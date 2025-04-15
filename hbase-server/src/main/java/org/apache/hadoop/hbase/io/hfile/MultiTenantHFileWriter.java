@@ -17,69 +17,20 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-/**
- * CHANGES REQUIRED IN HFileContext.java:
- * 1. Remove tenant-specific fields:
- *    - private int pbePrefixLength;
- *    - private int prefixOffset;
- *    - private boolean isMultiTenant;
- * 
- * 2. Remove tenant-specific getter methods:
- *    - getPbePrefixLength()
- *    - getPrefixOffset()
- *    - isMultiTenant()
- * 
- * 3. Remove tenant-specific parameters in constructors:
- *    a. Copy constructor should not copy tenant fields
- *    b. Remove constructor with multi-tenant parameters: HFileContext(..., pbePrefixLength, prefixOffset, isMultiTenant)
- * 
- * 4. Update toString() to remove tenant-specific fields
- * 
- * CHANGES REQUIRED IN HFileContextBuilder.java:
- * 1. Remove tenant-specific fields:
- *    - private int pbePrefixLength = 0;
- *    - private int prefixOffset = 0;
- *    - private boolean isMultiTenant = false;
- * 
- * 2. Remove tenant-specific builder methods:
- *    - withPbePrefixLength(int pbePrefixLength)
- *    - withPrefixOffset(int prefixOffset)
- *    - withMultiTenant(boolean isMultiTenant)
- * 
- * 3. Simplify build() method by removing the check for isMultiTenant
- * 4. Remove buildWithMultiTenant() method entirely
- * 
- * REASON FOR CHANGES:
- * Tenant configuration should be completely separate from file format concerns.
- * HFileContext should only handle format-specific details, while tenant configuration
- * is managed by TenantExtractorFactory using cluster configuration and table properties.
- * The HFile version (v4) inherently implies multi-tenant support without needing additional flags.
- */
-
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
-import java.util.function.Function;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.ByteBufferExtendedCell;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCell;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
-import org.apache.hadoop.hbase.io.hfile.HFile.WriterFactory;
-import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
@@ -102,7 +53,6 @@ public class MultiTenantHFileWriter implements HFile.Writer {
   private static final Logger LOG = LoggerFactory.getLogger(MultiTenantHFileWriter.class);
   
   // Tenant identification configuration at cluster level
-  public static final String TENANT_PREFIX_EXTRACTOR_CLASS = "hbase.multi.tenant.prefix.extractor.class";
   public static final String TENANT_PREFIX_LENGTH = "hbase.multi.tenant.prefix.length";
   public static final String TENANT_PREFIX_OFFSET = "hbase.multi.tenant.prefix.offset";
   
@@ -110,8 +60,12 @@ public class MultiTenantHFileWriter implements HFile.Writer {
   public static final String TABLE_TENANT_PREFIX_LENGTH = "TENANT_PREFIX_LENGTH";
   public static final String TABLE_TENANT_PREFIX_OFFSET = "TENANT_PREFIX_OFFSET";
   
+  // Table-level property to enable/disable multi-tenant sectioning
+  public static final String TABLE_MULTI_TENANT_ENABLED = "MULTI_TENANT_HFILE";
+  private static final byte[] DEFAULT_TENANT_PREFIX = new byte[0]; // Empty prefix for default tenant
+  
   // Default values
-  private static final int DEFAULT_PREFIX_LENGTH = 4;
+  private static final int DEFAULT_PREFIX_LENGTH = 0;
   private static final int DEFAULT_PREFIX_OFFSET = 0;
   
   /**
@@ -146,16 +100,8 @@ public class MultiTenantHFileWriter implements HFile.Writer {
   private long totalKeyLength = 0;
   private long totalValueLength = 0;
   private long lenOfBiggestCell = 0;
-  private byte[] keyOfBiggestCell;
   private int maxTagsLength = 0;
   private long totalUncompressedBytes = 0;
-  
-  // Store the last key to ensure the keys are in sorted order.
-  private byte[] lastKeyBuffer = null;
-  private int lastKeyOffset;
-  private int lastKeyLength;
-
-  private volatile boolean closed = false;
   
   // Additional field added to support v4
   private int majorVersion = HFile.MIN_FORMAT_VERSION_WITH_MULTI_TENANT;
@@ -210,9 +156,24 @@ public class MultiTenantHFileWriter implements HFile.Writer {
       Map<String, String> tableProperties,
       HFileContext fileContext) throws IOException {
     
+    // Check if multi-tenant functionality is enabled for this table
+    boolean multiTenantEnabled = true; // Default to enabled
+    if (tableProperties != null && tableProperties.containsKey(TABLE_MULTI_TENANT_ENABLED)) {
+      multiTenantEnabled = Boolean.parseBoolean(tableProperties.get(TABLE_MULTI_TENANT_ENABLED));
+    }
+    
     // Create tenant extractor using configuration and table properties
-    // without relying on HFileContext for tenant-specific configuration
-    TenantExtractor tenantExtractor = TenantExtractorFactory.createTenantExtractor(conf, tableProperties);
+    TenantExtractor tenantExtractor;
+    if (multiTenantEnabled) {
+      // Normal multi-tenant operation: extract tenant prefix from row keys
+      tenantExtractor = TenantExtractorFactory.createTenantExtractor(conf, tableProperties);
+      LOG.info("Creating MultiTenantHFileWriter with multi-tenant functionality enabled");
+    } else {
+      // Single-tenant mode: always return the default tenant prefix regardless of cell
+      tenantExtractor = new SingleTenantExtractor();
+      LOG.info("Creating MultiTenantHFileWriter with multi-tenant functionality disabled " +
+               "(all data will be written to a single section)");
+    }
     
     // HFile version 4 inherently implies multi-tenant
     return new MultiTenantHFileWriter(fs, path, conf, cacheConf, tenantExtractor, fileContext);
@@ -272,7 +233,6 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     int cellSize = PrivateCellUtil.estimatedSerializedSizeOf(cell);
     if (lenOfBiggestCell < cellSize) {
       lenOfBiggestCell = cellSize;
-      keyOfBiggestCell = PrivateCellUtil.getCellKeySerializedAsKeyValueKey((ExtendedCell)cell);
     }
     
     int tagsLength = cell.getTagsLength();
@@ -293,7 +253,15 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     
     // Record section in the index
     long sectionEndOffset = outputStream.getPos();
-    int sectionSize = (int)(sectionEndOffset - sectionStartOffset);
+    long rawSectionSize = sectionEndOffset - sectionStartOffset;
+    if (rawSectionSize > Integer.MAX_VALUE) {
+        LOG.warn("Section size ({}) for tenant {} exceeds Integer.MAX_VALUE. " +
+                 "Potential truncation in index.", rawSectionSize,
+                 Bytes.toStringBinary(currentTenantPrefix));
+        // Decide on behavior: throw exception or allow potential truncation?
+        // For now, allow potential truncation as it matches HFile index format.
+    }
+    int sectionSize = (int) rawSectionSize; // Cast occurs here
     
     sectionIndexWriter.addEntry(currentTenantPrefix, sectionStartOffset, sectionSize);
     
@@ -323,47 +291,54 @@ public class MultiTenantHFileWriter implements HFile.Writer {
   
   @Override
   public void close() throws IOException {
-    if (outputStream == null) {
+    if (outputStream == null) { // Removed closed flag check, only check for null stream
       return;
     }
     
-    if (currentSectionWriter != null) {
-      closeCurrentSection();
-      currentSectionWriter = null;
+    try {
+        if (currentSectionWriter != null) {
+          closeCurrentSection();
+          currentSectionWriter = null;
+        }
+
+        // Write the section index
+        LOG.info("Writing section index");
+        long sectionIndexOffset = sectionIndexWriter.writeIndexBlocks(outputStream);
+
+        // Write file info
+        LOG.info("Writing file info");
+        FixedFileTrailer trailer = new FixedFileTrailer(getMajorVersion(), getMinorVersion());
+        trailer.setFileInfoOffset(outputStream.getPos());
+
+        // Add HFile metadata to the info block
+        HFileInfo fileInfo = new HFileInfo();
+        finishFileInfo(fileInfo);
+
+        DataOutputStream out = blockWriter.startWriting(BlockType.FILE_INFO);
+        fileInfo.write(out);
+        blockWriter.writeHeaderAndData(outputStream);
+
+        // Set up the trailer
+        trailer.setLoadOnOpenOffset(sectionIndexOffset);
+        trailer.setDataIndexCount(sectionIndexWriter.getNumRootEntries());
+        trailer.setNumDataIndexLevels(sectionIndexWriter.getNumLevels());
+        trailer.setUncompressedDataIndexSize(sectionIndexWriter.getTotalUncompressedSize());
+        trailer.setComparatorClass(fileContext.getCellComparator().getClass());
+
+        // Serialize the trailer
+        trailer.serialize(outputStream);
+
+        LOG.info("MultiTenantHFileWriter closed: path={}, sections={}", path, sectionCount);
+
+    } finally {
+        // Ensure stream is closed and block writer released even if errors occur above
+        if (outputStream != null) {
+            outputStream.close();
+        }
+        if (blockWriter != null) {
+            blockWriter.release();
+        }
     }
-    
-    // Write the section index
-    LOG.info("Writing section index");
-    long sectionIndexOffset = sectionIndexWriter.writeIndexBlocks(outputStream);
-    
-    // Write file info
-    LOG.info("Writing file info");
-    FixedFileTrailer trailer = new FixedFileTrailer(getMajorVersion(), getMinorVersion());
-    trailer.setFileInfoOffset(outputStream.getPos());
-    
-    // Add HFile metadata to the info block
-    HFileInfo fileInfo = new HFileInfo();
-    finishFileInfo(fileInfo);
-    
-    DataOutputStream out = blockWriter.startWriting(BlockType.FILE_INFO);
-    fileInfo.write(out);
-    blockWriter.writeHeaderAndData(outputStream);
-    
-    // Set up the trailer
-    trailer.setLoadOnOpenOffset(sectionIndexOffset);
-    trailer.setDataIndexCount(sectionIndexWriter.getNumRootEntries());
-    trailer.setNumDataIndexLevels(sectionIndexWriter.getNumLevels());
-    trailer.setUncompressedDataIndexSize(sectionIndexWriter.getTotalUncompressedSize());
-    trailer.setComparatorClass(fileContext.getCellComparator().getClass());
-    
-    // Serialize the trailer
-    trailer.serialize(outputStream);
-    
-    // Close the output stream
-    outputStream.close();
-    blockWriter.release();
-    
-    LOG.info("MultiTenantHFileWriter closed: path={}, sections={}", path, sectionCount);
   }
   
   private void finishFileInfo(HFileInfo fileInfo) throws IOException {
@@ -603,6 +578,22 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     }
   }
   
+  /**
+   * An implementation of TenantExtractor that always returns the default tenant prefix.
+   * Used when multi-tenant functionality is disabled via the TABLE_MULTI_TENANT_ENABLED property.
+   */
+  private static class SingleTenantExtractor implements TenantExtractor {
+    @Override
+    public byte[] extractTenantPrefix(Cell cell) {
+      return DEFAULT_TENANT_PREFIX;
+    }
+    
+    @Override
+    public boolean hasTenantPrefixChanged(Cell previousCell, Cell currentCell) {
+      return false; // Never changes since we only have one tenant
+    }
+  }
+  
   /*
    * Tenant Identification Configuration Hierarchy
    * --------------------------------------------
@@ -614,6 +605,8 @@ public class MultiTenantHFileWriter implements HFile.Writer {
    *      Table-specific tenant prefix length
    *    - Property: TENANT_PREFIX_OFFSET
    *      Byte offset for tenant prefix extraction (default: 0)
+   *    - Property: MULTI_TENANT_HFILE
+   *      Boolean flag indicating if this table uses multi-tenant sectioning (default: true)
    * 
    * 2. Cluster Level Configuration (used as fallback)
    *    - Property: hbase.multi.tenant.prefix.extractor.class
@@ -624,7 +617,7 @@ public class MultiTenantHFileWriter implements HFile.Writer {
    *      Default prefix offset if using fixed-length prefixes
    * 
    * 3. Default Values (used if neither above is specified)
-   *    - Default prefix length: 4 bytes
+   *    - Default prefix length: 0 bytes
    *    - Default prefix offset: 0 bytes
    * 
    * When creating a MultiTenantHFileWriter, the system will:
@@ -643,36 +636,5 @@ public class MultiTenantHFileWriter implements HFile.Writer {
    * - Each table can have its own tenant prefix configuration
    * - Tenant configuration is separate from the low-level file format concerns
    * - Sensible defaults are used if no explicit configuration is provided
-   * 
-   * SUMMARY OF CHANGES NEEDED:
-   * --------------------------
-   * 
-   * 1. In HFileContext.java:
-   *    - Remove fields: pbePrefixLength, prefixOffset, isMultiTenant
-   *    - Remove methods: getPbePrefixLength(), getPrefixOffset(), isMultiTenant()
-   *    - Remove constructor with tenant parameters
-   *    - Update copy constructor and toString() to remove tenant fields
-   * 
-   * 2. In HFileContextBuilder.java:
-   *    - Remove fields: pbePrefixLength, prefixOffset, isMultiTenant
-   *    - Remove methods: withPbePrefixLength(), withPrefixOffset(), withMultiTenant()
-   *    - Remove buildWithMultiTenant() method
-   *    - Simplify build() method to not check isMultiTenant
-   * 
-   * 3. In TenantExtractorFactory.java:
-   *    - Remove method that takes HFileContext
-   *    - Focus only on method that takes Configuration and table properties
-   * 
-   * 4. In MultiTenantHFileWriter.java:
-   *    - Use TenantExtractorFactory directly
-   *    - Remove TenantConfiguration class
-   *    - Remove any dependency on HFileContext for tenant configuration
-   * 
-   * 5. In HFile.java:
-   *    - Update MultiTenantWriterFactory to get tenant configuration from 
-   *      TenantExtractorFactory, not from HFileContext
-   * 
-   * These changes ensure a clean separation between file format concerns (handled by 
-   * HFileContext) and tenant configuration (handled by TenantExtractorFactory).
    */
 }
