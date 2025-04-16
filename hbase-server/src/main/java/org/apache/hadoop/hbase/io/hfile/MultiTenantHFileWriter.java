@@ -70,10 +70,6 @@ public class MultiTenantHFileWriter implements HFile.Writer {
   public static final String TABLE_MULTI_TENANT_ENABLED = "MULTI_TENANT_HFILE";
   private static final byte[] DEFAULT_TENANT_PREFIX = new byte[0]; // Empty prefix for default tenant
   
-  // Default values
-  private static final int DEFAULT_PREFIX_LENGTH = 0;
-  private static final int DEFAULT_PREFIX_OFFSET = 0;
-  
   /**
    * Class that manages tenant configuration with proper precedence:
    * 1. Table level settings have highest precedence

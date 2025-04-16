@@ -492,19 +492,29 @@ public final class HFile {
   public static Reader createReader(ReaderContext context, HFileInfo fileInfo,
     CacheConfig cacheConf, Configuration conf) throws IOException {
     try {
+      FixedFileTrailer trailer = fileInfo.getTrailer();
+      int majorVersion = trailer.getMajorVersion();
+      
+      // Handle HFile V4 (multi-tenant) separately for both stream and pread modes
+      if (majorVersion == MIN_FORMAT_VERSION_WITH_MULTI_TENANT) {
+        LOG.debug("Opening MultiTenant HFile v4");
+        return MultiTenantReaderFactory.create(context, fileInfo, cacheConf, conf);
+      }
+      
+      // For non-multi-tenant files, continue with existing approach
       if (context.getReaderType() == ReaderType.STREAM) {
         // stream reader will share trailer with pread reader, see HFileStreamReader#copyFields
         return new HFileStreamReader(context, fileInfo, cacheConf, conf);
       }
-      FixedFileTrailer trailer = fileInfo.getTrailer();
-      switch (trailer.getMajorVersion()) {
+      
+      switch (majorVersion) {
         case 2:
           LOG.debug("Opening HFile v2 with v3 reader");
           // Fall through. FindBugs: SF_SWITCH_FALLTHROUGH
         case 3:
           return new HFilePreadReader(context, fileInfo, cacheConf, conf);
         default:
-          throw new IllegalArgumentException("Invalid HFile version " + trailer.getMajorVersion());
+          throw new IllegalArgumentException("Invalid HFile version " + majorVersion);
       }
     } catch (Throwable t) {
       IOUtils.closeQuietly(context.getInputStreamWrapper(),
