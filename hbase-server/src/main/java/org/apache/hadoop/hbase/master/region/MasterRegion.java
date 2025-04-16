@@ -118,6 +118,11 @@ public final class MasterRegion {
 
   private MasterRegionWALRoller walRoller;
 
+  /**
+   * This is only for test purpose.
+   */
+  private boolean updateFailForTest = false;
+
   private MasterRegion(Server server, HRegion region, WALFactory walFactory,
     MasterRegionFlusherAndCompactor flusherAndCompactor, MasterRegionWALRoller walRoller) {
     this.server = server;
@@ -143,13 +148,23 @@ public final class MasterRegion {
     }
   }
 
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  public void setTestFailure() {
+    this.updateFailForTest = true;
+  }
+
   public void update(UpdateMasterRegion action) throws IOException {
     try {
+      if (updateFailForTest) {
+        // test for HBASE-29251
+        throw new IOException("Update failed");
+      }
       action.update(region);
       flusherAndCompactor.onUpdate();
-    } catch (WALSyncTimeoutIOException e) {
-      LOG.error(HBaseMarkers.FATAL, "WAL sync timeout. Aborting server.");
-      server.abort("WAL sync timeout", e);
+    } catch (IOException e) {
+      LOG.error(HBaseMarkers.FATAL, "MasterRegion mutation is not successful. Aborting server.");
+      server.abort("MasterRegion mutation is not successful", e);
       throw e;
     }
   }
