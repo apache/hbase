@@ -22,7 +22,6 @@ import org.apache.hadoop.hbase.coprocessor.CoreCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.HasMasterServices;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
-import org.apache.hadoop.hbase.io.crypto.ManagedKeyStatus;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos;
@@ -103,53 +102,34 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
      */
     @Override
     public void enableKeyManagement(RpcController controller, ManagedKeysRequest request,
-        RpcCallback<ManagedKeysResponse> done) {
+        RpcCallback<GetManagedKeysResponse> done) {
       ManagedKeysResponse.Builder builder = getResponseBuilder(controller, request);
       if (builder.getKeyCust() != null) {
         try {
-          ManagedKeyStatus managedKeyStatus = master.getKeymetaAdmin()
+          List<ManagedKeyData> managedKeyStatuses = master.getKeymetaAdmin()
             .enableKeyManagement(request.getKeyCust(), request.getKeyNamespace());
-          builder.setKeyStatus(ManagedKeysProtos.ManagedKeyStatus.valueOf(
-            managedKeyStatus.getVal()));
+          done.run(generateKeyStatusResponse(managedKeyStatuses, builder));
         } catch (IOException e) {
           CoprocessorRpcUtils.setControllerException(controller, e);
-          builder.setKeyStatus(ManagedKeysProtos.ManagedKeyStatus.KEY_FAILED);
         }
       }
-      done.run(builder.build());
     }
 
     @Override
     public void getManagedKeys(RpcController controller, ManagedKeysRequest request,
         RpcCallback<GetManagedKeysResponse> done) {
-      GetManagedKeysResponse.Builder responseBuilder =
-        GetManagedKeysResponse.newBuilder();
       ManagedKeysResponse.Builder builder = getResponseBuilder(controller, request);
       if (builder.getKeyCust() != null) {
         try {
           List<ManagedKeyData> managedKeyStatuses = master.getKeymetaAdmin()
             .getManagedKeys(request.getKeyCust(), request.getKeyNamespace());
-          for (ManagedKeyData keyData: managedKeyStatuses) {
-            builder.setKeyStatus(
-              ManagedKeysProtos.ManagedKeyStatus.valueOf(keyData.getKeyStatus().getVal()));
-            builder.setKeyStatus(ManagedKeysProtos.ManagedKeyStatus.valueOf(
-                      keyData.getKeyStatus().getVal()))
-                   .setKeyMetadata(keyData.getKeyMetadata())
-                   .setRefreshTimestamp(keyData.getRefreshTimestamp())
-                   .setReadOpCount(keyData.getReadOpCount())
-                   .setWriteOpCount(keyData.getWriteOpCount())
-                   ;
-            responseBuilder.addStatus(builder.build());
-          }
+          done.run(generateKeyStatusResponse(managedKeyStatuses, builder));
         } catch (IOException e) {
           CoprocessorRpcUtils.setControllerException(controller, e);
-          builder.setKeyStatus(ManagedKeysProtos.ManagedKeyStatus.KEY_FAILED);
         } catch (KeyException e) {
           CoprocessorRpcUtils.setControllerException(controller, new IOException(e));
-          builder.setKeyStatus(ManagedKeysProtos.ManagedKeyStatus.KEY_FAILED);
         }
       }
-      done.run(responseBuilder.build());
     }
 
     private byte[] convertToKeyCustBytes(RpcController controller, ManagedKeysRequest request,
@@ -179,6 +159,24 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
           "Failed to decode specified prefix as Base64 string: " + request.getKeyCust(), e));
       }
       return builder;
+    }
+
+    private static GetManagedKeysResponse generateKeyStatusResponse(
+        List<ManagedKeyData> managedKeyStatuses, ManagedKeysResponse.Builder builder) {
+      GetManagedKeysResponse.Builder responseBuilder = GetManagedKeysResponse.newBuilder();
+      for (ManagedKeyData keyData: managedKeyStatuses) {
+        builder.setKeyStatus(
+          ManagedKeysProtos.ManagedKeyStatus.valueOf(keyData.getKeyStatus().getVal()));
+        builder.setKeyStatus(ManagedKeysProtos.ManagedKeyStatus.valueOf(
+            keyData.getKeyStatus().getVal()))
+          .setKeyMetadata(keyData.getKeyMetadata())
+          .setRefreshTimestamp(keyData.getRefreshTimestamp())
+          .setReadOpCount(keyData.getReadOpCount())
+          .setWriteOpCount(keyData.getWriteOpCount())
+        ;
+        responseBuilder.addStatus(builder.build());
+      }
+      return responseBuilder.build();
     }
   }
 }

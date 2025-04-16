@@ -15,9 +15,11 @@
 # limitations under the License.
 #
 
+require 'shell/commands/keymeta_command_base'
+
 module Shell
   module Commands
-    class EnableKeyManagement < Command
+    class EnableKeyManagement < KeymetaCommandBase
       def help
         <<-EOF
 Enable key management for a given cust:namespace (cust in Base64 format).
@@ -26,9 +28,8 @@ EOF
       end
 
       def command(key_info)
-        formatter.header(['KEY', 'STATUS'])
-        status = keymeta_admin.enable_key_management(key_info)
-        formatter.row([key_info, status.toString()])
+        statuses = keymeta_admin.enable_key_management(key_info)
+        print_key_statuses(statuses)
       end
     end
   end

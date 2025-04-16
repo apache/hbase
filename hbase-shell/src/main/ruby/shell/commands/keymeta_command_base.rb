@@ -15,21 +15,25 @@
 # limitations under the License.
 #
 
-require 'shell/commands/keymeta_command_base'
-
 module Shell
   module Commands
-    class ShowKeyStatus < KeymetaCommandBase
-      def help
-        <<-EOF
-Show key statuses for a given cust:namespace (cust in Base64 format).
-If no namespace is specified, the global namespace (*) is used.
-EOF
-      end
-
-      def command(key_info)
-        statuses = keymeta_admin.get_key_statuses(key_info)
-        print_key_statuses(statuses)
+    class KeymetaCommandBase < Command
+      def print_key_statuses(statuses)
+          formatter.header(['ENCODED-KEY', 'NAMESPACE', 'STATUS', 'METADATA', 'METADATA-HASH',
+            'REFRESH-TIMESTAMP', 'READ-OP-COUNT', 'WRITE-OP-COUNT'])
+          statuses.each { |status|
+            formatter.row([
+              status.getKeyCustodianEncoded(),
+              status.getKeyNamespace(),
+              status.getKeyStatus().toString(),
+              status.getKeyMetadata(),
+              status.getKeyMetadataHashEncoded(),
+              status.getRefreshTimestamp(),
+              status.getReadOpCount(),
+              status.getWriteOpCount()
+            ])
+          }
+          formatter.footer(statuses.size())
       end
     end
   end

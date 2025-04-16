@@ -52,7 +52,7 @@ message GetManagedKeysResponse {
 
 service ManagedKeysService {
   rpc EnableKeyManagement(ManagedKeysRequest)
-    returns (ManagedKeysResponse);
+    returns (GetManagedKeysResponse);
   rpc GetManagedKeys(ManagedKeysRequest)
     returns (GetManagedKeysResponse);
 }

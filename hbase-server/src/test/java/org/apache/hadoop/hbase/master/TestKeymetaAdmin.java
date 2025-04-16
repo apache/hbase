@@ -128,9 +128,11 @@ public class TestKeymetaAdmin {
       String cust = "cust1";
       managedKeyProvider.setMockedKeyStatus(cust, keyStatus);
       String encodedCust = ManagedKeyProvider.encodeToStr(cust.getBytes());
-      ManagedKeyStatus managedKeyStatus =
+      List<ManagedKeyData> managedKeyStatuses =
         keymetaAdmin.enableKeyManagement(encodedCust, ManagedKeyData.KEY_SPACE_GLOBAL);
-      assertNotNull(managedKeyStatus);
+      assertNotNull(managedKeyStatuses);
+      assertEquals(1, managedKeyStatuses.size());
+      assertEquals(keyStatus, managedKeyStatuses.get(0).getKeyStatus());
       verify(mockAccessor)
         .addKey(argThat((ManagedKeyData keyData) -> assertKeyData(keyData, keyStatus,
           isNullKey ? null : managedKeyProvider.getMockedKey(cust))));

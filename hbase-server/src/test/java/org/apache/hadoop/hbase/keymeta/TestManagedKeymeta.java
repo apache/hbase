@@ -47,10 +47,9 @@ public class TestManagedKeymeta extends ManagedKeyTestBase {
     ;
     String cust = "cust1";
     String encodedCust = ManagedKeyProvider.encodeToStr(cust.getBytes());
-    ManagedKeyStatus managedKeyStatus =
+    List<ManagedKeyData> managedKeyStatuses =
       adminClient.enableKeyManagement(encodedCust, ManagedKeyData.KEY_SPACE_GLOBAL);
-    assertNotNull(managedKeyStatus);
-    assertEquals(ManagedKeyStatus.ACTIVE, managedKeyStatus);
+    assertKeyDataListSingleKey(managedKeyStatuses, ManagedKeyStatus.ACTIVE);
 
     List<ManagedKeyData> managedKeys =
       adminClient.getManagedKeys(encodedCust, ManagedKeyData.KEY_SPACE_GLOBAL);
@@ -60,12 +59,23 @@ public class TestManagedKeymeta extends ManagedKeyTestBase {
 
     String nonExistentCust = "nonExistentCust";
     managedKeyProvider.setMockedKeyStatus(nonExistentCust, ManagedKeyStatus.FAILED);
-    assertEquals(ManagedKeyStatus.FAILED, adminClient.enableKeyManagement(
-      ManagedKeyProvider.encodeToStr(nonExistentCust.getBytes()), ManagedKeyData.KEY_SPACE_GLOBAL));
+    List<ManagedKeyData> keyDataList1 =
+      adminClient.enableKeyManagement(ManagedKeyProvider.encodeToStr(nonExistentCust.getBytes()),
+        ManagedKeyData.KEY_SPACE_GLOBAL);
+    assertKeyDataListSingleKey(keyDataList1, ManagedKeyStatus.FAILED);
 
     String disabledCust = "disabledCust";
     managedKeyProvider.setMockedKeyStatus(disabledCust, ManagedKeyStatus.DISABLED);
-    assertEquals(ManagedKeyStatus.DISABLED, adminClient.enableKeyManagement(
-      ManagedKeyProvider.encodeToStr(disabledCust.getBytes()), ManagedKeyData.KEY_SPACE_GLOBAL));
+    List<ManagedKeyData> keyDataList2 =
+      adminClient.enableKeyManagement(ManagedKeyProvider.encodeToStr(disabledCust.getBytes()),
+        ManagedKeyData.KEY_SPACE_GLOBAL);
+    assertKeyDataListSingleKey(keyDataList2, ManagedKeyStatus.DISABLED);
+  }
+
+  private static void assertKeyDataListSingleKey(List<ManagedKeyData> managedKeyStatuses,
+      ManagedKeyStatus keyStatus) {
+    assertNotNull(managedKeyStatuses);
+    assertEquals(1, managedKeyStatuses.size());
+    assertEquals(keyStatus, managedKeyStatuses.get(0).getKeyStatus());
   }
 }

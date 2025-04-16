@@ -36,17 +36,17 @@ public interface KeymetaAdmin {
    * @param keyCust      The key custodian in base64 encoded format.
    * @param keyNamespace The namespace for the key management.
    *
-   * @return The current status of the managed key.
+   * @return The list of {@link ManagedKeyData} objects each identifying the key and its current status.
    * @throws IOException if an error occurs while enabling key management.
    */
-  ManagedKeyStatus enableKeyManagement(String keyCust, String keyNamespace) throws IOException;
+  List<ManagedKeyData> enableKeyManagement(String keyCust, String keyNamespace) throws IOException;
 
   /**
    * Get the status of all the keys for the specified custodian.
    *
    * @param keyCust      The key custodian in base64 encoded format.
    * @param keyNamespace The namespace for the key management.
-   * @return The list of status objects each identifying the key and its current status.
+   * @return The list of {@link ManagedKeyData} objects each identifying the key and its current status.
    * @throws IOException if an error occurs while enabling key management.
    */
   List<ManagedKeyData> getManagedKeys(String keyCust, String keyNamespace)

@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.keymeta;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
-import org.apache.hadoop.hbase.io.crypto.ManagedKeyStatus;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,7 +38,7 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
   }
 
   @Override
-  public ManagedKeyStatus enableKeyManagement(String keyCust, String keyNamespace)
+  public List<ManagedKeyData> enableKeyManagement(String keyCust, String keyNamespace)
       throws IOException {
     assertKeyManagementEnabled();
     LOG.info("Trying to enable key management on custodian: {} under namespace: {}", keyCust,
@@ -48,9 +47,8 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
     ManagedKeyProvider provider = getKeyProvider();
     int perPrefixActiveKeyConfCount = getPerPrefixActiveKeyConfCount();
     Set<ManagedKeyData> retrievedKeys = new HashSet<>(perPrefixActiveKeyConfCount);
-    ManagedKeyData pbeKey = null;
     for (int i = 0; i < perPrefixActiveKeyConfCount; ++i) {
-      pbeKey = provider.getManagedKey(key_cust, keyNamespace);
+      ManagedKeyData pbeKey = provider.getManagedKey(key_cust, keyNamespace);
       if (pbeKey == null) {
         throw new IOException("Invalid null managed key received from key provider");
       }
@@ -66,9 +64,7 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
         pbeKey.getKeyStatus(), pbeKey.getKeyMetadata(), keyCust);
       addKey(pbeKey);
     }
-    // pbeKey can't be null at this point as perPrefixActiveKeyConfCount will always be > 0,
-    // but the null check is needed to avoid any warning.
-    return pbeKey == null ? null : pbeKey.getKeyStatus();
+    return retrievedKeys.stream().toList();
   }
 
   @Override

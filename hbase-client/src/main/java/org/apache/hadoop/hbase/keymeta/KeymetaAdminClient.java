@@ -26,13 +26,12 @@ public class KeymetaAdminClient implements KeymetaAdmin {
   }
 
   @Override
-  public ManagedKeyStatus enableKeyManagement(String keyCust, String keyNamespace)
+  public List<ManagedKeyData> enableKeyManagement(String keyCust, String keyNamespace)
       throws IOException {
     try {
-      ManagedKeysResponse response = stub.enableKeyManagement(null,
+      ManagedKeysProtos.GetManagedKeysResponse response = stub.enableKeyManagement(null,
         ManagedKeysRequest.newBuilder().setKeyCust(keyCust).setKeyNamespace(keyNamespace).build());
-      LOG.info("Got response: " + response);
-      return ManagedKeyStatus.forValue((byte) response.getKeyStatus().getNumber());
+      return generateKeyDataList(response);
     } catch (ServiceException e) {
       throw ProtobufUtil.handleRemoteException(e);
     }
@@ -41,20 +40,24 @@ public class KeymetaAdminClient implements KeymetaAdmin {
   @Override
   public List<ManagedKeyData> getManagedKeys(String keyCust, String keyNamespace)
     throws IOException, KeyException {
-    List<ManagedKeyData> keyStatuses = new ArrayList<>();
     try {
       ManagedKeysProtos.GetManagedKeysResponse statusResponse = stub.getManagedKeys(null,
         ManagedKeysRequest.newBuilder().setKeyCust(keyCust).setKeyNamespace(keyNamespace).build());
-      for (ManagedKeysResponse status: statusResponse.getStatusList()) {
-        keyStatuses.add(new ManagedKeyData(
-          status.getKeyCustBytes().toByteArray(),
-          status.getKeyNamespace(), null,
-          ManagedKeyStatus.forValue((byte) status.getKeyStatus().getNumber()),
-          status.getKeyMetadata(),
-          status.getRefreshTimestamp(), status.getReadOpCount(), status.getWriteOpCount()));
-      }
+      return generateKeyDataList(statusResponse);
     } catch (ServiceException e) {
       throw ProtobufUtil.handleRemoteException(e);
+    }
+  }
+
+  private static List<ManagedKeyData> generateKeyDataList(ManagedKeysProtos.GetManagedKeysResponse statusResponse) {
+    List<ManagedKeyData> keyStatuses = new ArrayList<>();
+    for (ManagedKeysResponse status: statusResponse.getStatusList()) {
+      keyStatuses.add(new ManagedKeyData(
+        status.getKeyCustBytes().toByteArray(),
+        status.getKeyNamespace(), null,
+        ManagedKeyStatus.forValue((byte) status.getKeyStatus().getNumber()),
+        status.getKeyMetadata(),
+        status.getRefreshTimestamp(), status.getReadOpCount(), status.getWriteOpCount()));
     }
     return keyStatuses;
   }
