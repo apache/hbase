@@ -33,11 +33,4 @@ public interface TenantExtractor {
    */
   byte[] extractTenantPrefix(Cell cell);
   
-  /**
-   * Check if the tenant prefix has changed from the previous cell
-   * @param previousCell The previous cell or null if first cell
-   * @param currentCell The current cell
-   * @return true if tenant prefix has changed, false otherwise
-   */
-  boolean hasTenantPrefixChanged(Cell previousCell, Cell currentCell);
 } 

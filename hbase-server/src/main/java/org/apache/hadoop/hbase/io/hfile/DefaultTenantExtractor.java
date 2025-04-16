@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -56,37 +55,6 @@ public class DefaultTenantExtractor implements TenantExtractor {
     return prefix;
   }
   
-  @Override
-  public boolean hasTenantPrefixChanged(Cell previousCell, Cell currentCell) {
-    if (previousCell == null) {
-      return false;
-    }
-    
-    if (prefixLength <= 0) {
-      return false;
-    }
-    
-    // Get row lengths and ensure they're sufficient for comparison
-    int prevRowLength = previousCell.getRowLength();
-    int currRowLength = currentCell.getRowLength();
-    
-    if (prevRowLength < prefixOffset + prefixLength || 
-        currRowLength < prefixOffset + prefixLength) {
-      // Same behavior as extractTenantPrefix - throw exception if row is too short
-      if (prevRowLength < prefixOffset + prefixLength) {
-        throw new IllegalArgumentException("Previous row key too short for configured prefix parameters. " +
-            "Row key length: " + prevRowLength + ", required: " + (prefixOffset + prefixLength));
-      } else {
-        throw new IllegalArgumentException("Current row key too short for configured prefix parameters. " +
-            "Row key length: " + currRowLength + ", required: " + (prefixOffset + prefixLength));
-      }
-    }
-    
-    // Compare the tenant prefix bytes directly without allocating intermediate arrays
-    return !Bytes.equals(
-        previousCell.getRowArray(), previousCell.getRowOffset() + prefixOffset, prefixLength,
-        currentCell.getRowArray(), currentCell.getRowOffset() + prefixOffset, prefixLength);
-  }
   
   /**
    * Get the tenant prefix length.

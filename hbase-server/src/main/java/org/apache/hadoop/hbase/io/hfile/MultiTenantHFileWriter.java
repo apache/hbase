@@ -593,11 +593,6 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     public byte[] extractTenantPrefix(Cell cell) {
       return DEFAULT_TENANT_PREFIX;
     }
-    
-    @Override
-    public boolean hasTenantPrefixChanged(Cell previousCell, Cell currentCell) {
-      return false; // Never changes since we only have one tenant
-    }
   }
   
   /*
