@@ -22,7 +22,6 @@ import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.compress.Compression;
-import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -35,7 +34,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class ZstdHFileDecompressionContext extends Compression.HFileDecompressionContext {
 
-  public static final long FIXED_OVERHEAD = ClassSize.estimateBase(HFileContext.class, false);
+  public static final long FIXED_OVERHEAD =
+    ClassSize.estimateBase(ZstdHFileDecompressionContext.class, false);
 
   @Nullable
   private final ZstdDictDecompress dict;
