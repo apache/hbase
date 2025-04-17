@@ -149,9 +149,9 @@ public final class MasterRegion {
       flusherAndCompactor.onUpdate();
     } catch (IOException e) {
       LOG.error(HBaseMarkers.FATAL,
-        "MasterRegion mutation is not successful. Aborting server to let new active master "
+        "MasterRegion update is not successful. Aborting server to let new active master "
           + "resume failed proc store update.");
-      server.abort("MasterRegion mutation is not successful", e);
+      server.abort("MasterRegion update is not successful", e);
       throw e;
     }
   }
