@@ -663,7 +663,7 @@
     <brotli4j.version>1.11.0</brotli4j.version>
     <lz4.version>1.8.0</lz4.version>
     <snappy.version>1.1.10.4</snappy.version>
-    <zstd-jni.version>1.5.5-2</zstd-jni.version>
+    <zstd-jni.version>1.5.7-2</zstd-jni.version>
     <!--
         Note that the version of protobuf shipped in hbase-thirdparty must match the version used
         in hbase-protocol-shaded and hbase-examples. The version of jackson-[annotations,core,

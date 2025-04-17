@@ -55,20 +55,8 @@ public class ZstdByteBuffDecompressor implements ByteBuffDecompressor, CanReinit
 
   @Override
   public boolean canDecompress(ByteBuff output, ByteBuff input) {
-    if (!allowByteBuffDecompression) {
-      return false;
-    }
-    if (output instanceof SingleByteBuff && input instanceof SingleByteBuff) {
-      ByteBuffer nioOutput = output.nioByteBuffers()[0];
-      ByteBuffer nioInput = input.nioByteBuffers()[0];
-      if (nioOutput.isDirect() && nioInput.isDirect()) {
-        return true;
-      } else if (!nioOutput.isDirect() && !nioInput.isDirect()) {
-        return true;
-      }
-    }
-
-    return false;
+    return allowByteBuffDecompression && output instanceof SingleByteBuff
+      && input instanceof SingleByteBuff;
   }
 
   @Override
@@ -80,38 +68,35 @@ public class ZstdByteBuffDecompressor implements ByteBuffDecompressor, CanReinit
     if (output instanceof SingleByteBuff && input instanceof SingleByteBuff) {
       ByteBuffer nioOutput = output.nioByteBuffers()[0];
       ByteBuffer nioInput = input.nioByteBuffers()[0];
+      int origOutputPos = nioOutput.position();
+      int n;
       if (nioOutput.isDirect() && nioInput.isDirect()) {
-        return decompressDirectByteBuffers(nioOutput, nioInput, inputLen);
+        n = ctx.decompressDirectByteBuffer(nioOutput, nioOutput.position(),
+          nioOutput.limit() - nioOutput.position(), nioInput, nioInput.position(), inputLen);
       } else if (!nioOutput.isDirect() && !nioInput.isDirect()) {
-        return decompressHeapByteBuffers(nioOutput, nioInput, inputLen);
+        n = ctx.decompressByteArray(nioOutput.array(),
+          nioOutput.arrayOffset() + nioOutput.position(), nioOutput.limit() - nioOutput.position(),
+          nioInput.array(), nioInput.arrayOffset() + nioInput.position(), inputLen);
+      } else if (nioOutput.isDirect() && !nioInput.isDirect()) {
+        n = ctx.decompressByteArrayToDirectByteBuffer(nioOutput, nioOutput.position(),
+          nioOutput.limit() - nioOutput.position(), nioInput.array(),
+          nioInput.arrayOffset() + nioInput.position(), inputLen);
+      } else if (!nioOutput.isDirect() && nioInput.isDirect()) {
+        n = ctx.decompressDirectByteBufferToByteArray(nioOutput.array(),
+          nioOutput.arrayOffset() + nioOutput.position(), nioOutput.limit() - nioOutput.position(),
+          nioInput, nioInput.position(), inputLen);
+      } else {
+        throw new IllegalStateException("Unreachable line");
       }
+
+      nioOutput.position(origOutputPos + n);
+      nioInput.position(input.position() + inputLen);
+
+      return n;
+    } else {
+      throw new IllegalStateException(
+        "At least one buffer is not a SingleByteBuff, this is not supported");
     }
-
-    throw new IllegalStateException("One buffer is direct and the other is not, "
-      + "or one or more not SingleByteBuffs. This is not supported");
-  }
-
-  private int decompressDirectByteBuffers(ByteBuffer output, ByteBuffer input, int inputLen) {
-    int origOutputPos = output.position();
-
-    int n = ctx.decompressDirectByteBuffer(output, output.position(),
-      output.limit() - output.position(), input, input.position(), inputLen);
-
-    output.position(origOutputPos + n);
-    input.position(input.position() + inputLen);
-    return n;
-  }
-
-  private int decompressHeapByteBuffers(ByteBuffer output, ByteBuffer input, int inputLen) {
-    int origOutputPos = output.position();
-
-    int n = ctx.decompressByteArray(output.array(), output.arrayOffset() + output.position(),
-      output.limit() - output.position(), input.array(), input.arrayOffset() + input.position(),
-      inputLen);
-
-    output.position(origOutputPos + n);
-    input.position(input.position() + inputLen);
-    return n;
   }
 
   @Override
