@@ -23,6 +23,7 @@ import org.apache.hadoop.hbase.io.MultiTenantFSDataInputStreamWrapper;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * HFile reader for multi-tenant HFiles in STREAM (sequential access) mode.
@@ -44,11 +45,14 @@ public class MultiTenantStreamReader extends AbstractMultiTenantReader {
   public MultiTenantStreamReader(ReaderContext context, HFileInfo fileInfo,
       CacheConfig cacheConf, Configuration conf) throws IOException {
     super(context, fileInfo, cacheConf, conf);
+    // Tenant index structure is loaded and logged by the parent class
   }
 
   @Override
   protected SectionReader createSectionReader(byte[] tenantPrefix, SectionMetadata metadata)
       throws IOException {
+    LOG.debug("Creating section reader for tenant: {}, offset: {}, size: {}",
+        Bytes.toStringBinary(tenantPrefix), metadata.getOffset(), metadata.getSize());
     return new StreamSectionReader(tenantPrefix, metadata);
   }
 
@@ -65,21 +69,36 @@ public class MultiTenantStreamReader extends AbstractMultiTenantReader {
       if (!initialized) {
         // Create section context with section-specific settings
         MultiTenantFSDataInputStreamWrapper sectionStream = 
-            new MultiTenantFSDataInputStreamWrapper(context.getInputStreamWrapper(), metadata.offset);
+            new MultiTenantFSDataInputStreamWrapper(context.getInputStreamWrapper(), metadata.getOffset());
             
         ReaderContext sectionContext = ReaderContextBuilder.newBuilder(context)
             .withInputStreamWrapper(sectionStream)
             .withFilePath(context.getFilePath())
             .withReaderType(ReaderContext.ReaderType.STREAM)
             .withFileSystem(context.getFileSystem())
-            .withFileSize(metadata.size)
+            .withFileSize(metadata.getSize())
             .build();
 
-        // Create stream reader for this section
-        reader = new HFileStreamReader(sectionContext, fileInfo, cacheConf, getConf());
-        initialized = true;
-        LOG.debug("Initialized HFileStreamReader for tenant prefix: {}",
-            org.apache.hadoop.hbase.util.Bytes.toStringBinary(tenantPrefix));
+        try {
+          // Create a section-specific HFileInfo
+          HFileInfo sectionFileInfo = new HFileInfo(sectionContext, getConf());
+          
+          // Create stream reader for this section with the section-specific fileInfo
+          reader = new HFileStreamReader(sectionContext, sectionFileInfo, cacheConf, getConf());
+          
+          // Initialize section indices using the standard HFileInfo method
+          // This method was designed for HFile v3 format, which each section follows
+          LOG.debug("Initializing section indices for tenant at offset {}", metadata.getOffset());
+          sectionFileInfo.initMetaAndIndex(reader);
+          LOG.debug("Successfully initialized indices for section at offset {}", metadata.getOffset());
+          
+          initialized = true;
+          LOG.debug("Initialized HFileStreamReader for tenant prefix: {}",
+              org.apache.hadoop.hbase.util.Bytes.toStringBinary(tenantPrefix));
+        } catch (IOException e) {
+          LOG.error("Failed to initialize section reader", e);
+          throw e;
+        }
       }
       return reader;
     }

@@ -88,7 +88,7 @@ public class MultiTenantHFileWriter implements HFile.Writer {
   // Main file writer components
   private final FSDataOutputStream outputStream;
   private HFileBlock.Writer blockWriter;
-  private HFileBlockIndex.BlockIndexWriter sectionIndexWriter;
+  private SectionIndexManager.Writer sectionIndexWriter;
   
   // Section tracking
   private VirtualSectionWriter currentSectionWriter;
@@ -190,20 +190,27 @@ public class MultiTenantHFileWriter implements HFile.Writer {
                                         conf.getInt(MAX_BLOCK_SIZE_UNCOMPRESSED, 
                                                    fileContext.getBlocksize() * 10));
     
-    // Initialize the section index
+    // Initialize the section index using SectionIndexManager
     boolean cacheIndexesOnWrite = cacheConf.shouldCacheIndexesOnWrite();
     String nameForCaching = cacheIndexesOnWrite ? path.getName() : null;
     
-    sectionIndexWriter = new HFileBlockIndex.BlockIndexWriter(
+    sectionIndexWriter = new SectionIndexManager.Writer(
         blockWriter,
         cacheIndexesOnWrite ? cacheConf : null, 
-        nameForCaching,
-        NoOpIndexBlockEncoder.INSTANCE);
+        nameForCaching);
     
-    // Initialize tracking
-    this.sectionStartOffset = 0;
+    // Configure multi-level tenant indexing based on configuration
+    int maxChunkSize = conf.getInt(SectionIndexManager.SECTION_INDEX_MAX_CHUNK_SIZE, 
+                                   SectionIndexManager.DEFAULT_MAX_CHUNK_SIZE);
+    int minIndexNumEntries = conf.getInt(SectionIndexManager.SECTION_INDEX_MIN_NUM_ENTRIES,
+                                        SectionIndexManager.DEFAULT_MIN_INDEX_NUM_ENTRIES);
     
-    LOG.info("Initialized MultiTenantHFileWriter for path: {}", path);
+    sectionIndexWriter.setMaxChunkSize(maxChunkSize);
+    sectionIndexWriter.setMinIndexNumEntries(minIndexNumEntries);
+    
+    LOG.info("Initialized MultiTenantHFileWriter with multi-level section indexing for path: {} " +
+             "(maxChunkSize={}, minIndexNumEntries={})", 
+             path, maxChunkSize, minIndexNumEntries);
   }
   
   @Override
@@ -247,25 +254,21 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     LOG.info("Closing section for tenant prefix: {}", 
         currentTenantPrefix == null ? "null" : Bytes.toStringBinary(currentTenantPrefix));
     
+    // Record the section start position
+    long sectionStartOffset = currentSectionWriter.getSectionStartOffset();
+    
     // Finish writing the current section
     currentSectionWriter.close();
     
-    // Add to total uncompressed bytes
-    totalUncompressedBytes += currentSectionWriter.getTotalUncompressedBytes();
+    // Get current position to calculate section size
+    long sectionEndOffset = outputStream.getPos();
+    long sectionSize = sectionEndOffset - sectionStartOffset;
     
     // Record section in the index
-    long sectionEndOffset = outputStream.getPos();
-    long rawSectionSize = sectionEndOffset - sectionStartOffset;
-    if (rawSectionSize > Integer.MAX_VALUE) {
-        LOG.warn("Section size ({}) for tenant {} exceeds Integer.MAX_VALUE. " +
-                 "Potential truncation in index.", rawSectionSize,
-                 Bytes.toStringBinary(currentTenantPrefix));
-        // Decide on behavior: throw exception or allow potential truncation?
-        // For now, allow potential truncation as it matches HFile index format.
-    }
-    int sectionSize = (int) rawSectionSize; // Cast occurs here
+    sectionIndexWriter.addEntry(currentTenantPrefix, sectionStartOffset, (int)sectionSize);
     
-    sectionIndexWriter.addEntry(currentTenantPrefix, sectionStartOffset, sectionSize);
+    // Add to total uncompressed bytes
+    totalUncompressedBytes += currentSectionWriter.getTotalUncompressedBytes();
     
     LOG.info("Section closed: start={}, size={}", sectionStartOffset, sectionSize);
   }
@@ -306,6 +309,12 @@ public class MultiTenantHFileWriter implements HFile.Writer {
         // Write the section index
         LOG.info("Writing section index");
         long sectionIndexOffset = sectionIndexWriter.writeIndexBlocks(outputStream);
+
+        // Write a tenant-wide meta index block
+        HFileBlockIndex.BlockIndexWriter metaBlockIndexWriter = new HFileBlockIndex.BlockIndexWriter();
+        DataOutputStream dos = blockWriter.startWriting(BlockType.ROOT_INDEX);
+        metaBlockIndexWriter.writeSingleLevelIndex(dos, "meta");
+        blockWriter.writeHeaderAndData(outputStream);
 
         // Write file info
         LOG.info("Writing file info");
@@ -372,6 +381,15 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     
     // Section count information
     fileInfo.append(Bytes.toBytes("SECTION_COUNT"), Bytes.toBytes(sectionCount), false);
+    
+    // Add tenant index level information
+    fileInfo.append(Bytes.toBytes("TENANT_INDEX_LEVELS"), 
+                    Bytes.toBytes(sectionIndexWriter.getNumLevels()), false);
+    if (sectionIndexWriter.getNumLevels() > 1) {
+      fileInfo.append(Bytes.toBytes("TENANT_INDEX_MAX_CHUNK"), 
+                     Bytes.toBytes(conf.getInt(SectionIndexManager.SECTION_INDEX_MAX_CHUNK_SIZE, 
+                                              SectionIndexManager.DEFAULT_MAX_CHUNK_SIZE)), false);
+    }
   }
   
   @Override
@@ -513,6 +531,14 @@ public class MultiTenantHFileWriter implements HFile.Writer {
       
       LOG.debug("Closed section for tenant: {}", 
           tenantPrefix == null ? "default" : Bytes.toStringBinary(tenantPrefix));
+    }
+    
+    /**
+     * Get the starting offset of this section in the file.
+     * @return The section's starting offset
+     */
+    public long getSectionStartOffset() {
+      return sectionStartOffset;
     }
     
     @Override

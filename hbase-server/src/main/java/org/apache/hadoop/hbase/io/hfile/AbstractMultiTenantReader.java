@@ -36,6 +36,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
+import java.nio.ByteBuffer;
 
 /**
  * Abstract base class for multi-tenant HFile readers. This class handles the common
@@ -54,10 +55,14 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
   // Reuse constants from writer
   protected final TenantExtractor tenantExtractor;
   protected final Map<ImmutableBytesWritable, SectionReader> sectionReaders;
-  protected final HFileBlockIndex.ByteArrayKeyBlockIndexReader sectionIndexReader;
+  protected final SectionIndexManager.Reader sectionIndexReader;
   
   // Private map to store section metadata
   private final Map<ImmutableBytesWritable, SectionMetadata> sectionLocations = new HashMap<>();
+  
+  // Tenant index structure information
+  private int tenantIndexLevels = 1;
+  private int tenantIndexMaxChunkSize = SectionIndexManager.DEFAULT_MAX_CHUNK_SIZE;
   
   /**
    * Constructor for multi-tenant reader
@@ -79,11 +84,14 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
     this.tenantExtractor = TenantExtractorFactory.createTenantExtractor(conf, tableProperties);
     this.sectionReaders = new ConcurrentHashMap<>();
     
-    // Initialize section index - this will be used to find tenant sections
-    this.sectionIndexReader = new HFileBlockIndex.ByteArrayKeyBlockIndexReader(1);
+    // Initialize section index reader
+    this.sectionIndexReader = new SectionIndexManager.Reader();
     
     // Initialize section index using dataBlockIndexReader from parent
     initializeSectionIndex();
+    
+    // Load tenant index structure information
+    loadTenantIndexStructureInfo();
     
     LOG.info("Initialized multi-tenant reader for {}", context.getFilePath());
   }
@@ -103,41 +111,91 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
     long originalPosition = fsdis.getPos();
     
     try {
-      // Position at the beginning of the load-on-open section
-      fsdis.seek(trailer.getLoadOnOpenDataOffset());
+      LOG.debug("Seeking to load-on-open section at offset {}", trailer.getLoadOnOpenDataOffset());
       
-      // Read the section index
-      HFileBlock block = readBlock(trailer.getLoadOnOpenDataOffset(),
-                                  trailer.getUncompressedDataIndexSize(), 
-                                  true, true, false, true,
-                                  BlockType.ROOT_INDEX, null);
+      // In HFile v4, the tenant index is stored at the load-on-open offset
+      HFileBlock rootIndexBlock = getUncachedBlockReader().readBlockData(
+          trailer.getLoadOnOpenDataOffset(), -1, true, false, false);
       
-      // Use the block to initialize our data structure
-      initSectionLocations(block);
+      // Validate this is a root index block
+      if (rootIndexBlock.getBlockType() != BlockType.ROOT_INDEX) {
+        throw new IOException("Expected ROOT_INDEX block for tenant index in HFile v4, found " + 
+            rootIndexBlock.getBlockType() + " at offset " + trailer.getLoadOnOpenDataOffset());
+      }
       
-      LOG.debug("Initialized section index with {} entries", getSectionCount());
+      // Load the section index from the root block
+      sectionIndexReader.loadSectionIndex(rootIndexBlock);
+      
+      // Copy section info to our internal data structures
+      initSectionLocations();
+      
+      LOG.debug("Initialized tenant section index with {} entries", getSectionCount());
+    } catch (IOException e) {
+      LOG.error("Failed to load tenant section index", e);
+      throw e;
     } finally {
       // Restore original position
       fsdis.seek(originalPosition);
     }
   }
   
-  // Initialize our section location map from the index block
-  private void initSectionLocations(HFileBlock indexBlock) {
-    ByteBuff buffer = indexBlock.getBufferWithoutHeader();
+  /**
+   * Load information about the tenant index structure from file info
+   */
+  private void loadTenantIndexStructureInfo() {
+    // Get tenant index level information
+    byte[] tenantIndexLevelsBytes = fileInfo.get(Bytes.toBytes("TENANT_INDEX_LEVELS"));
+    if (tenantIndexLevelsBytes != null) {
+      tenantIndexLevels = Bytes.toInt(tenantIndexLevelsBytes);
+    }
     
-    // First int is the number of entries
-    int numEntries = buffer.getInt();
+    // Get chunk size for multi-level indices
+    if (tenantIndexLevels > 1) {
+      byte[] chunkSizeBytes = fileInfo.get(Bytes.toBytes("TENANT_INDEX_MAX_CHUNK"));
+      if (chunkSizeBytes != null) {
+        tenantIndexMaxChunkSize = Bytes.toInt(chunkSizeBytes);
+      }
+    }
     
-    for (int i = 0; i < numEntries; i++) {
-      // Each entry has: key length, key bytes, block offset, block on-disk size
-      int keyLength = buffer.getInt();
-      byte[] key = new byte[keyLength];
-      buffer.get(key);
-      long offset = buffer.getLong();
-      int size = buffer.getInt();
-      
-      sectionLocations.put(new ImmutableBytesWritable(key), new SectionMetadata(offset, size));
+    // Log tenant index structure information
+    int numSections = getSectionCount();
+    if (tenantIndexLevels > 1) {
+      LOG.info("Multi-tenant HFile loaded with {} sections using {}-level tenant index " +
+               "(maxChunkSize={})", 
+               numSections, tenantIndexLevels, tenantIndexMaxChunkSize);
+    } else {
+      LOG.info("Multi-tenant HFile loaded with {} sections using single-level tenant index",
+               numSections);
+    }
+    
+    LOG.debug("Tenant index details: levels={}, chunkSize={}, sections={}",
+              tenantIndexLevels, tenantIndexMaxChunkSize, numSections);
+  }
+  
+  /**
+   * Get the number of levels in the tenant index
+   * 
+   * @return The number of levels (1 for single-level, 2+ for multi-level)
+   */
+  public int getTenantIndexLevels() {
+    return tenantIndexLevels;
+  }
+  
+  /**
+   * Get the maximum chunk size used in the tenant index
+   * 
+   * @return The maximum entries per index block
+   */
+  public int getTenantIndexMaxChunkSize() {
+    return tenantIndexMaxChunkSize;
+  }
+  
+  // Initialize our section location map from the index reader
+  private void initSectionLocations() {
+    for (SectionIndexManager.SectionIndexEntry entry : sectionIndexReader.getSections()) {
+      sectionLocations.put(
+          new ImmutableBytesWritable(entry.getTenantPrefix()),
+          new SectionMetadata(entry.getOffset(), entry.getSectionSize()));
     }
   }
   
@@ -194,6 +252,14 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
     SectionMetadata(long offset, int size) {
       this.offset = offset;
       this.size = size;
+    }
+    
+    long getOffset() {
+      return offset;
+    }
+    
+    int getSize() {
+      return size;
     }
   }
   

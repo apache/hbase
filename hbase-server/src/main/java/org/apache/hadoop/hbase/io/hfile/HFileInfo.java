@@ -469,6 +469,9 @@ public class HFileInfo implements SortedMap<byte[], byte[]> {
     if (majorVersion == getMajorVersion()) {
       return;
     }
+    if (majorVersion == HFile.MIN_FORMAT_VERSION_WITH_MULTI_TENANT) {
+      return;
+    }
     int minorVersion = trailer.getMinorVersion();
     if (majorVersion == 2 && minorVersion >= MIN_V2_MINOR_VERSION_WITH_PB) {
       return;

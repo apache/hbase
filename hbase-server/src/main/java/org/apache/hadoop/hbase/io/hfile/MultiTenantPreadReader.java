@@ -23,6 +23,7 @@ import org.apache.hadoop.hbase.io.MultiTenantFSDataInputStreamWrapper;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * HFile reader for multi-tenant HFiles in PREAD (random access) mode.
@@ -44,11 +45,14 @@ public class MultiTenantPreadReader extends AbstractMultiTenantReader {
   public MultiTenantPreadReader(ReaderContext context, HFileInfo fileInfo,
       CacheConfig cacheConf, Configuration conf) throws IOException {
     super(context, fileInfo, cacheConf, conf);
+    // Tenant index structure is loaded and logged by the parent class
   }
 
   @Override
   protected SectionReader createSectionReader(byte[] tenantPrefix, SectionMetadata metadata)
       throws IOException {
+    LOG.debug("Creating section reader for tenant: {}, offset: {}, size: {}",
+        Bytes.toStringBinary(tenantPrefix), metadata.getOffset(), metadata.getSize());
     return new PreadSectionReader(tenantPrefix, metadata);
   }
 
@@ -65,21 +69,36 @@ public class MultiTenantPreadReader extends AbstractMultiTenantReader {
       if (!initialized) {
         // Create section context with section-specific settings
         MultiTenantFSDataInputStreamWrapper sectionStream = 
-            new MultiTenantFSDataInputStreamWrapper(context.getInputStreamWrapper(), metadata.offset);
+            new MultiTenantFSDataInputStreamWrapper(context.getInputStreamWrapper(), metadata.getOffset());
             
         ReaderContext sectionContext = ReaderContextBuilder.newBuilder(context)
             .withInputStreamWrapper(sectionStream)
             .withFilePath(context.getFilePath())
             .withReaderType(ReaderContext.ReaderType.PREAD)
             .withFileSystem(context.getFileSystem())
-            .withFileSize(metadata.size)
+            .withFileSize(metadata.getSize())
             .build();
 
-        // Create pread reader for this section
-        reader = new HFilePreadReader(sectionContext, fileInfo, cacheConf, getConf());
-        initialized = true;
-        LOG.debug("Initialized HFilePreadReader for tenant prefix: {}",
-            org.apache.hadoop.hbase.util.Bytes.toStringBinary(tenantPrefix));
+        try {
+          // Create a section-specific HFileInfo
+          HFileInfo sectionFileInfo = new HFileInfo(sectionContext, getConf());
+          
+          // Create pread reader for this section with the section-specific fileInfo
+          reader = new HFilePreadReader(sectionContext, sectionFileInfo, cacheConf, getConf());
+          
+          // Initialize section indices using the standard HFileInfo method
+          // This method was designed for HFile v3 format, which each section follows
+          LOG.debug("Initializing section indices for tenant at offset {}", metadata.getOffset());
+          sectionFileInfo.initMetaAndIndex(reader);
+          LOG.debug("Successfully initialized indices for section at offset {}", metadata.getOffset());
+          
+          initialized = true;
+          LOG.debug("Initialized HFilePreadReader for tenant prefix: {}", 
+              org.apache.hadoop.hbase.util.Bytes.toStringBinary(tenantPrefix));
+        } catch (IOException e) {
+          LOG.error("Failed to initialize section reader", e);
+          throw e;
+        }
       }
       return reader;
     }
@@ -88,11 +107,6 @@ public class MultiTenantPreadReader extends AbstractMultiTenantReader {
     public HFileScanner getScanner(Configuration conf, boolean cacheBlocks, 
         boolean pread, boolean isCompaction) throws IOException {
       return getReader().getScanner(conf, cacheBlocks, pread, isCompaction);
-    }
-
-    @Override
-    public void close() throws IOException {
-      close(false);
     }
 
     @Override

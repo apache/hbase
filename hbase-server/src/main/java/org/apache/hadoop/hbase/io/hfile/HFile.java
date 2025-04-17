@@ -563,7 +563,10 @@ public final class HFile {
         .withPrimaryReplicaReader(primaryReplicaReader).withReaderType(ReaderType.PREAD).build();
     HFileInfo fileInfo = new HFileInfo(context, conf);
     Reader reader = createReader(context, fileInfo, cacheConf, conf);
-    fileInfo.initMetaAndIndex(reader);
+    if (fileInfo.getTrailer().getMajorVersion() != HFile.MIN_FORMAT_VERSION_WITH_MULTI_TENANT) {
+      // Only initialize meta and index for non-multi-tenant files
+      fileInfo.initMetaAndIndex(reader);
+    }
     return reader;
   }
 
