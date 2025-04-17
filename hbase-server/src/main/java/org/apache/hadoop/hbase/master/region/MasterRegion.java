@@ -118,11 +118,6 @@ public final class MasterRegion {
 
   private MasterRegionWALRoller walRoller;
 
-  /**
-   * This is only for test purpose.
-   */
-  private boolean updateFailForTest = false;
-
   private MasterRegion(Server server, HRegion region, WALFactory walFactory,
     MasterRegionFlusherAndCompactor flusherAndCompactor, MasterRegionWALRoller walRoller) {
     this.server = server;
@@ -148,22 +143,14 @@ public final class MasterRegion {
     }
   }
 
-  @RestrictedApi(explanation = "Should only be called in tests", link = "",
-      allowedOnPath = ".*/src/test/.*")
-  public void setTestFailure() {
-    this.updateFailForTest = true;
-  }
-
   public void update(UpdateMasterRegion action) throws IOException {
     try {
-      if (updateFailForTest) {
-        // test for HBASE-29251
-        throw new IOException("Update failed");
-      }
       action.update(region);
       flusherAndCompactor.onUpdate();
     } catch (IOException e) {
-      LOG.error(HBaseMarkers.FATAL, "MasterRegion mutation is not successful. Aborting server.");
+      LOG.error(HBaseMarkers.FATAL,
+        "MasterRegion mutation is not successful. Aborting server to let new active master "
+          + "resume failed proc store update.");
       server.abort("MasterRegion mutation is not successful", e);
       throw e;
     }

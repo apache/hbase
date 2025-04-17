@@ -17,22 +17,35 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import java.io.IOException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.Mutation;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.hbck.HbckChore;
 import org.apache.hadoop.hbase.master.hbck.HbckReport;
-import org.apache.hadoop.hbase.master.region.MasterRegion;
+import org.apache.hadoop.hbase.master.region.MasterRegionFactory;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.OperationStatus;
+import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
@@ -47,7 +60,11 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 
-@Category({ MiscTests.class, LargeTests.class })
+/**
+ * MasterRegion related test that ensures the operations continue even when Procedure state update
+ * encounters IO errors.
+ */
+@Category({ MasterTests.class, LargeTests.class })
 public class TestMasterRegionMutation {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMasterRegionMutation.class);
@@ -62,10 +79,13 @@ public class TestMasterRegionMutation {
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static ServerName rs0;
 
+  private static final AtomicBoolean ERROR_OUT = new AtomicBoolean(false);
+
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
+    TEST_UTIL.getConfiguration().setClass(HConstants.REGION_IMPL, TestRegion.class, HRegion.class);
     StartTestingClusterOption.Builder builder = StartTestingClusterOption.builder();
-    builder.numMasters(2).numRegionServers(3);
+    builder.numMasters(4).numRegionServers(3);
     TEST_UTIL.startMiniCluster(builder.build());
     SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     rs0 = cluster.getRegionServer(0).getServerName();
@@ -105,12 +125,17 @@ public class TestMasterRegionMutation {
     Assert.assertEquals(0, hbckReport.getOrphanRegionsOnFS().size());
     Assert.assertEquals(0, hbckReport.getOrphanRegionsOnRS().size());
 
-    MasterRegion masterRegion = cluster.getMaster().getMasterRegion();
-    masterRegion.setTestFailure();
+    // procedure state store update failure needs to trigger active master abort and hence master
+    // failover
+    ERROR_OUT.set(true);
 
     // move one region from server 1 to server 0
     TEST_UTIL.getAdmin()
       .move(hRegionServer1.getRegions().get(0).getRegionInfo().getEncodedNameAsBytes(), rs0);
+
+    // procedure state store update failure needs to trigger active master abort and hence master
+    // failover
+    ERROR_OUT.set(true);
 
     // move one region from server 2 to server 0
     TEST_UTIL.getAdmin()
@@ -153,6 +178,32 @@ public class TestMasterRegionMutation {
         && report.getOrphanRegionsOnRS().isEmpty();
     });
 
+  }
+
+  public static class TestRegion extends HRegion {
+
+    public TestRegion(Path tableDir, WAL wal, FileSystem fs, Configuration confParam,
+      RegionInfo regionInfo, TableDescriptor htd, RegionServerServices rsServices) {
+      super(tableDir, wal, fs, confParam, regionInfo, htd, rsServices);
+    }
+
+    public TestRegion(HRegionFileSystem fs, WAL wal, Configuration confParam, TableDescriptor htd,
+      RegionServerServices rsServices) {
+      super(fs, wal, confParam, htd, rsServices);
+    }
+
+    @Override
+    public OperationStatus[] batchMutate(Mutation[] mutations, boolean atomic, long nonceGroup,
+      long nonce) throws IOException {
+      if (
+        MasterRegionFactory.TABLE_NAME.equals(getTableDescriptor().getTableName())
+          && ERROR_OUT.get()
+      ) {
+        ERROR_OUT.set(false);
+        throw new IOException("test error");
+      }
+      return super.batchMutate(mutations, atomic, nonceGroup, nonce);
+    }
   }
 
 }
