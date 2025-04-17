@@ -32,7 +32,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * reuse them in every block that gets decompressed.
  */
 @InterfaceAudience.Private
-public class ZstdHFileDecompressionContext extends Compression.HFileDecompressionContext {
+public final class ZstdHFileDecompressionContext extends Compression.HFileDecompressionContext {
 
   public static final long FIXED_OVERHEAD =
     ClassSize.estimateBase(ZstdHFileDecompressionContext.class, false);

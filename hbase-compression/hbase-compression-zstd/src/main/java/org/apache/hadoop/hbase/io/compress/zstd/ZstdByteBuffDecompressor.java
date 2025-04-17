@@ -126,7 +126,8 @@ public class ZstdByteBuffDecompressor implements ByteBuffDecompressor {
         }
       } else {
         throw new IllegalArgumentException(
-          "ZstdByteBuffDecompression#reinit() was given an HFileDecompressionContext that was not a ZstdHFileDecompressionContext, this should never happen");
+          "ZstdByteBuffDecompression#reinit() was given an HFileDecompressionContext that was not "
+            + "a ZstdHFileDecompressionContext, this should never happen");
       }
     }
   }
