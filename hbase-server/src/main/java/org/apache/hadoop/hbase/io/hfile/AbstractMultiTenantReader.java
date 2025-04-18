@@ -30,12 +30,13 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
+import org.apache.hadoop.hbase.io.MultiTenantFSDataInputStreamWrapper;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.hbase.nio.ByteBuff;
-import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import java.nio.ByteBuffer;
 
 /**
@@ -339,10 +340,13 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
     protected final SectionMetadata metadata;
     protected HFileReaderImpl reader;
     protected boolean initialized = false;
+    protected boolean usesRelativeOffsets = false;
+    protected long sectionBaseOffset;
     
     public SectionReader(byte[] tenantPrefix, SectionMetadata metadata) {
       this.tenantPrefix = tenantPrefix;
       this.metadata = metadata;
+      this.sectionBaseOffset = metadata.getOffset();
     }
     
     /**
@@ -382,6 +386,28 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
      * @throws IOException If an error occurs closing the reader
      */
     public abstract void close(boolean evictOnClose) throws IOException;
+    
+    /**
+     * Check if the section uses relative offsets by examining file info
+     * 
+     * @param sectionFileInfo The section's file info
+     */
+    protected void initOffsetTranslation(HFileInfo sectionFileInfo) {
+      // Check if this section uses relative offsets
+      byte[] relativeOffsetsBytes = sectionFileInfo.get(Bytes.toBytes("USING_RELATIVE_OFFSETS"));
+      if (relativeOffsetsBytes != null) {
+        usesRelativeOffsets = Bytes.toBoolean(relativeOffsetsBytes);
+        
+        // If there's an explicit base offset in file info, use it
+        byte[] baseOffsetBytes = sectionFileInfo.get(Bytes.toBytes("SECTION_BASE_OFFSET"));
+        if (baseOffsetBytes != null) {
+          sectionBaseOffset = Bytes.toLong(baseOffsetBytes);
+        }
+        
+        LOG.debug("Section for tenant {} uses relative offsets (base={})", 
+            Bytes.toStringBinary(tenantPrefix), sectionBaseOffset);
+      }
+    }
   }
   
   /**
@@ -637,5 +663,31 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
   @Override
   public int getMajorVersion() {
     return HFile.MIN_FORMAT_VERSION_WITH_MULTI_TENANT;
+  }
+
+  /**
+   * Build a section context with the appropriate offset translation wrapper
+   * 
+   * @param metadata The section metadata
+   * @param readerType The type of reader (PREAD or STREAM)
+   * @return A reader context for the section
+   */
+  protected ReaderContext buildSectionContext(SectionMetadata metadata, 
+                                            ReaderContext.ReaderType readerType) throws IOException {
+    // Create a special wrapper with offset translation capabilities
+    FSDataInputStreamWrapper parentWrapper = context.getInputStreamWrapper();
+    MultiTenantFSDataInputStreamWrapper sectionWrapper = 
+        new MultiTenantFSDataInputStreamWrapper(parentWrapper, metadata.getOffset());
+    
+    // Build the reader context
+    ReaderContext sectionContext = ReaderContextBuilder.newBuilder(context)
+        .withInputStreamWrapper(sectionWrapper)
+        .withFilePath(context.getFilePath())
+        .withReaderType(readerType)
+        .withFileSystem(context.getFileSystem())
+        .withFileSize(metadata.getSize())
+        .build();
+    
+    return sectionContext;
   }
 } 

@@ -407,11 +407,6 @@ public class MultiTenantHFileWriter implements HFile.Writer {
   }
   
   @Override
-  public Path getPath() {
-    return path;
-  }
-  
-  @Override
   public void addInlineBlockWriter(InlineBlockWriter ibw) {
     if (currentSectionWriter != null) {
       currentSectionWriter.addInlineBlockWriter(ibw);
@@ -433,11 +428,6 @@ public class MultiTenantHFileWriter implements HFile.Writer {
   }
   
   @Override
-  public HFileContext getFileContext() {
-    return fileContext;
-  }
-  
-  @Override
   public void beforeShipped() throws IOException {
     if (currentSectionWriter != null) {
       currentSectionWriter.beforeShipped();
@@ -447,6 +437,16 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     if (this.lastCell != null) {
       this.lastCell = KeyValueUtil.toNewKeyCell((ExtendedCell)this.lastCell);
     }
+  }
+  
+  @Override
+  public Path getPath() {
+    return path;
+  }
+  
+  @Override
+  public HFileContext getFileContext() {
+    return fileContext;
   }
   
   public long getEntryCount() {
@@ -490,6 +490,10 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     private final byte[] tenantPrefix;
     private final long sectionStartOffset;
     private boolean closed = false;
+    private boolean useRelativeOffsets = true; // Use relative offsets by default
+    
+    // Track original stream when using relative position wrapper
+    private FSDataOutputStream originalOutputStream = null;
     
     public VirtualSectionWriter(
         Configuration conf,
@@ -509,8 +513,79 @@ public class MultiTenantHFileWriter implements HFile.Writer {
         appendFileInfo(Bytes.toBytes("TENANT_PREFIX"), tenantPrefix);
       }
       
+      // Add relative offset information to section file info
+      appendFileInfo(Bytes.toBytes("USING_RELATIVE_OFFSETS"), Bytes.toBytes(useRelativeOffsets));
+      appendFileInfo(Bytes.toBytes("SECTION_BASE_OFFSET"), Bytes.toBytes(sectionStartOffset));
+      
       LOG.debug("Created section writer at offset {} for tenant {}", 
           sectionStartOffset, tenantPrefix == null ? "default" : Bytes.toStringBinary(tenantPrefix));
+    }
+    
+    /**
+     * Enable relative position translation by replacing the output stream with a wrapper
+     */
+    private void enableRelativePositionTranslation() {
+      if (!useRelativeOffsets || originalOutputStream != null) {
+        return; // Already using a relative stream or not needed
+      }
+      
+      // Store the original stream
+      originalOutputStream = outputStream;
+      final long baseOffset = sectionStartOffset;
+      
+      // Create a position-translating wrapper
+      outputStream = new FSDataOutputStream(originalOutputStream.getWrappedStream(), null) {
+        @Override
+        public long getPos() {
+          // Get absolute position
+          long absolutePos = 0;
+          try {
+            absolutePos = originalOutputStream.getPos();
+          } catch (Exception e) {
+            LOG.error("Error getting position", e);
+          }
+          
+          // Convert to position relative to section start
+          return absolutePos - baseOffset;
+        }
+        
+        @Override
+        public void write(byte[] b, int off, int len) throws IOException {
+          originalOutputStream.write(b, off, len);
+        }
+        
+        @Override
+        public void flush() throws IOException {
+          originalOutputStream.flush();
+        }
+      };
+    }
+    
+    /**
+     * Restore the original output stream after using enableRelativePositionTranslation()
+     */
+    private void disableRelativePositionTranslation() {
+      if (originalOutputStream != null) {
+        outputStream = originalOutputStream;
+        originalOutputStream = null;
+      }
+    }
+    
+    @Override
+    public void append(ExtendedCell cell) throws IOException {
+      checkNotClosed();
+      
+      // Use relative positions during append
+      if (useRelativeOffsets) {
+        enableRelativePositionTranslation();
+      }
+      
+      try {
+        super.append(cell);
+      } finally {
+        // Always restore original stream after operation
+        disableRelativePositionTranslation();
+      }
     }
     
     @Override
@@ -519,15 +594,18 @@ public class MultiTenantHFileWriter implements HFile.Writer {
         return;
       }
       
-      // Call the parent close method, which will write all necessary blocks
-      // for a complete HFile v3 section including:
-      // - Meta blocks
-      // - File info
-      // - Data block index
-      // - Meta block index
-      // - Fixed file trailer
-      super.close();
-      closed = true;
+      // Use relative positions during close
+      if (useRelativeOffsets) {
+        enableRelativePositionTranslation();
+      }
+      
+      try {
+        super.close();
+        closed = true;
+      } finally {
+        // Always restore original stream after operation
+        disableRelativePositionTranslation();
+      }
       
       LOG.debug("Closed section for tenant: {}", 
           tenantPrefix == null ? "default" : Bytes.toStringBinary(tenantPrefix));
@@ -548,45 +626,93 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     }
     
     @Override
-    public void append(ExtendedCell cell) throws IOException {
-      checkNotClosed();
-      super.append(cell);
-    }
-    
-    @Override
     public void appendFileInfo(byte[] key, byte[] value) throws IOException {
       checkNotClosed();
-      super.appendFileInfo(key, value);
+      
+      if (useRelativeOffsets) {
+        enableRelativePositionTranslation();
+      }
+      
+      try {
+        super.appendFileInfo(key, value);
+      } finally {
+        disableRelativePositionTranslation();
+      }
     }
     
     @Override
     public void appendMetaBlock(String metaBlockName, Writable content) {
       checkNotClosed();
-      super.appendMetaBlock(metaBlockName, content);
+      
+      if (useRelativeOffsets) {
+        enableRelativePositionTranslation();
+      }
+      
+      try {
+        super.appendMetaBlock(metaBlockName, content);
+      } finally {
+        disableRelativePositionTranslation();
+      }
     }
     
     @Override
     public void addInlineBlockWriter(InlineBlockWriter ibw) {
       checkNotClosed();
-      super.addInlineBlockWriter(ibw);
+      
+      if (useRelativeOffsets) {
+        enableRelativePositionTranslation();
+      }
+      
+      try {
+        super.addInlineBlockWriter(ibw);
+      } finally {
+        disableRelativePositionTranslation();
+      }
     }
     
     @Override
     public void addGeneralBloomFilter(BloomFilterWriter bfw) {
       checkNotClosed();
-      super.addGeneralBloomFilter(bfw);
+      
+      if (useRelativeOffsets) {
+        enableRelativePositionTranslation();
+      }
+      
+      try {
+        super.addGeneralBloomFilter(bfw);
+      } finally {
+        disableRelativePositionTranslation();
+      }
     }
     
     @Override
     public void addDeleteFamilyBloomFilter(BloomFilterWriter bfw) {
       checkNotClosed();
-      super.addDeleteFamilyBloomFilter(bfw);
+      
+      if (useRelativeOffsets) {
+        enableRelativePositionTranslation();
+      }
+      
+      try {
+        super.addDeleteFamilyBloomFilter(bfw);
+      } finally {
+        disableRelativePositionTranslation();
+      }
     }
     
     @Override
     public void beforeShipped() throws IOException {
       checkNotClosed();
-      super.beforeShipped();
+      
+      if (useRelativeOffsets) {
+        enableRelativePositionTranslation();
+      }
+      
+      try {
+        super.beforeShipped();
+      } finally {
+        disableRelativePositionTranslation();
+      }
     }
     
     private void checkNotClosed() {

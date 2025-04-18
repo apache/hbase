@@ -18,8 +18,13 @@
 package org.apache.hadoop.hbase.io;
 
 import java.io.IOException;
+import java.io.InputStream;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A specialized FSDataInputStreamWrapper for multi-tenant HFile section reading.
@@ -27,8 +32,11 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class MultiTenantFSDataInputStreamWrapper extends FSDataInputStreamWrapper {
-  private final long sectionOffset;
+  private static final Logger LOG = LoggerFactory.getLogger(MultiTenantFSDataInputStreamWrapper.class);
+  
   private final FSDataInputStreamWrapper parent;
+  private final long sectionOffset;
+  private boolean useRelativeOffsets = false;
   
   /**
    * Creates a wrapper over an existing input stream with a section offset.
@@ -37,15 +45,26 @@ public class MultiTenantFSDataInputStreamWrapper extends FSDataInputStreamWrappe
    * @param sectionOffset The offset to the start of the section
    */
   public MultiTenantFSDataInputStreamWrapper(FSDataInputStreamWrapper parent, long sectionOffset) {
-    super(new ForwardingFSDataInputStream(parent.getStream(false), sectionOffset));
+    super(new ForwardingFSDataInputStream(parent.getStream(false), sectionOffset, false));
     this.parent = parent;
     this.sectionOffset = sectionOffset;
+  }
+  
+  /**
+   * Set whether this wrapper should use relative offsets.
+   * @param value True to use relative offsets, false for absolute offsets
+   */
+  public void setUsesRelativeOffsets(boolean value) {
+    this.useRelativeOffsets = value;
+    LOG.debug("Set relative offset mode to {} (base offset={})", value, sectionOffset);
   }
   
   @Override
   public FSDataInputStream getStream(boolean useHBaseChecksum) {
     // Always delegate to the original stream with offset adjustment
-    return new ForwardingFSDataInputStream(parent.getStream(useHBaseChecksum), sectionOffset);
+    ForwardingFSDataInputStream stream = new ForwardingFSDataInputStream(
+        parent.getStream(useHBaseChecksum), sectionOffset, useRelativeOffsets);
+    return stream;
   }
 
   @Override
@@ -69,42 +88,79 @@ public class MultiTenantFSDataInputStreamWrapper extends FSDataInputStreamWrappe
     parent.unbuffer();
   }
   
+  @Override
+  public Path getReaderPath() {
+    return parent.getReaderPath();
+  }
+  
   /**
    * Inner class that forwards input stream operations with offset adjustment.
    */
   private static class ForwardingFSDataInputStream extends FSDataInputStream {
     private final FSDataInputStream delegate;
     private final long offset;
+    private boolean useRelativeOffsets;
     
-    public ForwardingFSDataInputStream(FSDataInputStream delegate, long offset) {
+    public ForwardingFSDataInputStream(FSDataInputStream delegate, long offset, boolean useRelativeOffsets) {
       super(delegate.getWrappedStream());
       this.delegate = delegate;
       this.offset = offset;
+      this.useRelativeOffsets = useRelativeOffsets;
     }
     
     @Override
     public void seek(long pos) throws IOException {
-      delegate.seek(pos + offset);
+      if (useRelativeOffsets) {
+        // If using relative offsets, translate relative to absolute
+        delegate.seek(pos + offset);
+      } else {
+        // Otherwise, pass through directly
+        delegate.seek(pos);
+      }
     }
     
     @Override
     public long getPos() throws IOException {
-      return delegate.getPos() - offset;
+      if (useRelativeOffsets) {
+        // If using relative offsets, translate absolute to relative
+        return delegate.getPos() - offset;
+      } else {
+        // Otherwise, return actual position
+        return delegate.getPos();
+      }
     }
     
     @Override
     public int read(long position, byte[] buffer, int offset, int length) throws IOException {
-      return delegate.read(position + this.offset, buffer, offset, length);
+      if (useRelativeOffsets) {
+        // If using relative offsets, translate relative to absolute
+        return delegate.read(position + this.offset, buffer, offset, length);
+      } else {
+        // Otherwise, pass through directly
+        return delegate.read(position, buffer, offset, length);
+      }
     }
     
     @Override
     public void readFully(long position, byte[] buffer, int offset, int length) throws IOException {
-      delegate.readFully(position + this.offset, buffer, offset, length);
+      if (useRelativeOffsets) {
+        // If using relative offsets, translate relative to absolute
+        delegate.readFully(position + this.offset, buffer, offset, length);
+      } else {
+        // Otherwise, pass through directly
+        delegate.readFully(position, buffer, offset, length);
+      }
     }
     
     @Override
     public void readFully(long position, byte[] buffer) throws IOException {
-      delegate.readFully(position + this.offset, buffer);
+      if (useRelativeOffsets) {
+        // If using relative offsets, translate relative to absolute
+        delegate.readFully(position + this.offset, buffer);
+      } else {
+        // Otherwise, pass through directly
+        delegate.readFully(position, buffer);
+      }
     }
   }
 } 

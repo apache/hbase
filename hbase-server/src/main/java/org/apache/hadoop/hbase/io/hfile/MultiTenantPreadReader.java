@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.MultiTenantFSDataInputStreamWrapper;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -67,17 +68,9 @@ public class MultiTenantPreadReader extends AbstractMultiTenantReader {
     @Override
     public synchronized HFileReaderImpl getReader() throws IOException {
       if (!initialized) {
-        // Create section context with section-specific settings
-        MultiTenantFSDataInputStreamWrapper sectionStream = 
-            new MultiTenantFSDataInputStreamWrapper(context.getInputStreamWrapper(), metadata.getOffset());
-            
-        ReaderContext sectionContext = ReaderContextBuilder.newBuilder(context)
-            .withInputStreamWrapper(sectionStream)
-            .withFilePath(context.getFilePath())
-            .withReaderType(ReaderContext.ReaderType.PREAD)
-            .withFileSystem(context.getFileSystem())
-            .withFileSize(metadata.getSize())
-            .build();
+        // Create section context with section-specific settings using parent method
+        ReaderContext sectionContext = buildSectionContext(
+            metadata, ReaderContext.ReaderType.PREAD);
 
         try {
           // Create a section-specific HFileInfo
@@ -85,6 +78,9 @@ public class MultiTenantPreadReader extends AbstractMultiTenantReader {
           
           // Create pread reader for this section with the section-specific fileInfo
           reader = new HFilePreadReader(sectionContext, sectionFileInfo, cacheConf, getConf());
+          
+          // Check if this section uses relative offsets
+          initOffsetTranslation(sectionFileInfo);
           
           // Initialize section indices using the standard HFileInfo method
           // This method was designed for HFile v3 format, which each section follows
