@@ -15,16 +15,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.util;
+package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.RegionTooBusyException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
@@ -34,7 +36,6 @@ import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
-import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.hbck.HbckChore;
 import org.apache.hadoop.hbase.master.hbck.HbckReport;
 import org.apache.hadoop.hbase.master.region.MasterRegionFactory;
@@ -45,6 +46,7 @@ import org.apache.hadoop.hbase.regionserver.OperationStatus;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -65,27 +67,30 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
  * encounters IO errors.
  */
 @Category({ MasterTests.class, LargeTests.class })
-public class TestMasterRegionMutation {
+public class TestMasterRegionMutation1 {
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestMasterRegionMutation.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestMasterRegionMutation1.class);
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMasterRegionMutation.class);
+    HBaseClassTestRule.forClass(TestMasterRegionMutation1.class);
 
   @Rule
   public TestName name = new TestName();
 
-  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
-  private static ServerName rs0;
+  protected static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
+  protected static ServerName rs0;
 
-  private static final AtomicBoolean ERROR_OUT = new AtomicBoolean(false);
+  protected static final AtomicBoolean ERROR_OUT = new AtomicBoolean(false);
+  private static final AtomicInteger ERROR_COUNTER = new AtomicInteger(0);
+  private static final AtomicBoolean FIRST_TIME_ERROR = new AtomicBoolean(true);
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    TEST_UTIL.getConfiguration().setClass(HConstants.REGION_IMPL, TestRegion.class, HRegion.class);
+    TEST_UTIL.getConfiguration().setClass(HConstants.REGION_IMPL, TestRegion2.class, HRegion.class);
     StartTestingClusterOption.Builder builder = StartTestingClusterOption.builder();
-    builder.numMasters(4).numRegionServers(3);
+    // 1 master is expected to be aborted with this test
+    builder.numMasters(2).numRegionServers(3);
     TEST_UTIL.startMiniCluster(builder.build());
     SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     rs0 = cluster.getRegionServer(0).getServerName();
@@ -125,16 +130,15 @@ public class TestMasterRegionMutation {
     Assert.assertEquals(0, hbckReport.getOrphanRegionsOnFS().size());
     Assert.assertEquals(0, hbckReport.getOrphanRegionsOnRS().size());
 
-    // procedure state store update failure needs to trigger active master abort and hence master
-    // failover
+    // procedure state store update encounters retriable error, master abort is not required
     ERROR_OUT.set(true);
 
     // move one region from server 1 to server 0
     TEST_UTIL.getAdmin()
       .move(hRegionServer1.getRegions().get(0).getRegionInfo().getEncodedNameAsBytes(), rs0);
 
-    // procedure state store update failure needs to trigger active master abort and hence master
-    // failover
+    // procedure state store update encounters retriable error, however all retries are exhausted.
+    // This leads to the trigger of active master abort and hence master failover.
     ERROR_OUT.set(true);
 
     // move one region from server 2 to server 0
@@ -180,14 +184,14 @@ public class TestMasterRegionMutation {
 
   }
 
-  public static class TestRegion extends HRegion {
+  public static class TestRegion2 extends HRegion {
 
-    public TestRegion(Path tableDir, WAL wal, FileSystem fs, Configuration confParam,
+    public TestRegion2(Path tableDir, WAL wal, FileSystem fs, Configuration confParam,
       RegionInfo regionInfo, TableDescriptor htd, RegionServerServices rsServices) {
       super(tableDir, wal, fs, confParam, regionInfo, htd, rsServices);
     }
 
-    public TestRegion(HRegionFileSystem fs, WAL wal, Configuration confParam, TableDescriptor htd,
+    public TestRegion2(HRegionFileSystem fs, WAL wal, Configuration confParam, TableDescriptor htd,
       RegionServerServices rsServices) {
       super(fs, wal, confParam, htd, rsServices);
     }
@@ -199,8 +203,19 @@ public class TestMasterRegionMutation {
         MasterRegionFactory.TABLE_NAME.equals(getTableDescriptor().getTableName())
           && ERROR_OUT.get()
       ) {
-        ERROR_OUT.set(false);
-        throw new IOException("test error");
+        // First time errors are recovered with enough retries
+        if (FIRST_TIME_ERROR.get() && ERROR_COUNTER.getAndIncrement() == 5) {
+          ERROR_OUT.set(false);
+          ERROR_COUNTER.set(0);
+          FIRST_TIME_ERROR.set(false);
+          return super.batchMutate(mutations, atomic, nonceGroup, nonce);
+        }
+        // Second time errors are not recovered with enough retries, leading to master abort
+        if (!FIRST_TIME_ERROR.get() && ERROR_COUNTER.getAndIncrement() == 8) {
+          ERROR_OUT.set(false);
+          ERROR_COUNTER.set(0);
+        }
+        throw new RegionTooBusyException("test error...");
       }
       return super.batchMutate(mutations, atomic, nonceGroup, nonce);
     }
