@@ -1768,7 +1768,6 @@ public class ProcedureExecutor<TEnvironment> {
   }
 
   private void yieldProcedure(Procedure<TEnvironment> proc) {
-    proc.afterExec(getEnvironment());
     releaseLock(proc, false);
     scheduler.yield(proc);
   }
@@ -1833,11 +1832,13 @@ public class ProcedureExecutor<TEnvironment> {
         suspended = true;
       } catch (ProcedureYieldException e) {
         LOG.trace("Yield {}", procedure, e);
+        procedure.afterExec(getEnvironment());
         yieldProcedure(procedure);
         return;
       } catch (InterruptedException e) {
         LOG.trace("Yield interrupt {}", procedure, e);
         handleInterruptedException(procedure, e);
+        procedure.afterExec(getEnvironment());
         yieldProcedure(procedure);
         return;
       } catch (Throwable e) {
