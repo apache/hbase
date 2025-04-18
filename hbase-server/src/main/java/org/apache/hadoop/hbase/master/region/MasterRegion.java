@@ -148,6 +148,11 @@ public final class MasterRegion {
       action.update(region);
       flusherAndCompactor.onUpdate();
     } catch (IOException e) {
+      // We catch IOException here to ensure that if the mutation is not successful
+      // even after the internal retries done within AbstractFSWAL, we better abort
+      // the active master so that the new active master can take care of resuming
+      // the procedure state which could not be persisted successfully by previously
+      // aborted master. Refer to Jira: HBASE-29251.
       LOG.error(HBaseMarkers.FATAL,
         "MasterRegion update is not successful. Aborting server to let new active master "
           + "resume failed proc store update.");
