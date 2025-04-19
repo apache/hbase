@@ -168,7 +168,7 @@ public final class SaslClientAuthenticationProviders {
   static SaslClientAuthenticationProviders instantiate(Configuration conf) {
     ServiceLoader<SaslClientAuthenticationProvider> loader =
       ServiceLoader.load(SaslClientAuthenticationProvider.class,
-      SaslClientAuthenticationProviders.class.getClassLoader());
+        SaslClientAuthenticationProviders.class.getClassLoader());
     HashMap<Byte, SaslClientAuthenticationProvider> providerMap = new HashMap<>();
     for (SaslClientAuthenticationProvider provider : loader) {
       addProviderIfNotExists(provider, providerMap);
