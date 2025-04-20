@@ -1822,6 +1822,7 @@ public class ProcedureExecutor<TEnvironment> {
       reExecute = false;
       procedure.resetPersistence();
       try {
+        procedure.beforeExec(getEnvironment());
         subprocs = procedure.doExecute(getEnvironment());
         if (subprocs != null && subprocs.length == 0) {
           subprocs = null;
@@ -1831,11 +1832,13 @@ public class ProcedureExecutor<TEnvironment> {
         suspended = true;
       } catch (ProcedureYieldException e) {
         LOG.trace("Yield {}", procedure, e);
+        procedure.afterExec(getEnvironment());
         yieldProcedure(procedure);
         return;
       } catch (InterruptedException e) {
         LOG.trace("Yield interrupt {}", procedure, e);
         handleInterruptedException(procedure, e);
+        procedure.afterExec(getEnvironment());
         yieldProcedure(procedure);
         return;
       } catch (Throwable e) {
@@ -1907,6 +1910,7 @@ public class ProcedureExecutor<TEnvironment> {
           updateStoreOnExec(procStack, procedure, subprocs);
         }
       }
+      procedure.afterExec(getEnvironment());
 
       // if the store is not running we are aborting
       if (!store.isRunning()) {
