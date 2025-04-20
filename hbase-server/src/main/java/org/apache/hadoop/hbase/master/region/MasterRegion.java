@@ -157,7 +157,7 @@ public final class MasterRegion {
   /**
    * Performs the mutation to the master region using UpdateMasterRegion update action.
    * @param action Update region action.
-   * @throws IOException IO errors that causes active master to abort.
+   * @throws IOException IO error that causes active master to abort.
    */
   public void update(UpdateMasterRegion action) throws IOException {
     for (int tries = 0; tries < maxRetriesForRegionUpdates; tries++) {
@@ -174,7 +174,7 @@ public final class MasterRegion {
         if (tries == (maxRetriesForRegionUpdates - 1)) {
           abortServer(e);
         }
-        LOG.info("Master region is too busy... retry attempt: {}", tries);
+        LOG.info("Master region {} is too busy... retry attempt: {}", region, tries);
         Threads.sleep(ConnectionUtils.getPauseTime(regionUpdateRetryPauseTime, tries));
       } catch (IOException e) {
         // We catch IOException here to ensure that if the mutation is not successful
@@ -187,6 +187,13 @@ public final class MasterRegion {
     }
   }
 
+  /**
+   * Log the error and abort the master daemon immediately. Use this utility only when procedure
+   * state store update fails and the only way to recover is by terminating the active master so
+   * that new failed-over active master can resume the procedure execution.
+   * @param e IO error that causes active master to abort.
+   * @throws IOException IO error that causes active master to abort.
+   */
   private void abortServer(IOException e) throws IOException {
     LOG.error(HBaseMarkers.FATAL,
       "MasterRegion update is not successful. Aborting server to let new active master "

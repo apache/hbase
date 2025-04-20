@@ -64,7 +64,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 
 /**
  * MasterRegion related test that ensures the operations continue even when Procedure state update
- * encounters IO errors.
+ * encounters retriable IO errors.
  */
 @Category({ MasterTests.class, LargeTests.class })
 public class TestMasterRegionMutation1 {
@@ -87,7 +87,7 @@ public class TestMasterRegionMutation1 {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    TEST_UTIL.getConfiguration().setClass(HConstants.REGION_IMPL, TestRegion2.class, HRegion.class);
+    TEST_UTIL.getConfiguration().setClass(HConstants.REGION_IMPL, TestRegion.class, HRegion.class);
     StartTestingClusterOption.Builder builder = StartTestingClusterOption.builder();
     // 1 master is expected to be aborted with this test
     builder.numMasters(2).numRegionServers(3);
@@ -184,14 +184,14 @@ public class TestMasterRegionMutation1 {
 
   }
 
-  public static class TestRegion2 extends HRegion {
+  public static class TestRegion extends HRegion {
 
-    public TestRegion2(Path tableDir, WAL wal, FileSystem fs, Configuration confParam,
+    public TestRegion(Path tableDir, WAL wal, FileSystem fs, Configuration confParam,
       RegionInfo regionInfo, TableDescriptor htd, RegionServerServices rsServices) {
       super(tableDir, wal, fs, confParam, regionInfo, htd, rsServices);
     }
 
-    public TestRegion2(HRegionFileSystem fs, WAL wal, Configuration confParam, TableDescriptor htd,
+    public TestRegion(HRegionFileSystem fs, WAL wal, Configuration confParam, TableDescriptor htd,
       RegionServerServices rsServices) {
       super(fs, wal, confParam, htd, rsServices);
     }

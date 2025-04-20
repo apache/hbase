@@ -56,7 +56,7 @@ public class TestMasterRegionMutation2 extends TestMasterRegionMutation1 {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    TEST_UTIL.getConfiguration().setClass(HConstants.REGION_IMPL, TestRegion1.class, HRegion.class);
+    TEST_UTIL.getConfiguration().setClass(HConstants.REGION_IMPL, TestRegion.class, HRegion.class);
     StartTestingClusterOption.Builder builder = StartTestingClusterOption.builder();
     // 2 masters are expected to be aborted with this test
     builder.numMasters(3).numRegionServers(3);
@@ -81,14 +81,14 @@ public class TestMasterRegionMutation2 extends TestMasterRegionMutation1 {
     super.testMasterRegionMutations();
   }
 
-  public static class TestRegion1 extends HRegion {
+  public static class TestRegion extends HRegion {
 
-    public TestRegion1(Path tableDir, WAL wal, FileSystem fs, Configuration confParam,
+    public TestRegion(Path tableDir, WAL wal, FileSystem fs, Configuration confParam,
       RegionInfo regionInfo, TableDescriptor htd, RegionServerServices rsServices) {
       super(tableDir, wal, fs, confParam, regionInfo, htd, rsServices);
     }
 
-    public TestRegion1(HRegionFileSystem fs, WAL wal, Configuration confParam, TableDescriptor htd,
+    public TestRegion(HRegionFileSystem fs, WAL wal, Configuration confParam, TableDescriptor htd,
       RegionServerServices rsServices) {
       super(fs, wal, confParam, htd, rsServices);
     }
