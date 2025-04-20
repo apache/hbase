@@ -65,7 +65,7 @@ public class TestIncrementalBackupDeleteTable extends TestBackupBase {
     BackupAdminImpl client = new BackupAdminImpl(conn);
 
     BackupRequest request = createBackupRequest(BackupType.FULL, tables, BACKUP_ROOT_DIR);
-    String backupIdFull = client.backupTables(request);
+    String backupIdFull = client.backupTables(request).getBackupId();
 
     assertTrue(checkSucceeded(backupIdFull));
 
@@ -88,7 +88,7 @@ public class TestIncrementalBackupDeleteTable extends TestBackupBase {
     // #3 - incremental backup for table1
     tables = Lists.newArrayList(table1);
     request = createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR);
-    String backupIdIncMultiple = client.backupTables(request);
+    String backupIdIncMultiple = client.backupTables(request).getBackupId();
     assertTrue(checkSucceeded(backupIdIncMultiple));
 
     // #4 - restore full backup for all tables, without overwrite

@@ -17,15 +17,19 @@
  */
 package org.apache.hadoop.hbase.backup;
 
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -58,7 +62,10 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.cleaner.LogCleaner;
 import org.apache.hadoop.hbase.master.cleaner.TimeToLiveLogCleaner;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.regionserver.LogRoller;
+import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
+import org.apache.hadoop.hbase.rsgroup.RSGroupUtil;
 import org.apache.hadoop.hbase.security.HadoopSecurityEnabledUserProviderForTesting;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.SecureTestUtil;
@@ -87,6 +94,15 @@ public class TestBackupBase {
   protected static Configuration conf1;
   protected static Configuration conf2;
 
+  protected static final int RSGROUP_RS_NUM = 5;
+  protected static final int NUM_REGIONSERVERS = 3;
+  protected static final String RSGROUP_NAME = "rsgroup1";
+  protected static final String RSGROUP_NAMESPACE = "rsgroup_ns";
+  protected static final TableName RSGROUP_TABLE_1 =
+    TableName.valueOf(RSGROUP_NAMESPACE + ":rsgroup_table1");
+  protected static final TableName RSGROUP_TABLE_2 =
+    TableName.valueOf(RSGROUP_NAMESPACE + ":rsgroup_table2");
+
   protected static TableName table1 = TableName.valueOf("table1");
   protected static TableDescriptor table1Desc;
   protected static TableName table2 = TableName.valueOf("table2");
@@ -108,6 +124,7 @@ public class TestBackupBase {
 
   protected static boolean autoRestoreOnFailure;
   protected static boolean useSecondCluster;
+  protected static boolean enableRSgroup;
 
   static class IncrementalTableBackupClientForTest extends IncrementalTableBackupClient {
     public IncrementalTableBackupClientForTest() {
@@ -292,6 +309,22 @@ public class TestBackupBase {
     }
   }
 
+  private static RSGroupInfo addGroup(String groupName, int serverCount) throws IOException {
+    Admin admin = TEST_UTIL.getAdmin();
+    RSGroupInfo defaultInfo = admin.getRSGroup(RSGroupInfo.DEFAULT_GROUP);
+    admin.addRSGroup(groupName);
+    Set<Address> set = new HashSet<>();
+    for (Address server : defaultInfo.getServers()) {
+      if (set.size() == serverCount) {
+        break;
+      }
+      set.add(server);
+    }
+    admin.moveServersToRSGroup(set, groupName);
+    RSGroupInfo result = admin.getRSGroup(groupName);
+    return result;
+  }
+
   public static void setUpHelper() throws Exception {
     BACKUP_ROOT_DIR = Path.SEPARATOR + "backupUT";
     BACKUP_REMOTE_ROOT_DIR = Path.SEPARATOR + "backupUT";
@@ -314,7 +347,13 @@ public class TestBackupBase {
 
     // Set MultiWAL (with 2 default WAL files per RS)
     conf1.set(WALFactory.WAL_PROVIDER, provider);
-    TEST_UTIL.startMiniCluster();
+    if (enableRSgroup) {
+      conf1.setBoolean(RSGroupUtil.RS_GROUP_ENABLED, true);
+      TEST_UTIL.startMiniCluster(RSGROUP_RS_NUM + NUM_REGIONSERVERS);
+      addGroup(RSGROUP_NAME, RSGROUP_RS_NUM);
+    } else {
+      TEST_UTIL.startMiniCluster();
+    }
 
     if (useSecondCluster) {
       conf2 = HBaseConfiguration.create(conf1);
@@ -352,6 +391,7 @@ public class TestBackupBase {
   public static void setUp() throws Exception {
     TEST_UTIL = new HBaseTestingUtil();
     conf1 = TEST_UTIL.getConfiguration();
+    enableRSgroup = false;
     autoRestoreOnFailure = true;
     useSecondCluster = false;
     setUpHelper();
@@ -377,6 +417,7 @@ public class TestBackupBase {
     }
     TEST_UTIL.shutdownMiniCluster();
     TEST_UTIL.shutdownMiniMapReduceCluster();
+    enableRSgroup = false;
     autoRestoreOnFailure = true;
     useSecondCluster = false;
   }
@@ -406,16 +447,16 @@ public class TestBackupBase {
     return request;
   }
 
-  protected String backupTables(BackupType type, List<TableName> tables, String path)
+  protected BackupInfo backupTables(BackupType type, List<TableName> tables, String path)
     throws IOException {
     Connection conn = null;
     BackupAdmin badmin = null;
-    String backupId;
+    BackupInfo backupInfo;
     try {
       conn = ConnectionFactory.createConnection(conf1);
       badmin = new BackupAdminImpl(conn);
       BackupRequest request = createBackupRequest(type, new ArrayList<>(tables), path);
-      backupId = badmin.backupTables(request);
+      backupInfo = badmin.backupTables(request);
     } finally {
       if (badmin != null) {
         badmin.close();
@@ -424,14 +465,14 @@ public class TestBackupBase {
         conn.close();
       }
     }
-    return backupId;
+    return backupInfo;
   }
 
-  protected String fullTableBackup(List<TableName> tables) throws IOException {
+  protected BackupInfo fullTableBackup(List<TableName> tables) throws IOException {
     return backupTables(BackupType.FULL, tables, BACKUP_ROOT_DIR);
   }
 
-  protected String incrementalTableBackup(List<TableName> tables) throws IOException {
+  protected BackupInfo incrementalTableBackup(List<TableName> tables) throws IOException {
     return backupTables(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR);
   }
 
@@ -479,6 +520,23 @@ public class TestBackupBase {
     table.close();
     ha.close();
     conn.close();
+
+    if (enableRSgroup) {
+      ha.createNamespace(NamespaceDescriptor.create(RSGROUP_NAMESPACE)
+        .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, RSGROUP_NAME).build());
+
+      ha.createTable(TableDescriptorBuilder.newBuilder(RSGROUP_TABLE_1)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(famName)).build());
+      table = ConnectionFactory.createConnection(conf1).getTable(RSGROUP_TABLE_1);
+      loadTable(table);
+      table.close();
+
+      ha.createTable(TableDescriptorBuilder.newBuilder(RSGROUP_TABLE_2)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(famName)).build());
+      table = ConnectionFactory.createConnection(conf1).getTable(RSGROUP_TABLE_2);
+      loadTable(table);
+      table.close();
+    }
   }
 
   protected boolean checkSucceeded(String backupId) throws IOException {
@@ -501,7 +559,7 @@ public class TestBackupBase {
     return status.getState() == BackupState.FAILED;
   }
 
-  private BackupInfo getBackupInfo(String backupId) throws IOException {
+  protected BackupInfo getBackupInfo(String backupId) throws IOException {
     try (BackupSystemTable table = new BackupSystemTable(TEST_UTIL.getConnection())) {
       BackupInfo status = table.readBackupInfo(backupId);
       return status;
@@ -536,6 +594,26 @@ public class TestBackupBase {
       }
     }
     return logFiles;
+  }
+
+  protected Set<Address> getRsgroupServers(String rsgroupName) throws IOException {
+    RSGroupInfo rsGroupInfo = TEST_UTIL.getAdmin().getRSGroup(rsgroupName);
+    if (
+      rsGroupInfo != null && rsGroupInfo.getServers() != null && !rsGroupInfo.getServers().isEmpty()
+    ) {
+      return new HashSet<>(rsGroupInfo.getServers());
+    }
+    return new HashSet<>();
+  }
+
+  protected void checkIfWALFilesBelongToRsgroup(List<String> walFiles, String rsgroupName)
+    throws IOException {
+    for (String file : walFiles) {
+      Address walServerAddress =
+        Address.fromString(BackupUtils.parseHostNameFromLogFile(new Path(file)));
+      assertTrue("Backed WAL files should be from RSGroup " + rsgroupName,
+        getRsgroupServers(rsgroupName).contains(walServerAddress));
+    }
   }
 
   protected void dumpBackupDir() throws IOException {

@@ -82,7 +82,7 @@ public class TestBackupDescribe extends TestBackupBase {
     LOG.info("test backup describe on a single table with data: command-line");
 
     List<TableName> tableList = Lists.newArrayList(table1);
-    String backupId = fullTableBackup(tableList);
+    String backupId = fullTableBackup(tableList).getBackupId();
 
     LOG.info("backup complete");
     assertTrue(checkSucceeded(backupId));

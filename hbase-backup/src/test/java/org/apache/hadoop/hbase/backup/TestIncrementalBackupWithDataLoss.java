@@ -54,11 +54,12 @@ public class TestIncrementalBackupWithDataLoss extends TestBackupBase {
       List<TableName> tables = Lists.newArrayList(table1);
 
       insertIntoTable(conn, table1, famName, 1, 1).close();
-      String backup1 =
-        client.backupTables(createBackupRequest(BackupType.FULL, tables, BACKUP_ROOT_DIR));
+      String backup1 = client
+        .backupTables(createBackupRequest(BackupType.FULL, tables, BACKUP_ROOT_DIR)).getBackupId();
       insertIntoTable(conn, table1, famName, 2, 1).close();
       String backup2 =
-        client.backupTables(createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR));
+        client.backupTables(createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR))
+          .getBackupId();
 
       assertTrue(checkSucceeded(backup1));
       assertTrue(checkSucceeded(backup2));
@@ -67,14 +68,16 @@ public class TestIncrementalBackupWithDataLoss extends TestBackupBase {
       TEST_UTIL.getTestFileSystem().delete(new Path(BACKUP_ROOT_DIR, backup2), true);
 
       insertIntoTable(conn, table1, famName, 4, 1).close();
-      String backup4 =
-        client.backupTables(createBackupRequest(BackupType.FULL, tables, BACKUP_ROOT_DIR));
+      String backup4 = client
+        .backupTables(createBackupRequest(BackupType.FULL, tables, BACKUP_ROOT_DIR)).getBackupId();
       insertIntoTable(conn, table1, famName, 5, 1).close();
       String backup5 =
-        client.backupTables(createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR));
+        client.backupTables(createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR))
+          .getBackupId();
       insertIntoTable(conn, table1, famName, 6, 1).close();
       String backup6 =
-        client.backupTables(createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR));
+        client.backupTables(createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR))
+          .getBackupId();
 
       assertTrue(checkSucceeded(backup4));
       assertTrue(checkSucceeded(backup5));

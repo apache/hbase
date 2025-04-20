@@ -50,7 +50,7 @@ public class TestRepairAfterFailedDelete extends TestBackupBase {
   public void testRepairBackupDelete() throws Exception {
     LOG.info("test repair backup delete on a single table with data");
     List<TableName> tableList = Lists.newArrayList(table1);
-    String backupId = fullTableBackup(tableList);
+    String backupId = fullTableBackup(tableList).getBackupId();
     assertTrue(checkSucceeded(backupId));
     LOG.info("backup complete");
     String[] backupIds = new String[] { backupId };
