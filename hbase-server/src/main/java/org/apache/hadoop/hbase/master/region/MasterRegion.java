@@ -27,9 +27,11 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseIOException;
+import org.apache.hadoop.hbase.RegionTooBusyException;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -54,6 +56,7 @@ import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.RecoverLeaseFSUtils;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
@@ -118,6 +121,10 @@ public final class MasterRegion {
 
   private MasterRegionWALRoller walRoller;
 
+  private final int maxRetriesForRegionUpdates;
+
+  private final long regionUpdateRetryPauseTime;
+
   private MasterRegion(Server server, HRegion region, WALFactory walFactory,
     MasterRegionFlusherAndCompactor flusherAndCompactor, MasterRegionWALRoller walRoller) {
     this.server = server;
@@ -125,6 +132,10 @@ public final class MasterRegion {
     this.walFactory = walFactory;
     this.flusherAndCompactor = flusherAndCompactor;
     this.walRoller = walRoller;
+    this.maxRetriesForRegionUpdates =
+      server.getConfiguration().getInt("hbase.master.region.update.max.retries", 9);
+    this.regionUpdateRetryPauseTime =
+      server.getConfiguration().getLong("hbase.master.region.update.retry.pause", 100);
   }
 
   private void closeRegion(boolean abort) {
@@ -143,15 +154,52 @@ public final class MasterRegion {
     }
   }
 
+  /**
+   * Performs the mutation to the master region using UpdateMasterRegion update action.
+   * @param action Update region action.
+   * @throws IOException IO error that causes active master to abort.
+   */
   public void update(UpdateMasterRegion action) throws IOException {
-    try {
-      action.update(region);
-      flusherAndCompactor.onUpdate();
-    } catch (WALSyncTimeoutIOException e) {
-      LOG.error(HBaseMarkers.FATAL, "WAL sync timeout. Aborting server.");
-      server.abort("WAL sync timeout", e);
-      throw e;
+    for (int tries = 0; tries < maxRetriesForRegionUpdates; tries++) {
+      try {
+        // If the update is successful, return immediately.
+        action.update(region);
+        flusherAndCompactor.onUpdate();
+        return;
+      } catch (RegionTooBusyException e) {
+        // RegionTooBusyException is the type of IOException for which we can retry
+        // for few times before aborting the active master. The master region might
+        // have genuine case for delayed flushes and/or some procedure bug causing
+        // heavy pressure on the memstore.
+        if (tries == (maxRetriesForRegionUpdates - 1)) {
+          abortServer(e);
+        }
+        LOG.info("Master region {} is too busy... retry attempt: {}", region, tries);
+        Threads.sleep(ConnectionUtils.getPauseTime(regionUpdateRetryPauseTime, tries));
+      } catch (IOException e) {
+        // We catch IOException here to ensure that if the mutation is not successful
+        // even after the internal retries done within AbstractFSWAL, we better abort
+        // the active master so that the new active master can take care of resuming
+        // the procedure state which could not be persisted successfully by previously
+        // aborted master. Refer to Jira: HBASE-29251.
+        abortServer(e);
+      }
     }
+  }
+
+  /**
+   * Log the error and abort the master daemon immediately. Use this utility only when procedure
+   * state store update fails and the only way to recover is by terminating the active master so
+   * that new failed-over active master can resume the procedure execution.
+   * @param e IO error that causes active master to abort.
+   * @throws IOException IO error that causes active master to abort.
+   */
+  private void abortServer(IOException e) throws IOException {
+    LOG.error(HBaseMarkers.FATAL,
+      "MasterRegion update is not successful. Aborting server to let new active master "
+        + "resume failed proc store update.");
+    server.abort("MasterRegion update is not successful", e);
+    throw e;
   }
 
   public Result get(Get get) throws IOException {
