@@ -284,10 +284,21 @@ public abstract class RegionRemoteProcedureBase extends Procedure<MasterProcedur
   }
 
   @Override
+  protected void beforeExec(MasterProcedureEnv env) {
+    RegionStateNode regionNode = getRegionNode(env);
+    regionNode.lock();
+  }
+
+  @Override
+  protected void afterExec(MasterProcedureEnv env) {
+    RegionStateNode regionNode = getRegionNode(env);
+    regionNode.unlock();
+  }
+
+  @Override
   protected Procedure<MasterProcedureEnv>[] execute(MasterProcedureEnv env)
     throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
     RegionStateNode regionNode = getRegionNode(env);
-    regionNode.lock();
     try {
       switch (state) {
         case REGION_REMOTE_PROCEDURE_DISPATCH: {
@@ -333,8 +344,6 @@ public abstract class RegionRemoteProcedureBase extends Procedure<MasterProcedur
       setState(ProcedureProtos.ProcedureState.WAITING_TIMEOUT);
       skipPersistence();
       throw new ProcedureSuspendedException();
-    } finally {
-      regionNode.unlock();
     }
   }
 

@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.procedure.AbstractStateMachineRegionProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
-import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
@@ -313,19 +312,18 @@ public class TransitRegionStateProcedure
     return Flow.HAS_MORE_STATE;
   }
 
-  // Override to lock RegionStateNode
-  @SuppressWarnings("rawtypes")
   @Override
-  protected Procedure[] execute(MasterProcedureEnv env)
-    throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
+  protected void beforeExec(MasterProcedureEnv env) {
     RegionStateNode regionNode =
       env.getAssignmentManager().getRegionStates().getOrCreateRegionStateNode(getRegion());
     regionNode.lock();
-    try {
-      return super.execute(env);
-    } finally {
-      regionNode.unlock();
-    }
+  }
+
+  @Override
+  protected void afterExec(MasterProcedureEnv env) {
+    RegionStateNode regionNode =
+      env.getAssignmentManager().getRegionStates().getOrCreateRegionStateNode(getRegion());
+    regionNode.unlock();
   }
 
   private RegionStateNode getRegionStateNode(MasterProcedureEnv env) {
