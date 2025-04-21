@@ -288,13 +288,4 @@ public class TestContinuousBackup extends TestBackupBase {
     }
   }
 
-  private void deleteContinuousBackupReplicationPeerIfExists(Admin admin) throws IOException {
-    if (
-      admin.listReplicationPeers().stream()
-        .anyMatch(peer -> peer.getPeerId().equals(CONTINUOUS_BACKUP_REPLICATION_PEER))
-    ) {
-      admin.disableReplicationPeer(CONTINUOUS_BACKUP_REPLICATION_PEER);
-      admin.removeReplicationPeer(CONTINUOUS_BACKUP_REPLICATION_PEER);
-    }
-  }
 }

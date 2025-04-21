@@ -770,4 +770,8 @@ public final class BackupUtils {
     return BackupRestoreConstants.BACKUPID_PREFIX + recentTimestamp;
   }
 
+  public static long getReplicationCheckpoint(Connection conn) throws IOException {
+    // TODO this will be fixed in PR https://github.com/apache/hbase/pull/6717
+    return System.currentTimeMillis();
+  }
 }
