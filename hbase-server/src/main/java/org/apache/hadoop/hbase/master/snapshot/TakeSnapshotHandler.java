@@ -88,7 +88,7 @@ public abstract class TakeSnapshotHandler extends EventHandler
   protected final Path workingDir;
   private final MasterSnapshotVerifier verifier;
   protected final ForeignExceptionDispatcher monitor;
-  private final LockManager.MasterLock tableLock;
+  private LockManager.MasterLock tableLock;
   protected final MonitoredTask status;
   protected final TableName snapshotTable;
   protected final SnapshotManifest snapshotManifest;
@@ -167,15 +167,28 @@ public abstract class TakeSnapshotHandler extends EventHandler
     if (this.tableLock.tryAcquire(this.lockAcquireTimeoutMs)) {
       try {
         this.htd = loadTableDescriptor(); // check that .tableinfo is present
+        if (downgradeToSharedTableLock()) {
+          // release the exclusive lock and hold the shared lock instead
+          this.tableLock.release();
+          this.tableLock = master.getLockManager().createMasterLock(snapshotTable, LockType.SHARED,
+            this.getClass().getName() + ": take snapshot " + snapshot.getName());
+          if (!this.tableLock.tryAcquire(this.lockAcquireTimeoutMs)) {
+            throwLockNotAcquiredException();
+          }
+        }
       } catch (Exception e) {
         this.tableLock.release();
         throw e;
       }
     } else {
-      LOG.error("Master lock could not be acquired in {} ms", lockAcquireTimeoutMs);
-      throw new DoNotRetryIOException("Master lock could not be acquired");
+      throwLockNotAcquiredException();
     }
     return this;
+  }
+
+  private void throwLockNotAcquiredException() throws DoNotRetryIOException {
+    LOG.error("Master lock could not be acquired in {} ms", lockAcquireTimeoutMs);
+    throw new DoNotRetryIOException("Master lock could not be acquired");
   }
 
   /**
@@ -192,18 +205,6 @@ public abstract class TakeSnapshotHandler extends EventHandler
     MasterLock tableLockToRelease = this.tableLock;
     status.setStatus(msg);
     try {
-      if (downgradeToSharedTableLock()) {
-        // release the exclusive lock and hold the shared lock instead
-        tableLockToRelease = master.getLockManager().createMasterLock(snapshotTable,
-          LockType.SHARED, this.getClass().getName() + ": take snapshot " + snapshot.getName());
-        tableLock.release();
-        boolean isTableLockAcquired = tableLockToRelease.tryAcquire(this.lockAcquireTimeoutMs);
-        if (!isTableLockAcquired) {
-          LOG.error("Could not acquire shared lock on table {} in {} ms", snapshotTable,
-            lockAcquireTimeoutMs);
-          throw new IOException("Could not acquire shared lock on table " + snapshotTable);
-        }
-      }
       // If regions move after this meta scan, the region specific snapshot should fail, triggering
       // an external exception that gets captured here.
 
