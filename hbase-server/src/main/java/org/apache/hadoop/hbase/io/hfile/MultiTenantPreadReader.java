@@ -25,6 +25,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.fs.Path;
 
 /**
  * HFile reader for multi-tenant HFiles in PREAD (random access) mode.
@@ -91,53 +92,50 @@ public class MultiTenantPreadReader extends AbstractMultiTenantReader {
       if (hfileReader != null) {
         return hfileReader;
       }
-      
       synchronized (this) {
         if (hfileReader != null) {
           return hfileReader;
         }
-        
+        // Prepare placeholders for contexts for logging in catch
+        ReaderContext sectionContext = null;
+        ReaderContext perSectionContext = null;
         try {
-          // Create a reader context with our offset translation wrapper
+          // Build section context with offset translation
           LOG.debug("Building section context for tenant at offset {}", metadata.getOffset());
-          ReaderContext sectionContext = buildSectionContext(metadata, ReaderContext.ReaderType.PREAD);
-          LOG.debug("Created section context: {}", sectionContext);
+          sectionContext = buildSectionContext(metadata, ReaderContext.ReaderType.PREAD);
+          // Override filePath so each tenant section schedules its own prefetch key
+          Path containerPath = sectionContext.getFilePath();
+          String tenantId = Bytes.toStringBinary(tenantPrefix);
+          Path perSectionPath = new Path(containerPath.toString() + "#" + tenantId);
+          perSectionContext = ReaderContextBuilder.newBuilder(sectionContext)
+              .withFilePath(perSectionPath)
+              .build();
+          LOG.debug("Created section context (prefetchKey={}) : {}", perSectionPath, perSectionContext);
           
-          // Create HFileInfo for this section
+          // Use per-section context for info and reader
           LOG.debug("Creating HFileInfo for tenant section at offset {}", metadata.getOffset());
-          HFileInfo info = new HFileInfo(sectionContext, getConf());
-          
-          // For non-first sections (offset > 0), add special validation for trailer reading
+          HFileInfo info = new HFileInfo(perSectionContext, getConf());
+          // Extra debug for non-first sections
           if (metadata.getOffset() > 0) {
-            // Add more debug information to help diagnose issues
-            LOG.debug("Section size: {}, expected trailer at relative offset: {}", 
-                     metadata.getSize(), metadata.getSize() - 212);
-            LOG.debug("Trailer position in absolute coordinates: {}", 
-                     metadata.getOffset() + metadata.getSize() - 212);
+            LOG.debug("Section size: {}, expected trailer at relative offset: {}", metadata.getSize(), metadata.getSize() - 212);
+            LOG.debug("Trailer position in absolute coordinates: {}", metadata.getOffset() + metadata.getSize() - 212);
           }
-          
           LOG.debug("Initializing section indices for tenant at offset {}", metadata.getOffset());
-          
-          // Create the reader - we need to create it before initializing indices
+          // Instantiate the PreadReader for this section
           LOG.debug("Creating HFilePreadReader for tenant section at offset {}", metadata.getOffset());
-          hfileReader = new HFilePreadReader(sectionContext, info, cacheConf, getConf());
-          
-          // Initialize the HFileInfo with the reader
+          hfileReader = new HFilePreadReader(perSectionContext, info, cacheConf, getConf());
+          // Init metadata and indices
           LOG.debug("About to initialize metadata and indices for section at offset {}", metadata.getOffset());
           info.initMetaAndIndex(hfileReader);
-          
           LOG.debug("Successfully initialized indices for section at offset {}", metadata.getOffset());
           LOG.debug("Initialized HFilePreadReader for tenant prefix: {}", Bytes.toStringBinary(tenantPrefix));
-          
           return hfileReader;
         } catch (IOException e) {
           LOG.error("Failed to initialize section reader", e);
-          // Log detailed diagnostic information for troubleshooting
+          // Log basic diagnostic info (omit context to avoid scope issues)
           if (metadata.getOffset() > 0) {
-            LOG.error("Error details for section at offset {}: size={}, endpoint={}, sectionContext={}",
-                     metadata.getOffset(), metadata.getSize(), 
-                     metadata.getOffset() + metadata.getSize(),
-                     context);
+            LOG.error("Error details for section at offset {}: size={}, endpoint={}",
+                metadata.getOffset(), metadata.getSize(), metadata.getOffset() + metadata.getSize());
           }
           throw e;
         }
@@ -153,7 +151,14 @@ public class MultiTenantPreadReader extends AbstractMultiTenantReader {
     @Override
     public void close(boolean evictOnClose) throws IOException {
       if (hfileReader != null) {
-        hfileReader.close(evictOnClose);
+        HFileReaderImpl r = hfileReader;
+        hfileReader = null;
+        try {
+          r.close(evictOnClose);
+        } finally {
+          // Unbuffer section wrapper to free socket/buffer
+          r.getContext().getInputStreamWrapper().unbuffer();
+        }
       }
     }
   }

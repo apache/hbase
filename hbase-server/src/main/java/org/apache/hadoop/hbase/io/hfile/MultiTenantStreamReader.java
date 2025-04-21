@@ -105,8 +105,11 @@ public class MultiTenantStreamReader extends AbstractMultiTenantReader {
     @Override
     public void close(boolean evictOnClose) throws IOException {
       if (reader != null) {
-        reader.close(evictOnClose);
+        // Close underlying HFileStreamReader and unbuffer its wrapper
+        HFileReaderImpl r = reader;
         reader = null;
+        r.close(evictOnClose);
+        r.getContext().getInputStreamWrapper().unbuffer();
       }
       initialized = false;
     }
