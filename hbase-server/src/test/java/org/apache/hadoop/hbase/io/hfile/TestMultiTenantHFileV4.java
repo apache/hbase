@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.io.hfile;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -244,10 +245,20 @@ public class TestMultiTenantHFileV4 {
     
     // Open the file directly using HFile class
     try (HFile.Reader reader = HFile.createReader(fs, path, cacheConf, true, conf)) {
+      // Verify that we got a multi-tenant reader implementation
+      assertTrue("Expected reader to be an AbstractMultiTenantReader but got " + reader.getClass().getName(),
+                reader instanceof AbstractMultiTenantReader);
+      LOG.info("Created reader instance: {}", reader.getClass().getName());
+      
       LOG.info("Opened HFile reader for {}", path);
       
       // Create a scanner
       HFileScanner scanner = reader.getScanner(conf, false, true);
+      
+      // Verify that we got a multi-tenant scanner implementation
+      assertTrue("Expected scanner to be a MultiTenantScanner but got " + scanner.getClass().getName(),
+                scanner instanceof AbstractMultiTenantReader.MultiTenantScanner);
+      LOG.info("Created scanner instance: {}", scanner.getClass().getName());
       
       // Verify data for each tenant
       verifyTenantData(scanner, TENANT_1, expectedData.get(TENANT_1));
@@ -267,6 +278,16 @@ public class TestMultiTenantHFileV4 {
     ExtendedCell firstCell = expectedCells.get(0);
     int seekResult = scanner.seekTo(firstCell);
     assertTrue("Failed to seek to first key for tenant " + tenant, seekResult != -1);
+    
+    // Verify scanner properly initialized for this tenant
+    HFile.Reader mainReader = scanner.getReader();
+    if (mainReader instanceof AbstractMultiTenantReader) {
+      // This part shows that the code flow is indeed going through AbstractMultiTenantReader
+      AbstractMultiTenantReader mtReader = (AbstractMultiTenantReader)mainReader;
+      LOG.info("Successfully verified scanner is using a multi-tenant reader for tenant {}", tenant);
+    } else {
+      fail("Expected AbstractMultiTenantReader to be used but got " + mainReader.getClass().getName());
+    }
     
     // Verify all expected cells
     int cellCount = 0;
