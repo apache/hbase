@@ -112,26 +112,7 @@ public class MultiTenantStreamReader extends AbstractMultiTenantReader {
     }
   }
 
-  // Add the close() implementation for completeness
-  @Override
-  public void close() throws IOException {
-    close(false);
-  }
+  // No close overrides needed; inherited from AbstractMultiTenantReader
   
-  // Add the close(boolean) implementation
-  @Override
-  public void close(boolean evictOnClose) throws IOException {
-    // Close all section readers
-    for (SectionReader reader : sectionReaders.values()) {
-      if (reader != null) {
-        reader.close(evictOnClose);
-      }
-    }
-    sectionReaders.clear();
-    
-    // Close resources in HFileReaderImpl
-    if (fsBlockReader != null) {
-      fsBlockReader.closeStreams();
-    }
-  }
+  // End of class
 } 

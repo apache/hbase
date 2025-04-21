@@ -36,8 +36,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.hbase.nio.ByteBuff;
-import java.nio.ByteBuffer;
+import java.io.UncheckedIOException;
 
 /**
  * Abstract base class for multi-tenant HFile readers. This class handles the common
@@ -284,24 +283,26 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
    */
   protected SectionReader getSectionReader(byte[] tenantPrefix) throws IOException {
     ImmutableBytesWritable key = new ImmutableBytesWritable(tenantPrefix);
-    
-    // Check if we already have a reader for this tenant
-    SectionReader reader = sectionReaders.get(key);
-    if (reader != null) {
-      return reader;
-    }
-    
-    // Create new section reader
+    // Lookup the section metadata
     SectionMetadata metadata = getSectionMetadata(tenantPrefix);
     if (metadata == null) {
       LOG.debug("No section found for tenant prefix: {}", Bytes.toStringBinary(tenantPrefix));
       return null;
     }
-    
-    reader = createSectionReader(tenantPrefix, metadata);
-    sectionReaders.put(key, reader);
-    LOG.debug("Created section reader for tenant prefix: {}", Bytes.toStringBinary(tenantPrefix));
-    return reader;
+    try {
+      // Atomically create or return the per-tenant SectionReader
+      return sectionReaders.computeIfAbsent(key, k -> {
+        try {
+          SectionReader reader = createSectionReader(tenantPrefix, metadata);
+          LOG.debug("Created section reader for tenant prefix: {}", Bytes.toStringBinary(tenantPrefix));
+          return reader;
+        } catch (IOException e) {
+          throw new UncheckedIOException(e);
+        }
+      });
+    } catch (UncheckedIOException uioe) {
+      throw uioe.getCause();
+    }
   }
   
   /**
@@ -633,7 +634,26 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
     close(false);
   }
 
-  
+  /**
+   * Close all section readers and underlying resources, with optional block eviction
+   */
+  @Override
+  public void close(boolean evictOnClose) throws IOException {
+    // Close each tenant section reader
+    for (SectionReader reader : sectionReaders.values()) {
+      if (reader != null) {
+        reader.close(evictOnClose);
+      }
+    }
+    sectionReaders.clear();
+    // Close filesystem block reader streams
+    if (fsBlockReader != null) {
+      fsBlockReader.closeStreams();
+    }
+    // Unbuffer the main input stream wrapper
+    context.getInputStreamWrapper().unbuffer();
+  }
+
   /**
    * Get HFile version
    */

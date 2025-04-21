@@ -157,20 +157,4 @@ public class MultiTenantPreadReader extends AbstractMultiTenantReader {
       }
     }
   }
-
-  @Override
-  public void close(boolean evictOnClose) throws IOException {
-    // Close all section readers
-    for (SectionReader reader : sectionReaders.values()) {
-      if (reader != null) {
-        reader.close(evictOnClose);
-      }
-    }
-    sectionReaders.clear();
-    
-    // Close resources in HFileReaderImpl
-    if (fsBlockReader != null) {
-      fsBlockReader.closeStreams();
-    }
-  }
 } 
