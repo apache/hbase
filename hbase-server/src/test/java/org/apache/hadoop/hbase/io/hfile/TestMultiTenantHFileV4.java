@@ -101,11 +101,6 @@ public class TestMultiTenantHFileV4 {
     // Explicitly configure HFile version 4
     conf.setInt(HFile.FORMAT_VERSION_KEY, HFile.MIN_FORMAT_VERSION_WITH_MULTI_TENANT);
     
-    // Configure block index parameters for test with few entries
-    // This prevents trying to create multi-level index with too few entries
-    conf.setInt(HFileBlockIndex.MAX_CHUNK_SIZE_KEY, 5); // Allow up to 5 entries per chunk
-    conf.setInt(HFileBlockIndex.MIN_INDEX_NUM_ENTRIES_KEY, 7); // Only create multi-level when more than 7 entries
-    
     fs = FileSystem.get(conf);
     testDir = new Path(TEST_UTIL.getDataTestDir(), testName.getMethodName());
     if (fs.exists(testDir)) {
@@ -198,13 +193,23 @@ public class TestMultiTenantHFileV4 {
         .withHBaseCheckSum(true)
         .build();
     
-    // Use the MultiTenantHFileWriter factory explicitly for v4
-    HFile.WriterFactory writerFactory = new MultiTenantHFileWriter.WriterFactory(conf, cacheConf)
+    // Use the generic factory method which will return the appropriate writer factory based on configuration
+    HFile.WriterFactory writerFactory = HFile.getWriterFactory(conf, cacheConf)
         .withFileContext(hfileContext)
         .withPath(fs, path);
     
+    // Verify we got the correct writer factory type
+    assertTrue("Expected MultiTenantHFileWriter.WriterFactory but got " + writerFactory.getClass().getName(),
+               writerFactory instanceof MultiTenantHFileWriter.WriterFactory);
+    LOG.info("Created writer factory instance: {}", writerFactory.getClass().getName());
+    
     // Create writer
     try (HFile.Writer writer = writerFactory.create()) {
+      // Verify we got a MultiTenantHFileWriter instance
+      assertTrue("Expected MultiTenantHFileWriter but got " + writer.getClass().getName(),
+                 writer instanceof MultiTenantHFileWriter);
+      LOG.info("Created writer instance: {}", writer.getClass().getName());
+      
       LOG.info("Writing HFile with multi-tenant data to {}", path);
       
       // Write data for each tenant - must be in proper sort order
