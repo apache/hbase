@@ -259,20 +259,11 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     
     // Finish writing the current section
     currentSectionWriter.close();
-    outputStream.hsync(); // Ensure section data (incl. trailer) is synced to disk
+    //outputStream.hsync(); // Ensure section data (incl. trailer) is synced to disk
     
     // Get current position to calculate section size
     long sectionEndOffset = outputStream.getPos();
     long sectionSize = sectionEndOffset - sectionStartOffset;
-    
-    // Make sure section size is not too small (minimum size to include valid trailer)
-    // We use 60 bytes as a conservative minimum trailer size
-    int MIN_TRAILER_SIZE = 60;
-    if (sectionSize < MIN_TRAILER_SIZE) {
-      LOG.warn("Section size {} is smaller than minimum required size {}. Adjusting.",
-              sectionSize, MIN_TRAILER_SIZE);
-      sectionSize = Math.max(MIN_TRAILER_SIZE, sectionSize);
-    }
     
     // Record section in the index
     sectionIndexWriter.addEntry(currentTenantPrefix, sectionStartOffset, (int)sectionSize);
