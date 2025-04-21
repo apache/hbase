@@ -215,6 +215,17 @@ public class SectionIndexManager {
     }
     
     /**
+     * Helper to write a single section index entry (prefix, offset, size).
+     */
+    private void writeEntry(DataOutputStream out, SectionIndexEntry entry) throws IOException {
+      byte[] prefix = entry.getTenantPrefix();
+      out.writeInt(prefix.length);
+      out.write(prefix);
+      out.writeLong(entry.getOffset());
+      out.writeInt(entry.getSectionSize());
+    }
+    
+    /**
      * Write the section index blocks to the output stream.
      * For large tenant sets, this builds a multi-level index.
      * 
@@ -373,16 +384,10 @@ public class SectionIndexManager {
       // Write block count
       dos.writeInt(blocks.size());
       
-      // For each block, write its first entry's tenant prefix and the block's metadata
+      // Write entries using helper + block metadata
       for (SectionIndexBlock block : blocks) {
         SectionIndexEntry firstEntry = block.getFirstEntry();
-        
-        // Write tenant prefix length and bytes
-        byte[] prefix = firstEntry.getTenantPrefix();
-        dos.writeInt(prefix.length);
-        dos.write(prefix);
-        
-        // Write block offset and size
+        writeEntry(dos, firstEntry);
         dos.writeLong(block.getBlockOffset());
         dos.writeInt(block.getBlockSize());
       }
@@ -406,16 +411,9 @@ public class SectionIndexManager {
       // Write entry count
       out.writeInt(blockEntries.size());
       
-      // Write each entry
+      // Write each entry using helper
       for (SectionIndexEntry entry : blockEntries) {
-        // Write tenant prefix
-        byte[] prefix = entry.getTenantPrefix();
-        out.writeInt(prefix.length);
-        out.write(prefix);
-        
-        // Write section offset and size
-        out.writeLong(entry.getOffset());
-        out.writeInt(entry.getSectionSize());
+        writeEntry(out, entry);
       }
     }
     

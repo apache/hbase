@@ -51,7 +51,6 @@ public class MultiTenantFSDataInputStreamWrapper extends FSDataInputStreamWrappe
    * @param offset the offset where the section starts in the parent file
    */
   public MultiTenantFSDataInputStreamWrapper(FSDataInputStreamWrapper parent, long offset) {
-    // Pass the parent's stream to the superclass constructor
     super(parent.getStream(false));
     this.parent = parent;
     this.sectionOffset = offset;
@@ -79,23 +78,9 @@ public class MultiTenantFSDataInputStreamWrapper extends FSDataInputStreamWrappe
 
   @Override
   public FSDataInputStream getStream(boolean useHBaseChecksum) {
+    // Always wrap the raw stream so each call uses fresh translator
     FSDataInputStream raw = parent.getStream(useHBaseChecksum);
-    return new FSDataInputStream(raw.getWrappedStream()) {
-      @Override
-      public void seek(long pos) throws IOException {
-        // translate relative section pos to absolute
-        raw.seek(toAbsolutePosition(pos));
-      }
-      @Override
-      public long getPos() throws IOException {
-        return toRelativePosition(raw.getPos());
-      }
-      @Override
-      public int read(long position, byte[] buffer, int offset, int length)
-          throws IOException {
-        return raw.read(toAbsolutePosition(position), buffer, offset, length);
-      }
-    };
+    return new TranslatingFSStream(raw);
   }
 
   @Override
@@ -130,7 +115,7 @@ public class MultiTenantFSDataInputStreamWrapper extends FSDataInputStreamWrappe
 
   @Override
   public void close() {
-    // Don't close the parent stream as it might be used elsewhere
+    // Keep parent.close() behavior (do not close parent stream here)
   }
 
   /**
@@ -204,5 +189,22 @@ public class MultiTenantFSDataInputStreamWrapper extends FSDataInputStreamWrappe
 
   public FSDataInputStream getStream(FSDataInputStream stream) {
     return stream;
+  }
+
+  /**
+   * Translates section-relative seeks/reads into absolute file positions.
+   */
+  private class TranslatingFSStream extends FSDataInputStream {
+    private final FSDataInputStream raw;
+    TranslatingFSStream(FSDataInputStream raw) {
+      super(raw.getWrappedStream());
+      this.raw = raw;
+    }
+    @Override public void seek(long pos) throws IOException { raw.seek(toAbsolutePosition(pos)); }
+    @Override public long getPos() throws IOException { return toRelativePosition(raw.getPos()); }
+    @Override public int read(long pos, byte[] b, int off, int len) throws IOException {
+      return raw.read(toAbsolutePosition(pos), b, off, len);
+    }
+    // Other read()/read(b,off,len) use default implementations after seek
   }
 } 

@@ -108,6 +108,9 @@ public class MultiTenantHFileWriter implements HFile.Writer {
   // Additional field added to support v4
   private int majorVersion = HFile.MIN_FORMAT_VERSION_WITH_MULTI_TENANT;
   
+  // Temporary path used for atomic writes
+  private final Path tmpPath;
+  
   /**
    * Creates a multi-tenant HFile writer that writes sections to a single file.
    * 
@@ -125,17 +128,17 @@ public class MultiTenantHFileWriter implements HFile.Writer {
       CacheConfig cacheConf,
       TenantExtractor tenantExtractor,
       HFileContext fileContext) throws IOException {
+    // write into a .tmp file to allow atomic rename
+    this.tmpPath = new Path(path.toString() + ".tmp");
     this.fs = fs;
     this.path = path;
     this.conf = conf;
     this.cacheConf = cacheConf;
     this.tenantExtractor = tenantExtractor;
     this.fileContext = fileContext;
-    
-    // Create the output stream
-    this.outputStream = fs.create(path);
-    
-    // Initialize components
+    // create output stream on temp path
+    this.outputStream = fs.create(tmpPath);
+    // initialize blockWriter and sectionIndexWriter after creating stream
     initialize();
   }
   
@@ -297,59 +300,57 @@ public class MultiTenantHFileWriter implements HFile.Writer {
   
   @Override
   public void close() throws IOException {
-    if (outputStream == null) { // Removed closed flag check, only check for null stream
-      return;
+    // Ensure all sections are closed and resources flushed
+    if (currentSectionWriter != null) {
+      closeCurrentSection();
+      currentSectionWriter = null;
     }
     
+    // Write indexes, file info, and trailer
+    LOG.info("Writing section index");
+    long sectionIndexOffset = sectionIndexWriter.writeIndexBlocks(outputStream);
+
+    // Write a tenant-wide meta index block
+    HFileBlockIndex.BlockIndexWriter metaBlockIndexWriter = new HFileBlockIndex.BlockIndexWriter();
+    DataOutputStream dos = blockWriter.startWriting(BlockType.ROOT_INDEX);
+    metaBlockIndexWriter.writeSingleLevelIndex(dos, "meta");
+    blockWriter.writeHeaderAndData(outputStream);
+
+    // Write file info
+    LOG.info("Writing file info");
+    FixedFileTrailer trailer = new FixedFileTrailer(getMajorVersion(), getMinorVersion());
+    trailer.setFileInfoOffset(outputStream.getPos());
+
+    // Add HFile metadata to the info block
+    HFileInfo fileInfo = new HFileInfo();
+    finishFileInfo(fileInfo);
+
+    DataOutputStream out = blockWriter.startWriting(BlockType.FILE_INFO);
+    fileInfo.write(out);
+    blockWriter.writeHeaderAndData(outputStream);
+
+    // Set up the trailer
+    trailer.setLoadOnOpenOffset(sectionIndexOffset);
+    trailer.setDataIndexCount(sectionIndexWriter.getNumRootEntries());
+    trailer.setNumDataIndexLevels(sectionIndexWriter.getNumLevels());
+    trailer.setUncompressedDataIndexSize(sectionIndexWriter.getTotalUncompressedSize());
+    trailer.setComparatorClass(fileContext.getCellComparator().getClass());
+
+    // Serialize the trailer
+    trailer.serialize(outputStream);
+
+    LOG.info("MultiTenantHFileWriter closed: path={}, sections={}", path, sectionCount);
+
+    // close and cleanup resources
     try {
-        if (currentSectionWriter != null) {
-          closeCurrentSection();
-          currentSectionWriter = null;
-        }
-
-        // Write the section index
-        LOG.info("Writing section index");
-        long sectionIndexOffset = sectionIndexWriter.writeIndexBlocks(outputStream);
-
-        // Write a tenant-wide meta index block
-        HFileBlockIndex.BlockIndexWriter metaBlockIndexWriter = new HFileBlockIndex.BlockIndexWriter();
-        DataOutputStream dos = blockWriter.startWriting(BlockType.ROOT_INDEX);
-        metaBlockIndexWriter.writeSingleLevelIndex(dos, "meta");
-        blockWriter.writeHeaderAndData(outputStream);
-
-        // Write file info
-        LOG.info("Writing file info");
-        FixedFileTrailer trailer = new FixedFileTrailer(getMajorVersion(), getMinorVersion());
-        trailer.setFileInfoOffset(outputStream.getPos());
-
-        // Add HFile metadata to the info block
-        HFileInfo fileInfo = new HFileInfo();
-        finishFileInfo(fileInfo);
-
-        DataOutputStream out = blockWriter.startWriting(BlockType.FILE_INFO);
-        fileInfo.write(out);
-        blockWriter.writeHeaderAndData(outputStream);
-
-        // Set up the trailer
-        trailer.setLoadOnOpenOffset(sectionIndexOffset);
-        trailer.setDataIndexCount(sectionIndexWriter.getNumRootEntries());
-        trailer.setNumDataIndexLevels(sectionIndexWriter.getNumLevels());
-        trailer.setUncompressedDataIndexSize(sectionIndexWriter.getTotalUncompressedSize());
-        trailer.setComparatorClass(fileContext.getCellComparator().getClass());
-
-        // Serialize the trailer
-        trailer.serialize(outputStream);
-
-        LOG.info("MultiTenantHFileWriter closed: path={}, sections={}", path, sectionCount);
-
-    } finally {
-        // Ensure stream is closed and block writer released even if errors occur above
-        if (outputStream != null) {
-            outputStream.close();
-        }
-        if (blockWriter != null) {
-            blockWriter.release();
-        }
+      outputStream.close();
+      blockWriter.release();
+      // atomically rename tmp -> final path
+      fs.rename(tmpPath, path);
+    } catch (IOException e) {
+      // log rename or close failure
+      LOG.error("Error closing MultiTenantHFileWriter, tmpPath={}, path={}", tmpPath, path, e);
+      throw e;
     }
   }
   

@@ -64,10 +64,28 @@ public class TenantExtractorFactory {
         MultiTenantHFileWriter.TENANT_PREFIX_OFFSET, DEFAULT_PREFIX_OFFSET);
     
     // Use table settings if available, otherwise use cluster settings
-    int prefixLength = tablePrefixLengthStr != null ? 
-        Integer.parseInt(tablePrefixLengthStr) : clusterPrefixLength;
-    int prefixOffset = tablePrefixOffsetStr != null ? 
-        Integer.parseInt(tablePrefixOffsetStr) : clusterPrefixOffset;
+    int prefixLength;
+    if (tablePrefixLengthStr != null) {
+      try {
+        prefixLength = Integer.parseInt(tablePrefixLengthStr);
+      } catch (NumberFormatException nfe) {
+        LOG.warn("Invalid table-level tenant prefix length '{}', using cluster default {}", tablePrefixLengthStr, clusterPrefixLength);
+        prefixLength = clusterPrefixLength;
+      }
+    } else {
+      prefixLength = clusterPrefixLength;
+    }
+    int prefixOffset;
+    if (tablePrefixOffsetStr != null) {
+      try {
+        prefixOffset = Integer.parseInt(tablePrefixOffsetStr);
+      } catch (NumberFormatException nfe) {
+        LOG.warn("Invalid table-level tenant prefix offset '{}', using cluster default {}", tablePrefixOffsetStr, clusterPrefixOffset);
+        prefixOffset = clusterPrefixOffset;
+      }
+    } else {
+      prefixOffset = clusterPrefixOffset;
+    }
     
     LOG.info("Tenant configuration initialized: prefixLength={}, prefixOffset={}, " +
         "from table properties: {}", prefixLength, prefixOffset, 
