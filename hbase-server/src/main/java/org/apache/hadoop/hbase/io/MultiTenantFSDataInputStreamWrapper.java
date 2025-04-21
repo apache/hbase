@@ -79,7 +79,23 @@ public class MultiTenantFSDataInputStreamWrapper extends FSDataInputStreamWrappe
 
   @Override
   public FSDataInputStream getStream(boolean useHBaseChecksum) {
-    return parent.getStream(useHBaseChecksum);
+    FSDataInputStream raw = parent.getStream(useHBaseChecksum);
+    return new FSDataInputStream(raw.getWrappedStream()) {
+      @Override
+      public void seek(long pos) throws IOException {
+        // translate relative section pos to absolute
+        raw.seek(toAbsolutePosition(pos));
+      }
+      @Override
+      public long getPos() throws IOException {
+        return toRelativePosition(raw.getPos());
+      }
+      @Override
+      public int read(long position, byte[] buffer, int offset, int length)
+          throws IOException {
+        return raw.read(toAbsolutePosition(position), buffer, offset, length);
+      }
+    };
   }
 
   @Override

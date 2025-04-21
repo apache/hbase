@@ -701,7 +701,7 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
         .withFilePath(context.getFilePath())
         .withReaderType(readerType)
         .withFileSystem(context.getFileSystem())
-        .withFileSize(sectionEndpoint) // Use endpoint (offset+size), not just section size
+        .withFileSize(sectionSize) // Use section size; wrapper adds the offset when seeking
         .build();
     
     LOG.debug("Created section reader context: {}", sectionContext);
