@@ -198,8 +198,8 @@ public class TestMultiTenantHFileV4 {
         .withHBaseCheckSum(true)
         .build();
     
-    // For testing purposes, we'll use a standard HFile writer
-    HFile.WriterFactory writerFactory = new HFile.WriterFactory(conf, cacheConf)
+    // Use the MultiTenantHFileWriter factory explicitly for v4
+    HFile.WriterFactory writerFactory = new MultiTenantHFileWriter.WriterFactory(conf, cacheConf)
         .withFileContext(hfileContext)
         .withPath(fs, path);
     

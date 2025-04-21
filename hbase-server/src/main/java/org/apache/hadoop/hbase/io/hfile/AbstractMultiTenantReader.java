@@ -340,7 +340,6 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
     protected final SectionMetadata metadata;
     protected HFileReaderImpl reader;
     protected boolean initialized = false;
-    protected boolean usesRelativeOffsets = false;
     protected long sectionBaseOffset;
     
     public SectionReader(byte[] tenantPrefix, SectionMetadata metadata) {
@@ -386,28 +385,6 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
      * @throws IOException If an error occurs closing the reader
      */
     public abstract void close(boolean evictOnClose) throws IOException;
-    
-    /**
-     * Check if the section uses relative offsets by examining file info
-     * 
-     * @param sectionFileInfo The section's file info
-     */
-    protected void initOffsetTranslation(HFileInfo sectionFileInfo) {
-      // Check if this section uses relative offsets
-      byte[] relativeOffsetsBytes = sectionFileInfo.get(Bytes.toBytes("USING_RELATIVE_OFFSETS"));
-      if (relativeOffsetsBytes != null) {
-        usesRelativeOffsets = Bytes.toBoolean(relativeOffsetsBytes);
-        
-        // If there's an explicit base offset in file info, use it
-        byte[] baseOffsetBytes = sectionFileInfo.get(Bytes.toBytes("SECTION_BASE_OFFSET"));
-        if (baseOffsetBytes != null) {
-          sectionBaseOffset = Bytes.toLong(baseOffsetBytes);
-        }
-        
-        LOG.debug("Section for tenant {} uses relative offsets (base={})", 
-            Bytes.toStringBinary(tenantPrefix), sectionBaseOffset);
-      }
-    }
   }
   
   /**
@@ -679,13 +656,14 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
     MultiTenantFSDataInputStreamWrapper sectionWrapper = 
         new MultiTenantFSDataInputStreamWrapper(parentWrapper, metadata.getOffset());
     
-    // Build the reader context
+    // Build the reader context - critically, use ENTIRE file size, not section size
+    // This helps HFileInfo correctly locate the trailer at the end of each section
     ReaderContext sectionContext = ReaderContextBuilder.newBuilder(context)
         .withInputStreamWrapper(sectionWrapper)
         .withFilePath(context.getFilePath())
         .withReaderType(readerType)
         .withFileSystem(context.getFileSystem())
-        .withFileSize(metadata.getSize())
+        .withFileSize(metadata.getOffset() + metadata.getSize()) // End position, not size
         .build();
     
     return sectionContext;

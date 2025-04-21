@@ -79,9 +79,6 @@ public class MultiTenantStreamReader extends AbstractMultiTenantReader {
           // Create stream reader for this section with the section-specific fileInfo
           reader = new HFileStreamReader(sectionContext, sectionFileInfo, cacheConf, getConf());
           
-          // Check if this section uses relative offsets
-          initOffsetTranslation(sectionFileInfo);
-          
           // Initialize section indices using the standard HFileInfo method
           // This method was designed for HFile v3 format, which each section follows
           LOG.debug("Initializing section indices for tenant at offset {}", metadata.getOffset());
