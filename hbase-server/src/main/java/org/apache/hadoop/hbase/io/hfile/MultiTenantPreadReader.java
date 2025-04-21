@@ -49,66 +49,112 @@ public class MultiTenantPreadReader extends AbstractMultiTenantReader {
     // Tenant index structure is loaded and logged by the parent class
   }
 
+  /**
+   * Create a section reader for a specific tenant
+   * 
+   * @param tenantPrefix The tenant prefix
+   * @param metadata The section metadata
+   * @return A section reader for the tenant
+   * @throws IOException If an error occurs creating the reader
+   */
   @Override
-  protected SectionReader createSectionReader(byte[] tenantPrefix, SectionMetadata metadata)
-      throws IOException {
+  protected SectionReader createSectionReader(byte[] tenantPrefix, SectionMetadata metadata) throws IOException {
     LOG.debug("Creating section reader for tenant: {}, offset: {}, size: {}",
-        Bytes.toStringBinary(tenantPrefix), metadata.getOffset(), metadata.getSize());
+             Bytes.toStringBinary(tenantPrefix), metadata.getOffset(), metadata.getSize());
+            
+    // Special handling for non-first sections
+    if (metadata.getOffset() > 0) {
+      LOG.debug("Non-first section tenant reader: offset={}, size={}, end={}",
+               metadata.getOffset(), metadata.getSize(), 
+               metadata.getOffset() + metadata.getSize());
+               
+      // For non-first sections, we need to be especially careful about trailer position
+      long trailerPos = metadata.getOffset() + metadata.getSize() - 212; // 212 is HFile v3 trailer size
+      LOG.debug("Trailer should be at absolute position: {}", trailerPos);
+    }
+    
     return new PreadSectionReader(tenantPrefix, metadata);
   }
 
   /**
-   * Section reader implementation for pread mode that uses HFilePreadReader
+   * Section reader implementation for pread access mode
    */
   protected class PreadSectionReader extends SectionReader {
+    private HFileReaderImpl hfileReader;
+    
     public PreadSectionReader(byte[] tenantPrefix, SectionMetadata metadata) {
       super(tenantPrefix, metadata);
     }
-
+    
     @Override
-    public synchronized HFileReaderImpl getReader() throws IOException {
-      if (!initialized) {
-        // Create section context with section-specific settings using parent method
-        ReaderContext sectionContext = buildSectionContext(
-            metadata, ReaderContext.ReaderType.PREAD);
-
+    public HFileReaderImpl getReader() throws IOException {
+      if (hfileReader != null) {
+        return hfileReader;
+      }
+      
+      synchronized (this) {
+        if (hfileReader != null) {
+          return hfileReader;
+        }
+        
         try {
-          // Create a section-specific HFileInfo
-          HFileInfo sectionFileInfo = new HFileInfo(sectionContext, getConf());
+          // Create a reader context with our offset translation wrapper
+          LOG.debug("Building section context for tenant at offset {}", metadata.getOffset());
+          ReaderContext sectionContext = buildSectionContext(metadata, ReaderContext.ReaderType.PREAD);
+          LOG.debug("Created section context: {}", sectionContext);
           
-          // Create pread reader for this section with the section-specific fileInfo
-          reader = new HFilePreadReader(sectionContext, sectionFileInfo, cacheConf, getConf());
+          // Create HFileInfo for this section
+          LOG.debug("Creating HFileInfo for tenant section at offset {}", metadata.getOffset());
+          HFileInfo info = new HFileInfo(sectionContext, getConf());
           
-          // Initialize section indices using the standard HFileInfo method
-          // This method was designed for HFile v3 format, which each section follows
+          // For non-first sections (offset > 0), add special validation for trailer reading
+          if (metadata.getOffset() > 0) {
+            // Add more debug information to help diagnose issues
+            LOG.debug("Section size: {}, expected trailer at relative offset: {}", 
+                     metadata.getSize(), metadata.getSize() - 212);
+            LOG.debug("Trailer position in absolute coordinates: {}", 
+                     metadata.getOffset() + metadata.getSize() - 212);
+          }
+          
           LOG.debug("Initializing section indices for tenant at offset {}", metadata.getOffset());
-          sectionFileInfo.initMetaAndIndex(reader);
-          LOG.debug("Successfully initialized indices for section at offset {}", metadata.getOffset());
           
-          initialized = true;
-          LOG.debug("Initialized HFilePreadReader for tenant prefix: {}", 
-              org.apache.hadoop.hbase.util.Bytes.toStringBinary(tenantPrefix));
+          // Create the reader - we need to create it before initializing indices
+          LOG.debug("Creating HFilePreadReader for tenant section at offset {}", metadata.getOffset());
+          hfileReader = new HFilePreadReader(sectionContext, info, cacheConf, getConf());
+          
+          // Initialize the HFileInfo with the reader
+          LOG.debug("About to initialize metadata and indices for section at offset {}", metadata.getOffset());
+          info.initMetaAndIndex(hfileReader);
+          
+          LOG.debug("Successfully initialized indices for section at offset {}", metadata.getOffset());
+          LOG.debug("Initialized HFilePreadReader for tenant prefix: {}", Bytes.toStringBinary(tenantPrefix));
+          
+          return hfileReader;
         } catch (IOException e) {
           LOG.error("Failed to initialize section reader", e);
+          // Log detailed diagnostic information for troubleshooting
+          if (metadata.getOffset() > 0) {
+            LOG.error("Error details for section at offset {}: size={}, endpoint={}, sectionContext={}",
+                     metadata.getOffset(), metadata.getSize(), 
+                     metadata.getOffset() + metadata.getSize(),
+                     context);
+          }
           throw e;
         }
       }
-      return reader;
     }
-
+    
     @Override
     public HFileScanner getScanner(Configuration conf, boolean cacheBlocks, 
         boolean pread, boolean isCompaction) throws IOException {
-      return getReader().getScanner(conf, cacheBlocks, pread, isCompaction);
+      return getReader().getScanner(conf, cacheBlocks, true, isCompaction);
     }
-
+    
     @Override
     public void close(boolean evictOnClose) throws IOException {
-      if (reader != null) {
-        reader.close(evictOnClose);
-        reader = null;
+      if (hfileReader != null) {
+        hfileReader.close(evictOnClose);
       }
-      initialized = false;
     }
   }
 

@@ -20,147 +20,173 @@ package org.apache.hadoop.hbase.io;
 import java.io.IOException;
 import java.io.InputStream;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.PositionedReadable;
+import org.apache.hadoop.fs.Seekable;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
- * A specialized FSDataInputStreamWrapper for multi-tenant HFile section reading.
- * This wrapper adds offset handling to standard input stream operations.
+ * Implementation of {@link FSDataInputStreamWrapper} that adds offset translation
+ * capability for multi-tenant HFiles. This allows each tenant section to have its
+ * own coordinate system starting from 0, while the actual file positions are
+ * calculated by adding the section offset.
+ * <p>
+ * The class transparently handles all position-related operations including:
+ * <ul>
+ *   <li>Converting relative positions (0-based within section) to absolute file positions</li>
+ *   <li>Maintaining correct logical position tracking for the section reader</li>
+ *   <li>Seeking and position reporting that is section-relative</li>
+ * </ul>
  */
 @InterfaceAudience.Private
 public class MultiTenantFSDataInputStreamWrapper extends FSDataInputStreamWrapper {
-  private static final Logger LOG = LoggerFactory.getLogger(MultiTenantFSDataInputStreamWrapper.class);
-  
-  private final FSDataInputStreamWrapper parent;
+  // The offset where this section starts in the parent file
   private final long sectionOffset;
-  private boolean useRelativeOffsets = false;
-  
+  private final FSDataInputStreamWrapper parent;
+
   /**
-   * Creates a wrapper over an existing input stream with a section offset.
+   * Constructor that creates a wrapper with offset translation.
    *
-   * @param parent The parent input stream wrapper
-   * @param sectionOffset The offset to the start of the section
+   * @param parent the original input stream wrapper to delegate to
+   * @param offset the offset where the section starts in the parent file
    */
-  public MultiTenantFSDataInputStreamWrapper(FSDataInputStreamWrapper parent, long sectionOffset) {
-    super(new ForwardingFSDataInputStream(parent.getStream(false), sectionOffset, false));
+  public MultiTenantFSDataInputStreamWrapper(FSDataInputStreamWrapper parent, long offset) {
+    // Pass the parent's stream to the superclass constructor
+    super(parent.getStream(false));
     this.parent = parent;
-    this.sectionOffset = sectionOffset;
+    this.sectionOffset = offset;
   }
-  
+
   /**
-   * Set whether this wrapper should use relative offsets.
-   * @param value True to use relative offsets, false for absolute offsets
+   * Converts a position relative to the section to an absolute file position.
+   *
+   * @param relativePos the position relative to the section start
+   * @return the absolute position in the file
    */
-  public void setUsesRelativeOffsets(boolean value) {
-    this.useRelativeOffsets = value;
-    LOG.debug("Set relative offset mode to {} (base offset={})", value, sectionOffset);
+  public long toAbsolutePosition(long relativePos) {
+    return relativePos + sectionOffset;
   }
-  
+
+  /**
+   * Converts an absolute file position to a position relative to the section.
+   *
+   * @param absolutePos the absolute position in the file
+   * @return the position relative to the section start
+   */
+  public long toRelativePosition(long absolutePos) {
+    return absolutePos - sectionOffset;
+  }
+
   @Override
   public FSDataInputStream getStream(boolean useHBaseChecksum) {
-    // Always delegate to the original stream with offset adjustment
-    ForwardingFSDataInputStream stream = new ForwardingFSDataInputStream(
-        parent.getStream(useHBaseChecksum), sectionOffset, useRelativeOffsets);
-    return stream;
+    return parent.getStream(useHBaseChecksum);
+  }
+
+  @Override
+  public Path getReaderPath() {
+    return parent.getReaderPath();
   }
 
   @Override
   public boolean shouldUseHBaseChecksum() {
     return parent.shouldUseHBaseChecksum();
   }
-  
+
+  @Override
+  public void prepareForBlockReader(boolean forceNoHBaseChecksum) throws IOException {
+    parent.prepareForBlockReader(forceNoHBaseChecksum);
+  }
+
+  @Override
+  public FSDataInputStream fallbackToFsChecksum(int offCount) throws IOException {
+    return parent.fallbackToFsChecksum(offCount);
+  }
+
   @Override
   public void checksumOk() {
     parent.checksumOk();
   }
-  
-  @Override
-  public FSDataInputStream fallbackToFsChecksum(int offCount) throws IOException {
-    parent.fallbackToFsChecksum(offCount);
-    return getStream(false);
-  }
-  
+
   @Override
   public void unbuffer() {
     parent.unbuffer();
   }
-  
+
   @Override
-  public Path getReaderPath() {
-    return parent.getReaderPath();
+  public void close() {
+    // Don't close the parent stream as it might be used elsewhere
   }
-  
+
   /**
-   * Inner class that forwards input stream operations with offset adjustment.
+   * Custom implementation to translate seek position.
    */
-  private static class ForwardingFSDataInputStream extends FSDataInputStream {
-    private final FSDataInputStream delegate;
-    private final long offset;
-    private boolean useRelativeOffsets;
-    
-    public ForwardingFSDataInputStream(FSDataInputStream delegate, long offset, boolean useRelativeOffsets) {
-      super(delegate.getWrappedStream());
-      this.delegate = delegate;
-      this.offset = offset;
-      this.useRelativeOffsets = useRelativeOffsets;
-    }
-    
-    @Override
-    public void seek(long pos) throws IOException {
-      if (useRelativeOffsets) {
-        // If using relative offsets, translate relative to absolute
-        delegate.seek(pos + offset);
-      } else {
-        // Otherwise, pass through directly
-        delegate.seek(pos);
-      }
-    }
-    
-    @Override
-    public long getPos() throws IOException {
-      if (useRelativeOffsets) {
-        // If using relative offsets, translate absolute to relative
-        return delegate.getPos() - offset;
-      } else {
-        // Otherwise, return actual position
-        return delegate.getPos();
-      }
-    }
-    
-    @Override
-    public int read(long position, byte[] buffer, int offset, int length) throws IOException {
-      if (useRelativeOffsets) {
-        // If using relative offsets, translate relative to absolute
-        return delegate.read(position + this.offset, buffer, offset, length);
-      } else {
-        // Otherwise, pass through directly
-        return delegate.read(position, buffer, offset, length);
-      }
-    }
-    
-    @Override
-    public void readFully(long position, byte[] buffer, int offset, int length) throws IOException {
-      if (useRelativeOffsets) {
-        // If using relative offsets, translate relative to absolute
-        delegate.readFully(position + this.offset, buffer, offset, length);
-      } else {
-        // Otherwise, pass through directly
-        delegate.readFully(position, buffer, offset, length);
-      }
-    }
-    
-    @Override
-    public void readFully(long position, byte[] buffer) throws IOException {
-      if (useRelativeOffsets) {
-        // If using relative offsets, translate relative to absolute
-        delegate.readFully(position + this.offset, buffer);
-      } else {
-        // Otherwise, pass through directly
-        delegate.readFully(position, buffer);
-      }
-    }
+  public void seek(long seekPos) throws IOException {
+    // Convert section-relative position to absolute file position
+    long absolutePos = toAbsolutePosition(seekPos);
+    FSDataInputStream stream = parent.getStream(shouldUseHBaseChecksum());
+    stream.seek(absolutePos);
+  }
+
+  /**
+   * Custom implementation to translate position.
+   */
+  public long getPos() throws IOException {
+    // Get the absolute position and convert to section-relative position
+    FSDataInputStream stream = parent.getStream(shouldUseHBaseChecksum());
+    long absolutePos = stream.getPos();
+    return toRelativePosition(absolutePos);
+  }
+
+  /**
+   * Read method that translates position.
+   */
+  public int read(byte[] b, int off, int len) throws IOException {
+    FSDataInputStream stream = parent.getStream(shouldUseHBaseChecksum());
+    return stream.read(b, off, len);
+  }
+
+  /**
+   * Custom implementation to read at position with offset translation.
+   */
+  public int read(long pos, byte[] b, int off, int len) throws IOException {
+    long absolutePos = toAbsolutePosition(pos);
+    FSDataInputStream stream = parent.getStream(shouldUseHBaseChecksum());
+    return stream.read(absolutePos, b, off, len);
+  }
+
+  public PositionedReadable getPositionedReadable() {
+    FSDataInputStream stream = parent.getStream(shouldUseHBaseChecksum());
+    return stream;
+  }
+
+  public Seekable getSeekable() {
+    FSDataInputStream stream = parent.getStream(shouldUseHBaseChecksum());
+    return stream;
+  }
+
+  public InputStream getStream() {
+    FSDataInputStream stream = parent.getStream(shouldUseHBaseChecksum());
+    return stream;
+  }
+
+  public boolean hasInputStream() {
+    return true;
+  }
+
+  public boolean hasPositionedReadable() {
+    return true;
+  }
+
+  public boolean hasSeekable() {
+    return true;
+  }
+
+  public int read() throws IOException {
+    FSDataInputStream stream = parent.getStream(shouldUseHBaseChecksum());
+    return stream.read();
+  }
+
+  public FSDataInputStream getStream(FSDataInputStream stream) {
+    return stream;
   }
 } 

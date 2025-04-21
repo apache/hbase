@@ -653,19 +653,58 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
                                             ReaderContext.ReaderType readerType) throws IOException {
     // Create a special wrapper with offset translation capabilities
     FSDataInputStreamWrapper parentWrapper = context.getInputStreamWrapper();
+    LOG.debug("Creating MultiTenantFSDataInputStreamWrapper with offset translation from parent at offset {}", 
+             metadata.getOffset());
+    
     MultiTenantFSDataInputStreamWrapper sectionWrapper = 
         new MultiTenantFSDataInputStreamWrapper(parentWrapper, metadata.getOffset());
     
-    // Build the reader context - critically, use ENTIRE file size, not section size
-    // This helps HFileInfo correctly locate the trailer at the end of each section
+    // In HFile format, each tenant section is a complete HFile with a trailer,
+    // so we need to properly handle trailer positioning for each section
+    
+    // Calculate section size and endpoint
+    int sectionSize = metadata.getSize();
+    long sectionEndpoint = metadata.getOffset() + sectionSize;
+    
+    // HFile v3 trailer size is 212 bytes (from FixedFileTrailer.TRAILER_SIZE[3])
+    // Each section is internally using HFile v3 format
+    int trailerSize = 212;
+    
+    if (sectionSize < trailerSize) {
+      LOG.warn("Section size {} for offset {} is smaller than minimum trailer size {}",
+               sectionSize, metadata.getOffset(), trailerSize);
+    }
+    
+    // Set log level to debug for detailed section position information
+    LOG.debug("Section context: offset={}, size={}, endPos={}, trailer expected at {}",
+             metadata.getOffset(), 
+             sectionSize,
+             sectionEndpoint,
+             sectionEndpoint - trailerSize);
+    
+    // Log additional debug information to validate blocks and headers
+    LOG.debug("Block boundary details: section starts at absolute position {}, " +
+             "first block header should be at this position", metadata.getOffset());
+    
+    // If this is not the first section, log detailed information about block alignment
+    if (metadata.getOffset() > 0) {
+      LOG.debug("Non-first section requires correct offset translation for all block operations");
+      LOG.debug("First block in section: relative pos=0, absolute pos={}", metadata.getOffset());
+      LOG.debug("CHECKSUM_TYPE_INDEX position should be translated from relative pos 24 to absolute pos {}",
+               metadata.getOffset() + 24);
+    }
+    
+    // Build the reader context with proper file size calculation
+    // This ensures HFileReaderImpl correctly finds the trailer at (offset + size - trailerSize)
     ReaderContext sectionContext = ReaderContextBuilder.newBuilder(context)
         .withInputStreamWrapper(sectionWrapper)
         .withFilePath(context.getFilePath())
         .withReaderType(readerType)
         .withFileSystem(context.getFileSystem())
-        .withFileSize(metadata.getOffset() + metadata.getSize()) // End position, not size
+        .withFileSize(sectionEndpoint) // Use endpoint (offset+size), not just section size
         .build();
     
+    LOG.debug("Created section reader context: {}", sectionContext);
     return sectionContext;
   }
 } 
