@@ -183,10 +183,11 @@ public class ManagedKeyData {
     return keyMetadata;
   }
 
-  @Override public String toString() {
+  @Override
+  public String toString() {
     return "ManagedKeyData{" + "keyCustodian=" + Arrays.toString(keyCust) + ", keyNamespace='"
       + keyNamespace + '\'' + ", keyStatus=" + keyStatus + ", keyMetadata='" + keyMetadata + '\''
-      + ", refreshTimestamp=" + refreshTimestamp + '}';
+      + ", refreshTimestamp=" + refreshTimestamp + ", keyChecksum=" + getKeyChecksum() + '}';
   }
 
   public long getRefreshTimestamp() {
@@ -213,9 +214,12 @@ public class ManagedKeyData {
    * Computes the checksum of the key. If the checksum has already been computed, this method
    * returns the previously computed value. The checksum is computed using the CRC32C algorithm.
    *
-   * @return The checksum of the key as a long value.
+   * @return The checksum of the key as a long value, {@code 0} if no key is available.
    */
   public long getKeyChecksum() {
+    if (theKey == null) {
+      return 0;
+    }
     if (keyChecksum == 0) {
       keyChecksum = constructKeyChecksum(theKey.getEncoded());
     }

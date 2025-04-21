@@ -54,8 +54,8 @@ public class TestManagedKeymeta extends ManagedKeyTestBase {
     List<ManagedKeyData> managedKeys =
       adminClient.getManagedKeys(encodedCust, ManagedKeyData.KEY_SPACE_GLOBAL);
     assertEquals(1, managedKeys.size());
-    assertEquals(managedKeyProvider.getKey(cust.getBytes()).cloneWithoutKey(),
-      managedKeys.get(0).cloneWithoutKey());
+    assertEquals(managedKeyProvider.getLastGeneratedKeyData(cust,
+        ManagedKeyData.KEY_SPACE_GLOBAL).cloneWithoutKey(), managedKeys.get(0).cloneWithoutKey());
 
     String nonExistentCust = "nonExistentCust";
     managedKeyProvider.setMockedKeyStatus(nonExistentCust, ManagedKeyStatus.FAILED);

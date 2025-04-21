@@ -37,53 +37,83 @@ import org.slf4j.LoggerFactory;
 public class MockManagedKeyProvider extends MockAesKeyProvider implements ManagedKeyProvider {
   protected static final Logger LOG = LoggerFactory.getLogger(MockManagedKeyProvider.class);
 
-  public Map<String, Key> keys = new HashMap<>();
-  public Map<String, ManagedKeyStatus> keyStatus = new HashMap<>();
+  private boolean multikeyGenMode;
+  private Map<String,Map<String, Key>> keys = new HashMap<>();
+  private Map<String, Map<String, ManagedKeyData>> lastGenKeyData = new HashMap<>();
+  // Keep references of all generated keys by their full and partial metadata.
+  private Map<String, Key> allGeneratedKeys = new HashMap<>();
+  private Map<String, ManagedKeyStatus> keyStatus = new HashMap<>();
   private String systemKeyAlias = "default_system_key_alias";
 
-  @Override public void initConfig(Configuration conf) {
+  @Override
+  public void initConfig(Configuration conf) {
    // NO-OP
   }
 
-  @Override public ManagedKeyData getSystemKey(byte[] systemId) throws IOException {
-    return getKey(systemId, systemKeyAlias);
+  @Override
+  public ManagedKeyData getSystemKey(byte[] systemId) throws IOException {
+    return getKey(systemId, systemKeyAlias, ManagedKeyData.KEY_SPACE_GLOBAL);
   }
 
-  @Override public ManagedKeyData getManagedKey(byte[] key_cust, String key_namespace)
+  @Override
+  public ManagedKeyData getManagedKey(byte[] key_cust, String key_namespace)
     throws IOException {
-    return getKey(key_cust);
+    String alias = Bytes.toString(key_cust);
+    return getKey(key_cust, alias, key_namespace);
   }
 
-  @Override public ManagedKeyData unwrapKey(String keyMetadata) throws IOException {
-    String[] meta_toks = keyMetadata.split(":");
-    if (keys.containsKey(meta_toks[1])) {
-      return getKey(meta_toks[0].getBytes(), meta_toks[1]);
+  @Override
+  public ManagedKeyData unwrapKey(String keyMetadata) throws IOException {
+    if (allGeneratedKeys.containsKey(keyMetadata)) {
+      String[] meta_toks = keyMetadata.split(":");
+      ManagedKeyStatus keyStatus = this.keyStatus.get(meta_toks[1]);
+      ManagedKeyData managedKeyData =
+        new ManagedKeyData(meta_toks[0].getBytes(), ManagedKeyData.KEY_SPACE_GLOBAL,
+          allGeneratedKeys.get(keyMetadata),
+          keyStatus == null ? ManagedKeyStatus.ACTIVE : keyStatus, keyMetadata);
+      return registerKeyData(meta_toks[1], managedKeyData);
     }
     return null;
   }
 
-  /**
-   * Lookup the key data for the given key_cust from keys. If missing, initialize one using
-   * generateSecretKey().
-   */
-  public ManagedKeyData getKey(byte[] key_cust) {
-    String alias = Bytes.toString(key_cust);
-    return getKey(key_cust, alias);
+  public ManagedKeyData getLastGeneratedKeyData(String alias, String keyNamespace) {
+    if (! lastGenKeyData.containsKey(keyNamespace)) {
+      return null;
+    }
+    return lastGenKeyData.get(keyNamespace).get(alias);
+  }
+
+  private ManagedKeyData registerKeyData(String alias, ManagedKeyData managedKeyData) {
+    if (! lastGenKeyData.containsKey(managedKeyData.getKeyNamespace())) {
+      lastGenKeyData.put(managedKeyData.getKeyNamespace(), new HashMap<>());
+    }
+    lastGenKeyData.get(managedKeyData.getKeyNamespace()).put(alias,
+      managedKeyData);
+    return managedKeyData;
+  }
+
+  public void setMultikeyGenMode(boolean multikeyGenMode) {
+    this.multikeyGenMode = multikeyGenMode;
   }
 
   public void setMockedKeyStatus(String alias, ManagedKeyStatus status) {
     keyStatus.put(alias, status);
   }
 
-  public void setMockedKey(String alias, Key key) {
-    keys.put(alias, key);
+  public void setMockedKey(String alias, Key key, String keyNamespace) {
+    if (! keys.containsKey(keyNamespace)) {
+      keys.put(keyNamespace, new HashMap<>());
+    }
+    Map<String, Key> keysForSpace = keys.get(keyNamespace);
+    keysForSpace.put(alias, key);
   }
 
-  public Key getMockedKey(String alias) {
-    return keys.get(alias);
+  public Key getMockedKey(String alias, String keySpace) {
+    Map<String, Key> keysForSpace = keys.get(keySpace);
+    return keysForSpace != null ? keysForSpace.get(alias) : null;
   }
 
-  public void setCluterKeyAlias(String alias) {
+  public void setClusterKeyAlias(String alias) {
     this.systemKeyAlias = alias;
   }
 
@@ -106,21 +136,32 @@ public class MockManagedKeyProvider extends MockAesKeyProvider implements Manage
     return keyGen.generateKey();
   }
 
-  private ManagedKeyData getKey(byte[] key_cust, String alias) {
+  // TODO: look up existing key only if multi generate mode is off.
+  private ManagedKeyData getKey(byte[] key_cust, String alias, String key_namespace) {
     ManagedKeyStatus keyStatus = this.keyStatus.get(alias);
+    if (! keys.containsKey(key_namespace)) {
+      keys.put(key_namespace, new HashMap<>());
+    }
+    Map<String, Key> keySpace = keys.get(key_namespace);
     Key key = null;
     if (keyStatus != ManagedKeyStatus.FAILED && keyStatus != ManagedKeyStatus.DISABLED) {
-      if (! keys.containsKey(alias)) {
+      if (! keySpace.containsKey(alias)) {
         key = generateSecretKey();
-        keys.put(alias, key);
+        keySpace.put(alias, key);
       }
-      key = keys.get(alias);
+      key = keySpace.get(alias);
       if (key == null) {
         return null;
       }
     }
-    return new ManagedKeyData(key_cust, ManagedKeyData.KEY_SPACE_GLOBAL, key,
-      keyStatus == null ? ManagedKeyStatus.ACTIVE : keyStatus,
-      Bytes.toString(key_cust)+":"+alias);
+    long checksum = key == null ? 0 : ManagedKeyData.constructKeyChecksum(key.getEncoded());
+    String partialMetadata = Bytes.toString(key_cust) + ":" + alias;
+    String keyMetadata = partialMetadata + ":" + key_namespace + ":" + checksum;
+    allGeneratedKeys.put(partialMetadata, key);
+    allGeneratedKeys.put(keyMetadata, key);
+    ManagedKeyData managedKeyData =
+      new ManagedKeyData(key_cust, ManagedKeyData.KEY_SPACE_GLOBAL, key,
+        keyStatus == null ? ManagedKeyStatus.ACTIVE : keyStatus, keyMetadata);
+    return registerKeyData(alias, managedKeyData);
   }
 }

@@ -41,19 +41,17 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @RunWith(Suite.class)
-@Suite.SuiteClasses({ TestKeymetaAdmin.TestWhenDisabled.class,
-  TestKeymetaAdmin.TestAdminImpl.class })
+@Suite.SuiteClasses({ TestKeymetaAdminImpl.TestWhenDisabled.class,
+  TestKeymetaAdminImpl.TestAdminImpl.class, TestKeymetaAdminImpl.TestForInvalid.class })
 @Category({ MasterTests.class, SmallTests.class })
-public class TestKeymetaAdmin {
+public class TestKeymetaAdminImpl {
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   @Rule public TestName name = new TestName();
@@ -77,11 +75,11 @@ public class TestKeymetaAdmin {
 
     when(mockServer.getFileSystem()).thenReturn(mockFileSystem);
     when(mockServer.getConfiguration()).thenReturn(conf);
-    keymetaAdmin = new TestKeymetaAdminImpl(mockServer, mockAccessor);
+    keymetaAdmin = new DummyKeymetaAdminImpl(mockServer, mockAccessor);
   }
 
   @RunWith(BlockJUnit4ClassRunner.class) @Category({ MasterTests.class, SmallTests.class })
-  public static class TestWhenDisabled extends TestKeymetaAdmin {
+  public static class TestWhenDisabled extends TestKeymetaAdminImpl {
     @ClassRule public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestWhenDisabled.class);
 
@@ -102,9 +100,9 @@ public class TestKeymetaAdmin {
 
   @RunWith(Parameterized.class)
   @Category({ MasterTests.class, SmallTests.class })
-  public static class TestAdminImpl extends TestKeymetaAdmin {
+  public static class TestAdminImpl extends TestKeymetaAdminImpl {
     @ClassRule public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSystemKeyAccessor.TestAccessor.class);
+      HBaseClassTestRule.forClass(TestAdminImpl.class);
 
     @Parameter(0)
     public ManagedKeyStatus keyStatus;
@@ -135,7 +133,8 @@ public class TestKeymetaAdmin {
       assertEquals(keyStatus, managedKeyStatuses.get(0).getKeyStatus());
       verify(mockAccessor)
         .addKey(argThat((ManagedKeyData keyData) -> assertKeyData(keyData, keyStatus,
-          isNullKey ? null : managedKeyProvider.getMockedKey(cust))));
+          isNullKey ? null : managedKeyProvider.getMockedKey(cust,
+            ManagedKeyData.KEY_SPACE_GLOBAL))));
 
       keymetaAdmin.getManagedKeys(encodedCust, ManagedKeyData.KEY_SPACE_GLOBAL);
       verify(mockAccessor)
@@ -146,26 +145,26 @@ public class TestKeymetaAdmin {
 
   @RunWith(BlockJUnit4ClassRunner.class)
   @Category({ MasterTests.class, SmallTests.class })
-  public static class TestForInvalid extends TestKeymetaAdmin {
+  public static class TestForInvalid extends TestKeymetaAdminImpl {
     @ClassRule public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestKeymetaAdmin.TestForInvalid.class);
+      HBaseClassTestRule.forClass(TestForInvalid.class);
 
       @Test
       public void testForKeyProviderNullReturn() throws Exception {
         MockManagedKeyProvider managedKeyProvider = (MockManagedKeyProvider)
           Encryption.getKeyProvider(conf);
-        String cust = "cust1";
+        String cust = "invalidcust1";
         String encodedCust = ManagedKeyProvider.encodeToStr(cust.getBytes());
-        managedKeyProvider.setMockedKey(cust, null);
-        assertThrows(IOException.class, () -> keymetaAdmin.enableKeyManagement(encodedCust,
-          ManagedKeyData.KEY_SPACE_GLOBAL));
-
+        managedKeyProvider.setMockedKey(cust, null, ManagedKeyData.KEY_SPACE_GLOBAL);
+        IOException ex = assertThrows(IOException.class,
+          () -> keymetaAdmin.enableKeyManagement(encodedCust, ManagedKeyData.KEY_SPACE_GLOBAL));
+        assertEquals("Invalid null managed key received from key provider", ex.getMessage());
       }
     }
 
 
-  private class TestKeymetaAdminImpl extends KeymetaAdminImpl {
-    public TestKeymetaAdminImpl(Server mockServer, KeymetaTableAccessor mockAccessor) {
+  private class DummyKeymetaAdminImpl extends KeymetaAdminImpl {
+    public DummyKeymetaAdminImpl(Server mockServer, KeymetaTableAccessor mockAccessor) {
       super(mockServer);
     }
 

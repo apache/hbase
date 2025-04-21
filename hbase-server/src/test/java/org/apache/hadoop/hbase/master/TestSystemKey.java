@@ -63,9 +63,9 @@ public class TestSystemKey extends ManagedKeyTestBase {
 
     // Test rotation of cluster key by changing the key that the key provider provides and restart master.
     String newAlias = "new_cluster_key";
-    pbeKeyProvider.setCluterKeyAlias(newAlias);
+    pbeKeyProvider.setClusterKeyAlias(newAlias);
     Key newCluterKey = MockManagedKeyProvider.generateSecretKey();
-    pbeKeyProvider.setMockedKey(newAlias, newCluterKey);
+    pbeKeyProvider.setMockedKey(newAlias, newCluterKey, ManagedKeyData.KEY_SPACE_GLOBAL);
     restartSystem();
     master = TEST_UTIL.getHBaseCluster().getMaster();
     SystemKeyAccessor systemKeyAccessor = new SystemKeyAccessor(master);
