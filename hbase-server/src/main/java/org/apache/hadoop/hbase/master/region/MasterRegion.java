@@ -171,10 +171,14 @@ public final class MasterRegion {
         // for few times before aborting the active master. The master region might
         // have genuine case for delayed flushes and/or some procedure bug causing
         // heavy pressure on the memstore.
+        flusherAndCompactor.onUpdate();
         if (tries == (maxRetriesForRegionUpdates - 1)) {
           abortServer(e);
         }
         LOG.info("Master region {} is too busy... retry attempt: {}", region, tries);
+        // Exponential backoff is performed by ConnectionUtils.getPauseTime().
+        // It uses HConstants.RETRY_BACKOFF array for the backoff multiplier, the
+        // same array is used as backoff multiplier with RPC retries.
         Threads.sleep(ConnectionUtils.getPauseTime(regionUpdateRetryPauseTime, tries));
       } catch (IOException e) {
         // We catch IOException here to ensure that if the mutation is not successful
