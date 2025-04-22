@@ -136,7 +136,6 @@ public class MockManagedKeyProvider extends MockAesKeyProvider implements Manage
     return keyGen.generateKey();
   }
 
-  // TODO: look up existing key only if multi generate mode is off.
   private ManagedKeyData getKey(byte[] key_cust, String alias, String key_namespace) {
     ManagedKeyStatus keyStatus = this.keyStatus.get(alias);
     if (! keys.containsKey(key_namespace)) {
@@ -145,7 +144,7 @@ public class MockManagedKeyProvider extends MockAesKeyProvider implements Manage
     Map<String, Key> keySpace = keys.get(key_namespace);
     Key key = null;
     if (keyStatus != ManagedKeyStatus.FAILED && keyStatus != ManagedKeyStatus.DISABLED) {
-      if (! keySpace.containsKey(alias)) {
+      if (multikeyGenMode || ! keySpace.containsKey(alias)) {
         key = generateSecretKey();
         keySpace.put(alias, key);
       }

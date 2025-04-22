@@ -37,24 +37,32 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import static org.apache.hadoop.hbase.io.crypto.ManagedKeyStatus.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @RunWith(Suite.class)
 @Suite.SuiteClasses({ TestKeymetaAdminImpl.TestWhenDisabled.class,
-  TestKeymetaAdminImpl.TestAdminImpl.class, TestKeymetaAdminImpl.TestForInvalid.class })
+  TestKeymetaAdminImpl.TestAdminImpl.class,
+  TestKeymetaAdminImpl.TestForKeyProviderNullReturn.class,
+  TestKeymetaAdminImpl.TestMultiKeyGen.class,
+  TestKeymetaAdminImpl.TestForInvalidKeyCountConfig.class,
+})
 @Category({ MasterTests.class, SmallTests.class })
 public class TestKeymetaAdminImpl {
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
-  @Rule public TestName name = new TestName();
+  @Rule
+  public TestName name = new TestName();
 
   protected Configuration conf;
   protected Path testRootDir;
@@ -65,7 +73,8 @@ public class TestKeymetaAdminImpl {
   protected KeymetaAdminImpl keymetaAdmin;
   KeymetaTableAccessor mockAccessor = mock(KeymetaTableAccessor.class);
 
-  @Before public void setUp() throws IOException {
+  @Before
+  public void setUp() throws IOException {
     conf = TEST_UTIL.getConfiguration();
     testRootDir = TEST_UTIL.getDataTestDir(name.getMethodName());
     fs = testRootDir.getFileSystem(conf);
@@ -78,17 +87,21 @@ public class TestKeymetaAdminImpl {
     keymetaAdmin = new DummyKeymetaAdminImpl(mockServer, mockAccessor);
   }
 
-  @RunWith(BlockJUnit4ClassRunner.class) @Category({ MasterTests.class, SmallTests.class })
+  @RunWith(BlockJUnit4ClassRunner.class)
+  @Category({ MasterTests.class, SmallTests.class })
   public static class TestWhenDisabled extends TestKeymetaAdminImpl {
-    @ClassRule public static final HBaseClassTestRule CLASS_RULE =
+    @ClassRule
+    public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestWhenDisabled.class);
 
-    @Override public void setUp() throws IOException {
+    @Override
+    public void setUp() throws IOException {
       super.setUp();
       conf.set(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, "false");
     }
 
-    @Test public void testDisabled() throws Exception {
+    @Test
+    public void testDisabled() throws Exception {
       assertThrows(IOException.class,
         () -> keymetaAdmin.enableKeyManagement(ManagedKeyData.KEY_GLOBAL_CUSTODIAN,
           ManagedKeyData.KEY_SPACE_GLOBAL));
@@ -101,28 +114,40 @@ public class TestKeymetaAdminImpl {
   @RunWith(Parameterized.class)
   @Category({ MasterTests.class, SmallTests.class })
   public static class TestAdminImpl extends TestKeymetaAdminImpl {
-    @ClassRule public static final HBaseClassTestRule CLASS_RULE =
+    @ClassRule
+    public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestAdminImpl.class);
 
     @Parameter(0)
-    public ManagedKeyStatus keyStatus;
+    public int nKeys;
     @Parameter(1)
+    public ManagedKeyStatus keyStatus;
+    @Parameter(2)
     public boolean isNullKey;
 
-    @Parameters(name = "{index},keyStatus={0}")
+    @Parameters(name = "{index},nKeys={0},keyStatus={1}")
     public static Collection<Object[]> data() {
-      return Arrays.asList(new Object[][] {
-        { ManagedKeyStatus.ACTIVE, false },
-        { ManagedKeyStatus.FAILED, true },
-        { ManagedKeyStatus.INACTIVE, false },
-        { ManagedKeyStatus.DISABLED, true },
-      });
+      return Arrays.asList(
+        new Object[][] {
+          { 1, ACTIVE, false },
+          { 1, FAILED, true },
+          { 1, INACTIVE, false },
+          { 1, DISABLED, true },
+          { 2, ACTIVE, false },
+        });
+    }
+
+    @Override
+    public void setUp() throws IOException {
+      super.setUp();
+      conf.set(HConstants.CRYPTO_MANAGED_KEYS_PER_CUST_ACTIVE_KEY_COUNT,
+        Integer.toString(nKeys));
     }
 
     @Test
     public void testEnable() throws Exception {
-      MockManagedKeyProvider managedKeyProvider = (MockManagedKeyProvider)
-        Encryption.getKeyProvider(conf);
+      MockManagedKeyProvider managedKeyProvider =
+        (MockManagedKeyProvider) Encryption.getKeyProvider(conf);
       String cust = "cust1";
       managedKeyProvider.setMockedKeyStatus(cust, keyStatus);
       String encodedCust = ManagedKeyProvider.encodeToStr(cust.getBytes());
@@ -131,37 +156,97 @@ public class TestKeymetaAdminImpl {
       assertNotNull(managedKeyStatuses);
       assertEquals(1, managedKeyStatuses.size());
       assertEquals(keyStatus, managedKeyStatuses.get(0).getKeyStatus());
-      verify(mockAccessor)
-        .addKey(argThat((ManagedKeyData keyData) -> assertKeyData(keyData, keyStatus,
+      verify(mockAccessor).addKey(argThat(
+        (ManagedKeyData keyData) -> assertKeyData(keyData, keyStatus,
           isNullKey ? null : managedKeyProvider.getMockedKey(cust,
             ManagedKeyData.KEY_SPACE_GLOBAL))));
 
       keymetaAdmin.getManagedKeys(encodedCust, ManagedKeyData.KEY_SPACE_GLOBAL);
-      verify(mockAccessor)
-        .getAllKeys(argThat((arr) -> Bytes.compareTo(cust.getBytes(), arr) == 0),
-          eq(ManagedKeyData.KEY_SPACE_GLOBAL));
+      verify(mockAccessor).getAllKeys(
+        argThat((arr) -> Bytes.compareTo(cust.getBytes(), arr) == 0),
+        eq(ManagedKeyData.KEY_SPACE_GLOBAL));
     }
   }
 
   @RunWith(BlockJUnit4ClassRunner.class)
   @Category({ MasterTests.class, SmallTests.class })
-  public static class TestForInvalid extends TestKeymetaAdminImpl {
-    @ClassRule public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestForInvalid.class);
+  public static class TestMultiKeyGen extends TestKeymetaAdminImpl {
+    @ClassRule
+    public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestKeymetaAdminImpl.TestMultiKeyGen.class);
 
-      @Test
-      public void testForKeyProviderNullReturn() throws Exception {
-        MockManagedKeyProvider managedKeyProvider = (MockManagedKeyProvider)
-          Encryption.getKeyProvider(conf);
-        String cust = "invalidcust1";
-        String encodedCust = ManagedKeyProvider.encodeToStr(cust.getBytes());
-        managedKeyProvider.setMockedKey(cust, null, ManagedKeyData.KEY_SPACE_GLOBAL);
-        IOException ex = assertThrows(IOException.class,
-          () -> keymetaAdmin.enableKeyManagement(encodedCust, ManagedKeyData.KEY_SPACE_GLOBAL));
-        assertEquals("Invalid null managed key received from key provider", ex.getMessage());
-      }
+    @Override
+    public void setUp() throws IOException {
+      super.setUp();
+      conf.set(HConstants.CRYPTO_MANAGED_KEYS_PER_CUST_ACTIVE_KEY_COUNT, "3");
+      MockManagedKeyProvider managedKeyProvider =
+        (MockManagedKeyProvider) Encryption.getKeyProvider(conf);
+      managedKeyProvider.setMultikeyGenMode(true);
     }
 
+    @Test
+    public void testEnable() throws Exception {
+      String cust = "cust1";
+      String encodedCust = ManagedKeyProvider.encodeToStr(cust.getBytes());
+      List<ManagedKeyData> managedKeyStatuses =
+        keymetaAdmin.enableKeyManagement(encodedCust, ManagedKeyData.KEY_SPACE_GLOBAL);
+      assertNotNull(managedKeyStatuses);
+      assertEquals(3, managedKeyStatuses.size());
+      assertEquals(ACTIVE, managedKeyStatuses.get(0).getKeyStatus());
+      assertEquals(ACTIVE, managedKeyStatuses.get(1).getKeyStatus());
+      verify(mockAccessor, times(3)).addKey(any());
+    }
+  }
+
+  @RunWith(BlockJUnit4ClassRunner.class)
+  @Category({ MasterTests.class, SmallTests.class })
+  public static class TestForKeyProviderNullReturn extends TestKeymetaAdminImpl {
+    @ClassRule
+    public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestForKeyProviderNullReturn.class);
+
+    @Test
+    public void test() throws Exception {
+      MockManagedKeyProvider managedKeyProvider =
+        (MockManagedKeyProvider) Encryption.getKeyProvider(conf);
+      String cust = "invalidcust1";
+      String encodedCust = ManagedKeyProvider.encodeToStr(cust.getBytes());
+      managedKeyProvider.setMockedKey(cust, null, ManagedKeyData.KEY_SPACE_GLOBAL);
+      IOException ex = assertThrows(IOException.class,
+        () -> keymetaAdmin.enableKeyManagement(encodedCust, ManagedKeyData.KEY_SPACE_GLOBAL));
+      assertEquals("Invalid null managed key received from key provider", ex.getMessage());
+    }
+  }
+
+  @RunWith(Parameterized.class)
+  @Category({ MasterTests.class, SmallTests.class })
+  public static class TestForInvalidKeyCountConfig extends TestKeymetaAdminImpl {
+    @ClassRule public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestForInvalidKeyCountConfig.class);
+
+    @Parameter(0)
+    public String keyCount;;
+    @Parameter(1)
+    public Class expectedExType;
+    @Parameters(name = "{index},keyCount={0},expectedExType={1}")
+    public static Collection<Object[]> data() {
+      return Arrays.asList(new Object[][] {
+        { "0", IOException.class },
+        { "-1", IOException.class },
+        { "abc", NumberFormatException.class },
+      });
+    }
+
+    @Test
+    public void test() throws Exception {
+      conf.set(HConstants.CRYPTO_MANAGED_KEYS_PER_CUST_ACTIVE_KEY_COUNT, keyCount);
+      String cust = "cust1";
+      String encodedCust = ManagedKeyProvider.encodeToStr(cust.getBytes());
+      assertThrows(expectedExType, () ->
+        keymetaAdmin.enableKeyManagement(encodedCust,
+          ManagedKeyData.KEY_SPACE_GLOBAL));
+    }
+  }
 
   private class DummyKeymetaAdminImpl extends KeymetaAdminImpl {
     public DummyKeymetaAdminImpl(Server mockServer, KeymetaTableAccessor mockAccessor) {
