@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
-import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -102,13 +101,12 @@ public class TestBlockEvictionOnRegionMovement {
         : cluster.getRegionServer(0);
     assertTrue(regionServingRS.getBlockCache().isPresent());
 
-    //wait for running prefetch threads to be completed.
+    // wait for running prefetch threads to be completed.
     Waiter.waitFor(this.conf, 200, () -> PrefetchExecutor.getPrefetchFutures().isEmpty());
 
     long oldUsedCacheSize =
       regionServingRS.getBlockCache().get().getBlockCaches()[1].getCurrentSize();
     assertNotEquals(0, oldUsedCacheSize);
-
 
     Admin admin = TEST_UTIL.getAdmin();
     RegionInfo regionToMove = regionServingRS.getRegions(tableRegionMove).get(0).getRegionInfo();
