@@ -261,8 +261,6 @@ In the previous section, we discussed enabling authentication for the Web UI via
 
 HBase provides a mechanism to define administrators for the Web UI through a list of usernames in the `hbase-site.xml` configuration file.
 
-==== Configuration Example
-
 To specify the administrators, use the following property in `hbase-site.xml`:
 
 [source,xml]
@@ -273,25 +271,11 @@ To specify the administrators, use the following property in `hbase-site.xml`:
 </property>
 ----
 
-* `hbase.security.authentication.ldap.admin.users`: This property defines a comma-separated list of usernames that are mapped to LDAP identities. These users will have administrative access to sensitive Web UI endpoints.
-
-==== Mapping Usernames to LDAP Identities
-
-The usernames listed in the `hbase.security.authentication.ldap.admin.users` property must correspond to the LDAP identities as defined by the `binddomain` rules in `hbase-site.xml`. For example:
-
-[source,xml]
-----
-<property>
-  <name>hadoop.http.authentication.ldap.binddomain</name>
-  <value>EXAMPLE.COM</value>
-</property>
-----
-
-In this case, the LDAP identity `user@EXAMPLE.COM` would map to the username `user`.
+The usernames listed in the above property should correspond to the LDAP usernames of the administrators.
 
 ==== Notes
 
-* Ensure that the LDAP server is properly configured and running.
+* Ensure that the LDAP server is properly configured and running. See the previous section for details.
 * Only users explicitly listed in the `hbase.security.authentication.ldap.admin.users` property will have access to sensitive endpoints.
 * Non-administrative users can still access non-sensitive endpoints, provided they are authenticated.
 
