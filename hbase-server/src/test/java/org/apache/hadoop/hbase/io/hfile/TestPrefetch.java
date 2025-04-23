@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MatcherPredicate;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -69,9 +70,12 @@ import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.PrefetchExecutorNotifier;
+import org.apache.hadoop.hbase.regionserver.StoreContext;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.regionserver.TestHStoreFile;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.trace.TraceUtil;
@@ -108,7 +112,7 @@ public class TestPrefetch {
   public OpenTelemetryRule otelRule = OpenTelemetryRule.create();
 
   @Before
-  public void setUp() throws IOException {
+  public void setUp() throws IOException, InterruptedException {
     conf = TEST_UTIL.getConfiguration();
     conf.setBoolean(CacheConfig.PREFETCH_BLOCKS_ON_OPEN_KEY, true);
     fs = HFileSystem.get(conf);
@@ -358,25 +362,45 @@ public class TestPrefetch {
     HFileContext context = new HFileContextBuilder().withCompression(Compression.Algorithm.GZ)
       .withBlockSize(DATA_BLOCK_SIZE).build();
     Path storeFile = writeStoreFile("TestPrefetchWithDelay", context);
-    HFile.Reader reader = HFile.createReader(fs, storeFile, cacheConf, true, conf);
     long startTime = System.currentTimeMillis();
+    HFile.Reader reader = HFile.createReader(fs, storeFile, cacheConf, true, conf);
 
     // Wait for 20 seconds, no thread should start prefetch
     Thread.sleep(20000);
     assertFalse("Prefetch threads should not be running at this point", reader.prefetchStarted());
-    while (!reader.prefetchStarted()) {
-      assertTrue("Prefetch delay has not been expired yet",
-        getElapsedTime(startTime) < PrefetchExecutor.getPrefetchDelay());
-    }
-    if (reader.prefetchStarted()) {
-      // Added some delay as we have started the timer a bit late.
-      Thread.sleep(500);
-      assertTrue("Prefetch should start post configured delay",
-        getElapsedTime(startTime) > PrefetchExecutor.getPrefetchDelay());
-    }
+    long timeout = 10000;
+    Waiter.waitFor(conf, 10000, () -> (reader.prefetchStarted() || reader.prefetchComplete()));
+
+    assertTrue(reader.prefetchStarted() || reader.prefetchComplete());
+
+    assertTrue("Prefetch should start post configured delay",
+      getElapsedTime(startTime) > PrefetchExecutor.getPrefetchDelay());
+
     conf.setInt(PREFETCH_DELAY, 1000);
     conf.setFloat(PREFETCH_DELAY_VARIATION, PREFETCH_DELAY_VARIATION_DEFAULT_VALUE);
     prefetchExecutorNotifier.onConfigurationChange(conf);
+  }
+
+  @Test
+  public void testPrefetchWhenNoBlockCache() throws Exception {
+    PrefetchExecutorNotifier prefetchExecutorNotifier = new PrefetchExecutorNotifier(conf);
+    try {
+      // Set a delay to max, as we don't need to have the thread running, but rather
+      // assert that it never gets scheduled
+      conf.setInt(PREFETCH_DELAY, Integer.MAX_VALUE);
+      conf.setFloat(PREFETCH_DELAY_VARIATION, 0.0f);
+      prefetchExecutorNotifier.onConfigurationChange(conf);
+
+      HFileContext context = new HFileContextBuilder().withCompression(Compression.Algorithm.GZ)
+        .withBlockSize(DATA_BLOCK_SIZE).build();
+      Path storeFile = writeStoreFile("testPrefetchWhenNoBlockCache", context);
+      HFile.createReader(fs, storeFile, new CacheConfig(conf), true, conf);
+      assertEquals(0, PrefetchExecutor.getPrefetchFutures().size());
+    } finally {
+      conf.setInt(PREFETCH_DELAY, 1000);
+      conf.setFloat(PREFETCH_DELAY_VARIATION, PREFETCH_DELAY_VARIATION_DEFAULT_VALUE);
+      prefetchExecutorNotifier.onConfigurationChange(conf);
+    }
   }
 
   @Test
@@ -400,11 +424,14 @@ public class TestPrefetch {
     Path storeFile = fileWithSplitPoint.getFirst();
     HRegionFileSystem regionFS =
       HRegionFileSystem.createRegionOnFileSystem(conf, fs, tableDir, region);
-    HStoreFile file = new HStoreFile(fs, storeFile, conf, cacheConf, BloomType.NONE, true);
+    StoreFileTracker sft = StoreFileTrackerFactory.create(conf, true,
+      StoreContext.getBuilder().withFamilyStoreDirectoryPath(new Path(regionDir, "cf"))
+        .withRegionFileSystem(regionFS).build());
+    HStoreFile file = new HStoreFile(fs, storeFile, conf, cacheConf, BloomType.NONE, true, sft);
     Path ref = regionFS.splitStoreFile(region, "cf", file, fileWithSplitPoint.getSecond(), false,
-      new ConstantSizeRegionSplitPolicy());
+      new ConstantSizeRegionSplitPolicy(), sft);
     conf.setBoolean(HBASE_REGION_SERVER_ENABLE_COMPACTION, compactionEnabled);
-    HStoreFile refHsf = new HStoreFile(this.fs, ref, conf, cacheConf, BloomType.NONE, true);
+    HStoreFile refHsf = new HStoreFile(this.fs, ref, conf, cacheConf, BloomType.NONE, true, sft);
     refHsf.initReader();
     HFile.Reader reader = refHsf.getReader().getHFileReader();
     while (!reader.prefetchComplete()) {
@@ -441,13 +468,22 @@ public class TestPrefetch {
       Bytes.toBytes("testPrefetchWhenHFileLink"));
 
     Path storeFilePath = regionFs.commitStoreFile("cf", writer.getPath());
-    Path dstPath = new Path(regionFs.getTableDir(), new Path("test-region", "cf"));
-    HFileLink.create(testConf, this.fs, dstPath, hri, storeFilePath.getName());
+    final RegionInfo dstHri =
+      RegionInfoBuilder.newBuilder(TableName.valueOf("testPrefetchWhenHFileLink")).build();
+    HRegionFileSystem dstRegionFs = HRegionFileSystem.createRegionOnFileSystem(testConf, fs,
+      CommonFSUtils.getTableDir(testDir, dstHri.getTable()), dstHri);
+    Path dstPath = new Path(regionFs.getTableDir(), new Path(dstHri.getRegionNameAsString(), "cf"));
+    StoreFileTracker sft = StoreFileTrackerFactory.create(testConf, false,
+      StoreContext.getBuilder()
+        .withFamilyStoreDirectoryPath(new Path(dstRegionFs.getRegionDir(), "cf"))
+        .withColumnFamilyDescriptor(ColumnFamilyDescriptorBuilder.of("cf"))
+        .withRegionFileSystem(dstRegionFs).build());
+    sft.createHFileLink(hri.getTable(), hri.getEncodedName(), storeFilePath.getName(), true);
     Path linkFilePath =
       new Path(dstPath, HFileLink.createHFileLinkName(hri, storeFilePath.getName()));
 
     // Try to open store file from link
-    StoreFileInfo storeFileInfo = new StoreFileInfo(testConf, this.fs, linkFilePath, true);
+    StoreFileInfo storeFileInfo = sft.getStoreFileInfo(linkFilePath, true);
     HStoreFile hsf = new HStoreFile(storeFileInfo, BloomType.NONE, cacheConf);
     assertTrue(storeFileInfo.isLink());
 

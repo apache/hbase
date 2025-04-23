@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -292,7 +293,7 @@ public class TestVisibilityLabelsReplication {
         (Bytes.equals(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(), row, 0,
           row.length))
       ) {
-        List<Tag> tags = PrivateCellUtil.getTags(cell);
+        List<Tag> tags = PrivateCellUtil.getTags((ExtendedCell) cell);
         for (Tag tag : tags) {
           if (tag.getType() == TagType.STRING_VIS_TAG_TYPE) {
             assertEquals(visTag, Tag.getValueAsString(tag));
@@ -410,22 +411,23 @@ public class TestVisibilityLabelsReplication {
     }
 
     @Override
-    public void prePut(ObserverContext<RegionCoprocessorEnvironment> e, Put m, WALEdit edit,
-      Durability durability) throws IOException {
+    public void prePut(ObserverContext<? extends RegionCoprocessorEnvironment> e, Put m,
+      WALEdit edit, Durability durability) throws IOException {
       byte[] attribute = m.getAttribute(NON_VISIBILITY);
       byte[] cf = null;
       List<Cell> updatedCells = new ArrayList<>();
       if (attribute != null) {
         for (List<? extends Cell> edits : m.getFamilyCellMap().values()) {
           for (Cell cell : edits) {
-            KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
+            KeyValue kv = KeyValueUtil.ensureKeyValue((ExtendedCell) cell);
             if (cf == null) {
               cf = CellUtil.cloneFamily(kv);
             }
             Tag tag = new ArrayBackedTag((byte) NON_VIS_TAG_TYPE, attribute);
-            List<Tag> tagList = new ArrayList<>(PrivateCellUtil.getTags(cell).size() + 1);
+            List<Tag> tagList =
+              new ArrayList<>(PrivateCellUtil.getTags((ExtendedCell) cell).size() + 1);
             tagList.add(tag);
-            tagList.addAll(PrivateCellUtil.getTags(cell));
+            tagList.addAll(PrivateCellUtil.getTags((ExtendedCell) cell));
             Cell newcell = PrivateCellUtil.createCell(kv, tagList);
             ((List<Cell>) updatedCells).add(newcell);
           }
@@ -446,13 +448,13 @@ public class TestVisibilityLabelsReplication {
     }
 
     @Override
-    public void postGetOp(ObserverContext<RegionCoprocessorEnvironment> e, Get get,
+    public void postGetOp(ObserverContext<? extends RegionCoprocessorEnvironment> e, Get get,
       List<Cell> results) throws IOException {
       if (results.size() > 0) {
         // Check tag presence in the 1st cell in 1st Result
         if (!results.isEmpty()) {
           Cell cell = results.get(0);
-          tags = PrivateCellUtil.getTags(cell);
+          tags = PrivateCellUtil.getTags((ExtendedCell) cell);
         }
       }
     }

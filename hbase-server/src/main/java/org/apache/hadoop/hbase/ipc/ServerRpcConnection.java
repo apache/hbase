@@ -39,8 +39,8 @@ import java.util.Properties;
 import org.apache.commons.crypto.cipher.CryptoCipherFactory;
 import org.apache.commons.crypto.random.CryptoRandom;
 import org.apache.commons.crypto.random.CryptoRandomFactory;
-import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.client.ConnectionRegistryEndpoint;
 import org.apache.hadoop.hbase.client.VersionInfoUtil;
 import org.apache.hadoop.hbase.codec.Codec;
@@ -351,10 +351,12 @@ abstract class ServerRpcConnection implements Closeable {
   }
 
   void finishSaslNegotiation() throws IOException {
-    String qop = saslServer.getNegotiatedQop();
+    String negotiatedQop = saslServer.getNegotiatedQop();
+    SaslUtil.verifyNegotiatedQop(saslServer.getRequestedQop(), negotiatedQop);
     ugi = provider.getAuthorizedUgi(saslServer.getAuthorizationID(), this.rpcServer.secretManager);
     RpcServer.LOG.debug(
-      "SASL server context established. Authenticated client: {}. Negotiated QoP is {}", ugi, qop);
+      "SASL server context established. Authenticated client: {}. Negotiated QoP is {}", ugi,
+      negotiatedQop);
     rpcServer.metrics.authenticationSuccess();
     RpcServer.AUDITLOG.info(RpcServer.AUTH_SUCCESSFUL_FOR + ugi);
   }
@@ -366,6 +368,7 @@ abstract class ServerRpcConnection implements Closeable {
       processConnectionHeader(buf);
       callCleanupIfNeeded();
       this.connectionHeaderRead = true;
+      this.rpcServer.getRpcCoprocessorHost().preAuthorizeConnection(connectionHeader, addr);
       if (rpcServer.needAuthorization() && !authorizeConnection()) {
         // Throw FatalConnectionException wrapping ACE so client does right thing and closes
         // down the connection instead of trying to read non-existent retun.
@@ -373,6 +376,8 @@ abstract class ServerRpcConnection implements Closeable {
           + connectionHeader.getServiceName() + " is unauthorized for user: " + ugi);
       }
       this.user = this.rpcServer.userProvider.create(this.ugi);
+      this.rpcServer.getRpcCoprocessorHost().postAuthorizeConnection(
+        this.user != null ? this.user.getName() : null, this.clientCertificateChain);
     }
   }
 
@@ -588,7 +593,7 @@ abstract class ServerRpcConnection implements Closeable {
       }
       MethodDescriptor md = null;
       Message param = null;
-      CellScanner cellScanner = null;
+      ExtendedCellScanner cellScanner = null;
       try {
         if (header.hasRequestParam() && header.getRequestParam()) {
           md = this.service.getDescriptorForType().findMethodByName(header.getMethodName());
@@ -816,7 +821,7 @@ abstract class ServerRpcConnection implements Closeable {
   public abstract boolean isConnectionOpen();
 
   public abstract ServerCall<?> createCall(int id, BlockingService service, MethodDescriptor md,
-    RequestHeader header, Message param, CellScanner cellScanner, long size,
+    RequestHeader header, Message param, ExtendedCellScanner cellScanner, long size,
     InetAddress remoteAddress, int timeout, CallCleanup reqCleanup);
 
   private static class ByteBuffByteInput extends ByteInput {

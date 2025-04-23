@@ -33,10 +33,10 @@ import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.CellScannable;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
+import org.apache.hadoop.hbase.ExtendedCellScannable;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
@@ -388,9 +388,10 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
         Result result = next(scannerId);
         if (result != null) {
           builder.addCellsPerResult(result.size());
-          List<CellScannable> results = new ArrayList<>(1);
+          List<ExtendedCellScannable> results = new ArrayList<>(1);
           results.add(result);
-          ((HBaseRpcController) controller).setCellScanner(CellUtil.createCellScanner(results));
+          ((HBaseRpcController) controller)
+            .setCellScanner(PrivateCellUtil.createExtendedCellScanner(results));
           builder.setMoreResults(true);
         } else {
           builder.setMoreResults(false);

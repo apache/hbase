@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -32,12 +33,14 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MultithreadedTestUtil;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestThread;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.compress.Compression;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -160,6 +163,8 @@ public class CacheTestUtils {
       }
     }
 
+    testConvertToJSON(toBeTested);
+
   }
 
   public static void hammerSingleKey(final BlockCache toBeTested, int numThreads, int numQueries)
@@ -275,6 +280,11 @@ public class CacheTestUtils {
   }
 
   public static HFileBlockPair[] generateHFileBlocks(int blockSize, int numBlocks) {
+    return generateBlocksForPath(blockSize, numBlocks, null);
+  }
+
+  public static HFileBlockPair[] generateBlocksForPath(int blockSize, int numBlocks, Path path,
+    boolean encoded) {
     HFileBlockPair[] returnedBlocks = new HFileBlockPair[numBlocks];
     Random rand = ThreadLocalRandom.current();
     HashSet<String> usedStrings = new HashSet<>();
@@ -293,25 +303,35 @@ public class CacheTestUtils {
       HFileContext meta =
         new HFileContextBuilder().withHBaseCheckSum(false).withIncludesMvcc(includesMemstoreTS)
           .withIncludesTags(false).withCompression(Compression.Algorithm.NONE)
-          .withBytesPerCheckSum(0).withChecksumType(ChecksumType.NULL).build();
-      HFileBlock generated =
-        new HFileBlock(BlockType.DATA, onDiskSizeWithoutHeader, uncompressedSizeWithoutHeader,
-          prevBlockOffset, ByteBuff.wrap(cachedBuffer), HFileBlock.DONT_FILL_HEADER, blockSize,
-          onDiskSizeWithoutHeader + HConstants.HFILEBLOCK_HEADER_SIZE, -1, meta,
-          ByteBuffAllocator.HEAP);
-
-      String strKey;
-      /* No conflicting keys */
-      strKey = Long.toString(rand.nextLong());
-      while (!usedStrings.add(strKey)) {
-        strKey = Long.toString(rand.nextLong());
+          .withDataBlockEncoding(DataBlockEncoding.FAST_DIFF).withBytesPerCheckSum(0)
+          .withChecksumType(ChecksumType.NULL).build();
+      HFileBlock generated = new HFileBlock(encoded ? BlockType.ENCODED_DATA : BlockType.DATA,
+        onDiskSizeWithoutHeader, uncompressedSizeWithoutHeader, prevBlockOffset,
+        ByteBuff.wrap(cachedBuffer), HFileBlock.DONT_FILL_HEADER, blockSize,
+        onDiskSizeWithoutHeader + HConstants.HFILEBLOCK_HEADER_SIZE, -1, meta,
+        ByteBuffAllocator.HEAP);
+      String key = null;
+      long offset = 0;
+      if (path != null) {
+        key = path.getName();
+        offset = i * blockSize;
+      } else {
+        /* No conflicting keys */
+        key = Long.toString(rand.nextLong());
+        while (!usedStrings.add(key)) {
+          key = Long.toString(rand.nextLong());
+        }
       }
-
       returnedBlocks[i] = new HFileBlockPair();
-      returnedBlocks[i].blockName = new BlockCacheKey(strKey, 0);
+      returnedBlocks[i].blockName =
+        new BlockCacheKey(key, offset, true, encoded ? BlockType.ENCODED_DATA : BlockType.DATA);
       returnedBlocks[i].block = generated;
     }
     return returnedBlocks;
+  }
+
+  public static HFileBlockPair[] generateBlocksForPath(int blockSize, int numBlocks, Path path) {
+    return generateBlocksForPath(blockSize, numBlocks, path, false);
   }
 
   public static class HFileBlockPair {
@@ -340,6 +360,15 @@ public class CacheTestUtils {
       if (actualBlock != null) {
         actualBlock.release();
       }
+    }
+  }
+
+  public static void testConvertToJSON(BlockCache toBeTested) {
+    try {
+      String json = BlockCacheUtil.toJSON(toBeTested);
+      assertNotNull(json);
+    } catch (Exception e) {
+      fail("conversion to JSON should not fail, exception is:" + e);
     }
   }
 }

@@ -19,23 +19,31 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.util.HashMap;
+import java.util.Map;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.SnapshotDescription;
+import org.apache.hadoop.hbase.client.SnapshotType;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
+import org.apache.hadoop.hbase.snapshot.SnapshotTTLExpiredException;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.LauncherSecurityManager;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -208,6 +216,40 @@ public class TestCopyTable extends CopyTableTestBase {
   @Test
   public void testLoadingSnapshotToTable() throws Exception {
     testCopyTableBySnapshot("testLoadingSnapshotToTable", false, false);
+  }
+
+  @Test
+  public void testLoadingTtlExpiredSnapshotToTable() throws Exception {
+    String tablePrefix = "testLoadingExpiredSnapshotToTable";
+    TableName table1 = TableName.valueOf(tablePrefix + 1);
+    TableName table2 = TableName.valueOf(tablePrefix + 2);
+    Table t1 = createTable(table1, FAMILY_A, false);
+    createTable(table2, FAMILY_A, false);
+    loadData(t1, FAMILY_A, Bytes.toBytes("qualifier"));
+    String snapshot = tablePrefix + "_snapshot";
+    Map<String, Object> properties = new HashMap<>();
+    properties.put("TTL", 10);
+    SnapshotDescription snapshotDescription = new SnapshotDescription(snapshot, table1,
+      SnapshotType.FLUSH, null, EnvironmentEdgeManager.currentTime(), -1, properties);
+    TEST_UTIL.getAdmin().snapshot(snapshotDescription);
+    boolean isExist =
+      TEST_UTIL.getAdmin().listSnapshots().stream().anyMatch(ele -> snapshot.equals(ele.getName()));
+    assertTrue(isExist);
+    int retry = 6;
+    while (
+      !SnapshotDescriptionUtils.isExpiredSnapshot(snapshotDescription.getTtl(),
+        snapshotDescription.getCreationTime(), EnvironmentEdgeManager.currentTime()) && retry > 0
+    ) {
+      retry--;
+      Thread.sleep(10 * 1000);
+    }
+    boolean isExpiredSnapshot =
+      SnapshotDescriptionUtils.isExpiredSnapshot(snapshotDescription.getTtl(),
+        snapshotDescription.getCreationTime(), EnvironmentEdgeManager.currentTime());
+    assertTrue(isExpiredSnapshot);
+    String[] args = new String[] { "--snapshot", "--new.name=" + table2, "--bulkload", snapshot };
+    assertThrows(SnapshotTTLExpiredException.class,
+      () -> runCopy(TEST_UTIL.getConfiguration(), args));
   }
 
   @Test

@@ -24,11 +24,12 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -66,7 +67,7 @@ public class MobFile {
    * @param cacheMobBlocks Should this scanner cache blocks.
    * @return The cell in the mob file.
    */
-  public MobCell readCell(Cell search, boolean cacheMobBlocks) throws IOException {
+  public MobCell readCell(ExtendedCell search, boolean cacheMobBlocks) throws IOException {
     return readCell(search, cacheMobBlocks, sf.getMaxMemStoreTS());
   }
 
@@ -77,7 +78,8 @@ public class MobFile {
    * @param readPt         the read point.
    * @return The cell in the mob file.
    */
-  public MobCell readCell(Cell search, boolean cacheMobBlocks, long readPt) throws IOException {
+  public MobCell readCell(ExtendedCell search, boolean cacheMobBlocks, long readPt)
+    throws IOException {
     StoreFileScanner scanner = null;
     boolean succ = false;
     try {
@@ -133,11 +135,11 @@ public class MobFile {
    * @param cacheConf The CacheConfig.
    * @return An instance of the MobFile.
    */
-  public static MobFile create(FileSystem fs, Path path, Configuration conf, CacheConfig cacheConf)
-    throws IOException {
+  public static MobFile create(FileSystem fs, Path path, Configuration conf, CacheConfig cacheConf,
+    StoreFileTracker sft) throws IOException {
     // XXX: primaryReplica is only used for constructing the key of block cache so it is not a
     // critical problem if we pass the wrong value, so here we always pass true. Need to fix later.
-    HStoreFile sf = new HStoreFile(fs, path, conf, cacheConf, BloomType.NONE, true);
+    HStoreFile sf = new HStoreFile(fs, path, conf, cacheConf, BloomType.NONE, true, sft);
     return new MobFile(sf);
   }
 }

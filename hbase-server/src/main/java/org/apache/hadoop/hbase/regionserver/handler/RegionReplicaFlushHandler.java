@@ -91,6 +91,27 @@ public class RegionReplicaFlushHandler extends EventHandler {
     return numRetries;
   }
 
+  private boolean isTableDisabledOrDropped(IOException error, HRegion region) {
+    if (error instanceof TableNotFoundException) {
+      return true;
+    }
+    try {
+      if (
+        FutureUtils.get(connection.getAdmin().isTableDisabled(region.getRegionInfo().getTable()))
+      ) {
+        return true;
+      }
+    } catch (IOException e) {
+      if (error instanceof TableNotFoundException) {
+        return true;
+      } else {
+        LOG.warn("failed tp check whether table {} is disabled", region.getRegionInfo().getTable(),
+          e);
+      }
+    }
+    return false;
+  }
+
   void triggerFlushInPrimaryRegion(final HRegion region) throws IOException {
     long pause = connection.getConfiguration().getLong(HConstants.HBASE_CLIENT_PAUSE,
       HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
@@ -114,10 +135,7 @@ public class RegionReplicaFlushHandler extends EventHandler {
         response = FutureUtils.get(connection.flush(ServerRegionReplicaUtil
           .getRegionInfoForDefaultReplica(region.getRegionInfo()).getRegionName(), true));
       } catch (IOException e) {
-        if (
-          e instanceof TableNotFoundException || FutureUtils
-            .get(connection.getAdmin().isTableDisabled(region.getRegionInfo().getTable()))
-        ) {
+        if (isTableDisabledOrDropped(e, region)) {
           return;
         }
         if (!counter.shouldRetry()) {

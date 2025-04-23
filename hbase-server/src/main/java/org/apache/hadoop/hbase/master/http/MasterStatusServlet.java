@@ -77,7 +77,10 @@ public class MasterStatusServlet extends HttpServlet {
   private ServerName getMetaLocationOrNull(HMaster master) {
     RegionStateNode rsn = master.getAssignmentManager().getRegionStates()
       .getRegionStateNode(RegionInfoBuilder.FIRST_META_REGIONINFO);
-    return rsn.isInState(RegionState.State.OPEN) ? rsn.getRegionLocation() : null;
+    if (rsn != null) {
+      return rsn.isInState(RegionState.State.OPEN) ? rsn.getRegionLocation() : null;
+    }
+    return null;
   }
 
   private Map<String, Integer> getFragmentationInfo(HMaster master, Configuration conf)

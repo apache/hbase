@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.util;
 import java.io.IOException;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -44,7 +45,7 @@ public abstract class BloomContext {
   /**
    * Bloom information from the cell is retrieved
    */
-  public void writeBloom(Cell cell) throws IOException {
+  public void writeBloom(ExtendedCell cell) throws IOException {
     // only add to the bloom filter on a new, unique key
     if (isNewKey(cell)) {
       sanityCheck(cell);
@@ -52,7 +53,7 @@ public abstract class BloomContext {
     }
   }
 
-  private void sanityCheck(Cell cell) throws IOException {
+  private void sanityCheck(ExtendedCell cell) throws IOException {
     if (this.getLastCell() != null) {
       if (comparator.compare(cell, this.getLastCell()) <= 0) {
         throw new IOException("Added a key not lexically larger than" + " previous. Current cell = "
@@ -71,5 +72,5 @@ public abstract class BloomContext {
    * @param cell the cell to be verified
    * @return true if a new key else false
    */
-  protected abstract boolean isNewKey(Cell cell);
+  protected abstract boolean isNewKey(ExtendedCell cell);
 }

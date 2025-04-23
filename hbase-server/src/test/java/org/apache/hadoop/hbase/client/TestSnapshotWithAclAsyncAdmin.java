@@ -49,10 +49,11 @@ public class TestSnapshotWithAclAsyncAdmin extends SnapshotWithAclTestBase {
   }
 
   @Override
-  protected void restoreSnapshot(String snapshotName, boolean restoreAcl) throws Exception {
+  protected void restoreSnapshot(String snapshotName, boolean takeFailSafeSnapshot,
+    boolean restoreAcl) throws Exception {
     try (AsyncConnection conn =
       ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get()) {
-      conn.getAdmin().restoreSnapshot(snapshotName, false, restoreAcl).get();
+      conn.getAdmin().restoreSnapshot(snapshotName, takeFailSafeSnapshot, restoreAcl).get();
     }
   }
 }

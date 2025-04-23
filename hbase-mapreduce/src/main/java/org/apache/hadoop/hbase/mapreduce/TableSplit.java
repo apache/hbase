@@ -38,9 +38,8 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Public
 public class TableSplit extends InputSplit implements Writable, Comparable<TableSplit> {
-  /** @deprecated LOG variable would be made private. fix in hbase 3.0 */
-  @Deprecated
-  public static final Logger LOG = LoggerFactory.getLogger(TableSplit.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TableSplit.class);
 
   // should be < 0 (@see #readFields(DataInput))
   // version 1 supports Scan data member

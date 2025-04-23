@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import static org.apache.hadoop.fs.CommonPathCapabilities.FS_STORAGEPOLICY;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
@@ -514,6 +516,11 @@ public final class CommonFSUtils {
   private static void invokeSetStoragePolicy(final FileSystem fs, final Path path,
     final String storagePolicy) throws IOException {
     Exception toThrow = null;
+
+    if (!fs.hasPathCapability(path, FS_STORAGEPOLICY)) {
+      LOG.debug("The file system does not support storage policy.");
+      return;
+    }
 
     try {
       fs.setStoragePolicy(path, storagePolicy);

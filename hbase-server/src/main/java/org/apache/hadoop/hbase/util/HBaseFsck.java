@@ -73,6 +73,7 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ClientMetaTableAccessor;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
@@ -991,9 +992,9 @@ public class HBaseFsck extends Configured implements Closeable {
         HFile.Reader hf = null;
         try {
           hf = HFile.createReader(fs, hfile.getPath(), CacheConfig.DISABLED, true, getConf());
-          Optional<Cell> startKv = hf.getFirstKey();
+          Optional<ExtendedCell> startKv = hf.getFirstKey();
           start = CellUtil.cloneRow(startKv.get());
-          Optional<Cell> endKv = hf.getLastKey();
+          Optional<ExtendedCell> endKv = hf.getLastKey();
           end = CellUtil.cloneRow(endKv.get());
         } catch (Exception ioe) {
           LOG.warn("Problem reading orphan file " + hfile + ", skipping");

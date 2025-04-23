@@ -30,7 +30,7 @@
 
   final RESTServer restServer = (RESTServer) getServletContext().getAttribute(RESTServer.REST_SERVER);
   final String hostName = restServer.getServerName().getHostname();
-  pageContext.setAttribute("pageTitle", "HBase REST Server" + hostName);
+  pageContext.setAttribute("pageTitle", "HBase REST Server: " + hostName);
 %>
 
 <jsp:include page="header.jsp">

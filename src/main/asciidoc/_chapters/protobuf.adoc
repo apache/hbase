@@ -33,11 +33,11 @@ HBase uses Google's link:https://developers.google.com/protocol-buffers/[protobu
 it persists metadata -- in the tail of hfiles or Cells written by
 HBase into the system hbase:meta table or when HBase writes znodes
 to zookeeper, etc. -- and when it passes objects over the wire making
-xref:hbase.rpc[RPCs]. HBase uses protobufs to describe the RPC
+<<hbase.rpc,RPCs>>. HBase uses protobufs to describe the RPC
 Interfaces (Services) we expose to clients, for example the `Admin` and `Client`
 Interfaces that the RegionServer fields,
 or specifying the arbitrary extensions added by developers via our
-xref:cp[Coprocessor Endpoint] mechanism.
+<<cp,Coprocessor Endpoint>> mechanism.
 
 In this chapter we go into detail for  developers who are looking to
 understand better how it all works. This chapter is of particular
@@ -72,7 +72,7 @@ use these core protos when they want to serialize a Cell or a Put or
 refer to a particular node via ServerName, etc., as part of providing the
 CPEP Service. Going forward, after the release of hbase-2.0.0, this
 practice needs to whither. We'll explain why in the later
-xref:shaded.protobuf[hbase-2.0.0] section.
+<<shaded.protobuf,hbase-2.0.0>> section.
 
 [[shaded.protobuf]]
 === hbase-2.0.0 and the shading of protobufs (HBASE-15638)

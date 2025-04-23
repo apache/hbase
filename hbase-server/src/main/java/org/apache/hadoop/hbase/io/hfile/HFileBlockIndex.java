@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.ByteBufferKeyOnlyKeyValue;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KeyOnlyKeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -45,8 +46,8 @@ import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.ObjectIntPair;
+import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.io.WritableUtils;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -145,7 +146,7 @@ public class HFileBlockIndex {
     }
 
     @Override
-    public BlockWithScanInfo loadDataBlockWithScanInfo(Cell key, HFileBlock currentBlock,
+    public BlockWithScanInfo loadDataBlockWithScanInfo(ExtendedCell key, HFileBlock currentBlock,
       boolean cacheBlocks, boolean pread, boolean isCompaction,
       DataBlockEncoding expectedDataBlockEncoding, CachingBlockReader cachingBlockReader)
       throws IOException {
@@ -221,9 +222,9 @@ public class HFileBlockIndex {
    */
   static class CellBasedKeyBlockIndexReader extends BlockIndexReader {
 
-    private Cell[] blockKeys;
+    private ExtendedCell[] blockKeys;
     /** Pre-computed mid-key */
-    private AtomicReference<Cell> midKey = new AtomicReference<>();
+    private AtomicReference<ExtendedCell> midKey = new AtomicReference<>();
     /** Needed doing lookup on blocks. */
     protected CellComparator comparator;
 
@@ -258,12 +259,12 @@ public class HFileBlockIndex {
     /**
      * from 0 to {@link #getRootBlockCount() - 1}
      */
-    public Cell getRootBlockKey(int i) {
+    public ExtendedCell getRootBlockKey(int i) {
       return blockKeys[i];
     }
 
     @Override
-    public BlockWithScanInfo loadDataBlockWithScanInfo(Cell key, HFileBlock currentBlock,
+    public BlockWithScanInfo loadDataBlockWithScanInfo(ExtendedCell key, HFileBlock currentBlock,
       boolean cacheBlocks, boolean pread, boolean isCompaction,
       DataBlockEncoding expectedDataBlockEncoding, CachingBlockReader cachingBlockReader)
       throws IOException {
@@ -273,7 +274,7 @@ public class HFileBlockIndex {
       }
 
       // the next indexed key
-      Cell nextIndexedKey = null;
+      ExtendedCell nextIndexedKey = null;
 
       // Read the next-level (intermediate or leaf) index block.
       long currentOffset = blockOffsets[rootLevelIndex];
@@ -381,10 +382,12 @@ public class HFileBlockIndex {
     }
 
     @Override
-    public Cell midkey(CachingBlockReader cachingBlockReader) throws IOException {
-      if (rootCount == 0) throw new IOException("HFile empty");
+    public ExtendedCell midkey(CachingBlockReader cachingBlockReader) throws IOException {
+      if (rootCount == 0) {
+        throw new IOException("HFile empty");
+      }
 
-      Cell targetMidKey = this.midKey.get();
+      ExtendedCell targetMidKey = this.midKey.get();
       if (targetMidKey != null) {
         return targetMidKey;
       }
@@ -416,7 +419,7 @@ public class HFileBlockIndex {
 
     @Override
     protected void initialize(int numEntries) {
-      blockKeys = new Cell[numEntries];
+      blockKeys = new ExtendedCell[numEntries];
     }
 
     /**
@@ -501,7 +504,7 @@ public class HFileBlockIndex {
     }
 
     @Override
-    public BlockWithScanInfo loadDataBlockWithScanInfo(Cell key, HFileBlock currentBlock,
+    public BlockWithScanInfo loadDataBlockWithScanInfo(ExtendedCell key, HFileBlock currentBlock,
       boolean cacheBlocks, boolean pread, boolean isCompaction,
       DataBlockEncoding expectedDataBlockEncoding, CachingBlockReader cachingBlockReader)
       throws IOException {
@@ -510,14 +513,14 @@ public class HFileBlockIndex {
     }
 
     @Override
-    public Cell midkey(CachingBlockReader cachingBlockReader) throws IOException {
+    public ExtendedCell midkey(CachingBlockReader cachingBlockReader) throws IOException {
       return seeker.midkey(cachingBlockReader);
     }
 
     /**
      * from 0 to {@link #getRootBlockCount() - 1}
      */
-    public Cell getRootBlockKey(int i) {
+    public ExtendedCell getRootBlockKey(int i) {
       return seeker.getRootBlockKey(i);
     }
 
@@ -601,9 +604,10 @@ public class HFileBlockIndex {
      *                                  the block irrespective of the encoding
      * @return reader a basic way to load blocks
      */
-    public HFileBlock seekToDataBlock(final Cell key, HFileBlock currentBlock, boolean cacheBlocks,
-      boolean pread, boolean isCompaction, DataBlockEncoding expectedDataBlockEncoding,
-      CachingBlockReader cachingBlockReader) throws IOException {
+    public HFileBlock seekToDataBlock(final ExtendedCell key, HFileBlock currentBlock,
+      boolean cacheBlocks, boolean pread, boolean isCompaction,
+      DataBlockEncoding expectedDataBlockEncoding, CachingBlockReader cachingBlockReader)
+      throws IOException {
       BlockWithScanInfo blockWithScanInfo = loadDataBlockWithScanInfo(key, currentBlock,
         cacheBlocks, pread, isCompaction, expectedDataBlockEncoding, cachingBlockReader);
       if (blockWithScanInfo == null) {
@@ -625,8 +629,8 @@ public class HFileBlockIndex {
      * @return the BlockWithScanInfo which contains the DataBlock with other scan info such as
      *         nextIndexedKey.
      */
-    public abstract BlockWithScanInfo loadDataBlockWithScanInfo(Cell key, HFileBlock currentBlock,
-      boolean cacheBlocks, boolean pread, boolean isCompaction,
+    public abstract BlockWithScanInfo loadDataBlockWithScanInfo(ExtendedCell key,
+      HFileBlock currentBlock, boolean cacheBlocks, boolean pread, boolean isCompaction,
       DataBlockEncoding expectedDataBlockEncoding, CachingBlockReader cachingBlockReader)
       throws IOException;
 
@@ -1072,6 +1076,9 @@ public class HFileBlockIndex {
             HFileBlock blockForCaching = blockWriter.getBlockForCaching(cacheConf);
             cache.cacheBlock(new BlockCacheKey(nameForCaching, rootLevelIndexPos, true,
               blockForCaching.getBlockType()), blockForCaching);
+            // Index blocks always go to LRU, which then converts any off-heap buffer to on-heap,
+            // so we need to release any off-heap buffers now to avoid leak
+            blockForCaching.release();
           });
         }
       }
@@ -1084,8 +1091,8 @@ public class HFileBlockIndex {
         LOG.trace("Wrote a " + numLevels + "-level index with root level at pos "
           + rootLevelIndexPos + ", " + rootChunk.getNumEntries() + " root-level entries, "
           + totalNumEntries + " total entries, "
-          + StringUtils.humanReadableInt(this.totalBlockOnDiskSize) + " on-disk size, "
-          + StringUtils.humanReadableInt(totalBlockUncompressedSize) + " total uncompressed size.");
+          + Strings.humanReadableInt(this.totalBlockOnDiskSize) + " on-disk size, "
+          + Strings.humanReadableInt(totalBlockUncompressedSize) + " total uncompressed size.");
       }
       return rootLevelIndexPos;
     }

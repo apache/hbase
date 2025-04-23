@@ -34,18 +34,15 @@ import org.slf4j.LoggerFactory;
 public class HFilePreadReader extends HFileReaderImpl {
   private static final Logger LOG = LoggerFactory.getLogger(HFileReaderImpl.class);
 
+  private static final int WAIT_TIME_FOR_CACHE_INITIALIZATION = 10 * 60 * 1000;
+
   public HFilePreadReader(ReaderContext context, HFileInfo fileInfo, CacheConfig cacheConf,
     Configuration conf) throws IOException {
     super(context, fileInfo, cacheConf, conf);
-    final MutableBoolean shouldCache = new MutableBoolean(true);
-
-    cacheConf.getBlockCache().ifPresent(cache -> {
-      Optional<Boolean> result = cache.shouldCacheFile(path.getName());
-      shouldCache.setValue(result.isPresent() ? result.get().booleanValue() : true);
-    });
-
+    // master hosted regions, like the master procedures store wouldn't have a block cache
+    final MutableBoolean shouldCache = new MutableBoolean(cacheConf.getBlockCache().isPresent());
     // Prefetch file blocks upon open if requested
-    if (cacheConf.shouldPrefetchOnOpen() && shouldCache.booleanValue()) {
+    if (shouldCache.booleanValue() && cacheConf.shouldPrefetchOnOpen()) {
       PrefetchExecutor.request(path, new Runnable() {
         @Override
         public void run() {
@@ -53,6 +50,16 @@ public class HFilePreadReader extends HFileReaderImpl {
           long end = 0;
           HFile.Reader prefetchStreamReader = null;
           try {
+            cacheConf.getBlockCache().ifPresent(cache -> {
+              cache.waitForCacheInitialization(WAIT_TIME_FOR_CACHE_INITIALIZATION);
+              Optional<Boolean> result = cache.shouldCacheFile(path.getName());
+              shouldCache.setValue(result.isPresent() ? result.get().booleanValue() : true);
+            });
+            if (!shouldCache.booleanValue()) {
+              LOG.info("Prefetch skipped for file: {}", path);
+              return;
+            }
+
             ReaderContext streamReaderContext = ReaderContextBuilder.newBuilder(context)
               .withReaderType(ReaderContext.ReaderType.STREAM)
               .withInputStreamWrapper(new FSDataInputStreamWrapper(context.getFileSystem(),
@@ -110,8 +117,8 @@ public class HFilePreadReader extends HFileReaderImpl {
                   if (!cache.blockFitsIntoTheCache(block).orElse(true)) {
                     LOG.warn(
                       "Interrupting prefetch for file {} because block {} of size {} "
-                        + "doesn't fit in the available cache space.",
-                      path, cacheKey, block.getOnDiskSizeWithHeader());
+                        + "doesn't fit in the available cache space. isCacheEnabled: {}",
+                      path, cacheKey, block.getOnDiskSizeWithHeader(), cache.isCacheEnabled());
                     interrupted = true;
                     break;
                   }

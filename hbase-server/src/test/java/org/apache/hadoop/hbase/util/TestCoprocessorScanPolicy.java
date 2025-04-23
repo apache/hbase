@@ -29,6 +29,7 @@ import java.util.function.Predicate;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -226,8 +227,8 @@ public class TestCoprocessorScanPolicy {
     // lame way to communicate with the coprocessor,
     // since it is loaded by a different class loader
     @Override
-    public void prePut(final ObserverContext<RegionCoprocessorEnvironment> c, final Put put,
-      final WALEdit edit, final Durability durability) throws IOException {
+    public void prePut(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
+      final Put put, final WALEdit edit, final Durability durability) throws IOException {
       if (put.getAttribute("ttl") != null) {
         Cell cell = put.getFamilyCellMap().values().stream().findFirst().get().get(0);
         ttls.put(
@@ -286,7 +287,8 @@ public class TestCoprocessorScanPolicy {
         }
 
         @Override
-        public boolean next(List<Cell> result, ScannerContext scannerContext) throws IOException {
+        public boolean next(List<? super ExtendedCell> result, ScannerContext scannerContext)
+          throws IOException {
           boolean moreRows = scanner.next(result, scannerContext);
           if (result.isEmpty()) {
             return moreRows;
@@ -297,7 +299,7 @@ public class TestCoprocessorScanPolicy {
             predicate = checkTtl(now, ttl);
           }
           if (version != null) {
-            Predicate<Cell> vp = checkVersion(result.get(0), version);
+            Predicate<Cell> vp = checkVersion((Cell) result.get(0), version);
             if (predicate != null) {
               predicate = predicate.and(vp);
             } else {
@@ -305,7 +307,7 @@ public class TestCoprocessorScanPolicy {
             }
           }
           if (predicate != null) {
-            result.removeIf(predicate);
+            ((List<Cell>) result).removeIf(predicate);
           }
           return moreRows;
         }
@@ -313,20 +315,20 @@ public class TestCoprocessorScanPolicy {
     }
 
     @Override
-    public InternalScanner preFlush(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-      InternalScanner scanner, FlushLifeCycleTracker tracker) throws IOException {
+    public InternalScanner preFlush(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+      Store store, InternalScanner scanner, FlushLifeCycleTracker tracker) throws IOException {
       return wrap(store, scanner);
     }
 
     @Override
-    public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-      InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
+    public InternalScanner preCompact(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+      Store store, InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
       CompactionRequest request) throws IOException {
       return wrap(store, scanner);
     }
 
     @Override
-    public void preGetOp(ObserverContext<RegionCoprocessorEnvironment> c, Get get,
+    public void preGetOp(ObserverContext<? extends RegionCoprocessorEnvironment> c, Get get,
       List<Cell> result) throws IOException {
       TableName tableName = c.getEnvironment().getRegion().getTableDescriptor().getTableName();
       Long ttl = this.ttls.get(tableName);
@@ -340,7 +342,7 @@ public class TestCoprocessorScanPolicy {
     }
 
     @Override
-    public void preScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c, Scan scan)
+    public void preScannerOpen(ObserverContext<? extends RegionCoprocessorEnvironment> c, Scan scan)
       throws IOException {
       Region region = c.getEnvironment().getRegion();
       TableName tableName = region.getTableDescriptor().getTableName();

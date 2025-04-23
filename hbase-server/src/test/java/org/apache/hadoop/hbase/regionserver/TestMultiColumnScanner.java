@@ -36,6 +36,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
@@ -210,7 +211,7 @@ public abstract class TestMultiColumnScanner {
         }
 
         InternalScanner scanner = region.getScanner(scan);
-        List<Cell> results = new ArrayList<>();
+        List<ExtendedCell> results = new ArrayList<>();
 
         int kvPos = 0;
         int numResults = 0;
@@ -218,7 +219,7 @@ public abstract class TestMultiColumnScanner {
           + "), maxVersions=" + maxVersions;
 
         while (scanner.next(results) || results.size() > 0) {
-          for (Cell kv : results) {
+          for (ExtendedCell kv : results) {
             while (
               kvPos < kvs.size()
                 && !matchesQuery(kvs.get(kvPos), qualSet, maxVersions, lastDelTimeMap)
@@ -236,7 +237,7 @@ public abstract class TestMultiColumnScanner {
               "Scanner returned additional key/value: " + kv + ", " + queryInfo + deleteInfo + ";",
               kvPos < kvs.size());
             assertTrue("Scanner returned wrong key/value; " + queryInfo + deleteInfo + ";",
-              PrivateCellUtil.equalsIgnoreMvccVersion(kvs.get(kvPos), (kv)));
+              PrivateCellUtil.equalsIgnoreMvccVersion(kvs.get(kvPos), kv));
             ++kvPos;
             ++numResults;
           }

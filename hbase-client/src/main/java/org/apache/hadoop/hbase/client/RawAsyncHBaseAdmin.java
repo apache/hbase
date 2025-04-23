@@ -82,6 +82,7 @@ import org.apache.hadoop.hbase.quotas.QuotaFilter;
 import org.apache.hadoop.hbase.quotas.QuotaSettings;
 import org.apache.hadoop.hbase.quotas.QuotaTableUtil;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot;
+import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
@@ -757,13 +758,13 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
    * targetState).
    */
   private static CompletableFuture<Boolean> completeCheckTableState(
-    CompletableFuture<Boolean> future, TableState tableState, Throwable error,
+    CompletableFuture<Boolean> future, Optional<TableState> tableState, Throwable error,
     TableState.State targetState, TableName tableName) {
     if (error != null) {
       future.completeExceptionally(error);
     } else {
-      if (tableState != null) {
-        future.complete(tableState.inStates(targetState));
+      if (tableState.isPresent()) {
+        future.complete(tableState.get().inStates(targetState));
       } else {
         future.completeExceptionally(new TableNotFoundException(tableName));
       }
@@ -779,8 +780,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     CompletableFuture<Boolean> future = new CompletableFuture<>();
     addListener(ClientMetaTableAccessor.getTableState(metaTable, tableName),
       (tableState, error) -> {
-        completeCheckTableState(future, tableState.isPresent() ? tableState.get() : null, error,
-          TableState.State.ENABLED, tableName);
+        completeCheckTableState(future, tableState, error, TableState.State.ENABLED, tableName);
       });
     return future;
   }
@@ -793,8 +793,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     CompletableFuture<Boolean> future = new CompletableFuture<>();
     addListener(ClientMetaTableAccessor.getTableState(metaTable, tableName),
       (tableState, error) -> {
-        completeCheckTableState(future, tableState.isPresent() ? tableState.get() : null, error,
-          TableState.State.DISABLED, tableName);
+        completeCheckTableState(future, tableState, error, TableState.State.DISABLED, tableName);
       });
     return future;
   }
@@ -967,6 +966,8 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<Void> flush(TableName tableName, byte[] columnFamily) {
+    Preconditions.checkNotNull(columnFamily,
+      "columnFamily is null, If you don't specify a columnFamily, use flush(TableName) instead.");
     return flush(tableName, Collections.singletonList(columnFamily));
   }
 
@@ -976,6 +977,8 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     // If the server version is lower than the client version, it's possible that the
     // flushTable method is not present in the server side, if so, we need to fall back
     // to the old implementation.
+    Preconditions.checkNotNull(columnFamilyList,
+      "columnFamily is null, If you don't specify a columnFamily, use flush(TableName) instead.");
     List<byte[]> columnFamilies = columnFamilyList.stream()
       .filter(cf -> cf != null && cf.length > 0).distinct().collect(Collectors.toList());
     FlushTableRequest request = RequestConverter.buildFlushTableRequest(tableName, columnFamilies,
@@ -986,7 +989,10 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     CompletableFuture<Void> future = new CompletableFuture<>();
     addListener(procFuture, (ret, error) -> {
       if (error != null) {
-        if (error instanceof TableNotFoundException || error instanceof TableNotEnabledException) {
+        if (
+          error instanceof TableNotFoundException || error instanceof TableNotEnabledException
+            || error instanceof NoSuchColumnFamilyException
+        ) {
           future.completeExceptionally(error);
         } else if (error instanceof DoNotRetryIOException) {
           // usually this is caused by the method is not present on the server or
@@ -2181,10 +2187,21 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
                     if (err3 != null) {
                       future.completeExceptionally(err3);
                     } else {
-                      String msg =
-                        "Restore snapshot=" + snapshotName + " failed. Rollback to snapshot="
-                          + failSafeSnapshotSnapshotName + " succeeded.";
-                      future.completeExceptionally(new RestoreSnapshotException(msg, err2));
+                      // If fail to restore snapshot but rollback successfully, delete the
+                      // restore-failsafe snapshot.
+                      LOG.info(
+                        "Deleting restore-failsafe snapshot: " + failSafeSnapshotSnapshotName);
+                      addListener(deleteSnapshot(failSafeSnapshotSnapshotName), (ret4, err4) -> {
+                        if (err4 != null) {
+                          LOG.error("Unable to remove the failsafe snapshot: {}",
+                            failSafeSnapshotSnapshotName, err4);
+                        }
+                        String msg =
+                          "Restore snapshot=" + snapshotName + " failed, Rollback to snapshot="
+                            + failSafeSnapshotSnapshotName + " succeeded.";
+                        LOG.error(msg);
+                        future.completeExceptionally(new RestoreSnapshotException(msg, err2));
+                      });
                     }
                   });
               } else {

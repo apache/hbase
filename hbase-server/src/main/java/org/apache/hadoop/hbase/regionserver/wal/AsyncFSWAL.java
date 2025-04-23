@@ -102,9 +102,6 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
 
   private static final Logger LOG = LoggerFactory.getLogger(AsyncFSWAL.class);
 
-  public static final String WAL_BATCH_SIZE = "hbase.wal.batch.size";
-  public static final long DEFAULT_WAL_BATCH_SIZE = 64L * 1024;
-
   public static final String ASYNC_WAL_USE_SHARED_EVENT_LOOP =
     "hbase.wal.async.use-shared-event-loop";
   public static final boolean DEFAULT_ASYNC_WAL_USE_SHARED_EVENT_LOOP = false;

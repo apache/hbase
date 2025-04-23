@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCell;
@@ -135,19 +134,17 @@ public class CellChunkImmutableSegment extends ImmutableSegment {
   // Create CellSet based on CellChunkMap from compacting iterator
   private void initializeCellSet(int numOfCells, MemStoreSegmentsIterator iterator,
     MemStoreCompactionStrategy.Action action) {
-
     int numOfCellsAfterCompaction = 0;
     int currentChunkIdx = 0;
     int offsetInCurentChunk = ChunkCreator.SIZEOF_CHUNK_HEADER;
     int numUniqueKeys = 0;
-    Cell prev = null;
+    ExtendedCell prev = null;
     Chunk[] chunks = allocIndexChunks(numOfCells);
     while (iterator.hasNext()) { // the iterator hides the elimination logic for compaction
       boolean alreadyCopied = false;
-      Cell c = iterator.next();
+      ExtendedCell c = iterator.next();
       numOfCellsAfterCompaction++;
-      assert (c instanceof ExtendedCell);
-      if (((ExtendedCell) c).getChunkId() == ExtendedCell.CELL_NOT_BASED_ON_CHUNK) {
+      if (c.getChunkId() == ExtendedCell.CELL_NOT_BASED_ON_CHUNK) {
         // CellChunkMap assumes all cells are allocated on MSLAB.
         // Therefore, cells which are not allocated on MSLAB initially,
         // are copied into MSLAB here.
@@ -190,9 +187,9 @@ public class CellChunkImmutableSegment extends ImmutableSegment {
       numUniqueKeys = CellSet.UNKNOWN_NUM_UNIQUES;
     }
     // build the immutable CellSet
-    CellChunkMap ccm =
-      new CellChunkMap(getComparator(), chunks, 0, numOfCellsAfterCompaction, false);
-    this.setCellSet(null, new CellSet(ccm, numUniqueKeys)); // update the CellSet of this Segment
+    CellChunkMap<ExtendedCell> ccm =
+      new CellChunkMap<>(getComparator(), chunks, 0, numOfCellsAfterCompaction, false);
+    this.setCellSet(null, new CellSet<>(ccm, numUniqueKeys)); // update the CellSet of this Segment
   }
 
   /*------------------------------------------------------------------------*/
@@ -200,19 +197,19 @@ public class CellChunkImmutableSegment extends ImmutableSegment {
   // (without compacting iterator)
   // This is a service for not-flat immutable segments
   private void reinitializeCellSet(int numOfCells, KeyValueScanner segmentScanner,
-    CellSet oldCellSet, MemStoreSizing memstoreSizing, MemStoreCompactionStrategy.Action action) {
-    Cell curCell;
+    CellSet<ExtendedCell> oldCellSet, MemStoreSizing memstoreSizing,
+    MemStoreCompactionStrategy.Action action) {
+    ExtendedCell curCell;
     Chunk[] chunks = allocIndexChunks(numOfCells);
 
     int currentChunkIdx = 0;
     int offsetInCurentChunk = ChunkCreator.SIZEOF_CHUNK_HEADER;
 
     int numUniqueKeys = 0;
-    Cell prev = null;
+    ExtendedCell prev = null;
     try {
       while ((curCell = segmentScanner.next()) != null) {
-        assert (curCell instanceof ExtendedCell);
-        if (((ExtendedCell) curCell).getChunkId() == ExtendedCell.CELL_NOT_BASED_ON_CHUNK) {
+        if (curCell.getChunkId() == ExtendedCell.CELL_NOT_BASED_ON_CHUNK) {
           // CellChunkMap assumes all cells are allocated on MSLAB.
           // Therefore, cells which are not allocated on MSLAB initially,
           // are copied into MSLAB here.
@@ -246,9 +243,10 @@ public class CellChunkImmutableSegment extends ImmutableSegment {
       segmentScanner.close();
     }
 
-    CellChunkMap ccm = new CellChunkMap(getComparator(), chunks, 0, numOfCells, false);
+    CellChunkMap<ExtendedCell> ccm =
+      new CellChunkMap<>(getComparator(), chunks, 0, numOfCells, false);
     // update the CellSet of this Segment
-    this.setCellSet(oldCellSet, new CellSet(ccm, numUniqueKeys));
+    this.setCellSet(oldCellSet, new CellSet<>(ccm, numUniqueKeys));
   }
 
   /*------------------------------------------------------------------------*/
@@ -317,7 +315,7 @@ public class CellChunkImmutableSegment extends ImmutableSegment {
     return chunks;
   }
 
-  private Cell copyCellIntoMSLAB(Cell cell, MemStoreSizing memstoreSizing) {
+  private ExtendedCell copyCellIntoMSLAB(ExtendedCell cell, MemStoreSizing memstoreSizing) {
     // Take care for a special case when a cell is copied from on-heap to (probably off-heap) MSLAB.
     // The cell allocated as an on-heap JVM object (byte array) occupies slightly different
     // amount of memory, than when the cell serialized and allocated on the MSLAB.

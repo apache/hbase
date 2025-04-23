@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -31,6 +32,8 @@ import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
 import org.apache.hbase.thirdparty.io.netty.util.Timeout;
@@ -41,6 +44,8 @@ import org.apache.hbase.thirdparty.io.netty.util.Timeout;
 @InterfaceAudience.Private
 class AsyncBufferedMutatorImpl implements AsyncBufferedMutator {
 
+  private static final Logger LOG = LoggerFactory.getLogger(AsyncBufferedMutatorImpl.class);
+
   private final HashedWheelTimer periodicalFlushTimer;
 
   private final AsyncTable<?> table;
@@ -50,6 +55,8 @@ class AsyncBufferedMutatorImpl implements AsyncBufferedMutator {
   private final long periodicFlushTimeoutNs;
 
   private final int maxKeyValueSize;
+
+  private final int maxMutations;
 
   private List<Mutation> mutations = new ArrayList<>();
 
@@ -62,12 +69,13 @@ class AsyncBufferedMutatorImpl implements AsyncBufferedMutator {
   Timeout periodicFlushTask;
 
   AsyncBufferedMutatorImpl(HashedWheelTimer periodicalFlushTimer, AsyncTable<?> table,
-    long writeBufferSize, long periodicFlushTimeoutNs, int maxKeyValueSize) {
+    long writeBufferSize, long periodicFlushTimeoutNs, int maxKeyValueSize, int maxMutations) {
     this.periodicalFlushTimer = periodicalFlushTimer;
     this.table = table;
     this.writeBufferSize = writeBufferSize;
     this.periodicFlushTimeoutNs = periodicFlushTimeoutNs;
     this.maxKeyValueSize = maxKeyValueSize;
+    this.maxMutations = maxMutations;
   }
 
   @Override
@@ -130,7 +138,7 @@ class AsyncBufferedMutatorImpl implements AsyncBufferedMutator {
         periodicFlushTask = periodicalFlushTimer.newTimeout(timeout -> {
           synchronized (AsyncBufferedMutatorImpl.this) {
             // confirm that we are still valid, if there is already an internalFlush call before us,
-            // then we should not execute any more. And in internalFlush we will set periodicFlush
+            // then we should not execute anymore. And in internalFlush we will set periodicFlush
             // to null, and since we may schedule a new one, so here we check whether the references
             // are equal.
             if (timeout == periodicFlushTask) {
@@ -144,6 +152,10 @@ class AsyncBufferedMutatorImpl implements AsyncBufferedMutator {
       this.futures.addAll(futures);
       bufferedSize += heapSize;
       if (bufferedSize >= writeBufferSize) {
+        LOG.trace("Flushing because write buffer size {} reached", writeBufferSize);
+        internalFlush();
+      } else if (maxMutations > 0 && this.mutations.size() >= maxMutations) {
+        LOG.trace("Flushing because max mutations {} reached", maxMutations);
         internalFlush();
       }
     }
@@ -169,5 +181,15 @@ class AsyncBufferedMutatorImpl implements AsyncBufferedMutator {
   @Override
   public long getPeriodicalFlushTimeout(TimeUnit unit) {
     return unit.convert(periodicFlushTimeoutNs, TimeUnit.NANOSECONDS);
+  }
+
+  @Override
+  public int getMaxMutations() {
+    return maxMutations;
+  }
+
+  @Override
+  public Map<String, byte[]> getRequestAttributes() {
+    return table.getRequestAttributes();
   }
 }

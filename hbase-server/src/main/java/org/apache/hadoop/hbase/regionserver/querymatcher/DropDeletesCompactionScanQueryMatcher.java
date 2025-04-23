@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver.querymatcher;
 
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.regionserver.ScanInfo;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -60,7 +60,7 @@ public abstract class DropDeletesCompactionScanQueryMatcher extends CompactionSc
     this.earliestPutTs = earliestPutTs;
   }
 
-  protected final MatchCode tryDropDelete(Cell cell) {
+  protected final MatchCode tryDropDelete(ExtendedCell cell) {
     long timestamp = cell.getTimestamp();
     // If it is not the time to drop the delete marker, just return
     if (timeToPurgeDeletes > 0 && now - timestamp <= timeToPurgeDeletes) {

@@ -256,8 +256,8 @@ public class TestImportTSVWithOperationAttributes implements Configurable {
     }
 
     @Override
-    public void prePut(ObserverContext<RegionCoprocessorEnvironment> e, Put put, WALEdit edit,
-      Durability durability) throws IOException {
+    public void prePut(ObserverContext<? extends RegionCoprocessorEnvironment> e, Put put,
+      WALEdit edit, Durability durability) throws IOException {
       Region region = e.getEnvironment().getRegion();
       if (
         !region.getRegionInfo().isMetaRegion() && !region.getRegionInfo().getTable().isSystemTable()

@@ -21,6 +21,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.IndexBlockEncoding;
@@ -58,15 +59,15 @@ public interface HFileIndexBlockEncoder {
 
     boolean isEmpty();
 
-    Cell getRootBlockKey(int i);
+    ExtendedCell getRootBlockKey(int i);
 
     int getRootBlockCount();
 
-    Cell midkey(HFile.CachingBlockReader cachingBlockReader) throws IOException;
+    ExtendedCell midkey(HFile.CachingBlockReader cachingBlockReader) throws IOException;
 
     int rootBlockContainingKey(Cell key);
 
-    BlockWithScanInfo loadDataBlockWithScanInfo(Cell key, HFileBlock currentBlock,
+    BlockWithScanInfo loadDataBlockWithScanInfo(ExtendedCell key, HFileBlock currentBlock,
       boolean cacheBlocks, boolean pread, boolean isCompaction,
       DataBlockEncoding expectedDataBlockEncoding, HFile.CachingBlockReader cachingBlockReader)
       throws IOException;

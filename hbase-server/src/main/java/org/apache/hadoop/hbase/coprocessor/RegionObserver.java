@@ -98,9 +98,6 @@ import org.apache.yetus.audience.InterfaceStability;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
-// TODO as method signatures need to break, update to
-// ObserverContext<? extends RegionCoprocessorEnvironment>
-// so we can use additional environment state that isn't exposed to coprocessors.
 public interface RegionObserver {
   /** Mutation type for postMutationBeforeWAL hook */
   enum MutationType {
@@ -112,14 +109,15 @@ public interface RegionObserver {
    * Called before the region is reported as open to the master.
    * @param c the environment provided by the region server
    */
-  default void preOpen(ObserverContext<RegionCoprocessorEnvironment> c) throws IOException {
+  default void preOpen(ObserverContext<? extends RegionCoprocessorEnvironment> c)
+    throws IOException {
   }
 
   /**
    * Called after the region is reported as open to the master.
    * @param c the environment provided by the region server
    */
-  default void postOpen(ObserverContext<RegionCoprocessorEnvironment> c) {
+  default void postOpen(ObserverContext<? extends RegionCoprocessorEnvironment> c) {
   }
 
   /**
@@ -127,7 +125,7 @@ public interface RegionObserver {
    * @param c       the environment provided by the region server
    * @param tracker tracker used to track the life cycle of a flush
    */
-  default void preFlush(final ObserverContext<RegionCoprocessorEnvironment> c,
+  default void preFlush(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
     FlushLifeCycleTracker tracker) throws IOException {
   }
 
@@ -138,8 +136,8 @@ public interface RegionObserver {
    * @param store   the store where flush is being requested
    * @param options used to change max versions and TTL for the scanner being opened
    */
-  default void preFlushScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-    ScanOptions options, FlushLifeCycleTracker tracker) throws IOException {
+  default void preFlushScannerOpen(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    Store store, ScanOptions options, FlushLifeCycleTracker tracker) throws IOException {
   }
 
   /**
@@ -151,8 +149,8 @@ public interface RegionObserver {
    * @return the scanner to use during flush. Should not be {@code null} unless the implementation
    *         is writing new store files on its own.
    */
-  default InternalScanner preFlush(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-    InternalScanner scanner, FlushLifeCycleTracker tracker) throws IOException {
+  default InternalScanner preFlush(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    Store store, InternalScanner scanner, FlushLifeCycleTracker tracker) throws IOException {
     return scanner;
   }
 
@@ -162,7 +160,7 @@ public interface RegionObserver {
    * @param tracker tracker used to track the life cycle of a flush
    * @throws IOException if an error occurred on the coprocessor
    */
-  default void postFlush(ObserverContext<RegionCoprocessorEnvironment> c,
+  default void postFlush(ObserverContext<? extends RegionCoprocessorEnvironment> c,
     FlushLifeCycleTracker tracker) throws IOException {
   }
 
@@ -173,7 +171,7 @@ public interface RegionObserver {
    * @param resultFile the new store file written out during compaction
    * @param tracker    tracker used to track the life cycle of a flush
    */
-  default void postFlush(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
+  default void postFlush(ObserverContext<? extends RegionCoprocessorEnvironment> c, Store store,
     StoreFile resultFile, FlushLifeCycleTracker tracker) throws IOException {
   }
 
@@ -182,8 +180,8 @@ public interface RegionObserver {
    * @param c     the environment provided by the region server
    * @param store the store where in memory compaction is being requested
    */
-  default void preMemStoreCompaction(ObserverContext<RegionCoprocessorEnvironment> c, Store store)
-    throws IOException {
+  default void preMemStoreCompaction(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    Store store) throws IOException {
   }
 
   /**
@@ -196,7 +194,7 @@ public interface RegionObserver {
    * @param options used to change max versions and TTL for the scanner being opened
    */
   default void preMemStoreCompactionCompactScannerOpen(
-    ObserverContext<RegionCoprocessorEnvironment> c, Store store, ScanOptions options)
+    ObserverContext<? extends RegionCoprocessorEnvironment> c, Store store, ScanOptions options)
     throws IOException {
   }
 
@@ -210,7 +208,7 @@ public interface RegionObserver {
    * @return the scanner to use during in memory compaction. Must be non-null.
    */
   default InternalScanner preMemStoreCompactionCompact(
-    ObserverContext<RegionCoprocessorEnvironment> c, Store store, InternalScanner scanner)
+    ObserverContext<? extends RegionCoprocessorEnvironment> c, Store store, InternalScanner scanner)
     throws IOException {
     return scanner;
   }
@@ -220,8 +218,8 @@ public interface RegionObserver {
    * @param c     the environment provided by the region server
    * @param store the store where in memory compaction is being executed
    */
-  default void postMemStoreCompaction(ObserverContext<RegionCoprocessorEnvironment> c, Store store)
-    throws IOException {
+  default void postMemStoreCompaction(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    Store store) throws IOException {
   }
 
   /**
@@ -237,8 +235,9 @@ public interface RegionObserver {
    * @param candidates the store files currently available for compaction
    * @param tracker    tracker used to track the life cycle of a compaction
    */
-  default void preCompactSelection(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-    List<? extends StoreFile> candidates, CompactionLifeCycleTracker tracker) throws IOException {
+  default void preCompactSelection(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    Store store, List<? extends StoreFile> candidates, CompactionLifeCycleTracker tracker)
+    throws IOException {
   }
 
   /**
@@ -250,8 +249,8 @@ public interface RegionObserver {
    * @param tracker  tracker used to track the life cycle of a compaction
    * @param request  the requested compaction
    */
-  default void postCompactSelection(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-    List<? extends StoreFile> selected, CompactionLifeCycleTracker tracker,
+  default void postCompactSelection(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    Store store, List<? extends StoreFile> selected, CompactionLifeCycleTracker tracker,
     CompactionRequest request) {
   }
 
@@ -265,8 +264,8 @@ public interface RegionObserver {
    * @param tracker  tracker used to track the life cycle of a compaction
    * @param request  the requested compaction
    */
-  default void preCompactScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-    ScanType scanType, ScanOptions options, CompactionLifeCycleTracker tracker,
+  default void preCompactScannerOpen(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    Store store, ScanType scanType, ScanOptions options, CompactionLifeCycleTracker tracker,
     CompactionRequest request) throws IOException {
   }
 
@@ -296,8 +295,8 @@ public interface RegionObserver {
    * @return the scanner to use during compaction. Should not be {@code null} unless the
    *         implementation is writing new store files on its own.
    */
-  default InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-    InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
+  default InternalScanner preCompact(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    Store store, InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
     CompactionRequest request) throws IOException {
     return scanner;
   }
@@ -310,7 +309,7 @@ public interface RegionObserver {
    * @param tracker    used to track the life cycle of a compaction
    * @param request    the requested compaction
    */
-  default void postCompact(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
+  default void postCompact(ObserverContext<? extends RegionCoprocessorEnvironment> c, Store store,
     StoreFile resultFile, CompactionLifeCycleTracker tracker, CompactionRequest request)
     throws IOException {
   }
@@ -320,8 +319,8 @@ public interface RegionObserver {
    * @param c              the environment provided by the region server
    * @param abortRequested true if the region server is aborting
    */
-  default void preClose(ObserverContext<RegionCoprocessorEnvironment> c, boolean abortRequested)
-    throws IOException {
+  default void preClose(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    boolean abortRequested) throws IOException {
   }
 
   /**
@@ -329,7 +328,8 @@ public interface RegionObserver {
    * @param c              the environment provided by the region server
    * @param abortRequested true if the region server is aborting
    */
-  default void postClose(ObserverContext<RegionCoprocessorEnvironment> c, boolean abortRequested) {
+  default void postClose(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    boolean abortRequested) {
   }
 
   /**
@@ -342,8 +342,8 @@ public interface RegionObserver {
    * @param result The result to return to the client if default processing is bypassed. Can be
    *               modified. Will not be used if default processing is not bypassed.
    */
-  default void preGetOp(ObserverContext<RegionCoprocessorEnvironment> c, Get get, List<Cell> result)
-    throws IOException {
+  default void preGetOp(ObserverContext<? extends RegionCoprocessorEnvironment> c, Get get,
+    List<Cell> result) throws IOException {
   }
 
   /**
@@ -355,7 +355,7 @@ public interface RegionObserver {
    * @param get    the Get request
    * @param result the result to return to the client, modify as necessary
    */
-  default void postGetOp(ObserverContext<RegionCoprocessorEnvironment> c, Get get,
+  default void postGetOp(ObserverContext<? extends RegionCoprocessorEnvironment> c, Get get,
     List<Cell> result) throws IOException {
   }
 
@@ -369,7 +369,7 @@ public interface RegionObserver {
    * @param exists the result returned by the region server
    * @return the value to return to the client if bypassing default processing
    */
-  default boolean preExists(ObserverContext<RegionCoprocessorEnvironment> c, Get get,
+  default boolean preExists(ObserverContext<? extends RegionCoprocessorEnvironment> c, Get get,
     boolean exists) throws IOException {
     return exists;
   }
@@ -381,7 +381,7 @@ public interface RegionObserver {
    * @param exists the result returned by the region server
    * @return the result to return to the client
    */
-  default boolean postExists(ObserverContext<RegionCoprocessorEnvironment> c, Get get,
+  default boolean postExists(ObserverContext<? extends RegionCoprocessorEnvironment> c, Get get,
     boolean exists) throws IOException {
     return exists;
   }
@@ -402,8 +402,8 @@ public interface RegionObserver {
    *             {@link #prePut(ObserverContext, Put, WALEdit)} instead.
    */
   @Deprecated
-  default void prePut(ObserverContext<RegionCoprocessorEnvironment> c, Put put, WALEdit edit,
-    Durability durability) throws IOException {
+  default void prePut(ObserverContext<? extends RegionCoprocessorEnvironment> c, Put put,
+    WALEdit edit, Durability durability) throws IOException {
   }
 
   /**
@@ -418,8 +418,8 @@ public interface RegionObserver {
    * @param put  The Put object
    * @param edit The WALEdit object that will be written to the wal
    */
-  default void prePut(ObserverContext<RegionCoprocessorEnvironment> c, Put put, WALEdit edit)
-    throws IOException {
+  default void prePut(ObserverContext<? extends RegionCoprocessorEnvironment> c, Put put,
+    WALEdit edit) throws IOException {
     prePut(c, put, edit, put.getDurability());
   }
 
@@ -436,8 +436,8 @@ public interface RegionObserver {
    *             {@link #postPut(ObserverContext, Put, WALEdit)} instead.
    */
   @Deprecated
-  default void postPut(ObserverContext<RegionCoprocessorEnvironment> c, Put put, WALEdit edit,
-    Durability durability) throws IOException {
+  default void postPut(ObserverContext<? extends RegionCoprocessorEnvironment> c, Put put,
+    WALEdit edit, Durability durability) throws IOException {
   }
 
   /**
@@ -449,8 +449,8 @@ public interface RegionObserver {
    * @param put  The Put object
    * @param edit The WALEdit object for the wal
    */
-  default void postPut(ObserverContext<RegionCoprocessorEnvironment> c, Put put, WALEdit edit)
-    throws IOException {
+  default void postPut(ObserverContext<? extends RegionCoprocessorEnvironment> c, Put put,
+    WALEdit edit) throws IOException {
     postPut(c, put, edit, put.getDurability());
   }
 
@@ -470,7 +470,7 @@ public interface RegionObserver {
    *             {@link #preDelete(ObserverContext, Delete, WALEdit)} instead.
    */
   @Deprecated
-  default void preDelete(ObserverContext<RegionCoprocessorEnvironment> c, Delete delete,
+  default void preDelete(ObserverContext<? extends RegionCoprocessorEnvironment> c, Delete delete,
     WALEdit edit, Durability durability) throws IOException {
   }
 
@@ -486,7 +486,7 @@ public interface RegionObserver {
    * @param delete The Delete object
    * @param edit   The WALEdit object for the wal
    */
-  default void preDelete(ObserverContext<RegionCoprocessorEnvironment> c, Delete delete,
+  default void preDelete(ObserverContext<? extends RegionCoprocessorEnvironment> c, Delete delete,
     WALEdit edit) throws IOException {
     preDelete(c, delete, edit, delete.getDurability());
   }
@@ -507,8 +507,9 @@ public interface RegionObserver {
    *             VisibilityController still needs this, need to change the logic there first.
    */
   @Deprecated
-  default void prePrepareTimeStampForDeleteVersion(ObserverContext<RegionCoprocessorEnvironment> c,
-    Mutation mutation, Cell cell, byte[] byteNow, Get get) throws IOException {
+  default void prePrepareTimeStampForDeleteVersion(
+    ObserverContext<? extends RegionCoprocessorEnvironment> c, Mutation mutation, Cell cell,
+    byte[] byteNow, Get get) throws IOException {
   }
 
   /**
@@ -524,7 +525,7 @@ public interface RegionObserver {
    *             {@link #postDelete(ObserverContext, Delete, WALEdit)} instead.
    */
   @Deprecated
-  default void postDelete(ObserverContext<RegionCoprocessorEnvironment> c, Delete delete,
+  default void postDelete(ObserverContext<? extends RegionCoprocessorEnvironment> c, Delete delete,
     WALEdit edit, Durability durability) throws IOException {
   }
 
@@ -537,7 +538,7 @@ public interface RegionObserver {
    * @param delete The Delete object
    * @param edit   The WALEdit object for the wal
    */
-  default void postDelete(ObserverContext<RegionCoprocessorEnvironment> c, Delete delete,
+  default void postDelete(ObserverContext<? extends RegionCoprocessorEnvironment> c, Delete delete,
     WALEdit edit) throws IOException {
     postDelete(c, delete, edit, delete.getDurability());
   }
@@ -555,7 +556,7 @@ public interface RegionObserver {
    * @param c           the environment provided by the region server
    * @param miniBatchOp batch of Mutations getting applied to region.
    */
-  default void preBatchMutate(ObserverContext<RegionCoprocessorEnvironment> c,
+  default void preBatchMutate(ObserverContext<? extends RegionCoprocessorEnvironment> c,
     MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {
   }
 
@@ -575,7 +576,7 @@ public interface RegionObserver {
    *                    manipulating its state.
    */
   // Coprocessors can do a form of bypass by changing state in miniBatchOp.
-  default void postBatchMutate(ObserverContext<RegionCoprocessorEnvironment> c,
+  default void postBatchMutate(ObserverContext<? extends RegionCoprocessorEnvironment> c,
     MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {
   }
 
@@ -584,14 +585,14 @@ public interface RegionObserver {
    * {@link Region#startRegionOperation()}.
    * @param operation The operation is about to be taken on the region
    */
-  default void postStartRegionOperation(ObserverContext<RegionCoprocessorEnvironment> ctx,
+  default void postStartRegionOperation(ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
     Operation operation) throws IOException {
   }
 
   /**
    * Called after releasing read lock in {@link Region#closeRegionOperation()}.
    */
-  default void postCloseRegionOperation(ObserverContext<RegionCoprocessorEnvironment> ctx,
+  default void postCloseRegionOperation(ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
     Operation operation) throws IOException {
   }
 
@@ -603,7 +604,8 @@ public interface RegionObserver {
    * need a Cell reference for later use, copy the cell and use that.
    * @param success true if batch operation is successful otherwise false.
    */
-  default void postBatchMutateIndispensably(ObserverContext<RegionCoprocessorEnvironment> ctx,
+  default void postBatchMutateIndispensably(
+    ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
     MiniBatchOperationInProgress<Mutation> miniBatchOp, boolean success) throws IOException {
   }
 
@@ -629,9 +631,9 @@ public interface RegionObserver {
    *             instead.
    */
   @Deprecated
-  default boolean preCheckAndPut(ObserverContext<RegionCoprocessorEnvironment> c, byte[] row,
-    byte[] family, byte[] qualifier, CompareOperator op, ByteArrayComparable comparator, Put put,
-    boolean result) throws IOException {
+  default boolean preCheckAndPut(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    byte[] row, byte[] family, byte[] qualifier, CompareOperator op, ByteArrayComparable comparator,
+    Put put, boolean result) throws IOException {
     return result;
   }
 
@@ -654,8 +656,8 @@ public interface RegionObserver {
    *             instead.
    */
   @Deprecated
-  default boolean preCheckAndPut(ObserverContext<RegionCoprocessorEnvironment> c, byte[] row,
-    Filter filter, Put put, boolean result) throws IOException {
+  default boolean preCheckAndPut(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    byte[] row, Filter filter, Put put, boolean result) throws IOException {
     return result;
   }
 
@@ -685,9 +687,10 @@ public interface RegionObserver {
    *             instead.
    */
   @Deprecated
-  default boolean preCheckAndPutAfterRowLock(ObserverContext<RegionCoprocessorEnvironment> c,
-    byte[] row, byte[] family, byte[] qualifier, CompareOperator op, ByteArrayComparable comparator,
-    Put put, boolean result) throws IOException {
+  default boolean preCheckAndPutAfterRowLock(
+    ObserverContext<? extends RegionCoprocessorEnvironment> c, byte[] row, byte[] family,
+    byte[] qualifier, CompareOperator op, ByteArrayComparable comparator, Put put, boolean result)
+    throws IOException {
     return result;
   }
 
@@ -714,8 +717,9 @@ public interface RegionObserver {
    *             instead.
    */
   @Deprecated
-  default boolean preCheckAndPutAfterRowLock(ObserverContext<RegionCoprocessorEnvironment> c,
-    byte[] row, Filter filter, Put put, boolean result) throws IOException {
+  default boolean preCheckAndPutAfterRowLock(
+    ObserverContext<? extends RegionCoprocessorEnvironment> c, byte[] row, Filter filter, Put put,
+    boolean result) throws IOException {
     return result;
   }
 
@@ -738,9 +742,9 @@ public interface RegionObserver {
    *             instead.
    */
   @Deprecated
-  default boolean postCheckAndPut(ObserverContext<RegionCoprocessorEnvironment> c, byte[] row,
-    byte[] family, byte[] qualifier, CompareOperator op, ByteArrayComparable comparator, Put put,
-    boolean result) throws IOException {
+  default boolean postCheckAndPut(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    byte[] row, byte[] family, byte[] qualifier, CompareOperator op, ByteArrayComparable comparator,
+    Put put, boolean result) throws IOException {
     return result;
   }
 
@@ -760,8 +764,8 @@ public interface RegionObserver {
    *             instead.
    */
   @Deprecated
-  default boolean postCheckAndPut(ObserverContext<RegionCoprocessorEnvironment> c, byte[] row,
-    Filter filter, Put put, boolean result) throws IOException {
+  default boolean postCheckAndPut(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    byte[] row, Filter filter, Put put, boolean result) throws IOException {
     return result;
   }
 
@@ -787,8 +791,8 @@ public interface RegionObserver {
    *             instead.
    */
   @Deprecated
-  default boolean preCheckAndDelete(ObserverContext<RegionCoprocessorEnvironment> c, byte[] row,
-    byte[] family, byte[] qualifier, CompareOperator op, ByteArrayComparable comparator,
+  default boolean preCheckAndDelete(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    byte[] row, byte[] family, byte[] qualifier, CompareOperator op, ByteArrayComparable comparator,
     Delete delete, boolean result) throws IOException {
     return result;
   }
@@ -812,8 +816,8 @@ public interface RegionObserver {
    *             instead.
    */
   @Deprecated
-  default boolean preCheckAndDelete(ObserverContext<RegionCoprocessorEnvironment> c, byte[] row,
-    Filter filter, Delete delete, boolean result) throws IOException {
+  default boolean preCheckAndDelete(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    byte[] row, Filter filter, Delete delete, boolean result) throws IOException {
     return result;
   }
 
@@ -843,9 +847,10 @@ public interface RegionObserver {
    *             instead.
    */
   @Deprecated
-  default boolean preCheckAndDeleteAfterRowLock(ObserverContext<RegionCoprocessorEnvironment> c,
-    byte[] row, byte[] family, byte[] qualifier, CompareOperator op, ByteArrayComparable comparator,
-    Delete delete, boolean result) throws IOException {
+  default boolean preCheckAndDeleteAfterRowLock(
+    ObserverContext<? extends RegionCoprocessorEnvironment> c, byte[] row, byte[] family,
+    byte[] qualifier, CompareOperator op, ByteArrayComparable comparator, Delete delete,
+    boolean result) throws IOException {
     return result;
   }
 
@@ -872,8 +877,9 @@ public interface RegionObserver {
    *             instead.
    */
   @Deprecated
-  default boolean preCheckAndDeleteAfterRowLock(ObserverContext<RegionCoprocessorEnvironment> c,
-    byte[] row, Filter filter, Delete delete, boolean result) throws IOException {
+  default boolean preCheckAndDeleteAfterRowLock(
+    ObserverContext<? extends RegionCoprocessorEnvironment> c, byte[] row, Filter filter,
+    Delete delete, boolean result) throws IOException {
     return result;
   }
 
@@ -896,8 +902,8 @@ public interface RegionObserver {
    *             instead.
    */
   @Deprecated
-  default boolean postCheckAndDelete(ObserverContext<RegionCoprocessorEnvironment> c, byte[] row,
-    byte[] family, byte[] qualifier, CompareOperator op, ByteArrayComparable comparator,
+  default boolean postCheckAndDelete(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    byte[] row, byte[] family, byte[] qualifier, CompareOperator op, ByteArrayComparable comparator,
     Delete delete, boolean result) throws IOException {
     return result;
   }
@@ -918,8 +924,8 @@ public interface RegionObserver {
    *             instead.
    */
   @Deprecated
-  default boolean postCheckAndDelete(ObserverContext<RegionCoprocessorEnvironment> c, byte[] row,
-    Filter filter, Delete delete, boolean result) throws IOException {
+  default boolean postCheckAndDelete(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    byte[] row, Filter filter, Delete delete, boolean result) throws IOException {
     return result;
   }
 
@@ -937,8 +943,9 @@ public interface RegionObserver {
    * @return the return value to return to client if bypassing default processing
    * @throws IOException if an error occurred on the coprocessor
    */
-  default CheckAndMutateResult preCheckAndMutate(ObserverContext<RegionCoprocessorEnvironment> c,
-    CheckAndMutate checkAndMutate, CheckAndMutateResult result) throws IOException {
+  default CheckAndMutateResult preCheckAndMutate(
+    ObserverContext<? extends RegionCoprocessorEnvironment> c, CheckAndMutate checkAndMutate,
+    CheckAndMutateResult result) throws IOException {
     if (checkAndMutate.getAction() instanceof Put) {
       boolean success;
       if (checkAndMutate.hasFilter()) {
@@ -986,7 +993,7 @@ public interface RegionObserver {
    * @throws IOException if an error occurred on the coprocessor
    */
   default CheckAndMutateResult preCheckAndMutateAfterRowLock(
-    ObserverContext<RegionCoprocessorEnvironment> c, CheckAndMutate checkAndMutate,
+    ObserverContext<? extends RegionCoprocessorEnvironment> c, CheckAndMutate checkAndMutate,
     CheckAndMutateResult result) throws IOException {
     if (checkAndMutate.getAction() instanceof Put) {
       boolean success;
@@ -1027,8 +1034,9 @@ public interface RegionObserver {
    * @return the possibly transformed returned value to return to client
    * @throws IOException if an error occurred on the coprocessor
    */
-  default CheckAndMutateResult postCheckAndMutate(ObserverContext<RegionCoprocessorEnvironment> c,
-    CheckAndMutate checkAndMutate, CheckAndMutateResult result) throws IOException {
+  default CheckAndMutateResult postCheckAndMutate(
+    ObserverContext<? extends RegionCoprocessorEnvironment> c, CheckAndMutate checkAndMutate,
+    CheckAndMutateResult result) throws IOException {
     if (checkAndMutate.getAction() instanceof Put) {
       boolean success;
       if (checkAndMutate.hasFilter()) {
@@ -1072,7 +1080,7 @@ public interface RegionObserver {
    *             {@link #preAppend(ObserverContext, Append, WALEdit)} instead.
    */
   @Deprecated
-  default Result preAppend(ObserverContext<RegionCoprocessorEnvironment> c, Append append)
+  default Result preAppend(ObserverContext<? extends RegionCoprocessorEnvironment> c, Append append)
     throws IOException {
     return null;
   }
@@ -1090,7 +1098,7 @@ public interface RegionObserver {
    * @param edit   The WALEdit object that will be written to the wal
    * @return result to return to the client if bypassing default processing
    */
-  default Result preAppend(ObserverContext<RegionCoprocessorEnvironment> c, Append append,
+  default Result preAppend(ObserverContext<? extends RegionCoprocessorEnvironment> c, Append append,
     WALEdit edit) throws IOException {
     return preAppend(c, append);
   }
@@ -1114,7 +1122,7 @@ public interface RegionObserver {
    *             {@link #preBatchMutate(ObserverContext, MiniBatchOperationInProgress)} instead.
    */
   @Deprecated
-  default Result preAppendAfterRowLock(ObserverContext<RegionCoprocessorEnvironment> c,
+  default Result preAppendAfterRowLock(ObserverContext<? extends RegionCoprocessorEnvironment> c,
     Append append) throws IOException {
     return null;
   }
@@ -1132,8 +1140,8 @@ public interface RegionObserver {
    *             {@link #postAppend(ObserverContext, Append, Result, WALEdit)} instead.
    */
   @Deprecated
-  default Result postAppend(ObserverContext<RegionCoprocessorEnvironment> c, Append append,
-    Result result) throws IOException {
+  default Result postAppend(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    Append append, Result result) throws IOException {
     return result;
   }
 
@@ -1148,8 +1156,8 @@ public interface RegionObserver {
    * @param edit   The WALEdit object for the wal
    * @return the result to return to the client
    */
-  default Result postAppend(ObserverContext<RegionCoprocessorEnvironment> c, Append append,
-    Result result, WALEdit edit) throws IOException {
+  default Result postAppend(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    Append append, Result result, WALEdit edit) throws IOException {
     return postAppend(c, append, result);
   }
 
@@ -1168,8 +1176,8 @@ public interface RegionObserver {
    *             {@link #preIncrement(ObserverContext, Increment, WALEdit)} instead.
    */
   @Deprecated
-  default Result preIncrement(ObserverContext<RegionCoprocessorEnvironment> c, Increment increment)
-    throws IOException {
+  default Result preIncrement(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    Increment increment) throws IOException {
     return null;
   }
 
@@ -1186,8 +1194,8 @@ public interface RegionObserver {
    * @param edit      The WALEdit object that will be written to the wal
    * @return result to return to the client if bypassing default processing
    */
-  default Result preIncrement(ObserverContext<RegionCoprocessorEnvironment> c, Increment increment,
-    WALEdit edit) throws IOException {
+  default Result preIncrement(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    Increment increment, WALEdit edit) throws IOException {
     return preIncrement(c, increment);
   }
 
@@ -1210,7 +1218,7 @@ public interface RegionObserver {
    *             {@link #preBatchMutate(ObserverContext, MiniBatchOperationInProgress)} instead.
    */
   @Deprecated
-  default Result preIncrementAfterRowLock(ObserverContext<RegionCoprocessorEnvironment> c,
+  default Result preIncrementAfterRowLock(ObserverContext<? extends RegionCoprocessorEnvironment> c,
     Increment increment) throws IOException {
     return null;
   }
@@ -1228,8 +1236,8 @@ public interface RegionObserver {
    *             {@link #postIncrement(ObserverContext, Increment, Result, WALEdit)} instead.
    */
   @Deprecated
-  default Result postIncrement(ObserverContext<RegionCoprocessorEnvironment> c, Increment increment,
-    Result result) throws IOException {
+  default Result postIncrement(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    Increment increment, Result result) throws IOException {
     return result;
   }
 
@@ -1244,8 +1252,8 @@ public interface RegionObserver {
    * @param edit      The WALEdit object for the wal
    * @return the result to return to the client
    */
-  default Result postIncrement(ObserverContext<RegionCoprocessorEnvironment> c, Increment increment,
-    Result result, WALEdit edit) throws IOException {
+  default Result postIncrement(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    Increment increment, Result result, WALEdit edit) throws IOException {
     return postIncrement(c, increment, result);
   }
 
@@ -1257,7 +1265,7 @@ public interface RegionObserver {
    * @param c    the environment provided by the region server
    * @param scan the Scan specification
    */
-  default void preScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c, Scan scan)
+  default void preScannerOpen(ObserverContext<? extends RegionCoprocessorEnvironment> c, Scan scan)
     throws IOException {
   }
 
@@ -1271,8 +1279,8 @@ public interface RegionObserver {
    * @param s    if not null, the base scanner
    * @return the scanner instance to use
    */
-  default RegionScanner postScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c, Scan scan,
-    RegionScanner s) throws IOException {
+  default RegionScanner postScannerOpen(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    Scan scan, RegionScanner s) throws IOException {
     return s;
   }
 
@@ -1292,8 +1300,8 @@ public interface RegionObserver {
    * @param hasNext the 'has more' indication
    * @return 'has more' indication that should be sent to client
    */
-  default boolean preScannerNext(ObserverContext<RegionCoprocessorEnvironment> c, InternalScanner s,
-    List<Result> result, int limit, boolean hasNext) throws IOException {
+  default boolean preScannerNext(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    InternalScanner s, List<Result> result, int limit, boolean hasNext) throws IOException {
     return hasNext;
   }
 
@@ -1309,7 +1317,7 @@ public interface RegionObserver {
    * @param hasNext the 'has more' indication
    * @return 'has more' indication that should be sent to client
    */
-  default boolean postScannerNext(ObserverContext<RegionCoprocessorEnvironment> c,
+  default boolean postScannerNext(ObserverContext<? extends RegionCoprocessorEnvironment> c,
     InternalScanner s, List<Result> result, int limit, boolean hasNext) throws IOException {
     return hasNext;
   }
@@ -1333,7 +1341,7 @@ public interface RegionObserver {
    * @param hasMore    the 'has more' indication
    * @return whether more rows are available for the scanner or not
    */
-  default boolean postScannerFilterRow(ObserverContext<RegionCoprocessorEnvironment> c,
+  default boolean postScannerFilterRow(ObserverContext<? extends RegionCoprocessorEnvironment> c,
     InternalScanner s, Cell curRowCell, boolean hasMore) throws IOException {
     return hasMore;
   }
@@ -1346,8 +1354,8 @@ public interface RegionObserver {
    * @param c the environment provided by the region server
    * @param s the scanner
    */
-  default void preScannerClose(ObserverContext<RegionCoprocessorEnvironment> c, InternalScanner s)
-    throws IOException {
+  default void preScannerClose(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    InternalScanner s) throws IOException {
   }
 
   /**
@@ -1355,7 +1363,7 @@ public interface RegionObserver {
    * @param ctx the environment provided by the region server
    * @param s   the scanner
    */
-  default void postScannerClose(ObserverContext<RegionCoprocessorEnvironment> ctx,
+  default void postScannerClose(ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
     InternalScanner s) throws IOException {
   }
 
@@ -1377,8 +1385,8 @@ public interface RegionObserver {
    * @see #preCompactScannerOpen(ObserverContext, Store, ScanType, ScanOptions,
    *      CompactionLifeCycleTracker, CompactionRequest)
    */
-  default void preStoreScannerOpen(ObserverContext<RegionCoprocessorEnvironment> ctx, Store store,
-    ScanOptions options) throws IOException {
+  default void preStoreScannerOpen(ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
+    Store store, ScanOptions options) throws IOException {
   }
 
   /**
@@ -1411,7 +1419,7 @@ public interface RegionObserver {
    * @param familyPaths pairs of { CF, HFile path } submitted for bulk load. Adding or removing from
    *                    this list will add or remove HFiles to be bulk loaded.
    */
-  default void preBulkLoadHFile(ObserverContext<RegionCoprocessorEnvironment> ctx,
+  default void preBulkLoadHFile(ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
     List<Pair<byte[], String>> familyPaths) throws IOException {
   }
 
@@ -1422,8 +1430,8 @@ public interface RegionObserver {
    * @param pairs  List of pairs of { HFile location in staging dir, HFile path in region dir } Each
    *               pair are for the same hfile.
    */
-  default void preCommitStoreFile(ObserverContext<RegionCoprocessorEnvironment> ctx, byte[] family,
-    List<Pair<Path, Path>> pairs) throws IOException {
+  default void preCommitStoreFile(ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
+    byte[] family, List<Pair<Path, Path>> pairs) throws IOException {
   }
 
   /**
@@ -1433,8 +1441,8 @@ public interface RegionObserver {
    * @param srcPath Path to file before the move
    * @param dstPath Path to file after the move
    */
-  default void postCommitStoreFile(ObserverContext<RegionCoprocessorEnvironment> ctx, byte[] family,
-    Path srcPath, Path dstPath) throws IOException {
+  default void postCommitStoreFile(ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
+    byte[] family, Path srcPath, Path dstPath) throws IOException {
   }
 
   /**
@@ -1445,7 +1453,7 @@ public interface RegionObserver {
    *                           not null, the bulkLoad was successful. Otherwise the bulk load
    *                           failed. bulkload is done by the time this hook is called.
    */
-  default void postBulkLoadHFile(ObserverContext<RegionCoprocessorEnvironment> ctx,
+  default void postBulkLoadHFile(ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
     List<Pair<byte[], String>> stagingFamilyPaths, Map<byte[], List<Path>> finalPaths)
     throws IOException {
   }
@@ -1468,9 +1476,10 @@ public interface RegionObserver {
   @Deprecated
   // Passing InterfaceAudience.Private args FSDataInputStreamWrapper, CacheConfig and Reference.
   // This is fine as the hook is deprecated any way.
-  default StoreFileReader preStoreFileReaderOpen(ObserverContext<RegionCoprocessorEnvironment> ctx,
-    FileSystem fs, Path p, FSDataInputStreamWrapper in, long size, CacheConfig cacheConf,
-    Reference r, StoreFileReader reader) throws IOException {
+  default StoreFileReader preStoreFileReaderOpen(
+    ObserverContext<? extends RegionCoprocessorEnvironment> ctx, FileSystem fs, Path p,
+    FSDataInputStreamWrapper in, long size, CacheConfig cacheConf, Reference r,
+    StoreFileReader reader) throws IOException {
     return reader;
   }
 
@@ -1489,9 +1498,10 @@ public interface RegionObserver {
   @Deprecated
   // Passing InterfaceAudience.Private args FSDataInputStreamWrapper, CacheConfig and Reference.
   // This is fine as the hook is deprecated any way.
-  default StoreFileReader postStoreFileReaderOpen(ObserverContext<RegionCoprocessorEnvironment> ctx,
-    FileSystem fs, Path p, FSDataInputStreamWrapper in, long size, CacheConfig cacheConf,
-    Reference r, StoreFileReader reader) throws IOException {
+  default StoreFileReader postStoreFileReaderOpen(
+    ObserverContext<? extends RegionCoprocessorEnvironment> ctx, FileSystem fs, Path p,
+    FSDataInputStreamWrapper in, long size, CacheConfig cacheConf, Reference r,
+    StoreFileReader reader) throws IOException {
     return reader;
   }
 
@@ -1514,7 +1524,7 @@ public interface RegionObserver {
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-21643">HBASE-21643</a>
    */
   @Deprecated
-  default Cell postMutationBeforeWAL(ObserverContext<RegionCoprocessorEnvironment> ctx,
+  default Cell postMutationBeforeWAL(ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
     MutationType opType, Mutation mutation, Cell oldCell, Cell newCell) throws IOException {
     return newCell;
   }
@@ -1529,7 +1539,7 @@ public interface RegionObserver {
    * @return a list of cell pair, possibly changed.
    */
   default List<Pair<Cell, Cell>> postIncrementBeforeWAL(
-    ObserverContext<RegionCoprocessorEnvironment> ctx, Mutation mutation,
+    ObserverContext<? extends RegionCoprocessorEnvironment> ctx, Mutation mutation,
     List<Pair<Cell, Cell>> cellPairs) throws IOException {
     List<Pair<Cell, Cell>> resultPairs = new ArrayList<>(cellPairs.size());
     for (Pair<Cell, Cell> pair : cellPairs) {
@@ -1549,7 +1559,7 @@ public interface RegionObserver {
    * @return a list of cell pair, possibly changed.
    */
   default List<Pair<Cell, Cell>> postAppendBeforeWAL(
-    ObserverContext<RegionCoprocessorEnvironment> ctx, Mutation mutation,
+    ObserverContext<? extends RegionCoprocessorEnvironment> ctx, Mutation mutation,
     List<Pair<Cell, Cell>> cellPairs) throws IOException {
     List<Pair<Cell, Cell>> resultPairs = new ArrayList<>(cellPairs.size());
     for (Pair<Cell, Cell> pair : cellPairs) {
@@ -1567,11 +1577,12 @@ public interface RegionObserver {
    * @param ctx        the environment provided by the region server
    * @param delTracker the deleteTracker that is created by the QueryMatcher
    * @return the Delete Tracker
-   * @deprecated Since 2.0 with out any replacement and will be removed in 3.0
+   * @deprecated Since 2.0.0, will be removed in 4.0.0. Visibility label feature still use this
+   *             method, so it can not be removed in 3.0.0
    */
   @Deprecated
   default DeleteTracker postInstantiateDeleteTracker(
-    ObserverContext<RegionCoprocessorEnvironment> ctx, DeleteTracker delTracker)
+    ObserverContext<? extends RegionCoprocessorEnvironment> ctx, DeleteTracker delTracker)
     throws IOException {
     return delTracker;
   }
@@ -1583,7 +1594,7 @@ public interface RegionObserver {
    * @param ctx the environment provided by the region server
    * @param key the WALKey associated with a particular append to a WAL
    */
-  default void preWALAppend(ObserverContext<RegionCoprocessorEnvironment> ctx, WALKey key,
+  default void preWALAppend(ObserverContext<? extends RegionCoprocessorEnvironment> ctx, WALKey key,
     WALEdit edit) throws IOException {
   }
 }

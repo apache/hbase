@@ -43,7 +43,8 @@ public class TestSnapshotWithAcl extends SnapshotWithAclTestBase {
   }
 
   @Override
-  protected void restoreSnapshot(String snapshotName, boolean restoreAcl) throws Exception {
-    TEST_UTIL.getAdmin().restoreSnapshot(snapshotName, false, restoreAcl);
+  protected void restoreSnapshot(String snapshotName, boolean takeFailSafeSnapshot,
+    boolean restoreAcl) throws Exception {
+    TEST_UTIL.getAdmin().restoreSnapshot(snapshotName, takeFailSafeSnapshot, restoreAcl);
   }
 }

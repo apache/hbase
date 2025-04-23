@@ -78,7 +78,8 @@ public class TestMasterHandlerFullWhenTransitRegion {
   public static class DelayOpenCP implements RegionCoprocessor, RegionObserver {
 
     @Override
-    public void preOpen(ObserverContext<RegionCoprocessorEnvironment> c) throws IOException {
+    public void preOpen(ObserverContext<? extends RegionCoprocessorEnvironment> c)
+      throws IOException {
       try {
         if (!c.getEnvironment().getRegion().getRegionInfo().getTable().isSystemTable()) {
           LOG.info("begin to sleep");

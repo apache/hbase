@@ -89,7 +89,7 @@ public class TestAsyncNonMetaRegionLocatorConcurrenyLimit {
     }
 
     @Override
-    public boolean preScannerNext(ObserverContext<RegionCoprocessorEnvironment> c,
+    public boolean preScannerNext(ObserverContext<? extends RegionCoprocessorEnvironment> c,
       InternalScanner s, List<Result> result, int limit, boolean hasNext) throws IOException {
       if (c.getEnvironment().getRegionInfo().isMetaRegion()) {
         int concurrency = CONCURRENCY.incrementAndGet();
@@ -108,7 +108,7 @@ public class TestAsyncNonMetaRegionLocatorConcurrenyLimit {
     }
 
     @Override
-    public boolean postScannerNext(ObserverContext<RegionCoprocessorEnvironment> c,
+    public boolean postScannerNext(ObserverContext<? extends RegionCoprocessorEnvironment> c,
       InternalScanner s, List<Result> result, int limit, boolean hasNext) throws IOException {
       if (c.getEnvironment().getRegionInfo().isMetaRegion()) {
         CONCURRENCY.decrementAndGet();

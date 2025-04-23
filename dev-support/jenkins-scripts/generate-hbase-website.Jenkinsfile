@@ -39,11 +39,26 @@ pipeline {
       tools {
         maven 'maven_latest'
         // this needs to be set to the jdk that ought to be used to build releases on the branch the Jenkinsfile is stored in.
-        jdk "jdk_1.8_latest"
+        jdk "jdk_17_latest"
       }
       steps {
         dir('hbase') {
-          checkout scm
+          script {
+            checkout([
+              $class: 'GitSCM',
+              branches: [[name: '*/master']],
+              doGenerateSubmoduleConfigurations: false,
+              extensions: [
+                [$class: 'CloneOption',
+                  noTags: true,
+                  shallow: true,
+                  depth: 1
+                ],
+                [$class: 'CheckoutOption', timeout: 20]
+              ],
+              userRemoteConfigs: [[url: 'https://github.com/apache/hbase']]
+            ])
+          }
         }
         sh '''#!/usr/bin/env bash
           set -e

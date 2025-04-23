@@ -97,7 +97,7 @@ public class ClaimReplicationQueueRemoteProcedure extends ServerRemoteProcedure
     queueId.getSourceServerName()
       .ifPresent(sourceServer -> builder.setSourceServer(ProtobufUtil.toServerName(sourceServer)));
     return Optional.of(new ServerOperation(this, getProcId(), ClaimReplicationQueueCallable.class,
-      builder.build().toByteArray()));
+      builder.build().toByteArray(), env.getMasterServices().getMasterActiveTime()));
   }
 
   @Override

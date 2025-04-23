@@ -22,21 +22,21 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PushbackInputStream;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * TODO javadoc
+ * Base implementation for {@link Codec.Decoder}.
  */
 @InterfaceAudience.LimitedPrivate({ HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX })
 public abstract class BaseDecoder implements Codec.Decoder {
   protected static final Logger LOG = LoggerFactory.getLogger(BaseDecoder.class);
 
   protected final InputStream in;
-  private Cell current = null;
+  private ExtendedCell current = null;
 
   protected static class PBIS extends PushbackInputStream {
     public PBIS(InputStream in, int size) {
@@ -98,10 +98,10 @@ public abstract class BaseDecoder implements Codec.Decoder {
    *         thrown if EOF is reached prematurely. Does not return null.
    */
   @NonNull
-  protected abstract Cell parseCell() throws IOException;
+  protected abstract ExtendedCell parseCell() throws IOException;
 
   @Override
-  public Cell current() {
+  public ExtendedCell current() {
     return this.current;
   }
 }

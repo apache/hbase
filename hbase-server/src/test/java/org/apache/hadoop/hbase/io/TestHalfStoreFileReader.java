@@ -17,13 +17,17 @@
  */
 package org.apache.hadoop.hbase.io;
 
+import static org.apache.hadoop.hbase.io.ByteBuffAllocator.BUFFER_SIZE_KEY;
+import static org.apache.hadoop.hbase.io.hfile.CacheConfig.CACHE_BLOCKS_ON_WRITE_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -31,10 +35,15 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
@@ -42,8 +51,14 @@ import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext;
 import org.apache.hadoop.hbase.io.hfile.ReaderContextBuilder;
+import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
+import org.apache.hadoop.hbase.nio.RefCnt;
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
+import org.apache.hadoop.hbase.regionserver.StoreContext;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -52,6 +67,8 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import org.apache.hbase.thirdparty.io.netty.util.ResourceLeakDetector;
 
 @Category({ IOTests.class, SmallTests.class })
 public class TestHalfStoreFileReader {
@@ -83,17 +100,39 @@ public class TestHalfStoreFileReader {
    * top of the file while we are at it.
    */
   @Test
-  public void testHalfScanAndReseek() throws IOException {
+  public void testHalfScanAndReseek() throws Exception {
+    ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
     Configuration conf = TEST_UTIL.getConfiguration();
     FileSystem fs = FileSystem.get(conf);
     String root_dir = TEST_UTIL.getDataTestDir().toString();
     Path parentPath = new Path(new Path(root_dir, "parent"), "CF");
     fs.mkdirs(parentPath);
-    Path splitAPath = new Path(new Path(root_dir, "splita"), "CF");
-    Path splitBPath = new Path(new Path(root_dir, "splitb"), "CF");
+    String tableName = Paths.get(root_dir).getFileName().toString();
+    RegionInfo splitAHri = RegionInfoBuilder.newBuilder(TableName.valueOf(tableName)).build();
+    Thread.currentThread().sleep(1000);
+    RegionInfo splitBHri = RegionInfoBuilder.newBuilder(TableName.valueOf(tableName)).build();
+    Path splitAPath = new Path(new Path(root_dir, splitAHri.getRegionNameAsString()), "CF");
+    Path splitBPath = new Path(new Path(root_dir, splitBHri.getRegionNameAsString()), "CF");
     Path filePath = StoreFileWriter.getUniqueFile(fs, parentPath);
+    String ioEngineName = "file:" + TEST_UTIL.getDataTestDir() + "/bucketNoRecycler.cache";
+    BucketCache bucketCache = new BucketCache(ioEngineName, 32 * 1024 * 1024, 1024,
+      new int[] { 4 * 1024, 8 * 1024, 64 * 1024, 96 * 1024 }, 1, 1, null);
+    conf.setBoolean(CACHE_BLOCKS_ON_WRITE_KEY, true);
+    conf.setInt(BUFFER_SIZE_KEY, 1024);
+    ByteBuffAllocator allocator = ByteBuffAllocator.create(conf, true);
 
-    CacheConfig cacheConf = new CacheConfig(conf);
+    final AtomicInteger counter = new AtomicInteger();
+    RefCnt.detector.setLeakListener(new ResourceLeakDetector.LeakListener() {
+      @Override
+      public void onLeak(String s, String s1) {
+        counter.incrementAndGet();
+      }
+    });
+
+    ColumnFamilyDescriptorBuilder cfBuilder =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("CF"));
+    CacheConfig cacheConf = new CacheConfig(conf, cfBuilder.build(), bucketCache, allocator);
+
     HFileContext meta = new HFileContextBuilder().withBlockSize(1024).build();
     HFile.Writer w =
       HFile.getWriterFactory(conf, cacheConf).withPath(fs, filePath).withFileContext(meta).create();
@@ -112,19 +151,33 @@ public class TestHalfStoreFileReader {
     Path splitFileA = new Path(splitAPath, filePath.getName() + ".parent");
     Path splitFileB = new Path(splitBPath, filePath.getName() + ".parent");
 
+    HRegionFileSystem splitAregionFS =
+      HRegionFileSystem.create(conf, fs, new Path(root_dir), splitAHri);
+    StoreContext splitAStoreContext =
+      StoreContext.getBuilder().withColumnFamilyDescriptor(ColumnFamilyDescriptorBuilder.of("CF"))
+        .withFamilyStoreDirectoryPath(splitAPath).withRegionFileSystem(splitAregionFS).build();
+    StoreFileTracker splitAsft = StoreFileTrackerFactory.create(conf, false, splitAStoreContext);
     Reference bottom = new Reference(midkey, Reference.Range.bottom);
-    bottom.write(fs, splitFileA);
+    splitAsft.createReference(bottom, splitFileA);
     doTestOfScanAndReseek(splitFileA, fs, bottom, cacheConf);
 
+    HRegionFileSystem splitBregionFS =
+      HRegionFileSystem.create(conf, fs, new Path(root_dir), splitBHri);
+    StoreContext splitBStoreContext =
+      StoreContext.getBuilder().withColumnFamilyDescriptor(ColumnFamilyDescriptorBuilder.of("CF"))
+        .withFamilyStoreDirectoryPath(splitBPath).withRegionFileSystem(splitBregionFS).build();
+    StoreFileTracker splitBsft = StoreFileTrackerFactory.create(conf, false, splitBStoreContext);
     Reference top = new Reference(midkey, Reference.Range.top);
-    top.write(fs, splitFileB);
+    splitBsft.createReference(top, splitFileB);
     doTestOfScanAndReseek(splitFileB, fs, top, cacheConf);
 
     r.close();
+
+    assertEquals(0, counter.get());
   }
 
   private void doTestOfScanAndReseek(Path p, FileSystem fs, Reference bottom, CacheConfig cacheConf)
-    throws IOException {
+    throws Exception {
     Path referencePath = StoreFileInfo.getReferredToFile(p);
     FSDataInputStreamWrapper in = new FSDataInputStreamWrapper(fs, referencePath, false, 0);
     FileStatus status = fs.getFileStatus(referencePath);
@@ -133,7 +186,8 @@ public class TestHalfStoreFileReader {
       new ReaderContextBuilder().withInputStreamWrapper(in).withFileSize(length)
         .withReaderType(ReaderContext.ReaderType.PREAD).withFileSystem(fs).withFilePath(p);
     ReaderContext context = contextBuilder.build();
-    StoreFileInfo storeFileInfo = new StoreFileInfo(TEST_UTIL.getConfiguration(), fs, p, true);
+    StoreFileInfo storeFileInfo =
+      new StoreFileInfo(TEST_UTIL.getConfiguration(), fs, fs.getFileStatus(p), bottom);
     storeFileInfo.initHFileInfo(context);
     final HalfStoreFileReader halfreader =
       (HalfStoreFileReader) storeFileInfo.createReader(context, cacheConf);
@@ -157,6 +211,9 @@ public class TestHalfStoreFileReader {
     }
 
     halfreader.close(true);
+
+    System.gc();
+    Thread.sleep(1000);
   }
 
   // Tests the scanner on an HFile that is backed by HalfStoreFiles
@@ -179,7 +236,7 @@ public class TestHalfStoreFileReader {
     w.close();
 
     HFile.Reader r = HFile.createReader(fs, p, cacheConf, true, conf);
-    Cell midKV = r.midKey().get();
+    ExtendedCell midKV = r.midKey().get();
     byte[] midkey = CellUtil.cloneRow(midKV);
 
     Reference bottom = new Reference(midkey, Reference.Range.bottom);
@@ -228,7 +285,7 @@ public class TestHalfStoreFileReader {
     assertNull(foundKeyValue);
   }
 
-  private Cell doTestOfSeekBefore(Path p, FileSystem fs, Reference bottom, Cell seekBefore,
+  private Cell doTestOfSeekBefore(Path p, FileSystem fs, Reference bottom, ExtendedCell seekBefore,
     CacheConfig cacheConfig) throws IOException {
     ReaderContext context = new ReaderContextBuilder().withFileSystemAndPath(fs, p).build();
     StoreFileInfo storeFileInfo =

@@ -75,8 +75,8 @@ public class TestDropTimeoutRequest {
     }
 
     @Override
-    public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e, final Get get,
-      final List<Cell> results) throws IOException {
+    public void preGetOp(final ObserverContext<? extends RegionCoprocessorEnvironment> e,
+      final Get get, final List<Cell> results) throws IOException {
       // After first sleep, all requests are timeout except the last retry. If we handle
       // all the following requests, finally the last request is also timeout. If we drop all
       // timeout requests, we can handle the last request immediately and it will not timeout.

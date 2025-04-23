@@ -44,15 +44,19 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.SnapshotType;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
+import org.apache.hadoop.hbase.tool.BulkLoadHFilesTool;
+import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.HFileTestUtil;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -205,6 +209,52 @@ public class TestExportSnapshot {
   }
 
   @Test
+  public void testExportFileSystemStateWithSplitRegion() throws Exception {
+    // disable compaction
+    admin.compactionSwitch(false,
+      admin.getRegionServers().stream().map(a -> a.getServerName()).collect(Collectors.toList()));
+    // create Table
+    TableName splitTableName = TableName.valueOf(testName.getMethodName());
+    String splitTableSnap = "snapshot-" + testName.getMethodName();
+    admin.createTable(TableDescriptorBuilder.newBuilder(splitTableName).setColumnFamilies(
+      Lists.newArrayList(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).build())).build());
+
+    Path output = TEST_UTIL.getDataTestDir("output/cf");
+    TEST_UTIL.getTestFileSystem().mkdirs(output);
+    // Create and load a large hfile to ensure the execution time of MR job.
+    HFileTestUtil.createHFile(TEST_UTIL.getConfiguration(), TEST_UTIL.getTestFileSystem(),
+      new Path(output, "test_file"), FAMILY, Bytes.toBytes("q"), Bytes.toBytes("1"),
+      Bytes.toBytes("9"), 9999999);
+    BulkLoadHFilesTool tool = new BulkLoadHFilesTool(TEST_UTIL.getConfiguration());
+    tool.run(new String[] { output.getParent().toString(), splitTableName.getNameAsString() });
+
+    List<RegionInfo> regions = admin.getRegions(splitTableName);
+    assertEquals(1, regions.size());
+    tableNumFiles = regions.size();
+
+    // split region
+    admin.split(splitTableName, Bytes.toBytes("5"));
+    regions = admin.getRegions(splitTableName);
+    assertEquals(2, regions.size());
+
+    // take a snapshot
+    admin.snapshot(splitTableSnap, splitTableName);
+    // export snapshot and verify
+    Configuration tmpConf = TEST_UTIL.getConfiguration();
+    // Decrease the buffer size of copier to avoid the export task finished shortly
+    tmpConf.setInt("snapshot.export.buffer.size", 1);
+    // Decrease the maximum files of each mapper to ensure the three files(1 hfile + 2 reference
+    // files)
+    // copied in different mappers concurrently.
+    tmpConf.setInt("snapshot.export.default.map.group", 1);
+    testExportFileSystemState(tmpConf, splitTableName, splitTableSnap, splitTableSnap,
+      tableNumFiles, TEST_UTIL.getDefaultRootDirPath(), getHdfsDestinationDir(), false, false,
+      getBypassRegionPredicate(), true, false);
+    // delete table
+    TEST_UTIL.deleteTable(splitTableName);
+  }
+
+  @Test
   public void testExportFileSystemStateWithSkipTmp() throws Exception {
     TEST_UTIL.getConfiguration().setBoolean(ExportSnapshot.CONF_SKIP_TMP, true);
     try {
@@ -225,6 +275,23 @@ public class TestExportSnapshot {
     testExportFileSystemState(tableName, snapshotName, snapshotName, tableNumFiles, copyDir, false);
     testExportFileSystemState(tableName, snapshotName, snapshotName, tableNumFiles, copyDir, true);
     removeExportDir(copyDir);
+  }
+
+  @Test
+  public void testExportWithChecksum() throws Exception {
+    // Test different schemes: input scheme is hdfs:// and output scheme is file://
+    // The checksum verification will fail
+    Path copyLocalDir = getLocalDestinationDir(TEST_UTIL);
+    testExportFileSystemState(TEST_UTIL.getConfiguration(), tableName, snapshotName, snapshotName,
+      tableNumFiles, TEST_UTIL.getDefaultRootDirPath(), copyLocalDir, false, false,
+      getBypassRegionPredicate(), false, true);
+
+    // Test same schemes: input scheme is hdfs:// and output scheme is hdfs://
+    // The checksum verification will success
+    Path copyHdfsDir = getHdfsDestinationDir();
+    testExportFileSystemState(TEST_UTIL.getConfiguration(), tableName, snapshotName, snapshotName,
+      tableNumFiles, TEST_UTIL.getDefaultRootDirPath(), copyHdfsDir, false, false,
+      getBypassRegionPredicate(), true, true);
   }
 
   @Test
@@ -264,6 +331,39 @@ public class TestExportSnapshot {
     }
   }
 
+  @Test
+  public void testExportExpiredSnapshot() throws Exception {
+    String name = "testExportExpiredSnapshot";
+    TableName tableName = TableName.valueOf(name);
+    String snapshotName = "snapshot-" + name;
+    createTable(tableName);
+    SnapshotTestingUtils.loadData(TEST_UTIL, tableName, 50, FAMILY);
+    Map<String, Object> properties = new HashMap<>();
+    properties.put("TTL", 10);
+    org.apache.hadoop.hbase.client.SnapshotDescription snapshotDescription =
+      new org.apache.hadoop.hbase.client.SnapshotDescription(snapshotName, tableName,
+        SnapshotType.FLUSH, null, EnvironmentEdgeManager.currentTime(), -1, properties);
+    admin.snapshot(snapshotDescription);
+    boolean isExist =
+      admin.listSnapshots().stream().anyMatch(ele -> snapshotName.equals(ele.getName()));
+    assertTrue(isExist);
+    int retry = 6;
+    while (
+      !SnapshotDescriptionUtils.isExpiredSnapshot(snapshotDescription.getTtl(),
+        snapshotDescription.getCreationTime(), EnvironmentEdgeManager.currentTime()) && retry > 0
+    ) {
+      retry--;
+      Thread.sleep(10 * 1000);
+    }
+    boolean isExpiredSnapshot =
+      SnapshotDescriptionUtils.isExpiredSnapshot(snapshotDescription.getTtl(),
+        snapshotDescription.getCreationTime(), EnvironmentEdgeManager.currentTime());
+    assertTrue(isExpiredSnapshot);
+    int res = runExportSnapshot(TEST_UTIL.getConfiguration(), snapshotName, snapshotName,
+      TEST_UTIL.getDefaultRootDirPath(), getHdfsDestinationDir(), false, false, false, true, true);
+    assertTrue(res == AbstractHBaseTool.EXIT_FAILURE);
+  }
+
   private void testExportFileSystemState(final TableName tableName, final String snapshotName,
     final String targetName, int filesExpected) throws Exception {
     testExportFileSystemState(tableName, snapshotName, targetName, filesExpected,
@@ -281,7 +381,7 @@ public class TestExportSnapshot {
     throws Exception {
     testExportFileSystemState(TEST_UTIL.getConfiguration(), tableName, snapshotName, targetName,
       filesExpected, TEST_UTIL.getDefaultRootDirPath(), copyDir, overwrite, resetTtl,
-      getBypassRegionPredicate(), true);
+      getBypassRegionPredicate(), true, false);
   }
 
   /**
@@ -290,31 +390,15 @@ public class TestExportSnapshot {
   protected static void testExportFileSystemState(final Configuration conf,
     final TableName tableName, final String snapshotName, final String targetName,
     final int filesExpected, final Path srcDir, Path rawTgtDir, final boolean overwrite,
-    final boolean resetTtl, final RegionPredicate bypassregionPredicate, boolean success)
-    throws Exception {
+    final boolean resetTtl, final RegionPredicate bypassregionPredicate, final boolean success,
+    final boolean checksumVerify) throws Exception {
     FileSystem tgtFs = rawTgtDir.getFileSystem(conf);
     FileSystem srcFs = srcDir.getFileSystem(conf);
     Path tgtDir = rawTgtDir.makeQualified(tgtFs.getUri(), tgtFs.getWorkingDirectory());
-    LOG.info("tgtFsUri={}, tgtDir={}, rawTgtDir={}, srcFsUri={}, srcDir={}", tgtFs.getUri(), tgtDir,
-      rawTgtDir, srcFs.getUri(), srcDir);
-    List<String> opts = new ArrayList<>();
-    opts.add("--snapshot");
-    opts.add(snapshotName);
-    opts.add("--copy-to");
-    opts.add(tgtDir.toString());
-    if (!targetName.equals(snapshotName)) {
-      opts.add("--target");
-      opts.add(targetName);
-    }
-    if (overwrite) {
-      opts.add("--overwrite");
-    }
-    if (resetTtl) {
-      opts.add("--reset-ttl");
-    }
 
     // Export Snapshot
-    int res = run(conf, new ExportSnapshot(), opts.toArray(new String[opts.size()]));
+    int res = runExportSnapshot(conf, snapshotName, targetName, srcDir, rawTgtDir, overwrite,
+      resetTtl, checksumVerify, true, true);
     assertEquals("success " + success + ", res=" + res, success ? 0 : 1, res);
     if (!success) {
       final Path targetDir = new Path(HConstants.SNAPSHOT_DIR_NAME, targetName);
@@ -446,5 +530,43 @@ public class TestExportSnapshot {
   private static void removeExportDir(final Path path) throws IOException {
     FileSystem fs = FileSystem.get(path.toUri(), new Configuration());
     fs.delete(path, true);
+  }
+
+  private static int runExportSnapshot(final Configuration conf, final String sourceSnapshotName,
+    final String targetSnapshotName, final Path srcDir, Path rawTgtDir, final boolean overwrite,
+    final boolean resetTtl, final boolean checksumVerify, final boolean noSourceVerify,
+    final boolean noTargetVerify) throws Exception {
+    FileSystem tgtFs = rawTgtDir.getFileSystem(conf);
+    FileSystem srcFs = srcDir.getFileSystem(conf);
+    Path tgtDir = rawTgtDir.makeQualified(tgtFs.getUri(), tgtFs.getWorkingDirectory());
+    LOG.info("tgtFsUri={}, tgtDir={}, rawTgtDir={}, srcFsUri={}, srcDir={}", tgtFs.getUri(), tgtDir,
+      rawTgtDir, srcFs.getUri(), srcDir);
+    List<String> opts = new ArrayList<>();
+    opts.add("--snapshot");
+    opts.add(sourceSnapshotName);
+    opts.add("--copy-to");
+    opts.add(tgtDir.toString());
+    if (!targetSnapshotName.equals(sourceSnapshotName)) {
+      opts.add("--target");
+      opts.add(targetSnapshotName);
+    }
+    if (overwrite) {
+      opts.add("--overwrite");
+    }
+    if (resetTtl) {
+      opts.add("--reset-ttl");
+    }
+    if (!checksumVerify) {
+      opts.add("--no-checksum-verify");
+    }
+    if (!noSourceVerify) {
+      opts.add("--no-source-verify");
+    }
+    if (!noTargetVerify) {
+      opts.add("--no-target-verify");
+    }
+
+    // Export Snapshot
+    return run(conf, new ExportSnapshot(), opts.toArray(new String[opts.size()]));
   }
 }

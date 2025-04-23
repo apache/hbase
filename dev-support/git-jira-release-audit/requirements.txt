@@ -16,10 +16,10 @@
 # limitations under the License.
 #
 blessed==1.17.0
-certifi==2023.7.22
+certifi==2024.7.4
 cffi==1.13.2
 chardet==3.0.4
-cryptography==42.0.4
+cryptography==44.0.1
 defusedxml==0.6.0
 enlighten==1.4.0
 gitdb2==2.0.6

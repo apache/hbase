@@ -22,7 +22,7 @@ import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -215,7 +215,7 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
   }
 
   @Override
-  public int internalEncode(Cell cell, HFileBlockDefaultEncodingContext encodingContext,
+  public int internalEncode(ExtendedCell cell, HFileBlockDefaultEncodingContext encodingContext,
     DataOutputStream out) throws IOException {
     EncodingState state = encodingContext.getEncodingState();
     int size = compressSingleKeyValue(out, cell, state.prevCell);
@@ -224,7 +224,7 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
     return size;
   }
 
-  private int compressSingleKeyValue(DataOutputStream out, Cell cell, Cell prevCell)
+  private int compressSingleKeyValue(DataOutputStream out, ExtendedCell cell, ExtendedCell prevCell)
     throws IOException {
     int flag = 0; // Do not use more bits than will fit into a byte
     int kLength = KeyValueUtil.keyLength(cell);
@@ -330,7 +330,7 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
   }
 
   @Override
-  public Cell getFirstKeyCellInBlock(ByteBuff block) {
+  public ExtendedCell getFirstKeyCellInBlock(ByteBuff block) {
     block.mark();
     block.position(Bytes.SIZEOF_INT + Bytes.SIZEOF_BYTE);
     int keyLength = ByteBuff.readCompressedInt(block);

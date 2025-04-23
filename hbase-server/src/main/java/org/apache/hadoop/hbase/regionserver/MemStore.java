@@ -21,6 +21,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -65,14 +66,14 @@ public interface MemStore extends Closeable {
    * @param memstoreSizing The delta in memstore size will be passed back via this. This will
    *                       include both data size and heap overhead delta.
    */
-  void add(final Cell cell, MemStoreSizing memstoreSizing);
+  void add(final ExtendedCell cell, MemStoreSizing memstoreSizing);
 
   /**
    * Write the updates
    * @param memstoreSizing The delta in memstore size will be passed back via this. This will
    *                       include both data size and heap overhead delta.
    */
-  void add(Iterable<Cell> cells, MemStoreSizing memstoreSizing);
+  void add(Iterable<ExtendedCell> cells, MemStoreSizing memstoreSizing);
 
   /** Returns Oldest timestamp of all the Cells in the MemStore */
   long timeOfOldestEdit();
@@ -92,7 +93,7 @@ public interface MemStore extends Closeable {
    * @param memstoreSizing The delta in memstore size will be passed back via this. This will
    *                       include both data size and heap overhead delta.
    */
-  void upsert(Iterable<Cell> cells, long readpoint, MemStoreSizing memstoreSizing);
+  void upsert(Iterable<ExtendedCell> cells, long readpoint, MemStoreSizing memstoreSizing);
 
   /**
    * @return scanner over the memstore. This might include scanner over the snapshot when one is

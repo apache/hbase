@@ -26,18 +26,18 @@ import java.nio.ByteBuffer;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.ByteBuffInputStream;
 import org.apache.hadoop.hbase.io.ByteBufferInputStream;
 import org.apache.hadoop.hbase.io.ByteBufferListOutputStream;
 import org.apache.hadoop.hbase.io.ByteBufferOutputStream;
+import org.apache.hadoop.hbase.io.compress.CodecPool;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.util.ClassSize;
-import org.apache.hadoop.io.compress.CodecPool;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionInputStream;
 import org.apache.hadoop.io.compress.Compressor;
@@ -110,7 +110,7 @@ class CellBlockBuilder {
    *         been flipped and is ready for reading. Use limit to find total size.
    */
   public ByteBuffer buildCellBlock(final Codec codec, final CompressionCodec compressor,
-    final CellScanner cellScanner) throws IOException {
+    final ExtendedCellScanner cellScanner) throws IOException {
     ByteBufferOutputStreamSupplier supplier = new ByteBufferOutputStreamSupplier();
     if (buildCellBlock(codec, compressor, cellScanner, supplier)) {
       ByteBuffer bb = supplier.baos.getByteBuffer();
@@ -144,8 +144,8 @@ class CellBlockBuilder {
     }
   }
 
-  public ByteBuf buildCellBlock(Codec codec, CompressionCodec compressor, CellScanner cellScanner,
-    ByteBufAllocator alloc) throws IOException {
+  public ByteBuf buildCellBlock(Codec codec, CompressionCodec compressor,
+    ExtendedCellScanner cellScanner, ByteBufAllocator alloc) throws IOException {
     ByteBufOutputStreamSupplier supplier = new ByteBufOutputStreamSupplier(alloc);
     if (buildCellBlock(codec, compressor, cellScanner, supplier)) {
       return supplier.buf;
@@ -155,7 +155,7 @@ class CellBlockBuilder {
   }
 
   private boolean buildCellBlock(final Codec codec, final CompressionCodec compressor,
-    final CellScanner cellScanner, OutputStreamSupplier supplier) throws IOException {
+    final ExtendedCellScanner cellScanner, OutputStreamSupplier supplier) throws IOException {
     if (cellScanner == null) {
       return false;
     }
@@ -171,7 +171,7 @@ class CellBlockBuilder {
     return true;
   }
 
-  private void encodeCellsTo(OutputStream os, CellScanner cellScanner, Codec codec,
+  private void encodeCellsTo(OutputStream os, ExtendedCellScanner cellScanner, Codec codec,
     CompressionCodec compressor) throws IOException {
     Compressor poolCompressor = null;
     try {
@@ -212,7 +212,7 @@ class CellBlockBuilder {
    * @throws IOException if encoding the cells fail
    */
   public ByteBufferListOutputStream buildCellBlockStream(Codec codec, CompressionCodec compressor,
-    CellScanner cellScanner, ByteBuffAllocator allocator) throws IOException {
+    ExtendedCellScanner cellScanner, ByteBuffAllocator allocator) throws IOException {
     if (cellScanner == null) {
       return null;
     }
@@ -235,7 +235,7 @@ class CellBlockBuilder {
    * @return CellScanner to work against the content of <code>cellBlock</code>
    * @throws IOException if encoding fails
    */
-  public CellScanner createCellScanner(final Codec codec, final CompressionCodec compressor,
+  public ExtendedCellScanner createCellScanner(final Codec codec, final CompressionCodec compressor,
     final byte[] cellBlock) throws IOException {
     // Use this method from Client side to create the CellScanner
     if (compressor != null) {
@@ -258,7 +258,7 @@ class CellBlockBuilder {
    *         out of the CellScanner will share the same ByteBuffer being passed.
    * @throws IOException if cell encoding fails
    */
-  public CellScanner createCellScannerReusingBuffers(final Codec codec,
+  public ExtendedCellScanner createCellScannerReusingBuffers(final Codec codec,
     final CompressionCodec compressor, ByteBuff cellBlock) throws IOException {
     // Use this method from HRS to create the CellScanner
     // If compressed, decompress it first before passing it on else we will leak compression

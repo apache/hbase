@@ -41,6 +41,9 @@ declare -a required_envs=(
   "SOURCEDIR"
   "TESTS_FILTER"
   "YETUSDIR"
+  "AUTHOR_IGNORE_LIST"
+  "BLANKS_EOL_IGNORE_FILE"
+  "BLANKS_TABS_IGNORE_FILE"
 )
 # Validate params
 for required_env in "${required_envs[@]}"; do
@@ -57,7 +60,7 @@ if [ ${missing_env} -gt 0 ]; then
 fi
 
 # TODO (HBASE-23900): cannot assume test-patch runs directly from sources
-TESTPATCHBIN="${YETUSDIR}/precommit/src/main/shell/test-patch.sh"
+TESTPATCHBIN="${YETUSDIR}/bin/test-patch"
 
 # this must be clean for every run
 rm -rf "${PATCHDIR}"
@@ -87,8 +90,8 @@ YETUS_ARGS+=("--brief-report-file=${PATCHDIR}/brief.txt")
 YETUS_ARGS+=("--console-report-file=${PATCHDIR}/console.txt")
 YETUS_ARGS+=("--html-report-file=${PATCHDIR}/report.html")
 # enable writing back to Github
-YETUS_ARGS+=("--github-password=${GITHUB_PASSWORD}")
-YETUS_ARGS+=("--github-user=${GITHUB_USER}")
+YETUS_ARGS+=("--github-token=${GITHUB_PASSWORD}")
+YETUS_ARGS+=("--github-write-comment")
 # auto-kill any surefire stragglers during unit test runs
 YETUS_ARGS+=("--reapermode=kill")
 # set relatively high limits for ASF machines
@@ -109,8 +112,9 @@ YETUS_ARGS+=("--docker")
 YETUS_ARGS+=("--dockerfile=${DOCKERFILE}")
 YETUS_ARGS+=("--mvn-custom-repos")
 YETUS_ARGS+=("--java-home=${SET_JAVA_HOME}")
-YETUS_ARGS+=("--whitespace-eol-ignore-list=.*/generated/.*")
-YETUS_ARGS+=("--whitespace-tabs-ignore-list=.*/generated/.*")
+YETUS_ARGS+=("--author-ignore-list=${AUTHOR_IGNORE_LIST}")
+YETUS_ARGS+=("--blanks-eol-ignore-file=${BLANKS_EOL_IGNORE_FILE}")
+YETUS_ARGS+=("--blanks-tabs-ignore-file=${BLANKS_TABS_IGNORE_FILE}*")
 YETUS_ARGS+=("--tests-filter=${TESTS_FILTER}")
 YETUS_ARGS+=("--personality=${SOURCEDIR}/dev-support/hbase-personality.sh")
 YETUS_ARGS+=("--quick-hadoopcheck")

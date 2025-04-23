@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.ipc;
 
 import java.io.IOException;
 import java.net.InetAddress;
-import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.ipc.RpcServer.CallCleanup;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -39,7 +39,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader
 class NettyServerCall extends ServerCall<NettyServerRpcConnection> {
 
   NettyServerCall(int id, BlockingService service, MethodDescriptor md, RequestHeader header,
-    Message param, CellScanner cellScanner, NettyServerRpcConnection connection, long size,
+    Message param, ExtendedCellScanner cellScanner, NettyServerRpcConnection connection, long size,
     InetAddress remoteAddress, long receiveTime, int timeout, ByteBuffAllocator bbAllocator,
     CellBlockBuilder cellBlockBuilder, CallCleanup reqCleanup) {
     super(id, service, md, header, param, cellScanner, connection, size, remoteAddress, receiveTime,

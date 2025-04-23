@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.BackupProtos;
 @InterfaceAudience.Private
 public class BackupInfo implements Comparable<BackupInfo> {
   private static final Logger LOG = LoggerFactory.getLogger(BackupInfo.class);
+  private static final int MAX_FAILED_MESSAGE_LENGTH = 1024;
 
   public interface Filter {
     /**
@@ -164,6 +165,11 @@ public class BackupInfo implements Comparable<BackupInfo> {
    */
   private long bandwidth = -1;
 
+  /**
+   * Do not verify checksum between source snapshot and exported snapshot
+   */
+  private boolean noChecksumVerify;
+
   public BackupInfo() {
     backupTableInfoMap = new HashMap<>();
   }
@@ -195,6 +201,14 @@ public class BackupInfo implements Comparable<BackupInfo> {
 
   public void setBandwidth(long bandwidth) {
     this.bandwidth = bandwidth;
+  }
+
+  public void setNoChecksumVerify(boolean noChecksumVerify) {
+    this.noChecksumVerify = noChecksumVerify;
+  }
+
+  public boolean getNoChecksumVerify() {
+    return noChecksumVerify;
   }
 
   public void setBackupTableInfoMap(Map<TableName, BackupTableInfo> backupTableInfoMap) {
@@ -253,6 +267,9 @@ public class BackupInfo implements Comparable<BackupInfo> {
   }
 
   public void setFailedMsg(String failedMsg) {
+    if (failedMsg != null && failedMsg.length() > MAX_FAILED_MESSAGE_LENGTH) {
+      failedMsg = failedMsg.substring(0, MAX_FAILED_MESSAGE_LENGTH);
+    }
     this.failedMsg = failedMsg;
   }
 

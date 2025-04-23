@@ -25,8 +25,8 @@ import java.util.Arrays;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -135,12 +135,12 @@ public class TestMemStoreSegmentsIterator {
   protected void verifyNext(MemStoreSegmentsIterator iterator) {
     // check first cell
     assertTrue(iterator.hasNext());
-    Cell firstCell = iterator.next();
+    ExtendedCell firstCell = iterator.next();
     assertEquals(LESS_THAN_INTEGER_MAX_VALUE_SEQ_ID, firstCell.getSequenceId());
 
     // check second cell
     assertTrue(iterator.hasNext());
-    Cell secondCell = iterator.next();
+    ExtendedCell secondCell = iterator.next();
     assertEquals(GREATER_THAN_INTEGER_MAX_VALUE_SEQ_ID, secondCell.getSequenceId());
   }
 

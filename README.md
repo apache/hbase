@@ -28,6 +28,8 @@ The latest HBase can be downloaded from the [download page](https://hbase.apache
 
 We use mailing lists to send notice and discuss. The mailing lists and archives are listed [here](http://hbase.apache.org/mail-lists.html)
 
+We use the #hbase channel on the official [ASF Slack Workspace](https://the-asf.slack.com/) for real time questions and discussions. Please mail dev@hbase.apache.org to request an invite.
+
 # How to Contribute
 The source code can be found at https://hbase.apache.org/source-repository.html
 

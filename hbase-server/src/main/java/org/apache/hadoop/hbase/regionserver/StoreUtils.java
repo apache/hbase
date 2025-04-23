@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompoundConfiguration;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -121,7 +122,7 @@ public final class StoreUtils {
     // Get first, last, and mid keys. Midkey is the key that starts block
     // in middle of hfile. Has column and timestamp. Need to return just
     // the row we want to split on as midkey.
-    Optional<Cell> optionalMidKey = reader.midKey();
+    Optional<ExtendedCell> optionalMidKey = reader.midKey();
     if (!optionalMidKey.isPresent()) {
       return Optional.empty();
     }

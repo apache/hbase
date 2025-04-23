@@ -64,14 +64,14 @@ public class ExampleRegionObserverWithMetrics implements RegionCoprocessor {
     }
 
     @Override
-    public void preGetOp(ObserverContext<RegionCoprocessorEnvironment> e, Get get,
+    public void preGetOp(ObserverContext<? extends RegionCoprocessorEnvironment> e, Get get,
       List<Cell> results) throws IOException {
       // Increment the Counter whenever the coprocessor is called
       preGetCounter.increment();
     }
 
     @Override
-    public void postGetOp(ObserverContext<RegionCoprocessorEnvironment> e, Get get,
+    public void postGetOp(ObserverContext<? extends RegionCoprocessorEnvironment> e, Get get,
       List<Cell> results) throws IOException {
       // do a costly (high latency) operation which we want to measure how long it takes by
       // using a Timer (which is a Meter and a Histogram).
@@ -84,20 +84,20 @@ public class ExampleRegionObserverWithMetrics implements RegionCoprocessor {
     }
 
     @Override
-    public void postFlush(ObserverContext<RegionCoprocessorEnvironment> c,
+    public void postFlush(ObserverContext<? extends RegionCoprocessorEnvironment> c,
       FlushLifeCycleTracker tracker) throws IOException {
       flushCounter.increment();
     }
 
     @Override
-    public void postFlush(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
+    public void postFlush(ObserverContext<? extends RegionCoprocessorEnvironment> c, Store store,
       StoreFile resultFile, FlushLifeCycleTracker tracker) throws IOException {
       flushCounter.increment();
     }
 
     @Override
-    public void postCompactSelection(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-      List<? extends StoreFile> selected, CompactionLifeCycleTracker tracker,
+    public void postCompactSelection(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+      Store store, List<? extends StoreFile> selected, CompactionLifeCycleTracker tracker,
       CompactionRequest request) {
       if (selected != null) {
         filesCompactedCounter.increment(selected.size());

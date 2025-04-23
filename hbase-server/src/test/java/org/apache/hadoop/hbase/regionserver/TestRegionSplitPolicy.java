@@ -155,6 +155,46 @@ public class TestRegionSplitPolicy {
   }
 
   @Test
+  public void testSteppingSplitPolicyWithRegionReplication() throws IOException {
+    conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY, SteppingSplitPolicy.class.getName());
+
+    RegionServerServices rss = mock(RegionServerServices.class);
+    doReturn(rss).when(mockRegion).getRegionServerServices();
+
+    long maxFileSize = HConstants.DEFAULT_MAX_FILE_SIZE;
+    TableDescriptor td =
+      TableDescriptorBuilder.newBuilder(TABLENAME).setMaxFileSize(maxFileSize).build();
+    doReturn(td).when(mockRegion).getTableDescriptor();
+    assertEquals(td.getMaxFileSize(), maxFileSize);
+
+    List<HStore> storefiles = new ArrayList<>();
+    HStore mockStore = mock(HStore.class);
+    long flushSize = conf.getLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE,
+      TableDescriptorBuilder.DEFAULT_MEMSTORE_FLUSH_SIZE);
+    long exceedSize = flushSize * 2 + 1;
+    doReturn(exceedSize).when(mockStore).getSize();
+    doReturn(true).when(mockStore).canSplit();
+    storefiles.add(mockStore);
+    doReturn(storefiles).when(mockRegion).getStores();
+
+    List<HRegion> regions = new ArrayList<>();
+    HRegion r1 = mock(HRegion.class);
+    RegionInfo regionInfo1 = mock(RegionInfo.class);
+    doReturn(regionInfo1).when(r1).getRegionInfo();
+    doReturn(RegionInfo.DEFAULT_REPLICA_ID).when(regionInfo1).getReplicaId();
+    HRegion r2 = mock(HRegion.class);
+    RegionInfo regionInfo2 = mock(RegionInfo.class);
+    doReturn(regionInfo2).when(r2).getRegionInfo();
+    doReturn(1).when(regionInfo2).getReplicaId();
+    regions.add(r1);
+    regions.add(r2);
+    doReturn(regions).when(rss).getRegions(td.getTableName());
+
+    SteppingSplitPolicy policy = (SteppingSplitPolicy) RegionSplitPolicy.create(mockRegion, conf);
+    assertTrue(policy.shouldSplit());
+  }
+
+  @Test
   public void testIsExceedSize() throws IOException {
     // Configure SteppingAllStoresSizeSplitPolicy as our split policy
     conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,

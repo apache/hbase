@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.codec;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -42,7 +42,7 @@ public abstract class BaseEncoder implements Codec.Encoder {
   }
 
   @Override
-  public abstract void write(Cell cell) throws IOException;
+  public abstract void write(ExtendedCell cell) throws IOException;
 
   protected void checkFlushed() throws CodecException {
     if (this.flushed) throw new CodecException("Flushed; done");

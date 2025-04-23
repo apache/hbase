@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.io.crypto.tls;
 
 import static org.junit.Assert.assertThrows;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -36,6 +37,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Random;
+import javax.net.ssl.SSLEngine;
 import javax.net.ssl.X509ExtendedTrustManager;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -86,6 +88,8 @@ public class TestHBaseTrustManager {
   private InetAddress mockInetAddressWithHostname;
   private Socket mockSocketWithoutHostname;
   private Socket mockSocketWithHostname;
+  private SSLEngine mockSSLEngineWithoutPeerhost;
+  private SSLEngine mockSSLEngineWithPeerhost;
 
   @BeforeClass
   public static void createKeyPair() throws Exception {
@@ -126,6 +130,12 @@ public class TestHBaseTrustManager {
     mockSocketWithHostname = mock(Socket.class);
     when(mockSocketWithHostname.getInetAddress())
       .thenAnswer((Answer<?>) invocationOnMock -> mockInetAddressWithHostname);
+
+    mockSSLEngineWithoutPeerhost = mock(SSLEngine.class);
+    doReturn(null).when(mockSSLEngineWithoutPeerhost).getPeerHost();
+
+    mockSSLEngineWithPeerhost = mock(SSLEngine.class);
+    doReturn(IP_ADDRESS).when(mockSSLEngineWithPeerhost).getPeerHost();
   }
 
   @SuppressWarnings("JavaUtilDate")
@@ -352,4 +362,35 @@ public class TestHBaseTrustManager {
       mockSocketWithHostname);
   }
 
+  @Test
+  public void testClientTrustedSslEngineWithPeerHostReverseLookup() throws Exception {
+    HBaseTrustManager trustManager =
+      new HBaseTrustManager(mockX509ExtendedTrustManager, true, true);
+    X509Certificate[] certificateChain = createSelfSignedCertificateChain(null, HOSTNAME);
+    trustManager.checkClientTrusted(certificateChain, null, mockSSLEngineWithPeerhost);
+  }
+
+  @Test(expected = CertificateException.class)
+  public void testClientTrustedSslEngineWithPeerHostNoReverseLookup() throws Exception {
+    HBaseTrustManager trustManager =
+      new HBaseTrustManager(mockX509ExtendedTrustManager, true, false);
+    X509Certificate[] certificateChain = createSelfSignedCertificateChain(null, HOSTNAME);
+    trustManager.checkClientTrusted(certificateChain, null, mockSSLEngineWithPeerhost);
+  }
+
+  @Test
+  public void testClientTrustedSslEngineWithoutPeerHost() throws Exception {
+    HBaseTrustManager trustManager =
+      new HBaseTrustManager(mockX509ExtendedTrustManager, true, false);
+    X509Certificate[] certificateChain = createSelfSignedCertificateChain(null, HOSTNAME);
+    trustManager.checkClientTrusted(certificateChain, null, mockSSLEngineWithoutPeerhost);
+  }
+
+  @Test
+  public void testClientTrustedSslEngineNotAvailable() throws Exception {
+    HBaseTrustManager trustManager =
+      new HBaseTrustManager(mockX509ExtendedTrustManager, true, false);
+    X509Certificate[] certificateChain = createSelfSignedCertificateChain(null, HOSTNAME);
+    trustManager.checkClientTrusted(certificateChain, null, (SSLEngine) null);
+  }
 }

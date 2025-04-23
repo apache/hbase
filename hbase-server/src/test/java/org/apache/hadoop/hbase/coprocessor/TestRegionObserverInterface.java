@@ -31,10 +31,10 @@ import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.Coprocessor;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
@@ -583,14 +583,15 @@ public class TestRegionObserverInterface {
     }
 
     @Override
-    public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> e, Store store,
-      InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
+    public InternalScanner preCompact(ObserverContext<? extends RegionCoprocessorEnvironment> e,
+      Store store, InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
       CompactionRequest request) {
       return new InternalScanner() {
 
         @Override
-        public boolean next(List<Cell> results, ScannerContext scannerContext) throws IOException {
-          List<Cell> internalResults = new ArrayList<>();
+        public boolean next(List<? super ExtendedCell> results, ScannerContext scannerContext)
+          throws IOException {
+          List<ExtendedCell> internalResults = new ArrayList<>();
           boolean hasMore;
           do {
             hasMore = scanner.next(internalResults, scannerContext);
@@ -619,13 +620,13 @@ public class TestRegionObserverInterface {
     }
 
     @Override
-    public void postCompact(ObserverContext<RegionCoprocessorEnvironment> e, Store store,
+    public void postCompact(ObserverContext<? extends RegionCoprocessorEnvironment> e, Store store,
       StoreFile resultFile, CompactionLifeCycleTracker tracker, CompactionRequest request) {
       lastCompaction = EnvironmentEdgeManager.currentTime();
     }
 
     @Override
-    public void postFlush(ObserverContext<RegionCoprocessorEnvironment> e,
+    public void postFlush(ObserverContext<? extends RegionCoprocessorEnvironment> e,
       FlushLifeCycleTracker tracker) {
       lastFlush = EnvironmentEdgeManager.currentTime();
     }

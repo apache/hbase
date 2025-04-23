@@ -37,19 +37,25 @@ public class TestVersionModel extends TestModelBase<VersionModel> {
   private static final String JVM_VERSION = "Sun Microsystems Inc. 1.6.0_13-11.3-b02";
   private static final String JETTY_VERSION = "6.1.14";
   private static final String JERSEY_VERSION = "1.1.0-ea";
+  private static final String VERSION = "4.0.0-alpha-1-SNAPSHOT";
+  private static final String REVISION = "5085d27ab17d857118a96ae3f37c00b60c925471";
 
   public TestVersionModel() throws Exception {
     super(VersionModel.class);
     AS_XML = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Version JVM=\"Sun "
       + "Microsystems Inc. 1.6.0_13-11.3-b02\" Jersey=\"1.1.0-ea\" "
-      + "OS=\"Linux 2.6.18-128.1.6.el5.centos.plusxen amd64\" REST=\"0.0.1\" Server=\"6.1.14\"/>";
+      + "OS=\"Linux 2.6.18-128.1.6.el5.centos.plusxen amd64\" REST=\"0.0.1\" Server=\"6.1.14\" "
+      + "Version=\"4.0.0-alpha-1-SNAPSHOT\" "
+      + "Revision=\"5085d27ab17d857118a96ae3f37c00b60c925471\"/>";
 
-    AS_PB = "CgUwLjAuMRInU3VuIE1pY3Jvc3lzdGVtcyBJbmMuIDEuNi4wXzEzLTExLjMtYjAyGi1MaW51eCAy"
-      + "LjYuMTgtMTI4LjEuNi5lbDUuY2VudG9zLnBsdXN4ZW4gYW1kNjQiBjYuMS4xNCoIMS4xLjAtZWE=";
+    AS_PB = "CgUwLjAuMRInU3VuIE1pY3Jvc3lzdGVtcyBJbmMuIDEuNi4wXzEzLTExLjMtYjAyGi1MaW51eCAyLjYuMTg"
+      + "tMTI4LjEuNi5lbDUuY2VudG9zLnBsdXN4ZW4gYW1kNjQiBjYuMS4xNCoIMS4xLjAtZWEyFjQuMC4wLWFscGhhLT"
+      + "EtU05BUFNIT1Q6KDUwODVkMjdhYjE3ZDg1NzExOGE5NmFlM2YzN2MwMGI2MGM5MjU0NzE=";
 
     AS_JSON = "{\"JVM\":\"Sun Microsystems Inc. 1.6.0_13-11.3-b02\",\"Jersey\":\"1.1.0-ea\","
       + "\"OS\":\"Linux 2.6.18-128.1.6.el5.centos.plusxen amd64\",\""
-      + "REST\":\"0.0.1\",\"Server\":\"6.1.14\"}";
+      + "REST\":\"0.0.1\",\"Server\":\"6.1.14\", \"Version\":\"4.0.0-alpha-1-SNAPSHOT\","
+      + "\"Revision\":\"5085d27ab17d857118a96ae3f37c00b60c925471\"}";
   }
 
   @Override
@@ -60,6 +66,8 @@ public class TestVersionModel extends TestModelBase<VersionModel> {
     model.setJVMVersion(JVM_VERSION);
     model.setServerVersion(JETTY_VERSION);
     model.setJerseyVersion(JERSEY_VERSION);
+    model.setVersion(VERSION);
+    model.setRevision(REVISION);
     return model;
   }
 
@@ -70,5 +78,7 @@ public class TestVersionModel extends TestModelBase<VersionModel> {
     assertEquals(JVM_VERSION, model.getJVMVersion());
     assertEquals(JETTY_VERSION, model.getServerVersion());
     assertEquals(JERSEY_VERSION, model.getJerseyVersion());
+    assertEquals(VERSION, model.getVersion());
+    assertEquals(REVISION, model.getRevision());
   }
 }

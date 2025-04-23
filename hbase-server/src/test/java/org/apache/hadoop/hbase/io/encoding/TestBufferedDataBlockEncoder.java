@@ -24,11 +24,11 @@ import static org.junit.Assert.assertTrue;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.codec.Codec.Decoder;
 import org.apache.hadoop.hbase.codec.Codec.Encoder;
 import org.apache.hadoop.hbase.codec.KeyValueCodecWithTags;
@@ -127,11 +127,11 @@ public class TestBufferedDataBlockEncoder {
     ByteArrayInputStream is = new ByteArrayInputStream(os.toByteArray());
     Decoder decoder = codec.getDecoder(is);
     assertTrue(decoder.advance());
-    assertTrue(CellUtil.equals(c1, decoder.current()));
+    assertTrue(PrivateCellUtil.equals(c1, decoder.current()));
     assertTrue(decoder.advance());
-    assertTrue(CellUtil.equals(c2, decoder.current()));
+    assertTrue(PrivateCellUtil.equals(c2, decoder.current()));
     assertTrue(decoder.advance());
-    assertTrue(CellUtil.equals(c3, decoder.current()));
+    assertTrue(PrivateCellUtil.equals(c3, decoder.current()));
     assertFalse(decoder.advance());
   }
 }

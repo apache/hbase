@@ -475,8 +475,7 @@ public class QuotaObserverChore extends ScheduledChore {
   TablesWithQuotas fetchAllTablesWithQuotasDefined() throws IOException {
     final Scan scan = QuotaTableUtil.makeScan(null);
     final TablesWithQuotas tablesWithQuotas = new TablesWithQuotas(conn, conf);
-    try (final QuotaRetriever scanner = new QuotaRetriever()) {
-      scanner.init(conn, scan);
+    try (final QuotaRetriever scanner = new QuotaRetriever(conn, scan)) {
       for (QuotaSettings quotaSettings : scanner) {
         // Only one of namespace and tablename should be 'null'
         final String namespace = quotaSettings.getNamespace();

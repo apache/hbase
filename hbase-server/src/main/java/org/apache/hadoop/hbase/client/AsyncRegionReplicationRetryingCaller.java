@@ -22,8 +22,8 @@ import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
-import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.protobuf.ReplicationProtobufUtil;
 import org.apache.hadoop.hbase.util.Pair;
@@ -94,7 +94,7 @@ public class AsyncRegionReplicationRetryingCaller extends AsyncRpcRetryingCaller
         err -> conn.getLocator().updateCachedLocationOnError(loc, err));
       return;
     }
-    Pair<ReplicateWALEntryRequest, CellScanner> pair = ReplicationProtobufUtil
+    Pair<ReplicateWALEntryRequest, ExtendedCellScanner> pair = ReplicationProtobufUtil
       .buildReplicateWALEntryRequest(entries, replica.getEncodedNameAsBytes(), null, null, null);
     resetCallTimeout();
     controller.setCellScanner(pair.getSecond());

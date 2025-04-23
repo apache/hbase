@@ -121,7 +121,14 @@ function download_and_import_keys() {
 
 function download_release_candidate () {
     # get all files from release candidate repo
-    wget -r -np -N -nH --cut-dirs 4 "${SOURCE_URL}"
+    wget \
+      --execute robots=off \
+      --recursive \
+      --no-parent \
+      --timestamping \
+      --no-host-directories \
+      --cut-dirs 4 \
+      "${SOURCE_URL}"
 }
 
 function verify_signatures() {

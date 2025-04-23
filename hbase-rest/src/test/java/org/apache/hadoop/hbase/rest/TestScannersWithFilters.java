@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.FilterList.Operator;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
+import org.apache.hadoop.hbase.filter.FuzzyRowFilter;
 import org.apache.hadoop.hbase.filter.InclusiveStopFilter;
 import org.apache.hadoop.hbase.filter.MultiRowRangeFilter;
 import org.apache.hadoop.hbase.filter.PageFilter;
@@ -71,6 +72,7 @@ import org.apache.hadoop.hbase.rest.model.ScannerModel;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -230,7 +232,7 @@ public class TestScannersWithFilters {
 
     int rows = cells.getRows().size();
     assertEquals(
-      "Scanned too many rows! Only expected " + expectedRows + " total but scanned " + rows,
+      "Unexpected number of rows! Expected " + expectedRows + " total but scanned " + rows,
       expectedRows, rows);
     for (RowModel row : cells.getRows()) {
       int count = row.getCells().size();
@@ -976,6 +978,27 @@ public class TestScannersWithFilters {
 
     Scan s = new Scan();
     s.setFilter(new MultiRowRangeFilter(ranges));
+    verifyScan(s, expectedRows, expectedKeys);
+  }
+
+  @Test
+  public void testFuzzyRowFilter() throws Exception {
+    long expectedRows = 4;
+    long expectedKeys = colsPerRow;
+    List<Pair<byte[], byte[]>> fuzzyKeys = new ArrayList<>();
+
+    // Exact match for ROWS_ONE[0] (one row)
+    byte[] rowOneMask = new byte[ROWS_ONE[0].length];
+    Arrays.fill(rowOneMask, (byte) 0);
+    fuzzyKeys.add(new Pair<>(ROWS_ONE[0], rowOneMask));
+    // All ROW_TWO keys (three rows)
+    byte[] rowTwoMask = new byte[ROWS_TWO[0].length];
+    Arrays.fill(rowTwoMask, (byte) 0);
+    rowTwoMask[rowTwoMask.length - 1] = (byte) 1;
+    fuzzyKeys.add(new Pair<>(ROWS_TWO[2], rowTwoMask));
+
+    Scan s = new Scan();
+    s.setFilter(new FuzzyRowFilter(fuzzyKeys));
     verifyScan(s, expectedRows, expectedKeys);
   }
 }

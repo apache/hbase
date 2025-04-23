@@ -30,8 +30,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.HBaseServerException;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
@@ -72,7 +72,7 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
   protected final RequestHeader header;
   protected Message param; // the parameter passed
   // Optional cell data passed outside of protobufs.
-  protected final CellScanner cellScanner;
+  protected final ExtendedCellScanner cellScanner;
   protected final T connection; // connection to client
   protected final long receiveTime; // the time received when response is null
   // the time served when response is not null
@@ -120,8 +120,8 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "NP_NULL_ON_SOME_PATH",
       justification = "Can't figure why this complaint is happening... see below")
   ServerCall(int id, BlockingService service, MethodDescriptor md, RequestHeader header,
-    Message param, CellScanner cellScanner, T connection, long size, InetAddress remoteAddress,
-    long receiveTime, int timeout, ByteBuffAllocator byteBuffAllocator,
+    Message param, ExtendedCellScanner cellScanner, T connection, long size,
+    InetAddress remoteAddress, long receiveTime, int timeout, ByteBuffAllocator byteBuffAllocator,
     CellBlockBuilder cellBlockBuilder, CallCleanup reqCleanup) {
     this.id = id;
     this.service = service;
@@ -273,7 +273,7 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
   }
 
   @Override
-  public synchronized void setResponse(Message m, final CellScanner cells, Throwable t,
+  public synchronized void setResponse(Message m, final ExtendedCellScanner cells, Throwable t,
     String errorMsg) {
     if (this.isError) {
       return;
@@ -544,7 +544,7 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
   }
 
   @Override
-  public CellScanner getCellScanner() {
+  public ExtendedCellScanner getCellScanner() {
     return cellScanner;
   }
 

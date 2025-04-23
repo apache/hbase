@@ -42,7 +42,7 @@ import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.WALLink;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
-import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.hbase.util.Strings;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -253,12 +253,16 @@ public final class SnapshotInfo extends AbstractHBaseTool {
 
     /** Returns the percentage of the shared store files */
     public float getSharedStoreFilePercentage() {
-      return ((float) hfilesSize.get() / (getStoreFilesSize())) * 100;
+      return getStoreFilesSize() == 0
+        ? 0
+        : ((float) hfilesSize.get() / (getStoreFilesSize())) * 100;
     }
 
     /** Returns the percentage of the mob store files */
     public float getMobStoreFilePercentage() {
-      return ((float) hfilesMobSize.get() / (getStoreFilesSize())) * 100;
+      return getStoreFilesSize() == 0
+        ? 0
+        : ((float) hfilesMobSize.get() / (getStoreFilesSize())) * 100;
     }
 
     /** Returns the total log size */
@@ -521,7 +525,7 @@ public final class SnapshotInfo extends AbstractHBaseTool {
   }
 
   private String fileSizeToString(long size) {
-    return printSizeInBytes ? Long.toString(size) : StringUtils.humanReadableInt(size);
+    return printSizeInBytes ? Long.toString(size) : Strings.humanReadableInt(size);
   }
 
   @Override

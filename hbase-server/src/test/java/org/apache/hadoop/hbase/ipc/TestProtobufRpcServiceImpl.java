@@ -21,10 +21,10 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellScanner;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.ExtendedCell;
+import org.apache.hadoop.hbase.ExtendedCellScanner;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -82,8 +82,8 @@ public class TestProtobufRpcServiceImpl implements BlockingInterface {
       HBaseRpcController pcrc = (HBaseRpcController) controller;
       // If cells, scan them to check we are able to iterate what we were given and since this is an
       // echo, just put them back on the controller creating a new block. Tests our block building.
-      CellScanner cellScanner = pcrc.cellScanner();
-      List<Cell> list = null;
+      ExtendedCellScanner cellScanner = pcrc.cellScanner();
+      List<ExtendedCell> list = null;
       if (cellScanner != null) {
         list = new ArrayList<>();
         try {
@@ -94,7 +94,7 @@ public class TestProtobufRpcServiceImpl implements BlockingInterface {
           throw new ServiceException(e);
         }
       }
-      cellScanner = CellUtil.createCellScanner(list);
+      cellScanner = PrivateCellUtil.createExtendedCellScanner(list);
       pcrc.setCellScanner(cellScanner);
     }
     return EchoResponseProto.newBuilder().setMessage(request.getMessage()).build();

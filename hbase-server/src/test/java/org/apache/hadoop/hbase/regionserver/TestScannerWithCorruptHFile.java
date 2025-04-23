@@ -80,7 +80,7 @@ public class TestScannerWithCorruptHFile {
     }
 
     @Override
-    public boolean preScannerNext(ObserverContext<RegionCoprocessorEnvironment> e,
+    public boolean preScannerNext(ObserverContext<? extends RegionCoprocessorEnvironment> e,
       InternalScanner s, List<Result> results, int limit, boolean hasMore) throws IOException {
       throw new CorruptHFileException("For test");
     }

@@ -20,8 +20,12 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -69,7 +73,6 @@ public class TestBrokenStoreFileCleaner {
 
   @After
   public void tearDown() throws Exception {
-    testUtil.deleteTable(tableName);
     testUtil.shutdownMiniCluster();
   }
 
@@ -104,7 +107,6 @@ public class TestBrokenStoreFileCleaner {
     // verify no storefile got deleted
     int currentStoreFiles = store.getStorefilesCount();
     assertEquals(currentStoreFiles, storeFiles);
-
   }
 
   @Test
@@ -190,6 +192,48 @@ public class TestBrokenStoreFileCleaner {
     // verify no storefile got deleted
     int currentStoreFiles = store.getStorefilesCount();
     assertEquals(currentStoreFiles, storeFiles);
+  }
+
+  @Test
+  public void testWhenRegionIsClosing() throws Exception {
+    tableName = TableName.valueOf(getClass().getSimpleName() + "testWhenRegionIsClosing");
+    createTableWithData(tableName);
+
+    HRegion region = testUtil.getMiniHBaseCluster().getRegions(tableName).get(0);
+    ServerName sn = testUtil.getMiniHBaseCluster().getServerHoldingRegion(tableName,
+      region.getRegionInfo().getRegionName());
+    HRegionServer rs = testUtil.getMiniHBaseCluster().getRegionServer(sn);
+
+    HStore store = region.getStore(fam);
+    int expectedStoreFiles = store.getStorefilesCount();
+    assertTrue(expectedStoreFiles > 0);
+    Path cfPath = store.getRegionFileSystem().getStoreDir(store.getColumnFamilyName());
+    // because we use FILE SFT, there will be a .filelist dir under the store dir
+    int totalFiles = store.getRegionFileSystem().getFileSystem().listStatus(cfPath).length - 1;
+    assertEquals(expectedStoreFiles, totalFiles);
+
+    HRegionServer mockedServer = mock(HRegionServer.class);
+    HRegion mockedRegion = mock(HRegion.class);
+    when(mockedRegion.isAvailable()).thenReturn(region.isAvailable());
+    when(mockedRegion.getRegionFileSystem()).thenReturn(region.getRegionFileSystem());
+    List<HRegion> mockedRegionsList = new ArrayList<>();
+    mockedRegionsList.add(mockedRegion);
+    when(mockedServer.getRegions()).thenReturn(mockedRegionsList);
+    when(mockedServer.getServerName()).thenReturn(rs.getServerName());
+    when(mockedRegion.getStores()).thenAnswer(i -> {
+      region.close();
+      return region.getStores();
+    });
+
+    BrokenStoreFileCleaner cleaner =
+      new BrokenStoreFileCleaner(15000000, 0, rs, rs.getConfiguration(), mockedServer);
+
+    cleaner.chore();
+
+    // verify no storefile got deleted
+    int currentStoreFiles =
+      store.getRegionFileSystem().getFileSystem().listStatus(cfPath).length - 1;
+    assertEquals(expectedStoreFiles, currentStoreFiles);
   }
 
   private Table createTableWithData(TableName tableName) throws IOException {

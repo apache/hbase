@@ -102,8 +102,7 @@ public class DisableTableProcedure extends AbstractStateMachineTableProcedure<Di
           setNextState(DisableTableState.DISABLE_TABLE_MARK_REGIONS_OFFLINE);
           break;
         case DISABLE_TABLE_MARK_REGIONS_OFFLINE:
-          addChildProcedure(
-            env.getAssignmentManager().createUnassignProceduresForDisabling(tableName));
+          addChildProcedure(new CloseTableRegionsProcedure(tableName));
           setNextState(DisableTableState.DISABLE_TABLE_ADD_REPLICATION_BARRIER);
           break;
         case DISABLE_TABLE_ADD_REPLICATION_BARRIER:
@@ -212,14 +211,6 @@ public class DisableTableProcedure extends AbstractStateMachineTableProcedure<Di
     setUser(MasterProcedureUtil.toUserInfo(disableTableMsg.getUserInfo()));
     tableName = ProtobufUtil.toTableName(disableTableMsg.getTableName());
     skipTableStateCheck = disableTableMsg.getSkipTableStateCheck();
-  }
-
-  // For disabling a table, we does not care whether a region can be online so hold the table xlock
-  // for ever. This will simplify the logic as we will not be conflict with procedures other than
-  // SCP.
-  @Override
-  protected boolean holdLock(MasterProcedureEnv env) {
-    return true;
   }
 
   @Override

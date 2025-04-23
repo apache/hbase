@@ -68,14 +68,14 @@ public class TestRegionObserverPreFlushAndPreCompact {
    */
   public static class TestRegionObserver implements RegionObserver, RegionCoprocessor {
     @Override
-    public InternalScanner preFlush(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-      InternalScanner scanner, FlushLifeCycleTracker tracker) throws IOException {
+    public InternalScanner preFlush(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+      Store store, InternalScanner scanner, FlushLifeCycleTracker tracker) throws IOException {
       return null;
     }
 
     @Override
-    public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-      InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
+    public InternalScanner preCompact(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+      Store store, InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
       CompactionRequest request) throws IOException {
       return null;
     }

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -31,9 +31,9 @@ public class BlockWithScanInfo {
    * The first key in the next block following this one in the HFile. If this key is unknown, this
    * is reference-equal with HConstants.NO_NEXT_INDEXED_KEY
    */
-  private final Cell nextIndexedKey;
+  private final ExtendedCell nextIndexedKey;
 
-  public BlockWithScanInfo(HFileBlock hFileBlock, Cell nextIndexedKey) {
+  public BlockWithScanInfo(HFileBlock hFileBlock, ExtendedCell nextIndexedKey) {
     this.hFileBlock = hFileBlock;
     this.nextIndexedKey = nextIndexedKey;
   }
@@ -42,7 +42,7 @@ public class BlockWithScanInfo {
     return hFileBlock;
   }
 
-  public Cell getNextIndexedKey() {
+  public ExtendedCell getNextIndexedKey() {
     return nextIndexedKey;
   }
 }

@@ -17,11 +17,6 @@
  */
 package org.apache.hadoop.hbase.wal;
 
-import static org.apache.hadoop.hbase.wal.BoundedGroupingStrategy.DEFAULT_NUM_REGION_GROUPS;
-import static org.apache.hadoop.hbase.wal.BoundedGroupingStrategy.NUM_REGION_GROUPS;
-import static org.apache.hadoop.hbase.wal.RegionGroupingProvider.DELEGATE_PROVIDER;
-import static org.apache.hadoop.hbase.wal.RegionGroupingProvider.REGION_GROUPING_STRATEGY;
-import static org.apache.hadoop.hbase.wal.WALFactory.WAL_PROVIDER;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
@@ -65,10 +60,10 @@ public class TestBoundedRegionGroupingStrategy {
   private static final Logger LOG =
     LoggerFactory.getLogger(TestBoundedRegionGroupingStrategy.class);
 
-  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
+  protected static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
-  private static Configuration CONF;
-  private static DistributedFileSystem FS;
+  protected static Configuration CONF;
+  protected static DistributedFileSystem FS;
 
   @Parameter
   public String walProvider;
@@ -80,7 +75,7 @@ public class TestBoundedRegionGroupingStrategy {
 
   @Before
   public void setUp() throws Exception {
-    CONF.set(DELEGATE_PROVIDER, walProvider);
+    CONF.set(RegionGroupingProvider.DELEGATE_PROVIDER, walProvider);
   }
 
   @After
@@ -106,8 +101,9 @@ public class TestBoundedRegionGroupingStrategy {
     CONF.setInt("dfs.client.block.recovery.retries", 1);
     CONF.setInt("hbase.ipc.client.connection.maxidletime", 500);
 
-    CONF.setClass(WAL_PROVIDER, RegionGroupingProvider.class, WALProvider.class);
-    CONF.set(REGION_GROUPING_STRATEGY, RegionGroupingProvider.Strategies.bounded.name());
+    CONF.setClass(WALFactory.WAL_PROVIDER, RegionGroupingProvider.class, WALProvider.class);
+    CONF.set(RegionGroupingProvider.REGION_GROUPING_STRATEGY,
+      RegionGroupingProvider.Strategies.bounded.name());
 
     TEST_UTIL.startMiniDFSCluster(3);
 
@@ -120,68 +116,15 @@ public class TestBoundedRegionGroupingStrategy {
   }
 
   /**
-   * Write to a log file with three concurrent threads and verifying all data is written.
-   */
-  @Test
-  public void testConcurrentWrites() throws Exception {
-    // Run the WPE tool with three threads writing 3000 edits each concurrently.
-    // When done, verify that all edits were written.
-    int errCode = WALPerformanceEvaluation.innerMain(new Configuration(CONF),
-      new String[] { "-threads", "3", "-verify", "-noclosefs", "-iterations", "3000" });
-    assertEquals(0, errCode);
-  }
-
-  /**
-   * Make sure we can successfully run with more regions then our bound.
-   */
-  @Test
-  public void testMoreRegionsThanBound() throws Exception {
-    final String parallelism = Integer.toString(DEFAULT_NUM_REGION_GROUPS * 2);
-    int errCode =
-      WALPerformanceEvaluation.innerMain(new Configuration(CONF), new String[] { "-threads",
-        parallelism, "-verify", "-noclosefs", "-iterations", "3000", "-regions", parallelism });
-    assertEquals(0, errCode);
-  }
-
-  @Test
-  public void testBoundsGreaterThanDefault() throws Exception {
-    final int temp = CONF.getInt(NUM_REGION_GROUPS, DEFAULT_NUM_REGION_GROUPS);
-    try {
-      CONF.setInt(NUM_REGION_GROUPS, temp * 4);
-      final String parallelism = Integer.toString(temp * 4);
-      int errCode =
-        WALPerformanceEvaluation.innerMain(new Configuration(CONF), new String[] { "-threads",
-          parallelism, "-verify", "-noclosefs", "-iterations", "3000", "-regions", parallelism });
-      assertEquals(0, errCode);
-    } finally {
-      CONF.setInt(NUM_REGION_GROUPS, temp);
-    }
-  }
-
-  @Test
-  public void testMoreRegionsThanBoundWithBoundsGreaterThanDefault() throws Exception {
-    final int temp = CONF.getInt(NUM_REGION_GROUPS, DEFAULT_NUM_REGION_GROUPS);
-    try {
-      CONF.setInt(NUM_REGION_GROUPS, temp * 4);
-      final String parallelism = Integer.toString(temp * 4 * 2);
-      int errCode =
-        WALPerformanceEvaluation.innerMain(new Configuration(CONF), new String[] { "-threads",
-          parallelism, "-verify", "-noclosefs", "-iterations", "3000", "-regions", parallelism });
-      assertEquals(0, errCode);
-    } finally {
-      CONF.setInt(NUM_REGION_GROUPS, temp);
-    }
-  }
-
-  /**
    * Ensure that we can use Set.add to deduplicate WALs
    */
   @Test
   public void setMembershipDedups() throws IOException {
-    final int temp = CONF.getInt(NUM_REGION_GROUPS, DEFAULT_NUM_REGION_GROUPS);
+    final int temp = CONF.getInt(BoundedGroupingStrategy.NUM_REGION_GROUPS,
+      BoundedGroupingStrategy.DEFAULT_NUM_REGION_GROUPS);
     WALFactory wals = null;
     try {
-      CONF.setInt(NUM_REGION_GROUPS, temp * 4);
+      CONF.setInt(BoundedGroupingStrategy.NUM_REGION_GROUPS, temp * 4);
       // Set HDFS root directory for storing WAL
       CommonFSUtils.setRootDir(CONF, TEST_UTIL.getDataTestDirOnTestFS());
 
@@ -203,7 +146,7 @@ public class TestBoundedRegionGroupingStrategy {
       if (wals != null) {
         wals.close();
       }
-      CONF.setInt(NUM_REGION_GROUPS, temp);
+      CONF.setInt(BoundedGroupingStrategy.NUM_REGION_GROUPS, temp);
     }
   }
 }

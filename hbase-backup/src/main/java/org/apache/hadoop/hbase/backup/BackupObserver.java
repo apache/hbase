@@ -18,9 +18,12 @@
 package org.apache.hadoop.hbase.backup;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -52,7 +55,7 @@ public class BackupObserver implements RegionCoprocessor, RegionObserver {
   }
 
   @Override
-  public void postBulkLoadHFile(ObserverContext<RegionCoprocessorEnvironment> ctx,
+  public void postBulkLoadHFile(ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
     List<Pair<byte[], String>> stagingFamilyPaths, Map<byte[], List<Path>> finalPaths)
     throws IOException {
     Configuration cfg = ctx.getEnvironment().getConfiguration();
@@ -64,44 +67,43 @@ public class BackupObserver implements RegionCoprocessor, RegionObserver {
       LOG.debug("skipping recording bulk load in postBulkLoadHFile since backup is disabled");
       return;
     }
-    try (Connection connection = ConnectionFactory.createConnection(cfg);
-      BackupSystemTable tbl = new BackupSystemTable(connection)) {
-      List<TableName> fullyBackedUpTables = tbl.getTablesForBackupType(BackupType.FULL);
-      RegionInfo info = ctx.getEnvironment().getRegionInfo();
-      TableName tableName = info.getTable();
-      if (!fullyBackedUpTables.contains(tableName)) {
-        if (LOG.isTraceEnabled()) {
-          LOG.trace(tableName + " has not gone thru full backup");
-        }
-        return;
-      }
-      tbl.writePathsPostBulkLoad(tableName, info.getEncodedNameAsBytes(), finalPaths);
-    } catch (IOException ioe) {
-      LOG.error("Failed to get tables which have been fully backed up", ioe);
-    }
+
+    registerBulkLoad(ctx, finalPaths);
   }
 
   @Override
-  public void preCommitStoreFile(final ObserverContext<RegionCoprocessorEnvironment> ctx,
+  public void preCommitStoreFile(final ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
     final byte[] family, final List<Pair<Path, Path>> pairs) throws IOException {
     Configuration cfg = ctx.getEnvironment().getConfiguration();
     if (pairs == null || pairs.isEmpty() || !BackupManager.isBackupEnabled(cfg)) {
       LOG.debug("skipping recording bulk load in preCommitStoreFile since backup is disabled");
       return;
     }
+
+    List<Path> hfiles = new ArrayList<>(pairs.size());
+    for (Pair<Path, Path> pair : pairs) {
+      hfiles.add(pair.getSecond());
+    }
+    registerBulkLoad(ctx, Collections.singletonMap(family, hfiles));
+  }
+
+  private void registerBulkLoad(ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
+    Map<byte[], List<Path>> cfToHFilePaths) throws IOException {
+    Configuration cfg = ctx.getEnvironment().getConfiguration();
+    RegionInfo region = ctx.getEnvironment().getRegionInfo();
+    TableName tableName = region.getTable();
+
     try (Connection connection = ConnectionFactory.createConnection(cfg);
       BackupSystemTable tbl = new BackupSystemTable(connection)) {
-      List<TableName> fullyBackedUpTables = tbl.getTablesForBackupType(BackupType.FULL);
-      RegionInfo info = ctx.getEnvironment().getRegionInfo();
-      TableName tableName = info.getTable();
-      if (!fullyBackedUpTables.contains(tableName)) {
+      Set<TableName> fullyBackedUpTables = tbl.getTablesIncludedInBackups();
+
+      if (fullyBackedUpTables.contains(tableName)) {
+        tbl.registerBulkLoad(tableName, region.getEncodedNameAsBytes(), cfToHFilePaths);
+      } else {
         if (LOG.isTraceEnabled()) {
-          LOG.trace(tableName + " has not gone thru full backup");
+          LOG.trace("Table {} has not gone through full backup - skipping.", tableName);
         }
-        return;
       }
-      tbl.writeFilesForBulkLoadPreCommit(tableName, info.getEncodedNameAsBytes(), family, pairs);
-      return;
     }
   }
 }

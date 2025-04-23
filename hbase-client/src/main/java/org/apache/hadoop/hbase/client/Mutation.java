@@ -22,11 +22,9 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
-import java.util.Optional;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -34,10 +32,10 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilder;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
-import org.apache.hadoop.hbase.CellScannable;
-import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCell;
+import org.apache.hadoop.hbase.ExtendedCellScannable;
+import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.IndividualBytesFieldCell;
 import org.apache.hadoop.hbase.KeyValue;
@@ -66,7 +64,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 
 @InterfaceAudience.Public
 public abstract class Mutation extends OperationWithAttributes
-  implements Row, CellScannable, HeapSize {
+  implements Row, ExtendedCellScannable, HeapSize {
   public static final long MUTATION_OVERHEAD = ClassSize.align(
     // This
     ClassSize.OBJECT +
@@ -96,13 +94,12 @@ public abstract class Mutation extends OperationWithAttributes
   private static final String RETURN_RESULTS = "_rr_";
 
   // TODO: row should be final
-  protected byte[] row = null;
+  protected byte[] row;
   protected long ts = HConstants.LATEST_TIMESTAMP;
   protected Durability durability = Durability.USE_DEFAULT;
 
-  // TODO: familyMap should be final
   // A Map sorted by column family.
-  protected NavigableMap<byte[], List<Cell>> familyMap;
+  protected final NavigableMap<byte[], List<ExtendedCell>> familyMap;
 
   /**
    * empty construction. We need this empty construction to keep binary compatibility.
@@ -115,7 +112,7 @@ public abstract class Mutation extends OperationWithAttributes
     super(clone);
     this.row = clone.getRow();
     this.ts = clone.getTimestamp();
-    this.familyMap = clone.getFamilyCellMap().entrySet().stream()
+    this.familyMap = clone.familyMap.entrySet().stream()
       .collect(Collectors.toMap(e -> e.getKey(), e -> new ArrayList<>(e.getValue()), (k, v) -> {
         throw new RuntimeException("collisions!!!");
       }, () -> new TreeMap<>(Bytes.BYTES_COMPARATOR)));
@@ -127,18 +124,23 @@ public abstract class Mutation extends OperationWithAttributes
    * @param ts        timestamp
    * @param familyMap the map to collect all cells internally. CAN'T be null
    */
+  @SuppressWarnings({ "unchecked", "rawtypes" })
   protected Mutation(byte[] row, long ts, NavigableMap<byte[], List<Cell>> familyMap) {
     this.row = Preconditions.checkNotNull(row);
-    if (row.length == 0) {
-      throw new IllegalArgumentException("Row can't be empty");
-    }
+    Preconditions.checkArgument(row.length > 0, "Row can't be empty");
     this.ts = ts;
-    this.familyMap = Preconditions.checkNotNull(familyMap);
+    // We do not allow other Cell types in HBase so here we just do a simple cast
+    this.familyMap = (NavigableMap) Preconditions.checkNotNull(familyMap);
   }
 
+  /**
+   * For client users: You should only use the return value as a
+   * {@link org.apache.hadoop.hbase.CellScanner}, {@link ExtendedCellScanner} is marked as
+   * IA.Private which means there is no guarantee about its API stability.
+   */
   @Override
-  public CellScanner cellScanner() {
-    return CellUtil.createCellScanner(getFamilyCellMap());
+  public ExtendedCellScanner cellScanner() {
+    return PrivateCellUtil.createExtendedCellScanner(familyMap);
   }
 
   /**
@@ -147,13 +149,8 @@ public abstract class Mutation extends OperationWithAttributes
    * @param family column family
    * @return a list of Cell objects, returns an empty list if one doesn't exist.
    */
-  List<Cell> getCellList(byte[] family) {
-    List<Cell> list = getFamilyCellMap().get(family);
-    if (list == null) {
-      list = new ArrayList<>();
-      getFamilyCellMap().put(family, list);
-    }
-    return list;
+  List<ExtendedCell> getCellList(byte[] family) {
+    return familyMap.computeIfAbsent(family, k -> new ArrayList<>());
   }
 
   /**
@@ -218,7 +215,7 @@ public abstract class Mutation extends OperationWithAttributes
     map.put("row", Bytes.toStringBinary(this.row));
     int colCount = 0;
     // iterate through all column families affected
-    for (Map.Entry<byte[], List<Cell>> entry : getFamilyCellMap().entrySet()) {
+    for (Map.Entry<byte[], List<ExtendedCell>> entry : familyMap.entrySet()) {
       // map from this family to details for each cell affected within the family
       List<Map<String, Object>> qualifierDetails = new ArrayList<>();
       columns.put(Bytes.toStringBinary(entry.getKey()), qualifierDetails);
@@ -227,7 +224,7 @@ public abstract class Mutation extends OperationWithAttributes
         continue;
       }
       // add details for each cell
-      for (Cell cell : entry.getValue()) {
+      for (ExtendedCell cell : entry.getValue()) {
         if (--maxCols <= 0) {
           continue;
         }
@@ -250,7 +247,7 @@ public abstract class Mutation extends OperationWithAttributes
     return map;
   }
 
-  private static Map<String, Object> cellToStringMap(Cell c) {
+  private static Map<String, Object> cellToStringMap(ExtendedCell c) {
     Map<String, Object> stringMap = new HashMap<>();
     stringMap.put("qualifier",
       Bytes.toStringBinary(c.getQualifierArray(), c.getQualifierOffset(), c.getQualifierLength()));
@@ -283,8 +280,9 @@ public abstract class Mutation extends OperationWithAttributes
   /**
    * Method for retrieving the put's familyMap
    */
+  @SuppressWarnings({ "unchecked", "rawtypes" })
   public NavigableMap<byte[], List<Cell>> getFamilyCellMap() {
-    return this.familyMap;
+    return (NavigableMap) this.familyMap;
   }
 
   /**
@@ -517,9 +515,7 @@ public abstract class Mutation extends OperationWithAttributes
    * Set the timestamp of the delete.
    */
   public Mutation setTimestamp(long timestamp) {
-    if (timestamp < 0) {
-      throw new IllegalArgumentException("Timestamp cannot be negative. ts=" + timestamp);
-    }
+    checkTimestamp(timestamp);
     this.ts = timestamp;
     return this;
   }
@@ -603,7 +599,7 @@ public abstract class Mutation extends OperationWithAttributes
    */
   protected boolean has(byte[] family, byte[] qualifier, long ts, byte[] value, boolean ignoreTS,
     boolean ignoreValue) {
-    List<Cell> list = getCellList(family);
+    List<ExtendedCell> list = getCellList(family);
     if (list.isEmpty()) {
       return false;
     }
@@ -613,7 +609,7 @@ public abstract class Mutation extends OperationWithAttributes
     // F T => 2
     // F F => 1
     if (!ignoreTS && !ignoreValue) {
-      for (Cell cell : list) {
+      for (ExtendedCell cell : list) {
         if (
           CellUtil.matchingFamily(cell, family) && CellUtil.matchingQualifier(cell, qualifier)
             && CellUtil.matchingValue(cell, value) && cell.getTimestamp() == ts
@@ -692,6 +688,10 @@ public abstract class Mutation extends OperationWithAttributes
     }
   }
 
+  protected final void checkTimestamp(long ts) {
+    Preconditions.checkArgument(ts >= 0, "Timestamp cannot be negative. ts=%s", ts);
+  }
+
   Mutation add(Cell cell) throws IOException {
     // Checking that the row of the kv is the same as the mutation
     // TODO: It is fraught with risk if user pass the wrong row.
@@ -714,9 +714,9 @@ public abstract class Mutation extends OperationWithAttributes
     }
 
     if (cell instanceof ExtendedCell) {
-      getCellList(family).add(cell);
+      getCellList(family).add((ExtendedCell) cell);
     } else {
-      getCellList(family).add(new CellWrapper(cell));
+      throw new IllegalArgumentException("Unsupported cell type: " + cell.getClass().getName());
     }
     return this;
   }
@@ -743,7 +743,7 @@ public abstract class Mutation extends OperationWithAttributes
    * @param cellType        e.g Cell.Type.Put
    * @return CellBuilder which already has relevant Type and Row set.
    */
-  protected CellBuilder getCellBuilder(CellBuilderType cellBuilderType, Cell.Type cellType) {
+  protected final CellBuilder getCellBuilder(CellBuilderType cellBuilderType, Cell.Type cellType) {
     CellBuilder builder = CellBuilderFactory.create(cellBuilderType).setRow(row).setType(cellType);
     return new CellBuilder() {
       @Override
@@ -817,159 +817,5 @@ public abstract class Mutation extends OperationWithAttributes
         return this;
       }
     };
-  }
-
-  private static final class CellWrapper implements ExtendedCell {
-    private static final long FIXED_OVERHEAD = ClassSize.align(ClassSize.OBJECT // object header
-      + KeyValue.TIMESTAMP_SIZE // timestamp
-      + Bytes.SIZEOF_LONG // sequence id
-      + 1 * ClassSize.REFERENCE); // references to cell
-    private final Cell cell;
-    private long sequenceId;
-    private long timestamp;
-
-    CellWrapper(Cell cell) {
-      assert !(cell instanceof ExtendedCell);
-      this.cell = cell;
-      this.sequenceId = cell.getSequenceId();
-      this.timestamp = cell.getTimestamp();
-    }
-
-    @Override
-    public void setSequenceId(long seqId) {
-      sequenceId = seqId;
-    }
-
-    @Override
-    public void setTimestamp(long ts) {
-      timestamp = ts;
-    }
-
-    @Override
-    public void setTimestamp(byte[] ts) {
-      timestamp = Bytes.toLong(ts);
-    }
-
-    @Override
-    public long getSequenceId() {
-      return sequenceId;
-    }
-
-    @Override
-    public byte[] getValueArray() {
-      return cell.getValueArray();
-    }
-
-    @Override
-    public int getValueOffset() {
-      return cell.getValueOffset();
-    }
-
-    @Override
-    public int getValueLength() {
-      return cell.getValueLength();
-    }
-
-    @Override
-    public byte[] getTagsArray() {
-      return cell.getTagsArray();
-    }
-
-    @Override
-    public int getTagsOffset() {
-      return cell.getTagsOffset();
-    }
-
-    @Override
-    public int getTagsLength() {
-      return cell.getTagsLength();
-    }
-
-    @Override
-    public byte[] getRowArray() {
-      return cell.getRowArray();
-    }
-
-    @Override
-    public int getRowOffset() {
-      return cell.getRowOffset();
-    }
-
-    @Override
-    public short getRowLength() {
-      return cell.getRowLength();
-    }
-
-    @Override
-    public byte[] getFamilyArray() {
-      return cell.getFamilyArray();
-    }
-
-    @Override
-    public int getFamilyOffset() {
-      return cell.getFamilyOffset();
-    }
-
-    @Override
-    public byte getFamilyLength() {
-      return cell.getFamilyLength();
-    }
-
-    @Override
-    public byte[] getQualifierArray() {
-      return cell.getQualifierArray();
-    }
-
-    @Override
-    public int getQualifierOffset() {
-      return cell.getQualifierOffset();
-    }
-
-    @Override
-    public int getQualifierLength() {
-      return cell.getQualifierLength();
-    }
-
-    @Override
-    public long getTimestamp() {
-      return timestamp;
-    }
-
-    @Override
-    public byte getTypeByte() {
-      return cell.getTypeByte();
-    }
-
-    @Override
-    public Optional<Tag> getTag(byte type) {
-      return PrivateCellUtil.getTag(cell, type);
-    }
-
-    @Override
-    public Iterator<Tag> getTags() {
-      return PrivateCellUtil.tagsIterator(cell);
-    }
-
-    @Override
-    public byte[] cloneTags() {
-      return PrivateCellUtil.cloneTags(cell);
-    }
-
-    private long heapOverhead() {
-      return FIXED_OVERHEAD + ClassSize.ARRAY // row
-        + getFamilyLength() == 0
-        ? 0
-        : ClassSize.ARRAY + getQualifierLength() == 0 ? 0
-        : ClassSize.ARRAY + getValueLength() == 0 ? 0
-        : ClassSize.ARRAY + getTagsLength() == 0 ? 0
-        : ClassSize.ARRAY;
-    }
-
-    @Override
-    public long heapSize() {
-      return heapOverhead() + ClassSize.align(getRowLength()) + ClassSize.align(getFamilyLength())
-        + ClassSize.align(getQualifierLength()) + ClassSize.align(getValueLength())
-        + ClassSize.align(getTagsLength());
-    }
   }
 }

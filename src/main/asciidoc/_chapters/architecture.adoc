@@ -357,7 +357,7 @@ as bootstrap nodes, not only masters
 . Support refreshing bootstrap nodes, for spreading loads across the nodes in the cluster, and also
 remove the dead nodes in bootstrap nodes.
 
-To explicitly enable the Master-based registry, use
+To explicitly enable the rpc-based registry, use
 
 [source, xml]
 ----
@@ -416,6 +416,72 @@ configuration to fallback to the ZooKeeper based connection registry implementat
     <value>org.apache.hadoop.hbase.client.ZKConnectionRegistry</value>
 </property>
 ----
+
+[[client.connectionuri]]
+=== Connection URI
+Starting from 2.7.0, we add the support for specifying the connection information for a HBase
+cluster through an URI, which we call a "connection URI". And we've added several methods in
+_ConnectionFactory_ to let you get a connection to the cluster specified by the URI. It looks
+like:
+
+[source, java]
+----
+  URI uri = new URI("hbase+rpc://server1:16020,server2:16020,server3:16020");
+  try (Connection conn = ConnectionFactory.createConnection(uri)) {
+    ...
+  }
+----
+
+==== Supported Schemes
+Currently there are two schemes supported, _hbase+rpc_ for _RpcConnectionRegistry_ and _hbase+zk_
+for _ZKConnectionRegistry_. _MasterRegistry_ is deprecated so we do not expose it through
+connection URI.
+
+For _hbase+rpc_, it looks like
+[source, shell]
+----
+hbase+rpc://server1:16020,server2:16020,server3:16020
+----
+
+The authority part _server1:16020,server2:16020,server3:16020_ specifies the bootstrap nodes and
+their rpc ports, i.e, the configuration value for _hbase.client.bootstrap.servers_ in the past.
+
+For _hbase+zk_, it looks like
+[source, shell]
+----
+hbase+zk://zk1:2181,zk2:2181,zk3:2181/hbase
+----
+
+The authority part _zk1:2181,zk2:2181,zk3:2181_ is the zk quorum, i.e, the configuration value
+for _hbase.zookeeper.quorum_ in the past.
+The path part _/hbase_ is the znode parent, i.e, the configuration value for
+_zookeeper.znode.parent_ in the past.
+
+==== Specify Configuration through URI Queries
+To let users fully specify the connection information through a connection URI, we support
+specifying configuration values through URI Queries. It looks like:
+
+[source, shell]
+----
+hbase+rpc://server1:16020?hbase.client.operation.timeout=10000
+----
+
+In this way you can set the operation timeout to 10 seconds. Notice that, the configuration values
+specified in the connection URI will override the ones in the configuration file.
+
+==== Implement Your Own Connection Registry
+We use _ServiceLoader_ to load different connection registry implementations, the entry point is
+_org.apache.hadoop.hbase.client.ConnectionRegistryURIFactory_. So if you implement your own
+_ConnectionRegistryURIFactory_ which has a different scheme, and register it in the services file,
+we can load it at runtime.
+
+Connection URI is still a very new feature which has not been used extensively in production, so
+we do not want to expose the ability to customize _ConnectionRegistryURIFactory_ yet as the API
+may be changed frequently in the beginning.
+
+If you really want to implement your own connection registry, you can use the above way but take
+your own risk.
+
 
 [[client.filter]]
 == Client Request Filters
@@ -1082,7 +1148,7 @@ benefit of NOT provoking GC.
 From HBase 2.0.0 onwards, the notions of L1 and L2 have been deprecated. When BucketCache is turned on, the DATA blocks will always go to BucketCache and INDEX/BLOOM blocks go to on heap LRUBlockCache. `cacheDataInL1` support has been removed.
 ====
 
-[[bc.deloy.modes]]
+[[bc.deploy.modes]]
 ====== BucketCache Deploy Modes
 The BucketCache Block Cache can be deployed _offheap_, _file_ or _mmaped_ file mode.
 
@@ -1902,10 +1968,10 @@ Type the following to see usage:
 ----
 $ ${HBASE_HOME}/bin/hbase hfile
 ----
-For example, to view the content of the file _hdfs://10.81.47.41:8020/hbase/default/TEST/1418428042/DSMP/4759508618286845475_, type the following:
+For example, to view the content of the file _hdfs://10.81.47.41:9000/hbase/default/TEST/1418428042/DSMP/4759508618286845475_, type the following:
 [source,bash]
 ----
- $ ${HBASE_HOME}/bin/hbase hfile -v -f hdfs://10.81.47.41:8020/hbase/default/TEST/1418428042/DSMP/4759508618286845475
+ $ ${HBASE_HOME}/bin/hbase hfile -v -f hdfs://10.81.47.41:9000/hbase/default/TEST/1418428042/DSMP/4759508618286845475
 ----
 If you leave off the option -v to see just a summary on the HFile.
 See usage for other things to do with the `hfile` tool.

@@ -22,10 +22,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import org.apache.hadoop.hbase.CellScannable;
-import org.apache.hadoop.hbase.CellScanner;
-import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCellScannable;
+import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -72,28 +72,29 @@ public class HBaseRpcControllerImpl implements HBaseRpcController {
    * sometimes the scanner is backed by a List of Cells and other times, it is backed by an encoded
    * block that implements CellScanner.
    */
-  private CellScanner cellScanner;
+  private ExtendedCellScanner cellScanner;
 
   private Map<String, byte[]> requestAttributes = Collections.emptyMap();
 
   public HBaseRpcControllerImpl() {
-    this(null, (CellScanner) null);
+    this(null, (ExtendedCellScanner) null);
   }
 
   /**
    * Used server-side. Clients should go via {@link RpcControllerFactory}
    */
-  public HBaseRpcControllerImpl(final CellScanner cellScanner) {
+  public HBaseRpcControllerImpl(final ExtendedCellScanner cellScanner) {
     this(null, cellScanner);
   }
 
-  HBaseRpcControllerImpl(RegionInfo regionInfo, final CellScanner cellScanner) {
+  HBaseRpcControllerImpl(RegionInfo regionInfo, final ExtendedCellScanner cellScanner) {
     this.cellScanner = cellScanner;
     this.regionInfo = regionInfo;
   }
 
-  HBaseRpcControllerImpl(RegionInfo regionInfo, final List<CellScannable> cellIterables) {
-    this.cellScanner = cellIterables == null ? null : CellUtil.createCellScanner(cellIterables);
+  HBaseRpcControllerImpl(RegionInfo regionInfo, final List<ExtendedCellScannable> cellIterables) {
+    this.cellScanner =
+      cellIterables == null ? null : PrivateCellUtil.createExtendedCellScanner(cellIterables);
     this.regionInfo = null;
   }
 
@@ -109,14 +110,14 @@ public class HBaseRpcControllerImpl implements HBaseRpcController {
 
   /** Returns One-shot cell scanner (you cannot back it up and restart) */
   @Override
-  public CellScanner cellScanner() {
+  public ExtendedCellScanner cellScanner() {
     return cellScanner;
   }
 
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "IS2_INCONSISTENT_SYNC",
       justification = "The only possible race method is startCancel")
   @Override
-  public void setCellScanner(final CellScanner cellScanner) {
+  public void setCellScanner(final ExtendedCellScanner cellScanner) {
     this.cellScanner = cellScanner;
   }
 
@@ -240,7 +241,7 @@ public class HBaseRpcControllerImpl implements HBaseRpcController {
   }
 
   @Override
-  public synchronized void setDone(CellScanner cellScanner) {
+  public synchronized void setDone(ExtendedCellScanner cellScanner) {
     if (done) {
       return;
     }

@@ -197,7 +197,7 @@ public abstract class Action {
     getLogger().info("Suspending regionserver {}", server);
     cluster.suspendRegionServer(server);
     if (!(cluster instanceof SingleProcessHBaseCluster)) {
-      cluster.waitForRegionServerToStop(server, killRsTimeout);
+      cluster.waitForRegionServerToSuspend(server, killRsTimeout);
     }
     getLogger().info("Suspending regionserver {}. Reported num of rs:{}", server,
       cluster.getClusterMetrics().getLiveServerMetrics().size());
@@ -207,7 +207,7 @@ public abstract class Action {
     getLogger().info("Resuming regionserver {}", server);
     cluster.resumeRegionServer(server);
     if (!(cluster instanceof SingleProcessHBaseCluster)) {
-      cluster.waitForRegionServerToStart(server.getHostname(), server.getPort(), startRsTimeout);
+      cluster.waitForRegionServerToResume(server, startRsTimeout);
     }
     getLogger().info("Resuming regionserver {}. Reported num of rs:{}", server,
       cluster.getClusterMetrics().getLiveServerMetrics().size());

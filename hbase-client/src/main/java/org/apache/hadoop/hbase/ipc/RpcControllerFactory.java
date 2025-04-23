@@ -19,8 +19,8 @@ package org.apache.hadoop.hbase.ipc;
 
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CellScannable;
-import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.ExtendedCellScannable;
+import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
@@ -54,20 +54,20 @@ public class RpcControllerFactory {
     return new HBaseRpcControllerImpl();
   }
 
-  public HBaseRpcController newController(CellScanner cellScanner) {
+  public HBaseRpcController newController(ExtendedCellScanner cellScanner) {
     return new HBaseRpcControllerImpl(null, cellScanner);
   }
 
-  public HBaseRpcController newController(RegionInfo regionInfo, CellScanner cellScanner) {
+  public HBaseRpcController newController(RegionInfo regionInfo, ExtendedCellScanner cellScanner) {
     return new HBaseRpcControllerImpl(regionInfo, cellScanner);
   }
 
-  public HBaseRpcController newController(final List<CellScannable> cellIterables) {
+  public HBaseRpcController newController(final List<ExtendedCellScannable> cellIterables) {
     return new HBaseRpcControllerImpl(null, cellIterables);
   }
 
   public HBaseRpcController newController(RegionInfo regionInfo,
-    final List<CellScannable> cellIterables) {
+    final List<ExtendedCellScannable> cellIterables) {
     return new HBaseRpcControllerImpl(regionInfo, cellIterables);
   }
 

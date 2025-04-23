@@ -26,7 +26,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
-import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
+import org.apache.hadoop.hbase.io.crypto.MockAesKeyProvider;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -56,7 +56,7 @@ public class TestEncryptionDisabled {
   @BeforeClass
   public static void setUp() throws Exception {
     conf.setInt("hfile.format.version", 3);
-    conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
+    conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, MockAesKeyProvider.class.getName());
     conf.set(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, "hbase");
     conf.set(Encryption.CRYPTO_ENABLED_CONF_KEY, "false");
     conf.set(TableDescriptorChecker.TABLE_SANITY_CHECKS, "true");

@@ -347,6 +347,25 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
   }
 
   /**
+   * Called before we call the execute method of this procedure, but after we acquire the execution
+   * lock and procedure scheduler lock.
+   */
+  protected void beforeExec(TEnvironment env) throws ProcedureSuspendedException {
+    // no-op
+  }
+
+  /**
+   * Called after we call the execute method of this procedure, and also after we initialize all the
+   * sub procedures and persist the the state if persistence is needed.
+   * <p>
+   * This is for doing some hooks after we initialize the sub procedures. See HBASE-29259 for more
+   * details on why we can not release the region lock inside the execute method.
+   */
+  protected void afterExec(TEnvironment env) {
+    // no-op
+  }
+
+  /**
    * Called when the procedure is marked as completed (success or rollback). The procedure
    * implementor may use this method to cleanup in-memory states. This operation will not be retried
    * on failure. If a procedure took a lock, it will have been released when this method runs.
@@ -903,7 +922,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
     this.wasExecuted = true;
   }
 
-  protected synchronized boolean wasExecuted() {
+  public synchronized boolean wasExecuted() {
     return wasExecuted;
   }
 

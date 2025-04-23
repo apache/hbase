@@ -168,6 +168,7 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil.NonceProcedu
 import org.apache.hadoop.hbase.master.procedure.ModifyTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
 import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
+import org.apache.hadoop.hbase.master.procedure.RSProcedureDispatcher;
 import org.apache.hadoop.hbase.master.procedure.ReopenTableRegionsProcedure;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.master.procedure.TruncateRegionProcedure;
@@ -260,6 +261,7 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.JsonMapper;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.util.RetryCounterFactory;
 import org.apache.hadoop.hbase.util.TableDescriptorChecker;
@@ -488,6 +490,15 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
   public static final String WARMUP_BEFORE_MOVE = "hbase.master.warmup.before.move";
   private static final boolean DEFAULT_WARMUP_BEFORE_MOVE = true;
+
+  /**
+   * Use RSProcedureDispatcher instance to initiate master -> rs remote procedure execution. Use
+   * this config to extend RSProcedureDispatcher (mainly for testing purpose).
+   */
+  public static final String HBASE_MASTER_RSPROC_DISPATCHER_CLASS =
+    "hbase.master.rsproc.dispatcher.class";
+  private static final String DEFAULT_HBASE_MASTER_RSPROC_DISPATCHER_CLASS =
+    RSProcedureDispatcher.class.getName();
 
   private TaskGroup startupTaskGroup;
 
@@ -1833,7 +1844,11 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   }
 
   private void createProcedureExecutor() throws IOException {
-    MasterProcedureEnv procEnv = new MasterProcedureEnv(this);
+    final String procedureDispatcherClassName =
+      conf.get(HBASE_MASTER_RSPROC_DISPATCHER_CLASS, DEFAULT_HBASE_MASTER_RSPROC_DISPATCHER_CLASS);
+    final RSProcedureDispatcher procedureDispatcher = ReflectionUtils.instantiateWithCustomCtor(
+      procedureDispatcherClassName, new Class[] { MasterServices.class }, new Object[] { this });
+    final MasterProcedureEnv procEnv = new MasterProcedureEnv(this, procedureDispatcher);
     procedureStore = new RegionProcedureStore(this, masterRegion,
       new MasterProcedureEnv.FsUtilsLeaseRecovery(this));
     procedureStore.registerListener(new ProcedureStoreListener() {
@@ -2173,10 +2188,14 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
         // TODO: bulk assign
         try {
           this.assignmentManager.balance(plan);
+          this.balancer.updateClusterMetrics(getClusterMetricsWithoutCoprocessor());
+          this.balancer.throttle(plan);
         } catch (HBaseIOException hioe) {
           // should ignore failed plans here, avoiding the whole balance plans be aborted
           // later calls of balance() can fetch up the failed and skipped plans
           LOG.warn("Failed balance plan {}, skipping...", plan, hioe);
+        } catch (Exception e) {
+          LOG.warn("Failed throttling assigning a new plan.", e);
         }
         // rpCount records balance plans processed, does not care if a plan succeeds
         rpCount++;
@@ -2256,21 +2275,26 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     final long nonce) throws IOException {
     checkInitialized();
 
+    final String regionNamesToLog = RegionInfo.getShortNameToLog(regionsToMerge);
+
     if (!isSplitOrMergeEnabled(MasterSwitchType.MERGE)) {
-      String regionsStr = Arrays.deepToString(regionsToMerge);
-      LOG.warn("Merge switch is off! skip merge of " + regionsStr);
+      LOG.warn("Merge switch is off! skip merge of " + regionNamesToLog);
       throw new DoNotRetryIOException(
-        "Merge of " + regionsStr + " failed because merge switch is off");
+        "Merge of " + regionNamesToLog + " failed because merge switch is off");
     }
 
-    final String mergeRegionsStr = Arrays.stream(regionsToMerge).map(RegionInfo::getEncodedName)
-      .collect(Collectors.joining(", "));
+    if (!getTableDescriptors().get(regionsToMerge[0].getTable()).isMergeEnabled()) {
+      LOG.warn("Merge is disabled for the table! Skipping merge of {}", regionNamesToLog);
+      throw new DoNotRetryIOException(
+        "Merge of " + regionNamesToLog + " failed as region merge is disabled for the table");
+    }
+
     return MasterProcedureUtil.submitProcedure(new NonceProcedureRunnable(this, ng, nonce) {
       @Override
       protected void run() throws IOException {
         getMaster().getMasterCoprocessorHost().preMergeRegions(regionsToMerge);
         String aid = getClientIdAuditPrefix();
-        LOG.info("{} merge regions {}", aid, mergeRegionsStr);
+        LOG.info("{} merge regions {}", aid, regionNamesToLog);
         submitProcedure(new MergeTableRegionsProcedure(procedureExecutor.getEnvironment(),
           regionsToMerge, forcible));
         getMaster().getMasterCoprocessorHost().postMergeRegions(regionsToMerge);
@@ -2292,6 +2316,12 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
       LOG.warn("Split switch is off! skip split of " + regionInfo);
       throw new DoNotRetryIOException(
         "Split region " + regionInfo.getRegionNameAsString() + " failed due to split switch off");
+    }
+
+    if (!getTableDescriptors().get(regionInfo.getTable()).isSplitEnabled()) {
+      LOG.warn("Split is disabled for the table! Skipping split of {}", regionInfo);
+      throw new DoNotRetryIOException("Split region " + regionInfo.getRegionNameAsString()
+        + " failed as region split is disabled for the table");
     }
 
     return MasterProcedureUtil
@@ -3153,6 +3183,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   }
 
   /** Returns timestamp in millis when HMaster became the active master. */
+  @Override
   public long getMasterActiveTime() {
     return masterActiveTime;
   }

@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -59,9 +60,12 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.regionserver.BloomType;
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.regionserver.StoreUtils;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -119,7 +123,7 @@ public final class MobUtils {
    * @param cell The current cell.
    * @return True if the cell has a mob reference tag, false if it doesn't.
    */
-  public static boolean isMobReferenceCell(Cell cell) {
+  public static boolean isMobReferenceCell(ExtendedCell cell) {
     if (cell.getTagsLength() > 0) {
       Optional<Tag> tag = PrivateCellUtil.getTag(cell, TagType.MOB_REFERENCE_TAG_TYPE);
       if (tag.isPresent()) {
@@ -134,7 +138,7 @@ public final class MobUtils {
    * @param cell The current cell.
    * @return The table name tag.
    */
-  private static Optional<Tag> getTableNameTag(Cell cell) {
+  private static Optional<Tag> getTableNameTag(ExtendedCell cell) {
     Optional<Tag> tag = Optional.empty();
     if (cell.getTagsLength() > 0) {
       tag = PrivateCellUtil.getTag(cell, TagType.MOB_TABLE_NAME_TAG_TYPE);
@@ -147,7 +151,7 @@ public final class MobUtils {
    * @param cell to extract tag from
    * @return table name as a string. empty if the tag is not found.
    */
-  public static Optional<String> getTableNameString(Cell cell) {
+  public static Optional<String> getTableNameString(ExtendedCell cell) {
     Optional<Tag> tag = getTableNameTag(cell);
     Optional<String> name = Optional.empty();
     if (tag.isPresent()) {
@@ -161,7 +165,7 @@ public final class MobUtils {
    * @param cell to extract tag from
    * @return name of table as a TableName. empty if the tag is not found.
    */
-  public static Optional<TableName> getTableName(Cell cell) {
+  public static Optional<TableName> getTableName(ExtendedCell cell) {
     Optional<Tag> maybe = getTableNameTag(cell);
     Optional<TableName> name = Optional.empty();
     if (maybe.isPresent()) {
@@ -266,7 +270,7 @@ public final class MobUtils {
    * @param cacheConfig      The cacheConfig that disables the block cache.
    * @param current          The current time.
    */
-  public static void cleanExpiredMobFiles(FileSystem fs, Configuration conf, TableName tableName,
+  public static void cleanExpiredMobFiles(FileSystem fs, Configuration conf, TableDescriptor htd,
     ColumnFamilyDescriptor columnDescriptor, CacheConfig cacheConfig, long current)
     throws IOException {
     long timeToLive = columnDescriptor.getTimeToLive();
@@ -287,7 +291,11 @@ public final class MobUtils {
     LOG.info("MOB HFiles older than " + expireDate.toGMTString() + " will be deleted!");
 
     FileStatus[] stats = null;
+    TableName tableName = htd.getTableName();
     Path mobTableDir = CommonFSUtils.getTableDir(getMobHome(conf), tableName);
+    HRegionFileSystem regionFS =
+      HRegionFileSystem.create(conf, fs, mobTableDir, getMobRegionInfo(tableName));
+    StoreFileTracker sft = StoreFileTrackerFactory.create(conf, htd, columnDescriptor, regionFS);
     Path path = getMobFamilyPath(conf, tableName, columnDescriptor.getNameAsString());
     try {
       stats = fs.listStatus(path);
@@ -318,7 +326,7 @@ public final class MobUtils {
             LOG.debug("{} is an expired file", fileName);
           }
           filesToClean
-            .add(new HStoreFile(fs, file.getPath(), conf, cacheConfig, BloomType.NONE, true));
+            .add(new HStoreFile(fs, file.getPath(), conf, cacheConfig, BloomType.NONE, true, sft));
           if (
             filesToClean.size() >= conf.getInt(MOB_CLEANER_BATCH_SIZE_UPPER_BOUND,
               DEFAULT_MOB_CLEANER_BATCH_SIZE_UPPER_BOUND)
@@ -385,6 +393,10 @@ public final class MobUtils {
    */
   public static Path getMobTableDir(Path rootDir, TableName tableName) {
     return CommonFSUtils.getTableDir(getMobHome(rootDir), tableName);
+  }
+
+  public static Path getMobTableDir(Configuration conf, TableName tableName) {
+    return getMobTableDir(new Path(conf.get(HConstants.HBASE_DIR)), tableName);
   }
 
   /**
@@ -497,7 +509,8 @@ public final class MobUtils {
    *                     snapshot.
    * @return The mob reference KeyValue.
    */
-  public static Cell createMobRefCell(Cell cell, byte[] fileName, Tag tableNameTag) {
+  public static ExtendedCell createMobRefCell(ExtendedCell cell, byte[] fileName,
+    Tag tableNameTag) {
     // Append the tags to the KeyValue.
     // The key is same, the value is the filename of the mob file
     List<Tag> tags = new ArrayList<>();
@@ -512,7 +525,8 @@ public final class MobUtils {
     return createMobRefCell(cell, fileName, TagUtil.fromList(tags));
   }
 
-  public static Cell createMobRefCell(Cell cell, byte[] fileName, byte[] refCellTags) {
+  public static ExtendedCell createMobRefCell(ExtendedCell cell, byte[] fileName,
+    byte[] refCellTags) {
     byte[] refValue = Bytes.add(Bytes.toBytes(cell.getValueLength()), fileName);
     return PrivateCellUtil.createCell(cell, refValue, TagUtil.concatTags(refCellTags, cell));
   }

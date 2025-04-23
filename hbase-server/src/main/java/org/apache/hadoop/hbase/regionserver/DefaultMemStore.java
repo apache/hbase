@@ -25,6 +25,7 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.InnerStoreCellComparator;
@@ -155,7 +156,7 @@ public class DefaultMemStore extends AbstractMemStore {
    * @param cell Find the row that comes after this one. If null, we return the first.
    * @return Next row or null if none found.
    */
-  Cell getNextRow(final Cell cell) {
+  ExtendedCell getNextRow(final ExtendedCell cell) {
     return getLowest(getNextRow(cell, this.getActive().getCellSet()),
       getNextRow(cell, this.snapshot.getCellSet()));
   }
@@ -165,7 +166,7 @@ public class DefaultMemStore extends AbstractMemStore {
   }
 
   @Override
-  protected boolean preUpdate(MutableSegment currentActive, Cell cell,
+  protected boolean preUpdate(MutableSegment currentActive, ExtendedCell cell,
     MemStoreSizing memstoreSizing) {
     return true;
   }

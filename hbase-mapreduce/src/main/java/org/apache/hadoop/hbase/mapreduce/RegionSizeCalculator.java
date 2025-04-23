@@ -82,8 +82,8 @@ public class RegionSizeCalculator {
         regionLocator.getName())) {
 
         byte[] regionId = regionLoad.getRegionName();
-        long regionSizeBytes =
-          ((long) regionLoad.getStoreFileSize().get(Size.Unit.MEGABYTE)) * MEGABYTE;
+        long regionSizeBytes = ((long) (regionLoad.getStoreFileSize().get(Size.Unit.MEGABYTE)
+          + regionLoad.getMemStoreSize().get(Size.Unit.MEGABYTE))) * MEGABYTE;
 
         sizeMap.put(regionId, regionSizeBytes);
 

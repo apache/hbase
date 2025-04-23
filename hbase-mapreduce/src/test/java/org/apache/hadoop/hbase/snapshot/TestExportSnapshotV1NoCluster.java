@@ -125,7 +125,7 @@ public class TestExportSnapshotV1NoCluster {
     TableName tableName = builder.getTableDescriptor().getTableName();
     TestExportSnapshot.testExportFileSystemState(testUtil.getConfiguration(), tableName,
       snapshotName, snapshotName, snapshotFilesCount, testDir,
-      getDestinationDir(fs, testUtil, testDir), false, false, null, true);
+      getDestinationDir(fs, testUtil, testDir), false, false, null, true, false);
   }
 
   static Path getDestinationDir(FileSystem fs, HBaseCommonTestingUtil hctu, Path testDir)

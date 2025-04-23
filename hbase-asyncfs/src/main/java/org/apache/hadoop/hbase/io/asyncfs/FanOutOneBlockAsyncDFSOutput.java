@@ -36,6 +36,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -47,6 +48,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.Encryptor;
+import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputHelper.CancelOnClose;
 import org.apache.hadoop.hbase.io.asyncfs.monitor.StreamSlowMonitor;
@@ -57,9 +59,11 @@ import org.apache.hadoop.hbase.util.NettyFutureUtils;
 import org.apache.hadoop.hbase.util.RecoverLeaseFSUtils;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.DummyDFSOutputStream;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.datatransfer.PacketHeader;
 import org.apache.hadoop.hdfs.protocol.datatransfer.PipelineAck;
@@ -121,7 +125,7 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
 
   private final String src;
 
-  private final long fileId;
+  private final HdfsFileStatus stat;
 
   private final ExtendedBlock block;
 
@@ -136,6 +140,9 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
   private final int maxDataLen;
 
   private final ByteBufAllocator alloc;
+
+  // a dummy DFSOutputStream used for lease renewal
+  private final DummyDFSOutputStream dummyStream;
 
   private static final class Callback {
 
@@ -354,14 +361,15 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
   }
 
   FanOutOneBlockAsyncDFSOutput(Configuration conf, DistributedFileSystem dfs, DFSClient client,
-    ClientProtocol namenode, String clientName, String src, long fileId, LocatedBlock locatedBlock,
-    Encryptor encryptor, Map<Channel, DatanodeInfo> datanodeInfoMap, DataChecksum summer,
-    ByteBufAllocator alloc, StreamSlowMonitor streamSlowMonitor) {
+    ClientProtocol namenode, String clientName, String src, HdfsFileStatus stat,
+    EnumSet<CreateFlag> createFlags, LocatedBlock locatedBlock, Encryptor encryptor,
+    Map<Channel, DatanodeInfo> datanodeInfoMap, DataChecksum summer, ByteBufAllocator alloc,
+    StreamSlowMonitor streamSlowMonitor) {
     this.conf = conf;
     this.dfs = dfs;
     this.client = client;
     this.namenode = namenode;
-    this.fileId = fileId;
+    this.stat = stat;
     this.clientName = clientName;
     this.src = src;
     this.block = locatedBlock.getBlock();
@@ -375,6 +383,7 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
     this.state = State.STREAMING;
     setupReceiver(conf.getInt(DFS_CLIENT_SOCKET_TIMEOUT_KEY, READ_TIMEOUT));
     this.streamSlowMonitor = streamSlowMonitor;
+    this.dummyStream = new DummyDFSOutputStream(this, client, src, stat, createFlags, summer);
   }
 
   @Override
@@ -592,7 +601,7 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
       buf = null;
     }
     closeDataNodeChannelsAndAwait();
-    endFileLease(client, fileId);
+    endFileLease(this);
     RecoverLeaseFSUtils.recoverFileLease(dfs, new Path(src), conf,
       reporter == null ? new CancelOnClose(client) : reporter);
   }
@@ -607,7 +616,7 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
     state = State.CLOSED;
     closeDataNodeChannelsAndAwait();
     block.setNumBytes(ackedBlockLength);
-    completeFile(client, namenode, src, clientName, block, fileId);
+    completeFile(this, client, namenode, src, clientName, block, stat);
   }
 
   @Override
@@ -624,5 +633,21 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
       allowedOnPath = ".*/src/test/.*")
   Map<Channel, DatanodeInfo> getDatanodeInfoMap() {
     return this.datanodeInfoMap;
+  }
+
+  DFSClient getClient() {
+    return client;
+  }
+
+  DummyDFSOutputStream getDummyStream() {
+    return dummyStream;
+  }
+
+  boolean isClosed() {
+    return state == State.CLOSED;
+  }
+
+  HdfsFileStatus getStat() {
+    return stat;
   }
 }

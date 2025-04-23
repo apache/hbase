@@ -46,7 +46,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 public class ProtobufWALTailingReader extends AbstractProtobufWALReader
   implements WALTailingReader {
 
-  private static final Logger LOG = LoggerFactory.getLogger(ProtobufWALStreamReader.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ProtobufWALTailingReader.class);
 
   private DelegatingInputStream delegatingInput;
 
@@ -117,8 +117,7 @@ public class ProtobufWALTailingReader extends AbstractProtobufWALReader
       return KEY_ERROR_AND_RESET;
     }
     if (available > 0 && available < size) {
-      LOG.info(
-        "Available stream not enough for edit, available={}, " + "entry size={} at offset={}",
+      LOG.info("Available stream not enough for edit, available={}, entry size={} at offset={}",
         available, size, getPositionQuietly());
       return KEY_EOF_AND_RESET;
     }

@@ -43,7 +43,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class RegionServerRpcQuotaManager {
+public class RegionServerRpcQuotaManager implements RpcQuotaManager {
   private static final Logger LOG = LoggerFactory.getLogger(RegionServerRpcQuotaManager.class);
 
   private final RegionServerServices rsServices;
@@ -154,21 +154,7 @@ public class RegionServerRpcQuotaManager {
     return NoopOperationQuota.get();
   }
 
-  /**
-   * Check the quota for the current (rpc-context) user. Returns the OperationQuota used to get the
-   * available quota and to report the data/usage of the operation. This method is specific to scans
-   * because estimating a scan's workload is more complicated than estimating the workload of a
-   * get/put.
-   * @param region                          the region where the operation will be performed
-   * @param scanRequest                     the scan to be estimated against the quota
-   * @param maxScannerResultSize            the maximum bytes to be returned by the scanner
-   * @param maxBlockBytesScanned            the maximum bytes scanned in a single RPC call by the
-   *                                        scanner
-   * @param prevBlockBytesScannedDifference the difference between BBS of the previous two next
-   *                                        calls
-   * @return the OperationQuota
-   * @throws RpcThrottlingException if the operation cannot be executed due to quota exceeded.
-   */
+  @Override
   public OperationQuota checkScanQuota(final Region region,
     final ClientProtos.ScanRequest scanRequest, long maxScannerResultSize,
     long maxBlockBytesScanned, long prevBlockBytesScannedDifference)
@@ -195,45 +181,27 @@ public class RegionServerRpcQuotaManager {
     return quota;
   }
 
-  /**
-   * Check the quota for the current (rpc-context) user. Returns the OperationQuota used to get the
-   * available quota and to report the data/usage of the operation. This method does not support
-   * scans because estimating a scan's workload is more complicated than estimating the workload of
-   * a get/put.
-   * @param region the region where the operation will be performed
-   * @param type   the operation type
-   * @return the OperationQuota
-   * @throws RpcThrottlingException if the operation cannot be executed due to quota exceeded.
-   */
+  @Override
   public OperationQuota checkBatchQuota(final Region region,
     final OperationQuota.OperationType type) throws IOException, RpcThrottlingException {
     switch (type) {
       case GET:
-        return this.checkBatchQuota(region, 0, 1);
+        return this.checkBatchQuota(region, 0, 1, false);
       case MUTATE:
-        return this.checkBatchQuota(region, 1, 0);
+        return this.checkBatchQuota(region, 1, 0, false);
       case CHECK_AND_MUTATE:
-        return this.checkBatchQuota(region, 1, 1);
+        return this.checkBatchQuota(region, 1, 1, true);
     }
     throw new RuntimeException("Invalid operation type: " + type);
   }
 
-  /**
-   * Check the quota for the current (rpc-context) user. Returns the OperationQuota used to get the
-   * available quota and to report the data/usage of the operation. This method does not support
-   * scans because estimating a scan's workload is more complicated than estimating the workload of
-   * a get/put.
-   * @param region       the region where the operation will be performed
-   * @param actions      the "multi" actions to perform
-   * @param hasCondition whether the RegionAction has a condition
-   * @return the OperationQuota
-   * @throws RpcThrottlingException if the operation cannot be executed due to quota exceeded.
-   */
+  @Override
   public OperationQuota checkBatchQuota(final Region region,
     final List<ClientProtos.Action> actions, boolean hasCondition)
     throws IOException, RpcThrottlingException {
     int numWrites = 0;
     int numReads = 0;
+    boolean isAtomic = false;
     for (final ClientProtos.Action action : actions) {
       if (action.hasMutation()) {
         numWrites++;
@@ -241,12 +209,16 @@ public class RegionServerRpcQuotaManager {
           QuotaUtil.getQuotaOperationType(action, hasCondition);
         if (operationType == OperationQuota.OperationType.CHECK_AND_MUTATE) {
           numReads++;
+          // If any mutations in this batch are atomic, we will count the entire batch as atomic.
+          // This is a conservative approach, but it is the best that we can do without knowing
+          // the block bytes scanned of each individual action.
+          isAtomic = true;
         }
       } else if (action.hasGet()) {
         numReads++;
       }
     }
-    return checkBatchQuota(region, numWrites, numReads);
+    return checkBatchQuota(region, numWrites, numReads, isAtomic);
   }
 
   /**
@@ -258,8 +230,9 @@ public class RegionServerRpcQuotaManager {
    * @return the OperationQuota
    * @throws RpcThrottlingException if the operation cannot be executed due to quota exceeded.
    */
-  private OperationQuota checkBatchQuota(final Region region, final int numWrites,
-    final int numReads) throws IOException, RpcThrottlingException {
+  @Override
+  public OperationQuota checkBatchQuota(final Region region, final int numWrites,
+    final int numReads, boolean isAtomic) throws IOException, RpcThrottlingException {
     Optional<User> user = RpcServer.getRequestUser();
     UserGroupInformation ugi;
     if (user.isPresent()) {
@@ -272,7 +245,7 @@ public class RegionServerRpcQuotaManager {
 
     OperationQuota quota = getQuota(ugi, table, region.getMinBlockSizeBytes());
     try {
-      quota.checkBatchQuota(numWrites, numReads);
+      quota.checkBatchQuota(numWrites, numReads, isAtomic);
     } catch (RpcThrottlingException e) {
       LOG.debug("Throttling exception for user=" + ugi.getUserName() + " table=" + table
         + " numWrites=" + numWrites + " numReads=" + numReads + ": " + e.getMessage());

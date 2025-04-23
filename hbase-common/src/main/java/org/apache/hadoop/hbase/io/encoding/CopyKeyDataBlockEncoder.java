@@ -21,7 +21,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -56,7 +56,7 @@ public class CopyKeyDataBlockEncoder extends BufferedDataBlockEncoder {
   }
 
   @Override
-  public int internalEncode(Cell cell, HFileBlockDefaultEncodingContext encodingContext,
+  public int internalEncode(ExtendedCell cell, HFileBlockDefaultEncodingContext encodingContext,
     DataOutputStream out) throws IOException {
     CopyKeyEncodingState state = (CopyKeyEncodingState) encodingContext.getEncodingState();
     NoneEncoder encoder = state.encoder;
@@ -64,7 +64,7 @@ public class CopyKeyDataBlockEncoder extends BufferedDataBlockEncoder {
   }
 
   @Override
-  public Cell getFirstKeyCellInBlock(ByteBuff block) {
+  public ExtendedCell getFirstKeyCellInBlock(ByteBuff block) {
     int keyLength = block.getIntAfterPosition(Bytes.SIZEOF_INT);
     int pos = 3 * Bytes.SIZEOF_INT;
     ByteBuffer key = block.asSubByteBuffer(pos + keyLength).duplicate();

@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.regionserver.handler;
 
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
@@ -34,12 +34,12 @@ import org.slf4j.LoggerFactory;
 public class ParallelSeekHandler extends EventHandler {
   private static final Logger LOG = LoggerFactory.getLogger(ParallelSeekHandler.class);
   private KeyValueScanner scanner;
-  private Cell keyValue;
+  private ExtendedCell keyValue;
   private long readPoint;
   private CountDownLatch latch;
   private Throwable err = null;
 
-  public ParallelSeekHandler(KeyValueScanner scanner, Cell keyValue, long readPoint,
+  public ParallelSeekHandler(KeyValueScanner scanner, ExtendedCell keyValue, long readPoint,
     CountDownLatch latch) {
     super(null, EventType.RS_PARALLEL_SEEK);
     this.scanner = scanner;

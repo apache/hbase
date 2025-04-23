@@ -26,15 +26,15 @@ import org.apache.yetus.audience.InterfaceAudience;
  * CellArrayMap's array of references pointing to Cell objects.
  */
 @InterfaceAudience.Private
-public class CellArrayMap extends CellFlatMap {
+public class CellArrayMap<T extends Cell> extends CellFlatMap<T> {
 
-  private final Cell[] block;
+  private final T[] block;
 
   /*
    * The Cells Array is created only when CellArrayMap is created, all sub-CellBlocks use boundary
    * indexes. The given Cell array must be ordered.
    */
-  public CellArrayMap(Comparator<? super Cell> comparator, Cell[] b, int min, int max,
+  public CellArrayMap(Comparator<? super T> comparator, T[] b, int min, int max,
     boolean descending) {
     super(comparator, min, max, descending);
     this.block = b;
@@ -42,12 +42,12 @@ public class CellArrayMap extends CellFlatMap {
 
   /* To be used by base class only to create a sub-CellFlatMap */
   @Override
-  protected CellFlatMap createSubCellFlatMap(int min, int max, boolean descending) {
-    return new CellArrayMap(comparator(), this.block, min, max, descending);
+  protected CellFlatMap<T> createSubCellFlatMap(int min, int max, boolean descending) {
+    return new CellArrayMap<>(comparator(), this.block, min, max, descending);
   }
 
   @Override
-  protected Cell getCell(int i) {
+  protected T getCell(int i) {
     if ((i < minCellIdx) || (i >= maxCellIdx)) return null;
     return block[i];
   }

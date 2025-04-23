@@ -35,12 +35,13 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.ExtendedCell;
+import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -469,12 +470,12 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
           }
         }
       } else if (entry.getValue() instanceof List) {
-        List<Cell> list = (List<Cell>) entry.getValue();
+        List<ExtendedCell> list = (List<ExtendedCell>) entry.getValue();
         if (list == null || list.isEmpty()) {
           get.addFamily(col);
         } else {
           // In case of family delete, a Cell will be added into the list with Qualifier as null.
-          for (Cell cell : list) {
+          for (ExtendedCell cell : list) {
             if (
               cell.getQualifierLength() == 0 && (cell.getTypeByte() == Type.DeleteFamily.getCode()
                 || cell.getTypeByte() == Type.DeleteFamilyVersion.getCode())
@@ -562,7 +563,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
                 (col.getQualifierLength() == 0 && request == OpType.DELETE)
                   || CellUtil.matchingQualifier(cell, col)
               ) {
-                byte type = col.getTypeByte();
+                byte type = PrivateCellUtil.getTypeByte(col);
                 if (considerCellTs) {
                   curColCheckTs = col.getTimestamp();
                 }
@@ -609,7 +610,9 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     // with new cells including the ACL data
     for (Map.Entry<byte[], List<Cell>> e : familyMap.entrySet()) {
       List<Cell> newCells = Lists.newArrayList();
-      for (Cell cell : e.getValue()) {
+      for (Cell c : e.getValue()) {
+        assert c instanceof ExtendedCell;
+        ExtendedCell cell = (ExtendedCell) c;
         // Prepend the supplied perms in a new ACL tag to an update list of tags for the cell
         List<Tag> tags = new ArrayList<>();
         tags.add(new ArrayBackedTag(PermissionStorage.ACL_TAG_TYPE, perms));
@@ -641,7 +644,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     if (m.getAttribute(TAG_CHECK_PASSED) != null) {
       return;
     }
-    for (CellScanner cellScanner = m.cellScanner(); cellScanner.advance();) {
+    for (ExtendedCellScanner cellScanner = m.cellScanner(); cellScanner.advance();) {
       Iterator<Tag> tagsItr = PrivateCellUtil.tagsIterator(cellScanner.current());
       while (tagsItr.hasNext()) {
         if (tagsItr.next().getType() == PermissionStorage.ACL_TAG_TYPE) {
@@ -1218,7 +1221,8 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   /* ---- RegionObserver implementation ---- */
 
   @Override
-  public void preOpen(ObserverContext<RegionCoprocessorEnvironment> c) throws IOException {
+  public void preOpen(ObserverContext<? extends RegionCoprocessorEnvironment> c)
+    throws IOException {
     RegionCoprocessorEnvironment env = c.getEnvironment();
     final Region region = env.getRegion();
     if (region == null) {
@@ -1234,7 +1238,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   @Override
-  public void postOpen(ObserverContext<RegionCoprocessorEnvironment> c) {
+  public void postOpen(ObserverContext<? extends RegionCoprocessorEnvironment> c) {
     RegionCoprocessorEnvironment env = c.getEnvironment();
     final Region region = env.getRegion();
     if (region == null) {
@@ -1256,22 +1260,22 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   @Override
-  public void preFlush(ObserverContext<RegionCoprocessorEnvironment> c,
+  public void preFlush(ObserverContext<? extends RegionCoprocessorEnvironment> c,
     FlushLifeCycleTracker tracker) throws IOException {
     requirePermission(c, "flush", getTableName(c.getEnvironment()), null, null, Action.ADMIN,
       Action.CREATE);
   }
 
   @Override
-  public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-    InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
+  public InternalScanner preCompact(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    Store store, InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
     CompactionRequest request) throws IOException {
     requirePermission(c, "compact", getTableName(c.getEnvironment()), null, null, Action.ADMIN,
       Action.CREATE);
     return scanner;
   }
 
-  private void internalPreRead(final ObserverContext<RegionCoprocessorEnvironment> c,
+  private void internalPreRead(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
     final Query query, OpType opType) throws IOException {
     Filter filter = query.getFilter();
     // Don't wrap an AccessControlFilter
@@ -1373,20 +1377,20 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   @Override
-  public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> c, final Get get,
-    final List<Cell> result) throws IOException {
+  public void preGetOp(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    final Get get, final List<Cell> result) throws IOException {
     internalPreRead(c, get, OpType.GET);
   }
 
   @Override
-  public boolean preExists(final ObserverContext<RegionCoprocessorEnvironment> c, final Get get,
-    final boolean exists) throws IOException {
+  public boolean preExists(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    final Get get, final boolean exists) throws IOException {
     internalPreRead(c, get, OpType.EXISTS);
     return exists;
   }
 
   @Override
-  public void prePut(final ObserverContext<RegionCoprocessorEnvironment> c, final Put put,
+  public void prePut(final ObserverContext<? extends RegionCoprocessorEnvironment> c, final Put put,
     final WALEdit edit, final Durability durability) throws IOException {
     User user = getActiveUser(c);
     checkForReservedTagPresence(user, put);
@@ -1421,16 +1425,16 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   @Override
-  public void postPut(final ObserverContext<RegionCoprocessorEnvironment> c, final Put put,
-    final WALEdit edit, final Durability durability) {
+  public void postPut(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    final Put put, final WALEdit edit, final Durability durability) {
     if (aclRegion) {
       updateACL(c.getEnvironment(), put.getFamilyCellMap());
     }
   }
 
   @Override
-  public void preDelete(final ObserverContext<RegionCoprocessorEnvironment> c, final Delete delete,
-    final WALEdit edit, final Durability durability) throws IOException {
+  public void preDelete(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    final Delete delete, final WALEdit edit, final Durability durability) throws IOException {
     // An ACL on a delete is useless, we shouldn't allow it
     if (delete.getAttribute(AccessControlConstants.OP_ATTRIBUTE_ACL) != null) {
       throw new DoNotRetryIOException("ACL on delete has no effect: " + delete.toString());
@@ -1455,7 +1459,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   @Override
-  public void preBatchMutate(ObserverContext<RegionCoprocessorEnvironment> c,
+  public void preBatchMutate(ObserverContext<? extends RegionCoprocessorEnvironment> c,
     MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {
     if (cellFeaturesEnabled && !compatibleEarlyTermination) {
       TableName table = c.getEnvironment().getRegion().getRegionInfo().getTable();
@@ -1506,15 +1510,15 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   @Override
-  public void postDelete(final ObserverContext<RegionCoprocessorEnvironment> c, final Delete delete,
-    final WALEdit edit, final Durability durability) throws IOException {
+  public void postDelete(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    final Delete delete, final WALEdit edit, final Durability durability) throws IOException {
     if (aclRegion) {
       updateACL(c.getEnvironment(), delete.getFamilyCellMap());
     }
   }
 
   @Override
-  public boolean preCheckAndPut(final ObserverContext<RegionCoprocessorEnvironment> c,
+  public boolean preCheckAndPut(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
     final byte[] row, final byte[] family, final byte[] qualifier, final CompareOperator op,
     final ByteArrayComparable comparator, final Put put, final boolean result) throws IOException {
     User user = getActiveUser(c);
@@ -1546,8 +1550,9 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   @Override
-  public boolean preCheckAndPutAfterRowLock(final ObserverContext<RegionCoprocessorEnvironment> c,
-    final byte[] row, final byte[] family, final byte[] qualifier, final CompareOperator opp,
+  public boolean preCheckAndPutAfterRowLock(
+    final ObserverContext<? extends RegionCoprocessorEnvironment> c, final byte[] row,
+    final byte[] family, final byte[] qualifier, final CompareOperator opp,
     final ByteArrayComparable comparator, final Put put, final boolean result) throws IOException {
     if (put.getAttribute(CHECK_COVERING_PERM) != null) {
       // We had failure with table, cf and q perm checks and now giving a chance for cell
@@ -1575,7 +1580,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   @Override
-  public boolean preCheckAndDelete(final ObserverContext<RegionCoprocessorEnvironment> c,
+  public boolean preCheckAndDelete(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
     final byte[] row, final byte[] family, final byte[] qualifier, final CompareOperator op,
     final ByteArrayComparable comparator, final Delete delete, final boolean result)
     throws IOException {
@@ -1603,9 +1608,10 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
 
   @Override
   public boolean preCheckAndDeleteAfterRowLock(
-    final ObserverContext<RegionCoprocessorEnvironment> c, final byte[] row, final byte[] family,
-    final byte[] qualifier, final CompareOperator op, final ByteArrayComparable comparator,
-    final Delete delete, final boolean result) throws IOException {
+    final ObserverContext<? extends RegionCoprocessorEnvironment> c, final byte[] row,
+    final byte[] family, final byte[] qualifier, final CompareOperator op,
+    final ByteArrayComparable comparator, final Delete delete, final boolean result)
+    throws IOException {
     if (delete.getAttribute(CHECK_COVERING_PERM) != null) {
       // We had failure with table, cf and q perm checks and now giving a chance for cell
       // perm check
@@ -1632,7 +1638,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   @Override
-  public Result preAppend(ObserverContext<RegionCoprocessorEnvironment> c, Append append)
+  public Result preAppend(ObserverContext<? extends RegionCoprocessorEnvironment> c, Append append)
     throws IOException {
     User user = getActiveUser(c);
     checkForReservedTagPresence(user, append);
@@ -1663,7 +1669,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   @Override
-  public Result preIncrement(final ObserverContext<RegionCoprocessorEnvironment> c,
+  public Result preIncrement(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
     final Increment increment) throws IOException {
     User user = getActiveUser(c);
     checkForReservedTagPresence(user, increment);
@@ -1696,7 +1702,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
 
   @Override
   public List<Pair<Cell, Cell>> postIncrementBeforeWAL(
-    ObserverContext<RegionCoprocessorEnvironment> ctx, Mutation mutation,
+    ObserverContext<? extends RegionCoprocessorEnvironment> ctx, Mutation mutation,
     List<Pair<Cell, Cell>> cellPairs) throws IOException {
     // If the HFile version is insufficient to persist tags, we won't have any
     // work to do here
@@ -1711,7 +1717,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
 
   @Override
   public List<Pair<Cell, Cell>> postAppendBeforeWAL(
-    ObserverContext<RegionCoprocessorEnvironment> ctx, Mutation mutation,
+    ObserverContext<? extends RegionCoprocessorEnvironment> ctx, Mutation mutation,
     List<Pair<Cell, Cell>> cellPairs) throws IOException {
     // If the HFile version is insufficient to persist tags, we won't have any
     // work to do here
@@ -1729,8 +1735,9 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     // there is no need to rewrite them again. Just extract non-acl tags of newCell if we need to
     // add a new acl tag for the cell. Actually, oldCell is useless here.
     List<Tag> tags = Lists.newArrayList();
-    if (newCell != null) {
-      Iterator<Tag> tagIterator = PrivateCellUtil.tagsIterator(newCell);
+    ExtendedCell newExtendedCell = (ExtendedCell) newCell;
+    if (newExtendedCell != null) {
+      Iterator<Tag> tagIterator = PrivateCellUtil.tagsIterator(newExtendedCell);
       while (tagIterator.hasNext()) {
         Tag tag = tagIterator.next();
         if (tag.getType() != PermissionStorage.ACL_TAG_TYPE) {
@@ -1747,18 +1754,19 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     // We have checked the ACL tag of mutation is not null.
     // So that the tags could not be empty.
     tags.add(new ArrayBackedTag(PermissionStorage.ACL_TAG_TYPE, mutation.getACL()));
-    return PrivateCellUtil.createCell(newCell, tags);
+    return PrivateCellUtil.createCell(newExtendedCell, tags);
   }
 
   @Override
-  public void preScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c, final Scan scan)
-    throws IOException {
+  public void preScannerOpen(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    final Scan scan) throws IOException {
     internalPreRead(c, scan, OpType.SCAN);
   }
 
   @Override
-  public RegionScanner postScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
-    final Scan scan, final RegionScanner s) throws IOException {
+  public RegionScanner postScannerOpen(
+    final ObserverContext<? extends RegionCoprocessorEnvironment> c, final Scan scan,
+    final RegionScanner s) throws IOException {
     User user = getActiveUser(c);
     if (user != null && user.getShortName() != null) {
       // store reference to scanner owner for later checks
@@ -1768,7 +1776,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   @Override
-  public boolean preScannerNext(final ObserverContext<RegionCoprocessorEnvironment> c,
+  public boolean preScannerNext(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
     final InternalScanner s, final List<Result> result, final int limit, final boolean hasNext)
     throws IOException {
     requireScannerOwner(s);
@@ -1776,13 +1784,13 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   @Override
-  public void preScannerClose(final ObserverContext<RegionCoprocessorEnvironment> c,
+  public void preScannerClose(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
     final InternalScanner s) throws IOException {
     requireScannerOwner(s);
   }
 
   @Override
-  public void postScannerClose(final ObserverContext<RegionCoprocessorEnvironment> c,
+  public void postScannerClose(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
     final InternalScanner s) throws IOException {
     // clean up any associated owner mapping
     scannerOwners.remove(s);
@@ -1808,7 +1816,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
    * bulkLoadHFile request. Specific Column Write privileges are presently ignored.
    */
   @Override
-  public void preBulkLoadHFile(ObserverContext<RegionCoprocessorEnvironment> ctx,
+  public void preBulkLoadHFile(ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
     List<Pair<byte[], String>> familyPaths) throws IOException {
     User user = getActiveUser(ctx);
     for (Pair<byte[], String> el : familyPaths) {
@@ -1845,7 +1853,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   /* ---- EndpointObserver implementation ---- */
 
   @Override
-  public Message preEndpointInvocation(ObserverContext<RegionCoprocessorEnvironment> ctx,
+  public Message preEndpointInvocation(ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
     Service service, String methodName, Message request) throws IOException {
     // Don't intercept calls to our own AccessControlService, we check for
     // appropriate permissions in the service handlers
@@ -1858,7 +1866,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   @Override
-  public void postEndpointInvocation(ObserverContext<RegionCoprocessorEnvironment> ctx,
+  public void postEndpointInvocation(ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
     Service service, String methodName, Message request, Message.Builder responseBuilder)
     throws IOException {
   }
@@ -2072,8 +2080,8 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   @Override
-  public void preClose(ObserverContext<RegionCoprocessorEnvironment> c, boolean abortRequested)
-    throws IOException {
+  public void preClose(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    boolean abortRequested) throws IOException {
     requirePermission(c, "preClose", Action.ADMIN);
   }
 

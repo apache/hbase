@@ -21,7 +21,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableSet;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.mob.MobCell;
 import org.apache.hadoop.hbase.mob.MobUtils;
@@ -62,7 +62,7 @@ public class ReversedMobStoreScanner extends ReversedStoreScanner {
    * the mob file as the result.
    */
   @Override
-  public boolean next(List<Cell> outResult, ScannerContext ctx) throws IOException {
+  public boolean next(List<? super ExtendedCell> outResult, ScannerContext ctx) throws IOException {
     boolean result = super.next(outResult, ctx);
     if (!rawMobScan) {
       // retrieve the mob data
@@ -72,7 +72,7 @@ public class ReversedMobStoreScanner extends ReversedStoreScanner {
       long mobKVCount = 0;
       long mobKVSize = 0;
       for (int i = 0; i < outResult.size(); i++) {
-        Cell cell = outResult.get(i);
+        ExtendedCell cell = (ExtendedCell) outResult.get(i);
         if (MobUtils.isMobReferenceCell(cell)) {
           MobCell mobCell =
             mobStore.resolve(cell, cacheMobBlocks, readPt, readEmptyValueOnMobCellMiss);

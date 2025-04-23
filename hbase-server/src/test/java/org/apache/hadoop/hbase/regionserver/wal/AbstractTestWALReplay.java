@@ -50,6 +50,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -98,6 +99,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALEditInternalHelper;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALSplitUtil;
@@ -514,7 +516,7 @@ public abstract class AbstractTestWALReplay {
         final AtomicInteger countOfRestoredEdits = new AtomicInteger(0);
         HRegion region3 = new HRegion(basedir, wal3, newFS, newConf, hri, htd, null) {
           @Override
-          protected void restoreEdit(HStore s, Cell cell, MemStoreSizing memstoreSizing) {
+          protected void restoreEdit(HStore s, ExtendedCell cell, MemStoreSizing memstoreSizing) {
             super.restoreEdit(s, cell, memstoreSizing);
             countOfRestoredEdits.incrementAndGet();
           }
@@ -756,14 +758,16 @@ public abstract class AbstractTestWALReplay {
     // Add an edit to another family, should be skipped.
     WALEdit edit = new WALEdit();
     long now = ee.currentTime();
-    edit.add(new KeyValue(rowName, Bytes.toBytes("another family"), rowName, now, rowName));
+    WALEditInternalHelper.addExtendedCell(edit,
+      new KeyValue(rowName, Bytes.toBytes("another family"), rowName, now, rowName));
     wal.appendData(hri, new WALKeyImpl(hri.getEncodedNameAsBytes(), tableName, now, mvcc, scopes),
       edit);
 
     // Delete the c family to verify deletes make it over.
     edit = new WALEdit();
     now = ee.currentTime();
-    edit.add(new KeyValue(rowName, Bytes.toBytes("c"), null, now, KeyValue.Type.DeleteFamily));
+    WALEditInternalHelper.addExtendedCell(edit,
+      new KeyValue(rowName, Bytes.toBytes("c"), null, now, KeyValue.Type.DeleteFamily));
     wal.appendData(hri, new WALKeyImpl(hri.getEncodedNameAsBytes(), tableName, now, mvcc, scopes),
       edit);
 
@@ -1102,7 +1106,8 @@ public abstract class AbstractTestWALReplay {
     byte[] qualifierBytes = Bytes.toBytes(Integer.toString(index));
     byte[] columnBytes = Bytes.toBytes(Bytes.toString(family) + ":" + Integer.toString(index));
     WALEdit edit = new WALEdit();
-    edit.add(new KeyValue(rowName, family, qualifierBytes, ee.currentTime(), columnBytes));
+    WALEditInternalHelper.addExtendedCell(edit,
+      new KeyValue(rowName, family, qualifierBytes, ee.currentTime(), columnBytes));
     return edit;
   }
 

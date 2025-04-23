@@ -28,8 +28,8 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.List;
 import org.apache.hadoop.hbase.ArrayBackedTag;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -58,15 +58,15 @@ public class TestCellCodecWithTags {
     DataOutputStream dos = new DataOutputStream(cos);
     Codec codec = new CellCodecWithTags();
     Codec.Encoder encoder = codec.getEncoder(dos);
-    final Cell cell1 = new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("1"),
-      HConstants.LATEST_TIMESTAMP, Bytes.toBytes("1"),
+    final ExtendedCell cell1 = new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"),
+      Bytes.toBytes("1"), HConstants.LATEST_TIMESTAMP, Bytes.toBytes("1"),
       new Tag[] { new ArrayBackedTag((byte) 1, Bytes.toBytes("teststring1")),
         new ArrayBackedTag((byte) 2, Bytes.toBytes("teststring2")) });
-    final Cell cell2 = new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("2"),
-      HConstants.LATEST_TIMESTAMP, Bytes.toBytes("2"),
+    final ExtendedCell cell2 = new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"),
+      Bytes.toBytes("2"), HConstants.LATEST_TIMESTAMP, Bytes.toBytes("2"),
       new Tag[] { new ArrayBackedTag((byte) 1, Bytes.toBytes("teststring3")), });
-    final Cell cell3 = new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("3"),
-      HConstants.LATEST_TIMESTAMP, Bytes.toBytes("3"),
+    final ExtendedCell cell3 = new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"),
+      Bytes.toBytes("3"), HConstants.LATEST_TIMESTAMP, Bytes.toBytes("3"),
       new Tag[] { new ArrayBackedTag((byte) 2, Bytes.toBytes("teststring4")),
         new ArrayBackedTag((byte) 2, Bytes.toBytes("teststring5")),
         new ArrayBackedTag((byte) 1, Bytes.toBytes("teststring6")) });
@@ -81,7 +81,7 @@ public class TestCellCodecWithTags {
     DataInputStream dis = new DataInputStream(cis);
     Codec.Decoder decoder = codec.getDecoder(dis);
     assertTrue(decoder.advance());
-    Cell c = decoder.current();
+    ExtendedCell c = decoder.current();
     assertTrue(CellUtil.equals(c, cell1));
     List<Tag> tags = PrivateCellUtil.getTags(c);
     assertEquals(2, tags.size());

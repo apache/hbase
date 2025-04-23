@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.io;
 
 import java.io.IOException;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
@@ -40,7 +40,7 @@ public interface CellOutputStream {
    * the copy of the Cell that was added in the write.
    * @param cell Cell to write out
    */
-  void write(Cell cell) throws IOException;
+  void write(ExtendedCell cell) throws IOException;
 
   /**
    * Let the implementation decide what to do. Usually means writing accumulated data into a byte[]

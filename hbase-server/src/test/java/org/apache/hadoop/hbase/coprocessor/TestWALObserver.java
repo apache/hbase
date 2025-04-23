@@ -61,6 +61,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALEditInternalHelper;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALSplitter;
@@ -444,7 +445,8 @@ public class TestWALObserver {
       byte[] qualifierBytes = Bytes.toBytes(Integer.toString(j));
       byte[] columnBytes = Bytes.toBytes(familyStr + ":" + Integer.toString(j));
       WALEdit edit = new WALEdit();
-      edit.add(new KeyValue(rowName, family, qualifierBytes, ee.currentTime(), columnBytes));
+      WALEditInternalHelper.addExtendedCell(edit,
+        new KeyValue(rowName, family, qualifierBytes, ee.currentTime(), columnBytes));
       // uses WALKeyImpl instead of HLogKey on purpose. will only work for tests where we don't care
       // about legacy coprocessors
       txid = wal.appendData(hri,

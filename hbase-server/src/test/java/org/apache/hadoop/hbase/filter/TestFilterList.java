@@ -31,6 +31,7 @@ import java.util.Objects;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CompareOperator;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
@@ -168,7 +169,9 @@ public class TestFilterList {
     assertTrue(filterMPONE.filterRowKey(KeyValueUtil.createFirstOnRow(rowkey)));
     kv = new KeyValue(rowkey, rowkey, Bytes.toBytes(0), Bytes.toBytes(0));
     assertFalse(Filter.ReturnCode.INCLUDE == filterMPONE.filterCell(kv));
-    assertFalse(filterMPONE.filterRow());
+    // FilterList.filterRow() returns true because previously "z" was filtered out (return true) by
+    // PrefixFilter.filterRowKey()
+    assertTrue(filterMPONE.filterRow());
 
     /* We should filter any row */
     rowkey = Bytes.toBytes("z");
@@ -554,12 +557,14 @@ public class TestFilterList {
 
     // Value for fam:qual1 should be stripped:
     assertEquals(Filter.ReturnCode.INCLUDE, flist.filterCell(kvQual1));
-    final KeyValue transformedQual1 = KeyValueUtil.ensureKeyValue(flist.transformCell(kvQual1));
+    final KeyValue transformedQual1 =
+      KeyValueUtil.ensureKeyValue((ExtendedCell) flist.transformCell(kvQual1));
     assertEquals(0, transformedQual1.getValueLength());
 
     // Value for fam:qual2 should not be stripped:
     assertEquals(Filter.ReturnCode.INCLUDE, flist.filterCell(kvQual2));
-    final KeyValue transformedQual2 = KeyValueUtil.ensureKeyValue(flist.transformCell(kvQual2));
+    final KeyValue transformedQual2 =
+      KeyValueUtil.ensureKeyValue((ExtendedCell) flist.transformCell(kvQual2));
     assertEquals("value", Bytes.toString(transformedQual2.getValueArray(),
       transformedQual2.getValueOffset(), transformedQual2.getValueLength()));
 

@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.regionserver.querymatcher;
 
 import java.io.IOException;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.regionserver.ShipperListener;
 import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher.MatchCode;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -53,25 +53,26 @@ public interface ColumnTracker extends ShipperListener {
   /**
    * Checks if the column is present in the list of requested columns by returning the match code
    * instance. It does not check against the number of versions for the columns asked for. To do the
-   * version check, one has to call {@link #checkVersions(Cell, long, byte, boolean)} method based
-   * on the return type (INCLUDE) of this method. The values that can be returned by this method are
-   * {@link MatchCode#INCLUDE}, {@link MatchCode#SEEK_NEXT_COL} and {@link MatchCode#SEEK_NEXT_ROW}.
+   * version check, one has to call {@link #checkVersions(ExtendedCell, long, byte, boolean)} method
+   * based on the return type (INCLUDE) of this method. The values that can be returned by this
+   * method are {@link MatchCode#INCLUDE}, {@link MatchCode#SEEK_NEXT_COL} and
+   * {@link MatchCode#SEEK_NEXT_ROW}.
    * @param cell a cell with the column to match against
    * @param type The type of the Cell
    * @return The match code instance.
    * @throws IOException in case there is an internal consistency problem caused by a data
    *                     corruption.
    */
-  ScanQueryMatcher.MatchCode checkColumn(Cell cell, byte type) throws IOException;
+  ScanQueryMatcher.MatchCode checkColumn(ExtendedCell cell, byte type) throws IOException;
 
   /**
    * Keeps track of the number of versions for the columns asked for. It assumes that the user has
    * already checked if the cell needs to be included by calling the
-   * {@link #checkColumn(Cell, byte)} method. The enum values returned by this method are
+   * {@link #checkColumn(ExtendedCell, byte)} method. The enum values returned by this method are
    * {@link MatchCode#SKIP}, {@link MatchCode#INCLUDE}, {@link MatchCode#INCLUDE_AND_SEEK_NEXT_COL}
    * and {@link MatchCode#INCLUDE_AND_SEEK_NEXT_ROW}. Implementations which include all the columns
-   * could just return {@link MatchCode#INCLUDE} in the {@link #checkColumn(Cell, byte)} method and
-   * perform all the operations in this checkVersions method.
+   * could just return {@link MatchCode#INCLUDE} in the {@link #checkColumn(ExtendedCell, byte)}
+   * method and perform all the operations in this checkVersions method.
    * @param cell        a cell with the column to match against
    * @param timestamp   The timestamp of the cell.
    * @param type        the type of the key value (Put/Delete)
@@ -82,7 +83,7 @@ public interface ColumnTracker extends ShipperListener {
    * @throws IOException in case there is an internal consistency problem caused by a data
    *                     corruption.
    */
-  ScanQueryMatcher.MatchCode checkVersions(Cell cell, long timestamp, byte type,
+  ScanQueryMatcher.MatchCode checkVersions(ExtendedCell cell, long timestamp, byte type,
     boolean ignoreCount) throws IOException;
 
   /**
@@ -106,7 +107,7 @@ public interface ColumnTracker extends ShipperListener {
   /**
    * Retrieve the MatchCode for the next row or column
    */
-  MatchCode getNextRowOrNextColumn(Cell cell);
+  MatchCode getNextRowOrNextColumn(ExtendedCell cell);
 
   /**
    * Give the tracker a chance to declare it's done based on only the timestamp to allow an early
@@ -120,6 +121,6 @@ public interface ColumnTracker extends ShipperListener {
    * this information from external filters or timestamp range and we then need to indicate this
    * information to tracker. It is currently implemented for ExplicitColumnTracker.
    */
-  default void doneWithColumn(Cell cell) {
+  default void doneWithColumn(ExtendedCell cell) {
   }
 }

@@ -26,7 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ArrayBackedTag;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
@@ -84,7 +84,7 @@ public class TestStoreFileScannerWithTagCompression {
     writer.close();
 
     ReaderContext context = new ReaderContextBuilder().withFileSystemAndPath(fs, f).build();
-    StoreFileInfo storeFileInfo = new StoreFileInfo(conf, fs, f, true);
+    StoreFileInfo storeFileInfo = StoreFileInfo.createStoreFileInfoForHFile(conf, fs, f, true);
     storeFileInfo.initHFileInfo(context);
     StoreFileReader reader = storeFileInfo.createReader(context, cacheConf);
     storeFileInfo.getHFileInfo().initMetaAndIndex(reader.getHFileReader());
@@ -93,7 +93,7 @@ public class TestStoreFileScannerWithTagCompression {
       // Now do reseek with empty KV to position to the beginning of the file
       KeyValue k = KeyValueUtil.createFirstOnRow(Bytes.toBytes("k2"));
       s.reseek(k);
-      Cell kv = s.next();
+      ExtendedCell kv = s.next();
       kv = s.next();
       kv = s.next();
       byte[] key5 = Bytes.toBytes("k5");

@@ -26,6 +26,7 @@ import java.util.SortedSet;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -45,7 +46,7 @@ public class TestCellSkipListSet {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestCellSkipListSet.class);
 
-  private final CellSet csls = new CellSet(CellComparatorImpl.COMPARATOR);
+  private final CellSet<ExtendedCell> csls = new CellSet<>(CellComparatorImpl.COMPARATOR);
 
   @Rule
   public TestName name = new TestName();
@@ -125,7 +126,7 @@ public class TestCellSkipListSet {
     }
     // Assert that we added 'total' values and that they are in order
     int count = 0;
-    for (Iterator<Cell> i = this.csls.descendingIterator(); i.hasNext();) {
+    for (Iterator<ExtendedCell> i = this.csls.descendingIterator(); i.hasNext();) {
       Cell kv = i.next();
       assertEquals("" + (total - (count + 1)),
         Bytes.toString(kv.getQualifierArray(), kv.getQualifierOffset(), kv.getQualifierLength()));
@@ -141,7 +142,7 @@ public class TestCellSkipListSet {
     // Assert that we added 'total' values and that they are in order and that
     // we are getting back value2
     count = 0;
-    for (Iterator<Cell> i = this.csls.descendingIterator(); i.hasNext();) {
+    for (Iterator<ExtendedCell> i = this.csls.descendingIterator(); i.hasNext();) {
       Cell kv = i.next();
       assertEquals("" + (total - (count + 1)),
         Bytes.toString(kv.getQualifierArray(), kv.getQualifierOffset(), kv.getQualifierLength()));
@@ -164,9 +165,9 @@ public class TestCellSkipListSet {
       if (i == 1) splitter = kv;
       this.csls.add(kv);
     }
-    SortedSet<Cell> tail = this.csls.tailSet(splitter);
+    SortedSet<ExtendedCell> tail = this.csls.tailSet(splitter);
     assertEquals(2, tail.size());
-    SortedSet<Cell> head = this.csls.headSet(splitter);
+    SortedSet<ExtendedCell> head = this.csls.headSet(splitter);
     assertEquals(1, head.size());
     // Now ensure that we get back right answer even when we do tail or head.
     // Now overwrite with a new value.

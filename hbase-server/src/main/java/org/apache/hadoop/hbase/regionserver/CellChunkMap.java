@@ -51,7 +51,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * </pre>
  */
 @InterfaceAudience.Private
-public class CellChunkMap extends CellFlatMap {
+public class CellChunkMap<T extends Cell> extends CellFlatMap<T> {
 
   private final Chunk[] chunks; // the array of chunks, on which the index is based
 
@@ -69,7 +69,7 @@ public class CellChunkMap extends CellFlatMap {
    * @param max        number of Cells or the index of the cell after the maximal cell
    * @param descending the order of the given array
    */
-  public CellChunkMap(Comparator<? super Cell> comparator, Chunk[] chunks, int min, int max,
+  public CellChunkMap(Comparator<? super T> comparator, Chunk[] chunks, int min, int max,
     boolean descending) {
     super(comparator, min, max, descending);
     this.chunks = chunks;
@@ -86,12 +86,12 @@ public class CellChunkMap extends CellFlatMap {
    * create only CellChunkMap from CellChunkMap
    */
   @Override
-  protected CellFlatMap createSubCellFlatMap(int min, int max, boolean descending) {
-    return new CellChunkMap(this.comparator(), this.chunks, min, max, descending);
+  protected CellFlatMap<T> createSubCellFlatMap(int min, int max, boolean descending) {
+    return new CellChunkMap<>(this.comparator(), this.chunks, min, max, descending);
   }
 
   @Override
-  protected Cell getCell(int i) {
+  protected T getCell(int i) {
     // get the index of the relevant chunk inside chunk array
     int chunkIndex = (i / numOfCellRepsInChunk);
     ByteBuffer block = chunks[chunkIndex].getData();// get the ByteBuffer of the relevant chunk
@@ -127,6 +127,9 @@ public class CellChunkMap extends CellFlatMap {
           + ". We were looking for a cell at index " + i);
     }
 
-    return new ByteBufferChunkKeyValue(buf, offsetOfCell, lengthOfCell, cellSeqID);
+    @SuppressWarnings("unchecked")
+    T cell = (T) new ByteBufferChunkKeyValue(buf, offsetOfCell, lengthOfCell, cellSeqID);
+
+    return cell;
   }
 }

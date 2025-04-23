@@ -119,13 +119,13 @@ public class TestResultFromCoprocessor {
     }
 
     @Override
-    public Result postAppend(final ObserverContext<RegionCoprocessorEnvironment> c,
+    public Result postAppend(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
       final Append append, final Result result) {
       return FIXED_RESULT;
     }
 
     @Override
-    public Result postIncrement(final ObserverContext<RegionCoprocessorEnvironment> c,
+    public Result postIncrement(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
       final Increment increment, final Result result) {
       return FIXED_RESULT;
     }

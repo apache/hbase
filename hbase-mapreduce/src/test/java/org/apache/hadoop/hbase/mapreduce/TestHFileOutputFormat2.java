@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -63,7 +64,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HadoopShims;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.PerformanceEvaluation;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
@@ -136,7 +136,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Simple test for {@link HFileOutputFormat2}. Sets up and runs a mapreduce job that writes hfile
  * output. Creates a few inner classes to implement splits and an inputformat that emits keys and
- * values like those of {@link PerformanceEvaluation}.
+ * values.
  */
 @Category({ VerySlowMapReduceTests.class, LargeTests.class })
 public class TestHFileOutputFormat2 {
@@ -146,6 +146,7 @@ public class TestHFileOutputFormat2 {
     HBaseClassTestRule.forClass(TestHFileOutputFormat2.class);
 
   private final static int ROWSPERSPLIT = 1024;
+  private static final int DEFAULT_VALUE_LENGTH = 1000;
 
   public static final byte[] FAMILY_NAME = TestHRegionFileSystem.FAMILY_NAME;
   private static final byte[][] FAMILIES =
@@ -518,7 +519,7 @@ public class TestHFileOutputFormat2 {
           HFile.createReader(fs, keyFileStatus.getPath(), new CacheConfig(conf), true, conf);
         HFileScanner scanner = reader.getScanner(conf, false, false, false);
         scanner.seekTo();
-        Cell cell = scanner.getCell();
+        ExtendedCell cell = scanner.getCell();
         List<Tag> tagsFromCell = PrivateCellUtil.getTags(cell);
         assertTrue(tagsFromCell.size() > 0);
         for (Tag tag : tagsFromCell) {
@@ -553,18 +554,43 @@ public class TestHFileOutputFormat2 {
     // first region start key is always empty
     ret[0] = HConstants.EMPTY_BYTE_ARRAY;
     for (int i = 1; i < numKeys; i++) {
-      ret[i] =
-        PerformanceEvaluation.generateData(random, PerformanceEvaluation.DEFAULT_VALUE_LENGTH);
+      ret[i] = generateData(random, DEFAULT_VALUE_LENGTH);
     }
     return ret;
+  }
+
+  /*
+   * This method takes some time and is done inline uploading data. For example, doing the mapfile
+   * test, generation of the key and value consumes about 30% of CPU time.
+   * @return Generated random value to insert into a table cell.
+   */
+  public static byte[] generateData(final Random r, int length) {
+    byte[] b = new byte[length];
+    int i;
+
+    for (i = 0; i < (length - 8); i += 8) {
+      b[i] = (byte) (65 + r.nextInt(26));
+      b[i + 1] = b[i];
+      b[i + 2] = b[i];
+      b[i + 3] = b[i];
+      b[i + 4] = b[i];
+      b[i + 5] = b[i];
+      b[i + 6] = b[i];
+      b[i + 7] = b[i];
+    }
+
+    byte a = (byte) (65 + r.nextInt(26));
+    for (; i < length; i++) {
+      b[i] = a;
+    }
+    return b;
   }
 
   private byte[][] generateRandomSplitKeys(int numKeys) {
     Random random = ThreadLocalRandom.current();
     byte[][] ret = new byte[numKeys][];
     for (int i = 0; i < numKeys; i++) {
-      ret[i] =
-        PerformanceEvaluation.generateData(random, PerformanceEvaluation.DEFAULT_VALUE_LENGTH);
+      ret[i] = generateData(random, DEFAULT_VALUE_LENGTH);
     }
     return ret;
   }

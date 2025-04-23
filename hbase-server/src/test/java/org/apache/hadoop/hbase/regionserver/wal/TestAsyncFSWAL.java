@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALEditInternalHelper;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALProvider.AsyncWriter;
@@ -202,7 +203,8 @@ public class TestAsyncFSWAL extends AbstractTestFSWAL {
           public void run() {
             byte[] row = Bytes.toBytes("row" + index);
             WALEdit cols = new WALEdit();
-            cols.add(new KeyValue(row, row, row, timestamp + index, row));
+            WALEditInternalHelper.addExtendedCell(cols,
+              new KeyValue(row, row, row, timestamp + index, row));
             WALKeyImpl key = new WALKeyImpl(ri.getEncodedNameAsBytes(), td.getTableName(),
               SequenceId.NO_SEQUENCE_ID, timestamp, WALKey.EMPTY_UUIDS, HConstants.NO_NONCE,
               HConstants.NO_NONCE, mvcc, scopes);

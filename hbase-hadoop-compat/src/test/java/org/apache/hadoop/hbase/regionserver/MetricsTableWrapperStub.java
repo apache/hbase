@@ -117,6 +117,7 @@ public class MetricsTableWrapperStub implements MetricsTableWrapperAggregate {
     return 99;
   }
 
+  @Override
   public long getStaticIndexSize(String table) {
     return 101;
   }

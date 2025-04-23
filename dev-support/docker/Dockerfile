@@ -53,6 +53,8 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -qq update && \
     ruby=1:3.0* \
     ruby-dev=1:3.0* \
     shellcheck='0.8.0-*' \
+    libxml2-dev='2.9.13+dfsg-*' \
+    libxml2-utils='2.9.13+dfsg-*' \
     && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* \
@@ -73,46 +75,46 @@ ENV LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_ALL=en_US.UTF-8
 #
 
 FROM base_image AS spotbugs_download_image
-ENV SPOTBUGS_VERSION '4.7.3'
-ENV SPOTBUGS_URL "https://repo.maven.apache.org/maven2/com/github/spotbugs/spotbugs/${SPOTBUGS_VERSION}/spotbugs-${SPOTBUGS_VERSION}.tgz"
-ENV SPOTBUGS_SHA512 '09a9fe0e5a6ec8e9d6d116c361b5c34c9d0560c0271241f02fadee911952adfcd69dc184f6de1cc4d4a8fe2c84c162689ea9a691dcae0779935eedf390fcc4ad'
+ENV SPOTBUGS_VERSION='4.7.3'
+ENV SPOTBUGS_URL="https://repo.maven.apache.org/maven2/com/github/spotbugs/spotbugs/${SPOTBUGS_VERSION}/spotbugs-${SPOTBUGS_VERSION}.tgz"
+ENV SPOTBUGS_SHA512='09a9fe0e5a6ec8e9d6d116c361b5c34c9d0560c0271241f02fadee911952adfcd69dc184f6de1cc4d4a8fe2c84c162689ea9a691dcae0779935eedf390fcc4ad'
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN curl --location --fail --silent --show-error --output /tmp/spotbugs.tgz "${SPOTBUGS_URL}" && \
   echo "${SPOTBUGS_SHA512} */tmp/spotbugs.tgz" | sha512sum -c -
 
 FROM base_image AS hadolint_download_image
-ENV HADOLINT_VERSION '2.10.0'
-ENV HADOLINT_URL "https://github.com/hadolint/hadolint/releases/download/v${HADOLINT_VERSION}/hadolint-Linux-x86_64"
-ENV HADOLINT_SHA512 '4816c95243bedf15476d2225f487fc17465495fb2031e1a4797d82a26db83a1edb63e4fed084b80cef17d5eb67eb45508caadaf7cd0252fb061187113991a338'
+ENV HADOLINT_VERSION='2.10.0'
+ENV HADOLINT_URL="https://github.com/hadolint/hadolint/releases/download/v${HADOLINT_VERSION}/hadolint-Linux-x86_64"
+ENV HADOLINT_SHA512='4816c95243bedf15476d2225f487fc17465495fb2031e1a4797d82a26db83a1edb63e4fed084b80cef17d5eb67eb45508caadaf7cd0252fb061187113991a338'
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN curl --location --fail --silent --show-error --output /tmp/hadolint "${HADOLINT_URL}" && \
   echo "${HADOLINT_SHA512} */tmp/hadolint" | sha512sum -c -
 
 FROM base_image AS maven_download_image
-ENV MAVEN_VERSION='3.8.6'
-ENV MAVEN_URL "https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz"
-ENV MAVEN_SHA512 'f790857f3b1f90ae8d16281f902c689e4f136ebe584aba45e4b1fa66c80cba826d3e0e52fdd04ed44b4c66f6d3fe3584a057c26dfcac544a60b301e6d0f91c26'
+ENV MAVEN_VERSION='3.9.8'
+ENV MAVEN_URL="https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz"
+ENV MAVEN_SHA512='7d171def9b85846bf757a2cec94b7529371068a0670df14682447224e57983528e97a6d1b850327e4ca02b139abaab7fcb93c4315119e6f0ffb3f0cbc0d0b9a2'
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN curl --location --fail --silent --show-error --output /tmp/maven.tar.gz "${MAVEN_URL}" && \
   echo "${MAVEN_SHA512} */tmp/maven.tar.gz" | sha512sum -c -
 
 FROM base_image AS openjdk8_download_image
-ENV OPENJDK8_URL 'https://github.com/adoptium/temurin8-binaries/releases/download/jdk8u352-b08/OpenJDK8U-jdk_x64_linux_hotspot_8u352b08.tar.gz'
-ENV OPENJDK8_SHA256 '1633bd7590cb1cd72f5a1378ae8294451028b274d798e2a4ac672059a2f00fee'
+ENV OPENJDK8_URL='https://github.com/adoptium/temurin8-binaries/releases/download/jdk8u412-b08/OpenJDK8U-jdk_x64_linux_hotspot_8u412b08.tar.gz'
+ENV OPENJDK8_SHA256='b9884a96f78543276a6399c3eb8c2fd8a80e6b432ea50e87d3d12d495d1d2808'
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN curl --location --fail --silent --show-error --output /tmp/adoptopenjdk8.tar.gz "${OPENJDK8_URL}" && \
   echo "${OPENJDK8_SHA256} */tmp/adoptopenjdk8.tar.gz" | sha256sum -c -
 
 FROM base_image AS openjdk11_download_image
-ENV OPENJDK11_URL 'https://github.com/adoptium/temurin11-binaries/releases/download/jdk-11.0.17%2B8/OpenJDK11U-jdk_x64_linux_hotspot_11.0.17_8.tar.gz'
-ENV OPENJDK11_SHA256 'b8d46ed08ef4859476fe6421a7690d899ed83dce63f13fd894f994043177ef3c'
+ENV OPENJDK11_URL='https://github.com/adoptium/temurin11-binaries/releases/download/jdk-11.0.23%2B9/OpenJDK11U-jdk_x64_linux_hotspot_11.0.23_9.tar.gz'
+ENV OPENJDK11_SHA256='23e47ea7a3015be3240f21185fd902adebdcf76530757c9b482c7eb5bd3417c2'
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN curl --location --fail --silent --show-error --output /tmp/adoptopenjdk11.tar.gz "${OPENJDK11_URL}" && \
   echo "${OPENJDK11_SHA256} */tmp/adoptopenjdk11.tar.gz" | sha256sum -c -
 
 FROM base_image AS openjdk17_download_image
-ENV OPENJDK17_URL 'https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.10%2B7/OpenJDK17U-jdk_x64_linux_hotspot_17.0.10_7.tar.gz'
-ENV OPENJDK17_SHA256 'a8fd07e1e97352e97e330beb20f1c6b351ba064ca7878e974c7d68b8a5c1b378'
+ENV OPENJDK17_URL='https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.11%2B9/OpenJDK17U-jdk_x64_linux_hotspot_17.0.11_9.tar.gz'
+ENV OPENJDK17_SHA256='aa7fb6bb342319d227a838af5c363bfa1b4a670c209372f9e6585bd79da6220c'
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN curl --location --fail --silent --show-error --output /tmp/adoptopenjdk17.tar.gz "${OPENJDK17_URL}" && \
   echo "${OPENJDK17_SHA256} */tmp/adoptopenjdk17.tar.gz" | sha256sum -c -
@@ -177,9 +179,7 @@ RUN mkdir -p /usr/lib/jvm && \
 # these values to be specified here; the various --foo-path flags do not
 # propigate as expected, while these are honored.
 # TODO (nd): is this really true? investigate and file a ticket.
-ENV SPOTBUGS_HOME '/opt/spotbugs'
-ENV MAVEN_HOME '/opt/maven'
-ENV MAVEN_OPTS '-Xmx3.6G'
+ENV SPOTBUGS_HOME='/opt/spotbugs' MAVEN_HOME='/opt/maven'
 
 CMD ["/bin/bash"]
 

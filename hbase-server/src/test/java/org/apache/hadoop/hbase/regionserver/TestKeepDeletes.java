@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -349,7 +350,7 @@ public class TestKeepDeletes {
     s.setRaw(true);
     s.readAllVersions();
     InternalScanner scan = region.getScanner(s);
-    List<Cell> kvs = new ArrayList<>();
+    List<ExtendedCell> kvs = new ArrayList<>();
     scan.next(kvs);
     assertEquals(8, kvs.size());
     assertTrue(PrivateCellUtil.isDeleteFamily(kvs.get(0)));

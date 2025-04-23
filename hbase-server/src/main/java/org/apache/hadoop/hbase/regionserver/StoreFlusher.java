@@ -24,7 +24,7 @@ import java.util.List;
 import java.util.function.Consumer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PrivateConstants;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
@@ -120,7 +120,7 @@ abstract class StoreFlusher {
     ScannerContext scannerContext =
       ScannerContext.newBuilder().setBatchLimit(compactionKVMax).build();
 
-    List<Cell> kvs = new ArrayList<>();
+    List<ExtendedCell> kvs = new ArrayList<>();
     boolean hasMore;
     String flushName = ThroughputControlUtil.getNameForThrottling(store, "flush");
     // no control on system table (such as meta, namespace, etc) flush
@@ -131,9 +131,12 @@ abstract class StoreFlusher {
     }
     try {
       do {
+        // InternalScanner is for CPs so we do not want to leak ExtendedCell to the interface, but
+        // all the server side implementation should only add ExtendedCell to the List, otherwise it
+        // will cause serious assertions in our code
         hasMore = scanner.next(kvs, scannerContext);
         if (!kvs.isEmpty()) {
-          for (Cell c : kvs) {
+          for (ExtendedCell c : kvs) {
             sink.append(c);
             if (control) {
               throughputController.control(flushName, c.getSerializedSize());

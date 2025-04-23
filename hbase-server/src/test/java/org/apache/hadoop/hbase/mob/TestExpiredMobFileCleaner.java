@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.After;
@@ -43,6 +44,8 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category(MediumTests.class)
 public class TestExpiredMobFileCleaner {
@@ -58,6 +61,7 @@ public class TestExpiredMobFileCleaner {
   private final static byte[] row2 = Bytes.toBytes("row2");
   private final static byte[] row3 = Bytes.toBytes("row3");
   private final static byte[] qf = Bytes.toBytes("qf");
+  private static final Logger LOG = LoggerFactory.getLogger(TestExpiredMobFileCleaner.class);
 
   private static BufferedMutator table;
   private static Admin admin;
@@ -135,6 +139,9 @@ public class TestExpiredMobFileCleaner {
     byte[] dummyData = makeDummyData(600);
     long ts = EnvironmentEdgeManager.currentTime() - 3 * secondsOfDay() * 1000; // 3 days before
     putKVAndFlush(table, row1, dummyData, ts);
+    LOG.info("test log to be deleted, tablename is " + tableName);
+    CommonFSUtils.logFileSystemState(TEST_UTIL.getTestFileSystem(),
+      TEST_UTIL.getDefaultRootDirPath(), LOG);
     FileStatus[] firstFiles = TEST_UTIL.getTestFileSystem().listStatus(mobDirPath);
     // the first mob file
     assertEquals("Before cleanup without delay 1", 1, firstFiles.length);

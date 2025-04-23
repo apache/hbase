@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -569,7 +570,8 @@ public class TestScannerHeartbeatMessages {
     }
 
     @Override
-    public boolean nextRaw(List<Cell> outResults, ScannerContext context) throws IOException {
+    public boolean nextRaw(List<? super ExtendedCell> outResults, ScannerContext context)
+      throws IOException {
       boolean moreRows = super.nextRaw(outResults, context);
       HeartbeatHRegion.rowSleep();
       return moreRows;
@@ -598,7 +600,8 @@ public class TestScannerHeartbeatMessages {
     }
 
     @Override
-    public boolean nextRaw(List<Cell> outResults, ScannerContext context) throws IOException {
+    public boolean nextRaw(List<? super ExtendedCell> outResults, ScannerContext context)
+      throws IOException {
       boolean moreRows = super.nextRaw(outResults, context);
       HeartbeatHRegion.rowSleep();
       return moreRows;
@@ -630,7 +633,8 @@ public class TestScannerHeartbeatMessages {
     }
 
     @Override
-    public boolean next(List<Cell> result, ScannerContext context) throws IOException {
+    public boolean next(List<? super ExtendedCell> result, ScannerContext context)
+      throws IOException {
       if (HeartbeatHRegion.sleepBeforeColumnFamily) HeartbeatHRegion.columnFamilySleep();
       boolean moreRows = super.next(result, context);
       if (!HeartbeatHRegion.sleepBeforeColumnFamily) HeartbeatHRegion.columnFamilySleep();
@@ -649,7 +653,8 @@ public class TestScannerHeartbeatMessages {
     }
 
     @Override
-    public boolean next(List<Cell> result, ScannerContext context) throws IOException {
+    public boolean next(List<? super ExtendedCell> result, ScannerContext context)
+      throws IOException {
       if (HeartbeatHRegion.sleepBeforeColumnFamily) HeartbeatHRegion.columnFamilySleep();
       boolean moreRows = super.next(result, context);
       if (!HeartbeatHRegion.sleepBeforeColumnFamily) HeartbeatHRegion.columnFamilySleep();

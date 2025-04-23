@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.ipc;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
@@ -45,7 +45,8 @@ public interface RpcServerInterface {
 
   InetSocketAddress getListenerAddress();
 
-  Pair<Message, CellScanner> call(RpcCall call, MonitoredRPCHandler status) throws IOException;
+  Pair<Message, ExtendedCellScanner> call(RpcCall call, MonitoredRPCHandler status)
+    throws IOException;
 
   void setErrorHandler(HBaseRPCErrorHandler handler);
 
@@ -84,4 +85,6 @@ public interface RpcServerInterface {
    */
   void setNamedQueueRecorder(final NamedQueueRecorder namedQueueRecorder);
 
+  /** Return RPC's instance of {@link RpcCoprocessorHost} */
+  RpcCoprocessorHost getRpcCoprocessorHost();
 }

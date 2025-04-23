@@ -32,6 +32,7 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -45,10 +46,12 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.HFileOutputFormat2.TableInfo;
 import org.apache.hadoop.hbase.regionserver.wal.WALCellCodec;
+import org.apache.hadoop.hbase.snapshot.SnapshotRegionLocator;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.MapReduceExtendedCell;
 import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALEditInternalHelper;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -117,7 +120,8 @@ public class WALPlayer extends Configured implements Tool {
             byte[] outKey = multiTableSupport
               ? Bytes.add(table.getName(), Bytes.toBytes(tableSeparator), CellUtil.cloneRow(cell))
               : CellUtil.cloneRow(cell);
-            context.write(new ImmutableBytesWritable(outKey), new MapReduceExtendedCell(cell));
+            context.write(new ImmutableBytesWritable(outKey),
+              new MapReduceExtendedCell(PrivateCellUtil.ensureExtendedCell(cell)));
           }
         }
       } catch (InterruptedException e) {
@@ -166,8 +170,8 @@ public class WALPlayer extends Configured implements Tool {
           ImmutableBytesWritable tableOut = new ImmutableBytesWritable(targetTable.getName());
           Put put = null;
           Delete del = null;
-          Cell lastCell = null;
-          for (Cell cell : value.getCells()) {
+          ExtendedCell lastCell = null;
+          for (ExtendedCell cell : WALEditInternalHelper.getExtendedCells(value)) {
             context.getCounter(Counter.CELLS_READ).increment(1);
             // Filtering WAL meta marker entries.
             if (WALEdit.isMetaEditFamily(cell)) {
@@ -332,7 +336,7 @@ public class WALPlayer extends Configured implements Tool {
         List<TableInfo> tableInfoList = new ArrayList<TableInfo>();
         for (TableName tableName : tableNames) {
           Table table = conn.getTable(tableName);
-          RegionLocator regionLocator = conn.getRegionLocator(tableName);
+          RegionLocator regionLocator = getRegionLocator(tableName, conf, conn);
           tableInfoList.add(new TableInfo(table.getDescriptor(), regionLocator));
         }
         MultiTableHFileOutputFormat.configureIncrementalLoad(job, tableInfoList);
@@ -421,5 +425,14 @@ public class WALPlayer extends Configured implements Tool {
     }
     Job job = createSubmittableJob(args);
     return job.waitForCompletion(true) ? 0 : 1;
+  }
+
+  private static RegionLocator getRegionLocator(TableName tableName, Configuration conf,
+    Connection conn) throws IOException {
+    if (SnapshotRegionLocator.shouldUseSnapshotRegionLocator(conf, tableName)) {
+      return SnapshotRegionLocator.create(conf, tableName);
+    }
+
+    return conn.getRegionLocator(tableName);
   }
 }

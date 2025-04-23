@@ -38,9 +38,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
@@ -53,6 +55,7 @@ import org.apache.hadoop.hbase.security.SaslUtil.QualityOfProtection;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.token.AuthenticationTokenSecretManager;
+import org.apache.hadoop.hbase.util.CoprocessorConfigurationUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.GsonUtil;
 import org.apache.hadoop.hbase.util.Pair;
@@ -219,6 +222,8 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
 
   protected volatile boolean allowFallbackToSimpleAuth;
 
+  volatile RpcCoprocessorHost cpHost;
+
   /**
    * Used to get details for scan with a scanner_id<br/>
    * TODO try to figure out a better way and remove reference from regionserver package later.
@@ -311,6 +316,8 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
 
     this.isOnlineLogProviderEnabled = getIsOnlineLogProviderEnabled(conf);
     this.scheduler = scheduler;
+
+    initializeCoprocessorHost(getConf());
   }
 
   @Override
@@ -323,6 +330,13 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
       refreshAuthManager(newConf, new HBasePolicyProvider());
     }
     refreshSlowLogConfiguration(newConf);
+    if (
+      CoprocessorConfigurationUtil.checkConfigurationChange(getConf(), newConf,
+        CoprocessorHost.RPC_COPROCESSOR_CONF_KEY)
+    ) {
+      LOG.info("Update the RPC coprocessor(s) because the configuration has changed");
+      initializeCoprocessorHost(newConf);
+    }
   }
 
   private void refreshSlowLogConfiguration(Configuration newConf) {
@@ -428,7 +442,7 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
    * the protobuf response.
    */
   @Override
-  public Pair<Message, CellScanner> call(RpcCall call, MonitoredRPCHandler status)
+  public Pair<Message, ExtendedCellScanner> call(RpcCall call, MonitoredRPCHandler status)
     throws IOException {
     try {
       MethodDescriptor md = call.getMethod();
@@ -896,5 +910,14 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
       allowedOnPath = ".*/src/test/.*")
   public List<BlockingServiceAndInterface> getServices() {
     return services;
+  }
+
+  private void initializeCoprocessorHost(Configuration conf) {
+    this.cpHost = new RpcCoprocessorHost(conf);
+  }
+
+  @Override
+  public RpcCoprocessorHost getRpcCoprocessorHost() {
+    return cpHost;
   }
 }

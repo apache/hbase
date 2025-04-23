@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.List;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -34,14 +34,14 @@ public interface CellSink {
    * Append the given cell
    * @param cell the cell to be added
    */
-  void append(Cell cell) throws IOException;
+  void append(ExtendedCell cell) throws IOException;
 
   /**
    * Append the given (possibly partial) list of cells of a row
    * @param cellList the cell list to be added
    */
-  default void appendAll(List<Cell> cellList) throws IOException {
-    for (Cell cell : cellList) {
+  default void appendAll(List<ExtendedCell> cellList) throws IOException {
+    for (ExtendedCell cell : cellList) {
       append(cell);
     }
   }

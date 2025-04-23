@@ -22,26 +22,35 @@ import static org.apache.hadoop.hbase.client.coprocessor.AggregationHelper.valid
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
 import java.io.IOException;
+import java.time.Duration;
+import java.util.Collections;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.AdvancedScanResultConsumer;
 import org.apache.hadoop.hbase.client.AsyncTable;
-import org.apache.hadoop.hbase.client.AsyncTable.CoprocessorCallback;
+import org.apache.hadoop.hbase.client.AsyncTable.PartialResultCoprocessorCallback;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.ServiceCaller;
 import org.apache.hadoop.hbase.coprocessor.ColumnInterpreter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
+import org.apache.hbase.thirdparty.com.google.protobuf.TextFormat;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AggregateProtos.AggregateRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AggregateProtos.AggregateResponse;
@@ -54,12 +63,21 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AggregateProtos.Aggrega
  */
 @InterfaceAudience.Public
 public final class AsyncAggregationClient {
+  private static final Logger log = LoggerFactory.getLogger(AsyncAggregationClient.class);
+
   private AsyncAggregationClient() {
   }
 
+  private interface StubCaller {
+    void call(AggregateService stub, RpcController controller, AggregateRequest request,
+      RpcCallback<AggregateResponse> rpcCallback);
+  }
+
   private static abstract class AbstractAggregationCallback<T>
-    implements CoprocessorCallback<AggregateResponse> {
+    implements PartialResultCoprocessorCallback<AggregateService, AggregateResponse> {
     private final CompletableFuture<T> future;
+    private final AggregateRequest originalRequest;
+    private final AsyncAggregationClient.StubCaller stubCaller;
 
     protected boolean finished = false;
 
@@ -71,8 +89,11 @@ public final class AsyncAggregationClient {
       future.completeExceptionally(error);
     }
 
-    protected AbstractAggregationCallback(CompletableFuture<T> future) {
+    protected AbstractAggregationCallback(CompletableFuture<T> future,
+      AggregateRequest originalRequest, AsyncAggregationClient.StubCaller stubCaller) {
       this.future = future;
+      this.originalRequest = originalRequest;
+      this.stubCaller = stubCaller;
     }
 
     @Override
@@ -106,6 +127,31 @@ public final class AsyncAggregationClient {
       finished = true;
       future.complete(getFinalResult());
     }
+
+    @Override
+    public ServiceCaller<AggregateService, AggregateResponse>
+      getNextCallable(AggregateResponse response, RegionInfo region) {
+      if (!response.hasNextChunkStartRow()) {
+        return null;
+      }
+      return (stub, controller, rpcCallback) -> {
+        AggregateRequest.Builder updatedRequest = AggregateRequest.newBuilder(originalRequest);
+        updatedRequest.setScan(originalRequest.getScan().toBuilder()
+          .setStartRow(response.getNextChunkStartRow()).build());
+        if (log.isTraceEnabled()) {
+          log.trace("Got incomplete result {} for original scan {}. Sending next request {}.",
+            TextFormat.shortDebugString(response),
+            TextFormat.shortDebugString(originalRequest.getScan()),
+            TextFormat.shortDebugString(updatedRequest));
+        }
+        stubCaller.call(stub, controller, updatedRequest.build(), rpcCallback);
+      };
+    }
+
+    @Override
+    public Duration getWaitInterval(AggregateResponse response, RegionInfo region) {
+      return Duration.ofMillis(response.getWaitIntervalMs());
+    }
   }
 
   private static <R, S, P extends Message, Q extends Message, T extends Message> R
@@ -131,32 +177,38 @@ public final class AsyncAggregationClient {
     CompletableFuture<R> future = new CompletableFuture<>();
     AggregateRequest req;
     try {
-      req = validateArgAndGetPB(scan, ci, false);
+      req = validateArgAndGetPB(scan, ci, false, true);
     } catch (IOException e) {
       future.completeExceptionally(e);
       return future;
     }
-    AbstractAggregationCallback<R> callback = new AbstractAggregationCallback<R>(future) {
+    AbstractAggregationCallback<R> callback =
+      new AbstractAggregationCallback<>(future, req, AggregateService::getMax) {
 
-      private R max;
+        private R max;
+        private final Object lock = new Object();
 
-      @Override
-      protected void aggregate(RegionInfo region, AggregateResponse resp) throws IOException {
-        if (resp.getFirstPartCount() > 0) {
-          R result = getCellValueFromProto(ci, resp, 0);
-          if (max == null || (result != null && ci.compare(max, result) < 0)) {
-            max = result;
+        @Override
+        protected void aggregate(RegionInfo region, AggregateResponse resp) throws IOException {
+          if (resp.getFirstPartCount() > 0) {
+            R result = getCellValueFromProto(ci, resp, 0);
+            synchronized (lock) {
+              if (max == null || (result != null && ci.compare(max, result) < 0)) {
+                max = result;
+              }
+            }
           }
         }
-      }
 
-      @Override
-      protected R getFinalResult() {
-        return max;
-      }
-    };
+        @Override
+        protected R getFinalResult() {
+          synchronized (lock) {
+            return max;
+          }
+        }
+      };
     table
-      .<AggregateService, AggregateResponse> coprocessorService(AggregateService::newStub,
+      .coprocessorService(AggregateService::newStub,
         (stub, controller, rpcCallback) -> stub.getMax(controller, req, rpcCallback), callback)
       .fromRow(nullToEmpty(scan.getStartRow()), scan.includeStartRow())
       .toRow(nullToEmpty(scan.getStopRow()), scan.includeStopRow()).execute();
@@ -168,33 +220,39 @@ public final class AsyncAggregationClient {
     CompletableFuture<R> future = new CompletableFuture<>();
     AggregateRequest req;
     try {
-      req = validateArgAndGetPB(scan, ci, false);
+      req = validateArgAndGetPB(scan, ci, false, true);
     } catch (IOException e) {
       future.completeExceptionally(e);
       return future;
     }
 
-    AbstractAggregationCallback<R> callback = new AbstractAggregationCallback<R>(future) {
+    AbstractAggregationCallback<R> callback =
+      new AbstractAggregationCallback<>(future, req, AggregateService::getMin) {
 
-      private R min;
+        private R min;
+        private final Object lock = new Object();
 
-      @Override
-      protected void aggregate(RegionInfo region, AggregateResponse resp) throws IOException {
-        if (resp.getFirstPartCount() > 0) {
-          R result = getCellValueFromProto(ci, resp, 0);
-          if (min == null || (result != null && ci.compare(min, result) > 0)) {
-            min = result;
+        @Override
+        protected void aggregate(RegionInfo region, AggregateResponse resp) throws IOException {
+          if (resp.getFirstPartCount() > 0) {
+            R result = getCellValueFromProto(ci, resp, 0);
+            synchronized (lock) {
+              if (min == null || (result != null && ci.compare(min, result) > 0)) {
+                min = result;
+              }
+            }
           }
         }
-      }
 
-      @Override
-      protected R getFinalResult() {
-        return min;
-      }
-    };
+        @Override
+        protected R getFinalResult() {
+          synchronized (lock) {
+            return min;
+          }
+        }
+      };
     table
-      .<AggregateService, AggregateResponse> coprocessorService(AggregateService::newStub,
+      .coprocessorService(AggregateService::newStub,
         (stub, controller, rpcCallback) -> stub.getMin(controller, req, rpcCallback), callback)
       .fromRow(nullToEmpty(scan.getStartRow()), scan.includeStartRow())
       .toRow(nullToEmpty(scan.getStopRow()), scan.includeStopRow()).execute();
@@ -207,27 +265,28 @@ public final class AsyncAggregationClient {
     CompletableFuture<Long> future = new CompletableFuture<>();
     AggregateRequest req;
     try {
-      req = validateArgAndGetPB(scan, ci, true);
+      req = validateArgAndGetPB(scan, ci, true, true);
     } catch (IOException e) {
       future.completeExceptionally(e);
       return future;
     }
-    AbstractAggregationCallback<Long> callback = new AbstractAggregationCallback<Long>(future) {
+    AbstractAggregationCallback<Long> callback =
+      new AbstractAggregationCallback<>(future, req, AggregateService::getRowNum) {
 
-      private long count;
+        private final AtomicLong count = new AtomicLong(0L);
 
-      @Override
-      protected void aggregate(RegionInfo region, AggregateResponse resp) throws IOException {
-        count += resp.getFirstPart(0).asReadOnlyByteBuffer().getLong();
-      }
+        @Override
+        protected void aggregate(RegionInfo region, AggregateResponse resp) throws IOException {
+          count.addAndGet(resp.getFirstPart(0).asReadOnlyByteBuffer().getLong());
+        }
 
-      @Override
-      protected Long getFinalResult() {
-        return count;
-      }
-    };
+        @Override
+        protected Long getFinalResult() {
+          return count.get();
+        }
+      };
     table
-      .<AggregateService, AggregateResponse> coprocessorService(AggregateService::newStub,
+      .coprocessorService(AggregateService::newStub,
         (stub, controller, rpcCallback) -> stub.getRowNum(controller, req, rpcCallback), callback)
       .fromRow(nullToEmpty(scan.getStartRow()), scan.includeStartRow())
       .toRow(nullToEmpty(scan.getStopRow()), scan.includeStopRow()).execute();
@@ -239,29 +298,35 @@ public final class AsyncAggregationClient {
     CompletableFuture<S> future = new CompletableFuture<>();
     AggregateRequest req;
     try {
-      req = validateArgAndGetPB(scan, ci, false);
+      req = validateArgAndGetPB(scan, ci, false, true);
     } catch (IOException e) {
       future.completeExceptionally(e);
       return future;
     }
-    AbstractAggregationCallback<S> callback = new AbstractAggregationCallback<S>(future) {
-      private S sum;
+    AbstractAggregationCallback<S> callback =
+      new AbstractAggregationCallback<>(future, req, AggregateService::getSum) {
+        private S sum;
+        private final Object lock = new Object();
 
-      @Override
-      protected void aggregate(RegionInfo region, AggregateResponse resp) throws IOException {
-        if (resp.getFirstPartCount() > 0) {
-          S s = getPromotedValueFromProto(ci, resp, 0);
-          sum = ci.add(sum, s);
+        @Override
+        protected void aggregate(RegionInfo region, AggregateResponse resp) throws IOException {
+          if (resp.getFirstPartCount() > 0) {
+            S s = getPromotedValueFromProto(ci, resp, 0);
+            synchronized (lock) {
+              sum = ci.add(sum, s);
+            }
+          }
         }
-      }
 
-      @Override
-      protected S getFinalResult() {
-        return sum;
-      }
-    };
+        @Override
+        protected S getFinalResult() {
+          synchronized (lock) {
+            return sum;
+          }
+        }
+      };
     table
-      .<AggregateService, AggregateResponse> coprocessorService(AggregateService::newStub,
+      .coprocessorService(AggregateService::newStub,
         (stub, controller, rpcCallback) -> stub.getSum(controller, req, rpcCallback), callback)
       .fromRow(nullToEmpty(scan.getStartRow()), scan.includeStartRow())
       .toRow(nullToEmpty(scan.getStopRow()), scan.includeStopRow()).execute();
@@ -274,31 +339,36 @@ public final class AsyncAggregationClient {
     CompletableFuture<Double> future = new CompletableFuture<>();
     AggregateRequest req;
     try {
-      req = validateArgAndGetPB(scan, ci, false);
+      req = validateArgAndGetPB(scan, ci, false, true);
     } catch (IOException e) {
       future.completeExceptionally(e);
       return future;
     }
-    AbstractAggregationCallback<Double> callback = new AbstractAggregationCallback<Double>(future) {
-      private S sum;
+    AbstractAggregationCallback<Double> callback =
+      new AbstractAggregationCallback<>(future, req, AggregateService::getAvg) {
+        private S sum;
+        long count = 0L;
+        private final Object lock = new Object();
 
-      long count = 0L;
-
-      @Override
-      protected void aggregate(RegionInfo region, AggregateResponse resp) throws IOException {
-        if (resp.getFirstPartCount() > 0) {
-          sum = ci.add(sum, getPromotedValueFromProto(ci, resp, 0));
-          count += resp.getSecondPart().asReadOnlyByteBuffer().getLong();
+        @Override
+        protected void aggregate(RegionInfo region, AggregateResponse resp) throws IOException {
+          if (resp.getFirstPartCount() > 0) {
+            synchronized (lock) {
+              sum = ci.add(sum, getPromotedValueFromProto(ci, resp, 0));
+              count += resp.getSecondPart().asReadOnlyByteBuffer().getLong();
+            }
+          }
         }
-      }
 
-      @Override
-      protected Double getFinalResult() {
-        return ci.divideForAvg(sum, count);
-      }
-    };
+        @Override
+        protected Double getFinalResult() {
+          synchronized (lock) {
+            return ci.divideForAvg(sum, count);
+          }
+        }
+      };
     table
-      .<AggregateService, AggregateResponse> coprocessorService(AggregateService::newStub,
+      .coprocessorService(AggregateService::newStub,
         (stub, controller, rpcCallback) -> stub.getAvg(controller, req, rpcCallback), callback)
       .fromRow(nullToEmpty(scan.getStartRow()), scan.includeStartRow())
       .toRow(nullToEmpty(scan.getStopRow()), scan.includeStopRow()).execute();
@@ -311,37 +381,41 @@ public final class AsyncAggregationClient {
     CompletableFuture<Double> future = new CompletableFuture<>();
     AggregateRequest req;
     try {
-      req = validateArgAndGetPB(scan, ci, false);
+      req = validateArgAndGetPB(scan, ci, false, true);
     } catch (IOException e) {
       future.completeExceptionally(e);
       return future;
     }
-    AbstractAggregationCallback<Double> callback = new AbstractAggregationCallback<Double>(future) {
+    AbstractAggregationCallback<Double> callback =
+      new AbstractAggregationCallback<>(future, req, AggregateService::getStd) {
 
-      private S sum;
+        private S sum;
+        private S sumSq;
+        private long count;
+        private final Object lock = new Object();
 
-      private S sumSq;
-
-      private long count;
-
-      @Override
-      protected void aggregate(RegionInfo region, AggregateResponse resp) throws IOException {
-        if (resp.getFirstPartCount() > 0) {
-          sum = ci.add(sum, getPromotedValueFromProto(ci, resp, 0));
-          sumSq = ci.add(sumSq, getPromotedValueFromProto(ci, resp, 1));
-          count += resp.getSecondPart().asReadOnlyByteBuffer().getLong();
+        @Override
+        protected void aggregate(RegionInfo region, AggregateResponse resp) throws IOException {
+          if (resp.getFirstPartCount() > 0) {
+            synchronized (lock) {
+              sum = ci.add(sum, getPromotedValueFromProto(ci, resp, 0));
+              sumSq = ci.add(sumSq, getPromotedValueFromProto(ci, resp, 1));
+              count += resp.getSecondPart().asReadOnlyByteBuffer().getLong();
+            }
+          }
         }
-      }
 
-      @Override
-      protected Double getFinalResult() {
-        double avg = ci.divideForAvg(sum, count);
-        double avgSq = ci.divideForAvg(sumSq, count);
-        return Math.sqrt(avgSq - avg * avg);
-      }
-    };
+        @Override
+        protected Double getFinalResult() {
+          synchronized (lock) {
+            double avg = ci.divideForAvg(sum, count);
+            double avgSq = ci.divideForAvg(sumSq, count);
+            return Math.sqrt(avgSq - avg * avg);
+          }
+        }
+      };
     table
-      .<AggregateService, AggregateResponse> coprocessorService(AggregateService::newStub,
+      .coprocessorService(AggregateService::newStub,
         (stub, controller, rpcCallback) -> stub.getStd(controller, req, rpcCallback), callback)
       .fromRow(nullToEmpty(scan.getStartRow()), scan.includeStartRow())
       .toRow(nullToEmpty(scan.getStopRow()), scan.includeStopRow()).execute();
@@ -352,20 +426,20 @@ public final class AsyncAggregationClient {
   private static <R, S, P extends Message, Q extends Message, T extends Message>
     CompletableFuture<NavigableMap<byte[], S>>
     sumByRegion(AsyncTable<?> table, ColumnInterpreter<R, S, P, Q, T> ci, Scan scan) {
-    CompletableFuture<NavigableMap<byte[], S>> future =
-      new CompletableFuture<NavigableMap<byte[], S>>();
+    CompletableFuture<NavigableMap<byte[], S>> future = new CompletableFuture<>();
     AggregateRequest req;
     try {
-      req = validateArgAndGetPB(scan, ci, false);
+      req = validateArgAndGetPB(scan, ci, false, true);
     } catch (IOException e) {
       future.completeExceptionally(e);
       return future;
     }
     int firstPartIndex = scan.getFamilyMap().get(scan.getFamilies()[0]).size() - 1;
     AbstractAggregationCallback<NavigableMap<byte[], S>> callback =
-      new AbstractAggregationCallback<NavigableMap<byte[], S>>(future) {
+      new AbstractAggregationCallback<>(future, req, AggregateService::getMedian) {
 
-        private final NavigableMap<byte[], S> map = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+        private final NavigableMap<byte[], S> map =
+          Collections.synchronizedNavigableMap(new TreeMap<>(Bytes.BYTES_COMPARATOR));
 
         @Override
         protected void aggregate(RegionInfo region, AggregateResponse resp) throws IOException {
@@ -380,7 +454,7 @@ public final class AsyncAggregationClient {
         }
       };
     table
-      .<AggregateService, AggregateResponse> coprocessorService(AggregateService::newStub,
+      .coprocessorService(AggregateService::newStub,
         (stub, controller, rpcCallback) -> stub.getMedian(controller, req, rpcCallback), callback)
       .fromRow(nullToEmpty(scan.getStartRow()), scan.includeStartRow())
       .toRow(nullToEmpty(scan.getStopRow()), scan.includeStopRow()).execute();

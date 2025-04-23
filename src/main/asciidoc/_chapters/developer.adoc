@@ -46,13 +46,16 @@ As Apache HBase is an Apache Software Foundation project, see <<asf,asf>>       
 === Mailing Lists
 
 Sign up for the dev-list and the user-list.
-See the link:https://hbase.apache.org/mail-lists.html[mailing lists] page.
+See the link:https://hbase.apache.org/mailing-lists.html[mailing lists] page.
 Posing questions - and helping to answer other people's questions - is encouraged! There are varying levels of experience on both lists so patience and politeness are encouraged (and please stay on topic.)
 
 [[slack]]
 === Slack
-The Apache HBase project has its own link: http://apache-hbase.slack.com[Slack Channel] for real-time questions
-and discussion. Mail dev@hbase.apache.org to request an invite.
+
+The Apache HBase project uses the #hbase channel on the official
+https://the-asf.slack.com/[ASF Slack Workspace] for real-time questions and discussion.
+All committers of any Apache projects can join the channel directly, for others, please mail
+dev@hbase.apache.org to request an invite.
 
 [[irc]]
 === Internet Relay Chat (IRC)

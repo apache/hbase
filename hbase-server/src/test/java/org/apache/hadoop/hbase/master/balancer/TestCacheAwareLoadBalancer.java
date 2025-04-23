@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master.balancer;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -47,6 +48,8 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.Pair;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -232,6 +235,157 @@ public class TestCacheAwareLoadBalancer extends BalancerTestBase {
     assertEquals(5, regionsMovedFromServer0.size());
     assertEquals(5, targetServers.get(server1).size());
     assertTrue(targetServers.get(server1).containsAll(oldCachedRegions));
+  }
+
+  @Test
+  public void testThrottlingRegionBeyondThreshold() throws Exception {
+    Configuration conf = HBaseConfiguration.create();
+    CacheAwareLoadBalancer balancer = new CacheAwareLoadBalancer();
+    balancer.setClusterInfoProvider(new DummyClusterInfoProvider(conf));
+    balancer.loadConf(conf);
+    balancer.initialize();
+    ServerName server0 = servers.get(0);
+    ServerName server1 = servers.get(1);
+    Pair<ServerName, Float> regionRatio = new Pair<>();
+    regionRatio.setFirst(server0);
+    regionRatio.setSecond(1.0f);
+    balancer.regionCacheRatioOnOldServerMap.put("region1", regionRatio);
+    RegionInfo mockedInfo = mock(RegionInfo.class);
+    when(mockedInfo.getEncodedName()).thenReturn("region1");
+    RegionPlan plan = new RegionPlan(mockedInfo, server1, server0);
+    long startTime = EnvironmentEdgeManager.currentTime();
+    balancer.throttle(plan);
+    long endTime = EnvironmentEdgeManager.currentTime();
+    assertTrue((endTime - startTime) < 10);
+  }
+
+  @Test
+  public void testThrottlingRegionBelowThreshold() throws Exception {
+    Configuration conf = HBaseConfiguration.create();
+    conf.setLong(CacheAwareLoadBalancer.MOVE_THROTTLING, 100);
+    CacheAwareLoadBalancer balancer = new CacheAwareLoadBalancer();
+    balancer.setClusterInfoProvider(new DummyClusterInfoProvider(conf));
+    balancer.loadConf(conf);
+    balancer.initialize();
+    ServerName server0 = servers.get(0);
+    ServerName server1 = servers.get(1);
+    Pair<ServerName, Float> regionRatio = new Pair<>();
+    regionRatio.setFirst(server0);
+    regionRatio.setSecond(0.1f);
+    balancer.regionCacheRatioOnOldServerMap.put("region1", regionRatio);
+    RegionInfo mockedInfo = mock(RegionInfo.class);
+    when(mockedInfo.getEncodedName()).thenReturn("region1");
+    RegionPlan plan = new RegionPlan(mockedInfo, server1, server0);
+    long startTime = EnvironmentEdgeManager.currentTime();
+    balancer.throttle(plan);
+    long endTime = EnvironmentEdgeManager.currentTime();
+    assertTrue((endTime - startTime) >= 100);
+  }
+
+  @Test
+  public void testThrottlingCacheRatioUnknownOnTarget() throws Exception {
+    Configuration conf = HBaseConfiguration.create();
+    conf.setLong(CacheAwareLoadBalancer.MOVE_THROTTLING, 100);
+    CacheAwareLoadBalancer balancer = new CacheAwareLoadBalancer();
+    balancer.setClusterInfoProvider(new DummyClusterInfoProvider(conf));
+    balancer.loadConf(conf);
+    balancer.initialize();
+    ServerName server0 = servers.get(0);
+    ServerName server1 = servers.get(1);
+    ServerName server3 = servers.get(2);
+    // setting region cache ratio 100% on server 3, though this is not the target in the region plan
+    Pair<ServerName, Float> regionRatio = new Pair<>();
+    regionRatio.setFirst(server3);
+    regionRatio.setSecond(1.0f);
+    balancer.regionCacheRatioOnOldServerMap.put("region1", regionRatio);
+    RegionInfo mockedInfo = mock(RegionInfo.class);
+    when(mockedInfo.getEncodedName()).thenReturn("region1");
+    RegionPlan plan = new RegionPlan(mockedInfo, server1, server0);
+    long startTime = EnvironmentEdgeManager.currentTime();
+    balancer.throttle(plan);
+    long endTime = EnvironmentEdgeManager.currentTime();
+    assertTrue((endTime - startTime) >= 100);
+  }
+
+  @Test
+  public void testThrottlingCacheRatioUnknownForRegion() throws Exception {
+    Configuration conf = HBaseConfiguration.create();
+    conf.setLong(CacheAwareLoadBalancer.MOVE_THROTTLING, 100);
+    CacheAwareLoadBalancer balancer = new CacheAwareLoadBalancer();
+    balancer.setClusterInfoProvider(new DummyClusterInfoProvider(conf));
+    balancer.loadConf(conf);
+    balancer.initialize();
+    ServerName server0 = servers.get(0);
+    ServerName server1 = servers.get(1);
+    ServerName server3 = servers.get(2);
+    // No cache ratio available for region1
+    RegionInfo mockedInfo = mock(RegionInfo.class);
+    when(mockedInfo.getEncodedName()).thenReturn("region1");
+    RegionPlan plan = new RegionPlan(mockedInfo, server1, server0);
+    long startTime = EnvironmentEdgeManager.currentTime();
+    balancer.throttle(plan);
+    long endTime = EnvironmentEdgeManager.currentTime();
+    assertTrue((endTime - startTime) >= 100);
+  }
+
+  @Test
+  public void testRegionPlansSortedByCacheRatioOnTarget() throws Exception {
+    // The regions are fully cached on old server
+
+    Map<ServerName, List<RegionInfo>> clusterState = new HashMap<>();
+    ServerName server0 = servers.get(0);
+    ServerName server1 = servers.get(1);
+    ServerName server2 = servers.get(2);
+
+    // Simulate on RS with all regions, and two RSes with no regions
+    List<RegionInfo> regionsOnServer0 = randomRegions(15);
+    List<RegionInfo> regionsOnServer1 = randomRegions(0);
+    List<RegionInfo> regionsOnServer2 = randomRegions(0);
+
+    clusterState.put(server0, regionsOnServer0);
+    clusterState.put(server1, regionsOnServer1);
+    clusterState.put(server2, regionsOnServer2);
+
+    // Mock cluster metrics
+    // Mock 5 regions from server0 were previously hosted on server1
+    List<RegionInfo> oldCachedRegions1 = regionsOnServer0.subList(5, 10);
+    List<RegionInfo> oldCachedRegions2 = regionsOnServer0.subList(10, regionsOnServer0.size());
+    Map<ServerName, ServerMetrics> serverMetricsMap = new TreeMap<>();
+    // mock server metrics to set cache ratio as 0 in the RS 0
+    serverMetricsMap.put(server0, mockServerMetricsWithRegionCacheInfo(server0, regionsOnServer0,
+      0.0f, new ArrayList<>(), 0, 10));
+    // mock server metrics to set cache ratio as 1 in the RS 1
+    serverMetricsMap.put(server1, mockServerMetricsWithRegionCacheInfo(server1, regionsOnServer1,
+      0.0f, oldCachedRegions1, 10, 10));
+    // mock server metrics to set cache ratio as .8 in the RS 2
+    serverMetricsMap.put(server2, mockServerMetricsWithRegionCacheInfo(server2, regionsOnServer2,
+      0.0f, oldCachedRegions2, 8, 10));
+    ClusterMetrics clusterMetrics = mock(ClusterMetrics.class);
+    when(clusterMetrics.getLiveServerMetrics()).thenReturn(serverMetricsMap);
+    loadBalancer.updateClusterMetrics(clusterMetrics);
+
+    Map<TableName, Map<ServerName, List<RegionInfo>>> LoadOfAllTable =
+      (Map) mockClusterServersWithTables(clusterState);
+    List<RegionPlan> plans = loadBalancer.balanceCluster(LoadOfAllTable);
+    LOG.debug("plans size: {}", plans.size());
+    LOG.debug("plans: {}", plans);
+    LOG.debug("server1 name: {}", server1.getServerName());
+    // assert the plans are in descending order from the most cached to the least cached
+    int highCacheCount = 0;
+    for (RegionPlan plan : plans) {
+      LOG.debug("plan region: {}, target server: {}", plan.getRegionInfo().getEncodedName(),
+        plan.getDestination().getServerName());
+      if (highCacheCount < 5) {
+        LOG.debug("Count: {}", highCacheCount);
+        assertTrue(oldCachedRegions1.contains(plan.getRegionInfo()));
+        assertFalse(oldCachedRegions2.contains(plan.getRegionInfo()));
+        highCacheCount++;
+      } else {
+        assertTrue(oldCachedRegions2.contains(plan.getRegionInfo()));
+        assertFalse(oldCachedRegions1.contains(plan.getRegionInfo()));
+      }
+    }
+
   }
 
   @Test

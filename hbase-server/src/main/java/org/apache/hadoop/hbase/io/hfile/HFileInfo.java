@@ -37,6 +37,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
@@ -92,7 +93,7 @@ public class HFileInfo implements SortedMap<byte[], byte[]> {
   static final int MAX_MINOR_VERSION = 3;
 
   /** Last key in the file. Filled in when we read in the file info */
-  private Cell lastKeyCell = null;
+  private ExtendedCell lastKeyCell = null;
   /** Average key length read from file info */
   private int avgKeyLen = -1;
   /** Average value length read from file info */
@@ -512,7 +513,7 @@ public class HFileInfo implements SortedMap<byte[], byte[]> {
     return loadOnOpenBlocks;
   }
 
-  public Cell getLastKeyCell() {
+  public ExtendedCell getLastKeyCell() {
     return lastKeyCell;
   }
 

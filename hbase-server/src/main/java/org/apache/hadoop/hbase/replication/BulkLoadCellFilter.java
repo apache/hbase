@@ -21,9 +21,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.ExtendedCellBuilder;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -49,7 +49,7 @@ public class BulkLoadCellFilter {
    * @param famPredicate Returns true of given family should be removed.
    * @return The filtered cell.
    */
-  public Cell filterCell(Cell cell, Predicate<byte[]> famPredicate) {
+  public ExtendedCell filterCell(ExtendedCell cell, Predicate<byte[]> famPredicate) {
     byte[] fam;
     BulkLoadDescriptor bld = null;
     try {

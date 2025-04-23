@@ -65,6 +65,11 @@ public final class BackupRequest {
       return this;
     }
 
+    public Builder withNoChecksumVerify(boolean noChecksumVerify) {
+      request.setNoChecksumVerify(noChecksumVerify);
+      return this;
+    }
+
     public Builder withYarnPoolName(String name) {
       request.setYarnPoolName(name);
       return this;
@@ -81,6 +86,7 @@ public final class BackupRequest {
   private String targetRootDir;
   private int totalTasks = -1;
   private long bandwidth = -1L;
+  private boolean noChecksumVerify = false;
   private String backupSetName;
   private String yarnPoolName;
 
@@ -130,6 +136,15 @@ public final class BackupRequest {
 
   public long getBandwidth() {
     return this.bandwidth;
+  }
+
+  private BackupRequest setNoChecksumVerify(boolean noChecksumVerify) {
+    this.noChecksumVerify = noChecksumVerify;
+    return this;
+  }
+
+  public boolean getNoChecksumVerify() {
+    return noChecksumVerify;
   }
 
   public String getBackupSetName() {

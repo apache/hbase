@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
+import java.net.UnknownHostException;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -28,6 +29,7 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.AsyncRegionServerAdmin;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.exceptions.ConnectionClosedException;
 import org.apache.hadoop.hbase.ipc.RpcConnectionConstants;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.master.MasterServices;
@@ -35,7 +37,6 @@ import org.apache.hadoop.hbase.master.ServerListener;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher;
-import org.apache.hadoop.hbase.regionserver.RegionServerAbortedException;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FutureUtils;
@@ -249,6 +250,22 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
       "hbase.regionserver.rpc.retry.interval";
     private static final int DEFAULT_RS_RPC_RETRY_INTERVAL = 100;
 
+    /**
+     * Config to determine the retry limit while executing remote regionserver procedure. This retry
+     * limit applies to only specific errors. These errors could potentially get the remote
+     * procedure stuck for several minutes unless the retry limit is applied.
+     */
+    private static final String RS_REMOTE_PROC_FAIL_FAST_LIMIT =
+      "hbase.master.rs.remote.proc.fail.fast.limit";
+    /**
+     * The default retry limit. Waiting for more than {@value} attempts is not going to help much
+     * for genuine connectivity errors. Therefore, consider fail-fast after {@value} retries. Value
+     * = {@value}
+     */
+    private static final int DEFAULT_RS_REMOTE_PROC_RETRY_LIMIT = 5;
+
+    private final int failFastRetryLimit;
+
     private ExecuteProceduresRequest.Builder request = null;
 
     public ExecuteProceduresRemoteCall(final ServerName serverName,
@@ -257,6 +274,8 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
       this.remoteProcedures = remoteProcedures;
       this.rsRpcRetryInterval = master.getConfiguration().getLong(RS_RPC_RETRY_INTERVAL_CONF_KEY,
         DEFAULT_RS_RPC_RETRY_INTERVAL);
+      this.failFastRetryLimit = master.getConfiguration().getInt(RS_REMOTE_PROC_FAIL_FAST_LIMIT,
+        DEFAULT_RS_REMOTE_PROC_RETRY_LIMIT);
     }
 
     private AsyncRegionServerAdmin getRsAdmin() throws IOException {
@@ -300,13 +319,28 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
       if (numberOfAttemptsSoFar == 0 && unableToConnectToServer(e)) {
         return false;
       }
+
+      // Check if the num of attempts have crossed the retry limit, and if the error type can
+      // fail-fast.
+      if (numberOfAttemptsSoFar >= failFastRetryLimit - 1 && isErrorTypeFailFast(e)) {
+        LOG
+          .warn("Number of retries {} exceeded limit {} for the given error type. Scheduling server"
+            + " crash for {}", numberOfAttemptsSoFar + 1, failFastRetryLimit, serverName, e);
+        // Expiring the server will schedule SCP and also reject the regionserver report from the
+        // regionserver if regionserver is somehow able to send the regionserver report to master.
+        // The master rejects the report by throwing YouAreDeadException, which would eventually
+        // result in the regionserver abort.
+        // This will also remove "serverName" from the ServerManager's onlineServers map.
+        master.getServerManager().expireServer(serverName);
+        return false;
+      }
       // Always retry for other exception types if the region server is not dead yet.
       if (!master.getServerManager().isServerOnline(serverName)) {
         LOG.warn("Request to {} failed due to {}, try={} and the server is not online, give up",
           serverName, e.toString(), numberOfAttemptsSoFar);
         return false;
       }
-      if (e instanceof RegionServerAbortedException || e instanceof RegionServerStoppedException) {
+      if (e instanceof RegionServerStoppedException) {
         // A better way is to return true here to let the upper layer quit, and then schedule a
         // background task to check whether the region server is dead. And if it is dead, call
         // remoteCallFailed to tell the upper layer. Keep retrying here does not lead to incorrect
@@ -324,7 +358,8 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
       // retry^2 on each try
       // up to max of 10 seconds (don't want to back off too much in case of situation change).
       submitTask(this,
-        Math.min(rsRpcRetryInterval * (this.numberOfAttemptsSoFar * this.numberOfAttemptsSoFar),
+        Math.min(
+          rsRpcRetryInterval * ((long) this.numberOfAttemptsSoFar * this.numberOfAttemptsSoFar),
           10 * 1000),
         TimeUnit.MILLISECONDS);
       return true;
@@ -369,6 +404,42 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
           return false;
         }
       }
+    }
+
+    /**
+     * Returns true if the error or its cause indicates a network connection issue.
+     * @param e IOException thrown by the underlying rpc framework.
+     * @return True if the error or its cause indicates a network connection issue.
+     */
+    private boolean isNetworkError(IOException e) {
+      if (e instanceof ConnectionClosedException || e instanceof UnknownHostException) {
+        return true;
+      }
+      Throwable cause = e;
+      while (true) {
+        if (cause instanceof IOException) {
+          IOException unwrappedCause = unwrapException((IOException) cause);
+          if (
+            unwrappedCause instanceof ConnectionClosedException
+              || unwrappedCause instanceof UnknownHostException
+          ) {
+            return true;
+          }
+        }
+        cause = cause.getCause();
+        if (cause == null) {
+          return false;
+        }
+      }
+    }
+
+    /**
+     * Returns true if the error type can allow fail-fast.
+     * @param e IOException thrown by the underlying rpc framework.
+     * @return True if the error type can allow fail-fast.
+     */
+    private boolean isErrorTypeFailFast(IOException e) {
+      return e instanceof CallQueueTooBigException || isSaslError(e) || isNetworkError(e);
     }
 
     private long getMaxWaitTime() {
@@ -422,7 +493,7 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
 
     @Override
     public void dispatchServerOperations(MasterProcedureEnv env, List<ServerOperation> operations) {
-      operations.stream().map(o -> o.buildRequest()).forEachOrdered(request::addProc);
+      operations.stream().map(ServerOperation::buildRequest).forEachOrdered(request::addProc);
     }
 
     // will be overridden in test.
@@ -441,7 +512,9 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
   private static OpenRegionRequest buildOpenRegionRequest(final MasterProcedureEnv env,
     final ServerName serverName, final List<RegionOpenOperation> operations) {
     final OpenRegionRequest.Builder builder = OpenRegionRequest.newBuilder();
-    builder.setServerStartCode(serverName.getStartcode());
+    builder.setServerStartCode(serverName.getStartCode());
+    operations.stream().map(RemoteOperation::getInitiatingMasterActiveTime).findAny()
+      .ifPresent(builder::setInitiatingMasterActiveTime);
     builder.setMasterSystemTime(EnvironmentEdgeManager.currentTime());
     for (RegionOpenOperation op : operations) {
       builder.addOpenInfo(op.buildRegionOpenInfoRequest(env));
@@ -464,8 +537,8 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
     private final byte[] rsProcData;
 
     public ServerOperation(RemoteProcedure remoteProcedure, long procId, Class<?> rsProcClass,
-      byte[] rsProcData) {
-      super(remoteProcedure);
+      byte[] rsProcData, long initiatingMasterActiveTime) {
+      super(remoteProcedure, initiatingMasterActiveTime);
       this.procId = procId;
       this.rsProcClass = rsProcClass;
       this.rsProcData = rsProcData;
@@ -473,7 +546,8 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
 
     public RemoteProcedureRequest buildRequest() {
       return RemoteProcedureRequest.newBuilder().setProcId(procId)
-        .setProcClass(rsProcClass.getName()).setProcData(ByteString.copyFrom(rsProcData)).build();
+        .setProcClass(rsProcClass.getName()).setProcData(ByteString.copyFrom(rsProcData))
+        .setInitiatingMasterActiveTime(getInitiatingMasterActiveTime()).build();
     }
   }
 
@@ -481,8 +555,9 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
     protected final RegionInfo regionInfo;
     protected final long procId;
 
-    protected RegionOperation(RemoteProcedure remoteProcedure, RegionInfo regionInfo, long procId) {
-      super(remoteProcedure);
+    protected RegionOperation(RemoteProcedure remoteProcedure, RegionInfo regionInfo, long procId,
+      long initiatingMasterActiveTime) {
+      super(remoteProcedure, initiatingMasterActiveTime);
       this.regionInfo = regionInfo;
       this.procId = procId;
     }
@@ -490,9 +565,9 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
 
   public static class RegionOpenOperation extends RegionOperation {
 
-    public RegionOpenOperation(RemoteProcedure remoteProcedure, RegionInfo regionInfo,
-      long procId) {
-      super(remoteProcedure, regionInfo, procId);
+    public RegionOpenOperation(RemoteProcedure remoteProcedure, RegionInfo regionInfo, long procId,
+      long initiatingMasterActiveTime) {
+      super(remoteProcedure, regionInfo, procId, initiatingMasterActiveTime);
     }
 
     public OpenRegionRequest.RegionOpenInfo
@@ -507,8 +582,8 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
     private boolean evictCache;
 
     public RegionCloseOperation(RemoteProcedure remoteProcedure, RegionInfo regionInfo, long procId,
-      ServerName destinationServer, boolean evictCache) {
-      super(remoteProcedure, regionInfo, procId);
+      ServerName destinationServer, boolean evictCache, long initiatingMasterActiveTime) {
+      super(remoteProcedure, regionInfo, procId, initiatingMasterActiveTime);
       this.destinationServer = destinationServer;
       this.evictCache = evictCache;
     }
@@ -519,8 +594,7 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
 
     public CloseRegionRequest buildCloseRegionRequest(final ServerName serverName) {
       return ProtobufUtil.buildCloseRegionRequest(serverName, regionInfo.getRegionName(),
-        getDestinationServer(), procId, evictCache);
-
+        getDestinationServer(), procId, evictCache, getInitiatingMasterActiveTime());
     }
   }
 }

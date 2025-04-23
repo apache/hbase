@@ -35,7 +35,11 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.regionserver.BloomType;
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
+import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -90,7 +94,10 @@ public final class MobFileCleanupUtil {
     Set<String> allActiveMobFileName = new HashSet<String>();
     for (Path regionPath : regionDirs) {
       regionNames.add(regionPath.getName());
+      HRegionFileSystem regionFS =
+        HRegionFileSystem.create(conf, fs, tableDir, MobUtils.getMobRegionInfo(table));
       for (ColumnFamilyDescriptor hcd : list) {
+        StoreFileTracker sft = StoreFileTrackerFactory.create(conf, htd, hcd, regionFS, false);
         String family = hcd.getNameAsString();
         Path storePath = new Path(regionPath, family);
         boolean succeed = false;
@@ -102,26 +109,19 @@ public final class MobFileCleanupUtil {
               + " execution, aborting MOB file cleaner chore.", storePath);
             throw new IOException(errMsg);
           }
-          RemoteIterator<LocatedFileStatus> rit = fs.listLocatedStatus(storePath);
-          List<Path> storeFiles = new ArrayList<Path>();
-          // Load list of store files first
-          while (rit.hasNext()) {
-            Path p = rit.next().getPath();
-            if (fs.isFile(p)) {
-              storeFiles.add(p);
-            }
-          }
-          LOG.info("Found {} store files in: {}", storeFiles.size(), storePath);
+          List<StoreFileInfo> storeFileInfos = sft.load();
+          LOG.info("Found {} store files in: {}", storeFileInfos.size(), storePath);
           Path currentPath = null;
           try {
-            for (Path pp : storeFiles) {
+            for (StoreFileInfo storeFileInfo : storeFileInfos) {
+              Path pp = storeFileInfo.getPath();
               currentPath = pp;
               LOG.trace("Store file: {}", pp);
               HStoreFile sf = null;
               byte[] mobRefData = null;
               byte[] bulkloadMarkerData = null;
               try {
-                sf = new HStoreFile(fs, pp, conf, CacheConfig.DISABLED, BloomType.NONE, true);
+                sf = new HStoreFile(storeFileInfo, BloomType.NONE, CacheConfig.DISABLED);
                 sf.initReader();
                 mobRefData = sf.getMetadataValue(HStoreFile.MOB_FILE_REFS);
                 bulkloadMarkerData = sf.getMetadataValue(HStoreFile.BULKLOAD_TASK_KEY);

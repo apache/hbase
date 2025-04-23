@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALEditInternalHelper;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.junit.Assert;
 import org.junit.Before;
@@ -361,7 +362,7 @@ public class TestReplicationEmptyWALRecovery extends TestReplicationBase {
       byte[] b = Bytes.toBytes(Integer.toString(i));
       KeyValue kv = new KeyValue(b, famName, b);
       WALEdit edit = new WALEdit();
-      edit.add(kv);
+      WALEditInternalHelper.addExtendedCell(edit, kv);
       txId = wal.appendData(info, getWalKeyImpl(), edit);
     }
     wal.sync(txId);

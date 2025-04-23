@@ -42,7 +42,8 @@ public interface QuotaLimiter {
    * @throws RpcThrottlingException thrown if not enough available resources to perform operation.
    */
   void checkQuota(long writeReqs, long estimateWriteSize, long readReqs, long estimateReadSize,
-    long estimateWriteCapacityUnit, long estimateReadCapacityUnit) throws RpcThrottlingException;
+    long estimateWriteCapacityUnit, long estimateReadCapacityUnit, boolean isAtomic)
+    throws RpcThrottlingException;
 
   /**
    * Removes the specified write and read amount from the quota. At this point the write and read
@@ -56,19 +57,19 @@ public interface QuotaLimiter {
    * @param readCapacityUnit  the read capacity unit num that will be removed from the current quota
    */
   void grabQuota(long writeReqs, long writeSize, long readReqs, long readSize,
-    long writeCapacityUnit, long readCapacityUnit);
+    long writeCapacityUnit, long readCapacityUnit, boolean isAtomic);
 
   /**
    * Removes or add back some write amount to the quota. (called at the end of an operation in case
    * the estimate quota was off)
    */
-  void consumeWrite(long size, long capacityUnit);
+  void consumeWrite(long size, long capacityUnit, boolean isAtomic);
 
   /**
    * Removes or add back some read amount to the quota. (called at the end of an operation in case
    * the estimate quota was off)
    */
-  void consumeRead(long size, long capacityUnit);
+  void consumeRead(long size, long capacityUnit, boolean isAtomic);
 
   /** Returns true if the limiter is a noop */
   boolean isBypass();
@@ -79,6 +80,19 @@ public interface QuotaLimiter {
   /** Returns the maximum number of bytes ever available to read */
   long getReadLimit();
 
+  /** Returns the maximum number of bytes ever available to write */
+  long getWriteLimit();
+
   /** Returns the number of bytes available to write to avoid exceeding the quota */
   long getWriteAvailable();
+
+  /** Returns the maximum number of requests to allow per TimeUnit */
+  long getRequestNumLimit();
+
+  /** Returns the maximum number of reads to allow per TimeUnit */
+  long getReadNumLimit();
+
+  /** Returns the maximum number of writes to allow per TimeUnit */
+  long getWriteNumLimit();
+
 }

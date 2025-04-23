@@ -17,13 +17,20 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThrows;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.regex.Pattern;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
@@ -33,6 +40,8 @@ import org.apache.hadoop.hbase.security.access.AccessController;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.PermissionStorage;
 import org.apache.hadoop.hbase.security.access.SecureTestUtil;
+import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
+import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -110,6 +119,8 @@ public abstract class SnapshotWithAclTestBase extends SecureTestUtil {
     verifyConfiguration(conf);
     // Enable EXEC permission checking
     conf.setBoolean(AccessControlConstants.EXEC_PERMISSION_CHECKS_KEY, true);
+    TEST_UTIL.getConfiguration().set(HConstants.SNAPSHOT_RESTORE_FAILSAFE_NAME,
+      "hbase-failsafe-{snapshot.name}-{restore.timestamp}");
     TEST_UTIL.startMiniCluster();
     TEST_UTIL.waitUntilAllRegionsAssigned(PermissionStorage.ACL_TABLE_NAME);
     MasterCoprocessorHost cpHost =
@@ -168,7 +179,7 @@ public abstract class SnapshotWithAclTestBase extends SecureTestUtil {
         byte[] value = result.getValue(TEST_FAMILY, TEST_QUALIFIER);
         Assert.assertArrayEquals(value, Bytes.toBytes(rowCount++));
       }
-      Assert.assertEquals(ROW_COUNT, rowCount);
+      assertEquals(ROW_COUNT, rowCount);
     }
   }
 
@@ -177,7 +188,8 @@ public abstract class SnapshotWithAclTestBase extends SecureTestUtil {
   protected abstract void cloneSnapshot(String snapshotName, TableName tableName,
     boolean restoreAcl) throws Exception;
 
-  protected abstract void restoreSnapshot(String snapshotName, boolean restoreAcl) throws Exception;
+  protected abstract void restoreSnapshot(String snapshotName, boolean takeFailSafeSnapshot,
+    boolean restoreAcl) throws Exception;
 
   @Test
   public void testRestoreSnapshot() throws Exception {
@@ -220,7 +232,7 @@ public abstract class SnapshotWithAclTestBase extends SecureTestUtil {
 
     // restore snapshot with restoreAcl false.
     TEST_UTIL.getAdmin().disableTable(TEST_TABLE);
-    restoreSnapshot(snapshotName1, false);
+    restoreSnapshot(snapshotName1, false, false);
     TEST_UTIL.getAdmin().enableTable(TEST_TABLE);
     verifyAllowed(new AccessReadAction(TEST_TABLE), USER_OWNER, USER_RW);
     verifyDenied(new AccessReadAction(TEST_TABLE), USER_RO, USER_NONE);
@@ -229,12 +241,36 @@ public abstract class SnapshotWithAclTestBase extends SecureTestUtil {
 
     // restore snapshot with restoreAcl true.
     TEST_UTIL.getAdmin().disableTable(TEST_TABLE);
-    restoreSnapshot(snapshotName1, true);
+    restoreSnapshot(snapshotName1, false, true);
     TEST_UTIL.getAdmin().enableTable(TEST_TABLE);
     verifyAllowed(new AccessReadAction(TEST_TABLE), USER_OWNER, USER_RO, USER_RW);
     verifyDenied(new AccessReadAction(TEST_TABLE), USER_NONE);
     verifyAllowed(new AccessWriteAction(TEST_TABLE), USER_OWNER, USER_RW);
     verifyDenied(new AccessWriteAction(TEST_TABLE), USER_RO, USER_NONE);
+
+    // Delete data.manifest of the snapshot to simulate an invalid snapshot.
+    Configuration configuration = TEST_UTIL.getConfiguration();
+    Path rootDir = new Path(configuration.get(HConstants.HBASE_DIR));
+    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName1, rootDir);
+    FileSystem fileSystem = FileSystem.get(rootDir.toUri(), configuration);
+    Path maniFestPath = new Path(snapshotDir, SnapshotManifest.DATA_MANIFEST_NAME);
+    fileSystem.delete(maniFestPath, false);
+    assertFalse(fileSystem.exists(maniFestPath));
+    assertEquals(1, TEST_UTIL.getAdmin().listSnapshots(Pattern.compile(snapshotName1)).size());
+    // There is no failsafe snapshot before restoring.
+    int failsafeSnapshotCount = TEST_UTIL.getAdmin()
+      .listSnapshots(Pattern.compile("hbase-failsafe-" + snapshotName1 + ".*")).size();
+    assertEquals(0, failsafeSnapshotCount);
+    TEST_UTIL.getAdmin().disableTable(TEST_TABLE);
+    // We would get Exception when restoring data by this an invalid snapshot.
+    assertThrows(Exception.class, () -> restoreSnapshot(snapshotName1, true, true));
+    TEST_UTIL.getAdmin().enableTable(TEST_TABLE);
+    verifyRows(TEST_TABLE);
+    // Fail to store snapshot but rollback successfully, so there is no failsafe snapshot after
+    // restoring.
+    failsafeSnapshotCount = TEST_UTIL.getAdmin()
+      .listSnapshots(Pattern.compile("hbase-failsafe-" + snapshotName1 + ".*")).size();
+    assertEquals(0, failsafeSnapshotCount);
   }
 
   final class AccessSnapshotAction implements AccessTestAction {
@@ -262,8 +298,8 @@ public abstract class SnapshotWithAclTestBase extends SecureTestUtil {
       USER_RO, USER_RW, USER_NONE);
     List<SnapshotDescription> snapshotDescriptions =
       TEST_UTIL.getAdmin().listSnapshots(Pattern.compile(testSnapshotName));
-    Assert.assertEquals(1, snapshotDescriptions.size());
-    Assert.assertEquals(USER_OWNER.getShortName(), snapshotDescriptions.get(0).getOwner());
+    assertEquals(1, snapshotDescriptions.size());
+    assertEquals(USER_OWNER.getShortName(), snapshotDescriptions.get(0).getOwner());
     AccessTestAction deleteSnapshotAction = () -> {
       try (Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
         Admin admin = conn.getAdmin()) {
@@ -276,6 +312,6 @@ public abstract class SnapshotWithAclTestBase extends SecureTestUtil {
 
     List<SnapshotDescription> snapshotsAfterDelete =
       TEST_UTIL.getAdmin().listSnapshots(Pattern.compile(testSnapshotName));
-    Assert.assertEquals(0, snapshotsAfterDelete.size());
+    assertEquals(0, snapshotsAfterDelete.size());
   }
 }

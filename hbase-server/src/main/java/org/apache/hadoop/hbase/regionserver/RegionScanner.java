@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.List;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -78,7 +78,7 @@ public interface RegionScanner extends InternalScanner {
    * @return true if more rows exist after this one, false if scanner is done
    * @throws IOException e
    */
-  boolean nextRaw(List<Cell> result) throws IOException;
+  boolean nextRaw(List<? super ExtendedCell> result) throws IOException;
 
   /**
    * Grab the next row's worth of values. The {@link ScannerContext} is used to enforce and track
@@ -109,5 +109,6 @@ public interface RegionScanner extends InternalScanner {
    * @return true if more rows exist after this one, false if scanner is done
    * @throws IOException e
    */
-  boolean nextRaw(List<Cell> result, ScannerContext scannerContext) throws IOException;
+  boolean nextRaw(List<? super ExtendedCell> result, ScannerContext scannerContext)
+    throws IOException;
 }

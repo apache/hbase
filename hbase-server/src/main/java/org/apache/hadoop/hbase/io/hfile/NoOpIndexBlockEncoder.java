@@ -27,6 +27,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.IndexBlockEncoding;
@@ -138,12 +139,12 @@ public class NoOpIndexBlockEncoder implements HFileIndexBlockEncoder {
     protected int midLeafBlockOnDiskSize = -1;
     protected int midKeyEntry = -1;
 
-    private Cell[] blockKeys;
+    private ExtendedCell[] blockKeys;
     private CellComparator comparator;
     protected int searchTreeLevel;
 
     /** Pre-computed mid-key */
-    private AtomicReference<Cell> midKey = new AtomicReference<>();
+    private AtomicReference<ExtendedCell> midKey = new AtomicReference<>();
 
     @Override
     public long heapSize() {
@@ -184,7 +185,7 @@ public class NoOpIndexBlockEncoder implements HFileIndexBlockEncoder {
     }
 
     @Override
-    public Cell getRootBlockKey(int i) {
+    public ExtendedCell getRootBlockKey(int i) {
       return blockKeys[i];
     }
 
@@ -238,7 +239,7 @@ public class NoOpIndexBlockEncoder implements HFileIndexBlockEncoder {
     }
 
     private void initialize(int numEntries) {
-      blockKeys = new Cell[numEntries];
+      blockKeys = new ExtendedCell[numEntries];
     }
 
     private void add(final byte[] key, final long offset, final int dataSize) {
@@ -250,10 +251,12 @@ public class NoOpIndexBlockEncoder implements HFileIndexBlockEncoder {
     }
 
     @Override
-    public Cell midkey(HFile.CachingBlockReader cachingBlockReader) throws IOException {
-      if (rootCount == 0) throw new IOException("HFile empty");
+    public ExtendedCell midkey(HFile.CachingBlockReader cachingBlockReader) throws IOException {
+      if (rootCount == 0) {
+        throw new IOException("HFile empty");
+      }
 
-      Cell targetMidKey = this.midKey.get();
+      ExtendedCell targetMidKey = this.midKey.get();
       if (targetMidKey != null) {
         return targetMidKey;
       }
@@ -285,7 +288,7 @@ public class NoOpIndexBlockEncoder implements HFileIndexBlockEncoder {
     }
 
     @Override
-    public BlockWithScanInfo loadDataBlockWithScanInfo(Cell key, HFileBlock currentBlock,
+    public BlockWithScanInfo loadDataBlockWithScanInfo(ExtendedCell key, HFileBlock currentBlock,
       boolean cacheBlocks, boolean pread, boolean isCompaction,
       DataBlockEncoding expectedDataBlockEncoding, HFile.CachingBlockReader cachingBlockReader)
       throws IOException {
@@ -295,7 +298,7 @@ public class NoOpIndexBlockEncoder implements HFileIndexBlockEncoder {
       }
 
       // the next indexed key
-      Cell nextIndexedKey = null;
+      ExtendedCell nextIndexedKey = null;
 
       // Read the next-level (intermediate or leaf) index block.
       long currentOffset = blockOffsets[rootLevelIndex];

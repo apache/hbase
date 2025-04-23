@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.regionserver.querymatcher;
 
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.regionserver.ShipperListener;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -42,14 +42,14 @@ public interface DeleteTracker extends ShipperListener {
    * This is called when a Delete is encountered in a StoreFile.
    * @param cell - the delete cell
    */
-  void add(Cell cell);
+  void add(ExtendedCell cell);
 
   /**
    * Check if the specified cell buffer has been deleted by a previously seen delete.
    * @param cell - current cell to check if deleted by a previously seen delete
    * @return deleteResult The result tells whether the Cell is deleted and why
    */
-  DeleteResult isDeleted(Cell cell);
+  DeleteResult isDeleted(ExtendedCell cell);
 
   /** Returns true if there are no current delete, false otherwise */
   boolean isEmpty();

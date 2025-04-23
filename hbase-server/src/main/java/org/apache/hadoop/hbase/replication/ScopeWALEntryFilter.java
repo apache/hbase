@@ -20,7 +20,9 @@ package org.apache.hadoop.hbase.replication;
 import java.util.NavigableMap;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -50,13 +52,14 @@ public class ScopeWALEntryFilter implements WALEntryFilter, WALCellFilter {
 
   @Override
   public Cell filterCell(Entry entry, Cell cell) {
+    ExtendedCell extendedCell = PrivateCellUtil.ensureExtendedCell(cell);
     NavigableMap<byte[], Integer> scopes = entry.getKey().getReplicationScopes();
     if (scopes == null || scopes.isEmpty()) {
       return null;
     }
     byte[] family = CellUtil.cloneFamily(cell);
     if (CellUtil.matchingColumn(cell, WALEdit.METAFAMILY, WALEdit.BULK_LOAD)) {
-      return bulkLoadFilter.filterCell(cell, new Predicate<byte[]>() {
+      return bulkLoadFilter.filterCell(extendedCell, new Predicate<byte[]>() {
         @Override
         public boolean apply(byte[] family) {
           return !hasGlobalScope(scopes, family);

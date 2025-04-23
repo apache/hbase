@@ -163,7 +163,6 @@ public class TestMapReduceExamples {
   @Test
   public void testMainIndexBuilder() throws Exception {
     PrintStream oldPrintStream = System.err;
-    SecurityManager SECURITY_MANAGER = System.getSecurityManager();
     LauncherSecurityManager newSecurityManager = new LauncherSecurityManager();
     System.setSecurityManager(newSecurityManager);
     ByteArrayOutputStream data = new ByteArrayOutputStream();
@@ -182,7 +181,6 @@ public class TestMapReduceExamples {
       }
     } finally {
       System.setErr(oldPrintStream);
-      System.setSecurityManager(SECURITY_MANAGER);
     }
   }
 }

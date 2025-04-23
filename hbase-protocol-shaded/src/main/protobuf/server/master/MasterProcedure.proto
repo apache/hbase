@@ -787,6 +787,7 @@ enum MigrateReplicationQueueFromZkToTableState {
   MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_WAIT_UPGRADING = 5;
   MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_ENABLE_PEER = 6;
   MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_ENABLE_CLEANER = 7;
+  MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_CLEAN_UP = 8;
 }
 
 message MigrateReplicationQueueFromZkToTableStateData {
@@ -810,4 +811,13 @@ enum CloseExcessRegionReplicasProcedureState {
 message CloseExcessRegionReplicasProcedureStateData {
   required TableName table_name = 1;
   required uint32 new_replica_count = 2;
+}
+
+enum CloseTableRegionsProcedureState {
+  CLOSE_TABLE_REGIONS_SCHEDULE = 1;
+  CLOSE_TABLE_REGIONS_CONFIRM = 2;
+}
+
+message CloseTableRegionsProcedureStateData {
+  required TableName table_name = 1;
 }

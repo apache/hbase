@@ -77,24 +77,25 @@ public class MetaTableMetrics implements RegionCoprocessor {
     }
 
     @Override
-    public void preGetOp(ObserverContext<RegionCoprocessorEnvironment> e, Get get,
+    public void preGetOp(ObserverContext<? extends RegionCoprocessorEnvironment> e, Get get,
       List<Cell> results) throws IOException {
       registerAndMarkMetrics(e, get);
     }
 
     @Override
-    public void prePut(ObserverContext<RegionCoprocessorEnvironment> e, Put put, WALEdit edit,
-      Durability durability) throws IOException {
+    public void prePut(ObserverContext<? extends RegionCoprocessorEnvironment> e, Put put,
+      WALEdit edit, Durability durability) throws IOException {
       registerAndMarkMetrics(e, put);
     }
 
     @Override
-    public void preDelete(ObserverContext<RegionCoprocessorEnvironment> e, Delete delete,
+    public void preDelete(ObserverContext<? extends RegionCoprocessorEnvironment> e, Delete delete,
       WALEdit edit, Durability durability) {
       registerAndMarkMetrics(e, delete);
     }
 
-    private void registerAndMarkMetrics(ObserverContext<RegionCoprocessorEnvironment> e, Row row) {
+    private void registerAndMarkMetrics(ObserverContext<? extends RegionCoprocessorEnvironment> e,
+      Row row) {
       if (!active || !isMetaTableOp(e)) {
         return;
       }
@@ -131,7 +132,7 @@ public class MetaTableMetrics implements RegionCoprocessor {
       return splits.length > 2 ? splits[2] : null;
     }
 
-    private boolean isMetaTableOp(ObserverContext<RegionCoprocessorEnvironment> e) {
+    private boolean isMetaTableOp(ObserverContext<? extends RegionCoprocessorEnvironment> e) {
       return TableName.META_TABLE_NAME.equals(e.getEnvironment().getRegionInfo().getTable());
     }
 

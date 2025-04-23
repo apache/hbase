@@ -28,7 +28,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
@@ -152,7 +152,7 @@ public class TestHFileDataBlockEncoder {
   public void testEncodingWithOffheapKeyValue() throws IOException {
     // usually we have just block without headers, but don't complicate that
     try {
-      List<Cell> kvs = generator.generateTestExtendedOffheapKeyValues(60, true);
+      List<ExtendedCell> kvs = generator.generateTestExtendedOffheapKeyValues(60, true);
       HFileContext meta = new HFileContextBuilder().withIncludesMvcc(includesMemstoreTS)
         .withIncludesTags(true).withHBaseCheckSum(true).withCompression(Algorithm.NONE)
         .withBlockSize(0).withChecksumType(ChecksumType.NULL).build();
@@ -214,7 +214,7 @@ public class TestHFileDataBlockEncoder {
       block.getOnDiskDataSizeWithHeader(), -1, block.getHFileContext(), ByteBuffAllocator.HEAP);
   }
 
-  private void writeBlock(Configuration conf, List<Cell> kvs, HFileContext fileContext,
+  private void writeBlock(Configuration conf, List<ExtendedCell> kvs, HFileContext fileContext,
     boolean useTags) throws IOException {
     HFileBlockEncodingContext context = new HFileBlockDefaultEncodingContext(conf,
       blockEncoder.getDataBlockEncoding(), HConstants.HFILEBLOCK_DUMMY_HEADER, fileContext);
@@ -223,7 +223,7 @@ public class TestHFileDataBlockEncoder {
     baos.write(HConstants.HFILEBLOCK_DUMMY_HEADER);
     DataOutputStream dos = new DataOutputStream(baos);
     blockEncoder.startBlockEncoding(context, dos);
-    for (Cell kv : kvs) {
+    for (ExtendedCell kv : kvs) {
       blockEncoder.encode(kv, context, dos);
     }
   }

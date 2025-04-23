@@ -30,12 +30,12 @@ import static org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStag
 import static org.apache.hbase.thirdparty.io.netty.channel.ChannelOption.CONNECT_TIMEOUT_MILLIS;
 import static org.apache.hbase.thirdparty.io.netty.handler.timeout.IdleState.READER_IDLE;
 
-import com.google.protobuf.CodedOutputStream;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
@@ -43,6 +43,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
 import org.apache.hadoop.crypto.Encryptor;
@@ -82,7 +83,6 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
-import org.apache.hadoop.hdfs.server.namenode.LeaseExpiredException;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
@@ -92,6 +92,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.protobuf.CodedOutputStream;
 import org.apache.hbase.thirdparty.io.netty.bootstrap.Bootstrap;
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBufAllocator;
@@ -139,9 +140,9 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
 
   private interface LeaseManager {
 
-    void begin(DFSClient client, long inodeId);
+    void begin(FanOutOneBlockAsyncDFSOutput output);
 
-    void end(DFSClient client, long inodeId);
+    void end(FanOutOneBlockAsyncDFSOutput output);
   }
 
   private static final LeaseManager LEASE_MANAGER;
@@ -170,7 +171,42 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
 
   private static final FileCreator FILE_CREATOR;
 
-  private static LeaseManager createLeaseManager() throws NoSuchMethodException {
+  private static LeaseManager createLeaseManager3_4() throws NoSuchMethodException {
+    Method beginFileLeaseMethod =
+      DFSClient.class.getDeclaredMethod("beginFileLease", String.class, DFSOutputStream.class);
+    beginFileLeaseMethod.setAccessible(true);
+    Method endFileLeaseMethod = DFSClient.class.getDeclaredMethod("endFileLease", String.class);
+    endFileLeaseMethod.setAccessible(true);
+    Method getUniqKeyMethod = DFSOutputStream.class.getMethod("getUniqKey");
+    return new LeaseManager() {
+
+      private String getUniqKey(FanOutOneBlockAsyncDFSOutput output)
+        throws IllegalAccessException, InvocationTargetException {
+        return (String) getUniqKeyMethod.invoke(output.getDummyStream());
+      }
+
+      @Override
+      public void begin(FanOutOneBlockAsyncDFSOutput output) {
+        try {
+          beginFileLeaseMethod.invoke(output.getClient(), getUniqKey(output),
+            output.getDummyStream());
+        } catch (IllegalAccessException | InvocationTargetException e) {
+          throw new RuntimeException(e);
+        }
+      }
+
+      @Override
+      public void end(FanOutOneBlockAsyncDFSOutput output) {
+        try {
+          endFileLeaseMethod.invoke(output.getClient(), getUniqKey(output));
+        } catch (IllegalAccessException | InvocationTargetException e) {
+          throw new RuntimeException(e);
+        }
+      }
+    };
+  }
+
+  private static LeaseManager createLeaseManager3() throws NoSuchMethodException {
     Method beginFileLeaseMethod =
       DFSClient.class.getDeclaredMethod("beginFileLease", long.class, DFSOutputStream.class);
     beginFileLeaseMethod.setAccessible(true);
@@ -179,23 +215,34 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
     return new LeaseManager() {
 
       @Override
-      public void begin(DFSClient client, long inodeId) {
+      public void begin(FanOutOneBlockAsyncDFSOutput output) {
         try {
-          beginFileLeaseMethod.invoke(client, inodeId, null);
+          beginFileLeaseMethod.invoke(output.getClient(), output.getDummyStream().getFileId(),
+            output.getDummyStream());
         } catch (IllegalAccessException | InvocationTargetException e) {
           throw new RuntimeException(e);
         }
       }
 
       @Override
-      public void end(DFSClient client, long inodeId) {
+      public void end(FanOutOneBlockAsyncDFSOutput output) {
         try {
-          endFileLeaseMethod.invoke(client, inodeId);
+          endFileLeaseMethod.invoke(output.getClient(), output.getDummyStream().getFileId());
         } catch (IllegalAccessException | InvocationTargetException e) {
           throw new RuntimeException(e);
         }
       }
     };
+  }
+
+  private static LeaseManager createLeaseManager() throws NoSuchMethodException {
+    try {
+      return createLeaseManager3_4();
+    } catch (NoSuchMethodException e) {
+      LOG.debug("DFSClient::beginFileLease wrong arguments, should be hadoop 3.3 or below");
+    }
+
+    return createLeaseManager3();
   }
 
   private static FileCreator createFileCreator3_3() throws NoSuchMethodException {
@@ -260,12 +307,12 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
     }
   }
 
-  static void beginFileLease(DFSClient client, long inodeId) {
-    LEASE_MANAGER.begin(client, inodeId);
+  private static void beginFileLease(FanOutOneBlockAsyncDFSOutput output) {
+    LEASE_MANAGER.begin(output);
   }
 
-  static void endFileLease(DFSClient client, long inodeId) {
-    LEASE_MANAGER.end(client, inodeId);
+  static void endFileLease(FanOutOneBlockAsyncDFSOutput output) {
+    LEASE_MANAGER.end(output);
   }
 
   static DataChecksum createChecksum(DFSClient client) {
@@ -351,7 +398,7 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
       writeBlockProtoBuilder.setStorageType(PBHelperClient.convertStorageType(storageType)).build();
     int protoLen = proto.getSerializedSize();
     ByteBuf buffer =
-      channel.alloc().buffer(3 + CodedOutputStream.computeRawVarint32Size(protoLen) + protoLen);
+      channel.alloc().buffer(3 + CodedOutputStream.computeUInt32SizeNoTag(protoLen) + protoLen);
     buffer.writeShort(DataTransferProtocol.DATA_TRANSFER_VERSION);
     buffer.writeByte(Op.WRITE_BLOCK.code);
     proto.writeDelimitedTo(new ByteBufOutputStream(buffer));
@@ -473,14 +520,16 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
     Set<DatanodeInfo> toExcludeNodes =
       new HashSet<>(excludeDatanodeManager.getExcludeDNs().keySet());
     for (int retry = 0;; retry++) {
-      LOG.debug("When create output stream for {}, exclude list is {}, retry={}", src,
-        toExcludeNodes, retry);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("When create output stream for {}, exclude list is {}, retry={}", src,
+          getDataNodeInfo(toExcludeNodes), retry);
+      }
+      EnumSetWritable<CreateFlag> createFlags = getCreateFlags(overwrite, noLocalWrite);
       HdfsFileStatus stat;
       try {
         stat = FILE_CREATOR.create(namenode, src,
           FsPermission.getFileDefault().applyUMask(FsPermission.getUMask(conf)), clientName,
-          getCreateFlags(overwrite, noLocalWrite), createParent, replication, blockSize,
-          CryptoProtocolVersion.supported());
+          createFlags, createParent, replication, blockSize, CryptoProtocolVersion.supported());
       } catch (Exception e) {
         if (e instanceof RemoteException) {
           throw (RemoteException) e;
@@ -488,7 +537,6 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
           throw new NameNodeException(e);
         }
       }
-      beginFileLease(client, stat.getFileId());
       boolean succ = false;
       LocatedBlock locatedBlock = null;
       List<Future<Channel>> futureList = null;
@@ -512,8 +560,9 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
         }
         Encryptor encryptor = createEncryptor(conf, stat, client);
         FanOutOneBlockAsyncDFSOutput output =
-          new FanOutOneBlockAsyncDFSOutput(conf, dfs, client, namenode, clientName, src,
-            stat.getFileId(), locatedBlock, encryptor, datanodes, summer, ALLOC, monitor);
+          new FanOutOneBlockAsyncDFSOutput(conf, dfs, client, namenode, clientName, src, stat,
+            createFlags.get(), locatedBlock, encryptor, datanodes, summer, ALLOC, monitor);
+        beginFileLease(output);
         succ = true;
         return output;
       } catch (RemoteException e) {
@@ -552,7 +601,6 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
               });
             }
           }
-          endFileLease(client, stat.getFileId());
         }
       }
     }
@@ -589,29 +637,24 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
     return e.getClassName().endsWith("RetryStartFileException");
   }
 
-  static void completeFile(DFSClient client, ClientProtocol namenode, String src, String clientName,
-    ExtendedBlock block, long fileId) {
-    for (int retry = 0;; retry++) {
+  static void completeFile(FanOutOneBlockAsyncDFSOutput output, DFSClient client,
+    ClientProtocol namenode, String src, String clientName, ExtendedBlock block,
+    HdfsFileStatus stat) throws IOException {
+    int maxRetries = client.getConf().getNumBlockWriteLocateFollowingRetry();
+    for (int retry = 0; retry < maxRetries; retry++) {
       try {
-        if (namenode.complete(src, clientName, block, fileId)) {
-          endFileLease(client, fileId);
+        if (namenode.complete(src, clientName, block, stat.getFileId())) {
+          endFileLease(output);
           return;
         } else {
           LOG.warn("complete file " + src + " not finished, retry = " + retry);
         }
       } catch (RemoteException e) {
-        IOException ioe = e.unwrapRemoteException();
-        if (ioe instanceof LeaseExpiredException) {
-          LOG.warn("lease for file " + src + " is expired, give up", e);
-          return;
-        } else {
-          LOG.warn("complete file " + src + " failed, retry = " + retry, e);
-        }
-      } catch (Exception e) {
-        LOG.warn("complete file " + src + " failed, retry = " + retry, e);
+        throw e.unwrapRemoteException();
       }
       sleepIgnoreInterrupt(retry);
     }
+    throw new IOException("can not complete file after retrying " + maxRetries + " times");
   }
 
   static void sleepIgnoreInterrupt(int retry) {
@@ -619,5 +662,16 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
       Thread.sleep(ConnectionUtils.getPauseTime(100, retry));
     } catch (InterruptedException e) {
     }
+  }
+
+  public static String getDataNodeInfo(Collection<DatanodeInfo> datanodeInfos) {
+    if (datanodeInfos.isEmpty()) {
+      return "[]";
+    }
+    return datanodeInfos.stream()
+      .map(datanodeInfo -> new StringBuilder().append("(").append(datanodeInfo.getHostName())
+        .append("/").append(datanodeInfo.getInfoAddr()).append(":")
+        .append(datanodeInfo.getInfoPort()).append(")").toString())
+      .collect(Collectors.joining(",", "[", "]"));
   }
 }

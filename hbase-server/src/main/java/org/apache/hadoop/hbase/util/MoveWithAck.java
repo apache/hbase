@@ -138,7 +138,7 @@ class MoveWithAck implements Callable<Boolean> {
    */
   static ServerName getServerNameForRegion(RegionInfo region, Admin admin, Connection conn)
     throws IOException {
-    if (!admin.isTableEnabled(region.getTable())) {
+    if (!admin.tableExists(region.getTable()) || !admin.isTableEnabled(region.getTable())) {
       return null;
     }
     HRegionLocation loc = conn.getRegionLocator(region.getTable())

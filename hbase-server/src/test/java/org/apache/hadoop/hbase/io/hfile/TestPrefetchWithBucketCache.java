@@ -54,7 +54,10 @@ import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
+import org.apache.hadoop.hbase.regionserver.StoreContext;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -156,7 +159,9 @@ public class TestPrefetchWithBucketCache {
     HRegionFileSystem regionFS =
       HRegionFileSystem.createRegionOnFileSystem(conf, fs, tableDir, region);
     Path storeFile = writeStoreFile(100, cfDir);
-
+    StoreFileTracker sft = StoreFileTrackerFactory.create(conf, true,
+      StoreContext.getBuilder().withRegionFileSystem(regionFS).withFamilyStoreDirectoryPath(cfDir)
+        .withCacheConfig(cacheConf).build());
     // Prefetches the file blocks
     LOG.debug("First read should prefetch the blocks.");
     readStoreFile(storeFile);
@@ -167,10 +172,10 @@ public class TestPrefetchWithBucketCache {
     // split the file and return references to the original file
     Random rand = ThreadLocalRandom.current();
     byte[] splitPoint = RandomKeyValueUtil.randomOrderedKey(rand, 50);
-    HStoreFile file = new HStoreFile(fs, storeFile, conf, cacheConf, BloomType.NONE, true);
+    HStoreFile file = new HStoreFile(fs, storeFile, conf, cacheConf, BloomType.NONE, true, sft);
     Path ref = regionFS.splitStoreFile(region, "cf", file, splitPoint, false,
-      new ConstantSizeRegionSplitPolicy());
-    HStoreFile refHsf = new HStoreFile(this.fs, ref, conf, cacheConf, BloomType.NONE, true);
+      new ConstantSizeRegionSplitPolicy(), sft);
+    HStoreFile refHsf = new HStoreFile(this.fs, ref, conf, cacheConf, BloomType.NONE, true, sft);
     // starts reader for the ref. The ref should resolve to the original file blocks
     // and not duplicate blocks in the cache.
     refHsf.initReader();

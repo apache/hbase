@@ -99,7 +99,7 @@ public class TestAppendTimeRange {
     }
 
     @Override
-    public Result preAppend(final ObserverContext<RegionCoprocessorEnvironment> e,
+    public Result preAppend(final ObserverContext<? extends RegionCoprocessorEnvironment> e,
       final Append append) throws IOException {
       NavigableMap<byte[], List<Cell>> map = append.getFamilyCellMap();
       for (Map.Entry<byte[], List<Cell>> entry : map.entrySet()) {

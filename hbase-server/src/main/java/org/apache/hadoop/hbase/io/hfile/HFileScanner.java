@@ -21,7 +21,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.function.IntConsumer;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.regionserver.Shipper;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -30,7 +30,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * reposition yourself as well.
  * <p>
  * A scanner doesn't always have a key/value that it is pointing to when it is first created and
- * before {@link #seekTo()}/{@link #seekTo(Cell)} are called. In this case,
+ * before {@link #seekTo()}/{@link #seekTo(ExtendedCell)} are called. In this case,
  * {@link #getKey()}/{@link #getValue()} returns null. At most other times, a key and value will be
  * available. The general pattern is that you position the Scanner using the seekTo variants and
  * then getKey and getValue.
@@ -48,7 +48,7 @@ public interface HFileScanner extends Shipper, Closeable {
    *         will position itself at the end of the file and next() will return false when it is
    *         called.
    */
-  int seekTo(Cell cell) throws IOException;
+  int seekTo(ExtendedCell cell) throws IOException;
 
   /**
    * Reseek to or just before the passed <code>cell</code>. Similar to seekTo except that this can
@@ -63,7 +63,7 @@ public interface HFileScanner extends Shipper, Closeable {
    * @return -1, if cell &lt; c[0], no position; 0, such that c[i] = cell and scanner is left in
    *         position i; and 1, such that c[i] &lt; cell, and scanner is left in position i.
    */
-  int reseekTo(Cell cell) throws IOException;
+  int reseekTo(ExtendedCell cell) throws IOException;
 
   /**
    * Consider the cell stream of all the cells in the file, <code>c[0] .. c[n]</code>, where there
@@ -73,7 +73,7 @@ public interface HFileScanner extends Shipper, Closeable {
    *         cell. Furthermore: there may be a c[i+1], such that c[i] &lt; cell &lt;= c[i+1] but
    *         there may also NOT be a c[i+1], and next() will return false (EOF).
    */
-  boolean seekBefore(Cell cell) throws IOException;
+  boolean seekBefore(ExtendedCell cell) throws IOException;
 
   /**
    * Positions this scanner at the start of the file.
@@ -89,34 +89,35 @@ public interface HFileScanner extends Shipper, Closeable {
   boolean next() throws IOException;
 
   /**
-   * Gets the current key in the form of a cell. You must call {@link #seekTo(Cell)} before this
-   * method.
+   * Gets the current key in the form of a cell. You must call {@link #seekTo(ExtendedCell)} before
+   * this method.
    * @return gets the current key as a Cell.
    */
-  Cell getKey();
+  ExtendedCell getKey();
 
   /**
-   * Gets a buffer view to the current value. You must call {@link #seekTo(Cell)} before this
-   * method.
+   * Gets a buffer view to the current value. You must call {@link #seekTo(ExtendedCell)} before
+   * this method.
    * @return byte buffer for the value. The limit is set to the value size, and the position is 0,
    *         the start of the buffer view.
    */
   ByteBuffer getValue();
 
-  /** Returns Instance of {@link org.apache.hadoop.hbase.Cell}. */
-  Cell getCell();
+  /** Returns Instance of {@link ExtendedCell}. */
+  ExtendedCell getCell();
 
   /** Returns Reader that underlies this Scanner instance. */
   HFile.Reader getReader();
 
   /**
-   * @return True is scanner has had one of the seek calls invoked; i.e. {@link #seekBefore(Cell)}
-   *         or {@link #seekTo()} or {@link #seekTo(Cell)}. Otherwise returns false.
+   * @return True is scanner has had one of the seek calls invoked; i.e.
+   *         {@link #seekBefore(ExtendedCell)} or {@link #seekTo()} or
+   *         {@link #seekTo(ExtendedCell)}. Otherwise returns false.
    */
   boolean isSeeked();
 
   /** Returns the next key in the index (the key to seek to the next block) */
-  Cell getNextIndexedKey();
+  ExtendedCell getNextIndexedKey();
 
   /**
    * Close this HFile scanner and do necessary cleanup.

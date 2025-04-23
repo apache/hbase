@@ -26,9 +26,9 @@ import java.util.SortedMap;
 import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher.MatchCode;
@@ -127,7 +127,7 @@ public class NewVersionBehaviorTracker implements ColumnTracker, DeleteTracker {
       this(Long.MIN_VALUE, Long.MAX_VALUE);
     }
 
-    public void addVersionDelete(Cell cell) {
+    public void addVersionDelete(ExtendedCell cell) {
       SortedSet<Long> set = deletesMap.get(cell.getTimestamp());
       if (set == null) {
         set = new TreeSet<>();
@@ -161,7 +161,7 @@ public class NewVersionBehaviorTracker implements ColumnTracker, DeleteTracker {
    * @return If this put has duplicate ts with last cell, return the mvcc of last cell. Else return
    *         MAX_VALUE.
    */
-  protected long prepare(Cell cell) {
+  protected long prepare(ExtendedCell cell) {
     if (isColumnQualifierChanged(cell)) {
       // The last cell is family-level delete and this is not, or the cq is changed,
       // we should construct delColMap as a deep copy of delFamMap.
@@ -186,7 +186,7 @@ public class NewVersionBehaviorTracker implements ColumnTracker, DeleteTracker {
     return Long.MAX_VALUE;
   }
 
-  private boolean isColumnQualifierChanged(Cell cell) {
+  private boolean isColumnQualifierChanged(ExtendedCell cell) {
     if (
       delColMap.isEmpty() && lastCqArray == null && cell.getQualifierLength() == 0
         && (PrivateCellUtil.isDeleteColumns(cell) || PrivateCellUtil.isDeleteColumnVersion(cell))
@@ -199,7 +199,7 @@ public class NewVersionBehaviorTracker implements ColumnTracker, DeleteTracker {
 
   // DeleteTracker
   @Override
-  public void add(Cell cell) {
+  public void add(ExtendedCell cell) {
     prepare(cell);
     byte type = cell.getTypeByte();
     switch (Type.codeToType(type)) {
@@ -231,7 +231,7 @@ public class NewVersionBehaviorTracker implements ColumnTracker, DeleteTracker {
    * @return We don't distinguish DeleteColumn and DeleteFamily. We only return code for column.
    */
   @Override
-  public DeleteResult isDeleted(Cell cell) {
+  public DeleteResult isDeleted(ExtendedCell cell) {
     long duplicateMvcc = prepare(cell);
 
     for (Map.Entry<Long, DeleteVersionsNode> e : delColMap.tailMap(cell.getSequenceId())
@@ -281,7 +281,7 @@ public class NewVersionBehaviorTracker implements ColumnTracker, DeleteTracker {
   // ColumnTracker
 
   @Override
-  public MatchCode checkColumn(Cell cell, byte type) throws IOException {
+  public MatchCode checkColumn(ExtendedCell cell, byte type) throws IOException {
     if (columns == null) {
       return MatchCode.INCLUDE;
     }
@@ -305,7 +305,7 @@ public class NewVersionBehaviorTracker implements ColumnTracker, DeleteTracker {
   }
 
   @Override
-  public MatchCode checkVersions(Cell cell, long timestamp, byte type, boolean ignoreCount)
+  public MatchCode checkVersions(ExtendedCell cell, long timestamp, byte type, boolean ignoreCount)
     throws IOException {
     assert !PrivateCellUtil.isDelete(type);
     // We drop old version in #isDeleted, so here we won't SKIP because of versioning. But we should
@@ -370,7 +370,7 @@ public class NewVersionBehaviorTracker implements ColumnTracker, DeleteTracker {
   }
 
   @Override
-  public MatchCode getNextRowOrNextColumn(Cell cell) {
+  public MatchCode getNextRowOrNextColumn(ExtendedCell cell) {
     // TODO maybe we can optimize.
     return MatchCode.SEEK_NEXT_COL;
   }

@@ -43,7 +43,6 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.procedure.ProcedureManagerHost;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -120,11 +119,17 @@ public class BackupManager implements Closeable {
     plugins = conf.get(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS);
     conf.set(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS,
       (plugins == null ? "" : plugins + ",") + BackupHFileCleaner.class.getName());
+
+    String observerClass = BackupObserver.class.getName();
+    String masterCoProc = conf.get(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
+    conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
+      (masterCoProc == null ? "" : masterCoProc + ",") + observerClass);
+
     if (LOG.isDebugEnabled()) {
       LOG.debug(
         "Added log cleaner: {}. Added master procedure manager: {}."
-          + "Added master procedure manager: {}",
-        cleanerClass, masterProcedureClass, BackupHFileCleaner.class.getName());
+          + " Added master procedure manager: {}. Added master observer: {}",
+        cleanerClass, masterProcedureClass, BackupHFileCleaner.class.getName(), observerClass);
     }
   }
 
@@ -193,7 +198,8 @@ public class BackupManager implements Closeable {
    * @throws BackupException exception
    */
   public BackupInfo createBackupInfo(String backupId, BackupType type, List<TableName> tableList,
-    String targetRootDir, int workers, long bandwidth) throws BackupException {
+    String targetRootDir, int workers, long bandwidth, boolean noChecksumVerify)
+    throws BackupException {
     if (targetRootDir == null) {
       throw new BackupException("Wrong backup request parameter: target backup root directory");
     }
@@ -230,6 +236,7 @@ public class BackupManager implements Closeable {
       targetRootDir);
     backupInfo.setBandwidth(bandwidth);
     backupInfo.setWorkers(workers);
+    backupInfo.setNoChecksumVerify(noChecksumVerify);
     return backupInfo;
   }
 
@@ -354,8 +361,7 @@ public class BackupManager implements Closeable {
     return systemTable.readRegionServerLastLogRollResult(backupInfo.getBackupRootDir());
   }
 
-  public Pair<Map<TableName, Map<String, Map<String, List<Pair<String, Boolean>>>>>, List<byte[]>>
-    readBulkloadRows(List<TableName> tableList) throws IOException {
+  public List<BulkLoad> readBulkloadRows(List<TableName> tableList) throws IOException {
     return systemTable.readBulkloadRows(tableList);
   }
 

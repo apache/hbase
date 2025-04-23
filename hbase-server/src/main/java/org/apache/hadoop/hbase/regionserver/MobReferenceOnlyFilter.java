@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -30,9 +31,9 @@ class MobReferenceOnlyFilter extends FilterBase {
 
   @Override
   public ReturnCode filterCell(final Cell cell) {
-    if (null != cell) {
+    if (null != cell && cell instanceof ExtendedCell) {
       // If a cell with a mob reference tag, it's included.
-      if (MobUtils.isMobReferenceCell(cell)) {
+      if (MobUtils.isMobReferenceCell((ExtendedCell) cell)) {
         return ReturnCode.INCLUDE;
       }
     }

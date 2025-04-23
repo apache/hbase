@@ -23,6 +23,7 @@ import static org.hamcrest.Matchers.hasProperty;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -44,9 +45,10 @@ import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellBuilder;
-import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
+import org.apache.hadoop.hbase.ExtendedCell;
+import org.apache.hadoop.hbase.ExtendedCellBuilder;
+import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.fs.HFileSystem;
@@ -54,6 +56,7 @@ import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ChecksumType;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeMatcher;
@@ -90,6 +93,141 @@ public class TestHFileBlockHeaderCorruption {
     TestName testName = new TestName();
     hFileTestRule = new HFileTestRule(new HBaseTestingUtil(), testName);
     ruleChain = RuleChain.outerRule(testName).around(hFileTestRule);
+  }
+
+  @Test
+  public void testChecksumTypeCorruptionFirstBlock() throws Exception {
+    HFileBlockChannelPosition firstBlock = null;
+    try {
+      try (HFileBlockChannelPositionIterator it =
+        new HFileBlockChannelPositionIterator(hFileTestRule)) {
+        assertTrue(it.hasNext());
+        firstBlock = it.next();
+      }
+
+      Corrupter c = new Corrupter(firstBlock);
+
+      logHeader(firstBlock);
+
+      // test corrupted HFileBlock with unknown checksumType code -1
+      c.write(HFileBlock.Header.CHECKSUM_TYPE_INDEX, ByteBuffer.wrap(new byte[] { -1 }));
+      logHeader(firstBlock);
+      try (HFileBlockChannelPositionIterator it =
+        new HFileBlockChannelPositionIterator(hFileTestRule)) {
+        CountingConsumer consumer = new CountingConsumer(it);
+        try {
+          consumer.readFully();
+          fail();
+        } catch (Exception e) {
+          assertThat(e, new IsThrowableMatching().withInstanceOf(IOException.class)
+            .withMessage(startsWith("Unknown checksum type code")));
+        }
+        assertEquals(0, consumer.getItemsRead());
+      }
+
+      // valid checksumType code test
+      for (ChecksumType t : ChecksumType.values()) {
+        testValidChecksumTypeReadBlock(t.getCode(), c, firstBlock);
+      }
+
+      c.restore();
+      // test corrupted HFileBlock with unknown checksumType code 3
+      c.write(HFileBlock.Header.CHECKSUM_TYPE_INDEX, ByteBuffer.wrap(new byte[] { 3 }));
+      logHeader(firstBlock);
+      try (HFileBlockChannelPositionIterator it =
+        new HFileBlockChannelPositionIterator(hFileTestRule)) {
+        CountingConsumer consumer = new CountingConsumer(it);
+        try {
+          consumer.readFully();
+          fail();
+        } catch (Exception e) {
+          assertThat(e, new IsThrowableMatching().withInstanceOf(IOException.class)
+            .withMessage(startsWith("Unknown checksum type code")));
+        }
+        assertEquals(0, consumer.getItemsRead());
+      }
+    } finally {
+      if (firstBlock != null) {
+        firstBlock.close();
+      }
+    }
+  }
+
+  @Test
+  public void testChecksumTypeCorruptionSecondBlock() throws Exception {
+    HFileBlockChannelPosition secondBlock = null;
+    try {
+      try (HFileBlockChannelPositionIterator it =
+        new HFileBlockChannelPositionIterator(hFileTestRule)) {
+        assertTrue(it.hasNext());
+        it.next();
+        assertTrue(it.hasNext());
+        secondBlock = it.next();
+      }
+
+      Corrupter c = new Corrupter(secondBlock);
+
+      logHeader(secondBlock);
+      // test corrupted HFileBlock with unknown checksumType code -1
+      c.write(HFileBlock.Header.CHECKSUM_TYPE_INDEX, ByteBuffer.wrap(new byte[] { -1 }));
+      logHeader(secondBlock);
+      try (HFileBlockChannelPositionIterator it =
+        new HFileBlockChannelPositionIterator(hFileTestRule)) {
+        CountingConsumer consumer = new CountingConsumer(it);
+        try {
+          consumer.readFully();
+          fail();
+        } catch (Exception e) {
+          assertThat(e, new IsThrowableMatching().withInstanceOf(RuntimeException.class)
+            .withMessage(startsWith("Unknown checksum type code")));
+        }
+        assertEquals(1, consumer.getItemsRead());
+      }
+
+      // valid checksumType code test
+      for (ChecksumType t : ChecksumType.values()) {
+        testValidChecksumTypeReadBlock(t.getCode(), c, secondBlock);
+      }
+
+      c.restore();
+      // test corrupted HFileBlock with unknown checksumType code 3
+      c.write(HFileBlock.Header.CHECKSUM_TYPE_INDEX, ByteBuffer.wrap(new byte[] { 3 }));
+      logHeader(secondBlock);
+      try (HFileBlockChannelPositionIterator it =
+        new HFileBlockChannelPositionIterator(hFileTestRule)) {
+        CountingConsumer consumer = new CountingConsumer(it);
+        try {
+          consumer.readFully();
+          fail();
+        } catch (Exception e) {
+          assertThat(e, new IsThrowableMatching().withInstanceOf(RuntimeException.class)
+            .withMessage(startsWith("Unknown checksum type code")));
+        }
+        assertEquals(1, consumer.getItemsRead());
+      }
+    } finally {
+      if (secondBlock != null) {
+        secondBlock.close();
+      }
+    }
+  }
+
+  public void testValidChecksumTypeReadBlock(byte checksumTypeCode, Corrupter c,
+    HFileBlockChannelPosition testBlock) throws IOException {
+    c.restore();
+    c.write(HFileBlock.Header.CHECKSUM_TYPE_INDEX,
+      ByteBuffer.wrap(new byte[] { checksumTypeCode }));
+    logHeader(testBlock);
+    try (
+      HFileBlockChannelPositionIterator it = new HFileBlockChannelPositionIterator(hFileTestRule)) {
+      CountingConsumer consumer = new CountingConsumer(it);
+      try {
+        consumer.readFully();
+      } catch (Exception e) {
+        fail("test fail: valid checksumType are not executing properly");
+      }
+      assertNotEquals(0, consumer.getItemsRead());
+    }
   }
 
   @Test
@@ -330,7 +468,8 @@ public class TestHFileBlockHeaderCorruption {
       try {
         reader = HFile.createReader(hfs, hfsPath, CacheConfig.DISABLED, true, conf);
         HFileBlock.FSReader fsreader = reader.getUncachedBlockReader();
-        iter = fsreader.blockRange(0, hfs.getFileStatus(hfsPath).getLen());
+        // The read block offset cannot out of the range:0,loadOnOpenDataOffset
+        iter = fsreader.blockRange(0, reader.getTrailer().getLoadOnOpenDataOffset());
       } catch (IOException e) {
         if (reader != null) {
           closeQuietly(reader::close);
@@ -465,7 +604,8 @@ public class TestHFileBlockHeaderCorruption {
         HFile.getWriterFactory(testingUtility.getConfiguration(), CacheConfig.DISABLED)
           .withPath(hfs, path).withFileContext(context);
 
-      CellBuilder cellBuilder = CellBuilderFactory.create(CellBuilderType.DEEP_COPY);
+      ExtendedCellBuilder cellBuilder =
+        ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY);
       Random rand = new Random(Instant.now().toEpochMilli());
       byte[] family = Bytes.toBytes("f");
       try (HFile.Writer writer = factory.create()) {
@@ -473,7 +613,7 @@ public class TestHFileBlockHeaderCorruption {
           byte[] row = RandomKeyValueUtil.randomOrderedFixedLengthKey(rand, i, 100);
           byte[] qualifier = RandomKeyValueUtil.randomRowOrQualifier(rand);
           byte[] value = RandomKeyValueUtil.randomValue(rand);
-          Cell cell = cellBuilder.setType(Cell.Type.Put).setRow(row).setFamily(family)
+          ExtendedCell cell = cellBuilder.setType(Cell.Type.Put).setRow(row).setFamily(family)
             .setQualifier(qualifier).setValue(value).build();
           writer.append(cell);
           cellBuilder.clear();

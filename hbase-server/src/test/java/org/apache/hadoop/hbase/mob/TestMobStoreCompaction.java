@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -60,12 +61,15 @@ import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.RegionAsTable;
+import org.apache.hadoop.hbase.regionserver.StoreContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
 import org.apache.hadoop.hbase.security.User;
@@ -328,9 +332,18 @@ public class TestMobStoreCompaction {
     copyOfConf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0f);
     CacheConfig cacheConfig = new CacheConfig(copyOfConf);
     if (fs.exists(mobDirPath)) {
+      // TODO: use sft.load() api here
+      HRegionFileSystem regionFs = HRegionFileSystem.create(copyOfConf, fs,
+        MobUtils.getMobTableDir(copyOfConf, tableDescriptor.getTableName()),
+        region.getRegionInfo());
+      StoreFileTracker sft = StoreFileTrackerFactory.create(copyOfConf, false,
+        StoreContext.getBuilder().withColumnFamilyDescriptor(familyDescriptor)
+          .withFamilyStoreDirectoryPath(mobDirPath).withCacheConfig(cacheConfig)
+          .withRegionFileSystem(regionFs).build());
       FileStatus[] files = UTIL.getTestFileSystem().listStatus(mobDirPath);
       for (FileStatus file : files) {
-        HStoreFile sf = new HStoreFile(fs, file.getPath(), conf, cacheConfig, BloomType.NONE, true);
+        HStoreFile sf =
+          new HStoreFile(fs, file.getPath(), conf, cacheConfig, BloomType.NONE, true, sft);
         sf.initReader();
         Map<byte[], byte[]> fileInfo = sf.getReader().loadFileInfo();
         byte[] count = fileInfo.get(MOB_CELLS_COUNT);
@@ -373,11 +386,11 @@ public class TestMobStoreCompaction {
     InternalScanner scanner = region.getScanner(scan);
 
     int scannedCount = 0;
-    List<Cell> results = new ArrayList<>();
+    List<ExtendedCell> results = new ArrayList<>();
     boolean hasMore = true;
     while (hasMore) {
       hasMore = scanner.next(results);
-      for (Cell c : results) {
+      for (ExtendedCell c : results) {
         if (MobUtils.isMobReferenceCell(c)) {
           scannedCount++;
         }
@@ -401,7 +414,7 @@ public class TestMobStoreCompaction {
     scan.setAttribute(MobConstants.MOB_SCAN_RAW, Bytes.toBytes(Boolean.TRUE));
     InternalScanner scanner = region.getScanner(scan);
 
-    List<Cell> kvs = new ArrayList<>();
+    List<ExtendedCell> kvs = new ArrayList<>();
     boolean hasMore = true;
     String fileName;
     Set<String> files = new HashSet<>();
@@ -409,7 +422,7 @@ public class TestMobStoreCompaction {
       kvs.clear();
       hasMore = scanner.next(kvs);
       for (Cell kv : kvs) {
-        if (!MobUtils.isMobReferenceCell(kv)) {
+        if (!MobUtils.isMobReferenceCell((ExtendedCell) kv)) {
           continue;
         }
         if (!MobUtils.hasValidMobRefCellValue(kv)) {

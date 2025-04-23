@@ -326,29 +326,29 @@ public class TestRegionInterrupt {
     }
 
     @Override
-    public void prePut(ObserverContext<RegionCoprocessorEnvironment> c, Put put, WALEdit edit,
-      Durability durability) throws IOException {
+    public void prePut(ObserverContext<? extends RegionCoprocessorEnvironment> c, Put put,
+      WALEdit edit, Durability durability) throws IOException {
       doSleep(Region.Operation.PUT);
       RegionObserver.super.prePut(c, put, edit, durability);
     }
 
     @Override
-    public void preDelete(ObserverContext<RegionCoprocessorEnvironment> c, Delete delete,
+    public void preDelete(ObserverContext<? extends RegionCoprocessorEnvironment> c, Delete delete,
       WALEdit edit, Durability durability) throws IOException {
       doSleep(Region.Operation.DELETE);
       RegionObserver.super.preDelete(c, delete, edit, durability);
     }
 
     @Override
-    public Result preAppend(ObserverContext<RegionCoprocessorEnvironment> c, Append append)
-      throws IOException {
+    public Result preAppend(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+      Append append) throws IOException {
       doSleep(Region.Operation.APPEND);
       return RegionObserver.super.preAppend(c, append);
     }
 
     @Override
-    public Result preIncrement(ObserverContext<RegionCoprocessorEnvironment> c, Increment increment)
-      throws IOException {
+    public Result preIncrement(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+      Increment increment) throws IOException {
       doSleep(Region.Operation.INCREMENT);
       return RegionObserver.super.preIncrement(c, increment);
     }

@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.Coprocessor;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -127,13 +128,13 @@ public class TestRegionObserverScannerOpenHook {
     }
 
     @Override
-    public void preGetOp(ObserverContext<RegionCoprocessorEnvironment> c, Get get,
+    public void preGetOp(ObserverContext<? extends RegionCoprocessorEnvironment> c, Get get,
       List<Cell> result) throws IOException {
       c.bypass();
     }
 
     @Override
-    public void preScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c, Scan scan)
+    public void preScannerOpen(ObserverContext<? extends RegionCoprocessorEnvironment> c, Scan scan)
       throws IOException {
       scan.setFilter(new NoDataFilter());
     }
@@ -142,7 +143,8 @@ public class TestRegionObserverScannerOpenHook {
   private static final InternalScanner NO_DATA = new InternalScanner() {
 
     @Override
-    public boolean next(List<Cell> result, ScannerContext scannerContext) throws IOException {
+    public boolean next(List<? super ExtendedCell> result, ScannerContext scannerContext)
+      throws IOException {
       return false;
     }
 
@@ -161,8 +163,8 @@ public class TestRegionObserverScannerOpenHook {
     }
 
     @Override
-    public InternalScanner preFlush(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-      InternalScanner scanner, FlushLifeCycleTracker tracker) throws IOException {
+    public InternalScanner preFlush(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+      Store store, InternalScanner scanner, FlushLifeCycleTracker tracker) throws IOException {
       return NO_DATA;
     }
   }
@@ -178,8 +180,8 @@ public class TestRegionObserverScannerOpenHook {
     }
 
     @Override
-    public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-      InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
+    public InternalScanner preCompact(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+      Store store, InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
       CompactionRequest request) throws IOException {
       return NO_DATA;
     }

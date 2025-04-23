@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.mob;
 import java.io.Closeable;
 import java.io.IOException;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -45,20 +46,20 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class MobCell implements Closeable {
 
-  private final Cell cell;
+  private final ExtendedCell cell;
   private final StoreFileScanner sfScanner;
 
-  public MobCell(Cell cell) {
+  public MobCell(ExtendedCell cell) {
     this.cell = cell;
     this.sfScanner = null;
   }
 
-  public MobCell(Cell cell, StoreFileScanner sfScanner) {
+  public MobCell(ExtendedCell cell, StoreFileScanner sfScanner) {
     this.cell = cell;
     this.sfScanner = sfScanner;
   }
 
-  public Cell getCell() {
+  public ExtendedCell getCell() {
     return cell;
   }
 

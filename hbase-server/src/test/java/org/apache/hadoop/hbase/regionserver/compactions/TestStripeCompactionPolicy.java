@@ -49,8 +49,8 @@ import java.util.List;
 import java.util.OptionalLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
@@ -931,7 +931,8 @@ public class TestStripeCompactionPolicy {
     }
 
     @Override
-    public boolean next(List<Cell> result, ScannerContext scannerContext) throws IOException {
+    public boolean next(List<? super ExtendedCell> result, ScannerContext scannerContext)
+      throws IOException {
       if (kvs.isEmpty()) {
         return false;
       }

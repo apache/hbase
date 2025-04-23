@@ -82,6 +82,7 @@ import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -105,6 +106,7 @@ import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.CheckAndMutate;
 import org.apache.hadoop.hbase.client.CheckAndMutateResult;
+import org.apache.hadoop.hbase.client.ClientInternalHelper;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Delete;
@@ -147,6 +149,8 @@ import org.apache.hadoop.hbase.regionserver.Region.Operation;
 import org.apache.hadoop.hbase.regionserver.Region.RowLock;
 import org.apache.hadoop.hbase.regionserver.TestHStore.FaultyFileSystem;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequestImpl;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
 import org.apache.hadoop.hbase.regionserver.wal.AsyncFSWAL;
 import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
@@ -170,6 +174,7 @@ import org.apache.hadoop.hbase.wal.FaultyFSLog;
 import org.apache.hadoop.hbase.wal.NettyAsyncFSWALConfigHelper;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALEditInternalHelper;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALProvider;
@@ -698,7 +703,7 @@ public class TestHRegion {
 
         long time = System.nanoTime();
         WALEdit edit = new WALEdit();
-        edit.add(
+        WALEditInternalHelper.addExtendedCell(edit,
           new KeyValue(row, family, Bytes.toBytes(i), time, KeyValue.Type.Put, Bytes.toBytes(i)));
         writer.append(new WAL.Entry(
           new WALKeyImpl(regionName, tableName, i, time, HConstants.DEFAULT_CLUSTER_ID), edit));
@@ -752,7 +757,7 @@ public class TestHRegion {
 
         long time = System.nanoTime();
         WALEdit edit = new WALEdit();
-        edit.add(
+        WALEditInternalHelper.addExtendedCell(edit,
           new KeyValue(row, family, Bytes.toBytes(i), time, KeyValue.Type.Put, Bytes.toBytes(i)));
         writer.append(new WAL.Entry(
           new WALKeyImpl(regionName, tableName, i, time, HConstants.DEFAULT_CLUSTER_ID), edit));
@@ -803,7 +808,7 @@ public class TestHRegion {
 
         long time = System.nanoTime();
         WALEdit edit = new WALEdit();
-        edit.add(
+        WALEditInternalHelper.addExtendedCell(edit,
           new KeyValue(row, family, Bytes.toBytes(i), time, KeyValue.Type.Put, Bytes.toBytes(i)));
         writer.append(new WAL.Entry(
           new WALKeyImpl(regionName, tableName, i, time, HConstants.DEFAULT_CLUSTER_ID), edit));
@@ -898,7 +903,7 @@ public class TestHRegion {
               .setRegionName(ByteString.copyFrom(region.getRegionInfo().getRegionName())).build());
         } else {
           edit = new WALEdit();
-          edit.add(
+          WALEditInternalHelper.addExtendedCell(edit,
             new KeyValue(row, family, Bytes.toBytes(i), time, KeyValue.Type.Put, Bytes.toBytes(i)));
         }
         writer.append(new WAL.Entry(
@@ -3780,10 +3785,10 @@ public class TestHRegion {
     scan.addFamily(fam2);
     scan.addFamily(fam4);
     try (InternalScanner is = region.getScanner(scan)) {
-      List<Cell> res = null;
+      List<ExtendedCell> res = null;
 
       // Result 1
-      List<Cell> expected1 = new ArrayList<>();
+      List<ExtendedCell> expected1 = new ArrayList<>();
       expected1.add(new KeyValue(row1, fam2, null, ts, KeyValue.Type.Put, null));
       expected1.add(new KeyValue(row1, fam4, null, ts, KeyValue.Type.Put, null));
 
@@ -3794,7 +3799,7 @@ public class TestHRegion {
       }
 
       // Result 2
-      List<Cell> expected2 = new ArrayList<>();
+      List<ExtendedCell> expected2 = new ArrayList<>();
       expected2.add(new KeyValue(row2, fam2, null, ts, KeyValue.Type.Put, null));
       expected2.add(new KeyValue(row2, fam4, null, ts, KeyValue.Type.Put, null));
 
@@ -3894,7 +3899,7 @@ public class TestHRegion {
     region.flush(true);
 
     // Expected
-    List<Cell> expected = new ArrayList<>();
+    List<ExtendedCell> expected = new ArrayList<>();
     expected.add(kv13);
     expected.add(kv12);
     expected.add(kv23);
@@ -3904,7 +3909,7 @@ public class TestHRegion {
     scan.addColumn(fam1, qf1);
     scan.addColumn(fam1, qf2);
     scan.readVersions(MAX_VERSIONS);
-    List<Cell> actual = new ArrayList<>();
+    List<ExtendedCell> actual = new ArrayList<>();
     try (InternalScanner scanner = region.getScanner(scan)) {
       boolean hasNext = scanner.next(actual);
       assertEquals(false, hasNext);
@@ -3968,7 +3973,7 @@ public class TestHRegion {
     region.put(put);
 
     // Expected
-    List<Cell> expected = new ArrayList<>();
+    List<ExtendedCell> expected = new ArrayList<>();
     expected.add(kv14);
     expected.add(kv13);
     expected.add(kv12);
@@ -3981,7 +3986,7 @@ public class TestHRegion {
     scan.addColumn(fam1, qf2);
     int versions = 3;
     scan.readVersions(versions);
-    List<Cell> actual = new ArrayList<>();
+    List<ExtendedCell> actual = new ArrayList<>();
     try (InternalScanner scanner = region.getScanner(scan)) {
       boolean hasNext = scanner.next(actual);
       assertEquals(false, hasNext);
@@ -4082,7 +4087,7 @@ public class TestHRegion {
     region.flush(true);
 
     // Expected
-    List<Cell> expected = new ArrayList<>();
+    List<ExtendedCell> expected = new ArrayList<>();
     expected.add(kv13);
     expected.add(kv12);
     expected.add(kv23);
@@ -4091,7 +4096,7 @@ public class TestHRegion {
     Scan scan = new Scan().withStartRow(row1);
     scan.addFamily(fam1);
     scan.readVersions(MAX_VERSIONS);
-    List<Cell> actual = new ArrayList<>();
+    List<ExtendedCell> actual = new ArrayList<>();
     try (InternalScanner scanner = region.getScanner(scan)) {
       boolean hasNext = scanner.next(actual);
       assertEquals(false, hasNext);
@@ -4207,7 +4212,7 @@ public class TestHRegion {
     Scan scan = new Scan().withStartRow(row1);
     int versions = 3;
     scan.readVersions(versions);
-    List<Cell> actual = new ArrayList<>();
+    List<ExtendedCell> actual = new ArrayList<>();
     try (InternalScanner scanner = region.getScanner(scan)) {
       boolean hasNext = scanner.next(actual);
       assertEquals(false, hasNext);
@@ -4837,9 +4842,9 @@ public class TestHRegion {
           }
           assertTrue(timestamp >= prevTimestamp);
           prevTimestamp = timestamp;
-          Cell previousKV = null;
+          ExtendedCell previousKV = null;
 
-          for (Cell kv : result.rawCells()) {
+          for (ExtendedCell kv : ClientInternalHelper.getExtendedRawCells(result)) {
             byte[] thisValue = CellUtil.cloneValue(kv);
             if (previousKV != null) {
               if (Bytes.compareTo(CellUtil.cloneValue(previousKV), thisValue) != 0) {
@@ -5706,8 +5711,14 @@ public class TestHRegion {
       // move the file of the primary region to the archive, simulating a compaction
       Collection<HStoreFile> storeFiles = primaryRegion.getStore(families[0]).getStorefiles();
       primaryRegion.getRegionFileSystem().removeStoreFiles(Bytes.toString(families[0]), storeFiles);
-      Collection<StoreFileInfo> storeFileInfos =
-        primaryRegion.getRegionFileSystem().getStoreFiles(Bytes.toString(families[0]));
+      HRegionFileSystem regionFs = primaryRegion.getRegionFileSystem();
+      StoreFileTracker sft = StoreFileTrackerFactory.create(primaryRegion.getBaseConf(), false,
+        StoreContext.getBuilder()
+          .withColumnFamilyDescriptor(ColumnFamilyDescriptorBuilder.newBuilder(families[0]).build())
+          .withFamilyStoreDirectoryPath(
+            new Path(regionFs.getRegionDir(), Bytes.toString(families[0])))
+          .withRegionFileSystem(regionFs).build());
+      Collection<StoreFileInfo> storeFileInfos = sft.load();
       Assert.assertTrue(storeFileInfos == null || storeFileInfos.isEmpty());
 
       verifyData(secondaryRegion, 0, 1000, cq, families);

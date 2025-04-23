@@ -26,6 +26,8 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
@@ -33,6 +35,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -90,11 +93,21 @@ public class TestFSUtils {
     try {
       cluster = htu.startMiniDFSCluster(1);
       assertTrue(CommonFSUtils.isHDFS(conf));
+      assertTrue(FSUtils.supportSafeMode(cluster.getFileSystem()));
+      FSUtils.checkDfsSafeMode(conf);
     } finally {
       if (cluster != null) {
         cluster.shutdown();
       }
     }
+  }
+
+  @Test
+  public void testLocalFileSystemSafeMode() throws Exception {
+    conf.setClass("fs.file.impl", LocalFileSystem.class, FileSystem.class);
+    assertFalse(CommonFSUtils.isHDFS(conf));
+    assertFalse(FSUtils.supportSafeMode(FileSystem.get(conf)));
+    FSUtils.checkDfsSafeMode(conf);
   }
 
   private void WriteDataToHDFS(FileSystem fs, Path file, int dataSize) throws Exception {
@@ -415,8 +428,9 @@ public class TestFSUtils {
    * Note: currently the default policy is set to defer to HDFS and this case is to verify the
    * logic, will need to remove the check if the default policy is changed
    */
-  private void verifyNoHDFSApiInvocationForDefaultPolicy() {
+  private void verifyNoHDFSApiInvocationForDefaultPolicy() throws URISyntaxException, IOException {
     FileSystem testFs = new AlwaysFailSetStoragePolicyFileSystem();
+    testFs.initialize(new URI("hdfs://localhost/"), conf);
     // There should be no exception thrown when setting to default storage policy, which indicates
     // the HDFS API hasn't been called
     try {

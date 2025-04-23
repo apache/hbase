@@ -149,31 +149,31 @@ public class TestTableOperationException {
     }
 
     @Override
-    public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e, final Get get,
-      final List<Cell> results) throws IOException {
+    public void preGetOp(final ObserverContext<? extends RegionCoprocessorEnvironment> e,
+      final Get get, final List<Cell> results) throws IOException {
       throw new DoNotRetryIOException("Call failed and don't retry");
     }
 
     @Override
-    public void prePut(final ObserverContext<RegionCoprocessorEnvironment> e, final Put put,
-      final WALEdit edit, final Durability durability) throws IOException {
+    public void prePut(final ObserverContext<? extends RegionCoprocessorEnvironment> e,
+      final Put put, final WALEdit edit, final Durability durability) throws IOException {
       throw new DoNotRetryIOException("Call failed and don't retry");
     }
 
     @Override
-    public void preDelete(final ObserverContext<RegionCoprocessorEnvironment> e,
+    public void preDelete(final ObserverContext<? extends RegionCoprocessorEnvironment> e,
       final Delete delete, final WALEdit edit, final Durability durability) throws IOException {
       throw new DoNotRetryIOException("Call failed and don't retry");
     }
 
     @Override
-    public Result preIncrement(final ObserverContext<RegionCoprocessorEnvironment> e,
+    public Result preIncrement(final ObserverContext<? extends RegionCoprocessorEnvironment> e,
       final Increment increment) throws IOException {
       throw new DoNotRetryIOException("Call failed and don't retry");
     }
 
     @Override
-    public Result preAppend(final ObserverContext<RegionCoprocessorEnvironment> e,
+    public Result preAppend(final ObserverContext<? extends RegionCoprocessorEnvironment> e,
       final Append append) throws IOException {
       throw new DoNotRetryIOException("Call failed and don't retry");
     }
@@ -190,31 +190,31 @@ public class TestTableOperationException {
     }
 
     @Override
-    public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e, final Get get,
-      final List<Cell> results) throws IOException {
+    public void preGetOp(final ObserverContext<? extends RegionCoprocessorEnvironment> e,
+      final Get get, final List<Cell> results) throws IOException {
       throw new IOException("Call failed and retry");
     }
 
     @Override
-    public void prePut(final ObserverContext<RegionCoprocessorEnvironment> e, final Put put,
-      final WALEdit edit, final Durability durability) throws IOException {
+    public void prePut(final ObserverContext<? extends RegionCoprocessorEnvironment> e,
+      final Put put, final WALEdit edit, final Durability durability) throws IOException {
       throw new IOException("Call failed and retry");
     }
 
     @Override
-    public void preDelete(final ObserverContext<RegionCoprocessorEnvironment> e,
+    public void preDelete(final ObserverContext<? extends RegionCoprocessorEnvironment> e,
       final Delete delete, final WALEdit edit, final Durability durability) throws IOException {
       throw new IOException("Call failed and retry");
     }
 
     @Override
-    public Result preIncrement(final ObserverContext<RegionCoprocessorEnvironment> e,
+    public Result preIncrement(final ObserverContext<? extends RegionCoprocessorEnvironment> e,
       final Increment increment) throws IOException {
       throw new IOException("Call failed and retry");
     }
 
     @Override
-    public Result preAppend(final ObserverContext<RegionCoprocessorEnvironment> e,
+    public Result preAppend(final ObserverContext<? extends RegionCoprocessorEnvironment> e,
       final Append append) throws IOException {
       throw new IOException("Call failed and retry");
     }

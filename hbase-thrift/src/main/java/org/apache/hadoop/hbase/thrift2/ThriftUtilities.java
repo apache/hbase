@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.ExtendedCellBuilder;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HConstants;
@@ -44,6 +45,7 @@ import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.ClientInternalHelper;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Consistency;
@@ -120,7 +122,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
 @InterfaceAudience.Private
 public final class ThriftUtilities {
 
-  private final static Cell[] EMPTY_CELL_ARRAY = new Cell[] {};
+  private final static ExtendedCell[] EMPTY_CELL_ARRAY = new ExtendedCell[0];
   private final static Result EMPTY_RESULT = Result.create(EMPTY_CELL_ARRAY);
   private final static Result EMPTY_RESULT_STALE = Result.create(EMPTY_CELL_ARRAY, null, true);
 
@@ -220,14 +222,14 @@ public final class ThriftUtilities {
    * @return converted result, returns an empty result if the input is <code>null</code>
    */
   public static TResult resultFromHBase(Result in) {
-    Cell[] raw = in.rawCells();
+    ExtendedCell[] raw = ClientInternalHelper.getExtendedRawCells(in);
     TResult out = new TResult();
     byte[] row = in.getRow();
     if (row != null) {
       out.setRow(in.getRow());
     }
     List<TColumnValue> columnValues = new ArrayList<>(raw.length);
-    for (Cell kv : raw) {
+    for (ExtendedCell kv : raw) {
       TColumnValue col = new TColumnValue();
       col.setFamily(CellUtil.cloneFamily(kv));
       col.setQualifier(CellUtil.cloneQualifier(kv));
@@ -1309,9 +1311,10 @@ public final class ThriftUtilities {
     if (in.getDurability() != Durability.USE_DEFAULT) {
       out.setDurability(durabilityFromHBase(in.getDurability()));
     }
-    for (Map.Entry<byte[], List<Cell>> entry : in.getFamilyCellMap().entrySet()) {
+    for (Map.Entry<byte[], List<ExtendedCell>> entry : ClientInternalHelper
+      .getExtendedFamilyCellMap(in).entrySet()) {
       byte[] family = entry.getKey();
-      for (Cell cell : entry.getValue()) {
+      for (ExtendedCell cell : entry.getValue()) {
         TColumnValue columnValue = new TColumnValue();
         columnValue.setFamily(family).setQualifier(CellUtil.cloneQualifier(cell))
           .setType(cell.getType().getCode()).setTimestamp(cell.getTimestamp())
@@ -1372,9 +1375,10 @@ public final class ThriftUtilities {
     if (in.getDurability() != Durability.USE_DEFAULT) {
       out.setDurability(durabilityFromHBase(in.getDurability()));
     }
-    for (Map.Entry<byte[], List<Cell>> entry : in.getFamilyCellMap().entrySet()) {
+    for (Map.Entry<byte[], List<ExtendedCell>> entry : ClientInternalHelper
+      .getExtendedFamilyCellMap(in).entrySet()) {
       byte[] family = entry.getKey();
-      for (Cell cell : entry.getValue()) {
+      for (ExtendedCell cell : entry.getValue()) {
         TColumnValue columnValue = new TColumnValue();
         columnValue.setFamily(family).setQualifier(CellUtil.cloneQualifier(cell))
           .setType(cell.getType().getCode()).setTimestamp(cell.getTimestamp())

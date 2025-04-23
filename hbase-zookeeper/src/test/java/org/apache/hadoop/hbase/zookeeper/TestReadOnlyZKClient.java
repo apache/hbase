@@ -43,6 +43,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Exchanger;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseZKTestingUtil;
@@ -51,6 +52,7 @@ import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ZKTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.zookeeper.AsyncCallback;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
@@ -62,6 +64,9 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
 
 @Category({ ZKTests.class, MediumTests.class })
 public class TestReadOnlyZKClient {
@@ -79,6 +84,10 @@ public class TestReadOnlyZKClient {
   private static int CHILDREN = 5;
 
   private static ReadOnlyZKClient RO_ZK;
+  private static final HashedWheelTimer RETRY_TIMER = new HashedWheelTimer(
+    new ThreadFactoryBuilder().setNameFormat("Async-Client-Retry-Timer-pool-%d").setDaemon(true)
+      .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build(),
+    10, TimeUnit.MILLISECONDS);
 
   @BeforeClass
   public static void setUp() throws Exception {
@@ -98,13 +107,14 @@ public class TestReadOnlyZKClient {
     conf.setInt(ReadOnlyZKClient.RECOVERY_RETRY, 3);
     conf.setInt(ReadOnlyZKClient.RECOVERY_RETRY_INTERVAL_MILLIS, 100);
     conf.setInt(ReadOnlyZKClient.KEEPALIVE_MILLIS, 3000);
-    RO_ZK = new ReadOnlyZKClient(conf);
+    RO_ZK = new ReadOnlyZKClient(conf, RETRY_TIMER);
     // only connect when necessary
     assertNull(RO_ZK.zookeeper);
   }
 
   @AfterClass
   public static void tearDown() throws IOException {
+    RETRY_TIMER.stop();
     RO_ZK.close();
     UTIL.shutdownMiniZKCluster();
     UTIL.cleanupTestDir();
@@ -203,5 +213,19 @@ public class TestReadOnlyZKClient {
     // now we will close the idle connection.
     waitForIdleConnectionClosed();
     verify(mockedZK, times(1)).close();
+  }
+
+  @Test
+  public void testReadWithTimeout() throws Exception {
+    assertArrayEquals(DATA, RO_ZK.get(PATH, 10000).get());
+    assertEquals(CHILDREN, RO_ZK.exists(PATH, 10000).get().getNumChildren());
+    List<String> children = RO_ZK.list(PATH, 10000).get();
+    assertEquals(CHILDREN, children.size());
+    Collections.sort(children);
+    for (int i = 0; i < CHILDREN; i++) {
+      assertEquals("c" + i, children.get(i));
+    }
+    assertNotNull(RO_ZK.zookeeper);
+    waitForIdleConnectionClosed();
   }
 }

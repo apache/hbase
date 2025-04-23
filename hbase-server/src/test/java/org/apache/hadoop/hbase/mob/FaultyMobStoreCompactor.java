@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -151,7 +152,7 @@ public class FaultyMobStoreCompactor extends DefaultMobStoreCompactor {
     long shippedCallSizeLimit =
       (long) request.getFiles().size() * this.store.getColumnFamilyDescriptor().getBlocksize();
 
-    Cell mobCell = null;
+    ExtendedCell mobCell = null;
 
     long counter = 0;
     long countFailAt = -1;
@@ -186,7 +187,8 @@ public class FaultyMobStoreCompactor extends DefaultMobStoreCompactor {
           progress.cancel();
           return false;
         }
-        for (Cell c : cells) {
+        for (Cell cell : cells) {
+          ExtendedCell c = (ExtendedCell) cell;
           counter++;
           if (compactMOBs) {
             if (MobUtils.isMobReferenceCell(c)) {
@@ -304,7 +306,8 @@ public class FaultyMobStoreCompactor extends DefaultMobStoreCompactor {
             mobCells++;
             // append the original keyValue in the mob file.
             mobFileWriter.append(c);
-            Cell reference = MobUtils.createMobRefCell(c, fileName, this.mobStore.getRefCellTags());
+            ExtendedCell reference =
+              MobUtils.createMobRefCell(c, fileName, this.mobStore.getRefCellTags());
             // write the cell whose value is the path of a mob file to the store file.
             writer.append(reference);
             cellsCountCompactedToMob++;

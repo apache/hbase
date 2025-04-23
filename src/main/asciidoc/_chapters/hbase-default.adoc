@@ -1417,6 +1417,7 @@ The policy configuration file used by RPC servers to make
 List of users or groups (comma-separated), who are allowed
     full privileges, regardless of stored ACLs, across the cluster.
     Only used when HBase security is enabled.
+    Group names should be prefixed with "@".
 +
 .Default
 ``

@@ -114,26 +114,15 @@ public interface Cell extends HeapSize {
   // 5) Type
 
   /**
-   * Return the byte representation of the KeyValue.TYPE of this cell: one of Put, Delete, etc
-   * @deprecated As of HBase-2.0. Will be removed in HBase-3.0. Use {@link #getType()}.
+   * Returns the type of cell in a human readable format using {@link Type}.
+   * <p>
+   * Note : This does not expose the internal types of Cells like {@link KeyValue.Type#Maximum} and
+   * {@link KeyValue.Type#Minimum}
+   * @return The data type this cell: one of Put, Delete, etc
    */
-  @Deprecated
-  byte getTypeByte();
+  Type getType();
 
-  // 6) SequenceId
-
-  /**
-   * A region-specific unique monotonically increasing sequence ID given to each Cell. It always
-   * exists for cells in the memstore but is not retained forever. It will be kept for
-   * {@link HConstants#KEEP_SEQID_PERIOD} days, but generally becomes irrelevant after the cell's
-   * row is no longer involved in any operations that require strict consistency.
-   * @return seqId (always &gt; 0 if exists), or 0 if it no longer exists
-   * @deprecated As of HBase-2.0. Will be removed in HBase-3.0.
-   */
-  @Deprecated
-  long getSequenceId();
-
-  // 7) Value
+  // 6) Value
 
   /**
    * Contiguous raw bytes that may start at any index in the containing array. Max length is
@@ -150,48 +139,6 @@ public interface Cell extends HeapSize {
 
   /** Returns Serialized size (defaults to include tag length if has some tags). */
   int getSerializedSize();
-
-  /**
-   * Contiguous raw bytes representing tags that may start at any index in the containing array.
-   * @return the tags byte array
-   * @deprecated As of HBase-2.0. Will be removed in HBase-3.0. Tags are are now internal.
-   */
-  @Deprecated
-  byte[] getTagsArray();
-
-  /**
-   * Return the first offset where the tags start in the Cell
-   * @deprecated As of HBase-2.0. Will be removed in HBase-3.0. Tags are are now internal.
-   */
-  @Deprecated
-  int getTagsOffset();
-
-  /**
-   * HBase internally uses 2 bytes to store tags length in Cell. As the tags length is always a
-   * non-negative number, to make good use of the sign bit, the max of tags length is defined 2 *
-   * Short.MAX_VALUE + 1 = 65535. As a result, the return type is int, because a short is not
-   * capable of handling that. Please note that even if the return type is int, the max tags length
-   * is far less than Integer.MAX_VALUE.
-   * @return the total length of the tags in the Cell.
-   * @deprecated As of HBase-2.0. Will be removed in HBase-3.0. Tags are are now internal.
-   */
-  @Deprecated
-  int getTagsLength();
-
-  /**
-   * Returns the type of cell in a human readable format using {@link Type}. Note : This does not
-   * expose the internal types of Cells like {@link KeyValue.Type#Maximum} and
-   * {@link KeyValue.Type#Minimum}
-   * @return The data type this cell: one of Put, Delete, etc
-   */
-  default Type getType() {
-    byte byteType = getTypeByte();
-    Type t = Type.CODE_ARRAY[byteType & 0xff];
-    if (t != null) {
-      return t;
-    }
-    throw new UnsupportedOperationException("Invalid type of cell " + byteType);
-  }
 
   /**
    * The valid types for user to build the cell. Currently, This is subset of {@link KeyValue.Type}.
@@ -215,14 +162,6 @@ public interface Cell extends HeapSize {
 
     public byte getCode() {
       return this.code;
-    }
-
-    private static final Type[] CODE_ARRAY = new Type[256];
-
-    static {
-      for (Type t : Type.values()) {
-        CODE_ARRAY[t.code & 0xff] = t;
-      }
     }
   }
 }

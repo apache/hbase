@@ -80,7 +80,7 @@ public class TestScannerRetriableFailure {
     }
 
     @Override
-    public boolean preScannerNext(final ObserverContext<RegionCoprocessorEnvironment> e,
+    public boolean preScannerNext(final ObserverContext<? extends RegionCoprocessorEnvironment> e,
       final InternalScanner s, final List<Result> results, final int limit, final boolean hasMore)
       throws IOException {
       final TableName tableName = e.getEnvironment().getRegionInfo().getTable();

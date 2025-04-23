@@ -62,7 +62,7 @@ _hbase-site.xml_::
   You can also view the entire effective configuration for your cluster (defaults and overrides) in
   the [label]#HBase Configuration# tab of the HBase Web UI.
 
-_log4j2.xml_::
+_log4j2.properties_::
   Configuration file for HBase logging via `log4j2`.
 
 _regionservers_::
@@ -130,62 +130,86 @@ JVM. When selecting your JDK distribution, please take this into consideration.
 ====
 
 .Java support by release line
-[cols="5*^.^", options="header"]
+[cols="6*^.^", options="header"]
 |===
 |HBase Version
 |JDK 6
 |JDK 7
 |JDK 8
 |JDK 11
+|JDK 17
 
-|HBase 2.3+
-|icon:times-circle[role="red"]
-|icon:times-circle[role="red"]
+|HBase 2.6
+2+|icon:times-circle[role="red"]
+|icon:check-circle[role="green"]
+|icon:check-circle[role="green"]
+|icon:check-circle[role="green"]
+
+
+|HBase 2.5
+2+|icon:times-circle[role="red"]
+|icon:check-circle[role="green"]
 |icon:check-circle[role="green"]
 |icon:exclamation-circle[role="yellow"]*
 
-|HBase 2.0-2.2
-|icon:times-circle[role="red"]
-|icon:times-circle[role="red"]
+|HBase 2.4
+2+|icon:times-circle[role="red"]
+|icon:check-circle[role="green"]
 |icon:check-circle[role="green"]
 |icon:times-circle[role="red"]
+
+|HBase 2.3
+2+|icon:times-circle[role="red"]
+|icon:check-circle[role="green"]
+|icon:exclamation-circle[role="yellow"]*
+|icon:times-circle[role="red"]
+
+|HBase 2.0-2.2
+2+|icon:times-circle[role="red"]
+|icon:check-circle[role="green"]
+2+|icon:times-circle[role="red"]
 
 |HBase 1.2+
 |icon:times-circle[role="red"]
 |icon:check-circle[role="green"]
 |icon:check-circle[role="green"]
-|icon:times-circle[role="red"]
+2+|icon:times-circle[role="red"]
 
 |HBase 1.0-1.1
 |icon:times-circle[role="red"]
 |icon:check-circle[role="green"]
 |icon:exclamation-circle[role="yellow"]
-|icon:times-circle[role="red"]
+2+|icon:times-circle[role="red"]
 
 |HBase 0.98
 |icon:check-circle[role="green"]
 |icon:check-circle[role="green"]
 |icon:exclamation-circle[role="yellow"]
-|icon:times-circle[role="red"]
+2+|icon:times-circle[role="red"]
 
 |HBase 0.94
 |icon:check-circle[role="green"]
 |icon:check-circle[role="green"]
-|icon:times-circle[role="red"]
-|icon:times-circle[role="red"]
+3+|icon:times-circle[role="red"]
 
 |===
 
-.A Note on JDK11 icon:exclamation-circle[role="yellow"]*
+.A Note on JDK11/JDK17 icon:exclamation-circle[role="yellow"]*
 [WARNING]
 ====
-Preliminary support for JDK11 is introduced with HBase 2.3.0. This support is limited to
-compilation and running the full test suite. There are open questions regarding the runtime
-compatibility of JDK11 with Apache ZooKeeper and Apache Hadoop
-(link:https://issues.apache.org/jira/browse/HADOOP-15338[HADOOP-15338]). Significantly, neither
-project has yet released a version with explicit runtime support for JDK11. The remaining known
-issues in HBase are catalogued in
-link:https://issues.apache.org/jira/browse/HBASE-22972[HBASE-22972].
+Preliminary support for JDK11 is introduced with HBase 2.3.0, and for JDK17 is introduced with
+HBase 2.5.x. We will compile and run test suites with JDK11/17 in pre commit checks and nightly
+checks. We will mark the support as icon:check-circle[role="green"] as long as we have run some
+ITs with the JDK version and also there are users in the community use the JDK version in real
+production clusters.
+
+For JDK11/JDK17 support in HBase, please refer to
+link:https://issues.apache.org/jira/browse/HBASE-22972[HBASE-22972] and
+link:https://issues.apache.org/jira/browse/HBASE-26038[HBASE-26038]
+
+For JDK11/JDK17 support in Hadoop, which may also affect HBase, please refer to
+link:https://issues.apache.org/jira/browse/HADOOP-15338[HADOOP-15338] and
+link:https://issues.apache.org/jira/browse/HADOOP-17177[HADOOP-17177]
 ====
 
 NOTE: You must set `JAVA_HOME` on each node of your cluster. _hbase-env.sh_ provides a handy
@@ -294,16 +318,19 @@ use Apache Hadoop, or a vendor's distribution of Hadoop. No distinction is made 
 link:https://cwiki.apache.org/confluence/display/HADOOP2/Distributions+and+Commercial+Support[the Hadoop wiki]
 for information about vendors of Hadoop.
 
-.Hadoop 2.x is recommended.
+.Hadoop 3.x is recommended.
 [TIP]
 ====
-Hadoop 2.x is faster and includes features, such as short-circuit reads (see
-<<perf.hdfs.configs.localread>>), which will help improve your HBase random read profile. Hadoop
-2.x also includes important bug fixes that will improve your overall HBase experience. HBase does
-not support running with earlier versions of Hadoop. See the table below for requirements specific
-to different HBase versions.
+Comparing to Hadoop 1.x, Hadoop 2.x is faster and includes features, such as short-circuit reads
+(see <<perf.hdfs.configs.localread>>), which will help improve your HBase random read profile.
+Hadoop 2.x also includes important bug fixes that will improve your overall HBase experience. HBase
+does not support running with earlier versions of Hadoop. See the table below for requirements
+specific to different HBase versions.
 
-Hadoop 3.x is still in early access releases and has not yet been sufficiently tested by the HBase community for production use cases.
+Today, Hadoop 3.x is recommended as the last Hadoop 2.x release 2.10.2 was released years ago, and
+there is no release for Hadoop 2.x for a very long time, although the Hadoop community does not
+officially EOL Hadoop 2.x yet.
+
 ====
 
 Use the following legend to interpret these tables:
@@ -317,27 +344,29 @@ link:https://hadoop.apache.org/cve_list.html[CVEs] so we drop the support in new
 
 [cols="1,2*^.^", options="header"]
 |===
-| | HBase-2.4.x | HBase-2.5.x
-|Hadoop-2.10.[0-1] | icon:check-circle[role="green"] | icon:times-circle[role="red"]
+| | HBase-2.5.x | HBase-2.6.x
+|Hadoop-2.10.[0-1] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
 |Hadoop-2.10.2+ | icon:check-circle[role="green"] | icon:check-circle[role="green"]
 |Hadoop-3.1.0 | icon:times-circle[role="red"] | icon:times-circle[role="red"]
-|Hadoop-3.1.1+ | icon:check-circle[role="green"] | icon:times-circle[role="red"]
-|Hadoop-3.2.[0-2] | icon:check-circle[role="green"] | icon:times-circle[role="red"]
-|Hadoop-3.2.3+ | icon:check-circle[role="green"] | icon:check-circle[role="green"]
-|Hadoop-3.3.[0-1] | icon:check-circle[role="green"] | icon:times-circle[role="red"]
-|Hadoop-3.3.2+ | icon:check-circle[role="green"] | icon:check-circle[role="green"]
+|Hadoop-3.1.1+ | icon:times-circle[role="red"] | icon:times-circle[role="red"]
+|Hadoop-3.2.[0-2] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
+|Hadoop-3.2.3+ | icon:check-circle[role="green"] | icon:times-circle[role="red"]
+|Hadoop-3.3.[0-1] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
+|Hadoop-3.3.[2-4] | icon:check-circle[role="green"] | icon:times-circle[role="red"]
+|Hadoop-3.3.5+ | icon:check-circle[role="green"] | icon:check-circle[role="green"]
+|Hadoop-3.4.0+ | icon:check-circle[role="green"] (2.5.11+) | icon:check-circle[role="green"] (2.6.2+)
 |===
 
 .Hadoop version support matrix for EOM 2.3+ release lines
 
-[cols="1,1*^.^", options="header"]
+[cols="1,2*^.^", options="header"]
 |===
-| | HBase-2.3.x
-|Hadoop-2.10.x | icon:check-circle[role="green"]
-|Hadoop-3.1.0 | icon:times-circle[role="red"]
-|Hadoop-3.1.1+ | icon:check-circle[role="green"]
-|Hadoop-3.2.x | icon:check-circle[role="green"]
-|Hadoop-3.3.x | icon:check-circle[role="green"]
+| | HBase-2.3.x | HBase-2.4.x
+|Hadoop-2.10.x | icon:check-circle[role="green"] | icon:check-circle[role="green"]
+|Hadoop-3.1.0 | icon:times-circle[role="red"] | icon:times-circle[role="red"]
+|Hadoop-3.1.1+ | icon:check-circle[role="green"] | icon:check-circle[role="green"]
+|Hadoop-3.2.x | icon:check-circle[role="green"] | icon:check-circle[role="green"]
+|Hadoop-3.3.x | icon:check-circle[role="green"] | icon:check-circle[role="green"]
 |===
 
 .Hadoop version support matrix for EOM 2.x release lines
@@ -424,6 +453,7 @@ expressly advises downstream users to avoid running on top of this release. For 
 the link:https://s.apache.org/hadoop-3.1.0-announcement[release announcement for Hadoop 3.1.0].
 ====
 
+[[note_replace_hadoop]]
 .Replace the Hadoop Bundled With HBase!
 [NOTE]
 ====
@@ -435,6 +465,33 @@ cluster to avoid version mismatch issues. Make sure you replace the jars under H
 whole cluster. Hadoop version mismatch issues have various manifestations. Check for mismatch if
 HBase appears hung.
 ====
+
+[[binary_release_hadoop_version]]
+==== Hadoop 3 Support for the HBase Binary Releases and Maven Artifacts ====
+
+For HBase 2.5.1 and earlier, the official HBase binary releases and Maven artifacts were built with Hadoop 2.x.
+
+Starting with HBase 2.5.2, HBase provides binary releases and Maven artifacts built with both Hadoop 2.x and Hadoop 3.x.
+The Hadoop 2 artifacts do not have any version suffix, the Hadoop 3 artifacts add the `-hadoop-3` suffix to the version.
+i.e. `hbase-2.5.2-bin.tar.gz.asc` is the Binary release built with Hadoop2, and `hbase-2.5.2-hadoop3-bin.tar.gz` is the
+release built with Hadoop 3.
+
+[[default_hadoop_version_policy]]
+==== Hadoop 3 version policy ====
+
+Each HBase release has a default Hadoop 3 version. This is used when the Hadoop 3 version is not specified during build,
+and for building the official binary releases and artifacts. Generally when a new minor version is released
+(i.e. 2.5.0) the default version is set to the latest supported Hadoop 3 version at the start of the release
+process.
+
+Up to HBase 2.5.10 and 2.6.1 even if HBase added support for newer Hadoop 3 releases in a patch release,
+the default Hadoop 3 version (and the one used in the official binary releases) was not updated.
+This simplified upgrading, but meant that HBase releases often included old unfixed CVEs both from Hadoop and Hadoop's
+dependencies, even when newer Hadoop releases with fixes were available.
+
+Starting with HBase 2.5.11 and 2.6.2, the default Hadoop 3 version is always set to the latest supported Hadoop 3 version,
+and is also used for the `-hadoop3` binary releases and artifacts. This will drastically reduce the number of known CVEs
+shipped in the HBase binary releases, and make sure that all fixes and improvements in Hadoop are included.
 
 [[dfs.datanode.max.transfer.threads]]
 ==== `dfs.datanode.max.transfer.threads` (((dfs.datanode.max.transfer.threads)))
@@ -516,7 +573,7 @@ to _false_. For example:
 <configuration>
   <property>
     <name>hbase.rootdir</name>
-    <value>hdfs://namenode.example.org:8020/hbase</value>
+    <value>hdfs://namenode.example.org:9000/hbase</value>
   </property>
   <property>
     <name>hbase.cluster.distributed</name>
@@ -593,7 +650,7 @@ overridden in the _hbase-site.xml_. See "<<config.files,Configuration Files>>" f
 <configuration>
   <property>
     <name>hbase.rootdir</name>
-    <value>hdfs://namenode.example.org:8020/hbase</value>
+    <value>hdfs://namenode.example.org:9000/hbase</value>
   </property>
   <property>
     <name>hbase.cluster.distributed</name>
@@ -650,6 +707,27 @@ c. if only a small set of HDFS client configurations, add them to _hbase-site.xm
 An example of such an HDFS client configuration is `dfs.replication`.
 If for example, you want to run with a replication factor of 5, HBase will create files with the
 default of 3 unless you do the above to make the configuration available to HBase.
+
+[[byo-hadoop-assembly]]
+=== Choosing between the Classic Package and the BYO Hadoop Package
+
+Starting with HBase 3.0, HBase includes two binary packages. The classic package
+includes both the HBase and Hadoop components, while the Hadoop-less "Bring Your Own Hadoop"
+package omits the Hadoop components, and uses the files from an existing Hadoop installation.
+The classic binary package filename is named `hbase-<version>-bin.tar.gz` i.e.
+_hbase-3.0.0-bin.tar.gz_ , while the Hadoop-less package is
+`hbase-byo-hadoop-<version>-bin.tar.gz` i.e. _hbase-byo-hadoop-3.0.0-bin.tar.gz_.
+
+If the cluster nodes already have Hadoop installed, you can use the Hadoop-less package.
+In this case you need to make sure that the `HADOOP_HOME` environment variable is set and
+points to the Hadoop installation.
+The easiest way to ensure this is to set it in _hbase-env.sh_. You still need to make sure that
+the Hadoop configuration files are present on the HBase classpath, as described above.
+
+.Advantages of the BYO Hadoop package
+* There is no need to replace the Hadoop libraries, as noted <<note_replace_hadoop,above>>.
+* It is easier to upgrade Hadoop and HBase independently (as long as compatible versions are used).
+* Both the package and installed size are about 100 MB smaller.
 
 [[confirm]]
 == Running and Confirming Your Installation
@@ -730,9 +808,9 @@ read by HBase daemons on startup.
 Changes here will require a cluster restart for HBase to notice the change.
 
 [[log4j]]
-=== _log4j2.xml_
+=== _log4j2.properties_
 
-Since version 3.0.0, HBase has upgraded to Log4j2, so the configuration file name and format has changed. Read more in link:https://logging.apache.org/log4j/2.x/index.html[Apache Log4j2].
+Since version 2.5.0, HBase has upgraded to Log4j2, so the configuration file name and format has changed. Read more in link:https://logging.apache.org/log4j/2.x/index.html[Apache Log4j2].
 
 Edit this file to change rate at which HBase files are rolled and to change the level at which
 HBase logs messages.
@@ -746,8 +824,8 @@ be changed for particular daemons via the HBase UI.
 If you are running HBase in standalone mode, you don't need to configure anything for your client
 to work provided that they are all on the same machine.
 
-Starting release 3.0.0, the default connection registry has been switched to a master based
-implementation. Refer to <<client.masterregistry>> for more details about what a connection
+Starting release 3.0.0, the default connection registry has been switched to a rpc based
+implementation. Refer to <<client.rpcconnectionregistry>> for more details about what a connection
 registry is and implications of this change. Depending on your HBase version, following is the
 expected minimal client configuration.
 
@@ -772,11 +850,11 @@ before they can do anything. This can be configured in the client configuration 
 </configuration>
 ----
 
-==== Starting 3.0.0 release
+==== Starting from 3.0.0 release
 
-The default implementation was switched to a master based connection registry. With this
-implementation, clients always contact the active or stand-by master RPC end points to fetch the
-connection registry information. This means that the clients should have access to the list of
+The default implementation was switched to a rpc based connection registry. With this
+implementation, by default clients contact the active or stand-by master RPC end points to fetch
+the connection registry information. This means that the clients should have access to the list of
 active and master end points before they can do anything. This can be configured in the client
 configuration xml as follows:
 
@@ -796,8 +874,22 @@ configuration xml as follows:
 The configuration value for _hbase.masters_ is a comma separated list of _host:port_ values. If no
 port value is specified, the default of _16000_ is assumed.
 
-Usually this configuration is kept out in the _hbase-site.xml_ and is picked up by the client from
-the `CLASSPATH`.
+Of course you are free to specify bootstrap nodes other than masters, like:
+[source,xml]
+----
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<property>
+    <name>hbase.client.bootstrap.servers</name>
+    <value>server1:16020,server2:16020,server3:16020</value>
+</property>
+----
+
+The configuration value for _hbase.client.bootstrap.servers_ is a comma separated list of
+_host:port_ values. Notice that port must be specified here.
+
+Usually these configurations are kept out in the _hbase-site.xml_ and is picked up by the client
+from the `CLASSPATH`.
 
 If you are configuring an IDE to run an HBase client, you should include the _conf/_ directory on
 your classpath so _hbase-site.xml_ settings can be found (or add _src/test/resources_ to pick up
@@ -827,14 +919,15 @@ in the content of the first _hbase-site.xml_ found on the client's `CLASSPATH`, 
 the _hbase.X.X.X.jar_). It is also possible to specify configuration directly without having to
 read from a _hbase-site.xml_.
 
-For example, to set the ZooKeeper ensemble for the cluster programmatically do as follows:
+For example, to set the ZooKeeper ensemble or bootstrap nodes for the cluster programmatically
+do as follows:
 
 [source,java]
 ----
 Configuration config = HBaseConfiguration.create();
 config.set("hbase.zookeeper.quorum", "localhost");  // Until 2.x.y versions
 // ---- or ----
-config.set("hbase.masters", "localhost:1234"); // Starting 3.0.0 version
+config.set("hbase.client.bootstrap.servers", "localhost:1234"); // Starting 3.0.0 version
 ----
 
 [[config_timeouts]]
@@ -902,7 +995,7 @@ _hbase-env.sh_ -- found in the HBase _conf_ directory might look like.
   </property>
   <property>
     <name>hbase.rootdir</name>
-    <value>hdfs://example0:8020/hbase</value>
+    <value>hdfs://example0:9000/hbase</value>
     <description>The directory shared by RegionServers.
     </description>
   </property>

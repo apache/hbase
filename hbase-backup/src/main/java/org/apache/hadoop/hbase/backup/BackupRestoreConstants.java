@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.backup;
 
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -64,7 +65,7 @@ public interface BackupRestoreConstants {
 
   String OPTION_TABLE = "t";
   String OPTION_TABLE_DESC =
-    "Table name. If specified, only backup images," + " which contain this table will be listed.";
+    "Table name. If specified, only backup images, which contain this table will be listed.";
 
   String OPTION_LIST = "l";
   String OPTION_TABLE_LIST_DESC = "Table name list, comma-separated.";
@@ -75,6 +76,12 @@ public interface BackupRestoreConstants {
 
   String OPTION_WORKERS = "w";
   String OPTION_WORKERS_DESC = "Number of parallel MapReduce tasks to execute";
+
+  String OPTION_IGNORECHECKSUM = "i";
+  String OPTION_IGNORECHECKSUM_DESC =
+    "Ignore checksum verify between source snapshot and exported snapshot."
+      + " Especially when the source and target file system types are different,"
+      + " we should use -i option to skip checksum-checks.";
 
   String OPTION_RECORD_NUMBER = "n";
   String OPTION_RECORD_NUMBER_DESC = "Number of records of backup history. Default: 10";
@@ -94,16 +101,17 @@ public interface BackupRestoreConstants {
 
   String JOB_NAME_CONF_KEY = "mapreduce.job.name";
 
-  String BACKUP_CONFIG_STRING =
-    BackupRestoreConstants.BACKUP_ENABLE_KEY + "=true\n" + "hbase.master.logcleaner.plugins="
-      + "YOUR_PLUGINS,org.apache.hadoop.hbase.backup.master.BackupLogCleaner\n"
-      + "hbase.procedure.master.classes=YOUR_CLASSES,"
-      + "org.apache.hadoop.hbase.backup.master.LogRollMasterProcedureManager\n"
-      + "hbase.procedure.regionserver.classes=YOUR_CLASSES,"
-      + "org.apache.hadoop.hbase.backup.regionserver.LogRollRegionServerProcedureManager\n"
-      + "hbase.coprocessor.region.classes=YOUR_CLASSES,"
-      + "org.apache.hadoop.hbase.backup.BackupObserver\n" + "and restart the cluster\n"
-      + "For more information please see http://hbase.apache.org/book.html#backuprestore\n";
+  String BACKUP_CONFIG_STRING = BackupRestoreConstants.BACKUP_ENABLE_KEY + "=true\n"
+    + "hbase.master.logcleaner.plugins="
+    + "YOUR_PLUGINS,org.apache.hadoop.hbase.backup.master.BackupLogCleaner\n"
+    + "hbase.procedure.master.classes=YOUR_CLASSES,"
+    + "org.apache.hadoop.hbase.backup.master.LogRollMasterProcedureManager\n"
+    + "hbase.procedure.regionserver.classes=YOUR_CLASSES,"
+    + "org.apache.hadoop.hbase.backup.regionserver.LogRollRegionServerProcedureManager\n"
+    + CoprocessorHost.REGION_COPROCESSOR_CONF_KEY + "=YOUR_CLASSES,"
+    + BackupObserver.class.getSimpleName() + "\n" + CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY
+    + "=YOUR_CLASSES," + BackupMasterObserver.class.getSimpleName() + "\nand restart the cluster\n"
+    + "For more information please see http://hbase.apache.org/book.html#backuprestore\n";
   String ENABLE_BACKUP = "Backup is not enabled. To enable backup, " + "in hbase-site.xml, set:\n "
     + BACKUP_CONFIG_STRING;
 

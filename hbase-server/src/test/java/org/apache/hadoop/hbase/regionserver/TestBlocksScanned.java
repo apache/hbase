@@ -24,7 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValueUtil;
@@ -114,7 +114,7 @@ public class TestBlocksScanned {
     scan.readVersions(1);
 
     InternalScanner s = r.getScanner(scan);
-    List<Cell> results = new ArrayList<>();
+    List<ExtendedCell> results = new ArrayList<>();
     while (s.next(results))
       ;
     s.close();

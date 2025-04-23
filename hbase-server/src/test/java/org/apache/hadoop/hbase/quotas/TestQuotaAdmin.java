@@ -123,7 +123,7 @@ public class TestQuotaAdmin {
       QuotaSettingsFactory.throttleUser(userName, ThrottleType.WRITE_NUMBER, 12, TimeUnit.MINUTES));
     admin.setQuota(QuotaSettingsFactory.bypassGlobals(userName, true));
 
-    try (QuotaRetriever scanner = QuotaRetriever.open(TEST_UTIL.getConfiguration())) {
+    try (QuotaRetriever scanner = new QuotaRetriever(TEST_UTIL.getConnection())) {
       int countThrottle = 0;
       int countGlobalBypass = 0;
       for (QuotaSettings settings : scanner) {
@@ -169,7 +169,7 @@ public class TestQuotaAdmin {
       TimeUnit.MINUTES));
     admin.setQuota(QuotaSettingsFactory.bypassGlobals(userName, true));
 
-    try (QuotaRetriever scanner = QuotaRetriever.open(TEST_UTIL.getConfiguration())) {
+    try (QuotaRetriever scanner = new QuotaRetriever(TEST_UTIL.getConnection())) {
       int countThrottle = 0;
       int countGlobalBypass = 0;
       for (QuotaSettings settings : scanner) {
@@ -345,11 +345,8 @@ public class TestQuotaAdmin {
     }
 
     // Verify we can retrieve it via the QuotaRetriever API
-    QuotaRetriever scanner = QuotaRetriever.open(admin.getConfiguration());
-    try {
+    try (QuotaRetriever scanner = new QuotaRetriever(admin.getConnection())) {
       assertSpaceQuota(sizeLimit, violationPolicy, Iterables.getOnlyElement(scanner));
-    } finally {
-      scanner.close();
     }
 
     // Now, remove the quota
@@ -367,11 +364,8 @@ public class TestQuotaAdmin {
     }
 
     // Verify that we can also not fetch it via the API
-    scanner = QuotaRetriever.open(admin.getConfiguration());
-    try {
+    try (QuotaRetriever scanner = new QuotaRetriever(admin.getConnection())) {
       assertNull("Did not expect to find a quota entry", scanner.next());
-    } finally {
-      scanner.close();
     }
   }
 
@@ -399,11 +393,8 @@ public class TestQuotaAdmin {
     }
 
     // Verify we can retrieve it via the QuotaRetriever API
-    QuotaRetriever quotaScanner = QuotaRetriever.open(admin.getConfiguration());
-    try {
+    try (QuotaRetriever quotaScanner = new QuotaRetriever(admin.getConnection())) {
       assertSpaceQuota(originalSizeLimit, violationPolicy, Iterables.getOnlyElement(quotaScanner));
-    } finally {
-      quotaScanner.close();
     }
 
     // Setting a new size and policy should be reflected
@@ -427,11 +418,8 @@ public class TestQuotaAdmin {
     }
 
     // Verify we can retrieve the new quota via the QuotaRetriever API
-    quotaScanner = QuotaRetriever.open(admin.getConfiguration());
-    try {
+    try (QuotaRetriever quotaScanner = new QuotaRetriever(admin.getConnection())) {
       assertSpaceQuota(newSizeLimit, newViolationPolicy, Iterables.getOnlyElement(quotaScanner));
-    } finally {
-      quotaScanner.close();
     }
 
     // Now, remove the quota
@@ -449,11 +437,8 @@ public class TestQuotaAdmin {
     }
 
     // Verify that we can also not fetch it via the API
-    quotaScanner = QuotaRetriever.open(admin.getConfiguration());
-    try {
+    try (QuotaRetriever quotaScanner = new QuotaRetriever(admin.getConnection())) {
       assertNull("Did not expect to find a quota entry", quotaScanner.next());
-    } finally {
-      quotaScanner.close();
     }
   }
 
@@ -549,8 +534,7 @@ public class TestQuotaAdmin {
     admin.setQuota(QuotaSettingsFactory.throttleRegionServer(regionServer, ThrottleType.READ_NUMBER,
       30, TimeUnit.SECONDS));
     int count = 0;
-    QuotaRetriever scanner = QuotaRetriever.open(TEST_UTIL.getConfiguration(), rsFilter);
-    try {
+    try (QuotaRetriever scanner = new QuotaRetriever(TEST_UTIL.getConnection(), rsFilter)) {
       for (QuotaSettings settings : scanner) {
         assertTrue(settings.getQuotaType() == QuotaType.THROTTLE);
         ThrottleSettings throttleSettings = (ThrottleSettings) settings;
@@ -564,8 +548,6 @@ public class TestQuotaAdmin {
           assertEquals(TimeUnit.SECONDS, throttleSettings.getTimeUnit());
         }
       }
-    } finally {
-      scanner.close();
     }
     assertEquals(2, count);
 
@@ -733,14 +715,14 @@ public class TestQuotaAdmin {
   private void verifyFetchableViaAPI(Admin admin, ThrottleType type, long limit, TimeUnit tu)
     throws Exception {
     // Verify we can retrieve the new quota via the QuotaRetriever API
-    try (QuotaRetriever quotaScanner = QuotaRetriever.open(admin.getConfiguration())) {
+    try (QuotaRetriever quotaScanner = new QuotaRetriever(admin.getConnection())) {
       assertRPCQuota(type, limit, tu, Iterables.getOnlyElement(quotaScanner));
     }
   }
 
   private void verifyNotFetchableViaAPI(Admin admin) throws Exception {
     // Verify that we can also not fetch it via the API
-    try (QuotaRetriever quotaScanner = QuotaRetriever.open(admin.getConfiguration())) {
+    try (QuotaRetriever quotaScanner = new QuotaRetriever(admin.getConnection())) {
       assertNull("Did not expect to find a quota entry", quotaScanner.next());
     }
   }
@@ -791,6 +773,14 @@ public class TestQuotaAdmin {
         assertTrue(rpcQuota.hasWriteCapacityUnit());
         t = rpcQuota.getWriteCapacityUnit();
         break;
+      case ATOMIC_READ_SIZE:
+        assertTrue(rpcQuota.hasAtomicReadSize());
+        t = rpcQuota.getAtomicReadSize();
+        break;
+      case ATOMIC_REQUEST_NUMBER:
+        assertTrue(rpcQuota.hasAtomicReqNum());
+        t = rpcQuota.getAtomicReqNum();
+        break;
       default:
     }
 
@@ -830,16 +820,13 @@ public class TestQuotaAdmin {
   }
 
   private int countResults(final QuotaFilter filter) throws Exception {
-    QuotaRetriever scanner = QuotaRetriever.open(TEST_UTIL.getConfiguration(), filter);
-    try {
+    try (QuotaRetriever scanner = new QuotaRetriever(TEST_UTIL.getConnection(), filter)) {
       int count = 0;
       for (QuotaSettings settings : scanner) {
         LOG.debug(Objects.toString(settings));
         count++;
       }
       return count;
-    } finally {
-      scanner.close();
     }
   }
 

@@ -177,14 +177,14 @@ public class ZooKeeperScanPolicyObserver implements RegionCoprocessor, RegionObs
   }
 
   @Override
-  public void preFlushScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-    ScanOptions options, FlushLifeCycleTracker tracker) throws IOException {
+  public void preFlushScannerOpen(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    Store store, ScanOptions options, FlushLifeCycleTracker tracker) throws IOException {
     resetTTL(options);
   }
 
   @Override
-  public void preCompactScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-    ScanType scanType, ScanOptions options, CompactionLifeCycleTracker tracker,
+  public void preCompactScannerOpen(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    Store store, ScanType scanType, ScanOptions options, CompactionLifeCycleTracker tracker,
     CompactionRequest request) throws IOException {
     resetTTL(options);
   }

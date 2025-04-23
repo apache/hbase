@@ -39,6 +39,17 @@ def usage
   exit!
 end
 
+def create_namespace_if_not_exists(src, dst, namespace)
+  begin
+    dst.getNamespaceDescriptor(namespace)
+    puts format('Namespace "%s" already exists.', namespace)
+  rescue org.apache.hadoop.hbase.NamespaceNotFoundException
+    n = src.getNamespaceDescriptor(namespace)
+    dst.createNamespace(n)
+    puts format('Namespace "%s" was successfully created.', namespace)
+  end
+end
+
 def copy(src, dst, table)
   # verify if table exists in source cluster
   begin
@@ -48,6 +59,10 @@ def copy(src, dst, table)
     return
   end
 
+  # verify if namespace *doesn't* exists in the target cluster
+  namespace = TableName.valueOf(table).getNamespaceAsString
+  create_namespace_if_not_exists(src, dst, namespace)
+
   # verify if table *doesn't* exists in the target cluster
   begin
     dst.createTable(t)
@@ -56,7 +71,7 @@ def copy(src, dst, table)
     return
   end
 
-  puts format('Schema for table "%s" was succesfully copied to remote cluster.', table)
+  puts format('Schema for table "%s" was successfully copied to remote cluster.', table)
 end
 
 # disable debug/info logging on this script for clarity

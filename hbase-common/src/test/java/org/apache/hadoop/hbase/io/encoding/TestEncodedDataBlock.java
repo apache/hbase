@@ -17,20 +17,27 @@
  */
 package org.apache.hadoop.hbase.io.encoding;
 
-import java.io.IOException;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Before;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.mockito.Mockito;
+import org.junit.runner.RunWith;
+import org.mockito.Mock;
+import org.mockito.MockedStatic;
+import org.mockito.junit.MockitoJUnitRunner;
 
 /**
- * Test for EncodedDataBlock
+ * Test for HBASE-23342
  */
+@RunWith(MockitoJUnitRunner.class)
 @Category({ MiscTests.class, SmallTests.class })
 public class TestEncodedDataBlock {
 
@@ -38,26 +45,23 @@ public class TestEncodedDataBlock {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestEncodedDataBlock.class);
 
-  private Algorithm algo;
+  // for generating exception
+  @Mock
+  private MockedStatic<ReflectionUtils> mockedReflectionUtils;
+
   private static final byte[] INPUT_BYTES = new byte[] { 0, 1, 0, 0, 1, 2, 3, 0, 0, 1, 0, 0, 1, 2,
     3, 0, 0, 1, 0, 0, 1, 2, 3, 0, 0, 1, 0, 0, 1, 2, 3, 0 };
 
-  @Before
-  public void setUp() throws IOException {
-    algo = Mockito.mock(Algorithm.class);
-  }
-
+  @SuppressWarnings("unchecked")
   @Test
   public void testGetCompressedSize() throws Exception {
-    Mockito.when(algo.createCompressionStream(Mockito.any(), Mockito.any(), Mockito.anyInt()))
-      .thenThrow(IOException.class);
-    try {
-      EncodedDataBlock.getCompressedSize(algo, null, INPUT_BYTES, 0, 0);
-      throw new RuntimeException("Should not reach here");
-    } catch (IOException e) {
-      Mockito.verify(algo, Mockito.times(1)).createCompressionStream(Mockito.any(), Mockito.any(),
-        Mockito.anyInt());
-    }
+    RuntimeException inject = new RuntimeException("inject error");
+    mockedReflectionUtils.when(() -> ReflectionUtils.newInstance(any(Class.class), any()))
+      .thenThrow(inject);
+    RuntimeException error = assertThrows(RuntimeException.class,
+      () -> EncodedDataBlock.getCompressedSize(Algorithm.GZ, null, INPUT_BYTES, 0, 0));
+    // make sure we get the injected error instead of NPE
+    assertSame(inject, error);
   }
 
 }

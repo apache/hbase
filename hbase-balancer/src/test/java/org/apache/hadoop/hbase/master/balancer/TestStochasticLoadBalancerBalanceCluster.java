@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master.balancer;
 
 import static org.junit.Assert.assertNull;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -51,6 +52,7 @@ public class TestStochasticLoadBalancerBalanceCluster extends StochasticBalancer
    */
   @Test
   public void testBalanceCluster() throws Exception {
+    setMaxRunTime(Duration.ofMillis(2500));
     loadBalancer.onConfigurationChange(conf);
     for (int[] mockCluster : clusterStateMocks) {
       Map<ServerName, List<RegionInfo>> servers = mockClusterServers(mockCluster);

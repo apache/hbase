@@ -210,7 +210,7 @@ public class TestRegionObserverForAddingMutationsFromCoprocessors {
     }
 
     @Override
-    public void preBatchMutate(ObserverContext<RegionCoprocessorEnvironment> c,
+    public void preBatchMutate(ObserverContext<? extends RegionCoprocessorEnvironment> c,
       MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {
       Mutation mut = miniBatchOp.getOperation(0);
       List<Cell> cells = mut.getFamilyCellMap().get(test);
@@ -229,7 +229,7 @@ public class TestRegionObserverForAddingMutationsFromCoprocessors {
     }
 
     @Override
-    public void preBatchMutate(ObserverContext<RegionCoprocessorEnvironment> c,
+    public void preBatchMutate(ObserverContext<? extends RegionCoprocessorEnvironment> c,
       MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {
       Mutation mut = miniBatchOp.getOperation(0);
       List<Cell> cells = mut.getFamilyCellMap().get(test);
@@ -249,7 +249,7 @@ public class TestRegionObserverForAddingMutationsFromCoprocessors {
     }
 
     @Override
-    public void preBatchMutate(ObserverContext<RegionCoprocessorEnvironment> c,
+    public void preBatchMutate(ObserverContext<? extends RegionCoprocessorEnvironment> c,
       MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {
       Mutation mut = miniBatchOp.getOperation(0);
 
@@ -272,7 +272,7 @@ public class TestRegionObserverForAddingMutationsFromCoprocessors {
     }
 
     @Override
-    public void preBatchMutate(ObserverContext<RegionCoprocessorEnvironment> c,
+    public void preBatchMutate(ObserverContext<? extends RegionCoprocessorEnvironment> c,
       MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {
       Mutation mut = miniBatchOp.getOperation(0);
 
@@ -295,7 +295,7 @@ public class TestRegionObserverForAddingMutationsFromCoprocessors {
     }
 
     @Override
-    public void preBatchMutate(ObserverContext<RegionCoprocessorEnvironment> c,
+    public void preBatchMutate(ObserverContext<? extends RegionCoprocessorEnvironment> c,
       MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {
       Mutation mut = miniBatchOp.getOperation(0);
 

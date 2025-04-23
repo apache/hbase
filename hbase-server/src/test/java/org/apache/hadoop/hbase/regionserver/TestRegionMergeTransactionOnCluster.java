@@ -60,6 +60,8 @@ import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -247,7 +249,9 @@ public class TestRegionMergeTransactionOnCluster {
         new HRegionFileSystem(TEST_UTIL.getConfiguration(), fs, tabledir, mergedRegionInfo);
       int count = 0;
       for (ColumnFamilyDescriptor colFamily : columnFamilies) {
-        count += hrfs.getStoreFiles(colFamily.getNameAsString()).size();
+        StoreFileTracker sft = StoreFileTrackerFactory.create(TEST_UTIL.getConfiguration(),
+          tableDescriptor, colFamily, hrfs, false);
+        count += sft.load().size();
       }
       ADMIN.compactRegion(mergedRegionInfo.getRegionName());
       // clean up the merged region store files
@@ -256,7 +260,9 @@ public class TestRegionMergeTransactionOnCluster {
       int newcount = 0;
       while (EnvironmentEdgeManager.currentTime() < timeout) {
         for (ColumnFamilyDescriptor colFamily : columnFamilies) {
-          newcount += hrfs.getStoreFiles(colFamily.getNameAsString()).size();
+          StoreFileTracker sft = StoreFileTrackerFactory.create(TEST_UTIL.getConfiguration(),
+            tableDescriptor, colFamily, hrfs, false);
+          newcount += sft.load().size();
         }
         if (newcount > count) {
           break;
@@ -275,7 +281,9 @@ public class TestRegionMergeTransactionOnCluster {
       while (EnvironmentEdgeManager.currentTime() < timeout) {
         int newcount1 = 0;
         for (ColumnFamilyDescriptor colFamily : columnFamilies) {
-          newcount1 += hrfs.getStoreFiles(colFamily.getNameAsString()).size();
+          StoreFileTracker sft = StoreFileTrackerFactory.create(TEST_UTIL.getConfiguration(),
+            tableDescriptor, colFamily, hrfs, false);
+          newcount1 += sft.load().size();
         }
         if (newcount1 <= 1) {
           break;

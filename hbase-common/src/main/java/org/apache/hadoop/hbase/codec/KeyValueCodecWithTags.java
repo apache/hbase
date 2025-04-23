@@ -22,7 +22,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
@@ -58,11 +58,11 @@ public class KeyValueCodecWithTags implements Codec {
     }
 
     @Override
-    public void write(Cell cell) throws IOException {
+    public void write(ExtendedCell cell) throws IOException {
       checkFlushed();
       // Write tags
-      ByteBufferUtils.putInt(this.out, KeyValueUtil.getSerializedSize(cell, true));
-      KeyValueUtil.oswrite(cell, out, true);
+      ByteBufferUtils.putInt(this.out, cell.getSerializedSize(true));
+      cell.write(out, true);
     }
   }
 
@@ -72,7 +72,7 @@ public class KeyValueCodecWithTags implements Codec {
     }
 
     @Override
-    protected Cell parseCell() throws IOException {
+    protected ExtendedCell parseCell() throws IOException {
       // create KeyValue with tags
       return KeyValueUtil.createKeyValueFromInputStream(in, true);
     }
@@ -85,12 +85,12 @@ public class KeyValueCodecWithTags implements Codec {
     }
 
     @Override
-    protected Cell createCell(byte[] buf, int offset, int len) {
+    protected ExtendedCell createCell(byte[] buf, int offset, int len) {
       return new KeyValue(buf, offset, len);
     }
 
     @Override
-    protected Cell createCell(ByteBuffer bb, int pos, int len) {
+    protected ExtendedCell createCell(ByteBuffer bb, int pos, int len) {
       return new ByteBufferKeyValue(bb, pos, len);
     }
   }

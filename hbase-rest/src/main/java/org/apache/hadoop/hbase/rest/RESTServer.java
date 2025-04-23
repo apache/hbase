@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.rest;
 
+import static org.apache.hadoop.hbase.http.HttpServerUtil.PATH_SPEC_ANY;
+
 import java.lang.management.ManagementFactory;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
@@ -31,10 +33,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.http.ClickjackingPreventionFilter;
 import org.apache.hadoop.hbase.http.HttpServerUtil;
 import org.apache.hadoop.hbase.http.InfoServer;
-import org.apache.hadoop.hbase.http.SecurityHeadersFilter;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.rest.filter.AuthFilter;
 import org.apache.hadoop.hbase.rest.filter.GzipFilter;
@@ -99,8 +99,6 @@ public class RESTServer implements Constants {
   static final String HTTP_HEADER_CACHE_SIZE = "hbase.rest.http.header.cache.size";
   static final int DEFAULT_HTTP_HEADER_CACHE_SIZE = Character.MAX_VALUE - 1;
 
-  private static final String PATH_SPEC_ANY = "/*";
-
   static final String REST_HTTP_ALLOW_OPTIONS_METHOD = "hbase.rest.http.allow.options.method";
   // HTTP OPTIONS method is commonly used in REST APIs for negotiation. So it is enabled by default.
   private static boolean REST_HTTP_ALLOW_OPTIONS_METHOD_DEFAULT = true;
@@ -142,24 +140,6 @@ public class RESTServer implements Constants {
       holder.setInitParameters(restCsrfParams);
       ctxHandler.addFilter(holder, PATH_SPEC_ANY, EnumSet.allOf(DispatcherType.class));
     }
-  }
-
-  private void addClickjackingPreventionFilter(ServletContextHandler ctxHandler,
-    Configuration conf) {
-    FilterHolder holder = new FilterHolder();
-    holder.setName("clickjackingprevention");
-    holder.setClassName(ClickjackingPreventionFilter.class.getName());
-    holder.setInitParameters(ClickjackingPreventionFilter.getDefaultParameters(conf));
-    ctxHandler.addFilter(holder, PATH_SPEC_ANY, EnumSet.allOf(DispatcherType.class));
-  }
-
-  private void addSecurityHeadersFilter(ServletContextHandler ctxHandler, Configuration conf,
-    boolean isSecure) {
-    FilterHolder holder = new FilterHolder();
-    holder.setName("securityheaders");
-    holder.setClassName(SecurityHeadersFilter.class.getName());
-    holder.setInitParameters(SecurityHeadersFilter.getDefaultParameters(conf, isSecure));
-    ctxHandler.addFilter(holder, PATH_SPEC_ANY, EnumSet.allOf(DispatcherType.class));
   }
 
   // login the server principal (if using secure Hadoop)
@@ -397,8 +377,8 @@ public class RESTServer implements Constants {
       ctxHandler.addFilter(filter, PATH_SPEC_ANY, EnumSet.of(DispatcherType.REQUEST));
     }
     addCSRFFilter(ctxHandler, conf);
-    addClickjackingPreventionFilter(ctxHandler, conf);
-    addSecurityHeadersFilter(ctxHandler, conf, isSecure);
+    HttpServerUtil.addClickjackingPreventionFilter(ctxHandler, conf, PATH_SPEC_ANY);
+    HttpServerUtil.addSecurityHeadersFilter(ctxHandler, conf, isSecure, PATH_SPEC_ANY);
     HttpServerUtil.constrainHttpMethods(ctxHandler, servlet.getConfiguration()
       .getBoolean(REST_HTTP_ALLOW_OPTIONS_METHOD, REST_HTTP_ALLOW_OPTIONS_METHOD_DEFAULT));
 

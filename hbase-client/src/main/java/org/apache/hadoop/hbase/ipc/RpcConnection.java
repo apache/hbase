@@ -34,7 +34,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import javax.security.sasl.SaslException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.MetricsConnection;
 import org.apache.hadoop.hbase.codec.Codec;
@@ -382,7 +382,7 @@ abstract class RpcConnection {
     } else {
       value = null;
     }
-    CellScanner cellBlockScanner;
+    ExtendedCellScanner cellBlockScanner;
     if (responseHeader.hasCellBlockMeta()) {
       int size = responseHeader.getCellBlockMeta().getLength();
       // Maybe we could read directly from the ByteBuf.

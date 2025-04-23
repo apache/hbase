@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.wal;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletionService;
@@ -58,9 +59,12 @@ abstract class OutputSink {
   protected final AtomicLong totalSkippedEdits = new AtomicLong();
 
   /**
-   * List of all the files produced by this sink
+   * List of all the files produced by this sink,
+   * <p>
+   * Must be a synchronized list to avoid concurrency issues. CopyOnWriteArrayList is not a good
+   * choice because all we do is add to the list and then return the result.
    */
-  protected final List<Path> splits = new ArrayList<>();
+  protected final List<Path> splits = Collections.synchronizedList(new ArrayList<>());
 
   protected MonitoredTask status = null;
 
@@ -97,6 +101,19 @@ abstract class OutputSink {
       WriterThread t = new WriterThread(controller, entryBuffers, this, i);
       t.start();
       writerThreads.add(t);
+    }
+  }
+
+  public synchronized void restartWriterThreadsIfNeeded() {
+    for (int i = 0; i < writerThreads.size(); i++) {
+      WriterThread t = writerThreads.get(i);
+      if (!t.isAlive()) {
+        String threadName = t.getName();
+        LOG.debug("Replacing dead thread: " + threadName);
+        WriterThread newThread = new WriterThread(controller, entryBuffers, this, threadName);
+        newThread.start();
+        writerThreads.set(i, newThread);
+      }
     }
   }
 
@@ -176,7 +193,12 @@ abstract class OutputSink {
 
     WriterThread(WALSplitter.PipelineController controller, EntryBuffers entryBuffers,
       OutputSink sink, int i) {
-      super(Thread.currentThread().getName() + "-Writer-" + i);
+      this(controller, entryBuffers, sink, Thread.currentThread().getName() + "-Writer-" + i);
+    }
+
+    WriterThread(WALSplitter.PipelineController controller, EntryBuffers entryBuffers,
+      OutputSink sink, String threadName) {
+      super(threadName);
       this.controller = controller;
       this.entryBuffers = entryBuffers;
       outputSink = sink;

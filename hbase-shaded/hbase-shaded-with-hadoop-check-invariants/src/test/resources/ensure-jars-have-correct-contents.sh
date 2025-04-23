@@ -75,6 +75,8 @@ allowed_expr="(^org/$|^org/apache/$|^org/apache/hadoop/$"
 allowed_expr+="|^org/apache/hadoop/hbase"
 #   * classes in packages that start with org.apache.hbase
 allowed_expr+="|^org/apache/hbase/"
+# We have a dummy DFSOutputStream implementation in hbase
+allowed_expr+="|^org/apache/hadoop/hdfs/$|^org/apache/hadoop/hdfs/DummyDFSOutputStream.class"
 #   * whatever in the "META-INF" directory
 allowed_expr+="|^META-INF/"
 #   * the folding tables from jcodings
@@ -108,6 +110,8 @@ if [ -n "${allow_hadoop}" ]; then
   allowed_expr+="|^[^-]*-version-info.properties$"
   #   * Hadoop's application classloader properties file.
   allowed_expr+="|^org.apache.hadoop.application-classloader.properties$"
+  #   * Comes from dnssecjava via Hadoop
+  allowed_expr+="|^messages.properties$"
 else
   # We have some classes for integrating with the Hadoop Metrics2 system
   # that have to be in a particular package space due to access rules.

@@ -31,10 +31,11 @@ import java.util.SortedSet;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.regionserver.ChunkCreator.ChunkType;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -64,16 +65,18 @@ public class TestCellFlatSet {
 
   private static final int NUM_OF_CELLS = 4;
   private static final int SMALL_CHUNK_SIZE = 64;
-  private Cell ascCells[];
-  private CellArrayMap ascCbOnHeap;
-  private Cell descCells[];
-  private CellArrayMap descCbOnHeap;
+  private ExtendedCell[] ascCells;
+  private CellArrayMap<ExtendedCell> ascCbOnHeap;
+  private ExtendedCell[] descCells;
+  private CellArrayMap<ExtendedCell> descCbOnHeap;
   private final static Configuration CONF = new Configuration();
   private KeyValue lowerOuterCell;
   private KeyValue upperOuterCell;
 
-  private CellChunkMap ascCCM; // for testing ascending CellChunkMap with one chunk in array
-  private CellChunkMap descCCM; // for testing descending CellChunkMap with one chunk in array
+  private CellChunkMap<ExtendedCell> ascCCM; // for testing ascending CellChunkMap with one chunk in
+                                             // array
+  private CellChunkMap<ExtendedCell> descCCM; // for testing descending CellChunkMap with one chunk
+                                              // in array
   private final boolean smallChunks;
   private static ChunkCreator chunkCreator;
 
@@ -116,10 +119,12 @@ public class TestCellFlatSet {
     final KeyValue kv4 = new KeyValue(four, f, q, 40, v);
     lowerOuterCell = new KeyValue(Bytes.toBytes(10), f, q, 10, v);
     upperOuterCell = new KeyValue(Bytes.toBytes(50), f, q, 10, v);
-    ascCells = new Cell[] { kv1, kv2, kv3, kv4 };
-    ascCbOnHeap = new CellArrayMap(CellComparator.getInstance(), ascCells, 0, NUM_OF_CELLS, false);
-    descCells = new Cell[] { kv4, kv3, kv2, kv1 };
-    descCbOnHeap = new CellArrayMap(CellComparator.getInstance(), descCells, 0, NUM_OF_CELLS, true);
+    ascCells = new ExtendedCell[] { kv1, kv2, kv3, kv4 };
+    ascCbOnHeap = new CellArrayMap<ExtendedCell>(CellComparator.getInstance(), ascCells, 0,
+      NUM_OF_CELLS, false);
+    descCells = new ExtendedCell[] { kv4, kv3, kv2, kv1 };
+    descCbOnHeap = new CellArrayMap<ExtendedCell>(CellComparator.getInstance(), descCells, 0,
+      NUM_OF_CELLS, true);
 
     CONF.setBoolean(MemStoreLAB.USEMSLAB_KEY, true);
     CONF.setFloat(MemStoreLAB.CHUNK_POOL_MAXSIZE_KEY, 0.2f);
@@ -138,7 +143,7 @@ public class TestCellFlatSet {
   /* Create and test ascending CellSet based on CellArrayMap */
   @Test
   public void testCellArrayMapAsc() throws Exception {
-    CellSet cs = new CellSet(ascCbOnHeap);
+    CellSet<ExtendedCell> cs = new CellSet<>(ascCbOnHeap);
     testCellBlocks(cs);
     testIterators(cs);
   }
@@ -146,11 +151,11 @@ public class TestCellFlatSet {
   /* Create and test ascending and descending CellSet based on CellChunkMap */
   @Test
   public void testCellChunkMap() throws Exception {
-    CellSet cs = new CellSet(ascCCM);
+    CellSet<ExtendedCell> cs = new CellSet<>(ascCCM);
     testCellBlocks(cs);
     testIterators(cs);
     testSubSet(cs);
-    cs = new CellSet(descCCM);
+    cs = new CellSet<>(descCCM);
     testSubSet(cs);
     // cs = new CellSet(ascMultCCM);
     // testCellBlocks(cs);
@@ -161,63 +166,63 @@ public class TestCellFlatSet {
 
   @Test
   public void testAsc() throws Exception {
-    CellSet ascCs = new CellSet(ascCbOnHeap);
+    CellSet<ExtendedCell> ascCs = new CellSet<>(ascCbOnHeap);
     assertEquals(NUM_OF_CELLS, ascCs.size());
     testSubSet(ascCs);
   }
 
   @Test
   public void testDesc() throws Exception {
-    CellSet descCs = new CellSet(descCbOnHeap);
+    CellSet<ExtendedCell> descCs = new CellSet<>(descCbOnHeap);
     assertEquals(NUM_OF_CELLS, descCs.size());
     testSubSet(descCs);
   }
 
-  private void testSubSet(CellSet cs) throws Exception {
+  private void testSubSet(CellSet<ExtendedCell> cs) throws Exception {
     for (int i = 0; i != ascCells.length; ++i) {
-      NavigableSet<Cell> excludeTail = cs.tailSet(ascCells[i], false);
-      NavigableSet<Cell> includeTail = cs.tailSet(ascCells[i], true);
+      NavigableSet<ExtendedCell> excludeTail = cs.tailSet(ascCells[i], false);
+      NavigableSet<ExtendedCell> includeTail = cs.tailSet(ascCells[i], true);
       assertEquals(ascCells.length - 1 - i, excludeTail.size());
       assertEquals(ascCells.length - i, includeTail.size());
-      Iterator<Cell> excludeIter = excludeTail.iterator();
-      Iterator<Cell> includeIter = includeTail.iterator();
+      Iterator<ExtendedCell> excludeIter = excludeTail.iterator();
+      Iterator<ExtendedCell> includeIter = includeTail.iterator();
       for (int j = 1 + i; j != ascCells.length; ++j) {
-        assertEquals(true, CellUtil.equals(excludeIter.next(), ascCells[j]));
+        assertEquals(true, PrivateCellUtil.equals(excludeIter.next(), ascCells[j]));
       }
       for (int j = i; j != ascCells.length; ++j) {
-        assertEquals(true, CellUtil.equals(includeIter.next(), ascCells[j]));
+        assertEquals(true, PrivateCellUtil.equals(includeIter.next(), ascCells[j]));
       }
     }
     assertEquals(NUM_OF_CELLS, cs.tailSet(lowerOuterCell, false).size());
     assertEquals(0, cs.tailSet(upperOuterCell, false).size());
     for (int i = 0; i != ascCells.length; ++i) {
-      NavigableSet<Cell> excludeHead = cs.headSet(ascCells[i], false);
-      NavigableSet<Cell> includeHead = cs.headSet(ascCells[i], true);
+      NavigableSet<ExtendedCell> excludeHead = cs.headSet(ascCells[i], false);
+      NavigableSet<ExtendedCell> includeHead = cs.headSet(ascCells[i], true);
       assertEquals(i, excludeHead.size());
       assertEquals(i + 1, includeHead.size());
-      Iterator<Cell> excludeIter = excludeHead.iterator();
-      Iterator<Cell> includeIter = includeHead.iterator();
+      Iterator<ExtendedCell> excludeIter = excludeHead.iterator();
+      Iterator<ExtendedCell> includeIter = includeHead.iterator();
       for (int j = 0; j != i; ++j) {
-        assertEquals(true, CellUtil.equals(excludeIter.next(), ascCells[j]));
+        assertEquals(true, PrivateCellUtil.equals(excludeIter.next(), ascCells[j]));
       }
       for (int j = 0; j != i + 1; ++j) {
-        assertEquals(true, CellUtil.equals(includeIter.next(), ascCells[j]));
+        assertEquals(true, PrivateCellUtil.equals(includeIter.next(), ascCells[j]));
       }
     }
     assertEquals(0, cs.headSet(lowerOuterCell, false).size());
     assertEquals(NUM_OF_CELLS, cs.headSet(upperOuterCell, false).size());
 
-    NavigableMap<Cell, Cell> sub =
+    NavigableMap<ExtendedCell, ExtendedCell> sub =
       cs.getDelegatee().subMap(lowerOuterCell, true, upperOuterCell, true);
     assertEquals(NUM_OF_CELLS, sub.size());
-    Iterator<Cell> iter = sub.values().iterator();
+    Iterator<ExtendedCell> iter = sub.values().iterator();
     for (int i = 0; i != ascCells.length; ++i) {
-      assertEquals(true, CellUtil.equals(iter.next(), ascCells[i]));
+      assertEquals(true, PrivateCellUtil.equals(iter.next(), ascCells[i]));
     }
   }
 
   /* Generic basic test for immutable CellSet */
-  private void testCellBlocks(CellSet cs) throws Exception {
+  private void testCellBlocks(CellSet<ExtendedCell> cs) throws Exception {
     final byte[] oneAndHalf = Bytes.toBytes(20);
     final byte[] f = Bytes.toBytes("f");
     final byte[] q = Bytes.toBytes("q");
@@ -235,12 +240,13 @@ public class TestCellFlatSet {
     Cell last = cs.last();
     assertTrue(ascCells[NUM_OF_CELLS - 1].equals(last));
 
-    SortedSet<Cell> tail = cs.tailSet(ascCells[1]); // check tail abd head sizes
+    SortedSet<ExtendedCell> tail = cs.tailSet(ascCells[1]); // check tail abd head sizes
     assertEquals(NUM_OF_CELLS - 1, tail.size());
-    SortedSet<Cell> head = cs.headSet(ascCells[1]);
+    SortedSet<ExtendedCell> head = cs.headSet(ascCells[1]);
     assertEquals(1, head.size());
 
-    SortedSet<Cell> tailOuter = cs.tailSet(outerCell); // check tail starting from outer cell
+    SortedSet<ExtendedCell> tailOuter = cs.tailSet(outerCell); // check tail starting from outer
+                                                               // cell
     assertEquals(NUM_OF_CELLS - 1, tailOuter.size());
 
     Cell tailFirst = tail.first();
@@ -255,8 +261,7 @@ public class TestCellFlatSet {
   }
 
   /* Generic iterators test for immutable CellSet */
-  private void testIterators(CellSet cs) throws Exception {
-
+  private void testIterators(CellSet<ExtendedCell> cs) throws Exception {
     // Assert that we have NUM_OF_CELLS values and that they are in order
     int count = 0;
     for (Cell kv : cs) {
@@ -273,7 +278,7 @@ public class TestCellFlatSet {
 
     // Test descending iterator
     count = 0;
-    for (Iterator<Cell> i = cs.descendingIterator(); i.hasNext();) {
+    for (Iterator<ExtendedCell> i = cs.descendingIterator(); i.hasNext();) {
       Cell kv = i.next();
       assertEquals(ascCells[NUM_OF_CELLS - (count + 1)], kv);
       count++;
@@ -282,8 +287,7 @@ public class TestCellFlatSet {
   }
 
   /* Create CellChunkMap with four cells inside the index chunk */
-  private CellChunkMap setUpCellChunkMap(boolean asc) {
-
+  private CellChunkMap<ExtendedCell> setUpCellChunkMap(boolean asc) {
     // allocate new chunks and use the data chunk to hold the full data of the cells
     // and the index chunk to hold the cell-representations
     Chunk dataChunk = chunkCreator.getChunk();
@@ -298,9 +302,9 @@ public class TestCellFlatSet {
     int dataOffset = ChunkCreator.SIZEOF_CHUNK_HEADER; // offset inside data buffer
     int idxOffset = ChunkCreator.SIZEOF_CHUNK_HEADER; // skip the space for chunk ID
 
-    Cell[] cellArray = asc ? ascCells : descCells;
+    ExtendedCell[] cellArray = asc ? ascCells : descCells;
 
-    for (Cell kv : cellArray) {
+    for (ExtendedCell kv : cellArray) {
       // do we have enough space to write the cell data on the data chunk?
       if (dataOffset + kv.getSerializedSize() > chunkCreator.getChunkSize()) {
         // allocate more data chunks if needed
@@ -326,14 +330,14 @@ public class TestCellFlatSet {
       idxOffset = ByteBufferUtils.putLong(idxBuffer, idxOffset, kv.getSequenceId()); // seqId
     }
 
-    return new CellChunkMap(CellComparator.getInstance(), chunkArray, 0, NUM_OF_CELLS, !asc);
+    return new CellChunkMap<>(CellComparator.getInstance(), chunkArray, 0, NUM_OF_CELLS, !asc);
   }
 
   /*
    * Create CellChunkMap with four cells inside the data jumbo chunk. This test is working only with
    * small chunks sized SMALL_CHUNK_SIZE (64) bytes
    */
-  private CellChunkMap setUpJumboCellChunkMap(boolean asc) {
+  private CellChunkMap<ExtendedCell> setUpJumboCellChunkMap(boolean asc) {
     int smallChunkSize = SMALL_CHUNK_SIZE + 8;
     // allocate new chunks and use the data JUMBO chunk to hold the full data of the cells
     // and the normal index chunk to hold the cell-representations
@@ -350,9 +354,9 @@ public class TestCellFlatSet {
     int dataOffset = ChunkCreator.SIZEOF_CHUNK_HEADER; // offset inside data buffer
     int idxOffset = ChunkCreator.SIZEOF_CHUNK_HEADER; // skip the space for chunk ID
 
-    Cell[] cellArray = asc ? ascCells : descCells;
+    ExtendedCell[] cellArray = asc ? ascCells : descCells;
 
-    for (Cell kv : cellArray) {
+    for (ExtendedCell kv : cellArray) {
       int dataStartOfset = dataOffset;
       dataOffset = KeyValueUtil.appendTo(kv, dataBuffer, dataOffset, false); // write deep cell data
 
@@ -378,6 +382,6 @@ public class TestCellFlatSet {
       dataOffset = ChunkCreator.SIZEOF_CHUNK_HEADER;
     }
 
-    return new CellChunkMap(CellComparator.getInstance(), chunkArray, 0, NUM_OF_CELLS, !asc);
+    return new CellChunkMap<>(CellComparator.getInstance(), chunkArray, 0, NUM_OF_CELLS, !asc);
   }
 }

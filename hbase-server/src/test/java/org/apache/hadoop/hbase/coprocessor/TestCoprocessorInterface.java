@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -92,22 +93,24 @@ public class TestCoprocessorInterface {
     }
 
     @Override
-    public boolean next(List<Cell> results) throws IOException {
+    public boolean next(List<? super ExtendedCell> results) throws IOException {
       return delegate.next(results);
     }
 
     @Override
-    public boolean next(List<Cell> result, ScannerContext scannerContext) throws IOException {
+    public boolean next(List<? super ExtendedCell> result, ScannerContext scannerContext)
+      throws IOException {
       return delegate.next(result, scannerContext);
     }
 
     @Override
-    public boolean nextRaw(List<Cell> result) throws IOException {
+    public boolean nextRaw(List<? super ExtendedCell> result) throws IOException {
       return delegate.nextRaw(result);
     }
 
     @Override
-    public boolean nextRaw(List<Cell> result, ScannerContext context) throws IOException {
+    public boolean nextRaw(List<? super ExtendedCell> result, ScannerContext context)
+      throws IOException {
       return delegate.nextRaw(result, context);
     }
 
@@ -181,54 +184,57 @@ public class TestCoprocessorInterface {
     }
 
     @Override
-    public void preOpen(ObserverContext<RegionCoprocessorEnvironment> e) {
+    public void preOpen(ObserverContext<? extends RegionCoprocessorEnvironment> e) {
       preOpenCalled = true;
     }
 
     @Override
-    public void postOpen(ObserverContext<RegionCoprocessorEnvironment> e) {
+    public void postOpen(ObserverContext<? extends RegionCoprocessorEnvironment> e) {
       postOpenCalled = true;
     }
 
     @Override
-    public void preClose(ObserverContext<RegionCoprocessorEnvironment> e, boolean abortRequested) {
+    public void preClose(ObserverContext<? extends RegionCoprocessorEnvironment> e,
+      boolean abortRequested) {
       preCloseCalled = true;
     }
 
     @Override
-    public void postClose(ObserverContext<RegionCoprocessorEnvironment> e, boolean abortRequested) {
+    public void postClose(ObserverContext<? extends RegionCoprocessorEnvironment> e,
+      boolean abortRequested) {
       postCloseCalled = true;
     }
 
     @Override
-    public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> e, Store store,
-      InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
+    public InternalScanner preCompact(ObserverContext<? extends RegionCoprocessorEnvironment> e,
+      Store store, InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
       CompactionRequest request) {
       preCompactCalled = true;
       return scanner;
     }
 
     @Override
-    public void postCompact(ObserverContext<RegionCoprocessorEnvironment> e, Store store,
+    public void postCompact(ObserverContext<? extends RegionCoprocessorEnvironment> e, Store store,
       StoreFile resultFile, CompactionLifeCycleTracker tracker, CompactionRequest request) {
       postCompactCalled = true;
     }
 
     @Override
-    public void preFlush(ObserverContext<RegionCoprocessorEnvironment> e,
+    public void preFlush(ObserverContext<? extends RegionCoprocessorEnvironment> e,
       FlushLifeCycleTracker tracker) {
       preFlushCalled = true;
     }
 
     @Override
-    public void postFlush(ObserverContext<RegionCoprocessorEnvironment> e,
+    public void postFlush(ObserverContext<? extends RegionCoprocessorEnvironment> e,
       FlushLifeCycleTracker tracker) {
       postFlushCalled = true;
     }
 
     @Override
-    public RegionScanner postScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> e,
-      final Scan scan, final RegionScanner s) throws IOException {
+    public RegionScanner postScannerOpen(
+      final ObserverContext<? extends RegionCoprocessorEnvironment> e, final Scan scan,
+      final RegionScanner s) throws IOException {
       return new CustomScanner(s);
     }
 
@@ -279,8 +285,8 @@ public class TestCoprocessorInterface {
     public Optional<RegionObserver> getRegionObserver() {
       return Optional.of(new RegionObserver() {
         @Override
-        public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e, final Get get,
-          final List<Cell> results) throws IOException {
+        public void preGetOp(final ObserverContext<? extends RegionCoprocessorEnvironment> e,
+          final Get get, final List<Cell> results) throws IOException {
           throw new RuntimeException();
         }
       });

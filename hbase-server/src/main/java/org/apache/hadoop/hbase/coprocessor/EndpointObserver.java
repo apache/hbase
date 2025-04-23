@@ -58,7 +58,7 @@ public interface EndpointObserver {
    * @param methodName the invoked service method
    * @return the possibly modified message
    */
-  default Message preEndpointInvocation(ObserverContext<RegionCoprocessorEnvironment> ctx,
+  default Message preEndpointInvocation(ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
     Service service, String methodName, Message request) throws IOException {
     return request;
   }
@@ -74,7 +74,7 @@ public interface EndpointObserver {
    * @param responseBuilder Builder for final response to the client, with original response from
    *                        Service's method merged into it.
    */
-  default void postEndpointInvocation(ObserverContext<RegionCoprocessorEnvironment> ctx,
+  default void postEndpointInvocation(ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
     Service service, String methodName, Message request, Message.Builder responseBuilder)
     throws IOException {
   }

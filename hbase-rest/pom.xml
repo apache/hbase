@@ -190,25 +190,8 @@
     </dependency>
     <dependency>
       <!--For JspC used in ant task-->
-      <groupId>org.glassfish.web</groupId>
-      <artifactId>javax.servlet.jsp</artifactId>
-    </dependency>
-    <!-- Specifically needed for jetty-jsp, included
-         to bypass version scanning that hits a bad repo
-         see HBASE-18831 -->
-    <dependency>
-      <groupId>org.glassfish</groupId>
-      <artifactId>javax.el</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.kerby</groupId>
-      <artifactId>kerb-simplekdc</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.kerby</groupId>
-      <artifactId>kerb-core</artifactId>
-      <scope>test</scope>
+      <groupId>org.apache.tomcat</groupId>
+      <artifactId>tomcat-jasper</artifactId>
     </dependency>
     <dependency>
       <groupId>commons-io</groupId>
@@ -296,6 +279,38 @@
           <skipAssembly>true</skipAssembly>
         </configuration>
       </plugin>
+      <!-- Copy the static web resources (JS, CSS, images, etc.) from hbase-server sources -->
+      <plugin>
+        <artifactId>maven-resources-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>copy-static-resources</id>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <phase>generate-resources</phase>
+            <configuration>
+              <outputDirectory>${project.build.outputDirectory}/hbase-webapps/static</outputDirectory>
+              <outputDirectory>${project.build.directory}/hbase-webapps/static</outputDirectory>
+              <overwrite>true</overwrite>
+              <resources>
+                <resource>
+                  <directory>../hbase-server/src/main/resources/hbase-webapps/static</directory>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+          <excludes>
+            <exclude>**/hbase-webapps/**</exclude>
+          </excludes>
+        </configuration>
+      </plugin>
       <!-- Make a jar and put the sources in the jar -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -361,6 +376,29 @@
             <test.build.webapps>target/test-classes/webapps</test.build.webapps>
           </systemPropertyVariables>
         </configuration>
+      </plugin>
+      <!-- The protobuf-maven-plugin and com.google.code.maven-replacer-plugin config
+      is copied directly from hbase-shaded-protocol, and should be kept in sync. -->
+      <plugin>
+        <groupId>org.xolstice.maven.plugins</groupId>
+        <artifactId>protobuf-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>compile-protoc</id>
+            <goals>
+              <goal>compile</goal>
+            </goals>
+            <phase>generate-sources</phase>
+            <configuration>
+              <protocArtifact>com.google.protobuf:protoc:${internal.protobuf.version}:exe:${os.detected.classifier}</protocArtifact>
+              <checkStaleness>true</checkStaleness>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>com.google.code.maven-replacer-plugin</groupId>
+        <artifactId>replacer</artifactId>
       </plugin>
       <plugin>
         <groupId>net.revelc.code</groupId>

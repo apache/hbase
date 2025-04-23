@@ -119,7 +119,8 @@ public class RefreshPeerProcedure extends ServerRemoteProcedure
     assert targetServer.equals(remote);
     return Optional.of(new ServerOperation(this, getProcId(), RefreshPeerCallable.class,
       RefreshPeerParameter.newBuilder().setPeerId(peerId).setType(toPeerModificationType(type))
-        .setTargetServer(ProtobufUtil.toServerName(remote)).setStage(stage).build().toByteArray()));
+        .setTargetServer(ProtobufUtil.toServerName(remote)).setStage(stage).build().toByteArray(),
+      env.getMasterServices().getMasterActiveTime()));
   }
 
   @Override

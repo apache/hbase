@@ -281,7 +281,10 @@ trap cleanup EXIT SIGQUIT
 
 echo "Starting up Hadoop"
 
-if [ "${hadoop_version%.*.*}" -gt 2 ]; then
+if [[ "${hadoop_version%.*.*.*}" = "3.4.0" || "${hadoop_version%.*.*.*}" = "3.4.1" ]]; then
+  # writeDetails is broken in 3.4.0 and 3.4.1. See MAPREDUCE-7492
+  "${mapred_exec}" minicluster -format -writeConfig "${working_dir}/hbase-conf/core-site.xml" >"${working_dir}/hadoop_cluster_command.out" 2>"${working_dir}/hadoop_cluster_command.err" &
+elif [ "${hadoop_version%.*.*}" -gt 2 ]; then
   "${mapred_exec}" minicluster -format -writeConfig "${working_dir}/hbase-conf/core-site.xml" -writeDetails "${working_dir}/hadoop_cluster_info.json" >"${working_dir}/hadoop_cluster_command.out" 2>"${working_dir}/hadoop_cluster_command.err" &
 else
   HADOOP_CLASSPATH="${timeline_service_dir}/*:${timeline_service_dir}/lib/*:${yarn_server_tests_test_jar}" "${hadoop_exec}" jar "${mapred_jobclient_test_jar}" minicluster -format -writeConfig "${working_dir}/hbase-conf/core-site.xml" -writeDetails "${working_dir}/hadoop_cluster_info.json" >"${working_dir}/hadoop_cluster_command.out" 2>"${working_dir}/hadoop_cluster_command.err" &
@@ -513,11 +516,11 @@ public class HBaseClientReadWriteExample {
 }
 EOF
 redirect_and_run "${working_dir}/hbase-shaded-client-compile" \
-    javac -cp "${hbase_client}/lib/shaded-clients/hbase-shaded-client-byo-hadoop-${hbase_version}.jar:${hadoop_jars}" "${working_dir}/HBaseClientReadWriteExample.java"
+    $JAVA_HOME/bin/javac -cp "${hbase_client}/lib/shaded-clients/hbase-shaded-client-byo-hadoop-${hbase_version}.jar:${hadoop_jars}" "${working_dir}/HBaseClientReadWriteExample.java"
 echo "Running shaded client example. It'll fetch the set of regions, round-trip them to a file in HDFS, then write them one-per-row into the test table."
 # The order of classpath entries here is important. if we're using non-shaded Hadoop 3 / 2.9.0 jars, we have to work around YARN-2190.
 redirect_and_run "${working_dir}/hbase-shaded-client-example" \
-    java -cp "${working_dir}/hbase-conf/:${hbase_client}/lib/shaded-clients/hbase-shaded-client-byo-hadoop-${hbase_version}.jar:${hbase_dep_classpath}:${working_dir}:${hadoop_jars}" HBaseClientReadWriteExample
+    $JAVA_HOME/bin/java -cp "${working_dir}/hbase-conf/:${hbase_client}/lib/shaded-clients/hbase-shaded-client-byo-hadoop-${hbase_version}.jar:${hbase_dep_classpath}:${working_dir}:${hadoop_jars}" HBaseClientReadWriteExample
 
 echo "Checking on results of example program."
 "${hadoop_exec}" --config "${working_dir}/hbase-conf/" fs -copyToLocal "example-region-listing.data" "${working_dir}/example-region-listing.data"

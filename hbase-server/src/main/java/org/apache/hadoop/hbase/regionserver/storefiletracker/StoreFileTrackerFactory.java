@@ -129,10 +129,16 @@ public final class StoreFileTrackerFactory {
    */
   public static StoreFileTracker create(Configuration conf, TableDescriptor td,
     ColumnFamilyDescriptor cfd, HRegionFileSystem regionFs) {
+    return create(conf, td, cfd, regionFs, true);
+  }
+
+  public static StoreFileTracker create(Configuration conf, TableDescriptor td,
+    ColumnFamilyDescriptor cfd, HRegionFileSystem regionFs, boolean isPrimaryReplica) {
     StoreContext ctx =
       StoreContext.getBuilder().withColumnFamilyDescriptor(cfd).withRegionFileSystem(regionFs)
         .withFamilyStoreDirectoryPath(regionFs.getStoreDir(cfd.getNameAsString())).build();
-    return StoreFileTrackerFactory.create(mergeConfigurations(conf, td, cfd), true, ctx);
+    return StoreFileTrackerFactory.create(mergeConfigurations(conf, td, cfd), isPrimaryReplica,
+      ctx);
   }
 
   private static Configuration mergeConfigurations(Configuration global, TableDescriptor table,

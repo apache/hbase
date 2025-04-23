@@ -79,16 +79,6 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.apache.kerby</groupId>
-      <artifactId>kerb-client</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.kerby</groupId>
-      <artifactId>kerb-simplekdc</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-http</artifactId>
       <type>test-jar</type>
@@ -97,6 +87,11 @@
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-inline</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -132,11 +127,6 @@
   </dependencies>
   <build>
     <plugins>
-      <!-- Make a jar and put the sources in the jar -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-source-plugin</artifactId>
-      </plugin>
       <plugin>
         <!--Make it so assembly:single does nothing in here-->
         <artifactId>maven-assembly-plugin</artifactId>

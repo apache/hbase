@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.ByteBufferExtendedCell;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
@@ -75,7 +76,7 @@ public class HFileWriterImpl implements HFile.Writer {
   private final int encodedBlockSizeLimit;
 
   /** The Cell previously appended. Becomes the last cell in the file. */
-  protected Cell lastCell = null;
+  protected ExtendedCell lastCell = null;
 
   /** FileSystem stream to write into. */
   protected FSDataOutputStream outputStream;
@@ -112,7 +113,7 @@ public class HFileWriterImpl implements HFile.Writer {
   /**
    * First cell in a block. This reference should be short-lived since we write hfiles in a burst.
    */
-  protected Cell firstCellInBlock = null;
+  protected ExtendedCell firstCellInBlock = null;
 
   /** May be null if we were passed a stream. */
   protected final Path path;
@@ -163,7 +164,7 @@ public class HFileWriterImpl implements HFile.Writer {
    * The last(stop) Cell of the previous data block. This reference should be short-lived since we
    * write hfiles in a burst.
    */
-  private Cell lastCellOfPreviousBlock = null;
+  private ExtendedCell lastCellOfPreviousBlock = null;
 
   /** Additional data items to be written to the "load-on-open" section. */
   private List<BlockWritable> additionalLoadOnOpenData = new ArrayList<>();
@@ -360,7 +361,7 @@ public class HFileWriterImpl implements HFile.Writer {
     lastDataBlockOffset = outputStream.getPos();
     blockWriter.writeHeaderAndData(outputStream);
     int onDiskSize = blockWriter.getOnDiskSizeWithHeader();
-    Cell indexEntry =
+    ExtendedCell indexEntry =
       getMidpoint(this.hFileContext.getCellComparator(), lastCellOfPreviousBlock, firstCellInBlock);
     dataBlockIndexWriter.addEntry(PrivateCellUtil.getCellKeySerializedAsKeyValueKey(indexEntry),
       lastDataBlockOffset, onDiskSize);
@@ -377,8 +378,8 @@ public class HFileWriterImpl implements HFile.Writer {
    * cell.
    * @return A cell that sorts between <code>left</code> and <code>right</code>.
    */
-  public static Cell getMidpoint(final CellComparator comparator, final Cell left,
-    final Cell right) {
+  public static ExtendedCell getMidpoint(final CellComparator comparator, final ExtendedCell left,
+    final ExtendedCell right) {
     if (right == null) {
       throw new IllegalArgumentException("right cell can not be null");
     }
@@ -555,14 +556,21 @@ public class HFileWriterImpl implements HFile.Writer {
   private void doCacheOnWrite(long offset) {
     cacheConf.getBlockCache().ifPresent(cache -> {
       HFileBlock cacheFormatBlock = blockWriter.getBlockForCaching(cacheConf);
+      BlockCacheKey key = buildCacheBlockKey(offset, cacheFormatBlock.getBlockType());
       try {
-        cache.cacheBlock(new BlockCacheKey(name, offset, true, cacheFormatBlock.getBlockType()),
-          cacheFormatBlock, cacheConf.isInMemory(), true);
+        cache.cacheBlock(key, cacheFormatBlock, cacheConf.isInMemory(), true);
       } finally {
         // refCnt will auto increase when block add to Cache, see RAMCache#putIfAbsent
         cacheFormatBlock.release();
       }
     });
+  }
+
+  private BlockCacheKey buildCacheBlockKey(long offset, BlockType blockType) {
+    if (path != null) {
+      return new BlockCacheKey(path, offset, true, blockType);
+    }
+    return new BlockCacheKey(name, offset, true, blockType);
   }
 
   /**
@@ -733,7 +741,7 @@ public class HFileWriterImpl implements HFile.Writer {
    * construction. Cell to add. Cannot be empty nor null.
    */
   @Override
-  public void append(final Cell cell) throws IOException {
+  public void append(final ExtendedCell cell) throws IOException {
     // checkKey uses comparator to check we are writing in order.
     boolean dupKey = checkKey(cell);
     if (!dupKey) {

@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
@@ -46,6 +47,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ClientInternalHelper;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
@@ -114,7 +116,7 @@ public class Import extends Configured implements Tool {
 
   public static class CellWritableComparable implements WritableComparable<CellWritableComparable> {
 
-    private Cell kv = null;
+    private ExtendedCell kv = null;
 
     static {
       // register this comparator
@@ -125,13 +127,16 @@ public class Import extends Configured implements Tool {
     }
 
     public CellWritableComparable(Cell kv) {
-      this.kv = kv;
+      this.kv = (ExtendedCell) kv;
     }
 
     @Override
     public void write(DataOutput out) throws IOException {
-      out.writeInt(PrivateCellUtil.estimatedSerializedSizeOfKey(kv));
-      out.writeInt(0);
+      int keyLen = PrivateCellUtil.estimatedSerializedSizeOfKey(kv);
+      int valueLen = 0; // We avoid writing value here. So just serialize as if an empty value.
+      out.writeInt(keyLen + valueLen + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE);
+      out.writeInt(keyLen);
+      out.writeInt(valueLen);
       PrivateCellUtil.writeFlatKey(kv, out);
     }
 
@@ -174,7 +179,7 @@ public class Import extends Configured implements Tool {
       int index = 0;
       for (Cell kv : kvs) {
         context.write(new ImmutableBytesWritable(CellUtil.cloneRow(kv)),
-          new MapReduceExtendedCell(kv));
+          new MapReduceExtendedCell(PrivateCellUtil.ensureExtendedCell(kv)));
         if (++index % 100 == 0) context.setStatus("Wrote " + index + " KeyValues, "
           + "and the rowkey whose is being wrote is " + Bytes.toString(kv.getRowArray()));
       }
@@ -203,12 +208,15 @@ public class Import extends Configured implements Tool {
           filter == null || !filter.filterRowKey(
             PrivateCellUtil.createFirstOnRow(row.get(), row.getOffset(), (short) row.getLength()))
         ) {
-          for (Cell kv : value.rawCells()) {
+          for (ExtendedCell kv : ClientInternalHelper.getExtendedRawCells(value)) {
             kv = filterKv(filter, kv);
             // skip if we filtered it out
-            if (kv == null) continue;
+            if (kv == null) {
+              continue;
+            }
             Cell ret = convertKv(kv, cfRenameMap);
-            context.write(new CellWritableComparable(ret), ret);
+            context.write(new CellWritableComparable(ret),
+              new MapReduceExtendedCell((ExtendedCell) ret));
           }
         }
       } catch (InterruptedException e) {
@@ -267,10 +275,12 @@ public class Import extends Configured implements Tool {
           filter == null || !filter.filterRowKey(
             PrivateCellUtil.createFirstOnRow(row.get(), row.getOffset(), (short) row.getLength()))
         ) {
-          for (Cell kv : value.rawCells()) {
+          for (ExtendedCell kv : ClientInternalHelper.getExtendedRawCells(value)) {
             kv = filterKv(filter, kv);
             // skip if we filtered it out
-            if (kv == null) continue;
+            if (kv == null) {
+              continue;
+            }
             context.write(row, new MapReduceExtendedCell(convertKv(kv, cfRenameMap)));
           }
         }
@@ -330,10 +340,12 @@ public class Import extends Configured implements Tool {
 
     protected void processKV(ImmutableBytesWritable key, Result result, Context context, Put put,
       Delete delete) throws IOException, InterruptedException {
-      for (Cell kv : result.rawCells()) {
+      for (ExtendedCell kv : ClientInternalHelper.getExtendedRawCells(result)) {
         kv = filterKv(filter, kv);
         // skip if we filter it out
-        if (kv == null) continue;
+        if (kv == null) {
+          continue;
+        }
 
         kv = convertKv(kv, cfRenameMap);
         // Deletes and Puts are gathered and written when finished
@@ -476,7 +488,7 @@ public class Import extends Configured implements Tool {
    * @return <tt>null</tt> if the key should not be written, otherwise returns the original
    *         {@link Cell}
    */
-  public static Cell filterKv(Filter filter, Cell c) throws IOException {
+  public static ExtendedCell filterKv(Filter filter, ExtendedCell c) throws IOException {
     // apply the filter and skip this kv if the filter doesn't apply
     if (filter != null) {
       Filter.ReturnCode code = filter.filterCell(c);
@@ -495,7 +507,7 @@ public class Import extends Configured implements Tool {
   }
 
   // helper: create a new KeyValue based on CF rename map
-  private static Cell convertKv(Cell kv, Map<byte[], byte[]> cfRenameMap) {
+  private static ExtendedCell convertKv(ExtendedCell kv, Map<byte[], byte[]> cfRenameMap) {
     if (cfRenameMap != null) {
       // If there's a rename mapping for this CF, create a new KeyValue
       byte[] newCfName = cfRenameMap.get(CellUtil.cloneFamily(kv));

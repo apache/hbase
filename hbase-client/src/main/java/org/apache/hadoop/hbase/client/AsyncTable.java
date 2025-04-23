@@ -21,12 +21,13 @@ import static java.util.stream.Collectors.toList;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.toCheckExistenceOnly;
 import static org.apache.hadoop.hbase.util.FutureUtils.allOf;
 
+import java.time.Duration;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
-import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.TableName;
@@ -117,7 +118,7 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
    * @return a map of request attributes supplied by the client
    */
   default Map<String, byte[]> getRequestAttributes() {
-    throw new NotImplementedException("Add an implementation!");
+    return Collections.emptyMap();
   }
 
   /**
@@ -677,6 +678,47 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
   }
 
   /**
+   * Some coprocessors may support the idea of "partial results." If for some reason a coprocessor
+   * cannot return all results for a given region in a single response, the client side can be
+   * designed to recognize this and continuing requesting more results until they are completely
+   * accumulated in the client.
+   * <p>
+   * It is up to a particular coprocessor implementation and its corresponding clients to agree on
+   * what it means for results to be incomplete, how this state is communicated, and how multiple
+   * incomplete results are accumulated together.
+   * <p>
+   * Use this callback when you want to execute a coprocessor call on a range of regions, and that
+   * coprocessor may return incomplete results for a given region. See also the docs for
+   * {@link CoprocessorCallback}, which all apply here to its child interface too.
+   */
+  @InterfaceAudience.Public
+  interface PartialResultCoprocessorCallback<S, R> extends CoprocessorCallback<R> {
+    /**
+     * Subclasses should implement this to tell AsyncTable whether the given response is "final" or
+     * whether the AsyncTable should send another request to the coprocessor to fetch more results
+     * from the given region. This method of fetching more results can be used many times until
+     * there are no more results to fetch from the region.
+     * @param response The response received from the coprocessor
+     * @param region   The region the response came from
+     * @return A ServiceCaller object if the response was not final and therefore another request is
+     *         required to continuing fetching results. null if no more requests need to be sent to
+     *         the region.
+     */
+    ServiceCaller<S, R> getNextCallable(R response, RegionInfo region);
+
+    /**
+     * Subclasses should implement this such that, when the above method returns non-null, this
+     * method returns the duration that AsyncTable should wait before sending the next request to
+     * the given region. You can use this to create a back-off behavior to reduce load on the
+     * RegionServer. If that's not desired, you can always return {@link Duration.ZERO}.
+     * @param response The response received from the coprocessor
+     * @param region   The region the response came from
+     * @return The duration to wait.
+     */
+    Duration getWaitInterval(R response, RegionInfo region);
+  }
+
+  /**
    * Helper class for sending coprocessorService request that executes a coprocessor call on regions
    * which are covered by a range.
    * <p>
@@ -744,4 +786,12 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
    */
   <S, R> CoprocessorServiceBuilder<S, R> coprocessorService(Function<RpcChannel, S> stubMaker,
     ServiceCaller<S, R> callable, CoprocessorCallback<R> callback);
+
+  /**
+   * Similar to above. Use when your coprocessor client+endpoint supports partial results. If the
+   * server does not offer partial results, it is still safe to use this, assuming you implement
+   * your {@link PartialResultCoprocessorCallback#getNextCallable(Object, RegionInfo)} correctly.
+   */
+  <S, R> CoprocessorServiceBuilder<S, R> coprocessorService(Function<RpcChannel, S> stubMaker,
+    ServiceCaller<S, R> callable, PartialResultCoprocessorCallback<S, R> callback);
 }

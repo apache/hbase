@@ -105,20 +105,8 @@
     </dependency>
     <dependency>
       <!--For JspC used in ant task-->
-      <groupId>org.glassfish.web</groupId>
-      <artifactId>javax.servlet.jsp</artifactId>
-    </dependency>
-    <!-- Specifically needed for jetty-jsp, included
-         to bypass version scanning that hits a bad repo
-         see HBASE-18831 -->
-    <dependency>
-      <groupId>org.glassfish</groupId>
-      <artifactId>javax.el</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.kerby</groupId>
-      <artifactId>kerb-simplekdc</artifactId>
-      <scope>test</scope>
+      <groupId>org.apache.tomcat</groupId>
+      <artifactId>tomcat-jasper</artifactId>
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
@@ -148,6 +136,11 @@
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
       <artifactId>log4j-1.2-api</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcprov-jdk18on</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -194,6 +187,38 @@
         <artifactId>maven-assembly-plugin</artifactId>
         <configuration>
           <skipAssembly>true</skipAssembly>
+        </configuration>
+      </plugin>
+      <!-- Copy the static web resources (JS, CSS, images, etc.) from hbase-server sources -->
+      <plugin>
+        <artifactId>maven-resources-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>copy-static-resources</id>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <phase>generate-resources</phase>
+            <configuration>
+              <outputDirectory>${project.build.outputDirectory}/hbase-webapps/static</outputDirectory>
+              <outputDirectory>${project.build.directory}/hbase-webapps/static</outputDirectory>
+              <overwrite>true</overwrite>
+              <resources>
+                <resource>
+                  <directory>../hbase-server/src/main/resources/hbase-webapps/static</directory>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+          <excludes>
+            <exclude>**/hbase-webapps/**</exclude>
+          </excludes>
         </configuration>
       </plugin>
       <!-- General ant tasks, bound to different build phases -->
@@ -247,11 +272,6 @@
             </configuration>
           </execution>
         </executions>
-      </plugin>
-      <!-- Make a jar and put the sources in the jar -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-source-plugin</artifactId>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -439,6 +459,7 @@
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-minicluster</artifactId>
+          <scope>test</scope>
           <exclusions>
             <exclusion>
               <groupId>com.google.guava</groupId>

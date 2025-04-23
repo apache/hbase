@@ -96,10 +96,11 @@ public abstract class RegionRemoteProcedureBase extends Procedure<MasterProcedur
     if (state == RegionRemoteProcedureBaseState.REGION_REMOTE_PROCEDURE_REPORT_SUCCEED) {
       return Optional.empty();
     }
-    return Optional.of(newRemoteOperation());
+    return Optional.of(newRemoteOperation(env));
   }
 
-  protected abstract RemoteProcedureDispatcher.RemoteOperation newRemoteOperation();
+  protected abstract RemoteProcedureDispatcher.RemoteOperation
+    newRemoteOperation(MasterProcedureEnv env);
 
   @Override
   public void remoteOperationCompleted(MasterProcedureEnv env) {
@@ -295,12 +296,37 @@ public abstract class RegionRemoteProcedureBase extends Procedure<MasterProcedur
   }
 
   @Override
+  protected void beforeExec(MasterProcedureEnv env) throws ProcedureSuspendedException {
+    RegionStateNode regionNode = getRegionNode(env);
+    if (!regionNode.isLockedBy(this)) {
+      // The wake up action will be called under the lock inside RegionStateNode for implementing
+      // RegionStateNodeLock, so if we call ProcedureUtil.wakeUp where we will acquire the procedure
+      // execution lock directly, it may cause dead lock since in normal case procedure execution
+      // case, we will acquire the procedure execution lock first and then acquire the lock inside
+      // RegionStateNodeLock. This is the reason why we need to schedule the task to a thread pool
+      // and execute asynchronously.
+      regionNode.lock(this,
+        () -> env.getAsyncTaskExecutor().execute(() -> ProcedureFutureUtil.wakeUp(this, env)));
+    }
+  }
+
+  @Override
+  protected void afterExec(MasterProcedureEnv env) {
+    // only release the lock if there is no pending updating meta operation
+    if (future == null) {
+      RegionStateNode regionNode = getRegionNode(env);
+      // in beforeExec, we may throw ProcedureSuspendedException which means we do not get the lock,
+      // in this case we should not call unlock
+      if (regionNode.isLockedBy(this)) {
+        regionNode.unlock(this);
+      }
+    }
+  }
+
+  @Override
   protected Procedure<MasterProcedureEnv>[] execute(MasterProcedureEnv env)
     throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
     RegionStateNode regionNode = getRegionNode(env);
-    if (!regionNode.isLockedBy(this)) {
-      regionNode.lock(this, () -> ProcedureFutureUtil.wakeUp(this, env));
-    }
     try {
       switch (state) {
         case REGION_REMOTE_PROCEDURE_DISPATCH: {
@@ -355,10 +381,6 @@ public abstract class RegionRemoteProcedureBase extends Procedure<MasterProcedur
       long backoff = retryCounter.getBackoffTimeAndIncrementAttempts();
       LOG.warn("Failed updating meta, suspend {}secs {}; {};", backoff / 1000, this, regionNode, e);
       throw suspend(Math.toIntExact(backoff), true);
-    } finally {
-      if (future == null) {
-        regionNode.unlock(this);
-      }
     }
   }
 

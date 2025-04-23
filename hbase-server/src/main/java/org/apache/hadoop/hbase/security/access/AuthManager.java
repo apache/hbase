@@ -27,6 +27,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.security.Superusers;
@@ -74,15 +75,6 @@ public final class AuthManager {
     Set<T> get(String name) {
       synchronized (mutex) {
         return cache.get(name);
-      }
-    }
-
-    void clear() {
-      synchronized (mutex) {
-        for (Map.Entry<String, Set<T>> entry : cache.entrySet()) {
-          entry.getValue().clear();
-        }
-        cache.clear();
       }
     }
   }
@@ -183,9 +175,7 @@ public final class AuthManager {
    * @param tablePerms new table permissions
    */
   private void updateTableCache(TableName table, ListMultimap<String, Permission> tablePerms) {
-    PermissionCache<TablePermission> cacheToUpdate =
-      tableCache.getOrDefault(table, new PermissionCache<>());
-    clearCache(cacheToUpdate);
+    PermissionCache<TablePermission> cacheToUpdate = new PermissionCache<>();
     updateCache(tablePerms, cacheToUpdate);
     tableCache.put(table, cacheToUpdate);
     mtime.incrementAndGet();
@@ -197,16 +187,10 @@ public final class AuthManager {
    * @param nsPerms   new namespace permissions
    */
   private void updateNamespaceCache(String namespace, ListMultimap<String, Permission> nsPerms) {
-    PermissionCache<NamespacePermission> cacheToUpdate =
-      namespaceCache.getOrDefault(namespace, new PermissionCache<>());
-    clearCache(cacheToUpdate);
+    PermissionCache<NamespacePermission> cacheToUpdate = new PermissionCache<>();
     updateCache(nsPerms, cacheToUpdate);
     namespaceCache.put(namespace, cacheToUpdate);
     mtime.incrementAndGet();
-  }
-
-  private void clearCache(PermissionCache cacheToUpdate) {
-    cacheToUpdate.clear();
   }
 
   @SuppressWarnings("unchecked")
@@ -452,7 +436,9 @@ public final class AuthManager {
    */
   public boolean authorizeCell(User user, TableName table, Cell cell, Permission.Action action) {
     try {
-      List<Permission> perms = PermissionStorage.getCellPermissionsForUser(user, cell);
+      assert cell instanceof ExtendedCell;
+      List<Permission> perms =
+        PermissionStorage.getCellPermissionsForUser(user, (ExtendedCell) cell);
       if (LOG.isTraceEnabled()) {
         LOG.trace("Perms for user {} in table {} in cell {}: {}", user.getShortName(), table, cell,
           (perms != null ? perms : ""));

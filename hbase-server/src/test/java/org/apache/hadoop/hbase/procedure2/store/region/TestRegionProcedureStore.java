@@ -28,7 +28,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.ipc.RpcCall;
@@ -184,7 +184,7 @@ public class TestRegionProcedureStore extends RegionProcedureStoreTestBase {
       }
 
       @Override
-      public CellScanner getCellScanner() {
+      public ExtendedCellScanner getCellScanner() {
         return null;
       }
 
@@ -244,7 +244,7 @@ public class TestRegionProcedureStore extends RegionProcedureStoreTestBase {
       }
 
       @Override
-      public void setResponse(Message param, CellScanner cells, Throwable errorThrowable,
+      public void setResponse(Message param, ExtendedCellScanner cells, Throwable errorThrowable,
         String error) {
       }
 

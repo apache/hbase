@@ -111,6 +111,14 @@ function personality_parse_args
         delete_parameter "${i}"
         HADOOP_PROFILE=${i#*=}
       ;;
+      --hadoop-three-version=*)
+        delete_parameter "${i}"
+        HADOOP_THREE_VERSION=${i#*=}
+      ;;
+      --test-profile=*)
+        delete_parameter "${i}"
+        TEST_PROFILE=${i#*=}
+      ;;
       --skip-errorprone)
         delete_parameter "${i}"
         SKIP_ERRORPRONE=true
@@ -178,8 +186,13 @@ function personality_modules
   # If we have HADOOP_PROFILE specified and we're on branch-2.x, pass along
   # the hadoop.profile system property. Ensures that Hadoop2 and Hadoop3
   # logic is not both activated within Maven.
-  if [[ -n "${HADOOP_PROFILE}" ]] && [[ "${PATCH_BRANCH}" = branch-2* ]] ; then
+  if [[ -n "${HADOOP_PROFILE}" ]] && [[ "${PATCH_BRANCH}" == *"branch-2"* ]] ; then
     extra="${extra} -Dhadoop.profile=${HADOOP_PROFILE}"
+  fi
+
+  # If we have HADOOP_THREE_VERSION specified it pass along in the hadoop.version system property.
+  if [[ -n "${HADOOP_THREE_VERSION}" ]] ; then
+    extra="${extra} -Dhadoop-three.version=${HADOOP_THREE_VERSION}"
   fi
 
   # BUILDMODE value is 'full' when there is no patch to be tested, and we are running checks on
@@ -233,8 +246,15 @@ function personality_modules
   # tests respectively.
   if [[ ${testtype} == unit ]]; then
     local tests_arg=""
+
+    if [ -n "${TEST_PROFILE}" ]; then
+      extra="${extra} -P${TEST_PROFILE}"
+    else
+      extra="${extra} -PrunAllTests"
+    fi
+
     get_include_exclude_tests_arg tests_arg
-    extra="${extra} -PrunAllTests ${tests_arg}"
+    extra="${extra} ${tests_arg}"
 
     # Inject the jenkins build-id for our surefire invocations
     # Used by zombie detection stuff, even though we're not including that yet.
@@ -490,7 +510,7 @@ function shadedjars_rebuild
   # If we have HADOOP_PROFILE specified and we're on branch-2.x, pass along
   # the hadoop.profile system property. Ensures that Hadoop2 and Hadoop3
   # logic is not both activated within Maven.
-  if [[ -n "${HADOOP_PROFILE}" ]] && [[ "${PATCH_BRANCH}" = branch-2* ]] ; then
+  if [[ -n "${HADOOP_PROFILE}" ]] && [[ "${PATCH_BRANCH}" = *"branch-2"* ]] ; then
     maven_args+=("-Dhadoop.profile=${HADOOP_PROFILE}")
   fi
 
@@ -580,14 +600,7 @@ function hadoopcheck_rebuild
 
   # All supported Hadoop versions that we want to test the compilation with
   # See the Hadoop section on prereqs in the HBase Reference Guide
-  if [[ "${PATCH_BRANCH}" = branch-2.4 ]]; then
-    yetus_info "Setting Hadoop 2 versions to test based on branch-2.4 rules."
-    if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
-      hbase_hadoop2_versions="2.10.2"
-    else
-      hbase_hadoop2_versions="2.10.0 2.10.1 2.10.2"
-    fi
-  elif [[ "${PATCH_BRANCH}" = branch-2* ]]; then
+  if [[ "${PATCH_BRANCH}" = *"branch-2"* ]]; then
     yetus_info "Setting Hadoop 2 versions to test based on branch-2.5+ rules."
     hbase_hadoop2_versions="2.10.2"
   else
@@ -595,26 +608,21 @@ function hadoopcheck_rebuild
     hbase_hadoop2_versions=""
   fi
 
-  if [[ "${PATCH_BRANCH}" = branch-2.4 ]]; then
-    yetus_info "Setting Hadoop 3 versions to test based on branch-2.4 rules"
-    if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
-      hbase_hadoop3_versions="3.1.4 3.2.4 3.3.6"
-    else
-      hbase_hadoop3_versions="3.1.1 3.1.2 3.1.3 3.1.4 3.2.0 3.2.1 3.2.2 3.2.3 3.2.4 3.3.0 3.3.1 3.3.2 3.3.3 3.3.4 3.3.5 3.3.6"
-    fi
-  elif [[ "${PATCH_BRANCH}" = branch-2.5 ]]; then
+  if [[ "${PATCH_BRANCH}" = *"branch-2.5"* ]]; then
+    # TODO remove this on non 2.5 branches ?
     yetus_info "Setting Hadoop 3 versions to test based on branch-2.5 rules"
     if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
-      hbase_hadoop3_versions="3.2.4 3.3.6"
+      hbase_hadoop3_versions="3.2.4 3.3.6 3.4.0"
     else
-      hbase_hadoop3_versions="3.2.3 3.2.4 3.3.2 3.3.3 3.3.4 3.3.5 3.3.6"
+      hbase_hadoop3_versions="3.2.3 3.2.4 3.3.2 3.3.3 3.3.4 3.3.5 3.3.6 3.4.0"
     fi
   else
     yetus_info "Setting Hadoop 3 versions to test based on branch-2.6+/master/feature branch rules"
+    # Isn't runnung these tests with the default Hadoop version redundant ?
     if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
-      hbase_hadoop3_versions="3.3.6"
+      hbase_hadoop3_versions="3.3.6 3.4.0"
     else
-      hbase_hadoop3_versions="3.3.5 3.3.6"
+      hbase_hadoop3_versions="3.3.5 3.3.6 3.4.0"
     fi
   fi
 
@@ -642,7 +650,7 @@ function hadoopcheck_rebuild
   done
 
   hadoop_profile=""
-  if [[ "${PATCH_BRANCH}" = branch-2* ]]; then
+  if [[ "${PATCH_BRANCH}" == *"branch-2"* ]]; then
     hadoop_profile="-Dhadoop.profile=3.0"
   fi
   for hadoopver in ${hbase_hadoop3_versions}; do

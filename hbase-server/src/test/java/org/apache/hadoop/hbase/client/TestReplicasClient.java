@@ -111,19 +111,19 @@ public class TestReplicasClient {
     }
 
     @Override
-    public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e, final Get get,
-      final List<Cell> results) throws IOException {
+    public void preGetOp(final ObserverContext<? extends RegionCoprocessorEnvironment> e,
+      final Get get, final List<Cell> results) throws IOException {
       slowdownCode(e);
     }
 
     @Override
-    public void preScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> e,
+    public void preScannerOpen(final ObserverContext<? extends RegionCoprocessorEnvironment> e,
       final Scan scan) throws IOException {
       slowdownCode(e);
     }
 
     @Override
-    public boolean preScannerNext(final ObserverContext<RegionCoprocessorEnvironment> e,
+    public boolean preScannerNext(final ObserverContext<? extends RegionCoprocessorEnvironment> e,
       final InternalScanner s, final List<Result> results, final int limit, final boolean hasMore)
       throws IOException {
       // this will slow down a certain next operation if the conditions are met. The slowness
@@ -138,7 +138,7 @@ public class TestReplicasClient {
       return true;
     }
 
-    private void slowdownCode(final ObserverContext<RegionCoprocessorEnvironment> e) {
+    private void slowdownCode(final ObserverContext<? extends RegionCoprocessorEnvironment> e) {
       if (e.getEnvironment().getRegion().getRegionInfo().getReplicaId() == 0) {
         LOG.info("We're the primary replicas.");
         CountDownLatch latch = getPrimaryCdl().get();

@@ -45,14 +45,14 @@ public class SleepAtFirstRpcCall implements RegionCoprocessor, RegionObserver {
   }
 
   @Override
-  public void postOpen(ObserverContext<RegionCoprocessorEnvironment> c) {
+  public void postOpen(ObserverContext<? extends RegionCoprocessorEnvironment> c) {
     RegionCoprocessorEnvironment env = c.getEnvironment();
     Configuration conf = env.getConfiguration();
     sleepTime.set(conf.getLong(SLEEP_TIME_CONF_KEY, DEFAULT_SLEEP_TIME));
   }
 
   @Override
-  public Result postIncrement(final ObserverContext<RegionCoprocessorEnvironment> e,
+  public Result postIncrement(final ObserverContext<? extends RegionCoprocessorEnvironment> e,
     final Increment increment, final Result result) throws IOException {
     if (ct.incrementAndGet() == 1) {
       Threads.sleep(sleepTime.get());
@@ -61,7 +61,7 @@ public class SleepAtFirstRpcCall implements RegionCoprocessor, RegionObserver {
   }
 
   @Override
-  public Result postAppend(final ObserverContext<RegionCoprocessorEnvironment> e,
+  public Result postAppend(final ObserverContext<? extends RegionCoprocessorEnvironment> e,
     final Append append, final Result result) throws IOException {
     if (ct.incrementAndGet() == 1) {
       Threads.sleep(sleepTime.get());

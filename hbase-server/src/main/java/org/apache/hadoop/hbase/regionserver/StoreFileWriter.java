@@ -50,6 +50,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -105,15 +106,15 @@ public class StoreFileWriter implements CellSink, ShipperListener {
   private final boolean shouldDropCacheBehind;
   private final Supplier<Collection<HStoreFile>> compactedFilesSupplier;
   private final CellComparator comparator;
-  private Cell lastCell;
+  private ExtendedCell lastCell;
   // The first (latest) delete family marker of the current row
-  private Cell deleteFamily;
+  private ExtendedCell deleteFamily;
   // The list of delete family version markers of the current row
-  private List<Cell> deleteFamilyVersionList = new ArrayList<>();
+  private List<ExtendedCell> deleteFamilyVersionList = new ArrayList<>();
   // The first (latest) delete column marker of the current column
-  private Cell deleteColumn;
+  private ExtendedCell deleteColumn;
   // The list of delete column version markers of the current column
-  private List<Cell> deleteColumnVersionList = new ArrayList<>();
+  private List<ExtendedCell> deleteColumnVersionList = new ArrayList<>();
   // The live put cell count for the current column
   private int livePutCellCount;
   private final int maxVersions;
@@ -344,14 +345,14 @@ public class StoreFileWriter implements CellSink, ShipperListener {
 
   }
 
-  private boolean isDeletedByDeleteFamily(Cell cell) {
+  private boolean isDeletedByDeleteFamily(ExtendedCell cell) {
     return deleteFamily != null && (deleteFamily.getTimestamp() > cell.getTimestamp()
       || (deleteFamily.getTimestamp() == cell.getTimestamp()
         && (!newVersionBehavior || cell.getSequenceId() < deleteFamily.getSequenceId())));
   }
 
-  private boolean isDeletedByDeleteFamilyVersion(Cell cell) {
-    for (Cell deleteFamilyVersion : deleteFamilyVersionList) {
+  private boolean isDeletedByDeleteFamilyVersion(ExtendedCell cell) {
+    for (ExtendedCell deleteFamilyVersion : deleteFamilyVersionList) {
       if (
         deleteFamilyVersion.getTimestamp() == cell.getTimestamp()
           && (!newVersionBehavior || cell.getSequenceId() < deleteFamilyVersion.getSequenceId())
@@ -362,14 +363,14 @@ public class StoreFileWriter implements CellSink, ShipperListener {
     return false;
   }
 
-  private boolean isDeletedByDeleteColumn(Cell cell) {
+  private boolean isDeletedByDeleteColumn(ExtendedCell cell) {
     return deleteColumn != null && (deleteColumn.getTimestamp() > cell.getTimestamp()
       || (deleteColumn.getTimestamp() == cell.getTimestamp()
         && (!newVersionBehavior || cell.getSequenceId() < deleteColumn.getSequenceId())));
   }
 
-  private boolean isDeletedByDeleteColumnVersion(Cell cell) {
-    for (Cell deleteColumnVersion : deleteColumnVersionList) {
+  private boolean isDeletedByDeleteColumnVersion(ExtendedCell cell) {
+    for (ExtendedCell deleteColumnVersion : deleteColumnVersionList) {
       if (
         deleteColumnVersion.getTimestamp() == cell.getTimestamp()
           && (!newVersionBehavior || cell.getSequenceId() < deleteColumnVersion.getSequenceId())
@@ -380,12 +381,12 @@ public class StoreFileWriter implements CellSink, ShipperListener {
     return false;
   }
 
-  private boolean isDeleted(Cell cell) {
+  private boolean isDeleted(ExtendedCell cell) {
     return isDeletedByDeleteFamily(cell) || isDeletedByDeleteColumn(cell)
       || isDeletedByDeleteFamilyVersion(cell) || isDeletedByDeleteColumnVersion(cell);
   }
 
-  private void appendCell(Cell cell) throws IOException {
+  private void appendCell(ExtendedCell cell) throws IOException {
     if ((lastCell == null || !CellUtil.matchingColumn(lastCell, cell))) {
       initColumnState();
     }
@@ -458,11 +459,11 @@ public class StoreFileWriter implements CellSink, ShipperListener {
   }
 
   @Override
-  public void appendAll(List<Cell> cellList) throws IOException {
+  public void appendAll(List<ExtendedCell> cellList) throws IOException {
     if (historicalFilePath == null) {
       // The dual writing is not enabled and all cells are written to one file. We use
       // the live version file in this case
-      for (Cell cell : cellList) {
+      for (ExtendedCell cell : cellList) {
         liveFileWriter.append(cell);
       }
       return;
@@ -474,13 +475,13 @@ public class StoreFileWriter implements CellSink, ShipperListener {
       // It is a new row and thus time to reset the state
       initRowState();
     }
-    for (Cell cell : cellList) {
+    for (ExtendedCell cell : cellList) {
       appendCell(cell);
     }
   }
 
   @Override
-  public void append(Cell cell) throws IOException {
+  public void append(ExtendedCell cell) throws IOException {
     if (historicalFilePath == null) {
       // The dual writing is not enabled and all cells are written to one file. We use
       // the live version file in this case
@@ -675,14 +676,14 @@ public class StoreFileWriter implements CellSink, ShipperListener {
      * Record the earlest Put timestamp. If the timeRangeTracker is not set, update TimeRangeTracker
      * to include the timestamp of this key
      */
-    private void trackTimestamps(final Cell cell) {
+    private void trackTimestamps(final ExtendedCell cell) {
       if (KeyValue.Type.Put.getCode() == cell.getTypeByte()) {
         earliestPutTs = Math.min(earliestPutTs, cell.getTimestamp());
       }
       timeRangeTracker.includeTimestamp(cell);
     }
 
-    private void appendGeneralBloomfilter(final Cell cell) throws IOException {
+    private void appendGeneralBloomfilter(final ExtendedCell cell) throws IOException {
       if (this.generalBloomFilterWriter != null) {
         /*
          * http://2.bp.blogspot.com/_Cib_A77V54U/StZMrzaKufI/AAAAAAAAADo/ZhK7bGoJdMQ/s400/KeyValue.
@@ -694,7 +695,7 @@ public class StoreFileWriter implements CellSink, ShipperListener {
       }
     }
 
-    private void appendDeleteFamilyBloomFilter(final Cell cell) throws IOException {
+    private void appendDeleteFamilyBloomFilter(final ExtendedCell cell) throws IOException {
       if (!PrivateCellUtil.isDeleteFamily(cell) && !PrivateCellUtil.isDeleteFamilyVersion(cell)) {
         return;
       }
@@ -706,7 +707,7 @@ public class StoreFileWriter implements CellSink, ShipperListener {
       }
     }
 
-    private void append(final Cell cell) throws IOException {
+    private void append(final ExtendedCell cell) throws IOException {
       appendGeneralBloomfilter(cell);
       appendDeleteFamilyBloomFilter(cell);
       writer.append(cell);

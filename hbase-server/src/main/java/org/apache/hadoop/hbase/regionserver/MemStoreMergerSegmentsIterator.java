@@ -20,8 +20,8 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -61,7 +61,7 @@ public class MemStoreMergerSegmentsIterator extends MemStoreSegmentsIterator {
   }
 
   @Override
-  public Cell next() {
+  public ExtendedCell next() {
     try { // try to get next
       if (!closed && heap != null) {
         return heap.next();

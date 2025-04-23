@@ -47,7 +47,7 @@ class TableQueue extends Queue<TableName> {
   /**
    * @param proc must not be null
    */
-  private static boolean requireTableExclusiveLock(TableProcedureInterface proc) {
+  static boolean requireTableExclusiveLock(TableProcedureInterface proc) {
     switch (proc.getTableOperationType()) {
       case CREATE:
       case DELETE:

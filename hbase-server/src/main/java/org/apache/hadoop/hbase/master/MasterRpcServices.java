@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.ClusterMetricsBuilder;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseRpcServicesBase;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerMetrics;
@@ -64,7 +65,6 @@ import org.apache.hadoop.hbase.ipc.PriorityFunction;
 import org.apache.hadoop.hbase.ipc.QosPriority;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
-import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
@@ -396,6 +396,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.Rena
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.UpdateRSGroupConfigRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.UpdateRSGroupConfigResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RecentLogs;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.FileArchiveNotificationRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.FileArchiveNotificationResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
@@ -1854,6 +1855,15 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
     ReportRegionStateTransitionRequest req) throws ServiceException {
     try {
       server.checkServiceStarted();
+      for (RegionServerStatusProtos.RegionStateTransition transition : req.getTransitionList()) {
+        long procId =
+          transition.getProcIdCount() > 0 ? transition.getProcId(0) : Procedure.NO_PROC_ID;
+        // -1 is less than any possible MasterActiveCode
+        long initiatingMasterActiveTime = transition.hasInitiatingMasterActiveTime()
+          ? transition.getInitiatingMasterActiveTime()
+          : -1;
+        throwOnOldMaster(procId, initiatingMasterActiveTime);
+      }
       return server.getAssignmentManager().reportRegionStateTransition(req);
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
@@ -2553,8 +2563,14 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
     // Check Masters is up and ready for duty before progressing. Remote side will keep trying.
     try {
       this.server.checkServiceStarted();
-    } catch (ServerNotRunningYetException snrye) {
-      throw new ServiceException(snrye);
+      for (RemoteProcedureResult result : request.getResultList()) {
+        // -1 is less than any possible MasterActiveCode
+        long initiatingMasterActiveTime =
+          result.hasInitiatingMasterActiveTime() ? result.getInitiatingMasterActiveTime() : -1;
+        throwOnOldMaster(result.getProcId(), initiatingMasterActiveTime);
+      }
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
     }
     request.getResultList().forEach(result -> {
       if (result.getStatus() == RemoteProcedureResult.Status.SUCCESS) {
@@ -2565,6 +2581,18 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
       }
     });
     return ReportProcedureDoneResponse.getDefaultInstance();
+  }
+
+  private void throwOnOldMaster(long procId, long initiatingMasterActiveTime)
+    throws MasterNotRunningException {
+    if (initiatingMasterActiveTime > server.getMasterActiveTime()) {
+      // procedure is initiated by new active master but report received on master with older active
+      // time
+      LOG.warn(
+        "Report for procId: {} and initiatingMasterAT {} received on master with activeTime {}",
+        procId, initiatingMasterActiveTime, server.getMasterActiveTime());
+      throw new MasterNotRunningException("Another master is active");
+    }
   }
 
   @Override

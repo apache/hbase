@@ -165,8 +165,8 @@ If this list goes out of date or you can't reach the listed person, reach out to
 
 | 2.4
 | Andrew Purtell
-| Check the https://hbase.apache.org/downloads.html[download] page
-| *NOT YET*
+| 2.4.18
+| June 2024
 
 | 2.5
 | Andrew Purtell

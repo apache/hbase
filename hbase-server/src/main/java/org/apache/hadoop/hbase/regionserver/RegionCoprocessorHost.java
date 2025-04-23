@@ -65,6 +65,9 @@ import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.metrics.MetricRegistry;
+import org.apache.hadoop.hbase.quotas.OperationQuota;
+import org.apache.hadoop.hbase.quotas.RpcQuotaManager;
+import org.apache.hadoop.hbase.quotas.RpcThrottlingException;
 import org.apache.hadoop.hbase.regionserver.Region.Operation;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
@@ -82,6 +85,9 @@ import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.map.AbstractReferenceMap;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.map.ReferenceMap;
+
+import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 
 /**
  * Implements the coprocessor environment and runtime support for coprocessors loaded within a
@@ -116,6 +122,7 @@ public class RegionCoprocessorHost
     ConcurrentMap<String, Object> sharedData;
     private final MetricRegistry metricRegistry;
     private final RegionServerServices services;
+    private final RpcQuotaManager rpcQuotaManager;
 
     /**
      * Constructor
@@ -131,6 +138,13 @@ public class RegionCoprocessorHost
       this.services = services;
       this.metricRegistry =
         MetricsCoprocessor.createRegistryForRegionCoprocessor(impl.getClass().getName());
+      // Some unit tests reach this line with services == null, and are okay with rpcQuotaManager
+      // being null. Let these unit tests succeed. This should not happen in real usage.
+      if (services != null) {
+        this.rpcQuotaManager = services.getRegionServerRpcQuotaManager();
+      } else {
+        this.rpcQuotaManager = null;
+      }
     }
 
     /** Returns the region */
@@ -185,6 +199,35 @@ public class RegionCoprocessorHost
     public RawCellBuilder getCellBuilder() {
       // We always do a DEEP_COPY only
       return RawCellBuilderFactory.create();
+    }
+
+    @Override
+    public RpcQuotaManager getRpcQuotaManager() {
+      return rpcQuotaManager;
+    }
+
+    @Override
+    public OperationQuota checkScanQuota(Scan scan, long maxBlockBytesScanned,
+      long prevBlockBytesScannedDifference) throws IOException, RpcThrottlingException {
+      ClientProtos.ScanRequest scanRequest = RequestConverter
+        .buildScanRequest(region.getRegionInfo().getRegionName(), scan, scan.getCaching(), false);
+      long maxScannerResultSize =
+        services.getConfiguration().getLong(HConstants.HBASE_SERVER_SCANNER_MAX_RESULT_SIZE_KEY,
+          HConstants.DEFAULT_HBASE_SERVER_SCANNER_MAX_RESULT_SIZE);
+      return rpcQuotaManager.checkScanQuota(region, scanRequest, maxScannerResultSize,
+        maxBlockBytesScanned, prevBlockBytesScannedDifference);
+    }
+
+    @Override
+    public OperationQuota checkBatchQuota(Region region, OperationQuota.OperationType type)
+      throws IOException, RpcThrottlingException {
+      return rpcQuotaManager.checkBatchQuota(region, type);
+    }
+
+    @Override
+    public OperationQuota checkBatchQuota(final Region region, int numWrites, int numReads)
+      throws IOException, RpcThrottlingException {
+      return rpcQuotaManager.checkBatchQuota(region, numWrites, numReads, false);
     }
   }
 
@@ -909,11 +952,7 @@ public class RegionCoprocessorHost
    * @param get      - the get that could be used Note that the get only does not specify the family
    *                 and qualifier that should be used
    * @return true if default processing should be bypassed
-   * @deprecated In hbase-2.0.0. Will be removed in hbase-4.0.0. Added explicitly for a single
-   *             Coprocessor for its needs only. Will be removed. VisibilityController still needs
-   *             this, need to change the logic there first.
    */
-  @Deprecated
   public boolean prePrepareTimeStampForDeleteVersion(final Mutation mutation, final Cell kv,
     final byte[] byteNow, final Get get) throws IOException {
     if (coprocEnvironments.isEmpty()) {
@@ -1571,10 +1610,6 @@ public class RegionCoprocessorHost
       });
   }
 
-  /**
-   * @deprecated Since 2.0 with out any replacement and will be removed in 3.0
-   */
-  @Deprecated
   public DeleteTracker postInstantiateDeleteTracker(DeleteTracker result) throws IOException {
     if (this.coprocEnvironments.isEmpty()) {
       return result;

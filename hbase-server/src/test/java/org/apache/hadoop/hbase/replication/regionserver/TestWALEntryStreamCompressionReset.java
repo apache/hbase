@@ -32,8 +32,8 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
+import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALEditInternalHelper;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -112,20 +113,23 @@ public class TestWALEntryStreamCompressionReset {
     writer.init(FS, path, UTIL.getConfiguration(), false, FS.getDefaultBlockSize(path), null);
     for (int i = 0; i < Byte.MAX_VALUE; i++) {
       WALEdit edit = new WALEdit();
-      edit.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setType(Cell.Type.Put)
-        .setRow(Bytes.toBytes(i)).setFamily(FAMILY).setQualifier(Bytes.toBytes("qualifier-" + i))
-        .setValue(Bytes.toBytes("v-" + i)).build());
+      WALEditInternalHelper.addExtendedCell(edit,
+        ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setType(Cell.Type.Put)
+          .setRow(Bytes.toBytes(i)).setFamily(FAMILY).setQualifier(Bytes.toBytes("qualifier-" + i))
+          .setValue(Bytes.toBytes("v-" + i)).build());
       writer.append(new WAL.Entry(new WALKeyImpl(REGION_INFO.getEncodedNameAsBytes(), TABLE_NAME,
         EnvironmentEdgeManager.currentTime(), MVCC, SCOPE), edit));
     }
 
     WALEdit edit2 = new WALEdit();
-    edit2.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setType(Cell.Type.Put)
-      .setRow(Bytes.toBytes(-1)).setFamily(FAMILY).setQualifier(Bytes.toBytes("qualifier"))
-      .setValue(Bytes.toBytes("vv")).build());
-    edit2.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setType(Cell.Type.Put)
-      .setRow(Bytes.toBytes(-1)).setFamily(FAMILY).setQualifier(Bytes.toBytes("qualifier-1"))
-      .setValue(Bytes.toBytes("vvv")).build());
+    WALEditInternalHelper.addExtendedCell(edit2,
+      ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setType(Cell.Type.Put)
+        .setRow(Bytes.toBytes(-1)).setFamily(FAMILY).setQualifier(Bytes.toBytes("qualifier"))
+        .setValue(Bytes.toBytes("vv")).build());
+    WALEditInternalHelper.addExtendedCell(edit2,
+      ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setType(Cell.Type.Put)
+        .setRow(Bytes.toBytes(-1)).setFamily(FAMILY).setQualifier(Bytes.toBytes("qualifier-1"))
+        .setValue(Bytes.toBytes("vvv")).build());
     writer.append(new WAL.Entry(new WALKeyImpl(REGION_INFO.getEncodedNameAsBytes(), TABLE_NAME,
       EnvironmentEdgeManager.currentTime(), MVCC, SCOPE), edit2));
     writer.sync(false);

@@ -23,8 +23,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.locks.Lock;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.procedure2.BaseRSProcedureCallable;
 import org.apache.hadoop.hbase.protobuf.ReplicationProtobufUtil;
@@ -106,8 +106,9 @@ public class ReplaySyncReplicationWALCallable extends BaseRSProcedureCallable {
     try {
       List<Entry> entries = readWALEntries(reader, wal);
       while (!entries.isEmpty()) {
-        Pair<AdminProtos.ReplicateWALEntryRequest, CellScanner> pair = ReplicationProtobufUtil
-          .buildReplicateWALEntryRequest(entries.toArray(new Entry[entries.size()]));
+        Pair<AdminProtos.ReplicateWALEntryRequest, ExtendedCellScanner> pair =
+          ReplicationProtobufUtil
+            .buildReplicateWALEntryRequest(entries.toArray(new Entry[entries.size()]));
         ReplicateWALEntryRequest request = pair.getFirst();
         rs.getReplicationSinkService().replicateLogEntries(request.getEntryList(), pair.getSecond(),
           request.getReplicationClusterId(), request.getSourceBaseNamespaceDirPath(),

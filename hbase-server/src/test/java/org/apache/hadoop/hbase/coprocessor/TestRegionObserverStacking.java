@@ -69,8 +69,8 @@ public class TestRegionObserverStacking {
     }
 
     @Override
-    public void postPut(final ObserverContext<RegionCoprocessorEnvironment> c, final Put put,
-      final WALEdit edit, final Durability durability) throws IOException {
+    public void postPut(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
+      final Put put, final WALEdit edit, final Durability durability) throws IOException {
       id = EnvironmentEdgeManager.currentTime();
       Threads.sleepWithoutInterrupt(10);
     }
@@ -85,8 +85,8 @@ public class TestRegionObserverStacking {
     }
 
     @Override
-    public void postPut(final ObserverContext<RegionCoprocessorEnvironment> c, final Put put,
-      final WALEdit edit, final Durability durability) throws IOException {
+    public void postPut(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
+      final Put put, final WALEdit edit, final Durability durability) throws IOException {
       id = EnvironmentEdgeManager.currentTime();
       Threads.sleepWithoutInterrupt(10);
     }
@@ -101,8 +101,8 @@ public class TestRegionObserverStacking {
     }
 
     @Override
-    public void postPut(final ObserverContext<RegionCoprocessorEnvironment> c, final Put put,
-      final WALEdit edit, final Durability durability) throws IOException {
+    public void postPut(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
+      final Put put, final WALEdit edit, final Durability durability) throws IOException {
       id = EnvironmentEdgeManager.currentTime();
       Threads.sleepWithoutInterrupt(10);
     }

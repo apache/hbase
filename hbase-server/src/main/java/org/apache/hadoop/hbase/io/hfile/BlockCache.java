@@ -261,4 +261,22 @@ public interface BlockCache extends Iterable<CachedBlock> {
   default int evictBlocksRangeByHfileName(String hfileName, long initOffset, long endOffset) {
     return 0;
   }
+
+  /**
+   * API to check whether or not, the cache is enabled.
+   * @return returns true if the cache is enabled, false otherwise.
+   */
+  default boolean isCacheEnabled() {
+    return true;
+  }
+
+  /**
+   * Wait for the block cache implementation to be completely enabled. Some block cache
+   * implementations may take longer to initialise, and this initialisation may be asynchronous.
+   * @param timeout time to wait for the cache to become enabled.
+   * @return boolean true if the cache is enabled, false otherwise.
+   */
+  default boolean waitForCacheInitialization(long timeout) {
+    return true;
+  }
 }

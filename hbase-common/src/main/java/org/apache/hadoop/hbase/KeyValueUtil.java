@@ -22,11 +22,9 @@ import java.io.DataOutput;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.hadoop.hbase.io.util.StreamUtils;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.IOUtils;
@@ -88,7 +86,7 @@ public class KeyValueUtil {
 
   /**************** copy the cell to create a new keyvalue *********************/
 
-  public static KeyValue copyToNewKeyValue(final Cell cell) {
+  public static KeyValue copyToNewKeyValue(final ExtendedCell cell) {
     byte[] bytes = copyToNewByteArray(cell);
     KeyValue kvCell = new KeyValue(bytes, 0, bytes.length);
     kvCell.setSequenceId(cell.getSequenceId());
@@ -99,7 +97,7 @@ public class KeyValueUtil {
    * The position will be set to the beginning of the new ByteBuffer
    * @return the Bytebuffer containing the key part of the cell
    */
-  public static ByteBuffer copyKeyToNewByteBuffer(final Cell cell) {
+  public static ByteBuffer copyKeyToNewByteBuffer(final ExtendedCell cell) {
     byte[] bytes = new byte[keyLength(cell)];
     appendKeyTo(cell, bytes, 0);
     ByteBuffer buffer = ByteBuffer.wrap(bytes);
@@ -110,7 +108,7 @@ public class KeyValueUtil {
    * Copies the key to a new KeyValue
    * @return the KeyValue that consists only the key part of the incoming cell
    */
-  public static KeyValue toNewKeyCell(final Cell cell) {
+  public static KeyValue toNewKeyCell(final ExtendedCell cell) {
     byte[] bytes = new byte[keyLength(cell)];
     appendKeyTo(cell, bytes, 0);
     KeyValue kv = new KeyValue.KeyOnlyKeyValue(bytes, 0, bytes.length);
@@ -120,7 +118,7 @@ public class KeyValueUtil {
     return kv;
   }
 
-  public static byte[] copyToNewByteArray(final Cell cell) {
+  public static byte[] copyToNewByteArray(final ExtendedCell cell) {
     // Cell#getSerializedSize returns the serialized size of the Source cell, which may
     // not serialize all fields. We are constructing a KeyValue backing array here,
     // which does include all fields, and must allocate accordingly.
@@ -133,7 +131,7 @@ public class KeyValueUtil {
     return backingBytes;
   }
 
-  public static int appendKeyTo(final Cell cell, final byte[] output, final int offset) {
+  public static int appendKeyTo(final ExtendedCell cell, final byte[] output, final int offset) {
     int nextOffset = offset;
     nextOffset = Bytes.putShort(output, nextOffset, cell.getRowLength());
     nextOffset = CellUtil.copyRowTo(cell, output, nextOffset);
@@ -147,7 +145,8 @@ public class KeyValueUtil {
 
   /**************** copy key and value *********************/
 
-  public static int appendToByteArray(Cell cell, byte[] output, int offset, boolean withTags) {
+  public static int appendToByteArray(ExtendedCell cell, byte[] output, int offset,
+    boolean withTags) {
     int pos = offset;
     pos = Bytes.putInt(output, pos, keyLength(cell));
     pos = Bytes.putInt(output, pos, cell.getValueLength());
@@ -163,7 +162,7 @@ public class KeyValueUtil {
   /**
    * Copy the Cell content into the passed buf in KeyValue serialization format.
    */
-  public static int appendTo(Cell cell, ByteBuffer buf, int offset, boolean withTags) {
+  public static int appendTo(ExtendedCell cell, ByteBuffer buf, int offset, boolean withTags) {
     offset = ByteBufferUtils.putInt(buf, offset, keyLength(cell));// Key length
     offset = ByteBufferUtils.putInt(buf, offset, cell.getValueLength());// Value length
     offset = appendKeyTo(cell, buf, offset);
@@ -176,7 +175,7 @@ public class KeyValueUtil {
     return offset;
   }
 
-  public static int appendKeyTo(Cell cell, ByteBuffer buf, int offset) {
+  public static int appendKeyTo(ExtendedCell cell, ByteBuffer buf, int offset) {
     offset = ByteBufferUtils.putShort(buf, offset, cell.getRowLength());// RK length
     offset = CellUtil.copyRowTo(cell, buf, offset);// Row bytes
     offset = ByteBufferUtils.putByte(buf, offset, cell.getFamilyLength());// CF length
@@ -416,7 +415,7 @@ public class KeyValueUtil {
    * @deprecated without any replacement.
    */
   @Deprecated
-  public static KeyValue ensureKeyValue(final Cell cell) {
+  public static KeyValue ensureKeyValue(final ExtendedCell cell) {
     if (cell == null) return null;
     if (cell instanceof KeyValue) {
       if (cell.getClass().getName().equals(KeyValue.class.getName())) {
@@ -433,10 +432,10 @@ public class KeyValueUtil {
   }
 
   @Deprecated
-  public static List<KeyValue> ensureKeyValues(List<Cell> cells) {
-    List<KeyValue> lazyList = Lists.transform(cells, new Function<Cell, KeyValue>() {
+  public static List<KeyValue> ensureKeyValues(List<ExtendedCell> cells) {
+    List<KeyValue> lazyList = Lists.transform(cells, new Function<ExtendedCell, KeyValue>() {
       @Override
-      public KeyValue apply(Cell arg0) {
+      public KeyValue apply(ExtendedCell arg0) {
         return KeyValueUtil.ensureKeyValue(arg0);
       }
     });
@@ -707,7 +706,6 @@ public class KeyValueUtil {
    *         useful marking a stream as done.
    */
   public static KeyValue create(int length, final DataInput in) throws IOException {
-
     if (length <= 0) {
       if (length == 0) return null;
       throw new IOException("Failed read " + length + " bytes, stream corrupt?");
@@ -718,61 +716,5 @@ public class KeyValueUtil {
     byte[] bytes = new byte[length];
     in.readFully(bytes);
     return new KeyValue(bytes, 0, length);
-  }
-
-  public static int getSerializedSize(Cell cell, boolean withTags) {
-    if (withTags) {
-      return cell.getSerializedSize();
-    }
-    if (cell instanceof ExtendedCell) {
-      return ((ExtendedCell) cell).getSerializedSize(withTags);
-    }
-    return length(cell.getRowLength(), cell.getFamilyLength(), cell.getQualifierLength(),
-      cell.getValueLength(), cell.getTagsLength(), withTags);
-  }
-
-  public static int oswrite(final Cell cell, final OutputStream out, final boolean withTags)
-    throws IOException {
-    if (cell instanceof ExtendedCell) {
-      return ((ExtendedCell) cell).write(out, withTags);
-    } else {
-      short rlen = cell.getRowLength();
-      byte flen = cell.getFamilyLength();
-      int qlen = cell.getQualifierLength();
-      int vlen = cell.getValueLength();
-      int tlen = cell.getTagsLength();
-      // write key length
-      int klen = keyLength(rlen, flen, qlen);
-      ByteBufferUtils.putInt(out, klen);
-      // write value length
-      ByteBufferUtils.putInt(out, vlen);
-      // Write rowkey - 2 bytes rk length followed by rowkey bytes
-      StreamUtils.writeShort(out, rlen);
-      out.write(cell.getRowArray(), cell.getRowOffset(), rlen);
-      // Write cf - 1 byte of cf length followed by the family bytes
-      out.write(flen);
-      out.write(cell.getFamilyArray(), cell.getFamilyOffset(), flen);
-      // write qualifier
-      out.write(cell.getQualifierArray(), cell.getQualifierOffset(), qlen);
-      // write timestamp
-      StreamUtils.writeLong(out, cell.getTimestamp());
-      // write the type
-      out.write(cell.getTypeByte());
-      // write value
-      out.write(cell.getValueArray(), cell.getValueOffset(), vlen);
-      int size = klen + vlen + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE;
-      // write tags if we have to
-      if (withTags && tlen > 0) {
-        // 2 bytes tags length followed by tags bytes
-        // tags length is serialized with 2 bytes only(short way) even if the
-        // type is int. As this
-        // is non -ve numbers, we save the sign bit. See HBASE-11437
-        out.write((byte) (0xff & (tlen >> 8)));
-        out.write((byte) (0xff & tlen));
-        out.write(cell.getTagsArray(), cell.getTagsOffset(), tlen);
-        size += tlen + KeyValue.TAGS_LENGTH_SIZE;
-      }
-      return size;
-    }
   }
 }

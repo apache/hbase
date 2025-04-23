@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.Cell.Type;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.ExtendedCellBuilder;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
@@ -503,7 +504,8 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
       @Override
       public boolean evaluate(Cell cell) throws IOException {
         boolean visibilityTagPresent = false;
-        Iterator<Tag> tagsItr = PrivateCellUtil.tagsIterator(cell);
+        assert cell instanceof ExtendedCell;
+        Iterator<Tag> tagsItr = PrivateCellUtil.tagsIterator((ExtendedCell) cell);
         while (tagsItr.hasNext()) {
           boolean includeKV = true;
           Tag tag = tagsItr.next();

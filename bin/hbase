@@ -158,15 +158,7 @@ fi
 # establish a default value for HBASE_OPTS if it's not already set. For now,
 # all we set is the garbage collector.
 if [ -z "${HBASE_OPTS}" ] ; then
-  major_version_number="$(parse_java_major_version "$(read_java_version)")"
-  case "$major_version_number" in
-  8|9|10)
-    HBASE_OPTS="-XX:+UseConcMarkSweepGC"
-    ;;
-  11|*)
-    HBASE_OPTS="-XX:+UseG1GC"
-    ;;
-  esac
+  HBASE_OPTS="-XX:+UseG1GC"
   export HBASE_OPTS
 fi
 
@@ -223,10 +215,23 @@ if [ -d "$HBASE_HOME/hbase-server/target/hbase-webapps" ]; then
   fi
 fi
 
-#If avail, add Hadoop to the CLASSPATH and to the JAVA_LIBRARY_PATH
+# If available, add Hadoop to the CLASSPATH and to the JAVA_LIBRARY_PATH
 # Allow this functionality to be disabled
 if [ "$HBASE_DISABLE_HADOOP_CLASSPATH_LOOKUP" != "true" ] ; then
   HADOOP_IN_PATH=$(PATH="${HADOOP_HOME:-${HADOOP_PREFIX}}/bin:$PATH" which hadoop 2>/dev/null)
+fi
+
+# Check if hadoop jars are available
+has_hadoop_jars=false
+if ls "${HBASE_HOME}"/lib/hadoop-common* &>/dev/null; then
+  has_hadoop_jars=true
+fi
+
+if [[ $in_dev_env = false && -z "${HADOOP_IN_PATH}" && $has_hadoop_jars = false ]] ; then
+  echo Installation does not contain Hadoop, and HADOOP_HOME does not point to a Hadoop installation.
+  echo Specify a compatible Hadoop installation via HADOOP_HOME, or use the HBase assembly variant
+  echo that includes Hadoop.
+  exit 1
 fi
 
 # Add libs to CLASSPATH
@@ -487,17 +492,22 @@ add_maven_deps_to_classpath() {
   CLASSPATH=${CLASSPATH}:$(cat "${f}")
 }
 
-add_jdk11_deps_to_classpath() {
-  for f in ${HBASE_HOME}/lib/jdk11/*; do
-    if [ -f "${f}" ]; then
-      CLASSPATH="${CLASSPATH}:${f}"
-    fi
-  done
-}
-
-add_jdk11_jvm_flags() {
-  # Keep in sync with hbase-surefire.jdk11.flags in the root pom.xml
-  HBASE_OPTS="$HBASE_OPTS -Dorg.apache.hbase.thirdparty.io.netty.tryReflectionSetAccessible=true --add-modules jdk.unsupported --add-opens java.base/java.io=ALL-UNNAMED --add-opens java.base/java.nio=ALL-UNNAMED --add-opens java.base/sun.nio.ch=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/jdk.internal.ref=ALL-UNNAMED --add-opens java.base/java.lang.reflect=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.util.concurrent=ALL-UNNAMED --add-exports java.base/jdk.internal.misc=ALL-UNNAMED --add-exports java.security.jgss/sun.security.krb5=ALL-UNNAMED --add-exports java.base/sun.net.dns=ALL-UNNAMED --add-exports java.base/sun.net.util=ALL-UNNAMED"
+add_jdk17_jvm_flags() {
+  # Keep in sync with hbase-surefire.jdk17.flags in the root pom.xml
+  HBASE_OPTS="$HBASE_OPTS -Dorg.apache.hbase.thirdparty.io.netty.tryReflectionSetAccessible=true"
+  HBASE_OPTS="$HBASE_OPTS --add-modules jdk.unsupported"
+  HBASE_OPTS="$HBASE_OPTS --add-opens java.base/java.io=ALL-UNNAMED"
+  HBASE_OPTS="$HBASE_OPTS --add-opens java.base/java.nio=ALL-UNNAMED"
+  HBASE_OPTS="$HBASE_OPTS --add-opens java.base/sun.nio.ch=ALL-UNNAMED"
+  HBASE_OPTS="$HBASE_OPTS --add-opens java.base/java.lang=ALL-UNNAMED"
+  HBASE_OPTS="$HBASE_OPTS --add-opens java.base/jdk.internal.ref=ALL-UNNAMED"
+  HBASE_OPTS="$HBASE_OPTS --add-opens java.base/java.lang.reflect=ALL-UNNAMED"
+  HBASE_OPTS="$HBASE_OPTS --add-opens java.base/java.util=ALL-UNNAMED"
+  HBASE_OPTS="$HBASE_OPTS --add-opens java.base/java.util.concurrent=ALL-UNNAMED"
+  HBASE_OPTS="$HBASE_OPTS --add-exports java.base/jdk.internal.misc=ALL-UNNAMED"
+  HBASE_OPTS="$HBASE_OPTS --add-exports java.security.jgss/sun.security.krb5=ALL-UNNAMED"
+  HBASE_OPTS="$HBASE_OPTS --add-exports java.base/sun.net.dns=ALL-UNNAMED"
+  HBASE_OPTS="$HBASE_OPTS --add-exports java.base/sun.net.util=ALL-UNNAMED"
 }
 
 add_opentelemetry_agent() {
@@ -517,8 +527,9 @@ add_opentelemetry_agent() {
 
 #Add the development env class path stuff
 if $in_dev_env; then
+  # The below line makes available all the jars required in dev_env, even if we may not add them
+  # to assembly. See HBASE-28433 for more info.
   add_maven_deps_to_classpath "cached_classpath.txt"
-
   if [[ $jline_needed ]]; then
     add_maven_deps_to_classpath "cached_classpath_jline.txt"
   elif [[ $jruby_needed ]]; then
@@ -566,12 +577,6 @@ if [ "$COMMAND" = "shell" ] ; then
   fi
   HBASE_OPTS="$HBASE_OPTS $HBASE_SHELL_OPTS"
 elif [ "$COMMAND" = 'jshell' ] ; then
-  java_version="$(read_java_version)"
-  major_version_number="$(parse_java_major_version "${java_version}")"
-  if [ "${major_version_number}" -lt 9 ] ; then
-    echo "JShell is available only with JDK9 and lated. Detected JDK version is ${java_version}".
-    exit 1
-  fi
   CLASS='jdk.internal.jshell.tool.JShellToolProvider'
   # set default values for HBASE_JSHELL_ARGS
   read -r -a JSHELL_ARGS <<< "${HBASE_JSHELL_ARGS:-"--startup DEFAULT --startup PRINTING --startup ${HBASE_HOME}/bin/hbase_startup.jsh"}"
@@ -772,71 +777,14 @@ elif [ "$COMMAND" = "hbtop" ] ; then
 elif [ "$COMMAND" = "credential" ] ; then
   CLASS='org.apache.hadoop.security.alias.CredentialShell'
 elif [ "$COMMAND" = "copyreppeers" ] ; then
-  CLASS='org.apache.hadoop.hbase.replication.ReplicationPeerMigrationTool'
+  CLASS='org.apache.hadoop.hbase.replication.CopyReplicationPeers'
 else
   CLASS=$COMMAND
-if [[ "$CLASS" =~ .*IntegrationTest.* ]] ; then
-    for f in ${HBASE_HOME}/lib/test/*.jar; do
-      if [ -f "${f}" ]; then
-        CLASSPATH="${CLASSPATH}:${f}"
-      fi
-    done
-  fi
 fi
 
-# Add lib/jdk11 jars to the classpath
-
+add_jdk17_jvm_flags
 if [ "${DEBUG}" = "true" ]; then
-  echo "Deciding on addition of lib/jdk11 jars to the classpath and setting JVM module flags"
-fi
-
-addJDK11Jars=false
-
-if [ "${HBASE_JDK11}" != "" ]; then
-  # Use the passed Environment Variable HBASE_JDK11
-  if [ "${HBASE_JDK11}" = "include" ]; then
-    addJDK11Jars=true
-    if [ "${DEBUG}" = "true" ]; then
-      echo "HBASE_JDK11 set as 'include' hence adding JDK11 jars to classpath."
-    fi
-  elif [ "${HBASE_JDK11}" = "exclude" ]; then
-    if [ "${DEBUG}" = "true" ]; then
-      echo "HBASE_JDK11 set as 'exclude' hence skipping JDK11 jars to classpath."
-    fi
-  else
-    echo "[HBASE_JDK11] contains unsupported value(s) - ${HBASE_JDK11}. Ignoring passed value."
-    echo "[HBASE_JDK11] supported values: [include, exclude]."
-  fi
-else
-  # Use JDK detection
-  version="$(read_java_version)"
-  major_version_number="$(parse_java_major_version "$version")"
-
-  if [ "${DEBUG}" = "true" ]; then
-    echo "HBASE_JDK11 not set hence using JDK detection."
-    echo "Extracted JDK version - ${version}, major_version_number - ${major_version_number}"
-  fi
-
-  if [[ "$major_version_number" -ge "11" ]]; then
-    if [ "${DEBUG}" = "true" ]; then
-      echo "Version ${version} is greater-than/equal to 11 hence adding JDK11 jars to classpath."
-    fi
-    addJDK11Jars=true
-  elif [ "${DEBUG}" = "true" ]; then
-      echo "Version ${version} is lesser than 11 hence skipping JDK11 jars from classpath."
-  fi
-fi
-
-if [ "${addJDK11Jars}" = "true" ]; then
-  add_jdk11_deps_to_classpath
-  add_jdk11_jvm_flags
-  if [ "${DEBUG}" = "true" ]; then
-     echo "Added JDK11 jars to classpath."
-     echo "Added JDK11 JVM flags too."
-  fi
-elif [ "${DEBUG}" = "true" ]; then
-  echo "JDK11 jars skipped from classpath."
-  echo "Skipped adding JDK11 JVM flags."
+  echo "Added JDK17 JVM flags."
 fi
 
 if [[ "${HBASE_OTEL_TRACING_ENABLED:-false}" = "true" ]] ; then
@@ -869,9 +817,10 @@ fi
 
 HEAP_SETTINGS="$JAVA_HEAP_MAX $JAVA_OFFHEAP_MAX"
 # by now if we're running a command it means we need logging
+# prepend the logging jars to make sure they are before the ones coming from HADOOP_CLASSPATH
 for f in ${HBASE_HOME}/lib/client-facing-thirdparty/log4j*.jar; do
   if [ -f "${f}" ]; then
-    CLASSPATH="${CLASSPATH}:${f}"
+    CLASSPATH="${f}:${CLASSPATH}"
   fi
 done
 

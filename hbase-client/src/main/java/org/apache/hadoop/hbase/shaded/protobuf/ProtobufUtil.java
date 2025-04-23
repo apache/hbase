@@ -57,6 +57,7 @@ import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.ExtendedCellBuilder;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -75,6 +76,7 @@ import org.apache.hadoop.hbase.client.BalanceResponse;
 import org.apache.hadoop.hbase.client.BalancerDecision;
 import org.apache.hadoop.hbase.client.BalancerRejection;
 import org.apache.hadoop.hbase.client.CheckAndMutate;
+import org.apache.hadoop.hbase.client.ClientInternalHelper;
 import org.apache.hadoop.hbase.client.ClientUtil;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -88,7 +90,6 @@ import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.LogEntry;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.OnlineLogRecord;
-import org.apache.hadoop.hbase.client.PackagePrivateFieldAccessor;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionLoadStats;
@@ -245,7 +246,7 @@ public final class ProtobufUtil {
    * Many results are simple: no cell, exists true or false. To save on object creations, we reuse
    * them across calls.
    */
-  private final static Cell[] EMPTY_CELL_ARRAY = new Cell[] {};
+  private final static ExtendedCell[] EMPTY_CELL_ARRAY = new ExtendedCell[0];
   private final static Result EMPTY_RESULT = Result.create(EMPTY_CELL_ARRAY);
   final static Result EMPTY_RESULT_EXISTS_TRUE = Result.create(null, true);
   final static Result EMPTY_RESULT_EXISTS_FALSE = Result.create(null, false);
@@ -1081,7 +1082,7 @@ public final class ProtobufUtil {
     if (scan.getCaching() > 0) {
       scanBuilder.setCaching(scan.getCaching());
     }
-    long mvccReadPoint = PackagePrivateFieldAccessor.getMvccReadPoint(scan);
+    long mvccReadPoint = ClientInternalHelper.getMvccReadPoint(scan);
     if (mvccReadPoint > 0) {
       scanBuilder.setMvccReadPoint(mvccReadPoint);
     }
@@ -1191,7 +1192,7 @@ public final class ProtobufUtil {
       scan.setCaching(proto.getCaching());
     }
     if (proto.hasMvccReadPoint()) {
-      PackagePrivateFieldAccessor.setMvccReadPoint(scan, proto.getMvccReadPoint());
+      ClientInternalHelper.setMvccReadPoint(scan, proto.getMvccReadPoint());
     }
     if (proto.hasReadType()) {
       scan.setReadType(toReadType(proto.getReadType()));
@@ -1314,10 +1315,11 @@ public final class ProtobufUtil {
     }
     ColumnValue.Builder columnBuilder = ColumnValue.newBuilder();
     QualifierValue.Builder valueBuilder = QualifierValue.newBuilder();
-    for (Map.Entry<byte[], List<Cell>> family : mutation.getFamilyCellMap().entrySet()) {
+    for (Map.Entry<byte[], List<ExtendedCell>> family : ClientInternalHelper
+      .getExtendedFamilyCellMap(mutation).entrySet()) {
       columnBuilder.clear();
       columnBuilder.setFamily(UnsafeByteOperations.unsafeWrap(family.getKey()));
-      for (Cell cell : family.getValue()) {
+      for (ExtendedCell cell : family.getValue()) {
         valueBuilder.clear();
         valueBuilder.setQualifier(UnsafeByteOperations.unsafeWrap(cell.getQualifierArray(),
           cell.getQualifierOffset(), cell.getQualifierLength()));
@@ -1419,13 +1421,13 @@ public final class ProtobufUtil {
       return toResult(result.getExists(), result.isStale());
     }
 
-    Cell[] cells = result.rawCells();
+    ExtendedCell[] cells = ClientInternalHelper.getExtendedRawCells(result);
     if (cells == null || cells.length == 0) {
       return result.isStale() ? EMPTY_RESULT_PB_STALE : EMPTY_RESULT_PB;
     }
 
     ClientProtos.Result.Builder builder = ClientProtos.Result.newBuilder();
-    for (Cell c : cells) {
+    for (ExtendedCell c : cells) {
       builder.addCell(toCell(c, encodeTags));
     }
 
@@ -1979,7 +1981,7 @@ public final class ProtobufUtil {
     throw new IOException(se);
   }
 
-  public static CellProtos.Cell toCell(final Cell kv, boolean encodeTags) {
+  public static CellProtos.Cell toCell(final ExtendedCell kv, boolean encodeTags) {
     // Doing this is going to kill us if we do it for all data passed.
     // St.Ack 20121205
     CellProtos.Cell.Builder kvbuilder = CellProtos.Cell.newBuilder();
@@ -1990,7 +1992,7 @@ public final class ProtobufUtil {
         ((ByteBufferExtendedCell) kv).getFamilyPosition(), kv.getFamilyLength()));
       kvbuilder.setQualifier(wrap(((ByteBufferExtendedCell) kv).getQualifierByteBuffer(),
         ((ByteBufferExtendedCell) kv).getQualifierPosition(), kv.getQualifierLength()));
-      kvbuilder.setCellType(CellProtos.CellType.valueOf(kv.getTypeByte()));
+      kvbuilder.setCellType(CellProtos.CellType.forNumber(kv.getTypeByte()));
       kvbuilder.setTimestamp(kv.getTimestamp());
       kvbuilder.setValue(wrap(((ByteBufferExtendedCell) kv).getValueByteBuffer(),
         ((ByteBufferExtendedCell) kv).getValuePosition(), kv.getValueLength()));
@@ -2005,7 +2007,7 @@ public final class ProtobufUtil {
         kv.getFamilyLength()));
       kvbuilder.setQualifier(UnsafeByteOperations.unsafeWrap(kv.getQualifierArray(),
         kv.getQualifierOffset(), kv.getQualifierLength()));
-      kvbuilder.setCellType(CellProtos.CellType.valueOf(kv.getTypeByte()));
+      kvbuilder.setCellType(CellProtos.CellType.forNumber(kv.getTypeByte()));
       kvbuilder.setTimestamp(kv.getTimestamp());
       kvbuilder.setValue(UnsafeByteOperations.unsafeWrap(kv.getValueArray(), kv.getValueOffset(),
         kv.getValueLength()));
@@ -2024,7 +2026,7 @@ public final class ProtobufUtil {
     return UnsafeByteOperations.unsafeWrap(dup);
   }
 
-  public static Cell toCell(ExtendedCellBuilder cellBuilder, final CellProtos.Cell cell,
+  public static ExtendedCell toCell(ExtendedCellBuilder cellBuilder, final CellProtos.Cell cell,
     boolean decodeTags) {
     ExtendedCellBuilder builder = cellBuilder.clear().setRow(cell.getRow().toByteArray())
       .setFamily(cell.getFamily().toByteArray()).setQualifier(cell.getQualifier().toByteArray())
@@ -2148,7 +2150,9 @@ public final class ProtobufUtil {
    * @return toString of passed <code>m</code>
    */
   public static String getShortTextFormat(Message m) {
-    if (m == null) return "null";
+    if (m == null) {
+      return "null";
+    }
     if (m instanceof ScanRequest) {
       // This should be small and safe to output. No data.
       return TextFormat.shortDebugString(m);
@@ -2190,6 +2194,8 @@ public final class ProtobufUtil {
       ClientProtos.CoprocessorServiceRequest r = (ClientProtos.CoprocessorServiceRequest) m;
       return "coprocessorService= " + r.getCall().getServiceName() + ":"
         + r.getCall().getMethodName();
+    } else if (m instanceof MasterProtos.MoveRegionRequest) {
+      return TextFormat.shortDebugString(m);
     }
     return "TODO: " + m.getClass().toString();
   }
@@ -2462,6 +2468,12 @@ public final class ProtobufUtil {
         return ThrottleType.READ_CAPACITY_UNIT;
       case WRITE_CAPACITY_UNIT:
         return ThrottleType.WRITE_CAPACITY_UNIT;
+      case ATOMIC_READ_SIZE:
+        return ThrottleType.ATOMIC_READ_SIZE;
+      case ATOMIC_REQUEST_NUMBER:
+        return ThrottleType.ATOMIC_REQUEST_NUMBER;
+      case ATOMIC_WRITE_SIZE:
+        return ThrottleType.ATOMIC_WRITE_SIZE;
       default:
         throw new RuntimeException("Invalid ThrottleType " + proto);
     }
@@ -2491,6 +2503,12 @@ public final class ProtobufUtil {
         return QuotaProtos.ThrottleType.READ_CAPACITY_UNIT;
       case WRITE_CAPACITY_UNIT:
         return QuotaProtos.ThrottleType.WRITE_CAPACITY_UNIT;
+      case ATOMIC_READ_SIZE:
+        return QuotaProtos.ThrottleType.ATOMIC_READ_SIZE;
+      case ATOMIC_REQUEST_NUMBER:
+        return QuotaProtos.ThrottleType.ATOMIC_REQUEST_NUMBER;
+      case ATOMIC_WRITE_SIZE:
+        return QuotaProtos.ThrottleType.ATOMIC_WRITE_SIZE;
       default:
         throw new RuntimeException("Invalid ThrottleType " + type);
     }
@@ -3095,10 +3113,12 @@ public final class ProtobufUtil {
   }
 
   public static CloseRegionRequest buildCloseRegionRequest(ServerName server, byte[] regionName,
-    ServerName destinationServer, long closeProcId, boolean evictCache) {
+    ServerName destinationServer, long closeProcId, boolean evictCache,
+    long initiatingMasterActiveTime) {
     CloseRegionRequest.Builder builder =
       getBuilder(server, regionName, destinationServer, closeProcId);
     builder.setEvictCache(evictCache);
+    builder.setInitiatingMasterActiveTime(initiatingMasterActiveTime);
     return builder.build();
   }
 

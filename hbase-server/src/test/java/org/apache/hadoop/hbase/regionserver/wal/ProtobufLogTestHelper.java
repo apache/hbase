@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALEditInternalHelper;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALProvider;
 
@@ -64,7 +65,8 @@ public final class ProtobufLogTestHelper {
     WALEdit edit = new WALEdit();
     int prefix = i;
     IntStream.range(0, columnCount).mapToObj(j -> toValue(prefix, j))
-      .map(value -> new KeyValue(row, row, row, timestamp, value)).forEachOrdered(edit::add);
+      .map(value -> new KeyValue(row, row, row, timestamp, value))
+      .forEachOrdered(c -> WALEditInternalHelper.addExtendedCell(edit, c));
     return new WAL.Entry(key, edit);
   }
 

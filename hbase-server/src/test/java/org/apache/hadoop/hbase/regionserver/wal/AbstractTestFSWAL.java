@@ -50,8 +50,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.Coprocessor;
+import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -87,6 +87,7 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALEditInternalHelper;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.junit.AfterClass;
@@ -183,7 +184,7 @@ public abstract class AbstractTestFSWAL {
     for (int i = 0; i < times; i++) {
       long timestamp = EnvironmentEdgeManager.currentTime();
       WALEdit cols = new WALEdit();
-      cols.add(new KeyValue(row, row, row, timestamp, row));
+      WALEditInternalHelper.addExtendedCell(cols, new KeyValue(row, row, row, timestamp, row));
       WALKeyImpl key =
         new WALKeyImpl(hri.getEncodedNameAsBytes(), htd.getTableName(), SequenceId.NO_SEQUENCE_ID,
           timestamp, WALKey.EMPTY_UUIDS, HConstants.NO_NONCE, HConstants.NO_NONCE, mvcc, scopes);
@@ -459,9 +460,9 @@ public abstract class AbstractTestFSWAL {
       // Construct a WALEdit and add it a few times to the WAL.
       WALEdit edits = new WALEdit();
       for (Put p : puts) {
-        CellScanner cs = p.cellScanner();
+        ExtendedCellScanner cs = p.cellScanner();
         while (cs.advance()) {
-          edits.add(cs.current());
+          WALEditInternalHelper.addExtendedCell(edits, cs.current());
         }
       }
       // Add any old cluster id.
@@ -517,7 +518,7 @@ public abstract class AbstractTestFSWAL {
     long timestamp = EnvironmentEdgeManager.currentTime();
     byte[] row = Bytes.toBytes("row");
     WALEdit cols = new WALEdit();
-    cols.add(new KeyValue(row, row, row, timestamp, row));
+    WALEditInternalHelper.addExtendedCell(cols, new KeyValue(row, row, row, timestamp, row));
     WALKeyImpl key =
       new WALKeyImpl(ri.getEncodedNameAsBytes(), td.getTableName(), SequenceId.NO_SEQUENCE_ID,
         timestamp, WALKey.EMPTY_UUIDS, HConstants.NO_NONCE, HConstants.NO_NONCE, mvcc, scopes);

@@ -47,7 +47,6 @@
     <dependency>
       <groupId>net.spy</groupId>
       <artifactId>spymemcached</artifactId>
-      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
@@ -93,20 +92,13 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase-zookeeper</artifactId>
-      <type>test-jar</type>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-server</artifactId>
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>com.thimbleware.jmemcached</groupId>
-      <artifactId>jmemcached-core</artifactId>
-      <version>1.0.0</version>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -148,11 +140,6 @@
             </configuration>
           </execution>
         </executions>
-      </plugin>
-      <!-- Make a jar and put the sources in the jar -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-source-plugin</artifactId>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

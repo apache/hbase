@@ -39,6 +39,7 @@ import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -232,7 +233,7 @@ public final class ConnectionUtils {
     return estimatedHeapSizeOfResult;
   }
 
-  static Result filterCells(Result result, Cell keepCellsAfter) {
+  static Result filterCells(Result result, ExtendedCell keepCellsAfter) {
     if (keepCellsAfter == null) {
       // do not need to filter
       return result;
@@ -241,7 +242,7 @@ public final class ConnectionUtils {
     if (!PrivateCellUtil.matchingRows(keepCellsAfter, result.getRow(), 0, result.getRow().length)) {
       return result;
     }
-    Cell[] rawCells = result.rawCells();
+    ExtendedCell[] rawCells = result.rawExtendedCells();
     int index = Arrays.binarySearch(rawCells, keepCellsAfter,
       CellComparator.getInstance()::compareWithoutRow);
     if (index < 0) {

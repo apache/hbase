@@ -42,8 +42,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
+import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -52,6 +53,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.client.ClientInternalHelper;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -364,7 +366,7 @@ public class TestImportExport {
       s.setRaw(true);
       ResultScanner scanner = t.getScanner(s);
       Result r = scanner.next();
-      Cell[] res = r.rawCells();
+      ExtendedCell[] res = ClientInternalHelper.getExtendedRawCells(r);
       assertTrue(PrivateCellUtil.isDeleteFamily(res[0]));
       assertEquals(now + 4, res[1].getTimestamp());
       assertEquals(now + 3, res[2].getTimestamp());
@@ -503,6 +505,47 @@ public class TestImportExport {
     // cleanup
     exportTable.close();
     importTable.close();
+  }
+
+  /**
+   * Create a simple table, run an Export Job on it, Import with bulk output and enable largeResult
+   */
+  @Test
+  public void testBulkImportAndLargeResult() throws Throwable {
+    // Create simple table to export
+    TableDescriptor desc = TableDescriptorBuilder
+      .newBuilder(TableName.valueOf(name.getMethodName()))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILYA).setMaxVersions(5).build())
+      .build();
+    UTIL.getAdmin().createTable(desc);
+    Table exportTable = UTIL.getConnection().getTable(desc.getTableName());
+
+    Put p1 = new Put(ROW1);
+    p1.addColumn(FAMILYA, QUAL, now, QUAL);
+
+    // Having another row would actually test the filter.
+    Put p2 = new Put(ROW2);
+    p2.addColumn(FAMILYA, QUAL, now, QUAL);
+
+    exportTable.put(Arrays.asList(p1, p2));
+
+    // Export the simple table
+    String[] args = new String[] { name.getMethodName(), FQ_OUTPUT_DIR, "1000" };
+    assertTrue(runExport(args));
+
+    // Import to a new table
+    final String IMPORT_TABLE = name.getMethodName() + "import";
+    desc = TableDescriptorBuilder.newBuilder(TableName.valueOf(IMPORT_TABLE))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILYA).setMaxVersions(5).build())
+      .build();
+    UTIL.getAdmin().createTable(desc);
+
+    String O_OUTPUT_DIR =
+      new Path(OUTPUT_DIR + 1).makeQualified(FileSystem.get(UTIL.getConfiguration())).toString();
+
+    args = new String[] { "-D" + Import.BULK_OUTPUT_CONF_KEY + "=" + O_OUTPUT_DIR,
+      "-D" + Import.HAS_LARGE_RESULT + "=" + true, IMPORT_TABLE, FQ_OUTPUT_DIR, "1000" };
+    assertTrue(runImport(args));
   }
 
   /**
@@ -645,13 +688,12 @@ public class TestImportExport {
     }).when(ctx).write(any(), any());
 
     importer.setup(ctx);
-    Result value = mock(Result.class);
     KeyValue[] keys = {
       new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("family"), Bytes.toBytes("qualifier"),
         Bytes.toBytes("value")),
       new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("family"), Bytes.toBytes("qualifier"),
         Bytes.toBytes("value1")) };
-    when(value.rawCells()).thenReturn(keys);
+    Result value = Result.create(keys);
     importer.map(new ImmutableBytesWritable(Bytes.toBytes("Key")), value, ctx);
 
   }
@@ -819,7 +861,7 @@ public class TestImportExport {
   }
 
   private void checkWhetherTagExists(TableName table, boolean tagExists) throws IOException {
-    List<Cell> values = new ArrayList<>();
+    List<ExtendedCell> values = new ArrayList<>();
     for (HRegion region : UTIL.getHBaseCluster().getRegions(table)) {
       Scan scan = new Scan();
       // Make sure to set rawScan to true so that we will get Delete Markers.
@@ -835,7 +877,7 @@ public class TestImportExport {
       }
     }
     boolean deleteFound = false;
-    for (Cell cell : values) {
+    for (ExtendedCell cell : values) {
       if (PrivateCellUtil.isDelete(cell.getType().getCode())) {
         deleteFound = true;
         List<Tag> tags = PrivateCellUtil.getTags(cell);
@@ -864,7 +906,7 @@ public class TestImportExport {
     }
 
     @Override
-    public void preBatchMutate(ObserverContext<RegionCoprocessorEnvironment> c,
+    public void preBatchMutate(ObserverContext<? extends RegionCoprocessorEnvironment> c,
       MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {
       if (c.getEnvironment().getRegion().getRegionInfo().getTable().isSystemTable()) {
         return;
@@ -880,8 +922,8 @@ public class TestImportExport {
         }
         Tag sourceOpTag = new ArrayBackedTag(TEST_TAG_TYPE, sourceOpAttr);
         List<Cell> updatedCells = new ArrayList<>();
-        for (CellScanner cellScanner = m.cellScanner(); cellScanner.advance();) {
-          Cell cell = cellScanner.current();
+        for (ExtendedCellScanner cellScanner = m.cellScanner(); cellScanner.advance();) {
+          ExtendedCell cell = cellScanner.current();
           List<Tag> tags = PrivateCellUtil.getTags(cell);
           tags.add(sourceOpTag);
           Cell updatedCell = PrivateCellUtil.createCell(cell, tags);
@@ -933,9 +975,9 @@ public class TestImportExport {
       int count = 0;
       Result result;
       while ((result = scanner.next()) != null) {
-        List<Cell> cells = result.listCells();
+        List<ExtendedCell> cells = Arrays.asList(ClientInternalHelper.getExtendedRawCells(result));
         assertEquals(2, cells.size());
-        Cell cell = cells.get(0);
+        ExtendedCell cell = cells.get(0);
         assertTrue(CellUtil.isDelete(cell));
         List<Tag> tags = PrivateCellUtil.getTags(cell);
         assertEquals(0, tags.size());

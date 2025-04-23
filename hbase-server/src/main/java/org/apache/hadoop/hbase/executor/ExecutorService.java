@@ -32,6 +32,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.hbase.monitoring.ThreadMonitoring;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -253,6 +254,7 @@ public class ExecutorService {
       ThreadFactoryBuilder tfb = new ThreadFactoryBuilder();
       tfb.setNameFormat(this.name + "-%d");
       tfb.setDaemon(true);
+      tfb.setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER);
       this.threadPoolExecutor.setThreadFactory(tfb.build());
     }
 

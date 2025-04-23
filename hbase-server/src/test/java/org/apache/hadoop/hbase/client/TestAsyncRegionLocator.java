@@ -83,7 +83,7 @@ public class TestAsyncRegionLocator {
     }
 
     @Override
-    public void preScannerOpen(ObserverContext<RegionCoprocessorEnvironment> e, Scan scan)
+    public void preScannerOpen(ObserverContext<? extends RegionCoprocessorEnvironment> e, Scan scan)
       throws IOException {
       if (SLEEP_MS > 0) {
         Threads.sleepWithoutInterrupt(SLEEP_MS);

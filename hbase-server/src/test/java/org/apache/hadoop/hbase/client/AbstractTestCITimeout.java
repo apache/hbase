@@ -67,15 +67,15 @@ public abstract class AbstractTestCITimeout {
     }
 
     @Override
-    public void postOpen(ObserverContext<RegionCoprocessorEnvironment> c) {
+    public void postOpen(ObserverContext<? extends RegionCoprocessorEnvironment> c) {
       RegionCoprocessorEnvironment env = c.getEnvironment();
       Configuration conf = env.getConfiguration();
       sleepTime.set(conf.getLong(SLEEP_TIME_CONF_KEY, DEFAULT_SLEEP_TIME));
     }
 
     @Override
-    public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e, final Get get,
-      final List<Cell> results) throws IOException {
+    public void preGetOp(final ObserverContext<? extends RegionCoprocessorEnvironment> e,
+      final Get get, final List<Cell> results) throws IOException {
       Threads.sleep(sleepTime.get());
       if (ct.incrementAndGet() == 1) {
         throw new IOException("first call I fail");
@@ -83,8 +83,8 @@ public abstract class AbstractTestCITimeout {
     }
 
     @Override
-    public void prePut(final ObserverContext<RegionCoprocessorEnvironment> e, final Put put,
-      final WALEdit edit, final Durability durability) throws IOException {
+    public void prePut(final ObserverContext<? extends RegionCoprocessorEnvironment> e,
+      final Put put, final WALEdit edit, final Durability durability) throws IOException {
       Threads.sleep(sleepTime.get());
       if (ct.incrementAndGet() == 1) {
         throw new IOException("first call I fail");
@@ -92,7 +92,7 @@ public abstract class AbstractTestCITimeout {
     }
 
     @Override
-    public void preDelete(final ObserverContext<RegionCoprocessorEnvironment> e,
+    public void preDelete(final ObserverContext<? extends RegionCoprocessorEnvironment> e,
       final Delete delete, final WALEdit edit, final Durability durability) throws IOException {
       Threads.sleep(sleepTime.get());
       if (ct.incrementAndGet() == 1) {
@@ -101,7 +101,7 @@ public abstract class AbstractTestCITimeout {
     }
 
     @Override
-    public Result preIncrement(final ObserverContext<RegionCoprocessorEnvironment> e,
+    public Result preIncrement(final ObserverContext<? extends RegionCoprocessorEnvironment> e,
       final Increment increment) throws IOException {
       Threads.sleep(sleepTime.get());
       if (ct.incrementAndGet() == 1) {
@@ -121,26 +121,26 @@ public abstract class AbstractTestCITimeout {
     }
 
     @Override
-    public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e, final Get get,
-      final List<Cell> results) throws IOException {
+    public void preGetOp(final ObserverContext<? extends RegionCoprocessorEnvironment> e,
+      final Get get, final List<Cell> results) throws IOException {
       Threads.sleep(SLEEP_TIME);
     }
 
     @Override
-    public void prePut(final ObserverContext<RegionCoprocessorEnvironment> e, final Put put,
-      final WALEdit edit, final Durability durability) throws IOException {
+    public void prePut(final ObserverContext<? extends RegionCoprocessorEnvironment> e,
+      final Put put, final WALEdit edit, final Durability durability) throws IOException {
       Threads.sleep(SLEEP_TIME);
     }
 
     @Override
-    public Result preIncrement(final ObserverContext<RegionCoprocessorEnvironment> e,
+    public Result preIncrement(final ObserverContext<? extends RegionCoprocessorEnvironment> e,
       final Increment increment) throws IOException {
       Threads.sleep(SLEEP_TIME);
       return null;
     }
 
     @Override
-    public void preDelete(final ObserverContext<RegionCoprocessorEnvironment> e,
+    public void preDelete(final ObserverContext<? extends RegionCoprocessorEnvironment> e,
       final Delete delete, final WALEdit edit, final Durability durability) throws IOException {
       Threads.sleep(SLEEP_TIME);
     }

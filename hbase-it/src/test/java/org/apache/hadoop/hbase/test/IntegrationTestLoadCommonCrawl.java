@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hbase.test;
 
+import static org.apache.hadoop.hbase.IntegrationTestingUtility.DEFAULT_REGIONS_PER_SERVER;
+import static org.apache.hadoop.hbase.IntegrationTestingUtility.PRESPLIT_TEST_TABLE;
+import static org.apache.hadoop.hbase.IntegrationTestingUtility.PRESPLIT_TEST_TABLE_KEY;
+import static org.apache.hadoop.hbase.IntegrationTestingUtility.REGIONS_PER_SERVER_KEY;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
 import java.io.BufferedReader;
@@ -49,7 +53,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.IntegrationTestBase;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
@@ -478,16 +481,13 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
           TableDescriptor tableDescriptor =
             TableDescriptorBuilder.newBuilder(tableName).setColumnFamilies(families).build();
 
-          if (
-            getConf().getBoolean(HBaseTestingUtil.PRESPLIT_TEST_TABLE_KEY,
-              HBaseTestingUtil.PRESPLIT_TEST_TABLE)
-          ) {
+          if (getConf().getBoolean(PRESPLIT_TEST_TABLE_KEY, PRESPLIT_TEST_TABLE)) {
             int numberOfServers = admin.getRegionServers().size();
             if (numberOfServers == 0) {
               throw new IllegalStateException("No live regionservers");
             }
-            int regionsPerServer = getConf().getInt(HBaseTestingUtil.REGIONS_PER_SERVER_KEY,
-              HBaseTestingUtil.DEFAULT_REGIONS_PER_SERVER);
+            int regionsPerServer =
+              getConf().getInt(REGIONS_PER_SERVER_KEY, DEFAULT_REGIONS_PER_SERVER);
             int totalNumberOfRegions = numberOfServers * regionsPerServer;
             LOG.info("Creating test table: " + tableDescriptor);
             LOG.info("Number of live regionservers: " + numberOfServers + ", "

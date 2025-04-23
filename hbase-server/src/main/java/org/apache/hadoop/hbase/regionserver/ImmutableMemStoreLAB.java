@@ -20,14 +20,14 @@ package org.apache.hadoop.hbase.regionserver;
 import com.google.errorprone.annotations.RestrictedApi;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.nio.RefCnt;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A MemStoreLAB implementation which wraps N MemStoreLABs. Its main duty is in proper managing the
  * close of the individual MemStoreLAB. This is treated as an immutable one and so do not allow to
- * add any more Cells into it. {@link #copyCellInto(Cell)} throws Exception
+ * add any more Cells into it. {@link #copyCellInto(ExtendedCell)} throws Exception
  */
 @InterfaceAudience.Private
 public class ImmutableMemStoreLAB implements MemStoreLAB {
@@ -45,7 +45,7 @@ public class ImmutableMemStoreLAB implements MemStoreLAB {
   }
 
   @Override
-  public Cell copyCellInto(Cell cell) {
+  public ExtendedCell copyCellInto(ExtendedCell cell) {
     throw new IllegalStateException("This is an Immutable MemStoreLAB.");
   }
 
@@ -58,7 +58,7 @@ public class ImmutableMemStoreLAB implements MemStoreLAB {
    * data, or null when this cell cannt be copied.
    */
   @Override
-  public Cell forceCopyOfBigCellInto(Cell cell) {
+  public ExtendedCell forceCopyOfBigCellInto(ExtendedCell cell) {
     MemStoreLAB mslab = this.mslabs.get(0);
     return mslab.forceCopyOfBigCellInto(cell);
   }

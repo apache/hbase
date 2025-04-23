@@ -95,9 +95,11 @@ public class SnapshotRegionProcedure extends Procedure<MasterProcedureEnv>
 
   @Override
   public Optional<RemoteOperation> remoteCallBuild(MasterProcedureEnv env, ServerName serverName) {
-    return Optional.of(new RSProcedureDispatcher.ServerOperation(this, getProcId(),
-      SnapshotRegionCallable.class, MasterProcedureProtos.SnapshotRegionParameter.newBuilder()
-        .setRegion(ProtobufUtil.toRegionInfo(region)).setSnapshot(snapshot).build().toByteArray()));
+    return Optional
+      .of(new RSProcedureDispatcher.ServerOperation(this, getProcId(), SnapshotRegionCallable.class,
+        MasterProcedureProtos.SnapshotRegionParameter.newBuilder()
+          .setRegion(ProtobufUtil.toRegionInfo(region)).setSnapshot(snapshot).build().toByteArray(),
+        env.getMasterServices().getMasterActiveTime()));
   }
 
   @Override

@@ -27,11 +27,11 @@ import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.ClusterMetricsBuilder;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.ExtendedCellScannable;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
@@ -469,7 +469,7 @@ public final class RequestConverter {
    *                            RowMutations/CheckAndMutate within the original list of actions
    */
   public static void buildNoDataRegionActions(final byte[] regionName,
-    final Iterable<Action> actions, final List<CellScannable> cells,
+    final Iterable<Action> actions, final List<ExtendedCellScannable> cells,
     final MultiRequest.Builder multiRequestBuilder, final RegionAction.Builder regionActionBuilder,
     final ClientProtos.Action.Builder actionBuilder, final MutationProto.Builder mutationBuilder,
     long nonceGroup, final Map<Integer, Integer> indexMap) throws IOException {
@@ -609,17 +609,19 @@ public final class RequestConverter {
     }
   }
 
-  private static void buildNoDataRegionAction(final Put put, final List<CellScannable> cells,
-    final RegionAction.Builder regionActionBuilder, final ClientProtos.Action.Builder actionBuilder,
-    final MutationProto.Builder mutationBuilder) throws IOException {
+  private static void buildNoDataRegionAction(final Put put,
+    final List<ExtendedCellScannable> cells, final RegionAction.Builder regionActionBuilder,
+    final ClientProtos.Action.Builder actionBuilder, final MutationProto.Builder mutationBuilder)
+    throws IOException {
     cells.add(put);
     regionActionBuilder.addAction(actionBuilder
       .setMutation(ProtobufUtil.toMutationNoData(MutationType.PUT, put, mutationBuilder)));
   }
 
-  private static void buildNoDataRegionAction(final Delete delete, final List<CellScannable> cells,
-    final RegionAction.Builder regionActionBuilder, final ClientProtos.Action.Builder actionBuilder,
-    final MutationProto.Builder mutationBuilder) throws IOException {
+  private static void buildNoDataRegionAction(final Delete delete,
+    final List<ExtendedCellScannable> cells, final RegionAction.Builder regionActionBuilder,
+    final ClientProtos.Action.Builder actionBuilder, final MutationProto.Builder mutationBuilder)
+    throws IOException {
     int size = delete.size();
     // Note that a legitimate Delete may have a size of zero; i.e. a Delete that has nothing
     // in it but the row to delete. In this case, the current implementation does not make
@@ -637,18 +639,18 @@ public final class RequestConverter {
   }
 
   private static void buildNoDataRegionAction(final Increment increment,
-    final List<CellScannable> cells, long nonce, final RegionAction.Builder regionActionBuilder,
-    final ClientProtos.Action.Builder actionBuilder, final MutationProto.Builder mutationBuilder)
-    throws IOException {
+    final List<ExtendedCellScannable> cells, long nonce,
+    final RegionAction.Builder regionActionBuilder, final ClientProtos.Action.Builder actionBuilder,
+    final MutationProto.Builder mutationBuilder) throws IOException {
     cells.add(increment);
     regionActionBuilder.addAction(actionBuilder.setMutation(
       ProtobufUtil.toMutationNoData(MutationType.INCREMENT, increment, mutationBuilder, nonce)));
   }
 
-  private static void buildNoDataRegionAction(final Append append, final List<CellScannable> cells,
-    long nonce, final RegionAction.Builder regionActionBuilder,
-    final ClientProtos.Action.Builder actionBuilder, final MutationProto.Builder mutationBuilder)
-    throws IOException {
+  private static void buildNoDataRegionAction(final Append append,
+    final List<ExtendedCellScannable> cells, long nonce,
+    final RegionAction.Builder regionActionBuilder, final ClientProtos.Action.Builder actionBuilder,
+    final MutationProto.Builder mutationBuilder) throws IOException {
     cells.add(append);
     regionActionBuilder.addAction(actionBuilder.setMutation(
       ProtobufUtil.toMutationNoData(MutationType.APPEND, append, mutationBuilder, nonce)));
@@ -656,9 +658,9 @@ public final class RequestConverter {
 
   /** Returns whether or not the rowMutations has a Increment or Append */
   private static boolean buildNoDataRegionAction(final RowMutations rowMutations,
-    final List<CellScannable> cells, long nonce, final RegionAction.Builder regionActionBuilder,
-    final ClientProtos.Action.Builder actionBuilder, final MutationProto.Builder mutationBuilder)
-    throws IOException {
+    final List<ExtendedCellScannable> cells, long nonce,
+    final RegionAction.Builder regionActionBuilder, final ClientProtos.Action.Builder actionBuilder,
+    final MutationProto.Builder mutationBuilder) throws IOException {
     boolean ret = false;
     for (Mutation mutation : rowMutations.getMutations()) {
       mutationBuilder.clear();

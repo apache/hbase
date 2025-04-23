@@ -822,20 +822,20 @@ public class TestMasterReplication {
     }
 
     @Override
-    public void prePut(final ObserverContext<RegionCoprocessorEnvironment> e, final Put put,
-      final WALEdit edit, final Durability durability) throws IOException {
+    public void prePut(final ObserverContext<? extends RegionCoprocessorEnvironment> e,
+      final Put put, final WALEdit edit, final Durability durability) throws IOException {
       nCount++;
     }
 
     @Override
-    public void postDelete(final ObserverContext<RegionCoprocessorEnvironment> c,
+    public void postDelete(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
       final Delete delete, final WALEdit edit, final Durability durability) throws IOException {
       nDelete++;
     }
 
     @Override
-    public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> c, final Get get,
-      final List<Cell> result) throws IOException {
+    public void preGetOp(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
+      final Get get, final List<Cell> result) throws IOException {
       if (get.getAttribute("count") != null) {
         result.clear();
         // order is important!

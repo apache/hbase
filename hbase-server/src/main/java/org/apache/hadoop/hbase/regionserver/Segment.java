@@ -26,6 +26,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -50,7 +51,7 @@ public abstract class Segment implements MemStoreSizing {
   public final static long DEEP_OVERHEAD = FIXED_OVERHEAD + ClassSize.ATOMIC_REFERENCE
     + ClassSize.CELL_SET + 2 * ClassSize.ATOMIC_LONG + ClassSize.REENTRANT_LOCK;
 
-  private AtomicReference<CellSet> cellSet = new AtomicReference<>();
+  private AtomicReference<CellSet<ExtendedCell>> cellSet = new AtomicReference<>();
   private final CellComparator comparator;
   private ReentrantReadWriteLock updatesLock;
   protected long minSequenceId;
@@ -93,8 +94,8 @@ public abstract class Segment implements MemStoreSizing {
   }
 
   // This constructor is used to create empty Segments.
-  protected Segment(CellSet cellSet, CellComparator comparator, MemStoreLAB memStoreLAB,
-    TimeRangeTracker trt) {
+  protected Segment(CellSet<ExtendedCell> cellSet, CellComparator comparator,
+    MemStoreLAB memStoreLAB, TimeRangeTracker trt) {
     this.cellSet.set(cellSet);
     this.comparator = comparator;
     this.updatesLock = new ReentrantReadWriteLock();
@@ -154,12 +155,12 @@ public abstract class Segment implements MemStoreSizing {
    * set to 'true' and the cell is copied into MSLAB.
    * @return either the given cell or its clone
    */
-  public Cell maybeCloneWithAllocator(Cell cell, boolean forceCloneOfBigCell) {
+  public ExtendedCell maybeCloneWithAllocator(ExtendedCell cell, boolean forceCloneOfBigCell) {
     if (this.memStoreLAB == null) {
       return cell;
     }
 
-    Cell cellFromMslab;
+    ExtendedCell cellFromMslab;
     if (forceCloneOfBigCell) {
       cellFromMslab = this.memStoreLAB.forceCopyOfBigCellInto(cell);
     } else {
@@ -202,7 +203,7 @@ public abstract class Segment implements MemStoreSizing {
    * @return this object
    */
 
-  protected Segment setCellSet(CellSet cellSetOld, CellSet cellSetNew) {
+  protected Segment setCellSet(CellSet<ExtendedCell> cellSetOld, CellSet<ExtendedCell> cellSetNew) {
     this.cellSet.compareAndSet(cellSetOld, cellSetNew);
     return this;
   }
@@ -265,15 +266,15 @@ public abstract class Segment implements MemStoreSizing {
   }
 
   // *** Methods for SegmentsScanner
-  public Cell last() {
+  public ExtendedCell last() {
     return getCellSet().last();
   }
 
-  public Iterator<Cell> iterator() {
+  public Iterator<ExtendedCell> iterator() {
     return getCellSet().iterator();
   }
 
-  public SortedSet<Cell> headSet(Cell firstKeyOnRow) {
+  public SortedSet<ExtendedCell> headSet(ExtendedCell firstKeyOnRow) {
     return getCellSet().headSet(firstKeyOnRow);
   }
 
@@ -286,7 +287,7 @@ public abstract class Segment implements MemStoreSizing {
   }
 
   /** Returns a set of all cells in the segment */
-  protected CellSet getCellSet() {
+  protected CellSet<ExtendedCell> getCellSet() {
     return cellSet.get();
   }
 
@@ -298,13 +299,13 @@ public abstract class Segment implements MemStoreSizing {
     return comparator;
   }
 
-  protected void internalAdd(Cell cell, boolean mslabUsed, MemStoreSizing memstoreSizing,
+  protected void internalAdd(ExtendedCell cell, boolean mslabUsed, MemStoreSizing memstoreSizing,
     boolean sizeAddedPreOperation) {
     boolean succ = getCellSet().add(cell);
     updateMetaInfo(cell, succ, mslabUsed, memstoreSizing, sizeAddedPreOperation);
   }
 
-  protected void updateMetaInfo(Cell cellToAdd, boolean succ, boolean mslabUsed,
+  protected void updateMetaInfo(ExtendedCell cellToAdd, boolean succ, boolean mslabUsed,
     MemStoreSizing memstoreSizing, boolean sizeAddedPreOperation) {
     long delta = 0;
     long cellSize = getCellLength(cellToAdd);
@@ -335,7 +336,8 @@ public abstract class Segment implements MemStoreSizing {
     }
   }
 
-  protected void updateMetaInfo(Cell cellToAdd, boolean succ, MemStoreSizing memstoreSizing) {
+  protected void updateMetaInfo(ExtendedCell cellToAdd, boolean succ,
+    MemStoreSizing memstoreSizing) {
     updateMetaInfo(cellToAdd, succ, (getMemStoreLAB() != null), memstoreSizing, false);
   }
 
@@ -396,7 +398,7 @@ public abstract class Segment implements MemStoreSizing {
    * @param firstCell a cell in the segment
    * @return a subset of the segment cell set, which starts with the given cell
    */
-  protected SortedSet<Cell> tailSet(Cell firstCell) {
+  protected SortedSet<ExtendedCell> tailSet(ExtendedCell firstCell) {
     return getCellSet().tailSet(firstCell);
   }
 

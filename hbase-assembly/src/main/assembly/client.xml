@@ -31,48 +31,10 @@
   <baseDirectory>hbase-${project.version}-client</baseDirectory>
   <componentDescriptors>
     <componentDescriptor>src/main/assembly/client-components.xml</componentDescriptor>
+    <!-- Not that everything below is an exact copy of hadoop-three-compat.xml
+    Unless differences are introduced on purpose, this should be kept in sync with
+    hadoop-three-compat.xml -->
   </componentDescriptors>
-  <moduleSets>
-    <!-- include regular jars so the shell can use them -->
-    <moduleSet>
-      <useAllReactorProjects>true</useAllReactorProjects>
-      <includes>
-        <include>org.apache.hbase:hbase-shell</include>
-      </includes>
-      <binaries>
-        <unpack>false</unpack>
-        <outputDirectory>lib</outputDirectory>
-        <dependencySets>
-          <dependencySet>
-            <excludes>
-            <!-- Exclude J2EE libraries that get pulled in when building on JDK11 -->
-              <exclude>com.sun.xml.ws:jaxws-ri</exclude>
-            <!-- Exclude libraries that we put in their own dirs under lib/ -->
-              <exclude>org.jruby:jruby-complete</exclude>
-              <exclude>com.sun.jersey:*</exclude>
-              <exclude>com.sun.jersey.contribs:*</exclude>
-              <exclude>jline:jline</exclude>
-              <exclude>junit:junit</exclude>
-              <exclude>com.github.stephenc.findbugs:findbugs-annotations</exclude>
-              <exclude>commons-logging:commons-logging</exclude>
-              <exclude>log4j:log4j</exclude>
-              <exclude>org.apache.hbase:hbase-shaded-client</exclude>
-              <exclude>org.apache.hbase:hbase-shaded-client-byo-hadoop</exclude>
-              <exclude>org.apache.hbase:hbase-shaded-mapreduce</exclude>
-              <exclude>org.apache.htrace:htrace-core4</exclude>
-              <exclude>org.apache.htrace:htrace-core</exclude>
-              <exclude>org.apache.yetus:audience-annotations</exclude>
-              <exclude>org.slf4j:*</exclude>
-              <exclude>org.apache.logging.log4j:*</exclude>
-              <exclude>io.opentelemetry.javaagent:*</exclude>
-              <exclude>org.hamcrest:hamcrest-core</exclude>
-              <exclude>org.mockito:mockito-core</exclude>
-            </excludes>
-          </dependencySet>
-        </dependencySets>
-      </binaries>
-    </moduleSet>
-  </moduleSets>
   <!-- Include the generated LICENSE and NOTICE files -->
   <files>
     <file>
@@ -97,15 +59,40 @@
 
   <dependencySets>
     <dependencySet>
-      <outputDirectory>lib/shaded-clients</outputDirectory>
-      <includes>
-        <include>org.apache.hbase:hbase-shaded-client</include>
-        <include>org.apache.hbase:hbase-shaded-mapreduce</include>
-        <include>org.apache.hbase:hbase-shaded-client-byo-hadoop</include>
-      </includes>
+      <outputDirectory>lib</outputDirectory>
+      <useTransitiveDependencies>true</useTransitiveDependencies>
+      <!-- Exclude artifacts added in the sub-directories to avoid duplication -->
+      <excludes>
+        <!-- Exclude the shaded jars that go in the lib/shaded-clients directory -->
+        <exclude>org.apache.hbase:hbase-shaded-client</exclude>
+        <exclude>org.apache.hbase:hbase-shaded-mapreduce</exclude>
+        <exclude>org.apache.hbase:hbase-shaded-client-byo-hadoop</exclude>
+        <!-- Exclude the Ruby jar that goes in the lib/ruby directory -->
+        <exclude>org.jruby:jruby-complete</exclude>
+        <!-- Exclude jars that go into the lib/client-facing-thirdparty directory -->
+        <exclude>com.github.stephenc.findbugs:findbugs-annotations</exclude>
+        <exclude>commons-logging:commons-logging</exclude>
+        <exclude>log4j:log4j</exclude>
+        <exclude>org.apache.htrace:htrace-core4</exclude>
+        <exclude>org.apache.htrace:htrace-core</exclude>
+        <exclude>org.apache.yetus:audience-annotations</exclude>
+        <exclude>org.slf4j:*</exclude>
+        <exclude>org.apache.logging.log4j:*</exclude>
+        <!-- TODO shouldn't we also exclude duplicate io.opentelemetry.* jars which are added to client-facing-thirdparty ? -->
+        <!-- Exclude the opentelemetry agent that goes in the lib/trace directory -->
+        <exclude>io.opentelemetry.javaagent:*</exclude>
+        <!-- Exclude jline2 which goes into lib/zk-client. jline3 is a different artifact-->
+        <exclude>jline:jline</exclude>
+        <!-- These two exclusions are added here to preserve previous behaviour, and are not included in sub-directories -->
+        <!-- TODO investigate using the provided mechanism for these -->
+        <exclude>com.sun.jersey:*</exclude>
+        <exclude>com.sun.jersey.contribs:*</exclude>
+        <!-- FIXME remove when jaxws-ri is removed from assembly -->
+        <exclude>com.sun.xml.ws:jaxws-ri:pom</exclude>
+      </excludes>
     </dependencySet>
-  <!-- Add jruby-complete to hbase_home/lib/ruby.
-       Update JRUBY_PACKAGED_WITH_HBASE in bin/hbase and hbase.cmd if you would like to update outputDirectory below -->
+    <!-- Add jruby-complete to hbase_home/lib/ruby.
+         Update JRUBY_PACKAGED_WITH_HBASE in bin/hbase and hbase.cmd if you would like to update outputDirectory below -->
     <dependencySet>
       <outputDirectory>lib/ruby</outputDirectory>
       <includes>
@@ -113,8 +100,6 @@
       </includes>
     </dependencySet>
     <!-- Include third party dependencies the shaded clients expose in the lib directory
-         N.B. this will conflict with the omnibus tarball but these should be precisely
-         the same artifacts so blind overwrite of either should be fine.
       -->
     <dependencySet>
       <outputDirectory>lib/client-facing-thirdparty</outputDirectory>
@@ -145,6 +130,7 @@
            tarball in a different build.
         -->
       <includes>
+        <!-- TODO Review and remove entries that are not present in any supported HBase and Hadoop version -->
         <include>com.github.stephenc.findbugs:findbugs-annotations</include>
         <include>commons-logging:commons-logging</include>
         <include>log4j:log4j</include>
@@ -157,20 +143,25 @@
       </includes>
     </dependencySet>
     <dependencySet>
+      <outputDirectory>lib/shaded-clients</outputDirectory>
+      <includes>
+        <include>org.apache.hbase:hbase-shaded-client</include>
+        <include>org.apache.hbase:hbase-shaded-mapreduce</include>
+        <include>org.apache.hbase:hbase-shaded-client-byo-hadoop</include>
+      </includes>
+    </dependencySet>
+    <dependencySet>
+      <outputDirectory>lib/zkcli</outputDirectory>
+      <includes>
+        <!-- This is jline2 -->
+        <include>jline:jline</include>
+      </includes>
+    </dependencySet>
+    <dependencySet>
       <outputDirectory>lib/trace</outputDirectory>
       <includes>
         <include>io.opentelemetry.javaagent:*</include>
       </includes>
     </dependencySet>
-    <!-- Adds junit libs to lib/test -->
-    <dependencySet>
-      <outputDirectory>lib/test</outputDirectory>
-      <includes>
-        <include>junit:junit</include>
-        <include>org.hamcrest:hamcrest-core</include>
-        <include>org.mockito:mockito-core</include>
-      </includes>
-    </dependencySet>
   </dependencySets>
-
 </assembly>

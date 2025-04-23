@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.coprocessor.example;
 
 import java.io.IOException;
 import java.util.List;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.ScannerContext;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -37,7 +37,8 @@ public class DelegatingInternalScanner implements InternalScanner {
   }
 
   @Override
-  public boolean next(List<Cell> result, ScannerContext scannerContext) throws IOException {
+  public boolean next(List<? super ExtendedCell> result, ScannerContext scannerContext)
+    throws IOException {
     return scanner.next(result, scannerContext);
   }
 

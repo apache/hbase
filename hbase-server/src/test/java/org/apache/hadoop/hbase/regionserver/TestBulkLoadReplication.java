@@ -36,9 +36,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellBuilder;
-import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
+import org.apache.hadoop.hbase.ExtendedCellBuilder;
+import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -278,7 +278,7 @@ public class TestBulkLoadReplication extends TestReplicationBase {
 
   private String createHFileForFamilies(byte[] row, byte[] value, Configuration clusterConfig)
     throws IOException {
-    CellBuilder cellBuilder = CellBuilderFactory.create(CellBuilderType.DEEP_COPY);
+    ExtendedCellBuilder cellBuilder = ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY);
     cellBuilder.setRow(row).setFamily(TestReplicationBase.famName).setQualifier(Bytes.toBytes("1"))
       .setValue(value).setType(Cell.Type.Put);
 
@@ -311,7 +311,7 @@ public class TestBulkLoadReplication extends TestReplicationBase {
       return Optional.of(new RegionObserver() {
 
         @Override
-        public void postBulkLoadHFile(ObserverContext<RegionCoprocessorEnvironment> ctx,
+        public void postBulkLoadHFile(ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
           List<Pair<byte[], String>> stagingFamilyPaths, Map<byte[], List<Path>> finalPaths)
           throws IOException {
           BULK_LOAD_LATCH.countDown();

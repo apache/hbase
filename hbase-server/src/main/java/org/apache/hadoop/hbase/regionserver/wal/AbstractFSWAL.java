@@ -71,6 +71,7 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import org.apache.commons.lang3.mutable.MutableLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -85,6 +86,7 @@ import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
+import org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputHelper;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.ServerCall;
@@ -1105,7 +1107,8 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
         tellListenersAboutPostLogRoll(oldPath, newPath);
         if (LOG.isDebugEnabled()) {
           LOG.debug("Create new " + implClassName + " writer with pipeline: "
-            + Arrays.toString(getPipeline()));
+            + FanOutOneBlockAsyncDFSOutputHelper
+              .getDataNodeInfo(Arrays.stream(getPipeline()).collect(Collectors.toList())));
         }
         // We got a new writer, so reset the slow sync count
         lastTimeCheckSlowSync = EnvironmentEdgeManager.currentTime();

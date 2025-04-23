@@ -17,13 +17,9 @@
  */
 package org.apache.hadoop.hbase.io;
 
-import java.io.BufferedInputStream;
 import java.io.DataInput;
-import java.io.DataInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.Arrays;
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -144,36 +140,6 @@ public class Reference {
     return p;
   }
 
-  /**
-   * Read a Reference from FileSystem.
-   * @return New Reference made from passed <code>p</code>
-   */
-  public static Reference read(final FileSystem fs, final Path p) throws IOException {
-    InputStream in = fs.open(p);
-    try {
-      // I need to be able to move back in the stream if this is not a pb serialization so I can
-      // do the Writable decoding instead.
-      in = in.markSupported() ? in : new BufferedInputStream(in);
-      int pblen = ProtobufUtil.lengthOfPBMagic();
-      in.mark(pblen);
-      byte[] pbuf = new byte[pblen];
-      IOUtils.readFully(in, pbuf, 0, pblen);
-      // WATCHOUT! Return in middle of function!!!
-      if (ProtobufUtil.isPBMagicPrefix(pbuf)) return convert(FSProtos.Reference.parseFrom(in));
-      // Else presume Writables. Need to reset the stream since it didn't start w/ pb.
-      // We won't bother rewriting thie Reference as a pb since Reference is transitory.
-      in.reset();
-      Reference r = new Reference();
-      DataInputStream dis = new DataInputStream(in);
-      // Set in = dis so it gets the close below in the finally on our way out.
-      in = dis;
-      r.readFields(dis);
-      return r;
-    } finally {
-      in.close();
-    }
-  }
-
   public FSProtos.Reference convert() {
     FSProtos.Reference.Builder builder = FSProtos.Reference.newBuilder();
     builder.setRange(isTopFileRegion(getFileRegion())
@@ -195,7 +161,7 @@ public class Reference {
    * delimiter, pb reads to EOF which may not be what you want).
    * @return This instance serialized as a delimited protobuf w/ a magic pb prefix.
    */
-  byte[] toByteArray() throws IOException {
+  public byte[] toByteArray() throws IOException {
     return ProtobufUtil.prependPBMagic(convert().toByteArray());
   }
 

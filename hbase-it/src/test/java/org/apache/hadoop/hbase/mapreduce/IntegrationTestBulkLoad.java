@@ -145,7 +145,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
     }
 
     @Override
-    public void preScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> e,
+    public void preScannerOpen(final ObserverContext<? extends RegionCoprocessorEnvironment> e,
       final Scan scan) throws IOException {
       if (countOfOpen.incrementAndGet() == 2) { // slowdown openScanner randomly
         slowdownCode(e);
@@ -153,7 +153,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
     }
 
     @Override
-    public boolean preScannerNext(final ObserverContext<RegionCoprocessorEnvironment> e,
+    public boolean preScannerNext(final ObserverContext<? extends RegionCoprocessorEnvironment> e,
       final InternalScanner s, final List<Result> results, final int limit, final boolean hasMore)
       throws IOException {
       // this will slow down a certain next operation if the conditions are met. The slowness
@@ -165,7 +165,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
       return true;
     }
 
-    protected void slowdownCode(final ObserverContext<RegionCoprocessorEnvironment> e) {
+    protected void slowdownCode(final ObserverContext<? extends RegionCoprocessorEnvironment> e) {
       if (e.getEnvironment().getRegion().getRegionInfo().getReplicaId() == 0) {
         try {
           if (sleepTime.get() > 0) {

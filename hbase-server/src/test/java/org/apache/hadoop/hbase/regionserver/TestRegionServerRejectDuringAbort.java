@@ -244,8 +244,8 @@ public class TestRegionServerRejectDuringAbort {
     }
 
     @Override
-    public void preClose(ObserverContext<RegionCoprocessorEnvironment> c, boolean abortRequested)
-      throws IOException {
+    public void preClose(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+      boolean abortRequested) throws IOException {
       // Wait so that the region can't close until we get the information we need from our test
       UTIL.waitFor(60_000, () -> THROWN_EXCEPTION.get() != null);
     }

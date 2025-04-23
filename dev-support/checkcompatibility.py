@@ -141,7 +141,7 @@ def build_tree(java_path, verbose):
     # special hack for comparing with rel/2.0.0, see HBASE-26063 for more details
     subprocess.check_call(["sed", "-i", "2148s/3.0.0/3.0.4/g", "pom.xml"], cwd=java_path)
     mvn_cmd = ["mvn", "--batch-mode", "-DskipTests",
-               "-Dmaven.javadoc.skip=true", "package"]
+               "-Dmaven.javadoc.skip=true", "--threads=1.0C", "package"]
     if not verbose:
         mvn_cmd.insert(-1, "--quiet")
     subprocess.check_call(mvn_cmd, cwd=java_path)

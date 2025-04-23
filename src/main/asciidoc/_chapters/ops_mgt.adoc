@@ -432,7 +432,7 @@ The `WALPrettyPrinter` is a tool with configurable options to print the contents
 or a _recovered.edits_ file. You can invoke it via the HBase cli with the 'wal' command.
 
 ----
- $ ./bin/hbase wal hdfs://example.org:8020/hbase/WALs/example.org,60020,1283516293161/10.10.21.10%3A60020.1283973724012
+ $ ./bin/hbase wal hdfs://example.org:9000/hbase/WALs/example.org,60020,1283516293161/10.10.21.10%3A60020.1283973724012
 ----
 
 .WAL Printing in older versions of HBase
@@ -442,7 +442,7 @@ Prior to version 2.0, the `WALPrettyPrinter` was called the `HLogPrettyPrinter`,
 In those versions, you can print the contents of a WAL using the same configuration as above, but with the 'hlog' command.
 
 ----
- $ ./bin/hbase hlog hdfs://example.org:8020/hbase/.logs/example.org,60020,1283516293161/10.10.21.10%3A60020.1283973724012
+ $ ./bin/hbase hlog hdfs://example.org:9000/hbase/.logs/example.org,60020,1283516293161/10.10.21.10%3A60020.1283973724012
 ----
 ====
 
@@ -475,8 +475,11 @@ Options:
  endtime      end of the time range.  Ignored if no starttime specified.
  versions     number of cell versions to copy
  new.name     new table's name
+ peer.uri     The URI of the peer cluster
  peer.adr     Address of the peer cluster given in the format
               hbase.zookeeer.quorum:hbase.zookeeper.client.port:zookeeper.znode.parent
+              Do not take effect if peer.uri is specified
+              Deprecated, please use peer.uri instead
  families     comma-separated list of families to copy
               To copy from cf1 to cf2, give sourceCfName:destCfName.
               To keep the same name, just give "cfName"
@@ -498,10 +501,14 @@ For performance consider the following general options:
     -Dmapred.map.tasks.speculative.execution=false
 ----
 
+Starting from 3.0.0, we introduce a `peer.uri` option so the `peer.adr` option is deprecated. Please
+use connection URI for specifying HBase clusters. For all previous versions, you should still use
+the `peer.adr` option.
+
 .Scanner Caching
 [NOTE]
 ====
-Caching for the input Scan is configured via `hbase.client.scanner.caching`          in the job configuration.
+Caching for the input Scan is configured via `hbase.client.scanner.caching` in the job configuration.
 ====
 
 .Versions
@@ -586,10 +593,18 @@ $ ./bin/hbase org.apache.hadoop.hbase.mapreduce.SyncTable --help
 Usage: SyncTable [options] <sourcehashdir> <sourcetable> <targettable>
 
 Options:
+ sourceuri        Cluster connection uri of the source table
+                  (defaults to cluster in classpath's config)
  sourcezkcluster  ZK cluster key of the source table
+                  (defaults to cluster in classpath's config)
+                  Do not take effect if sourceuri is specifie
+                  Deprecated, please use sourceuri instead
+ targeturi        Cluster connection uri of the target table
                   (defaults to cluster in classpath's config)
  targetzkcluster  ZK cluster key of the target table
                   (defaults to cluster in classpath's config)
+                  Do not take effect if targeturi is specified
+                  Deprecated, please use targeturi instead
  dryrun           if true, output counters but no writes
                   (defaults to false)
  doDeletes        if false, does not perform deletes
@@ -612,6 +627,10 @@ Examples:
  to a local target cluster:
  $ bin/hbase org.apache.hadoop.hbase.mapreduce.SyncTable --dryrun=true --sourcezkcluster=zk1.example.com,zk2.example.com,zk3.example.com:2181:/hbase hdfs://nn:9000/hashes/tableA tableA tableA
 ----
+
+Starting from 3.0.0, we introduce `sourceuri` and `targeturi` options so `sourcezkcluster` and
+`targetzkcluster` are deprecated. Please use connection URI for specifying HBase clusters. For all
+previous versions, you should still use `sourcezkcluster` and `targetzkcluster`.
 
 Cell comparison takes ROW/FAMILY/QUALIFIER/TIMESTAMP/VALUE into account for equality. When syncing at the target, missing cells will be
 added with original timestamp value from source. That may cause unexpected results after SyncTable completes, for example, if missing
@@ -1203,15 +1222,15 @@ If the problem is about PREFIX_TREE encoding it is necessary to change encodings
 The following log message shows an example of incorrect HFiles.
 
 ----
-2018-06-05 16:20:46,976 WARN  [hfilevalidator-pool1-t3] hbck.HFileCorruptionChecker: Found corrupt HFile hdfs://example.com:8020/hbase/data/default/t/72ea7f7d625ee30f959897d1a3e2c350/prefix/7e6b3d73263c4851bf2b8590a9b3791e
-org.apache.hadoop.hbase.io.hfile.CorruptHFileException: Problem reading HFile Trailer from file hdfs://example.com:8020/hbase/data/default/t/72ea7f7d625ee30f959897d1a3e2c350/prefix/7e6b3d73263c4851bf2b8590a9b3791e
+2018-06-05 16:20:46,976 WARN  [hfilevalidator-pool1-t3] hbck.HFileCorruptionChecker: Found corrupt HFile hdfs://example.com:9000/hbase/data/default/t/72ea7f7d625ee30f959897d1a3e2c350/prefix/7e6b3d73263c4851bf2b8590a9b3791e
+org.apache.hadoop.hbase.io.hfile.CorruptHFileException: Problem reading HFile Trailer from file hdfs://example.com:9000/hbase/data/default/t/72ea7f7d625ee30f959897d1a3e2c350/prefix/7e6b3d73263c4851bf2b8590a9b3791e
     ...
 Caused by: java.io.IOException: Invalid data block encoding type in file info: PREFIX_TREE
     ...
 Caused by: java.lang.IllegalArgumentException: No enum constant org.apache.hadoop.hbase.io.encoding.DataBlockEncoding.PREFIX_TREE
     ...
-2018-06-05 16:20:47,322 INFO  [main] tool.HFileContentValidator: Corrupted file: hdfs://example.com:8020/hbase/data/default/t/72ea7f7d625ee30f959897d1a3e2c350/prefix/7e6b3d73263c4851bf2b8590a9b3791e
-2018-06-05 16:20:47,383 INFO  [main] tool.HFileContentValidator: Corrupted file: hdfs://example.com:8020/hbase/archive/data/default/t/56be41796340b757eb7fff1eb5e2a905/f/29c641ae91c34fc3bee881f45436b6d1
+2018-06-05 16:20:47,322 INFO  [main] tool.HFileContentValidator: Corrupted file: hdfs://example.com:9000/hbase/data/default/t/72ea7f7d625ee30f959897d1a3e2c350/prefix/7e6b3d73263c4851bf2b8590a9b3791e
+2018-06-05 16:20:47,383 INFO  [main] tool.HFileContentValidator: Corrupted file: hdfs://example.com:9000/hbase/archive/data/default/t/56be41796340b757eb7fff1eb5e2a905/f/29c641ae91c34fc3bee881f45436b6d1
 ----
 
 ===== Fixing PREFIX_TREE errors
@@ -2449,6 +2468,7 @@ The `Peers` Znode::
   It consists of a list of all peer replication clusters, along with the status of each of them.
   The value of each peer is its cluster key, which is provided in the HBase Shell.
   The cluster key contains a list of ZooKeeper nodes in the cluster's quorum, the client port for the ZooKeeper quorum, and the base znode for HBase in HDFS on that cluster.
+  Starting from 3.0.0, you can also specify connection URI as a cluster key. See <<client.connectionuri>> for more details about connection URI.
 
 The `RS` Znode::
   The `rs` znode contains a list of WAL logs which need to be replicated.

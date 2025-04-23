@@ -21,24 +21,24 @@
     See the License for the specific language governing permissions and
     limitations under the License.
 -->
-  <Project rdf:about="http://hbase.apache.org">
+  <Project rdf:about="https://hbase.apache.org">
     <created>2012-04-14</created>
     <license rdf:resource="http://usefulinc.com/doap/licenses/asl20" />
     <name>Apache HBase</name>
-    <homepage rdf:resource="http://hbase.apache.org" />
-    <asfext:pmc rdf:resource="http://hbase.apache.org" />
+    <homepage rdf:resource="https://hbase.apache.org" />
+    <asfext:pmc rdf:resource="https://hbase.apache.org" />
     <shortdesc>Apache HBase software is the Hadoop database. Think of it as a distributed, scalable, big data store.</shortdesc>
     <description>Use Apache HBase software when you need random, realtime read/write access to your Big Data. This project's goal is the hosting of very large tables -- billions of rows X millions of columns -- atop clusters of commodity hardware. HBase is an open-source, distributed, versioned, column-oriented store modeled after Google's Bigtable: A Distributed Storage System for Structured Data by Chang et al. Just as Bigtable leverages the distributed data storage provided by the Google File System, HBase provides Bigtable-like capabilities on top of Hadoop and HDFS. </description>
-    <bug-database rdf:resource="http://issues.apache.org/jira/browse/HBASE" />
-    <mailing-list rdf:resource="http://hbase.apache.org/mail-lists.html" />
-    <download-page rdf:resource="http://www.apache.org/dyn/closer.lua/hbase/" />
+    <bug-database rdf:resource="https://issues.apache.org/jira/browse/HBASE" />
+    <mailing-list rdf:resource="https://hbase.apache.org/mailing-lists.html" />
+    <download-page rdf:resource="https://hbase.apache.org/downloads.html" />
     <programming-language>Java</programming-language>
     <category rdf:resource="http://projects.apache.org/category/database" />
     <release>
       <Version>
-        <name>Apache hbase </name>
-        <created>2015-07-23</created>
-        <revision>2.0.0-SNAPSHOT</revision>
+        <name>Apache HBase</name>
+        <created>2024-05-17</created>
+        <revision>2.6.0</revision>
       </Version>
     </release>
     <repository>

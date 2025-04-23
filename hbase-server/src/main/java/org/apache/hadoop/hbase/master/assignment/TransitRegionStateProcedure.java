@@ -40,7 +40,6 @@ import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.procedure.AbstractStateMachineRegionProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
-import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureFutureUtil;
 import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
@@ -372,14 +371,14 @@ public class TransitRegionStateProcedure
   }
 
   private void closeRegionAfterUpdatingMeta(MasterProcedureEnv env, RegionStateNode regionNode) {
-    CloseRegionProcedure closeProc =
-      isSplit
-        ? new CloseRegionProcedure(this, getRegion(), regionNode.getRegionLocation(),
-          assignCandidate,
-          env.getMasterConfiguration().getBoolean(EVICT_BLOCKS_ON_SPLIT_KEY,
-            DEFAULT_EVICT_ON_SPLIT))
-        : new CloseRegionProcedure(this, getRegion(), regionNode.getRegionLocation(),
-          assignCandidate, evictCache);
+    LOG.debug("Close region: isSplit: {}: evictOnSplit: {}: evictOnClose: {}", isSplit,
+      env.getMasterConfiguration().getBoolean(EVICT_BLOCKS_ON_SPLIT_KEY, DEFAULT_EVICT_ON_SPLIT),
+      evictCache);
+    // Splits/Merges are special cases, rather than deciding on the cache eviction behaviour here at
+    // Master, we just need to tell this close is for a split/merge and let RSes decide on the
+    // eviction. See HBASE-28811 for more context.
+    CloseRegionProcedure closeProc = new CloseRegionProcedure(this, getRegion(),
+      regionNode.getRegionLocation(), assignCandidate, isSplit);
     addChildProcedure(closeProc);
     setNextState(RegionStateTransitionState.REGION_STATE_TRANSITION_CONFIRM_CLOSED);
   }
@@ -443,21 +442,31 @@ public class TransitRegionStateProcedure
     return Flow.HAS_MORE_STATE;
   }
 
-  // Override to lock RegionStateNode
-  @SuppressWarnings("rawtypes")
   @Override
-  protected Procedure[] execute(MasterProcedureEnv env)
-    throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
+  protected void beforeExec(MasterProcedureEnv env) throws ProcedureSuspendedException {
     RegionStateNode regionNode =
       env.getAssignmentManager().getRegionStates().getOrCreateRegionStateNode(getRegion());
     if (!regionNode.isLockedBy(this)) {
-      regionNode.lock(this, () -> ProcedureFutureUtil.wakeUp(this, env));
+      // The wake up action will be called under the lock inside RegionStateNode for implementing
+      // RegionStateNodeLock, so if we call ProcedureUtil.wakeUp where we will acquire the procedure
+      // execution lock directly, it may cause dead lock since in normal case procedure execution
+      // case, we will acquire the procedure execution lock first and then acquire the lock inside
+      // RegionStateNodeLock. This is the reason why we need to schedule the task to a thread pool
+      // and execute asynchronously.
+      regionNode.lock(this,
+        () -> env.getAsyncTaskExecutor().execute(() -> ProcedureFutureUtil.wakeUp(this, env)));
     }
-    try {
-      return super.execute(env);
-    } finally {
-      if (future == null) {
-        // release the lock if there is no pending updating meta operation
+  }
+
+  @Override
+  protected void afterExec(MasterProcedureEnv env) {
+    // only release the lock if there is no pending updating meta operation
+    if (future == null) {
+      RegionStateNode regionNode =
+        env.getAssignmentManager().getRegionStates().getOrCreateRegionStateNode(getRegion());
+      // in beforeExec, we may throw ProcedureSuspendedException which means we do not get the lock,
+      // in this case we should not call unlock
+      if (regionNode.isLockedBy(this)) {
         regionNode.unlock(this);
       }
     }

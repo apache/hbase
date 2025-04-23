@@ -29,6 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -211,15 +212,15 @@ public class TestReplicationWithTags {
     }
 
     @Override
-    public void prePut(final ObserverContext<RegionCoprocessorEnvironment> e, final Put put,
-      final WALEdit edit, final Durability durability) throws IOException {
+    public void prePut(final ObserverContext<? extends RegionCoprocessorEnvironment> e,
+      final Put put, final WALEdit edit, final Durability durability) throws IOException {
       byte[] attribute = put.getAttribute("visibility");
       byte[] cf = null;
       List<Cell> updatedCells = new ArrayList<>();
       if (attribute != null) {
         for (List<? extends Cell> edits : put.getFamilyCellMap().values()) {
           for (Cell cell : edits) {
-            KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
+            KeyValue kv = KeyValueUtil.ensureKeyValue((ExtendedCell) cell);
             if (cf == null) {
               cf = CellUtil.cloneFamily(kv);
             }
@@ -251,13 +252,13 @@ public class TestReplicationWithTags {
     }
 
     @Override
-    public void postGetOp(ObserverContext<RegionCoprocessorEnvironment> e, Get get,
+    public void postGetOp(ObserverContext<? extends RegionCoprocessorEnvironment> e, Get get,
       List<Cell> results) throws IOException {
       if (results.size() > 0) {
         // Check tag presence in the 1st cell in 1st Result
         if (!results.isEmpty()) {
           Cell cell = results.get(0);
-          TAGS = PrivateCellUtil.getTags(cell);
+          TAGS = PrivateCellUtil.getTags((ExtendedCell) cell);
         }
       }
     }

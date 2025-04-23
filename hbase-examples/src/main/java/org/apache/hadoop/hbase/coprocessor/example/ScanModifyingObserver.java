@@ -56,7 +56,7 @@ public class ScanModifyingObserver implements RegionCoprocessor, RegionObserver 
   }
 
   @Override
-  public void preScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c, Scan scan)
+  public void preScannerOpen(ObserverContext<? extends RegionCoprocessorEnvironment> c, Scan scan)
     throws IOException {
     // Add another family:qualifier
     scan.addColumn(FAMILY_TO_ADD, QUALIFIER_TO_ADD);

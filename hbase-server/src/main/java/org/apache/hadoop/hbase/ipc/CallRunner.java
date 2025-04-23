@@ -23,7 +23,7 @@ import io.opentelemetry.context.Scope;
 import java.net.InetSocketAddress;
 import java.nio.channels.ClosedChannelException;
 import org.apache.hadoop.hbase.CallDroppedException;
-import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
@@ -111,7 +111,7 @@ public class CallRunner {
       }
       Throwable errorThrowable = null;
       String error = null;
-      Pair<Message, CellScanner> resultPair = null;
+      Pair<Message, ExtendedCellScanner> resultPair = null;
       RpcServer.CurCall.set(call);
       final Span ipcServerSpan = new IpcServerSpanBuilder(call).build();
       try (Scope ignored1 = ipcServerSpan.makeCurrent()) {
@@ -156,7 +156,7 @@ public class CallRunner {
       call.cleanup();
       // Set the response
       Message param = resultPair != null ? resultPair.getFirst() : null;
-      CellScanner cells = resultPair != null ? resultPair.getSecond() : null;
+      ExtendedCellScanner cells = resultPair != null ? resultPair.getSecond() : null;
       call.setResponse(param, cells, errorThrowable, error);
       call.sendResponseIfReady();
       // don't touch `span` here because its status and `end()` are managed in `call#setResponse()`
