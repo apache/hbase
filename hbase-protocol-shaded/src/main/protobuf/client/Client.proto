@@ -90,6 +90,7 @@ message Get {
   optional Consistency consistency = 12 [default = STRONG];
   repeated ColumnFamilyTimeRange cf_time_range = 13;
   optional bool load_column_families_on_demand = 14; /* DO NOT add defaults to load_column_families_on_demand. */
+  optional bool query_metrics_enabled = 15 [default = false];
 }
 
 message Result {
@@ -117,6 +118,9 @@ message Result {
   // to form a complete result. The equivalent flag in o.a.h.h.client.Result is
   // mayHaveMoreCellsInRow.
   optional bool partial = 5 [default = false];
+
+  // Server side metrics about the result
+  optional QueryMetrics metrics = 6;
 }
 
 /**
@@ -145,6 +149,7 @@ message Condition {
   optional Comparator comparator = 5;
   optional TimeRange time_range = 6;
   optional Filter filter = 7;
+  optional bool queryMetricsEnabled = 8;
 }
 
 
@@ -233,6 +238,7 @@ message MutateResponse {
 
   // used for mutate to indicate processed only
   optional bool processed = 2;
+  optional QueryMetrics metrics = 3;
 }
 
 /**
@@ -274,6 +280,7 @@ message Scan {
   }
   optional ReadType readType = 23 [default = DEFAULT];
   optional bool need_cursor_result = 24 [default = false];
+  optional bool query_metrics_enabled = 25 [default = false];
 }
 
 /**
@@ -366,6 +373,9 @@ message ScanResponse {
   // If the Scan need cursor, return the row key we are scanning in heartbeat message.
   // If the Scan doesn't need a cursor, don't set this field to reduce network IO.
   optional Cursor cursor = 12;
+
+  // List of QueryMetrics that maps 1:1 to the results in the response based on index
+  repeated QueryMetrics query_metrics = 13;
 }
 
 /**
@@ -459,6 +469,13 @@ message RegionAction {
 }
 
 /*
+* Statistics about the Result's server-side metrics
+*/
+message QueryMetrics {
+  optional uint64 block_bytes_scanned = 1;
+}
+
+/*
 * Statistics about the current load on the region
 */
 message RegionLoadStats {
@@ -491,6 +508,7 @@ message ResultOrException {
   optional CoprocessorServiceResult service_result = 4;
   // current load on the region
   optional RegionLoadStats loadStats = 5 [deprecated=true];
+  optional QueryMetrics metrics = 6;
 }
 
 /**
