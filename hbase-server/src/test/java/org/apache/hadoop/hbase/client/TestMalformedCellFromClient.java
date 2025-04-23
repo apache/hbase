@@ -237,7 +237,7 @@ public class TestMalformedCellFromClient {
     ClientProtos.Action.Builder actionBuilder = ClientProtos.Action.newBuilder();
     ClientProtos.MutationProto.Builder mutationBuilder = ClientProtos.MutationProto.newBuilder();
     ClientProtos.Condition condition = ProtobufUtil.toCondition(rm.getRow(), FAMILY, null,
-      CompareOperator.EQUAL, new byte[10], null, null);
+      CompareOperator.EQUAL, new byte[10], null, null, false);
     for (Mutation mutation : rm.getMutations()) {
       ClientProtos.MutationProto.MutationType mutateType = null;
       if (mutation instanceof Put) {

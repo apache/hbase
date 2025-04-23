@@ -744,10 +744,8 @@ public class HTable implements Table {
       .setTableName(tableName).setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE)
       .setContainerOperations(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE,
         HBaseSemanticAttributes.Operation.PUT);
-    return TraceUtil.trace(
-      () -> doCheckAndMutate(row, family, qualifier, CompareOperator.EQUAL, value, null, null, put)
-        .isSuccess(),
-      supplier);
+    return TraceUtil.trace(() -> doCheckAndMutate(row, family, qualifier, CompareOperator.EQUAL,
+      value, null, null, put, false).isSuccess(), supplier);
   }
 
   @Override
@@ -759,7 +757,7 @@ public class HTable implements Table {
       .setContainerOperations(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE,
         HBaseSemanticAttributes.Operation.PUT);
     return TraceUtil.trace(() -> doCheckAndMutate(row, family, qualifier,
-      toCompareOperator(compareOp), value, null, null, put).isSuccess(), supplier);
+      toCompareOperator(compareOp), value, null, null, put, false).isSuccess(), supplier);
   }
 
   @Override
@@ -771,7 +769,7 @@ public class HTable implements Table {
       .setContainerOperations(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE,
         HBaseSemanticAttributes.Operation.PUT);
     return TraceUtil.trace(
-      () -> doCheckAndMutate(row, family, qualifier, op, value, null, null, put).isSuccess(),
+      () -> doCheckAndMutate(row, family, qualifier, op, value, null, null, put, false).isSuccess(),
       supplier);
   }
 
@@ -784,7 +782,7 @@ public class HTable implements Table {
       .setContainerOperations(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE,
         HBaseSemanticAttributes.Operation.DELETE);
     return TraceUtil.trace(() -> doCheckAndMutate(row, family, qualifier, CompareOperator.EQUAL,
-      value, null, null, delete).isSuccess(), supplier);
+      value, null, null, delete, false).isSuccess(), supplier);
   }
 
   @Override
@@ -796,7 +794,7 @@ public class HTable implements Table {
       .setContainerOperations(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE,
         HBaseSemanticAttributes.Operation.DELETE);
     return TraceUtil.trace(() -> doCheckAndMutate(row, family, qualifier,
-      toCompareOperator(compareOp), value, null, null, delete).isSuccess(), supplier);
+      toCompareOperator(compareOp), value, null, null, delete, false).isSuccess(), supplier);
   }
 
   @Override
@@ -807,9 +805,9 @@ public class HTable implements Table {
       .setTableName(tableName).setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE)
       .setContainerOperations(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE,
         HBaseSemanticAttributes.Operation.DELETE);
-    return TraceUtil.trace(
-      () -> doCheckAndMutate(row, family, qualifier, op, value, null, null, delete).isSuccess(),
-      supplier);
+    return TraceUtil
+      .trace(() -> doCheckAndMutate(row, family, qualifier, op, value, null, null, delete, false)
+        .isSuccess(), supplier);
   }
 
   @Override
@@ -826,7 +824,8 @@ public class HTable implements Table {
 
   private CheckAndMutateResult doCheckAndMutate(final byte[] row, final byte[] family,
     final byte[] qualifier, final CompareOperator op, final byte[] value, final Filter filter,
-    final TimeRange timeRange, final RowMutations rm) throws IOException {
+    final TimeRange timeRange, final RowMutations rm, boolean queryMetricsEnabled)
+    throws IOException {
     long nonceGroup = getNonceGroup();
     long nonce = getNonce();
     CancellableRegionServerCallable<MultiResponse> callable =
@@ -835,9 +834,9 @@ public class HTable implements Table {
         rm.getMaxPriority(), requestAttributes) {
         @Override
         protected MultiResponse rpcCall() throws Exception {
-          MultiRequest request =
-            RequestConverter.buildMultiRequest(getLocation().getRegionInfo().getRegionName(), row,
-              family, qualifier, op, value, filter, timeRange, rm, nonceGroup, nonce);
+          MultiRequest request = RequestConverter.buildMultiRequest(
+            getLocation().getRegionInfo().getRegionName(), row, family, qualifier, op, value,
+            filter, timeRange, rm, nonceGroup, nonce, queryMetricsEnabled);
           ClientProtos.MultiResponse response = doMulti(request);
           ClientProtos.RegionActionResult res = response.getRegionActionResultList().get(0);
           if (res.hasException()) {
@@ -880,7 +879,7 @@ public class HTable implements Table {
       .setTableName(tableName).setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE)
       .setContainerOperations(rm);
     return TraceUtil.trace(() -> doCheckAndMutate(row, family, qualifier,
-      toCompareOperator(compareOp), value, null, null, rm).isSuccess(), supplier);
+      toCompareOperator(compareOp), value, null, null, rm, false).isSuccess(), supplier);
   }
 
   @Override
@@ -891,7 +890,7 @@ public class HTable implements Table {
       .setTableName(tableName).setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE)
       .setContainerOperations(rm);
     return TraceUtil.trace(
-      () -> doCheckAndMutate(row, family, qualifier, op, value, null, null, rm).isSuccess(),
+      () -> doCheckAndMutate(row, family, qualifier, op, value, null, null, rm, false).isSuccess(),
       supplier);
   }
 
@@ -910,18 +909,21 @@ public class HTable implements Table {
         }
         return doCheckAndMutate(checkAndMutate.getRow(), checkAndMutate.getFamily(),
           checkAndMutate.getQualifier(), checkAndMutate.getCompareOp(), checkAndMutate.getValue(),
-          checkAndMutate.getFilter(), checkAndMutate.getTimeRange(), (Mutation) action);
+          checkAndMutate.getFilter(), checkAndMutate.getTimeRange(), (Mutation) action,
+          checkAndMutate.isQueryMetricsEnabled());
       } else {
         return doCheckAndMutate(checkAndMutate.getRow(), checkAndMutate.getFamily(),
           checkAndMutate.getQualifier(), checkAndMutate.getCompareOp(), checkAndMutate.getValue(),
-          checkAndMutate.getFilter(), checkAndMutate.getTimeRange(), (RowMutations) action);
+          checkAndMutate.getFilter(), checkAndMutate.getTimeRange(), (RowMutations) action,
+          checkAndMutate.isQueryMetricsEnabled());
       }
     }, supplier);
   }
 
   private CheckAndMutateResult doCheckAndMutate(final byte[] row, final byte[] family,
     final byte[] qualifier, final CompareOperator op, final byte[] value, final Filter filter,
-    final TimeRange timeRange, final Mutation mutation) throws IOException {
+    final TimeRange timeRange, final Mutation mutation, boolean queryMetricsEnabled)
+    throws IOException {
     long nonceGroup = getNonceGroup();
     long nonce = getNonce();
     ClientServiceCallable<CheckAndMutateResult> callable =
@@ -929,9 +931,9 @@ public class HTable implements Table {
         this.rpcControllerFactory.newController(), mutation.getPriority(), requestAttributes) {
         @Override
         protected CheckAndMutateResult rpcCall() throws Exception {
-          MutateRequest request =
-            RequestConverter.buildMutateRequest(getLocation().getRegionInfo().getRegionName(), row,
-              family, qualifier, op, value, filter, timeRange, mutation, nonceGroup, nonce);
+          MutateRequest request = RequestConverter.buildMutateRequest(
+            getLocation().getRegionInfo().getRegionName(), row, family, qualifier, op, value,
+            filter, timeRange, mutation, nonceGroup, nonce, queryMetricsEnabled);
           MutateResponse response = doMutate(request);
           if (response.hasResult()) {
             return new CheckAndMutateResult(response.getProcessed(),
@@ -1419,7 +1421,7 @@ public class HTable implements Table {
       return TraceUtil.trace(() -> {
         validatePut(put);
         preCheck();
-        return doCheckAndMutate(row, family, qualifier, op, value, null, timeRange, put)
+        return doCheckAndMutate(row, family, qualifier, op, value, null, timeRange, put, false)
           .isSuccess();
       }, supplier);
     }
@@ -1430,7 +1432,7 @@ public class HTable implements Table {
         .setTableName(tableName).setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
       return TraceUtil.trace(() -> {
         preCheck();
-        return doCheckAndMutate(row, family, qualifier, op, value, null, timeRange, delete)
+        return doCheckAndMutate(row, family, qualifier, op, value, null, timeRange, delete, false)
           .isSuccess();
       }, supplier);
     }
@@ -1441,7 +1443,7 @@ public class HTable implements Table {
         .setTableName(tableName).setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
       return TraceUtil.trace(() -> {
         preCheck();
-        return doCheckAndMutate(row, family, qualifier, op, value, null, timeRange, mutation)
+        return doCheckAndMutate(row, family, qualifier, op, value, null, timeRange, mutation, false)
           .isSuccess();
       }, supplier);
     }
@@ -1475,7 +1477,8 @@ public class HTable implements Table {
         .setTableName(tableName).setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
       return TraceUtil.trace(() -> {
         validatePut(put);
-        return doCheckAndMutate(row, null, null, null, null, filter, timeRange, put).isSuccess();
+        return doCheckAndMutate(row, null, null, null, null, filter, timeRange, put, false)
+          .isSuccess();
       }, supplier);
     }
 
@@ -1483,18 +1486,19 @@ public class HTable implements Table {
     public boolean thenDelete(Delete delete) throws IOException {
       final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
         .setTableName(tableName).setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
-      return TraceUtil.trace(
-        () -> doCheckAndMutate(row, null, null, null, null, filter, timeRange, delete).isSuccess(),
-        supplier);
+      return TraceUtil
+        .trace(() -> doCheckAndMutate(row, null, null, null, null, filter, timeRange, delete, false)
+          .isSuccess(), supplier);
     }
 
     @Override
     public boolean thenMutate(RowMutations mutation) throws IOException {
       final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
         .setTableName(tableName).setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
-      return TraceUtil
-        .trace(() -> doCheckAndMutate(row, null, null, null, null, filter, timeRange, mutation)
-          .isSuccess(), supplier);
+      return TraceUtil.trace(
+        () -> doCheckAndMutate(row, null, null, null, null, filter, timeRange, mutation, false)
+          .isSuccess(),
+        supplier);
     }
   }
 }
