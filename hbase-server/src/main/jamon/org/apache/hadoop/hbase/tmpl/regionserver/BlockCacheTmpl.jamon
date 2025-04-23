@@ -216,11 +216,30 @@ org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
         <td>Block requests that were cache misses but only requests set to use block cache</td>
     </tr>
     <tr>
-        <td>Hit Ratio</td>
+        <td>All Time Hit Ratio</td>
         <td><% String.format("%,.2f", bc.getStats().getHitRatio() * 100) %><% "%" %></td>
         <td>Hit Count divided by total requests count</td>
     </tr>
-
+    <%for int i=0; i<bc.getStats().getNumPeriodsInWindow(); i++ %>
+      <%if bc.getStats().getWindowPeriods()[i] != null %>
+          <tr>
+              <td>Hit Ratio for period starting at <% bc.getStats().getWindowPeriods()[i] %></td>
+              <%if bc.getStats().getRequestCounts()[i] > 0 %>
+                <td><% String.format("%,.2f", ((double)bc.getStats().getHitCounts()[i]/(double)bc.getStats().getRequestCounts()[i]) * 100.0) %><% "%" %></td>
+              <%else>
+                <td>No requests</td>
+              </%if>
+              <td>Hit Count divided by total requests count over the <% i %>th period of <% bc.getStats().getPeriodTimeInMinutes() %> minutes</td>
+          </tr>
+      </%if>
+    </%for>
+    <%if bc.getStats().getPeriodTimeInMinutes() > 0 %>
+      <tr>
+          <td>Last <% bc.getStats().getNumPeriodsInWindow()*bc.getStats().getPeriodTimeInMinutes() %> minutes Hit Ratio</td>
+          <td><% String.format("%,.2f", bc.getStats().getHitRatioPastNPeriods() * 100.0) %><% "%" %></td>
+          <td>Hit Count divided by total requests count for the last <% bc.getStats().getNumPeriodsInWindow()*bc.getStats().getPeriodTimeInMinutes() %> minutes</td>
+      </tr>
+    </%if>
 </%def>
 
 <%def bc_stats>
