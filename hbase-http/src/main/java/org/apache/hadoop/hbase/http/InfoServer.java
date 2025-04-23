@@ -77,18 +77,23 @@ public class InfoServer {
           c.get("ssl.server.truststore.type", "jks"));
       builder.excludeCiphers(c.get("ssl.server.exclude.cipher.list"));
     }
+
+    final String httpAuthType = c.get(HttpServer.HTTP_UI_AUTHENTICATION, "").toLowerCase();
     // Enable SPNEGO authentication
-    if ("kerberos".equalsIgnoreCase(c.get(HttpServer.HTTP_UI_AUTHENTICATION, null))) {
+    if ("kerberos".equals(httpAuthType)) {
       builder.setUsernameConfKey(HttpServer.HTTP_SPNEGO_AUTHENTICATION_PRINCIPAL_KEY)
         .setKeytabConfKey(HttpServer.HTTP_SPNEGO_AUTHENTICATION_KEYTAB_KEY)
         .setKerberosNameRulesKey(HttpServer.HTTP_SPNEGO_AUTHENTICATION_KRB_NAME_KEY)
         .setSignatureSecretFileKey(HttpServer.HTTP_AUTHENTICATION_SIGNATURE_SECRET_FILE_KEY)
         .setSecurityEnabled(true);
+    }
 
-      // Set an admin ACL on sensitive webUI endpoints
+    // Set an admin ACL on sensitive webUI endpoints (works only if SPNEGO or LDAP is enabled)
+    if ("ldap".equals(httpAuthType) || "kerberos".equals(httpAuthType)) {
       AccessControlList acl = buildAdminAcl(c);
       builder.setACL(acl);
     }
+
     this.httpServer = builder.build();
   }
 
@@ -96,15 +101,22 @@ public class InfoServer {
    * Builds an ACL that will restrict the users who can issue commands to endpoints on the UI which
    * are meant only for administrators.
    */
-  AccessControlList buildAdminAcl(Configuration conf) {
-    final String userGroups = conf.get(HttpServer.HTTP_SPNEGO_AUTHENTICATION_ADMIN_USERS_KEY, null);
+  static AccessControlList buildAdminAcl(Configuration conf) {
+    // Initialize admin users based on whether http ui auth is set to ldap or kerberos
+    String httpAuthType = conf.get(HttpServer.HTTP_UI_AUTHENTICATION, "").toLowerCase();
+    String adminUsers = null;
+    if ("kerberos".equals(httpAuthType)) {
+      adminUsers = conf.get(HttpServer.HTTP_SPNEGO_AUTHENTICATION_ADMIN_USERS_KEY, null);
+    } else if ("ldap".equals(httpAuthType)) {
+      adminUsers = conf.get(HttpServer.HTTP_LDAP_AUTHENTICATION_ADMIN_USERS_KEY, null);
+    }
     final String adminGroups =
       conf.get(HttpServer.HTTP_SPNEGO_AUTHENTICATION_ADMIN_GROUPS_KEY, null);
-    if (userGroups == null && adminGroups == null) {
+    if (adminUsers == null && adminGroups == null) {
       // Backwards compatibility - if the user doesn't have anything set, allow all users in.
       return new AccessControlList("*", null);
     }
-    return new AccessControlList(userGroups, adminGroups);
+    return new AccessControlList(adminUsers, adminGroups);
   }
 
   /**

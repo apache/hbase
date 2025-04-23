@@ -137,7 +137,7 @@ A number of properties exist to configure SPNEGO authentication for the web serv
 </property>
 ----
 
-=== Defining administrators of the Web UI
+=== Defining administrators of the Web UI with SPNEGO
 
 In the previous section, we cover how to enable authentication for the Web UI via SPNEGO.
 However, some portions of the Web UI could be used to impact the availability and performance
@@ -255,7 +255,49 @@ A number of properties exist to configure LDAP authentication for the web server
   of Active Directory server.</description>
 </property>
 ----
+=== Defining Administrators of the Web UI with LDAP
 
+In the previous section, we discussed enabling authentication for the Web UI via LDAP. Certain portions of the Web UI can impact the availability and performance of an HBase cluster. To safeguard these sensitive endpoints, it is essential to restrict access to authorized administrators only.
+
+HBase provides a mechanism to define administrators for the Web UI through a list of usernames in the `hbase-site.xml` configuration file.
+
+==== Configuration Example
+
+To specify the administrators, use the following property in `hbase-site.xml`:
+
+[source,xml]
+----
+<property>
+  <name>hbase.security.authentication.ldap.admin.users</name>
+  <value>admin1,admin2,admin3</value>
+</property>
+----
+
+* `hbase.security.authentication.ldap.admin.users`: This property defines a comma-separated list of usernames that are mapped to LDAP identities. These users will have administrative access to sensitive Web UI endpoints.
+
+==== Mapping Usernames to LDAP Identities
+
+The usernames listed in the `hbase.security.authentication.ldap.admin.users` property must correspond to the LDAP identities as defined by the `binddomain` rules in `hbase-site.xml`. For example:
+
+[source,xml]
+----
+<property>
+  <name>hadoop.http.authentication.ldap.binddomain</name>
+  <value>EXAMPLE.COM</value>
+</property>
+----
+
+In this case, the LDAP identity `user@EXAMPLE.COM` would map to the username `user`.
+
+==== Notes
+
+* Ensure that the LDAP server is properly configured and running.
+* Only users explicitly listed in the `hbase.security.authentication.ldap.admin.users` property will have access to sensitive endpoints.
+* Non-administrative users can still access non-sensitive endpoints, provided they are authenticated.
+
+By defining administrators in this way, you can ensure that only authorized personnel can interact with critical Web UI functionalities, thereby enhancing the security and stability of your HBase cluster.
+
+---
 === Other UI security-related configuration
 
 While it is a clear anti-pattern for HBase developers, the developers acknowledge that the HBase
