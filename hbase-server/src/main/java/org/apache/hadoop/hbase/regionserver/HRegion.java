@@ -5142,7 +5142,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           } else {
             boolean valueIsNull =
               comparator.getValue() == null || comparator.getValue().length == 0;
-            if (result.isEmpty() && valueIsNull) {
+            if (result.isEmpty() && checkAndMutate.isCheckNonExists()) {
+              matches = true;
+            } else if (result.isEmpty() && valueIsNull) {
               matches = op != CompareOperator.NOT_EQUAL;
             } else if (result.size() > 0 && valueIsNull) {
               matches = (result.get(0).getValueLength() == 0) == (op != CompareOperator.NOT_EQUAL);
