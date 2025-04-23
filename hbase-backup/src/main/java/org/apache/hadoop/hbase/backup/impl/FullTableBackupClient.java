@@ -26,7 +26,9 @@ import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.JOB_NAME_CON
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupCopyJob;
 import org.apache.hadoop.hbase.backup.BackupInfo;
@@ -152,6 +154,11 @@ public class FullTableBackupClient extends TableBackupClient {
       // the snapshot.
       LOG.info("Execute roll log procedure for full backup ...");
 
+      // Gather the bulk loads being tracked by the system, which can be deleted (since their data
+      // will be part of the snapshot being taken). We gather this list before taking the actual
+      // snapshots for the same reason as the log rolls.
+      List<BulkLoad> bulkLoadsToDelete = backupManager.readBulkloadRows(tableList);
+
       Map<String, String> props = new HashMap<>();
       props.put("backupRoot", backupInfo.getBackupRootDir());
       admin.execProcedure(LogRollMasterProcedureManager.ROLLLOG_PROCEDURE_SIGNATURE,
@@ -191,6 +198,9 @@ public class FullTableBackupClient extends TableBackupClient {
       Long newStartCode =
         BackupUtils.getMinValue(BackupUtils.getRSLogTimestampMins(newTableSetTimestampMap));
       backupManager.writeBackupStartCode(newStartCode);
+
+      backupManager.deleteBulkLoadedRows(
+        bulkLoadsToDelete.stream().map(BulkLoad::getRowKey).collect(Collectors.toList()));
 
       // backup complete
       completeBackup(conn, backupInfo, BackupType.FULL, conf);
