@@ -146,6 +146,10 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
     initializeScanners(scan, additionalScanners);
   }
 
+  public ScannerContext getContext() {
+    return defaultScannerContext;
+  }
+
   private void initializeScanners(Scan scan, List<KeyValueScanner> additionalScanners)
     throws IOException {
     // Here we separate all scanners into two lists - scanner that provide data required
