@@ -395,7 +395,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
         () -> RawAsyncTableImpl.this.<Boolean> newCaller(row, put.getPriority(), rpcTimeoutNs)
           .action((controller, loc, stub) -> RawAsyncTableImpl.mutate(controller, loc, stub, put,
             (rn, p) -> RequestConverter.buildMutateRequest(rn, row, family, qualifier, op, value,
-              null, timeRange, p, HConstants.NO_NONCE, HConstants.NO_NONCE),
+              null, timeRange, p, HConstants.NO_NONCE, HConstants.NO_NONCE, false),
             (c, r) -> r.getProcessed()))
           .call(),
         supplier);
@@ -411,7 +411,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
         () -> RawAsyncTableImpl.this.<Boolean> newCaller(row, delete.getPriority(), rpcTimeoutNs)
           .action((controller, loc, stub) -> RawAsyncTableImpl.mutate(controller, loc, stub, delete,
             (rn, d) -> RequestConverter.buildMutateRequest(rn, row, family, qualifier, op, value,
-              null, timeRange, d, HConstants.NO_NONCE, HConstants.NO_NONCE),
+              null, timeRange, d, HConstants.NO_NONCE, HConstants.NO_NONCE, false),
             (c, r) -> r.getProcessed()))
           .call(),
         supplier);
@@ -429,7 +429,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
         .action((controller, loc, stub) -> RawAsyncTableImpl.this.mutateRow(controller, loc, stub,
           mutations,
           (rn, rm) -> RequestConverter.buildMultiRequest(rn, row, family, qualifier, op, value,
-            null, timeRange, rm, HConstants.NO_NONCE, HConstants.NO_NONCE),
+            null, timeRange, rm, HConstants.NO_NONCE, HConstants.NO_NONCE, false),
           CheckAndMutateResult::isSuccess))
         .call(), supplier);
     }
@@ -470,7 +470,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
         () -> RawAsyncTableImpl.this.<Boolean> newCaller(row, put.getPriority(), rpcTimeoutNs)
           .action((controller, loc, stub) -> RawAsyncTableImpl.mutate(controller, loc, stub, put,
             (rn, p) -> RequestConverter.buildMutateRequest(rn, row, null, null, null, null, filter,
-              timeRange, p, HConstants.NO_NONCE, HConstants.NO_NONCE),
+              timeRange, p, HConstants.NO_NONCE, HConstants.NO_NONCE, false),
             (c, r) -> r.getProcessed()))
           .call(),
         supplier);
@@ -485,7 +485,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
         () -> RawAsyncTableImpl.this.<Boolean> newCaller(row, delete.getPriority(), rpcTimeoutNs)
           .action((controller, loc, stub) -> RawAsyncTableImpl.mutate(controller, loc, stub, delete,
             (rn, d) -> RequestConverter.buildMutateRequest(rn, row, null, null, null, null, filter,
-              timeRange, d, HConstants.NO_NONCE, HConstants.NO_NONCE),
+              timeRange, d, HConstants.NO_NONCE, HConstants.NO_NONCE, false),
             (c, r) -> r.getProcessed()))
           .call(),
         supplier);
@@ -502,7 +502,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
         .action((controller, loc, stub) -> RawAsyncTableImpl.this.mutateRow(controller, loc, stub,
           mutations,
           (rn, rm) -> RequestConverter.buildMultiRequest(rn, row, null, null, null, null, filter,
-            timeRange, rm, HConstants.NO_NONCE, HConstants.NO_NONCE),
+            timeRange, rm, HConstants.NO_NONCE, HConstants.NO_NONCE, false),
           CheckAndMutateResult::isSuccess))
         .call(), supplier);
     }
@@ -537,7 +537,8 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
               (rn, m) -> RequestConverter.buildMutateRequest(rn, checkAndMutate.getRow(),
                 checkAndMutate.getFamily(), checkAndMutate.getQualifier(),
                 checkAndMutate.getCompareOp(), checkAndMutate.getValue(),
-                checkAndMutate.getFilter(), checkAndMutate.getTimeRange(), m, nonceGroup, nonce),
+                checkAndMutate.getFilter(), checkAndMutate.getTimeRange(), m, nonceGroup, nonce,
+                checkAndMutate.isQueryMetricsEnabled()),
               (c, r) -> ResponseConverter.getCheckAndMutateResult(r, c.cellScanner())))
           .call();
       } else if (checkAndMutate.getAction() instanceof RowMutations) {
@@ -553,7 +554,8 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
               (rn, rm) -> RequestConverter.buildMultiRequest(rn, checkAndMutate.getRow(),
                 checkAndMutate.getFamily(), checkAndMutate.getQualifier(),
                 checkAndMutate.getCompareOp(), checkAndMutate.getValue(),
-                checkAndMutate.getFilter(), checkAndMutate.getTimeRange(), rm, nonceGroup, nonce),
+                checkAndMutate.getFilter(), checkAndMutate.getTimeRange(), rm, nonceGroup, nonce,
+                checkAndMutate.isQueryMetricsEnabled()),
               resp -> resp))
           .call();
       } else {
