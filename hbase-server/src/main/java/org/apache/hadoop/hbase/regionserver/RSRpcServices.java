@@ -78,6 +78,7 @@ import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.OperationWithAttributes;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.QueryMetrics;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
@@ -2673,6 +2674,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.Blockin
       scan.setLoadColumnFamiliesOnDemand(region.isLoadingCfsOnDemandDefault());
     }
     RegionScannerImpl scanner = null;
+    long blockBytesScannedBefore = context.getBlockBytesScanned();
     try {
       scanner = region.getScanner(scan);
       scanner.next(results);
@@ -2700,7 +2702,13 @@ public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.Blockin
     }
     region.metricsUpdateForGet(results, before);
 
-    return Result.create(results, get.isCheckExistenceOnly() ? !results.isEmpty() : null, stale);
+    Result r =
+      Result.create(results, get.isCheckExistenceOnly() ? !results.isEmpty() : null, stale);
+    if (get.isQueryMetricsEnabled()) {
+      long blockBytesScanned = context.getBlockBytesScanned() - blockBytesScannedBefore;
+      r.setMetrics(new QueryMetrics(blockBytesScanned));
+    }
+    return r;
   }
 
   private void checkBatchSizeAndLogLargeSize(MultiRequest request) throws ServiceException {
@@ -2867,6 +2875,12 @@ public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.Blockin
               if (result.getResult() != null) {
                 resultOrExceptionOrBuilder.setResult(ProtobufUtil.toResult(result.getResult()));
               }
+
+              if (result.getMetrics() != null) {
+                resultOrExceptionOrBuilder
+                  .setMetrics(ProtobufUtil.toQueryMetrics(result.getMetrics()));
+              }
+
               regionActionResultBuilder.addResultOrException(resultOrExceptionOrBuilder.build());
             } else {
               CheckAndMutateResult result = checkAndMutate(region, regionAction.getActionList(),
@@ -3015,6 +3029,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.Blockin
         addResult(builder, result.getResult(), controller, clientCellBlockSupported);
         if (clientCellBlockSupported) {
           addSize(context, result.getResult());
+        }
+        if (result.getMetrics() != null) {
+          builder.setMetrics(ProtobufUtil.toQueryMetrics(result.getMetrics()));
         }
       } else {
         Result r = null;
@@ -3428,6 +3445,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.Blockin
         contextBuilder.setTrackMetrics(trackMetrics);
         ScannerContext scannerContext = contextBuilder.build();
         boolean limitReached = false;
+        long blockBytesScannedBefore = 0;
         while (numOfResults < maxResults) {
           // Reset the batch progress to 0 before every call to RegionScanner#nextRaw. The
           // batch limit is a limit on the number of cells per Result. Thus, if progress is
@@ -3439,6 +3457,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.Blockin
 
           // Collect values to be returned here
           moreRows = scanner.nextRaw(values, scannerContext);
+
+          long blockBytesScanned = scannerContext.getBlockSizeProgress() - blockBytesScannedBefore;
+          blockBytesScannedBefore = scannerContext.getBlockSizeProgress();
+
           if (rpcCall == null) {
             // When there is no RpcCallContext,copy EC to heap, then the scanner would close,
             // This can be an EXPENSIVE call. It may make an extra copy from offheap to onheap
@@ -3477,6 +3499,12 @@ public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.Blockin
             }
             boolean mayHaveMoreCellsInRow = scannerContext.mayHaveMoreCellsInRow();
             Result r = Result.create(values, null, stale, mayHaveMoreCellsInRow);
+
+            if (request.getScan().getQueryMetricsEnabled()) {
+              builder.addQueryMetrics(ClientProtos.QueryMetrics.newBuilder()
+                .setBlockBytesScanned(blockBytesScanned).build());
+            }
+
             results.add(r);
             numOfResults++;
             if (!mayHaveMoreCellsInRow && limitOfRows > 0) {

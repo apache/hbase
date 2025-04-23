@@ -182,6 +182,7 @@ public class TestGet {
     get.setMaxResultsPerColumnFamily(10);
     get.setRowOffsetPerColumnFamily(11);
     get.setCacheBlocks(true);
+    get.setQueryMetricsEnabled(true);
 
     Get copyGet = new Get(get);
     assertEquals(0, Bytes.compareTo(get.getRow(), copyGet.getRow()));
@@ -196,6 +197,7 @@ public class TestGet {
     assertEquals(get.getConsistency(), copyGet.getConsistency());
     assertEquals(get.getReplicaId(), copyGet.getReplicaId());
     assertEquals(get.getIsolationLevel(), copyGet.getIsolationLevel());
+    assertTrue(get.isQueryMetricsEnabled());
 
     // from Get class
     assertEquals(get.isCheckExistenceOnly(), copyGet.isCheckExistenceOnly());

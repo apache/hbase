@@ -96,6 +96,7 @@ public class Get extends Query implements Row {
     this.setFilter(get.getFilter());
     this.setReplicaId(get.getReplicaId());
     this.setConsistency(get.getConsistency());
+    this.setQueryMetricsEnabled(get.isQueryMetricsEnabled());
     // from Get
     this.cacheBlocks = get.getCacheBlocks();
     this.maxVersions = get.getMaxVersions();
@@ -511,6 +512,7 @@ public class Get extends Query implements Row {
       map.put("colFamTimeRangeMap", colFamTimeRangeMapStr);
     }
     map.put("priority", getPriority());
+    map.put("queryMetricsEnabled", queryMetricsEnabled);
     return map;
   }
 

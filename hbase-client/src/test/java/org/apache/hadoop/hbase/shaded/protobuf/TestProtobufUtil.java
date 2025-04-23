@@ -131,6 +131,7 @@ public class TestProtobufUtil {
     getBuilder.setMaxVersions(1);
     getBuilder.setCacheBlocks(true);
     getBuilder.setTimeRange(ProtobufUtil.toTimeRange(TimeRange.allTime()));
+    getBuilder.setQueryMetricsEnabled(false);
     Get get = ProtobufUtil.toGet(proto);
     assertEquals(getBuilder.build(), ProtobufUtil.toGet(get));
   }
@@ -259,6 +260,7 @@ public class TestProtobufUtil {
     scanBuilder.setCaching(1024);
     scanBuilder.setTimeRange(ProtobufUtil.toTimeRange(TimeRange.allTime()));
     scanBuilder.setIncludeStopRow(false);
+    scanBuilder.setQueryMetricsEnabled(false);
     ClientProtos.Scan expectedProto = scanBuilder.build();
 
     ClientProtos.Scan actualProto = ProtobufUtil.toScan(ProtobufUtil.toScan(expectedProto));
