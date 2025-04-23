@@ -111,6 +111,7 @@ public class TestKeymetaAdminImpl {
     }
   }
 
+  // TODO: Need to add test cases for multiple key spaces.
   @RunWith(Parameterized.class)
   @Category({ MasterTests.class, SmallTests.class })
   public static class TestAdminImpl extends TestKeymetaAdminImpl {

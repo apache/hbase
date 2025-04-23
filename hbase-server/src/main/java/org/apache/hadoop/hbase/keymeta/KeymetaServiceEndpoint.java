@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.keymeta;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.CoreCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.HasMasterServices;
@@ -90,7 +91,8 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
    * The implementation of the {@link ManagedKeysProtos.ManagedKeysService}
    * interface, which provides the actual method implementations for enabling key management.
    */
-  private class KeyMetaAdminServiceImpl extends ManagedKeysService {
+  @VisibleForTesting
+  public class KeyMetaAdminServiceImpl extends ManagedKeysService {
 
     /**
      * Enables key management for a given tenant and namespace, as specified in the provided
@@ -104,7 +106,7 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
     public void enableKeyManagement(RpcController controller, ManagedKeysRequest request,
         RpcCallback<GetManagedKeysResponse> done) {
       ManagedKeysResponse.Builder builder = getResponseBuilder(controller, request);
-      if (builder.getKeyCust() != null) {
+      if (builder.getKeyCust() != null && ! builder.getKeyCust().isEmpty()) {
         try {
           List<ManagedKeyData> managedKeyStatuses = master.getKeymetaAdmin()
             .enableKeyManagement(request.getKeyCust(), request.getKeyNamespace());
@@ -119,7 +121,7 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
     public void getManagedKeys(RpcController controller, ManagedKeysRequest request,
         RpcCallback<GetManagedKeysResponse> done) {
       ManagedKeysResponse.Builder builder = getResponseBuilder(controller, request);
-      if (builder.getKeyCust() != null) {
+      if (builder.getKeyCust() != null && ! builder.getKeyCust().isEmpty()) {
         try {
           List<ManagedKeyData> managedKeyStatuses = master.getKeymetaAdmin()
             .getManagedKeys(request.getKeyCust(), request.getKeyNamespace());
@@ -131,52 +133,49 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
         }
       }
     }
+  }
 
-    private byte[] convertToKeyCustBytes(RpcController controller, ManagedKeysRequest request,
-      ManagedKeysResponse.Builder builder) {
-      byte[] key_cust = null;
-      try {
-        key_cust = Base64.getDecoder().decode(request.getKeyCust());
-      } catch (IllegalArgumentException e) {
-        builder.setKeyStatus(ManagedKeysProtos.ManagedKeyStatus.KEY_FAILED);
-        CoprocessorRpcUtils.setControllerException(controller, new IOException(
-          "Failed to decode specified prefix as Base64 string: " + request.getKeyCust(), e));
-      }
-      return key_cust;
+  @VisibleForTesting
+  public static ManagedKeysResponse.Builder getResponseBuilder(RpcController controller,
+    ManagedKeysRequest request) {
+    ManagedKeysResponse.Builder builder = ManagedKeysResponse.newBuilder()
+      .setKeyNamespace(request.getKeyNamespace());
+    byte[] key_cust = convertToKeyCustBytes(controller, request, builder);
+    if (key_cust != null) {
+      builder.setKeyCustBytes(ByteString.copyFrom(key_cust));
     }
+    return builder;
+  }
 
-    private ManagedKeysResponse.Builder getResponseBuilder(RpcController controller,
-        ManagedKeysRequest request) {
-      ManagedKeysResponse.Builder builder = ManagedKeysResponse.newBuilder()
-          .setKeyNamespace(request.getKeyNamespace());
-      byte[] key_cust = null;
-      try {
-        key_cust = Base64.getDecoder().decode(request.getKeyCust());
-        builder.setKeyCustBytes(ByteString.copyFrom(key_cust));
-      } catch (IllegalArgumentException e) {
-        builder.setKeyStatus(ManagedKeysProtos.ManagedKeyStatus.KEY_FAILED);
-        CoprocessorRpcUtils.setControllerException(controller, new IOException(
-          "Failed to decode specified prefix as Base64 string: " + request.getKeyCust(), e));
-      }
-      return builder;
+  // Assumes that all ManagedKeyData objects belong to the same custodian and namespace.
+  @VisibleForTesting
+  public static GetManagedKeysResponse generateKeyStatusResponse(
+    List<ManagedKeyData> managedKeyStatuses, ManagedKeysResponse.Builder builder) {
+    GetManagedKeysResponse.Builder responseBuilder = GetManagedKeysResponse.newBuilder();
+    for (ManagedKeyData keyData: managedKeyStatuses) {
+      builder.setKeyStatus(ManagedKeysProtos.ManagedKeyStatus.valueOf(
+          keyData.getKeyStatus().getVal()))
+        .setKeyMetadata(keyData.getKeyMetadata())
+        .setRefreshTimestamp(keyData.getRefreshTimestamp())
+        .setReadOpCount(keyData.getReadOpCount())
+        .setWriteOpCount(keyData.getWriteOpCount())
+      ;
+      responseBuilder.addStatus(builder.build());
     }
+    return responseBuilder.build();
+  }
 
-    private static GetManagedKeysResponse generateKeyStatusResponse(
-        List<ManagedKeyData> managedKeyStatuses, ManagedKeysResponse.Builder builder) {
-      GetManagedKeysResponse.Builder responseBuilder = GetManagedKeysResponse.newBuilder();
-      for (ManagedKeyData keyData: managedKeyStatuses) {
-        builder.setKeyStatus(
-          ManagedKeysProtos.ManagedKeyStatus.valueOf(keyData.getKeyStatus().getVal()));
-        builder.setKeyStatus(ManagedKeysProtos.ManagedKeyStatus.valueOf(
-            keyData.getKeyStatus().getVal()))
-          .setKeyMetadata(keyData.getKeyMetadata())
-          .setRefreshTimestamp(keyData.getRefreshTimestamp())
-          .setReadOpCount(keyData.getReadOpCount())
-          .setWriteOpCount(keyData.getWriteOpCount())
-        ;
-        responseBuilder.addStatus(builder.build());
-      }
-      return responseBuilder.build();
+  @VisibleForTesting
+  public static byte[] convertToKeyCustBytes(RpcController controller, ManagedKeysRequest request,
+    ManagedKeysResponse.Builder builder) {
+    byte[] key_cust = null;
+    try {
+      key_cust = Base64.getDecoder().decode(request.getKeyCust());
+    } catch (IllegalArgumentException e) {
+      builder.setKeyStatus(ManagedKeysProtos.ManagedKeyStatus.KEY_FAILED);
+      CoprocessorRpcUtils.setControllerException(controller, new IOException(
+        "Failed to decode specified prefix as Base64 string: " + request.getKeyCust(), e));
     }
+    return key_cust;
   }
 }
