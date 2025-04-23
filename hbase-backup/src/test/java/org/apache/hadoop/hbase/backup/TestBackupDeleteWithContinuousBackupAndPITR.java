@@ -91,9 +91,9 @@ public class TestBackupDeleteWithContinuousBackupAndPITR extends TestBackupBase 
     backupId3 = fullTableBackup(Lists.newArrayList(table2));
     assertTrue(checkSucceeded(backupId3));
 
-    // 15 days back
+    // 45 days back
     EnvironmentEdgeManager
-      .injectEdge(() -> System.currentTimeMillis() - 15 * ONE_DAY_IN_MILLISECONDS);
+      .injectEdge(() -> System.currentTimeMillis() - 45 * ONE_DAY_IN_MILLISECONDS);
     backupId4 = fullTableBackup(Lists.newArrayList(table2));
     assertTrue(checkSucceeded(backupId4));
 
