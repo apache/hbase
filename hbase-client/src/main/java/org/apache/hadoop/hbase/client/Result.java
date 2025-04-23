@@ -99,6 +99,7 @@ public class Result implements ExtendedCellScannable, ExtendedCellScanner {
    */
   private int cellScannerIndex = INITIAL_CELLSCANNER_INDEX;
   private RegionLoadStats stats;
+  private QueryMetrics metrics = null;
 
   private final boolean readonly;
 
@@ -931,12 +932,22 @@ public class Result implements ExtendedCellScannable, ExtendedCellScanner {
     this.stats = loadStats;
   }
 
+  @InterfaceAudience.Private
+  public void setMetrics(QueryMetrics metrics) {
+    this.metrics = metrics;
+  }
+
   /**
    * Returns the associated statistics about the region from which this was returned. Can be
    * <tt>null</tt> if stats are disabled.
    */
   public RegionLoadStats getStats() {
     return stats;
+  }
+
+  /** Returns the query metrics, or {@code null} if we do not enable metrics. */
+  public QueryMetrics getMetrics() {
+    return metrics;
   }
 
   /**
