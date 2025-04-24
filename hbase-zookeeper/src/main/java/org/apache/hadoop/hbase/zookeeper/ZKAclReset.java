@@ -21,6 +21,7 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -78,7 +79,7 @@ public class ZKAclReset extends Configured implements Tool {
     System.err.println();
     System.err.println("  To reset the ACLs to the secure cluster behavior:");
     System.err.println("  hbase " + getClass().getName() + " -set-acls");
-    System.exit(1);
+    ExitHandler.getInstance().exit(1);
   }
 
   @Override
@@ -107,6 +108,7 @@ public class ZKAclReset extends Configured implements Tool {
   }
 
   public static void main(String[] args) throws Exception {
-    System.exit(ToolRunner.run(HBaseConfiguration.create(), new ZKAclReset(), args));
+    ExitHandler.getInstance()
+      .exit(ToolRunner.run(HBaseConfiguration.create(), new ZKAclReset(), args));
   }
 }

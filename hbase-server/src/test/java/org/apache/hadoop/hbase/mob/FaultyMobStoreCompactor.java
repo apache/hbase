@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.regionserver.throttle.ThroughputControlUtil;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -355,7 +356,7 @@ public class FaultyMobStoreCompactor extends DefaultMobStoreCompactor {
         "Interrupted while control throughput of compacting " + compactionName);
     } catch (FileNotFoundException e) {
       LOG.error("MOB Stress Test FAILED, region: " + store.getRegionInfo().getEncodedName(), e);
-      System.exit(-1);
+      ExitHandler.getInstance().exit(-1);
     } catch (IOException t) {
       LOG.error("Mob compaction failed for region: " + store.getRegionInfo().getEncodedName());
       throw t;

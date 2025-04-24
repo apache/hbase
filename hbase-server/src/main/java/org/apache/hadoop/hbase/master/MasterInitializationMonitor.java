@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master;
 
 import java.util.concurrent.TimeUnit;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -69,7 +70,7 @@ class MasterInitializationMonitor extends Thread {
           if (haltOnTimeout) {
             LOG.error("Zombie Master exiting. Thread dump to stdout");
             Threads.printThreadInfo(System.out, "Zombie HMaster");
-            System.exit(-1);
+            ExitHandler.getInstance().exit(-1);
           }
         }
       }

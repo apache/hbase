@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.token.FsDelegationToken;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.hbase.util.Triple;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
@@ -95,7 +96,7 @@ public class Export extends ExportProtos.ExportService implements RegionCoproces
 
   public static void main(String[] args) throws Throwable {
     Map<byte[], Response> response = run(HBaseConfiguration.create(), args);
-    System.exit(response == null ? -1 : 0);
+    ExitHandler.getInstance().exit(response == null ? -1 : 0);
   }
 
   @InterfaceAudience.Private

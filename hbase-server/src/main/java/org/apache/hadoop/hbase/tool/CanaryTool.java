@@ -85,6 +85,7 @@ import org.apache.hadoop.hbase.http.InfoServer;
 import org.apache.hadoop.hbase.tool.CanaryTool.RegionTask.TaskType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.util.RegionSplitter;
@@ -1187,7 +1188,7 @@ public class CanaryTool implements Tool, Canary {
     System.err.println("To sniff/probe all regions of a table, pass tablename.");
     System.err.println("To sniff/probe regionservers, pass -regionserver, etc.");
     System.err.println("See http://hbase.apache.org/book.html#_canary for Canary documentation.");
-    System.exit(USAGE_EXIT_CODE);
+    ExitHandler.getInstance().exit(USAGE_EXIT_CODE);
   }
 
   Sink getSink(Configuration configuration, Class clazz) {
@@ -2038,6 +2039,6 @@ public class CanaryTool implements Tool, Canary {
     } finally {
       executor.shutdown();
     }
-    System.exit(exitCode);
+    ExitHandler.getInstance().exit(exitCode);
   }
 }

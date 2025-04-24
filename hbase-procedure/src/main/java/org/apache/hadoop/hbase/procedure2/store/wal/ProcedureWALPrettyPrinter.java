@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -186,6 +187,6 @@ public class ProcedureWALPrettyPrinter extends Configured implements Tool {
   public static void main(String[] args) throws Exception {
     final Configuration conf = HBaseConfiguration.create();
     int exitCode = ToolRunner.run(conf, new ProcedureWALPrettyPrinter(), args);
-    System.exit(exitCode);
+    ExitHandler.getInstance().exit(exitCode);
   }
 }

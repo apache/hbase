@@ -23,6 +23,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.tool.coprocessor.CoprocessorValidator;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -116,6 +117,6 @@ public class PreUpgradeValidator implements Tool {
       ret = AbstractHBaseTool.EXIT_FAILURE;
     }
 
-    System.exit(ret);
+    ExitHandler.getInstance().exit(ret);
   }
 }

@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.BloomFilterUtil;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.io.BytesWritable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -281,10 +282,10 @@ public class CreateRandomStoreFile {
   public static void main(String[] args) {
     CreateRandomStoreFile app = new CreateRandomStoreFile();
     try {
-      if (!app.run(args)) System.exit(EXIT_FAILURE);
+      if (!app.run(args)) ExitHandler.getInstance().exit(EXIT_FAILURE);
     } catch (IOException ex) {
       LOG.error(ex.toString(), ex);
-      System.exit(EXIT_FAILURE);
+      ExitHandler.getInstance().exit(EXIT_FAILURE);
     }
 
   }

@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.StoreEngine;
 import org.apache.hadoop.hbase.regionserver.StripeStoreEngine;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.hbase.util.HFileTestUtil;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.experimental.categories.Category;
@@ -56,6 +57,6 @@ public class IntegrationTestIngestStripeCompactions extends IntegrationTestInges
     Configuration conf = HBaseConfiguration.create();
     IntegrationTestingUtility.setUseDistributedCluster(conf);
     int ret = ToolRunner.run(conf, new IntegrationTestIngestStripeCompactions(), args);
-    System.exit(ret);
+    ExitHandler.getInstance().exit(ret);
   }
 }

@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.util.Dictionary;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALProvider;
@@ -48,7 +49,7 @@ public class Compressor {
   public static void main(String[] args) throws IOException {
     if (args.length != 2 || args[0].equals("--help") || args[0].equals("-h")) {
       printHelp();
-      System.exit(-1);
+      ExitHandler.getInstance().exit(-1);
     }
 
     Path inputPath = new Path(args[0]);

@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.hbase.util.HBaseFsck;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.hbck.HbckTestingUtil;
@@ -1001,7 +1002,7 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
       if (connection != null) {
         connection.close();
       }
-      System.exit(ret);
+      ExitHandler.getInstance().exit(ret);
     }
   }
 }

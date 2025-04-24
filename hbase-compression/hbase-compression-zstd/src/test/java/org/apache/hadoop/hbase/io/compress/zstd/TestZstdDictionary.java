@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.io.compress.CompressionTestBase;
 import org.apache.hadoop.hbase.io.compress.DictionaryCache;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.hbase.util.RandomDistribution;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -80,7 +81,7 @@ public class TestZstdDictionary extends CompressionTestBase {
     // zstd --train -B1024 -o <dictionary_file> <input_file>
     if (args.length < 1) {
       System.err.println("Usage: TestZstdCodec <outFile>");
-      System.exit(-1);
+      ExitHandler.getInstance().exit(-1);
     }
     final RandomDistribution.DiscreteRNG rng =
       new RandomDistribution.Zipf(new Random(), 0, Byte.MAX_VALUE, 2);

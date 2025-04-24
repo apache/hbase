@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.mapreduce.HFileOutputFormat2;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.snapshot.SnapshotRegionLocator;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.hbase.util.MapReduceExtendedCell;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.Job;
@@ -159,7 +160,7 @@ public class MapReduceHFileSplitterJob extends Configured implements Tool {
    */
   public static void main(String[] args) throws Exception {
     int ret = ToolRunner.run(new MapReduceHFileSplitterJob(HBaseConfiguration.create()), args);
-    System.exit(ret);
+    ExitHandler.getInstance().exit(ret);
   }
 
   @Override

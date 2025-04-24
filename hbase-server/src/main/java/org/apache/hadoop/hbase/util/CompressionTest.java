@@ -112,7 +112,7 @@ public class CompressionTest {
     System.err.println("Usage: CompressionTest <path> "
       + StringUtils.join(Compression.Algorithm.values(), "|").toLowerCase(Locale.ROOT) + "\n"
       + "For example:\n" + "  hbase " + CompressionTest.class + " file:///tmp/testfile gz\n");
-    System.exit(1);
+    ExitHandler.getInstance().exit(1);
   }
 
   public static void doSmokeTest(FileSystem fs, Path path, String codec) throws Exception {
@@ -148,7 +148,7 @@ public class CompressionTest {
   public static void main(String[] args) throws Exception {
     if (args.length != 2) {
       usage();
-      System.exit(1);
+      ExitHandler.getInstance().exit(1);
     }
 
     Configuration conf = new Configuration();
@@ -156,7 +156,7 @@ public class CompressionTest {
     try (FileSystem fs = path.getFileSystem(conf)) {
       if (fs.exists(path)) {
         System.err.println("The specified path exists, aborting!");
-        System.exit(1);
+        ExitHandler.getInstance().exit(1);
       }
 
       try {

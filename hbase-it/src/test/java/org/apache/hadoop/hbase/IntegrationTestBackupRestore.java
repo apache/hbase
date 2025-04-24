@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.After;
 import org.junit.Assert;
@@ -426,6 +427,6 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
     Configuration conf = HBaseConfiguration.create();
     IntegrationTestingUtility.setUseDistributedCluster(conf);
     int status = ToolRunner.run(conf, new IntegrationTestBackupRestore(), args);
-    System.exit(status);
+    ExitHandler.getInstance().exit(status);
   }
 }

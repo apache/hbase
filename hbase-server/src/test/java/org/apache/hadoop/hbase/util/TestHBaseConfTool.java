@@ -19,11 +19,13 @@ package org.apache.hadoop.hbase.util;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.PrintStream;
 import java.util.LinkedList;
 import java.util.List;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.SystemExitRule;
 import org.apache.hadoop.hbase.master.cleaner.TimeToLiveLogCleaner;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -56,6 +58,35 @@ public class TestHBaseConfTool {
     } finally {
       // reset to standard output
       System.setOut(stdout);
+    }
+  }
+
+  @Test
+  public void testHBaseConfToolError() {
+    String[] args = {};
+    PrintStream stdout = System.out;
+    PrintStream stderr = System.err;
+
+    DummyPrintStream printStream = new DummyPrintStream(System.out);
+    DummyPrintStream errStream = new DummyPrintStream(System.out);
+    System.setOut(printStream);
+    System.setErr(errStream);
+
+    try {
+      HBaseConfTool.main(args);
+    } catch (SystemExitRule.SystemExitInTestException ex) {
+      List<String> printedLines = printStream.getPrintedLines();
+      assertNotNull(printedLines);
+      assertEquals(0, printedLines.size());
+
+      List<String> printedErrLines = errStream.getPrintedLines();
+      assertNotNull(printedErrLines);
+      assertEquals(1, printedErrLines.size());
+      assertTrue(printedErrLines.get(0).contains("Usage: HBaseConfTool"));
+    } finally {
+      // reset to standard output
+      System.setOut(stdout);
+      System.setErr(stderr);
     }
   }
 

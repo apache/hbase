@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.util.Tool;
@@ -137,7 +138,7 @@ public class IndexBuilder extends Configured implements Tool {
     if (args.length < 3) {
       System.err.println("Only " + args.length + " arguments supplied, required: 3");
       System.err.println("Usage: IndexBuilder <TABLE_NAME> <COLUMN_FAMILY> <ATTR> [<ATTR> ...]");
-      System.exit(-1);
+      ExitHandler.getInstance().exit(-1);
     }
     Job job = configureJob(conf, args);
     return (job.waitForCompletion(true) ? 0 : 1);
@@ -145,6 +146,6 @@ public class IndexBuilder extends Configured implements Tool {
 
   public static void main(String[] args) throws Exception {
     int result = ToolRunner.run(HBaseConfiguration.create(), new IndexBuilder(), args);
-    System.exit(result);
+    ExitHandler.getInstance().exit(result);
   }
 }

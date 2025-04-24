@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -363,7 +364,7 @@ public class IntegrationTestRpcClient {
       try {
         Thread.sleep(timeout);
         Threads.printThreadInfo(System.err, "TEST TIMEOUT STACK DUMP");
-        System.exit(1); // a timeout happened
+        ExitHandler.getInstance().exit(1); // a timeout happened
       } catch (InterruptedException e) {
         // this is what we want
       }

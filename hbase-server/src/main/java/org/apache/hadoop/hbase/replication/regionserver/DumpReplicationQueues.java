@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.replication.ReplicationQueueData;
 import org.apache.hadoop.hbase.replication.ReplicationQueueId;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -156,7 +157,7 @@ public class DumpReplicationQueues extends Configured implements Tool {
   public static void main(String[] args) throws Exception {
     Configuration conf = HBaseConfiguration.create();
     int ret = ToolRunner.run(conf, new DumpReplicationQueues(), args);
-    System.exit(ret);
+    ExitHandler.getInstance().exit(ret);
   }
 
   @Override
@@ -202,7 +203,7 @@ public class DumpReplicationQueues extends Configured implements Tool {
 
   protected static void printUsageAndExit(final String message, final int exitCode) {
     printUsage(message);
-    System.exit(exitCode);
+    ExitHandler.getInstance().exit(exitCode);
   }
 
   private int dumpReplicationQueues(DumpOptions opts) throws Exception {

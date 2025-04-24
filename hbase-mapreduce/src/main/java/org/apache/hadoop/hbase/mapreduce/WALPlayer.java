@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALCellCodec;
 import org.apache.hadoop.hbase.snapshot.SnapshotRegionLocator;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.hbase.util.MapReduceExtendedCell;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALEditInternalHelper;
@@ -414,14 +415,14 @@ public class WALPlayer extends Configured implements Tool {
    */
   public static void main(String[] args) throws Exception {
     int ret = ToolRunner.run(new WALPlayer(HBaseConfiguration.create()), args);
-    System.exit(ret);
+    ExitHandler.getInstance().exit(ret);
   }
 
   @Override
   public int run(String[] args) throws Exception {
     if (args.length < 1) {
       usage("Wrong number of arguments: " + args.length);
-      System.exit(-1);
+      ExitHandler.getInstance().exit(-1);
     }
     Job job = createSubmittableJob(args);
     return job.waitForCompletion(true) ? 0 : 1;

@@ -1688,7 +1688,7 @@ public class HBaseFsck extends Configured implements Closeable {
       @Override
       public void abort(String why, Throwable e) {
         LOG.error(why, e);
-        System.exit(1);
+        ExitHandler.getInstance().exit(1);
       }
 
       @Override
@@ -3540,7 +3540,7 @@ public class HBaseFsck extends Configured implements Closeable {
     URI defaultFs = hbasedir.getFileSystem(conf).getUri();
     CommonFSUtils.setFsDefault(conf, new Path(defaultFs));
     int ret = ToolRunner.run(new HBaseFsckTool(conf), args);
-    System.exit(ret);
+    ExitHandler.getInstance().exit(ret);
   }
 
   /**

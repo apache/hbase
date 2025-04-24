@@ -60,6 +60,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.hbase.util.MapReduceExtendedCell;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
@@ -781,7 +782,7 @@ public class Import extends Configured implements Tool {
    */
   public static void main(String[] args) throws Exception {
     int errCode = ToolRunner.run(HBaseConfiguration.create(), new Import(), args);
-    System.exit(errCode);
+    ExitHandler.getInstance().exit(errCode);
   }
 
 }

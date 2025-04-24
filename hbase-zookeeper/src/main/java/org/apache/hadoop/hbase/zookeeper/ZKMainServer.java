@@ -23,6 +23,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.ZooKeeperMain;
 import org.apache.zookeeper.cli.CliException;
@@ -67,7 +68,7 @@ public class ZKMainServer {
      */
     void runCmdLine() throws IOException, InterruptedException, CliException {
       processCmd(this.cl);
-      System.exit(0);
+      ExitHandler.getInstance().exit(0);
     }
 
     @Override

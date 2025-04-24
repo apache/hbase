@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.regionserver.DisabledRegionSplitPolicy;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.hbase.util.YammerHistogramUtils;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
@@ -329,6 +330,6 @@ public class IntegrationTestRegionReplicaPerf extends IntegrationTestBase {
     Configuration conf = HBaseConfiguration.create();
     IntegrationTestingUtility.setUseDistributedCluster(conf);
     int status = ToolRunner.run(conf, new IntegrationTestRegionReplicaPerf(), args);
-    System.exit(status);
+    ExitHandler.getInstance().exit(status);
   }
 }

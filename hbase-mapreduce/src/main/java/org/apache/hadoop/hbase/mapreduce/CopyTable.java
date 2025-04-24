@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
 import org.apache.hadoop.hbase.tool.BulkLoadHFilesTool;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -417,7 +418,7 @@ public class CopyTable extends Configured implements Tool {
    */
   public static void main(String[] args) throws Exception {
     int ret = ToolRunner.run(HBaseConfiguration.create(), new CopyTable(), args);
-    System.exit(ret);
+    ExitHandler.getInstance().exit(ret);
   }
 
   @Override

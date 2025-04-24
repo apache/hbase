@@ -40,7 +40,8 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.LauncherSecurityManager;
+import org.apache.hadoop.hbase.util.ExitHandler;
+import org.apache.hadoop.hbase.util.LauncherExitHandler;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -278,9 +279,9 @@ public class TestCellCounter {
   @Test
   public void testCellCounterMain() throws Exception {
     PrintStream oldPrintStream = System.err;
-    SecurityManager SECURITY_MANAGER = System.getSecurityManager();
-    LauncherSecurityManager newSecurityManager = new LauncherSecurityManager();
-    System.setSecurityManager(newSecurityManager);
+    ExitHandler originalHandler = ExitHandler.getInstance();
+    LauncherExitHandler newExitHandler = new LauncherExitHandler();
+    ExitHandler.setInstance(newExitHandler);
     ByteArrayOutputStream data = new ByteArrayOutputStream();
     String[] args = {};
     System.setErr(new PrintStream(data));
@@ -291,7 +292,7 @@ public class TestCellCounter {
         CellCounter.main(args);
         fail("should be SecurityException");
       } catch (SecurityException e) {
-        assertEquals(-1, newSecurityManager.getExitCode());
+        assertEquals(-1, newExitHandler.getExitCode());
         assertTrue(data.toString().contains("ERROR: Wrong number of parameters:"));
         // should be information about usage
         assertTrue(data.toString().contains("Usage:"));
@@ -299,7 +300,7 @@ public class TestCellCounter {
 
     } finally {
       System.setErr(oldPrintStream);
-      System.setSecurityManager(SECURITY_MANAGER);
+      ExitHandler.setInstance(originalHandler);
     }
   }
 

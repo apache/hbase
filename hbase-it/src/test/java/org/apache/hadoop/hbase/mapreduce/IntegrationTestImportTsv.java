@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.tool.BulkLoadHFilesTool;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.mapreduce.lib.partition.TotalOrderPartitioner;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -267,6 +268,6 @@ public class IntegrationTestImportTsv extends Configured implements Tool {
     IntegrationTestingUtility.setUseDistributedCluster(conf);
     util = new IntegrationTestingUtility(conf);
     int status = ToolRunner.run(conf, new IntegrationTestImportTsv(), args);
-    System.exit(status);
+    ExitHandler.getInstance().exit(status);
   }
 }

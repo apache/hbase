@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.DNS;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -79,7 +80,7 @@ public final class HQuorumPeer {
       runZKServer(zkConfig);
     } catch (Exception e) {
       LOG.error("Failed to start ZKServer", e);
-      System.exit(-1);
+      ExitHandler.getInstance().exit(-1);
     }
   }
 

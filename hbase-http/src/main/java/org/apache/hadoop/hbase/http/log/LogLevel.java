@@ -38,6 +38,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.http.HttpServer;
 import org.apache.hadoop.hbase.logging.Log4jUtils;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authentication.client.KerberosAuthenticator;
 import org.apache.hadoop.security.ssl.SSLFactory;
@@ -67,7 +68,7 @@ public final class LogLevel {
    */
   public static void main(String[] args) throws Exception {
     CLI cli = new CLI(new Configuration());
-    System.exit(cli.run(args));
+    ExitHandler.getInstance().exit(cli.run(args));
   }
 
   /**
@@ -81,7 +82,7 @@ public final class LogLevel {
 
   private static void printUsage() {
     System.err.println(USAGES);
-    System.exit(-1);
+    ExitHandler.getInstance().exit(-1);
   }
 
   public static boolean isValidProtocol(String protocol) {

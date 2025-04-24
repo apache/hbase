@@ -96,6 +96,7 @@ import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.token.FsDelegationToken;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.hbase.util.FSVisitor;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.Pair;
@@ -1195,7 +1196,7 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
   public static void main(String[] args) throws Exception {
     Configuration conf = HBaseConfiguration.create();
     int ret = ToolRunner.run(conf, new BulkLoadHFilesTool(conf), args);
-    System.exit(ret);
+    ExitHandler.getInstance().exit(ret);
   }
 
   @Override

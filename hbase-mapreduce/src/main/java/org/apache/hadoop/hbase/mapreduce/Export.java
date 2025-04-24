@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.hbase.util.Triple;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
@@ -93,6 +94,6 @@ public class Export extends Configured implements Tool {
    */
   public static void main(String[] args) throws Exception {
     int errCode = ToolRunner.run(HBaseConfiguration.create(), new Export(), args);
-    System.exit(errCode);
+    ExitHandler.getInstance().exit(errCode);
   }
 }

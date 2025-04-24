@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.io.LongWritable;
@@ -461,6 +462,7 @@ public class CompactionTool extends Configured implements Tool {
   }
 
   public static void main(String[] args) throws Exception {
-    System.exit(ToolRunner.run(HBaseConfiguration.create(), new CompactionTool(), args));
+    ExitHandler.getInstance()
+      .exit(ToolRunner.run(HBaseConfiguration.create(), new CompactionTool(), args));
   }
 }

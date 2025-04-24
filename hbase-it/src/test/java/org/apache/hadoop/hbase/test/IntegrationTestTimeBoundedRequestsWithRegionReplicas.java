@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.StorefileRefresherChore;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.hbase.util.LoadTestTool;
 import org.apache.hadoop.hbase.util.MultiThreadedReader;
 import org.apache.hadoop.hbase.util.Threads;
@@ -371,6 +372,6 @@ public class IntegrationTestTimeBoundedRequestsWithRegionReplicas extends Integr
     IntegrationTestingUtility.setUseDistributedCluster(conf);
     int ret =
       ToolRunner.run(conf, new IntegrationTestTimeBoundedRequestsWithRegionReplicas(), args);
-    System.exit(ret);
+    ExitHandler.getInstance().exit(ret);
   }
 }

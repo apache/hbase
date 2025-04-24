@@ -86,7 +86,8 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.LauncherSecurityManager;
+import org.apache.hadoop.hbase.util.ExitHandler;
+import org.apache.hadoop.hbase.util.LauncherExitHandler;
 import org.apache.hadoop.hbase.util.MapReduceExtendedCell;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -530,9 +531,9 @@ public class TestImportExport {
   @Test
   public void testImportMain() throws Throwable {
     PrintStream oldPrintStream = System.err;
-    SecurityManager SECURITY_MANAGER = System.getSecurityManager();
-    LauncherSecurityManager newSecurityManager = new LauncherSecurityManager();
-    System.setSecurityManager(newSecurityManager);
+    ExitHandler originalHandler = ExitHandler.getInstance();
+    LauncherExitHandler newExitHandler = new LauncherExitHandler();
+    ExitHandler.setInstance(newExitHandler);
     ByteArrayOutputStream data = new ByteArrayOutputStream();
     String[] args = {};
     System.setErr(new PrintStream(data));
@@ -541,7 +542,7 @@ public class TestImportExport {
       Import.main(args);
       fail("should be SecurityException");
     } catch (SecurityException e) {
-      assertEquals(-1, newSecurityManager.getExitCode());
+      assertEquals(-1, newExitHandler.getExitCode());
       assertTrue(data.toString().contains("Wrong number of arguments:"));
       assertTrue(data.toString().contains("-Dimport.bulk.output=/path/for/output"));
       assertTrue(data.toString().contains("-Dimport.filter.class=<name of filter class>"));
@@ -549,7 +550,7 @@ public class TestImportExport {
       assertTrue(data.toString().contains("-Dmapreduce.reduce.speculative=false"));
     } finally {
       System.setErr(oldPrintStream);
-      System.setSecurityManager(SECURITY_MANAGER);
+      ExitHandler.setInstance(originalHandler);
     }
   }
 
@@ -595,9 +596,9 @@ public class TestImportExport {
   @Test
   public void testExportMain() throws Throwable {
     PrintStream oldPrintStream = System.err;
-    SecurityManager SECURITY_MANAGER = System.getSecurityManager();
-    LauncherSecurityManager newSecurityManager = new LauncherSecurityManager();
-    System.setSecurityManager(newSecurityManager);
+    ExitHandler originalHandler = ExitHandler.getInstance();
+    LauncherExitHandler newExitHandler = new LauncherExitHandler();
+    ExitHandler.setInstance(newExitHandler);
     ByteArrayOutputStream data = new ByteArrayOutputStream();
     String[] args = {};
     System.setErr(new PrintStream(data));
@@ -606,7 +607,7 @@ public class TestImportExport {
       runExportMain(args);
       fail("should be SecurityException");
     } catch (SecurityException e) {
-      assertEquals(-1, newSecurityManager.getExitCode());
+      assertEquals(-1, newExitHandler.getExitCode());
       String errMsg = data.toString();
       assertTrue(errMsg.contains("Wrong number of arguments:"));
       assertTrue(
@@ -619,7 +620,7 @@ public class TestImportExport {
       assertTrue(errMsg.contains("-D hbase.export.scanner.caching=100"));
     } finally {
       System.setErr(oldPrintStream);
-      System.setSecurityManager(SECURITY_MANAGER);
+      ExitHandler.setInstance(originalHandler);
     }
   }
 

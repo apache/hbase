@@ -286,7 +286,7 @@ public abstract class AbstractHBaseTool implements Tool {
       LOG.error("Error running command-line tool", ex);
       ret = EXIT_FAILURE;
     }
-    System.exit(ret);
+    ExitHandler.getInstance().exit(ret);
   }
 
 }

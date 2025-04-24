@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.security.visibility.VisibilityTestUtil;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.Counter;
@@ -402,6 +403,6 @@ public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationT
     Configuration conf = HBaseConfiguration.create();
     IntegrationTestingUtility.setUseDistributedCluster(conf);
     int ret = ToolRunner.run(conf, new IntegrationTestWithCellVisibilityLoadAndVerify(), argv);
-    System.exit(ret);
+    ExitHandler.getInstance().exit(ret);
   }
 }

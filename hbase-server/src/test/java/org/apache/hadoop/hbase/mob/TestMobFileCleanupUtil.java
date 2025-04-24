@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -229,7 +230,7 @@ public class TestMobFileCleanupUtil {
       if (HTU != null) {
         assertTrue(false);
       } else {
-        System.exit(-1);
+        ExitHandler.getInstance().exit(-1);
       }
     }
     return 0;

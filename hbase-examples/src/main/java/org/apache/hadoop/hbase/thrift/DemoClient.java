@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.thrift.generated.TCell;
 import org.apache.hadoop.hbase.thrift.generated.TRowResult;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClientUtils;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.transport.TSaslClientTransport;
@@ -59,7 +60,7 @@ public class DemoClient {
       System.out.println("Invalid arguments!");
       System.out.println("Usage: DemoClient host port [secure=false [server-principal=hbase] ]");
 
-      System.exit(-1);
+      ExitHandler.getInstance().exit(-1);
     }
 
     port = Integer.parseInt(args[1]);
@@ -303,7 +304,7 @@ public class DemoClient {
 
       if (versions.isEmpty()) {
         System.out.println("FATAL: wrong # of versions");
-        System.exit(-1);
+        ExitHandler.getInstance().exit(-1);
       }
 
       List<TCell> result = client.get(demoTable, ByteBuffer.wrap(row),
@@ -311,7 +312,7 @@ public class DemoClient {
 
       if (!result.isEmpty()) {
         System.out.println("FATAL: shouldn't get here");
-        System.exit(-1);
+        ExitHandler.getInstance().exit(-1);
       }
 
       System.out.println("");
