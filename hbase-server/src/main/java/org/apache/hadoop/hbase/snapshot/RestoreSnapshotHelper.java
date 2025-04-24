@@ -732,12 +732,14 @@ public class RestoreSnapshotHelper {
     final StoreFileTracker tracker) throws IOException {
     String hfileName = storeFile.getName();
     if (HFileLink.isHFileLink(hfileName)) {
-      return tracker.createFromHFileLink(hfileName, createBackRef);
+      tracker.createFromHFileLink(hfileName, createBackRef);
+      return hfileName;
     } else if (StoreFileInfo.isReference(hfileName)) {
       return restoreReferenceFile(familyDir, regionInfo, storeFile, tracker);
     } else {
-      return tracker.createHFileLink(regionInfo.getTable(), regionInfo.getEncodedName(), hfileName,
+      tracker.createHFileLink(regionInfo.getTable(), regionInfo.getEncodedName(), hfileName,
         createBackRef);
+      return hfileName;
     }
   }
 

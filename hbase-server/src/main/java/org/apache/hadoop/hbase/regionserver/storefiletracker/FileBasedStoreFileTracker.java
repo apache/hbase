@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver.storefiletracker;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -27,8 +28,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.io.HFileLink;
+import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.regionserver.StoreContext;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
@@ -36,6 +41,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.FSProtos.Reference.Range;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.StoreFileTrackerProtos.StoreFileEntry;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.StoreFileTrackerProtos.StoreFileList;
 
@@ -107,8 +115,18 @@ class FileBasedStoreFileTracker extends StoreFileTrackerBase {
   }
 
   private StoreFileEntry toStoreFileEntry(StoreFileInfo info) {
-    return StoreFileEntry.newBuilder().setName(info.getPath().getName()).setSize(info.getSize())
-      .build();
+    org.apache.hadoop.hbase.shaded.protobuf.generated.StoreFileTrackerProtos.StoreFileEntry.Builder entryBuilder =
+      StoreFileEntry.newBuilder().setName(info.getPath().getName()).setSize(info.getSize());
+    if (info.isReference()) {
+      // TODO: Need a better way to fix the Protobuf generate enum Range to Reference.Range,
+      // otherwise it would result in DATA LOSS
+      org.apache.hadoop.hbase.shaded.protobuf.generated.FSProtos.Reference reference =
+        org.apache.hadoop.hbase.shaded.protobuf.generated.FSProtos.Reference.newBuilder()
+          .setSplitkey(ByteString.copyFrom(info.getReference().getSplitKey()))
+          .setRange(Range.forNumber(info.getReference().getFileRegion().ordinal())).build();
+      entryBuilder.setReference(reference);
+    }
+    return entryBuilder.build();
   }
 
   @Override
@@ -175,5 +193,66 @@ class FileBasedStoreFileTracker extends StoreFileTrackerBase {
         LOG.trace("Set store files in store file list file: " + files);
       }
     }
+  }
+
+  @Override
+  public Reference readReference(Path p) throws IOException {
+    String fileName = p.getName();
+    StoreFileList list = backedFile.load(true);
+    for (StoreFileEntry entry : list.getStoreFileList()) {
+      if (entry.getName().equals(fileName)) {
+        return Reference.convert(entry.getReference());
+      }
+    }
+    throw new FileNotFoundException("Reference does not exist for path : " + p);
+  }
+
+  @Override
+  public boolean hasReferences() throws IOException {
+    StoreFileList list = backedFile.load(true);
+    for (StoreFileEntry entry : list.getStoreFileList()) {
+      if (entry.hasReference() || HFileLink.isHFileLink(entry.getName())) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  @Override
+  public HFileLink createHFileLink(TableName linkedTable, String linkedRegion, String hfileName,
+    boolean createBackRef) throws IOException {
+    // String name = HFileLink.createHFileLinkName(linkedTable, linkedRegion, hfileName);
+    FileSystem fs = ctx.getRegionFileSystem().getFileSystem();
+    HFileLink hfileLink = HFileLink.build(conf, linkedTable, linkedRegion,
+      ctx.getFamily().getNameAsString(), hfileName);
+    FileStatus fileStatus = hfileLink.getFileStatus(fs);
+    StoreFileInfo storeFileInfo = new StoreFileInfo(conf, fs, fileStatus, hfileLink);
+    // Path backRefPath = null;
+    if (createBackRef) {
+      // TODO: this should be done as part of commit
+      // Path backRefssDir = HFileLink.getBackReferencesDir(archiveStoreDir, hfileName);
+      // fs.mkdirs(backRefssDir);
+      //
+      // // Create the reference for the link
+      // backRefPath = new Path(backRefssDir, refName);
+      // fs.createNewFile(backRefPath);
+    }
+    try {
+      add(Collections.singletonList(storeFileInfo));
+    } catch (Exception e) {
+      // LOG.error("couldn't create the link=" + name + " for " + ctx.getFamilyStoreDirectoryPath(),
+      // e);
+      // // Revert the reference if the link creation failed
+      // if (createBackRef) {
+      // fs.delete(backRefPath, false);
+      // }
+    }
+    return hfileLink;
+  }
+
+  @Override
+  public Reference createReference(Reference reference, Path path) throws IOException {
+    // NOOP
+    return reference;
   }
 }

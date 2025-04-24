@@ -1171,12 +1171,12 @@ public class TestHStoreFile {
   private Path splitStoreFile(final HRegionFileSystem regionFs, final RegionInfo hri,
     final String family, final HStoreFile sf, final byte[] splitKey, boolean isTopRef,
     StoreFileTracker sft) throws IOException {
-    Path path = regionFs.splitStoreFile(hri, family, sf, splitKey, isTopRef, null, sft);
-    if (null == path) {
+    StoreFileInfo sfi = regionFs.splitStoreFile(hri, family, sf, splitKey, isTopRef, null, sft);
+    if (null == sfi) {
       return null;
     }
-    List<Path> splitFiles = new ArrayList<>();
-    splitFiles.add(path);
+    List<StoreFileInfo> splitFiles = new ArrayList<>();
+    splitFiles.add(sfi);
     MasterProcedureEnv mockEnv = mock(MasterProcedureEnv.class);
     MasterServices mockServices = mock(MasterServices.class);
     when(mockEnv.getMasterServices()).thenReturn(mockServices);
@@ -1187,7 +1187,7 @@ public class TestHStoreFile {
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).build();
     when(mockTblDescs.get(any())).thenReturn(mockTblDesc);
     Path regionDir = regionFs.commitDaughterRegion(hri, splitFiles, mockEnv);
-    return new Path(new Path(regionDir, family), path.getName());
+    return new Path(new Path(regionDir, family), sfi.getPath().getName());
   }
 
   private StoreFileWriter writeStoreFile(Configuration conf, CacheConfig cacheConf, Path path,

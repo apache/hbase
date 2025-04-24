@@ -644,20 +644,46 @@ public class SplitTableRegionProcedure
     HRegionFileSystem regionFs = HRegionFileSystem.openRegionFromFileSystem(
       env.getMasterConfiguration(), fs, tabledir, getParentRegion(), false);
     regionFs.createSplitsDir(daughterOneRI, daughterTwoRI);
+    Pair<List<StoreFileInfo>, List<StoreFileInfo>> expectedReferences =
+      splitStoreFiles(env, regionFs);
+    final ExecutorService threadPool = Executors.newFixedThreadPool(2,
+      new ThreadFactoryBuilder().setNameFormat("RegionCommitter-pool-%d").setDaemon(true)
+        .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
+    threadPool.submit(new Callable<Path>() {
+      @Override
+      public Path call() throws IOException {
+        return regionFs.commitDaughterRegion(daughterOneRI, expectedReferences.getFirst(), env);
+      }
+    });
+    threadPool.submit(new Callable<Path>() {
+      @Override
+      public Path call() throws IOException {
+        return regionFs.commitDaughterRegion(daughterTwoRI, expectedReferences.getSecond(), env);
+      }
+    });
+    // Shutdown the pool
+    threadPool.shutdown();
 
-    Pair<List<Path>, List<Path>> expectedReferences = splitStoreFiles(env, regionFs);
-
-    assertSplitResultFilesCount(fs, expectedReferences.getFirst().size(),
-      regionFs.getSplitsDir(daughterOneRI));
-    regionFs.commitDaughterRegion(daughterOneRI, expectedReferences.getFirst(), env);
-    assertSplitResultFilesCount(fs, expectedReferences.getFirst().size(),
-      new Path(tabledir, daughterOneRI.getEncodedName()));
-
-    assertSplitResultFilesCount(fs, expectedReferences.getSecond().size(),
-      regionFs.getSplitsDir(daughterTwoRI));
-    regionFs.commitDaughterRegion(daughterTwoRI, expectedReferences.getSecond(), env);
-    assertSplitResultFilesCount(fs, expectedReferences.getSecond().size(),
-      new Path(tabledir, daughterTwoRI.getEncodedName()));
+    Configuration conf = env.getMasterConfiguration();
+    // Wait for all the tasks to finish.
+    // When splits ran on the RegionServer, how-long-to-wait-configuration was named
+    // hbase.regionserver.fileSplitTimeout. If set, use its value.
+    long fileSplitTimeout = conf.getLong("hbase.master.fileSplitTimeout",
+      conf.getLong("hbase.regionserver.fileSplitTimeout", 600000));
+    try {
+      boolean stillRunning = !threadPool.awaitTermination(fileSplitTimeout, TimeUnit.MILLISECONDS);
+      if (stillRunning) {
+        threadPool.shutdownNow();
+        // wait for the thread to shutdown completely.
+        while (!threadPool.isTerminated()) {
+          Thread.sleep(50);
+        }
+        throw new IOException(
+          "Took too long to split the" + " files and create the references, aborting split");
+      }
+    } catch (InterruptedException e) {
+      throw (InterruptedIOException) new InterruptedIOException().initCause(e);
+    }
   }
 
   private void deleteDaughterRegions(final MasterProcedureEnv env) throws IOException {
@@ -673,8 +699,8 @@ public class SplitTableRegionProcedure
    * Create Split directory
    * @param env MasterProcedureEnv
    */
-  private Pair<List<Path>, List<Path>> splitStoreFiles(final MasterProcedureEnv env,
-    final HRegionFileSystem regionFs) throws IOException {
+  private Pair<List<StoreFileInfo>, List<StoreFileInfo>> splitStoreFiles(
+    final MasterProcedureEnv env, final HRegionFileSystem regionFs) throws IOException {
     final Configuration conf = env.getMasterConfiguration();
     TableDescriptor htd = env.getMasterServices().getTableDescriptors().get(getTableName());
     // The following code sets up a thread pool executor with as many slots as
@@ -729,7 +755,8 @@ public class SplitTableRegionProcedure
     final ExecutorService threadPool = Executors.newFixedThreadPool(maxThreads,
       new ThreadFactoryBuilder().setNameFormat("StoreFileSplitter-pool-%d").setDaemon(true)
         .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
-    final List<Future<Pair<Path, Path>>> futures = new ArrayList<Future<Pair<Path, Path>>>(nbFiles);
+    final List<Future<Pair<StoreFileInfo, StoreFileInfo>>> futures =
+      new ArrayList<Future<Pair<StoreFileInfo, StoreFileInfo>>>(nbFiles);
 
     // Split each store file.
     for (Map.Entry<String, Collection<StoreFileInfo>> e : files.entrySet()) {
@@ -776,12 +803,12 @@ public class SplitTableRegionProcedure
       throw (InterruptedIOException) new InterruptedIOException().initCause(e);
     }
 
-    List<Path> daughterA = new ArrayList<>();
-    List<Path> daughterB = new ArrayList<>();
+    List<StoreFileInfo> daughterA = new ArrayList<>();
+    List<StoreFileInfo> daughterB = new ArrayList<>();
     // Look for any exception
-    for (Future<Pair<Path, Path>> future : futures) {
+    for (Future<Pair<StoreFileInfo, StoreFileInfo>> future : futures) {
       try {
-        Pair<Path, Path> p = future.get();
+        Pair<StoreFileInfo, StoreFileInfo> p = future.get();
         if (p.getFirst() != null) {
           daughterA.add(p.getFirst());
         }
@@ -803,6 +830,7 @@ public class SplitTableRegionProcedure
     return new Pair<>(daughterA, daughterB);
   }
 
+  // TODO: update assert to do SFT.load instead of FileSystem listing
   private void assertSplitResultFilesCount(final FileSystem fs,
     final int expectedSplitResultFileCount, Path dir) throws IOException {
     if (expectedSplitResultFileCount != 0) {
@@ -814,8 +842,8 @@ public class SplitTableRegionProcedure
     }
   }
 
-  private Pair<Path, Path> splitStoreFile(HRegionFileSystem regionFs, TableDescriptor htd,
-    ColumnFamilyDescriptor hcd, HStoreFile sf) throws IOException {
+  private Pair<StoreFileInfo, StoreFileInfo> splitStoreFile(HRegionFileSystem regionFs,
+    TableDescriptor htd, ColumnFamilyDescriptor hcd, HStoreFile sf) throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("pid=" + getProcId() + " splitting started for store file: " + sf.getPath()
         + " for region: " + getParentRegion().getShortNameToLog());
@@ -831,22 +859,22 @@ public class SplitTableRegionProcedure
       StoreFileTrackerFactory.create(regionFs.getFileSystem().getConf(), htd, hcd,
         HRegionFileSystem.create(regionFs.getFileSystem().getConf(), regionFs.getFileSystem(),
           regionFs.getTableDir(), daughterTwoRI));
-    final Path path_first = regionFs.splitStoreFile(this.daughterOneRI, familyName, sf, splitRow,
-      false, splitPolicy, daughterOneSft);
-    final Path path_second = regionFs.splitStoreFile(this.daughterTwoRI, familyName, sf, splitRow,
-      true, splitPolicy, daughterTwoSft);
+    final StoreFileInfo sfiFirst = regionFs.splitStoreFile(this.daughterOneRI, familyName, sf,
+      splitRow, false, splitPolicy, daughterOneSft);
+    final StoreFileInfo sfiSecond = regionFs.splitStoreFile(this.daughterTwoRI, familyName, sf,
+      splitRow, true, splitPolicy, daughterTwoSft);
     if (LOG.isDebugEnabled()) {
       LOG.debug("pid=" + getProcId() + " splitting complete for store file: " + sf.getPath()
         + " for region: " + getParentRegion().getShortNameToLog());
     }
-    return new Pair<Path, Path>(path_first, path_second);
+    return new Pair<StoreFileInfo, StoreFileInfo>(sfiFirst, sfiSecond);
   }
 
   /**
    * Utility class used to do the file splitting / reference writing in parallel instead of
    * sequentially.
    */
-  private class StoreFileSplitter implements Callable<Pair<Path, Path>> {
+  private class StoreFileSplitter implements Callable<Pair<StoreFileInfo, StoreFileInfo>> {
     private final HRegionFileSystem regionFs;
     private final ColumnFamilyDescriptor hcd;
     private final HStoreFile sf;
@@ -867,7 +895,7 @@ public class SplitTableRegionProcedure
     }
 
     @Override
-    public Pair<Path, Path> call() throws IOException {
+    public Pair<StoreFileInfo, StoreFileInfo> call() throws IOException {
       return splitStoreFile(regionFs, htd, hcd, sf);
     }
   }
