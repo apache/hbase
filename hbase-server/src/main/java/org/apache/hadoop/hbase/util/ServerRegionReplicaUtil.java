@@ -125,7 +125,7 @@ public class ServerRegionReplicaUtil extends RegionReplicaUtil {
 
     // if this is a primary region, just return the StoreFileInfo constructed from path
     if (RegionInfo.COMPARATOR.compare(regionInfo, regionInfoForFs) == 0) {
-      return tracker.getStoreFileInfo(path, true);
+    	return StoreFileInfo.createStoreFileInfoForHFile(conf, fs, path, true);
     }
 
     // else create a store file link. The link file does not exists on filesystem though.
