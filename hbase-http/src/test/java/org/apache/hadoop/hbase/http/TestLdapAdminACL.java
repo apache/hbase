@@ -21,22 +21,18 @@ import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
-import java.net.URL;
-import org.apache.commons.codec.binary.Base64;
 import org.apache.directory.server.annotations.CreateLdapServer;
 import org.apache.directory.server.annotations.CreateTransport;
 import org.apache.directory.server.core.annotations.ApplyLdifs;
 import org.apache.directory.server.core.annotations.ContextEntry;
 import org.apache.directory.server.core.annotations.CreateDS;
 import org.apache.directory.server.core.annotations.CreatePartition;
-import org.apache.directory.server.core.integ.CreateLdapServerRule;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.http.resource.JerseyResource;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -45,12 +41,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Test class for LDAP authentication on the HttpServer.
+ * Test class for admin ACLs with LDAP authentication on the HttpServer.
  */
 @Category({ MiscTests.class, SmallTests.class })
 @CreateLdapServer(
     transports = { @CreateTransport(protocol = "LDAP", address = LdapConstants.LDAP_SERVER_ADDR), })
-@CreateDS(allowAnonAccess = true,
+@CreateDS(name = "TestLdapAdminACL", allowAnonAccess = true,
     partitions = { @CreatePartition(name = "Test_Partition", suffix = LdapConstants.LDAP_BASE_DN,
         contextEntry = @ContextEntry(entryLdif = "dn: " + LdapConstants.LDAP_BASE_DN + " \n"
           + "dc: example\n" + "objectClass: top\n" + "objectClass: domain\n\n")) })
@@ -59,26 +55,22 @@ import org.slf4j.LoggerFactory;
 
   "dn: uid=jdoe," + LdapConstants.LDAP_BASE_DN, "cn: John Doe", "sn: Doe",
   "objectClass: inetOrgPerson", "uid: jdoe", "userPassword: secure123" })
-public class TestLdapAdminACL extends HttpServerFunctionalTest {
-
-  private static final String ADMIN_CREDENTIALS = "bjones:p@ssw0rd";
-  private static final String NON_ADMIN_CREDENTIALS = "jdoe:secure123";
-  private static final String WRONG_CREDENTIALS = "bjones:password";
-  private static final String AUTH_TYPE = "Basic ";
+public class TestLdapAdminACL extends LdapServerTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestLdapAdminACL.class);
   private static final Logger LOG = LoggerFactory.getLogger(TestLdapAdminACL.class);
-  @ClassRule
-  public static CreateLdapServerRule serverRule = new CreateLdapServerRule();
-  private static HttpServer server;
-  private static URL baseUrl;
+
+  private static final String ADMIN_CREDENTIALS = "bjones:p@ssw0rd";
+  private static final String NON_ADMIN_CREDENTIALS = "jdoe:secure123";
+  private static final String WRONG_CREDENTIALS = "bjones:password";
 
   @BeforeClass
   public static void setupServer() throws Exception {
     Configuration conf = new Configuration();
-    buildLdapConfiguration(conf);
+    setLdapConfigurationWithACLs(conf);
+
     server = createTestServer(conf, InfoServer.buildAdminAcl(conf));
     server.addUnprivilegedServlet("echo", "/echo", TestHttpServer.EchoServlet.class);
     // we will reuse /jmx which is a privileged servlet
@@ -86,53 +78,17 @@ public class TestLdapAdminACL extends HttpServerFunctionalTest {
     server.start();
 
     baseUrl = getServerURL(server);
-
     LOG.info("HTTP server started: " + baseUrl);
   }
 
-  @AfterClass
-  public static void stopServer() throws Exception {
-    try {
-      if (null != server) {
-        server.stop();
-      }
-    } catch (Exception e) {
-      LOG.info("Failed to stop info server", e);
-    }
-  }
-
-  private static Configuration buildLdapConfiguration(Configuration conf) {
-
-    conf.setInt(HttpServer.HTTP_MAX_THREADS, TestHttpServer.MAX_THREADS);
-
-    // Enable LDAP (pre-req)
-    conf.set(HttpServer.HTTP_UI_AUTHENTICATION, "ldap");
-    conf.set(HttpServer.FILTER_INITIALIZERS_PROPERTY,
-      "org.apache.hadoop.hbase.http.lib.AuthenticationFilterInitializer");
-    conf.set("hadoop.http.authentication.type", "ldap");
-    conf.set("hadoop.http.authentication.ldap.providerurl", String.format("ldap://%s:%s",
-      LdapConstants.LDAP_SERVER_ADDR, serverRule.getLdapServer().getPort()));
-    conf.set("hadoop.http.authentication.ldap.enablestarttls", "false");
-    conf.set("hadoop.http.authentication.ldap.basedn", LdapConstants.LDAP_BASE_DN);
-    conf.set("hadoop.http.authentication.ldap.admin.group",
-      "cn=admins,ou=groups," + LdapConstants.LDAP_BASE_DN);
+  private static Configuration setLdapConfigurationWithACLs(Configuration conf) {
+    setLdapConfigurations(conf);
 
     // Enable LDAP admin ACL
     conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, true);
     conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_INSTRUMENTATION_REQUIRES_ADMIN, true);
     conf.set(HttpServer.HTTP_LDAP_AUTHENTICATION_ADMIN_USERS_KEY, "bjones");
     return conf;
-  }
-
-  private String getBasicAuthHeader(String credentials) {
-    return AUTH_TYPE + new Base64(0).encodeToString(credentials.getBytes());
-  }
-
-  private HttpURLConnection openConnection(String endpoint, String credentials) throws IOException {
-    URL url = new URL(getServerURL(server) + endpoint);
-    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-    conn.setRequestProperty("Authorization", getBasicAuthHeader(credentials));
-    return conn;
   }
 
   @Test
