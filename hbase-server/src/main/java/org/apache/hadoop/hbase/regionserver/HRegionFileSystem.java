@@ -519,7 +519,7 @@ public class HRegionFileSystem {
    * in the filesystem.
    * @param regionInfo daughter {@link org.apache.hadoop.hbase.client.RegionInfo}
    */
-  public Path commitDaughterRegion(final RegionInfo regionInfo, List<Path> allRegionFiles,
+  public Path commitDaughterRegion(final RegionInfo regionInfo, List<StoreFileInfo> allRegionFiles,
     MasterProcedureEnv env) throws IOException {
     Path regionDir = this.getSplitsDir(regionInfo);
     if (fs.exists(regionDir)) {
@@ -534,7 +534,29 @@ public class HRegionFileSystem {
     return regionDir;
   }
 
-  private void insertRegionFilesIntoStoreTracker(List<Path> allFiles, MasterProcedureEnv env,
+  private void insertRegionFilesIntoStoreTracker(List<StoreFileInfo> allFiles,
+    MasterProcedureEnv env, HRegionFileSystem regionFs) throws IOException {
+    TableDescriptor tblDesc =
+      env.getMasterServices().getTableDescriptors().get(regionInfo.getTable());
+    // we need to map trackers per store
+    Map<String, StoreFileTracker> trackerMap = new HashMap<>();
+    // we need to map store files per store
+    Map<String, List<StoreFileInfo>> fileInfoMap = new HashMap<>();
+    for (StoreFileInfo sfi : allFiles) {
+      Path file = sfi.getPath();
+      String familyName = file.getParent().getName();
+      trackerMap.computeIfAbsent(familyName, t -> StoreFileTrackerFactory.create(conf, tblDesc,
+        tblDesc.getColumnFamily(Bytes.toBytes(familyName)), regionFs));
+      fileInfoMap.computeIfAbsent(familyName, l -> new ArrayList<>());
+      List<StoreFileInfo> infos = fileInfoMap.get(familyName);
+      infos.add(sfi);
+    }
+    for (Map.Entry<String, StoreFileTracker> entry : trackerMap.entrySet()) {
+      entry.getValue().add(fileInfoMap.get(entry.getKey()));
+    }
+  }
+
+  private void insertRegionfilePathsIntoStoreTracker(List<Path> allFiles, MasterProcedureEnv env,
     HRegionFileSystem regionFs) throws IOException {
     TableDescriptor tblDesc =
       env.getMasterServices().getTableDescriptors().get(regionInfo.getTable());
@@ -591,8 +613,9 @@ public class HRegionFileSystem {
    *                    have a reference to a Region.
    * @return Path to created reference.
    */
-  public Path splitStoreFile(RegionInfo hri, String familyName, HStoreFile f, byte[] splitRow,
-    boolean top, RegionSplitPolicy splitPolicy, StoreFileTracker tracker) throws IOException {
+  public StoreFileInfo splitStoreFile(RegionInfo hri, String familyName, HStoreFile f,
+    byte[] splitRow, boolean top, RegionSplitPolicy splitPolicy, StoreFileTracker tracker)
+    throws IOException {
     Path splitDir = new Path(getSplitsDir(hri), familyName);
     // Add the referred-to regions name as a dot separated suffix.
     // See REF_NAME_REGEX regex above. The referred-to regions name is
@@ -604,7 +627,7 @@ public class HRegionFileSystem {
     Path p = new Path(splitDir, f.getPath().getName() + "." + parentRegionName);
     if (fs.exists(p)) {
       LOG.warn("Found an already existing split file for {}. Assuming this is a recovery.", p);
-      return p;
+      return tracker.getStoreFileInfo(fs.getFileStatus(p), p, true);
     }
     boolean createLinkFile = false;
     if (splitPolicy == null || !splitPolicy.skipStoreFileRangeCheck(familyName)) {
@@ -662,12 +685,12 @@ public class HRegionFileSystem {
           hfileName = m.group(4);
         }
         // must create back reference here
-        tracker.createHFileLink(linkedTable, linkedRegion, hfileName, true);
+        HFileLink hFileLink = tracker.createHFileLink(linkedTable, linkedRegion, hfileName, true);
         Path path =
           new Path(splitDir, HFileLink.createHFileLinkName(linkedTable, linkedRegion, hfileName));
         LOG.info("Created linkFile:" + path.toString() + " for child: " + hri.getEncodedName()
           + ", parent: " + regionInfoForFs.getEncodedName());
-        return path;
+        return new StoreFileInfo(conf, fs, path, hFileLink);
       } catch (IOException e) {
         // if create HFileLink file failed, then just skip the error and create Reference file
         LOG.error("Create link file for " + hfileName + " for child " + hri.getEncodedName()
@@ -678,7 +701,7 @@ public class HRegionFileSystem {
     Reference r =
       top ? Reference.createTopReference(splitRow) : Reference.createBottomReference(splitRow);
     tracker.createReference(r, p);
-    return p;
+    return new StoreFileInfo(conf, fs, p, r);
   }
 
   // ===========================================================================
@@ -747,7 +770,8 @@ public class HRegionFileSystem {
       Path regionInfoFile = new Path(regionDir, REGION_INFO_FILE);
       byte[] regionInfoContent = getRegionInfoFileContent(regionInfo);
       writeRegionInfoFileContent(conf, fs, regionInfoFile, regionInfoContent);
-      insertRegionFilesIntoStoreTracker(allMergedFiles, env, this);
+      List<StoreFileInfo> infos = new ArrayList<StoreFileInfo>();
+      insertRegionfilePathsIntoStoreTracker(allMergedFiles, env, this);
     }
   }
 

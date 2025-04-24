@@ -24,6 +24,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.regionserver.CreateStoreFileWriterParams;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
@@ -130,7 +131,7 @@ public interface StoreFileTracker {
    * @return the file link name.
    * @throws IOException on file or parent directory creation failure.
    */
-  String createHFileLink(final TableName linkedTable, final String linkedRegion,
+  HFileLink createHFileLink(final TableName linkedTable, final String linkedRegion,
     final String hfileName, final boolean createBackRef) throws IOException;
 
   /**
@@ -143,7 +144,7 @@ public interface StoreFileTracker {
    * @return the file link name.
    * @throws IOException on file or parent directory creation failure.
    */
-  String createFromHFileLink(final String hfileName, final boolean createBackRef)
+  HFileLink createFromHFileLink(final String hfileName, final boolean createBackRef)
     throws IOException;
 
 }
