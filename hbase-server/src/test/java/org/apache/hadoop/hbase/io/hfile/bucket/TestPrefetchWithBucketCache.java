@@ -197,7 +197,7 @@ public class TestPrefetchWithBucketCache {
     byte[] splitPoint = RandomKeyValueUtil.randomOrderedKey(rand, 50);
     HStoreFile file = new HStoreFile(fs, storeFile, conf, cacheConf, BloomType.NONE, true, sft);
     Path ref = regionFS.splitStoreFile(region, "cf", file, splitPoint, false,
-      new ConstantSizeRegionSplitPolicy(), sft);
+      new ConstantSizeRegionSplitPolicy(), sft).getPath();
     HStoreFile refHsf = new HStoreFile(this.fs, ref, conf, cacheConf, BloomType.NONE, true, sft);
     // starts reader for the ref. The ref should resolve to the original file blocks
     // and not duplicate blocks in the cache.

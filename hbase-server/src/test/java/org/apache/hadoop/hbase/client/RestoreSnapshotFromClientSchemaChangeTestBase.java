@@ -23,6 +23,7 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
@@ -32,9 +33,14 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class RestoreSnapshotFromClientSchemaChangeTestBase
   extends RestoreSnapshotFromClientTestBase {
+
+  private static final Logger LOG =
+    LoggerFactory.getLogger(RestoreSnapshotFromClientSchemaChangeTestBase.class);
 
   private Set<String> getFamiliesFromFS(final TableName tableName) throws IOException {
     MasterFileSystem mfs = TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterFileSystem();
@@ -74,8 +80,14 @@ public class RestoreSnapshotFromClientSchemaChangeTestBase
     admin.disableTable(tableName);
     admin.snapshot(snapshotName2, tableName);
 
+    System.out.println("check data immediately before restore : + with sft ");
+    CommonFSUtils.logFileSystemState(FileSystem.get(TEST_UTIL.getConfiguration()),
+      TEST_UTIL.getDefaultRootDirPath(), LOG);
     // Restore the snapshot (without the cf)
     admin.restoreSnapshot(snapshotName0);
+    System.out.println("check data immediately after restore : + with sft ");
+    CommonFSUtils.logFileSystemState(FileSystem.get(TEST_UTIL.getConfiguration()),
+      TEST_UTIL.getDefaultRootDirPath(), LOG);
     admin.enableTable(tableName);
     assertEquals(1, table.getDescriptor().getColumnFamilyCount());
     try {

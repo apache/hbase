@@ -23,6 +23,7 @@ import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -219,6 +220,11 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
     return reference;
   }
 
+  @Override
+  public Reference createAndCommitReference(Reference reference, Path path) throws IOException {
+    return createReference(reference, path);
+  }
+
   /**
    * Returns true if the specified family has reference files
    * @param familyName Column Family Name
@@ -324,7 +330,19 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
       isPrimaryReplica);
   }
 
-  public String createHFileLink(final TableName linkedTable, final String linkedRegion,
+  public HFileLink createAndCommitHFileLink(final TableName linkedTable, final String linkedRegion,
+    final String hfileName, final boolean createBackRef) throws IOException {
+    HFileLink hFileLink = createHFileLink(linkedTable, linkedRegion, hfileName, createBackRef);
+    Path path = new Path(ctx.getFamilyStoreDirectoryPath(),
+      HFileLink.createHFileLinkName(linkedTable, linkedRegion, hfileName));
+    StoreFileInfo storeFileInfo =
+      new StoreFileInfo(conf, this.ctx.getRegionFileSystem().getFileSystem(), path, hFileLink);
+    add(Arrays.asList(storeFileInfo));
+    System.out.println("Created hfilelink " + path.toString());
+    return hFileLink;
+  }
+
+  public HFileLink createHFileLink(final TableName linkedTable, final String linkedRegion,
     final String hfileName, final boolean createBackRef) throws IOException {
     String name = HFileLink.createHFileLinkName(linkedTable, linkedRegion, hfileName);
     String refName = HFileLink.createBackReferenceName(ctx.getTableName().toString(),
@@ -349,7 +367,8 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
     try {
       // Create the link
       if (fs.createNewFile(new Path(ctx.getFamilyStoreDirectoryPath(), name))) {
-        return name;
+        return new HFileLink(new Path(ctx.getFamilyStoreDirectoryPath(), name), backRefPath, null,
+          archiveStoreDir);
       }
     } catch (IOException e) {
       LOG.error("couldn't create the link=" + name + " for " + ctx.getFamilyStoreDirectoryPath(),
@@ -365,7 +384,7 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
 
   }
 
-  public String createFromHFileLink(final String hfileLinkName, final boolean createBackRef)
+  public HFileLink createFromHFileLink(final String hfileLinkName, final boolean createBackRef)
     throws IOException {
     Matcher m = HFileLink.LINK_NAME_PATTERN.matcher(hfileLinkName);
     if (!m.matches()) {

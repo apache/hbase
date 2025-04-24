@@ -176,11 +176,34 @@ public class StoreFileInfo implements Configurable {
    * @param conf       The {@link Configuration} to use
    * @param fs         The current file system to use
    * @param fileStatus The {@link FileStatus} of the file
+   */
+  public StoreFileInfo(final Configuration conf, final FileSystem fs, final Path initiaPath,
+    final HFileLink link) {
+    this(conf, fs, initiaPath, null, link);
+  }
+
+  /**
+   * Create a Store File Info from an HFileLink
+   * @param conf       The {@link Configuration} to use
+   * @param fs         The current file system to use
+   * @param fileStatus The {@link FileStatus} of the file
    * @param reference  The reference instance
    */
   public StoreFileInfo(final Configuration conf, final FileSystem fs, final FileStatus fileStatus,
     final Reference reference) {
     this(conf, fs, fileStatus, reference, null);
+  }
+
+  /**
+   * Create a Store File Info from an HFileLink
+   * @param conf       The {@link Configuration} to use
+   * @param fs         The current file system to use
+   * @param fileStatus The {@link FileStatus} of the file
+   * @param reference  The reference instance
+   */
+  public StoreFileInfo(final Configuration conf, final FileSystem fs, final Path initialPath,
+    final Reference reference) {
+    this(conf, fs, initialPath, reference, null);
   }
 
   /**
@@ -198,6 +221,26 @@ public class StoreFileInfo implements Configurable {
     this.primaryReplica = false;
     this.initialPath = (fileStatus == null) ? null : fileStatus.getPath();
     this.createdTimestamp = (fileStatus == null) ? 0 : fileStatus.getModificationTime();
+    this.reference = reference;
+    this.link = link;
+    this.noReadahead =
+      this.conf.getBoolean(STORE_FILE_READER_NO_READAHEAD, DEFAULT_STORE_FILE_READER_NO_READAHEAD);
+  }
+
+  /**
+   * Create a Store File Info from an HFileLink and a Reference
+   * @param conf       The {@link Configuration} to use
+   * @param fs         The current file system to use
+   * @param fileStatus The {@link FileStatus} of the file
+   * @param reference  The reference instance
+   * @param link       The link instance
+   */
+  public StoreFileInfo(final Configuration conf, final FileSystem fs, final Path path,
+    final Reference reference, final HFileLink link) {
+    this.fs = fs;
+    this.conf = conf;
+    this.primaryReplica = false;
+    this.initialPath = path;
     this.reference = reference;
     this.link = link;
     this.noReadahead =
@@ -603,10 +646,15 @@ public class StoreFileInfo implements Configurable {
    * @return <tt>true</tt> if the file could be a valid store file, <tt>false</tt> otherwise
    */
   public static boolean validateStoreFileName(final String fileName) {
-    if (HFileLink.isHFileLink(fileName) || isReference(fileName)) {
+    if (HFileLink.isHFileLink(fileName) || isReference(fileName) || isMobFileLink(fileName)) {
       return true;
     }
     return !fileName.contains("-");
+  }
+
+  private static boolean isMobFileLink(String fileName) {
+    Matcher m = HFileLink.REF_OR_HFILE_LINK_PATTERN.matcher(fileName);
+    return m.matches();
   }
 
   /**
@@ -624,7 +672,7 @@ public class StoreFileInfo implements Configurable {
     // Check for empty hfile. Should never be the case but can happen
     // after data loss in hdfs for whatever reason (upgrade, etc.): HBASE-646
     // NOTE: that the HFileLink is just a name, so it's an empty file.
-    if (!HFileLink.isHFileLink(p) && fileStatus.getLen() <= 0) {
+    if (!HFileLink.isHFileLink(p) && fileStatus.getLen() <= 0 && !isMobFileLink(p.getName())) {
       LOG.warn("Skipping {} because it is empty. HBASE-646 DATA LOSS?", p);
       return false;
     }
