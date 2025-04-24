@@ -17,13 +17,15 @@
  */
 package org.apache.hadoop.hbase.client.metrics;
 
-import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.ScanMetricsHolder;
+import org.apache.hadoop.hbase.client.ScanMetricsRegionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
-
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 
 /**
@@ -35,18 +37,32 @@ public class ServerSideScanMetrics {
   /**
    * Hash to hold the String -&gt; Atomic Long mappings for each metric
    */
-  protected final Map<String, AtomicLong> counters = new HashMap<>();
-  private ServerName serverName;
-  private String encodedRegionName;
+  private List<ScanMetricsHolder> scanMetricsHolders = new ArrayList<>();
+  private ScanMetricsHolder currentScanMetricsHolder;
+
+  public ServerSideScanMetrics() {
+    createScanMetricsHolderInternal();
+  }
+
+  public void createScanMetricsHolder() {
+    createScanMetricsHolderInternal();
+  }
+
+  private void createScanMetricsHolderInternal() {
+    currentScanMetricsHolder = new ScanMetricsHolder();
+    scanMetricsHolders.add(currentScanMetricsHolder);
+    countOfRowsScanned = createCounter(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME);
+    countOfRowsFiltered = createCounter(COUNT_OF_ROWS_FILTERED_KEY_METRIC_NAME);
+    countOfBlockBytesScanned = createCounter(BLOCK_BYTES_SCANNED_KEY_METRIC_NAME);
+    fsReadTime = createCounter(FS_READ_TIME_METRIC_NAME);
+  }
 
   /**
    * Create a new counter with the specified name
    * @return {@link AtomicLong} instance for the counter with counterName
    */
   protected AtomicLong createCounter(String counterName) {
-    AtomicLong c = new AtomicLong(0);
-    counters.put(counterName, c);
-    return c;
+    return currentScanMetricsHolder.createCounter(counterName);
   }
 
   public static final String COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME = "ROWS_SCANNED";
@@ -59,42 +75,34 @@ public class ServerSideScanMetrics {
   /**
    * number of rows filtered during scan RPC
    */
-  public final AtomicLong countOfRowsFiltered =
-    createCounter(COUNT_OF_ROWS_FILTERED_KEY_METRIC_NAME);
+  public AtomicLong countOfRowsFiltered;
 
   /**
    * number of rows scanned during scan RPC. Not every row scanned will be returned to the client
    * since rows may be filtered.
    */
-  public final AtomicLong countOfRowsScanned = createCounter(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME);
+  public AtomicLong countOfRowsScanned;
 
-  public final AtomicLong countOfBlockBytesScanned =
-    createCounter(BLOCK_BYTES_SCANNED_KEY_METRIC_NAME);
+  public AtomicLong countOfBlockBytesScanned;
 
-  public final AtomicLong fsReadTime = createCounter(FS_READ_TIME_METRIC_NAME);
+  public AtomicLong fsReadTime;
 
   public void setCounter(String counterName, long value) {
-    AtomicLong c = this.counters.get(counterName);
-    if (c != null) {
-      c.set(value);
-    }
+    currentScanMetricsHolder.setCounter(counterName, value);
   }
 
   /** Returns true if a counter exists with the counterName */
   public boolean hasCounter(String counterName) {
-    return this.counters.containsKey(counterName);
+    return currentScanMetricsHolder.hasCounter(counterName);
   }
 
   /** Returns {@link AtomicLong} instance for this counter name, null if counter does not exist. */
   public AtomicLong getCounter(String counterName) {
-    return this.counters.get(counterName);
+    return currentScanMetricsHolder.getCounter(counterName);
   }
 
   public void addToCounter(String counterName, long delta) {
-    AtomicLong c = this.counters.get(counterName);
-    if (c != null) {
-      c.addAndGet(delta);
-    }
+    currentScanMetricsHolder.addToCounter(counterName, delta);
   }
 
   /**
@@ -103,7 +111,7 @@ public class ServerSideScanMetrics {
    * @return A Map of String -&gt; Long for metrics
    */
   public Map<String, Long> getMetricsMap() {
-    return getMetricsMap(true);
+    return currentScanMetricsHolder.getMetricsMap(true);
   }
 
   /**
@@ -112,73 +120,33 @@ public class ServerSideScanMetrics {
    * @return A Map of String -&gt; Long for metrics
    */
   public Map<String, Long> getMetricsMap(boolean reset) {
+    return currentScanMetricsHolder.getMetricsMap(reset);
+  }
+
+  public Map<ScanMetricsRegionInfo, Map<String, Long>> getMetricsMapByRegion() {
+    return getMetricsMapByRegion(true);
+  }
+
+  public Map<ScanMetricsRegionInfo, Map<String, Long>> getMetricsMapByRegion(boolean reset) {
     // Create a builder
-    ImmutableMap.Builder<String, Long> builder = ImmutableMap.builder();
-    for (Map.Entry<String, AtomicLong> e : this.counters.entrySet()) {
-      long value = reset ? e.getValue().getAndSet(0) : e.getValue().get();
-      builder.put(e.getKey(), value);
+    ImmutableMap.Builder<ScanMetricsRegionInfo, Map<String, Long>> builder = ImmutableMap.builder();
+    for (ScanMetricsHolder scanMetricsHolder : scanMetricsHolders) {
+      builder.put(scanMetricsHolder.getScanMetricsRegionInfo(),
+        scanMetricsHolder.getMetricsMap(reset));
     }
-    // Build the immutable map so that people can't mess around with it.
     return builder.build();
-  }
-
-  public ServerName getServerName() {
-    return this.serverName;
-  }
-
-  public void setServerName(ServerName serverName) {
-    if (this.serverName == null) {
-      this.serverName = serverName;
-    }
-  }
-
-  public void setEncodedRegionName(String encodedRegionName) {
-    if (this.encodedRegionName == null) {
-      this.encodedRegionName = encodedRegionName;
-    }
-  }
-
-  public String getEncodedRegionName() {
-    return this.encodedRegionName;
   }
 
   @Override
   public String toString() {
-    StringBuilder sb = new StringBuilder();
-    sb.append("ServerName:");
-    sb.append(this.serverName);
-    sb.append(",EncodedRegion:");
-    sb.append(this.encodedRegionName);
-    sb.append(",[");
-    boolean isFirstMetric = true;
-    for (Map.Entry<String, AtomicLong> e : this.counters.entrySet()) {
-      if (isFirstMetric) {
-        isFirstMetric = false;
-      } else {
-        sb.append(",");
-      }
-      sb.append(e.getKey());
-      sb.append(":");
-      sb.append(e.getValue().get());
+    ToStringBuilder tsb = new ToStringBuilder(this);
+    for (ScanMetricsHolder h : scanMetricsHolders) {
+      tsb.append(h.toString());
     }
-    sb.append("]");
-    return sb.toString();
+    return tsb.toString();
   }
 
-  public void combineMetrics(ScanMetrics other) {
-    for (Map.Entry<String, AtomicLong> entry : other.counters.entrySet()) {
-      String counterName = entry.getKey();
-      AtomicLong counter = entry.getValue();
-      this.addToCounter(counterName, counter.get());
-    }
-    if (
-      this.encodedRegionName != null
-        && !Objects.equals(this.encodedRegionName, other.getEncodedRegionName())
-    ) {
-      this.encodedRegionName = null;
-    }
-    if (this.serverName != null && !Objects.equals(this.serverName, other.getServerName())) {
-      this.serverName = null;
-    }
+  public void initScanMetricsRegionInfo(ServerName serverName, String encodedRegionName) {
+    currentScanMetricsHolder.initScanMetricsRegionInfo(serverName, encodedRegionName);
   }
 }
