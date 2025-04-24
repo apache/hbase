@@ -34,8 +34,9 @@ import java.util.concurrent.locks.ReentrantLock;
 @InterfaceAudience.Private
 public class ManagedKeyDataCache {
   private final Map<String, ManagedKeyData> cache;
-  private final Map<String, Map<Bytes, List<ManagedKeyData>>> prefixCache;
+  private final Map<String, Map<Bytes, Map<String,ManagedKeyData>>> prefixCache;
   private final ReentrantLock lock;
+  private int nEntries;
 
   public ManagedKeyDataCache() {
     this.prefixCache = new HashMap<>();
@@ -56,19 +57,16 @@ public class ManagedKeyDataCache {
 
       cache.put(keyData.getKeyMetadata(), keyData);
 
-      Map<Bytes, List<ManagedKeyData>> nsCache = prefixCache.get(keyNamespace);
-      if (nsCache == null) {
-        nsCache = new HashMap<>();
-        prefixCache.put(keyNamespace, nsCache);
-      }
+      Map<Bytes, Map<String, ManagedKeyData>> nsCache = prefixCache.computeIfAbsent(keyNamespace,
+        k -> new HashMap<>());
+      Map<String, ManagedKeyData> keyMap = nsCache.computeIfAbsent(keyCust,
+        k -> new HashMap<>());
 
-      List<ManagedKeyData> keyList = nsCache.get(keyCust);
-      if (keyList == null) {
-        keyList = new ArrayList<>();
-        prefixCache.get(keyNamespace).put(keyCust, keyList);
+      int prevSize = keyMap.size();
+      keyMap.put(keyData.getKeyMetadata(), keyData);
+      if (keyMap.size() != prevSize) {
+        ++nEntries;
       }
-
-      keyList.add(keyData);
     } finally {
       lock.unlock();
     }
@@ -102,19 +100,27 @@ public class ManagedKeyDataCache {
       if (removedEntry != null) {
         Bytes keyCust = new Bytes(removedEntry.getKeyCustodian());
         String keyNamespace = removedEntry.getKeyNamespace();
-        Map<Bytes, List<ManagedKeyData>> nsCache = prefixCache.get(keyNamespace);
-        List<ManagedKeyData> keyList = nsCache != null ? nsCache.get(keyCust) : null;
-        if (keyList != null) {
-          keyList.remove(removedEntry);
-          if (keyList.isEmpty()) {
-            prefixCache.get(keyNamespace).remove(keyCust);
-          }
+        Map<Bytes, Map<String, ManagedKeyData>> nsCache = prefixCache.get(keyNamespace);
+        Map<String, ManagedKeyData> keyMap = nsCache.get(keyCust);
+        keyMap.remove(removedEntry.getKeyMetadata());
+        if (keyMap.isEmpty()) {
+          nsCache.remove(keyCust);
         }
+      }
+      if (removedEntry != null) {
+        --nEntries;
       }
       return removedEntry;
     } finally {
       lock.unlock();
     }
+  }
+
+  /**
+   * @return the approximate number of entries in the cache.
+   */
+  public int getEntryCount() {
+    return nEntries;
   }
 
   /**
@@ -132,10 +138,10 @@ public class ManagedKeyDataCache {
       List<ManagedKeyData> activeEntries = new ArrayList<>();
 
       Bytes keyCust = new Bytes(key_cust);
-      Map<Bytes, List<ManagedKeyData>> nsCache = prefixCache.get(keyNamespace);
-      List<ManagedKeyData> keyList = nsCache != null ? nsCache.get(keyCust) : null;
-      if (keyList != null) {
-        for (ManagedKeyData entry : keyList) {
+      Map<Bytes, Map<String, ManagedKeyData>> nsCache = prefixCache.get(keyNamespace);
+      Map<String, ManagedKeyData> keyMap = nsCache != null ? nsCache.get(keyCust) : null;
+      if (keyMap != null) {
+        for (ManagedKeyData entry : keyMap.values()) {
           if (entry.getKeyStatus() == ManagedKeyStatus.ACTIVE) {
             activeEntries.add(entry);
           }

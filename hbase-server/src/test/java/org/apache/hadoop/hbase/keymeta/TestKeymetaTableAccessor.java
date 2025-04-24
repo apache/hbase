@@ -101,11 +101,11 @@ public class TestKeymetaTableAccessor {
   protected MockManagedKeyProvider managedKeyProvider;
   protected ManagedKeyData latestSystemKey;
 
-  private AutoCloseable closeable;
+  private AutoCloseable closeableMocks;
 
   @Before
   public void setUp() throws Exception {
-    closeable = MockitoAnnotations.openMocks(this);
+    closeableMocks = MockitoAnnotations.openMocks(this);
 
     conf.set(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, "true");
     conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, MockManagedKeyProvider.class.getName());
@@ -126,7 +126,7 @@ public class TestKeymetaTableAccessor {
 
   @After
   public void tearDown() throws Exception {
-    closeable.close();
+    closeableMocks.close();
   }
 
   @RunWith(Parameterized.class)
