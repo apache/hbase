@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.io.compress;
 
+import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import org.apache.hadoop.hbase.nio.ByteBuff;
@@ -44,5 +45,12 @@ public interface ByteBuffDecompressor extends Closeable {
    * combinations of these, so always check.
    */
   boolean canDecompress(ByteBuff output, ByteBuff input);
+
+  /**
+   * Call before every use of {@link #canDecompress(ByteBuff, ByteBuff)} and
+   * {@link #decompress(ByteBuff, ByteBuff, int)} to reinitialize the decompressor with settings
+   * from the HFileInfo. This can matter because ByteBuffDecompressors are reused many times.
+   */
+  void reinit(@Nullable Compression.HFileDecompressionContext newHFileDecompressionContext);
 
 }
