@@ -58,7 +58,7 @@ public class CodecPool {
     NavigableSet<ByteBuffDecompressor>> BYTE_BUFF_DECOMPRESSOR_POOL = new ConcurrentHashMap<>();
 
   private static <T> LoadingCache<Class<T>, AtomicInteger> createCache() {
-    return CacheBuilder.newBuilder().build(new CacheLoader<>() {
+    return CacheBuilder.newBuilder().build(new CacheLoader<Class<T>, AtomicInteger>() {
       @Override
       public AtomicInteger load(Class<T> key) throws Exception {
         return new AtomicInteger();
