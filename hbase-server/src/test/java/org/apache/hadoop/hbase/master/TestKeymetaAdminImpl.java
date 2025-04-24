@@ -74,7 +74,7 @@ public class TestKeymetaAdminImpl {
   KeymetaTableAccessor mockAccessor = mock(KeymetaTableAccessor.class);
 
   @Before
-  public void setUp() throws IOException {
+  public void setUp() throws Exception {
     conf = TEST_UTIL.getConfiguration();
     testRootDir = TEST_UTIL.getDataTestDir(name.getMethodName());
     fs = testRootDir.getFileSystem(conf);
@@ -95,7 +95,7 @@ public class TestKeymetaAdminImpl {
       HBaseClassTestRule.forClass(TestWhenDisabled.class);
 
     @Override
-    public void setUp() throws IOException {
+    public void setUp() throws Exception {
       super.setUp();
       conf.set(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, "false");
     }
@@ -139,7 +139,7 @@ public class TestKeymetaAdminImpl {
     }
 
     @Override
-    public void setUp() throws IOException {
+    public void setUp() throws Exception {
       super.setUp();
       conf.set(HConstants.CRYPTO_MANAGED_KEYS_PER_CUST_ACTIVE_KEY_COUNT,
         Integer.toString(nKeys));
@@ -177,7 +177,7 @@ public class TestKeymetaAdminImpl {
       HBaseClassTestRule.forClass(TestKeymetaAdminImpl.TestMultiKeyGen.class);
 
     @Override
-    public void setUp() throws IOException {
+    public void setUp() throws Exception {
       super.setUp();
       conf.set(HConstants.CRYPTO_MANAGED_KEYS_PER_CUST_ACTIVE_KEY_COUNT, "3");
       MockManagedKeyProvider managedKeyProvider =

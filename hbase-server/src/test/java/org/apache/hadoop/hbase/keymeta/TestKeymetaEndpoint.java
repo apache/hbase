@@ -51,14 +51,11 @@ import static org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.Manag
 import static org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.ManagedKeyStatus.KEY_FAILED;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -204,8 +201,8 @@ public class TestKeymetaEndpoint {
     assertNotNull(result.getStatusList());
     assertEquals(2, result.getStatusList().size());
     assertEquals(ManagedKeyStatus.KEY_ACTIVE, result.getStatusList().get(0).getKeyStatus());
-    assertTrue(Bytes.compareTo(keyData1.getKeyCustodian(),
-      result.getStatusList().get(0).getKeyCustBytes().toByteArray()) == 0);
+    assertEquals(0, Bytes.compareTo(keyData1.getKeyCustodian(),
+      result.getStatusList().get(0).getKeyCustBytes().toByteArray()));
     assertEquals(keyData1.getKeyNamespace(), result.getStatusList().get(0).getKeyNamespace());
     verify(controller, never()).setFailed(anyString());
   }

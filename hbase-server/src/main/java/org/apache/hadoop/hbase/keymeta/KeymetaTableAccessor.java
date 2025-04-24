@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.keymeta;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -123,7 +124,7 @@ public class KeymetaTableAccessor extends KeyManagementBase {
       ResultScanner scanner = table.getScanner(scan);
       List<ManagedKeyData> allKeys = new ArrayList<>();
       for (Result result : scanner) {
-        ManagedKeyData keyData = parseFromResult(key_cust, keyNamespace, result);
+        ManagedKeyData keyData = parseFromResult(server, key_cust, keyNamespace, result);
         if (keyData != null) {
           allKeys.add(keyData);
         }
@@ -171,7 +172,7 @@ public class KeymetaTableAccessor extends KeyManagementBase {
       byte[] rowKey = constructRowKeyForMetadata(key_cust, keyNamespace,
         ManagedKeyData.constructMetadataHash(keyMetadata));
       Result result = table.get(new Get(rowKey));
-      return parseFromResult(key_cust, keyNamespace, result);
+      return parseFromResult(server, key_cust, keyNamespace, result);
     }
   }
 
@@ -210,13 +211,13 @@ public class KeymetaTableAccessor extends KeyManagementBase {
       put.addColumn(KEY_META_INFO_FAMILY, DEK_CHECKSUM_QUAL_BYTES,
           Bytes.toBytes(keyData.getKeyChecksum()))
          .addColumn(KEY_META_INFO_FAMILY, DEK_WRAPPED_BY_STK_QUAL_BYTES, dekWrappedBySTK)
+         .addColumn(KEY_META_INFO_FAMILY, STK_CHECKSUM_QUAL_BYTES,
+           Bytes.toBytes(latestSystemKey.getKeyChecksum()))
          ;
     }
     return put.setDurability(Durability.SKIP_WAL)
       .setPriority(HConstants.SYSTEMTABLE_QOS)
       .addColumn(KEY_META_INFO_FAMILY, DEK_METADATA_QUAL_BYTES, keyData.getKeyMetadata().getBytes())
-      .addColumn(KEY_META_INFO_FAMILY, STK_CHECKSUM_QUAL_BYTES,
-        Bytes.toBytes(latestSystemKey.getKeyChecksum()))
       .addColumn(KEY_META_INFO_FAMILY, REFRESHED_TIMESTAMP_QUAL_BYTES,
         Bytes.toBytes(keyData.getRefreshTimestamp()))
       .addColumn(KEY_META_INFO_FAMILY, KEY_STATUS_QUAL_BYTES,
@@ -224,26 +225,35 @@ public class KeymetaTableAccessor extends KeyManagementBase {
       ;
   }
 
-  private byte[] constructRowKeyForMetadata(ManagedKeyData keyData) {
+  @VisibleForTesting
+  public static byte[] constructRowKeyForMetadata(ManagedKeyData keyData) {
     return constructRowKeyForMetadata(keyData.getKeyCustodian(), keyData.getKeyNamespace(),
       keyData.getKeyMetadataHash());
   }
 
-  private static byte[] constructRowKeyForMetadata(byte[] key_cust, String keyNamespace,
+  @VisibleForTesting
+  public static byte[] constructRowKeyForMetadata(byte[] key_cust, String keyNamespace,
       byte[] keyMetadataHash) {
     int prefixLength = key_cust.length;
     return Bytes.add(Bytes.toBytes(prefixLength), key_cust, Bytes.toBytesBinary(keyNamespace),
       keyMetadataHash);
   }
 
-  private ManagedKeyData parseFromResult(byte[] key_cust, String keyNamespace, Result result)
-    throws IOException, KeyException {
+  @VisibleForTesting
+  public static ManagedKeyData parseFromResult(Server server, byte[] key_cust, String keyNamespace,
+      Result result) throws IOException, KeyException {
     if (result == null || result.isEmpty()) {
       return null;
     }
+    ManagedKeyStatus keyStatus = ManagedKeyStatus.forValue(
+      result.getValue(KEY_META_INFO_FAMILY, KEY_STATUS_QUAL_BYTES)[0]);
     String dekMetadata = Bytes.toString(result.getValue(KEY_META_INFO_FAMILY,
       DEK_METADATA_QUAL_BYTES));
     byte[] dekWrappedByStk = result.getValue(KEY_META_INFO_FAMILY, DEK_WRAPPED_BY_STK_QUAL_BYTES);
+    if ((keyStatus == ManagedKeyStatus.ACTIVE || keyStatus == ManagedKeyStatus.INACTIVE)
+        && dekWrappedByStk == null) {
+      throw new IOException(keyStatus + " key must have a wrapped key");
+    }
     Key dek = null;
     if (dekWrappedByStk != null) {
       long stkChecksum =
@@ -257,8 +267,6 @@ public class KeymetaTableAccessor extends KeyManagementBase {
       dek = EncryptionUtil.unwrapKey(server.getConfiguration(), null, dekWrappedByStk,
         clusterKey.getTheKey());
     }
-    ManagedKeyStatus keyStatus = ManagedKeyStatus.forValue(
-      result.getValue(KEY_META_INFO_FAMILY, KEY_STATUS_QUAL_BYTES)[0]);
     long refreshedTimestamp = Bytes.toLong(result.getValue(KEY_META_INFO_FAMILY,
       REFRESHED_TIMESTAMP_QUAL_BYTES));
     byte[] readOpValue = result.getValue(KEY_META_INFO_FAMILY, READ_OP_COUNT_QUAL_BYTES);
