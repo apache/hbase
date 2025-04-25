@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.backup;
 
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -30,7 +31,8 @@ public interface BackupRestoreConstants {
    * Backup/Restore constants
    */
   String BACKUP_SYSTEM_TABLE_NAME_KEY = "hbase.backup.system.table.name";
-  String BACKUP_SYSTEM_TABLE_NAME_DEFAULT = "backup:system";
+  String BACKUP_SYSTEM_TABLE_NAME_DEFAULT =
+    NamespaceDescriptor.BACKUP_NAMESPACE_NAME_STR + ":system";
 
   String BACKUP_SYSTEM_TTL_KEY = "hbase.backup.system.ttl";
 

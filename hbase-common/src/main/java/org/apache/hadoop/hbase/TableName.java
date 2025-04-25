@@ -100,6 +100,7 @@ public final class TableName implements Comparable<TableName> {
   private final byte[] qualifier;
   private final String qualifierAsString;
   private final boolean systemTable;
+  private final boolean backupsTable;
   private final int hashCode;
 
   /**
@@ -264,6 +265,10 @@ public final class TableName implements Comparable<TableName> {
     return systemTable;
   }
 
+  public boolean isBackupsTable() {
+    return backupsTable;
+  }
+
   @Override
   public String toString() {
     return nameAsString;
@@ -287,6 +292,7 @@ public final class TableName implements Comparable<TableName> {
       this.namespace = NamespaceDescriptor.DEFAULT_NAMESPACE_NAME;
       this.namespaceAsString = NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR;
       this.systemTable = false;
+      this.backupsTable = false;
 
       // The name does not include the namespace when it's the default one.
       this.nameAsString = qualifierAsString;
@@ -296,11 +302,18 @@ public final class TableName implements Comparable<TableName> {
         this.namespace = NamespaceDescriptor.SYSTEM_NAMESPACE_NAME;
         this.namespaceAsString = NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR;
         this.systemTable = true;
+        this.backupsTable = false;
+      } else if (Bytes.equals(NamespaceDescriptor.BACKUP_NAMESPACE_NAME, namespace)) {
+        this.namespace = NamespaceDescriptor.BACKUP_NAMESPACE_NAME;
+        this.namespaceAsString = NamespaceDescriptor.BACKUP_NAMESPACE_NAME_STR;
+        this.systemTable = true;
+        this.backupsTable = true;
       } else {
         this.namespace = new byte[namespace.remaining()];
         namespace.duplicate().get(this.namespace);
         this.namespaceAsString = Bytes.toString(this.namespace);
         this.systemTable = false;
+        this.backupsTable = false;
       }
       this.nameAsString = namespaceAsString + NAMESPACE_DELIM + qualifierAsString;
       this.name = Bytes.toBytes(nameAsString);
@@ -320,6 +333,7 @@ public final class TableName implements Comparable<TableName> {
     this.namespace = NamespaceDescriptor.SYSTEM_NAMESPACE_NAME;
     this.namespaceAsString = NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR;
     this.systemTable = true;
+    this.backupsTable = false;
 
     // WARNING: nameAsString is different than name for old meta & root!
     // This is by design.
