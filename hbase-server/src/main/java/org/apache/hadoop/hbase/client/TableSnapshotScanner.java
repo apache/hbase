@@ -134,7 +134,7 @@ public class TableSnapshotScanner extends AbstractClientScanner {
       openWithRestoringSnapshot();
     }
 
-    initScanMetricsByRegion(scan);
+    initScanMetrics(scan);
   }
 
   private void openWithoutRestoringSnapshot() throws IOException {
@@ -184,7 +184,7 @@ public class TableSnapshotScanner extends AbstractClientScanner {
         }
 
         RegionInfo hri = regions.get(currentRegion);
-        initScanMetrics(scan);
+        scanMetrics.createScanMetricsHolder();
         currentRegionScanner =
           new ClientSideRegionScanner(conf, fs, restoreDir, htd, hri, scan, scanMetrics);
         if (this.scanMetrics != null) {

@@ -103,6 +103,9 @@ public class ScanMetrics extends ServerSideScanMetrics {
 
   @Override
   public void createScanMetricsHolder() {
+    if (isFirstRegion()) {
+      return;
+    }
     super.createScanMetricsHolder();
     createScanMetricsHolderInternal();
   }

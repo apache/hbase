@@ -122,15 +122,8 @@ class AsyncClientScanner {
     this.resultCache = createScanResultCache(scan);
     this.requestAttributes = requestAttributes;
     if (scan.isScanMetricsEnabled()) {
-      if (scan.isScanMetricsByRegionEnabled()) {
-        // When scan metrics per region is enabled we will create scan metrics while calling
-        // openScanner.
-        this.scanMetricByRegion = new ArrayList<>();
-        consumer.onScanMetricsByRegionEnabled(scanMetricByRegion);
-      } else {
-        this.scanMetrics = new ScanMetrics();
-        consumer.onScanMetricsCreated(scanMetrics);
-      }
+      this.scanMetrics = new ScanMetrics();
+      consumer.onScanMetricsCreated(scanMetrics);
     } else {
       this.scanMetrics = null;
     }
@@ -176,8 +169,8 @@ class AsyncClientScanner {
     HRegionLocation loc, ClientService.Interface stub) {
     try (Scope ignored = span.makeCurrent()) {
       if (this.scanMetrics != null && scan.isScanMetricsByRegionEnabled()) {
-        this.scanMetrics.setServerName(loc.getServerName());
-        this.scanMetrics.setEncodedRegionName(loc.getRegion().getEncodedName());
+        this.scanMetrics.initScanMetricsRegionInfo(
+          loc.getServerName(), loc.getRegion().getEncodedName());
       }
       boolean isRegionServerRemote = isRemote(loc.getHostname());
       incRPCCallsMetrics(scanMetrics, isRegionServerRemote);
@@ -264,11 +257,10 @@ class AsyncClientScanner {
   }
 
   private void openScanner() {
-    if (scan.isScanMetricsEnabled() && scan.isScanMetricsByRegionEnabled()) {
-      this.scanMetrics = new ScanMetrics();
-      this.scanMetricByRegion.add(this.scanMetrics);
-    }
     incRegionCountMetrics(scanMetrics);
+    if (this.scanMetrics != null && this.scan.isScanMetricsByRegionEnabled()) {
+      scanMetrics.createScanMetricsHolder();
+    }
     openScannerTries.set(1);
     addListener(timelineConsistentRead(conn.getLocator(), tableName, scan, scan.getStartRow(),
       getLocateType(scan), this::openScanner, rpcTimeoutNs, getPrimaryTimeoutNs(), retryTimer,

@@ -78,11 +78,6 @@ class RegionScannerAsResultScanner implements ResultScanner {
   }
 
   @Override
-  public List<ScanMetrics> getScanMetricsByRegion() {
-    return null;
-  }
-
-  @Override
   public void close() {
     try {
       scanner.close();

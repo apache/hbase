@@ -116,7 +116,7 @@ public class Scan extends Query {
   // scan.setAttribute(Scan.SCAN_ATTRIBUTES_TABLE_NAME, Bytes.toBytes(tableName))
   static public final String SCAN_ATTRIBUTES_TABLE_NAME = "scan.attributes.table.name";
   static private final String SCAN_ATTRIBUTES_METRICS_BY_REGION_ENABLE =
-    "scan.attributes.metrics.byRegion.enable";
+    "scan.attributes.metrics.byregion.enable";
 
   /**
    * -1 means no caching specified and the value of {@link HConstants#HBASE_CLIENT_SCANNER_CACHING}
@@ -1034,8 +1034,7 @@ public class Scan extends Query {
   }
 
   public Scan setEnableScanMetricsByRegion(final boolean enable) {
-    setAttribute(Scan.SCAN_ATTRIBUTES_METRICS_BY_REGION_ENABLE,
-      Bytes.toBytes(Boolean.valueOf(enable)));
+    setAttribute(Scan.SCAN_ATTRIBUTES_METRICS_BY_REGION_ENABLE, Bytes.toBytes(enable));
     return this;
   }
 

@@ -39,12 +39,16 @@ public class ServerSideScanMetrics {
    */
   private List<ScanMetricsHolder> scanMetricsHolders = new ArrayList<>();
   private ScanMetricsHolder currentScanMetricsHolder;
+  private boolean isFirstRegion = true;
 
   public ServerSideScanMetrics() {
     createScanMetricsHolderInternal();
   }
 
   public void createScanMetricsHolder() {
+    if (isFirstRegion()) {
+      return;
+    }
     createScanMetricsHolderInternal();
   }
 
@@ -148,5 +152,11 @@ public class ServerSideScanMetrics {
 
   public void initScanMetricsRegionInfo(ServerName serverName, String encodedRegionName) {
     currentScanMetricsHolder.initScanMetricsRegionInfo(serverName, encodedRegionName);
+  }
+
+  protected boolean isFirstRegion() {
+    boolean tmpIsFirstRegion = isFirstRegion;
+    isFirstRegion = false;
+    return tmpIsFirstRegion;
   }
 }

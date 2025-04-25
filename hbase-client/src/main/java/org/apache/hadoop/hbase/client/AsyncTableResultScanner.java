@@ -23,7 +23,6 @@ import io.opentelemetry.api.trace.Span;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayDeque;
-import java.util.List;
 import java.util.Queue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.AsyncScanSingleRegionRpcRetryingCaller.ScanResumerImpl;
@@ -63,7 +62,6 @@ class AsyncTableResultScanner implements ResultScanner, AdvancedScanResultConsum
 
   // Used to pass the span instance to the `AsyncTableImpl` from its underlying `rawAsyncTable`.
   private Span span = null;
-  private List<ScanMetrics> scanMetricsByRegion;
 
   public AsyncTableResultScanner(TableName tableName, Scan scan, long maxCacheSize) {
     this.tableName = tableName;
@@ -213,30 +211,7 @@ class AsyncTableResultScanner implements ResultScanner, AdvancedScanResultConsum
 
   @Override
   public ScanMetrics getScanMetrics() {
-    if (scanMetricsByRegion != null) {
-      if (scanMetricsByRegion.isEmpty()) {
-        return null;
-      } else if (scanMetricsByRegion.size() == 1) {
-        return scanMetricsByRegion.get(0);
-      }
-      ScanMetrics overallScanMetrics = new ScanMetrics();
-      for (ScanMetrics otherScanMetrics : scanMetricsByRegion) {
-        overallScanMetrics.combineMetrics(otherScanMetrics);
-      }
-      return overallScanMetrics;
-    } else {
-      return scanMetrics;
-    }
-  }
-
-  @Override
-  public void onScanMetricsByRegionEnabled(List<ScanMetrics> scanMetricsByRegion) {
-    this.scanMetricsByRegion = scanMetricsByRegion;
-  }
-
-  @Override
-  public List<ScanMetrics> getScanMetricsByRegion() {
-    return scanMetricsByRegion;
+    return scanMetrics;
   }
 
   int getCacheSize() {

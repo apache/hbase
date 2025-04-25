@@ -28,8 +28,4 @@ public interface SimpleScanResultConsumer extends ScanResultConsumer {
   List<Result> getAll() throws Exception;
 
   ScanMetrics getScanMetrics();
-
-  default List<ScanMetrics> getScanMetricsByRegion() {
-    throw new UnsupportedOperationException("Scan metrics by region not supported!!");
-  }
 }

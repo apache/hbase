@@ -23,6 +23,10 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Public
 public class ScanMetricsRegionInfo {
+  /**
+   * Users should only compare against this constant by reference and should not make any
+   * assumptions regarding content of the constant.
+   */
   public static final ScanMetricsRegionInfo EMPTY_SCAN_METRICS_REGION_INFO =
     new ScanMetricsRegionInfo(null, null);
 
