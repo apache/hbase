@@ -900,6 +900,22 @@ public class BucketCache implements BlockCache, HeapSize {
     return false;
   }
 
+  /**
+   * Since HBASE-29249, the following properties governin freeSpace behaviour and block priorities
+   * were made dynamically configurable: - hbase.bucketcache.acceptfactor -
+   * hbase.bucketcache.minfactor - hbase.bucketcache.extrafreefactor -
+   * hbase.bucketcache.single.factor - hbase.bucketcache.multi.factor -
+   * hbase.bucketcache.multi.factor - hbase.bucketcache.memory.factor The
+   * hbase.bucketcache.queue.addition.waittime property allows for introducing a delay in the
+   * publishing of blocks for the cache writer threads during prefetch reads only (client reads
+   * wouldn't get delayed). It has also been made dynamic configurable since HBASE-29249. The
+   * hbase.bucketcache.persist.intervalinmillis propperty determines the frequency for saving the
+   * persistent cache, and it has also been made dynamically configurable since HBASE-29249. The
+   * hbase.bucketcache.persistence.chunksize property determines the size of the persistent file
+   * splits (due to the limitation of maximum allowed protobuff size), and it has also been made
+   * dynamically configurable since HBASE-29249.
+   * @param config the new configuration to be updated.
+   */
   @Override
   public void onConfigurationChange(Configuration config) {
     this.acceptableFactor = conf.getFloat(ACCEPT_FACTOR_CONFIG_NAME, DEFAULT_ACCEPT_FACTOR);
