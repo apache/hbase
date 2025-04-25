@@ -411,6 +411,10 @@ public class StoreFileInfo implements Configurable {
     return initialPath;
   }
 
+  public String getPathName() {
+    return initialPath.getName();
+  }
+
   /** Returns The {@link FileStatus} of the file */
   public FileStatus getFileStatus() throws IOException {
     return getReferencedFileStatus(fs);

@@ -370,6 +370,10 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
     refreshStoreFilesInternal(fileInfos);
   }
 
+  public List<StoreFileInfo> getStoreFiles() throws IOException {
+    return storeFileTracker.load();
+  }
+
   public void refreshStoreFiles(Collection<String> newFiles) throws IOException {
     List<StoreFileInfo> storeFiles = new ArrayList<>(newFiles.size());
     for (String file : newFiles) {
