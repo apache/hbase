@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
+import org.apache.hadoop.hbase.snapshot.SnapshotRegionSizeCalculator;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.RegionSplitter;
@@ -145,13 +146,19 @@ public class TableSnapshotInputFormatImpl {
     private String[] locations;
     private String scan;
     private String restoreDir;
+    private long length;
 
     // constructor for mapreduce framework / Writable
     public InputSplit() {
     }
 
     public InputSplit(TableDescriptor htd, RegionInfo regionInfo, List<String> locations, Scan scan,
-      Path restoreDir) {
+      Path restoreDir){
+      this(htd, regionInfo, locations, scan, restoreDir, 1);
+    }
+
+    public InputSplit(TableDescriptor htd, RegionInfo regionInfo, List<String> locations, Scan scan,
+      Path restoreDir, long length) {
       this.htd = htd;
       this.regionInfo = regionInfo;
       if (locations == null || locations.isEmpty()) {
@@ -166,6 +173,7 @@ public class TableSnapshotInputFormatImpl {
       }
 
       this.restoreDir = restoreDir.toString();
+      this.length = length;
     }
 
     public TableDescriptor getHtd() {
@@ -181,8 +189,7 @@ public class TableSnapshotInputFormatImpl {
     }
 
     public long getLength() {
-      // TODO: We can obtain the file sizes of the snapshot here.
-      return 0;
+      return length;
     }
 
     public String[] getLocations() {
@@ -440,6 +447,8 @@ public class TableSnapshotInputFormatImpl {
       }
     }
 
+    SnapshotRegionSizeCalculator snapshotRegionSizeCalculator = new SnapshotRegionSizeCalculator(
+      conf, manifest);
     List<InputSplit> splits = new ArrayList<>();
     for (RegionInfo hri : regionManifests) {
       // load region descriptor
@@ -456,6 +465,7 @@ public class TableSnapshotInputFormatImpl {
         }
       }
 
+      long snapshotRegionSize = snapshotRegionSizeCalculator.getRegionSize(hri.getEncodedName());
       if (numSplits > 1) {
         byte[][] sp = sa.split(hri.getStartKey(), hri.getEndKey(), numSplits, true);
         for (int i = 0; i < sp.length - 1; i++) {
@@ -478,7 +488,7 @@ public class TableSnapshotInputFormatImpl {
                 Bytes.compareTo(scan.getStopRow(), sp[i + 1]) < 0 ? scan.getStopRow() : sp[i + 1]);
             }
 
-            splits.add(new InputSplit(htd, hri, hosts, boundedScan, restoreDir));
+            splits.add(new InputSplit(htd, hri, hosts, boundedScan, restoreDir,snapshotRegionSize / numSplits));
           }
         }
       } else {
@@ -487,7 +497,7 @@ public class TableSnapshotInputFormatImpl {
             hri.getEndKey())
         ) {
 
-          splits.add(new InputSplit(htd, hri, hosts, scan, restoreDir));
+          splits.add(new InputSplit(htd, hri, hosts, scan, restoreDir, snapshotRegionSize));
         }
       }
     }
