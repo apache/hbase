@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import edu.umd.cs.findbugs.annotations.Nullable;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HConstants;
@@ -50,6 +52,11 @@ public class HFileContext implements HeapSize, Cloneable {
   private boolean includesTags;
   /** Compression algorithm used **/
   private Compression.Algorithm compressAlgo = Compression.Algorithm.NONE;
+  /**
+   * Details used by compression algorithm that are more efficiently loaded once and then reused
+   **/
+  @Nullable
+  private Compression.HFileDecompressionContext decompressionContext = null;
   /** Whether tags to be compressed or not **/
   private boolean compressTags;
   /** the checksum type **/
@@ -80,6 +87,7 @@ public class HFileContext implements HeapSize, Cloneable {
     this.includesMvcc = context.includesMvcc;
     this.includesTags = context.includesTags;
     this.compressAlgo = context.compressAlgo;
+    this.decompressionContext = context.decompressionContext;
     this.compressTags = context.compressTags;
     this.checksumType = context.checksumType;
     this.bytesPerChecksum = context.bytesPerChecksum;
@@ -95,14 +103,16 @@ public class HFileContext implements HeapSize, Cloneable {
   }
 
   HFileContext(boolean useHBaseChecksum, boolean includesMvcc, boolean includesTags,
-    Compression.Algorithm compressAlgo, boolean compressTags, ChecksumType checksumType,
-    int bytesPerChecksum, int blockSize, DataBlockEncoding encoding,
-    Encryption.Context cryptoContext, long fileCreateTime, String hfileName, byte[] columnFamily,
-    byte[] tableName, CellComparator cellComparator, IndexBlockEncoding indexBlockEncoding) {
+    Compression.Algorithm compressAlgo, Compression.HFileDecompressionContext decompressionContext,
+    boolean compressTags, ChecksumType checksumType, int bytesPerChecksum, int blockSize,
+    DataBlockEncoding encoding, Encryption.Context cryptoContext, long fileCreateTime,
+    String hfileName, byte[] columnFamily, byte[] tableName, CellComparator cellComparator,
+    IndexBlockEncoding indexBlockEncoding) {
     this.usesHBaseChecksum = useHBaseChecksum;
     this.includesMvcc = includesMvcc;
     this.includesTags = includesTags;
     this.compressAlgo = compressAlgo;
+    this.decompressionContext = decompressionContext;
     this.compressTags = compressTags;
     this.checksumType = checksumType;
     this.bytesPerChecksum = bytesPerChecksum;
@@ -138,6 +148,20 @@ public class HFileContext implements HeapSize, Cloneable {
 
   public Compression.Algorithm getCompression() {
     return compressAlgo;
+  }
+
+  /**
+   * Get an object that, if non-null, may be cast into a codec-specific type that exposes some
+   * information from the store-file-specific Configuration that is relevant to decompression. For
+   * example, ZSTD tables can have "hbase.io.compress.zstd.dictionary" on their table descriptor,
+   * and decompressions of blocks in that table must use that dictionary. It's cheaper for HBase to
+   * load these settings into an object of their own once and check this upon each block
+   * decompression, than it is to call into {@link Configuration#get(String)} on each block
+   * decompression.
+   */
+  @Nullable
+  public Compression.HFileDecompressionContext getDecompressionContext() {
+    return decompressionContext;
   }
 
   public boolean isUseHBaseChecksum() {
@@ -237,6 +261,9 @@ public class HFileContext implements HeapSize, Cloneable {
     if (this.tableName != null) {
       size += ClassSize.sizeOfByteArray(this.tableName.length);
     }
+    if (this.decompressionContext != null) {
+      size += this.decompressionContext.heapSize();
+    }
     return size;
   }
 
@@ -273,6 +300,8 @@ public class HFileContext implements HeapSize, Cloneable {
     sb.append(compressAlgo);
     sb.append(", compressTags=");
     sb.append(compressTags);
+    sb.append(", decompressionContext=");
+    sb.append(decompressionContext);
     sb.append(", cryptoContext=[");
     sb.append(cryptoContext);
     sb.append("]");
