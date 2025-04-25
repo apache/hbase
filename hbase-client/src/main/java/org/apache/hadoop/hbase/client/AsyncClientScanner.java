@@ -32,7 +32,6 @@ import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.context.Scope;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -259,7 +258,7 @@ class AsyncClientScanner {
   private void openScanner() {
     incRegionCountMetrics(scanMetrics);
     if (this.scanMetrics != null && this.scan.isScanMetricsByRegionEnabled()) {
-      scanMetrics.createScanMetricsHolder();
+      scanMetrics.moveToNextRegion();
     }
     openScannerTries.set(1);
     addListener(timelineConsistentRead(conn.getLocator(), tableName, scan, scan.getStartRow(),

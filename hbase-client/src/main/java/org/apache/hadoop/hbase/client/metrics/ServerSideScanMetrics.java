@@ -18,13 +18,12 @@
 package org.apache.hadoop.hbase.client.metrics;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
-import org.apache.commons.lang3.builder.ToStringBuilder;
+import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.client.ScanMetricsHolder;
-import org.apache.hadoop.hbase.client.ScanMetricsRegionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 
@@ -37,22 +36,26 @@ public class ServerSideScanMetrics {
   /**
    * Hash to hold the String -&gt; Atomic Long mappings for each metric
    */
-  private List<ScanMetricsHolder> scanMetricsHolders = new ArrayList<>();
+  private final List<ScanMetricsHolder> scanMetricsHolders = new ArrayList<>();
   private ScanMetricsHolder currentScanMetricsHolder;
   private boolean isFirstRegion = true;
 
   public ServerSideScanMetrics() {
-    createScanMetricsHolderInternal();
+    createScanMetricsHolder();
   }
 
-  public void createScanMetricsHolder() {
+  /**
+   * If region level scan metrics are enabled, must call this method to start collecting metrics for
+   * the region before scanning the region.
+   */
+  public void moveToNextRegion() {
     if (isFirstRegion()) {
       return;
     }
-    createScanMetricsHolderInternal();
+    createScanMetricsHolder();
   }
 
-  private void createScanMetricsHolderInternal() {
+  private void createScanMetricsHolder() {
     currentScanMetricsHolder = new ScanMetricsHolder();
     scanMetricsHolders.add(currentScanMetricsHolder);
     countOfRowsScanned = createCounter(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME);
@@ -63,6 +66,8 @@ public class ServerSideScanMetrics {
 
   /**
    * Create a new counter with the specified name
+   * If region level scan metrics are enabled then creates a new counter for the current region
+   * being scanned. Please see {@link #moveToNextRegion()}.
    * @return {@link AtomicLong} instance for the counter with counterName
    */
   protected AtomicLong createCounter(String counterName) {
@@ -91,46 +96,88 @@ public class ServerSideScanMetrics {
 
   public AtomicLong fsReadTime;
 
+  /**
+   * Sets counter with counterName to passed in value, does nothing if counter does not exist.
+   * If region level scan metrics are enabled then sets the value of counter for the current region
+   * being scanned.
+   */
   public void setCounter(String counterName, long value) {
     currentScanMetricsHolder.setCounter(counterName, value);
   }
 
-  /** Returns true if a counter exists with the counterName */
+  /** Returns true if a counter exists with the counterName
+   * If region level scan metrics are enabled then checks if a counter exists with the counterName
+   * for the current region being scanned. Please see {@link #moveToNextRegion()}.
+   */
   public boolean hasCounter(String counterName) {
     return currentScanMetricsHolder.hasCounter(counterName);
   }
 
-  /** Returns {@link AtomicLong} instance for this counter name, null if counter does not exist. */
+  /** Returns {@link AtomicLong} instance for this counter name, null if counter does not exist.
+   * If region level scan metrics are enabled then {@link AtomicLong} instance for current region
+   * being scanned is returned or null if counter does not exist.
+   * Please see {@link #moveToNextRegion()}.
+   */
   public AtomicLong getCounter(String counterName) {
     return currentScanMetricsHolder.getCounter(counterName);
   }
 
+  /**
+   * Increments the counter with counterName by delta, does nothing if counter does not exist.
+   * If region level scan metrics are enabled then increments the counter corresponding to the
+   * current region being scanned. Please see {@link #moveToNextRegion()}.
+   */
   public void addToCounter(String counterName, long delta) {
     currentScanMetricsHolder.addToCounter(counterName, delta);
   }
 
   /**
-   * Get all of the values since the last time this function was called. Calling this function will
-   * reset all AtomicLongs in the instance back to 0.
+   * Get all of the values combined for all the regions since the last time this function or
+   * {@link #getMetricsMapByRegion()} was called. Calling this function will reset all
+   * AtomicLongs in the instance back to 0.
    * @return A Map of String -&gt; Long for metrics
    */
   public Map<String, Long> getMetricsMap() {
-    return currentScanMetricsHolder.getMetricsMap(true);
+    return getMetricsMap(true);
   }
 
   /**
-   * Get all of the values. If reset is true, we will reset the all AtomicLongs back to 0.
+   * Get all of the values combined for all the regions. If reset is true, we will reset the
+   * all AtomicLongs back to 0.
    * @param reset whether to reset the AtomicLongs to 0.
    * @return A Map of String -&gt; Long for metrics
    */
   public Map<String, Long> getMetricsMap(boolean reset) {
-    return currentScanMetricsHolder.getMetricsMap(reset);
+    Map<String, Long> overallMetrics = new HashMap<>();
+    for (ScanMetricsHolder scanMetricsHolder : scanMetricsHolders) {
+      Map<String, Long> metricsSnapshot = scanMetricsHolder.getMetricsMap(reset);
+      metricsSnapshot.forEach((k, v) -> {
+        if (overallMetrics.containsKey(k)) {
+          overallMetrics.put(k, overallMetrics.get(k) + v);
+        }
+        else {
+          overallMetrics.put(k, v);
+        }
+      });
+    }
+    return ImmutableMap.copyOf(overallMetrics);
   }
 
+  /**
+   * Get values grouped by each region scanned since the last time this or {@link #getMetricsMap()}
+   * was called. Calling this function will reset all AtomicLongs in the instance back to 0.
+   * @return A Map of region -&gt (Map of metric name -&gt Long) for metrics
+   */
   public Map<ScanMetricsRegionInfo, Map<String, Long>> getMetricsMapByRegion() {
     return getMetricsMapByRegion(true);
   }
 
+  /**
+   * Get values grouped by each region scanned. If reset is true, we will reset the all
+   * AtomicLongs back to 0.
+   * @param reset whether to reset the AtomicLongs to 0.
+   * @return A Map of region -&gt (Map of metric name -&gt Long) for metrics
+   */
   public Map<ScanMetricsRegionInfo, Map<String, Long>> getMetricsMapByRegion(boolean reset) {
     // Create a builder
     ImmutableMap.Builder<ScanMetricsRegionInfo, Map<String, Long>> builder = ImmutableMap.builder();
@@ -143,13 +190,15 @@ public class ServerSideScanMetrics {
 
   @Override
   public String toString() {
-    ToStringBuilder tsb = new ToStringBuilder(this);
-    for (ScanMetricsHolder h : scanMetricsHolders) {
-      tsb.append(h.toString());
-    }
-    return tsb.toString();
+    return scanMetricsHolders.stream().map(ScanMetricsHolder::toString).
+      collect(Collectors.joining(";"));
   }
 
+  /**
+   * Call this method after calling {@link #moveToNextRegion()} to populate server name and encoded
+   * region name details for the region being scanned and for which metrics are being collected
+   * at the moment.
+   */
   public void initScanMetricsRegionInfo(ServerName serverName, String encodedRegionName) {
     currentScanMetricsHolder.initScanMetricsRegionInfo(serverName, encodedRegionName);
   }

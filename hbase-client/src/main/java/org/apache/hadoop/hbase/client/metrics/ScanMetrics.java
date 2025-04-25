@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.client.metrics;
 
 import java.util.concurrent.atomic.AtomicLong;
-import org.apache.hadoop.hbase.client.ScanMetricsHolder;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -98,19 +97,19 @@ public class ScanMetrics extends ServerSideScanMetrics {
    * constructor
    */
   public ScanMetrics() {
-    createScanMetricsHolderInternal();
+    createScanMetricsHolder();
   }
 
   @Override
-  public void createScanMetricsHolder() {
+  public void moveToNextRegion() {
     if (isFirstRegion()) {
       return;
     }
-    super.createScanMetricsHolder();
-    createScanMetricsHolderInternal();
+    super.moveToNextRegion();
+    createScanMetricsHolder();
   }
 
-  private void createScanMetricsHolderInternal() {
+  private void createScanMetricsHolder() {
     countOfRPCcalls = createCounter(RPC_CALLS_METRIC_NAME);
     countOfRemoteRPCcalls = createCounter(REMOTE_RPC_CALLS_METRIC_NAME);
     sumOfMillisSecBetweenNexts = createCounter(MILLIS_BETWEEN_NEXTS_METRIC_NAME);

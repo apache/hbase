@@ -15,12 +15,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.client;
+package org.apache.hadoop.hbase.client.metrics;
 
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 
+/**
+ * POJO for capturing region level details when region level scan metrics are enabled.
+ * <br>
+ * <br>
+ * Currently, encoded region name and server name (host name, ports and startcode) are captured
+ * as region details.
+ * <br>
+ * <br>
+ * Instance of this class serves as key in the Map returned by
+ * {@link ServerSideScanMetrics#getMetricsMapByRegion()} or
+ * {@link ServerSideScanMetrics#getMetricsMapByRegion(boolean)}.
+ */
 @InterfaceAudience.Public
 public class ScanMetricsRegionInfo {
   /**

@@ -15,34 +15,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.client;
-
-import static org.apache.hadoop.hbase.client.ScanMetricsRegionInfo.EMPTY_SCAN_METRICS_REGION_INFO;
+package org.apache.hadoop.hbase.client.metrics;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
-import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 
+/**
+ * Generic holder class for capturing Scan Metrics as a map of
+ * metric name ({@link String}) -&gt Value ({@link AtomicLong}).
+ */
 @InterfaceAudience.Private
 public class ScanMetricsHolder {
   private final Map<String, AtomicLong> counters = new HashMap<>();
-  private ScanMetricsRegionInfo scanMetricsRegionInfo = EMPTY_SCAN_METRICS_REGION_INFO;
+  private ScanMetricsRegionInfo scanMetricsRegionInfo =
+    ScanMetricsRegionInfo.EMPTY_SCAN_METRICS_REGION_INFO;
 
   /**
    * Create a new counter with the specified name
    * @return {@link AtomicLong} instance for the counter with counterName
    */
-  public AtomicLong createCounter(String counterName) {
+  AtomicLong createCounter(String counterName) {
     AtomicLong c = new AtomicLong(0);
     counters.put(counterName, c);
     return c;
   }
 
-  public void setCounter(String counterName, long value) {
+  /** Sets counter with counterName to passed in value, does nothing if counter does not exist. */
+  void setCounter(String counterName, long value) {
     AtomicLong c = this.counters.get(counterName);
     if (c != null) {
       c.set(value);
@@ -50,16 +52,17 @@ public class ScanMetricsHolder {
   }
 
   /** Returns true if a counter exists with the counterName */
-  public boolean hasCounter(String counterName) {
+  boolean hasCounter(String counterName) {
     return this.counters.containsKey(counterName);
   }
 
   /** Returns {@link AtomicLong} instance for this counter name, null if counter does not exist. */
-  public AtomicLong getCounter(String counterName) {
+  AtomicLong getCounter(String counterName) {
     return this.counters.get(counterName);
   }
 
-  public void addToCounter(String counterName, long delta) {
+  /** Increments the counter with counterName by delta, does nothing if counter does not exist. */
+  void addToCounter(String counterName, long delta) {
     AtomicLong c = this.counters.get(counterName);
     if (c != null) {
       c.addAndGet(delta);
@@ -67,45 +70,34 @@ public class ScanMetricsHolder {
   }
 
   /**
-   * Get all of the values since the last time this function was called. Calling this function will
-   * reset all AtomicLongs in the instance back to 0.
-   * @return A Map of String -&gt; Long for metrics
-   */
-  public Map<String, Long> getMetricsMap() {
-    return getMetricsMap(true);
-  }
-
-  /**
    * Get all of the values. If reset is true, we will reset the all AtomicLongs back to 0.
    * @param reset whether to reset the AtomicLongs to 0.
    * @return A Map of String -&gt; Long for metrics
    */
-  public Map<String, Long> getMetricsMap(boolean reset) {
-    // Create a builder
-    ImmutableMap.Builder<String, Long> builder = ImmutableMap.builder();
+  Map<String, Long> getMetricsMap(boolean reset) {
+    Map<String, Long> metricsSnapshot = new HashMap<>();
     for (Map.Entry<String, AtomicLong> e : this.counters.entrySet()) {
       long value = reset ? e.getValue().getAndSet(0) : e.getValue().get();
-      builder.put(e.getKey(), value);
+      metricsSnapshot.put(e.getKey(), value);
     }
-    // Build the immutable map so that people can't mess around with it.
-    return builder.build();
+    return metricsSnapshot;
   }
 
   @Override
   public String toString() {
-    ToStringBuilder tsb = new ToStringBuilder(this).
-      append("ServerName", scanMetricsRegionInfo.getServerName()).
-      append("EncodedRegionName", scanMetricsRegionInfo.getEncodedRegionName());
-    for (Map.Entry<String, AtomicLong> e : counters.entrySet()) {
-      tsb.append(e.getKey()).append(e.getValue().get());
-    }
-    return tsb.toString();
+    return "ServerName=" + scanMetricsRegionInfo.getServerName() + "," + "EncodedRegionName="
+      + scanMetricsRegionInfo.getEncodedRegionName() + "," + counters;
   }
 
-  public void initScanMetricsRegionInfo(
+  /**
+   * Populate server name and encoded region name details if not already populated. If details are
+   * already populated and a re-attempt is done then {@link UnsupportedOperationException} is
+   * thrown.
+   */
+  void initScanMetricsRegionInfo(
     ServerName serverName, String encodedRegionName) {
     // Check by reference
-    if (scanMetricsRegionInfo == EMPTY_SCAN_METRICS_REGION_INFO) {
+    if (scanMetricsRegionInfo == ScanMetricsRegionInfo.EMPTY_SCAN_METRICS_REGION_INFO) {
       scanMetricsRegionInfo = new ScanMetricsRegionInfo(encodedRegionName, serverName);
     }
     else {
@@ -113,7 +105,7 @@ public class ScanMetricsHolder {
     }
   }
 
-  public ScanMetricsRegionInfo getScanMetricsRegionInfo() {
+  ScanMetricsRegionInfo getScanMetricsRegionInfo() {
     return scanMetricsRegionInfo;
   }
 }
