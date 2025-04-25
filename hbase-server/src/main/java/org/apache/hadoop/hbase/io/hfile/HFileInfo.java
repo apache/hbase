@@ -404,6 +404,8 @@ public class HFileInfo implements SortedMap<byte[], byte[]> {
     throws IOException {
     HFileContextBuilder builder = new HFileContextBuilder().withHBaseCheckSum(true)
       .withHFileName(path.getName()).withCompression(trailer.getCompressionCodec())
+      .withDecompressionContext(
+        trailer.getCompressionCodec().getHFileDecompressionContextForConfiguration(conf))
       .withCellComparator(FixedFileTrailer.createComparator(trailer.getComparatorClassName()));
     // Check for any key material available
     byte[] keyBytes = trailer.getEncryptionKey();
