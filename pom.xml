@@ -801,7 +801,7 @@
     </site>
   </distributionManagement>
   <properties>
-    <revision>4.0.0-DEFINATELY-DUMMY-1-SNAPSHOT</revision>
+    <revision>4.0.0-alpha-1-SNAPSHOT</revision>
     <!-- override on command line to have generated LICENSE files include
          diagnostic info for verifying notice requirements -->
     <license.debug.print.included>false</license.debug.print.included>
