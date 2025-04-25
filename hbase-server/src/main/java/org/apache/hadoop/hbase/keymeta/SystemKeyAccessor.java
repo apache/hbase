@@ -67,7 +67,7 @@ public class SystemKeyAccessor extends KeyManagementBase {
     if (!isKeyManagementEnabled()) {
       return null;
     }
-    FileSystem fs = server.getFileSystem();
+    FileSystem fs = getServer().getFileSystem();
     Map<Integer, Path> clusterKeys = new TreeMap<>(Comparator.reverseOrder());
     for (FileStatus st : fs.globStatus(new Path(systemKeyDir,
       SYSTEM_KEY_FILE_PREFIX + "*"))) {
@@ -111,7 +111,7 @@ public class SystemKeyAccessor extends KeyManagementBase {
   }
 
   protected String loadKeyMetadata(Path keyPath) throws IOException {
-    try (FSDataInputStream fin = server.getFileSystem().open(keyPath)) {
+    try (FSDataInputStream fin = getServer().getFileSystem().open(keyPath)) {
       return fin.readUTF();
     }
   }

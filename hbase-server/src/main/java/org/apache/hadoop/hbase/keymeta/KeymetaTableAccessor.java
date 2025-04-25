@@ -93,7 +93,7 @@ public class KeymetaTableAccessor extends KeyManagementBase {
     assertKeyManagementEnabled();
     final Put putForMetadata = addMutationColumns(new Put(constructRowKeyForMetadata(keyData)),
       keyData);
-    Connection connection = server.getConnection();
+    Connection connection = getServer().getConnection();
     try (Table table = connection.getTable(KEY_META_TABLE_NAME)) {
       table.put(putForMetadata);
     }
@@ -112,7 +112,7 @@ public class KeymetaTableAccessor extends KeyManagementBase {
   public List<ManagedKeyData> getAllKeys(byte[] key_cust, String keyNamespace)
     throws IOException, KeyException {
     assertKeyManagementEnabled();
-    Connection connection = server.getConnection();
+    Connection connection = getServer().getConnection();
     byte[] prefixForScan = Bytes.add(Bytes.toBytes(key_cust.length), key_cust,
       Bytes.toBytes(keyNamespace));
     try (Table table = connection.getTable(KEY_META_TABLE_NAME)) {
@@ -124,7 +124,7 @@ public class KeymetaTableAccessor extends KeyManagementBase {
       ResultScanner scanner = table.getScanner(scan);
       List<ManagedKeyData> allKeys = new ArrayList<>();
       for (Result result : scanner) {
-        ManagedKeyData keyData = parseFromResult(server, key_cust, keyNamespace, result);
+        ManagedKeyData keyData = parseFromResult(getServer(), key_cust, keyNamespace, result);
         if (keyData != null) {
           allKeys.add(keyData);
         }
@@ -167,12 +167,12 @@ public class KeymetaTableAccessor extends KeyManagementBase {
   public ManagedKeyData getKey(byte[] key_cust, String keyNamespace, String keyMetadata)
     throws IOException, KeyException {
     assertKeyManagementEnabled();
-    Connection connection = server.getConnection();
+    Connection connection = getServer().getConnection();
     try (Table table = connection.getTable(KEY_META_TABLE_NAME)) {
       byte[] rowKey = constructRowKeyForMetadata(key_cust, keyNamespace,
         ManagedKeyData.constructMetadataHash(keyMetadata));
       Result result = table.get(new Get(rowKey));
-      return parseFromResult(server, key_cust, keyNamespace, result);
+      return parseFromResult(getServer(), key_cust, keyNamespace, result);
     }
   }
 
@@ -188,7 +188,7 @@ public class KeymetaTableAccessor extends KeyManagementBase {
   public void reportOperation(byte[] key_cust, String keyNamespace, String keyMetadata, long count,
       boolean isReadOperation) throws IOException {
     assertKeyManagementEnabled();
-    Connection connection = server.getConnection();
+    Connection connection = getServer().getConnection();
     try (Table table = connection.getTable(KEY_META_TABLE_NAME)) {
       byte[] rowKey = constructRowKeyForMetadata(key_cust, keyNamespace,
         ManagedKeyData.constructMetadataHash(keyMetadata));
@@ -204,9 +204,9 @@ public class KeymetaTableAccessor extends KeyManagementBase {
    * Add the mutation columns to the given Put that are derived from the keyData.
    */
   private Put addMutationColumns(Put put, ManagedKeyData keyData) throws IOException {
-    ManagedKeyData latestSystemKey = server.getSystemKeyCache().getLatestSystemKey();
+    ManagedKeyData latestSystemKey = getServer().getSystemKeyCache().getLatestSystemKey();
     if (keyData.getTheKey() != null) {
-      byte[] dekWrappedBySTK = EncryptionUtil.wrapKey(server.getConfiguration(), null,
+      byte[] dekWrappedBySTK = EncryptionUtil.wrapKey(getServer().getConfiguration(), null,
         keyData.getTheKey(), latestSystemKey.getTheKey());
       put.addColumn(KEY_META_INFO_FAMILY, DEK_CHECKSUM_QUAL_BYTES,
           Bytes.toBytes(keyData.getKeyChecksum()))

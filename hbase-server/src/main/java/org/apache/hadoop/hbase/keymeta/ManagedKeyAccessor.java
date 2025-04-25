@@ -34,10 +34,11 @@ public class ManagedKeyAccessor extends KeyManagementBase {
   private final ManagedKeyDataCache keyDataCache;
   private final KeymetaTableAccessor keymetaAccessor;
 
-  public ManagedKeyAccessor(KeymetaTableAccessor keymetaAccessor) {
-    super(keymetaAccessor.server);
+  public ManagedKeyAccessor(KeymetaTableAccessor keymetaAccessor,
+      ManagedKeyDataCache keyDataCache) {
+    super(keymetaAccessor.getServer());
     this.keymetaAccessor = keymetaAccessor;
-    keyDataCache = new ManagedKeyDataCache();
+    this.keyDataCache = keyDataCache;
   }
 
   /**
@@ -61,10 +62,16 @@ public class ManagedKeyAccessor extends KeyManagementBase {
         // 3. Check with Key Provider.
         ManagedKeyProvider provider = getKeyProvider();
         keyData = provider.unwrapKey(keyMetadata);
-        LOG.info("Got key data with status: {} and metadata: {} for prefix: {}",
-          keyData.getKeyStatus(), keyData.getKeyMetadata(),
-          ManagedKeyProvider.encodeToStr(key_cust));
-        keymetaAccessor.addKey(keyData);
+        if (keyData != null) {
+          LOG.info("Got key data with status: {} and metadata: {} for prefix: {}",
+            keyData.getKeyStatus(), keyData.getKeyMetadata(),
+            ManagedKeyProvider.encodeToStr(key_cust));
+          keymetaAccessor.addKey(keyData);
+        }
+        else {
+          LOG.info("Failed to get key data with metadata: {} for prefix: {}",
+            keyMetadata, ManagedKeyProvider.encodeToStr(key_cust));
+        }
       }
       if (keyData != null) {
         keyDataCache.addEntry(keyData);
@@ -82,15 +89,17 @@ public class ManagedKeyAccessor extends KeyManagementBase {
    * @throws IOException if an error occurs while retrieving the key
    */
   public ManagedKeyData getAnActiveKey(byte[] key_cust, String keyNamespace)
-    throws IOException, KeyException {
+      throws IOException, KeyException {
     assertKeyManagementEnabled();
     ManagedKeyData keyData = keyDataCache.getRandomEntryForPrefix(key_cust, keyNamespace);
     if (keyData == null) {
       List<ManagedKeyData> activeKeys = keymetaAccessor.getActiveKeys(key_cust, keyNamespace);
-      for (ManagedKeyData kd: activeKeys) {
-        keyDataCache.addEntry(kd);
+      if (! activeKeys.isEmpty()) {
+        for (ManagedKeyData kd : activeKeys) {
+          keyDataCache.addEntry(kd);
+        }
+        keyData = keyDataCache.getRandomEntryForPrefix(key_cust, keyNamespace);
       }
-      keyData = keyDataCache.getRandomEntryForPrefix(key_cust, keyNamespace);
     }
     return keyData;
   }

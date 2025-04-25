@@ -48,7 +48,7 @@ public class TestManagedKeyDataCache {
   private static final String ALIAS = "cust1";
   private static final byte[] CUST_ID = ALIAS.getBytes();
 
-  private MockManagedKeyProvider managedKeyProvider;
+  private final MockManagedKeyProvider managedKeyProvider = new MockManagedKeyProvider();
   private ManagedKeyDataCache cache;
   protected Configuration conf = HBaseConfiguration.create();
 
@@ -58,7 +58,6 @@ public class TestManagedKeyDataCache {
     conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, MockManagedKeyProvider.class.getName());
 
     cache = new ManagedKeyDataCache();
-    managedKeyProvider = new MockManagedKeyProvider();
     managedKeyProvider.initConfig(conf);
     managedKeyProvider.setMultikeyGenMode(true);
   }

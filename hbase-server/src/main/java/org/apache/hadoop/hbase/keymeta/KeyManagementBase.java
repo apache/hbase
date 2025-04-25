@@ -34,13 +34,17 @@ import java.io.IOException;
 public abstract class KeyManagementBase {
   protected static final Logger LOG = LoggerFactory.getLogger(KeyManagementBase.class);
 
-  protected final Server server;
+  private final Server server;
 
   private Boolean keyManagementEnabled;
   private Integer perPrefixActiveKeyCount;
 
   public KeyManagementBase(Server server) {
     this.server = server;
+  }
+
+  protected Server getServer() {
+    return server;
   }
 
   /**
@@ -50,7 +54,7 @@ public abstract class KeyManagementBase {
    * instance of ManagedKeyProvider
    */
   protected ManagedKeyProvider getKeyProvider() {
-    KeyProvider provider = Encryption.getKeyProvider(server.getConfiguration());
+    KeyProvider provider = Encryption.getKeyProvider(getServer().getConfiguration());
     if (!(provider instanceof ManagedKeyProvider)) {
       throw new RuntimeException(
         "KeyProvider: " + provider.getClass().getName() + " expected to be of type ManagedKeyProvider");
@@ -64,7 +68,7 @@ public abstract class KeyManagementBase {
    */
   protected boolean isKeyManagementEnabled() {
     if (keyManagementEnabled == null) {
-      keyManagementEnabled = Server.isKeyManagementEnabled(server);
+      keyManagementEnabled = Server.isKeyManagementEnabled(getServer());
     }
     return keyManagementEnabled;
   }
@@ -81,7 +85,7 @@ public abstract class KeyManagementBase {
 
   protected int getPerPrefixActiveKeyConfCount() throws IOException {
     if (perPrefixActiveKeyCount == null) {
-      perPrefixActiveKeyCount = server.getConfiguration().getInt(
+      perPrefixActiveKeyCount = getServer().getConfiguration().getInt(
         HConstants.CRYPTO_MANAGED_KEYS_PER_CUST_ACTIVE_KEY_COUNT,
         HConstants.CRYPTO_MANAGED_KEYS_PER_CUST_ACTIVE_KEY_DEFAULT_COUNT);
     }
