@@ -119,11 +119,17 @@ public class BackupManager implements Closeable {
     plugins = conf.get(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS);
     conf.set(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS,
       (plugins == null ? "" : plugins + ",") + BackupHFileCleaner.class.getName());
+
+    String observerClass = BackupObserver.class.getName();
+    String masterCoProc = conf.get(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
+    conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
+      (masterCoProc == null ? "" : masterCoProc + ",") + observerClass);
+
     if (LOG.isDebugEnabled()) {
       LOG.debug(
         "Added log cleaner: {}. Added master procedure manager: {}."
-          + "Added master procedure manager: {}",
-        cleanerClass, masterProcedureClass, BackupHFileCleaner.class.getName());
+          + " Added master procedure manager: {}. Added master observer: {}",
+        cleanerClass, masterProcedureClass, BackupHFileCleaner.class.getName(), observerClass);
     }
   }
 
