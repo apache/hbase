@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.keymeta;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -51,7 +52,7 @@ public class SystemKeyAccessor extends KeyManagementBase {
     if (allClusterKeyFiles.isEmpty()) {
       throw new RuntimeException("No cluster key initialized yet");
     }
-    int currentMaxSeqNum = extractKeySequence(allClusterKeyFiles.get(0));
+    int currentMaxSeqNum = SystemKeyAccessor.extractKeySequence(allClusterKeyFiles.get(0));
     return new Path(systemKeyDir, SYSTEM_KEY_FILE_PREFIX + currentMaxSeqNum);
   }
 
@@ -84,7 +85,8 @@ public class SystemKeyAccessor extends KeyManagementBase {
     return provider.unwrapKey(loadKeyMetadata(keyPath));
   }
 
-  public int extractSystemKeySeqNum(Path keyPath) throws IOException {
+  @VisibleForTesting
+  public static int extractSystemKeySeqNum(Path keyPath) throws IOException {
     if (keyPath.getName().startsWith(SYSTEM_KEY_FILE_PREFIX)) {
       try {
         return Integer.valueOf(keyPath.getName().substring(SYSTEM_KEY_FILE_PREFIX.length()));
@@ -102,7 +104,8 @@ public class SystemKeyAccessor extends KeyManagementBase {
    * @return The sequence or {@code -1} if not a valid sequence file.
    * @throws IOException
    */
-  protected int extractKeySequence(Path clusterKeyFile) throws IOException {
+  @VisibleForTesting
+  public static int extractKeySequence(Path clusterKeyFile) throws IOException {
     int keySeq = -1;
     if (clusterKeyFile.getName().startsWith(SYSTEM_KEY_FILE_PREFIX)) {
       keySeq = Integer.valueOf(clusterKeyFile.getName().substring(SYSTEM_KEY_FILE_PREFIX.length()));

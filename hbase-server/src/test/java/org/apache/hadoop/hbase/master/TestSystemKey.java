@@ -1,114 +1,346 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package org.apache.hadoop.hbase.master;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
-import org.apache.hadoop.hbase.io.crypto.KeyProvider;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
 import org.apache.hadoop.hbase.io.crypto.MockManagedKeyProvider;
-import org.apache.hadoop.hbase.io.crypto.ManagedKeyStatus;
 import org.apache.hadoop.hbase.keymeta.SystemKeyAccessor;
-import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
-import org.apache.hadoop.hbase.keymeta.ManagedKeyTestBase;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
+import org.junit.runner.RunWith;
+import org.junit.runners.BlockJUnit4ClassRunner;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameter;
+import org.junit.runners.Parameterized.Parameters;
+import org.junit.runners.Suite;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 import java.io.IOException;
-import java.security.Key;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.stream.IntStream;
+import static org.apache.hadoop.hbase.HConstants.SYSTEM_KEY_FILE_PREFIX;
+import static org.apache.hadoop.hbase.io.crypto.ManagedKeyData.KEY_SPACE_GLOBAL;
+import static org.apache.hadoop.hbase.io.crypto.ManagedKeyStatus.ACTIVE;
+import static org.apache.hadoop.hbase.io.crypto.ManagedKeyStatus.INACTIVE;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
-@Category({ MasterTests.class, MediumTests.class })
-public class TestSystemKey extends ManagedKeyTestBase {
+@RunWith(Suite.class)
+@Suite.SuiteClasses({
+  TestSystemKey.TestAccessorWhenDisabled.class,
+  TestSystemKey.TestManagerWhenDisabled.class,
+  TestSystemKey.TestAccessor.class,
+  TestSystemKey.TestForInvalidFilenames.class,
+  TestSystemKey.TestManagerForErrors.class
+})
+@Category({ MasterTests.class, SmallTests.class })
+public class TestSystemKey {
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSystemKey.class);
+  @Rule
+  public TestName name = new TestName();
 
-  @Test
-  public void testSystemKeyInitializationAndRotation() throws Exception {
-    HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
-    KeyProvider keyProvider = Encryption.getKeyProvider(master.getConfiguration());
-    assertNotNull(keyProvider);
-    assertTrue(keyProvider instanceof ManagedKeyProvider);
-    assertTrue(keyProvider instanceof MockManagedKeyProvider);
-    MockManagedKeyProvider pbeKeyProvider = (MockManagedKeyProvider) keyProvider;
-    ManagedKeyData initialSystemKey = validateInitialState(master, pbeKeyProvider);
+  protected Configuration conf;
+  protected Path testRootDir;
+  protected FileSystem fs;
 
-    restartSystem();
-    master = TEST_UTIL.getHBaseCluster().getMaster();
-    validateInitialState(master, pbeKeyProvider);
+  protected FileSystem mockFileSystem = mock(FileSystem.class);
+  protected MasterServices mockMaster = mock(MasterServices.class);
+  protected SystemKeyManager systemKeyManager;
 
-    // Test rotation of cluster key by changing the key that the key provider provides and restart master.
-    String newAlias = "new_cluster_key";
-    pbeKeyProvider.setClusterKeyAlias(newAlias);
-    Key newCluterKey = MockManagedKeyProvider.generateSecretKey();
-    pbeKeyProvider.setMockedKey(newAlias, newCluterKey, ManagedKeyData.KEY_SPACE_GLOBAL);
-    restartSystem();
-    master = TEST_UTIL.getHBaseCluster().getMaster();
-    SystemKeyAccessor systemKeyAccessor = new SystemKeyAccessor(master);
-    assertEquals(2, systemKeyAccessor.getAllSystemKeyFiles().size());
-    SystemKeyCache systemKeyCache = master.getSystemKeyCache();
-    assertEquals(0, Bytes.compareTo(newCluterKey.getEncoded(),
-      systemKeyCache.getLatestSystemKey().getTheKey().getEncoded()));
-    assertEquals(initialSystemKey,
-      systemKeyAccessor.loadSystemKey(systemKeyAccessor.getAllSystemKeyFiles().get(1)));
-    assertEquals(initialSystemKey,
-      systemKeyCache.getSystemKeyByChecksum(initialSystemKey.getKeyChecksum()));
+  @Before
+  public void setUp() throws Exception {
+    conf = TEST_UTIL.getConfiguration();
+    testRootDir = TEST_UTIL.getDataTestDir(name.getMethodName());
+    fs = testRootDir.getFileSystem(conf);
+
+    conf.set(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, "true");
+
+    when(mockMaster.getFileSystem()).thenReturn(mockFileSystem);
+    when(mockMaster.getConfiguration()).thenReturn(conf);
+    systemKeyManager = new SystemKeyManager(mockMaster);
   }
 
-  @Test
-  public void testWithInvalidSystemKey() throws Exception {
-    HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
-    KeyProvider keyProvider = Encryption.getKeyProvider(master.getConfiguration());
-    MockManagedKeyProvider pbeKeyProvider = (MockManagedKeyProvider) keyProvider;
-
-    // Test startup failure when the cluster key is INACTIVE
-    SystemKeyManager tmpCKM = new SystemKeyManager(master);
-    tmpCKM.ensureSystemKeyInitialized();
-    pbeKeyProvider.setMockedKeyStatus(pbeKeyProvider.getSystemKeyAlias(), ManagedKeyStatus.INACTIVE);
-    assertThrows(IOException.class, tmpCKM::ensureSystemKeyInitialized);
+  private static FileStatus createMockFile(String fileName) {
+    Path mockPath = mock(Path.class);
+    when(mockPath.getName()).thenReturn(fileName);
+    FileStatus mockFileStatus = mock(FileStatus.class);
+    when(mockFileStatus.getPath()).thenReturn(mockPath);
+    return mockFileStatus;
   }
 
-  private ManagedKeyData validateInitialState(HMaster master, MockManagedKeyProvider pbeKeyProvider )
-    throws IOException {
-    SystemKeyAccessor systemKeyAccessor = new SystemKeyAccessor(master);
-    assertEquals(1, systemKeyAccessor.getAllSystemKeyFiles().size());
-    SystemKeyCache systemKeyCache = master.getSystemKeyCache();
-    assertNotNull(systemKeyCache);
-    ManagedKeyData clusterKey = systemKeyCache.getLatestSystemKey();
-    assertEquals(pbeKeyProvider.getSystemKey(master.getClusterId().getBytes()), clusterKey);
-    assertEquals(clusterKey,
-      systemKeyCache.getSystemKeyByChecksum(clusterKey.getKeyChecksum()));
-    return clusterKey;
+  @RunWith(BlockJUnit4ClassRunner.class)
+  @Category({ MasterTests.class, SmallTests.class })
+  public static class TestAccessorWhenDisabled extends TestSystemKey {
+    @ClassRule public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestAccessorWhenDisabled.class);
+
+    @Override public void setUp() throws Exception {
+      super.setUp();
+      conf.set(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, "false");
+    }
+
+    @Test public void test() throws Exception {
+      assertNull(systemKeyManager.getAllSystemKeyFiles());
+      assertNull(systemKeyManager.getLatestSystemKeyFile());
+    }
   }
 
-  private void restartSystem() throws Exception {
-    TEST_UTIL.shutdownMiniHBaseCluster();
-    Thread.sleep(2000);
-    TEST_UTIL.restartHBaseCluster(1);
-    TEST_UTIL.waitFor(60000, () -> TEST_UTIL.getMiniHBaseCluster().getMaster().isInitialized());
+  @RunWith(BlockJUnit4ClassRunner.class)
+  @Category({ MasterTests.class, SmallTests.class })
+  public static class TestManagerWhenDisabled extends TestSystemKey {
+    @ClassRule public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestManagerWhenDisabled.class);
+
+    @Override public void setUp() throws Exception {
+      super.setUp();
+      conf.set(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, "false");
+    }
+
+    @Test public void test() throws Exception {
+      systemKeyManager.ensureSystemKeyInitialized();
+      assertNull(systemKeyManager.rotateSystemKeyIfChanged());
+    }
+  }
+
+  @RunWith(BlockJUnit4ClassRunner.class)
+  @Category({ MasterTests.class, SmallTests.class })
+  public static class TestAccessor extends TestSystemKey {
+    @ClassRule
+    public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestAccessor.class);
+
+    @Test
+    public void testGetLatestWithNone() throws Exception {
+      when(mockFileSystem.globStatus(any())).thenReturn(new FileStatus[0]);
+
+      RuntimeException ex = assertThrows(RuntimeException.class,
+        () -> systemKeyManager.getLatestSystemKeyFile());
+      assertEquals("No cluster key initialized yet", ex.getMessage());
+    }
+
+    @Test
+    public void testGetWithSingle() throws Exception {
+      String fileName = SYSTEM_KEY_FILE_PREFIX + "1";
+      FileStatus mockFileStatus = createMockFile(fileName);
+
+      Path systemKeyDir = CommonFSUtils.getSystemKeyDir(conf);
+      when(mockFileSystem.globStatus(eq(new Path(systemKeyDir, SYSTEM_KEY_FILE_PREFIX+"*"))))
+        .thenReturn(new FileStatus[] { mockFileStatus });
+
+      List<Path> files = systemKeyManager.getAllSystemKeyFiles();
+      assertEquals(1, files.size());
+      assertEquals(fileName, files.get(0).getName());
+
+      Path latestSystemKeyFile = systemKeyManager.getLatestSystemKeyFile();
+      assertEquals(fileName, latestSystemKeyFile.getName());
+
+      assertEquals(1, SystemKeyAccessor.extractSystemKeySeqNum(latestSystemKeyFile));
+    }
+
+    @Test
+    public void testGetWithMultiple() throws Exception {
+      FileStatus[] mockFileStatuses = IntStream.rangeClosed(1, 3)
+        .mapToObj(i -> createMockFile(SYSTEM_KEY_FILE_PREFIX + i))
+        .toArray(FileStatus[]::new);
+
+      Path systemKeyDir = CommonFSUtils.getSystemKeyDir(conf);
+      when(mockFileSystem.globStatus(eq(new Path(systemKeyDir, SYSTEM_KEY_FILE_PREFIX+"*"))))
+        .thenReturn( mockFileStatuses );
+
+      List<Path> files = systemKeyManager.getAllSystemKeyFiles();
+      assertEquals(3, files.size());
+
+      Path latestSystemKeyFile = systemKeyManager.getLatestSystemKeyFile();
+      assertEquals(3, SystemKeyAccessor.extractSystemKeySeqNum(latestSystemKeyFile));
+    }
+
+    @Test
+    public void testExtractKeySequenceForInvalidFilename() throws Exception {
+      assertEquals(-1, SystemKeyAccessor.extractKeySequence(
+        createMockFile("abcd").getPath()));
+    }
+  }
+
+  @RunWith(Parameterized.class)
+  @Category({ MasterTests.class, SmallTests.class })
+  public static class TestForInvalidFilenames extends TestSystemKey {
+    @ClassRule
+    public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestForInvalidFilenames.class);
+
+    @Parameter(0)
+    public String fileName;
+    @Parameter(1)
+    public String expectedErrorMessage;
+
+    @Parameters(name = "{index},fileName={0}")
+    public static Collection<Object[]> data() {
+      return Arrays.asList(new Object[][] {
+        { "abcd", "Couldn't parse key file name: abcd" },
+        {SYSTEM_KEY_FILE_PREFIX+"abcd", "Couldn't parse key file name: "+
+          SYSTEM_KEY_FILE_PREFIX+"abcd"},
+        // Add more test cases here
+      });
+    }
+
+    @Test
+    public void test() throws Exception {
+      FileStatus mockFileStatus = createMockFile(fileName);
+
+      IOException ex = assertThrows(IOException.class,
+          () -> SystemKeyAccessor.extractSystemKeySeqNum(mockFileStatus.getPath()));
+      assertEquals(expectedErrorMessage, ex.getMessage());
+    }
+  }
+
+  @RunWith(BlockJUnit4ClassRunner.class)
+  @Category({ MasterTests.class, SmallTests.class })
+  public static class TestManagerForErrors extends TestSystemKey {
+    @ClassRule
+    public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestManagerForErrors.class);
+
+    private static final String CLUSTER_ID = "clusterId";
+
+    @Mock
+    ManagedKeyProvider mockKeyProvide;
+    @Mock
+    MasterFileSystem masterFS;
+
+    private MockSystemKeyManager manager;
+    private AutoCloseable closeableMocks;
+
+    @Before
+    public void setUp() throws Exception {
+      super.setUp();
+      closeableMocks = MockitoAnnotations.openMocks(this);
+
+      when(mockFileSystem.globStatus(any())).thenReturn(new FileStatus[0]);
+      ClusterId clusterId = mock(ClusterId.class);
+      when(mockMaster.getMasterFileSystem()).thenReturn(masterFS);
+      when(masterFS.getClusterId()).thenReturn(clusterId);
+      when(clusterId.toString()).thenReturn(CLUSTER_ID);
+      when(masterFS.getFileSystem()).thenReturn(mockFileSystem);
+
+      manager = new MockSystemKeyManager(mockMaster, mockKeyProvide);
+    }
+
+    @After
+    public void tearDown() throws Exception {
+      closeableMocks.close();;
+    }
+
+    @Test
+    public void testEnsureSystemKeyInitialized_WithNoSystemKeys() throws Exception {
+      when(mockKeyProvide.getSystemKey(any())).thenReturn(null);
+
+      IOException ex = assertThrows(IOException.class, manager::ensureSystemKeyInitialized);
+      assertEquals("Failed to get system key for cluster id: " + CLUSTER_ID, ex.getMessage());
+    }
+
+    @Test
+    public void testEnsureSystemKeyInitialized_WithNoNonActiveKey() throws Exception {
+      String metadata = "key-metadata";
+      ManagedKeyData keyData = mock(ManagedKeyData.class);
+      when(keyData.getKeyStatus()).thenReturn(INACTIVE);
+      when(keyData.getKeyMetadata()).thenReturn(metadata);
+      when(mockKeyProvide.getSystemKey(any())).thenReturn(keyData);
+
+      IOException ex = assertThrows(IOException.class, manager::ensureSystemKeyInitialized);
+      assertEquals("System key is expected to be ACTIVE but it is: INACTIVE for metadata: "
+        + metadata, ex.getMessage());
+    }
+
+    @Test
+    public void testEnsureSystemKeyInitialized_WithInvalidMetadata() throws Exception {
+      ManagedKeyData keyData = mock(ManagedKeyData.class);
+      when(keyData.getKeyStatus()).thenReturn(ACTIVE);
+      when(mockKeyProvide.getSystemKey(any())).thenReturn(keyData);
+
+      IOException ex = assertThrows(IOException.class, manager::ensureSystemKeyInitialized);
+      assertEquals("System key is expected to have metadata but it is null", ex.getMessage());
+    }
+
+    @Test
+    public void testEnsureSystemKeyInitialized_WithSaveFailure() throws Exception {
+      String metadata = "key-metadata";
+      ManagedKeyData keyData = mock(ManagedKeyData.class);
+      when(keyData.getKeyStatus()).thenReturn(ACTIVE);
+      when(mockKeyProvide.getSystemKey(any())).thenReturn(keyData);
+      when(keyData.getKeyMetadata()).thenReturn(metadata);
+      when(mockFileSystem.globStatus(any())).thenReturn(new FileStatus[0]);
+      Path rootDir = CommonFSUtils.getRootDir(conf);
+      when(masterFS.getTempDir()).thenReturn(rootDir);
+      FSDataOutputStream mockStream = mock(FSDataOutputStream.class);
+      when(mockFileSystem.create(any())).thenReturn(mockStream);
+      when(mockFileSystem.rename(any(), any())).thenReturn(false);
+
+      RuntimeException ex = assertThrows(RuntimeException.class, manager::ensureSystemKeyInitialized);
+      assertEquals("Failed to generate or save System Key", ex.getMessage());
+    }
+
+    @Test
+    public void testEnsureSystemKeyInitialized_RaceCondition() throws Exception {
+      String metadata = "key-metadata";
+      ManagedKeyData keyData = mock(ManagedKeyData.class);
+      when(keyData.getKeyStatus()).thenReturn(ACTIVE);
+      when(mockKeyProvide.getSystemKey(any())).thenReturn(keyData);
+      when(keyData.getKeyMetadata()).thenReturn(metadata);
+      when(mockFileSystem.globStatus(any())).thenReturn(new FileStatus[0]);
+      Path rootDir = CommonFSUtils.getRootDir(conf);
+      when(masterFS.getTempDir()).thenReturn(rootDir);
+      FSDataOutputStream mockStream = mock(FSDataOutputStream.class);
+      when(mockFileSystem.create(any())).thenReturn(mockStream);
+      when(mockFileSystem.rename(any(), any())).thenReturn(false);
+      String fileName = SYSTEM_KEY_FILE_PREFIX + "1";
+      FileStatus mockFileStatus = createMockFile(fileName);
+      when(mockFileSystem.globStatus(any())).thenReturn(
+          new FileStatus[0],
+          new FileStatus[0],
+          new FileStatus[] { mockFileStatus }
+        );
+
+      manager.ensureSystemKeyInitialized();
+    }
+  }
+
+  private static class MockSystemKeyManager extends SystemKeyManager {
+    private final ManagedKeyProvider keyProvider;
+
+    public MockSystemKeyManager(MasterServices master, ManagedKeyProvider keyProvider) throws IOException {
+      super(master);
+      this.keyProvider = keyProvider;
+      //systemKeyDir = mock(Path.class);
+    }
+
+    @Override
+    protected ManagedKeyProvider getKeyProvider() {
+      return keyProvider;
+    }
   }
 }

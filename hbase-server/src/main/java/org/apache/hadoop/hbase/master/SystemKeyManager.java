@@ -68,18 +68,21 @@ public class SystemKeyManager extends SystemKeyAccessor {
   }
 
   private ManagedKeyData rotateSystemKey(String currentKeyMetadata) throws IOException {
-    if (! isKeyManagementEnabled()) {
-      return null;
-    }
     ManagedKeyProvider provider = getKeyProvider();
     ManagedKeyData clusterKey = provider.getSystemKey(
       master.getMasterFileSystem().getClusterId().toString().getBytes());
+    if (clusterKey == null) {
+      throw new IOException("Failed to get system key for cluster id: " +
+        master.getMasterFileSystem().getClusterId().toString());
+    }
     if (clusterKey.getKeyStatus() != ManagedKeyStatus.ACTIVE) {
       throw new IOException("System key is expected to be ACTIVE but it is: " +
         clusterKey.getKeyStatus() + " for metadata: " + clusterKey.getKeyMetadata());
     }
-    if (clusterKey != null && clusterKey.getKeyMetadata() != null &&
-        ! clusterKey.getKeyMetadata().equals(currentKeyMetadata) &&
+    if (clusterKey.getKeyMetadata() == null) {
+      throw new IOException("System key is expected to have metadata but it is null");
+    }
+    if (! clusterKey.getKeyMetadata().equals(currentKeyMetadata) &&
         saveLatestSystemKey(clusterKey.getKeyMetadata())) {
       return clusterKey;
     }
@@ -89,7 +92,7 @@ public class SystemKeyManager extends SystemKeyAccessor {
   private boolean saveLatestSystemKey(String keyMetadata) throws IOException {
     List<Path> allSystemKeyFiles = getAllSystemKeyFiles();
     int nextSystemKeySeq = (allSystemKeyFiles.isEmpty() ? -1
-      : extractKeySequence(allSystemKeyFiles.get(0))) + 1;
+      : SystemKeyAccessor.extractKeySequence(allSystemKeyFiles.get(0))) + 1;
     LOG.info("Trying to save a new cluster key at seq: {}", nextSystemKeySeq);
     MasterFileSystem masterFS = master.getMasterFileSystem();
     Path nextSystemKeyPath = new Path(systemKeyDir,
