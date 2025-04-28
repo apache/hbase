@@ -904,7 +904,7 @@ public class BucketCache implements BlockCache, HeapSize {
    * @param config the new configuration to be updated.
    */
   @Override
-  public void onConfigurationChange(Configuration config) {
+  public void onConfigurationChange(Configuration conf) {
     this.acceptableFactor = conf.getFloat(ACCEPT_FACTOR_CONFIG_NAME, DEFAULT_ACCEPT_FACTOR);
     this.minFactor = conf.getFloat(MIN_FACTOR_CONFIG_NAME, DEFAULT_MIN_FACTOR);
     this.extraFreeFactor = conf.getFloat(EXTRA_FREE_FACTOR_CONFIG_NAME, DEFAULT_EXTRA_FREE_FACTOR);
