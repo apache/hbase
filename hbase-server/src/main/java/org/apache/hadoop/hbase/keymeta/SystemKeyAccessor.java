@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -44,16 +45,17 @@ public class SystemKeyAccessor extends KeyManagementBase {
     this.systemKeyDir = CommonFSUtils.getSystemKeyDir(server.getConfiguration());
   }
 
-  public Path getLatestSystemKeyFile() throws IOException {
+  public Pair<Path,List<Path>> getLatestSystemKeyFile() throws IOException {
     if (! isKeyManagementEnabled()) {
-      return null;
+      return new Pair<>(null, null);
     }
     List<Path> allClusterKeyFiles = getAllSystemKeyFiles();
     if (allClusterKeyFiles.isEmpty()) {
       throw new RuntimeException("No cluster key initialized yet");
     }
     int currentMaxSeqNum = SystemKeyAccessor.extractKeySequence(allClusterKeyFiles.get(0));
-    return new Path(systemKeyDir, SYSTEM_KEY_FILE_PREFIX + currentMaxSeqNum);
+    return new Pair<>(new Path(systemKeyDir, SYSTEM_KEY_FILE_PREFIX + currentMaxSeqNum),
+      allClusterKeyFiles);
   }
 
   /**

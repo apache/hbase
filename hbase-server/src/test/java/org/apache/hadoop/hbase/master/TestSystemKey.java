@@ -9,14 +9,13 @@ import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
-import org.apache.hadoop.hbase.io.crypto.MockManagedKeyProvider;
 import org.apache.hadoop.hbase.keymeta.SystemKeyAccessor;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.Pair;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -38,7 +37,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.stream.IntStream;
 import static org.apache.hadoop.hbase.HConstants.SYSTEM_KEY_FILE_PREFIX;
-import static org.apache.hadoop.hbase.io.crypto.ManagedKeyData.KEY_SPACE_GLOBAL;
 import static org.apache.hadoop.hbase.io.crypto.ManagedKeyStatus.ACTIVE;
 import static org.apache.hadoop.hbase.io.crypto.ManagedKeyStatus.INACTIVE;
 import static org.junit.Assert.assertEquals;
@@ -106,7 +104,7 @@ public class TestSystemKey {
 
     @Test public void test() throws Exception {
       assertNull(systemKeyManager.getAllSystemKeyFiles());
-      assertNull(systemKeyManager.getLatestSystemKeyFile());
+      assertNull(systemKeyManager.getLatestSystemKeyFile().getFirst());
     }
   }
 
@@ -156,10 +154,11 @@ public class TestSystemKey {
       assertEquals(1, files.size());
       assertEquals(fileName, files.get(0).getName());
 
-      Path latestSystemKeyFile = systemKeyManager.getLatestSystemKeyFile();
-      assertEquals(fileName, latestSystemKeyFile.getName());
+      Pair<Path, List<Path>> latestSystemKeyFileResult = systemKeyManager.getLatestSystemKeyFile();
+      assertEquals(fileName, latestSystemKeyFileResult.getFirst().getName());
 
-      assertEquals(1, SystemKeyAccessor.extractSystemKeySeqNum(latestSystemKeyFile));
+      assertEquals(1, SystemKeyAccessor.extractSystemKeySeqNum(
+        latestSystemKeyFileResult.getFirst()));
     }
 
     @Test
@@ -175,8 +174,9 @@ public class TestSystemKey {
       List<Path> files = systemKeyManager.getAllSystemKeyFiles();
       assertEquals(3, files.size());
 
-      Path latestSystemKeyFile = systemKeyManager.getLatestSystemKeyFile();
-      assertEquals(3, SystemKeyAccessor.extractSystemKeySeqNum(latestSystemKeyFile));
+      Pair<Path, List<Path>> latestSystemKeyFileResult = systemKeyManager.getLatestSystemKeyFile();
+      assertEquals(3,
+        SystemKeyAccessor.extractSystemKeySeqNum(latestSystemKeyFileResult.getFirst()));
     }
 
     @Test
@@ -320,7 +320,6 @@ public class TestSystemKey {
       String fileName = SYSTEM_KEY_FILE_PREFIX + "1";
       FileStatus mockFileStatus = createMockFile(fileName);
       when(mockFileSystem.globStatus(any())).thenReturn(
-          new FileStatus[0],
           new FileStatus[0],
           new FileStatus[] { mockFileStatus }
         );

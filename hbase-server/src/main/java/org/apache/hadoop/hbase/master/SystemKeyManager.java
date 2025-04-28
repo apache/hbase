@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyStatus;
 import org.apache.hadoop.hbase.keymeta.SystemKeyAccessor;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import static org.apache.hadoop.hbase.HConstants.SYSTEM_KEY_FILE_PREFIX;
 
@@ -46,7 +47,8 @@ public class SystemKeyManager extends SystemKeyAccessor {
     if (clusterKeys.isEmpty()) {
       LOG.info("Initializing System Key for the first time");
       // Double check for cluster key as another HMaster might have succeeded.
-      if (rotateSystemKey(null) == null && getAllSystemKeyFiles().isEmpty()) {
+      if (rotateSystemKey(null, clusterKeys) == null &&
+          getAllSystemKeyFiles().isEmpty()) {
         throw new RuntimeException("Failed to generate or save System Key");
       }
     }
@@ -62,12 +64,13 @@ public class SystemKeyManager extends SystemKeyAccessor {
     if (! isKeyManagementEnabled()) {
       return null;
     }
-    Path latestFile = getLatestSystemKeyFile();
+    Pair<Path, List<Path>> latestFileResult = getLatestSystemKeyFile();
+    Path latestFile = getLatestSystemKeyFile().getFirst();
     String latestKeyMetadata = loadKeyMetadata(latestFile);
-    return rotateSystemKey(latestKeyMetadata);
+    return rotateSystemKey(latestKeyMetadata, latestFileResult.getSecond());
   }
 
-  private ManagedKeyData rotateSystemKey(String currentKeyMetadata) throws IOException {
+  private ManagedKeyData rotateSystemKey(String currentKeyMetadata, List<Path> allSystemKeyFiles) throws IOException {
     ManagedKeyProvider provider = getKeyProvider();
     ManagedKeyData clusterKey = provider.getSystemKey(
       master.getMasterFileSystem().getClusterId().toString().getBytes());
@@ -83,14 +86,13 @@ public class SystemKeyManager extends SystemKeyAccessor {
       throw new IOException("System key is expected to have metadata but it is null");
     }
     if (! clusterKey.getKeyMetadata().equals(currentKeyMetadata) &&
-        saveLatestSystemKey(clusterKey.getKeyMetadata())) {
+        saveLatestSystemKey(clusterKey.getKeyMetadata(), allSystemKeyFiles)) {
       return clusterKey;
     }
     return null;
   }
 
-  private boolean saveLatestSystemKey(String keyMetadata) throws IOException {
-    List<Path> allSystemKeyFiles = getAllSystemKeyFiles();
+  private boolean saveLatestSystemKey(String keyMetadata, List<Path> allSystemKeyFiles) throws IOException {
     int nextSystemKeySeq = (allSystemKeyFiles.isEmpty() ? -1
       : SystemKeyAccessor.extractKeySequence(allSystemKeyFiles.get(0))) + 1;
     LOG.info("Trying to save a new cluster key at seq: {}", nextSystemKeySeq);
