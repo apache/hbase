@@ -584,6 +584,10 @@ public class BackupAdminImpl implements BackupAdmin {
         }
       }
       if (nonExistingTableList != null) {
+        // Non-continuous Backup incremental backup is controlled by 'incremental backup table set'
+        // and not by user provided backup table list. This is an optimization to avoid copying
+        // the same set of WALs for incremental backups of different tables at different time
+        // HBASE-14038
         if (type == BackupType.INCREMENTAL && !request.isContinuousBackupEnabled()) {
           // Update incremental backup set
           tableList = excludeNonExistingTables(tableList, nonExistingTableList);

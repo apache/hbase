@@ -434,15 +434,4 @@ public class BackupManager implements Closeable {
     throws IOException {
     systemTable.addContinuousBackupTableSet(tables, startTimestamp);
   }
-
-  /**
-   * Retrieves the current set of tables covered by continuous backup along with the timestamp
-   * indicating when continuous backup started for each table.
-   * @return a map where the key is the table name and the value is the timestamp representing the
-   *         start time of continuous backup for that table.
-   * @throws IOException if an I/O error occurs while accessing the backup system table.
-   */
-  public Map<TableName, Long> getContinuousBackupTableSet() throws IOException {
-    return systemTable.getContinuousBackupTableSet();
-  }
 }

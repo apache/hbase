@@ -148,8 +148,6 @@ public class FullTableBackupClient extends TableBackupClient {
   public void execute() throws IOException {
     try (Admin admin = conn.getAdmin()) {
       beginBackup(backupManager, backupInfo);
-      initializeBackupStartCode(backupManager);
-      performLogRoll(admin);
 
       if (backupInfo.isContinuousBackupEnabled()) {
         handleContinuousBackup(admin);
@@ -157,7 +155,6 @@ public class FullTableBackupClient extends TableBackupClient {
         handleNonContinuousBackup(admin);
       }
 
-      updateBackupMetadata();
       completeBackup(conn, backupInfo, BackupType.FULL, conf);
     } catch (Exception e) {
       failBackup(conn, backupInfo, backupManager, e, "Unexpected BackupException : ",
