@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import org.apache.hadoop.hbase.TableName;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.incRPCCallsMetrics;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.incRPCRetriesMetrics;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.noMoreResultsForReverseScan;
@@ -551,6 +552,10 @@ class AsyncScanSingleRegionRpcRetryingCaller {
         consumer.onHeartbeat(scanController);
       }
     }
+    if (controller.getTableName().equals(TableName.valueOf(
+      "TestAsyncTableScanMetricsWithScannerSuspending"))) {
+      System.out.println("Suspending");
+    }
     ScanControllerState state = scanController.destroy();
     if (state == ScanControllerState.TERMINATED) {
       stopScan(resp);
@@ -559,8 +564,16 @@ class AsyncScanSingleRegionRpcRetryingCaller {
     int numberOfCompleteRows = resultCache.numberOfCompleteRows() - numberOfCompleteRowsBefore;
     if (state == ScanControllerState.SUSPENDED) {
       if (scanController.resumer.prepare(resp, numberOfCompleteRows)) {
+        if (controller.getTableName().equals(TableName.valueOf(
+          "TestAsyncTableScanMetricsWithScannerSuspending"))) {
+          System.out.println("Suspending");
+        }
         return;
       }
+    }
+    if (controller.getTableName().equals(TableName.valueOf(
+      "TestAsyncTableScanMetricsWithScannerSuspending"))) {
+      System.out.println("Suspending");
     }
     completeOrNext(resp, numberOfCompleteRows);
   }
@@ -596,6 +609,10 @@ class AsyncScanSingleRegionRpcRetryingCaller {
       incRPCRetriesMetrics(scanMetrics, regionServerRemote);
     }
     resetController(controller, callTimeoutNs, priority, loc.getRegion().getTable());
+    if (controller.getTableName().equals(TableName.valueOf(
+      "TestAsyncTableScanMetricsWithScannerSuspending"))) {
+      System.out.println("Suspending");
+    }
     ScanRequest req = RequestConverter.buildScanRequest(scannerId, scan.getCaching(), false,
       nextCallSeq, scan.isScanMetricsEnabled(), false, scan.getLimit());
     final Context context = Context.current();

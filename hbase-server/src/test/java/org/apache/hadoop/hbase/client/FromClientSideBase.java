@@ -17,8 +17,12 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.util.HashMap;
+import java.util.Map;
 import static org.apache.hadoop.hbase.HBaseTestingUtil.countRows;
+import org.apache.hadoop.hbase.client.metrics.ScanMetricsRegionInfo;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
@@ -280,19 +284,6 @@ class FromClientSideBase {
     Result result = scanner.next();
     scanner.close();
     return result;
-  }
-
-  protected Pair<ScanMetrics, List<ScanMetrics>> getScanMetrics(Table ht, Scan scan)
-    throws IOException {
-    ScanMetrics scanMetrics;
-    List<ScanMetrics> scanMetricsByRegion;
-    try (ResultScanner scanner = ht.getScanner(scan)) {
-      while ((scanner.next()) != null) {
-      }
-      scanMetrics = scanner.getScanMetrics();
-      scanMetricsByRegion = scanner.getScanMetricsByRegion();
-    }
-    return Pair.newPair(scanMetrics, scanMetricsByRegion);
   }
 
   byte[][] makeNAscii(byte[] base, int n) {

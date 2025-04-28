@@ -28,11 +28,11 @@ import static org.apache.hadoop.hbase.client.ConnectionUtils.isRemote;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.timelineConsistentRead;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
+import com.google.common.annotations.VisibleForTesting;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.context.Scope;
 import java.io.IOException;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -93,9 +93,12 @@ class AsyncClientScanner {
   private final ScanResultCache resultCache;
 
   private final Span span;
-  private List<ScanMetrics> scanMetricByRegion;
 
   private final Map<String, byte[]> requestAttributes;
+  private final boolean isScanMetricsByRegionEnabled;
+
+  @VisibleForTesting
+  public static boolean readFromSecondaryReplicas = false;
 
   public AsyncClientScanner(Scan scan, AdvancedScanResultConsumer consumer, TableName tableName,
     AsyncConnectionImpl conn, Timer retryTimer, long pauseNs, long pauseNsForServerOverloaded,
@@ -120,12 +123,17 @@ class AsyncClientScanner {
     this.startLogErrorsCnt = startLogErrorsCnt;
     this.resultCache = createScanResultCache(scan);
     this.requestAttributes = requestAttributes;
+    boolean isScanMetricsByRegionEnabled = false;
     if (scan.isScanMetricsEnabled()) {
       this.scanMetrics = new ScanMetrics();
       consumer.onScanMetricsCreated(scanMetrics);
+      if (this.scan.isScanMetricsByRegionEnabled()) {
+        isScanMetricsByRegionEnabled = true;
+      }
     } else {
       this.scanMetrics = null;
     }
+    this.isScanMetricsByRegionEnabled = isScanMetricsByRegionEnabled;
 
     /*
      * Assumes that the `start()` method is called immediately after construction. If this is no
@@ -167,10 +175,6 @@ class AsyncClientScanner {
   private CompletableFuture<OpenScannerResponse> callOpenScanner(HBaseRpcController controller,
     HRegionLocation loc, ClientService.Interface stub) {
     try (Scope ignored = span.makeCurrent()) {
-      if (this.scanMetrics != null && scan.isScanMetricsByRegionEnabled()) {
-        this.scanMetrics.initScanMetricsRegionInfo(
-          loc.getServerName(), loc.getRegion().getEncodedName());
-      }
       boolean isRegionServerRemote = isRemote(loc.getHostname());
       incRPCCallsMetrics(scanMetrics, isRegionServerRemote);
       if (openScannerTries.getAndIncrement() > 1) {
@@ -239,6 +243,12 @@ class AsyncClientScanner {
 
   private CompletableFuture<OpenScannerResponse> openScanner(int replicaId) {
     try (Scope ignored = span.makeCurrent()) {
+      if (readFromSecondaryReplicas && replicaId == RegionReplicaUtil.DEFAULT_REPLICA_ID) {
+        // Only for testing, return a CompletableFuture which will never complete, to force read
+        // from secondary replicas
+        return new CompletableFuture<>();
+      }
+      // Prod path
       return conn.callerFactory.<OpenScannerResponse> single().table(tableName)
         .row(scan.getStartRow()).replicaId(replicaId).locateType(getLocateType(scan))
         .priority(scan.getPriority()).rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS)
@@ -256,10 +266,10 @@ class AsyncClientScanner {
   }
 
   private void openScanner() {
-    incRegionCountMetrics(scanMetrics);
-    if (this.scanMetrics != null && this.scan.isScanMetricsByRegionEnabled()) {
+    if (this.isScanMetricsByRegionEnabled) {
       scanMetrics.moveToNextRegion();
     }
+    incRegionCountMetrics(scanMetrics);
     openScannerTries.set(1);
     addListener(timelineConsistentRead(conn.getLocator(), tableName, scan, scan.getStartRow(),
       getLocateType(scan), this::openScanner, rpcTimeoutNs, getPrimaryTimeoutNs(), retryTimer,
@@ -273,6 +283,11 @@ class AsyncClientScanner {
               TraceUtil.setError(span, error);
               span.end();
             }
+          }
+          if (this.isScanMetricsByRegionEnabled) {
+            HRegionLocation loc = resp.loc;
+            this.scanMetrics.initScanMetricsRegionInfo(
+              loc.getServerName(), loc.getRegion().getEncodedName());
           }
           startScan(resp);
         }
