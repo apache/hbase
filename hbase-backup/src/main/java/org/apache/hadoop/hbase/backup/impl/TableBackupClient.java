@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.backup.BackupRestoreConstants;
 import org.apache.hadoop.hbase.backup.BackupType;
 import org.apache.hadoop.hbase.backup.HBackupFileSystem;
 import org.apache.hadoop.hbase.backup.impl.BackupManifest.BackupImage;
+import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -112,7 +113,9 @@ public abstract class TableBackupClient {
     backupManager.setBackupInfo(backupInfo);
     // set the start timestamp of the overall backup
     long startTs = EnvironmentEdgeManager.currentTime();
+    long committedWALsTs = BackupUtils.getReplicationCheckpoint(conn);
     backupInfo.setStartTs(startTs);
+    backupInfo.setIncrCommittedWalTs(committedWALsTs);
     // set overall backup status: ongoing
     backupInfo.setState(BackupState.RUNNING);
     backupInfo.setPhase(BackupPhase.REQUEST);
