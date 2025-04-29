@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
@@ -98,6 +99,10 @@ public class TestBlockEvictionOnRegionMovement {
         ? cluster.getRegionServer(1)
         : cluster.getRegionServer(0);
     assertTrue(regionServingRS.getBlockCache().isPresent());
+
+    // wait for running prefetch threads to be completed.
+    Waiter.waitFor(this.conf, 200, () -> PrefetchExecutor.getPrefetchFutures().isEmpty());
+
     long oldUsedCacheSize =
       regionServingRS.getBlockCache().get().getBlockCaches()[1].getCurrentSize();
     assertNotEquals(0, oldUsedCacheSize);

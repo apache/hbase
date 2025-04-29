@@ -20,7 +20,8 @@ package org.apache.hadoop.hbase.io.hfile;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
-import org.apache.hadoop.hbase.conf.ConfigurationObserver;
+import org.apache.hadoop.hbase.conf.ConfigurationManager;
+import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -31,7 +32,7 @@ import org.slf4j.LoggerFactory;
  * Stores all of the cache objects and configuration for a single HFile.
  */
 @InterfaceAudience.Private
-public class CacheConfig implements ConfigurationObserver {
+public class CacheConfig implements PropagatingConfigurationObserver {
   private static final Logger LOG = LoggerFactory.getLogger(CacheConfig.class.getName());
 
   /**
@@ -448,5 +449,15 @@ public class CacheConfig implements ConfigurationObserver {
         + "hbase.rs.cacheblocksonwrite is changed to {}, "
         + "hbase.rs.evictblocksonclose is changed to {}",
       cacheDataOnRead, cacheDataOnWrite, evictOnClose);
+  }
+
+  @Override
+  public void registerChildren(ConfigurationManager manager) {
+    manager.registerObserver(blockCache);
+  }
+
+  @Override
+  public void deregisterChildren(ConfigurationManager manager) {
+    manager.deregisterObserver(blockCache);
   }
 }
