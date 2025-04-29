@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.AfterClass;
+import static org.junit.Assert.assertTrue;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -171,18 +172,7 @@ public class TestAsyncTableScanMetrics {
     assertEquals(bytes, scanMetrics.countOfBytesInResults.get());
     assertEquals(NUM_REGIONS, scanMetrics.countOfRPCcalls.get());
     // Assert scan metrics have not been collected by region
-    Map<ScanMetricsRegionInfo, Map<String, Long>> scanMetricsByRegion =
-      scanMetrics.getMetricsMapByRegion(false);
-    assertEquals(1, scanMetricsByRegion.size());
-    for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry :
-      scanMetricsByRegion.entrySet()) {
-      ScanMetricsRegionInfo smri = entry.getKey();
-      Map<String, Long> metrics = entry.getValue();
-      assertSame(ScanMetricsRegionInfo.EMPTY_SCAN_METRICS_REGION_INFO, smri);
-      // Assert overall scan metrics and scan metrics by region should be equal as
-      // scan metrics by region are disabled.
-      assertEquals(scanMetrics.getMetricsMap(false), metrics);
-    }
+    assertTrue(scanMetrics.getMetricsMapByRegion().isEmpty());
   }
 
   @Test
@@ -234,7 +224,7 @@ public class TestAsyncTableScanMetrics {
     Map<ScanMetricsRegionInfo, Map<String, Long>> scanMetricsByRegion =
       scanMetrics.getMetricsMapByRegion(false);
     assertEquals(NUM_REGIONS, scanMetricsByRegion.size());
-    int regionIndex = 0;
+    int rowsScannedAcrossAllRegions = 0;
     for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry :
       scanMetricsByRegion.entrySet()) {
       ScanMetricsRegionInfo smri = entry.getKey();
@@ -242,19 +232,17 @@ public class TestAsyncTableScanMetrics {
       assertNotNull(smri.getServerName());
       assertNotNull(smri.getEncodedRegionName());
       assertEquals(1, (long) perRegionMetrics.get(REGIONS_SCANNED_METRIC_NAME));
-      // Last 3 regions contains 1 row each but prior to that no region contains any row
-      if (regionIndex < NUM_REGIONS - 3) {
+      if (perRegionMetrics.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME) == 1) {
+        bytes = getBytesOfResults(Collections.singletonList(results.get(0)));
+        assertEquals(bytes, (long) perRegionMetrics.get(BYTES_IN_RESULTS_METRIC_NAME));
+        rowsScannedAcrossAllRegions++;
+      }
+      else {
         assertEquals(0, (long) perRegionMetrics.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME));
         assertEquals(0, (long) perRegionMetrics.get(BYTES_IN_RESULTS_METRIC_NAME));
       }
-      else {
-        assertEquals(1, (long) perRegionMetrics.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME));
-        bytes = getBytesOfResults(Collections.singletonList(
-          results.get(regionIndex - (NUM_REGIONS - 3))));
-        assertEquals(bytes, (long) perRegionMetrics.get(BYTES_IN_RESULTS_METRIC_NAME));
-      }
-      regionIndex++;
     }
+    assertEquals(3, rowsScannedAcrossAllRegions);
   }
 
   static long getBytesOfResults(List<Result> results) {

@@ -182,6 +182,10 @@ public class ServerSideScanMetrics {
     // Create a builder
     ImmutableMap.Builder<ScanMetricsRegionInfo, Map<String, Long>> builder = ImmutableMap.builder();
     for (ScanMetricsHolder scanMetricsHolder : scanMetricsHolders) {
+      if (scanMetricsHolder.getScanMetricsRegionInfo() ==
+        ScanMetricsRegionInfo.EMPTY_SCAN_METRICS_REGION_INFO) {
+        continue;
+      }
       builder.put(scanMetricsHolder.getScanMetricsRegionInfo(),
         scanMetricsHolder.getMetricsMap(reset));
     }
