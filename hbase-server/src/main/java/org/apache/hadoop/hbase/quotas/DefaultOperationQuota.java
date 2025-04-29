@@ -171,10 +171,7 @@ public class DefaultOperationQuota implements OperationQuota {
     readCapacityUnitDiff = calculateReadCapacityUnitDiff(
       operationSize[OperationType.GET.ordinal()] + operationSize[OperationType.SCAN.ordinal()],
       readConsumed);
-
-    long currentTime = EnvironmentEdgeManager.currentTime();
-    long startTime = RpcServer.getCurrentCall().map(RpcCall::getStartTime).orElse(currentTime);
-    handlerUsageTimeDiff = currentTime - startTime;
+    handlerUsageTimeDiff = calculateHandlerUsageMsDiff();
 
     for (final QuotaLimiter limiter : limiters) {
       if (writeDiff != 0) {
@@ -322,5 +319,12 @@ public class DefaultOperationQuota implements OperationQuota {
       // We don't ever want zero here
       return Math.max((long) requestsPerMillisecond, 1L);
     }
+  }
+
+  private long calculateHandlerUsageMsDiff() {
+    long currentTime = EnvironmentEdgeManager.currentTime();
+    long startTime = RpcServer.getCurrentCall().map(RpcCall::getStartTime).orElse(currentTime);
+    long timeElapsed = currentTime - startTime;
+    return handlerUsageTimeConsumed - timeElapsed;
   }
 }
