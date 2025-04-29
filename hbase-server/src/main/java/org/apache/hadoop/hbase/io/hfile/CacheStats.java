@@ -476,7 +476,7 @@ public class CacheStats {
 
   public void rollMetricsPeriod() {
     windowPeriods[windowIndex] =
-      new Date((EnvironmentEdgeManager.currentTime() - (periodTimeInMinutes * 60 * 1000)));
+      new Date((EnvironmentEdgeManager.currentTime() - (periodTimeInMinutes * 60 * 1000L)));
     hitCounts[windowIndex] = getHitCount() - lastHitCount;
     lastHitCount = getHitCount();
     hitCachingCounts[windowIndex] = getHitCachingCount() - lastHitCachingCount;
