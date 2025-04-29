@@ -97,7 +97,6 @@ class AsyncClientScanner {
 
   private final boolean isScanMetricsByRegionEnabled;
 
-
   public AsyncClientScanner(Scan scan, AdvancedScanResultConsumer consumer, TableName tableName,
     AsyncConnectionImpl conn, Timer retryTimer, long pauseNs, long pauseNsForServerOverloaded,
     int maxAttempts, long scanTimeoutNs, long rpcTimeoutNs, int startLogErrorsCnt,
