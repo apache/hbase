@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
-import com.google.common.base.Suppliers;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
@@ -35,6 +34,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.com.google.common.base.Suppliers;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 
 /**
