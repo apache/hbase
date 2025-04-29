@@ -184,7 +184,9 @@ public class TableSnapshotScanner extends AbstractClientScanner {
         }
 
         RegionInfo hri = regions.get(currentRegion);
-        scanMetrics.moveToNextRegion();
+        if (this.isScanMetricsByRegionEnabled) {
+          scanMetrics.moveToNextRegion();
+        }
         currentRegionScanner =
           new ClientSideRegionScanner(conf, fs, restoreDir, htd, hri, scan, scanMetrics);
         if (this.scanMetrics != null) {

@@ -26,6 +26,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public abstract class AbstractClientScanner implements ResultScanner {
   protected ScanMetrics scanMetrics;
+  protected boolean isScanMetricsByRegionEnabled = false;
 
   /**
    * Check and initialize if application wants to collect scan metrics
@@ -34,6 +35,9 @@ public abstract class AbstractClientScanner implements ResultScanner {
     // check if application wants to collect scan metrics
     if (scan.isScanMetricsEnabled()) {
       scanMetrics = new ScanMetrics();
+      if (scan.isScanMetricsByRegionEnabled()) {
+        isScanMetricsByRegionEnabled = true;
+      }
     }
   }
 
