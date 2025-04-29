@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 
 @InterfaceAudience.Private
@@ -96,8 +97,8 @@ public class DefaultOperationQuota implements OperationQuota {
     this.limiters = limiters;
     int numHandlerThreads = conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT,
       HConstants.DEFAULT_REGION_SERVER_HANDLER_COUNT);
-    this.estimatedHandlerUsagePerReq = calculateHandlerUsageTimeEstimate(requestsPerSecond,
-      numHandlerThreads);
+    this.estimatedHandlerUsagePerReq =
+      calculateHandlerUsageTimeEstimate(requestsPerSecond, numHandlerThreads);
 
     int size = OperationType.values().length;
     operationSize = new long[size];
@@ -147,8 +148,8 @@ public class DefaultOperationQuota implements OperationQuota {
     }
 
     for (final QuotaLimiter limiter : limiters) {
-      limiter.grabQuota(numWrites, writeConsumed, numReads, readConsumed,
-        writeCapacityUnitConsumed, readCapacityUnitConsumed, isAtomic , handlerUsageTimeConsumed);
+      limiter.grabQuota(numWrites, writeConsumed, numReads, readConsumed, writeCapacityUnitConsumed,
+        readCapacityUnitConsumed, isAtomic, handlerUsageTimeConsumed);
     }
   }
 
@@ -309,10 +310,12 @@ public class DefaultOperationQuota implements OperationQuota {
     return calculateReadCapacityUnit(actualSize) - calculateReadCapacityUnit(estimateSize);
   }
 
-  private long calculateHandlerUsageTimeEstimate(final double requestsPerSecond, final int numHandlerThreads) {
-    if (requestsPerSecond <= numHandlerThreads ) {
+  private long calculateHandlerUsageTimeEstimate(final double requestsPerSecond,
+    final int numHandlerThreads) {
+    if (requestsPerSecond <= numHandlerThreads) {
       // If less than 1 request per second per handler thread, then we use the number of handler
-      // threads as a baseline to avoid incorrect estimations when the number of requests is very low.
+      // threads as a baseline to avoid incorrect estimations when the number of requests is very
+      // low.
       return numHandlerThreads;
     } else {
       double requestsPerMillisecond = Math.ceil(requestsPerSecond / 1000);

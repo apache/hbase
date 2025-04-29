@@ -34,7 +34,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Suppliers;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 
 /**
@@ -61,9 +63,8 @@ public class RegionServerRpcQuotaManager implements RpcQuotaManager {
     rpcThrottleStorage =
       new RpcThrottleStorage(rsServices.getZooKeeper(), rsServices.getConfiguration());
     this.requestsPerSecondSupplier = Suppliers.memoizeWithExpiration(
-      () -> rsServices.getMetrics().getRegionServerWrapper().getRequestsPerSecond(),
-      1, TimeUnit.MINUTES
-    );
+      () -> rsServices.getMetrics().getRegionServerWrapper().getRequestsPerSecond(), 1,
+      TimeUnit.MINUTES);
   }
 
   public void start(final RpcScheduler rpcScheduler) throws IOException {

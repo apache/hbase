@@ -52,7 +52,7 @@ public class RpcThrottlingException extends HBaseIOException {
     "number of write requests exceeded", "write size limit exceeded", "read size limit exceeded",
     "request capacity unit exceeded", "read capacity unit exceeded", "write capacity unit exceeded",
     "atomic request number exceeded", "atomic read size exceeded", "atomic write size exceeded",
-    "request handler usage time exceeded"};
+    "request handler usage time exceeded" };
 
   private static final String MSG_WAIT = " - wait ";
 

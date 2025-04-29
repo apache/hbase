@@ -28,43 +28,48 @@ import org.apache.yetus.audience.InterfaceStability;
 public interface QuotaLimiter {
   /**
    * Checks if it is possible to execute the specified operation.
-   * @param writeReqs                     the write requests that will be checked against the available
-   *                                      quota
-   * @param estimateWriteSize             the write size that will be checked against the available
-   *                                      quota
-   * @param readReqs                      the read requests that will be checked against the available
-   *                                      quota
-   * @param estimateReadSize              the read size that will be checked against the available quota
-   * @param estimateWriteCapacityUnit     the write capacity unit that will be checked against the
-   *                                      available quota
-   * @param estimateReadCapacityUnit      the read capacity unit that will be checked against the
-   *                                      available quota
-   * @param isAtomic                      if the request performs an atomic operation
-   * @param estimateHandlerThreadUsageMs  the estimated handler usage time in ms that will be checked
-   *                                      against the available quota
+   * @param writeReqs                    the write requests that will be checked against the
+   *                                     available quota
+   * @param estimateWriteSize            the write size that will be checked against the available
+   *                                     quota
+   * @param readReqs                     the read requests that will be checked against the
+   *                                     available quota
+   * @param estimateReadSize             the read size that will be checked against the available
+   *                                     quota
+   * @param estimateWriteCapacityUnit    the write capacity unit that will be checked against the
+   *                                     available quota
+   * @param estimateReadCapacityUnit     the read capacity unit that will be checked against the
+   *                                     available quota
+   * @param isAtomic                     if the request performs an atomic operation
+   * @param estimateHandlerThreadUsageMs the estimated handler usage time in ms that will be checked
+   *                                     against the available quota
    * @throws RpcThrottlingException thrown if not enough available resources to perform operation.
    */
   void checkQuota(long writeReqs, long estimateWriteSize, long readReqs, long estimateReadSize,
     long estimateWriteCapacityUnit, long estimateReadCapacityUnit, boolean isAtomic,
-    long estimateHandlerThreadUsageMs)
-    throws RpcThrottlingException;
+    long estimateHandlerThreadUsageMs) throws RpcThrottlingException;
 
   /**
    * Removes the specified write and read amount from the quota. At this point the write and read
    * amount will be an estimate, that will be later adjusted with a consumeWrite()/consumeRead()
    * call.
-   * @param writeReqs                     the write requests that will be removed from the current quota
-   * @param writeSize                     the write size that will be removed from the current quota
-   * @param readReqs                      the read requests that will be removed from the current quota
-   * @param readSize                      the read size that will be removed from the current quota
-   * @param writeCapacityUnit             the write capacity unit that will be removed from the current quota
-   * @param readCapacityUnit              the read capacity unit num that will be removed from the current quota
-   * @param isAtomic                      if the request performs an atomic operation
-   * @param estimateHandlerThreadUsageMs  the estimated handler usage time in ms that will be removed from
-   *                                      the available quota
+   * @param writeReqs                    the write requests that will be removed from the current
+   *                                     quota
+   * @param writeSize                    the write size that will be removed from the current quota
+   * @param readReqs                     the read requests that will be removed from the current
+   *                                     quota
+   * @param readSize                     the read size that will be removed from the current quota
+   * @param writeCapacityUnit            the write capacity unit that will be removed from the
+   *                                     current quota
+   * @param readCapacityUnit             the read capacity unit num that will be removed from the
+   *                                     current quota
+   * @param isAtomic                     if the request performs an atomic operation
+   * @param estimateHandlerThreadUsageMs the estimated handler usage time in ms that will be removed
+   *                                     from the available quota
    */
   void grabQuota(long writeReqs, long writeSize, long readReqs, long readSize,
-    long writeCapacityUnit, long readCapacityUnit, boolean isAtomic, long estimateHandlerThreadUsageMs);
+    long writeCapacityUnit, long readCapacityUnit, boolean isAtomic,
+    long estimateHandlerThreadUsageMs);
 
   /**
    * Removes or add back some write amount to the quota. (called at the end of an operation in case
@@ -79,8 +84,8 @@ public interface QuotaLimiter {
   void consumeRead(long size, long capacityUnit, boolean isAtomic);
 
   /**
-   * Removes or add back some handler thread usage milliseconds to the quota. (called at the end
-   * of an operation in case the estimate quota was off)
+   * Removes or add back some handler thread usage milliseconds to the quota. (called at the end of
+   * an operation in case the estimate quota was off)
    * @param handlerMillisUsed the actual elapsed time used processing the request
    */
   void consumeTime(long handlerMillisUsed);
