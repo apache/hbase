@@ -21,13 +21,14 @@ import java.util.Arrays;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.ipc.RpcCall;
 import org.apache.hadoop.hbase.ipc.RpcServer;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 
 @InterfaceAudience.Private
@@ -45,11 +46,18 @@ public class DefaultOperationQuota implements OperationQuota {
 
   // the available read/write quota size in bytes
   protected long readAvailable = 0;
+
+  // The estimated handler usage time in ms for a request based on
+  // the number of requests per second and the number of handler threads
+  private final long estimatedHandlerUsagePerReq;
+
   // estimated quota
   protected long writeConsumed = 0;
   protected long readConsumed = 0;
   protected long writeCapacityUnitConsumed = 0;
   protected long readCapacityUnitConsumed = 0;
+  protected long handlerUsageTimeConsumed = 0;
+
   // real consumed quota
   private final long[] operationSize;
   // difference between estimated quota and real consumed quota used in close method
@@ -59,14 +67,15 @@ public class DefaultOperationQuota implements OperationQuota {
   protected long readDiff = 0;
   protected long writeCapacityUnitDiff = 0;
   protected long readCapacityUnitDiff = 0;
+  protected long handlerUsageTimeDiff = 0;
   private boolean useResultSizeBytes;
   private long blockSizeBytes;
   private long maxScanEstimate;
   private boolean isAtomic = false;
 
   public DefaultOperationQuota(final Configuration conf, final int blockSizeBytes,
-    final QuotaLimiter... limiters) {
-    this(conf, Arrays.asList(limiters));
+    final double requestsPerSecond, final QuotaLimiter... limiters) {
+    this(conf, requestsPerSecond, Arrays.asList(limiters));
     this.useResultSizeBytes =
       conf.getBoolean(OperationQuota.USE_RESULT_SIZE_BYTES, USE_RESULT_SIZE_BYTES_DEFAULT);
     this.blockSizeBytes = blockSizeBytes;
@@ -78,15 +87,20 @@ public class DefaultOperationQuota implements OperationQuota {
   /**
    * NOTE: The order matters. It should be something like [user, table, namespace, global]
    */
-  public DefaultOperationQuota(final Configuration conf, final List<QuotaLimiter> limiters) {
+  public DefaultOperationQuota(final Configuration conf, final double requestsPerSecond,
+    final List<QuotaLimiter> limiters) {
     this.writeCapacityUnit =
       conf.getLong(QuotaUtil.WRITE_CAPACITY_UNIT_CONF_KEY, QuotaUtil.DEFAULT_WRITE_CAPACITY_UNIT);
     this.readCapacityUnit =
       conf.getLong(QuotaUtil.READ_CAPACITY_UNIT_CONF_KEY, QuotaUtil.DEFAULT_READ_CAPACITY_UNIT);
     this.limiters = limiters;
+    int numHandlerThreads = conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT,
+      HConstants.DEFAULT_REGION_SERVER_HANDLER_COUNT);
+    this.estimatedHandlerUsagePerReq = calculateHandlerUsageTimeEstimate(requestsPerSecond,
+      numHandlerThreads);
+
     int size = OperationType.values().length;
     operationSize = new long[size];
-
     for (int i = 0; i < size; ++i) {
       operationSize[i] = 0;
     }
@@ -128,13 +142,13 @@ public class DefaultOperationQuota implements OperationQuota {
       limiter.checkQuota(Math.min(maxWritesToEstimate, numWrites),
         Math.min(maxWriteSizeToEstimate, writeConsumed), Math.min(maxReadsToEstimate, numReads),
         Math.min(maxReadSizeToEstimate, readConsumed), writeCapacityUnitConsumed,
-        readCapacityUnitConsumed, isAtomic);
+        readCapacityUnitConsumed, isAtomic, handlerUsageTimeConsumed);
       readAvailable = Math.min(readAvailable, limiter.getReadAvailable());
     }
 
     for (final QuotaLimiter limiter : limiters) {
-      limiter.grabQuota(numWrites, writeConsumed, numReads, readConsumed, writeCapacityUnitConsumed,
-        readCapacityUnitConsumed, isAtomic);
+      limiter.grabQuota(numWrites, writeConsumed, numReads, readConsumed,
+        writeCapacityUnitConsumed, readCapacityUnitConsumed, isAtomic , handlerUsageTimeConsumed);
     }
   }
 
@@ -152,12 +166,15 @@ public class DefaultOperationQuota implements OperationQuota {
         RpcServer.getCurrentCall().map(RpcCall::getBlockBytesScanned).orElse(0L);
       readDiff = Math.max(blockBytesScanned, resultSize) - readConsumed;
     }
-
     writeCapacityUnitDiff =
       calculateWriteCapacityUnitDiff(operationSize[OperationType.MUTATE.ordinal()], writeConsumed);
     readCapacityUnitDiff = calculateReadCapacityUnitDiff(
       operationSize[OperationType.GET.ordinal()] + operationSize[OperationType.SCAN.ordinal()],
       readConsumed);
+
+    long currentTime = EnvironmentEdgeManager.currentTime();
+    long startTime = RpcServer.getCurrentCall().map(RpcCall::getStartTime).orElse(currentTime);
+    handlerUsageTimeDiff = currentTime - startTime;
 
     for (final QuotaLimiter limiter : limiters) {
       if (writeDiff != 0) {
@@ -165,6 +182,9 @@ public class DefaultOperationQuota implements OperationQuota {
       }
       if (readDiff != 0) {
         limiter.consumeRead(readDiff, readCapacityUnitDiff, isAtomic);
+      }
+      if (handlerUsageTimeDiff != 0) {
+        limiter.consumeTime(handlerUsageTimeDiff);
       }
     }
   }
@@ -216,6 +236,8 @@ public class DefaultOperationQuota implements OperationQuota {
 
     writeCapacityUnitConsumed = calculateWriteCapacityUnit(writeConsumed);
     readCapacityUnitConsumed = calculateReadCapacityUnit(readConsumed);
+
+    handlerUsageTimeConsumed = (numReads + numWrites) * estimatedHandlerUsagePerReq;
   }
 
   /**
@@ -238,6 +260,7 @@ public class DefaultOperationQuota implements OperationQuota {
     }
 
     readCapacityUnitConsumed = calculateReadCapacityUnit(readConsumed);
+    handlerUsageTimeConsumed = estimatedHandlerUsagePerReq;
   }
 
   protected static long getScanReadConsumeEstimate(long blockSizeBytes, long nextCallSeq,
@@ -287,5 +310,17 @@ public class DefaultOperationQuota implements OperationQuota {
 
   private long calculateReadCapacityUnitDiff(final long actualSize, final long estimateSize) {
     return calculateReadCapacityUnit(actualSize) - calculateReadCapacityUnit(estimateSize);
+  }
+
+  private long calculateHandlerUsageTimeEstimate(final double requestsPerSecond, final int numHandlerThreads) {
+    if (requestsPerSecond <= numHandlerThreads ) {
+      // If less than 1 request per second per handler thread, then we use the number of handler
+      // threads as a baseline to avoid incorrect estimations when the number of requests is very low.
+      return numHandlerThreads;
+    } else {
+      double requestsPerMillisecond = Math.ceil(requestsPerSecond / 1000);
+      // We don't ever want zero here
+      return Math.max((long) requestsPerMillisecond, 1L);
+    }
   }
 }

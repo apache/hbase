@@ -23,7 +23,6 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetQuotaRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
@@ -107,6 +106,9 @@ public class ThrottleSettings extends QuotaSettings {
           case READ_CAPACITY_UNIT:
           case WRITE_CAPACITY_UNIT:
             builder.append(String.format("%dCU", timedQuota.getSoftLimit()));
+            break;
+          case REQUEST_HANDLER_USAGE_MS:
+            builder.append(String.format("%dms", timedQuota.getSoftLimit()));
             break;
           default:
         }

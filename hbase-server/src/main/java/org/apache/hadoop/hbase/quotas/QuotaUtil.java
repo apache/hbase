@@ -49,7 +49,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TimeUnit;
@@ -102,6 +101,8 @@ public class QuotaUtil extends QuotaTableUtil {
     "hbase.quota.default.user.machine.atomic.request.num";
   public static final String QUOTA_DEFAULT_USER_MACHINE_ATOMIC_WRITE_SIZE =
     "hbase.quota.default.user.machine.atomic.write.size";
+  public static final String QUOTA_DEFAULT_USER_MACHINE_REQUEST_HANDLER_USAGE_MS =
+    "hbase.quota.default.user.machine.request.handler.usage.ms";
 
   /** Table descriptor for Quota internal table */
   public static final TableDescriptor QUOTA_TABLE_DESC =
@@ -401,6 +402,8 @@ public class QuotaUtil extends QuotaTableUtil {
       .ifPresent(throttleBuilder::setAtomicReqNum);
     buildDefaultTimedQuota(conf, QUOTA_DEFAULT_USER_MACHINE_ATOMIC_WRITE_SIZE)
       .ifPresent(throttleBuilder::setAtomicWriteSize);
+    buildDefaultTimedQuota(conf, QUOTA_DEFAULT_USER_MACHINE_REQUEST_HANDLER_USAGE_MS)
+      .ifPresent(throttleBuilder::setReqHandlerUsageMs);
 
     UserQuotaState state = new UserQuotaState(nowTs);
     QuotaProtos.Quotas defaultQuotas =

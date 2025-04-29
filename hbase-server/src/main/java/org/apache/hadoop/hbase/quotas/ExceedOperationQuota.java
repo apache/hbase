@@ -22,7 +22,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 
 /*
@@ -43,8 +42,9 @@ public class ExceedOperationQuota extends DefaultOperationQuota {
   private QuotaLimiter regionServerLimiter;
 
   public ExceedOperationQuota(final Configuration conf, int blockSizeBytes,
-    QuotaLimiter regionServerLimiter, final QuotaLimiter... limiters) {
-    super(conf, blockSizeBytes, limiters);
+    final double requestsPerSecond, QuotaLimiter regionServerLimiter,
+    final QuotaLimiter... limiters) {
+    super(conf, blockSizeBytes, requestsPerSecond, limiters);
     this.regionServerLimiter = regionServerLimiter;
   }
 
@@ -78,7 +78,7 @@ public class ExceedOperationQuota extends DefaultOperationQuota {
       estimateQuota.run();
       // 2. Check if region server limiter is enough. If not, throw RpcThrottlingException.
       regionServerLimiter.checkQuota(numWrites, writeConsumed, numReads + numScans, readConsumed,
-        writeCapacityUnitConsumed, readCapacityUnitConsumed, isAtomic);
+        writeCapacityUnitConsumed, readCapacityUnitConsumed, isAtomic, handlerUsageTimeConsumed);
       // 3. Check if other limiters are enough. If not, exceed other limiters because region server
       // limiter is enough.
       boolean exceed = false;
@@ -94,13 +94,13 @@ public class ExceedOperationQuota extends DefaultOperationQuota {
       // 4. Region server limiter is enough and grab estimated consume quota.
       readAvailable = Math.max(readAvailable, regionServerLimiter.getReadAvailable());
       regionServerLimiter.grabQuota(numWrites, writeConsumed, numReads + numScans, readConsumed,
-        writeCapacityUnitConsumed, writeCapacityUnitConsumed, isAtomic);
+        writeCapacityUnitConsumed, writeCapacityUnitConsumed, isAtomic, handlerUsageTimeConsumed);
       if (exceed) {
         // 5. Other quota limiter is exceeded and has not been grabbed (because throw
         // RpcThrottlingException in Step 3), so grab it.
         for (final QuotaLimiter limiter : limiters) {
           limiter.grabQuota(numWrites, writeConsumed, numReads + numScans, readConsumed,
-            writeCapacityUnitConsumed, writeCapacityUnitConsumed, isAtomic);
+            writeCapacityUnitConsumed, writeCapacityUnitConsumed, isAtomic, 0L);
         }
       }
     }
@@ -114,6 +114,9 @@ public class ExceedOperationQuota extends DefaultOperationQuota {
     }
     if (readDiff != 0) {
       regionServerLimiter.consumeRead(readDiff, readCapacityUnitDiff, false);
+    }
+    if (handlerUsageTimeDiff != 0) {
+      regionServerLimiter.consumeTime(handlerUsageTimeDiff);
     }
   }
 
