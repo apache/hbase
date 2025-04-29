@@ -1663,6 +1663,9 @@ public final class HConstants {
    */
   public final static boolean HBASE_GLOBAL_READONLY_ENABLED_DEFAULT = false;
 
+  /** name of the file having active cluster suffix */
+  public static final String ACTIVE_CLUSTER_SUFFIX_FILE_NAME = "active_cluster_suffix.id";
+
   private HConstants() {
     // Can't be instantiated with this ctor.
   }
