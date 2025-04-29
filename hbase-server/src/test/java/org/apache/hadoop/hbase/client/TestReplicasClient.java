@@ -17,9 +17,11 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.client.metrics.ScanMetrics.REGIONS_SCANNED_METRIC_NAME;
+import static org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME;
+
 import com.codahale.metrics.Counter;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -40,9 +42,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import static org.apache.hadoop.hbase.client.metrics.ScanMetrics.REGIONS_SCANNED_METRIC_NAME;
 import org.apache.hadoop.hbase.client.metrics.ScanMetricsRegionInfo;
-import static org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
@@ -664,8 +664,7 @@ public class TestReplicasClient {
       // Assert row was read from secondary replica along with asserting scan metrics by region
       assertScanMetrics(scan, hriSecondary, true);
       LOG.info("Scanned secondary replica ");
-    }
-    finally {
+    } finally {
       SlowMeCopro.getPrimaryCdl().get().countDown();
       Delete d = new Delete(b1);
       table.delete(d);
@@ -673,7 +672,8 @@ public class TestReplicasClient {
     }
   }
 
-  private void assertScanMetrics(Scan scan, RegionInfo regionInfo, boolean isStale) throws IOException {
+  private void assertScanMetrics(Scan scan, RegionInfo regionInfo, boolean isStale)
+    throws IOException {
     try (ResultScanner rs = table.getScanner(scan);) {
       for (Result r : rs) {
         Assert.assertEquals(isStale, r.isStale());
@@ -682,8 +682,8 @@ public class TestReplicasClient {
       Map<ScanMetricsRegionInfo, Map<String, Long>> scanMetricsByRegion =
         rs.getScanMetrics().getMetricsMapByRegion(false);
       Assert.assertEquals(1, scanMetricsByRegion.size());
-      for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry :
-        scanMetricsByRegion.entrySet()) {
+      for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry : scanMetricsByRegion
+        .entrySet()) {
         ScanMetricsRegionInfo scanMetricsRegionInfo = entry.getKey();
         Map<String, Long> metrics = entry.getValue();
         Assert.assertEquals(rsServerName, scanMetricsRegionInfo.getServerName());

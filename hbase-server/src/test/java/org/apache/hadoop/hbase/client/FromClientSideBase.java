@@ -17,12 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.util.HashMap;
-import java.util.Map;
 import static org.apache.hadoop.hbase.HBaseTestingUtil.countRows;
-import org.apache.hadoop.hbase.client.metrics.ScanMetricsRegionInfo;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
@@ -39,7 +35,6 @@ import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
-import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -53,7 +48,6 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.NonRepeatedEnvironmentEdge;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.TableDescriptorChecker;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;

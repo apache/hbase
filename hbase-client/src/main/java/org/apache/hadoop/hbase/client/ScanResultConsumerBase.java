@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.util.List;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.yetus.audience.InterfaceAudience;
 

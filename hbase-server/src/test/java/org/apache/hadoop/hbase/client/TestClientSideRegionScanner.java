@@ -17,8 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics.
-  COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME;
+import static org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -243,8 +242,8 @@ public class TestClientSideRegionScanner {
       Map<ScanMetricsRegionInfo, Map<String, Long>> scanMetricsByRegion =
         scanMetricsFromScanner.getMetricsMapByRegion();
       Assert.assertEquals(1, scanMetricsByRegion.size());
-      for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry :
-        scanMetricsByRegion.entrySet()) {
+      for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry : scanMetricsByRegion
+        .entrySet()) {
         ScanMetricsRegionInfo scanMetricsRegionInfo = entry.getKey();
         Map<String, Long> metricsMap = entry.getValue();
         Assert.assertEquals(hri.getEncodedName(), scanMetricsRegionInfo.getEncodedRegionName());

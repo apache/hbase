@@ -24,8 +24,8 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Generic holder class for capturing Scan Metrics as a map of
- * metric name ({@link String}) -&gt Value ({@link AtomicLong}).
+ * Generic holder class for capturing Scan Metrics as a map of metric name ({@link String}) -&gt
+ * Value ({@link AtomicLong}).
  */
 @InterfaceAudience.Private
 public class ScanMetricsHolder {
@@ -94,13 +94,11 @@ public class ScanMetricsHolder {
    * already populated and a re-attempt is done then {@link UnsupportedOperationException} is
    * thrown.
    */
-  void initScanMetricsRegionInfo(
-    ServerName serverName, String encodedRegionName) {
+  void initScanMetricsRegionInfo(ServerName serverName, String encodedRegionName) {
     // Check by reference
     if (scanMetricsRegionInfo == ScanMetricsRegionInfo.EMPTY_SCAN_METRICS_REGION_INFO) {
       scanMetricsRegionInfo = new ScanMetricsRegionInfo(encodedRegionName, serverName);
-    }
-    else {
+    } else {
       throw new UnsupportedOperationException("ScanMetricsRegionInfo has already been initialized");
     }
   }

@@ -17,6 +17,15 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.client.TestAsyncTableScanMetrics.getBytesOfResults;
+import static org.apache.hadoop.hbase.client.metrics.ScanMetrics.BYTES_IN_RESULTS_METRIC_NAME;
+import static org.apache.hadoop.hbase.client.metrics.ScanMetrics.REGIONS_SCANNED_METRIC_NAME;
+import static org.apache.hadoop.hbase.client.metrics.ScanMetrics.RPC_CALLS_METRIC_NAME;
+import static org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -27,27 +36,19 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
-import static org.apache.hadoop.hbase.client.TestAsyncTableScanMetrics.getBytesOfResults;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
-import static org.apache.hadoop.hbase.client.metrics.ScanMetrics.BYTES_IN_RESULTS_METRIC_NAME;
-import static org.apache.hadoop.hbase.client.metrics.ScanMetrics.REGIONS_SCANNED_METRIC_NAME;
-import static org.apache.hadoop.hbase.client.metrics.ScanMetrics.RPC_CALLS_METRIC_NAME;
 import org.apache.hadoop.hbase.client.metrics.ScanMetricsRegionInfo;
-import static org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.Assert;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
+import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
 @Category({ MediumTests.class, ClientTests.class })
 public class TestAsyncTableScanMetricsWithScannerSuspending {
@@ -58,8 +59,8 @@ public class TestAsyncTableScanMetricsWithScannerSuspending {
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
-  private static final TableName TABLE_NAME = TableName.valueOf(
-    TestAsyncTableScanMetricsWithScannerSuspending.class.getSimpleName());
+  private static final TableName TABLE_NAME =
+    TableName.valueOf(TestAsyncTableScanMetricsWithScannerSuspending.class.getSimpleName());
 
   private static final byte[] CF = Bytes.toBytes("cf");
 
@@ -147,16 +148,15 @@ public class TestAsyncTableScanMetricsWithScannerSuspending {
       scanMetrics.getMetricsMapByRegion(false);
     assertEquals(3, scanMetricsByRegion.size());
     int regionIndex = 0;
-    for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry :
-      scanMetricsByRegion.entrySet()) {
+    for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry : scanMetricsByRegion
+      .entrySet()) {
       ScanMetricsRegionInfo smri = entry.getKey();
       Map<String, Long> perRegionMetrics = entry.getValue();
       assertNotNull(smri.getServerName());
       assertNotNull(smri.getEncodedRegionName());
       assertEquals(1, (long) perRegionMetrics.get(REGIONS_SCANNED_METRIC_NAME));
       assertEquals(1, (long) perRegionMetrics.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME));
-      bytes = getBytesOfResults(Collections.singletonList(
-        results.get(regionIndex)));
+      bytes = getBytesOfResults(Collections.singletonList(results.get(regionIndex)));
       assertEquals(bytes, (long) perRegionMetrics.get(BYTES_IN_RESULTS_METRIC_NAME));
       assertEquals(2, (long) perRegionMetrics.get(RPC_CALLS_METRIC_NAME));
       regionIndex++;

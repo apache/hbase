@@ -22,12 +22,10 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * POJO for capturing region level details when region level scan metrics are enabled.
+ * POJO for capturing region level details when region level scan metrics are enabled. <br>
  * <br>
- * <br>
- * Currently, encoded region name and server name (host name, ports and startcode) are captured
- * as region details.
- * <br>
+ * Currently, encoded region name and server name (host name, ports and startcode) are captured as
+ * region details. <br>
  * <br>
  * Instance of this class serves as key in the Map returned by
  * {@link ServerSideScanMetrics#getMetricsMapByRegion()} or

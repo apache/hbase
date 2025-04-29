@@ -17,9 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics.
-  COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME;
 import static org.apache.hadoop.hbase.client.metrics.ScanMetrics.REGIONS_SCANNED_METRIC_NAME;
+import static org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -267,8 +266,7 @@ public class TestTableSnapshotScanner {
         new TableSnapshotScanner(conf, restoreDir, snapshotName, scan);
       verifyScanner(snapshotScanner, bbb, endKey);
       return snapshotScanner.getScanMetrics();
-    }
-    finally {
+    } finally {
       UTIL.getAdmin().deleteSnapshot(snapshotName);
       UTIL.deleteTable(tableName);
     }
@@ -285,7 +283,7 @@ public class TestTableSnapshotScanner {
     ScanMetrics scanMetrics = createTableSnapshotScannerAndGetScanMetrics(true, false, yyy);
     Assert.assertNotNull(scanMetrics);
     int rowsScanned = 0;
-    for (byte[] row: HBaseTestingUtil.ROWS) {
+    for (byte[] row : HBaseTestingUtil.ROWS) {
       if (Bytes.compareTo(row, bbb) >= 0 && Bytes.compareTo(row, yyy) < 0) {
         rowsScanned++;
       }
@@ -303,15 +301,14 @@ public class TestTableSnapshotScanner {
     Map<ScanMetricsRegionInfo, Map<String, Long>> scanMetricsByRegion =
       scanMetrics.getMetricsMapByRegion();
     Assert.assertEquals(1, scanMetricsByRegion.size());
-    for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry :
-      scanMetricsByRegion.entrySet()) {
+    for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry : scanMetricsByRegion
+      .entrySet()) {
       ScanMetricsRegionInfo scanMetricsRegionInfo = entry.getKey();
       Map<String, Long> metricsMap = entry.getValue();
       Assert.assertNull(scanMetricsRegionInfo.getServerName());
       Assert.assertNotNull(scanMetricsRegionInfo.getEncodedRegionName());
       Assert.assertEquals(1, (long) metricsMap.get(REGIONS_SCANNED_METRIC_NAME));
-      Assert.assertEquals(1,
-        (long) metricsMap.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME));
+      Assert.assertEquals(1, (long) metricsMap.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME));
     }
   }
 
@@ -321,8 +318,8 @@ public class TestTableSnapshotScanner {
     Assert.assertNotNull(scanMetrics);
     Map<ScanMetricsRegionInfo, Map<String, Long>> scanMetricsByRegion =
       scanMetrics.getMetricsMapByRegion();
-    for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry :
-      scanMetricsByRegion.entrySet()) {
+    for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry : scanMetricsByRegion
+      .entrySet()) {
       ScanMetricsRegionInfo scanMetricsRegionInfo = entry.getKey();
       Map<String, Long> metricsMap = entry.getValue();
       Assert.assertNull(scanMetricsRegionInfo.getServerName());

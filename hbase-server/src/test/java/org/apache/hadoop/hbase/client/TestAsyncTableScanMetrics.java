@@ -17,22 +17,21 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.util.Collections;
 import static org.apache.hadoop.hbase.client.metrics.ScanMetrics.BYTES_IN_RESULTS_METRIC_NAME;
-import static org.apache.hadoop.hbase.client.metrics.ScanMetrics.RPC_CALLS_METRIC_NAME;
+import static org.apache.hadoop.hbase.client.metrics.ScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME;
 import static org.apache.hadoop.hbase.client.metrics.ScanMetrics.REGIONS_SCANNED_METRIC_NAME;
-import static org.apache.hadoop.hbase.client.metrics.ScanMetrics.
-  COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME;
+import static org.apache.hadoop.hbase.client.metrics.ScanMetrics.RPC_CALLS_METRIC_NAME;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Map;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ForkJoinPool;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -45,7 +44,6 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.AfterClass;
-import static org.junit.Assert.assertTrue;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -194,8 +192,8 @@ public class TestAsyncTableScanMetrics {
     Map<ScanMetricsRegionInfo, Map<String, Long>> scanMetricsByRegion =
       scanMetrics.getMetricsMapByRegion(false);
     assertEquals(1, scanMetricsByRegion.size());
-    for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry :
-      scanMetricsByRegion.entrySet()) {
+    for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry : scanMetricsByRegion
+      .entrySet()) {
       ScanMetricsRegionInfo smri = entry.getKey();
       Map<String, Long> metrics = entry.getValue();
       assertNotNull(smri.getServerName());
@@ -225,8 +223,8 @@ public class TestAsyncTableScanMetrics {
       scanMetrics.getMetricsMapByRegion(false);
     assertEquals(NUM_REGIONS, scanMetricsByRegion.size());
     int rowsScannedAcrossAllRegions = 0;
-    for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry :
-      scanMetricsByRegion.entrySet()) {
+    for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry : scanMetricsByRegion
+      .entrySet()) {
       ScanMetricsRegionInfo smri = entry.getKey();
       Map<String, Long> perRegionMetrics = entry.getValue();
       assertNotNull(smri.getServerName());
@@ -236,8 +234,7 @@ public class TestAsyncTableScanMetrics {
         bytes = getBytesOfResults(Collections.singletonList(results.get(0)));
         assertEquals(bytes, (long) perRegionMetrics.get(BYTES_IN_RESULTS_METRIC_NAME));
         rowsScannedAcrossAllRegions++;
-      }
-      else {
+      } else {
         assertEquals(0, (long) perRegionMetrics.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME));
         assertEquals(0, (long) perRegionMetrics.get(BYTES_IN_RESULTS_METRIC_NAME));
       }

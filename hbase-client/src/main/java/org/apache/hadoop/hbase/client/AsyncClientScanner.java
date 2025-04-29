@@ -286,8 +286,8 @@ class AsyncClientScanner {
           }
           if (this.isScanMetricsByRegionEnabled) {
             HRegionLocation loc = resp.loc;
-            this.scanMetrics.initScanMetricsRegionInfo(
-              loc.getServerName(), loc.getRegion().getEncodedName());
+            this.scanMetrics.initScanMetricsRegionInfo(loc.getServerName(),
+              loc.getRegion().getEncodedName());
           }
           startScan(resp);
         }

@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.TableName;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.incRPCCallsMetrics;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.incRPCRetriesMetrics;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.noMoreResultsForReverseScan;
@@ -42,6 +41,7 @@ import org.apache.hadoop.hbase.HBaseServerException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.AdvancedScanResultConsumer.ScanResumer;
 import org.apache.hadoop.hbase.client.backoff.HBaseServerExceptionPauseManager;
@@ -552,8 +552,10 @@ class AsyncScanSingleRegionRpcRetryingCaller {
         consumer.onHeartbeat(scanController);
       }
     }
-    if (controller.getTableName().equals(TableName.valueOf(
-      "TestAsyncTableScanMetricsWithScannerSuspending"))) {
+    if (
+      controller.getTableName()
+        .equals(TableName.valueOf("TestAsyncTableScanMetricsWithScannerSuspending"))
+    ) {
       System.out.println("Suspending");
     }
     ScanControllerState state = scanController.destroy();
@@ -564,15 +566,19 @@ class AsyncScanSingleRegionRpcRetryingCaller {
     int numberOfCompleteRows = resultCache.numberOfCompleteRows() - numberOfCompleteRowsBefore;
     if (state == ScanControllerState.SUSPENDED) {
       if (scanController.resumer.prepare(resp, numberOfCompleteRows)) {
-        if (controller.getTableName().equals(TableName.valueOf(
-          "TestAsyncTableScanMetricsWithScannerSuspending"))) {
+        if (
+          controller.getTableName()
+            .equals(TableName.valueOf("TestAsyncTableScanMetricsWithScannerSuspending"))
+        ) {
           System.out.println("Suspending");
         }
         return;
       }
     }
-    if (controller.getTableName().equals(TableName.valueOf(
-      "TestAsyncTableScanMetricsWithScannerSuspending"))) {
+    if (
+      controller.getTableName()
+        .equals(TableName.valueOf("TestAsyncTableScanMetricsWithScannerSuspending"))
+    ) {
       System.out.println("Suspending");
     }
     completeOrNext(resp, numberOfCompleteRows);
@@ -609,8 +615,10 @@ class AsyncScanSingleRegionRpcRetryingCaller {
       incRPCRetriesMetrics(scanMetrics, regionServerRemote);
     }
     resetController(controller, callTimeoutNs, priority, loc.getRegion().getTable());
-    if (controller.getTableName().equals(TableName.valueOf(
-      "TestAsyncTableScanMetricsWithScannerSuspending"))) {
+    if (
+      controller.getTableName()
+        .equals(TableName.valueOf("TestAsyncTableScanMetricsWithScannerSuspending"))
+    ) {
       System.out.println("Suspending");
     }
     ScanRequest req = RequestConverter.buildScanRequest(scannerId, scan.getCaching(), false,
