@@ -849,7 +849,7 @@
     <commons-codec.version>1.15</commons-codec.version>
     <commons-validator.version>1.7</commons-validator.version>
     <commons-io.version>2.18.0</commons-io.version>
-    <commons-lang3.version>3.9</commons-lang3.version>
+    <commons-lang3.version>3.17.0</commons-lang3.version>
     <commons-math.version>3.6.1</commons-math.version>
     <commons-cli.version>1.5.0</commons-cli.version>
     <disruptor.version>3.4.4</disruptor.version>
@@ -931,7 +931,7 @@
     <brotli4j.version>1.11.0</brotli4j.version>
     <lz4.version>1.8.0</lz4.version>
     <snappy.version>1.1.10.4</snappy.version>
-    <zstd-jni.version>1.5.5-2</zstd-jni.version>
+    <zstd-jni.version>1.5.7-2</zstd-jni.version>
     <!--
         Note that the version of protobuf shipped in hbase-thirdparty must match the version used
         in hbase-protocol-shaded and hbase-examples. The version of jackson-[annotations,core,

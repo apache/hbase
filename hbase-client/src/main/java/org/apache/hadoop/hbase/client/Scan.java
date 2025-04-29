@@ -219,6 +219,7 @@ public class Scan extends Query {
     setPriority(scan.getPriority());
     readType = scan.getReadType();
     super.setReplicaId(scan.getReplicaId());
+    super.setQueryMetricsEnabled(scan.isQueryMetricsEnabled());
   }
 
   /**
@@ -251,6 +252,7 @@ public class Scan extends Query {
     this.mvccReadPoint = -1L;
     setPriority(get.getPriority());
     super.setReplicaId(get.getReplicaId());
+    super.setQueryMetricsEnabled(get.isQueryMetricsEnabled());
   }
 
   public boolean isGetScan() {
@@ -828,6 +830,7 @@ public class Scan extends Query {
       map.put("colFamTimeRangeMap", colFamTimeRangeMapStr);
     }
     map.put("priority", getPriority());
+    map.put("queryMetricsEnabled", queryMetricsEnabled);
     return map;
   }
 

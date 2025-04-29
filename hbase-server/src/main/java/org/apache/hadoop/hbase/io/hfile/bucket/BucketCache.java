@@ -144,11 +144,11 @@ public class BucketCache implements BlockCache, HeapSize {
   static final float DEFAULT_MEMORY_FACTOR = 0.25f;
   static final float DEFAULT_MIN_FACTOR = 0.85f;
 
-  private static final float DEFAULT_EXTRA_FREE_FACTOR = 0.10f;
-  private static final float DEFAULT_ACCEPT_FACTOR = 0.95f;
+  static final float DEFAULT_EXTRA_FREE_FACTOR = 0.10f;
+  static final float DEFAULT_ACCEPT_FACTOR = 0.95f;
 
   // Number of blocks to clear for each of the bucket size that is full
-  private static final int DEFAULT_FREE_ENTIRE_BLOCK_FACTOR = 2;
+  static final int DEFAULT_FREE_ENTIRE_BLOCK_FACTOR = 2;
 
   /** Statistics thread */
   private static final int statThreadPeriod = 5 * 60;
@@ -289,7 +289,7 @@ public class BucketCache implements BlockCache, HeapSize {
   private static final String DEFAULT_FILE_VERIFY_ALGORITHM = "MD5";
 
   public static final String QUEUE_ADDITION_WAIT_TIME = "hbase.bucketcache.queue.addition.waittime";
-  private static final long DEFAULT_QUEUE_ADDITION_WAIT_TIME = 0;
+  static final long DEFAULT_QUEUE_ADDITION_WAIT_TIME = 0;
   private long queueAdditionWaitTime;
   /**
    * Use {@link java.security.MessageDigest} class's encryption algorithms to check persistent file
@@ -344,22 +344,8 @@ public class BucketCache implements BlockCache, HeapSize {
       throw new IllegalArgumentException("Cache capacity is too large, only support 32TB now");
     }
 
-    this.acceptableFactor = conf.getFloat(ACCEPT_FACTOR_CONFIG_NAME, DEFAULT_ACCEPT_FACTOR);
-    this.minFactor = conf.getFloat(MIN_FACTOR_CONFIG_NAME, DEFAULT_MIN_FACTOR);
-    this.extraFreeFactor = conf.getFloat(EXTRA_FREE_FACTOR_CONFIG_NAME, DEFAULT_EXTRA_FREE_FACTOR);
-    this.singleFactor = conf.getFloat(SINGLE_FACTOR_CONFIG_NAME, DEFAULT_SINGLE_FACTOR);
-    this.multiFactor = conf.getFloat(MULTI_FACTOR_CONFIG_NAME, DEFAULT_MULTI_FACTOR);
-    this.memoryFactor = conf.getFloat(MEMORY_FACTOR_CONFIG_NAME, DEFAULT_MEMORY_FACTOR);
-    this.queueAdditionWaitTime =
-      conf.getLong(QUEUE_ADDITION_WAIT_TIME, DEFAULT_QUEUE_ADDITION_WAIT_TIME);
-    this.bucketcachePersistInterval = conf.getLong(BUCKETCACHE_PERSIST_INTERVAL_KEY, 1000);
-    this.persistenceChunkSize =
-      conf.getLong(BACKING_MAP_PERSISTENCE_CHUNK_SIZE, DEFAULT_BACKING_MAP_PERSISTENCE_CHUNK_SIZE);
-    if (this.persistenceChunkSize <= 0) {
-      persistenceChunkSize = DEFAULT_BACKING_MAP_PERSISTENCE_CHUNK_SIZE;
-    }
-
-    sanityCheckConfigs();
+    // these sets the dynamic configs
+    this.onConfigurationChange(conf);
 
     LOG.info("Instantiating BucketCache with acceptableFactor: " + acceptableFactor
       + ", minFactor: " + minFactor + ", extraFreeFactor: " + extraFreeFactor + ", singleFactor: "
@@ -450,6 +436,9 @@ public class BucketCache implements BlockCache, HeapSize {
     Preconditions.checkArgument((singleFactor + multiFactor + memoryFactor) == 1,
       SINGLE_FACTOR_CONFIG_NAME + ", " + MULTI_FACTOR_CONFIG_NAME + ", and "
         + MEMORY_FACTOR_CONFIG_NAME + " segments must add up to 1.0");
+    if (this.persistenceChunkSize <= 0) {
+      persistenceChunkSize = DEFAULT_BACKING_MAP_PERSISTENCE_CHUNK_SIZE;
+    }
   }
 
   /**
@@ -909,6 +898,38 @@ public class BucketCache implements BlockCache, HeapSize {
       return doEvictBlock(blockCacheKey, bucketEntry, true);
     }
     return false;
+  }
+
+  /**
+   * Since HBASE-29249, the following properties governin freeSpace behaviour and block priorities
+   * were made dynamically configurable: - hbase.bucketcache.acceptfactor -
+   * hbase.bucketcache.minfactor - hbase.bucketcache.extrafreefactor -
+   * hbase.bucketcache.single.factor - hbase.bucketcache.multi.factor -
+   * hbase.bucketcache.multi.factor - hbase.bucketcache.memory.factor The
+   * hbase.bucketcache.queue.addition.waittime property allows for introducing a delay in the
+   * publishing of blocks for the cache writer threads during prefetch reads only (client reads
+   * wouldn't get delayed). It has also been made dynamic configurable since HBASE-29249. The
+   * hbase.bucketcache.persist.intervalinmillis propperty determines the frequency for saving the
+   * persistent cache, and it has also been made dynamically configurable since HBASE-29249. The
+   * hbase.bucketcache.persistence.chunksize property determines the size of the persistent file
+   * splits (due to the limitation of maximum allowed protobuff size), and it has also been made
+   * dynamically configurable since HBASE-29249.
+   * @param config the new configuration to be updated.
+   */
+  @Override
+  public void onConfigurationChange(Configuration config) {
+    this.acceptableFactor = conf.getFloat(ACCEPT_FACTOR_CONFIG_NAME, DEFAULT_ACCEPT_FACTOR);
+    this.minFactor = conf.getFloat(MIN_FACTOR_CONFIG_NAME, DEFAULT_MIN_FACTOR);
+    this.extraFreeFactor = conf.getFloat(EXTRA_FREE_FACTOR_CONFIG_NAME, DEFAULT_EXTRA_FREE_FACTOR);
+    this.singleFactor = conf.getFloat(SINGLE_FACTOR_CONFIG_NAME, DEFAULT_SINGLE_FACTOR);
+    this.multiFactor = conf.getFloat(MULTI_FACTOR_CONFIG_NAME, DEFAULT_MULTI_FACTOR);
+    this.memoryFactor = conf.getFloat(MEMORY_FACTOR_CONFIG_NAME, DEFAULT_MEMORY_FACTOR);
+    this.queueAdditionWaitTime =
+      conf.getLong(QUEUE_ADDITION_WAIT_TIME, DEFAULT_QUEUE_ADDITION_WAIT_TIME);
+    this.bucketcachePersistInterval = conf.getLong(BUCKETCACHE_PERSIST_INTERVAL_KEY, 1000);
+    this.persistenceChunkSize =
+      conf.getLong(BACKING_MAP_PERSISTENCE_CHUNK_SIZE, DEFAULT_BACKING_MAP_PERSISTENCE_CHUNK_SIZE);
+    sanityCheckConfigs();
   }
 
   protected boolean removeFromRamCache(BlockCacheKey cacheKey) {
@@ -2157,6 +2178,18 @@ public class BucketCache implements BlockCache, HeapSize {
     return memoryFactor;
   }
 
+  long getQueueAdditionWaitTime() {
+    return queueAdditionWaitTime;
+  }
+
+  long getPersistenceChunkSize() {
+    return persistenceChunkSize;
+  }
+
+  long getBucketcachePersistInterval() {
+    return bucketcachePersistInterval;
+  }
+
   public String getPersistencePath() {
     return persistencePath;
   }
@@ -2296,11 +2329,10 @@ public class BucketCache implements BlockCache, HeapSize {
         ReentrantReadWriteLock lock = offsetLock.getLock(entry.getOffset());
         lock.readLock().lock();
         locks.add(lock);
-        if (backingMap.containsKey(entry) && entry.getBlockType() == BlockType.DATA) {
+        if (backingMap.containsKey(entry) && entry.getBlockType().isData()) {
           count.increment();
         }
       });
-      int metaCount = totalBlockCount - dataBlockCount;
       // BucketCache would only have data blocks
       if (dataBlockCount == count.getValue()) {
         LOG.debug("File {} has now been fully cached.", fileName);
@@ -2320,18 +2352,13 @@ public class BucketCache implements BlockCache, HeapSize {
             + "and try the verification again.", fileName);
           Thread.sleep(100);
           notifyFileCachingCompleted(fileName, totalBlockCount, dataBlockCount, size);
-        } else if (
-          (getAllCacheKeysForFile(fileName.getName(), 0, Long.MAX_VALUE).size() - metaCount)
-              == dataBlockCount
-        ) {
-          LOG.debug("We counted {} data blocks, expected was {}, there was no more pending in "
-            + "the cache write queue but we now found that total cached blocks for file {} "
-            + "is equal to data block count.", count, dataBlockCount, fileName.getName());
-          fileCacheCompleted(fileName, size);
         } else {
-          LOG.info("We found only {} data blocks cached from a total of {} for file {}, "
-            + "but no blocks pending caching. Maybe cache is full or evictions "
-            + "happened concurrently to cache prefetch.", count, dataBlockCount, fileName);
+          LOG.info(
+            "The total block count was {}. We found only {} data blocks cached from "
+              + "a total of {} data blocks for file {}, "
+              + "but no blocks pending caching. Maybe cache is full or evictions "
+              + "happened concurrently to cache prefetch.",
+            totalBlockCount, count, dataBlockCount, fileName);
         }
       }
     } catch (InterruptedException e) {

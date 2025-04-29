@@ -28,7 +28,8 @@ public class TestNoopOperationQuota implements OperationQuota {
   public static final TestNoopOperationQuota INSTANCE = new TestNoopOperationQuota();
 
   @Override
-  public void checkBatchQuota(int numWrites, int numReads) throws RpcThrottlingException {
+  public void checkBatchQuota(int numWrites, int numReads, boolean isAtomic)
+    throws RpcThrottlingException {
   }
 
   @Override

@@ -89,24 +89,40 @@ class RecoveredEditsOutputSink extends AbstractRecoveredEditsOutputSink {
 
   @Override
   public List<Path> close() throws IOException {
-    boolean isSuccessful = true;
+    boolean isSuccessful;
     try {
       isSuccessful = finishWriterThreads();
-    } finally {
-      isSuccessful &= closeWriters();
+    } catch (IOException e) {
+      closeWriters(false);
+      throw e;
     }
+    if (!isSuccessful) {
+      // Even if an exception is not thrown, finishWriterThreads() not being successful is an
+      // error case where the WAL files should not be finalized.
+      closeWriters(false);
+      return null;
+    }
+    isSuccessful = closeWriters(true);
     return isSuccessful ? splits : null;
   }
 
   /**
-   * Close all of the output streams.
+   * Close all the output streams.
+   * @param finalizeEdits true in the successful close case, false when we don't want to rename and
+   *                      finalize the temporary, possibly corrupted WAL files, such as when there
+   *                      was a previous failure or exception. Please see HBASE-28569.
    * @return true when there is no error.
    */
-  private boolean closeWriters() throws IOException {
+  boolean closeWriters(boolean finalizeEdits) throws IOException {
     List<IOException> thrown = Lists.newArrayList();
     for (RecoveredEditsWriter writer : writers.values()) {
       closeCompletionService.submit(() -> {
-        Path dst = closeRecoveredEditsWriter(writer, thrown);
+        if (!finalizeEdits) {
+          abortRecoveredEditsWriter(writer, thrown);
+          LOG.trace("Aborted edits at {}", writer.path);
+          return null;
+        }
+        Path dst = closeRecoveredEditsWriterAndFinalizeEdits(writer, thrown);
         LOG.trace("Closed {}", dst);
         splits.add(dst);
         return null;

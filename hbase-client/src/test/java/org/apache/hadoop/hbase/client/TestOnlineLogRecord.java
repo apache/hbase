@@ -44,21 +44,21 @@ public class TestOnlineLogRecord {
     Scan scan = new Scan();
     scan.withStartRow(Bytes.toBytes(123));
     scan.withStopRow(Bytes.toBytes(456));
-    String expectedOutput =
-      "{\n" + "  \"startTime\": 1,\n" + "  \"processingTime\": 2,\n" + "  \"queueTime\": 3,\n"
-        + "  \"responseSize\": 4,\n" + "  \"blockBytesScanned\": 5,\n" + "  \"fsReadTime\": 6,\n"
-        + "  \"multiGetsCount\": 6,\n" + "  \"multiMutationsCount\": 7,\n" + "  \"scan\": {\n"
-        + "    \"startRow\": \"\\\\x00\\\\x00\\\\x00{\",\n" + "    \"targetReplicaId\": -1,\n"
-        + "    \"batch\": -1,\n" + "    \"totalColumns\": 0,\n" + "    \"maxResultSize\": -1,\n"
-        + "    \"families\": {},\n" + "    \"priority\": -1,\n" + "    \"caching\": -1,\n"
-        + "    \"includeStopRow\": false,\n" + "    \"consistency\": \"STRONG\",\n"
-        + "    \"maxVersions\": 1,\n" + "    \"storeOffset\": 0,\n" + "    \"mvccReadPoint\": -1,\n"
-        + "    \"includeStartRow\": true,\n" + "    \"needCursorResult\": false,\n"
-        + "    \"stopRow\": \"\\\\x00\\\\x00\\\\x01\\\\xC8\",\n" + "    \"storeLimit\": -1,\n"
-        + "    \"limit\": -1,\n" + "    \"cacheBlocks\": true,\n"
-        + "    \"readType\": \"DEFAULT\",\n" + "    \"allowPartialResults\": false,\n"
-        + "    \"reversed\": false,\n" + "    \"timeRange\": [\n" + "      0,\n"
-        + "      9223372036854775807\n" + "    ]\n" + "  }\n" + "}";
+    String expectedOutput = "{\n" + "  \"startTime\": 1,\n" + "  \"processingTime\": 2,\n"
+      + "  \"queueTime\": 3,\n" + "  \"responseSize\": 4,\n" + "  \"blockBytesScanned\": 5,\n"
+      + "  \"fsReadTime\": 6,\n" + "  \"multiGetsCount\": 6,\n" + "  \"multiMutationsCount\": 7,\n"
+      + "  \"scan\": {\n" + "    \"totalColumns\": 0,\n" + "    \"maxResultSize\": -1,\n"
+      + "    \"caching\": -1,\n" + "    \"includeStopRow\": false,\n"
+      + "    \"consistency\": \"STRONG\",\n" + "    \"maxVersions\": 1,\n"
+      + "    \"mvccReadPoint\": -1,\n" + "    \"includeStartRow\": true,\n"
+      + "    \"stopRow\": \"\\\\x00\\\\x00\\\\x01\\\\xC8\",\n" + "    \"limit\": -1,\n"
+      + "    \"timeRange\": [\n" + "      0,\n" + "      9223372036854775807\n" + "    ],\n"
+      + "    \"startRow\": \"\\\\x00\\\\x00\\\\x00{\",\n" + "    \"targetReplicaId\": -1,\n"
+      + "    \"batch\": -1,\n" + "    \"families\": {},\n" + "    \"priority\": -1,\n"
+      + "    \"storeOffset\": 0,\n" + "    \"queryMetricsEnabled\": false,\n"
+      + "    \"needCursorResult\": false,\n" + "    \"storeLimit\": -1,\n"
+      + "    \"cacheBlocks\": true,\n" + "    \"readType\": \"DEFAULT\",\n"
+      + "    \"allowPartialResults\": false,\n" + "    \"reversed\": false\n" + "  }\n" + "}";
     OnlineLogRecord o = new OnlineLogRecord(1, 2, 3, 4, 5, 6, null, null, null, null, null, null,
       null, 6, 7, 0, scan, Collections.emptyMap(), Collections.emptyMap());
     String actualOutput = o.toJsonPrettyPrint();

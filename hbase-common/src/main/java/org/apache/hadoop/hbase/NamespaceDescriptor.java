@@ -41,6 +41,9 @@ public class NamespaceDescriptor {
   /** Default namespace name. */
   public static final byte[] DEFAULT_NAMESPACE_NAME = Bytes.toBytes("default");
   public static final String DEFAULT_NAMESPACE_NAME_STR = Bytes.toString(DEFAULT_NAMESPACE_NAME);
+  /** Backup namespace name. */
+  public static final byte[] BACKUP_NAMESPACE_NAME = Bytes.toBytes("backup");
+  public static final String BACKUP_NAMESPACE_NAME_STR = Bytes.toString(BACKUP_NAMESPACE_NAME);
 
   public static final NamespaceDescriptor DEFAULT_NAMESPACE =
     NamespaceDescriptor.create(DEFAULT_NAMESPACE_NAME_STR).build();

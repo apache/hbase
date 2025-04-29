@@ -25,6 +25,7 @@ import java.util.NavigableSet;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.IntConsumer;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
@@ -37,6 +38,7 @@ import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.PrivateConstants;
 import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.conf.ConfigKey;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.ipc.RpcCall;
@@ -128,7 +130,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
    * timeout checks.
    */
   public static final String HBASE_CELLS_SCANNED_PER_HEARTBEAT_CHECK =
-    "hbase.cells.scanned.per.heartbeat.check";
+    ConfigKey.LONG("hbase.cells.scanned.per.heartbeat.check");
 
   /**
    * Default value of {@link #HBASE_CELLS_SCANNED_PER_HEARTBEAT_CHECK}.
@@ -141,7 +143,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
    * block size for this store. If configured with a value <0, for all scans with ReadType DEFAULT,
    * we will open scanner with stream mode itself.
    */
-  public static final String STORESCANNER_PREAD_MAX_BYTES = "hbase.storescanner.pread.max.bytes";
+  public static final String STORESCANNER_PREAD_MAX_BYTES =
+    ConfigKey.LONG("hbase.storescanner.pread.max.bytes");
 
   private final Scan.ReadType readType;
 
@@ -588,6 +591,13 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
     Optional<RpcCall> rpcCall =
       matcher.isUserScan() ? RpcServer.getCurrentCall() : Optional.empty();
+    // re-useable closure to avoid allocations
+    IntConsumer recordBlockSize = blockSize -> {
+      if (rpcCall.isPresent()) {
+        rpcCall.get().incrementBlockBytesScanned(blockSize);
+      }
+      scannerContext.incrementBlockProgress(blockSize);
+    };
 
     int count = 0;
     long totalBytesRead = 0;
@@ -629,12 +639,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
           scannerContext.returnImmediately();
         }
 
-        heap.recordBlockSize(blockSize -> {
-          if (rpcCall.isPresent()) {
-            rpcCall.get().incrementBlockBytesScanned(blockSize);
-          }
-          scannerContext.incrementBlockProgress(blockSize);
-        });
+        heap.recordBlockSize(recordBlockSize);
 
         prevCell = cell;
         scannerContext.setLastPeekedCell(cell);

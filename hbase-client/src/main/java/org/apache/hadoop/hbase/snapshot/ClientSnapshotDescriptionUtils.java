@@ -46,7 +46,7 @@ public final class ClientSnapshotDescriptionUtils {
       // make sure the table name is valid, this will implicitly check validity
       TableName tableName = TableName.valueOf(snapshot.getTable());
 
-      if (tableName.isSystemTable()) {
+      if (tableName.isSystemTable() && !tableName.isBackupsTable()) {
         throw new IllegalArgumentException("System table snapshots are not allowed");
       }
     }
