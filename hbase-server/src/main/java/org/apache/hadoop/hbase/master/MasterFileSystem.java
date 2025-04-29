@@ -19,12 +19,15 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.Objects;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hbase.ActiveClusterSuffix;
 import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
@@ -60,6 +63,8 @@ public class MasterFileSystem {
   private final Configuration conf;
   // Persisted unique cluster ID
   private ClusterId clusterId;
+  // Persisted unique Active Cluster Suffix
+  private ActiveClusterSuffix activeClusterSuffix;
   // Keep around for convenience.
   private final FileSystem fs;
   // Keep around for convenience.
@@ -158,6 +163,8 @@ public class MasterFileSystem {
     if (isSecurityEnabled) {
       fs.setPermission(new Path(rootdir, HConstants.VERSION_FILE_NAME), secureRootFilePerms);
       fs.setPermission(new Path(rootdir, HConstants.CLUSTER_ID_FILE_NAME), secureRootFilePerms);
+      fs.setPermission(new Path(rootdir, HConstants.ACTIVE_CLUSTER_SUFFIX_FILE_NAME),
+        secureRootFilePerms);
     }
     FsPermission currentRootPerms = fs.getFileStatus(this.rootdir).getPermission();
     if (
@@ -262,10 +269,14 @@ public class MasterFileSystem {
       throw iae;
     }
     // Make sure cluster ID exists
-    if (!FSUtils.checkClusterIdExists(fs, rd, threadWakeFrequency)) {
-      FSUtils.setClusterId(fs, rd, new ClusterId(), threadWakeFrequency);
+    if (
+      !FSUtils.checkFileExistsInHbaseRootDir(fs, rootdir, HConstants.CLUSTER_ID_FILE_NAME,
+        threadWakeFrequency)
+    ) {
+      FSUtils.setClusterId(fs, rootdir, new ClusterId(), threadWakeFrequency);
     }
-    clusterId = FSUtils.getClusterId(fs, rd);
+    clusterId = FSUtils.getClusterId(fs, rootdir);
+    negotiateActiveClusterSuffixFile(threadWakeFrequency);
   }
 
   /**
@@ -381,5 +392,65 @@ public class MasterFileSystem {
 
   public void logFileSystemState(Logger log) throws IOException {
     CommonFSUtils.logFileSystemState(fs, rootdir, log);
+  }
+
+  private void negotiateActiveClusterSuffixFile(long wait) throws IOException {
+    if (!isReadOnlyModeEnabled(conf)) {
+      try {
+        // verify the contents against the config set
+        ActiveClusterSuffix acs = FSUtils.getActiveClusterSuffix(fs, rootdir);
+        LOG.debug("File Suffix {} : Configured suffix {} :  Cluster ID : {}", acs,
+          getSuffixFromConfig(), getClusterId());
+        if (Objects.equals(acs.getActiveClusterSuffix(), getSuffixFromConfig())) {
+          this.activeClusterSuffix = acs;
+        } else {
+          // throw error
+          LOG.info("rootdir {} : Active Cluster File Suffix {} ", rootdir, acs);
+          throw new IOException("Cannot start master, because another cluster is running in active "
+            + "(read-write) mode on this storage location. Active Cluster Id: {} " + acs
+            + " This cluster Id: " + getClusterId());
+        }
+        LOG.info(
+          "This is the active cluster on this storage location, " + "File Suffix {} : Suffix {} : ",
+          acs, getActiveClusterSuffix());
+      } catch (FileNotFoundException fnfe) {
+        // this is the active cluster, create active cluster suffix file if it does not exist
+        FSUtils.setActiveClusterSuffix(fs, rootdir, getSuffixFileDataToWrite(), wait);
+      }
+    } else {
+      // this is a replica cluster
+      LOG.info("Replica cluster is being started in Read Only Mode");
+    }
+  }
+
+  public ActiveClusterSuffix getActiveClusterSuffix() {
+    return activeClusterSuffix;
+  }
+
+  private boolean isReadOnlyModeEnabled(Configuration conf) {
+    return conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
+      HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
+  }
+
+  private String getActiveClusterSuffixFromConfig(Configuration conf) {
+    return conf.get(HConstants.HBASE_META_TABLE_SUFFIX,
+      HConstants.HBASE_META_TABLE_SUFFIX_DEFAULT_VALUE);
+  }
+
+  public String getSuffixFromConfig() {
+    return getClusterId().toString() + ":" + getActiveClusterSuffixFromConfig(conf);
+  }
+
+  // Used only for testing
+  public byte[] getSuffixFileDataToCompare() {
+    String str = this.activeClusterSuffix.toString();
+    return str.getBytes(StandardCharsets.UTF_8);
+  }
+
+  //
+  public byte[] getSuffixFileDataToWrite() {
+    String str = getClusterId().toString() + ":" + getActiveClusterSuffixFromConfig(conf);
+    this.activeClusterSuffix = new ActiveClusterSuffix(str);
+    return str.getBytes(StandardCharsets.UTF_8);
   }
 }
