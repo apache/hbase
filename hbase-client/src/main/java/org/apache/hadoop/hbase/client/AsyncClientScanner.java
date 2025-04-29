@@ -28,7 +28,6 @@ import static org.apache.hadoop.hbase.client.ConnectionUtils.isRemote;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.timelineConsistentRead;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
-import com.google.common.annotations.VisibleForTesting;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.context.Scope;
@@ -68,7 +67,7 @@ class AsyncClientScanner {
   // AsyncScanSingleRegionRpcRetryingCaller will modify this scan object directly.
   private final Scan scan;
 
-  private ScanMetrics scanMetrics;
+  private final ScanMetrics scanMetrics;
 
   private final AdvancedScanResultConsumer consumer;
 
@@ -95,10 +94,9 @@ class AsyncClientScanner {
   private final Span span;
 
   private final Map<String, byte[]> requestAttributes;
+
   private final boolean isScanMetricsByRegionEnabled;
 
-  @VisibleForTesting
-  public static boolean readFromSecondaryReplicas = false;
 
   public AsyncClientScanner(Scan scan, AdvancedScanResultConsumer consumer, TableName tableName,
     AsyncConnectionImpl conn, Timer retryTimer, long pauseNs, long pauseNsForServerOverloaded,
@@ -243,12 +241,6 @@ class AsyncClientScanner {
 
   private CompletableFuture<OpenScannerResponse> openScanner(int replicaId) {
     try (Scope ignored = span.makeCurrent()) {
-      if (readFromSecondaryReplicas && replicaId == RegionReplicaUtil.DEFAULT_REPLICA_ID) {
-        // Only for testing, return a CompletableFuture which will never complete, to force read
-        // from secondary replicas
-        return new CompletableFuture<>();
-      }
-      // Prod path
       return conn.callerFactory.<OpenScannerResponse> single().table(tableName)
         .row(scan.getStartRow()).replicaId(replicaId).locateType(getLocateType(scan))
         .priority(scan.getPriority()).rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS)

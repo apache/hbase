@@ -32,7 +32,6 @@ class SimpleScanResultConsumerImpl implements SimpleScanResultConsumer {
   private Throwable error;
 
   private boolean finished = false;
-  private List<ScanMetrics> scanMetricsByRegion;
 
   @Override
   public void onScanMetricsCreated(ScanMetrics scanMetrics) {

@@ -47,7 +47,6 @@ import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
-import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.StorefileRefresherChore;
@@ -246,7 +245,6 @@ public class TestReplicasClient {
     } catch (Exception ignored) {
     }
     table = HTU.getConnection().getTable(TABLE_NAME);
-    HMaster master = HTU.getHBaseCluster().getMaster();
   }
 
   @After

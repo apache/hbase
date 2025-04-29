@@ -272,7 +272,7 @@ public class TestTableScanMetrics extends FromClientSideBase {
   }
 
   @Test
-  public void testConcurrentUpdatesAndResetToScanMetricsByRegion() throws Exception {
+  public void testConcurrentUpdatesAndResetOfScanMetricsByRegion() throws Exception {
     ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(2);
     TableName tableName = TableName.valueOf(TestTableScanMetrics.class.getSimpleName()
       + "_testConcurrentUpdatesAndResetToScanMetricsByRegion");
@@ -282,7 +282,7 @@ public class TestTableScanMetrics extends FromClientSideBase {
       Map<ScanMetricsRegionInfo, Map<String, Long>> concurrentScanMetricsByRegion = new HashMap<>();
 
       // Trigger two concurrent threads one of which scans the table and other periodically
-      // collects the scan metrics.
+      // collects the scan metrics (along with resetting the counters to 0).
       Scan scan = generateScan(EMPTY_BYTE_ARRAY, EMPTY_BYTE_ARRAY);
       scan.setScanMetricsEnabled(true);
       scan.setEnableScanMetricsByRegion(true);
@@ -312,8 +312,8 @@ public class TestTableScanMetrics extends FromClientSideBase {
 
       Map<ScanMetricsRegionInfo, Map<String, Long>> expectedScanMetricsByRegion;
 
-      // Collect scan metrics by region from single thread and assert that concurrent scan
-      // and metrics collection works as expected
+      // Collect scan metrics by region from single thread. Assert that concurrent scan
+      // and metrics collection works as expected.
       scan = generateScan(EMPTY_BYTE_ARRAY, EMPTY_BYTE_ARRAY);
       scan.setScanMetricsEnabled(true);
       scan.setEnableScanMetricsByRegion(true);

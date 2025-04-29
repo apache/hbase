@@ -147,7 +147,6 @@ public class TestAsyncTableScanMetricsWithScannerSuspending {
     Map<ScanMetricsRegionInfo, Map<String, Long>> scanMetricsByRegion =
       scanMetrics.getMetricsMapByRegion(false);
     assertEquals(3, scanMetricsByRegion.size());
-    int regionIndex = 0;
     for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry : scanMetricsByRegion
       .entrySet()) {
       ScanMetricsRegionInfo smri = entry.getKey();
@@ -156,10 +155,9 @@ public class TestAsyncTableScanMetricsWithScannerSuspending {
       assertNotNull(smri.getEncodedRegionName());
       assertEquals(1, (long) perRegionMetrics.get(REGIONS_SCANNED_METRIC_NAME));
       assertEquals(1, (long) perRegionMetrics.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME));
-      bytes = getBytesOfResults(Collections.singletonList(results.get(regionIndex)));
+      bytes = getBytesOfResults(Collections.singletonList(results.get(0)));
       assertEquals(bytes, (long) perRegionMetrics.get(BYTES_IN_RESULTS_METRIC_NAME));
       assertEquals(2, (long) perRegionMetrics.get(RPC_CALLS_METRIC_NAME));
-      regionIndex++;
     }
   }
 }

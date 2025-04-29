@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.ArrayDeque;
-import java.util.List;
 import java.util.Queue;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 
@@ -39,7 +38,6 @@ class BufferingScanResultConsumer implements AdvancedScanResultConsumer {
   private boolean finished;
 
   private Throwable error;
-  private List<ScanMetrics> scanMetricsByRegion;
 
   @Override
   public void onScanMetricsCreated(ScanMetrics scanMetrics) {
