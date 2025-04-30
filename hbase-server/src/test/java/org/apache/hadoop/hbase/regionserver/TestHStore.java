@@ -67,6 +67,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
 import java.util.function.IntBinaryOperator;
+import java.util.function.IntConsumer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -82,6 +83,7 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCell;
+import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -1273,6 +1275,12 @@ public class TestHStore {
     return c;
   }
 
+  private ExtendedCell createDeleteCell(byte[] row, byte[] qualifier, long ts, long sequenceId) {
+    return ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(row)
+      .setFamily(family).setQualifier(qualifier).setTimestamp(ts).setType(Cell.Type.DeleteColumn)
+      .setSequenceId(sequenceId).build();
+  }
+
   @Test
   public void testFlushBeforeCompletingScanWoFilter() throws IOException, InterruptedException {
     final AtomicBoolean timeToGoNextRow = new AtomicBoolean(false);
@@ -1413,6 +1421,74 @@ public class TestHStore {
         byte[] actualValue = CellUtil.cloneValue(c);
         assertTrue("expected:" + Bytes.toStringBinary(value2) + ", actual:"
           + Bytes.toStringBinary(actualValue), Bytes.equals(actualValue, value2));
+      }
+    }
+  }
+
+  @Test
+  public void testFlushBeforeCompletingScanWithDeleteCell() throws IOException {
+    final Configuration conf = HBaseConfiguration.create();
+
+    byte[] r1 = Bytes.toBytes("row1");
+    byte[] r2 = Bytes.toBytes("row2");
+
+    byte[] value1 = Bytes.toBytes("value1");
+    byte[] value2 = Bytes.toBytes("value2");
+
+    final MemStoreSizing memStoreSizing = new NonThreadSafeMemStoreSizing();
+    final long ts = EnvironmentEdgeManager.currentTime();
+    final long seqId = 100;
+
+    init(name.getMethodName(), conf, TableDescriptorBuilder.newBuilder(TableName.valueOf(table)),
+      ColumnFamilyDescriptorBuilder.newBuilder(family).setMaxVersions(1).build(),
+      new MyStoreHook() {
+        @Override
+        long getSmallestReadPoint(HStore store) {
+          return seqId + 3;
+        }
+      });
+
+    store.add(createCell(r1, qf1, ts + 1, seqId + 1, value2), memStoreSizing);
+    store.add(createCell(r1, qf2, ts + 1, seqId + 1, value2), memStoreSizing);
+    store.add(createCell(r1, qf3, ts + 1, seqId + 1, value2), memStoreSizing);
+
+    store.add(createDeleteCell(r1, qf1, ts + 2, seqId + 2), memStoreSizing);
+    store.add(createDeleteCell(r1, qf2, ts + 2, seqId + 2), memStoreSizing);
+    store.add(createDeleteCell(r1, qf3, ts + 2, seqId + 2), memStoreSizing);
+
+    store.add(createCell(r2, qf1, ts + 3, seqId + 3, value1), memStoreSizing);
+    store.add(createCell(r2, qf2, ts + 3, seqId + 3, value1), memStoreSizing);
+    store.add(createCell(r2, qf3, ts + 3, seqId + 3, value1), memStoreSizing);
+
+    Scan scan = new Scan().withStartRow(r1);
+
+    try (final InternalScanner scanner =
+      new StoreScanner(store, store.getScanInfo(), scan, null, seqId + 3) {
+        @Override
+        protected KeyValueHeap newKVHeap(List<? extends KeyValueScanner> scanners,
+          CellComparator comparator) throws IOException {
+          return new MyKeyValueHeap(scanners, comparator, recordBlockSizeCallCount -> {
+            if (recordBlockSizeCallCount == 6) {
+              try {
+                flushStore(store, id++);
+              } catch (IOException e) {
+                throw new RuntimeException(e);
+              }
+            }
+          });
+        }
+      }) {
+      List<Cell> cellResult = new ArrayList<>();
+
+      scanner.next(cellResult);
+      assertEquals(0, cellResult.size());
+
+      cellResult.clear();
+
+      scanner.next(cellResult);
+      assertEquals(3, cellResult.size());
+      for (Cell cell : cellResult) {
+        assertArrayEquals(r2, CellUtil.cloneRow(cell));
       }
     }
   }
@@ -3131,6 +3207,28 @@ public class TestHStore {
     @Override
     public List<T> subList(int fromIndex, int toIndex) {
       return delegatee.subList(fromIndex, toIndex);
+    }
+  }
+
+  private interface MyKeyValueHeapHook {
+    void onRecordBlockSize(int recordBlockSizeCallCount);
+  }
+
+  private static class MyKeyValueHeap extends KeyValueHeap {
+    private final MyKeyValueHeapHook hook;
+    private int recordBlockSizeCallCount;
+
+    public MyKeyValueHeap(List<? extends KeyValueScanner> scanners, CellComparator comparator,
+      MyKeyValueHeapHook hook) throws IOException {
+      super(scanners, comparator);
+      this.hook = hook;
+    }
+
+    @Override
+    public void recordBlockSize(IntConsumer blockSizeConsumer) {
+      recordBlockSizeCallCount++;
+      hook.onRecordBlockSize(recordBlockSizeCallCount);
+      super.recordBlockSize(blockSizeConsumer);
     }
   }
 
