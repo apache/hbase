@@ -747,7 +747,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
             }
             matcher.clearCurrentRow();
             seekOrSkipToNextRow(cell);
-            NextState stateAfterSeekNextRow = needToReturn(outResult);
+            NextState stateAfterSeekNextRow = needToReturn();
             if (stateAfterSeekNextRow != null) {
               return scannerContext.setScannerState(stateAfterSeekNextRow).hasMoreValues();
             }
@@ -755,7 +755,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
           case SEEK_NEXT_COL:
             seekOrSkipToNextColumn(cell);
-            NextState stateAfterSeekNextColumn = needToReturn(outResult);
+            NextState stateAfterSeekNextColumn = needToReturn();
             if (stateAfterSeekNextColumn != null) {
               return scannerContext.setScannerState(stateAfterSeekNextColumn).hasMoreValues();
             }
@@ -773,7 +773,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
                 ((!scan.isReversed() && difference > 0) || (scan.isReversed() && difference < 0))
               ) {
                 seekAsDirection(nextKV);
-                NextState stateAfterSeekByHint = needToReturn(outResult);
+                NextState stateAfterSeekByHint = needToReturn();
                 if (stateAfterSeekByHint != null) {
                   return scannerContext.setScannerState(stateAfterSeekByHint).hasMoreValues();
                 }
@@ -830,11 +830,10 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
    * memstore scanner is replaced by hfile scanner after #reopenAfterFlush. If the row of top cell
    * is changed, we should return the current cells. Otherwise, we may return the cells across
    * different rows.
-   * @param outResult the cells which are visible for user scan
    * @return null is the top cell doesn't change. Otherwise, the NextState to return
    */
-  private NextState needToReturn(List<Cell> outResult) {
-    if (!outResult.isEmpty() && topChanged) {
+  private NextState needToReturn() {
+    if (topChanged) {
       return heap.peek() == null ? NextState.NO_MORE_VALUES : NextState.MORE_VALUES;
     }
     return null;
