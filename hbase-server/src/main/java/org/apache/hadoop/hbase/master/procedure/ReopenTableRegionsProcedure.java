@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.conf.ConfigKey;
 import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
 import org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
@@ -55,12 +56,11 @@ public class ReopenTableRegionsProcedure
   private static final Logger LOG = LoggerFactory.getLogger(ReopenTableRegionsProcedure.class);
 
   public static final String PROGRESSIVE_BATCH_BACKOFF_MILLIS_KEY =
-    "hbase.reopen.table.regions.progressive.batch.backoff.ms";
+    ConfigKey.LONG("hbase.reopen.table.regions.progressive.batch.backoff.ms");
   public static final long PROGRESSIVE_BATCH_BACKOFF_MILLIS_DEFAULT = 0L;
   public static final String PROGRESSIVE_BATCH_SIZE_MAX_KEY =
-    "hbase.reopen.table.regions.progressive.batch.size.max";
+    ConfigKey.INT("hbase.reopen.table.regions.progressive.batch.size.max");
   public static final int PROGRESSIVE_BATCH_SIZE_MAX_DISABLED = -1;
-  private static final int PROGRESSIVE_BATCH_SIZE_MAX_DEFAULT_VALUE = Integer.MAX_VALUE;
 
   // this minimum prevents a max which would break this procedure
   private static final int MINIMUM_BATCH_SIZE_MAX = 1;

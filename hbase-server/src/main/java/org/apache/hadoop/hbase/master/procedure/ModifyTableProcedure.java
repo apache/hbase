@@ -27,6 +27,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -231,10 +232,19 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
         case MODIFY_TABLE_REOPEN_ALL_REGIONS:
           if (isTableEnabled(env)) {
             Configuration conf = env.getMasterConfiguration();
-            long backoffMillis = conf.getLong(PROGRESSIVE_BATCH_BACKOFF_MILLIS_KEY,
-              PROGRESSIVE_BATCH_BACKOFF_MILLIS_DEFAULT);
+            // Use table configuration if defined
+            final TableDescriptor descriptor =
+              env.getMasterServices().getTableDescriptors().get(getTableName());
+            long backoffMillis =
+              Optional.ofNullable(descriptor.getValue(PROGRESSIVE_BATCH_BACKOFF_MILLIS_KEY))
+                .map(Long::parseLong)
+                .orElseGet(() -> conf.getLong(PROGRESSIVE_BATCH_BACKOFF_MILLIS_KEY,
+                  PROGRESSIVE_BATCH_BACKOFF_MILLIS_DEFAULT));
             int batchSizeMax =
-              conf.getInt(PROGRESSIVE_BATCH_SIZE_MAX_KEY, PROGRESSIVE_BATCH_SIZE_MAX_DISABLED);
+              Optional.ofNullable(descriptor.getValue(PROGRESSIVE_BATCH_SIZE_MAX_KEY))
+                .map(Integer::parseInt).orElseGet(() -> conf.getInt(PROGRESSIVE_BATCH_SIZE_MAX_KEY,
+                  PROGRESSIVE_BATCH_SIZE_MAX_DISABLED));
+
             addChildProcedure(
               new ReopenTableRegionsProcedure(getTableName(), backoffMillis, batchSizeMax));
           }
