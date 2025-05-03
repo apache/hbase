@@ -19,27 +19,33 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.HConstants.EMPTY_BYTE_ARRAY;
 import static org.apache.hadoop.hbase.client.metrics.ScanMetrics.REGIONS_SCANNED_METRIC_NAME;
+import static org.apache.hadoop.hbase.client.metrics.ScanMetrics.RPC_RETRIES_METRIC_NAME;
 import static org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.client.metrics.ScanMetricsRegionInfo;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FutureUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -306,7 +312,7 @@ public class TestTableScanMetrics extends FromClientSideBase {
         executor.execute(metricsCollector);
         latch.await();
         // Merge leftover scan metrics
-        mergeMaps(scanMetrics.getMetricsMapByRegion(), concurrentScanMetricsByRegion);
+        mergeScanMetricsByRegion(scanMetrics.getMetricsMapByRegion(), concurrentScanMetricsByRegion);
         Assert.assertEquals(HBaseTestingUtil.ROWS.length, rowsScanned.get());
       }
 
@@ -348,6 +354,222 @@ public class TestTableScanMetrics extends FromClientSideBase {
     }
   }
 
+  @Test
+  public void testScanMetricsByRegionWithRegionMove() throws Exception {
+    TableName tableName = TableName.valueOf(TestTableScanMetrics.class.getSimpleName()
+      + "testScanMetricsByRegionWithRegionMove");
+    try (Table table = TEST_UTIL.createMultiRegionTable(tableName, CF)) {
+      TEST_UTIL.loadTable(table, CF);
+
+      // Scan 2 regions with start row keys: bbb and ccc
+      byte[] bbb = Bytes.toBytes("bbb");
+      byte[] ccc = Bytes.toBytes("ccc");
+      byte[] ddc = Bytes.toBytes("ddc");
+      long expectedCountOfRowsScannedInMovedRegion = 0;
+      // ROWS is the data loaded by loadTable()
+      for (byte[] row: HBaseTestingUtil.ROWS) {
+        if (Bytes.compareTo(row, bbb) >= 0 && Bytes.compareTo(row, ccc) < 0) {
+          expectedCountOfRowsScannedInMovedRegion++;
+        }
+      }
+      byte[] movedRegion = null;
+      ScanMetrics scanMetrics;
+
+      // Initialize scan with maxResultSize as size of 50 rows.
+      Scan scan = generateScan(bbb, ddc);
+      scan.setScanMetricsEnabled(true);
+      scan.setEnableScanMetricsByRegion(true);
+      scan.setMaxResultSize(8000);
+
+      try (ResultScanner rs = table.getScanner(scan)) {
+        boolean isFirstScanOfRegion = true;
+        for (Result r : rs) {
+          byte[] row = r.getRow();
+          if (isFirstScanOfRegion) {
+            movedRegion = moveRegion(tableName, row);
+            isFirstScanOfRegion = false;
+          }
+        }
+        Assert.assertNotNull(movedRegion);
+
+        scanMetrics = rs.getScanMetrics();
+        Map<ScanMetricsRegionInfo, Map<String, Long>> scanMetricsByRegion =
+          scanMetrics.getMetricsMapByRegion();
+        long actualCountOfRowsScannedInMovedRegion = 0;
+        Set<ServerName> serversForMovedRegion = new HashSet<>();
+
+        // 2 regions scanned with two entries for first region as it moved in b/w scan
+        Assert.assertEquals(3, scanMetricsByRegion.size());
+        for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry : scanMetricsByRegion
+          .entrySet()) {
+          ScanMetricsRegionInfo scanMetricsRegionInfo = entry.getKey();
+          Map<String, Long> metricsMap = entry.getValue();
+          if (scanMetricsRegionInfo.getEncodedRegionName().equals(Bytes.toString(movedRegion))) {
+            long rowsScanned = metricsMap.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME);
+            actualCountOfRowsScannedInMovedRegion += rowsScanned;
+            serversForMovedRegion.add(scanMetricsRegionInfo.getServerName());
+
+            Assert.assertEquals(1, (long) metricsMap.get(RPC_RETRIES_METRIC_NAME));
+          }
+          Assert.assertEquals(1, (long) metricsMap.get(REGIONS_SCANNED_METRIC_NAME));
+        }
+        Assert.assertEquals(expectedCountOfRowsScannedInMovedRegion,
+          actualCountOfRowsScannedInMovedRegion);
+        Assert.assertEquals(2, serversForMovedRegion.size());
+      }
+    }
+    finally {
+      TEST_UTIL.deleteTable(tableName);
+    }
+  }
+
+  @Test
+  public void testScanMetricsByRegionWithRegionSplit() throws Exception {
+    TableName tableName = TableName.valueOf(TestTableScanMetrics.class.getSimpleName()
+      + "testScanMetricsByRegionWithRegionSplit");
+    try (Table table = TEST_UTIL.createMultiRegionTable(tableName, CF)) {
+      TEST_UTIL.loadTable(table, CF);
+
+      // Scan 1 region with start row key: bbb
+      byte[] bbb = Bytes.toBytes("bbb");
+      byte[] bmw = Bytes.toBytes("bmw");
+      byte[] ccb = Bytes.toBytes("ccb");
+      long expectedCountOfRowsScannedInRegion = 0;
+      // ROWS is the data loaded by loadTable()
+      for (byte[] row: HBaseTestingUtil.ROWS) {
+        if (Bytes.compareTo(row, bbb) >= 0 && Bytes.compareTo(row, ccb) <= 0) {
+          expectedCountOfRowsScannedInRegion++;
+        }
+      }
+      ScanMetrics scanMetrics;
+      Set<String> expectedSplitRegionRes = new HashSet<>();
+
+      // Initialize scan
+      Scan scan = generateScan(bbb, ccb);
+      scan.setScanMetricsEnabled(true);
+      scan.setEnableScanMetricsByRegion(true);
+      scan.setMaxResultSize(8000);
+
+      try (ResultScanner rs = table.getScanner(scan)) {
+        boolean isFirstScanOfRegion = true;
+        for (Result r : rs) {
+          if (isFirstScanOfRegion) {
+            splitRegion(tableName, bbb, bmw).forEach(
+              region -> expectedSplitRegionRes.add(Bytes.toString(region))
+            );
+            isFirstScanOfRegion = false;
+          }
+        }
+
+        scanMetrics = rs.getScanMetrics();
+        Map<ScanMetricsRegionInfo, Map<String, Long>> scanMetricsByRegion =
+          scanMetrics.getMetricsMapByRegion();
+
+        long actualCountOfRowsScannedInRegion = 0;
+        long rpcRetiesCount = 0;
+        Set<String> splitRegionRes = new HashSet<>();
+
+        // 1 entry each for parent and two child regions
+        Assert.assertEquals(3, scanMetricsByRegion.size());
+        for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry : scanMetricsByRegion
+          .entrySet()) {
+          ScanMetricsRegionInfo scanMetricsRegionInfo = entry.getKey();
+          Map<String, Long> metricsMap = entry.getValue();
+          long rowsScanned = metricsMap.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME);
+          actualCountOfRowsScannedInRegion += rowsScanned;
+          splitRegionRes.add(scanMetricsRegionInfo.getEncodedRegionName());
+
+          if (metricsMap.get(RPC_RETRIES_METRIC_NAME) == 1) {
+            rpcRetiesCount++;
+          }
+
+          Assert.assertEquals(1, (long) metricsMap.get(REGIONS_SCANNED_METRIC_NAME));
+        }
+        Assert.assertEquals(expectedCountOfRowsScannedInRegion, actualCountOfRowsScannedInRegion);
+        Assert.assertEquals(2, rpcRetiesCount);
+        Assert.assertEquals(expectedSplitRegionRes, splitRegionRes);
+      }
+    }
+    finally {
+      TEST_UTIL.deleteTable(tableName);
+    }
+  }
+
+  @Test
+  public void testScanMetricsByRegionWithRegionMerge() throws Exception {
+    TableName tableName = TableName.valueOf(TestTableScanMetrics.class.getSimpleName()
+      + "testScanMetricsByRegionWithRegionMerge");
+    try (Table table = TEST_UTIL.createMultiRegionTable(tableName, CF)) {
+      TEST_UTIL.loadTable(table, CF);
+
+      // Scan 2 regions with start row keys: bbb and ccc
+      byte[] bbb = Bytes.toBytes("bbb");
+      byte[] ccc = Bytes.toBytes("ccc");
+      byte[] ddc = Bytes.toBytes("ddc");
+      long expectedCountOfRowsScannedInRegions = 0;
+      // ROWS is the data loaded by loadTable()
+      for (byte[] row: HBaseTestingUtil.ROWS) {
+        if (Bytes.compareTo(row, bbb) >= 0 && Bytes.compareTo(row, ddc) <= 0) {
+          expectedCountOfRowsScannedInRegions++;
+        }
+      }
+      ScanMetrics scanMetrics;
+      Set<String> expectedMergeRegionsRes = new HashSet<>();
+      String mergedRegionEncodedName = null;
+
+      // Initialize scan
+      Scan scan = generateScan(bbb, ddc);
+      scan.setScanMetricsEnabled(true);
+      scan.setEnableScanMetricsByRegion(true);
+      scan.setMaxResultSize(8000);
+
+      try (ResultScanner rs = table.getScanner(scan)) {
+        boolean isFirstScanOfRegion = true;
+        for (Result r : rs) {
+          if (isFirstScanOfRegion) {
+            List<byte[]> out = mergeRegions(tableName, bbb, ccc);
+            // Entry with index 2 is the encoded region name of merged region
+            mergedRegionEncodedName = Bytes.toString(out.get(2));
+            out.forEach(
+              region -> expectedMergeRegionsRes.add(Bytes.toString(region))
+            );
+            isFirstScanOfRegion = false;
+          }
+        }
+
+        scanMetrics = rs.getScanMetrics();
+        Map<ScanMetricsRegionInfo, Map<String, Long>> scanMetricsByRegion =
+          scanMetrics.getMetricsMapByRegion();
+        long actualCountOfRowsScannedInRegions = 0;
+        Set<String> mergeRegionsRes = new HashSet<>();
+        boolean containsMergedRegionInScanMetrics = false;
+
+        // 1 entry each for old region from which first row was scanned and new merged region
+        Assert.assertEquals(2, scanMetricsByRegion.size());
+        for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry : scanMetricsByRegion
+          .entrySet()) {
+          ScanMetricsRegionInfo scanMetricsRegionInfo = entry.getKey();
+          Map<String, Long> metricsMap = entry.getValue();
+          long rowsScanned = metricsMap.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME);
+          actualCountOfRowsScannedInRegions += rowsScanned;
+          mergeRegionsRes.add(scanMetricsRegionInfo.getEncodedRegionName());
+          if (scanMetricsRegionInfo.getEncodedRegionName().equals(mergedRegionEncodedName)) {
+            containsMergedRegionInScanMetrics = true;
+          }
+
+          Assert.assertEquals(1, (long) metricsMap.get(RPC_RETRIES_METRIC_NAME));
+          Assert.assertEquals(1, (long) metricsMap.get(REGIONS_SCANNED_METRIC_NAME));
+        }
+        Assert.assertEquals(expectedCountOfRowsScannedInRegions, actualCountOfRowsScannedInRegions);
+        Assert.assertTrue(expectedMergeRegionsRes.containsAll(mergeRegionsRes));
+        Assert.assertTrue(containsMergedRegionInScanMetrics);
+      }
+    }
+    finally {
+      TEST_UTIL.deleteTable(tableName);
+    }
+  }
+
   private Runnable getPeriodicScanMetricsCollector(ScanMetrics scanMetrics,
     Map<ScanMetricsRegionInfo, Map<String, Long>> scanMetricsByRegionCollection,
     CountDownLatch latch) {
@@ -357,7 +579,7 @@ public class TestTableScanMetrics extends FromClientSideBase {
           while (latch.getCount() > 0) {
             Map<ScanMetricsRegionInfo, Map<String, Long>> scanMetricsByRegion =
               scanMetrics.getMetricsMapByRegion();
-            mergeMaps(scanMetricsByRegion, scanMetricsByRegionCollection);
+            mergeScanMetricsByRegion(scanMetricsByRegion, scanMetricsByRegionCollection);
             Thread.sleep(RAND.nextInt(10));
           }
         } catch (InterruptedException e) {
@@ -367,7 +589,7 @@ public class TestTableScanMetrics extends FromClientSideBase {
     };
   }
 
-  private void mergeMaps(Map<ScanMetricsRegionInfo, Map<String, Long>> srcMap,
+  private void mergeScanMetricsByRegion(Map<ScanMetricsRegionInfo, Map<String, Long>> srcMap,
     Map<ScanMetricsRegionInfo, Map<String, Long>> dstMap) {
     for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry : srcMap.entrySet()) {
       ScanMetricsRegionInfo scanMetricsRegionInfo = entry.getKey();
@@ -384,5 +606,111 @@ public class TestTableScanMetrics extends FromClientSideBase {
         dstMap.put(scanMetricsRegionInfo, metricsMap);
       }
     }
+  }
+
+  /**
+   * Moves the region with start row key from its original region server to some other region
+   * server. This is a synchronous method.
+   * @param tableName Table name of region to be moved belongs.
+   * @param startRow Start row key of the region to be moved.
+   * @return Encoded region name of the region which was moved.
+   * @throws IOException
+   */
+  private byte[] moveRegion(TableName tableName, byte[] startRow) throws IOException {
+    Admin admin = TEST_UTIL.getAdmin();
+    RegionLocator regionLocator = CONN.getRegionLocator(tableName);
+    HRegionLocation loc = regionLocator.getRegionLocation(startRow, true);
+    byte[] encodedRegionName = loc.getRegion().getEncodedNameAsBytes();
+    ServerName initialServerName = loc.getServerName();
+
+    admin.move(encodedRegionName);
+
+    ServerName finalServerName = regionLocator.getRegionLocation(startRow, true).getServerName();
+
+    // Assert that region actually moved
+    Assert.assertNotEquals(initialServerName, finalServerName);
+    return encodedRegionName;
+  }
+
+  /**
+   * Splits the region with start row key at the split key provided. This is a synchronous method.
+   * @param tableName Table name of region to be split.
+   * @param startRow Start row key of the region to be split.
+   * @param splitKey Split key for splitting the region.
+   * @return List of encoded region names with first element being parent region followed by two
+   * child regions.
+   * @throws IOException
+   */
+  private List<byte[]> splitRegion(TableName tableName, byte[] startRow, byte[] splitKey)
+    throws IOException {
+    Admin admin = TEST_UTIL.getAdmin();
+    RegionLocator regionLocator = CONN.getRegionLocator(tableName);
+    HRegionLocation topLoc = regionLocator.getRegionLocation(startRow, true);
+    byte[] initialEncodedTopRegionName = topLoc.getRegion().getEncodedNameAsBytes();
+    ServerName initialTopServerName = topLoc.getServerName();
+    HRegionLocation bottomLoc = regionLocator.getRegionLocation(splitKey, true);
+    byte[] initialEncodedBottomRegionName = bottomLoc.getRegion().getEncodedNameAsBytes();
+    ServerName initialBottomServerName = bottomLoc.getServerName();
+
+    // Assert region is ready for split
+    Assert.assertEquals(initialTopServerName, initialBottomServerName);
+    Assert.assertEquals(initialEncodedTopRegionName, initialEncodedBottomRegionName);
+
+    FutureUtils.get(admin.splitRegionAsync(initialEncodedTopRegionName, splitKey));
+
+    topLoc = regionLocator.getRegionLocation(startRow, true);
+    byte[] finalEncodedTopRegionName = topLoc.getRegion().getEncodedNameAsBytes();
+    bottomLoc = regionLocator.getRegionLocation(splitKey, true);
+    byte[] finalEncodedBottomRegionName = bottomLoc.getRegion().getEncodedNameAsBytes();
+
+    // Assert that region split is complete
+    Assert.assertNotEquals(finalEncodedTopRegionName, finalEncodedBottomRegionName);
+    Assert.assertNotEquals(initialEncodedTopRegionName, finalEncodedBottomRegionName);
+    Assert.assertNotEquals(initialEncodedBottomRegionName, finalEncodedTopRegionName);
+
+    return Arrays.asList(initialEncodedTopRegionName, finalEncodedTopRegionName,
+      finalEncodedBottomRegionName);
+  }
+
+  /**
+   * Merges two regions with the start row key as topRegion and bottomRegion. Ensures that
+   * the regions to be merged are adjacent regions. This is a synchronous method.
+   * @param tableName Table name of regions to be merged.
+   * @param topRegion Start row key of first region for merging.
+   * @param bottomRegion Start row key of second region for merging.
+   * @return List of encoded region names with first two elements being original regions followed
+   * by the merged region.
+   * @throws IOException
+   */
+  private List<byte[]> mergeRegions(TableName tableName, byte[] topRegion, byte[] bottomRegion)
+    throws IOException {
+    Admin admin = TEST_UTIL.getAdmin();
+    RegionLocator regionLocator = CONN.getRegionLocator(tableName);
+    HRegionLocation topLoc = regionLocator.getRegionLocation(topRegion, true);
+    byte[] initialEncodedTopRegionName = topLoc.getRegion().getEncodedNameAsBytes();
+    String initialTopRegionEndKey = Bytes.toString(topLoc.getRegion().getEndKey());
+    HRegionLocation bottomLoc = regionLocator.getRegionLocation(bottomRegion, true);
+    byte[] initialEncodedBottomRegionName = bottomLoc.getRegion().getEncodedNameAsBytes();
+    String initialBottomRegionStartKey = Bytes.toString(bottomLoc.getRegion().getStartKey());
+
+    // Assert that regions are ready to be merged
+    Assert.assertNotEquals(initialEncodedTopRegionName, initialEncodedBottomRegionName);
+    Assert.assertEquals(initialBottomRegionStartKey, initialTopRegionEndKey);
+
+    FutureUtils.get(admin.mergeRegionsAsync(
+      new byte[][] { initialEncodedTopRegionName, initialEncodedBottomRegionName }, false));
+
+    topLoc = regionLocator.getRegionLocation(topRegion, true);
+    byte[] finalEncodedTopRegionName = topLoc.getRegion().getEncodedNameAsBytes();
+    bottomLoc = regionLocator.getRegionLocation(bottomRegion, true);
+    byte[] finalEncodedBottomRegionName = bottomLoc.getRegion().getEncodedNameAsBytes();
+
+    // Assert regions have been merges successfully
+    Assert.assertEquals(finalEncodedTopRegionName, finalEncodedBottomRegionName);
+    Assert.assertNotEquals(initialEncodedTopRegionName, finalEncodedTopRegionName);
+    Assert.assertNotEquals(initialEncodedBottomRegionName, finalEncodedTopRegionName);
+
+    return Arrays.asList(initialEncodedTopRegionName, initialEncodedBottomRegionName,
+      finalEncodedTopRegionName);
   }
 }
