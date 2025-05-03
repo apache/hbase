@@ -312,7 +312,8 @@ public class TestTableScanMetrics extends FromClientSideBase {
         executor.execute(metricsCollector);
         latch.await();
         // Merge leftover scan metrics
-        mergeScanMetricsByRegion(scanMetrics.getMetricsMapByRegion(), concurrentScanMetricsByRegion);
+        mergeScanMetricsByRegion(scanMetrics.getMetricsMapByRegion(),
+          concurrentScanMetricsByRegion);
         Assert.assertEquals(HBaseTestingUtil.ROWS.length, rowsScanned.get());
       }
 
@@ -356,8 +357,8 @@ public class TestTableScanMetrics extends FromClientSideBase {
 
   @Test
   public void testScanMetricsByRegionWithRegionMove() throws Exception {
-    TableName tableName = TableName.valueOf(TestTableScanMetrics.class.getSimpleName()
-      + "testScanMetricsByRegionWithRegionMove");
+    TableName tableName = TableName.valueOf(
+      TestTableScanMetrics.class.getSimpleName() + "testScanMetricsByRegionWithRegionMove");
     try (Table table = TEST_UTIL.createMultiRegionTable(tableName, CF)) {
       TEST_UTIL.loadTable(table, CF);
 
@@ -367,7 +368,7 @@ public class TestTableScanMetrics extends FromClientSideBase {
       byte[] ddc = Bytes.toBytes("ddc");
       long expectedCountOfRowsScannedInMovedRegion = 0;
       // ROWS is the data loaded by loadTable()
-      for (byte[] row: HBaseTestingUtil.ROWS) {
+      for (byte[] row : HBaseTestingUtil.ROWS) {
         if (Bytes.compareTo(row, bbb) >= 0 && Bytes.compareTo(row, ccc) < 0) {
           expectedCountOfRowsScannedInMovedRegion++;
         }
@@ -417,16 +418,15 @@ public class TestTableScanMetrics extends FromClientSideBase {
           actualCountOfRowsScannedInMovedRegion);
         Assert.assertEquals(2, serversForMovedRegion.size());
       }
-    }
-    finally {
+    } finally {
       TEST_UTIL.deleteTable(tableName);
     }
   }
 
   @Test
   public void testScanMetricsByRegionWithRegionSplit() throws Exception {
-    TableName tableName = TableName.valueOf(TestTableScanMetrics.class.getSimpleName()
-      + "testScanMetricsByRegionWithRegionSplit");
+    TableName tableName = TableName.valueOf(
+      TestTableScanMetrics.class.getSimpleName() + "testScanMetricsByRegionWithRegionSplit");
     try (Table table = TEST_UTIL.createMultiRegionTable(tableName, CF)) {
       TEST_UTIL.loadTable(table, CF);
 
@@ -436,7 +436,7 @@ public class TestTableScanMetrics extends FromClientSideBase {
       byte[] ccb = Bytes.toBytes("ccb");
       long expectedCountOfRowsScannedInRegion = 0;
       // ROWS is the data loaded by loadTable()
-      for (byte[] row: HBaseTestingUtil.ROWS) {
+      for (byte[] row : HBaseTestingUtil.ROWS) {
         if (Bytes.compareTo(row, bbb) >= 0 && Bytes.compareTo(row, ccb) <= 0) {
           expectedCountOfRowsScannedInRegion++;
         }
@@ -454,9 +454,8 @@ public class TestTableScanMetrics extends FromClientSideBase {
         boolean isFirstScanOfRegion = true;
         for (Result r : rs) {
           if (isFirstScanOfRegion) {
-            splitRegion(tableName, bbb, bmw).forEach(
-              region -> expectedSplitRegionRes.add(Bytes.toString(region))
-            );
+            splitRegion(tableName, bbb, bmw)
+              .forEach(region -> expectedSplitRegionRes.add(Bytes.toString(region)));
             isFirstScanOfRegion = false;
           }
         }
@@ -489,16 +488,15 @@ public class TestTableScanMetrics extends FromClientSideBase {
         Assert.assertEquals(2, rpcRetiesCount);
         Assert.assertEquals(expectedSplitRegionRes, splitRegionRes);
       }
-    }
-    finally {
+    } finally {
       TEST_UTIL.deleteTable(tableName);
     }
   }
 
   @Test
   public void testScanMetricsByRegionWithRegionMerge() throws Exception {
-    TableName tableName = TableName.valueOf(TestTableScanMetrics.class.getSimpleName()
-      + "testScanMetricsByRegionWithRegionMerge");
+    TableName tableName = TableName.valueOf(
+      TestTableScanMetrics.class.getSimpleName() + "testScanMetricsByRegionWithRegionMerge");
     try (Table table = TEST_UTIL.createMultiRegionTable(tableName, CF)) {
       TEST_UTIL.loadTable(table, CF);
 
@@ -508,7 +506,7 @@ public class TestTableScanMetrics extends FromClientSideBase {
       byte[] ddc = Bytes.toBytes("ddc");
       long expectedCountOfRowsScannedInRegions = 0;
       // ROWS is the data loaded by loadTable()
-      for (byte[] row: HBaseTestingUtil.ROWS) {
+      for (byte[] row : HBaseTestingUtil.ROWS) {
         if (Bytes.compareTo(row, bbb) >= 0 && Bytes.compareTo(row, ddc) <= 0) {
           expectedCountOfRowsScannedInRegions++;
         }
@@ -530,9 +528,7 @@ public class TestTableScanMetrics extends FromClientSideBase {
             List<byte[]> out = mergeRegions(tableName, bbb, ccc);
             // Entry with index 2 is the encoded region name of merged region
             mergedRegionEncodedName = Bytes.toString(out.get(2));
-            out.forEach(
-              region -> expectedMergeRegionsRes.add(Bytes.toString(region))
-            );
+            out.forEach(region -> expectedMergeRegionsRes.add(Bytes.toString(region)));
             isFirstScanOfRegion = false;
           }
         }
@@ -564,8 +560,7 @@ public class TestTableScanMetrics extends FromClientSideBase {
         Assert.assertTrue(expectedMergeRegionsRes.containsAll(mergeRegionsRes));
         Assert.assertTrue(containsMergedRegionInScanMetrics);
       }
-    }
-    finally {
+    } finally {
       TEST_UTIL.deleteTable(tableName);
     }
   }
@@ -612,9 +607,8 @@ public class TestTableScanMetrics extends FromClientSideBase {
    * Moves the region with start row key from its original region server to some other region
    * server. This is a synchronous method.
    * @param tableName Table name of region to be moved belongs.
-   * @param startRow Start row key of the region to be moved.
+   * @param startRow  Start row key of the region to be moved.
    * @return Encoded region name of the region which was moved.
-   * @throws IOException
    */
   private byte[] moveRegion(TableName tableName, byte[] startRow) throws IOException {
     Admin admin = TEST_UTIL.getAdmin();
@@ -635,11 +629,10 @@ public class TestTableScanMetrics extends FromClientSideBase {
   /**
    * Splits the region with start row key at the split key provided. This is a synchronous method.
    * @param tableName Table name of region to be split.
-   * @param startRow Start row key of the region to be split.
-   * @param splitKey Split key for splitting the region.
+   * @param startRow  Start row key of the region to be split.
+   * @param splitKey  Split key for splitting the region.
    * @return List of encoded region names with first element being parent region followed by two
-   * child regions.
-   * @throws IOException
+   *         child regions.
    */
   private List<byte[]> splitRegion(TableName tableName, byte[] startRow, byte[] splitKey)
     throws IOException {
@@ -673,14 +666,13 @@ public class TestTableScanMetrics extends FromClientSideBase {
   }
 
   /**
-   * Merges two regions with the start row key as topRegion and bottomRegion. Ensures that
-   * the regions to be merged are adjacent regions. This is a synchronous method.
-   * @param tableName Table name of regions to be merged.
-   * @param topRegion Start row key of first region for merging.
+   * Merges two regions with the start row key as topRegion and bottomRegion. Ensures that the
+   * regions to be merged are adjacent regions. This is a synchronous method.
+   * @param tableName    Table name of regions to be merged.
+   * @param topRegion    Start row key of first region for merging.
    * @param bottomRegion Start row key of second region for merging.
-   * @return List of encoded region names with first two elements being original regions followed
-   * by the merged region.
-   * @throws IOException
+   * @return List of encoded region names with first two elements being original regions followed by
+   *         the merged region.
    */
   private List<byte[]> mergeRegions(TableName tableName, byte[] topRegion, byte[] bottomRegion)
     throws IOException {
