@@ -17,12 +17,18 @@
  */
 package org.apache.hadoop.hbase.chaos.actions;
 
+import java.util.Collections;
+import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.SnapshotType;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 
 /**
  * Action that tries to take a snapshot of a table.
@@ -31,14 +37,20 @@ public class SnapshotTableAction extends Action {
   private static final Logger LOG = LoggerFactory.getLogger(SnapshotTableAction.class);
   private final TableName tableName;
   private final long sleepTime;
+  private final Map<String, Object> snapshotProps;
 
-  public SnapshotTableAction(TableName tableName) {
-    this(-1, tableName);
+  public SnapshotTableAction(TableName tableName, long ttl) {
+    this(-1, tableName, ttl);
   }
 
-  public SnapshotTableAction(int sleepTime, TableName tableName) {
+  public SnapshotTableAction(int sleepTime, TableName tableName, long ttl) {
     this.tableName = tableName;
     this.sleepTime = sleepTime;
+    if (ttl > 0) {
+      snapshotProps = ImmutableMap.of("TTL", ttl);
+    } else {
+      snapshotProps = Collections.emptyMap();
+    }
   }
 
   @Override
@@ -58,7 +70,9 @@ public class SnapshotTableAction extends Action {
     }
 
     getLogger().info("Performing action: Snapshot table {}", tableName);
-    admin.snapshot(snapshotName, tableName);
+    SnapshotType type =
+      ThreadLocalRandom.current().nextBoolean() ? SnapshotType.FLUSH : SnapshotType.SKIPFLUSH;
+    admin.snapshot(snapshotName, tableName, type, snapshotProps);
     if (sleepTime > 0) {
       Thread.sleep(sleepTime);
     }
