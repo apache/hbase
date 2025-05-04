@@ -62,13 +62,14 @@ public interface MonkeyConstants {
   String FILL_DISK_FILE_SIZE = "fill.disk.file.size";
   String FILL_DISK_ISSUE_DURATION = "fill.disk.issue.duration";
   String DATA_ISSUE_CHANCE = "data.issue.chance";
+  String SNAPSHOT_TABLE_TTL = "snapshot.table.ttl";
 
   /**
    * A Set of prefixes which encompasses all of the configuration properties for the ChaosMonky.
    */
-  Set<String> MONKEY_CONFIGURATION_KEY_PREFIXES = new HashSet<>(
-    Arrays.asList("sdm.", "move.", "restart.", "batch.", "rolling.", "compact.", "unbalance.",
-      "decrease.", "decrease.", "graceful.", "cpu.", "network.", "fill.", "data.", "skip"));
+  Set<String> MONKEY_CONFIGURATION_KEY_PREFIXES = new HashSet<>(Arrays.asList("sdm.", "move.",
+    "restart.", "batch.", "rolling.", "compact.", "unbalance.", "decrease.", "decrease.",
+    "graceful.", "cpu.", "network.", "fill.", "data.", "snapshot.", "skip"));
 
   long DEFAULT_PERIODIC_ACTION1_PERIOD = 60 * 1000;
   long DEFAULT_PERIODIC_ACTION2_PERIOD = 90 * 1000;
@@ -108,4 +109,5 @@ public interface MonkeyConstants {
   long DEFAULT_FILL_DISK_FILE_SIZE = 0;
   long DEFAULT_FILL_DISK_ISSUE_DURATION = 5 * 60 * 1000;
   float DEFAULT_DATA_ISSUE_CHANCE = 0.01f;
+  long DEFAULT_SNAPSHOT_TABLE_TTL = -1L;
 }

@@ -72,6 +72,7 @@ public class SlowDeterministicMonkeyFactory extends MonkeyFactory {
   private long gracefulRollingRestartTSSLeepTime;
   private long rollingBatchSuspendRSSleepTime;
   private float rollingBatchSuspendtRSRatio;
+  private long snapshotTableTtl;
 
   protected Action[] getLightWeightedActions() {
     return new Action[] { new CompactTableAction(tableName, compactTableRatio),
@@ -82,11 +83,11 @@ public class SlowDeterministicMonkeyFactory extends MonkeyFactory {
 
   protected Action[] getMidWeightedActions() {
     return new Action[] { new SplitRandomRegionOfTableAction(tableName),
-      new MergeRandomAdjacentRegionsOfTableAction(tableName), new SnapshotTableAction(tableName),
-      new AddColumnAction(tableName), new RemoveColumnAction(tableName, columnFamilies),
-      new ChangeEncodingAction(tableName), new ChangeCompressionAction(tableName),
-      new ChangeBloomFilterAction(tableName), new ChangeVersionsAction(tableName),
-      new ChangeSplitPolicyAction(tableName), };
+      new MergeRandomAdjacentRegionsOfTableAction(tableName),
+      new SnapshotTableAction(tableName, snapshotTableTtl), new AddColumnAction(tableName),
+      new RemoveColumnAction(tableName, columnFamilies), new ChangeEncodingAction(tableName),
+      new ChangeCompressionAction(tableName), new ChangeBloomFilterAction(tableName),
+      new ChangeVersionsAction(tableName), new ChangeSplitPolicyAction(tableName), };
   }
 
   protected Action[] getHeavyWeightedActions() {
@@ -195,5 +196,8 @@ public class SlowDeterministicMonkeyFactory extends MonkeyFactory {
     rollingBatchSuspendtRSRatio =
       Float.parseFloat(this.properties.getProperty(MonkeyConstants.ROLLING_BATCH_SUSPEND_RS_RATIO,
         MonkeyConstants.DEFAULT_ROLLING_BATCH_SUSPEND_RS_RATIO + ""));
+    snapshotTableTtl =
+      Long.parseLong(this.properties.getProperty(MonkeyConstants.SNAPSHOT_TABLE_TTL,
+        MonkeyConstants.DEFAULT_SNAPSHOT_TABLE_TTL + ""));
   }
 }
