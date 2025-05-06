@@ -123,6 +123,37 @@ public class TestReadOnlyController {
     TEST_UTIL.shutdownMiniCluster();
   }
 
+  private static void enableReadOnlyMode() {
+    // Dynamically enable Read-Only mode if it is not active
+    if (!isReadOnlyModeEnabled()) {
+      LOG.info("Dynamically enabling Read-Only mode by setting {} to true",
+        HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
+      conf.setBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, true);
+      notifyObservers();
+    }
+  }
+
+  private static void disableReadOnlyMode() {
+    // Dynamically disable Read-Only mode if it is active
+    if (isReadOnlyModeEnabled()) {
+      LOG.info("Dynamically disabling Read-Only mode by setting {} to false",
+        HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
+      conf.setBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, false);
+      notifyObservers();
+    }
+  }
+
+  private static boolean isReadOnlyModeEnabled() {
+    return conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
+      HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
+  }
+
+  private static void notifyObservers() {
+    LOG.info("Notifying observers about configuration changes");
+    hMaster.getConfigurationManager().notifyAllObservers(conf);
+    hRegionServer.getConfigurationManager().notifyAllObservers(conf);
+  }
+
   // The test case for successfully creating a table with Read-Only mode disabled happens when
   // setting up the test class, so we only need a test function for a failed table creation.
   @Test
@@ -189,36 +220,5 @@ public class TestReadOnlyController {
 
     // This should throw the IOException
     testTable.batch(actions, null);
-  }
-
-  private static void enableReadOnlyMode() {
-    // Dynamically enable Read-Only mode if it is not active
-    if (!isReadOnlyModeEnabled()) {
-      LOG.info("Dynamically enabling Read-Only mode by setting {} to true",
-        HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
-      conf.setBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, true);
-      notifyObservers();
-    }
-  }
-
-  private static void disableReadOnlyMode() {
-    // Dynamically disable Read-Only mode if it is active
-    if (isReadOnlyModeEnabled()) {
-      LOG.info("Dynamically disabling Read-Only mode by setting {} to false",
-        HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
-      conf.setBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, false);
-      notifyObservers();
-    }
-  }
-
-  private static boolean isReadOnlyModeEnabled() {
-    return conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
-      HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
-  }
-
-  private static void notifyObservers() {
-    LOG.info("Notifying observers about configuration changes");
-    hMaster.getConfigurationManager().notifyAllObservers(conf);
-    hRegionServer.getConfigurationManager().notifyAllObservers(conf);
   }
 }
