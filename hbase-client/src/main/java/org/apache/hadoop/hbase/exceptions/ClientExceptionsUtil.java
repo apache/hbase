@@ -26,6 +26,7 @@ import java.net.ConnectException;
 import java.net.SocketTimeoutException;
 import java.nio.channels.ClosedChannelException;
 import java.util.Set;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeoutException;
 import org.apache.hadoop.hbase.CallDroppedException;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
@@ -56,8 +57,8 @@ public final class ClientExceptionsUtil {
     if (cur == null) {
       return true;
     }
-    return !isSpecialException(cur) || (cur instanceof RegionMovedException)
-      || cur instanceof NotServingRegionException;
+    return (!isExecutorException(cur) && !isSpecialException(cur))
+      || (cur instanceof RegionMovedException) || cur instanceof NotServingRegionException;
   }
 
   public static boolean isSpecialException(Throwable cur) {
@@ -176,5 +177,9 @@ public final class ClientExceptionsUtil {
       throw (Error) t;
     }
     return t;
+  }
+
+  private static boolean isExecutorException(Throwable t) {
+    return RejectedExecutionException.class.isAssignableFrom(t.getClass());
   }
 }
