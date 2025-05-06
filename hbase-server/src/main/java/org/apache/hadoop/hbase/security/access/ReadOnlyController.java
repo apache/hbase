@@ -75,7 +75,6 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
 
   private void internalReadOnlyGuard() throws IOException {
     if (this.globalReadOnlyEnabled) {
-      // throw new FailedSanityCheckException("Operation not allowed in Read-Only Mode");
       throw new IOException("Operation not allowed in Read-Only Mode");
     }
   }
@@ -100,9 +99,6 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
   @Override
   public void prePut(ObserverContext<? extends RegionCoprocessorEnvironment> c, Put put,
     WALEdit edit) throws IOException {
-    if (edit.isMetaEdit() || edit.isEmpty()) {
-      return;
-    }
     internalReadOnlyGuard();
   }
 
@@ -115,13 +111,7 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
   @Override
   public void preBatchMutate(ObserverContext<? extends RegionCoprocessorEnvironment> c,
     MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {
-    for (int i = 0; i < miniBatchOp.size(); i++) {
-      WALEdit edit = miniBatchOp.getWalEdit(i);
-      if (edit == null || edit.isMetaEdit() || edit.isEmpty()) {
-        continue;
-      }
-      internalReadOnlyGuard();
-    }
+    internalReadOnlyGuard();
   }
 
   @Override
