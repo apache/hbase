@@ -79,6 +79,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.MapReduceExtendedCell;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
@@ -90,6 +92,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.PathOutputCommitter;
 import org.apache.hadoop.mapreduce.lib.partition.TotalOrderPartitioner;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -306,8 +309,7 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
               LOG.trace("Failed get of location, use default writer {}", Bytes.toString(rowKey));
             } else {
               LOG.debug("First rowkey: [{}]", Bytes.toString(rowKey));
-              InetSocketAddress initialIsa =
-                new InetSocketAddress(loc.getHostname(), loc.getPort());
+              InetSocketAddress initialIsa = getDNFavoredNode(conf, loc);
               if (initialIsa.isUnresolved()) {
                 LOG.trace("Failed resolve address {}, use default writer", loc.getHostnamePort());
               } else {
@@ -327,6 +329,14 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
 
         // Copy the row so we know when a row transition.
         this.previousRows.put(family, rowKey);
+      }
+
+      private InetSocketAddress getDNFavoredNode(Configuration conf, HRegionLocation loc) {
+        HdfsConfiguration.init();
+        Configuration dnConf = new HdfsConfiguration(conf);
+        int dnPort = NetUtils.createSocketAddr(dnConf.get(DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY,
+          DFSConfigKeys.DFS_DATANODE_ADDRESS_DEFAULT)).getPort();
+        return new InetSocketAddress(loc.getHostname(), dnPort);
       }
 
       private Path getTableRelativePath(byte[] tableNameBytes) {
