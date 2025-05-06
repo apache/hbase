@@ -71,13 +71,10 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
   ConfigurationObserver {
 
   private static final Logger LOG = LoggerFactory.getLogger(ReadOnlyController.class);
-  private Configuration conf;
+  private volatile boolean globalReadOnlyEnabled;
 
   private void internalReadOnlyGuard() throws IOException {
-    if (
-      conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
-        HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT)
-    ) {
+    if (this.globalReadOnlyEnabled) {
       // throw new FailedSanityCheckException("Operation not allowed in Read-Only Mode");
       throw new IOException("Operation not allowed in Read-Only Mode");
     }
@@ -85,7 +82,9 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
 
   @Override
   public void start(CoprocessorEnvironment env) throws IOException {
-    conf = env.getConfiguration();
+    this.globalReadOnlyEnabled =
+      env.getConfiguration().getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
+        HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
   }
 
   @Override
@@ -394,9 +393,9 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
 
   @Override
   public void onConfigurationChange(Configuration conf) {
-    boolean globalReadOnlyEnabled = conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
+    this.globalReadOnlyEnabled = conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
       HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
-    LOG.info("Config {} is changed to {}, ", HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
-      globalReadOnlyEnabled);
+    LOG.info("Config {} has been dynamically changed to {}, ",
+      HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, this.globalReadOnlyEnabled);
   }
 }
