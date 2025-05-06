@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.coprocessor.BulkLoadObserver;
 import org.apache.hadoop.hbase.coprocessor.CoreCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.EndpointObserver;
@@ -67,7 +68,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class ReadOnlyController
   implements MasterCoprocessor, RegionCoprocessor, MasterObserver, RegionObserver,
-  RegionServerCoprocessor, RegionServerObserver, EndpointObserver, BulkLoadObserver {
+  RegionServerCoprocessor, RegionServerObserver, EndpointObserver, BulkLoadObserver,
+  ConfigurationObserver {
 
   private static final Logger LOG = LoggerFactory.getLogger(ReadOnlyController.class);
   private Configuration conf;
@@ -389,5 +391,13 @@ public class ReadOnlyController
     throws IOException {
     internalReadOnlyGuard();
     BulkLoadObserver.super.preCleanupBulkLoad(ctx);
+  }
+
+  @Override
+  public void onConfigurationChange(Configuration conf) {
+    boolean globalReadOnlyEnabled = conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
+      HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
+    LOG.info("Config {} is changed to {}, ", HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
+      globalReadOnlyEnabled);
   }
 }
