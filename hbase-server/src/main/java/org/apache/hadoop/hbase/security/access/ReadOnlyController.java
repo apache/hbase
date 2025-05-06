@@ -395,7 +395,7 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
   public void onConfigurationChange(Configuration conf) {
     this.globalReadOnlyEnabled = conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
       HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
-    LOG.info("Config {} has been dynamically changed to {}, ",
+    LOG.info("Config {} has been dynamically changed to {}",
       HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, this.globalReadOnlyEnabled);
   }
 }
