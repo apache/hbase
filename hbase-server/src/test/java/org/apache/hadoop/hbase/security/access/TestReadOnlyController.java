@@ -98,17 +98,14 @@ public class TestReadOnlyController {
       // Start the test cluster
       cluster = TEST_UTIL.startMiniCluster(1);
 
-      // Get the HMaster and HRegionServer instances
       hMaster = cluster.getMaster();
       hRegionServer = cluster.getRegionServerThreads().get(0).getRegionServer();
-
-      // Get connection to the HBase
       connection = ConnectionFactory.createConnection(conf);
 
       // Create a test table
       testTable = TEST_UTIL.createTable(TEST_TABLE, TEST_FAMILY);
     } catch (Exception e) {
-      // Delete the created table and clean up the connection and cluster before throwing an
+      // Delete the created table, and clean up the connection and cluster before throwing an
       // exception
       disableReadOnlyMode();
       TEST_UTIL.deleteTable(TEST_TABLE);
@@ -126,10 +123,8 @@ public class TestReadOnlyController {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  /*
-   * The test case for successfully creating a table with Read-Only mode disabled happens when
-   * setting up the test class, so we only need a test function for a bad table creation.
-   */
+  // The test case for successfully creating a table with Read-Only mode disabled happens when
+  // setting up the test class, so we only need a test function for a failed table creation.
   @Test
   public void testCannotCreateTableWithReadOnlyEnabled() throws IOException {
     // Expect an IOException to result from the createTable attempt since Read-Only mode is enabled
