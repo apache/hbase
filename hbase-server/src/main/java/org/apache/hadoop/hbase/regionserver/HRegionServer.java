@@ -2139,7 +2139,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     if (rsHost != null) {
       rsHost.registerConfigurationObservers(configurationManager);
     } else {
-      LOG.warn("Could not register HRegionServer coprocessor configuration observers because "
+      LOG.warn("Could not register HRegionServer coprocessors to the ConfigurationManager because "
         + "RegionServerCoprocessorHost is null");
     }
   }
