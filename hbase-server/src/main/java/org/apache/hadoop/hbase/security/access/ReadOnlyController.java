@@ -381,6 +381,7 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
     BulkLoadObserver.super.preCleanupBulkLoad(ctx);
   }
 
+  /* ---- ConfigurationObserver Overrides ---- */
   @Override
   public void onConfigurationChange(Configuration conf) {
     boolean maybeUpdatedConfValue = conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
