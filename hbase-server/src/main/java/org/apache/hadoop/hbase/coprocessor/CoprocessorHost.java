@@ -37,6 +37,8 @@ import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.conf.ConfigurationManager;
+import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.CoprocessorClassLoader;
@@ -114,6 +116,17 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
       returnValue.add(e.getInstance().getClass().getSimpleName());
     }
     return returnValue;
+  }
+
+  public void registerConfigurationObservers(ConfigurationManager configurationManager) {
+    Coprocessor foundCp;
+    Set<String> coprocessors = this.getCoprocessors();
+    for (String cp : coprocessors) {
+      foundCp = this.findCoprocessor(cp);
+      if (foundCp instanceof ConfigurationObserver) {
+        configurationManager.registerObserver((ConfigurationObserver) foundCp);
+      }
+    }
   }
 
   /**

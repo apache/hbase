@@ -2136,6 +2136,12 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     configurationManager.registerObserver(this.rpcServices);
     configurationManager.registerObserver(this.prefetchExecutorNotifier);
     configurationManager.registerObserver(this);
+    if (rsHost != null) {
+      rsHost.registerConfigurationObservers(configurationManager);
+    } else {
+      LOG.warn("Could not register HRegionServer coprocessor configuration observers because "
+        + "RegionServerCoprocessorHost is null");
+    }
   }
 
   /*
