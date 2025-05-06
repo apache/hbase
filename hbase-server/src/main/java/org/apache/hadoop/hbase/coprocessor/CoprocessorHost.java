@@ -118,6 +118,12 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
     return returnValue;
   }
 
+  /**
+   * Used to help make the relevant loaded coprocessors dynamically configurable by registering them
+   * to the {@link ConfigurationManager}. Coprocessors are considered "relevant" if they implement
+   * the {@link ConfigurationObserver} interface.
+   * @param configurationManager the ConfigurationManager the coprocessors get registered to
+   */
   public void registerConfigurationObservers(ConfigurationManager configurationManager) {
     Coprocessor foundCp;
     Set<String> coprocessors = this.getCoprocessors();
