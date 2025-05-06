@@ -66,9 +66,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 
 @CoreCoprocessor
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
-public class ReadOnlyController
-  implements MasterCoprocessor, RegionCoprocessor, MasterObserver, RegionObserver,
-  RegionServerCoprocessor, RegionServerObserver, EndpointObserver, BulkLoadObserver,
+public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor, MasterObserver,
+  RegionObserver, RegionServerCoprocessor, RegionServerObserver, EndpointObserver, BulkLoadObserver,
   ConfigurationObserver {
 
   private static final Logger LOG = LoggerFactory.getLogger(ReadOnlyController.class);
