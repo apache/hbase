@@ -136,6 +136,22 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
   }
 
   /**
+   * Deregisters relevant coprocessors from the {@link ConfigurationManager}. Coprocessors are
+   * considered "relevant" if they implement the {@link ConfigurationObserver} interface.
+   * @param configurationManager the ConfigurationManager the coprocessors get deregistered from
+   */
+  public void deregisterConfigurationObservers(ConfigurationManager configurationManager) {
+    Coprocessor foundCp;
+    Set<String> coprocessors = this.getCoprocessors();
+    for (String cp : coprocessors) {
+      foundCp = this.findCoprocessor(cp);
+      if (foundCp instanceof ConfigurationObserver) {
+        configurationManager.deregisterObserver((ConfigurationObserver) foundCp);
+      }
+    }
+  }
+
+  /**
    * Load system coprocessors once only. Read the class names from configuration. Called by
    * constructor.
    */
