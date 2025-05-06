@@ -785,9 +785,6 @@ public final class BackupCommands {
             continue;
           }
 
-          System.out.println("Backup [" + targetBackup.getBackupId()
-            + "] covered PITR window for table [" + table + "]: " + coveredPitrWindow);
-
           // Check if there is any other valid backup that can cover the PITR window
           List<BackupInfo> allBackups = backupSystemTable.getBackupInfos(BackupState.COMPLETE);
           boolean hasAnotherValidBackup =
@@ -871,9 +868,6 @@ public final class BackupCommands {
 
           // The backup must fully cover the target window
           if (covered.getFirst() <= targetStart && covered.getSecond() >= targetEnd) {
-            System.out.println("Backup [" + backup.getBackupId() + "] covers the target window ["
-              + targetStart + ", " + targetEnd + "] with window [" + covered.getFirst() + ", "
-              + covered.getSecond() + "]");
             return true;
           }
         }
