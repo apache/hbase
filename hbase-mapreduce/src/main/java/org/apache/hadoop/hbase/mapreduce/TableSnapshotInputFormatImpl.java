@@ -153,7 +153,7 @@ public class TableSnapshotInputFormatImpl {
     }
 
     public InputSplit(TableDescriptor htd, RegionInfo regionInfo, List<String> locations, Scan scan,
-      Path restoreDir){
+      Path restoreDir) {
       this(htd, regionInfo, locations, scan, restoreDir, 1);
     }
 
@@ -447,8 +447,8 @@ public class TableSnapshotInputFormatImpl {
       }
     }
 
-    SnapshotRegionSizeCalculator snapshotRegionSizeCalculator = new SnapshotRegionSizeCalculator(
-      conf, manifest);
+    SnapshotRegionSizeCalculator snapshotRegionSizeCalculator =
+      new SnapshotRegionSizeCalculator(conf, manifest);
     List<InputSplit> splits = new ArrayList<>();
     for (RegionInfo hri : regionManifests) {
       // load region descriptor
@@ -488,7 +488,8 @@ public class TableSnapshotInputFormatImpl {
                 Bytes.compareTo(scan.getStopRow(), sp[i + 1]) < 0 ? scan.getStopRow() : sp[i + 1]);
             }
 
-            splits.add(new InputSplit(htd, hri, hosts, boundedScan, restoreDir,snapshotRegionSize / numSplits));
+            splits.add(new InputSplit(htd, hri, hosts, boundedScan, restoreDir,
+              snapshotRegionSize / numSplits));
           }
         }
       } else {
