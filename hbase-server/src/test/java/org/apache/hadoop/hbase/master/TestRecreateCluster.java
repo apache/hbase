@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import static org.apache.hadoop.hbase.master.assignment.AssignmentManager.PROCESS_UNKNOWN_RS_ON_STARTUP;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -74,6 +75,8 @@ public class TestRecreateCluster {
   public void setup() {
     TEST_UTIL.getConfiguration().setLong("hbase.master.init.timeout.localHBaseCluster",
       MASTER_INIT_TIMEOUT_MS);
+    TEST_UTIL.getConfiguration().setBoolean(PROCESS_UNKNOWN_RS_ON_STARTUP,
+      false);
   }
 
   @Test
@@ -97,6 +100,13 @@ public class TestRecreateCluster {
   public void testRecreateCluster_UserTableEnabled_CleanupWALAndZNodes() throws Exception {
     // master fails with InitMetaProcedure because it cannot delete existing meta table directory,
     // region server cannot join and time-out the cluster starts.
+    validateRecreateClusterWithUserTableEnabled(true, true);
+  }
+
+  @Test
+  public void testRecreateCluster_UserTableEnabled_CleanupWALAndZNodes_WithRecoverUnknownServer() throws Exception {
+    TEST_UTIL.getConfiguration().setBoolean(PROCESS_UNKNOWN_RS_ON_STARTUP,
+      true);
     validateRecreateClusterWithUserTableEnabled(true, true);
   }
 
@@ -196,7 +206,6 @@ public class TestRecreateCluster {
     MiniHBaseCluster hbaseCluster = TEST_UTIL.getHBaseCluster();
     assertTrue("Please start more than 1 regionserver",
       hbaseCluster.getRegionServerThreads().size() > 1);
-
     int userTableServerNum = getServerNumForTableWithOnlyOneRegion(userTable);
     int systemTableServerNum = getServerNumForTableWithOnlyOneRegion(systemTable);
 
@@ -237,5 +246,4 @@ public class TestRecreateCluster {
       Bytes.toString(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()));
     assertFalse(result.advance());
   }
-
 }

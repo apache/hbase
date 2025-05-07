@@ -1058,16 +1058,30 @@ public class HMaster extends HRegionServer implements MasterServices {
     // Checking if meta needs initializing.
     startupTaskGroup.addTask("Initializing meta table if this is a new deploy");
     InitMetaProcedure initMetaProc = null;
+    Future<byte[]> metaAssignProc = null;
     // Print out state of hbase:meta on startup; helps debugging.
     if (!this.assignmentManager.getRegionStates().hasTableRegionStates(TableName.META_TABLE_NAME)) {
+      // This isn't "does hbase:meta exist?", but do we think the table is assigned somewhere.
+      // In AssignmentManager#start(), we did the following for all meta znodes
+      //  a. Create RegionState from that znode
+      //  b. Add RegionServer from znode if available
+      //  c. Sets the ProcedureEvent state to "ready" if the meta znode is OPEN
+      //  d. Will hold up the rest of assignment if meta is _not_ OPEN.
       Optional<InitMetaProcedure> optProc = procedureExecutor.getProcedures().stream()
         .filter(p -> p instanceof InitMetaProcedure).map(o -> (InitMetaProcedure) o).findAny();
-      initMetaProc = optProc.orElseGet(() -> {
-        // schedule an init meta procedure if meta has not been deployed yet
-        InitMetaProcedure temp = new InitMetaProcedure();
-        procedureExecutor.submitProcedure(temp);
-        return temp;
-      });
+      if (optProc.isPresent()) {
+        // TODO is scheduling an SCP more correct?
+        LOG.info("Found an InitMetaProcedure but no assignment data for meta (ZooKeeper wiped?). " +
+            "Scheduling a new assignment for hbase:meta.");
+        metaAssignProc = assignmentManager.assignAsync(RegionInfoBuilder.FIRST_META_REGIONINFO);
+      } else {
+        LOG.info("Found no InitMetaProcedure, submitting one");
+        initMetaProc = new InitMetaProcedure();
+        procedureExecutor.submitProcedure(initMetaProc);
+      }
+    } else {
+      LOG.info("hbase:meta is marked as open on some server, ensuring it's not assigned to a dead server");
+      assignmentManager.tryScheduleRecoveryForMetaRegionServer();
     }
     if (this.balancer instanceof FavoredNodesPromoter) {
       favoredNodesManager = new FavoredNodesManager(this);
@@ -1083,10 +1097,23 @@ public class HMaster extends HRegionServer implements MasterServices {
     startServiceThreads();
     // wait meta to be initialized after we start procedure executor
     if (initMetaProc != null) {
+      LOG.info("Waiting for InitMetaProcedure to complete.");
       initMetaProc.await();
       if (initMetaProc.isFailed() && initMetaProc.hasException()) {
         throw new IOException("Failed to initialize meta table", initMetaProc.getException());
       }
+      LOG.info("InitMetaProcedure has completed, continuing with startup.");
+    } else if (metaAssignProc != null) {
+      LOG.info("Waiting for hbase:meta to be assigned.");
+      try {
+        metaAssignProc.get();
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        return;
+      } catch (ExecutionException e) {
+        throw new IOException(e);
+      }
+      LOG.info("hbase:meta was assigned, continuing with startup.");
     }
     // Wake up this server to check in
     sleeper.skipSleepCycle();
@@ -1134,6 +1161,9 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
 
     this.assignmentManager.processOfflineRegions();
+    // Find Regions which on UNKNOWN RegionServers and schedule SCPs for those UNKNOWN RS
+    // when feature is enabled.
+    this.assignmentManager.processRegionsOnUnknownServers();
     // this must be called after the above processOfflineRegions to prevent race
     this.assignmentManager.wakeMetaLoadedEvent();
 

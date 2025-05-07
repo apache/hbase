@@ -30,6 +30,7 @@ import java.util.Set;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
@@ -65,6 +66,7 @@ import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.ServerManager;
+import org.apache.hadoop.hbase.master.ServerManager.ServerLiveState;
 import org.apache.hadoop.hbase.master.TableStateManager;
 import org.apache.hadoop.hbase.master.balancer.FavoredStochasticBalancer;
 import org.apache.hadoop.hbase.master.procedure.HBCKServerCrashProcedure;
@@ -173,6 +175,11 @@ public class AssignmentManager {
     "hbase.master.scp.retain.assignment.force.retries";
 
   public static final int DEFAULT_FORCE_REGION_RETAINMENT_RETRIES = 600;
+
+  /** Schedule an SCP for any unknown RS on startup. */
+  public static final String PROCESS_UNKNOWN_RS_ON_STARTUP =
+    "hbase.master.assign.regions.on.unknown.servers";
+  private static final boolean DEFAULT_PROCESS_UNKNOWN_RS_ON_STARTUP = false;
 
   private final ProcedureEvent<?> metaAssignEvent = new ProcedureEvent<>("meta assign");
   private final ProcedureEvent<?> metaLoadEvent = new ProcedureEvent<>("meta load");
@@ -1722,6 +1729,68 @@ public class AssignmentManager {
     }
   }
 
+  /**
+   * Create assign procedure for non-offline regions of enabled table that are
+   * assigned to `unknown` servers after hbase:meta is online.
+   *
+   * This is a special case when WAL directory, SCP WALs and ZK data are cleared,
+   * cluster restarts with hbase:meta table and other tables with storefiles.
+   */
+  public void processRegionsOnUnknownServers() {
+    if (!getConfiguration().getBoolean(PROCESS_UNKNOWN_RS_ON_STARTUP,
+      DEFAULT_PROCESS_UNKNOWN_RS_ON_STARTUP)) {
+      LOG.info(
+        "Not attempting to assign any regions on UNKNOWN RegionServers because of {} is not set.",
+        PROCESS_UNKNOWN_RS_ON_STARTUP);
+      return;
+    }
+    LOG.info("Reading meta to schedule processing for any UNKNOWN RegionServers without "
+      + "pending ServerCrashProcedure.");
+    AtomicInteger unassignedRegions = new AtomicInteger(0);
+    final List<Procedure<MasterProcedureEnv>> currProcedures =
+      master.getMasterProcedureExecutor().getProcedures();
+    Set<ServerName> unknownServers = regionStates.getRegionStates().stream().filter(s -> {
+        // Filter out regions which are offline, part of a disabled table,
+        // or already in transition.
+        return !s.isOffline() && isTableEnabled(s.getRegion().getTable())
+          && !regionStates.isRegionInTransition(s.getRegion());
+      }).filter(s -> {
+        // Retain regions which are on UNKNOWN RegionServers
+        ServerName serverName = regionStates.getRegionServerOfRegion(s.getRegion());
+        if (serverName == null) {
+          return false;
+        }
+        unassignedRegions.incrementAndGet();
+        return master.getServerManager().isServerKnownAndOnline(serverName)
+          .equals(ServerManager.ServerLiveState.UNKNOWN);
+      }).map((regionState) -> regionStates.getRegionServerOfRegion(regionState.getRegion()))
+      .filter((unknownServer) -> {
+        // Filter out any Servers which already have in-progress SCP's. Mimic'ing
+        // MasterRpcServices#shouldSubmitSCP.
+        for (Procedure<MasterProcedureEnv> procedure : currProcedures) {
+          // This check encapsulates both ServerCrashProcedure and
+          // HBCKServerCrashProcedure
+          if (procedure instanceof ServerCrashProcedure) {
+            if (unknownServer.compareTo(((ServerCrashProcedure) procedure).getServerName()) == 0
+              && !procedure.isFinished()) {
+              LOG.info("there is already a SCP of this server {} running, pid {}", unknownServer,
+                procedure.getProcId());
+              return false;
+            }
+          }
+        }
+        return true;
+      }).collect(Collectors.toSet());
+    if (!unknownServers.isEmpty()) {
+      LOG.info("Found {} regions on unknown servers, scheduling ServerCrashProcedures for {}",
+        unassignedRegions.intValue(), unknownServers);
+      // force=true schedules an HBCKSCP instead of a normal SCP which is critical for this case.
+      // A normal SCP looks at the state of regions in the Master to reassign regions, whereas HBCKSCP
+      // goes off of the state of hbase:meta.
+      unknownServers.forEach((unknownServer) -> submitServerCrash(unknownServer, true, true));
+    }
+  }
+
   private void updateRegionsInTransitionMetrics(final RegionInTransitionStat ritStat) {
     metrics.updateRITOldestAge(ritStat.getOldestRITTime());
     metrics.updateRITCount(ritStat.getTotalRITs());
@@ -2625,4 +2694,27 @@ public class AssignmentManager {
       .setRegionsInTransition(ritCount).setTotalRegions(totalRegionCount).build();
   }
 
+  public void tryScheduleRecoveryForMetaRegionServer() throws IOException {
+    List<RegionState> metaRegionStates =
+      regionStates.getTableRegionStates(TableName.META_TABLE_NAME);
+    LOG.info("Found states for hbase:meta {}", metaRegionStates);
+    Set<ServerName> metaRegionServers = new HashSet<>();
+    for (RegionState metaRegionState : metaRegionStates) {
+      ServerName hostingServer = regionStates.getRegionServerOfRegion(metaRegionState.getRegion());
+      if (hostingServer != null) {
+        metaRegionServers.add(hostingServer);
+      }
+    }
+    LOG.info("RegionServers allegedly hosting meta {}", metaRegionServers);
+    // Make sure the RS hosting meta isn't "live". We don't want to expire a still-running RS.
+    for (ServerName metaRegionServer : metaRegionServers) {
+      if (master.getServerManager().isServerKnownAndOnline(metaRegionServer)
+        != ServerLiveState.LIVE) {
+        LOG.info("Expiring {} which is hosting meta but is not LIVE", metaRegionServer);
+        master.getServerManager().expireServer(metaRegionServer);
+      } else {
+        LOG.info("Ignoring {} which is hosting hbase:meta and LIVE", metaRegionServer);
+      }
+    }
+  }
 }
