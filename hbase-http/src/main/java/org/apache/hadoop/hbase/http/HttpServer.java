@@ -791,7 +791,7 @@ public class HttpServer implements FilterContainer {
    * @param appDir The application directory
    */
   protected void addDefaultApps(ContextHandlerCollection parent, final String appDir,
-    Configuration conf) throws IOException {
+    Configuration conf) {
     // set up the context for "/logs/" if "hadoop.log.dir" property is defined.
     String logDir = this.logDir;
     if (logDir == null) {
@@ -800,9 +800,7 @@ public class HttpServer implements FilterContainer {
     if (logDir != null) {
       ServletContextHandler logContext = new ServletContextHandler(parent, "/logs");
       logContext.addServlet(AdminAuthorizedServlet.class, "/*");
-      // We are doing this as otherwise jetty 12 is not handling /dir0/dir1/../dir2
-      // See https://github.com/jetty/jetty.project/issues/12958
-      logContext.setBaseResourceAsPath(Path.of(logDir).toRealPath());
+      logContext.setResourceBase(logDir);
       logContext.setDisplayName("logs");
       configureAliasChecks(logContext,
         conf.getBoolean(ServerConfigurationKeys.HBASE_JETTY_LOGS_SERVE_ALIASES,
