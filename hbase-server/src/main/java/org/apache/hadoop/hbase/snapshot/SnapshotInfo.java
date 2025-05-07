@@ -40,10 +40,8 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.WALLink;
-import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -178,9 +176,10 @@ public final class SnapshotInfo extends AbstractHBaseTool {
       this.fs = fs;
     }
 
-    SnapshotStats(final Configuration conf, final FileSystem fs,
-      final SnapshotManifest mainfest) throws CorruptedSnapshotException {
-      this.snapshot =  SnapshotDescriptionUtils.readSnapshotInfo(fs, mainfest.getSnapshotDir());;
+    SnapshotStats(final Configuration conf, final FileSystem fs, final SnapshotManifest mainfest)
+      throws CorruptedSnapshotException {
+      this.snapshot = SnapshotDescriptionUtils.readSnapshotInfo(fs, mainfest.getSnapshotDir());
+      ;
       this.snapshotTable = mainfest.getTableDescriptor().getTableName();
       this.conf = conf;
       this.fs = fs;
@@ -188,7 +187,6 @@ public final class SnapshotInfo extends AbstractHBaseTool {
 
     /**
      * Returns the map containing region sizes.
-     *
      * @return A map where keys are region names and values are their corresponding sizes.
      */
     public Map<String, Long> getRegionSizeMap() {
@@ -367,11 +365,10 @@ public final class SnapshotInfo extends AbstractHBaseTool {
     }
 
     void updateRegionSizeMap(final RegionInfo region,
-      final SnapshotRegionManifest.StoreFile storeFile){
+      final SnapshotRegionManifest.StoreFile storeFile) {
       long currentSize = regionSizeMap.getOrDefault(region.getEncodedName(), 0L);
       regionSizeMap.put(region.getEncodedName(), currentSize + storeFile.getFileSize());
     }
-
 
     /**
      * Add the specified log file to the stats
@@ -634,8 +631,7 @@ public final class SnapshotInfo extends AbstractHBaseTool {
   }
 
   public static SnapshotStats getSnapshotStats(final Configuration conf,
-    final SnapshotManifest manifest, final Map<Path, Integer> filesMap)
-    throws IOException {
+    final SnapshotManifest manifest, final Map<Path, Integer> filesMap) throws IOException {
     Path rootDir = CommonFSUtils.getRootDir(conf);
     FileSystem fs = FileSystem.get(rootDir.toUri(), conf);
     final SnapshotStats stats = new SnapshotStats(conf, fs, manifest);
