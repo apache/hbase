@@ -28,6 +28,7 @@ import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -56,6 +57,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMetaState> {
 
   private static final Logger LOG = LoggerFactory.getLogger(InitMetaProcedure.class);
+
+  public static final String ADDITIONAL_NAMESPACES = "hbase.master.additional.namespaces";
 
   private CountDownLatch latch = new CountDownLatch(1);
 
@@ -119,6 +122,19 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
           // namespaces when starting.
           insertNamespaceToMeta(env.getMasterServices().getConnection(), DEFAULT_NAMESPACE);
           insertNamespaceToMeta(env.getMasterServices().getConnection(), SYSTEM_NAMESPACE);
+          // create the additional namespaces based on the configuration value
+          String[] customNamespaces =
+            env.getMasterConfiguration().getStrings(ADDITIONAL_NAMESPACES);
+          if (null != customNamespaces && customNamespaces.length > 0) {
+            Arrays.stream(customNamespaces).forEach(ns -> {
+              try {
+                insertNamespaceToMeta(env.getMasterServices().getConnection(),
+                  NamespaceDescriptor.create(ns).build());
+              } catch (IOException e) {
+                throw new RuntimeException(e);
+              }
+            });
+          }
 
           return Flow.NO_MORE_STATE;
         default:
