@@ -84,7 +84,7 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
     AggregateResponse response = null;
     PartialResultContext partialResultContext = new PartialResultContext();
     T max = null;
-    boolean hasMoreRows = false;
+    boolean hasMoreRows = true;
     try {
       ColumnInterpreter<T, S, P, Q, R> ci = constructColumnInterpreterFromRequest(request);
       T temp;
@@ -144,7 +144,7 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
     InternalScanner scanner = null;
     PartialResultContext partialResultContext = new PartialResultContext();
     T min = null;
-    boolean hasMoreRows = false;
+    boolean hasMoreRows = true;
     try {
       ColumnInterpreter<T, S, P, Q, R> ci = constructColumnInterpreterFromRequest(request);
       T temp;
@@ -203,7 +203,7 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
     InternalScanner scanner = null;
     PartialResultContext partialResultContext = new PartialResultContext();
     long sum = 0L;
-    boolean hasMoreRows = false;
+    boolean hasMoreRows = true;
     try {
       ColumnInterpreter<T, S, P, Q, R> ci = constructColumnInterpreterFromRequest(request);
       S sumVal = null;
@@ -264,7 +264,7 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
     List<Cell> results = new ArrayList<>();
     InternalScanner scanner = null;
     PartialResultContext partialResultContext = new PartialResultContext();
-    boolean hasMoreRows = false;
+    boolean hasMoreRows = true;
     try {
       Scan scan = ProtobufUtil.toScan(request.getScan());
       byte[][] colFamilies = scan.getFamilies();
@@ -339,7 +339,7 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
         qualifier = qualifiers.pollFirst();
       }
       List<Cell> results = new ArrayList<>();
-      boolean hasMoreRows = false;
+      boolean hasMoreRows = true;
 
       do {
         results.clear();
@@ -404,7 +404,7 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
       }
       List<Cell> results = new ArrayList<>();
 
-      boolean hasMoreRows = false;
+      boolean hasMoreRows = true;
 
       do {
         if (shouldBreakForThrottling(request, scan, partialResultContext)) {
@@ -473,7 +473,7 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
       }
       List<Cell> results = new ArrayList<>();
 
-      boolean hasMoreRows = false;
+      boolean hasMoreRows = true;
       do {
         if (shouldBreakForThrottling(request, scan, partialResultContext)) {
           break;
