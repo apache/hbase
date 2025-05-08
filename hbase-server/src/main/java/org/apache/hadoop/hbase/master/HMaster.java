@@ -1063,16 +1063,16 @@ public class HMaster extends HRegionServer implements MasterServices {
     if (!this.assignmentManager.getRegionStates().hasTableRegionStates(TableName.META_TABLE_NAME)) {
       // This isn't "does hbase:meta exist?", but do we think the table is assigned somewhere.
       // In AssignmentManager#start(), we did the following for all meta znodes
-      //  a. Create RegionState from that znode
-      //  b. Add RegionServer from znode if available
-      //  c. Sets the ProcedureEvent state to "ready" if the meta znode is OPEN
-      //  d. Will hold up the rest of assignment if meta is _not_ OPEN.
+      // a. Create RegionState from that znode
+      // b. Add RegionServer from znode if available
+      // c. Sets the ProcedureEvent state to "ready" if the meta znode is OPEN
+      // d. Will hold up the rest of assignment if meta is _not_ OPEN.
       Optional<InitMetaProcedure> optProc = procedureExecutor.getProcedures().stream()
         .filter(p -> p instanceof InitMetaProcedure).map(o -> (InitMetaProcedure) o).findAny();
       if (optProc.isPresent()) {
         // TODO is scheduling an SCP more correct?
-        LOG.info("Found an InitMetaProcedure but no assignment data for meta (ZooKeeper wiped?). " +
-            "Scheduling a new assignment for hbase:meta.");
+        LOG.info("Found an InitMetaProcedure but no assignment data for meta (ZooKeeper wiped?). "
+          + "Scheduling a new assignment for hbase:meta.");
         metaAssignProc = assignmentManager.assignAsync(RegionInfoBuilder.FIRST_META_REGIONINFO);
       } else {
         LOG.info("Found no InitMetaProcedure, submitting one");
@@ -1080,7 +1080,8 @@ public class HMaster extends HRegionServer implements MasterServices {
         procedureExecutor.submitProcedure(initMetaProc);
       }
     } else {
-      LOG.info("hbase:meta is marked as open on some server, ensuring it's not assigned to a dead server");
+      LOG.info(
+        "hbase:meta is marked as open on some server, ensuring it's not assigned to a dead server");
       assignmentManager.tryScheduleRecoveryForMetaRegionServer();
     }
     if (this.balancer instanceof FavoredNodesPromoter) {

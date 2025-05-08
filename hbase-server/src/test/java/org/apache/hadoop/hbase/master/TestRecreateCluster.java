@@ -75,8 +75,7 @@ public class TestRecreateCluster {
   public void setup() {
     TEST_UTIL.getConfiguration().setLong("hbase.master.init.timeout.localHBaseCluster",
       MASTER_INIT_TIMEOUT_MS);
-    TEST_UTIL.getConfiguration().setBoolean(PROCESS_UNKNOWN_RS_ON_STARTUP,
-      false);
+    TEST_UTIL.getConfiguration().setBoolean(PROCESS_UNKNOWN_RS_ON_STARTUP, false);
   }
 
   @Test
@@ -104,9 +103,9 @@ public class TestRecreateCluster {
   }
 
   @Test
-  public void testRecreateCluster_UserTableEnabled_CleanupWALAndZNodes_WithRecoverUnknownServer() throws Exception {
-    TEST_UTIL.getConfiguration().setBoolean(PROCESS_UNKNOWN_RS_ON_STARTUP,
-      true);
+  public void testRecreateCluster_UserTableEnabled_CleanupWALAndZNodes_WithRecoverUnknownServer()
+    throws Exception {
+    TEST_UTIL.getConfiguration().setBoolean(PROCESS_UNKNOWN_RS_ON_STARTUP, true);
     validateRecreateClusterWithUserTableEnabled(true, true);
   }
 

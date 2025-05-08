@@ -95,7 +95,8 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
     return metaDescriptor;
   }
 
-  static TableDescriptor metaAppearsSane(FileSystem fs, Configuration conf, Path tableDir) throws IOException {
+  static TableDescriptor metaAppearsSane(FileSystem fs, Configuration conf, Path tableDir)
+    throws IOException {
     if (!fs.exists(tableDir)) {
       LOG.warn("hbase:meta directory {} does not exist", tableDir);
       return null;

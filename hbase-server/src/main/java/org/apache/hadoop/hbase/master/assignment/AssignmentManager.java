@@ -1730,15 +1730,15 @@ public class AssignmentManager {
   }
 
   /**
-   * Create assign procedure for non-offline regions of enabled table that are
-   * assigned to `unknown` servers after hbase:meta is online.
-   *
-   * This is a special case when WAL directory, SCP WALs and ZK data are cleared,
-   * cluster restarts with hbase:meta table and other tables with storefiles.
+   * Create assign procedure for non-offline regions of enabled table that are assigned to `unknown`
+   * servers after hbase:meta is online. This is a special case when WAL directory, SCP WALs and ZK
+   * data are cleared, cluster restarts with hbase:meta table and other tables with storefiles.
    */
   public void processRegionsOnUnknownServers() {
-    if (!getConfiguration().getBoolean(PROCESS_UNKNOWN_RS_ON_STARTUP,
-      DEFAULT_PROCESS_UNKNOWN_RS_ON_STARTUP)) {
+    if (
+      !getConfiguration().getBoolean(PROCESS_UNKNOWN_RS_ON_STARTUP,
+        DEFAULT_PROCESS_UNKNOWN_RS_ON_STARTUP)
+    ) {
       LOG.info(
         "Not attempting to assign any regions on UNKNOWN RegionServers because of {} is not set.",
         PROCESS_UNKNOWN_RS_ON_STARTUP);
@@ -1750,20 +1750,20 @@ public class AssignmentManager {
     final List<Procedure<MasterProcedureEnv>> currProcedures =
       master.getMasterProcedureExecutor().getProcedures();
     Set<ServerName> unknownServers = regionStates.getRegionStates().stream().filter(s -> {
-        // Filter out regions which are offline, part of a disabled table,
-        // or already in transition.
-        return !s.isOffline() && isTableEnabled(s.getRegion().getTable())
-          && !regionStates.isRegionInTransition(s.getRegion());
-      }).filter(s -> {
-        // Retain regions which are on UNKNOWN RegionServers
-        ServerName serverName = regionStates.getRegionServerOfRegion(s.getRegion());
-        if (serverName == null) {
-          return false;
-        }
-        unassignedRegions.incrementAndGet();
-        return master.getServerManager().isServerKnownAndOnline(serverName)
-          .equals(ServerManager.ServerLiveState.UNKNOWN);
-      }).map((regionState) -> regionStates.getRegionServerOfRegion(regionState.getRegion()))
+      // Filter out regions which are offline, part of a disabled table,
+      // or already in transition.
+      return !s.isOffline() && isTableEnabled(s.getRegion().getTable())
+        && !regionStates.isRegionInTransition(s.getRegion());
+    }).filter(s -> {
+      // Retain regions which are on UNKNOWN RegionServers
+      ServerName serverName = regionStates.getRegionServerOfRegion(s.getRegion());
+      if (serverName == null) {
+        return false;
+      }
+      unassignedRegions.incrementAndGet();
+      return master.getServerManager().isServerKnownAndOnline(serverName)
+        .equals(ServerManager.ServerLiveState.UNKNOWN);
+    }).map((regionState) -> regionStates.getRegionServerOfRegion(regionState.getRegion()))
       .filter((unknownServer) -> {
         // Filter out any Servers which already have in-progress SCP's. Mimic'ing
         // MasterRpcServices#shouldSubmitSCP.
@@ -1771,8 +1771,10 @@ public class AssignmentManager {
           // This check encapsulates both ServerCrashProcedure and
           // HBCKServerCrashProcedure
           if (procedure instanceof ServerCrashProcedure) {
-            if (unknownServer.compareTo(((ServerCrashProcedure) procedure).getServerName()) == 0
-              && !procedure.isFinished()) {
+            if (
+              unknownServer.compareTo(((ServerCrashProcedure) procedure).getServerName()) == 0
+                && !procedure.isFinished()
+            ) {
               LOG.info("there is already a SCP of this server {} running, pid {}", unknownServer,
                 procedure.getProcId());
               return false;
@@ -1785,7 +1787,8 @@ public class AssignmentManager {
       LOG.info("Found {} regions on unknown servers, scheduling ServerCrashProcedures for {}",
         unassignedRegions.intValue(), unknownServers);
       // force=true schedules an HBCKSCP instead of a normal SCP which is critical for this case.
-      // A normal SCP looks at the state of regions in the Master to reassign regions, whereas HBCKSCP
+      // A normal SCP looks at the state of regions in the Master to reassign regions, whereas
+      // HBCKSCP
       // goes off of the state of hbase:meta.
       unknownServers.forEach((unknownServer) -> submitServerCrash(unknownServer, true, true));
     }
@@ -2708,8 +2711,9 @@ public class AssignmentManager {
     LOG.info("RegionServers allegedly hosting meta {}", metaRegionServers);
     // Make sure the RS hosting meta isn't "live". We don't want to expire a still-running RS.
     for (ServerName metaRegionServer : metaRegionServers) {
-      if (master.getServerManager().isServerKnownAndOnline(metaRegionServer)
-        != ServerLiveState.LIVE) {
+      if (
+        master.getServerManager().isServerKnownAndOnline(metaRegionServer) != ServerLiveState.LIVE
+      ) {
         LOG.info("Expiring {} which is hosting meta but is not LIVE", metaRegionServer);
         master.getServerManager().expireServer(metaRegionServer);
       } else {
