@@ -965,26 +965,27 @@ public class HStore
     boolean isCompaction, ScanQueryMatcher matcher, byte[] startRow, byte[] stopRow, long readPt,
     boolean onlyLatestVersion) throws IOException {
     return getScanners(cacheBlocks, usePread, isCompaction, matcher, startRow, true, stopRow, false,
-      readPt, onlyLatestVersion);
+      readPt, onlyLatestVersion, false);
   }
 
   /**
    * Get all scanners with no filtering based on TTL (that happens further down the line).
-   * @param cacheBlocks     cache the blocks or not
-   * @param usePread        true to use pread, false if not
-   * @param isCompaction    true if the scanner is created for compaction
-   * @param matcher         the scan query matcher
-   * @param startRow        the start row
-   * @param includeStartRow true to include start row, false if not
-   * @param stopRow         the stop row
-   * @param includeStopRow  true to include stop row, false if not
-   * @param readPt          the read point of the current scan
+   * @param cacheBlocks           cache the blocks or not
+   * @param usePread              true to use pread, false if not
+   * @param isCompaction          true if the scanner is created for compaction
+   * @param matcher               the scan query matcher
+   * @param startRow              the start row
+   * @param includeStartRow       true to include start row, false if not
+   * @param stopRow               the stop row
+   * @param includeStopRow        true to include stop row, false if not
+   * @param readPt                the read point of the current scan
+   * @param reopenStoreFileReader true if the StoreFileReader should be reopened
    * @return all scanners for this store
    */
   public List<KeyValueScanner> getScanners(boolean cacheBlocks, boolean usePread,
     boolean isCompaction, ScanQueryMatcher matcher, byte[] startRow, boolean includeStartRow,
-    byte[] stopRow, boolean includeStopRow, long readPt, boolean onlyLatestVersion)
-    throws IOException {
+    byte[] stopRow, boolean includeStopRow, long readPt, boolean onlyLatestVersion,
+    boolean reopenStoreFileReader) throws IOException {
     Collection<HStoreFile> storeFilesToScan;
     List<KeyValueScanner> memStoreScanners;
     this.storeEngine.readLock();
@@ -1008,8 +1009,9 @@ public class HStore
       // TODO this used to get the store files in descending order,
       // but now we get them in ascending order, which I think is
       // actually more correct, since memstore get put at the end.
-      List<StoreFileScanner> sfScanners = StoreFileScanner.getScannersForStoreFiles(
-        storeFilesToScan, cacheBlocks, usePread, isCompaction, false, matcher, readPt);
+      List<StoreFileScanner> sfScanners =
+        StoreFileScanner.getScannersForStoreFiles(storeFilesToScan, cacheBlocks, usePread,
+          isCompaction, false, matcher, readPt, reopenStoreFileReader);
       List<KeyValueScanner> scanners = new ArrayList<>(sfScanners.size() + 1);
       scanners.addAll(sfScanners);
       // Then the memstore scanners
@@ -1086,7 +1088,7 @@ public class HStore
     }
     try {
       List<StoreFileScanner> sfScanners = StoreFileScanner.getScannersForStoreFiles(files,
-        cacheBlocks, usePread, isCompaction, false, matcher, readPt);
+        cacheBlocks, usePread, isCompaction, false, matcher, readPt, false);
       List<KeyValueScanner> scanners = new ArrayList<>(sfScanners.size() + 1);
       scanners.addAll(sfScanners);
       // Then the memstore scanners
