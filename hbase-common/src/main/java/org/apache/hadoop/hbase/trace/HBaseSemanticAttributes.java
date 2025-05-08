@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.trace;
 
 import io.opentelemetry.api.common.AttributeKey;
-import io.opentelemetry.semconv.trace.attributes.SemanticAttributes;
+import io.opentelemetry.semconv.SemanticAttributes;
 import java.nio.ByteBuffer;
 import java.util.List;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -56,6 +56,10 @@ public final class HBaseSemanticAttributes {
   public static final AttributeKey<Boolean> ROW_LOCK_READ_LOCK_KEY =
     AttributeKey.booleanKey("db.hbase.rowlock.readlock");
   public static final AttributeKey<String> WAL_IMPL = AttributeKey.stringKey("db.hbase.wal.impl");
+
+  public static final AttributeKey<String> EXCEPTION_TYPE = SemanticAttributes.EXCEPTION_TYPE;
+  public static final AttributeKey<String> EXCEPTION_MESSAGE = SemanticAttributes.EXCEPTION_MESSAGE;
+  public static final String EXCEPTION_EVENT_NAME = SemanticAttributes.EXCEPTION_EVENT_NAME;
 
   /**
    * Indicates the amount of data was read into a {@link ByteBuffer} of type
