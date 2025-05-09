@@ -48,10 +48,8 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Before;
 import org.junit.ClassRule;
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
 import org.mockito.ArgumentCaptor;
 import org.mockito.stubbing.Answer;
 
@@ -73,9 +71,6 @@ public class TestAggregateImplementation {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestAggregateImplementation.class);
-
-  @Rule
-  public TestName name = new TestName();
 
   private static final byte[] CF = Bytes.toBytes("CF");
   private static final byte[] CQ = Bytes.toBytes("CQ");
@@ -153,7 +148,6 @@ public class TestAggregateImplementation {
     return invocation -> {
       int count = rowCount.incrementAndGet();
       if (count == THROTTLE_AT_ROW) {
-        // Create a throttling exception with wait interval
         RpcThrottlingException throttlingEx =
           new RpcThrottlingException(ReadSizeExceeded, 1000, "Throttled for testing");
         throw throttlingEx;
@@ -197,10 +191,8 @@ public class TestAggregateImplementation {
     RpcCallback<AggregateResponse> callback2 = mock(RpcCallback.class);
     aggregate.getMax(controller, request2, callback2);
 
-    // Verify second callback was called
     verify(callback2).run(responseCaptor.capture());
 
-    // Verify the complete result
     AggregateResponse response2 = responseCaptor.getValue();
     b = response2.getFirstPart(0);
     q = getParsedGenericInstance(LONG_COLUMN_INTERPRETER.getClass(), 3, b);
@@ -301,7 +293,6 @@ public class TestAggregateImplementation {
     HBaseProtos.LongMsg q = getParsedGenericInstance(LONG_COLUMN_INTERPRETER.getClass(), 3, b);
     assertEquals(1L, (long) LONG_COLUMN_INTERPRETER.getCellValueFromProto(q));
 
-    // Create a second request with the next chunk start row
     AggregateRequest request2 = AggregateRequest.newBuilder(request)
       .setScan(request.getScan().toBuilder().setStartRow(response.getNextChunkStartRow()).build())
       .build();
@@ -520,7 +511,6 @@ public class TestAggregateImplementation {
     assertEquals("Wait interval should be set", 1000, response.getWaitIntervalMs());
     assertEquals(THROTTLE_AT_ROW - 1, response.getFirstPart(0).asReadOnlyByteBuffer().getLong());
 
-    // Create a second request with the next chunk start row
     AggregateRequest request2 = AggregateRequest.newBuilder(request)
       .setScan(request.getScan().toBuilder().setStartRow(response.getNextChunkStartRow()).build())
       .build();
