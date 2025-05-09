@@ -1556,7 +1556,7 @@ public class MetaTableAccessor {
   public static void mergeRegions(Connection connection, RegionInfo mergedRegion,
     Map<RegionInfo, Long> parentSeqNum, ServerName sn, int regionReplication) throws IOException {
     try (Table meta = getMetaHTable(connection)) {
-      long time = HConstants.LATEST_TIMESTAMP;
+      long time = EnvironmentEdgeManager.currentTime();
       List<Mutation> mutations = new ArrayList<>();
       List<RegionInfo> replicationParents = new ArrayList<>();
       for (Map.Entry<RegionInfo, Long> e : parentSeqNum.entrySet()) {
