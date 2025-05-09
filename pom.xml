@@ -26,7 +26,7 @@
   (in particular, if you are doing it for the first time), instead do
   'mvn package'.  If you are interested in the full story, see
   https://issues.apache.org/jira/browse/HBASE-6795.
-
+for triggering tests
 -->
   <modelVersion>4.0.0</modelVersion>
   <parent>
