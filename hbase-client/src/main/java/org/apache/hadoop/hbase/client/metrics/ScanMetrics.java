@@ -51,46 +51,55 @@ public class ScanMetrics extends ServerSideScanMetrics {
   /**
    * number of RPC calls
    */
+  @SuppressWarnings("checkstyle:VisibilityModifier")
   public AtomicLong countOfRPCcalls;
 
   /**
    * number of remote RPC calls
    */
+  @SuppressWarnings("checkstyle:VisibilityModifier")
   public AtomicLong countOfRemoteRPCcalls;
 
   /**
    * sum of milliseconds between sequential next calls
    */
+  @SuppressWarnings("checkstyle:VisibilityModifier")
   public AtomicLong sumOfMillisSecBetweenNexts;
 
   /**
    * number of NotServingRegionException caught
    */
+  @SuppressWarnings("checkstyle:VisibilityModifier")
   public AtomicLong countOfNSRE;
 
   /**
    * number of bytes in Result objects from region servers
    */
+  @SuppressWarnings("checkstyle:VisibilityModifier")
   public AtomicLong countOfBytesInResults;
 
   /**
    * number of bytes in Result objects from remote region servers
    */
+  @SuppressWarnings("checkstyle:VisibilityModifier")
   public AtomicLong countOfBytesInRemoteResults;
 
   /**
    * number of regions
    */
+  @SuppressWarnings("checkstyle:VisibilityModifier")
   public AtomicLong countOfRegions;
 
   /**
    * number of RPC retries
    */
+  @SuppressWarnings("checkstyle:VisibilityModifier")
   public AtomicLong countOfRPCRetries;
 
   /**
    * number of remote RPC retries
    */
+  @SuppressWarnings("checkstyle:VisibilityModifier")
   public AtomicLong countOfRemoteRPCRetries;
 
   /**

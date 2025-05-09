@@ -24,7 +24,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Generic holder class for capturing Scan Metrics as a map of metric name ({@link String}) -&gt
+ * Generic holder class for capturing Scan Metrics as a map of metric name ({@link String}) ->
  * Value ({@link AtomicLong}).
  */
 @InterfaceAudience.Private
@@ -72,7 +72,7 @@ public class ScanMetricsHolder {
   /**
    * Get all of the values. If reset is true, we will reset the all AtomicLongs back to 0.
    * @param reset whether to reset the AtomicLongs to 0.
-   * @return A Map of String -&gt; Long for metrics
+   * @return A Map of String -> Long for metrics
    */
   Map<String, Long> getMetricsMap(boolean reset) {
     Map<String, Long> metricsSnapshot = new HashMap<>();

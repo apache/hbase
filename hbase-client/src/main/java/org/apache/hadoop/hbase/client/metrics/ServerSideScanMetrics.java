@@ -35,7 +35,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 @SuppressWarnings("checkstyle:VisibilityModifier") // See HBASE-27757
 public class ServerSideScanMetrics {
   /**
-   * Hash to hold the String -&gt; Atomic Long mappings for each metric
+   * Hash to hold the String -> Atomic Long mappings for each metric
    */
   private final List<ScanMetricsHolder> scanMetricsHolders = new ArrayList<>();
   private ScanMetricsHolder currentScanMetricsHolder;
@@ -137,7 +137,7 @@ public class ServerSideScanMetrics {
    * Get all of the values combined for all the regions since the last time this function or
    * {@link #getMetricsMapByRegion()} was called. Calling this function will reset all AtomicLongs
    * in the instance back to 0.
-   * @return A Map of String -&gt; Long for metrics
+   * @return A Map of String -> Long for metrics
    */
   public Map<String, Long> getMetricsMap() {
     return getMetricsMap(true);
@@ -147,7 +147,7 @@ public class ServerSideScanMetrics {
    * Get all of the values combined for all the regions. If reset is true, we will reset the all
    * AtomicLongs back to 0.
    * @param reset whether to reset the AtomicLongs to 0.
-   * @return A Map of String -&gt; Long for metrics
+   * @return A Map of String -> Long for metrics
    */
   public Map<String, Long> getMetricsMap(boolean reset) {
     Map<String, Long> overallMetrics = new HashMap<>();
@@ -167,7 +167,7 @@ public class ServerSideScanMetrics {
   /**
    * Get values grouped by each region scanned since the last time this or {@link #getMetricsMap()}
    * was called. Calling this function will reset all AtomicLongs in the instance back to 0.
-   * @return A Map of region -&gt (Map of metric name -&gt Long) for metrics
+   * @return A Map of region -> (Map of metric name -> Long) for metrics
    */
   public Map<ScanMetricsRegionInfo, Map<String, Long>> getMetricsMapByRegion() {
     return getMetricsMapByRegion(true);
@@ -177,7 +177,7 @@ public class ServerSideScanMetrics {
    * Get values grouped by each region scanned. If reset is true, we will reset the all AtomicLongs
    * back to 0.
    * @param reset whether to reset the AtomicLongs to 0.
-   * @return A Map of region -&gt (Map of metric name -&gt Long) for metrics
+   * @return A Map of region -> (Map of metric name -> Long) for metrics
    */
   public Map<ScanMetricsRegionInfo, Map<String, Long>> getMetricsMapByRegion(boolean reset) {
     // Create a builder
