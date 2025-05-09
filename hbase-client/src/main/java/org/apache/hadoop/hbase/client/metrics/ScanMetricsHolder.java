@@ -24,8 +24,8 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Generic holder class for capturing Scan Metrics as a map of metric name ({@link String}) ->
- * Value ({@link AtomicLong}).
+ * Generic holder class for capturing Scan Metrics as a map of metric name ({@link String}) -> Value
+ * ({@link AtomicLong}).
  */
 @InterfaceAudience.Private
 public class ScanMetricsHolder {
