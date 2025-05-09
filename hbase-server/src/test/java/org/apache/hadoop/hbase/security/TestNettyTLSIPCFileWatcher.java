@@ -73,14 +73,14 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
 import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProtos;
 import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestRpcServiceProtos;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @RunWith(Parameterized.class)
 @Category({ RPCTests.class, MediumTests.class })
@@ -164,9 +164,8 @@ public class TestNettyTLSIPCFileWatcher {
   }
 
   @Test
-  public void testReplaceServerKeystore()
-    throws IOException, ServiceException, GeneralSecurityException, OperatorCreationException,
-    InterruptedException {
+  public void testReplaceServerKeystore() throws IOException, ServiceException,
+    GeneralSecurityException, OperatorCreationException, InterruptedException {
     Configuration clientConf = new Configuration(CONF);
     RpcServer rpcServer = createRpcServer("testRpcServer",
       Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(SERVICE, null)),
@@ -193,9 +192,9 @@ public class TestNettyTLSIPCFileWatcher {
       FileChangeWatcher fileChangeWatcher =
         new FileChangeWatcher(trustStorePath, Objects.toString(trustStorePath.getFileName()),
           Duration.ofMillis(20), watchEventFilePath -> {
-          LOG.info("File " + watchEventFilePath.getFileName() + " has been changed.");
-          latch.countDown();
-        });
+            LOG.info("File " + watchEventFilePath.getFileName() + " has been changed.");
+            latch.countDown();
+          });
       fileChangeWatcher.start();
 
       // Replace keystore
@@ -222,9 +221,8 @@ public class TestNettyTLSIPCFileWatcher {
   }
 
   @Test
-  public void testReplaceClientAndServerKeystore()
-    throws GeneralSecurityException, IOException, OperatorCreationException, ServiceException,
-    InterruptedException {
+  public void testReplaceClientAndServerKeystore() throws GeneralSecurityException, IOException,
+    OperatorCreationException, ServiceException, InterruptedException {
     Configuration clientConf = new Configuration(CONF);
     RpcServer rpcServer = createRpcServer("testRpcServer",
       Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(SERVICE, null)),
@@ -250,9 +248,9 @@ public class TestNettyTLSIPCFileWatcher {
         FileChangeWatcher fileChangeWatcher =
           new FileChangeWatcher(trustStorePath, Objects.toString(trustStorePath.getFileName()),
             Duration.ofMillis(20), watchEventFilePath -> {
-            LOG.info("File " + watchEventFilePath.getFileName() + " has been changed.");
-            latch.countDown();
-          });
+              LOG.info("File " + watchEventFilePath.getFileName() + " has been changed.");
+              latch.countDown();
+            });
         fileChangeWatcher.start();
 
         // Replace keystore and cancel client connections
