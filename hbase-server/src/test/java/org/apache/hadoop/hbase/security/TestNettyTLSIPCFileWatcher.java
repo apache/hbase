@@ -27,10 +27,16 @@ import static org.mockito.Mockito.when;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
 import java.security.Security;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -38,6 +44,7 @@ import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseServerBase;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.io.FileChangeWatcher;
 import org.apache.hadoop.hbase.io.crypto.tls.KeyStoreFileType;
 import org.apache.hadoop.hbase.io.crypto.tls.X509KeyType;
 import org.apache.hadoop.hbase.io.crypto.tls.X509TestContext;
@@ -72,6 +79,8 @@ import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
 import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProtos;
 import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestRpcServiceProtos;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RunWith(Parameterized.class)
 @Category({ RPCTests.class, MediumTests.class })
@@ -80,6 +89,8 @@ public class TestNettyTLSIPCFileWatcher {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestNettyTLSIPCFileWatcher.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestNettyTLSIPCFileWatcher.class);
 
   private static final Configuration CONF = HBaseConfiguration.create();
   private static final HBaseCommonTestingUtil UTIL = new HBaseCommonTestingUtil(CONF);
@@ -136,6 +147,7 @@ public class TestNettyTLSIPCFileWatcher {
     CONF.setBoolean(X509Util.HBASE_SERVER_NETTY_TLS_SUPPORTPLAINTEXT, false);
     CONF.setBoolean(X509Util.HBASE_CLIENT_NETTY_TLS_ENABLED, true);
     CONF.setBoolean(X509Util.TLS_CERT_RELOAD, true);
+    CONF.setLong(X509Util.HBASE_TLS_FILEPOLL_INTERVAL_MILLIS, 10);
   }
 
   @After
@@ -144,6 +156,7 @@ public class TestNettyTLSIPCFileWatcher {
     x509TestContext.getConf().unset(X509Util.TLS_CONFIG_OCSP);
     x509TestContext.getConf().unset(X509Util.TLS_CONFIG_CLR);
     x509TestContext.getConf().unset(X509Util.TLS_CONFIG_PROTOCOL);
+    x509TestContext.getConf().unset(X509Util.HBASE_TLS_FILEPOLL_INTERVAL_MILLIS);
     System.clearProperty("com.sun.net.ssl.checkRevocation");
     System.clearProperty("com.sun.security.enableCRLDP");
     Security.setProperty("ocsp.enable", Boolean.FALSE.toString());
@@ -152,7 +165,8 @@ public class TestNettyTLSIPCFileWatcher {
 
   @Test
   public void testReplaceServerKeystore()
-    throws IOException, ServiceException, GeneralSecurityException, OperatorCreationException {
+    throws IOException, ServiceException, GeneralSecurityException, OperatorCreationException,
+    InterruptedException {
     Configuration clientConf = new Configuration(CONF);
     RpcServer rpcServer = createRpcServer("testRpcServer",
       Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(SERVICE, null)),
@@ -172,8 +186,24 @@ public class TestNettyTLSIPCFileWatcher {
         assertNull(pcrc.cellScanner());
       }
 
+      // truststore file change latch
+      final CountDownLatch latch = new CountDownLatch(1);
+
+      final Path trustStorePath = Paths.get(CONF.get(X509Util.TLS_CONFIG_TRUSTSTORE_LOCATION));
+      FileChangeWatcher fileChangeWatcher =
+        new FileChangeWatcher(trustStorePath, Objects.toString(trustStorePath.getFileName()),
+          Duration.ofMillis(20), watchEventFilePath -> {
+          LOG.info("File " + watchEventFilePath.getFileName() + " has been changed.");
+          latch.countDown();
+        });
+      fileChangeWatcher.start();
+
       // Replace keystore
       x509TestContext.regenerateStores(keyType, keyType, storeFileType, storeFileType);
+
+      if (!latch.await(1, TimeUnit.SECONDS)) {
+        throw new AssertionError("Timed out waiting for truststore file to be changed");
+      }
 
       try (AbstractRpcClient<?> client = new NettyRpcClient(clientConf)) {
         TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface stub =
@@ -193,7 +223,8 @@ public class TestNettyTLSIPCFileWatcher {
 
   @Test
   public void testReplaceClientAndServerKeystore()
-    throws GeneralSecurityException, IOException, OperatorCreationException, ServiceException {
+    throws GeneralSecurityException, IOException, OperatorCreationException, ServiceException,
+    InterruptedException {
     Configuration clientConf = new Configuration(CONF);
     RpcServer rpcServer = createRpcServer("testRpcServer",
       Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(SERVICE, null)),
@@ -212,10 +243,26 @@ public class TestNettyTLSIPCFileWatcher {
             .getMessage());
         assertNull(pcrc.cellScanner());
 
+        // truststore file change latch
+        final CountDownLatch latch = new CountDownLatch(1);
+
+        final Path trustStorePath = Paths.get(CONF.get(X509Util.TLS_CONFIG_TRUSTSTORE_LOCATION));
+        FileChangeWatcher fileChangeWatcher =
+          new FileChangeWatcher(trustStorePath, Objects.toString(trustStorePath.getFileName()),
+            Duration.ofMillis(20), watchEventFilePath -> {
+            LOG.info("File " + watchEventFilePath.getFileName() + " has been changed.");
+            latch.countDown();
+          });
+        fileChangeWatcher.start();
+
         // Replace keystore and cancel client connections
         x509TestContext.regenerateStores(keyType, keyType, storeFileType, storeFileType);
         client.cancelConnections(
           ServerName.valueOf(Address.fromSocketAddress(rpcServer.getListenerAddress()), 0L));
+
+        if (!latch.await(1, TimeUnit.SECONDS)) {
+          throw new AssertionError("Timed out waiting for truststore file to be changed");
+        }
 
         assertEquals(message,
           stub.echo(pcrc, TestProtos.EchoRequestProto.newBuilder().setMessage(message).build())
