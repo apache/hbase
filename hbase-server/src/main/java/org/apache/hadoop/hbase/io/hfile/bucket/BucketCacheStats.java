@@ -36,9 +36,8 @@ public class BucketCacheStats extends CacheStats {
   /* Tracing failed Bucket Cache allocations. */
   private LongAdder allocationFailCount = new LongAdder();
 
-  BucketCacheStats() {
-    super("BucketCache");
-
+  BucketCacheStats(int numPeriodsInWindow, int periodTimeInMinutes) {
+    super("BucketCache", numPeriodsInWindow, periodTimeInMinutes);
     allocationFailCount.reset();
   }
 
