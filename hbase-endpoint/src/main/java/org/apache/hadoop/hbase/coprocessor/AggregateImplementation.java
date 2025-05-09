@@ -112,10 +112,8 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
         results.clear();
       } while (hasMoreRows);
       if (max != null) {
-        AggregateResponse.Builder builder = AggregateResponse.newBuilder();
-        builder.addFirstPart(ci.getProtoForCellType(max).toByteString());
-        setPartialResultResponse(builder, request, hasMoreRows, partialResultContext);
-        response = builder.build();
+        response = responseBuilder(request, hasMoreRows, partialResultContext)
+          .addFirstPart(ci.getProtoForCellType(max).toByteString()).build();
       }
     } catch (IOException e) {
       CoprocessorRpcUtils.setControllerException(controller, e);
@@ -171,10 +169,8 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
         results.clear();
       } while (hasMoreRows);
       if (min != null) {
-        AggregateResponse.Builder responseBuilder =
-          AggregateResponse.newBuilder().addFirstPart(ci.getProtoForCellType(min).toByteString());
-        setPartialResultResponse(responseBuilder, request, hasMoreRows, partialResultContext);
-        response = responseBuilder.build();
+        response = responseBuilder(request, hasMoreRows, partialResultContext)
+          .addFirstPart(ci.getProtoForCellType(min).toByteString()).build();
       }
     } catch (IOException e) {
       CoprocessorRpcUtils.setControllerException(controller, e);
@@ -233,10 +229,8 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
         results.clear();
       } while (hasMoreRows);
       if (sumVal != null) {
-        AggregateResponse.Builder responseBuilder = AggregateResponse.newBuilder()
-          .addFirstPart(ci.getProtoForPromotedType(sumVal).toByteString());
-        setPartialResultResponse(responseBuilder, request, hasMoreRows, partialResultContext);
-        response = responseBuilder.build();
+        response = responseBuilder(request, hasMoreRows, partialResultContext)
+          .addFirstPart(ci.getProtoForPromotedType(sumVal).toByteString()).build();
       }
     } catch (IOException e) {
       CoprocessorRpcUtils.setControllerException(controller, e);
@@ -292,10 +286,8 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
       } while (hasMoreRows);
       ByteBuffer bb = ByteBuffer.allocate(8).putLong(counter);
       bb.rewind();
-      AggregateResponse.Builder responseBuilder =
-        AggregateResponse.newBuilder().addFirstPart(ByteString.copyFrom(bb));
-      setPartialResultResponse(responseBuilder, request, hasMoreRows, partialResultContext);
-      response = responseBuilder.build();
+      response = responseBuilder(request, hasMoreRows, partialResultContext)
+        .addFirstPart(ByteString.copyFrom(bb)).build();
     } catch (IOException e) {
       CoprocessorRpcUtils.setControllerException(controller, e);
     } finally {
@@ -357,12 +349,12 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
       } while (hasMoreRows);
       if (sumVal != null) {
         ByteString first = ci.getProtoForPromotedType(sumVal).toByteString();
-        AggregateResponse.Builder pair = AggregateResponse.newBuilder();
+        AggregateResponse.Builder pair =
+          responseBuilder(request, hasMoreRows, partialResultContext);
         pair.addFirstPart(first);
         ByteBuffer bb = ByteBuffer.allocate(8).putLong(rowCountVal);
         bb.rewind();
         pair.setSecondPart(ByteString.copyFrom(bb));
-        setPartialResultResponse(pair, request, hasMoreRows, partialResultContext);
         response = pair.build();
       }
     } catch (IOException e) {
@@ -426,13 +418,13 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
       if (sumVal != null) {
         ByteString first_sumVal = ci.getProtoForPromotedType(sumVal).toByteString();
         ByteString first_sumSqVal = ci.getProtoForPromotedType(sumSqVal).toByteString();
-        AggregateResponse.Builder pair = AggregateResponse.newBuilder();
+        AggregateResponse.Builder pair =
+          responseBuilder(request, hasMoreRows, partialResultContext);
         pair.addFirstPart(first_sumVal);
         pair.addFirstPart(first_sumSqVal);
         ByteBuffer bb = ByteBuffer.allocate(8).putLong(rowCountVal);
         bb.rewind();
         pair.setSecondPart(ByteString.copyFrom(bb));
-        setPartialResultResponse(pair, request, hasMoreRows, partialResultContext);
         response = pair.build();
       }
     } catch (IOException e) {
@@ -498,10 +490,9 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
       ByteString first_sumVal = ci.getProtoForPromotedType(sumVal).toByteString();
       S s = sumWeights == null ? ci.castToReturnType(ci.getMinValue()) : sumWeights;
       ByteString first_sumWeights = ci.getProtoForPromotedType(s).toByteString();
-      AggregateResponse.Builder pair = AggregateResponse.newBuilder();
+      AggregateResponse.Builder pair = responseBuilder(request, hasMoreRows, partialResultContext);
       pair.addFirstPart(first_sumVal);
       pair.addFirstPart(first_sumWeights);
-      setPartialResultResponse(pair, request, hasMoreRows, partialResultContext);
       response = pair.build();
     } catch (IOException e) {
       CoprocessorRpcUtils.setControllerException(controller, e);
@@ -560,10 +551,9 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
     }
   }
 
-  private void setPartialResultResponse(AggregateResponse.Builder builder, AggregateRequest request,
-    boolean hasMoreRows, PartialResultContext context) throws IOException {
-    // If we encountered an RpcThrottlingException, tell the client the partial result we've
-    // accumulated so far, and what row to start scanning at in order to finish the scan.
+  private AggregateResponse.Builder responseBuilder(AggregateRequest request, boolean hasMoreRows,
+    PartialResultContext context) {
+    AggregateResponse.Builder builder = AggregateResponse.newBuilder();
     if (request.getClientSupportsPartialResult() && hasMoreRows) {
       if (context.lastRowSuccessfullyProcessedArray != null) {
         byte[] lastRowSuccessfullyProcessed = Arrays.copyOfRange(
@@ -571,9 +561,12 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
           context.lastRowSuccessfullyProcessedOffset + context.lastRowSuccessfullyProcessedLength);
         builder.setNextChunkStartRow(ByteString.copyFrom(
           ClientUtil.calculateTheClosestNextRowKeyForPrefix(lastRowSuccessfullyProcessed)));
+      } else {
+        builder.setNextChunkStartRow(request.getScan().getStartRow());
       }
       builder.setWaitIntervalMs(context.waitIntervalMs);
     }
+    return builder;
   }
 
   @SuppressWarnings("unchecked")
