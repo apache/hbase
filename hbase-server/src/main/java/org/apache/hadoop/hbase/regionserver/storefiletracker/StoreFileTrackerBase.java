@@ -322,7 +322,7 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
       isPrimaryReplica);
   }
 
-  public String createHFileLink(final TableName linkedTable, final String linkedRegion,
+  public HFileLink createHFileLink(final TableName linkedTable, final String linkedRegion,
     final String hfileName, final boolean createBackRef) throws IOException {
     String name = HFileLink.createHFileLinkName(linkedTable, linkedRegion, hfileName);
     String refName = HFileLink.createBackReferenceName(ctx.getTableName().toString(),
@@ -347,7 +347,8 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
     try {
       // Create the link
       if (fs.createNewFile(new Path(ctx.getFamilyStoreDirectoryPath(), name))) {
-        return name;
+        return new HFileLink(new Path(ctx.getFamilyStoreDirectoryPath(), name), backRefPath, null,
+          archiveStoreDir);
       }
     } catch (IOException e) {
       LOG.error("couldn't create the link=" + name + " for " + ctx.getFamilyStoreDirectoryPath(),
@@ -363,7 +364,7 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
 
   }
 
-  public String createFromHFileLink(final String hfileLinkName, final boolean createBackRef)
+  public HFileLink createFromHFileLink(final String hfileLinkName, final boolean createBackRef)
     throws IOException {
     Matcher m = HFileLink.LINK_NAME_PATTERN.matcher(hfileLinkName);
     if (!m.matches()) {
