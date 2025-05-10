@@ -1308,6 +1308,15 @@ The CacheAwareLoadBalancer can be enabled in the cluster by setting the followin
 </property>
 ----
 
+Within HBASE-29168, the CacheAwareLoadBalancer implements region move throttling. This mitigates
+the impact of "losing" cache factor when balancing mainly due to region skewness, i.e. when new
+region servers are added to the cluster, a large bulk of cached regions may move to the new servers
+at once, which can cause noticeable read performance impacts for cache sensitive use cases. The
+throttling sleep time is determined by the *hbase.master.balancer.move.throttlingMillis* property,
+and it defaults to 60000 millis. If a region planned to be moved has a cache ratio on the target
+server above the thershold configurable by the
+*hbase.master.balancer.stochastic.throttling.cacheRatio* property (80% by default), no throttling
+will be applied in this region move.
 
 [[regionserver_splitting_implementation]]
 === RegionServer Splitting Implementation
