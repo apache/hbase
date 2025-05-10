@@ -748,8 +748,8 @@ public class TestBucketCache {
       HFileBlock.FILL_HEADER, -1, 52, -1, meta, ByteBuffAllocator.HEAP);
     HFileBlock blk2 = new HFileBlock(BlockType.DATA, size, size, -1, ByteBuff.wrap(buf),
       HFileBlock.FILL_HEADER, -1, -1, -1, meta, ByteBuffAllocator.HEAP);
-    RAMQueueEntry re1 = new RAMQueueEntry(key1, blk1, 1, false, false);
-    RAMQueueEntry re2 = new RAMQueueEntry(key1, blk2, 1, false, false);
+    RAMQueueEntry re1 = new RAMQueueEntry(key1, blk1, 1, false, false, false);
+    RAMQueueEntry re2 = new RAMQueueEntry(key1, blk2, 1, false, false, false);
 
     assertFalse(cache.containsKey(key1));
     assertNull(cache.putIfAbsent(key1, re1));
@@ -796,12 +796,12 @@ public class TestBucketCache {
     BucketAllocator allocator = new BucketAllocator(availableSpace, null);
 
     BlockCacheKey key = new BlockCacheKey("dummy", 1L);
-    RAMQueueEntry re = new RAMQueueEntry(key, block, 1, true, false);
+    RAMQueueEntry re = new RAMQueueEntry(key, block, 1, true, false, false);
 
     Assert.assertEquals(0, allocator.getUsedSize());
     try {
       re.writeToCache(ioEngine, allocator, null, null,
-        ByteBuffer.allocate(HFileBlock.BLOCK_METADATA_SPACE));
+        ByteBuffer.allocate(HFileBlock.BLOCK_METADATA_SPACE), Long.MAX_VALUE);
       Assert.fail();
     } catch (Exception e) {
     }
