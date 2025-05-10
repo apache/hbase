@@ -381,6 +381,19 @@ public class MetricsSource implements BaseSource {
     globalSourceSource.incrUnknownFileLengthForClosedWAL();
   }
 
+  public void incrWalAppendBytes(final long size) {
+    singleSourceSource.incrWalAppendBytes(size);
+    globalSourceSource.incrWalAppendBytes(size);
+  }
+
+  public void incrTableWalAppendBytes(String tableName, final long size) {
+    MetricsReplicationTableSource tableSource =
+      getSingleSourceSourceByTable().computeIfAbsent(tableName,
+        t -> CompatibilitySingletonFactory.getInstance(MetricsReplicationSourceFactory.class).getTableSource(t));
+    tableSource.incrWalAppendBytes(size);
+    incrWalAppendBytes(size);
+  }
+
   public void incrUncleanlyClosedWALs() {
     singleSourceSource.incrUncleanlyClosedWALs();
     globalSourceSource.incrUncleanlyClosedWALs();
