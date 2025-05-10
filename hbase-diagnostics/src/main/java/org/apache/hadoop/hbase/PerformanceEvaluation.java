@@ -93,6 +93,7 @@ import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.ByteArrayHashKey;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.hbase.util.GsonUtil;
 import org.apache.hadoop.hbase.util.Hash;
 import org.apache.hadoop.hbase.util.MurmurHash;
@@ -2679,7 +2680,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
   protected static void printUsageAndExit(final String message, final int exitCode) {
     printUsage(message);
-    System.exit(exitCode);
+    ExitHandler.getInstance().exit(exitCode);
   }
 
   protected static void printUsage(final String shortName, final String message) {
@@ -3239,6 +3240,6 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
   public static void main(final String[] args) throws Exception {
     int res = ToolRunner.run(new PerformanceEvaluation(HBaseConfiguration.create()), args);
-    System.exit(res);
+    ExitHandler.getInstance().exit(res);
   }
 }

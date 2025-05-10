@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -112,19 +113,19 @@ public class StoreFileListFilePrettyPrinter extends Configured implements Tool {
       if (StringUtils.isEmpty(regionName)) {
         err.println("Region name is not specified.");
         formatter.printHelp(cmdString, options, true);
-        System.exit(1);
+        ExitHandler.getInstance().exit(1);
       }
       columnFamily = cmd.getOptionValue(columnFamilyOption);
       if (StringUtils.isEmpty(columnFamily)) {
         err.println("Column family is not specified.");
         formatter.printHelp(cmdString, options, true);
-        System.exit(1);
+        ExitHandler.getInstance().exit(1);
       }
       String tableNameWtihNS = cmd.getOptionValue(tableNameOption);
       if (StringUtils.isEmpty(tableNameWtihNS)) {
         err.println("Table name is not specified.");
         formatter.printHelp(cmdString, options, true);
-        System.exit(1);
+        ExitHandler.getInstance().exit(1);
       }
       TableName tn = TableName.valueOf(tableNameWtihNS);
       namespace = tn.getNamespaceAsString();
@@ -219,6 +220,6 @@ public class StoreFileListFilePrettyPrinter extends Configured implements Tool {
   public static void main(String[] args) throws Exception {
     Configuration conf = HBaseConfiguration.create();
     int ret = ToolRunner.run(conf, new StoreFileListFilePrettyPrinter(), args);
-    System.exit(ret);
+    ExitHandler.getInstance().exit(ret);
   }
 }

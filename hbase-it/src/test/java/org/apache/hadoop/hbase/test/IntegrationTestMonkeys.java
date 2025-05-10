@@ -23,6 +23,7 @@ import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.chaos.util.ChaosMonkeyRunner;
 import org.apache.hadoop.hbase.chaos.util.Monkeys;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -61,6 +62,6 @@ public class IntegrationTestMonkeys extends ChaosMonkeyRunner {
     Configuration conf = HBaseConfiguration.create();
     IntegrationTestingUtility.setUseDistributedCluster(conf);
     int exitCode = ToolRunner.run(conf, new IntegrationTestMonkeys(), args);
-    System.exit(exitCode);
+    ExitHandler.getInstance().exit(exitCode);
   }
 }
