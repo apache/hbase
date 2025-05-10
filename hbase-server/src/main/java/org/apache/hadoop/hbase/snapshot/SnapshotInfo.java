@@ -51,7 +51,6 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLineParser;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.DefaultParser;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.Option;
-import org.apache.hbase.thirdparty.org.apache.commons.cli.Options;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.ParseException;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -151,6 +150,7 @@ public final class SnapshotInfo extends AbstractHBaseTool {
     private AtomicInteger logsCount = new AtomicInteger();
     private AtomicLong hfilesArchiveSize = new AtomicLong();
     private AtomicLong hfilesSize = new AtomicLong();
+    private Map<String, Long> regionSizeMap = new ConcurrentHashMap<>();
     private AtomicLong hfilesMobSize = new AtomicLong();
     private AtomicLong nonSharedHfilesArchiveSize = new AtomicLong();
     private AtomicLong logSize = new AtomicLong();
@@ -174,6 +174,23 @@ public final class SnapshotInfo extends AbstractHBaseTool {
       this.snapshotTable = TableName.valueOf(snapshot.getTable());
       this.conf = conf;
       this.fs = fs;
+    }
+
+    SnapshotStats(final Configuration conf, final FileSystem fs, final SnapshotManifest mainfest)
+      throws CorruptedSnapshotException {
+      this.snapshot = SnapshotDescriptionUtils.readSnapshotInfo(fs, mainfest.getSnapshotDir());
+      ;
+      this.snapshotTable = mainfest.getTableDescriptor().getTableName();
+      this.conf = conf;
+      this.fs = fs;
+    }
+
+    /**
+     * Returns the map containing region sizes.
+     * @return A map where keys are region names and values are their corresponding sizes.
+     */
+    public Map<String, Long> getRegionSizeMap() {
+      return regionSizeMap;
     }
 
     /** Returns the snapshot descriptor */
@@ -345,6 +362,12 @@ public final class SnapshotInfo extends AbstractHBaseTool {
         hfilesMissing.incrementAndGet();
       }
       return new FileInfo(inArchive, size, isCorrupted);
+    }
+
+    void updateRegionSizeMap(final RegionInfo region,
+      final SnapshotRegionManifest.StoreFile storeFile) {
+      long currentSize = regionSizeMap.getOrDefault(region.getEncodedName(), 0L);
+      regionSizeMap.put(region.getEncodedName(), currentSize + storeFile.getFileSize());
     }
 
     /**
@@ -604,7 +627,14 @@ public final class SnapshotInfo extends AbstractHBaseTool {
     FileSystem fs = FileSystem.get(rootDir.toUri(), conf);
     Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotDesc, rootDir);
     SnapshotManifest manifest = SnapshotManifest.open(conf, fs, snapshotDir, snapshotDesc);
-    final SnapshotStats stats = new SnapshotStats(conf, fs, snapshotDesc);
+    return getSnapshotStats(conf, manifest, filesMap);
+  }
+
+  public static SnapshotStats getSnapshotStats(final Configuration conf,
+    final SnapshotManifest manifest, final Map<Path, Integer> filesMap) throws IOException {
+    Path rootDir = CommonFSUtils.getRootDir(conf);
+    FileSystem fs = FileSystem.get(rootDir.toUri(), conf);
+    final SnapshotStats stats = new SnapshotStats(conf, fs, manifest);
     SnapshotReferenceUtil.concurrentVisitReferencedFiles(conf, fs, manifest,
       "SnapshotsStatsAggregation", new SnapshotReferenceUtil.SnapshotVisitor() {
         @Override
@@ -613,6 +643,7 @@ public final class SnapshotInfo extends AbstractHBaseTool {
           if (!storeFile.hasReference()) {
             stats.addStoreFile(regionInfo, family, storeFile, filesMap);
           }
+          stats.updateRegionSizeMap(regionInfo, storeFile);
         }
       });
     return stats;
