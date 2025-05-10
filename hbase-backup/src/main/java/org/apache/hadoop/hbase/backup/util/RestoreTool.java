@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
+import org.apache.hadoop.hbase.snapshot.SnapshotTTLExpiredException;
 import org.apache.hadoop.hbase.tool.BulkLoadHFilesTool;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -54,6 +55,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 
 /**
@@ -265,6 +267,10 @@ public class RestoreTool {
     Path tableInfoPath = this.getTableInfoPath(tableName);
     SnapshotDescription desc = SnapshotDescriptionUtils.readSnapshotInfo(fs, tableInfoPath);
     SnapshotManifest manifest = SnapshotManifest.open(conf, fs, tableInfoPath, desc);
+    if (SnapshotDescriptionUtils.isExpiredSnapshot(desc.getTtl(), desc.getCreationTime(),
+        EnvironmentEdgeManager.currentTime())) {
+      throw new SnapshotTTLExpiredException(ProtobufUtil.createSnapshotDesc(desc));
+    }
     TableDescriptor tableDescriptor = manifest.getTableDescriptor();
     if (!tableDescriptor.getTableName().equals(tableName)) {
       LOG.error("couldn't find Table Desc for table: " + tableName + " under tableInfoPath: "
@@ -310,6 +316,9 @@ public class RestoreTool {
           SnapshotDescription desc =
             SnapshotDescriptionUtils.readSnapshotInfo(fileSys, tableSnapshotPath);
           SnapshotManifest manifest = SnapshotManifest.open(conf, fileSys, tableSnapshotPath, desc);
+          if(SnapshotDescriptionUtils.isExpiredSnapshot(desc.getTtl(), desc.getCreationTime(), EnvironmentEdgeManager.currentTime())){
+            throw new SnapshotTTLExpiredException(ProtobufUtil.createSnapshotDesc(desc));
+          }
           tableDescriptor = manifest.getTableDescriptor();
         } else {
           tableDescriptor = getTableDesc(tableName);
