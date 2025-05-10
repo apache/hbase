@@ -51,53 +51,82 @@ public class ScanMetrics extends ServerSideScanMetrics {
   /**
    * number of RPC calls
    */
-  public final AtomicLong countOfRPCcalls = createCounter(RPC_CALLS_METRIC_NAME);
+  @SuppressWarnings("checkstyle:VisibilityModifier")
+  public AtomicLong countOfRPCcalls;
 
   /**
    * number of remote RPC calls
    */
-  public final AtomicLong countOfRemoteRPCcalls = createCounter(REMOTE_RPC_CALLS_METRIC_NAME);
+  @SuppressWarnings("checkstyle:VisibilityModifier")
+  public AtomicLong countOfRemoteRPCcalls;
 
   /**
    * sum of milliseconds between sequential next calls
    */
-  public final AtomicLong sumOfMillisSecBetweenNexts =
-    createCounter(MILLIS_BETWEEN_NEXTS_METRIC_NAME);
+  @SuppressWarnings("checkstyle:VisibilityModifier")
+  public AtomicLong sumOfMillisSecBetweenNexts;
 
   /**
    * number of NotServingRegionException caught
    */
-  public final AtomicLong countOfNSRE = createCounter(NOT_SERVING_REGION_EXCEPTION_METRIC_NAME);
+  @SuppressWarnings("checkstyle:VisibilityModifier")
+  public AtomicLong countOfNSRE;
 
   /**
    * number of bytes in Result objects from region servers
    */
-  public final AtomicLong countOfBytesInResults = createCounter(BYTES_IN_RESULTS_METRIC_NAME);
+  @SuppressWarnings("checkstyle:VisibilityModifier")
+  public AtomicLong countOfBytesInResults;
 
   /**
    * number of bytes in Result objects from remote region servers
    */
-  public final AtomicLong countOfBytesInRemoteResults =
-    createCounter(BYTES_IN_REMOTE_RESULTS_METRIC_NAME);
+  @SuppressWarnings("checkstyle:VisibilityModifier")
+  public AtomicLong countOfBytesInRemoteResults;
 
   /**
    * number of regions
    */
-  public final AtomicLong countOfRegions = createCounter(REGIONS_SCANNED_METRIC_NAME);
+  @SuppressWarnings("checkstyle:VisibilityModifier")
+  public AtomicLong countOfRegions;
 
   /**
    * number of RPC retries
    */
-  public final AtomicLong countOfRPCRetries = createCounter(RPC_RETRIES_METRIC_NAME);
+  @SuppressWarnings("checkstyle:VisibilityModifier")
+  public AtomicLong countOfRPCRetries;
 
   /**
    * number of remote RPC retries
    */
-  public final AtomicLong countOfRemoteRPCRetries = createCounter(REMOTE_RPC_RETRIES_METRIC_NAME);
+  @SuppressWarnings("checkstyle:VisibilityModifier")
+  public AtomicLong countOfRemoteRPCRetries;
 
   /**
    * constructor
    */
   public ScanMetrics() {
+    createScanMetricsHolder();
+  }
+
+  @Override
+  public void moveToNextRegion() {
+    if (isFirstRegion()) {
+      return;
+    }
+    super.moveToNextRegion();
+    createScanMetricsHolder();
+  }
+
+  private void createScanMetricsHolder() {
+    countOfRPCcalls = createCounter(RPC_CALLS_METRIC_NAME);
+    countOfRemoteRPCcalls = createCounter(REMOTE_RPC_CALLS_METRIC_NAME);
+    sumOfMillisSecBetweenNexts = createCounter(MILLIS_BETWEEN_NEXTS_METRIC_NAME);
+    countOfNSRE = createCounter(NOT_SERVING_REGION_EXCEPTION_METRIC_NAME);
+    countOfBytesInResults = createCounter(BYTES_IN_RESULTS_METRIC_NAME);
+    countOfBytesInRemoteResults = createCounter(BYTES_IN_REMOTE_RESULTS_METRIC_NAME);
+    countOfRegions = createCounter(REGIONS_SCANNED_METRIC_NAME);
+    countOfRPCRetries = createCounter(RPC_RETRIES_METRIC_NAME);
+    countOfRemoteRPCRetries = createCounter(REMOTE_RPC_RETRIES_METRIC_NAME);
   }
 }
