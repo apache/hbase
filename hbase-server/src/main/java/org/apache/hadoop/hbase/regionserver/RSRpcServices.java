@@ -3291,7 +3291,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.Blockin
       if (!rsh.incNextCallSeq(callSeq)) {
         throw new OutOfOrderScannerNextException(
           "Expected nextCallSeq: " + rsh.getNextCallSeq() + " But the nextCallSeq got from client: "
-            + request.getNextCallSeq() + "; request=" + TextFormat.shortDebugString(request));
+            + request.getNextCallSeq() + "; request=" + TextFormat.shortDebugString(request)
+            + "; region=" + rsh.r.getRegionInfo().getRegionNameAsString());
       }
     }
   }
