@@ -1505,6 +1505,10 @@ public final class HConstants {
   /** Config key for hbase temporary directory in hdfs */
   public static final String TEMPORARY_FS_DIRECTORY_KEY = "hbase.fs.tmp.dir";
 
+  public static final String FILESYSTEM_DELEGATION_TOKEN_MAPPING =
+    "hbase.fs.dt.mapping";
+  public static final String DEFAULT_FILESYSTEM_DELEGATION_TOKEN_MAPPING = "ofs=OzoneToken";
+
   /**
    * Don't use it! This'll get you the wrong path in a secure cluster. Use
    * FileSystem.getHomeDirectory() or "/user/" +
