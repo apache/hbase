@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
+import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -262,7 +263,8 @@ public class TestTruncateTableProcedure extends TestTableDDLProcedureBase {
 
     @Override
     protected Flow executeFromState(MasterProcedureEnv env,
-      MasterProcedureProtos.TruncateTableState state) throws InterruptedException {
+      MasterProcedureProtos.TruncateTableState state)
+      throws InterruptedException, ProcedureSuspendedException {
 
       if (
         !failOnce
