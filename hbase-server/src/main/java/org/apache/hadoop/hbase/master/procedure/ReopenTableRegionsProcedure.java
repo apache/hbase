@@ -238,8 +238,10 @@ public class ReopenTableRegionsProcedure
     if (regionsToReopen.stream().anyMatch(loc -> canSchedule(env, loc))) {
       retryCounter = null;
       setNextState(ReopenTableRegionsState.REOPEN_TABLE_REGIONS_REOPEN_REGIONS);
-      if (shouldBatchBackoff && reopenBatchBackoffMillis > 0) {
+      if (shouldBatchBackoff) {
         progressBatchSize();
+      }
+      if (shouldBatchBackoff && reopenBatchBackoffMillis > 0) {
         setBackoffState(reopenBatchBackoffMillis);
         throw new ProcedureSuspendedException();
       } else {
