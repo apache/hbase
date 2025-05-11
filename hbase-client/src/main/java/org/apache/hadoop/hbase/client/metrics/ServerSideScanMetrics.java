@@ -215,4 +215,20 @@ public class ServerSideScanMetrics {
     isFirstRegion = false;
     return tmpIsFirstRegion;
   }
+
+  public AtomicLong getCountOfRowsFiltered() {
+    return countOfRowsFiltered;
+  }
+
+  public AtomicLong getCountOfRowsScanned() {
+    return countOfRowsScanned;
+  }
+
+  public AtomicLong getCountOfBlockBytesScanned() {
+    return countOfBlockBytesScanned;
+  }
+
+  public AtomicLong getFsReadTime() {
+    return fsReadTime;
+  }
 }

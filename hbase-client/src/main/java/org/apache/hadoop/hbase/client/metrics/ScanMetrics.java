@@ -129,4 +129,40 @@ public class ScanMetrics extends ServerSideScanMetrics {
     countOfRPCRetries = createCounter(RPC_RETRIES_METRIC_NAME);
     countOfRemoteRPCRetries = createCounter(REMOTE_RPC_RETRIES_METRIC_NAME);
   }
+
+  public AtomicLong getCountOfRPCcalls() {
+    return countOfRPCcalls;
+  }
+
+  public AtomicLong getCountOfRemoteRPCcalls() {
+    return countOfRemoteRPCcalls;
+  }
+
+  public AtomicLong getSumOfMillisSecBetweenNexts() {
+    return sumOfMillisSecBetweenNexts;
+  }
+
+  public AtomicLong getCountOfNSRE() {
+    return countOfNSRE;
+  }
+
+  public AtomicLong getCountOfBytesInResults() {
+    return countOfBytesInResults;
+  }
+
+  public AtomicLong getCountOfBytesInRemoteResults() {
+    return countOfBytesInRemoteResults;
+  }
+
+  public AtomicLong getCountOfRegions() {
+    return countOfRegions;
+  }
+
+  public AtomicLong getCountOfRPCRetries() {
+    return countOfRPCRetries;
+  }
+
+  public AtomicLong getCountOfRemoteRPCRetries() {
+    return countOfRemoteRPCRetries;
+  }
 }
