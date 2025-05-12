@@ -15,12 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.io.hfile;
+package org.apache.hadoop.hbase.io.hfile.bucket;
 
 import static org.apache.hadoop.hbase.HConstants.BUCKET_CACHE_IOENGINE_KEY;
 import static org.apache.hadoop.hbase.HConstants.BUCKET_CACHE_SIZE_KEY;
 import static org.apache.hadoop.hbase.io.hfile.BlockCacheFactory.BUCKET_CACHE_BUCKETS_KEY;
+import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.QUEUE_ADDITION_WAIT_TIME;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -30,6 +32,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
@@ -48,8 +51,19 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
-import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
-import org.apache.hadoop.hbase.io.hfile.bucket.BucketEntry;
+import org.apache.hadoop.hbase.io.hfile.BlockCache;
+import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
+import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
+import org.apache.hadoop.hbase.io.hfile.BlockType;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.io.hfile.Cacheable;
+import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.io.hfile.HFileBlock;
+import org.apache.hadoop.hbase.io.hfile.HFileContext;
+import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
+import org.apache.hadoop.hbase.io.hfile.HFileScanner;
+import org.apache.hadoop.hbase.io.hfile.PrefetchExecutor;
+import org.apache.hadoop.hbase.io.hfile.RandomKeyValueUtil;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
@@ -202,20 +216,21 @@ public class TestPrefetchWithBucketCache {
     conf.setLong(BUCKET_CACHE_SIZE_KEY, 1);
     conf.set(BUCKET_CACHE_BUCKETS_KEY, "3072");
     conf.setDouble("hbase.bucketcache.acceptfactor", 0.98);
-    conf.setDouble("hbase.bucketcache.minfactor", 0.95);
-    conf.setDouble("hbase.bucketcache.extrafreefactor", 0.01);
+    conf.setDouble("hbase.bucketcache.minfactor", 0.98);
+    conf.setDouble("hbase.bucketcache.extrafreefactor", 0.0);
+    conf.setLong(QUEUE_ADDITION_WAIT_TIME, 100);
     blockCache = BlockCacheFactory.createBlockCache(conf);
     cacheConf = new CacheConfig(conf, blockCache);
     Path storeFile = writeStoreFile("testPrefetchInterruptOnCapacity", 10000);
     // Prefetches the file blocks
     LOG.debug("First read should prefetch the blocks.");
     createReaderAndWaitForPrefetchInterruption(storeFile);
+    Waiter.waitFor(conf, (PrefetchExecutor.getPrefetchDelay() + 1000),
+      () -> PrefetchExecutor.isCompleted(storeFile));
     BucketCache bc = BucketCache.getBucketCacheFromCacheConfig(cacheConf).get();
-    long evictionsFirstPrefetch = bc.getStats().getEvictionCount();
-    LOG.debug("evictions after first prefetch: {}", bc.getStats().getEvictionCount());
+    long evictedFirstPrefetch = bc.getStats().getEvictedCount();
     HFile.Reader reader = createReaderAndWaitForPrefetchInterruption(storeFile);
-    LOG.debug("evictions after second prefetch: {}", bc.getStats().getEvictionCount());
-    assertTrue((bc.getStats().getEvictionCount() - evictionsFirstPrefetch) < 10);
+    assertEquals(evictedFirstPrefetch, bc.getStats().getEvictedCount());
     HFileScanner scanner = reader.getScanner(conf, true, true);
     scanner.seekTo();
     while (scanner.next()) {
@@ -223,10 +238,17 @@ public class TestPrefetchWithBucketCache {
       LOG.trace("Iterating the full scan to evict some blocks");
     }
     scanner.close();
-    LOG.debug("evictions after scanner: {}", bc.getStats().getEvictionCount());
+    Waiter.waitFor(conf, 5000, () -> {
+      for (BlockingQueue<BucketCache.RAMQueueEntry> queue : bc.writerQueues) {
+        if (!queue.isEmpty()) {
+          return false;
+        }
+      }
+      return true;
+    });
     // The scanner should had triggered at least 3x evictions from the prefetch,
     // as we try cache each block without interruption.
-    assertTrue(bc.getStats().getEvictionCount() > evictionsFirstPrefetch);
+    assertTrue(bc.getStats().getEvictedCount() > evictedFirstPrefetch);
   }
 
   @Test
@@ -234,8 +256,8 @@ public class TestPrefetchWithBucketCache {
     conf.setLong(BUCKET_CACHE_SIZE_KEY, 1);
     conf.set(BUCKET_CACHE_BUCKETS_KEY, "3072");
     conf.setDouble("hbase.bucketcache.acceptfactor", 0.98);
-    conf.setDouble("hbase.bucketcache.minfactor", 0.95);
-    conf.setDouble("hbase.bucketcache.extrafreefactor", 0.01);
+    conf.setDouble("hbase.bucketcache.minfactor", 0.98);
+    conf.setDouble("hbase.bucketcache.extrafreefactor", 0.0);
     blockCache = BlockCacheFactory.createBlockCache(conf);
     ColumnFamilyDescriptor family =
       ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("f")).setInMemory(true).build();
@@ -245,7 +267,73 @@ public class TestPrefetchWithBucketCache {
     LOG.debug("First read should prefetch the blocks.");
     createReaderAndWaitForPrefetchInterruption(storeFile);
     BucketCache bc = BucketCache.getBucketCacheFromCacheConfig(cacheConf).get();
-    assertTrue(bc.getStats().getEvictedCount() > 200);
+    Waiter.waitFor(conf, 1000, () -> PrefetchExecutor.isCompleted(storeFile));
+    long evictions = bc.getStats().getEvictedCount();
+    LOG.debug("Total evicted at this point: {}", evictions);
+    // creates another reader, now that cache is full, no block would fit and prefetch should not
+    // trigger any new evictions
+    createReaderAndWaitForPrefetchInterruption(storeFile);
+    assertEquals(evictions, bc.getStats().getEvictedCount());
+  }
+
+  @Test
+  public void testPrefetchRunNoEvictions() throws Exception {
+    conf.setLong(BUCKET_CACHE_SIZE_KEY, 1);
+    conf.set(BUCKET_CACHE_BUCKETS_KEY, "3072");
+    conf.setDouble("hbase.bucketcache.acceptfactor", 0.98);
+    conf.setDouble("hbase.bucketcache.minfactor", 0.98);
+    conf.setDouble("hbase.bucketcache.extrafreefactor", 0.0);
+    conf.setLong(QUEUE_ADDITION_WAIT_TIME, 100);
+    blockCache = BlockCacheFactory.createBlockCache(conf);
+    cacheConf = new CacheConfig(conf, blockCache);
+    Path storeFile = writeStoreFile("testPrefetchRunNoEvictions", 10000);
+    // Prefetches the file blocks
+    createReaderAndWaitForPrefetchInterruption(storeFile);
+    Waiter.waitFor(conf, (PrefetchExecutor.getPrefetchDelay() + 1000),
+      () -> PrefetchExecutor.isCompleted(storeFile));
+    BucketCache bc = BucketCache.getBucketCacheFromCacheConfig(cacheConf).get();
+    // Wait until all cache writer queues are empty
+    Waiter.waitFor(conf, 5000, () -> {
+      for (BlockingQueue<BucketCache.RAMQueueEntry> queue : bc.writerQueues) {
+        if (!queue.isEmpty()) {
+          return false;
+        }
+      }
+      return true;
+    });
+    // With the wait time configuration, prefetch should trigger no evictions once it reaches
+    // cache capacity
+    assertEquals(0, bc.getStats().getEvictedCount());
+  }
+
+  @Test
+  public void testPrefetchRunTriggersEvictions() throws Exception {
+    conf.setLong(BUCKET_CACHE_SIZE_KEY, 1);
+    conf.set(BUCKET_CACHE_BUCKETS_KEY, "3072");
+    conf.setDouble("hbase.bucketcache.acceptfactor", 0.98);
+    conf.setDouble("hbase.bucketcache.minfactor", 0.98);
+    conf.setDouble("hbase.bucketcache.extrafreefactor", 0.0);
+    conf.setLong(QUEUE_ADDITION_WAIT_TIME, 0);
+    blockCache = BlockCacheFactory.createBlockCache(conf);
+    cacheConf = new CacheConfig(conf, blockCache);
+    Path storeFile = writeStoreFile("testPrefetchInterruptOnCapacity", 10000);
+    // Prefetches the file blocks
+    createReaderAndWaitForPrefetchInterruption(storeFile);
+    Waiter.waitFor(conf, (PrefetchExecutor.getPrefetchDelay() + 1000),
+      () -> PrefetchExecutor.isCompleted(storeFile));
+    BucketCache bc = BucketCache.getBucketCacheFromCacheConfig(cacheConf).get();
+    // Wait until all cache writer queues are empty
+    Waiter.waitFor(conf, 5000, () -> {
+      for (BlockingQueue<BucketCache.RAMQueueEntry> queue : bc.writerQueues) {
+        if (!queue.isEmpty()) {
+          return false;
+        }
+      }
+      return true;
+    });
+    // With the wait time configuration, prefetch should trigger no evictions once it reaches
+    // cache capacity
+    assertNotEquals(0, bc.getStats().getEvictedCount());
   }
 
   @Test
