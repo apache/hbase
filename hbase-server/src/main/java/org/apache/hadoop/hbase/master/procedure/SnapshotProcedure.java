@@ -186,8 +186,10 @@ public class SnapshotProcedure extends AbstractStateMachineTableProcedure<Snapsh
           if (isSnapshotCorrupted()) {
             throw new CorruptedSnapshotException(snapshot.getName());
           }
-          if (SnapshotDescriptionUtils.isExpiredSnapshot(snapshot.getTtl(), snapshot.getCreationTime(),
-              EnvironmentEdgeManager.currentTime())) {
+          if (
+            SnapshotDescriptionUtils.isExpiredSnapshot(snapshot.getTtl(),
+              snapshot.getCreationTime(), EnvironmentEdgeManager.currentTime())
+          ) {
             throw new SnapshotTTLExpiredException(ProtobufUtil.createSnapshotDesc(snapshot));
           }
           completeSnapshot(env);

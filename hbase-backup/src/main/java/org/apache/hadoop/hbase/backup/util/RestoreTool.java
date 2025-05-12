@@ -267,8 +267,10 @@ public class RestoreTool {
     Path tableInfoPath = this.getTableInfoPath(tableName);
     SnapshotDescription desc = SnapshotDescriptionUtils.readSnapshotInfo(fs, tableInfoPath);
     SnapshotManifest manifest = SnapshotManifest.open(conf, fs, tableInfoPath, desc);
-    if (SnapshotDescriptionUtils.isExpiredSnapshot(desc.getTtl(), desc.getCreationTime(),
-        EnvironmentEdgeManager.currentTime())) {
+    if (
+      SnapshotDescriptionUtils.isExpiredSnapshot(desc.getTtl(), desc.getCreationTime(),
+        EnvironmentEdgeManager.currentTime())
+    ) {
       throw new SnapshotTTLExpiredException(ProtobufUtil.createSnapshotDesc(desc));
     }
     TableDescriptor tableDescriptor = manifest.getTableDescriptor();
@@ -316,7 +318,10 @@ public class RestoreTool {
           SnapshotDescription desc =
             SnapshotDescriptionUtils.readSnapshotInfo(fileSys, tableSnapshotPath);
           SnapshotManifest manifest = SnapshotManifest.open(conf, fileSys, tableSnapshotPath, desc);
-          if(SnapshotDescriptionUtils.isExpiredSnapshot(desc.getTtl(), desc.getCreationTime(), EnvironmentEdgeManager.currentTime())){
+          if (
+            SnapshotDescriptionUtils.isExpiredSnapshot(desc.getTtl(), desc.getCreationTime(),
+              EnvironmentEdgeManager.currentTime())
+          ) {
             throw new SnapshotTTLExpiredException(ProtobufUtil.createSnapshotDesc(desc));
           }
           tableDescriptor = manifest.getTableDescriptor();

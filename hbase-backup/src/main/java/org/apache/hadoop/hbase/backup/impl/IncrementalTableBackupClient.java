@@ -542,10 +542,14 @@ public class IncrementalTableBackupClient extends TableBackupClient {
           SnapshotDescriptionUtils.readSnapshotInfo(fs, manifestDir);
         SnapshotManifest manifest =
           SnapshotManifest.open(conf, fs, manifestDir, snapshotDescription);
-        if(SnapshotDescriptionUtils.isExpiredSnapshot(snapshotDescription.getTtl(), snapshotDescription.getCreationTime(), EnvironmentEdgeManager.currentTime())){
-          throw new SnapshotTTLExpiredException(ProtobufUtil.createSnapshotDesc(snapshotDescription));
+        if (
+          SnapshotDescriptionUtils.isExpiredSnapshot(snapshotDescription.getTtl(),
+            snapshotDescription.getCreationTime(), EnvironmentEdgeManager.currentTime())
+        ) {
+          throw new SnapshotTTLExpiredException(
+            ProtobufUtil.createSnapshotDesc(snapshotDescription));
         }
-        
+
         ColumnFamilyDescriptor[] backupCfs = manifest.getTableDescriptor().getColumnFamilies();
         if (!areCfsCompatible(currentCfs, backupCfs)) {
           exBuilder.addMismatchedTable(tn, currentCfs, backupCfs);

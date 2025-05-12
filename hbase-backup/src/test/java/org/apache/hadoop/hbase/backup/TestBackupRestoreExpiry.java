@@ -1,3 +1,20 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.apache.hadoop.hbase.backup;
 
 import static org.junit.Assert.assertNotEquals;
@@ -8,7 +25,6 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
@@ -32,20 +48,20 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
-import org.junit.After;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+
 @Category(LargeTests.class)
 public class TestBackupRestoreExpiry extends TestBackupBase {
 
   @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule
-      .forClass(TestBackupRestoreExpiry.class);
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(TestBackupRestoreExpiry.class);
 
   @BeforeClass
   public static void setUp() throws Exception {
@@ -110,10 +126,9 @@ public class TestBackupRestoreExpiry extends TestBackupBase {
     byte[] mobFam = Bytes.toBytes("mob");
 
     List<TableName> tables = Lists.newArrayList(table1);
-    TableDescriptor newTable1Desc = TableDescriptorBuilder.newBuilder(table1Desc)
-        .setColumnFamily(ColumnFamilyDescriptorBuilder
-            .newBuilder(mobFam).setMobEnabled(true).setMobThreshold(5L).build())
-        .build();
+    TableDescriptor newTable1Desc =
+      TableDescriptorBuilder.newBuilder(table1Desc).setColumnFamily(ColumnFamilyDescriptorBuilder
+        .newBuilder(mobFam).setMobEnabled(true).setMobThreshold(5L).build()).build();
     TEST_UTIL.getAdmin().modifyTable(newTable1Desc);
 
     Connection conn = TEST_UTIL.getConnection();
@@ -135,7 +150,7 @@ public class TestBackupRestoreExpiry extends TestBackupBase {
 
     assertThrows(SnapshotTTLExpiredException.class, () -> {
       backupAdmin.restore(BackupUtils.createRestoreRequest(BACKUP_ROOT_DIR, fullBackupId, false,
-          fromTables, toTables, true, true));
+        fromTables, toTables, true, true));
     });
 
     EnvironmentEdgeManager.reset();
@@ -146,10 +161,9 @@ public class TestBackupRestoreExpiry extends TestBackupBase {
     byte[] mobFam = Bytes.toBytes("mob");
 
     List<TableName> tables = Lists.newArrayList(table1);
-    TableDescriptor newTable1Desc = TableDescriptorBuilder.newBuilder(table1Desc)
-        .setColumnFamily(ColumnFamilyDescriptorBuilder
-            .newBuilder(mobFam).setMobEnabled(true).setMobThreshold(5L).build())
-        .build();
+    TableDescriptor newTable1Desc =
+      TableDescriptorBuilder.newBuilder(table1Desc).setColumnFamily(ColumnFamilyDescriptorBuilder
+        .newBuilder(mobFam).setMobEnabled(true).setMobThreshold(5L).build()).build();
     TEST_UTIL.getAdmin().modifyTable(newTable1Desc);
 
     Connection conn = TEST_UTIL.getConnection();
@@ -163,7 +177,7 @@ public class TestBackupRestoreExpiry extends TestBackupBase {
 
     List<LocatedFileStatus> preRestoreBackupFiles = getBackupFiles();
     backupAdmin.restore(BackupUtils.createRestoreRequest(BACKUP_ROOT_DIR, fullBackupId, false,
-        fromTables, toTables, true, true));
+      fromTables, toTables, true, true));
     List<LocatedFileStatus> postRestoreBackupFiles = getBackupFiles();
 
     // Check that the backup files are the same before and after the restore process
@@ -196,7 +210,8 @@ public class TestBackupRestoreExpiry extends TestBackupBase {
       });
 
       try {
-        backupAdmin.backupTables(createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR));
+        backupAdmin
+          .backupTables(createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR));
         fail("Should not reach here");
       } catch (Exception e) {
         if (e instanceof SnapshotTTLExpiredException) {
