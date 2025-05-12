@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.quotas;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -31,7 +30,6 @@ import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
 
@@ -298,39 +296,4 @@ public class TestDefaultOperationQuota {
     // even after the TimeUnit, the limit should not be refilled because we oversubscribed
     assertThrows(RpcThrottlingException.class, () -> quota.checkBatchQuota((int) limit, 1, false));
   }
-
-  // @Test
-  // void testHandlerUsageTimeQuota() throws RpcThrottlingException {
-  // long blockSize = 65536;
-  // int handlerTimeLimitMs = 200; // 200ms per second
-  // QuotaProtos.Throttle throttle = QuotaProtos.Throttle.newBuilder()
-  // .setReqHandlerUsageMs(
-  // QuotaProtos.TimedQuota.newBuilder()
-  // .setSoftLimit(handlerTimeLimitMs)
-  // .setTimeUnit(HBaseProtos.TimeUnit.SECONDS)
-  // .build()
-  // ).build();
-  //
-  // QuotaLimiter limiter = TimeBasedLimiter.fromThrottle(throttle);
-  // DefaultOperationQuota quota = new DefaultOperationQuota(new Configuration(), blockSize,
-  // DEFAULT_REQUESTS_PER_SECOND, limiter);
-  //
-  // // Simulate a batch that should be allowed (estimate is under the limit)
-  // quota.checkBatchQuota(1, 0, false); // 1 op, estimate 100ms < 200ms limit
-  //
-  // // Simulate actual handler time usage: advance the clock by 100ms
-  // long start = envEdge.currentTime();
-  // envEdge.setValue(start + 100);
-  // limiter.grabQuota(1, 0, false);
-  //
-  // // Next op: estimate will again be 100ms, but actual usage will push us over the limit
-  // quota.checkBatchQuota(1, 0, false);
-  // envEdge.setValue(start + 200); // another 100ms used, total 200ms
-  // limiter.grabQuota(1, 0, false);
-  //
-  // // Now, any further operation should be blocked by the handler usage time quota
-  // assertThrows(RpcThrottlingException.class, () -> {
-  // quota.checkBatchQuota(1, 0, false);
-  // });
-  // }
 }
