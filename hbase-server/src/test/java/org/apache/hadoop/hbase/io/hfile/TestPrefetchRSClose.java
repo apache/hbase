@@ -22,6 +22,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -30,6 +32,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
@@ -114,11 +117,17 @@ public class TestPrefetchRSClose {
 
     // Default interval for cache persistence is 1000ms. So after 1000ms, both the persistence files
     // should exist.
-
     HRegionServer regionServingRS = cluster.getRegionServer(0);
-
     Admin admin = TEST_UTIL.getAdmin();
-    List<String> cachedFilesList = admin.getCachedFilesList(regionServingRS.getServerName());
+    List<String> cachedFilesList = new ArrayList<>();
+    Waiter.waitFor(conf, 5000, () -> {
+      try {
+        cachedFilesList.addAll(admin.getCachedFilesList(regionServingRS.getServerName()));
+      } catch (IOException e) {
+        // let the test try again
+      }
+      return cachedFilesList.size() > 0;
+    });
     assertEquals(1, cachedFilesList.size());
     for (HStoreFile h : regionServingRS.getRegions().get(0).getStores().get(0).getStorefiles()) {
       assertTrue(cachedFilesList.contains(h.getPath().getName()));
