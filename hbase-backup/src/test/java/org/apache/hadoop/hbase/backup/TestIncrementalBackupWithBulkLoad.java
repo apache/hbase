@@ -17,14 +17,10 @@
  */
 package org.apache.hadoop.hbase.backup;
 
-import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.CONF_STAGED_WAL_FLUSH_INITIAL_DELAY;
-import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.CONF_STAGED_WAL_FLUSH_INTERVAL;
 import static org.junit.Assert.assertTrue;
 
-import java.io.IOException;
 import java.util.List;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupAdminImpl;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
@@ -38,10 +34,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.tool.TestBulkLoadHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
 import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -55,7 +48,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
  * Incremental backup t1
  */
 @Category(LargeTests.class)
-public class TestIncrementalBackupWithBulkLoad extends TestIncrementalBackupWithContinuous {
+public class TestIncrementalBackupWithBulkLoad extends TestBackupBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -63,29 +56,9 @@ public class TestIncrementalBackupWithBulkLoad extends TestIncrementalBackupWith
 
   private static final Logger LOG = LoggerFactory.getLogger(TestIncrementalBackupDeleteTable.class);
 
-  @BeforeClass
-  public static void setUp() throws Exception {
-    TEST_UTIL = new HBaseTestingUtil();
-    conf1 = TEST_UTIL.getConfiguration();
-    autoRestoreOnFailure = true;
-    useSecondCluster = false;
-    conf1.setInt(CONF_STAGED_WAL_FLUSH_INTERVAL, 1);
-    conf1.setInt(CONF_STAGED_WAL_FLUSH_INITIAL_DELAY, 1);
-    setUpHelper();
-  }
-
-  @Before
-  public void beforeTest() throws IOException {
-    super.beforeTest();
-  }
-
-  @After
-  public void afterTest() throws IOException {
-    super.afterTest();
-  }
-
   // implement all test cases in 1 test since incremental backup/restore has dependencies
-  public void TestIncBackupDeleteTable(boolean withContinuousBackup) throws Exception {
+  @Test
+  public void TestIncBackupDeleteTable() throws Exception {
     String testName = "TestIncBackupDeleteTable";
     // #1 - create full backup for all tables
     LOG.info("create full backup image for all tables");
@@ -95,8 +68,7 @@ public class TestIncrementalBackupWithBulkLoad extends TestIncrementalBackupWith
     Admin admin = conn.getAdmin();
     BackupAdminImpl client = new BackupAdminImpl(conn);
 
-    BackupRequest request =
-      createBackupRequest(BackupType.FULL, tables, BACKUP_ROOT_DIR, false, withContinuousBackup);
+    BackupRequest request = createBackupRequest(BackupType.FULL, tables, BACKUP_ROOT_DIR);
     String backupIdFull = client.backupTables(request);
 
     assertTrue(checkSucceeded(backupIdFull));
@@ -123,8 +95,7 @@ public class TestIncrementalBackupWithBulkLoad extends TestIncrementalBackupWith
 
     // #3 - incremental backup for table1
     tables = Lists.newArrayList(table1);
-    request = createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR, false,
-      withContinuousBackup);
+    request = createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR);
     String backupIdIncMultiple = client.backupTables(request);
     assertTrue(checkSucceeded(backupIdIncMultiple));
     // #4 bulk load again
@@ -137,8 +108,7 @@ public class TestIncrementalBackupWithBulkLoad extends TestIncrementalBackupWith
 
     // #5 - incremental backup for table1
     tables = Lists.newArrayList(table1);
-    request = createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR, false,
-      withContinuousBackup);
+    request = createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR);
     String backupIdIncMultiple1 = client.backupTables(request);
     assertTrue(checkSucceeded(backupIdIncMultiple1));
     // Delete all data in table1
@@ -152,8 +122,7 @@ public class TestIncrementalBackupWithBulkLoad extends TestIncrementalBackupWith
 
     Table hTable = conn.getTable(table1);
     Assert.assertEquals(TEST_UTIL.countRows(hTable), NB_ROWS_IN_BATCH * 2 + actual + actual1);
-    request =
-      createBackupRequest(BackupType.FULL, tables, BACKUP_ROOT_DIR, false, withContinuousBackup);
+    request = createBackupRequest(BackupType.FULL, tables, BACKUP_ROOT_DIR);
 
     backupIdFull = client.backupTables(request);
     try (final BackupSystemTable table = new BackupSystemTable(conn)) {
@@ -165,15 +134,5 @@ public class TestIncrementalBackupWithBulkLoad extends TestIncrementalBackupWith
     hTable.close();
     admin.close();
     conn.close();
-  }
-
-  @Test
-  public void TestIncBackupDeleteTable() throws Exception {
-    TestIncBackupDeleteTable(false);
-  }
-
-  @Test
-  public void TestIncBackupDeleteTableWithContinuousBackup() throws Exception {
-    TestIncBackupDeleteTable(true);
   }
 }

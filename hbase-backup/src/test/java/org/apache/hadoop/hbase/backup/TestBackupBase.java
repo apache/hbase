@@ -419,13 +419,20 @@ public class TestBackupBase {
 
   protected String backupTables(BackupType type, List<TableName> tables, String path)
     throws IOException {
+    return backupTables(type, tables, path, false);
+  }
+
+  protected String backupTables(BackupType type, List<TableName> tables, String path,
+    boolean isContinuousBackup) throws IOException {
     Connection conn = null;
     BackupAdmin badmin = null;
     String backupId;
     try {
       conn = ConnectionFactory.createConnection(conf1);
       badmin = new BackupAdminImpl(conn);
-      BackupRequest request = createBackupRequest(type, new ArrayList<>(tables), path);
+
+      BackupRequest request =
+        createBackupRequest(type, new ArrayList<>(tables), path, false, isContinuousBackup);
       backupId = badmin.backupTables(request);
     } finally {
       if (badmin != null) {
