@@ -169,6 +169,7 @@ import org.apache.hadoop.hbase.master.procedure.ModifyTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
 import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
 import org.apache.hadoop.hbase.master.procedure.RSProcedureDispatcher;
+import org.apache.hadoop.hbase.master.procedure.RefreshMetaProcedure;
 import org.apache.hadoop.hbase.master.procedure.ReloadQuotasProcedure;
 import org.apache.hadoop.hbase.master.procedure.ReopenTableRegionsProcedure;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
@@ -4554,6 +4555,22 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
         @Override
         protected String getDescription() {
           return "FlushTableProcedure";
+        }
+      });
+  }
+
+  public Long refreshMeta(long nonceGroup, long nonce) throws IOException {
+    return MasterProcedureUtil
+      .submitProcedure(new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
+        @Override
+        protected void run() throws IOException {
+          LOG.info("Submitting RefreshMetaProcedure");
+          submitProcedure(new RefreshMetaProcedure(procedureExecutor.getEnvironment()));
+        }
+
+        @Override
+        protected String getDescription() {
+          return "RefreshMetaProcedure";
         }
       });
   }

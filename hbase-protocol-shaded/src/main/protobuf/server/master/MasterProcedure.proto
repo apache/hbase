@@ -839,3 +839,15 @@ message ReloadQuotasProcedureStateData {
   required ServerName target_server = 1;
   optional ForeignExceptionMessage error = 2;
 }
+
+enum RefreshMetaState {
+  REFRESH_META_INIT = 1;
+  REFRESH_META_SCAN_STORAGE = 2;
+  REFRESH_META_PREPARE = 3;
+  REFRESH_META_APPLY = 4;
+  REFRESH_META_FOLLOWUP = 5;
+  REFRESH_META_FINISH = 6;
+}
+
+message RefreshMetaStateData {
+}
