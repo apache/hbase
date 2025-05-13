@@ -66,21 +66,32 @@ public class TestTableDescriptorChecker {
     t.setValue(key, "1");
     TableDescriptorChecker.sanityCheck(conf, t.build());
 
-    // Error in column family configuration.
-    cf.setValue(key, "xx");
-    t.removeColumnFamily("cf".getBytes());
-    t.setColumnFamily(cf.build());
-    try {
-      TableDescriptorChecker.sanityCheck(conf, t.build());
-      fail("Should have thrown IllegalArgumentException");
-    } catch (DoNotRetryIOException e) {
-      // Expected
-    }
+    // Verify column family configuration.
+    for (boolean viaSetValue : new boolean[] { true, false }) {
+      // Error in column family configuration.
+      if (viaSetValue) {
+        cf.setValue(key, "xx");
+      } else {
+        cf.setConfiguration(key, "xx");
+      }
+      t.removeColumnFamily("cf".getBytes());
+      t.setColumnFamily(cf.build());
+      try {
+        TableDescriptorChecker.sanityCheck(conf, t.build());
+        fail("Should have thrown IllegalArgumentException");
+      } catch (DoNotRetryIOException e) {
+        // Expected
+      }
 
-    // Fix the error.
-    cf.setValue(key, "1");
-    t.removeColumnFamily("cf".getBytes());
-    t.setColumnFamily(cf.build());
-    TableDescriptorChecker.sanityCheck(conf, t.build());
+      // Fix the error.
+      if (viaSetValue) {
+        cf.setValue(key, "");
+      } else {
+        cf.setConfiguration(key, "");
+      }
+      t.removeColumnFamily("cf".getBytes());
+      t.setColumnFamily(cf.build());
+      TableDescriptorChecker.sanityCheck(conf, t.build());
+    }
   }
 }
