@@ -187,15 +187,8 @@ public class TestNettyTLSIPCFileWatcher {
 
       // truststore file change latch
       final CountDownLatch latch = new CountDownLatch(1);
-
       final Path trustStorePath = Paths.get(CONF.get(X509Util.TLS_CONFIG_TRUSTSTORE_LOCATION));
-      FileChangeWatcher fileChangeWatcher =
-        new FileChangeWatcher(trustStorePath, Objects.toString(trustStorePath.getFileName()),
-          Duration.ofMillis(20), watchEventFilePath -> {
-            LOG.info("File " + watchEventFilePath.getFileName() + " has been changed.");
-            latch.countDown();
-          });
-      fileChangeWatcher.start();
+      createAndStartFileWatcher(trustStorePath, latch, Duration.ofMillis(20));
 
       // Replace keystore
       x509TestContext.regenerateStores(keyType, keyType, storeFileType, storeFileType);
