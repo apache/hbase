@@ -806,6 +806,13 @@ public class RecoverableZooKeeper {
   }
 
   public synchronized ZooKeeper getZooKeeper() {
+    // Callers expect an initialized ZooKeeper instance
+    // Pre HBASE-28529 the constructor used to call checkZk()
+    try {
+      checkZk();
+    } catch (Exception x) {
+      // Just return null zk
+    }
     return zk;
   }
 
