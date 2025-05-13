@@ -107,21 +107,21 @@ public class TestRecreateCluster {
 
   private void validateRecreateClusterWithUserDisabled(boolean cleanupWALs, boolean cleanUpZNodes)
     throws Exception {
-      TableName tableName = TableName.valueOf("t1");
-      prepareDataBeforeRecreate(TEST_UTIL, tableName);
-      TEST_UTIL.getAdmin().disableTable(tableName);
-      TEST_UTIL.waitTableDisabled(tableName.getName());
-      restartHBaseCluster(cleanupWALs, cleanUpZNodes);
-      TEST_UTIL.getAdmin().enableTable(tableName);
-      validateDataAfterRecreate(TEST_UTIL, tableName);
+    TableName tableName = TableName.valueOf("t1");
+    prepareDataBeforeRecreate(TEST_UTIL, tableName);
+    TEST_UTIL.getAdmin().disableTable(tableName);
+    TEST_UTIL.waitTableDisabled(tableName.getName());
+    restartHBaseCluster(cleanupWALs, cleanUpZNodes);
+    TEST_UTIL.getAdmin().enableTable(tableName);
+    validateDataAfterRecreate(TEST_UTIL, tableName);
   }
 
   private void validateRecreateClusterWithUserTableEnabled(boolean cleanupWALs,
     boolean cleanUpZNodes) throws Exception {
-      TableName tableName = TableName.valueOf("t1");
-      prepareDataBeforeRecreate(TEST_UTIL, tableName);
-      restartHBaseCluster(cleanupWALs, cleanUpZNodes);
-      validateDataAfterRecreate(TEST_UTIL, tableName);
+    TableName tableName = TableName.valueOf("t1");
+    prepareDataBeforeRecreate(TEST_UTIL, tableName);
+    restartHBaseCluster(cleanupWALs, cleanUpZNodes);
+    validateDataAfterRecreate(TEST_UTIL, tableName);
   }
 
   private void restartHBaseCluster(boolean cleanUpWALs, boolean cleanUpZnodes) throws Exception {
