@@ -495,6 +495,7 @@ Shell.load_command_group(
     decommission_regionservers
     recommission_regionserver
     truncate_region
+    refresh_meta
   ],
   # TODO: remove older hlog_roll command
   aliases: {
