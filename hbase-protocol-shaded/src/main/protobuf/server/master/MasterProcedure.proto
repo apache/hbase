@@ -821,3 +821,13 @@ enum CloseTableRegionsProcedureState {
 message CloseTableRegionsProcedureStateData {
   required TableName table_name = 1;
 }
+
+enum RefreshMetaState {
+  REFRESH_META_INIT = 1;
+  REFRESH_META_SCAN_STORAGE = 2;
+  REFRESH_META_UPDATE = 3;
+  REFRESH_META_COMPLETE = 4;
+}
+
+message RefreshMetaStateData {
+}

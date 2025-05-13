@@ -799,6 +799,14 @@ message ModifyColumnStoreFileTrackerResponse {
 message FlushMasterStoreRequest {}
 message FlushMasterStoreResponse {}
 
+message RefreshMetaRequest {
+  optional uint64 nonce_group = 1 [default = 0];
+  optional uint64 nonce = 2 [default = 0];
+}
+message RefreshMetaResponse {
+  optional uint64 proc_id = 1;
+}
+
 service MasterService {
   /** Used by the client to get the number of regions that have received the updated schema */
   rpc GetSchemaAlterStatus(GetSchemaAlterStatusRequest)
@@ -1270,6 +1278,9 @@ service MasterService {
 
   rpc FlushTable(FlushTableRequest)
     returns(FlushTableResponse);
+
+  rpc RefreshMeta(RefreshMetaRequest)
+    returns(RefreshMetaResponse);
 }
 
 // HBCK Service definitions.
