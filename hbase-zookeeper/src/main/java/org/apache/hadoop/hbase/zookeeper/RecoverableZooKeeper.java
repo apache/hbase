@@ -725,15 +725,21 @@ public class RecoverableZooKeeper {
     return zk == null ? null : zk.getState();
   }
 
+  /**
+   * Returns the wrapped ZooKeeper client.
+   * If the wrapped client hasn't been created yet then tries create it first.
+   *
+   * @return the wrapped ZK client of null if the creation has failed.
+   */
   public synchronized ZooKeeper getZooKeeper() {
     // Callers expect an initialized ZooKeeper instance
     // Pre HBASE-28529 the constructor used to call checkZk()
     try {
-      checkZk();
+      return checkZk();
     } catch (Exception x) {
-      // Just return null zk
+      LOG.warn("Failed to initialize Zookeeper object, returning null", x);
+      return null;
     }
-    return zk;
   }
 
   public void sync(String path, AsyncCallback.VoidCallback cb, Object ctx) throws KeeperException {
