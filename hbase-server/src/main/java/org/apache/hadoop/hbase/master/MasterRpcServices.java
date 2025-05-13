@@ -3662,4 +3662,15 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
       throw new ServiceException(ioe);
     }
   }
+
+  @Override
+  public MasterProtos.RefreshMetaResponse refreshMeta(RpcController controller,
+    MasterProtos.RefreshMetaRequest request) throws ServiceException {
+    try {
+      Long procId = server.refreshMeta(request.getNonceGroup(), request.getNonce());
+      return MasterProtos.RefreshMetaResponse.newBuilder().setProcId(procId).build();
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
+    }
+  }
 }
