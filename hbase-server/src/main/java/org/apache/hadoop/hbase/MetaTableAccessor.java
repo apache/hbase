@@ -742,7 +742,7 @@ public final class MetaTableAccessor {
    * @param connection connection we're using
    * @param deletes    Deletes to add to hbase:meta This list should support #remove.
    */
-  private static void deleteFromMetaTable(final Connection connection, final List<Delete> deletes)
+  public static void deleteFromMetaTable(final Connection connection, final List<Delete> deletes)
     throws IOException {
     try (Table t = getMetaHTable(connection)) {
       debugLogMutations(deletes);

@@ -1862,4 +1862,9 @@ public interface AsyncAdmin {
    * Get the list of cached files
    */
   CompletableFuture<List<String>> getCachedFilesList(ServerName serverName);
+
+  /**
+   * Perform hbase:meta table refresh
+   */
+  CompletableFuture<Long> refreshMeta();
 }
