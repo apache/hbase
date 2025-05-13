@@ -156,8 +156,8 @@ public final class X509Util {
 
   public static final String HBASE_TLS_FILEPOLL_INTERVAL_MILLIS =
     CONFIG_PREFIX + "filepoll.interval.millis";
-  private static final long DEFAULT_FILE_POLL_INTERVAL = Duration.ofSeconds(60).toMillis(); // 1
-                                                                                            // minute
+  // 1 minute
+  private static final long DEFAULT_FILE_POLL_INTERVAL = Duration.ofSeconds(60).toMillis();
 
   /**
    * Not all of our default ciphers are available in OpenSSL. Takes our default cipher lists and

@@ -238,13 +238,7 @@ public class TestNettyTLSIPCFileWatcher {
         final CountDownLatch latch = new CountDownLatch(1);
 
         final Path trustStorePath = Paths.get(CONF.get(X509Util.TLS_CONFIG_TRUSTSTORE_LOCATION));
-        FileChangeWatcher fileChangeWatcher =
-          new FileChangeWatcher(trustStorePath, Objects.toString(trustStorePath.getFileName()),
-            Duration.ofMillis(20), watchEventFilePath -> {
-              LOG.info("File " + watchEventFilePath.getFileName() + " has been changed.");
-              latch.countDown();
-            });
-        fileChangeWatcher.start();
+        createAndStartFileWatcher(trustStorePath, latch, Duration.ofMillis(20));
 
         // Replace keystore and cancel client connections
         x509TestContext.regenerateStores(keyType, keyType, storeFileType, storeFileType);
@@ -269,5 +263,15 @@ public class TestNettyTLSIPCFileWatcher {
     List<RpcServer.BlockingServiceAndInterface> services, InetSocketAddress bindAddress,
     Configuration conf, RpcScheduler scheduler) throws IOException {
     return new NettyRpcServer(SERVER, name, services, bindAddress, conf, scheduler, true);
+  }
+
+  private void createAndStartFileWatcher(Path trustStorePath, CountDownLatch latch,
+    Duration duration) throws IOException {
+    FileChangeWatcher fileChangeWatcher = new FileChangeWatcher(trustStorePath,
+      Objects.toString(trustStorePath.getFileName()), duration, watchEventFilePath -> {
+        LOG.info("File " + watchEventFilePath.getFileName() + " has been changed.");
+        latch.countDown();
+      });
+    fileChangeWatcher.start();
   }
 }
