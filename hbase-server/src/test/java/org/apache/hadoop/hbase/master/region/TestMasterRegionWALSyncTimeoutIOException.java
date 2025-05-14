@@ -18,8 +18,6 @@
 package org.apache.hadoop.hbase.master.region;
 
 import static org.junit.Assert.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
 import java.time.Duration;
@@ -81,7 +79,6 @@ public class TestMasterRegionWALSyncTimeoutIOException extends MasterRegionTestB
         Thread.sleep(Duration.ofSeconds(1).toMillis());
       }
     });
-    verify(server).abort(any(), any());
   }
 
   public static class SlowAsyncFSWAL extends AsyncFSWAL {

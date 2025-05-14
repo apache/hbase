@@ -22,7 +22,6 @@ import static org.apache.hadoop.hbase.HConstants.HREGION_LOGDIR_NAME;
 import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
 import java.util.List;
-import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -41,8 +40,6 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
-import org.apache.hadoop.hbase.ipc.RpcCall;
-import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegion.FlushResult;
@@ -157,7 +154,12 @@ public final class MasterRegion {
     }
   }
 
-  private void update0(UpdateMasterRegion action) throws IOException {
+  /**
+   * Performs the mutation to the master region using UpdateMasterRegion update action.
+   * @param action Update region action.
+   * @throws IOException IO error that causes active master to abort.
+   */
+  public void update(UpdateMasterRegion action) throws IOException {
     for (int tries = 0; tries < maxRetriesForRegionUpdates; tries++) {
       try {
         // If the update is successful, return immediately.
@@ -186,25 +188,6 @@ public final class MasterRegion {
         // aborted master. Refer to Jira: HBASE-29251.
         abortServer(e);
       }
-    }
-  }
-
-  /**
-   * Performs the mutation to the master region using UpdateMasterRegion update action.
-   * @param action Update region action.
-   * @throws IOException IO error that causes active master to abort.
-   */
-  public void update(UpdateMasterRegion action) throws IOException {
-    // Since now we will abort master when updating master region fails, and when updating, if the
-    // rpc is already timed out, we will hit a TimeoutIOException which indicates that we can not
-    // get the row lock in time, so here we need to unset the rpc call to prevent this, otherwise
-    // master will abort with a rpc timeout, which is not necessary...
-    // See HBASE-29294.
-    Optional<RpcCall> rpcCall = RpcServer.unsetCurrentCall();
-    try {
-      update0(action);
-    } finally {
-      rpcCall.ifPresent(RpcServer::setCurrentCall);
     }
   }
 

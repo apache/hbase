@@ -29,6 +29,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.apache.commons.lang3.mutable.MutableLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -40,6 +41,8 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.ipc.RpcCall;
+import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.master.assignment.AssignProcedure;
 import org.apache.hadoop.hbase.master.assignment.MoveRegionProcedure;
@@ -301,6 +304,20 @@ public class RegionProcedureStore extends ProcedureStoreBase {
     rowsToLock.add(row);
   }
 
+  /**
+   * Insert procedure may be called by master's rpc call. There are some check about the rpc call
+   * when mutate region. Here unset the current rpc call and set it back in finally block. See
+   * HBASE-23895 for more details.
+   */
+  private void runWithoutRpcCall(Runnable runnable) {
+    Optional<RpcCall> rpcCall = RpcServer.unsetCurrentCall();
+    try {
+      runnable.run();
+    } finally {
+      rpcCall.ifPresent(RpcServer::setCurrentCall);
+    }
+  }
+
   @Override
   public void insert(Procedure<?> proc, Procedure<?>[] subProcs) {
     if (subProcs == null || subProcs.length == 0) {
@@ -310,44 +327,50 @@ public class RegionProcedureStore extends ProcedureStoreBase {
     }
     List<Mutation> mutations = new ArrayList<>(subProcs.length + 1);
     List<byte[]> rowsToLock = new ArrayList<>(subProcs.length + 1);
-    try {
-      serializePut(proc, mutations, rowsToLock);
-      for (Procedure<?> subProc : subProcs) {
-        serializePut(subProc, mutations, rowsToLock);
+    runWithoutRpcCall(() -> {
+      try {
+        serializePut(proc, mutations, rowsToLock);
+        for (Procedure<?> subProc : subProcs) {
+          serializePut(subProc, mutations, rowsToLock);
+        }
+        region.update(r -> r.mutateRowsWithLocks(mutations, rowsToLock, NO_NONCE, NO_NONCE));
+      } catch (IOException e) {
+        LOG.error(HBaseMarkers.FATAL, "Failed to insert proc {}, sub procs {}", proc,
+          Arrays.toString(subProcs), e);
+        throw new UncheckedIOException(e);
       }
-      region.update(r -> r.mutateRowsWithLocks(mutations, rowsToLock, NO_NONCE, NO_NONCE));
-    } catch (IOException e) {
-      LOG.error(HBaseMarkers.FATAL, "Failed to insert proc {}, sub procs {}", proc,
-        Arrays.toString(subProcs), e);
-      throw new UncheckedIOException(e);
-    }
+    });
   }
 
   @Override
   public void insert(Procedure<?>[] procs) {
     List<Mutation> mutations = new ArrayList<>(procs.length);
     List<byte[]> rowsToLock = new ArrayList<>(procs.length);
-    try {
-      for (Procedure<?> proc : procs) {
-        serializePut(proc, mutations, rowsToLock);
+    runWithoutRpcCall(() -> {
+      try {
+        for (Procedure<?> proc : procs) {
+          serializePut(proc, mutations, rowsToLock);
+        }
+        region.update(r -> r.mutateRowsWithLocks(mutations, rowsToLock, NO_NONCE, NO_NONCE));
+      } catch (IOException e) {
+        LOG.error(HBaseMarkers.FATAL, "Failed to insert procs {}", Arrays.toString(procs), e);
+        throw new UncheckedIOException(e);
       }
-      region.update(r -> r.mutateRowsWithLocks(mutations, rowsToLock, NO_NONCE, NO_NONCE));
-    } catch (IOException e) {
-      LOG.error(HBaseMarkers.FATAL, "Failed to insert procs {}", Arrays.toString(procs), e);
-      throw new UncheckedIOException(e);
-    }
+    });
   }
 
   @Override
   public void update(Procedure<?> proc) {
-    try {
-      ProcedureProtos.Procedure proto = ProcedureUtil.convertToProtoProcedure(proc);
-      region.update(r -> r.put(new Put(Bytes.toBytes(proc.getProcId())).addColumn(PROC_FAMILY,
-        PROC_QUALIFIER, proto.toByteArray())));
-    } catch (IOException e) {
-      LOG.error(HBaseMarkers.FATAL, "Failed to update proc {}", proc, e);
-      throw new UncheckedIOException(e);
-    }
+    runWithoutRpcCall(() -> {
+      try {
+        ProcedureProtos.Procedure proto = ProcedureUtil.convertToProtoProcedure(proc);
+        region.update(r -> r.put(new Put(Bytes.toBytes(proc.getProcId())).addColumn(PROC_FAMILY,
+          PROC_QUALIFIER, proto.toByteArray())));
+      } catch (IOException e) {
+        LOG.error(HBaseMarkers.FATAL, "Failed to update proc {}", proc, e);
+        throw new UncheckedIOException(e);
+      }
+    });
   }
 
   @Override
