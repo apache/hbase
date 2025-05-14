@@ -53,6 +53,8 @@ public class MasterRegionTestBase {
 
   protected DirScanPool logCleanerPool;
 
+  protected Server server;
+
   protected static byte[] CF1 = Bytes.toBytes("f1");
 
   protected static byte[] CF2 = Bytes.toBytes("f2");
@@ -92,9 +94,9 @@ public class MasterRegionTestBase {
     Configuration conf = htu.getConfiguration();
     configure(conf);
     choreService = new ChoreService(getClass().getSimpleName());
-    hfileCleanerPool = DirScanPool.getHFileCleanerScanPool(htu.getConfiguration());
-    logCleanerPool = DirScanPool.getLogCleanerScanPool(htu.getConfiguration());
-    Server server = mock(Server.class);
+    hfileCleanerPool = DirScanPool.getHFileCleanerScanPool(conf);
+    logCleanerPool = DirScanPool.getLogCleanerScanPool(conf);
+    server = mock(Server.class);
     when(server.getConfiguration()).thenReturn(conf);
     when(server.getServerName())
       .thenReturn(ServerName.valueOf("localhost", 12345, EnvironmentEdgeManager.currentTime()));
