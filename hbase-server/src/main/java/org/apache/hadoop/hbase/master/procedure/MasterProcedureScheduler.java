@@ -668,7 +668,7 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
         return true;
       }
       if (!tableLock.tryExclusiveLock(procedure)) {
-        namespaceLock.releaseSharedLock();
+        namespaceLock.releaseSharedLock(procedure);
         waitProcedure(tableLock, procedure);
         logLockedResource(LockedResourceType.TABLE, table.getNameAsString());
         return true;
@@ -695,7 +695,7 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
       if (tableLock.releaseExclusiveLock(procedure)) {
         waitingCount += wakeWaitingProcedures(tableLock);
       }
-      if (namespaceLock.releaseSharedLock()) {
+      if (namespaceLock.releaseSharedLock(procedure)) {
         waitingCount += wakeWaitingProcedures(namespaceLock);
       }
       addToRunQueue(tableRunQueue, getTableQueue(table),
@@ -728,7 +728,7 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
       }
 
       if (!tableLock.trySharedLock(procedure)) {
-        namespaceLock.releaseSharedLock();
+        namespaceLock.releaseSharedLock(procedure);
         waitProcedure(tableLock, procedure);
         return null;
       }
@@ -750,12 +750,12 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
       final LockAndQueue namespaceLock = locking.getNamespaceLock(table.getNamespaceAsString());
       final LockAndQueue tableLock = locking.getTableLock(table);
       int waitingCount = 0;
-      if (tableLock.releaseSharedLock()) {
+      if (tableLock.releaseSharedLock(procedure)) {
         addToRunQueue(tableRunQueue, getTableQueue(table),
           () -> procedure + " released the shared lock");
         waitingCount += wakeWaitingProcedures(tableLock);
       }
-      if (namespaceLock.releaseSharedLock()) {
+      if (namespaceLock.releaseSharedLock(procedure)) {
         waitingCount += wakeWaitingProcedures(namespaceLock);
       }
       wakePollIfNeeded(waitingCount);
@@ -934,7 +934,7 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
 
       final LockAndQueue namespaceLock = locking.getNamespaceLock(namespace);
       if (!namespaceLock.tryExclusiveLock(procedure)) {
-        systemNamespaceTableLock.releaseSharedLock();
+        systemNamespaceTableLock.releaseSharedLock(procedure);
         waitProcedure(namespaceLock, procedure);
         logLockedResource(LockedResourceType.NAMESPACE, namespace);
         return true;
@@ -961,7 +961,7 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
       if (namespaceLock.releaseExclusiveLock(procedure)) {
         waitingCount += wakeWaitingProcedures(namespaceLock);
       }
-      if (systemNamespaceTableLock.releaseSharedLock()) {
+      if (systemNamespaceTableLock.releaseSharedLock(procedure)) {
         addToRunQueue(tableRunQueue,
           getTableQueue(TableProcedureInterface.DUMMY_NAMESPACE_TABLE_NAME),
           () -> procedure + " released namespace exclusive lock");

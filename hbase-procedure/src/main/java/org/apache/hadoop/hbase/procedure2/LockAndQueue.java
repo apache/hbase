@@ -23,6 +23,8 @@ import java.util.stream.Stream;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Locking for mutual exclusion between procedures. Used only by procedure framework internally.
@@ -47,6 +49,8 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class LockAndQueue implements LockStatus {
+
+  private static final Logger LOG = LoggerFactory.getLogger(LockAndQueue.class);
 
   private final Function<Long, Procedure<?>> procedureRetriever;
   private final ProcedureDeque queue = new ProcedureDeque();
@@ -117,14 +121,16 @@ public class LockAndQueue implements LockStatus {
     // If the parent proc or we have already held the xlock, then we return true here as
     // xlock is more powerful then shared lock.
     sharedLock++;
+    LOG.trace("{} acquired shared lock on {}", proc, this);
     return true;
   }
 
   /** Returns whether we should wake the procedures waiting on the lock here. */
-  public boolean releaseSharedLock() {
+  public boolean releaseSharedLock(Procedure<?> proc) {
     // hasExclusiveLock could be true, it usually means we acquire shared lock while we or our
     // parent have held the xlock. And since there is still an exclusive lock, we do not need to
     // wake any procedures.
+    LOG.trace("{} released shared lock on {}", proc, this);
     return --sharedLock == 0 && !hasExclusiveLock();
   }
 
@@ -133,6 +139,7 @@ public class LockAndQueue implements LockStatus {
       return hasLockAccess(proc);
     }
     exclusiveLockOwnerProcedure = proc;
+    LOG.trace("{} acquired exclusive lock on {}", proc, this);
     return true;
   }
 
@@ -145,6 +152,7 @@ public class LockAndQueue implements LockStatus {
       // We are not the lock owner, it is probably inherited from the parent procedures.
       return false;
     }
+    LOG.trace("{} released exclusive lock on {}", proc, this);
     exclusiveLockOwnerProcedure = null;
     // This maybe a bit strange so let me explain. We allow acquiring shared lock while the parent
     // proc or we have already held the xlock, and also allow releasing the locks in any order, so
