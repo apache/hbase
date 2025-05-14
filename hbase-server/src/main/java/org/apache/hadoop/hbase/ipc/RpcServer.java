@@ -695,10 +695,9 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
   }
 
   /**
-   * Used by {@link org.apache.hadoop.hbase.procedure2.store.region.RegionProcedureStore}. For
-   * master's rpc call, it may generate new procedure and mutate the region which store procedure.
-   * There are some check about rpc when mutate region, such as rpc timeout check. So unset the rpc
-   * call to avoid the rpc check.
+   * Used by {@link org.apache.hadoop.hbase.master.region.MasterRegion}, to avoid hit row lock
+   * timeout when updating master region in a rpc call. See HBASE-23895, HBASE-29251 and HBASE-29294
+   * for more details.
    * @return the currently ongoing rpc call
    */
   public static Optional<RpcCall> unsetCurrentCall() {
@@ -708,8 +707,8 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
   }
 
   /**
-   * Used by {@link org.apache.hadoop.hbase.procedure2.store.region.RegionProcedureStore}. Set the
-   * rpc call back after mutate region.
+   * Used by {@link org.apache.hadoop.hbase.master.region.MasterRegion}. Set the rpc call back after
+   * mutate region.
    */
   public static void setCurrentCall(RpcCall rpcCall) {
     CurCall.set(rpcCall);
