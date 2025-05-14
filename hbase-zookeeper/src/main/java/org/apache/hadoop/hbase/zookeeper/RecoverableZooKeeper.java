@@ -726,9 +726,8 @@ public class RecoverableZooKeeper {
   }
 
   /**
-   * Returns the wrapped ZooKeeper client.
-   * If the wrapped client hasn't been created yet then tries create it first.
-   *
+   * Returns the wrapped ZooKeeper client. If the wrapped client hasn't been created yet then tries
+   * create it first.
    * @return the wrapped ZK client of null if the creation has failed.
    */
   public synchronized ZooKeeper getZooKeeper() {
