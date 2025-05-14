@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import static org.junit.Assert.fail;
+import static org.junit.Assert.assertThrows;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
@@ -55,12 +55,8 @@ public class TestTableDescriptorChecker {
 
     // Error in table configuration.
     t.setValue(key, "xx");
-    try {
-      TableDescriptorChecker.sanityCheck(conf, t.build());
-      fail("Should have thrown IllegalArgumentException");
-    } catch (DoNotRetryIOException e) {
-      // Expected
-    }
+    assertThrows("Should have thrown IllegalArgumentException", DoNotRetryIOException.class,
+      () -> TableDescriptorChecker.sanityCheck(conf, t.build()));
 
     // Fix the error.
     t.setValue(key, "1");
@@ -76,12 +72,8 @@ public class TestTableDescriptorChecker {
       }
       t.removeColumnFamily("cf".getBytes());
       t.setColumnFamily(cf.build());
-      try {
-        TableDescriptorChecker.sanityCheck(conf, t.build());
-        fail("Should have thrown IllegalArgumentException");
-      } catch (DoNotRetryIOException e) {
-        // Expected
-      }
+      assertThrows("Should have thrown IllegalArgumentException", DoNotRetryIOException.class,
+        () -> TableDescriptorChecker.sanityCheck(conf, t.build()));
 
       // Fix the error.
       if (viaSetValue) {
