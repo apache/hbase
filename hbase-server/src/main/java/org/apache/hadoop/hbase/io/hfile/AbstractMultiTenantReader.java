@@ -416,30 +416,32 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
     
     @Override
     public boolean seekTo() throws IOException {
-      // Try default tenant first
-      currentTenantSectionId = new byte[0]; // Default tenant section ID
-      SectionReader sectionReader = getSectionReader(currentTenantSectionId);
-      
-      if (sectionReader == null) {
-        // Try to find any section if default doesn't exist
+      // Get the first section from the section index
+      if (!sectionReaders.isEmpty()) {
+        // Get the first section ID from the index
+        byte[] firstSectionId = null;
         for (ImmutableBytesWritable key : sectionReaders.keySet()) {
-          currentTenantSectionId = key.get();
-          sectionReader = getSectionReader(currentTenantSectionId);
+          byte[] candidateSectionId = key.get();
+          if (firstSectionId == null || Bytes.compareTo(candidateSectionId, firstSectionId) < 0) {
+            firstSectionId = candidateSectionId;
+          }
+        }
+        
+        if (firstSectionId != null) {
+          currentTenantSectionId = firstSectionId;
+          SectionReader sectionReader = getSectionReader(currentTenantSectionId);
           if (sectionReader != null) {
-            break;
+            currentScanner = sectionReader.getScanner(conf, cacheBlocks, pread, isCompaction);
+            boolean result = currentScanner.seekTo();
+            seeked = result;
+            return result;
           }
         }
       }
       
-      if (sectionReader == null) {
-        seeked = false;
-        return false;
-      }
-      
-      currentScanner = sectionReader.getScanner(conf, cacheBlocks, pread, isCompaction);
-      boolean result = currentScanner.seekTo();
-      seeked = result;
-      return result;
+      // If we reach here, no sections were found or seeking failed
+      seeked = false;
+      return false;
     }
     
     @Override
