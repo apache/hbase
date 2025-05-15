@@ -179,6 +179,25 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
     this.deleteColumnFamilyInModify = false;
   }
 
+  /**
+   * ModifyTableProcedure reopens regions. Reopening regions leads to memstore flushes, which
+   * sometimes leads to splits. The
+   * {@link org.apache.hadoop.hbase.master.assignment.SplitTableRegionProcedure} takes care of
+   * opening the regions that it split. This is a problem if we are increasing the region
+   * replication count, because allowing a split to occur after MODIFY_TABLE_UPDATE_TABLE_DESCRIPTOR
+   * but before MODIFY_TABLE_ASSIGN_NEW_REPLICAS would mean that SplitTableRegionProcedure opens the
+   * new replicas, and then this ModifyTableProcedure would also try to open them, which would cause
+   * this procedure to get stuck. To avoid this problem, hold the lock on the table for the duration
+   * of this ModifyTableProcedure. This will still allow children of this procedure to run, but it
+   * will block others. A SplitTableRegionProcedure requested by a RegionServer doing a memstore
+   * flush will not be considered a child of this procedure, so it will run after this procedure
+   * finishes.
+   */
+  @Override
+  protected boolean holdLock(MasterProcedureEnv env) {
+    return true;
+  }
+
   @Override
   protected Flow executeFromState(final MasterProcedureEnv env, final ModifyTableState state)
     throws InterruptedException {
