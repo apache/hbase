@@ -66,6 +66,7 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
   private boolean deleteColumnFamilyInModify;
   private boolean shouldCheckDescriptor;
   private boolean reopenRegions;
+  private boolean holdLock;
   /**
    * List of column families that cannot be deleted from the hbase:meta table. They are critical to
    * cluster operation. This is a bit of an odd place to keep this list but then this is the tooling
@@ -86,6 +87,12 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
   }
 
   public ModifyTableProcedure(final MasterProcedureEnv env, final TableDescriptor htd,
+    boolean holdLock) throws HBaseIOException {
+    this(env, htd, null);
+    this.holdLock = holdLock;
+  }
+
+  public ModifyTableProcedure(final MasterProcedureEnv env, final TableDescriptor htd,
     final ProcedurePrepareLatch latch) throws HBaseIOException {
     this(env, htd, latch, null, false, true);
   }
@@ -96,6 +103,7 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
     final boolean reopenRegions) throws HBaseIOException {
     super(env, latch);
     this.reopenRegions = reopenRegions;
+    this.holdLock = true;
     initialize(oldTableDescriptor, shouldCheckDescriptor);
     this.modifiedTableDescriptor = newTableDescriptor;
     preflightChecks(env, null/* No table checks; if changing peers, table can be online */);
@@ -191,11 +199,11 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
    * of this ModifyTableProcedure. This will still allow children of this procedure to run, but it
    * will block others. A SplitTableRegionProcedure requested by a RegionServer doing a memstore
    * flush will not be considered a child of this procedure, so it will run after this procedure
-   * finishes.
+   * finishes. {@link #holdLock} should always be true outside of unit testing.
    */
   @Override
   protected boolean holdLock(MasterProcedureEnv env) {
-    return true;
+    return holdLock;
   }
 
   @Override

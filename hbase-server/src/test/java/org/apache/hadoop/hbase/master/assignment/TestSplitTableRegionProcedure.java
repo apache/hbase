@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.SnapshotType;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
@@ -53,6 +54,7 @@ import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureTestingUtility;
+import org.apache.hadoop.hbase.master.procedure.ModifyTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.TestSnapshotProcedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
@@ -195,11 +197,10 @@ public class TestSplitTableRegionProcedure {
     RegionInfo[] regions =
       MasterProcedureTestingUtility.createTable(procExec, tableName, null, columnFamilyName1);
 
-    try {
-      HBaseTestingUtil.setReplicas(UTIL.getAdmin(), tableName, 2);
-    } catch (IOException ioe) {
-
-    }
+    TableDescriptor newTableDescriptor = TableDescriptorBuilder
+      .newBuilder(UTIL.getAdmin().getDescriptor(tableName)).setRegionReplication(2).build();
+    procExec.submitProcedure(
+      new ModifyTableProcedure(procExec.getEnvironment(), newTableDescriptor, false));
 
     // wait until the primary region is online.
     HBaseTestingUtil.await(2000, () -> {
