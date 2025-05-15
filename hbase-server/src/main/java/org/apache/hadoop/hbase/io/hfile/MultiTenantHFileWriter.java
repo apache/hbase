@@ -91,7 +91,7 @@ public class MultiTenantHFileWriter implements HFile.Writer {
   private SectionIndexManager.Writer sectionIndexWriter;
   
   // Section tracking
-  private VirtualSectionWriter currentSectionWriter;
+  private SectionWriter currentSectionWriter;
   private byte[] currentTenantSectionId;
   private long sectionStartOffset;
   private int sectionCount = 0;
@@ -284,7 +284,7 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     sectionStartOffset = outputStream.getPos();
     
     // Create a new virtual section writer
-    currentSectionWriter = new VirtualSectionWriter(
+    currentSectionWriter = new SectionWriter(
         conf, 
         cacheConf, 
         outputStream, 
@@ -492,7 +492,7 @@ public class MultiTenantHFileWriter implements HFile.Writer {
    * A virtual writer for a tenant section within the HFile.
    * This handles writing data for a specific tenant section.
    */
-  private class VirtualSectionWriter extends HFileWriterImpl {
+  private class SectionWriter extends HFileWriterImpl {
     private final byte[] tenantSectionId;
     private final long sectionStartOffset;
     private boolean closed = false;
@@ -500,7 +500,7 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     // Track original stream when using relative position wrapper
     private FSDataOutputStream originalOutputStream = null;
     
-    public VirtualSectionWriter(
+    public SectionWriter(
         Configuration conf,
         CacheConfig cacheConf,
         FSDataOutputStream outputStream,
