@@ -92,7 +92,7 @@ public class MultiTenantHFileWriter implements HFile.Writer {
   
   // Section tracking
   private VirtualSectionWriter currentSectionWriter;
-  private byte[] currentTenantPrefix;
+  private byte[] currentTenantSectionId;
   private long sectionStartOffset;
   private int sectionCount = 0;
   
@@ -222,15 +222,17 @@ public class MultiTenantHFileWriter implements HFile.Writer {
       throw new IOException("Cannot append null cell");
     }
     
-    // Extract tenant prefix from the cell
-    byte[] tenantPrefix = tenantExtractor.extractTenantPrefix(cell);
+    // Extract tenant section ID from the cell for section indexing
+    byte[] tenantSectionId = tenantExtractor.extractTenantSectionId(cell);
     
-    // If this is the first cell or tenant has changed, switch to new section
-    if (currentSectionWriter == null || !Arrays.equals(currentTenantPrefix, tenantPrefix)) {
+    // If this is the first cell or tenant section has changed, switch to new section
+    if (currentSectionWriter == null || !Arrays.equals(currentTenantSectionId, tenantSectionId)) {
       if (currentSectionWriter != null) {
         closeCurrentSection();
       }
-      createNewSection(tenantPrefix);
+      // Extract tenant ID from the cell
+      byte[] tenantId = tenantExtractor.extractTenantId(cell);
+      createNewSection(tenantSectionId, tenantId);
     }
     
     // Write the cell to the current section
@@ -254,8 +256,8 @@ public class MultiTenantHFileWriter implements HFile.Writer {
   }
   
   private void closeCurrentSection() throws IOException {
-    LOG.info("Closing section for tenant prefix: {}", 
-        currentTenantPrefix == null ? "null" : Bytes.toStringBinary(currentTenantPrefix));
+    LOG.info("Closing section for tenant section ID: {}", 
+        currentTenantSectionId == null ? "null" : Bytes.toStringBinary(currentTenantSectionId));
     
     // Record the section start position
     long sectionStartOffset = currentSectionWriter.getSectionStartOffset();
@@ -269,7 +271,7 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     long sectionSize = sectionEndOffset - sectionStartOffset;
     
     // Record section in the index
-    sectionIndexWriter.addEntry(currentTenantPrefix, sectionStartOffset, (int)sectionSize);
+    sectionIndexWriter.addEntry(currentTenantSectionId, sectionStartOffset, (int)sectionSize);
     
     // Add to total uncompressed bytes
     totalUncompressedBytes += currentSectionWriter.getTotalUncompressedBytes();
@@ -277,7 +279,7 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     LOG.info("Section closed: start={}, size={}", sectionStartOffset, sectionSize);
   }
   
-  private void createNewSection(byte[] tenantPrefix) throws IOException {
+  private void createNewSection(byte[] tenantSectionId, byte[] tenantId) throws IOException {
     // Set the start offset for this section
     sectionStartOffset = outputStream.getPos();
     
@@ -287,64 +289,66 @@ public class MultiTenantHFileWriter implements HFile.Writer {
         cacheConf, 
         outputStream, 
         fileContext, 
-        tenantPrefix, 
+        tenantSectionId,
+        tenantId,
         sectionStartOffset);
     
-    currentTenantPrefix = tenantPrefix;
+    currentTenantSectionId = tenantSectionId;
     sectionCount++;
     
-    LOG.info("Created new section writer for tenant prefix: {}, offset: {}", 
-        tenantPrefix == null ? "null" : Bytes.toStringBinary(tenantPrefix), 
+    LOG.info("Created new section writer for tenant section ID: {}, tenant ID: {}, offset: {}", 
+        tenantSectionId == null ? "null" : Bytes.toStringBinary(tenantSectionId),
+        tenantId == null ? "null" : Bytes.toStringBinary(tenantId),
         sectionStartOffset);
   }
   
   @Override
   public void close() throws IOException {
     // Ensure all sections are closed and resources flushed
-    if (currentSectionWriter != null) {
-      closeCurrentSection();
-      currentSectionWriter = null;
-    }
-    
+        if (currentSectionWriter != null) {
+          closeCurrentSection();
+          currentSectionWriter = null;
+        }
+
     // Write indexes, file info, and trailer
-    LOG.info("Writing section index");
-    long sectionIndexOffset = sectionIndexWriter.writeIndexBlocks(outputStream);
+        LOG.info("Writing section index");
+        long sectionIndexOffset = sectionIndexWriter.writeIndexBlocks(outputStream);
 
-    // Write a tenant-wide meta index block
-    HFileBlockIndex.BlockIndexWriter metaBlockIndexWriter = new HFileBlockIndex.BlockIndexWriter();
-    DataOutputStream dos = blockWriter.startWriting(BlockType.ROOT_INDEX);
-    metaBlockIndexWriter.writeSingleLevelIndex(dos, "meta");
-    blockWriter.writeHeaderAndData(outputStream);
+        // Write a tenant-wide meta index block
+        HFileBlockIndex.BlockIndexWriter metaBlockIndexWriter = new HFileBlockIndex.BlockIndexWriter();
+        DataOutputStream dos = blockWriter.startWriting(BlockType.ROOT_INDEX);
+        metaBlockIndexWriter.writeSingleLevelIndex(dos, "meta");
+        blockWriter.writeHeaderAndData(outputStream);
 
-    // Write file info
-    LOG.info("Writing file info");
-    FixedFileTrailer trailer = new FixedFileTrailer(getMajorVersion(), getMinorVersion());
-    trailer.setFileInfoOffset(outputStream.getPos());
+        // Write file info
+        LOG.info("Writing file info");
+        FixedFileTrailer trailer = new FixedFileTrailer(getMajorVersion(), getMinorVersion());
+        trailer.setFileInfoOffset(outputStream.getPos());
 
-    // Add HFile metadata to the info block
-    HFileInfo fileInfo = new HFileInfo();
-    finishFileInfo(fileInfo);
+        // Add HFile metadata to the info block
+        HFileInfo fileInfo = new HFileInfo();
+        finishFileInfo(fileInfo);
 
-    DataOutputStream out = blockWriter.startWriting(BlockType.FILE_INFO);
-    fileInfo.write(out);
-    blockWriter.writeHeaderAndData(outputStream);
+        DataOutputStream out = blockWriter.startWriting(BlockType.FILE_INFO);
+        fileInfo.write(out);
+        blockWriter.writeHeaderAndData(outputStream);
 
-    // Set up the trailer
-    trailer.setLoadOnOpenOffset(sectionIndexOffset);
-    trailer.setDataIndexCount(sectionIndexWriter.getNumRootEntries());
-    trailer.setNumDataIndexLevels(sectionIndexWriter.getNumLevels());
-    trailer.setUncompressedDataIndexSize(sectionIndexWriter.getTotalUncompressedSize());
-    trailer.setComparatorClass(fileContext.getCellComparator().getClass());
+        // Set up the trailer
+        trailer.setLoadOnOpenOffset(sectionIndexOffset);
+        trailer.setDataIndexCount(sectionIndexWriter.getNumRootEntries());
+        trailer.setNumDataIndexLevels(sectionIndexWriter.getNumLevels());
+        trailer.setUncompressedDataIndexSize(sectionIndexWriter.getTotalUncompressedSize());
+        trailer.setComparatorClass(fileContext.getCellComparator().getClass());
 
-    // Serialize the trailer
-    trailer.serialize(outputStream);
+        // Serialize the trailer
+        trailer.serialize(outputStream);
 
-    LOG.info("MultiTenantHFileWriter closed: path={}, sections={}", path, sectionCount);
+        LOG.info("MultiTenantHFileWriter closed: path={}, sections={}", path, sectionCount);
 
     // close and cleanup resources
     try {
-      outputStream.close();
-      blockWriter.release();
+            outputStream.close();
+            blockWriter.release();
       // atomically rename tmp -> final path
       fs.rename(tmpPath, path);
     } catch (IOException e) {
@@ -489,7 +493,7 @@ public class MultiTenantHFileWriter implements HFile.Writer {
    * This handles writing data for a specific tenant section.
    */
   private class VirtualSectionWriter extends HFileWriterImpl {
-    private final byte[] tenantPrefix;
+    private final byte[] tenantSectionId;
     private final long sectionStartOffset;
     private boolean closed = false;
     
@@ -501,21 +505,29 @@ public class MultiTenantHFileWriter implements HFile.Writer {
         CacheConfig cacheConf,
         FSDataOutputStream outputStream,
         HFileContext fileContext,
-        byte[] tenantPrefix,
+        byte[] tenantSectionId,
+        byte[] tenantId,
         long sectionStartOffset) throws IOException {
       // Call the parent constructor with the shared outputStream
       super(conf, cacheConf, null, outputStream, fileContext);
       
-      this.tenantPrefix = tenantPrefix;
+      this.tenantSectionId = tenantSectionId;
       this.sectionStartOffset = sectionStartOffset;
       
-      // Add tenant information to the section's file info
-      if (tenantPrefix != null) {
-        appendFileInfo(Bytes.toBytes("TENANT_PREFIX"), tenantPrefix);
+      // Store the tenant ID in the file info
+      if (tenantId != null && tenantId.length > 0) {
+        appendFileInfo(Bytes.toBytes("TENANT_ID"), tenantId);
       }
       
-      LOG.debug("Created section writer at offset {} for tenant {}", 
-          sectionStartOffset, tenantPrefix == null ? "default" : Bytes.toStringBinary(tenantPrefix));
+      // Store the section ID for reference
+      if (tenantSectionId != null) {
+        appendFileInfo(Bytes.toBytes("TENANT_SECTION_ID"), tenantSectionId);
+      }
+      
+      LOG.debug("Created section writer at offset {} for tenant section {}, tenant ID {}", 
+          sectionStartOffset, 
+          tenantSectionId == null ? "default" : Bytes.toStringBinary(tenantSectionId),
+          tenantId == null ? "default" : Bytes.toStringBinary(tenantId));
     }
     
     /**
@@ -590,7 +602,7 @@ public class MultiTenantHFileWriter implements HFile.Writer {
       }
       
       // Use relative positions during close
-      enableRelativePositionTranslation();
+        enableRelativePositionTranslation();
       
       try {
         super.close();
@@ -600,8 +612,8 @@ public class MultiTenantHFileWriter implements HFile.Writer {
         disableRelativePositionTranslation();
       }
       
-      LOG.debug("Closed section for tenant: {}", 
-          tenantPrefix == null ? "default" : Bytes.toStringBinary(tenantPrefix));
+      LOG.debug("Closed section for tenant section: {}", 
+          tenantSectionId == null ? "default" : Bytes.toStringBinary(tenantSectionId));
     }
     
     /**
@@ -731,7 +743,12 @@ public class MultiTenantHFileWriter implements HFile.Writer {
    */
   private static class SingleTenantExtractor implements TenantExtractor {
     @Override
-    public byte[] extractTenantPrefix(Cell cell) {
+    public byte[] extractTenantId(Cell cell) {
+      return DEFAULT_TENANT_PREFIX;
+    }
+    
+    @Override
+    public byte[] extractTenantSectionId(Cell cell) {
       return DEFAULT_TENANT_PREFIX;
     }
   }

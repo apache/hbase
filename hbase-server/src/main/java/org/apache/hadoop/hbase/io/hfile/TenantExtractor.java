@@ -27,10 +27,16 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public interface TenantExtractor {
   /**
-   * Extract tenant prefix from a cell
+   * Extract tenant ID from a cell
    * @param cell The cell to extract tenant information from
-   * @return The tenant prefix as a byte array
+   * @return The tenant ID as a byte array
    */
-  byte[] extractTenantPrefix(Cell cell);
+  byte[] extractTenantId(Cell cell);
   
+  /**
+   * Extract tenant section ID from a cell for use in section index blocks
+   * @param cell The cell to extract tenant section information from
+   * @return The tenant section ID as a byte array
+   */
+  byte[] extractTenantSectionId(Cell cell);
 } 

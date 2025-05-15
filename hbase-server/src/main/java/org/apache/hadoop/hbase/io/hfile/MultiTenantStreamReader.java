@@ -48,19 +48,19 @@ public class MultiTenantStreamReader extends AbstractMultiTenantReader {
   }
 
   @Override
-  protected SectionReader createSectionReader(byte[] tenantPrefix, SectionMetadata metadata)
+  protected SectionReader createSectionReader(byte[] tenantSectionId, SectionMetadata metadata)
       throws IOException {
-    LOG.debug("Creating section reader for tenant: {}, offset: {}, size: {}",
-        Bytes.toStringBinary(tenantPrefix), metadata.getOffset(), metadata.getSize());
-    return new StreamSectionReader(tenantPrefix, metadata);
+    LOG.debug("Creating section reader for tenant section: {}, offset: {}, size: {}",
+        Bytes.toStringBinary(tenantSectionId), metadata.getOffset(), metadata.getSize());
+    return new StreamSectionReader(tenantSectionId, metadata);
   }
 
   /**
    * Section reader implementation for stream mode that uses HFileStreamReader
    */
   protected class StreamSectionReader extends SectionReader {
-    public StreamSectionReader(byte[] tenantPrefix, SectionMetadata metadata) {
-      super(tenantPrefix, metadata);
+    public StreamSectionReader(byte[] tenantSectionId, SectionMetadata metadata) {
+      super(tenantSectionId, metadata);
     }
 
     @Override
@@ -84,8 +84,8 @@ public class MultiTenantStreamReader extends AbstractMultiTenantReader {
           LOG.debug("Successfully initialized indices for section at offset {}", metadata.getOffset());
           
           initialized = true;
-          LOG.debug("Initialized HFileStreamReader for tenant prefix: {}",
-              org.apache.hadoop.hbase.util.Bytes.toStringBinary(tenantPrefix));
+          LOG.debug("Initialized HFileStreamReader for tenant section ID: {}",
+              org.apache.hadoop.hbase.util.Bytes.toStringBinary(tenantSectionId));
         } catch (IOException e) {
           LOG.error("Failed to initialize section reader", e);
           throw e;

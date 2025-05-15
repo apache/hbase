@@ -36,7 +36,25 @@ public class DefaultTenantExtractor implements TenantExtractor {
   }
   
   @Override
-  public byte[] extractTenantPrefix(Cell cell) {
+  public byte[] extractTenantId(Cell cell) {
+    // Tenant ID doesn't include offset bytes
+    return extractPrefix(cell, false);
+  }
+  
+  @Override
+  public byte[] extractTenantSectionId(Cell cell) {
+    // Tenant section ID includes offset bytes
+    return extractPrefix(cell, true);
+  }
+  
+  /**
+   * Extract tenant prefix from a cell.
+   * 
+   * @param cell The cell to extract tenant information from
+   * @param includeOffset Whether to include the offset in the extracted prefix
+   * @return The tenant prefix as a byte array
+   */
+  private byte[] extractPrefix(Cell cell, boolean includeOffset) {
     if (prefixLength <= 0) {
       return HConstants.EMPTY_BYTE_ARRAY;
     }
@@ -48,13 +66,16 @@ public class DefaultTenantExtractor implements TenantExtractor {
           "Row key length: " + rowLength + ", required: " + (prefixOffset + prefixLength));
     }
     
+    // Determine starting position based on whether to include offset
+    int startPos = includeOffset ? 
+        cell.getRowOffset() + prefixOffset : 
+        cell.getRowOffset();
+    
+    // Create and populate result array
     byte[] prefix = new byte[prefixLength];
-    // Copy directly from the cell's row bytes
-    System.arraycopy(cell.getRowArray(), cell.getRowOffset() + prefixOffset, 
-                    prefix, 0, prefixLength);
+    System.arraycopy(cell.getRowArray(), startPos, prefix, 0, prefixLength);
     return prefix;
   }
-  
   
   /**
    * Get the tenant prefix length.

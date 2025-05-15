@@ -266,35 +266,35 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
   /**
    * Get metadata for a tenant section
    * 
-   * @param tenantPrefix The tenant prefix to look up
+   * @param tenantSectionId The tenant section ID to look up
    * @return Section metadata or null if not found
    * @throws IOException If an error occurs during lookup
    */
-  protected SectionMetadata getSectionMetadata(byte[] tenantPrefix) throws IOException {
-    return sectionLocations.get(new ImmutableBytesWritable(tenantPrefix));
+  protected SectionMetadata getSectionMetadata(byte[] tenantSectionId) throws IOException {
+    return sectionLocations.get(new ImmutableBytesWritable(tenantSectionId));
   }
   
   /**
    * Get or create a reader for a tenant section
    * 
-   * @param tenantPrefix The tenant prefix for the section
+   * @param tenantSectionId The tenant section ID for the section
    * @return A section reader or null if the section doesn't exist
    * @throws IOException If an error occurs creating the reader
    */
-  protected SectionReader getSectionReader(byte[] tenantPrefix) throws IOException {
-    ImmutableBytesWritable key = new ImmutableBytesWritable(tenantPrefix);
+  protected SectionReader getSectionReader(byte[] tenantSectionId) throws IOException {
+    ImmutableBytesWritable key = new ImmutableBytesWritable(tenantSectionId);
     // Lookup the section metadata
-    SectionMetadata metadata = getSectionMetadata(tenantPrefix);
+    SectionMetadata metadata = getSectionMetadata(tenantSectionId);
     if (metadata == null) {
-      LOG.debug("No section found for tenant prefix: {}", Bytes.toStringBinary(tenantPrefix));
+      LOG.debug("No section found for tenant section ID: {}", Bytes.toStringBinary(tenantSectionId));
       return null;
     }
     try {
       // Atomically create or return the per-tenant SectionReader
       return sectionReaders.computeIfAbsent(key, k -> {
         try {
-          SectionReader reader = createSectionReader(tenantPrefix, metadata);
-          LOG.debug("Created section reader for tenant prefix: {}", Bytes.toStringBinary(tenantPrefix));
+          SectionReader reader = createSectionReader(tenantSectionId, metadata);
+          LOG.debug("Created section reader for tenant section ID: {}", Bytes.toStringBinary(tenantSectionId));
           return reader;
         } catch (IOException e) {
           throw new UncheckedIOException(e);
@@ -308,13 +308,13 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
   /**
    * Create appropriate section reader based on type (to be implemented by subclasses)
    * 
-   * @param tenantPrefix The tenant prefix
+   * @param tenantSectionId The tenant section ID
    * @param metadata The section metadata
    * @return A section reader
    * @throws IOException If an error occurs creating the reader
    */
   protected abstract SectionReader createSectionReader(
-      byte[] tenantPrefix, SectionMetadata metadata) throws IOException;
+      byte[] tenantSectionId, SectionMetadata metadata) throws IOException;
   
   /**
    * Get a scanner for this file
@@ -337,14 +337,14 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
    * Abstract base class for section readers
    */
   protected abstract class SectionReader {
-    protected final byte[] tenantPrefix;
+    protected final byte[] tenantSectionId;
     protected final SectionMetadata metadata;
     protected HFileReaderImpl reader;
     protected boolean initialized = false;
     protected long sectionBaseOffset;
     
-    public SectionReader(byte[] tenantPrefix, SectionMetadata metadata) {
-      this.tenantPrefix = tenantPrefix;
+    public SectionReader(byte[] tenantSectionId, SectionMetadata metadata) {
+      this.tenantSectionId = tenantSectionId;
       this.metadata = metadata;
       this.sectionBaseOffset = metadata.getOffset();
     }
@@ -397,7 +397,7 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
     private final boolean pread;
     private final boolean isCompaction;
     
-    private byte[] currentTenantPrefix;
+    private byte[] currentTenantSectionId;
     private HFileScanner currentScanner;
     private boolean seeked = false;
     
@@ -417,14 +417,14 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
     @Override
     public boolean seekTo() throws IOException {
       // Try default tenant first
-      currentTenantPrefix = new byte[0]; // Default tenant prefix
-      SectionReader sectionReader = getSectionReader(currentTenantPrefix);
+      currentTenantSectionId = new byte[0]; // Default tenant section ID
+      SectionReader sectionReader = getSectionReader(currentTenantSectionId);
       
       if (sectionReader == null) {
         // Try to find any section if default doesn't exist
         for (ImmutableBytesWritable key : sectionReaders.keySet()) {
-          currentTenantPrefix = key.get();
-          sectionReader = getSectionReader(currentTenantPrefix);
+          currentTenantSectionId = key.get();
+          sectionReader = getSectionReader(currentTenantSectionId);
           if (sectionReader != null) {
             break;
           }
@@ -444,11 +444,11 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
     
     @Override
     public int seekTo(ExtendedCell key) throws IOException {
-      // Extract tenant prefix
-      byte[] tenantPrefix = tenantExtractor.extractTenantPrefix(key);
+      // Extract tenant section ID
+      byte[] tenantSectionId = tenantExtractor.extractTenantSectionId(key);
       
-      // Get the scanner for this tenant
-      SectionReader sectionReader = getSectionReader(tenantPrefix);
+      // Get the scanner for this tenant section
+      SectionReader sectionReader = getSectionReader(tenantSectionId);
       if (sectionReader == null) {
         seeked = false;
         return -1;
@@ -458,7 +458,7 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
       HFileScanner scanner = sectionReader.getScanner(conf, cacheBlocks, pread, isCompaction);
       int result = scanner.seekTo(key);
       if (result != -1) {
-        currentTenantPrefix = tenantPrefix;
+        currentTenantSectionId = tenantSectionId;
         currentScanner = scanner;
         seeked = true;
       } else {
@@ -472,15 +472,15 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
     public int reseekTo(ExtendedCell key) throws IOException {
       assertSeeked();
       
-      // Extract tenant prefix
-      byte[] tenantPrefix = tenantExtractor.extractTenantPrefix(key);
+      // Extract tenant section ID
+      byte[] tenantSectionId = tenantExtractor.extractTenantSectionId(key);
       
-      // If tenant changed, we need to do a full seek
-      if (!Bytes.equals(tenantPrefix, currentTenantPrefix)) {
+      // If tenant section changed, we need to do a full seek
+      if (!Bytes.equals(tenantSectionId, currentTenantSectionId)) {
         return seekTo(key);
       }
       
-      // Reuse existing scanner for same tenant
+      // Reuse existing scanner for same tenant section
       int result = currentScanner.reseekTo(key);
       if (result == -1) {
         seeked = false;
@@ -490,11 +490,11 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
     
     @Override
     public boolean seekBefore(ExtendedCell key) throws IOException {
-      // Extract tenant prefix
-      byte[] tenantPrefix = tenantExtractor.extractTenantPrefix(key);
+      // Extract tenant section ID
+      byte[] tenantSectionId = tenantExtractor.extractTenantSectionId(key);
       
-      // Get the scanner for this tenant
-      SectionReader sectionReader = getSectionReader(tenantPrefix);
+      // Get the scanner for this tenant section
+      SectionReader sectionReader = getSectionReader(tenantSectionId);
       if (sectionReader == null) {
         seeked = false;
         return false;
@@ -504,7 +504,7 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
       HFileScanner scanner = sectionReader.getScanner(conf, cacheBlocks, pread, isCompaction);
       boolean result = scanner.seekBefore(key);
       if (result) {
-        currentTenantPrefix = tenantPrefix;
+        currentTenantSectionId = tenantSectionId;
         currentScanner = scanner;
         seeked = true;
       } else {
@@ -545,20 +545,20 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
       boolean hasNext = currentScanner.next();
       if (!hasNext) {
         // Try to find the next tenant section
-        byte[] nextTenantPrefix = findNextTenantPrefix(currentTenantPrefix);
-        if (nextTenantPrefix == null) {
+        byte[] nextTenantSectionId = findNextTenantSectionId(currentTenantSectionId);
+        if (nextTenantSectionId == null) {
           seeked = false;
           return false;
         }
         
-        // Move to the next tenant
-        SectionReader nextSectionReader = getSectionReader(nextTenantPrefix);
+        // Move to the next tenant section
+        SectionReader nextSectionReader = getSectionReader(nextTenantSectionId);
         if (nextSectionReader == null) {
           seeked = false;
           return false;
         }
         
-        currentTenantPrefix = nextTenantPrefix;
+        currentTenantSectionId = nextTenantSectionId;
         currentScanner = nextSectionReader.getScanner(conf, cacheBlocks, pread, isCompaction);
         boolean result = currentScanner.seekTo();
         seeked = result;
@@ -568,19 +568,19 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
       return true;
     }
     
-    private byte[] findNextTenantPrefix(byte[] currentPrefix) {
-      // Simple linear search for the lexicographically next tenant prefix
-      byte[] nextPrefix = null;
+    private byte[] findNextTenantSectionId(byte[] currentSectionId) {
+      // Simple linear search for the lexicographically next tenant section ID
+      byte[] nextSectionId = null;
       
       for (ImmutableBytesWritable key : sectionReaders.keySet()) {
-        byte[] candidatePrefix = key.get();
-        if (Bytes.compareTo(candidatePrefix, currentPrefix) > 0 && 
-            (nextPrefix == null || Bytes.compareTo(candidatePrefix, nextPrefix) < 0)) {
-          nextPrefix = candidatePrefix;
+        byte[] candidateSectionId = key.get();
+        if (Bytes.compareTo(candidateSectionId, currentSectionId) > 0 && 
+            (nextSectionId == null || Bytes.compareTo(candidateSectionId, nextSectionId) < 0)) {
+          nextSectionId = candidateSectionId;
         }
       }
       
-      return nextPrefix;
+      return nextSectionId;
     }
     
     private void assertSeeked() {

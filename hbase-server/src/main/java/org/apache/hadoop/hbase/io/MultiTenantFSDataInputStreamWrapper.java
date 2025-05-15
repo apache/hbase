@@ -43,7 +43,7 @@ public class MultiTenantFSDataInputStreamWrapper extends FSDataInputStreamWrappe
   // The offset where this section starts in the parent file
   private final long sectionOffset;
   private final FSDataInputStreamWrapper parent;
-
+  
   /**
    * Constructor that creates a wrapper with offset translation.
    *
@@ -55,7 +55,7 @@ public class MultiTenantFSDataInputStreamWrapper extends FSDataInputStreamWrappe
     this.parent = parent;
     this.sectionOffset = offset;
   }
-
+  
   /**
    * Converts a position relative to the section to an absolute file position.
    *
@@ -75,7 +75,7 @@ public class MultiTenantFSDataInputStreamWrapper extends FSDataInputStreamWrappe
   public long toRelativePosition(long absolutePos) {
     return absolutePos - sectionOffset;
   }
-
+  
   @Override
   public FSDataInputStream getStream(boolean useHBaseChecksum) {
     // Always wrap the raw stream so each call uses fresh translator
@@ -92,12 +92,12 @@ public class MultiTenantFSDataInputStreamWrapper extends FSDataInputStreamWrappe
   public boolean shouldUseHBaseChecksum() {
     return parent.shouldUseHBaseChecksum();
   }
-
+  
   @Override
   public void prepareForBlockReader(boolean forceNoHBaseChecksum) throws IOException {
     parent.prepareForBlockReader(forceNoHBaseChecksum);
   }
-
+  
   @Override
   public FSDataInputStream fallbackToFsChecksum(int offCount) throws IOException {
     return parent.fallbackToFsChecksum(offCount);
@@ -107,17 +107,17 @@ public class MultiTenantFSDataInputStreamWrapper extends FSDataInputStreamWrappe
   public void checksumOk() {
     parent.checksumOk();
   }
-
+  
   @Override
   public void unbuffer() {
     parent.unbuffer();
   }
-
+  
   @Override
   public void close() {
     // Keep parent.close() behavior (do not close parent stream here)
   }
-
+  
   /**
    * Custom implementation to translate seek position.
    */
@@ -136,7 +136,7 @@ public class MultiTenantFSDataInputStreamWrapper extends FSDataInputStreamWrappe
     FSDataInputStream stream = parent.getStream(shouldUseHBaseChecksum());
     long absolutePos = stream.getPos();
     return toRelativePosition(absolutePos);
-  }
+      }
 
   /**
    * Read method that translates position.

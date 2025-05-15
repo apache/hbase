@@ -51,15 +51,15 @@ public class MultiTenantPreadReader extends AbstractMultiTenantReader {
   /**
    * Create a section reader for a specific tenant
    * 
-   * @param tenantPrefix The tenant prefix
+   * @param tenantSectionId The tenant section ID
    * @param metadata The section metadata
    * @return A section reader for the tenant
    * @throws IOException If an error occurs creating the reader
    */
   @Override
-  protected SectionReader createSectionReader(byte[] tenantPrefix, SectionMetadata metadata) throws IOException {
-    LOG.debug("Creating section reader for tenant: {}, offset: {}, size: {}",
-             Bytes.toStringBinary(tenantPrefix), metadata.getOffset(), metadata.getSize());
+  protected SectionReader createSectionReader(byte[] tenantSectionId, SectionMetadata metadata) throws IOException {
+    LOG.debug("Creating section reader for tenant section: {}, offset: {}, size: {}",
+             Bytes.toStringBinary(tenantSectionId), metadata.getOffset(), metadata.getSize());
             
     // Special handling for non-first sections
     if (metadata.getOffset() > 0) {
@@ -72,7 +72,7 @@ public class MultiTenantPreadReader extends AbstractMultiTenantReader {
       LOG.debug("Trailer should be at absolute position: {}", trailerPos);
     }
     
-    return new PreadSectionReader(tenantPrefix, metadata);
+    return new PreadSectionReader(tenantSectionId, metadata);
   }
 
   /**
@@ -81,8 +81,8 @@ public class MultiTenantPreadReader extends AbstractMultiTenantReader {
   protected class PreadSectionReader extends SectionReader {
     private HFileReaderImpl hfileReader;
     
-    public PreadSectionReader(byte[] tenantPrefix, SectionMetadata metadata) {
-      super(tenantPrefix, metadata);
+    public PreadSectionReader(byte[] tenantSectionId, SectionMetadata metadata) {
+      super(tenantSectionId, metadata);
     }
     
     @Override
@@ -103,8 +103,8 @@ public class MultiTenantPreadReader extends AbstractMultiTenantReader {
           sectionContext = buildSectionContext(metadata, ReaderContext.ReaderType.PREAD);
           // Override filePath so each tenant section schedules its own prefetch key
           Path containerPath = sectionContext.getFilePath();
-          String tenantId = Bytes.toStringBinary(tenantPrefix);
-          Path perSectionPath = new Path(containerPath.toString() + "#" + tenantId);
+          String tenantSectionIdStr = Bytes.toStringBinary(tenantSectionId);
+          Path perSectionPath = new Path(containerPath.toString() + "#" + tenantSectionIdStr);
           perSectionContext = ReaderContextBuilder.newBuilder(sectionContext)
               .withFilePath(perSectionPath)
               .build();
@@ -126,7 +126,7 @@ public class MultiTenantPreadReader extends AbstractMultiTenantReader {
           LOG.debug("About to initialize metadata and indices for section at offset {}", metadata.getOffset());
           info.initMetaAndIndex(hfileReader);
           LOG.debug("Successfully initialized indices for section at offset {}", metadata.getOffset());
-          LOG.debug("Initialized HFilePreadReader for tenant prefix: {}", Bytes.toStringBinary(tenantPrefix));
+          LOG.debug("Initialized HFilePreadReader for tenant section ID: {}", Bytes.toStringBinary(tenantSectionId));
           return hfileReader;
         } catch (IOException e) {
           LOG.error("Failed to initialize section reader", e);
