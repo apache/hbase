@@ -92,6 +92,8 @@
                 <arg>-XDcompilePolicy=simple</arg>
                 <!-- All -Xep need to be on single line see: https://github.com/google/error-prone/pull/1115 -->
                 <arg>-Xplugin:ErrorProne -XepDisableWarningsInGeneratedCode -XepExcludedPaths:.*/target/.* -Xep:FallThrough:OFF -Xep:MutablePublicArray:OFF -Xep:ClassNewInstance:ERROR -Xep:MissingDefault:ERROR -Xep:BanJNDI:WARN</arg>
+                <!-- Required by error prone >= 2.36.0. See https://github.com/google/error-prone/commit/e71db1f369a9367f6f2db34c4fbd006b6d6238fd !-->
+                <arg>--should-stop=ifError=FLOW</arg>
               </compilerArgs>
               <annotationProcessorPaths>
                 <path>
