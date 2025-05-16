@@ -1851,7 +1851,6 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
   }
 
   @Override
-  @QosPriority(priority = HConstants.ADMIN_QOS)
   public ReportRegionStateTransitionResponse reportRegionStateTransition(RpcController c,
     ReportRegionStateTransitionRequest req) throws ServiceException {
     try {
@@ -2559,7 +2558,7 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
   }
 
   @Override
-  @QosPriority(priority = HConstants.ADMIN_QOS)
+  @QosPriority(priority = HConstants.HIGH_QOS)
   public ReportProcedureDoneResponse reportProcedureDone(RpcController controller,
     ReportProcedureDoneRequest request) throws ServiceException {
     // Check Masters is up and ready for duty before progressing. Remote side will keep trying.
