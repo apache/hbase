@@ -863,7 +863,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
           Duration waitInterval = callback.getWaitInterval(r, region);
           LOG.trace("Coprocessor returned incomplete result. "
             + "Sleeping for {} before making follow-up request.", waitInterval);
-          if (waitInterval.isZero()) {
+          if (!waitInterval.isZero()) {
             AsyncConnectionImpl.RETRY_TIMER.newTimeout(
               (timeout) -> coprocessorServiceUntilComplete(stubMaker, updatedCallable, callback,
                 locateFinished, unfinishedRequest, region, span),
