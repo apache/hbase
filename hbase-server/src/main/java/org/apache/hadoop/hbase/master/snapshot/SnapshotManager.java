@@ -653,7 +653,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
    * @param snapshot the snapshot description
    * @param handler  the snapshot handler
    */
-  private synchronized void snapshotTable(SnapshotDescription snapshot,
+  public synchronized void snapshotTable(SnapshotDescription snapshot,
     final TakeSnapshotHandler handler) throws IOException {
     try {
       handler.prepare();
