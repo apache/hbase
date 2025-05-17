@@ -514,18 +514,23 @@ public class HStoreFile implements StoreFile {
     comparator = initialReader.getComparator();
   }
 
+  public void initReader() throws IOException {
+    initReader(false);
+  }
+
   /**
    * Initialize the reader used for pread.
    */
-  public void initReader() throws IOException {
-    if (initialReader == null) {
+  public void initReader(boolean reopen) throws IOException {
+    if (initialReader == null || reopen) {
       synchronized (this) {
-        if (initialReader == null) {
+        if (initialReader == null || reopen) {
+          boolean evictOnClose = cacheConf == null || cacheConf.shouldEvictOnClose();
           try {
+            if (reopen) closeStoreFile(evictOnClose);
             open();
           } catch (Exception e) {
             try {
-              boolean evictOnClose = cacheConf != null ? cacheConf.shouldEvictOnClose() : true;
               this.closeStoreFile(evictOnClose);
             } catch (IOException ee) {
               LOG.warn("failed to close reader", ee);

@@ -255,18 +255,14 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
     List<KeyValueScanner> scanners = null;
     try {
-      // Pass columns to try to filter out unnecessary StoreFiles.
-      scanners = selectScannersFrom(store,
-        store.getScanners(cacheBlocks, scanUsePread, false, matcher, scan.getStartRow(),
-          scan.includeStartRow(), scan.getStopRow(), scan.includeStopRow(), this.readPt,
-          isOnlyLatestVersionScan(scan)));
-
-      // Seek all scanners to the start of the Row (or if the exact matching row
-      // key does not exist, then to the start of the next matching Row).
-      // Always check bloom filter to optimize the top row seek for delete
-      // family marker.
-      seekScanners(scanners, matcher.getStartKey(), explicitColumnQuery && lazySeekEnabledGlobally,
-        parallelSeekEnabled);
+      try {
+        scanners = getScannersAndSeek(false);
+      } catch (IOException e) {
+        // If we fail to read the store files,
+        // we should close and reopen the store file readers to refresh metadata
+        LOG.info("Reopen StoreScanner", e);
+        scanners = getScannersAndSeek(true);
+      }
 
       // set storeLimit
       this.storeLimit = scan.getMaxResultsPerColumnFamily();
@@ -283,6 +279,24 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       store.deleteChangedReaderObserver(this);
       throw e;
     }
+  }
+
+  protected List<KeyValueScanner> getScannersAndSeek(boolean reopenStoreFileReader)
+    throws IOException {
+    // Pass columns to try to filter out unnecessary StoreFiles.
+    List<KeyValueScanner> scanners = selectScannersFrom(store,
+      store.getScanners(cacheBlocks, scanUsePread, false, matcher, scan.getStartRow(),
+        scan.includeStartRow(), scan.getStopRow(), scan.includeStopRow(), this.readPt,
+        isOnlyLatestVersionScan(scan), reopenStoreFileReader));
+
+    // Seek all scanners to the start of the Row (or if the exact matching row
+    // key does not exist, then to the start of the next matching Row).
+    // Always check bloom filter to optimize the top row seek for delete
+    // family marker.
+    seekScanners(scanners, matcher.getStartKey(), explicitColumnQuery && lazySeekEnabledGlobally,
+      parallelSeekEnabled);
+
+    return scanners;
   }
 
   // a dummy scan instance for compaction.
