@@ -21,6 +21,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -124,6 +125,20 @@ public final class GlobalMetricRegistriesAdapter {
         // exported from the BaseSource.getMetrics() call directly because there is already a
         // MetricRecordBuilder there (see MetricsRegionServerSourceImpl).
         continue;
+      }
+
+      // To determine whether a new MetricRegistry is created in registries,
+      // Need to remove the old MetricRegistry in registeredSources for the new MetricRegistry
+      // https://issues.apache.org/jira/browse/HBASE-29322
+      MetricsSourceAdapter registeredSource = registeredSources.get(info);
+      if (registeredSource != null && !Objects.equals(registeredSource.registry, registry)) {
+        registeredSources.remove(info);
+        synchronized (DefaultMetricsSystem.instance()) {
+          DefaultMetricsSystem.instance().unregisterSource(info.getMetricsJmxContext());
+          helper.removeSourceName(info.getMetricsJmxContext());
+          helper.removeObjectName(info.getMetricsJmxContext());
+        }
+        LOG.info("Unregistered old adapter for the MetricRegistry: " + info.getMetricsJmxContext());
       }
 
       if (!registeredSources.containsKey(info)) {
