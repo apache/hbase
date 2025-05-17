@@ -17,9 +17,13 @@
  */
 package org.apache.hadoop.hbase.client.metrics;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
@@ -31,18 +35,44 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 @SuppressWarnings("checkstyle:VisibilityModifier") // See HBASE-27757
 public class ServerSideScanMetrics {
   /**
-   * Hash to hold the String -&gt; Atomic Long mappings for each metric
+   * Hash to hold the String -> Atomic Long mappings for each metric
    */
-  private final Map<String, AtomicLong> counters = new HashMap<>();
+  private final List<ScanMetricsHolder> scanMetricsHolders = new ArrayList<>();
+  private ScanMetricsHolder currentScanMetricsHolder;
+  private boolean isFirstRegion = true;
+
+  public ServerSideScanMetrics() {
+    createScanMetricsHolder();
+  }
 
   /**
-   * Create a new counter with the specified name
+   * If region level scan metrics are enabled, must call this method to start collecting metrics for
+   * the region before scanning the region.
+   */
+  public void moveToNextRegion() {
+    if (isFirstRegion()) {
+      return;
+    }
+    createScanMetricsHolder();
+  }
+
+  private void createScanMetricsHolder() {
+    currentScanMetricsHolder = new ScanMetricsHolder();
+    scanMetricsHolders.add(currentScanMetricsHolder);
+    countOfRowsScanned = createCounter(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME);
+    countOfRowsFiltered = createCounter(COUNT_OF_ROWS_FILTERED_KEY_METRIC_NAME);
+    countOfBlockBytesScanned = createCounter(BLOCK_BYTES_SCANNED_KEY_METRIC_NAME);
+    fsReadTime = createCounter(FS_READ_TIME_METRIC_NAME);
+  }
+
+  /**
+   * Create a new counter with the specified name If region level scan metrics are enabled then
+   * creates a new counter for the current region being scanned. Please see
+   * {@link #moveToNextRegion()}.
    * @return {@link AtomicLong} instance for the counter with counterName
    */
   protected AtomicLong createCounter(String counterName) {
-    AtomicLong c = new AtomicLong(0);
-    counters.put(counterName, c);
-    return c;
+    return currentScanMetricsHolder.createCounter(counterName);
   }
 
   public static final String COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME = "ROWS_SCANNED";
@@ -55,66 +85,150 @@ public class ServerSideScanMetrics {
   /**
    * number of rows filtered during scan RPC
    */
-  public final AtomicLong countOfRowsFiltered =
-    createCounter(COUNT_OF_ROWS_FILTERED_KEY_METRIC_NAME);
+  public AtomicLong countOfRowsFiltered;
 
   /**
    * number of rows scanned during scan RPC. Not every row scanned will be returned to the client
    * since rows may be filtered.
    */
-  public final AtomicLong countOfRowsScanned = createCounter(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME);
+  public AtomicLong countOfRowsScanned;
 
-  public final AtomicLong countOfBlockBytesScanned =
-    createCounter(BLOCK_BYTES_SCANNED_KEY_METRIC_NAME);
+  public AtomicLong countOfBlockBytesScanned;
 
-  public final AtomicLong fsReadTime = createCounter(FS_READ_TIME_METRIC_NAME);
+  public AtomicLong fsReadTime;
 
+  /**
+   * Sets counter with counterName to passed in value, does nothing if counter does not exist. If
+   * region level scan metrics are enabled then sets the value of counter for the current region
+   * being scanned.
+   */
   public void setCounter(String counterName, long value) {
-    AtomicLong c = this.counters.get(counterName);
-    if (c != null) {
-      c.set(value);
-    }
-  }
-
-  /** Returns true if a counter exists with the counterName */
-  public boolean hasCounter(String counterName) {
-    return this.counters.containsKey(counterName);
-  }
-
-  /** Returns {@link AtomicLong} instance for this counter name, null if counter does not exist. */
-  public AtomicLong getCounter(String counterName) {
-    return this.counters.get(counterName);
-  }
-
-  public void addToCounter(String counterName, long delta) {
-    AtomicLong c = this.counters.get(counterName);
-    if (c != null) {
-      c.addAndGet(delta);
-    }
+    currentScanMetricsHolder.setCounter(counterName, value);
   }
 
   /**
-   * Get all of the values since the last time this function was called. Calling this function will
-   * reset all AtomicLongs in the instance back to 0.
-   * @return A Map of String -&gt; Long for metrics
+   * Returns true if a counter exists with the counterName If region level scan metrics are enabled
+   * then checks if a counter exists with the counterName for the current region being scanned.
+   * Please see {@link #moveToNextRegion()}.
+   */
+  public boolean hasCounter(String counterName) {
+    return currentScanMetricsHolder.hasCounter(counterName);
+  }
+
+  /**
+   * Returns {@link AtomicLong} instance for this counter name, null if counter does not exist. If
+   * region level scan metrics are enabled then {@link AtomicLong} instance for current region being
+   * scanned is returned or null if counter does not exist. Please see {@link #moveToNextRegion()}.
+   */
+  public AtomicLong getCounter(String counterName) {
+    return currentScanMetricsHolder.getCounter(counterName);
+  }
+
+  /**
+   * Increments the counter with counterName by delta, does nothing if counter does not exist. If
+   * region level scan metrics are enabled then increments the counter corresponding to the current
+   * region being scanned. Please see {@link #moveToNextRegion()}.
+   */
+  public void addToCounter(String counterName, long delta) {
+    currentScanMetricsHolder.addToCounter(counterName, delta);
+  }
+
+  /**
+   * Get all of the values combined for all the regions since the last time this function or
+   * {@link #getMetricsMapByRegion()} was called. Calling this function will reset all AtomicLongs
+   * in the instance back to 0.
+   * @return A Map of String -> Long for metrics
    */
   public Map<String, Long> getMetricsMap() {
     return getMetricsMap(true);
   }
 
   /**
-   * Get all of the values. If reset is true, we will reset the all AtomicLongs back to 0.
+   * Get all of the values combined for all the regions. If reset is true, we will reset the all
+   * AtomicLongs back to 0.
    * @param reset whether to reset the AtomicLongs to 0.
-   * @return A Map of String -&gt; Long for metrics
+   * @return A Map of String -> Long for metrics
    */
   public Map<String, Long> getMetricsMap(boolean reset) {
-    // Create a builder
-    ImmutableMap.Builder<String, Long> builder = ImmutableMap.builder();
-    for (Map.Entry<String, AtomicLong> e : this.counters.entrySet()) {
-      long value = reset ? e.getValue().getAndSet(0) : e.getValue().get();
-      builder.put(e.getKey(), value);
+    Map<String, Long> overallMetrics = new HashMap<>();
+    for (ScanMetricsHolder scanMetricsHolder : scanMetricsHolders) {
+      Map<String, Long> metricsSnapshot = scanMetricsHolder.getMetricsMap(reset);
+      metricsSnapshot.forEach((k, v) -> {
+        if (overallMetrics.containsKey(k)) {
+          overallMetrics.put(k, overallMetrics.get(k) + v);
+        } else {
+          overallMetrics.put(k, v);
+        }
+      });
     }
-    // Build the immutable map so that people can't mess around with it.
+    return ImmutableMap.copyOf(overallMetrics);
+  }
+
+  /**
+   * Get values grouped by each region scanned since the last time this or {@link #getMetricsMap()}
+   * was called. Calling this function will reset all AtomicLongs in the instance back to 0.
+   * @return A Map of region -> (Map of metric name -> Long) for metrics
+   */
+  public Map<ScanMetricsRegionInfo, Map<String, Long>> getMetricsMapByRegion() {
+    return getMetricsMapByRegion(true);
+  }
+
+  /**
+   * Get values grouped by each region scanned. If reset is true, we will reset the all AtomicLongs
+   * back to 0.
+   * @param reset whether to reset the AtomicLongs to 0.
+   * @return A Map of region -> (Map of metric name -> Long) for metrics
+   */
+  public Map<ScanMetricsRegionInfo, Map<String, Long>> getMetricsMapByRegion(boolean reset) {
+    // Create a builder
+    ImmutableMap.Builder<ScanMetricsRegionInfo, Map<String, Long>> builder = ImmutableMap.builder();
+    for (ScanMetricsHolder scanMetricsHolder : scanMetricsHolders) {
+      if (
+        scanMetricsHolder.getScanMetricsRegionInfo()
+            == ScanMetricsRegionInfo.EMPTY_SCAN_METRICS_REGION_INFO
+      ) {
+        continue;
+      }
+      builder.put(scanMetricsHolder.getScanMetricsRegionInfo(),
+        scanMetricsHolder.getMetricsMap(reset));
+    }
     return builder.build();
+  }
+
+  @Override
+  public String toString() {
+    return scanMetricsHolders.stream().map(ScanMetricsHolder::toString)
+      .collect(Collectors.joining(";"));
+  }
+
+  /**
+   * Call this method after calling {@link #moveToNextRegion()} to populate server name and encoded
+   * region name details for the region being scanned and for which metrics are being collected at
+   * the moment.
+   */
+  public void initScanMetricsRegionInfo(ServerName serverName, String encodedRegionName) {
+    currentScanMetricsHolder.initScanMetricsRegionInfo(serverName, encodedRegionName);
+  }
+
+  protected boolean isFirstRegion() {
+    boolean tmpIsFirstRegion = isFirstRegion;
+    isFirstRegion = false;
+    return tmpIsFirstRegion;
+  }
+
+  public AtomicLong getCountOfRowsFiltered() {
+    return countOfRowsFiltered;
+  }
+
+  public AtomicLong getCountOfRowsScanned() {
+    return countOfRowsScanned;
+  }
+
+  public AtomicLong getCountOfBlockBytesScanned() {
+    return countOfBlockBytesScanned;
+  }
+
+  public AtomicLong getFsReadTime() {
+    return fsReadTime;
   }
 }

@@ -90,6 +90,11 @@ public class ClientSideRegionScanner extends AbstractClientScanner {
       initScanMetrics(scan);
     } else {
       this.scanMetrics = scanMetrics;
+      setIsScanMetricsByRegionEnabled(scan.isScanMetricsByRegionEnabled());
+    }
+    if (isScanMetricsByRegionEnabled()) {
+      this.scanMetrics.initScanMetricsRegionInfo(null, region.getRegionInfo().getEncodedName());
+      // The server name will be null in scan metrics as this is a client side region scanner
     }
     region.startRegionOperation();
   }
