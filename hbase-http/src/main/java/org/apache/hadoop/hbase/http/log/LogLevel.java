@@ -41,7 +41,6 @@ import org.apache.hadoop.hbase.logging.Log4jUtils;
 import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authentication.client.KerberosAuthenticator;
 import org.apache.hadoop.security.ssl.SSLFactory;
-import org.apache.hadoop.util.HttpExceptionUtils;
 import org.apache.hadoop.util.ServletUtil;
 import org.apache.hadoop.util.Tool;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -267,7 +266,11 @@ public final class LogLevel {
 
       HttpURLConnection connection = connect(url);
 
-      HttpExceptionUtils.validateResponse(connection, 200);
+      // We now use the validateResponse method of hbase to handle for HTML response,
+      // as with Jetty 12: getResponseMessage() returns "Precondition Failed" vs
+      // "Modification of logger protected.org.apache.hadoop.hbase.http.log.TestLogLevel is
+      // disallowed in configuration" in Jetty 9
+      LogLevelExceptionUtils.validateResponse(connection, 200);
 
       // read from the servlet
 
