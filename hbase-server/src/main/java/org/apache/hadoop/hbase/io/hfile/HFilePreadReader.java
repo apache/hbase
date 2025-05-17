@@ -97,6 +97,9 @@ public class HFilePreadReader extends HFileReaderImpl {
                     + "Skipping prefetch, the block is already cached.", size, cacheKey);
                   blockCount++;
                   dataBlockCount++;
+                  // We need to reset this here, because we don't know the size of next block, since
+                  // we never recovered the current block.
+                  onDiskSizeOfNextBlock = -1;
                   continue;
                 } else {
                   LOG.debug("Found block for cache key {}, but couldn't get its size. "
@@ -150,8 +153,8 @@ public class HFilePreadReader extends HFileReaderImpl {
             }
           } catch (IOException e) {
             // IOExceptions are probably due to region closes (relocation, etc.)
-            if (LOG.isTraceEnabled()) {
-              LOG.trace("Prefetch " + getPathOffsetEndStr(path, offset, end), e);
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Prefetch " + getPathOffsetEndStr(path, offset, end), e);
             }
           } catch (Throwable e) {
             // Other exceptions are interesting
