@@ -37,6 +37,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos;
@@ -97,5 +99,33 @@ public class TestMasterQosFunction extends QosTestBase {
   @Test
   public void testAnnotations() {
     checkMethod(conf, "GetLastFlushedSequenceId", HConstants.ADMIN_QOS, qosFunction);
+  }
+
+  @Test
+  public void testRegionServerStatusProtos() {
+    RegionServerStatusProtos.RemoteProcedureResult splitWalProcedureResult =
+      RegionServerStatusProtos.RemoteProcedureResult.newBuilder()
+        .setStatus(RegionServerStatusProtos.RemoteProcedureResult.Status.SUCCESS).setProcId(100)
+        .build();
+
+    RegionServerStatusProtos.ReportProcedureDoneRequest splitWalProcedureDoneReport =
+      RegionServerStatusProtos.ReportProcedureDoneRequest.newBuilder()
+        .addResult(splitWalProcedureResult).build();
+
+    RegionServerStatusProtos.GetLastFlushedSequenceIdRequest lastFlushedSequenceIdRequest =
+      RegionServerStatusProtos.GetLastFlushedSequenceIdRequest.newBuilder()
+        .setRegionName(ByteString.copyFrom(RegionInfoBuilder.FIRST_META_REGIONINFO.getRegionName()))
+        .build();
+
+    RegionServerStatusProtos.RegionServerReportRequest regionServerReportRequest =
+      RegionServerStatusProtos.RegionServerReportRequest.newBuilder()
+        .setServer(ProtobufUtil.toServerName(ServerName.valueOf("locahost:60020", 100))).build();
+
+    checkMethod(conf, "ReportProcedureDone", HConstants.HIGH_QOS, qosFunction,
+      splitWalProcedureDoneReport);
+    checkMethod(conf, "GetLastFlushedSequenceId", HConstants.HIGH_QOS, qosFunction,
+      lastFlushedSequenceIdRequest);
+    checkMethod(conf, "RegionServerReport", HConstants.HIGH_QOS, qosFunction,
+      regionServerReportRequest);
   }
 }
