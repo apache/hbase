@@ -161,6 +161,8 @@ public class Scan extends Query {
 
   private boolean needCursorResult = false;
 
+  private boolean enableOptimization = false;
+
   /**
    * Create a Scan operation across all rows.
    */
@@ -1032,5 +1034,21 @@ public class Scan extends Query {
    */
   public static Scan createScanFromCursor(Cursor cursor) {
     return new Scan().withStartRow(cursor.getRow());
+  }
+
+  /**
+   *  allow optimization of start row and stop row based on {@link Filter} by
+   *  {@link org.apache.hadoop.hbase.filter.ScanRangeOptimizer}
+   */
+  public Scan enableOptimization() {
+    this.enableOptimization = true;
+    return this;
+  }
+
+  /**
+   *  Whether to allow optimization of start row and stop row based on {@link Filter}
+   */
+  public boolean optimizationEnabled() {
+    return enableOptimization;
   }
 }
