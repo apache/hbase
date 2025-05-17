@@ -66,6 +66,7 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
   private boolean deleteColumnFamilyInModify;
   private boolean shouldCheckDescriptor;
   private boolean reopenRegions;
+  private boolean holdLock;
   /**
    * List of column families that cannot be deleted from the hbase:meta table. They are critical to
    * cluster operation. This is a bit of an odd place to keep this list but then this is the tooling
@@ -86,6 +87,12 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
   }
 
   public ModifyTableProcedure(final MasterProcedureEnv env, final TableDescriptor htd,
+    boolean holdLock) throws HBaseIOException {
+    this(env, htd, null);
+    this.holdLock = holdLock;
+  }
+
+  public ModifyTableProcedure(final MasterProcedureEnv env, final TableDescriptor htd,
     final ProcedurePrepareLatch latch) throws HBaseIOException {
     this(env, htd, latch, null, false, true);
   }
@@ -96,6 +103,7 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
     final boolean reopenRegions) throws HBaseIOException {
     super(env, latch);
     this.reopenRegions = reopenRegions;
+    this.holdLock = true;
     initialize(oldTableDescriptor, shouldCheckDescriptor);
     this.modifiedTableDescriptor = newTableDescriptor;
     preflightChecks(env, null/* No table checks; if changing peers, table can be online */);
@@ -177,6 +185,25 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
     this.unmodifiedTableDescriptor = unmodifiedTableDescriptor;
     this.shouldCheckDescriptor = shouldCheckDescriptor;
     this.deleteColumnFamilyInModify = false;
+  }
+
+  /**
+   * ModifyTableProcedure reopens regions. Reopening regions leads to memstore flushes, which
+   * sometimes leads to splits. The
+   * {@link org.apache.hadoop.hbase.master.assignment.SplitTableRegionProcedure} takes care of
+   * opening the regions that it split. This is a problem if we are increasing the region
+   * replication count, because allowing a split to occur after MODIFY_TABLE_UPDATE_TABLE_DESCRIPTOR
+   * but before MODIFY_TABLE_ASSIGN_NEW_REPLICAS would mean that SplitTableRegionProcedure opens the
+   * new replicas, and then this ModifyTableProcedure would also try to open them, which would cause
+   * this procedure to get stuck. To avoid this problem, hold the lock on the table for the duration
+   * of this ModifyTableProcedure. This will still allow children of this procedure to run, but it
+   * will block others. A SplitTableRegionProcedure requested by a RegionServer doing a memstore
+   * flush will not be considered a child of this procedure, so it will run after this procedure
+   * finishes. {@link #holdLock} should always be true outside of unit testing.
+   */
+  @Override
+  protected boolean holdLock(MasterProcedureEnv env) {
+    return holdLock;
   }
 
   @Override
