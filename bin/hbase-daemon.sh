@@ -35,7 +35,7 @@
 usage="Usage: hbase-daemon.sh [--config <conf-dir>]\
  [--autostart-window-size <window size in hours>]\
  [--autostart-window-retry-limit <retry count limit for autostart>]\
- (start|stop|restart|autostart|autorestart|foreground_start) <hbase-command> \
+ (start|stop|restart|autostart|autorestart|foreground_start|status) <hbase-command> \
  <args...>"
 
 # if no args specified, show usage
@@ -374,6 +374,19 @@ case $startStop in
     # start the command
     $thiscmd --config "${HBASE_CONF_DIR}" start $command $args &
     wait_until_done $!
+  ;;
+
+(status)
+    if [ -f $HBASE_PID ]; then
+      pid=`cat $HBASE_PID`
+      if kill -0 "$pid" > /dev/null 2>&1; then
+        echo "$command is running as PID $pid"
+        exit 0
+      fi
+    fi
+
+    echo "$command is not running"
+    exit 1
   ;;
 
 (*)
