@@ -98,7 +98,7 @@ public class TestMasterQosFunction extends QosTestBase {
 
   @Test
   public void testAnnotations() {
-    checkMethod(conf, "GetLastFlushedSequenceId", HConstants.ADMIN_QOS, qosFunction);
+    checkMethod(conf, "GetRegionInfo", HConstants.ADMIN_QOS, qosFunction);
   }
 
   @Test
