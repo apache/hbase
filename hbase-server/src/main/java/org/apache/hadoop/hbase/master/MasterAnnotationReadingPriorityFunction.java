@@ -93,7 +93,7 @@ public class MasterAnnotationReadingPriorityFunction
       return HConstants.HIGH_QOS;
     }
     // also use HIGH_QOS for region server report
-    if (param instanceof RegionServerStatusProtos.RegionServerReportRequest) {
+    if (param.getClass().getEnclosingClass().equals(RegionServerStatusProtos.class)) {
       return HConstants.HIGH_QOS;
     }
     // Trust the client-set priorities if set
