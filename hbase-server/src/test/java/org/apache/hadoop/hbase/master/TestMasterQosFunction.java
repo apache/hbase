@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.QosTestHelper;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.regionserver.AnnotationReadingPriorityFunction;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -38,6 +39,8 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
@@ -97,9 +100,34 @@ public class TestMasterQosFunction extends QosTestHelper {
 
   @Test
   public void testAnnotations() {
-    checkMethod(conf, "GetLastFlushedSequenceId", HConstants.ADMIN_QOS, qosFunction);
-    checkMethod(conf, "CompactRegion", HConstants.ADMIN_QOS, qosFunction);
-    checkMethod(conf, "GetLastFlushedSequenceId", HConstants.ADMIN_QOS, qosFunction);
     checkMethod(conf, "GetRegionInfo", HConstants.ADMIN_QOS, qosFunction);
+  }
+
+  @Test
+  public void testRegionServerStatusProtos() {
+    RegionServerStatusProtos.RemoteProcedureResult splitWalProcedureResult =
+      RegionServerStatusProtos.RemoteProcedureResult.newBuilder()
+        .setStatus(RegionServerStatusProtos.RemoteProcedureResult.Status.SUCCESS).setProcId(100)
+        .build();
+
+    RegionServerStatusProtos.ReportProcedureDoneRequest splitWalProcedureDoneReport =
+      RegionServerStatusProtos.ReportProcedureDoneRequest.newBuilder()
+        .addResult(splitWalProcedureResult).build();
+
+    RegionServerStatusProtos.GetLastFlushedSequenceIdRequest lastFlushedSequenceIdRequest =
+      RegionServerStatusProtos.GetLastFlushedSequenceIdRequest.newBuilder()
+        .setRegionName(ByteString.copyFrom(RegionInfoBuilder.FIRST_META_REGIONINFO.getRegionName()))
+        .build();
+
+    RegionServerStatusProtos.RegionServerReportRequest regionServerReportRequest =
+      RegionServerStatusProtos.RegionServerReportRequest.newBuilder()
+        .setServer(ProtobufUtil.toServerName(ServerName.valueOf("locahost:60020", 100))).build();
+
+    checkMethod(conf, "ReportProcedureDone", HConstants.HIGH_QOS, qosFunction,
+      splitWalProcedureDoneReport);
+    checkMethod(conf, "GetLastFlushedSequenceId", HConstants.HIGH_QOS, qosFunction,
+      lastFlushedSequenceIdRequest);
+    checkMethod(conf, "RegionServerReport", HConstants.HIGH_QOS, qosFunction,
+      regionServerReportRequest);
   }
 }
