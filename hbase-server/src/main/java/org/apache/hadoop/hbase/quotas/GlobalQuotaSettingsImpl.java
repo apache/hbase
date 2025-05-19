@@ -398,9 +398,12 @@ public class GlobalQuotaSettingsImpl extends GlobalQuotaSettings {
             case READ_CAPACITY_UNIT:
             case WRITE_CAPACITY_UNIT:
               builder.append(String.format("%dCU", timedQuota.getSoftLimit()));
+              break;
             case REQUEST_HANDLER_USAGE_MS:
               builder.append(String.format("%dms", timedQuota.getSoftLimit()));
+              break;
             default:
+              // no-op
           }
         } else if (timedQuota.hasShare()) {
           builder.append(String.format("%.2f%%", timedQuota.getShare()));
