@@ -27,6 +27,7 @@ import static org.apache.hadoop.hbase.quotas.ThrottleQuotaTestUtil.triggerUserCa
 import static org.apache.hadoop.hbase.quotas.ThrottleQuotaTestUtil.waitMinuteQuota;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.TimeUnit;

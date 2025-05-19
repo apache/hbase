@@ -91,18 +91,16 @@ public class TestDefaultHandlerUsageQuota {
     TEST_UTIL.waitFor(60_000, () -> runPutTest(100) < 100);
   }
 
-
   private void configureLenientThrottle() throws IOException {
     try (Admin admin = TEST_UTIL.getAdmin()) {
-      admin.setQuota(
-        QuotaSettingsFactory.throttleUser(getUserName(), ThrottleType.REQUEST_HANDLER_USAGE_MS, 100_000, TimeUnit.SECONDS));
+      admin.setQuota(QuotaSettingsFactory.throttleUser(getUserName(),
+        ThrottleType.REQUEST_HANDLER_USAGE_MS, 100_000, TimeUnit.SECONDS));
     }
   }
 
   private static String getUserName() throws IOException {
     return User.getCurrent().getShortName();
   }
-
 
   private void unsetQuota() throws Exception {
     try (Admin admin = TEST_UTIL.getAdmin()) {
