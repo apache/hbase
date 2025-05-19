@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.coprocessor;
 
 import static org.apache.hadoop.hbase.client.coprocessor.AggregationHelper.getParsedGenericInstance;
 
+import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.ByteBuffer;
@@ -27,6 +28,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.NavigableSet;
+import java.util.function.Function;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
@@ -111,17 +113,8 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
         postScanPartialResultUpdate(results, partialResultContext);
         results.clear();
       } while (hasMoreRows);
-      if (max != null && !request.getClientSupportsPartialResult()) {
-        ByteString first = ci.getProtoForCellType(max).toByteString();
-        response = AggregateResponse.newBuilder().addFirstPart(first).build();
-      } else if (request.getClientSupportsPartialResult()) {
-        AggregateResponse.Builder responseBuilder =
-          responseBuilder(request, hasMoreRows, partialResultContext);
-        if (max != null) {
-          responseBuilder.addFirstPart(ci.getProtoForCellType(max).toByteString());
-        }
-        response = responseBuilder.build();
-      }
+      response = singlePartResponse(request, hasMoreRows, partialResultContext, max,
+        ci::getProtoForCellType);
     } catch (IOException e) {
       CoprocessorRpcUtils.setControllerException(controller, e);
     } finally {
@@ -175,17 +168,8 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
         postScanPartialResultUpdate(results, partialResultContext);
         results.clear();
       } while (hasMoreRows);
-      if (min != null && !request.getClientSupportsPartialResult()) {
-        ByteString first = ci.getProtoForCellType(min).toByteString();
-        response = AggregateResponse.newBuilder().addFirstPart(first).build();
-      } else if (request.getClientSupportsPartialResult()) {
-        AggregateResponse.Builder responseBuilder =
-          responseBuilder(request, hasMoreRows, partialResultContext);
-        if (min != null) {
-          responseBuilder.addFirstPart(ci.getProtoForCellType(min).toByteString());
-        }
-        response = responseBuilder.build();
-      }
+      response = singlePartResponse(request, hasMoreRows, partialResultContext, min,
+        ci::getProtoForCellType);
     } catch (IOException e) {
       CoprocessorRpcUtils.setControllerException(controller, e);
     } finally {
@@ -242,17 +226,8 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
         postScanPartialResultUpdate(results, partialResultContext);
         results.clear();
       } while (hasMoreRows);
-      if (sumVal != null && !request.getClientSupportsPartialResult()) {
-        ByteString first = ci.getProtoForPromotedType(sumVal).toByteString();
-        response = AggregateResponse.newBuilder().addFirstPart(first).build();
-      } else if (request.getClientSupportsPartialResult()) {
-        AggregateResponse.Builder responseBuilder =
-          responseBuilder(request, hasMoreRows, partialResultContext);
-        if (sumVal != null) {
-          responseBuilder.addFirstPart(ci.getProtoForPromotedType(sumVal).toByteString());
-        }
-        response = responseBuilder.build();
-      }
+      response = singlePartResponse(request, hasMoreRows, partialResultContext, sumVal,
+        ci::getProtoForPromotedType);
     } catch (IOException e) {
       CoprocessorRpcUtils.setControllerException(controller, e);
     } finally {
@@ -607,6 +582,25 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
       context.lastRowSuccessfullyProcessedOffset = result.getRowOffset();
       context.lastRowSuccessfullyProcessedLength = result.getRowLength();
     }
+  }
+
+  @Nullable
+  private <ACC, RES extends Message> AggregateResponse singlePartResponse(AggregateRequest request,
+    boolean hasMoreRows, PartialResultContext partialResultContext, ACC acc,
+    Function<ACC, RES> toRes) {
+    AggregateResponse response = null;
+    if (acc != null && !request.getClientSupportsPartialResult()) {
+      ByteString first = toRes.apply(acc).toByteString();
+      response = AggregateResponse.newBuilder().addFirstPart(first).build();
+    } else if (request.getClientSupportsPartialResult()) {
+      AggregateResponse.Builder responseBuilder =
+        responseBuilder(request, hasMoreRows, partialResultContext);
+      if (acc != null) {
+        responseBuilder.addFirstPart(toRes.apply(acc).toByteString());
+      }
+      response = responseBuilder.build();
+    }
+    return response;
   }
 
   private AggregateResponse.Builder responseBuilder(AggregateRequest request, boolean hasMoreRows,
