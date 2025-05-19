@@ -146,7 +146,7 @@ public class TestPrefetchWithBucketCache {
     // Removes the meta block from L1 cache
     l1.clearCache();
     // Reads file again. Checks we are not prefetching data blocks again,
-    // but fetch back the meta blok
+    // but fetch back the meta block
     LOG.debug("Second read, prefetch should run, without altering bucket cache state,"
       + " only the meta block should be fetched again.");
     readStoreFile(storeFile);
