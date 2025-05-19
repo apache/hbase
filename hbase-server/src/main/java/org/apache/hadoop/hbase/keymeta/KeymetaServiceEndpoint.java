@@ -113,6 +113,8 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
           done.run(generateKeyStatusResponse(managedKeyStatuses, builder));
         } catch (IOException e) {
           CoprocessorRpcUtils.setControllerException(controller, e);
+        } catch (KeyException e) {
+          CoprocessorRpcUtils.setControllerException(controller, new IOException(e));
         }
       }
     }

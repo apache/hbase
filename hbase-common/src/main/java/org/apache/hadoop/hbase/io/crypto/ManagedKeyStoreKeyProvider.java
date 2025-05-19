@@ -24,16 +24,17 @@ public class ManagedKeyStoreKeyProvider extends KeyStoreKeyProvider implements M
   @Override
   public ManagedKeyData getSystemKey(byte[] clusterId) {
     checkConfig();
-    String masterKeyAlias = conf.get(HConstants.CRYPTO_MANAGED_KEY_STORE_SYSTEM_KEY_NAME_CONF_KEY, null);
-    if (masterKeyAlias == null) {
-      throw new RuntimeException("No alias configured for master key");
+    String systemKeyAlias = conf.get(HConstants.CRYPTO_MANAGED_KEY_STORE_SYSTEM_KEY_NAME_CONF_KEY,
+      null);
+    if (systemKeyAlias == null) {
+      throw new RuntimeException("No alias configured for system key");
     }
-    Key key = getKey(masterKeyAlias);
+    Key key = getKey(systemKeyAlias);
     if (key == null) {
-      throw new RuntimeException("Unable to find cluster key with alias: " + masterKeyAlias);
+      throw new RuntimeException("Unable to find system key with alias: " + systemKeyAlias);
     }
     // Encode clusterId too for consistency with that of key custodian.
-    String keyMetadata = generateKeyMetadata(masterKeyAlias,
+    String keyMetadata = generateKeyMetadata(systemKeyAlias,
       ManagedKeyProvider.encodeToStr(clusterId));
     return new ManagedKeyData(clusterId, ManagedKeyData.KEY_SPACE_GLOBAL, key, ManagedKeyStatus.ACTIVE,
       keyMetadata);

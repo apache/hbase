@@ -234,8 +234,8 @@ public class KeymetaTableAccessor extends KeyManagementBase {
   @VisibleForTesting
   public static byte[] constructRowKeyForMetadata(byte[] key_cust, String keyNamespace,
       byte[] keyMetadataHash) {
-    int prefixLength = key_cust.length;
-    return Bytes.add(Bytes.toBytes(prefixLength), key_cust, Bytes.toBytesBinary(keyNamespace),
+    int custLength = key_cust.length;
+    return Bytes.add(Bytes.toBytes(custLength), key_cust, Bytes.toBytesBinary(keyNamespace),
       keyMetadataHash);
   }
 

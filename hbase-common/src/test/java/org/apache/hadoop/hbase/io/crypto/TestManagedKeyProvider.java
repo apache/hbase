@@ -47,6 +47,7 @@ import static org.apache.hadoop.hbase.io.crypto.ManagedKeyStoreKeyProvider.KEY_M
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(Suite.class)
@@ -61,7 +62,7 @@ public class TestManagedKeyProvider {
     public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestManagedKeyStoreKeyProvider.class);
 
-    private static final String MASTER_KEY_ALIAS = "master-alias";
+    private static final String SYSTEM_KEY_ALIAS = "system-alias";
 
     private Configuration conf = HBaseConfiguration.create();
     private int nPrefixes = 2;
@@ -69,7 +70,7 @@ public class TestManagedKeyProvider {
     private Map<Bytes, Bytes> prefix2key = new HashMap<>();
     private Map<Bytes, String> prefix2alias = new HashMap<>();
     private String clusterId;
-    private byte[] masterKey;
+    private byte[] systemKey;
 
     @Before
     public void setUp() throws Exception {
@@ -102,16 +103,16 @@ public class TestManagedKeyProvider {
         passwdProps.setProperty(alias, PASSWORD);
 
         clusterId = UUID.randomUUID().toString();
-        masterKey = MessageDigest.getInstance("SHA-256").digest(
-          Bytes.toBytes(MASTER_KEY_ALIAS));
-        store.setEntry(MASTER_KEY_ALIAS, new KeyStore.SecretKeyEntry(
-            new SecretKeySpec(masterKey, "AES")),
+        systemKey = MessageDigest.getInstance("SHA-256").digest(
+          Bytes.toBytes(SYSTEM_KEY_ALIAS));
+        store.setEntry(SYSTEM_KEY_ALIAS, new KeyStore.SecretKeyEntry(
+            new SecretKeySpec(systemKey, "AES")),
           new KeyStore.PasswordProtection(withPasswordOnAlias ? PASSWORD.toCharArray() :
             new char[0]));
 
-        conf.set(HConstants.CRYPTO_MANAGED_KEY_STORE_SYSTEM_KEY_NAME_CONF_KEY, MASTER_KEY_ALIAS);
+        conf.set(HConstants.CRYPTO_MANAGED_KEY_STORE_SYSTEM_KEY_NAME_CONF_KEY, SYSTEM_KEY_ALIAS);
 
-        passwdProps.setProperty(MASTER_KEY_ALIAS, PASSWORD);
+        passwdProps.setProperty(SYSTEM_KEY_ALIAS, PASSWORD);
       }
     }
 
@@ -120,6 +121,14 @@ public class TestManagedKeyProvider {
       String confKey = HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + encPrefix + "."
       + "alias";
       conf.set(confKey, alias);
+    }
+
+    @Test
+    public void testMissingConfig() throws Exception {
+      managedKeyProvider.initConfig(null);
+      RuntimeException ex = assertThrows(RuntimeException.class,
+        () -> managedKeyProvider.getSystemKey(null));
+      assertEquals("initConfig is not called or config is null", ex.getMessage());
     }
 
     @Test
@@ -170,8 +179,16 @@ public class TestManagedKeyProvider {
     @Test
     public void testGetSystemKey() throws Exception {
       ManagedKeyData clusterKeyData = managedKeyProvider.getSystemKey(clusterId.getBytes());
-      assertKeyData(clusterKeyData, ManagedKeyStatus.ACTIVE, masterKey, clusterId.getBytes(),
-        MASTER_KEY_ALIAS);
+      assertKeyData(clusterKeyData, ManagedKeyStatus.ACTIVE, systemKey, clusterId.getBytes(),
+        SYSTEM_KEY_ALIAS);
+      conf.unset(HConstants.CRYPTO_MANAGED_KEY_STORE_SYSTEM_KEY_NAME_CONF_KEY);
+      RuntimeException ex = assertThrows(RuntimeException.class,
+        () -> managedKeyProvider.getSystemKey(null));
+      assertEquals("No alias configured for system key", ex.getMessage());
+      conf.set(HConstants.CRYPTO_MANAGED_KEY_STORE_SYSTEM_KEY_NAME_CONF_KEY, "non_existing_alias");
+      ex = assertThrows(RuntimeException.class,
+        () -> managedKeyProvider.getSystemKey(null));
+      assertTrue(ex.getMessage().startsWith("Unable to find system key with alias:"));
     }
 
     @Test
@@ -229,7 +246,7 @@ public class TestManagedKeyProvider {
   public static class TestManagedKeyProviderDefault {
     @ClassRule
     public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestManagedKeyProvider.class);
+      HBaseClassTestRule.forClass(TestManagedKeyProviderDefault.class);
 
     @Test public void testEncodeToStr() {
       byte[] input = { 72, 101, 108, 108, 111 }; // "Hello" in ASCII

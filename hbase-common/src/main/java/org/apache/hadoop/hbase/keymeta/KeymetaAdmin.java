@@ -39,7 +39,8 @@ public interface KeymetaAdmin {
    * @return The list of {@link ManagedKeyData} objects each identifying the key and its current status.
    * @throws IOException if an error occurs while enabling key management.
    */
-  List<ManagedKeyData> enableKeyManagement(String keyCust, String keyNamespace) throws IOException;
+  List<ManagedKeyData> enableKeyManagement(String keyCust, String keyNamespace)
+    throws IOException, KeyException;
 
   /**
    * Get the status of all the keys for the specified custodian.

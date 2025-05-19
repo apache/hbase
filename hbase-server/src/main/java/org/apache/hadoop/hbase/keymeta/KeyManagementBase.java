@@ -37,7 +37,7 @@ public abstract class KeyManagementBase {
   private final Server server;
 
   private Boolean keyManagementEnabled;
-  private Integer perPrefixActiveKeyCount;
+  private Integer perCustNamespaceActiveKeyCount;
 
   public KeyManagementBase(Server server) {
     this.server = server;
@@ -83,16 +83,16 @@ public abstract class KeyManagementBase {
     }
   }
 
-  protected int getPerPrefixActiveKeyConfCount() throws IOException {
-    if (perPrefixActiveKeyCount == null) {
-      perPrefixActiveKeyCount = getServer().getConfiguration().getInt(
-        HConstants.CRYPTO_MANAGED_KEYS_PER_CUST_ACTIVE_KEY_COUNT,
-        HConstants.CRYPTO_MANAGED_KEYS_PER_CUST_ACTIVE_KEY_DEFAULT_COUNT);
+  protected int getPerCustodianNamespaceActiveKeyConfCount() throws IOException {
+    if (perCustNamespaceActiveKeyCount == null) {
+      perCustNamespaceActiveKeyCount = getServer().getConfiguration().getInt(
+        HConstants.CRYPTO_MANAGED_KEYS_PER_CUST_NAMESPACE_ACTIVE_KEY_COUNT,
+        HConstants.CRYPTO_MANAGED_KEYS_PER_CUST_NAMESPACE_ACTIVE_KEY_DEFAULT_COUNT);
     }
-    if (perPrefixActiveKeyCount <= 0) {
-      throw new IOException("Invalid value: " + perPrefixActiveKeyCount + " configured for: " +
-        HConstants.CRYPTO_MANAGED_KEYS_PER_CUST_ACTIVE_KEY_COUNT);
+    if (perCustNamespaceActiveKeyCount <= 0) {
+      throw new IOException("Invalid value: " + perCustNamespaceActiveKeyCount + " configured for: " +
+        HConstants.CRYPTO_MANAGED_KEYS_PER_CUST_NAMESPACE_ACTIVE_KEY_COUNT);
     }
-    return perPrefixActiveKeyCount;
+    return perCustNamespaceActiveKeyCount;
   }
 }

@@ -46,6 +46,7 @@ import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -70,7 +71,7 @@ public class TestKeymetaAdminImpl {
 
   protected FileSystem mockFileSystem = mock(FileSystem.class);
   protected Server mockServer = mock(Server.class);
-  protected KeymetaAdminImpl keymetaAdmin;
+  protected DummyKeymetaAdminImpl keymetaAdmin;
   KeymetaTableAccessor keymetaAccessor = mock(KeymetaTableAccessor.class);
 
   @Before
@@ -143,7 +144,7 @@ public class TestKeymetaAdminImpl {
     @Override
     public void setUp() throws Exception {
       super.setUp();
-      conf.set(HConstants.CRYPTO_MANAGED_KEYS_PER_CUST_ACTIVE_KEY_COUNT,
+      conf.set(HConstants.CRYPTO_MANAGED_KEYS_PER_CUST_NAMESPACE_ACTIVE_KEY_COUNT,
         Integer.toString(nKeys));
     }
 
@@ -163,6 +164,8 @@ public class TestKeymetaAdminImpl {
         (ManagedKeyData keyData) -> assertKeyData(keyData, keyStatus,
           isNullKey ? null : managedKeyProvider.getMockedKey(cust,
             keySpace))));
+      verify(keymetaAccessor).getAllKeys(cust.getBytes(), keySpace);
+      reset(keymetaAccessor);
 
       keymetaAdmin.getManagedKeys(encodedCust, keySpace);
       verify(keymetaAccessor).getAllKeys(cust.getBytes(), keySpace);
@@ -179,6 +182,8 @@ public class TestKeymetaAdminImpl {
     @Parameter(0)
     public String keySpace;
 
+    private MockManagedKeyProvider managedKeyProvider;
+
     @Parameters(name = "{index},keySpace={0}")
     public static Collection<Object[]> data() {
       return Arrays.asList(
@@ -191,23 +196,59 @@ public class TestKeymetaAdminImpl {
     @Override
     public void setUp() throws Exception {
       super.setUp();
-      conf.set(HConstants.CRYPTO_MANAGED_KEYS_PER_CUST_ACTIVE_KEY_COUNT, "3");
-      MockManagedKeyProvider managedKeyProvider =
-        (MockManagedKeyProvider) Encryption.getKeyProvider(conf);
+      conf.set(HConstants.CRYPTO_MANAGED_KEYS_PER_CUST_NAMESPACE_ACTIVE_KEY_COUNT, "3");
+      managedKeyProvider = (MockManagedKeyProvider) Encryption.getKeyProvider(conf);
       managedKeyProvider.setMultikeyGenMode(true);
     }
 
     @Test
     public void testEnable() throws Exception {
+      List<ManagedKeyData> managedKeyStatuses;
       String cust = "cust1";
       String encodedCust = ManagedKeyProvider.encodeToStr(cust.getBytes());
-      List<ManagedKeyData> managedKeyStatuses =
-        keymetaAdmin.enableKeyManagement(encodedCust, keySpace);
-      assertNotNull(managedKeyStatuses);
-      assertEquals(3, managedKeyStatuses.size());
-      assertEquals(ACTIVE, managedKeyStatuses.get(0).getKeyStatus());
-      assertEquals(ACTIVE, managedKeyStatuses.get(1).getKeyStatus());
+      managedKeyStatuses = keymetaAdmin.enableKeyManagement(encodedCust, keySpace);
+      assertKeys(managedKeyStatuses, 3);
+      verify(keymetaAccessor).getAllKeys(cust.getBytes(), keySpace);
       verify(keymetaAccessor, times(3)).addKey(any());
+
+      reset(keymetaAccessor);
+
+      when(keymetaAccessor.getAllKeys(cust.getBytes(), keySpace)).thenReturn(managedKeyStatuses);
+      managedKeyStatuses = keymetaAdmin.enableKeyManagement(encodedCust, keySpace);
+      assertKeys(managedKeyStatuses, 3);
+      verify(keymetaAccessor, times(0)).addKey(any());
+
+      reset(keymetaAccessor);
+      when(keymetaAccessor.getAllKeys(cust.getBytes(), keySpace)).thenReturn(managedKeyStatuses);
+      keymetaAdmin.activeKeyCountOverride = 4;
+      managedKeyStatuses = keymetaAdmin.enableKeyManagement(encodedCust, keySpace);
+      assertKeys(managedKeyStatuses, 1);
+      verify(keymetaAccessor, times(1)).addKey(any());
+
+      reset(keymetaAccessor);
+      when(keymetaAccessor.getAllKeys(cust.getBytes(), keySpace)).thenReturn(managedKeyStatuses);
+      managedKeyProvider.setMultikeyGenMode(false);
+      managedKeyStatuses = keymetaAdmin.enableKeyManagement(encodedCust, keySpace);
+      assertKeys(managedKeyStatuses, 0);
+      verify(keymetaAccessor, times(0)).addKey(any());
+
+      //reset(keymetaAccessor);
+      managedKeyProvider.setMockedKeyStatus(cust, FAILED);
+      managedKeyStatuses = keymetaAdmin.enableKeyManagement(encodedCust, keySpace);
+      assertNotNull(managedKeyStatuses);
+      assertEquals(1, managedKeyStatuses.size());
+      assertEquals(FAILED, managedKeyStatuses.get(0).getKeyStatus());
+      verify(keymetaAccessor, times(1)).addKey(any());
+      // NOTE: Reset as this instance is shared for more than 1 test.
+      managedKeyProvider.setMockedKeyStatus(cust, ACTIVE);
+    }
+
+    private static void assertKeys(List<ManagedKeyData> managedKeyStatuses, int expectedCnt) {
+      assertNotNull(managedKeyStatuses);
+      assertEquals(expectedCnt, managedKeyStatuses.size());
+      for (int i = 0; i < managedKeyStatuses.size(); ++i) {
+        assertEquals(ACTIVE, managedKeyStatuses.get(i).getKeyStatus());
+      }
     }
   }
 
@@ -269,7 +310,7 @@ public class TestKeymetaAdminImpl {
 
     @Test
     public void test() throws Exception {
-      conf.set(HConstants.CRYPTO_MANAGED_KEYS_PER_CUST_ACTIVE_KEY_COUNT, keyCount);
+      conf.set(HConstants.CRYPTO_MANAGED_KEYS_PER_CUST_NAMESPACE_ACTIVE_KEY_COUNT, keyCount);
       String cust = "cust1";
       String encodedCust = ManagedKeyProvider.encodeToStr(cust.getBytes());
       assertThrows(expectedExType, () ->
@@ -280,6 +321,16 @@ public class TestKeymetaAdminImpl {
   private class DummyKeymetaAdminImpl extends KeymetaAdminImpl {
     public DummyKeymetaAdminImpl(Server mockServer, KeymetaTableAccessor mockAccessor) {
       super(mockServer);
+    }
+
+    public Integer activeKeyCountOverride;
+
+    @Override
+    protected int getPerCustodianNamespaceActiveKeyConfCount() throws IOException {
+      if (activeKeyCountOverride != null) {
+        return activeKeyCountOverride;
+      }
+      return super.getPerCustodianNamespaceActiveKeyConfCount();
     }
 
     @Override
