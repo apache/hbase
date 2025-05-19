@@ -97,6 +97,7 @@ allowed_expr+="|^PropertyList-1.0.dtd$"
 allowed_expr+="|^about.html$"
 allowed_expr+="|^jetty-dir.css$"
 
+
 if [ -n "${allow_hadoop}" ]; then
   #   * classes in packages that start with org.apache.hadoop, which by
   #     convention should be in a path that looks like org/apache/hadoop
