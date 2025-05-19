@@ -104,12 +104,7 @@ public class InfoServer {
   static AccessControlList buildAdminAcl(Configuration conf) {
     // Initialize admin users based on whether http ui auth is set to ldap or kerberos
     String httpAuthType = conf.get(HttpServer.HTTP_UI_AUTHENTICATION, "").toLowerCase();
-    String adminUsers = null;
-    if ("kerberos".equals(httpAuthType)) {
-      adminUsers = conf.get(HttpServer.HTTP_SPNEGO_AUTHENTICATION_ADMIN_USERS_KEY, null);
-    } else if ("ldap".equals(httpAuthType)) {
-      adminUsers = conf.get(HttpServer.HTTP_LDAP_AUTHENTICATION_ADMIN_USERS_KEY, null);
-    }
+    final String adminUsers = getAdminUsers(conf, httpAuthType);
     final String adminGroups =
       conf.get(HttpServer.HTTP_SPNEGO_AUTHENTICATION_ADMIN_GROUPS_KEY, null);
     if (adminUsers == null && adminGroups == null) {
@@ -117,6 +112,16 @@ public class InfoServer {
       return new AccessControlList("*", null);
     }
     return new AccessControlList(adminUsers, adminGroups);
+  }
+
+  private static String getAdminUsers(Configuration conf, String httpAuthType) {
+    if ("kerberos".equals(httpAuthType)) {
+      return conf.get(HttpServer.HTTP_SPNEGO_AUTHENTICATION_ADMIN_USERS_KEY, null);
+    } else if ("ldap".equals(httpAuthType)) {
+      return conf.get(HttpServer.HTTP_LDAP_AUTHENTICATION_ADMIN_USERS_KEY, null);
+    }
+    // If the auth type is not kerberos or ldap, return null
+    return null;
   }
 
   /**

@@ -81,14 +81,13 @@ public class TestLdapAdminACL extends LdapServerTestBase {
     LOG.info("HTTP server started: " + baseUrl);
   }
 
-  private static Configuration setLdapConfigurationWithACLs(Configuration conf) {
+  private static void setLdapConfigurationWithACLs(Configuration conf) {
     setLdapConfigurations(conf);
 
     // Enable LDAP admin ACL
     conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, true);
     conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_INSTRUMENTATION_REQUIRES_ADMIN, true);
     conf.set(HttpServer.HTTP_LDAP_AUTHENTICATION_ADMIN_USERS_KEY, "bjones");
-    return conf;
   }
 
   @Test

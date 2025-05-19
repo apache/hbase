@@ -82,7 +82,7 @@ public class LdapServerTestBase extends HttpServerFunctionalTest {
    * @param conf the Configuration object to set LDAP properties on
    * @return the configured Configuration object
    */
-  protected static Configuration setLdapConfigurations(Configuration conf) {
+  protected static void setLdapConfigurations(Configuration conf) {
     conf.setInt(HttpServer.HTTP_MAX_THREADS, TestHttpServer.MAX_THREADS);
 
     // Enable LDAP (pre-req)
@@ -94,7 +94,6 @@ public class LdapServerTestBase extends HttpServerFunctionalTest {
       LdapConstants.LDAP_SERVER_ADDR, ldapRule.getLdapServer().getPort()));
     conf.set("hadoop.http.authentication.ldap.enablestarttls", "false");
     conf.set("hadoop.http.authentication.ldap.basedn", LdapConstants.LDAP_BASE_DN);
-    return conf;
   }
 
   /**
@@ -102,7 +101,7 @@ public class LdapServerTestBase extends HttpServerFunctionalTest {
    * @param credentials the credentials to encode
    * @return the Basic Authentication header
    */
-  String getBasicAuthHeader(String credentials) {
+  private String getBasicAuthHeader(String credentials) {
     return AUTH_TYPE + new Base64(0).encodeToString(credentials.getBytes());
   }
 
