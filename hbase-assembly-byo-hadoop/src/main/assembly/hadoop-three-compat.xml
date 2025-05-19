@@ -71,6 +71,7 @@
         <exclude>org.slf4j:*</exclude>
         <exclude>org.apache.logging.log4j:*</exclude>
         <exclude>io.opentelemetry:*</exclude>
+        <exclude>io.opentelemetry.semconv:*</exclude>
         <!-- Exclude the opentelemetry agent that goes in the lib/trace directory -->
         <exclude>io.opentelemetry.javaagent:*</exclude>
         <!-- Exclude jline2 which goes into lib/zk-client. jline3 is a different artifact-->
