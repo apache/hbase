@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.quotas.QuotaSettingsFactory.QuotaGlobalsSettingsBypass;
 import org.apache.yetus.audience.InterfaceAudience;
-
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
@@ -174,6 +173,11 @@ public class GlobalQuotaSettingsImpl extends GlobalQuotaSettings {
           hasThrottle = true;
         }
         break;
+      case REQUEST_HANDLER_USAGE_MS:
+        if (throttleBuilder.hasReqHandlerUsageMs()) {
+          hasThrottle = true;
+        }
+        break;
       default:
     }
     return hasThrottle;
@@ -236,6 +240,9 @@ public class GlobalQuotaSettingsImpl extends GlobalQuotaSettings {
             case ATOMIC_WRITE_SIZE:
               throttleBuilder.clearAtomicWriteSize();
               break;
+            case REQUEST_HANDLER_USAGE_MS:
+              throttleBuilder.clearReqHandlerUsageMs();
+              break;
             default:
           }
           boolean hasThrottle = false;
@@ -295,6 +302,8 @@ public class GlobalQuotaSettingsImpl extends GlobalQuotaSettings {
           case ATOMIC_WRITE_SIZE:
             throttleBuilder.setAtomicWriteSize(otherProto.getTimedQuota());
             break;
+          case REQUEST_HANDLER_USAGE_MS:
+            throttleBuilder.setReqHandlerUsageMs(otherProto.getTimedQuota());
           default:
         }
       }
@@ -388,6 +397,8 @@ public class GlobalQuotaSettingsImpl extends GlobalQuotaSettings {
             case READ_CAPACITY_UNIT:
             case WRITE_CAPACITY_UNIT:
               builder.append(String.format("%dCU", timedQuota.getSoftLimit()));
+            case REQUEST_HANDLER_USAGE_MS:
+              builder.append(String.format("%dms", timedQuota.getSoftLimit()));
             default:
           }
         } else if (timedQuota.hasShare()) {
