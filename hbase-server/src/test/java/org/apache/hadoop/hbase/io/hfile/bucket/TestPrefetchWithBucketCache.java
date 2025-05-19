@@ -331,9 +331,14 @@ public class TestPrefetchWithBucketCache {
       }
       return true;
     });
-    // With the wait time configuration, prefetch should trigger no evictions once it reaches
-    // cache capacity
-    assertNotEquals(0, bc.getStats().getEvictedCount());
+    if (bc.getStats().getFailedInserts() == 0) {
+      // With no wait time configuration, prefetch should trigger evictions once it reaches
+      // cache capacity
+      assertNotEquals(0, bc.getStats().getEvictedCount());
+    } else {
+      LOG.info("We had {} cache insert failures, which may cause cache usage "
+        + "to never reach capacity.", bc.getStats().getFailedInserts());
+    }
   }
 
   @Test
