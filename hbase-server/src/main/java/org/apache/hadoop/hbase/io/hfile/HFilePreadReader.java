@@ -18,8 +18,6 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import java.io.IOException;
-import java.util.Optional;
-import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
@@ -39,10 +37,11 @@ public class HFilePreadReader extends HFileReaderImpl {
   public HFilePreadReader(ReaderContext context, HFileInfo fileInfo, CacheConfig cacheConf,
     Configuration conf) throws IOException {
     super(context, fileInfo, cacheConf, conf);
+    cacheConf.getBlockCache()
+      .ifPresent(cache -> cache.waitForCacheInitialization(WAIT_TIME_FOR_CACHE_INITIALIZATION));
     // master hosted regions, like the master procedures store wouldn't have a block cache
-    final MutableBoolean shouldCache = new MutableBoolean(cacheConf.getBlockCache().isPresent());
     // Prefetch file blocks upon open if requested
-    if (shouldCache.booleanValue() && cacheConf.shouldPrefetchOnOpen()) {
+    if (cacheConf.getBlockCache().isPresent() && cacheConf.shouldPrefetchOnOpen()) {
       PrefetchExecutor.request(path, new Runnable() {
         @Override
         public void run() {
@@ -50,16 +49,6 @@ public class HFilePreadReader extends HFileReaderImpl {
           long end = 0;
           HFile.Reader prefetchStreamReader = null;
           try {
-            cacheConf.getBlockCache().ifPresent(cache -> {
-              cache.waitForCacheInitialization(WAIT_TIME_FOR_CACHE_INITIALIZATION);
-              Optional<Boolean> result = cache.shouldCacheFile(path.getName());
-              shouldCache.setValue(result.isPresent() ? result.get().booleanValue() : true);
-            });
-            if (!shouldCache.booleanValue()) {
-              LOG.info("Prefetch skipped for file: {}", path);
-              return;
-            }
-
             ReaderContext streamReaderContext = ReaderContextBuilder.newBuilder(context)
               .withReaderType(ReaderContext.ReaderType.STREAM)
               .withInputStreamWrapper(new FSDataInputStreamWrapper(context.getFileSystem(),
