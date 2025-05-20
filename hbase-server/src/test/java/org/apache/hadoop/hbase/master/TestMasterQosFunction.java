@@ -129,5 +129,6 @@ public class TestMasterQosFunction extends QosTestHelper {
       lastFlushedSequenceIdRequest);
     checkMethod(conf, "RegionServerReport", HConstants.HIGH_QOS, qosFunction,
       regionServerReportRequest);
+    checkMethod(conf, "CompactRegion", HConstants.ADMIN_QOS, qosFunction);
   }
 }
