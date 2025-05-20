@@ -639,7 +639,9 @@
     -->
     <checkstyle.version>8.29</checkstyle.version>
     <exec.maven.version>3.1.0</exec.maven.version>
-    <error-prone.version>2.38.0</error-prone.version>
+    <!-- Error Prone 2.31.0 is the latest version which supports running on JDK 11, see
+    https://github.com/google/error-prone/releases/tag/v2.31.0 for details -->
+    <error-prone.version>2.31.0</error-prone.version>
     <jamon.plugin.version>2.4.2</jamon.plugin.version>
     <lifecycle.mapping.version>1.0.0</lifecycle.mapping.version>
     <maven.antrun.version>1.8</maven.antrun.version>
