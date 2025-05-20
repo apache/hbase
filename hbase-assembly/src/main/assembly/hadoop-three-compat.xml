@@ -211,6 +211,7 @@
         <include>org.slf4j:*</include>
         <include>org.apache.logging.log4j:*</include>
         <include>io.opentelemetry:*</include>
+        <include>io.opentelemetry.semconv:*</include>
       </includes>
     </dependencySet>
     <dependencySet>
