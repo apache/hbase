@@ -24,21 +24,33 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
-import java.util.List;
+import java.io.IOException;
 import java.util.Set;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
+/**
+ * Tests the deletion of HBase backups under continuous backup and PITR settings.
+ * <p>
+ * Terminology:
+ * <ul>
+ * <li><b>ct (current time)</b>: Current timestamp</li>
+ * <li><b>maxAllowedPITRTime (mapt)</b>: Maximum allowed time range for PITR, typically a
+ * cluster-level config (e.g., 30 days ago)</li>
+ * <li><b>cst (continuousBackupStartTime)</b>: Earliest time from which continuous backup is
+ * available</li>
+ * <li><b>fs</b>: Full backup start time (not reliably usable)</li>
+ * <li><b>fm</b>: Time when snapshot (logical freeze) was taken (we don't have this)</li>
+ * <li><b>fe</b>: Full backup end time (used as conservative proxy for fm)</li>
+ * </ul>
+ */
 @Category(LargeTests.class)
 public class TestBackupDeleteWithContinuousBackupAndPITR extends TestBackupBase {
   @ClassRule
@@ -46,112 +58,183 @@ public class TestBackupDeleteWithContinuousBackupAndPITR extends TestBackupBase 
     HBaseClassTestRule.forClass(TestBackupDeleteWithContinuousBackupAndPITR.class);
 
   private BackupSystemTable backupSystemTable;
-  private String backupId1;
-  private String backupId2;
-  private String backupId3;
-  private String backupId4;
-  private String backupId5;
 
   /**
-   * Sets up the backup environment before each test.
-   * <p>
-   * This includes:
-   * <ul>
-   * <li>Setting a 30-day PITR (Point-In-Time Recovery) window</li>
-   * <li>Registering table2 as a continuous backup table starting 40 days ago</li>
-   * <li>Creating a mix of full and incremental backups at specific time offsets (using
-   * EnvironmentEdge injection) to simulate scenarios like: - backups outside PITR window - valid
-   * PITR backups - incomplete PITR chains</li>
-   * <li>Resetting the system clock after time manipulation</li>
-   * </ul>
-   * This setup enables tests to evaluate deletion behavior of backups based on age, table type, and
-   * PITR chain requirements.
+   * Configures continuous backup with the specified CST (continuous backup start time).
    */
-  @Before
-  public void setup() throws Exception {
+  private void configureContinuousBackup(long cstTimestamp) throws IOException {
     conf1.setLong(CONF_CONTINUOUS_BACKUP_PITR_WINDOW_DAYS, 30);
     backupSystemTable = new BackupSystemTable(TEST_UTIL.getConnection());
 
-    long currentTime = System.currentTimeMillis();
-    long backupStartTime = currentTime - 40 * ONE_DAY_IN_MILLISECONDS;
-    backupSystemTable.addContinuousBackupTableSet(Set.of(table2), backupStartTime);
-
-    backupId1 = fullTableBackup(Lists.newArrayList(table1));
-    assertTrue(checkSucceeded(backupId1));
-
-    // 31 days back
-    EnvironmentEdgeManager
-      .injectEdge(() -> System.currentTimeMillis() - 31 * ONE_DAY_IN_MILLISECONDS);
-    backupId2 = fullTableBackup(Lists.newArrayList(table2));
-    assertTrue(checkSucceeded(backupId2));
-
-    // 32 days back
-    EnvironmentEdgeManager
-      .injectEdge(() -> System.currentTimeMillis() - 32 * ONE_DAY_IN_MILLISECONDS);
-    backupId3 = fullTableBackup(Lists.newArrayList(table2));
-    assertTrue(checkSucceeded(backupId3));
-
-    // 15 days back
-    EnvironmentEdgeManager
-      .injectEdge(() -> System.currentTimeMillis() - 15 * ONE_DAY_IN_MILLISECONDS);
-    backupId4 = fullTableBackup(Lists.newArrayList(table2));
-    assertTrue(checkSucceeded(backupId4));
-
-    // Reset clock
-    EnvironmentEdgeManager.reset();
-
-    backupId5 = incrementalTableBackup(Lists.newArrayList(table1));
-    assertTrue(checkSucceeded(backupId5));
+    backupSystemTable.addContinuousBackupTableSet(Set.of(table1), cstTimestamp);
   }
 
-  @After
-  public void teardown() throws Exception {
-    EnvironmentEdgeManager.reset();
-    // Try to delete all backups forcefully if they exist
-    for (String id : List.of(backupId1, backupId2, backupId3, backupId4, backupId5)) {
-      try {
-        deleteBackup(id, true);
-      } catch (Exception ignored) {
-      }
-    }
+  private void cleanupContinuousBackup() throws IOException {
+    backupSystemTable.removeContinuousBackupTableSet(Set.of(table1));
+  }
+
+  /**
+   * Main Case: continuousBackupStartTime < maxAllowedPITRTime
+   * <p>
+   * Sub Case: fe < cst
+   */
+  @Test
+  public void testDeletionWhenBackupCompletesBeforeCST() throws Exception {
+    long now = System.currentTimeMillis();
+    long cst = now - 40 * ONE_DAY_IN_MILLISECONDS; // CST = 40 days ago
+    configureContinuousBackup(cst);
+
+    String backupId =
+      createAndUpdateBackup(cst - ONE_DAY_IN_MILLISECONDS, cst - ONE_DAY_IN_MILLISECONDS + 1000);
+    assertDeletionSucceeds(backupSystemTable, backupId, false);
+
+    cleanupContinuousBackup();
+  }
+
+  /**
+   * Main Case: continuousBackupStartTime < maxAllowedPITRTime
+   * <p>
+   * Sub Case: fs < cst < fe
+   */
+  @Test
+  public void testDeletionWhenBackupStraddlesCST() throws Exception {
+    long now = System.currentTimeMillis();
+    long cst = now - 40 * ONE_DAY_IN_MILLISECONDS; // CST = 40 days ago
+    configureContinuousBackup(cst);
+
+    String backupId = createAndUpdateBackup(cst - 1000, cst + 1000);
+    assertDeletionSucceeds(backupSystemTable, backupId, false);
+
+    cleanupContinuousBackup();
+  }
+
+  /**
+   * Main Case: continuousBackupStartTime < maxAllowedPITRTime
+   * <p>
+   * Sub Case: fs >= cst && fe < mapt
+   */
+  @Test
+  public void testDeletionWhenBackupWithinCSTToMAPTRangeAndUncovered() throws Exception {
+    long now = System.currentTimeMillis();
+    long cst = now - 40 * ONE_DAY_IN_MILLISECONDS;
+    long mapt = now - 30 * ONE_DAY_IN_MILLISECONDS;
+    configureContinuousBackup(cst);
+
+    String backupId = createAndUpdateBackup(cst, mapt - 1000);
+    assertDeletionFails(backupSystemTable, backupId);
+
+    // Cover the backup with another backup
+    String coverId = createAndUpdateBackup(cst, mapt - 1000);
+
+    // Now, deletion should succeed because the backup is covered by the new one
+    assertDeletionSucceeds(backupSystemTable, backupId, false);
+    assertDeletionSucceeds(backupSystemTable, coverId, true);
+
+    cleanupContinuousBackup();
+  }
+
+  /**
+   * Main Case: continuousBackupStartTime < maxAllowedPITRTime
+   * <p>
+   * Sub Case: fs >= cst && fe >= mapt
+   */
+  @Test
+  public void testDeletionWhenBackupExtendsBeyondMAPTAndUncovered() throws Exception {
+    long now = System.currentTimeMillis();
+    long cst = now - 40 * ONE_DAY_IN_MILLISECONDS;
+    long mapt = now - 30 * ONE_DAY_IN_MILLISECONDS;
+    configureContinuousBackup(cst);
+
+    String backupId = createAndUpdateBackup(cst + 1000, mapt + 1000);
+    assertDeletionFails(backupSystemTable, backupId);
+
+    // Cover the backup with another backup
+    String coverId = createAndUpdateBackup(cst + 1000, mapt + 1000);
+
+    // Now, deletion should succeed because the backup is covered by the new one
+    assertDeletionSucceeds(backupSystemTable, backupId, false);
+    assertDeletionSucceeds(backupSystemTable, coverId, true);
+
+    cleanupContinuousBackup();
+  }
+
+  /**
+   * Main Case: continuousBackupStartTime >= maxAllowedPITRTime
+   * <p>
+   * Sub Case: fs < cst
+   */
+  @Test
+  public void testDeletionWhenBackupBeforeCST_ShouldSucceed() throws Exception {
+    long now = System.currentTimeMillis();
+    long cst = now - 20 * ONE_DAY_IN_MILLISECONDS;
+    configureContinuousBackup(cst);
+
+    String backupId = createAndUpdateBackup(cst - 1000, cst + 1000);
+    assertDeletionSucceeds(backupSystemTable, backupId, false);
+
+    cleanupContinuousBackup();
+  }
+
+  /**
+   * Main Case: continuousBackupStartTime >= maxAllowedPITRTime
+   * <p>
+   * Sub Case: fs >= cst
+   */
+  @Test
+  public void testDeletionWhenBackupAfterCST_ShouldFailUnlessCovered() throws Exception {
+    long now = System.currentTimeMillis();
+    long cst = now - 20 * ONE_DAY_IN_MILLISECONDS;
+    configureContinuousBackup(cst);
+
+    String backupId = createAndUpdateBackup(cst + 1000, cst + 2000);
+    assertDeletionFails(backupSystemTable, backupId);
+
+    // Cover the backup with another backup
+    String coverId = createAndUpdateBackup(cst + 1000, cst + 2000);
+
+    assertDeletionSucceeds(backupSystemTable, backupId, false);
+    assertDeletionSucceeds(backupSystemTable, coverId, true);
+
+    cleanupContinuousBackup();
   }
 
   @Test
   public void testDeleteIncrementalBackup() throws Exception {
-    assertDeletionSucceeds(backupSystemTable, backupId5, false);
+    long now = System.currentTimeMillis();
+    long cst = now - 20 * ONE_DAY_IN_MILLISECONDS;
+    configureContinuousBackup(cst);
+
+    String fullBackupId = fullTableBackup(Lists.newArrayList(table1));
+    String incrementalTableBackupId = incrementalTableBackup(Lists.newArrayList(table1));
+    assertDeletionSucceeds(backupSystemTable, incrementalTableBackupId, false);
+
+    assertDeletionSucceeds(backupSystemTable, fullBackupId, true);
   }
 
   @Test
   public void testDeleteFullBackupNonContinuousTable() throws Exception {
-    assertDeletionSucceeds(backupSystemTable, backupId1, false);
+    conf1.setLong(CONF_CONTINUOUS_BACKUP_PITR_WINDOW_DAYS, 30);
+    backupSystemTable = new BackupSystemTable(TEST_UTIL.getConnection());
+
+    long now = System.currentTimeMillis();
+    String backupId =
+      createAndUpdateBackup(now - ONE_DAY_IN_MILLISECONDS, now - ONE_DAY_IN_MILLISECONDS + 1000);
+    assertDeletionSucceeds(backupSystemTable, backupId, false);
   }
 
-  @Test
-  public void testDeletePITRIncompleteBackup() throws Exception {
-    assertDeletionSucceeds(backupSystemTable, backupId4, false);
-  }
+  /**
+   * Creates a full backup and updates its timestamps.
+   */
+  private String createAndUpdateBackup(long startTs, long completeTs) throws Exception {
+    String backupId = fullTableBackup(Lists.newArrayList(table1));
+    assertTrue(checkSucceeded(backupId));
 
-  @Test
-  public void testDeleteValidPITRBackupWithAnotherPresent() throws Exception {
-    assertDeletionSucceeds(backupSystemTable, backupId2, false);
-  }
+    BackupInfo backupInfo = getBackupInfoById(backupId);
+    backupInfo.setStartTs(startTs);
+    backupInfo.setCompleteTs(completeTs);
+    backupSystemTable.updateBackupInfo(backupInfo);
 
-  @Test
-  public void testDeleteOnlyValidPITRBackupFails() throws Exception {
-    // Delete backupId2 (31 days ago) — this should succeed
-    assertDeletionSucceeds(backupSystemTable, backupId2, false);
-
-    // Now backupId3 (32 days ago) is the only remaining PITR backup — deletion should fail
-    assertDeletionFails(backupSystemTable, backupId3, false);
-  }
-
-  @Test
-  public void testForceDeleteOnlyValidPITRBackup() throws Exception {
-    // Delete backupId2 (31 days ago)
-    assertDeletionSucceeds(backupSystemTable, backupId2, false);
-
-    // Force delete backupId3 — should succeed despite PITR constraints
-    assertDeletionSucceeds(backupSystemTable, backupId3, true);
+    return backupId;
   }
 
   private void assertDeletionSucceeds(BackupSystemTable table, String backupId,
@@ -161,9 +244,8 @@ public class TestBackupDeleteWithContinuousBackupAndPITR extends TestBackupBase 
     assertFalse("Backup should be deleted but still exists!", backupExists(table, backupId));
   }
 
-  private void assertDeletionFails(BackupSystemTable table, String backupId, boolean isForceDelete)
-    throws Exception {
-    int ret = deleteBackup(backupId, isForceDelete);
+  private void assertDeletionFails(BackupSystemTable table, String backupId) throws Exception {
+    int ret = deleteBackup(backupId, false);
     assertNotEquals(0, ret);
     assertTrue("Backup should still exist after failed deletion!", backupExists(table, backupId));
   }
@@ -182,5 +264,11 @@ public class TestBackupDeleteWithContinuousBackupAndPITR extends TestBackupBase 
     return isForceDelete
       ? new String[] { "delete", "-l", backupId, "-fd" }
       : new String[] { "delete", "-l", backupId };
+  }
+
+  private BackupInfo getBackupInfoById(String backupId) throws IOException {
+    return backupSystemTable.getBackupInfos(BackupInfo.BackupState.COMPLETE).stream()
+      .filter(b -> b.getBackupId().equals(backupId)).findFirst()
+      .orElseThrow(() -> new IllegalStateException("Backup should exist: " + backupId));
   }
 }
