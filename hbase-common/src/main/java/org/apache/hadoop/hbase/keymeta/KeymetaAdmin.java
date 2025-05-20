@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.keymeta;
 
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
-import org.apache.hadoop.hbase.io.crypto.ManagedKeyStatus;
 import org.apache.yetus.audience.InterfaceAudience;
 import java.io.IOException;
 import java.security.KeyException;

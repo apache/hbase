@@ -36,7 +36,7 @@ public class ManagedKeyStoreKeyProvider extends KeyStoreKeyProvider implements M
     // Encode clusterId too for consistency with that of key custodian.
     String keyMetadata = generateKeyMetadata(systemKeyAlias,
       ManagedKeyProvider.encodeToStr(clusterId));
-    return new ManagedKeyData(clusterId, ManagedKeyData.KEY_SPACE_GLOBAL, key, ManagedKeyStatus.ACTIVE,
+    return new ManagedKeyData(clusterId, ManagedKeyData.KEY_SPACE_GLOBAL, key, ManagedKeyState.ACTIVE,
       keyMetadata);
   }
 
@@ -63,10 +63,10 @@ public class ManagedKeyStoreKeyProvider extends KeyStoreKeyProvider implements M
     Key key = alias != null ? getKey(alias) : null;
     if (key != null) {
       return new ManagedKeyData(key_cust, ManagedKeyData.KEY_SPACE_GLOBAL, key,
-        isActive ? ManagedKeyStatus.ACTIVE : ManagedKeyStatus.INACTIVE, keyMetadataStr);
+        isActive ? ManagedKeyState.ACTIVE : ManagedKeyState.INACTIVE, keyMetadataStr);
     }
     return new ManagedKeyData(key_cust, ManagedKeyData.KEY_SPACE_GLOBAL, null,
-      isActive ? ManagedKeyStatus.FAILED : ManagedKeyStatus.DISABLED, keyMetadataStr);
+      isActive ? ManagedKeyState.FAILED : ManagedKeyState.DISABLED, keyMetadataStr);
   }
 
   private void checkConfig() {

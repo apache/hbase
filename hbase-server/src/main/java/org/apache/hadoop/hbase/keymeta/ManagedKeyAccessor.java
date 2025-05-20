@@ -64,7 +64,7 @@ public class ManagedKeyAccessor extends KeyManagementBase {
         keyData = provider.unwrapKey(keyMetadata);
         if (keyData != null) {
           LOG.info("Got key data with status: {} and metadata: {} for prefix: {}",
-            keyData.getKeyStatus(), keyData.getKeyMetadata(),
+            keyData.getKeyState(), keyData.getKeyMetadata(),
             ManagedKeyProvider.encodeToStr(key_cust));
           keymetaAccessor.addKey(keyData);
         }

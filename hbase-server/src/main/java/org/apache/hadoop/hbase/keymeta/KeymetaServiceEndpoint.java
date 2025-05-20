@@ -108,9 +108,9 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
       ManagedKeysResponse.Builder builder = getResponseBuilder(controller, request);
       if (builder.getKeyCust() != null && ! builder.getKeyCust().isEmpty()) {
         try {
-          List<ManagedKeyData> managedKeyStatuses = master.getKeymetaAdmin()
+          List<ManagedKeyData> managedKeyStates = master.getKeymetaAdmin()
             .enableKeyManagement(request.getKeyCust(), request.getKeyNamespace());
-          done.run(generateKeyStatusResponse(managedKeyStatuses, builder));
+          done.run(generateKeyStateResponse(managedKeyStates, builder));
         } catch (IOException e) {
           CoprocessorRpcUtils.setControllerException(controller, e);
         } catch (KeyException e) {
@@ -125,9 +125,9 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
       ManagedKeysResponse.Builder builder = getResponseBuilder(controller, request);
       if (builder.getKeyCust() != null && ! builder.getKeyCust().isEmpty()) {
         try {
-          List<ManagedKeyData> managedKeyStatuses = master.getKeymetaAdmin()
+          List<ManagedKeyData> managedKeyStates = master.getKeymetaAdmin()
             .getManagedKeys(request.getKeyCust(), request.getKeyNamespace());
-          done.run(generateKeyStatusResponse(managedKeyStatuses, builder));
+          done.run(generateKeyStateResponse(managedKeyStates, builder));
         } catch (IOException e) {
           CoprocessorRpcUtils.setControllerException(controller, e);
         } catch (KeyException e) {
@@ -151,18 +151,18 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
 
   // Assumes that all ManagedKeyData objects belong to the same custodian and namespace.
   @VisibleForTesting
-  public static GetManagedKeysResponse generateKeyStatusResponse(
-    List<ManagedKeyData> managedKeyStatuses, ManagedKeysResponse.Builder builder) {
+  public static GetManagedKeysResponse generateKeyStateResponse(
+    List<ManagedKeyData> managedKeyStates, ManagedKeysResponse.Builder builder) {
     GetManagedKeysResponse.Builder responseBuilder = GetManagedKeysResponse.newBuilder();
-    for (ManagedKeyData keyData: managedKeyStatuses) {
-      builder.setKeyStatus(ManagedKeysProtos.ManagedKeyStatus.valueOf(
-          keyData.getKeyStatus().getVal()))
+    for (ManagedKeyData keyData: managedKeyStates) {
+      builder.setKeyState(ManagedKeysProtos.ManagedKeyState.valueOf(
+          keyData.getKeyState().getVal()))
         .setKeyMetadata(keyData.getKeyMetadata())
         .setRefreshTimestamp(keyData.getRefreshTimestamp())
         .setReadOpCount(keyData.getReadOpCount())
         .setWriteOpCount(keyData.getWriteOpCount())
       ;
-      responseBuilder.addStatus(builder.build());
+      responseBuilder.addState(builder.build());
     }
     return responseBuilder.build();
   }
@@ -174,7 +174,7 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
     try {
       key_cust = Base64.getDecoder().decode(request.getKeyCust());
     } catch (IllegalArgumentException e) {
-      builder.setKeyStatus(ManagedKeysProtos.ManagedKeyStatus.KEY_FAILED);
+      builder.setKeyState(ManagedKeysProtos.ManagedKeyState.KEY_FAILED);
       CoprocessorRpcUtils.setControllerException(controller, new IOException(
         "Failed to decode specified prefix as Base64 string: " + request.getKeyCust(), e));
     }

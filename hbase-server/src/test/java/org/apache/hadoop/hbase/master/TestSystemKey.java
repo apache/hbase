@@ -37,8 +37,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.stream.IntStream;
 import static org.apache.hadoop.hbase.HConstants.SYSTEM_KEY_FILE_PREFIX;
-import static org.apache.hadoop.hbase.io.crypto.ManagedKeyStatus.ACTIVE;
-import static org.apache.hadoop.hbase.io.crypto.ManagedKeyStatus.INACTIVE;
+import static org.apache.hadoop.hbase.io.crypto.ManagedKeyState.ACTIVE;
+import static org.apache.hadoop.hbase.io.crypto.ManagedKeyState.INACTIVE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
@@ -267,7 +267,7 @@ public class TestSystemKey {
     public void testEnsureSystemKeyInitialized_WithNoNonActiveKey() throws Exception {
       String metadata = "key-metadata";
       ManagedKeyData keyData = mock(ManagedKeyData.class);
-      when(keyData.getKeyStatus()).thenReturn(INACTIVE);
+      when(keyData.getKeyState()).thenReturn(INACTIVE);
       when(keyData.getKeyMetadata()).thenReturn(metadata);
       when(mockKeyProvide.getSystemKey(any())).thenReturn(keyData);
 
@@ -279,7 +279,7 @@ public class TestSystemKey {
     @Test
     public void testEnsureSystemKeyInitialized_WithInvalidMetadata() throws Exception {
       ManagedKeyData keyData = mock(ManagedKeyData.class);
-      when(keyData.getKeyStatus()).thenReturn(ACTIVE);
+      when(keyData.getKeyState()).thenReturn(ACTIVE);
       when(mockKeyProvide.getSystemKey(any())).thenReturn(keyData);
 
       IOException ex = assertThrows(IOException.class, manager::ensureSystemKeyInitialized);
@@ -290,7 +290,7 @@ public class TestSystemKey {
     public void testEnsureSystemKeyInitialized_WithSaveFailure() throws Exception {
       String metadata = "key-metadata";
       ManagedKeyData keyData = mock(ManagedKeyData.class);
-      when(keyData.getKeyStatus()).thenReturn(ACTIVE);
+      when(keyData.getKeyState()).thenReturn(ACTIVE);
       when(mockKeyProvide.getSystemKey(any())).thenReturn(keyData);
       when(keyData.getKeyMetadata()).thenReturn(metadata);
       when(mockFileSystem.globStatus(any())).thenReturn(new FileStatus[0]);
@@ -308,7 +308,7 @@ public class TestSystemKey {
     public void testEnsureSystemKeyInitialized_RaceCondition() throws Exception {
       String metadata = "key-metadata";
       ManagedKeyData keyData = mock(ManagedKeyData.class);
-      when(keyData.getKeyStatus()).thenReturn(ACTIVE);
+      when(keyData.getKeyState()).thenReturn(ACTIVE);
       when(mockKeyProvide.getSystemKey(any())).thenReturn(keyData);
       when(keyData.getKeyMetadata()).thenReturn(metadata);
       when(mockFileSystem.globStatus(any())).thenReturn(new FileStatus[0]);

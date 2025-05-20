@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
-import org.apache.hadoop.hbase.io.crypto.ManagedKeyStatus;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyState;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -71,8 +71,8 @@ public class KeymetaTableAccessor extends KeyManagementBase {
   public static final String REFRESHED_TIMESTAMP_QUAL_NAME = "refreshed_timestamp";
   public static final byte[] REFRESHED_TIMESTAMP_QUAL_BYTES = Bytes.toBytes(REFRESHED_TIMESTAMP_QUAL_NAME);
 
-  public static final String KEY_STATUS_QUAL_NAME = "key_status";
-  public static final byte[] KEY_STATUS_QUAL_BYTES = Bytes.toBytes(KEY_STATUS_QUAL_NAME);
+  public static final String KEY_STATE_QUAL_NAME = "key_state";
+  public static final byte[] KEY_STATE_QUAL_BYTES = Bytes.toBytes(KEY_STATE_QUAL_NAME);
 
   public static final String READ_OP_COUNT_QUAL_NAME = "read_op_count";
   public static final byte[] READ_OP_COUNT_QUAL_BYTES = Bytes.toBytes(READ_OP_COUNT_QUAL_NAME);
@@ -147,7 +147,7 @@ public class KeymetaTableAccessor extends KeyManagementBase {
     assertKeyManagementEnabled();
     List<ManagedKeyData> activeKeys = new ArrayList<>();
     for (ManagedKeyData keyData : getAllKeys(key_cust, keyNamespace)) {
-      if (keyData.getKeyStatus() == ManagedKeyStatus.ACTIVE) {
+      if (keyData.getKeyState() == ManagedKeyState.ACTIVE) {
         activeKeys.add(keyData);
       }
     }
@@ -220,8 +220,8 @@ public class KeymetaTableAccessor extends KeyManagementBase {
       .addColumn(KEY_META_INFO_FAMILY, DEK_METADATA_QUAL_BYTES, keyData.getKeyMetadata().getBytes())
       .addColumn(KEY_META_INFO_FAMILY, REFRESHED_TIMESTAMP_QUAL_BYTES,
         Bytes.toBytes(keyData.getRefreshTimestamp()))
-      .addColumn(KEY_META_INFO_FAMILY, KEY_STATUS_QUAL_BYTES,
-        new byte[] { keyData.getKeyStatus().getVal() })
+      .addColumn(KEY_META_INFO_FAMILY, KEY_STATE_QUAL_BYTES,
+        new byte[] { keyData.getKeyState().getVal() })
       ;
   }
 
@@ -245,14 +245,14 @@ public class KeymetaTableAccessor extends KeyManagementBase {
     if (result == null || result.isEmpty()) {
       return null;
     }
-    ManagedKeyStatus keyStatus = ManagedKeyStatus.forValue(
-      result.getValue(KEY_META_INFO_FAMILY, KEY_STATUS_QUAL_BYTES)[0]);
+    ManagedKeyState keyState = ManagedKeyState.forValue(
+      result.getValue(KEY_META_INFO_FAMILY, KEY_STATE_QUAL_BYTES)[0]);
     String dekMetadata = Bytes.toString(result.getValue(KEY_META_INFO_FAMILY,
       DEK_METADATA_QUAL_BYTES));
     byte[] dekWrappedByStk = result.getValue(KEY_META_INFO_FAMILY, DEK_WRAPPED_BY_STK_QUAL_BYTES);
-    if ((keyStatus == ManagedKeyStatus.ACTIVE || keyStatus == ManagedKeyStatus.INACTIVE)
+    if ((keyState == ManagedKeyState.ACTIVE || keyState == ManagedKeyState.INACTIVE)
         && dekWrappedByStk == null) {
-      throw new IOException(keyStatus + " key must have a wrapped key");
+      throw new IOException(keyState + " key must have a wrapped key");
     }
     Key dek = null;
     if (dekWrappedByStk != null) {
@@ -274,7 +274,7 @@ public class KeymetaTableAccessor extends KeyManagementBase {
     byte[] writeOpValue = result.getValue(KEY_META_INFO_FAMILY, WRITE_OP_COUNT_QUAL_BYTES);
     long writeOpCount = writeOpValue != null ? Bytes.toLong(writeOpValue) : 0;
     ManagedKeyData
-      dekKeyData = new ManagedKeyData(key_cust, keyNamespace, dek, keyStatus, dekMetadata,
+      dekKeyData = new ManagedKeyData(key_cust, keyNamespace, dek, keyState, dekMetadata,
       refreshedTimestamp, readOpCount, writeOpCount);
     if (dek != null) {
       long dekChecksum = Bytes.toLong(result.getValue(KEY_META_INFO_FAMILY,

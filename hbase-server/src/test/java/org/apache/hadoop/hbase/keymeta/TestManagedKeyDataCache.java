@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.keymeta;
 
 import static org.apache.hadoop.hbase.io.crypto.ManagedKeyData.KEY_SPACE_GLOBAL;
-import static org.apache.hadoop.hbase.io.crypto.ManagedKeyStatus.FAILED;
+import static org.apache.hadoop.hbase.io.crypto.ManagedKeyState.FAILED;
 import static org.junit.Assert.*;
 
 import org.apache.hadoop.conf.Configuration;
@@ -141,7 +141,7 @@ public class TestManagedKeyDataCache {
 
   @Test
   public void testRandomKeyGetNoActive() throws Exception {
-    managedKeyProvider.setMockedKeyStatus(ALIAS, FAILED);
+    managedKeyProvider.setMockedKeyState(ALIAS, FAILED);
     for (int i = 0; i < 20; ++i) {
       cache.addEntry(managedKeyProvider.getManagedKey(CUST_ID, KEY_SPACE_GLOBAL));
     }

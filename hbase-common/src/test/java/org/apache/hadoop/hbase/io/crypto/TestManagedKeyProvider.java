@@ -136,7 +136,7 @@ public class TestManagedKeyProvider {
       for (Bytes prefix : prefix2key.keySet()) {
         ManagedKeyData keyData = managedKeyProvider.getManagedKey(prefix.get(),
           ManagedKeyData.KEY_SPACE_GLOBAL);
-        assertKeyData(keyData, ManagedKeyStatus.ACTIVE, prefix2key.get(prefix).get(), prefix.get(),
+        assertKeyData(keyData, ManagedKeyState.ACTIVE, prefix2key.get(prefix).get(), prefix.get(),
           prefix2alias.get(prefix));
       }
     }
@@ -150,7 +150,7 @@ public class TestManagedKeyProvider {
       ManagedKeyData keyData = managedKeyProvider.getManagedKey(firstPrefix.get(),
         ManagedKeyData.KEY_SPACE_GLOBAL);
       assertNotNull(keyData);
-      assertKeyData(keyData, ManagedKeyStatus.INACTIVE, prefix2key.get(firstPrefix).get(),
+      assertKeyData(keyData, ManagedKeyState.INACTIVE, prefix2key.get(firstPrefix).get(),
         firstPrefix.get(), prefix2alias.get(firstPrefix));
     }
 
@@ -160,7 +160,7 @@ public class TestManagedKeyProvider {
       ManagedKeyData keyData = managedKeyProvider.getManagedKey(invalidPrefixBytes,
         ManagedKeyData.KEY_SPACE_GLOBAL);
       assertNotNull(keyData);
-      assertKeyData(keyData, ManagedKeyStatus.FAILED, null, invalidPrefixBytes, null);
+      assertKeyData(keyData, ManagedKeyState.FAILED, null, invalidPrefixBytes, null);
     }
 
     @Test
@@ -172,14 +172,14 @@ public class TestManagedKeyProvider {
       ManagedKeyData keyData = managedKeyProvider.getManagedKey(invalidPrefix,
         ManagedKeyData.KEY_SPACE_GLOBAL);
       assertNotNull(keyData);
-      assertKeyData(keyData, ManagedKeyStatus.DISABLED, null,
+      assertKeyData(keyData, ManagedKeyState.DISABLED, null,
         invalidPrefix, null);
     }
 
     @Test
     public void testGetSystemKey() throws Exception {
       ManagedKeyData clusterKeyData = managedKeyProvider.getSystemKey(clusterId.getBytes());
-      assertKeyData(clusterKeyData, ManagedKeyStatus.ACTIVE, systemKey, clusterId.getBytes(),
+      assertKeyData(clusterKeyData, ManagedKeyState.ACTIVE, systemKey, clusterId.getBytes(),
         SYSTEM_KEY_ALIAS);
       conf.unset(HConstants.CRYPTO_MANAGED_KEY_STORE_SYSTEM_KEY_NAME_CONF_KEY);
       RuntimeException ex = assertThrows(RuntimeException.class,
@@ -200,7 +200,7 @@ public class TestManagedKeyProvider {
         invalidPrefixEnc);
       ManagedKeyData keyData = managedKeyProvider.unwrapKey(invalidMetadata);
       assertNotNull(keyData);
-      assertKeyData(keyData, ManagedKeyStatus.FAILED, null, invalidPrefix,
+      assertKeyData(keyData, ManagedKeyState.FAILED, null, invalidPrefix,
         invalidAlias);
     }
 
@@ -215,13 +215,13 @@ public class TestManagedKeyProvider {
         invalidPrefixEnc);
       ManagedKeyData keyData = managedKeyProvider.unwrapKey(invalidMetadata);
       assertNotNull(keyData);
-      assertKeyData(keyData, ManagedKeyStatus.DISABLED, null, invalidPrefix, invalidAlias);
+      assertKeyData(keyData, ManagedKeyState.DISABLED, null, invalidPrefix, invalidAlias);
     }
 
-    private void assertKeyData(ManagedKeyData keyData, ManagedKeyStatus expKeyStatus, byte[] key,
+    private void assertKeyData(ManagedKeyData keyData, ManagedKeyState expKeyState, byte[] key,
       byte[] prefixBytes, String alias) throws Exception {
       assertNotNull(keyData);
-      assertEquals(expKeyStatus, keyData.getKeyStatus());
+      assertEquals(expKeyState, keyData.getKeyState());
       if (key == null) {
         assertNull(keyData.getTheKey());
       }

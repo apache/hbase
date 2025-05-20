@@ -10,7 +10,7 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
-import org.apache.hadoop.hbase.io.crypto.ManagedKeyStatus;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyState;
 import org.apache.hadoop.hbase.io.crypto.MockManagedKeyProvider;
 import org.apache.hadoop.hbase.keymeta.KeymetaAdminImpl;
 import org.apache.hadoop.hbase.keymeta.KeymetaTableAccessor;
@@ -38,7 +38,7 @@ import java.util.Collection;
 import java.util.List;
 
 import static org.apache.hadoop.hbase.io.crypto.ManagedKeyData.KEY_SPACE_GLOBAL;
-import static org.apache.hadoop.hbase.io.crypto.ManagedKeyStatus.*;
+import static org.apache.hadoop.hbase.io.crypto.ManagedKeyState.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -124,11 +124,11 @@ public class TestKeymetaAdminImpl {
     @Parameter(1)
     public String keySpace;
     @Parameter(2)
-    public ManagedKeyStatus keyStatus;
+    public ManagedKeyState keyState;
     @Parameter(3)
     public boolean isNullKey;
 
-    @Parameters(name = "{index},nKeys={0},keySpace={1},keyStatus={2}")
+    @Parameters(name = "{index},nKeys={0},keySpace={1},keyState={2}")
     public static Collection<Object[]> data() {
       return Arrays.asList(
         new Object[][] {
@@ -153,15 +153,15 @@ public class TestKeymetaAdminImpl {
       MockManagedKeyProvider managedKeyProvider =
         (MockManagedKeyProvider) Encryption.getKeyProvider(conf);
       String cust = "cust1";
-      managedKeyProvider.setMockedKeyStatus(cust, keyStatus);
+      managedKeyProvider.setMockedKeyState(cust, keyState);
       String encodedCust = ManagedKeyProvider.encodeToStr(cust.getBytes());
-      List<ManagedKeyData> managedKeyStatuses =
+      List<ManagedKeyData> managedKeyStates =
         keymetaAdmin.enableKeyManagement(encodedCust, keySpace);
-      assertNotNull(managedKeyStatuses);
-      assertEquals(1, managedKeyStatuses.size());
-      assertEquals(keyStatus, managedKeyStatuses.get(0).getKeyStatus());
+      assertNotNull(managedKeyStates);
+      assertEquals(1, managedKeyStates.size());
+      assertEquals(keyState, managedKeyStates.get(0).getKeyState());
       verify(keymetaAccessor).addKey(argThat(
-        (ManagedKeyData keyData) -> assertKeyData(keyData, keyStatus,
+        (ManagedKeyData keyData) -> assertKeyData(keyData, keyState,
           isNullKey ? null : managedKeyProvider.getMockedKey(cust,
             keySpace))));
       verify(keymetaAccessor).getAllKeys(cust.getBytes(), keySpace);
@@ -203,51 +203,51 @@ public class TestKeymetaAdminImpl {
 
     @Test
     public void testEnable() throws Exception {
-      List<ManagedKeyData> managedKeyStatuses;
+      List<ManagedKeyData> managedKeyStates;
       String cust = "cust1";
       String encodedCust = ManagedKeyProvider.encodeToStr(cust.getBytes());
-      managedKeyStatuses = keymetaAdmin.enableKeyManagement(encodedCust, keySpace);
-      assertKeys(managedKeyStatuses, 3);
+      managedKeyStates = keymetaAdmin.enableKeyManagement(encodedCust, keySpace);
+      assertKeys(managedKeyStates, 3);
       verify(keymetaAccessor).getAllKeys(cust.getBytes(), keySpace);
       verify(keymetaAccessor, times(3)).addKey(any());
 
       reset(keymetaAccessor);
 
-      when(keymetaAccessor.getAllKeys(cust.getBytes(), keySpace)).thenReturn(managedKeyStatuses);
-      managedKeyStatuses = keymetaAdmin.enableKeyManagement(encodedCust, keySpace);
-      assertKeys(managedKeyStatuses, 3);
+      when(keymetaAccessor.getAllKeys(cust.getBytes(), keySpace)).thenReturn(managedKeyStates);
+      managedKeyStates = keymetaAdmin.enableKeyManagement(encodedCust, keySpace);
+      assertKeys(managedKeyStates, 3);
       verify(keymetaAccessor, times(0)).addKey(any());
 
       reset(keymetaAccessor);
-      when(keymetaAccessor.getAllKeys(cust.getBytes(), keySpace)).thenReturn(managedKeyStatuses);
+      when(keymetaAccessor.getAllKeys(cust.getBytes(), keySpace)).thenReturn(managedKeyStates);
       keymetaAdmin.activeKeyCountOverride = 4;
-      managedKeyStatuses = keymetaAdmin.enableKeyManagement(encodedCust, keySpace);
-      assertKeys(managedKeyStatuses, 1);
+      managedKeyStates = keymetaAdmin.enableKeyManagement(encodedCust, keySpace);
+      assertKeys(managedKeyStates, 1);
       verify(keymetaAccessor, times(1)).addKey(any());
 
       reset(keymetaAccessor);
-      when(keymetaAccessor.getAllKeys(cust.getBytes(), keySpace)).thenReturn(managedKeyStatuses);
+      when(keymetaAccessor.getAllKeys(cust.getBytes(), keySpace)).thenReturn(managedKeyStates);
       managedKeyProvider.setMultikeyGenMode(false);
-      managedKeyStatuses = keymetaAdmin.enableKeyManagement(encodedCust, keySpace);
-      assertKeys(managedKeyStatuses, 0);
+      managedKeyStates = keymetaAdmin.enableKeyManagement(encodedCust, keySpace);
+      assertKeys(managedKeyStates, 0);
       verify(keymetaAccessor, times(0)).addKey(any());
 
       //reset(keymetaAccessor);
-      managedKeyProvider.setMockedKeyStatus(cust, FAILED);
-      managedKeyStatuses = keymetaAdmin.enableKeyManagement(encodedCust, keySpace);
-      assertNotNull(managedKeyStatuses);
-      assertEquals(1, managedKeyStatuses.size());
-      assertEquals(FAILED, managedKeyStatuses.get(0).getKeyStatus());
+      managedKeyProvider.setMockedKeyState(cust, FAILED);
+      managedKeyStates = keymetaAdmin.enableKeyManagement(encodedCust, keySpace);
+      assertNotNull(managedKeyStates);
+      assertEquals(1, managedKeyStates.size());
+      assertEquals(FAILED, managedKeyStates.get(0).getKeyState());
       verify(keymetaAccessor, times(1)).addKey(any());
       // NOTE: Reset as this instance is shared for more than 1 test.
-      managedKeyProvider.setMockedKeyStatus(cust, ACTIVE);
+      managedKeyProvider.setMockedKeyState(cust, ACTIVE);
     }
 
-    private static void assertKeys(List<ManagedKeyData> managedKeyStatuses, int expectedCnt) {
-      assertNotNull(managedKeyStatuses);
-      assertEquals(expectedCnt, managedKeyStatuses.size());
-      for (int i = 0; i < managedKeyStatuses.size(); ++i) {
-        assertEquals(ACTIVE, managedKeyStatuses.get(i).getKeyStatus());
+    private static void assertKeys(List<ManagedKeyData> managedKeyStates, int expectedCnt) {
+      assertNotNull(managedKeyStates);
+      assertEquals(expectedCnt, managedKeyStates.size());
+      for (int i = 0; i < managedKeyStates.size(); ++i) {
+        assertEquals(ACTIVE, managedKeyStates.get(i).getKeyState());
       }
     }
   }
@@ -345,10 +345,10 @@ public class TestKeymetaAdminImpl {
     }
   }
 
-  protected boolean assertKeyData(ManagedKeyData keyData, ManagedKeyStatus expKeyStatus,
+  protected boolean assertKeyData(ManagedKeyData keyData, ManagedKeyState expKeyState,
       Key expectedKey) {
     assertNotNull(keyData);
-    assertEquals(expKeyStatus, keyData.getKeyStatus());
+    assertEquals(expKeyState, keyData.getKeyState());
     if (expectedKey == null) {
       assertNull(keyData.getTheKey());
     }

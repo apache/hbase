@@ -25,7 +25,7 @@ import java.util.Map;
  * Enum of Managed key status. It is used to indicate the status of managed custodian keys.
  */
 @InterfaceAudience.Public
-public enum ManagedKeyStatus {
+public enum ManagedKeyState {
   /** Represents the active status of a managed key. */
   ACTIVE((byte) 1),
   /** Represents the inactive status of a managed key. */
@@ -36,11 +36,11 @@ public enum ManagedKeyStatus {
   DISABLED((byte) 4),
   ;
 
-  private static Map<Byte, ManagedKeyStatus> lookupByVal;
+  private static Map<Byte, ManagedKeyState> lookupByVal;
 
   private final byte val;
 
-  private ManagedKeyStatus(byte val) {
+  private ManagedKeyState(byte val) {
     this.val = val;
   }
 
@@ -53,14 +53,14 @@ public enum ManagedKeyStatus {
   }
 
   /**
-   * Returns the ManagedKeyStatus for the given numeric value.
-   * @param val The numeric value of the desired ManagedKeyStatus
-   * @return The ManagedKeyStatus corresponding to the given value
+   * Returns the ManagedKeyState for the given numeric value.
+   * @param val The numeric value of the desired ManagedKeyState
+   * @return The ManagedKeyState corresponding to the given value
    */
-  public static ManagedKeyStatus forValue(byte val) {
+  public static ManagedKeyState forValue(byte val) {
     if (lookupByVal == null) {
-      Map<Byte, ManagedKeyStatus> tbl = new HashMap<>();
-      for (ManagedKeyStatus e: ManagedKeyStatus.values()) {
+      Map<Byte, ManagedKeyState> tbl = new HashMap<>();
+      for (ManagedKeyState e: ManagedKeyState.values()) {
         tbl.put(e.getVal(), e);
       }
       lookupByVal = tbl;

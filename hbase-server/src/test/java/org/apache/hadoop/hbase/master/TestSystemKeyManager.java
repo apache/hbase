@@ -23,7 +23,7 @@ import org.apache.hadoop.hbase.io.crypto.KeyProvider;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
 import org.apache.hadoop.hbase.io.crypto.MockManagedKeyProvider;
-import org.apache.hadoop.hbase.io.crypto.ManagedKeyStatus;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyState;
 import org.apache.hadoop.hbase.keymeta.SystemKeyAccessor;
 import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
 import org.apache.hadoop.hbase.keymeta.ManagedKeyTestBase;
@@ -90,7 +90,7 @@ public class TestSystemKeyManager extends ManagedKeyTestBase {
     // Test startup failure when the cluster key is INACTIVE
     SystemKeyManager tmpCKM = new SystemKeyManager(master);
     tmpCKM.ensureSystemKeyInitialized();
-    pbeKeyProvider.setMockedKeyStatus(pbeKeyProvider.getSystemKeyAlias(), ManagedKeyStatus.INACTIVE);
+    pbeKeyProvider.setMockedKeyState(pbeKeyProvider.getSystemKeyAlias(), ManagedKeyState.INACTIVE);
     assertThrows(IOException.class, tmpCKM::ensureSystemKeyInitialized);
   }
 

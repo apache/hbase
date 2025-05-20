@@ -2,7 +2,7 @@ package org.apache.hadoop.hbase.keymeta;
 
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
-import org.apache.hadoop.hbase.io.crypto.ManagedKeyStatus;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyState;
 import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.ManagedKeysRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.ManagedKeysResponse;
@@ -49,16 +49,16 @@ public class KeymetaAdminClient implements KeymetaAdmin {
     }
   }
 
-  private static List<ManagedKeyData> generateKeyDataList(ManagedKeysProtos.GetManagedKeysResponse statusResponse) {
-    List<ManagedKeyData> keyStatuses = new ArrayList<>();
-    for (ManagedKeysResponse status: statusResponse.getStatusList()) {
-      keyStatuses.add(new ManagedKeyData(
-        status.getKeyCustBytes().toByteArray(),
-        status.getKeyNamespace(), null,
-        ManagedKeyStatus.forValue((byte) status.getKeyStatus().getNumber()),
-        status.getKeyMetadata(),
-        status.getRefreshTimestamp(), status.getReadOpCount(), status.getWriteOpCount()));
+  private static List<ManagedKeyData> generateKeyDataList(ManagedKeysProtos.GetManagedKeysResponse stateResponse) {
+    List<ManagedKeyData> keyStates = new ArrayList<>();
+    for (ManagedKeysResponse state: stateResponse.getStateList()) {
+      keyStates.add(new ManagedKeyData(
+        state.getKeyCustBytes().toByteArray(),
+        state.getKeyNamespace(), null,
+        ManagedKeyState.forValue((byte) state.getKeyState().getNumber()),
+        state.getKeyMetadata(),
+        state.getRefreshTimestamp(), state.getReadOpCount(), state.getWriteOpCount()));
     }
-    return keyStatuses;
+    return keyStates;
   }
 }

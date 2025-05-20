@@ -45,7 +45,7 @@ public class TestManagedKeyData {
   private byte[] keyCust;
   private String keyNamespace;
   private Key theKey;
-  private ManagedKeyStatus keyStatus;
+  private ManagedKeyState keyState;
   private String keyMetadata;
   private ManagedKeyData managedKeyData;
 
@@ -56,9 +56,9 @@ public class TestManagedKeyData {
     KeyGenerator keyGen = KeyGenerator.getInstance("AES");
     keyGen.init(256);
     theKey = keyGen.generateKey();
-    keyStatus = ManagedKeyStatus.ACTIVE;
+    keyState = ManagedKeyState.ACTIVE;
     keyMetadata = "testMetadata";
-    managedKeyData = new ManagedKeyData(keyCust, keyNamespace, theKey, keyStatus, keyMetadata);
+    managedKeyData = new ManagedKeyData(keyCust, keyNamespace, theKey, keyState, keyMetadata);
   }
 
   @Test
@@ -67,7 +67,7 @@ public class TestManagedKeyData {
     assertEquals(keyNamespace, managedKeyData.getKeyNamespace());
     assertArrayEquals(keyCust, managedKeyData.getKeyCustodian());
     assertEquals(theKey, managedKeyData.getTheKey());
-    assertEquals(keyStatus, managedKeyData.getKeyStatus());
+    assertEquals(keyState, managedKeyData.getKeyState());
     assertEquals(keyMetadata, managedKeyData.getKeyMetadata());
   }
 
@@ -77,7 +77,7 @@ public class TestManagedKeyData {
     long readOpCount = 10;
     long writeOpCount = 5;
     ManagedKeyData keyDataWithCounts =
-      new ManagedKeyData(keyCust, keyNamespace, theKey, keyStatus, keyMetadata, refreshTimestamp,
+      new ManagedKeyData(keyCust, keyNamespace, theKey, keyState, keyMetadata, refreshTimestamp,
         readOpCount, writeOpCount);
 
     assertEquals(refreshTimestamp, keyDataWithCounts.getRefreshTimestamp());
@@ -88,21 +88,21 @@ public class TestManagedKeyData {
   @Test
   public void testConstructorNullChecks() {
     assertThrows(NullPointerException.class,
-      () -> new ManagedKeyData(null, keyNamespace, theKey, keyStatus, keyMetadata));
+      () -> new ManagedKeyData(null, keyNamespace, theKey, keyState, keyMetadata));
     assertThrows(NullPointerException.class,
-      () -> new ManagedKeyData(keyCust, null, theKey, keyStatus, keyMetadata));
+      () -> new ManagedKeyData(keyCust, null, theKey, keyState, keyMetadata));
     assertThrows(NullPointerException.class,
       () -> new ManagedKeyData(keyCust, keyNamespace, theKey, null, keyMetadata));
     assertThrows(NullPointerException.class,
-      () -> new ManagedKeyData(keyCust, keyNamespace, theKey, keyStatus, null));
+      () -> new ManagedKeyData(keyCust, keyNamespace, theKey, keyState, null));
   }
 
   @Test
   public void testConstructorNegativeCountChecks() {
     assertThrows(IllegalArgumentException.class,
-      () -> new ManagedKeyData(keyCust, keyNamespace, theKey, keyStatus, keyMetadata, 0, -1, 0));
+      () -> new ManagedKeyData(keyCust, keyNamespace, theKey, keyState, keyMetadata, 0, -1, 0));
     assertThrows(IllegalArgumentException.class,
-      () -> new ManagedKeyData(keyCust, keyNamespace, theKey, keyStatus, keyMetadata, 0, 0, -1));
+      () -> new ManagedKeyData(keyCust, keyNamespace, theKey, keyState, keyMetadata, 0, 0, -1));
   }
 
   @Test
@@ -111,7 +111,7 @@ public class TestManagedKeyData {
     assertNull(cloned.getTheKey());
     assertEquals(managedKeyData.getKeyCustodian(), cloned.getKeyCustodian());
     assertEquals(managedKeyData.getKeyNamespace(), cloned.getKeyNamespace());
-    assertEquals(managedKeyData.getKeyStatus(), cloned.getKeyStatus());
+    assertEquals(managedKeyData.getKeyState(), cloned.getKeyState());
     assertEquals(managedKeyData.getKeyMetadata(), cloned.getKeyMetadata());
   }
 
@@ -129,7 +129,7 @@ public class TestManagedKeyData {
 
     // Test with null key
     ManagedKeyData nullKeyData =
-      new ManagedKeyData(keyCust, keyNamespace, null, keyStatus, keyMetadata);
+      new ManagedKeyData(keyCust, keyNamespace, null, keyState, keyMetadata);
     assertEquals(0, nullKeyData.getKeyChecksum());
   }
 
@@ -166,7 +166,7 @@ public class TestManagedKeyData {
     String toString = managedKeyData.toString();
     assertTrue(toString.contains("keyCustodian"));
     assertTrue(toString.contains("keyNamespace"));
-    assertTrue(toString.contains("keyStatus"));
+    assertTrue(toString.contains("keyState"));
     assertTrue(toString.contains("keyMetadata"));
     assertTrue(toString.contains("refreshTimestamp"));
     assertTrue(toString.contains("keyChecksum"));
@@ -174,21 +174,21 @@ public class TestManagedKeyData {
 
   @Test
   public void testEquals() {
-    ManagedKeyData same = new ManagedKeyData(keyCust, keyNamespace, theKey, keyStatus, keyMetadata);
+    ManagedKeyData same = new ManagedKeyData(keyCust, keyNamespace, theKey, keyState, keyMetadata);
     assertEquals(managedKeyData, same);
 
     ManagedKeyData different =
-      new ManagedKeyData("differentCust".getBytes(), keyNamespace, theKey, keyStatus, keyMetadata);
+      new ManagedKeyData("differentCust".getBytes(), keyNamespace, theKey, keyState, keyMetadata);
     assertNotEquals(managedKeyData, different);
   }
 
   @Test
   public void testHashCode() {
-    ManagedKeyData same = new ManagedKeyData(keyCust, keyNamespace, theKey, keyStatus, keyMetadata);
+    ManagedKeyData same = new ManagedKeyData(keyCust, keyNamespace, theKey, keyState, keyMetadata);
     assertEquals(managedKeyData.hashCode(), same.hashCode());
 
     ManagedKeyData different =
-      new ManagedKeyData("differentCust".getBytes(), keyNamespace, theKey, keyStatus, keyMetadata);
+      new ManagedKeyData("differentCust".getBytes(), keyNamespace, theKey, keyState, keyMetadata);
     assertNotEquals(managedKeyData.hashCode(), different.hashCode());
   }
 

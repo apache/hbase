@@ -31,7 +31,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * A simple implementation of ManagedKeyProvider for testing. It generates a key on demand given a
- * prefix. One can control the state of a key by calling setKeyStatus and can rotate a key by
+ * prefix. One can control the state of a key by calling setKeyState and can rotate a key by
  * calling setKey.
  */
 public class MockManagedKeyProvider extends MockAesKeyProvider implements ManagedKeyProvider {
@@ -42,7 +42,7 @@ public class MockManagedKeyProvider extends MockAesKeyProvider implements Manage
   private Map<String, Map<String, ManagedKeyData>> lastGenKeyData = new HashMap<>();
   // Keep references of all generated keys by their full and partial metadata.
   private Map<String, Key> allGeneratedKeys = new HashMap<>();
-  private Map<String, ManagedKeyStatus> keyStatus = new HashMap<>();
+  private Map<String, ManagedKeyState> keyState = new HashMap<>();
   private String systemKeyAlias = "default_system_key_alias";
 
   @Override
@@ -66,11 +66,11 @@ public class MockManagedKeyProvider extends MockAesKeyProvider implements Manage
   public ManagedKeyData unwrapKey(String keyMetadata) throws IOException {
     if (allGeneratedKeys.containsKey(keyMetadata)) {
       String[] meta_toks = keyMetadata.split(":");
-      ManagedKeyStatus keyStatus = this.keyStatus.get(meta_toks[1]);
+      ManagedKeyState keyState = this.keyState.get(meta_toks[1]);
       ManagedKeyData managedKeyData =
         new ManagedKeyData(meta_toks[0].getBytes(), ManagedKeyData.KEY_SPACE_GLOBAL,
           allGeneratedKeys.get(keyMetadata),
-          keyStatus == null ? ManagedKeyStatus.ACTIVE : keyStatus, keyMetadata);
+          keyState == null ? ManagedKeyState.ACTIVE : keyState, keyMetadata);
       return registerKeyData(meta_toks[1], managedKeyData);
     }
     return null;
@@ -96,8 +96,8 @@ public class MockManagedKeyProvider extends MockAesKeyProvider implements Manage
     this.multikeyGenMode = multikeyGenMode;
   }
 
-  public void setMockedKeyStatus(String alias, ManagedKeyStatus status) {
-    keyStatus.put(alias, status);
+  public void setMockedKeyState(String alias, ManagedKeyState status) {
+    keyState.put(alias, status);
   }
 
   public void setMockedKey(String alias, Key key, String keyNamespace) {
@@ -137,13 +137,13 @@ public class MockManagedKeyProvider extends MockAesKeyProvider implements Manage
   }
 
   private ManagedKeyData getKey(byte[] key_cust, String alias, String key_namespace) {
-    ManagedKeyStatus keyStatus = this.keyStatus.get(alias);
+    ManagedKeyState keyState = this.keyState.get(alias);
     if (! keys.containsKey(key_namespace)) {
       keys.put(key_namespace, new HashMap<>());
     }
     Map<String, Key> keySpace = keys.get(key_namespace);
     Key key = null;
-    if (keyStatus != ManagedKeyStatus.FAILED && keyStatus != ManagedKeyStatus.DISABLED) {
+    if (keyState != ManagedKeyState.FAILED && keyState != ManagedKeyState.DISABLED) {
       if (multikeyGenMode || ! keySpace.containsKey(alias)) {
         key = generateSecretKey();
         keySpace.put(alias, key);
@@ -160,7 +160,7 @@ public class MockManagedKeyProvider extends MockAesKeyProvider implements Manage
     allGeneratedKeys.put(keyMetadata, key);
     ManagedKeyData managedKeyData =
       new ManagedKeyData(key_cust, ManagedKeyData.KEY_SPACE_GLOBAL, key,
-        keyStatus == null ? ManagedKeyStatus.ACTIVE : keyStatus, keyMetadata);
+        keyState == null ? ManagedKeyState.ACTIVE : keyState, keyMetadata);
     return registerKeyData(alias, managedKeyData);
   }
 }

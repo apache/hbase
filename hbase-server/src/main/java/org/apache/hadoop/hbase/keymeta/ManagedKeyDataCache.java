@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.keymeta;
 
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
-import org.apache.hadoop.hbase.io.crypto.ManagedKeyStatus;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyState;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -142,7 +142,7 @@ public class ManagedKeyDataCache {
       Map<String, ManagedKeyData> keyMap = nsCache != null ? nsCache.get(keyCust) : null;
       if (keyMap != null) {
         for (ManagedKeyData entry : keyMap.values()) {
-          if (entry.getKeyStatus() == ManagedKeyStatus.ACTIVE) {
+          if (entry.getKeyState() == ManagedKeyState.ACTIVE) {
             activeEntries.add(entry);
           }
         }

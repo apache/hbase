@@ -24,7 +24,6 @@ import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.keymeta.KeymetaServiceEndpoint.KeyMetaAdminServiceImpl;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.GetManagedKeysResponse;
-import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.ManagedKeyStatus;
 import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.ManagedKeysRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.ManagedKeysResponse;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -46,9 +45,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
-import static org.apache.hadoop.hbase.io.crypto.ManagedKeyStatus.ACTIVE;
-import static org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.ManagedKeyStatus.KEY_ACTIVE;
-import static org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.ManagedKeyStatus.KEY_FAILED;
+import static org.apache.hadoop.hbase.io.crypto.ManagedKeyState.ACTIVE;
+import static org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.ManagedKeyState.KEY_ACTIVE;
+import static org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.ManagedKeyState.KEY_FAILED;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -101,7 +100,7 @@ public class TestKeymetaEndpoint {
     keymetaServiceEndpoint.start(env);
     keyMetaAdminService = (KeyMetaAdminServiceImpl) keymetaServiceEndpoint.getServices()
       .iterator().next();
-    responseBuilder = ManagedKeysResponse.newBuilder().setKeyStatus(KEY_ACTIVE);
+    responseBuilder = ManagedKeysResponse.newBuilder().setKeyState(KEY_ACTIVE);
     requestBuilder = ManagedKeysRequest.newBuilder()
       .setKeyNamespace(ManagedKeyData.KEY_SPACE_GLOBAL);
     keyData1 = new ManagedKeyData(KEY_CUST.getBytes(), KEY_NAMESPACE,
@@ -124,7 +123,7 @@ public class TestKeymetaEndpoint {
     // Assert
     assertNotNull(result);
     assertArrayEquals("testKey".getBytes(), result);
-    assertEquals(KEY_ACTIVE, responseBuilder.getKeyStatus());
+    assertEquals(KEY_ACTIVE, responseBuilder.getKeyState());
     verify(controller, never()).setFailed(anyString());
   }
 
@@ -140,7 +139,7 @@ public class TestKeymetaEndpoint {
 
     // Assert
     assertNull(result);
-    assertEquals(KEY_FAILED, responseBuilder.getKeyStatus());
+    assertEquals(KEY_FAILED, responseBuilder.getKeyState());
     verify(controller).setFailed(anyString());
   }
 
@@ -179,56 +178,56 @@ public class TestKeymetaEndpoint {
     // Assert
     assertNotNull(result);
     assertEquals(keyNamespace, result.getKeyNamespace());
-    assertEquals(ManagedKeyStatus.KEY_FAILED, result.getKeyStatus());
+    assertEquals(KEY_FAILED, result.getKeyState());
     verify(controller).setFailed(contains("Failed to decode specified prefix as Base64 string"));
   }
 
   @Test
-  public void testGenerateKeyStatusResponse() throws Exception {
+  public void testGenerateKeyStateResponse() throws Exception {
     // Arrange
     ManagedKeysResponse response = responseBuilder.setKeyCustBytes(ByteString.copyFrom(
         keyData1.getKeyCustodian()))
       .setKeyNamespace(keyData1.getKeyNamespace())
       .build();
-    List<ManagedKeyData> managedKeyStatuses = Arrays.asList(keyData1, keyData2);
+    List<ManagedKeyData> managedKeyStates = Arrays.asList(keyData1, keyData2);
 
     // Act
-    GetManagedKeysResponse result = KeymetaServiceEndpoint.generateKeyStatusResponse(
-      managedKeyStatuses, responseBuilder);
+    GetManagedKeysResponse result = KeymetaServiceEndpoint.generateKeyStateResponse(
+      managedKeyStates, responseBuilder);
 
     // Assert
     assertNotNull(response);
-    assertNotNull(result.getStatusList());
-    assertEquals(2, result.getStatusList().size());
-    assertEquals(ManagedKeyStatus.KEY_ACTIVE, result.getStatusList().get(0).getKeyStatus());
+    assertNotNull(result.getStateList());
+    assertEquals(2, result.getStateList().size());
+    assertEquals(KEY_ACTIVE, result.getStateList().get(0).getKeyState());
     assertEquals(0, Bytes.compareTo(keyData1.getKeyCustodian(),
-      result.getStatusList().get(0).getKeyCustBytes().toByteArray()));
-    assertEquals(keyData1.getKeyNamespace(), result.getStatusList().get(0).getKeyNamespace());
+      result.getStateList().get(0).getKeyCustBytes().toByteArray()));
+    assertEquals(keyData1.getKeyNamespace(), result.getStateList().get(0).getKeyNamespace());
     verify(controller, never()).setFailed(anyString());
   }
 
   @Test
-  public void testGenerateKeyStatusResponse_Empty() throws Exception {
+  public void testGenerateKeyStateResponse_Empty() throws Exception {
     // Arrange
     ManagedKeysResponse response = responseBuilder.setKeyCustBytes(ByteString.copyFrom(
         keyData1.getKeyCustodian()))
       .setKeyNamespace(keyData1.getKeyNamespace())
       .build();
-    List<ManagedKeyData> managedKeyStatuses = new ArrayList<>();
+    List<ManagedKeyData> managedKeyStates = new ArrayList<>();
 
     // Act
-    GetManagedKeysResponse result = KeymetaServiceEndpoint.generateKeyStatusResponse(
-      managedKeyStatuses, responseBuilder);
+    GetManagedKeysResponse result = KeymetaServiceEndpoint.generateKeyStateResponse(
+      managedKeyStates, responseBuilder);
 
     // Assert
     assertNotNull(response);
-    assertNotNull(result.getStatusList());
-    assertEquals(0, result.getStatusList().size());
+    assertNotNull(result.getStateList());
+    assertEquals(0, result.getStateList().size());
     verify(controller, never()).setFailed(anyString());
   }
 
   @Test
-  public void testGenerateKeyStatusResponse_Success() throws Exception {
+  public void testGenerateKeyStatResponse_Success() throws Exception {
     doTestServiceCallForSuccess(
       (controller, request, done) ->
         keyMetaAdminService.enableKeyManagement(controller, request, done));
@@ -244,8 +243,8 @@ public class TestKeymetaEndpoint {
   private void doTestServiceCallForSuccess(ServiceCall svc) throws Exception {
     // Arrange
     ManagedKeysRequest request = requestBuilder.setKeyCust(KEY_CUST).build();
-    List<ManagedKeyData> managedKeyStatuses = Arrays.asList(keyData1);
-    when(keymetaAdmin.enableKeyManagement(any(), any())).thenReturn(managedKeyStatuses);
+    List<ManagedKeyData> managedKeyStates = Arrays.asList(keyData1);
+    when(keymetaAdmin.enableKeyManagement(any(), any())).thenReturn(managedKeyStates);
 
     // Act
     svc.call(controller, request, done);
@@ -261,7 +260,7 @@ public class TestKeymetaEndpoint {
   }
 
   @Test
-  public void testGenerateKeyStatusResponse_InvalidCust() throws Exception {
+  public void testGenerateKeyStateResponse_InvalidCust() throws Exception {
     // Arrange
     String invalidBase64 = "invalid!Base64@String";
     ManagedKeysRequest request = requestBuilder.setKeyCust(invalidBase64).build();
@@ -276,7 +275,7 @@ public class TestKeymetaEndpoint {
   }
 
   @Test
-  public void testGenerateKeyStatusResponse_IOException() throws Exception {
+  public void testGenerateKeyStateResponse_IOException() throws Exception {
     // Arrange
     when(keymetaAdmin.enableKeyManagement(any(), any())).thenThrow(IOException.class);
     ManagedKeysRequest request = requestBuilder.setKeyCust(KEY_CUST).build();

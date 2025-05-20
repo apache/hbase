@@ -18,15 +18,15 @@
 package org.apache.hadoop.hbase.keymeta;
 
 import static org.apache.hadoop.hbase.io.crypto.ManagedKeyData.KEY_SPACE_GLOBAL;
-import static org.apache.hadoop.hbase.io.crypto.ManagedKeyStatus.ACTIVE;
-import static org.apache.hadoop.hbase.io.crypto.ManagedKeyStatus.DISABLED;
-import static org.apache.hadoop.hbase.io.crypto.ManagedKeyStatus.FAILED;
-import static org.apache.hadoop.hbase.io.crypto.ManagedKeyStatus.INACTIVE;
+import static org.apache.hadoop.hbase.io.crypto.ManagedKeyState.ACTIVE;
+import static org.apache.hadoop.hbase.io.crypto.ManagedKeyState.DISABLED;
+import static org.apache.hadoop.hbase.io.crypto.ManagedKeyState.FAILED;
+import static org.apache.hadoop.hbase.io.crypto.ManagedKeyState.INACTIVE;
 import static org.apache.hadoop.hbase.keymeta.KeymetaTableAccessor.DEK_CHECKSUM_QUAL_BYTES;
 import static org.apache.hadoop.hbase.keymeta.KeymetaTableAccessor.DEK_METADATA_QUAL_BYTES;
 import static org.apache.hadoop.hbase.keymeta.KeymetaTableAccessor.DEK_WRAPPED_BY_STK_QUAL_BYTES;
 import static org.apache.hadoop.hbase.keymeta.KeymetaTableAccessor.KEY_META_INFO_FAMILY;
-import static org.apache.hadoop.hbase.keymeta.KeymetaTableAccessor.KEY_STATUS_QUAL_BYTES;
+import static org.apache.hadoop.hbase.keymeta.KeymetaTableAccessor.KEY_STATE_QUAL_BYTES;
 import static org.apache.hadoop.hbase.keymeta.KeymetaTableAccessor.READ_OP_COUNT_QUAL_BYTES;
 import static org.apache.hadoop.hbase.keymeta.KeymetaTableAccessor.REFRESHED_TIMESTAMP_QUAL_BYTES;
 import static org.apache.hadoop.hbase.keymeta.KeymetaTableAccessor.STK_CHECKSUM_QUAL_BYTES;
@@ -52,7 +52,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
-import org.apache.hadoop.hbase.io.crypto.ManagedKeyStatus;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyState;
 import org.apache.hadoop.hbase.io.crypto.MockManagedKeyProvider;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -137,9 +137,9 @@ public class TestKeymetaTableAccessor {
       HBaseClassTestRule.forClass(TestAdd.class);
 
     @Parameter(0)
-    public ManagedKeyStatus keyStatus;
+    public ManagedKeyState keyState;
 
-    @Parameterized.Parameters(name = "{index},keyStatus={0}")
+    @Parameterized.Parameters(name = "{index},keyState={0}")
     public static Collection<Object[]> data() {
       return Arrays.asList(
         new Object[][] { { ACTIVE }, { FAILED }, { INACTIVE }, { DISABLED }, });
@@ -147,7 +147,7 @@ public class TestKeymetaTableAccessor {
 
     @Test
     public void testAddActiveKey() throws Exception {
-      managedKeyProvider.setMockedKeyStatus(ALIAS, keyStatus);
+      managedKeyProvider.setMockedKeyState(ALIAS, keyState);
       ManagedKeyData keyData =
         managedKeyProvider.getManagedKey(CUST_ID, KEY_SPACE_GLOBAL);
 
@@ -178,9 +178,9 @@ public class TestKeymetaTableAccessor {
     public void setUp() throws Exception {
       super.setUp();
 
-      when(result1.getValue(eq(KEY_META_INFO_FAMILY), eq(KEY_STATUS_QUAL_BYTES)))
+      when(result1.getValue(eq(KEY_META_INFO_FAMILY), eq(KEY_STATE_QUAL_BYTES)))
         .thenReturn(new byte[] { ACTIVE.getVal() });
-      when(result2.getValue(eq(KEY_META_INFO_FAMILY), eq(KEY_STATUS_QUAL_BYTES)))
+      when(result2.getValue(eq(KEY_META_INFO_FAMILY), eq(KEY_STATE_QUAL_BYTES)))
         .thenReturn(new byte[] { FAILED.getVal() });
       for (Result result : Arrays.asList(result1, result2)) {
         when(result.getValue(eq(KEY_META_INFO_FAMILY), eq(REFRESHED_TIMESTAMP_QUAL_BYTES)))
@@ -207,7 +207,7 @@ public class TestKeymetaTableAccessor {
     public void testGetActiveKeyMissingWrappedKey() throws Exception {
       Result result = mock(Result.class);
       when(table.get(any(Get.class))).thenReturn(result);
-      when(result.getValue(eq(KEY_META_INFO_FAMILY), eq(KEY_STATUS_QUAL_BYTES)))
+      when(result.getValue(eq(KEY_META_INFO_FAMILY), eq(KEY_STATE_QUAL_BYTES)))
         .thenReturn(new byte[] { ACTIVE.getVal() }, new byte[] { INACTIVE.getVal() });
 
       IOException ex;
@@ -244,7 +244,7 @@ public class TestKeymetaTableAccessor {
       assertEquals(KEY_METADATA, result.getKeyMetadata());
       assertEquals(0, Bytes.compareTo(keyData.getTheKey().getEncoded(),
         result.getTheKey().getEncoded()));
-      assertEquals(ACTIVE, result.getKeyStatus());
+      assertEquals(ACTIVE, result.getKeyState());
 
       // When DEK checksum doesn't match, we expect a null value.
       result = accessor.getKey(CUST_ID, KEY_NAMESPACE, KEY_METADATA);
@@ -263,7 +263,7 @@ public class TestKeymetaTableAccessor {
       assertEquals(KEY_NAMESPACE, result.getKeyNamespace());
       assertEquals(keyMetadata2, result.getKeyMetadata());
       assertNull(result.getTheKey());
-      assertEquals(FAILED, result.getKeyStatus());
+      assertEquals(FAILED, result.getKeyState());
     }
 
     @Test
@@ -392,7 +392,7 @@ public class TestKeymetaTableAccessor {
     assertEquals(new Bytes(keyData.getKeyMetadata().getBytes()),
       valueMap.get(new Bytes(DEK_METADATA_QUAL_BYTES)));
     assertNotNull(valueMap.get(new Bytes(REFRESHED_TIMESTAMP_QUAL_BYTES)));
-    assertEquals(new Bytes(new byte[] { keyData.getKeyStatus().getVal() }),
-      valueMap.get(new Bytes(KEY_STATUS_QUAL_BYTES)));
+    assertEquals(new Bytes(new byte[] { keyData.getKeyState().getVal() }),
+      valueMap.get(new Bytes(KEY_STATE_QUAL_BYTES)));
   }
 }

@@ -21,8 +21,8 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyState;
 import org.apache.hadoop.hbase.io.crypto.MockManagedKeyProvider;
-import org.apache.hadoop.hbase.io.crypto.ManagedKeyStatus;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -62,9 +62,9 @@ public class TestManagedKeymeta extends ManagedKeyTestBase {
     ;
     String cust = "cust1";
     String encodedCust = ManagedKeyProvider.encodeToStr(cust.getBytes());
-    List<ManagedKeyData> managedKeyStatuses =
+    List<ManagedKeyData> managedKeyStates =
       adminClient.enableKeyManagement(encodedCust, ManagedKeyData.KEY_SPACE_GLOBAL);
-    assertKeyDataListSingleKey(managedKeyStatuses, ManagedKeyStatus.ACTIVE);
+    assertKeyDataListSingleKey(managedKeyStates, ManagedKeyState.ACTIVE);
 
     List<ManagedKeyData> managedKeys =
       adminClient.getManagedKeys(encodedCust, ManagedKeyData.KEY_SPACE_GLOBAL);
@@ -73,24 +73,24 @@ public class TestManagedKeymeta extends ManagedKeyTestBase {
         ManagedKeyData.KEY_SPACE_GLOBAL).cloneWithoutKey(), managedKeys.get(0).cloneWithoutKey());
 
     String nonExistentCust = "nonExistentCust";
-    managedKeyProvider.setMockedKeyStatus(nonExistentCust, ManagedKeyStatus.FAILED);
+    managedKeyProvider.setMockedKeyState(nonExistentCust, ManagedKeyState.FAILED);
     List<ManagedKeyData> keyDataList1 =
       adminClient.enableKeyManagement(ManagedKeyProvider.encodeToStr(nonExistentCust.getBytes()),
         ManagedKeyData.KEY_SPACE_GLOBAL);
-    assertKeyDataListSingleKey(keyDataList1, ManagedKeyStatus.FAILED);
+    assertKeyDataListSingleKey(keyDataList1, ManagedKeyState.FAILED);
 
     String disabledCust = "disabledCust";
-    managedKeyProvider.setMockedKeyStatus(disabledCust, ManagedKeyStatus.DISABLED);
+    managedKeyProvider.setMockedKeyState(disabledCust, ManagedKeyState.DISABLED);
     List<ManagedKeyData> keyDataList2 =
       adminClient.enableKeyManagement(ManagedKeyProvider.encodeToStr(disabledCust.getBytes()),
         ManagedKeyData.KEY_SPACE_GLOBAL);
-    assertKeyDataListSingleKey(keyDataList2, ManagedKeyStatus.DISABLED);
+    assertKeyDataListSingleKey(keyDataList2, ManagedKeyState.DISABLED);
   }
 
-  private static void assertKeyDataListSingleKey(List<ManagedKeyData> managedKeyStatuses,
-      ManagedKeyStatus keyStatus) {
-    assertNotNull(managedKeyStatuses);
-    assertEquals(1, managedKeyStatuses.size());
-    assertEquals(keyStatus, managedKeyStatuses.get(0).getKeyStatus());
+  private static void assertKeyDataListSingleKey(List<ManagedKeyData> managedKeyStates,
+      ManagedKeyState keyState) {
+    assertNotNull(managedKeyStates);
+    assertEquals(1, managedKeyStates.size());
+    assertEquals(keyState, managedKeyStates.get(0).getKeyState());
   }
 }

@@ -24,7 +24,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
-import org.apache.hadoop.hbase.io.crypto.ManagedKeyStatus;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyState;
 import org.apache.hadoop.hbase.keymeta.SystemKeyAccessor;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -78,9 +78,9 @@ public class SystemKeyManager extends SystemKeyAccessor {
       throw new IOException("Failed to get system key for cluster id: " +
         master.getMasterFileSystem().getClusterId().toString());
     }
-    if (clusterKey.getKeyStatus() != ManagedKeyStatus.ACTIVE) {
+    if (clusterKey.getKeyState() != ManagedKeyState.ACTIVE) {
       throw new IOException("System key is expected to be ACTIVE but it is: " +
-        clusterKey.getKeyStatus() + " for metadata: " + clusterKey.getKeyMetadata());
+        clusterKey.getKeyState() + " for metadata: " + clusterKey.getKeyMetadata());
     }
     if (clusterKey.getKeyMetadata() == null) {
       throw new IOException("System key is expected to have metadata but it is null");

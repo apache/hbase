@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.keymeta;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
-import org.apache.hadoop.hbase.io.crypto.ManagedKeyStatus;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyState;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -76,13 +76,13 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
       }
       retrievedKeys.add(pbeKey);
       LOG.info("enableManagedKeys: got managed key with status: {} and metadata: {} for "
-          + "(custodian: {}, namespace: {})", pbeKey.getKeyStatus(), pbeKey.getKeyMetadata(),
+          + "(custodian: {}, namespace: {})", pbeKey.getKeyState(), pbeKey.getKeyMetadata(),
         keyCust, keyNamespace);
       addKey(pbeKey);
-      if (pbeKey.getKeyStatus() != ManagedKeyStatus.ACTIVE) {
+      if (pbeKey.getKeyState() != ManagedKeyState.ACTIVE) {
         LOG.info("enableManagedKeys: received non-ACTIVE key with status: {} with metadata: {} for "
             + "(custodian: {}, namespace: {})",
-          pbeKey.getKeyStatus(), pbeKey.getKeyMetadata(), keyCust, keyNamespace);
+          pbeKey.getKeyState(), pbeKey.getKeyMetadata(), keyCust, keyNamespace);
         break;
       }
     }

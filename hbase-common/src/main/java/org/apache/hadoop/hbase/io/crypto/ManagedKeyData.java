@@ -31,16 +31,16 @@ import java.util.Arrays;
 import java.util.Base64;
 
 /**
- * This class represents an encryption key data which includes the key itself, its status, metadata
+ * This class represents an encryption key data which includes the key itself, its state, metadata
  * and a prefix. The metadata encodes enough information on the key such that it can be used to
- * retrieve the exact same key again in the future. If the key status is {@link ManagedKeyStatus#FAILED}
+ * retrieve the exact same key again in the future. If the key state is {@link ManagedKeyState#FAILED}
  * expect the key to be {@code null}.
  *
  * The key data is represented by the following fields:
  * <ul>
  * <li>key_cust: The prefix for which this key belongs to</li>
  * <li>theKey: The key capturing the bytes and encoding</li>
- * <li>keyStatus: The status of the key (see {@link ManagedKeyStatus})</li>
+ * <li>keyState: The state of the key (see {@link ManagedKeyState})</li>
  * <li>keyMetadata: Metadata that identifies the key</li>
  * </ul>
  *
@@ -67,7 +67,7 @@ public class ManagedKeyData {
   private final byte[] keyCust;
   private final String keyNamespace;
   private final Key theKey;
-  private final ManagedKeyStatus keyStatus;
+  private final ManagedKeyState keyState;
   private final String keyMetadata;
   private final long refreshTimestamp;
   private final long readOpCount;
@@ -80,13 +80,13 @@ public class ManagedKeyData {
    *
    * @param key_cust     The key custodian.
    * @param theKey       The actual key, can be {@code null}.
-   * @param keyStatus    The status of the key.
+   * @param keyState    The state of the key.
    * @param keyMetadata  The metadata associated with the key.
-   * @throws NullPointerException if any of key_cust, keyStatus or keyMetadata is null.
+   * @throws NullPointerException if any of key_cust, keyState or keyMetadata is null.
    */
-  public ManagedKeyData(byte[] key_cust, String key_namespace, Key theKey, ManagedKeyStatus keyStatus,
+  public ManagedKeyData(byte[] key_cust, String key_namespace, Key theKey, ManagedKeyState keyState,
                         String keyMetadata) {
-    this(key_cust, key_namespace, theKey, keyStatus, keyMetadata,
+    this(key_cust, key_namespace, theKey, keyState, keyMetadata,
       EnvironmentEdgeManager.currentTime(), 0, 0);
   }
 
@@ -95,18 +95,18 @@ public class ManagedKeyData {
    *
    * @param key_cust         The key custodian.
    * @param theKey           The actual key, can be {@code null}.
-   * @param keyStatus        The status of the key.
+   * @param keyState        The state of the key.
    * @param keyMetadata      The metadata associated with the key.
    * @param refreshTimestamp The timestamp when this key was last refreshed.
    * @param readOpCount      The current number of read operations for this key.
    * @param writeOpCount     The current number of write operations for this key.
-   * @throws NullPointerException if any of key_cust, keyStatus or keyMetadata is null.
+   * @throws NullPointerException if any of key_cust, keyState or keyMetadata is null.
    */
-  public ManagedKeyData(byte[] key_cust, String key_namespace, Key theKey, ManagedKeyStatus keyStatus,
+  public ManagedKeyData(byte[] key_cust, String key_namespace, Key theKey, ManagedKeyState keyState,
                         String keyMetadata, long refreshTimestamp, long readOpCount, long writeOpCount) {
     Preconditions.checkNotNull(key_cust, "key_cust should not be null");
     Preconditions.checkNotNull(key_namespace, "key_namespace should not be null");
-    Preconditions.checkNotNull(keyStatus,  "keyStatus should not be null");
+    Preconditions.checkNotNull(keyState,  "keyState should not be null");
     Preconditions.checkNotNull(keyMetadata, "keyMetadata should not be null");
     Preconditions.checkArgument(readOpCount >= 0, "readOpCount: " + readOpCount +
       " should be >= 0");
@@ -116,7 +116,7 @@ public class ManagedKeyData {
     this.keyCust = key_cust;
     this.keyNamespace = key_namespace;
     this.theKey = theKey;
-    this.keyStatus = keyStatus;
+    this.keyState = keyState;
     this.keyMetadata = keyMetadata;
     this.refreshTimestamp = refreshTimestamp;
     this.readOpCount = readOpCount;
@@ -125,7 +125,7 @@ public class ManagedKeyData {
 
   @VisibleForTesting
   public ManagedKeyData cloneWithoutKey() {
-    return new ManagedKeyData(keyCust, keyNamespace, null, keyStatus, keyMetadata,
+    return new ManagedKeyData(keyCust, keyNamespace, null, keyState, keyMetadata,
       refreshTimestamp, readOpCount, writeOpCount);
   }
 
@@ -166,12 +166,12 @@ public class ManagedKeyData {
   }
 
   /**
-   * Returns the status of the key.
+   * Returns the state of the key.
    *
-   * @return The key status as a {@code ManagedKeyStatus} enum value.
+   * @return The key state as a {@code ManagedKeyState} enum value.
    */
-  public ManagedKeyStatus getKeyStatus() {
-    return keyStatus;
+  public ManagedKeyState getKeyState() {
+    return keyState;
   }
 
   /**
@@ -186,7 +186,7 @@ public class ManagedKeyData {
   @Override
   public String toString() {
     return "ManagedKeyData{" + "keyCustodian=" + Arrays.toString(keyCust) + ", keyNamespace='"
-      + keyNamespace + '\'' + ", keyStatus=" + keyStatus + ", keyMetadata='" + keyMetadata + '\''
+      + keyNamespace + '\'' + ", keyState=" + keyState + ", keyMetadata='" + keyMetadata + '\''
       + ", refreshTimestamp=" + refreshTimestamp + ", keyChecksum=" + getKeyChecksum() + '}';
   }
 
@@ -279,7 +279,7 @@ public class ManagedKeyData {
       .append(keyCust, that.keyCust)
       .append(keyNamespace, that.keyNamespace)
       .append(theKey, that.theKey)
-      .append(keyStatus, that.keyStatus)
+      .append(keyState, that.keyState)
       .append(keyMetadata, that.keyMetadata)
       .isEquals();
   }
@@ -290,7 +290,7 @@ public class ManagedKeyData {
       .append(keyCust)
       .append(keyNamespace)
       .append(theKey)
-      .append(keyStatus)
+      .append(keyState)
       .append(keyMetadata)
       .toHashCode();
   }
