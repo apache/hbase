@@ -974,6 +974,36 @@ public final class BackupSystemTable implements Closeable {
   }
 
   /**
+   * Removes tables from the global continuous backup set. Only removes entries that currently exist
+   * in the backup system table.
+   * @param tables set of tables to remove
+   * @throws IOException if an error occurs while updating the backup system table
+   */
+  public void removeContinuousBackupTableSet(Set<TableName> tables) throws IOException {
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Remove continuous backup table set from backup system table. tables ["
+        + StringUtils.join(tables, " ") + "]");
+    }
+    if (LOG.isDebugEnabled()) {
+      tables.forEach(table -> LOG.debug("Removing: " + table));
+    }
+
+    Map<TableName, Long> existingTables = getContinuousBackupTableSet();
+    Set<TableName> toRemove =
+      tables.stream().filter(existingTables::containsKey).collect(Collectors.toSet());
+
+    if (toRemove.isEmpty()) {
+      LOG.debug("No matching tables found to remove from continuous backup set.");
+      return;
+    }
+
+    try (Table table = connection.getTable(tableName)) {
+      Delete delete = createDeleteForContinuousBackupTableSet(toRemove);
+      table.delete(delete);
+    }
+  }
+
+  /**
    * Deletes incremental backup set for a backup destination
    * @param backupRoot backup root
    */
@@ -1357,6 +1387,19 @@ public final class BackupSystemTable implements Closeable {
   private Delete createDeleteForIncrBackupTableSet(String backupRoot) {
     Delete delete = new Delete(rowkey(INCR_BACKUP_SET, backupRoot));
     delete.addFamily(BackupSystemTable.META_FAMILY);
+    return delete;
+  }
+
+  /**
+   * Creates Delete for continuous backup table set
+   * @param tables tables to remove
+   * @return delete operation
+   */
+  private Delete createDeleteForContinuousBackupTableSet(Set<TableName> tables) {
+    Delete delete = new Delete(rowkey(CONTINUOUS_BACKUP_SET));
+    for (TableName tableName : tables) {
+      delete.addColumns(META_FAMILY, Bytes.toBytes(tableName.getNameAsString()));
+    }
     return delete;
   }
 
