@@ -92,8 +92,8 @@ public class MasterAnnotationReadingPriorityFunction extends AnnotationReadingPr
       }
       return HConstants.HIGH_QOS;
     }
-    // also use HIGH_QOS for region server report
-    if (param instanceof RegionServerStatusProtos.RegionServerReportRequest) {
+    // also use HIGH_QOS for all rest methods in RegionServerStatusProtos
+    if (RegionServerStatusProtos.class.equals(param.getClass().getEnclosingClass())) {
       return HConstants.HIGH_QOS;
     }
 
