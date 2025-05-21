@@ -644,6 +644,7 @@
     <maven.eclipse.version>2.10</maven.eclipse.version>
     <maven.gpg.version>3.0.1</maven.gpg.version>
     <maven.javadoc.version>3.4.0</maven.javadoc.version>
+    <maven.dependency.version>3.8.1</maven.dependency.version>
     <maven.warbucks.version>1.1.0</maven.warbucks.version>
     <maven.project.info.report.version>3.1.2</maven.project.info.report.version>
     <maven-owasp-plugin.version>12.1.0</maven-owasp-plugin.version>
@@ -776,6 +777,13 @@
     <!-- Still need this to ignore some errors when building javadoc-->
     <doclint>none</doclint>
     <javax.activation.version>1.2.0</javax.activation.version>
+    <!-- Web UI dependencies -->
+    <bootstrap.version>5.3.3</bootstrap.version>
+    <jquery.version>3.7.1</jquery.version>
+    <tablesorter.version>2.32.0</tablesorter.version>
+    <vega.version>5.32.0</vega.version>
+    <vega-embed.version>6.29.0</vega-embed.version>
+    <vega-lite.version>5.23.0</vega-lite.version>
   </properties>
   <!-- Sorted by groups of dependencies then groupId and artifactId -->
   <dependencyManagement>
