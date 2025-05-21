@@ -26,6 +26,7 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.security.User;
@@ -54,6 +55,10 @@ public class TestFsDelegationToken {
   private WebHdfsFileSystem swebHdfsFileSystem = Mockito.mock(SWebHdfsFileSystem.class);
   private FileSystem fileSystem = Mockito.mock(FileSystem.class);
 
+  private static final Text OZONE_TOKEN_KIND = new Text("OzoneToken");
+  private FileSystem rootedOzoneFileSystem = Mockito.mock(FileSystem.class);
+  private Token ofsToken = Mockito.mock(Token.class);
+
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestFsDelegationToken.class);
@@ -68,6 +73,8 @@ public class TestFsDelegationToken {
     when(webHdfsFileSystem.getUri()).thenReturn(new URI("webhdfs://someUri"));
     when(swebHdfsFileSystem.getCanonicalServiceName()).thenReturn("swebhdfs://");
     when(swebHdfsFileSystem.getUri()).thenReturn(new URI("swebhdfs://someUri"));
+    when(rootedOzoneFileSystem.getCanonicalServiceName()).thenReturn("ofs://");
+    when(rootedOzoneFileSystem.getUri()).thenReturn(new URI("ofs://ozone1"));
     when(user.getToken(HDFS_DELEGATION_KIND.toString(), fileSystem.getCanonicalServiceName()))
       .thenReturn(hdfsToken);
     when(user.getToken(WEBHDFS_TOKEN_KIND.toString(), webHdfsFileSystem.getCanonicalServiceName()))
@@ -75,9 +82,18 @@ public class TestFsDelegationToken {
     when(
       user.getToken(SWEBHDFS_TOKEN_KIND.toString(), swebHdfsFileSystem.getCanonicalServiceName()))
         .thenReturn(swebhdfsToken);
+    when(user.getToken(OZONE_TOKEN_KIND.toString(), rootedOzoneFileSystem.getCanonicalServiceName()))
+      .thenReturn(ofsToken);
     when(hdfsToken.getKind()).thenReturn(new Text("HDFS_DELEGATION_TOKEN"));
     when(webhdfsToken.getKind()).thenReturn(WEBHDFS_TOKEN_KIND);
     when(swebhdfsToken.getKind()).thenReturn(SWEBHDFS_TOKEN_KIND);
+    when(ofsToken.getKind()).thenReturn(OZONE_TOKEN_KIND);
+
+    Configuration conf = new Configuration();
+    when(fileSystem.getConf()).thenReturn(conf);
+    when(webHdfsFileSystem.getConf()).thenReturn(conf);
+    when(swebHdfsFileSystem.getConf()).thenReturn(conf);
+    when(rootedOzoneFileSystem.getConf()).thenReturn(conf);
   }
 
   @Test
@@ -113,5 +129,11 @@ public class TestFsDelegationToken {
   public void acquireDelegationTokenByTokenKind_swebhdfsFileSystem() throws IOException {
     fsDelegationToken.acquireDelegationToken(SWEBHDFS_TOKEN_KIND.toString(), swebHdfsFileSystem);
     assertEquals(fsDelegationToken.getUserToken().getKind(), SWEBHDFS_TOKEN_KIND);
+  }
+
+  @Test
+  public void acquireDelegationTokenByTokenKind_OzoneFileSystem() throws IOException {
+    fsDelegationToken.acquireDelegationToken(rootedOzoneFileSystem);
+    assertEquals(fsDelegationToken.getUserToken().getKind(), OZONE_TOKEN_KIND);
   }
 }
