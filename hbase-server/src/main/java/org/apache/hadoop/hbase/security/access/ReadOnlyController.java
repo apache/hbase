@@ -99,6 +99,10 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
   @Override
   public void prePut(ObserverContext<? extends RegionCoprocessorEnvironment> c, Put put,
     WALEdit edit) throws IOException {
+    TableName tableName = c.getEnvironment().getRegionInfo().getTable();
+    if (tableName.isSystemTable()) {
+      return;
+    }
     internalReadOnlyGuard();
   }
 
@@ -111,6 +115,10 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
   @Override
   public void preBatchMutate(ObserverContext<? extends RegionCoprocessorEnvironment> c,
     MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {
+    TableName tableName = c.getEnvironment().getRegionInfo().getTable();
+    if (tableName.isSystemTable()) {
+      return;
+    }
     internalReadOnlyGuard();
   }
 
