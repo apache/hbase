@@ -8832,6 +8832,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public void registerChildren(ConfigurationManager manager) {
     configurationManager = manager;
     stores.values().forEach(manager::registerObserver);
+    if (coprocessorHost != null) {
+      coprocessorHost.registerConfigurationObservers(manager);
+    } else {
+      LOG.warn("Could not register HRegion coprocessors to the ConfigurationManager because "
+        + "RegionCoprocessorHost is null");
+    }
   }
 
   /**
@@ -8840,6 +8846,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   @Override
   public void deregisterChildren(ConfigurationManager manager) {
     stores.values().forEach(configurationManager::deregisterObserver);
+    if (coprocessorHost != null) {
+      coprocessorHost.deregisterConfigurationObservers(manager);
+    } else {
+      LOG.warn("Could not deregister HRegion coprocessors from the ConfigurationManager because "
+        + "RegionCoprocessorHost is null");
+    }
   }
 
   @Override
