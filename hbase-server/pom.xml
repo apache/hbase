@@ -920,7 +920,7 @@
                       <version>${bootstrap.version}</version>
                       <type>jar</type>
                       <overWrite>true</overWrite>
-                      <includes>**/js/bootstrap.min.js</includes>
+                      <includes>**/js/bootstrap.bundle.min.js</includes>
                       <fileMappers>
                         <fileMapper implementation="org.codehaus.plexus.components.io.filemappers.FlattenFileMapper"/>
                       </fileMappers>
