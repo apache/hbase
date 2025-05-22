@@ -132,6 +132,7 @@
                     <exclude>commons-logging:*</exclude>
                     <exclude>org.javassist:*</exclude>
                     <exclude>io.opentelemetry:*</exclude>
+                    <exclude>io.opentelemetry.semconv:*</exclude>
                   </excludes>
                 </artifactSet>
                 <relocations>
