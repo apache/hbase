@@ -256,7 +256,7 @@ org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 </div>
 <script src="/static/js/jquery.min.js" type="text/javascript"></script>
 <script src="/static/js/jquery.tablesorter.min.js" type="text/javascript"></script>
-<script src="/static/js/bootstrap.min.js" type="text/javascript"></script>
+<script src="/static/js/bootstrap.bundle.min.js" type="text/javascript"></script>
 <script src="/static/js/tab.js" type="text/javascript"></script>
 <script>
 $(document).ready(function()
