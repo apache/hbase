@@ -60,11 +60,9 @@ public class MultiTenantHFileWriter implements HFile.Writer {
   
   // Tenant identification configuration at cluster level
   public static final String TENANT_PREFIX_LENGTH = "hbase.multi.tenant.prefix.length";
-  public static final String TENANT_PREFIX_OFFSET = "hbase.multi.tenant.prefix.offset";
   
   // Tenant identification configuration at table level (higher precedence)
   public static final String TABLE_TENANT_PREFIX_LENGTH = "TENANT_PREFIX_LENGTH";
-  public static final String TABLE_TENANT_PREFIX_OFFSET = "TENANT_PREFIX_OFFSET";
   
   // Table-level property to enable/disable multi-tenant sectioning
   public static final String TABLE_MULTI_TENANT_ENABLED = "MULTI_TENANT_HFILE";
@@ -762,8 +760,6 @@ public class MultiTenantHFileWriter implements HFile.Writer {
    * 1. Table Level Configuration (highest precedence)
    *    - Property: TENANT_PREFIX_LENGTH 
    *      Table-specific tenant prefix length
-   *    - Property: TENANT_PREFIX_OFFSET
-   *      Byte offset for tenant prefix extraction (default: 0)
    *    - Property: MULTI_TENANT_HFILE
    *      Boolean flag indicating if this table uses multi-tenant sectioning (default: true)
    * 
@@ -772,12 +768,9 @@ public class MultiTenantHFileWriter implements HFile.Writer {
    *      Defines the implementation class for TenantExtractor
    *    - Property: hbase.multi.tenant.prefix.length
    *      Default prefix length if using fixed-length prefixes
-   *    - Property: hbase.multi.tenant.prefix.offset
-   *      Default prefix offset if using fixed-length prefixes
    * 
    * 3. Default Values (used if neither above is specified)
-   *    - Default prefix length: 0 bytes
-   *    - Default prefix offset: 0 bytes
+   *    - Default prefix length: 4 bytes
    * 
    * When creating a MultiTenantHFileWriter, the system will:
    * 1. First check table properties for tenant configuration

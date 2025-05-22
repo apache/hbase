@@ -755,7 +755,7 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
     // we can use regular tenant extraction
     DefaultTenantExtractor defaultExtractor = getDefaultExtractor();
     if (defaultExtractor != null) {
-      int neededLength = defaultExtractor.getPrefixOffset() + defaultExtractor.getPrefixLength();
+      int neededLength = defaultExtractor.getPrefixLength();
       if (partialRowKey.length >= neededLength) {
         // We have enough information for exact tenant identification
         LOG.debug("Partial key contains full tenant information, using exact tenant lookup");
@@ -766,7 +766,7 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
       }
     }
     
-    // For partial keys without complete tenant identification, we need to find all
+    // For partial keys without complete tenant identification, find all
     // potential matching sections
     LOG.debug("Finding sections that could contain row key starting with: {}", 
               org.apache.hadoop.hbase.util.Bytes.toStringBinary(partialRowKey));
@@ -820,31 +820,24 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
    * @return An array of tenant section IDs that could match the partial key
    */
   private byte[][] findPotentialTenantSectionsForPartialKey(byte[] partialRowKey) {
-    // In order to handle partial keys, we need to determine if the partial key
+    // In order to handle partial keys, determine if the partial key
     // gives us any prefix information that can narrow down the sections
     DefaultTenantExtractor defaultExtractor = getDefaultExtractor();
     
     if (defaultExtractor != null) {
-      // For the default extractor, we know the offset and length
-      int prefixOffset = defaultExtractor.getPrefixOffset();
+      // For the default extractor, we know the prefix length
       int prefixLength = defaultExtractor.getPrefixLength();
       
-      // If the partial key doesn't even reach the offset, we need all sections
-      if (partialRowKey.length <= prefixOffset) {
-        LOG.debug("Partial key doesn't reach tenant offset, must scan all sections");
-        return getAllTenantSectionIds();
-      }
-      
       // Extract the partial prefix information we have
-      int availablePrefixLength = Math.min(partialRowKey.length - prefixOffset, prefixLength);
+      int availablePrefixLength = Math.min(partialRowKey.length, prefixLength);
       if (availablePrefixLength <= 0) {
         LOG.debug("No prefix information available, must scan all sections");
         return getAllTenantSectionIds();
       }
       
-      // Extract the partial prefix we have
+      // Extract the partial prefix we have (always from beginning of row)
       byte[] partialPrefix = new byte[availablePrefixLength];
-      System.arraycopy(partialRowKey, prefixOffset, partialPrefix, 0, availablePrefixLength);
+      System.arraycopy(partialRowKey, 0, partialPrefix, 0, availablePrefixLength);
       LOG.debug("Using partial prefix for section filtering: {}", 
                 org.apache.hadoop.hbase.util.Bytes.toStringBinary(partialPrefix));
       

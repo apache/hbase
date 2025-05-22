@@ -110,10 +110,9 @@ public class TestMultiTenantReaderPartialKeys {
         .withBlockSize(4096)
         .build();
     
-    // Configure for tenant separation with 4-byte prefix, offset 0
+    // Configure for tenant separation with 4-byte prefix
     Configuration writerConf = new Configuration(conf);
     writerConf.setInt("hbase.hfile.tenant.prefix.length", 4); // "t1:r", "t2:r", "t3:r"
-    writerConf.setInt("hbase.hfile.tenant.prefix.offset", 0);
     
     // Write the multi-tenant HFile
     try (HFile.Writer writer = HFile.getWriterFactory(writerConf, cacheConf)
@@ -146,61 +145,6 @@ public class TestMultiTenantReaderPartialKeys {
     testPartialKeyScanWithPrefix(hfilePath, "t1:row", 3); // All t1 rows
     testPartialKeyScanWithPrefix(hfilePath, "t2:row", 2); // All t2 rows
     testPartialKeyScanWithPrefix(hfilePath, "t3:row", 3); // All t3 rows
-  }
-  
-  /**
-   * Test with tenant prefix offset to verify that partial row key logic works
-   * even when tenant ID is embedded in the middle of the row key.
-   * 
-   * @throws IOException if an error occurs during testing
-   */
-  @Test
-  public void testPartialRowKeyWithPrefixOffset() throws IOException {
-    // Create test data with tenant ID in middle of row key
-    List<ExtendedCell> cells = new ArrayList<>();
-    
-    // Row keys with format "prefix-{tenantId}-suffix"
-    // Tenant section is at offset 7, length 2
-    cells.add(createCell("prefix-t1-row1", FAMILY, QUALIFIER, 1, "value1"));
-    cells.add(createCell("prefix-t1-row2", FAMILY, QUALIFIER, 2, "value2"));
-    cells.add(createCell("prefix-t2-row1", FAMILY, QUALIFIER, 3, "value3"));
-    cells.add(createCell("prefix-t2-row2", FAMILY, QUALIFIER, 4, "value4"));
-    cells.add(createCell("prefix-t3-row1", FAMILY, QUALIFIER, 5, "value5"));
-    
-    // Write cells to an HFile
-    Path hfilePath = new Path(testDir, "testMultiTenantPartialRowsOffset.hfile");
-    
-    HFileContext context = new HFileContextBuilder()
-        .withBlockSize(4096)
-        .build();
-    
-    // Configure for tenant separation with 2-byte prefix, offset 7
-    Configuration writerConf = new Configuration(conf);
-    writerConf.setInt("hbase.hfile.tenant.prefix.length", 2); // "t1", "t2", "t3"
-    writerConf.setInt("hbase.hfile.tenant.prefix.offset", 7); // After "prefix-"
-    
-    // Write the multi-tenant HFile
-    try (HFile.Writer writer = HFile.getWriterFactory(writerConf, cacheConf)
-        .withPath(fs, hfilePath)
-        .withFileContext(context)
-        .create()) {
-      
-      // Write cells in order
-      for (ExtendedCell cell : cells) {
-        writer.append(cell);
-      }
-    }
-    
-    // Case 1: Test partial key that doesn't reach tenant ID
-    testPartialKeyScanWithPrefix(hfilePath, "prefix-", 5); // All cells
-    
-    // Case 2: Complete row key with tenant ID
-    testPartialKeyScanWithPrefix(hfilePath, "prefix-t1-row1", 1);
-    
-    // Case 3: Partial row key that includes partial tenant information
-    testPartialKeyScanWithPrefix(hfilePath, "prefix-t1-", 2); // All t1 rows
-    testPartialKeyScanWithPrefix(hfilePath, "prefix-t2-", 2); // All t2 rows
-    testPartialKeyScanWithPrefix(hfilePath, "prefix-t3-", 1); // All t3 rows
   }
   
   /**

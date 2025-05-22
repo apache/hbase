@@ -23,57 +23,48 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Default implementation of TenantExtractor that extracts tenant information
- * based on configurable prefix length and offset in row keys.
+ * based on configurable prefix length at the beginning of row keys.
  */
 @InterfaceAudience.Private
 public class DefaultTenantExtractor implements TenantExtractor {
   private final int prefixLength;
-  private final int prefixOffset;
   
-  public DefaultTenantExtractor(int prefixLength, int prefixOffset) {
+  public DefaultTenantExtractor(int prefixLength) {
     this.prefixLength = prefixLength;
-    this.prefixOffset = prefixOffset;
   }
   
   @Override
   public byte[] extractTenantId(Cell cell) {
-    // Tenant ID doesn't include offset bytes
-    return extractPrefix(cell, false);
+    return extractPrefix(cell);
   }
   
   @Override
   public byte[] extractTenantSectionId(Cell cell) {
-    // Tenant section ID includes offset bytes
-    return extractPrefix(cell, true);
+    // Tenant section ID is same as tenant ID
+    return extractPrefix(cell);
   }
   
   /**
    * Extract tenant prefix from a cell.
    * 
    * @param cell The cell to extract tenant information from
-   * @param includeOffset Whether to include the offset in the extracted prefix
    * @return The tenant prefix as a byte array
    */
-  private byte[] extractPrefix(Cell cell, boolean includeOffset) {
+  private byte[] extractPrefix(Cell cell) {
     if (prefixLength <= 0) {
       return HConstants.EMPTY_BYTE_ARRAY;
     }
     
     // Get row length and ensure it's sufficient
     int rowLength = cell.getRowLength();
-    if (rowLength < prefixOffset + prefixLength) {
-      throw new IllegalArgumentException("Row key too short for configured prefix parameters. " +
-          "Row key length: " + rowLength + ", required: " + (prefixOffset + prefixLength));
+    if (rowLength < prefixLength) {
+      throw new IllegalArgumentException("Row key too short for configured prefix length. " +
+          "Row key length: " + rowLength + ", required: " + prefixLength);
     }
     
-    // Determine starting position based on whether to include offset
-    int startPos = includeOffset ? 
-        cell.getRowOffset() + prefixOffset : 
-        cell.getRowOffset();
-    
-    // Create and populate result array
+    // Create and populate result array - always from start of row
     byte[] prefix = new byte[prefixLength];
-    System.arraycopy(cell.getRowArray(), startPos, prefix, 0, prefixLength);
+    System.arraycopy(cell.getRowArray(), cell.getRowOffset(), prefix, 0, prefixLength);
     return prefix;
   }
   
@@ -83,13 +74,5 @@ public class DefaultTenantExtractor implements TenantExtractor {
    */
   public int getPrefixLength() {
     return prefixLength;
-  }
-  
-  /**
-   * Get the tenant prefix offset.
-   * @return The configured tenant prefix offset
-   */
-  public int getPrefixOffset() {
-    return prefixOffset;
   }
 } 

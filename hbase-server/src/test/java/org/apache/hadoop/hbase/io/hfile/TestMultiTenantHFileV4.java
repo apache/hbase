@@ -83,17 +83,9 @@ public class TestMultiTenantHFileV4 {
   
   // Tenant configuration
   private static final int TENANT_PREFIX_LENGTH = 3;
-  private static final int TENANT_PREFIX_OFFSET = 0; // With offset 0, tenant ID = section ID
   private static final String TENANT_1 = "T01";
   private static final String TENANT_2 = "T02";
   private static final String TENANT_3 = "T03";
-  
-  // Tenant configuration for test with offset
-  private static final int OFFSET_PREFIX_LENGTH = 3;
-  private static final int OFFSET_PREFIX_OFFSET = 2; // Use a non-zero offset
-  private static final String PREFIX_1 = "P01";
-  private static final String PREFIX_2 = "P02";
-  private static final String PREFIX_3 = "P03";
   
   // Test data
   private static final byte[] FAMILY = Bytes.toBytes("f");
@@ -105,7 +97,6 @@ public class TestMultiTenantHFileV4 {
     
     // Configure tenant section ID extraction
     conf.setInt(MultiTenantHFileWriter.TENANT_PREFIX_LENGTH, TENANT_PREFIX_LENGTH);
-    conf.setInt(MultiTenantHFileWriter.TENANT_PREFIX_OFFSET, TENANT_PREFIX_OFFSET);
     
     // Explicitly configure HFile version 4
     conf.setInt(HFile.FORMAT_VERSION_KEY, HFile.MIN_FORMAT_VERSION_WITH_MULTI_TENANT);
@@ -277,9 +268,6 @@ public class TestMultiTenantHFileV4 {
   
   /**
    * Verify data for a specific tenant
-   * 
-   * Note: In this test with TENANT_PREFIX_OFFSET=0, the tenant ID 
-   * and tenant section ID are identical.
    */
   private void verifyTenantData(HFileScanner scanner, String tenant, List<ExtendedCell> expectedCells) 
       throws IOException {
@@ -336,229 +324,5 @@ public class TestMultiTenantHFileV4 {
                 expectedCells.size(), cellCount);
     
     LOG.info("Successfully verified {} cells for tenant {}", cellCount, tenant);
-  }
-  
-  /**
-   * Test multi-tenant functionality with a non-zero offset.
-   * 
-   * This test verifies that:
-   * 1. Different tenant IDs and section IDs work correctly when offset is non-zero
-   * 2. The system can extract both IDs correctly from the row keys
-   * 3. Data can be read back correctly for each tenant using section IDs
-   */
-  @Test
-  public void testMultiTenantWriteReadWithOffset() throws IOException {
-    // Save original config values
-    int originalPrefixLength = conf.getInt(MultiTenantHFileWriter.TENANT_PREFIX_LENGTH, 0);
-    int originalPrefixOffset = conf.getInt(MultiTenantHFileWriter.TENANT_PREFIX_OFFSET, 0);
-    
-    try {
-      // Update config to use non-zero offset
-      conf.setInt(MultiTenantHFileWriter.TENANT_PREFIX_LENGTH, OFFSET_PREFIX_LENGTH);
-      conf.setInt(MultiTenantHFileWriter.TENANT_PREFIX_OFFSET, OFFSET_PREFIX_OFFSET);
-      
-      Path hfilePath = new Path(testDir, "test_v4_with_offset.hfile");
-      
-      // Create test data with tenant IDs at specified offset
-      Map<String, List<ExtendedCell>> tenantData = createTestDataWithOffset();
-      
-      // Write the data to an HFile
-      writeHFileWithOffset(hfilePath, tenantData);
-      
-      // Read back and verify
-      readAndVerifyHFileWithOffset(hfilePath, tenantData);
-      
-    } finally {
-      // Restore original config values
-      conf.setInt(MultiTenantHFileWriter.TENANT_PREFIX_LENGTH, originalPrefixLength);
-      conf.setInt(MultiTenantHFileWriter.TENANT_PREFIX_OFFSET, originalPrefixOffset);
-    }
-  }
-  
-  /**
-   * Create test data with tenant prefix at the specified offset in row keys
-   */
-  private Map<String, List<ExtendedCell>> createTestDataWithOffset() {
-    Map<String, List<ExtendedCell>> tenantData = new HashMap<>();
-    
-    // Create a prefix to place before the tenant ID
-    String prefixPattern = "XX"; // This matches our OFFSET_PREFIX_OFFSET of 2
-    
-    // Tenant 1 data
-    List<ExtendedCell> tenant1Cells = new ArrayList<>();
-    for (int i = 0; i < 10; i++) {
-      String paddedIndex = String.format("%02d", i);
-      // Insert tenant ID at the offset position in the row key
-      byte[] row = Bytes.toBytes(prefixPattern + PREFIX_1 + "_row_" + paddedIndex);
-      byte[] value = Bytes.toBytes("value_" + i);
-      tenant1Cells.add((ExtendedCell)new KeyValue(row, FAMILY, QUALIFIER, value));
-    }
-    tenantData.put(PREFIX_1, tenant1Cells);
-    
-    // Tenant 2 data
-    List<ExtendedCell> tenant2Cells = new ArrayList<>();
-    for (int i = 0; i < 5; i++) {
-      String paddedIndex = String.format("%02d", i);
-      byte[] row = Bytes.toBytes(prefixPattern + PREFIX_2 + "_row_" + paddedIndex);
-      byte[] value = Bytes.toBytes("value_" + (100 + i));
-      tenant2Cells.add((ExtendedCell)new KeyValue(row, FAMILY, QUALIFIER, value));
-    }
-    tenantData.put(PREFIX_2, tenant2Cells);
-    
-    // Tenant 3 data
-    List<ExtendedCell> tenant3Cells = new ArrayList<>();
-    for (int i = 0; i < 15; i++) {
-      String paddedIndex = String.format("%02d", i);
-      byte[] row = Bytes.toBytes(prefixPattern + PREFIX_3 + "_row_" + paddedIndex);
-      byte[] value = Bytes.toBytes("value_" + (200 + i));
-      tenant3Cells.add((ExtendedCell)new KeyValue(row, FAMILY, QUALIFIER, value));
-    }
-    tenantData.put(PREFIX_3, tenant3Cells);
-    
-    return tenantData;
-  }
-  
-  /**
-   * Read back the HFile with offset and verify each tenant's data
-   */
-  private void readAndVerifyHFileWithOffset(Path path, Map<String, List<ExtendedCell>> expectedData) 
-      throws IOException {
-    // Create a CacheConfig
-    CacheConfig cacheConf = new CacheConfig(conf);
-    
-    // Open the file directly using HFile class
-    try (HFile.Reader reader = HFile.createReader(fs, path, cacheConf, true, conf)) {
-      // Verify that we got a multi-tenant reader implementation
-      assertTrue("Expected reader to be an AbstractMultiTenantReader but got " + reader.getClass().getName(),
-                reader instanceof AbstractMultiTenantReader);
-      LOG.info("Created reader instance: {}", reader.getClass().getName());
-      
-      LOG.info("Opened HFile reader for {}", path);
-      
-      // Create a scanner
-      HFileScanner scanner = reader.getScanner(conf, false, true);
-      
-      // Verify that we got a multi-tenant scanner implementation
-      assertTrue("Expected scanner to be a MultiTenantScanner but got " + scanner.getClass().getName(),
-                scanner instanceof AbstractMultiTenantReader.MultiTenantScanner);
-      LOG.info("Created scanner instance: {}", scanner.getClass().getName());
-      
-      // Verify data for each tenant
-      verifyTenantDataWithOffset(scanner, PREFIX_1, expectedData.get(PREFIX_1));
-      verifyTenantDataWithOffset(scanner, PREFIX_2, expectedData.get(PREFIX_2));
-      verifyTenantDataWithOffset(scanner, PREFIX_3, expectedData.get(PREFIX_3));
-    }
-  }
-  
-  /**
-   * Verify data for a specific tenant with offset
-   */
-  private void verifyTenantDataWithOffset(HFileScanner scanner, String tenant, List<ExtendedCell> expectedCells) 
-      throws IOException {
-    LOG.info("Verifying data for tenant {}", tenant);
-    
-    // Seek to first row for this tenant
-    ExtendedCell firstCell = expectedCells.get(0);
-    int seekResult = scanner.seekTo(firstCell);
-    assertTrue("Failed to seek to first key for tenant " + tenant, seekResult != -1);
-    
-    // Verify all expected cells
-    int cellCount = 0;
-    do {
-      Cell cell = scanner.getCell();
-      assertNotNull("Cell should not be null", cell);
-      
-      // Get the row
-      byte[] rowBytes = CellUtil.cloneRow(cell);
-      String row = Bytes.toString(rowBytes);
-      
-      // For this test with offset, the tenant ID starts at position OFFSET_PREFIX_OFFSET
-      String extractedTenant = row.substring(OFFSET_PREFIX_OFFSET, OFFSET_PREFIX_OFFSET + OFFSET_PREFIX_LENGTH);
-      
-      // Verify this is still the same tenant
-      if (!extractedTenant.equals(tenant)) {
-        LOG.info("Reached end of tenant {}'s data", tenant);
-        break;
-      }
-      
-      // Verify against expected cell
-      if (cellCount < expectedCells.size()) {
-        Cell expectedCell = expectedCells.get(cellCount);
-        
-        assertEquals("Row mismatch", 
-                    Bytes.toString(CellUtil.cloneRow(expectedCell)), 
-                    Bytes.toString(CellUtil.cloneRow(cell)));
-        
-        assertEquals("Value mismatch", 
-                    Bytes.toString(CellUtil.cloneValue(expectedCell)), 
-                    Bytes.toString(CellUtil.cloneValue(cell)));
-        
-        cellCount++;
-      }
-    } while (scanner.next());
-    
-    // Verify we saw all expected cells
-    assertEquals("Did not see expected number of cells for tenant " + tenant, 
-                expectedCells.size(), cellCount);
-    
-    LOG.info("Successfully verified {} cells for tenant {}", cellCount, tenant);
-  }
-  
-  /**
-   * Write all tenant data with offset to an HFile v4
-   */
-  private void writeHFileWithOffset(Path path, Map<String, List<ExtendedCell>> tenantData) throws IOException {
-    // Setup HFile writing
-    CacheConfig cacheConf = new CacheConfig(conf);
-    CellComparator comparator = CellComparator.getInstance();
-    
-    // Create HFile context with table name (for tenant configuration)
-    HFileContext hfileContext = new HFileContextBuilder()
-        .withBlockSize(64 * 1024)
-        .withCellComparator(comparator)
-        .withTableName(TableName.valueOf("test_table").getName())
-        .withHBaseCheckSum(true)
-        .build();
-    
-    // Use the generic factory method which will return the appropriate writer factory based on configuration
-    HFile.WriterFactory writerFactory = HFile.getWriterFactory(conf, cacheConf)
-        .withFileContext(hfileContext)
-        .withPath(fs, path);
-    
-    // Verify we got the correct writer factory type
-    assertTrue("Expected MultiTenantHFileWriter.WriterFactory but got " + writerFactory.getClass().getName(),
-               writerFactory instanceof MultiTenantHFileWriter.WriterFactory);
-    LOG.info("Created writer factory instance: {}", writerFactory.getClass().getName());
-    
-    // Create writer
-    try (HFile.Writer writer = writerFactory.create()) {
-      // Verify we got a MultiTenantHFileWriter instance
-      assertTrue("Expected MultiTenantHFileWriter but got " + writer.getClass().getName(),
-                 writer instanceof MultiTenantHFileWriter);
-      LOG.info("Created writer instance: {}", writer.getClass().getName());
-      
-      LOG.info("Writing HFile with multi-tenant data to {}", path);
-      
-      // Write data for each tenant - must be in proper sort order
-      // First tenant 1 
-      for (ExtendedCell cell : tenantData.get(PREFIX_1)) {
-        writer.append(cell);
-      }
-      
-      // Then tenant 2
-      for (ExtendedCell cell : tenantData.get(PREFIX_2)) {
-        writer.append(cell);
-      }
-      
-      // Finally tenant 3
-      for (ExtendedCell cell : tenantData.get(PREFIX_3)) {
-        writer.append(cell);
-      }
-      
-      LOG.info("Finished writing {} cells to HFile", 
-              tenantData.get(PREFIX_1).size() + 
-              tenantData.get(PREFIX_2).size() + 
-              tenantData.get(PREFIX_3).size());
-    }
   }
 } 

@@ -35,7 +35,6 @@ public class TenantExtractorFactory {
   
   // Default values
   private static final int DEFAULT_PREFIX_LENGTH = 4;
-  private static final int DEFAULT_PREFIX_OFFSET = 0;
   
   /**
    * Create a tenant extractor based on configuration.
@@ -54,14 +53,10 @@ public class TenantExtractorFactory {
     // First try table level settings (highest precedence)
     String tablePrefixLengthStr = tableProperties != null ? 
         tableProperties.get(MultiTenantHFileWriter.TABLE_TENANT_PREFIX_LENGTH) : null;
-    String tablePrefixOffsetStr = tableProperties != null ? 
-        tableProperties.get(MultiTenantHFileWriter.TABLE_TENANT_PREFIX_OFFSET) : null;
     
     // If not found at table level, try cluster level settings
     int clusterPrefixLength = conf.getInt(
         MultiTenantHFileWriter.TENANT_PREFIX_LENGTH, DEFAULT_PREFIX_LENGTH);
-    int clusterPrefixOffset = conf.getInt(
-        MultiTenantHFileWriter.TENANT_PREFIX_OFFSET, DEFAULT_PREFIX_OFFSET);
     
     // Use table settings if available, otherwise use cluster settings
     int prefixLength;
@@ -75,23 +70,11 @@ public class TenantExtractorFactory {
     } else {
       prefixLength = clusterPrefixLength;
     }
-    int prefixOffset;
-    if (tablePrefixOffsetStr != null) {
-      try {
-        prefixOffset = Integer.parseInt(tablePrefixOffsetStr);
-      } catch (NumberFormatException nfe) {
-        LOG.warn("Invalid table-level tenant prefix offset '{}', using cluster default {}", tablePrefixOffsetStr, clusterPrefixOffset);
-        prefixOffset = clusterPrefixOffset;
-      }
-    } else {
-      prefixOffset = clusterPrefixOffset;
-    }
     
-    LOG.info("Tenant configuration initialized: prefixLength={}, prefixOffset={}, " +
-        "from table properties: {}", prefixLength, prefixOffset, 
-        (tablePrefixLengthStr != null || tablePrefixOffsetStr != null));
+    LOG.info("Tenant configuration initialized: prefixLength={}, from table properties: {}", 
+        prefixLength, (tablePrefixLengthStr != null));
     
     // Create and return a DefaultTenantExtractor with the configured parameters
-    return new DefaultTenantExtractor(prefixLength, prefixOffset);
+    return new DefaultTenantExtractor(prefixLength);
   }
 } 
