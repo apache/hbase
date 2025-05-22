@@ -527,7 +527,9 @@ public class HStoreFile implements StoreFile {
         if (initialReader == null || reopen) {
           boolean evictOnClose = cacheConf == null || cacheConf.shouldEvictOnClose();
           try {
-            if (reopen) closeStoreFile(evictOnClose);
+            if (reopen) {
+              closeStoreFile(evictOnClose);
+            }
             open();
           } catch (Exception e) {
             try {
