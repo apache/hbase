@@ -47,8 +47,8 @@ public class HFilePreadReader extends HFileReaderImpl {
           long end = 0;
           HFile.Reader prefetchStreamReader = null;
           try {
-            cacheConf.getBlockCache().ifPresent(cache ->
-              cache.waitForCacheInitialization(WAIT_TIME_FOR_CACHE_INITIALIZATION));
+            cacheConf.getBlockCache().ifPresent(
+              cache -> cache.waitForCacheInitialization(WAIT_TIME_FOR_CACHE_INITIALIZATION));
             ReaderContext streamReaderContext = ReaderContextBuilder.newBuilder(context)
               .withReaderType(ReaderContext.ReaderType.STREAM)
               .withInputStreamWrapper(new FSDataInputStreamWrapper(context.getFileSystem(),
