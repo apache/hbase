@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -397,7 +398,7 @@ public class TestMetaCache {
     return Arrays.asList(new RegionOpeningException(" "),
       new RegionTooBusyException("Some old message"), new RpcThrottlingException(" "),
       new MultiActionResultTooLarge(" "), new RetryImmediatelyException(" "),
-      new CallQueueTooBigException());
+      new CallQueueTooBigException(), new RejectedExecutionException(" "));
   }
 
   public static class RegionServerWithFakeRpcServices extends HRegionServer {
