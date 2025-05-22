@@ -381,11 +381,9 @@ public class TestFSHLog extends AbstractTestFSWAL {
       region.flush(true);
       log.rollWriter();
 
-      Thread.sleep(10000);
+      TEST_UTIL.waitFor(10000, log.walFile2Props::isEmpty);
       assertEquals("WAL Files not cleaned ", 0, log.walFile2Props.size());
       region.close();
-    } catch (InterruptedException e) {
-      throw new RuntimeException(e);
     }
   }
 }
