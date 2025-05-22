@@ -654,7 +654,7 @@
     <surefire.version>3.1.0</surefire.version>
     <wagon.ssh.version>2.12</wagon.ssh.version>
     <xml.maven.version>1.0.1</xml.maven.version>
-    <spotless.version>2.27.2</spotless.version>
+    <spotless.version>2.44.4</spotless.version>
     <maven-site.version>3.12.0</maven-site.version>
     <!-- compression -->
     <aircompressor.version>0.27</aircompressor.version>
@@ -2518,6 +2518,13 @@
         <artifactId>spotless-maven-plugin</artifactId>
         <version>${spotless.version}</version>
         <configuration>
+          <upToDateChecking>
+            <!--
+              we need to process some files twice with spotless so we need to disable up to date
+              check, see https://github.com/diffplug/spotless/issues/1767
+            -->
+            <enabled>false</enabled>
+          </upToDateChecking>
           <!-- define a language-specific format -->
           <java>
             <excludes>
