@@ -409,13 +409,6 @@ public class TransitRegionStateProcedure
       AssignmentManager am = env.getAssignmentManager();
       am.getRegionStates().removeFromFailedOpen(regionNode.getRegionInfo());
       future = am.getRegionStateStore().updateRegionLocation(regionNode);
-      FutureUtils.addListener(future, (r, e) -> {
-        if (e != null) {
-          // Failed to persist CLOSED state to meta. Revert.
-          LOG.error("Failed to update meta for {} to CLOSED", regionNode.getRegionInfo(), e);
-          regionNode.setState(State.FAILED_OPEN);
-        }
-      });
     }
     if (future != null) {
       ProcedureFutureUtil.suspendIfNecessary(this, this::setFuture, future, env,
