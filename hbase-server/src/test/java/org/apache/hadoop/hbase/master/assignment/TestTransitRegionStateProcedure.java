@@ -21,6 +21,7 @@ import static org.apache.hadoop.hbase.master.assignment.AssignmentManager.ASSIGN
 import static org.apache.hadoop.hbase.master.assignment.RegionStateStore.getStateColumn;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -196,6 +197,23 @@ public class TestTransitRegionStateProcedure {
     }
   }
 
+  private Set<String> getRegionStates() throws IOException {
+    List<RegionInfo> regions = MetaTableAccessor.getTableRegions(UTIL.getConnection(), tableName);
+    Set<String> regionStates = new HashSet<>();
+    for (RegionInfo region : regions) {
+      Result result = MetaTableAccessor.getRegionResult(UTIL.getConnection(), region);
+      String state = Bytes.toString(
+        result.getValue(HConstants.CATALOG_FAMILY, getStateColumn(region.getReplicaId())));
+      regionStates.add(state);
+    }
+    return regionStates;
+  }
+
+  private static int getTotalRITs() throws IOException {
+    final AssignmentManager am = UTIL.getHBaseCluster().getMaster().getAssignmentManager();
+    return am.computeRegionInTransitionStat().getTotalRITs();
+  }
+
   @Test
   public void testDisableFailedOpenRegions() throws Exception {
     // Perform a faulty modification to put regions into FAILED_OPEN state
@@ -215,16 +233,26 @@ public class TestTransitRegionStateProcedure {
       MetaTableAccessor.getTableState(UTIL.getConnection(), tableName).getState());
 
     // But the regions are in "FAILED_OPEN" state
-    List<RegionInfo> regions = MetaTableAccessor.getTableRegions(UTIL.getConnection(), tableName);
-    Set<String> regionStates = new HashSet<>();
-    for (RegionInfo region : regions) {
-      Result result = MetaTableAccessor.getRegionResult(UTIL.getConnection(), region);
-      String state = Bytes.toString(
-        result.getValue(HConstants.CATALOG_FAMILY, getStateColumn(region.getReplicaId())));
-      regionStates.add(state);
-    }
-    assertEquals(Collections.singleton("FAILED_OPEN"), regionStates);
+    assertEquals(Collections.singleton("FAILED_OPEN"), getRegionStates());
 
-    // tearDown should be able to disable and delete the table successfully
+    // We should be able to disable the table
+    assertNotEquals(0, getTotalRITs());
+    UTIL.getAdmin().disableTable(tableName);
+
+    // The number of RITs should be 0 after disabling the table
+    assertEquals(0, getTotalRITs());
+
+    // The regions are now in "CLOSED" state
+    assertEquals(Collections.singleton("CLOSED"), getRegionStates());
+
+    // Fix the error in the table descriptor
+    tdb = TableDescriptorBuilder.newBuilder(td);
+    tdb.setValue("hbase.hstore.engine.class", DefaultStoreEngine.class.getName());
+    admin.modifyTable(tdb.build());
+
+    // We can then re-enable the table
+    UTIL.getAdmin().enableTable(tableName);
+    assertEquals(Collections.singleton("OPEN"), getRegionStates());
+    assertEquals(0, getTotalRITs());
   }
 }
