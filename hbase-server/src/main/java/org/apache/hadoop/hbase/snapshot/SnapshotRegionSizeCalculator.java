@@ -20,24 +20,35 @@ package org.apache.hadoop.hbase.snapshot;
 import java.io.IOException;
 import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.snapshot.SnapshotInfo.SnapshotStats;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 
 /**
  * Utility class to calculate the size of each region in a snapshot.
  */
+@InterfaceAudience.Private
 public class SnapshotRegionSizeCalculator {
   private static final Logger LOG = LoggerFactory.getLogger(SnapshotRegionSizeCalculator.class);
   private final SnapshotManifest manifest;
   private final Configuration conf;
   private final Map<String, Long> regionSizes;
 
+  private final FileSystem fs;
+
   public SnapshotRegionSizeCalculator(Configuration conf, SnapshotManifest manifest)
     throws IOException {
     this.conf = conf;
     this.manifest = manifest;
     this.regionSizes = calculateRegionSizes();
+    Path rootDir = CommonFSUtils.getRootDir(conf);
+    fs = FileSystem.get(rootDir.toUri(), conf);
   }
 
   /**
@@ -45,7 +56,9 @@ public class SnapshotRegionSizeCalculator {
    * @return A map of region encoded names to their total size in bytes.
    */
   public Map<String, Long> calculateRegionSizes() throws IOException {
-    SnapshotStats stats = SnapshotInfo.getSnapshotStats(conf, manifest, null);
+    SnapshotProtos.SnapshotDescription snapshot =
+      SnapshotDescriptionUtils.readSnapshotInfo(fs, manifest.getSnapshotDir());
+    SnapshotStats stats = SnapshotInfo.getSnapshotStats(conf, snapshot, null);
     return stats.getRegionSizeMap();
   }
 
