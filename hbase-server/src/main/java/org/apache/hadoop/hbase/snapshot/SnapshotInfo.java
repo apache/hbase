@@ -176,15 +176,6 @@ public final class SnapshotInfo extends AbstractHBaseTool {
       this.fs = fs;
     }
 
-    SnapshotStats(final Configuration conf, final FileSystem fs, final SnapshotManifest mainfest)
-      throws CorruptedSnapshotException {
-      this.snapshot = SnapshotDescriptionUtils.readSnapshotInfo(fs, mainfest.getSnapshotDir());
-      ;
-      this.snapshotTable = mainfest.getTableDescriptor().getTableName();
-      this.conf = conf;
-      this.fs = fs;
-    }
-
     /**
      * Returns the map containing region sizes.
      * @return A map where keys are region names and values are their corresponding sizes.
@@ -627,14 +618,7 @@ public final class SnapshotInfo extends AbstractHBaseTool {
     FileSystem fs = FileSystem.get(rootDir.toUri(), conf);
     Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotDesc, rootDir);
     SnapshotManifest manifest = SnapshotManifest.open(conf, fs, snapshotDir, snapshotDesc);
-    return getSnapshotStats(conf, manifest, filesMap);
-  }
-
-  public static SnapshotStats getSnapshotStats(final Configuration conf,
-    final SnapshotManifest manifest, final Map<Path, Integer> filesMap) throws IOException {
-    Path rootDir = CommonFSUtils.getRootDir(conf);
-    FileSystem fs = FileSystem.get(rootDir.toUri(), conf);
-    final SnapshotStats stats = new SnapshotStats(conf, fs, manifest);
+    final SnapshotStats stats = new SnapshotStats(conf, fs, snapshotDesc);
     SnapshotReferenceUtil.concurrentVisitReferencedFiles(conf, fs, manifest,
       "SnapshotsStatsAggregation", new SnapshotReferenceUtil.SnapshotVisitor() {
         @Override
