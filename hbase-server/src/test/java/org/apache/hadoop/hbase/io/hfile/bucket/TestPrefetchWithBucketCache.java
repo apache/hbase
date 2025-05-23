@@ -57,11 +57,13 @@ import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
+import org.apache.hadoop.hbase.io.hfile.CombinedBlockCache;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
+import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.io.hfile.PrefetchExecutor;
 import org.apache.hadoop.hbase.io.hfile.RandomKeyValueUtil;
 import org.apache.hadoop.hbase.regionserver.BloomType;
@@ -139,15 +141,22 @@ public class TestPrefetchWithBucketCache {
     // Our file should have 6 DATA blocks. We should wait for all of them to be cached
     Waiter.waitFor(conf, 300, () -> bc.getBackingMap().size() == 6);
     Map<BlockCacheKey, BucketEntry> snapshot = ImmutableMap.copyOf(bc.getBackingMap());
-    // Reads file again and check we are not prefetching it again
-    LOG.debug("Second read, no prefetch should happen here.");
+    LruBlockCache l1 = (LruBlockCache) ((CombinedBlockCache) blockCache).getFirstLevelCache();
+    assertEquals(1, l1.getBlockCount());
+    // Removes the meta block from L1 cache
+    l1.clearCache();
+    // Reads file again. Checks we are not prefetching data blocks again,
+    // but fetch back the meta block
+    LOG.debug("Second read, prefetch should run, without altering bucket cache state,"
+      + " only the meta block should be fetched again.");
     readStoreFile(storeFile);
-    // Makes sure the cache hasn't changed
+    // Makes sure the bucketcache entries have not changed
     snapshot.entrySet().forEach(e -> {
       BucketEntry entry = bc.getBackingMap().get(e.getKey());
       assertNotNull(entry);
       assertEquals(e.getValue().getCachedTime(), entry.getCachedTime());
     });
+    assertEquals(1, l1.getBlockCount());
     // forcibly removes first block from the bc backing map, in order to cause it to be cached again
     BlockCacheKey key = snapshot.keySet().stream().findFirst().get();
     LOG.debug("removing block {}", key);
