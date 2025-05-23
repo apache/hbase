@@ -22,10 +22,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.List;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormatImpl;
 import org.apache.hadoop.hbase.util.RegionSplitter;
@@ -54,12 +51,6 @@ public class TableSnapshotInputFormat implements InputFormat<ImmutableBytesWrita
 
     public TableSnapshotRegionSplit(TableSnapshotInputFormatImpl.InputSplit delegate) {
       this.delegate = delegate;
-    }
-
-    public TableSnapshotRegionSplit(TableDescriptor htd, RegionInfo regionInfo,
-      List<String> locations, Scan scan, Path restoreDir) {
-      this.delegate =
-        new TableSnapshotInputFormatImpl.InputSplit(htd, regionInfo, locations, scan, restoreDir);
     }
 
     @Override
