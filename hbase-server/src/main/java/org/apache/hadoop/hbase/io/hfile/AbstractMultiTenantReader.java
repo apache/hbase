@@ -44,6 +44,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Abstract base class for multi-tenant HFile readers. This class handles the common
@@ -693,22 +694,19 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
     
     // Calculate section size and endpoint
     int sectionSize = metadata.getSize();
-    long sectionEndpoint = metadata.getOffset() + sectionSize;
-    
-    // HFile v3 trailer size is 212 bytes (from FixedFileTrailer.TRAILER_SIZE[3])
-    // Each section is internally using HFile v3 format
-    int trailerSize = 212;
+    long sectionEndpoint = metadata.getOffset() + metadata.getSize();
+    // HFile v3 trailer size is 4096 bytes (from FixedFileTrailer.getTrailerSize(3))
+    // For sections, the trailer is at the end of each section
+    int trailerSize = FixedFileTrailer.getTrailerSize(3); // HFile v3 sections are HFile v3 format
     
     if (sectionSize < trailerSize) {
       LOG.warn("Section size {} for offset {} is smaller than minimum trailer size {}",
                sectionSize, metadata.getOffset(), trailerSize);
+      return null;
     }
     
-    // Set log level to debug for detailed section position information
     LOG.debug("Section context: offset={}, size={}, endPos={}, trailer expected at {}",
-             metadata.getOffset(), 
-             sectionSize,
-             sectionEndpoint,
+             metadata.getOffset(), sectionSize, sectionEndpoint, 
              sectionEndpoint - trailerSize);
     
     // Log additional debug information to validate blocks and headers
@@ -1035,6 +1033,80 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
       
       // Try to move to the next section
       return seekToNextCandidateSection(currentSectionIndex + 1);
+    }
+  }
+
+  /**
+   * For multi-tenant HFiles, get the first key from the first available section.
+   * This overrides the HFileReaderImpl implementation that requires dataBlockIndexReader.
+   */
+  @Override
+  public Optional<ExtendedCell> getFirstKey() {
+    try {
+      // Get all section IDs in sorted order
+      byte[][] sectionIds = getAllTenantSectionIds();
+      if (sectionIds.length == 0) {
+        return Optional.empty();
+      }
+      
+      // Get the first section and try to read its first key
+      for (byte[] sectionId : sectionIds) {
+        try {
+          SectionReader sectionReader = getSectionReader(sectionId);
+          HFileReaderImpl reader = sectionReader.getReader();
+          Optional<ExtendedCell> firstKey = reader.getFirstKey();
+          if (firstKey.isPresent()) {
+            return firstKey;
+          }
+        } catch (IOException e) {
+          LOG.warn("Failed to get first key from section {}, trying next section", 
+                   Bytes.toString(sectionId), e);
+          // Continue to next section
+        }
+      }
+      
+      return Optional.empty();
+    } catch (Exception e) {
+      LOG.error("Failed to get first key from multi-tenant HFile", e);
+      return Optional.empty();
+    }
+  }
+
+  /**
+   * For multi-tenant HFiles, get the last key from the last available section.
+   * This overrides the HFileReaderImpl implementation that requires dataBlockIndexReader.
+   */
+  @Override
+  public Optional<ExtendedCell> getLastKey() {
+    try {
+      // Get all section IDs in sorted order
+      byte[][] sectionIds = getAllTenantSectionIds();
+      if (sectionIds.length == 0) {
+        return Optional.empty();
+      }
+      
+      // Get the last section and try to read its last key
+      // Iterate backwards to find the last available key
+      for (int i = sectionIds.length - 1; i >= 0; i--) {
+        byte[] sectionId = sectionIds[i];
+        try {
+          SectionReader sectionReader = getSectionReader(sectionId);
+          HFileReaderImpl reader = sectionReader.getReader();
+          Optional<ExtendedCell> lastKey = reader.getLastKey();
+          if (lastKey.isPresent()) {
+            return lastKey;
+          }
+        } catch (IOException e) {
+          LOG.warn("Failed to get last key from section {}, trying previous section", 
+                   Bytes.toString(sectionId), e);
+          // Continue to previous section
+        }
+      }
+      
+      return Optional.empty();
+    } catch (Exception e) {
+      LOG.error("Failed to get last key from multi-tenant HFile", e);
+      return Optional.empty();
     }
   }
 } 

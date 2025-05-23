@@ -232,8 +232,10 @@ public class SectionIndexManager {
      * @throws IOException if an I/O error occurs
      */
     public long writeIndexBlocks(FSDataOutputStream out) throws IOException {
+      // Handle empty indexes like HFileBlockIndex does - write valid empty structure
       if (entries.isEmpty()) {
-        throw new IOException("No tenant sections to write in the index");
+        LOG.info("Writing empty section index (no tenant sections)");
+        return writeEmptyIndex(out);
       }
       
       // Sort entries by tenant prefix for binary search later
@@ -300,6 +302,32 @@ public class SectionIndexManager {
       
       // Write root block (pointing to intermediate blocks)
       return writeIntermediateBlock(out, intermediateBlocks, true);
+    }
+    
+    /**
+     * Write an empty index structure. This creates a valid but empty root block
+     * similar to how HFileBlockIndex handles empty indexes.
+     * 
+     * @param out the output stream to write to
+     * @return the offset where the empty root block starts
+     * @throws IOException if an I/O error occurs
+     */
+    private long writeEmptyIndex(FSDataOutputStream out) throws IOException {
+      // Record root offset
+      long rootOffset = out.getPos();
+      
+      // Write empty root block
+      DataOutputStream dos = blockWriter.startWriting(BlockType.ROOT_INDEX);
+      dos.writeInt(0); // Zero entries
+      blockWriter.writeHeaderAndData(out);
+      
+      // Update metrics
+      totalUncompressedSize += blockWriter.getOnDiskSizeWithHeader();
+      numLevels = 1;
+      
+      LOG.info("Wrote empty section index at offset {}", rootOffset);
+      
+      return rootOffset;
     }
     
     /**

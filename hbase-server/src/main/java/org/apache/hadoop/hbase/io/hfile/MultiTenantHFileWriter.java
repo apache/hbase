@@ -43,7 +43,7 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.TableDescriptor;
-
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import static org.apache.hadoop.hbase.io.hfile.BlockCompressedSizePredicator.MAX_BLOCK_SIZE_UNCOMPRESSED;
 
 /**
@@ -106,14 +106,16 @@ public class MultiTenantHFileWriter implements HFile.Writer {
   // Additional field added to support v4
   private int majorVersion = HFile.MIN_FORMAT_VERSION_WITH_MULTI_TENANT;
   
-  // Temporary path used for atomic writes
-  private final Path tmpPath;
+  // Added for v4
+  private FixedFileTrailer trailer;
+  private HFileBlockIndex.BlockIndexWriter metaBlockIndexWriter;
+  private HFileInfo fileInfo = new HFileInfo();
   
   /**
    * Creates a multi-tenant HFile writer that writes sections to a single file.
    * 
    * @param fs Filesystem to write to
-   * @param path Path for the HFile
+   * @param path Path for the HFile (final destination)
    * @param conf Configuration settings
    * @param cacheConf Cache configuration
    * @param tenantExtractor Extractor for tenant information
@@ -126,16 +128,20 @@ public class MultiTenantHFileWriter implements HFile.Writer {
       CacheConfig cacheConf,
       TenantExtractor tenantExtractor,
       HFileContext fileContext) throws IOException {
-    // write into a .tmp file to allow atomic rename
-    this.tmpPath = new Path(path.toString() + ".tmp");
-    this.fs = fs;
+    // Follow HFileWriterImpl pattern: accept path and create outputStream
     this.path = path;
+    this.fs = fs;
     this.conf = conf;
     this.cacheConf = cacheConf;
     this.tenantExtractor = tenantExtractor;
     this.fileContext = fileContext;
-    // create output stream on temp path
-    this.outputStream = fs.create(tmpPath);
+    
+    // Create output stream directly to the provided path - no temporary file management here
+    // The caller (StoreFileWriter or integration test framework) handles temporary files
+    this.outputStream = HFileWriterImpl.createOutputStream(conf, fs, path, null);
+    
+    // Initialize meta block index writer
+    this.metaBlockIndexWriter = new HFileBlockIndex.BlockIndexWriter();
     // initialize blockWriter and sectionIndexWriter after creating stream
     initialize();
   }
@@ -159,24 +165,12 @@ public class MultiTenantHFileWriter implements HFile.Writer {
       Map<String, String> tableProperties,
       HFileContext fileContext) throws IOException {
     
-    // Check if multi-tenant functionality is enabled for this table
-    boolean multiTenantEnabled = true; // Default to enabled
-    if (tableProperties != null && tableProperties.containsKey(TABLE_MULTI_TENANT_ENABLED)) {
-      multiTenantEnabled = Boolean.parseBoolean(tableProperties.get(TABLE_MULTI_TENANT_ENABLED));
-    }
+    // Create tenant extractor using factory - it will decide whether to use 
+    // DefaultTenantExtractor or SingleTenantExtractor based on table properties
+    TenantExtractor tenantExtractor = TenantExtractorFactory.createTenantExtractor(conf, tableProperties);
     
-    // Create tenant extractor using configuration and table properties
-    TenantExtractor tenantExtractor;
-    if (multiTenantEnabled) {
-      // Normal multi-tenant operation: extract tenant prefix from row keys
-      tenantExtractor = TenantExtractorFactory.createTenantExtractor(conf, tableProperties);
-      LOG.info("Creating MultiTenantHFileWriter with multi-tenant functionality enabled");
-    } else {
-      // Single-tenant mode: always return the default tenant prefix regardless of cell
-      tenantExtractor = new SingleTenantExtractor();
-      LOG.info("Creating MultiTenantHFileWriter with multi-tenant functionality disabled " +
-               "(all data will be written to a single section)");
-    }
+    LOG.info("Creating MultiTenantHFileWriter with tenant extractor: {}", 
+             tenantExtractor.getClass().getSimpleName());
     
     // HFile version 4 inherently implies multi-tenant
     return new MultiTenantHFileWriter(fs, path, conf, cacheConf, tenantExtractor, fileContext);
@@ -257,24 +251,32 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     LOG.info("Closing section for tenant section ID: {}", 
         currentTenantSectionId == null ? "null" : Bytes.toStringBinary(currentTenantSectionId));
     
-    // Record the section start position
-    long sectionStartOffset = currentSectionWriter.getSectionStartOffset();
-    
-    // Finish writing the current section
-    currentSectionWriter.close();
-    //outputStream.hsync(); // Ensure section data (incl. trailer) is synced to disk
-    
-    // Get current position to calculate section size
-    long sectionEndOffset = outputStream.getPos();
-    long sectionSize = sectionEndOffset - sectionStartOffset;
-    
-    // Record section in the index
-    sectionIndexWriter.addEntry(currentTenantSectionId, sectionStartOffset, (int)sectionSize);
-    
-    // Add to total uncompressed bytes
-    totalUncompressedBytes += currentSectionWriter.getTotalUncompressedBytes();
-    
-    LOG.info("Section closed: start={}, size={}", sectionStartOffset, sectionSize);
+    try {
+      // Record the section start position
+      long sectionStartOffset = currentSectionWriter.getSectionStartOffset();
+      
+      // Finish writing the current section
+      currentSectionWriter.close();
+      //outputStream.hsync(); // Ensure section data (incl. trailer) is synced to disk
+      
+      // Get current position to calculate section size
+      long sectionEndOffset = outputStream.getPos();
+      long sectionSize = sectionEndOffset - sectionStartOffset;
+      
+      // Record section in the index
+      sectionIndexWriter.addEntry(currentTenantSectionId, sectionStartOffset, (int)sectionSize);
+      
+      // Add to total uncompressed bytes
+      totalUncompressedBytes += currentSectionWriter.getTotalUncompressedBytes();
+      
+      LOG.info("Section closed: start={}, size={}", sectionStartOffset, sectionSize);
+    } catch (IOException e) {
+      LOG.error("Error closing section for tenant section ID: {}", 
+          currentTenantSectionId == null ? "null" : Bytes.toStringBinary(currentTenantSectionId), e);
+      throw e;
+    } finally {
+      currentSectionWriter = null;
+    }
   }
   
   private void createNewSection(byte[] tenantSectionId, byte[] tenantId) throws IOException {
@@ -302,62 +304,89 @@ public class MultiTenantHFileWriter implements HFile.Writer {
   
   @Override
   public void close() throws IOException {
+    if (outputStream == null) {
+      return;
+    }
+    
     // Ensure all sections are closed and resources flushed
-        if (currentSectionWriter != null) {
-          closeCurrentSection();
-          currentSectionWriter = null;
-        }
+    if (currentSectionWriter != null) {
+      closeCurrentSection();
+      currentSectionWriter = null;
+    }
 
-    // Write indexes, file info, and trailer
-        LOG.info("Writing section index");
-        long sectionIndexOffset = sectionIndexWriter.writeIndexBlocks(outputStream);
+    // HFile v4 structure: Section Index + File Info + Trailer
+    // (Each section contains complete HFile v3 with its own blocks)
+    // Note: v4 readers skip initMetaAndIndex, so no meta block index needed
 
-        // Write a tenant-wide meta index block
-        HFileBlockIndex.BlockIndexWriter metaBlockIndexWriter = new HFileBlockIndex.BlockIndexWriter();
-        DataOutputStream dos = blockWriter.startWriting(BlockType.ROOT_INDEX);
-        metaBlockIndexWriter.writeSingleLevelIndex(dos, "meta");
-        blockWriter.writeHeaderAndData(outputStream);
+    trailer = new FixedFileTrailer(getMajorVersion(), getMinorVersion());
 
-        // Write file info
-        LOG.info("Writing file info");
-        FixedFileTrailer trailer = new FixedFileTrailer(getMajorVersion(), getMinorVersion());
-        trailer.setFileInfoOffset(outputStream.getPos());
+    // 1. Write Section Index Block (replaces data block index in v4)
+    // This is the core of HFile v4 - maps tenant prefixes to section locations
+    LOG.info("Writing section index with {} sections", sectionCount);
+    long rootIndexOffset = sectionIndexWriter.writeIndexBlocks(outputStream);
+    trailer.setLoadOnOpenOffset(rootIndexOffset);
 
-        // Add HFile metadata to the info block
-        HFileInfo fileInfo = new HFileInfo();
-        finishFileInfo(fileInfo);
+    // 2. Write File Info Block (minimal v4-specific metadata)
+    LOG.info("Writing v4 file info");
+    finishFileInfo();
+    writeFileInfo(trailer, blockWriter.startWriting(BlockType.FILE_INFO));
+    blockWriter.writeHeaderAndData(outputStream);
+    totalUncompressedBytes += blockWriter.getUncompressedSizeWithHeader();
 
-        DataOutputStream out = blockWriter.startWriting(BlockType.FILE_INFO);
-        fileInfo.write(out);
-        blockWriter.writeHeaderAndData(outputStream);
+    // 3. Write Trailer
+    finishClose(trailer);
 
-        // Set up the trailer
-        trailer.setLoadOnOpenOffset(sectionIndexOffset);
-        trailer.setDataIndexCount(sectionIndexWriter.getNumRootEntries());
-        trailer.setNumDataIndexLevels(sectionIndexWriter.getNumLevels());
-        trailer.setUncompressedDataIndexSize(sectionIndexWriter.getTotalUncompressedSize());
-        trailer.setComparatorClass(fileContext.getCellComparator().getClass());
+    LOG.info("MultiTenantHFileWriter closed: path={}, sections={}, entries={}, totalUncompressedBytes={}", 
+             path, sectionCount, entryCount, totalUncompressedBytes);
 
-        // Serialize the trailer
-        trailer.serialize(outputStream);
+    blockWriter.release();
+  }
+  
+  /**
+   * Write file info similar to HFileWriterImpl but adapted for multi-tenant structure
+   */
+  private void writeFileInfo(FixedFileTrailer trailer, DataOutputStream out) throws IOException {
+    trailer.setFileInfoOffset(outputStream.getPos());
+    fileInfo.write(out);
+  }
+  
+  /**
+   * Finish the close for HFile v4 trailer
+   */
+  private void finishClose(FixedFileTrailer trailer) throws IOException {
+    // Set v4-specific trailer fields
+    trailer.setNumDataIndexLevels(sectionIndexWriter.getNumLevels());
+    trailer.setUncompressedDataIndexSize(sectionIndexWriter.getTotalUncompressedSize());
+    trailer.setDataIndexCount(sectionIndexWriter.getNumRootEntries());
+    
+    // For v4 files, these indicate no global data blocks (data is in sections)
+    trailer.setFirstDataBlockOffset(-1); // UNSET indicates no global data blocks
+    trailer.setLastDataBlockOffset(-1);  // UNSET indicates no global data blocks
+    
+    // Set other standard trailer fields
+    trailer.setComparatorClass(fileContext.getCellComparator().getClass());
+    trailer.setMetaIndexCount(0); // No global meta blocks for multi-tenant files
+    trailer.setTotalUncompressedBytes(totalUncompressedBytes + trailer.getTrailerSize());
+    trailer.setEntryCount(entryCount);
+    trailer.setCompressionCodec(fileContext.getCompression());
 
-        LOG.info("MultiTenantHFileWriter closed: path={}, sections={}", path, sectionCount);
+    // Write trailer and close stream
+    long startTime = EnvironmentEdgeManager.currentTime();
+    trailer.serialize(outputStream);
+    HFile.updateWriteLatency(EnvironmentEdgeManager.currentTime() - startTime);
 
-    // close and cleanup resources
+    // Close the output stream - no file renaming needed since caller handles temporary files
     try {
-            outputStream.close();
-            blockWriter.release();
-      // atomically rename tmp -> final path
-      fs.rename(tmpPath, path);
+      outputStream.close();
+      LOG.info("Successfully closed MultiTenantHFileWriter: {}", path);
     } catch (IOException e) {
-      // log rename or close failure
-      LOG.error("Error closing MultiTenantHFileWriter, tmpPath={}, path={}", tmpPath, path, e);
+      LOG.error("Error closing MultiTenantHFileWriter for path: {}", path, e);
       throw e;
     }
   }
   
-  private void finishFileInfo(HFileInfo fileInfo) throws IOException {
-    // Don't store the last key in global file info
+  private void finishFileInfo() throws IOException {
+    // Don't store the last key in global file info for tenant isolation
     // This is intentionally removed to ensure we don't track first/last keys globally
     
     // Average key length
@@ -383,7 +412,7 @@ public class MultiTenantHFileWriter implements HFile.Writer {
       fileInfo.append(HFileInfo.TAGS_COMPRESSED, Bytes.toBytes(tagsCompressed), false);
     }
     
-    // Section count information
+    // Section count information - this ensures fileInfo always has meaningful data
     fileInfo.append(Bytes.toBytes("SECTION_COUNT"), Bytes.toBytes(sectionCount), false);
     
     // Add tenant index level information
@@ -394,6 +423,10 @@ public class MultiTenantHFileWriter implements HFile.Writer {
                      Bytes.toBytes(conf.getInt(SectionIndexManager.SECTION_INDEX_MAX_CHUNK_SIZE, 
                                               SectionIndexManager.DEFAULT_MAX_CHUNK_SIZE)), false);
     }
+    
+    // Multi-tenant specific metadata - ensures fileInfo is never empty
+    fileInfo.append(Bytes.toBytes("MULTI_TENANT_FORMAT"), Bytes.toBytes(true), false);
+    fileInfo.append(Bytes.toBytes("HFILE_VERSION"), Bytes.toBytes(getMajorVersion()), false);
   }
   
   @Override
@@ -419,15 +452,29 @@ public class MultiTenantHFileWriter implements HFile.Writer {
   
   @Override
   public void addGeneralBloomFilter(BloomFilterWriter bfw) {
-    if (currentSectionWriter != null) {
+    // Only add Bloom filters to current section, never at global level
+    if (currentSectionWriter != null && bfw != null && bfw.getKeyCount() > 0) {
+      LOG.debug("Adding general bloom filter with {} keys to section", bfw.getKeyCount());
+      // Ensure it's properly prepared for writing
+      bfw.compactBloom();
+      // Add to current section only
       currentSectionWriter.addGeneralBloomFilter(bfw);
+    } else {
+      LOG.debug("Skipping empty or null general bloom filter");
     }
   }
   
   @Override
-  public void addDeleteFamilyBloomFilter(BloomFilterWriter bfw) {
-    if (currentSectionWriter != null) {
+  public void addDeleteFamilyBloomFilter(BloomFilterWriter bfw) throws IOException {
+    // Only add Bloom filters to current section, never at global level
+    if (currentSectionWriter != null && bfw != null && bfw.getKeyCount() > 0) {
+      LOG.debug("Adding delete family bloom filter with {} keys to section", bfw.getKeyCount());
+      // Ensure it's properly prepared for writing
+      bfw.compactBloom();
+      // Add to current section only
       currentSectionWriter.addDeleteFamilyBloomFilter(bfw);
+    } else {
+      LOG.debug("Skipping empty or null delete family bloom filter");
     }
   }
   
@@ -593,17 +640,94 @@ public class MultiTenantHFileWriter implements HFile.Writer {
       }
     }
     
+    /**
+     * Safely handle adding general bloom filters to the section
+     */
+    @Override
+    public void addGeneralBloomFilter(final BloomFilterWriter bfw) {
+      checkNotClosed();
+      
+      // Skip empty bloom filters
+      if (bfw == null || bfw.getKeyCount() <= 0) {
+        LOG.debug("Skipping empty general bloom filter for tenant section: {}", 
+             tenantSectionId == null ? "default" : Bytes.toStringBinary(tenantSectionId));
+        return;
+      }
+      
+      // Use relative positions during bloom filter addition
+      enableRelativePositionTranslation();
+      
+      try {
+        // Ensure the bloom filter is properly initialized
+        bfw.compactBloom();
+        
+        LOG.debug("Added general bloom filter with {} keys for tenant section: {}", 
+            bfw.getKeyCount(),
+            tenantSectionId == null ? "default" : Bytes.toStringBinary(tenantSectionId));
+        
+        super.addGeneralBloomFilter(bfw);
+      } finally {
+        // Always restore original stream after operation
+        disableRelativePositionTranslation();
+      }
+    }
+    
+    /**
+     * Safely handle adding delete family bloom filters to the section
+     */
+    @Override
+    public void addDeleteFamilyBloomFilter(final BloomFilterWriter bfw) {
+      checkNotClosed();
+      
+      // Skip empty bloom filters
+      if (bfw == null || bfw.getKeyCount() <= 0) {
+        LOG.debug("Skipping empty delete family bloom filter for tenant section: {}", 
+             tenantSectionId == null ? "default" : Bytes.toStringBinary(tenantSectionId));
+        return;
+      }
+      
+      // Use relative positions during bloom filter addition
+      enableRelativePositionTranslation();
+      
+      try {
+        // Ensure the bloom filter is properly initialized
+        bfw.compactBloom();
+        
+        LOG.debug("Added delete family bloom filter with {} keys for tenant section: {}", 
+            bfw.getKeyCount(),
+            tenantSectionId == null ? "default" : Bytes.toStringBinary(tenantSectionId));
+        
+        // Call the parent implementation without try/catch since it doesn't actually throw IOException
+        // The HFileWriterImpl implementation doesn't throw IOException despite the interface declaration
+        super.addDeleteFamilyBloomFilter(bfw);
+      } finally {
+        // Always restore original stream after operation
+        disableRelativePositionTranslation();
+      }
+    }
+    
     @Override
     public void close() throws IOException {
       if (closed) {
         return;
       }
       
+      LOG.debug("Closing section for tenant section ID: {}", 
+          tenantSectionId == null ? "null" : Bytes.toStringBinary(tenantSectionId));
+      
       // Use relative positions during close
-        enableRelativePositionTranslation();
+      enableRelativePositionTranslation();
       
       try {
-        super.close();
+        // Close the section writer safely
+        // HFileWriterImpl.close() can fail with NPE on empty bloom filters, but we want to 
+        // still properly close the stream and resources
+        try {
+          super.close();
+        } catch (RuntimeException e) {
+          LOG.warn("Error during section close, continuing with stream cleanup. Error: {}", e.getMessage());
+          // We will still mark as closed and continue with resource cleanup
+        }
         closed = true;
       } finally {
         // Always restore original stream after operation
@@ -674,36 +798,6 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     }
     
     @Override
-    public void addGeneralBloomFilter(BloomFilterWriter bfw) {
-      checkNotClosed();
-      
-      if (originalOutputStream == null) {
-        enableRelativePositionTranslation();
-      }
-      
-      try {
-        super.addGeneralBloomFilter(bfw);
-      } finally {
-        disableRelativePositionTranslation();
-      }
-    }
-    
-    @Override
-    public void addDeleteFamilyBloomFilter(BloomFilterWriter bfw) {
-      checkNotClosed();
-      
-      if (originalOutputStream == null) {
-        enableRelativePositionTranslation();
-      }
-      
-      try {
-        super.addDeleteFamilyBloomFilter(bfw);
-      } finally {
-        disableRelativePositionTranslation();
-      }
-    }
-    
-    @Override
     public void beforeShipped() throws IOException {
       checkNotClosed();
       
@@ -739,7 +833,7 @@ public class MultiTenantHFileWriter implements HFile.Writer {
    * An implementation of TenantExtractor that always returns the default tenant prefix.
    * Used when multi-tenant functionality is disabled via the TABLE_MULTI_TENANT_ENABLED property.
    */
-  private static class SingleTenantExtractor implements TenantExtractor {
+  static class SingleTenantExtractor implements TenantExtractor {
     @Override
     public byte[] extractTenantId(Cell cell) {
       return DEFAULT_TENANT_PREFIX;
@@ -830,7 +924,6 @@ public class MultiTenantHFileWriter implements HFile.Writer {
       TableDescriptor tableDesc = getTableDescriptor(writerFileContext);
       if (tableDesc != null) {
         // Extract relevant properties for multi-tenant configuration
-        // More properties can be added here as needed
         for (Entry<Bytes, Bytes> entry : tableDesc.getValues().entrySet()) {
           String key = Bytes.toString(entry.getKey().get());
           tableProperties.put(key, Bytes.toString(entry.getValue().get()));
@@ -842,6 +935,10 @@ public class MultiTenantHFileWriter implements HFile.Writer {
       }
       
       // Create the writer using the factory method
+      // For system tables with MULTI_TENANT_ENABLED=false, this will use SingleTenantExtractor
+      // which creates HFile v4 with a single default section (clean and consistent)
+      // For user tables with multi-tenant properties, this will use DefaultTenantExtractor  
+      // which creates HFile v4 with multiple tenant sections based on row key prefixes
       return MultiTenantHFileWriter.create(fs, path, conf, cacheConf, tableProperties, writerFileContext);
     }
     

@@ -68,7 +68,9 @@ public class MultiTenantPreadReader extends AbstractMultiTenantReader {
                metadata.getOffset() + metadata.getSize());
                
       // For non-first sections, we need to be especially careful about trailer position
-      long trailerPos = metadata.getOffset() + metadata.getSize() - 212; // 212 is HFile v3 trailer size
+      // Use proper trailer size for HFile v3 (which is 4096 bytes, not 212)
+      int trailerSize = FixedFileTrailer.getTrailerSize(3); // HFile v3 trailer size
+      long trailerPos = metadata.getOffset() + metadata.getSize() - trailerSize;
       LOG.debug("Trailer should be at absolute position: {}", trailerPos);
     }
     
@@ -115,8 +117,9 @@ public class MultiTenantPreadReader extends AbstractMultiTenantReader {
           HFileInfo info = new HFileInfo(perSectionContext, getConf());
           // Extra debug for non-first sections
           if (metadata.getOffset() > 0) {
-            LOG.debug("Section size: {}, expected trailer at relative offset: {}", metadata.getSize(), metadata.getSize() - 212);
-            LOG.debug("Trailer position in absolute coordinates: {}", metadata.getOffset() + metadata.getSize() - 212);
+            int trailerSize = FixedFileTrailer.getTrailerSize(3); // HFile v3 trailer size
+            LOG.debug("Section size: {}, expected trailer at relative offset: {}", metadata.getSize(), metadata.getSize() - trailerSize);
+            LOG.debug("Trailer position in absolute coordinates: {}", metadata.getOffset() + metadata.getSize() - trailerSize);
           }
           LOG.debug("Initializing section indices for tenant at offset {}", metadata.getOffset());
           // Instantiate the PreadReader for this section

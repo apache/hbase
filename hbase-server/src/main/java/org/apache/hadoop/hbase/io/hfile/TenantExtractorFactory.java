@@ -50,6 +50,20 @@ public class TenantExtractorFactory {
   public static TenantExtractor createTenantExtractor(
       Configuration conf, Map<String, String> tableProperties) {
     
+    // Check if multi-tenant functionality is enabled for this table
+    boolean multiTenantEnabled = false; // Default to disabled - only enabled when explicitly set
+    if (tableProperties != null && tableProperties.containsKey(MultiTenantHFileWriter.TABLE_MULTI_TENANT_ENABLED)) {
+      multiTenantEnabled = Boolean.parseBoolean(tableProperties.get(MultiTenantHFileWriter.TABLE_MULTI_TENANT_ENABLED));
+    }
+    
+    // If multi-tenant is disabled, return SingleTenantExtractor
+    if (!multiTenantEnabled) {
+      LOG.info("Multi-tenant functionality disabled for this table, using SingleTenantExtractor");
+      return new MultiTenantHFileWriter.SingleTenantExtractor();
+    }
+    
+    // Multi-tenant enabled - configure DefaultTenantExtractor
+    
     // First try table level settings (highest precedence)
     String tablePrefixLengthStr = tableProperties != null ? 
         tableProperties.get(MultiTenantHFileWriter.TABLE_TENANT_PREFIX_LENGTH) : null;

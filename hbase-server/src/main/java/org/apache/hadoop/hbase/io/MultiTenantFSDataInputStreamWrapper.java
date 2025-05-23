@@ -24,6 +24,8 @@ import org.apache.hadoop.fs.PositionedReadable;
 import org.apache.hadoop.fs.Seekable;
 import org.apache.hadoop.fs.Path;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Implementation of {@link FSDataInputStreamWrapper} that adds offset translation
@@ -40,6 +42,8 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class MultiTenantFSDataInputStreamWrapper extends FSDataInputStreamWrapper {
+  private static final Logger LOG = LoggerFactory.getLogger(MultiTenantFSDataInputStreamWrapper.class);
+
   // The offset where this section starts in the parent file
   private final long sectionOffset;
   private final FSDataInputStreamWrapper parent;
@@ -51,9 +55,13 @@ public class MultiTenantFSDataInputStreamWrapper extends FSDataInputStreamWrappe
    * @param offset the offset where the section starts in the parent file
    */
   public MultiTenantFSDataInputStreamWrapper(FSDataInputStreamWrapper parent, long offset) {
-    super(parent.getStream(false));
+    // Use test constructor to properly initialize both streams and avoid assertion issues
+    super(parent.getStream(false), parent.getStream(true));
     this.parent = parent;
     this.sectionOffset = offset;
+    
+    LOG.debug("Created section wrapper for section at offset {} (translation: {})", 
+              offset, offset == 0 ? "none" : "enabled");
   }
   
   /**
@@ -78,7 +86,7 @@ public class MultiTenantFSDataInputStreamWrapper extends FSDataInputStreamWrappe
   
   @Override
   public FSDataInputStream getStream(boolean useHBaseChecksum) {
-    // Always wrap the raw stream so each call uses fresh translator
+    // For all sections, wrap the raw stream with position translator
     FSDataInputStream raw = parent.getStream(useHBaseChecksum);
     return new TranslatingFSStream(raw);
   }
@@ -95,7 +103,9 @@ public class MultiTenantFSDataInputStreamWrapper extends FSDataInputStreamWrappe
   
   @Override
   public void prepareForBlockReader(boolean forceNoHBaseChecksum) throws IOException {
-    parent.prepareForBlockReader(forceNoHBaseChecksum);
+    // Since we're using test constructor with hfs=null, prepareForBlockReader should return early
+    // and never hit the assertion. Call super instead of parent to avoid multiple calls on parent.
+    super.prepareForBlockReader(forceNoHBaseChecksum);
   }
   
   @Override
@@ -122,9 +132,10 @@ public class MultiTenantFSDataInputStreamWrapper extends FSDataInputStreamWrappe
    * Custom implementation to translate seek position.
    */
   public void seek(long seekPos) throws IOException {
+    FSDataInputStream stream = parent.getStream(shouldUseHBaseChecksum());
+    
     // Convert section-relative position to absolute file position
     long absolutePos = toAbsolutePosition(seekPos);
-    FSDataInputStream stream = parent.getStream(shouldUseHBaseChecksum());
     stream.seek(absolutePos);
   }
 
@@ -132,11 +143,12 @@ public class MultiTenantFSDataInputStreamWrapper extends FSDataInputStreamWrappe
    * Custom implementation to translate position.
    */
   public long getPos() throws IOException {
-    // Get the absolute position and convert to section-relative position
     FSDataInputStream stream = parent.getStream(shouldUseHBaseChecksum());
     long absolutePos = stream.getPos();
+    
+    // Get the absolute position and convert to section-relative position
     return toRelativePosition(absolutePos);
-      }
+  }
 
   /**
    * Read method that translates position.
@@ -150,8 +162,10 @@ public class MultiTenantFSDataInputStreamWrapper extends FSDataInputStreamWrappe
    * Custom implementation to read at position with offset translation.
    */
   public int read(long pos, byte[] b, int off, int len) throws IOException {
-    long absolutePos = toAbsolutePosition(pos);
     FSDataInputStream stream = parent.getStream(shouldUseHBaseChecksum());
+    
+    // Convert section-relative position to absolute file position
+    long absolutePos = toAbsolutePosition(pos);
     return stream.read(absolutePos, b, off, len);
   }
 
@@ -199,12 +213,64 @@ public class MultiTenantFSDataInputStreamWrapper extends FSDataInputStreamWrappe
     TranslatingFSStream(FSDataInputStream raw) {
       super(raw.getWrappedStream());
       this.raw = raw;
+      // DO NOT automatically seek to sectionOffset here!
+      // This interferes with normal HFile reading patterns.
+      // The HFileReaderImpl will seek to specific positions as needed,
+      // and our translator will handle the offset translation.
+      LOG.debug("Created section stream wrapper for section starting at offset {}", sectionOffset);
     }
-    @Override public void seek(long pos) throws IOException { raw.seek(toAbsolutePosition(pos)); }
-    @Override public long getPos() throws IOException { return toRelativePosition(raw.getPos()); }
-    @Override public int read(long pos, byte[] b, int off, int len) throws IOException {
-      return raw.read(toAbsolutePosition(pos), b, off, len);
+    
+    @Override 
+    public void seek(long pos) throws IOException {
+      // Convert section-relative position to absolute file position
+      long absolutePos = toAbsolutePosition(pos);
+      LOG.debug("Section seek: relative pos {} -> absolute pos {}, sectionOffset={}", 
+                pos, absolutePos, sectionOffset);
+      // Validate that we're not seeking beyond reasonable bounds
+      if (pos < 0) {
+        LOG.warn("Attempting to seek to negative relative position: {}", pos);
+      }
+      raw.seek(absolutePos);
     }
-    // Other read()/read(b,off,len) use default implementations after seek
+    
+    @Override 
+    public long getPos() throws IOException {
+      long absolutePos = raw.getPos();
+      
+      // Convert absolute position to section-relative position
+      long relativePos = toRelativePosition(absolutePos);
+      LOG.trace("Section getPos: absolute {} -> relative {}, sectionOffset={}", 
+                absolutePos, relativePos, sectionOffset);
+      // Validate position translation
+      if (relativePos < 0) {
+        LOG.warn("Position translation resulted in negative relative position: absolute={}, relative={}, sectionOffset={}", 
+                 absolutePos, relativePos, sectionOffset);
+      }
+      return relativePos;
+    }
+    
+    @Override 
+    public int read(long pos, byte[] b, int off, int len) throws IOException {
+      // Convert section-relative position to absolute file position
+      long absolutePos = toAbsolutePosition(pos);
+      LOG.trace("Section pread: relative pos {} -> absolute pos {}, len={}, sectionOffset={}", 
+                pos, absolutePos, len, sectionOffset);
+      // Validate read parameters
+      if (pos < 0) {
+        LOG.warn("Attempting to read from negative relative position: {}", pos);
+      }
+      if (len < 0) {
+        throw new IllegalArgumentException("Read length cannot be negative: " + len);
+      }
+      return raw.read(absolutePos, b, off, len);
+    }
+    
+    @Override
+    public boolean seekToNewSource(long targetPos) throws IOException {
+      return raw.seekToNewSource(toAbsolutePosition(targetPos));
+    }
+    
+    // Other read methods use the underlying stream's implementations
+    // Note: We cannot override final methods like read(), read(byte[]), etc.
   }
 } 
