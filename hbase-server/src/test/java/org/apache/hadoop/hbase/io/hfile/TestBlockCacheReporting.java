@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -97,6 +98,7 @@ public class TestBlockCacheReporting {
     CacheConfig cc = new CacheConfig(this.conf);
     assertTrue(CacheConfig.DEFAULT_IN_MEMORY == cc.isInMemory());
     BlockCache blockCache = BlockCacheFactory.createBlockCache(this.conf);
+    assertNotNull("blockCache creation failed", blockCache);
     logPerBlock(blockCache);
     addDataAndHits(blockCache, 3);
     // The below has no asserts. It is just exercising toString and toJSON code.
