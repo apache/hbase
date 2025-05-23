@@ -298,7 +298,8 @@ final class AsyncRegionLocationCache {
    * are empty after removing the server from it.
    * @param serverName server to remove from locations
    */
-  public synchronized void removeForServer(ServerName serverName) {
+  public synchronized boolean removeForServer(ServerName serverName) {
+    boolean removed = false;
     for (Map.Entry<byte[], RegionLocations> entry : cache.entrySet()) {
       byte[] regionName = entry.getKey();
       RegionLocations locs = entry.getValue();
@@ -307,10 +308,11 @@ final class AsyncRegionLocationCache {
         continue;
       }
       if (newLocs.isEmpty()) {
-        cache.remove(regionName, locs);
+        removed |= cache.remove(regionName, locs);
       } else {
         cache.put(regionName, newLocs);
       }
     }
+    return removed;
   }
 }
