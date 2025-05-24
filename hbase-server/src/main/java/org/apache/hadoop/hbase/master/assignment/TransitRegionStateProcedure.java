@@ -373,7 +373,8 @@ public class TransitRegionStateProcedure
   }
 
   private void closeRegionAfterUpdatingMeta(MasterProcedureEnv env, RegionStateNode regionNode) {
-    // This region was in FAILED_OPEN state. No need to close it.
+    // Absence of location indicates that this region was in FAILED_OPEN state.
+    // This happens when disabling a table with regions in FAILED_OPEN state.
     if (regionNode.getRegionLocation() == null) {
       setNextState(RegionStateTransitionState.REGION_STATE_TRANSITION_CONFIRM_CLOSED);
       return;
@@ -400,19 +401,23 @@ public class TransitRegionStateProcedure
       return;
     }
 
-    CompletableFuture<Void> future = null;
     if (regionNode.isInState(STATES_EXPECTED_ON_CLOSING)) {
       // This is the normal case
-      future = env.getAssignmentManager().regionClosing(regionNode);
-    } else if (regionNode.setState(State.CLOSED, State.FAILED_OPEN)) {
-      // FAILED_OPEN doesn't need further transition, immediately mark the region as closed
-      AssignmentManager am = env.getAssignmentManager();
-      am.getRegionStates().removeFromFailedOpen(regionNode.getRegionInfo());
-      future = am.getRegionStateStore().updateRegionLocation(regionNode);
-    }
-    if (future != null) {
-      ProcedureFutureUtil.suspendIfNecessary(this, this::setFuture, future, env,
+      ProcedureFutureUtil.suspendIfNecessary(this, this::setFuture,
+        env.getAssignmentManager().regionClosing(regionNode), env,
         () -> closeRegionAfterUpdatingMeta(env, regionNode));
+    } else if (regionNode.setState(State.CLOSED, State.FAILED_OPEN)) {
+      // If a region was in FAILED_OPEN state, it was not OPEN and effectively CLOSED.
+      // So we should not try to close it again. We just need to update the state to CLOSED.
+
+      // Remove the region from RIT list to prevent periodic "RITs over threshold" messages.
+      final AssignmentManager am = env.getAssignmentManager();
+      am.getRegionStates().removeFromFailedOpen(regionNode.getRegionInfo());
+
+      // Persistent CLOSED state to meta and proceed to the next state.
+      ProcedureFutureUtil.suspendIfNecessary(this, this::setFuture,
+        am.getRegionStateStore().updateRegionLocation(regionNode), env,
+        () -> setNextState(RegionStateTransitionState.REGION_STATE_TRANSITION_CONFIRM_CLOSED));
     } else {
       forceNewPlan = true;
       regionNode.setRegionLocation(null);
