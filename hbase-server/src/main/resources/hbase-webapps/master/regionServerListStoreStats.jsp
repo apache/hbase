@@ -99,7 +99,7 @@ for (ServerName serverName: serverNames) {
 } else {
 %>
     <% request.setAttribute("serverName", serverName); %>
-    <jsp:include page="regionServerList_emptyStat.jsp"/>
+    <jsp:include page="regionServerListEmptyStat.jsp"/>
 <%
   }
 }
