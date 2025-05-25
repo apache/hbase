@@ -60,19 +60,19 @@
     <% request.setAttribute(MasterStatusConstants.COLLECT_SERVERS, collectServers); %>
 
     <div class="tab-pane active" id="tab_rsgroup_baseStats" role="tabpanel">
-      <jsp:include page="rsGroupList_baseStats.jsp"/>
+      <jsp:include page="rsGroupListBaseStats.jsp"/>
     </div>
     <div class="tab-pane" id="tab_rsgroup_memoryStats" role="tabpanel">
-      <jsp:include page="rsGroupList_memoryStats.jsp"/>
+      <jsp:include page="rsGroupListMemoryStats.jsp"/>
     </div>
     <div class="tab-pane" id="tab_rsgroup_requestStats" role="tabpanel">
-      <jsp:include page="rsGroupList_requestStats.jsp"/>
+      <jsp:include page="rsGroupListRequestStats.jsp"/>
     </div>
     <div class="tab-pane" id="tab_rsgroup_storeStats" role="tabpanel">
-      <jsp:include page="rsGroupList_storeStats.jsp"/>
+      <jsp:include page="rsGroupListStoreStats.jsp"/>
     </div>
     <div class="tab-pane" id="tab_rsgroup_compactStats" role="tabpanel">
-      <jsp:include page="rsGroupList_compactStats.jsp"/>
+      <jsp:include page="rsGroupListCompactStats.jsp"/>
     </div>
   </div>
 </div>

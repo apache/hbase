@@ -66,7 +66,7 @@
 } else {
 %>
   <% request.setAttribute(MasterStatusConstants.SERVER_NAME, serverName); %>
-  <jsp:include page="regionServerList_emptyStat.jsp"/>
+  <jsp:include page="regionServerListEmptyStat.jsp"/>
 <%
   }
 }

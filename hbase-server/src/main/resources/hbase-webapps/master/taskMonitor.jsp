@@ -37,7 +37,7 @@
 
 <% if (format.equals("json")) { %>
   <% request.setAttribute(MasterStatusConstants.FILTER, filter); %>
-  <jsp:include page="taskMonitor_renderTasks.jsp"/>
+  <jsp:include page="taskMonitorRenderTasks.jsp"/>
 <% } else { %>
   <h2><a name="tasks">Tasks</a></h2>
 
@@ -63,27 +63,27 @@
       <div class="tab-pane" id="tab_alltasks" role="tabpanel">
         <a href="<%= parent %>?format=json&filter=all">View as JSON</a>
         <% request.setAttribute(MasterStatusConstants.FILTER, "all"); %>
-        <jsp:include page="taskMonitor_renderTasks.jsp"/>
+        <jsp:include page="taskMonitorRenderTasks.jsp"/>
       </div>
       <div class="tab-pane active" id="tab_generaltasks" role="tabpanel">
         <a href="<%= parent %>?format=json&filter=general">View as JSON</a>
         <% request.setAttribute(MasterStatusConstants.FILTER, "general"); %>
-        <jsp:include page="taskMonitor_renderTasks.jsp"/>
+        <jsp:include page="taskMonitorRenderTasks.jsp"/>
       </div>
       <div class="tab-pane" id="tab_handlertasks" role="tabpanel">
         <a href="<%= parent %>?format=json&filter=handler">View as JSON</a>
         <% request.setAttribute(MasterStatusConstants.FILTER, "handler"); %>
-        <jsp:include page="taskMonitor_renderTasks.jsp"/>
+        <jsp:include page="taskMonitorRenderTasks.jsp"/>
       </div>
       <div class="tab-pane" id="tab_rpctasks" role="tabpanel">
         <a href="<%= parent %>?format=json&filter=rpc">View as JSON</a>
         <% request.setAttribute(MasterStatusConstants.FILTER, "rpc"); %>
-        <jsp:include page="taskMonitor_renderTasks.jsp"/>
+        <jsp:include page="taskMonitorRenderTasks.jsp"/>
       </div>
       <div class="tab-pane" id="tab_operationtasks" role="tabpanel">
         <a href="<%= parent %>?format=json&filter=operation">View as JSON</a>
         <% request.setAttribute(MasterStatusConstants.FILTER, "operation"); %>
-        <jsp:include page="taskMonitor_renderTasks.jsp"/>
+        <jsp:include page="taskMonitorRenderTasks.jsp"/>
       </div>
     </div>
   </div>

@@ -67,22 +67,22 @@
   <div class="tab-content">
     <% request.setAttribute("serverNames", serverNames); %>
     <div class="tab-pane active" id="tab_baseStats" role="tabpanel">
-      <jsp:include page="regionServerList_baseStats.jsp"/>
+      <jsp:include page="regionServerListBaseStats.jsp"/>
     </div>
     <div class="tab-pane" id="tab_memoryStats" role="tabpanel">
-      <jsp:include page="regionServerList_memoryStats.jsp" />
+      <jsp:include page="regionServerListMemoryStats.jsp" />
     </div>
     <div class="tab-pane" id="tab_requestStats" role="tabpanel">
-      <jsp:include page="regionServerList_requestStats.jsp" />
+      <jsp:include page="regionServerListRequestStats.jsp" />
     </div>
     <div class="tab-pane" id="tab_storeStats" role="tabpanel">
-      <jsp:include page="regionServerList_storeStats.jsp" />
+      <jsp:include page="regionServerListStoreStats.jsp" />
     </div>
     <div class="tab-pane" id="tab_compactStats" role="tabpanel">
-      <jsp:include page="regionServerList_compactionStats.jsp" />
+      <jsp:include page="regionServerListCompactionStats.jsp" />
     </div>
     <div class="tab-pane" id="tab_replicationStats" role="tabpanel">
-      <jsp:include page="regionServerList_replicationStats.jsp" />
+      <jsp:include page="regionServerListReplicationStats.jsp" />
     </div>
   </div>
 </div>

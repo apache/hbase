@@ -21,9 +21,7 @@
          import="org.apache.hadoop.hbase.ServerName"
          import="org.apache.hadoop.hbase.master.HMaster"
          import="org.apache.hadoop.hbase.ServerMetrics"
-         import="org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix"
          import="org.apache.hadoop.hbase.RegionMetrics"
-         import="org.apache.hadoop.hbase.Size"
          import="org.apache.hadoop.hbase.util.MasterStatusConstants"
          import="org.apache.hadoop.hbase.util.MasterStatusUtil" %>
 
@@ -32,56 +30,46 @@
   HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
 %>
 
-<table id="memoryStatsTable" class="tablesorter table table-striped">
+<table id="compactionStatsTable" class="tablesorter table table-striped">
   <thead>
   <tr>
     <th>ServerName</th>
-    <th class="cls_filesize">Used Heap</th>
-    <th class="cls_filesize">Max Heap</th>
-    <th class="cls_filesize">Memstore Size</th>
-
+    <th class="cls_separator">Num. Compacting Cells</th>
+    <th class="cls_separator">Num. Compacted Cells</th>
+    <th class="cls_separator">Remaining Cells</th>
+    <th>Compaction Progress</th>
   </tr>
   </thead>
   <tbody>
-<%
-final String ZEROMB = "0 MB";
+    <%
 for (ServerName serverName: serverNames) {
-  String usedHeapStr = ZEROMB;
-  String maxHeapStr = ZEROMB;
-  String memStoreSizeMBStr = ZEROMB;
-  ServerMetrics sl = master.getServerManager().getLoad(serverName);
-  if (sl != null) {
-    long memStoreSizeMB = 0;
-    for (RegionMetrics rl : sl.getRegionMetrics().values()) {
-      memStoreSizeMB += rl.getMemStoreSize().get(Size.Unit.MEGABYTE);
-    }
-    if (memStoreSizeMB > 0) {
-      memStoreSizeMBStr = TraditionalBinaryPrefix.long2String(memStoreSizeMB
-                                * TraditionalBinaryPrefix.MEGA.value, "B", 1);
-    }
 
-    double usedHeapSizeMB = sl.getUsedHeapSize().get(Size.Unit.MEGABYTE);
-    if (usedHeapSizeMB > 0) {
-      usedHeapStr = TraditionalBinaryPrefix.long2String((long) usedHeapSizeMB
-                          * TraditionalBinaryPrefix.MEGA.value, "B", 1);
-    }
-    double maxHeapSizeMB = sl.getMaxHeapSize().get(Size.Unit.MEGABYTE);
-    if (maxHeapSizeMB > 0) {
-      maxHeapStr = TraditionalBinaryPrefix.long2String((long) maxHeapSizeMB
-                         * TraditionalBinaryPrefix.MEGA.value, "B", 1);
-    }
+ServerMetrics sl = master.getServerManager().getLoad(serverName);
+if (sl != null) {
+long totalCompactingCells = 0;
+long totalCompactedCells = 0;
+for (RegionMetrics rl : sl.getRegionMetrics().values()) {
+  totalCompactingCells += rl.getCompactingCellCount();
+  totalCompactedCells += rl.getCompactedCellCount();
+}
+String percentDone = "";
+if  (totalCompactingCells > 0) {
+     percentDone = String.format("%.2f", 100 *
+        ((float) totalCompactedCells / totalCompactingCells)) + "%";
+}
 %>
 <tr>
   <td><%= MasterStatusUtil.serverNameLink(master, serverName) %></td>
-  <td><%= usedHeapStr %></td>
-  <td><%= maxHeapStr %></td>
-  <td><%= memStoreSizeMBStr %></td>
+  <td><%= String.format("%,d", totalCompactingCells) %></td>
+  <td><%= String.format("%,d", totalCompactedCells) %></td>
+  <td><%= String.format("%,d", totalCompactingCells - totalCompactedCells) %></td>
+  <td><%= percentDone %></td>
   </tr>
 <%
-} else {
+}  else {
 %>
-  <% request.setAttribute("serverName", serverName); %>
-  <jsp:include page="regionServerList_emptyStat.jsp"/>
+    <% request.setAttribute("serverName", serverName); %>
+    <jsp:include page="regionServerListEmptyStat.jsp"/>
 <%
   }
 }
