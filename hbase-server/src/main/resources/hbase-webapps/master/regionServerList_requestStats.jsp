@@ -34,10 +34,10 @@
   <thead>
   <tr>
     <th>ServerName</th>
-    <th>Request Per Second</th>
-    <th>Read Request Count</th>
-    <th>Filtered Read Request Count</th>
-    <th>Write Request Count</th>
+    <th class="cls_separator">Request Per Second</th>
+    <th class="cls_separator">Read Request Count</th>
+    <th class="cls_separator">Filtered Read Request Count</th>
+    <th class="cls_separator">Write Request Count</th>
   </tr>
   </thead>
   <tbody>

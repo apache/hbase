@@ -34,9 +34,9 @@
   <thead>
   <tr>
     <th>ServerName</th>
-    <th>Num. Compacting Cells</th>
-    <th>Num. Compacted Cells</th>
-    <th>Remaining Cells</th>
+    <th class="cls_separator">Num. Compacting Cells</th>
+    <th class="cls_separator">Num. Compacted Cells</th>
+    <th class="cls_separator">Remaining Cells</th>
     <th>Compaction Progress</th>
   </tr>
   </thead>

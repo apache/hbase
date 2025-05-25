@@ -39,11 +39,11 @@
   <tr>
     <th>ServerName</th>
     <th>State</th>
-    <th>Start time</th>
+    <th class="cls_dateTime">Start time</th>
     <th>Last contact</th>
     <th>Version</th>
-    <th>Requests Per Second</th>
-    <th>Num. Regions</th>
+    <th class="cls_separator">Requests Per Second</th>
+    <th class="cls_separator">Num. Regions</th>
     <% if (!master.isInMaintenanceMode() && master.getMasterCoprocessorHost() != null) { %>
       <% if (RSGroupUtil.isRSGroupEnabled(master.getConfiguration())) { %>
       <th style="vertical-align: middle;" rowspan="2">RSGroup</th>

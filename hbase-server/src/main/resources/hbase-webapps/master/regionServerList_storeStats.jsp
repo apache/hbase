@@ -35,12 +35,12 @@
   <thead>
   <tr>
     <th>ServerName</th>
-    <th>Num. Stores</th>
-    <th>Num. Storefiles</th>
-    <th>Storefile Size Uncompressed</th>
-    <th>Storefile Size</th>
-    <th>Index Size</th>
-    <th>Bloom Size</th>
+    <th class="cls_separator">Num. Stores</th>
+    <th class="cls_separator">Num. Storefiles</th>
+    <th class="cls_filesize">Storefile Size Uncompressed</th>
+    <th class="cls_filesize">Storefile Size</th>
+    <th class="cls_filesize">Index Size</th>
+    <th class="cls_filesize">Bloom Size</th>
   </tr>
   </thead>
   <tbody>

@@ -36,9 +36,9 @@
   <thead>
   <tr>
     <th>ServerName</th>
-    <th>Used Heap</th>
-    <th>Max Heap</th>
-    <th>Memstore Size</th>
+    <th class="cls_filesize">Used Heap</th>
+    <th class="cls_filesize">Max Heap</th>
+    <th class="cls_filesize">Memstore Size</th>
 
   </tr>
   </thead>

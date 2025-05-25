@@ -18,9 +18,9 @@
  */
 --%>
 
-<script type="text/javascript" src="/static/js/vega@5.32.0.min.js"></script>
-<script type="text/javascript" src="/static/js/vega-lite@5.23.0.min.js"></script>
-<script type="text/javascript" src="/static/js/vega-embed@6.29.0.min.js"></script>
+<script type="text/javascript" src="/static/js/vega.min.js"></script>
+<script type="text/javascript" src="/static/js/vega-lite.min.js"></script>
+<script type="text/javascript" src="/static/js/vega-embed.min.js"></script>
 
 <div id="vis" style="width:80%;"></div>
 <script type="text/javascript">
