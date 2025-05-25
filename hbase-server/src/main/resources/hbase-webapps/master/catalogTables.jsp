@@ -59,7 +59,7 @@
         if (tableName.equals(TableName.META_TABLE_NAME)){
             description = "The hbase:meta table holds references to all User Table regions.";
         } else if (tableName.equals(CanaryTool.DEFAULT_WRITE_TABLE_NAME)){
-            description = "The hbase:canary table is used to sniff the write availbility of"
+            description = "The hbase:canary table is used to sniff the write availability of"
               + " each regionserver.";
         } else if (tableName.equals(PermissionStorage.ACL_TABLE_NAME)){
             description = "The hbase:acl table holds information about acl.";
