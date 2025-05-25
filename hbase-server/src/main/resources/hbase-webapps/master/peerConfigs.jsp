@@ -62,8 +62,8 @@
       <td><%= peerConfig.getReplicationEndpointImpl() %></td>
       <td><%= peer.isEnabled() ? "ENABLED" : "DISABLED" %></td>
       <td><%= peerConfig.isSerial() %></td>
-      <td><%= peerConfig.getRemoteWALDir() == null ? "" : peerConfig.getRemoteWALDir() %>
-      <td><%= peer.getSyncReplicationState() %>
+      <td><%= peerConfig.getRemoteWALDir() == null ? "" : peerConfig.getRemoteWALDir() %></td>
+      <td><%= peer.getSyncReplicationState() %></td>
       <td><%= peerConfig.getBandwidth() == 0? "UNLIMITED" : Strings.humanReadableInt(peerConfig.getBandwidth()) %></td>
       <td><%= peerConfig.replicateAllUserTables() %></td>
       <td>
