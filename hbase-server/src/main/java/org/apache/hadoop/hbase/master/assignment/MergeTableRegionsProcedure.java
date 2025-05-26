@@ -451,6 +451,19 @@ public class MergeTableRegionsProcedure
         "Skip merging regions " + regionNamesToLog + ", because we are snapshotting " + tn);
     }
 
+    /*
+     * Sometimes a ModifyTableProcedure has edited a table descriptor to change the number of region
+     * replicas for a table, but it has not yet opened/closed the new replicas. The
+     * ModifyTableProcedure assumes that nobody else will do the opening/closing of the new
+     * replicas, but a concurrent MergeTableRegionProcedure would violate that assumption.
+     */
+    if (isTableModificationInProgress(env)) {
+      setFailure(getClass().getSimpleName(),
+        new IOException("Skip merging regions " + regionNamesToLog
+          + ", because there is an active procedure that is modifying the table " + tn));
+      return false;
+    }
+
     // Mostly the below two checks are not used because we already check the switches before
     // submitting the merge procedure. Just for safety, we are checking the switch again here.
     // Also, in case the switch was set to false after submission, this procedure can be rollbacked,
