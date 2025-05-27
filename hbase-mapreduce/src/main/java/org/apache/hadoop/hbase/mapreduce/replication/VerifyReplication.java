@@ -156,7 +156,6 @@ public class VerifyReplication extends Configured implements Tool {
     private int sleepMsBeforeReCompare;
     private String delimiter = "";
     private boolean verbose = false;
-    private int batch = -1;
 
     /**
      * Map method that compares every scanned row with the equivalent from a distant cluster.
@@ -178,7 +177,7 @@ public class VerifyReplication extends Configured implements Tool {
         }
         delimiter = conf.get(NAME + ".delimiter", "");
         verbose = conf.getBoolean(NAME + ".verbose", false);
-        batch = conf.getInt(NAME + ".batch", -1);
+        int batch = conf.getInt(NAME + ".batch", -1);
         final Scan scan = new Scan();
         if (batch > 0) {
           scan.setBatch(batch);
@@ -200,7 +199,7 @@ public class VerifyReplication extends Configured implements Tool {
         setRowPrefixFilter(scan, rowPrefixes);
         scan.setTimeRange(startTime, endTime);
         int versions = conf.getInt(NAME + ".versions", -1);
-        LOG.info("Setting number of version inside map as: " + versions);
+        LOG.info("Setting number of version inside map as: {}", versions);
         if (versions >= 0) {
           scan.readVersions(versions);
         }
@@ -245,9 +244,9 @@ public class VerifyReplication extends Configured implements Tool {
           String peerHBaseRootAddress = conf.get(NAME + ".peerHBaseRootAddress", null);
           FileSystem.setDefaultUri(peerConf, peerFSAddress);
           CommonFSUtils.setRootDir(peerConf, new Path(peerHBaseRootAddress));
-          LOG.info("Using peer snapshot:" + peerSnapshotName + " with temp dir:"
-            + peerSnapshotTmpDir + " peer root uri:" + CommonFSUtils.getRootDir(peerConf)
-            + " peerFSAddress:" + peerFSAddress);
+          LOG.info("Using peer snapshot:{} with temp dir:{} peer root uri:{} peerFSAddress:{}",
+            peerSnapshotName, peerSnapshotTmpDir, CommonFSUtils.getRootDir(peerConf),
+            peerFSAddress);
 
           replicatedScanner = new TableSnapshotScanner(peerConf, CommonFSUtils.getRootDir(peerConf),
             new Path(peerFSAddress, peerSnapshotTmpDir), peerSnapshotName, scan, true);
@@ -269,8 +268,8 @@ public class VerifyReplication extends Configured implements Tool {
             Result.compareResults(value, currentCompareRowInPeerTable, false);
             context.getCounter(Counters.GOODROWS).increment(1);
             if (verbose) {
-              LOG.info(
-                "Good row key: " + delimiter + Bytes.toStringBinary(value.getRow()) + delimiter);
+              LOG.info("Good row key: {}",
+                delimiter + Bytes.toStringBinary(value.getRow()) + delimiter);
             }
           } catch (Exception e) {
             logFailRowAndIncreaseCounter(context, Counters.CONTENT_DIFFERENT_ROWS, value,
@@ -291,7 +290,6 @@ public class VerifyReplication extends Configured implements Tool {
       }
     }
 
-    @SuppressWarnings("FutureReturnValueIgnored")
     private void logFailRowAndIncreaseCounter(Context context, Counters counter, Result row,
       Result replicatedRow) {
       byte[] rowKey = getRow(row, replicatedRow);
@@ -311,7 +309,11 @@ public class VerifyReplication extends Configured implements Tool {
         return;
       }
 
-      reCompareExecutor.submit(runnable);
+      try {
+        reCompareExecutor.submit(runnable).get();
+      } catch (Exception e) {
+        throw new RuntimeException(e);
+      }
     }
 
     @Override
@@ -389,18 +391,16 @@ public class VerifyReplication extends Configured implements Tool {
 
   private static Pair<ReplicationPeerConfig, Configuration>
     getPeerQuorumConfig(final Configuration conf, String peerId) throws IOException {
-    ZKWatcher localZKW = null;
-    try {
-      localZKW = new ZKWatcher(conf, "VerifyReplication", new Abortable() {
-        @Override
-        public void abort(String why, Throwable e) {
-        }
+    try (ZKWatcher localZKW = new ZKWatcher(conf, "VerifyReplication", new Abortable() {
+      @Override
+      public void abort(String why, Throwable e) {
+      }
 
-        @Override
-        public boolean isAborted() {
-          return false;
-        }
-      });
+      @Override
+      public boolean isAborted() {
+        return false;
+      }
+    })) {
       ReplicationPeerStorage storage =
         ReplicationStorageFactory.getReplicationPeerStorage(FileSystem.get(conf), localZKW, conf);
       ReplicationPeerConfig peerConfig = storage.getPeerConfig(peerId);
@@ -409,10 +409,6 @@ public class VerifyReplication extends Configured implements Tool {
     } catch (ReplicationException e) {
       throw new IOException("An error occurred while trying to connect to the remote peer cluster",
         e);
-    } finally {
-      if (localZKW != null) {
-        localZKW.close();
-      }
     }
   }
 
@@ -471,25 +467,25 @@ public class VerifyReplication extends Configured implements Tool {
       peerConfigPair = getPeerQuorumConfig(conf, peerId);
       ReplicationPeerConfig peerConfig = peerConfigPair.getFirst();
       peerQuorumAddress = peerConfig.getClusterKey();
-      LOG.info("Peer Quorum Address: " + peerQuorumAddress + ", Peer Configuration: "
-        + peerConfig.getConfiguration());
+      LOG.info("Peer Quorum Address: {}, Peer Configuration: {}", peerQuorumAddress,
+        peerConfig.getConfiguration());
       conf.set(NAME + ".peerQuorumAddress", peerQuorumAddress);
       HBaseConfiguration.setWithPrefix(conf, PEER_CONFIG_PREFIX,
         peerConfig.getConfiguration().entrySet());
     } else {
       assert this.peerQuorumAddress != null;
       peerQuorumAddress = this.peerQuorumAddress;
-      LOG.info("Peer Quorum Address: " + peerQuorumAddress);
+      LOG.info("Peer Quorum Address: {}", peerQuorumAddress);
       conf.set(NAME + ".peerQuorumAddress", peerQuorumAddress);
     }
 
     if (peerTableName != null) {
-      LOG.info("Peer Table Name: " + peerTableName);
+      LOG.info("Peer Table Name: {}", peerTableName);
       conf.set(NAME + ".peerTableName", peerTableName);
     }
 
     conf.setInt(NAME + ".versions", versions);
-    LOG.info("Number of version: " + versions);
+    LOG.info("Number of version: {}", versions);
 
     conf.setInt(NAME + ".recompareTries", reCompareTries);
     conf.setInt(NAME + ".recompareBackoffExponent", reCompareBackoffExponent);
@@ -524,7 +520,7 @@ public class VerifyReplication extends Configured implements Tool {
     }
     if (versions >= 0) {
       scan.readVersions(versions);
-      LOG.info("Number of versions set to " + versions);
+      LOG.info("Number of versions set to {}", versions);
     }
     if (families != null) {
       String[] fams = families.split(",");
@@ -537,8 +533,8 @@ public class VerifyReplication extends Configured implements Tool {
 
     if (sourceSnapshotName != null) {
       Path snapshotTempPath = new Path(sourceSnapshotTmpDir);
-      LOG.info(
-        "Using source snapshot-" + sourceSnapshotName + " with temp dir:" + sourceSnapshotTmpDir);
+      LOG.info("Using source snapshot-{} with temp dir:{}", sourceSnapshotName,
+        sourceSnapshotTmpDir);
       TableMapReduceUtil.initTableSnapshotMapperJob(sourceSnapshotName, scan, Verifier.class, null,
         null, job, true, snapshotTempPath);
       restoreSnapshotForPeerCluster(conf, peerQuorumAddress);
@@ -819,7 +815,7 @@ public class VerifyReplication extends Configured implements Tool {
    * @param errorMsg Error message. Can be null.
    */
   private static void printUsage(final String errorMsg) {
-    if (errorMsg != null && errorMsg.length() > 0) {
+    if (errorMsg != null && !errorMsg.isEmpty()) {
       System.err.println("ERROR: " + errorMsg);
     }
     System.err.println("Usage: verifyrep [--starttime=X]"
@@ -914,7 +910,8 @@ public class VerifyReplication extends Configured implements Tool {
         + "2181:/cluster-b \\\n" + "     TestTable");
   }
 
-  private static ThreadPoolExecutor buildReCompareExecutor(int maxThreads, Mapper.Context context) {
+  private static ThreadPoolExecutor buildReCompareExecutor(int maxThreads,
+    Mapper<?, ?, ?, ?>.Context context) {
     if (maxThreads == 0) {
       return null;
     }
@@ -923,7 +920,7 @@ public class VerifyReplication extends Configured implements Tool {
       buildRejectedReComparePolicy(context));
   }
 
-  private static CallerRunsPolicy buildRejectedReComparePolicy(Mapper.Context context) {
+  private static CallerRunsPolicy buildRejectedReComparePolicy(Mapper<?, ?, ?, ?>.Context context) {
     return new CallerRunsPolicy() {
       @Override
       public void rejectedExecution(Runnable runnable, ThreadPoolExecutor e) {
@@ -938,9 +935,10 @@ public class VerifyReplication extends Configured implements Tool {
   @Override
   public int run(String[] args) throws Exception {
     Configuration conf = this.getConf();
-    Job job = createSubmittableJob(conf, args);
-    if (job != null) {
-      return job.waitForCompletion(true) ? 0 : 1;
+    try (Job job = createSubmittableJob(conf, args)) {
+      if (job != null) {
+        return job.waitForCompletion(true) ? 0 : 1;
+      }
     }
     return 1;
   }
