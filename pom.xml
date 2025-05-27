@@ -601,6 +601,7 @@
     <opentelemetry-javaagent.version>2.15.0</opentelemetry-javaagent.version>
     <log4j2.version>2.17.2</log4j2.version>
     <mockito.version>4.11.0</mockito.version>
+    <byte-buddy.version>1.15.11</byte-buddy.version>
     <!--Internally we use a different version of protobuf. See hbase-protocol-shaded-->
     <external.protobuf.groupid>com.google.protobuf</external.protobuf.groupid>
     <external.protobuf.version>2.5.0</external.protobuf.version>
@@ -1365,6 +1366,16 @@
         <groupId>org.hamcrest</groupId>
         <artifactId>hamcrest-library</artifactId>
         <version>${hamcrest.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>net.bytebuddy</groupId>
+        <artifactId>byte-buddy</artifactId>
+        <version>${byte-buddy.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>net.bytebuddy</groupId>
+        <artifactId>byte-buddy-agent</artifactId>
+        <version>${byte-buddy.version}</version>
       </dependency>
       <dependency>
         <groupId>org.mockito</groupId>
