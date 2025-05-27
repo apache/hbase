@@ -46,6 +46,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -112,7 +113,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hbase.thirdparty.com.google.gson.Gson;
 
@@ -367,36 +367,67 @@ public class PerformanceEvaluation extends Configured implements Tool {
    * opts.replicas}.
    */
   static boolean checkTable(Admin admin, TestOptions opts) throws IOException {
-    TableName tableName = TableName.valueOf(opts.tableName);
-    boolean needsDelete = false, exists = admin.tableExists(tableName);
-    boolean isReadCmd = opts.cmdName.toLowerCase(Locale.ROOT).contains("read")
+    final TableName tableName = TableName.valueOf(opts.tableName);
+    final boolean exists = admin.tableExists(tableName);
+    final boolean isReadCmd = opts.cmdName.toLowerCase(Locale.ROOT).contains("read")
       || opts.cmdName.toLowerCase(Locale.ROOT).contains("scan");
-    boolean isDeleteCmd = opts.cmdName.toLowerCase(Locale.ROOT).contains("delete");
-    if (!exists && (isReadCmd || isDeleteCmd)) {
+    final boolean isDeleteCmd = opts.cmdName.toLowerCase(Locale.ROOT).contains("delete");
+    final boolean needsData = isReadCmd || isDeleteCmd;
+    if (!exists && needsData) {
       throw new IllegalStateException(
-        "Must specify an existing table for read commands. Run a write command first.");
+        "Must specify an existing table for read/delete commands. Run a write command first.");
     }
     TableDescriptor desc = exists ? admin.getDescriptor(TableName.valueOf(opts.tableName)) : null;
-    byte[][] splits = getSplits(opts);
+    final byte[][] splits = getSplits(opts);
 
     // recreate the table when user has requested presplit or when existing
     // {RegionSplitPolicy,replica count} does not match requested, or when the
     // number of column families does not match requested.
-    if (
-      (exists && opts.presplitRegions != DEFAULT_OPTS.presplitRegions
-        && opts.presplitRegions != admin.getRegions(tableName).size())
-        || (!isReadCmd && desc != null
-          && !StringUtils.equals(desc.getRegionSplitPolicyClassName(), opts.splitPolicy))
-        || (!(isReadCmd || isDeleteCmd) && desc != null
-          && desc.getRegionReplication() != opts.replicas)
-        || (desc != null && desc.getColumnFamilyCount() != opts.families)
-    ) {
-      needsDelete = true;
-      // wait, why did it delete my table?!?
-      LOG.debug(MoreObjects.toStringHelper("needsDelete").add("needsDelete", needsDelete)
-        .add("isReadCmd", isReadCmd).add("exists", exists).add("desc", desc)
-        .add("presplit", opts.presplitRegions).add("splitPolicy", opts.splitPolicy)
-        .add("replicas", opts.replicas).add("families", opts.families).toString());
+    final boolean regionCountChanged =
+      exists && opts.presplitRegions != DEFAULT_OPTS.presplitRegions
+        && opts.presplitRegions != admin.getRegions(tableName).size();
+    final boolean splitPolicyChanged =
+      exists && !StringUtils.equals(desc.getRegionSplitPolicyClassName(), opts.splitPolicy);
+    final boolean regionReplicationChanged = exists && desc.getRegionReplication() != opts.replicas;
+    final boolean columnFamilyCountChanged = exists && desc.getColumnFamilyCount() != opts.families;
+
+    boolean needsDelete = regionCountChanged || splitPolicyChanged || regionReplicationChanged
+      || columnFamilyCountChanged;
+
+    if (needsDelete) {
+      final List<String> errors = new ArrayList<>();
+      if (columnFamilyCountChanged) {
+        final String error = String.format("--families=%d, but found %d column families",
+          opts.families, desc.getColumnFamilyCount());
+        if (needsData) {
+          // We can't proceed the test in this case
+          throw new IllegalStateException(
+            "Cannot proceed the test. Run a write command first: " + error);
+        }
+        errors.add(error);
+      }
+      if (regionCountChanged) {
+        errors.add(String.format("--presplit=%d, but found %d regions", opts.presplitRegions,
+          admin.getRegions(tableName).size()));
+      }
+      if (splitPolicyChanged) {
+        errors.add(String.format("--splitPolicy=%s, but current policy is %s", opts.splitPolicy,
+          desc.getRegionSplitPolicyClassName()));
+      }
+      if (regionReplicationChanged) {
+        errors.add(String.format("--replicas=%d, but found %d replicas", opts.replicas,
+          desc.getRegionReplication()));
+      }
+      final String reason =
+        errors.stream().map(s -> '[' + s + ']').collect(Collectors.joining(", "));
+
+      if (needsData) {
+        LOG.warn(
+          "Inconsistent table state detected. Consider running a write command first: " + reason);
+        needsDelete = false;
+      } else {
+        LOG.debug(reason);
+      }
     }
 
     // remove an existing table
