@@ -18,8 +18,6 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import java.io.IOException;
-import java.util.Optional;
-import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
@@ -38,15 +36,8 @@ public class HFilePreadReader extends HFileReaderImpl {
     Configuration conf) throws IOException {
     super(context, fileInfo, cacheConf, conf);
     // master hosted regions, like the master procedures store wouldn't have a block cache
-    final MutableBoolean shouldCache = new MutableBoolean(cacheConf.getBlockCache().isPresent());
-
-    cacheConf.getBlockCache().ifPresent(cache -> {
-      Optional<Boolean> result = cache.shouldCacheFile(path.getName());
-      shouldCache.setValue(result.isPresent() ? result.get().booleanValue() : true);
-    });
-
     // Prefetch file blocks upon open if requested
-    if (cacheConf.shouldPrefetchOnOpen() && cacheIfCompactionsOff() && shouldCache.booleanValue()) {
+    if (cacheConf.getBlockCache().isPresent() && cacheConf.shouldPrefetchOnOpen()) {
       PrefetchExecutor.request(path, new Runnable() {
         @Override
         public void run() {
@@ -134,8 +125,8 @@ public class HFilePreadReader extends HFileReaderImpl {
             }
           } catch (IOException e) {
             // IOExceptions are probably due to region closes (relocation, etc.)
-            if (LOG.isTraceEnabled()) {
-              LOG.trace("Prefetch " + getPathOffsetEndStr(path, offset, end), e);
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Prefetch " + getPathOffsetEndStr(path, offset, end), e);
             }
           } catch (Throwable e) {
             // Other exceptions are interesting
