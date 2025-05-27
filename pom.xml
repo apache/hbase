@@ -674,7 +674,7 @@
         databind] must be kept in sync with the version of jackson-jaxrs-json-provider shipped in
         hbase-thirdparty.
     -->
-    <hbase-thirdparty.version>4.1.11-SNAPSHOT</hbase-thirdparty.version>
+    <hbase-thirdparty.version>4.1.11</hbase-thirdparty.version>
     <!-- Coverage properties -->
     <jacoco.version>0.8.8</jacoco.version>
     <jacocoArgLine/>
@@ -1596,15 +1596,11 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
-  <!-- TODO Remove below block, added just for testing -->
   <repositories>
     <repository>
-      <snapshots>
-        <enabled>true</enabled>
-        <updatePolicy>always</updatePolicy>
-      </snapshots>
-      <id>apache.snapshots</id>
-      <url>https://repository.apache.org/content/repositories/snapshots</url>
+      <id>staging</id>
+      <name>staging</name>
+      <url>https://repository.apache.org/content/repositories/orgapachehbase-1577</url>
     </repository>
   </repositories>
   <build>
