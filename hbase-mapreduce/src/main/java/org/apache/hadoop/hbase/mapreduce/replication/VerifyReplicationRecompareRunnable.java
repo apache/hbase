@@ -34,7 +34,7 @@ public class VerifyReplicationRecompareRunnable implements Runnable {
   private static final Logger LOG =
     LoggerFactory.getLogger(VerifyReplicationRecompareRunnable.class);
 
-  private final Mapper.Context context;
+  private final Mapper<?, ?, ?, ?>.Context context;
   private final VerifyReplication.Verifier.Counters originalCounter;
   private final String delimiter;
   private final byte[] row;
@@ -50,7 +50,7 @@ public class VerifyReplicationRecompareRunnable implements Runnable {
   private Result sourceResult;
   private Result replicatedResult;
 
-  public VerifyReplicationRecompareRunnable(Mapper.Context context, Result sourceResult,
+  public VerifyReplicationRecompareRunnable(Mapper<?, ?, ?, ?>.Context context, Result sourceResult,
     Result replicatedResult, VerifyReplication.Verifier.Counters originalCounter, String delimiter,
     Scan tableScan, Table sourceTable, Table replicatedTable, int reCompareTries,
     int sleepMsBeforeReCompare, int reCompareBackoffExponent, boolean verbose) {
