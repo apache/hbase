@@ -498,14 +498,17 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
   private void assignNewReplicasIfNeeded(MasterProcedureEnv env) throws IOException {
     final int oldReplicaCount = unmodifiedTableDescriptor.getRegionReplication();
     final int newReplicaCount = modifiedTableDescriptor.getRegionReplication();
-    if (newReplicaCount <= oldReplicaCount) {
+    int existingReplicasCount = env.getAssignmentManager().getRegionStates()
+      .getRegionsOfTable(modifiedTableDescriptor.getTableName()).size();
+    if (newReplicaCount <= Math.min(oldReplicaCount, existingReplicasCount)) {
       return;
     }
     if (isTableEnabled(env)) {
       List<RegionInfo> newReplicas = env.getAssignmentManager().getRegionStates()
         .getRegionsOfTable(getTableName()).stream().filter(RegionReplicaUtil::isDefaultReplica)
-        .flatMap(primaryRegion -> IntStream.range(oldReplicaCount, newReplicaCount).mapToObj(
-          replicaId -> RegionReplicaUtil.getRegionInfoForReplica(primaryRegion, replicaId)))
+        .flatMap(primaryRegion -> IntStream
+          .range(Math.min(oldReplicaCount, existingReplicasCount), newReplicaCount).mapToObj(
+            replicaId -> RegionReplicaUtil.getRegionInfoForReplica(primaryRegion, replicaId)))
         .collect(Collectors.toList());
       addChildProcedure(env.getAssignmentManager().createAssignProcedures(newReplicas));
     }
