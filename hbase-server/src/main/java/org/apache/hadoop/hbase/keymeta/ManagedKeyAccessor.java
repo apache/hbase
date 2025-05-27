@@ -46,11 +46,13 @@ public class ManagedKeyAccessor extends KeyManagementBase {
    *
    * @param key_cust     The key custodian.
    * @param keyNamespace The namespace of the key
-   * @param keyMetadata The metadata of the key
+   * @param keyMetadata  The metadata of the key
+   * @param wrappedKey The DEK key material encrypted with the corresponding KEK, if available.
    * @return The key data or {@code null}
    * @throws IOException if an error occurs while retrieving the key
    */
-  public ManagedKeyData getKey(byte[] key_cust, String keyNamespace, String keyMetadata)
+  public ManagedKeyData getKey(byte[] key_cust, String keyNamespace, String keyMetadata,
+    byte[] wrappedKey)
       throws IOException, KeyException {
     assertKeyManagementEnabled();
     // 1. Check L1 cache.
@@ -61,7 +63,7 @@ public class ManagedKeyAccessor extends KeyManagementBase {
       if (keyData == null) {
         // 3. Check with Key Provider.
         ManagedKeyProvider provider = getKeyProvider();
-        keyData = provider.unwrapKey(keyMetadata);
+        keyData = provider.unwrapKey(keyMetadata, wrappedKey);
         if (keyData != null) {
           LOG.info("Got key data with status: {} and metadata: {} for prefix: {}",
             keyData.getKeyState(), keyData.getKeyMetadata(),

@@ -155,6 +155,21 @@ public class KeymetaTableAccessor extends KeyManagementBase {
   }
 
   /**
+   * Get the specific key identified by key_cust, keyNamespace and keyState.
+   *
+   * @param key_cust    The prefix.
+   * @param keyNamespace The namespace.
+   * @param keyState    The state of the key.
+   * @return the key or {@code null}
+   * @throws IOException when there is an underlying IOException.
+   * @throws KeyException when there is an underlying KeyException.
+   */
+  public ManagedKeyData getKey(byte[] key_cust, String keyNamespace, ManagedKeyState keyState)
+    throws IOException, KeyException {
+    return getKeyInternal(key_cust, keyNamespace, new byte[] { keyState.getVal() });
+  }
+
+  /**
    * Get the specific key identified by key_cust, keyNamespace and keyMetadata.
    *
    * @param key_cust    The prefix.
@@ -166,11 +181,25 @@ public class KeymetaTableAccessor extends KeyManagementBase {
    */
   public ManagedKeyData getKey(byte[] key_cust, String keyNamespace, String keyMetadata)
     throws IOException, KeyException {
+    return getKeyInternal(key_cust, keyNamespace, ManagedKeyData.constructMetadataHash(keyMetadata));
+  }
+
+  /**
+   * Internal helper method to get a key using the provided metadata hash.
+   *
+   * @param key_cust        The prefix.
+   * @param keyNamespace    The namespace.
+   * @param keyMetadataHash The metadata hash or state value.
+   * @return the key or {@code null}
+   * @throws IOException when there is an underlying IOException.
+   * @throws KeyException when there is an underlying KeyException.
+   */
+  private ManagedKeyData getKeyInternal(byte[] key_cust, String keyNamespace, byte[] keyMetadataHash)
+    throws IOException, KeyException {
     assertKeyManagementEnabled();
     Connection connection = getServer().getConnection();
     try (Table table = connection.getTable(KEY_META_TABLE_NAME)) {
-      byte[] rowKey = constructRowKeyForMetadata(key_cust, keyNamespace,
-        ManagedKeyData.constructMetadataHash(keyMetadata));
+      byte[] rowKey = constructRowKeyForMetadata(key_cust, keyNamespace, keyMetadataHash);
       Result result = table.get(new Get(rowKey));
       return parseFromResult(getServer(), key_cust, keyNamespace, result);
     }
@@ -215,20 +244,34 @@ public class KeymetaTableAccessor extends KeyManagementBase {
            Bytes.toBytes(latestSystemKey.getKeyChecksum()))
          ;
     }
-    return put.setDurability(Durability.SKIP_WAL)
+    Put result = put.setDurability(Durability.SKIP_WAL)
       .setPriority(HConstants.SYSTEMTABLE_QOS)
-      .addColumn(KEY_META_INFO_FAMILY, DEK_METADATA_QUAL_BYTES, keyData.getKeyMetadata().getBytes())
       .addColumn(KEY_META_INFO_FAMILY, REFRESHED_TIMESTAMP_QUAL_BYTES,
         Bytes.toBytes(keyData.getRefreshTimestamp()))
       .addColumn(KEY_META_INFO_FAMILY, KEY_STATE_QUAL_BYTES,
         new byte[] { keyData.getKeyState().getVal() })
       ;
+
+    // Only add metadata column if metadata is not null
+    String metadata = keyData.getKeyMetadata();
+    if (metadata != null) {
+      result.addColumn(KEY_META_INFO_FAMILY, DEK_METADATA_QUAL_BYTES, metadata.getBytes());
+    }
+
+    return result;
   }
 
   @VisibleForTesting
   public static byte[] constructRowKeyForMetadata(ManagedKeyData keyData) {
+    byte[] keyMetadataHash;
+    if (keyData.getKeyState() == ManagedKeyState.FAILED && keyData.getKeyMetadata() == null) {
+      // For FAILED state with null metadata, use state as metadata
+      keyMetadataHash = new byte[] { keyData.getKeyState().getVal() };
+    } else {
+      keyMetadataHash = keyData.getKeyMetadataHash();
+    }
     return constructRowKeyForMetadata(keyData.getKeyCustodian(), keyData.getKeyNamespace(),
-      keyData.getKeyMetadataHash());
+      keyMetadataHash);
   }
 
   @VisibleForTesting

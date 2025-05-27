@@ -63,7 +63,7 @@ public class MockManagedKeyProvider extends MockAesKeyProvider implements Manage
   }
 
   @Override
-  public ManagedKeyData unwrapKey(String keyMetadata) throws IOException {
+  public ManagedKeyData unwrapKey(String keyMetadata, byte[] wrappedKey) throws IOException {
     if (allGeneratedKeys.containsKey(keyMetadata)) {
       String[] meta_toks = keyMetadata.split(":");
       ManagedKeyState keyState = this.keyState.get(meta_toks[1]);

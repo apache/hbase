@@ -94,7 +94,16 @@ public class TestManagedKeyData {
     assertThrows(NullPointerException.class,
       () -> new ManagedKeyData(keyCust, keyNamespace, theKey, null, keyMetadata));
     assertThrows(NullPointerException.class,
-      () -> new ManagedKeyData(keyCust, keyNamespace, theKey, keyState, null));
+      () -> new ManagedKeyData(keyCust, keyNamespace, theKey, ManagedKeyState.ACTIVE, null));
+  }
+
+  @Test
+  public void testConstructorWithFailedStateAndNullMetadata() {
+    ManagedKeyData keyData = new ManagedKeyData(keyCust, keyNamespace, null, ManagedKeyState.FAILED, null);
+    assertNotNull(keyData);
+    assertEquals(ManagedKeyState.FAILED, keyData.getKeyState());
+    assertNull(keyData.getKeyMetadata());
+    assertNull(keyData.getTheKey());
   }
 
   @Test

@@ -75,6 +75,7 @@ import org.mockito.MockitoAnnotations;
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
   TestKeymetaTableAccessor.TestAdd.class,
+  TestKeymetaTableAccessor.TestAddWithNullableFields.class,
   TestKeymetaTableAccessor.TestGet.class,
   TestKeymetaTableAccessor.TestOps.class,
 })
@@ -146,7 +147,7 @@ public class TestKeymetaTableAccessor {
     }
 
     @Test
-    public void testAddActiveKey() throws Exception {
+    public void testAddKey() throws Exception {
       managedKeyProvider.setMockedKeyState(ALIAS, keyState);
       ManagedKeyData keyData =
         managedKeyProvider.getManagedKey(CUST_ID, KEY_SPACE_GLOBAL);
@@ -157,6 +158,42 @@ public class TestKeymetaTableAccessor {
       verify(table).put(putCaptor.capture());
       Put put = putCaptor.getValue();
       assertPut(keyData, put);
+    }
+  }
+
+  @RunWith(BlockJUnit4ClassRunner.class)
+  @Category({ MasterTests.class, SmallTests.class })
+  public static class TestAddWithNullableFields extends TestKeymetaTableAccessor {
+    @ClassRule
+    public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestAddWithNullableFields.class);
+
+    @Test
+    public void testAddKeyWithFailedStateAndNullMetadata() throws Exception {
+      managedKeyProvider.setMockedKeyState(ALIAS, FAILED);
+      ManagedKeyData keyData = new ManagedKeyData(CUST_ID, KEY_SPACE_GLOBAL, null, FAILED, null);
+
+      accessor.addKey(keyData);
+
+      ArgumentCaptor<Put> putCaptor = ArgumentCaptor.forClass(Put.class);
+      verify(table).put(putCaptor.capture());
+      Put put = putCaptor.getValue();
+
+      // Verify the row key uses state value for metadata hash
+      byte[] expectedRowKey = constructRowKeyForMetadata(CUST_ID, KEY_SPACE_GLOBAL,
+        new byte[] { FAILED.getVal() });
+      assertEquals(0, Bytes.compareTo(expectedRowKey, put.getRow()));
+
+      Map<Bytes, Bytes> valueMap = getValueMap(put);
+
+      // Verify key-related columns are not present
+      assertNull(valueMap.get(new Bytes(DEK_CHECKSUM_QUAL_BYTES)));
+      assertNull(valueMap.get(new Bytes(DEK_WRAPPED_BY_STK_QUAL_BYTES)));
+      assertNull(valueMap.get(new Bytes(STK_CHECKSUM_QUAL_BYTES)));
+
+      // Verify state is set correctly
+      assertEquals(new Bytes(new byte[] { FAILED.getVal() }),
+        valueMap.get(new Bytes(KEY_STATE_QUAL_BYTES)));
     }
   }
 
@@ -249,6 +286,32 @@ public class TestKeymetaTableAccessor {
       // When DEK checksum doesn't match, we expect a null value.
       result = accessor.getKey(CUST_ID, KEY_NAMESPACE, KEY_METADATA);
       assertNull(result);
+    }
+
+    @Test
+    public void testGetKeyWithFailedState() throws Exception {
+      // Test with FAILED state and null metadata
+      Result failedResult = mock(Result.class);
+      when(failedResult.getValue(eq(KEY_META_INFO_FAMILY), eq(KEY_STATE_QUAL_BYTES)))
+        .thenReturn(new byte[] { FAILED.getVal() });
+      when(failedResult.getValue(eq(KEY_META_INFO_FAMILY), eq(REFRESHED_TIMESTAMP_QUAL_BYTES)))
+        .thenReturn(Bytes.toBytes(0L));
+      when(failedResult.getValue(eq(KEY_META_INFO_FAMILY), eq(STK_CHECKSUM_QUAL_BYTES)))
+        .thenReturn(Bytes.toBytes(0L));
+      // Explicitly return null for metadata to simulate FAILED state with null metadata
+      when(failedResult.getValue(eq(KEY_META_INFO_FAMILY), eq(DEK_METADATA_QUAL_BYTES)))
+        .thenReturn(null);
+
+      when(table.get(any(Get.class))).thenReturn(failedResult);
+      ManagedKeyData result = accessor.getKey(CUST_ID, KEY_NAMESPACE, FAILED);
+
+      verify(table).get(any(Get.class));
+      assertNotNull(result);
+      assertEquals(0, Bytes.compareTo(CUST_ID, result.getKeyCustodian()));
+      assertEquals(KEY_NAMESPACE, result.getKeyNamespace());
+      assertNull(result.getKeyMetadata());
+      assertNull(result.getTheKey());
+      assertEquals(FAILED, result.getKeyState());
     }
 
     @Test
@@ -369,14 +432,7 @@ public class TestKeymetaTableAccessor {
     assertTrue(Bytes.compareTo(constructRowKeyForMetadata(keyData),
       put.getRow()) == 0);
 
-    NavigableMap<byte[], List<Cell>> familyCellMap = put.getFamilyCellMap();
-    List<Cell> cells = familyCellMap.get(KEY_META_INFO_FAMILY);
-    Map<Bytes, Bytes> valueMap = new HashMap<>();
-    for (Cell cell : cells) {
-      valueMap.put(
-        new Bytes(cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength()),
-        new Bytes(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()));
-    }
+    Map<Bytes, Bytes> valueMap = getValueMap(put);
 
     if (keyData.getTheKey() != null) {
       assertNotNull(valueMap.get(new Bytes(DEK_CHECKSUM_QUAL_BYTES)));
@@ -394,5 +450,17 @@ public class TestKeymetaTableAccessor {
     assertNotNull(valueMap.get(new Bytes(REFRESHED_TIMESTAMP_QUAL_BYTES)));
     assertEquals(new Bytes(new byte[] { keyData.getKeyState().getVal() }),
       valueMap.get(new Bytes(KEY_STATE_QUAL_BYTES)));
+  }
+
+  private static Map<Bytes, Bytes> getValueMap(Put put) {
+    NavigableMap<byte[], List<Cell>> familyCellMap = put.getFamilyCellMap();
+    List<Cell> cells = familyCellMap.get(KEY_META_INFO_FAMILY);
+    Map<Bytes, Bytes> valueMap = new HashMap<>();
+    for (Cell cell : cells) {
+      valueMap.put(
+        new Bytes(cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength()),
+        new Bytes(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()));
+    }
+    return valueMap;
   }
 }

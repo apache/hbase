@@ -88,7 +88,8 @@ public class TestManagedKeyAccessor {
   @Test
   public void testGetKeyNonExisting() throws Exception {
     for (int i = 0; i < 2; ++i) {
-      ManagedKeyData keyData = managedKeyAccessor.getKey(CUST_ID, KEY_SPACE_GLOBAL, "abcd");
+      ManagedKeyData keyData = managedKeyAccessor.getKey(CUST_ID, KEY_SPACE_GLOBAL, "abcd",
+        null);
       verifyNonExisting(keyData);
     }
   }
@@ -108,11 +109,11 @@ public class TestManagedKeyAccessor {
     when(keyDataCache.getEntry(any())).thenReturn(keyData);
 
     ManagedKeyData result =
-      managedKeyAccessor.getKey(CUST_ID, KEY_SPACE_GLOBAL, keyData.getKeyMetadata());
+      managedKeyAccessor.getKey(CUST_ID, KEY_SPACE_GLOBAL, keyData.getKeyMetadata(), null);
 
     assertEquals(keyData, result);
     verify(keyDataCache).getEntry(keyData.getKeyMetadata());
-    verify(keymetaAccessor, never()).getKey(any(), any(), any());
+    verify(keymetaAccessor, never()).getKey(any(), any(), any(String.class));
     verify(keymetaAccessor, never()).addKey(any());
     verify(keyDataCache, never()).addEntry(keyData);
   }
@@ -120,10 +121,10 @@ public class TestManagedKeyAccessor {
   @Test
   public void testGetFromL2() throws Exception {
     ManagedKeyData keyData = managedKeyProvider.getManagedKey(CUST_ID, KEY_SPACE_GLOBAL);
-    when(keymetaAccessor.getKey(any(), any(), any())).thenReturn(keyData);
+    when(keymetaAccessor.getKey(any(), any(), any(String.class))).thenReturn(keyData);
 
     ManagedKeyData result =
-      managedKeyAccessor.getKey(CUST_ID, KEY_SPACE_GLOBAL, keyData.getKeyMetadata());
+      managedKeyAccessor.getKey(CUST_ID, KEY_SPACE_GLOBAL, keyData.getKeyMetadata(), null);
 
     assertEquals(keyData, result);
     verify(keyDataCache).getEntry(keyData.getKeyMetadata());
@@ -137,7 +138,7 @@ public class TestManagedKeyAccessor {
     ManagedKeyData keyData = managedKeyProvider.getManagedKey(CUST_ID, KEY_SPACE_GLOBAL);
 
     ManagedKeyData result =
-      managedKeyAccessor.getKey(CUST_ID, KEY_SPACE_GLOBAL, keyData.getKeyMetadata());
+      managedKeyAccessor.getKey(CUST_ID, KEY_SPACE_GLOBAL, keyData.getKeyMetadata(), null);
 
     assertEquals(keyData, result);
     verify(keyDataCache).getEntry(keyData.getKeyMetadata());

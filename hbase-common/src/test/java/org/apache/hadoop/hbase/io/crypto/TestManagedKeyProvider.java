@@ -198,7 +198,7 @@ public class TestManagedKeyProvider {
       String invalidPrefixEnc = ManagedKeyProvider.encodeToStr(invalidPrefix);
       String invalidMetadata = ManagedKeyStoreKeyProvider.generateKeyMetadata(invalidAlias,
         invalidPrefixEnc);
-      ManagedKeyData keyData = managedKeyProvider.unwrapKey(invalidMetadata);
+      ManagedKeyData keyData = managedKeyProvider.unwrapKey(invalidMetadata, null);
       assertNotNull(keyData);
       assertKeyData(keyData, ManagedKeyState.FAILED, null, invalidPrefix,
         invalidAlias);
@@ -213,7 +213,7 @@ public class TestManagedKeyProvider {
         "false");
       String invalidMetadata = ManagedKeyStoreKeyProvider.generateKeyMetadata(invalidAlias,
         invalidPrefixEnc);
-      ManagedKeyData keyData = managedKeyProvider.unwrapKey(invalidMetadata);
+      ManagedKeyData keyData = managedKeyProvider.unwrapKey(invalidMetadata, null);
       assertNotNull(keyData);
       assertKeyData(keyData, ManagedKeyState.DISABLED, null, invalidPrefix, invalidAlias);
     }
@@ -237,7 +237,7 @@ public class TestManagedKeyProvider {
       assertEquals(alias, keyMetadata.get(KEY_METADATA_ALIAS));
       assertEquals(Base64.getEncoder().encodeToString(prefixBytes),
         keyMetadata.get(KEY_METADATA_CUST));
-      assertEquals(keyData, managedKeyProvider.unwrapKey(keyData.getKeyMetadata()));
+      assertEquals(keyData, managedKeyProvider.unwrapKey(keyData.getKeyMetadata(), null));
     }
   }
 

@@ -47,11 +47,11 @@ public class ManagedKeyStoreKeyProvider extends KeyStoreKeyProvider implements M
     String aliasConfKey = HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + encodedCust + "." +
       "alias";
     String keyMetadata = generateKeyMetadata(conf.get(aliasConfKey, null), encodedCust);
-    return unwrapKey(keyMetadata);
+    return unwrapKey(keyMetadata, null);
   }
 
   @Override
-  public ManagedKeyData unwrapKey(String keyMetadataStr) throws IOException {
+  public ManagedKeyData unwrapKey(String keyMetadataStr, byte[] wrappedKey) throws IOException {
     Map<String, String> keyMetadata = GsonUtil.getDefaultInstance().fromJson(keyMetadataStr,
       HashMap.class);
     String encodedCust = keyMetadata.get(KEY_METADATA_CUST);

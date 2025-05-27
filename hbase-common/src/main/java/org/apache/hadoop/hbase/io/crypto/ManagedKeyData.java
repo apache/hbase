@@ -107,7 +107,10 @@ public class ManagedKeyData {
     Preconditions.checkNotNull(key_cust, "key_cust should not be null");
     Preconditions.checkNotNull(key_namespace, "key_namespace should not be null");
     Preconditions.checkNotNull(keyState,  "keyState should not be null");
-    Preconditions.checkNotNull(keyMetadata, "keyMetadata should not be null");
+    // Only check for null metadata if state is not FAILED
+    if (keyState != ManagedKeyState.FAILED) {
+      Preconditions.checkNotNull(keyMetadata, "keyMetadata should not be null");
+    }
     Preconditions.checkArgument(readOpCount >= 0, "readOpCount: " + readOpCount +
       " should be >= 0");
     Preconditions.checkArgument(writeOpCount >= 0, "writeOpCount: " + writeOpCount +

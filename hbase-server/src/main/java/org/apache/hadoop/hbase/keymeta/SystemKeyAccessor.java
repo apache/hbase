@@ -84,7 +84,7 @@ public class SystemKeyAccessor extends KeyManagementBase {
 
   public ManagedKeyData loadSystemKey(Path keyPath) throws IOException {
     ManagedKeyProvider provider = getKeyProvider();
-    return provider.unwrapKey(loadKeyMetadata(keyPath));
+    return provider.unwrapKey(loadKeyMetadata(keyPath), null);
   }
 
   @VisibleForTesting
