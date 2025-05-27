@@ -26,9 +26,9 @@ import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.sdk.trace.data.EventData;
 import io.opentelemetry.sdk.trace.data.SpanData;
-import io.opentelemetry.semconv.trace.attributes.SemanticAttributes;
 import java.time.Duration;
 import java.util.Objects;
+import org.apache.hadoop.hbase.trace.HBaseSemanticAttributes;
 import org.hamcrest.Description;
 import org.hamcrest.FeatureMatcher;
 import org.hamcrest.Matcher;
@@ -87,7 +87,7 @@ public final class SpanDataMatchers {
   }
 
   public static Matcher<SpanData> hasExceptionWithType(Matcher<? super String> matcher) {
-    return hasException(containsEntry(is(SemanticAttributes.EXCEPTION_TYPE), matcher));
+    return hasException(containsEntry(is(HBaseSemanticAttributes.EXCEPTION_TYPE), matcher));
   }
 
   public static Matcher<SpanData> hasException(Matcher<? super Attributes> matcher) {
@@ -96,7 +96,7 @@ public final class SpanDataMatchers {
       @Override
       protected Attributes featureValueOf(SpanData actual) {
         return actual.getEvents().stream()
-          .filter(e -> Objects.equals(SemanticAttributes.EXCEPTION_EVENT_NAME, e.getName()))
+          .filter(e -> Objects.equals(HBaseSemanticAttributes.EXCEPTION_EVENT_NAME, e.getName()))
           .map(EventData::getAttributes).findFirst().orElse(null);
       }
     };
