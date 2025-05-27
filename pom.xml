@@ -941,7 +941,7 @@
         databind] must be kept in sync with the version of jackson-jaxrs-json-provider shipped in
         hbase-thirdparty.
     -->
-    <hbase-thirdparty.version>4.1.11-SNAPSHOT</hbase-thirdparty.version>
+    <hbase-thirdparty.version>4.1.11</hbase-thirdparty.version>
     <!-- for.exclusion version are NOT for direct dependencies. To use the provided
     scope to transitively exclude some transitive dependencies, we need to specify
     some existing version to for maven. -->
@@ -1877,12 +1877,9 @@
   <!-- TODO Remove below block, added just for testing -->
   <repositories>
     <repository>
-      <snapshots>
-        <enabled>true</enabled>
-        <updatePolicy>always</updatePolicy>
-      </snapshots>
-      <id>apache.snapshots</id>
-      <url>https://repository.apache.org/content/repositories/snapshots</url>
+      <id>staging</id>
+      <name>staging</name>
+      <url>https://repository.apache.org/content/repositories/orgapachehbase-1577</url>
     </repository>
   </repositories>
   <build>
