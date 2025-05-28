@@ -44,7 +44,7 @@ public final class GsonUtil {
    */
   public static GsonBuilder createGson() {
     return new GsonBuilder().setLongSerializationPolicy(LongSerializationPolicy.STRING)
-      .excludeFieldsWithModifiers(Modifier.TRANSIENT).excludeFieldsWithModifiers(Modifier.STATIC)
+//      .excludeFieldsWithModifiers(Modifier.TRANSIENT).excludeFieldsWithModifiers(Modifier.STATIC)
       .excludeFieldsWithModifiers(Modifier.PRIVATE)
       .registerTypeAdapter(LongAdder.class, new TypeAdapter<LongAdder>() {
 
