@@ -103,6 +103,8 @@ public class SplitTableRegionProcedure
   private RegionInfo daughterTwoRI;
   private byte[] bestSplitRow;
   private RegionSplitPolicy splitPolicy;
+  // exposed for unit testing
+  boolean checkTableModifyInProgress = true;
 
   public SplitTableRegionProcedure() {
     // Required by the Procedure framework to create the procedure on replay
@@ -513,6 +515,20 @@ public class SplitTableRegionProcedure
         + ", because we are taking snapshot for the table " + getParentRegion().getTable()));
       return false;
     }
+
+    /*
+     * Sometimes a ModifyTableProcedure has edited a table descriptor to change the number of region
+     * replicas for a table, but it has not yet opened/closed the new replicas. The
+     * ModifyTableProcedure assumes that nobody else will do the opening/closing of the new
+     * replicas, but a concurrent SplitTableRegionProcedure would violate that assumption.
+     */
+    if (checkTableModifyInProgress && isTableModificationInProgress(env)) {
+      setFailure(new IOException("Skip splitting region " + getParentRegion().getShortNameToLog()
+        + ", because there is an active procedure that is modifying the table "
+        + getParentRegion().getTable()));
+      return false;
+    }
+
     // Check whether the region is splittable
     RegionStateNode node =
       env.getAssignmentManager().getRegionStates().getRegionStateNode(getParentRegion());
