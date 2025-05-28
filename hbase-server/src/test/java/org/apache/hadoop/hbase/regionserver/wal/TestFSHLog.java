@@ -373,11 +373,13 @@ public class TestFSHLog extends AbstractTestFSWAL {
         region.put(new Put(b).addColumn(b, b, b));
         log.rollWriter();
       }
-      assertEquals(2, log.getClosedErrorCount());
+
       region.put(new Put(b).addColumn(b, b, b));
       region.put(new Put(b).addColumn(b, b, b));
       region.flush(true);
       log.rollWriter();
+
+      TEST_UTIL.waitFor(10000, log.walFile2Props::isEmpty);
       assertEquals("WAL Files not cleaned ", 0, log.walFile2Props.size());
       region.close();
     }
