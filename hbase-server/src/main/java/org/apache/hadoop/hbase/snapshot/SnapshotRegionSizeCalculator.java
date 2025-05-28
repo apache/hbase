@@ -46,14 +46,15 @@ public class SnapshotRegionSizeCalculator {
     throws IOException {
     this.conf = conf;
     this.manifest = manifest;
-    this.regionSizes = calculateRegionSizes();
     Path rootDir = CommonFSUtils.getRootDir(conf);
-    fs = FileSystem.get(rootDir.toUri(), conf);
+    this.fs = FileSystem.get(rootDir.toUri(), conf);
+    this.regionSizes = calculateRegionSizes();
   }
 
   /**
    * Calculate the size of each region in the snapshot.
    * @return A map of region encoded names to their total size in bytes.
+   * @throws IOException If an error occurs during calculation.
    */
   public Map<String, Long> calculateRegionSizes() throws IOException {
     SnapshotProtos.SnapshotDescription snapshot =
@@ -62,6 +63,11 @@ public class SnapshotRegionSizeCalculator {
     return stats.getRegionSizeMap();
   }
 
+  /**
+   * Retrieves the size of a specific region by its encoded name.
+   * @param encodedRegionName The encoded name of the region.
+   * @return The size of the region in bytes, or 0 if the region is not found.
+   */
   public long getRegionSize(String encodedRegionName) {
     Long size = regionSizes.get(encodedRegionName);
     if (size == null) {
