@@ -21,7 +21,7 @@ import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.coprocessor.HasMasterServices;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
-import org.apache.hadoop.hbase.keymeta.KeymetaServiceEndpoint.KeyMetaAdminServiceImpl;
+import org.apache.hadoop.hbase.keymeta.KeymetaServiceEndpoint.KeymetaAdminServiceImpl;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.GetManagedKeysResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.ManagedKeysRequest;
@@ -86,7 +86,7 @@ public class TestKeymetaEndpoint {
   KeymetaServiceEndpoint keymetaServiceEndpoint;
   private ManagedKeysResponse.Builder responseBuilder;
   private ManagedKeysRequest.Builder requestBuilder;
-  private KeyMetaAdminServiceImpl keyMetaAdminService;
+  private KeymetaAdminServiceImpl keyMetaAdminService;
   private ManagedKeyData keyData1;
   private ManagedKeyData keyData2;
 
@@ -98,7 +98,7 @@ public class TestKeymetaEndpoint {
       withSettings().extraInterfaces(HasMasterServices.class));
     when(((HasMasterServices) env).getMasterServices()).thenReturn(master);
     keymetaServiceEndpoint.start(env);
-    keyMetaAdminService = (KeyMetaAdminServiceImpl) keymetaServiceEndpoint.getServices()
+    keyMetaAdminService = (KeymetaAdminServiceImpl) keymetaServiceEndpoint.getServices()
       .iterator().next();
     responseBuilder = ManagedKeysResponse.newBuilder().setKeyState(KEY_ACTIVE);
     requestBuilder = ManagedKeysRequest.newBuilder()
