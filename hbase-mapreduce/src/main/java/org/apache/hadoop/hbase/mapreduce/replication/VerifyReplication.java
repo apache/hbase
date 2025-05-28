@@ -935,8 +935,9 @@ public class VerifyReplication extends Configured implements Tool {
   @Override
   public int run(String[] args) throws Exception {
     Configuration conf = this.getConf();
-    try (Job job = createSubmittableJob(conf, args)) {
-      if (job != null) {
+    Job job = createSubmittableJob(conf, args);
+    if (job != null) {
+      try (job) {
         return job.waitForCompletion(true) ? 0 : 1;
       }
     }
