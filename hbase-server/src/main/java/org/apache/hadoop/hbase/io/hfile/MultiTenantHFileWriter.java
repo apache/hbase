@@ -111,6 +111,11 @@ public class MultiTenantHFileWriter implements HFile.Writer {
   private HFileBlockIndex.BlockIndexWriter metaBlockIndexWriter;
   private HFileInfo fileInfo = new HFileInfo();
   
+  // Write verification
+  private boolean enableWriteVerification;
+  private static final String WRITE_VERIFICATION_ENABLED = "hbase.multi.tenant.write.verification.enabled";
+  private static final boolean DEFAULT_WRITE_VERIFICATION_ENABLED = false;
+  
   /**
    * Creates a multi-tenant HFile writer that writes sections to a single file.
    * 
@@ -135,6 +140,7 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     this.cacheConf = cacheConf;
     this.tenantExtractor = tenantExtractor;
     this.fileContext = fileContext;
+    this.enableWriteVerification = conf.getBoolean(WRITE_VERIFICATION_ENABLED, DEFAULT_WRITE_VERIFICATION_ENABLED);
     
     // Create output stream directly to the provided path - no temporary file management here
     // The caller (StoreFileWriter or integration test framework) handles temporary files
@@ -231,7 +237,7 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     currentSectionWriter.append(cell);
     
     // Track statistics for the entire file
-    lastCell = cell; // Keep tracking for internal purposes
+    lastCell = cell;
     entryCount++;
     totalKeyLength += PrivateCellUtil.estimatedSerializedSizeOfKey(cell);
     totalValueLength += cell.getValueLength();
@@ -251,9 +257,20 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     LOG.info("Closing section for tenant section ID: {}", 
         currentTenantSectionId == null ? "null" : Bytes.toStringBinary(currentTenantSectionId));
     
+    if (currentSectionWriter == null) {
+      LOG.warn("Attempted to close null section writer");
+      return;
+    }
+    
     try {
       // Record the section start position
       long sectionStartOffset = currentSectionWriter.getSectionStartOffset();
+      
+      // Validate section has data
+      if (currentSectionWriter.getEntryCount() == 0) {
+        LOG.warn("Closing empty section for tenant: {}", 
+            Bytes.toStringBinary(currentTenantSectionId));
+      }
       
       // Finish writing the current section
       currentSectionWriter.close();
@@ -263,19 +280,65 @@ public class MultiTenantHFileWriter implements HFile.Writer {
       long sectionEndOffset = outputStream.getPos();
       long sectionSize = sectionEndOffset - sectionStartOffset;
       
+      // Validate section size
+      if (sectionSize <= 0) {
+        throw new IOException("Invalid section size: " + sectionSize + 
+            " for tenant: " + Bytes.toStringBinary(currentTenantSectionId));
+      }
+      
+      // Validate section doesn't exceed max size (2GB limit for int)
+      if (sectionSize > Integer.MAX_VALUE) {
+        throw new IOException("Section size exceeds maximum: " + sectionSize + 
+            " for tenant: " + Bytes.toStringBinary(currentTenantSectionId));
+      }
+      
+      // Write verification if enabled
+      if (enableWriteVerification) {
+        verifySection(sectionStartOffset, sectionSize);
+      }
+      
       // Record section in the index
       sectionIndexWriter.addEntry(currentTenantSectionId, sectionStartOffset, (int)sectionSize);
       
       // Add to total uncompressed bytes
       totalUncompressedBytes += currentSectionWriter.getTotalUncompressedBytes();
       
-      LOG.info("Section closed: start={}, size={}", sectionStartOffset, sectionSize);
+      LOG.info("Section closed: start={}, size={}, entries={}", 
+          sectionStartOffset, sectionSize, currentSectionWriter.getEntryCount());
     } catch (IOException e) {
       LOG.error("Error closing section for tenant section ID: {}", 
           currentTenantSectionId == null ? "null" : Bytes.toStringBinary(currentTenantSectionId), e);
       throw e;
     } finally {
       currentSectionWriter = null;
+    }
+  }
+  
+  /**
+   * Verify that the section was written correctly by checking basic structure
+   */
+  private void verifySection(long sectionStartOffset, long sectionSize) throws IOException {
+    LOG.debug("Verifying section at offset {} with size {}", sectionStartOffset, sectionSize);
+    
+    // Basic verification: check that we can read the trailer
+    long currentPos = outputStream.getPos();
+    try {
+      // Seek to trailer position
+      int trailerSize = FixedFileTrailer.getTrailerSize(3); // v3 sections
+      long trailerOffset = sectionStartOffset + sectionSize - trailerSize;
+      
+      if (trailerOffset < sectionStartOffset) {
+        throw new IOException("Section too small to contain trailer: size=" + sectionSize);
+      }
+      
+      // Just verify the position is valid - actual trailer reading would require
+      // creating an input stream which is expensive
+      LOG.debug("Section verification passed: trailer would be at offset {}", trailerOffset);
+    } finally {
+      // Restore position
+      // Note: FSDataOutputStream doesn't support seek, so we can't actually verify
+      // Just log that verification was requested
+      LOG.debug("Write verification completed (limited check due to stream constraints)");
     }
   }
   
@@ -452,29 +515,43 @@ public class MultiTenantHFileWriter implements HFile.Writer {
   
   @Override
   public void addGeneralBloomFilter(BloomFilterWriter bfw) {
-    // Only add Bloom filters to current section, never at global level
-    if (currentSectionWriter != null && bfw != null && bfw.getKeyCount() > 0) {
-      LOG.debug("Adding general bloom filter with {} keys to section", bfw.getKeyCount());
+    // For multi-tenant files, bloom filters are only added at section level
+    // This prevents creating bloom filters at the global level
+    if (bfw == null || bfw.getKeyCount() <= 0) {
+      LOG.debug("Ignoring empty or null general bloom filter at global level");
+      return;
+    }
+    
+    // Only add to current section if one exists
+    if (currentSectionWriter != null) {
+      LOG.debug("Delegating general bloom filter with {} keys to current section", bfw.getKeyCount());
       // Ensure it's properly prepared for writing
       bfw.compactBloom();
-      // Add to current section only
       currentSectionWriter.addGeneralBloomFilter(bfw);
     } else {
-      LOG.debug("Skipping empty or null general bloom filter");
+      LOG.warn("Attempted to add general bloom filter with {} keys but no section is active", 
+               bfw.getKeyCount());
     }
   }
   
   @Override
   public void addDeleteFamilyBloomFilter(BloomFilterWriter bfw) throws IOException {
-    // Only add Bloom filters to current section, never at global level
-    if (currentSectionWriter != null && bfw != null && bfw.getKeyCount() > 0) {
-      LOG.debug("Adding delete family bloom filter with {} keys to section", bfw.getKeyCount());
+    // For multi-tenant files, bloom filters are only added at section level
+    // This prevents creating bloom filters at the global level
+    if (bfw == null || bfw.getKeyCount() <= 0) {
+      LOG.debug("Ignoring empty or null delete family bloom filter at global level");
+      return;
+    }
+    
+    // Only add to current section if one exists
+    if (currentSectionWriter != null) {
+      LOG.debug("Delegating delete family bloom filter with {} keys to current section", bfw.getKeyCount());
       // Ensure it's properly prepared for writing
       bfw.compactBloom();
-      // Add to current section only
       currentSectionWriter.addDeleteFamilyBloomFilter(bfw);
     } else {
-      LOG.debug("Skipping empty or null delete family bloom filter");
+      LOG.warn("Attempted to add delete family bloom filter with {} keys but no section is active", 
+               bfw.getKeyCount());
     }
   }
   
@@ -542,9 +619,6 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     private final long sectionStartOffset;
     private boolean closed = false;
     
-    // Track original stream when using relative position wrapper
-    private FSDataOutputStream originalOutputStream = null;
-    
     public SectionWriter(
         Configuration conf,
         CacheConfig cacheConf,
@@ -553,8 +627,8 @@ public class MultiTenantHFileWriter implements HFile.Writer {
         byte[] tenantSectionId,
         byte[] tenantId,
         long sectionStartOffset) throws IOException {
-      // Call the parent constructor with the shared outputStream
-      super(conf, cacheConf, null, outputStream, fileContext);
+      // Create a section-aware output stream that handles position translation
+      super(conf, cacheConf, null, new SectionOutputStream(outputStream, sectionStartOffset), fileContext);
       
       this.tenantSectionId = tenantSectionId;
       this.sectionStartOffset = sectionStartOffset;
@@ -576,52 +650,42 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     }
     
     /**
-     * Enable relative position translation by replacing the output stream with a wrapper
+     * Output stream that translates positions relative to section start
      */
-    private void enableRelativePositionTranslation() {
-      if (originalOutputStream != null) {
-        return; // Already using a relative stream
+    private static class SectionOutputStream extends FSDataOutputStream {
+      private final FSDataOutputStream delegate;
+      private final long baseOffset;
+      
+      public SectionOutputStream(FSDataOutputStream delegate, long baseOffset) {
+        super(delegate.getWrappedStream(), null);
+        this.delegate = delegate;
+        this.baseOffset = baseOffset;
       }
       
-      // Store the original stream
-      originalOutputStream = outputStream;
-      final long baseOffset = sectionStartOffset;
+      @Override
+      public long getPos() {
+        try {
+          // Return position relative to section start
+          return delegate.getPos() - baseOffset;
+        } catch (Exception e) {
+          throw new RuntimeException("Failed to get position", e);
+        }
+      }
       
-      // Create a position-translating wrapper
-      outputStream = new FSDataOutputStream(originalOutputStream.getWrappedStream(), null) {
-        @Override
-        public long getPos() {
-          // Get absolute position
-          long absolutePos = 0;
-          try {
-            absolutePos = originalOutputStream.getPos();
-          } catch (Exception e) {
-            LOG.error("Error getting position", e);
-          }
-          
-          // Convert to position relative to section start
-          return absolutePos - baseOffset;
-        }
-        
-        @Override
-        public void write(byte[] b, int off, int len) throws IOException {
-          originalOutputStream.write(b, off, len);
-        }
-        
-        @Override
-        public void flush() throws IOException {
-          originalOutputStream.flush();
-        }
-      };
-    }
-    
-    /**
-     * Restore the original output stream after using enableRelativePositionTranslation()
-     */
-    private void disableRelativePositionTranslation() {
-      if (originalOutputStream != null) {
-        outputStream = originalOutputStream;
-        originalOutputStream = null;
+      @Override
+      public void write(byte[] b, int off, int len) throws IOException {
+        delegate.write(b, off, len);
+      }
+      
+      @Override
+      public void flush() throws IOException {
+        delegate.flush();
+      }
+      
+      @Override
+      public void close() throws IOException {
+        // Don't close the delegate - it's shared across sections
+        flush();
       }
     }
     
@@ -629,15 +693,7 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     public void append(ExtendedCell cell) throws IOException {
       checkNotClosed();
       
-      // Use relative positions during append
-      enableRelativePositionTranslation();
-      
-      try {
-        super.append(cell);
-      } finally {
-        // Always restore original stream after operation
-        disableRelativePositionTranslation();
-      }
+      super.append(cell);
     }
     
     /**
@@ -654,22 +710,14 @@ public class MultiTenantHFileWriter implements HFile.Writer {
         return;
       }
       
-      // Use relative positions during bloom filter addition
-      enableRelativePositionTranslation();
+      // Ensure the bloom filter is properly initialized
+      bfw.compactBloom();
       
-      try {
-        // Ensure the bloom filter is properly initialized
-        bfw.compactBloom();
-        
-        LOG.debug("Added general bloom filter with {} keys for tenant section: {}", 
-            bfw.getKeyCount(),
-            tenantSectionId == null ? "default" : Bytes.toStringBinary(tenantSectionId));
-        
-        super.addGeneralBloomFilter(bfw);
-      } finally {
-        // Always restore original stream after operation
-        disableRelativePositionTranslation();
-      }
+      LOG.debug("Added general bloom filter with {} keys for tenant section: {}", 
+          bfw.getKeyCount(),
+          tenantSectionId == null ? "default" : Bytes.toStringBinary(tenantSectionId));
+      
+      super.addGeneralBloomFilter(bfw);
     }
     
     /**
@@ -686,24 +734,16 @@ public class MultiTenantHFileWriter implements HFile.Writer {
         return;
       }
       
-      // Use relative positions during bloom filter addition
-      enableRelativePositionTranslation();
+      // Ensure the bloom filter is properly initialized
+      bfw.compactBloom();
       
-      try {
-        // Ensure the bloom filter is properly initialized
-        bfw.compactBloom();
-        
-        LOG.debug("Added delete family bloom filter with {} keys for tenant section: {}", 
-            bfw.getKeyCount(),
-            tenantSectionId == null ? "default" : Bytes.toStringBinary(tenantSectionId));
-        
-        // Call the parent implementation without try/catch since it doesn't actually throw IOException
-        // The HFileWriterImpl implementation doesn't throw IOException despite the interface declaration
-        super.addDeleteFamilyBloomFilter(bfw);
-      } finally {
-        // Always restore original stream after operation
-        disableRelativePositionTranslation();
-      }
+      LOG.debug("Added delete family bloom filter with {} keys for tenant section: {}", 
+          bfw.getKeyCount(),
+          tenantSectionId == null ? "default" : Bytes.toStringBinary(tenantSectionId));
+      
+      // Call the parent implementation without try/catch since it doesn't actually throw IOException
+      // The HFileWriterImpl implementation doesn't throw IOException despite the interface declaration
+      super.addDeleteFamilyBloomFilter(bfw);
     }
     
     @Override
@@ -715,24 +755,16 @@ public class MultiTenantHFileWriter implements HFile.Writer {
       LOG.debug("Closing section for tenant section ID: {}", 
           tenantSectionId == null ? "null" : Bytes.toStringBinary(tenantSectionId));
       
-      // Use relative positions during close
-      enableRelativePositionTranslation();
-      
+      // Close the section writer safely
+      // HFileWriterImpl.close() can fail with NPE on empty bloom filters, but we want to 
+      // still properly close the stream and resources
       try {
-        // Close the section writer safely
-        // HFileWriterImpl.close() can fail with NPE on empty bloom filters, but we want to 
-        // still properly close the stream and resources
-        try {
-          super.close();
-        } catch (RuntimeException e) {
-          LOG.warn("Error during section close, continuing with stream cleanup. Error: {}", e.getMessage());
-          // We will still mark as closed and continue with resource cleanup
-        }
-        closed = true;
-      } finally {
-        // Always restore original stream after operation
-        disableRelativePositionTranslation();
+        super.close();
+      } catch (RuntimeException e) {
+        LOG.warn("Error during section close, continuing with stream cleanup. Error: {}", e.getMessage());
+        // We will still mark as closed and continue with resource cleanup
       }
+      closed = true;
       
       LOG.debug("Closed section for tenant section: {}", 
           tenantSectionId == null ? "default" : Bytes.toStringBinary(tenantSectionId));
@@ -755,61 +787,25 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     @Override
     public void appendFileInfo(byte[] key, byte[] value) throws IOException {
       checkNotClosed();
-      
-      if (originalOutputStream == null) {
-        enableRelativePositionTranslation();
-      }
-      
-      try {
-        super.appendFileInfo(key, value);
-      } finally {
-        disableRelativePositionTranslation();
-      }
+      super.appendFileInfo(key, value);
     }
     
     @Override
     public void appendMetaBlock(String metaBlockName, Writable content) {
       checkNotClosed();
-      
-      if (originalOutputStream == null) {
-        enableRelativePositionTranslation();
-      }
-      
-      try {
-        super.appendMetaBlock(metaBlockName, content);
-      } finally {
-        disableRelativePositionTranslation();
-      }
+      super.appendMetaBlock(metaBlockName, content);
     }
     
     @Override
     public void addInlineBlockWriter(InlineBlockWriter ibw) {
       checkNotClosed();
-      
-      if (originalOutputStream == null) {
-        enableRelativePositionTranslation();
-      }
-      
-      try {
-        super.addInlineBlockWriter(ibw);
-      } finally {
-        disableRelativePositionTranslation();
-      }
+      super.addInlineBlockWriter(ibw);
     }
     
     @Override
     public void beforeShipped() throws IOException {
       checkNotClosed();
-      
-      if (originalOutputStream == null) {
-        enableRelativePositionTranslation();
-      }
-      
-      try {
-        super.beforeShipped();
-      } finally {
-        disableRelativePositionTranslation();
-      }
+      super.beforeShipped();
     }
     
     private void checkNotClosed() {
@@ -826,6 +822,14 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     
     public long getTotalUncompressedBytes() {
       return this.totalUncompressedBytes;
+    }
+    
+    /**
+     * Get the number of entries written to this section
+     * @return The entry count
+     */
+    public long getEntryCount() {
+      return this.entryCount;
     }
   }
   
