@@ -100,8 +100,11 @@ public class PointInTimeRestoreDriver extends AbstractRestoreDriver {
         return -5;
       }
 
-      client.pointInTimeRestore(BackupUtils.createPointInTimeRestoreRequest(backupRootDir, check,
-        fromTables, toTables, isOverwrite, endTime));
+      PointInTimeRestoreRequest pointInTimeRestoreRequest = new PointInTimeRestoreRequest.Builder()
+        .withBackupRootDir(backupRootDir).withCheck(check).withFromTables(fromTables)
+        .withToTables(toTables).withOverwrite(isOverwrite).withToDateTime(endTime).build();
+
+      client.pointInTimeRestore(pointInTimeRestoreRequest);
     } catch (Exception e) {
       LOG.error("Error while running restore backup", e);
       return -5;

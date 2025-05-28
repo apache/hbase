@@ -50,7 +50,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupInfo;
 import org.apache.hadoop.hbase.backup.BackupRestoreConstants;
 import org.apache.hadoop.hbase.backup.HBackupFileSystem;
-import org.apache.hadoop.hbase.backup.PointInTimeRestoreRequest;
 import org.apache.hadoop.hbase.backup.RestoreRequest;
 import org.apache.hadoop.hbase.backup.impl.BackupManifest;
 import org.apache.hadoop.hbase.backup.impl.BackupManifest.BackupImage;
@@ -682,14 +681,6 @@ public final class BackupUtils {
     return request;
   }
 
-  public static PointInTimeRestoreRequest createPointInTimeRestoreRequest(String backupRootDir,
-    boolean check, TableName[] fromTables, TableName[] toTables, boolean isOverwrite,
-    long toDateTime) {
-    PointInTimeRestoreRequest.Builder builder = new PointInTimeRestoreRequest.Builder();
-    return builder.withBackupRootDir(backupRootDir).withCheck(check).withFromTables(fromTables)
-      .withToTables(toTables).withOverwrite(isOverwrite).withToDateTime(toDateTime).build();
-  }
-
   public static boolean validate(List<TableName> tables, BackupManifest backupManifest,
     Configuration conf) throws IOException {
     boolean isValid = true;
@@ -914,7 +905,7 @@ public final class BackupUtils {
           } else {
             // This server is no longer active (e.g., RS moved or removed); skip
             if (LOG.isDebugEnabled()) {
-              LOG.debug("Skipping replication marker timestamp for invalid server: {}", server);
+              LOG.debug("Skipping replication marker timestamp for inactive server: {}", server);
             }
           }
         }
