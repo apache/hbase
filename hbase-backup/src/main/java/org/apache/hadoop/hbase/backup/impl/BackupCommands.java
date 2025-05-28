@@ -84,8 +84,10 @@ import org.apache.hadoop.hbase.backup.HBackupFileSystem;
 import org.apache.hadoop.hbase.backup.replication.BackupFileSystemManager;
 import org.apache.hadoop.hbase.backup.util.BackupSet;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -892,7 +894,8 @@ public final class BackupCommands {
 
     /**
      * Cleans up Write-Ahead Logs (WALs) that are no longer required for PITR after a successful
-     * backup deletion.
+     * backup deletion. If no full backups are present, all WALs are deleted, tables are removed
+     * from continuous backup metadata, and the associated replication peer is disabled.
      */
     private void cleanUpUnusedBackupWALs() throws IOException {
       Configuration conf = getConf() != null ? getConf() : HBaseConfiguration.create();
@@ -903,7 +906,8 @@ public final class BackupCommands {
         return;
       }
 
-      try (BackupSystemTable sysTable = new BackupSystemTable(conn)) {
+      try (Admin admin = conn.getAdmin();
+        BackupSystemTable sysTable = new BackupSystemTable(conn)) {
         // Get list of tables under continuous backup
         Map<TableName, Long> continuousBackupTables = sysTable.getContinuousBackupTableSet();
         if (continuousBackupTables.isEmpty()) {
@@ -914,7 +918,15 @@ public final class BackupCommands {
         // Find the earliest timestamp after which WALs are still needed
         long cutoffTimestamp = determineWALCleanupCutoffTime(sysTable);
         if (cutoffTimestamp == 0) {
-          System.err.println("ERROR: No valid full backup found. Skipping WAL cleanup.");
+          // No full backup exists. PITR cannot function without a base full backup.
+          // Clean up all WALs, remove tables from backup metadata, and disable the replication
+          // peer.
+          System.out
+            .println("No full backups found. Cleaning up all WALs and disabling replication peer.");
+
+          disableContinuousBackupReplicationPeer(admin);
+          removeAllTablesFromContinuousBackup(sysTable);
+          deleteAllBackupWALFiles(conf, backupWalDir);
           return;
         }
 
@@ -944,6 +956,16 @@ public final class BackupCommands {
       return 0;
     }
 
+    private void disableContinuousBackupReplicationPeer(Admin admin) throws IOException {
+      for (ReplicationPeerDescription peer : admin.listReplicationPeers()) {
+        if (peer.getPeerId().equals(CONTINUOUS_BACKUP_REPLICATION_PEER) && peer.isEnabled()) {
+          admin.disableReplicationPeer(CONTINUOUS_BACKUP_REPLICATION_PEER);
+          System.out.println("Disabled replication peer: " + CONTINUOUS_BACKUP_REPLICATION_PEER);
+          break;
+        }
+      }
+    }
+
     /**
      * Updates the start time for continuous backups if older than cutoff timestamp.
      * @param sysTable        Backup system table
@@ -963,6 +985,34 @@ public final class BackupCommands {
 
       if (!tablesToUpdate.isEmpty()) {
         sysTable.updateContinuousBackupTableSet(tablesToUpdate, cutoffTimestamp);
+      }
+    }
+
+    private void removeAllTablesFromContinuousBackup(BackupSystemTable sysTable)
+      throws IOException {
+      Map<TableName, Long> allTables = sysTable.getContinuousBackupTableSet();
+      if (!allTables.isEmpty()) {
+        sysTable.removeContinuousBackupTableSet(allTables.keySet());
+        System.out.println("Removed all tables from continuous backup metadata.");
+      }
+    }
+
+    private void deleteAllBackupWALFiles(Configuration conf, String backupWalDir)
+      throws IOException {
+      try {
+        FileSystem fs = FileSystem.get(conf);
+        Path walPath = new Path(backupWalDir);
+        if (fs.exists(walPath)) {
+          FileStatus[] contents = fs.listStatus(walPath);
+          for (FileStatus item : contents) {
+            fs.delete(item.getPath(), true); // recursive delete of each child
+          }
+          System.out.println("Deleted all contents under WAL directory: " + backupWalDir);
+        }
+      } catch (IOException e) {
+        System.out.println("WARNING: Failed to delete contents under WAL directory: " + backupWalDir
+          + ". Error: " + e.getMessage());
+        throw e;
       }
     }
 
