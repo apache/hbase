@@ -112,7 +112,7 @@ public class TestManagedKeyDataCache {
 
   @Test
   public void testRandomKeyGet() throws Exception{
-    assertNull(cache.getRandomEntryForPrefix(CUST_ID, KEY_SPACE_GLOBAL));
+    assertNull(cache.getRandomEntry(CUST_ID, KEY_SPACE_GLOBAL));
     List<ManagedKeyData> allKeys = new ArrayList<>();
     for (int i = 0; i < 20; ++i) {
       ManagedKeyData keyData;
@@ -125,7 +125,7 @@ public class TestManagedKeyDataCache {
     }
     Set<ManagedKeyData> keys = new HashSet<>();
     for (int i = 0; i < 10; ++i) {
-      keys.add(cache.getRandomEntryForPrefix(CUST_ID, KEY_SPACE_GLOBAL));
+      keys.add(cache.getRandomEntry(CUST_ID, KEY_SPACE_GLOBAL));
     }
     assertTrue(keys.size() > 1);
     assertTrue(keys.size() <= 10);
@@ -136,7 +136,7 @@ public class TestManagedKeyDataCache {
     for(ManagedKeyData key: allKeys) {
       assertEquals(key, cache.removeEntry(key.getKeyMetadata()));
     }
-    assertNull(cache.getRandomEntryForPrefix(CUST_ID, KEY_SPACE_GLOBAL));
+    assertNull(cache.getRandomEntry(CUST_ID, KEY_SPACE_GLOBAL));
   }
 
   @Test
@@ -145,7 +145,7 @@ public class TestManagedKeyDataCache {
     for (int i = 0; i < 20; ++i) {
       cache.addEntry(managedKeyProvider.getManagedKey(CUST_ID, KEY_SPACE_GLOBAL));
     }
-    assertNull(cache.getRandomEntryForPrefix(CUST_ID, KEY_SPACE_GLOBAL));
+    assertNull(cache.getRandomEntry(CUST_ID, KEY_SPACE_GLOBAL));
   }
 
   private void assertEntries(ManagedKeyData... keys) {

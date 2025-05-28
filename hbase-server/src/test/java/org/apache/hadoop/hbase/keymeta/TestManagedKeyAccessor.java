@@ -152,19 +152,19 @@ public class TestManagedKeyAccessor {
     ManagedKeyData result = managedKeyAccessor.getAnActiveKey(CUST_ID, KEY_SPACE_GLOBAL);
 
     assertNull(result);
-    verify(keyDataCache).getRandomEntryForPrefix(CUST_ID, KEY_SPACE_GLOBAL);
+    verify(keyDataCache).getRandomEntry(CUST_ID, KEY_SPACE_GLOBAL);
     verify(keymetaAccessor).getActiveKeys(CUST_ID, KEY_SPACE_GLOBAL);
   }
 
   @Test
   public void testGetActiveKeyFromL1() throws Exception {
     ManagedKeyData keyData = managedKeyProvider.getManagedKey(CUST_ID, KEY_SPACE_GLOBAL);
-    when(keyDataCache.getRandomEntryForPrefix(any(), any())).thenReturn(keyData);
+    when(keyDataCache.getRandomEntry(any(), any())).thenReturn(keyData);
 
     ManagedKeyData result = managedKeyAccessor.getAnActiveKey(CUST_ID, KEY_SPACE_GLOBAL);
 
     assertEquals(keyData, result);
-    verify(keyDataCache).getRandomEntryForPrefix(CUST_ID, KEY_SPACE_GLOBAL);
+    verify(keyDataCache).getRandomEntry(CUST_ID, KEY_SPACE_GLOBAL);
     verify(keymetaAccessor, never()).getActiveKeys(any(), any());
   }
 
@@ -175,20 +175,20 @@ public class TestManagedKeyAccessor {
     ManagedKeyData result = managedKeyAccessor.getAnActiveKey(CUST_ID, KEY_SPACE_GLOBAL);
 
     assertNull(result);
-    verify(keyDataCache).getRandomEntryForPrefix(CUST_ID, KEY_SPACE_GLOBAL);
+    verify(keyDataCache).getRandomEntry(CUST_ID, KEY_SPACE_GLOBAL);
     verify(keymetaAccessor).getActiveKeys(CUST_ID, KEY_SPACE_GLOBAL);
   }
 
   @Test
   public void testGetActiveKeyFromL2WithSingleResult() throws Exception {
     ManagedKeyData keyData = managedKeyProvider.getManagedKey(CUST_ID, KEY_SPACE_GLOBAL);
-    when(keyDataCache.getRandomEntryForPrefix(any(), any())).thenReturn(null, keyData);
+    when(keyDataCache.getRandomEntry(any(), any())).thenReturn(null, keyData);
     when(keymetaAccessor.getActiveKeys(any(), any())).thenReturn(Arrays.asList(keyData));
 
     ManagedKeyData result = managedKeyAccessor.getAnActiveKey(CUST_ID, KEY_SPACE_GLOBAL);
 
     assertEquals(keyData, result);
-    verify(keyDataCache, times(2)).getRandomEntryForPrefix(CUST_ID, KEY_SPACE_GLOBAL);
+    verify(keyDataCache, times(2)).getRandomEntry(CUST_ID, KEY_SPACE_GLOBAL);
     verify(keymetaAccessor).getActiveKeys(CUST_ID, KEY_SPACE_GLOBAL);
     verify(keyDataCache).addEntry(keyData);
   }
@@ -198,13 +198,13 @@ public class TestManagedKeyAccessor {
     managedKeyProvider.setMultikeyGenMode(true);
     ManagedKeyData keyData1 = managedKeyProvider.getManagedKey(CUST_ID, KEY_SPACE_GLOBAL);
     ManagedKeyData keyData2 = managedKeyProvider.getManagedKey(CUST_ID, KEY_SPACE_GLOBAL);
-    when(keyDataCache.getRandomEntryForPrefix(any(), any())).thenReturn(null, keyData1);
+    when(keyDataCache.getRandomEntry(any(), any())).thenReturn(null, keyData1);
     when(keymetaAccessor.getActiveKeys(any(), any())).thenReturn(Arrays.asList(keyData1, keyData2));
 
     ManagedKeyData result = managedKeyAccessor.getAnActiveKey(CUST_ID, KEY_SPACE_GLOBAL);
 
     assertEquals(keyData1, result);
-    verify(keyDataCache, times(2)).getRandomEntryForPrefix(CUST_ID, KEY_SPACE_GLOBAL);
+    verify(keyDataCache, times(2)).getRandomEntry(CUST_ID, KEY_SPACE_GLOBAL);
     verify(keymetaAccessor).getActiveKeys(CUST_ID, KEY_SPACE_GLOBAL);
     verify(keyDataCache, times(2)).addEntry(any());
   }

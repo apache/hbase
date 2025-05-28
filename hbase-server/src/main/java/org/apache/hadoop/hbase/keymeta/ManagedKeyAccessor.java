@@ -93,14 +93,14 @@ public class ManagedKeyAccessor extends KeyManagementBase {
   public ManagedKeyData getAnActiveKey(byte[] key_cust, String keyNamespace)
       throws IOException, KeyException {
     assertKeyManagementEnabled();
-    ManagedKeyData keyData = keyDataCache.getRandomEntryForPrefix(key_cust, keyNamespace);
+    ManagedKeyData keyData = keyDataCache.getRandomEntry(key_cust, keyNamespace);
     if (keyData == null) {
       List<ManagedKeyData> activeKeys = keymetaAccessor.getActiveKeys(key_cust, keyNamespace);
       if (! activeKeys.isEmpty()) {
         for (ManagedKeyData kd : activeKeys) {
           keyDataCache.addEntry(kd);
         }
-        keyData = keyDataCache.getRandomEntryForPrefix(key_cust, keyNamespace);
+        keyData = keyDataCache.getRandomEntry(key_cust, keyNamespace);
       }
     }
     return keyData;
