@@ -422,11 +422,12 @@ public class PerformanceEvaluation extends Configured implements Tool {
         errors.stream().map(s -> '[' + s + ']').collect(Collectors.joining(", "));
 
       if (needsData) {
-        LOG.warn(
-          "Inconsistent table state detected. Consider running a write command first: " + reason);
+        LOG.warn("Unexpected or incorrect options provided for {}. "
+          + "Please verify whether the detected inconsistencies are expected or ignorable: {}. "
+          + "The test will proceed, but the results may not be reliable.", opts.cmdName, reason);
         needsDelete = false;
       } else {
-        LOG.debug(reason);
+        LOG.info("Table will be recreated: " + reason);
       }
     }
 
