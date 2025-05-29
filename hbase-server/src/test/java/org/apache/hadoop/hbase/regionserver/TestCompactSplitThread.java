@@ -36,9 +36,8 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.BeforeClass;
+import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -64,8 +63,8 @@ public class TestCompactSplitThread {
   /**
    * Setup the config for the cluster
    */
-  @BeforeClass
-  public static void setupCluster() throws Exception {
+  @Before
+  public void setupCluster() throws Exception {
     setupConf(TEST_UTIL.getConfiguration());
     TEST_UTIL.startMiniCluster(NUM_RS);
     fs = TEST_UTIL.getDFSCluster().getFileSystem();
@@ -92,12 +91,7 @@ public class TestCompactSplitThread {
   }
 
   @After
-  public void tearDown() throws Exception {
-    TEST_UTIL.deleteTable(tableName);
-  }
-
-  @AfterClass
-  public static void cleanupTest() throws Exception {
+  public void cleanupTest() throws Exception {
     try {
       TEST_UTIL.shutdownMiniCluster();
     } catch (Exception e) {
@@ -172,5 +166,23 @@ public class TestCompactSplitThread {
     Path tableDir = CommonFSUtils.getTableDir(rootDir, tableName);
     Collection<String> hfiles = SnapshotTestingUtils.listHFileNames(fs, tableDir);
     assert (hfiles.size() > blockingStoreFiles + 1);
+  }
+
+  @Test
+  public void testFlushWithRegionReplicas() throws Exception {
+    TableDescriptor htd =
+      TableDescriptorBuilder.newBuilder(tableName).setRegionReplication(2).build();
+    TEST_UTIL.createTable(htd, new byte[][] { family }, null);
+
+    // load the table
+    for (int i = 0; i < blockingStoreFiles + 1; i++) {
+      TEST_UTIL.loadTable(TEST_UTIL.getConnection().getTable(tableName), family);
+      TEST_UTIL.flush(tableName);
+    }
+
+    // One region split should have taken place, because the primary replica gets split, and not the
+    // secondary replica.
+    assertEquals(1,
+      TEST_UTIL.getRSForFirstRegionInTable(tableName).getCompactSplitThread().getSplitCounter());
   }
 }
