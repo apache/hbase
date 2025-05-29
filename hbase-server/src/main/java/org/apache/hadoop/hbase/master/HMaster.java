@@ -611,6 +611,12 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   private void registerConfigurationObservers() {
     configurationManager.registerObserver(this.rpcServices);
     configurationManager.registerObserver(this);
+    if (cpHost != null) {
+      cpHost.registerConfigurationObservers(configurationManager);
+    } else {
+      LOG.warn("Could not register HMaster coprocessors to the ConfigurationManager because "
+        + "MasterCoprocessorHost is null");
+    }
   }
 
   // Main run loop. Calls through to the regionserver run loop AFTER becoming active Master; will
@@ -619,7 +625,6 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   public void run() {
     try {
       installShutdownHook();
-      registerConfigurationObservers();
       Threads.setDaemonThreadRunning(new Thread(TraceUtil.tracedRunnable(() -> {
         try {
           int infoPort = putUpJettyServer();
@@ -1080,7 +1085,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     if (!maintenanceMode) {
       startupTaskGroup.addTask("Initializing master coprocessors");
       setQuotasObserver(conf);
-      this.cpHost = new MasterCoprocessorHost(this, conf);
+      initializeCoprocessorHost(conf);
     } else {
       // start an in process region server for carrying system regions
       maintenanceRegionServer =
@@ -4489,7 +4494,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
         CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY) && !maintenanceMode
     ) {
       LOG.info("Update the master coprocessor(s) because the configuration has changed");
-      this.cpHost = new MasterCoprocessorHost(this, newConf);
+      initializeCoprocessorHost(newConf);
     }
   }
 
@@ -4586,6 +4591,12 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     if (QuotaUtil.isQuotaEnabled(conf)) {
       updateConfigurationForQuotasObserver(conf);
     }
+  }
+
+  private void initializeCoprocessorHost(Configuration conf) {
+    // initialize master side coprocessors before we start handling requests
+    this.cpHost = new MasterCoprocessorHost(this, conf);
+    registerConfigurationObservers();
   }
 
   @Override

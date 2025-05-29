@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.coprocessor.BulkLoadObserver;
 import org.apache.hadoop.hbase.coprocessor.CoreCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.EndpointObserver;
@@ -65,26 +66,24 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 
 @CoreCoprocessor
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
-public class ReadOnlyController
-  implements MasterCoprocessor, RegionCoprocessor, MasterObserver, RegionObserver,
-  RegionServerCoprocessor, RegionServerObserver, EndpointObserver, BulkLoadObserver {
+public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor, MasterObserver,
+  RegionObserver, RegionServerCoprocessor, RegionServerObserver, EndpointObserver, BulkLoadObserver,
+  ConfigurationObserver {
 
   private static final Logger LOG = LoggerFactory.getLogger(ReadOnlyController.class);
-  private Configuration conf;
+  private volatile boolean globalReadOnlyEnabled;
 
   private void internalReadOnlyGuard() throws IOException {
-    if (
-      conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
-        HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT)
-    ) {
-      // throw new FailedSanityCheckException("Operation not allowed in Read-Only Mode");
+    if (this.globalReadOnlyEnabled) {
       throw new IOException("Operation not allowed in Read-Only Mode");
     }
   }
 
   @Override
   public void start(CoprocessorEnvironment env) throws IOException {
-    conf = env.getConfiguration();
+    this.globalReadOnlyEnabled =
+      env.getConfiguration().getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
+        HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
   }
 
   @Override
@@ -100,7 +99,8 @@ public class ReadOnlyController
   @Override
   public void prePut(ObserverContext<? extends RegionCoprocessorEnvironment> c, Put put,
     WALEdit edit) throws IOException {
-    if (edit.isMetaEdit() || edit.isEmpty()) {
+    TableName tableName = c.getEnvironment().getRegionInfo().getTable();
+    if (tableName.isSystemTable()) {
       return;
     }
     internalReadOnlyGuard();
@@ -115,13 +115,11 @@ public class ReadOnlyController
   @Override
   public void preBatchMutate(ObserverContext<? extends RegionCoprocessorEnvironment> c,
     MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {
-    for (int i = 0; i < miniBatchOp.size(); i++) {
-      WALEdit edit = miniBatchOp.getWalEdit(i);
-      if (edit == null || edit.isMetaEdit() || edit.isEmpty()) {
-        continue;
-      }
-      internalReadOnlyGuard();
+    TableName tableName = c.getEnvironment().getRegionInfo().getTable();
+    if (tableName.isSystemTable()) {
+      return;
     }
+    internalReadOnlyGuard();
   }
 
   @Override
@@ -389,5 +387,17 @@ public class ReadOnlyController
     throws IOException {
     internalReadOnlyGuard();
     BulkLoadObserver.super.preCleanupBulkLoad(ctx);
+  }
+
+  /* ---- ConfigurationObserver Overrides ---- */
+  @Override
+  public void onConfigurationChange(Configuration conf) {
+    boolean maybeUpdatedConfValue = conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
+      HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
+    if (this.globalReadOnlyEnabled != maybeUpdatedConfValue) {
+      this.globalReadOnlyEnabled = maybeUpdatedConfValue;
+      LOG.info("Config {} has been dynamically changed to {}",
+        HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, this.globalReadOnlyEnabled);
+    }
   }
 }
