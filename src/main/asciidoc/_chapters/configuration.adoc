@@ -1477,6 +1477,7 @@ Here are those configurations:
 | hbase.coprocessor.region.classes
 | hbase.coprocessor.regionserver.classes
 | hbase.coprocessor.user.region.classes
+| hbase.global.readonly.enabled
 | hbase.regionserver.thread.compaction.large
 | hbase.regionserver.thread.compaction.small
 | hbase.regionserver.thread.split
