@@ -17,13 +17,21 @@
  */
 package org.apache.hadoop.hbase.backup;
 
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.BACKUPID_PREFIX;
+
 import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupManifest;
+import org.apache.hadoop.hbase.backup.impl.BackupManifest.BackupImage;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -134,5 +142,37 @@ public final class HBackupFileSystem {
     BackupManifest manifest =
       new BackupManifest(conf, getManifestPath(conf, backupRootPath, backupId));
     return manifest;
+  }
+
+  public static List<BackupImage> getAllBackupImages(Configuration conf, Path backupRootPath)
+    throws IOException {
+    FileSystem fs = FileSystem.get(backupRootPath.toUri(), conf);
+    RemoteIterator<LocatedFileStatus> it = fs.listLocatedStatus(backupRootPath);
+
+    List<BackupImage> images = new ArrayList<>();
+
+    while (it.hasNext()) {
+      LocatedFileStatus lfs = it.next();
+      if (!lfs.isDirectory()) {
+        continue;
+      }
+
+      String backupId = lfs.getPath().getName();
+      try {
+        BackupManifest manifest = getManifest(conf, backupRootPath, backupId);
+        images.add(manifest.getBackupImage());
+      } catch (IOException e) {
+        LOG.error("Cannot load backup manifest from: " + lfs.getPath(), e);
+      }
+    }
+
+    // Sort images by timestamp in descending order
+    images.sort(Comparator.comparingLong(m -> -getTimestamp(m.getBackupId())));
+
+    return images;
+  }
+
+  private static long getTimestamp(String backupId) {
+    return Long.parseLong(backupId.substring(BACKUPID_PREFIX.length()));
   }
 }
