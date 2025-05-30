@@ -19,6 +19,8 @@ package org.apache.hadoop.hbase.backup;
 
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONF_CONTINUOUS_BACKUP_WAL_DIR;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_ENABLE_CONTINUOUS_BACKUP;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_TABLE;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_TABLE_MAPPING;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_TO_DATETIME;
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.ONE_DAY_IN_MILLISECONDS;
 import static org.junit.Assert.assertEquals;
@@ -65,7 +67,7 @@ public class TestPointInTimeRestore extends TestBackupBase {
     fs.mkdirs(backupWalDir);
     conf1.set(CONF_CONTINUOUS_BACKUP_WAL_DIR, backupWalDir.toString());
 
-    setUpBackupUps();
+    setUpBackups();
   }
 
   /**
@@ -74,7 +76,7 @@ public class TestPointInTimeRestore extends TestBackupBase {
    * backups with or without continuous backup enabled. 4. Ensuring replication is complete before
    * proceeding.
    */
-  private static void setUpBackupUps() throws Exception {
+  private static void setUpBackups() throws Exception {
     // Simulate a backup taken 20 days ago
     EnvironmentEdgeManager
       .injectEdge(() -> System.currentTimeMillis() - 20 * ONE_DAY_IN_MILLISECONDS);
@@ -233,8 +235,8 @@ public class TestPointInTimeRestore extends TestBackupBase {
     String targetTableNames =
       Arrays.stream(targetTables).map(TableName::getNameAsString).collect(Collectors.joining(","));
 
-    return new String[] { "-t", sourceTableNames, "-m", targetTableNames, "-" + OPTION_TO_DATETIME,
-      String.valueOf(endTime) };
+    return new String[] { "-" + OPTION_TABLE, sourceTableNames, "-" + OPTION_TABLE_MAPPING,
+      targetTableNames, "-" + OPTION_TO_DATETIME, String.valueOf(endTime) };
   }
 
   private static String[] buildBackupArgs(String backupType, TableName[] tables,
@@ -243,10 +245,10 @@ public class TestPointInTimeRestore extends TestBackupBase {
       Arrays.stream(tables).map(TableName::getNameAsString).collect(Collectors.joining(","));
 
     if (continuousEnabled) {
-      return new String[] { "create", backupType, BACKUP_ROOT_DIR, "-t", tableNames,
+      return new String[] { "create", backupType, BACKUP_ROOT_DIR, "-" + OPTION_TABLE, tableNames,
         "-" + OPTION_ENABLE_CONTINUOUS_BACKUP };
     } else {
-      return new String[] { "create", backupType, BACKUP_ROOT_DIR, "-t", tableNames };
+      return new String[] { "create", backupType, BACKUP_ROOT_DIR, "-" + OPTION_TABLE, tableNames };
     }
   }
 

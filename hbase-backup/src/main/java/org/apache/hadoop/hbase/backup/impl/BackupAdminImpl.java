@@ -803,8 +803,7 @@ public class BackupAdminImpl implements BackupAdmin {
       try {
         Date dirDate = dateFormat.parse(dirName);
         long dirStartTime = dirDate.getTime(); // Start of that day (00:00:00)
-        long dirEndTime = dirStartTime + ONE_DAY_IN_MILLISECONDS - 1; // End time of the day
-        // (23:59:59)
+        long dirEndTime = dirStartTime + ONE_DAY_IN_MILLISECONDS - 1; // End time of day (23:59:59)
 
         // Check if this day's WAL files overlap with the required time range
         if (dirEndTime >= startTime && dirStartTime <= endTime) {

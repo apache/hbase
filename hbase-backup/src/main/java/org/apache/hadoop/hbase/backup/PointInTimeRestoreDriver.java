@@ -38,6 +38,8 @@ import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hbase.thirdparty.com.google.common.base.Strings;
+
 /**
  * Command-line entry point for restore operation
  */
@@ -53,7 +55,7 @@ public class PointInTimeRestoreDriver extends AbstractRestoreDriver {
   protected int executeRestore(boolean check, TableName[] fromTables, TableName[] toTables,
     boolean isOverwrite) {
     String walBackupDir = getConf().get(CONF_CONTINUOUS_BACKUP_WAL_DIR);
-    if (walBackupDir == null || walBackupDir.isEmpty()) {
+    if (Strings.isNullOrEmpty(walBackupDir)) {
       System.err.printf(
         "Point-in-Time Restore requires the WAL backup directory (%s) to replay logs after full and incremental backups. "
           + "Set this property if you need Point-in-Time Restore. Otherwise, use the normal restore process with the appropriate backup ID.%n",
@@ -67,8 +69,7 @@ public class PointInTimeRestoreDriver extends AbstractRestoreDriver {
       return -1;
     }
 
-    String backupRootDir =
-      cmd.hasOption(OPTION_PITR_BACKUP_PATH) ? cmd.getOptionValue(OPTION_PITR_BACKUP_PATH) : null;
+    String backupRootDir = cmd.getOptionValue(OPTION_PITR_BACKUP_PATH);
 
     try (final Connection conn = ConnectionFactory.createConnection(conf);
       BackupAdmin client = new BackupAdminImpl(conn)) {

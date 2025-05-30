@@ -231,8 +231,8 @@ public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint
       }
 
       // Capture the timestamp of the last WAL entry processed. This is used as the replication
-      // checkpoint
-      // so that point-in-time restores know the latest consistent time up to which replication has
+      // checkpoint so that point-in-time restores know the latest consistent time up to which
+      // replication has
       // occurred.
       latestWALEntryTimestamp = entries.get(entries.size() - 1).getKey().getWriteTime();
 

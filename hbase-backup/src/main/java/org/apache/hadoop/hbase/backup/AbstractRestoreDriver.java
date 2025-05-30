@@ -81,25 +81,30 @@ public abstract class AbstractRestoreDriver extends AbstractHBaseTool {
 
     boolean overwrite = cmd.hasOption(OPTION_OVERWRITE);
     if (overwrite) {
-      LOG.debug("Found -overwrite option in restore command, "
-        + "will overwrite to existing table if any in the restore target");
+      LOG.debug("Found overwrite option (-{}) in restore command, "
+        + "will overwrite to existing table if any in the restore target", OPTION_OVERWRITE);
     }
 
     boolean check = cmd.hasOption(OPTION_CHECK);
     if (check) {
       LOG.debug(
-        "Found -check option in restore command, " + "will check and verify the dependencies");
+        "Found check option (-{}) in restore command, will check and verify the dependencies",
+        OPTION_CHECK);
     }
 
     if (cmd.hasOption(OPTION_SET) && cmd.hasOption(OPTION_TABLE)) {
-      System.err.println(
-        "Options -s and -t are mutually exclusive," + " you can not specify both of them.");
+      System.err.printf(
+        "Set name (-%s) and table list (-%s) are mutually exclusive, you can not specify both "
+          + "of them.%n",
+        OPTION_SET, OPTION_TABLE);
       printToolUsage();
       return -1;
     }
 
     if (!cmd.hasOption(OPTION_SET) && !cmd.hasOption(OPTION_TABLE)) {
-      System.err.println("You have to specify either set name or table list to restore");
+      System.err.printf(
+        "You have to specify either set name (-%s) or table list (-%s) to " + "restore%n",
+        OPTION_SET, OPTION_TABLE);
       printToolUsage();
       return -1;
     }
@@ -114,8 +119,8 @@ public abstract class AbstractRestoreDriver extends AbstractHBaseTool {
     TableName[] sTableArray;
     TableName[] tTableArray;
 
-    String tableMapping =
-      cmd.hasOption(OPTION_TABLE_MAPPING) ? cmd.getOptionValue(OPTION_TABLE_MAPPING) : null;
+    String tableMapping = cmd.getOptionValue(OPTION_TABLE_MAPPING);
+
     try (final Connection conn = ConnectionFactory.createConnection(conf)) {
       // Check backup set
       if (cmd.hasOption(OPTION_SET)) {
