@@ -109,6 +109,16 @@ public interface BackupRestoreConstants {
   String OPTION_FORCE_DELETE_DESC =
     "Flag to forcefully delete the backup, even if it may be required for Point-in-Time Restore";
 
+  String OPTION_TO_DATETIME = "td";
+  String LONG_OPTION_TO_DATETIME = "to-datetime";
+  String OPTION_TO_DATETIME_DESC = "Target date and time up to which data should be restored";
+
+  String OPTION_PITR_BACKUP_PATH = "bp";
+  String LONG_OPTION_PITR_BACKUP_PATH = "backup-path";
+  String OPTION_PITR_BACKUP_PATH_DESC =
+    "Specifies a custom backup location for Point-In-Time Recovery (PITR). "
+      + "If provided, this location will be used exclusively instead of deriving the path from the system table.";
+
   String JOB_NAME_CONF_KEY = "mapreduce.job.name";
 
   String BACKUP_CONFIG_STRING = BackupRestoreConstants.BACKUP_ENABLE_KEY + "=true\n"
