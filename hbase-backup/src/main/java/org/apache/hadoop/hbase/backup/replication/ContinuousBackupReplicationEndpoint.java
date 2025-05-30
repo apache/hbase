@@ -36,6 +36,9 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.io.asyncfs.monitor.StreamSlowMonitor;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.replication.BaseReplicationEndpoint;
@@ -81,6 +84,8 @@ public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint
   private UUID peerUUID;
   private String peerId;
   private ScheduledExecutorService flushExecutor;
+
+  private long latestWALEntryTimestamp = -1L;
 
   public static final long ONE_DAY_IN_MILLISECONDS = TimeUnit.DAYS.toMillis(1);
   public static final String WAL_FILE_PREFIX = "wal_file.";
@@ -174,6 +179,13 @@ public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint
       }
     }
     walWriters.clear();
+
+    // All received WAL entries have been flushed and persisted successfully.
+    // At this point, it's safe to record the latest replicated timestamp,
+    // as we are guaranteed that all entries up to that timestamp are durably stored.
+    // This checkpoint is essential for enabling consistent Point-in-Time Restore (PITR).
+    updateLastReplicatedTimestampForContinuousBackup();
+
     LOG.info("{} WAL writers flushed and cleared", Utils.logPeerId(peerId));
   }
 
@@ -218,6 +230,12 @@ public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint
         backupWalEntries(entry.getKey(), entry.getValue());
       }
 
+      // Capture the timestamp of the last WAL entry processed. This is used as the replication
+      // checkpoint so that point-in-time restores know the latest consistent time up to which
+      // replication has
+      // occurred.
+      latestWALEntryTimestamp = entries.get(entries.size() - 1).getKey().getWriteTime();
+
       if (isAnyWriterFull()) {
         LOG.debug("{} Some WAL writers reached max size, triggering flush",
           Utils.logPeerId(peerId));
@@ -234,6 +252,21 @@ public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint
       return ReplicationResult.FAILED;
     } finally {
       lock.unlock();
+    }
+  }
+
+  /**
+   * Persists the latest replicated WAL entry timestamp in the backup system table. This checkpoint
+   * is critical for Continuous Backup and Point-in-Time Restore (PITR) to ensure restore operations
+   * only go up to a known safe point. The value is stored per region server using its ServerName as
+   * the key.
+   * @throws IOException if the checkpoint update fails
+   */
+  private void updateLastReplicatedTimestampForContinuousBackup() throws IOException {
+    try (final Connection conn = ConnectionFactory.createConnection(conf);
+      BackupSystemTable backupSystemTable = new BackupSystemTable(conn)) {
+      backupSystemTable.updateBackupCheckpointTimestamp(replicationSource.getServerWALsBelongTo(),
+        latestWALEntryTimestamp);
     }
   }
 
