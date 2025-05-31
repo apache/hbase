@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.backup.impl;
 
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONF_CONTINUOUS_BACKUP_PITR_WINDOW_DAYS;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.DEFAULT_CONTINUOUS_BACKUP_PITR_WINDOW_DAYS;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_BACKUP_LIST_DESC;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_BANDWIDTH;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_BANDWIDTH_DESC;
@@ -24,6 +26,8 @@ import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_DEBUG
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_DEBUG_DESC;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_ENABLE_CONTINUOUS_BACKUP;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_ENABLE_CONTINUOUS_BACKUP_DESC;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_FORCE_DELETE;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_FORCE_DELETE_DESC;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_IGNORECHECKSUM;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_IGNORECHECKSUM_DESC;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_KEEP;
@@ -46,8 +50,12 @@ import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_YARN_
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -68,6 +76,7 @@ import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
@@ -632,15 +641,18 @@ public final class BackupCommands {
         printUsage();
         throw new IOException(INCORRECT_USAGE);
       }
+
+      boolean isForceDelete = cmdline.hasOption(OPTION_FORCE_DELETE);
       super.execute();
       if (cmdline.hasOption(OPTION_KEEP)) {
-        executeDeleteOlderThan(cmdline);
+        executeDeleteOlderThan(cmdline, isForceDelete);
       } else if (cmdline.hasOption(OPTION_LIST)) {
-        executeDeleteListOfBackups(cmdline);
+        executeDeleteListOfBackups(cmdline, isForceDelete);
       }
     }
 
-    private void executeDeleteOlderThan(CommandLine cmdline) throws IOException {
+    private void executeDeleteOlderThan(CommandLine cmdline, boolean isForceDelete)
+      throws IOException {
       String value = cmdline.getOptionValue(OPTION_KEEP);
       int days = 0;
       try {
@@ -662,6 +674,7 @@ public final class BackupCommands {
         BackupAdminImpl admin = new BackupAdminImpl(conn)) {
         history = sysTable.getBackupHistory(-1, dateFilter);
         String[] backupIds = convertToBackupIds(history);
+        validatePITRBackupDeletion(backupIds, isForceDelete);
         int deleted = admin.deleteBackups(backupIds);
         System.out.println("Deleted " + deleted + " backups. Total older than " + days + " days: "
           + backupIds.length);
@@ -680,10 +693,11 @@ public final class BackupCommands {
       return ids;
     }
 
-    private void executeDeleteListOfBackups(CommandLine cmdline) throws IOException {
+    private void executeDeleteListOfBackups(CommandLine cmdline, boolean isForceDelete)
+      throws IOException {
       String value = cmdline.getOptionValue(OPTION_LIST);
       String[] backupIds = value.split(",");
-
+      validatePITRBackupDeletion(backupIds, isForceDelete);
       try (BackupAdminImpl admin = new BackupAdminImpl(conn)) {
         int deleted = admin.deleteBackups(backupIds);
         System.out.println("Deleted " + deleted + " backups. Total requested: " + backupIds.length);
@@ -695,12 +709,180 @@ public final class BackupCommands {
 
     }
 
+    /**
+     * Validates whether the specified backups can be deleted while preserving Point-In-Time
+     * Recovery (PITR) capabilities. If a backup is the only remaining full backup enabling PITR for
+     * certain tables, deletion is prevented unless forced.
+     * @param backupIds     Array of backup IDs to validate.
+     * @param isForceDelete Flag indicating whether deletion should proceed regardless of PITR
+     *                      constraints.
+     * @throws IOException If a backup is essential for PITR and force deletion is not enabled.
+     */
+    private void validatePITRBackupDeletion(String[] backupIds, boolean isForceDelete)
+      throws IOException {
+      if (!isForceDelete) {
+        for (String backupId : backupIds) {
+          List<TableName> affectedTables = getTablesDependentOnBackupForPITR(backupId);
+          if (!affectedTables.isEmpty()) {
+            String errMsg = String.format(
+              "Backup %s is the only FULL backup remaining that enables PITR for tables: %s. "
+                + "Use the force option to delete it anyway.",
+              backupId, affectedTables);
+            System.err.println(errMsg);
+            throw new IOException(errMsg);
+          }
+        }
+      }
+    }
+
+    /**
+     * Identifies tables that rely on the specified backup for PITR (Point-In-Time Recovery). A
+     * table is considered dependent on the backup if it does not have any other valid full backups
+     * that can cover the PITR window enabled by the specified backup.
+     * @param backupId The ID of the backup being evaluated for PITR coverage.
+     * @return A list of tables that are dependent on the specified backup for PITR recovery.
+     * @throws IOException If there is an error retrieving the backup metadata or backup system
+     *                     table.
+     */
+    private List<TableName> getTablesDependentOnBackupForPITR(String backupId) throws IOException {
+      List<TableName> dependentTables = new ArrayList<>();
+
+      try (final BackupSystemTable backupSystemTable = new BackupSystemTable(conn)) {
+        // Fetch the target backup's info using the backup ID
+        BackupInfo targetBackup = backupSystemTable.readBackupInfo(backupId);
+        if (targetBackup == null) {
+          throw new IOException("Backup info not found for backupId: " + backupId);
+        }
+
+        // Only full backups are mandatory for PITR
+        if (!BackupType.FULL.equals(targetBackup.getType())) {
+          return List.of();
+        }
+
+        // Retrieve the tables with continuous backup enabled along with their start times
+        Map<TableName, Long> continuousBackupStartTimes =
+          backupSystemTable.getContinuousBackupTableSet();
+
+        // Calculate the PITR window by fetching configuration and current time
+        long pitrWindowDays = getConf().getLong(CONF_CONTINUOUS_BACKUP_PITR_WINDOW_DAYS,
+          DEFAULT_CONTINUOUS_BACKUP_PITR_WINDOW_DAYS);
+        long currentTime = EnvironmentEdgeManager.getDelegate().currentTime();
+        final long maxAllowedPITRTime = currentTime - TimeUnit.DAYS.toMillis(pitrWindowDays);
+
+        // Check each table associated with the target backup
+        for (TableName table : targetBackup.getTableNames()) {
+          // Skip tables without continuous backup enabled
+          if (!continuousBackupStartTimes.containsKey(table)) {
+            continue;
+          }
+
+          // Calculate the PITR window this backup covers for the table
+          Optional<Pair<Long, Long>> coveredPitrWindow = getCoveredPitrWindowForTable(targetBackup,
+            continuousBackupStartTimes.get(table), maxAllowedPITRTime, currentTime);
+
+          // If this backup does not cover a valid PITR window for the table, skip
+          if (coveredPitrWindow.isEmpty()) {
+            continue;
+          }
+
+          // Check if there is any other valid backup that can cover the PITR window
+          List<BackupInfo> allBackups = backupSystemTable.getBackupInfos(BackupState.COMPLETE);
+          boolean hasAnotherValidBackup =
+            canAnyOtherBackupCover(allBackups, targetBackup, table, coveredPitrWindow.get(),
+              continuousBackupStartTimes.get(table), maxAllowedPITRTime, currentTime);
+
+          // If no other valid backup exists, add the table to the dependent list
+          if (!hasAnotherValidBackup) {
+            dependentTables.add(table);
+          }
+        }
+      }
+
+      return dependentTables;
+    }
+
+    /**
+     * Calculates the PITR (Point-In-Time Recovery) window that the given backup enables for a
+     * table.
+     * @param backupInfo                Metadata of the backup being evaluated.
+     * @param continuousBackupStartTime When continuous backups started for the table.
+     * @param maxAllowedPITRTime        The earliest timestamp from which PITR is supported in the
+     *                                  cluster.
+     * @param currentTime               Current time.
+     * @return Optional PITR window as a pair (start, end), or empty if backup is not useful for
+     *         PITR.
+     */
+    private Optional<Pair<Long, Long>> getCoveredPitrWindowForTable(BackupInfo backupInfo,
+      long continuousBackupStartTime, long maxAllowedPITRTime, long currentTime) {
+
+      long backupStartTs = backupInfo.getStartTs();
+      long backupEndTs = backupInfo.getCompleteTs();
+      long effectiveStart = Math.max(continuousBackupStartTime, maxAllowedPITRTime);
+
+      if (backupStartTs < continuousBackupStartTime) {
+        return Optional.empty();
+      }
+
+      return Optional.of(Pair.newPair(Math.max(backupEndTs, effectiveStart), currentTime));
+    }
+
+    /**
+     * Checks if any backup (excluding the current backup) can cover the specified PITR window for
+     * the given table. A backup can cover the PITR window if it fully encompasses the target time
+     * range specified.
+     * @param allBackups                List of all backups available.
+     * @param currentBackup             The current backup that should not be considered for
+     *                                  coverage.
+     * @param table                     The table for which we need to check backup coverage.
+     * @param targetWindow              A pair representing the target PITR window (start and end
+     *                                  times).
+     * @param continuousBackupStartTime When continuous backups started for the table.
+     * @param maxAllowedPITRTime        The earliest timestamp from which PITR is supported in the
+     *                                  cluster.
+     * @param currentTime               Current time.
+     * @return {@code true} if any backup (excluding the current one) fully covers the target PITR
+     *         window; {@code false} otherwise.
+     */
+    private boolean canAnyOtherBackupCover(List<BackupInfo> allBackups, BackupInfo currentBackup,
+      TableName table, Pair<Long, Long> targetWindow, long continuousBackupStartTime,
+      long maxAllowedPITRTime, long currentTime) {
+
+      long targetStart = targetWindow.getFirst();
+      long targetEnd = targetWindow.getSecond();
+
+      // Iterate through all backups (including the current one)
+      for (BackupInfo backup : allBackups) {
+        // Skip if the backup is not full or doesn't contain the table
+        if (!BackupType.FULL.equals(backup.getType())) continue;
+        if (!backup.getTableNames().contains(table)) continue;
+
+        // Skip the current backup itself
+        if (backup.equals(currentBackup)) continue;
+
+        // Get the covered PITR window for this backup
+        Optional<Pair<Long, Long>> coveredWindow = getCoveredPitrWindowForTable(backup,
+          continuousBackupStartTime, maxAllowedPITRTime, currentTime);
+
+        if (coveredWindow.isPresent()) {
+          Pair<Long, Long> covered = coveredWindow.get();
+
+          // The backup must fully cover the target window
+          if (covered.getFirst() <= targetStart && covered.getSecond() >= targetEnd) {
+            return true;
+          }
+        }
+      }
+
+      return false;
+    }
+
     @Override
     protected void printUsage() {
       System.out.println(DELETE_CMD_USAGE);
       Options options = new Options();
       options.addOption(OPTION_KEEP, true, OPTION_KEEP_DESC);
       options.addOption(OPTION_LIST, true, OPTION_BACKUP_LIST_DESC);
+      options.addOption(OPTION_FORCE_DELETE, false, OPTION_FORCE_DELETE_DESC);
 
       HelpFormatter helpFormatter = new HelpFormatter();
       helpFormatter.setLeftPadding(2);

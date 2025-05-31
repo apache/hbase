@@ -18,6 +18,9 @@
 package org.apache.hadoop.hbase.backup;
 
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONTINUOUS_BACKUP_REPLICATION_PEER;
+import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.CONF_BACKUP_MAX_WAL_SIZE;
+import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.CONF_STAGED_WAL_FLUSH_INITIAL_DELAY;
+import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.CONF_STAGED_WAL_FLUSH_INTERVAL;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -297,6 +300,10 @@ public class TestBackupBase {
   public static void setUpHelper() throws Exception {
     BACKUP_ROOT_DIR = Path.SEPARATOR + "backupUT";
     BACKUP_REMOTE_ROOT_DIR = Path.SEPARATOR + "backupUT";
+
+    conf1.set(CONF_BACKUP_MAX_WAL_SIZE, "10240");
+    conf1.set(CONF_STAGED_WAL_FLUSH_INITIAL_DELAY, "10");
+    conf1.set(CONF_STAGED_WAL_FLUSH_INTERVAL, "10");
 
     if (secure) {
       // set the always on security provider

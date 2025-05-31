@@ -174,10 +174,18 @@ public class FullTableBackupClient extends TableBackupClient {
   private void handleContinuousBackup(Admin admin) throws IOException {
     backupInfo.setPhase(BackupInfo.BackupPhase.SETUP_WAL_REPLICATION);
     long startTimestamp = startContinuousWALBackup(admin);
+    backupManager.addContinuousBackupTableSet(backupInfo.getTables(), startTimestamp);
+
+    // Updating the start time of this backup to reflect the actual beginning of the full backup.
+    // So far, we have only set up continuous WAL replication, but the full backup has not yet
+    // started.
+    // Setting the correct start time is crucial for Point-In-Time Recovery (PITR).
+    // When selecting a backup for PITR, we must ensure that the backup started **on or after** the
+    // starting time of the WALs. If WAL streaming began later, we couldn't guarantee that WALs
+    // exist for the entire period between the backup's start time and the desired PITR timestamp.
+    backupInfo.setStartTs(startTimestamp);
 
     performBackupSnapshots(admin);
-
-    backupManager.addContinuousBackupTableSet(backupInfo.getTables(), startTimestamp);
 
     // set overall backup status: complete. Here we make sure to complete the backup.
     // After this checkpoint, even if entering cancel process, will let the backup finished
