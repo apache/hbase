@@ -137,7 +137,7 @@ A number of properties exist to configure SPNEGO authentication for the web serv
 </property>
 ----
 
-=== Defining administrators of the Web UI
+=== Defining administrators of the Web UI with SPNEGO
 
 In the previous section, we cover how to enable authentication for the Web UI via SPNEGO.
 However, some portions of the Web UI could be used to impact the availability and performance
@@ -255,7 +255,34 @@ A number of properties exist to configure LDAP authentication for the web server
   of Active Directory server.</description>
 </property>
 ----
+=== Defining Administrators of the Web UI with LDAP
 
+In the previous section, we discussed enabling authentication for the Web UI via LDAP. Certain portions of the Web UI can impact the availability and performance of an HBase cluster. To safeguard these sensitive endpoints, it is essential to restrict access to authorized administrators only.
+
+HBase provides a mechanism to define administrators for the Web UI through a list of usernames in the `hbase-site.xml` configuration file.
+
+To specify the administrators, use the following property in `hbase-site.xml`:
+
+[source,xml]
+----
+<property>
+  <name>hbase.security.authentication.ldap.admin.users</name>
+  <value>admin1,admin2,admin3</value>
+</property>
+----
+
+The usernames listed in the above property should correspond to the LDAP usernames of the administrators.
+
+==== Notes
+
+* This feature is supported by only versions of HBase having https://issues.apache.org/jira/browse/HBASE-29244[HBASE-29244]
+* Ensure that the LDAP server is properly configured and running. See the previous section for details.
+* Only users explicitly listed in the `hbase.security.authentication.ldap.admin.users` property will have access to sensitive endpoints.
+* Non-administrative users can still access non-sensitive endpoints, provided they are authenticated.
+
+By defining administrators in this way, you can ensure that only authorized personnel can interact with critical Web UI functionalities, thereby enhancing the security and stability of your HBase cluster.
+
+---
 === Other UI security-related configuration
 
 While it is a clear anti-pattern for HBase developers, the developers acknowledge that the HBase
