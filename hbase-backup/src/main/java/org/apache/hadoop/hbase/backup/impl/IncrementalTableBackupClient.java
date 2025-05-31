@@ -52,7 +52,9 @@ import org.apache.hadoop.hbase.mapreduce.WALPlayer;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.snapshot.SnapshotRegionLocator;
+import org.apache.hadoop.hbase.snapshot.SnapshotTTLExpiredException;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.util.Tool;
@@ -62,6 +64,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 
 /**
@@ -539,6 +542,13 @@ public class IncrementalTableBackupClient extends TableBackupClient {
           SnapshotDescriptionUtils.readSnapshotInfo(fs, manifestDir);
         SnapshotManifest manifest =
           SnapshotManifest.open(conf, fs, manifestDir, snapshotDescription);
+        if (
+          SnapshotDescriptionUtils.isExpiredSnapshot(snapshotDescription.getTtl(),
+            snapshotDescription.getCreationTime(), EnvironmentEdgeManager.currentTime())
+        ) {
+          throw new SnapshotTTLExpiredException(
+            ProtobufUtil.createSnapshotDesc(snapshotDescription));
+        }
 
         ColumnFamilyDescriptor[] backupCfs = manifest.getTableDescriptor().getColumnFamilies();
         if (!areCfsCompatible(currentCfs, backupCfs)) {
