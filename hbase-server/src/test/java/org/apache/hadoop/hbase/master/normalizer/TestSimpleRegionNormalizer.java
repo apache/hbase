@@ -34,6 +34,7 @@ import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -676,13 +677,27 @@ public class TestSimpleRegionNormalizer {
     ServerName sn = ServerName.valueOf("localhost", 0, 0L);
     when(masterServices.getAssignmentManager().getRegionStates().getRegionsOfTable(any()))
       .thenReturn(regionInfoList);
-    when(masterServices.getAssignmentManager().getRegionStates().getRegionServerOfRegion(any()))
-      .thenReturn(sn);
+    for (RegionInfo regionInfo : regionInfoList) {
+      int regionSize = regionSizes.get(regionInfo.getRegionName());
+      // ensures that the getRegionSizeMB method returns -1, simulating the condition when the
+      // region size cannot be found
+      if (regionSize == -1) {
+        when(masterServices.getAssignmentManager().getRegionStates()
+          .getRegionServerOfRegion(regionInfo)).thenReturn(null);
+      } else {
+        when(masterServices.getAssignmentManager().getRegionStates()
+          .getRegionServerOfRegion(regionInfo)).thenReturn(sn);
+      }
+    }
     when(
       masterServices.getAssignmentManager().getRegionStates().getRegionState(any(RegionInfo.class)))
       .thenReturn(RegionState.createForTesting(null, RegionState.State.OPEN));
 
     for (Map.Entry<byte[], Integer> region : regionSizes.entrySet()) {
+      // skip regions where we don't know the size
+      if (region.getValue() == -1) {
+        continue;
+      }
       RegionMetrics regionLoad = Mockito.mock(RegionMetrics.class);
       when(regionLoad.getRegionName()).thenReturn(region.getKey());
       when(regionLoad.getStoreFileSize())
@@ -756,5 +771,26 @@ public class TestSimpleRegionNormalizer {
       ret.put(regionInfos.get(i).getRegionName(), sizes[i]);
     }
     return ret;
+  }
+
+  @Test
+  public void testSplitOfLargeRegionIfOneIsNotKnow() {
+    final TableName tableName = name.getTableName();
+    final List<RegionInfo> regionInfos = createRegionInfos(tableName, 5);
+    final Map<byte[], Integer> regionSizes = createRegionSizesMap(regionInfos, 8, 6, -1, 10, 30);
+
+    setupMocksForNormalizer(regionSizes, regionInfos);
+
+    assertThat(normalizer.computePlansForTable(tableDescriptor),
+      contains(new SplitNormalizationPlan(regionInfos.get(4), 30)));
+  }
+
+  @Test
+  public void testSplitOfAllUnknownSize() {
+    final TableName tableName = name.getTableName();
+    final List<RegionInfo> regionInfos = createRegionInfos(tableName, 4);
+    final Map<byte[], Integer> regionSizes = createRegionSizesMap(regionInfos, -1, -1, -1, -1);
+    setupMocksForNormalizer(regionSizes, regionInfos);
+    assertThat(normalizer.computePlansForTable(tableDescriptor), is(empty()));
   }
 }
