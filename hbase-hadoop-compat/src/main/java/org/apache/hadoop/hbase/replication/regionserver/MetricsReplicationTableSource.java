@@ -29,6 +29,10 @@ public interface MetricsReplicationTableSource extends BaseSource {
 
   long getShippedBytes();
 
+  long getWalAppendBytes();
+
+  void incrWalAppendBytes(long size);
+
   void clear();
 
   long getLastShippedAge();
