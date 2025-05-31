@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TimeZone;
+import com.google.common.base.Strings;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.FileStatus;
@@ -275,16 +276,17 @@ public class IncrementalTableBackupClient extends TableBackupClient {
       backupInfo.setPhase(BackupPhase.PREPARE_INCREMENTAL);
       // Non-continuous Backup incremental backup is controlled by 'incremental backup table set'
       // and not by user provided backup table list. This is an optimization to avoid copying
-      // the same set of WALs for incremental backups of different tables at different time
+      // the same set of WALs for incremental backups of different tables at different times
       // HBASE-14038
       // Continuous-incremental backup backs up user provided table list/set
+      Set<TableName> currentTableSet;
       if (backupInfo.isContinuousBackupEnabled()) {
-        LOG.debug("For incremental backup, current table set is " + backupInfo.getTables());
+        currentTableSet = backupInfo.getTables();
       } else {
-        LOG.debug("For incremental backup, current table set is "
-          + backupManager.getIncrementalBackupTableSet());
+        currentTableSet = backupManager.getIncrementalBackupTableSet();
         newTimestamps = ((IncrementalBackupManager) backupManager).getIncrBackupLogFileMap();
       }
+      LOG.debug("For incremental backup, the current table set is {}", currentTableSet);
     } catch (Exception e) {
       // fail the overall backup and return
       failBackup(conn, backupInfo, backupManager, e, "Unexpected Exception : ",
@@ -431,7 +433,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
   private List<String> getBackupLogs(long startTs) throws IOException {
     // get log files from backup dir
     String walBackupDir = conf.get(CONF_CONTINUOUS_BACKUP_WAL_DIR);
-    if (walBackupDir == null || walBackupDir.isEmpty()) {
+    if (Strings.isNullOrEmpty(walBackupDir)) {
       throw new IOException(
         "Incremental backup requires the WAL backup directory " + CONF_CONTINUOUS_BACKUP_WAL_DIR);
     }
@@ -451,8 +453,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
       try {
         Date dirDate = dateFormat.parse(dirName);
         long dirStartTime = dirDate.getTime(); // Start of that day (00:00:00)
-        long dirEndTime = dirStartTime + ONE_DAY_IN_MILLISECONDS - 1; // End time of the day
-        // (23:59:59)
+        long dirEndTime = dirStartTime + ONE_DAY_IN_MILLISECONDS - 1; //End time of day (23:59:59)
 
         if (dirEndTime >= startTs) {
           Path dirPath = dayDir.getPath();

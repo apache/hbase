@@ -873,7 +873,7 @@ public class BackupAdminImpl implements BackupAdmin {
         if (!continuousBackupTableSet.containsAll(tableList)) {
           String extraTables = StringUtils.join(tableList, ",");
           String msg = "Some tables (" + extraTables + ") haven't gone through Continuous backup. "
-            + "Perform Continuous backup on " + extraTables + " first, " + "then retry the command";
+            + "Perform Continuous backup on " + extraTables + " first, then retry the command";
           throw new IOException(msg);
         }
       } else {
@@ -894,7 +894,7 @@ public class BackupAdminImpl implements BackupAdmin {
           if (!tableList.isEmpty()) {
             String extraTables = StringUtils.join(tableList, ",");
             String msg = "Some tables (" + extraTables + ") haven't gone through full backup. "
-              + "Perform full backup on " + extraTables + " first, " + "then retry the command";
+              + "Perform full backup on " + extraTables + " first, then retry the command";
             throw new IOException(msg);
           }
         }
@@ -928,7 +928,7 @@ public class BackupAdminImpl implements BackupAdmin {
       if (nonExistingTableList != null) {
         // Non-continuous incremental backup is controlled by 'incremental backup table set'
         // and not by user provided backup table list. This is an optimization to avoid copying
-        // the same set of WALs for incremental backups of different tables at different time
+        // the same set of WALs for incremental backups of different tables at different times
         // HBASE-14038. Since continuous incremental backup and full backup backs-up user provided
         // table list, we should inform use about non-existence of input table(s)
         if (type == BackupType.INCREMENTAL && !request.isContinuousBackupEnabled()) {

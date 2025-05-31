@@ -54,8 +54,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.HFileTestUtil;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -78,7 +76,6 @@ public class TestIncrementalBackupWithContinuous extends TestContinuousBackup {
   private byte[] ROW = Bytes.toBytes("row1");
   private final byte[] FAMILY = Bytes.toBytes("family");
   private final byte[] COLUMN = Bytes.toBytes("col");
-  String backupWalDirName = "TestContinuousBackupWalDir";
   private static final int ROWS_IN_BULK_LOAD = 100;
 
   @BeforeClass
@@ -125,7 +122,6 @@ public class TestIncrementalBackupWithContinuous extends TestContinuousBackup {
       Put p = new Put(ROW);
       p.addColumn(FAMILY, COLUMN, COLUMN);
       t1.put(p);
-      // Thread.sleep(5000);
 
       // Run incremental backup
       LOG.info("Run incremental backup now");
@@ -175,7 +171,6 @@ public class TestIncrementalBackupWithContinuous extends TestContinuousBackup {
       assertTrue(checkSucceeded(backup1));
 
       loadTable(TEST_UTIL.getConnection().getTable(table1));
-      // expectedRowCount += ROWS_IN_BULK_LOAD;
       assertEquals(expectedRowCount, TEST_UTIL.countRows(table1));
       performBulkLoad("bulk2", methodName);
       expectedRowCount += ROWS_IN_BULK_LOAD;
@@ -244,7 +239,6 @@ public class TestIncrementalBackupWithContinuous extends TestContinuousBackup {
     FileStatus[] list = CommonFSUtils.listStatus(fs, dir);
     if (list != null) {
       for (FileStatus fstat : list) {
-        //LOG.debug(Objects.toString(fstat.getPath()));
         if (fstat.isDirectory()) {
           LOG.info("Found directory {}", Objects.toString(fstat.getPath()));
           files.addAll(listFiles(fs, root, fstat.getPath()));
