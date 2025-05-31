@@ -159,7 +159,6 @@ public class TestIncrementalBackup extends TestBackupBase {
       validateRootPathCanBeOverridden(BACKUP_ROOT_DIR, backupIdFull);
       assertTrue(checkSucceeded(backupIdFull));
 
-    /*
       // #2 - insert some data to table
       Table t1 = insertIntoTable(conn, table1, famName, 1, ADD_ROWS);
       LOG.debug("writing " + ADD_ROWS + " rows to " + table1);
@@ -286,7 +285,6 @@ public class TestIncrementalBackup extends TestBackupBase {
       Assert.assertEquals(NB_ROWS_IN_BATCH + 5, HBaseTestingUtil.countRows(hTable));
       hTable.close();
       admin.close();
-      */
     }
   }
 
@@ -325,12 +323,9 @@ public class TestIncrementalBackup extends TestBackupBase {
 
     try (Admin admin = conn.getAdmin()) {
       List<HRegion> currentRegions = TEST_UTIL.getHBaseCluster().getRegions(table1);
-      LOG.info("TODO Regions count {}", currentRegions.size());
       for (HRegion region : currentRegions) {
-        LOG.info("TODO Split starting {}", region.getRegionInfo().getRegionNameAsString());
         byte[] name = region.getRegionInfo().getEncodedNameAsBytes();
         admin.splitRegionAsync(name).get();
-        LOG.info("TODO Split done {}", region.getRegionInfo().getRegionNameAsString());
       }
 
       TEST_UTIL.waitTableAvailable(table1);
@@ -341,7 +336,6 @@ public class TestIncrementalBackup extends TestBackupBase {
       request = createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR);
       String incrementalBackupId = backupAdmin.backupTables(request);
       assertTrue(checkSucceeded(incrementalBackupId));
-/*
       preRestoreBackupFiles = getBackupFiles();
       backupAdmin.restore(BackupUtils.createRestoreRequest(BACKUP_ROOT_DIR, incrementalBackupId,
         false, fromTables, toTables, true, true));
@@ -386,7 +380,6 @@ public class TestIncrementalBackup extends TestBackupBase {
       int rowsActual = TEST_UTIL.countRows(table1_restore);
 
       Assert.assertEquals(rowsExpected, rowsActual);
-      */
     }
   }
 
