@@ -113,7 +113,7 @@ public class BackupAdminImpl implements BackupAdmin {
       // Step 2: Make sure there is no failed session
       List<BackupInfo> list = sysTable.getBackupInfos(BackupState.RUNNING);
       if (list.size() != 0) {
-        // ailed sessions found
+        // failed sessions found
         LOG.warn("Failed backup session found. Run backup repair tool first.");
         return -1;
       }
@@ -132,10 +132,11 @@ public class BackupAdminImpl implements BackupAdmin {
         for (int i = 0; i < backupIds.length; i++) {
           BackupInfo info = sysTable.readBackupInfo(backupIds[i]);
           if (info == null) {
+            LOG.warn("Delete backup failed: no information found for backupID={}", backupIds[i]);
             continue;
           }
           affectedBackupRootDirs.add(info.getBackupRootDir());
-          totalDeleted += deleteBackup(backupIds[i], sysTable);
+          totalDeleted += deleteBackup(info, sysTable);
         }
         finalizeDelete(affectedBackupRootDirs, sysTable);
         // Finish
@@ -192,136 +193,103 @@ public class BackupAdminImpl implements BackupAdmin {
   }
 
   /**
-   * Delete single backup and all related backups <br>
-   * Algorithm:<br>
-   * Backup type: FULL or INCREMENTAL <br>
-   * Is this last backup session for table T: YES or NO <br>
-   * For every table T from table list 'tables':<br>
-   * if(FULL, YES) deletes only physical data (PD) <br>
-   * if(FULL, NO), deletes PD, scans all newer backups and removes T from backupInfo,<br>
-   * until we either reach the most recent backup for T in the system or FULL backup<br>
-   * which includes T<br>
-   * if(INCREMENTAL, YES) deletes only physical data (PD) if(INCREMENTAL, NO) deletes physical data
-   * and for table T scans all backup images between last<br>
-   * FULL backup, which is older than the backup being deleted and the next FULL backup (if exists)
-   * <br>
-   * or last one for a particular table T and removes T from list of backup tables.
-   * @param backupId backup id
-   * @param sysTable backup system table
-   * @return total number of deleted backup images
-   * @throws IOException if deleting the backup fails
+   * Deletes a single backup, updating the metadata of any dependent backups as necessary. If
+   * dependent backups no longer contain any tables, they are deleted as well.
    */
-  private int deleteBackup(String backupId, BackupSystemTable sysTable) throws IOException {
-    BackupInfo backupInfo = sysTable.readBackupInfo(backupId);
+  private int deleteBackup(BackupInfo backupToDelete, BackupSystemTable sysTable)
+    throws IOException {
+    int totalDeleted = 1;
+    LOG.info("Deleting backup {} ...", backupToDelete.getBackupId());
+    // Clean up data for backup session (idempotent)
+    BackupUtils.cleanupBackupData(backupToDelete, conn.getConfiguration());
 
-    int totalDeleted = 0;
-    if (backupInfo != null) {
-      LOG.info("Deleting backup " + backupInfo.getBackupId() + " ...");
-      // Step 1: clean up data for backup session (idempotent)
-      BackupUtils.cleanupBackupData(backupInfo, conn.getConfiguration());
-      // List of tables in this backup;
-      List<TableName> tables = backupInfo.getTableNames();
-      long startTime = backupInfo.getStartTs();
-      for (TableName tn : tables) {
-        boolean isLastBackupSession = isLastBackupSession(sysTable, tn, startTime);
-        if (isLastBackupSession) {
-          continue;
-        }
-        // else
-        List<BackupInfo> affectedBackups = getAffectedBackupSessions(backupInfo, tn, sysTable);
-        for (BackupInfo info : affectedBackups) {
-          if (info.equals(backupInfo)) {
-            continue;
-          }
-          removeTableFromBackupImage(info, tn, sysTable);
+    List<BackupInfo> history = sysTable.getBackupHistory(backupToDelete.getBackupRootDir());
+    for (TableName tn : backupToDelete.getTableNames()) {
+      List<BackupInfo> affectedBackups = getAffectedBackupSessions(backupToDelete, tn, history);
+      for (BackupInfo info : affectedBackups) {
+        if (removeTableFromBackupImage(info, tn, sysTable)) {
+          totalDeleted++;
         }
       }
-      Map<byte[], String> map = sysTable.readBulkLoadedFiles(backupId);
-      FileSystem fs = FileSystem.get(conn.getConfiguration());
-      boolean success = true;
-      int numDeleted = 0;
-      for (String f : map.values()) {
-        Path p = new Path(f);
-        try {
-          LOG.debug("Delete backup info " + p + " for " + backupInfo.getBackupId());
-          if (!fs.delete(p)) {
-            if (fs.exists(p)) {
-              LOG.warn(f + " was not deleted");
-              success = false;
-            }
-          } else {
-            numDeleted++;
-          }
-        } catch (IOException ioe) {
-          LOG.warn(f + " was not deleted", ioe);
-          success = false;
-        }
-      }
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(numDeleted + " bulk loaded files out of " + map.size() + " were deleted");
-      }
-      if (success) {
-        sysTable.deleteBulkLoadedRows(new ArrayList<>(map.keySet()));
-      }
+    }
+    sysTable.deleteBackupInfo(backupToDelete.getBackupId());
+    LOG.info("Deletion of backup {} completed.", backupToDelete.getBackupId());
 
-      sysTable.deleteBackupInfo(backupInfo.getBackupId());
-      LOG.info("Delete backup " + backupInfo.getBackupId() + " completed.");
-      totalDeleted++;
-    } else {
-      LOG.warn("Delete backup failed: no information found for backupID=" + backupId);
+    // If there are no more backups, clear the bulk loaded rows.
+    // HBASE-28706: this should be done on a per backup-root basis.
+    if (sysTable.getBackupHistory().isEmpty()) {
+      List<BulkLoad> bulkLoads = sysTable.readBulkloadRows();
+      List<byte[]> bulkLoadedRows = Lists.transform(bulkLoads, BulkLoad::getRowKey);
+      sysTable.deleteBulkLoadedRows(bulkLoadedRows);
     }
     return totalDeleted;
   }
 
-  private void removeTableFromBackupImage(BackupInfo info, TableName tn, BackupSystemTable sysTable)
-    throws IOException {
+  /**
+   * Adjusts the metadata of the given backup to no longer include the given table. If the backup no
+   * longer contains any tables, the backup is deleted.
+   * @return true if the backup is deleted
+   */
+  private boolean removeTableFromBackupImage(BackupInfo info, TableName tn,
+    BackupSystemTable sysTable) throws IOException {
     List<TableName> tables = info.getTableNames();
-    LOG.debug(
-      "Remove " + tn + " from " + info.getBackupId() + " tables=" + info.getTableListAsString());
-    if (tables.contains(tn)) {
-      tables.remove(tn);
+    LOG.debug("Removing table {} from backup {} (tables={})", tn, info.getBackupId(),
+      info.getTableListAsString());
 
+    if (tables.remove(tn)) {
       if (tables.isEmpty()) {
-        LOG.debug("Delete backup info " + info.getBackupId());
+        LOG.debug("Deleting backup info {}", info.getBackupId());
 
         sysTable.deleteBackupInfo(info.getBackupId());
         // Idempotent operation
         BackupUtils.cleanupBackupData(info, conn.getConfiguration());
+        return true;
       } else {
         info.setTables(tables);
         sysTable.updateBackupInfo(info);
         // Now, clean up directory for table (idempotent)
         cleanupBackupDir(info, tn, conn.getConfiguration());
+        return false;
       }
     }
+    return false;
   }
 
-  private List<BackupInfo> getAffectedBackupSessions(BackupInfo backupInfo, TableName tn,
-    BackupSystemTable table) throws IOException {
-    LOG.debug("GetAffectedBackupInfos for: " + backupInfo.getBackupId() + " table=" + tn);
-    long ts = backupInfo.getStartTs();
-    List<BackupInfo> list = new ArrayList<>();
-    List<BackupInfo> history = table.getBackupHistory(backupInfo.getBackupRootDir());
-    // Scan from most recent to backupInfo
-    // break when backupInfo reached
-    for (BackupInfo info : history) {
-      if (info.getStartTs() == ts) {
+  /**
+   * Collects all backups whose metadata would need to be updated due to a given backup being
+   * removed, for a given table (from that backup being removed).
+   * <p>
+   * This is the list of all backups that are newer than the backup being removed, up to (and
+   * excluding) the first FULL backup containing the given table. If no newer FULL backup exists,
+   * this means all newer backups.
+   * @param backupBeingRemoved the backup being removed
+   * @param tn                 the name of a table present in {@code backupBeingRemoved}
+   * @param history            the backup history corresponding to the backup root of
+   *                           {@code backupBeingRemoved}, from newest to oldest
+   * @return the list of backups whose metadata would need to be updated
+   */
+  private List<BackupInfo> getAffectedBackupSessions(BackupInfo backupBeingRemoved, TableName tn,
+    List<BackupInfo> history) {
+    LOG.debug("GetAffectedBackupInfos for: {} table={}", backupBeingRemoved.getBackupId(), tn);
+    List<BackupInfo> result = new ArrayList<>();
+
+    for (BackupInfo historicBackup : history) {
+      if (historicBackup.equals(backupBeingRemoved)) {
         break;
       }
-      List<TableName> tables = info.getTableNames();
+      Set<TableName> tables = historicBackup.getTables();
       if (tables.contains(tn)) {
-        BackupType bt = info.getType();
-        if (bt == BackupType.FULL) {
-          // Clear list if we encounter FULL backup
-          list.clear();
+        if (historicBackup.getType() == BackupType.FULL) {
+          result.clear();
         } else {
-          LOG.debug("GetAffectedBackupInfos for: " + backupInfo.getBackupId() + " table=" + tn
-            + " added " + info.getBackupId() + " tables=" + info.getTableListAsString());
-          list.add(info);
+          LOG.debug("GetAffectedBackupInfos for: {} table={} added {} tables={}",
+            backupBeingRemoved.getBackupId(), tn, historicBackup.getBackupId(),
+            historicBackup.getTableListAsString());
+          result.add(historicBackup);
         }
       }
     }
-    return list;
+    return result;
   }
 
   /**
@@ -352,19 +320,6 @@ public class BackupAdminImpl implements BackupAdmin {
         + "at " + backupInfo.getBackupRootDir() + " failed due to " + e1.getMessage() + ".");
       throw e1;
     }
-  }
-
-  private boolean isLastBackupSession(BackupSystemTable table, TableName tn, long startTime)
-    throws IOException {
-    List<BackupInfo> history = table.getBackupHistory();
-    for (BackupInfo info : history) {
-      List<TableName> tables = info.getTableNames();
-      if (!tables.contains(tn)) {
-        continue;
-      }
-      return info.getStartTs() <= startTime;
-    }
-    return false;
   }
 
   @Override
