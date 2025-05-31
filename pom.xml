@@ -1608,13 +1608,6 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
-  <repositories>
-    <repository>
-      <id>staging</id>
-      <name>staging</name>
-      <url>https://repository.apache.org/content/repositories/orgapachehbase-1577</url>
-    </repository>
-  </repositories>
   <build>
     <!-- Plugin versions are inherited from ASF parent pom: https://maven.apache.org/pom/asf/
          For specific version use a property and define it in the parent pom.
