@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
+import java.net.ConnectException;
 import java.net.UnknownHostException;
 import java.util.List;
 import java.util.Set;
@@ -412,7 +413,10 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
      * @return True if the error or its cause indicates a network connection issue.
      */
     private boolean isNetworkError(IOException e) {
-      if (e instanceof ConnectionClosedException || e instanceof UnknownHostException) {
+      if (
+        e instanceof ConnectionClosedException || e instanceof UnknownHostException
+          || e instanceof ConnectException
+      ) {
         return true;
       }
       Throwable cause = e;
@@ -422,6 +426,7 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
           if (
             unwrappedCause instanceof ConnectionClosedException
               || unwrappedCause instanceof UnknownHostException
+              || unwrappedCause instanceof ConnectException
           ) {
             return true;
           }
