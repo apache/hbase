@@ -36,6 +36,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.IntSupplier;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
 import org.apache.hadoop.hbase.quotas.RegionServerSpaceQuotaManager;
@@ -90,6 +91,8 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
   private volatile ThreadPoolExecutor longCompactions;
   private volatile ThreadPoolExecutor shortCompactions;
   private volatile ThreadPoolExecutor splits;
+  // Used in unit testing
+  private int splitCounter;
 
   private volatile ThroughputController compactionThroughputController;
   private volatile Set<String> underCompactionStores = ConcurrentHashMap.newKeySet();
@@ -112,6 +115,8 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
     // compaction throughput controller
     this.compactionThroughputController =
       CompactionThroughputControllerFactory.create(server, conf);
+
+    this.splitCounter = 0;
   }
 
   // only for test
@@ -205,7 +210,7 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
     // continuously growing, as well as the number of store files, see HBASE-26242.
     HRegion hr = (HRegion) r;
     try {
-      if (shouldSplitRegion() && hr.getCompactPriority() >= PRIORITY_USER) {
+      if (shouldSplitRegion(r.getRegionInfo()) && hr.getCompactPriority() >= PRIORITY_USER) {
         byte[] midKey = hr.checkSplit().orElse(null);
         if (midKey != null) {
           requestSplit(r, midKey);
@@ -235,6 +240,7 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
     }
     try {
       this.splits.execute(new SplitRequest(r, midKey, this.server, user));
+      splitCounter += 1;
       if (LOG.isDebugEnabled()) {
         LOG.debug("Splitting " + r + ", " + this);
       }
@@ -503,12 +509,13 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
     return splits.getQueue().size();
   }
 
-  private boolean shouldSplitRegion() {
+  private boolean shouldSplitRegion(RegionInfo ri) {
     if (server.getNumberOfOnlineRegions() > 0.9 * regionSplitLimit) {
       LOG.warn("Total number of regions is approaching the upper limit " + regionSplitLimit + ". "
         + "Please consider taking a look at http://hbase.apache.org/book.html#ops.regionmgt");
     }
-    return (regionSplitLimit > server.getNumberOfOnlineRegions());
+    return (regionSplitLimit > server.getNumberOfOnlineRegions()
+      && ri.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID);
   }
 
   /** Returns the regionSplitLimit */
@@ -805,6 +812,11 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
 
   protected int getSplitThreadNum() {
     return this.splits.getCorePoolSize();
+  }
+
+  /** Exposed for unit testing */
+  int getSplitCounter() {
+    return splitCounter;
   }
 
   /**
