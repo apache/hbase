@@ -66,5 +66,15 @@ cbsbf = null;
 <%args>
     CachedBlocksByFile cbsbf;
 </%args>
-[<%for Map.Entry<String, NavigableSet<CachedBlock>> e: cbsbf.getCachedBlockStatsByFile().entrySet() %><% BlockCacheUtil.toJSON(e.getKey(), e.getValue()) %></%for>]
+<%java>
+    boolean firstEntry = true;
+</%java>
+[<%for Map.Entry<String, NavigableSet<CachedBlock>> e: cbsbf.getCachedBlockStatsByFile().entrySet() %>
+  <%if !firstEntry %>,</%if><% BlockCacheUtil.toJSON(e.getKey(), e.getValue()) %>
+  <%java>
+      if (firstEntry) {
+        firstEntry = false;
+      }
+  </%java>
+</%for>]
 </%def>
