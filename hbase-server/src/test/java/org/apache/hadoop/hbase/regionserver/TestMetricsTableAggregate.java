@@ -80,6 +80,7 @@ public class TestMetricsTableAggregate {
     HELPER.assertCounter(pre + "readRequestCount", 10, agg);
     HELPER.assertCounter(pre + "writeRequestCount", 20, agg);
     HELPER.assertCounter(pre + "totalRequestCount", 30, agg);
+    HELPER.assertCounter(pre + "deletedReadRequestCount", 50, agg);
   }
 
   @Test
