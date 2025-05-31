@@ -395,6 +395,8 @@
               -->
               <testExcludes>
                 <testExclude>**/org/apache/hadoop/hbase/http/TestLdapHttpServer**</testExclude>
+                <testExclude>**/org/apache/hadoop/hbase/http/LdapServerTestBase**</testExclude>
+                <testExclude>**/org/apache/hadoop/hbase/http/TestLdapAdminACL**</testExclude>
               </testExcludes>
             </configuration>
           </plugin>
