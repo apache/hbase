@@ -148,6 +148,11 @@ public class HttpServer implements FilterContainer {
     HTTP_SPNEGO_AUTHENTICATION_PREFIX + "admin.users";
   public static final String HTTP_SPNEGO_AUTHENTICATION_ADMIN_GROUPS_KEY =
     HTTP_SPNEGO_AUTHENTICATION_PREFIX + "admin.groups";
+
+  static final String HTTP_LDAP_AUTHENTICATION_PREFIX = HTTP_AUTHENTICATION_PREFIX + "ldap.";
+  public static final String HTTP_LDAP_AUTHENTICATION_ADMIN_USERS_KEY =
+    HTTP_LDAP_AUTHENTICATION_PREFIX + "admin.users";
+
   public static final String HTTP_PRIVILEGED_CONF_KEY =
     "hbase.security.authentication.ui.config.protected";
   public static final String HTTP_UI_NO_CACHE_ENABLE_KEY = "hbase.http.filter.no-store.enable";
