@@ -787,6 +787,9 @@
     <vega.version>5.32.0</vega.version>
     <vega-embed.version>6.29.0</vega-embed.version>
     <vega-lite.version>5.23.0</vega-lite.version>
+    <!-- Required for testing LDAP integration -->
+    <apacheds.version>2.0.0.AM26</apacheds.version>
+    <ldap-api.version>2.0.0</ldap-api.version>
   </properties>
   <!-- Sorted by groups of dependencies then groupId and artifactId -->
   <dependencyManagement>
