@@ -22,6 +22,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -83,6 +84,6 @@ public class IntegrationTestFileBasedSFTBulkLoad extends IntegrationTestBulkLoad
     Configuration conf = HBaseConfiguration.create();
     IntegrationTestingUtility.setUseDistributedCluster(conf);
     int status = ToolRunner.run(conf, new IntegrationTestFileBasedSFTBulkLoad(), args);
-    System.exit(status);
+    ExitHandler.getInstance().exit(status);
   }
 }
