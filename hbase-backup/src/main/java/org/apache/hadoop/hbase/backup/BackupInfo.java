@@ -562,6 +562,7 @@ public class BackupInfo implements Comparable<BackupInfo> {
     sb.append("{");
     sb.append("ID=" + backupId).append(",");
     sb.append("Type=" + getType()).append(",");
+    sb.append("IsContinuous=" + isContinuousBackupEnabled()).append(",");
     sb.append("Tables=" + getTableListAsString()).append(",");
     sb.append("State=" + getState()).append(",");
     Calendar cal = Calendar.getInstance();

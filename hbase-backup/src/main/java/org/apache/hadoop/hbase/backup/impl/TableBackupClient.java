@@ -113,9 +113,13 @@ public abstract class TableBackupClient {
     backupManager.setBackupInfo(backupInfo);
     // set the start timestamp of the overall backup
     long startTs = EnvironmentEdgeManager.currentTime();
-    long committedWALsTs = BackupUtils.getReplicationCheckpoint(conn);
     backupInfo.setStartTs(startTs);
-    backupInfo.setIncrCommittedWalTs(committedWALsTs);
+    if (backupInfo.isContinuousBackupEnabled()) {
+      // committedWALsTs is needed only for Incremental backups with continuous backup
+      // since these do not depend on log roll ts
+      long committedWALsTs = BackupUtils.getReplicationCheckpoint(conn);
+      backupInfo.setIncrCommittedWalTs(committedWALsTs);
+    }
     // set overall backup status: ongoing
     backupInfo.setState(BackupState.RUNNING);
     backupInfo.setPhase(BackupPhase.REQUEST);

@@ -17,14 +17,21 @@
  */
 package org.apache.hadoop.hbase.backup;
 
-import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.*;
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.CONF_STAGED_WAL_FLUSH_INITIAL_DELAY;
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.CONF_STAGED_WAL_FLUSH_INTERVAL;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.*;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellUtil;
@@ -36,10 +43,15 @@ import org.apache.hadoop.hbase.backup.impl.BackupManifest;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.backup.impl.BulkLoad;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
-import org.apache.hadoop.hbase.client.*;
+
+import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.HFileTestUtil;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.After;
@@ -78,16 +90,6 @@ public class TestIncrementalBackupWithContinuous extends TestContinuousBackup {
     conf1.setInt(CONF_STAGED_WAL_FLUSH_INTERVAL, 1);
     conf1.setInt(CONF_STAGED_WAL_FLUSH_INITIAL_DELAY, 1);
     setUpHelper();
-  }
-
-  @Before
-  public void beforeTest() throws IOException {
-    super.beforeTest();
-  }
-
-  @After
-  public void afterTest() throws IOException {
-    super.afterTest();
   }
 
   @Test
@@ -229,9 +231,31 @@ public class TestIncrementalBackupWithContinuous extends TestContinuousBackup {
     HFileTestUtil.createHFile(TEST_UTIL.getConfiguration(), fs, hfilePath, famName, qualName,
       Bytes.toBytes(keyPrefix), Bytes.toBytes(keyPrefix + "z"), ROWS_IN_BULK_LOAD);
 
+    listFiles(fs, baseDirectory, baseDirectory);
+
     Map<BulkLoadHFiles.LoadQueueItem, ByteBuffer> result =
       BulkLoadHFiles.create(TEST_UTIL.getConfiguration()).bulkLoad(table1, baseDirectory);
     assertFalse(result.isEmpty());
+  }
+
+  private static Set<String> listFiles(final FileSystem fs, final Path root, final Path dir)
+    throws IOException {
+    Set<String> files = new HashSet<>();
+    FileStatus[] list = CommonFSUtils.listStatus(fs, dir);
+    if (list != null) {
+      for (FileStatus fstat : list) {
+        //LOG.debug(Objects.toString(fstat.getPath()));
+        if (fstat.isDirectory()) {
+          LOG.info("Found directory {}", Objects.toString(fstat.getPath()));
+          files.addAll(listFiles(fs, root, fstat.getPath()));
+        } else {
+          LOG.info("Found file {}", Objects.toString(fstat.getPath()));
+          String file = fstat.getPath().makeQualified(fs).toString();
+          files.add(file);
+        }
+      }
+    }
+    return files;
   }
 
   protected static void loadTable(Table table) throws Exception {
