@@ -52,6 +52,7 @@ enum ThrottleType {
   ATOMIC_READ_SIZE    = 10;
   ATOMIC_REQUEST_NUMBER = 11;
   ATOMIC_WRITE_SIZE = 12;
+  REQUEST_HANDLER_USAGE_MS = 13;
 }
 
 message Throttle {
@@ -71,6 +72,8 @@ message Throttle {
   optional TimedQuota atomic_read_size =  10;
   optional TimedQuota atomic_req_num   =  11;
   optional TimedQuota atomic_write_size = 12;
+
+  optional TimedQuota req_handler_usage_ms = 13;
 }
 
 message ThrottleRequest {
