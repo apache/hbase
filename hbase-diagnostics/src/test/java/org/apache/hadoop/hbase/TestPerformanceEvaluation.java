@@ -417,7 +417,7 @@ public class TestPerformanceEvaluation {
 
     final PerformanceEvaluation.TestOptions options = PerformanceEvaluation.parseOpts(opts);
     assertTrue(options.valueRandom);
-    assertTrue(options.flushCommits);
+    assertTrue(options.autoFlush);
     assertTrue(options.inMemoryCF);
     assertFalse(options.writeToWAL);
     assertEquals(PerformanceEvaluation.RANDOM_READ, options.getCmdName());
