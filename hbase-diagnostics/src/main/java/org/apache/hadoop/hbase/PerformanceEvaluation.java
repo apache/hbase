@@ -115,6 +115,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hbase.thirdparty.com.google.gson.Gson;
 
@@ -2912,6 +2913,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     });
 
     String cmd = null;
+    final Splitter splitter = Splitter.on("=").limit(2).trimResults();
     while ((cmd = args.poll()) != null) {
       if (cmd.equals("-h") || cmd.startsWith("--h")) {
         // place item back onto queue so that caller knows parsing was incomplete
@@ -2920,24 +2922,24 @@ public class PerformanceEvaluation extends Configured implements Tool {
       }
 
       if (cmd.startsWith("--")) {
-        final String[] parts = cmd.substring(2).split("=", 2);
-        final String key = parts[0];
+        final List<String> parts = splitter.splitToList(cmd.substring(2));
+        final String key = parts.get(0);
 
         try {
           // Boolean options can be specified as --flag or --flag=true/false
           final Consumer<Boolean> flagHandler = flagHandlers.get(key);
           if (flagHandler != null) {
-            flagHandler.accept(parts.length > 1 ? parseBoolean(parts[1]) : true);
+            flagHandler.accept(parts.size() > 1 ? parseBoolean(parts.get(1)) : true);
             continue;
           }
 
           // Options that require a value followed by an equals sign
           final Consumer<String> handler = handlers.get(key);
           if (handler != null) {
-            if (parts.length < 2) {
+            if (parts.size() < 2) {
               throw new IllegalArgumentException("--" + key + " requires a value");
             }
-            handler.accept(parts[1]);
+            handler.accept(parts.get(1));
             continue;
           }
         } catch (RuntimeException e) {
