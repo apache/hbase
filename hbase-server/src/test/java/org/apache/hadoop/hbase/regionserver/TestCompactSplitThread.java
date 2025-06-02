@@ -182,7 +182,7 @@ public class TestCompactSplitThread {
 
     // One region split should have taken place, because the primary replica gets split, and not the
     // secondary replica.
-    assertEquals(1,
-      TEST_UTIL.getRSForFirstRegionInTable(tableName).getCompactSplitThread().getSplitCounter());
+    assertEquals(1, TEST_UTIL.getRSForFirstRegionInTable(tableName).getCompactSplitThread()
+      .getSubmittedSplitsCount());
   }
 }

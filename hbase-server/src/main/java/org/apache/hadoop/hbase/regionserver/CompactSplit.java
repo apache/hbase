@@ -91,8 +91,6 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
   private volatile ThreadPoolExecutor longCompactions;
   private volatile ThreadPoolExecutor shortCompactions;
   private volatile ThreadPoolExecutor splits;
-  // Used in unit testing
-  private int splitCounter;
 
   private volatile ThroughputController compactionThroughputController;
   private volatile Set<String> underCompactionStores = ConcurrentHashMap.newKeySet();
@@ -115,8 +113,6 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
     // compaction throughput controller
     this.compactionThroughputController =
       CompactionThroughputControllerFactory.create(server, conf);
-
-    this.splitCounter = 0;
   }
 
   // only for test
@@ -240,7 +236,6 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
     }
     try {
       this.splits.execute(new SplitRequest(r, midKey, this.server, user));
-      splitCounter += 1;
       if (LOG.isDebugEnabled()) {
         LOG.debug("Splitting " + r + ", " + this);
       }
@@ -515,6 +510,8 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
         + "Please consider taking a look at http://hbase.apache.org/book.html#ops.regionmgt");
     }
     return (regionSplitLimit > server.getNumberOfOnlineRegions()
+      // Do not attempt to split secondary region replicas, as this is not allowed and our request
+      // to do so will be rejected
       && ri.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID);
   }
 
@@ -815,8 +812,8 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
   }
 
   /** Exposed for unit testing */
-  int getSplitCounter() {
-    return splitCounter;
+  long getSubmittedSplitsCount() {
+    return this.splits.getTaskCount();
   }
 
   /**
