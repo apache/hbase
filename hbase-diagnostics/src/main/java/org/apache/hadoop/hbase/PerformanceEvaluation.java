@@ -22,6 +22,7 @@ import com.codahale.metrics.UniformReservoir;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.context.Scope;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintStream;
 import java.lang.reflect.Constructor;
 import java.math.BigDecimal;
@@ -2902,9 +2903,14 @@ public class PerformanceEvaluation extends Configured implements Tool {
     handlers.put("scanReadType", v -> opts.scanReadType = Scan.ReadType.valueOf(v.toUpperCase()));
     handlers.put("bufferSize", v -> opts.bufferSize = Long.parseLong(v));
     handlers.put("commandPropertiesFile", fileName -> {
-      final Properties properties = new Properties();
       try {
-        properties.load(PerformanceEvaluation.class.getClassLoader().getResourceAsStream(fileName));
+        final Properties properties = new Properties();
+        final InputStream resourceStream =
+          PerformanceEvaluation.class.getClassLoader().getResourceAsStream(fileName);
+        if (resourceStream == null) {
+          throw new IllegalArgumentException("Resource file not found: " + fileName);
+        }
+        properties.load(resourceStream);
         opts.commandProperties = properties;
       } catch (IOException e) {
         throw new IllegalStateException("Failed to load command properties from file: " + fileName,
