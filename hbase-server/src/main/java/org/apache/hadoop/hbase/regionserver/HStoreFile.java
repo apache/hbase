@@ -525,14 +525,14 @@ public class HStoreFile implements StoreFile {
     if (initialReader == null || reopen) {
       synchronized (this) {
         if (initialReader == null || reopen) {
-          boolean evictOnClose = cacheConf == null || cacheConf.shouldEvictOnClose();
           try {
             if (reopen) {
-              closeStoreFile(evictOnClose);
+              closeStoreFile(false);
             }
             open();
           } catch (Exception e) {
             try {
+              boolean evictOnClose = cacheConf != null ? cacheConf.shouldEvictOnClose() : true;
               this.closeStoreFile(evictOnClose);
             } catch (IOException ee) {
               LOG.warn("failed to close reader", ee);
