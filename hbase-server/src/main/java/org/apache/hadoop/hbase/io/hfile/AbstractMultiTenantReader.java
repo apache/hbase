@@ -20,19 +20,20 @@ package org.apache.hadoop.hbase.io.hfile;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.ExtendedCell;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hbase.thirdparty.com.google.common.cache.Cache;
+import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
+import org.apache.hbase.thirdparty.com.google.common.cache.RemovalListener;
+import org.apache.hbase.thirdparty.com.google.common.cache.RemovalNotification;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.MultiTenantFSDataInputStreamWrapper;
@@ -41,15 +42,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
-import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicInteger;
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.RemovalListener;
-import com.google.common.cache.RemovalNotification;
 
 /**
  * Abstract base class for multi-tenant HFile readers. This class handles the common
@@ -114,12 +109,6 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
       CacheConfig cacheConf, Configuration conf) throws IOException {
     super(context, fileInfo, cacheConf, conf);
     
-    // Get table properties for tenant configuration
-    Map<String, String> tableProperties = getTableProperties();
-    
-    // Create tenant extractor with consistent configuration
-    this.tenantExtractor = TenantExtractorFactory.createTenantExtractor(conf, tableProperties);
-    
     // Initialize bounded cache with eviction
     int cacheSize = conf.getInt(SECTION_READER_CACHE_SIZE, DEFAULT_SECTION_READER_CACHE_SIZE);
     this.sectionReaderCache = CacheBuilder.newBuilder()
@@ -150,6 +139,9 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
     
     // Load tenant index structure information
     loadTenantIndexStructureInfo();
+
+    // Create tenant extractor with consistent configuration
+    this.tenantExtractor = TenantExtractorFactory.createFromReader(this);
     
     // Initialize prefetch configuration
     this.prefetchEnabled = conf.getBoolean(SECTION_PREFETCH_ENABLED, DEFAULT_SECTION_PREFETCH_ENABLED);

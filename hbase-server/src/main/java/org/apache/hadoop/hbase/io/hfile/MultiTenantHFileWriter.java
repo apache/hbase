@@ -487,9 +487,10 @@ public class MultiTenantHFileWriter implements HFile.Writer {
                                               SectionIndexManager.DEFAULT_MAX_CHUNK_SIZE)), false);
     }
     
-    // Multi-tenant specific metadata - ensures fileInfo is never empty
-    fileInfo.append(Bytes.toBytes("MULTI_TENANT_FORMAT"), Bytes.toBytes(true), false);
-    fileInfo.append(Bytes.toBytes("HFILE_VERSION"), Bytes.toBytes(getMajorVersion()), false);
+    // Store multi-tenant configuration in file info
+    fileInfo.append(Bytes.toBytes("MULTI_TENANT_ENABLED"), Bytes.toBytes("true"), false);
+    fileInfo.append(Bytes.toBytes("TENANT_PREFIX_LENGTH"), 
+                    Bytes.toBytes(String.valueOf(tenantExtractor.getPrefixLength())), false);
   }
   
   @Override
@@ -846,6 +847,11 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     @Override
     public byte[] extractTenantSectionId(Cell cell) {
       return DEFAULT_TENANT_PREFIX;
+    }
+
+    @Override
+    public int getPrefixLength() {
+      return 0;
     }
   }
   

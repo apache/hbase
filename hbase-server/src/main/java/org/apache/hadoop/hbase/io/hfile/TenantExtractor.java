@@ -39,4 +39,6 @@ public interface TenantExtractor {
    * @return The tenant section ID as a byte array
    */
   byte[] extractTenantSectionId(Cell cell);
+
+  int getPrefixLength();
 } 

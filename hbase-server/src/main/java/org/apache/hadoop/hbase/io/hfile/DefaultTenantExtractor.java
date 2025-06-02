@@ -72,6 +72,7 @@ public class DefaultTenantExtractor implements TenantExtractor {
    * Get the tenant prefix length.
    * @return The configured tenant prefix length
    */
+  @Override
   public int getPrefixLength() {
     return prefixLength;
   }

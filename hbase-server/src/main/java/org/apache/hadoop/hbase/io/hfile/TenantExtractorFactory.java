@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.io.hfile;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,6 +36,41 @@ public class TenantExtractorFactory {
   
   // Default values
   private static final int DEFAULT_PREFIX_LENGTH = 4;
+
+      /**
+     * Create a TenantExtractor from HFile's reader context.
+     * This method is called during HFile reading to determine how to extract tenant information.
+     * 
+     * @param reader The HFile reader that contains file info
+     * @return Appropriate TenantExtractor implementation
+     */
+    public static TenantExtractor createFromReader(HFile.Reader reader) {
+      // Get HFileInfo from the reader
+      HFileInfo fileInfo = reader.getHFileInfo();
+      
+      if (fileInfo != null) {
+          // Check HFile metadata for multi-tenant configuration
+          byte[] multiTenantEnabledBytes = fileInfo.get(Bytes.toBytes("MULTI_TENANT_ENABLED"));
+          if (multiTenantEnabledBytes != null && 
+              "true".equals(Bytes.toString(multiTenantEnabledBytes))) {
+              
+              byte[] prefixLengthBytes = fileInfo.get(Bytes.toBytes("TENANT_PREFIX_LENGTH"));
+              if (prefixLengthBytes != null) {
+                  try {
+                      int prefixLength = Integer.parseInt(Bytes.toString(prefixLengthBytes));
+                      LOG.info("Multi-tenant enabled from HFile metadata, prefixLength={}", prefixLength);
+                      return new DefaultTenantExtractor(prefixLength);
+                  } catch (NumberFormatException e) {
+                      LOG.warn("Invalid TENANT_PREFIX_LENGTH in HFile metadata: {}", 
+                              Bytes.toString(prefixLengthBytes), e);
+                  }
+              };
+          }
+      }
+      
+      LOG.info("Multi-tenant functionality disabled based on HFile metadata, using SingleTenantExtractor");
+      return new MultiTenantHFileWriter.SingleTenantExtractor();
+  }
   
   /**
    * Create a tenant extractor based on configuration.
