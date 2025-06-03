@@ -300,22 +300,12 @@ public class SnapshotProcedure extends AbstractStateMachineTableProcedure<Snapsh
 
   private void preSnapshot(MasterProcedureEnv env) throws IOException {
     env.getMasterServices().getSnapshotManager().prepareWorkingDirectory(snapshot);
-
-    MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
-    if (cpHost != null) {
-      cpHost.preSnapshot(ProtobufUtil.createSnapshotDesc(snapshot), htd, getUser());
-    }
   }
 
   private void postSnapshot(MasterProcedureEnv env) throws IOException {
     SnapshotManager sm = env.getMasterServices().getSnapshotManager();
     if (sm != null) {
       sm.unregisterSnapshotProcedure(snapshot, getProcId());
-    }
-
-    MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
-    if (cpHost != null) {
-      cpHost.postSnapshot(ProtobufUtil.createSnapshotDesc(snapshot), htd, getUser());
     }
   }
 
