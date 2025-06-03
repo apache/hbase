@@ -4557,4 +4557,15 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
           resp -> resp.getCachedFilesList()))
       .serverName(serverName).call();
   }
+
+  @Override
+  public CompletableFuture<Long> refreshMeta() {
+    MasterProtos.RefreshMetaRequest.Builder request = MasterProtos.RefreshMetaRequest.newBuilder();
+    request.setNonceGroup(ng.getNonceGroup()).setNonce(ng.newNonce());
+    return this.<Long> newMasterCaller()
+      .action((controller, stub) -> this.<MasterProtos.RefreshMetaRequest, MasterProtos.RefreshMetaResponse,
+        Long> call(controller, stub, request.build(), MasterService.Interface::refreshMeta,
+        MasterProtos.RefreshMetaResponse::getProcId)).call();
+  }
+
 }

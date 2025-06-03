@@ -1355,6 +1355,10 @@ public class ThriftAdmin implements Admin {
     throw new NotImplementedException("getCachedFilesList not supported in ThriftAdmin");
   }
 
+  @Override public Long refreshMeta() throws IOException {
+    throw new NotImplementedException("refreshMeta not supported in ThriftAdmin");
+  }
+
   @Override
   public boolean replicationPeerModificationSwitch(boolean on, boolean drainProcedures)
     throws IOException {
