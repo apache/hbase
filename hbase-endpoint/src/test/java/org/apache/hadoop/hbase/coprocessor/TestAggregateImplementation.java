@@ -99,7 +99,7 @@ public class TestAggregateImplementation {
     when(region.getRegionInfo()).thenReturn(regionInfo);
     when(regionInfo.getRegionNameAsString()).thenReturn("testRegion");
 
-    scan = new Scan().addColumn(CF, CQ);
+    scan = new Scan().addColumn(CF, CQ).setCaching(1);
 
     scanner = mock(RegionScannerImpl.class);
     doAnswer(createMockScanner()).when(scanner).next(any(List.class));
