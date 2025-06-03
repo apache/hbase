@@ -91,6 +91,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
+import org.apache.hbase.thirdparty.com.google.common.base.Strings;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.HelpFormatter;
@@ -897,7 +898,7 @@ public final class BackupCommands {
       Configuration conf = getConf() != null ? getConf() : HBaseConfiguration.create();
       String backupWalDir = conf.get(CONF_CONTINUOUS_BACKUP_WAL_DIR);
 
-      if (backupWalDir == null || backupWalDir.isEmpty()) {
+      if (Strings.isNullOrEmpty(backupWalDir)) {
         System.out.println("No WAL directory specified for continuous backup. Skipping cleanup.");
         return;
       }
