@@ -31,6 +31,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -65,6 +66,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hbase.ActiveClusterSuffix;
 import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
@@ -515,15 +517,15 @@ public final class FSUtils {
    * @return <code>true</code> if the file exists, otherwise <code>false</code>
    * @throws IOException if checking the FileSystem fails
    */
-  public static boolean checkClusterIdExists(FileSystem fs, Path rootdir, long wait)
-    throws IOException {
+  public static boolean checkFileExistsInHbaseRootDir(FileSystem fs, Path rootdir, String file,
+    long wait) throws IOException {
     while (true) {
       try {
-        Path filePath = new Path(rootdir, HConstants.CLUSTER_ID_FILE_NAME);
+        Path filePath = new Path(rootdir, file);
         return fs.exists(filePath);
       } catch (IOException ioe) {
         if (wait > 0L) {
-          LOG.warn("Unable to check cluster ID file in {}, retrying in {}ms", rootdir, wait, ioe);
+          LOG.warn("Unable to check file {} in {}, retrying in {}ms", file, rootdir, wait, ioe);
           try {
             Thread.sleep(wait);
           } catch (InterruptedException e) {
@@ -585,6 +587,46 @@ public final class FSUtils {
     return clusterId;
   }
 
+  public static ActiveClusterSuffix getActiveClusterSuffix(FileSystem fs, Path rootdir)
+    throws IOException {
+    Path idPath = new Path(rootdir, HConstants.ACTIVE_CLUSTER_SUFFIX_FILE_NAME);
+    ActiveClusterSuffix cs = null;
+    FileStatus status = fs.exists(idPath) ? fs.getFileStatus(idPath) : null;
+    if (status != null) {
+      int len = Ints.checkedCast(status.getLen());
+      byte[] content = new byte[len];
+      FSDataInputStream in = fs.open(idPath);
+      try {
+        in.readFully(content);
+      } catch (EOFException eof) {
+        LOG.warn("Cluster Suffix file {} is empty   ", idPath);
+      } finally {
+        in.close();
+      }
+      try {
+        cs = ActiveClusterSuffix.parseFrom(content);
+      } catch (DeserializationException e) {
+        throw new IOException("content=" + Bytes.toString(content), e);
+      }
+      // If not pb'd, make it so.
+      if (!ProtobufUtil.isPBMagicPrefix(content)) {
+        String data = null;
+        in = fs.open(idPath);
+        try {
+          data = in.readUTF();
+          cs = new ActiveClusterSuffix(data);
+        } catch (EOFException eof) {
+          LOG.warn("Active Cluster Suffix File {} is empty ", idPath);
+        } finally {
+          in.close();
+        }
+      }
+      return cs;
+    } else {
+      throw new FileNotFoundException("Active Cluster Suffix File " + idPath + " not found");
+    }
+  }
+
   /**
    *   */
   private static void rewriteAsPb(final FileSystem fs, final Path rootdir, final Path p,
@@ -612,31 +654,57 @@ public final class FSUtils {
    */
   public static void setClusterId(final FileSystem fs, final Path rootdir,
     final ClusterId clusterId, final long wait) throws IOException {
-
     final Path idFile = new Path(rootdir, HConstants.CLUSTER_ID_FILE_NAME);
     final Path tempDir = new Path(rootdir, HConstants.HBASE_TEMP_DIRECTORY);
     final Path tempIdFile = new Path(tempDir, HConstants.CLUSTER_ID_FILE_NAME);
 
     LOG.debug("Create cluster ID file [{}] with ID: {}", idFile, clusterId);
+    writeClusterInfo(fs, rootdir, idFile, tempIdFile, clusterId.toByteArray(), wait);
+  }
 
+  /**
+   * Writes a user provided suffix for this cluster to the "active_cluster_suffix.id" file in the
+   * HBase root directory. If any operations on the ID file fails, and {@code wait} is a positive
+   * value, the method will retry to produce the ID file until the thread is forcibly interrupted.
+   */
+
+  public static void setActiveClusterSuffix(final FileSystem fs, final Path rootdir, byte[] bdata,
+    final long wait) throws IOException {
+    final Path idFile = new Path(rootdir, HConstants.ACTIVE_CLUSTER_SUFFIX_FILE_NAME);
+    final Path tempDir = new Path(rootdir, HConstants.HBASE_TEMP_DIRECTORY);
+    final Path tempIdFile = new Path(tempDir, HConstants.ACTIVE_CLUSTER_SUFFIX_FILE_NAME);
+    String fsuffix = new String(bdata, StandardCharsets.US_ASCII);
+
+    LOG.debug("Create Active cluster Suffix file [{}] with Suffix: {}", idFile, fsuffix);
+    writeClusterInfo(fs, rootdir, idFile, tempIdFile, bdata, wait);
+  }
+
+  /**
+   * Writes information about this cluster to the specified file. For ex, it is used for writing
+   * cluster id in "hbase.id" file in the HBase root directory. Also, used for writing active
+   * cluster suffix in "active_cluster_suffix.id" file. If any operations on the ID file fails, and
+   * {@code wait} is a positive value, the method will retry to produce the ID file until the thread
+   * is forcibly interrupted.
+   */
+
+  private static void writeClusterInfo(final FileSystem fs, final Path rootdir, final Path idFile,
+    final Path tempIdFile, byte[] fileData, final long wait) throws IOException {
     while (true) {
       Optional<IOException> failure = Optional.empty();
 
-      LOG.debug("Write the cluster ID file to a temporary location: {}", tempIdFile);
+      LOG.debug("Write the file to a temporary location: {}", tempIdFile);
       try (FSDataOutputStream s = fs.create(tempIdFile)) {
-        s.write(clusterId.toByteArray());
+        s.write(fileData);
       } catch (IOException ioe) {
         failure = Optional.of(ioe);
       }
 
       if (!failure.isPresent()) {
         try {
-          LOG.debug("Move the temporary cluster ID file to its target location [{}]:[{}]",
-            tempIdFile, idFile);
+          LOG.debug("Move the temporary file to its target location [{}]:[{}]", tempIdFile, idFile);
 
           if (!fs.rename(tempIdFile, idFile)) {
-            failure =
-              Optional.of(new IOException("Unable to move temp cluster ID file to " + idFile));
+            failure = Optional.of(new IOException("Unable to move temp file to " + idFile));
           }
         } catch (IOException ioe) {
           failure = Optional.of(ioe);
@@ -646,8 +714,7 @@ public final class FSUtils {
       if (failure.isPresent()) {
         final IOException cause = failure.get();
         if (wait > 0L) {
-          LOG.warn("Unable to create cluster ID file in {}, retrying in {}ms", rootdir, wait,
-            cause);
+          LOG.warn("Unable to create file in {}, retrying in {}ms", rootdir, wait, cause);
           try {
             Thread.sleep(wait);
           } catch (InterruptedException e) {
