@@ -33,16 +33,26 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.SnapshotType;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.io.HFileLink;
+import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
+import org.apache.hadoop.hbase.master.assignment.MergeTableRegionsProcedure;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
+import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
+import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils.SnapshotMock;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -91,6 +101,7 @@ public class TestRestoreSnapshotHelper {
 
   @BeforeClass
   public static void setupCluster() throws Exception {
+    TEST_UTIL.getConfiguration().setInt(AssignmentManager.ASSIGN_MAX_ATTEMPTS, 3);
     TEST_UTIL.startMiniCluster();
   }
 
@@ -107,6 +118,8 @@ public class TestRestoreSnapshotHelper {
     conf = TEST_UTIL.getConfiguration();
     setupConf(conf);
     CommonFSUtils.setRootDir(conf, rootDir);
+    // Turn off balancer so it doesn't cut in and mess up our placements.
+    TEST_UTIL.getAdmin().balancerSwitch(false, true);
   }
 
   @After
@@ -216,6 +229,104 @@ public class TestRestoreSnapshotHelper {
     assertTrue(isExpiredSnapshot);
     assertThrows(SnapshotTTLExpiredException.class, () -> RestoreSnapshotHelper
       .copySnapshotForScanner(conf, fs, rootDir, restoreDir, snapshotName));
+  }
+
+  /**
+   * Test scenario for HBASE-29346, which addresses the issue where restoring snapshots after region
+   * merge operations could lead to missing store file references, potentially resulting in data
+   * loss.
+   * <p>
+   * This test performs the following steps:
+   * </p>
+   * <ol>
+   * <li>Creates a table with multiple regions.</li>
+   * <li>Inserts data into each region and flushes to create store files.</li>
+   * <li>Takes snapshot of the table and performs restore.</li>
+   * <li>Disable compactions, merge regions, create a new snapshot, and restore that snapshot on the
+   * same restore path.</li>
+   * <li>Verifies data integrity by scanning all data post region re-open.</li>
+   * </ol>
+   */
+  @Test
+  public void testMultiSnapshotRestoreWithMerge() throws IOException, InterruptedException {
+    rootDir = TEST_UTIL.getDefaultRootDirPath();
+    CommonFSUtils.setRootDir(conf, rootDir);
+    TableName tableName = TableName.valueOf("testMultiSnapshotRestoreWithMerge");
+    Path restoreDir = new Path("/hbase/.tmp-snapshot/restore-snapshot-dest");
+
+    byte[] columnFamily = Bytes.toBytes("A");
+    Table table = TEST_UTIL.createTable(tableName, new byte[][] { columnFamily },
+      new byte[][] { new byte[] { 'b' }, new byte[] { 'd' } });
+    Put put1 = new Put(Bytes.toBytes("a")); // Region 1: [-∞, b)
+    put1.addColumn(columnFamily, Bytes.toBytes("q"), Bytes.toBytes("val1"));
+    table.put(put1);
+    Put put2 = new Put(Bytes.toBytes("b")); // Region 2: [b, d)
+    put2.addColumn(columnFamily, Bytes.toBytes("q"), Bytes.toBytes("val2"));
+    table.put(put2);
+    Put put3 = new Put(Bytes.toBytes("d")); // Region 3: [d, +∞)
+    put3.addColumn(columnFamily, Bytes.toBytes("q"), Bytes.toBytes("val3"));
+    table.put(put3);
+
+    TEST_UTIL.getAdmin().flush(tableName);
+
+    String snapshotOne = tableName.getNameAsString() + "-snapshot-one";
+    createAndAssertSnapshot(tableName, snapshotOne);
+    RestoreSnapshotHelper.copySnapshotForScanner(conf, fs, rootDir, restoreDir, snapshotOne);
+    flipCompactions(false);
+    mergeRegions(tableName, 2);
+    String snapshotTwo = tableName.getNameAsString() + "-snapshot-two";
+    createAndAssertSnapshot(tableName, snapshotTwo);
+    RestoreSnapshotHelper.copySnapshotForScanner(conf, fs, rootDir, restoreDir, snapshotTwo);
+    flipCompactions(true);
+
+    TEST_UTIL.getAdmin().disableTable(tableName);
+    TEST_UTIL.getAdmin().enableTable(tableName);
+    try (ResultScanner scanner = table.getScanner(new Scan())) {
+      assertEquals(3, scanner.next(4).length);
+    }
+    String snapshotThree = tableName.getNameAsString() + "-snapshot-three";
+    createAndAssertSnapshot(tableName, snapshotThree);
+  }
+
+  private void createAndAssertSnapshot(TableName tableName, String snapshotName)
+    throws SnapshotCreationException, IllegalArgumentException, IOException {
+    org.apache.hadoop.hbase.client.SnapshotDescription snapshotDescOne =
+      new org.apache.hadoop.hbase.client.SnapshotDescription(snapshotName, tableName,
+        SnapshotType.FLUSH, null, EnvironmentEdgeManager.currentTime(), -1);
+    TEST_UTIL.getAdmin().snapshot(snapshotDescOne);
+    boolean isExist = TEST_UTIL.getAdmin().listSnapshots().stream()
+      .anyMatch(ele -> snapshotName.equals(ele.getName()));
+    assertTrue(isExist);
+
+  }
+
+  private void flipCompactions(boolean isEnable) {
+    int numLiveRegionServers = TEST_UTIL.getHBaseCluster().getNumLiveRegionServers();
+    for (int serverNumber = 0; serverNumber < numLiveRegionServers; serverNumber++) {
+      HRegionServer regionServer = TEST_UTIL.getHBaseCluster().getRegionServer(serverNumber);
+      regionServer.getCompactSplitThread().setCompactionsEnabled(isEnable);
+    }
+
+  }
+
+  private void mergeRegions(TableName tableName, int mergeCount) throws IOException {
+    List<RegionInfo> ris = MetaTableAccessor.getTableRegions(TEST_UTIL.getConnection(), tableName);
+    int originalRegionCount = ris.size();
+    assertTrue(originalRegionCount > mergeCount);
+    RegionInfo[] regionsToMerge = ris.subList(0, mergeCount).toArray(new RegionInfo[] {});
+    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
+    MergeTableRegionsProcedure proc =
+      new MergeTableRegionsProcedure(procExec.getEnvironment(), regionsToMerge, true);
+    long procId = procExec.submitProcedure(proc);
+    ProcedureTestingUtility.waitProcedure(procExec, procId);
+    ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
+    MetaTableAccessor.fullScanMetaAndPrint(TEST_UTIL.getConnection());
+    assertEquals(originalRegionCount - mergeCount + 1,
+      MetaTableAccessor.getTableRegions(TEST_UTIL.getConnection(), tableName).size());
+  }
+
+  private ProcedureExecutor<MasterProcedureEnv> getMasterProcedureExecutor() {
+    return TEST_UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor();
   }
 
   protected void createTableAndSnapshot(TableName tableName, String snapshotName)
