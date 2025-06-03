@@ -108,6 +108,9 @@ public class ThrottleSettings extends QuotaSettings {
           case WRITE_CAPACITY_UNIT:
             builder.append(String.format("%dCU", timedQuota.getSoftLimit()));
             break;
+          case REQUEST_HANDLER_USAGE_MS:
+            builder.append(String.format("%dms", timedQuota.getSoftLimit()));
+            break;
           default:
         }
       } else if (timedQuota.hasShare()) {

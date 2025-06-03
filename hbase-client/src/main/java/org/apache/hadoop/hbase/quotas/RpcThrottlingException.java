@@ -44,13 +44,15 @@ public class RpcThrottlingException extends HBaseIOException {
     AtomicRequestNumberExceeded,
     AtomicReadSizeExceeded,
     AtomicWriteSizeExceeded,
+    RequestHandlerUsageTimeExceeded,
   }
 
   private static final String[] MSG_TYPE = new String[] { "number of requests exceeded",
     "request size limit exceeded", "number of read requests exceeded",
     "number of write requests exceeded", "write size limit exceeded", "read size limit exceeded",
     "request capacity unit exceeded", "read capacity unit exceeded", "write capacity unit exceeded",
-    "atomic request number exceeded", "atomic read size exceeded", "atomic write size exceeded" };
+    "atomic request number exceeded", "atomic read size exceeded", "atomic write size exceeded",
+    "request handler usage time exceeded" };
 
   private static final String MSG_WAIT = " - wait ";
 
@@ -143,6 +145,11 @@ public class RpcThrottlingException extends HBaseIOException {
   public static void throwAtomicWriteSizeExceeded(final long waitInterval)
     throws RpcThrottlingException {
     throwThrottlingException(Type.AtomicWriteSizeExceeded, waitInterval);
+  }
+
+  public static void throwRequestHandlerUsageTimeExceeded(final long waitInterval)
+    throws RpcThrottlingException {
+    throwThrottlingException(Type.RequestHandlerUsageTimeExceeded, waitInterval);
   }
 
   private static void throwThrottlingException(final Type type, final long waitInterval)
