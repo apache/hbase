@@ -36,6 +36,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.IntSupplier;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
 import org.apache.hadoop.hbase.quotas.RegionServerSpaceQuotaManager;
@@ -205,7 +206,7 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
     // continuously growing, as well as the number of store files, see HBASE-26242.
     HRegion hr = (HRegion) r;
     try {
-      if (shouldSplitRegion() && hr.getCompactPriority() >= PRIORITY_USER) {
+      if (shouldSplitRegion(r.getRegionInfo()) && hr.getCompactPriority() >= PRIORITY_USER) {
         byte[] midKey = hr.checkSplit().orElse(null);
         if (midKey != null) {
           requestSplit(r, midKey);
@@ -503,12 +504,15 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
     return splits.getQueue().size();
   }
 
-  private boolean shouldSplitRegion() {
+  private boolean shouldSplitRegion(RegionInfo ri) {
     if (server.getNumberOfOnlineRegions() > 0.9 * regionSplitLimit) {
       LOG.warn("Total number of regions is approaching the upper limit " + regionSplitLimit + ". "
         + "Please consider taking a look at http://hbase.apache.org/book.html#ops.regionmgt");
     }
-    return (regionSplitLimit > server.getNumberOfOnlineRegions());
+    return (regionSplitLimit > server.getNumberOfOnlineRegions()
+      // Do not attempt to split secondary region replicas, as this is not allowed and our request
+      // to do so will be rejected
+      && ri.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID);
   }
 
   /** Returns the regionSplitLimit */
@@ -805,6 +809,11 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
 
   protected int getSplitThreadNum() {
     return this.splits.getCorePoolSize();
+  }
+
+  /** Exposed for unit testing */
+  long getSubmittedSplitsCount() {
+    return this.splits.getTaskCount();
   }
 
   /**
