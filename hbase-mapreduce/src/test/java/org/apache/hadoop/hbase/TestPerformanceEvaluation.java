@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -400,5 +401,31 @@ public class TestPerformanceEvaluation {
     boolean testRow(long i, long startTime) throws IOException, InterruptedException {
       return false;
     }
+  }
+
+  @Test
+  public void testParseBooleanFlags() {
+    final Queue<String> opts = new LinkedList<>();
+    opts.offer("--valueRandom");
+    opts.offer("--autoFlush"); // default: false
+    opts.offer("--inmemory=true"); // default: false
+    opts.offer("--writeToWAL=false"); // default: true
+    opts.offer(PerformanceEvaluation.RANDOM_READ);
+    opts.offer("1");
+
+    final PerformanceEvaluation.TestOptions options = PerformanceEvaluation.parseOpts(opts);
+    assertTrue(options.valueRandom);
+    assertTrue(options.autoFlush);
+    assertTrue(options.inMemoryCF);
+    assertFalse(options.writeToWAL);
+    assertEquals(PerformanceEvaluation.RANDOM_READ, options.getCmdName());
+    assertEquals(1, options.getNumClientThreads());
+  }
+
+  @Test
+  public void testOptionMissingValue() {
+    final Queue<String> opts = new LinkedList<>();
+    opts.offer("--presplit");
+    assertThrows(IllegalArgumentException.class, () -> PerformanceEvaluation.parseOpts(opts));
   }
 }
