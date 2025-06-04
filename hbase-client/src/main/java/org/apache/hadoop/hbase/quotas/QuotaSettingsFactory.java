@@ -180,6 +180,10 @@ public class QuotaSettingsFactory {
       settings.add(ThrottleSettings.fromTimedQuota(userName, tableName, namespace, regionServer,
         ThrottleType.ATOMIC_REQUEST_NUMBER, throttle.getAtomicReqNum()));
     }
+    if (throttle.hasReqHandlerUsageMs()) {
+      settings.add(ThrottleSettings.fromTimedQuota(userName, tableName, namespace, regionServer,
+        ThrottleType.REQUEST_HANDLER_USAGE_MS, throttle.getReqHandlerUsageMs()));
+    }
     return settings;
   }
 
