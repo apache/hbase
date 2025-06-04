@@ -1063,6 +1063,11 @@ public final class BackupSystemTable implements Closeable {
    */
   public void updateContinuousBackupTableSet(Set<TableName> tablesToUpdate, long newStartTimestamp)
     throws IOException {
+    if (tablesToUpdate == null || tablesToUpdate.isEmpty()) {
+      LOG.warn("No tables provided for updating start timestamps.");
+      return;
+    }
+
     try (Table table = connection.getTable(tableName)) {
       Put put = new Put(rowkey(CONTINUOUS_BACKUP_SET));
 
