@@ -32,7 +32,6 @@ import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -1517,53 +1516,61 @@ public class TestHFileOutputFormat2 {
   }
 
   @Test
-  public void TestConfigurePartitioner() throws IOException {
-    Configuration conf = util.getConfiguration();
-    // Create a user who is not the current user
-    String fooUserName = "foo1234";
-    String fooGroupName = "group1";
-    UserGroupInformation ugi =
-      UserGroupInformation.createUserForTesting(fooUserName, new String[] { fooGroupName });
-    // Get user's home directory
-    Path fooHomeDirectory = ugi.doAs(new PrivilegedAction<Path>() {
-      @Override
-      public Path run() {
-        try (FileSystem fs = FileSystem.get(conf)) {
-          return fs.makeQualified(fs.getHomeDirectory());
-        } catch (IOException ioe) {
-          LOG.error("Failed to get foo's home directory", ioe);
+  public void testConfigurePartitioner() throws Exception {
+    util.startMiniDFSCluster(1);
+    try {
+      Configuration conf = util.getConfiguration();
+      // Create a user who is not the current user
+      String fooUserName = "foo1234";
+      String fooGroupName = "group1";
+      UserGroupInformation ugi =
+        UserGroupInformation.createUserForTesting(fooUserName, new String[] { fooGroupName });
+      // Get user's home directory
+      Path fooHomeDirectory = ugi.doAs(new PrivilegedAction<Path>() {
+        @Override
+        public Path run() {
+          try (FileSystem fs = FileSystem.get(conf)) {
+            return fs.makeQualified(fs.getHomeDirectory());
+          } catch (IOException ioe) {
+            LOG.error("Failed to get foo's home directory", ioe);
+          }
+          return null;
         }
-        return null;
-      }
-    });
+      });
+      // create the home directory and chown
+      FileSystem fs = FileSystem.get(conf);
+      fs.mkdirs(fooHomeDirectory);
+      fs.setOwner(fooHomeDirectory, fooUserName, fooGroupName);
 
-    Job job = Mockito.mock(Job.class);
-    Mockito.doReturn(conf).when(job).getConfiguration();
-    ImmutableBytesWritable writable = new ImmutableBytesWritable();
-    List<ImmutableBytesWritable> splitPoints = new LinkedList<ImmutableBytesWritable>();
-    splitPoints.add(writable);
+      Job job = Mockito.mock(Job.class);
+      Mockito.doReturn(conf).when(job).getConfiguration();
+      ImmutableBytesWritable writable = new ImmutableBytesWritable();
+      List<ImmutableBytesWritable> splitPoints = new ArrayList<ImmutableBytesWritable>();
+      splitPoints.add(writable);
 
-    ugi.doAs(new PrivilegedAction<Void>() {
-      @Override
-      public Void run() {
-        try {
-          HFileOutputFormat2.configurePartitioner(job, splitPoints, false);
-        } catch (IOException ioe) {
-          LOG.error("Failed to configure partitioner", ioe);
+      ugi.doAs(new PrivilegedAction<Void>() {
+        @Override
+        public Void run() {
+          try {
+            HFileOutputFormat2.configurePartitioner(job, splitPoints, false);
+          } catch (IOException ioe) {
+            LOG.error("Failed to configure partitioner", ioe);
+          }
+          return null;
         }
-        return null;
-      }
-    });
-    FileSystem fs = FileSystem.get(conf);
-    // verify that the job uses TotalOrderPartitioner
-    verify(job).setPartitionerClass(TotalOrderPartitioner.class);
-    // verify that TotalOrderPartitioner.setPartitionFile() is called.
-    String partitionPathString = conf.get("mapreduce.totalorderpartitioner.path");
-    Assert.assertNotNull(partitionPathString);
-    // Make sure the partion file is in foo1234's home directory, and that
-    // the file exists.
-    Assert.assertTrue(partitionPathString.startsWith(fooHomeDirectory.toString()));
-    Assert.assertTrue(fs.exists(new Path(partitionPathString)));
+      });
+      // verify that the job uses TotalOrderPartitioner
+      verify(job).setPartitionerClass(TotalOrderPartitioner.class);
+      // verify that TotalOrderPartitioner.setPartitionFile() is called.
+      String partitionPathString = conf.get("mapreduce.totalorderpartitioner.path");
+      Assert.assertNotNull(partitionPathString);
+      // Make sure the partion file is in foo1234's home directory, and that
+      // the file exists.
+      Assert.assertTrue(partitionPathString.startsWith(fooHomeDirectory.toString()));
+      Assert.assertTrue(fs.exists(new Path(partitionPathString)));
+    } finally {
+      util.shutdownMiniDFSCluster();
+    }
   }
 
   @Test
