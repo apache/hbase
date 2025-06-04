@@ -44,6 +44,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TimeZone;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
@@ -282,6 +283,7 @@ public class TestContinuousBackupReplicationEndpoint {
     long oneDayBackTime = currentTime - ONE_DAY_IN_MILLISECONDS;
 
     SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
+    dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
     String expectedPrevDayDir = dateFormat.format(new Date(oneDayBackTime));
     String expectedCurrentDayDir = dateFormat.format(new Date(currentTime));
 
@@ -437,8 +439,22 @@ public class TestContinuousBackupReplicationEndpoint {
       assertEquals(0, getRowCount(tableName));
 
       replayWALs(new Path(backupRootDir, WALS_DIR).toString(), tableName);
-      replayBulkLoadHFilesIfPresent(new Path(backupRootDir, BULKLOAD_FILES_DIR).toString(),
-        tableName);
+
+      // replay Bulk loaded HFiles if Present
+      try {
+        Path bulkloadDir = new Path(backupRootDir, BULKLOAD_FILES_DIR);
+        if (fs.exists(bulkloadDir)) {
+          FileStatus[] directories = fs.listStatus(bulkloadDir);
+          for (FileStatus dirStatus : directories) {
+            if (dirStatus.isDirectory()) {
+              replayBulkLoadHFilesIfPresent(dirStatus.getPath().toString(), tableName);
+            }
+          }
+        }
+      } catch (Exception e) {
+        fail("Failed to replay BulkLoad HFiles properly: " + e.getMessage());
+      }
+
       assertEquals(expectedRows, getRowCount(tableName));
     }
   }
