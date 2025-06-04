@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
-import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MetricsSnapshot;
 import org.apache.hadoop.hbase.master.assignment.MergeTableRegionsProcedure;
 import org.apache.hadoop.hbase.master.assignment.SplitTableRegionProcedure;
@@ -300,22 +299,12 @@ public class SnapshotProcedure extends AbstractStateMachineTableProcedure<Snapsh
 
   private void preSnapshot(MasterProcedureEnv env) throws IOException {
     env.getMasterServices().getSnapshotManager().prepareWorkingDirectory(snapshot);
-
-    MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
-    if (cpHost != null) {
-      cpHost.preSnapshot(ProtobufUtil.createSnapshotDesc(snapshot), htd, getUser());
-    }
   }
 
   private void postSnapshot(MasterProcedureEnv env) throws IOException {
     SnapshotManager sm = env.getMasterServices().getSnapshotManager();
     if (sm != null) {
       sm.unregisterSnapshotProcedure(snapshot, getProcId());
-    }
-
-    MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
-    if (cpHost != null) {
-      cpHost.postSnapshot(ProtobufUtil.createSnapshotDesc(snapshot), htd, getUser());
     }
   }
 
