@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.backup;
 
-import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.CONF_STAGED_WAL_FLUSH_INITIAL_DELAY;
-import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.CONF_STAGED_WAL_FLUSH_INTERVAL;
+import static org.apache.hadoop.hbase.replication.regionserver.ReplicationMarkerChore.REPLICATION_MARKER_ENABLED_DEFAULT;
+import static org.apache.hadoop.hbase.replication.regionserver.ReplicationMarkerChore.REPLICATION_MARKER_ENABLED_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -76,20 +76,10 @@ public class TestIncrementalBackupWithContinuous extends TestContinuousBackup {
   private final byte[] COLUMN = Bytes.toBytes("col");
   private static final int ROWS_IN_BULK_LOAD = 100;
 
-  @BeforeClass
-  public static void setUp() throws Exception {
-    TEST_UTIL = new HBaseTestingUtil();
-    conf1 = TEST_UTIL.getConfiguration();
-    autoRestoreOnFailure = true;
-    useSecondCluster = false;
-    conf1.setInt(CONF_STAGED_WAL_FLUSH_INTERVAL, 1);
-    conf1.setInt(CONF_STAGED_WAL_FLUSH_INITIAL_DELAY, 1);
-    setUpHelper();
-  }
-
   @Test
   public void testContinuousBackupWithIncrementalBackupSuccess() throws Exception {
     LOG.info("Testing incremental backup with continuous backup");
+    conf1.setBoolean(REPLICATION_MARKER_ENABLED_KEY, true);
     String methodName = Thread.currentThread().getStackTrace()[1].getMethodName();
     TableName tableName = TableName.valueOf("table_" + methodName);
     Table t1 = TEST_UTIL.createTable(tableName, FAMILY);
@@ -120,6 +110,7 @@ public class TestIncrementalBackupWithContinuous extends TestContinuousBackup {
       Put p = new Put(ROW);
       p.addColumn(FAMILY, COLUMN, COLUMN);
       t1.put(p);
+      Thread.sleep(5000);
 
       // Run incremental backup
       LOG.info("Run incremental backup now");
@@ -127,6 +118,7 @@ public class TestIncrementalBackupWithContinuous extends TestContinuousBackup {
       args = buildBackupArgs("incremental", new TableName[] { tableName }, false);
       ret = ToolRunner.run(conf1, new BackupDriver(), args);
       assertEquals("Incremental Backup should succeed", 0, ret);
+      LOG.info("Incremental backup completed");
 
       // Verify backup history increased and all the backups are succeeded
       backups = table.getBackupHistory();
@@ -146,11 +138,13 @@ public class TestIncrementalBackupWithContinuous extends TestContinuousBackup {
         tables, tables, true));
 
       verifyTable(t1);
+      conf1.setBoolean(REPLICATION_MARKER_ENABLED_KEY, REPLICATION_MARKER_ENABLED_DEFAULT);
     }
   }
 
   @Test
   public void testContinuousBackupWithIncrementalBackupAndBulkloadSuccess() throws Exception {
+    conf1.setBoolean(REPLICATION_MARKER_ENABLED_KEY, true);
     String methodName = Thread.currentThread().getStackTrace()[1].getMethodName();
     try (BackupSystemTable systemTable = new BackupSystemTable(TEST_UTIL.getConnection())) {
       // The test starts with some data, and no bulk loaded rows.
@@ -205,6 +199,7 @@ public class TestIncrementalBackupWithContinuous extends TestContinuousBackup {
       assertEquals(rowCountAfterBackup2, TEST_UTIL.countRows(table1));
       List<BulkLoad> bulkLoads = systemTable.readBulkloadRows(List.of(table1));
       assertEquals(3, bulkLoads.size());
+      conf1.setBoolean(REPLICATION_MARKER_ENABLED_KEY, REPLICATION_MARKER_ENABLED_DEFAULT);
     }
   }
 

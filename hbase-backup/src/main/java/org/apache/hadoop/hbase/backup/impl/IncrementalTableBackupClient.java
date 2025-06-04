@@ -23,7 +23,6 @@ import static org.apache.hadoop.hbase.backup.replication.BackupFileSystemManager
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.DATE_FORMAT;
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.ONE_DAY_IN_MILLISECONDS;
 
-import com.google.common.base.Strings;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -72,6 +71,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.base.Strings;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
@@ -460,7 +460,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
           FileStatus[] logs = backupFs.listStatus(dirPath);
           for (FileStatus log : logs) {
             String filepath = log.getPath().toString();
-            LOG.debug("currentLogFile: " + filepath);
+            LOG.debug("Found WAL file: {}", filepath);
             resultLogFiles.add(filepath);
           }
         }
@@ -494,7 +494,11 @@ public class IncrementalTableBackupClient extends TableBackupClient {
     conf.set(JOB_NAME_CONF_KEY, jobname);
     if (backupInfo.isContinuousBackupEnabled()) {
       conf.set(WALInputFormat.START_TIME_KEY, Long.toString(previousBackupTs));
-      conf.set(WALInputFormat.END_TIME_KEY, Long.toString(backupInfo.getIncrCommittedWalTs()));
+      // committedWALsTs is needed only for Incremental backups with continuous backup
+      // since these do not depend on log roll ts
+      long committedWALsTs = BackupUtils.getReplicationCheckpoint(conn);
+      backupInfo.setIncrCommittedWalTs(committedWALsTs);
+      conf.set(WALInputFormat.END_TIME_KEY, Long.toString(committedWALsTs));
     }
     String[] playerArgs = { dirs, StringUtils.join(tableList, ",") };
 
