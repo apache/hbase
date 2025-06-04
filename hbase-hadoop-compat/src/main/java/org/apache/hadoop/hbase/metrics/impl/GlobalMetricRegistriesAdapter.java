@@ -133,11 +133,9 @@ public final class GlobalMetricRegistriesAdapter {
       MetricsSourceAdapter registeredSource = registeredSources.get(info);
       if (registeredSource != null && !Objects.equals(registeredSource.registry, registry)) {
         registeredSources.remove(info);
-        synchronized (DefaultMetricsSystem.instance()) {
-          DefaultMetricsSystem.instance().unregisterSource(info.getMetricsJmxContext());
-          helper.removeSourceName(info.getMetricsJmxContext());
-          helper.removeObjectName(info.getMetricsJmxContext());
-        }
+        DefaultMetricsSystem.instance().unregisterSource(info.getMetricsJmxContext());
+        helper.removeSourceName(info.getMetricsJmxContext());
+        helper.removeObjectName(info.getMetricsJmxContext());
         LOG.info("Unregistered old adapter for the MetricRegistry: " + info.getMetricsJmxContext());
       }
 
