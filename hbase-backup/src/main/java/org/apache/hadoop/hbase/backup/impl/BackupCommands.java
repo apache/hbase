@@ -903,8 +903,7 @@ public final class BackupCommands {
         return;
       }
 
-      try (Connection conn = ConnectionFactory.createConnection(conf);
-        BackupSystemTable sysTable = new BackupSystemTable(conn)) {
+      try (BackupSystemTable sysTable = new BackupSystemTable(conn)) {
         // Get list of tables under continuous backup
         Map<TableName, Long> continuousBackupTables = sysTable.getContinuousBackupTableSet();
         if (continuousBackupTables.isEmpty()) {
