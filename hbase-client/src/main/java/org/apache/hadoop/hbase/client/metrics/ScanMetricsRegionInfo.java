@@ -54,24 +54,19 @@ public class ScanMetricsRegionInfo {
     if (!(obj instanceof ScanMetricsRegionInfo other)) {
       return false;
     }
-    return new EqualsBuilder()
-      .append(encodedRegionName, other.encodedRegionName)
-      .append(serverName, other.serverName)
-      .isEquals();
+    return new EqualsBuilder().append(encodedRegionName, other.encodedRegionName)
+      .append(serverName, other.serverName).isEquals();
   }
 
   @Override
   public int hashCode() {
-    return new HashCodeBuilder(17, 37)
-      .append(encodedRegionName)
-      .append(serverName)
-      .toHashCode();
+    return new HashCodeBuilder(17, 37).append(encodedRegionName).append(serverName).toHashCode();
   }
 
   @Override
   public String toString() {
-    return getClass().getSimpleName() + "[encodedRegionName=" + encodedRegionName
-      + ",serverName=" + serverName + "]";
+    return getClass().getSimpleName() + "[encodedRegionName=" + encodedRegionName + ",serverName="
+      + serverName + "]";
   }
 
   public String getEncodedRegionName() {

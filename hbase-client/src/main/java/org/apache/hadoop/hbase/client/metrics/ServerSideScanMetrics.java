@@ -125,8 +125,8 @@ public class ServerSideScanMetrics {
   }
 
   /**
-   * Get all the values combined for all the regions since the last time this function was
-   * called. Calling this function will reset all AtomicLongs in the instance back to 0.
+   * Get all the values combined for all the regions since the last time this function was called.
+   * Calling this function will reset all AtomicLongs in the instance back to 0.
    * @return A Map of String -> Long for metrics
    */
   public Map<String, Long> getMetricsMap() {

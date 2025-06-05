@@ -53,8 +53,8 @@ public class RegionScanMetricsData {
 
   @Override
   public String toString() {
-    return getClass().getSimpleName() + "[" + scanMetricsRegionInfo + "," + "Counters="
-      + counters + "]";
+    return getClass().getSimpleName() + "[" + scanMetricsRegionInfo + "," + "Counters=" + counters
+      + "]";
   }
 
   /**

@@ -1041,8 +1041,8 @@ public class Scan extends Query {
   }
 
   /**
-   * Enables region level scan metrics. If scan metrics are disabled then first enables scan
-   * metrics followed by region level scan metrics.
+   * Enables region level scan metrics. If scan metrics are disabled then first enables scan metrics
+   * followed by region level scan metrics.
    * @param enable Set to true to enable region level scan metrics.
    */
   public Scan setEnableScanMetricsByRegion(final boolean enable) {
