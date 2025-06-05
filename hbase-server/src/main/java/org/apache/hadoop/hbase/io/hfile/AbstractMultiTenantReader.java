@@ -86,8 +86,8 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
   // Private map to store section metadata
   private final Map<ImmutableBytesWritable, SectionMetadata> sectionLocations = new LinkedHashMap<ImmutableBytesWritable, SectionMetadata>();
   
-  // Add sorted list for efficient navigation
-  private List<ImmutableBytesWritable> sortedSectionIds;
+  // Add list for section navigation
+  private List<ImmutableBytesWritable> sectionIds;
   
   // Tenant index structure information
   private int tenantIndexLevels = 1;
@@ -252,10 +252,9 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
           new SectionMetadata(entry.getOffset(), entry.getSectionSize()));
     }
     
-    // Create sorted list for efficient binary search
-    sortedSectionIds = new ArrayList<>(sectionLocations.keySet());
-    //sortedSectionIds.sort((a, b) -> Bytes.compareTo(a.get(), b.get()));
-    LOG.debug("Initialized {} sorted section IDs for efficient navigation", sortedSectionIds.size());
+    // Create list for section navigation
+    sectionIds = new ArrayList<>(sectionLocations.keySet());
+    LOG.debug("Initialized {} section IDs for navigation", sectionIds.size());
   }
   
   // Get the number of sections
@@ -539,10 +538,10 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
     
     @Override
     public boolean seekTo() throws IOException {
-      // Get the first section from the sorted section index
-      if (!sortedSectionIds.isEmpty()) {
-        // Get the first section ID from the sorted list
-        byte[] firstSectionId = sortedSectionIds.get(0).get();
+      // Get the first section from the section index
+      if (!sectionIds.isEmpty()) {
+        // Get the first section ID from the list
+        byte[] firstSectionId = sectionIds.get(0).get();
         
         SectionReader sectionReader = getSectionReader(firstSectionId);
         if (sectionReader != null) {
@@ -731,35 +730,15 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
     }
     
     private byte[] findNextTenantSectionId(byte[] currentSectionId) {
-      // Use binary search on sorted list for O(log n) performance
-      int currentIndex = -1;
-      
-      // Binary search to find current position
-      int low = 0;
-      int high = sortedSectionIds.size() - 1;
-      
-      while (low <= high) {
-        int mid = (low + high) >>> 1;
-        int cmp = Bytes.compareTo(sortedSectionIds.get(mid).get(), currentSectionId);
-        
-        if (cmp < 0) {
-          low = mid + 1;
-        } else if (cmp > 0) {
-          high = mid - 1;
-        } else {
-          currentIndex = mid;
+      // Linear search to find current position and return next
+      for (int i = 0; i < sectionIds.size(); i++) {
+        if (Bytes.equals(sectionIds.get(i).get(), currentSectionId)) {
+          // Found current section, return next if it exists
+          if (i < sectionIds.size() - 1) {
+            return sectionIds.get(i + 1).get();
+          }
           break;
         }
-      }
-      
-      // If we found the current section and there's a next one, return it
-      if (currentIndex >= 0 && currentIndex < sortedSectionIds.size() - 1) {
-        return sortedSectionIds.get(currentIndex + 1).get();
-      }
-      
-      // If we didn't find exact match but low is valid, it's the next section
-      if (currentIndex < 0 && low < sortedSectionIds.size()) {
-        return sortedSectionIds.get(low).get();
       }
       
       return null;
@@ -947,7 +926,7 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
       // Check if the partial key matches the common prefix
       boolean matchesCommon = true;
       for (int i = 0; i < commonPrefixLength && i < partialRowKey.length; i++) {
-        byte firstSectionByte = sortedSectionIds.get(0).get()[i];
+        byte firstSectionByte = sectionIds.get(0).get()[i];
         if (partialRowKey[i] != firstSectionByte) {
           matchesCommon = false;
           break;
@@ -974,20 +953,20 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
    * Compute the length of the common prefix shared by all sections
    */
   private void computeCommonPrefixLength() {
-    if (sortedSectionIds.isEmpty()) {
+    if (sectionIds.isEmpty()) {
       commonPrefixLength = 0;
       return;
     }
     
-    if (sortedSectionIds.size() == 1) {
+    if (sectionIds.size() == 1) {
       // Only one section, common prefix is the entire section ID
-      commonPrefixLength = sortedSectionIds.get(0).get().length;
+      commonPrefixLength = sectionIds.get(0).get().length;
       return;
     }
     
     // Compare first and last section IDs to find common prefix
-    byte[] first = sortedSectionIds.get(0).get();
-    byte[] last = sortedSectionIds.get(sortedSectionIds.size() - 1).get();
+    byte[] first = sectionIds.get(0).get();
+    byte[] last = sectionIds.get(sectionIds.size() - 1).get();
     
     int minLength = Math.min(first.length, last.length);
     commonPrefixLength = 0;

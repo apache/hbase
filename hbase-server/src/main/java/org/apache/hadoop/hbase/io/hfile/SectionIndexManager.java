@@ -238,9 +238,7 @@ public class SectionIndexManager {
         return writeEmptyIndex(out);
       }
       
-      // Sort entries by tenant prefix for binary search later
-      //Collections.sort(entries, (a, b) -> 
-      //   Bytes.compareTo(a.getTenantPrefix(), b.getTenantPrefix()));
+      // Keep entries in their original order for sequential access
       
       // Determine if we need a multi-level index based on entry count
       boolean multiLevel = entries.size() > maxChunkSize;

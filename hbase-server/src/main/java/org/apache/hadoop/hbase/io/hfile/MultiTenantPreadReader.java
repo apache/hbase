@@ -89,7 +89,7 @@ public class MultiTenantPreadReader extends AbstractMultiTenantReader {
    * Section reader implementation for pread access mode
    */
   protected class PreadSectionReader extends SectionReader {
-    private HFileReaderImpl hfileReader;
+    private volatile HFileReaderImpl hfileReader;
     
     public PreadSectionReader(byte[] tenantSectionId, SectionMetadata metadata) {
       // Make a defensive copy of the tenant section ID to avoid any reference issues
@@ -100,12 +100,15 @@ public class MultiTenantPreadReader extends AbstractMultiTenantReader {
     
     @Override
     public HFileReaderImpl getReader() throws IOException {
-      if (hfileReader != null) {
-        return hfileReader;
+      HFileReaderImpl reader = hfileReader;
+      if (reader != null) {
+        return reader;
       }
+      
       synchronized (this) {
-        if (hfileReader != null) {
-          return hfileReader;
+        reader = hfileReader;
+        if (reader != null) {
+          return reader;
         }
         // Prepare placeholders for contexts for logging in catch
         ReaderContext sectionContext = null;
