@@ -322,7 +322,7 @@ public class TestLogRolling extends AbstractTestLogRolling {
         @Override
         public void preLogRoll(Path oldFile, Path newFile) {
           LOG.debug("preLogRoll: oldFile=" + oldFile + " newFile=" + newFile);
-          preLogRolledCalled.add(new Integer(1));
+          preLogRolledCalled.add(1);
         }
 
         @Override
