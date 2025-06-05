@@ -560,6 +560,16 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
     
     @Override
     public int seekTo(ExtendedCell key) throws IOException {
+      // Handle empty or null keys by falling back to seekTo() without parameters
+      if (key == null || key.getRowLength() == 0) {
+        LOG.debug("seekTo called with null or empty key, falling back to seekTo()");
+        if (seekTo()) {
+          return 0; // Successfully seeked to first position
+        } else {
+          return -1; // No data found
+        }
+      }
+      
       // Extract tenant section ID
       byte[] tenantSectionId = tenantExtractor.extractTenantSectionId(key);
       
