@@ -150,7 +150,7 @@ public class TestMultiParallel {
       byte[] k = starterKeys[kIdx];
       byte[] cp = new byte[k.length + 1];
       System.arraycopy(k, 0, cp, 0, k.length);
-      cp[k.length] = new Integer(i % 256).byteValue();
+      cp[k.length] = (byte) (i % 256);
       keys.add(cp);
     }
 
@@ -163,7 +163,7 @@ public class TestMultiParallel {
       byte[] k = starterKeys[kIdx];
       byte[] cp = new byte[k.length + 1];
       System.arraycopy(k, 0, cp, 0, k.length);
-      cp[k.length] = new Integer(i % 256).byteValue();
+      cp[k.length] = (byte) (i % 256);
       keys.add(cp);
     }
     return keys.toArray(new byte[][] { new byte[] {} });
