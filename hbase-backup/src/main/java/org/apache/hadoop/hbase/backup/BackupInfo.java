@@ -125,6 +125,11 @@ public class BackupInfo implements Comparable<BackupInfo> {
   private long completeTs;
 
   /**
+   * Committed WAL timestamp for incremental backup
+   */
+  private long incrCommittedWalTs;
+
+  /**
    * Total bytes of incremental logs copied
    */
   private long totalBytesCopied;
@@ -291,6 +296,14 @@ public class BackupInfo implements Comparable<BackupInfo> {
 
   public void setCompleteTs(long endTs) {
     this.completeTs = endTs;
+  }
+
+  public long getIncrCommittedWalTs() {
+    return incrCommittedWalTs;
+  }
+
+  public void setIncrCommittedWalTs(long timestamp) {
+    this.incrCommittedWalTs = timestamp;
   }
 
   public long getTotalBytesCopied() {
@@ -549,6 +562,7 @@ public class BackupInfo implements Comparable<BackupInfo> {
     sb.append("{");
     sb.append("ID=" + backupId).append(",");
     sb.append("Type=" + getType()).append(",");
+    sb.append("IsContinuous=" + isContinuousBackupEnabled()).append(",");
     sb.append("Tables=" + getTableListAsString()).append(",");
     sb.append("State=" + getState()).append(",");
     Calendar cal = Calendar.getInstance();
