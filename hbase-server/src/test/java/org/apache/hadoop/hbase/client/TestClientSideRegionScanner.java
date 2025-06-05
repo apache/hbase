@@ -249,6 +249,8 @@ public class TestClientSideRegionScanner {
         Assert.assertEquals(hri.getEncodedName(), scanMetricsRegionInfo.getEncodedRegionName());
         Assert.assertNull(scanMetricsRegionInfo.getServerName());
         Assert.assertTrue(metricsMap.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME) > 0);
+        Assert.assertEquals((long) metricsMap.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME),
+          scanMetricsFromScanner.countOfRowsScanned.get());
       }
     }
   }

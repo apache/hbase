@@ -24,77 +24,45 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Generic holder class for capturing Scan Metrics as a map of metric name ({@link String}) -> Value
+ * Captures region level scan metrics as a map of metric name ({@link String}) -> Value
  * ({@link AtomicLong}).
+ * <br/><br/>
+ * One instance stores scan metrics for a single region only.
  */
 @InterfaceAudience.Private
-public class ScanMetricsHolder {
+public class RegionScanMetricsData {
   private final Map<String, AtomicLong> counters = new HashMap<>();
   private ScanMetricsRegionInfo scanMetricsRegionInfo =
     ScanMetricsRegionInfo.EMPTY_SCAN_METRICS_REGION_INFO;
 
-  /**
-   * Create a new counter with the specified name
-   * @return {@link AtomicLong} instance for the counter with counterName
-   */
   AtomicLong createCounter(String counterName) {
-    AtomicLong c = new AtomicLong(0);
-    counters.put(counterName, c);
-    return c;
+    return ScanMetricsUtil.createCounter(counters, counterName);
   }
 
-  /** Sets counter with counterName to passed in value, does nothing if counter does not exist. */
   void setCounter(String counterName, long value) {
-    AtomicLong c = this.counters.get(counterName);
-    if (c != null) {
-      c.set(value);
-    }
+    ScanMetricsUtil.setCounter(counters, counterName, value);
   }
 
-  /** Returns true if a counter exists with the counterName */
-  boolean hasCounter(String counterName) {
-    return this.counters.containsKey(counterName);
-  }
-
-  /** Returns {@link AtomicLong} instance for this counter name, null if counter does not exist. */
-  AtomicLong getCounter(String counterName) {
-    return this.counters.get(counterName);
-  }
-
-  /** Increments the counter with counterName by delta, does nothing if counter does not exist. */
   void addToCounter(String counterName, long delta) {
-    AtomicLong c = this.counters.get(counterName);
-    if (c != null) {
-      c.addAndGet(delta);
-    }
+    ScanMetricsUtil.addToCounter(counters, counterName, delta);
   }
 
-  /**
-   * Get all of the values. If reset is true, we will reset the all AtomicLongs back to 0.
-   * @param reset whether to reset the AtomicLongs to 0.
-   * @return A Map of String -> Long for metrics
-   */
   Map<String, Long> getMetricsMap(boolean reset) {
-    Map<String, Long> metricsSnapshot = new HashMap<>();
-    for (Map.Entry<String, AtomicLong> e : this.counters.entrySet()) {
-      long value = reset ? e.getValue().getAndSet(0) : e.getValue().get();
-      metricsSnapshot.put(e.getKey(), value);
-    }
-    return metricsSnapshot;
+    return ScanMetricsUtil.getMetricsMap(counters, reset);
   }
 
   @Override
   public String toString() {
-    return "ServerName=" + scanMetricsRegionInfo.getServerName() + "," + "EncodedRegionName="
-      + scanMetricsRegionInfo.getEncodedRegionName() + "," + counters;
+    return "EncodedRegionName=" + scanMetricsRegionInfo.getEncodedRegionName()
+      + "," + "ServerName=" + scanMetricsRegionInfo.getServerName() + "," + counters;
   }
 
   /**
-   * Populate server name and encoded region name details if not already populated. If details are
+   * Populate encoded region name and server name details if not already populated. If details are
    * already populated and a re-attempt is done then {@link UnsupportedOperationException} is
    * thrown.
    */
-  void initScanMetricsRegionInfo(ServerName serverName, String encodedRegionName) {
+  void initScanMetricsRegionInfo(String encodedRegionName, ServerName serverName) {
     // Check by reference
     if (scanMetricsRegionInfo == ScanMetricsRegionInfo.EMPTY_SCAN_METRICS_REGION_INFO) {
       scanMetricsRegionInfo = new ScanMetricsRegionInfo(encodedRegionName, serverName);

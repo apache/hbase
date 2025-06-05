@@ -153,7 +153,7 @@ public class TestTableScanMetrics extends FromClientSideBase {
     Assert.assertNotNull(scanMetrics);
     Map<String, Long> metricsMap = scanMetrics.getMetricsMap(false);
     // The test setup is such that we have 1 row per region in the scan range
-    Assert.assertEquals(expectedRowsScanned, (long) metricsMap.get(REGIONS_SCANNED_METRIC_NAME));
+    Assert.assertEquals(expectedRowsScanned, scanMetrics.countOfRegions.get());
     Assert.assertEquals(expectedRowsScanned,
       (long) metricsMap.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME));
     Assert.assertTrue(scanMetrics.getMetricsMapByRegion().isEmpty());
@@ -172,9 +172,8 @@ public class TestTableScanMetrics extends FromClientSideBase {
     Assert.assertEquals(expectedRowsScanned,
       (long) metricsMap.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME));
     // Subsequent call to get scan metrics map should show all counters as 0
-    metricsMap = scanMetrics.getMetricsMap(false);
-    Assert.assertEquals(0, (long) metricsMap.get(REGIONS_SCANNED_METRIC_NAME));
-    Assert.assertEquals(0, (long) metricsMap.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME));
+    Assert.assertEquals(0, scanMetrics.countOfRegions.get());
+    Assert.assertEquals(0, scanMetrics.countOfRowsScanned.get());
   }
 
   @Test
@@ -213,10 +212,8 @@ public class TestTableScanMetrics extends FromClientSideBase {
     int expectedRowsScanned = 3;
     ScanMetrics scanMetrics = assertScannedRowsAndGetScanMetrics(scan, expectedRowsScanned);
     Assert.assertNotNull(scanMetrics);
-    Map<String, Long> metricsMap = scanMetrics.getMetricsMap(false);
-    Assert.assertEquals(NUM_REGIONS, (long) metricsMap.get(REGIONS_SCANNED_METRIC_NAME));
-    Assert.assertEquals(expectedRowsScanned,
-      (long) metricsMap.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME));
+    Assert.assertEquals(NUM_REGIONS, scanMetrics.countOfRegions.get());
+    Assert.assertEquals(expectedRowsScanned, scanMetrics.countOfRowsScanned.get());
     Map<ScanMetricsRegionInfo, Map<String, Long>> scanMetricsByRegion =
       scanMetrics.getMetricsMapByRegion(false);
     Assert.assertEquals(NUM_REGIONS, scanMetricsByRegion.size());
@@ -224,7 +221,7 @@ public class TestTableScanMetrics extends FromClientSideBase {
     for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry : scanMetricsByRegion
       .entrySet()) {
       ScanMetricsRegionInfo scanMetricsRegionInfo = entry.getKey();
-      metricsMap = entry.getValue();
+      Map<String, Long> metricsMap = entry.getValue();
       Assert.assertNotNull(scanMetricsRegionInfo.getEncodedRegionName());
       Assert.assertNotNull(scanMetricsRegionInfo.getServerName());
       Assert.assertEquals(1, (long) metricsMap.get(REGIONS_SCANNED_METRIC_NAME));

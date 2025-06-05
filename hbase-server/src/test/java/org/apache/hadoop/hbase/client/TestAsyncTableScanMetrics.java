@@ -216,8 +216,11 @@ public class TestAsyncTableScanMetrics {
     ScanMetrics scanMetrics = pair.getSecond();
     Map<String, Long> overallMetrics = scanMetrics.getMetricsMap(false);
     assertEquals(NUM_REGIONS, (long) overallMetrics.get(REGIONS_SCANNED_METRIC_NAME));
+    assertEquals(NUM_REGIONS, scanMetrics.countOfRegions.get());
     assertEquals(bytes, (long) overallMetrics.get(BYTES_IN_RESULTS_METRIC_NAME));
+    assertEquals(bytes, scanMetrics.countOfBytesInResults.get());
     assertEquals(NUM_REGIONS, (long) overallMetrics.get(RPC_CALLS_METRIC_NAME));
+    assertEquals(NUM_REGIONS, scanMetrics.countOfRPCcalls.get());
     // Assert scan metrics by region were collected for the region scanned
     Map<ScanMetricsRegionInfo, Map<String, Long>> scanMetricsByRegion =
       scanMetrics.getMetricsMapByRegion(false);

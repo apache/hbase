@@ -37,42 +37,29 @@ public class ServerSideScanMetrics {
   /**
    * Hash to hold the String -> Atomic Long mappings for each metric
    */
-  private final List<ScanMetricsHolder> scanMetricsHolders = new ArrayList<>();
-  private ScanMetricsHolder currentScanMetricsHolder;
-  private boolean isFirstRegion = true;
-
-  public ServerSideScanMetrics() {
-    createScanMetricsHolder();
-  }
+  private final Map<String, AtomicLong> counters = new HashMap<>();
+  private final List<RegionScanMetricsData> regionScanMetricsData = new ArrayList<>(0);
+  protected RegionScanMetricsData currentRegionScanMetricsData = null;
 
   /**
    * If region level scan metrics are enabled, must call this method to start collecting metrics for
    * the region before scanning the region.
    */
   public void moveToNextRegion() {
-    if (isFirstRegion()) {
-      return;
-    }
-    createScanMetricsHolder();
-  }
-
-  private void createScanMetricsHolder() {
-    currentScanMetricsHolder = new ScanMetricsHolder();
-    scanMetricsHolders.add(currentScanMetricsHolder);
-    countOfRowsScanned = createCounter(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME);
-    countOfRowsFiltered = createCounter(COUNT_OF_ROWS_FILTERED_KEY_METRIC_NAME);
-    countOfBlockBytesScanned = createCounter(BLOCK_BYTES_SCANNED_KEY_METRIC_NAME);
-    fsReadTime = createCounter(FS_READ_TIME_METRIC_NAME);
+    currentRegionScanMetricsData = new RegionScanMetricsData();
+    regionScanMetricsData.add(currentRegionScanMetricsData);
+    currentRegionScanMetricsData.createCounter(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME);
+    currentRegionScanMetricsData.createCounter(COUNT_OF_ROWS_FILTERED_KEY_METRIC_NAME);
+    currentRegionScanMetricsData.createCounter(BLOCK_BYTES_SCANNED_KEY_METRIC_NAME);
+    currentRegionScanMetricsData.createCounter(FS_READ_TIME_METRIC_NAME);
   }
 
   /**
-   * Create a new counter with the specified name If region level scan metrics are enabled then
-   * creates a new counter for the current region being scanned. Please see
-   * {@link #moveToNextRegion()}.
+   * Create a new counter with the specified name.
    * @return {@link AtomicLong} instance for the counter with counterName
    */
   protected AtomicLong createCounter(String counterName) {
-    return currentScanMetricsHolder.createCounter(counterName);
+    return ScanMetricsUtil.createCounter(counters, counterName);
   }
 
   public static final String COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME = "ROWS_SCANNED";
@@ -85,17 +72,17 @@ public class ServerSideScanMetrics {
   /**
    * number of rows filtered during scan RPC
    */
-  public AtomicLong countOfRowsFiltered;
+  public final AtomicLong countOfRowsFiltered = createCounter(COUNT_OF_ROWS_FILTERED_KEY_METRIC_NAME);
 
   /**
    * number of rows scanned during scan RPC. Not every row scanned will be returned to the client
    * since rows may be filtered.
    */
-  public AtomicLong countOfRowsScanned;
+  public final AtomicLong countOfRowsScanned = createCounter(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME);
 
-  public AtomicLong countOfBlockBytesScanned;
+  public final AtomicLong countOfBlockBytesScanned = createCounter(BLOCK_BYTES_SCANNED_KEY_METRIC_NAME);
 
-  public AtomicLong fsReadTime;
+  public final AtomicLong fsReadTime = createCounter(FS_READ_TIME_METRIC_NAME);
 
   /**
    * Sets counter with counterName to passed in value, does nothing if counter does not exist. If
@@ -103,25 +90,24 @@ public class ServerSideScanMetrics {
    * being scanned.
    */
   public void setCounter(String counterName, long value) {
-    currentScanMetricsHolder.setCounter(counterName, value);
+    ScanMetricsUtil.setCounter(counters, counterName, value);
+    if (this.currentRegionScanMetricsData != null) {
+      this.currentRegionScanMetricsData.setCounter(counterName, value);
+    }
   }
 
   /**
-   * Returns true if a counter exists with the counterName If region level scan metrics are enabled
-   * then checks if a counter exists with the counterName for the current region being scanned.
-   * Please see {@link #moveToNextRegion()}.
+   * Returns true if a counter exists with the counterName.
    */
   public boolean hasCounter(String counterName) {
-    return currentScanMetricsHolder.hasCounter(counterName);
+    return ScanMetricsUtil.hasCounter(counters, counterName);
   }
 
   /**
-   * Returns {@link AtomicLong} instance for this counter name, null if counter does not exist. If
-   * region level scan metrics are enabled then {@link AtomicLong} instance for current region being
-   * scanned is returned or null if counter does not exist. Please see {@link #moveToNextRegion()}.
+   * Returns {@link AtomicLong} instance for this counter name, null if counter does not exist.
    */
   public AtomicLong getCounter(String counterName) {
-    return currentScanMetricsHolder.getCounter(counterName);
+    return ScanMetricsUtil.getCounter(counters, counterName);
   }
 
   /**
@@ -130,13 +116,15 @@ public class ServerSideScanMetrics {
    * region being scanned. Please see {@link #moveToNextRegion()}.
    */
   public void addToCounter(String counterName, long delta) {
-    currentScanMetricsHolder.addToCounter(counterName, delta);
+    ScanMetricsUtil.addToCounter(counters, counterName, delta);
+    if (this.currentRegionScanMetricsData != null) {
+      this.currentRegionScanMetricsData.addToCounter(counterName, delta);
+    }
   }
 
   /**
-   * Get all of the values combined for all the regions since the last time this function or
-   * {@link #getMetricsMapByRegion()} was called. Calling this function will reset all AtomicLongs
-   * in the instance back to 0.
+   * Get all of the values combined for all the regions since the last time this function was
+   * called. Calling this function will reset all AtomicLongs in the instance back to 0.
    * @return A Map of String -> Long for metrics
    */
   public Map<String, Long> getMetricsMap() {
@@ -144,29 +132,18 @@ public class ServerSideScanMetrics {
   }
 
   /**
-   * Get all of the values combined for all the regions. If reset is true, we will reset the all
+   * Get all of the values combined for all the regions. If reset is true, we will reset all the
    * AtomicLongs back to 0.
    * @param reset whether to reset the AtomicLongs to 0.
    * @return A Map of String -> Long for metrics
    */
   public Map<String, Long> getMetricsMap(boolean reset) {
-    Map<String, Long> overallMetrics = new HashMap<>();
-    for (ScanMetricsHolder scanMetricsHolder : scanMetricsHolders) {
-      Map<String, Long> metricsSnapshot = scanMetricsHolder.getMetricsMap(reset);
-      metricsSnapshot.forEach((k, v) -> {
-        if (overallMetrics.containsKey(k)) {
-          overallMetrics.put(k, overallMetrics.get(k) + v);
-        } else {
-          overallMetrics.put(k, v);
-        }
-      });
-    }
-    return ImmutableMap.copyOf(overallMetrics);
+    return ImmutableMap.copyOf(ScanMetricsUtil.getMetricsMap(counters, reset));
   }
 
   /**
-   * Get values grouped by each region scanned since the last time this or {@link #getMetricsMap()}
-   * was called. Calling this function will reset all AtomicLongs in the instance back to 0.
+   * Get values grouped by each region scanned since the last time this was called.
+   * Calling this function will reset all region level scan metrics counters back to 0.
    * @return A Map of region -> (Map of metric name -> Long) for metrics
    */
   public Map<ScanMetricsRegionInfo, Map<String, Long>> getMetricsMapByRegion() {
@@ -174,30 +151,30 @@ public class ServerSideScanMetrics {
   }
 
   /**
-   * Get values grouped by each region scanned. If reset is true, we will reset the all AtomicLongs
-   * back to 0.
-   * @param reset whether to reset the AtomicLongs to 0.
+   * Get values grouped by each region scanned. If reset is true, will reset all the region level
+   * scan metrics counters back to 0.
+   * @param reset whether to reset region level scan metric counters to 0.
    * @return A Map of region -> (Map of metric name -> Long) for metrics
    */
   public Map<ScanMetricsRegionInfo, Map<String, Long>> getMetricsMapByRegion(boolean reset) {
     // Create a builder
     ImmutableMap.Builder<ScanMetricsRegionInfo, Map<String, Long>> builder = ImmutableMap.builder();
-    for (ScanMetricsHolder scanMetricsHolder : scanMetricsHolders) {
+    for (RegionScanMetricsData regionScanMetricsData : this.regionScanMetricsData) {
       if (
-        scanMetricsHolder.getScanMetricsRegionInfo()
+        regionScanMetricsData.getScanMetricsRegionInfo()
             == ScanMetricsRegionInfo.EMPTY_SCAN_METRICS_REGION_INFO
       ) {
         continue;
       }
-      builder.put(scanMetricsHolder.getScanMetricsRegionInfo(),
-        scanMetricsHolder.getMetricsMap(reset));
+      builder.put(regionScanMetricsData.getScanMetricsRegionInfo(),
+        regionScanMetricsData.getMetricsMap(reset));
     }
     return builder.build();
   }
 
   @Override
   public String toString() {
-    return scanMetricsHolders.stream().map(ScanMetricsHolder::toString)
+    return counters + regionScanMetricsData.stream().map(RegionScanMetricsData::toString)
       .collect(Collectors.joining(";"));
   }
 
@@ -206,29 +183,7 @@ public class ServerSideScanMetrics {
    * region name details for the region being scanned and for which metrics are being collected at
    * the moment.
    */
-  public void initScanMetricsRegionInfo(ServerName serverName, String encodedRegionName) {
-    currentScanMetricsHolder.initScanMetricsRegionInfo(serverName, encodedRegionName);
-  }
-
-  protected boolean isFirstRegion() {
-    boolean tmpIsFirstRegion = isFirstRegion;
-    isFirstRegion = false;
-    return tmpIsFirstRegion;
-  }
-
-  public AtomicLong getCountOfRowsFiltered() {
-    return countOfRowsFiltered;
-  }
-
-  public AtomicLong getCountOfRowsScanned() {
-    return countOfRowsScanned;
-  }
-
-  public AtomicLong getCountOfBlockBytesScanned() {
-    return countOfBlockBytesScanned;
-  }
-
-  public AtomicLong getFsReadTime() {
-    return fsReadTime;
+  public void initScanMetricsRegionInfo(String encodedRegionName, ServerName serverName) {
+    currentRegionScanMetricsData.initScanMetricsRegionInfo(encodedRegionName, serverName);
   }
 }

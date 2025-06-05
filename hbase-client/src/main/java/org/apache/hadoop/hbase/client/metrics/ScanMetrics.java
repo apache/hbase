@@ -51,118 +51,59 @@ public class ScanMetrics extends ServerSideScanMetrics {
   /**
    * number of RPC calls
    */
-  @SuppressWarnings("checkstyle:VisibilityModifier")
-  public AtomicLong countOfRPCcalls;
+  public final AtomicLong countOfRPCcalls = createCounter(RPC_CALLS_METRIC_NAME);
 
   /**
    * number of remote RPC calls
    */
-  @SuppressWarnings("checkstyle:VisibilityModifier")
-  public AtomicLong countOfRemoteRPCcalls;
+  public final AtomicLong countOfRemoteRPCcalls = createCounter(REMOTE_RPC_CALLS_METRIC_NAME);
 
   /**
    * sum of milliseconds between sequential next calls
    */
-  @SuppressWarnings("checkstyle:VisibilityModifier")
-  public AtomicLong sumOfMillisSecBetweenNexts;
+  public final AtomicLong sumOfMillisSecBetweenNexts = createCounter(MILLIS_BETWEEN_NEXTS_METRIC_NAME);
 
   /**
    * number of NotServingRegionException caught
    */
-  @SuppressWarnings("checkstyle:VisibilityModifier")
-  public AtomicLong countOfNSRE;
+  public final AtomicLong countOfNSRE = createCounter(NOT_SERVING_REGION_EXCEPTION_METRIC_NAME);
 
   /**
    * number of bytes in Result objects from region servers
    */
-  @SuppressWarnings("checkstyle:VisibilityModifier")
-  public AtomicLong countOfBytesInResults;
+  public final AtomicLong countOfBytesInResults = createCounter(BYTES_IN_RESULTS_METRIC_NAME);
 
   /**
    * number of bytes in Result objects from remote region servers
    */
-  @SuppressWarnings("checkstyle:VisibilityModifier")
-  public AtomicLong countOfBytesInRemoteResults;
+  public final AtomicLong countOfBytesInRemoteResults = createCounter(BYTES_IN_REMOTE_RESULTS_METRIC_NAME);
 
   /**
    * number of regions
    */
-  @SuppressWarnings("checkstyle:VisibilityModifier")
-  public AtomicLong countOfRegions;
+  public final AtomicLong countOfRegions = createCounter(REGIONS_SCANNED_METRIC_NAME);
 
   /**
    * number of RPC retries
    */
-  @SuppressWarnings("checkstyle:VisibilityModifier")
-  public AtomicLong countOfRPCRetries;
+  public final AtomicLong countOfRPCRetries = createCounter(RPC_RETRIES_METRIC_NAME);
 
   /**
    * number of remote RPC retries
    */
-  @SuppressWarnings("checkstyle:VisibilityModifier")
-  public AtomicLong countOfRemoteRPCRetries;
-
-  /**
-   * constructor
-   */
-  public ScanMetrics() {
-    createScanMetricsHolder();
-  }
+  public final AtomicLong countOfRemoteRPCRetries = createCounter(REMOTE_RPC_RETRIES_METRIC_NAME);
 
   @Override
   public void moveToNextRegion() {
-    if (isFirstRegion()) {
-      return;
-    }
     super.moveToNextRegion();
-    createScanMetricsHolder();
-  }
-
-  private void createScanMetricsHolder() {
-    countOfRPCcalls = createCounter(RPC_CALLS_METRIC_NAME);
-    countOfRemoteRPCcalls = createCounter(REMOTE_RPC_CALLS_METRIC_NAME);
-    sumOfMillisSecBetweenNexts = createCounter(MILLIS_BETWEEN_NEXTS_METRIC_NAME);
-    countOfNSRE = createCounter(NOT_SERVING_REGION_EXCEPTION_METRIC_NAME);
-    countOfBytesInResults = createCounter(BYTES_IN_RESULTS_METRIC_NAME);
-    countOfBytesInRemoteResults = createCounter(BYTES_IN_REMOTE_RESULTS_METRIC_NAME);
-    countOfRegions = createCounter(REGIONS_SCANNED_METRIC_NAME);
-    countOfRPCRetries = createCounter(RPC_RETRIES_METRIC_NAME);
-    countOfRemoteRPCRetries = createCounter(REMOTE_RPC_RETRIES_METRIC_NAME);
-  }
-
-  public AtomicLong getCountOfRPCcalls() {
-    return countOfRPCcalls;
-  }
-
-  public AtomicLong getCountOfRemoteRPCcalls() {
-    return countOfRemoteRPCcalls;
-  }
-
-  public AtomicLong getSumOfMillisSecBetweenNexts() {
-    return sumOfMillisSecBetweenNexts;
-  }
-
-  public AtomicLong getCountOfNSRE() {
-    return countOfNSRE;
-  }
-
-  public AtomicLong getCountOfBytesInResults() {
-    return countOfBytesInResults;
-  }
-
-  public AtomicLong getCountOfBytesInRemoteResults() {
-    return countOfBytesInRemoteResults;
-  }
-
-  public AtomicLong getCountOfRegions() {
-    return countOfRegions;
-  }
-
-  public AtomicLong getCountOfRPCRetries() {
-    return countOfRPCRetries;
-  }
-
-  public AtomicLong getCountOfRemoteRPCRetries() {
-    return countOfRemoteRPCRetries;
+    currentRegionScanMetricsData.createCounter(RPC_CALLS_METRIC_NAME);
+    currentRegionScanMetricsData.createCounter(REMOTE_RPC_CALLS_METRIC_NAME);
+    currentRegionScanMetricsData.createCounter(MILLIS_BETWEEN_NEXTS_METRIC_NAME);
+    currentRegionScanMetricsData.createCounter(NOT_SERVING_REGION_EXCEPTION_METRIC_NAME);
+    currentRegionScanMetricsData.createCounter(BYTES_IN_RESULTS_METRIC_NAME);
+    currentRegionScanMetricsData.createCounter(BYTES_IN_REMOTE_RESULTS_METRIC_NAME);
+    currentRegionScanMetricsData.createCounter(REGIONS_SCANNED_METRIC_NAME);
+    currentRegionScanMetricsData.createCounter(RPC_RETRIES_METRIC_NAME);
+    currentRegionScanMetricsData.createCounter(REMOTE_RPC_RETRIES_METRIC_NAME);
   }
 }

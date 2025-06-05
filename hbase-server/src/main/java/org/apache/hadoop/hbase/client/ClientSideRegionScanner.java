@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
+import org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
 import org.apache.hadoop.hbase.mob.MobFileCache;
@@ -93,7 +94,8 @@ public class ClientSideRegionScanner extends AbstractClientScanner {
       setIsScanMetricsByRegionEnabled(scan.isScanMetricsByRegionEnabled());
     }
     if (isScanMetricsByRegionEnabled()) {
-      this.scanMetrics.initScanMetricsRegionInfo(null, region.getRegionInfo().getEncodedName());
+      this.scanMetrics.moveToNextRegion();
+      this.scanMetrics.initScanMetricsRegionInfo(region.getRegionInfo().getEncodedName(), null);
       // The server name will be null in scan metrics as this is a client side region scanner
     }
     region.startRegionOperation();
@@ -115,8 +117,9 @@ public class ClientSideRegionScanner extends AbstractClientScanner {
       for (Cell cell : values) {
         resultSize += PrivateCellUtil.estimatedSerializedSizeOf(cell);
       }
-      this.scanMetrics.countOfBytesInResults.addAndGet(resultSize);
-      this.scanMetrics.countOfRowsScanned.incrementAndGet();
+      this.scanMetrics.addToCounter(ScanMetrics.BYTES_IN_RESULTS_METRIC_NAME, resultSize);
+      this.scanMetrics.addToCounter(
+        ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME, 1);
     }
 
     return result;
