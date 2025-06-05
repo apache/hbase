@@ -358,19 +358,32 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
    */
   protected SectionReader getSectionReader(byte[] tenantSectionId) throws IOException {
     ImmutableBytesWritable key = new ImmutableBytesWritable(tenantSectionId);
+    LOG.debug("getSectionReader called for tenant section ID: {}, cache key: {}", 
+              Bytes.toStringBinary(tenantSectionId), key);
+    
     // Lookup the section metadata
     SectionMetadata metadata = getSectionMetadata(tenantSectionId);
     if (metadata == null) {
       LOG.debug("No section found for tenant section ID: {}", Bytes.toStringBinary(tenantSectionId));
       return null;
     }
+    
+    LOG.debug("Found section metadata for tenant section ID: {}, offset: {}, size: {}", 
+              Bytes.toStringBinary(tenantSectionId), metadata.getOffset(), metadata.getSize());
+    
     try {
       // Use cache's get method with loader for atomic creation
-      return sectionReaderCache.get(key, () -> {
-        SectionReader reader = createSectionReader(tenantSectionId, metadata);
+      SectionReader reader = sectionReaderCache.get(key, () -> {
+        LOG.debug("Cache miss for tenant section ID: {}, creating new section reader", 
+                  Bytes.toStringBinary(tenantSectionId));
+        SectionReader newReader = createSectionReader(tenantSectionId, metadata);
         LOG.debug("Created section reader for tenant section ID: {}", Bytes.toStringBinary(tenantSectionId));
-        return reader;
+        return newReader;
       });
+      
+      LOG.debug("Returning section reader for tenant section ID: {}, reader: {}", 
+                Bytes.toStringBinary(tenantSectionId), reader);
+      return reader;
     } catch (Exception e) {
       if (e instanceof IOException) {
         throw (IOException) e;
@@ -418,7 +431,7 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
     protected long sectionBaseOffset;
     
     public SectionReader(byte[] tenantSectionId, SectionMetadata metadata) {
-      this.tenantSectionId = tenantSectionId;
+      this.tenantSectionId = tenantSectionId.clone(); // Make defensive copy
       this.metadata = metadata;
       this.sectionBaseOffset = metadata.getOffset();
     }
@@ -488,11 +501,16 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
      * Switch to a new section reader, properly managing reference counts
      */
     private void switchToSectionReader(SectionReader newReader, byte[] sectionId) throws IOException {
+      LOG.debug("Switching section reader from {} to {}, section ID: {}", 
+                currentSectionReader, newReader, Bytes.toStringBinary(sectionId));
+      
       // Release previous reader
       if (currentSectionReader != null) {
         try {
           // Note: We don't close the reader here as it might be cached and reused
           // The cache eviction will handle the actual closing
+          LOG.debug("Releasing previous section reader: {}, tenant section ID: {}", 
+                    currentSectionReader, Bytes.toStringBinary(currentTenantSectionId));
           currentSectionReader = null;
           currentScanner = null;
         } catch (Exception e) {
@@ -505,9 +523,12 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
       if (currentSectionReader != null) {
         currentTenantSectionId = sectionId;
         currentScanner = currentSectionReader.getScanner(conf, cacheBlocks, pread, isCompaction);
+        LOG.debug("Switched to new section reader: {}, scanner: {}, tenant section ID: {}", 
+                  currentSectionReader, currentScanner, Bytes.toStringBinary(currentTenantSectionId));
       } else {
         currentTenantSectionId = null;
         currentScanner = null;
+        LOG.debug("Cleared current section reader and scanner");
       }
     }
     
@@ -542,20 +563,39 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
       // Extract tenant section ID
       byte[] tenantSectionId = tenantExtractor.extractTenantSectionId(key);
       
+      LOG.debug("seekTo called with key: {}, extracted tenant section ID: {}", 
+                key, Bytes.toStringBinary(tenantSectionId));
+      
       // Get the scanner for this tenant section
       SectionReader sectionReader = getSectionReader(tenantSectionId);
       if (sectionReader == null) {
+        LOG.warn("No section reader found for tenant section ID: {}", 
+                 Bytes.toStringBinary(tenantSectionId));
         seeked = false;
         return -1;
       }
       
+      LOG.debug("Got section reader for tenant section ID: {}, reader instance: {}", 
+                Bytes.toStringBinary(tenantSectionId), sectionReader);
+      
       // Use the section scanner
       switchToSectionReader(sectionReader, tenantSectionId);
       int result = currentScanner.seekTo(key);
+      
+      LOG.debug("seekTo result: {}, current scanner: {}", result, currentScanner);
+      
       if (result != -1) {
         seeked = true;
+        // Log what cell we actually found
+        ExtendedCell foundCell = currentScanner.getCell();
+        if (foundCell != null) {
+          LOG.debug("Found cell after seekTo: row={}, value={}", 
+                    Bytes.toStringBinary(foundCell.getRowArray(), foundCell.getRowOffset(), foundCell.getRowLength()),
+                    Bytes.toStringBinary(foundCell.getValueArray(), foundCell.getValueOffset(), foundCell.getValueLength()));
+        }
       } else {
         seeked = false;
+        LOG.debug("seekTo failed for key in tenant section {}", Bytes.toStringBinary(tenantSectionId));
       }
       
       return result;

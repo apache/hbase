@@ -211,7 +211,7 @@ public class MultiTenantFSDataInputStreamWrapper extends FSDataInputStreamWrappe
   private class TranslatingFSStream extends FSDataInputStream {
     private final FSDataInputStream raw;
     TranslatingFSStream(FSDataInputStream raw) {
-      super(raw.getWrappedStream());
+      super(new OffsetTranslatingInputStream(raw, sectionOffset));
       this.raw = raw;
       // DO NOT automatically seek to sectionOffset here!
       // This interferes with normal HFile reading patterns.
@@ -272,5 +272,117 @@ public class MultiTenantFSDataInputStreamWrapper extends FSDataInputStreamWrappe
     
     // Other read methods use the underlying stream's implementations
     // Note: We cannot override final methods like read(), read(byte[]), etc.
+  }
+  
+  /**
+   * Custom InputStream that translates all read operations by adding the section offset.
+   * This ensures that when DataInputStream's final methods call read(), they go through
+   * our offset translation logic.
+   */
+  private static class OffsetTranslatingInputStream extends InputStream 
+      implements Seekable, PositionedReadable {
+    private final FSDataInputStream raw;
+    private final long sectionOffset;
+
+    OffsetTranslatingInputStream(FSDataInputStream raw, long sectionOffset) {
+      this.raw = raw;
+      this.sectionOffset = sectionOffset;
+    }
+
+    @Override
+    public int read() throws IOException {
+      // For single byte reads, we rely on the current position being correctly set
+      return raw.read();
+    }
+
+    @Override
+    public int read(byte[] b, int off, int len) throws IOException {
+      // This is the key method that gets called by DataInputStream's final methods
+      // We need to ensure the stream is positioned correctly before reading
+      return raw.read(b, off, len);
+    }
+
+    @Override
+    public long skip(long n) throws IOException {
+      return raw.skip(n);
+    }
+
+    @Override
+    public int available() throws IOException {
+      return raw.available();
+    }
+
+    @Override
+    public void close() throws IOException {
+      raw.close();
+    }
+
+    @Override
+    public void mark(int readlimit) {
+      raw.mark(readlimit);
+    }
+
+    @Override
+    public void reset() throws IOException {
+      raw.reset();
+    }
+
+    @Override
+    public boolean markSupported() {
+      return raw.markSupported();
+    }
+
+    // Seekable interface implementation
+    @Override
+    public void seek(long pos) throws IOException {
+      // Translate section-relative position to absolute file position
+      long absolutePos = sectionOffset + pos;
+      LOG.trace("OffsetTranslatingInputStream seek: relative pos {} -> absolute pos {}, sectionOffset={}", 
+                pos, absolutePos, sectionOffset);
+      raw.seek(absolutePos);
+    }
+
+    @Override
+    public long getPos() throws IOException {
+      // Translate absolute file position back to section-relative position
+      long absolutePos = raw.getPos();
+      long relativePos = absolutePos - sectionOffset;
+      LOG.trace("OffsetTranslatingInputStream getPos: absolute pos {} -> relative pos {}, sectionOffset={}", 
+                absolutePos, relativePos, sectionOffset);
+      return relativePos;
+    }
+
+    @Override
+    public boolean seekToNewSource(long targetPos) throws IOException {
+      // Translate section-relative position to absolute file position
+      long absolutePos = sectionOffset + targetPos;
+      LOG.trace("OffsetTranslatingInputStream seekToNewSource: relative pos {} -> absolute pos {}, sectionOffset={}", 
+                targetPos, absolutePos, sectionOffset);
+      return raw.seekToNewSource(absolutePos);
+    }
+
+    // PositionedReadable interface implementation
+    @Override
+    public int read(long pos, byte[] b, int off, int len) throws IOException {
+      // Translate section-relative position to absolute file position
+      long absolutePos = sectionOffset + pos;
+      LOG.trace("OffsetTranslatingInputStream pread: relative pos {} -> absolute pos {}, len={}, sectionOffset={}", 
+                pos, absolutePos, len, sectionOffset);
+      return raw.read(absolutePos, b, off, len);
+    }
+
+    @Override
+    public void readFully(long pos, byte[] b, int off, int len) throws IOException {
+      // Translate section-relative position to absolute file position
+      long absolutePos = sectionOffset + pos;
+      LOG.trace("OffsetTranslatingInputStream readFully: relative pos {} -> absolute pos {}, len={}, sectionOffset={}", 
+                pos, absolutePos, len, sectionOffset);
+      raw.readFully(absolutePos, b, off, len);
+    }
+
+    @Override
+    public void readFully(long pos, byte[] b) throws IOException {
+      readFully(pos, b, 0, b.length);
+    }
   }
 } 

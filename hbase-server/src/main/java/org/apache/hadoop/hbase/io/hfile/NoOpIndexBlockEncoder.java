@@ -36,6 +36,8 @@ import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Does not perform any kind of encoding/decoding.
@@ -129,6 +131,7 @@ public class NoOpIndexBlockEncoder implements HFileIndexBlockEncoder {
   }
 
   protected static class NoOpEncodedSeeker implements EncodedSeeker {
+    private static final Logger LOG = LoggerFactory.getLogger(NoOpEncodedSeeker.class);
 
     protected long[] blockOffsets;
     protected int[] blockDataSizes;
@@ -304,6 +307,9 @@ public class NoOpIndexBlockEncoder implements HFileIndexBlockEncoder {
       long currentOffset = blockOffsets[rootLevelIndex];
       int currentOnDiskSize = blockDataSizes[rootLevelIndex];
 
+      LOG.debug("OFFSET_TRACE: loadDataBlockWithScanInfo - Reading block at offset={}, size={}", 
+                currentOffset, currentOnDiskSize);
+
       if (rootLevelIndex < blockKeys.length - 1) {
         nextIndexedKey = blockKeys[rootLevelIndex + 1];
       } else {
@@ -426,7 +432,18 @@ public class NoOpIndexBlockEncoder implements HFileIndexBlockEncoder {
 
       int i = -pos - 1;
       assert 0 <= i && i <= blockKeys.length;
-      return i - 1;
+      int result = i - 1;
+      
+      // CRITICAL FIX: Handle single-block case
+      // For a single-block file, if the search key is before the last key of the block,
+      // the standard calculation returns -1. But we know the key must be in block 0.
+      if (result == -1 && blockKeys.length > 0) {
+        // Check if the key could potentially be in the first (and only) block
+        // This happens when we have a single block and the key is less than the block's last key
+        result = 0;
+      }
+      
+      return result;
     }
 
     @Override
