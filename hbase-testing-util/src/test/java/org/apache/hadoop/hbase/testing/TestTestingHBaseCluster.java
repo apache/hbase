@@ -23,7 +23,11 @@ import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 import java.util.Collection;
+import java.util.List;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
@@ -59,8 +63,10 @@ public class TestTestingHBaseCluster {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
+    final Configuration conf = HBaseConfiguration.create();
+    conf.setInt(HConstants.MASTER_INFO_PORT, 0);
     CLUSTER = TestingHBaseCluster.create(TestingHBaseClusterOption.builder().numMasters(2)
-      .numRegionServers(3).numDataNodes(3).build());
+      .numRegionServers(3).numDataNodes(3).conf(conf).build());
   }
 
   @AfterClass
@@ -150,5 +156,17 @@ public class TestTestingHBaseCluster {
     assertTrue(CLUSTER.getActiveMasterAddress().isPresent());
     assertEquals(1, CLUSTER.getBackupMasterAddresses().size());
     assertEquals(3, CLUSTER.getRegionServerAddresses().size());
+
+    // [HOSTNAME1:PORT1, HOSTNAME2:PORT2]
+    final List<String> masterAddrs = CLUSTER.getMasterAddresses();
+    assertEquals(2, masterAddrs.size());
+    assertTrue(masterAddrs.stream().allMatch(addr -> addr.matches(".*:[0-9]+$")));
+  }
+
+  @Test
+  public void testGetPorts() throws Exception {
+    assertTrue(CLUSTER.getActiveMasterInfoPort().isPresent());
+    assertTrue(CLUSTER.getActiveNameNodeInfoPort().isPresent());
+    assertTrue(CLUSTER.getActiveZooKeeperClientPort().isPresent());
   }
 }

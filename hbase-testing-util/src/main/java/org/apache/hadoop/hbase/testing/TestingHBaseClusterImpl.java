@@ -24,6 +24,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -37,6 +38,8 @@ import org.apache.hadoop.hbase.regionserver.OnlineRegions;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
+import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
@@ -217,6 +220,33 @@ class TestingHBaseClusterImpl implements TestingHBaseCluster {
   public List<ServerName> getRegionServerAddresses() {
     return util.getMiniHBaseCluster().getRegionServerThreads().stream()
       .map(t -> t.getRegionServer().getServerName()).collect(Collectors.toList());
+  }
+
+  @Override
+  public Optional<Integer> getActiveMasterInfoPort() {
+    return Optional.ofNullable(util.getMiniHBaseCluster().getMaster())
+      .map(m -> m.getConfiguration().getInt(HConstants.MASTER_INFO_PORT, 0))
+      .filter(port -> port > 0);
+  }
+
+  @Override
+  public Optional<Integer> getActiveNameNodeInfoPort() {
+    return Stream.of(util.getDFSCluster().getNameNodeInfos()).map(i -> i.nameNode)
+      .filter(NameNode::isActiveState).map(nn -> nn.getHttpAddress().getPort())
+      .filter(port -> port > 0).findFirst();
+  }
+
+  @Override
+  public Optional<Integer> getActiveZooKeeperClientPort() {
+    return Optional.ofNullable(util.getZkCluster()).map(MiniZooKeeperCluster::getClientPort)
+      .filter(port -> port > 0);
+  }
+
+  @Override
+  public List<String> getMasterAddresses() {
+    return util.getMiniHBaseCluster().getMasterThreads().stream()
+      .map(mt -> mt.getMaster().getServerName()).map(sn -> sn.getHostname() + ':' + sn.getPort())
+      .collect(Collectors.toList());
   }
 
   @Override

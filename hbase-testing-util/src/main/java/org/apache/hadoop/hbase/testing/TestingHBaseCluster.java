@@ -136,6 +136,26 @@ public interface TestingHBaseCluster {
   List<ServerName> getRegionServerAddresses();
 
   /**
+   * Get the info port of the active master if there is one.
+   */
+  Optional<Integer> getActiveMasterInfoPort();
+
+  /**
+   * Get the info port of the active NameNode if there is one.
+   */
+  Optional<Integer> getActiveNameNodeInfoPort();
+
+  /**
+   * Get the client port of the ZooKeeper if there is one.
+   */
+  Optional<Integer> getActiveZooKeeperClientPort();
+
+  /**
+   * Get the list of master addresses.
+   */
+  List<String> getMasterAddresses();
+
+  /**
    * Get the server side {@link Region} interface for the specific region.
    * <p/>
    * This is used for CPs to test something which can only be accessed at server side, such as tags.
