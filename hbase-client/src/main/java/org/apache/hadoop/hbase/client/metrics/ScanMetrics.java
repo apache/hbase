@@ -61,7 +61,8 @@ public class ScanMetrics extends ServerSideScanMetrics {
   /**
    * sum of milliseconds between sequential next calls
    */
-  public final AtomicLong sumOfMillisSecBetweenNexts = createCounter(MILLIS_BETWEEN_NEXTS_METRIC_NAME);
+  public final AtomicLong sumOfMillisSecBetweenNexts =
+    createCounter(MILLIS_BETWEEN_NEXTS_METRIC_NAME);
 
   /**
    * number of NotServingRegionException caught
@@ -76,7 +77,8 @@ public class ScanMetrics extends ServerSideScanMetrics {
   /**
    * number of bytes in Result objects from remote region servers
    */
-  public final AtomicLong countOfBytesInRemoteResults = createCounter(BYTES_IN_REMOTE_RESULTS_METRIC_NAME);
+  public final AtomicLong countOfBytesInRemoteResults =
+    createCounter(BYTES_IN_REMOTE_RESULTS_METRIC_NAME);
 
   /**
    * number of regions

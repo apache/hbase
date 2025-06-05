@@ -25,7 +25,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public final class ScanMetricsUtil {
 
-  private ScanMetricsUtil() {}
+  private ScanMetricsUtil() {
+  }
 
   /**
    * Creates a new counter with the specified name and stores it in the counters map.

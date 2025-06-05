@@ -72,7 +72,8 @@ public class ServerSideScanMetrics {
   /**
    * number of rows filtered during scan RPC
    */
-  public final AtomicLong countOfRowsFiltered = createCounter(COUNT_OF_ROWS_FILTERED_KEY_METRIC_NAME);
+  public final AtomicLong countOfRowsFiltered =
+    createCounter(COUNT_OF_ROWS_FILTERED_KEY_METRIC_NAME);
 
   /**
    * number of rows scanned during scan RPC. Not every row scanned will be returned to the client
@@ -80,7 +81,8 @@ public class ServerSideScanMetrics {
    */
   public final AtomicLong countOfRowsScanned = createCounter(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME);
 
-  public final AtomicLong countOfBlockBytesScanned = createCounter(BLOCK_BYTES_SCANNED_KEY_METRIC_NAME);
+  public final AtomicLong countOfBlockBytesScanned =
+    createCounter(BLOCK_BYTES_SCANNED_KEY_METRIC_NAME);
 
   public final AtomicLong fsReadTime = createCounter(FS_READ_TIME_METRIC_NAME);
 
@@ -142,8 +144,8 @@ public class ServerSideScanMetrics {
   }
 
   /**
-   * Get values grouped by each region scanned since the last time this was called.
-   * Calling this function will reset all region level scan metrics counters back to 0.
+   * Get values grouped by each region scanned since the last time this was called. Calling this
+   * function will reset all region level scan metrics counters back to 0.
    * @return A Map of region -> (Map of metric name -> Long) for metrics
    */
   public Map<ScanMetricsRegionInfo, Map<String, Long>> getMetricsMapByRegion() {

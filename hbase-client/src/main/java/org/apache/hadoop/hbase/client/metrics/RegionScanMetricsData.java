@@ -25,8 +25,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Captures region level scan metrics as a map of metric name ({@link String}) -> Value
- * ({@link AtomicLong}).
- * <br/><br/>
+ * ({@link AtomicLong}). <br/>
+ * <br/>
  * One instance stores scan metrics for a single region only.
  */
 @InterfaceAudience.Private
@@ -53,8 +53,8 @@ public class RegionScanMetricsData {
 
   @Override
   public String toString() {
-    return "EncodedRegionName=" + scanMetricsRegionInfo.getEncodedRegionName()
-      + "," + "ServerName=" + scanMetricsRegionInfo.getServerName() + "," + counters;
+    return "EncodedRegionName=" + scanMetricsRegionInfo.getEncodedRegionName() + "," + "ServerName="
+      + scanMetricsRegionInfo.getServerName() + "," + counters;
   }
 
   /**

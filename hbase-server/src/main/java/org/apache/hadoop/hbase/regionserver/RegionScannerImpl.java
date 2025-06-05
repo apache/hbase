@@ -646,8 +646,8 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
       return;
     }
 
-    scannerContext.getMetrics().addToCounter(
-      ServerSideScanMetrics.COUNT_OF_ROWS_FILTERED_KEY_METRIC_NAME, 1);
+    scannerContext.getMetrics()
+      .addToCounter(ServerSideScanMetrics.COUNT_OF_ROWS_FILTERED_KEY_METRIC_NAME, 1);
   }
 
   private void incrementCountOfRowsScannedMetric(ScannerContext scannerContext) {
@@ -655,8 +655,8 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
       return;
     }
 
-    scannerContext.getMetrics().addToCounter(
-      ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME, 1);
+    scannerContext.getMetrics()
+      .addToCounter(ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME, 1);
   }
 
   /** Returns true when the joined heap may have data for the current row */
