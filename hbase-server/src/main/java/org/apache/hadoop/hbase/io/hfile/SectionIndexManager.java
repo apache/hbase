@@ -239,8 +239,8 @@ public class SectionIndexManager {
       }
       
       // Sort entries by tenant prefix for binary search later
-      Collections.sort(entries, (a, b) -> 
-          Bytes.compareTo(a.getTenantPrefix(), b.getTenantPrefix()));
+      //Collections.sort(entries, (a, b) -> 
+      //   Bytes.compareTo(a.getTenantPrefix(), b.getTenantPrefix()));
       
       // Determine if we need a multi-level index based on entry count
       boolean multiLevel = entries.size() > maxChunkSize;

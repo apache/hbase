@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
@@ -83,7 +84,7 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
   protected final Cache<ImmutableBytesWritable, SectionReader> sectionReaderCache;
   
   // Private map to store section metadata
-  private final Map<ImmutableBytesWritable, SectionMetadata> sectionLocations = new HashMap<>();
+  private final Map<ImmutableBytesWritable, SectionMetadata> sectionLocations = new LinkedHashMap<ImmutableBytesWritable, SectionMetadata>();
   
   // Add sorted list for efficient navigation
   private List<ImmutableBytesWritable> sortedSectionIds;
@@ -253,7 +254,7 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
     
     // Create sorted list for efficient binary search
     sortedSectionIds = new ArrayList<>(sectionLocations.keySet());
-    sortedSectionIds.sort((a, b) -> Bytes.compareTo(a.get(), b.get()));
+    //sortedSectionIds.sort((a, b) -> Bytes.compareTo(a.get(), b.get()));
     LOG.debug("Initialized {} sorted section IDs for efficient navigation", sortedSectionIds.size());
   }
   
