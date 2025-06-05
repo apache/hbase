@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
+import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -43,6 +44,7 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import static org.apache.hadoop.hbase.io.hfile.BlockCompressedSizePredicator.MAX_BLOCK_SIZE_UNCOMPRESSED;
 
@@ -116,6 +118,17 @@ public class MultiTenantHFileWriter implements HFile.Writer {
   private static final String WRITE_VERIFICATION_ENABLED = "hbase.multi.tenant.write.verification.enabled";
   private static final boolean DEFAULT_WRITE_VERIFICATION_ENABLED = false;
   
+  // Add bloom filter configuration fields
+  private static final String BLOOM_FILTER_TYPE = "hbase.multi.tenant.bloom.filter.type";
+  private static final String DEFAULT_BLOOM_FILTER_TYPE = "ROW";
+  private static final String BLOOM_FILTER_ENABLED = "hbase.multi.tenant.bloom.filter.enabled";
+  private static final boolean DEFAULT_BLOOM_FILTER_ENABLED = true;
+  
+  // Current bloom filter writer - one per section
+  private BloomFilterWriter currentBloomFilterWriter;
+  private boolean bloomFilterEnabled;
+  private BloomType bloomFilterType;
+  
   /**
    * Creates a multi-tenant HFile writer that writes sections to a single file.
    * 
@@ -141,6 +154,11 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     this.tenantExtractor = tenantExtractor;
     this.fileContext = fileContext;
     this.enableWriteVerification = conf.getBoolean(WRITE_VERIFICATION_ENABLED, DEFAULT_WRITE_VERIFICATION_ENABLED);
+    
+    // Initialize bloom filter configuration
+    this.bloomFilterEnabled = conf.getBoolean(BLOOM_FILTER_ENABLED, DEFAULT_BLOOM_FILTER_ENABLED);
+    String filterType = conf.get(BLOOM_FILTER_TYPE, DEFAULT_BLOOM_FILTER_TYPE);
+    this.bloomFilterType = BloomType.valueOf(filterType);
     
     // Create output stream directly to the provided path - no temporary file management here
     // The caller (StoreFileWriter or integration test framework) handles temporary files
@@ -236,6 +254,15 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     // Write the cell to the current section
     currentSectionWriter.append(cell);
     
+    // Add to bloom filter if enabled
+    if (bloomFilterEnabled && currentBloomFilterWriter != null) {
+      try {
+        currentBloomFilterWriter.append(cell);
+      } catch (IOException e) {
+        LOG.warn("Error adding cell to bloom filter", e);
+      }
+    }
+    
     // Track statistics for the entire file
     lastCell = cell;
     entryCount++;
@@ -267,9 +294,28 @@ public class MultiTenantHFileWriter implements HFile.Writer {
       long sectionStartOffset = currentSectionWriter.getSectionStartOffset();
       
       // Validate section has data
-      if (currentSectionWriter.getEntryCount() == 0) {
+      long entryCount = currentSectionWriter.getEntryCount();
+      if (entryCount == 0) {
         LOG.warn("Closing empty section for tenant: {}", 
             Bytes.toStringBinary(currentTenantSectionId));
+      }
+      
+      // Add bloom filter to the section if enabled
+      if (bloomFilterEnabled && currentBloomFilterWriter != null) {
+        long keyCount = currentBloomFilterWriter.getKeyCount();
+        if (keyCount > 0) {
+          LOG.debug("Adding section-specific bloom filter with {} keys for section: {}", 
+              keyCount, Bytes.toStringBinary(currentTenantSectionId));
+          // Compact the bloom filter before adding it
+          currentBloomFilterWriter.compactBloom();
+          // Add the bloom filter to the current section
+          currentSectionWriter.addGeneralBloomFilter(currentBloomFilterWriter);
+        } else {
+          LOG.debug("No keys to add to bloom filter for section: {}", 
+              Bytes.toStringBinary(currentTenantSectionId));
+        }
+        // Clear the bloom filter writer for the next section
+        currentBloomFilterWriter = null;
       }
       
       // Finish writing the current section
@@ -356,6 +402,19 @@ public class MultiTenantHFileWriter implements HFile.Writer {
         tenantId,
         sectionStartOffset);
     
+    // Create a new bloom filter for this section if enabled
+    if (bloomFilterEnabled) {
+      currentBloomFilterWriter = BloomFilterFactory.createGeneralBloomAtWrite(
+          conf, 
+          cacheConf,
+          bloomFilterType,
+          0,  // Don't need to specify maxKeys here
+          currentSectionWriter); // Pass the section writer
+      
+      LOG.debug("Created new bloom filter for tenant section ID: {}", 
+          tenantSectionId == null ? "null" : Bytes.toStringBinary(tenantSectionId));
+    }
+    
     currentTenantSectionId = tenantSectionId;
     sectionCount++;
     
@@ -422,6 +481,10 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     trailer.setUncompressedDataIndexSize(sectionIndexWriter.getTotalUncompressedSize());
     trailer.setDataIndexCount(sectionIndexWriter.getNumRootEntries());
     
+    // Set multi-tenant configuration in the trailer - MOST IMPORTANT PART
+    trailer.setMultiTenant(true);
+    trailer.setTenantPrefixLength(tenantExtractor.getPrefixLength());
+    
     // For v4 files, these indicate no global data blocks (data is in sections)
     trailer.setFirstDataBlockOffset(-1); // UNSET indicates no global data blocks
     trailer.setLastDataBlockOffset(-1);  // UNSET indicates no global data blocks
@@ -432,7 +495,7 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     trailer.setTotalUncompressedBytes(totalUncompressedBytes + trailer.getTrailerSize());
     trailer.setEntryCount(entryCount);
     trailer.setCompressionCodec(fileContext.getCompression());
-
+    
     // Write trailer and close stream
     long startTime = EnvironmentEdgeManager.currentTime();
     trailer.serialize(outputStream);
@@ -478,19 +541,13 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     // Section count information - this ensures fileInfo always has meaningful data
     fileInfo.append(Bytes.toBytes("SECTION_COUNT"), Bytes.toBytes(sectionCount), false);
     
-    // Add tenant index level information
-    fileInfo.append(Bytes.toBytes("TENANT_INDEX_LEVELS"), 
-                    Bytes.toBytes(sectionIndexWriter.getNumLevels()), false);
-    if (sectionIndexWriter.getNumLevels() > 1) {
-      fileInfo.append(Bytes.toBytes("TENANT_INDEX_MAX_CHUNK"), 
-                     Bytes.toBytes(conf.getInt(SectionIndexManager.SECTION_INDEX_MAX_CHUNK_SIZE, 
-                                              SectionIndexManager.DEFAULT_MAX_CHUNK_SIZE)), false);
-    }
+    // Record tenant index structure information
+    int tenantIndexLevels = sectionIndexWriter.getNumLevels();
+    fileInfo.append(Bytes.toBytes("TENANT_INDEX_LEVELS"),
+                    Bytes.toBytes(tenantIndexLevels), false);
     
-    // Store multi-tenant configuration in file info
-    fileInfo.append(Bytes.toBytes("MULTI_TENANT_ENABLED"), Bytes.toBytes("true"), false);
-    fileInfo.append(Bytes.toBytes("TENANT_PREFIX_LENGTH"), 
-                    Bytes.toBytes(String.valueOf(tenantExtractor.getPrefixLength())), false);
+    // Multi-tenant configuration is stored in the trailer for v4 files
+    // This allows readers to access this information before file info is fully loaded
   }
   
   @Override
@@ -517,22 +574,15 @@ public class MultiTenantHFileWriter implements HFile.Writer {
   @Override
   public void addGeneralBloomFilter(BloomFilterWriter bfw) {
     // For multi-tenant files, bloom filters are only added at section level
-    // This prevents creating bloom filters at the global level
+    // We create and add a bloom filter for each section separately
+    // This method is called externally but we ignore it since we handle bloom filters internally
     if (bfw == null || bfw.getKeyCount() <= 0) {
       LOG.debug("Ignoring empty or null general bloom filter at global level");
       return;
     }
     
-    // Only add to current section if one exists
-    if (currentSectionWriter != null) {
-      LOG.debug("Delegating general bloom filter with {} keys to current section", bfw.getKeyCount());
-      // Ensure it's properly prepared for writing
-      bfw.compactBloom();
-      currentSectionWriter.addGeneralBloomFilter(bfw);
-    } else {
-      LOG.warn("Attempted to add general bloom filter with {} keys but no section is active", 
-               bfw.getKeyCount());
-    }
+    LOG.debug("Ignoring external bloom filter with {} keys - using per-section bloom filters instead", 
+             bfw.getKeyCount());
   }
   
   @Override

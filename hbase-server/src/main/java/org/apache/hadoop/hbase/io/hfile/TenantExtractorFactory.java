@@ -29,6 +29,10 @@ import org.slf4j.LoggerFactory;
  * Factory for creating TenantExtractor instances based on configuration.
  * Tenant configuration is obtained from cluster configuration and table properties,
  * not from HFileContext.
+ * 
+ * For HFile v4, tenant configuration is stored in the file trailer, allowing it to be
+ * accessed before the file info blocks are loaded. This resolves timing issues in the
+ * reader initialization process.
  */
 @InterfaceAudience.Private
 public class TenantExtractorFactory {
@@ -45,32 +49,23 @@ public class TenantExtractorFactory {
      * @return Appropriate TenantExtractor implementation
      */
     public static TenantExtractor createFromReader(HFile.Reader reader) {
-      // Get HFileInfo from the reader
-      HFileInfo fileInfo = reader.getHFileInfo();
-      
-      if (fileInfo != null) {
-          // Check HFile metadata for multi-tenant configuration
-          byte[] multiTenantEnabledBytes = fileInfo.get(Bytes.toBytes("MULTI_TENANT_ENABLED"));
-          if (multiTenantEnabledBytes != null && 
-              "true".equals(Bytes.toString(multiTenantEnabledBytes))) {
-              
-              byte[] prefixLengthBytes = fileInfo.get(Bytes.toBytes("TENANT_PREFIX_LENGTH"));
-              if (prefixLengthBytes != null) {
-                  try {
-                      int prefixLength = Integer.parseInt(Bytes.toString(prefixLengthBytes));
-                      LOG.info("Multi-tenant enabled from HFile metadata, prefixLength={}", prefixLength);
-                      return new DefaultTenantExtractor(prefixLength);
-                  } catch (NumberFormatException e) {
-                      LOG.warn("Invalid TENANT_PREFIX_LENGTH in HFile metadata: {}", 
-                              Bytes.toString(prefixLengthBytes), e);
-                  }
-              };
-          }
+      // Check if this is a v4 file with tenant configuration in the trailer
+      FixedFileTrailer trailer = reader.getTrailer();
+      if (trailer.getMajorVersion() == HFile.MIN_FORMAT_VERSION_WITH_MULTI_TENANT) {
+        if (trailer.isMultiTenant()) {
+          int prefixLength = trailer.getTenantPrefixLength();
+          LOG.info("Multi-tenant enabled from HFile v4 trailer, prefixLength={}", prefixLength);
+          return new DefaultTenantExtractor(prefixLength);
+        } else {
+          LOG.info("HFile v4 format, but multi-tenant not enabled in trailer");
+          return new MultiTenantHFileWriter.SingleTenantExtractor();
+        }
       }
       
-      LOG.info("Multi-tenant functionality disabled based on HFile metadata, using SingleTenantExtractor");
+      // For non-v4 files, always use SingleTenantExtractor
+      LOG.info("Non-v4 HFile format (v{}), using SingleTenantExtractor", trailer.getMajorVersion());
       return new MultiTenantHFileWriter.SingleTenantExtractor();
-  }
+    }
   
   /**
    * Create a tenant extractor based on configuration.
