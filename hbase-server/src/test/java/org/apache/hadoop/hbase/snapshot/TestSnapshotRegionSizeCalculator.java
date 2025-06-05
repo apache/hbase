@@ -26,7 +26,10 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -49,14 +52,71 @@ public class TestSnapshotRegionSizeCalculator {
   private static Path snapshotDir;
   private static SnapshotProtos.SnapshotDescription snapshotDesc;
   private static SnapshotManifest manifest;
+  private static Admin admin;
+  private static Configuration conf;
 
   @BeforeClass
   public static void setUp() throws Exception {
-    Configuration conf = TEST_UTIL.getConfiguration();
+    TEST_UTIL.startMiniCluster(2);
+    conf = TEST_UTIL.getConfiguration();
     fs = TEST_UTIL.getTestFileSystem();
     rootDir = TEST_UTIL.getDataTestDir("TestSnapshotRegionSizeCalculator");
     CommonFSUtils.setRootDir(conf, rootDir);
+    admin = TEST_UTIL.getConnection().getAdmin();
+  }
 
+  @AfterClass
+  public static void tearDown() throws Exception {
+    fs.delete(rootDir, true);
+    TEST_UTIL.shutdownMiniCluster();
+  }
+
+  @Test
+  public void testCalculateRegionSizeOneRegion() throws IOException {
+    TableName tableName = TableName.valueOf("test_table");
+    String snapshotName = "test_snapshot";
+
+    // table has no data
+    TEST_UTIL.createTable(tableName, Bytes.toBytes("info"));
+    admin = TEST_UTIL.getConnection().getAdmin();
+    admin.snapshot(snapshotName, tableName);
+    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName,
+      TEST_UTIL.getDefaultRootDirPath());
+    SnapshotProtos.SnapshotDescription snapshotDesc =
+      SnapshotDescriptionUtils.readSnapshotInfo(TEST_UTIL.getTestFileSystem(), snapshotDir);
+    SnapshotManifest manifest = SnapshotManifest.open(TEST_UTIL.getConfiguration(),
+      TEST_UTIL.getTestFileSystem(), snapshotDir, snapshotDesc);
+    SnapshotRegionSizeCalculator calculator =
+      new SnapshotRegionSizeCalculator(TEST_UTIL.getConfiguration(), manifest);
+    Map<String, Long> regionSizes = calculator.calculateRegionSizes();
+
+    for (Map.Entry<String, Long> entry : regionSizes.entrySet()) {
+      assertTrue("Region size should be 0.", entry.getValue() == 0);
+    }
+
+    admin.deleteSnapshot(snapshotName);
+
+    // table has some data
+    TEST_UTIL.loadTable(admin.getConnection().getTable(tableName), Bytes.toBytes("info"));
+    admin.snapshot(snapshotName, tableName);
+    snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName,
+      TEST_UTIL.getDefaultRootDirPath());
+    snapshotDesc =
+      SnapshotDescriptionUtils.readSnapshotInfo(TEST_UTIL.getTestFileSystem(), snapshotDir);
+    manifest = SnapshotManifest.open(TEST_UTIL.getConfiguration(), TEST_UTIL.getTestFileSystem(),
+      snapshotDir, snapshotDesc);
+    calculator = new SnapshotRegionSizeCalculator(TEST_UTIL.getConfiguration(), manifest);
+    regionSizes = calculator.calculateRegionSizes();
+    for (Map.Entry<String, Long> entry : regionSizes.entrySet()) {
+      assertTrue("Region size should be greater than 0.", entry.getValue() > 0);
+    }
+
+    TEST_UTIL.deleteTable(tableName);
+    admin.deleteSnapshot(snapshotName);
+  }
+
+  @Test
+  public void testCalculateRegionSizesMultiRegion() throws IOException {
     // Create a mock snapshot with a region and store files
     SnapshotTestingUtils.SnapshotMock snapshotMock =
       new SnapshotTestingUtils.SnapshotMock(conf, fs, rootDir);
@@ -70,15 +130,6 @@ public class TestSnapshotRegionSizeCalculator {
     snapshotDesc = builder.getSnapshotDescription();
     manifest = SnapshotManifest.open(conf, fs, snapshotDir, snapshotDesc);
 
-  }
-
-  @AfterClass
-  public static void tearDown() throws Exception {
-    fs.delete(rootDir, true);
-  }
-
-  @Test
-  public void testCalculateRegionSizes() throws IOException {
     SnapshotRegionSizeCalculator calculator =
       new SnapshotRegionSizeCalculator(TEST_UTIL.getConfiguration(), manifest);
     Map<String, Long> regionSizes = calculator.calculateRegionSizes();
