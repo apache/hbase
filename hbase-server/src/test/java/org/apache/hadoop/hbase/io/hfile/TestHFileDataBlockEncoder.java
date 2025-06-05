@@ -238,7 +238,7 @@ public class TestHFileDataBlockEncoder {
         HFileDataBlockEncoder dbe = (diskAlgo == DataBlockEncoding.NONE)
           ? NoOpDataBlockEncoder.INSTANCE
           : new HFileDataBlockEncoderImpl(diskAlgo);
-        configurations.add(new Object[] { dbe, new Boolean(includesMemstoreTS) });
+        configurations.add(new Object[] { dbe, includesMemstoreTS });
       }
     }
 
