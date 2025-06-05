@@ -403,7 +403,7 @@ public class TestWALSplit {
   private Path createRecoveredEditsPathForRegion() throws IOException {
     byte[] encoded = RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedNameAsBytes();
     Path p = WALSplitUtil.getRegionSplitEditsPath(TableName.META_TABLE_NAME, encoded, 1,
-      FILENAME_BEING_SPLIT, TMPDIRNAME, conf);
+      FILENAME_BEING_SPLIT, TMPDIRNAME, conf, 0L);
     return p;
   }
 
