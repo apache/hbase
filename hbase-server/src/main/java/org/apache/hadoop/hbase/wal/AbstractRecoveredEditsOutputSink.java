@@ -55,9 +55,14 @@ abstract class AbstractRecoveredEditsOutputSink extends OutputSink {
   /** Returns a writer that wraps a {@link WALProvider.Writer} and its Path. Caller should close. */
   protected RecoveredEditsWriter createRecoveredEditsWriter(TableName tableName, byte[] region,
     long seqId) throws IOException {
+    // If multiple worker are splitting a WAL at a same time, both should use unique file name to
+    // avoid conflict
+    long workerStartCode =
+      walSplitter.rsServices != null ? walSplitter.rsServices.getServerName().getStartCode() : 0L;
     Path regionEditsPath = getRegionSplitEditsPath(tableName, region, seqId,
       walSplitter.getFileBeingSplit().getPath().getName(), walSplitter.getTmpDirName(),
-      walSplitter.conf);
+      walSplitter.conf, workerStartCode);
+
     if (walSplitter.walFS.exists(regionEditsPath)) {
       LOG.warn("Found old edits file. It could be the "
         + "result of a previous failed split attempt. Deleting " + regionEditsPath + ", length="
@@ -111,6 +116,11 @@ abstract class AbstractRecoveredEditsOutputSink extends OutputSink {
       // TestHLogSplit#testThreading is an example.
       if (walSplitter.walFS.exists(editsWriter.path)) {
         if (!walSplitter.walFS.rename(editsWriter.path, dst)) {
+          // We only rename editsWriter if dst does not exist, still if rename fails and dst exist
+          // with equal or more entries, we can delete the editsWriter file.
+          // It happens if two RS was splitting the same WAL and both tried to rename at the same
+          // time. See HBASE-28951 for more details.
+          if (deleteTmpIfDstHasNoLessEntries(editsWriter, dst)) return dst;
           final String errorMsg =
             "Failed renaming recovered edits " + editsWriter.path + " to " + dst;
           updateStatusWithMsg(errorMsg);
@@ -128,6 +138,18 @@ abstract class AbstractRecoveredEditsOutputSink extends OutputSink {
       return null;
     }
     return dst;
+  }
+
+  private boolean deleteTmpIfDstHasNoLessEntries(RecoveredEditsWriter editsWriter, Path dst)
+    throws IOException {
+    if (walSplitter.walFS.exists(dst) && !isDstHasFewerEntries(editsWriter, dst)) {
+      if (!walSplitter.walFS.delete(editsWriter.path, false)) {
+        LOG.warn("Failed deleting of {}", editsWriter.path);
+        throw new IOException("Failed deleting of " + editsWriter.path);
+      }
+      return true;
+    }
+    return false;
   }
 
   private boolean closeRecoveredEditsWriter(RecoveredEditsWriter editsWriter,
@@ -188,18 +210,7 @@ abstract class AbstractRecoveredEditsOutputSink extends OutputSink {
   // delete the one with fewer wal entries
   private void deleteOneWithFewerEntries(RecoveredEditsWriter editsWriter, Path dst)
     throws IOException {
-    long dstMinLogSeqNum = -1L;
-    try (WALStreamReader reader =
-      walSplitter.getWalFactory().createStreamReader(walSplitter.walFS, dst)) {
-      WAL.Entry entry = reader.next();
-      if (entry != null) {
-        dstMinLogSeqNum = entry.getKey().getSequenceId();
-      }
-    } catch (EOFException e) {
-      LOG.debug("Got EOF when reading first WAL entry from {}, an empty or broken WAL file?", dst,
-        e);
-    }
-    if (editsWriter.minLogSeqNum < dstMinLogSeqNum) {
+    if (isDstHasFewerEntries(editsWriter, dst)) {
       LOG.warn("Found existing old edits file. It could be the result of a previous failed"
         + " split attempt or we have duplicated wal entries. Deleting " + dst + ", length="
         + walSplitter.walFS.getFileStatus(dst).getLen());
@@ -216,6 +227,22 @@ abstract class AbstractRecoveredEditsOutputSink extends OutputSink {
         throw new IOException("Failed deleting of " + editsWriter.path);
       }
     }
+  }
+
+  private boolean isDstHasFewerEntries(RecoveredEditsWriter editsWriter, Path dst)
+    throws IOException {
+    long dstMinLogSeqNum = -1L;
+    try (WALStreamReader reader =
+      walSplitter.getWalFactory().createStreamReader(walSplitter.walFS, dst)) {
+      WAL.Entry entry = reader.next();
+      if (entry != null) {
+        dstMinLogSeqNum = entry.getKey().getSequenceId();
+      }
+    } catch (EOFException e) {
+      LOG.debug("Got EOF when reading first WAL entry from {}, an empty or broken WAL file?", dst,
+        e);
+    }
+    return editsWriter.minLogSeqNum < dstMinLogSeqNum;
   }
 
   /**
