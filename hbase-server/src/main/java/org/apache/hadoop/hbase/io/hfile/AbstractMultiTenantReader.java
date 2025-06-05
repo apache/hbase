@@ -94,9 +94,6 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
   private int tenantIndexMaxChunkSize = SectionIndexManager.DEFAULT_MAX_CHUNK_SIZE;
   private final boolean prefetchEnabled;
   
-  // Partial key optimization
-  private int commonPrefixLength = -1; // -1 means not computed yet
-  
   /**
    * Constructor for multi-tenant reader
    * 
@@ -889,128 +886,11 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
   }
 
   /**
-   * Find all tenant sections that could potentially match a partial row key.
-   * This is used when the client provides a partial row key that doesn't have
-   * enough information to definitively determine the tenant ID.
-   * 
-   * @param partialRowKey The partial row key
-   * @return An array of tenant section IDs that could match the partial key
-   */
-  protected byte[][] findSectionsForPartialKey(byte[] partialRowKey) {
-    if (partialRowKey == null || partialRowKey.length == 0) {
-      // For empty key, return all sections
-      return getAllTenantSectionIds();
-    }
-    
-    // Special case: If the partial key is longer than needed to identify tenant,
-    // we can use regular tenant extraction
-    DefaultTenantExtractor defaultExtractor = getDefaultExtractor();
-    if (defaultExtractor != null) {
-      int neededLength = defaultExtractor.getPrefixLength();
-      if (partialRowKey.length >= neededLength) {
-        // We have enough information for exact tenant identification
-        LOG.debug("Partial key contains full tenant information, using exact tenant lookup");
-        // Create a dummy cell to extract tenant section ID
-        Cell dummyCell = createDummyCellFromKey(partialRowKey);
-        byte[] tenantSectionId = tenantExtractor.extractTenantSectionId(dummyCell);
-        return new byte[][] { tenantSectionId };
-      }
-    }
-    
-    // Optimize: If all sections share a common prefix, we can quickly filter
-    if (commonPrefixLength == -1) {
-      computeCommonPrefixLength();
-    }
-    
-    if (commonPrefixLength > 0 && partialRowKey.length >= commonPrefixLength) {
-      // Check if the partial key matches the common prefix
-      boolean matchesCommon = true;
-      for (int i = 0; i < commonPrefixLength && i < partialRowKey.length; i++) {
-        byte firstSectionByte = sectionIds.get(0).get()[i];
-        if (partialRowKey[i] != firstSectionByte) {
-          matchesCommon = false;
-          break;
-        }
-      }
-      
-      if (!matchesCommon) {
-        // Partial key doesn't match common prefix - no sections will match
-        LOG.debug("Partial key doesn't match common prefix, returning empty result");
-        return new byte[0][];
-      }
-    }
-    
-    // For partial keys without complete tenant identification, find all
-    // potential matching sections
-    LOG.debug("Finding sections that could contain row key starting with: {}", 
-              org.apache.hadoop.hbase.util.Bytes.toStringBinary(partialRowKey));
-    
-    // Build candidate list based on prefix matching
-    return findPotentialTenantSectionsForPartialKey(partialRowKey);
-  }
-  
-  /**
-   * Compute the length of the common prefix shared by all sections
-   */
-  private void computeCommonPrefixLength() {
-    if (sectionIds.isEmpty()) {
-      commonPrefixLength = 0;
-      return;
-    }
-    
-    if (sectionIds.size() == 1) {
-      // Only one section, common prefix is the entire section ID
-      commonPrefixLength = sectionIds.get(0).get().length;
-      return;
-    }
-    
-    // Compare first and last section IDs to find common prefix
-    byte[] first = sectionIds.get(0).get();
-    byte[] last = sectionIds.get(sectionIds.size() - 1).get();
-    
-    int minLength = Math.min(first.length, last.length);
-    commonPrefixLength = 0;
-    
-    for (int i = 0; i < minLength; i++) {
-      if (first[i] == last[i]) {
-        commonPrefixLength++;
-      } else {
-        break;
-      }
-    }
-    
-    LOG.debug("Computed common prefix length: {} bytes", commonPrefixLength);
-  }
-  
-  /**
-   * Create a dummy cell from a partial row key for tenant extraction
-   * 
-   * @param rowKey The row key to use
-   * @return A cell using the provided row key
-   */
-  private Cell createDummyCellFromKey(byte[] rowKey) {
-    // Create a KeyValue with the given row key and empty family/qualifier for tenant extraction
-    return new KeyValue(rowKey, HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY);
-  }
-  
-  /**
-   * Get the default tenant extractor if it's the current implementation
-   * 
-   * @return The default tenant extractor, or null if using a custom implementation
-   */
-  private DefaultTenantExtractor getDefaultExtractor() {
-    if (tenantExtractor instanceof DefaultTenantExtractor) {
-      return (DefaultTenantExtractor) tenantExtractor;
-    }
-    return null;
-  }
-  
-  /**
    * Get all tenant section IDs present in the file
    * 
    * @return An array of all tenant section IDs
    */
-  protected byte[][] getAllTenantSectionIds() {
+  public byte[][] getAllTenantSectionIds() {
     byte[][] allIds = new byte[sectionLocations.size()][];
     int i = 0;
     for (ImmutableBytesWritable key : sectionLocations.keySet()) {
@@ -1018,231 +898,20 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
     }
     return allIds;
   }
-  
-  /**
-   * Find all tenant sections that could potentially match a partial row key.
-   * This implements the core logic to search for matching sections.
-   * 
-   * @param partialRowKey The partial row key
-   * @return An array of tenant section IDs that could match the partial key
-   */
-  private byte[][] findPotentialTenantSectionsForPartialKey(byte[] partialRowKey) {
-    // In order to handle partial keys, determine if the partial key
-    // gives us any prefix information that can narrow down the sections
-    DefaultTenantExtractor defaultExtractor = getDefaultExtractor();
-    
-    if (defaultExtractor != null) {
-      // For the default extractor, we know the prefix length
-      int prefixLength = defaultExtractor.getPrefixLength();
-      
-      // Extract the partial prefix information we have
-      int availablePrefixLength = Math.min(partialRowKey.length, prefixLength);
-      if (availablePrefixLength <= 0) {
-        LOG.debug("No prefix information available, must scan all sections");
-        return getAllTenantSectionIds();
-      }
-      
-      // Extract the partial prefix we have (always from beginning of row)
-      byte[] partialPrefix = new byte[availablePrefixLength];
-      System.arraycopy(partialRowKey, 0, partialPrefix, 0, availablePrefixLength);
-      LOG.debug("Using partial prefix for section filtering: {}", 
-                org.apache.hadoop.hbase.util.Bytes.toStringBinary(partialPrefix));
-      
-      // Find all sections whose prefix starts with the partial prefix
-      return findSectionsWithMatchingPrefix(partialPrefix, availablePrefixLength);
-    } else {
-      // With custom tenant extractors, we can't make assumptions about the structure
-      // We need to include all sections
-      LOG.debug("Using custom tenant extractor, must scan all sections");
-      return getAllTenantSectionIds();
-    }
-  }
-  
-  /**
-   * Find all sections whose tenant ID starts with the given partial prefix
-   * 
-   * @param partialPrefix The partial prefix to match
-   * @param prefixLength The length of the partial prefix
-   * @return An array of tenant section IDs that match the partial prefix
-   */
-  private byte[][] findSectionsWithMatchingPrefix(byte[] partialPrefix, int prefixLength) {
-    java.util.List<byte[]> matchingSections = new java.util.ArrayList<>();
-    
-    // Scan all sections and check for prefix match
-    for (ImmutableBytesWritable key : sectionLocations.keySet()) {
-      byte[] sectionId = key.copyBytes();
-      // Check if this section's ID starts with the partial prefix
-      if (startsWith(sectionId, partialPrefix, prefixLength)) {
-        LOG.debug("Section ID {} matches partial prefix {}", 
-                  org.apache.hadoop.hbase.util.Bytes.toStringBinary(sectionId),
-                  org.apache.hadoop.hbase.util.Bytes.toStringBinary(partialPrefix));
-        matchingSections.add(sectionId);
-      }
-    }
-    
-    LOG.debug("Found {} sections matching partial prefix", matchingSections.size());
-    return matchingSections.toArray(new byte[matchingSections.size()][]);
-  }
-  
-  /**
-   * Check if an array starts with the given prefix
-   * 
-   * @param array The array to check
-   * @param prefix The prefix to check for
-   * @param prefixLength The length of the prefix
-   * @return true if the array starts with the prefix
-   */
-  private boolean startsWith(byte[] array, byte[] prefix, int prefixLength) {
-    if (array.length < prefixLength) {
-      return false;
-    }
-    
-    for (int i = 0; i < prefixLength; i++) {
-      if (array[i] != prefix[i]) {
-        return false;
-      }
-    }
-    
-    return true;
-  }
-  
-  /**
-   * Get a scanner for scanning with a partial row key.
-   * This creates a scanner that will scan all sections that could potentially
-   * match the partial row key.
-   * 
-   * @param conf Configuration to use
-   * @param cacheBlocks Whether to cache blocks
-   * @param pread Whether to use positional read
-   * @param isCompaction Whether this is for a compaction
-   * @param partialRowKey The partial row key to scan for
-   * @return A scanner that will scan all potentially matching sections
-   */
-  public HFileScanner getScannerForPartialKey(Configuration conf, boolean cacheBlocks, 
-      boolean pread, boolean isCompaction, byte[] partialRowKey) {
-    return new PartialKeyMultiTenantScanner(conf, cacheBlocks, pread, isCompaction, partialRowKey);
-  }
 
   /**
-   * Scanner implementation for multi-tenant HFiles that handles partial row keys
-   * by scanning across multiple tenant sections.
+   * Get cache statistics for monitoring
+   * @return A map of cache statistics
    */
-  protected class PartialKeyMultiTenantScanner extends MultiTenantScanner {
-    private final byte[] partialRowKey;
-    private final byte[][] candidateSectionIds;
-    private int currentSectionIndex;
-    
-    public PartialKeyMultiTenantScanner(Configuration conf, boolean cacheBlocks, 
-        boolean pread, boolean isCompaction, byte[] partialRowKey) {
-      super(conf, cacheBlocks, pread, isCompaction);
-      this.partialRowKey = partialRowKey;
-      this.candidateSectionIds = findSectionsForPartialKey(partialRowKey);
-      this.currentSectionIndex = 0;
-      LOG.debug("Created PartialKeyMultiTenantScanner with {} candidate sections", 
-                candidateSectionIds.length);
-    }
-    
-    @Override
-    public boolean seekTo() throws IOException {
-      if (candidateSectionIds.length == 0) {
-        return false;
-      }
-      
-      // Start with the first candidate section
-      return seekToNextCandidateSection(0);
-    }
-    
-    @Override
-    public int seekTo(ExtendedCell key) throws IOException {
-      // If we have a complete key, use the parent implementation
-      if (key != null) {
-        return super.seekTo(key);
-      }
-      
-      // Otherwise, start a partial key scan
-      if (seekTo()) {
-        // Successfully seeked to first position
-        return 0;
-      }
-      return -1;
-    }
-    
-    /**
-     * Seek to the next candidate section starting from the given index
-     * 
-     * @param startIndex The index to start from
-     * @return true if successfully seeked to a section
-     * @throws IOException If an error occurs
-     */
-    private boolean seekToNextCandidateSection(int startIndex) throws IOException {
-      for (int i = startIndex; i < candidateSectionIds.length; i++) {
-        currentSectionIndex = i;
-        byte[] sectionId = candidateSectionIds[i];
-        LOG.debug("Attempting to seek to section {} (index {})", 
-                 org.apache.hadoop.hbase.util.Bytes.toStringBinary(sectionId), i);
-        
-        // Try to seek to this section
-        SectionReader sectionReader = getSectionReader(sectionId);
-        if (sectionReader != null) {
-          currentTenantSectionId = sectionId;
-          currentScanner = sectionReader.getScanner(conf, cacheBlocks, pread, isCompaction);
-          
-          // If we have a partial row key, try to seek to it
-          if (partialRowKey != null && partialRowKey.length > 0) {
-            // Create a KeyValue with the partial row key to seek to
-            KeyValue seekKey = new KeyValue(partialRowKey, HConstants.EMPTY_BYTE_ARRAY, 
-                                           HConstants.EMPTY_BYTE_ARRAY);
-            
-            // Try to seek to or just before the partial key position
-            int seekResult = currentScanner.seekTo(seekKey);
-            if (seekResult >= 0) {
-              // Found an exact or after match
-              LOG.debug("Successfully seeked to position for partial key in section {}", 
-                       org.apache.hadoop.hbase.util.Bytes.toStringBinary(sectionId));
-              seeked = true;
-              return true;
-            } else if (currentScanner.seekTo()) {
-              // If direct seek fails, try from the beginning of the section
-              LOG.debug("Partial key seek failed, but successfully seeked to first position in section {}", 
-                       org.apache.hadoop.hbase.util.Bytes.toStringBinary(sectionId));
-              seeked = true;
-              return true;
-            } else {
-              LOG.debug("Failed to seek to any position in section {}", 
-                       org.apache.hadoop.hbase.util.Bytes.toStringBinary(sectionId));
-            }
-          } else {
-            // For empty partial key, just seek to the start of the section
-            if (currentScanner.seekTo()) {
-              seeked = true;
-              return true;
-            }
-          }
-        } else {
-          LOG.debug("Could not get section reader for section {}", 
-                   org.apache.hadoop.hbase.util.Bytes.toStringBinary(sectionId));
-        }
-      }
-      
-      // No more sections to try
-      return false;
-    }
-    
-    @Override
-    public boolean next() throws IOException {
-      if (!seeked) {
-        return seekTo();
-      }
-      
-      // Try to advance within the current section
-      boolean hasNext = currentScanner.next();
-      if (hasNext) {
-        return true;
-      }
-      
-      // Try to move to the next section
-      return seekToNextCandidateSection(currentSectionIndex + 1);
-    }
+  public Map<String, Long> getCacheStats() {
+    Map<String, Long> stats = new HashMap<>();
+    stats.put("cacheSize", sectionReaderCache.size());
+    stats.put("cacheHitCount", sectionReaderCache.stats().hitCount());
+    stats.put("cacheMissCount", sectionReaderCache.stats().missCount());
+    stats.put("cacheLoadCount", sectionReaderCache.stats().loadCount());
+    stats.put("cacheEvictionCount", sectionReaderCache.stats().evictionCount());
+    stats.put("totalSections", (long) sectionLocations.size());
+    return stats;
   }
 
   /**
@@ -1252,14 +921,9 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
   @Override
   public Optional<ExtendedCell> getFirstKey() {
     try {
-      // Get all section IDs in sorted order
-      byte[][] sectionIds = getAllTenantSectionIds();
-      if (sectionIds.length == 0) {
-        return Optional.empty();
-      }
-      
       // Get the first section and try to read its first key
-      for (byte[] sectionId : sectionIds) {
+      for (ImmutableBytesWritable sectionKey : sectionLocations.keySet()) {
+        byte[] sectionId = sectionKey.get();
         try {
           SectionReader sectionReader = getSectionReader(sectionId);
           HFileReaderImpl reader = sectionReader.getReader();
@@ -1288,17 +952,16 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
   @Override
   public Optional<ExtendedCell> getLastKey() {
     try {
-      // Get all section IDs in sorted order
-      byte[][] sectionIds = getAllTenantSectionIds();
-      if (sectionIds.length == 0) {
-        return Optional.empty();
+      // Get the last section and try to read its last key
+      // Since LinkedHashMap maintains insertion order, get the last section
+      ImmutableBytesWritable lastSectionKey = null;
+      for (ImmutableBytesWritable sectionKey : sectionLocations.keySet()) {
+        lastSectionKey = sectionKey;
       }
       
-      // Get the last section and try to read its last key
-      // Iterate backwards to find the last available key
-      for (int i = sectionIds.length - 1; i >= 0; i--) {
-        byte[] sectionId = sectionIds[i];
+      if (lastSectionKey != null) {
         try {
+          byte[] sectionId = lastSectionKey.get();
           SectionReader sectionReader = getSectionReader(sectionId);
           HFileReaderImpl reader = sectionReader.getReader();
           Optional<ExtendedCell> lastKey = reader.getLastKey();
@@ -1306,9 +969,25 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
             return lastKey;
           }
         } catch (IOException e) {
-          LOG.warn("Failed to get last key from section {}, trying previous section", 
-                   Bytes.toString(sectionId), e);
-          // Continue to previous section
+          LOG.warn("Failed to get last key from last section, trying all sections backwards", e);
+          
+          // Fallback: try all sections in reverse order
+          List<ImmutableBytesWritable> sectionKeys = new ArrayList<>(sectionLocations.keySet());
+          for (int i = sectionKeys.size() - 1; i >= 0; i--) {
+            byte[] sectionId = sectionKeys.get(i).get();
+            try {
+              SectionReader sectionReader = getSectionReader(sectionId);
+              HFileReaderImpl reader = sectionReader.getReader();
+              Optional<ExtendedCell> lastKey = reader.getLastKey();
+              if (lastKey.isPresent()) {
+                return lastKey;
+              }
+            } catch (IOException ex) {
+              LOG.warn("Failed to get last key from section {}, trying previous section", 
+                       Bytes.toString(sectionId), ex);
+              // Continue to previous section
+            }
+          }
         }
       }
       
@@ -1317,20 +996,5 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
       LOG.error("Failed to get last key from multi-tenant HFile", e);
       return Optional.empty();
     }
-  }
-
-  /**
-   * Get cache statistics for monitoring
-   * @return A map of cache statistics
-   */
-  public Map<String, Long> getCacheStats() {
-    Map<String, Long> stats = new HashMap<>();
-    stats.put("cacheSize", sectionReaderCache.size());
-    stats.put("cacheHitCount", sectionReaderCache.stats().hitCount());
-    stats.put("cacheMissCount", sectionReaderCache.stats().missCount());
-    stats.put("cacheLoadCount", sectionReaderCache.stats().loadCount());
-    stats.put("cacheEvictionCount", sectionReaderCache.stats().evictionCount());
-    stats.put("totalSections", (long) sectionLocations.size());
-    return stats;
   }
 } 

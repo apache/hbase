@@ -423,14 +423,6 @@ public class TestMultiTenantHFileWriterIntegration {
   }
   
   /**
-   * Verify data using HBase GET operations with a provided connection.
-   */
-  private void verifyDataWithGet(Connection conn) throws IOException {
-    LOG.info("Verifying data using GET operations with provided connection");
-    doVerifyDataWithGet(conn);
-  }
-  
-  /**
    * Verify data using a full table SCAN.
    * This tests scanning across all tenant sections in the multi-tenant HFile.
    */
@@ -469,14 +461,6 @@ public class TestMultiTenantHFileWriterIntegration {
         }
       }
     }
-  }
-  
-  /**
-   * Verify data using a full table SCAN with a provided connection.
-   */
-  private void verifyDataWithScan(Connection conn) throws IOException {
-    LOG.info("Verifying data using full table SCAN with provided connection");
-    doVerifyDataWithScan(conn);
   }
   
   /**
@@ -521,14 +505,6 @@ public class TestMultiTenantHFileWriterIntegration {
   }
   
   /**
-   * Verify data using tenant-specific SCAN operations with a provided connection.
-   */
-  private void verifyDataWithTenantSpecificScans(Connection conn) throws IOException {
-    LOG.info("Verifying data using tenant-specific SCAN operations with provided connection");
-    doVerifyDataWithTenantSpecificScans(conn);
-  }
-  
-  /**
    * Verify edge cases and cross-tenant isolation.
    * This tests that tenant boundaries are properly enforced and no data leakage occurs.
    */
@@ -567,14 +543,6 @@ public class TestMultiTenantHFileWriterIntegration {
         }
       }
     }
-  }
-  
-  /**
-   * Verify edge cases and cross-tenant isolation with a provided connection.
-   */
-  private void verifyEdgeCasesAndCrossTenantIsolation(Connection conn) throws IOException {
-    LOG.info("Verifying edge cases and cross-tenant isolation with provided connection");
-    doVerifyEdgeCasesAndCrossTenantIsolation(conn);
   }
   
   /**
