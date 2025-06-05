@@ -71,7 +71,7 @@ public class SnapshotRegionSizeCalculator {
   public long getRegionSize(String encodedRegionName) {
     Long size = regionSizes.get(encodedRegionName);
     if (size == null) {
-      LOG.debug("Unknown region:" + encodedRegionName);
+      LOG.debug("Unknown or empty region:" + encodedRegionName);
       return 0;
     } else {
       return size;
