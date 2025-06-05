@@ -17,8 +17,9 @@
  */
 package org.apache.hadoop.hbase.client.metrics;
 
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -40,35 +41,44 @@ public class ScanMetricsRegionInfo {
   public static final ScanMetricsRegionInfo EMPTY_SCAN_METRICS_REGION_INFO =
     new ScanMetricsRegionInfo(null, null);
 
-  private final Pair<String, ServerName> regionAndServerName;
+  private final String encodedRegionName;
+  private final ServerName serverName;
 
   ScanMetricsRegionInfo(String encodedRegionName, ServerName serverName) {
-    this.regionAndServerName = new Pair<>(encodedRegionName, serverName);
+    this.encodedRegionName = encodedRegionName;
+    this.serverName = serverName;
   }
 
   @Override
   public boolean equals(Object obj) {
-    if (!(obj instanceof ScanMetricsRegionInfo)) {
+    if (!(obj instanceof ScanMetricsRegionInfo other)) {
       return false;
     }
-    return regionAndServerName.equals(((ScanMetricsRegionInfo) obj).regionAndServerName);
+    return new EqualsBuilder()
+      .append(encodedRegionName, other.encodedRegionName)
+      .append(serverName, other.serverName)
+      .isEquals();
   }
 
   @Override
   public int hashCode() {
-    return regionAndServerName.hashCode();
+    return new HashCodeBuilder(17, 37)
+      .append(encodedRegionName)
+      .append(serverName)
+      .toHashCode();
   }
 
   @Override
   public String toString() {
-    return regionAndServerName.toString();
+    return getClass().getSimpleName() + " [encodedRegionName=" + encodedRegionName
+      + ", serverName=" + serverName + "]";
   }
 
   public String getEncodedRegionName() {
-    return regionAndServerName.getFirst();
+    return encodedRegionName;
   }
 
   public ServerName getServerName() {
-    return regionAndServerName.getSecond();
+    return serverName;
   }
 }

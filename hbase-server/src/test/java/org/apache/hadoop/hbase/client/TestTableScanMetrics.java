@@ -138,6 +138,23 @@ public class TestTableScanMetrics extends FromClientSideBase {
   }
 
   @Test
+  public void testCoEnableAndCoDisableScanMetricsAndScanMetricsByRegion() throws Exception {
+    Scan scan = generateScan(Bytes.toBytes("xxx1"), Bytes.toBytes("zzz1"));
+    Assert.assertFalse(scan.isScanMetricsEnabled());
+    Assert.assertFalse(scan.isScanMetricsByRegionEnabled());
+
+    // Assert enabling scan metrics by region enables scan metrics also
+    scan.setEnableScanMetricsByRegion(true);
+    Assert.assertTrue(scan.isScanMetricsEnabled());
+    Assert.assertTrue(scan.isScanMetricsByRegionEnabled());
+
+    // Assert disabling scan metrics disables scan metrics by region
+    scan.setScanMetricsEnabled(false);
+    Assert.assertFalse(scan.isScanMetricsEnabled());
+    Assert.assertFalse(scan.isScanMetricsByRegionEnabled());
+  }
+
+  @Test
   public void testScanMetricsDisabled() throws Exception {
     Scan scan = generateScan(Bytes.toBytes("xxx1"), Bytes.toBytes("zzz1"));
     ScanMetrics scanMetrics = assertScannedRowsAndGetScanMetrics(scan, 3);
@@ -179,7 +196,6 @@ public class TestTableScanMetrics extends FromClientSideBase {
   @Test
   public void testScanMetricsByRegionForSingleRegionScan() throws Exception {
     Scan scan = generateScan(Bytes.toBytes("xxx1"), Bytes.toBytes("xxx1"));
-    scan.setScanMetricsEnabled(true);
     scan.setEnableScanMetricsByRegion(true);
     int expectedRowsScanned = 1;
     ScanMetrics scanMetrics = assertScannedRowsAndGetScanMetrics(scan, expectedRowsScanned);
@@ -207,7 +223,6 @@ public class TestTableScanMetrics extends FromClientSideBase {
   @Test
   public void testScanMetricsByRegionForMultiRegionScan() throws Exception {
     Scan scan = generateScan(EMPTY_BYTE_ARRAY, EMPTY_BYTE_ARRAY);
-    scan.setScanMetricsEnabled(true);
     scan.setEnableScanMetricsByRegion(true);
     int expectedRowsScanned = 3;
     ScanMetrics scanMetrics = assertScannedRowsAndGetScanMetrics(scan, expectedRowsScanned);
@@ -237,7 +252,6 @@ public class TestTableScanMetrics extends FromClientSideBase {
   @Test
   public void testScanMetricsByRegionReset() throws Exception {
     Scan scan = generateScan(Bytes.toBytes("xxx1"), Bytes.toBytes("zzz1"));
-    scan.setScanMetricsEnabled(true);
     scan.setEnableScanMetricsByRegion(true);
     int expectedRowsScanned = 3;
     ScanMetrics scanMetrics = assertScannedRowsAndGetScanMetrics(scan, expectedRowsScanned);
@@ -287,7 +301,6 @@ public class TestTableScanMetrics extends FromClientSideBase {
       // Trigger two concurrent threads one of which scans the table and other periodically
       // collects the scan metrics (along with resetting the counters to 0).
       Scan scan = generateScan(EMPTY_BYTE_ARRAY, EMPTY_BYTE_ARRAY);
-      scan.setScanMetricsEnabled(true);
       scan.setEnableScanMetricsByRegion(true);
       scan.setCaching(2);
       try (ResultScanner rs = table.getScanner(scan)) {
@@ -319,7 +332,6 @@ public class TestTableScanMetrics extends FromClientSideBase {
       // Collect scan metrics by region from single thread. Assert that concurrent scan
       // and metrics collection works as expected.
       scan = generateScan(EMPTY_BYTE_ARRAY, EMPTY_BYTE_ARRAY);
-      scan.setScanMetricsEnabled(true);
       scan.setEnableScanMetricsByRegion(true);
       scan.setCaching(2);
       try (ResultScanner rs = table.getScanner(scan)) {
@@ -375,7 +387,6 @@ public class TestTableScanMetrics extends FromClientSideBase {
 
       // Initialize scan with maxResultSize as size of 50 rows.
       Scan scan = generateScan(bbb, ddc);
-      scan.setScanMetricsEnabled(true);
       scan.setEnableScanMetricsByRegion(true);
       scan.setMaxResultSize(8000);
 
@@ -443,7 +454,6 @@ public class TestTableScanMetrics extends FromClientSideBase {
 
       // Initialize scan
       Scan scan = generateScan(bbb, ccb);
-      scan.setScanMetricsEnabled(true);
       scan.setEnableScanMetricsByRegion(true);
       scan.setMaxResultSize(8000);
 
@@ -514,7 +524,6 @@ public class TestTableScanMetrics extends FromClientSideBase {
 
       // Initialize scan
       Scan scan = generateScan(bbb, ddc);
-      scan.setScanMetricsEnabled(true);
       scan.setEnableScanMetricsByRegion(true);
       scan.setMaxResultSize(8000);
 

@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -178,7 +179,6 @@ public class TestAsyncTableScanMetrics {
     Scan scan = new Scan();
     scan.withStartRow(Bytes.toBytes("zzz1"), true);
     scan.withStopRow(Bytes.toBytes("zzz1"), true);
-    scan.setScanMetricsEnabled(true);
     scan.setEnableScanMetricsByRegion(true);
     Pair<List<Result>, ScanMetrics> pair = method.scan(scan);
     List<Result> results = pair.getFirst();
@@ -207,7 +207,6 @@ public class TestAsyncTableScanMetrics {
   @Test
   public void testScanMetricsByRegionForMultiRegionScan() throws Exception {
     Scan scan = new Scan();
-    scan.setScanMetricsEnabled(true);
     scan.setEnableScanMetricsByRegion(true);
     Pair<List<Result>, ScanMetrics> pair = method.scan(scan);
     List<Result> results = pair.getFirst();

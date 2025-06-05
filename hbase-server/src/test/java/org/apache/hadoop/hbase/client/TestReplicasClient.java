@@ -643,7 +643,6 @@ public class TestReplicasClient {
 
       // Explicitly read replica 0
       Scan scan = new Scan();
-      scan.setScanMetricsEnabled(true);
       scan.setEnableScanMetricsByRegion(true);
       scan.withStartRow(b1, true);
       scan.withStopRow(b1, true);
@@ -654,7 +653,6 @@ public class TestReplicasClient {
       // Read from region replica
       SlowMeCopro.getPrimaryCdl().set(new CountDownLatch(1));
       scan = new Scan();
-      scan.setScanMetricsEnabled(true);
       scan.setEnableScanMetricsByRegion(true);
       scan.withStartRow(b1, true);
       scan.withStopRow(b1, true);

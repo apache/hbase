@@ -228,7 +228,6 @@ public class TestClientSideRegionScanner {
   private void testScanMetricByRegion(ScanMetrics scanMetrics) throws IOException {
     Configuration copyConf = new Configuration(conf);
     Scan scan = new Scan();
-    scan.setScanMetricsEnabled(true);
     scan.setEnableScanMetricsByRegion(true);
     TEST_UTIL.getAdmin().flush(TableName.META_TABLE_NAME);
     try (ClientSideRegionScanner clientSideRegionScanner =

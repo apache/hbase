@@ -95,7 +95,6 @@ public class TestAsyncTableScanMetricsWithScannerSuspending {
     Scan scan = new Scan();
     scan.withStartRow(Bytes.toBytes("xxx1"), true);
     scan.withStopRow(Bytes.toBytes("zzz1"), true);
-    scan.setScanMetricsEnabled(true);
     scan.setEnableScanMetricsByRegion(true);
     scan.setMaxResultSize(1);
 

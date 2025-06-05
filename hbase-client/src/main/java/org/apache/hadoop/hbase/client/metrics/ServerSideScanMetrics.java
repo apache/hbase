@@ -125,7 +125,7 @@ public class ServerSideScanMetrics {
   }
 
   /**
-   * Get all of the values combined for all the regions since the last time this function was
+   * Get all the values combined for all the regions since the last time this function was
    * called. Calling this function will reset all AtomicLongs in the instance back to 0.
    * @return A Map of String -> Long for metrics
    */
@@ -134,7 +134,7 @@ public class ServerSideScanMetrics {
   }
 
   /**
-   * Get all of the values combined for all the regions. If reset is true, we will reset all the
+   * Get all the values combined for all the regions. If reset is true, we will reset all the
    * AtomicLongs back to 0.
    * @param reset whether to reset the AtomicLongs to 0.
    * @return A Map of String -> Long for metrics
