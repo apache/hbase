@@ -65,11 +65,11 @@ public final class ScanMetricsUtil {
   }
 
   /**
-   * Get all of the values. If reset is true, we will reset the all AtomicLongs back to 0.
+   * Get all the values. If reset is true, we will reset the all AtomicLongs back to 0.
    * @param reset whether to reset the AtomicLongs to 0.
    * @return A Map of String -> Long for metrics
    */
-  static Map<String, Long> getMetricsMap(Map<String, AtomicLong> counters, boolean reset) {
+  static Map<String, Long> collectMetrics(Map<String, AtomicLong> counters, boolean reset) {
     Map<String, Long> metricsSnapshot = new HashMap<>();
     for (Map.Entry<String, AtomicLong> e : counters.entrySet()) {
       long value = reset ? e.getValue().getAndSet(0) : e.getValue().get();

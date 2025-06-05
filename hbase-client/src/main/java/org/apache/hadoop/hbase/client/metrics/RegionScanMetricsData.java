@@ -47,14 +47,14 @@ public class RegionScanMetricsData {
     ScanMetricsUtil.addToCounter(counters, counterName, delta);
   }
 
-  Map<String, Long> getMetricsMap(boolean reset) {
-    return ScanMetricsUtil.getMetricsMap(counters, reset);
+  Map<String, Long> collectMetrics(boolean reset) {
+    return ScanMetricsUtil.collectMetrics(counters, reset);
   }
 
   @Override
   public String toString() {
-    return "EncodedRegionName=" + scanMetricsRegionInfo.getEncodedRegionName() + "," + "ServerName="
-      + scanMetricsRegionInfo.getServerName() + "," + counters;
+    return getClass().getSimpleName() + "[" + scanMetricsRegionInfo + "," + "Counters="
+      + counters + "]";
   }
 
   /**

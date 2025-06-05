@@ -676,7 +676,7 @@ public class TestReplicasClient {
         Assert.assertFalse(r.isEmpty());
       }
       Map<ScanMetricsRegionInfo, Map<String, Long>> scanMetricsByRegion =
-        rs.getScanMetrics().getMetricsMapByRegion(false);
+        rs.getScanMetrics().collectMetricsByRegion(false);
       Assert.assertEquals(1, scanMetricsByRegion.size());
       for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry : scanMetricsByRegion
         .entrySet()) {

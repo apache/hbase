@@ -173,7 +173,7 @@ public class TestTableScanMetrics extends FromClientSideBase {
     Assert.assertEquals(expectedRowsScanned, scanMetrics.countOfRegions.get());
     Assert.assertEquals(expectedRowsScanned,
       (long) metricsMap.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME));
-    Assert.assertTrue(scanMetrics.getMetricsMapByRegion().isEmpty());
+    Assert.assertTrue(scanMetrics.collectMetricsByRegion().isEmpty());
   }
 
   @Test
@@ -205,7 +205,7 @@ public class TestTableScanMetrics extends FromClientSideBase {
     Assert.assertEquals(expectedRowsScanned,
       (long) metricsMap.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME));
     Map<ScanMetricsRegionInfo, Map<String, Long>> scanMetricsByRegion =
-      scanMetrics.getMetricsMapByRegion(false);
+      scanMetrics.collectMetricsByRegion(false);
     Assert.assertEquals(expectedRowsScanned, scanMetricsByRegion.size());
     for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry : scanMetricsByRegion
       .entrySet()) {
@@ -230,7 +230,7 @@ public class TestTableScanMetrics extends FromClientSideBase {
     Assert.assertEquals(NUM_REGIONS, scanMetrics.countOfRegions.get());
     Assert.assertEquals(expectedRowsScanned, scanMetrics.countOfRowsScanned.get());
     Map<ScanMetricsRegionInfo, Map<String, Long>> scanMetricsByRegion =
-      scanMetrics.getMetricsMapByRegion(false);
+      scanMetrics.collectMetricsByRegion(false);
     Assert.assertEquals(NUM_REGIONS, scanMetricsByRegion.size());
     int rowsScannedAcrossAllRegions = 0;
     for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry : scanMetricsByRegion
@@ -259,7 +259,7 @@ public class TestTableScanMetrics extends FromClientSideBase {
 
     // Retrieve scan metrics by region as a map and reset
     Map<ScanMetricsRegionInfo, Map<String, Long>> scanMetricsByRegion =
-      scanMetrics.getMetricsMapByRegion();
+      scanMetrics.collectMetricsByRegion();
     // We scan 1 row per region
     Assert.assertEquals(expectedRowsScanned, scanMetricsByRegion.size());
     for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry : scanMetricsByRegion
@@ -273,7 +273,7 @@ public class TestTableScanMetrics extends FromClientSideBase {
     }
 
     // Scan metrics have already been reset and now all counters should be 0
-    scanMetricsByRegion = scanMetrics.getMetricsMapByRegion(false);
+    scanMetricsByRegion = scanMetrics.collectMetricsByRegion(false);
     // Size of map should be same as earlier
     Assert.assertEquals(expectedRowsScanned, scanMetricsByRegion.size());
     for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry : scanMetricsByRegion
@@ -322,7 +322,7 @@ public class TestTableScanMetrics extends FromClientSideBase {
         executor.execute(metricsCollector);
         latch.await();
         // Merge leftover scan metrics
-        mergeScanMetricsByRegion(scanMetrics.getMetricsMapByRegion(),
+        mergeScanMetricsByRegion(scanMetrics.collectMetricsByRegion(),
           concurrentScanMetricsByRegion);
         Assert.assertEquals(HBaseTestingUtil.ROWS.length, rowsScanned.get());
       }
@@ -342,7 +342,7 @@ public class TestTableScanMetrics extends FromClientSideBase {
           rowsScanned++;
         }
         Assert.assertEquals(HBaseTestingUtil.ROWS.length, rowsScanned);
-        expectedScanMetricsByRegion = scanMetrics.getMetricsMapByRegion();
+        expectedScanMetricsByRegion = scanMetrics.collectMetricsByRegion();
         for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry : expectedScanMetricsByRegion
           .entrySet()) {
           ScanMetricsRegionInfo scanMetricsRegionInfo = entry.getKey();
@@ -403,7 +403,7 @@ public class TestTableScanMetrics extends FromClientSideBase {
 
         scanMetrics = rs.getScanMetrics();
         Map<ScanMetricsRegionInfo, Map<String, Long>> scanMetricsByRegion =
-          scanMetrics.getMetricsMapByRegion();
+          scanMetrics.collectMetricsByRegion();
         long actualCountOfRowsScannedInMovedRegion = 0;
         Set<ServerName> serversForMovedRegion = new HashSet<>();
 
@@ -469,7 +469,7 @@ public class TestTableScanMetrics extends FromClientSideBase {
 
         scanMetrics = rs.getScanMetrics();
         Map<ScanMetricsRegionInfo, Map<String, Long>> scanMetricsByRegion =
-          scanMetrics.getMetricsMapByRegion();
+          scanMetrics.collectMetricsByRegion();
 
         long actualCountOfRowsScannedInRegion = 0;
         long rpcRetiesCount = 0;
@@ -541,7 +541,7 @@ public class TestTableScanMetrics extends FromClientSideBase {
 
         scanMetrics = rs.getScanMetrics();
         Map<ScanMetricsRegionInfo, Map<String, Long>> scanMetricsByRegion =
-          scanMetrics.getMetricsMapByRegion();
+          scanMetrics.collectMetricsByRegion();
         long actualCountOfRowsScannedInRegions = 0;
         Set<String> mergeRegionsRes = new HashSet<>();
         boolean containsMergedRegionInScanMetrics = false;
@@ -579,7 +579,7 @@ public class TestTableScanMetrics extends FromClientSideBase {
         try {
           while (latch.getCount() > 0) {
             Map<ScanMetricsRegionInfo, Map<String, Long>> scanMetricsByRegion =
-              scanMetrics.getMetricsMapByRegion();
+              scanMetrics.collectMetricsByRegion();
             mergeScanMetricsByRegion(scanMetricsByRegion, scanMetricsByRegionCollection);
             Thread.sleep(RAND.nextInt(10));
           }

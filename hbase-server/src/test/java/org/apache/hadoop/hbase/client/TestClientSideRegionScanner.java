@@ -211,7 +211,7 @@ public class TestClientSideRegionScanner {
       }
       Map<String, Long> metricsMap = scanMetricsFromScanner.getMetricsMap(false);
       Assert.assertTrue(metricsMap.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME) > 0);
-      Assert.assertTrue(scanMetricsFromScanner.getMetricsMapByRegion(false).isEmpty());
+      Assert.assertTrue(scanMetricsFromScanner.collectMetricsByRegion(false).isEmpty());
     }
   }
 
@@ -239,7 +239,7 @@ public class TestClientSideRegionScanner {
         Assert.assertSame(scanMetrics, scanMetricsFromScanner);
       }
       Map<ScanMetricsRegionInfo, Map<String, Long>> scanMetricsByRegion =
-        scanMetricsFromScanner.getMetricsMapByRegion();
+        scanMetricsFromScanner.collectMetricsByRegion();
       Assert.assertEquals(1, scanMetricsByRegion.size());
       for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry : scanMetricsByRegion
         .entrySet()) {

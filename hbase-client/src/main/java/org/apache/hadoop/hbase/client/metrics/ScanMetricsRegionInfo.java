@@ -29,8 +29,8 @@ import org.apache.yetus.audience.InterfaceAudience;
  * region details. <br>
  * <br>
  * Instance of this class serves as key in the Map returned by
- * {@link ServerSideScanMetrics#getMetricsMapByRegion()} or
- * {@link ServerSideScanMetrics#getMetricsMapByRegion(boolean)}.
+ * {@link ServerSideScanMetrics#collectMetricsByRegion()} or
+ * {@link ServerSideScanMetrics#collectMetricsByRegion(boolean)}.
  */
 @InterfaceAudience.Public
 public class ScanMetricsRegionInfo {
@@ -70,8 +70,8 @@ public class ScanMetricsRegionInfo {
 
   @Override
   public String toString() {
-    return getClass().getSimpleName() + " [encodedRegionName=" + encodedRegionName
-      + ", serverName=" + serverName + "]";
+    return getClass().getSimpleName() + "[encodedRegionName=" + encodedRegionName
+      + ",serverName=" + serverName + "]";
   }
 
   public String getEncodedRegionName() {

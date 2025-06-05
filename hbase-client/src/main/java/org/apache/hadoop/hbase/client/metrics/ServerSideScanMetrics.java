@@ -140,7 +140,7 @@ public class ServerSideScanMetrics {
    * @return A Map of String -> Long for metrics
    */
   public Map<String, Long> getMetricsMap(boolean reset) {
-    return ImmutableMap.copyOf(ScanMetricsUtil.getMetricsMap(counters, reset));
+    return ImmutableMap.copyOf(ScanMetricsUtil.collectMetrics(counters, reset));
   }
 
   /**
@@ -148,8 +148,8 @@ public class ServerSideScanMetrics {
    * function will reset all region level scan metrics counters back to 0.
    * @return A Map of region -> (Map of metric name -> Long) for metrics
    */
-  public Map<ScanMetricsRegionInfo, Map<String, Long>> getMetricsMapByRegion() {
-    return getMetricsMapByRegion(true);
+  public Map<ScanMetricsRegionInfo, Map<String, Long>> collectMetricsByRegion() {
+    return collectMetricsByRegion(true);
   }
 
   /**
@@ -158,7 +158,7 @@ public class ServerSideScanMetrics {
    * @param reset whether to reset region level scan metric counters to 0.
    * @return A Map of region -> (Map of metric name -> Long) for metrics
    */
-  public Map<ScanMetricsRegionInfo, Map<String, Long>> getMetricsMapByRegion(boolean reset) {
+  public Map<ScanMetricsRegionInfo, Map<String, Long>> collectMetricsByRegion(boolean reset) {
     // Create a builder
     ImmutableMap.Builder<ScanMetricsRegionInfo, Map<String, Long>> builder = ImmutableMap.builder();
     for (RegionScanMetricsData regionScanMetricsData : this.regionScanMetricsData) {
@@ -169,15 +169,15 @@ public class ServerSideScanMetrics {
         continue;
       }
       builder.put(regionScanMetricsData.getScanMetricsRegionInfo(),
-        regionScanMetricsData.getMetricsMap(reset));
+        regionScanMetricsData.collectMetrics(reset));
     }
     return builder.build();
   }
 
   @Override
   public String toString() {
-    return counters + regionScanMetricsData.stream().map(RegionScanMetricsData::toString)
-      .collect(Collectors.joining(";"));
+    return counters + "," + regionScanMetricsData.stream().map(RegionScanMetricsData::toString)
+      .collect(Collectors.joining(","));
   }
 
   /**

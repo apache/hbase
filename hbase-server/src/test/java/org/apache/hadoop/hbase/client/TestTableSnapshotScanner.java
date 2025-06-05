@@ -299,7 +299,7 @@ public class TestTableSnapshotScanner {
     ScanMetrics scanMetrics = createTableSnapshotScannerAndGetScanMetrics(true, true, bbc);
     Assert.assertNotNull(scanMetrics);
     Map<ScanMetricsRegionInfo, Map<String, Long>> scanMetricsByRegion =
-      scanMetrics.getMetricsMapByRegion();
+      scanMetrics.collectMetricsByRegion();
     Assert.assertEquals(1, scanMetricsByRegion.size());
     for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry : scanMetricsByRegion
       .entrySet()) {
@@ -317,7 +317,7 @@ public class TestTableSnapshotScanner {
     ScanMetrics scanMetrics = createTableSnapshotScannerAndGetScanMetrics(true, true, yyy);
     Assert.assertNotNull(scanMetrics);
     Map<ScanMetricsRegionInfo, Map<String, Long>> scanMetricsByRegion =
-      scanMetrics.getMetricsMapByRegion();
+      scanMetrics.collectMetricsByRegion();
     for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry : scanMetricsByRegion
       .entrySet()) {
       ScanMetricsRegionInfo scanMetricsRegionInfo = entry.getKey();

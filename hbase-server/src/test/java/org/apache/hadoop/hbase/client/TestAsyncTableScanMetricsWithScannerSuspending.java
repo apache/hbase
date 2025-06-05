@@ -144,7 +144,7 @@ public class TestAsyncTableScanMetricsWithScannerSuspending {
     assertEquals(6, (long) overallMetrics.get(RPC_CALLS_METRIC_NAME));
     // Assert scan metrics by region were collected for the region scanned
     Map<ScanMetricsRegionInfo, Map<String, Long>> scanMetricsByRegion =
-      scanMetrics.getMetricsMapByRegion(false);
+      scanMetrics.collectMetricsByRegion(false);
     assertEquals(3, scanMetricsByRegion.size());
     for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry : scanMetricsByRegion
       .entrySet()) {

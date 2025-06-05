@@ -44,7 +44,6 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -171,7 +170,7 @@ public class TestAsyncTableScanMetrics {
     assertEquals(bytes, scanMetrics.countOfBytesInResults.get());
     assertEquals(NUM_REGIONS, scanMetrics.countOfRPCcalls.get());
     // Assert scan metrics have not been collected by region
-    assertTrue(scanMetrics.getMetricsMapByRegion().isEmpty());
+    assertTrue(scanMetrics.collectMetricsByRegion().isEmpty());
   }
 
   @Test
@@ -190,7 +189,7 @@ public class TestAsyncTableScanMetrics {
     assertEquals(1, scanMetrics.countOfRPCcalls.get());
     // Assert scan metrics by region were collected for the region scanned
     Map<ScanMetricsRegionInfo, Map<String, Long>> scanMetricsByRegion =
-      scanMetrics.getMetricsMapByRegion(false);
+      scanMetrics.collectMetricsByRegion(false);
     assertEquals(1, scanMetricsByRegion.size());
     for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry : scanMetricsByRegion
       .entrySet()) {
@@ -222,7 +221,7 @@ public class TestAsyncTableScanMetrics {
     assertEquals(NUM_REGIONS, scanMetrics.countOfRPCcalls.get());
     // Assert scan metrics by region were collected for the region scanned
     Map<ScanMetricsRegionInfo, Map<String, Long>> scanMetricsByRegion =
-      scanMetrics.getMetricsMapByRegion(false);
+      scanMetrics.collectMetricsByRegion(false);
     assertEquals(NUM_REGIONS, scanMetricsByRegion.size());
     int rowsScannedAcrossAllRegions = 0;
     for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry : scanMetricsByRegion
