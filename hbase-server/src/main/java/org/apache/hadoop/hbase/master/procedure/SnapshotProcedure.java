@@ -62,6 +62,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.S
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.SnapshotState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.Type;
 
 /**
  * A procedure used to take snapshot on tables.
@@ -143,12 +144,15 @@ public class SnapshotProcedure extends AbstractStateMachineTableProcedure<Snapsh
           setNextState(SnapshotState.SNAPSHOT_WRITE_SNAPSHOT_INFO);
           return Flow.HAS_MORE_STATE;
         case SNAPSHOT_WRITE_SNAPSHOT_INFO:
-          SnapshotDescriptionUtils.writeSnapshotInfo(snapshot, workingDir, workingDirFS);
           TableState tableState =
             env.getMasterServices().getTableStateManager().getTableState(snapshotTable);
           if (tableState.isEnabled()) {
+            SnapshotDescriptionUtils.writeSnapshotInfo(snapshot, workingDir, workingDirFS);
             setNextState(SnapshotState.SNAPSHOT_SNAPSHOT_ONLINE_REGIONS);
           } else if (tableState.isDisabled()) {
+            // Set the snapshot type to DISABLED as the table is in DISABLED state
+            snapshot = snapshot.toBuilder().setType(Type.DISABLED).build();
+            SnapshotDescriptionUtils.writeSnapshotInfo(snapshot, workingDir, workingDirFS);
             setNextState(SnapshotState.SNAPSHOT_SNAPSHOT_CLOSED_REGIONS);
           }
           return Flow.HAS_MORE_STATE;
