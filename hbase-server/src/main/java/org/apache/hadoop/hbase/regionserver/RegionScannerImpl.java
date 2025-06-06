@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.FilterWrapper;
 import org.apache.hadoop.hbase.filter.IncompatibleFilterException;
+import org.apache.hadoop.hbase.io.hfile.HFileReaderImpl;
 import org.apache.hadoop.hbase.ipc.CallerDisconnectedException;
 import org.apache.hadoop.hbase.ipc.RpcCall;
 import org.apache.hadoop.hbase.ipc.RpcCallback;
@@ -144,6 +145,8 @@ public class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
     } finally {
       region.smallestReadPointCalcLock.unlock(ReadPointCalculationLock.LockType.RECORDING_LOCK);
     }
+    HFileReaderImpl.bytesReadFromFs.get().set(0);
+    HFileReaderImpl.bytesReadFromCache.get().set(0);
     initializeScanners(scan, additionalScanners);
   }
 

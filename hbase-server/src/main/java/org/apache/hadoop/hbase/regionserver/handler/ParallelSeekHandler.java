@@ -19,9 +19,11 @@ package org.apache.hadoop.hbase.regionserver.handler;
 
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
+import org.apache.hadoop.hbase.io.hfile.HFileReaderImpl;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -38,20 +40,26 @@ public class ParallelSeekHandler extends EventHandler {
   private long readPoint;
   private CountDownLatch latch;
   private Throwable err = null;
+  private final AtomicInteger bytesReadFromFs;
+  private final AtomicInteger bytesReadFromCache;
 
   public ParallelSeekHandler(KeyValueScanner scanner, ExtendedCell keyValue, long readPoint,
-    CountDownLatch latch) {
+    CountDownLatch latch, AtomicInteger bytesReadFromFs, AtomicInteger bytesReadFromCache) {
     super(null, EventType.RS_PARALLEL_SEEK);
     this.scanner = scanner;
     this.keyValue = keyValue;
     this.readPoint = readPoint;
     this.latch = latch;
+    this.bytesReadFromFs = bytesReadFromFs;
+    this.bytesReadFromCache = bytesReadFromCache;
   }
 
   @Override
   public void process() {
     try {
       scanner.seek(keyValue);
+      bytesReadFromFs.addAndGet(HFileReaderImpl.bytesReadFromFs.get().getAndSet(0));
+      bytesReadFromCache.addAndGet(HFileReaderImpl.bytesReadFromCache.get().getAndSet(0));
     } catch (IOException e) {
       LOG.error("", e);
       setErr(e);

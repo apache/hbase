@@ -1754,6 +1754,7 @@ public class HFileBlock implements Cacheable {
           headerBuf = HEAP.allocate(hdrSize);
           readAtOffset(is, headerBuf, hdrSize, false, offset, pread);
           headerBuf.rewind();
+          HFileReaderImpl.bytesReadFromFs.get().addAndGet(hdrSize);
         }
         onDiskSizeWithHeader = getOnDiskSizeWithHeader(headerBuf, checksumSupport);
       }
@@ -1801,6 +1802,8 @@ public class HFileBlock implements Cacheable {
         boolean readNextHeader = readAtOffset(is, onDiskBlock,
           onDiskSizeWithHeader - preReadHeaderSize, true, offset + preReadHeaderSize, pread);
         onDiskBlock.rewind(); // in case of moving position when copying a cached header
+        int bytesRead = (onDiskSizeWithHeader - preReadHeaderSize) + (readNextHeader ? hdrSize : 0);
+        HFileReaderImpl.bytesReadFromFs.get().addAndGet(bytesRead);
 
         // the call to validateChecksum for this block excludes the next block header over-read, so
         // no reason to delay extracting this value.

@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.BloomFilterMetrics;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.io.hfile.HFileReaderImpl;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext.ReaderType;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
@@ -394,6 +395,8 @@ public class HStoreFile implements StoreFile {
     long readahead = fileInfo.isNoReadahead() ? 0L : -1L;
     ReaderContext context = fileInfo.createReaderContext(false, readahead, ReaderType.PREAD);
     fileInfo.initHFileInfo(context);
+    HFileReaderImpl.bytesReadFromFs.get().addAndGet(
+      fileInfo.getHFileInfo().getTrailer().getTrailerSize());
     StoreFileReader reader = fileInfo.preStoreFileReaderOpen(context, cacheConf);
     if (reader == null) {
       reader = fileInfo.createReader(context, cacheConf);

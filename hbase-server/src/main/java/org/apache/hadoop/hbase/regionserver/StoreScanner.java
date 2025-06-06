@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.NavigableSet;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.IntConsumer;
 import org.apache.hadoop.hbase.Cell;
@@ -41,6 +42,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.conf.ConfigKey;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.io.hfile.HFileReaderImpl;
 import org.apache.hadoop.hbase.ipc.RpcCall;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.regionserver.ScannerContext.LimitScope;
@@ -167,6 +169,9 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   protected final long readPt;
   private boolean topChanged = false;
 
+  private int bytesReadFromFs = 0;
+  private int bytesReadFromCache = 0;
+
   /** An internal constructor. */
   private StoreScanner(HStore store, Scan scan, ScanInfo scanInfo, int numColumns, long readPt,
     boolean cacheBlocks, ScanType scanType) {
@@ -276,6 +281,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       addCurrentScanners(scanners);
       // Combine all seeked scanners with a heap
       resetKVHeap(scanners, comparator);
+      bytesReadFromFs += HFileReaderImpl.bytesReadFromFs.get().getAndSet(0);
+      bytesReadFromCache += HFileReaderImpl.bytesReadFromCache.get().getAndSet(0);
     } catch (IOException e) {
       clearAndClose(scanners);
       // remove us from the HStore#changedReaderObservers here or we'll have no chance to
@@ -1214,9 +1221,12 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     int storeFileScannerCount = scanners.size();
     CountDownLatch latch = new CountDownLatch(storeFileScannerCount);
     List<ParallelSeekHandler> handlers = new ArrayList<>(storeFileScannerCount);
+    AtomicInteger bytesReadFromFs = HFileReaderImpl.bytesReadFromFs.get();
+    AtomicInteger bytesReadFromCache = HFileReaderImpl.bytesReadFromCache.get();
     for (KeyValueScanner scanner : scanners) {
       if (scanner instanceof StoreFileScanner) {
-        ParallelSeekHandler seekHandler = new ParallelSeekHandler(scanner, kv, this.readPt, latch);
+        ParallelSeekHandler seekHandler = new ParallelSeekHandler(scanner, kv, this.readPt, latch,
+          bytesReadFromFs, bytesReadFromCache);
         executor.submit(seekHandler);
         handlers.add(seekHandler);
       } else {
