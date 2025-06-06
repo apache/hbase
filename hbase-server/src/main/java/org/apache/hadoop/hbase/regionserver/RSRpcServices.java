@@ -83,6 +83,7 @@ import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.VersionInfoUtil;
+import org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics;
 import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
 import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
 import org.apache.hadoop.hbase.exceptions.ScannerResetException;
@@ -3516,10 +3517,12 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
         if (trackMetrics) {
           // rather than increment yet another counter in StoreScanner, just set the value here
           // from block size progress before writing into the response
-          scannerContext.getMetrics().countOfBlockBytesScanned
-            .set(scannerContext.getBlockSizeProgress());
+          scannerContext.getMetrics().setCounter(
+            ServerSideScanMetrics.BLOCK_BYTES_SCANNED_KEY_METRIC_NAME,
+            scannerContext.getBlockSizeProgress());
           if (rpcCall != null) {
-            scannerContext.getMetrics().fsReadTime.set(rpcCall.getFsReadTime());
+            scannerContext.getMetrics().setCounter(ServerSideScanMetrics.FS_READ_TIME_METRIC_NAME,
+              rpcCall.getFsReadTime());
           }
           Map<String, Long> metrics = scannerContext.getMetrics().getMetricsMap();
           ScanMetrics.Builder metricBuilder = ScanMetrics.newBuilder();
