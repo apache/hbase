@@ -413,7 +413,7 @@ public class RestoreSnapshotHelper {
     ModifyRegionUtils.editRegions(exec, regions, new ModifyRegionUtils.RegionEditTask() {
       @Override
       public void editRegion(final RegionInfo hri) throws IOException {
-        HFileArchiver.archiveRegion(conf, fs, hri);
+        HFileArchiver.archiveRegion(conf, fs, hri, rootDir, tableDir);
       }
     });
   }
