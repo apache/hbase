@@ -59,4 +59,7 @@ public enum ThrottleType {
 
   /** Throttling based on the size of atomic write requests */
   ATOMIC_WRITE_SIZE,
+
+  /** Throttling based on the handler thread time in milliseconds used */
+  REQUEST_HANDLER_USAGE_MS,
 }

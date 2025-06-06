@@ -2461,6 +2461,8 @@ public final class ProtobufUtil {
         return ThrottleType.ATOMIC_REQUEST_NUMBER;
       case ATOMIC_WRITE_SIZE:
         return ThrottleType.ATOMIC_WRITE_SIZE;
+      case REQUEST_HANDLER_USAGE_MS:
+        return ThrottleType.REQUEST_HANDLER_USAGE_MS;
       default:
         throw new RuntimeException("Invalid ThrottleType " + proto);
     }
@@ -2496,6 +2498,8 @@ public final class ProtobufUtil {
         return QuotaProtos.ThrottleType.ATOMIC_REQUEST_NUMBER;
       case ATOMIC_WRITE_SIZE:
         return QuotaProtos.ThrottleType.ATOMIC_WRITE_SIZE;
+      case REQUEST_HANDLER_USAGE_MS:
+        return QuotaProtos.ThrottleType.REQUEST_HANDLER_USAGE_MS;
       default:
         throw new RuntimeException("Invalid ThrottleType " + type);
     }
