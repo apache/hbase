@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.util.BloomFilterChunk;
 import org.apache.hadoop.hbase.util.BloomFilterUtil;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Hash;
 import org.apache.hadoop.io.Writable;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -245,13 +244,8 @@ public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
       out.writeInt(VERSION);
 
       out.writeLong(getByteSize());
-      if (prevChunk != null) {
-        out.writeInt(prevChunk.getHashCount());
-        out.writeInt(prevChunk.getHashType());
-      } else {
-        out.writeInt(0);                    // No previous chunk
-        out.writeInt(Hash.MURMUR_HASH);     // Reasonable default hash type
-      }
+      out.writeInt(prevChunk.getHashCount());
+      out.writeInt(prevChunk.getHashType());
       out.writeLong(getKeyCount());
       out.writeLong(getMaxKeys());
 
