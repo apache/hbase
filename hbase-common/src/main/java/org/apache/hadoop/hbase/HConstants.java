@@ -1321,6 +1321,9 @@ public final class HConstants {
   public static final String CRYPTO_MANAGED_KEYS_PER_CUST_NAMESPACE_ACTIVE_KEY_COUNT =
     "hbase.crypto.managed_keys.per_cust_namespace.active_count";
   public static final int CRYPTO_MANAGED_KEYS_PER_CUST_NAMESPACE_ACTIVE_KEY_DEFAULT_COUNT = 1;
+  public static final String CRYPTO_MANAGED_KEYS_DYNAMIC_LOOKUP_ENABLED_CONF_KEY =
+    "hbase.crypto.managed_keys.dynamic_lookup.enabled";
+  public static final boolean CRYPTO_MANAGED_KEYS_DYNAMIC_LOOKUP_DEFAULT_ENABLED = true;
 
   /** Configuration key for setting RPC codec class name */
   public static final String RPC_CODEC_CONF_KEY = "hbase.client.rpc.codec";

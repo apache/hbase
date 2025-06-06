@@ -57,7 +57,7 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
 
   private MasterServices master = null;
 
-  private final ManagedKeysService managedKeysService = new KeymetaAdminServiceImpl();
+  private final ManagedKeysService managedKeysService = new KeyMetaAdminServiceImpl();
 
   /**
    * Starts the coprocessor by initializing the reference to the {@link org.apache.hadoop.hbase.master.MasterServices}
@@ -78,7 +78,7 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
   /**
    * Returns an iterable of the available coprocessor services, which includes the
    * {@link ManagedKeysService} implemented by
-   * {@link KeymetaServiceEndpoint.KeymetaAdminServiceImpl}.
+   * {@link KeymetaServiceEndpoint.KeyMetaAdminServiceImpl}.
    *
    * @return An iterable of the available coprocessor services.
    */
@@ -92,7 +92,7 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
    * interface, which provides the actual method implementations for enabling key management.
    */
   @VisibleForTesting
-  public class KeymetaAdminServiceImpl extends ManagedKeysService {
+  public class KeyMetaAdminServiceImpl extends ManagedKeysService {
 
     /**
      * Enables key management for a given tenant and namespace, as specified in the provided

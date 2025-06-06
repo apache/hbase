@@ -74,6 +74,16 @@ public abstract class KeyManagementBase {
   }
 
   /**
+   * A utility method for checking if dynamic lookup is enabled.
+   * @return true if dynamic lookup is enabled
+   */
+  protected boolean isDynamicLookupEnabled() {
+    return getServer().getConfiguration().getBoolean(
+      HConstants.CRYPTO_MANAGED_KEYS_DYNAMIC_LOOKUP_ENABLED_CONF_KEY,
+      HConstants.CRYPTO_MANAGED_KEYS_DYNAMIC_LOOKUP_DEFAULT_ENABLED);
+  }
+
+  /**
    * Check if key management is enabled, otherwise throw exception.
    * @throws IOException if key management is not enabled.
    */

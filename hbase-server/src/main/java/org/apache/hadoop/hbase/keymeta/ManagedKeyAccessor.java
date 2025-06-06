@@ -61,9 +61,11 @@ public class ManagedKeyAccessor extends KeyManagementBase {
       // 2. Check L2 cache.
       keyData = keymetaAccessor.getKey(key_cust, keyNamespace, keyMetadata);
       if (keyData == null) {
-        // 3. Check with Key Provider.
-        ManagedKeyProvider provider = getKeyProvider();
-        keyData = provider.unwrapKey(keyMetadata, wrappedKey);
+        // 3. If dynamic lookup is enabled, check with Key Provider.
+        if (isDynamicLookupEnabled()) {
+          ManagedKeyProvider provider = getKeyProvider();
+          keyData = provider.unwrapKey(keyMetadata, wrappedKey);
+        }
         if (keyData != null) {
           LOG.info("Got key data with status: {} and metadata: {} for prefix: {}",
             keyData.getKeyState(), keyData.getKeyMetadata(),
