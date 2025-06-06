@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.rest.client;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InterruptedIOException;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
@@ -28,13 +28,16 @@ import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.TableDescriptor;
-import org.apache.hadoop.hbase.rest.Constants;
+import org.apache.hadoop.hbase.rest.ProtobufHttpEntity;
 import org.apache.hadoop.hbase.rest.model.StorageClusterStatusModel;
 import org.apache.hadoop.hbase.rest.model.StorageClusterVersionModel;
 import org.apache.hadoop.hbase.rest.model.TableListModel;
 import org.apache.hadoop.hbase.rest.model.TableSchemaModel;
 import org.apache.hadoop.hbase.rest.model.VersionModel;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPut;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
@@ -42,6 +45,7 @@ public class RemoteAdmin {
 
   final Client client;
   final Configuration conf;
+  // This is never used in the server. Maybe it was for some proxy thing ???
   final String accessToken;
   final int maxRetries;
   final long sleepTime;
@@ -114,24 +118,27 @@ public class RemoteAdmin {
 
     int code = 0;
     for (int i = 0; i < maxRetries; i++) {
-      Response response = client.get(path.toString(), Constants.MIMETYPE_PROTOBUF);
-      code = response.getCode();
-      switch (code) {
-        case 200:
+      HttpGet get = new HttpGet(path.toString());
+      try (
+        CloseableHttpResponse response = client.execute(get, Client.ACCEPT_PROTOBUF_HEADER_ARR)) {
+        code = response.getStatusLine().getStatusCode();
+        switch (code) {
+          case 200:
 
-          VersionModel v = new VersionModel();
-          return (VersionModel) v.getObjectFromMessage(response.getBody());
-        case 404:
-          throw new IOException("REST version not found");
-        case 509:
-          try {
-            Thread.sleep(sleepTime);
-          } catch (InterruptedException e) {
-            throw (InterruptedIOException) new InterruptedIOException().initCause(e);
-          }
-          break;
-        default:
-          throw new IOException("get request to " + path.toString() + " returned " + code);
+            VersionModel v = new VersionModel();
+            return (VersionModel) v.getObjectFromMessage(response.getEntity().getContent());
+          case 404:
+            throw new IOException("REST version not found");
+          case 509:
+            try {
+              Thread.sleep(sleepTime);
+            } catch (InterruptedException e) {
+              throw (InterruptedIOException) new InterruptedIOException().initCause(e);
+            }
+            break;
+          default:
+            throw new IOException("get request to " + path.toString() + " returned " + code);
+        }
       }
     }
     throw new IOException("get request to " + path.toString() + " timed out");
@@ -155,23 +162,27 @@ public class RemoteAdmin {
 
     int code = 0;
     for (int i = 0; i < maxRetries; i++) {
-      Response response = client.get(path.toString(), Constants.MIMETYPE_PROTOBUF);
-      code = response.getCode();
-      switch (code) {
-        case 200:
-          StorageClusterStatusModel s = new StorageClusterStatusModel();
-          return (StorageClusterStatusModel) s.getObjectFromMessage(response.getBody());
-        case 404:
-          throw new IOException("Cluster version not found");
-        case 509:
-          try {
-            Thread.sleep(sleepTime);
-          } catch (InterruptedException e) {
-            throw (InterruptedIOException) new InterruptedIOException().initCause(e);
-          }
-          break;
-        default:
-          throw new IOException("get request to " + path + " returned " + code);
+      HttpGet get = new HttpGet(path.toString());
+      try (
+        CloseableHttpResponse response = client.execute(get, Client.ACCEPT_PROTOBUF_HEADER_ARR)) {
+        code = response.getStatusLine().getStatusCode();
+        switch (code) {
+          case 200:
+            StorageClusterStatusModel s = new StorageClusterStatusModel();
+            return (StorageClusterStatusModel) s
+              .getObjectFromMessage(response.getEntity().getContent());
+          case 404:
+            throw new IOException("Cluster version not found");
+          case 509:
+            try {
+              Thread.sleep(sleepTime);
+            } catch (InterruptedException e) {
+              throw (InterruptedIOException) new InterruptedIOException().initCause(e);
+            }
+            break;
+          default:
+            throw new IOException("get request to " + path + " returned " + code);
+        }
       }
     }
     throw new IOException("get request to " + path + " timed out");
@@ -194,30 +205,32 @@ public class RemoteAdmin {
 
     int code = 0;
     for (int i = 0; i < maxRetries; i++) {
-      Response response = client.get(path.toString(), Constants.MIMETYPE_XML);
-      code = response.getCode();
-      switch (code) {
-        case 200:
-          try {
+      HttpGet get = new HttpGet(path.toString());
+      try (CloseableHttpResponse response = client.execute(get, Client.ACCEPT_XML_HEADER_ARR)) {
+        code = response.getStatusLine().getStatusCode();
+        switch (code) {
+          case 200:
+            try {
 
-            return (StorageClusterVersionModel) getUnmarsheller()
-              .unmarshal(getInputStream(response));
-          } catch (JAXBException jaxbe) {
+              return (StorageClusterVersionModel) getUnmarsheller()
+                .unmarshal(getInputStream(response.getEntity().getContent()));
+            } catch (JAXBException jaxbe) {
 
-            throw new IOException("Issue parsing StorageClusterVersionModel object in XML form: "
-              + jaxbe.getLocalizedMessage(), jaxbe);
-          }
-        case 404:
-          throw new IOException("Cluster version not found");
-        case 509:
-          try {
-            Thread.sleep(sleepTime);
-          } catch (InterruptedException e) {
-            throw (InterruptedIOException) new InterruptedIOException().initCause(e);
-          }
-          break;
-        default:
-          throw new IOException(path.toString() + " request returned " + code);
+              throw new IOException("Issue parsing StorageClusterVersionModel object in XML form: "
+                + jaxbe.getLocalizedMessage(), jaxbe);
+            }
+          case 404:
+            throw new IOException("Cluster version not found");
+          case 509:
+            try {
+              Thread.sleep(sleepTime);
+            } catch (InterruptedException e) {
+              throw (InterruptedIOException) new InterruptedIOException().initCause(e);
+            }
+            break;
+          default:
+            throw new IOException(path.toString() + " request returned " + code);
+        }
       }
     }
     throw new IOException("get request to " + path.toString() + " request timed out");
@@ -240,22 +253,25 @@ public class RemoteAdmin {
     path.append("exists");
     int code = 0;
     for (int i = 0; i < maxRetries; i++) {
-      Response response = client.get(path.toString(), Constants.MIMETYPE_PROTOBUF);
-      code = response.getCode();
-      switch (code) {
-        case 200:
-          return true;
-        case 404:
-          return false;
-        case 509:
-          try {
-            Thread.sleep(sleepTime);
-          } catch (InterruptedException e) {
-            throw (InterruptedIOException) new InterruptedIOException().initCause(e);
-          }
-          break;
-        default:
-          throw new IOException("get request to " + path.toString() + " returned " + code);
+      HttpGet get = new HttpGet(path.toString());
+      try (
+        CloseableHttpResponse response = client.execute(get, Client.ACCEPT_PROTOBUF_HEADER_ARR)) {
+        code = response.getStatusLine().getStatusCode();
+        switch (code) {
+          case 200:
+            return true;
+          case 404:
+            return false;
+          case 509:
+            try {
+              Thread.sleep(sleepTime);
+            } catch (InterruptedException e) {
+              throw (InterruptedIOException) new InterruptedIOException().initCause(e);
+            }
+            break;
+          default:
+            throw new IOException("get request to " + path.toString() + " returned " + code);
+        }
       }
     }
     throw new IOException("get request to " + path.toString() + " timed out");
@@ -279,21 +295,24 @@ public class RemoteAdmin {
     path.append("schema");
     int code = 0;
     for (int i = 0; i < maxRetries; i++) {
-      Response response =
-        client.put(path.toString(), Constants.MIMETYPE_PROTOBUF, model.createProtobufOutput());
-      code = response.getCode();
-      switch (code) {
-        case 201:
-          return;
-        case 509:
-          try {
-            Thread.sleep(sleepTime);
-          } catch (InterruptedException e) {
-            throw (InterruptedIOException) new InterruptedIOException().initCause(e);
-          }
-          break;
-        default:
-          throw new IOException("create request to " + path.toString() + " returned " + code);
+      HttpPut put = new HttpPut(path.toString());
+      put.setEntity(new ProtobufHttpEntity(model));
+      try (
+        CloseableHttpResponse response = client.execute(put, Client.ACCEPT_PROTOBUF_HEADER_ARR)) {
+        code = response.getStatusLine().getStatusCode();
+        switch (code) {
+          case 201:
+            return;
+          case 509:
+            try {
+              Thread.sleep(sleepTime);
+            } catch (InterruptedException e) {
+              throw (InterruptedIOException) new InterruptedIOException().initCause(e);
+            }
+            break;
+          default:
+            throw new IOException("create request to " + path.toString() + " returned " + code);
+        }
       }
     }
     throw new IOException("create request to " + path.toString() + " timed out");
@@ -325,20 +344,23 @@ public class RemoteAdmin {
     path.append("schema");
     int code = 0;
     for (int i = 0; i < maxRetries; i++) {
-      Response response = client.delete(path.toString());
-      code = response.getCode();
-      switch (code) {
-        case 200:
-          return;
-        case 509:
-          try {
-            Thread.sleep(sleepTime);
-          } catch (InterruptedException e) {
-            throw (InterruptedIOException) new InterruptedIOException().initCause(e);
-          }
-          break;
-        default:
-          throw new IOException("delete request to " + path.toString() + " returned " + code);
+      HttpGet get = new HttpGet(path.toString());
+      try (
+        CloseableHttpResponse response = client.execute(get, Client.ACCEPT_PROTOBUF_HEADER_ARR)) {
+        code = response.getStatusLine().getStatusCode();
+        switch (code) {
+          case 200:
+            return;
+          case 509:
+            try {
+              Thread.sleep(sleepTime);
+            } catch (InterruptedException e) {
+              throw (InterruptedIOException) new InterruptedIOException().initCause(e);
+            }
+            break;
+          default:
+            throw new IOException("delete request to " + path.toString() + " returned " + code);
+        }
       }
     }
     throw new IOException("delete request to " + path.toString() + " timed out");
@@ -361,23 +383,27 @@ public class RemoteAdmin {
     for (int i = 0; i < maxRetries; i++) {
       // Response response = client.get(path.toString(),
       // Constants.MIMETYPE_XML);
-      Response response = client.get(path.toString(), Constants.MIMETYPE_PROTOBUF);
-      code = response.getCode();
-      switch (code) {
-        case 200:
-          TableListModel t = new TableListModel();
-          return (TableListModel) t.getObjectFromMessage(response.getBody());
-        case 404:
-          throw new IOException("Table list not found");
-        case 509:
-          try {
-            Thread.sleep(sleepTime);
-          } catch (InterruptedException e) {
-            throw (InterruptedIOException) new InterruptedIOException().initCause(e);
-          }
-          break;
-        default:
-          throw new IOException("get request to " + path.toString() + " request returned " + code);
+      HttpGet get = new HttpGet(path.toString());
+      try (
+        CloseableHttpResponse response = client.execute(get, Client.ACCEPT_PROTOBUF_HEADER_ARR)) {
+        code = response.getStatusLine().getStatusCode();
+        switch (code) {
+          case 200:
+            TableListModel t = new TableListModel();
+            return (TableListModel) t.getObjectFromMessage(response.getEntity().getContent());
+          case 404:
+            throw new IOException("Table list not found");
+          case 509:
+            try {
+              Thread.sleep(sleepTime);
+            } catch (InterruptedException e) {
+              throw (InterruptedIOException) new InterruptedIOException().initCause(e);
+            }
+            break;
+          default:
+            throw new IOException(
+              "get request to " + path.toString() + " request returned " + code);
+        }
       }
     }
     throw new IOException("get request to " + path.toString() + " request timed out");
@@ -385,17 +411,17 @@ public class RemoteAdmin {
 
   /**
    * Convert the REST server's response to an XML reader.
-   * @param response The REST server's response.
+   * @param req Entity InputStream
    * @return A reader over the parsed XML document.
    * @throws IOException If the document fails to parse
    */
-  private XMLStreamReader getInputStream(Response response) throws IOException {
+  private XMLStreamReader getInputStream(InputStream is) throws IOException {
     try {
       // Prevent the parser from reading XMl with external entities defined
       XMLInputFactory xif = XMLInputFactory.newFactory();
       xif.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, false);
       xif.setProperty(XMLInputFactory.SUPPORT_DTD, false);
-      return xif.createXMLStreamReader(new ByteArrayInputStream(response.getBody()));
+      return xif.createXMLStreamReader(is);
     } catch (XMLStreamException e) {
       throw new IOException("Failed to parse XML", e);
     }
