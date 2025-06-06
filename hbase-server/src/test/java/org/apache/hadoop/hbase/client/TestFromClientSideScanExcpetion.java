@@ -97,11 +97,14 @@ public class TestFromClientSideScanExcpetion {
                                                                            // DNRIOE
   private static AtomicBoolean THROW_ONCE = new AtomicBoolean(true); // whether to only throw once
 
+  private static final AtomicBoolean SEEK_EXCEPTION_OCCURRED = new AtomicBoolean(false);
+
   private static void reset() {
     ON.set(false);
     REQ_COUNT.set(0);
     IS_DO_NOT_RETRY.set(false);
     THROW_ONCE.set(true);
+    SEEK_EXCEPTION_OCCURRED.set(false);
   }
 
   private static void inject() {
@@ -169,6 +172,15 @@ public class TestFromClientSideScanExcpetion {
         });
       }
       return newScanners;
+    }
+
+    @Override
+    protected List<KeyValueScanner> getScannersAndSeek(boolean reopenStoreFileReader)
+      throws IOException {
+      if (SEEK_EXCEPTION_OCCURRED.get() && !reopenStoreFileReader) {
+        throw new IOException("Injected exception");
+      }
+      return super.getScannersAndSeek(reopenStoreFileReader);
     }
   }
 
@@ -239,5 +251,27 @@ public class TestFromClientSideScanExcpetion {
       assertThat(e.getCause(), instanceOf(ScannerResetException.class));
     }
     assertTrue(REQ_COUNT.get() >= 3);
+  }
+
+  /**
+   * Tests the case when a StoreScanner throws an IOException due to HStoreFile instances having
+   * stale initialReader. The initialReader should be closed and reopened.
+   */
+  @Test(timeout = 5000)
+  public void testScannerReopenedWhenStoreFileSeekThrowsIOException() throws IOException {
+    reset();
+    TableName tableName = TableName.valueOf(name.getMethodName());
+    try (Table t = TEST_UTIL.createTable(tableName, FAMILY)) {
+      int rowCount = TEST_UTIL.loadTable(t, FAMILY, false);
+      TEST_UTIL.getAdmin().flush(tableName);
+
+      Scan scan = new Scan();
+      int actualRowCount = TEST_UTIL.countRows(t, scan.addColumn(FAMILY, FAMILY));
+      assertEquals(rowCount, actualRowCount);
+
+      SEEK_EXCEPTION_OCCURRED.set(true);
+      actualRowCount = TEST_UTIL.countRows(t, scan.addColumn(FAMILY, FAMILY));
+      assertEquals(rowCount, actualRowCount);
+    }
   }
 }
