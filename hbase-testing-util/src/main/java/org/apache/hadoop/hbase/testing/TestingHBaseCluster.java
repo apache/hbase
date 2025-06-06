@@ -136,19 +136,19 @@ public interface TestingHBaseCluster {
   List<ServerName> getRegionServerAddresses();
 
   /**
-   * Get the info port of the active master if there is one.
+   * Get the web UI address of the active master if there is one.
    */
-  Optional<Integer> getActiveMasterInfoPort();
+  Optional<String> getActiveMasterInfoAddress();
 
   /**
-   * Get the info port of the active NameNode if there is one.
+   * Get the web UI address of the active NameNode if there is one.
    */
-  Optional<Integer> getActiveNameNodeInfoPort();
+  Optional<String> getActiveNameNodeInfoAddress();
 
   /**
-   * Get the client port of the ZooKeeper if there is one.
+   * Get the 'hbase.zookeeper.quorum' configuration value for the ZooKeeper cluster.
    */
-  Optional<Integer> getActiveZooKeeperClientPort();
+  Optional<String> getZooKeeperQuorum();
 
   /**
    * Get the list of master addresses.

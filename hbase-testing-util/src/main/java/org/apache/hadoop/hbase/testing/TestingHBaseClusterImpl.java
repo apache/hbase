@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.testing;
 
+import static org.apache.hadoop.hbase.http.ServerConfigurationKeys.HBASE_SSL_ENABLED_KEY;
+
+import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -39,6 +42,7 @@ import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -223,23 +227,66 @@ class TestingHBaseClusterImpl implements TestingHBaseCluster {
   }
 
   @Override
-  public Optional<Integer> getActiveMasterInfoPort() {
-    return Optional.ofNullable(util.getMiniHBaseCluster().getMaster())
-      .map(m -> m.getConfiguration().getInt(HConstants.MASTER_INFO_PORT, 0))
-      .filter(port -> port > 0);
+  public Optional<String> getActiveMasterInfoAddress() {
+    final HMaster master = util.getMiniHBaseCluster().getMaster();
+
+    // No active master
+    if (master == null) {
+      return Optional.empty();
+    }
+
+    final Configuration conf = master.getConfiguration();
+    final int port = conf.getInt(HConstants.MASTER_INFO_PORT, 0);
+
+    // Web UI disabled
+    if (port <= 0) {
+      return Optional.empty();
+    }
+
+    final String protocol = conf.getBoolean(HBASE_SSL_ENABLED_KEY, false) ? "https" : "http";
+    final String hostname = master.getServerName().getHostname();
+    return Optional.of(String.format("%s://%s:%d", protocol, hostname, port));
   }
 
   @Override
-  public Optional<Integer> getActiveNameNodeInfoPort() {
-    return Stream.of(util.getDFSCluster().getNameNodeInfos()).map(i -> i.nameNode)
-      .filter(NameNode::isActiveState).map(nn -> nn.getHttpAddress().getPort())
-      .filter(port -> port > 0).findFirst();
+  public Optional<String> getActiveNameNodeInfoAddress() {
+    final MiniDFSCluster cluster = util.getDFSCluster();
+
+    // External DFS cluster
+    if (cluster == null) {
+      return Optional.empty();
+    }
+
+    final NameNode ann = Stream.of(cluster.getNameNodeInfos()).map(i -> i.nameNode)
+      .filter(NameNode::isActiveState).findFirst().orElse(null);
+
+    // No active NameNode
+    if (ann == null) {
+      return Optional.empty();
+    }
+
+    String protocol = "http";
+    InetSocketAddress address = ann.getHttpAddress();
+    if (address == null) {
+      protocol = "https";
+      address = ann.getHttpsAddress();
+    }
+
+    // Neither HTTP nor HTTPS address is available
+    if (address == null) {
+      return Optional.empty();
+    }
+
+    return Optional
+      .of(String.format("%s://%s:%d", protocol, address.getHostName(), address.getPort()));
   }
 
   @Override
-  public Optional<Integer> getActiveZooKeeperClientPort() {
-    return Optional.ofNullable(util.getZkCluster()).map(MiniZooKeeperCluster::getClientPort)
-      .filter(port -> port > 0);
+  public Optional<String> getZooKeeperQuorum() {
+    return Optional.ofNullable(util.getZkCluster())
+      .map(zk -> zk.getClientPortList().stream()
+        .map(port -> String.format("%s:%d", MiniZooKeeperCluster.HOST, port))
+        .collect(Collectors.joining(",")));
   }
 
   @Override

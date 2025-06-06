@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.regex.Pattern;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -165,8 +166,11 @@ public class TestTestingHBaseCluster {
 
   @Test
   public void testGetPorts() throws Exception {
-    assertTrue(CLUSTER.getActiveMasterInfoPort().isPresent());
-    assertTrue(CLUSTER.getActiveNameNodeInfoPort().isPresent());
-    assertTrue(CLUSTER.getActiveZooKeeperClientPort().isPresent());
+    final String addressPattern = "^https?://.*:[0-9]+$";
+    assertTrue(CLUSTER.getActiveMasterInfoAddress().map(a -> Pattern.matches(addressPattern, a))
+      .orElse(false));
+    assertTrue(CLUSTER.getActiveNameNodeInfoAddress().map(a -> Pattern.matches(addressPattern, a))
+      .orElse(false));
+    assertTrue(CLUSTER.getZooKeeperQuorum().isPresent());
   }
 }
