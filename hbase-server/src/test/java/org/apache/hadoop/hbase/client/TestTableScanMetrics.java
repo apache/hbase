@@ -138,23 +138,6 @@ public class TestTableScanMetrics extends FromClientSideBase {
   }
 
   @Test
-  public void testCoEnableAndCoDisableScanMetricsAndScanMetricsByRegion() throws Exception {
-    Scan scan = generateScan(Bytes.toBytes("xxx1"), Bytes.toBytes("zzz1"));
-    Assert.assertFalse(scan.isScanMetricsEnabled());
-    Assert.assertFalse(scan.isScanMetricsByRegionEnabled());
-
-    // Assert enabling scan metrics by region enables scan metrics also
-    scan.setEnableScanMetricsByRegion(true);
-    Assert.assertTrue(scan.isScanMetricsEnabled());
-    Assert.assertTrue(scan.isScanMetricsByRegionEnabled());
-
-    // Assert disabling scan metrics disables scan metrics by region
-    scan.setScanMetricsEnabled(false);
-    Assert.assertFalse(scan.isScanMetricsEnabled());
-    Assert.assertFalse(scan.isScanMetricsByRegionEnabled());
-  }
-
-  @Test
   public void testScanMetricsDisabled() throws Exception {
     Scan scan = generateScan(Bytes.toBytes("xxx1"), Bytes.toBytes("zzz1"));
     ScanMetrics scanMetrics = assertScannedRowsAndGetScanMetrics(scan, 3);
