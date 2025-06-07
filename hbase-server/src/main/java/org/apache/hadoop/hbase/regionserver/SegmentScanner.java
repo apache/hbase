@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.metrics.ThreadLocalScanMetrics;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -340,6 +341,8 @@ public class SegmentScanner implements KeyValueScanner {
     try {
       while (iter.hasNext()) {
         next = iter.next();
+        ThreadLocalScanMetrics.bytesReadFromMemstore.get().addAndGet(
+          PrivateCellUtil.estimatedSerializedSizeOf(next));
         if (next.getSequenceId() <= this.readPoint) {
           current = next;
           return;// skip irrelevant versions

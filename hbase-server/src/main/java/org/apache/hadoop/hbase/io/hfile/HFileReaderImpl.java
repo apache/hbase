@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.SizeCachedByteBufferKeyValue;
 import org.apache.hadoop.hbase.SizeCachedKeyValue;
 import org.apache.hadoop.hbase.SizeCachedNoTagsByteBufferKeyValue;
 import org.apache.hadoop.hbase.SizeCachedNoTagsKeyValue;
+import org.apache.hadoop.hbase.client.metrics.ThreadLocalScanMetrics;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -64,18 +65,6 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD")
 public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
-  public static final ThreadLocal<AtomicInteger> bytesReadFromCache = new ThreadLocal<>() {
-    @Override
-    protected AtomicInteger initialValue() {
-      return new AtomicInteger(0);
-    }
-  };
-  public static final ThreadLocal<AtomicInteger> bytesReadFromFs = new ThreadLocal<>() {
-    @Override
-    protected AtomicInteger initialValue() {
-      return new AtomicInteger(0);
-    }
-  };
   // This class is HFileReaderV3 + HFileReaderV2 + AbstractHFileReader all squashed together into
   // one file. Ditto for all the HFileReader.ScannerV? implementations. I was running up against
   // the MaxInlineLevel limit because too many tiers involved reading from an hfile. Was also hard
@@ -1345,7 +1334,8 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
                   + dataBlockEncoder.getDataBlockEncoding() + "), path=" + path);
               }
             }
-            bytesReadFromCache.get().addAndGet(cachedBlock.getOnDiskSizeWithHeader());
+            ThreadLocalScanMetrics.bytesReadFromBlockCache.get().addAndGet(
+              cachedBlock.getOnDiskSizeWithHeader());
             // Cache-hit. Return!
             return cachedBlock;
           }

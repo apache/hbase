@@ -39,10 +39,10 @@ import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.PrivateConstants;
 import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.metrics.ThreadLocalScanMetrics;
 import org.apache.hadoop.hbase.conf.ConfigKey;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.filter.Filter;
-import org.apache.hadoop.hbase.io.hfile.HFileReaderImpl;
 import org.apache.hadoop.hbase.ipc.RpcCall;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.regionserver.ScannerContext.LimitScope;
@@ -1216,12 +1216,12 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     int storeFileScannerCount = scanners.size();
     CountDownLatch latch = new CountDownLatch(storeFileScannerCount);
     List<ParallelSeekHandler> handlers = new ArrayList<>(storeFileScannerCount);
-    AtomicInteger bytesReadFromFs = HFileReaderImpl.bytesReadFromFs.get();
-    AtomicInteger bytesReadFromCache = HFileReaderImpl.bytesReadFromCache.get();
+    AtomicInteger bytesReadFromFs = ThreadLocalScanMetrics.bytesReadFromFs.get();
+    AtomicInteger bytesReadFromBlockCache = ThreadLocalScanMetrics.bytesReadFromBlockCache.get();
     for (KeyValueScanner scanner : scanners) {
       if (scanner instanceof StoreFileScanner) {
         ParallelSeekHandler seekHandler = new ParallelSeekHandler(scanner, kv, this.readPt, latch,
-          bytesReadFromFs, bytesReadFromCache);
+          bytesReadFromFs, bytesReadFromBlockCache);
         executor.submit(seekHandler);
         handlers.add(seekHandler);
       } else {

@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
+import org.apache.hadoop.hbase.client.metrics.ThreadLocalScanMetrics;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.BloomFilterMetrics;
@@ -395,7 +396,7 @@ public class HStoreFile implements StoreFile {
     long readahead = fileInfo.isNoReadahead() ? 0L : -1L;
     ReaderContext context = fileInfo.createReaderContext(false, readahead, ReaderType.PREAD);
     fileInfo.initHFileInfo(context);
-    HFileReaderImpl.bytesReadFromFs.get().addAndGet(
+    ThreadLocalScanMetrics.bytesReadFromFs.get().addAndGet(
       fileInfo.getHFileInfo().getTrailer().getTrailerSize());
     StoreFileReader reader = fileInfo.preStoreFileReaderOpen(context, cacheConf);
     if (reader == null) {
