@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.client.ClientInternalHelper;
 import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics;
 import org.apache.hadoop.hbase.filter.FilterWrapper;
 import org.apache.hadoop.hbase.filter.IncompatibleFilterException;
 import org.apache.hadoop.hbase.io.hfile.HFileReaderImpl;
@@ -95,6 +96,9 @@ public class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
 
   private RegionServerServices rsServices;
 
+  private int bytesReadFromFs = 0;
+  private int bytesReadFromCache = 0;
+
   @Override
   public RegionInfo getRegionInfo() {
     return region.getRegionInfo();
@@ -145,9 +149,11 @@ public class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
     } finally {
       region.smallestReadPointCalcLock.unlock(ReadPointCalculationLock.LockType.RECORDING_LOCK);
     }
-    HFileReaderImpl.bytesReadFromFs.get().set(0);
-    HFileReaderImpl.bytesReadFromCache.get().set(0);
+    HFileReaderImpl.bytesReadFromFs.get().getAndSet(0);
+    HFileReaderImpl.bytesReadFromCache.get().getAndSet(0);
     initializeScanners(scan, additionalScanners);
+    bytesReadFromFs += HFileReaderImpl.bytesReadFromFs.get().getAndSet(0);
+    bytesReadFromCache += HFileReaderImpl.bytesReadFromCache.get().getAndSet(0);
   }
 
   public ScannerContext getContext() {
@@ -281,6 +287,18 @@ public class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
       throw new UnknownScannerException("Scanner was closed");
     }
     boolean moreValues = false;
+    if (bytesReadFromFs > 0) {
+      scannerContext.getMetrics().addToCounter(
+        ServerSideScanMetrics.BYTES_READ_FROM_FS_METRIC_NAME, bytesReadFromFs);
+      // Reset to zero to avoid double counting
+      bytesReadFromFs = 0;
+    }
+    if (bytesReadFromCache > 0) {
+      scannerContext.getMetrics().addToCounter(
+        ServerSideScanMetrics.BYTES_READ_FROM_CACHE_METRIC_NAME, bytesReadFromCache);
+      // Reset to zero to avoid double counting
+      bytesReadFromCache = 0;
+    }
     if (outResults.isEmpty()) {
       // Usually outResults is empty. This is true when next is called
       // to handle scan or get operation.
@@ -290,6 +308,12 @@ public class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
       moreValues = nextInternal(tmpList, scannerContext);
       outResults.addAll(tmpList);
     }
+    scannerContext.getMetrics().addToCounter(
+      ServerSideScanMetrics.BYTES_READ_FROM_FS_METRIC_NAME,
+      HFileReaderImpl.bytesReadFromFs.get().getAndSet(0));
+    scannerContext.getMetrics().addToCounter(
+      ServerSideScanMetrics.BYTES_READ_FROM_CACHE_METRIC_NAME,
+      HFileReaderImpl.bytesReadFromCache.get().getAndSet(0));
 
     region.addReadRequestsCount(1);
     if (region.getMetrics() != null) {

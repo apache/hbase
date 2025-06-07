@@ -169,9 +169,6 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   protected final long readPt;
   private boolean topChanged = false;
 
-  private int bytesReadFromFs = 0;
-  private int bytesReadFromCache = 0;
-
   /** An internal constructor. */
   private StoreScanner(HStore store, Scan scan, ScanInfo scanInfo, int numColumns, long readPt,
     boolean cacheBlocks, ScanType scanType) {
@@ -281,8 +278,6 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       addCurrentScanners(scanners);
       // Combine all seeked scanners with a heap
       resetKVHeap(scanners, comparator);
-      bytesReadFromFs += HFileReaderImpl.bytesReadFromFs.get().getAndSet(0);
-      bytesReadFromCache += HFileReaderImpl.bytesReadFromCache.get().getAndSet(0);
     } catch (IOException e) {
       clearAndClose(scanners);
       // remove us from the HStore#changedReaderObservers here or we'll have no chance to

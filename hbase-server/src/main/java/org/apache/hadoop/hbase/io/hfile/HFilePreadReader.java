@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import java.io.IOException;
-import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
@@ -38,8 +37,6 @@ public class HFilePreadReader extends HFileReaderImpl {
   public HFilePreadReader(ReaderContext context, HFileInfo fileInfo, CacheConfig cacheConf,
     Configuration conf) throws IOException {
     super(context, fileInfo, cacheConf, conf);
-    AtomicInteger bytesReadFromFs = HFileReaderImpl.bytesReadFromFs.get();
-    AtomicInteger bytesReadFromCache = HFileReaderImpl.bytesReadFromCache.get();
     // master hosted regions, like the master procedures store wouldn't have a block cache
     // Prefetch file blocks upon open if requested
     if (cacheConf.getBlockCache().isPresent() && cacheConf.shouldPrefetchOnOpen()) {
@@ -107,8 +104,6 @@ public class HFilePreadReader extends HFileReaderImpl {
               // cached block. This 'optimization' triggers extremely rarely I'd say.
               HFileBlock block = prefetchStreamReader.readBlock(offset, onDiskSizeOfNextBlock,
                 /* cacheBlock= */true, /* pread= */false, false, false, null, null, true);
-              bytesReadFromFs.addAndGet(HFileReaderImpl.bytesReadFromFs.get().get());
-              bytesReadFromCache.addAndGet(HFileReaderImpl.bytesReadFromCache.get().get());
               try {
                 if (!cacheConf.isInMemory()) {
                   if (!cache.blockFitsIntoTheCache(block).orElse(true)) {
