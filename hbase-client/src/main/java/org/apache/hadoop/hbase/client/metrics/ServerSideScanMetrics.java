@@ -51,6 +51,9 @@ public class ServerSideScanMetrics {
   public static final String BLOCK_BYTES_SCANNED_KEY_METRIC_NAME = "BLOCK_BYTES_SCANNED";
 
   public static final String FS_READ_TIME_METRIC_NAME = "FS_READ_TIME";
+  public static final String BYTES_READ_FROM_FS_METRIC_NAME = "BYTES_READ_FROM_FS";
+  public static final String BYTES_READ_FROM_CACHE_METRIC_NAME = "BYTES_READ_FROM_CACHE";
+  public static final String BYTES_READ_FROM_MEMSTORE_METRIC_NAME = "BYTES_READ_FROM_MEMSTORE";
 
   /**
    * number of rows filtered during scan RPC
@@ -68,6 +71,12 @@ public class ServerSideScanMetrics {
     createCounter(BLOCK_BYTES_SCANNED_KEY_METRIC_NAME);
 
   public final AtomicLong fsReadTime = createCounter(FS_READ_TIME_METRIC_NAME);
+
+  public final AtomicLong bytesReadFromFs = createCounter(BYTES_READ_FROM_FS_METRIC_NAME);
+
+  public final AtomicLong bytesReadFromCache = createCounter(BYTES_READ_FROM_CACHE_METRIC_NAME);
+
+  public final AtomicLong bytesReadFromMemstore = createCounter(BYTES_READ_FROM_MEMSTORE_METRIC_NAME);
 
   public void setCounter(String counterName, long value) {
     AtomicLong c = this.counters.get(counterName);
