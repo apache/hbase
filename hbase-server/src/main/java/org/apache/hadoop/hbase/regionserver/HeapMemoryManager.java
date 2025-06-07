@@ -47,8 +47,6 @@ import org.slf4j.LoggerFactory;
 public class HeapMemoryManager {
   private static final Logger LOG = LoggerFactory.getLogger(HeapMemoryManager.class);
   private static final int CONVERT_TO_PERCENTAGE = 100;
-  private static final int CLUSTER_MINIMUM_MEMORY_THRESHOLD =
-    (int) (CONVERT_TO_PERCENTAGE * HConstants.HBASE_CLUSTER_MINIMUM_MEMORY_THRESHOLD);
 
   public static final String BLOCK_CACHE_SIZE_MAX_RANGE_KEY = "hfile.block.cache.size.max.range";
   public static final String BLOCK_CACHE_SIZE_MIN_RANGE_KEY = "hfile.block.cache.size.min.range";
@@ -84,6 +82,7 @@ public class HeapMemoryManager {
   private final boolean tunerOn;
   private final int defaultChorePeriod;
   private final float heapOccupancyLowWatermark;
+  private final float minFreeHeapFraction;
 
   private final long maxHeapSize;
   {
@@ -110,6 +109,7 @@ public class HeapMemoryManager {
     this.memStoreFlusher = memStoreFlusher;
     this.server = server;
     this.regionServerAccounting = regionServerAccounting;
+    this.minFreeHeapFraction = MemorySizeUtil.getRegionServerMinFreeHeapFraction(conf);
     this.tunerOn = doInit(conf);
     this.defaultChorePeriod =
       conf.getInt(HBASE_RS_HEAP_MEMORY_TUNER_PERIOD, HBASE_RS_HEAP_MEMORY_TUNER_DEFAULT_PERIOD);
@@ -130,7 +130,7 @@ public class HeapMemoryManager {
     boolean tuningEnabled = true;
     globalMemStorePercent = MemorySizeUtil.getGlobalMemStoreHeapPercent(conf, false);
     blockCachePercent = MemorySizeUtil.getBlockCacheHeapPercent(conf);
-    MemorySizeUtil.checkForClusterFreeHeapMemoryLimit(conf);
+    MemorySizeUtil.validateRegionServerHeapMemoryAllocation(conf);
     // Initialize max and min range for memstore heap space
     globalMemStorePercentMinRange =
       conf.getFloat(MEMSTORE_SIZE_MIN_RANGE_KEY, globalMemStorePercent);
@@ -184,26 +184,23 @@ public class HeapMemoryManager {
       tuningEnabled = false;
     }
 
-    int gml = (int) (globalMemStorePercentMaxRange * CONVERT_TO_PERCENTAGE);
-    int bcul = (int) ((blockCachePercentMinRange) * CONVERT_TO_PERCENTAGE);
-    if (CONVERT_TO_PERCENTAGE - (gml + bcul) < CLUSTER_MINIMUM_MEMORY_THRESHOLD) {
+    if (isHeapMemoryUsageExceedingLimit(globalMemStorePercentMaxRange, blockCachePercentMinRange)) {
       throw new RuntimeException("Current heap configuration for MemStore and BlockCache exceeds "
-        + "the threshold required for successful cluster operation. "
-        + "The combined value cannot exceed 0.8. Please check the settings for "
-        + MEMSTORE_SIZE_MAX_RANGE_KEY + " and " + BLOCK_CACHE_SIZE_MIN_RANGE_KEY
-        + " in your configuration. " + MEMSTORE_SIZE_MAX_RANGE_KEY + " is "
-        + globalMemStorePercentMaxRange + " and " + BLOCK_CACHE_SIZE_MIN_RANGE_KEY + " is "
+        + "the allowed heap usage. At least " + minFreeHeapFraction
+        + " of the heap must remain free to ensure stable RegionServer operation. "
+        + "Please check the settings for " + MEMSTORE_SIZE_MAX_RANGE_KEY + " and "
+        + BLOCK_CACHE_SIZE_MIN_RANGE_KEY + " in your configuration. " + MEMSTORE_SIZE_MAX_RANGE_KEY
+        + " is " + globalMemStorePercentMaxRange + " and " + BLOCK_CACHE_SIZE_MIN_RANGE_KEY + " is "
         + blockCachePercentMinRange);
     }
-    gml = (int) (globalMemStorePercentMinRange * CONVERT_TO_PERCENTAGE);
-    bcul = (int) ((blockCachePercentMaxRange) * CONVERT_TO_PERCENTAGE);
-    if (CONVERT_TO_PERCENTAGE - (gml + bcul) < CLUSTER_MINIMUM_MEMORY_THRESHOLD) {
+
+    if (isHeapMemoryUsageExceedingLimit(globalMemStorePercentMinRange, blockCachePercentMaxRange)) {
       throw new RuntimeException("Current heap configuration for MemStore and BlockCache exceeds "
-        + "the threshold required for successful cluster operation. "
-        + "The combined value cannot exceed 0.8. Please check the settings for "
-        + MEMSTORE_SIZE_MIN_RANGE_KEY + " and " + BLOCK_CACHE_SIZE_MAX_RANGE_KEY
-        + " in your configuration. " + MEMSTORE_SIZE_MIN_RANGE_KEY + " is "
-        + globalMemStorePercentMinRange + " and " + BLOCK_CACHE_SIZE_MAX_RANGE_KEY + " is "
+        + "the allowed heap usage. At least " + minFreeHeapFraction
+        + " of the heap must remain free to ensure stable RegionServer operation. "
+        + "Please check the settings for " + MEMSTORE_SIZE_MIN_RANGE_KEY + " and "
+        + BLOCK_CACHE_SIZE_MAX_RANGE_KEY + " in your configuration. " + MEMSTORE_SIZE_MIN_RANGE_KEY
+        + " is " + globalMemStorePercentMinRange + " and " + BLOCK_CACHE_SIZE_MAX_RANGE_KEY + " is "
         + blockCachePercentMaxRange);
     }
     return tuningEnabled;
@@ -239,6 +236,15 @@ public class HeapMemoryManager {
     return this.heapOccupancyPercent == Float.MAX_VALUE
       ? HEAP_OCCUPANCY_ERROR_VALUE
       : this.heapOccupancyPercent;
+  }
+
+  private boolean isHeapMemoryUsageExceedingLimit(float memStoreFraction,
+    float blockCacheFraction) {
+    int memStorePercent = (int) (memStoreFraction * CONVERT_TO_PERCENTAGE);
+    int blockCachePercent = (int) (blockCacheFraction * CONVERT_TO_PERCENTAGE);
+    int minFreeHeapPercent = (int) (this.minFreeHeapFraction * CONVERT_TO_PERCENTAGE);
+
+    return memStorePercent + blockCachePercent + minFreeHeapPercent > CONVERT_TO_PERCENTAGE;
   }
 
   private class HeapMemoryTunerChore extends ScheduledChore implements FlushRequestListener {
@@ -363,14 +369,15 @@ public class HeapMemoryManager {
               + blockCachePercentMaxRange + ". Resetting blockCacheSize to min size");
           blockCacheSize = blockCachePercentMaxRange;
         }
-        int gml = (int) (memstoreSize * CONVERT_TO_PERCENTAGE);
-        int bcul = (int) ((blockCacheSize) * CONVERT_TO_PERCENTAGE);
-        if (CONVERT_TO_PERCENTAGE - (gml + bcul) < CLUSTER_MINIMUM_MEMORY_THRESHOLD) {
+
+        if (isHeapMemoryUsageExceedingLimit(memstoreSize, blockCacheSize)) {
           LOG.info("Current heap configuration from HeapMemoryTuner exceeds "
-            + "the threshold required for successful cluster operation. "
-            + "The combined value cannot exceed 0.8. " + MemorySizeUtil.MEMSTORE_SIZE_KEY + " is "
-            + memstoreSize + " and " + HFILE_BLOCK_CACHE_SIZE_KEY + " is " + blockCacheSize);
-          // TODO can adjust the value so as not exceed 80%. Is that correct? may be.
+            + "the allowed heap usage. At least " + minFreeHeapFraction
+            + " of the heap must remain free to ensure stable RegionServer operation. "
+            + MemorySizeUtil.MEMSTORE_SIZE_KEY + " is " + memstoreSize + " and "
+            + HFILE_BLOCK_CACHE_SIZE_KEY + " is " + blockCacheSize);
+          // NOTE: In the future, we might adjust values to not exceed limits,
+          // but for now tuning is skipped if over threshold.
         } else {
           int memStoreDeltaSize =
             (int) ((memstoreSize - globalMemStorePercent) * CONVERT_TO_PERCENTAGE);
