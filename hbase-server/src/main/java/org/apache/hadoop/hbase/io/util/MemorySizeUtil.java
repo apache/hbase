@@ -77,34 +77,71 @@ public class MemorySizeUtil {
   }
 
   /**
-   * Checks whether we have enough heap memory left out after portion for Memstore and Block cache.
-   * We need atleast 20% of heap left out for other RS functions.
+   * Validates that heap allocations for memStore and block cache do not exceed the allowed limit,
+   * ensuring enough free heap remains for other RegionServer tasks.
+   * @param conf the configuration to validate
+   * @throws RuntimeException if the combined allocation exceeds the threshold
    */
-  public static void checkForClusterFreeHeapMemoryLimit(Configuration conf) {
+  public static void validateRegionServerHeapMemoryAllocation(Configuration conf) {
     if (conf.get(MEMSTORE_SIZE_OLD_KEY) != null) {
       LOG.warn(MEMSTORE_SIZE_OLD_KEY + " is deprecated by " + MEMSTORE_SIZE_KEY);
     }
-    float globalMemstoreSize = getGlobalMemStoreHeapPercent(conf, false);
-    int gml = (int) (globalMemstoreSize * CONVERT_TO_PERCENTAGE);
-    float blockCacheUpperLimit = getBlockCacheHeapPercent(conf);
-    int bcul = (int) (blockCacheUpperLimit * CONVERT_TO_PERCENTAGE);
-    if (
-      CONVERT_TO_PERCENTAGE - (gml + bcul)
-          < (int) (CONVERT_TO_PERCENTAGE * HConstants.HBASE_CLUSTER_MINIMUM_MEMORY_THRESHOLD)
-    ) {
-      throw new RuntimeException("Current heap configuration for MemStore and BlockCache exceeds "
-        + "the threshold required for successful cluster operation. "
-        + "The combined value cannot exceed 0.8. Please check " + "the settings for "
-        + MEMSTORE_SIZE_KEY + " and either " + HConstants.HFILE_BLOCK_CACHE_MEMORY_SIZE_KEY + " or "
-        + HConstants.HFILE_BLOCK_CACHE_SIZE_KEY + " in your configuration. " + MEMSTORE_SIZE_KEY
-        + "=" + globalMemstoreSize + ", " + HConstants.HFILE_BLOCK_CACHE_MEMORY_SIZE_KEY + "="
-        + conf.get(HConstants.HFILE_BLOCK_CACHE_MEMORY_SIZE_KEY) + ", "
-        + HConstants.HFILE_BLOCK_CACHE_SIZE_KEY + "="
-        + conf.get(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY) + ". (Note: If both "
-        + HConstants.HFILE_BLOCK_CACHE_MEMORY_SIZE_KEY + " and "
-        + HConstants.HFILE_BLOCK_CACHE_SIZE_KEY + " are set, " + "the system will use "
-        + HConstants.HFILE_BLOCK_CACHE_MEMORY_SIZE_KEY + ")");
+    float memStoreFraction = getGlobalMemStoreHeapPercent(conf, false);
+    float blockCacheFraction = getBlockCacheHeapPercent(conf);
+    float minFreeHeapFraction = getRegionServerMinFreeHeapFraction(conf);
+
+    int memStorePercent = (int) (memStoreFraction * 100);
+    int blockCachePercent = (int) (blockCacheFraction * 100);
+    int minFreeHeapPercent = (int) (minFreeHeapFraction * 100);
+    int usedPercent = memStorePercent + blockCachePercent;
+    int maxAllowedUsed = 100 - minFreeHeapPercent;
+
+    if (usedPercent > maxAllowedUsed) {
+      throw new RuntimeException(String.format(
+        "RegionServer heap memory allocation is invalid: "
+          + "memStore=%d%%, blockCache=%d%%, requiredFreeHeap=%d%%. "
+          + "Combined usage %d%% exceeds allowed maximum %d%%. "
+          + "Check the following configuration values:%n" + "  - %s = %.2f%n" + "  - %s = %s%n"
+          + "  - %s = %s%n" + "  - %s = %s%n" + "  - %s = %s",
+        memStorePercent, blockCachePercent, minFreeHeapPercent, usedPercent, maxAllowedUsed,
+        MEMSTORE_SIZE_KEY, memStoreFraction, HConstants.HFILE_BLOCK_CACHE_MEMORY_SIZE_KEY,
+        conf.get(HConstants.HFILE_BLOCK_CACHE_MEMORY_SIZE_KEY),
+        HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, conf.get(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY),
+        HConstants.HBASE_REGION_SERVER_FREE_HEAP_MEMORY_MIN_SIZE_KEY,
+        conf.get(HConstants.HBASE_REGION_SERVER_FREE_HEAP_MEMORY_MIN_SIZE_KEY),
+        HConstants.HBASE_REGION_SERVER_FREE_HEAP_MIN_SIZE_KEY,
+        conf.get(HConstants.HBASE_REGION_SERVER_FREE_HEAP_MIN_SIZE_KEY)));
     }
+  }
+
+  /**
+   * Retrieve an explicit minimum required free heap size in bytes in the configuration.
+   * @param conf used to read configs
+   * @return the minimum required free heap size in bytes, or a negative value if not configured.
+   * @throws IllegalArgumentException if HBASE_REGION_SERVER_FREE_HEAP_MEMORY_MIN_SIZE_KEY format is
+   *                                  invalid
+   */
+  public static long getRegionServerMinFreeHeapInBytes(Configuration conf) {
+    final String key = HConstants.HBASE_REGION_SERVER_FREE_HEAP_MEMORY_MIN_SIZE_KEY;
+    try {
+      return Long.parseLong(conf.get(key));
+    } catch (NumberFormatException e) {
+      return (long) conf.getStorageSize(key, -1, StorageUnit.BYTES);
+    }
+  }
+
+  /**
+   * Returns the minimum required free heap as a fraction of total heap.
+   */
+  public static float getRegionServerMinFreeHeapFraction(final Configuration conf) {
+    long minFreeHeapInBytes = getRegionServerMinFreeHeapInBytes(conf);
+    if (minFreeHeapInBytes > 0) {
+      final MemoryUsage usage = safeGetHeapMemoryUsage();
+      return usage == null ? 0 : (float) minFreeHeapInBytes / usage.getMax();
+    }
+
+    return conf.getFloat(HConstants.HBASE_REGION_SERVER_FREE_HEAP_MIN_SIZE_KEY,
+      HConstants.HBASE_REGION_SERVER_FREE_HEAP_MIN_SIZE_DEFAULT);
   }
 
   /**
