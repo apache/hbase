@@ -1047,7 +1047,7 @@ public final class HConstants {
   public static final String HBASE_REGION_SERVER_FREE_HEAP_MIN_SIZE_KEY =
     "hbase.regionserver.free.heap.min.size";
 
-  public static final float HBASE_REGION_SERVER_FREE_HEAP_MIN_SIZE_DEFAULT = 0.1f;
+  public static final float HBASE_REGION_SERVER_FREE_HEAP_MIN_SIZE_DEFAULT = 0.2f;
 
   /**
    * Configuration key for the absolute amount of heap memory that must remain free for a

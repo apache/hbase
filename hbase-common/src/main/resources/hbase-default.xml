@@ -280,9 +280,9 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>hbase.regionserver.free.heap.min.size</name>
-    <value>0.1</value>
+    <value>0.2</value>
     <description>The minimum fraction of heap memory that must remain free (not used by memstore or block cache)
-      for a RegionServer to start. Default is 0.1 (10%). If memstore and block cache configurations
+      for a RegionServer to start. Default is 0.2 (20%). If memstore and block cache configurations
       together exceed (1 - this value), the RegionServer will fail to start.</description>
   </property>
   <property>
