@@ -887,6 +887,7 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
     Configuration conf = job.getConfiguration();
     // create the partitions file
     FileSystem fs = FileSystem.get(conf);
+    System.err.println(conf.get(HConstants.TEMPORARY_FS_DIRECTORY_KEY));
     String hbaseTmpFsDir =
       conf.get(HConstants.TEMPORARY_FS_DIRECTORY_KEY, fs.getHomeDirectory() + "/hbase-staging");
     Path partitionsPath =
