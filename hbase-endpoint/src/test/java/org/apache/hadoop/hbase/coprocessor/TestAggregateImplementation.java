@@ -531,6 +531,27 @@ public class TestAggregateImplementation {
   }
 
   @Test
+  public void testRowNumWithScannerCaching() throws Exception {
+    ArgumentCaptor<AggregateResponse> responseCaptor =
+      ArgumentCaptor.forClass(AggregateResponse.class);
+    RpcCallback<AggregateResponse> callback = mock(RpcCallback.class);
+
+    // set caching such that throttles are not triggered
+    scan = new Scan().addColumn(CF, CQ).setCaching(5);
+    request = AggregateRequest.newBuilder().setScan(ProtobufUtil.toScan(scan))
+      .setInterpreterClassName(LongColumnInterpreter.class.getName())
+      .setClientSupportsPartialResult(true).build();
+    aggregate.getRowNum(controller, request, callback);
+
+    verify(callback).run(responseCaptor.capture());
+
+    AggregateResponse response = responseCaptor.getValue();
+    assertFalse("Response should not indicate there are more rows",
+      response.hasNextChunkStartRow());
+    assertEquals(NUM_ROWS, response.getFirstPart(0).asReadOnlyByteBuffer().getLong());
+  }
+
+  @Test
   public void testRowNumThrottleWithNoResults() throws Exception {
     AggregateRequest request = AggregateRequest.newBuilder().setScan(ProtobufUtil.toScan(scan))
       .setInterpreterClassName(LongColumnInterpreter.class.getName())
