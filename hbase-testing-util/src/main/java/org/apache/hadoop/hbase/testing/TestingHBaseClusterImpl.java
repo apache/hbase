@@ -154,7 +154,7 @@ class TestingHBaseClusterImpl implements TestingHBaseCluster {
   public void start() throws Exception {
     Preconditions.checkState(!miniClusterRunning, "Cluster has already been started");
     if (externalZkConnectString == null) {
-      util.startMiniZKCluster();
+      util.startMiniZKCluster(option.getNumZkServers());
     } else {
       Configuration conf = util.getConfiguration();
       conf.set(HConstants.ZOOKEEPER_QUORUM, externalZkConnectString);

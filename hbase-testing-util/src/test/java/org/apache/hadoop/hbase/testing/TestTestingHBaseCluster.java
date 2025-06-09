@@ -25,6 +25,7 @@ import static org.junit.Assert.assertTrue;
 import java.util.Collection;
 import java.util.List;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -67,7 +68,7 @@ public class TestTestingHBaseCluster {
     final Configuration conf = HBaseConfiguration.create();
     conf.setInt(HConstants.MASTER_INFO_PORT, 0);
     CLUSTER = TestingHBaseCluster.create(TestingHBaseClusterOption.builder().numMasters(2)
-      .numRegionServers(3).numDataNodes(3).conf(conf).build());
+      .numZkServers(3).numRegionServers(3).numDataNodes(3).conf(conf).build());
   }
 
   @AfterClass
@@ -162,15 +163,17 @@ public class TestTestingHBaseCluster {
     final List<String> masterAddrs = CLUSTER.getMasterAddresses();
     assertEquals(2, masterAddrs.size());
     assertTrue(masterAddrs.stream().allMatch(addr -> addr.matches(".*:[0-9]+$")));
-  }
 
-  @Test
-  public void testGetPorts() throws Exception {
+    // ZooKeeper quorum: localhost:PORT1,localhost:PORT2,localhost:PORT3
+    final String[] quorum = CLUSTER.getZooKeeperQuorum().orElse("").split(",");
+    assertEquals(3, quorum.length);
+    assertTrue(Stream.of(quorum).allMatch(a -> Pattern.matches(".*:[0-9]+$", a)));
+
+    // Web UI addresses
     final String addressPattern = "^https?://.*:[0-9]+$";
     assertTrue(CLUSTER.getActiveMasterInfoAddress().map(a -> Pattern.matches(addressPattern, a))
       .orElse(false));
     assertTrue(CLUSTER.getActiveNameNodeInfoAddress().map(a -> Pattern.matches(addressPattern, a))
       .orElse(false));
-    assertTrue(CLUSTER.getZooKeeperQuorum().isPresent());
   }
 }
