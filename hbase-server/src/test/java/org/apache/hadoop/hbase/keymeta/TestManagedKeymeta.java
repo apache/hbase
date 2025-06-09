@@ -29,6 +29,15 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos;
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+import org.mockito.stubbing.OngoingStubbing;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.any;
+import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
+import java.lang.reflect.Field;
 import java.io.IOException;
 import java.security.KeyException;
 import java.util.List;
@@ -92,5 +101,49 @@ public class TestManagedKeymeta extends ManagedKeyTestBase {
     assertNotNull(managedKeyStates);
     assertEquals(1, managedKeyStates.size());
     assertEquals(keyState, managedKeyStates.get(0).getKeyState());
+  }
+
+  @Test
+  public void testEnableKeyManagementWithServiceException() throws Exception {
+    ManagedKeysProtos.ManagedKeysService.BlockingInterface mockStub =
+      mock(ManagedKeysProtos.ManagedKeysService.BlockingInterface.class);
+
+    ServiceException networkError = new ServiceException("Network error");
+    networkError.initCause(new IOException("Network error"));
+    when(mockStub.enableKeyManagement(any(), any())).thenThrow(networkError);
+
+    KeymetaAdminClient client = new KeymetaAdminClient(TEST_UTIL.getConnection());
+    // Use reflection to set the stub
+    Field stubField = KeymetaAdminClient.class.getDeclaredField("stub");
+    stubField.setAccessible(true);
+    stubField.set(client, mockStub);
+
+    IOException exception = assertThrows(IOException.class, () -> {
+      client.enableKeyManagement("cust", "namespace");
+    });
+
+    assertTrue(exception.getMessage().contains("Network error"));
+  }
+
+  @Test
+  public void testGetManagedKeysWithServiceException() throws Exception {
+    // Similar test for getManagedKeys method
+    ManagedKeysProtos.ManagedKeysService.BlockingInterface mockStub =
+      mock(ManagedKeysProtos.ManagedKeysService.BlockingInterface.class);
+
+    ServiceException networkError = new ServiceException("Network error");
+    networkError.initCause(new IOException("Network error"));
+    when(mockStub.getManagedKeys(any(), any())).thenThrow(networkError);
+
+    KeymetaAdminClient client = new KeymetaAdminClient(TEST_UTIL.getConnection());
+    Field stubField = KeymetaAdminClient.class.getDeclaredField("stub");
+    stubField.setAccessible(true);
+    stubField.set(client, mockStub);
+
+    IOException exception = assertThrows(IOException.class, () -> {
+      client.getManagedKeys("cust", "namespace");
+    });
+
+    assertTrue(exception.getMessage().contains("Network error"));
   }
 }

@@ -103,13 +103,14 @@ public class ManagedKeyData {
    * @throws NullPointerException if any of key_cust, keyState or keyMetadata is null.
    */
   public ManagedKeyData(byte[] key_cust, String key_namespace, Key theKey, ManagedKeyState keyState,
-                        String keyMetadata, long refreshTimestamp, long readOpCount, long writeOpCount) {
+                        String keyMetadata, long refreshTimestamp, long readOpCount,
+                        long writeOpCount) {
     Preconditions.checkNotNull(key_cust, "key_cust should not be null");
     Preconditions.checkNotNull(key_namespace, "key_namespace should not be null");
     Preconditions.checkNotNull(keyState,  "keyState should not be null");
     // Only check for null metadata if state is not FAILED
     if (keyState != ManagedKeyState.FAILED) {
-    Preconditions.checkNotNull(keyMetadata, "keyMetadata should not be null");
+      Preconditions.checkNotNull(keyMetadata, "keyMetadata should not be null");
     }
     Preconditions.checkArgument(readOpCount >= 0, "readOpCount: " + readOpCount +
       " should be >= 0");
@@ -242,7 +243,7 @@ public class ManagedKeyData {
    * @return The hash of the key metadata as a byte array.
    */
   public byte[] getKeyMetadataHash() {
-    if (keyMetadataHash == null) {
+    if (keyMetadataHash == null && keyMetadata != null) {
       keyMetadataHash = constructMetadataHash(keyMetadata);
     }
     return keyMetadataHash;

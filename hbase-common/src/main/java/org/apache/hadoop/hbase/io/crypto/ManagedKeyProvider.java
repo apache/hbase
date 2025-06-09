@@ -83,7 +83,8 @@ public interface ManagedKeyProvider extends KeyProvider {
       key_cust = Base64.getDecoder().decode(encodedKeyCust);
     }
     catch (IllegalArgumentException e) {
-      throw new IOException("Failed to decode specified key custodian as Base64 string: " + encodedKeyCust, e);
+      throw new IOException("Failed to decode specified key custodian as Base64 string: "
+          + encodedKeyCust, e);
     }
     return key_cust;
   }

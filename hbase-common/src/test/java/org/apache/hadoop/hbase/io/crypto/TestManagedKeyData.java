@@ -164,6 +164,18 @@ public class TestManagedKeyData {
   }
 
   @Test
+  public void testGetKeyMetadataHashEncodedWithNullHash() {
+    // Create ManagedKeyData with FAILED state and null metadata
+    ManagedKeyData keyData = new ManagedKeyData(
+      "custodian".getBytes(), "namespace", null, ManagedKeyState.FAILED,
+      null  // null metadata should result in null hash
+    );
+
+    String encoded = keyData.getKeyMetadataHashEncoded();
+    assertNull(encoded);
+  }
+
+  @Test
   public void testConstructMetadataHash() {
     byte[] hash = ManagedKeyData.constructMetadataHash(keyMetadata);
     assertNotNull(hash);

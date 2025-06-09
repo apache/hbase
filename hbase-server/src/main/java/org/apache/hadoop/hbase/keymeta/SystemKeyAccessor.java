@@ -84,7 +84,11 @@ public class SystemKeyAccessor extends KeyManagementBase {
 
   public ManagedKeyData loadSystemKey(Path keyPath) throws IOException {
     ManagedKeyProvider provider = getKeyProvider();
-    return provider.unwrapKey(loadKeyMetadata(keyPath), null);
+    ManagedKeyData keyData = provider.unwrapKey(loadKeyMetadata(keyPath), null);
+    if (keyData == null) {
+      throw new RuntimeException("Failed to load system key from: " + keyPath);
+    }
+    return keyData;
   }
 
   @VisibleForTesting
@@ -110,7 +114,14 @@ public class SystemKeyAccessor extends KeyManagementBase {
   public static int extractKeySequence(Path clusterKeyFile) throws IOException {
     int keySeq = -1;
     if (clusterKeyFile.getName().startsWith(SYSTEM_KEY_FILE_PREFIX)) {
-      keySeq = Integer.valueOf(clusterKeyFile.getName().substring(SYSTEM_KEY_FILE_PREFIX.length()));
+      String seqStr = clusterKeyFile.getName().substring(SYSTEM_KEY_FILE_PREFIX.length());
+      if (! seqStr.isEmpty()) {
+        try {
+          keySeq = Integer.valueOf(seqStr);
+        } catch (NumberFormatException e) {
+          throw new IOException("Invalid file name for a cluster key: " + clusterKeyFile, e);
+        }
+      }
     }
     return keySeq;
   }

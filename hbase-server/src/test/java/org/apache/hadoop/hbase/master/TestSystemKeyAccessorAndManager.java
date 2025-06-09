@@ -11,6 +11,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyState;
 import org.apache.hadoop.hbase.keymeta.SystemKeyAccessor;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -32,10 +33,12 @@ import org.junit.runners.Suite;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import java.io.IOException;
+import java.security.Key;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.stream.IntStream;
+import javax.crypto.spec.SecretKeySpec;
 import static org.apache.hadoop.hbase.HConstants.SYSTEM_KEY_FILE_PREFIX;
 import static org.apache.hadoop.hbase.io.crypto.ManagedKeyState.ACTIVE;
 import static org.apache.hadoop.hbase.io.crypto.ManagedKeyState.INACTIVE;
@@ -45,18 +48,20 @@ import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-  TestSystemKey.TestAccessorWhenDisabled.class,
-  TestSystemKey.TestManagerWhenDisabled.class,
-  TestSystemKey.TestAccessor.class,
-  TestSystemKey.TestForInvalidFilenames.class,
-  TestSystemKey.TestManagerForErrors.class
+  TestSystemKeyAccessorAndManager.TestAccessorWhenDisabled.class,
+  TestSystemKeyAccessorAndManager.TestManagerWhenDisabled.class,
+  TestSystemKeyAccessorAndManager.TestAccessor.class,
+  TestSystemKeyAccessorAndManager.TestForInvalidFilenames.class,
+  TestSystemKeyAccessorAndManager.TestManagerForErrors.class,
+  TestSystemKeyAccessorAndManager.TestAccessorAdvanced.class  // ADD THIS
 })
 @Category({ MasterTests.class, SmallTests.class })
-public class TestSystemKey {
+public class TestSystemKeyAccessorAndManager {
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   @Rule
@@ -93,7 +98,7 @@ public class TestSystemKey {
 
   @RunWith(BlockJUnit4ClassRunner.class)
   @Category({ MasterTests.class, SmallTests.class })
-  public static class TestAccessorWhenDisabled extends TestSystemKey {
+  public static class TestAccessorWhenDisabled extends TestSystemKeyAccessorAndManager {
     @ClassRule public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestAccessorWhenDisabled.class);
 
@@ -110,7 +115,7 @@ public class TestSystemKey {
 
   @RunWith(BlockJUnit4ClassRunner.class)
   @Category({ MasterTests.class, SmallTests.class })
-  public static class TestManagerWhenDisabled extends TestSystemKey {
+  public static class TestManagerWhenDisabled extends TestSystemKeyAccessorAndManager {
     @ClassRule public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestManagerWhenDisabled.class);
 
@@ -127,7 +132,7 @@ public class TestSystemKey {
 
   @RunWith(BlockJUnit4ClassRunner.class)
   @Category({ MasterTests.class, SmallTests.class })
-  public static class TestAccessor extends TestSystemKey {
+  public static class TestAccessor extends TestSystemKeyAccessorAndManager {
     @ClassRule
     public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestAccessor.class);
@@ -188,7 +193,7 @@ public class TestSystemKey {
 
   @RunWith(Parameterized.class)
   @Category({ MasterTests.class, SmallTests.class })
-  public static class TestForInvalidFilenames extends TestSystemKey {
+  public static class TestForInvalidFilenames extends TestSystemKeyAccessorAndManager {
     @ClassRule
     public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestForInvalidFilenames.class);
@@ -220,7 +225,7 @@ public class TestSystemKey {
 
   @RunWith(BlockJUnit4ClassRunner.class)
   @Category({ MasterTests.class, SmallTests.class })
-  public static class TestManagerForErrors extends TestSystemKey {
+  public static class TestManagerForErrors extends TestSystemKeyAccessorAndManager {
     @ClassRule
     public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestManagerForErrors.class);
@@ -325,6 +330,159 @@ public class TestSystemKey {
         );
 
       manager.ensureSystemKeyInitialized();
+    }
+  }
+
+  @RunWith(BlockJUnit4ClassRunner.class)
+  @Category({ MasterTests.class, SmallTests.class })
+  public static class TestAccessorAdvanced extends TestSystemKeyAccessorAndManager {
+    @ClassRule
+    public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestAccessorAdvanced.class);
+
+
+
+
+    @Test
+    public void testLoadSystemKeySuccess() throws Exception {
+      Path testPath = new Path("/test/key/path");
+      String testMetadata = "test-metadata";
+
+      // Create test key data
+      Key testKey = new SecretKeySpec("test-key-bytes".getBytes(), "AES");
+      ManagedKeyData testKeyData = new ManagedKeyData(
+        "custodian".getBytes(), "namespace", testKey,
+        ManagedKeyState.ACTIVE, testMetadata, 1000L, 0, 0);
+
+      // Mock key provider
+      ManagedKeyProvider realProvider = mock(ManagedKeyProvider.class);
+      when(realProvider.unwrapKey(testMetadata, null)).thenReturn(testKeyData);
+
+      // Create testable SystemKeyAccessor that overrides both loadKeyMetadata and getKeyProvider
+      SystemKeyAccessor testAccessor = new SystemKeyAccessor(mockMaster) {
+        @Override
+        protected String loadKeyMetadata(Path keyPath) throws IOException {
+          assertEquals(testPath, keyPath);
+          return testMetadata;
+        }
+
+        @Override
+        protected ManagedKeyProvider getKeyProvider() {
+          return realProvider;
+        }
+      };
+
+      ManagedKeyData result = testAccessor.loadSystemKey(testPath);
+      assertEquals(testKeyData, result);
+
+      // Verify the key provider was called correctly
+      verify(realProvider).unwrapKey(testMetadata, null);
+    }
+
+    @Test(expected = RuntimeException.class)
+    public void testLoadSystemKeyNullResult() throws Exception {
+      Path testPath = new Path("/test/key/path");
+      String testMetadata = "test-metadata";
+
+      // Mock key provider to return null
+      ManagedKeyProvider realProvider = mock(ManagedKeyProvider.class);
+      when(realProvider.unwrapKey(testMetadata, null)).thenReturn(null);
+
+      SystemKeyAccessor testAccessor = new SystemKeyAccessor(mockMaster) {
+        @Override
+        protected String loadKeyMetadata(Path keyPath) throws IOException {
+          assertEquals(testPath, keyPath);
+          return testMetadata;
+        }
+
+        @Override
+        protected ManagedKeyProvider getKeyProvider() {
+          return realProvider;
+        }
+      };
+
+      testAccessor.loadSystemKey(testPath);
+    }
+
+    @Test
+    public void testExtractSystemKeySeqNumValid() throws Exception {
+      Path testPath1 = new Path(SYSTEM_KEY_FILE_PREFIX + "1");
+      Path testPath123 = new Path(SYSTEM_KEY_FILE_PREFIX + "123");
+      Path testPathMax = new Path(SYSTEM_KEY_FILE_PREFIX + Integer.MAX_VALUE);
+
+      assertEquals(1, SystemKeyAccessor.extractSystemKeySeqNum(testPath1));
+      assertEquals(123, SystemKeyAccessor.extractSystemKeySeqNum(testPath123));
+      assertEquals(Integer.MAX_VALUE, SystemKeyAccessor.extractSystemKeySeqNum(testPathMax));
+    }
+
+
+
+    @Test(expected = IOException.class)
+    public void testGetAllSystemKeyFilesIOException() throws Exception {
+      when(mockFileSystem.globStatus(any())).thenThrow(new IOException("Filesystem error"));
+      systemKeyManager.getAllSystemKeyFiles();
+    }
+
+    @Test(expected = IOException.class)
+    public void testLoadSystemKeyIOExceptionFromMetadata() throws Exception {
+      Path testPath = new Path("/test/key/path");
+
+      SystemKeyAccessor testAccessor = new SystemKeyAccessor(mockMaster) {
+        @Override
+        protected String loadKeyMetadata(Path keyPath) throws IOException {
+          assertEquals(testPath, keyPath);
+          throw new IOException("Metadata read failed");
+        }
+
+        @Override
+        protected ManagedKeyProvider getKeyProvider() {
+          return mock(ManagedKeyProvider.class);
+        }
+      };
+
+      testAccessor.loadSystemKey(testPath);
+    }
+
+    @Test(expected = RuntimeException.class)
+    public void testLoadSystemKeyProviderException() throws Exception {
+      Path testPath = new Path("/test/key/path");
+      String testMetadata = "test-metadata";
+
+      SystemKeyAccessor testAccessor = new SystemKeyAccessor(mockMaster) {
+        @Override
+        protected String loadKeyMetadata(Path keyPath) throws IOException {
+          assertEquals(testPath, keyPath);
+          return testMetadata;
+        }
+
+        @Override
+        protected ManagedKeyProvider getKeyProvider() {
+          throw new RuntimeException("Key provider not available");
+        }
+      };
+
+      testAccessor.loadSystemKey(testPath);
+    }
+
+    @Test
+    public void testExtractSystemKeySeqNumBoundaryValues() throws Exception {
+      // Test boundary values
+      Path testPath0 = new Path(SYSTEM_KEY_FILE_PREFIX + "0");
+      Path testPathMin = new Path(SYSTEM_KEY_FILE_PREFIX + Integer.MIN_VALUE);
+
+      assertEquals(0, SystemKeyAccessor.extractSystemKeySeqNum(testPath0));
+      assertEquals(Integer.MIN_VALUE, SystemKeyAccessor.extractSystemKeySeqNum(testPathMin));
+    }
+
+    @Test
+    public void testExtractKeySequenceEdgeCases() throws Exception {
+      // Test various edge cases for extractKeySequence
+      Path validZero = new Path(SYSTEM_KEY_FILE_PREFIX + "0");
+      Path validNegative = new Path(SYSTEM_KEY_FILE_PREFIX + "-1");
+
+      // Valid cases should still work
+      assertEquals(0, SystemKeyAccessor.extractKeySequence(validZero));
+      assertEquals(-1, SystemKeyAccessor.extractKeySequence(validNegative));
     }
   }
 
