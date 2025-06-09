@@ -24,7 +24,6 @@ import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.client.metrics.ThreadLocalScanMetrics;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
-import org.apache.hadoop.hbase.io.hfile.HFileReaderImpl;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
