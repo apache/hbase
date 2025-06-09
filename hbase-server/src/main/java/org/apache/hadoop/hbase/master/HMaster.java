@@ -2992,6 +2992,10 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     }
   }
 
+  public void reloadRegionServerQuotas() {
+    asyncClusterConnection.getAdmin().reloadQuotas();
+  }
+
   public ClusterMetrics getClusterMetricsWithoutCoprocessor() throws InterruptedIOException {
     return getClusterMetricsWithoutCoprocessor(EnumSet.allOf(Option.class));
   }

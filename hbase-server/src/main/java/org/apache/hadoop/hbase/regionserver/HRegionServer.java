@@ -2078,6 +2078,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
 
     // Setup the Quota Manager
     rsQuotaManager = new RegionServerRpcQuotaManager(this);
+    configurationManager.registerObserver(rsQuotaManager);
     rsSpaceQuotaManager = new RegionServerSpaceQuotaManager(this);
 
     if (QuotaUtil.isQuotaEnabled(conf)) {

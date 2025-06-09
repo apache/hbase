@@ -149,6 +149,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.Has
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.Permission.Type;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.RevokeRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.RevokeResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompactionQueuesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompactionQueuesResponse;
@@ -1872,7 +1873,15 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
   public SetQuotaResponse setQuota(RpcController c, SetQuotaRequest req) throws ServiceException {
     try {
       server.checkInitialized();
-      return server.getMasterQuotaManager().setQuota(req);
+      SetQuotaResponse response = server.getMasterQuotaManager().setQuota(req);
+      try {
+        server.reloadRegionServerQuotas();
+      } catch (Exception e) {
+        LOG.warn(
+          "Failed to tell RegionServers to reload their quotas. Maybe they are on an older version of HBase that does not support this RPC.",
+          e);
+      }
+      return response;
     } catch (Exception e) {
       throw new ServiceException(e);
     }
@@ -3610,6 +3619,12 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
   @Override
   public GetCachedFilesListResponse getCachedFilesList(RpcController controller,
     GetCachedFilesListRequest request) throws ServiceException {
+    throw new ServiceException(new DoNotRetryIOException("Unsupported method on master"));
+  }
+
+  @Override
+  public AdminProtos.ReloadQuotasResponse reloadQuotas(RpcController controller,
+    AdminProtos.ReloadQuotasRequest request) throws ServiceException {
     throw new ServiceException(new DoNotRetryIOException("Unsupported method on master"));
   }
 

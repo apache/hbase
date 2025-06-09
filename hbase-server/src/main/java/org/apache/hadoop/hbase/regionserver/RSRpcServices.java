@@ -157,6 +157,7 @@ import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUti
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompactionQueuesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompactionQueuesResponse;
@@ -4019,6 +4020,13 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
       fullyCachedFiles.addAll(fcf.keySet());
     });
     return responseBuilder.addAllCachedFiles(fullyCachedFiles).build();
+  }
+
+  @Override
+  public AdminProtos.ReloadQuotasResponse reloadQuotas(RpcController controller,
+    AdminProtos.ReloadQuotasRequest request) throws ServiceException {
+    getRpcQuotaManager().reload();
+    return AdminProtos.ReloadQuotasResponse.getDefaultInstance();
   }
 
   RegionScannerContext checkQuotaAndGetRegionScannerContext(ScanRequest request,

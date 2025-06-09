@@ -1862,4 +1862,8 @@ public interface AsyncAdmin {
    * Get the list of cached files
    */
   CompletableFuture<List<String>> getCachedFilesList(ServerName serverName);
+
+  CompletableFuture<Void> reloadQuotas();
+
+  CompletableFuture<Void> reloadQuotas(ServerName serverName);
 }
