@@ -58,7 +58,7 @@ import static org.mockito.Mockito.when;
   TestSystemKeyAccessorAndManager.TestAccessor.class,
   TestSystemKeyAccessorAndManager.TestForInvalidFilenames.class,
   TestSystemKeyAccessorAndManager.TestManagerForErrors.class,
-  TestSystemKeyAccessorAndManager.TestAccessorAdvanced.class  // ADD THIS
+  TestSystemKeyAccessorAndManager.TestAccessorMisc.class  // ADD THIS
 })
 @Category({ MasterTests.class, SmallTests.class })
 public class TestSystemKeyAccessorAndManager {
@@ -335,13 +335,10 @@ public class TestSystemKeyAccessorAndManager {
 
   @RunWith(BlockJUnit4ClassRunner.class)
   @Category({ MasterTests.class, SmallTests.class })
-  public static class TestAccessorAdvanced extends TestSystemKeyAccessorAndManager {
+  public static class TestAccessorMisc extends TestSystemKeyAccessorAndManager {
     @ClassRule
     public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestAccessorAdvanced.class);
-
-
-
+      HBaseClassTestRule.forClass(TestAccessorMisc.class);
 
     @Test
     public void testLoadSystemKeySuccess() throws Exception {
