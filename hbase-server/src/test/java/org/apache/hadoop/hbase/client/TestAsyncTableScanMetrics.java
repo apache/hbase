@@ -99,6 +99,7 @@ public class TestAsyncTableScanMetrics {
       table.put(Arrays.asList(new Put(Bytes.toBytes("zzz1")).addColumn(CF, CQ, VALUE),
         new Put(Bytes.toBytes("zzz2")).addColumn(CF, CQ, VALUE),
         new Put(Bytes.toBytes("zzz3")).addColumn(CF, CQ, VALUE)));
+      // UTIL.flush(TABLE_NAME);
     }
     CONN = ConnectionFactory.createAsyncConnection(UTIL.getConfiguration()).get();
     NUM_REGIONS = UTIL.getHBaseCluster().getRegions(TABLE_NAME).size();
@@ -161,5 +162,9 @@ public class TestAsyncTableScanMetrics {
     // also assert a server side metric to ensure that we have published them into the client side
     // metrics.
     assertEquals(3, scanMetrics.countOfRowsScanned.get());
+
+    System.out.println("Bytes read from fs: " + scanMetrics.bytesReadFromFs.get());
+    System.out.println("Bytes read from block cache: " + scanMetrics.bytesReadFromBlockCache.get());
+    System.out.println("Bytes read from memstore: " + scanMetrics.bytesReadFromMemstore.get());
   }
 }

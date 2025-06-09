@@ -52,7 +52,8 @@ public class ServerSideScanMetrics {
 
   public static final String FS_READ_TIME_METRIC_NAME = "FS_READ_TIME";
   public static final String BYTES_READ_FROM_FS_METRIC_NAME = "BYTES_READ_FROM_FS";
-  public static final String BYTES_READ_FROM_CACHE_METRIC_NAME = "BYTES_READ_FROM_CACHE";
+  public static final String BYTES_READ_FROM_BLOCK_CACHE_METRIC_NAME =
+    "BYTES_READ_FROM_BLOCK_CACHE";
   public static final String BYTES_READ_FROM_MEMSTORE_METRIC_NAME = "BYTES_READ_FROM_MEMSTORE";
 
   /**
@@ -74,7 +75,8 @@ public class ServerSideScanMetrics {
 
   public final AtomicLong bytesReadFromFs = createCounter(BYTES_READ_FROM_FS_METRIC_NAME);
 
-  public final AtomicLong bytesReadFromCache = createCounter(BYTES_READ_FROM_CACHE_METRIC_NAME);
+  public final AtomicLong bytesReadFromBlockCache =
+    createCounter(BYTES_READ_FROM_BLOCK_CACHE_METRIC_NAME);
 
   public final AtomicLong bytesReadFromMemstore = createCounter(BYTES_READ_FROM_MEMSTORE_METRIC_NAME);
 

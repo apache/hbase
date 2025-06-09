@@ -307,7 +307,7 @@ public class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
       }
       if (bytesReadFromBlockCache > 0) {
         scanMetrics.addToCounter(
-          ServerSideScanMetrics.BYTES_READ_FROM_CACHE_METRIC_NAME, bytesReadFromBlockCache);
+          ServerSideScanMetrics.BYTES_READ_FROM_BLOCK_CACHE_METRIC_NAME, bytesReadFromBlockCache);
         bytesReadFromBlockCache = 0;
       }
       if (bytesReadFromMemstore > 0) {
@@ -330,7 +330,7 @@ public class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
         ServerSideScanMetrics.BYTES_READ_FROM_FS_METRIC_NAME,
         ThreadLocalScanMetrics.bytesReadFromFs.get().getAndSet(0));
       scannerContext.getMetrics().addToCounter(
-        ServerSideScanMetrics.BYTES_READ_FROM_CACHE_METRIC_NAME,
+        ServerSideScanMetrics.BYTES_READ_FROM_BLOCK_CACHE_METRIC_NAME,
         ThreadLocalScanMetrics.bytesReadFromBlockCache.get().getAndSet(0));
       scannerContext.getMetrics().addToCounter(
         ServerSideScanMetrics.BYTES_READ_FROM_MEMSTORE_METRIC_NAME,
