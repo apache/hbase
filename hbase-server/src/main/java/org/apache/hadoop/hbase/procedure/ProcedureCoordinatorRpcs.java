@@ -74,4 +74,25 @@ public interface ProcedureCoordinatorRpcs extends Closeable {
    * @throws IOException if the remote notification mechanism cannot be reached
    */
   void resetMembers(Procedure procName) throws IOException;
+
+  /**
+   * Clean up the notification notifying members to acquire barrier
+   * @param procName name of the procedure to clean up
+   * @throws IOException if the remote notification mechanism cannot be reached
+   */
+  void cleanupBarrierAcquired(Procedure procName) throws IOException;
+
+  /**
+   * Clean up the notification notifying members have reached barrier
+   * @param procName name of the procedure to clean up
+   * @throws IOException if the remote notification mechanism cannot be reached
+   */
+  void cleanupBarrierReached(Procedure procName) throws IOException;
+
+  /**
+   * Clean up the notification notifying members to abort
+   * @param procName name of the procedure to clean up
+   * @throws IOException if the remote notification mechanism cannot be reached
+   */
+  void cleanupBarrierAborted(Procedure procName) throws IOException;
 }
