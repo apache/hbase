@@ -22,7 +22,8 @@ public class KeymetaAdminClient implements KeymetaAdmin {
   private ManagedKeysProtos.ManagedKeysService.BlockingInterface stub;
 
   public KeymetaAdminClient(Connection conn) throws IOException {
-    this.stub = ManagedKeysProtos.ManagedKeysService.newBlockingStub(conn.getAdmin().coprocessorService());
+    this.stub = ManagedKeysProtos.ManagedKeysService.newBlockingStub(
+        conn.getAdmin().coprocessorService());
   }
 
   @Override
@@ -49,7 +50,8 @@ public class KeymetaAdminClient implements KeymetaAdmin {
     }
   }
 
-  private static List<ManagedKeyData> generateKeyDataList(ManagedKeysProtos.GetManagedKeysResponse stateResponse) {
+  private static List<ManagedKeyData> generateKeyDataList(
+      ManagedKeysProtos.GetManagedKeysResponse stateResponse) {
     List<ManagedKeyData> keyStates = new ArrayList<>();
     for (ManagedKeysResponse state: stateResponse.getStateList()) {
       keyStates.add(new ManagedKeyData(

@@ -60,8 +60,8 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
   private final ManagedKeysService managedKeysService = new KeymetaAdminServiceImpl();
 
   /**
-   * Starts the coprocessor by initializing the reference to the {@link org.apache.hadoop.hbase.master.MasterServices}
-   * instance.
+   * Starts the coprocessor by initializing the reference to the
+   * {@link org.apache.hadoop.hbase.master.MasterServices} * instance.
    *
    * @param env The coprocessor environment.
    * @throws IOException If an error occurs during initialization.

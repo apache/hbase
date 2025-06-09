@@ -173,7 +173,8 @@ public class TestKeymetaEndpoint {
       .build();
 
     // Act
-    ManagedKeysResponse.Builder result = KeymetaServiceEndpoint.getResponseBuilder(controller, request);
+    ManagedKeysResponse.Builder result = KeymetaServiceEndpoint.getResponseBuilder(controller,
+        request);
 
     // Assert
     assertNotNull(result);

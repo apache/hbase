@@ -70,7 +70,8 @@ public class SystemKeyManager extends SystemKeyAccessor {
     return rotateSystemKey(latestKeyMetadata, latestFileResult.getSecond());
   }
 
-  private ManagedKeyData rotateSystemKey(String currentKeyMetadata, List<Path> allSystemKeyFiles) throws IOException {
+  private ManagedKeyData rotateSystemKey(String currentKeyMetadata, List<Path> allSystemKeyFiles)
+      throws IOException {
     ManagedKeyProvider provider = getKeyProvider();
     ManagedKeyData clusterKey = provider.getSystemKey(
       master.getMasterFileSystem().getClusterId().toString().getBytes());
@@ -92,7 +93,8 @@ public class SystemKeyManager extends SystemKeyAccessor {
     return null;
   }
 
-  private boolean saveLatestSystemKey(String keyMetadata, List<Path> allSystemKeyFiles) throws IOException {
+  private boolean saveLatestSystemKey(String keyMetadata, List<Path> allSystemKeyFiles)
+      throws IOException {
     int nextSystemKeySeq = (allSystemKeyFiles.isEmpty() ? -1
       : SystemKeyAccessor.extractKeySequence(allSystemKeyFiles.get(0))) + 1;
     LOG.info("Trying to save a new cluster key at seq: {}", nextSystemKeySeq);

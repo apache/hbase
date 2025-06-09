@@ -33,8 +33,8 @@ import java.util.Base64;
 /**
  * This class represents an encryption key data which includes the key itself, its state, metadata
  * and a prefix. The metadata encodes enough information on the key such that it can be used to
- * retrieve the exact same key again in the future. If the key state is {@link ManagedKeyState#FAILED}
- * expect the key to be {@code null}.
+ * retrieve the exact same key again in the future. If the key state is
+ * {@link ManagedKeyState#FAILED} expect the key to be {@code null}.
  *
  * The key data is represented by the following fields:
  * <ul>

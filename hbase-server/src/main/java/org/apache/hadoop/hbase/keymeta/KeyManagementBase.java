@@ -56,8 +56,8 @@ public abstract class KeyManagementBase {
   protected ManagedKeyProvider getKeyProvider() {
     KeyProvider provider = Encryption.getKeyProvider(getServer().getConfiguration());
     if (!(provider instanceof ManagedKeyProvider)) {
-      throw new RuntimeException(
-        "KeyProvider: " + provider.getClass().getName() + " expected to be of type ManagedKeyProvider");
+      throw new RuntimeException("KeyProvider: " + provider.getClass().getName()
+          + " expected to be of type ManagedKeyProvider");
     }
     return (ManagedKeyProvider) provider;
   }
@@ -100,8 +100,8 @@ public abstract class KeyManagementBase {
         HConstants.CRYPTO_MANAGED_KEYS_PER_CUST_NAMESPACE_ACTIVE_KEY_DEFAULT_COUNT);
     }
     if (perCustNamespaceActiveKeyCount <= 0) {
-      throw new IOException("Invalid value: " + perCustNamespaceActiveKeyCount + " configured for: " +
-        HConstants.CRYPTO_MANAGED_KEYS_PER_CUST_NAMESPACE_ACTIVE_KEY_COUNT);
+      throw new IOException("Invalid value: " + perCustNamespaceActiveKeyCount + " configured for: "
+          + HConstants.CRYPTO_MANAGED_KEYS_PER_CUST_NAMESPACE_ACTIVE_KEY_COUNT);
     }
     return perCustNamespaceActiveKeyCount;
   }

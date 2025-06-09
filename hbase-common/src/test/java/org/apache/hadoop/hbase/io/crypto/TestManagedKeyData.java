@@ -99,7 +99,8 @@ public class TestManagedKeyData {
 
   @Test
   public void testConstructorWithFailedStateAndNullMetadata() {
-    ManagedKeyData keyData = new ManagedKeyData(keyCust, keyNamespace, null, ManagedKeyState.FAILED, null);
+    ManagedKeyData keyData = new ManagedKeyData(keyCust, keyNamespace, null,
+        ManagedKeyState.FAILED, null);
     assertNotNull(keyData);
     assertEquals(ManagedKeyState.FAILED, keyData.getKeyState());
     assertNull(keyData.getKeyMetadata());

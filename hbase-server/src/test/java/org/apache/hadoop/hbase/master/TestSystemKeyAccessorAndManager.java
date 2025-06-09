@@ -305,7 +305,8 @@ public class TestSystemKeyAccessorAndManager {
       when(mockFileSystem.create(any())).thenReturn(mockStream);
       when(mockFileSystem.rename(any(), any())).thenReturn(false);
 
-      RuntimeException ex = assertThrows(RuntimeException.class, manager::ensureSystemKeyInitialized);
+      RuntimeException ex = assertThrows(RuntimeException.class,
+          manager::ensureSystemKeyInitialized);
       assertEquals("Failed to generate or save System Key", ex.getMessage());
     }
 
@@ -486,7 +487,8 @@ public class TestSystemKeyAccessorAndManager {
   private static class MockSystemKeyManager extends SystemKeyManager {
     private final ManagedKeyProvider keyProvider;
 
-    public MockSystemKeyManager(MasterServices master, ManagedKeyProvider keyProvider) throws IOException {
+    public MockSystemKeyManager(MasterServices master, ManagedKeyProvider keyProvider)
+        throws IOException {
       super(master);
       this.keyProvider = keyProvider;
       //systemKeyDir = mock(Path.class);

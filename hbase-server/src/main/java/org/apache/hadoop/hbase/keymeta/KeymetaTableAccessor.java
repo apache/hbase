@@ -63,13 +63,15 @@ public class KeymetaTableAccessor extends KeyManagementBase {
   public static final byte[] DEK_CHECKSUM_QUAL_BYTES = Bytes.toBytes(DEK_CHECKSUM_QUAL_NAME);
 
   public static final String DEK_WRAPPED_BY_STK_QUAL_NAME = "dek_wrapped_by_stk";
-  public static final byte[] DEK_WRAPPED_BY_STK_QUAL_BYTES = Bytes.toBytes(DEK_WRAPPED_BY_STK_QUAL_NAME);
+  public static final byte[] DEK_WRAPPED_BY_STK_QUAL_BYTES =
+      Bytes.toBytes(DEK_WRAPPED_BY_STK_QUAL_NAME);
 
   public static final String STK_CHECKSUM_QUAL_NAME = "stk_checksum";
   public static final byte[] STK_CHECKSUM_QUAL_BYTES = Bytes.toBytes(STK_CHECKSUM_QUAL_NAME);
 
   public static final String REFRESHED_TIMESTAMP_QUAL_NAME = "refreshed_timestamp";
-  public static final byte[] REFRESHED_TIMESTAMP_QUAL_BYTES = Bytes.toBytes(REFRESHED_TIMESTAMP_QUAL_NAME);
+  public static final byte[] REFRESHED_TIMESTAMP_QUAL_BYTES =
+      Bytes.toBytes(REFRESHED_TIMESTAMP_QUAL_NAME);
 
   public static final String KEY_STATE_QUAL_NAME = "key_state";
   public static final byte[] KEY_STATE_QUAL_BYTES = Bytes.toBytes(KEY_STATE_QUAL_NAME);
@@ -181,7 +183,8 @@ public class KeymetaTableAccessor extends KeyManagementBase {
    */
   public ManagedKeyData getKey(byte[] key_cust, String keyNamespace, String keyMetadata)
     throws IOException, KeyException {
-    return getKeyInternal(key_cust, keyNamespace, ManagedKeyData.constructMetadataHash(keyMetadata));
+    return getKeyInternal(key_cust, keyNamespace,
+        ManagedKeyData.constructMetadataHash(keyMetadata));
   }
 
   /**
@@ -194,8 +197,8 @@ public class KeymetaTableAccessor extends KeyManagementBase {
    * @throws IOException when there is an underlying IOException.
    * @throws KeyException when there is an underlying KeyException.
    */
-  private ManagedKeyData getKeyInternal(byte[] key_cust, String keyNamespace, byte[] keyMetadataHash)
-    throws IOException, KeyException {
+  private ManagedKeyData getKeyInternal(byte[] key_cust, String keyNamespace,
+      byte[] keyMetadataHash) throws IOException, KeyException {
     assertKeyManagementEnabled();
     Connection connection = getServer().getConnection();
     try (Table table = connection.getTable(KEY_META_TABLE_NAME)) {

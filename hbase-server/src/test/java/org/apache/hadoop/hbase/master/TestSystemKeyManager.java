@@ -94,7 +94,7 @@ public class TestSystemKeyManager extends ManagedKeyTestBase {
     assertThrows(IOException.class, tmpCKM::ensureSystemKeyInitialized);
   }
 
-  private ManagedKeyData validateInitialState(HMaster master, MockManagedKeyProvider pbeKeyProvider )
+  private ManagedKeyData validateInitialState(HMaster master, MockManagedKeyProvider pbeKeyProvider)
     throws IOException {
     SystemKeyAccessor systemKeyAccessor = new SystemKeyAccessor(master);
     assertEquals(1, systemKeyAccessor.getAllSystemKeyFiles().size());
@@ -111,6 +111,7 @@ public class TestSystemKeyManager extends ManagedKeyTestBase {
     TEST_UTIL.shutdownMiniHBaseCluster();
     Thread.sleep(2000);
     TEST_UTIL.restartHBaseCluster(1);
-    TEST_UTIL.waitFor(60000, () -> TEST_UTIL.getMiniHBaseCluster().getMaster().isInitialized());
+    TEST_UTIL.waitFor(60000,
+        () -> TEST_UTIL.getMiniHBaseCluster().getMaster().isInitialized());
   }
 }

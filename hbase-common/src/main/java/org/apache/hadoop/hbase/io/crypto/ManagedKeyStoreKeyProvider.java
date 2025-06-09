@@ -36,8 +36,8 @@ public class ManagedKeyStoreKeyProvider extends KeyStoreKeyProvider implements M
     // Encode clusterId too for consistency with that of key custodian.
     String keyMetadata = generateKeyMetadata(systemKeyAlias,
       ManagedKeyProvider.encodeToStr(clusterId));
-    return new ManagedKeyData(clusterId, ManagedKeyData.KEY_SPACE_GLOBAL, key, ManagedKeyState.ACTIVE,
-      keyMetadata);
+    return new ManagedKeyData(clusterId, ManagedKeyData.KEY_SPACE_GLOBAL, key,
+        ManagedKeyState.ACTIVE, keyMetadata);
   }
 
   @Override
