@@ -22,8 +22,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.ipc.RpcScheduler;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.regionserver.Region;
@@ -47,7 +49,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class RegionServerRpcQuotaManager implements RpcQuotaManager {
+public class RegionServerRpcQuotaManager implements RpcQuotaManager, ConfigurationObserver {
   private static final Logger LOG = LoggerFactory.getLogger(RegionServerRpcQuotaManager.class);
 
   private final RegionServerServices rsServices;
@@ -86,6 +88,15 @@ public class RegionServerRpcQuotaManager implements RpcQuotaManager {
     if (isQuotaEnabled()) {
       quotaCache.stop("shutdown");
     }
+  }
+
+  public void reload() {
+    quotaCache.forceSynchronousCacheRefresh();
+  }
+
+  @Override
+  public void onConfigurationChange(Configuration conf) {
+    reload();
   }
 
   protected boolean isRpcThrottleEnabled() {
