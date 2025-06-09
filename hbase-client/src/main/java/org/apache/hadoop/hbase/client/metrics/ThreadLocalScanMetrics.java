@@ -25,6 +25,13 @@ public final class ThreadLocalScanMetrics {
   private ThreadLocalScanMetrics() {
   }
 
+  public static final ThreadLocal<Boolean> isScanMetricsEnabled = new ThreadLocal<>() {
+    @Override
+    protected Boolean initialValue() {
+      return false;
+    }
+  };
+
   public static final ThreadLocal<AtomicInteger> bytesReadFromFs = new ThreadLocal<>() {
     @Override
     protected AtomicInteger initialValue() {

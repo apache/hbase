@@ -1216,12 +1216,9 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     int storeFileScannerCount = scanners.size();
     CountDownLatch latch = new CountDownLatch(storeFileScannerCount);
     List<ParallelSeekHandler> handlers = new ArrayList<>(storeFileScannerCount);
-    AtomicInteger bytesReadFromFs = ThreadLocalScanMetrics.bytesReadFromFs.get();
-    AtomicInteger bytesReadFromBlockCache = ThreadLocalScanMetrics.bytesReadFromBlockCache.get();
     for (KeyValueScanner scanner : scanners) {
       if (scanner instanceof StoreFileScanner) {
-        ParallelSeekHandler seekHandler = new ParallelSeekHandler(scanner, kv, this.readPt, latch,
-          bytesReadFromFs, bytesReadFromBlockCache);
+        ParallelSeekHandler seekHandler = new ParallelSeekHandler(scanner, kv, this.readPt, latch);
         executor.submit(seekHandler);
         handlers.add(seekHandler);
       } else {

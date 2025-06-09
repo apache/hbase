@@ -396,8 +396,11 @@ public class HStoreFile implements StoreFile {
     long readahead = fileInfo.isNoReadahead() ? 0L : -1L;
     ReaderContext context = fileInfo.createReaderContext(false, readahead, ReaderType.PREAD);
     fileInfo.initHFileInfo(context);
-    ThreadLocalScanMetrics.bytesReadFromFs.get().addAndGet(
-      fileInfo.getHFileInfo().getTrailer().getTrailerSize());
+    boolean isScanMetricsEnabled = ThreadLocalScanMetrics.isScanMetricsEnabled.get();
+    if (isScanMetricsEnabled) {
+      ThreadLocalScanMetrics.bytesReadFromFs.get().addAndGet(
+        fileInfo.getHFileInfo().getTrailer().getTrailerSize());
+    }
     StoreFileReader reader = fileInfo.preStoreFileReaderOpen(context, cacheConf);
     if (reader == null) {
       reader = fileInfo.createReader(context, cacheConf);

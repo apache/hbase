@@ -150,13 +150,19 @@ public class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
     } finally {
       region.smallestReadPointCalcLock.unlock(ReadPointCalculationLock.LockType.RECORDING_LOCK);
     }
-    ThreadLocalScanMetrics.bytesReadFromFs.get().getAndSet(0);
-    ThreadLocalScanMetrics.bytesReadFromBlockCache.get().getAndSet(0);
-    ThreadLocalScanMetrics.bytesReadFromMemstore.get().getAndSet(0);
+    boolean isScanMetricsEnabled = scan.isScanMetricsEnabled();
+    ThreadLocalScanMetrics.isScanMetricsEnabled.set(isScanMetricsEnabled);
+    if (isScanMetricsEnabled) {
+      ThreadLocalScanMetrics.bytesReadFromFs.get().getAndSet(0);
+      ThreadLocalScanMetrics.bytesReadFromBlockCache.get().getAndSet(0);
+      ThreadLocalScanMetrics.bytesReadFromMemstore.get().getAndSet(0);
+    }
     initializeScanners(scan, additionalScanners);
-    bytesReadFromFs += ThreadLocalScanMetrics.bytesReadFromFs.get().getAndSet(0);
-    bytesReadFromBlockCache += ThreadLocalScanMetrics.bytesReadFromBlockCache.get().getAndSet(0);
-    bytesReadFromMemstore += ThreadLocalScanMetrics.bytesReadFromMemstore.get().getAndSet(0);
+    if (isScanMetricsEnabled) {
+      bytesReadFromFs += ThreadLocalScanMetrics.bytesReadFromFs.get().getAndSet(0);
+      bytesReadFromBlockCache += ThreadLocalScanMetrics.bytesReadFromBlockCache.get().getAndSet(0);
+      bytesReadFromMemstore += ThreadLocalScanMetrics.bytesReadFromMemstore.get().getAndSet(0);
+    }
   }
 
   public ScannerContext getContext() {
@@ -290,22 +296,25 @@ public class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
       throw new UnknownScannerException("Scanner was closed");
     }
     boolean moreValues = false;
-    if (bytesReadFromFs > 0) {
-      scannerContext.getMetrics().addToCounter(
-        ServerSideScanMetrics.BYTES_READ_FROM_FS_METRIC_NAME, bytesReadFromFs);
-      // Reset to zero to avoid double counting
-      bytesReadFromFs = 0;
-    }
-    if (bytesReadFromBlockCache > 0) {
-      scannerContext.getMetrics().addToCounter(
-        ServerSideScanMetrics.BYTES_READ_FROM_CACHE_METRIC_NAME, bytesReadFromBlockCache);
-      // Reset to zero to avoid double counting
-      bytesReadFromBlockCache = 0;
-    }
-    if (bytesReadFromMemstore > 0) {
-      scannerContext.getMetrics().addToCounter(
-        ServerSideScanMetrics.BYTES_READ_FROM_MEMSTORE_METRIC_NAME, bytesReadFromMemstore);
-      bytesReadFromMemstore = 0;
+    boolean isScanMetricsEnabled = scannerContext.isTrackingMetrics();
+    ThreadLocalScanMetrics.isScanMetricsEnabled.set(isScanMetricsEnabled);
+    if (isScanMetricsEnabled) {
+      ServerSideScanMetrics scanMetrics = scannerContext.getMetrics();
+      if (bytesReadFromFs > 0) {
+        scanMetrics.addToCounter(ServerSideScanMetrics.BYTES_READ_FROM_FS_METRIC_NAME,
+          bytesReadFromFs);
+        bytesReadFromFs = 0;
+      }
+      if (bytesReadFromBlockCache > 0) {
+        scanMetrics.addToCounter(
+          ServerSideScanMetrics.BYTES_READ_FROM_CACHE_METRIC_NAME, bytesReadFromBlockCache);
+        bytesReadFromBlockCache = 0;
+      }
+      if (bytesReadFromMemstore > 0) {
+        scanMetrics.addToCounter(
+          ServerSideScanMetrics.BYTES_READ_FROM_MEMSTORE_METRIC_NAME, bytesReadFromMemstore);
+        bytesReadFromMemstore = 0;
+      }
     }
     if (outResults.isEmpty()) {
       // Usually outResults is empty. This is true when next is called
@@ -316,16 +325,17 @@ public class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
       moreValues = nextInternal(tmpList, scannerContext);
       outResults.addAll(tmpList);
     }
-    scannerContext.getMetrics().addToCounter(
-      ServerSideScanMetrics.BYTES_READ_FROM_FS_METRIC_NAME,
-      ThreadLocalScanMetrics.bytesReadFromFs.get().getAndSet(0));
-    scannerContext.getMetrics().addToCounter(
-      ServerSideScanMetrics.BYTES_READ_FROM_CACHE_METRIC_NAME,
-      ThreadLocalScanMetrics.bytesReadFromBlockCache.get().getAndSet(0));
-    scannerContext.getMetrics().addToCounter(
-      ServerSideScanMetrics.BYTES_READ_FROM_MEMSTORE_METRIC_NAME,
-      ThreadLocalScanMetrics.bytesReadFromMemstore.get().getAndSet(0));
-
+    if (isScanMetricsEnabled) {
+      scannerContext.getMetrics().addToCounter(
+        ServerSideScanMetrics.BYTES_READ_FROM_FS_METRIC_NAME,
+        ThreadLocalScanMetrics.bytesReadFromFs.get().getAndSet(0));
+      scannerContext.getMetrics().addToCounter(
+        ServerSideScanMetrics.BYTES_READ_FROM_CACHE_METRIC_NAME,
+        ThreadLocalScanMetrics.bytesReadFromBlockCache.get().getAndSet(0));
+      scannerContext.getMetrics().addToCounter(
+        ServerSideScanMetrics.BYTES_READ_FROM_MEMSTORE_METRIC_NAME,
+        ThreadLocalScanMetrics.bytesReadFromMemstore.get().getAndSet(0));
+    }
     region.addReadRequestsCount(1);
     if (region.getMetrics() != null) {
       region.getMetrics().updateReadRequestCount();

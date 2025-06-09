@@ -337,12 +337,15 @@ public class SegmentScanner implements KeyValueScanner {
    */
   protected void updateCurrent() {
     ExtendedCell next = null;
+    boolean isScanMetricsEnabled = ThreadLocalScanMetrics.isScanMetricsEnabled.get();
 
     try {
       while (iter.hasNext()) {
         next = iter.next();
-        ThreadLocalScanMetrics.bytesReadFromMemstore.get().addAndGet(
-          PrivateCellUtil.estimatedSerializedSizeOf(next));
+        if (isScanMetricsEnabled) {
+          ThreadLocalScanMetrics.bytesReadFromMemstore.get()
+            .addAndGet(PrivateCellUtil.estimatedSerializedSizeOf(next));
+        }
         if (next.getSequenceId() <= this.readPoint) {
           current = next;
           return;// skip irrelevant versions
