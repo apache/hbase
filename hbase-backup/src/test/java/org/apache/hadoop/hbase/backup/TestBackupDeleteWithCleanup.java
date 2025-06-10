@@ -98,7 +98,7 @@ public class TestBackupDeleteWithCleanup extends TestBackupBase {
     verifySystemTableUpdate(backupSystemTable, currentTime);
   }
 
-  private static void setupBackupFolders(FileSystem fs, Path backupWalDir, long currentTime)
+  public static void setupBackupFolders(FileSystem fs, Path backupWalDir, long currentTime)
     throws IOException {
     Path walsDir = new Path(backupWalDir, WALS_DIR);
     Path bulkLoadDir = new Path(backupWalDir, BULKLOAD_FILES_DIR);
@@ -160,13 +160,13 @@ public class TestBackupDeleteWithCleanup extends TestBackupBase {
     }
   }
 
-  private static void logDirectoryStructure(FileSystem fs, Path dir, String message)
+  public static void logDirectoryStructure(FileSystem fs, Path dir, String message)
     throws IOException {
     System.out.println(message);
     listDirectory(fs, dir, "  ");
   }
 
-  private static void listDirectory(FileSystem fs, Path dir, String indent) throws IOException {
+  public static void listDirectory(FileSystem fs, Path dir, String indent) throws IOException {
     if (!fs.exists(dir)) {
       System.out.println(indent + "[Missing] " + dir);
       return;

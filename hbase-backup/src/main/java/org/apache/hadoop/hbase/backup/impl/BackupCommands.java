@@ -932,7 +932,7 @@ public final class BackupCommands {
      * @param sysTable Backup system table
      * @return cutoff timestamp or 0 if not found
      */
-    private long determineWALCleanupCutoffTime(BackupSystemTable sysTable) throws IOException {
+    long determineWALCleanupCutoffTime(BackupSystemTable sysTable) throws IOException {
       List<BackupInfo> backupInfos = sysTable.getBackupInfos(BackupState.COMPLETE);
       Collections.reverse(backupInfos); // Start from oldest
 
@@ -949,7 +949,7 @@ public final class BackupCommands {
      * @param sysTable        Backup system table
      * @param cutoffTimestamp Timestamp before which WALs are no longer needed
      */
-    private void updateBackupTableStartTimes(BackupSystemTable sysTable, long cutoffTimestamp)
+    void updateBackupTableStartTimes(BackupSystemTable sysTable, long cutoffTimestamp)
       throws IOException {
 
       Map<TableName, Long> backupTables = sysTable.getContinuousBackupTableSet();
@@ -969,7 +969,7 @@ public final class BackupCommands {
     /**
      * Cleans up old WAL and bulk-loaded files based on the determined cutoff timestamp.
      */
-    private void deleteOldWALFiles(Configuration conf, String backupWalDir, long cutoffTime)
+    void deleteOldWALFiles(Configuration conf, String backupWalDir, long cutoffTime)
       throws IOException {
       System.out.println("Starting WAL cleanup in backup directory: " + backupWalDir
         + " with cutoff time: " + cutoffTime);
