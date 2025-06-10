@@ -1054,7 +1054,7 @@ public final class HConstants {
    * RegionServer to start
    */
   public static final String HBASE_REGION_SERVER_FREE_HEAP_MEMORY_MIN_SIZE_KEY =
-    "hbase.regionserver.free.heap.memory.min.size";
+    "hbase.regionserver.free.heap.min.memory.size";
 
   public static final String CP_HTD_ATTR_INCLUSION_KEY =
     "hbase.coprocessor.classloader.included.classes";
