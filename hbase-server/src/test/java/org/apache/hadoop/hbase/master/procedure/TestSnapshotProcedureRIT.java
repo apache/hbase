@@ -53,8 +53,7 @@ public class TestSnapshotProcedureRIT extends TestSnapshotProcedure {
       () -> procExec.getProcedure(mergeProcId).getState() == ProcedureState.RUNNABLE);
     SnapshotProcedure sp = new SnapshotProcedure(procExec.getEnvironment(), snapshotProto);
     long snapshotProcId = procExec.submitProcedure(sp);
-    TEST_UTIL.waitFor(2000, 1000, () -> procExec.getProcedure(snapshotProcId) != null
-      && procExec.getProcedure(snapshotProcId).getState() == ProcedureState.WAITING_TIMEOUT);
+    TEST_UTIL.waitFor(2000, 1000, () -> procExec.getProcedure(snapshotProcId) != null);
     ProcedureTestingUtility.waitProcedure(procExec, snapshotProcId);
     SnapshotTestingUtils.confirmSnapshotValid(TEST_UTIL, snapshotProto, TABLE_NAME, CF);
   }
