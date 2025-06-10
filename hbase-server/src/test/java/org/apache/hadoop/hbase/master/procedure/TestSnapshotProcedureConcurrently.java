@@ -27,8 +27,10 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.SnapshotType;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
@@ -135,5 +137,41 @@ public class TestSnapshotProcedureConcurrently extends TestSnapshotProcedure {
       () -> sm.isSnapshotDone(snapshotOnSameTableProto) && !sm.isTakingAnySnapshot());
     SnapshotTestingUtils.confirmSnapshotValid(TEST_UTIL, snapshotProto, TABLE_NAME, CF);
     SnapshotTestingUtils.confirmSnapshotValid(TEST_UTIL, snapshotOnSameTableProto, TABLE_NAME, CF);
+  }
+
+  @Test
+  public void testItFailsIfTableIsNotDisabledOrEnabled() throws Exception {
+    ProcedureExecutor<MasterProcedureEnv> executor = master.getMasterProcedureExecutor();
+    MasterProcedureEnv env = executor.getEnvironment();
+    master.getTableStateManager().setTableState(TABLE_NAME, TableState.State.ENABLING);
+    // Using a delayed spy ensures we hit the problem state while the table enable procedure
+    // is waiting to run
+    SnapshotProcedure snapshotProc =
+      getDelayedOnSpecificStateSnapshotProcedure(new SnapshotProcedure(env, snapshotProto), env,
+        MasterProcedureProtos.SnapshotState.SNAPSHOT_WRITE_SNAPSHOT_INFO);
+    long snapshotProcId = executor.submitProcedure(snapshotProc);
+    TEST_UTIL.waitFor(2000, () -> master.getProcedures().stream().map(Procedure::getProcId)
+      .collect(Collectors.toSet()).contains(snapshotProcId));
+
+    TestEnableTableProcedure enableTable =
+      new TestEnableTableProcedure(master.getMasterProcedureExecutor().getEnvironment(), TABLE_NAME,
+        MasterProcedureProtos.EnableTableState.ENABLE_TABLE_SET_ENABLED_TABLE_STATE);
+    executor.submitProcedure(enableTable);
+    TEST_UTIL.waitFor(70000, // need to wait slightly longer than the spy proc (60_000)
+      () -> master.getTableStateManager().getTableState(TABLE_NAME).isEnabled());
+  }
+
+  // Needs to be publicly accessible for Procedure validation
+  public static class TestEnableTableProcedure extends EnableTableProcedure {
+    // Necessary for Procedure validation
+    public TestEnableTableProcedure() {
+    }
+
+    public TestEnableTableProcedure(MasterProcedureEnv env, TableName tableName,
+      MasterProcedureProtos.EnableTableState state) {
+      super(env, tableName);
+      this.setNextState(state);
+    }
+
   }
 }
