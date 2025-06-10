@@ -50,33 +50,54 @@ public class TestMemorySizeUtil {
 
   @Test
   public void testValidateRegionServerHeapMemoryAllocation() {
+    // when memstore size + block cache size + default free heap min size == 1.0
     conf.setFloat(MemorySizeUtil.MEMSTORE_SIZE_KEY, 0.4f);
     conf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0.4f);
-    conf.setFloat(HConstants.HBASE_REGION_SERVER_FREE_HEAP_MIN_SIZE_KEY, 0.2f);
+    assertEquals(MemorySizeUtil.DEFAULT_FREE_HEAP_FRACTION, 0.2f, 0.0f);
     MemorySizeUtil.validateRegionServerHeapMemoryAllocation(conf);
 
-    conf.setFloat(HConstants.HBASE_REGION_SERVER_FREE_HEAP_MIN_SIZE_KEY, 0.1f);
-    MemorySizeUtil.validateRegionServerHeapMemoryAllocation(conf);
-
-    // when memstore size + block cache size + free heap min size > 1.0,
-    // it should throw an exception
-    conf.setFloat(HConstants.HBASE_REGION_SERVER_FREE_HEAP_MIN_SIZE_KEY, 0.3f);
+    // when memstore size + block cache size + default free heap min size > 1.0
+    conf.setFloat(MemorySizeUtil.MEMSTORE_SIZE_KEY, 0.5f);
     assertThrows(RuntimeException.class,
       () -> MemorySizeUtil.validateRegionServerHeapMemoryAllocation(conf));
+
+    // set the min free heap size to 1.6g, which is 10% of the total heap size
+    conf.set(HConstants.HBASE_REGION_SERVER_FREE_HEAP_MIN_MEMORY_SIZE_KEY, "1.6g");
+    try (MockedStatic<MemorySizeUtil> mockedMemorySizeUtil =
+      mockStatic(MemorySizeUtil.class, CALLS_REAL_METHODS)) {
+      mockedMemorySizeUtil.when(MemorySizeUtil::safeGetHeapMemoryUsage)
+        .thenReturn(createMemoryUsage(16L * 1024 * 1024 * 1024));
+
+      MemorySizeUtil.validateRegionServerHeapMemoryAllocation(conf);
+    }
+
+    // set the min free heap size to 4g, which is 25% of the total heap size
+    conf.set(HConstants.HBASE_REGION_SERVER_FREE_HEAP_MIN_MEMORY_SIZE_KEY, "4g");
+    try (MockedStatic<MemorySizeUtil> mockedMemorySizeUtil =
+      mockStatic(MemorySizeUtil.class, CALLS_REAL_METHODS)) {
+      mockedMemorySizeUtil.when(MemorySizeUtil::safeGetHeapMemoryUsage)
+        .thenReturn(createMemoryUsage(16L * 1024 * 1024 * 1024));
+
+      // this should throw an exception as 0.5 + 0.4 + 0.25 = 1.15 > 1.0
+      assertThrows(RuntimeException.class,
+        () -> MemorySizeUtil.validateRegionServerHeapMemoryAllocation(conf));
+    }
   }
 
   @Test
   public void testGetRegionServerMinFreeHeapFraction() {
-    conf.setFloat(HConstants.HBASE_REGION_SERVER_FREE_HEAP_MIN_SIZE_KEY, 0.15f);
+    // when setting is not set, it should return the default value
+    conf.set(HConstants.HBASE_REGION_SERVER_FREE_HEAP_MIN_MEMORY_SIZE_KEY, "");
     float minFreeHeapFraction = MemorySizeUtil.getRegionServerMinFreeHeapFraction(conf);
-    assertEquals(0.15f, minFreeHeapFraction, 0.0f);
+    assertEquals(MemorySizeUtil.DEFAULT_FREE_HEAP_FRACTION, minFreeHeapFraction, 0.0f);
 
-    conf.setFloat(HConstants.HBASE_REGION_SERVER_FREE_HEAP_MIN_SIZE_KEY, 0.3f);
+    // when setting to 0, it should return 0.0f
+    conf.set(HConstants.HBASE_REGION_SERVER_FREE_HEAP_MIN_MEMORY_SIZE_KEY, "0");
     minFreeHeapFraction = MemorySizeUtil.getRegionServerMinFreeHeapFraction(conf);
-    assertEquals(0.3f, minFreeHeapFraction, 0.0f);
+    assertEquals(0.0f, minFreeHeapFraction, 0.0f);
 
     // when setting with human-readable format
-    conf.set(HConstants.HBASE_REGION_SERVER_FREE_HEAP_MEMORY_MIN_SIZE_KEY, "4g");
+    conf.set(HConstants.HBASE_REGION_SERVER_FREE_HEAP_MIN_MEMORY_SIZE_KEY, "4g");
     try (MockedStatic<MemorySizeUtil> mockedMemorySizeUtil =
       mockStatic(MemorySizeUtil.class, CALLS_REAL_METHODS)) {
       mockedMemorySizeUtil.when(MemorySizeUtil::safeGetHeapMemoryUsage)

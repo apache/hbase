@@ -1041,19 +1041,10 @@ public final class HConstants {
   public static final boolean HFILE_PREAD_ALL_BYTES_ENABLED_DEFAULT = false;
 
   /**
-   * Configuration key for the minimum fraction of heap memory that must remain free for a
-   * RegionServer to start
-   */
-  public static final String HBASE_REGION_SERVER_FREE_HEAP_MIN_SIZE_KEY =
-    "hbase.regionserver.free.heap.min.size";
-
-  public static final float HBASE_REGION_SERVER_FREE_HEAP_MIN_SIZE_DEFAULT = 0.2f;
-
-  /**
    * Configuration key for the absolute amount of heap memory that must remain free for a
    * RegionServer to start
    */
-  public static final String HBASE_REGION_SERVER_FREE_HEAP_MEMORY_MIN_SIZE_KEY =
+  public static final String HBASE_REGION_SERVER_FREE_HEAP_MIN_MEMORY_SIZE_KEY =
     "hbase.regionserver.free.heap.min.memory.size";
 
   public static final String CP_HTD_ATTR_INCLUSION_KEY =

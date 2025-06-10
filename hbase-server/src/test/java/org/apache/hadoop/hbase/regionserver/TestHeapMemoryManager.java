@@ -72,7 +72,6 @@ public class TestHeapMemoryManager {
     conf.setFloat(MemorySizeUtil.MEMSTORE_SIZE_KEY, 0.02f);
     conf.setFloat(HeapMemoryManager.BLOCK_CACHE_SIZE_MAX_RANGE_KEY, 0.75f);
     conf.setFloat(HeapMemoryManager.BLOCK_CACHE_SIZE_MIN_RANGE_KEY, 0.03f);
-    conf.setFloat(HConstants.HBASE_REGION_SERVER_FREE_HEAP_MIN_SIZE_KEY, 0.2f);
     RegionServerAccountingStub regionServerAccounting = new RegionServerAccountingStub(conf);
     HeapMemoryManager manager = new HeapMemoryManager(new BlockCacheStub(0),
       new MemstoreFlusherStub(0), new RegionServerStub(conf), regionServerAccounting);
@@ -85,7 +84,6 @@ public class TestHeapMemoryManager {
     conf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0.02f);
     conf.setFloat(HeapMemoryManager.MEMSTORE_SIZE_MAX_RANGE_KEY, 0.75f);
     conf.setFloat(HeapMemoryManager.MEMSTORE_SIZE_MIN_RANGE_KEY, 0.03f);
-    conf.setFloat(HConstants.HBASE_REGION_SERVER_FREE_HEAP_MIN_SIZE_KEY, 0.2f);
     RegionServerAccountingStub regionServerAccounting = new RegionServerAccountingStub(conf);
     HeapMemoryManager manager = new HeapMemoryManager(new BlockCacheStub(0),
       new MemstoreFlusherStub(0), new RegionServerStub(conf), regionServerAccounting);
@@ -98,7 +96,6 @@ public class TestHeapMemoryManager {
     Configuration conf = HBaseConfiguration.create();
     conf.setFloat(HeapMemoryManager.MEMSTORE_SIZE_MAX_RANGE_KEY, 0.75f);
     conf.setFloat(HeapMemoryManager.BLOCK_CACHE_SIZE_MIN_RANGE_KEY, 0.06f);
-    conf.setFloat(HConstants.HBASE_REGION_SERVER_FREE_HEAP_MIN_SIZE_KEY, 0.2f);
     RegionServerAccountingStub regionServerAccounting = new RegionServerAccountingStub(conf);
     MemstoreFlusherStub memStoreFlusher = new MemstoreFlusherStub(0);
     try {
@@ -110,7 +107,6 @@ public class TestHeapMemoryManager {
     conf = HBaseConfiguration.create();
     conf.setFloat(HeapMemoryManager.MEMSTORE_SIZE_MIN_RANGE_KEY, 0.2f);
     conf.setFloat(HeapMemoryManager.BLOCK_CACHE_SIZE_MAX_RANGE_KEY, 0.7f);
-    conf.setFloat(HConstants.HBASE_REGION_SERVER_FREE_HEAP_MIN_SIZE_KEY, 0.2f);
     try {
       new HeapMemoryManager(blockCache, memStoreFlusher, new RegionServerStub(conf),
         regionServerAccounting);
@@ -127,7 +123,6 @@ public class TestHeapMemoryManager {
     conf.setFloat(HeapMemoryManager.BLOCK_CACHE_SIZE_MAX_RANGE_KEY, 0.7f);
     conf.setFloat(HeapMemoryManager.BLOCK_CACHE_SIZE_MIN_RANGE_KEY, 0.05f);
     conf.setLong(HeapMemoryManager.HBASE_RS_HEAP_MEMORY_TUNER_PERIOD, 1000);
-    conf.setFloat(HConstants.HBASE_REGION_SERVER_FREE_HEAP_MIN_SIZE_KEY, 0.2f);
     BlockCacheStub blockCache = new BlockCacheStub((long) (maxHeapSize * 0.4));
     RegionServerAccountingStub regionServerAccounting = new RegionServerAccountingStub(conf);
     MemstoreFlusherStub memStoreFlusher = new MemstoreFlusherStub((long) (maxHeapSize * 0.4));
@@ -166,7 +161,6 @@ public class TestHeapMemoryManager {
     conf.setFloat(HeapMemoryManager.BLOCK_CACHE_SIZE_MIN_RANGE_KEY, 0.05f);
     conf.setLong(HeapMemoryManager.HBASE_RS_HEAP_MEMORY_TUNER_PERIOD, 1000);
     conf.setInt(DefaultHeapMemoryTuner.NUM_PERIODS_TO_IGNORE, 0);
-    conf.setFloat(HConstants.HBASE_REGION_SERVER_FREE_HEAP_MIN_SIZE_KEY, 0.2f);
     RegionServerAccountingStub regionServerAccounting = new RegionServerAccountingStub(conf, true);
     MemstoreFlusherStub memStoreFlusher = new MemstoreFlusherStub((long) (maxHeapSize * 0.4));
     // Empty memstore and but nearly filled block cache
@@ -215,7 +209,6 @@ public class TestHeapMemoryManager {
     conf.setFloat(HeapMemoryManager.BLOCK_CACHE_SIZE_MIN_RANGE_KEY, 0.05f);
     conf.setLong(HeapMemoryManager.HBASE_RS_HEAP_MEMORY_TUNER_PERIOD, 1000);
     conf.setInt(DefaultHeapMemoryTuner.NUM_PERIODS_TO_IGNORE, 0);
-    conf.setFloat(HConstants.HBASE_REGION_SERVER_FREE_HEAP_MIN_SIZE_KEY, 0.2f);
     RegionServerAccountingStub regionServerAccounting = new RegionServerAccountingStub(conf, true);
     MemstoreFlusherStub memStoreFlusher = new MemstoreFlusherStub((long) (maxHeapSize * 0.4));
     // Empty memstore and but nearly filled block cache
@@ -271,7 +264,6 @@ public class TestHeapMemoryManager {
     conf.setFloat(HeapMemoryManager.BLOCK_CACHE_SIZE_MIN_RANGE_KEY, 0.05f);
     conf.setLong(HeapMemoryManager.HBASE_RS_HEAP_MEMORY_TUNER_PERIOD, 1000);
     conf.setInt(DefaultHeapMemoryTuner.NUM_PERIODS_TO_IGNORE, 0);
-    conf.setFloat(HConstants.HBASE_REGION_SERVER_FREE_HEAP_MIN_SIZE_KEY, 0.2f);
     RegionServerAccountingStub regionServerAccounting = new RegionServerAccountingStub(conf);
     MemstoreFlusherStub memStoreFlusher = new MemstoreFlusherStub((long) (maxHeapSize * 0.4));
     // Empty block cache and memstore
@@ -304,7 +296,6 @@ public class TestHeapMemoryManager {
     conf.setFloat(HeapMemoryManager.BLOCK_CACHE_SIZE_MIN_RANGE_KEY, 0.05f);
     conf.setLong(HeapMemoryManager.HBASE_RS_HEAP_MEMORY_TUNER_PERIOD, 1000);
     conf.setInt(DefaultHeapMemoryTuner.NUM_PERIODS_TO_IGNORE, 0);
-    conf.setFloat(HConstants.HBASE_REGION_SERVER_FREE_HEAP_MIN_SIZE_KEY, 0.2f);
     RegionServerAccountingStub regionServerAccounting = new RegionServerAccountingStub(conf);
     MemstoreFlusherStub memStoreFlusher = new MemstoreFlusherStub((long) (maxHeapSize * 0.4));
     // Empty block cache and but nearly filled memstore
@@ -352,7 +343,6 @@ public class TestHeapMemoryManager {
     conf.setFloat(HeapMemoryManager.BLOCK_CACHE_SIZE_MIN_RANGE_KEY, 0.05f);
     conf.setLong(HeapMemoryManager.HBASE_RS_HEAP_MEMORY_TUNER_PERIOD, 1000);
     conf.setInt(DefaultHeapMemoryTuner.NUM_PERIODS_TO_IGNORE, 0);
-    conf.setFloat(HConstants.HBASE_REGION_SERVER_FREE_HEAP_MIN_SIZE_KEY, 0.2f);
     RegionServerAccountingStub regionServerAccounting = new RegionServerAccountingStub(conf);
     MemstoreFlusherStub memStoreFlusher = new MemstoreFlusherStub((long) (maxHeapSize * 0.4));
     // Empty block cache and but nearly filled memstore
@@ -389,7 +379,6 @@ public class TestHeapMemoryManager {
     conf.setFloat(HeapMemoryManager.BLOCK_CACHE_SIZE_MIN_RANGE_KEY, 0.05f);
     conf.setLong(HeapMemoryManager.HBASE_RS_HEAP_MEMORY_TUNER_PERIOD, 1000);
     conf.setInt(DefaultHeapMemoryTuner.NUM_PERIODS_TO_IGNORE, 0);
-    conf.setFloat(HConstants.HBASE_REGION_SERVER_FREE_HEAP_MIN_SIZE_KEY, 0.2f);
     RegionServerAccountingStub regionServerAccounting = new RegionServerAccountingStub(conf);
     MemstoreFlusherStub memStoreFlusher = new MemstoreFlusherStub((long) (maxHeapSize * 0.4));
     // Empty memstore and but nearly filled block cache
@@ -441,7 +430,6 @@ public class TestHeapMemoryManager {
     conf.setFloat(HeapMemoryManager.BLOCK_CACHE_SIZE_MIN_RANGE_KEY, 0.05f);
     conf.setLong(HeapMemoryManager.HBASE_RS_HEAP_MEMORY_TUNER_PERIOD, 1000);
     conf.setInt(DefaultHeapMemoryTuner.NUM_PERIODS_TO_IGNORE, 0);
-    conf.setFloat(HConstants.HBASE_REGION_SERVER_FREE_HEAP_MIN_SIZE_KEY, 0.2f);
     RegionServerAccountingStub regionServerAccounting = new RegionServerAccountingStub(conf);
     MemstoreFlusherStub memStoreFlusher = new MemstoreFlusherStub((long) (maxHeapSize * 0.4));
     // Both memstore and block cache are nearly filled
@@ -489,7 +477,6 @@ public class TestHeapMemoryManager {
     conf.setFloat(HeapMemoryManager.BLOCK_CACHE_SIZE_MIN_RANGE_KEY, 0.05f);
     conf.setLong(HeapMemoryManager.HBASE_RS_HEAP_MEMORY_TUNER_PERIOD, 1000);
     conf.setInt(DefaultHeapMemoryTuner.NUM_PERIODS_TO_IGNORE, 0);
-    conf.setFloat(HConstants.HBASE_REGION_SERVER_FREE_HEAP_MIN_SIZE_KEY, 0.2f);
     RegionServerAccountingStub regionServerAccounting = new RegionServerAccountingStub(conf);
     // Both memstore and block cache are nearly filled
     blockCache.setTestBlockSize(0);
@@ -539,7 +526,6 @@ public class TestHeapMemoryManager {
     conf.setFloat(HeapMemoryManager.BLOCK_CACHE_SIZE_MIN_RANGE_KEY, 0.02f);
     conf.setLong(HeapMemoryManager.HBASE_RS_HEAP_MEMORY_TUNER_PERIOD, 1000);
     conf.setInt(DefaultHeapMemoryTuner.NUM_PERIODS_TO_IGNORE, 0);
-    conf.setFloat(HConstants.HBASE_REGION_SERVER_FREE_HEAP_MIN_SIZE_KEY, 0.2f);
     conf.setClass(HeapMemoryManager.HBASE_RS_HEAP_MEMORY_TUNER_CLASS, CustomHeapMemoryTuner.class,
       HeapMemoryTuner.class);
     // Let the system start with default values for memstore heap and block cache size.
@@ -574,7 +560,6 @@ public class TestHeapMemoryManager {
     conf.setFloat(HeapMemoryManager.BLOCK_CACHE_SIZE_MIN_RANGE_KEY, 0.1f);
     conf.setLong(HeapMemoryManager.HBASE_RS_HEAP_MEMORY_TUNER_PERIOD, 1000);
     conf.setInt(DefaultHeapMemoryTuner.NUM_PERIODS_TO_IGNORE, 0);
-    conf.setFloat(HConstants.HBASE_REGION_SERVER_FREE_HEAP_MIN_SIZE_KEY, 0.2f);
     conf.setClass(HeapMemoryManager.HBASE_RS_HEAP_MEMORY_TUNER_CLASS, CustomHeapMemoryTuner.class,
       HeapMemoryTuner.class);
     HeapMemoryManager heapMemoryManager = new HeapMemoryManager(blockCache, memStoreFlusher,
@@ -601,7 +586,6 @@ public class TestHeapMemoryManager {
     conf.setFloat(HeapMemoryManager.BLOCK_CACHE_SIZE_MIN_RANGE_KEY, 0.1f);
     conf.setLong(HeapMemoryManager.HBASE_RS_HEAP_MEMORY_TUNER_PERIOD, 1000);
     conf.setInt(DefaultHeapMemoryTuner.NUM_PERIODS_TO_IGNORE, 0);
-    conf.setFloat(HConstants.HBASE_REGION_SERVER_FREE_HEAP_MIN_SIZE_KEY, 0.2f);
     conf.setClass(HeapMemoryManager.HBASE_RS_HEAP_MEMORY_TUNER_CLASS, CustomHeapMemoryTuner.class,
       HeapMemoryTuner.class);
     HeapMemoryManager heapMemoryManager = new HeapMemoryManager(blockCache, memStoreFlusher,

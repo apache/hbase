@@ -50,10 +50,9 @@ public class MemorySizeUtil {
   public static final float DEFAULT_MEMSTORE_SIZE = 0.4f;
   // Default lower water mark limit is 95% size of memstore size.
   public static final float DEFAULT_MEMSTORE_SIZE_LOWER_LIMIT = 0.95f;
+  public static final float DEFAULT_FREE_HEAP_FRACTION = 0.2f;
 
   private static final Logger LOG = LoggerFactory.getLogger(MemorySizeUtil.class);
-  // a constant to convert a fraction to a percentage
-  private static final int CONVERT_TO_PERCENTAGE = 100;
 
   private static final String JVM_HEAP_EXCEPTION = "Got an exception while attempting to read "
     + "information about the JVM heap. Please submit this log information in a bug report and "
@@ -102,15 +101,13 @@ public class MemorySizeUtil {
           + "memStore=%d%%, blockCache=%d%%, requiredFreeHeap=%d%%. "
           + "Combined usage %d%% exceeds allowed maximum %d%%. "
           + "Check the following configuration values:%n" + "  - %s = %.2f%n" + "  - %s = %s%n"
-          + "  - %s = %s%n" + "  - %s = %s%n" + "  - %s = %s",
+          + "  - %s = %s%n" + "  - %s = %s",
         memStorePercent, blockCachePercent, minFreeHeapPercent, usedPercent, maxAllowedUsed,
         MEMSTORE_SIZE_KEY, memStoreFraction, HConstants.HFILE_BLOCK_CACHE_MEMORY_SIZE_KEY,
         conf.get(HConstants.HFILE_BLOCK_CACHE_MEMORY_SIZE_KEY),
         HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, conf.get(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY),
-        HConstants.HBASE_REGION_SERVER_FREE_HEAP_MEMORY_MIN_SIZE_KEY,
-        conf.get(HConstants.HBASE_REGION_SERVER_FREE_HEAP_MEMORY_MIN_SIZE_KEY),
-        HConstants.HBASE_REGION_SERVER_FREE_HEAP_MIN_SIZE_KEY,
-        conf.get(HConstants.HBASE_REGION_SERVER_FREE_HEAP_MIN_SIZE_KEY)));
+        HConstants.HBASE_REGION_SERVER_FREE_HEAP_MIN_MEMORY_SIZE_KEY,
+        conf.get(HConstants.HBASE_REGION_SERVER_FREE_HEAP_MIN_MEMORY_SIZE_KEY)));
     }
   }
 
@@ -121,8 +118,8 @@ public class MemorySizeUtil {
    * @throws IllegalArgumentException if HBASE_REGION_SERVER_FREE_HEAP_MEMORY_MIN_SIZE_KEY format is
    *                                  invalid
    */
-  public static long getRegionServerMinFreeHeapInBytes(Configuration conf) {
-    final String key = HConstants.HBASE_REGION_SERVER_FREE_HEAP_MEMORY_MIN_SIZE_KEY;
+  private static long getRegionServerMinFreeHeapInBytes(Configuration conf) {
+    final String key = HConstants.HBASE_REGION_SERVER_FREE_HEAP_MIN_MEMORY_SIZE_KEY;
     try {
       return Long.parseLong(conf.get(key));
     } catch (NumberFormatException e) {
@@ -134,14 +131,17 @@ public class MemorySizeUtil {
    * Returns the minimum required free heap as a fraction of total heap.
    */
   public static float getRegionServerMinFreeHeapFraction(final Configuration conf) {
-    long minFreeHeapInBytes = getRegionServerMinFreeHeapInBytes(conf);
-    if (minFreeHeapInBytes > 0) {
-      final MemoryUsage usage = safeGetHeapMemoryUsage();
-      return usage == null ? 0 : (float) minFreeHeapInBytes / usage.getMax();
+    final MemoryUsage usage = safeGetHeapMemoryUsage();
+    if (usage == null) {
+      return 0;
     }
 
-    return conf.getFloat(HConstants.HBASE_REGION_SERVER_FREE_HEAP_MIN_SIZE_KEY,
-      HConstants.HBASE_REGION_SERVER_FREE_HEAP_MIN_SIZE_DEFAULT);
+    long minFreeHeapInBytes = getRegionServerMinFreeHeapInBytes(conf);
+    if (minFreeHeapInBytes >= 0) {
+      return (float) minFreeHeapInBytes / usage.getMax();
+    }
+
+    return DEFAULT_FREE_HEAP_FRACTION;
   }
 
   /**
