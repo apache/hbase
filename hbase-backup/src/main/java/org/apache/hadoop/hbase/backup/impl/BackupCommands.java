@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase.backup.impl;
 
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONF_CONTINUOUS_BACKUP_PITR_WINDOW_DAYS;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONF_CONTINUOUS_BACKUP_WAL_DIR;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONTINUOUS_BACKUP_REPLICATION_PEER;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.DEFAULT_CONTINUOUS_BACKUP_PITR_WINDOW_DAYS;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_BACKUP_LIST_DESC;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_BANDWIDTH;
@@ -47,18 +49,26 @@ import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_WORKE
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_WORKERS_DESC;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_YARN_QUEUE_NAME;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_YARN_QUEUE_NAME_DESC;
+import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.DATE_FORMAT;
+import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.ONE_DAY_IN_MILLISECONDS;
 
 import java.io.IOException;
 import java.net.URI;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -71,6 +81,7 @@ import org.apache.hadoop.hbase.backup.BackupRestoreConstants;
 import org.apache.hadoop.hbase.backup.BackupRestoreConstants.BackupCommand;
 import org.apache.hadoop.hbase.backup.BackupType;
 import org.apache.hadoop.hbase.backup.HBackupFileSystem;
+import org.apache.hadoop.hbase.backup.replication.BackupFileSystemManager;
 import org.apache.hadoop.hbase.backup.util.BackupSet;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Connection;
@@ -80,6 +91,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
+import org.apache.hbase.thirdparty.com.google.common.base.Strings;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.HelpFormatter;
@@ -649,6 +661,8 @@ public final class BackupCommands {
       } else if (cmdline.hasOption(OPTION_LIST)) {
         executeDeleteListOfBackups(cmdline, isForceDelete);
       }
+
+      cleanUpUnusedBackupWALs();
     }
 
     private void executeDeleteOlderThan(CommandLine cmdline, boolean isForceDelete)
@@ -874,6 +888,139 @@ public final class BackupCommands {
       }
 
       return false;
+    }
+
+    /**
+     * Cleans up Write-Ahead Logs (WALs) that are no longer required for PITR after a successful
+     * backup deletion.
+     */
+    private void cleanUpUnusedBackupWALs() throws IOException {
+      Configuration conf = getConf() != null ? getConf() : HBaseConfiguration.create();
+      String backupWalDir = conf.get(CONF_CONTINUOUS_BACKUP_WAL_DIR);
+
+      if (Strings.isNullOrEmpty(backupWalDir)) {
+        System.out.println("No WAL directory specified for continuous backup. Skipping cleanup.");
+        return;
+      }
+
+      try (BackupSystemTable sysTable = new BackupSystemTable(conn)) {
+        // Get list of tables under continuous backup
+        Map<TableName, Long> continuousBackupTables = sysTable.getContinuousBackupTableSet();
+        if (continuousBackupTables.isEmpty()) {
+          System.out.println("No continuous backups configured. Skipping WAL cleanup.");
+          return;
+        }
+
+        // Find the earliest timestamp after which WALs are still needed
+        long cutoffTimestamp = determineWALCleanupCutoffTime(sysTable);
+        if (cutoffTimestamp == 0) {
+          System.err.println("ERROR: No valid full backup found. Skipping WAL cleanup.");
+          return;
+        }
+
+        // Update metadata before actual cleanup to avoid inconsistencies
+        updateBackupTableStartTimes(sysTable, cutoffTimestamp);
+
+        // Delete WAL files older than cutoff timestamp
+        deleteOldWALFiles(conf, backupWalDir, cutoffTimestamp);
+
+      }
+    }
+
+    /**
+     * Determines the cutoff time for cleaning WAL files.
+     * @param sysTable Backup system table
+     * @return cutoff timestamp or 0 if not found
+     */
+    long determineWALCleanupCutoffTime(BackupSystemTable sysTable) throws IOException {
+      List<BackupInfo> backupInfos = sysTable.getBackupInfos(BackupState.COMPLETE);
+      Collections.reverse(backupInfos); // Start from oldest
+
+      for (BackupInfo backupInfo : backupInfos) {
+        if (BackupType.FULL.equals(backupInfo.getType())) {
+          return backupInfo.getStartTs();
+        }
+      }
+      return 0;
+    }
+
+    /**
+     * Updates the start time for continuous backups if older than cutoff timestamp.
+     * @param sysTable        Backup system table
+     * @param cutoffTimestamp Timestamp before which WALs are no longer needed
+     */
+    void updateBackupTableStartTimes(BackupSystemTable sysTable, long cutoffTimestamp)
+      throws IOException {
+
+      Map<TableName, Long> backupTables = sysTable.getContinuousBackupTableSet();
+      Set<TableName> tablesToUpdate = new HashSet<>();
+
+      for (Map.Entry<TableName, Long> entry : backupTables.entrySet()) {
+        if (entry.getValue() < cutoffTimestamp) {
+          tablesToUpdate.add(entry.getKey());
+        }
+      }
+
+      if (!tablesToUpdate.isEmpty()) {
+        sysTable.updateContinuousBackupTableSet(tablesToUpdate, cutoffTimestamp);
+      }
+    }
+
+    /**
+     * Cleans up old WAL and bulk-loaded files based on the determined cutoff timestamp.
+     */
+    void deleteOldWALFiles(Configuration conf, String backupWalDir, long cutoffTime)
+      throws IOException {
+      System.out.println("Starting WAL cleanup in backup directory: " + backupWalDir
+        + " with cutoff time: " + cutoffTime);
+
+      BackupFileSystemManager manager =
+        new BackupFileSystemManager(CONTINUOUS_BACKUP_REPLICATION_PEER, conf, backupWalDir);
+      FileSystem fs = manager.getBackupFs();
+      Path walDir = manager.getWalsDir();
+      Path bulkloadDir = manager.getBulkLoadFilesDir();
+
+      SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
+      dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+
+      System.out.println("Listing directories under: " + walDir);
+
+      FileStatus[] directories = fs.listStatus(walDir);
+
+      for (FileStatus dirStatus : directories) {
+        if (!dirStatus.isDirectory()) {
+          continue; // Skip files, we only want directories
+        }
+
+        Path dirPath = dirStatus.getPath();
+        String dirName = dirPath.getName();
+
+        try {
+          long dayStart = parseDayDirectory(dirName, dateFormat);
+          System.out
+            .println("Checking WAL directory: " + dirName + " (Start Time: " + dayStart + ")");
+
+          // If WAL files of that day are older than cutoff time, delete them
+          if (dayStart + ONE_DAY_IN_MILLISECONDS - 1 < cutoffTime) {
+            System.out.println("Deleting outdated WAL directory: " + dirPath);
+            fs.delete(dirPath, true);
+            fs.delete(new Path(bulkloadDir, dirName), true);
+          }
+        } catch (ParseException e) {
+          System.out.println("WARNING: Failed to parse directory name '" + dirName
+            + "'. Skipping. Error: " + e.getMessage());
+        } catch (IOException e) {
+          System.out.println("WARNING: Failed to delete directory '" + dirPath
+            + "'. Skipping. Error: " + e.getMessage());
+        }
+      }
+
+      System.out.println("Completed WAL cleanup for backup directory: " + backupWalDir);
+    }
+
+    private long parseDayDirectory(String dayDir, SimpleDateFormat dateFormat)
+      throws ParseException {
+      return dateFormat.parse(dayDir).getTime();
     }
 
     @Override
