@@ -3175,6 +3175,13 @@
               <!-- define the steps to apply to those files -->
               <trimTrailingWhitespace/>
               <endWithNewline/>
+              <!--
+                On Windows, spotless might convert the line endings of these files to LF.
+                We're instructing it to respect the line ending definitions in .gitattributes
+                for these files.
+                For more details, please refer to HBASE-29388.
+               -->
+              <lineEndings>GIT_ATTRIBUTES</lineEndings>
             </format>
             <format>
               <!--
