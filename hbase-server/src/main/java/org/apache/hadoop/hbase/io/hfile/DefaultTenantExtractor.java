@@ -27,8 +27,14 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class DefaultTenantExtractor implements TenantExtractor {
+  /** The length of the tenant prefix to extract */
   private final int prefixLength;
   
+  /**
+   * Constructor for DefaultTenantExtractor.
+   *
+   * @param prefixLength the length of the tenant prefix to extract from row keys
+   */
   public DefaultTenantExtractor(int prefixLength) {
     this.prefixLength = prefixLength;
   }
@@ -70,6 +76,7 @@ public class DefaultTenantExtractor implements TenantExtractor {
   
   /**
    * Get the tenant prefix length.
+   * 
    * @return The configured tenant prefix length
    */
   @Override

@@ -18,20 +18,15 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import java.io.IOException;
+import java.util.Optional;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.ExtendedCell;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.FSDataInputStream;
-import java.util.Optional;
-import org.apache.hadoop.hbase.ExtendedCell;
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-import org.apache.hadoop.hbase.io.hfile.HFile.CachingBlockReader;
-import org.apache.hadoop.hbase.io.MultiTenantFSDataInputStreamWrapper;
 
 /**
  * HFile reader for multi-tenant HFiles in PREAD (random access) mode.
@@ -42,7 +37,7 @@ public class MultiTenantPreadReader extends AbstractMultiTenantReader {
   private static final Logger LOG = LoggerFactory.getLogger(MultiTenantPreadReader.class);
 
   /**
-   * Constructor for multi-tenant pread reader
+   * Constructor for multi-tenant pread reader.
    *
    * @param context Reader context info
    * @param fileInfo HFile info
@@ -57,7 +52,7 @@ public class MultiTenantPreadReader extends AbstractMultiTenantReader {
   }
 
   /**
-   * Create a section reader for a specific tenant
+   * Create a section reader for a specific tenant.
    * 
    * @param tenantSectionId The tenant section ID
    * @param metadata The section metadata
@@ -65,7 +60,8 @@ public class MultiTenantPreadReader extends AbstractMultiTenantReader {
    * @throws IOException If an error occurs creating the reader
    */
   @Override
-  protected SectionReader createSectionReader(byte[] tenantSectionId, SectionMetadata metadata) throws IOException {
+  protected SectionReader createSectionReader(byte[] tenantSectionId, SectionMetadata metadata) 
+      throws IOException {
     LOG.debug("Creating section reader for tenant section: {}, offset: {}, size: {}",
              Bytes.toStringBinary(tenantSectionId), metadata.getOffset(), metadata.getSize());
             
@@ -78,24 +74,32 @@ public class MultiTenantPreadReader extends AbstractMultiTenantReader {
       // For non-first sections, we need to be especially careful about trailer position
       // Use proper trailer size for HFile v3 (which is 4096 bytes, not 212)
       int trailerSize = FixedFileTrailer.getTrailerSize(3); // HFile v3 trailer size
-      long trailerPos = metadata.getOffset() + metadata.getSize() - trailerSize;
-      LOG.debug("Trailer should be at absolute position: {}", trailerPos);
+      long trailerPosition = metadata.getOffset() + metadata.getSize() - trailerSize;
+      LOG.debug("Trailer should be at absolute position: {}", trailerPosition);
     }
     
     return new PreadSectionReader(tenantSectionId, metadata);
   }
 
   /**
-   * Section reader implementation for pread access mode
+   * Section reader implementation for pread access mode.
    */
   protected class PreadSectionReader extends SectionReader {
+    /** The underlying HFile reader for this section */
     private volatile HFileReaderImpl hfileReader;
     
+    /**
+     * Constructor for PreadSectionReader.
+     *
+     * @param tenantSectionId The tenant section ID
+     * @param metadata The section metadata
+     */
     public PreadSectionReader(byte[] tenantSectionId, SectionMetadata metadata) {
       // Make a defensive copy of the tenant section ID to avoid any reference issues
       super(tenantSectionId.clone(), metadata);
       LOG.debug("Created PreadSectionReader for tenant section ID: {}, offset: {}, size: {}", 
-                Bytes.toStringBinary(this.tenantSectionId), metadata.getOffset(), metadata.getSize());
+                Bytes.toStringBinary(this.tenantSectionId), metadata.getOffset(), 
+                metadata.getSize());
     }
     
     @Override
@@ -124,7 +128,8 @@ public class MultiTenantPreadReader extends AbstractMultiTenantReader {
           perSectionContext = ReaderContextBuilder.newBuilder(sectionContext)
               .withFilePath(perSectionPath)
               .build();
-          LOG.debug("Created section context (prefetchKey={}) : {}", perSectionPath, perSectionContext);
+          LOG.debug("Created section context (prefetchKey={}) : {}", 
+                    perSectionPath, perSectionContext);
           
           // Use per-section context for info and reader
           LOG.debug("Creating HFileInfo for tenant section at offset {}", metadata.getOffset());
@@ -133,11 +138,15 @@ public class MultiTenantPreadReader extends AbstractMultiTenantReader {
           // TRAILER_ANALYSIS: Validate section trailer information
           FixedFileTrailer sectionTrailer = info.getTrailer();
           if (sectionTrailer != null) {
-            LOG.debug("TRAILER_ANALYSIS: Section trailer - version: {}, loadOnOpenOffset: {}, fileInfoOffset: {}", 
-                      sectionTrailer.getMajorVersion(), sectionTrailer.getLoadOnOpenDataOffset(), sectionTrailer.getFileInfoOffset());
-            LOG.debug("TRAILER_ANALYSIS: Section trailer - entryCount: {}, dataIndexCount: {}, firstDataBlockOffset: {}, lastDataBlockOffset: {}", 
+            LOG.debug("TRAILER_ANALYSIS: Section trailer - version: {}, " +
+                      "loadOnOpenOffset: {}, fileInfoOffset: {}", 
+                      sectionTrailer.getMajorVersion(), sectionTrailer.getLoadOnOpenDataOffset(), 
+                      sectionTrailer.getFileInfoOffset());
+            LOG.debug("TRAILER_ANALYSIS: Section trailer - entryCount: {}, " +
+                      "dataIndexCount: {}, firstDataBlockOffset: {}, lastDataBlockOffset: {}", 
                       sectionTrailer.getEntryCount(), sectionTrailer.getDataIndexCount(), 
-                      sectionTrailer.getFirstDataBlockOffset(), sectionTrailer.getLastDataBlockOffset());
+                      sectionTrailer.getFirstDataBlockOffset(), 
+                      sectionTrailer.getLastDataBlockOffset());
             
             // Validate that trailer offsets make sense for this section
             long sectionStart = metadata.getOffset();
@@ -148,43 +157,53 @@ public class MultiTenantPreadReader extends AbstractMultiTenantReader {
             
             LOG.debug("TRAILER_ANALYSIS: Section boundaries - start: {}, end: {}, size: {}", 
                       sectionStart, sectionEnd, metadata.getSize());
-            LOG.debug("TRAILER_ANALYSIS: Trailer offsets (section-relative) - loadOnOpen: {}, firstData: {}, lastData: {}", 
+            LOG.debug("TRAILER_ANALYSIS: Trailer offsets (section-relative) - " +
+                      "loadOnOpen: {}, firstData: {}, lastData: {}", 
                       loadOnOpenOffset, firstDataOffset, lastDataOffset);
             
             // Check if trailer offsets are within section boundaries (they should be section-relative)
             if (loadOnOpenOffset >= 0 && loadOnOpenOffset < metadata.getSize()) {
-              LOG.debug("TRAILER_ANALYSIS: loadOnOpenOffset {} is within section boundaries (good)", loadOnOpenOffset);
+              LOG.debug("TRAILER_ANALYSIS: loadOnOpenOffset {} is within section boundaries (good)", 
+                        loadOnOpenOffset);
             } else {
-              LOG.warn("TRAILER_ANALYSIS: loadOnOpenOffset {} is outside section boundaries [0, {}]", 
-                       loadOnOpenOffset, metadata.getSize());
+              LOG.warn("TRAILER_ANALYSIS: loadOnOpenOffset {} is outside " +
+                       "section boundaries [0, {}]", loadOnOpenOffset, metadata.getSize());
             }
             
             if (firstDataOffset >= 0 && firstDataOffset < metadata.getSize()) {
-              LOG.debug("TRAILER_ANALYSIS: firstDataBlockOffset {} is within section boundaries (good)", firstDataOffset);
+              LOG.debug("TRAILER_ANALYSIS: firstDataBlockOffset {} is within " +
+                        "section boundaries (good)", firstDataOffset);
             } else {
-              LOG.warn("TRAILER_ANALYSIS: firstDataBlockOffset {} is outside section boundaries [0, {}]", 
-                       firstDataOffset, metadata.getSize());
+              LOG.warn("TRAILER_ANALYSIS: firstDataBlockOffset {} is outside " +
+                       "section boundaries [0, {}]", firstDataOffset, metadata.getSize());
             }
           } else {
-            LOG.error("TRAILER_ANALYSIS: Section trailer is null for section at offset {}", metadata.getOffset());
+            LOG.error("TRAILER_ANALYSIS: Section trailer is null for section at offset {}", 
+                      metadata.getOffset());
           }
           
           // Extra debug for non-first sections
           if (metadata.getOffset() > 0) {
             int trailerSize = FixedFileTrailer.getTrailerSize(3); // HFile v3 trailer size
-            LOG.debug("Section size: {}, expected trailer at relative offset: {}", metadata.getSize(), metadata.getSize() - trailerSize);
-            LOG.debug("Trailer position in absolute coordinates: {}", metadata.getOffset() + metadata.getSize() - trailerSize);
+            LOG.debug("Section size: {}, expected trailer at relative offset: {}", 
+                      metadata.getSize(), metadata.getSize() - trailerSize);
+            LOG.debug("Trailer position in absolute coordinates: {}", 
+                      metadata.getOffset() + metadata.getSize() - trailerSize);
           }
           LOG.debug("Initializing section indices for tenant at offset {}", metadata.getOffset());
           // Create stream reader for this section with the section-specific fileInfo
-          LOG.debug("Creating HFilePreadReader for tenant section at offset {}", metadata.getOffset());
+          LOG.debug("Creating HFilePreadReader for tenant section at offset {}", 
+                    metadata.getOffset());
           hfileReader = new HFilePreadReader(perSectionContext, info, cacheConf, getConf());
           // Init metadata and indices
-          LOG.debug("About to initialize metadata and indices for section at offset {}", metadata.getOffset());
+          LOG.debug("About to initialize metadata and indices for section at offset {}", 
+                    metadata.getOffset());
           info.initMetaAndIndex(hfileReader);
           
-          LOG.debug("Successfully initialized indices for section at offset {}", metadata.getOffset());
-          LOG.debug("Initialized HFilePreadReader for tenant section ID: {}", Bytes.toStringBinary(tenantSectionId));
+          LOG.debug("Successfully initialized indices for section at offset {}", 
+                    metadata.getOffset());
+          LOG.debug("Initialized HFilePreadReader for tenant section ID: {}", 
+                    Bytes.toStringBinary(tenantSectionId));
           
           // Validate that the reader is reading from the correct section
           try {
@@ -192,13 +211,16 @@ public class MultiTenantPreadReader extends AbstractMultiTenantReader {
             if (firstKey.isPresent()) {
               ExtendedCell cell = firstKey.get();
               byte[] rowKey = new byte[cell.getRowLength()];
-              System.arraycopy(cell.getRowArray(), cell.getRowOffset(), rowKey, 0, cell.getRowLength());
+              System.arraycopy(cell.getRowArray(), cell.getRowOffset(), rowKey, 0, 
+                              cell.getRowLength());
               String rowKeyStr = Bytes.toString(rowKey);
-              LOG.debug("First key in section for tenant {}: {}", Bytes.toStringBinary(tenantSectionId), rowKeyStr);
+              LOG.debug("First key in section for tenant {}: {}", 
+                        Bytes.toStringBinary(tenantSectionId), rowKeyStr);
               
               // Validate that the first key belongs to this tenant
               if (!rowKeyStr.startsWith(Bytes.toString(tenantSectionId))) {
-                LOG.error("CRITICAL: Section reader for tenant {} has first key {} which doesn't belong to this tenant!", 
+                LOG.error("CRITICAL: Section reader for tenant {} has first key {} " +
+                         "which doesn't belong to this tenant!", 
                          Bytes.toStringBinary(tenantSectionId), rowKeyStr);
               }
             }
@@ -212,7 +234,8 @@ public class MultiTenantPreadReader extends AbstractMultiTenantReader {
           // Log basic diagnostic info (omit context to avoid scope issues)
           if (metadata.getOffset() > 0) {
             LOG.error("Error details for section at offset {}: size={}, endpoint={}",
-                metadata.getOffset(), metadata.getSize(), metadata.getOffset() + metadata.getSize());
+                metadata.getOffset(), metadata.getSize(), 
+                metadata.getOffset() + metadata.getSize());
           }
           throw e;
         }
@@ -224,8 +247,8 @@ public class MultiTenantPreadReader extends AbstractMultiTenantReader {
         boolean pread, boolean isCompaction) throws IOException {
       HFileReaderImpl reader = getReader();
       HFileScanner scanner = reader.getScanner(conf, cacheBlocks, true, isCompaction);
-      LOG.debug("PreadSectionReader.getScanner for tenant section ID: {}, reader: {}, scanner: {}", 
-                Bytes.toStringBinary(tenantSectionId), reader, scanner);
+      LOG.debug("PreadSectionReader.getScanner for tenant section ID: {}, reader: {}, " +
+                "scanner: {}", Bytes.toStringBinary(tenantSectionId), reader, scanner);
       return scanner;
     }
     

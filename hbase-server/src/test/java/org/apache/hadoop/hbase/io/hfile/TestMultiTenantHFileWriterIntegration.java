@@ -55,9 +55,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Integration test for multi-tenant HFile writer. This test brings up a mini cluster,
- * creates a table with multi-tenant configuration, writes data, flushes, and verifies
- * that HFile v4 files are created with the proper format.
+ * Integration test for multi-tenant HFile writer. 
+ * <p>
+ * This test brings up a mini cluster, creates a table with multi-tenant configuration, 
+ * writes data, flushes, and verifies that HFile v4 files are created with the proper format.
  */
 @Category(MediumTests.class)
 public class TestMultiTenantHFileWriterIntegration {
@@ -66,18 +67,24 @@ public class TestMultiTenantHFileWriterIntegration {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestMultiTenantHFileWriterIntegration.class);
 
+  /** Logger for this integration test class */
   private static final Logger LOG = LoggerFactory.getLogger(TestMultiTenantHFileWriterIntegration.class);
   
+  /** HBase testing utility instance for cluster operations */
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   
-  // Test constants
+  /** Test table name for multi-tenant operations */
   private static final TableName TABLE_NAME = TableName.valueOf("TestMultiTenantTable");
+  /** Column family name for test data */
   private static final byte[] FAMILY = Bytes.toBytes("f");
+  /** Column qualifier for test data */
   private static final byte[] QUALIFIER = Bytes.toBytes("q");
   
-  // Tenant configuration
+  /** Tenant prefix length configuration for extraction */
   private static final int TENANT_PREFIX_LENGTH = 3;
+  /** Array of tenant identifiers for testing */
   private static final String[] TENANTS = {"T01", "T02", "T03"};
+  /** Number of rows to create per tenant */
   private static final int ROWS_PER_TENANT = 10;
   
   @BeforeClass
@@ -109,6 +116,22 @@ public class TestMultiTenantHFileWriterIntegration {
   /**
    * Test creating a table, writing data with tenant prefixes, flushing,
    * and verifying the resulting HFiles are multi-tenant v4 format.
+   * <p>
+   * This test performs the following steps:
+   * <ol>
+   * <li>Creates a test table with multi-tenant configuration</li>
+   * <li>Writes data for multiple tenants</li>
+   * <li>Verifies memstore has data before flush</li>
+   * <li>Flushes the table to create HFiles</li>
+   * <li>Verifies memstore is empty after flush</li>
+   * <li>Verifies data integrity using GET operations</li>
+   * <li>Verifies data integrity using SCAN operations</li>
+   * <li>Verifies tenant-specific scans work correctly</li>
+   * <li>Verifies edge cases and cross-tenant isolation</li>
+   * <li>Verifies HFile format is v4 multi-tenant</li>
+   * </ol>
+   * 
+   * @throws Exception if any test operation fails
    */
   @Test(timeout = 180000) // 3 minutes timeout
   public void testMultiTenantHFileCreation() throws Exception {
@@ -168,6 +191,15 @@ public class TestMultiTenantHFileWriterIntegration {
   
   /**
    * Create a test table with multi-tenant configuration.
+   * <p>
+   * This method creates a table with:
+   * <ul>
+   * <li>Multi-tenant functionality enabled</li>
+   * <li>Configured tenant prefix length</li>
+   * <li>Single column family for test data</li>
+   * </ul>
+   * 
+   * @throws IOException if table creation fails
    */
   private void createTestTable() throws IOException {
     try (Admin admin = TEST_UTIL.getAdmin()) {
@@ -199,6 +231,11 @@ public class TestMultiTenantHFileWriterIntegration {
   
   /**
    * Write test data with different tenant prefixes.
+   * <p>
+   * Creates data for each configured tenant with unique values to ensure
+   * proper tenant isolation during verification.
+   * 
+   * @throws IOException if data writing fails
    */
   private void writeTestData() throws IOException {
     try (Connection conn = TEST_UTIL.getConnection();
@@ -286,6 +323,7 @@ public class TestMultiTenantHFileWriterIntegration {
   
   /**
    * Flush the table using TEST_UTIL which has built-in retry logic.
+   * @throws IOException if flush operation fails
    */
   private void flushTable() throws IOException {
     LOG.info("Flushing table {}", TABLE_NAME);
@@ -547,6 +585,18 @@ public class TestMultiTenantHFileWriterIntegration {
   
   /**
    * Verify that the HFiles are in v4 multi-tenant format.
+   * <p>
+   * This method performs comprehensive verification of the HFile format:
+   * <ul>
+   * <li>Verifies HFile version is v4</li>
+   * <li>Verifies reader is multi-tenant capable</li>
+   * <li>Verifies tenant section IDs are properly created</li>
+   * <li>Verifies data integrity within each tenant section</li>
+   * <li>Verifies multi-tenant metadata is present</li>
+   * </ul>
+   * 
+   * @param hfilePaths List of HFile paths to verify
+   * @throws IOException if verification fails
    */
   private void verifyHFileFormat(List<Path> hfilePaths) throws IOException {
     FileSystem fs = TEST_UTIL.getTestFileSystem();
@@ -698,6 +748,8 @@ public class TestMultiTenantHFileWriterIntegration {
   
   /**
    * Find all HFiles created for our test table by directly scanning the filesystem.
+   * @return List of paths to HFiles found for the test table
+   * @throws IOException if filesystem access fails
    */
   private List<Path> findHFilePaths() throws IOException {
     List<Path> hfilePaths = new ArrayList<>();

@@ -54,14 +54,16 @@ import org.apache.hadoop.hbase.ExtendedCell;
 
 /**
  * Test tenant-aware reading capabilities with data from multiple tenants.
- * 
+ * <p>
  * Note: This test focuses on the reading capabilities rather than writing with
  * the multi-tenant writer directly, to avoid multi-level index issues in test environments.
- * 
+ * <p>
  * It tests:
- * 1. Writing data for 3 tenants in a sorted manner
- * 2. Reading that data back using tenant section IDs
- * 3. Verifying the integrity of each tenant's data set
+ * <ol>
+ * <li>Writing data for 3 tenants in a sorted manner</li>
+ * <li>Reading that data back using tenant section IDs</li>
+ * <li>Verifying the integrity of each tenant's data set</li>
+ * </ol>
  */
 @Category({IOTests.class, MediumTests.class})
 public class TestMultiTenantHFileV4 {
@@ -70,25 +72,34 @@ public class TestMultiTenantHFileV4 {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestMultiTenantHFileV4.class);
 
+  /** Logger for this test class */
   private static final Logger LOG = LoggerFactory.getLogger(TestMultiTenantHFileV4.class);
   
+  /** HBase testing utility instance */
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   
   @Rule
   public TestName testName = new TestName();
   
+  /** HBase configuration for tests */
   private Configuration conf;
+  /** FileSystem instance for test operations */
   private FileSystem fs;
+  /** Test directory path */
   private Path testDir;
   
-  // Tenant configuration
+  /** Tenant prefix length for extraction */
   private static final int TENANT_PREFIX_LENGTH = 3;
+  /** First tenant identifier */
   private static final String TENANT_1 = "T01";
+  /** Second tenant identifier */
   private static final String TENANT_2 = "T02";
+  /** Third tenant identifier */
   private static final String TENANT_3 = "T03";
   
-  // Test data
+  /** Column family name for test data */
   private static final byte[] FAMILY = Bytes.toBytes("f");
+  /** Column qualifier for test data */
   private static final byte[] QUALIFIER = Bytes.toBytes("q");
   
   @Before
@@ -116,12 +127,16 @@ public class TestMultiTenantHFileV4 {
   
   /**
    * Test writing data for multiple tenants and reading it back with tenant awareness.
-   * 
+   * <p>
    * This test:
-   * 1. Creates data for 3 different tenants
-   * 2. Writes all data to a single HFile (sorted by tenant)
-   * 3. Reads back with tenant section ID awareness
-   * 4. Verifies each tenant's data is correctly identified and retrieved
+   * <ol>
+   * <li>Creates data for 3 different tenants</li>
+   * <li>Writes all data to a single HFile (sorted by tenant)</li>
+   * <li>Reads back with tenant section ID awareness</li>
+   * <li>Verifies each tenant's data is correctly identified and retrieved</li>
+   * </ol>
+   * 
+   * @throws IOException if any I/O operation fails
    */
   @Test
   public void testMultiTenantWriteRead() throws IOException {
@@ -139,6 +154,7 @@ public class TestMultiTenantHFileV4 {
   
   /**
    * Create test data with different keys for each tenant
+   * @return Map of tenant ID to list of cells for that tenant
    */
   private Map<String, List<ExtendedCell>> createTestData() {
     Map<String, List<ExtendedCell>> tenantData = new HashMap<>();
@@ -179,6 +195,9 @@ public class TestMultiTenantHFileV4 {
   
   /**
    * Write all tenant data to an HFile v4
+   * @param path Path where the HFile should be written
+   * @param tenantData Map of tenant data to write
+   * @throws IOException if writing fails
    */
   private void writeHFile(Path path, Map<String, List<ExtendedCell>> tenantData) throws IOException {
     // Setup HFile writing

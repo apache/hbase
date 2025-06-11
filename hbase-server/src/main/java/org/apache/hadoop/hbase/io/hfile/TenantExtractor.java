@@ -40,5 +40,9 @@ public interface TenantExtractor {
    */
   byte[] extractTenantSectionId(Cell cell);
 
+  /**
+   * Get the tenant prefix length used for extraction
+   * @return The length of the tenant prefix in bytes
+   */
   int getPrefixLength();
 } 

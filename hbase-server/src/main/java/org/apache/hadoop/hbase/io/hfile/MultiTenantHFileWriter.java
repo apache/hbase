@@ -60,73 +60,103 @@ import static org.apache.hadoop.hbase.io.hfile.BlockCompressedSizePredicator.MAX
 public class MultiTenantHFileWriter implements HFile.Writer {
   private static final Logger LOG = LoggerFactory.getLogger(MultiTenantHFileWriter.class);
   
-  // Tenant identification configuration at cluster level
+  /** Tenant identification configuration at cluster level */
   public static final String TENANT_PREFIX_LENGTH = "hbase.multi.tenant.prefix.length";
   
-  // Tenant identification configuration at table level (higher precedence)
+  /** Tenant identification configuration at table level (higher precedence) */
   public static final String TABLE_TENANT_PREFIX_LENGTH = "TENANT_PREFIX_LENGTH";
   
-  // Table-level property to enable/disable multi-tenant sectioning
+  /** Table-level property to enable/disable multi-tenant sectioning */
   public static final String TABLE_MULTI_TENANT_ENABLED = "MULTI_TENANT_HFILE";
-  private static final byte[] DEFAULT_TENANT_PREFIX = new byte[0]; // Empty prefix for default tenant
+  /** Empty prefix for default tenant */
+  private static final byte[] DEFAULT_TENANT_PREFIX = new byte[0];
   
   /**
    * Class that manages tenant configuration with proper precedence:
-   * 1. Table level settings have highest precedence
-   * 2. Cluster level settings are used as fallback
-   * 3. Default values are used if neither is specified
+   * <ol>
+   *   <li>Table level settings have highest precedence</li>
+   *   <li>Cluster level settings are used as fallback</li>
+   *   <li>Default values are used if neither is specified</li>
+   * </ol>
    */
   // TenantConfiguration class removed - use TenantExtractorFactory instead
   
+  /** Extractor for tenant information */
   private final TenantExtractor tenantExtractor;
+  /** Filesystem to write to */
   private final FileSystem fs;
+  /** Path for the HFile */
   private final Path path;
+  /** Configuration settings */
   private final Configuration conf;
+  /** Cache configuration */
   private final CacheConfig cacheConf;
+  /** HFile context */
   private final HFileContext fileContext;
   
-  // Main file writer components
+  /** Main file writer components - Output stream */
   private final FSDataOutputStream outputStream;
+  /** Block writer for HFile blocks */
   private HFileBlock.Writer blockWriter;
+  /** Section index writer for tenant indexing */
   private SectionIndexManager.Writer sectionIndexWriter;
   
-  // Section tracking
+  /** Section tracking - Current section writer */
   private SectionWriter currentSectionWriter;
+  /** Current tenant section ID */
   private byte[] currentTenantSectionId;
+  /** Start offset of current section */
   private long sectionStartOffset;
+  /** Number of sections written */
   private int sectionCount = 0;
   
-  // Stats for the entire file
-  private Cell lastCell = null; // Keep this for internal tracking but don't use in global structures
+  /** Stats for the entire file - Last cell written (internal tracking only) */
+  private Cell lastCell = null;
+  /** Total number of entries */
   private long entryCount = 0;
+  /** Total key length across all entries */
   private long totalKeyLength = 0;
+  /** Total value length across all entries */
   private long totalValueLength = 0;
+  /** Length of the biggest cell */
   private long lenOfBiggestCell = 0;
+  /** Maximum tags length encountered */
   private int maxTagsLength = 0;
+  /** Total uncompressed bytes */
   private long totalUncompressedBytes = 0;
   
-  // Additional field added to support v4
+  /** Major version for HFile v4 */
   private int majorVersion = HFile.MIN_FORMAT_VERSION_WITH_MULTI_TENANT;
   
-  // Added for v4
+  /** HFile v4 trailer */
   private FixedFileTrailer trailer;
+  /** Meta block index writer */
   private HFileBlockIndex.BlockIndexWriter metaBlockIndexWriter;
+  /** File info for metadata */
   private HFileInfo fileInfo = new HFileInfo();
   
-  // Write verification
+  /** Whether write verification is enabled */
   private boolean enableWriteVerification;
-  private static final String WRITE_VERIFICATION_ENABLED = "hbase.multi.tenant.write.verification.enabled";
+  /** Configuration key for write verification */
+  private static final String WRITE_VERIFICATION_ENABLED = 
+      "hbase.multi.tenant.write.verification.enabled";
+  /** Default write verification setting */
   private static final boolean DEFAULT_WRITE_VERIFICATION_ENABLED = false;
   
-  // Add bloom filter configuration fields
+  /** Configuration key for bloom filter type */
   private static final String BLOOM_FILTER_TYPE = "hbase.multi.tenant.bloom.filter.type";
+  /** Default bloom filter type */
   private static final String DEFAULT_BLOOM_FILTER_TYPE = "ROW";
+  /** Configuration key for bloom filter enablement */
   private static final String BLOOM_FILTER_ENABLED = "hbase.multi.tenant.bloom.filter.enabled";
+  /** Default bloom filter enabled setting */
   private static final boolean DEFAULT_BLOOM_FILTER_ENABLED = true;
   
-  // Current bloom filter writer - one per section
+  /** Current bloom filter writer - one per section */
   private BloomFilterWriter currentBloomFilterWriter;
+  /** Whether bloom filter is enabled */
   private boolean bloomFilterEnabled;
+  /** Type of bloom filter to use */
   private BloomType bloomFilterType;
   
   /**
@@ -138,6 +168,7 @@ public class MultiTenantHFileWriter implements HFile.Writer {
    * @param cacheConf Cache configuration
    * @param tenantExtractor Extractor for tenant information
    * @param fileContext HFile context
+   * @throws IOException If an error occurs during initialization
    */
   public MultiTenantHFileWriter(
       FileSystem fs,

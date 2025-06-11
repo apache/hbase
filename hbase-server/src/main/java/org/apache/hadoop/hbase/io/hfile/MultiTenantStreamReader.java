@@ -19,10 +19,10 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * HFile reader for multi-tenant HFiles in STREAM (sequential access) mode.
@@ -33,7 +33,7 @@ public class MultiTenantStreamReader extends AbstractMultiTenantReader {
   private static final Logger LOG = LoggerFactory.getLogger(MultiTenantStreamReader.class);
 
   /**
-   * Constructor for multi-tenant stream reader
+   * Constructor for multi-tenant stream reader.
    *
    * @param context Reader context info
    * @param fileInfo HFile info
@@ -56,9 +56,16 @@ public class MultiTenantStreamReader extends AbstractMultiTenantReader {
   }
 
   /**
-   * Section reader implementation for stream mode that uses HFileStreamReader
+   * Section reader implementation for stream mode that uses HFileStreamReader.
    */
   protected class StreamSectionReader extends SectionReader {
+    
+    /**
+     * Constructor for StreamSectionReader.
+     *
+     * @param tenantSectionId The tenant section ID
+     * @param metadata The section metadata
+     */
     public StreamSectionReader(byte[] tenantSectionId, SectionMetadata metadata) {
       super(tenantSectionId, metadata);
     }
@@ -81,7 +88,8 @@ public class MultiTenantStreamReader extends AbstractMultiTenantReader {
           // This method was designed for HFile v3 format, which each section follows
           LOG.debug("Initializing section indices for tenant at offset {}", metadata.getOffset());
           sectionFileInfo.initMetaAndIndex(reader);
-          LOG.debug("Successfully initialized indices for section at offset {}", metadata.getOffset());
+          LOG.debug("Successfully initialized indices for section at offset {}", 
+                    metadata.getOffset());
           
           initialized = true;
           LOG.debug("Initialized HFileStreamReader for tenant section ID: {}",
@@ -114,6 +122,4 @@ public class MultiTenantStreamReader extends AbstractMultiTenantReader {
   }
 
   // No close overrides needed; inherited from AbstractMultiTenantReader
-  
-  // End of class
 } 

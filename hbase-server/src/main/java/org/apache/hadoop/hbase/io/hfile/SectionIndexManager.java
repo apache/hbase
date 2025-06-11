@@ -66,24 +66,49 @@ public class SectionIndexManager {
    * Represents a tenant section entry in the index.
    */
   public static class SectionIndexEntry {
+    /** The tenant prefix for this section */
     private final byte[] tenantPrefix;
+    /** The file offset where the section starts */
     private final long offset;
+    /** The size of the section in bytes */
     private final int sectionSize;
     
+    /**
+     * Constructor for SectionIndexEntry.
+     *
+     * @param tenantPrefix the tenant prefix for this section
+     * @param offset the file offset where the section starts
+     * @param sectionSize the size of the section in bytes
+     */
     public SectionIndexEntry(byte[] tenantPrefix, long offset, int sectionSize) {
       this.tenantPrefix = tenantPrefix;
       this.offset = offset;
       this.sectionSize = sectionSize;
     }
     
+    /**
+     * Get the tenant prefix for this section.
+     *
+     * @return the tenant prefix
+     */
     public byte[] getTenantPrefix() {
       return tenantPrefix;
     }
     
+    /**
+     * Get the file offset where the section starts.
+     *
+     * @return the offset
+     */
     public long getOffset() {
       return offset;
     }
     
+    /**
+     * Get the size of the section in bytes.
+     *
+     * @return the section size
+     */
     public int getSectionSize() {
       return sectionSize;
     }
@@ -102,35 +127,74 @@ public class SectionIndexManager {
    * Represents a block in the multi-level section index.
    */
   private static class SectionIndexBlock {
+    /** List of entries in this block */
     private final List<SectionIndexEntry> entries = new ArrayList<>();
+    /** The offset of this block in the file */
     private long blockOffset;
+    /** The size of this block in bytes */
     private int blockSize;
     
+    /**
+     * Add an entry to this block.
+     *
+     * @param entry the entry to add
+     */
     public void addEntry(SectionIndexEntry entry) {
       entries.add(entry);
     }
     
+    /**
+     * Get all entries in this block.
+     *
+     * @return the list of entries
+     */
     public List<SectionIndexEntry> getEntries() {
       return entries;
     }
     
+    /**
+     * Get the number of entries in this block.
+     *
+     * @return the entry count
+     */
     public int getEntryCount() {
       return entries.size();
     }
     
+    /**
+     * Get the first entry in this block.
+     *
+     * @return the first entry, or null if the block is empty
+     */
     public SectionIndexEntry getFirstEntry() {
       return entries.isEmpty() ? null : entries.get(0);
     }
     
+    /**
+     * Set the metadata for this block.
+     *
+     * @param offset the offset of this block in the file
+     * @param size the size of this block in bytes
+     */
     public void setBlockMetadata(long offset, int size) {
       this.blockOffset = offset;
       this.blockSize = size;
     }
     
+    /**
+     * Get the offset of this block in the file.
+     *
+     * @return the block offset
+     */
     public long getBlockOffset() {
       return blockOffset;
     }
     
+    /**
+     * Get the size of this block in bytes.
+     *
+     * @return the block size
+     */
     public int getBlockSize() {
       return blockSize;
     }
@@ -144,18 +208,27 @@ public class SectionIndexManager {
   public static class Writer {
     private static final Logger LOG = LoggerFactory.getLogger(Writer.class);
     
+    /** List of all section entries */
     private final List<SectionIndexEntry> entries = new ArrayList<>();
+    /** Block writer to use for index blocks */
     private final HFileBlock.Writer blockWriter;
+    /** Cache configuration */
     private final CacheConfig cacheConf;
+    /** File name to use for caching, or null if no caching */
     private final String nameForCaching;
     
+    /** Maximum number of entries in a single index block */
     private int maxChunkSize = DEFAULT_MAX_CHUNK_SIZE;
+    /** Minimum number of entries in the root-level index block */
     private int minIndexNumEntries = DEFAULT_MIN_INDEX_NUM_ENTRIES;
+    /** Total uncompressed size of the index */
     private int totalUncompressedSize = 0;
+    /** Number of levels in this index */
     private int numLevels = 1;
     
-    // Track leaf and intermediate blocks for building the multi-level index
+    /** Track leaf blocks for building the multi-level index */
     private final List<SectionIndexBlock> leafBlocks = new ArrayList<>();
+    /** Track intermediate blocks for building the multi-level index */
     private final List<SectionIndexBlock> intermediateBlocks = new ArrayList<>();
     
     /**
@@ -535,7 +608,9 @@ public class SectionIndexManager {
   public static class Reader {
     private static final Logger LOG = LoggerFactory.getLogger(Reader.class);
     
+    /** List of all section entries loaded from the index */
     private final List<SectionIndexEntry> sections = new ArrayList<>();
+    /** Number of levels in the loaded index */
     private int numLevels = 1;
     
     /**
