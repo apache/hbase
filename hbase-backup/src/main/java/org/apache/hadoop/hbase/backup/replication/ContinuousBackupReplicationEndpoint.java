@@ -23,6 +23,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.TimeZone;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
@@ -304,7 +305,7 @@ public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint
         walWriter.append(entry);
       }
       walWriter.sync(true);
-      uploadBulkLoadFiles(bulkLoadFiles);
+      uploadBulkLoadFiles(day, bulkLoadFiles);
     } catch (UncheckedIOException e) {
       String errorMsg = Utils.logPeerId(peerId) + " Failed to get or create WAL Writer for " + day;
       LOG.error("{} Backup failed for day {}. Error: {}", Utils.logPeerId(peerId), day,
@@ -314,9 +315,7 @@ public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint
   }
 
   private FSHLogProvider.Writer createWalWriter(long dayInMillis) {
-    // Convert dayInMillis to "yyyy-MM-dd" format
-    SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
-    String dayDirectoryName = dateFormat.format(new Date(dayInMillis));
+    String dayDirectoryName = formatToDateString(dayInMillis);
 
     FileSystem fs = backupFileSystemManager.getBackupFs();
     Path walsDir = backupFileSystemManager.getWalsDir();
@@ -376,7 +375,7 @@ public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint
     }
   }
 
-  private void uploadBulkLoadFiles(List<Path> bulkLoadFiles) throws IOException {
+  private void uploadBulkLoadFiles(long dayInMillis, List<Path> bulkLoadFiles) throws IOException {
     LOG.debug("{} Starting upload of {} bulk load files", Utils.logPeerId(peerId),
       bulkLoadFiles.size());
 
@@ -384,9 +383,13 @@ public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint
       LOG.trace("{} Bulk load files to upload: {}", Utils.logPeerId(peerId),
         bulkLoadFiles.stream().map(Path::toString).collect(Collectors.joining(", ")));
     }
+    String dayDirectoryName = formatToDateString(dayInMillis);
+    Path bulkloadDir = new Path(backupFileSystemManager.getBulkLoadFilesDir(), dayDirectoryName);
+    backupFileSystemManager.getBackupFs().mkdirs(bulkloadDir);
+
     for (Path file : bulkLoadFiles) {
       Path sourcePath = getBulkLoadFileStagingPath(file);
-      Path destPath = new Path(backupFileSystemManager.getBulkLoadFilesDir(), file);
+      Path destPath = new Path(bulkloadDir, file);
 
       try {
         LOG.debug("{} Copying bulk load file from {} to {}", Utils.logPeerId(peerId), sourcePath,
@@ -405,6 +408,15 @@ public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint
     }
 
     LOG.debug("{} Completed upload of bulk load files", Utils.logPeerId(peerId));
+  }
+
+  /**
+   * Convert dayInMillis to "yyyy-MM-dd" format
+   */
+  private String formatToDateString(long dayInMillis) {
+    SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
+    dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+    return dateFormat.format(new Date(dayInMillis));
   }
 
   private Path getBulkLoadFileStagingPath(Path relativePathFromNamespace) throws IOException {
