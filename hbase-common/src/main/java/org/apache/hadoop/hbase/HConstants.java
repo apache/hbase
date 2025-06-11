@@ -1040,6 +1040,12 @@ public final class HConstants {
   public static final String HFILE_PREAD_ALL_BYTES_ENABLED_KEY = "hfile.pread.all.bytes.enabled";
   public static final boolean HFILE_PREAD_ALL_BYTES_ENABLED_DEFAULT = false;
 
+  /*
+   * Default minimum fraction (20%) of free heap required for RegionServer startup, used only when
+   * 'hbase.regionserver.free.heap.min.memory.size' is not explicitly set.
+   */
+  public static final float HBASE_CLUSTER_MINIMUM_MEMORY_THRESHOLD = 0.2f;
+
   /**
    * Configuration key for the absolute amount of heap memory that must remain free for a
    * RegionServer to start

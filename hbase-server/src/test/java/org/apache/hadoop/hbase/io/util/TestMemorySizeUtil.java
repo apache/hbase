@@ -53,7 +53,7 @@ public class TestMemorySizeUtil {
     // when memstore size + block cache size + default free heap min size == 1.0
     conf.setFloat(MemorySizeUtil.MEMSTORE_SIZE_KEY, 0.4f);
     conf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0.4f);
-    assertEquals(MemorySizeUtil.DEFAULT_FREE_HEAP_FRACTION, 0.2f, 0.0f);
+    assertEquals(HConstants.HBASE_CLUSTER_MINIMUM_MEMORY_THRESHOLD, 0.2f, 0.0f);
     MemorySizeUtil.validateRegionServerHeapMemoryAllocation(conf);
 
     // when memstore size + block cache size + default free heap min size > 1.0
@@ -89,7 +89,7 @@ public class TestMemorySizeUtil {
     // when setting is not set, it should return the default value
     conf.set(HConstants.HBASE_REGION_SERVER_FREE_HEAP_MIN_MEMORY_SIZE_KEY, "");
     float minFreeHeapFraction = MemorySizeUtil.getRegionServerMinFreeHeapFraction(conf);
-    assertEquals(MemorySizeUtil.DEFAULT_FREE_HEAP_FRACTION, minFreeHeapFraction, 0.0f);
+    assertEquals(HConstants.HBASE_CLUSTER_MINIMUM_MEMORY_THRESHOLD, minFreeHeapFraction, 0.0f);
 
     // when setting to 0, it should return 0.0f
     conf.set(HConstants.HBASE_REGION_SERVER_FREE_HEAP_MIN_MEMORY_SIZE_KEY, "0");

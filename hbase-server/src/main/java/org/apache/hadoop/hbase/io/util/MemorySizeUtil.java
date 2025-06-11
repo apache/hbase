@@ -50,7 +50,6 @@ public class MemorySizeUtil {
   public static final float DEFAULT_MEMSTORE_SIZE = 0.4f;
   // Default lower water mark limit is 95% size of memstore size.
   public static final float DEFAULT_MEMSTORE_SIZE_LOWER_LIMIT = 0.95f;
-  public static final float DEFAULT_FREE_HEAP_FRACTION = 0.2f;
 
   private static final Logger LOG = LoggerFactory.getLogger(MemorySizeUtil.class);
 
@@ -141,7 +140,7 @@ public class MemorySizeUtil {
       return (float) minFreeHeapInBytes / usage.getMax();
     }
 
-    return DEFAULT_FREE_HEAP_FRACTION;
+    return HConstants.HBASE_CLUSTER_MINIMUM_MEMORY_THRESHOLD;
   }
 
   /**
