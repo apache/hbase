@@ -17,12 +17,17 @@
  */
 package org.apache.hadoop.hbase.backup;
 
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONF_CONTINUOUS_BACKUP_WAL_DIR;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_ENABLE_CONTINUOUS_BACKUP;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.util.List;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupInfo.BackupState;
@@ -106,5 +111,51 @@ public class TestBackupDescribe extends TestBackupBase {
     String desc = status.getShortDescription();
     table.close();
     assertTrue(response.indexOf(desc) >= 0);
+  }
+
+  @Test
+  public void testBackupDescribeCommandForContinuousBackup() throws Exception {
+    LOG.info("test backup describe on a single table with data: command-line");
+    BackupSystemTable table = new BackupSystemTable(TEST_UTIL.getConnection());
+
+    Path root = TEST_UTIL.getDataTestDirOnTestFS();
+    Path backupWalDir = new Path(root, "testBackupDescribeCommand");
+    FileSystem fs = FileSystem.get(conf1);
+    fs.mkdirs(backupWalDir);
+    conf1.set(CONF_CONTINUOUS_BACKUP_WAL_DIR, backupWalDir.toString());
+
+    String[] backupArgs = new String[] { "create", BackupType.FULL.name(), BACKUP_ROOT_DIR, "-t",
+      table1.getNameAsString(), "-" + OPTION_ENABLE_CONTINUOUS_BACKUP };
+    int ret = ToolRunner.run(conf1, new BackupDriver(), backupArgs);
+    assertEquals("Backup should succeed", 0, ret);
+    String backupId = table.getBackupHistory().get(0).getBackupId();
+    assertTrue(checkSucceeded(backupId));
+    LOG.info("backup complete");
+
+    BackupInfo info = getBackupAdmin().getBackupInfo(backupId);
+    assertTrue(info.getState() == BackupState.COMPLETE);
+
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(baos));
+
+    String[] args = new String[] { "describe", backupId };
+    // Run backup
+    ret = ToolRunner.run(conf1, new BackupDriver(), args);
+    assertTrue(ret == 0);
+    String response = baos.toString();
+    assertTrue(response.indexOf(backupId) > 0);
+    assertTrue(response.indexOf("COMPLETE") > 0);
+    assertTrue(response.indexOf("IsContinuous=true") > 0);
+
+    BackupInfo status = table.readBackupInfo(backupId);
+    String desc = status.getShortDescription();
+    table.close();
+    assertTrue(response.indexOf(desc) >= 0);
+
+    // cleanup
+    if (fs.exists(backupWalDir)) {
+      fs.delete(backupWalDir, true);
+    }
+    conf1.unset(CONF_CONTINUOUS_BACKUP_WAL_DIR);
   }
 }
