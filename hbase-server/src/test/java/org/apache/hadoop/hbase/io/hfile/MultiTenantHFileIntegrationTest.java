@@ -55,10 +55,22 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Integration test for multi-tenant HFile writer. 
+ * Comprehensive integration test for multi-tenant HFile functionality.
  * <p>
- * This test brings up a mini cluster, creates a table with multi-tenant configuration, 
- * writes data, flushes, and verifies that HFile v4 files are created with the proper format.
+ * This integration test validates the complete multi-tenant HFile workflow by:
+ * <ul>
+ * <li>Setting up a mini HBase cluster with multi-tenant configuration</li>
+ * <li>Creating tables with tenant-aware settings</li>
+ * <li>Writing data for multiple tenants using standard HBase operations</li>
+ * <li>Flushing data to create multi-tenant HFile v4 format files</li>
+ * <li>Reading data back using various access patterns (GET, SCAN, tenant-specific)</li>
+ * <li>Verifying tenant isolation and data integrity</li>
+ * <li>Validating HFile format compliance and metadata</li>
+ * </ul>
+ * <p>
+ * The test ensures that multi-tenant HFiles maintain proper tenant boundaries,
+ * provide efficient access patterns, and preserve data integrity across
+ * different tenant sections within a single physical file.
  */
 @Category(MediumTests.class)
 public class MultiTenantHFileIntegrationTest {
@@ -114,24 +126,36 @@ public class MultiTenantHFileIntegrationTest {
   }
   
   /**
-   * Test creating a table, writing data with tenant prefixes, flushing,
-   * and verifying the resulting HFiles are multi-tenant v4 format.
+   * Comprehensive end-to-end test of multi-tenant HFile functionality.
    * <p>
-   * This test performs the following steps:
+   * This test validates the complete multi-tenant workflow from data ingestion
+   * through various read access patterns to format verification. The test sequence:
    * <ol>
-   * <li>Creates a test table with multi-tenant configuration</li>
-   * <li>Writes data for multiple tenants</li>
-   * <li>Verifies memstore has data before flush</li>
-   * <li>Flushes the table to create HFiles</li>
-   * <li>Verifies memstore is empty after flush</li>
-   * <li>Verifies data integrity using GET operations</li>
-   * <li>Verifies data integrity using SCAN operations</li>
-   * <li>Verifies tenant-specific scans work correctly</li>
-   * <li>Verifies edge cases and cross-tenant isolation</li>
-   * <li>Verifies HFile format is v4 multi-tenant</li>
+   * <li><strong>Setup Phase:</strong> Creates a test table with multi-tenant configuration</li>
+   * <li><strong>Write Phase:</strong> Writes data for multiple tenants with distinct prefixes</li>
+   * <li><strong>Pre-flush Verification:</strong> Confirms data exists in memstore</li>
+   * <li><strong>Flush Phase:</strong> Forces flush to create multi-tenant HFile v4 files</li>
+   * <li><strong>Post-flush Verification:</strong> Confirms memstore is empty after flush</li>
+   * <li><strong>Read Verification Phase:</strong>
+   *     <ul>
+   *     <li>Individual row retrieval using GET operations</li>
+   *     <li>Full table scanning across all tenant sections</li>
+   *     <li>Tenant-specific scans to verify isolation</li>
+   *     <li>Edge case testing for boundary conditions</li>
+   *     </ul>
+   * </li>
+   * <li><strong>Format Verification Phase:</strong> Validates HFile v4 structure and metadata</li>
    * </ol>
+   * <p>
+   * <strong>Key Validations:</strong>
+   * <ul>
+   * <li>Tenant data isolation - no cross-tenant data leakage</li>
+   * <li>Data integrity - all written data can be retrieved correctly</li>
+   * <li>Format compliance - HFiles are properly structured as v4 multi-tenant</li>
+   * <li>Access pattern efficiency - various read patterns work correctly</li>
+   * </ul>
    * 
-   * @throws Exception if any test operation fails
+   * @throws Exception if any phase of the integration test fails
    */
   @Test(timeout = 180000) // 3 minutes timeout
   public void testMultiTenantHFileCreation() throws Exception {
@@ -230,74 +254,58 @@ public class MultiTenantHFileIntegrationTest {
   }
   
   /**
-   * Write test data with different tenant prefixes.
+   * Write test data with different tenant prefixes to validate multi-tenant functionality.
    * <p>
-   * Creates data for each configured tenant with unique values to ensure
-   * proper tenant isolation during verification.
+   * This method creates a comprehensive dataset for testing by:
+   * <ul>
+   * <li>Generating data for each configured tenant with unique row keys</li>
+   * <li>Ensuring tenant prefixes are correctly positioned for extraction</li>
+   * <li>Creating distinguishable values to detect any cross-tenant data mixing</li>
+   * <li>Using batch operations for efficient data insertion</li>
+   * </ul>
+   * <p>
+   * <strong>Row Key Format:</strong> {@code <TenantID>row<PaddedIndex>} (e.g., "T01row000")
+   * <br>
+   * <strong>Value Format:</strong> {@code value_tenant-<TenantID>_row-<PaddedIndex>}
    * 
-   * @throws IOException if data writing fails
+   * @throws IOException if data writing operations fail
    */
   private void writeTestData() throws IOException {
-    try (Connection conn = TEST_UTIL.getConnection();
-         Table table = conn.getTable(TABLE_NAME)) {
+    try (Connection connection = TEST_UTIL.getConnection();
+         Table table = connection.getTable(TABLE_NAME)) {
       
-      List<Put> puts = new ArrayList<>();
+      List<Put> batchPuts = new ArrayList<>();
       
       // Generate data for each tenant with clear tenant markers in the values
-      for (String tenant : TENANTS) {
-        for (int i = 0; i < ROWS_PER_TENANT; i++) {
+      for (String tenantId : TENANTS) {
+        for (int rowIndex = 0; rowIndex < ROWS_PER_TENANT; rowIndex++) {
           // IMPORTANT: Create row key ensuring the tenant prefix is exactly at the start
           // and has the correct length as specified by TENANT_PREFIX_LENGTH.
           // For DefaultTenantExtractor, the first TENANT_PREFIX_LENGTH bytes are used as tenant ID.
           
-          // DEBUG: Add extra logging about each tenant's row key
-          String rowKey = String.format("%srow%03d", tenant, i);
+          // Create row key with proper tenant prefix positioning
+          String rowKey = String.format("%srow%03d", tenantId, rowIndex);
           byte[] rowKeyBytes = Bytes.toBytes(rowKey);
-          byte[] tenantBytes = new byte[TENANT_PREFIX_LENGTH];
-          System.arraycopy(rowKeyBytes, 0, tenantBytes, 0, TENANT_PREFIX_LENGTH);
+          byte[] extractedTenantBytes = new byte[TENANT_PREFIX_LENGTH];
+          System.arraycopy(rowKeyBytes, 0, extractedTenantBytes, 0, TENANT_PREFIX_LENGTH);
           
           LOG.info("DEBUG: Creating row with key '{}', tenant ID bytes: '{}', hex: '{}'", 
-                  rowKey, Bytes.toString(tenantBytes), Bytes.toHex(tenantBytes));
+                  rowKey, Bytes.toString(extractedTenantBytes), Bytes.toHex(extractedTenantBytes));
           
-          Put put = new Put(rowKeyBytes);
+          Put putOperation = new Put(rowKeyBytes);
           
           // Make the values more distinguishable between tenants to detect mixing
-          String value = String.format("value_tenant-%s_row-%03d", tenant, i);
+          String cellValue = String.format("value_tenant-%s_row-%03d", tenantId, rowIndex);
           
-          put.addColumn(FAMILY, QUALIFIER, Bytes.toBytes(value));
-          puts.add(put);
+          putOperation.addColumn(FAMILY, QUALIFIER, Bytes.toBytes(cellValue));
+          batchPuts.add(putOperation);
           LOG.debug("Created put for row: {}", rowKey);
         }
       }
       
-      // Write all puts
-      table.put(puts);
-      LOG.info("Successfully wrote {} rows with tenant prefixes", puts.size());
-      
-      // Verify data was written by doing a quick scan
-      /*try (org.apache.hadoop.hbase.client.ResultScanner scanner = table.getScanner(FAMILY)) {
-        int scannedRows = 0;
-        for (org.apache.hadoop.hbase.client.Result result : scanner) {
-          scannedRows++;
-          if (scannedRows <= 10) { // Log first 10 rows for better debugging
-            String rowKey = Bytes.toString(result.getRow());
-            String value = Bytes.toString(result.getValue(FAMILY, QUALIFIER));
-            LOG.info("Scanned row: {} = {}", rowKey, value);
-            
-            // DEBUG: Log raw bytes as well
-            byte[] rowKeyBytes = result.getRow();
-            byte[] tenantBytes = new byte[TENANT_PREFIX_LENGTH];
-            System.arraycopy(rowKeyBytes, 0, tenantBytes, 0, TENANT_PREFIX_LENGTH);
-            LOG.info("DEBUG: Row key bytes for '{}': tenant ID bytes: '{}', hex: '{}'", 
-                    rowKey, Bytes.toString(tenantBytes), Bytes.toHex(tenantBytes));
-          }
-        }
-        LOG.info("Total rows scanned after write: {}", scannedRows);
-        
-        if (scannedRows != puts.size()) {
-          LOG.warn("Expected {} rows but scanned {} rows", puts.size(), scannedRows);
-        }
-      }*/
+      // Write all puts in a single batch operation
+      table.put(batchPuts);
+      LOG.info("Successfully wrote {} rows with tenant prefixes", batchPuts.size());
     }
   }
   
@@ -367,8 +375,19 @@ public class MultiTenantHFileIntegrationTest {
   }
   
   /**
-   * Verify data using HBase GET operations.
-   * This tests individual row retrieval after data has been flushed to HFiles.
+   * Verify data integrity using HBase GET operations for individual row retrieval.
+   * <p>
+   * This verification phase tests:
+   * <ul>
+   * <li>Individual row retrieval accuracy across all tenant sections</li>
+   * <li>Data integrity after flush to multi-tenant HFiles</li>
+   * <li>Proper tenant prefix extraction and routing</li>
+   * <li>Value correctness for each tenant's data</li>
+   * </ul>
+   * <p>
+   * Uses retry logic to handle potential timing issues during HFile stabilization.
+   * 
+   * @throws Exception if GET operations fail or data integrity is compromised
    */
   private void verifyDataWithGet() throws Exception {
     LOG.info("Verifying data using GET operations");
@@ -408,61 +427,19 @@ public class MultiTenantHFileIntegrationTest {
   }
   
   /**
-   * Actual implementation of GET verification.
-   */
-  private void doVerifyDataWithGet(Connection conn) throws IOException {
-    try (Table table = conn.getTable(TABLE_NAME)) {
-      int successfulGets = 0;
-      int failedGets = 0;
-      List<String> failedRows = new ArrayList<>();
-      
-      // Add debug logging
-      LOG.info("Performing GET verification for {} rows", TENANTS.length * ROWS_PER_TENANT);
-      
-      // Check each tenant's data
-      for (String tenant : TENANTS) {
-        for (int i = 0; i < ROWS_PER_TENANT; i++) {
-          String formattedIndex = String.format("%03d", i);
-          String rowKey = tenant + "row" + formattedIndex;
-          String expectedValue = "value_tenant-" + tenant + "_row-" + formattedIndex;
-          
-          // Debug log for each row
-          LOG.info("Verifying row: {}, expected value: {}", rowKey, expectedValue);
-          
-          Get get = new Get(Bytes.toBytes(rowKey));
-          get.addColumn(FAMILY, QUALIFIER);
-          
-          Result result = table.get(get);
-          if (!result.isEmpty()) {
-            byte[] actualValue = result.getValue(FAMILY, QUALIFIER);
-            String actualValueStr = Bytes.toString(actualValue);
-            
-            // Debug log for actual value
-            LOG.info("Row: {}, Actual value: {}", rowKey, actualValueStr);
-            
-            // Check value matches expected
-            assertEquals("Value mismatch for row " + rowKey, expectedValue, actualValueStr);
-            successfulGets++;
-          } else {
-            LOG.error("No result found for row: {}", rowKey);
-            failedGets++;
-            failedRows.add(rowKey);
-          }
-        }
-      }
-      
-      LOG.info("GET verification complete - successful: {}, failed: {}", successfulGets, failedGets);
-      
-      if (failedGets > 0) {
-        LOG.error("Failed rows: {}", failedRows);
-        fail("Failed to retrieve " + failedGets + " rows");
-      }
-    }
-  }
-  
-  /**
-   * Verify data using a full table SCAN.
-   * This tests scanning across all tenant sections in the multi-tenant HFile.
+   * Verify data integrity using full table SCAN operations.
+   * <p>
+   * This verification phase tests:
+   * <ul>
+   * <li>Sequential scanning across all tenant sections in the multi-tenant HFile</li>
+   * <li>Cross-tenant data isolation (no data mixing between tenants)</li>
+   * <li>Complete data retrieval (all written rows are accessible)</li>
+   * <li>Value format consistency and correctness</li>
+   * </ul>
+   * <p>
+   * Uses retry logic to handle potential timing issues during HFile stabilization.
+   * 
+   * @throws IOException if SCAN operations fail or data integrity is compromised
    */
   private void verifyDataWithScan() throws IOException {
     LOG.info("Verifying data using full table SCAN");
@@ -502,8 +479,20 @@ public class MultiTenantHFileIntegrationTest {
   }
   
   /**
-   * Verify data using tenant-specific SCAN operations.
-   * This tests scanning within specific tenant boundaries to ensure proper data isolation.
+   * Verify tenant isolation using tenant-specific SCAN operations.
+   * <p>
+   * This verification phase tests:
+   * <ul>
+   * <li>Tenant-specific scanning within defined boundaries</li>
+   * <li>Proper tenant isolation (no cross-tenant data leakage)</li>
+   * <li>Efficient tenant-specific data access patterns</li>
+   * <li>Row count accuracy for each tenant's data subset</li>
+   * </ul>
+   * <p>
+   * Each tenant is scanned independently to ensure proper data isolation
+   * and verify that tenant boundaries are correctly enforced.
+   * 
+   * @throws IOException if tenant-specific SCAN operations fail or isolation is compromised
    */
   private void verifyDataWithTenantSpecificScans() throws IOException {
     LOG.info("Verifying data using tenant-specific SCAN operations");
@@ -543,8 +532,20 @@ public class MultiTenantHFileIntegrationTest {
   }
   
   /**
-   * Verify edge cases and cross-tenant isolation.
-   * This tests that tenant boundaries are properly enforced and no data leakage occurs.
+   * Verify edge cases and cross-tenant isolation boundaries.
+   * <p>
+   * This verification phase tests:
+   * <ul>
+   * <li>Non-existent tenant prefix handling (should return no results)</li>
+   * <li>Tenant boundary conditions between adjacent tenants</li>
+   * <li>Empty scan behavior (should return all data across tenants)</li>
+   * <li>Proper isolation enforcement at tenant boundaries</li>
+   * </ul>
+   * <p>
+   * These edge case tests ensure robust behavior under various access patterns
+   * and confirm that tenant isolation is maintained even at boundary conditions.
+   * 
+   * @throws IOException if edge case verification fails or isolation is compromised
    */
   private void verifyEdgeCasesAndCrossTenantIsolation() throws IOException {
     LOG.info("Verifying edge cases and cross-tenant isolation");
@@ -805,88 +806,152 @@ public class MultiTenantHFileIntegrationTest {
   }
 
   /**
-   * Actual implementation of SCAN verification.
+   * Actual implementation of GET verification.
    */
-  private void doVerifyDataWithScan(Connection conn) throws IOException {
+  private void doVerifyDataWithGet(Connection conn) throws IOException {
+    try (Table table = conn.getTable(TABLE_NAME)) {
+      int successfulGets = 0;
+      int failedGets = 0;
+      List<String> failedRows = new ArrayList<>();
+      
+      // Add debug logging
+      LOG.info("Performing GET verification for {} rows", TENANTS.length * ROWS_PER_TENANT);
+      
+      // Check each tenant's data
+      for (String tenant : TENANTS) {
+        for (int i = 0; i < ROWS_PER_TENANT; i++) {
+          String formattedIndex = String.format("%03d", i);
+          String rowKey = tenant + "row" + formattedIndex;
+          String expectedValue = "value_tenant-" + tenant + "_row-" + formattedIndex;
+          
+          // Debug log for each row
+          LOG.info("Verifying row: {}, expected value: {}", rowKey, expectedValue);
+          
+          Get get = new Get(Bytes.toBytes(rowKey));
+          get.addColumn(FAMILY, QUALIFIER);
+          
+          Result result = table.get(get);
+          if (!result.isEmpty()) {
+            byte[] actualValue = result.getValue(FAMILY, QUALIFIER);
+            String actualValueStr = Bytes.toString(actualValue);
+            
+            // Debug log for actual value
+            LOG.info("Row: {}, Actual value: {}", rowKey, actualValueStr);
+            
+            // Check value matches expected
+            assertEquals("Value mismatch for row " + rowKey, expectedValue, actualValueStr);
+            successfulGets++;
+          } else {
+            LOG.error("No result found for row: {}", rowKey);
+            failedGets++;
+            failedRows.add(rowKey);
+          }
+        }
+      }
+      
+      LOG.info("GET verification complete - successful: {}, failed: {}", successfulGets, failedGets);
+      
+      if (failedGets > 0) {
+        LOG.error("Failed rows: {}", failedRows);
+        fail("Failed to retrieve " + failedGets + " rows");
+      }
+    }
+  }
+  
+  /**
+   * Implementation of full table SCAN verification with detailed data validation.
+   * <p>
+   * Performs comprehensive validation of all data written to the table by:
+   * <ul>
+   * <li>Scanning all rows across all tenant sections</li>
+   * <li>Validating row count matches expected total</li>
+   * <li>Checking value format consistency for each tenant</li>
+   * <li>Detecting any cross-tenant data mixing</li>
+   * </ul>
+   * 
+   * @param connection The HBase connection to use for scanning
+   * @throws IOException if scanning fails or data validation errors are detected
+   */
+  private void doVerifyDataWithScan(Connection connection) throws IOException {
     LOG.info("Performing full table SCAN verification");
     
-    try (Table table = conn.getTable(TABLE_NAME)) {
-      org.apache.hadoop.hbase.client.Scan scan = new org.apache.hadoop.hbase.client.Scan();
-      scan.addColumn(FAMILY, QUALIFIER);
+    try (Table table = connection.getTable(TABLE_NAME)) {
+      org.apache.hadoop.hbase.client.Scan tableScan = new org.apache.hadoop.hbase.client.Scan();
+      tableScan.addColumn(FAMILY, QUALIFIER);
       
-      try (org.apache.hadoop.hbase.client.ResultScanner scanner = table.getScanner(scan)) {
-        int rowCount = 0;
-        int mixedDataCount = 0;
-        List<String> failedRows = new ArrayList<>();
+      try (org.apache.hadoop.hbase.client.ResultScanner resultScanner = table.getScanner(tableScan)) {
+        int totalRowCount = 0;
+        int crossTenantMixingCount = 0;
+        List<String> validationFailures = new ArrayList<>();
         
-        for (org.apache.hadoop.hbase.client.Result result : scanner) {
-          String rowKey = Bytes.toString(result.getRow());
+        for (org.apache.hadoop.hbase.client.Result scanResult : resultScanner) {
+          String rowKey = Bytes.toString(scanResult.getRow());
           // Extract tenant ID - first 3 characters (TENANT_PREFIX_LENGTH)
-          String tenant = rowKey.substring(0, TENANT_PREFIX_LENGTH);
-          int rowNum = -1;
+          String extractedTenantId = rowKey.substring(0, TENANT_PREFIX_LENGTH);
+          int rowNumber = -1;
           
           // Extract row number from key - parse the numeric part after "row"
           try {
-            String rowNumStr = rowKey.substring(rowKey.indexOf("row") + 3);
-            rowNum = Integer.parseInt(rowNumStr);
+            String rowNumberString = rowKey.substring(rowKey.indexOf("row") + 3);
+            rowNumber = Integer.parseInt(rowNumberString);
           } catch (Exception e) {
             LOG.warn("Could not parse row number from key: {}", rowKey);
           }
           
-          byte[] value = result.getValue(FAMILY, QUALIFIER);
-          if (value != null) {
-            String actualValue = Bytes.toString(value);
+          byte[] cellValue = scanResult.getValue(FAMILY, QUALIFIER);
+          if (cellValue != null) {
+            String actualValueString = Bytes.toString(cellValue);
             
             // Determine expected value format
             String expectedValue;
-            if (actualValue.contains("tenant-")) {
-              expectedValue = String.format("value_tenant-%s_row-%03d", tenant, rowNum);
+            if (actualValueString.contains("tenant-")) {
+              expectedValue = String.format("value_tenant-%s_row-%03d", extractedTenantId, rowNumber);
             } else {
               // Otherwise use the old format
-              expectedValue = "value_" + tenant + "_" + rowNum;
+              expectedValue = "value_" + extractedTenantId + "_" + rowNumber;
             }
             
             // Check for data correctness
-            if (!actualValue.equals(expectedValue)) {
+            if (!actualValueString.equals(expectedValue)) {
               LOG.error("Value mismatch on row {}: expected={}, actual={}", 
-                        rowKey, expectedValue, actualValue);
-              failedRows.add(rowKey);
+                        rowKey, expectedValue, actualValueString);
+              validationFailures.add(rowKey);
             }
             
             // Check for tenant data mixing
-            if (!actualValue.contains(tenant)) {
+            if (!actualValueString.contains(extractedTenantId)) {
               LOG.error("TENANT DATA MIXING DETECTED: Row {} expected to have tenant {} but got value {}", 
-                       rowKey, tenant, actualValue);
-              mixedDataCount++;
+                       rowKey, extractedTenantId, actualValueString);
+              crossTenantMixingCount++;
             }
           } else {
             LOG.error("Missing value for row: {}", rowKey);
-            failedRows.add(rowKey);
+            validationFailures.add(rowKey);
           }
           
-          rowCount++;
-          if (rowCount <= 5) {
-            LOG.info("SCAN verified row {}: {}", rowCount, rowKey);
+          totalRowCount++;
+          if (totalRowCount <= 5) {
+            LOG.info("SCAN verified row {}: {}", totalRowCount, rowKey);
           }
         }
         
-        LOG.info("SCAN verification complete: {} rows scanned", rowCount);
-        int expectedTotal = TENANTS.length * ROWS_PER_TENANT;
+        LOG.info("SCAN verification complete: {} rows scanned", totalRowCount);
+        int expectedTotalRows = TENANTS.length * ROWS_PER_TENANT;
         
-        if (rowCount != expectedTotal) {
-          LOG.error("Expected {} rows but scanned {} rows", expectedTotal, rowCount);
-          throw new IOException("Row count mismatch: expected=" + expectedTotal + ", actual=" + rowCount);
+        if (totalRowCount != expectedTotalRows) {
+          LOG.error("Expected {} rows but scanned {} rows", expectedTotalRows, totalRowCount);
+          throw new IOException("Row count mismatch: expected=" + expectedTotalRows + ", actual=" + totalRowCount);
         }
         
-        if (!failedRows.isEmpty()) {
+        if (!validationFailures.isEmpty()) {
           LOG.error("Failed rows (first 10 max): {}", 
-                   failedRows.subList(0, Math.min(10, failedRows.size())));
-          throw new IOException("SCAN verification failed for " + failedRows.size() + " rows");
+                   validationFailures.subList(0, Math.min(10, validationFailures.size())));
+          throw new IOException("SCAN verification failed for " + validationFailures.size() + " rows");
         }
         
-        if (mixedDataCount > 0) {
-          LOG.error("Detected tenant data mixing in {} rows", mixedDataCount);
-          throw new IOException("Tenant data mixing detected in " + mixedDataCount + " rows");
+        if (crossTenantMixingCount > 0) {
+          LOG.error("Detected tenant data mixing in {} rows", crossTenantMixingCount);
+          throw new IOException("Tenant data mixing detected in " + crossTenantMixingCount + " rows");
         }
         
         LOG.info("Full table SCAN verification passed");
@@ -895,92 +960,103 @@ public class MultiTenantHFileIntegrationTest {
   }
   
   /**
-   * Actual implementation of tenant-specific SCAN verification.
+   * Implementation of tenant-specific SCAN verification with isolation testing.
+   * <p>
+   * Validates tenant isolation by scanning each tenant's data independently:
+   * <ul>
+   * <li>Creates tenant-specific scan boundaries for each tenant</li>
+   * <li>Verifies only the target tenant's data is returned</li>
+   * <li>Validates row count accuracy for each tenant subset</li>
+   * <li>Detects any cross-tenant data leakage</li>
+   * </ul>
+   * 
+   * @param connection The HBase connection to use for tenant-specific scanning
+   * @throws IOException if tenant-specific scanning fails or isolation is compromised
    */
-  private void doVerifyDataWithTenantSpecificScans(Connection conn) throws IOException {
+  private void doVerifyDataWithTenantSpecificScans(Connection connection) throws IOException {
     LOG.info("Performing tenant-specific SCAN verification");
     
-    try (Table table = conn.getTable(TABLE_NAME)) {
+    try (Table table = connection.getTable(TABLE_NAME)) {
       // Verify each tenant has the correct data in isolation
-      for (String tenant : TENANTS) {
-        LOG.info("Verifying data for tenant: {}", tenant);
+      for (String targetTenantId : TENANTS) {
+        LOG.info("Verifying data for tenant: {}", targetTenantId);
         
         // Create tenant-specific scan
-        org.apache.hadoop.hbase.client.Scan scan = new org.apache.hadoop.hbase.client.Scan();
-        scan.addColumn(FAMILY, QUALIFIER);
+        org.apache.hadoop.hbase.client.Scan tenantScan = new org.apache.hadoop.hbase.client.Scan();
+        tenantScan.addColumn(FAMILY, QUALIFIER);
         
         // Set start and stop row for this tenant
         // Use the new row key format: "T01row000"
-        scan.withStartRow(Bytes.toBytes(tenant + "row"));
-        scan.withStopRow(Bytes.toBytes(tenant + "row" + "\uFFFF"));
+        tenantScan.withStartRow(Bytes.toBytes(targetTenantId + "row"));
+        tenantScan.withStopRow(Bytes.toBytes(targetTenantId + "row" + "\uFFFF"));
         
-        try (org.apache.hadoop.hbase.client.ResultScanner scanner = table.getScanner(scan)) {
-          int rowCount = 0;
-          List<String> failedRows = new ArrayList<>();
+        try (org.apache.hadoop.hbase.client.ResultScanner tenantScanner = table.getScanner(tenantScan)) {
+          int tenantRowCount = 0;
+          List<String> isolationViolations = new ArrayList<>();
           
-          for (org.apache.hadoop.hbase.client.Result result : scanner) {
-            String rowKey = Bytes.toString(result.getRow());
-            int rowNum = -1;
+          for (org.apache.hadoop.hbase.client.Result scanResult : tenantScanner) {
+            String rowKey = Bytes.toString(scanResult.getRow());
+            int rowNumber = -1;
             
             // Extract row number
             try {
-              String rowNumStr = rowKey.substring(rowKey.indexOf("row") + 3);
-              rowNum = Integer.parseInt(rowNumStr);
+              String rowNumberString = rowKey.substring(rowKey.indexOf("row") + 3);
+              rowNumber = Integer.parseInt(rowNumberString);
             } catch (Exception e) {
               LOG.warn("Could not parse row number from key: {}", rowKey);
             }
             
             // Verify row belongs to current tenant
-            if (!rowKey.startsWith(tenant)) {
-              LOG.error("TENANT SCAN VIOLATION: Found row {} in scan for tenant {}", rowKey, tenant);
-              failedRows.add(rowKey);
+            if (!rowKey.startsWith(targetTenantId)) {
+              LOG.error("TENANT SCAN VIOLATION: Found row {} in scan for tenant {}", rowKey, targetTenantId);
+              isolationViolations.add(rowKey);
               continue;
             }
             
-            byte[] value = result.getValue(FAMILY, QUALIFIER);
-            if (value != null) {
-              String actualValue = Bytes.toString(value);
+            byte[] cellValue = scanResult.getValue(FAMILY, QUALIFIER);
+            if (cellValue != null) {
+              String actualValueString = Bytes.toString(cellValue);
               
               // Determine expected value format
               String expectedValue;
-              if (actualValue.contains("tenant-")) {
-                expectedValue = String.format("value_tenant-%s_row-%03d", tenant, rowNum);
+              if (actualValueString.contains("tenant-")) {
+                expectedValue = String.format("value_tenant-%s_row-%03d", targetTenantId, rowNumber);
               } else {
                 // Otherwise use the old format
-                expectedValue = "value_" + tenant + "_" + rowNum;
+                expectedValue = "value_" + targetTenantId + "_" + rowNumber;
               }
               
               // Check for data correctness
-              if (!actualValue.equals(expectedValue)) {
+              if (!actualValueString.equals(expectedValue)) {
                 LOG.error("Value mismatch on row {}: expected={}, actual={}", 
-                          rowKey, expectedValue, actualValue);
-                failedRows.add(rowKey);
+                          rowKey, expectedValue, actualValueString);
+                isolationViolations.add(rowKey);
               }
             } else {
               LOG.error("Missing value for row: {}", rowKey);
-              failedRows.add(rowKey);
+              isolationViolations.add(rowKey);
             }
             
-            rowCount++;
-            if (rowCount <= 3) {
-              LOG.info("Tenant scan for {} verified row: {}", tenant, rowKey);
+            tenantRowCount++;
+            if (tenantRowCount <= 3) {
+              LOG.info("Tenant scan for {} verified row: {}", targetTenantId, rowKey);
             }
           }
           
-          LOG.info("Tenant {} scan verification complete: {} rows scanned", tenant, rowCount);
+          LOG.info("Tenant {} scan verification complete: {} rows scanned", targetTenantId, tenantRowCount);
           
-          if (rowCount != ROWS_PER_TENANT) {
+          if (tenantRowCount != ROWS_PER_TENANT) {
             LOG.error("Expected {} rows for tenant {} but scanned {} rows", 
-                     ROWS_PER_TENANT, tenant, rowCount);
-            throw new IOException("Row count mismatch for tenant " + tenant + 
-                                 ": expected=" + ROWS_PER_TENANT + ", actual=" + rowCount);
+                     ROWS_PER_TENANT, targetTenantId, tenantRowCount);
+            throw new IOException("Row count mismatch for tenant " + targetTenantId + 
+                                 ": expected=" + ROWS_PER_TENANT + ", actual=" + tenantRowCount);
           }
           
-          if (!failedRows.isEmpty()) {
+          if (!isolationViolations.isEmpty()) {
             LOG.error("Failed rows for tenant {} (first 10 max): {}", 
-                     tenant, failedRows.subList(0, Math.min(10, failedRows.size())));
+                     targetTenantId, isolationViolations.subList(0, Math.min(10, isolationViolations.size())));
             throw new IOException("Tenant-specific scan verification failed for " + 
-                                 failedRows.size() + " rows in tenant " + tenant);
+                                 isolationViolations.size() + " rows in tenant " + targetTenantId);
           }
         }
       }
