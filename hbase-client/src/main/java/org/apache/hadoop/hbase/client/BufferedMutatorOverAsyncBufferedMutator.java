@@ -135,13 +135,15 @@ class BufferedMutatorOverAsyncBufferedMutator implements BufferedMutator {
       long heapSize = mutation.heapSize();
       bufferedSize.addAndGet(heapSize);
       addListener(fs.get(i), (r, e) -> {
-        futures.remove(toComplete);
-        bufferedSize.addAndGet(-heapSize);
-        if (e != null) {
-          errors.add(Pair.newPair(mutation, e));
-          toComplete.completeExceptionally(e);
-        } else {
-          toComplete.complete(r);
+        synchronized (this) {
+          futures.remove(toComplete);
+          bufferedSize.addAndGet(-heapSize);
+          if (e != null) {
+            errors.add(Pair.newPair(mutation, e));
+            toComplete.completeExceptionally(e);
+          } else {
+            toComplete.complete(r);
+          }
         }
       });
     }
