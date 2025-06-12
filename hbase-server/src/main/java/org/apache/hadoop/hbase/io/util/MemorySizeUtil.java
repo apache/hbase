@@ -51,6 +51,13 @@ public class MemorySizeUtil {
   // Default lower water mark limit is 95% size of memstore size.
   public static final float DEFAULT_MEMSTORE_SIZE_LOWER_LIMIT = 0.95f;
 
+  /**
+   * Configuration key for the absolute amount of heap memory that must remain free for a
+   * RegionServer to start
+   */
+  public static final String HBASE_REGION_SERVER_FREE_HEAP_MIN_MEMORY_SIZE_KEY =
+    "hbase.regionserver.free.heap.min.memory.size";
+
   private static final Logger LOG = LoggerFactory.getLogger(MemorySizeUtil.class);
 
   private static final String JVM_HEAP_EXCEPTION = "Got an exception while attempting to read "
@@ -105,8 +112,8 @@ public class MemorySizeUtil {
         MEMSTORE_SIZE_KEY, memStoreFraction, HConstants.HFILE_BLOCK_CACHE_MEMORY_SIZE_KEY,
         conf.get(HConstants.HFILE_BLOCK_CACHE_MEMORY_SIZE_KEY),
         HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, conf.get(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY),
-        HConstants.HBASE_REGION_SERVER_FREE_HEAP_MIN_MEMORY_SIZE_KEY,
-        conf.get(HConstants.HBASE_REGION_SERVER_FREE_HEAP_MIN_MEMORY_SIZE_KEY)));
+        MemorySizeUtil.HBASE_REGION_SERVER_FREE_HEAP_MIN_MEMORY_SIZE_KEY,
+        conf.get(MemorySizeUtil.HBASE_REGION_SERVER_FREE_HEAP_MIN_MEMORY_SIZE_KEY)));
     }
   }
 
@@ -118,7 +125,7 @@ public class MemorySizeUtil {
    *                                  invalid
    */
   private static long getRegionServerMinFreeHeapInBytes(Configuration conf) {
-    final String key = HConstants.HBASE_REGION_SERVER_FREE_HEAP_MIN_MEMORY_SIZE_KEY;
+    final String key = MemorySizeUtil.HBASE_REGION_SERVER_FREE_HEAP_MIN_MEMORY_SIZE_KEY;
     try {
       return Long.parseLong(conf.get(key));
     } catch (NumberFormatException e) {
