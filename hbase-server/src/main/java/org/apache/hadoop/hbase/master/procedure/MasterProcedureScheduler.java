@@ -17,12 +17,14 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -418,7 +420,9 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
   // ============================================================================
   private TableQueue getTableQueue(TableName tableName) {
     TableQueue node = AvlTree.get(tableMap, tableName, TABLE_QUEUE_KEY_COMPARATOR);
-    if (node != null) return node;
+    if (node != null) {
+      return node;
+    }
 
     node = new TableQueue(tableName, MasterProcedureUtil.getTablePriority(tableName),
       locking.getTableLock(tableName), locking.getNamespaceLock(tableName.getNamespaceAsString()));
@@ -429,6 +433,21 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
   private void removeTableQueue(TableName tableName) {
     tableMap = AvlTree.remove(tableMap, tableName, TABLE_QUEUE_KEY_COMPARATOR);
     locking.removeTableLock(tableName);
+  }
+
+  /**
+   * Tries to remove the queue and the table-lock of the specified table. If there are new
+   * operations pending (e.g. a new create), the remove will not be performed.
+   * @param table     the name of the table that should be marked as deleted
+   * @param procedure the procedure that is removing the table
+   * @return true if deletion succeeded, false otherwise meaning that there are other new operations
+   *         pending for that table (e.g. a new create).
+   */
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/(MasterProcedureScheduler.java|src/test/.*)")
+  boolean markTableAsDeleted(final TableName table, final Procedure<?> procedure) {
+    return tryCleanupQueue(table, procedure, () -> tableMap, TABLE_QUEUE_KEY_COMPARATOR,
+      locking::getTableLock, tableRunQueue, this::removeTableQueue);
   }
 
   private static boolean isTableProcedure(Procedure<?> proc) {
@@ -467,23 +486,10 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
   }
 
   private void tryCleanupServerQueue(ServerName serverName, Procedure<?> proc) {
-    schedLock();
-    try {
-      int index = getBucketIndex(serverBuckets, serverName.hashCode());
-      ServerQueue node = AvlTree.get(serverBuckets[index], serverName, SERVER_QUEUE_KEY_COMPARATOR);
-      if (node == null) {
-        return;
-      }
-
-      LockAndQueue lock = locking.getServerLock(serverName);
-      if (node.isEmpty() && lock.tryExclusiveLock(proc)) {
-        removeFromRunQueue(serverRunQueue, node,
-          () -> "clean up server queue after " + proc + " completed");
-        removeServerQueue(serverName);
-      }
-    } finally {
-      schedUnlock();
-    }
+    // serverBuckets
+    tryCleanupQueue(serverName, proc,
+      () -> serverBuckets[getBucketIndex(serverBuckets, serverName.hashCode())],
+      SERVER_QUEUE_KEY_COMPARATOR, locking::getServerLock, serverRunQueue, this::removeServerQueue);
   }
 
   private static int getBucketIndex(Object[] buckets, int hashCode) {
@@ -516,23 +522,9 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     locking.removePeerLock(peerId);
   }
 
-  private void tryCleanupPeerQueue(String peerId, Procedure procedure) {
-    schedLock();
-    try {
-      PeerQueue queue = AvlTree.get(peerMap, peerId, PEER_QUEUE_KEY_COMPARATOR);
-      if (queue == null) {
-        return;
-      }
-
-      final LockAndQueue lock = locking.getPeerLock(peerId);
-      if (queue.isEmpty() && lock.tryExclusiveLock(procedure)) {
-        removeFromRunQueue(peerRunQueue, queue,
-          () -> "clean up peer queue after " + procedure + " completed");
-        removePeerQueue(peerId);
-      }
-    } finally {
-      schedUnlock();
-    }
+  private void tryCleanupPeerQueue(String peerId, Procedure<?> procedure) {
+    tryCleanupQueue(peerId, procedure, () -> peerMap, PEER_QUEUE_KEY_COMPARATOR,
+      locking::getPeerLock, peerRunQueue, this::removePeerQueue);
   }
 
   private static boolean isPeerProcedure(Procedure<?> proc) {
@@ -558,6 +550,35 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
 
   private static boolean isMetaProcedure(Procedure<?> proc) {
     return proc instanceof MetaProcedureInterface;
+  }
+
+  private <T extends Comparable<T>, TNode extends Queue<T>> boolean tryCleanupQueue(T id,
+    Procedure<?> proc, Supplier<TNode> getMap, AvlKeyComparator<TNode> comparator,
+    Function<T, LockAndQueue> getLock, FairQueue<T> runQueue, Consumer<T> removeQueue) {
+    schedLock();
+    try {
+      Queue<T> queue = AvlTree.get(getMap.get(), id, comparator);
+      if (queue == null) {
+        return true;
+      }
+
+      LockAndQueue lock = getLock.apply(id);
+      if (queue.isEmpty() && lock.isWaitingQueueEmpty() && !lock.isLocked()) {
+        // 1. the queue is empty
+        // 2. no procedure is in the lock's waiting queue
+        // 3. no other one holds the lock. It is possible that someone else holds the lock, usually
+        // our parent procedures
+        // If we can meet all the above conditions, it is safe for us to remove the queue
+        removeFromRunQueue(runQueue, queue, () -> "clean up queue after " + proc + " completed");
+        removeQueue.accept(id);
+        return true;
+      } else {
+        return false;
+      }
+
+    } finally {
+      schedUnlock();
+    }
   }
 
   // ============================================================================
@@ -697,39 +718,6 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     } finally {
       schedUnlock();
     }
-  }
-
-  /**
-   * Tries to remove the queue and the table-lock of the specified table. If there are new
-   * operations pending (e.g. a new create), the remove will not be performed.
-   * @param table     the name of the table that should be marked as deleted
-   * @param procedure the procedure that is removing the table
-   * @return true if deletion succeeded, false otherwise meaning that there are other new operations
-   *         pending for that table (e.g. a new create).
-   */
-  boolean markTableAsDeleted(final TableName table, final Procedure<?> procedure) {
-    schedLock();
-    try {
-      final TableQueue queue = getTableQueue(table);
-      final LockAndQueue tableLock = locking.getTableLock(table);
-      if (queue == null) {
-        return true;
-      }
-
-      if (queue.isEmpty() && tableLock.tryExclusiveLock(procedure)) {
-        // remove the table from the run-queue and the map
-        if (AvlIterableList.isLinked(queue)) {
-          tableRunQueue.remove(queue);
-        }
-        removeTableQueue(table);
-      } else {
-        // TODO: If there are no create, we can drop all the other ops
-        return false;
-      }
-    } finally {
-      schedUnlock();
-    }
-    return true;
   }
 
   // ============================================================================
