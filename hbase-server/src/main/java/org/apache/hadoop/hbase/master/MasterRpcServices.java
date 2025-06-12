@@ -1877,8 +1877,9 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
       try {
         server.reloadRegionServerQuotas();
       } catch (Exception e) {
-        LOG.warn(
-          "Failed to tell RegionServers to reload their quotas. Maybe they are on an older version of HBase that does not support this RPC.",
+        LOG.error(
+          "Failed to tell RegionServers to reload their quotas. "
+            + "Maybe they are on an older version of HBase that does not support SetQuotaRequest.",
           e);
       }
       return response;

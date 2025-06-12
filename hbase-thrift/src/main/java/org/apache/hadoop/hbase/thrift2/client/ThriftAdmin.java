@@ -1367,4 +1367,14 @@ public class ThriftAdmin implements Admin {
     throw new NotImplementedException(
       "isReplicationPeerModificationEnabled not supported in ThriftAdmin");
   }
+
+  @Override
+  public void reloadQuotas() throws IOException {
+    throw new NotImplementedException("reloadQuotas not supported in ThriftAdmin");
+  }
+
+  @Override
+  public void reloadQuotas(ServerName serverName) throws IOException {
+    throw new NotImplementedException("reloadQuotas not supported in ThriftAdmin");
+  }
 }
