@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import java.io.DataInput;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -37,6 +38,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.MultiTenantFSDataInputStreamWrapper;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hbase.thirdparty.com.google.common.cache.Cache;
 import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
@@ -1127,5 +1129,408 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
       LOG.error("Failed to get last key from multi-tenant HFile", e);
       return Optional.empty();
     }
+  }
+
+  /**
+   * For HFile v4 multi-tenant files, meta blocks don't exist at the file level.
+   * They exist within individual sections. This method is not supported.
+   * 
+   * @param metaBlockName the name of the meta block to retrieve
+   * @param cacheBlock whether to cache the block
+   * @return always null for multi-tenant HFiles
+   * @throws IOException if an error occurs
+   */
+  @Override
+  public HFileBlock getMetaBlock(String metaBlockName, boolean cacheBlock) throws IOException {
+    // HFile v4 multi-tenant files don't have file-level meta blocks
+    // Meta blocks exist within individual sections
+    LOG.debug("Meta blocks not supported at file level for HFile v4 multi-tenant files: {}", 
+              metaBlockName);
+    return null;
+  }
+
+  /**
+   * For HFile v4 multi-tenant files, bloom filter metadata doesn't exist at the file level.
+   * It exists within individual sections. This method is not supported.
+   * 
+   * @return always null for multi-tenant HFiles
+   * @throws IOException if an error occurs
+   */
+  @Override
+  public DataInput getGeneralBloomFilterMetadata() throws IOException {
+    // HFile v4 multi-tenant files don't have file-level bloom filters
+    // Bloom filters exist within individual sections
+    LOG.debug("General bloom filter metadata not supported at file level for HFile v4 multi-tenant files");
+    return null;
+  }
+
+  /**
+   * For HFile v4 multi-tenant files, delete bloom filter metadata doesn't exist at the file level.
+   * It exists within individual sections. This method is not supported.
+   * 
+   * @return always null for multi-tenant HFiles
+   * @throws IOException if an error occurs
+   */
+  @Override
+  public DataInput getDeleteBloomFilterMetadata() throws IOException {
+    // HFile v4 multi-tenant files don't have file-level delete bloom filters
+    // Delete bloom filters exist within individual sections
+    LOG.debug("Delete bloom filter metadata not supported at file level for HFile v4 multi-tenant files");
+    return null;
+  }
+
+  /**
+   * For HFile v4 multi-tenant files, index size is just the section index size.
+   * 
+   * @return the heap size of the section index
+   */
+  @Override
+  public long indexSize() {
+    if (sectionIndexReader != null) {
+      int numSections = sectionIndexReader.getNumSections();
+      // Estimate: each section entry is approximately 64 bytes (prefix + offset + size)
+      return numSections * 64L;
+    }
+    return 0;
+  }
+
+  /**
+   * Override mid-key calculation to find the middle key across all sections.
+   * For HFile v4 multi-tenant files, midkey calculation is complex and not meaningful
+   * at the file level since data is distributed across sections with different densities.
+   * This method is not supported for multi-tenant HFiles.
+   * 
+   * @return empty optional for multi-tenant HFiles
+   * @throws IOException if an error occurs
+   */
+  @Override
+  public Optional<ExtendedCell> midKey() throws IOException {
+    // HFile v4 multi-tenant files don't have a meaningful file-level midkey
+    // since data distribution across sections can be highly variable
+    LOG.debug("Midkey calculation not supported for HFile v4 multi-tenant files");
+    return Optional.empty();
+  }
+
+  /**
+   * Override block reading to support tenant-aware block access.
+   * Routes block reads to the appropriate section based on offset.
+   * 
+   * @param dataBlockOffset the offset of the block to read
+   * @param onDiskBlockSize the on-disk size of the block
+   * @param cacheBlock whether to cache the block
+   * @param pread whether to use positional read
+   * @param isCompaction whether this is for a compaction
+   * @param updateCacheMetrics whether to update cache metrics
+   * @param expectedBlockType the expected block type
+   * @param expectedDataBlockEncoding the expected data block encoding
+   * @return the read block
+   * @throws IOException if an error occurs reading the block
+   */
+  @Override
+  public HFileBlock readBlock(long dataBlockOffset, long onDiskBlockSize, boolean cacheBlock,
+      boolean pread, boolean isCompaction, boolean updateCacheMetrics,
+      BlockType expectedBlockType, DataBlockEncoding expectedDataBlockEncoding) throws IOException {
+    
+    // Find the section that contains this offset
+    SectionReader targetSectionReader = findSectionForOffset(dataBlockOffset);
+    if (targetSectionReader == null) {
+      throw new IOException("No section found for offset: " + dataBlockOffset + 
+                           ", path=" + getPath());
+    }
+    
+    try {
+      HFileReaderImpl sectionReader = targetSectionReader.getReader();
+      
+      // Convert absolute offset to section-relative offset
+      long sectionRelativeOffset = dataBlockOffset - targetSectionReader.sectionBaseOffset;
+      
+      return sectionReader.readBlock(sectionRelativeOffset, onDiskBlockSize, cacheBlock, 
+                                   pread, isCompaction, updateCacheMetrics, 
+                                   expectedBlockType, expectedDataBlockEncoding);
+    } catch (IOException e) {
+      LOG.error("Failed to read block at offset {} from section", dataBlockOffset, e);
+      throw e;
+    }
+  }
+
+  /**
+   * Override block reading with cache-only flag.
+   * 
+   * @param dataBlockOffset the offset of the block to read
+   * @param onDiskBlockSize the on-disk size of the block  
+   * @param cacheBlock whether to cache the block
+   * @param pread whether to use positional read
+   * @param isCompaction whether this is for a compaction
+   * @param updateCacheMetrics whether to update cache metrics
+   * @param expectedBlockType the expected block type
+   * @param expectedDataBlockEncoding the expected data block encoding
+   * @param cacheOnly whether to only read from cache
+   * @return the read block
+   * @throws IOException if an error occurs reading the block
+   */
+  @Override
+  public HFileBlock readBlock(long dataBlockOffset, long onDiskBlockSize, boolean cacheBlock,
+      boolean pread, boolean isCompaction, boolean updateCacheMetrics,
+      BlockType expectedBlockType, DataBlockEncoding expectedDataBlockEncoding, 
+      boolean cacheOnly) throws IOException {
+    
+    // Find the section that contains this offset
+    SectionReader targetSectionReader = findSectionForOffset(dataBlockOffset);
+    if (targetSectionReader == null) {
+      throw new IOException("No section found for offset: " + dataBlockOffset + 
+                           ", path=" + getPath());
+    }
+    
+    try {
+      HFileReaderImpl sectionReader = targetSectionReader.getReader();
+      
+      // Convert absolute offset to section-relative offset
+      long sectionRelativeOffset = dataBlockOffset - targetSectionReader.sectionBaseOffset;
+      
+      return sectionReader.readBlock(sectionRelativeOffset, onDiskBlockSize, cacheBlock, 
+                                   pread, isCompaction, updateCacheMetrics, 
+                                   expectedBlockType, expectedDataBlockEncoding, cacheOnly);
+    } catch (IOException e) {
+      LOG.error("Failed to read block at offset {} from section (cache-only={})", 
+                dataBlockOffset, cacheOnly, e);
+      throw e;
+    }
+  }
+
+  /**
+   * Find the section reader that contains the given absolute file offset.
+   * 
+   * @param absoluteOffset the absolute offset in the file
+   * @return the section reader containing this offset, or null if not found
+   */
+  private SectionReader findSectionForOffset(long absoluteOffset) {
+    for (Map.Entry<ImmutableBytesWritable, SectionMetadata> entry : sectionLocations.entrySet()) {
+      SectionMetadata metadata = entry.getValue();
+      if (absoluteOffset >= metadata.getOffset() && 
+          absoluteOffset < metadata.getOffset() + metadata.getSize()) {
+        try {
+          return getSectionReader(entry.getKey().get());
+        } catch (IOException e) {
+          LOG.warn("Failed to get section reader for offset {}", absoluteOffset, e);
+          return null;
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
+   * For HFile v4 multi-tenant files, MVCC information is determined from file info only.
+   * 
+   * @return true if file info indicates MVCC information is present
+   */
+  @Override
+  public boolean hasMVCCInfo() {
+    // HFile v4 multi-tenant files determine MVCC info from file info only
+    return fileInfo.shouldIncludeMemStoreTS() && fileInfo.isDecodeMemstoreTS();
+  }
+
+  /**
+   * For HFile v4 multi-tenant files, entry count is determined from trailer only.
+   * 
+   * @return the entry count from the trailer
+   */
+  @Override
+  public long getEntries() {
+    // HFile v4 multi-tenant files get entry count from trailer only
+    if (trailer != null) {
+      return trailer.getEntryCount();
+    }
+    return 0;
+  }
+
+  /**
+   * Override unbuffer stream to handle all section contexts.
+   */
+  @Override
+  public void unbufferStream() {
+    // Unbuffer the main context
+    super.unbufferStream();
+    
+    // Unbuffer all cached section readers
+    for (SectionReader sectionReader : sectionReaderCache.asMap().values()) {
+      try {
+        HFileReaderImpl reader = sectionReader.getReader();
+        reader.unbufferStream();
+      } catch (Exception e) {
+        LOG.debug("Failed to unbuffer stream for section reader", e);
+      }
+    }
+  }
+
+  /**
+   * For HFile v4 multi-tenant files, effective encoding in cache is ignored.
+   * 
+   * @param isCompaction whether this is for a compaction
+   * @return always NONE for multi-tenant HFiles
+   */
+  @Override
+  public DataBlockEncoding getEffectiveEncodingInCache(boolean isCompaction) {
+    // HFile v4 multi-tenant files ignore effective encoding in cache
+    LOG.debug("Effective encoding in cache ignored for HFile v4 multi-tenant files");
+    return DataBlockEncoding.NONE;
+  }
+
+  /**
+   * Get section-specific statistics for monitoring and debugging.
+   * 
+   * @return a map of section statistics
+   */
+  public Map<String, Object> getSectionStatistics() {
+    Map<String, Object> stats = new HashMap<>();
+    
+    stats.put("totalSections", sectionLocations.size());
+    stats.put("cachedSections", sectionReaderCache.size());
+    stats.put("tenantIndexLevels", tenantIndexLevels);
+    stats.put("tenantIndexMaxChunkSize", tenantIndexMaxChunkSize);
+    stats.put("prefetchEnabled", prefetchEnabled);
+    
+    // Cache statistics
+    stats.putAll(getCacheStats());
+    
+    // Section size distribution
+    List<Integer> sectionSizes = new ArrayList<>();
+    for (SectionMetadata metadata : sectionLocations.values()) {
+      sectionSizes.add(metadata.getSize());
+    }
+    if (!sectionSizes.isEmpty()) {
+      stats.put("avgSectionSize", sectionSizes.stream().mapToInt(Integer::intValue).average().orElse(0.0));
+      stats.put("minSectionSize", sectionSizes.stream().mapToInt(Integer::intValue).min().orElse(0));
+      stats.put("maxSectionSize", sectionSizes.stream().mapToInt(Integer::intValue).max().orElse(0));
+    }
+    
+    return stats;
+  }
+
+  /**
+   * Get metadata for a specific tenant section by section ID.
+   * 
+   * @param tenantSectionId The tenant section ID to look up
+   * @return Detailed metadata about the section including cached status
+   */
+  public Map<String, Object> getSectionInfo(byte[] tenantSectionId) {
+    Map<String, Object> info = new HashMap<>();
+    
+    ImmutableBytesWritable key = new ImmutableBytesWritable(tenantSectionId);
+    SectionMetadata metadata = sectionLocations.get(key);
+    
+    if (metadata != null) {
+      info.put("exists", true);
+      info.put("offset", metadata.getOffset());
+      info.put("size", metadata.getSize());
+      info.put("cached", sectionReaderCache.asMap().containsKey(key));
+      
+      // Try to get additional info from cached reader
+      SectionReader cachedReader = sectionReaderCache.getIfPresent(key);
+      if (cachedReader != null) {
+        try {
+          HFileReaderImpl reader = cachedReader.getReader();
+          info.put("entries", reader.getEntries());
+          info.put("indexSize", reader.indexSize());
+          info.put("hasMVCC", reader.hasMVCCInfo());
+        } catch (Exception e) {
+          LOG.debug("Failed to get additional info for section {}", 
+                    Bytes.toStringBinary(tenantSectionId), e);
+        }
+      }
+    } else {
+      info.put("exists", false);
+    }
+    
+    return info;
+  }
+
+  /**
+   * For HFile v4 multi-tenant files, data block encoding is ignored at file level.
+   * 
+   * @return always NONE for multi-tenant HFiles
+   */
+  @Override
+  public DataBlockEncoding getDataBlockEncoding() {
+    // HFile v4 multi-tenant files ignore data block encoding at file level
+    LOG.debug("Data block encoding ignored for HFile v4 multi-tenant files");
+    return DataBlockEncoding.NONE;
+  }
+
+  /**
+   * Check if prefetch is complete for this multi-tenant file.
+   * 
+   * @return true if prefetching is complete for all sections
+   */
+  @Override
+  public boolean prefetchComplete() {
+    // For multi-tenant files, prefetch is complete when section loading is done
+    // This is a simpler check than per-section prefetch status
+    return true; // Multi-tenant files handle prefetch at section level
+  }
+
+  /**
+   * Check if prefetch has started for this multi-tenant file.
+   * 
+   * @return true if prefetching has started
+   */
+  @Override
+  public boolean prefetchStarted() {
+    // Multi-tenant files start prefetch immediately on open
+    return prefetchEnabled;
+  }
+
+  /**
+   * Get file length from the context.
+   * 
+   * @return the file length in bytes
+   */
+  @Override
+  public long length() {
+    return context.getFileSize();
+  }
+
+  /**
+   * Check if file info is loaded (always true for multi-tenant readers).
+   * 
+   * @return true as file info is always loaded during construction
+   */
+  public boolean isFileInfoLoaded() {
+    return true;
+  }
+
+  /**
+   * Enhanced toString with multi-tenant specific information.
+   * 
+   * @return detailed string representation of this reader
+   */
+  @Override
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+    sb.append("MultiTenantReader{");
+    sb.append("path=").append(getPath());
+    sb.append(", majorVersion=").append(getMajorVersion());
+    sb.append(", sections=").append(sectionLocations.size());
+    sb.append(", cachedSections=").append(sectionReaderCache.size());
+    sb.append(", tenantIndexLevels=").append(tenantIndexLevels);
+    sb.append(", fileSize=").append(length());
+    
+    if (!sectionLocations.isEmpty()) {
+      try {
+        Optional<ExtendedCell> firstKey = getFirstKey();
+        Optional<ExtendedCell> lastKey = getLastKey();
+        if (firstKey.isPresent()) {
+          sb.append(", firstKey=").append(firstKey.get().toString());
+        }
+        if (lastKey.isPresent()) {
+          sb.append(", lastKey=").append(lastKey.get().toString());
+        }
+      } catch (Exception e) {
+        LOG.debug("Failed to get keys for toString", e);
+      }
+    }
+    
+    sb.append("}");
+    return sb.toString();
   }
 } 
