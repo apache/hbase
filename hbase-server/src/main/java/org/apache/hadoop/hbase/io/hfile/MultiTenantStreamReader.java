@@ -47,6 +47,17 @@ public class MultiTenantStreamReader extends AbstractMultiTenantReader {
     // Tenant index structure is loaded and logged by the parent class
   }
 
+  /**
+   * Create a section reader for a specific tenant.
+   * <p>
+   * Creates a StreamSectionReader that handles sequential access to a specific
+   * tenant section within the multi-tenant HFile.
+   * 
+   * @param tenantSectionId The tenant section ID
+   * @param metadata The section metadata containing offset and size
+   * @return A section reader for the tenant
+   * @throws IOException If an error occurs creating the reader
+   */
   @Override
   protected SectionReader createSectionReader(byte[] tenantSectionId, SectionMetadata metadata)
       throws IOException {
@@ -56,7 +67,11 @@ public class MultiTenantStreamReader extends AbstractMultiTenantReader {
   }
 
   /**
-   * Section reader implementation for stream mode that uses HFileStreamReader.
+   * Section reader implementation for stream (sequential access) mode.
+   * <p>
+   * This implementation creates HFileStreamReader instances for each tenant section,
+   * providing efficient sequential access to data within specific tenant boundaries.
+   * Stream readers are optimized for sequential scans and compaction operations.
    */
   protected class StreamSectionReader extends SectionReader {
     

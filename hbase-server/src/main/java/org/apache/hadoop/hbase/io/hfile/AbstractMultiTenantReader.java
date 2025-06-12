@@ -50,13 +50,22 @@ import org.slf4j.LoggerFactory;
  * Abstract base class for multi-tenant HFile readers. This class handles the common
  * functionality for both pread and stream access modes, delegating specific reader
  * creation to subclasses.
- * 
+ * <p>
  * The multi-tenant reader acts as a router that:
  * <ol>
  *   <li>Extracts tenant information from cell keys</li>
  *   <li>Locates the appropriate section in the HFile for that tenant</li>
  *   <li>Delegates reading operations to a standard v3 reader for that section</li>
  * </ol>
+ * <p>
+ * Key features:
+ * <ul>
+ * <li>Section-based caching with bounded size and LRU eviction</li>
+ * <li>Multi-level tenant index support for efficient section lookup</li>
+ * <li>Prefetching for sequential access optimization</li>
+ * <li>Table property caching to avoid repeated Admin API calls</li>
+ * <li>Transparent delegation to HFile v3 readers for each section</li>
+ * </ul>
  */
 @InterfaceAudience.Private
 public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
@@ -204,6 +213,9 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
   
   /**
    * Load information about the tenant index structure from file info.
+   * <p>
+   * Extracts tenant index levels and chunk size configuration from the HFile
+   * metadata to optimize section lookup performance.
    */
   private void loadTenantIndexStructureInfo() {
     // Get tenant index level information
@@ -255,6 +267,9 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
   
   /**
    * Initialize our section location map from the index reader.
+   * <p>
+   * Populates the internal section metadata map and creates the section ID list
+   * for efficient navigation during scanning operations.
    */
   private void initSectionLocations() {
     for (SectionIndexManager.SectionIndexEntry entry : sectionIndexReader.getSections()) {
@@ -288,6 +303,9 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
   
   /**
    * Get table properties from the file context if available.
+   * <p>
+   * Uses a bounded cache to avoid repeated Admin API calls for the same table.
+   * Properties are used for tenant configuration and optimization settings.
    * 
    * @return A map of table properties, or empty map if not available
    */
@@ -468,6 +486,10 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
   
   /**
    * Abstract base class for section readers.
+   * <p>
+   * Each section reader manages access to a specific tenant section within the HFile,
+   * providing transparent delegation to standard HFile v3 readers with proper offset
+   * translation and resource management.
    */
   protected abstract class SectionReader {
     /** The tenant section ID for this reader */
@@ -534,6 +556,14 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
   
   /**
    * Scanner implementation for multi-tenant HFiles.
+   * <p>
+   * This scanner provides transparent access across multiple tenant sections by:
+   * <ul>
+   * <li>Extracting tenant information from seek keys</li>
+   * <li>Routing operations to the appropriate section reader</li>
+   * <li>Managing section transitions during sequential scans</li>
+   * <li>Optimizing performance through section prefetching</li>
+   * </ul>
    */
   protected class MultiTenantScanner implements HFileScanner {
     /** Configuration to use */
@@ -929,10 +959,18 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
 
   /**
    * Build a section context with the appropriate offset translation wrapper.
+   * <p>
+   * Creates a specialized reader context for a tenant section that handles:
+   * <ul>
+   * <li>Offset translation from section-relative to file-absolute positions</li>
+   * <li>Proper trailer positioning for HFile v3 section format</li>
+   * <li>Block boundary validation and alignment</li>
+   * <li>File size calculation for section boundaries</li>
+   * </ul>
    * 
-   * @param metadata The section metadata
+   * @param metadata The section metadata containing offset and size
    * @param readerType The type of reader (PREAD or STREAM)
-   * @return A reader context for the section
+   * @return A reader context for the section, or null if section is invalid
    * @throws IOException If an error occurs building the context
    */
   protected ReaderContext buildSectionContext(SectionMetadata metadata, 
@@ -940,21 +978,12 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
       throws IOException {
     // Create a special wrapper with offset translation capabilities
     FSDataInputStreamWrapper parentWrapper = context.getInputStreamWrapper();
-    LOG.debug("Creating MultiTenantFSDataInputStreamWrapper with offset translation " +
-              "from parent at offset {}", metadata.getOffset());
-    
     MultiTenantFSDataInputStreamWrapper sectionWrapper = 
         new MultiTenantFSDataInputStreamWrapper(parentWrapper, metadata.getOffset());
     
-    // In HFile format, each tenant section is a complete HFile with a trailer,
-    // so we need to properly handle trailer positioning for each section
-    
-    // Calculate section size and endpoint
+    // Calculate section size and validate minimum requirements
     int sectionSize = metadata.getSize();
-    long sectionEndpoint = metadata.getOffset() + metadata.getSize();
-    // HFile v3 trailer size is 4096 bytes (from FixedFileTrailer.getTrailerSize(3))
-    // For sections, the trailer is at the end of each section
-    int trailerSize = FixedFileTrailer.getTrailerSize(3); // HFile v3 sections are HFile v3 format
+    int trailerSize = FixedFileTrailer.getTrailerSize(3); // HFile v3 sections use v3 format
     
     if (sectionSize < trailerSize) {
       LOG.warn("Section size {} for offset {} is smaller than minimum trailer size {}",
@@ -962,38 +991,25 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
       return null;
     }
     
-    LOG.debug("Section context: offset={}, size={}, endPos={}, trailer expected at {}",
-             metadata.getOffset(), sectionSize, sectionEndpoint, 
-             sectionEndpoint - trailerSize);
-    
-    // Log additional debug information to validate blocks and headers
-    LOG.debug("Block boundary details: section starts at absolute position {}, " +
-             "first block header should be at this position", metadata.getOffset());
-    
-    // If this is not the first section, log detailed information about block alignment
-    if (metadata.getOffset() > 0) {
-      LOG.debug("Non-first section requires correct offset translation for all block operations");
-      LOG.debug("First block in section: relative pos=0, absolute pos={}", metadata.getOffset());
-      LOG.debug("CHECKSUM_TYPE_INDEX position should be translated from relative pos 24 " +
-                "to absolute pos {}", metadata.getOffset() + 24);
-    }
-    
     // Build the reader context with proper file size calculation
-    // This ensures HFileReaderImpl correctly finds the trailer at (offset + size - trailerSize)
     ReaderContext sectionContext = ReaderContextBuilder.newBuilder(context)
         .withInputStreamWrapper(sectionWrapper)
         .withFilePath(context.getFilePath())
         .withReaderType(readerType)
         .withFileSystem(context.getFileSystem())
-        .withFileSize(sectionSize) // Use section size; wrapper adds the offset when seeking
+        .withFileSize(sectionSize) // Use section size; wrapper handles offset translation
         .build();
     
-    LOG.debug("Created section reader context: {}", sectionContext);
+    LOG.debug("Created section reader context for offset {}, size {}", 
+              metadata.getOffset(), sectionSize);
     return sectionContext;
   }
 
   /**
    * Get all tenant section IDs present in the file.
+   * <p>
+   * Returns a defensive copy of all section IDs for external iteration
+   * without exposing internal data structures.
    * 
    * @return An array of all tenant section IDs
    */
@@ -1007,9 +1023,12 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
   }
 
   /**
-   * Get cache statistics for monitoring.
+   * Get cache statistics for monitoring and performance analysis.
+   * <p>
+   * Provides comprehensive metrics about section reader cache performance
+   * including hit rates, eviction counts, and current cache utilization.
    * 
-   * @return A map of cache statistics
+   * @return A map of cache statistics with metric names as keys
    */
   public Map<String, Long> getCacheStats() {
     Map<String, Long> stats = new HashMap<>();

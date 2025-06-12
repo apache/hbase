@@ -161,31 +161,31 @@ public class TestMultiTenantHFileV4 {
     
     // Tenant 1 data
     List<ExtendedCell> tenant1Cells = new ArrayList<>();
-    for (int i = 0; i < 10; i++) {
+    for (int rowIndex = 0; rowIndex < 10; rowIndex++) {
       // Pad numbers with leading zeros to ensure proper lexicographical ordering
-      String paddedIndex = String.format("%02d", i);
+      String paddedIndex = String.format("%02d", rowIndex);
       byte[] row = Bytes.toBytes(TENANT_1 + "_row_" + paddedIndex);
-      byte[] value = Bytes.toBytes("value_" + i);
+      byte[] value = Bytes.toBytes("value_" + rowIndex);
       tenant1Cells.add((ExtendedCell)new KeyValue(row, FAMILY, QUALIFIER, value));
     }
     tenantData.put(TENANT_1, tenant1Cells);
     
     // Tenant 2 data
     List<ExtendedCell> tenant2Cells = new ArrayList<>();
-    for (int i = 0; i < 5; i++) {
-      String paddedIndex = String.format("%02d", i);
+    for (int rowIndex = 0; rowIndex < 5; rowIndex++) {
+      String paddedIndex = String.format("%02d", rowIndex);
       byte[] row = Bytes.toBytes(TENANT_2 + "_row_" + paddedIndex);
-      byte[] value = Bytes.toBytes("value_" + (100 + i));
+      byte[] value = Bytes.toBytes("value_" + (100 + rowIndex));
       tenant2Cells.add((ExtendedCell)new KeyValue(row, FAMILY, QUALIFIER, value));
     }
     tenantData.put(TENANT_2, tenant2Cells);
     
     // Tenant 3 data
     List<ExtendedCell> tenant3Cells = new ArrayList<>();
-    for (int i = 0; i < 15; i++) {
-      String paddedIndex = String.format("%02d", i);
+    for (int rowIndex = 0; rowIndex < 15; rowIndex++) {
+      String paddedIndex = String.format("%02d", rowIndex);
       byte[] row = Bytes.toBytes(TENANT_3 + "_row_" + paddedIndex);
-      byte[] value = Bytes.toBytes("value_" + (200 + i));
+      byte[] value = Bytes.toBytes("value_" + (200 + rowIndex));
       tenant3Cells.add((ExtendedCell)new KeyValue(row, FAMILY, QUALIFIER, value));
     }
     tenantData.put(TENANT_3, tenant3Cells);

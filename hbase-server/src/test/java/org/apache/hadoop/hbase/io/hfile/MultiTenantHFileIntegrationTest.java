@@ -61,14 +61,14 @@ import org.slf4j.LoggerFactory;
  * writes data, flushes, and verifies that HFile v4 files are created with the proper format.
  */
 @Category(MediumTests.class)
-public class TestMultiTenantHFileWriterIntegration {
+public class MultiTenantHFileIntegrationTest {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMultiTenantHFileWriterIntegration.class);
+      HBaseClassTestRule.forClass(MultiTenantHFileIntegrationTest.class);
 
   /** Logger for this integration test class */
-  private static final Logger LOG = LoggerFactory.getLogger(TestMultiTenantHFileWriterIntegration.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MultiTenantHFileIntegrationTest.class);
   
   /** HBase testing utility instance for cluster operations */
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();

@@ -50,11 +50,21 @@ import static org.apache.hadoop.hbase.io.hfile.BlockCompressedSizePredicator.MAX
 
 /**
  * An HFile writer that supports multiple tenants by sectioning the data within a single file.
+ * <p>
  * This implementation takes advantage of the fact that HBase data is always written
  * in sorted order, so once we move to a new tenant, we'll never go back to a previous one.
- * 
+ * <p>
  * Instead of creating separate physical files for each tenant, this writer creates a 
  * single HFile with internal sections that are indexed by tenant prefix.
+ * <p>
+ * Key features:
+ * <ul>
+ * <li>Single HFile v4 format with multiple tenant sections</li>
+ * <li>Each section contains complete HFile v3 structure</li>
+ * <li>Section-level bloom filters for efficient tenant-specific queries</li>
+ * <li>Multi-level tenant indexing for fast section lookup</li>
+ * <li>Configurable tenant prefix extraction</li>
+ * </ul>
  */
 @InterfaceAudience.Private
 public class MultiTenantHFileWriter implements HFile.Writer {
@@ -203,6 +213,13 @@ public class MultiTenantHFileWriter implements HFile.Writer {
   
   /**
    * Factory method to create a MultiTenantHFileWriter with configuration from both table and cluster levels.
+   * <p>
+   * This method applies configuration precedence:
+   * <ol>
+   * <li>Table-level properties have highest precedence</li>
+   * <li>Cluster-level configuration used as fallback</li>
+   * <li>Default values used if neither specified</li>
+   * </ol>
    * 
    * @param fs Filesystem to write to
    * @param path Path for the HFile
@@ -211,6 +228,7 @@ public class MultiTenantHFileWriter implements HFile.Writer {
    * @param tableProperties Table properties that may include table-level tenant configuration
    * @param fileContext HFile context
    * @return A configured MultiTenantHFileWriter
+   * @throws IOException if writer creation fails
    */
   public static MultiTenantHFileWriter create(
       FileSystem fs,
@@ -231,6 +249,13 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     return new MultiTenantHFileWriter(fs, path, conf, cacheConf, tenantExtractor, fileContext);
   }
   
+  /**
+   * Initialize the writer components including block writer and section index writer.
+   * <p>
+   * Sets up multi-level tenant indexing with configurable chunk sizes and index parameters.
+   * 
+   * @throws IOException if initialization fails
+   */
   private void initialize() throws IOException {
     // Initialize the block writer
     blockWriter = new HFileBlock.Writer(conf, 
@@ -392,7 +417,13 @@ public class MultiTenantHFileWriter implements HFile.Writer {
   }
   
   /**
-   * Verify that the section was written correctly by checking basic structure
+   * Verify that the section was written correctly by checking basic structure.
+   * <p>
+   * Performs basic validation of section size and structure without expensive I/O operations.
+   * 
+   * @param sectionStartOffset Starting offset of the section in the file
+   * @param sectionSize Size of the section in bytes
+   * @throws IOException if verification fails or section structure is invalid
    */
   private void verifySection(long sectionStartOffset, long sectionSize) throws IOException {
     LOG.debug("Verifying section at offset {} with size {}", sectionStartOffset, sectionSize);
@@ -419,6 +450,15 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     }
   }
   
+  /**
+   * Create a new section for a tenant with its own writer and bloom filter.
+   * <p>
+   * Each section is a complete HFile v3 structure within the larger v4 file.
+   * 
+   * @param tenantSectionId The tenant section identifier for indexing
+   * @param tenantId The tenant identifier for metadata
+   * @throws IOException if section creation fails
+   */
   private void createNewSection(byte[] tenantSectionId, byte[] tenantId) throws IOException {
     // Set the start offset for this section
     sectionStartOffset = outputStream.getPos();
@@ -496,7 +536,11 @@ public class MultiTenantHFileWriter implements HFile.Writer {
   }
   
   /**
-   * Write file info similar to HFileWriterImpl but adapted for multi-tenant structure
+   * Write file info similar to HFileWriterImpl but adapted for multi-tenant structure.
+   * 
+   * @param trailer The file trailer to update with file info offset
+   * @param out The output stream to write file info to
+   * @throws IOException if writing fails
    */
   private void writeFileInfo(FixedFileTrailer trailer, DataOutputStream out) throws IOException {
     trailer.setFileInfoOffset(outputStream.getPos());
@@ -504,7 +548,13 @@ public class MultiTenantHFileWriter implements HFile.Writer {
   }
   
   /**
-   * Finish the close for HFile v4 trailer
+   * Finish the close for HFile v4 trailer.
+   * <p>
+   * Sets v4-specific trailer fields including multi-tenant configuration
+   * and writes the final trailer to complete the file.
+   * 
+   * @param trailer The trailer to finalize and write
+   * @throws IOException if trailer writing fails
    */
   private void finishClose(FixedFileTrailer trailer) throws IOException {
     // Set v4-specific trailer fields
@@ -542,6 +592,14 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     }
   }
   
+  /**
+   * Finish file info preparation for multi-tenant HFile.
+   * <p>
+   * Excludes global first/last keys for tenant isolation while including
+   * essential metadata like section count and tenant index structure.
+   * 
+   * @throws IOException if file info preparation fails
+   */
   private void finishFileInfo() throws IOException {
     // Don't store the last key in global file info for tenant isolation
     // This is intentionally removed to ensure we don't track first/last keys globally
@@ -694,13 +752,31 @@ public class MultiTenantHFileWriter implements HFile.Writer {
   
   /**
    * A virtual writer for a tenant section within the HFile.
-   * This handles writing data for a specific tenant section.
+   * <p>
+   * This handles writing data for a specific tenant section as a complete HFile v3 structure.
+   * Each section maintains its own bloom filters and metadata while sharing the parent file's
+   * output stream through position translation.
    */
   private class SectionWriter extends HFileWriterImpl {
+    /** The tenant section identifier for this section */
     private final byte[] tenantSectionId;
+    /** The starting offset of this section in the parent file */
     private final long sectionStartOffset;
+    /** Whether this section writer has been closed */
     private boolean closed = false;
     
+    /**
+     * Creates a section writer for a specific tenant section.
+     * 
+     * @param conf Configuration settings
+     * @param cacheConf Cache configuration
+     * @param outputStream The parent file's output stream
+     * @param fileContext HFile context for this section
+     * @param tenantSectionId The tenant section identifier
+     * @param tenantId The tenant identifier for metadata
+     * @param sectionStartOffset Starting offset of this section
+     * @throws IOException if section writer creation fails
+     */
     public SectionWriter(
         Configuration conf,
         CacheConfig cacheConf,
@@ -732,12 +808,23 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     }
     
     /**
-     * Output stream that translates positions relative to section start
+     * Output stream that translates positions relative to section start.
+     * <p>
+     * This allows each section to maintain its own position tracking while
+     * writing to the shared parent file output stream.
      */
     private static class SectionOutputStream extends FSDataOutputStream {
+      /** The delegate output stream (parent file stream) */
       private final FSDataOutputStream delegate;
+      /** The base offset of this section in the parent file */
       private final long baseOffset;
       
+      /**
+       * Creates a section-aware output stream.
+       * 
+       * @param delegate The parent file's output stream
+       * @param baseOffset The starting offset of this section
+       */
       public SectionOutputStream(FSDataOutputStream delegate, long baseOffset) {
         super(delegate.getWrappedStream(), null);
         this.delegate = delegate;
@@ -916,8 +1003,19 @@ public class MultiTenantHFileWriter implements HFile.Writer {
   }
   
   /**
-   * An implementation of TenantExtractor that always returns the default tenant prefix.
-   * Used when multi-tenant functionality is disabled via the TABLE_MULTI_TENANT_ENABLED property.
+   * An implementation of TenantExtractor that treats all data as belonging to a single default tenant.
+   * <p>
+   * This extractor is used when multi-tenant functionality is disabled via the TABLE_MULTI_TENANT_ENABLED 
+   * property set to false. It ensures that all cells are treated as belonging to the same tenant section,
+   * effectively creating a single-tenant HFile v4 with one section containing all data.
+   * <p>
+   * Key characteristics:
+   * <ul>
+   * <li>Always returns the default empty tenant prefix for all cells</li>
+   * <li>Results in a single tenant section containing all data</li>
+   * <li>Maintains HFile v4 format compatibility while disabling multi-tenant features</li>
+   * <li>Useful for system tables or tables that don't require tenant isolation</li>
+   * </ul>
    */
   static class SingleTenantExtractor implements TenantExtractor {
     @Override
@@ -936,52 +1034,23 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     }
   }
   
-  /*
-   * Tenant Identification Configuration Hierarchy
-   * --------------------------------------------
-   * 
-   * The tenant configuration follows this precedence order:
-   * 
-   * 1. Table Level Configuration (highest precedence)
-   *    - Property: TENANT_PREFIX_LENGTH 
-   *      Table-specific tenant prefix length
-   *    - Property: MULTI_TENANT_HFILE
-   *      Boolean flag indicating if this table uses multi-tenant sectioning (default: true)
-   * 
-   * 2. Cluster Level Configuration (used as fallback)
-   *    - Property: hbase.multi.tenant.prefix.extractor.class
-   *      Defines the implementation class for TenantExtractor
-   *    - Property: hbase.multi.tenant.prefix.length
-   *      Default prefix length if using fixed-length prefixes
-   * 
-   * 3. Default Values (used if neither above is specified)
-   *    - Default prefix length: 4 bytes
-   * 
-   * When creating a MultiTenantHFileWriter, the system will:
-   * 1. First check table properties for tenant configuration
-   * 2. If not found, use cluster-wide configuration from hbase-site.xml
-   * 3. If neither is specified, fall back to default values
-   * 
-   * Important notes:
-   * - HFile version 4 inherently implies multi-tenancy 
-   * - Tenant configuration is obtained only from cluster configuration and table properties
-   * - HFileContext does not contain any tenant-specific configuration
-   * - The TenantExtractor is created directly from the configuration parameters
-   * 
-   * This design ensures:
-   * - Tables can override the cluster-wide tenant configuration
-   * - Each table can have its own tenant prefix configuration
-   * - Tenant configuration is separate from the low-level file format concerns
-   * - Sensible defaults are used if no explicit configuration is provided
-   */
-
   /**
-   * Creates a specialized writer factory for multi-tenant HFiles format version 4
+   * Creates a specialized writer factory for multi-tenant HFiles format version 4.
+   * <p>
+   * This factory automatically determines whether to create a multi-tenant or single-tenant
+   * writer based on table properties and configuration. It handles the extraction of table
+   * properties from the HFile context and applies proper configuration precedence.
    */
   public static class WriterFactory extends HFile.WriterFactory {
-    // Maintain our own copy of the file context
+    /** Maintain our own copy of the file context */
     private HFileContext writerFileContext;
     
+    /**
+     * Creates a new WriterFactory for multi-tenant HFiles.
+     * 
+     * @param conf Configuration settings
+     * @param cacheConf Cache configuration
+     */
     public WriterFactory(Configuration conf, CacheConfig cacheConf) {
       super(conf, cacheConf);
     }

@@ -300,15 +300,15 @@ public class SectionIndexManager {
      * Write the section index blocks to the output stream.
      * For large tenant sets, this builds a multi-level index.
      * 
-     * @param out the output stream to write to
+     * @param outputStream the output stream to write to
      * @return the offset where the section index root block starts
      * @throws IOException if an I/O error occurs
      */
-    public long writeIndexBlocks(FSDataOutputStream out) throws IOException {
+    public long writeIndexBlocks(FSDataOutputStream outputStream) throws IOException {
       // Handle empty indexes like HFileBlockIndex does - write valid empty structure
       if (entries.isEmpty()) {
         LOG.info("Writing empty section index (no tenant sections)");
-        return writeEmptyIndex(out);
+        return writeEmptyIndex(outputStream);
       }
       
       // Keep entries in their original order for sequential access
@@ -323,44 +323,44 @@ public class SectionIndexManager {
       // For small indices, just write a single-level root block
       if (!multiLevel) {
         numLevels = 1;
-        return writeSingleLevelIndex(out);
+        return writeSingleLevelIndex(outputStream);
       }
       
       // Split entries into leaf blocks
       int numLeafBlocks = (entries.size() + maxChunkSize - 1) / maxChunkSize;
-      for (int i = 0; i < numLeafBlocks; i++) {
+      for (int blockIndex = 0; blockIndex < numLeafBlocks; blockIndex++) {
         SectionIndexBlock block = new SectionIndexBlock();
-        int startIdx = i * maxChunkSize;
-        int endIdx = Math.min((i + 1) * maxChunkSize, entries.size());
+        int startIndex = blockIndex * maxChunkSize;
+        int endIndex = Math.min((blockIndex + 1) * maxChunkSize, entries.size());
         
-        for (int entryIdx = startIdx; entryIdx < endIdx; entryIdx++) {
-          block.addEntry(entries.get(entryIdx));
+        for (int entryIndex = startIndex; entryIndex < endIndex; entryIndex++) {
+          block.addEntry(entries.get(entryIndex));
         }
         
         leafBlocks.add(block);
       }
       
       // Write leaf blocks
-      writeLeafBlocks(out);
+      writeLeafBlocks(outputStream);
       
       // If we have few enough leaf blocks, root can point directly to them
       if (leafBlocks.size() <= minIndexNumEntries) {
         numLevels = 2; // Root + leaf level
-        return writeIntermediateBlock(out, leafBlocks, true);
+        return writeIntermediateBlock(outputStream, leafBlocks, true);
       }
       
       // Otherwise, we need intermediate blocks
       numLevels = 3; // Root + intermediate + leaf
       
       // Group leaf blocks into intermediate blocks
-      int intermBlocksNeeded = (leafBlocks.size() + maxChunkSize - 1) / maxChunkSize;
-      for (int i = 0; i < intermBlocksNeeded; i++) {
+      int intermediateBlocksNeeded = (leafBlocks.size() + maxChunkSize - 1) / maxChunkSize;
+      for (int blockIndex = 0; blockIndex < intermediateBlocksNeeded; blockIndex++) {
         SectionIndexBlock block = new SectionIndexBlock();
-        int startIdx = i * maxChunkSize;
-        int endIdx = Math.min((i + 1) * maxChunkSize, leafBlocks.size());
+        int startIndex = blockIndex * maxChunkSize;
+        int endIndex = Math.min((blockIndex + 1) * maxChunkSize, leafBlocks.size());
         
-        for (int leafIdx = startIdx; leafIdx < endIdx; leafIdx++) {
-          SectionIndexBlock leafBlock = leafBlocks.get(leafIdx);
+        for (int leafIndex = startIndex; leafIndex < endIndex; leafIndex++) {
+          SectionIndexBlock leafBlock = leafBlocks.get(leafIndex);
           // Add the first entry from this leaf block to the intermediate block
           block.addEntry(leafBlock.getFirstEntry());
         }
@@ -369,10 +369,10 @@ public class SectionIndexManager {
       }
       
       // Write intermediate blocks
-      writeIntermediateBlocks(out);
+      writeIntermediateBlocks(outputStream);
       
       // Write root block (pointing to intermediate blocks)
-      return writeIntermediateBlock(out, intermediateBlocks, true);
+      return writeIntermediateBlock(outputStream, intermediateBlocks, true);
     }
     
     /**
