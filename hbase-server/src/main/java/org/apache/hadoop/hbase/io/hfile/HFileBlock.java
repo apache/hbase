@@ -1739,7 +1739,7 @@ public class HFileBlock implements Cacheable {
       // checksums. Can change with circumstances. The below flag is whether the
       // file has support for checksums (version 2+).
       boolean checksumSupport = this.fileContext.isUseHBaseChecksum();
-      boolean isScanMetricsEnabled = ThreadLocalScanMetrics.isScanMetricsEnabled.get();
+      boolean isScanMetricsEnabled = ThreadLocalScanMetrics.isScanMetricsEnabled();
       long startTime = EnvironmentEdgeManager.currentTime();
       if (onDiskSizeWithHeader == -1) {
         // The caller does not know the block size. Need to get it from the header. If header was
@@ -1757,7 +1757,7 @@ public class HFileBlock implements Cacheable {
           readAtOffset(is, headerBuf, hdrSize, false, offset, pread);
           headerBuf.rewind();
           if (isScanMetricsEnabled) {
-            ThreadLocalScanMetrics.bytesReadFromFs.get().addAndGet(hdrSize);
+            ThreadLocalScanMetrics.addBytesReadFromFs(hdrSize);
           }
         }
         onDiskSizeWithHeader = getOnDiskSizeWithHeader(headerBuf, checksumSupport);
@@ -1809,7 +1809,7 @@ public class HFileBlock implements Cacheable {
         if (isScanMetricsEnabled) {
           int bytesRead =
             (onDiskSizeWithHeader - preReadHeaderSize) + (readNextHeader ? hdrSize : 0);
-          ThreadLocalScanMetrics.bytesReadFromFs.get().addAndGet(bytesRead);
+          ThreadLocalScanMetrics.addBytesReadFromFs(bytesRead);
         }
 
         // the call to validateChecksum for this block excludes the next block header over-read, so

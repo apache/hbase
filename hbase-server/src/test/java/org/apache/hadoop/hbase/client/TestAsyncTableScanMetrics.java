@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
+import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -45,6 +46,7 @@ import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
+import org.checkerframework.checker.units.qual.s;
 
 @RunWith(Parameterized.class)
 @Category({ MediumTests.class, ClientTests.class })
@@ -92,14 +94,27 @@ public class TestAsyncTableScanMetrics {
 
   @BeforeClass
   public static void setUp() throws Exception {
+    UTIL.getConfiguration().setBoolean("hbase.regionserver.compaction.enabled", false);
+    UTIL.getConfiguration().setBoolean("hbase.storescanner.parallel.seek.enable", false);
     UTIL.startMiniCluster(3);
     // Create 3 rows in the table, with rowkeys starting with "zzz*" so that
     // scan are forced to hit all the regions.
     try (Table table = UTIL.createMultiRegionTable(TABLE_NAME, CF)) {
-      table.put(Arrays.asList(new Put(Bytes.toBytes("zzz1")).addColumn(CF, CQ, VALUE),
-        new Put(Bytes.toBytes("zzz2")).addColumn(CF, CQ, VALUE),
-        new Put(Bytes.toBytes("zzz3")).addColumn(CF, CQ, VALUE)));
-      // UTIL.flush(TABLE_NAME);
+      ColumnFamilyDescriptor cfDesc = table.getDescriptor().getColumnFamily(CF);
+      System.out.println("Old Bloom type: " + cfDesc.getBloomFilterType());
+      ColumnFamilyDescriptorBuilder cfBuilder = ColumnFamilyDescriptorBuilder.newBuilder(cfDesc);
+      cfBuilder.setBloomFilterType(BloomType.ROW);
+      UTIL.getAdmin().modifyColumnFamily(table.getName(), cfBuilder.build());
+    }
+    try (Table table = UTIL.getConnection().getTable(TABLE_NAME)) {
+      ColumnFamilyDescriptor cfDesc = table.getDescriptor().getColumnFamily(CF);
+      System.out.println("New Bloom type: " + cfDesc.getBloomFilterType());
+      table.put(Arrays.asList(new Put(Bytes.toBytes("zzz1")).addColumn(CF, CQ, VALUE)));
+      UTIL.flush(TABLE_NAME);
+      table.put(Arrays.asList(new Put(Bytes.toBytes("zzz2")).addColumn(CF, CQ, VALUE)));
+      UTIL.flush(TABLE_NAME);
+      table.put(Arrays.asList(new Put(Bytes.toBytes("zzz3")).addColumn(CF, CQ, VALUE)));
+      UTIL.flush(TABLE_NAME);
     }
     CONN = ConnectionFactory.createAsyncConnection(UTIL.getConfiguration()).get();
     NUM_REGIONS = UTIL.getHBaseCluster().getRegions(TABLE_NAME).size();
@@ -150,21 +165,25 @@ public class TestAsyncTableScanMetrics {
 
   @Test
   public void testScanMetrics() throws Exception {
-    Pair<List<Result>, ScanMetrics> pair = method.scan(new Scan().setScanMetricsEnabled(true));
+    Scan scan = new Scan().setScanMetricsEnabled(true);
+    scan.withStartRow(Bytes.toBytes("zzz2"), true);
+    scan.withStopRow(Bytes.toBytes("zzz2"), true);
+    Pair<List<Result>, ScanMetrics> pair = method.scan(scan);
     List<Result> results = pair.getFirst();
-    assertEquals(3, results.size());
+    assertEquals(1, results.size());
     long bytes = results.stream().flatMap(r -> Arrays.asList(r.rawCells()).stream())
       .mapToLong(c -> PrivateCellUtil.estimatedSerializedSizeOf(c)).sum();
     ScanMetrics scanMetrics = pair.getSecond();
-    assertEquals(NUM_REGIONS, scanMetrics.countOfRegions.get());
+    assertEquals(1, scanMetrics.countOfRegions.get());
     assertEquals(bytes, scanMetrics.countOfBytesInResults.get());
-    assertEquals(NUM_REGIONS, scanMetrics.countOfRPCcalls.get());
+    assertEquals(1, scanMetrics.countOfRPCcalls.get());
     // also assert a server side metric to ensure that we have published them into the client side
     // metrics.
-    assertEquals(3, scanMetrics.countOfRowsScanned.get());
+    assertEquals(1, scanMetrics.countOfRowsScanned.get());
 
     System.out.println("Bytes read from fs: " + scanMetrics.bytesReadFromFs.get());
     System.out.println("Bytes read from block cache: " + scanMetrics.bytesReadFromBlockCache.get());
     System.out.println("Bytes read from memstore: " + scanMetrics.bytesReadFromMemstore.get());
+    System.out.println("Bytes in results: " + scanMetrics.countOfBytesInResults.get());
   }
 }

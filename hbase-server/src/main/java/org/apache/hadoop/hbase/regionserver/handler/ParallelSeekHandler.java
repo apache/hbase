@@ -40,7 +40,7 @@ public class ParallelSeekHandler extends EventHandler {
   private long readPoint;
   private CountDownLatch latch;
   private Throwable err = null;
-  private boolean isScanMetricsEnabled = false;
+  private final boolean isScanMetricsEnabled;
   private final AtomicInteger bytesReadFromFs;
   private final AtomicInteger bytesReadFromBlockCache;
 
@@ -51,20 +51,24 @@ public class ParallelSeekHandler extends EventHandler {
     this.keyValue = keyValue;
     this.readPoint = readPoint;
     this.latch = latch;
-    this.isScanMetricsEnabled = ThreadLocalScanMetrics.isScanMetricsEnabled.get();
-    this.bytesReadFromFs = ThreadLocalScanMetrics.bytesReadFromFs.get();
-    this.bytesReadFromBlockCache = ThreadLocalScanMetrics.bytesReadFromBlockCache.get();
+    this.isScanMetricsEnabled = ThreadLocalScanMetrics.isScanMetricsEnabled();
+    this.bytesReadFromFs = ThreadLocalScanMetrics.getBytesReadFromFsCounter();
+    this.bytesReadFromBlockCache = ThreadLocalScanMetrics.getBytesReadFromBlockCacheCounter();
   }
 
   @Override
   public void process() {
     try {
-      ThreadLocalScanMetrics.isScanMetricsEnabled.set(isScanMetricsEnabled);
+      LOG.info("Doing parallel seeks");
+      ThreadLocalScanMetrics.setScanMetricsEnabled(isScanMetricsEnabled);
+      if (isScanMetricsEnabled) {
+        ThreadLocalScanMetrics.reset();
+      }
       scanner.seek(keyValue);
       if (isScanMetricsEnabled) {
-        bytesReadFromFs.addAndGet(ThreadLocalScanMetrics.bytesReadFromFs.get().getAndSet(0));
+        bytesReadFromFs.addAndGet(ThreadLocalScanMetrics.getBytesReadFromFsAndReset());
         bytesReadFromBlockCache
-          .addAndGet(ThreadLocalScanMetrics.bytesReadFromBlockCache.get().getAndSet(0));
+          .addAndGet(ThreadLocalScanMetrics.getBytesReadFromBlockCacheAndReset());
       }
     } catch (IOException e) {
       LOG.error("", e);

@@ -25,31 +25,93 @@ public final class ThreadLocalScanMetrics {
   private ThreadLocalScanMetrics() {
   }
 
-  public static final ThreadLocal<Boolean> isScanMetricsEnabled = new ThreadLocal<>() {
+  private static final ThreadLocal<Boolean> isScanMetricsEnabled = new ThreadLocal<>() {
     @Override
     protected Boolean initialValue() {
       return false;
     }
   };
 
-  public static final ThreadLocal<AtomicInteger> bytesReadFromFs = new ThreadLocal<>() {
+  private static final ThreadLocal<AtomicInteger> bytesReadFromFs = new ThreadLocal<>() {
     @Override
     protected AtomicInteger initialValue() {
       return new AtomicInteger(0);
     }
   };
 
-  public static final ThreadLocal<AtomicInteger> bytesReadFromBlockCache = new ThreadLocal<>() {
+  private static final ThreadLocal<AtomicInteger> bytesReadFromBlockCache = new ThreadLocal<>() {
     @Override
     protected AtomicInteger initialValue() {
       return new AtomicInteger(0);
     }
   };
 
-  public static final ThreadLocal<AtomicInteger> bytesReadFromMemstore = new ThreadLocal<>() {
+  private static final ThreadLocal<AtomicInteger> bytesReadFromMemstore = new ThreadLocal<>() {
     @Override
     protected AtomicInteger initialValue() {
       return new AtomicInteger(0);
     }
   };
+
+  public static final void setScanMetricsEnabled(boolean enable) {
+    isScanMetricsEnabled.set(enable);
+  }
+
+  public static final int addBytesReadFromFs(int bytes) {
+    return bytesReadFromFs.get().addAndGet(bytes);
+  }
+
+  public static final int addBytesReadFromBlockCache(int bytes) {
+    return bytesReadFromBlockCache.get().addAndGet(bytes);
+  }
+
+  public static final int addBytesReadFromMemstore(int bytes) {
+    return bytesReadFromMemstore.get().addAndGet(bytes);
+  }
+
+  public static final boolean isScanMetricsEnabled() {
+    return isScanMetricsEnabled.get();
+  }
+
+  public static final AtomicInteger getBytesReadFromFsCounter() {
+    return bytesReadFromFs.get();
+  }
+
+  public static final AtomicInteger getBytesReadFromBlockCacheCounter() {
+    return bytesReadFromBlockCache.get();
+  }
+
+  public static final AtomicInteger getBytesReadFromMemstoreCounter() {
+    return bytesReadFromMemstore.get();
+  }
+
+  public static final int getBytesReadFromFsAndReset() {
+    return getBytesReadFromFsCounter().getAndSet(0);
+  }
+
+  public static final int getBytesReadFromBlockCacheAndReset() {
+    return getBytesReadFromBlockCacheCounter().getAndSet(0);
+  }
+
+  public static final int getBytesReadFromMemstoreAndReset() {
+    return getBytesReadFromMemstoreCounter().getAndSet(0);
+  }
+
+  public static final void reset() {
+    getBytesReadFromFsAndReset();
+    getBytesReadFromBlockCacheAndReset();
+    getBytesReadFromMemstoreAndReset();
+  }
+
+  public static final void populateServerSideScanMetrics(ServerSideScanMetrics metrics) {
+    if (metrics == null) {
+      return;
+    }
+    metrics.addToCounter(ServerSideScanMetrics.BYTES_READ_FROM_FS_METRIC_NAME,
+      getBytesReadFromFsCounter().get());
+    metrics.addToCounter(ServerSideScanMetrics.BYTES_READ_FROM_BLOCK_CACHE_METRIC_NAME,
+      getBytesReadFromBlockCacheCounter().get());
+    metrics.addToCounter(ServerSideScanMetrics.BYTES_READ_FROM_MEMSTORE_METRIC_NAME,
+      getBytesReadFromMemstoreCounter().get());
+  }
 }

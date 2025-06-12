@@ -337,7 +337,7 @@ public class SegmentScanner implements KeyValueScanner {
    */
   protected void updateCurrent() {
     ExtendedCell next = null;
-    boolean isScanMetricsEnabled = ThreadLocalScanMetrics.isScanMetricsEnabled.get();
+    boolean isScanMetricsEnabled = ThreadLocalScanMetrics.isScanMetricsEnabled();
 
     try {
       while (iter.hasNext()) {
@@ -345,8 +345,8 @@ public class SegmentScanner implements KeyValueScanner {
         if (isScanMetricsEnabled) {
           // Can this add too much overhead as being done for each cell as Iterator.next() is
           // called for each cell?
-          ThreadLocalScanMetrics.bytesReadFromMemstore.get()
-            .addAndGet(PrivateCellUtil.estimatedSerializedSizeOf(next));
+          ThreadLocalScanMetrics.addBytesReadFromMemstore(
+            PrivateCellUtil.estimatedSerializedSizeOf(next));
         }
         if (next.getSequenceId() <= this.readPoint) {
           current = next;

@@ -363,6 +363,7 @@ public class HFileWriterImpl implements HFile.Writer {
     int onDiskSize = blockWriter.getOnDiskSizeWithHeader();
     ExtendedCell indexEntry =
       getMidpoint(this.hFileContext.getCellComparator(), lastCellOfPreviousBlock, firstCellInBlock);
+    LOG.info("Adding index entry of size: " + PrivateCellUtil.getCellKeySerializedAsKeyValueKey(indexEntry).length);
     dataBlockIndexWriter.addEntry(PrivateCellUtil.getCellKeySerializedAsKeyValueKey(indexEntry),
       lastDataBlockOffset, onDiskSize);
     totalUncompressedBytes += blockWriter.getUncompressedSizeWithHeader();

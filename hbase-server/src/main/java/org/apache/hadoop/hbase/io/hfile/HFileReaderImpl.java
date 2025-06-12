@@ -1291,7 +1291,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
 
     BlockCacheKey cacheKey =
       new BlockCacheKey(path, dataBlockOffset, this.isPrimaryReplicaReader(), expectedBlockType);
-    boolean isScanMetricsEnabled = ThreadLocalScanMetrics.isScanMetricsEnabled.get();
+    boolean isScanMetricsEnabled = ThreadLocalScanMetrics.isScanMetricsEnabled();
 
     boolean useLock = false;
     IdLock.Entry lockEntry = null;
@@ -1336,8 +1336,8 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
               }
             }
             if (isScanMetricsEnabled) {
-              ThreadLocalScanMetrics.bytesReadFromBlockCache.get()
-                .addAndGet(cachedBlock.getOnDiskSizeWithHeader());
+              ThreadLocalScanMetrics
+                .addBytesReadFromBlockCache(cachedBlock.getOnDiskSizeWithHeader());
             }
             // Cache-hit. Return!
             return cachedBlock;
