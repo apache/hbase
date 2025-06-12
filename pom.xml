@@ -711,6 +711,12 @@
       <email>cconnell@apache.org</email>
       <timezone>-5</timezone>
     </developer>
+    <developer>
+      <id>chandrakambham</id>
+      <name>Chandra Kambham</name>
+      <email>chandra@apache.org</email>
+      <timezone>+5</timezone>
+    </developer>
   </developers>
   <mailingLists>
     <mailingList>
