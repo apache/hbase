@@ -699,6 +699,12 @@
       <email>heliangjun@apache.org</email>
       <timezone>+8</timezone>
     </developer>
+    <developer>
+      <id>cconnell</id>
+      <name>Charles Connell</name>
+      <email>cconnell@apache.org</email>
+      <timezone>-5</timezone>
+    </developer>
   </developers>
   <mailingLists>
     <mailingList>
