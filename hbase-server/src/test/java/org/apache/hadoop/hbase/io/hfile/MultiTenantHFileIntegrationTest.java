@@ -95,9 +95,9 @@ public class MultiTenantHFileIntegrationTest {
   /** Tenant prefix length configuration for extraction */
   private static final int TENANT_PREFIX_LENGTH = 3;
   /** Array of tenant identifiers for testing */
-  private static final String[] TENANTS = {"T01", "T02", "T03"};
-  /** Number of rows to create per tenant */
-  private static final int ROWS_PER_TENANT = 10;
+  private static final String[] TENANTS = {"T01", "T02", "T03", "T04", "T05", "T06", "T07", "T08", "T09", "T10"};
+  /** Number of rows to create per tenant (varying counts) */
+  private static final int[] ROWS_PER_TENANT = {5, 8, 12, 3, 15, 7, 20, 6, 10, 14};
   
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -214,6 +214,19 @@ public class MultiTenantHFileIntegrationTest {
   }
   
   /**
+   * Calculate the total expected number of rows across all tenants.
+   * 
+   * @return the sum of all tenant row counts
+   */
+  private static int calculateTotalExpectedRows() {
+    int total = 0;
+    for (int rows : ROWS_PER_TENANT) {
+      total += rows;
+    }
+    return total;
+  }
+  
+  /**
    * Create a test table with multi-tenant configuration.
    * <p>
    * This method creates a table with:
@@ -277,8 +290,10 @@ public class MultiTenantHFileIntegrationTest {
       List<Put> batchPuts = new ArrayList<>();
       
       // Generate data for each tenant with clear tenant markers in the values
-      for (String tenantId : TENANTS) {
-        for (int rowIndex = 0; rowIndex < ROWS_PER_TENANT; rowIndex++) {
+      for (int tenantIndex = 0; tenantIndex < TENANTS.length; tenantIndex++) {
+        String tenantId = TENANTS[tenantIndex];
+        int rowsForThisTenant = ROWS_PER_TENANT[tenantIndex];
+        for (int rowIndex = 0; rowIndex < rowsForThisTenant; rowIndex++) {
           // IMPORTANT: Create row key ensuring the tenant prefix is exactly at the start
           // and has the correct length as specified by TENANT_PREFIX_LENGTH.
           // For DefaultTenantExtractor, the first TENANT_PREFIX_LENGTH bytes are used as tenant ID.
@@ -720,7 +735,7 @@ public class MultiTenantHFileIntegrationTest {
         }
         
         LOG.info("Total cells verified: {}", totalCellsFound);
-        int expectedTotal = TENANTS.length * ROWS_PER_TENANT;
+        int expectedTotal = calculateTotalExpectedRows();
         assertEquals("Should have found all " + expectedTotal + " cells", 
                     expectedTotal, totalCellsFound);
         
@@ -815,11 +830,13 @@ public class MultiTenantHFileIntegrationTest {
       List<String> failedRows = new ArrayList<>();
       
       // Add debug logging
-      LOG.info("Performing GET verification for {} rows", TENANTS.length * ROWS_PER_TENANT);
+      LOG.info("Performing GET verification for {} rows", calculateTotalExpectedRows());
       
       // Check each tenant's data
-      for (String tenant : TENANTS) {
-        for (int i = 0; i < ROWS_PER_TENANT; i++) {
+      for (int tenantIndex = 0; tenantIndex < TENANTS.length; tenantIndex++) {
+        String tenant = TENANTS[tenantIndex];
+        int rowsForThisTenant = ROWS_PER_TENANT[tenantIndex];
+        for (int i = 0; i < rowsForThisTenant; i++) {
           String formattedIndex = String.format("%03d", i);
           String rowKey = tenant + "row" + formattedIndex;
           String expectedValue = "value_tenant-" + tenant + "_row-" + formattedIndex;
@@ -936,7 +953,7 @@ public class MultiTenantHFileIntegrationTest {
         }
         
         LOG.info("SCAN verification complete: {} rows scanned", totalRowCount);
-        int expectedTotalRows = TENANTS.length * ROWS_PER_TENANT;
+        int expectedTotalRows = calculateTotalExpectedRows();
         
         if (totalRowCount != expectedTotalRows) {
           LOG.error("Expected {} rows but scanned {} rows", expectedTotalRows, totalRowCount);
@@ -978,7 +995,9 @@ public class MultiTenantHFileIntegrationTest {
     
     try (Table table = connection.getTable(TABLE_NAME)) {
       // Verify each tenant has the correct data in isolation
-      for (String targetTenantId : TENANTS) {
+      for (int tenantIndex = 0; tenantIndex < TENANTS.length; tenantIndex++) {
+        String targetTenantId = TENANTS[tenantIndex];
+        int expectedRowsForThisTenant = ROWS_PER_TENANT[tenantIndex];
         LOG.info("Verifying data for tenant: {}", targetTenantId);
         
         // Create tenant-specific scan
@@ -1045,11 +1064,11 @@ public class MultiTenantHFileIntegrationTest {
           
           LOG.info("Tenant {} scan verification complete: {} rows scanned", targetTenantId, tenantRowCount);
           
-          if (tenantRowCount != ROWS_PER_TENANT) {
+          if (tenantRowCount != expectedRowsForThisTenant) {
             LOG.error("Expected {} rows for tenant {} but scanned {} rows", 
-                     ROWS_PER_TENANT, targetTenantId, tenantRowCount);
+                     expectedRowsForThisTenant, targetTenantId, tenantRowCount);
             throw new IOException("Row count mismatch for tenant " + targetTenantId + 
-                                 ": expected=" + ROWS_PER_TENANT + ", actual=" + tenantRowCount);
+                                 ": expected=" + expectedRowsForThisTenant + ", actual=" + tenantRowCount);
           }
           
           if (!isolationViolations.isEmpty()) {
@@ -1128,7 +1147,8 @@ public class MultiTenantHFileIntegrationTest {
       scan.addColumn(FAMILY, QUALIFIER);
       
       // Set start row to last row of tenant1
-      String startRow = tenant1 + "row" + String.format("%03d", ROWS_PER_TENANT - 1);
+      int tenant1RowCount = ROWS_PER_TENANT[i];
+      String startRow = tenant1 + "row" + String.format("%03d", tenant1RowCount - 1);
       // Set stop row to first row of tenant2 + 1
       String stopRow = tenant2 + "row" + String.format("%03d", 1);
       
@@ -1178,7 +1198,7 @@ public class MultiTenantHFileIntegrationTest {
         rowCount++;
       }
       
-      int expectedTotal = TENANTS.length * ROWS_PER_TENANT;
+      int expectedTotal = calculateTotalExpectedRows();
       assertEquals("Empty scan should return all rows", expectedTotal, rowCount);
       LOG.info("Empty scan verification passed: found all {} expected rows", rowCount);
     }

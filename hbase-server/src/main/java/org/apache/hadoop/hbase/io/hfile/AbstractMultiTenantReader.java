@@ -1086,15 +1086,11 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
   public Optional<ExtendedCell> getLastKey() {
     try {
       // Get the last section and try to read its last key
-      // Since LinkedHashMap maintains insertion order, get the last section
-      ImmutableBytesWritable lastSectionKey = null;
-      for (ImmutableBytesWritable sectionKey : sectionLocations.keySet()) {
-        lastSectionKey = sectionKey;
-      }
-      
-      if (lastSectionKey != null) {
+      // Since LinkedHashMap maintains insertion order, iterate in reverse to get the last section first
+      List<ImmutableBytesWritable> sectionKeys = new ArrayList<>(sectionLocations.keySet());
+      for (int i = sectionKeys.size() - 1; i >= 0; i--) {
+        byte[] sectionId = sectionKeys.get(i).get();
         try {
-          byte[] sectionId = lastSectionKey.get();
           SectionReader sectionReader = getSectionReader(sectionId);
           HFileReaderImpl reader = sectionReader.getReader();
           Optional<ExtendedCell> lastKey = reader.getLastKey();
@@ -1102,25 +1098,9 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
             return lastKey;
           }
         } catch (IOException e) {
-          LOG.warn("Failed to get last key from last section, trying all sections backwards", e);
-          
-          // Fallback: try all sections in reverse order
-          List<ImmutableBytesWritable> sectionKeys = new ArrayList<>(sectionLocations.keySet());
-          for (int i = sectionKeys.size() - 1; i >= 0; i--) {
-            byte[] sectionId = sectionKeys.get(i).get();
-            try {
-              SectionReader sectionReader = getSectionReader(sectionId);
-              HFileReaderImpl reader = sectionReader.getReader();
-              Optional<ExtendedCell> lastKey = reader.getLastKey();
-              if (lastKey.isPresent()) {
-                return lastKey;
-              }
-            } catch (IOException ex) {
-              LOG.warn("Failed to get last key from section {}, trying previous section", 
-                       Bytes.toString(sectionId), ex);
-              // Continue to previous section
-            }
-          }
+          LOG.warn("Failed to get last key from section {}, trying previous section", 
+                   Bytes.toString(sectionId), e);
+          // Continue to previous section
         }
       }
       
