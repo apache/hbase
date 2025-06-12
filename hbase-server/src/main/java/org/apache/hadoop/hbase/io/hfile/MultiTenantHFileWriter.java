@@ -153,14 +153,7 @@ public class MultiTenantHFileWriter implements HFile.Writer {
   /** Default write verification setting */
   private static final boolean DEFAULT_WRITE_VERIFICATION_ENABLED = false;
   
-  /** Configuration key for bloom filter type */
-  private static final String BLOOM_FILTER_TYPE = "hbase.multi.tenant.bloom.filter.type";
-  /** Default bloom filter type */
-  private static final String DEFAULT_BLOOM_FILTER_TYPE = "ROW";
-  /** Configuration key for bloom filter enablement */
-  private static final String BLOOM_FILTER_ENABLED = "hbase.multi.tenant.bloom.filter.enabled";
-  /** Default bloom filter enabled setting */
-  private static final boolean DEFAULT_BLOOM_FILTER_ENABLED = true;
+
   
   /** Current bloom filter writer - one per section */
   private BloomFilterWriter currentBloomFilterWriter;
@@ -178,6 +171,7 @@ public class MultiTenantHFileWriter implements HFile.Writer {
    * @param cacheConf Cache configuration
    * @param tenantExtractor Extractor for tenant information
    * @param fileContext HFile context
+   * @param bloomType Type of bloom filter to use
    * @throws IOException If an error occurs during initialization
    */
   public MultiTenantHFileWriter(
@@ -186,7 +180,8 @@ public class MultiTenantHFileWriter implements HFile.Writer {
       Configuration conf,
       CacheConfig cacheConf,
       TenantExtractor tenantExtractor,
-      HFileContext fileContext) throws IOException {
+      HFileContext fileContext,
+      BloomType bloomType) throws IOException {
     // Follow HFileWriterImpl pattern: accept path and create outputStream
     this.path = path;
     this.fs = fs;
@@ -196,10 +191,12 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     this.fileContext = fileContext;
     this.enableWriteVerification = conf.getBoolean(WRITE_VERIFICATION_ENABLED, DEFAULT_WRITE_VERIFICATION_ENABLED);
     
-    // Initialize bloom filter configuration
-    this.bloomFilterEnabled = conf.getBoolean(BLOOM_FILTER_ENABLED, DEFAULT_BLOOM_FILTER_ENABLED);
-    String filterType = conf.get(BLOOM_FILTER_TYPE, DEFAULT_BLOOM_FILTER_TYPE);
-    this.bloomFilterType = BloomType.valueOf(filterType);
+    // Initialize bloom filter configuration using existing HBase properties
+    // This reuses the standard io.storefile.bloom.enabled property instead of creating 
+    // a new multi-tenant specific property, ensuring consistency with existing HBase behavior
+    this.bloomFilterEnabled = BloomFilterFactory.isGeneralBloomEnabled(conf);
+    // Bloom filter type is passed from table properties, respecting column family configuration
+    this.bloomFilterType = bloomType;
     
     // Create output stream directly to the provided path - no temporary file management here
     // The caller (StoreFileWriter or integration test framework) handles temporary files
@@ -242,11 +239,22 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     // DefaultTenantExtractor or SingleTenantExtractor based on table properties
     TenantExtractor tenantExtractor = TenantExtractorFactory.createTenantExtractor(conf, tableProperties);
     
-    LOG.info("Creating MultiTenantHFileWriter with tenant extractor: {}", 
-             tenantExtractor.getClass().getSimpleName());
+    // Extract bloom filter type from table properties if available
+    BloomType bloomType = BloomType.ROW; // Default
+    if (tableProperties != null && tableProperties.containsKey("BLOOMFILTER")) {
+      try {
+        bloomType = BloomType.valueOf(tableProperties.get("BLOOMFILTER").toUpperCase());
+      } catch (IllegalArgumentException e) {
+        LOG.warn("Invalid bloom filter type in table properties: {}, using default ROW", 
+                 tableProperties.get("BLOOMFILTER"));
+      }
+    }
+    
+    LOG.info("Creating MultiTenantHFileWriter with tenant extractor: {}, bloom type: {}", 
+             tenantExtractor.getClass().getSimpleName(), bloomType);
     
     // HFile version 4 inherently implies multi-tenant
-    return new MultiTenantHFileWriter(fs, path, conf, cacheConf, tenantExtractor, fileContext);
+    return new MultiTenantHFileWriter(fs, path, conf, cacheConf, tenantExtractor, fileContext, bloomType);
   }
   
   /**
