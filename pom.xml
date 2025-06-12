@@ -377,6 +377,12 @@
       <timezone>+8</timezone>
     </developer>
     <developer>
+      <id>lupeng</id>
+      <name>Peng Lu</name>
+      <email>lupeng@apache.org</email>
+      <timezone>+8</timezone>
+    </developer>
+    <developer>
       <id>mbautin</id>
       <name>Mikhail Bautin</name>
       <email>mbautin@apache.org</email>
