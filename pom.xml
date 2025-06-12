@@ -311,6 +311,12 @@
       <timezone>-8</timezone>
     </developer>
     <developer>
+      <id>junegunn</id>
+      <name>Junegunn Choi</name>
+      <email>junegunn@apache.org</email>
+      <timezone>+9</timezone>
+    </developer>
+    <developer>
       <id>jxiang</id>
       <name>Jimmy Xiang</name>
       <email>jxiang@apache.org</email>
