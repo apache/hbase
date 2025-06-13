@@ -935,11 +935,20 @@ public class HTable implements Table {
             getLocation().getRegionInfo().getRegionName(), row, family, qualifier, op, value,
             filter, timeRange, mutation, nonceGroup, nonce, queryMetricsEnabled);
           MutateResponse response = doMutate(request);
+          CheckAndMutateResult result;
           if (response.hasResult()) {
-            return new CheckAndMutateResult(response.getProcessed(),
+            result = new CheckAndMutateResult(response.getProcessed(),
               ProtobufUtil.toResult(response.getResult(), getRpcControllerCellScanner()));
+          } else {
+            result = new CheckAndMutateResult(response.getProcessed(), null);
           }
-          return new CheckAndMutateResult(response.getProcessed(), null);
+
+          if (response.hasMetrics()) {
+            QueryMetrics metrics = ProtobufUtil.toQueryMetrics(response.getMetrics());
+            result.setMetrics(metrics);
+          }
+
+          return result;
         }
       };
     return rpcCallerFactory.<CheckAndMutateResult> newCaller(this.writeRpcTimeoutMs)
