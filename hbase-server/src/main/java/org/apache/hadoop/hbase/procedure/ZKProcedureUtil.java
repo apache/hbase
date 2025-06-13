@@ -280,4 +280,36 @@ public abstract class ZKProcedureUtil extends ZKListener implements Closeable {
       logZKTree(this.baseZNode);
     }
   }
+
+  public void clearAcquiredBarrierNode(String procedureName) throws KeeperException {
+    LOG.info("Clearing acquired barrier node for procedure " + procedureName);
+    ZKUtil.deleteNodeRecursively(watcher, getAcquiredBarrierNode(procedureName));
+
+    if (LOG.isTraceEnabled()) {
+      logZKTree(this.baseZNode);
+    }
+  }
+
+  public void clearReachedBarrierNode(String procedureName) throws KeeperException {
+    LOG.info("Clearing reached barrier node for procedure " + procedureName);
+    ZKUtil.deleteNodeRecursively(watcher, getReachedBarrierNode(procedureName));
+
+    if (LOG.isTraceEnabled()) {
+      logZKTree(this.baseZNode);
+    }
+  }
+
+  public void clearAbortedNode(String procedureName) throws KeeperException {
+    LOG.info("Clearing aborted node for procedure " + procedureName);
+
+    // Make sure we trigger the watches on these nodes by creating them. (HBASE-13885)
+    String abortZNode = getAbortZNode(procedureName);
+    ZKUtil.createAndFailSilent(watcher, abortZNode);
+
+    ZKUtil.deleteNodeRecursively(watcher, abortZNode);
+
+    if (LOG.isTraceEnabled()) {
+      logZKTree(this.baseZNode);
+    }
+  }
 }
