@@ -26,6 +26,7 @@ import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
@@ -143,13 +144,18 @@ public class SnapshotProcedure extends AbstractStateMachineTableProcedure<Snapsh
           setNextState(SnapshotState.SNAPSHOT_WRITE_SNAPSHOT_INFO);
           return Flow.HAS_MORE_STATE;
         case SNAPSHOT_WRITE_SNAPSHOT_INFO:
-          SnapshotDescriptionUtils.writeSnapshotInfo(snapshot, workingDir, workingDirFS);
           TableState tableState =
             env.getMasterServices().getTableStateManager().getTableState(snapshotTable);
           if (tableState.isEnabled()) {
+            SnapshotDescriptionUtils.writeSnapshotInfo(snapshot, workingDir, workingDirFS);
             setNextState(SnapshotState.SNAPSHOT_SNAPSHOT_ONLINE_REGIONS);
           } else if (tableState.isDisabled()) {
+            SnapshotDescriptionUtils.writeSnapshotInfo(snapshot, workingDir, workingDirFS);
             setNextState(SnapshotState.SNAPSHOT_SNAPSHOT_CLOSED_REGIONS);
+          } else {
+            setFailureState(new HBaseIOException(
+              "Table " + snapshotTable + " is not in a valid state for snapshot: " + tableState));
+            return Flow.NO_MORE_STATE;
           }
           return Flow.HAS_MORE_STATE;
         case SNAPSHOT_SNAPSHOT_ONLINE_REGIONS:
@@ -195,9 +201,7 @@ public class SnapshotProcedure extends AbstractStateMachineTableProcedure<Snapsh
     } catch (ProcedureSuspendedException e) {
       throw e;
     } catch (Exception e) {
-      setFailure("master-snapshot", e);
-      LOG.warn("unexpected exception while execute {}. Mark procedure Failed.", this, e);
-      status.abort("Abort Snapshot " + snapshot.getName() + " on Table " + snapshotTable);
+      setFailureState(e);
       return Flow.NO_MORE_STATE;
     }
   }
@@ -234,6 +238,12 @@ public class SnapshotProcedure extends AbstractStateMachineTableProcedure<Snapsh
   @Override
   protected SnapshotState getInitialState() {
     return SnapshotState.SNAPSHOT_PREPARE;
+  }
+
+  private void setFailureState(Exception e) {
+    setFailure("master-snapshot", e);
+    LOG.warn("unexpected exception while execute {}. Mark procedure Failed.", this, e);
+    status.abort("Abort Snapshot " + snapshot.getName() + " on Table " + snapshotTable);
   }
 
   private void prepareSnapshot(MasterProcedureEnv env)
