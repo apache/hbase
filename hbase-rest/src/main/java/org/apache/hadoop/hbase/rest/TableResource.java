@@ -147,12 +147,11 @@ public class TableResource extends ResourceBase {
           tableScan.withStartRow(prefixBytes, includeStartRow);
         }
       }
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("Query parameters  : Table Name = > " + this.table + " Start Row => " + startRow
-          + " End Row => " + endRow + " Columns => " + column + " Start Time => " + startTime
-          + " End Time => " + endTime + " Cache Blocks => " + cacheBlocks + " Max Versions => "
-          + maxVersions + " Batch Size => " + batchSize);
-      }
+      LOG.trace(
+        "Query parameters  : Table Name = > {} Start Row => {} End Row => {} Columns => {} Start Time => {} End Time => {} Cache Blocks => {} Max Versions => {} Batch Size => {} Reversed => {} LIMIT => {} FILTER => {} FILTER_B64 => {} Include Start Row => {} Include Stop Row => {}",
+        this.table, startRow, endRow, column, startTime, endTime, cacheBlocks, maxVersions,
+        batchSize, reversed, userRequestedLimit, paramFilter, paramFilterB64, includeStartRow,
+        includeStopRow);
       Table hTable = RESTServlet.getInstance().getTable(this.table);
       tableScan.setBatch(batchSize);
       tableScan.readVersions(maxVersions);
