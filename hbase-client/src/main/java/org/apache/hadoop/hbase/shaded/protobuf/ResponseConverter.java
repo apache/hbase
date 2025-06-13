@@ -166,8 +166,12 @@ public final class ResponseConverter {
           if (!r.isEmpty()) {
             result = r;
           }
-          results.add(regionName, roe.getIndex(),
-            new CheckAndMutateResult(actionResult.getProcessed(), result));
+          CheckAndMutateResult camResult =
+            new CheckAndMutateResult(actionResult.getProcessed(), result);
+          if (roe.hasMetrics()) {
+            camResult.setMetrics(ProtobufUtil.toQueryMetrics(roe.getMetrics()));
+          }
+          results.add(regionName, roe.getIndex(), camResult);
         }
       } else {
         if (actionResult.hasProcessed()) {
