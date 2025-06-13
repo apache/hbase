@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
+import static org.apache.hadoop.hbase.master.procedure.ReopenTableRegionsProcedure.PROGRESSIVE_BATCH_BACKOFF_MILLIS_DEFAULT;
+import static org.apache.hadoop.hbase.master.procedure.ReopenTableRegionsProcedure.PROGRESSIVE_BATCH_BACKOFF_MILLIS_KEY;
+import static org.apache.hadoop.hbase.master.procedure.ReopenTableRegionsProcedure.PROGRESSIVE_BATCH_SIZE_MAX_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -26,9 +29,11 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
@@ -158,6 +163,37 @@ public class TestReopenTableRegionsProcedureBatching {
       currentBatchSize = proc.progressBatchSize();
       assertTrue(currentBatchSize > 0);
     }
+  }
+
+  @Test
+  public void testBackoffConfigurationFromTableDescriptor() {
+    Configuration conf = HBaseConfiguration.create();
+    TableDescriptorBuilder tbd = TableDescriptorBuilder.newBuilder(TABLE_NAME);
+
+    // Default (no batching, no backoff)
+    ReopenTableRegionsProcedure proc = ReopenTableRegionsProcedure.throttled(conf, tbd.build());
+    assertEquals(PROGRESSIVE_BATCH_BACKOFF_MILLIS_DEFAULT, proc.getReopenBatchBackoffMillis());
+    assertEquals(Integer.MAX_VALUE, proc.progressBatchSize());
+
+    // From Configuration (backoff: 100ms, max: 6)
+    conf.setLong(PROGRESSIVE_BATCH_BACKOFF_MILLIS_KEY, 100);
+    conf.setInt(PROGRESSIVE_BATCH_SIZE_MAX_KEY, 6);
+    proc = ReopenTableRegionsProcedure.throttled(conf, tbd.build());
+    assertEquals(100, proc.getReopenBatchBackoffMillis());
+    assertEquals(2, proc.progressBatchSize());
+    assertEquals(4, proc.progressBatchSize());
+    assertEquals(6, proc.progressBatchSize());
+    assertEquals(6, proc.progressBatchSize());
+
+    // From TableDescriptor (backoff: 200ms, max: 7)
+    tbd.setValue(PROGRESSIVE_BATCH_BACKOFF_MILLIS_KEY, "200");
+    tbd.setValue(PROGRESSIVE_BATCH_SIZE_MAX_KEY, "7");
+    proc = ReopenTableRegionsProcedure.throttled(conf, tbd.build());
+    assertEquals(200, proc.getReopenBatchBackoffMillis());
+    assertEquals(2, proc.progressBatchSize());
+    assertEquals(4, proc.progressBatchSize());
+    assertEquals(7, proc.progressBatchSize());
+    assertEquals(7, proc.progressBatchSize());
   }
 
   private void confirmBatchSize(int expectedBatchSize, Set<StuckRegion> stuckRegions,
