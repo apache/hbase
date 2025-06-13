@@ -52,6 +52,34 @@ module Hbase
       assert_equal(0, security_admin.user_permission(@test_name).length)
     end
 
+    define_test "Revoke namespace should rid access rights appropriately" do
+      ns = 'test_ns_grant_revoke'
+      command(:drop_namespace, ns)
+      command(:create_namespace, ns)
+      test_ns_grant_revoke_user = org.apache.hadoop.hbase.security.User.createUserForTesting(
+        $TEST_CLUSTER.getConfiguration, "test_ns_grant_revoke", []).getName()
+      security_admin.grant(test_grant_revoke_user,"WRC", ns)
+      security_admin.user_permission(ns) do |user, permission|
+        assert_match(eval("/WRITE/"), permission.to_s)
+        assert_match(eval("/READ/"), permission.to_s)
+        assert_match(eval("/CREATE/"), permission.to_s)
+      end
+
+      security_admin.revoke(test_grant_revoke_user, ns, "C")
+      found_permission = false
+      security_admin.user_permission(ns) do |user, permission|
+        if user == "test_ns_grant_revoke"
+          assert_match(eval("/READ/"), permission.to_s)
+          assert_match(eval("/WRITE/"), permission.to_s)
+          assert_no_match(eval("/EXEC/"), permission.to_s)
+          assert_no_match(eval("/CREATE/"), permission.to_s)
+          assert_no_match(eval("/ADMIN/"), permission.to_s)
+          found_permission = true
+        end
+      end
+      assert(found_permission, "Permission for user test_ns_grant_revoke was not found.")
+    end
+
     define_test "Grant should set access rights appropriately" do
       drop_test_table(@test_name)
       create_test_table(@test_name)
