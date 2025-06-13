@@ -219,7 +219,7 @@ public class TestFSErrorsExposed {
           fail("Did not fail to count after removing data");
         } catch (Exception e) {
           LOG.info("Got expected error", e);
-          assertTrue(e.getMessage().contains("Could not seek"));
+          assertTrue(e.getMessage().contains("Problem reading HFile Trailer from file"));
         }
       }
 
