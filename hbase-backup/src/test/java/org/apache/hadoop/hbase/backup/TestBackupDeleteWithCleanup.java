@@ -34,6 +34,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -41,6 +42,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupAdminImpl;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
+import org.apache.hadoop.hbase.backup.replication.BackupFileSystemManager;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.ToolRunner;
@@ -140,8 +142,11 @@ public class TestBackupDeleteWithCleanup extends TestBackupBase {
     EnvironmentEdgeManager
       .injectEdge(() -> System.currentTimeMillis() - (2 * ONE_DAY_IN_MILLISECONDS));
 
-    String backupId = fullTableBackup(Lists.newArrayList(table1));
+    String backupId = fullTableBackupWithContinuous(Lists.newArrayList(table1));
     assertTrue(checkSucceeded(backupId));
+
+    assertTrue("Backup replication peer should be enabled after the backup",
+      continuousBackupReplicationPeerExistsAndEnabled());
 
     // Step 3: Run Delete Command
     deleteBackup(backupId);
@@ -151,31 +156,28 @@ public class TestBackupDeleteWithCleanup extends TestBackupBase {
 
     // Step 4: Verify CONTINUOUS_BACKUP_REPLICATION_PEER is disabled
     assertFalse("Backup replication peer should be disabled or removed",
-      continuousBackupReplicationPeerExists());
+      continuousBackupReplicationPeerExistsAndEnabled());
 
     // Step 5: Verify that system table is updated to remove all the tables
     Set<TableName> remainingTables = backupSystemTable.getContinuousBackupTableSet().keySet();
-    assertTrue("System table should have no tables after force delete", remainingTables.isEmpty());
+    assertTrue("System table should have no tables after all full backups are clear",
+      remainingTables.isEmpty());
 
     // Step 6: Verify that the backup WAL directory is empty
     assertTrue("WAL backup directory should be empty after force delete",
-      isDirectoryEmpty(fs, backupWalDir));
+      areWalAndBulkloadDirsEmpty(conf1, backupWalDir.toString()));
 
     // Step 7: Take new full backup with continuous backup enabled
     String backupIdContinuous = fullTableBackupWithContinuous(Lists.newArrayList(table1));
 
     // Step 8: Verify CONTINUOUS_BACKUP_REPLICATION_PEER is enabled again
     assertTrue("Backup replication peer should be re-enabled after new backup",
-      continuousBackupReplicationPeerExists());
+      continuousBackupReplicationPeerExistsAndEnabled());
 
     // And system table has new entry
     Set<TableName> newTables = backupSystemTable.getContinuousBackupTableSet().keySet();
     assertTrue("System table should contain the table after new backup",
       newTables.contains(table1));
-
-    // And WAL directory is no longer empty
-    assertFalse("WAL backup directory should not be empty after new backup",
-      isDirectoryEmpty(fs, backupWalDir));
 
     // Cleanup
     deleteBackup(backupIdContinuous);
@@ -269,18 +271,30 @@ public class TestBackupDeleteWithCleanup extends TestBackupBase {
     }
   }
 
-  private boolean continuousBackupReplicationPeerExists() throws IOException {
-    return TEST_UTIL.getAdmin().listReplicationPeers().stream()
-      .anyMatch(peer -> peer.getPeerId().equals(CONTINUOUS_BACKUP_REPLICATION_PEER));
+  private boolean continuousBackupReplicationPeerExistsAndEnabled() throws IOException {
+    return TEST_UTIL.getAdmin().listReplicationPeers().stream().anyMatch(
+      peer -> peer.getPeerId().equals(CONTINUOUS_BACKUP_REPLICATION_PEER) && peer.isEnabled());
+  }
+
+  private static boolean areWalAndBulkloadDirsEmpty(Configuration conf, String backupWalDir)
+    throws IOException {
+    BackupFileSystemManager manager =
+      new BackupFileSystemManager(CONTINUOUS_BACKUP_REPLICATION_PEER, conf, backupWalDir);
+
+    FileSystem fs = manager.getBackupFs();
+    Path walDir = manager.getWalsDir();
+    Path bulkloadDir = manager.getBulkLoadFilesDir();
+
+    return isDirectoryEmpty(fs, walDir) && isDirectoryEmpty(fs, bulkloadDir);
   }
 
   private static boolean isDirectoryEmpty(FileSystem fs, Path dirPath) throws IOException {
     if (!fs.exists(dirPath)) {
-      // Directory doesn't exist → consider empty
+      // Directory doesn't exist — treat as empty
       return true;
     }
-    FileStatus[] files = fs.listStatus(dirPath);
-    return files == null || files.length == 0;
+    FileStatus[] entries = fs.listStatus(dirPath);
+    return entries == null || entries.length == 0;
   }
 
   private static void deleteBackup(String backupId) throws Exception {
