@@ -415,10 +415,10 @@ public class TestBackupBase {
     return request;
   }
 
-  protected BackupRequest createBackupRequest(BackupType type, List<TableName> tables, String path,
-    boolean noChecksumVerify, boolean isContinuousBackupEnabled) {
+  protected BackupRequest createBackupRequest(BackupType type, List<TableName> tables,
+    String rootDir, boolean noChecksumVerify, boolean isContinuousBackupEnabled) {
     BackupRequest.Builder builder = new BackupRequest.Builder();
-    return builder.withBackupType(type).withTableList(tables).withTargetRootDir(path)
+    return builder.withBackupType(type).withTableList(tables).withTargetRootDir(rootDir)
       .withNoChecksumVerify(noChecksumVerify).withContinuousBackupEnabled(isContinuousBackupEnabled)
       .build();
   }

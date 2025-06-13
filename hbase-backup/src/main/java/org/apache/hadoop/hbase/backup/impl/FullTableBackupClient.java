@@ -305,6 +305,7 @@ public class FullTableBackupClient extends TableBackupClient {
       .collect(Collectors.toMap(tableName -> tableName, tableName -> new ArrayList<>()));
 
     try {
+      admin.enableReplicationPeer(CONTINUOUS_BACKUP_REPLICATION_PEER);
       admin.appendReplicationPeerTableCFs(CONTINUOUS_BACKUP_REPLICATION_PEER, tableMap);
       LOG.info("Updated replication peer {} with table and column family map.",
         CONTINUOUS_BACKUP_REPLICATION_PEER);

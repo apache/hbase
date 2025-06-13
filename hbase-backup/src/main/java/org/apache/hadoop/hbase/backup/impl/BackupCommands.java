@@ -1000,18 +1000,33 @@ public final class BackupCommands {
     private void deleteAllBackupWALFiles(Configuration conf, String backupWalDir)
       throws IOException {
       try {
-        FileSystem fs = FileSystem.get(conf);
-        Path walPath = new Path(backupWalDir);
-        if (fs.exists(walPath)) {
-          FileStatus[] contents = fs.listStatus(walPath);
-          for (FileStatus item : contents) {
+        BackupFileSystemManager manager =
+          new BackupFileSystemManager(CONTINUOUS_BACKUP_REPLICATION_PEER, conf, backupWalDir);
+        FileSystem fs = manager.getBackupFs();
+        Path walDir = manager.getWalsDir();
+        Path bulkloadDir = manager.getBulkLoadFilesDir();
+
+        // Delete contents under WAL directory
+        if (fs.exists(walDir)) {
+          FileStatus[] walContents = fs.listStatus(walDir);
+          for (FileStatus item : walContents) {
             fs.delete(item.getPath(), true); // recursive delete of each child
           }
-          System.out.println("Deleted all contents under WAL directory: " + backupWalDir);
+          System.out.println("Deleted all contents under WAL directory: " + walDir);
         }
+
+        // Delete contents under bulk load directory
+        if (fs.exists(bulkloadDir)) {
+          FileStatus[] bulkContents = fs.listStatus(bulkloadDir);
+          for (FileStatus item : bulkContents) {
+            fs.delete(item.getPath(), true); // recursive delete of each child
+          }
+          System.out.println("Deleted all contents under Bulk Load directory: " + bulkloadDir);
+        }
+
       } catch (IOException e) {
-        System.out.println("WARNING: Failed to delete contents under WAL directory: " + backupWalDir
-          + ". Error: " + e.getMessage());
+        System.out.println("WARNING: Failed to delete contents under backup directories: "
+          + backupWalDir + ". Error: " + e.getMessage());
         throw e;
       }
     }
@@ -1060,7 +1075,7 @@ public final class BackupCommands {
           System.out.println("WARNING: Failed to parse directory name '" + dirName
             + "'. Skipping. Error: " + e.getMessage());
         } catch (IOException e) {
-          System.out.println("WARNING: Failed to delete directory '" + dirPath
+          System.err.println("WARNING: Failed to delete directory '" + dirPath
             + "'. Skipping. Error: " + e.getMessage());
         }
       }
