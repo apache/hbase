@@ -18,11 +18,8 @@
 package org.apache.hadoop.hbase.backup;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -31,6 +28,7 @@ import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
+import org.apache.hadoop.hbase.backup.impl.BulkLoad;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.master.cleaner.BaseHFileCleanerDelegate;
@@ -42,106 +40,81 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 
 /**
- * Implementation of a file cleaner that checks if an hfile is still referenced by backup before
- * deleting it from hfile archive directory.
+ * File cleaner that prevents deletion of HFiles that are still required by future incremental
+ * backups.
+ * <p>
+ * Bulk loaded HFiles that are needed by future updates are stored in the backup system table.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class BackupHFileCleaner extends BaseHFileCleanerDelegate implements Abortable {
   private static final Logger LOG = LoggerFactory.getLogger(BackupHFileCleaner.class);
+
   private boolean stopped = false;
-  private boolean aborted;
-  private Configuration conf;
+  private boolean aborted = false;
   private Connection connection;
-  private long prevReadFromBackupTbl = 0, // timestamp of most recent read from backup:system table
-      secondPrevReadFromBackupTbl = 0; // timestamp of 2nd most recent read from backup:system table
-  // used by unit test to skip reading backup:system
-  private boolean checkForFullyBackedUpTables = true;
-  private List<TableName> fullyBackedUpTables = null;
-
-  private Set<String> getFilenameFromBulkLoad(Map<byte[], List<Path>>[] maps) {
-    Set<String> filenames = new HashSet<>();
-    for (Map<byte[], List<Path>> map : maps) {
-      if (map == null) {
-        continue;
-      }
-
-      for (List<Path> paths : map.values()) {
-        for (Path p : paths) {
-          filenames.add(p.getName());
-        }
-      }
-    }
-    return filenames;
-  }
-
-  private Set<String> loadHFileRefs(List<TableName> tableList) throws IOException {
-    if (connection == null) {
-      connection = ConnectionFactory.createConnection(conf);
-    }
-    try (BackupSystemTable tbl = new BackupSystemTable(connection)) {
-      Map<byte[], List<Path>>[] res = tbl.readBulkLoadedFiles(null, tableList);
-      secondPrevReadFromBackupTbl = prevReadFromBackupTbl;
-      prevReadFromBackupTbl = EnvironmentEdgeManager.currentTime();
-      return getFilenameFromBulkLoad(res);
-    }
-  }
-
-  @InterfaceAudience.Private
-  void setCheckForFullyBackedUpTables(boolean b) {
-    checkForFullyBackedUpTables = b;
-  }
+  // timestamp of most recent read from backup system table
+  private long prevReadFromBackupTbl = 0;
+  // timestamp of 2nd most recent read from backup system table
+  private long secondPrevReadFromBackupTbl = 0;
 
   @Override
   public Iterable<FileStatus> getDeletableFiles(Iterable<FileStatus> files) {
-    if (conf == null) {
-      return files;
-    }
-    // obtain the Set of TableName's which have been fully backed up
-    // so that we filter BulkLoad to be returned from server
-    if (checkForFullyBackedUpTables) {
-      if (connection == null) {
-        return files;
-      }
-
-      try (BackupSystemTable tbl = new BackupSystemTable(connection)) {
-        fullyBackedUpTables = new ArrayList<>(tbl.getTablesIncludedInBackups());
-      } catch (IOException ioe) {
-        LOG.error("Failed to get tables which have been fully backed up, skipping checking", ioe);
-        return Collections.emptyList();
-      }
-      Collections.sort(fullyBackedUpTables);
-    }
-    final Set<String> hfileRefs;
-    try {
-      hfileRefs = loadHFileRefs(fullyBackedUpTables);
-    } catch (IOException ioe) {
-      LOG.error("Failed to read hfile references, skipping checking deletable files", ioe);
+    if (stopped) {
       return Collections.emptyList();
     }
-    Iterable<FileStatus> deletables = Iterables.filter(files, file -> {
-      // If the file is recent, be conservative and wait for one more scan of backup:system table
+
+    // We use filenames because the HFile will have been moved to the archive since it
+    // was registered.
+    final Set<String> hfileFilenames = new HashSet<>();
+    try (BackupSystemTable tbl = new BackupSystemTable(connection)) {
+      Set<TableName> tablesIncludedInBackups = fetchFullyBackedUpTables(tbl);
+      for (BulkLoad bulkLoad : tbl.readBulkloadRows(tablesIncludedInBackups)) {
+        hfileFilenames.add(new Path(bulkLoad.getHfilePath()).getName());
+      }
+      LOG.debug("Found {} unique HFile filenames registered as bulk loads.", hfileFilenames.size());
+    } catch (IOException ioe) {
+      LOG.error(
+        "Failed to read registered bulk load references from backup system table, marking all files as non-deletable.",
+        ioe);
+      return Collections.emptyList();
+    }
+
+    secondPrevReadFromBackupTbl = prevReadFromBackupTbl;
+    prevReadFromBackupTbl = EnvironmentEdgeManager.currentTime();
+
+    return Iterables.filter(files, file -> {
+      // If the file is recent, be conservative and wait for one more scan of the bulk loads
       if (file.getModificationTime() > secondPrevReadFromBackupTbl) {
+        LOG.debug("Preventing deletion due to timestamp: {}", file.getPath().toString());
         return false;
       }
+      // A file can be deleted if it is not registered as a backup bulk load.
       String hfile = file.getPath().getName();
-      boolean foundHFileRef = hfileRefs.contains(hfile);
-      return !foundHFileRef;
+      if (hfileFilenames.contains(hfile)) {
+        LOG.debug("Preventing deletion due to bulk load registration in backup system table: {}",
+          file.getPath().toString());
+        return false;
+      } else {
+        LOG.debug("OK to delete: {}", file.getPath().toString());
+        return true;
+      }
     });
-    return deletables;
+  }
+
+  protected Set<TableName> fetchFullyBackedUpTables(BackupSystemTable tbl) throws IOException {
+    return tbl.getTablesIncludedInBackups();
   }
 
   @Override
   public boolean isFileDeletable(FileStatus fStat) {
-    // work is done in getDeletableFiles()
-    return true;
+    throw new IllegalStateException("This method should not be called");
   }
 
   @Override
   public void setConf(Configuration config) {
-    this.conf = config;
     this.connection = null;
     try {
-      this.connection = ConnectionFactory.createConnection(conf);
+      this.connection = ConnectionFactory.createConnection(config);
     } catch (IOException ioe) {
       LOG.error("Couldn't establish connection", ioe);
     }
@@ -156,7 +129,7 @@ public class BackupHFileCleaner extends BaseHFileCleanerDelegate implements Abor
       try {
         this.connection.close();
       } catch (IOException ioe) {
-        LOG.debug("Got " + ioe + " when closing connection");
+        LOG.debug("Got IOException when closing connection", ioe);
       }
     }
     this.stopped = true;
@@ -169,7 +142,7 @@ public class BackupHFileCleaner extends BaseHFileCleanerDelegate implements Abor
 
   @Override
   public void abort(String why, Throwable e) {
-    LOG.warn("Aborting ReplicationHFileCleaner because " + why, e);
+    LOG.warn("Aborting ReplicationHFileCleaner because {}", why, e);
     this.aborted = true;
     stop(why);
   }
