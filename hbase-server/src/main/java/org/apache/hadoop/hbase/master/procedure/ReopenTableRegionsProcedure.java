@@ -22,9 +22,13 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.conf.ConfigKey;
 import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
 import org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
@@ -55,12 +59,11 @@ public class ReopenTableRegionsProcedure
   private static final Logger LOG = LoggerFactory.getLogger(ReopenTableRegionsProcedure.class);
 
   public static final String PROGRESSIVE_BATCH_BACKOFF_MILLIS_KEY =
-    "hbase.reopen.table.regions.progressive.batch.backoff.ms";
+    ConfigKey.LONG("hbase.reopen.table.regions.progressive.batch.backoff.ms");
   public static final long PROGRESSIVE_BATCH_BACKOFF_MILLIS_DEFAULT = 0L;
   public static final String PROGRESSIVE_BATCH_SIZE_MAX_KEY =
-    "hbase.reopen.table.regions.progressive.batch.size.max";
+    ConfigKey.INT("hbase.reopen.table.regions.progressive.batch.size.max");
   public static final int PROGRESSIVE_BATCH_SIZE_MAX_DISABLED = -1;
-  private static final int PROGRESSIVE_BATCH_SIZE_MAX_DEFAULT_VALUE = Integer.MAX_VALUE;
 
   // this minimum prevents a max which would break this procedure
   private static final int MINIMUM_BATCH_SIZE_MAX = 1;
@@ -83,6 +86,23 @@ public class ReopenTableRegionsProcedure
   private long regionsReopened = 0;
   private long batchesProcessed = 0;
 
+  /**
+   * Create a new ReopenTableRegionsProcedure respecting the throttling configuration for the table.
+   * First check the table descriptor, then fall back to the global configuration. Only used in
+   * ModifyTableProcedure.
+   */
+  public static ReopenTableRegionsProcedure throttled(final Configuration conf,
+    final TableDescriptor desc) {
+    long backoffMillis = Optional.ofNullable(desc.getValue(PROGRESSIVE_BATCH_BACKOFF_MILLIS_KEY))
+      .map(Long::parseLong).orElseGet(() -> conf.getLong(PROGRESSIVE_BATCH_BACKOFF_MILLIS_KEY,
+        PROGRESSIVE_BATCH_BACKOFF_MILLIS_DEFAULT));
+    int batchSizeMax = Optional.ofNullable(desc.getValue(PROGRESSIVE_BATCH_SIZE_MAX_KEY))
+      .map(Integer::parseInt).orElseGet(
+        () -> conf.getInt(PROGRESSIVE_BATCH_SIZE_MAX_KEY, PROGRESSIVE_BATCH_SIZE_MAX_DISABLED));
+
+    return new ReopenTableRegionsProcedure(desc.getTableName(), backoffMillis, batchSizeMax);
+  }
+
   public ReopenTableRegionsProcedure() {
     this(null);
   }
@@ -96,12 +116,12 @@ public class ReopenTableRegionsProcedure
       PROGRESSIVE_BATCH_SIZE_MAX_DISABLED);
   }
 
-  public ReopenTableRegionsProcedure(final TableName tableName, long reopenBatchBackoffMillis,
+  ReopenTableRegionsProcedure(final TableName tableName, long reopenBatchBackoffMillis,
     int reopenBatchSizeMax) {
     this(tableName, Collections.emptyList(), reopenBatchBackoffMillis, reopenBatchSizeMax);
   }
 
-  public ReopenTableRegionsProcedure(final TableName tableName, final List<byte[]> regionNames,
+  private ReopenTableRegionsProcedure(final TableName tableName, final List<byte[]> regionNames,
     long reopenBatchBackoffMillis, int reopenBatchSizeMax) {
     this.tableName = tableName;
     this.regionNames = regionNames;
@@ -135,6 +155,12 @@ public class ReopenTableRegionsProcedure
       allowedOnPath = ".*/src/test/.*")
   public long getBatchesProcessed() {
     return batchesProcessed;
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  long getReopenBatchBackoffMillis() {
+    return reopenBatchBackoffMillis;
   }
 
   @RestrictedApi(explanation = "Should only be called internally or in tests", link = "",
