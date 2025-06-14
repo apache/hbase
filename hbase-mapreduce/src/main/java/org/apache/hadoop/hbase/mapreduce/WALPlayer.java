@@ -81,7 +81,7 @@ public class WALPlayer extends Configured implements Tool {
   public final static String IGNORE_MISSING_FILES = "wal.input.ignore.missing.files";
   public final static String MULTI_TABLES_SUPPORT = "wal.multi.tables.support";
   public final static String IGNORE_EMPTY_FILES = "wal.input.ignore.empty.files";
-  public final static boolean DEFAULT_IGNORE_EMPTY_FILES = true;
+  public final static boolean DEFAULT_IGNORE_EMPTY_FILES = false;
 
   protected static final String tableSeparator = ";";
 
