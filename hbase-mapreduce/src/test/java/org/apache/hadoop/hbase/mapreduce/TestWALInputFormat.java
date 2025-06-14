@@ -18,16 +18,23 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.mapreduce.InputSplit;
+import org.apache.hadoop.mapreduce.JobContext;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -73,5 +80,45 @@ public class TestWALInputFormat {
     Mockito.when(lfs.getPath()).thenReturn(new Path("/name." + now + ".meta"));
     WALInputFormat.addFile(lfss, lfs, now, now);
     assertEquals(8, lfss.size());
+  }
+
+  @Test
+  public void testEmptyFileIsIgnoredWhenConfigured() throws IOException, InterruptedException {
+    List<InputSplit> splits = getSplitsForEmptyFile(true);
+    assertTrue("Empty file should be ignored when IGNORE_EMPTY_FILES is true", splits.isEmpty());
+  }
+
+  @Test
+  public void testEmptyFileIsIncludedWhenNotIgnored() throws IOException, InterruptedException {
+    List<InputSplit> splits = getSplitsForEmptyFile(false);
+    assertEquals("Empty file should be included when IGNORE_EMPTY_FILES is false", 1,
+      splits.size());
+  }
+
+  private List<InputSplit> getSplitsForEmptyFile(boolean ignoreEmptyFiles)
+    throws IOException, InterruptedException {
+    Configuration conf = new Configuration();
+    conf.setBoolean(WALPlayer.IGNORE_EMPTY_FILES, ignoreEmptyFiles);
+
+    JobContext jobContext = Mockito.mock(JobContext.class);
+    Mockito.when(jobContext.getConfiguration()).thenReturn(conf);
+
+    LocatedFileStatus emptyFile = Mockito.mock(LocatedFileStatus.class);
+    Mockito.when(emptyFile.getLen()).thenReturn(0L);
+    Mockito.when(emptyFile.getPath()).thenReturn(new Path("/empty.wal"));
+
+    WALInputFormat inputFormat = new WALInputFormat() {
+      @Override
+      Path[] getInputPaths(Configuration conf) {
+        return new Path[] { new Path("/input") };
+      }
+
+      @Override
+      List<FileStatus> getFiles(FileSystem fs, Path inputPath, long startTime, long endTime) {
+        return Collections.singletonList(emptyFile);
+      }
+    };
+
+    return inputFormat.getSplits(jobContext, "", "");
   }
 }
