@@ -112,8 +112,8 @@ public class MemorySizeUtil {
         MEMSTORE_SIZE_KEY, memStoreFraction, HConstants.HFILE_BLOCK_CACHE_MEMORY_SIZE_KEY,
         conf.get(HConstants.HFILE_BLOCK_CACHE_MEMORY_SIZE_KEY),
         HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, conf.get(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY),
-        MemorySizeUtil.HBASE_REGION_SERVER_FREE_HEAP_MIN_MEMORY_SIZE_KEY,
-        conf.get(MemorySizeUtil.HBASE_REGION_SERVER_FREE_HEAP_MIN_MEMORY_SIZE_KEY)));
+        HBASE_REGION_SERVER_FREE_HEAP_MIN_MEMORY_SIZE_KEY,
+        conf.get(HBASE_REGION_SERVER_FREE_HEAP_MIN_MEMORY_SIZE_KEY)));
     }
   }
 
@@ -125,7 +125,7 @@ public class MemorySizeUtil {
    *                                  invalid
    */
   private static long getRegionServerMinFreeHeapInBytes(Configuration conf) {
-    final String key = MemorySizeUtil.HBASE_REGION_SERVER_FREE_HEAP_MIN_MEMORY_SIZE_KEY;
+    final String key = HBASE_REGION_SERVER_FREE_HEAP_MIN_MEMORY_SIZE_KEY;
     try {
       return Long.parseLong(conf.get(key));
     } catch (NumberFormatException e) {
