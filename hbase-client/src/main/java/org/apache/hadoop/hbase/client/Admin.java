@@ -2651,8 +2651,4 @@ public interface Admin extends Abortable, Closeable {
    * Get the list of cached files
    */
   List<String> getCachedFilesList(ServerName serverName) throws IOException;
-
-  void reloadQuotas() throws IOException;
-
-  void reloadQuotas(ServerName serverName) throws IOException;
 }

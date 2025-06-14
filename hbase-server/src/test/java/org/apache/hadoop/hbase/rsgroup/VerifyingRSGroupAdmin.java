@@ -989,14 +989,4 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   public boolean isReplicationPeerModificationEnabled() throws IOException {
     return admin.isReplicationPeerModificationEnabled();
   }
-
-  @Override
-  public void reloadQuotas() throws IOException {
-    admin.reloadQuotas();
-  }
-
-  @Override
-  public void reloadQuotas(ServerName serverName) throws IOException {
-    admin.reloadQuotas(serverName);
-  }
 }

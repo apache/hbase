@@ -757,10 +757,4 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
     ReplicateWALEntryRequest request) throws ServiceException {
     return null;
   }
-
-  @Override
-  public AdminProtos.ReloadQuotasResponse reloadQuotas(RpcController controller,
-    AdminProtos.ReloadQuotasRequest request) throws ServiceException {
-    return null;
-  }
 }

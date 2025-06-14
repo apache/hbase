@@ -123,7 +123,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.Has
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.HasUserPermissionsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.RevokeRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.RevokeResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompactionQueuesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompactionQueuesResponse;
@@ -4558,38 +4557,4 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
           resp -> resp.getCachedFilesList()))
       .serverName(serverName).call();
   }
-
-  @Override
-  public CompletableFuture<Void> reloadQuotas() {
-    CompletableFuture<Void> future = new CompletableFuture<Void>();
-    addListener(getClusterMetrics(EnumSet.of(Option.SERVERS_NAME)), (status, err) -> {
-      if (err != null) {
-        future.completeExceptionally(err);
-      } else {
-        List<CompletableFuture<Void>> futures = new ArrayList<>();
-        status.getServersName().forEach(server -> futures.add(reloadQuotas(server)));
-        addListener(
-          CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[futures.size()])),
-          (result, err2) -> {
-            if (err2 != null) {
-              future.completeExceptionally(err2);
-            } else {
-              future.complete(result);
-            }
-          });
-      }
-    });
-    return future;
-  }
-
-  @Override
-  public CompletableFuture<Void> reloadQuotas(ServerName serverName) {
-    return this.<Void> newAdminCaller()
-      .action((controller, stub) -> this.<AdminProtos.ReloadQuotasRequest,
-        AdminProtos.ReloadQuotasResponse, Void> adminCall(controller, stub,
-          AdminProtos.ReloadQuotasRequest.getDefaultInstance(),
-          (s, c, req, done) -> s.reloadQuotas(controller, req, done), resp -> null))
-      .serverName(serverName).call();
-  }
-
 }
