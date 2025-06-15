@@ -47,8 +47,10 @@ import org.apache.hadoop.thirdparty.org.checkerframework.checker.units.qual.t;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category({ IOTests.class, MediumTests.class })
 public class TestBytesReadFromFs {
@@ -58,25 +60,42 @@ public class TestBytesReadFromFs {
     public static final HBaseClassTestRule CLASS_RULE =
         HBaseClassTestRule.forClass(TestBytesReadFromFs.class);
 
+    @Rule
+    public TestName name = new TestName();
+    
+
     private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
     private static final Random RNG = new Random(9713312); // Just a fixed seed.
 
     private Configuration conf;
     private FileSystem fs;
     private List<KeyValue> keyValues = new ArrayList<>();
+    private Path path;
 
     @Before
     public void setUp() throws IOException {
         conf = TEST_UTIL.getConfiguration();
         fs = FileSystem.get(conf);
+        path = new Path(TEST_UTIL.getDataTestDir(), name.getMethodName());
+        conf.setInt(HFileBlockIndex.MAX_CHUNK_SIZE_KEY, 512);
     }
 
     @Test
-    public void testBytesReadFromFs() throws IOException {
-        Path path = new Path(TEST_UTIL.getDataTestDir(), "testBytesReadFromFs");
-        conf.setInt(HFileBlockIndex.MAX_CHUNK_SIZE_KEY, 512);
+    public void testBytesReadFromFsToReadDataUsingIndexBlocks() throws IOException {
         writeData(path);
-        readDataAndIndexBlocks(path);
+        KeyValue keyValue = keyValues.get(0);
+        readDataAndIndexBlocks(path, keyValue);
+    }
+
+    @Test
+    public void testBytesReadFromFsToReadLoadOnOpenDataSection() throws IOException {
+        writeData(path);
+        readLoadOnOpenDataSection(path);
+    }
+
+    @Test
+    public void testBytesReadFromFsToReadBloomFilterIndexesAndBloomBlocks() throws IOException {
+        writeData(path);
     }
 
     private void writeData(Path path) throws IOException {
@@ -96,8 +115,6 @@ public class TestBytesReadFromFs {
             byte[] valueBytes = RandomKeyValueUtil.randomFixedLengthValue(RNG, 10);
             KeyValue keyValue =
                 new KeyValue(keyBytes, cf, cq, EnvironmentEdgeManager.currentTime(), valueBytes);
-            System.out
-                .println("keyValue size: " + PrivateCellUtil.estimatedSerializedSizeOf(keyValue));
             writer.append(keyValue);
             keyValues.add(keyValue);
         }
@@ -105,7 +122,7 @@ public class TestBytesReadFromFs {
         writer.close();
     }
 
-    private void readDataAndIndexBlocks(Path path) throws IOException {
+    private void readDataAndIndexBlocks(Path path, KeyValue keyValue) throws IOException {
         ThreadLocalScanMetrics.setScanMetricsEnabled(true);
         long fileSize = fs.getFileStatus(path).getLen();
         
@@ -151,15 +168,12 @@ public class TestBytesReadFromFs {
         seeker.initRootIndex(block, trailer.getDataIndexCount(), comparator,
             trailer.getNumDataIndexLevels());
 
-        KeyValue keyValue = keyValues.get(0);
-
         int rootLevIndex = seeker.rootBlockContainingKey(keyValue);
         long currentOffset = seeker.getBlockOffset(rootLevIndex);
         int currentDataSize = seeker.getBlockDataSize(rootLevIndex);
 
         HFileBlock prevBlock = null;
         do {
-            System.out.println("Block levels read: " + blockLevelsRead);
             prevBlock = block;
             block = blockReader.readBlockData(currentOffset, currentDataSize, true, true, true);
             HFileBlock unpacked = block.unpack(meta, blockReader);
@@ -170,10 +184,6 @@ public class TestBytesReadFromFs {
             bytesRead += block.getOnDiskSizeWithHeader();
             if (block.getNextBlockOnDiskSize() > 0) {
                 bytesRead += HFileBlock.headerSize(meta.isUseHBaseChecksum());
-            }
-            // Header is prefetched
-            if (prevBlock.getOffset() + prevBlock.getOnDiskSizeWithHeader() == block.getOffset()) {
-                bytesRead -= HFileBlock.headerSize(meta.isUseHBaseChecksum());
             }
             if (!block.getBlockType().isData()) {
                 ByteBuff buffer = block.getBufferWithoutHeader();
@@ -188,11 +198,76 @@ public class TestBytesReadFromFs {
         } while (!block.getBlockType().isData());
         block.release();
 
-        System.out.println("Bytes read: " + bytesRead);
-        System.out.println("Block levels read: " + blockLevelsRead);
-        System.out
-            .println("Bytes read from FS: " + ThreadLocalScanMetrics.getBytesReadFromFsAndReset());
-        System.out.println("Index levels: " + trailer.getNumDataIndexLevels());
+        reader.close();
+
+        Assert.assertEquals(bytesRead, ThreadLocalScanMetrics.getBytesReadFromFsAndReset());
+        Assert.assertEquals(blockLevelsRead, trailer.getNumDataIndexLevels() + 1);
+        Assert.assertEquals(0, ThreadLocalScanMetrics.getBytesReadFromBlockCacheAndReset());
+    }
+
+    private void readLoadOnOpenDataSection(Path path) throws IOException {
+        ThreadLocalScanMetrics.setScanMetricsEnabled(true);
+        long fileSize = fs.getFileStatus(path).getLen();
+        
+        ReaderContext readerContext = new ReaderContextBuilder()
+            .withInputStreamWrapper(new FSDataInputStreamWrapper(fs, path)).withFilePath(path)
+            .withFileSystem(fs).withFileSize(fileSize).build();
+        
+        // Read HFile trailer
+        HFileInfo hfile = new HFileInfo(readerContext, conf);
+        FixedFileTrailer trailer = hfile.getTrailer();
+        Assert.assertEquals(trailer.getTrailerSize(),
+            ThreadLocalScanMetrics.getBytesReadFromFsAndReset());
+
+        CacheConfig cacheConfig = new CacheConfig(conf);
+        HFile.Reader reader = new HFilePreadReader(readerContext, hfile, cacheConfig, conf);
+        HFileBlock.FSReader blockReader = reader.getUncachedBlockReader();
+
+        // Create iterator for reading root index block
+        HFileBlock.BlockIterator blockIter = blockReader
+            .blockRange(trailer.getLoadOnOpenDataOffset(), fileSize - trailer.getTrailerSize());
+        boolean readNextHeader = false;
+        
+        // Read the root index block
+        readNextHeader = readEachBlockInLoadOnOpenDataSection(
+            blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX), readNextHeader);
+        
+        // Read meta index block
+        readNextHeader = readEachBlockInLoadOnOpenDataSection(
+            blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX), readNextHeader);
+
+        // Read File info block
+        readNextHeader = readEachBlockInLoadOnOpenDataSection(
+            blockIter.nextBlockWithBlockType(BlockType.FILE_INFO), readNextHeader);
+
+        // Read bloom filter indexes
+        boolean bloomFilterIndexesRead = false;
+        while (blockIter.nextBlock() != null) {
+            bloomFilterIndexesRead = true;
+            readNextHeader =
+                readEachBlockInLoadOnOpenDataSection(blockIter.nextBlock(), readNextHeader);
+        }
+        
+        reader.close();
+
+        Assert.assertFalse(bloomFilterIndexesRead);
+        Assert.assertEquals(0, ThreadLocalScanMetrics.getBytesReadFromBlockCacheAndReset());
+    }
+
+    private boolean readEachBlockInLoadOnOpenDataSection(HFileBlock block, boolean readNextHeader)
+        throws IOException {
+        int bytesRead = block.getOnDiskSizeWithHeader();
+        if (readNextHeader) {
+            bytesRead -= HFileBlock.headerSize(true);
+            readNextHeader = false;
+        }
+        if (block.getNextBlockOnDiskSize() > 0) {
+            bytesRead += HFileBlock.headerSize(true);
+            readNextHeader = true;
+        }
+        block.release();
+        Assert.assertEquals(bytesRead, ThreadLocalScanMetrics.getBytesReadFromFsAndReset());
+        return readNextHeader;
     }
 
     private static class MyNoOpEncodedSeeker extends NoOpIndexBlockEncoder.NoOpEncodedSeeker {

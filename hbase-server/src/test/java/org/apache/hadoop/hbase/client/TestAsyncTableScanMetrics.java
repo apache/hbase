@@ -185,5 +185,6 @@ public class TestAsyncTableScanMetrics {
     System.out.println("Bytes read from block cache: " + scanMetrics.bytesReadFromBlockCache.get());
     System.out.println("Bytes read from memstore: " + scanMetrics.bytesReadFromMemstore.get());
     System.out.println("Bytes in results: " + scanMetrics.countOfBytesInResults.get());
+    System.out.println("Block bytes scanned: " + scanMetrics.countOfBlockBytesScanned.get());
   }
 }

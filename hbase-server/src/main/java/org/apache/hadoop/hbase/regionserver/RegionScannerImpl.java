@@ -300,7 +300,12 @@ public class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
       ThreadLocalScanMetrics.reset();
       ServerSideScanMetrics scanMetrics = scannerContext.getMetrics();
       if (bytesReadFromFs > 0 || bytesReadFromBlockCache > 0 || bytesReadFromMemstore > 0) {
-        ThreadLocalScanMetrics.populateServerSideScanMetrics(scanMetrics);
+        scanMetrics.addToCounter(ServerSideScanMetrics.BYTES_READ_FROM_FS_METRIC_NAME,
+          bytesReadFromFs);
+        scanMetrics.addToCounter(ServerSideScanMetrics.BYTES_READ_FROM_BLOCK_CACHE_METRIC_NAME,
+          bytesReadFromBlockCache);
+        scanMetrics.addToCounter(ServerSideScanMetrics.BYTES_READ_FROM_MEMSTORE_METRIC_NAME,
+          bytesReadFromMemstore);
         bytesReadFromFs = bytesReadFromBlockCache = bytesReadFromMemstore = 0;
       }
     }
