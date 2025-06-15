@@ -99,7 +99,7 @@ public class TestAggregateImplementation {
     when(region.getRegionInfo()).thenReturn(regionInfo);
     when(regionInfo.getRegionNameAsString()).thenReturn("testRegion");
 
-    scan = new Scan().addColumn(CF, CQ);
+    scan = new Scan().addColumn(CF, CQ).setCaching(1);
 
     scanner = mock(RegionScannerImpl.class);
     doAnswer(createMockScanner()).when(scanner).next(any(List.class));
@@ -528,6 +528,27 @@ public class TestAggregateImplementation {
       response2.getFirstPart(0).asReadOnlyByteBuffer().getLong());
     assertFalse("Response should not indicate there are more rows",
       response2.hasNextChunkStartRow());
+  }
+
+  @Test
+  public void testRowNumWithScannerCaching() throws Exception {
+    ArgumentCaptor<AggregateResponse> responseCaptor =
+      ArgumentCaptor.forClass(AggregateResponse.class);
+    RpcCallback<AggregateResponse> callback = mock(RpcCallback.class);
+
+    // set caching such that throttles are not triggered
+    scan = new Scan().addColumn(CF, CQ).setCaching(5);
+    request = AggregateRequest.newBuilder().setScan(ProtobufUtil.toScan(scan))
+      .setInterpreterClassName(LongColumnInterpreter.class.getName())
+      .setClientSupportsPartialResult(true).build();
+    aggregate.getRowNum(controller, request, callback);
+
+    verify(callback).run(responseCaptor.capture());
+
+    AggregateResponse response = responseCaptor.getValue();
+    assertFalse("Response should not indicate there are more rows",
+      response.hasNextChunkStartRow());
+    assertEquals(NUM_ROWS, response.getFirstPart(0).asReadOnlyByteBuffer().getLong());
   }
 
   @Test
