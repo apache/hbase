@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.DefaultCodec;
 import org.apache.hadoop.io.compress.GzipCodec;
@@ -143,7 +144,7 @@ public class TestCellBlockBuilder {
     System.out.println(" --count  Count of Cells");
     System.out.println(" --size   Size of Cell values");
     System.out.println("Example: IPCUtil --count=1024 --size=1024");
-    System.exit(errorCode);
+    ExitHandler.getInstance().exit(errorCode);
   }
 
   private static void timerTests(final CellBlockBuilder builder, final int count, final int size,
