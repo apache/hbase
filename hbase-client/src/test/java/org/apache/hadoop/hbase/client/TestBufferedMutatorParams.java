@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -140,7 +141,8 @@ public class TestBufferedMutatorParams {
 
     BufferedMutator.ExceptionListener listener = new MockExceptionListener();
     bmp.writeBufferSize(17).setWriteBufferPeriodicFlushTimeoutMs(123)
-      .setWriteBufferPeriodicFlushTimerTickMs(456).maxKeyValueSize(13).pool(pool)
+      .setWriteBufferPeriodicFlushTimerTickMs(456).maxKeyValueSize(13).setMaxMutations(3737)
+      .setRequestAttribute("foo", "bar".getBytes(StandardCharsets.UTF_8)).pool(pool)
       .listener(listener);
     bmp.implementationClassName("someClassName");
     BufferedMutatorParams clone = bmp.clone();
@@ -151,6 +153,7 @@ public class TestBufferedMutatorParams {
     assertEquals(123, clone.getWriteBufferPeriodicFlushTimeoutMs());
     assertEquals(456, clone.getWriteBufferPeriodicFlushTimerTickMs());
     assertEquals(13, clone.getMaxKeyValueSize());
+    assertEquals(3737, clone.getMaxMutations());
     assertEquals("someClassName", clone.getImplementationClassName());
 
     cloneTest(bmp, clone);
@@ -178,6 +181,8 @@ public class TestBufferedMutatorParams {
     assertEquals(some.getWriteBufferPeriodicFlushTimerTickMs(),
       clone.getWriteBufferPeriodicFlushTimerTickMs());
     assertEquals(some.getMaxKeyValueSize(), clone.getMaxKeyValueSize());
+    assertTrue(some.getMaxMutations() == clone.getMaxMutations());
+    assertEquals(some.requestAttributes, clone.requestAttributes);
     assertTrue(some.getListener() == clone.getListener());
     assertTrue(some.getPool() == clone.getPool());
     assertEquals(some.getImplementationClassName(), clone.getImplementationClassName());

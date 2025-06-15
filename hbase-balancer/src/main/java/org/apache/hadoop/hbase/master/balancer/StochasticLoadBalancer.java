@@ -22,11 +22,14 @@ import java.lang.reflect.Constructor;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.StringJoiner;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
@@ -47,6 +50,8 @@ import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Suppliers;
 
 /**
  * <p>
@@ -147,7 +152,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   private double curOverallCost = 0d;
   private double[] tempFunctionCosts;
   private double[] curFunctionCosts;
-  private double[] weightsOfGenerators;
 
   // Keep locality based picker and cost function to alert them
   // when new services are offered
@@ -157,14 +161,18 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   private RegionReplicaHostCostFunction regionReplicaHostCostFunction;
   private RegionReplicaRackCostFunction regionReplicaRackCostFunction;
 
-  protected List<CandidateGenerator> candidateGenerators;
+  private final Map<Class<? extends CandidateGenerator>, Double> weightsOfGenerators =
+    new HashMap<>();
+  protected Map<Class<? extends CandidateGenerator>, CandidateGenerator> candidateGenerators;
+  protected final Supplier<List<Class<? extends CandidateGenerator>>> shuffledGeneratorClasses =
+    Suppliers.memoizeWithExpiration(() -> {
+      List<Class<? extends CandidateGenerator>> shuffled =
+        new ArrayList<>(candidateGenerators.keySet());
+      Collections.shuffle(shuffled);
+      return shuffled;
+    }, 5, TimeUnit.SECONDS);
 
-  public enum GeneratorType {
-    RANDOM,
-    LOAD,
-    LOCALITY,
-    RACK
-  }
+  private final BalancerConditionals balancerConditionals = BalancerConditionals.create();
 
   /**
    * The constructor that pass a MetricsStochasticBalancer to BaseLoadBalancer to replace its
@@ -213,17 +221,29 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
       allowedOnPath = ".*/src/test/.*")
-  List<CandidateGenerator> getCandidateGenerators() {
+  Map<Class<? extends CandidateGenerator>, CandidateGenerator> getCandidateGenerators() {
     return this.candidateGenerators;
   }
 
-  protected List<CandidateGenerator> createCandidateGenerators() {
-    List<CandidateGenerator> candidateGenerators = new ArrayList<CandidateGenerator>(4);
-    candidateGenerators.add(GeneratorType.RANDOM.ordinal(), new RandomCandidateGenerator());
-    candidateGenerators.add(GeneratorType.LOAD.ordinal(), new LoadCandidateGenerator());
-    candidateGenerators.add(GeneratorType.LOCALITY.ordinal(), localityCandidateGenerator);
-    candidateGenerators.add(GeneratorType.RACK.ordinal(),
-      new RegionReplicaRackCandidateGenerator());
+  protected Map<Class<? extends CandidateGenerator>, CandidateGenerator>
+    createCandidateGenerators(Configuration conf) {
+    balancerConditionals.setConf(conf);
+    Map<Class<? extends CandidateGenerator>, CandidateGenerator> candidateGenerators;
+    if (balancerConditionals.isReplicaDistributionEnabled()) {
+      candidateGenerators = new HashMap<>(3);
+      candidateGenerators.put(RandomCandidateGenerator.class, new RandomCandidateGenerator());
+      candidateGenerators.put(LoadCandidateGenerator.class, new LoadCandidateGenerator());
+      candidateGenerators.put(LocalityBasedCandidateGenerator.class, localityCandidateGenerator);
+    } else {
+      candidateGenerators = new HashMap<>(5);
+      candidateGenerators.put(RandomCandidateGenerator.class, new RandomCandidateGenerator());
+      candidateGenerators.put(LoadCandidateGenerator.class, new LoadCandidateGenerator());
+      candidateGenerators.put(LocalityBasedCandidateGenerator.class, localityCandidateGenerator);
+      candidateGenerators.put(RegionReplicaCandidateGenerator.class,
+        new RegionReplicaCandidateGenerator());
+      candidateGenerators.put(RegionReplicaRackCandidateGenerator.class,
+        new RegionReplicaRackCandidateGenerator());
+    }
     return candidateGenerators;
   }
 
@@ -235,6 +255,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     addCostFunction(costFunctions, localityCost);
     addCostFunction(costFunctions, rackLocalityCost);
     addCostFunction(costFunctions, new TableSkewCostFunction(conf));
+    addCostFunction(costFunctions, new StoreFileTableSkewCostFunction(conf));
     addCostFunction(costFunctions, regionReplicaHostCostFunction);
     addCostFunction(costFunctions, regionReplicaRackCostFunction);
     addCostFunction(costFunctions, new ReadRequestCostFunction(conf));
@@ -259,7 +280,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     localityCost = new ServerLocalityCostFunction(conf);
     rackLocalityCost = new RackLocalityCostFunction(conf);
 
-    this.candidateGenerators = createCandidateGenerators();
+    balancerConditionals.setConf(conf);
+    this.candidateGenerators = createCandidateGenerators(conf);
 
     regionReplicaHostCostFunction = new RegionReplicaHostCostFunction(conf);
     regionReplicaRackCostFunction = new RegionReplicaRackCostFunction(conf);
@@ -331,9 +353,43 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     }
   }
 
-  private boolean areSomeRegionReplicasColocated(BalancerClusterState c) {
-    regionReplicaHostCostFunction.prepare(c);
-    return (Math.abs(regionReplicaHostCostFunction.cost()) > CostFunction.COST_EPSILON);
+  private boolean areSomeRegionReplicasColocatedOnHost(BalancerClusterState c) {
+    if (!c.hasRegionReplicas || balancerConditionals.isReplicaDistributionEnabled()) {
+      // This check is unnecessary without replicas, or with conditional replica distribution
+      // The balancer will auto-run if conditional replica distribution candidates are available
+      return false;
+    }
+    if (c.numHosts >= c.maxReplicas) {
+      regionReplicaHostCostFunction.prepare(c);
+      double hostCost = Math.abs(regionReplicaHostCostFunction.cost());
+      boolean colocatedAtHost = hostCost > CostFunction.getCostEpsilon(hostCost);
+      if (colocatedAtHost) {
+        return true;
+      }
+      LOG.trace("No host colocation detected with host cost={}", hostCost);
+    }
+    return false;
+  }
+
+  private boolean areSomeRegionReplicasColocatedOnRack(BalancerClusterState c) {
+    if (!c.hasRegionReplicas || balancerConditionals.isReplicaDistributionEnabled()) {
+      // This check is unnecessary without replicas, or with conditional replica distribution
+      // The balancer will auto-run if conditional replica distribution candidates are available
+      return false;
+    }
+    if (c.numRacks >= c.maxReplicas) {
+      regionReplicaRackCostFunction.prepare(c);
+      double rackCost = Math.abs(regionReplicaRackCostFunction.cost());
+      boolean colocatedAtRack = rackCost > CostFunction.getCostEpsilon(rackCost);
+      if (colocatedAtRack) {
+        return true;
+      }
+      LOG.trace("No rack colocation detected with rack cost={}", rackCost);
+    } else {
+      LOG.trace("Rack colocation is inevitable with fewer racks than replicas, "
+        + "so we won't bother checking");
+    }
+    return false;
   }
 
   private String getBalanceReason(double total, double sumMultiplier) {
@@ -360,8 +416,15 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
         + " < MIN_SERVER_BALANCE(" + MIN_SERVER_BALANCE + ")", null);
       return false;
     }
-    if (areSomeRegionReplicasColocated(cluster)) {
+
+    if (areSomeRegionReplicasColocatedOnHost(cluster)) {
       LOG.info("Running balancer because at least one server hosts replicas of the same region."
+        + " function cost={}", functionCost());
+      return true;
+    }
+
+    if (areSomeRegionReplicasColocatedOnRack(cluster)) {
+      LOG.info("Running balancer because at least one rack hosts replicas of the same region."
         + " function cost={}", functionCost());
       return true;
     }
@@ -372,20 +435,31 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       return true;
     }
 
-    if (sloppyRegionServerExist(cs)) {
+    if (
+      // table isolation is inherently incompatible with naive "sloppy server" checks
+      !balancerConditionals.isTableIsolationEnabled() && sloppyRegionServerExist(cs)
+    ) {
       LOG.info("Running balancer because cluster has sloppy server(s)." + " function cost={}",
         functionCost());
       return true;
     }
 
+    if (balancerConditionals.shouldRunBalancer(cluster)) {
+      LOG.info("Running balancer because conditional candidate generators have important moves");
+      return true;
+    }
+
     double total = 0.0;
+    float localSumMultiplier = 0; // in case this.sumMultiplier is not initialized
     for (CostFunction c : costFunctions) {
       if (!c.isNeeded()) {
         LOG.trace("{} not needed", c.getClass().getSimpleName());
         continue;
       }
       total += c.cost() * c.getMultiplier();
+      localSumMultiplier += c.getMultiplier();
     }
+    sumMultiplier = localSumMultiplier;
     boolean balanced = (total / sumMultiplier < minCostNeedBalance);
 
     if (balanced) {
@@ -394,48 +468,83 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
         costFunctions);
       LOG.info(
         "{} - skipping load balancing because weighted average imbalance={} <= "
-          + "threshold({}). If you want more aggressive balancing, either lower "
+          + "threshold({}) and conditionals do not have opinionated move candidates. "
+          + "If you want more aggressive balancing, either lower "
           + "hbase.master.balancer.stochastic.minCostNeedBalance from {} or increase the relative "
           + "multiplier(s) of the specific cost function(s). functionCost={}",
         isByTable ? "Table specific (" + tableName + ")" : "Cluster wide", total / sumMultiplier,
         minCostNeedBalance, minCostNeedBalance, functionCost());
     } else {
-      LOG.info("{} - Calculating plan. may take up to {}ms to complete.",
-        isByTable ? "Table specific (" + tableName + ")" : "Cluster wide", maxRunningTime);
+      LOG.info(
+        "{} - Calculating plan. may take up to {}ms to complete. currentCost={}, targetCost={}",
+        isByTable ? "Table specific (" + tableName + ")" : "Cluster wide", maxRunningTime, total,
+        minCostNeedBalance);
     }
     return !balanced;
   }
 
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
       allowedOnPath = ".*(/src/test/.*|StochasticLoadBalancer).java")
-  BalanceAction nextAction(BalancerClusterState cluster) {
-    return getRandomGenerator().generate(cluster);
+  Pair<CandidateGenerator, BalanceAction> nextAction(BalancerClusterState cluster) {
+    CandidateGenerator generator = getRandomGenerator(cluster);
+    return Pair.newPair(generator, generator.generate(cluster));
   }
 
   /**
    * Select the candidate generator to use based on the cost of cost functions. The chance of
-   * selecting a candidate generator is propotional to the share of cost of all cost functions among
-   * all cost functions that benefit from it.
+   * selecting a candidate generator is proportional to the share of cost of all cost functions
+   * among all cost functions that benefit from it.
    */
-  protected CandidateGenerator getRandomGenerator() {
-    double sum = 0;
-    for (int i = 0; i < weightsOfGenerators.length; i++) {
-      sum += weightsOfGenerators[i];
-      weightsOfGenerators[i] = sum;
-    }
-    if (sum == 0) {
-      return candidateGenerators.get(0);
-    }
-    for (int i = 0; i < weightsOfGenerators.length; i++) {
-      weightsOfGenerators[i] /= sum;
-    }
-    double rand = ThreadLocalRandom.current().nextDouble();
-    for (int i = 0; i < weightsOfGenerators.length; i++) {
-      if (rand <= weightsOfGenerators[i]) {
-        return candidateGenerators.get(i);
+  protected CandidateGenerator getRandomGenerator(BalancerClusterState cluster) {
+    // Prefer conditional generators if they have moves to make
+    if (balancerConditionals.isConditionalBalancingEnabled()) {
+      for (RegionPlanConditional conditional : balancerConditionals.getConditionals()) {
+        List<RegionPlanConditionalCandidateGenerator> generators =
+          conditional.getCandidateGenerators();
+        for (RegionPlanConditionalCandidateGenerator generator : generators) {
+          if (generator.getWeight(cluster) > 0) {
+            return generator;
+          }
+        }
       }
     }
-    return candidateGenerators.get(candidateGenerators.size() - 1);
+
+    List<Class<? extends CandidateGenerator>> generatorClasses = shuffledGeneratorClasses.get();
+    List<Double> partialSums = new ArrayList<>(generatorClasses.size());
+    double sum = 0.0;
+    for (Class<? extends CandidateGenerator> clazz : generatorClasses) {
+      double weight = weightsOfGenerators.getOrDefault(clazz, 0.0);
+      sum += weight;
+      partialSums.add(sum);
+    }
+
+    // If the sum of all weights is zero, fall back to any generator
+    if (sum == 0.0) {
+      return pickAnyGenerator(generatorClasses);
+    }
+
+    double rand = ThreadLocalRandom.current().nextDouble();
+    // Normalize partial sums so that the last one should be exactly 1.0
+    for (int i = 0; i < partialSums.size(); i++) {
+      partialSums.set(i, partialSums.get(i) / sum);
+    }
+
+    // Generate a random number and pick the first generator whose partial sum is >= rand
+    for (int i = 0; i < partialSums.size(); i++) {
+      if (rand <= partialSums.get(i)) {
+        return candidateGenerators.get(generatorClasses.get(i));
+      }
+    }
+
+    // Fallback: if for some reason we didn't return above, return any generator
+    return pickAnyGenerator(generatorClasses);
+  }
+
+  private CandidateGenerator
+    pickAnyGenerator(List<Class<? extends CandidateGenerator>> generatorClasses) {
+    Class<? extends CandidateGenerator> randomClass =
+      generatorClasses.get(ThreadLocalRandom.current().nextInt(candidateGenerators.size()));
+    return candidateGenerators.get(randomClass);
   }
 
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
@@ -471,15 +580,19 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       rackManager, regionCacheRatioOnOldServerMap);
 
     long startTime = EnvironmentEdgeManager.currentTime();
+    cluster.setStopRequestedAt(startTime + maxRunningTime);
 
     initCosts(cluster);
+    balancerConditionals.loadClusterState(cluster);
+    balancerConditionals.clearConditionalWeightCaches();
 
-    sumMultiplier = 0;
+    float localSumMultiplier = 0;
     for (CostFunction c : costFunctions) {
       if (c.isNeeded()) {
-        sumMultiplier += c.getMultiplier();
+        localSumMultiplier += c.getMultiplier();
       }
     }
+    sumMultiplier = localSumMultiplier;
     if (sumMultiplier <= 0) {
       LOG.error("At least one cost function needs a multiplier > 0. For example, set "
         + "hbase.master.balancer.stochastic.regionCountCost to a positive value or default");
@@ -520,22 +633,69 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     final String initFunctionTotalCosts = totalCostsPerFunc();
     // Perform a stochastic walk to see if we can get a good fit.
     long step;
-
+    boolean planImprovedConditionals = false;
+    Map<Class<? extends CandidateGenerator>, Long> generatorToStepCount = new HashMap<>();
+    Map<Class<? extends CandidateGenerator>, Long> generatorToApprovedActionCount = new HashMap<>();
     for (step = 0; step < computedMaxSteps; step++) {
-      BalanceAction action = nextAction(cluster);
+      Pair<CandidateGenerator, BalanceAction> nextAction = nextAction(cluster);
+      CandidateGenerator generator = nextAction.getFirst();
+      BalanceAction action = nextAction.getSecond();
 
       if (action.getType() == BalanceAction.Type.NULL) {
         continue;
       }
 
-      cluster.doAction(action);
+      int conditionalViolationsChange = 0;
+      boolean isViolatingConditionals = false;
+      boolean moveImprovedConditionals = false;
+      // Only check conditionals if they are enabled
+      if (balancerConditionals.isConditionalBalancingEnabled()) {
+        // Always accept a conditional generator output. Sometimes conditional generators
+        // may need to make controversial moves in order to break what would otherwise
+        // be a deadlocked situation.
+        // Otherwise, for normal moves, evaluate the action.
+        if (RegionPlanConditionalCandidateGenerator.class.isAssignableFrom(generator.getClass())) {
+          conditionalViolationsChange = -1;
+        } else {
+          conditionalViolationsChange =
+            balancerConditionals.getViolationCountChange(cluster, action);
+          isViolatingConditionals = balancerConditionals.isViolating(cluster, action);
+        }
+        moveImprovedConditionals = conditionalViolationsChange < 0;
+        if (moveImprovedConditionals) {
+          planImprovedConditionals = true;
+        }
+      }
+
+      // Change state and evaluate costs
+      try {
+        cluster.doAction(action);
+      } catch (IllegalStateException | ArrayIndexOutOfBoundsException e) {
+        LOG.warn(
+          "Generator {} produced invalid action! "
+            + "Debug your candidate generator as this is likely a bug, "
+            + "and may cause a balancer deadlock. {}",
+          generator.getClass().getSimpleName(), action, e);
+        continue;
+      }
       updateCostsAndWeightsWithAction(cluster, action);
+      generatorToStepCount.merge(generator.getClass(), action.getStepCount(), Long::sum);
 
       newCost = computeCost(cluster, currentCost);
 
-      // Should this be kept?
-      if (newCost < currentCost) {
+      double costImprovement = currentCost - newCost;
+      double minimumImprovement =
+        Math.max(CostFunction.getCostEpsilon(currentCost), CostFunction.getCostEpsilon(newCost));
+      boolean costsImproved = costImprovement > minimumImprovement;
+      boolean conditionalsSimilarCostsImproved =
+        (costsImproved && conditionalViolationsChange == 0 && !isViolatingConditionals);
+      // Our first priority is to reduce conditional violations
+      // Our second priority is to reduce balancer cost
+      // change, regardless of cost change
+      if (moveImprovedConditionals || conditionalsSimilarCostsImproved) {
         currentCost = newCost;
+        generatorToApprovedActionCount.merge(generator.getClass(), action.getStepCount(),
+          Long::sum);
 
         // save for JMX
         curOverallCost = currentCost;
@@ -548,15 +708,24 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
         updateCostsAndWeightsWithAction(cluster, undoAction);
       }
 
-      if (EnvironmentEdgeManager.currentTime() - startTime > maxRunningTime) {
+      if (cluster.isStopRequested()) {
         break;
       }
     }
     long endTime = EnvironmentEdgeManager.currentTime();
 
+    StringJoiner joiner = new StringJoiner("\n");
+    joiner.add("CandidateGenerator activity summary:");
+    generatorToStepCount.forEach((generator, count) -> {
+      long approvals = generatorToApprovedActionCount.getOrDefault(generator, 0L);
+      joiner.add(String.format(" - %s: %d steps, %d approvals", generator.getSimpleName(), count,
+        approvals));
+    });
+    LOG.debug(joiner.toString());
+
     metricsBalancer.balanceCluster(endTime - startTime);
 
-    if (initCost > currentCost) {
+    if (planImprovedConditionals || (initCost > currentCost)) {
       updateStochasticCosts(tableName, curOverallCost, curFunctionCosts);
       List<RegionPlan> plans = createRegionPlans(cluster);
       LOG.info(
@@ -571,7 +740,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     }
     LOG.info(
       "Could not find a better moving plan.  Tried {} different configurations in "
-        + "{} ms, and did not find anything with an imbalance score less than {}",
+        + "{} ms, and did not find anything with an imbalance score less than {} "
+        + "and could not improve conditional violations",
       step, endTime - startTime, initCost / sumMultiplier);
     return null;
   }
@@ -746,8 +916,10 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
       allowedOnPath = ".*(/src/test/.*|StochasticLoadBalancer).java")
   void initCosts(BalancerClusterState cluster) {
-    // Initialize the weights of generator every time
-    weightsOfGenerators = new double[this.candidateGenerators.size()];
+    weightsOfGenerators.clear();
+    for (Class<? extends CandidateGenerator> clazz : candidateGenerators.keySet()) {
+      weightsOfGenerators.put(clazz, 0.0);
+    }
     for (CostFunction c : costFunctions) {
       c.prepare(cluster);
       c.updateWeight(weightsOfGenerators);
@@ -761,8 +933,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       allowedOnPath = ".*(/src/test/.*|StochasticLoadBalancer).java")
   void updateCostsAndWeightsWithAction(BalancerClusterState cluster, BalanceAction action) {
     // Reset all the weights to 0
-    for (int i = 0; i < weightsOfGenerators.length; i++) {
-      weightsOfGenerators[i] = 0;
+    for (Class<? extends CandidateGenerator> clazz : candidateGenerators.keySet()) {
+      weightsOfGenerators.put(clazz, 0.0);
     }
     for (CostFunction c : costFunctions) {
       if (c.isNeeded()) {

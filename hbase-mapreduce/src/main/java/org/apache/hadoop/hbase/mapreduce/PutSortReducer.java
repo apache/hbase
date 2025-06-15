@@ -37,8 +37,8 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.security.visibility.CellVisibility;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.mapreduce.Reducer;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -122,7 +122,7 @@ public class PutSortReducer
         }
       }
       context.setStatus("Read " + map.size() + " entries of " + map.getClass() + "("
-        + StringUtils.humanReadableInt(curSize) + ")");
+        + Strings.humanReadableInt(curSize) + ")");
       int index = 0;
       for (KeyValue kv : map) {
         context.write(row, kv);

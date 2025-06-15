@@ -168,6 +168,7 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil.NonceProcedu
 import org.apache.hadoop.hbase.master.procedure.ModifyTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
 import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
+import org.apache.hadoop.hbase.master.procedure.RSProcedureDispatcher;
 import org.apache.hadoop.hbase.master.procedure.ReopenTableRegionsProcedure;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.master.procedure.TruncateRegionProcedure;
@@ -260,6 +261,7 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.JsonMapper;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.util.RetryCounterFactory;
 import org.apache.hadoop.hbase.util.TableDescriptorChecker;
@@ -488,6 +490,15 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
   public static final String WARMUP_BEFORE_MOVE = "hbase.master.warmup.before.move";
   private static final boolean DEFAULT_WARMUP_BEFORE_MOVE = true;
+
+  /**
+   * Use RSProcedureDispatcher instance to initiate master -> rs remote procedure execution. Use
+   * this config to extend RSProcedureDispatcher (mainly for testing purpose).
+   */
+  public static final String HBASE_MASTER_RSPROC_DISPATCHER_CLASS =
+    "hbase.master.rsproc.dispatcher.class";
+  private static final String DEFAULT_HBASE_MASTER_RSPROC_DISPATCHER_CLASS =
+    RSProcedureDispatcher.class.getName();
 
   private TaskGroup startupTaskGroup;
 
@@ -1111,6 +1122,9 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     // wait meta to be initialized after we start procedure executor
     if (initMetaProc != null) {
       initMetaProc.await();
+      if (initMetaProc.isFailed() && initMetaProc.hasException()) {
+        throw new IOException("Failed to initialize meta table", initMetaProc.getException());
+      }
     }
     // Wake up this server to check in
     sleeper.skipSleepCycle();
@@ -1157,30 +1171,33 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
       int replicasNumInConf =
         conf.getInt(HConstants.META_REPLICAS_NUM, HConstants.DEFAULT_META_REPLICA_NUM);
       TableDescriptor metaDesc = tableDescriptors.get(TableName.META_TABLE_NAME);
+      int existingReplicasCount =
+        assignmentManager.getRegionStates().getRegionsOfTable(TableName.META_TABLE_NAME).size();
+
       if (metaDesc.getRegionReplication() != replicasNumInConf) {
         // it is possible that we already have some replicas before upgrading, so we must set the
         // region replication number in meta TableDescriptor directly first, without creating a
         // ModifyTableProcedure, otherwise it may cause a double assign for the meta replicas.
-        int existingReplicasCount =
-          assignmentManager.getRegionStates().getRegionsOfTable(TableName.META_TABLE_NAME).size();
-        if (existingReplicasCount > metaDesc.getRegionReplication()) {
-          LOG.info("Update replica count of hbase:meta from {}(in TableDescriptor)"
-            + " to {}(existing ZNodes)", metaDesc.getRegionReplication(), existingReplicasCount);
-          metaDesc = TableDescriptorBuilder.newBuilder(metaDesc)
-            .setRegionReplication(existingReplicasCount).build();
-          tableDescriptors.update(metaDesc);
-        }
-        // check again, and issue a ModifyTableProcedure if needed
-        if (metaDesc.getRegionReplication() != replicasNumInConf) {
-          LOG.info(
-            "The {} config is {} while the replica count in TableDescriptor is {}"
-              + " for hbase:meta, altering...",
-            HConstants.META_REPLICAS_NUM, replicasNumInConf, metaDesc.getRegionReplication());
-          procedureExecutor.submitProcedure(new ModifyTableProcedure(
-            procedureExecutor.getEnvironment(), TableDescriptorBuilder.newBuilder(metaDesc)
-              .setRegionReplication(replicasNumInConf).build(),
-            null, metaDesc, false, true));
-        }
+        LOG.info("Update replica count of hbase:meta from {}(in TableDescriptor)"
+          + " to {}(existing ZNodes)", metaDesc.getRegionReplication(), existingReplicasCount);
+        metaDesc = TableDescriptorBuilder.newBuilder(metaDesc)
+          .setRegionReplication(existingReplicasCount).build();
+        tableDescriptors.update(metaDesc);
+      }
+      // check again, and issue a ModifyTableProcedure if needed
+      if (
+        metaDesc.getRegionReplication() != replicasNumInConf
+          || existingReplicasCount != metaDesc.getRegionReplication()
+      ) {
+        LOG.info(
+          "The {} config is {} while the replica count in TableDescriptor is {},"
+            + " The number of replicas seen on ZK {} for hbase:meta, altering...",
+          HConstants.META_REPLICAS_NUM, replicasNumInConf, metaDesc.getRegionReplication(),
+          existingReplicasCount);
+        procedureExecutor.submitProcedure(new ModifyTableProcedure(
+          procedureExecutor.getEnvironment(), TableDescriptorBuilder.newBuilder(metaDesc)
+            .setRegionReplication(replicasNumInConf).build(),
+          null, metaDesc, false, true));
       }
     }
     // Initialize after meta is up as below scans meta
@@ -1833,7 +1850,11 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   }
 
   private void createProcedureExecutor() throws IOException {
-    MasterProcedureEnv procEnv = new MasterProcedureEnv(this);
+    final String procedureDispatcherClassName =
+      conf.get(HBASE_MASTER_RSPROC_DISPATCHER_CLASS, DEFAULT_HBASE_MASTER_RSPROC_DISPATCHER_CLASS);
+    final RSProcedureDispatcher procedureDispatcher = ReflectionUtils.instantiateWithCustomCtor(
+      procedureDispatcherClassName, new Class[] { MasterServices.class }, new Object[] { this });
+    final MasterProcedureEnv procEnv = new MasterProcedureEnv(this, procedureDispatcher);
     procedureStore = new RegionProcedureStore(this, masterRegion,
       new MasterProcedureEnv.FsUtilsLeaseRecovery(this));
     procedureStore.registerListener(new ProcedureStoreListener() {
@@ -2173,10 +2194,14 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
         // TODO: bulk assign
         try {
           this.assignmentManager.balance(plan);
+          this.balancer.updateClusterMetrics(getClusterMetricsWithoutCoprocessor());
+          this.balancer.throttle(plan);
         } catch (HBaseIOException hioe) {
           // should ignore failed plans here, avoiding the whole balance plans be aborted
           // later calls of balance() can fetch up the failed and skipped plans
           LOG.warn("Failed balance plan {}, skipping...", plan, hioe);
+        } catch (Exception e) {
+          LOG.warn("Failed throttling assigning a new plan.", e);
         }
         // rpCount records balance plans processed, does not care if a plan succeeds
         rpCount++;
@@ -2226,7 +2251,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
     final Set<TableName> matchingTables = getTableDescriptors(new LinkedList<>(),
       ntfp.getNamespace(), ntfp.getRegex(), ntfp.getTableNames(), false).stream()
-        .map(TableDescriptor::getTableName).collect(Collectors.toSet());
+      .map(TableDescriptor::getTableName).collect(Collectors.toSet());
     final Set<TableName> allEnabledTables =
       tableStateManager.getTablesInStates(TableState.State.ENABLED);
     final List<TableName> targetTables =

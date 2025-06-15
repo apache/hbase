@@ -1148,7 +1148,7 @@ benefit of NOT provoking GC.
 From HBase 2.0.0 onwards, the notions of L1 and L2 have been deprecated. When BucketCache is turned on, the DATA blocks will always go to BucketCache and INDEX/BLOOM blocks go to on heap LRUBlockCache. `cacheDataInL1` support has been removed.
 ====
 
-[[bc.deloy.modes]]
+[[bc.deploy.modes]]
 ====== BucketCache Deploy Modes
 The BucketCache Block Cache can be deployed _offheap_, _file_ or _mmaped_ file mode.
 
@@ -1308,6 +1308,15 @@ The CacheAwareLoadBalancer can be enabled in the cluster by setting the followin
 </property>
 ----
 
+Within HBASE-29168, the CacheAwareLoadBalancer implements region move throttling. This mitigates
+the impact of "losing" cache factor when balancing mainly due to region skewness, i.e. when new
+region servers are added to the cluster, a large bulk of cached regions may move to the new servers
+at once, which can cause noticeable read performance impacts for cache sensitive use cases. The
+throttling sleep time is determined by the *hbase.master.balancer.move.throttlingMillis* property,
+and it defaults to 60000 millis. If a region planned to be moved has a cache ratio on the target
+server above the thershold configurable by the
+*hbase.master.balancer.stochastic.throttling.cacheRatio* property (80% by default), no throttling
+will be applied in this region move.
 
 [[regionserver_splitting_implementation]]
 === RegionServer Splitting Implementation
@@ -1968,10 +1977,10 @@ Type the following to see usage:
 ----
 $ ${HBASE_HOME}/bin/hbase hfile
 ----
-For example, to view the content of the file _hdfs://10.81.47.41:8020/hbase/default/TEST/1418428042/DSMP/4759508618286845475_, type the following:
+For example, to view the content of the file _hdfs://10.81.47.41:9000/hbase/default/TEST/1418428042/DSMP/4759508618286845475_, type the following:
 [source,bash]
 ----
- $ ${HBASE_HOME}/bin/hbase hfile -v -f hdfs://10.81.47.41:8020/hbase/default/TEST/1418428042/DSMP/4759508618286845475
+ $ ${HBASE_HOME}/bin/hbase hfile -v -f hdfs://10.81.47.41:9000/hbase/default/TEST/1418428042/DSMP/4759508618286845475
 ----
 If you leave off the option -v to see just a summary on the HFile.
 See usage for other things to do with the `hfile` tool.

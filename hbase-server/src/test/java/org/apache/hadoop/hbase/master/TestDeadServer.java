@@ -125,10 +125,10 @@ public class TestDeadServer {
     Assert.assertEquals(2, copy.size());
 
     Assert.assertEquals(hostname1234, copy.get(0).getFirst());
-    Assert.assertEquals(new Long(2L), copy.get(0).getSecond());
+    Assert.assertEquals(Long.valueOf(2L), copy.get(0).getSecond());
 
     Assert.assertEquals(hostname12345, copy.get(1).getFirst());
-    Assert.assertEquals(new Long(3L), copy.get(1).getSecond());
+    Assert.assertEquals(Long.valueOf(3L), copy.get(1).getSecond());
 
     EnvironmentEdgeManager.reset();
   }

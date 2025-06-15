@@ -646,7 +646,6 @@ make_src_release() {
 build_release_binary() {
   local project="${1}"
   local version="${2}"
-  local base_name="${project}-${version}"
   local extra_flags=()
   if [[ "${version}" = *-hadoop3 ]] || [[ "${version}" = *-hadoop3-SNAPSHOT ]]; then
     extra_flags=("-Drevision=${version}" "-Dhadoop.profile=3.0")
@@ -670,19 +669,25 @@ build_release_binary() {
   echo "${cmd[*]}"
   "${cmd[@]}"
 
-  # Check there is a bin gz output. The build may not produce one: e.g. hbase-thirdparty.
-  local f_bin_prefix="./${PROJECT}-assembly/target/${base_name}"
-  if ls "${f_bin_prefix}"*-bin.tar.gz &>/dev/null; then
-    cp "${f_bin_prefix}"*-bin.tar.gz ..
-    cd .. || exit
-    for i in "${base_name}"*-bin.tar.gz; do
-      "${GPG}" "${GPG_ARGS[@]}" --armour --output "${i}.asc" --detach-sig "${i}"
-      "${GPG}" "${GPG_ARGS[@]}" --print-md SHA512 "${i}" > "${i}.sha512"
-    done
-  else
-    cd .. || exit
-    log "No ${f_bin_prefix}*-bin.tar.gz product; expected?"
-  fi
+  # Check there are bin gz outputs. The build may not produce one: e.g. hbase-thirdparty.
+  POSTFIXES=("" "-byo-hadoop")
+  local builddir=$(pwd)
+  for postfix in "${POSTFIXES[@]}"; do
+    cd "${builddir}"
+    local assembly_name=${project}${postfix}-${version}
+    local f_bin_prefix="./${PROJECT}-assembly${postfix}/target/${assembly_name}"
+    if ls "${f_bin_prefix}"*-bin.tar.gz &>/dev/null; then
+      cp "${f_bin_prefix}"*-bin.tar.gz ..
+      cd .. || exit
+      for i in "${assembly_name}"*-bin.tar.gz; do
+        "${GPG}" "${GPG_ARGS[@]}" --armour --output "${i}.asc" --detach-sig "${i}"
+        "${GPG}" "${GPG_ARGS[@]}" --print-md SHA512 "${i}" > "${i}.sha512"
+      done
+    else
+      cd .. || exit
+      log "No ${f_bin_prefix}*-bin.tar.gz product; expected?"
+    fi
+  done
 }
 
 # Make binary release.
@@ -751,6 +756,12 @@ function maven_set_version { #input: <version_to_set>
 function maven_get_version {
   # shellcheck disable=SC2016
   "${MVN[@]}" -q -N -Dexec.executable="echo" -Dexec.args='${project.version}' exec:exec
+}
+
+# Do maven command to read target Java version from local pom
+function maven_get_release_target {
+  # shellcheck disable=SC2016
+  "${MVN[@]}"  -q -N -Dexec.executable="echo" -Dexec.args='${releaseTarget}' exec:exec
 }
 
 # Do maven deploy to snapshot or release artifact repository, with checks.
@@ -881,4 +892,24 @@ function maven_spotless_apply() {
 
 function git_add_poms() {
   find . -name pom.xml -exec git add {} \;
+}
+
+# Check the releaseTarget defined in the project, and switch to JDK17
+# if JAVA_HOME does not already point to JDK17
+function init_java_17() {
+  RELEASETARGET=$(maven_get_release_target)
+  if [ "$RELEASETARGET" = "17" ]; then
+    log "Build requires JDK 17"
+    # Must be called after init_java
+    if [ "$JAVA_VERSION" != 17* ]; then
+      if [ -z "$JAVA_17_HOME" ]; then
+        #Ubuntu default, included in docker image
+        JAVA_17_HOME="/usr/lib/jvm/java-17-openjdk-amd64"
+      fi
+      log "Changing JAVA_HOME to $JAVA_17_HOME"
+      export JAVA_HOME="$JAVA_17_HOME"
+      # re-detect java version
+      init_java
+    fi
+  fi
 }

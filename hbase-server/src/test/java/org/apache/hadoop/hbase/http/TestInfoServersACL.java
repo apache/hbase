@@ -193,7 +193,7 @@ public class TestInfoServersACL {
 
   @Test
   public void testTableActionsAvailableForAdmins() throws Exception {
-    final String expectedAuthorizedContent = "Actions:";
+    final String expectedAuthorizedContent = "Actions";
     UserGroupInformation admin = UserGroupInformation
       .loginUserFromKeytabAndReturnUGI(USER_ADMIN_STR, KEYTAB_FILE.getAbsolutePath());
     admin.doAs(new PrivilegedExceptionAction<Void>() {

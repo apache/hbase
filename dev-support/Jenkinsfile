@@ -21,7 +21,7 @@ pipeline {
     }
   }
   triggers {
-    pollSCM('@daily')
+    pollSCM(getCronParams(env.BRANCH_NAME))
   }
   options {
     buildDiscarder(logRotator(numToKeepStr: '20'))
@@ -130,7 +130,7 @@ pipeline {
         }
         stage ('hadoop 2 cache') {
           environment {
-            HADOOP2_VERSION="2.10.0"
+            HADOOP2_VERSION="2.10.2"
           }
           steps {
             // directory must be unique for each parallel stage, because jenkins runs them in the same workspace :(
@@ -187,7 +187,8 @@ pipeline {
                   '''
                   stash name: "hadoop-${HADOOP3_VERSION}", includes: "hadoop-${HADOOP3_VERSION}-bin.tar.gz"
                   script {
-                    if (env.HADOOP3_VERSIONS == env.HADOOP3_DEFAULT_VERSION) {
+                    if (env.HADOOP3_VERSION == env.HADOOP3_DEFAULT_VERSION) {
+                      // FIXME: we never unstash this, because we run the packaging tests with the version-specific stashes
                       stash(name: "hadoop-3", includes: "hadoop-${HADOOP3_VERSION}-bin.tar.gz")
                     } //if
                   } //script
@@ -790,6 +791,10 @@ pipeline {
           steps {
             script {
               for (hadoop3_version in hadoop3_versions) {
+                if (hadoop3_version == env.HADOOP3_DEFAULT_VERSION) {
+                  // We are running the full test suite, no need to run the dev tests too
+                  continue
+                }
                 //HADOOP_THREE_VERSION is the environment variable name expected by the nightly shell script
                 env.HADOOP_THREE_VERSION = hadoop3_version;
                 env.OUTPUT_DIR_RELATIVE = "${env.OUTPUT_DIR_RELATIVE_JDK17_HADOOP3_BACKWARDS}-${env.HADOOP_THREE_VERSION}"
@@ -820,9 +825,9 @@ pipeline {
                           set -e
                           declare -i status=0
                           if "${BASEDIR}/dev-support/hbase_nightly_yetus.sh" ; then
-                            echo '(/) {color:green}+1 jdk17 hadoop ${HADOOP_THREE_VERSION} backward compatibility checks{color}' > "${OUTPUT_DIR}/commentfile"
+                            echo "(/) {color:green}+1 jdk17 hadoop ${HADOOP_THREE_VERSION} backward compatibility checks{color}" > "${OUTPUT_DIR}/commentfile"
                           else
-                            echo '(x) {color:red}-1 jdk17 hadoop ${HADOOP_THREE_VERSION} backward compatibility checks{color}' > "${OUTPUT_DIR}/commentfile"
+                            echo "(x) {color:red}-1 jdk17 hadoop ${HADOOP_THREE_VERSION} backward compatibility checks{color}" > "${OUTPUT_DIR}/commentfile"
                             status=1
                           fi
                           echo "-- For more information [see jdk17 report|${BUILD_URL}JDK17_20Nightly_20Build_20Report_20_28Hadoop3_29/]" >> "${OUTPUT_DIR}/commentfile"
@@ -901,7 +906,7 @@ pipeline {
         stage ('packaging and integration') {
           agent {
             node {
-              label 'hbase-large'
+              label 'hbase'
             }
           }
           environment {
@@ -1145,6 +1150,10 @@ pipeline {
                           "${env.OUTPUT_DIR_RELATIVE_JDK11_HADOOP3}/commentfile",
                           "${env.OUTPUT_DIR_RELATIVE_JDK17_HADOOP3}/commentfile"]
            for (hadoop3_version in hadoop3_versions) {
+             if (hadoop3_version == env.HADOOP3_DEFAULT_VERSION) {
+                // We haven't run these tests
+                continue
+            }
              unstash("jdk17-hadoop3-backwards-result-${hadoop3_version}")
                results.add("${env.OUTPUT_DIR_RELATIVE_JDK17_HADOOP3_BACKWARDS}-${hadoop3_version}/commentfile")
            }
@@ -1224,5 +1233,17 @@ String getJavaHomeForYetusGeneralCheck(String branchName) {
     return "/usr/lib/jvm/java-11";
   } else {
     return "/usr/lib/jvm/java-17"
+  }
+}
+@NonCPS
+String getCronParams(String branchName) {
+  if (branchName == 'master') {
+    return 'H H 1-31/3 * *'
+  } else if (branchName == 'branch-3') {
+    return 'H H 1-31/3 * *'
+  } else if (branchName == 'branch-2') {
+    return 'H H 2-31/3 * *'
+  } else {
+    return 'H H 3-31/3 * *'
   }
 }

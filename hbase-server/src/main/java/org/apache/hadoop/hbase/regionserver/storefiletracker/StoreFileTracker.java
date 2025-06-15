@@ -20,7 +20,11 @@ package org.apache.hadoop.hbase.regionserver.storefiletracker;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.regionserver.CreateStoreFileWriterParams;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
@@ -94,4 +98,52 @@ public interface StoreFileTracker {
    * does not allow broken store files under the actual data directory.
    */
   boolean requireWritingToTmpDirFirst();
+
+  Reference createReference(Reference reference, Path path) throws IOException;
+
+  /**
+   * Reads the reference file from the given path.
+   * @param path the {@link Path} to the reference file in the file system.
+   * @return a {@link Reference} that points at top/bottom half of a an hfile
+   */
+  Reference readReference(Path path) throws IOException;
+
+  /**
+   * Returns true if the specified family has reference files
+   * @return true if family contains reference files
+   */
+  boolean hasReferences() throws IOException;
+
+  StoreFileInfo getStoreFileInfo(final FileStatus fileStatus, final Path initialPath,
+    final boolean primaryReplica) throws IOException;
+
+  StoreFileInfo getStoreFileInfo(final Path initialPath, final boolean primaryReplica)
+    throws IOException;
+
+  /**
+   * Create a new HFileLink
+   * <p>
+   * It also adds a back-reference to the hfile back-reference directory to simplify the
+   * reference-count and the cleaning process.
+   * @param hfileLinkName - HFileLink name (it contains hfile-region-table)
+   * @param createBackRef - Whether back reference should be created. Defaults to true.
+   * @return the file link name.
+   * @throws IOException on file or parent directory creation failure.
+   */
+  String createHFileLink(final TableName linkedTable, final String linkedRegion,
+    final String hfileName, final boolean createBackRef) throws IOException;
+
+  /**
+   * Create a new HFileLink starting from a hfileLink name
+   * <p>
+   * It also adds a back-reference to the hfile back-reference directory to simplify the
+   * reference-count and the cleaning process.
+   * @param hfileLinkName - HFileLink name (it contains hfile-region-table)
+   * @param createBackRef - Whether back reference should be created. Defaults to true.
+   * @return the file link name.
+   * @throws IOException on file or parent directory creation failure.
+   */
+  String createFromHFileLink(final String hfileName, final boolean createBackRef)
+    throws IOException;
+
 }

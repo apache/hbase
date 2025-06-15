@@ -63,18 +63,20 @@ public class ScannerResultGenerator extends ResultGenerator {
 
   public ScannerResultGenerator(final String tableName, final RowSpec rowspec, final Filter filter,
     final int caching, final boolean cacheBlocks) throws IllegalArgumentException, IOException {
-    this(tableName, rowspec, filter, caching, cacheBlocks, -1);
+    this(tableName, rowspec, filter, caching, cacheBlocks, -1, true, false);
   }
 
   public ScannerResultGenerator(final String tableName, final RowSpec rowspec, final Filter filter,
-    final int caching, final boolean cacheBlocks, int limit) throws IOException {
+    final int caching, final boolean cacheBlocks, int limit, boolean includeStartRow,
+    boolean includeStopRow) throws IOException {
     Table table = RESTServlet.getInstance().getTable(tableName);
     try {
       Scan scan;
       if (rowspec.hasEndRow()) {
-        scan = new Scan().withStartRow(rowspec.getStartRow()).withStopRow(rowspec.getEndRow());
+        scan = new Scan().withStartRow(rowspec.getStartRow(), includeStartRow)
+          .withStopRow(rowspec.getEndRow(), includeStopRow);
       } else {
-        scan = new Scan().withStartRow(rowspec.getStartRow());
+        scan = new Scan().withStartRow(rowspec.getStartRow(), includeStartRow);
       }
       if (rowspec.hasColumns()) {
         byte[][] columns = rowspec.getColumns();
@@ -89,7 +91,13 @@ public class ScannerResultGenerator extends ResultGenerator {
           }
         }
       }
-      scan.setTimeRange(rowspec.getStartTime(), rowspec.getEndTime());
+
+      if (rowspec.isPartialTimeRange()) {
+        scan.setTimestamp(rowspec.getTimestamp());
+      } else {
+        scan.setTimeRange(rowspec.getStartTime(), rowspec.getEndTime());
+      }
+
       scan.readVersions(rowspec.getMaxVersions());
       if (filter != null) {
         scan.setFilter(filter);

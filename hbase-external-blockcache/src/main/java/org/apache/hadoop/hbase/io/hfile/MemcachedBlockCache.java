@@ -32,6 +32,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import net.spy.memcached.CachedData;
+import net.spy.memcached.ConnectionFactory;
 import net.spy.memcached.ConnectionFactoryBuilder;
 import net.spy.memcached.FailureMode;
 import net.spy.memcached.MemcachedClient;
@@ -81,8 +82,8 @@ public class MemcachedBlockCache implements BlockCache {
   public static final boolean MEMCACHED_OPTIMIZE_DEFAULT = false;
   public static final int STAT_THREAD_PERIOD = 60 * 5;
 
-  private final MemcachedClient client;
-  private final HFileBlockTranscoder tc = new HFileBlockTranscoder();
+  private transient final MemcachedClient client;
+  private transient final HFileBlockTranscoder tc = new HFileBlockTranscoder();
   private final CacheStats cacheStats = new CacheStats("MemcachedBlockCache");
   private final AtomicLong cachedCount = new AtomicLong();
   private final AtomicLong notCachedCount = new AtomicLong();
@@ -122,9 +123,14 @@ public class MemcachedBlockCache implements BlockCache {
       serverAddresses.add(Addressing.createInetSocketAddressFromHostAndPortStr(s));
     }
 
-    client = new MemcachedClient(builder.build(), serverAddresses);
+    client = createMemcachedClient(builder.build(), serverAddresses);
     this.scheduleThreadPool.scheduleAtFixedRate(new StatisticsThread(this), STAT_THREAD_PERIOD,
       STAT_THREAD_PERIOD, TimeUnit.SECONDS);
+  }
+
+  protected MemcachedClient createMemcachedClient(ConnectionFactory factory,
+    List<InetSocketAddress> serverAddresses) throws IOException {
+    return new MemcachedClient(factory, serverAddresses);
   }
 
   @Override

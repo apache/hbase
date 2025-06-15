@@ -17,17 +17,92 @@
  */
 
 /* General styling */
+
+/* Preserve original HBase UI colors */
+:root,
+[data-bs-theme=light] {
+  --bs-blue: #337ab7;
+  --bs-primary: #337ab7;
+  --bs-link-color: #337ab7;
+  --bs-link-color-rgb: #337ab7;
+  --bs-link-hover-color: #23527c;
+  --bs-link-hover-color-rgb: #23527c;
+}
+.nav-pills {
+  --bs-nav-pills-link-active-bg: #337ab7;
+}
+.btn-primary {
+  --bs-btn-bg: #337ab7;
+  --bs-btn-border-color: #337ab7;
+  --bs-btn-hover-bg: #265a88;
+  --bs-btn-hover-border-color: #204d74;
+  --bs-btn-disabled-bg: #337ab7;
+  --bs-btn-disabled-border-color: #337ab7;
+}
+.form-control:focus {
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, .075), 0 0 8px rgba(102, 175, 233, .6);
+}
+/* Avoid links with black color. */
+a {
+  color: var(--bs-link-color-rgb);
+}
+.pagination {
+  --bs-pagination-active-border-color: #337ab7;
+}
+/* Restore active navbar link background-color */
+.navbar-nav .nav-link.active {
+  background: linear-gradient(to bottom, #dbdbdb 0, #e2e2e2 100%);
+}
+@media (min-width: 768px) {
+  /* With Bootstrap 5 the navbar has 8px vertical padding and the links are smaller vertically.
+   For desktop view only we "grow" the link to the same height as navbar
+   and "position it to reach" navbar. */
+  .navbar-nav .nav-link.active {
+    height: calc(100% + 16px);
+    margin: -8px 0;
+    padding-top: 16px;
+  }
+}
+/* Make sure background color is visible in tables (Tasks) where alert class is used. */
+tr.alert td {
+  background: none;
+}
+/* End of Preserve original HBase UI colors */
+
 body { padding-top: 50px; }
 html .content {
-  margin-left: 2.0em;
-  margin-right: 2.0em;
+  padding: 0 2.0em;
 }
 .navbar-brand img {
   margin-top: -7px;
 }
 .inner_header { margin-bottom: 1em;}
-section { margin-bottom: 3em; }
+section {
+  width: 100%;
+  margin-bottom: 3em;
+}
 
+/** Avoid double bottom borders with tables in tab contents.  */
+td, tfoot, th, thead, tr {
+  border-style: none;
+  border-top: 1px solid #ddd;
+}
+
+.page-header {
+  padding-bottom: 9px;
+  margin: 40px 0 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.page-header small {
+  font-size: 65%;
+  color: #6c757d;
+}
+
+.tab-content {
+  padding-bottom: 9px;
+  border-bottom: 1px solid #ddd;
+}
 
 /* Master page styling */
 #tab_catalogTables table {

@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext.ReaderType;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -227,8 +228,8 @@ public class HStoreFile implements StoreFile {
    * @param primaryReplica true if this is a store file for primary replica, otherwise false.
    */
   public HStoreFile(FileSystem fs, Path p, Configuration conf, CacheConfig cacheConf,
-    BloomType cfBloomType, boolean primaryReplica) throws IOException {
-    this(new StoreFileInfo(conf, fs, p, primaryReplica), cfBloomType, cacheConf);
+    BloomType cfBloomType, boolean primaryReplica, StoreFileTracker sft) throws IOException {
+    this(sft.getStoreFileInfo(p, primaryReplica), cfBloomType, cacheConf);
   }
 
   /**

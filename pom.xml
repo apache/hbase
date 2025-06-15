@@ -311,6 +311,12 @@
       <timezone>-8</timezone>
     </developer>
     <developer>
+      <id>junegunn</id>
+      <name>Junegunn Choi</name>
+      <email>junegunn@apache.org</email>
+      <timezone>+9</timezone>
+    </developer>
+    <developer>
       <id>jxiang</id>
       <name>Jimmy Xiang</name>
       <email>jxiang@apache.org</email>
@@ -368,6 +374,12 @@
       <id>liyu</id>
       <name>Yu Li</name>
       <email>liyu@apache.org</email>
+      <timezone>+8</timezone>
+    </developer>
+    <developer>
+      <id>lupeng</id>
+      <name>Peng Lu</name>
+      <email>lupeng@apache.org</email>
       <timezone>+8</timezone>
     </developer>
     <developer>
@@ -693,6 +705,18 @@
       <email>heliangjun@apache.org</email>
       <timezone>+8</timezone>
     </developer>
+    <developer>
+      <id>cconnell</id>
+      <name>Charles Connell</name>
+      <email>cconnell@apache.org</email>
+      <timezone>-5</timezone>
+    </developer>
+    <developer>
+      <id>chandrakambham</id>
+      <name>Chandra Kambham</name>
+      <email>chandra@apache.org</email>
+      <timezone>+5</timezone>
+    </developer>
   </developers>
   <mailingLists>
     <mailingList>
@@ -762,6 +786,7 @@
     <module>hbase-it</module>
     <module>hbase-examples</module>
     <module>hbase-assembly</module>
+    <module>hbase-assembly-byo-hadoop</module>
     <module>hbase-testing-util</module>
     <module>hbase-annotations</module>
     <module>hbase-rest</module>
@@ -778,6 +803,7 @@
     <module>hbase-logging</module>
     <module>hbase-compression</module>
     <module>hbase-extensions</module>
+    <module>hbase-dev-generate-classpath</module>
   </modules>
   <scm>
     <connection>scm:git:git://gitbox.apache.org/repos/asf/hbase.git</connection>
@@ -838,8 +864,7 @@
       in the dependencyManagement section as it could still lead to different versions of netty
       modules and cause trouble if we only rely on transitive dependencies.
     -->
-    <netty3.version>3.10.6.Final</netty3.version>
-    <netty4.version>4.1.112.Final</netty4.version>
+    <netty4.version>4.1.121.Final</netty4.version>
     <!-- end HBASE-15925 default hadoop compatibility values -->
     <audience-annotations.version>0.15.0</audience-annotations.version>
     <javadoc.audience-annotations.version>0.15.0</javadoc.audience-annotations.version>
@@ -847,8 +872,8 @@
     <caffeine.version>2.8.1</caffeine.version>
     <commons-codec.version>1.15</commons-codec.version>
     <commons-validator.version>1.7</commons-validator.version>
-    <commons-io.version>2.14.0</commons-io.version>
-    <commons-lang3.version>3.9</commons-lang3.version>
+    <commons-io.version>2.18.0</commons-io.version>
+    <commons-lang3.version>3.17.0</commons-lang3.version>
     <commons-math.version>3.6.1</commons-math.version>
     <commons-cli.version>1.5.0</commons-cli.version>
     <disruptor.version>3.4.4</disruptor.version>
@@ -859,19 +884,26 @@
       Note that the version of jackson-[annotations,core,databind] must be kept in sync with the
       version of jackson-jaxrs-json-provider shipped in hbase-thirdparty.
     -->
-    <jackson.version>2.17.2</jackson.version>
-    <jackson.databind.version>2.17.2</jackson.databind.version>
+    <jackson.version>2.19.0</jackson.version>
+    <jackson.databind.version>2.19.0</jackson.databind.version>
     <jaxb-api.version>2.3.1</jaxb-api.version>
     <servlet.api.version>3.1.0</servlet.api.version>
     <wx.rs.api.version>2.1.1</wx.rs.api.version>
-    <tomcat.jasper.version>9.0.93</tomcat.jasper.version>
-    <jruby.version>9.4.8.0</jruby.version>
+    <tomcat.jasper.version>9.0.104</tomcat.jasper.version>
+    <jruby.version>9.4.12.1</jruby.version>
     <junit.version>4.13.2</junit.version>
     <hamcrest.version>1.3</hamcrest.version>
-    <opentelemetry.version>1.15.0</opentelemetry.version>
-    <opentelemetry-javaagent.version>1.15.0</opentelemetry-javaagent.version>
+    <opentelemetry.version>1.49.0</opentelemetry.version>
+    <opentelemetry-semconv.version>1.29.0-alpha</opentelemetry-semconv.version>
+    <opentelemetry-javaagent.version>2.15.0</opentelemetry-javaagent.version>
     <log4j2.version>2.17.2</log4j2.version>
     <mockito.version>4.11.0</mockito.version>
+    <byte-buddy.version>1.15.11</byte-buddy.version>
+    <!--
+      Version of protobuf that hbase uses internally (we shade our pb) Must match what is out
+      in hbase-thirdparty include.
+    -->
+    <internal.protobuf.version>4.30.2</internal.protobuf.version>
     <protobuf.plugin.version>0.6.1</protobuf.plugin.version>
     <thrift.path>thrift</thrift.path>
     <thrift.version>0.14.1</thrift.version>
@@ -882,14 +914,13 @@
     <jamon-runtime.version>2.4.1</jamon-runtime.version>
     <jettison.version>1.5.4</jettison.version>
     <!--Make sure these joni/jcodings are compatible with the versions used by jruby-->
-    <joni.version>2.2.1</joni.version>
-    <jcodings.version>1.0.58</jcodings.version>
-    <spy.version>2.12.2</spy.version>
+    <joni.version>2.2.3</joni.version>
+    <jcodings.version>1.0.61</jcodings.version>
+    <spy.version>2.12.3</spy.version>
     <bouncycastle.version>1.78</bouncycastle.version>
     <skyscreamer.version>1.5.1</skyscreamer.version>
-    <kerby.version>1.0.1</kerby.version>
     <commons-crypto.version>1.1.0</commons-crypto.version>
-    <curator.version>4.2.0</curator.version>
+    <curator.version>5.7.1</curator.version>
     <!-- Plugin Dependencies -->
     <asciidoctor.plugin.version>2.2.2</asciidoctor.plugin.version>
     <asciidoctorj.pdf.version>2.0.6</asciidoctorj.pdf.version>
@@ -900,7 +931,7 @@
     -->
     <checkstyle.version>8.29</checkstyle.version>
     <exec.maven.version>3.1.0</exec.maven.version>
-    <error-prone.version>2.28.0</error-prone.version>
+    <error-prone.version>2.38.0</error-prone.version>
     <jamon.plugin.version>2.4.2</jamon.plugin.version>
     <lifecycle.mapping.version>1.0.0</lifecycle.mapping.version>
     <maven.antrun.version>1.8</maven.antrun.version>
@@ -909,8 +940,10 @@
     <maven.eclipse.version>2.10</maven.eclipse.version>
     <maven.gpg.version>3.0.1</maven.gpg.version>
     <maven.javadoc.version>3.4.0</maven.javadoc.version>
+    <maven.dependency.version>3.8.1</maven.dependency.version>
     <maven.warbucks.version>1.1.0</maven.warbucks.version>
     <maven.project.info.report.version>3.1.2</maven.project.info.report.version>
+    <maven-owasp-plugin.version>12.1.0</maven-owasp-plugin.version>
     <os.maven.version>1.5.0.Final</os.maven.version>
     <findbugs-annotations.version>1.3.9-1</findbugs-annotations.version>
     <spotbugs.version>4.7.3</spotbugs.version>
@@ -918,36 +951,29 @@
     <surefire.version>3.1.0</surefire.version>
     <wagon.ssh.version>2.12</wagon.ssh.version>
     <xml.maven.version>1.0.1</xml.maven.version>
-    <spotless.version>2.27.2</spotless.version>
+    <spotless.version>2.44.4</spotless.version>
     <maven-site.version>3.12.0</maven-site.version>
     <!-- compression -->
     <aircompressor.version>0.27</aircompressor.version>
     <brotli4j.version>1.11.0</brotli4j.version>
     <lz4.version>1.8.0</lz4.version>
     <snappy.version>1.1.10.4</snappy.version>
-    <zstd-jni.version>1.5.5-2</zstd-jni.version>
+    <zstd-jni.version>1.5.7-2</zstd-jni.version>
     <!--
         Note that the version of protobuf shipped in hbase-thirdparty must match the version used
         in hbase-protocol-shaded and hbase-examples. The version of jackson-[annotations,core,
         databind] must be kept in sync with the version of jackson-jaxrs-json-provider shipped in
         hbase-thirdparty.
     -->
-    <hbase-thirdparty.version>4.1.9</hbase-thirdparty.version>
+    <hbase-thirdparty.version>4.1.11</hbase-thirdparty.version>
+    <!-- for.exclusion version are NOT for direct dependencies. To use the provided
+    scope to transitively exclude some transitive dependencies, we need to specify
+    some existing version to for maven. -->
+    <tomcat.version.for.exclusion>9.0.93</tomcat.version.for.exclusion>
     <!-- Coverage properties -->
     <jacoco.version>0.8.8</jacoco.version>
     <jacocoArgLine/>
     <sonar-maven-plugin.version>3.9.1.2184</sonar-maven-plugin.version>
-    <!-- Intraproject jar naming properties -->
-    <!-- TODO this is pretty ugly, but works for the moment.
-      Modules are pretty heavy-weight things, so doing this work isn't too bad. -->
-    <server.test.jar>hbase-server-${project.version}-tests.jar</server.test.jar>
-    <common.test.jar>hbase-common-${project.version}-tests.jar</common.test.jar>
-    <procedure.test.jar>hbase-procedure-${project.version}-tests.jar</procedure.test.jar>
-    <it.test.jar>hbase-it-${project.version}-tests.jar</it.test.jar>
-    <annotations.test.jar>hbase-annotations-${project.version}-tests.jar</annotations.test.jar>
-    <mapreduce.test.jar>hbase-mapreduce-${project.version}-tests.jar</mapreduce.test.jar>
-    <zookeeper.test.jar>hbase-zookeeper-${project.version}-tests.jar</zookeeper.test.jar>
-    <asyncfs.test.jar>hbase-asyncfs-${project.version}-tests.jar</asyncfs.test.jar>
     <shell-executable>bash</shell-executable>
     <surefire.provider>surefire-junit47</surefire.provider>
     <!-- default: run small & medium, medium with 2 threads -->
@@ -1040,6 +1066,14 @@
     <!-- Required for testing LDAP integration -->
     <apacheds.version>2.0.0.AM26</apacheds.version>
     <ldap-api.version>2.0.0</ldap-api.version>
+    <webjars-dir>${project.build.directory}/META-INF/resources/webjars</webjars-dir>
+    <!-- Web UI dependencies -->
+    <bootstrap.version>5.3.3</bootstrap.version>
+    <jquery.version>3.7.1</jquery.version>
+    <tablesorter.version>2.32.0</tablesorter.version>
+    <vega.version>5.32.0</vega.version>
+    <vega-embed.version>6.29.0</vega-embed.version>
+    <vega-lite.version>5.23.0</vega-lite.version>
   </properties>
   <!-- Sorted by groups of dependencies then groupId and artifactId -->
   <dependencyManagement>
@@ -1053,6 +1087,11 @@
           is what glassfish's jspC jar uses and that's where we get our own need for a jsp-api.
         -->
       <!-- Intra-module dependencies -->
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-annotations</artifactId>
+        <version>${project.version}</version>
+      </dependency>
       <dependency>
         <groupId>org.apache.hbase</groupId>
         <artifactId>hbase-annotations</artifactId>
@@ -1635,6 +1674,16 @@
         <version>${hamcrest.version}</version>
       </dependency>
       <dependency>
+        <groupId>net.bytebuddy</groupId>
+        <artifactId>byte-buddy</artifactId>
+        <version>${byte-buddy.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>net.bytebuddy</groupId>
+        <artifactId>byte-buddy-agent</artifactId>
+        <version>${byte-buddy.version}</version>
+      </dependency>
+      <dependency>
         <groupId>org.mockito</groupId>
         <artifactId>mockito-bom</artifactId>
         <version>${mockito.version}</version>
@@ -1649,9 +1698,9 @@
         <scope>import</scope>
       </dependency>
       <dependency>
-        <groupId>io.opentelemetry</groupId>
+        <groupId>io.opentelemetry.semconv</groupId>
         <artifactId>opentelemetry-semconv</artifactId>
-        <version>${opentelemetry.version}-alpha</version>
+        <version>${opentelemetry-semconv.version}</version>
       </dependency>
       <dependency>
         <groupId>io.opentelemetry.javaagent</groupId>
@@ -1667,7 +1716,6 @@
         <groupId>net.spy</groupId>
         <artifactId>spymemcached</artifactId>
         <version>${spy.version}</version>
-        <optional>true</optional>
       </dependency>
       <dependency>
         <groupId>org.bouncycastle</groupId>
@@ -1686,21 +1734,6 @@
         <artifactId>bcpkix-jdk18on</artifactId>
         <version>${bouncycastle.version}</version>
         <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.kerby</groupId>
-        <artifactId>kerb-core</artifactId>
-        <version>${kerby.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.kerby</groupId>
-        <artifactId>kerb-client</artifactId>
-        <version>${kerby.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.kerby</groupId>
-        <artifactId>kerb-simplekdc</artifactId>
-        <version>${kerby.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.commons</groupId>
@@ -1828,9 +1861,8 @@
       </dependency>
       <dependency>
         <groupId>com.sun.xml.ws</groupId>
-        <artifactId>jaxws-ri</artifactId>
-        <version>2.3.2</version>
-        <type>pom</type>
+        <artifactId>jaxws-rt</artifactId>
+        <version>2.3.7</version>
         <exclusions>
           <exclusion>
             <groupId>javax.activation</groupId>
@@ -1845,11 +1877,6 @@
             <artifactId>samples</artifactId>
           </exclusion>
         </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>io.netty</groupId>
-        <artifactId>netty</artifactId>
-        <version>${netty3.version}</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
@@ -2182,6 +2209,51 @@
               <version>${checkstyle.version}</version>
             </dependency>
           </dependencies>
+        </plugin>
+        <!--Need this old plugin to replace in generated files instances
+           of com.google.protobuf so instead its o.a.h.h.com.google.protobuf.
+           Plugin is old and in google code archive. Here is usage done by
+           anohther: https://github.com/beiliubei/maven-replacer-plugin/wiki/Usage-Guide
+           The mess with the regex in the below is to prevent replacement every time
+           we run mvn install. There is probably a better way of avoiding the
+           double interpolation but this is it for now.
+        -->
+        <plugin>
+          <groupId>com.google.code.maven-replacer-plugin</groupId>
+          <artifactId>replacer</artifactId>
+          <version>1.5.3</version>
+          <configuration>
+            <basedir>${basedir}/target/generated-sources/</basedir>
+            <includes>
+              <include>**/*.java</include>
+            </includes>
+            <!-- Ignore errors when missing files, because it means this build
+                   was run with -Dprotoc.skip and there is no -Dreplacer.skip -->
+            <ignoreErrors>true</ignoreErrors>
+            <replacements>
+              <replacement>
+                <token>([^\.])com.google.protobuf</token>
+                <value>$1org.apache.hbase.thirdparty.com.google.protobuf</value>
+              </replacement>
+              <replacement>
+                <token>(public)(\W+static)?(\W+final)?(\W+class)</token>
+                <value>@javax.annotation.Generated("proto") $1$2$3$4</value>
+              </replacement>
+              <!-- replacer doesn't support anchoring or negative lookbehind -->
+              <replacement>
+                <token>(@javax.annotation.Generated\("proto"\) ){2}</token>
+                <value>$1</value>
+              </replacement>
+            </replacements>
+          </configuration>
+          <executions>
+            <execution>
+              <goals>
+                <goal>replace</goal>
+              </goals>
+              <phase>process-sources</phase>
+            </execution>
+          </executions>
         </plugin>
         <plugin>
           <groupId>net.revelc.code</groupId>
@@ -2682,6 +2754,11 @@
           </execution>
         </executions>
       </plugin>
+      <!-- Make a jar and put the sources in the jar -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+      </plugin>
       <!-- parent-module only plugins -->
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
@@ -2715,6 +2792,81 @@
               <goal>transform</goal>
             </goals>
             <phase>site</phase>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>unpack-website-resources</id>
+            <goals>
+              <goal>unpack</goal>
+            </goals>
+            <phase>pre-site</phase>
+            <configuration>
+              <artifactItems>
+                <artifactItem>
+                  <groupId>org.webjars</groupId>
+                  <artifactId>bootstrap</artifactId>
+                  <version>2.3.2</version>
+                  <type>jar</type>
+                  <overWrite>true</overWrite>
+                  <includes>**/css/bootstrap-responsive.min.css</includes>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.webjars</groupId>
+                  <artifactId>highlightjs</artifactId>
+                  <version>8.7</version>
+                  <type>jar</type>
+                  <overWrite>true</overWrite>
+                  <includes>**/styles/github.min.css,
+                    **/highlight.min.js,</includes>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.webjars</groupId>
+                  <artifactId>font-awesome</artifactId>
+                  <version>4.7.0</version>
+                  <type>jar</type>
+                  <overWrite>true</overWrite>
+                  <includes>**/css/font-awesome.css,
+                    **/fonts/fontawesome-webfont.eot,
+                    **/fonts/fontawesome-webfont.svg,
+                    **/fonts/fontawesome-webfont.ttf,
+                    **/fonts/fontawesome-webfont.woff,
+                    **/fonts/fontawesome-webfont.woff2,</includes>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.webjars</groupId>
+                  <artifactId>MathJax</artifactId>
+                  <version>2.7.0</version>
+                  <type>jar</type>
+                  <overWrite>true</overWrite>
+                  <includes>**/MathJax.js,
+                    **/config/TeX-MML-AM_HTMLorMML.js,
+                    **/jax/output/HTML-CSS/jax.js,
+                    **/jax/output/HTML-CSS/imageFonts.js,
+                    **/jax/output/HTML-CSS/fonts/TeX/fontdata.js,
+                    **/jax/output/HTML-CSS/fonts/TeX/SansSerif/Italic/Main.js,
+                    **/jax/output/HTML-CSS/fonts/TeX/SansSerif/Italic/BasicLatin.js,
+                    **/extensions/MathMenu.js,
+                    **/fonts/HTML-CSS/TeX/woff/MathJax_Main-Regular.woff,
+                    **/fonts/HTML-CSS/TeX/woff/MathJax_Main-Italic.woff,
+                    **/fonts/HTML-CSS/TeX/woff/MathJax_Math-Italic.woff,
+                    **/fonts/HTML-CSS/TeX/woff/MathJax_Size1-Regular.woff,
+                    **/fonts/HTML-CSS/TeX/woff/MathJax_Size3-Regular.woff,
+                    **/fonts/HTML-CSS/TeX/woff/MathJax_SansSerif-Italic.woff,
+                    **/fonts/HTML-CSS/TeX/otf/MathJax_Main-Regular.otf,
+                    **/fonts/HTML-CSS/TeX/otf/MathJax_Main-Italic.otf,
+                    **/fonts/HTML-CSS/TeX/otf/MathJax_Math-Italic.otf,
+                    **/fonts/HTML-CSS/TeX/otf/MathJax_Size1-Regular.otf,
+                    **/fonts/HTML-CSS/TeX/otf/MathJax_Size3-Regular.otf,
+                    **/fonts/HTML-CSS/TeX/otf/MathJax_SansSerif-Italic.otf,</includes>
+                </artifactItem>
+              </artifactItems>
+              <outputDirectory>${project.build.directory}</outputDirectory>
+            </configuration>
           </execution>
         </executions>
       </plugin>
@@ -2771,6 +2923,8 @@
             <docVersion>${project.version}</docVersion>
             <imagesdir>images</imagesdir>
             <source-highlighter>coderay</source-highlighter>
+            <iconfont-remote>false</iconfont-remote>
+            <stylesdir>css</stylesdir>
           </attributes>
         </configuration>
         <dependencies>
@@ -2865,9 +3019,9 @@
         <artifactId>maven-antrun-plugin</artifactId>
         <version>${maven.antrun.version}</version>
         <inherited>false</inherited>
-        <!-- Rename the book.pdf generated by asciidoctor -->
         <executions>
           <execution>
+            <!-- Rename the book.pdf generated by asciidoctor -->
             <id>rename-pdf</id>
             <goals>
               <goal>run</goal>
@@ -2876,6 +3030,55 @@
             <configuration>
               <target name="rename file">
                 <move file="${project.reporting.outputDirectory}/book.pdf" tofile="${project.reporting.outputDirectory}/apache_hbase_reference_guide.pdf"/>
+              </target>
+            </configuration>
+          </execution>
+          <execution>
+            <!-- Copy static CSS and JS files for the website. -->
+            <id>copy-css-js-to-site</id>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <phase>pre-site</phase>
+            <configuration>
+              <target>
+                <copy flatten="true" todir="${project.build.directory}/site/css">
+                  <fileset dir="${webjars-dir}/bootstrap/2.3.2/css">
+                    <include name="bootstrap-responsive.min.css"/>
+                  </fileset>
+                  <fileset dir="${webjars-dir}/highlightjs/8.7/styles">
+                    <include name="github.min.css"/>
+                  </fileset>
+                  <fileset dir="${webjars-dir}/font-awesome/4.7.0/css">
+                    <include name="font-awesome.css"/>
+                  </fileset>
+                </copy>
+                <copy flatten="true" todir="${project.build.directory}/site/js">
+                  <fileset dir="${webjars-dir}/highlightjs/8.7/">
+                    <include name="highlight.min.js"/>
+                  </fileset>
+                  <fileset dir="${webjars-dir}/MathJax/2.7.0">
+                    <include name="MathJax.js"/>
+                  </fileset>
+                </copy>
+                <copy flatten="false" todir="${project.build.directory}/site/js">
+                  <fileset dir="${webjars-dir}/MathJax/2.7.0">
+                    <include name="config/TeX-MML-AM_HTMLorMML.js"/>
+                    <include name="jax/output/HTML-CSS/jax.js"/>
+                    <include name="jax/output/HTML-CSS/imageFonts.js"/>
+                    <include name="jax/output/HTML-CSS/fonts/TeX/fontdata.js"/>
+                    <include name="jax/output/HTML-CSS/fonts/TeX/SansSerif/Italic/Main.js"/>
+                    <include name="jax/output/HTML-CSS/fonts/TeX/SansSerif/Italic/BasicLatin.js"/>
+                    <include name="extensions/MathMenu.js"/>
+                    <include name="fonts/HTML-CSS/TeX/woff/MathJax_*.woff"/>
+                    <include name="fonts/HTML-CSS/TeX/otf/MathJax_*.otf"/>
+                  </fileset>
+                </copy>
+                <copy flatten="true" todir="${project.build.directory}/site/fonts">
+                  <fileset dir="${webjars-dir}/font-awesome/4.7.0/fonts">
+                    <include name="fontawesome-webfont.*"/>
+                  </fileset>
+                </copy>
               </target>
             </configuration>
           </execution>
@@ -2909,6 +3112,20 @@
         <artifactId>spotless-maven-plugin</artifactId>
         <version>${spotless.version}</version>
         <configuration>
+          <upToDateChecking>
+            <!--
+              we need to process some files twice with spotless so we need to disable up to date
+              check, see https://github.com/diffplug/spotless/issues/1767
+            -->
+            <enabled>false</enabled>
+          </upToDateChecking>
+          <!--
+            On Windows, spotless might convert the line endings of these files to LF.
+            We're instructing it to respect the line ending definitions in .gitattributes
+            for these files.
+            For more details, please refer to HBASE-29388.
+          -->
+          <lineEndings>GIT_ATTRIBUTES</lineEndings>
           <!-- define a language-specific format -->
           <java>
             <excludes>
@@ -3912,6 +4129,14 @@
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-reload4j</artifactId>
               </exclusion>
+              <exclusion>
+                <groupId>jline</groupId>
+                <artifactId>jline</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.jline</groupId>
+                <artifactId>jline</artifactId>
+              </exclusion>
             </exclusions>
           </dependency>
           <dependency>
@@ -4119,6 +4344,14 @@
               </exclusion>
             </exclusions>
           </dependency>
+          <!--
+            We use hadoop-minikdc everywhere instead of depending on kerby is
+            because hadoop upgrade kerby version in hadoop 3.4.x and kerby 1.x
+            and 2.x are not compatible, so if we specify the version of kerby
+            in our pom will cause compile/runtime error while compiling against
+            different hadoop versions, and also cause problem for downstream
+            projects. See HBASE-29117 for more details.
+          -->
           <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-minikdc</artifactId>
@@ -4140,6 +4373,18 @@
               <exclusion>
                 <groupId>bouncycastle</groupId>
                 <artifactId>bcprov-jdk15</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.apache.directory.api</groupId>
+                <artifactId>api-all</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>jline</groupId>
+                <artifactId>jline</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.jline</groupId>
+                <artifactId>jline</artifactId>
               </exclusion>
             </exclusions>
           </dependency>
@@ -4573,6 +4818,36 @@
           </plugin>
         </plugins>
       </build>
+    </profile>
+    <profile>
+      <id>owasp-dependency-check</id>
+      <activation>
+        <jdk>[11,)</jdk>
+        <property>
+          <name>owasp-check</name>
+        </property>
+      </activation>
+      <reporting>
+        <plugins>
+          <plugin>
+            <groupId>org.owasp</groupId>
+            <artifactId>dependency-check-maven</artifactId>
+            <version>${maven-owasp-plugin.version}</version>
+            <configuration>
+              <skipProvidedScope>true</skipProvidedScope>
+              <skipRuntimeScope>true</skipRuntimeScope>
+              <skipSystemScope>true</skipSystemScope>
+            </configuration>
+            <reportSets>
+              <reportSet>
+                <reports>
+                  <report>aggregate</report>
+                </reports>
+              </reportSet>
+            </reportSets>
+          </plugin>
+        </plugins>
+      </reporting>
     </profile>
     <profile>
       <!-- Used by the website generation script on jenkins to

@@ -90,7 +90,7 @@ public class TestRAMCache {
     MockHFileBlock blk = new MockHFileBlock(BlockType.DATA, size, size, -1,
       ByteBuffer.wrap(byteArr, 0, size), HFileBlock.FILL_HEADER, -1, 52, -1,
       new HFileContextBuilder().build(), ByteBuffAllocator.HEAP);
-    RAMQueueEntry re = new RAMQueueEntry(key, blk, 1, false, false);
+    RAMQueueEntry re = new RAMQueueEntry(key, blk, 1, false, false, false);
 
     Assert.assertNull(cache.putIfAbsent(key, re));
     Assert.assertEquals(cache.putIfAbsent(key, re), re);

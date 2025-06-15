@@ -91,6 +91,12 @@ under the License.
     features to quickly extract data based on their trading, risk and clearing
     activities from one single location.</dd>
 
+  <dt><a href="https://clearwateranalytics.com/">Clearwater Analytics</a></dt>
+  <dd>Clearwater Analytics has an HBase cluster with 9 nodes in production. We
+      have a handful of tables hosting billions of rows (and growing) in a time
+      series manner. Some tables are pretty wide, with several hundreds of
+      columns, while others are very tall and narrow.</dd>
+
    <dt><a href="https://esgyn.com/">EsgynDB</a></dt>
    <dd>EsgynDB, powered by Apache Trafodion&#153;, provides enterprise SQL on Hadoop.
      It includes full ACID transactions, online transaction processing and online

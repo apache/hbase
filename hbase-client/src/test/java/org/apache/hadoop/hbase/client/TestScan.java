@@ -76,7 +76,8 @@ public class TestScan {
       .setAttribute("att_v0", Bytes.toBytes("att_v0"))
       .setColumnFamilyTimeRange(Bytes.toBytes("cf"), 0, 123).setReplicaId(3)
       .setACL("test_user", new Permission(Permission.Action.READ))
-      .setAuthorizations(new Authorizations("test_label")).setPriority(3);
+      .setAuthorizations(new Authorizations("test_label")).setQueryMetricsEnabled(true)
+      .setPriority(3);
 
     Scan scan = new Scan(get);
     assertEquals(get.getCacheBlocks(), scan.getCacheBlocks());
@@ -100,6 +101,7 @@ public class TestScan {
     assertEquals(get.getACL(), scan.getACL());
     assertEquals(get.getAuthorizations().getLabels(), scan.getAuthorizations().getLabels());
     assertEquals(get.getPriority(), scan.getPriority());
+    assertEquals(get.isQueryMetricsEnabled(), scan.isQueryMetricsEnabled());
   }
 
   @Test
@@ -216,7 +218,7 @@ public class TestScan {
       .setReplicaId(3).setReversed(true).setRowOffsetPerColumnFamily(5)
       .setStartStopRowForPrefixScan(Bytes.toBytes("row_")).setScanMetricsEnabled(true)
       .setReadType(ReadType.STREAM).withStartRow(Bytes.toBytes("row_1"))
-      .withStopRow(Bytes.toBytes("row_2")).setTimeRange(0, 13);
+      .withStopRow(Bytes.toBytes("row_2")).setTimeRange(0, 13).setQueryMetricsEnabled(true);
 
     // create a copy of existing scan object
     Scan scanCopy = new Scan(scan);
@@ -252,6 +254,7 @@ public class TestScan {
     assertEquals(scan.getStartRow(), scanCopy.getStartRow());
     assertEquals(scan.getStopRow(), scanCopy.getStopRow());
     assertEquals(scan.getTimeRange(), scanCopy.getTimeRange());
+    assertEquals(scan.isQueryMetricsEnabled(), scanCopy.isQueryMetricsEnabled());
 
     assertTrue("Make sure copy constructor adds all the fields in the copied object",
       EqualsBuilder.reflectionEquals(scan, scanCopy));

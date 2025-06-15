@@ -27,6 +27,7 @@
 <%@ page import="org.apache.hadoop.hbase.monitoring.TaskGroup" %>
 <%
   final HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
+  pageContext.setAttribute("pageTitle", "HBase Master Startup Progress: " + master.getServerName());
 %>
 <jsp:include page="header.jsp">
   <jsp:param name="pageTitle" value="${pageTitle}"/>

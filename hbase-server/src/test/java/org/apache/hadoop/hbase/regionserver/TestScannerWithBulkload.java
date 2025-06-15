@@ -177,7 +177,7 @@ public class TestScannerWithBulkload {
       // Set a big MAX_SEQ_ID_KEY. Scan should not look at this seq id in a bulk loaded file.
       // Scan should only look at the seq id appended at the bulk load time, and not skip its
       // kv.
-      writer.appendFileInfo(MAX_SEQ_ID_KEY, Bytes.toBytes(new Long(9999999)));
+      writer.appendFileInfo(MAX_SEQ_ID_KEY, Bytes.toBytes(Long.valueOf(9999999)));
     } else {
       writer.appendFileInfo(BULKLOAD_TIME_KEY, Bytes.toBytes(EnvironmentEdgeManager.currentTime()));
     }

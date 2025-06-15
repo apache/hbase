@@ -17,7 +17,11 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
+import java.util.List;
+import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 
 @InterfaceAudience.Private
 public class SwapRegionsAction extends BalanceAction {
@@ -53,6 +57,15 @@ public class SwapRegionsAction extends BalanceAction {
   @Override
   public BalanceAction undoAction() {
     return new SwapRegionsAction(fromServer, toRegion, toServer, fromRegion);
+  }
+
+  @Override
+  List<RegionPlan> toRegionPlans(BalancerClusterState cluster) {
+    return ImmutableList.of(
+      new RegionPlan(cluster.regions[getFromRegion()], cluster.servers[getFromServer()],
+        cluster.servers[getToServer()]),
+      new RegionPlan(cluster.regions[getToRegion()], cluster.servers[getToServer()],
+        cluster.servers[getFromServer()]));
   }
 
   @Override

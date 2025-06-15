@@ -75,6 +75,8 @@ allowed_expr="(^org/$|^org/apache/$|^org/apache/hadoop/$"
 allowed_expr+="|^org/apache/hadoop/hbase"
 #   * classes in packages that start with org.apache.hbase
 allowed_expr+="|^org/apache/hbase/"
+# We have a dummy DFSOutputStream implementation in hbase
+allowed_expr+="|^org/apache/hadoop/hdfs/$|^org/apache/hadoop/hdfs/DummyDFSOutputStream.class"
 #   * whatever in the "META-INF" directory
 allowed_expr+="|^META-INF/"
 #   * the folding tables from jcodings
@@ -94,7 +96,8 @@ allowed_expr+="|^PropertyList-1.0.dtd$"
 # Shaded jetty resources
 allowed_expr+="|^about.html$"
 allowed_expr+="|^jetty-dir.css$"
-
+# Coming from Guava, see https://github.com/google/guava/commit/2cc8c5eddb587db3ac12dacdd5563e79a4681ec4
+allowed_expr+="|^org/jspecify/$|^org/jspecify/annotations/$|^org/jspecify/annotations/.*\.class$"
 
 if [ -n "${allow_hadoop}" ]; then
   #   * classes in packages that start with org.apache.hadoop, which by

@@ -18,15 +18,23 @@
 package org.apache.hadoop.hbase.io.compress.zstd;
 
 import com.github.luben.zstd.Zstd;
+import com.github.luben.zstd.ZstdDictDecompress;
+import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.hbase.io.compress.ByteBuffDecompressionCodec;
+import org.apache.hadoop.hbase.io.compress.ByteBuffDecompressor;
+import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.DictionaryCache;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.compress.BlockCompressorStream;
 import org.apache.hadoop.io.compress.BlockDecompressorStream;
 import org.apache.hadoop.io.compress.CompressionCodec;
@@ -36,18 +44,24 @@ import org.apache.hadoop.io.compress.Compressor;
 import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hbase.thirdparty.com.google.common.cache.Cache;
+import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
+
 /**
  * Hadoop ZStandard codec implemented with zstd-jni.
  * <p>
  * This is data format compatible with Hadoop's native ZStandard codec.
  */
 @InterfaceAudience.Private
-public class ZstdCodec implements Configurable, CompressionCodec {
+public class ZstdCodec implements Configurable, CompressionCodec, ByteBuffDecompressionCodec {
 
   public static final String ZSTD_LEVEL_KEY = "hbase.io.compress.zstd.level";
   public static final String ZSTD_BUFFER_SIZE_KEY = "hbase.io.compress.zstd.buffersize";
   public static final int ZSTD_BUFFER_SIZE_DEFAULT = 256 * 1024;
   public static final String ZSTD_DICTIONARY_KEY = "hbase.io.compress.zstd.dictionary";
+
+  private static final Cache<String, Pair<ZstdDictDecompress, Integer>> DECOMPRESS_DICT_CACHE =
+    CacheBuilder.newBuilder().maximumSize(100).expireAfterAccess(10, TimeUnit.MINUTES).build();
 
   private Configuration conf;
   private int bufferSize;
@@ -78,6 +92,11 @@ public class ZstdCodec implements Configurable, CompressionCodec {
   @Override
   public Decompressor createDecompressor() {
     return new ZstdDecompressor(bufferSize, dictionary);
+  }
+
+  @Override
+  public ByteBuffDecompressor createByteBuffDecompressor() {
+    return new ZstdByteBuffDecompressor(dictionary);
   }
 
   @Override
@@ -114,6 +133,17 @@ public class ZstdCodec implements Configurable, CompressionCodec {
   }
 
   @Override
+  public Class<? extends ByteBuffDecompressor> getByteBuffDecompressorType() {
+    return ZstdByteBuffDecompressor.class;
+  }
+
+  @Override
+  public Compression.HFileDecompressionContext
+    getDecompressionContextFromConfiguration(Configuration conf) {
+    return ZstdHFileDecompressionContext.fromConfiguration(conf);
+  }
+
+  @Override
   public String getDefaultExtension() {
     return ".zst";
   }
@@ -133,12 +163,30 @@ public class ZstdCodec implements Configurable, CompressionCodec {
     return size > 0 ? size : ZSTD_BUFFER_SIZE_DEFAULT;
   }
 
+  @Nullable
   static byte[] getDictionary(final Configuration conf) {
     String path = conf.get(ZSTD_DICTIONARY_KEY);
+    return DictionaryCache.getDictionary(conf, path);
+  }
+
+  /**
+   * Returns dictionary and its ID number, useful for comparing to other dictionaries for equality
+   */
+  @Nullable
+  static Pair<ZstdDictDecompress, Integer> getDecompressDictionary(final Configuration conf) {
+    String path = conf.get(ZSTD_DICTIONARY_KEY);
+    if (path == null) {
+      return null;
+    }
+
     try {
-      return DictionaryCache.getDictionary(conf, path);
-    } catch (IOException e) {
-      throw new RuntimeException("Unable to load dictionary at " + path, e);
+      return DECOMPRESS_DICT_CACHE.get(path, () -> {
+        byte[] dictBytes = DictionaryCache.getDictionary(conf, path);
+        int dictId = getDictionaryId(dictBytes);
+        return new Pair<>(new ZstdDictDecompress(dictBytes), dictId);
+      });
+    } catch (ExecutionException e) {
+      throw new RuntimeException("Unable to load ZSTD dictionary", e);
     }
   }
 

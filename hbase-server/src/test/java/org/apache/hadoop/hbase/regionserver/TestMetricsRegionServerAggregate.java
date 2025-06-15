@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.OptionalDouble;
 import java.util.OptionalLong;
@@ -38,6 +39,7 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALProvider;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -189,6 +191,42 @@ public class TestMetricsRegionServerAggregate {
     } finally {
       EnvironmentEdgeManager.reset();
     }
+  }
+
+  @Test
+  public void testWalMetricsForRegionServer() throws InterruptedException {
+    long numLogFiles = 10;
+    long logFileSize = 10240;
+    String hostname = "foo";
+    Configuration conf = HBaseConfiguration.create();
+    conf.setLong(HConstants.REGIONSERVER_METRICS_PERIOD, 1000);
+
+    HRegionServer regionServer = mock(HRegionServer.class);
+    when(regionServer.getConfiguration()).thenReturn(conf);
+    RpcServerInterface rpcServer = mock(RpcServerInterface.class);
+    when(regionServer.getRpcServer()).thenReturn(rpcServer);
+    WALFactory walFactory = mock(WALFactory.class);
+    WALProvider walProvider = mock(WALProvider.class);
+    when(walProvider.getNumLogFiles()).thenReturn(numLogFiles);
+    when(walProvider.getLogFileSize()).thenReturn(logFileSize);
+    List<WALProvider> providers = new ArrayList<>();
+    providers.add(walProvider);
+    when(walFactory.getAllWALProviders()).thenReturn(providers);
+    when(regionServer.getWalFactory()).thenReturn(walFactory);
+    ServerName serverName = mock(ServerName.class);
+    when(serverName.getHostname()).thenReturn(hostname);
+    when(regionServer.getServerName()).thenReturn(serverName);
+
+    MetricsRegionServerWrapperImpl wrapper = new MetricsRegionServerWrapperImpl(regionServer);
+    MetricsRegionServerWrapperImpl.RegionServerMetricsWrapperRunnable runnable =
+      wrapper.new RegionServerMetricsWrapperRunnable();
+    runnable.run();
+    assertEquals(numLogFiles, wrapper.getNumWALFiles());
+    assertEquals(logFileSize, wrapper.getWALFileSize());
+
+    runnable.run();
+    assertEquals(numLogFiles, wrapper.getNumWALFiles());
+    assertEquals(logFileSize, wrapper.getWALFileSize());
   }
 
   private HRegion getMockedRegion(Answer defaultAnswer, String name, String localOnHost,

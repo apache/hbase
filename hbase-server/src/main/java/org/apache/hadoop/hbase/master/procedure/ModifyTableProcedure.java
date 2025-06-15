@@ -17,11 +17,6 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
-import static org.apache.hadoop.hbase.master.procedure.ReopenTableRegionsProcedure.PROGRESSIVE_BATCH_BACKOFF_MILLIS_DEFAULT;
-import static org.apache.hadoop.hbase.master.procedure.ReopenTableRegionsProcedure.PROGRESSIVE_BATCH_BACKOFF_MILLIS_KEY;
-import static org.apache.hadoop.hbase.master.procedure.ReopenTableRegionsProcedure.PROGRESSIVE_BATCH_SIZE_MAX_DISABLED;
-import static org.apache.hadoop.hbase.master.procedure.ReopenTableRegionsProcedure.PROGRESSIVE_BATCH_SIZE_MAX_KEY;
-
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
@@ -31,7 +26,6 @@ import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ConcurrentTableModificationException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
@@ -230,13 +224,8 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
           break;
         case MODIFY_TABLE_REOPEN_ALL_REGIONS:
           if (isTableEnabled(env)) {
-            Configuration conf = env.getMasterConfiguration();
-            long backoffMillis = conf.getLong(PROGRESSIVE_BATCH_BACKOFF_MILLIS_KEY,
-              PROGRESSIVE_BATCH_BACKOFF_MILLIS_DEFAULT);
-            int batchSizeMax =
-              conf.getInt(PROGRESSIVE_BATCH_SIZE_MAX_KEY, PROGRESSIVE_BATCH_SIZE_MAX_DISABLED);
-            addChildProcedure(
-              new ReopenTableRegionsProcedure(getTableName(), backoffMillis, batchSizeMax));
+            addChildProcedure(ReopenTableRegionsProcedure.throttled(env.getMasterConfiguration(),
+              env.getMasterServices().getTableDescriptors().get(getTableName())));
           }
           setNextState(ModifyTableState.MODIFY_TABLE_ASSIGN_NEW_REPLICAS);
           break;
@@ -506,14 +495,17 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
   private void assignNewReplicasIfNeeded(MasterProcedureEnv env) throws IOException {
     final int oldReplicaCount = unmodifiedTableDescriptor.getRegionReplication();
     final int newReplicaCount = modifiedTableDescriptor.getRegionReplication();
-    if (newReplicaCount <= oldReplicaCount) {
+    int existingReplicasCount = env.getAssignmentManager().getRegionStates()
+      .getRegionsOfTable(modifiedTableDescriptor.getTableName()).size();
+    if (newReplicaCount <= Math.min(oldReplicaCount, existingReplicasCount)) {
       return;
     }
     if (isTableEnabled(env)) {
       List<RegionInfo> newReplicas = env.getAssignmentManager().getRegionStates()
         .getRegionsOfTable(getTableName()).stream().filter(RegionReplicaUtil::isDefaultReplica)
-        .flatMap(primaryRegion -> IntStream.range(oldReplicaCount, newReplicaCount).mapToObj(
-          replicaId -> RegionReplicaUtil.getRegionInfoForReplica(primaryRegion, replicaId)))
+        .flatMap(primaryRegion -> IntStream
+          .range(Math.min(oldReplicaCount, existingReplicasCount), newReplicaCount).mapToObj(
+            replicaId -> RegionReplicaUtil.getRegionInfoForReplica(primaryRegion, replicaId)))
         .collect(Collectors.toList());
       addChildProcedure(env.getAssignmentManager().createAssignProcedures(newReplicas));
     }

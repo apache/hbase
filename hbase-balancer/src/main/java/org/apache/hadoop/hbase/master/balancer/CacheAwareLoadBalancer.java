@@ -43,7 +43,9 @@ import org.apache.hadoop.hbase.RegionMetrics;
 import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Size;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -53,6 +55,13 @@ import org.slf4j.LoggerFactory;
 public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
   private static final Logger LOG = LoggerFactory.getLogger(CacheAwareLoadBalancer.class);
 
+  public static final String CACHE_RATIO_THRESHOLD =
+    "hbase.master.balancer.stochastic.throttling.cacheRatio";
+  public static final float CACHE_RATIO_THRESHOLD_DEFAULT = 0.8f;
+
+  public Float ratioThreshold;
+
+  private Long sleepTime;
   private Configuration configuration;
 
   public enum GeneratorFunctionType {
@@ -65,15 +74,19 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
     this.configuration = configuration;
     this.costFunctions = new ArrayList<>();
     super.loadConf(configuration);
+    ratioThreshold =
+      this.configuration.getFloat(CACHE_RATIO_THRESHOLD, CACHE_RATIO_THRESHOLD_DEFAULT);
+    sleepTime = configuration.getLong(MOVE_THROTTLING, MOVE_THROTTLING_DEFAULT.toMillis());
   }
 
   @Override
-  protected List<CandidateGenerator> createCandidateGenerators() {
-    List<CandidateGenerator> candidateGenerators = new ArrayList<>(2);
-    candidateGenerators.add(GeneratorFunctionType.LOAD.ordinal(),
+  protected Map<Class<? extends CandidateGenerator>, CandidateGenerator>
+    createCandidateGenerators(Configuration conf) {
+    Map<Class<? extends CandidateGenerator>, CandidateGenerator> candidateGenerators =
+      new HashMap<>(2);
+    candidateGenerators.put(CacheAwareSkewnessCandidateGenerator.class,
       new CacheAwareSkewnessCandidateGenerator());
-    candidateGenerators.add(GeneratorFunctionType.CACHE_RATIO.ordinal(),
-      new CacheAwareCandidateGenerator());
+    candidateGenerators.put(CacheAwareCandidateGenerator.class, new CacheAwareCandidateGenerator());
     return candidateGenerators;
   }
 
@@ -157,6 +170,53 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
       return regionInfoOptional.get();
     }
     return null;
+  }
+
+  @Override
+  public void throttle(RegionPlan plan) {
+    Pair<ServerName, Float> rsRatio = this.regionCacheRatioOnOldServerMap.get(plan.getRegionName());
+    if (
+      rsRatio != null && plan.getDestination().equals(rsRatio.getFirst())
+        && rsRatio.getSecond() >= ratioThreshold
+    ) {
+      LOG.debug("Moving region {} to server {} with cache ratio {}. No throttling needed.",
+        plan.getRegionInfo().getEncodedName(), plan.getDestination(), rsRatio.getSecond());
+    } else {
+      if (rsRatio != null) {
+        LOG.debug("Moving region {} to server {} with cache ratio: {}. Throttling move for {}ms.",
+          plan.getRegionInfo().getEncodedName(), plan.getDestination(),
+          plan.getDestination().equals(rsRatio.getFirst()) ? rsRatio.getSecond() : "unknown",
+          sleepTime);
+      } else {
+        LOG.debug(
+          "Moving region {} to server {} with no cache ratio info for the region. "
+            + "Throttling move for {}ms.",
+          plan.getRegionInfo().getEncodedName(), plan.getDestination(), sleepTime);
+      }
+      try {
+        Thread.sleep(sleepTime);
+      } catch (InterruptedException e) {
+        throw new RuntimeException(e);
+      }
+    }
+  }
+
+  @Override
+  protected List<RegionPlan> balanceTable(TableName tableName,
+    Map<ServerName, List<RegionInfo>> loadOfOneTable) {
+    final Map<String, Pair<ServerName, Float>> snapshot = new HashMap<>();
+    snapshot.putAll(this.regionCacheRatioOnOldServerMap);
+    List<RegionPlan> plans = super.balanceTable(tableName, loadOfOneTable);
+    plans.sort((p1, p2) -> {
+      Pair<ServerName, Float> pair1 = snapshot.get(p1.getRegionName());
+      Float ratio1 =
+        pair1 == null ? 0 : pair1.getFirst().equals(p1.getDestination()) ? pair1.getSecond() : 0f;
+      Pair<ServerName, Float> pair2 = snapshot.get(p2.getRegionName());
+      Float ratio2 =
+        pair2 == null ? 0 : pair2.getFirst().equals(p2.getDestination()) ? pair2.getSecond() : 0f;
+      return ratio1.compareTo(ratio2) * (-1);
+    });
+    return plans;
   }
 
   private class CacheAwareCandidateGenerator extends CandidateGenerator {
@@ -409,8 +469,9 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
       });
     }
 
-    public final void updateWeight(double[] weights) {
-      weights[GeneratorFunctionType.LOAD.ordinal()] += cost();
+    @Override
+    public final void updateWeight(Map<Class<? extends CandidateGenerator>, Double> weights) {
+      weights.merge(LoadCandidateGenerator.class, cost(), Double::sum);
     }
   }
 
@@ -478,8 +539,8 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
     }
 
     @Override
-    public final void updateWeight(double[] weights) {
-      weights[GeneratorFunctionType.CACHE_RATIO.ordinal()] += cost();
+    public void updateWeight(Map<Class<? extends CandidateGenerator>, Double> weights) {
+      weights.merge(LoadCandidateGenerator.class, cost(), Double::sum);
     }
   }
 }

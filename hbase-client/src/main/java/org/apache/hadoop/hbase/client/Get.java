@@ -95,6 +95,7 @@ public class Get extends Query implements Row {
     this.setFilter(get.getFilter());
     this.setReplicaId(get.getReplicaId());
     this.setConsistency(get.getConsistency());
+    this.setQueryMetricsEnabled(get.isQueryMetricsEnabled());
     // from Get
     this.cacheBlocks = get.getCacheBlocks();
     this.maxVersions = get.getMaxVersions();
@@ -214,7 +215,8 @@ public class Get extends Query implements Row {
 
   @Override
   public Get setColumnFamilyTimeRange(byte[] cf, long minStamp, long maxStamp) {
-    return (Get) super.setColumnFamilyTimeRange(cf, minStamp, maxStamp);
+    super.setColumnFamilyTimeRange(cf, minStamp, maxStamp);
+    return this;
   }
 
   /**
@@ -242,7 +244,8 @@ public class Get extends Query implements Row {
 
   @Override
   public Get setLoadColumnFamiliesOnDemand(boolean value) {
-    return (Get) super.setLoadColumnFamiliesOnDemand(value);
+    super.setLoadColumnFamiliesOnDemand(value);
+    return this;
   }
 
   /**
@@ -451,6 +454,7 @@ public class Get extends Query implements Row {
       map.put("colFamTimeRangeMap", colFamTimeRangeMapStr);
     }
     map.put("priority", getPriority());
+    map.put("queryMetricsEnabled", queryMetricsEnabled);
     return map;
   }
 
@@ -476,46 +480,55 @@ public class Get extends Query implements Row {
 
   @Override
   public Get setAttribute(String name, byte[] value) {
-    return (Get) super.setAttribute(name, value);
+    super.setAttribute(name, value);
+    return this;
   }
 
   @Override
   public Get setId(String id) {
-    return (Get) super.setId(id);
+    super.setId(id);
+    return this;
   }
 
   @Override
   public Get setAuthorizations(Authorizations authorizations) {
-    return (Get) super.setAuthorizations(authorizations);
+    super.setAuthorizations(authorizations);
+    return this;
   }
 
   @Override
   public Get setACL(Map<String, Permission> perms) {
-    return (Get) super.setACL(perms);
+    super.setACL(perms);
+    return this;
   }
 
   @Override
   public Get setACL(String user, Permission perms) {
-    return (Get) super.setACL(user, perms);
+    super.setACL(user, perms);
+    return this;
   }
 
   @Override
   public Get setConsistency(Consistency consistency) {
-    return (Get) super.setConsistency(consistency);
+    super.setConsistency(consistency);
+    return this;
   }
 
   @Override
   public Get setReplicaId(int Id) {
-    return (Get) super.setReplicaId(Id);
+    super.setReplicaId(Id);
+    return this;
   }
 
   @Override
   public Get setIsolationLevel(IsolationLevel level) {
-    return (Get) super.setIsolationLevel(level);
+    super.setIsolationLevel(level);
+    return this;
   }
 
   @Override
   public Get setPriority(int priority) {
-    return (Get) super.setPriority(priority);
+    super.setPriority(priority);
+    return this;
   }
 }

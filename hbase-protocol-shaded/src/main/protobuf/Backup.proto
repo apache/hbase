@@ -54,11 +54,12 @@ message TableServerTimestamp {
 
 /**
  * Structure keeps relevant info for backup restore session
+ * backup_root_dir was marked as deprecated in HBase 2.6.2, will be removed in 4.0.0.
  */
 message BackupImage {
   optional string backup_id = 1;
   optional BackupType backup_type = 2;
-  optional string backup_root_dir = 3;
+  optional string backup_root_dir = 3 [deprecated = true];
   repeated TableName table_list = 4;
   optional uint64 start_ts = 5;
   optional uint64 complete_ts = 6;

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
+import java.util.Map;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -25,7 +26,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 abstract class CostFunction {
 
-  public static final double COST_EPSILON = 0.0001;
+  public static double getCostEpsilon(double cost) {
+    return Math.ulp(cost);
+  }
 
   private float multiplier = 0;
 
@@ -73,6 +76,13 @@ abstract class CostFunction {
         regionMoved(a.getFromRegion(), a.getFromServer(), a.getToServer());
         regionMoved(a.getToRegion(), a.getToServer(), a.getFromServer());
         break;
+      case MOVE_BATCH:
+        MoveBatchAction mba = (MoveBatchAction) action;
+        for (MoveRegionAction moveRegionAction : mba.getMoveActions()) {
+          regionMoved(moveRegionAction.getRegion(), moveRegionAction.getFromServer(),
+            moveRegionAction.getToServer());
+        }
+        break;
       default:
         throw new RuntimeException("Uknown action:" + action.getType());
     }
@@ -89,8 +99,8 @@ abstract class CostFunction {
    * Called once per init or after postAction.
    * @param weights the weights for every generator.
    */
-  public void updateWeight(double[] weights) {
-    weights[StochasticLoadBalancer.GeneratorType.RANDOM.ordinal()] += cost();
+  public void updateWeight(Map<Class<? extends CandidateGenerator>, Double> weights) {
+    weights.merge(RandomCandidateGenerator.class, cost(), Double::sum);
   }
 
   /**
@@ -101,13 +111,14 @@ abstract class CostFunction {
    * @return The scaled value.
    */
   protected static double scale(double min, double max, double value) {
+    double costEpsilon = getCostEpsilon(max);
     if (
-      max <= min || value <= min || Math.abs(max - min) <= COST_EPSILON
-        || Math.abs(value - min) <= COST_EPSILON
+      max <= min || value <= min || Math.abs(max - min) <= costEpsilon
+        || Math.abs(value - min) <= costEpsilon
     ) {
       return 0;
     }
-    if (max <= min || Math.abs(max - min) <= COST_EPSILON) {
+    if (max <= min || Math.abs(max - min) <= costEpsilon) {
       return 0;
     }
 

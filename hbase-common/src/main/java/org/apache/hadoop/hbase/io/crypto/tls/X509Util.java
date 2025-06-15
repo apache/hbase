@@ -20,13 +20,12 @@ package org.apache.hadoop.hbase.io.crypto.tls;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardWatchEventKinds;
-import java.nio.file.WatchEvent;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.security.Security;
 import java.security.cert.PKIXBuilderParameters;
 import java.security.cert.X509CertSelector;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -154,6 +153,11 @@ public final class X509Util {
       getCBCCiphers(), String.class);
 
   private static final String[] DEFAULT_CIPHERS_OPENSSL = getOpenSslFilteredDefaultCiphers();
+
+  public static final String HBASE_TLS_FILEPOLL_INTERVAL_MILLIS =
+    CONFIG_PREFIX + "filepoll.interval.millis";
+  // 1 minute
+  private static final long DEFAULT_FILE_POLL_INTERVAL = Duration.ofSeconds(60).toMillis();
 
   /**
    * Not all of our default ciphers are available in OpenSSL. Takes our default cipher lists and
@@ -495,66 +499,36 @@ public final class X509Util {
     AtomicReference<FileChangeWatcher> trustStoreWatcher, Runnable resetContext)
     throws IOException {
     String keyStoreLocation = config.get(TLS_CONFIG_KEYSTORE_LOCATION, "");
-    keystoreWatcher.set(newFileChangeWatcher(keyStoreLocation, resetContext));
+    keystoreWatcher.set(newFileChangeWatcher(config, keyStoreLocation, resetContext));
     String trustStoreLocation = config.get(TLS_CONFIG_TRUSTSTORE_LOCATION, "");
     // we are using the same callback for both. there's no reason to kick off two
     // threads if keystore/truststore are both at the same location
     if (!keyStoreLocation.equals(trustStoreLocation)) {
-      trustStoreWatcher.set(newFileChangeWatcher(trustStoreLocation, resetContext));
+      trustStoreWatcher.set(newFileChangeWatcher(config, trustStoreLocation, resetContext));
     }
   }
 
-  private static FileChangeWatcher newFileChangeWatcher(String fileLocation, Runnable resetContext)
-    throws IOException {
+  private static FileChangeWatcher newFileChangeWatcher(Configuration config, String fileLocation,
+    Runnable resetContext) throws IOException {
     if (fileLocation == null || fileLocation.isEmpty() || resetContext == null) {
       return null;
     }
     final Path filePath = Paths.get(fileLocation).toAbsolutePath();
-    Path parentPath = filePath.getParent();
-    if (parentPath == null) {
-      throw new IOException("Key/trust store path does not have a parent: " + filePath);
-    }
     FileChangeWatcher fileChangeWatcher =
-      new FileChangeWatcher(parentPath, Objects.toString(filePath.getFileName()), watchEvent -> {
-        handleWatchEvent(filePath, watchEvent, resetContext);
-      });
+      new FileChangeWatcher(filePath, Objects.toString(filePath.getFileName()),
+        Duration
+          .ofMillis(config.getLong(HBASE_TLS_FILEPOLL_INTERVAL_MILLIS, DEFAULT_FILE_POLL_INTERVAL)),
+        watchEventFilePath -> handleWatchEvent(watchEventFilePath, resetContext));
     fileChangeWatcher.start();
     return fileChangeWatcher;
   }
 
   /**
    * Handler for watch events that let us know a file we may care about has changed on disk.
-   * @param filePath the path to the file we are watching for changes.
-   * @param event    the WatchEvent.
    */
-  private static void handleWatchEvent(Path filePath, WatchEvent<?> event, Runnable resetContext) {
-    boolean shouldResetContext = false;
-    Path dirPath = filePath.getParent();
-    if (event.kind().equals(StandardWatchEventKinds.OVERFLOW)) {
-      // If we get notified about possibly missed events, reload the key store / trust store just to
-      // be sure.
-      shouldResetContext = true;
-    } else if (
-      event.kind().equals(StandardWatchEventKinds.ENTRY_MODIFY)
-        || event.kind().equals(StandardWatchEventKinds.ENTRY_CREATE)
-    ) {
-      Path eventFilePath = dirPath.resolve((Path) event.context());
-      if (filePath.equals(eventFilePath)) {
-        shouldResetContext = true;
-      }
-    }
-    // Note: we don't care about delete events
-    if (shouldResetContext) {
-      LOG.info(
-        "Attempting to reset default SSL context after receiving watch event: {} with context: {}",
-        event.kind(), event.context());
-      resetContext.run();
-    } else {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(
-          "Ignoring watch event and keeping previous default SSL context. Event kind: {} with context: {}",
-          event.kind(), event.context());
-      }
-    }
+  private static void handleWatchEvent(Path filePath, Runnable resetContext) {
+    LOG.info("Attempting to reset default SSL context after receiving watch event on file {}",
+      filePath);
+    resetContext.run();
   }
 }

@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
@@ -54,6 +55,7 @@ import org.apache.hadoop.hbase.security.SaslUtil.QualityOfProtection;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.token.AuthenticationTokenSecretManager;
+import org.apache.hadoop.hbase.util.CoprocessorConfigurationUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.GsonUtil;
 import org.apache.hadoop.hbase.util.Pair;
@@ -220,6 +222,8 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
 
   protected volatile boolean allowFallbackToSimpleAuth;
 
+  volatile RpcCoprocessorHost cpHost;
+
   /**
    * Used to get details for scan with a scanner_id<br/>
    * TODO try to figure out a better way and remove reference from regionserver package later.
@@ -312,6 +316,8 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
 
     this.isOnlineLogProviderEnabled = getIsOnlineLogProviderEnabled(conf);
     this.scheduler = scheduler;
+
+    initializeCoprocessorHost(getConf());
   }
 
   @Override
@@ -324,6 +330,13 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
       refreshAuthManager(newConf, new HBasePolicyProvider());
     }
     refreshSlowLogConfiguration(newConf);
+    if (
+      CoprocessorConfigurationUtil.checkConfigurationChange(getConf(), newConf,
+        CoprocessorHost.RPC_COPROCESSOR_CONF_KEY)
+    ) {
+      LOG.info("Update the RPC coprocessor(s) because the configuration has changed");
+      initializeCoprocessorHost(newConf);
+    }
   }
 
   private void refreshSlowLogConfiguration(Configuration newConf) {
@@ -757,10 +770,9 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
   }
 
   /**
-   * Used by {@link org.apache.hadoop.hbase.procedure2.store.region.RegionProcedureStore}. For
-   * master's rpc call, it may generate new procedure and mutate the region which store procedure.
-   * There are some check about rpc when mutate region, such as rpc timeout check. So unset the rpc
-   * call to avoid the rpc check.
+   * Used by {@link org.apache.hadoop.hbase.master.region.MasterRegion}, to avoid hit row lock
+   * timeout when updating master region in a rpc call. See HBASE-23895, HBASE-29251 and HBASE-29294
+   * for more details.
    * @return the currently ongoing rpc call
    */
   public static Optional<RpcCall> unsetCurrentCall() {
@@ -770,8 +782,8 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
   }
 
   /**
-   * Used by {@link org.apache.hadoop.hbase.procedure2.store.region.RegionProcedureStore}. Set the
-   * rpc call back after mutate region.
+   * Used by {@link org.apache.hadoop.hbase.master.region.MasterRegion}. Set the rpc call back after
+   * mutate region.
    */
   public static void setCurrentCall(RpcCall rpcCall) {
     CurCall.set(rpcCall);
@@ -897,5 +909,14 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
       allowedOnPath = ".*/src/test/.*")
   public List<BlockingServiceAndInterface> getServices() {
     return services;
+  }
+
+  private void initializeCoprocessorHost(Configuration conf) {
+    this.cpHost = new RpcCoprocessorHost(conf);
+  }
+
+  @Override
+  public RpcCoprocessorHost getRpcCoprocessorHost() {
+    return cpHost;
   }
 }

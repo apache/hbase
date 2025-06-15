@@ -33,6 +33,8 @@
 RuntimeMXBean runtimeBean = ManagementFactory.getRuntimeMXBean();
 ObjectName jvmMetrics = new ObjectName("Hadoop:service=HBase,name=JvmMetrics");
 ObjectName rsMetrics = new ObjectName("Hadoop:service=HBase,name=RegionServer,sub=Server");
+Object pauseWarnThresholdExceeded = JSONMetricUtil.getValueFromMBean(rsMetrics, "pauseWarnThresholdExceeded");
+Object pauseInfoThresholdExceeded = JSONMetricUtil.getValueFromMBean(rsMetrics, "pauseInfoThresholdExceeded");
 
 // There is always two of GC collectors
 List<GarbageCollectorMXBean> gcBeans = JSONMetricUtil.getGcCollectorBeans();
@@ -60,7 +62,7 @@ pageContext.setAttribute("pageTitle", "Process info for PID: " + JSONMetricUtil.
         <th>Started</th>
         <th>Uptime</th>
         <th>PID</th>
-        <th>JvmPauseMonitor Count </th>
+        <th>JvmPauseMonitor Count</th>
         <th>Owner</th>
     </tr>
     <tr>
@@ -68,8 +70,8 @@ pageContext.setAttribute("pageTitle", "Process info for PID: " + JSONMetricUtil.
         <td><%= new Date(runtimeBean.getStartTime()) %></td>
         <td><%= StringUtils.humanTimeDiff(runtimeBean.getUptime()) %></td>
         <td><%= JSONMetricUtil.getProcessPID() %></td>
-        <td><%= (long)JSONMetricUtil.getValueFromMBean(rsMetrics, "pauseWarnThresholdExceeded")
-          + (long)JSONMetricUtil.getValueFromMBean(rsMetrics, "pauseInfoThresholdExceeded") %></td>
+        <td><%= pauseWarnThresholdExceeded != null && pauseInfoThresholdExceeded != null ?
+                (long)pauseWarnThresholdExceeded + (long)pauseInfoThresholdExceeded : 0 %></td>
         <td><%= runtimeBean.getSystemProperties().get("user.name") %></td>
       </tr>
   </table>
@@ -108,16 +110,16 @@ pageContext.setAttribute("pageTitle", "Process info for PID: " + JSONMetricUtil.
     </div>
     <% if (gcBeans.size() == 2) { %>
 <div class="tabbable">
-  <ul class="nav nav-pills">
-    <li class="active">
-      <a href="#tab_gc1" data-toggle="tab"><%=collector1.getName() %></a>
+  <ul class="nav nav-pills" role="tablist">
+    <li class="nav-item">
+      <a class="nav-link active" href="#tab_gc1" data-bs-toggle="tab" role="tab"><%=collector1.getName() %></a>
     </li>
-    <li class="">
-      <a href="#tab_gc2" data-toggle="tab"><%=collector2.getName() %></a>
+    <li class="nav-item">
+      <a class="nav-link" href="#tab_gc2" data-bs-toggle="tab" role="tab"><%=collector2.getName() %></a>
      </li>
   </ul>
-    <div class="tab-content" style="padding-bottom: 9px; border-bottom: 1px solid #ddd;">
-      <div class="tab-pane active" id="tab_gc1">
+    <div class="tab-content">
+      <div class="tab-pane active" id="tab_gc1" role="tabpanel">
           <table class="table table-striped">
             <tr>
               <th>Collection Count</th>
@@ -132,7 +134,7 @@ pageContext.setAttribute("pageTitle", "Process info for PID: " + JSONMetricUtil.
             </tr>
           </table>
       </div>
-      <div class="tab-pane" id="tab_gc2">
+      <div class="tab-pane" id="tab_gc2" role="tabpanel">
         <table class="table table-striped">
           <tr>
             <th>Collection Count</th>

@@ -80,17 +80,20 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer
   }
 
   @Override
-  protected List<CandidateGenerator> createCandidateGenerators() {
-    List<CandidateGenerator> fnPickers = new ArrayList<>(2);
-    fnPickers.add(new FavoredNodeLoadPicker());
-    fnPickers.add(new FavoredNodeLocalityPicker());
+  protected Map<Class<? extends CandidateGenerator>, CandidateGenerator>
+    createCandidateGenerators(Configuration conf) {
+    Map<Class<? extends CandidateGenerator>, CandidateGenerator> fnPickers = new HashMap<>(2);
+    fnPickers.put(FavoredNodeLoadPicker.class, new FavoredNodeLoadPicker());
+    fnPickers.put(FavoredNodeLocalityPicker.class, new FavoredNodeLocalityPicker());
     return fnPickers;
   }
 
   /** Returns any candidate generator in random */
   @Override
-  protected CandidateGenerator getRandomGenerator() {
-    return candidateGenerators.get(ThreadLocalRandom.current().nextInt(candidateGenerators.size()));
+  protected CandidateGenerator getRandomGenerator(BalancerClusterState cluster) {
+    Class<? extends CandidateGenerator> clazz = shuffledGeneratorClasses.get()
+      .get(ThreadLocalRandom.current().nextInt(candidateGenerators.size()));
+    return candidateGenerators.get(clazz);
   }
 
   /**

@@ -21,7 +21,6 @@
   import="static org.apache.commons.lang3.StringEscapeUtils.escapeXml"
   import="java.net.URLEncoder"
   import="java.util.ArrayList"
-  import="java.util.Collection"
   import="java.util.HashMap"
   import="java.util.LinkedHashMap"
   import="java.util.List"
@@ -30,20 +29,19 @@
   import="java.util.HashSet"
   import="java.util.Optional"
   import="java.util.TreeMap"
-  import="java.util.concurrent.TimeoutException"
   import="java.util.concurrent.TimeUnit"
+  import="java.text.DecimalFormat"
+  import="java.math.RoundingMode"
   import="org.apache.commons.lang3.StringEscapeUtils"
   import="org.apache.hadoop.conf.Configuration"
   import="org.apache.hadoop.hbase.HConstants"
   import="org.apache.hadoop.hbase.HRegionLocation"
-  import="org.apache.hadoop.hbase.NotServingRegionException"
   import="org.apache.hadoop.hbase.RegionMetrics"
   import="org.apache.hadoop.hbase.RegionMetricsBuilder"
   import="org.apache.hadoop.hbase.ServerMetrics"
   import="org.apache.hadoop.hbase.ServerName"
   import="org.apache.hadoop.hbase.Size"
   import="org.apache.hadoop.hbase.TableName"
-  import="org.apache.hadoop.hbase.TableNotFoundException"
   import="org.apache.hadoop.hbase.client.AsyncAdmin"
   import="org.apache.hadoop.hbase.client.AsyncConnection"
   import="org.apache.hadoop.hbase.client.ColumnFamilyDescriptor"
@@ -63,13 +61,11 @@
   import="org.apache.hadoop.hbase.master.http.MetaBrowser"
   import="org.apache.hadoop.hbase.master.http.RegionReplicaInfo"
   import="org.apache.hadoop.hbase.quotas.QuotaSettingsFactory"
-  import="org.apache.hadoop.hbase.quotas.QuotaTableUtil"
-  import="org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException" %>
+  import="org.apache.hadoop.hbase.quotas.QuotaTableUtil" %>
 <%@ page import="org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot" %>
 <%@ page import="org.apache.hadoop.hbase.quotas.ThrottleSettings" %>
 <%@ page import="org.apache.hadoop.hbase.util.Bytes" %>
 <%@ page import="org.apache.hadoop.hbase.util.FSUtils" %>
-<%@ page import="org.apache.hadoop.hbase.zookeeper.MetaTableLocator" %>
 <%@ page import="org.apache.hadoop.util.StringUtils" %>
 <%@ page import="org.apache.hbase.thirdparty.com.google.protobuf.ByteString" %>
 <%@ page import="org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos" %>
@@ -77,6 +73,7 @@
 <%@ page import="org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas" %>
 <%@ page import="org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota" %>
 <%@ page import="java.util.stream.Collectors" %>
+<%@ page import="java.nio.charset.StandardCharsets" %>
 <%!
   /**
    * @return An empty region load stamped with the passed in <code>regionInfo</code>
@@ -116,7 +113,7 @@
    * @return an <td> tag contents server name links to server rs-status page.
    */
   private static String buildRegionDeployedServerTag(RegionInfo regionInfo, HMaster master,
-    Map<RegionInfo, ServerName> regionsToServer) {
+                                                     Map<RegionInfo, ServerName> regionsToServer) {
     ServerName serverName = regionsToServer.get(regionInfo);
 
     if (serverName == null) {
@@ -124,7 +121,7 @@
     }
 
     String hostName = serverName.getHostname();
-    String hostNameEncoded = URLEncoder.encode(hostName);
+    String hostNameEncoded = URLEncoder.encode(hostName, StandardCharsets.UTF_8);
     // This port might be wrong if RS actually ended up using something else.
     int serverInfoPort = master.getRegionServerInfoPort(serverName);
     String urlRegionServer = "//" + hostNameEncoded + ":" + serverInfoPort + "/rs-status";
@@ -138,7 +135,7 @@
    */
   private static String moreRegionsToRender(int numRegionsRendered, int numRegions, String fqtn) {
     if (numRegions > numRegionsRendered) {
-      String allRegionsUrl = "?name=" + URLEncoder.encode(fqtn) + "&numRegions=all";
+      String allRegionsUrl = "?name=" + URLEncoder.encode(fqtn, StandardCharsets.UTF_8) + "&numRegions=all";
 
       return "This table has <b>" + numRegions
         + "</b> regions in total, in order to improve the page load time, only <b>"
@@ -222,7 +219,7 @@
   final MetaBrowser metaBrowser = new MetaBrowser(connection, request);
 %>
 
-<% // unknow table
+<% // unknown table
   if (! admin.tableExists(TableName.valueOf(fqtn)).get()) { %>
     <div class="container-fluid content">
       <div class="row inner_header">
@@ -301,210 +298,214 @@
 <div class="row">
 <% //Meta table.
   if(fqtn.equals(TableName.META_TABLE_NAME.getNameAsString())) { %>
-<h2>Table Regions</h2>
-<div class="tabbable">
-  <ul class="nav nav-pills">
-    <li class="active"><a href="#metaTab_baseStats" data-toggle="tab">Base Stats</a></li>
-    <li class=""><a href="#metaTab_localityStats" data-toggle="tab">Localities</a></li>
-    <li class=""><a href="#metaTab_compactStats" data-toggle="tab">Compactions</a></li>
-  </ul>
+  <section>
+    <h2>Table Regions</h2>
+    <div class="tabbable">
+      <ul class="nav nav-pills" role="tablist">
+        <li class="nav-item"><a class="nav-link active" href="#metaTab_baseStats" data-bs-toggle="tab" role="tab">Base Stats</a></li>
+        <li class="nav-item"><a class="nav-link" href="#metaTab_localityStats" data-bs-toggle="tab" role="tab">Localities</a></li>
+        <li class="nav-item"><a class="nav-link" href="#metaTab_compactStats" data-bs-toggle="tab" role="tab">Compactions</a></li>
+      </ul>
 
-  <div class="tab-content" style="padding-bottom: 9px; border-bottom: 1px solid #ddd;">
-    <div class="tab-pane active" id="metaTab_baseStats">
-      <table id="metaTableBaseStatsTable" class="tablesorter table table-striped">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Region Server</th>
-            <th>ReadRequests</th>
-            <th>WriteRequests</th>
-            <th>Uncompressed StoreFileSize</th>
-            <th>StorefileSize</th>
-            <th>Num.Storefiles</th>
-            <th>MemSize</th>
-            <th>Start Key</th>
-            <th>End Key</th>
-            <th>ReplicaID</th>
-          </tr>
-        </thead>
-        <tbody>
-        <%
-          // NOTE: Presumes meta with one or more replicas
-          for (int j = 0; j < numMetaReplicas; j++) {
-            RegionInfo meta = RegionReplicaUtil.getRegionInfoForReplica(
-                                    RegionInfoBuilder.FIRST_META_REGIONINFO, j);
-            //If a metaLocation is null, All of its info would be empty here to be displayed.
-            RegionStateNode rsn = master.getAssignmentManager().getRegionStates()
-              .getRegionStateNode(meta);
-            ServerName metaLocation = rsn != null ? rsn.getRegionLocation() : null;
-            for (int i = 0; i < 1; i++) {
-              //If metaLocation is null, default value below would be displayed in UI.
-              String hostAndPort = "";
-              String readReq = "N/A";
-              String writeReq = "N/A";
-              String fileSizeUncompressed = ZEROMB;
-              String fileSize = ZEROMB;
-              String fileCount = "N/A";
-              String memSize = ZEROMB;
+      <div class="tab-content">
+        <div class="tab-pane active" id="metaTab_baseStats" role="tabpanel">
+          <table id="metaTableBaseStatsTable" class="tablesorter table table-striped">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Region Server</th>
+                <th class="cls_separator">ReadRequests</th>
+                <th class="cls_separator">WriteRequests</th>
+                <th class="cls_filesize">Uncompressed StoreFileSize</th>
+                <th class="cls_filesize">StorefileSize</th>
+                <th class="cls_separator">Num.Storefiles</th>
+                <th class="cls_filesize">MemSize</th>
+                <th class="cls_emptyMin">Start Key</th>
+                <th class="cls_emptyMax">End Key</th>
+                <th>ReplicaID</th>
+              </tr>
+            </thead>
+            <tbody>
+            <%
+              // NOTE: Presumes meta with one or more replicas
+              for (int j = 0; j < numMetaReplicas; j++) {
+                RegionInfo meta = RegionReplicaUtil.getRegionInfoForReplica(
+                                        RegionInfoBuilder.FIRST_META_REGIONINFO, j);
+                //If a metaLocation is null, All of its info would be empty here to be displayed.
+                RegionStateNode rsn = master.getAssignmentManager().getRegionStates()
+                  .getRegionStateNode(meta);
+                ServerName metaLocation = rsn != null ? rsn.getRegionLocation() : null;
+                for (int i = 0; i < 1; i++) {
+                  //If metaLocation is null, default value below would be displayed in UI.
+                  String hostAndPort = "";
+                  String readReq = "N/A";
+                  String writeReq = "N/A";
+                  String fileSizeUncompressed = ZEROMB;
+                  String fileSize = ZEROMB;
+                  String fileCount = "N/A";
+                  String memSize = ZEROMB;
 
-              if (metaLocation != null) {
-                ServerMetrics sl = master.getServerManager().getLoad(metaLocation);
-                // The host name portion should be safe, but I don't know how we handle IDNs so err on the side of failing safely.
-                hostAndPort = URLEncoder.encode(metaLocation.getHostname()) + ":" + master.getRegionServerInfoPort(metaLocation);
-                if (sl != null) {
-                  Map<byte[], RegionMetrics> map = sl.getRegionMetrics();
-                  if (map.containsKey(meta.getRegionName())) {
-                    RegionMetrics load = map.get(meta.getRegionName());
-                    readReq = String.format("%,1d", load.getReadRequestCount());
-                    writeReq = String.format("%,1d", load.getWriteRequestCount());
-                    double rSize = load.getStoreFileSize().get(Size.Unit.BYTE);
-                    if (rSize > 0) {
-                    fileSize = StringUtils.byteDesc((long) rSize);
-                    }
-                    double rSizeUncompressed = load.getUncompressedStoreFileSize().get(Size.Unit.BYTE);
-                    if (rSizeUncompressed > 0) {
-                    fileSizeUncompressed = StringUtils.byteDesc((long) rSizeUncompressed);
-                    }
-                    fileCount = String.format("%,1d", load.getStoreFileCount());
-                    double mSize = load.getMemStoreSize().get(Size.Unit.BYTE);
-                    if (mSize > 0) {
-                    memSize = StringUtils.byteDesc((long)mSize);
+                  if (metaLocation != null) {
+                    ServerMetrics sl = master.getServerManager().getLoad(metaLocation);
+                    // The host name portion should be safe, but I don't know how we handle IDNs so err on the side of failing safely.
+                    hostAndPort = URLEncoder.encode(metaLocation.getHostname(), StandardCharsets.UTF_8) + ":" + master.getRegionServerInfoPort(metaLocation);
+                    if (sl != null) {
+                      Map<byte[], RegionMetrics> map = sl.getRegionMetrics();
+                      if (map.containsKey(meta.getRegionName())) {
+                        RegionMetrics load = map.get(meta.getRegionName());
+                        readReq = String.format("%,1d", load.getReadRequestCount());
+                        writeReq = String.format("%,1d", load.getWriteRequestCount());
+                        double rSize = load.getStoreFileSize().get(Size.Unit.BYTE);
+                        if (rSize > 0) {
+                        fileSize = StringUtils.byteDesc((long) rSize);
+                        }
+                        double rSizeUncompressed = load.getUncompressedStoreFileSize().get(Size.Unit.BYTE);
+                        if (rSizeUncompressed > 0) {
+                        fileSizeUncompressed = StringUtils.byteDesc((long) rSizeUncompressed);
+                        }
+                        fileCount = String.format("%,1d", load.getStoreFileCount());
+                        double mSize = load.getMemStoreSize().get(Size.Unit.BYTE);
+                        if (mSize > 0) {
+                        memSize = StringUtils.byteDesc((long)mSize);
+                        }
+                      }
                     }
                   }
-                }
-              }
-            %>
-          <tr>
-            <td><%= escapeXml(meta.getRegionNameAsString()) %></td>
-            <td><a href="http://<%= hostAndPort %>/rs-status"><%= StringEscapeUtils.escapeHtml4(hostAndPort) %></a></td>
-            <td><%= readReq%></td>
-            <td><%= writeReq%></td>
-            <td><%= fileSizeUncompressed%></td>
-            <td><%= fileSize%></td>
-            <td><%= fileCount%></td>
-            <td><%= memSize%></td>
-            <td><%= escapeXml(Bytes.toString(meta.getStartKey())) %></td>
-            <td><%= escapeXml(Bytes.toString(meta.getEndKey())) %></td>
-            <td><%= meta.getReplicaId() %></td>
-          </tr>
-        <%  } %>
-        <%} %>
-        </tbody>
-      </table>
-    </div>
-    <div class="tab-pane" id="metaTab_localityStats">
-       <table id="metaTableLocalityStatsTable" class="tablesorter table table-striped">
-         <thead>
-           <tr>
-             <th>Name</th>
-             <th>Region Server</th>
-             <th>Locality</th>
-             <th>LocalityForSsd</th>
-           </tr>
-         </thead>
-         <tbody>
-         <%
-           // NOTE: Presumes meta with one or more replicas
-           for (int j = 0; j < numMetaReplicas; j++) {
-             RegionInfo meta = RegionReplicaUtil.getRegionInfoForReplica(
-                                     RegionInfoBuilder.FIRST_META_REGIONINFO, j);
-             //If a metaLocation is null, All of its info would be empty here to be displayed.
-             RegionStateNode rsn = master.getAssignmentManager().getRegionStates()
-              .getRegionStateNode(meta);
-             ServerName metaLocation = rsn != null ? rsn.getRegionLocation() : null;
-             for (int i = 0; i < 1; i++) {
-               //If metaLocation is null, default value below would be displayed in UI.
-               String hostAndPort = "";
-               float locality = 0.0f;
-               float localityForSsd = 0.0f;
+                %>
+              <tr>
+                <td><%= escapeXml(meta.getRegionNameAsString()) %></td>
+                <td><a href="http://<%= hostAndPort %>/rs-status"><%= StringEscapeUtils.escapeHtml4(hostAndPort) %></a></td>
+                <td><%= readReq%></td>
+                <td><%= writeReq%></td>
+                <td><%= fileSizeUncompressed%></td>
+                <td><%= fileSize%></td>
+                <td><%= fileCount%></td>
+                <td><%= memSize%></td>
+                <td><%= escapeXml(Bytes.toString(meta.getStartKey())) %></td>
+                <td><%= escapeXml(Bytes.toString(meta.getEndKey())) %></td>
+                <td><%= meta.getReplicaId() %></td>
+              </tr>
+            <%  } %>
+            <%} %>
+            </tbody>
+          </table>
+        </div>
+        <div class="tab-pane" id="metaTab_localityStats" role="tabpanel">
+           <table id="metaTableLocalityStatsTable" class="tablesorter table table-striped">
+             <thead>
+               <tr>
+                 <th>Name</th>
+                 <th>Region Server</th>
+                 <th class="cls_separator">Locality</th>
+                 <th class="cls_separator">LocalityForSsd</th>
+               </tr>
+             </thead>
+             <tbody>
+             <%
+               // NOTE: Presumes meta with one or more replicas
+               for (int j = 0; j < numMetaReplicas; j++) {
+                 RegionInfo meta = RegionReplicaUtil.getRegionInfoForReplica(
+                                         RegionInfoBuilder.FIRST_META_REGIONINFO, j);
+                 //If a metaLocation is null, All of its info would be empty here to be displayed.
+                 RegionStateNode rsn = master.getAssignmentManager().getRegionStates()
+                  .getRegionStateNode(meta);
+                 ServerName metaLocation = rsn != null ? rsn.getRegionLocation() : null;
+                 for (int i = 0; i < 1; i++) {
+                   //If metaLocation is null, default value below would be displayed in UI.
+                   String hostAndPort = "";
+                   float locality = 0.0f;
+                   float localityForSsd = 0.0f;
 
-               if (metaLocation != null) {
-                 ServerMetrics sl = master.getServerManager().getLoad(metaLocation);
-                 hostAndPort = URLEncoder.encode(metaLocation.getHostname()) + ":" + master.getRegionServerInfoPort(metaLocation);
-                 if (sl != null) {
-                   Map<byte[], RegionMetrics> map = sl.getRegionMetrics();
-                   if (map.containsKey(meta.getRegionName())) {
-                     RegionMetrics load = map.get(meta.getRegionName());
-                     locality = load.getDataLocality();
-                     localityForSsd = load.getDataLocalityForSsd();
+                   if (metaLocation != null) {
+                     ServerMetrics sl = master.getServerManager().getLoad(metaLocation);
+                     hostAndPort = URLEncoder.encode(metaLocation.getHostname(), StandardCharsets.UTF_8) + ":" + master.getRegionServerInfoPort(metaLocation);
+                     if (sl != null) {
+                       Map<byte[], RegionMetrics> map = sl.getRegionMetrics();
+                       if (map.containsKey(meta.getRegionName())) {
+                         RegionMetrics load = map.get(meta.getRegionName());
+                         locality = load.getDataLocality();
+                         localityForSsd = load.getDataLocalityForSsd();
+                       }
+                     }
                    }
-                 }
-               }
-             %>
-           <tr>
-             <td><%= escapeXml(meta.getRegionNameAsString()) %></td>
-             <td><a href="http://<%= hostAndPort %>/rs-status"><%= StringEscapeUtils.escapeHtml4(hostAndPort) %></a></td>
-             <td><%= locality%></td>
-             <td><%= localityForSsd%></td>
-           </tr>
-         <%  } %>
-         <%} %>
-         </tbody>
-       </table>
-     </div>
-    <div class="tab-pane" id="metaTab_compactStats">
-      <table id="metaTableCompactStatsTable" class="tablesorter table table-striped">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Region Server</th>
-            <th>Num. Compacting Cells</th>
-            <th>Num. Compacted Cells</th>
-            <th>Remaining Cells</th>
-            <th>Compaction Progress</th>
-          </tr>
-        </thead>
-        <tbody>
-        <%
-          // NOTE: Presumes meta with one or more replicas
-          for (int j = 0; j < numMetaReplicas; j++) {
-            RegionInfo meta = RegionReplicaUtil.getRegionInfoForReplica(
-                                    RegionInfoBuilder.FIRST_META_REGIONINFO, j);
-            //If a metaLocation is null, All of its info would be empty here to be displayed.
-            RegionStateNode rsn = master.getAssignmentManager().getRegionStates()
-              .getRegionStateNode(meta);
-            ServerName metaLocation = rsn != null ? rsn.getRegionLocation() : null;
-            for (int i = 0; i < 1; i++) {
-              //If metaLocation is null, default value below would be displayed in UI.
-              String hostAndPort = "";
-              long compactingCells = 0;
-              long compactedCells = 0;
-              String compactionProgress = "";
+                 %>
+               <tr>
+                 <td><%= escapeXml(meta.getRegionNameAsString()) %></td>
+                 <td><a href="http://<%= hostAndPort %>/rs-status"><%= StringEscapeUtils.escapeHtml4(hostAndPort) %></a></td>
+                 <td><%= locality%></td>
+                 <td><%= localityForSsd%></td>
+               </tr>
+             <%  } %>
+             <%} %>
+             </tbody>
+           </table>
+         </div>
+        <div class="tab-pane" id="metaTab_compactStats" role="tabpanel">
+          <table id="metaTableCompactStatsTable" class="tablesorter table table-striped">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Region Server</th>
+                <th class="cls_separator">Num. Compacting Cells</th>
+                <th class="cls_separator">Num. Compacted Cells</th>
+                <th class="cls_separator">Remaining Cells</th>
+                <th>Compaction Progress</th>
+              </tr>
+            </thead>
+            <tbody>
+            <%
+              // NOTE: Presumes meta with one or more replicas
+              for (int j = 0; j < numMetaReplicas; j++) {
+                RegionInfo meta = RegionReplicaUtil.getRegionInfoForReplica(
+                                        RegionInfoBuilder.FIRST_META_REGIONINFO, j);
+                //If a metaLocation is null, All of its info would be empty here to be displayed.
+                RegionStateNode rsn = master.getAssignmentManager().getRegionStates()
+                  .getRegionStateNode(meta);
+                ServerName metaLocation = rsn != null ? rsn.getRegionLocation() : null;
+                for (int i = 0; i < 1; i++) {
+                  //If metaLocation is null, default value below would be displayed in UI.
+                  String hostAndPort = "";
+                  long compactingCells = 0;
+                  long compactedCells = 0;
+                  String compactionProgress = "";
 
-              if (metaLocation != null) {
-                ServerMetrics sl = master.getServerManager().getLoad(metaLocation);
-                hostAndPort = URLEncoder.encode(metaLocation.getHostname()) + ":" + master.getRegionServerInfoPort(metaLocation);
-                if (sl != null) {
-                  Map<byte[], RegionMetrics> map = sl.getRegionMetrics();
-                  if (map.containsKey(meta.getRegionName())) {
-                    RegionMetrics load = map.get(meta.getRegionName());
-                    compactingCells = load.getCompactingCellCount();
-                    compactedCells = load.getCompactedCellCount();
-                    if (compactingCells > 0) {
-                      compactionProgress = String.format("%.2f", 100 * ((float)
-                        compactedCells / compactingCells)) + "%";
+                  if (metaLocation != null) {
+                    ServerMetrics sl = master.getServerManager().getLoad(metaLocation);
+                    hostAndPort = URLEncoder.encode(metaLocation.getHostname(), StandardCharsets.UTF_8) + ":" + master.getRegionServerInfoPort(metaLocation);
+                    if (sl != null) {
+                      Map<byte[], RegionMetrics> map = sl.getRegionMetrics();
+                      if (map.containsKey(meta.getRegionName())) {
+                        RegionMetrics load = map.get(meta.getRegionName());
+                        compactingCells = load.getCompactingCellCount();
+                        compactedCells = load.getCompactedCellCount();
+                        if (compactingCells > 0) {
+                          compactionProgress = String.format("%.2f", 100 * ((float)
+                            compactedCells / compactingCells)) + "%";
+                        }
+                      }
                     }
                   }
-                }
-              }
-        %>
-          <tr>
-            <td><%= escapeXml(meta.getRegionNameAsString()) %></td>
-            <td><a href="http://<%= hostAndPort %>/rs-status"><%= StringEscapeUtils.escapeHtml4(hostAndPort) %></a></td>
-            <td><%= String.format("%,1d", compactingCells)%></td>
-            <td><%= String.format("%,1d", compactedCells)%></td>
-            <td><%= String.format("%,1d", compactingCells - compactedCells)%></td>
-            <td><%= compactionProgress%></td>
-          </tr>
-        <%  } %>
-        <%} %>
-        </tbody>
-      </table>
+            %>
+              <tr>
+                <td><%= escapeXml(meta.getRegionNameAsString()) %></td>
+                <td><a href="http://<%= hostAndPort %>/rs-status"><%= StringEscapeUtils.escapeHtml4(hostAndPort) %></a></td>
+                <td><%= String.format("%,1d", compactingCells)%></td>
+                <td><%= String.format("%,1d", compactedCells)%></td>
+                <td><%= String.format("%,1d", compactingCells - compactedCells)%></td>
+                <td><%= compactionProgress%></td>
+              </tr>
+            <%  } %>
+            <%} %>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
-  </div>
+  </section>
 </div>
 
-<h2 id="meta-entries">Meta Entries</h2>
+<div class="row">
+    <h2 id="meta-entries">Meta Entries</h2>
 <%
   if (!metaBrowser.getErrorMessages().isEmpty()) {
     for (final String errorMessage : metaBrowser.getErrorMessages()) {
@@ -610,42 +611,54 @@
   %>
   </table>
 </div>
-<div class="row">
+</div>
+<div class="row mb-5">
   <div class="col-md-4">
     <ul class="pagination" style="margin: 20px 0">
-      <li>
-        <a href="<%= metaBrowser.buildFirstPageUrl() %>" aria-label="Previous">
+      <li class="page-item">
+        <a class="page-link" href="<%= metaBrowser.buildFirstPageUrl() %>" aria-label="First" title="First">
           <span aria-hidden="true">&#x21E4;</span>
         </a>
       </li>
-      <li<%= metaScanHasMore ? "" : " class=\"disabled\"" %>>
-        <a<%= metaScanHasMore ? " href=\"" + metaBrowser.buildNextPageUrl(lastRow) + "\"" : "" %> aria-label="Next">
+      <li<%= metaScanHasMore ? " class=\"page-item\"" : " class=\"page-item disabled\"" %>>
+        <a class="page-link" <%= metaScanHasMore ? " href=\"" + metaBrowser.buildNextPageUrl(lastRow) + "\"" : "" %> aria-label="Next" title="Next">
           <span aria-hidden="true">&raquo;</span>
         </a>
       </li>
     </ul>
   </div>
   <div class="col-md-8">
-    <form action="/table.jsp" method="get" class="form-inline pull-right" style="margin: 20px 0">
+    <form action="/table.jsp" method="get" class="row g-1 justify-content-end align-items-center" style="margin: 20px 0">
       <input type="hidden" name="name" value="<%= TableName.META_TABLE_NAME %>" />
-      <div class="form-group">
-        <label for="scan-limit">Scan Limit</label>
+      <div class="col-sm-auto">
+        <label for="scan-limit" class="form-label">Scan Limit</label>
+      </div>
+      <div class="col-sm-auto">
         <input type="text" id="scan-limit" name="<%= MetaBrowser.SCAN_LIMIT_PARAM %>"
           class="form-control" placeholder="<%= MetaBrowser.SCAN_LIMIT_DEFAULT %>"
           <%= metaBrowser.getScanLimit() != null
             ? "value=\"" + metaBrowser.getScanLimit() + "\""
             : ""
           %>
-          aria-describedby="scan-limit" style="display:inline; width:auto" />
-        <label for="table-name-filter">Table</label>
+          aria-describedby="scan-limit" />
+      </div>
+      <div class="col-sm-auto">
+        <label for="table-name-filter" class="form-label">Table</label>
+      </div>
+      <div class="col-sm-auto">
         <input type="text" id="table-name-filter" name="<%= MetaBrowser.SCAN_TABLE_PARAM %>"
+          class="form-control"
           <%= metaBrowser.getScanTable() != null
             ? "value=\"" + metaBrowser.getScanTable() + "\""
             : ""
           %>
-          aria-describedby="scan-filter-table" style="display:inline; width:auto" />
-        <label for="region-state-filter">Region State</label>
-        <select class="form-control" id="region-state-filter" style="display:inline; width:auto"
+          aria-describedby="scan-filter-table" />
+      </div>
+      <div class="col-sm-auto">
+        <label for="region-state-filter" class="form-label">Region State</label>
+      </div>
+      <div class="col-sm-auto">
+        <select class="form-control" id="region-state-filter"
           name="<%= MetaBrowser.SCAN_REGION_STATE_PARAM %>">
           <option></option>
 <%
@@ -657,13 +670,15 @@
   }
 %>
         </select>
-        <button type="submit" class="btn btn-primary" style="display:inline; width:auto">
+      </div>
+      <div class="col-sm-auto">
+        <button type="submit" class="btn btn-primary">
           Filter Results
         </button>
       </div>
     </form>
-  </div>
-</div>
+  </div><!--/.col-md-8 -->
+</div><!--/.row .mb-5 -->
 <%} else {
   //Common tables
   RegionStates states = master.getAssignmentManager().getRegionStates();
@@ -914,212 +929,219 @@
       ((float) totalCompactedCells / totalCompactingCells)) + "%";
   }
   if (totalBlocksTotalWeight > 0) {
-    totalLocality = String.format("%.1f",
-      ((float) totalBlocksLocalWeight / totalBlocksTotalWeight));
-    totalLocalityForSsd = String.format("%.1f",
-      ((float) totalBlocksLocalWithSsdWeight / totalBlocksTotalWeight));
+    DecimalFormat df = new DecimalFormat("0.0#");
+    df.setRoundingMode(RoundingMode.DOWN);
+    totalLocality = df.format(((float) totalBlocksLocalWeight / totalBlocksTotalWeight));
+    totalLocalityForSsd = df.format(((float) totalBlocksLocalWithSsdWeight / totalBlocksTotalWeight));
   }
   if(regions != null && regions.size() > 0) { %>
-<h2>Table Regions</h2>
-<div class="tabbable">
-  <ul class="nav nav-pills">
-    <li class="active"><a href="#tab_baseStats" data-toggle="tab">Base Stats</a></li>
-    <li class=""><a href="#tab_localityStats" data-toggle="tab">Localities</a></li>
-    <li class=""><a href="#tab_compactStats" data-toggle="tab">Compactions</a></li>
-  </ul>
-  <div class="tab-content" style="padding-bottom: 9px; border-bottom: 1px solid #ddd;">
-    <div class="tab-pane active" id="tab_baseStats">
-      <table id="tableBaseStatsTable" class="tablesorter table table-striped">
-        <thead>
-          <tr>
-            <th>Name(<%= String.format("%,1d", regions.size())%>)</th>
-            <th>Region Server</th>
-            <th>ReadRequests<br>(<%= String.format("%,1d", totalReadReq)%>)</th>
-            <th>WriteRequests<br>(<%= String.format("%,1d", totalWriteReq)%>)</th>
-            <th>Uncompressed StoreFileSize<br>(<%= totalSizeUncompressedStr %>)</th>
-            <th>StorefileSize<br>(<%= totalSizeStr %>)</th>
-            <th>Num.Storefiles<br>(<%= String.format("%,1d", totalStoreFileCount)%>)</th>
-            <th>MemSize<br>(<%= totalMemSizeStr %>)</th>
-            <th>Start Key</th>
-            <th>End Key</th>
-            <th>Region State</th>
-            <th>ReplicaID</th>
-          </tr>
-        </thead>
-        <tbody>
-        <%
-          List<Map.Entry<RegionInfo, RegionMetrics>> entryList = new ArrayList<>(regionsToLoad.entrySet());
-          numRegions = regions.size();
-          int numRegionsRendered = 0;
-          // render all regions
-          if (numRegionsToRender < 0) {
-            numRegionsToRender = numRegions;
-          }
-          for (Map.Entry<RegionInfo, RegionMetrics> hriEntry : entryList) {
-            RegionInfo regionInfo = hriEntry.getKey();
-            ServerName addr = regionsToServer.get(regionInfo);
-            RegionMetrics load = hriEntry.getValue();
-            String readReq = "N/A";
-            String writeReq = "N/A";
-            String regionSizeUncompressed = ZEROMB;
-            String regionSize = ZEROMB;
-            String fileCount = "N/A";
-            String memSize = ZEROMB;
-            String state = "N/A";
-            if (load != null) {
-              readReq = String.format("%,1d", load.getReadRequestCount());
-              writeReq = String.format("%,1d", load.getWriteRequestCount());
-              double rSizeUncompressed = load.getUncompressedStoreFileSize().get(Size.Unit.BYTE);
-              if (rSizeUncompressed > 0) {
-                regionSizeUncompressed = StringUtils.byteDesc((long)rSizeUncompressed);
-              }
-              double rSize = load.getStoreFileSize().get(Size.Unit.BYTE);
-              if (rSize > 0) {
-                regionSize = StringUtils.byteDesc((long)rSize);
-              }
-              fileCount = String.format("%,1d", load.getStoreFileCount());
-              double mSize = load.getMemStoreSize().get(Size.Unit.BYTE);
-              if (mSize > 0) {
-                memSize = StringUtils.byteDesc((long)mSize);
-              }
-            }
-
-            if (stateMap.containsKey(regionInfo.getEncodedName())) {
-              state = stateMap.get(regionInfo.getEncodedName()).toString();
-            }
-
-            if (addr != null) {
-              ServerMetrics sl = master.getServerManager().getLoad(addr);
-              if(sl != null) {
-                Integer i = regDistribution.get(addr);
-                if (null == i) i = Integer.valueOf(0);
-                regDistribution.put(addr, i + 1);
-                if (RegionReplicaUtil.isDefaultReplica(regionInfo.getReplicaId())) {
-                  i = primaryRegDistribution.get(addr);
-                  if (null == i) i = Integer.valueOf(0);
-                  primaryRegDistribution.put(addr, i+1);
+<div class="row">
+  <div class="col">
+    <section>
+      <h2>Table Regions</h2>
+      <div class="tabbable">
+        <ul class="nav nav-pills" role="tablist">
+          <li class="nav-item"><a class="nav-link active" href="#tab_baseStats" data-bs-toggle="tab" role="tab">Base Stats</a></li>
+          <li class="nav-item"><a class="nav-link" href="#tab_localityStats" data-bs-toggle="tab" role="tab">Localities</a></li>
+          <li class="nav-item"><a class="nav-link" href="#tab_compactStats" data-bs-toggle="tab" role="tab">Compactions</a></li>
+        </ul>
+        <div class="tab-content">
+          <div class="tab-pane active" id="tab_baseStats" role="tabpanel">
+            <table id="tableBaseStatsTable" class="tablesorter table table-striped">
+              <thead>
+                <tr>
+                  <th>Name(<%= String.format("%,1d", regions.size())%>)</th>
+                  <th>Region Server</th>
+                  <th class="cls_separator">ReadRequests<br>(<%= String.format("%,1d", totalReadReq)%>)</th>
+                  <th class="cls_separator">WriteRequests<br>(<%= String.format("%,1d", totalWriteReq)%>)</th>
+                  <th class="cls_filesize">Uncompressed StoreFileSize<br>(<%= totalSizeUncompressedStr %>)</th>
+                  <th class="cls_filesize">StorefileSize<br>(<%= totalSizeStr %>)</th>
+                  <th class="cls_separator">Num.Storefiles<br>(<%= String.format("%,1d", totalStoreFileCount)%>)</th>
+                  <th class="cls_filesize">MemSize<br>(<%= totalMemSizeStr %>)</th>
+                  <th class="cls_emptyMin">Start Key</th>
+                  <th class="cls_emptyMax">End Key</th>
+                  <th>Region State</th>
+                  <th>ReplicaID</th>
+                </tr>
+              </thead>
+              <tbody>
+              <%
+                List<Map.Entry<RegionInfo, RegionMetrics>> entryList = new ArrayList<>(regionsToLoad.entrySet());
+                numRegions = regions.size();
+                int numRegionsRendered = 0;
+                // render all regions
+                if (numRegionsToRender < 0) {
+                  numRegionsToRender = numRegions;
                 }
-              }
-            }
-            if (numRegionsRendered < numRegionsToRender) {
-              numRegionsRendered++;
-        %>
-        <tr>
-          <td><%= escapeXml(Bytes.toStringBinary(regionInfo.getRegionName())) %></td>
-          <%= buildRegionDeployedServerTag(regionInfo, master, regionsToServer) %>
-          <td><%= readReq%></td>
-          <td><%= writeReq%></td>
-          <td><%= regionSizeUncompressed%></td>
-          <td><%= regionSize%></td>
-          <td><%= fileCount%></td>
-          <td><%= memSize%></td>
-          <td><%= escapeXml(Bytes.toStringBinary(regionInfo.getStartKey()))%></td>
-          <td><%= escapeXml(Bytes.toStringBinary(regionInfo.getEndKey()))%></td>
-          <td><%= state%></td>
-          <td><%= regionInfo.getReplicaId() %></td>
-        </tr>
-        <% } %>
-        <% } %>
-        </tbody>
-      </table>
-      <%= moreRegionsToRender(numRegionsRendered, numRegions, fqtn) %>
-    </div>
-    <div class="tab-pane" id="tab_localityStats">
-      <table id="tableLocalityStatsTable" class="tablesorter table table-striped">
-        <thead>
-          <tr>
-            <th>Name(<%= String.format("%,1d", regions.size())%>)</th>
-            <th>Region Server</th>
-            <th>Locality<br>(<%= totalLocality %>)</th>
-            <th>LocalityForSsd<br>(<%= totalLocalityForSsd %>)</th>
-          </tr>
-        </thead>
-        <tbody>
-        <%
-          numRegionsRendered = 0;
-          for (Map.Entry<RegionInfo, RegionMetrics> hriEntry : entryList) {
-            RegionInfo regionInfo = hriEntry.getKey();
-            ServerName addr = regionsToServer.get(regionInfo);
-            RegionMetrics load = hriEntry.getValue();
-            float locality = 0.0f;
-            float localityForSsd = 0.0f;
-            String state = "N/A";
-            if (load != null) {
-              locality = load.getDataLocality();
-              localityForSsd = load.getDataLocalityForSsd();
-            }
+                for (Map.Entry<RegionInfo, RegionMetrics> hriEntry : entryList) {
+                  RegionInfo regionInfo = hriEntry.getKey();
+                  ServerName addr = regionsToServer.get(regionInfo);
+                  RegionMetrics load = hriEntry.getValue();
+                  String readReq = "N/A";
+                  String writeReq = "N/A";
+                  String regionSizeUncompressed = ZEROMB;
+                  String regionSize = ZEROMB;
+                  String fileCount = "N/A";
+                  String memSize = ZEROMB;
+                  String state = "N/A";
+                  if (load != null) {
+                    readReq = String.format("%,1d", load.getReadRequestCount());
+                    writeReq = String.format("%,1d", load.getWriteRequestCount());
+                    double rSizeUncompressed = load.getUncompressedStoreFileSize().get(Size.Unit.BYTE);
+                    if (rSizeUncompressed > 0) {
+                      regionSizeUncompressed = StringUtils.byteDesc((long)rSizeUncompressed);
+                    }
+                    double rSize = load.getStoreFileSize().get(Size.Unit.BYTE);
+                    if (rSize > 0) {
+                      regionSize = StringUtils.byteDesc((long)rSize);
+                    }
+                    fileCount = String.format("%,1d", load.getStoreFileCount());
+                    double mSize = load.getMemStoreSize().get(Size.Unit.BYTE);
+                    if (mSize > 0) {
+                      memSize = StringUtils.byteDesc((long)mSize);
+                    }
+                  }
 
-            if (numRegionsRendered < numRegionsToRender) {
-              numRegionsRendered++;
-        %>
-        <tr>
-          <td><%= escapeXml(Bytes.toStringBinary(regionInfo.getRegionName())) %></td>
-          <%= buildRegionDeployedServerTag(regionInfo, master, regionsToServer) %>
-          <td><%= locality%></td>
-          <td><%= localityForSsd%></td>
-        </tr>
-        <% } %>
-        <% } %>
-        </tbody>
-      </table>
-      <%= moreRegionsToRender(numRegionsRendered, numRegions, fqtn) %>
-    </div>
-    <div class="tab-pane" id="tab_compactStats">
-      <table id="tableCompactStatsTable" class="tablesorter table table-striped">
-        <thead>
-          <tr>
-            <th>Name(<%= String.format("%,1d", regions.size())%>)</th>
-            <th>Region Server</th>
-            <th>Num. Compacting Cells<br>(<%= String.format("%,1d", totalCompactingCells)%>)</th>
-            <th>Num. Compacted Cells<br>(<%= String.format("%,1d", totalCompactedCells)%>)</th>
-            <th>Remaining Cells<br>(<%= String.format("%,1d", totalCompactingCells-totalCompactedCells)%>)</th>
-            <th>Compaction Progress<br>(<%= totalCompactionProgress %>)</th>
-          </tr>
-        </thead>
-        <tbody>
-        <%
-          numRegionsRendered = 0;
-          for (Map.Entry<RegionInfo, RegionMetrics> hriEntry : entryList) {
-            RegionInfo regionInfo = hriEntry.getKey();
-            ServerName addr = regionsToServer.get(regionInfo);
-            RegionMetrics load = hriEntry.getValue();
-            long compactingCells = 0;
-            long compactedCells = 0;
-            String compactionProgress = "";
-            if (load != null) {
-              compactingCells = load.getCompactingCellCount();
-              compactedCells = load.getCompactedCellCount();
-              if (compactingCells > 0) {
-                compactionProgress = String.format("%.2f", 100 * ((float)
-                compactedCells / compactingCells)) + "%";
-              }
-            }
+                  if (stateMap.containsKey(regionInfo.getEncodedName())) {
+                    state = stateMap.get(regionInfo.getEncodedName()).toString();
+                  }
 
-            if (numRegionsRendered < numRegionsToRender) {
-              numRegionsRendered++;
-        %>
-        <tr>
-          <td><%= escapeXml(Bytes.toStringBinary(regionInfo.getRegionName())) %></td>
-          <%= buildRegionDeployedServerTag(regionInfo, master, regionsToServer) %>
-          <td><%= String.format("%,1d", compactingCells)%></td>
-          <td><%= String.format("%,1d", compactedCells)%></td>
-          <td><%= String.format("%,1d", compactingCells - compactedCells)%></td>
-          <td><%= compactionProgress%></td>
-        </tr>
-        <% } %>
-        <% } %>
-        </tbody>
-      </table>
-      <%= moreRegionsToRender(numRegionsRendered, numRegions, fqtn) %>
-    </div>
+                  if (addr != null) {
+                    ServerMetrics sl = master.getServerManager().getLoad(addr);
+                    if(sl != null) {
+                      Integer i = regDistribution.get(addr);
+                      if (null == i) i = Integer.valueOf(0);
+                      regDistribution.put(addr, i + 1);
+                      if (RegionReplicaUtil.isDefaultReplica(regionInfo.getReplicaId())) {
+                        i = primaryRegDistribution.get(addr);
+                        if (null == i) i = Integer.valueOf(0);
+                        primaryRegDistribution.put(addr, i+1);
+                      }
+                    }
+                  }
+                  if (numRegionsRendered < numRegionsToRender) {
+                    numRegionsRendered++;
+              %>
+              <tr>
+                <td><%= escapeXml(Bytes.toStringBinary(regionInfo.getRegionName())) %></td>
+                <%= buildRegionDeployedServerTag(regionInfo, master, regionsToServer) %>
+                <td><%= readReq%></td>
+                <td><%= writeReq%></td>
+                <td><%= regionSizeUncompressed%></td>
+                <td><%= regionSize%></td>
+                <td><%= fileCount%></td>
+                <td><%= memSize%></td>
+                <td><%= escapeXml(Bytes.toStringBinary(regionInfo.getStartKey()))%></td>
+                <td><%= escapeXml(Bytes.toStringBinary(regionInfo.getEndKey()))%></td>
+                <td><%= state%></td>
+                <td><%= regionInfo.getReplicaId() %></td>
+              </tr>
+              <% } %>
+              <% } %>
+              </tbody>
+            </table>
+            <%= moreRegionsToRender(numRegionsRendered, numRegions, fqtn) %>
+          </div>
+          <div class="tab-pane" id="tab_localityStats" role="tabpanel">
+            <table id="tableLocalityStatsTable" class="tablesorter table table-striped">
+              <thead>
+                <tr>
+                  <th>Name(<%= String.format("%,1d", regions.size())%>)</th>
+                  <th>Region Server</th>
+                  <th class="cls_separator">Locality<br>(<%= totalLocality %>)</th>
+                  <th class="cls_separator">LocalityForSsd<br>(<%= totalLocalityForSsd %>)</th>
+                </tr>
+              </thead>
+              <tbody>
+              <%
+                numRegionsRendered = 0;
+                for (Map.Entry<RegionInfo, RegionMetrics> hriEntry : entryList) {
+                  RegionInfo regionInfo = hriEntry.getKey();
+                  RegionMetrics load = hriEntry.getValue();
+                  float locality = 0.0f;
+                  float localityForSsd = 0.0f;
+                  if (load != null) {
+                    locality = load.getDataLocality();
+                    localityForSsd = load.getDataLocalityForSsd();
+                  }
+
+                  if (numRegionsRendered < numRegionsToRender) {
+                    numRegionsRendered++;
+              %>
+              <tr>
+                <td><%= escapeXml(Bytes.toStringBinary(regionInfo.getRegionName())) %></td>
+                <%= buildRegionDeployedServerTag(regionInfo, master, regionsToServer) %>
+                <td><%= locality%></td>
+                <td><%= localityForSsd%></td>
+              </tr>
+              <% } %>
+              <% } %>
+              </tbody>
+            </table>
+            <%= moreRegionsToRender(numRegionsRendered, numRegions, fqtn) %>
+          </div>
+          <div class="tab-pane" id="tab_compactStats" role="tabpanel">
+            <table id="tableCompactStatsTable" class="tablesorter table table-striped">
+              <thead>
+                <tr>
+                  <th>Name(<%= String.format("%,1d", regions.size())%>)</th>
+                  <th>Region Server</th>
+                  <th class="cls_separator">Num. Compacting Cells<br>(<%= String.format("%,1d", totalCompactingCells)%>)</th>
+                  <th class="cls_separator">Num. Compacted Cells<br>(<%= String.format("%,1d", totalCompactedCells)%>)</th>
+                  <th class="cls_separator">Remaining Cells<br>(<%= String.format("%,1d", totalCompactingCells-totalCompactedCells)%>)</th>
+                  <th>Compaction Progress<br>(<%= totalCompactionProgress %>)</th>
+                </tr>
+              </thead>
+              <tbody>
+              <%
+                numRegionsRendered = 0;
+                for (Map.Entry<RegionInfo, RegionMetrics> hriEntry : entryList) {
+                  RegionInfo regionInfo = hriEntry.getKey();
+                  ServerName addr = regionsToServer.get(regionInfo);
+                  RegionMetrics load = hriEntry.getValue();
+                  long compactingCells = 0;
+                  long compactedCells = 0;
+                  String compactionProgress = "";
+                  if (load != null) {
+                    compactingCells = load.getCompactingCellCount();
+                    compactedCells = load.getCompactedCellCount();
+                    if (compactingCells > 0) {
+                      compactionProgress = String.format("%.2f", 100 * ((float)
+                      compactedCells / compactingCells)) + "%";
+                    }
+                  }
+
+                  if (numRegionsRendered < numRegionsToRender) {
+                    numRegionsRendered++;
+              %>
+              <tr>
+                <td><%= escapeXml(Bytes.toStringBinary(regionInfo.getRegionName())) %></td>
+                <%= buildRegionDeployedServerTag(regionInfo, master, regionsToServer) %>
+                <td><%= String.format("%,1d", compactingCells)%></td>
+                <td><%= String.format("%,1d", compactedCells)%></td>
+                <td><%= String.format("%,1d", compactingCells - compactedCells)%></td>
+                <td><%= compactionProgress%></td>
+              </tr>
+              <% } %>
+              <% } %>
+              </tbody>
+            </table>
+            <%= moreRegionsToRender(numRegionsRendered, numRegions, fqtn) %>
+          </div>
+        </div>
+      </div>
+    </section>
   </div>
 </div>
 
+<section>
 <h2>Regions by Region Server</h2>
 <table id="regionServerTable" class="tablesorter table table-striped">
   <thead>
     <tr>
-      <th>Region Server</th><th>Region Count</th><th>Primary Region Count</th>
+      <th>Region Server</th>
+      <th class="cls_separator">Region Count</th>
+      <th>Primary Region Count</th>
     </tr>
   </thead>
 
@@ -1127,11 +1149,11 @@
   <%
     for (Map.Entry<ServerName, Integer> rdEntry : regDistribution.entrySet()) {
       ServerName addr = rdEntry.getKey();
-      String url = "//" + URLEncoder.encode(addr.getHostname()) + ":"
+      String url = "//" + URLEncoder.encode(addr.getHostname(), StandardCharsets.UTF_8) + ":"
         + master.getRegionServerInfoPort(addr) + "/rs-status";
   %>
       <tr>
-        <td><a href="<%= url %>"><%= StringEscapeUtils.escapeHtml4(addr.getHostname().toString())
+        <td><a href="<%= url %>"><%= StringEscapeUtils.escapeHtml4(addr.getHostname())
           + ":" + master.getRegionServerInfoPort(addr) %></a></td>
         <td><%= rdEntry.getValue()%></td>
         <td><%= primaryRegDistribution.get(addr) == null ? 0 : primaryRegDistribution.get(addr)%></td>
@@ -1157,6 +1179,7 @@
 }
 } // end else
 %>
+</section>
 
 <h2>Table Stats</h2>
 <table class="table table-striped">
@@ -1185,91 +1208,86 @@
 </table>
 
 <% if (!readOnly) { %>
-<p><hr/></p>
-Actions:
-<p>
-<center>
-<table class="table" style="border: 0;" width="95%" >
-<tr>
-  <form method="get">
-  <input type="hidden" name="action" value="major compact" />
-  <input type="hidden" name="name" value="<%= escaped_fqtn %>" />
-  <td class="centered">
-    <input style="font-size: 12pt; width: 10em" type="submit" value="Major Compact" class="btn" />
-  </td>
-  <td style="text-align: center;">
-    <input type="text" name="key" size="40" placeholder="Row Key (optional)" />
-  </td>
-  <td>
-    This action will force a major compaction of all regions of the table, or,
-    if a key is supplied, only the region major containing the
-    given key.
-  </td>
-  </form>
-</tr>
-<tr>
-  <form method="get">
-  <input type="hidden" name="action" value="compact" />
-  <input type="hidden" name="name" value="<%= escaped_fqtn %>" />
-  <td class="centered">
-    <input style="font-size: 12pt; width: 10em" type="submit" value="Compact" class="btn" />
-  </td>
-  <td style="text-align: center;">
-    <input type="text" name="key" size="40" placeholder="Row Key (optional)" />
-  </td>
-  <td>
-    This action will force a compaction of all regions of the table, or,
-    if a key is supplied, only the region containing the
-    given key.
-  </td>
-  </form>
-</tr>
-<tr>
-  <form method="get">
-  <input type="hidden" name="action" value="split" />
-  <input type="hidden" name="name" value="<%= escaped_fqtn %>" />
-  <td class="centered">
-    <input style="font-size: 12pt; width: 10em" type="submit" value="Split" class="btn" />
-  </td>
-  <td style="text-align: center;">
-    <input type="text" name="key" size="40" placeholder="Row Key (optional)" />
-  </td>
-  <td>
-	  This action will force a split of all eligible
-	  regions of the table, or, if a key is supplied, only the region containing the
-	  given key. An eligible region is one that does not contain any references to
-	  other regions. Split requests for noneligible regions will be ignored.
-  </td>
-  </form>
-</tr>
-<tr>
-  <form method="get">
-  <input type="hidden" name="action" value="merge" />
-  <input type="hidden" name="name" value="<%= escaped_fqtn %>" />
-  <td class="centered">
-    <input style="font-size: 12pt; width: 10em" type="submit" value="Merge" class="btn" />
-  </td>
-  <td style="text-align: center;">
-    <input type="text" name="left" size="40" required="required" placeholder="Region Key (required)" />
-    <input type="text" name="right" size="40" required="required" placeholder="Region Key (required)" />
-  </td>
-  <td>
-    This action will merge two regions of the table, Merge requests for
-    noneligible regions will be ignored.
-  </td>
-  </form>
-</tr>
-</table>
-</center>
-</p>
-<% } %>
-</div>
-</div>
 
-<jsp:include page="footer.jsp" />
-<script src="/static/js/jquery.min.js" type="text/javascript"></script>
+<h2>Actions</h2>
+
+<table class="table">
+  <tr>
+    <form method="get">
+      <input type="hidden" name="action" value="major compact" />
+      <input type="hidden" name="name" value="<%= escaped_fqtn %>" />
+      <td class="centered">
+        <input type="submit" value="Major Compact" class="btn btn-secondary" />
+      </td>
+      <td style="text-align: center;">
+        <input type="text" class="form-control" name="key" size="40" placeholder="Row Key (optional)" />
+      </td>
+      <td>
+      This action will force a major compaction of all regions of the table, or,
+      if a key is supplied, only the region major containing the
+      given key.
+      </td>
+    </form>
+  </tr>
+  <tr>
+    <form method="get">
+      <input type="hidden" name="action" value="compact" />
+      <input type="hidden" name="name" value="<%= escaped_fqtn %>" />
+      <td class="centered">
+        <input type="submit" value="Compact" class="btn btn-secondary" />
+      </td>
+      <td style="text-align: center;">
+        <input type="text" class="form-control" name="key" size="40" placeholder="Row Key (optional)" />
+      </td>
+      <td>
+      This action will force a compaction of all regions of the table, or,
+      if a key is supplied, only the region containing the given key.
+      </td>
+    </form>
+  </tr>
+  <tr>
+    <form method="get">
+      <input type="hidden" name="action" value="split" />
+      <input type="hidden" name="name" value="<%= escaped_fqtn %>" />
+      <td class="centered">
+        <input type="submit" value="Split" class="btn btn-secondary" />
+      </td>
+      <td style="text-align: center;">
+        <input type="text" class="form-control" name="key" size="40" placeholder="Row Key (optional)" />
+      </td>
+      <td>
+      This action will force a split of all eligible
+      regions of the table, or, if a key is supplied, only the region containing the
+      given key. An eligible region is one that does not contain any references to
+      other regions. Split requests for noneligible regions will be ignored.
+      </td>
+    </form>
+  </tr>
+  <tr>
+    <form method="get">
+      <input type="hidden" name="action" value="merge" />
+      <input type="hidden" name="name" value="<%= escaped_fqtn %>" />
+      <td class="centered">
+        <input type="submit" value="Merge" class="btn btn-secondary" />
+      </td>
+      <td style="text-align: center;">
+        <input type="text" class="form-control mb-2" name="left" size="40" required="required" placeholder="Region Key (required)" />
+        <input type="text" class="form-control" name="right" size="40" required="required" placeholder="Region Key (required)" />
+      </td>
+      <td>
+      This action will merge two regions of the table, Merge requests for
+      noneligible regions will be ignored.
+      </td>
+    </form>
+  </tr>
+</table>
+
+<% } %>
+</div><!--/.row -->
+</div> <!--/.container-fluid -->
+
+<jsp:include page="scripts.jsp" />
 <script src="/static/js/jquery.tablesorter.min.js" type="text/javascript"></script>
-<script src="/static/js/bootstrap.min.js" type="text/javascript"></script>
 
 <script>
 $(document).ready(function()
@@ -1309,57 +1327,47 @@ $(document).ready(function()
         });
         $("#regionServerTable").tablesorter({
             headers: {
-                1: {sorter: 'separator'}
+                '.cls_separator': {sorter: 'separator'}
             }
         });
         $("#tableBaseStatsTable").tablesorter({
             headers: {
-                2: {sorter: 'separator'},
-                3: {sorter: 'separator'},
-                4: {sorter: 'filesize'},
-                5: {sorter: 'separator'},
-                6: {sorter: 'filesize'},
-                7: {empty: 'emptyMin'},
-                8: {empty: 'emptyMax'}
+                '.cls_separator': {sorter: 'separator'},
+                '.cls_filesize': {sorter: 'filesize'},
+                '.cls_emptyMin': {empty: 'emptyMin'},
+                '.cls_emptyMax': {empty: 'emptyMax'}
             }
         });
         $("#metaTableBaseStatsTable").tablesorter({
             headers: {
-                2: {sorter: 'separator'},
-                3: {sorter: 'separator'},
-                4: {sorter: 'filesize'},
-                5: {sorter: 'separator'},
-                6: {sorter: 'filesize'},
-                7: {empty: 'emptyMin'},
-                8: {empty: 'emptyMax'}
+                '.cls_separator': {sorter: 'separator'},
+                '.cls_filesize': {sorter: 'filesize'},
+                '.cls_emptyMin': {empty: 'emptyMin'},
+                '.cls_emptyMax': {empty: 'emptyMax'}
             }
         });
         $("#tableLocalityStatsTable").tablesorter({
             headers: {
-                2: {sorter: 'separator'},
-                3: {sorter: 'separator'}
+               '.cls_separator': {sorter: 'separator'}
             }
         });
         $("#metaTableLocalityStatsTable").tablesorter({
             headers: {
-                2: {sorter: 'separator'},
-                3: {sorter: 'separator'}
+                '.cls_separator': {sorter: 'separator'}
             }
         });
         $("#tableCompactStatsTable").tablesorter({
             headers: {
-                2: {sorter: 'separator'},
-                3: {sorter: 'separator'},
-                4: {sorter: 'separator'}
+                '.cls_separator': {sorter: 'separator'}
             }
         });
         $("#metaTableCompactStatsTable").tablesorter({
             headers: {
-                2: {sorter: 'separator'},
-                3: {sorter: 'separator'},
-                4: {sorter: 'separator'}
+                '.cls_separator': {sorter: 'separator'}
             }
         });
     }
 );
 </script>
+</body>
+</html>

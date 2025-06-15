@@ -18,12 +18,12 @@
 */
 --%>
     <script src="/static/js/jquery.min.js" type="text/javascript"></script>
-    <script src="/static/js/bootstrap.min.js" type="text/javascript"></script>
+    <script src="/static/js/bootstrap.bundle.min.js" type="text/javascript"></script>
     <script src="/static/js/tab.js" type="text/javascript"></script>
     <script type="text/javascript">
       $(document).ready(function() {
-        $('div.navbar li.active').removeClass('active');
-        $('a[href="' + location.pathname + '"]').closest('li').addClass('active');
+        $('nav.navbar li.active').removeClass('active');
+        $('a[href="' + location.pathname + '"]').addClass('active');
       });
     </script>
   </body>

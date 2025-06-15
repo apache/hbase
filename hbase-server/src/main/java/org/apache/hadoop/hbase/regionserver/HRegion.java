@@ -114,6 +114,7 @@ import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.QueryMetrics;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
@@ -122,6 +123,7 @@ import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.conf.ConfigKey;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -154,6 +156,8 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTrack
 import org.apache.hadoop.hbase.regionserver.compactions.ForbidMajorCompactionChecker;
 import org.apache.hadoop.hbase.regionserver.metrics.MetricsTableRequests;
 import org.apache.hadoop.hbase.regionserver.regionreplication.RegionReplicationSink;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.regionserver.throttle.CompactionThroughputControllerFactory;
 import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
 import org.apache.hadoop.hbase.regionserver.throttle.StoreHotnessProtector;
@@ -245,11 +249,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public static final String LOAD_CFS_ON_DEMAND_CONFIG_KEY =
     "hbase.hregion.scan.loadColumnFamiliesOnDemand";
 
-  public static final String HBASE_MAX_CELL_SIZE_KEY = "hbase.server.keyvalue.maxsize";
+  public static final String HBASE_MAX_CELL_SIZE_KEY =
+    ConfigKey.LONG("hbase.server.keyvalue.maxsize");
   public static final int DEFAULT_MAX_CELL_SIZE = 10485760;
 
   public static final String HBASE_REGIONSERVER_MINIBATCH_SIZE =
-    "hbase.regionserver.minibatch.size";
+    ConfigKey.INT("hbase.regionserver.minibatch.size");
   public static final int DEFAULT_HBASE_REGIONSERVER_MINIBATCH_SIZE = 20000;
 
   public static final String WAL_HSYNC_CONF_KEY = "hbase.wal.hsync";
@@ -1348,7 +1353,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         if (StoreFileInfo.isReference(p) || HFileLink.isHFileLink(p)) {
           // Only construct StoreFileInfo object if its not a hfile, save obj
           // creation
-          StoreFileInfo storeFileInfo = new StoreFileInfo(conf, fs, status);
+          StoreFileTracker sft =
+            StoreFileTrackerFactory.create(conf, tableDescriptor, family, regionFs);
+          StoreFileInfo storeFileInfo = sft.getStoreFileInfo(status, status.getPath(), false);
           hdfsBlocksDistribution.add(storeFileInfo.computeHDFSBlocksDistribution(fs));
         } else if (StoreFileInfo.isHFile(p)) {
           // If its a HFile, then lets just add to the block distribution
@@ -1580,7 +1587,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public static final boolean DEFAULT_FAIR_REENTRANT_CLOSE_LOCK = true;
   /** Conf key for the periodic flush interval */
   public static final String MEMSTORE_PERIODIC_FLUSH_INTERVAL =
-    "hbase.regionserver.optionalcacheflushinterval";
+    ConfigKey.INT("hbase.regionserver.optionalcacheflushinterval");
   /** Default interval for the memstore flush */
   public static final int DEFAULT_CACHE_FLUSH_INTERVAL = 3600000;
   /** Default interval for System tables memstore flush */
@@ -2241,6 +2248,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   // These methods are meant to be called periodically by the HRegionServer for
   // upkeep.
   //////////////////////////////////////////////////////////////////////////////
+
   /**
    * Do preparation for pending compaction.
    */
@@ -2328,37 +2336,100 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   /**
+   * <p>
    * We are trying to remove / relax the region read lock for compaction. Let's see what are the
    * potential race conditions among the operations (user scan, region split, region close and
-   * region bulk load). user scan ---> region read lock region split --> region close first -->
-   * region write lock region close --> region write lock region bulk load --> region write lock
+   * region bulk load).
+   * </p>
+   *
+   * <pre>
+   *   user scan ---> region read lock
+   *   region split --> region close first --> region write lock
+   *   region close --> region write lock
+   *   region bulk load --> region write lock
+   * </pre>
+   * <p>
    * read lock is compatible with read lock. ---> no problem with user scan/read region bulk load
    * does not cause problem for compaction (no consistency problem, store lock will help the store
-   * file accounting). They can run almost concurrently at the region level. The only remaining race
-   * condition is between the region close and compaction. So we will evaluate, below, how region
-   * close intervenes with compaction if compaction does not acquire region read lock. Here are the
-   * steps for compaction: 1. obtain list of StoreFile's 2. create StoreFileScanner's based on list
-   * from #1 3. perform compaction and save resulting files under tmp dir 4. swap in compacted files
+   * file accounting). They can run almost concurrently at the region level.
+   * </p>
+   * <p>
+   * The only remaining race condition is between the region close and compaction. So we will
+   * evaluate, below, how region close intervenes with compaction if compaction does not acquire
+   * region read lock.
+   * </p>
+   * <p>
+   * Here are the steps for compaction:
+   * <ol>
+   * <li>obtain list of StoreFile's</li>
+   * <li>create StoreFileScanner's based on list from #1</li>
+   * <li>perform compaction and save resulting files under tmp dir</li>
+   * <li>swap in compacted files</li>
+   * </ol>
+   * </p>
+   * <p>
    * #1 is guarded by store lock. This patch does not change this --> no worse or better For #2, we
    * obtain smallest read point (for region) across all the Scanners (for both default compactor and
    * stripe compactor). The read points are for user scans. Region keeps the read points for all
    * currently open user scanners. Compaction needs to know the smallest read point so that during
    * re-write of the hfiles, it can remove the mvcc points for the cells if their mvccs are older
    * than the smallest since they are not needed anymore. This will not conflict with compaction.
-   * For #3, it can be performed in parallel to other operations. For #4 bulk load and compaction
-   * don't conflict with each other on the region level (for multi-family atomicy). Region close and
-   * compaction are guarded pretty well by the 'writestate'. In HRegion#doClose(), we have :
-   * synchronized (writestate) { // Disable compacting and flushing by background threads for this
-   * // region. canFlush = !writestate.readOnly; writestate.writesEnabled = false;
-   * LOG.debug("Closing " + this + ": disabling compactions & flushes");
-   * waitForFlushesAndCompactions(); } waitForFlushesAndCompactions() would wait for
-   * writestate.compacting to come down to 0. and in HRegion.compact() try { synchronized
-   * (writestate) { if (writestate.writesEnabled) { wasStateSet = true; ++writestate.compacting; }
-   * else { String msg = "NOT compacting region " + this + ". Writes disabled."; LOG.info(msg);
-   * status.abort(msg); return false; } } Also in compactor.performCompaction(): check periodically
-   * to see if a system stop is requested if (closeChecker != null &&
-   * closeChecker.isTimeLimit(store, now)) { progress.cancel(); return false; } if (closeChecker !=
-   * null && closeChecker.isSizeLimit(store, len)) { progress.cancel(); return false; }
+   * </p>
+   * <p>
+   * For #3, it can be performed in parallel to other operations.
+   * </p>
+   * <p>
+   * For #4 bulk load and compaction don't conflict with each other on the region level (for
+   * multi-family atomicy).
+   * </p>
+   * <p>
+   * Region close and compaction are guarded pretty well by the 'writestate'. In HRegion#doClose(),
+   * we have :
+   *
+   * <pre>
+   * synchronized (writestate) {
+   *   // Disable compacting and flushing by background threads for this
+   *   // region.
+   *   canFlush = !writestate.readOnly;
+   *   writestate.writesEnabled = false;
+   *   LOG.debug("Closing " + this + ": disabling compactions & flushes");
+   *   waitForFlushesAndCompactions();
+   * }
+   * </pre>
+   *
+   * {@code waitForFlushesAndCompactions()} would wait for {@code writestate.compacting} to come
+   * down to 0. and in {@code HRegion.compact()}
+   *
+   * <pre>
+   *   try {
+   *     synchronized (writestate) {
+   *       if (writestate.writesEnabled) {
+   *         wasStateSet = true;
+   *         ++writestate.compacting;
+   *       } else {
+   *         String msg = "NOT compacting region " + this + ". Writes disabled.";
+   *         LOG.info(msg);
+   *         status.abort(msg);
+   *         return false;
+   *       }
+   *     }
+   *   }
+   * </pre>
+   *
+   * Also in {@code compactor.performCompaction()}: check periodically to see if a system stop is
+   * requested
+   *
+   * <pre>
+   * if (closeChecker != null && closeChecker.isTimeLimit(store, now)) {
+   *   progress.cancel();
+   *   return false;
+   * }
+   * if (closeChecker != null && closeChecker.isSizeLimit(store, len)) {
+   *   progress.cancel();
+   *   return false;
+   * }
+   * </pre>
+   * </p>
    */
   public boolean compact(CompactionContext compaction, HStore store,
     ThroughputController throughputController, User user) throws IOException {
@@ -5060,7 +5131,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         // we'll get the latest on this row.
         boolean matches = false;
         long cellTs = 0;
-        try (RegionScanner scanner = getScanner(new Scan(get))) {
+        QueryMetrics metrics = null;
+        try (RegionScannerImpl scanner = getScanner(new Scan(get))) {
           // NOTE: Please don't use HRegion.get() instead,
           // because it will copy cells to heap. See HBASE-26036
           List<ExtendedCell> result = new ArrayList<>(1);
@@ -5084,6 +5156,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
               int compareResult = PrivateCellUtil.compareValue(kv, comparator);
               matches = matches(op, compareResult);
             }
+          }
+          if (checkAndMutate.isQueryMetricsEnabled()) {
+            metrics = new QueryMetrics(scanner.getContext().getBlockSizeProgress());
           }
         }
 
@@ -5121,10 +5196,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             r = mutateRow(rowMutations, nonceGroup, nonce);
           }
           this.checkAndMutateChecksPassed.increment();
-          return new CheckAndMutateResult(true, r);
+          return new CheckAndMutateResult(true, r).setMetrics(metrics);
         }
         this.checkAndMutateChecksFailed.increment();
-        return new CheckAndMutateResult(false, null);
+        return new CheckAndMutateResult(false, null).setMetrics(metrics);
       } finally {
         rowLock.release();
       }
@@ -5493,9 +5568,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         // column family. Have to fake out file type too by casting our recovered.edits as
         // storefiles
         String fakeFamilyName = WALSplitUtil.getRegionDirRecoveredEditsDir(regionWALDir).getName();
+        StoreContext storeContext =
+          StoreContext.getBuilder().withRegionFileSystem(getRegionFileSystem()).build();
+        StoreFileTracker sft = StoreFileTrackerFactory.create(this.conf, true, storeContext);
         Set<HStoreFile> fakeStoreFiles = new HashSet<>(files.size());
         for (Path file : files) {
-          fakeStoreFiles.add(new HStoreFile(walFS, file, this.conf, null, null, true));
+          fakeStoreFiles.add(new HStoreFile(walFS, file, this.conf, null, null, true, sft));
         }
         getRegionWALFileSystem().archiveRecoveredEdits(fakeFamilyName, fakeStoreFiles);
       } else {
@@ -6501,17 +6579,15 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             continue;
           }
 
-          List<String> storeFiles = storeDescriptor.getStoreFileList();
-          for (String storeFile : storeFiles) {
-            StoreFileInfo storeFileInfo = null;
+          StoreContext storeContext = store.getStoreContext();
+          StoreFileTracker sft = StoreFileTrackerFactory.create(conf, false, storeContext);
+
+          List<StoreFileInfo> storeFiles = sft.load();
+          for (StoreFileInfo storeFileInfo : storeFiles) {
             try {
-              storeFileInfo = fs.getStoreFileInfo(Bytes.toString(family), storeFile);
               store.bulkLoadHFile(storeFileInfo);
             } catch (FileNotFoundException ex) {
-              LOG.warn(getRegionInfo().getEncodedName() + " : "
-                + ((storeFileInfo != null)
-                  ? storeFileInfo.toString()
-                  : (new Path(Bytes.toString(family), storeFile)).toString())
+              LOG.warn(getRegionInfo().getEncodedName() + " : " + storeFileInfo.toString()
                 + " doesn't exist any more. Skip loading the file");
             }
           }

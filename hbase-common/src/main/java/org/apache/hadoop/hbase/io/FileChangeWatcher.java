@@ -18,30 +18,27 @@
 package org.apache.hadoop.hbase.io;
 
 import java.io.IOException;
-import java.nio.file.ClosedWatchServiceException;
-import java.nio.file.FileSystem;
+import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardWatchEventKinds;
-import java.nio.file.WatchEvent;
-import java.nio.file.WatchKey;
-import java.nio.file.WatchService;
-import java.util.function.Consumer;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.FileTime;
+import java.time.Duration;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Instances of this class can be used to watch a directory for file changes. When a file is added
- * to, deleted from, or is modified in the given directory, the callback provided by the user will
- * be called from a background thread. Some things to keep in mind:
+ * Instances of this class can be used to watch a file for changes. When a file's modification time
+ * changes, the callback provided by the user will be called from a background thread. Modification
+ * are detected by checking the file's attributes every polling interval. Some things to keep in
+ * mind:
  * <ul>
  * <li>The callback should be thread-safe.</li>
  * <li>Changes that happen around the time the thread is started may be missed.</li>
  * <li>There is a delay between a file changing and the callback firing.</li>
- * <li>The watch is not recursive - changes to subdirectories will not trigger a callback.</li>
  * </ul>
  * <p/>
- * This file has been copied from the Apache ZooKeeper project.
+ * This file was originally copied from the Apache ZooKeeper project, and then modified.
  * @see <a href=
  *      "https://github.com/apache/zookeeper/blob/8148f966947d3ecf3db0b756d93c9ffa88174af9/zookeeper-server/src/main/java/org/apache/zookeeper/common/FileChangeWatcher.java">Base
  *      revision</a>
@@ -49,9 +46,13 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 public final class FileChangeWatcher {
 
+  public interface FileChangeWatcherCallback {
+    void callback(Path path);
+  }
+
   private static final Logger LOG = LoggerFactory.getLogger(FileChangeWatcher.class);
 
-  public enum State {
+  enum State {
     NEW, // object created but start() not called yet
     STARTING, // start() called but background thread has not entered main loop
     RUNNING, // background thread is running
@@ -61,29 +62,29 @@ public final class FileChangeWatcher {
 
   private final WatcherThread watcherThread;
   private State state; // protected by synchronized(this)
+  private FileTime lastModifiedTime;
+  private final Object lastModifiedTimeLock;
+  private final Path filePath;
+  private final Duration pollInterval;
 
   /**
-   * Creates a watcher that watches <code>dirPath</code> and invokes <code>callback</code> on
+   * Creates a watcher that watches <code>filePath</code> and invokes <code>callback</code> on
    * changes.
-   * @param dirPath  the directory to watch.
+   * @param filePath the file to watch.
    * @param callback the callback to invoke with events. <code>event.kind()</code> will return the
    *                 type of event, and <code>event.context()</code> will return the filename
    *                 relative to <code>dirPath</code>.
    * @throws IOException if there is an error creating the WatchService.
    */
-  public FileChangeWatcher(Path dirPath, String threadNameSuffix, Consumer<WatchEvent<?>> callback)
-    throws IOException {
-    FileSystem fs = dirPath.getFileSystem();
-    WatchService watchService = fs.newWatchService();
+  public FileChangeWatcher(Path filePath, String threadNameSuffix, Duration pollInterval,
+    FileChangeWatcherCallback callback) throws IOException {
+    this.filePath = filePath;
+    this.pollInterval = pollInterval;
 
-    LOG.debug("Registering with watch service: {}", dirPath);
-
-    dirPath.register(watchService,
-      new WatchEvent.Kind<?>[] { StandardWatchEventKinds.ENTRY_CREATE,
-        StandardWatchEventKinds.ENTRY_DELETE, StandardWatchEventKinds.ENTRY_MODIFY,
-        StandardWatchEventKinds.OVERFLOW });
     state = State.NEW;
-    this.watcherThread = new WatcherThread(threadNameSuffix, watchService, callback);
+    lastModifiedTimeLock = new Object();
+    lastModifiedTime = Files.readAttributes(filePath, BasicFileAttributes.class).lastModifiedTime();
+    this.watcherThread = new WatcherThread(threadNameSuffix, callback);
     this.watcherThread.setDaemon(true);
   }
 
@@ -91,7 +92,7 @@ public final class FileChangeWatcher {
    * Returns the current {@link FileChangeWatcher.State}.
    * @return the current state.
    */
-  public synchronized State getState() {
+  private synchronized State getState() {
     return state;
   }
 
@@ -187,13 +188,10 @@ public final class FileChangeWatcher {
 
     private static final String THREAD_NAME_PREFIX = "FileChangeWatcher-";
 
-    final WatchService watchService;
-    final Consumer<WatchEvent<?>> callback;
+    final FileChangeWatcherCallback callback;
 
-    WatcherThread(String threadNameSuffix, WatchService watchService,
-      Consumer<WatchEvent<?>> callback) {
+    WatcherThread(String threadNameSuffix, FileChangeWatcherCallback callback) {
       super(THREAD_NAME_PREFIX + threadNameSuffix);
-      this.watchService = watchService;
       this.callback = callback;
       setUncaughtExceptionHandler(FileChangeWatcher::handleException);
     }
@@ -201,7 +199,7 @@ public final class FileChangeWatcher {
     @Override
     public void run() {
       try {
-        LOG.info("{} thread started", getName());
+        LOG.debug("{} thread started", getName());
         if (
           !compareAndSetState(FileChangeWatcher.State.STARTING, FileChangeWatcher.State.RUNNING)
         ) {
@@ -216,44 +214,40 @@ public final class FileChangeWatcher {
         runLoop();
       } catch (Exception e) {
         LOG.warn("Error in runLoop()", e);
-        throw e;
+        throw new RuntimeException(e);
       } finally {
-        try {
-          watchService.close();
-        } catch (IOException e) {
-          LOG.warn("Error closing watch service", e);
-        }
-        LOG.info("{} thread finished", getName());
+        LOG.debug("{} thread finished", getName());
         FileChangeWatcher.this.setState(FileChangeWatcher.State.STOPPED);
       }
     }
 
-    private void runLoop() {
+    private void runLoop() throws IOException {
       while (FileChangeWatcher.this.getState() == FileChangeWatcher.State.RUNNING) {
-        WatchKey key;
-        try {
-          key = watchService.take();
-        } catch (InterruptedException | ClosedWatchServiceException e) {
-          LOG.debug("{} was interrupted and is shutting down...", getName());
-          break;
+        BasicFileAttributes attributes = Files.readAttributes(filePath, BasicFileAttributes.class);
+        boolean modified = false;
+        synchronized (lastModifiedTimeLock) {
+          FileTime maybeNewLastModifiedTime = attributes.lastModifiedTime();
+          if (!lastModifiedTime.equals(maybeNewLastModifiedTime)) {
+            modified = true;
+            lastModifiedTime = maybeNewLastModifiedTime;
+          }
         }
-        for (WatchEvent<?> event : key.pollEvents()) {
-          LOG.debug("Got file changed event: {} with context: {}", event.kind(), event.context());
+
+        // avoid calling callback while holding lock
+        if (modified) {
           try {
-            callback.accept(event);
+            callback.callback(filePath);
           } catch (Throwable e) {
             LOG.error("Error from callback", e);
           }
         }
-        boolean isKeyValid = key.reset();
-        if (!isKeyValid) {
-          // This is likely a problem, it means that file reloading is broken, probably because the
-          // directory we are watching was deleted or otherwise became inaccessible (unmounted,
-          // permissions
-          // changed, ???).
-          // For now, we log an error and exit the watcher thread.
-          LOG.error("Watch key no longer valid, maybe the directory is inaccessible?");
-          break;
+
+        try {
+          Thread.sleep(pollInterval.toMillis());
+        } catch (InterruptedException e) {
+          LOG.debug("Interrupted", e);
+          Thread.currentThread().interrupt();
+          return;
         }
       }
     }

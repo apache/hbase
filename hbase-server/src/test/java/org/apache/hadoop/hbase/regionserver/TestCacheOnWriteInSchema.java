@@ -219,7 +219,8 @@ public class TestCacheOnWriteInSchema {
   private void readStoreFile(Path path) throws IOException {
     CacheConfig cacheConf = store.getCacheConfig();
     BlockCache cache = cacheConf.getBlockCache().get();
-    HStoreFile sf = new HStoreFile(fs, path, conf, cacheConf, BloomType.ROWCOL, true);
+    StoreFileInfo storeFileInfo = StoreFileInfo.createStoreFileInfoForHFile(conf, fs, path, true);
+    HStoreFile sf = new HStoreFile(storeFileInfo, BloomType.ROWCOL, cacheConf);
     sf.initReader();
     HFile.Reader reader = sf.getReader().getHFileReader();
     try {
