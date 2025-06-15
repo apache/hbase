@@ -296,6 +296,12 @@ message GetCachedFilesListResponse {
   repeated string cached_files = 1;
 }
 
+message ReloadQuotasRequest {
+}
+
+message ReloadQuotasResponse {
+}
+
 /**
  * Slow/Large log (LogRequest) use-case specific RPC request. This request payload will be
  * converted in bytes and sent to generic RPC API: GetLogEntries
@@ -420,5 +426,8 @@ service AdminService {
 
   rpc GetCachedFilesList(GetCachedFilesListRequest)
     returns(GetCachedFilesListResponse);
+
+  rpc ReloadQuotas(ReloadQuotasRequest)
+    returns(ReloadQuotasResponse);
 
 }
