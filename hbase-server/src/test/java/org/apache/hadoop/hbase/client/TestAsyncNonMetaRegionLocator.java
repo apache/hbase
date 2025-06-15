@@ -584,7 +584,7 @@ public class TestAsyncNonMetaRegionLocator {
           .getDefaultRegionLocation();
       ServerName failedServer = locOnError.getServerName();
       Throwable exception = new CallTimeoutException("test");
-      conn.getFailedServers().addToFailedServers(failedServer.getAddress(), exception);
+      conn.rpcClient.getFailedServers().addToFailedServers(failedServer.getAddress(), exception);
       locator.updateCachedLocationOnError(locOnError, exception);
 
       // All location cache on the failed server should be removed
@@ -631,7 +631,7 @@ public class TestAsyncNonMetaRegionLocator {
       locator.getRegionLocations(TABLE_NAME, EMPTY_START_ROW, RegionReplicaUtil.DEFAULT_REPLICA_ID,
         RegionLocateType.CURRENT, false).get().getDefaultRegionLocation();
     ServerName failedServer = locOnError.getServerName();
-    conn.getFailedServers().addToFailedServers(failedServer.getAddress(), exception);
+    conn.rpcClient.getFailedServers().addToFailedServers(failedServer.getAddress(), exception);
     locator.updateCachedLocationOnError(locOnError, exception);
     verify(locator, times(1)).removeServerLocationFromCache(any());
   }

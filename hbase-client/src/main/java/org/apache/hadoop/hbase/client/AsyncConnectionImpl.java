@@ -51,7 +51,6 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.backoff.ClientBackoffPolicy;
 import org.apache.hadoop.hbase.client.backoff.ClientBackoffPolicyFactory;
-import org.apache.hadoop.hbase.ipc.FailedServers;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
@@ -427,11 +426,6 @@ public class AsyncConnectionImpl implements AsyncConnection {
       this.conn = c;
     }
     return c;
-  }
-
-  @Override
-  public FailedServers getFailedServers() {
-    return rpcClient.getFailedServers();
   }
 
   private Hbck getHbckInternal(ServerName masterServer) {

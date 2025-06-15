@@ -25,7 +25,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.ipc.FailedServers;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -209,11 +208,6 @@ public interface AsyncConnection extends Closeable {
    * consider this as a light-weighted operation.
    */
   Connection toConnection();
-
-  /**
-   * Returns {@link FailedServers} which contains the list of recently failed servers
-   */
-  FailedServers getFailedServers();
 
   /**
    * Retrieve an Hbck implementation to fix an HBase cluster. The returned Hbck is not guaranteed to

@@ -114,7 +114,7 @@ class AsyncMetaRegionLocator {
 
   void updateCachedLocationOnError(HRegionLocation loc, Throwable exception) {
     boolean isServerFailure =
-      conn.getFailedServers().isFailedServer(loc.getServerName().getAddress());
+      conn.rpcClient.getFailedServers().isFailedServer(loc.getServerName().getAddress());
     AsyncRegionLocatorHelper.updateCachedLocationOnError(loc, exception, this::getCacheLocation,
       this::addLocationToCache, this::removeLocationFromCache, this::removeServerLocationFromCache,
       null, isServerFailure);

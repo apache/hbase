@@ -227,7 +227,7 @@ public class TestAsyncMetaRegionLocator {
       // the region server of the location is added to FailedServers
       ServerName failedServer = location.getServerName();
       Throwable exception = new CallTimeoutException("test");
-      conn.getFailedServers().addToFailedServers(failedServer.getAddress(), exception);
+      conn.rpcClient.getFailedServers().addToFailedServers(failedServer.getAddress(), exception);
       locator.updateCachedLocationOnError(location, exception);
 
       // the location is removed from the meta region cache

@@ -23,7 +23,6 @@ import java.util.concurrent.ExecutorService;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.ipc.FailedServers;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -110,8 +109,4 @@ public class SharedAsyncConnection implements AsyncConnection {
     return new SharedConnection(conn.toConnection());
   }
 
-  @Override
-  public FailedServers getFailedServers() {
-    return conn.getFailedServers();
-  }
 }
