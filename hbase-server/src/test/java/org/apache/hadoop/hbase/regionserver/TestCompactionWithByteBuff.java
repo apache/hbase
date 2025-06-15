@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
+import org.apache.hadoop.hbase.io.DeallocateRewriteByteBuffAllocator;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
@@ -64,6 +65,8 @@ public class TestCompactionWithByteBuff {
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
     conf.setBoolean(ByteBuffAllocator.ALLOCATOR_POOL_ENABLED_KEY, true);
+    conf.set(ByteBuffAllocator.BYTEBUFF_ALLOCATOR_CLASS,
+      DeallocateRewriteByteBuffAllocator.class.getName());
     conf.setInt(ByteBuffAllocator.BUFFER_SIZE_KEY, 1024 * 5);
     conf.setInt(CompactSplit.SMALL_COMPACTION_THREADS, REGION_COUNT * 2);
     conf.setInt(CompactSplit.LARGE_COMPACTION_THREADS, REGION_COUNT * 2);
@@ -78,11 +81,9 @@ public class TestCompactionWithByteBuff {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test
-  public void testCompaction() throws Exception {
-    TableName table = TableName.valueOf("t1");
+  private void testCompaction(TableName table, boolean isMob) throws Exception {
     admin.compactionSwitch(false, new ArrayList<>(0));
-    try (Table t = createTable(TEST_UTIL, table)) {
+    try (Table t = createTable(TEST_UTIL, table, isMob)) {
       for (int i = 0; i < 2; i++) {
         put(t);
         admin.flush(table);
@@ -108,9 +109,22 @@ public class TestCompactionWithByteBuff {
     }
   }
 
-  private Table createTable(HBaseTestingUtil util, TableName tableName) throws IOException {
-    TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName).setColumnFamily(
-      ColumnFamilyDescriptorBuilder.newBuilder(COLUMN).setBlocksize(1024 * 4).build()).build();
+  @Test
+  public void testCompaction() throws Exception {
+    testCompaction(TableName.valueOf(name.getMethodName()), false);
+  }
+
+  @Test
+  public void testCompactionForMobTable() throws Exception {
+    testCompaction(TableName.valueOf(name.getMethodName()), true);
+  }
+
+  private Table createTable(HBaseTestingUtil util, TableName tableName, boolean isMob)
+    throws IOException {
+    TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(COLUMN).setBlocksize(1024 * 4)
+        .setMobEnabled(isMob).setMobThreshold(10240).build())
+      .build();
     byte[][] splits = new byte[REGION_COUNT - 1][];
     for (int i = 1; i < REGION_COUNT; i++) {
       splits[i - 1] = Bytes.toBytes(buildRow((int) (ROW_COUNT / REGION_COUNT * i)));
