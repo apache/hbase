@@ -161,7 +161,8 @@ public final class WALSplitUtil {
    */
   @SuppressWarnings("deprecation")
   static Path getRegionSplitEditsPath(TableName tableName, byte[] encodedRegionName, long seqId,
-    String fileNameBeingSplit, String tmpDirName, Configuration conf) throws IOException {
+    String fileNameBeingSplit, String tmpDirName, Configuration conf, long workerStartCode)
+    throws IOException {
     FileSystem walFS = CommonFSUtils.getWALFileSystem(conf);
     Path tableDir = CommonFSUtils.getWALTableDir(conf, tableName);
     String encodedRegionNameStr = Bytes.toString(encodedRegionName);
@@ -193,7 +194,8 @@ public final class WALSplitUtil {
     // Append file name ends with RECOVERED_LOG_TMPFILE_SUFFIX to ensure
     // region's replayRecoveredEdits will not delete it
     String fileName = formatRecoveredEditsFileName(seqId);
-    fileName = getTmpRecoveredEditsFileName(fileName + "-" + fileNameBeingSplit);
+    fileName =
+      getTmpRecoveredEditsFileName(fileName + "-" + fileNameBeingSplit + "-" + workerStartCode);
     return new Path(dir, fileName);
   }
 
