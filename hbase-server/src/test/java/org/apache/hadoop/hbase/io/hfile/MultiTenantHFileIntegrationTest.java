@@ -401,15 +401,35 @@ public class MultiTenantHFileIntegrationTest {
         
         try (org.apache.hadoop.hbase.client.ResultScanner tenantScanner = table.getScanner(tenantScan)) {
           int tenantRowCount = 0;
+          List<String> foundRows = new ArrayList<>();
           
           for (org.apache.hadoop.hbase.client.Result scanResult : tenantScanner) {
             String rowKey = Bytes.toString(scanResult.getRow());
+            foundRows.add(rowKey);
             
             if (!rowKey.startsWith(targetTenantId)) {
               fail("Tenant scan violation: Found row " + rowKey + " in scan for tenant " + targetTenantId);
             }
             
             tenantRowCount++;
+          }
+          
+          // Debug logging to see which rows were found
+          LOG.info("Tenant {} scan found {} rows: {}", targetTenantId, tenantRowCount, foundRows);
+          
+          if (tenantRowCount != expectedRowsForThisTenant) {
+            // Generate expected rows for comparison
+            List<String> expectedRows = new ArrayList<>();
+            for (int j = 0; j < expectedRowsForThisTenant; j++) {
+              expectedRows.add(targetTenantId + "row" + String.format("%03d", j));
+            }
+            LOG.error("Expected rows for {}: {}", targetTenantId, expectedRows);
+            LOG.error("Found rows for {}: {}", targetTenantId, foundRows);
+            
+            // Find missing rows
+            List<String> missingRows = new ArrayList<>(expectedRows);
+            missingRows.removeAll(foundRows);
+            LOG.error("Missing rows for {}: {}", targetTenantId, missingRows);
           }
           
           assertEquals("Row count mismatch for tenant " + targetTenantId, 
