@@ -22,6 +22,8 @@ import static org.apache.hadoop.hbase.wal.WALSplitUtil.getRegionSplitEditsPath;
 
 import java.io.EOFException;
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -30,8 +32,10 @@ import java.util.concurrent.ConcurrentMap;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
+import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -57,11 +61,9 @@ abstract class AbstractRecoveredEditsOutputSink extends OutputSink {
     long seqId) throws IOException {
     // If multiple worker are splitting a WAL at a same time, both should use unique file name to
     // avoid conflict
-    long workerStartCode =
-      walSplitter.rsServices != null ? walSplitter.rsServices.getServerName().getStartCode() : 0L;
     Path regionEditsPath = getRegionSplitEditsPath(tableName, region, seqId,
       walSplitter.getFileBeingSplit().getPath().getName(), walSplitter.getTmpDirName(),
-      walSplitter.conf, workerStartCode);
+      walSplitter.conf, getWorkerNameComponent());
 
     if (walSplitter.walFS.exists(regionEditsPath)) {
       LOG.warn("Found old edits file. It could be the "
@@ -76,6 +78,16 @@ abstract class AbstractRecoveredEditsOutputSink extends OutputSink {
     LOG.info(msg);
     updateStatusWithMsg(msg);
     return new RecoveredEditsWriter(region, regionEditsPath, w, seqId);
+  }
+
+  private String getWorkerNameComponent() {
+    if (walSplitter.rsServices == null) {
+      return "";
+    }
+    return URLEncoder.encode(
+      walSplitter.rsServices.getServerName().toShortString()
+        .replace(Addressing.HOSTNAME_PORT_SEPARATOR, ServerName.SERVERNAME_SEPARATOR),
+      StandardCharsets.UTF_8);
   }
 
   /**
@@ -143,6 +155,8 @@ abstract class AbstractRecoveredEditsOutputSink extends OutputSink {
   private boolean deleteTmpIfDstHasNoLessEntries(RecoveredEditsWriter editsWriter, Path dst)
     throws IOException {
     if (walSplitter.walFS.exists(dst) && !isDstHasFewerEntries(editsWriter, dst)) {
+      LOG.info("Destination {} already have no fewer entries so deleting tmp recovered edits file {}", dst,
+        editsWriter.path);
       if (!walSplitter.walFS.delete(editsWriter.path, false)) {
         LOG.warn("Failed deleting of {}", editsWriter.path);
         throw new IOException("Failed deleting of " + editsWriter.path);
