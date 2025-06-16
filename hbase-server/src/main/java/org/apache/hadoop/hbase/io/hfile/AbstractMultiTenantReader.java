@@ -43,8 +43,6 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hbase.thirdparty.com.google.common.cache.Cache;
 import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
-import org.apache.hbase.thirdparty.com.google.common.cache.RemovalListener;
-import org.apache.hbase.thirdparty.com.google.common.cache.RemovalNotification;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -63,10 +61,9 @@ import org.slf4j.LoggerFactory;
  * <p>
  * Key features:
  * <ul>
- * <li>Section-based caching with bounded size and LRU eviction</li>
  * <li>Multi-level tenant index support for efficient section lookup</li>
  * <li>Prefetching for sequential access optimization</li>
- * <li>Table property caching to avoid repeated Admin API calls</li>
+ * <li>Table property loading to support tenant configuration</li>
  * <li>Transparent delegation to HFile v3 readers for each section</li>
  * </ul>
  */
@@ -74,7 +71,7 @@ import org.slf4j.LoggerFactory;
 public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
   private static final Logger LOG = LoggerFactory.getLogger(AbstractMultiTenantReader.class);
   
-  /** Static cache for table properties to avoid repeated loading */
+  /** Static storage for table properties to avoid repeated loading */
   private static final Cache<TableName, Map<String, String>> TABLE_PROPERTIES_CACHE = 
       CacheBuilder.newBuilder()
           .maximumSize(100)
@@ -86,20 +83,11 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
   /** Section index reader for locating tenant sections */
   protected final SectionIndexManager.Reader sectionIndexReader;
   
-  /** Configuration key for section reader cache size */
-  private static final String SECTION_READER_CACHE_SIZE = 
-      "hbase.multi.tenant.reader.cache.size";
-  /** Default size for section reader cache */
-  private static final int DEFAULT_SECTION_READER_CACHE_SIZE = 100;
-  
   /** Configuration key for section prefetch enablement */
   private static final String SECTION_PREFETCH_ENABLED = 
       "hbase.multi.tenant.reader.prefetch.enabled";
   /** Default prefetch enabled flag */
   private static final boolean DEFAULT_SECTION_PREFETCH_ENABLED = true;
-  
-  /** Cache for section readers with bounded size and eviction */
-  protected final Cache<ImmutableBytesWritable, SectionReader> sectionReaderCache;
   
   /** Private map to store section metadata */
   private final Map<ImmutableBytesWritable, SectionMetadata> sectionLocations = 
@@ -127,29 +115,6 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
   public AbstractMultiTenantReader(ReaderContext context, HFileInfo fileInfo,
       CacheConfig cacheConf, Configuration conf) throws IOException {
     super(context, fileInfo, cacheConf, conf);
-    
-    // Initialize bounded cache with eviction
-    int cacheSize = conf.getInt(SECTION_READER_CACHE_SIZE, DEFAULT_SECTION_READER_CACHE_SIZE);
-    this.sectionReaderCache = CacheBuilder.newBuilder()
-        .maximumSize(cacheSize)
-        .recordStats()
-        .removalListener(new RemovalListener<ImmutableBytesWritable, SectionReader>() {
-          @Override
-          public void onRemoval(RemovalNotification<ImmutableBytesWritable, SectionReader> 
-                               notification) {
-            SectionReader reader = notification.getValue();
-            if (reader != null) {
-              try {
-                reader.close();
-                LOG.debug("Evicted section reader for tenant: {}", 
-                    Bytes.toStringBinary(notification.getKey().get()));
-              } catch (IOException e) {
-                LOG.warn("Error closing evicted section reader", e);
-              }
-            }
-          }
-        })
-        .build();
     
     // Initialize section index reader
     this.sectionIndexReader = new SectionIndexManager.Reader();
@@ -307,7 +272,6 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
   /**
    * Get table properties from the file context if available.
    * <p>
-   * Uses a bounded cache to avoid repeated Admin API calls for the same table.
    * Properties are used for tenant configuration and optimization settings.
    * 
    * @return A map of table properties, or empty map if not available
@@ -323,11 +287,10 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
         return tableProperties;
       }
       
-      // Get the table descriptor from the cache or Admin API
+      // Get the table descriptor from Admin API
       TableName tableName = TableName.valueOf(fileContext.getTableName());
       
       try {
-        // Try to get from cache first
         tableProperties = TABLE_PROPERTIES_CACHE.get(tableName, () -> {
           Map<String, String> props = new HashMap<>();
           try (Connection conn = ConnectionFactory.createConnection(getConf());
@@ -338,7 +301,7 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
               tableDesc.getValues().forEach((k, v) -> {
                 props.put(Bytes.toString(k.get()), Bytes.toString(v.get()));
               });
-              LOG.debug("Loaded and cached table properties for {}", tableName);
+              LOG.debug("Loaded table properties for {}", tableName);
             }
           }
           return props;
@@ -404,34 +367,21 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
   }
   
   /**
-   * Get or create a reader for a tenant section.
+   * Create a reader for a tenant section on demand.
    * 
    * @param tenantSectionId The tenant section ID for the section
    * @return A section reader or null if the section doesn't exist
    * @throws IOException If an error occurs creating the reader
    */
-      protected SectionReader getSectionReader(byte[] tenantSectionId) throws IOException {
-    ImmutableBytesWritable key = new ImmutableBytesWritable(tenantSectionId);
-    
+  protected SectionReader getSectionReader(byte[] tenantSectionId) throws IOException {
     // Lookup the section metadata
     SectionMetadata metadata = getSectionMetadata(tenantSectionId);
     if (metadata == null) {
       return null;
     }
     
-    try {
-      // Use cache's get method with loader for atomic creation
-      SectionReader reader = sectionReaderCache.get(key, () -> {
-        return createSectionReader(tenantSectionId, metadata);
-      });
-      
-      return reader;
-    } catch (Exception e) {
-      if (e instanceof IOException) {
-        throw (IOException) e;
-      }
-      throw new IOException("Failed to get section reader", e);
-    }
+    // Create reader directly - no caching needed for sequential access patterns
+    return createSectionReader(tenantSectionId, metadata);
   }
   
   /**
@@ -590,7 +540,7 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
     }
     
     /**
-     * Switch to a new section reader, properly managing reference counts.
+     * Switch to a new section reader, properly managing resource cleanup.
      *
      * @param newReader The new section reader to switch to
      * @param sectionId The section ID for the new reader
@@ -598,15 +548,17 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
      */
     private void switchToSectionReader(SectionReader newReader, byte[] sectionId) 
         throws IOException {
-      // Release previous reader
+      // Close previous reader since no cache will clean it up
       if (currentSectionReader != null) {
         try {
-          // Note: We don't close the reader here as it might be cached and reused
-          // The cache eviction will handle the actual closing
+          currentSectionReader.close();
+          LOG.debug("Closed section reader for tenant: {}", 
+              Bytes.toStringBinary(currentTenantSectionId));
+        } catch (IOException e) {
+          LOG.warn("Error closing previous section reader", e);
+        } finally {
           currentSectionReader = null;
           currentScanner = null;
-        } catch (Exception e) {
-          LOG.warn("Error releasing previous section reader", e);
         }
       }
       
@@ -839,7 +791,7 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
       try {
         byte[] nextSectionId = findNextTenantSectionId(currentSectionId);
         if (nextSectionId != null) {
-          // Trigger async load by just getting the reader (cache will hold it)
+          // Trigger async load by creating the reader
           getSectionReader(nextSectionId);
         }
       } catch (Exception e) {
@@ -895,8 +847,15 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
         currentScanner = null;
       }
       if (currentSectionReader != null) {
-        // Don't close the section reader - let cache eviction handle it
-        currentSectionReader = null;
+        try {
+          currentSectionReader.close();
+          LOG.debug("Closed section reader for tenant: {}", 
+              Bytes.toStringBinary(currentTenantSectionId));
+        } catch (IOException e) {
+          LOG.warn("Error closing section reader on scanner close", e);
+        } finally {
+          currentSectionReader = null;
+        }
       }
       seeked = false;
     }
@@ -932,16 +891,14 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
   }
 
   /**
-   * Close all section readers and underlying resources, with optional block eviction.
+   * Close underlying resources, with optional block eviction.
    *
    * @param evictOnClose Whether to evict blocks on close
    * @throws IOException If an error occurs during close
    */
   @Override
   public void close(boolean evictOnClose) throws IOException {
-    // Close and invalidate all cached section readers
-    // The removal listener will handle closing each reader
-    sectionReaderCache.invalidateAll();
+    // Section readers are created on demand and closed by scanner
     
     // Close filesystem block reader streams
     if (fsBlockReader != null) {
@@ -1025,25 +982,6 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
       allIds[i++] = key.copyBytes();
     }
     return allIds;
-  }
-
-  /**
-   * Get cache statistics for monitoring and performance analysis.
-   * <p>
-   * Provides comprehensive metrics about section reader cache performance
-   * including hit rates, eviction counts, and current cache utilization.
-   * 
-   * @return A map of cache statistics with metric names as keys
-   */
-  public Map<String, Long> getCacheStats() {
-    Map<String, Long> stats = new HashMap<>();
-    stats.put("cacheSize", sectionReaderCache.size());
-    stats.put("cacheHitCount", sectionReaderCache.stats().hitCount());
-    stats.put("cacheMissCount", sectionReaderCache.stats().missCount());
-    stats.put("cacheLoadCount", sectionReaderCache.stats().loadCount());
-    stats.put("cacheEvictionCount", sectionReaderCache.stats().evictionCount());
-    stats.put("totalSections", (long) sectionLocations.size());
-    return stats;
   }
 
   /**
@@ -1237,7 +1175,7 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
   }
 
   /**
-   * Override block reading with cache-only flag.
+   * Override block reading with section routing.
    * 
    * @param dataBlockOffset the offset of the block to read
    * @param onDiskBlockSize the on-disk size of the block  
@@ -1274,8 +1212,8 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
                                    pread, isCompaction, updateCacheMetrics, 
                                    expectedBlockType, expectedDataBlockEncoding, cacheOnly);
     } catch (IOException e) {
-      LOG.error("Failed to read block at offset {} from section (cache-only={})", 
-                dataBlockOffset, cacheOnly, e);
+      LOG.error("Failed to read block at offset {} from section", 
+                dataBlockOffset, e);
       throw e;
     }
   }
@@ -1328,34 +1266,26 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
   }
 
   /**
-   * Override unbuffer stream to handle all section contexts.
+   * Override unbuffer stream to handle main context.
    */
   @Override
   public void unbufferStream() {
     // Unbuffer the main context
     super.unbufferStream();
     
-    // Unbuffer all cached section readers
-    for (SectionReader sectionReader : sectionReaderCache.asMap().values()) {
-      try {
-        HFileReaderImpl reader = sectionReader.getReader();
-        reader.unbufferStream();
-      } catch (Exception e) {
-        LOG.debug("Failed to unbuffer stream for section reader", e);
-      }
-    }
+    // Section readers are created on demand and managed by scanner
   }
 
   /**
-   * For HFile v4 multi-tenant files, effective encoding in cache is ignored.
+   * For HFile v4 multi-tenant files, effective encoding is ignored.
    * 
    * @param isCompaction whether this is for a compaction
    * @return always NONE for multi-tenant HFiles
    */
   @Override
   public DataBlockEncoding getEffectiveEncodingInCache(boolean isCompaction) {
-    // HFile v4 multi-tenant files ignore effective encoding in cache
-    LOG.debug("Effective encoding in cache ignored for HFile v4 multi-tenant files");
+    // HFile v4 multi-tenant files ignore effective encoding
+    LOG.debug("Effective encoding ignored for HFile v4 multi-tenant files");
     return DataBlockEncoding.NONE;
   }
 
@@ -1368,13 +1298,9 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
     Map<String, Object> stats = new HashMap<>();
     
     stats.put("totalSections", sectionLocations.size());
-    stats.put("cachedSections", sectionReaderCache.size());
     stats.put("tenantIndexLevels", tenantIndexLevels);
     stats.put("tenantIndexMaxChunkSize", tenantIndexMaxChunkSize);
     stats.put("prefetchEnabled", prefetchEnabled);
-    
-    // Cache statistics
-    stats.putAll(getCacheStats());
     
     // Section size distribution
     List<Integer> sectionSizes = new ArrayList<>();
@@ -1394,7 +1320,7 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
    * Get metadata for a specific tenant section by section ID.
    * 
    * @param tenantSectionId The tenant section ID to look up
-   * @return Detailed metadata about the section including cached status
+   * @return Detailed metadata about the section
    */
   public Map<String, Object> getSectionInfo(byte[] tenantSectionId) {
     Map<String, Object> info = new HashMap<>();
@@ -1406,21 +1332,6 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
       info.put("exists", true);
       info.put("offset", metadata.getOffset());
       info.put("size", metadata.getSize());
-      info.put("cached", sectionReaderCache.asMap().containsKey(key));
-      
-      // Try to get additional info from cached reader
-      SectionReader cachedReader = sectionReaderCache.getIfPresent(key);
-      if (cachedReader != null) {
-        try {
-          HFileReaderImpl reader = cachedReader.getReader();
-          info.put("entries", reader.getEntries());
-          info.put("indexSize", reader.indexSize());
-          info.put("hasMVCC", reader.hasMVCCInfo());
-        } catch (Exception e) {
-          LOG.debug("Failed to get additional info for section {}", 
-                    Bytes.toStringBinary(tenantSectionId), e);
-        }
-      }
     } else {
       info.put("exists", false);
     }
@@ -1494,7 +1405,6 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
     sb.append("path=").append(getPath());
     sb.append(", majorVersion=").append(getMajorVersion());
     sb.append(", sections=").append(sectionLocations.size());
-    sb.append(", cachedSections=").append(sectionReaderCache.size());
     sb.append(", tenantIndexLevels=").append(tenantIndexLevels);
     sb.append(", fileSize=").append(length());
     
