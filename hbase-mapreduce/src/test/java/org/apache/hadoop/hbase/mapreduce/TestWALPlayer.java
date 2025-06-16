@@ -22,6 +22,7 @@ import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
@@ -35,6 +36,7 @@ import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -336,6 +338,47 @@ public class TestWALPlayer {
       System.setSecurityManager(SECURITY_MANAGER);
     }
 
+  }
+
+  @Test
+  public void testIgnoreEmptyWALFiles() throws Exception {
+    // Create an empty WAL file in a test input directory
+    FileSystem dfs = TEST_UTIL.getDFSCluster().getFileSystem();
+    Path inputDir = new Path("/empty-wal-dir");
+    dfs.mkdirs(inputDir);
+
+    Path emptyWAL = new Path(inputDir, "empty.wal");
+    FSDataOutputStream out = dfs.create(emptyWAL);
+    out.close(); // Creates a 0-byte file
+
+    assertTrue("Empty WAL file should exist", dfs.exists(emptyWAL));
+    assertEquals("WAL file should be 0 bytes", 0, dfs.getFileStatus(emptyWAL).getLen());
+
+    // Run WALPlayer with IGNORE_EMPTY_FILES = true
+    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
+    conf.setBoolean(WALPlayer.IGNORE_EMPTY_FILES, true);
+
+    int exitCode = ToolRunner.run(conf, new WALPlayer(conf), new String[] { inputDir.toString() });
+
+    assertEquals("WALPlayer should exit cleanly even with empty files", 0, exitCode);
+  }
+
+  @Test
+  public void testFailOnEmptyWALFilesWhenNotIgnored() throws Exception {
+    // Create an empty WAL file again
+    FileSystem dfs = TEST_UTIL.getDFSCluster().getFileSystem();
+    Path inputDir = new Path("/fail-empty-wal-dir");
+    dfs.mkdirs(inputDir);
+    Path emptyWAL = new Path(inputDir, "empty.wal");
+    FSDataOutputStream out = dfs.create(emptyWAL);
+    out.close();
+
+    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
+    conf.setBoolean(WALPlayer.IGNORE_EMPTY_FILES, false);
+
+    int exitCode = ToolRunner.run(conf, new WALPlayer(conf), new String[] { inputDir.toString() });
+
+    assertNotEquals("WALPlayer should fail on empty files when not ignored", 0, exitCode);
   }
 
 }
