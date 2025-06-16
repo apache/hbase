@@ -461,15 +461,15 @@ public class HFileInfo implements SortedMap<byte[], byte[]> {
   }
 
   /**
-   * File version check is a little sloppy. We read v3 files but can also read v2 files if their
-   * content has been pb'd; files written with 0.98.
+   * File version check is a little sloppy. We read v4 and v3 files but can also read v2 files if
+   * their content has been pb'd; files written with 0.98.
    */
   private void checkFileVersion(Path path) {
     int majorVersion = trailer.getMajorVersion();
     if (majorVersion == getMajorVersion()) {
       return;
     }
-    if (majorVersion == HFile.MIN_FORMAT_VERSION_WITH_MULTI_TENANT) {
+    if (majorVersion == HFile.MIN_FORMAT_VERSION_WITH_TAGS) {
       return;
     }
     int minorVersion = trailer.getMinorVersion();
@@ -489,7 +489,7 @@ public class HFileInfo implements SortedMap<byte[], byte[]> {
   }
 
   public int getMajorVersion() {
-    return 3;
+    return 4;
   }
 
   public void setTrailer(FixedFileTrailer trailer) {
