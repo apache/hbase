@@ -34,6 +34,7 @@
     <license.bundles.dependencies>true</license.bundles.dependencies>
     <!-- So that we don't have to add redundant exclusions to provided scope dependencies -->
     <enforcer.skip>true</enforcer.skip>
+    <final.name>hbase-byo-hadoop-${project.version}</final.name>
   </properties>
   <dependencies>
     <!-- Set every Hadoop dependency as provided. The byo-hadoop assembly relies an external Hadoop installation -->
@@ -370,7 +371,7 @@
         <artifactId>maven-assembly-plugin</artifactId>
         <configuration>
           <!--Else will use hbase-assembly as final name.-->
-          <finalName>hbase-byo-hadoop-${project.version}</finalName>
+          <finalName>${final.name}</finalName>
           <skipAssembly>false</skipAssembly>
           <appendAssemblyId>true</appendAssemblyId>
           <tarLongFileMode>posix</tarLongFileMode>
@@ -430,4 +431,84 @@
       <!-- /end building aggregation of NOTICE files -->
     </plugins>
   </build>
+  <profiles>
+    <profile>
+      <id>assemblyForTesting</id>
+      <activation>
+        <property>
+          <name>assemblyForTesting</name>
+        </property>
+      </activation>
+      <properties>
+        <final.name>hbase-byo-hadoop-for-testing-${project.version}</final.name>
+      </properties>
+      <dependencies>
+        <!-- Dependencies for running hbase-it -->
+        <dependency>
+          <groupId>org.apache.hbase</groupId>
+          <artifactId>hbase-it</artifactId>
+          <type>test-jar</type>
+          <scope>compile</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hbase</groupId>
+          <artifactId>hbase-testing-util</artifactId>
+          <scope>compile</scope>
+        </dependency>
+        <!-- Change the scope of test-jar dependencies -->
+        <dependency>
+          <groupId>org.apache.hbase</groupId>
+          <artifactId>hbase-annotations</artifactId>
+          <type>test-jar</type>
+          <scope>compile</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hbase</groupId>
+          <artifactId>hbase-procedure</artifactId>
+          <type>test-jar</type>
+          <scope>compile</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hbase</groupId>
+          <artifactId>hbase-common</artifactId>
+          <type>test-jar</type>
+          <scope>compile</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hbase</groupId>
+          <artifactId>hbase-zookeeper</artifactId>
+          <type>test-jar</type>
+          <scope>compile</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hbase</groupId>
+          <artifactId>hbase-server</artifactId>
+          <type>test-jar</type>
+          <scope>compile</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hbase</groupId>
+          <artifactId>hbase-hadoop-compat</artifactId>
+          <type>test-jar</type>
+          <scope>compile</scope>
+        </dependency>
+        <dependency>
+          <groupId>junit</groupId>
+          <artifactId>junit</artifactId>
+          <scope>compile</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.hamcrest</groupId>
+          <artifactId>hamcrest-core</artifactId>
+          <scope>compile</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.mockito</groupId>
+          <artifactId>mockito-core</artifactId>
+          <scope>compile</scope>
+        </dependency>
+        <!-- End of dependencies for running hbase-it -->
+      </dependencies>
+    </profile>
+  </profiles>
 </project>

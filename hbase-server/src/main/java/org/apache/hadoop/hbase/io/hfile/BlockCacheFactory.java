@@ -82,6 +82,28 @@ public final class BlockCacheFactory {
   @Deprecated
   static final String DEPRECATED_BLOCKCACHE_BLOCKSIZE_KEY = "hbase.offheapcache.minblocksize";
 
+  /**
+   * The window period length in minutes for CacheStats rolling metrics.
+   */
+  public static final String BLOCKCACHE_STATS_PERIOD_MINUTES_KEY =
+    "hbase.blockcache.stats.period.minutes";
+
+  /**
+   * Default window period length in minutes.
+   */
+  public static final int DEFAULT_BLOCKCACHE_STATS_PERIOD_MINUTES = 5;
+
+  /**
+   * The total number of periods in the window.
+   */
+  public static final String BLOCKCACHE_STATS_PERIODS = "hbase.blockcache.stats.periods";
+
+  /**
+   * Default number of periods in the window. We define 12 periods of 5 minutes to give an hourly
+   * split of 5 minutes periods.
+   */
+  public static final int DEFAULT_BLOCKCACHE_STATS_PERIODS = 12;
+
   private BlockCacheFactory() {
   }
 

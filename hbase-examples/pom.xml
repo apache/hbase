@@ -34,7 +34,7 @@
       Version of protobuf that hbase uses internally (we shade our pb) Must match what is out
       in hbase-thirdparty include.
     -->
-    <internal.protobuf.version>4.28.2</internal.protobuf.version>
+    <internal.protobuf.version>4.30.2</internal.protobuf.version>
   </properties>
   <dependencies>
     <dependency>
@@ -52,11 +52,6 @@
     <dependency>
       <groupId>com.lmax</groupId>
       <artifactId>disruptor</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.logging.log4j</groupId>
-      <artifactId>log4j-1.2-api</artifactId>
-      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>

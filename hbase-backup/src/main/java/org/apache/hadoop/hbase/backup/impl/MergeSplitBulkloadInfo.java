@@ -15,31 +15,41 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.chaos;
+package org.apache.hadoop.hbase.backup.impl;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HConstants;
+import java.util.ArrayList;
+import java.util.List;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 
-/**
- * ChaosUtils holds a bunch of useful functions like getting hostname and getting ZooKeeper quorum.
- */
 @InterfaceAudience.Private
-public class ChaosUtils {
+class MergeSplitBulkloadInfo {
+  private final List<String> activeFiles = new ArrayList<>();
+  private final List<String> archiveFiles = new ArrayList<>();
 
-  public static String getHostName() throws UnknownHostException {
-    return InetAddress.getLocalHost().getHostName();
+  private final TableName srcTable;
+
+  public MergeSplitBulkloadInfo(TableName srcTable) {
+    this.srcTable = srcTable;
   }
 
-  public static String getZKQuorum(Configuration conf) {
-    String port = Integer.toString(conf.getInt(HConstants.ZOOKEEPER_CLIENT_PORT, 2181));
-    String[] serverHosts = conf.getStrings(HConstants.ZOOKEEPER_QUORUM, "localhost");
-    for (int i = 0; i < serverHosts.length; i++) {
-      serverHosts[i] = serverHosts[i] + ":" + port;
-    }
-    return String.join(",", serverHosts);
+  public TableName getSrcTable() {
+    return srcTable;
   }
 
+  public List<String> getArchiveFiles() {
+    return archiveFiles;
+  }
+
+  public List<String> getActiveFiles() {
+    return activeFiles;
+  }
+
+  public void addActiveFile(String file) {
+    activeFiles.add(file);
+  }
+
+  public void addArchiveFiles(String file) {
+    archiveFiles.add(file);
+  }
 }

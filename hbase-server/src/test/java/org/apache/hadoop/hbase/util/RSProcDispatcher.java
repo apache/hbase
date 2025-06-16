@@ -18,6 +18,10 @@
 package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
+import java.net.ConnectException;
+import java.net.UnknownHostException;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.hbase.ServerName;
@@ -38,7 +42,14 @@ public class RSProcDispatcher extends RSProcedureDispatcher {
 
   private static final Logger LOG = LoggerFactory.getLogger(RSProcDispatcher.class);
 
-  private static final AtomicInteger i = new AtomicInteger();
+  private static final AtomicInteger I = new AtomicInteger();
+
+  private static final List<IOException> ERRORS =
+    Arrays.asList(new ConnectionClosedException("test connection closed error..."),
+      new UnknownHostException("test unknown host error..."),
+      new ConnectException("test connect error..."));
+
+  private static final AtomicInteger ERROR_IDX = new AtomicInteger();
 
   public RSProcDispatcher(MasterServices master) {
     super(master);
@@ -65,7 +76,7 @@ public class RSProcDispatcher extends RSProcedureDispatcher {
     @Override
     public AdminProtos.ExecuteProceduresResponse sendRequest(final ServerName serverName,
       final AdminProtos.ExecuteProceduresRequest request) throws IOException {
-      int j = i.addAndGet(1);
+      int j = I.addAndGet(1);
       LOG.info("sendRequest() req: {} , j: {}", request, j);
       if (j == 12 || j == 22) {
         // Execute the remote close and open region requests in the last (5th) retry before
@@ -79,7 +90,7 @@ public class RSProcDispatcher extends RSProcedureDispatcher {
       // schedules recoveries for the server.
       // We will have ABNORMALLY_CLOSED regions, and they are expected to recover on their own.
       if (j >= 8 && j <= 13 || j >= 18 && j <= 23) {
-        throw new ConnectionClosedException("test connection closed error...");
+        throw ERRORS.get(ERROR_IDX.getAndIncrement() % ERRORS.size());
       }
       return FutureUtils.get(getRsAdmin().executeProcedures(request));
     }

@@ -104,9 +104,10 @@ public class TestLargeClusterBalancingTableIsolationAndReplicaDistribution {
     conf.setBoolean(BalancerConditionals.ISOLATE_SYSTEM_TABLES_KEY, true);
     DistributeReplicasTestConditional.enableConditionalReplicaDistributionForTest(conf);
 
-    runBalancerToExhaustion(conf, serverToRegions, Set.of(this::isMetaTableIsolated,
-      this::isSystemTableIsolated, CandidateGeneratorTestUtil::areAllReplicasDistributed), 10.0f,
-      60_000);
+    runBalancerToExhaustion(conf, serverToRegions,
+      Set.of(this::isMetaTableIsolated, this::isSystemTableIsolated,
+        CandidateGeneratorTestUtil::areAllReplicasDistributed),
+      10.0f, 60_000, CandidateGeneratorTestUtil.ExhaustionType.COST_GOAL_ACHIEVED);
     LOG.info("Meta table regions are successfully isolated, "
       + "and region replicas are appropriately distributed.");
   }

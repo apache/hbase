@@ -189,7 +189,7 @@
           <skipAssembly>true</skipAssembly>
         </configuration>
       </plugin>
-      <!-- Copy the static web resources (JS, CSS, images, etc.) from hbase-server sources -->
+      <!-- Copy the static web resources (JS, CSS, images, etc.) from hbase-server -->
       <plugin>
         <artifactId>maven-resources-plugin</artifactId>
         <executions>
@@ -205,7 +205,7 @@
               <overwrite>true</overwrite>
               <resources>
                 <resource>
-                  <directory>../hbase-server/src/main/resources/hbase-webapps/static</directory>
+                  <directory>../hbase-server/target/hbase-webapps/static</directory>
                 </resource>
               </resources>
             </configuration>

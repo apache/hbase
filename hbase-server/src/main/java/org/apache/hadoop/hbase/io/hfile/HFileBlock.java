@@ -1588,6 +1588,24 @@ public class HFileBlock implements Cacheable {
     }
 
     /**
+     * Check that checksumType on {@code headerBuf} read from a block header seems reasonable,
+     * within the known value range.
+     * @return {@code true} if the headerBuf is safe to proceed, {@code false} otherwise.
+     */
+    private boolean checkCheckSumTypeOnHeaderBuf(ByteBuff headerBuf) {
+      if (headerBuf == null) {
+        return true;
+      }
+      byte b = headerBuf.get(HFileBlock.Header.CHECKSUM_TYPE_INDEX);
+      for (ChecksumType t : ChecksumType.values()) {
+        if (t.getCode() == b) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    /**
      * Check that {@code value} read from a block header seems reasonable, within a large margin of
      * error.
      * @return {@code true} if the value is safe to proceed, {@code false} otherwise.
@@ -1696,9 +1714,7 @@ public class HFileBlock implements Cacheable {
       long onDiskSizeWithHeaderL, boolean pread, boolean verifyChecksum, boolean updateMetrics,
       boolean intoHeap) throws IOException {
       final Span span = Span.current();
-      final AttributesBuilder attributesBuilder = Attributes.builder();
-      Optional.of(Context.current()).map(val -> val.get(CONTEXT_KEY))
-        .ifPresent(c -> c.accept(attributesBuilder));
+      final Attributes attributes = getReadDataBlockInternalAttributes(span);
       if (offset < 0) {
         throw new IOException("Invalid offset=" + offset + " trying to read " + "block (onDiskSize="
           + onDiskSizeWithHeaderL + ")");
@@ -1734,7 +1750,7 @@ public class HFileBlock implements Cacheable {
           if (LOG.isTraceEnabled()) {
             LOG.trace("Extra seek to get block size!", new RuntimeException());
           }
-          span.addEvent("Extra seek to get block size!", attributesBuilder.build());
+          span.addEvent("Extra seek to get block size!", attributes);
           headerBuf = HEAP.allocate(hdrSize);
           readAtOffset(is, headerBuf, hdrSize, false, offset, pread);
           headerBuf.rewind();
@@ -1742,12 +1758,27 @@ public class HFileBlock implements Cacheable {
         onDiskSizeWithHeader = getOnDiskSizeWithHeader(headerBuf, checksumSupport);
       }
 
+      // Inspect the header's checksumType for known valid values. If we don't find such a value,
+      // assume that the bytes read are corrupted.We will clear the cached value and roll back to
+      // HDFS checksum
+      if (!checkCheckSumTypeOnHeaderBuf(headerBuf)) {
+        if (verifyChecksum) {
+          invalidateNextBlockHeader();
+          span.addEvent("Falling back to HDFS checksumming.", attributes);
+          return null;
+        } else {
+          throw new IOException(
+            "Unknown checksum type code " + headerBuf.get(HFileBlock.Header.CHECKSUM_TYPE_INDEX)
+              + "for file " + pathName + ", the headerBuf of HFileBlock may corrupted.");
+        }
+      }
+
       // The common case is that onDiskSizeWithHeader was produced by a read without checksum
       // validation, so give it a sanity check before trying to use it.
       if (!checkOnDiskSizeWithHeader(onDiskSizeWithHeader)) {
         if (verifyChecksum) {
           invalidateNextBlockHeader();
-          span.addEvent("Falling back to HDFS checksumming.", attributesBuilder.build());
+          span.addEvent("Falling back to HDFS checksumming.", attributes);
           return null;
         } else {
           throw new IOException("Invalid onDiskSizeWithHeader=" + onDiskSizeWithHeader);
@@ -1788,7 +1819,7 @@ public class HFileBlock implements Cacheable {
         // Verify checksum of the data before using it for building HFileBlock.
         if (verifyChecksum && !validateChecksum(offset, curBlock, hdrSize)) {
           invalidateNextBlockHeader();
-          span.addEvent("Falling back to HDFS checksumming.", attributesBuilder.build());
+          span.addEvent("Falling back to HDFS checksumming.", attributes);
           return null;
         }
 
@@ -1805,7 +1836,7 @@ public class HFileBlock implements Cacheable {
             // requested. The block size provided by the caller (presumably from the block index)
             // does not match the block size written to the block header. treat this as
             // HBase-checksum failure.
-            span.addEvent("Falling back to HDFS checksumming.", attributesBuilder.build());
+            span.addEvent("Falling back to HDFS checksumming.", attributes);
             invalidateNextBlockHeader();
             return null;
           }
@@ -1835,7 +1866,7 @@ public class HFileBlock implements Cacheable {
           LOG.warn("Read Block Slow: read {} cost {} ms, threshold = {} ms", hFileBlock, duration,
             this.readWarnTime);
         }
-        span.addEvent("Read block", attributesBuilder.build());
+        span.addEvent("Read block", attributes);
         // Cache next block header if we read it for the next time through here.
         if (nextBlockOnDiskSize != -1) {
           cacheNextBlockHeader(offset + hFileBlock.getOnDiskSizeWithHeader(), onDiskBlock,
@@ -1885,6 +1916,17 @@ public class HFileBlock implements Cacheable {
       if (!fileContext.isUseHBaseChecksum()) {
         return false;
       }
+
+      // If the checksumType of the read block header is incorrect, it indicates that the block is
+      // corrupted and can be directly rolled back to HDFS checksum verification
+      if (!checkCheckSumTypeOnHeaderBuf(data)) {
+        HFile.LOG.warn(
+          "HBase checksumType verification failed for file {} at offset {} filesize {}"
+            + " checksumType {}. Retrying read with HDFS checksums turned on...",
+          pathName, offset, fileSize, data.get(HFileBlock.Header.CHECKSUM_TYPE_INDEX));
+        return false;
+      }
+
       return ChecksumUtil.validateChecksum(data, pathName, offset, hdrSize);
     }
 
@@ -2157,5 +2199,22 @@ public class HFileBlock implements Cacheable {
     ByteBuff deepCloned = ByteBuff
       .wrap(ByteBuffer.wrap(blk.bufWithoutChecksum.toBytes(0, blk.bufWithoutChecksum.limit())));
     return createBuilder(blk, deepCloned).build();
+  }
+
+  /**
+   * Returns OpenTelemetry Attributes for a Span that is reading a data block with relevant
+   * metadata. Will short-circuit if the span isn't going to be captured/OTEL isn't enabled.
+   */
+  private static Attributes getReadDataBlockInternalAttributes(Span span) {
+    // It's expensive to record these attributes, so we avoid the cost of doing this if the span
+    // isn't going to be persisted
+    if (!span.isRecording()) {
+      return Attributes.empty();
+    }
+
+    final AttributesBuilder attributesBuilder = Attributes.builder();
+    Optional.of(Context.current()).map(val -> val.get(CONTEXT_KEY))
+      .ifPresent(c -> c.accept(attributesBuilder));
+    return attributesBuilder.build();
   }
 }

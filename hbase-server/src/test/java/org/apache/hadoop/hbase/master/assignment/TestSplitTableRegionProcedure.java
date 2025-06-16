@@ -25,7 +25,6 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -45,14 +44,12 @@ import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.SnapshotType;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
-import org.apache.hadoop.hbase.coprocessor.ObserverContext;
-import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
-import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
-import org.apache.hadoop.hbase.coprocessor.RegionObserver;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureTestingUtility;
+import org.apache.hadoop.hbase.master.procedure.ModifyTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.TestSnapshotProcedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
@@ -114,39 +111,7 @@ public class TestSplitTableRegionProcedure {
     conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
     conf.setLong(HConstants.MAJOR_COMPACTION_PERIOD, 0);
     conf.set("hbase.coprocessor.region.classes",
-      RegionServerHostingReplicaSlowOpenCopro.class.getName());
-    conf.setInt("hbase.client.sync.wait.timeout.msec", 1500);
-  }
-
-  /**
-   * This copro is used to slow down opening of the replica regions.
-   */
-  public static class RegionServerHostingReplicaSlowOpenCopro
-    implements RegionCoprocessor, RegionObserver {
-    static int countForReplica = 0;
-    static boolean slowDownReplicaOpen = false;
-
-    @Override
-    public Optional<RegionObserver> getRegionObserver() {
-      return Optional.of(this);
-    }
-
-    @Override
-    public void preOpen(ObserverContext<? extends RegionCoprocessorEnvironment> c)
-      throws IOException {
-      int replicaId = c.getEnvironment().getRegion().getRegionInfo().getReplicaId();
-      if ((replicaId != RegionInfo.DEFAULT_REPLICA_ID) && (countForReplica == 0)) {
-        countForReplica++;
-        while (slowDownReplicaOpen) {
-          LOG.info("Slow down replica region open a bit");
-          try {
-            Thread.sleep(100);
-          } catch (InterruptedException ie) {
-            // Ingore
-          }
-        }
-      }
-    }
+      RegionServerHostingReplicaSlowOpenCoprocessor.class.getName());
   }
 
   @BeforeClass
@@ -191,15 +156,13 @@ public class TestSplitTableRegionProcedure {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
-    RegionServerHostingReplicaSlowOpenCopro.slowDownReplicaOpen = true;
+    RegionServerHostingReplicaSlowOpenCoprocessor.slowDownReplicaOpen = true;
     RegionInfo[] regions =
       MasterProcedureTestingUtility.createTable(procExec, tableName, null, columnFamilyName1);
 
-    try {
-      HBaseTestingUtil.setReplicas(UTIL.getAdmin(), tableName, 2);
-    } catch (IOException ioe) {
-
-    }
+    TableDescriptor td = TableDescriptorBuilder.newBuilder(UTIL.getAdmin().getDescriptor(tableName))
+      .setRegionReplication(2).build();
+    procExec.submitProcedure(new ModifyTableProcedure(procExec.getEnvironment(), td));
 
     // wait until the primary region is online.
     HBaseTestingUtil.await(2000, () -> {
@@ -223,7 +186,7 @@ public class TestSplitTableRegionProcedure {
     ProcedureTestingUtility.waitProcedure(procExec, procId);
 
     // Let replica parent region open.
-    RegionServerHostingReplicaSlowOpenCopro.slowDownReplicaOpen = false;
+    RegionServerHostingReplicaSlowOpenCoprocessor.slowDownReplicaOpen = false;
 
     // wait until the replica region is online.
     HBaseTestingUtil.await(2000, () -> {
@@ -231,7 +194,10 @@ public class TestSplitTableRegionProcedure {
         AssignmentManager am = UTIL.getHBaseCluster().getMaster().getAssignmentManager();
         if (am == null) return false;
         RegionInfo replicaRegion = RegionReplicaUtil.getRegionInfoForReplica(regions[0], 1);
-        if (am.getRegionStates().getRegionState(replicaRegion).isOpened()) {
+        if (
+          am.getRegionStates().getRegionState(replicaRegion) != null
+            && am.getRegionStates().getRegionState(replicaRegion).isOpened()
+        ) {
           return true;
         }
         return false;
@@ -608,6 +574,32 @@ public class TestSplitTableRegionProcedure {
 
     assertEquals(splitSubmittedCount + 1, splitProcMetrics.getSubmittedCounter().getCount());
     assertEquals(splitFailedCount + 1, splitProcMetrics.getFailedCounter().getCount());
+  }
+
+  @Test
+  public void testSplitDetectsModifyTableProcedure() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
+
+    RegionInfo[] regions =
+      MasterProcedureTestingUtility.createTable(procExec, tableName, null, columnFamilyName1);
+    RegionServerHostingReplicaSlowOpenCoprocessor.slowDownReplicaOpen = true;
+    TableDescriptor td = TableDescriptorBuilder.newBuilder(UTIL.getAdmin().getDescriptor(tableName))
+      .setRegionReplication(2).build();
+    long modifyProcId =
+      procExec.submitProcedure(new ModifyTableProcedure(procExec.getEnvironment(), td));
+
+    // Split region of the table, the SplitTableRegionProcedure will fail because there is a
+    // ModifyTableProcedure in progress
+    SplitTableRegionProcedure splitProcedure = new SplitTableRegionProcedure(
+      procExec.getEnvironment(), regions[0], HConstants.CATALOG_FAMILY);
+    long splitProcId = procExec.submitProcedure(splitProcedure);
+    ProcedureTestingUtility.waitProcedure(procExec, splitProcId);
+    ProcedureTestingUtility.assertProcFailed(procExec, splitProcId);
+
+    RegionServerHostingReplicaSlowOpenCoprocessor.slowDownReplicaOpen = false;
+    ProcedureTestingUtility.waitProcedure(procExec, modifyProcId);
+    ProcedureTestingUtility.assertProcNotFailed(procExec, modifyProcId);
   }
 
   private void deleteData(final TableName tableName, final int startDeleteRowNum)

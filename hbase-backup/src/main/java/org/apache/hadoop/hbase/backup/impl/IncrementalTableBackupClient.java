@@ -122,8 +122,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
    * @param tablesToBackup list of tables to be backed up
    */
   protected List<BulkLoad> handleBulkLoad(List<TableName> tablesToBackup) throws IOException {
-    List<String> activeFiles = new ArrayList<>();
-    List<String> archiveFiles = new ArrayList<>();
+    Map<TableName, MergeSplitBulkloadInfo> toBulkload = new HashMap<>();
     List<BulkLoad> bulkLoads = backupManager.readBulkloadRows(tablesToBackup);
     FileSystem tgtFs;
     try {
@@ -136,6 +135,8 @@ public class IncrementalTableBackupClient extends TableBackupClient {
 
     for (BulkLoad bulkLoad : bulkLoads) {
       TableName srcTable = bulkLoad.getTableName();
+      MergeSplitBulkloadInfo bulkloadInfo =
+        toBulkload.computeIfAbsent(srcTable, MergeSplitBulkloadInfo::new);
       String regionName = bulkLoad.getRegion();
       String fam = bulkLoad.getColumnFamily();
       String filename = FilenameUtils.getName(bulkLoad.getHfilePath());
@@ -165,19 +166,23 @@ public class IncrementalTableBackupClient extends TableBackupClient {
             srcTableQualifier);
           LOG.trace("copying {} to {}", p, tgt);
         }
-        activeFiles.add(p.toString());
+        bulkloadInfo.addActiveFile(p.toString());
       } else if (fs.exists(archive)) {
         LOG.debug("copying archive {} to {}", archive, tgt);
-        archiveFiles.add(archive.toString());
+        bulkloadInfo.addArchiveFiles(archive.toString());
       }
-      mergeSplitBulkloads(activeFiles, archiveFiles, srcTable);
-      incrementalCopyBulkloadHFiles(tgtFs, srcTable);
     }
+
+    for (MergeSplitBulkloadInfo bulkloadInfo : toBulkload.values()) {
+      mergeSplitAndCopyBulkloadedHFiles(bulkloadInfo.getActiveFiles(),
+        bulkloadInfo.getArchiveFiles(), bulkloadInfo.getSrcTable(), tgtFs);
+    }
+
     return bulkLoads;
   }
 
-  private void mergeSplitBulkloads(List<String> activeFiles, List<String> archiveFiles,
-    TableName tn) throws IOException {
+  private void mergeSplitAndCopyBulkloadedHFiles(List<String> activeFiles,
+    List<String> archiveFiles, TableName tn, FileSystem tgtFs) throws IOException {
     int attempt = 1;
 
     while (!activeFiles.isEmpty()) {
@@ -185,7 +190,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
       // Active file can be archived during copy operation,
       // we need to handle this properly
       try {
-        mergeSplitBulkloads(activeFiles, tn);
+        mergeSplitAndCopyBulkloadedHFiles(activeFiles, tn, tgtFs);
         break;
       } catch (IOException e) {
         int numActiveFiles = activeFiles.size();
@@ -199,11 +204,12 @@ public class IncrementalTableBackupClient extends TableBackupClient {
     }
 
     if (!archiveFiles.isEmpty()) {
-      mergeSplitBulkloads(archiveFiles, tn);
+      mergeSplitAndCopyBulkloadedHFiles(archiveFiles, tn, tgtFs);
     }
   }
 
-  private void mergeSplitBulkloads(List<String> files, TableName tn) throws IOException {
+  private void mergeSplitAndCopyBulkloadedHFiles(List<String> files, TableName tn, FileSystem tgtFs)
+    throws IOException {
     MapReduceHFileSplitterJob player = new MapReduceHFileSplitterJob();
     conf.set(MapReduceHFileSplitterJob.BULK_OUTPUT_CONF_KEY,
       getBulkOutputDirForTable(tn).toString());
@@ -218,6 +224,9 @@ public class IncrementalTableBackupClient extends TableBackupClient {
       result = player.run(args);
     } catch (Exception e) {
       LOG.error("Failed to run MapReduceHFileSplitterJob", e);
+      // Delete the bulkload directory if we fail to run the HFile splitter job for any reason
+      // as it might be re-tried
+      deleteBulkLoadDirectory();
       throw new IOException(e);
     }
 
@@ -225,6 +234,8 @@ public class IncrementalTableBackupClient extends TableBackupClient {
       throw new IOException(
         "Failed to run MapReduceHFileSplitterJob with invalid result: " + result);
     }
+
+    incrementalCopyBulkloadHFiles(tgtFs, tn);
   }
 
   private void updateFileLists(List<String> activeFiles, List<String> archiveFiles)

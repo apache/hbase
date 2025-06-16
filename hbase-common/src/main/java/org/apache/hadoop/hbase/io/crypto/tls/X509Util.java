@@ -154,7 +154,10 @@ public final class X509Util {
 
   private static final String[] DEFAULT_CIPHERS_OPENSSL = getOpenSslFilteredDefaultCiphers();
 
-  private static final Duration FILE_POLL_INTERVAL = Duration.ofMinutes(1);
+  public static final String HBASE_TLS_FILEPOLL_INTERVAL_MILLIS =
+    CONFIG_PREFIX + "filepoll.interval.millis";
+  // 1 minute
+  private static final long DEFAULT_FILE_POLL_INTERVAL = Duration.ofSeconds(60).toMillis();
 
   /**
    * Not all of our default ciphers are available in OpenSSL. Takes our default cipher lists and
@@ -496,23 +499,25 @@ public final class X509Util {
     AtomicReference<FileChangeWatcher> trustStoreWatcher, Runnable resetContext)
     throws IOException {
     String keyStoreLocation = config.get(TLS_CONFIG_KEYSTORE_LOCATION, "");
-    keystoreWatcher.set(newFileChangeWatcher(keyStoreLocation, resetContext));
+    keystoreWatcher.set(newFileChangeWatcher(config, keyStoreLocation, resetContext));
     String trustStoreLocation = config.get(TLS_CONFIG_TRUSTSTORE_LOCATION, "");
     // we are using the same callback for both. there's no reason to kick off two
     // threads if keystore/truststore are both at the same location
     if (!keyStoreLocation.equals(trustStoreLocation)) {
-      trustStoreWatcher.set(newFileChangeWatcher(trustStoreLocation, resetContext));
+      trustStoreWatcher.set(newFileChangeWatcher(config, trustStoreLocation, resetContext));
     }
   }
 
-  private static FileChangeWatcher newFileChangeWatcher(String fileLocation, Runnable resetContext)
-    throws IOException {
+  private static FileChangeWatcher newFileChangeWatcher(Configuration config, String fileLocation,
+    Runnable resetContext) throws IOException {
     if (fileLocation == null || fileLocation.isEmpty() || resetContext == null) {
       return null;
     }
     final Path filePath = Paths.get(fileLocation).toAbsolutePath();
     FileChangeWatcher fileChangeWatcher =
-      new FileChangeWatcher(filePath, Objects.toString(filePath.getFileName()), FILE_POLL_INTERVAL,
+      new FileChangeWatcher(filePath, Objects.toString(filePath.getFileName()),
+        Duration
+          .ofMillis(config.getLong(HBASE_TLS_FILEPOLL_INTERVAL_MILLIS, DEFAULT_FILE_POLL_INTERVAL)),
         watchEventFilePath -> handleWatchEvent(watchEventFilePath, resetContext));
     fileChangeWatcher.start();
     return fileChangeWatcher;

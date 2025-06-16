@@ -255,6 +255,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     addCostFunction(costFunctions, localityCost);
     addCostFunction(costFunctions, rackLocalityCost);
     addCostFunction(costFunctions, new TableSkewCostFunction(conf));
+    addCostFunction(costFunctions, new StoreFileTableSkewCostFunction(conf));
     addCostFunction(costFunctions, regionReplicaHostCostFunction);
     addCostFunction(costFunctions, regionReplicaRackCostFunction);
     addCostFunction(costFunctions, new ReadRequestCostFunction(conf));
@@ -682,8 +683,12 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
       newCost = computeCost(cluster, currentCost);
 
+      double costImprovement = currentCost - newCost;
+      double minimumImprovement =
+        Math.max(CostFunction.getCostEpsilon(currentCost), CostFunction.getCostEpsilon(newCost));
+      boolean costsImproved = costImprovement > minimumImprovement;
       boolean conditionalsSimilarCostsImproved =
-        (newCost < currentCost && conditionalViolationsChange == 0 && !isViolatingConditionals);
+        (costsImproved && conditionalViolationsChange == 0 && !isViolatingConditionals);
       // Our first priority is to reduce conditional violations
       // Our second priority is to reduce balancer cost
       // change, regardless of cost change
