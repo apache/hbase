@@ -155,7 +155,8 @@ abstract class AbstractRecoveredEditsOutputSink extends OutputSink {
   private boolean deleteTmpIfDstHasNoLessEntries(RecoveredEditsWriter editsWriter, Path dst)
     throws IOException {
     if (walSplitter.walFS.exists(dst) && !isDstHasFewerEntries(editsWriter, dst)) {
-      LOG.info("Destination {} already have no fewer entries so deleting tmp recovered edits file {}", dst,
+      LOG.info(
+        "Destination {} already have no fewer entries so deleting tmp recovered edits file {}", dst,
         editsWriter.path);
       if (!walSplitter.walFS.delete(editsWriter.path, false)) {
         LOG.warn("Failed deleting of {}", editsWriter.path);

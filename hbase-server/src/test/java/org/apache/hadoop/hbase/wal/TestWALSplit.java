@@ -375,7 +375,8 @@ public class TestWALSplit {
     }
   }
 
-  //If another worker is assigned to split a WAl and last worker is still running, both should not impact each other's progress
+  // If another worker is assigned to split a WAl and last worker is still running, both should not
+  // impact each other's progress
   @Test
   public void testTwoWorkerSplittingSameWAL() throws IOException, InterruptedException {
     int numWriter = 1, entries = 10;
