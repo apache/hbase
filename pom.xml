@@ -717,6 +717,12 @@
       <email>chandra@apache.org</email>
       <timezone>+5</timezone>
     </developer>
+    <developer>
+      <id>paksyd</id>
+      <name>Dávid Paksy</name>
+      <email>paksyd@apache.org</email>
+      <timezone>+1</timezone>
+    </developer>
   </developers>
   <mailingLists>
     <mailingList>
