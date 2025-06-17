@@ -35,7 +35,7 @@ public class TestMRIncrementalLoadWithLocality extends MRIncrementalLoadTestBase
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMRIncrementalLoad.class);
+    HBaseClassTestRule.forClass(TestMRIncrementalLoadWithLocality.class);
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
