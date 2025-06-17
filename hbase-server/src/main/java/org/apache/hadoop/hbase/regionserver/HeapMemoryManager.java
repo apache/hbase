@@ -184,25 +184,11 @@ public class HeapMemoryManager {
       tuningEnabled = false;
     }
 
-    if (isHeapMemoryUsageExceedingLimit(globalMemStorePercentMaxRange, blockCachePercentMinRange)) {
-      throw new RuntimeException("Current heap configuration for MemStore and BlockCache exceeds "
-        + "the allowed heap usage. At least " + minFreeHeapFraction
-        + " of the heap must remain free to ensure stable RegionServer operation. "
-        + "Please check the settings for " + MEMSTORE_SIZE_MAX_RANGE_KEY + " and "
-        + BLOCK_CACHE_SIZE_MIN_RANGE_KEY + " in your configuration. " + MEMSTORE_SIZE_MAX_RANGE_KEY
-        + " is " + globalMemStorePercentMaxRange + " and " + BLOCK_CACHE_SIZE_MIN_RANGE_KEY + " is "
-        + blockCachePercentMinRange);
-    }
+    checkHeapMemoryLimits(MEMSTORE_SIZE_MAX_RANGE_KEY, globalMemStorePercentMaxRange,
+      BLOCK_CACHE_SIZE_MIN_RANGE_KEY, blockCachePercentMinRange);
+    checkHeapMemoryLimits(MEMSTORE_SIZE_MIN_RANGE_KEY, globalMemStorePercentMinRange,
+      BLOCK_CACHE_SIZE_MAX_RANGE_KEY, blockCachePercentMaxRange);
 
-    if (isHeapMemoryUsageExceedingLimit(globalMemStorePercentMinRange, blockCachePercentMaxRange)) {
-      throw new RuntimeException("Current heap configuration for MemStore and BlockCache exceeds "
-        + "the allowed heap usage. At least " + minFreeHeapFraction
-        + " of the heap must remain free to ensure stable RegionServer operation. "
-        + "Please check the settings for " + MEMSTORE_SIZE_MIN_RANGE_KEY + " and "
-        + BLOCK_CACHE_SIZE_MAX_RANGE_KEY + " in your configuration. " + MEMSTORE_SIZE_MIN_RANGE_KEY
-        + " is " + globalMemStorePercentMinRange + " and " + BLOCK_CACHE_SIZE_MAX_RANGE_KEY + " is "
-        + blockCachePercentMaxRange);
-    }
     return tuningEnabled;
   }
 
@@ -245,6 +231,19 @@ public class HeapMemoryManager {
     int minFreeHeapPercent = (int) (this.minFreeHeapFraction * CONVERT_TO_PERCENTAGE);
 
     return memStorePercent + blockCachePercent + minFreeHeapPercent > CONVERT_TO_PERCENTAGE;
+  }
+
+  private void checkHeapMemoryLimits(String memStoreConfKey, float memStoreFraction,
+    String blockCacheConfKey, float blockCacheFraction) {
+    if (!isHeapMemoryUsageExceedingLimit(memStoreFraction, blockCacheFraction)) {
+      throw new RuntimeException(String.format(
+        "Current heap configuration for MemStore and BlockCache exceeds the allowed heap usage. "
+          + "At least %.2f of the heap must remain free to ensure stable RegionServer operation. "
+          + "Please check the settings for %s and %s in your configuration. "
+          + "%s is %.2f and %s is %.2f",
+        minFreeHeapFraction, memStoreConfKey, blockCacheConfKey, memStoreConfKey, memStoreFraction,
+        blockCacheConfKey, blockCacheFraction));
+    }
   }
 
   private class HeapMemoryTunerChore extends ScheduledChore implements FlushRequestListener {
