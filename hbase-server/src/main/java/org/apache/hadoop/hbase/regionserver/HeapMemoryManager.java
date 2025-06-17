@@ -226,6 +226,9 @@ public class HeapMemoryManager {
 
   private boolean isHeapMemoryUsageExceedingLimit(float memStoreFraction,
     float blockCacheFraction) {
+    // Use integer percentage to avoid subtle float precision issues and ensure consistent
+    // comparison. This also maintains backward compatibility with previous logic relying on int
+    // truncation.
     int memStorePercent = (int) (memStoreFraction * CONVERT_TO_PERCENTAGE);
     int blockCachePercent = (int) (blockCacheFraction * CONVERT_TO_PERCENTAGE);
     int minFreeHeapPercent = (int) (this.minFreeHeapFraction * CONVERT_TO_PERCENTAGE);
