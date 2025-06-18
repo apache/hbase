@@ -121,7 +121,7 @@ public class MemorySizeUtil {
    * Retrieve an explicit minimum required free heap size in bytes in the configuration.
    * @param conf used to read configs
    * @return the minimum required free heap size in bytes, or a negative value if not configured.
-   * @throws IllegalArgumentException if HBASE_REGION_SERVER_FREE_HEAP_MEMORY_MIN_SIZE_KEY format is
+   * @throws IllegalArgumentException if HBASE_REGION_SERVER_FREE_HEAP_MIN_MEMORY_SIZE_KEY format is
    *                                  invalid
    */
   private static long getRegionServerMinFreeHeapInBytes(Configuration conf) {

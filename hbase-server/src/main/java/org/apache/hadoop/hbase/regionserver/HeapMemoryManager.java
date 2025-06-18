@@ -238,7 +238,7 @@ public class HeapMemoryManager {
 
   private void checkHeapMemoryLimits(String memStoreConfKey, float memStoreFraction,
     String blockCacheConfKey, float blockCacheFraction) {
-    if (!isHeapMemoryUsageExceedingLimit(memStoreFraction, blockCacheFraction)) {
+    if (isHeapMemoryUsageExceedingLimit(memStoreFraction, blockCacheFraction)) {
       throw new RuntimeException(String.format(
         "Current heap configuration for MemStore and BlockCache exceeds the allowed heap usage. "
           + "At least %.2f of the heap must remain free to ensure stable RegionServer operation. "
