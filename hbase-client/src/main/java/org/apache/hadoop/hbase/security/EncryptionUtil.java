@@ -93,7 +93,8 @@ public final class EncryptionUtil {
    * @param kek     the key encryption key
    * @return the encrypted key bytes
    */
-  public static byte[] wrapKey(Configuration conf, String subject, Key key, Key kek) throws IOException {
+  public static byte[] wrapKey(Configuration conf, String subject, Key key, Key kek)
+      throws IOException {
     // Wrap the key with the configured encryption algorithm.
     String algorithm = conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
     Cipher cipher = Encryption.getCipher(conf, algorithm);
@@ -164,7 +165,8 @@ public final class EncryptionUtil {
   }
 
   private static Key getUnwrapKey(Configuration conf, String subject,
-    EncryptionProtos.WrappedKey wrappedKey, Cipher cipher, Key kek) throws IOException, KeyException {
+      EncryptionProtos.WrappedKey wrappedKey, Cipher cipher, Key kek)
+      throws IOException, KeyException {
     String configuredHashAlgorithm = Encryption.getConfiguredHashAlgorithm(conf);
     String wrappedHashAlgorithm = wrappedKey.getHashAlgorithm().trim();
     if (!configuredHashAlgorithm.equalsIgnoreCase(wrappedHashAlgorithm)) {
@@ -178,8 +180,8 @@ public final class EncryptionUtil {
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     byte[] iv = wrappedKey.hasIv() ? wrappedKey.getIv().toByteArray() : null;
     if (kek != null) {
-      Encryption.decryptWithGivenKey(kek, out, wrappedKey.getData().newInput(), wrappedKey.getLength(),
-        cipher, iv);
+      Encryption.decryptWithGivenKey(kek, out, wrappedKey.getData().newInput(),
+          wrappedKey.getLength(), cipher, iv);
     }
     else {
       Encryption.decryptWithSubjectKey(out, wrappedKey.getData().newInput(), wrappedKey.getLength(),

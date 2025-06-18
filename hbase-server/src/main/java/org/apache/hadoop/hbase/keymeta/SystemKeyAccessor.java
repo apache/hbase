@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -98,7 +97,7 @@ public class SystemKeyAccessor extends KeyManagementBase {
     return keyData;
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public static int extractSystemKeySeqNum(Path keyPath) throws IOException {
     if (keyPath.getName().startsWith(SYSTEM_KEY_FILE_PREFIX)) {
       try {

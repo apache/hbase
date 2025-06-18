@@ -23,7 +23,6 @@ import java.security.KeyException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -265,7 +264,7 @@ public class KeymetaTableAccessor extends KeyManagementBase {
     return result;
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public static byte[] constructRowKeyForMetadata(ManagedKeyData keyData) {
     byte[] keyMetadataHash;
     if (keyData.getKeyState() == ManagedKeyState.FAILED && keyData.getKeyMetadata() == null) {
@@ -278,7 +277,7 @@ public class KeymetaTableAccessor extends KeyManagementBase {
       keyMetadataHash);
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public static byte[] constructRowKeyForMetadata(byte[] key_cust, String keyNamespace,
       byte[] keyMetadataHash) {
     int custLength = key_cust.length;
@@ -286,7 +285,7 @@ public class KeymetaTableAccessor extends KeyManagementBase {
       keyMetadataHash);
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public static ManagedKeyData parseFromResult(Server server, byte[] key_cust, String keyNamespace,
       Result result) throws IOException, KeyException {
     if (result == null || result.isEmpty()) {

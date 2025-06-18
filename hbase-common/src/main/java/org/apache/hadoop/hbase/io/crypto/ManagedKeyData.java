@@ -25,7 +25,6 @@ import java.util.Base64;
 
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
-import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -129,7 +128,7 @@ public class ManagedKeyData {
     this.writeOpCount = writeOpCount;
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public ManagedKeyData cloneWithoutKey() {
     return new ManagedKeyData(keyCustodian, keyNamespace, null, keyState, keyMetadata,
       refreshTimestamp, readOpCount, writeOpCount);
@@ -191,9 +190,14 @@ public class ManagedKeyData {
 
   @Override
   public String toString() {
-    return "ManagedKeyData{" + "keyCustodian=" + Arrays.toString(keyCust) + ", keyNamespace='"
-      + keyNamespace + '\'' + ", keyState=" + keyState + ", keyMetadata='" + keyMetadata + '\''
-      + ", refreshTimestamp=" + refreshTimestamp + ", keyChecksum=" + getKeyChecksum() + '}';
+    return "ManagedKeyData{" +
+        "keyCustodian=" + Arrays.toString(keyCustodian) +
+        ", keyNamespace='" + keyNamespace + '\'' +
+        ", keyState=" + keyState +
+        ", keyMetadata='" + keyMetadata + '\'' +
+        ", refreshTimestamp=" + refreshTimestamp +
+        ", keyChecksum=" + getKeyChecksum() +
+        '}';
   }
 
   public long getRefreshTimestamp() {
@@ -282,7 +286,7 @@ public class ManagedKeyData {
     ManagedKeyData that = (ManagedKeyData) o;
 
     return new EqualsBuilder()
-      .append(keyCust, that.keyCust)
+      .append(keyCustodian, that.keyCustodian)
       .append(keyNamespace, that.keyNamespace)
       .append(theKey, that.theKey)
       .append(keyState, that.keyState)
@@ -293,7 +297,7 @@ public class ManagedKeyData {
   @Override
   public int hashCode() {
     return new HashCodeBuilder(17, 37)
-      .append(keyCust)
+      .append(keyCustodian)
       .append(keyNamespace)
       .append(theKey)
       .append(keyState)
