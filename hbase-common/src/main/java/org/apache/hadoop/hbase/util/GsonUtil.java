@@ -69,7 +69,6 @@ public final class GsonUtil {
   public static Gson getDefaultInstance() {
     if (INSTANCE == null) {
       INSTANCE = createGson().create();
-
     }
     return INSTANCE;
   }

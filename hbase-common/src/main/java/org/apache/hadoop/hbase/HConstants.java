@@ -1309,18 +1309,25 @@ public final class HConstants {
   /** Configuration key for enabling WAL encryption, a boolean */
   public static final String ENABLE_WAL_ENCRYPTION = "hbase.regionserver.wal.encryption";
 
+  /** Property used by {@link ManagedKeyStoreKeyProvider} class to set the alias that identifies
+   *  the current system key. */
   public static final String CRYPTO_MANAGED_KEY_STORE_SYSTEM_KEY_NAME_CONF_KEY =
     "hbase.crypto.managed_key_store.system.key.name";
   public static final String CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX =
     "hbase.crypto.managed_key_store.cust.";
 
+  /** Enables or disables the key management feature. */
   public static final String CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY =
     "hbase.crypto.managed_keys.enabled";
   public static final boolean CRYPTO_MANAGED_KEYS_DEFAULT_ENABLED = false;
 
+  /** The number of keys to retrieve from Key Provider per each custodian and namespace
+   *  combination. */
   public static final String CRYPTO_MANAGED_KEYS_PER_CUST_NAMESPACE_ACTIVE_KEY_COUNT =
     "hbase.crypto.managed_keys.per_cust_namespace.active_count";
   public static final int CRYPTO_MANAGED_KEYS_PER_CUST_NAMESPACE_ACTIVE_KEY_DEFAULT_COUNT = 1;
+  /** Enables or disables key lookup during data path as an alternative to static injection of keys
+   *  using control path. */
   public static final String CRYPTO_MANAGED_KEYS_DYNAMIC_LOOKUP_ENABLED_CONF_KEY =
     "hbase.crypto.managed_keys.dynamic_lookup.enabled";
   public static final boolean CRYPTO_MANAGED_KEYS_DYNAMIC_LOOKUP_DEFAULT_ENABLED = true;
