@@ -74,7 +74,7 @@ public class TestManagedKeyProvider {
 
     @Before
     public void setUp() throws Exception {
-      super.setUp();;
+      super.setUp();
       managedKeyProvider = (ManagedKeyProvider) provider;
       managedKeyProvider.initConfig(conf);
     }

@@ -174,7 +174,7 @@ public class TestSystemKeyAccessorAndManager {
 
       Path systemKeyDir = CommonFSUtils.getSystemKeyDir(conf);
       when(mockFileSystem.globStatus(eq(new Path(systemKeyDir, SYSTEM_KEY_FILE_PREFIX+"*"))))
-        .thenReturn( mockFileStatuses );
+        .thenReturn(mockFileStatuses);
 
       List<Path> files = systemKeyManager.getAllSystemKeyFiles();
       assertEquals(3, files.size());
@@ -257,7 +257,7 @@ public class TestSystemKeyAccessorAndManager {
 
     @After
     public void tearDown() throws Exception {
-      closeableMocks.close();;
+      closeableMocks.close();
     }
 
     @Test

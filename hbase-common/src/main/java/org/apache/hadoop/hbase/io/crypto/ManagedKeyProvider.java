@@ -76,7 +76,7 @@ public interface ManagedKeyProvider extends KeyProvider {
    * Decode the given key custodian which is encoded as Base64 string.
    * @param encodedKeyCust The encoded key custodian
    * @return the decoded key custodian
-   * @throws IOException
+   * @throws IOException if the encoded key custodian is not a valid Base64 string
    */
   static byte[] decodeToBytes(String encodedKeyCust) throws IOException {
     byte[] key_cust;

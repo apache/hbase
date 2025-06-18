@@ -33,32 +33,32 @@ import org.junit.experimental.categories.Category;
 
 @Category({ MasterTests.class, SmallTests.class })
 public class TestKeyManagementBase {
-    public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(
-        TestKeyManagementBase.class);
+  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(
+      TestKeyManagementBase.class);
 
-    @Test
-    public void testGetKeyProviderWithInvalidProvider() throws Exception {
-        // Setup configuration with a non-ManagedKeyProvider
-        Configuration conf = new Configuration();
-        conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY,
+  @Test
+  public void testGetKeyProviderWithInvalidProvider() throws Exception {
+    // Setup configuration with a non-ManagedKeyProvider
+    Configuration conf = new Configuration();
+    conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY,
         "org.apache.hadoop.hbase.keymeta.DummyKeyProvider");
 
-        Server mockServer = mock(Server.class);
-        when(mockServer.getConfiguration()).thenReturn(conf);
+    Server mockServer = mock(Server.class);
+    when(mockServer.getConfiguration()).thenReturn(conf);
 
-        KeyManagementBase keyMgmt = new TestKeyManagement(mockServer);
+    KeyManagementBase keyMgmt = new TestKeyManagement(mockServer);
 
-        // Should throw RuntimeException when provider is not ManagedKeyProvider
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-            keyMgmt.getKeyProvider();
-        });
+    // Should throw RuntimeException when provider is not ManagedKeyProvider
+    RuntimeException exception = assertThrows(RuntimeException.class, () -> {
+      keyMgmt.getKeyProvider();
+    });
 
-        assertTrue(exception.getMessage().contains("expected to be of type ManagedKeyProvider"));
+    assertTrue(exception.getMessage().contains("expected to be of type ManagedKeyProvider"));
+  }
+
+  private static class TestKeyManagement extends KeyManagementBase {
+    public TestKeyManagement(Server server) {
+      super(server);
     }
-
-    private static class TestKeyManagement extends KeyManagementBase {
-        public TestKeyManagement(Server server) {
-            super(server);
-        }
-    }
+  }
 }

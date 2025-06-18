@@ -22,17 +22,17 @@ import java.security.Key;
 import org.apache.hadoop.hbase.io.crypto.KeyProvider;
 
 public class DummyKeyProvider implements KeyProvider {
-    @Override
-    public void init(String params) {
-    }
+  @Override
+  public void init(String params) {
+  }
 
-    @Override
-    public Key[] getKeys(String[] aliases) {
-        return null;
-    }
+  @Override
+  public Key[] getKeys(String[] aliases) {
+      return null;
+  }
 
-    @Override
-    public Key getKey(String alias) {
-        return null;
-    }
+  @Override
+  public Key getKey(String alias) {
+      return null;
+  }
 }

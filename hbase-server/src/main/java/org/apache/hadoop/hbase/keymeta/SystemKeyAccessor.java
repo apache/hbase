@@ -49,7 +49,8 @@ public class SystemKeyAccessor extends KeyManagementBase {
   /**
    * Return both the latest system key file and all system key files.
    * @return a pair of the latest system key file and all system key files
-   * @throws IOException if there is an error getting the latest system key file
+   * @throws IOException if there is an error getting the latest system key file or no cluster key
+   *    is initialized yet.
    */
   public Pair<Path,List<Path>> getLatestSystemKeyFile() throws IOException {
     if (! isKeyManagementEnabled()) {
@@ -70,7 +71,7 @@ public class SystemKeyAccessor extends KeyManagementBase {
    * enabled, then return null.
    *
    * @return  a list of all available cluster key files
-   * @throws IOException
+   * @throws IOException if there is an error getting the cluster key files
    */
   public List<Path> getAllSystemKeyFiles() throws IOException {
     if (!isKeyManagementEnabled()) {
@@ -112,11 +113,11 @@ public class SystemKeyAccessor extends KeyManagementBase {
 
   /**
    * Extract the key sequence number from the cluster key file name.
-   * @param clusterKeyFile
+   * @param clusterKeyFile the path to the cluster key file
    * @return The sequence or {@code -1} if not a valid sequence file.
-   * @throws IOException
+   * @throws IOException if the file name is not a valid sequence file
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public static int extractKeySequence(Path clusterKeyFile) throws IOException {
     int keySeq = -1;
     if (clusterKeyFile.getName().startsWith(SYSTEM_KEY_FILE_PREFIX)) {

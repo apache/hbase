@@ -29,7 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
-public class SystemKeyCache {
+public final class SystemKeyCache {
   private static final Logger LOG = LoggerFactory.getLogger(SystemKeyCache.class);
 
   private final ManagedKeyData latestSystemKey;
@@ -37,9 +37,9 @@ public class SystemKeyCache {
 
   /**
    * Construct the System Key cache from the specified accessor.
-   * @param accessor
+   * @param accessor the accessor to use to load the system keys
    * @return the cache or {@code null} if no keys are found.
-   * @throws IOException
+   * @throws IOException if there is an error loading the system keys
    */
   public static SystemKeyCache createCache(SystemKeyAccessor accessor) throws IOException {
     List<Path> allSystemKeyFiles = accessor.getAllSystemKeyFiles();
