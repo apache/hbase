@@ -17,12 +17,13 @@
  */
 package org.apache.hadoop.hbase.keymeta;
 
-import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
-import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
-import org.apache.yetus.audience.InterfaceAudience;
 import java.io.IOException;
 import java.security.KeyException;
 import java.util.List;
+
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * This class provides unified access on top of both {@code ManagedKeyDataCache} (L1) and

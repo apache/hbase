@@ -17,11 +17,12 @@
  */
 package org.apache.hadoop.hbase.keymeta;
 
-import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
-import org.apache.yetus.audience.InterfaceAudience;
 import java.io.IOException;
 import java.security.KeyException;
 import java.util.List;
+
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * KeymetaAdmin is an interface for administrative functions related to managed keys.

@@ -17,18 +17,20 @@
  */
 package org.apache.hadoop.hbase.io.crypto;
 
-import org.apache.commons.lang3.builder.EqualsBuilder;
-import org.apache.commons.lang3.builder.HashCodeBuilder;
-import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.util.DataChecksum;
-import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
-import org.apache.yetus.audience.InterfaceAudience;
 import java.security.Key;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.Base64;
+
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.util.DataChecksum;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * This class represents an encryption key data which includes the key itself, its state, metadata
@@ -64,7 +66,7 @@ public class ManagedKeyData {
   public static final String KEY_GLOBAL_CUSTODIAN =
     ManagedKeyProvider.encodeToStr(KEY_SPACE_GLOBAL.getBytes());
 
-  private final byte[] keyCust;
+  private final byte[] keyCustodian;
   private final String keyNamespace;
   private final Key theKey;
   private final ManagedKeyState keyState;
@@ -117,7 +119,7 @@ public class ManagedKeyData {
     Preconditions.checkArgument(writeOpCount >= 0, "writeOpCount: " + writeOpCount +
       " should be >= 0");
 
-    this.keyCust = key_cust;
+    this.keyCustodian = key_cust;
     this.keyNamespace = key_namespace;
     this.theKey = theKey;
     this.keyState = keyState;
@@ -129,7 +131,7 @@ public class ManagedKeyData {
 
   @VisibleForTesting
   public ManagedKeyData cloneWithoutKey() {
-    return new ManagedKeyData(keyCust, keyNamespace, null, keyState, keyMetadata,
+    return new ManagedKeyData(keyCustodian, keyNamespace, null, keyState, keyMetadata,
       refreshTimestamp, readOpCount, writeOpCount);
   }
 
@@ -139,7 +141,7 @@ public class ManagedKeyData {
    * @return The key custodian as a byte array.
    */
   public byte[] getKeyCustodian() {
-    return keyCust;
+    return keyCustodian;
   }
 
   /**
@@ -147,7 +149,7 @@ public class ManagedKeyData {
    * @return the encoded key custodian
    */
   public String getKeyCustodianEncoded() {
-    return Base64.getEncoder().encodeToString(keyCust);
+    return Base64.getEncoder().encodeToString(keyCustodian);
   }
 
 

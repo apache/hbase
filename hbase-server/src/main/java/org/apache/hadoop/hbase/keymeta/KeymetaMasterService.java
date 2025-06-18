@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.keymeta;
 
+import java.io.IOException;
+
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
@@ -24,7 +26,6 @@ import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.io.IOException;
 
 @InterfaceAudience.Private
 public class KeymetaMasterService extends KeyManagementBase {

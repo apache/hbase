@@ -17,6 +17,12 @@
  */
 package org.apache.hadoop.hbase.keymeta;
 
+import java.io.IOException;
+import java.security.KeyException;
+import java.util.Base64;
+import java.util.Collections;
+import java.util.List;
+
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.CoreCoprocessor;
@@ -30,18 +36,14 @@ import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.ManagedKeysR
 import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.ManagedKeysResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.GetManagedKeysResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.ManagedKeysService;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.Service;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import java.io.IOException;
-import java.security.KeyException;
-import java.util.Base64;
-import java.util.Collections;
-import java.util.List;
 
 /**
  * This class implements a coprocessor service endpoint for the key management metadata operations.

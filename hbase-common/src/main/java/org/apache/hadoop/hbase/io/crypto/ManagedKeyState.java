@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.hbase.io.crypto;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import java.util.HashMap;
 import java.util.Map;
+
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Enum of Managed key status. It is used to indicate the status of managed custodian keys.

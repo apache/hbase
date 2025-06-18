@@ -1,13 +1,14 @@
 package org.apache.hadoop.hbase.io.crypto;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.util.GsonUtil;
-import org.apache.yetus.audience.InterfaceAudience;
 import java.io.IOException;
 import java.security.Key;
 import java.util.HashMap;
 import java.util.Map;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.util.GsonUtil;
+import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Public
 public class ManagedKeyStoreKeyProvider extends KeyStoreKeyProvider implements ManagedKeyProvider {
@@ -81,5 +82,4 @@ public class ManagedKeyStoreKeyProvider extends KeyStoreKeyProvider implements M
       KEY_METADATA_CUST, encodedCust
     ), HashMap.class);
   }
-
 }

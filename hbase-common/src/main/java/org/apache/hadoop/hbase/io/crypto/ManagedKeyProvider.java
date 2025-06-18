@@ -17,10 +17,11 @@
  */
 package org.apache.hadoop.hbase.io.crypto;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.yetus.audience.InterfaceAudience;
 import java.io.IOException;
 import java.util.Base64;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Interface for key providers of managed keys. Defines methods for generating and managing
