@@ -174,7 +174,7 @@ public final class X509Util {
 
     SslContextBuilder sslContextBuilder = SslContextBuilder.forClient();
 
-    boolean useOpenSsl = configureOpenSslIfAvailable(sslContextBuilder, config);
+    configureOpenSslIfAvailable(sslContextBuilder, config);
     String keyStoreLocation = config.get(TLS_CONFIG_KEYSTORE_LOCATION, "");
     char[] keyStorePassword = config.getPassword(TLS_CONFIG_KEYSTORE_PASSWORD);
     String keyStoreType = config.get(TLS_CONFIG_KEYSTORE_TYPE, "");
@@ -253,7 +253,7 @@ public final class X509Util {
     sslContextBuilder = SslContextBuilder
       .forServer(createKeyManager(keyStoreLocation, keyStorePassword, keyStoreType));
 
-    boolean useOpenSsl = configureOpenSslIfAvailable(sslContextBuilder, config);
+    configureOpenSslIfAvailable(sslContextBuilder, config);
     String trustStoreLocation = config.get(TLS_CONFIG_TRUSTSTORE_LOCATION, "");
     char[] trustStorePassword = config.getPassword(TLS_CONFIG_TRUSTSTORE_PASSWORD);
     String trustStoreType = config.get(TLS_CONFIG_TRUSTSTORE_TYPE, "");
