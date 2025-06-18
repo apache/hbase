@@ -76,10 +76,10 @@ public class ManagedKeyStoreKeyProvider extends KeyStoreKeyProvider implements M
   }
 
   public static String generateKeyMetadata(String aliasName, String encodedCust) {
-    return GsonUtil.getDefaultInstance().toJson(new HashMap<String, String>() {{
-      put(KEY_METADATA_ALIAS, aliasName);
-      put(KEY_METADATA_CUST, encodedCust);
-    }}, HashMap.class);
+    return GsonUtil.getDefaultInstance().toJson(Map.of(
+      KEY_METADATA_ALIAS, aliasName,
+      KEY_METADATA_CUST, encodedCust
+    ), HashMap.class);
   }
 
 }
