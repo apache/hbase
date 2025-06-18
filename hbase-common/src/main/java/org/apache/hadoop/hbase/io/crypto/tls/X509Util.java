@@ -213,7 +213,7 @@ public final class X509Util {
     sslContextBuilder.protocols(getEnabledProtocols(config));
     String[] cipherSuites = getCipherSuites(config);
     if (cipherSuites != null) {
-      sslContextBuilder.ciphers(Arrays.asList(getCipherSuites(config)));
+      sslContextBuilder.ciphers(Arrays.asList(cipherSuites));
     }
 
     return sslContextBuilder.build();
@@ -283,7 +283,7 @@ public final class X509Util {
     sslContextBuilder.protocols(getEnabledProtocols(config));
     String[] cipherSuites = getCipherSuites(config);
     if (cipherSuites != null) {
-      sslContextBuilder.ciphers(Arrays.asList(getCipherSuites(config)));
+      sslContextBuilder.ciphers(Arrays.asList(cipherSuites));
     }
     sslContextBuilder.clientAuth(clientAuth.toNettyClientAuth());
 
