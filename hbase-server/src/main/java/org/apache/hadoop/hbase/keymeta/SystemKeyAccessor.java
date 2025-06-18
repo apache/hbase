@@ -102,7 +102,7 @@ public class SystemKeyAccessor extends KeyManagementBase {
   public static int extractSystemKeySeqNum(Path keyPath) throws IOException {
     if (keyPath.getName().startsWith(SYSTEM_KEY_FILE_PREFIX)) {
       try {
-        return Integer.valueOf(keyPath.getName().substring(SYSTEM_KEY_FILE_PREFIX.length()));
+        return Integer.parseInt(keyPath.getName().substring(SYSTEM_KEY_FILE_PREFIX.length()));
       }
       catch (NumberFormatException e) {
         LOG.error("Invalid file name for a cluster key: {}", keyPath, e);
@@ -124,7 +124,7 @@ public class SystemKeyAccessor extends KeyManagementBase {
       String seqStr = clusterKeyFile.getName().substring(SYSTEM_KEY_FILE_PREFIX.length());
       if (! seqStr.isEmpty()) {
         try {
-          keySeq = Integer.valueOf(seqStr);
+          keySeq = Integer.parseInt(seqStr);
         } catch (NumberFormatException e) {
           throw new IOException("Invalid file name for a cluster key: " + clusterKeyFile, e);
         }
