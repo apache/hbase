@@ -45,6 +45,11 @@ public class SystemKeyAccessor extends KeyManagementBase {
     this.systemKeyDir = CommonFSUtils.getSystemKeyDir(server.getConfiguration());
   }
 
+  /**
+   * Return both the latest system key file and all system key files.
+   * @return a pair of the latest system key file and all system key files
+   * @throws IOException if there is an error getting the latest system key file
+   */
   public Pair<Path,List<Path>> getLatestSystemKeyFile() throws IOException {
     if (! isKeyManagementEnabled()) {
       return new Pair<>(null, null);

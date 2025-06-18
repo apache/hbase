@@ -17,6 +17,7 @@ import org.apache.hadoop.hbase.keymeta.KeymetaTableAccessor;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -61,6 +62,10 @@ import static org.mockito.Mockito.when;
 @Category({ MasterTests.class, SmallTests.class })
 public class TestKeymetaAdminImpl {
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
+
+  private static final String CUST = "cust1";
+  private static final String ENCODED_CUST = ManagedKeyProvider.encodeToStr(CUST.getBytes());
+
 
   @Rule
   public TestName name = new TestName();
@@ -201,46 +206,52 @@ public class TestKeymetaAdminImpl {
       managedKeyProvider.setMultikeyGenMode(true);
     }
 
+    @After
+    public void tearDown() {
+      // Reset as this instance gets reused for more than 1 test.
+      managedKeyProvider.setMockedKeyState(CUST, ACTIVE);
+    }
+
     @Test
     public void testEnable() throws Exception {
       List<ManagedKeyData> managedKeyStates;
-      String cust = "cust1";
-      String encodedCust = ManagedKeyProvider.encodeToStr(cust.getBytes());
-      managedKeyStates = keymetaAdmin.enableKeyManagement(encodedCust, keySpace);
+      // Test 1: Enable key management with 3 keys
+      managedKeyStates = keymetaAdmin.enableKeyManagement(ENCODED_CUST, keySpace);
       assertKeys(managedKeyStates, 3);
-      verify(keymetaAccessor).getAllKeys(cust.getBytes(), keySpace);
+      verify(keymetaAccessor).getAllKeys(CUST.getBytes(), keySpace);
       verify(keymetaAccessor, times(3)).addKey(any());
 
+      // Test 2: Enable key management with 3 keys, but already enabled
       reset(keymetaAccessor);
-
-      when(keymetaAccessor.getAllKeys(cust.getBytes(), keySpace)).thenReturn(managedKeyStates);
-      managedKeyStates = keymetaAdmin.enableKeyManagement(encodedCust, keySpace);
+      when(keymetaAccessor.getAllKeys(CUST.getBytes(), keySpace)).thenReturn(managedKeyStates);
+      managedKeyStates = keymetaAdmin.enableKeyManagement(ENCODED_CUST, keySpace);
       assertKeys(managedKeyStates, 3);
       verify(keymetaAccessor, times(0)).addKey(any());
 
+      // Test 3: Enable key management with 4 keys, but only 1 key is added
       reset(keymetaAccessor);
-      when(keymetaAccessor.getAllKeys(cust.getBytes(), keySpace)).thenReturn(managedKeyStates);
+      when(keymetaAccessor.getAllKeys(CUST.getBytes(), keySpace)).thenReturn(managedKeyStates);
       keymetaAdmin.activeKeyCountOverride = 4;
-      managedKeyStates = keymetaAdmin.enableKeyManagement(encodedCust, keySpace);
+      managedKeyStates = keymetaAdmin.enableKeyManagement(ENCODED_CUST, keySpace);
       assertKeys(managedKeyStates, 1);
       verify(keymetaAccessor, times(1)).addKey(any());
 
+      // Test 4: Enable key management when key provider is not able to generate any new keys
       reset(keymetaAccessor);
-      when(keymetaAccessor.getAllKeys(cust.getBytes(), keySpace)).thenReturn(managedKeyStates);
+      when(keymetaAccessor.getAllKeys(CUST.getBytes(), keySpace)).thenReturn(managedKeyStates);
       managedKeyProvider.setMultikeyGenMode(false);
-      managedKeyStates = keymetaAdmin.enableKeyManagement(encodedCust, keySpace);
+      managedKeyStates = keymetaAdmin.enableKeyManagement(ENCODED_CUST, keySpace);
       assertKeys(managedKeyStates, 0);
       verify(keymetaAccessor, times(0)).addKey(any());
 
-      //reset(keymetaAccessor);
-      managedKeyProvider.setMockedKeyState(cust, FAILED);
-      managedKeyStates = keymetaAdmin.enableKeyManagement(encodedCust, keySpace);
+      // Test 5: Enable key management when key provider is not able to generate any new keys
+      reset(keymetaAccessor);
+      managedKeyProvider.setMockedKeyState(CUST, FAILED);
+      managedKeyStates = keymetaAdmin.enableKeyManagement(ENCODED_CUST, keySpace);
       assertNotNull(managedKeyStates);
       assertEquals(1, managedKeyStates.size());
       assertEquals(FAILED, managedKeyStates.get(0).getKeyState());
       verify(keymetaAccessor, times(1)).addKey(any());
-      // NOTE: Reset as this instance is shared for more than 1 test.
-      managedKeyProvider.setMockedKeyState(cust, ACTIVE);
     }
 
     private static void assertKeys(List<ManagedKeyData> managedKeyStates, int expectedCnt) {
