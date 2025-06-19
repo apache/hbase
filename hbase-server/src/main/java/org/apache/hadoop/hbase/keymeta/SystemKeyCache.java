@@ -29,7 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
-public final class SystemKeyCache {
+public class SystemKeyCache {
   private static final Logger LOG = LoggerFactory.getLogger(SystemKeyCache.class);
 
   private final ManagedKeyData latestSystemKey;
