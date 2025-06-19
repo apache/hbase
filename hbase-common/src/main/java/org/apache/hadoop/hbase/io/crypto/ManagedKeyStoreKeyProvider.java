@@ -9,11 +9,15 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.GsonUtil;
 import org.apache.yetus.audience.InterfaceAudience;
+import com.google.gson.reflect.TypeToken;
 
 @InterfaceAudience.Public
 public class ManagedKeyStoreKeyProvider extends KeyStoreKeyProvider implements ManagedKeyProvider {
   public static final String KEY_METADATA_ALIAS = "KeyAlias";
   public static final String KEY_METADATA_CUST = "KeyCustodian";
+
+  private static final java.lang.reflect.Type KEY_METADATA_TYPE =
+    new TypeToken<HashMap<String, String>>(){}.getType();
 
   private Configuration conf;
 
@@ -54,7 +58,7 @@ public class ManagedKeyStoreKeyProvider extends KeyStoreKeyProvider implements M
   @Override
   public ManagedKeyData unwrapKey(String keyMetadataStr, byte[] wrappedKey) throws IOException {
     Map<String, String> keyMetadata = GsonUtil.getDefaultInstance().fromJson(keyMetadataStr,
-      HashMap.class);
+      KEY_METADATA_TYPE);
     String encodedCust = keyMetadata.get(KEY_METADATA_CUST);
     String activeStatusConfKey = HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + encodedCust +
       ".active";
@@ -77,9 +81,9 @@ public class ManagedKeyStoreKeyProvider extends KeyStoreKeyProvider implements M
   }
 
   public static String generateKeyMetadata(String aliasName, String encodedCust) {
-    return GsonUtil.getDefaultInstance().toJson(Map.of(
-      KEY_METADATA_ALIAS, aliasName,
-      KEY_METADATA_CUST, encodedCust
-    ), HashMap.class);
+    Map<String, String> metadata = new HashMap<>(2);
+    metadata.put(KEY_METADATA_ALIAS, aliasName);
+    metadata.put(KEY_METADATA_CUST, encodedCust);
+    return GsonUtil.getDefaultInstance().toJson(metadata, HashMap.class);
   }
 }
