@@ -1309,7 +1309,7 @@ public final class HConstants {
   /** Configuration key for enabling WAL encryption, a boolean */
   public static final String ENABLE_WAL_ENCRYPTION = "hbase.regionserver.wal.encryption";
 
-  /** Property used by {@link ManagedKeyStoreKeyProvider} class to set the alias that identifies
+  /** Property used by ManagedKeyStoreKeyProvider class to set the alias that identifies
    *  the current system key. */
   public static final String CRYPTO_MANAGED_KEY_STORE_SYSTEM_KEY_NAME_CONF_KEY =
     "hbase.crypto.managed_key_store.system.key.name";
