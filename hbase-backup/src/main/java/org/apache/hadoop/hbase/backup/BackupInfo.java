@@ -440,6 +440,7 @@ public class BackupInfo implements Comparable<BackupInfo> {
     builder.setBackupType(BackupProtos.BackupType.valueOf(getType().name()));
     builder.setWorkersNumber(workers);
     builder.setBandwidth(bandwidth);
+    builder.setContinuousBackupEnabled(isContinuousBackupEnabled());
     return builder.build();
   }
 
@@ -535,6 +536,7 @@ public class BackupInfo implements Comparable<BackupInfo> {
     context.setType(BackupType.valueOf(proto.getBackupType().name()));
     context.setWorkers(proto.getWorkersNumber());
     context.setBandwidth(proto.getBandwidth());
+    context.setContinuousBackupEnabled(proto.getContinuousBackupEnabled());
     return context;
   }
 
