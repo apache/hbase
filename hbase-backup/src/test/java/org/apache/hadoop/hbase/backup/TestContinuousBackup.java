@@ -259,8 +259,7 @@ public class TestContinuousBackup extends TestBackupBase {
     }
   }
 
-  private String[] buildBackupArgs(String backupType, TableName[] tables,
-    boolean continuousEnabled) {
+  String[] buildBackupArgs(String backupType, TableName[] tables, boolean continuousEnabled) {
     String tableNames =
       Arrays.stream(tables).map(TableName::getNameAsString).collect(Collectors.joining(","));
 
@@ -272,7 +271,7 @@ public class TestContinuousBackup extends TestBackupBase {
     }
   }
 
-  private BackupManifest getLatestBackupManifest(List<BackupInfo> backups) throws IOException {
+  BackupManifest getLatestBackupManifest(List<BackupInfo> backups) throws IOException {
     BackupInfo newestBackup = backups.get(0);
     return HBackupFileSystem.getManifest(conf1, new Path(BACKUP_ROOT_DIR),
       newestBackup.getBackupId());
@@ -286,16 +285,6 @@ public class TestContinuousBackup extends TestBackupBase {
         tableBackupMap.containsKey(table));
 
       assertTrue("Timestamp for table should be greater than 0", tableBackupMap.get(table) > 0);
-    }
-  }
-
-  private void deleteContinuousBackupReplicationPeerIfExists(Admin admin) throws IOException {
-    if (
-      admin.listReplicationPeers().stream()
-        .anyMatch(peer -> peer.getPeerId().equals(CONTINUOUS_BACKUP_REPLICATION_PEER))
-    ) {
-      admin.disableReplicationPeer(CONTINUOUS_BACKUP_REPLICATION_PEER);
-      admin.removeReplicationPeer(CONTINUOUS_BACKUP_REPLICATION_PEER);
     }
   }
 
