@@ -136,7 +136,7 @@ public class MasterFileSystem {
         HConstants.CORRUPT_DIR_NAME, ReplicationUtils.REMOTE_WAL_DIR_NAME };
     // check if the root directory exists
     checkRootDir(this.rootdir, conf, this.fs);
-    checkRootDir(this.systemKeyDir, conf, this.fs);
+    checkSubDir(this.systemKeyDir, HBASE_DIR_PERMS);
 
     // Check the directories under rootdir.
     checkTempDir(this.tempdir, conf, this.fs);
