@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
+import static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.EnableTableState.ENABLE_TABLE_MARK_REGIONS_ONLINE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
@@ -27,6 +28,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.SnapshotType;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
@@ -135,5 +137,60 @@ public class TestSnapshotProcedureConcurrently extends TestSnapshotProcedure {
       () -> sm.isSnapshotDone(snapshotOnSameTableProto) && !sm.isTakingAnySnapshot());
     SnapshotTestingUtils.confirmSnapshotValid(TEST_UTIL, snapshotProto, TABLE_NAME, CF);
     SnapshotTestingUtils.confirmSnapshotValid(TEST_UTIL, snapshotOnSameTableProto, TABLE_NAME, CF);
+  }
+
+  @Test
+  public void testItFailsIfTableIsNotDisabledOrEnabled() throws Exception {
+    ProcedureExecutor<MasterProcedureEnv> executor = master.getMasterProcedureExecutor();
+    MasterProcedureEnv env = executor.getEnvironment();
+    TEST_UTIL.getAdmin().disableTable(TABLE_NAME);
+
+    TestEnableTableProcedure enableTable = new TestEnableTableProcedure(
+      master.getMasterProcedureExecutor().getEnvironment(), TABLE_NAME);
+    long enableProcId = executor.submitProcedure(enableTable);
+    TEST_UTIL.waitFor(60000, () -> {
+      Procedure<MasterProcedureEnv> proc = executor.getProcedure(enableProcId);
+      if (proc == null) {
+        return false;
+      }
+      return ((TestEnableTableProcedure) proc).getProcedureState()
+          == ENABLE_TABLE_MARK_REGIONS_ONLINE;
+    });
+
+    // Using a delayed spy ensures we hit the problem state while the table enable procedure
+    // is waiting to run
+    SnapshotProcedure snapshotProc = new SnapshotProcedure(env, snapshotProto);
+    long snapshotProcId = executor.submitProcedure(snapshotProc);
+    TEST_UTIL.waitTableEnabled(TABLE_NAME);
+    // Wait for procedure to run and finish
+    TEST_UTIL.waitFor(60000, () -> executor.getProcedure(snapshotProcId) != null);
+    TEST_UTIL.waitFor(60000, () -> executor.getProcedure(snapshotProcId) == null);
+
+    SnapshotTestingUtils.confirmSnapshotValid(TEST_UTIL, snapshotProto, TABLE_NAME, CF);
+  }
+
+  // Needs to be publicly accessible for Procedure validation
+  public static class TestEnableTableProcedure extends EnableTableProcedure {
+    // Necessary for Procedure validation
+    public TestEnableTableProcedure() {
+    }
+
+    public TestEnableTableProcedure(MasterProcedureEnv env, TableName tableName) {
+      super(env, tableName);
+    }
+
+    public MasterProcedureProtos.EnableTableState getProcedureState() {
+      return getState(stateCount);
+    }
+
+    @Override
+    protected Flow executeFromState(MasterProcedureEnv env,
+      MasterProcedureProtos.EnableTableState state) throws InterruptedException {
+      if (state == ENABLE_TABLE_MARK_REGIONS_ONLINE) {
+        Thread.sleep(10000);
+      }
+
+      return super.executeFromState(env, state);
+    }
   }
 }

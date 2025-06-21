@@ -104,30 +104,6 @@ public class SnapshotProcedure extends AbstractStateMachineTableProcedure<Snapsh
   }
 
   @Override
-  protected LockState acquireLock(MasterProcedureEnv env) {
-    // AbstractStateMachineTableProcedure acquires exclusive table lock by default,
-    // but we may need to downgrade it to shared lock for some reasons:
-    // a. exclusive lock has a negative effect on assigning region. See HBASE-21480 for details.
-    // b. we want to support taking multiple different snapshots on same table on the same time.
-    if (env.getProcedureScheduler().waitTableSharedLock(this, getTableName())) {
-      return LockState.LOCK_EVENT_WAIT;
-    }
-    return LockState.LOCK_ACQUIRED;
-  }
-
-  @Override
-  protected void releaseLock(MasterProcedureEnv env) {
-    env.getProcedureScheduler().wakeTableSharedLock(this, getTableName());
-  }
-
-  @Override
-  protected boolean holdLock(MasterProcedureEnv env) {
-    // In order to avoid enabling/disabling/modifying/deleting table during snapshot,
-    // we don't release lock during suspend
-    return true;
-  }
-
-  @Override
   protected Flow executeFromState(MasterProcedureEnv env, SnapshotState state)
     throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
     LOG.info("{} execute state={}", this, state);
