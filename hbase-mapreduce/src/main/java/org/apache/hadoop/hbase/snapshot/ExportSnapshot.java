@@ -24,6 +24,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -37,6 +38,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.function.BiConsumer;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -75,12 +77,15 @@ import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
 import org.apache.hadoop.mapreduce.security.TokenCache;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.Option;
 
@@ -119,6 +124,10 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
   private static final String CONF_MAP_GROUP = "snapshot.export.default.map.group";
   private static final String CONF_BANDWIDTH_MB = "snapshot.export.map.bandwidth.mb";
   private static final String CONF_MR_JOB_NAME = "mapreduce.job.name";
+  private static final String CONF_INPUT_FILE_GROUPER_CLASS =
+    "snapshot.export.input.file.grouper.class";
+  private static final String CONF_INPUT_FILE_LOCATION_RESOLVER_CLASS =
+    "snapshot.export.input.file.location.resolver.class";
   protected static final String CONF_SKIP_TMP = "snapshot.export.skip.tmp";
   private static final String CONF_COPY_MANIFEST_THREADS =
     "snapshot.export.copy.references.threads";
@@ -164,6 +173,10 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
       new Option(null, "reset-ttl", false, "Do not copy TTL for the snapshot");
     static final Option STORAGE_POLICY = new Option(null, "storage-policy", true,
       "Storage policy for export snapshot output directory, with format like: f=HOT&g=ALL_SDD");
+    static final Option CUSTOM_FILE_GROUPER = new Option(null, "custom-file-grouper", true,
+      "Fully qualified class name of an implementation of ExportSnapshot.CustomFileGrouper. See JavaDoc on that class for more information.");
+    static final Option FILE_LOCATION_RESOLVER = new Option(null, "file-location-resolver", true,
+      "Fully qualified class name of an implementation of ExportSnapshot.FileLocationResolver. See JavaDoc on that class for more information.");
   }
 
   // Export Map-Reduce Counters, to keep track of the progress
@@ -184,6 +197,54 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
     TRUE, // checksum comparison is compatible and true.
     FALSE, // checksum comparison is compatible and false.
     INCOMPATIBLE, // checksum comparison is not compatible.
+  }
+
+  /**
+   * If desired, you may implement a CustomFileGrouper in order to influence how ExportSnapshot
+   * chooses which input files go into the MapReduce job's {@link InputSplit}s. Your implementation
+   * must return a data structure that contains each input file exactly once. Files that appear in
+   * separate entries in the top-level returned Collection are guaranteed to not be placed in the
+   * same InputSplit. This can be used to segregate your input files by the rack or host on which
+   * they are available, which, used in conjunction with {@link FileLocationResolver}, can improve
+   * the performance of your ExportSnapshot runs. To use this, pass the --custom-file-grouper
+   * argument with the fully qualified class name of an implementation of CustomFileGrouper that's
+   * on the classpath. If this argument is not used, no particular grouping logic will be applied.
+   */
+  @InterfaceAudience.Public
+  public interface CustomFileGrouper {
+    Collection<Collection<Pair<SnapshotFileInfo, Long>>>
+      getGroupedInputFiles(final Collection<Pair<SnapshotFileInfo, Long>> snapshotFiles);
+  }
+
+  private static class NoopCustomFileGrouper implements CustomFileGrouper {
+    @Override
+    public Collection<Collection<Pair<SnapshotFileInfo, Long>>>
+      getGroupedInputFiles(final Collection<Pair<SnapshotFileInfo, Long>> snapshotFiles) {
+      return ImmutableList.of(snapshotFiles);
+    }
+  }
+
+  /**
+   * If desired, you may implement a FileLocationResolver in order to influence the _location_
+   * metadata attached to each {@link InputSplit} that ExportSnapshot will submit to YARN. The
+   * method {@link #getLocationsForInputFiles(Collection)} method is called once for each InputSplit
+   * being constructed. Whatever is returned will ultimately be reported by that split's
+   * {@link InputSplit#getLocations()} method. This can be used to encourage YARN to schedule the
+   * ExportSnapshot's mappers on rack-local or host-local NodeManagers. To use this, pass the
+   * --file-location-resolver argument with the fully qualified class name of an implementation of
+   * FileLocationResolver that's on the classpath. If this argument is not used, no locations will
+   * be attached to the InputSplits.
+   */
+  @InterfaceAudience.Public
+  public interface FileLocationResolver {
+    Set<String> getLocationsForInputFiles(final Collection<Pair<SnapshotFileInfo, Long>> files);
+  }
+
+  private static class NoopFileLocationResolver implements FileLocationResolver {
+    @Override
+    public Set<String> getLocationsForInputFiles(Collection<Pair<SnapshotFileInfo, Long>> files) {
+      return ImmutableSet.of();
+    }
   }
 
   private static class ExportMapper
@@ -724,8 +785,9 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
    * The algorithm used is pretty straightforward; the file list is sorted by size, and then each
    * group fetch the bigger file available, iterating through groups alternating the direction.
    */
-  static List<List<Pair<SnapshotFileInfo, Long>>>
-    getBalancedSplits(final List<Pair<SnapshotFileInfo, Long>> files, final int ngroups) {
+  static List<List<Pair<SnapshotFileInfo, Long>>> getBalancedSplits(
+    final Collection<Pair<SnapshotFileInfo, Long>> unsortedFiles, final int ngroups) {
+    List<Pair<SnapshotFileInfo, Long>> files = new ArrayList<>(unsortedFiles);
     // Sort files by size, from small to big
     Collections.sort(files, new Comparator<Pair<SnapshotFileInfo, Long>>() {
       public int compare(Pair<SnapshotFileInfo, Long> a, Pair<SnapshotFileInfo, Long> b) {
@@ -769,12 +831,6 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
       }
     }
 
-    if (LOG.isDebugEnabled()) {
-      for (int i = 0; i < sizeGroups.length; ++i) {
-        LOG.debug("export split=" + i + " size=" + Strings.humanReadableInt(sizeGroups[i]));
-      }
-    }
-
     return fileGroups;
   }
 
@@ -792,6 +848,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
       FileSystem fs = FileSystem.get(snapshotDir.toUri(), conf);
 
       List<Pair<SnapshotFileInfo, Long>> snapshotFiles = getSnapshotFiles(conf, fs, snapshotDir);
+
       int mappers = conf.getInt(CONF_NUM_SPLITS, 0);
       if (mappers == 0 && snapshotFiles.size() > 0) {
         mappers = 1 + (snapshotFiles.size() / conf.getInt(CONF_MAP_GROUP, 10));
@@ -800,29 +857,63 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
         conf.setInt(MR_NUM_MAPS, mappers);
       }
 
-      List<List<Pair<SnapshotFileInfo, Long>>> groups = getBalancedSplits(snapshotFiles, mappers);
-      List<InputSplit> splits = new ArrayList(groups.size());
-      for (List<Pair<SnapshotFileInfo, Long>> files : groups) {
-        splits.add(new ExportSnapshotInputSplit(files));
+      Class<? extends CustomFileGrouper> inputFileGrouperClass = conf.getClass(
+        CONF_INPUT_FILE_GROUPER_CLASS, NoopCustomFileGrouper.class, CustomFileGrouper.class);
+      CustomFileGrouper customFileGrouper =
+        ReflectionUtils.newInstance(inputFileGrouperClass, conf);
+      Collection<Collection<Pair<SnapshotFileInfo, Long>>> groups =
+        customFileGrouper.getGroupedInputFiles(snapshotFiles);
+
+      LOG.info("CustomFileGrouper {} split input files into {} groups", inputFileGrouperClass,
+        groups.size());
+      int mappersPerGroup = groups.isEmpty() ? 1 : Math.max(mappers / groups.size(), 1);
+      LOG.info(
+        "Splitting each group into {} InputSplits, to achieve closest possible amount of mappers to target of {}",
+        mappersPerGroup, mappers);
+
+      Collection<List<Pair<SnapshotFileInfo, Long>>> balancedGroups =
+        groups.stream().map(g -> getBalancedSplits(g, mappersPerGroup)).flatMap(Collection::stream)
+          .collect(Collectors.toList());
+
+      Class<? extends FileLocationResolver> fileLocationResolverClass =
+        conf.getClass(CONF_INPUT_FILE_LOCATION_RESOLVER_CLASS, NoopFileLocationResolver.class,
+          FileLocationResolver.class);
+      FileLocationResolver fileLocationResolver =
+        ReflectionUtils.newInstance(fileLocationResolverClass, conf);
+      LOG.info("FileLocationResolver {} will provide location metadata for each InputSplit",
+        fileLocationResolverClass);
+
+      List<InputSplit> splits = new ArrayList<>(balancedGroups.size());
+      for (Collection<Pair<SnapshotFileInfo, Long>> files : balancedGroups) {
+        splits.add(new ExportSnapshotInputSplit(files, fileLocationResolver));
       }
       return splits;
     }
 
     private static class ExportSnapshotInputSplit extends InputSplit implements Writable {
+
       private List<Pair<BytesWritable, Long>> files;
+      private String[] locations;
       private long length;
 
       public ExportSnapshotInputSplit() {
         this.files = null;
+        this.locations = null;
       }
 
-      public ExportSnapshotInputSplit(final List<Pair<SnapshotFileInfo, Long>> snapshotFiles) {
-        this.files = new ArrayList(snapshotFiles.size());
+      public ExportSnapshotInputSplit(final Collection<Pair<SnapshotFileInfo, Long>> snapshotFiles,
+        FileLocationResolver fileLocationResolver) {
+        this.files = new ArrayList<>(snapshotFiles.size());
         for (Pair<SnapshotFileInfo, Long> fileInfo : snapshotFiles) {
           this.files.add(
             new Pair<>(new BytesWritable(fileInfo.getFirst().toByteArray()), fileInfo.getSecond()));
           this.length += fileInfo.getSecond();
         }
+        this.locations =
+          fileLocationResolver.getLocationsForInputFiles(snapshotFiles).toArray(new String[0]);
+        LOG.trace(
+          "This ExportSnapshotInputSplit has files {} of collective size {}, with location hints: {}",
+          files, length, locations);
       }
 
       private List<Pair<BytesWritable, Long>> getSplitKeys() {
@@ -836,7 +927,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
 
       @Override
       public String[] getLocations() throws IOException, InterruptedException {
-        return new String[] {};
+        return locations;
       }
 
       @Override
@@ -851,6 +942,12 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
           files.add(new Pair<>(fileInfo, size));
           length += size;
         }
+        int locationCount = in.readInt();
+        List<String> locations = new ArrayList<>(locationCount);
+        for (int i = 0; i < locationCount; ++i) {
+          locations.add(in.readUTF());
+        }
+        this.locations = locations.toArray(new String[0]);
       }
 
       @Override
@@ -859,6 +956,10 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
         for (final Pair<BytesWritable, Long> fileInfo : files) {
           fileInfo.getFirst().write(out);
           out.writeLong(fileInfo.getSecond());
+        }
+        out.writeInt(locations.length);
+        for (String location : locations) {
+          out.writeUTF(location);
         }
       }
     }
@@ -920,7 +1021,8 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
   private void runCopyJob(final Path inputRoot, final Path outputRoot, final String snapshotName,
     final Path snapshotDir, final boolean verifyChecksum, final String filesUser,
     final String filesGroup, final int filesMode, final int mappers, final int bandwidthMB,
-    final String storagePolicy) throws IOException, InterruptedException, ClassNotFoundException {
+    final String storagePolicy, final String customFileGrouper, final String fileLocationResolver)
+    throws IOException, InterruptedException, ClassNotFoundException {
     Configuration conf = getConf();
     if (filesGroup != null) conf.set(CONF_FILES_GROUP, filesGroup);
     if (filesUser != null) conf.set(CONF_FILES_USER, filesUser);
@@ -939,6 +1041,12 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
       for (Map.Entry<String, String> entry : storagePolicyPerFamily(storagePolicy).entrySet()) {
         conf.set(generateFamilyStoragePolicyKey(entry.getKey()), entry.getValue());
       }
+    }
+    if (customFileGrouper != null) {
+      conf.set(CONF_INPUT_FILE_GROUPER_CLASS, customFileGrouper);
+    }
+    if (fileLocationResolver != null) {
+      conf.set(CONF_INPUT_FILE_LOCATION_RESOLVER_CLASS, fileLocationResolver);
     }
 
     String jobname = conf.get(CONF_MR_JOB_NAME, "ExportSnapshot-" + snapshotName);
@@ -1058,6 +1166,8 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
   private int mappers = 0;
   private boolean resetTtl = false;
   private String storagePolicy = null;
+  private String customFileGrouper = null;
+  private String fileLocationResolver = null;
 
   @Override
   protected void processOptions(CommandLine cmd) {
@@ -1082,6 +1192,12 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
     resetTtl = cmd.hasOption(Options.RESET_TTL.getLongOpt());
     if (cmd.hasOption(Options.STORAGE_POLICY.getLongOpt())) {
       storagePolicy = cmd.getOptionValue(Options.STORAGE_POLICY.getLongOpt());
+    }
+    if (cmd.hasOption(Options.CUSTOM_FILE_GROUPER.getLongOpt())) {
+      customFileGrouper = cmd.getOptionValue(Options.CUSTOM_FILE_GROUPER.getLongOpt());
+    }
+    if (cmd.hasOption(Options.FILE_LOCATION_RESOLVER.getLongOpt())) {
+      fileLocationResolver = cmd.getOptionValue(Options.FILE_LOCATION_RESOLVER.getLongOpt());
     }
   }
 
@@ -1251,7 +1367,8 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
     // by the HFileArchiver, since they have no references.
     try {
       runCopyJob(inputRoot, outputRoot, snapshotName, snapshotDir, verifyChecksum, filesUser,
-        filesGroup, filesMode, mappers, bandwidthMB, storagePolicy);
+        filesGroup, filesMode, mappers, bandwidthMB, storagePolicy, customFileGrouper,
+        fileLocationResolver);
 
       LOG.info("Finalize the Snapshot Export");
       if (!skipTmp) {
@@ -1309,6 +1426,8 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
     addOption(Options.MAPPERS);
     addOption(Options.BANDWIDTH);
     addOption(Options.RESET_TTL);
+    addOption(Options.CUSTOM_FILE_GROUPER);
+    addOption(Options.FILE_LOCATION_RESOLVER);
   }
 
   public static void main(String[] args) {
