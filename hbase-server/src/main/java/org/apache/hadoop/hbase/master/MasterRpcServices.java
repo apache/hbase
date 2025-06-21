@@ -1872,7 +1872,10 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
   public SetQuotaResponse setQuota(RpcController c, SetQuotaRequest req) throws ServiceException {
     try {
       server.checkInitialized();
-      return server.getMasterQuotaManager().setQuota(req);
+      SetQuotaResponse response = server.getMasterQuotaManager().setQuota(req);
+      server.reloadRegionServerQuotas();
+
+      return response;
     } catch (Exception e) {
       throw new ServiceException(e);
     }

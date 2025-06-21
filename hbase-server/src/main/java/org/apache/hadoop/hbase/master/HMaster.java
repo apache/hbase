@@ -169,6 +169,7 @@ import org.apache.hadoop.hbase.master.procedure.ModifyTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
 import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
 import org.apache.hadoop.hbase.master.procedure.RSProcedureDispatcher;
+import org.apache.hadoop.hbase.master.procedure.ReloadQuotasProcedure;
 import org.apache.hadoop.hbase.master.procedure.ReopenTableRegionsProcedure;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.master.procedure.TruncateRegionProcedure;
@@ -2990,6 +2991,12 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     if (!ts.isDisabled()) {
       throw new TableNotDisabledException("Not DISABLED; " + ts);
     }
+  }
+
+  public void reloadRegionServerQuotas() {
+    // multiple reloads are harmless, so no need for NonceProcedureRunnable
+    getLiveRegionServers()
+      .forEach(sn -> procedureExecutor.submitProcedure(new ReloadQuotasProcedure(sn)));
   }
 
   public ClusterMetrics getClusterMetricsWithoutCoprocessor() throws InterruptedIOException {
