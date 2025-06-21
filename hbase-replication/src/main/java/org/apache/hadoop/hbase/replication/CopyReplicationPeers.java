@@ -24,6 +24,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -68,7 +69,7 @@ public class CopyReplicationPeers extends Configured implements Tool {
       public void abort(String why, Throwable e) {
         aborted = true;
         LOG.error(why, e);
-        System.exit(1);
+        ExitHandler.getInstance().exit(1);
       }
     });
   }
@@ -117,6 +118,6 @@ public class CopyReplicationPeers extends Configured implements Tool {
   public static void main(String[] args) throws Exception {
     Configuration conf = HBaseConfiguration.create();
     int ret = ToolRunner.run(conf, new CopyReplicationPeers(conf), args);
-    System.exit(ret);
+    ExitHandler.getInstance().exit(ret);
   }
 }
