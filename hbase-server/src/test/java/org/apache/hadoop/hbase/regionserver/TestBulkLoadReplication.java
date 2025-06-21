@@ -20,12 +20,15 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.apache.hadoop.hbase.HConstants.REPLICATION_CLUSTER_ID;
 import static org.apache.hadoop.hbase.HConstants.REPLICATION_CONF_DIR;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -60,6 +63,8 @@ import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
+import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
+import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.replication.TestReplicationBase;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
@@ -121,6 +126,8 @@ public class TestBulkLoadReplication extends TestReplicationBase {
   @ClassRule
   public static TemporaryFolder testFolder = new TemporaryFolder();
 
+  private static ReplicationQueueStorage queueStorage;
+
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     setupBulkLoadConfigsForCluster(CONF1, PEER1_CLUSTER_ID);
@@ -129,6 +136,8 @@ public class TestBulkLoadReplication extends TestReplicationBase {
     setupConfig(UTIL3, "/3");
     TestReplicationBase.setUpBeforeClass();
     startThirdCluster();
+    queueStorage = ReplicationStorageFactory.getReplicationQueueStorage(UTIL1.getConnection(),
+      UTIL1.getConfiguration());
   }
 
   private static void startThirdCluster() throws Exception {
@@ -321,5 +330,82 @@ public class TestBulkLoadReplication extends TestReplicationBase {
         }
       });
     }
+  }
+
+  @Test
+  public void testBulkloadReplicationActiveActiveForNoRepFamily() throws Exception {
+    Table peer1TestTable = UTIL1.getConnection().getTable(TestReplicationBase.tableName);
+    Table peer2TestTable = UTIL2.getConnection().getTable(TestReplicationBase.tableName);
+    Table peer3TestTable = UTIL3.getConnection().getTable(TestReplicationBase.tableName);
+    byte[] row = Bytes.toBytes("004");
+    byte[] value = Bytes.toBytes("v4");
+    assertBulkLoadConditionsForNoRepFamily(row, value, UTIL1, peer1TestTable, peer2TestTable,
+      peer3TestTable);
+    // additional wait to make sure no extra bulk load happens
+    Thread.sleep(400);
+    assertEquals(1, BULK_LOADS_COUNT.get());
+    assertEquals(0, queueStorage.getAllHFileRefs().size());
+  }
+
+  private void assertBulkLoadConditionsForNoRepFamily(byte[] row, byte[] value,
+    HBaseTestingUtil utility, Table... tables) throws Exception {
+    BULK_LOAD_LATCH = new CountDownLatch(1);
+    bulkLoadOnClusterForNoRepFamily(row, value, utility);
+    assertTrue(BULK_LOAD_LATCH.await(1, TimeUnit.MINUTES));
+    assertTableHasValue(tables[0], row, value);
+    assertTableNotHasValue(tables[1], row, value);
+    assertTableNotHasValue(tables[2], row, value);
+  }
+
+  private void bulkLoadOnClusterForNoRepFamily(byte[] row, byte[] value, HBaseTestingUtil cluster)
+    throws Exception {
+    String bulkloadFile = createHFileForNoRepFamilies(row, value, cluster.getConfiguration());
+    Path bulkLoadFilePath = new Path(bulkloadFile);
+    copyToHdfsForNoRepFamily(bulkloadFile, cluster.getDFSCluster());
+    BulkLoadHFilesTool bulkLoadHFilesTool = new BulkLoadHFilesTool(cluster.getConfiguration());
+    Map<byte[], List<Path>> family2Files = new HashMap<>();
+    List<Path> files = new ArrayList<>();
+    files.add(new Path(
+      BULK_LOAD_BASE_DIR + "/" + Bytes.toString(noRepfamName) + "/" + bulkLoadFilePath.getName()));
+    family2Files.put(noRepfamName, files);
+    bulkLoadHFilesTool.bulkLoad(tableName, family2Files);
+  }
+
+  private String createHFileForNoRepFamilies(byte[] row, byte[] value, Configuration clusterConfig)
+    throws IOException {
+    ExtendedCellBuilder cellBuilder = ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY);
+    cellBuilder.setRow(row).setFamily(TestReplicationBase.noRepfamName)
+      .setQualifier(Bytes.toBytes("1")).setValue(value).setType(Cell.Type.Put);
+
+    HFile.WriterFactory hFileFactory = HFile.getWriterFactoryNoCache(clusterConfig);
+    // TODO We need a way to do this without creating files
+    File hFileLocation = testFolder.newFile();
+    FSDataOutputStream out = new FSDataOutputStream(new FileOutputStream(hFileLocation), null);
+    try {
+      hFileFactory.withOutputStream(out);
+      hFileFactory.withFileContext(new HFileContextBuilder().build());
+      HFile.Writer writer = hFileFactory.create();
+      try {
+        writer.append(new KeyValue(cellBuilder.build()));
+      } finally {
+        writer.close();
+      }
+    } finally {
+      out.close();
+    }
+    return hFileLocation.getAbsoluteFile().getAbsolutePath();
+  }
+
+  private void copyToHdfsForNoRepFamily(String bulkLoadFilePath, MiniDFSCluster cluster)
+    throws Exception {
+    Path bulkLoadDir = new Path(BULK_LOAD_BASE_DIR + "/" + Bytes.toString(noRepfamName) + "/");
+    cluster.getFileSystem().mkdirs(bulkLoadDir);
+    cluster.getFileSystem().copyFromLocalFile(new Path(bulkLoadFilePath), bulkLoadDir);
+  }
+
+  private void assertTableNotHasValue(Table table, byte[] row, byte[] value) throws IOException {
+    Get get = new Get(row);
+    Result result = table.get(get);
+    assertNotEquals(Bytes.toString(value), Bytes.toString(result.value()));
   }
 }
