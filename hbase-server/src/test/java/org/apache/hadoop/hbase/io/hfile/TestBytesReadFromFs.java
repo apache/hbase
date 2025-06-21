@@ -21,29 +21,32 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.UUID;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.metrics.ThreadLocalScanMetrics;
-import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-import org.apache.hadoop.hbase.io.hfile.HFileIndexBlockEncoder.EncodedSeeker;
 import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.hadoop.hbase.regionserver.BloomType;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
+import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
+import org.apache.hadoop.hbase.regionserver.StoreFileReader;
+import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.testclassification.IOTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.BloomFilter;
+import org.apache.hadoop.hbase.util.BloomFilterFactory;
+import org.apache.hadoop.hbase.util.BloomFilterUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.thirdparty.org.checkerframework.checker.units.qual.t;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -51,10 +54,16 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-@Category({ IOTests.class, MediumTests.class })
+@Category({ IOTests.class, SmallTests.class })
 public class TestBytesReadFromFs {
     private static final int NUM_KEYS = 100000;
+    private static final int BLOOM_BLOCK_SIZE = 512;
+    private static final int INDEX_CHUNK_SIZE = 512;
+    private static final int DATA_BLOCK_SIZE = 4096;
+    private static final int ROW_PREFIX_LENGTH_IN_BLOOM_FILTER = 42;
 
     @ClassRule
     public static final HBaseClassTestRule CLASS_RULE =
@@ -62,26 +71,30 @@ public class TestBytesReadFromFs {
 
     @Rule
     public TestName name = new TestName();
-    
 
+    private static final Logger LOG = LoggerFactory.getLogger(TestBytesReadFromFs.class);
     private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
     private static final Random RNG = new Random(9713312); // Just a fixed seed.
 
     private Configuration conf;
     private FileSystem fs;
     private List<KeyValue> keyValues = new ArrayList<>();
+    private List<byte[]> keyList = new ArrayList<>();
     private Path path;
 
     @Before
     public void setUp() throws IOException {
         conf = TEST_UTIL.getConfiguration();
+        conf.setInt(BloomFilterUtil.PREFIX_LENGTH_KEY, ROW_PREFIX_LENGTH_IN_BLOOM_FILTER);
         fs = FileSystem.get(conf);
-        path = new Path(TEST_UTIL.getDataTestDir(), name.getMethodName());
-        conf.setInt(HFileBlockIndex.MAX_CHUNK_SIZE_KEY, 512);
+        String hfileName = UUID.randomUUID().toString().replaceAll("-", "");
+        path = new Path(TEST_UTIL.getDataTestDir(), hfileName);
+        conf.setInt(HFileBlockIndex.MAX_CHUNK_SIZE_KEY, INDEX_CHUNK_SIZE);
     }
 
     @Test
     public void testBytesReadFromFsToReadDataUsingIndexBlocks() throws IOException {
+        ThreadLocalScanMetrics.setScanMetricsEnabled(true);
         writeData(path);
         KeyValue keyValue = keyValues.get(0);
         readDataAndIndexBlocks(path, keyValue);
@@ -89,18 +102,36 @@ public class TestBytesReadFromFs {
 
     @Test
     public void testBytesReadFromFsToReadLoadOnOpenDataSection() throws IOException {
+        ThreadLocalScanMetrics.setScanMetricsEnabled(true);
         writeData(path);
-        readLoadOnOpenDataSection(path);
+        readLoadOnOpenDataSection(path, false);
     }
 
     @Test
     public void testBytesReadFromFsToReadBloomFilterIndexesAndBloomBlocks() throws IOException {
-        writeData(path);
+        ThreadLocalScanMetrics.setScanMetricsEnabled(true);
+        BloomType[] bloomTypes =
+            { BloomType.ROW, BloomType.ROWCOL, BloomType.ROWPREFIX_FIXED_LENGTH };
+        for (BloomType bloomType : bloomTypes) {
+            LOG.info("Testing bloom type: {}", bloomType);
+            ThreadLocalScanMetrics.getBytesReadFromFsAndReset();
+            keyList.clear();
+            keyValues.clear();
+            writeBloomFilters(path, bloomType, BLOOM_BLOCK_SIZE);
+            if (bloomType == BloomType.ROWCOL) {
+                KeyValue keyValue = keyValues.get(0);
+                readBloomFilters(path, bloomType, null, keyValue);
+            } else {
+                Assert.assertEquals(ROW_PREFIX_LENGTH_IN_BLOOM_FILTER, keyList.get(0).length);
+                byte[] key = keyList.get(0);
+                readBloomFilters(path, bloomType, key, null);
+            }
+        }
     }
 
     private void writeData(Path path) throws IOException {
-        HFileContext context = new HFileContextBuilder().withBlockSize(4096).withIncludesTags(false)
-            .withDataBlockEncoding(DataBlockEncoding.NONE)
+        HFileContext context = new HFileContextBuilder().withBlockSize(DATA_BLOCK_SIZE)
+            .withIncludesTags(false).withDataBlockEncoding(DataBlockEncoding.NONE)
             .withCompression(Compression.Algorithm.NONE).build();
         CacheConfig cacheConfig = new CacheConfig(conf);
         HFile.Writer writer = new HFile.WriterFactory(conf, cacheConfig).withPath(fs, path)
@@ -123,13 +154,12 @@ public class TestBytesReadFromFs {
     }
 
     private void readDataAndIndexBlocks(Path path, KeyValue keyValue) throws IOException {
-        ThreadLocalScanMetrics.setScanMetricsEnabled(true);
         long fileSize = fs.getFileStatus(path).getLen();
-        
+
         ReaderContext readerContext = new ReaderContextBuilder()
             .withInputStreamWrapper(new FSDataInputStreamWrapper(fs, path)).withFilePath(path)
             .withFileSystem(fs).withFileSize(fileSize).build();
-        
+
         // Read HFile trailer and create HFileContext
         HFileInfo hfile = new HFileInfo(readerContext, conf);
         FixedFileTrailer trailer = hfile.getTrailer();
@@ -139,14 +169,14 @@ public class TestBytesReadFromFs {
         HFile.Reader reader = new HFilePreadReader(readerContext, hfile, cacheConfig, conf);
         hfile.initMetaAndIndex(reader);
         HFileContext meta = hfile.getHFileContext();
-        
+
         // Get access to the block reader
         HFileBlock.FSReader blockReader = reader.getUncachedBlockReader();
 
         // Create iterator for reading load-on-open data section
         HFileBlock.BlockIterator blockIter = blockReader
             .blockRange(trailer.getLoadOnOpenDataOffset(), fileSize - trailer.getTrailerSize());
-        
+
         // Indexes use NoOpEncodedSeeker
         MyNoOpEncodedSeeker seeker = new MyNoOpEncodedSeeker();
         ThreadLocalScanMetrics.getBytesReadFromFsAndReset();
@@ -205,14 +235,13 @@ public class TestBytesReadFromFs {
         Assert.assertEquals(0, ThreadLocalScanMetrics.getBytesReadFromBlockCacheAndReset());
     }
 
-    private void readLoadOnOpenDataSection(Path path) throws IOException {
-        ThreadLocalScanMetrics.setScanMetricsEnabled(true);
+    private void readLoadOnOpenDataSection(Path path, boolean hasBloomFilters) throws IOException {
         long fileSize = fs.getFileStatus(path).getLen();
-        
+
         ReaderContext readerContext = new ReaderContextBuilder()
             .withInputStreamWrapper(new FSDataInputStreamWrapper(fs, path)).withFilePath(path)
             .withFileSystem(fs).withFileSize(fileSize).build();
-        
+
         // Read HFile trailer
         HFileInfo hfile = new HFileInfo(readerContext, conf);
         FixedFileTrailer trailer = hfile.getTrailer();
@@ -227,11 +256,11 @@ public class TestBytesReadFromFs {
         HFileBlock.BlockIterator blockIter = blockReader
             .blockRange(trailer.getLoadOnOpenDataOffset(), fileSize - trailer.getTrailerSize());
         boolean readNextHeader = false;
-        
+
         // Read the root index block
         readNextHeader = readEachBlockInLoadOnOpenDataSection(
             blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX), readNextHeader);
-        
+
         // Read meta index block
         readNextHeader = readEachBlockInLoadOnOpenDataSection(
             blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX), readNextHeader);
@@ -242,15 +271,15 @@ public class TestBytesReadFromFs {
 
         // Read bloom filter indexes
         boolean bloomFilterIndexesRead = false;
-        while (blockIter.nextBlock() != null) {
+        HFileBlock block;
+        while ((block = blockIter.nextBlock()) != null) {
             bloomFilterIndexesRead = true;
-            readNextHeader =
-                readEachBlockInLoadOnOpenDataSection(blockIter.nextBlock(), readNextHeader);
+            readNextHeader = readEachBlockInLoadOnOpenDataSection(block, readNextHeader);
         }
-        
+
         reader.close();
 
-        Assert.assertFalse(bloomFilterIndexesRead);
+        Assert.assertEquals(hasBloomFilters, bloomFilterIndexesRead);
         Assert.assertEquals(0, ThreadLocalScanMetrics.getBytesReadFromBlockCacheAndReset());
     }
 
@@ -268,6 +297,86 @@ public class TestBytesReadFromFs {
         block.release();
         Assert.assertEquals(bytesRead, ThreadLocalScanMetrics.getBytesReadFromFsAndReset());
         return readNextHeader;
+    }
+
+    private void readBloomFilters(Path path, BloomType bt, byte[] key, KeyValue keyValue)
+        throws IOException {
+        Assert.assertTrue(keyValue == null || key == null);
+
+        // Assert that the bloom filter index was read and it's size is accounted in bytes read from
+        // fs
+        readLoadOnOpenDataSection(path, true);
+
+        CacheConfig cacheConf = new CacheConfig(conf);
+        StoreFileInfo storeFileInfo =
+            StoreFileInfo.createStoreFileInfoForHFile(conf, fs, path, true);
+        HStoreFile sf = new HStoreFile(storeFileInfo, bt, cacheConf);
+
+        // Read HFile trailer and load-on-open data section
+        sf.initReader();
+
+        // Reset bytes read from fs to 0
+        ThreadLocalScanMetrics.getBytesReadFromFsAndReset();
+
+        StoreFileReader reader = sf.getReader();
+        BloomFilter bloomFilter = reader.getGeneralBloomFilter();
+        Assert.assertTrue(bloomFilter instanceof CompoundBloomFilter);
+        CompoundBloomFilter cbf = (CompoundBloomFilter) bloomFilter;
+
+        // Get the bloom filter index reader
+        HFileBlockIndex.BlockIndexReader index = cbf.getBloomIndex();
+        int block;
+
+        // Search for the key in the bloom filter index
+        if (keyValue != null) {
+            block = index.rootBlockContainingKey(keyValue);
+        } else {
+            byte[] row = key;
+            block = index.rootBlockContainingKey(row, 0, row.length);
+        }
+
+        // Read the bloom block from FS
+        HFileBlock bloomBlock = cbf.getBloomBlock(block);
+        int bytesRead = bloomBlock.getOnDiskSizeWithHeader();
+        if (bloomBlock.getNextBlockOnDiskSize() > 0) {
+            bytesRead += HFileBlock.headerSize(true);
+        }
+        // Asser that the block read is a bloom block
+        Assert.assertEquals(bloomBlock.getBlockType(), BlockType.BLOOM_CHUNK);
+        bloomBlock.release();
+
+        // Close the reader
+        reader.close(true);
+
+        Assert.assertEquals(bytesRead, ThreadLocalScanMetrics.getBytesReadFromFsAndReset());
+    }
+
+    private void writeBloomFilters(Path path, BloomType bt, int bloomBlockByteSize)
+        throws IOException {
+        conf.setInt(BloomFilterFactory.IO_STOREFILE_BLOOM_BLOCK_SIZE, bloomBlockByteSize);
+        CacheConfig cacheConf = new CacheConfig(conf);
+        HFileContext meta = new HFileContextBuilder().withBlockSize(DATA_BLOCK_SIZE)
+            .withIncludesTags(false).withDataBlockEncoding(DataBlockEncoding.NONE)
+            .withCompression(Compression.Algorithm.NONE).build();
+        StoreFileWriter w = new StoreFileWriter.Builder(conf, cacheConf, fs).withFileContext(meta)
+            .withBloomType(bt).withFilePath(path).build();
+        Assert.assertTrue(w.hasGeneralBloom());
+        Assert.assertTrue(w.getGeneralBloomWriter() instanceof CompoundBloomFilterWriter);
+        CompoundBloomFilterWriter cbbf = (CompoundBloomFilterWriter) w.getGeneralBloomWriter();
+        byte[] cf = Bytes.toBytes("cf");
+        byte[] cq = Bytes.toBytes("cq");
+        for (int i = 0; i < NUM_KEYS; i++) {
+            byte[] keyBytes = RandomKeyValueUtil.randomOrderedFixedLengthKey(RNG, i, 10);
+            // A random-length random value.
+            byte[] valueBytes = RandomKeyValueUtil.randomFixedLengthValue(RNG, 10);
+            KeyValue keyValue =
+                new KeyValue(keyBytes, cf, cq, EnvironmentEdgeManager.currentTime(), valueBytes);
+            w.append(keyValue);
+            keyList.add(keyBytes);
+            keyValues.add(keyValue);
+        }
+        Assert.assertEquals(keyList.size(), cbbf.getKeyCount());
+        w.close();
     }
 
     private static class MyNoOpEncodedSeeker extends NoOpIndexBlockEncoder.NoOpEncodedSeeker {

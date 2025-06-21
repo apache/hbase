@@ -285,7 +285,7 @@ public class StoreFileWriter implements CellSink, ShipperListener {
    * For unit testing only.
    * @return the Bloom filter used by this writer.
    */
-  BloomFilterWriter getGeneralBloomWriter() {
+  public BloomFilterWriter getGeneralBloomWriter() {
     return liveFileWriter.generalBloomFilterWriter;
   }
 
