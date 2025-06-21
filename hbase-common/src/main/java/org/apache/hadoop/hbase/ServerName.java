@@ -18,6 +18,9 @@
 package org.apache.hadoop.hbase;
 
 import java.io.Serializable;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -62,6 +65,12 @@ public class ServerName implements Comparable<ServerName>, Serializable {
    */
   private static final short VERSION = 0;
   static final byte[] VERSION_BYTES = Bytes.toBytes(VERSION);
+  private static final String COLON_ENCODED_VALUE = "%3a";
+
+  public static final String COLON = ":";
+
+  // IPV6 address length separated by COLON(:), eg: "0:0:0:0:0:0:0:1".split(colon).length
+  private static final int IPV6_SPLIT_COLON_LENGTH = 8;
 
   /**
    * What to use if no startcode supplied.
@@ -327,7 +336,49 @@ public class ServerName implements Comparable<ServerName>, Serializable {
    * @return A ServerName instance.
    */
   public static ServerName parseServerName(final String str) {
-    return SERVERNAME_PATTERN.matcher(str).matches() ? valueOf(str) : valueOf(str, NON_STARTCODE);
+    ServerName sn =
+      SERVERNAME_PATTERN.matcher(str).matches() ? valueOf(str) : valueOf(str, NON_STARTCODE);
+    String hostname = sn.getHostname();
+    // if IPV6 address is in encoded format, need to check and validate its address length
+    // eg: if address is like "0%3a0%3a0%3a0%3a0%3a0%3a0%3a0%3a1,16020,1720673488765" decode to
+    // "0:0:0:0:0:0:0:1,16020,1720673488765"
+    if (isIpv6ServerName(hostname, COLON_ENCODED_VALUE)) {
+      try {
+        hostname = URLDecoder.decode(sn.getHostname(), "UTF8");
+        return ServerName.valueOf(hostname, sn.getPort(), sn.getStartCode());
+      } catch (UnsupportedEncodingException e) {
+        throw new IllegalArgumentException("Exception occurred while decoding server name", e);
+      }
+    }
+    return sn;
+  }
+
+  /**
+   * Verify the ServerAddress is in IPV6 format or not
+   * @param serverAddress    IP address
+   * @param addressSeparator IPV6 address separator
+   * @return true if server address is in IPV6 format
+   */
+  public static boolean isIpv6ServerName(String serverAddress, String addressSeparator) {
+    return serverAddress.contains(addressSeparator)
+      && serverAddress.split(addressSeparator).length == IPV6_SPLIT_COLON_LENGTH;
+  }
+
+  /**
+   * Encode the Server Address
+   * @param str Either an instance of {@link #toString()} or a "'&lt;hostname&gt;' ':'
+   *            '&lt;port&gt;'".
+   * @return ServerName instance
+   */
+  public static ServerName getEncodedServerName(final String str) {
+    ServerName sn =
+      SERVERNAME_PATTERN.matcher(str).matches() ? valueOf(str) : valueOf(str, NON_STARTCODE);
+    try {
+      return ServerName.valueOf(URLEncoder.encode(sn.getHostname(), "UTF8"), sn.getPort(),
+        sn.getStartCode());
+    } catch (UnsupportedEncodingException e) {
+      throw new IllegalArgumentException("Exception occurred while encoding server name", e);
+    }
   }
 
   /** Returns true if the String follows the pattern of {@link #toString()}, false otherwise. */
