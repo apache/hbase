@@ -409,7 +409,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     try {
       pool = createExecutorService();
       Multimap<ByteBuffer, LoadQueueItem> regionGroups =
-        groupOrSplitPhase(table, pool, queue, startEndKeys).getFirst();
+        groupOrSplitPhase(table, pool, queue, startEndKeys, copyFile).getFirst();
       bulkLoadPhase(table, conn, pool, queue, regionGroups, copyFile, null);
     } finally {
       if (pool != null) {
@@ -451,7 +451,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       count++;
 
       // Using ByteBuffer for byte[] equality semantics
-      pair = groupOrSplitPhase(table, pool, queue, startEndKeys);
+      pair = groupOrSplitPhase(table, pool, queue, startEndKeys, copyFile);
       Multimap<ByteBuffer, LoadQueueItem> regionGroups = pair.getFirst();
 
       if (!checkHFilesCountPerRegionPerFamily(regionGroups)) {
@@ -630,7 +630,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    */
   private Pair<Multimap<ByteBuffer, LoadQueueItem>, Set<String>> groupOrSplitPhase(
     final Table table, ExecutorService pool, Deque<LoadQueueItem> queue,
-    final Pair<byte[][], byte[][]> startEndKeys) throws IOException {
+    final Pair<byte[][], byte[][]> startEndKeys, boolean copyFile) throws IOException {
     // <region start key, LQI> need synchronized only within this scope of this
     // phase because of the puts that happen in futures.
     Multimap<ByteBuffer, LoadQueueItem> rgs = HashMultimap.create();
@@ -649,7 +649,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
           @Override
           public Pair<List<LoadQueueItem>, String> call() throws Exception {
             Pair<List<LoadQueueItem>, String> splits =
-              groupOrSplit(regionGroups, item, table, startEndKeys);
+              groupOrSplit(regionGroups, item, table, startEndKeys, copyFile);
             return splits;
           }
         };
@@ -684,7 +684,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   }
 
   private List<LoadQueueItem> splitStoreFile(final LoadQueueItem item, final Table table,
-    byte[] startKey, byte[] splitKey) throws IOException {
+    byte[] startKey, byte[] splitKey, boolean copyFile) throws IOException {
     Path hfilePath = item.getFilePath();
     byte[] family = item.getFamily();
     Path tmpDir = hfilePath.getParent();
@@ -716,7 +716,10 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     // we don't need it anymore. Clean up to save space.
     // It is not part of the original input files.
     try {
-      if (tmpDir.getName().equals(TMP_DIR)) {
+      if (copyFile && !hfilePath.getParent().getName().equals(TMP_DIR)) {
+        // do nothing
+        // Retain the hfiles before splitting.
+      } else {
         fs.delete(hfilePath, false);
       }
     } catch (IOException e) {
@@ -779,7 +782,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   @InterfaceAudience.Private
   protected Pair<List<LoadQueueItem>, String> groupOrSplit(
     Multimap<ByteBuffer, LoadQueueItem> regionGroups, final LoadQueueItem item, final Table table,
-    final Pair<byte[][], byte[][]> startEndKeys) throws IOException {
+    final Pair<byte[][], byte[][]> startEndKeys, boolean copyFile) throws IOException {
     Path hfilePath = item.getFilePath();
     Optional<byte[]> first, last;
     try (HFile.Reader hfr = HFile.createReader(hfilePath.getFileSystem(getConf()), hfilePath,
@@ -823,7 +826,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
         checkRegionIndexValid(splitIdx, startEndKeys, table.getName());
       }
       List<LoadQueueItem> lqis = splitStoreFile(item, table,
-        startEndKeys.getFirst()[firstKeyRegionIdx], startEndKeys.getSecond()[splitIdx]);
+        startEndKeys.getFirst()[firstKeyRegionIdx], startEndKeys.getSecond()[splitIdx], copyFile);
       return new Pair<>(lqis, null);
     }
 
