@@ -16,6 +16,116 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 -->
+# HBASE  2.6.3 Release Notes
+
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
+
+
+---
+
+* [HBASE-29148](https://issues.apache.org/jira/browse/HBASE-29148) | *Minor* | **BufferedMutator should be able to flush after buffering a certain number of mutations**
+
+Introduces new configuration option hbase.client.write.buffer.maxmutations. If set to a positive integer, this will cause BufferedMutator to flush mutations after that number of mutations have been buffered. The default is -1, which disables this behavior. If you use hbase.rpc.rows.size.threshold.reject on your server, it's recommended that you set hbase.client.write.buffer.maxmutations on your client to a value at or below your server's hbase.rpc.rows.warning.threshold.
+
+
+---
+
+* [HBASE-29131](https://issues.apache.org/jira/browse/HBASE-29131) | *Major* | **Introduce the option for post-compaction validation of HFiles**
+
+Introduces the option for an HStore to fully read the file it just wrote after a flush or compaction. It does this by walking the block index and reading the first cell off of each data block. During testing, this was observed to have a negative impact on compaction queue depth of about 20%.
+
+To enable this feature, set hbase.hstore.validate.read\_fully=true. This is an HStore configuration feature, so it can be enabled in hbase-site.xml, in the TableDescriptor, or in the ColumnFamilyDescriptor.
+
+
+---
+
+* [HBASE-29168](https://issues.apache.org/jira/browse/HBASE-29168) | *Major* | **Add configurable throttling of region moves in CacheAwareLoadBalancer.**
+
+This introduces region moving throttling for LoadBalancer implementations.  The throttling time is configurable by the "hbase.master.balancer.move.throttlingMillis" property and default value is 60000 millis.
+In this change, the only balancer implementation applying throttling is the CacheAwareLoadBalancer. All other balancers just inherit the noop default provided within the LoadBalancer interface.
+
+The CacheAwareLoadBalancer throttling implementation performs throttling only for regions moving to target server with region cached ratio below the threshold configurable by "hbase.master.balancer.stochastic.throttling.cacheRatio" (80% by default).
+
+
+---
+
+* [HBASE-29248](https://issues.apache.org/jira/browse/HBASE-29248) | *Major* | **HBASE-28529 made an incompatible change to hbase.zookeeper.property handling**
+
+Originally, hbase properties with the "hbase.zookeeper.property." prefix were set as System properties, later ZKClientConfig properties by replacing the "hbase.zookeeper.property." prefix with a "zookeeper." prefix.
+
+This was accidentally changed in Hbase 2.5.9 and 2.6.0, so that "hbase.zookeeper.property." was simply removed, which broke configurations that relied on the original behaviour.
+
+HBase 2.5.12 and 2.6.3 reverts the accidental change, and restores the original behaviour of replacing the "hbase.zookeeper.property." prefix with a "zookeeper." prefix for the ZK client config properties.
+
+
+---
+
+* [HBASE-29238](https://issues.apache.org/jira/browse/HBASE-29238) | *Minor* | **ExportSnapshot support specify storage policy**
+
+This feature supports specifying the storage type for different column families by adding a -storage-policy.
+
+The format is like this: a=HOT, which is for a single case. If there are multiple column families, use: a=HOT&b=ALL\_SSD. This means the storage type for column family a is HOT, and for column family b it is ALL\_SSD, separated by &.
+
+Additionally, if there is a column family c for which you haven’t specified a storage policy (unspecified), HDFS will decide the storage type automatically.
+
+
+---
+
+* [HBASE-29137](https://issues.apache.org/jira/browse/HBASE-29137) | *Major* | **Add config type validation**
+
+Introduces the ConfigKey class for annotating configuration parameter constants with type information and optional validation predicates. The information is used by TableDescriptorChecker to detect errors in CREATE and ALTER requests. Many commonly used configuration parameters are now annotated.
+
+
+---
+
+* [HBASE-29276](https://issues.apache.org/jira/browse/HBASE-29276) | *Major* | **Compute and display hit ratio by configurable, granular time periods**
+
+This proposes two additional properties:
+
+1) "hbase.blockcache.stats.periods" which allows for defining a multiple window period;
+
+2)  "hbase.blockcache.stats.period.minute" which defines the length of each of these periods (in minutes);
+
+If "hbase.blockcache.stats.periods" is defined and is greater than one, it creates a scheduled executor that rolls the metrics calculation at "hbase.blockcache.stats.period.minute" rate.
+
+This will calculate hit ratio for each of the last periods (as defined by hbase.blockcache.stats.periods), accounting for only the hits and requests occurred during the interval of the given period (as defined by hbase.blockcache.stats.period.minute).
+
+For example, assuming default values for these two properties (12 and 5 minutes, respectively), the RS UI would display the hit ratio for each of the last twelve, five minutes periods, in the L2 Cache stats tab. It also displays the aggregated last hour hit ratio (by counting the 12\*5mins periods).
+
+
+---
+
+* [HBASE-29307](https://issues.apache.org/jira/browse/HBASE-29307) | *Major* | **Add status command to hbase-daemon.sh for process state checking**
+
+Introduces 'status' command in hbase-daemon.sh to support script-friendly HBase process checks.
+
+
+---
+
+* [HBASE-29344](https://issues.apache.org/jira/browse/HBASE-29344) | *Major* | **Update spotless to 2.44.4**
+
+Bump spotless plugin version to 2.44.4.
+
+This version of spotless does not support java 8 now, so at least you should use java 11 if you want to use spotless to format the code.
+
+For normal build and run, we do not run spotless, so you can still use java 8 to build and run hbase 2.x.
+
+
+---
+
+* [HBASE-28368](https://issues.apache.org/jira/browse/HBASE-28368) | *Major* | **Backport "HBASE-27693 Support for Hadoop's LDAP Authentication mechanism (Web UI only)" to branch-2**
+
+Support for LDAP Authentication in the HBase Web UI via Hadoop's LdapAuthenticationFilter.
+
+
+---
+
+* [HBASE-29244](https://issues.apache.org/jira/browse/HBASE-29244) | *Major* | **Support admin users acl setting with LDAP (Web UI only)**
+
+We now support configuring an LDAP user as admin for all HBase Web UIs, privileged pages can only be accessed by the admin user.
+
+
+
 # HBASE  2.6.2 Release Notes
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
