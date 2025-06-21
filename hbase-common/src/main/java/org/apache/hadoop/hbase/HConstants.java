@@ -1041,7 +1041,8 @@ public final class HConstants {
   public static final boolean HFILE_PREAD_ALL_BYTES_ENABLED_DEFAULT = false;
 
   /*
-   * Minimum percentage of free heap necessary for a successful cluster startup.
+   * Default minimum fraction (20%) of free heap required for RegionServer startup, used only when
+   * 'hbase.regionserver.free.heap.min.memory.size' is not explicitly set.
    */
   public static final float HBASE_CLUSTER_MINIMUM_MEMORY_THRESHOLD = 0.2f;
 
