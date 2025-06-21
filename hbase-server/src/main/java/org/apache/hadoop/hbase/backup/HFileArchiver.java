@@ -106,6 +106,20 @@ public class HFileArchiver {
   }
 
   /**
+   * Cleans up all the files for a HRegion by archiving the HFiles to the archive directory
+   * @param conf     the configuration to use
+   * @param fs       the file system object
+   * @param info     RegionInfo for region to be deleted
+   * @param rootDir  {@link Path} to the root directory where hbase files are stored (for building
+   *                 the archive path)
+   * @param tableDir {@link Path} to where the table is being stored (for building the archive path)
+   */
+  public static void archiveRegion(Configuration conf, FileSystem fs, RegionInfo info, Path rootDir,
+    Path tableDir) throws IOException {
+    archiveRegion(conf, fs, rootDir, tableDir, FSUtils.getRegionDirFromRootDir(rootDir, info));
+  }
+
+  /**
    * Remove an entire region from the table directory via archiving the region's hfiles.
    * @param fs        {@link FileSystem} from which to remove the region
    * @param rootdir   {@link Path} to the root directory where hbase files are stored (for building
