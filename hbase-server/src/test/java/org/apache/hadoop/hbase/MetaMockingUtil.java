@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -37,7 +38,7 @@ public class MetaMockingUtil {
    * @return A mocked up Result that fakes a Get on a row in the <code>hbase:meta</code> table.
    */
   public static Result getMetaTableRowResult(final HRegionInfo region) throws IOException {
-    return getMetaTableRowResult(region, null, null, null);
+    return getMetaTableRowResult(region, null, Collections.unmodifiableList(Arrays.asList(null, null)));
   }
 
   /**
@@ -49,7 +50,7 @@ public class MetaMockingUtil {
    */
   public static Result getMetaTableRowResult(final HRegionInfo region, final ServerName sn)
     throws IOException {
-    return getMetaTableRowResult(region, sn, null, null);
+    return getMetaTableRowResult(region, sn, Collections.unmodifiableList(Arrays.asList(null, null)));
   }
 
   /**
@@ -57,12 +58,10 @@ public class MetaMockingUtil {
    * table result.
    * @param region the HRegionInfo object or null
    * @param sn     to use making startcode and server hostname:port in meta or null
-   * @param splita daughter region or null
-   * @param splitb daughter region or null
+   * @param splits split daughter regions or null
    * @return A mocked up Result that fakes a Get on a row in the <code>hbase:meta</code> table.
    */
-  public static Result getMetaTableRowResult(RegionInfo region, final ServerName sn,
-    RegionInfo splita, RegionInfo splitb) throws IOException {
+  public static Result getMetaTableRowResult(RegionInfo region, final ServerName sn, final List<RegionInfo> splits) throws IOException {
     List<Cell> kvs = new ArrayList<>();
     if (region != null) {
       kvs.add(new KeyValue(region.getRegionName(), HConstants.CATALOG_FAMILY,
@@ -76,14 +75,14 @@ public class MetaMockingUtil {
         HConstants.STARTCODE_QUALIFIER, Bytes.toBytes(sn.getStartcode())));
     }
 
-    if (splita != null) {
-      kvs.add(new KeyValue(region.getRegionName(), HConstants.CATALOG_FAMILY,
-        HConstants.SPLITA_QUALIFIER, RegionInfo.toByteArray(splita)));
-    }
-
-    if (splitb != null) {
-      kvs.add(new KeyValue(region.getRegionName(), HConstants.CATALOG_FAMILY,
-        HConstants.SPLITB_QUALIFIER, RegionInfo.toByteArray(splitb)));
+    if(splits != null) {
+      for(RegionInfo split : splits) {
+        if(split != null) {
+          kvs.add(new KeyValue(region.getRegionName(), HConstants.CATALOG_FAMILY,
+            Bytes.toBytes(HConstants.MULTIPLE_REGIONS_QUALIFIER_PREFIX_STR + region.getEncodedName()),
+            RegionInfo.toByteArray(split)));
+        }
+      }
     }
 
     // important: sort the kvs so that binary search work
