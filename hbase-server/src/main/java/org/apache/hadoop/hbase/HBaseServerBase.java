@@ -52,6 +52,11 @@ import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.http.InfoServer;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
+import org.apache.hadoop.hbase.keymeta.KeymetaAdmin;
+import org.apache.hadoop.hbase.keymeta.KeymetaAdminImpl;
+import org.apache.hadoop.hbase.keymeta.SystemKeyAccessor;
+import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyAccessor;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
@@ -187,6 +192,10 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
 
   protected final NettyEventLoopGroupConfig eventLoopGroupConfig;
 
+  private SystemKeyCache systemKeyCache;
+  protected KeymetaAdminImpl keymetaAdmin;
+  protected ManagedKeyAccessor managedKeyAccessor;
+
   private void setupSignalHandlers() {
     if (!SystemUtils.IS_OS_WINDOWS) {
       HBasePlatformDependent.handle("HUP", (number, name) -> {
@@ -282,6 +291,8 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
       setupSignalHandlers();
 
       initializeFileSystem();
+
+      keymetaAdmin = new KeymetaAdminImpl(this);
 
       int choreServiceInitialSize =
         conf.getInt(CHORE_SERVICE_INITIAL_POOL_SIZE, DEFAULT_CHORE_SERVICE_INITIAL_POOL_SIZE);
@@ -401,6 +412,27 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
   @Override
   public ZKWatcher getZooKeeper() {
     return zooKeeper;
+  }
+
+  @Override
+  public KeymetaAdmin getKeymetaAdmin() {
+    return keymetaAdmin;
+  }
+
+  @Override
+  public ManagedKeyAccessor getManagedKeyAccessor() {
+    return managedKeyAccessor;
+  }
+
+  @Override
+  public SystemKeyCache getSystemKeyCache() {
+    return systemKeyCache;
+  }
+
+  protected void buildSystemKeyCache() throws IOException {
+    if (systemKeyCache == null && Server.isKeyManagementEnabled(this)) {
+      systemKeyCache = SystemKeyCache.createCache(new SystemKeyAccessor(this));
+    }
   }
 
   protected final void shutdownChore(ScheduledChore chore) {

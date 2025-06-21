@@ -120,6 +120,8 @@ import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyAccessor;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.mob.MobFileCache;
 import org.apache.hadoop.hbase.mob.RSMobFileCleanerChore;
@@ -596,7 +598,6 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     return getRegionServerCoprocessorHost();
   }
 
-  @Override
   protected boolean canCreateBaseZNode() {
     return !clusterMode();
   }
@@ -1448,6 +1449,9 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
         // initialize file system by the config fs.defaultFS and hbase.rootdir from master
         initializeFileSystem();
       }
+
+      buildSystemKeyCache();
+      managedKeyAccessor = new ManagedKeyAccessor(keymetaAdmin, new ManagedKeyDataCache());
 
       // hack! Maps DFSClient => RegionServer for logs. HDFS made this
       // config param for task trackers, but we can piggyback off of it.
