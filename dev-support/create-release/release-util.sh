@@ -887,7 +887,7 @@ function get_hadoop3_version() {
 # For 2.x, the generated CHANGES.md and RELEASENOTES.md may have lines end with whitespace and
 # case spotless:check failure, so we should run spotless:apply before committing
 function maven_spotless_apply() {
-  # our spotless plugin version requires at lease java 11 to run, so we use java 17 here
+  # our spotless plugin version requires at least java 11 to run, so we use java 17 here
   JAVA_HOME="/usr/lib/jvm/java-17-openjdk-amd64" "${MVN[@]}" spotless:apply
 }
 
