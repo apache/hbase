@@ -18,20 +18,16 @@
 package org.apache.hadoop.hbase.backup.mapreduce;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.RestoreJob;
+import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSVisitor;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.tools.DistCp;
+import org.apache.hadoop.util.Tool;
 import org.apache.yetus.audience.InterfaceAudience;
-
-import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 @InterfaceAudience.Private
 public class MapReduceRestoreToOriginalSplitsJob implements RestoreJob {
@@ -41,18 +37,29 @@ public class MapReduceRestoreToOriginalSplitsJob implements RestoreJob {
   public void run(Path[] dirPaths, TableName[] fromTables, Path restoreRootDir,
     TableName[] toTables, boolean fullBackupRestore) throws IOException {
     Configuration conf = getConf();
-
-    // We are using the files from the snapshot. We should copy them rather than move them over
     conf.setBoolean(BulkLoadHFiles.ALWAYS_COPY_FILES, true);
 
-    Path backupRootDir = new Path(conf.get(RestoreJob.BACKUP_ROOT_PATH_KEY));
+    for (int i = 0; i < fromTables.length; ++i) {
+      Path bulkOutputPath = BackupUtils.getBulkOutputDir(restoreRootDir,
+        BackupUtils.getFileNameCompatibleString(toTables[i]), getConf());
 
-    FileSystem fs = backupRootDir.getFileSystem(conf);
-    Map<byte[], List<Path>> family2Files = buildFamily2Files(fs, dirPaths, fullBackupRestore);
+      for (Path dirPath : dirPaths) {
+        String[] args = new String[] { dirPath.toString(), bulkOutputPath.toString() };
 
-    BulkLoadHFiles bulkLoad = BulkLoadHFiles.create(conf);
-    for (int i = 0; i < fromTables.length; i++) {
-      bulkLoad.bulkLoad(toTables[i], family2Files);
+        try {
+          Tool player = getDistCp(conf, fullBackupRestore);
+          int result = player.run(args);
+
+          if (!BackupUtils.succeeded(result)) {
+            throw new IOException("DistCp failed with exit code " + result);
+          }
+        } catch (Exception e) {
+          throw new IOException(e);
+        }
+
+        BulkLoadHFiles loader = BackupUtils.createLoader(conf);
+        loader.bulkLoad(toTables[i], bulkOutputPath);
+      }
     }
   }
 
@@ -66,41 +73,23 @@ public class MapReduceRestoreToOriginalSplitsJob implements RestoreJob {
     return conf;
   }
 
-  private static Map<byte[], List<Path>> buildFamily2Files(FileSystem fs, Path[] dirs,
-    boolean isFullBackup) throws IOException {
-    if (isFullBackup) {
-      return buildFullBackupFamily2Files(fs, dirs);
+  private static DistCp getDistCp(Configuration conf, boolean fullBackupRestore) throws Exception {
+    if (fullBackupRestore) {
+      return new DistCp(conf, null);
     }
 
-    Map<byte[], List<Path>> family2Files = new HashMap<>();
-
-    for (Path dir : dirs) {
-      byte[] familyName = Bytes.toBytes(dir.getParent().getName());
-      if (family2Files.containsKey(familyName)) {
-        family2Files.get(familyName).add(dir);
-      } else {
-        family2Files.put(familyName, Lists.newArrayList(dir));
-      }
-    }
-
-    return family2Files;
+    return new IncrementalBackupDistCp(conf);
   }
 
-  private static Map<byte[], List<Path>> buildFullBackupFamily2Files(FileSystem fs, Path[] dirs)
-    throws IOException {
-    Map<byte[], List<Path>> family2Files = new HashMap<>();
-    for (Path regionPath : dirs) {
-      FSVisitor.visitRegionStoreFiles(fs, regionPath, (region, family, name) -> {
-        Path path = new Path(regionPath, new Path(family, name));
-        byte[] familyName = Bytes.toBytes(family);
-        if (family2Files.containsKey(familyName)) {
-          family2Files.get(familyName).add(path);
-        } else {
-          family2Files.put(familyName, Lists.newArrayList(path));
-        }
-      });
+  private static class IncrementalBackupDistCp extends DistCp {
+    public IncrementalBackupDistCp(Configuration conf) throws Exception {
+      super(conf, null);
     }
-    return family2Files;
-  }
 
+    @Override
+    protected Path createInputFileListing(Job job) throws IOException {
+      return InputFileListingGenerator.createInputFileListing(this, job, getConf(),
+        getFileListingPath(), 2);
+    }
+  }
 }
