@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterServices;
@@ -134,6 +135,9 @@ public class TestLogsCleaner {
     when(masterServices.getConnection()).thenReturn(TEST_UTIL.getConnection());
     when(masterServices.getReplicationLogCleanerBarrier())
       .thenReturn(new ReplicationLogCleanerBarrier());
+    AsyncClusterConnection asyncClusterConnection = mock(AsyncClusterConnection.class);
+    when(masterServices.getAsyncClusterConnection()).thenReturn(asyncClusterConnection);
+    when(asyncClusterConnection.isClosed()).thenReturn(false);
     ReplicationPeerManager rpm = mock(ReplicationPeerManager.class);
     when(masterServices.getReplicationPeerManager()).thenReturn(rpm);
     when(rpm.getQueueStorage()).thenReturn(queueStorage);
