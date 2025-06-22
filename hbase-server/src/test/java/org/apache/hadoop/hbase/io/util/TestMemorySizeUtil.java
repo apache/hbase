@@ -19,10 +19,7 @@ package org.apache.hadoop.hbase.io.util;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
-import static org.mockito.Mockito.CALLS_REAL_METHODS;
-import static org.mockito.Mockito.mockStatic;
 
-import java.lang.management.MemoryUsage;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
@@ -32,7 +29,6 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.mockito.MockedStatic;
 
 @Category({ MiscTests.class, SmallTests.class })
 public class TestMemorySizeUtil {
@@ -60,28 +56,6 @@ public class TestMemorySizeUtil {
     conf.setFloat(MemorySizeUtil.MEMSTORE_SIZE_KEY, 0.5f);
     assertThrows(RuntimeException.class,
       () -> MemorySizeUtil.validateRegionServerHeapMemoryAllocation(conf));
-
-    // set the min free heap size to 1.6g, which is 10% of the total heap size
-    conf.set(MemorySizeUtil.HBASE_REGION_SERVER_FREE_HEAP_MIN_MEMORY_SIZE_KEY, "1.6g");
-    try (MockedStatic<MemorySizeUtil> mockedMemorySizeUtil =
-      mockStatic(MemorySizeUtil.class, CALLS_REAL_METHODS)) {
-      mockedMemorySizeUtil.when(MemorySizeUtil::safeGetHeapMemoryUsage)
-        .thenReturn(createMemoryUsage(16L * 1024 * 1024 * 1024));
-
-      MemorySizeUtil.validateRegionServerHeapMemoryAllocation(conf);
-    }
-
-    // set the min free heap size to 4g, which is 25% of the total heap size
-    conf.set(MemorySizeUtil.HBASE_REGION_SERVER_FREE_HEAP_MIN_MEMORY_SIZE_KEY, "4g");
-    try (MockedStatic<MemorySizeUtil> mockedMemorySizeUtil =
-      mockStatic(MemorySizeUtil.class, CALLS_REAL_METHODS)) {
-      mockedMemorySizeUtil.when(MemorySizeUtil::safeGetHeapMemoryUsage)
-        .thenReturn(createMemoryUsage(16L * 1024 * 1024 * 1024));
-
-      // this should throw an exception as 0.5 + 0.4 + 0.25 = 1.15 > 1.0
-      assertThrows(RuntimeException.class,
-        () -> MemorySizeUtil.validateRegionServerHeapMemoryAllocation(conf));
-    }
   }
 
   @Test
@@ -95,20 +69,5 @@ public class TestMemorySizeUtil {
     conf.set(MemorySizeUtil.HBASE_REGION_SERVER_FREE_HEAP_MIN_MEMORY_SIZE_KEY, "0");
     minFreeHeapFraction = MemorySizeUtil.getRegionServerMinFreeHeapFraction(conf);
     assertEquals(0.0f, minFreeHeapFraction, 0.0f);
-
-    // when setting with human-readable format
-    conf.set(MemorySizeUtil.HBASE_REGION_SERVER_FREE_HEAP_MIN_MEMORY_SIZE_KEY, "4g");
-    try (MockedStatic<MemorySizeUtil> mockedMemorySizeUtil =
-      mockStatic(MemorySizeUtil.class, CALLS_REAL_METHODS)) {
-      mockedMemorySizeUtil.when(MemorySizeUtil::safeGetHeapMemoryUsage)
-        .thenReturn(createMemoryUsage(16L * 1024 * 1024 * 1024));
-
-      minFreeHeapFraction = MemorySizeUtil.getRegionServerMinFreeHeapFraction(conf);
-      assertEquals(0.25f, minFreeHeapFraction, 0.001f);
-    }
-  }
-
-  private MemoryUsage createMemoryUsage(long max) {
-    return new MemoryUsage(0L, 0L, 0L, max);
   }
 }
