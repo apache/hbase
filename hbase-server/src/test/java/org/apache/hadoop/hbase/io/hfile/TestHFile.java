@@ -66,6 +66,7 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.MetaCellComparator;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.client.metrics.ThreadLocalScanMetrics;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
@@ -199,6 +200,63 @@ public class TestHFile {
     Assert.assertEquals(bufCount, alloc.getFreeBufferCount());
     alloc.clean();
     lru.shutdown();
+  }
+
+  @Test
+  public void bytesReadFromCache() throws Exception {
+    ThreadLocalScanMetrics.setScanMetricsEnabled(true);
+    // Write a store file
+    Path storeFilePath = writeStoreFile();
+
+    // Initialize the block cache and HFile reader
+    BlockCache lru = BlockCacheFactory.createBlockCache(conf);
+    Assert.assertTrue(lru instanceof LruBlockCache);
+    CacheConfig cacheConfig = new CacheConfig(conf, null, lru, ByteBuffAllocator.HEAP);
+    HFileReaderImpl reader =
+      (HFileReaderImpl) HFile.createReader(fs, storeFilePath, cacheConfig, true, conf);
+
+    // Read the first block in HFile from the block cache.
+    final int offset = 0;
+    BlockCacheKey cacheKey = new BlockCacheKey(storeFilePath.getName(), offset);
+    HFileBlock block = (HFileBlock) lru.getBlock(cacheKey, false, false, true);
+    Assert.assertNull(block);
+
+    // Assert that first block has not been cached in the block cache and no disk I/O happened to
+    // check that.
+    ThreadLocalScanMetrics.getBytesReadFromBlockCacheAndReset();
+    ThreadLocalScanMetrics.getBytesReadFromFsAndReset();
+    block = reader.getCachedBlock(cacheKey, false, false, true, BlockType.DATA, null);
+    Assert.assertEquals(0, ThreadLocalScanMetrics.getBytesReadFromBlockCacheAndReset());
+    Assert.assertEquals(0, ThreadLocalScanMetrics.getBytesReadFromFsAndReset());
+
+    // Read the first block from the HFile.
+    block = reader.readBlock(offset, -1, true, true, false, true, BlockType.DATA, null);
+    Assert.assertNotNull(block);
+    int bytesReadFromFs = block.getOnDiskSizeWithHeader();
+    if (block.getNextBlockOnDiskSize() > 0) {
+      bytesReadFromFs += block.headerSize();
+    }
+    block.release();
+    // Assert that disk I/O happened to read the first block.
+    Assert.assertEquals(bytesReadFromFs, ThreadLocalScanMetrics.getBytesReadFromFsAndReset());
+    Assert.assertEquals(0, ThreadLocalScanMetrics.getBytesReadFromBlockCacheAndReset());
+
+    // Read the first block again and assert that it has been cached in the block cache.
+    block = reader.getCachedBlock(cacheKey, false, false, true, BlockType.DATA, null);
+    Assert.assertNotNull(block);
+    int bytesReadFromCache = block.getOnDiskSizeWithHeader();
+    if (block.getNextBlockOnDiskSize() > 0) {
+      bytesReadFromCache += block.headerSize();
+    }
+    block.release();
+    Assert.assertEquals(bytesReadFromCache,
+      ThreadLocalScanMetrics.getBytesReadFromBlockCacheAndReset());
+    // Assert that bytes read from block cache account for same number of bytes that would have been
+    // read from FS if block cache wasn't there.
+    Assert.assertEquals(bytesReadFromFs, bytesReadFromCache);
+    Assert.assertEquals(0, ThreadLocalScanMetrics.getBytesReadFromFsAndReset());
+
+    reader.close();
   }
 
   private BlockCache initCombinedBlockCache(final String l1CachePolicy) {

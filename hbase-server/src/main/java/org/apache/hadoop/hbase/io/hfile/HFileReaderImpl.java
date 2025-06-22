@@ -1099,7 +1099,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
    * Retrieve block from cache. Validates the retrieved block's type vs {@code expectedBlockType}
    * and its encoding vs. {@code expectedDataBlockEncoding}. Unpacks the block as necessary.
    */
-  private HFileBlock getCachedBlock(BlockCacheKey cacheKey, boolean cacheBlock, boolean useLock,
+  public HFileBlock getCachedBlock(BlockCacheKey cacheKey, boolean cacheBlock, boolean useLock,
     boolean updateCacheMetrics, BlockType expectedBlockType,
     DataBlockEncoding expectedDataBlockEncoding) throws IOException {
     // Check cache for block. If found return.
@@ -1114,6 +1114,15 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
           // In case of compressed block after unpacking we can release the compressed block
           if (compressedBlock != cachedBlock) {
             compressedBlock.release();
+          }
+        }
+        boolean isScanMetricsEnabled = ThreadLocalScanMetrics.isScanMetricsEnabled();
+        if (isScanMetricsEnabled) {
+          ThreadLocalScanMetrics
+            .addBytesReadFromBlockCache(cachedBlock.getOnDiskSizeWithHeader());
+          // Account for the header size of the next block if it exists
+          if (cachedBlock.getNextBlockOnDiskSize() > 0) {
+            ThreadLocalScanMetrics.addBytesReadFromBlockCache(cachedBlock.headerSize());
           }
         }
         try {
@@ -1291,7 +1300,6 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
 
     BlockCacheKey cacheKey =
       new BlockCacheKey(path, dataBlockOffset, this.isPrimaryReplicaReader(), expectedBlockType);
-    boolean isScanMetricsEnabled = ThreadLocalScanMetrics.isScanMetricsEnabled();
 
     boolean useLock = false;
     IdLock.Entry lockEntry = null;
@@ -1334,10 +1342,6 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
                   + "has wrong encoding: " + cachedBlock.getDataBlockEncoding() + " (expected: "
                   + dataBlockEncoder.getDataBlockEncoding() + "), path=" + path);
               }
-            }
-            if (isScanMetricsEnabled) {
-              ThreadLocalScanMetrics
-                .addBytesReadFromBlockCache(cachedBlock.getOnDiskSizeWithHeader());
             }
             // Cache-hit. Return!
             return cachedBlock;
