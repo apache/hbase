@@ -1356,7 +1356,7 @@ public final class BackupSystemTable implements Closeable {
   private Delete createDeleteForContinuousBackupTableSet(Set<TableName> tables) {
     Delete delete = new Delete(rowkey(CONTINUOUS_BACKUP_SET));
     for (TableName tableName : tables) {
-      delete.addColumns(META_FAMILY, Bytes.toBytes(tableName.getNameAsString()));
+      delete.addColumn(META_FAMILY, Bytes.toBytes(tableName.getNameAsString()));
     }
     return delete;
   }
