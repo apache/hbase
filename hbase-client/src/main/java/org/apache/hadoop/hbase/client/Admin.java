@@ -2656,4 +2656,33 @@ public interface Admin extends Abortable, Closeable {
    * Perform hbase:meta table refresh
    */
   Long refreshMeta() throws IOException;
+
+  /**
+   * Refresh HFiles for the table
+   *
+   * @param tableName table to refresh HFiles for
+   * @throws IOException if a remote or network exception occurs
+   */
+  default void refreshHFiles(final TableName tableName) throws IOException {
+    System.out.println("Anuj: Admin.java : table name is provided " + tableName);
+  }
+  /**
+   * Refresh HFiles for the table
+   *
+   * @param namespace Namespace for which we should call refresh HFiles for all tables under it
+   * @throws IOException if a remote or network exception occurs
+   */
+  default void refreshHFiles(String namespace) throws IOException {
+    System.out.println("Anuj: Admin.java : Namespace is provided " + namespace);
+  }
+  /**
+   * Refresh HFiles for the table
+   *
+   * @param tableName table to refresh HFiles for
+   * @throws IOException if a remote or network exception occurs
+   */
+  //default void refreshHFiles(final TableName tableName) throws IOException {
+  default void refreshHFiles() throws IOException {
+    System.out.println("Anuj: Admin.java : Nothing is provided");
+  }
 }

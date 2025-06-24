@@ -1923,6 +1923,20 @@ module Hbase
     def refresh_meta()
       @admin.refreshMeta()
     end
+
+    #----------------------------------------------------------------------------------------------
+    # Refresh HFiles for the table
+    def refresh_hfiles(args = {})
+      table_name = args.fetch(TABLE_NAME, nil)
+      namespace = args.fetch(NAMESPACE, nil)
+      if !namespace.nil?
+        @admin.refreshHFiles(namespace)
+      elsif !table_name.nil?
+        @admin.refreshHFiles(org.apache.hadoop.hbase.TableName.valueOf(table_name))
+      else
+        @admin.refreshHFiles()
+      end
+    end
   end
   # rubocop:enable Metrics/ClassLength
 end
