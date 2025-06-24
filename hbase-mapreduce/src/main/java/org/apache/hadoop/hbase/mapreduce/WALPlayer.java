@@ -80,6 +80,22 @@ public class WALPlayer extends Configured implements Tool {
   public final static String INPUT_FILES_SEPARATOR_KEY = "wal.input.separator";
   public final static String IGNORE_MISSING_FILES = "wal.input.ignore.missing.files";
   public final static String MULTI_TABLES_SUPPORT = "wal.multi.tables.support";
+
+  /**
+   * Configuration flag that controls how the WALPlayer handles empty input WAL files.
+   * <p>
+   * If set to {@code true}, the WALPlayer will silently ignore empty files that cannot be parsed as
+   * valid WAL files. This is useful in scenarios where such files are expected (e.g., due to
+   * partial writes or cleanup operations).
+   * </p>
+   * <p>
+   * If set to {@code false} (default), the WALPlayer will throw an exception when it encounters an
+   * empty or un-parsable WAL file. This is useful for catching unexpected data issues early.
+   * </p>
+   * <p>
+   * Default value: {@link #DEFAULT_IGNORE_EMPTY_FILES} ({@code false})
+   * </p>
+   */
   public final static String IGNORE_EMPTY_FILES = "wal.input.ignore.empty.files";
   public final static boolean DEFAULT_IGNORE_EMPTY_FILES = false;
 
