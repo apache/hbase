@@ -1116,20 +1116,153 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
   }
 
   /**
-   * Override mid-key calculation to find the middle key across all sections.
-   * For HFile v4 multi-tenant files, midkey calculation is complex and not meaningful
-   * at the file level since data is distributed across sections with different densities.
-   * This method is not supported for multi-tenant HFiles.
+   * Find a key at approximately the given position within a section.
    * 
-   * @return empty optional for multi-tenant HFiles
+   * @param reader The section reader
+   * @param targetProgress The target position as a percentage (0.0 to 1.0) within the section
+   * @return A key near the target position, or empty if not found
+   */
+  private Optional<ExtendedCell> findKeyAtApproximatePosition(HFileReaderImpl reader, double targetProgress) throws IOException {
+    // If target is very close to the beginning, return first key
+    if (targetProgress <= 0.1) {
+      return reader.getFirstKey();
+    }
+    
+    // If target is very close to the end, return last key
+    if (targetProgress >= 0.9) {
+      return reader.getLastKey();
+    }
+    
+    // For middle positions, try to use the section's midkey as a reasonable approximation
+    // This is a simplification - ideally we'd scan through the section to find the exact position
+    // but that would be expensive. The section midkey provides a reasonable split point.
+    Optional<ExtendedCell> midKey = reader.midKey();
+    if (midKey.isPresent()) {
+      return midKey;
+    }
+    
+    // If no midkey available, try to get a key by scanning
+    // Create a scanner and try to position it roughly
+    HFileScanner scanner = reader.getScanner(getConf(), false, false, false);
+    if (scanner.seekTo()) {
+      // For a rough approximation, if we want position > 0.5, try to advance the scanner
+      if (targetProgress > 0.5) {
+        // Try to advance roughly halfway through the data
+        // This is a heuristic - advance the scanner several times to get deeper into the section
+        int advanceSteps = (int) ((targetProgress - 0.5) * 20); // Scale to reasonable number of steps
+        for (int i = 0; i < advanceSteps && scanner.next(); i++) {
+          // Keep advancing
+        }
+      }
+      
+      ExtendedCell key = scanner.getKey();
+      if (key != null) {
+        return Optional.of(key);
+      }
+    }
+    
+    // Last resort: return first key if available
+    return reader.getFirstKey();
+  }
+
+  /**
+   * Override mid-key calculation to find the middle key across all sections.
+   * For single tenant files, returns the midkey from the section.
+   * For multi-tenant files, finds the key that falls approximately in the middle
+   * of the total file size to enable proper splitting.
+   * 
+   * @return the middle key of the file
    * @throws IOException if an error occurs
    */
   @Override
   public Optional<ExtendedCell> midKey() throws IOException {
-    // HFile v4 multi-tenant files don't have a meaningful file-level midkey
-    // since data distribution across sections can be highly variable
-    LOG.debug("Midkey calculation not supported for HFile v4 multi-tenant files");
-    return Optional.empty();
+    // Handle empty file case
+    if (sectionLocations.isEmpty()) {
+      LOG.debug("No sections in file, returning empty midkey");
+      return Optional.empty();
+    }
+    
+    // If there's only one section (single tenant), use that section's midkey
+    if (sectionLocations.size() == 1) {
+      byte[] sectionId = sectionLocations.keySet().iterator().next().get();
+      SectionReader sectionReader = getSectionReader(sectionId);
+      if (sectionReader == null) {
+        throw new IOException("Unable to create section reader for single tenant section: " + 
+                             Bytes.toStringBinary(sectionId));
+      }
+      
+      HFileReaderImpl reader = sectionReader.getReader();
+      Optional<ExtendedCell> midKey = reader.midKey();
+      LOG.debug("Single tenant midkey: {}", midKey.orElse(null));
+      return midKey;
+    }
+    
+    // For multiple tenants, find the key at approximately the middle of the file
+    long totalFileSize = 0;
+    for (SectionMetadata metadata : sectionLocations.values()) {
+      totalFileSize += metadata.getSize();
+    }
+    
+    if (totalFileSize == 0) {
+      LOG.debug("No data in file, returning empty midkey");
+      return Optional.empty();
+    }
+    
+    long targetMiddleOffset = totalFileSize / 2;
+    long currentOffset = 0;
+    
+    // Find the section containing the middle point
+    for (Map.Entry<ImmutableBytesWritable, SectionMetadata> entry : sectionLocations.entrySet()) {
+      SectionMetadata metadata = entry.getValue();
+      long sectionEndOffset = currentOffset + metadata.getSize();
+      
+      if (currentOffset <= targetMiddleOffset && targetMiddleOffset < sectionEndOffset) {
+        // This section contains the middle point - this is our target section
+        byte[] sectionId = entry.getKey().get();
+        SectionReader sectionReader = getSectionReader(sectionId);
+        if (sectionReader == null) {
+          throw new IOException("Unable to create section reader for target section: " + 
+                               Bytes.toStringBinary(sectionId));
+        }
+        
+        HFileReaderImpl reader = sectionReader.getReader();
+        
+        // Calculate how far into this section the middle point is
+        long offsetIntoSection = targetMiddleOffset - currentOffset;
+        long sectionSize = metadata.getSize();
+        double sectionProgress = (double) offsetIntoSection / sectionSize;
+        
+        // Find a key that's approximately at the target position within this section
+        Optional<ExtendedCell> targetKey = findKeyAtApproximatePosition(reader, sectionProgress);
+        if (targetKey.isPresent()) {
+          LOG.debug("Multi-tenant midkey from section {} (position-based key, {}% into section): {}", 
+                   Bytes.toStringBinary(sectionId), 
+                   String.format("%.1f", sectionProgress * 100),
+                   targetKey.get());
+          return targetKey;
+        }
+        
+        // Fallback to section midkey if position-based lookup fails
+        Optional<ExtendedCell> midKey = reader.midKey();
+        if (midKey.isPresent()) {
+          LOG.debug("Multi-tenant midkey from section {} (section midkey fallback, {}% into section): {}", 
+                   Bytes.toStringBinary(sectionId),
+                   String.format("%.1f", sectionProgress * 100), 
+                   midKey.get());
+          return midKey;
+        }
+        
+        // If we can't get any key from the target section, this is a failure
+        throw new IOException("Unable to get any key from target section containing midpoint: " + 
+                             Bytes.toStringBinary(sectionId));
+      }
+      
+      currentOffset = sectionEndOffset;
+    }
+    
+    // This should not happen if totalFileSize > 0 and sections exist
+    throw new IOException("Unable to find section containing midpoint offset " + targetMiddleOffset + 
+                         " in file with total size " + totalFileSize);
   }
 
   /**
