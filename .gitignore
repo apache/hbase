@@ -25,3 +25,4 @@ linklint/
 **/*.log
 tmp
 **/.flattened-pom.xml
+.vscode

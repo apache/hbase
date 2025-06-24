@@ -617,7 +617,7 @@ public class FixedFileTrailer {
     }
   }
 
-  CellComparator createComparator() throws IOException {
+  public CellComparator createComparator() throws IOException {
     expectAtLeastMajorVersion(2);
     return createComparator(comparatorClassName);
   }

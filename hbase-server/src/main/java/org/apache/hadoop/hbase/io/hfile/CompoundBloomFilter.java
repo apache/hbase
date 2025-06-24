@@ -222,4 +222,11 @@ public class CompoundBloomFilter extends CompoundBloomFilterBase implements Bloo
     return index;
   }
 
+  public int getHashCount() {
+    return hashCount;
+  }
+
+  public Hash getHash() {
+    return hash;
+  }
 }

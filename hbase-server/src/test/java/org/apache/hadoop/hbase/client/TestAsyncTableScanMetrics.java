@@ -46,7 +46,6 @@ import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
-import org.checkerframework.checker.units.qual.s;
 
 @RunWith(Parameterized.class)
 @Category({ MediumTests.class, ClientTests.class })

@@ -128,7 +128,7 @@ public class NoOpIndexBlockEncoder implements HFileIndexBlockEncoder {
     return getClass().getSimpleName();
   }
 
-  protected static class NoOpEncodedSeeker implements EncodedSeeker {
+  public static class NoOpEncodedSeeker implements EncodedSeeker {
 
     protected long[] blockOffsets;
     protected int[] blockDataSizes;
