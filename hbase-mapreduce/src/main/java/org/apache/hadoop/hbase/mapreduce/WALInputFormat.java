@@ -328,14 +328,21 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
         throw e;
       }
     }
+
+    boolean ignoreEmptyFiles =
+      conf.getBoolean(WALPlayer.IGNORE_EMPTY_FILES, WALPlayer.DEFAULT_IGNORE_EMPTY_FILES);
     List<InputSplit> splits = new ArrayList<InputSplit>(allFiles.size());
     for (FileStatus file : allFiles) {
+      if (ignoreEmptyFiles && file.getLen() == 0) {
+        LOG.warn("Ignoring empty file: " + file.getPath());
+        continue;
+      }
       splits.add(new WALSplit(file.getPath().toString(), file.getLen(), startTime, endTime));
     }
     return splits;
   }
 
-  private Path[] getInputPaths(Configuration conf) {
+  Path[] getInputPaths(Configuration conf) {
     String inpDirs = conf.get(FileInputFormat.INPUT_DIR);
     return StringUtils
       .stringToPath(inpDirs.split(conf.get(WALPlayer.INPUT_FILES_SEPARATOR_KEY, ",")));
@@ -349,7 +356,7 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
    *                  equal to this value else we will filter out the file. If name does not seem to
    *                  have a timestamp, we will just return it w/o filtering.
    */
-  private List<FileStatus> getFiles(FileSystem fs, Path dir, long startTime, long endTime,
+  List<FileStatus> getFiles(FileSystem fs, Path dir, long startTime, long endTime,
     Configuration conf) throws IOException {
     List<FileStatus> result = new ArrayList<>();
     LOG.debug("Scanning " + dir.toString() + " for WAL files");

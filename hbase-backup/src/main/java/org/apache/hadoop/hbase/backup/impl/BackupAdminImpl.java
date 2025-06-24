@@ -23,6 +23,7 @@ import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.DEFAULT_CONT
 import static org.apache.hadoop.hbase.backup.replication.BackupFileSystemManager.WALS_DIR;
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.DATE_FORMAT;
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.ONE_DAY_IN_MILLISECONDS;
+import static org.apache.hadoop.hbase.mapreduce.WALPlayer.IGNORE_EMPTY_FILES;
 
 import java.io.IOException;
 import java.text.ParseException;
@@ -846,6 +847,7 @@ public class BackupAdminImpl implements BackupAdmin {
     Configuration conf = HBaseConfiguration.create(conn.getConfiguration());
     conf.setLong(WALInputFormat.START_TIME_KEY, startTime);
     conf.setLong(WALInputFormat.END_TIME_KEY, endTime);
+    conf.setBoolean(IGNORE_EMPTY_FILES, true);
     Tool walPlayer = new WALPlayer();
     walPlayer.setConf(conf);
     return walPlayer;
