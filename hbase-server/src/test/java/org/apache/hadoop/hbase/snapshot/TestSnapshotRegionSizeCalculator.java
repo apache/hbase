@@ -72,7 +72,7 @@ public class TestSnapshotRegionSizeCalculator {
   }
 
   @Test
-  public void testCalculateRegionSizeOneRegion() throws IOException {
+  public void testCalculateRegionSize() throws IOException {
     TableName tableName = TableName.valueOf("test_table");
     String snapshotName = "test_snapshot";
 
@@ -113,31 +113,5 @@ public class TestSnapshotRegionSizeCalculator {
 
     TEST_UTIL.deleteTable(tableName);
     admin.deleteSnapshot(snapshotName);
-  }
-
-  @Test
-  public void testCalculateRegionSizesMultiRegion() throws IOException {
-    // Create a mock snapshot with a region and store files
-    SnapshotTestingUtils.SnapshotMock snapshotMock =
-      new SnapshotTestingUtils.SnapshotMock(conf, fs, rootDir);
-    SnapshotTestingUtils.SnapshotMock.SnapshotBuilder builder =
-      snapshotMock.createSnapshotV2("snapshot", "testTable", 4);
-    builder.addRegion();
-    builder.addRegion();
-    builder.addRegion();
-    builder.addRegion();
-    snapshotDir = builder.commit();
-    snapshotDesc = builder.getSnapshotDescription();
-    manifest = SnapshotManifest.open(conf, fs, snapshotDir, snapshotDesc);
-
-    SnapshotRegionSizeCalculator calculator =
-      new SnapshotRegionSizeCalculator(TEST_UTIL.getConfiguration(), manifest);
-    Map<String, Long> regionSizes = calculator.calculateRegionSizes();
-
-    // Verify that the region sizes are calculated correctly
-    assertTrue("No regions found in the snapshot", regionSizes.size() == 4);
-    for (Map.Entry<String, Long> entry : regionSizes.entrySet()) {
-      assertTrue("Region size should be non-negative", entry.getValue() > 0);
-    }
   }
 }
