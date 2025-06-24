@@ -56,13 +56,13 @@ public class TestSnapshotRegionSizeCalculator {
   private static Configuration conf;
 
   @BeforeClass
-  public static void setUp() throws Exception {
-    TEST_UTIL.startMiniCluster(2);
+  public static void setupCluster() throws Exception {
+    TEST_UTIL.startMiniCluster(3);
     conf = TEST_UTIL.getConfiguration();
     fs = TEST_UTIL.getTestFileSystem();
     rootDir = TEST_UTIL.getDataTestDir("TestSnapshotRegionSizeCalculator");
     CommonFSUtils.setRootDir(conf, rootDir);
-    admin = TEST_UTIL.getConnection().getAdmin();
+    admin = TEST_UTIL.getAdmin();
   }
 
   @AfterClass
