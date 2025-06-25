@@ -57,9 +57,13 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Scan.ReadType;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.io.netty.util.Timeout;
+import org.apache.hbase.thirdparty.io.netty.util.TimerTask;
 
 /**
  * The asynchronous locator for regions other than meta.
@@ -252,6 +256,19 @@ class AsyncNonMetaRegionLocator {
         break;
       default:
         // Doing nothing
+    }
+
+    // The interval of invalidate meta cache task,
+    // if disable/delete table using same connection or usually create a new connection, no need to
+    // set it.
+    // Suggest set it to 24h or a higher value, because disable/delete table usually not very
+    // frequently.
+    long metaCacheInvalidateInterval = conn.getConfiguration()
+      .getLong("hbase.client.connection.metacache.invalidate-interval.ms", 0L);
+    if (metaCacheInvalidateInterval > 0) {
+      TimerTask invalidateMetaCacheTask = getInvalidateMetaCacheTask(metaCacheInvalidateInterval);
+      AsyncConnectionImpl.RETRY_TIMER.newTimeout(invalidateMetaCacheTask,
+        metaCacheInvalidateInterval, TimeUnit.MILLISECONDS);
     }
   }
 
@@ -617,5 +634,49 @@ class AsyncNonMetaRegionLocator {
     }
     return tableCache.regionLocationCache.getAll().stream()
       .mapToInt(RegionLocations::numNonNullElements).sum();
+  }
+
+  private TimerTask getInvalidateMetaCacheTask(long metaCacheInvalidateInterval) {
+    return new TimerTask() {
+      @Override
+      public void run(Timeout timeout) throws Exception {
+        invalidateTableCache();
+        AsyncConnectionImpl.RETRY_TIMER.newTimeout(this, metaCacheInvalidateInterval,
+          TimeUnit.MILLISECONDS);
+      }
+    };
+  }
+
+  private void invalidateTableCache() {
+    // Should not throw any exception from here, it will affect schedule a new specified TimerTask.
+    Set<TableName> cachedTables = cache.keySet();
+    if (!cachedTables.isEmpty()) {
+      AsyncAdmin admin = conn.getAdmin();
+      for (TableName tableName : cachedTables) {
+        FutureUtils.addListener(admin.isTableDisabled(tableName), (tableDisabled, err) -> {
+          boolean shouldInvalidateCache = false;
+          if (err != null) {
+            if (err instanceof TableNotFoundException) {
+              LOG.info("Table {} was not exist, will invalidate it's cache.", tableName);
+              shouldInvalidateCache = true;
+            } else {
+              // If other exception occurred, just skip to invalidate it cache.
+              LOG.warn("Get table state of {} failed, skip to invalidate it's cache.", tableName,
+                err);
+              return;
+            }
+          } else if (tableDisabled != null && tableDisabled) {
+            LOG.info("Table {} was disabled, will invalidate it's cache.", tableName);
+            shouldInvalidateCache = true;
+          }
+          if (shouldInvalidateCache) {
+            clearCache(tableName);
+            LOG.info("Invalidate cache for {} succeed.", tableName);
+          } else {
+            LOG.debug("Table {} is normal, no need to invalidate it's cache.", tableName);
+          }
+        });
+      }
+    }
   }
 }
