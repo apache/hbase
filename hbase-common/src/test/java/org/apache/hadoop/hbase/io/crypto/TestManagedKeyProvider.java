@@ -122,7 +122,7 @@ public class TestManagedKeyProvider {
     private void addEntry(String alias, String prefix) {
       String encPrefix = Base64.getEncoder().encodeToString(prefix.getBytes());
       String confKey = HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + encPrefix + "."
-      + "alias";
+          + "alias";
       conf.set(confKey, alias);
     }
 

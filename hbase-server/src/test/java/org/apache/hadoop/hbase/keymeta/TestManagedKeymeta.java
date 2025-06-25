@@ -70,7 +70,6 @@ public class TestManagedKeymeta extends ManagedKeyTestBase {
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
     MockManagedKeyProvider managedKeyProvider = (MockManagedKeyProvider)
       Encryption.getKeyProvider(master.getConfiguration());
-    ;
     String cust = "cust1";
     String encodedCust = ManagedKeyProvider.encodeToStr(cust.getBytes());
     List<ManagedKeyData> managedKeyStates =

@@ -227,7 +227,7 @@ public class TestSystemKeyAccessorAndManager {
       return Arrays.asList(new Object[][] {
         { "abcd", "Couldn't parse key file name: abcd" },
         {SYSTEM_KEY_FILE_PREFIX+"abcd", "Couldn't parse key file name: "+
-          SYSTEM_KEY_FILE_PREFIX+"abcd"},
+           SYSTEM_KEY_FILE_PREFIX+"abcd"},
         // Add more test cases here
       });
     }
@@ -237,7 +237,7 @@ public class TestSystemKeyAccessorAndManager {
       FileStatus mockFileStatus = createMockFile(fileName);
 
       IOException ex = assertThrows(IOException.class,
-          () -> SystemKeyAccessor.extractSystemKeySeqNum(mockFileStatus.getPath()));
+        () -> SystemKeyAccessor.extractSystemKeySeqNum(mockFileStatus.getPath()));
       assertEquals(expectedErrorMessage, ex.getMessage());
     }
   }
@@ -347,7 +347,7 @@ public class TestSystemKeyAccessorAndManager {
       when(mockFileSystem.globStatus(any())).thenReturn(
           new FileStatus[0],
           new FileStatus[] { mockFileStatus }
-        );
+      );
 
       manager.ensureSystemKeyInitialized();
     }

@@ -52,7 +52,7 @@ public abstract class KeyManagementBase {
    * A utility method for getting the managed key provider.
    * @return the key provider
    * @throws RuntimeException if no provider is configured or if the configured provider is not an
-   * instance of ManagedKeyProvider
+   *   instance of ManagedKeyProvider
    */
   protected ManagedKeyProvider getKeyProvider() {
     KeyProvider provider = Encryption.getKeyProvider(getServer().getConfiguration());

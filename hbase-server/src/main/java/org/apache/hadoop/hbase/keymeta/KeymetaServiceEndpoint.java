@@ -23,7 +23,6 @@ import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
 
-import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.CoreCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.HasMasterServices;
@@ -93,7 +92,7 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
    * The implementation of the {@link ManagedKeysProtos.ManagedKeysService}
    * interface, which provides the actual method implementations for enabling key management.
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public class KeymetaAdminServiceImpl extends ManagedKeysService {
 
     /**
@@ -139,7 +138,7 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
     }
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public static ManagedKeysResponse.Builder getResponseBuilder(RpcController controller,
     ManagedKeysRequest request) {
     ManagedKeysResponse.Builder builder = ManagedKeysResponse.newBuilder()
@@ -152,7 +151,7 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
   }
 
   // Assumes that all ManagedKeyData objects belong to the same custodian and namespace.
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public static GetManagedKeysResponse generateKeyStateResponse(
     List<ManagedKeyData> managedKeyStates, ManagedKeysResponse.Builder builder) {
     GetManagedKeysResponse.Builder responseBuilder = GetManagedKeysResponse.newBuilder();
@@ -169,7 +168,7 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
     return responseBuilder.build();
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public static byte[] convertToKeyCustBytes(RpcController controller, ManagedKeysRequest request,
     ManagedKeysResponse.Builder builder) {
     byte[] key_cust = null;

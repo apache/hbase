@@ -28,6 +28,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@SuppressWarnings("checkstyle:FinalClass") // as otherwise it breaks mocking.
 @InterfaceAudience.Private
 public class SystemKeyCache {
   private static final Logger LOG = LoggerFactory.getLogger(SystemKeyCache.class);

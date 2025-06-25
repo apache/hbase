@@ -28,11 +28,11 @@ public class DummyKeyProvider implements KeyProvider {
 
   @Override
   public Key[] getKeys(String[] aliases) {
-      return null;
+    return null;
   }
 
   @Override
   public Key getKey(String alias) {
-      return null;
+    return null;
   }
 }

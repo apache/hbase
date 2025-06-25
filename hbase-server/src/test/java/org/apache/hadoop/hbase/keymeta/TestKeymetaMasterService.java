@@ -169,7 +169,7 @@ public class TestKeymetaMasterService {
     verify(mockMaster).createSystemTable(any(TableDescriptor.class));
   }
 
-    @Test
+  @Test
   public void testConstructorWithMasterServices() throws Exception {
     // Execute
     service = new KeymetaMasterService(mockMaster);

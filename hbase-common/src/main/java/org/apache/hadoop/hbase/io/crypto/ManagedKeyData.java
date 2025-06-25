@@ -206,7 +206,7 @@ public class ManagedKeyData {
 
   /**
    * @return the number of times this key has been used for read operations as of the time this
-   * key data was initialized.
+   *   key data was initialized.
    */
   public long getReadOpCount() {
     return readOpCount;
@@ -214,7 +214,7 @@ public class ManagedKeyData {
 
   /**
    * @return the number of times this key has been used for write operations as of the time this
-   * key data was initialized.
+   *   key data was initialized.
    */
   public long getWriteOpCount() {
     return writeOpCount;

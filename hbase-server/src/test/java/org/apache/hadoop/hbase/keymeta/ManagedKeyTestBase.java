@@ -37,7 +37,7 @@ public class ManagedKeyTestBase {
     // Start the minicluster
     TEST_UTIL.startMiniCluster(1);
     TEST_UTIL.waitFor(60000,
-        () -> TEST_UTIL.getMiniHBaseCluster().getMaster().isInitialized());
+      () -> TEST_UTIL.getMiniHBaseCluster().getMaster().isInitialized());
     TEST_UTIL.waitUntilAllRegionsAssigned(KeymetaTableAccessor.KEY_META_TABLE_NAME);
   }
 

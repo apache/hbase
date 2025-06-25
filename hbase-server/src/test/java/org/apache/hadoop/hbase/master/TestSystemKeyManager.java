@@ -114,6 +114,6 @@ public class TestSystemKeyManager extends ManagedKeyTestBase {
     Thread.sleep(2000);
     TEST_UTIL.restartHBaseCluster(1);
     TEST_UTIL.waitFor(60000,
-        () -> TEST_UTIL.getMiniHBaseCluster().getMaster().isInitialized());
+      () -> TEST_UTIL.getMiniHBaseCluster().getMaster().isInitialized());
   }
 }

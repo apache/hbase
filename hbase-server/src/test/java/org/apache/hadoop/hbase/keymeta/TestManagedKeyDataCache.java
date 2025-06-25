@@ -19,11 +19,10 @@ package org.apache.hadoop.hbase.keymeta;
 
 import static org.apache.hadoop.hbase.io.crypto.ManagedKeyData.KEY_SPACE_GLOBAL;
 import static org.apache.hadoop.hbase.io.crypto.ManagedKeyState.FAILED;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
