@@ -93,7 +93,8 @@ message BackupInfo {
   optional uint32 workers_number = 11;
   optional uint64 bandwidth = 12;
   map<string, RSTimestampMap> table_set_timestamp = 13;
-  optional bool continuousBackupEnabled = 14;
+  optional bool continuous_backup_enabled = 14;
+  optional uint64 incr_committed_wal_ts = 15;
 
   message RSTimestampMap {
     map<string, uint64> rs_timestamp = 1;

@@ -105,6 +105,7 @@ public class TestBackupDescribe extends TestBackupBase {
     String response = baos.toString();
     assertTrue(response.indexOf(backupId) > 0);
     assertTrue(response.indexOf("COMPLETE") > 0);
+    assertTrue(response.contains("IsContinuous=false"));
 
     BackupSystemTable table = new BackupSystemTable(TEST_UTIL.getConnection());
     BackupInfo status = table.readBackupInfo(backupId);
@@ -116,46 +117,46 @@ public class TestBackupDescribe extends TestBackupBase {
   @Test
   public void testBackupDescribeCommandForContinuousBackup() throws Exception {
     LOG.info("test backup describe on a single table with data: command-line");
-    BackupSystemTable table = new BackupSystemTable(TEST_UTIL.getConnection());
-
     Path root = TEST_UTIL.getDataTestDirOnTestFS();
     Path backupWalDir = new Path(root, "testBackupDescribeCommand");
     FileSystem fs = FileSystem.get(conf1);
     fs.mkdirs(backupWalDir);
     conf1.set(CONF_CONTINUOUS_BACKUP_WAL_DIR, backupWalDir.toString());
 
-    String[] backupArgs = new String[] { "create", BackupType.FULL.name(), BACKUP_ROOT_DIR, "-t",
-      table1.getNameAsString(), "-" + OPTION_ENABLE_CONTINUOUS_BACKUP };
-    int ret = ToolRunner.run(conf1, new BackupDriver(), backupArgs);
-    assertEquals("Backup should succeed", 0, ret);
-    String backupId = table.getBackupHistory().get(0).getBackupId();
-    assertTrue(checkSucceeded(backupId));
-    LOG.info("backup complete");
+    try (BackupSystemTable table = new BackupSystemTable(TEST_UTIL.getConnection())) {
+      String[] backupArgs = new String[] { "create", BackupType.FULL.name(), BACKUP_ROOT_DIR, "-t",
+        table2.getNameAsString(), "-" + OPTION_ENABLE_CONTINUOUS_BACKUP };
+      int ret = ToolRunner.run(conf1, new BackupDriver(), backupArgs);
+      assertEquals("Backup should succeed", 0, ret);
+      List<BackupInfo> backups = table.getBackupHistory();
+      String backupId = backups.get(0).getBackupId();
+      assertTrue(checkSucceeded(backupId));
+      LOG.info("backup complete");
 
-    BackupInfo info = getBackupAdmin().getBackupInfo(backupId);
-    assertTrue(info.getState() == BackupState.COMPLETE);
+      BackupInfo info = getBackupAdmin().getBackupInfo(backupId);
+      assertTrue(info.getState() == BackupState.COMPLETE);
 
-    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    System.setOut(new PrintStream(baos));
+      ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      System.setOut(new PrintStream(baos));
 
-    String[] args = new String[] { "describe", backupId };
-    // Run backup
-    ret = ToolRunner.run(conf1, new BackupDriver(), args);
-    assertTrue(ret == 0);
-    String response = baos.toString();
-    assertTrue(response.indexOf(backupId) > 0);
-    assertTrue(response.indexOf("COMPLETE") > 0);
-    assertTrue(response.indexOf("IsContinuous=true") > 0);
+      String[] args = new String[] { "describe", backupId };
+      // Run backup
+      ret = ToolRunner.run(conf1, new BackupDriver(), args);
+      assertTrue(ret == 0);
+      String response = baos.toString();
+      assertTrue(response.indexOf(backupId) > 0);
+      assertTrue(response.indexOf("COMPLETE") > 0);
+      assertTrue(response.contains("IsContinuous=true"));
 
-    BackupInfo status = table.readBackupInfo(backupId);
-    String desc = status.getShortDescription();
-    table.close();
-    assertTrue(response.indexOf(desc) >= 0);
+      BackupInfo status = table.readBackupInfo(backupId);
+      String desc = status.getShortDescription();
+      assertTrue(response.indexOf(desc) >= 0);
 
-    // cleanup
-    if (fs.exists(backupWalDir)) {
-      fs.delete(backupWalDir, true);
+    } finally {
+      if (fs.exists(backupWalDir)) {
+        fs.delete(backupWalDir, true);
+      }
+      conf1.unset(CONF_CONTINUOUS_BACKUP_WAL_DIR);
     }
-    conf1.unset(CONF_CONTINUOUS_BACKUP_WAL_DIR);
   }
 }
