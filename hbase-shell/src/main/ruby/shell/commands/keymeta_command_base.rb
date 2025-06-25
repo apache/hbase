@@ -1,3 +1,5 @@
+#
+#
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -14,26 +16,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# frozen_string_literal: true
 
 module Shell
   module Commands
+    # KeymetaCommandBase is a base class for all key management commands.
     class KeymetaCommandBase < Command
       def print_key_statuses(statuses)
-          formatter.header(['ENCODED-KEY', 'NAMESPACE', 'STATUS', 'METADATA', 'METADATA-HASH',
-            'REFRESH-TIMESTAMP', 'READ-OP-COUNT', 'WRITE-OP-COUNT'])
-          statuses.each { |status|
-            formatter.row([
-              status.getKeyCustodianEncoded(),
-              status.getKeyNamespace(),
-              status.getKeyStatus().toString(),
-              status.getKeyMetadata(),
-              status.getKeyMetadataHashEncoded(),
-              status.getRefreshTimestamp(),
-              status.getReadOpCount(),
-              status.getWriteOpCount()
-            ])
-          }
-          formatter.footer(statuses.size())
+        formatter.header(%w[ENCODED-KEY NAMESPACE STATUS METADATA METADATA-HASH
+                            REFRESH-TIMESTAMP READ-OP-COUNT WRITE-OP-COUNT])
+        statuses.each { |status| formatter.row(format_status_row(status)) }
+        formatter.footer(statuses.size)
+      end
+
+      private
+
+      def format_status_row(status)
+        [
+          status.getKeyCustodianEncoded,
+          status.getKeyNamespace,
+          status.getKeyStatus.toString,
+          status.getKeyMetadata,
+          status.getKeyMetadataHashEncoded,
+          status.getRefreshTimestamp,
+          status.getReadOpCount,
+          status.getWriteOpCount
+        ]
       end
     end
   end

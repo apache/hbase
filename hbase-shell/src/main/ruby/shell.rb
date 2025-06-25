@@ -622,8 +622,9 @@ Shell.load_command_group(
 Shell.load_command_group(
   'keymeta',
   full_name: 'Keymeta',
-  comment: "NOTE: The KeyMeta Coprocessor Endpoint must be enabled on the Master else commands fail with:
-  UnknownProtocolException: No registered Master Coprocessor Endpoint found for ManagedKeysService",
+  comment: "NOTE: The KeyMeta Coprocessor Endpoint must be enabled on the Master else commands fail
+  with: UnknownProtocolException: No registered Master Coprocessor Endpoint found for
+  ManagedKeysService",
   commands: %w[
     enable_key_management
     show_key_status

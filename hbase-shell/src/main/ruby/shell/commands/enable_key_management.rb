@@ -1,3 +1,5 @@
+#
+#
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -14,17 +16,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# frozen_string_literal: true
 
 require 'shell/commands/keymeta_command_base'
 
 module Shell
   module Commands
+    # EnableKeyManagement is a class that provides a Ruby interface to enable key management via
+    # HBase Key Management API.
     class EnableKeyManagement < KeymetaCommandBase
       def help
         <<-EOF
 Enable key management for a given cust:namespace (cust in Base64 format).
 If no namespace is specified, the global namespace (*) is used.
-EOF
+
+Example:
+  hbase> enable_key_management 'cust:namespace'
+  hbase> enable_key_management 'cust'
+        EOF
       end
 
       def command(key_info)
