@@ -23,6 +23,7 @@ import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.DEFAULT_CONT
 import static org.apache.hadoop.hbase.backup.replication.BackupFileSystemManager.WALS_DIR;
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.DATE_FORMAT;
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.ONE_DAY_IN_MILLISECONDS;
+import static org.apache.hadoop.hbase.mapreduce.WALPlayer.IGNORE_EMPTY_FILES;
 
 import java.io.IOException;
 import java.text.ParseException;
@@ -846,6 +847,7 @@ public class BackupAdminImpl implements BackupAdmin {
     Configuration conf = HBaseConfiguration.create(conn.getConfiguration());
     conf.setLong(WALInputFormat.START_TIME_KEY, startTime);
     conf.setLong(WALInputFormat.END_TIME_KEY, endTime);
+    conf.setBoolean(IGNORE_EMPTY_FILES, true);
     Tool walPlayer = new WALPlayer();
     walPlayer.setConf(conf);
     return walPlayer;
@@ -859,28 +861,47 @@ public class BackupAdminImpl implements BackupAdmin {
 
     String backupId = BackupRestoreConstants.BACKUPID_PREFIX + EnvironmentEdgeManager.currentTime();
     if (type == BackupType.INCREMENTAL) {
-      Set<TableName> incrTableSet;
-      try (BackupSystemTable table = new BackupSystemTable(conn)) {
-        incrTableSet = table.getIncrementalBackupTableSet(targetRootDir);
-      }
-
-      if (incrTableSet.isEmpty()) {
-        String msg =
-          "Incremental backup table set contains no tables. " + "You need to run full backup first "
+      if (request.isContinuousBackupEnabled()) {
+        Set<TableName> continuousBackupTableSet;
+        try (BackupSystemTable table = new BackupSystemTable(conn)) {
+          continuousBackupTableSet = table.getContinuousBackupTableSet().keySet();
+        }
+        if (continuousBackupTableSet.isEmpty()) {
+          String msg = "Continuous backup table set contains no tables. "
+            + "You need to run Continuous backup first "
             + (tableList != null ? "on " + StringUtils.join(tableList, ",") : "");
-
-        throw new IOException(msg);
-      }
-      if (tableList != null) {
-        tableList.removeAll(incrTableSet);
-        if (!tableList.isEmpty()) {
-          String extraTables = StringUtils.join(tableList, ",");
-          String msg = "Some tables (" + extraTables + ") haven't gone through full backup. "
-            + "Perform full backup on " + extraTables + " first, " + "then retry the command";
           throw new IOException(msg);
         }
+        if (!continuousBackupTableSet.containsAll(tableList)) {
+          String extraTables = StringUtils.join(tableList, ",");
+          String msg = "Some tables (" + extraTables + ") haven't gone through Continuous backup. "
+            + "Perform Continuous backup on " + extraTables + " first, then retry the command";
+          throw new IOException(msg);
+        }
+      } else {
+        Set<TableName> incrTableSet;
+        try (BackupSystemTable table = new BackupSystemTable(conn)) {
+          incrTableSet = table.getIncrementalBackupTableSet(targetRootDir);
+        }
+
+        if (incrTableSet.isEmpty()) {
+          String msg = "Incremental backup table set contains no tables. "
+            + "You need to run full backup first "
+            + (tableList != null ? "on " + StringUtils.join(tableList, ",") : "");
+
+          throw new IOException(msg);
+        }
+        if (tableList != null) {
+          tableList.removeAll(incrTableSet);
+          if (!tableList.isEmpty()) {
+            String extraTables = StringUtils.join(tableList, ",");
+            String msg = "Some tables (" + extraTables + ") haven't gone through full backup. "
+              + "Perform full backup on " + extraTables + " first, then retry the command";
+            throw new IOException(msg);
+          }
+        }
+        tableList = Lists.newArrayList(incrTableSet);
       }
-      tableList = Lists.newArrayList(incrTableSet);
     }
     if (tableList != null && !tableList.isEmpty()) {
       for (TableName table : tableList) {
@@ -907,7 +928,12 @@ public class BackupAdminImpl implements BackupAdmin {
         }
       }
       if (nonExistingTableList != null) {
-        if (type == BackupType.INCREMENTAL) {
+        // Non-continuous incremental backup is controlled by 'incremental backup table set'
+        // and not by user provided backup table list. This is an optimization to avoid copying
+        // the same set of WALs for incremental backups of different tables at different times
+        // HBASE-14038. Since continuous incremental backup and full backup backs-up user provided
+        // table list, we should inform use about non-existence of input table(s)
+        if (type == BackupType.INCREMENTAL && !request.isContinuousBackupEnabled()) {
           // Update incremental backup set
           tableList = excludeNonExistingTables(tableList, nonExistingTableList);
         } else {

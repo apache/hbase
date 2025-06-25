@@ -99,6 +99,7 @@ public class TestBackupDescribe extends TestBackupBase {
     System.setOut(new PrintStream(baos));
 
     String[] args = new String[] { "describe", backupId };
+
     // Run backup
     int ret = ToolRunner.run(conf1, new BackupDriver(), args);
     assertTrue(ret == 0);

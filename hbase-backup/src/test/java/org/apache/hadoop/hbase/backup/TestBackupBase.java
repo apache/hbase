@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.backup;
 
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONTINUOUS_BACKUP_REPLICATION_PEER;
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.CONF_BACKUP_MAX_WAL_SIZE;
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.CONF_STAGED_WAL_FLUSH_INITIAL_DELAY;
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.CONF_STAGED_WAL_FLUSH_INTERVAL;
@@ -414,15 +415,30 @@ public class TestBackupBase {
     return request;
   }
 
+  protected BackupRequest createBackupRequest(BackupType type, List<TableName> tables,
+    String rootDir, boolean noChecksumVerify, boolean isContinuousBackupEnabled) {
+    BackupRequest.Builder builder = new BackupRequest.Builder();
+    return builder.withBackupType(type).withTableList(tables).withTargetRootDir(rootDir)
+      .withNoChecksumVerify(noChecksumVerify).withContinuousBackupEnabled(isContinuousBackupEnabled)
+      .build();
+  }
+
   protected String backupTables(BackupType type, List<TableName> tables, String path)
     throws IOException {
+    return backupTables(type, tables, path, false);
+  }
+
+  protected String backupTables(BackupType type, List<TableName> tables, String path,
+    boolean isContinuousBackup) throws IOException {
     Connection conn = null;
     BackupAdmin badmin = null;
     String backupId;
     try {
       conn = ConnectionFactory.createConnection(conf1);
       badmin = new BackupAdminImpl(conn);
-      BackupRequest request = createBackupRequest(type, new ArrayList<>(tables), path);
+
+      BackupRequest request =
+        createBackupRequest(type, new ArrayList<>(tables), path, false, isContinuousBackup);
       backupId = badmin.backupTables(request);
     } finally {
       if (badmin != null) {
@@ -552,6 +568,16 @@ public class TestBackupBase {
     RemoteIterator<LocatedFileStatus> it = fs.listFiles(new Path(BACKUP_ROOT_DIR), true);
     while (it.hasNext()) {
       LOG.debug(Objects.toString(it.next().getPath()));
+    }
+  }
+
+  void deleteContinuousBackupReplicationPeerIfExists(Admin admin) throws IOException {
+    if (
+      admin.listReplicationPeers().stream()
+        .anyMatch(peer -> peer.getPeerId().equals(CONTINUOUS_BACKUP_REPLICATION_PEER))
+    ) {
+      admin.disableReplicationPeer(CONTINUOUS_BACKUP_REPLICATION_PEER);
+      admin.removeReplicationPeer(CONTINUOUS_BACKUP_REPLICATION_PEER);
     }
   }
 }

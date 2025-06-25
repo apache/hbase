@@ -17,18 +17,28 @@
  */
 package org.apache.hadoop.hbase.backup.impl;
 
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONF_CONTINUOUS_BACKUP_WAL_DIR;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.JOB_NAME_CONF_KEY;
+import static org.apache.hadoop.hbase.backup.replication.BackupFileSystemManager.WALS_DIR;
+import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.DATE_FORMAT;
+import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.ONE_DAY_IN_MILLISECONDS;
 
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TimeZone;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
@@ -48,6 +58,7 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.mapreduce.WALInputFormat;
 import org.apache.hadoop.hbase.mapreduce.WALPlayer;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
@@ -60,6 +71,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.base.Strings;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
@@ -262,9 +274,19 @@ public class IncrementalTableBackupClient extends TableBackupClient {
       // case PREPARE_INCREMENTAL:
       beginBackup(backupManager, backupInfo);
       backupInfo.setPhase(BackupPhase.PREPARE_INCREMENTAL);
-      LOG.debug("For incremental backup, current table set is "
-        + backupManager.getIncrementalBackupTableSet());
-      newTimestamps = ((IncrementalBackupManager) backupManager).getIncrBackupLogFileMap();
+      // Non-continuous Backup incremental backup is controlled by 'incremental backup table set'
+      // and not by user provided backup table list. This is an optimization to avoid copying
+      // the same set of WALs for incremental backups of different tables at different times
+      // HBASE-14038
+      // Continuous-incremental backup backs up user provided table list/set
+      Set<TableName> currentTableSet;
+      if (backupInfo.isContinuousBackupEnabled()) {
+        currentTableSet = backupInfo.getTables();
+      } else {
+        currentTableSet = backupManager.getIncrementalBackupTableSet();
+        newTimestamps = ((IncrementalBackupManager) backupManager).getIncrBackupLogFileMap();
+      }
+      LOG.debug("For incremental backup, the current table set is {}", currentTableSet);
     } catch (Exception e) {
       // fail the overall backup and return
       failBackup(conn, backupInfo, backupManager, e, "Unexpected Exception : ",
@@ -291,21 +313,24 @@ public class IncrementalTableBackupClient extends TableBackupClient {
     // set overall backup status: complete. Here we make sure to complete the backup.
     // After this checkpoint, even if entering cancel process, will let the backup finished
     try {
-      // Set the previousTimestampMap which is before this current log roll to the manifest.
-      Map<TableName, Map<String, Long>> previousTimestampMap = backupManager.readLogTimestampMap();
-      backupInfo.setIncrTimestampMap(previousTimestampMap);
+      if (!backupInfo.isContinuousBackupEnabled()) {
+        // Set the previousTimestampMap which is before this current log roll to the manifest.
+        Map<TableName, Map<String, Long>> previousTimestampMap =
+          backupManager.readLogTimestampMap();
+        backupInfo.setIncrTimestampMap(previousTimestampMap);
 
-      // The table list in backupInfo is good for both full backup and incremental backup.
-      // For incremental backup, it contains the incremental backup table set.
-      backupManager.writeRegionServerLogTimestamp(backupInfo.getTables(), newTimestamps);
+        // The table list in backupInfo is good for both full backup and incremental backup.
+        // For incremental backup, it contains the incremental backup table set.
+        backupManager.writeRegionServerLogTimestamp(backupInfo.getTables(), newTimestamps);
 
-      Map<TableName, Map<String, Long>> newTableSetTimestampMap =
-        backupManager.readLogTimestampMap();
+        Map<TableName, Map<String, Long>> newTableSetTimestampMap =
+          backupManager.readLogTimestampMap();
 
-      backupInfo.setTableSetTimestampMap(newTableSetTimestampMap);
-      Long newStartCode =
-        BackupUtils.getMinValue(BackupUtils.getRSLogTimestampMins(newTableSetTimestampMap));
-      backupManager.writeBackupStartCode(newStartCode);
+        backupInfo.setTableSetTimestampMap(newTableSetTimestampMap);
+        Long newStartCode =
+          BackupUtils.getMinValue(BackupUtils.getRSLogTimestampMins(newTableSetTimestampMap));
+        backupManager.writeBackupStartCode(newStartCode);
+      }
 
       List<BulkLoad> bulkLoads = handleBulkLoad(backupInfo.getTableNames());
 
@@ -362,23 +387,88 @@ public class IncrementalTableBackupClient extends TableBackupClient {
   }
 
   protected void convertWALsToHFiles() throws IOException {
-    // get incremental backup file list and prepare parameters for DistCp
-    List<String> incrBackupFileList = backupInfo.getIncrBackupFileList();
-    // Get list of tables in incremental backup set
-    Set<TableName> tableSet = backupManager.getIncrementalBackupTableSet();
-    // filter missing files out (they have been copied by previous backups)
-    incrBackupFileList = filterMissingFiles(incrBackupFileList);
-    List<String> tableList = new ArrayList<String>();
-    for (TableName table : tableSet) {
-      // Check if table exists
-      if (tableExists(table, conn)) {
-        tableList.add(table.getNameAsString());
-      } else {
-        LOG.warn("Table " + table + " does not exists. Skipping in WAL converter");
+    long previousBackupTs = 0L;
+    if (backupInfo.isContinuousBackupEnabled()) {
+      Set<TableName> tableSet = backupInfo.getTables();
+      List<BackupInfo> backupInfos = backupManager.getBackupHistory(true);
+      for (TableName table : tableSet) {
+        for (BackupInfo backup : backupInfos) {
+          // find previous backup for this table
+          if (backup.getTables().contains(table)) {
+            LOG.info("Found previous backup of type {} with id {} for table {}", backup.getType(),
+              backup.getBackupId(), table.getNameAsString());
+            List<String> walBackupFileList;
+            if (backup.getType() == BackupType.FULL) {
+              previousBackupTs = backup.getStartTs();
+            } else {
+              previousBackupTs = backup.getIncrCommittedWalTs();
+            }
+            walBackupFileList = getBackupLogs(previousBackupTs);
+            walToHFiles(walBackupFileList, Arrays.asList(table.getNameAsString()),
+              previousBackupTs);
+            break;
+          }
+        }
+      }
+    } else {
+      // get incremental backup file list and prepare parameters for DistCp
+      List<String> incrBackupFileList = backupInfo.getIncrBackupFileList();
+      // Get list of tables in incremental backup set
+      Set<TableName> tableSet = backupManager.getIncrementalBackupTableSet();
+      // filter missing files out (they have been copied by previous backups)
+      incrBackupFileList = filterMissingFiles(incrBackupFileList);
+      List<String> tableList = new ArrayList<String>();
+      for (TableName table : tableSet) {
+        // Check if table exists
+        if (tableExists(table, conn)) {
+          tableList.add(table.getNameAsString());
+        } else {
+          LOG.warn("Table " + table + " does not exists. Skipping in WAL converter");
+        }
+      }
+      walToHFiles(incrBackupFileList, tableList, previousBackupTs);
+    }
+  }
+
+  private List<String> getBackupLogs(long startTs) throws IOException {
+    // get log files from backup dir
+    String walBackupDir = conf.get(CONF_CONTINUOUS_BACKUP_WAL_DIR);
+    if (Strings.isNullOrEmpty(walBackupDir)) {
+      throw new IOException(
+        "Incremental backup requires the WAL backup directory " + CONF_CONTINUOUS_BACKUP_WAL_DIR);
+    }
+    List<String> resultLogFiles = new ArrayList<>();
+    Path walBackupPath = new Path(walBackupDir);
+    FileSystem backupFs = FileSystem.get(walBackupPath.toUri(), conf);
+    FileStatus[] dayDirs = backupFs.listStatus(new Path(walBackupDir, WALS_DIR));
+    SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
+    dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+
+    for (FileStatus dayDir : dayDirs) {
+      if (!dayDir.isDirectory()) {
+        continue; // Skip files, only process directories
+      }
+
+      String dirName = dayDir.getPath().getName();
+      try {
+        Date dirDate = dateFormat.parse(dirName);
+        long dirStartTime = dirDate.getTime(); // Start of that day (00:00:00)
+        long dirEndTime = dirStartTime + ONE_DAY_IN_MILLISECONDS - 1; // End time of day (23:59:59)
+
+        if (dirEndTime >= startTs) {
+          Path dirPath = dayDir.getPath();
+          FileStatus[] logs = backupFs.listStatus(dirPath);
+          for (FileStatus log : logs) {
+            String filepath = log.getPath().toString();
+            LOG.debug("Found WAL file: {}", filepath);
+            resultLogFiles.add(filepath);
+          }
+        }
+      } catch (ParseException e) {
+        LOG.warn("Skipping invalid directory name: " + dirName, e);
       }
     }
-    walToHFiles(incrBackupFileList, tableList);
-
+    return resultLogFiles;
   }
 
   protected boolean tableExists(TableName table, Connection conn) throws IOException {
@@ -387,7 +477,8 @@ public class IncrementalTableBackupClient extends TableBackupClient {
     }
   }
 
-  protected void walToHFiles(List<String> dirPaths, List<String> tableList) throws IOException {
+  protected void walToHFiles(List<String> dirPaths, List<String> tableList, long previousBackupTs)
+    throws IOException {
     Tool player = new WALPlayer();
 
     // Player reads all files in arbitrary directory structure and creates
@@ -401,6 +492,14 @@ public class IncrementalTableBackupClient extends TableBackupClient {
     conf.set(WALPlayer.INPUT_FILES_SEPARATOR_KEY, ";");
     conf.setBoolean(WALPlayer.MULTI_TABLES_SUPPORT, true);
     conf.set(JOB_NAME_CONF_KEY, jobname);
+    if (backupInfo.isContinuousBackupEnabled()) {
+      conf.set(WALInputFormat.START_TIME_KEY, Long.toString(previousBackupTs));
+      // committedWALsTs is needed only for Incremental backups with continuous backup
+      // since these do not depend on log roll ts
+      long committedWALsTs = BackupUtils.getReplicationCheckpoint(conn);
+      backupInfo.setIncrCommittedWalTs(committedWALsTs);
+      conf.set(WALInputFormat.END_TIME_KEY, Long.toString(committedWALsTs));
+    }
     String[] playerArgs = { dirs, StringUtils.join(tableList, ",") };
 
     try {

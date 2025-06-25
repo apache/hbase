@@ -149,11 +149,19 @@ public class FullTableBackupClient extends TableBackupClient {
     try (Admin admin = conn.getAdmin()) {
       beginBackup(backupManager, backupInfo);
 
+      // Gather the bulk loads being tracked by the system, which can be deleted (since their data
+      // will be part of the snapshot being taken). We gather this list before taking the actual
+      // snapshots for the same reason as the log rolls.
+      List<BulkLoad> bulkLoadsToDelete = backupManager.readBulkloadRows(tableList);
+
       if (backupInfo.isContinuousBackupEnabled()) {
         handleContinuousBackup(admin);
       } else {
         handleNonContinuousBackup(admin);
       }
+
+      backupManager
+        .deleteBulkLoadedRows(bulkLoadsToDelete.stream().map(BulkLoad::getRowKey).toList());
 
       completeBackup(conn, backupInfo, BackupType.FULL, conf);
     } catch (Exception e) {
@@ -297,6 +305,9 @@ public class FullTableBackupClient extends TableBackupClient {
       .collect(Collectors.toMap(tableName -> tableName, tableName -> new ArrayList<>()));
 
     try {
+      if (!admin.isReplicationPeerEnabled(CONTINUOUS_BACKUP_REPLICATION_PEER)) {
+        admin.enableReplicationPeer(CONTINUOUS_BACKUP_REPLICATION_PEER);
+      }
       admin.appendReplicationPeerTableCFs(CONTINUOUS_BACKUP_REPLICATION_PEER, tableMap);
       LOG.info("Updated replication peer {} with table and column family map.",
         CONTINUOUS_BACKUP_REPLICATION_PEER);
