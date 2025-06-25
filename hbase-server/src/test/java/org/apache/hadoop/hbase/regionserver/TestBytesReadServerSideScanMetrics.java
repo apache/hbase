@@ -104,7 +104,7 @@ public class TestBytesReadServerSideScanMetrics {
     }
 
     @Test
-    public void testBytesReadFromFsForSerialScan() throws Exception {
+    public void testBytesReadFromFsForSerialSeeks() throws Exception {
         conf.setInt(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0);
         UTIL.startMiniCluster();
         try {
@@ -117,15 +117,24 @@ public class TestBytesReadServerSideScanMetrics {
     }
 
     @Test
-    public void testBytesReadFromFsForParallelScan() throws Exception {
+    public void testBytesReadFromFsForParallelSeeks() throws Exception {
         conf.setInt(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0);
         conf.setBoolean(StoreScanner.STORESCANNER_PARALLEL_SEEK_ENABLE, true);
         UTIL.startMiniCluster();
-
         try {
             TableName tableName = TableName.valueOf(name.getMethodName());
             createTable(tableName, false, BloomType.NONE);
             writeThenReadDataAndAssertMetrics(tableName, true);
+        } finally {
+            UTIL.shutdownMiniCluster();
+        }
+    }
+
+    @Test
+    public void testBytesReadFromBlockCache() throws Exception {
+        UTIL.startMiniCluster();
+        try {
+            TableName tableName = TableName.valueOf(name.getMethodName());
         } finally {
             UTIL.shutdownMiniCluster();
         }
