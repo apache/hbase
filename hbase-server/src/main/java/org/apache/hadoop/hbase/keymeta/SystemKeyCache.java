@@ -21,12 +21,12 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 
 @InterfaceAudience.Private
 public class SystemKeyCache {

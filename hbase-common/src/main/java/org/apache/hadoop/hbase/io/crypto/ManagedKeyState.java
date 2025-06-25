@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.io.crypto;
 
 import java.util.HashMap;
 import java.util.Map;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
