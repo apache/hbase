@@ -48,15 +48,19 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.hadoop.hbase.CatalogFamilyFormat;
 import org.apache.hadoop.hbase.CatalogReplicaMode;
+import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
+import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Scan.ReadType;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -90,6 +94,9 @@ class AsyncNonMetaRegionLocator {
   private CatalogReplicaLoadBalanceSelector metaReplicaSelector;
 
   private final ConcurrentMap<TableName, TableCache> cache = new ConcurrentHashMap<>();
+
+  // A chore service to invalidate table cache which table is not exist or disabled.
+  private ChoreService metaCacheInvalidateChoreService;
 
   private static final class LocateRequest {
 
@@ -252,6 +259,12 @@ class AsyncNonMetaRegionLocator {
         break;
       default:
         // Doing nothing
+    }
+
+    int metaCacheInvalidateInterval =
+      conn.getConfiguration().getInt("hbase.client.connection.metacache.invalidate-interval.ms", 0);
+    if (metaCacheInvalidateInterval > 0) {
+      spawnMetaCacheInvalidateChore(metaCacheInvalidateInterval);
     }
   }
 
@@ -617,5 +630,68 @@ class AsyncNonMetaRegionLocator {
     }
     return tableCache.regionLocationCache.getAll().stream()
       .mapToInt(RegionLocations::numNonNullElements).sum();
+  }
+
+  private void spawnMetaCacheInvalidateChore(int metaCacheInvalidateInterval) {
+    if (metaCacheInvalidateChoreService == null) {
+      metaCacheInvalidateChoreService = new ChoreService("Meta Cache Chore Service");
+    }
+    metaCacheInvalidateChoreService
+      .scheduleChore(getMetaCacheInvalidateChore(metaCacheInvalidateInterval));
+  }
+
+  private ScheduledChore getMetaCacheInvalidateChore(int metaCacheInvalidateInterval) {
+    return new ScheduledChore("MetaCacheChore", new Stoppable() {
+      private volatile boolean isStopped = false;
+
+      @Override
+      public void stop(String why) {
+        isStopped = true;
+      }
+
+      @Override
+      public boolean isStopped() {
+        return isStopped;
+      }
+    }, metaCacheInvalidateInterval, metaCacheInvalidateInterval) {
+
+      @Override
+      protected void chore() {
+        invalidateTableCache();
+      }
+    };
+  }
+
+  private void invalidateTableCache() {
+    Set<TableName> cachedTables = cache.keySet();
+    if (!cachedTables.isEmpty()) {
+      boolean shouldInvalidateCache;
+      AsyncAdmin admin = conn.getAdmin();
+      for (TableName tableName : cachedTables) {
+        try {
+          shouldInvalidateCache =
+            FutureUtils.get(admin.isTableDisabled(tableName), 5, TimeUnit.SECONDS);
+          if (shouldInvalidateCache) {
+            LOG.info("Table {} is disabled, invalidate it cache.", tableName);
+          }
+        } catch (TableNotFoundException tnfe) {
+          shouldInvalidateCache = true;
+          LOG.info("Table {} is not exist, invalidate it cache.", tableName);
+        } catch (IOException ioe) {
+          shouldInvalidateCache = false;
+          LOG.warn("Get table state failed.", ioe);
+        }
+        if (shouldInvalidateCache) {
+          clearCache(tableName);
+        }
+      }
+    }
+  }
+
+  public void closeChoreServices() {
+    if (metaCacheInvalidateChoreService != null) {
+      metaCacheInvalidateChoreService.shutdown();
+      metaCacheInvalidateChoreService = null;
+    }
   }
 }
