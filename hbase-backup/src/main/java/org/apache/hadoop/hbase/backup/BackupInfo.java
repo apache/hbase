@@ -582,7 +582,7 @@ public class BackupInfo implements Comparable<BackupInfo> {
       cal.setTimeInMillis(getCompleteTs());
       date = cal.getTime();
       sb.append("End time=" + date).append(",");
-      if (isContinuousBackupEnabled() && getType() == BackupType.INCREMENTAL) {
+      if (getType() == BackupType.INCREMENTAL) {
         cal = Calendar.getInstance();
         cal.setTimeInMillis(getIncrCommittedWalTs());
         date = cal.getTime();
