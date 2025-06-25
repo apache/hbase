@@ -1004,7 +1004,6 @@ public final class BackupCommands {
           new BackupFileSystemManager(CONTINUOUS_BACKUP_REPLICATION_PEER, conf, backupWalDir);
         FileSystem fs = manager.getBackupFs();
         Path walDir = manager.getWalsDir();
-        Path bulkloadDir = manager.getBulkLoadFilesDir();
 
         // Delete contents under WAL directory
         if (fs.exists(walDir)) {
@@ -1015,15 +1014,6 @@ public final class BackupCommands {
           System.out.println("Deleted all contents under WAL directory: " + walDir);
         }
 
-        // Delete contents under bulk load directory
-        if (fs.exists(bulkloadDir)) {
-          FileStatus[] bulkContents = fs.listStatus(bulkloadDir);
-          for (FileStatus item : bulkContents) {
-            fs.delete(item.getPath(), true); // recursive delete of each child
-          }
-          System.out.println("Deleted all contents under Bulk Load directory: " + bulkloadDir);
-        }
-
       } catch (IOException e) {
         System.out.println("WARNING: Failed to delete contents under backup directories: "
           + backupWalDir + ". Error: " + e.getMessage());
@@ -1032,7 +1022,7 @@ public final class BackupCommands {
     }
 
     /**
-     * Cleans up old WAL and bulk-loaded files based on the determined cutoff timestamp.
+     * Cleans up old WAL files based on the determined cutoff timestamp.
      */
     void deleteOldWALFiles(Configuration conf, String backupWalDir, long cutoffTime)
       throws IOException {
@@ -1043,7 +1033,6 @@ public final class BackupCommands {
         new BackupFileSystemManager(CONTINUOUS_BACKUP_REPLICATION_PEER, conf, backupWalDir);
       FileSystem fs = manager.getBackupFs();
       Path walDir = manager.getWalsDir();
-      Path bulkloadDir = manager.getBulkLoadFilesDir();
 
       SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
       dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
@@ -1069,7 +1058,6 @@ public final class BackupCommands {
           if (dayStart + ONE_DAY_IN_MILLISECONDS - 1 < cutoffTime) {
             System.out.println("Deleting outdated WAL directory: " + dirPath);
             fs.delete(dirPath, true);
-            fs.delete(new Path(bulkloadDir, dirName), true);
           }
         } catch (ParseException e) {
           System.out.println("WARNING: Failed to parse directory name '" + dirName
