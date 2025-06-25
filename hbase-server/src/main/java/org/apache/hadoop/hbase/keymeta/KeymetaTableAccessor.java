@@ -22,7 +22,6 @@ import java.security.Key;
 import java.security.KeyException;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
@@ -43,6 +42,7 @@ import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyState;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Accessor for keymeta table as part of key management.

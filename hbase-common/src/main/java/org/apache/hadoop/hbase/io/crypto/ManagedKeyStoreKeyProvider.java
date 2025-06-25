@@ -17,16 +17,16 @@
  */
 package org.apache.hadoop.hbase.io.crypto;
 
+import com.google.gson.reflect.TypeToken;
 import java.io.IOException;
 import java.security.Key;
 import java.util.HashMap;
 import java.util.Map;
-import org.apache.yetus.audience.InterfaceAudience;
-import com.google.gson.reflect.TypeToken;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.GsonUtil;
+import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Public
 public class ManagedKeyStoreKeyProvider extends KeyStoreKeyProvider implements ManagedKeyProvider {

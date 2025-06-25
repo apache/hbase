@@ -22,7 +22,6 @@ import static org.apache.hadoop.hbase.HConstants.SYSTEM_KEY_FILE_PREFIX;
 import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
-import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
@@ -31,6 +30,7 @@ import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyState;
 import org.apache.hadoop.hbase.keymeta.SystemKeyAccessor;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class SystemKeyManager extends SystemKeyAccessor {

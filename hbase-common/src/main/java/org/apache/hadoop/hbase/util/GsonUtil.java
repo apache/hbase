@@ -19,9 +19,10 @@ package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.LongAdder;
-import org.apache.hbase.thirdparty.com.google.gson.Gson;
+
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hbase.thirdparty.com.google.gson.Gson;
 import org.apache.hbase.thirdparty.com.google.gson.GsonBuilder;
 import org.apache.hbase.thirdparty.com.google.gson.LongSerializationPolicy;
 import org.apache.hbase.thirdparty.com.google.gson.TypeAdapter;
