@@ -178,11 +178,6 @@ public class BackupInfo implements Comparable<BackupInfo> {
 
   private boolean continuousBackupEnabled;
 
-  /**
-   * Committed WAL timestamp for incremental backup in case of continuous backup
-   */
-  private long incrCommittedWalTs;
-
   public BackupInfo() {
     backupTableInfoMap = new HashMap<>();
   }
@@ -632,13 +627,5 @@ public class BackupInfo implements Comparable<BackupInfo> {
 
   public boolean isContinuousBackupEnabled() {
     return this.continuousBackupEnabled;
-  }
-
-  public void setIncrCommittedWalTs(long timestamp) {
-    this.incrCommittedWalTs = timestamp;
-  }
-
-  public long getIncrCommittedWalTs() {
-    return this.incrCommittedWalTs;
   }
 }
