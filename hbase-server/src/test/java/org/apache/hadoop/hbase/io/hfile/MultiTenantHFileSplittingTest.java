@@ -17,10 +17,8 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -46,7 +44,6 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -93,31 +90,6 @@ public class MultiTenantHFileSplittingTest {
   
   // Track whether we're in the middle of a critical operation
   private static volatile boolean inCriticalOperation = false;
-  
-  // Test configurations for different scenarios
-  private static final String[] SINGLE_TENANT = {"T01"};
-  private static final int[] SINGLE_TENANT_ROWS = {2000};
-  
-  private static final String[] EVEN_TENANTS = {"T01", "T02", "T03", "T04", "T05"};
-  private static final int[] EVEN_ROWS_PER_TENANT = {200, 200, 200, 200, 200};
-  
-  private static final String[] UNEVEN_TENANTS = {"T01", "T02", "T03", "T04"};
-  private static final int[] UNEVEN_ROWS_PER_TENANT = {100, 300, 500, 100};
-  
-  private static final String[] SKEWED_TENANTS = {"T01", "T02", "T03", "T04", "T05", "T06"};
-  private static final int[] SKEWED_ROWS_PER_TENANT = {50, 50, 800, 50, 25, 25};
-  
-  private static final String[] MANY_TENANTS = new String[20];
-  private static final int[] MANY_ROWS_PER_TENANT = new int[20];
-  static {
-    for (int i = 0; i < 20; i++) {
-      MANY_TENANTS[i] = String.format("T%02d", i + 1);
-      MANY_ROWS_PER_TENANT[i] = 50;
-    }
-  }
-  
-  private static final String[] FEW_TENANTS = {"T01", "T02"};
-  private static final int[] FEW_ROWS_PER_TENANT = {600, 400};
   
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -312,26 +284,6 @@ public class MultiTenantHFileSplittingTest {
   }
   
   /**
-   * Get region count safely with retries.
-   */
-  private int getRegionCount(TableName tableName) throws Exception {
-    int maxRetries = 3;
-    for (int attempt = 1; attempt <= maxRetries; attempt++) {
-      try (Admin admin = TEST_UTIL.getAdmin()) {
-        List<RegionInfo> regions = admin.getRegions(tableName);
-        return regions.size();
-      } catch (Exception e) {
-        LOG.warn("Failed to get region count, attempt {}: {}", attempt, e.getMessage());
-        if (attempt == maxRetries) {
-          throw e;
-        }
-        Thread.sleep(1000);
-      }
-    }
-    return 0;
-  }
-  
-  /**
    * Execute a test scenario with the given configuration.
    */
   private void executeTestScenario(String tableName, String[] tenants, int[] rowsPerTenant) 
@@ -359,15 +311,8 @@ public class MultiTenantHFileSplittingTest {
       LOG.info("Phase 4: Verifying midkey calculation");
       verifyMidkeyCalculation(table, tenants, rowsPerTenant);
       
-      // Phase 5: Compact to ensure single HFile (optional but helps with testing)
-      LOG.info("Phase 5: Compacting table");
-      TEST_UTIL.compact(table, true); // Major compaction
-      
-      // Wait for compaction to complete
-      Thread.sleep(2000);
-      
-      // Phase 6: Trigger split - mark as critical operation
-      LOG.info("Phase 6: Triggering region split");
+      // Phase 5: Trigger split - mark as critical operation
+      LOG.info("Phase 5: Triggering region split");
       inCriticalOperation = true;
       try {
         triggerRegionSplit(tenants, rowsPerTenant, table);
@@ -375,8 +320,16 @@ public class MultiTenantHFileSplittingTest {
         inCriticalOperation = false;
       }
       
-      // Phase 7: Verify data integrity after split
-      LOG.info("Phase 7: Verifying data integrity after split");
+      // Phase 6: Compact after split to ensure proper HFile structure
+      LOG.info("Phase 6: Compacting table after split");
+      TEST_UTIL.compact(table, true); // Major compaction
+      
+      // Wait for compaction to complete
+      Thread.sleep(2000);
+      
+      // Phase 7: Comprehensive data integrity verification after split
+      LOG.info("Phase 7: Starting comprehensive data integrity verification after split");
+      verifyDataIntegrityWithScanning(table, tenants, rowsPerTenant);
       verifyDataIntegrityAfterSplit(table, tenants, rowsPerTenant);
       
       LOG.info("=== Test scenario completed successfully: {} ===", tableName);
@@ -422,7 +375,7 @@ public class MultiTenantHFileSplittingTest {
   }
   
   /**
-   * Write test data for all tenants.
+   * Write test data for all tenants in lexicographic order to avoid key ordering violations.
    */
   private void writeTestData(TableName tableName, String[] tenants, int[] rowsPerTenant) throws IOException {
     try (Connection connection = TEST_UTIL.getConnection();
@@ -430,6 +383,7 @@ public class MultiTenantHFileSplittingTest {
       
       List<Put> batchPuts = new ArrayList<>();
       
+      // Generate all row keys first
       for (int tenantIndex = 0; tenantIndex < tenants.length; tenantIndex++) {
         String tenantId = tenants[tenantIndex];
         int rowsForThisTenant = rowsPerTenant[tenantIndex];
@@ -444,7 +398,10 @@ public class MultiTenantHFileSplittingTest {
         }
       }
       
-      LOG.info("Writing {} total rows to table in batch operation", batchPuts.size());
+      // Sort puts by row key to ensure lexicographic ordering
+      batchPuts.sort((p1, p2) -> Bytes.compareTo(p1.getRow(), p2.getRow()));
+      
+      LOG.info("Writing {} total rows to table in lexicographic order", batchPuts.size());
       table.put(batchPuts);
       LOG.info("Successfully wrote all test data to table {}", tableName);
     }
@@ -534,6 +491,312 @@ public class MultiTenantHFileSplittingTest {
   }
   
   /**
+   * Comprehensive data integrity verification using scanning operations.
+   * This method tests various scanning scenarios to ensure data integrity after split.
+   */
+  private void verifyDataIntegrityWithScanning(TableName tableName, String[] tenants, int[] rowsPerTenant) 
+      throws Exception {
+    LOG.info("=== Comprehensive Scanning Verification After Split ===");
+    
+    try (Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
+         Table table = conn.getTable(tableName)) {
+      
+      // Test 1: Full table scan verification
+      LOG.info("Test 1: Full table scan verification");
+      verifyFullTableScanAfterSplit(table, tenants, rowsPerTenant);
+      
+      // Test 2: Tenant-specific scan verification
+      LOG.info("Test 2: Tenant-specific scan verification");
+      verifyTenantSpecificScansAfterSplit(table, tenants, rowsPerTenant);
+      
+      // Test 3: Cross-region boundary scanning
+      LOG.info("Test 3: Cross-region boundary scanning");
+      verifyCrossRegionBoundaryScanning(table, tenants, rowsPerTenant);
+      
+      // Test 4: Edge cases and tenant isolation
+      LOG.info("Test 4: Edge cases and tenant isolation verification");
+      verifyEdgeCasesAfterSplit(table, tenants, rowsPerTenant);
+      
+      LOG.info("Comprehensive scanning verification completed successfully");
+    }
+  }
+  
+  /**
+   * Verify full table scan returns all data correctly after split.
+   */
+  private void verifyFullTableScanAfterSplit(Table table, String[] tenants, int[] rowsPerTenant) 
+      throws IOException {
+    LOG.info("Performing full table scan to verify all data after split");
+    
+    org.apache.hadoop.hbase.client.Scan fullScan = new org.apache.hadoop.hbase.client.Scan();
+    fullScan.addColumn(FAMILY, QUALIFIER);
+    
+    try (org.apache.hadoop.hbase.client.ResultScanner scanner = table.getScanner(fullScan)) {
+      int totalRowsScanned = 0;
+      int[] tenantRowCounts = new int[tenants.length];
+      // Track seen rows per tenant to identify gaps later
+      @SuppressWarnings("unchecked")
+      java.util.Set<String>[] seenRowsPerTenant = new java.util.HashSet[tenants.length];
+      for (int i = 0; i < tenants.length; i++) {
+        seenRowsPerTenant[i] = new java.util.HashSet<>();
+      }
+      
+      for (org.apache.hadoop.hbase.client.Result result : scanner) {
+        String rowKey = Bytes.toString(result.getRow());
+        String tenantPrefix = rowKey.substring(0, TENANT_PREFIX_LENGTH);
+        
+        // Find which tenant this row belongs to
+        int tenantIndex = -1;
+        for (int i = 0; i < tenants.length; i++) {
+          if (tenants[i].equals(tenantPrefix)) {
+            tenantIndex = i;
+            break;
+          }
+        }
+        
+        if (tenantIndex == -1) {
+          fail("Found row with unknown tenant prefix: " + rowKey);
+        }
+        
+        // Verify data integrity
+        byte[] cellValue = result.getValue(FAMILY, QUALIFIER);
+        if (cellValue == null) {
+          fail("Missing value for row: " + rowKey);
+        }
+        
+        String actualValue = Bytes.toString(cellValue);
+        if (!actualValue.contains(tenantPrefix)) {
+          fail("Tenant data mixing detected in full scan: Row " + rowKey + 
+               " expected tenant " + tenantPrefix + " but got value " + actualValue);
+        }
+        
+        tenantRowCounts[tenantIndex]++;
+        seenRowsPerTenant[tenantIndex].add(rowKey);
+        // Per-row logging to trace scan order and locate gaps
+        LOG.info("SCANNED_ROW {}", rowKey);
+        totalRowsScanned++;
+      }
+      
+      // NEW DEBUG LOGGING: dump per-tenant counts before assertions
+      StringBuilder sb = new StringBuilder();
+      sb.append("Per-tenant counts: ");
+      for (int i = 0; i < tenants.length; i++) {
+        sb.append(tenants[i]).append('=')
+          .append(tenantRowCounts[i]).append(", ");
+      }
+      sb.append("total=").append(totalRowsScanned);
+      LOG.info(sb.toString());
+      
+      // Verify total row count
+      int expectedTotal = Arrays.stream(rowsPerTenant).sum();
+      assertEquals("Full scan should return all rows after split", expectedTotal, totalRowsScanned);
+      
+      // Verify per-tenant row counts
+      for (int i = 0; i < tenants.length; i++) {
+        assertEquals("Row count mismatch for tenant " + tenants[i] + " in full scan", 
+                    rowsPerTenant[i], tenantRowCounts[i]);
+      }
+      
+      LOG.info("Full table scan verified: {}/{} rows scanned successfully", 
+               totalRowsScanned, expectedTotal);
+      
+      // Identify and log missing rows per tenant
+      for (int i = 0; i < tenants.length; i++) {
+        if (tenantRowCounts[i] != rowsPerTenant[i]) {
+          java.util.List<String> missing = new java.util.ArrayList<>();
+          for (int r = 0; r < rowsPerTenant[i]; r++) {
+            String expectedKey = String.format("%srow%05d", tenants[i], r);
+            if (!seenRowsPerTenant[i].contains(expectedKey)) {
+              missing.add(expectedKey);
+            }
+          }
+          LOG.error("Missing rows for tenant {} ({} rows): {}", tenants[i], missing.size(), missing);
+        }
+      }
+    }
+  }
+  
+  /**
+   * Verify tenant-specific scans work correctly after split.
+   */
+  private void verifyTenantSpecificScansAfterSplit(Table table, String[] tenants, int[] rowsPerTenant) 
+      throws IOException {
+    LOG.info("Verifying tenant-specific scans after split");
+    
+    for (int tenantIndex = 0; tenantIndex < tenants.length; tenantIndex++) {
+      String tenant = tenants[tenantIndex];
+      int expectedRows = rowsPerTenant[tenantIndex];
+      
+      LOG.info("Testing tenant-specific scan for tenant {}: expecting {} rows", tenant, expectedRows);
+      
+      org.apache.hadoop.hbase.client.Scan tenantScan = new org.apache.hadoop.hbase.client.Scan();
+      tenantScan.addColumn(FAMILY, QUALIFIER);
+      tenantScan.withStartRow(Bytes.toBytes(tenant + "row"));
+      tenantScan.withStopRow(Bytes.toBytes(tenant + "row" + "\uFFFF"));
+      
+      try (org.apache.hadoop.hbase.client.ResultScanner tenantScanner = table.getScanner(tenantScan)) {
+        int tenantRowCount = 0;
+        List<String> foundRows = new ArrayList<>();
+        
+        for (org.apache.hadoop.hbase.client.Result result : tenantScanner) {
+          String rowKey = Bytes.toString(result.getRow());
+          foundRows.add(rowKey);
+          
+          if (!rowKey.startsWith(tenant)) {
+            fail("Tenant scan violation after split: Found row " + rowKey + 
+                 " in scan for tenant " + tenant);
+          }
+          
+          // Verify data integrity for this row
+          byte[] cellValue = result.getValue(FAMILY, QUALIFIER);
+          if (cellValue == null) {
+            fail("Missing value for tenant row: " + rowKey);
+          }
+          
+          String actualValue = Bytes.toString(cellValue);
+          if (!actualValue.contains(tenant)) {
+            fail("Tenant data corruption after split: Row " + rowKey + 
+                 " expected tenant " + tenant + " but got value " + actualValue);
+          }
+          
+          tenantRowCount++;
+        }
+        
+        if (tenantRowCount != expectedRows) {
+          LOG.error("Row count mismatch for tenant {} after split:", tenant);
+          LOG.error("  Expected: {}", expectedRows);
+          LOG.error("  Found: {}", tenantRowCount);
+          LOG.error("  Found rows: {}", foundRows);
+        }
+        
+        assertEquals("Row count mismatch for tenant " + tenant + " after split", 
+                    expectedRows, tenantRowCount);
+        
+        LOG.info("Tenant {} scan successful after split: {}/{} rows verified", 
+                 tenant, tenantRowCount, expectedRows);
+      }
+    }
+    
+    LOG.info("All tenant-specific scans verified successfully after split");
+  }
+  
+  /**
+   * Verify scanning across region boundaries works correctly.
+   */
+  private void verifyCrossRegionBoundaryScanning(Table table, String[] tenants, int[] rowsPerTenant) 
+      throws IOException {
+    LOG.info("Verifying cross-region boundary scanning after split");
+    
+    // Test scanning across the split point
+    // Find a range that likely spans both regions
+    String firstTenant = tenants[0];
+    String lastTenant = tenants[tenants.length - 1];
+    
+    org.apache.hadoop.hbase.client.Scan crossRegionScan = new org.apache.hadoop.hbase.client.Scan();
+    crossRegionScan.addColumn(FAMILY, QUALIFIER);
+    crossRegionScan.withStartRow(Bytes.toBytes(firstTenant + "row000"));
+    crossRegionScan.withStopRow(Bytes.toBytes(lastTenant + "row999"));
+    
+    try (org.apache.hadoop.hbase.client.ResultScanner scanner = table.getScanner(crossRegionScan)) {
+      int totalRowsScanned = 0;
+      String previousRowKey = null;
+      
+      for (org.apache.hadoop.hbase.client.Result result : scanner) {
+        String rowKey = Bytes.toString(result.getRow());
+        
+        // Verify row ordering is maintained across regions
+        if (previousRowKey != null) {
+          assertTrue("Row ordering should be maintained across regions: " + 
+                    previousRowKey + " should be <= " + rowKey,
+                    Bytes.compareTo(Bytes.toBytes(previousRowKey), Bytes.toBytes(rowKey)) <= 0);
+        }
+        
+        // Verify data integrity
+        byte[] cellValue = result.getValue(FAMILY, QUALIFIER);
+        if (cellValue == null) {
+          fail("Missing value in cross-region scan for row: " + rowKey);
+        }
+        
+        String tenantPrefix = rowKey.substring(0, TENANT_PREFIX_LENGTH);
+        String actualValue = Bytes.toString(cellValue);
+        if (!actualValue.contains(tenantPrefix)) {
+          fail("Data corruption in cross-region scan: Row " + rowKey + 
+               " expected tenant " + tenantPrefix + " but got value " + actualValue);
+        }
+        
+        previousRowKey = rowKey;
+        totalRowsScanned++;
+      }
+      
+      assertTrue("Cross-region scan should find data", totalRowsScanned > 0);
+      LOG.info("Cross-region boundary scan verified: {} rows scanned with proper ordering", 
+               totalRowsScanned);
+    }
+  }
+  
+  /**
+   * Verify edge cases and tenant isolation after split.
+   */
+  private void verifyEdgeCasesAfterSplit(Table table, String[] tenants, int[] rowsPerTenant) 
+      throws IOException {
+    LOG.info("Verifying edge cases and tenant isolation after split");
+    
+    // Test 1: Non-existent tenant scan
+    LOG.info("Testing scan with non-existent tenant prefix");
+    String nonExistentTenant = "ZZZ";
+    org.apache.hadoop.hbase.client.Scan nonExistentScan = new org.apache.hadoop.hbase.client.Scan();
+    nonExistentScan.addColumn(FAMILY, QUALIFIER);
+    nonExistentScan.withStartRow(Bytes.toBytes(nonExistentTenant + "row"));
+    nonExistentScan.withStopRow(Bytes.toBytes(nonExistentTenant + "row" + "\uFFFF"));
+    
+    try (org.apache.hadoop.hbase.client.ResultScanner scanner = table.getScanner(nonExistentScan)) {
+      int rowCount = 0;
+      for (org.apache.hadoop.hbase.client.Result result : scanner) {
+        rowCount++;
+      }
+      assertEquals("Non-existent tenant scan should return no results after split", 0, rowCount);
+    }
+    
+    // Test 2: Tenant boundary isolation
+    LOG.info("Testing tenant boundary isolation after split");
+    for (int i = 0; i < tenants.length - 1; i++) {
+      String tenant1 = tenants[i];
+      String tenant2 = tenants[i + 1];
+      
+      // Scan from last row of tenant1 to first row of tenant2
+      org.apache.hadoop.hbase.client.Scan boundaryScan = new org.apache.hadoop.hbase.client.Scan();
+      boundaryScan.addColumn(FAMILY, QUALIFIER);
+      boundaryScan.withStartRow(Bytes.toBytes(tenant1 + "row" + String.format("%05d", rowsPerTenant[i] - 1)));
+      boundaryScan.withStopRow(Bytes.toBytes(tenant2 + "row001"));
+      
+      try (org.apache.hadoop.hbase.client.ResultScanner scanner = table.getScanner(boundaryScan)) {
+        boolean foundTenant1 = false;
+        boolean foundTenant2 = false;
+        
+        for (org.apache.hadoop.hbase.client.Result result : scanner) {
+          String rowKey = Bytes.toString(result.getRow());
+          
+          if (rowKey.startsWith(tenant1)) {
+            foundTenant1 = true;
+          } else if (rowKey.startsWith(tenant2)) {
+            foundTenant2 = true;
+          } else {
+            fail("Unexpected tenant in boundary scan after split: " + rowKey);
+          }
+        }
+        
+        // We should find data from both tenants at the boundary
+        assertTrue("Should find tenant " + tenant1 + " data in boundary scan", foundTenant1);
+        if (rowsPerTenant[i + 1] > 0) {
+          assertTrue("Should find tenant " + tenant2 + " data in boundary scan", foundTenant2);
+        }
+      }
+    }
+    
+    LOG.info("Edge cases and tenant isolation verification completed successfully");
+  }
+  
+  /**
    * Verify data integrity after split using GET operations.
    */
   private void verifyDataIntegrityAfterSplit(TableName tableName, String[] tenants, int[] rowsPerTenant) 
@@ -570,35 +833,6 @@ public class MultiTenantHFileSplittingTest {
       assertEquals("All rows should be verified", expectedTotal, totalRowsVerified);
       LOG.info("Data integrity verified: {}/{} rows", totalRowsVerified, expectedTotal);
     }
-  }
-  
-  /**
-   * Verify sample rows for a tenant to ensure they exist and have correct values.
-   */
-  private void verifyTenantSampleRows(Table table, String tenantId, int expectedRowCount) throws IOException {
-    // Test key sample points: first, middle, and last rows
-    int[] sampleIndices = {0, expectedRowCount / 2, expectedRowCount - 1};
-    
-    for (int rowIndex : sampleIndices) {
-      if (rowIndex >= 0 && rowIndex < expectedRowCount) {
-        String rowKey = String.format("%srow%05d", tenantId, rowIndex);
-        String expectedValue = String.format("value_tenant-%s_row-%05d", tenantId, rowIndex);
-        
-        Get get = new Get(Bytes.toBytes(rowKey));
-        get.addColumn(FAMILY, QUALIFIER);
-        
-        Result result = table.get(get);
-        assertFalse("Sample row should exist: " + rowKey, result.isEmpty());
-        
-        byte[] actualValue = result.getValue(FAMILY, QUALIFIER);
-        String actualValueStr = Bytes.toString(actualValue);
-        assertEquals("Value mismatch for sample row " + rowKey, expectedValue, actualValueStr);
-        
-        LOG.debug("Verified sample row {} for tenant {}", rowKey, tenantId);
-      }
-    }
-    
-    LOG.info("Sample row verification passed for tenant {}", tenantId);
   }
   
   /**
@@ -710,384 +944,6 @@ public class MultiTenantHFileSplittingTest {
                 Bytes.toStringBinary(region.getStartKey()),
                 Bytes.toStringBinary(region.getEndKey()));
       }
-    }
-  }
-  
-  /**
-   * Verify that the split completed successfully and examine split results.
-   */
-  private void verifySplitResults(String[] tenants, int[] rowsPerTenant, TableName tableName) 
-      throws Exception {
-    try (Admin admin = TEST_UTIL.getAdmin()) {
-      List<RegionInfo> regions = admin.getRegions(tableName);
-      
-      // Verify we have exactly 2 regions after split
-      assertEquals("Should have exactly 2 regions after split", 2, regions.size());
-      
-      // Sort regions by start key for consistent ordering
-      regions.sort((r1, r2) -> {
-        byte[] start1 = r1.getStartKey();
-        byte[] start2 = r2.getStartKey();
-        if (start1.length == 0) return -1;
-        if (start2.length == 0) return 1;
-        return Bytes.compareTo(start1, start2);
-      });
-      
-      RegionInfo firstRegion = regions.get(0);
-      RegionInfo secondRegion = regions.get(1);
-      
-      LOG.info("Split results:");
-      LOG.info("  First region: {} -> {}", 
-               Bytes.toStringBinary(firstRegion.getStartKey()),
-               Bytes.toStringBinary(firstRegion.getEndKey()));
-      LOG.info("  Second region: {} -> {}", 
-               Bytes.toStringBinary(secondRegion.getStartKey()),
-               Bytes.toStringBinary(secondRegion.getEndKey()));
-      
-      // Verify region boundaries are correct
-      assertTrue("First region should have empty start key", firstRegion.getStartKey().length == 0);
-      assertTrue("Second region should have empty end key", secondRegion.getEndKey().length == 0);
-      
-      // Verify the split point is consistent
-      byte[] splitPoint = firstRegion.getEndKey();
-      assertArrayEquals("Split point should match", splitPoint, secondRegion.getStartKey());
-      
-      // Extract tenant from split point
-      if (splitPoint.length >= TENANT_PREFIX_LENGTH) {
-        String splitTenant = Bytes.toString(splitPoint, 0, TENANT_PREFIX_LENGTH);
-        LOG.info("Split occurred within tenant: {}", splitTenant);
-        
-        // Verify the split tenant is one of our test tenants
-        boolean foundTenant = false;
-        for (String tenant : tenants) {
-          if (tenant.equals(splitTenant)) {
-            foundTenant = true;
-            break;
-          }
-        }
-        assertTrue("Split point tenant should be one of the test tenants", foundTenant);
-      }
-      
-      // Verify HFiles exist for both regions
-      LOG.info("Verifying HFiles after split");
-      List<Path> hfilesAfterSplit = findHFilePaths(tableName);
-      assertTrue("Should have HFiles after split", hfilesAfterSplit.size() > 0);
-      LOG.info("Found {} HFiles after split", hfilesAfterSplit.size());
-    }
-  }
-
-  /**
-   * Simple test to verify cluster is healthy and basic operations work.
-   */
-  @Test(timeout = 60000)
-  public void testClusterHealthCheck() throws Exception {
-    LOG.info("=== Test Case: Cluster Health Check ===");
-    
-    try {
-      // Verify cluster is running
-      assertTrue("Mini cluster should be running", TEST_UTIL.getMiniHBaseCluster() != null);
-      LOG.info("Mini cluster is up and running");
-      
-      // Verify we can get an admin connection
-      try (Admin admin = TEST_UTIL.getAdmin()) {
-        assertNotNull("Admin connection should not be null", admin);
-        LOG.info("Successfully obtained admin connection");
-        
-        // List tables (should be empty or have system tables)
-        TableName[] tables = admin.listTableNames();
-        LOG.info("Found {} user tables", tables.length);
-        
-        // Create a simple test table
-        TableName simpleTable = TableName.valueOf("SimpleTestTable");
-        TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(simpleTable);
-        builder.setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).build());
-        
-        admin.createTable(builder.build());
-        LOG.info("Created simple test table");
-        
-        // Verify table exists
-        assertTrue("Table should exist", admin.tableExists(simpleTable));
-        
-        // Write a simple row
-        try (Connection conn = TEST_UTIL.getConnection();
-             Table table = conn.getTable(simpleTable)) {
-          
-          Put put = new Put(Bytes.toBytes("testrow"));
-          put.addColumn(FAMILY, QUALIFIER, Bytes.toBytes("testvalue"));
-          table.put(put);
-          LOG.info("Wrote test row");
-          
-          // Read it back
-          Get get = new Get(Bytes.toBytes("testrow"));
-          Result result = table.get(get);
-          assertFalse("Result should not be empty", result.isEmpty());
-          
-          String value = Bytes.toString(result.getValue(FAMILY, QUALIFIER));
-          assertEquals("Value should match", "testvalue", value);
-          LOG.info("Successfully read back test row");
-        }
-        
-        // Clean up
-        admin.disableTable(simpleTable);
-        admin.deleteTable(simpleTable);
-        LOG.info("Cleaned up test table");
-      }
-      
-      LOG.info("Cluster health check passed!");
-      
-    } catch (Exception e) {
-      LOG.error("Cluster health check failed", e);
-      throw e;
-    }
-  }
-
-  /**
-   * Simple step-by-step test to verify basic functionality before testing splits.
-   */
-  @Test(timeout = 180000)
-  public void testBasicFunctionality() throws Exception {
-    LOG.info("=== Test Case: Basic Functionality Step by Step ===");
-    TableName testTable = TableName.valueOf("TestBasicFunctionality");
-    
-    try {
-      // Step 1: Create table
-      LOG.info("Step 1: Creating test table");
-      createTestTable(testTable);
-      LOG.info("Table created successfully");
-      
-      // Step 2: Verify table exists
-      LOG.info("Step 2: Verifying table exists");
-      try (Admin admin = TEST_UTIL.getAdmin()) {
-        assertTrue("Table should exist", admin.tableExists(testTable));
-        LOG.info("Table existence verified");
-      }
-      
-      // Step 3: Write enough data to trigger a split
-      LOG.info("Step 3: Writing sufficient test data for split");
-      writeSubstantialTestData(testTable);
-      
-      // Step 4: Flush table
-      LOG.info("Step 4: Flushing table");
-      TEST_UTIL.flush(testTable);
-      LOG.info("Table flushed successfully");
-      
-      // Step 5: Verify data after flush
-      LOG.info("Step 5: Verifying data after flush");
-      verifyTestDataExists(testTable);
-      
-      // Step 6: Check regions
-      LOG.info("Step 6: Checking region count");
-      int regionCount = getRegionCount(testTable);
-      LOG.info("Current region count: {}", regionCount);
-      assertEquals("Should have 1 region before split", 1, regionCount);
-      
-      // Step 7: Force split with explicit split point
-      LOG.info("Step 7: Forcing split with explicit split point");
-      boolean splitSuccess = forceSplitWithSplitPoint(testTable);
-      assertTrue("Split should succeed", splitSuccess);
-      
-      // Step 8: Verify split completed
-      LOG.info("Step 8: Verifying split completion");
-      int newRegionCount = getRegionCount(testTable);
-      LOG.info("Region count after split: {}", newRegionCount);
-      assertTrue("Should have more than 1 region after split", newRegionCount > 1);
-      
-      // Step 9: Verify data integrity after split
-      LOG.info("Step 9: Verifying data integrity after split");
-      verifyAllDataAfterSplit(testTable);
-      
-      LOG.info("Basic functionality test completed successfully");
-      
-    } catch (Exception e) {
-      LOG.error("Basic functionality test failed: {}", e.getMessage(), e);
-      throw e;
-    }
-  }
-  
-  /**
-   * Write substantial test data to ensure split can happen.
-   */
-  private void writeSubstantialTestData(TableName tableName) throws Exception {
-    LOG.info("Writing substantial test data to table: {}", tableName);
-    
-    try (Connection conn = TEST_UTIL.getConnection();
-         Table table = conn.getTable(tableName)) {
-      
-      List<Put> puts = new ArrayList<>();
-      
-      // Write data for multiple tenants with enough rows
-      String[] tenants = {"T01", "T02", "T03"};
-      int rowsPerTenant = 1000; // Increased to ensure sufficient data
-      
-      for (String tenant : tenants) {
-        for (int i = 0; i < rowsPerTenant; i++) {
-          String rowKey = String.format("%srow%05d", tenant, i);
-          Put put = new Put(Bytes.toBytes(rowKey));
-          String value = String.format("value_tenant-%s_row-%05d", tenant, i);
-          put.addColumn(FAMILY, QUALIFIER, Bytes.toBytes(value));
-          puts.add(put);
-          
-          // Batch write every 100 rows
-          if (puts.size() >= 100) {
-            table.put(puts);
-            puts.clear();
-          }
-        }
-      }
-      
-      // Write remaining puts
-      if (!puts.isEmpty()) {
-        table.put(puts);
-      }
-      
-      LOG.info("Successfully wrote {} rows across {} tenants", 
-               tenants.length * rowsPerTenant, tenants.length);
-    }
-  }
-  
-  /**
-   * Force split with an explicit split point.
-   */
-  private boolean forceSplitWithSplitPoint(TableName tableName) throws Exception {
-    LOG.info("Forcing split with explicit split point for table: {}", tableName);
-    
-    try (Admin admin = TEST_UTIL.getAdmin()) {
-      // Find the midkey from the HFile
-      List<Path> hfiles = findHFilePaths(tableName);
-      assertTrue("Should have at least one HFile", !hfiles.isEmpty());
-      
-      Path hfilePath = hfiles.get(0);
-      LOG.info("Using HFile for midkey: {}", hfilePath);
-      
-      // Get midkey from the HFile
-      FileSystem fs = TEST_UTIL.getTestFileSystem();
-      CacheConfig cacheConf = new CacheConfig(TEST_UTIL.getConfiguration());
-      
-      byte[] splitPoint = null;
-      try (HFile.Reader reader = HFile.createReader(fs, hfilePath, cacheConf, true, 
-                                                   TEST_UTIL.getConfiguration())) {
-        Optional<ExtendedCell> midkey = reader.midKey();
-        if (midkey.isPresent()) {
-          ExtendedCell midkeyCell = midkey.get();
-          splitPoint = CellUtil.cloneRow(midkeyCell);
-          LOG.info("Found midkey for split: {}", Bytes.toStringBinary(splitPoint));
-        }
-      }
-      
-      if (splitPoint == null) {
-        // Fallback to a manual split point
-        splitPoint = Bytes.toBytes("T02row00000");
-        LOG.info("Using fallback split point: {}", Bytes.toStringBinary(splitPoint));
-      }
-      
-      // Submit split with explicit split point
-      admin.split(tableName, splitPoint);
-      LOG.info("Split request submitted with split point: {}", Bytes.toStringBinary(splitPoint));
-      
-      // Wait for split to complete
-      return waitForSplitCompletion(tableName, 60000); // 60 second timeout
-    }
-  }
-  
-  /**
-   * Wait for split to complete with timeout.
-   */
-  private boolean waitForSplitCompletion(TableName tableName, long timeoutMs) throws Exception {
-    LOG.info("Waiting for split to complete...");
-    
-    long startTime = System.currentTimeMillis();
-    int initialRegionCount = getRegionCount(tableName);
-    
-    while (System.currentTimeMillis() - startTime < timeoutMs) {
-      try {
-        TEST_UTIL.waitUntilNoRegionsInTransition(5000); // Short timeout
-        
-        int currentRegionCount = getRegionCount(tableName);
-        if (currentRegionCount > initialRegionCount) {
-          LOG.info("Split completed! Region count: {} -> {}", 
-                   initialRegionCount, currentRegionCount);
-          
-          // Give a bit more time for regions to stabilize
-          Thread.sleep(2000);
-          TEST_UTIL.waitUntilAllRegionsAssigned(tableName, 10000);
-          
-          return true;
-        }
-        
-        Thread.sleep(1000);
-      } catch (Exception e) {
-        LOG.debug("Waiting for split: {}", e.getMessage());
-      }
-    }
-    
-    LOG.error("Split did not complete within {} ms", timeoutMs);
-    return false;
-  }
-  
-  /**
-   * Verify all data exists after split.
-   */
-  private void verifyAllDataAfterSplit(TableName tableName) throws Exception {
-    LOG.info("Verifying all data after split");
-    
-    try (Connection conn = TEST_UTIL.getConnection();
-         Table table = conn.getTable(tableName)) {
-      
-      String[] tenants = {"T01", "T02", "T03"};
-      int rowsPerTenant = 1000;
-      int samplingRate = 100; // Check every 100th row
-      
-      int totalVerified = 0;
-      for (String tenant : tenants) {
-        for (int i = 0; i < rowsPerTenant; i += samplingRate) {
-          String rowKey = String.format("%srow%05d", tenant, i);
-          Get get = new Get(Bytes.toBytes(rowKey));
-          get.addColumn(FAMILY, QUALIFIER);
-          
-          Result result = table.get(get);
-          assertFalse("Row should exist: " + rowKey, result.isEmpty());
-          
-          String expectedValue = String.format("value_tenant-%s_row-%05d", tenant, i);
-          byte[] actualValue = result.getValue(FAMILY, QUALIFIER);
-          assertEquals("Value mismatch for " + rowKey, 
-                      expectedValue, Bytes.toString(actualValue));
-          
-          totalVerified++;
-        }
-      }
-      
-      LOG.info("Successfully verified {} sample rows after split", totalVerified);
-    }
-  }
-  
-  /**
-   * Verify that test data exists in the table (basic check).
-   */
-  private void verifyTestDataExists(TableName tableName) throws Exception {
-    LOG.info("Verifying test data exists in table: {}", tableName);
-    
-    try (Connection conn = TEST_UTIL.getConnection();
-         Table table = conn.getTable(tableName)) {
-      
-      // Just check a few sample rows to ensure data was written
-      String[] sampleRows = {
-        "T01row00000",
-        "T02row00000", 
-        "T03row00000"
-      };
-      
-      for (String rowKey : sampleRows) {
-        Get get = new Get(Bytes.toBytes(rowKey));
-        get.addColumn(FAMILY, QUALIFIER);
-        Result result = table.get(get);
-        
-        assertFalse("Row should exist: " + rowKey, result.isEmpty());
-        byte[] value = result.getValue(FAMILY, QUALIFIER);
-        assertNotNull("Value should not be null for " + rowKey, value);
-        LOG.debug("Verified row exists: {}", rowKey);
-      }
-      
-      LOG.info("Basic data verification passed");
     }
   }
 } 

@@ -384,7 +384,7 @@ public class MultiTenantHFileWriter implements HFile.Writer {
       
       // Finish writing the current section
       currentSectionWriter.close();
-      //outputStream.hsync(); // Ensure section data (incl. trailer) is synced to disk
+      outputStream.hsync(); // Ensure section data (incl. trailer) is synced to disk
       
       // Get current position to calculate section size
       long sectionEndOffset = outputStream.getPos();
