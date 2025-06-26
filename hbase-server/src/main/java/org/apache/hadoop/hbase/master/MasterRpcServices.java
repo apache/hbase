@@ -1812,7 +1812,9 @@ public class MasterRpcServices extends RSRpcServices
   public SetQuotaResponse setQuota(RpcController c, SetQuotaRequest req) throws ServiceException {
     try {
       master.checkInitialized();
-      return master.getMasterQuotaManager().setQuota(req);
+      SetQuotaResponse response = master.getMasterQuotaManager().setQuota(req);
+      master.reloadRegionServerQuotas();
+      return response;
     } catch (Exception e) {
       throw new ServiceException(e);
     }
