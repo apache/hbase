@@ -725,3 +725,8 @@ enum CloseTableRegionsProcedureState {
 message CloseTableRegionsProcedureStateData {
   required TableName table_name = 1;
 }
+
+message ReloadQuotasProcedureStateData {
+  required ServerName target_server = 1;
+  optional ForeignExceptionMessage error = 2;
+}
