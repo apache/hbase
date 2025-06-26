@@ -19,8 +19,10 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.util.Collection;
 import java.util.List;
-
+import java.util.function.Consumer;
+import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -37,6 +39,8 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
+import org.apache.hadoop.hbase.io.hfile.BlockCache;
+import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.CompoundBloomFilter;
 import org.apache.hadoop.hbase.io.hfile.FixedFileTrailer;
@@ -44,6 +48,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileBlockIndex;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
+import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.io.hfile.NoOpIndexBlockEncoder;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
@@ -81,6 +86,8 @@ public class TestBytesReadServerSideScanMetrics {
     private static final byte[] CQ = Bytes.toBytes("cq");
 
     private static final byte[] VALUE = Bytes.toBytes("value");
+
+    private static final byte[] ROW2 = Bytes.toBytes("row2");
 
     private Configuration conf;
 
@@ -135,14 +142,49 @@ public class TestBytesReadServerSideScanMetrics {
         UTIL.startMiniCluster();
         try {
             TableName tableName = TableName.valueOf(name.getMethodName());
+            createTable(tableName, true, BloomType.NONE);
+            HRegionServer server = UTIL.getMiniHBaseCluster().getRegionServer(0);
+            LruBlockCache blockCache = (LruBlockCache) server.getBlockCache().get();
+            Assert.assertTrue(blockCache.acceptableSize() > 1024 * 1024);
+            writeThenReadDataAndAssertMetrics(tableName, false);
+            KeyValue keyValue =
+                new KeyValue(ROW2, CF, CQ, PrivateConstants.OLDEST_TIMESTAMP, VALUE);
+            assertBlockCacheWarmUp(tableName, keyValue);
+            ScanMetrics scanMetrics;
+            try (Table table = UTIL.getConnection().getTable(tableName)) {
+                scanMetrics = readDataAndGetScanMetrics(table, true);
+            }
+            Assert.assertEquals(0, scanMetrics.bytesReadFromFs.get());
+            assertBytesReadFromBlockCache(tableName, scanMetrics.bytesReadFromBlockCache.get(),
+                keyValue);
+            Assert.assertEquals(0, scanMetrics.bytesReadFromMemstore.get());
         } finally {
             UTIL.shutdownMiniCluster();
         }
     }
 
+    private ScanMetrics readDataAndGetScanMetrics(Table table, boolean isScanMetricsEnabled)
+        throws Exception {
+        Scan scan = new Scan();
+        scan.withStartRow(ROW2, true);
+        scan.withStopRow(ROW2, true);
+        scan.setScanMetricsEnabled(isScanMetricsEnabled);
+        ScanMetrics scanMetrics;
+        try (ResultScanner scanner = table.getScanner(scan)) {
+            int rowCount = 0;
+            StoreFileScanner.instrument();
+            for (Result r : scanner) {
+                rowCount++;
+            }
+            Assert.assertEquals(1, rowCount);
+            scanMetrics = scanner.getScanMetrics();
+        }
+        return scanMetrics;
+    }
+
     private void writeThenReadDataAndAssertMetrics(TableName tableName,
         boolean isScanMetricsEnabled) throws Exception {
-        Put row2Put = new Put(Bytes.toBytes("row2")).addColumn(CF, CQ, VALUE);
+        Put row2Put = new Put(ROW2).addColumn(CF, CQ, VALUE);
         try (Table table = UTIL.getConnection().getTable(tableName)) {
             // Create a HFile
             table.put(row2Put);
@@ -154,27 +196,14 @@ public class TestBytesReadServerSideScanMetrics {
             table.put(new Put(Bytes.toBytes("row5")).addColumn(CF, CQ, VALUE));
             UTIL.flush(tableName);
 
-            Scan scan = new Scan();
-            scan.withStartRow(Bytes.toBytes("row2"), true);
-            scan.withStopRow(Bytes.toBytes("row2"), true);
-            scan.setScanMetricsEnabled(isScanMetricsEnabled);
-            ScanMetrics scanMetrics;
-            try (ResultScanner scanner = table.getScanner(scan)) {
-                int rowCount = 0;
-                StoreFileScanner.instrument();
-                for (Result r : scanner) {
-                    rowCount++;
-                }
-                Assert.assertEquals(1, rowCount);
-                scanMetrics = scanner.getScanMetrics();
-            }
+            ScanMetrics scanMetrics = readDataAndGetScanMetrics(table, isScanMetricsEnabled);
             if (isScanMetricsEnabled) {
                 System.out.println("Bytes read from fs: " + scanMetrics.bytesReadFromFs.get());
                 System.out.println(
                     "Count of bytes scanned: " + scanMetrics.countOfBlockBytesScanned.get());
                 System.out
                     .println("StoreFileScanners seek count: " + StoreFileScanner.getSeekCount());
-                
+
                 // Use oldest timestamp to make sure the fake key is not less than the first key in
                 // the file containing key: row2
                 KeyValue keyValue = new KeyValue(row2Put.getRow(), CF, CQ,
@@ -182,8 +211,7 @@ public class TestBytesReadServerSideScanMetrics {
                 assertBytesReadFromFs(tableName, scanMetrics.bytesReadFromFs.get(), keyValue);
                 Assert.assertEquals(0, scanMetrics.bytesReadFromBlockCache.get());
                 Assert.assertEquals(0, scanMetrics.bytesReadFromMemstore.get());
-            }
-            else {
+            } else {
                 Assert.assertNull(scanMetrics);
             }
         }
@@ -207,7 +235,7 @@ public class TestBytesReadServerSideScanMetrics {
         KeyValue keyValue) throws Exception {
         List<HRegion> regions = UTIL.getMiniHBaseCluster().getRegions(tableName);
         Assert.assertEquals(1, regions.size());
-        int totalExpectedBytesReadFromFs = 0;
+        MutableInt totalExpectedBytesReadFromFs = new MutableInt(0);
         for (HRegion region : regions) {
             Assert.assertNull(region.getBlockCache());
             HStore store = region.getStore(CF);
@@ -221,20 +249,27 @@ public class TestBytesReadServerSideScanMetrics {
                     .assertTrue(bloomFilter == null || bloomFilter instanceof CompoundBloomFilter);
                 CompoundBloomFilter cbf =
                     bloomFilter == null ? null : (CompoundBloomFilter) bloomFilter;
-                int bytesReadFromFs = getBytesReadFromFs(hfileReader, cbf, keyValue);
-                totalExpectedBytesReadFromFs += bytesReadFromFs;
+                Consumer<HFileBlock> bytesReadFunction = new Consumer<HFileBlock>() {
+                    @Override
+                    public void accept(HFileBlock block) {
+                        totalExpectedBytesReadFromFs.add(block.getOnDiskSizeWithHeader());
+                        if (block.getNextBlockOnDiskSize() > 0) {
+                            totalExpectedBytesReadFromFs.add(block.headerSize());
+                        }
+                    }
+                };
+                readHFile(hfileReader, cbf, keyValue, bytesReadFunction);
             }
         }
-        Assert.assertEquals(totalExpectedBytesReadFromFs, actualBytesReadFromFs);
+        Assert.assertEquals(totalExpectedBytesReadFromFs.longValue(), actualBytesReadFromFs);
     }
 
-    private int getBytesReadFromFs(HFile.Reader hfileReader, CompoundBloomFilter cbf,
-        KeyValue keyValue) throws Exception {
+    private void readHFile(HFile.Reader hfileReader, CompoundBloomFilter cbf, KeyValue keyValue,
+        Consumer<HFileBlock> bytesReadFunction) throws Exception {
         HFileBlock.FSReader blockReader = hfileReader.getUncachedBlockReader();
         FixedFileTrailer trailer = hfileReader.getTrailer();
         HFileContext meta = hfileReader.getFileContext();
         long fileSize = hfileReader.length();
-        int bytesRead = 0;
 
         // Read the bloom block from FS
         if (cbf != null) {
@@ -244,22 +279,19 @@ public class TestBytesReadServerSideScanMetrics {
                 .release();
 
             HFileBlockIndex.BlockIndexReader index = cbf.getBloomIndex();
-            byte[] row = Bytes.toBytes("row2");
+            byte[] row = ROW2;
             int blockIndex = index.rootBlockContainingKey(row, 0, row.length);
             HFileBlock bloomBlock = cbf.getBloomBlock(blockIndex);
             boolean fileContainsKey = BloomFilterUtil.contains(row, 0, row.length,
                 bloomBlock.getBufferReadOnly(), bloomBlock.headerSize(),
                 bloomBlock.getUncompressedSizeWithoutHeader(), cbf.getHash(), cbf.getHashCount());
-            bytesRead += bloomBlock.getOnDiskSizeWithHeader();
-            if (bloomBlock.getNextBlockOnDiskSize() > 0) {
-                bytesRead += bloomBlock.headerSize();
-            }
+            bytesReadFunction.accept(bloomBlock);
             // Asser that the block read is a bloom block
             Assert.assertEquals(bloomBlock.getBlockType(), BlockType.BLOOM_CHUNK);
             bloomBlock.release();
             if (!fileContainsKey) {
-                // Key is not in the file, so we don't need to read the data block
-                return bytesRead;
+                // Key is not in th file, so we don't need to read the data block
+                return;
             }
         }
 
@@ -290,10 +322,7 @@ public class TestBytesReadServerSideScanMetrics {
                 block.release();
                 block = unpacked;
             }
-            bytesRead += block.getOnDiskSizeWithHeader();
-            if (block.getNextBlockOnDiskSize() > 0) {
-                bytesRead += block.headerSize();
-            }
+            bytesReadFunction.accept(block);
             if (!block.getBlockType().isData()) {
                 ByteBuff buffer = block.getBufferWithoutHeader();
                 // Place the buffer at the correct position
@@ -309,8 +338,81 @@ public class TestBytesReadServerSideScanMetrics {
         blockIter.freeBlocks();
 
         Assert.assertEquals(blockLevelsRead, trailer.getNumDataIndexLevels() + 1);
+    }
 
-        return bytesRead;
+    private void assertBytesReadFromBlockCache(TableName tableName,
+        long actualBytesReadFromBlockCache, KeyValue keyValue) throws Exception {
+        List<HRegion> regions = UTIL.getMiniHBaseCluster().getRegions(tableName);
+        Assert.assertEquals(1, regions.size());
+        MutableInt totalExpectedBytesReadFromBlockCache = new MutableInt(0);
+        for (HRegion region : regions) {
+            Assert.assertNotNull(region.getBlockCache());
+            HStore store = region.getStore(CF);
+            Collection<HStoreFile> storeFiles = store.getStorefiles();
+            Assert.assertEquals(2, storeFiles.size());
+            for (HStoreFile storeFile : storeFiles) {
+                StoreFileReader reader = storeFile.getReader();
+                HFile.Reader hfileReader = reader.getHFileReader();
+                BloomFilter bloomFilter = reader.getGeneralBloomFilter();
+                Assert
+                    .assertTrue(bloomFilter == null || bloomFilter instanceof CompoundBloomFilter);
+                CompoundBloomFilter cbf =
+                    bloomFilter == null ? null : (CompoundBloomFilter) bloomFilter;
+                Consumer<HFileBlock> bytesReadFunction = new Consumer<HFileBlock>() {
+                    @Override
+                    public void accept(HFileBlock block) {
+                        totalExpectedBytesReadFromBlockCache.add(block.getOnDiskSizeWithHeader());
+                        if (block.getNextBlockOnDiskSize() > 0) {
+                            totalExpectedBytesReadFromBlockCache.add(block.headerSize());
+                        }
+                    }
+                };
+                readHFile(hfileReader, cbf, keyValue, bytesReadFunction);
+            }
+        }
+        Assert.assertEquals(totalExpectedBytesReadFromBlockCache.longValue(),
+            actualBytesReadFromBlockCache);
+    }
+
+    private void assertBlockCacheWarmUp(TableName tableName, KeyValue keyValue) throws Exception {
+        List<HRegion> regions = UTIL.getMiniHBaseCluster().getRegions(tableName);
+        Assert.assertEquals(1, regions.size());
+        for (HRegion region : regions) {
+            Assert.assertNotNull(region.getBlockCache());
+            HStore store = region.getStore(CF);
+            Collection<HStoreFile> storeFiles = store.getStorefiles();
+            Assert.assertEquals(2, storeFiles.size());
+            for (HStoreFile storeFile : storeFiles) {
+                StoreFileReader reader = storeFile.getReader();
+                HFile.Reader hfileReader = reader.getHFileReader();
+                BloomFilter bloomFilter = reader.getGeneralBloomFilter();
+                Assert
+                    .assertTrue(bloomFilter == null || bloomFilter instanceof CompoundBloomFilter);
+                CompoundBloomFilter cbf =
+                    bloomFilter == null ? null : (CompoundBloomFilter) bloomFilter;
+                Consumer<HFileBlock> bytesReadFunction = new Consumer<HFileBlock>() {
+                    @Override
+                    public void accept(HFileBlock block) {
+                        assertBlockIsCached(hfileReader, block, region.getBlockCache());
+                    }
+                };
+                readHFile(hfileReader, cbf, keyValue, bytesReadFunction);
+            }
+        }
+    }
+
+    private void assertBlockIsCached(HFile.Reader hfileReader, HFileBlock block,
+        BlockCache blockCache) {
+        if (blockCache == null) {
+            return;
+        }
+        Path path = hfileReader.getPath();
+        BlockCacheKey key = new BlockCacheKey(path, block.getOffset(), true, block.getBlockType());
+        HFileBlock cachedBlock = (HFileBlock) blockCache.getBlock(key, true, false, true);
+        Assert.assertNotNull(cachedBlock);
+        Assert.assertEquals(block.getOnDiskSizeWithHeader(), cachedBlock.getOnDiskSizeWithHeader());
+        Assert.assertEquals(block.getNextBlockOnDiskSize(), cachedBlock.getNextBlockOnDiskSize());
+        cachedBlock.release();
     }
 
     private static class MyNoOpEncodedSeeker extends NoOpIndexBlockEncoder.NoOpEncodedSeeker {

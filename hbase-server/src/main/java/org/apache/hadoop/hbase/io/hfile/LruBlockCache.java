@@ -1152,7 +1152,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
 
   // Simple calculators of sizes given factors and maxSize
 
-  long acceptableSize() {
+  public long acceptableSize() {
     return (long) Math.floor(this.maxSize * this.acceptableFactor);
   }
 
