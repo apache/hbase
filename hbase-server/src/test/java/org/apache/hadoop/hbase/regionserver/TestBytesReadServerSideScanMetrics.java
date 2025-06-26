@@ -52,7 +52,7 @@ import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.io.hfile.NoOpIndexBlockEncoder;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.BloomFilter;
 import org.apache.hadoop.hbase.util.BloomFilterUtil;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -66,7 +66,7 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ IOTests.class, SmallTests.class })
+@Category({ IOTests.class, MediumTests.class })
 public class TestBytesReadServerSideScanMetrics {
 
     @ClassRule
@@ -95,6 +95,8 @@ public class TestBytesReadServerSideScanMetrics {
     public void setUp() throws Exception {
         UTIL = new HBaseTestingUtil();
         conf = UTIL.getConfiguration();
+        conf.setInt(HRegion.MEMSTORE_PERIODIC_FLUSH_INTERVAL, 0);
+        conf.setBoolean(CompactSplit.HBASE_REGION_SERVER_ENABLE_COMPACTION, false);
     }
 
     @Test
@@ -104,7 +106,9 @@ public class TestBytesReadServerSideScanMetrics {
         try {
             TableName tableName = TableName.valueOf(name.getMethodName());
             createTable(tableName, false, BloomType.NONE);
-            writeThenReadDataAndAssertMetrics(tableName, false);
+            writeData(tableName, true);
+            ScanMetrics scanMetrics = readDataAndGetScanMetrics(tableName, false);
+            Assert.assertNull(scanMetrics);
         } finally {
             UTIL.shutdownMiniCluster();
         }
@@ -117,7 +121,16 @@ public class TestBytesReadServerSideScanMetrics {
         try {
             TableName tableName = TableName.valueOf(name.getMethodName());
             createTable(tableName, false, BloomType.ROW);
-            writeThenReadDataAndAssertMetrics(tableName, true);
+            writeData(tableName, true);
+            ScanMetrics scanMetrics = readDataAndGetScanMetrics(tableName, true);
+
+            // Use oldest timestamp to make sure the fake key is not less than the first key in
+            // the file containing key: row2
+            KeyValue keyValue =
+                new KeyValue(ROW2, CF, CQ, PrivateConstants.OLDEST_TIMESTAMP, VALUE);
+            assertBytesReadFromFs(tableName, scanMetrics.bytesReadFromFs.get(), keyValue);
+            Assert.assertEquals(0, scanMetrics.bytesReadFromBlockCache.get());
+            Assert.assertEquals(0, scanMetrics.bytesReadFromMemstore.get());
         } finally {
             UTIL.shutdownMiniCluster();
         }
@@ -131,7 +144,16 @@ public class TestBytesReadServerSideScanMetrics {
         try {
             TableName tableName = TableName.valueOf(name.getMethodName());
             createTable(tableName, false, BloomType.NONE);
-            writeThenReadDataAndAssertMetrics(tableName, true);
+            writeData(tableName, true);
+            ScanMetrics scanMetrics = readDataAndGetScanMetrics(tableName, true);
+
+            // Use oldest timestamp to make sure the fake key is not less than the first key in
+            // the file containing key: row2
+            KeyValue keyValue =
+                new KeyValue(ROW2, CF, CQ, PrivateConstants.OLDEST_TIMESTAMP, VALUE);
+            assertBytesReadFromFs(tableName, scanMetrics.bytesReadFromFs.get(), keyValue);
+            Assert.assertEquals(0, scanMetrics.bytesReadFromBlockCache.get());
+            Assert.assertEquals(0, scanMetrics.bytesReadFromMemstore.get());
         } finally {
             UTIL.shutdownMiniCluster();
         }
@@ -145,15 +167,15 @@ public class TestBytesReadServerSideScanMetrics {
             createTable(tableName, true, BloomType.NONE);
             HRegionServer server = UTIL.getMiniHBaseCluster().getRegionServer(0);
             LruBlockCache blockCache = (LruBlockCache) server.getBlockCache().get();
+
+            // Assert that acceptable size of LRU block cache is greater than 1MB
             Assert.assertTrue(blockCache.acceptableSize() > 1024 * 1024);
-            writeThenReadDataAndAssertMetrics(tableName, false);
+            writeData(tableName, true);
+            readDataAndGetScanMetrics(tableName, false);
             KeyValue keyValue =
                 new KeyValue(ROW2, CF, CQ, PrivateConstants.OLDEST_TIMESTAMP, VALUE);
             assertBlockCacheWarmUp(tableName, keyValue);
-            ScanMetrics scanMetrics;
-            try (Table table = UTIL.getConnection().getTable(tableName)) {
-                scanMetrics = readDataAndGetScanMetrics(table, true);
-            }
+            ScanMetrics scanMetrics = readDataAndGetScanMetrics(tableName, true);
             Assert.assertEquals(0, scanMetrics.bytesReadFromFs.get());
             assertBytesReadFromBlockCache(tableName, scanMetrics.bytesReadFromBlockCache.get(),
                 keyValue);
@@ -163,14 +185,45 @@ public class TestBytesReadServerSideScanMetrics {
         }
     }
 
-    private ScanMetrics readDataAndGetScanMetrics(Table table, boolean isScanMetricsEnabled)
+    @Test
+    public void testBytesReadFromMemstore() throws Exception {
+        UTIL.startMiniCluster();
+        try {
+            TableName tableName = TableName.valueOf(name.getMethodName());
+            createTable(tableName, false, BloomType.NONE);
+            writeData(tableName, false);
+            ScanMetrics scanMetrics = readDataAndGetScanMetrics(tableName, true);
+
+            // Assert no flush has happened for the table
+            List<HRegion> regions = UTIL.getMiniHBaseCluster().getRegions(tableName);
+            for (HRegion region : regions) {
+                HStore store = region.getStore(CF);
+                // Assert no HFile is there
+                Assert.assertEquals(0, store.getStorefiles().size());
+            }
+
+            KeyValue keyValue = new KeyValue(ROW2, CF, CQ, HConstants.LATEST_TIMESTAMP, VALUE);
+            int singleKeyValueSize = Segment.getCellLength(keyValue);
+            // First key value will be read on SegementScanner creation, second one on doing seek
+            // and third one on doing next() to determine there are no more cells in the row
+            int totalKeyValueSize = 3 * singleKeyValueSize;
+            Assert.assertEquals(0, scanMetrics.bytesReadFromFs.get());
+            Assert.assertEquals(0, scanMetrics.bytesReadFromBlockCache.get());
+            Assert.assertEquals(totalKeyValueSize, scanMetrics.bytesReadFromMemstore.get());
+        } finally {
+            UTIL.shutdownMiniCluster();
+        }
+    }
+
+    private ScanMetrics readDataAndGetScanMetrics(TableName tableName, boolean isScanMetricsEnabled)
         throws Exception {
         Scan scan = new Scan();
         scan.withStartRow(ROW2, true);
         scan.withStopRow(ROW2, true);
         scan.setScanMetricsEnabled(isScanMetricsEnabled);
         ScanMetrics scanMetrics;
-        try (ResultScanner scanner = table.getScanner(scan)) {
+        try (Table table = UTIL.getConnection().getTable(tableName);
+            ResultScanner scanner = table.getScanner(scan)) {
             int rowCount = 0;
             StoreFileScanner.instrument();
             for (Result r : scanner) {
@@ -179,40 +232,30 @@ public class TestBytesReadServerSideScanMetrics {
             Assert.assertEquals(1, rowCount);
             scanMetrics = scanner.getScanMetrics();
         }
+        if (isScanMetricsEnabled) {
+            LOG.info("Bytes read from fs: " + scanMetrics.bytesReadFromFs.get());
+            LOG.info("Bytes read from block cache: " + scanMetrics.bytesReadFromBlockCache.get());
+            LOG.info("Bytes read from memstore: " + scanMetrics.bytesReadFromMemstore.get());
+            LOG.info("Count of bytes scanned: " + scanMetrics.countOfBlockBytesScanned.get());
+            LOG.info("StoreFileScanners seek count: " + StoreFileScanner.getSeekCount());
+        }
         return scanMetrics;
     }
 
-    private void writeThenReadDataAndAssertMetrics(TableName tableName,
-        boolean isScanMetricsEnabled) throws Exception {
-        Put row2Put = new Put(ROW2).addColumn(CF, CQ, VALUE);
+    private void writeData(TableName tableName, boolean shouldFlush) throws Exception {
         try (Table table = UTIL.getConnection().getTable(tableName)) {
-            // Create a HFile
-            table.put(row2Put);
+            table.put(new Put(ROW2).addColumn(CF, CQ, VALUE));
             table.put(new Put(Bytes.toBytes("row4")).addColumn(CF, CQ, VALUE));
-            UTIL.flush(tableName);
+            if (shouldFlush) {
+                // Create a HFile
+                UTIL.flush(tableName);
+            }
 
-            // Create a HFile
             table.put(new Put(Bytes.toBytes("row1")).addColumn(CF, CQ, VALUE));
             table.put(new Put(Bytes.toBytes("row5")).addColumn(CF, CQ, VALUE));
-            UTIL.flush(tableName);
-
-            ScanMetrics scanMetrics = readDataAndGetScanMetrics(table, isScanMetricsEnabled);
-            if (isScanMetricsEnabled) {
-                System.out.println("Bytes read from fs: " + scanMetrics.bytesReadFromFs.get());
-                System.out.println(
-                    "Count of bytes scanned: " + scanMetrics.countOfBlockBytesScanned.get());
-                System.out
-                    .println("StoreFileScanners seek count: " + StoreFileScanner.getSeekCount());
-
-                // Use oldest timestamp to make sure the fake key is not less than the first key in
-                // the file containing key: row2
-                KeyValue keyValue = new KeyValue(row2Put.getRow(), CF, CQ,
-                    PrivateConstants.OLDEST_TIMESTAMP, VALUE);
-                assertBytesReadFromFs(tableName, scanMetrics.bytesReadFromFs.get(), keyValue);
-                Assert.assertEquals(0, scanMetrics.bytesReadFromBlockCache.get());
-                Assert.assertEquals(0, scanMetrics.bytesReadFromMemstore.get());
-            } else {
-                Assert.assertNull(scanMetrics);
+            if (shouldFlush) {
+                // Create a HFile
+                UTIL.flush(tableName);
             }
         }
     }
