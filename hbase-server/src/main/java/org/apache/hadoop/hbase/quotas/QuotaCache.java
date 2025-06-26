@@ -76,8 +76,8 @@ public class QuotaCache implements Stoppable {
   // from the perspective of user quotas
   public static final String QUOTA_USER_REQUEST_ATTRIBUTE_OVERRIDE_KEY =
     "hbase.quota.user.override.key";
-  private static final int REFRESH_DEFAULT_PERIOD = 5 * 60000; // 5min
-  private static final int EVICT_PERIOD_FACTOR = 5; // N * REFRESH_DEFAULT_PERIOD
+  private static final int REFRESH_DEFAULT_PERIOD = 43_200_000; // 12 hours
+  private static final int EVICT_PERIOD_FACTOR = 5;
 
   // for testing purpose only, enforce the cache to be always refreshed
   static boolean TEST_FORCE_REFRESH = false;
@@ -109,8 +109,12 @@ public class QuotaCache implements Stoppable {
   public void start() throws IOException {
     stopped = false;
 
-    // TODO: This will be replaced once we have the notification bus ready.
     Configuration conf = rsServices.getConfiguration();
+    // Refresh the cache every 12 hours, and every time a quota is changed, and every time a
+    // configuration
+    // reload is triggered. Periodic reloads are kept to a minimum to avoid flooding the
+    // RegionServer
+    // holding the hbase:quota table with requests.
     int period = conf.getInt(REFRESH_CONF_KEY, REFRESH_DEFAULT_PERIOD);
     refreshChore = new QuotaRefresherChore(conf, period, this);
     rsServices.getChoreService().scheduleChore(refreshChore);
@@ -385,18 +389,15 @@ public class QuotaCache implements Stoppable {
     private <K, V extends QuotaState> void fetch(final String type,
       final ConcurrentMap<K, V> quotasMap, final Fetcher<K, V> fetcher) {
       long now = EnvironmentEdgeManager.currentTime();
-      long refreshPeriod = getPeriod();
-      long evictPeriod = refreshPeriod * EVICT_PERIOD_FACTOR;
-
+      long evictPeriod = getPeriod() * EVICT_PERIOD_FACTOR;
       // Find the quota entries to update
       List<Get> gets = new ArrayList<>();
       List<K> toRemove = new ArrayList<>();
       for (Map.Entry<K, V> entry : quotasMap.entrySet()) {
-        long lastUpdate = entry.getValue().getLastUpdate();
         long lastQuery = entry.getValue().getLastQuery();
         if (lastQuery > 0 && (now - lastQuery) >= evictPeriod) {
           toRemove.add(entry.getKey());
-        } else if (TEST_FORCE_REFRESH || (now - lastUpdate) >= refreshPeriod) {
+        } else {
           gets.add(fetcher.makeGet(entry));
         }
       }

@@ -297,7 +297,13 @@ public enum EventType {
    * RS flush regions.<br>
    * RS_FLUSH_OPERATIONS
    */
-  RS_FLUSH_REGIONS(89, ExecutorType.RS_FLUSH_OPERATIONS);
+  RS_FLUSH_REGIONS(89, ExecutorType.RS_FLUSH_OPERATIONS),
+
+  /**
+   * RS reload quotas.<br>
+   * RS_RELOAD_QUOTAS
+   */
+  RS_RELOAD_QUOTAS(90, ExecutorType.RS_RELOAD_QUOTAS_OPERATIONS);
 
   private final int code;
   private final ExecutorType executor;
