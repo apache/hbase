@@ -23,6 +23,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.AsyncConnection;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.keymeta.KeymetaAdmin;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyAccessor;
+import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -83,6 +86,21 @@ public interface Server extends Abortable, Stoppable {
   /** Returns The {@link ChoreService} instance for this server */
   ChoreService getChoreService();
 
+  /**
+   * @return the cache for cluster keys.
+   */
+  public SystemKeyCache getSystemKeyCache();
+
+  /**
+   * @return the accessor for cluster keys.
+   */
+  public ManagedKeyAccessor getManagedKeyAccessor();
+
+  /**
+   * @return the admin for keymeta.
+   */
+  public KeymetaAdmin getKeymetaAdmin();
+
   /** Returns Return the FileSystem object used (can return null!). */
   // TODO: Distinguish between "dataFs" and "walFs".
   default FileSystem getFileSystem() {
@@ -104,4 +122,15 @@ public interface Server extends Abortable, Stoppable {
   default boolean isStopping() {
     return false;
   }
+
+  /**
+   * From the given server, determine if key management is enabbled.
+   * @return true if key management is enabled
+   */
+  static boolean isKeyManagementEnabled(Server server) {
+    return server.getConfiguration()
+      .getBoolean(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY,
+        HConstants.CRYPTO_MANAGED_KEYS_DEFAULT_ENABLED);
+  }
+
 }
