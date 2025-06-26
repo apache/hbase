@@ -95,6 +95,12 @@ public class ScanMetrics extends ServerSideScanMetrics {
    */
   public final AtomicLong countOfRemoteRPCRetries = createCounter(REMOTE_RPC_RETRIES_METRIC_NAME);
 
+  /**
+   * Constructor
+   */
+  public ScanMetrics() {
+  }
+
   @Override
   public void moveToNextRegion() {
     super.moveToNextRegion();

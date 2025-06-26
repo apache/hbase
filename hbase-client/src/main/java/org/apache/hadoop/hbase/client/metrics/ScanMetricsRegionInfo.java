@@ -21,6 +21,7 @@ import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * POJO for capturing region level details when region level scan metrics are enabled. <br>
@@ -33,6 +34,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * {@link ServerSideScanMetrics#collectMetricsByRegion(boolean)}.
  */
 @InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class ScanMetricsRegionInfo {
   /**
    * Users should only compare against this constant by reference and should not make any

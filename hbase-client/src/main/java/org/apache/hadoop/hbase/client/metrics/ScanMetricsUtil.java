@@ -38,7 +38,9 @@ public final class ScanMetricsUtil {
     return c;
   }
 
-  /** Sets counter with counterName to passed in value, does nothing if counter does not exist. */
+  /**
+   * Sets counter with counterName to passed in value, does nothing if counter does not exist.
+   */
   static void setCounter(Map<String, AtomicLong> counters, String counterName, long value) {
     AtomicLong c = counters.get(counterName);
     if (c != null) {
@@ -46,7 +48,9 @@ public final class ScanMetricsUtil {
     }
   }
 
-  /** Increments the counter with counterName by delta, does nothing if counter does not exist. */
+  /**
+   * Increments the counter with counterName by delta, does nothing if counter does not exist.
+   */
   static void addToCounter(Map<String, AtomicLong> counters, String counterName, long delta) {
     AtomicLong c = counters.get(counterName);
     if (c != null) {
@@ -54,12 +58,16 @@ public final class ScanMetricsUtil {
     }
   }
 
-  /** Returns true if a counter exists with the counterName */
+  /**
+   * Returns true if a counter exists with the counterName.
+   */
   static boolean hasCounter(Map<String, AtomicLong> counters, String counterName) {
     return counters.containsKey(counterName);
   }
 
-  /** Returns {@link AtomicLong} instance for this counter name, null if counter does not exist. */
+  /**
+   * Returns {@link AtomicLong} instance for this counter name, null if counter does not exist.
+   */
   static AtomicLong getCounter(Map<String, AtomicLong> counters, String counterName) {
     return counters.get(counterName);
   }
