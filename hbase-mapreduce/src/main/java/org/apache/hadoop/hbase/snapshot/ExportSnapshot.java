@@ -26,13 +26,16 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.function.BiConsumer;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -52,6 +55,10 @@ import org.apache.hadoop.hbase.io.hadoopbackport.ThrottledInputStream;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotFileInfo;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -74,17 +81,11 @@ import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
 import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.Option;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
-import org.apache.hbase.thirdparty.org.apache.commons.cli.Option;
-
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotFileInfo;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 
 /**
  * Export the specified snapshot to a given FileSystem. The .snapshot/name folder is copied to the
@@ -662,6 +663,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
 
     // Get snapshot files
     LOG.info("Loading Snapshot '" + snapshotDesc.getName() + "' hfile list");
+    Set<String> addedFiles = new HashSet<>();
     SnapshotReferenceUtil.visitReferencedFiles(conf, fs, snapshotDir, snapshotDesc,
       new SnapshotReferenceUtil.SnapshotVisitor() {
         @Override
@@ -681,7 +683,13 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
             snapshotFileAndSize = getSnapshotFileAndSize(fs, conf, table, referencedRegion, family,
               referencedHFile, storeFile.hasFileSize() ? storeFile.getFileSize() : -1);
           }
-          files.add(snapshotFileAndSize);
+          String fileToExport = snapshotFileAndSize.getFirst().getHfile();
+          if (!addedFiles.contains(fileToExport)) {
+            files.add(snapshotFileAndSize);
+            addedFiles.add(fileToExport);
+          } else {
+            LOG.debug("Skip the existing file: {}.", fileToExport);
+          }
         }
       });
 
