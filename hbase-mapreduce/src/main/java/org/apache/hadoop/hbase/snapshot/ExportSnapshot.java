@@ -174,9 +174,11 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
     static final Option STORAGE_POLICY = new Option(null, "storage-policy", true,
       "Storage policy for export snapshot output directory, with format like: f=HOT&g=ALL_SDD");
     static final Option CUSTOM_FILE_GROUPER = new Option(null, "custom-file-grouper", true,
-      "Fully qualified class name of an implementation of ExportSnapshot.CustomFileGrouper. See JavaDoc on that class for more information.");
+      "Fully qualified class name of an implementation of ExportSnapshot.CustomFileGrouper. "
+        + "See JavaDoc on that class for more information.");
     static final Option FILE_LOCATION_RESOLVER = new Option(null, "file-location-resolver", true,
-      "Fully qualified class name of an implementation of ExportSnapshot.FileLocationResolver. See JavaDoc on that class for more information.");
+      "Fully qualified class name of an implementation of ExportSnapshot.FileLocationResolver. "
+        + "See JavaDoc on that class for more information.");
   }
 
   // Export Map-Reduce Counters, to keep track of the progress
@@ -798,7 +800,6 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
 
     // create balanced groups
     List<List<Pair<SnapshotFileInfo, Long>>> fileGroups = new LinkedList<>();
-    long[] sizeGroups = new long[ngroups];
     int hi = files.size() - 1;
     int lo = 0;
 
@@ -817,7 +818,6 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
       Pair<SnapshotFileInfo, Long> fileInfo = files.get(hi--);
 
       // add the hi one
-      sizeGroups[g] += fileInfo.getSecond();
       group.add(fileInfo);
 
       // change direction when at the end or the beginning
@@ -868,7 +868,8 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
         groups.size());
       int mappersPerGroup = groups.isEmpty() ? 1 : Math.max(mappers / groups.size(), 1);
       LOG.info(
-        "Splitting each group into {} InputSplits, to achieve closest possible amount of mappers to target of {}",
+        "Splitting each group into {} InputSplits, "
+          + "to achieve closest possible amount of mappers to target of {}",
         mappersPerGroup, mappers);
 
       Collection<List<Pair<SnapshotFileInfo, Long>>> balancedGroups =
@@ -911,9 +912,8 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
         }
         this.locations =
           fileLocationResolver.getLocationsForInputFiles(snapshotFiles).toArray(new String[0]);
-        LOG.trace(
-          "This ExportSnapshotInputSplit has files {} of collective size {}, with location hints: {}",
-          files, length, locations);
+        LOG.trace("This ExportSnapshotInputSplit has files {} of collective size {}, "
+          + "with location hints: {}", files, length, locations);
       }
 
       private List<Pair<BytesWritable, Long>> getSplitKeys() {
