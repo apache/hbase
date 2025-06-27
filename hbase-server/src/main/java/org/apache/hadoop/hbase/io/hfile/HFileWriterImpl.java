@@ -921,7 +921,7 @@ public class HFileWriterImpl implements HFile.Writer {
    * to include the timestamp of this key
    */
   private void trackTimestamps(final ExtendedCell cell) {
-    if (Cell.Type.Put == cell.getType()) {
+    if (KeyValue.Type.Put == KeyValue.Type.codeToType(cell.getTypeByte())) {
       earliestPutTs = Math.min(earliestPutTs, cell.getTimestamp());
     }
     timeRangeTracker.includeTimestamp(cell);
