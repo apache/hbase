@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.backup;
 
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONF_CONTINUOUS_BACKUP_WAL_DIR;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONTINUOUS_BACKUP_REPLICATION_PEER;
-import static org.apache.hadoop.hbase.backup.replication.BackupFileSystemManager.BULKLOAD_FILES_DIR;
 import static org.apache.hadoop.hbase.backup.replication.BackupFileSystemManager.WALS_DIR;
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.DATE_FORMAT;
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.ONE_DAY_IN_MILLISECONDS;
@@ -165,7 +164,7 @@ public class TestBackupDeleteWithCleanup extends TestBackupBase {
 
     // Step 6: Verify that the backup WAL directory is empty
     assertTrue("WAL backup directory should be empty after force delete",
-      areWalAndBulkloadDirsEmpty(conf1, backupWalDir.toString()));
+      isWalDirsEmpty(conf1, backupWalDir.toString()));
 
     // Step 7: Take new full backup with continuous backup enabled
     String backupIdContinuous = fullTableBackupWithContinuous(Lists.newArrayList(table1));
@@ -190,35 +189,28 @@ public class TestBackupDeleteWithCleanup extends TestBackupBase {
   public static void setupBackupFolders(FileSystem fs, Path backupWalDir, long currentTime)
     throws IOException {
     Path walsDir = new Path(backupWalDir, WALS_DIR);
-    Path bulkLoadDir = new Path(backupWalDir, BULKLOAD_FILES_DIR);
 
     fs.mkdirs(walsDir);
-    fs.mkdirs(bulkLoadDir);
 
     SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
 
     for (int i = 0; i < 5; i++) {
       String dateStr = dateFormat.format(new Date(currentTime - (i * ONE_DAY_IN_MILLISECONDS)));
       fs.mkdirs(new Path(walsDir, dateStr));
-      fs.mkdirs(new Path(bulkLoadDir, dateStr));
     }
   }
 
   private static void verifyBackupCleanup(FileSystem fs, Path backupWalDir, long currentTime)
     throws IOException {
     Path walsDir = new Path(backupWalDir, WALS_DIR);
-    Path bulkLoadDir = new Path(backupWalDir, BULKLOAD_FILES_DIR);
     SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
 
     // Expect folders older than 3 days to be deleted
     for (int i = 3; i < 5; i++) {
       String oldDateStr = dateFormat.format(new Date(currentTime - (i * ONE_DAY_IN_MILLISECONDS)));
       Path walPath = new Path(walsDir, oldDateStr);
-      Path bulkLoadPath = new Path(bulkLoadDir, oldDateStr);
       assertFalse("Old WAL directory (" + walPath + ") should be deleted, but it exists!",
         fs.exists(walPath));
-      assertFalse("Old BulkLoad directory (" + bulkLoadPath + ") should be deleted, but it exists!",
-        fs.exists(bulkLoadPath));
     }
 
     // Expect folders within the last 3 days to exist
@@ -226,13 +218,9 @@ public class TestBackupDeleteWithCleanup extends TestBackupBase {
       String recentDateStr =
         dateFormat.format(new Date(currentTime - (i * ONE_DAY_IN_MILLISECONDS)));
       Path walPath = new Path(walsDir, recentDateStr);
-      Path bulkLoadPath = new Path(bulkLoadDir, recentDateStr);
 
       assertTrue("Recent WAL directory (" + walPath + ") should exist, but it is missing!",
         fs.exists(walPath));
-      assertTrue(
-        "Recent BulkLoad directory (" + bulkLoadPath + ") should exist, but it is missing!",
-        fs.exists(bulkLoadPath));
     }
   }
 
@@ -276,16 +264,15 @@ public class TestBackupDeleteWithCleanup extends TestBackupBase {
       peer -> peer.getPeerId().equals(CONTINUOUS_BACKUP_REPLICATION_PEER) && peer.isEnabled());
   }
 
-  private static boolean areWalAndBulkloadDirsEmpty(Configuration conf, String backupWalDir)
+  private static boolean isWalDirsEmpty(Configuration conf, String backupWalDir)
     throws IOException {
     BackupFileSystemManager manager =
       new BackupFileSystemManager(CONTINUOUS_BACKUP_REPLICATION_PEER, conf, backupWalDir);
 
     FileSystem fs = manager.getBackupFs();
     Path walDir = manager.getWalsDir();
-    Path bulkloadDir = manager.getBulkLoadFilesDir();
 
-    return isDirectoryEmpty(fs, walDir) && isDirectoryEmpty(fs, bulkloadDir);
+    return isDirectoryEmpty(fs, walDir);
   }
 
   private static boolean isDirectoryEmpty(FileSystem fs, Path dirPath) throws IOException {

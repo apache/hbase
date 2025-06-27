@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.backup.impl;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONF_CONTINUOUS_BACKUP_WAL_DIR;
 import static org.apache.hadoop.hbase.backup.TestBackupDeleteWithCleanup.logDirectoryStructure;
 import static org.apache.hadoop.hbase.backup.TestBackupDeleteWithCleanup.setupBackupFolders;
-import static org.apache.hadoop.hbase.backup.replication.BackupFileSystemManager.BULKLOAD_FILES_DIR;
 import static org.apache.hadoop.hbase.backup.replication.BackupFileSystemManager.WALS_DIR;
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.DATE_FORMAT;
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.ONE_DAY_IN_MILLISECONDS;
@@ -135,7 +134,7 @@ public class TestBackupCommands extends TestBackupBase {
     fs.mkdirs(backupWalDir);
 
     long currentTime = EnvironmentEdgeManager.getDelegate().currentTime();
-    setupBackupFolders(fs, backupWalDir, currentTime); // Create 5 days of WAL/bulk folders
+    setupBackupFolders(fs, backupWalDir, currentTime); // Create 5 days of WALs folders
 
     logDirectoryStructure(fs, backupWalDir, "Before cleanup:");
 
@@ -155,7 +154,6 @@ public class TestBackupCommands extends TestBackupBase {
   private static void verifyCleanupOutcome(FileSystem fs, Path backupWalDir, long currentTime,
     long cutoffTime) throws IOException {
     Path walsDir = new Path(backupWalDir, WALS_DIR);
-    Path bulkLoadDir = new Path(backupWalDir, BULKLOAD_FILES_DIR);
     SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
     dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
 
@@ -163,14 +161,11 @@ public class TestBackupCommands extends TestBackupBase {
       long dayTime = currentTime - (i * ONE_DAY_IN_MILLISECONDS);
       String dayDir = dateFormat.format(new Date(dayTime));
       Path walPath = new Path(walsDir, dayDir);
-      Path bulkPath = new Path(bulkLoadDir, dayDir);
 
       if (dayTime + ONE_DAY_IN_MILLISECONDS - 1 < cutoffTime) {
         assertFalse("Old WAL dir should be deleted: " + walPath, fs.exists(walPath));
-        assertFalse("Old BulkLoad dir should be deleted: " + bulkPath, fs.exists(bulkPath));
       } else {
         assertTrue("Recent WAL dir should exist: " + walPath, fs.exists(walPath));
-        assertTrue("Recent BulkLoad dir should exist: " + bulkPath, fs.exists(bulkPath));
       }
     }
   }

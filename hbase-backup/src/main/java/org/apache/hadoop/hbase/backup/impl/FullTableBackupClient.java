@@ -188,14 +188,6 @@ public class FullTableBackupClient extends TableBackupClient {
     // set overall backup status: complete. Here we make sure to complete the backup.
     // After this checkpoint, even if entering cancel process, will let the backup finished
     backupInfo.setState(BackupState.COMPLETE);
-
-    if (!conf.getBoolean("hbase.replication.bulkload.enabled", false)) {
-      System.out.println("NOTE: Bulkload replication is not enabled. "
-        + "Bulk loaded files will not be backed up as part of continuous backup. "
-        + "To ensure bulk loaded files are included in the backup, please enable bulkload replication "
-        + "(hbase.replication.bulkload.enabled=true) and configure other necessary settings "
-        + "to properly enable bulkload replication.");
-    }
   }
 
   private void handleNonContinuousBackup(Admin admin) throws IOException {
