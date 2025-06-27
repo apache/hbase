@@ -440,6 +440,8 @@ public class BackupInfo implements Comparable<BackupInfo> {
     builder.setBackupType(BackupProtos.BackupType.valueOf(getType().name()));
     builder.setWorkersNumber(workers);
     builder.setBandwidth(bandwidth);
+    builder.setContinuousBackupEnabled(isContinuousBackupEnabled());
+    builder.setIncrCommittedWalTs(getIncrCommittedWalTs());
     return builder.build();
   }
 
@@ -535,6 +537,8 @@ public class BackupInfo implements Comparable<BackupInfo> {
     context.setType(BackupType.valueOf(proto.getBackupType().name()));
     context.setWorkers(proto.getWorkersNumber());
     context.setBandwidth(proto.getBandwidth());
+    context.setContinuousBackupEnabled(proto.getContinuousBackupEnabled());
+    context.setIncrCommittedWalTs(proto.getIncrCommittedWalTs());
     return context;
   }
 
@@ -578,6 +582,12 @@ public class BackupInfo implements Comparable<BackupInfo> {
       cal.setTimeInMillis(getCompleteTs());
       date = cal.getTime();
       sb.append("End time=" + date).append(",");
+      if (getType() == BackupType.INCREMENTAL) {
+        cal = Calendar.getInstance();
+        cal.setTimeInMillis(getIncrCommittedWalTs());
+        date = cal.getTime();
+        sb.append("Committed WAL time for incremental backup=" + date).append(",");
+      }
     }
     sb.append("Progress=" + getProgress() + "%");
     sb.append("}");
