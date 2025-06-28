@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.HConstants.EMPTY_BYTE_ARRAY;
+import static org.apache.hadoop.hbase.client.metrics.ScanMetrics.MILLIS_BETWEEN_NEXTS_METRIC_NAME;
+import static org.apache.hadoop.hbase.client.metrics.ScanMetrics.NOT_SERVING_REGION_EXCEPTION_METRIC_NAME;
 import static org.apache.hadoop.hbase.client.metrics.ScanMetrics.REGIONS_SCANNED_METRIC_NAME;
 import static org.apache.hadoop.hbase.client.metrics.ScanMetrics.RPC_RETRIES_METRIC_NAME;
 import static org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME;
@@ -36,7 +38,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -61,7 +63,7 @@ public class TestTableScanMetrics extends FromClientSideBase {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestTableScanMetrics.class);
 
-  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   private static final TableName TABLE_NAME =
     TableName.valueOf(TestTableScanMetrics.class.getSimpleName());
@@ -307,7 +309,7 @@ public class TestTableScanMetrics extends FromClientSideBase {
         // Merge leftover scan metrics
         mergeScanMetricsByRegion(scanMetrics.collectMetricsByRegion(),
           concurrentScanMetricsByRegion);
-        Assert.assertEquals(HBaseTestingUtil.ROWS.length, rowsScanned.get());
+        Assert.assertEquals(HBaseTestingUtility.ROWS.length, rowsScanned.get());
       }
 
       Map<ScanMetricsRegionInfo, Map<String, Long>> expectedScanMetricsByRegion;
@@ -324,12 +326,14 @@ public class TestTableScanMetrics extends FromClientSideBase {
           Assert.assertFalse(r.isEmpty());
           rowsScanned++;
         }
-        Assert.assertEquals(HBaseTestingUtil.ROWS.length, rowsScanned);
+        Assert.assertEquals(HBaseTestingUtility.ROWS.length, rowsScanned);
         expectedScanMetricsByRegion = scanMetrics.collectMetricsByRegion();
         for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry : expectedScanMetricsByRegion
           .entrySet()) {
           ScanMetricsRegionInfo scanMetricsRegionInfo = entry.getKey();
           Map<String, Long> metricsMap = entry.getValue();
+          // Remove millis between nexts metric as it is not deterministic
+          metricsMap.remove(MILLIS_BETWEEN_NEXTS_METRIC_NAME);
           Assert.assertNotNull(scanMetricsRegionInfo.getEncodedRegionName());
           Assert.assertNotNull(scanMetricsRegionInfo.getServerName());
           Assert.assertEquals(1, (long) metricsMap.get(REGIONS_SCANNED_METRIC_NAME));
@@ -360,7 +364,7 @@ public class TestTableScanMetrics extends FromClientSideBase {
       byte[] ddc = Bytes.toBytes("ddc");
       long expectedCountOfRowsScannedInMovedRegion = 0;
       // ROWS is the data loaded by loadTable()
-      for (byte[] row : HBaseTestingUtil.ROWS) {
+      for (byte[] row : HBaseTestingUtility.ROWS) {
         if (Bytes.compareTo(row, bbb) >= 0 && Bytes.compareTo(row, ccc) < 0) {
           expectedCountOfRowsScannedInMovedRegion++;
         }
@@ -401,7 +405,8 @@ public class TestTableScanMetrics extends FromClientSideBase {
             actualCountOfRowsScannedInMovedRegion += rowsScanned;
             serversForMovedRegion.add(scanMetricsRegionInfo.getServerName());
 
-            Assert.assertEquals(1, (long) metricsMap.get(RPC_RETRIES_METRIC_NAME));
+            Assert.assertTrue(metricsMap.get(RPC_RETRIES_METRIC_NAME) == 1
+              || metricsMap.get(NOT_SERVING_REGION_EXCEPTION_METRIC_NAME) == 1);
           }
           Assert.assertEquals(1, (long) metricsMap.get(REGIONS_SCANNED_METRIC_NAME));
         }
@@ -427,7 +432,7 @@ public class TestTableScanMetrics extends FromClientSideBase {
       byte[] ccb = Bytes.toBytes("ccb");
       long expectedCountOfRowsScannedInRegion = 0;
       // ROWS is the data loaded by loadTable()
-      for (byte[] row : HBaseTestingUtil.ROWS) {
+      for (byte[] row : HBaseTestingUtility.ROWS) {
         if (Bytes.compareTo(row, bbb) >= 0 && Bytes.compareTo(row, ccb) <= 0) {
           expectedCountOfRowsScannedInRegion++;
         }
@@ -456,6 +461,7 @@ public class TestTableScanMetrics extends FromClientSideBase {
 
         long actualCountOfRowsScannedInRegion = 0;
         long rpcRetiesCount = 0;
+        long notServingRegionExceptionCount = 0;
         Set<String> splitRegionRes = new HashSet<>();
 
         // 1 entry each for parent and two child regions
@@ -471,11 +477,15 @@ public class TestTableScanMetrics extends FromClientSideBase {
           if (metricsMap.get(RPC_RETRIES_METRIC_NAME) == 1) {
             rpcRetiesCount++;
           }
+          if (metricsMap.get(NOT_SERVING_REGION_EXCEPTION_METRIC_NAME) == 1) {
+            notServingRegionExceptionCount++;
+          }
 
           Assert.assertEquals(1, (long) metricsMap.get(REGIONS_SCANNED_METRIC_NAME));
         }
         Assert.assertEquals(expectedCountOfRowsScannedInRegion, actualCountOfRowsScannedInRegion);
-        Assert.assertEquals(2, rpcRetiesCount);
+        Assert.assertEquals(1, rpcRetiesCount);
+        Assert.assertEquals(1, notServingRegionExceptionCount);
         Assert.assertEquals(expectedSplitRegionRes, splitRegionRes);
       }
     } finally {
@@ -496,7 +506,7 @@ public class TestTableScanMetrics extends FromClientSideBase {
       byte[] ddc = Bytes.toBytes("ddc");
       long expectedCountOfRowsScannedInRegions = 0;
       // ROWS is the data loaded by loadTable()
-      for (byte[] row : HBaseTestingUtil.ROWS) {
+      for (byte[] row : HBaseTestingUtility.ROWS) {
         if (Bytes.compareTo(row, bbb) >= 0 && Bytes.compareTo(row, ddc) <= 0) {
           expectedCountOfRowsScannedInRegions++;
         }
@@ -540,9 +550,10 @@ public class TestTableScanMetrics extends FromClientSideBase {
           mergeRegionsRes.add(scanMetricsRegionInfo.getEncodedRegionName());
           if (scanMetricsRegionInfo.getEncodedRegionName().equals(mergedRegionEncodedName)) {
             containsMergedRegionInScanMetrics = true;
+            Assert.assertEquals(1, (long) metricsMap.get(RPC_RETRIES_METRIC_NAME));
+          } else {
+            Assert.assertEquals(1, (long) metricsMap.get(NOT_SERVING_REGION_EXCEPTION_METRIC_NAME));
           }
-
-          Assert.assertEquals(1, (long) metricsMap.get(RPC_RETRIES_METRIC_NAME));
           Assert.assertEquals(1, (long) metricsMap.get(REGIONS_SCANNED_METRIC_NAME));
         }
         Assert.assertEquals(expectedCountOfRowsScannedInRegions, actualCountOfRowsScannedInRegions);
@@ -578,6 +589,8 @@ public class TestTableScanMetrics extends FromClientSideBase {
     for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry : srcMap.entrySet()) {
       ScanMetricsRegionInfo scanMetricsRegionInfo = entry.getKey();
       Map<String, Long> metricsMap = entry.getValue();
+      // Remove millis between nexts metric as it is not deterministic
+      metricsMap.remove(MILLIS_BETWEEN_NEXTS_METRIC_NAME);
       if (dstMap.containsKey(scanMetricsRegionInfo)) {
         Map<String, Long> dstMetricsMap = dstMap.get(scanMetricsRegionInfo);
         for (Map.Entry<String, Long> metricEntry : metricsMap.entrySet()) {
@@ -636,7 +649,7 @@ public class TestTableScanMetrics extends FromClientSideBase {
 
     // Assert region is ready for split
     Assert.assertEquals(initialTopServerName, initialBottomServerName);
-    Assert.assertEquals(initialEncodedTopRegionName, initialEncodedBottomRegionName);
+    Assert.assertTrue(Bytes.equals(initialEncodedTopRegionName, initialEncodedBottomRegionName));
 
     FutureUtils.get(admin.splitRegionAsync(initialEncodedTopRegionName, splitKey));
 
@@ -646,9 +659,9 @@ public class TestTableScanMetrics extends FromClientSideBase {
     byte[] finalEncodedBottomRegionName = bottomLoc.getRegion().getEncodedNameAsBytes();
 
     // Assert that region split is complete
-    Assert.assertNotEquals(finalEncodedTopRegionName, finalEncodedBottomRegionName);
-    Assert.assertNotEquals(initialEncodedTopRegionName, finalEncodedBottomRegionName);
-    Assert.assertNotEquals(initialEncodedBottomRegionName, finalEncodedTopRegionName);
+    Assert.assertFalse(Bytes.equals(finalEncodedTopRegionName, finalEncodedBottomRegionName));
+    Assert.assertFalse(Bytes.equals(initialEncodedTopRegionName, finalEncodedBottomRegionName));
+    Assert.assertFalse(Bytes.equals(initialEncodedBottomRegionName, finalEncodedTopRegionName));
 
     return Arrays.asList(initialEncodedTopRegionName, finalEncodedTopRegionName,
       finalEncodedBottomRegionName);
@@ -675,7 +688,7 @@ public class TestTableScanMetrics extends FromClientSideBase {
     String initialBottomRegionStartKey = Bytes.toString(bottomLoc.getRegion().getStartKey());
 
     // Assert that regions are ready to be merged
-    Assert.assertNotEquals(initialEncodedTopRegionName, initialEncodedBottomRegionName);
+    Assert.assertFalse(Bytes.equals(initialEncodedTopRegionName, initialEncodedBottomRegionName));
     Assert.assertEquals(initialBottomRegionStartKey, initialTopRegionEndKey);
 
     FutureUtils.get(admin.mergeRegionsAsync(
@@ -687,9 +700,9 @@ public class TestTableScanMetrics extends FromClientSideBase {
     byte[] finalEncodedBottomRegionName = bottomLoc.getRegion().getEncodedNameAsBytes();
 
     // Assert regions have been merges successfully
-    Assert.assertEquals(finalEncodedTopRegionName, finalEncodedBottomRegionName);
-    Assert.assertNotEquals(initialEncodedTopRegionName, finalEncodedTopRegionName);
-    Assert.assertNotEquals(initialEncodedBottomRegionName, finalEncodedTopRegionName);
+    Assert.assertTrue(Bytes.equals(finalEncodedTopRegionName, finalEncodedBottomRegionName));
+    Assert.assertFalse(Bytes.equals(initialEncodedTopRegionName, finalEncodedTopRegionName));
+    Assert.assertFalse(Bytes.equals(initialEncodedBottomRegionName, finalEncodedTopRegionName));
 
     return Arrays.asList(initialEncodedTopRegionName, initialEncodedBottomRegionName,
       finalEncodedTopRegionName);

@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.io.FileNotFoundException;
 import static org.apache.hadoop.hbase.client.metrics.ScanMetrics.REGIONS_SCANNED_METRIC_NAME;
 import static org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
@@ -282,7 +282,7 @@ public class TestTableSnapshotScanner {
     ScanMetrics scanMetrics = createTableSnapshotScannerAndGetScanMetrics(true, false, yyy);
     Assert.assertNotNull(scanMetrics);
     int rowsScanned = 0;
-    for (byte[] row : HBaseTestingUtil.ROWS) {
+    for (byte[] row : HBaseTestingUtility.ROWS) {
       if (Bytes.compareTo(row, bbb) >= 0 && Bytes.compareTo(row, yyy) < 0) {
         rowsScanned++;
       }

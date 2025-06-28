@@ -67,7 +67,10 @@ public class RegionScanMetricsData {
     if (scanMetricsRegionInfo == ScanMetricsRegionInfo.EMPTY_SCAN_METRICS_REGION_INFO) {
       scanMetricsRegionInfo = new ScanMetricsRegionInfo(encodedRegionName, serverName);
     } else {
-      throw new UnsupportedOperationException("ScanMetricsRegionInfo has already been initialized");
+      throw new UnsupportedOperationException(
+        "ScanMetricsRegionInfo has already been initialized to " + scanMetricsRegionInfo
+          + " and cannot be re-initialized to region: " + encodedRegionName + " and server: "
+          + serverName);
     }
   }
 
