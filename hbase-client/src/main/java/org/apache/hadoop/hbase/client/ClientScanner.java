@@ -137,6 +137,11 @@ public abstract class ClientScanner extends AbstractClientScanner {
     this.useScannerTimeoutForNextCalls = connectionConfiguration.isUseScannerTimeoutForNextCalls();
     this.requestAttributes = requestAttributes;
 
+    if (scan.isScanMetricsByRegionEnabled() && scan.getConsistency() == Consistency.TIMELINE) {
+      scan.setEnableScanMetricsByRegion(false);
+      scanForMetrics.setEnableScanMetricsByRegion(false);
+      LOG.warn("Scan metrics by region is not supported for timeline consistency in HBase 2");
+    }
     // check if application wants to collect scan metrics
     initScanMetrics(scan);
 
@@ -261,7 +266,7 @@ public abstract class ClientScanner extends AbstractClientScanner {
     // clear the current region, we will set a new value to it after the first call of the new
     // callable.
     this.currentRegion = null;
-    if (scan.isScanMetricsByRegionEnabled()) {
+    if (isScanMetricsByRegionEnabled()) {
       scanMetrics.moveToNextRegion();
     }
     this.callable = new ScannerCallableWithReplicas(getTable(), getConnection(),
@@ -461,10 +466,8 @@ public abstract class ClientScanner extends AbstractClientScanner {
         if (callable.switchedToADifferentReplica()) {
           // Any accumulated partial results are no longer valid since the callable will
           // openScanner with the correct startkey and we must pick up from there
-          incRegionCountMetrics(scanMetrics);
           scanResultCache.clear();
           this.currentRegion = callable.getHRegionInfo();
-          initScanMetricsRegionInfo();
         }
         retryAfterOutOfOrderException.setValue(true);
       } catch (DoNotRetryIOException e) {
@@ -633,7 +636,7 @@ public abstract class ClientScanner extends AbstractClientScanner {
   }
 
   private void initScanMetricsRegionInfo() {
-    if (scan.isScanMetricsByRegionEnabled()) {
+    if (isScanMetricsByRegionEnabled()) {
       HRegionLocation location = callable.getLocation();
       String encodedRegionName = location.getRegion().getEncodedName();
       scanMetrics.initScanMetricsRegionInfo(encodedRegionName, location.getServerName());

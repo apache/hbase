@@ -819,8 +819,9 @@ public class TestReplicasClient {
       scan.withStartRow(b1, true);
       scan.withStopRow(b1, true);
       scan.setConsistency(Consistency.TIMELINE);
-      // Assert row was read from secondary replica along with asserting scan metrics by region
-      assertScanMetrics(scan, hriSecondary, true);
+      // Assert row was read from secondary replica along with asserting no scan metrics by region
+      // for timeline consistency
+      assertScanMetrics(scan, null, true);
       LOG.info("Scanned secondary replica ");
     } finally {
       SlowMeCopro.getPrimaryCdl().get().countDown();
@@ -839,16 +840,20 @@ public class TestReplicasClient {
       }
       Map<ScanMetricsRegionInfo, Map<String, Long>> scanMetricsByRegion =
         rs.getScanMetrics().collectMetricsByRegion(false);
-      Assert.assertEquals(1, scanMetricsByRegion.size());
-      for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry : scanMetricsByRegion
-        .entrySet()) {
-        ScanMetricsRegionInfo scanMetricsRegionInfo = entry.getKey();
-        Map<String, Long> metrics = entry.getValue();
-        Assert.assertEquals(rsServerName, scanMetricsRegionInfo.getServerName());
-        Assert.assertEquals(regionInfo.getEncodedName(),
-          scanMetricsRegionInfo.getEncodedRegionName());
-        Assert.assertEquals(1, (long) metrics.get(REGIONS_SCANNED_METRIC_NAME));
-        Assert.assertEquals(1, (long) metrics.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME));
+      if (isStale) {
+        Assert.assertTrue(scanMetricsByRegion.isEmpty());
+      } else {
+        Assert.assertEquals(1, scanMetricsByRegion.size());
+        for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry : scanMetricsByRegion
+          .entrySet()) {
+          ScanMetricsRegionInfo scanMetricsRegionInfo = entry.getKey();
+          Map<String, Long> metrics = entry.getValue();
+          Assert.assertEquals(rsServerName, scanMetricsRegionInfo.getServerName());
+          Assert.assertEquals(regionInfo.getEncodedName(),
+            scanMetricsRegionInfo.getEncodedRegionName());
+          Assert.assertEquals(1, (long) metrics.get(REGIONS_SCANNED_METRIC_NAME));
+          Assert.assertEquals(1, (long) metrics.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME));
+        }
       }
     }
   }
