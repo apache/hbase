@@ -644,7 +644,6 @@ public class TestHFileBlockIndex {
             RandomKeyValueUtil.randomValue(rand));
           byte[] k = kv.getKey();
           writer.append(kv);
-          System.out.println("i=" + i + "size: " + PrivateCellUtil.estimatedSerializedSizeOf(kv));
           keys[i] = k;
           values[i] = CellUtil.cloneValue(kv);
           keyStrSet.add(Bytes.toStringBinary(k));
