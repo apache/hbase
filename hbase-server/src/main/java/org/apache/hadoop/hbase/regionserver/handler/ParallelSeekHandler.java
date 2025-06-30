@@ -60,7 +60,6 @@ public class ParallelSeekHandler extends EventHandler {
   @Override
   public void process() {
     try {
-      LOG.info("Doing parallel seeks");
       ThreadLocalServerSideScanMetrics.setScanMetricsEnabled(isScanMetricsEnabled);
       if (isScanMetricsEnabled) {
         ThreadLocalServerSideScanMetrics.reset();
