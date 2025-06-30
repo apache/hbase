@@ -38,7 +38,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.function.BiConsumer;
-import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -166,7 +165,8 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
     static final Option CHMOD =
       new Option(null, "chmod", true, "Change the permission of the files to the specified one.");
     static final Option MAPPERS = new Option(null, "mappers", true,
-      "Number of mappers to use during the copy (mapreduce.job.maps).");
+      "Number of mappers to use during the copy (mapreduce.job.maps). "
+        + "If you provide a --custom-file-grouper, then --mappers is interpreted as the number of mappers per group.");
     static final Option BANDWIDTH =
       new Option(null, "bandwidth", true, "Limit bandwidth to this value in MB/second.");
     static final Option RESET_TTL =
@@ -242,7 +242,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
     Set<String> getLocationsForInputFiles(final Collection<Pair<SnapshotFileInfo, Long>> files);
   }
 
-  private static class NoopFileLocationResolver implements FileLocationResolver {
+  static class NoopFileLocationResolver implements FileLocationResolver {
     @Override
     public Set<String> getLocationsForInputFiles(Collection<Pair<SnapshotFileInfo, Long>> files) {
       return ImmutableSet.of();
@@ -834,7 +834,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
     return fileGroups;
   }
 
-  private static class ExportSnapshotInputFormat extends InputFormat<BytesWritable, NullWritable> {
+  static class ExportSnapshotInputFormat extends InputFormat<BytesWritable, NullWritable> {
     @Override
     public RecordReader<BytesWritable, NullWritable> createRecordReader(InputSplit split,
       TaskAttemptContext tac) throws IOException, InterruptedException {
@@ -849,8 +849,28 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
 
       List<Pair<SnapshotFileInfo, Long>> snapshotFiles = getSnapshotFiles(conf, fs, snapshotDir);
 
+      Collection<List<Pair<SnapshotFileInfo, Long>>> balancedGroups =
+        groupFilesForSplits(conf, snapshotFiles);
+
+      Class<? extends FileLocationResolver> fileLocationResolverClass =
+        conf.getClass(CONF_INPUT_FILE_LOCATION_RESOLVER_CLASS, NoopFileLocationResolver.class,
+          FileLocationResolver.class);
+      FileLocationResolver fileLocationResolver =
+        ReflectionUtils.newInstance(fileLocationResolverClass, conf);
+      LOG.info("FileLocationResolver {} will provide location metadata for each InputSplit",
+        fileLocationResolverClass);
+
+      List<InputSplit> splits = new ArrayList<>(balancedGroups.size());
+      for (Collection<Pair<SnapshotFileInfo, Long>> files : balancedGroups) {
+        splits.add(new ExportSnapshotInputSplit(files, fileLocationResolver));
+      }
+      return splits;
+    }
+
+    Collection<List<Pair<SnapshotFileInfo, Long>>> groupFilesForSplits(Configuration conf,
+      List<Pair<SnapshotFileInfo, Long>> snapshotFiles) {
       int mappers = conf.getInt(CONF_NUM_SPLITS, 0);
-      if (mappers == 0 && snapshotFiles.size() > 0) {
+      if (mappers == 0 && !snapshotFiles.isEmpty()) {
         mappers = 1 + (snapshotFiles.size() / conf.getInt(CONF_MAP_GROUP, 10));
         mappers = Math.min(mappers, snapshotFiles.size());
         conf.setInt(CONF_NUM_SPLITS, mappers);
@@ -872,26 +892,12 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
           + "to achieve closest possible amount of mappers to target of {}",
         mappersPerGroup, mappers);
 
-      Collection<List<Pair<SnapshotFileInfo, Long>>> balancedGroups =
-        groups.stream().map(g -> getBalancedSplits(g, mappersPerGroup)).flatMap(Collection::stream)
-          .collect(Collectors.toList());
-
-      Class<? extends FileLocationResolver> fileLocationResolverClass =
-        conf.getClass(CONF_INPUT_FILE_LOCATION_RESOLVER_CLASS, NoopFileLocationResolver.class,
-          FileLocationResolver.class);
-      FileLocationResolver fileLocationResolver =
-        ReflectionUtils.newInstance(fileLocationResolverClass, conf);
-      LOG.info("FileLocationResolver {} will provide location metadata for each InputSplit",
-        fileLocationResolverClass);
-
-      List<InputSplit> splits = new ArrayList<>(balancedGroups.size());
-      for (Collection<Pair<SnapshotFileInfo, Long>> files : balancedGroups) {
-        splits.add(new ExportSnapshotInputSplit(files, fileLocationResolver));
-      }
-      return splits;
+      // Within each group, create splits of equal size. Groups are not mixed together.
+      return groups.stream().map(g -> getBalancedSplits(g, mappersPerGroup))
+        .flatMap(Collection::stream).toList();
     }
 
-    private static class ExportSnapshotInputSplit extends InputSplit implements Writable {
+    static class ExportSnapshotInputSplit extends InputSplit implements Writable {
 
       private List<Pair<BytesWritable, Long>> files;
       private String[] locations;
