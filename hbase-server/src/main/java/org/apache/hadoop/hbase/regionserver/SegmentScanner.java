@@ -27,7 +27,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.metrics.ThreadLocalScanMetrics;
+import org.apache.hadoop.hbase.client.metrics.ThreadLocalServerSideScanMetrics;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -337,16 +337,16 @@ public class SegmentScanner implements KeyValueScanner {
    */
   protected void updateCurrent() {
     ExtendedCell next = null;
-    boolean isScanMetricsEnabled = ThreadLocalScanMetrics.isScanMetricsEnabled();
+    boolean isScanMetricsEnabled = ThreadLocalServerSideScanMetrics.isScanMetricsEnabled();
 
     try {
       while (iter.hasNext()) {
         next = iter.next();
         if (isScanMetricsEnabled) {
-          // Can this add too much overhead as being done for each cell as Iterator.next() is
+          // Can this add too much overhead on being done for each cell as Iterator.next() is
           // called for each cell?
           // long startTime = System.nanoTime();
-          ThreadLocalScanMetrics.addBytesReadFromMemstore(Segment.getCellLength(next));
+          ThreadLocalServerSideScanMetrics.addBytesReadFromMemstore(Segment.getCellLength(next));
           // long endTime = System.nanoTime();
           // System.out
           //   .println("Time taken to add bytes read from memstore: " + (endTime - startTime));

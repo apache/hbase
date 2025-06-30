@@ -21,8 +21,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
-public final class ThreadLocalScanMetrics {
-  private ThreadLocalScanMetrics() {
+public final class ThreadLocalServerSideScanMetrics {
+  private ThreadLocalServerSideScanMetrics() {
   }
 
   private static final ThreadLocal<Boolean> isScanMetricsEnabled = new ThreadLocal<>() {

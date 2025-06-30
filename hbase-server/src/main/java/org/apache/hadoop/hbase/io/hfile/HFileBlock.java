@@ -42,7 +42,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.client.metrics.ThreadLocalScanMetrics;
+import org.apache.hadoop.hbase.client.metrics.ThreadLocalServerSideScanMetrics;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
@@ -1242,6 +1242,7 @@ public class HFileBlock implements Cacheable {
    * Iterator for reading {@link HFileBlock}s in load-on-open-section, such as root data index
    * block, meta index block, file info block etc.
    */
+  @InterfaceAudience.Private
   public interface BlockIterator {
     /**
      * Get the next block, or null if there are no more blocks to iterate.
@@ -1266,6 +1267,7 @@ public class HFileBlock implements Cacheable {
   }
 
   /** An HFile block reader with iteration ability. */
+  @InterfaceAudience.Private
   public interface FSReader {
     /**
      * Reads the block at the given offset in the file with the given on-disk size and uncompressed
@@ -1739,7 +1741,7 @@ public class HFileBlock implements Cacheable {
       // checksums. Can change with circumstances. The below flag is whether the
       // file has support for checksums (version 2+).
       boolean checksumSupport = this.fileContext.isUseHBaseChecksum();
-      boolean isScanMetricsEnabled = ThreadLocalScanMetrics.isScanMetricsEnabled();
+      boolean isScanMetricsEnabled = ThreadLocalServerSideScanMetrics.isScanMetricsEnabled();
       long startTime = EnvironmentEdgeManager.currentTime();
       if (onDiskSizeWithHeader == -1) {
         // The caller does not know the block size. Need to get it from the header. If header was
@@ -1757,7 +1759,7 @@ public class HFileBlock implements Cacheable {
           readAtOffset(is, headerBuf, hdrSize, false, offset, pread);
           headerBuf.rewind();
           if (isScanMetricsEnabled) {
-            ThreadLocalScanMetrics.addBytesReadFromFs(hdrSize);
+            ThreadLocalServerSideScanMetrics.addBytesReadFromFs(hdrSize);
           }
         }
         onDiskSizeWithHeader = getOnDiskSizeWithHeader(headerBuf, checksumSupport);
@@ -1809,7 +1811,7 @@ public class HFileBlock implements Cacheable {
         if (isScanMetricsEnabled) {
           int bytesRead =
             (onDiskSizeWithHeader - preReadHeaderSize) + (readNextHeader ? hdrSize : 0);
-          ThreadLocalScanMetrics.addBytesReadFromFs(bytesRead);
+          ThreadLocalServerSideScanMetrics.addBytesReadFromFs(bytesRead);
         }
 
         // the call to validateChecksum for this block excludes the next block header over-read, so

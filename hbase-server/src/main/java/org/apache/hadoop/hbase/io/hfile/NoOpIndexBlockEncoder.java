@@ -128,6 +128,7 @@ public class NoOpIndexBlockEncoder implements HFileIndexBlockEncoder {
     return getClass().getSimpleName();
   }
 
+  @InterfaceAudience.Private
   public static class NoOpEncodedSeeker implements EncodedSeeker {
 
     protected long[] blockOffsets;

@@ -21,7 +21,7 @@ import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.hbase.ExtendedCell;
-import org.apache.hadoop.hbase.client.metrics.ThreadLocalScanMetrics;
+import org.apache.hadoop.hbase.client.metrics.ThreadLocalServerSideScanMetrics;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
@@ -51,24 +51,24 @@ public class ParallelSeekHandler extends EventHandler {
     this.keyValue = keyValue;
     this.readPoint = readPoint;
     this.latch = latch;
-    this.isScanMetricsEnabled = ThreadLocalScanMetrics.isScanMetricsEnabled();
-    this.bytesReadFromFs = ThreadLocalScanMetrics.getBytesReadFromFsCounter();
-    this.bytesReadFromBlockCache = ThreadLocalScanMetrics.getBytesReadFromBlockCacheCounter();
+    this.isScanMetricsEnabled = ThreadLocalServerSideScanMetrics.isScanMetricsEnabled();
+    this.bytesReadFromFs = ThreadLocalServerSideScanMetrics.getBytesReadFromFsCounter();
+    this.bytesReadFromBlockCache = ThreadLocalServerSideScanMetrics.getBytesReadFromBlockCacheCounter();
   }
 
   @Override
   public void process() {
     try {
       LOG.info("Doing parallel seeks");
-      ThreadLocalScanMetrics.setScanMetricsEnabled(isScanMetricsEnabled);
+      ThreadLocalServerSideScanMetrics.setScanMetricsEnabled(isScanMetricsEnabled);
       if (isScanMetricsEnabled) {
-        ThreadLocalScanMetrics.reset();
+        ThreadLocalServerSideScanMetrics.reset();
       }
       scanner.seek(keyValue);
       if (isScanMetricsEnabled) {
-        bytesReadFromFs.addAndGet(ThreadLocalScanMetrics.getBytesReadFromFsAndReset());
+        bytesReadFromFs.addAndGet(ThreadLocalServerSideScanMetrics.getBytesReadFromFsAndReset());
         bytesReadFromBlockCache
-          .addAndGet(ThreadLocalScanMetrics.getBytesReadFromBlockCacheAndReset());
+          .addAndGet(ThreadLocalServerSideScanMetrics.getBytesReadFromBlockCacheAndReset());
       }
     } catch (IOException e) {
       LOG.error("", e);

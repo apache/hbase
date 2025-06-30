@@ -54,7 +54,7 @@ import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
-import org.apache.hadoop.hbase.client.metrics.ThreadLocalScanMetrics;
+import org.apache.hadoop.hbase.client.metrics.ThreadLocalServerSideScanMetrics;
 import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -357,14 +357,11 @@ public class TestDefaultMemStore {
     assertScannerResults(s, new KeyValue[] { kv1, kv2 });
   }
 
-  @Test
-  public void testBytesReadFromMemstore() throws IOException {
+  private int getBytesReadFromMemstore() throws IOException {
     final byte[] f = Bytes.toBytes("family");
     final byte[] q1 = Bytes.toBytes("q1");
     final byte[] v = Bytes.toBytes("value");
     int numKvs = 10;
-
-    ThreadLocalScanMetrics.setScanMetricsEnabled(true);
 
     MultiVersionConcurrencyControl.WriteEntry w = mvcc.begin();
 
@@ -382,9 +379,23 @@ public class TestDefaultMemStore {
     mvcc.completeAndWait(w);
 
     KeyValueScanner s = this.memstore.getScanners(mvcc.getReadPoint()).get(0);
-    ThreadLocalScanMetrics.getBytesReadFromMemstoreAndReset();
+    ThreadLocalServerSideScanMetrics.getBytesReadFromMemstoreAndReset();
     assertScannerResults(s, kvs);
-    Assert.assertEquals(totalCellSize, ThreadLocalScanMetrics.getBytesReadFromMemstoreAndReset());
+    return totalCellSize;
+  }
+
+  @Test
+  public void testBytesReadFromMemstore() throws IOException {
+    ThreadLocalServerSideScanMetrics.setScanMetricsEnabled(true);
+    int totalCellSize = getBytesReadFromMemstore();
+    Assert.assertEquals(totalCellSize, ThreadLocalServerSideScanMetrics.getBytesReadFromMemstoreAndReset());
+  }
+
+  @Test
+  public void testBytesReadFromMemstoreWithScanMetricsDisabled() throws IOException {
+    ThreadLocalServerSideScanMetrics.setScanMetricsEnabled(false);
+    getBytesReadFromMemstore();
+    Assert.assertEquals(0, ThreadLocalServerSideScanMetrics.getBytesReadFromMemstoreAndReset());
   }
 
   /**

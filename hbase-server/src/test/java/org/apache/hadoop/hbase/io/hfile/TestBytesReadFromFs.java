@@ -30,7 +30,7 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.client.metrics.ThreadLocalScanMetrics;
+import org.apache.hadoop.hbase.client.metrics.ThreadLocalServerSideScanMetrics;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -93,28 +93,36 @@ public class TestBytesReadFromFs {
     }
 
     @Test
-    public void testBytesReadFromFsToReadDataUsingIndexBlocks() throws IOException {
-        ThreadLocalScanMetrics.setScanMetricsEnabled(true);
+    public void testBytesReadFromFsWithScanMetricsDisabled() throws IOException {
+        ThreadLocalServerSideScanMetrics.setScanMetricsEnabled(false);
         writeData(path);
         KeyValue keyValue = keyValues.get(0);
-        readDataAndIndexBlocks(path, keyValue);
+        readDataAndIndexBlocks(path, keyValue, false);
+    }
+
+    @Test
+    public void testBytesReadFromFsToReadDataUsingIndexBlocks() throws IOException {
+        ThreadLocalServerSideScanMetrics.setScanMetricsEnabled(true);
+        writeData(path);
+        KeyValue keyValue = keyValues.get(0);
+        readDataAndIndexBlocks(path, keyValue, true);
     }
 
     @Test
     public void testBytesReadFromFsToReadLoadOnOpenDataSection() throws IOException {
-        ThreadLocalScanMetrics.setScanMetricsEnabled(true);
+        ThreadLocalServerSideScanMetrics.setScanMetricsEnabled(true);
         writeData(path);
         readLoadOnOpenDataSection(path, false);
     }
 
     @Test
     public void testBytesReadFromFsToReadBloomFilterIndexesAndBloomBlocks() throws IOException {
-        ThreadLocalScanMetrics.setScanMetricsEnabled(true);
+        ThreadLocalServerSideScanMetrics.setScanMetricsEnabled(true);
         BloomType[] bloomTypes =
             { BloomType.ROW, BloomType.ROWCOL, BloomType.ROWPREFIX_FIXED_LENGTH };
         for (BloomType bloomType : bloomTypes) {
             LOG.info("Testing bloom type: {}", bloomType);
-            ThreadLocalScanMetrics.getBytesReadFromFsAndReset();
+            ThreadLocalServerSideScanMetrics.getBytesReadFromFsAndReset();
             keyList.clear();
             keyValues.clear();
             writeBloomFilters(path, bloomType, BLOOM_BLOCK_SIZE);
@@ -153,7 +161,8 @@ public class TestBytesReadFromFs {
         writer.close();
     }
 
-    private void readDataAndIndexBlocks(Path path, KeyValue keyValue) throws IOException {
+    private void readDataAndIndexBlocks(Path path, KeyValue keyValue, boolean isScanMetricsEnabled)
+        throws IOException {
         long fileSize = fs.getFileStatus(path).getLen();
 
         ReaderContext readerContext = new ReaderContextBuilder()
@@ -179,7 +188,7 @@ public class TestBytesReadFromFs {
 
         // Indexes use NoOpEncodedSeeker
         MyNoOpEncodedSeeker seeker = new MyNoOpEncodedSeeker();
-        ThreadLocalScanMetrics.getBytesReadFromFsAndReset();
+        ThreadLocalServerSideScanMetrics.getBytesReadFromFsAndReset();
 
         int bytesRead = 0;
         int blockLevelsRead = 0;
@@ -230,9 +239,11 @@ public class TestBytesReadFromFs {
 
         reader.close();
 
-        Assert.assertEquals(bytesRead, ThreadLocalScanMetrics.getBytesReadFromFsAndReset());
+        Assert.assertEquals(isScanMetricsEnabled, ThreadLocalServerSideScanMetrics.isScanMetricsEnabled());
+        bytesRead = isScanMetricsEnabled ? bytesRead : 0;
+        Assert.assertEquals(bytesRead, ThreadLocalServerSideScanMetrics.getBytesReadFromFsAndReset());
         Assert.assertEquals(blockLevelsRead, trailer.getNumDataIndexLevels() + 1);
-        Assert.assertEquals(0, ThreadLocalScanMetrics.getBytesReadFromBlockCacheAndReset());
+        Assert.assertEquals(0, ThreadLocalServerSideScanMetrics.getBytesReadFromBlockCacheAndReset());
     }
 
     private void readLoadOnOpenDataSection(Path path, boolean hasBloomFilters) throws IOException {
@@ -246,7 +257,7 @@ public class TestBytesReadFromFs {
         HFileInfo hfile = new HFileInfo(readerContext, conf);
         FixedFileTrailer trailer = hfile.getTrailer();
         Assert.assertEquals(trailer.getTrailerSize(),
-            ThreadLocalScanMetrics.getBytesReadFromFsAndReset());
+            ThreadLocalServerSideScanMetrics.getBytesReadFromFsAndReset());
 
         CacheConfig cacheConfig = new CacheConfig(conf);
         HFile.Reader reader = new HFilePreadReader(readerContext, hfile, cacheConfig, conf);
@@ -280,7 +291,7 @@ public class TestBytesReadFromFs {
         reader.close();
 
         Assert.assertEquals(hasBloomFilters, bloomFilterIndexesRead);
-        Assert.assertEquals(0, ThreadLocalScanMetrics.getBytesReadFromBlockCacheAndReset());
+        Assert.assertEquals(0, ThreadLocalServerSideScanMetrics.getBytesReadFromBlockCacheAndReset());
     }
 
     private boolean readEachBlockInLoadOnOpenDataSection(HFileBlock block, boolean readNextHeader)
@@ -295,7 +306,7 @@ public class TestBytesReadFromFs {
             readNextHeader = true;
         }
         block.release();
-        Assert.assertEquals(bytesRead, ThreadLocalScanMetrics.getBytesReadFromFsAndReset());
+        Assert.assertEquals(bytesRead, ThreadLocalServerSideScanMetrics.getBytesReadFromFsAndReset());
         return readNextHeader;
     }
 
@@ -316,7 +327,7 @@ public class TestBytesReadFromFs {
         sf.initReader();
 
         // Reset bytes read from fs to 0
-        ThreadLocalScanMetrics.getBytesReadFromFsAndReset();
+        ThreadLocalServerSideScanMetrics.getBytesReadFromFsAndReset();
 
         StoreFileReader reader = sf.getReader();
         BloomFilter bloomFilter = reader.getGeneralBloomFilter();
@@ -348,7 +359,7 @@ public class TestBytesReadFromFs {
         // Close the reader
         reader.close(true);
 
-        Assert.assertEquals(bytesRead, ThreadLocalScanMetrics.getBytesReadFromFsAndReset());
+        Assert.assertEquals(bytesRead, ThreadLocalServerSideScanMetrics.getBytesReadFromFsAndReset());
     }
 
     private void writeBloomFilters(Path path, BloomType bt, int bloomBlockByteSize)

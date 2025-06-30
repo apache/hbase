@@ -28,7 +28,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.InnerStoreCellComparator;
 import org.apache.hadoop.hbase.MetaCellComparator;
-import org.apache.hadoop.hbase.client.metrics.ThreadLocalScanMetrics;
+import org.apache.hadoop.hbase.client.metrics.ThreadLocalServerSideScanMetrics;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -407,9 +407,9 @@ public class FixedFileTrailer {
     FixedFileTrailer fft = new FixedFileTrailer(majorVersion, minorVersion);
     fft.deserialize(new DataInputStream(new ByteArrayInputStream(buf.array(),
       buf.arrayOffset() + bufferSize - trailerSize, trailerSize)));
-    boolean isScanMetricsEnabled = ThreadLocalScanMetrics.isScanMetricsEnabled();
+    boolean isScanMetricsEnabled = ThreadLocalServerSideScanMetrics.isScanMetricsEnabled();
     if (isScanMetricsEnabled) {
-      ThreadLocalScanMetrics.addBytesReadFromFs(trailerSize);
+      ThreadLocalServerSideScanMetrics.addBytesReadFromFs(trailerSize);
     }
     return fft;
   }

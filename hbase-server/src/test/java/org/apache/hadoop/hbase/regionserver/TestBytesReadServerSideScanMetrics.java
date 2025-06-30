@@ -17,8 +17,10 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.function.Consumer;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.hadoop.conf.Configuration;
@@ -37,8 +39,10 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
+import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
@@ -145,7 +149,14 @@ public class TestBytesReadServerSideScanMetrics {
             TableName tableName = TableName.valueOf(name.getMethodName());
             createTable(tableName, false, BloomType.NONE);
             writeData(tableName, true);
+            HRegionServer server = UTIL.getMiniHBaseCluster().getRegionServer(0);
+            ThreadPoolExecutor executor =
+                server.getExecutorService().getExecutorThreadPool(ExecutorType.RS_PARALLEL_SEEK);
+            long tasksCompletedBeforeRead = executor.getCompletedTaskCount();
             ScanMetrics scanMetrics = readDataAndGetScanMetrics(tableName, true);
+            long tasksCompletedAfterRead = executor.getCompletedTaskCount();
+            // Assert both of the HFiles were read using parallel seek executor
+            Assert.assertEquals(2, tasksCompletedAfterRead - tasksCompletedBeforeRead);
 
             // Use oldest timestamp to make sure the fake key is not less than the first key in
             // the file containing key: row2

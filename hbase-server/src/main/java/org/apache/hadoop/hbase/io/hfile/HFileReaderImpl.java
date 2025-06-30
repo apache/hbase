@@ -43,7 +43,7 @@ import org.apache.hadoop.hbase.SizeCachedByteBufferKeyValue;
 import org.apache.hadoop.hbase.SizeCachedKeyValue;
 import org.apache.hadoop.hbase.SizeCachedNoTagsByteBufferKeyValue;
 import org.apache.hadoop.hbase.SizeCachedNoTagsKeyValue;
-import org.apache.hadoop.hbase.client.metrics.ThreadLocalScanMetrics;
+import org.apache.hadoop.hbase.client.metrics.ThreadLocalServerSideScanMetrics;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -1116,13 +1116,13 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
             compressedBlock.release();
           }
         }
-        boolean isScanMetricsEnabled = ThreadLocalScanMetrics.isScanMetricsEnabled();
+        boolean isScanMetricsEnabled = ThreadLocalServerSideScanMetrics.isScanMetricsEnabled();
         if (isScanMetricsEnabled) {
-          ThreadLocalScanMetrics
+          ThreadLocalServerSideScanMetrics
             .addBytesReadFromBlockCache(cachedBlock.getOnDiskSizeWithHeader());
           // Account for the header size of the next block if it exists
           if (cachedBlock.getNextBlockOnDiskSize() > 0) {
-            ThreadLocalScanMetrics.addBytesReadFromBlockCache(cachedBlock.headerSize());
+            ThreadLocalServerSideScanMetrics.addBytesReadFromBlockCache(cachedBlock.headerSize());
           }
         }
         try {
