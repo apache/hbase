@@ -311,6 +311,12 @@
       <timezone>-8</timezone>
     </developer>
     <developer>
+      <id>junegunn</id>
+      <name>Junegunn Choi</name>
+      <email>junegunn@apache.org</email>
+      <timezone>+9</timezone>
+    </developer>
+    <developer>
       <id>jxiang</id>
       <name>Jimmy Xiang</name>
       <email>jxiang@apache.org</email>
@@ -368,6 +374,12 @@
       <id>liyu</id>
       <name>Yu Li</name>
       <email>liyu@apache.org</email>
+      <timezone>+8</timezone>
+    </developer>
+    <developer>
+      <id>lupeng</id>
+      <name>Peng Lu</name>
+      <email>lupeng@apache.org</email>
       <timezone>+8</timezone>
     </developer>
     <developer>
@@ -692,6 +704,24 @@
       <name>Liangjun He</name>
       <email>heliangjun@apache.org</email>
       <timezone>+8</timezone>
+    </developer>
+    <developer>
+      <id>cconnell</id>
+      <name>Charles Connell</name>
+      <email>cconnell@apache.org</email>
+      <timezone>-5</timezone>
+    </developer>
+    <developer>
+      <id>chandrakambham</id>
+      <name>Chandra Kambham</name>
+      <email>chandra@apache.org</email>
+      <timezone>+5</timezone>
+    </developer>
+    <developer>
+      <id>paksyd</id>
+      <name>Dávid Paksy</name>
+      <email>paksyd@apache.org</email>
+      <timezone>+1</timezone>
     </developer>
   </developers>
   <mailingLists>
@@ -3095,6 +3125,13 @@
             -->
             <enabled>false</enabled>
           </upToDateChecking>
+          <!--
+            On Windows, spotless might convert the line endings of these files to LF.
+            We're instructing it to respect the line ending definitions in .gitattributes
+            for these files.
+            For more details, please refer to HBASE-29388.
+          -->
+          <lineEndings>GIT_ATTRIBUTES</lineEndings>
           <!-- define a language-specific format -->
           <java>
             <excludes>

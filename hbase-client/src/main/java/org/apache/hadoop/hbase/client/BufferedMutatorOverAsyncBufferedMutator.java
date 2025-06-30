@@ -135,7 +135,6 @@ class BufferedMutatorOverAsyncBufferedMutator implements BufferedMutator {
       long heapSize = mutation.heapSize();
       bufferedSize.addAndGet(heapSize);
       addListener(fs.get(i), (r, e) -> {
-        futures.remove(toComplete);
         bufferedSize.addAndGet(-heapSize);
         if (e != null) {
           errors.add(Pair.newPair(mutation, e));
@@ -143,6 +142,16 @@ class BufferedMutatorOverAsyncBufferedMutator implements BufferedMutator {
         } else {
           toComplete.complete(r);
         }
+        // Only remove future after completing, and add the error to errors field before completing,
+        // this is used as a guard in internalFlush method, which is used to make sure that
+        // 1. If the future is already completed and removed from futures, the error should have
+        // already been in errors field, so in internalFlush method, even if we do not wait on the
+        // future, we should still get this error in errors field at the end of the internalFlush
+        // method
+        // 2. If we get this future in the internalFlush method for waiting, then after the future
+        // complete, we should get this error in the errors field at the end of the internalFlush
+        // method
+        futures.remove(toComplete);
       });
     }
     synchronized (this) {

@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.io.crypto.tls;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -368,45 +366,4 @@ public class TestX509Util extends AbstractTestX509Parameterized {
     });
   }
 
-  @Test
-  public void testGetDefaultCipherSuitesJava8() {
-    String[] cipherSuites = X509Util.getDefaultCipherSuitesForJavaVersion("1.8");
-    // Java 8 default should have the CBC suites first
-    assertThat(cipherSuites[0], containsString("CBC"));
-  }
-
-  @Test
-  public void testGetDefaultCipherSuitesJava9() {
-    String[] cipherSuites = X509Util.getDefaultCipherSuitesForJavaVersion("9");
-    // Java 9+ default should have the GCM suites first
-    assertEquals(cipherSuites[0], "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256");
-  }
-
-  @Test
-  public void testGetDefaultCipherSuitesJava10() {
-    String[] cipherSuites = X509Util.getDefaultCipherSuitesForJavaVersion("10");
-    // Java 9+ default should have the GCM suites first
-    assertEquals(cipherSuites[0], "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256");
-  }
-
-  @Test
-  public void testGetDefaultCipherSuitesJava11() {
-    String[] cipherSuites = X509Util.getDefaultCipherSuitesForJavaVersion("11");
-    // Java 11+ default should have the TLSv1.3 suites first
-    assertThat(cipherSuites[0], containsString("TLS_AES_128_GCM"));
-  }
-
-  @Test
-  public void testGetDefaultCipherSuitesUnknownVersion() {
-    String[] cipherSuites = X509Util.getDefaultCipherSuitesForJavaVersion("notaversion");
-    // If version can't be parsed, use the more conservative Java 8 default
-    assertThat(cipherSuites[0], containsString("CBC"));
-  }
-
-  @Test
-  public void testGetDefaultCipherSuitesNullVersion() {
-    assertThrows(NullPointerException.class, () -> {
-      X509Util.getDefaultCipherSuitesForJavaVersion(null);
-    });
-  }
 }
