@@ -72,9 +72,9 @@ public class ReplicationObserver implements RegionCoprocessor, RegionObserver {
       env.getRegion().getTableDescriptor().getColumnFamily(family).getScope()
           != HConstants.REPLICATION_SCOPE_GLOBAL
     ) {
-      LOG.debug(
-        "Skipping recording bulk load entries in preCommitStoreFile for table:{}, family:{}, Because the replication is not enabled",
-        tableName, Bytes.toString(family));
+      LOG
+        .debug("Skipping recording bulk load entries in preCommitStoreFile for table:{}, family:{},"
+          + " Because the replication is not enabled", tableName, Bytes.toString(family));
       return;
     }
 

@@ -72,7 +72,6 @@ import org.apache.hadoop.hbase.tool.BulkLoadHFilesTool;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -128,6 +127,8 @@ public class TestBulkLoadReplication extends TestReplicationBase {
 
   private static ReplicationQueueStorage queueStorage;
 
+  private static boolean replicationPeersAdded = false;
+
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     setupBulkLoadConfigsForCluster(CONF1, PEER1_CLUSTER_ID);
@@ -161,22 +162,27 @@ public class TestBulkLoadReplication extends TestReplicationBase {
   @Before
   @Override
   public void setUpBase() throws Exception {
-    // "super.setUpBase()" already sets replication from 1->2,
-    // then on the subsequent lines, sets 2->1, 2->3 and 3->2.
-    // So we have following topology: "1 <-> 2 <->3"
-    super.setUpBase();
-    ReplicationPeerConfig peer1Config = getPeerConfigForCluster(UTIL1);
-    ReplicationPeerConfig peer2Config = getPeerConfigForCluster(UTIL2);
-    ReplicationPeerConfig peer3Config = getPeerConfigForCluster(UTIL3);
-    // adds cluster1 as a remote peer on cluster2
-    UTIL2.getAdmin().addReplicationPeer(PEER_ID1, peer1Config);
-    // adds cluster3 as a remote peer on cluster2
-    UTIL2.getAdmin().addReplicationPeer(PEER_ID3, peer3Config);
-    // adds cluster2 as a remote peer on cluster3
-    UTIL3.getAdmin().addReplicationPeer(PEER_ID2, peer2Config);
-    setupCoprocessor(UTIL1);
-    setupCoprocessor(UTIL2);
-    setupCoprocessor(UTIL3);
+    // removing the peer and adding again causing the previously completed bulk load jobs getting
+    // submitted again, adding a check to add the peers only once.
+    if (!replicationPeersAdded) {
+      // "super.setUpBase()" already sets replication from 1->2,
+      // then on the subsequent lines, sets 2->1, 2->3 and 3->2.
+      // So we have following topology: "1 <-> 2 <->3"
+      super.setUpBase();
+      ReplicationPeerConfig peer1Config = getPeerConfigForCluster(UTIL1);
+      ReplicationPeerConfig peer2Config = getPeerConfigForCluster(UTIL2);
+      ReplicationPeerConfig peer3Config = getPeerConfigForCluster(UTIL3);
+      // adds cluster1 as a remote peer on cluster2
+      UTIL2.getAdmin().addReplicationPeer(PEER_ID1, peer1Config);
+      // adds cluster3 as a remote peer on cluster2
+      UTIL2.getAdmin().addReplicationPeer(PEER_ID3, peer3Config);
+      // adds cluster2 as a remote peer on cluster3
+      UTIL3.getAdmin().addReplicationPeer(PEER_ID2, peer2Config);
+      setupCoprocessor(UTIL1);
+      setupCoprocessor(UTIL2);
+      setupCoprocessor(UTIL3);
+      replicationPeersAdded = true;
+    }
     BULK_LOADS_COUNT = new AtomicInteger(0);
   }
 
@@ -202,15 +208,6 @@ public class TestBulkLoadReplication extends TestReplicationBase {
         LOG.error(e.getMessage(), e);
       }
     });
-  }
-
-  @After
-  @Override
-  public void tearDownBase() throws Exception {
-    super.tearDownBase();
-    UTIL2.getAdmin().removeReplicationPeer(PEER_ID1);
-    UTIL2.getAdmin().removeReplicationPeer(PEER_ID3);
-    UTIL3.getAdmin().removeReplicationPeer(PEER_ID2);
   }
 
   protected static void setupBulkLoadConfigsForCluster(Configuration config,
