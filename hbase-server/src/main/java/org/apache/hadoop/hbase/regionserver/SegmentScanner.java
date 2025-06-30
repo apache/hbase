@@ -338,31 +338,39 @@ public class SegmentScanner implements KeyValueScanner {
   protected void updateCurrent() {
     ExtendedCell next = null;
     boolean isScanMetricsEnabled = ThreadLocalServerSideScanMetrics.isScanMetricsEnabled();
+    int totalBytesRead = 0;
 
     try {
       while (iter.hasNext()) {
         next = iter.next();
         if (isScanMetricsEnabled) {
-          // Can this add too much overhead on being done for each cell as Iterator.next() is
-          // called for each cell?
-          // long startTime = System.nanoTime();
-          ThreadLocalServerSideScanMetrics.addBytesReadFromMemstore(Segment.getCellLength(next));
-          // long endTime = System.nanoTime();
-          // System.out
-          //   .println("Time taken to add bytes read from memstore: " + (endTime - startTime));
+          // Batch collect bytes to reduce method call overhead
+          totalBytesRead += Segment.getCellLength(next);
         }
         if (next.getSequenceId() <= this.readPoint) {
           current = next;
+          // Add accumulated bytes before returning
+          if (isScanMetricsEnabled && totalBytesRead > 0) {
+            ThreadLocalServerSideScanMetrics.addBytesReadFromMemstore(totalBytesRead);
+          }
           return;// skip irrelevant versions
         }
         // for backwardSeek() stay in the boundaries of a single row
         if (stopSkippingKVsIfNextRow && segment.compareRows(next, stopSkippingKVsRow) > 0) {
           current = null;
+          // Add accumulated bytes before returning
+          if (isScanMetricsEnabled && totalBytesRead > 0) {
+            ThreadLocalServerSideScanMetrics.addBytesReadFromMemstore(totalBytesRead);
+          }
           return;
         }
       } // end of while
 
       current = null; // nothing found
+      // Add accumulated bytes at the end
+      if (isScanMetricsEnabled && totalBytesRead > 0) {
+        ThreadLocalServerSideScanMetrics.addBytesReadFromMemstore(totalBytesRead);
+      }
     } finally {
       if (next != null) {
         // in all cases, remember the last KV we iterated to, needed for reseek()
