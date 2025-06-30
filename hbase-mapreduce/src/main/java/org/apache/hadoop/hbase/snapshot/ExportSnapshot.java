@@ -166,7 +166,8 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
       new Option(null, "chmod", true, "Change the permission of the files to the specified one.");
     static final Option MAPPERS = new Option(null, "mappers", true,
       "Number of mappers to use during the copy (mapreduce.job.maps). "
-        + "If you provide a --custom-file-grouper, then --mappers is interpreted as the number of mappers per group.");
+        + "If you provide a --custom-file-grouper, "
+        + "then --mappers is interpreted as the number of mappers per group.");
     static final Option BANDWIDTH =
       new Option(null, "bandwidth", true, "Limit bandwidth to this value in MB/second.");
     static final Option RESET_TTL =
