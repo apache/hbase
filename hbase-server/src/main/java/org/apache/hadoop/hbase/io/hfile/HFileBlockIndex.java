@@ -813,7 +813,8 @@ public class HFileBlockIndex {
      * @return the index position where the given key was found, otherwise return -1 in the case the
      *         given key is before the first key.
      */
-    public static int locateNonRootIndexEntry(ByteBuff nonRootBlock, Cell key, CellComparator comparator) {
+    public static int locateNonRootIndexEntry(ByteBuff nonRootBlock, Cell key,
+      CellComparator comparator) {
       int entryIndex = binarySearchNonRootIndex(key, nonRootBlock, comparator);
 
       if (entryIndex != -1) {

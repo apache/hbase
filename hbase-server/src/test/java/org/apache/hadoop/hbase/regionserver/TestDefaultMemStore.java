@@ -388,7 +388,8 @@ public class TestDefaultMemStore {
   public void testBytesReadFromMemstore() throws IOException {
     ThreadLocalServerSideScanMetrics.setScanMetricsEnabled(true);
     int totalCellSize = getBytesReadFromMemstore();
-    Assert.assertEquals(totalCellSize, ThreadLocalServerSideScanMetrics.getBytesReadFromMemstoreAndReset());
+    Assert.assertEquals(totalCellSize,
+      ThreadLocalServerSideScanMetrics.getBytesReadFromMemstoreAndReset());
   }
 
   @Test

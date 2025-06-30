@@ -53,7 +53,8 @@ public class ParallelSeekHandler extends EventHandler {
     this.latch = latch;
     this.isScanMetricsEnabled = ThreadLocalServerSideScanMetrics.isScanMetricsEnabled();
     this.bytesReadFromFs = ThreadLocalServerSideScanMetrics.getBytesReadFromFsCounter();
-    this.bytesReadFromBlockCache = ThreadLocalServerSideScanMetrics.getBytesReadFromBlockCacheCounter();
+    this.bytesReadFromBlockCache =
+      ThreadLocalServerSideScanMetrics.getBytesReadFromBlockCacheCounter();
   }
 
   @Override

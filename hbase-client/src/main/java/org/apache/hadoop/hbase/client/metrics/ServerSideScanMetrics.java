@@ -98,7 +98,8 @@ public class ServerSideScanMetrics {
   public final AtomicLong bytesReadFromBlockCache =
     createCounter(BYTES_READ_FROM_BLOCK_CACHE_METRIC_NAME);
 
-  public final AtomicLong bytesReadFromMemstore = createCounter(BYTES_READ_FROM_MEMSTORE_METRIC_NAME);
+  public final AtomicLong bytesReadFromMemstore =
+    createCounter(BYTES_READ_FROM_MEMSTORE_METRIC_NAME);
 
   /**
    * Sets counter with counterName to passed in value, does nothing if counter does not exist. If
