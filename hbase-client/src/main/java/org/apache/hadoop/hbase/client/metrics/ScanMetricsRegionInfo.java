@@ -53,9 +53,10 @@ public class ScanMetricsRegionInfo {
 
   @Override
   public boolean equals(Object obj) {
-    if (!(obj instanceof ScanMetricsRegionInfo other)) {
+    if (!(obj instanceof ScanMetricsRegionInfo)) {
       return false;
     }
+    ScanMetricsRegionInfo other = (ScanMetricsRegionInfo) obj;
     return new EqualsBuilder().append(encodedRegionName, other.encodedRegionName)
       .append(serverName, other.serverName).isEquals();
   }
