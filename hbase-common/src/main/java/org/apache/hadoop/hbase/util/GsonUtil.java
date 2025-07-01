@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
-import java.lang.reflect.Modifier;
 import java.util.concurrent.atomic.LongAdder;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -44,7 +43,6 @@ public final class GsonUtil {
    */
   public static GsonBuilder createGson() {
     return new GsonBuilder().setLongSerializationPolicy(LongSerializationPolicy.STRING)
-      .excludeFieldsWithModifiers(Modifier.PRIVATE)
       .registerTypeAdapter(LongAdder.class, new TypeAdapter<LongAdder>() {
 
         @Override

@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.io.hfile;
 import static org.apache.hadoop.hbase.io.hfile.HFileBlock.FILL_HEADER;
 
 import java.io.IOException;
+import java.lang.reflect.Modifier;
 import java.nio.ByteBuffer;
 import java.util.HashSet;
 import java.util.Map;
@@ -59,6 +60,7 @@ public class BlockCacheUtil {
    * Needed generating JSON.
    */
   private static final Gson GSON = GsonUtil.createGson()
+    .excludeFieldsWithModifiers(Modifier.PRIVATE)
     .registerTypeAdapter(FastLongHistogram.class, new TypeAdapter<FastLongHistogram>() {
 
       @Override
