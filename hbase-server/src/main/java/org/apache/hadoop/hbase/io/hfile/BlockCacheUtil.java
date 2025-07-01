@@ -59,30 +59,30 @@ public class BlockCacheUtil {
   /**
    * Needed generating JSON.
    */
-  private static final Gson GSON = GsonUtil.createGson()
-    .excludeFieldsWithModifiers(Modifier.PRIVATE)
-    .registerTypeAdapter(FastLongHistogram.class, new TypeAdapter<FastLongHistogram>() {
+  private static final Gson GSON =
+    GsonUtil.createGson().excludeFieldsWithModifiers(Modifier.PRIVATE)
+      .registerTypeAdapter(FastLongHistogram.class, new TypeAdapter<FastLongHistogram>() {
 
-      @Override
-      public void write(JsonWriter out, FastLongHistogram value) throws IOException {
-        AgeSnapshot snapshot = new AgeSnapshot(value);
-        out.beginObject();
-        out.name("mean").value(snapshot.getMean());
-        out.name("min").value(snapshot.getMin());
-        out.name("max").value(snapshot.getMax());
-        out.name("75thPercentile").value(snapshot.get75thPercentile());
-        out.name("95thPercentile").value(snapshot.get95thPercentile());
-        out.name("98thPercentile").value(snapshot.get98thPercentile());
-        out.name("99thPercentile").value(snapshot.get99thPercentile());
-        out.name("999thPercentile").value(snapshot.get999thPercentile());
-        out.endObject();
-      }
+        @Override
+        public void write(JsonWriter out, FastLongHistogram value) throws IOException {
+          AgeSnapshot snapshot = new AgeSnapshot(value);
+          out.beginObject();
+          out.name("mean").value(snapshot.getMean());
+          out.name("min").value(snapshot.getMin());
+          out.name("max").value(snapshot.getMax());
+          out.name("75thPercentile").value(snapshot.get75thPercentile());
+          out.name("95thPercentile").value(snapshot.get95thPercentile());
+          out.name("98thPercentile").value(snapshot.get98thPercentile());
+          out.name("99thPercentile").value(snapshot.get99thPercentile());
+          out.name("999thPercentile").value(snapshot.get999thPercentile());
+          out.endObject();
+        }
 
-      @Override
-      public FastLongHistogram read(JsonReader in) throws IOException {
-        throw new UnsupportedOperationException();
-      }
-    }).setPrettyPrinting().create();
+        @Override
+        public FastLongHistogram read(JsonReader in) throws IOException {
+          throw new UnsupportedOperationException();
+        }
+      }).setPrettyPrinting().create();
 
   /** Returns The block content as String. */
   public static String toString(final CachedBlock cb, final long now) {
