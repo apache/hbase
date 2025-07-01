@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
+import org.apache.hadoop.hbase.security.SecurityUtil;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -53,7 +54,7 @@ public class SystemKeyAccessor extends KeyManagementBase {
    *    is initialized yet.
    */
   public Pair<Path,List<Path>> getLatestSystemKeyFile() throws IOException {
-    if (! isKeyManagementEnabled()) {
+    if (! SecurityUtil.isKeyManagementEnabled(getConfiguration())) {
       return new Pair<>(null, null);
     }
     List<Path> allClusterKeyFiles = getAllSystemKeyFiles();
@@ -74,7 +75,7 @@ public class SystemKeyAccessor extends KeyManagementBase {
    * @throws IOException if there is an error getting the cluster key files
    */
   public List<Path> getAllSystemKeyFiles() throws IOException {
-    if (!isKeyManagementEnabled()) {
+    if (!SecurityUtil.isKeyManagementEnabled(getConfiguration())) {
       return null;
     }
     FileSystem fs = getServer().getFileSystem();

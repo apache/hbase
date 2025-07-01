@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyState;
 import org.apache.hadoop.hbase.keymeta.SystemKeyAccessor;
+import org.apache.hadoop.hbase.security.SecurityUtil;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -42,7 +43,7 @@ public class SystemKeyManager extends SystemKeyAccessor {
   }
 
   public void ensureSystemKeyInitialized() throws IOException {
-    if (! isKeyManagementEnabled()) {
+    if (! SecurityUtil.isKeyManagementEnabled(getConfiguration())) {
       return;
     }
     List<Path> clusterKeys = getAllSystemKeyFiles();
@@ -63,7 +64,7 @@ public class SystemKeyManager extends SystemKeyAccessor {
   }
 
   public ManagedKeyData rotateSystemKeyIfChanged() throws IOException {
-    if (! isKeyManagementEnabled()) {
+    if (! SecurityUtil.isKeyManagementEnabled(getConfiguration())) {
       return null;
     }
     Pair<Path, List<Path>> latestFileResult = getLatestSystemKeyFile();

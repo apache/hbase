@@ -23,6 +23,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.security.SecurityUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,7 +49,7 @@ public class KeymetaMasterService extends KeyManagementBase {
   }
 
   public void init() throws IOException {
-    if (!isKeyManagementEnabled()) {
+    if (!SecurityUtil.isKeyManagementEnabled(getConfiguration())) {
       return;
     }
     if (!master.getTableDescriptors().exists(KeymetaTableAccessor.KEY_META_TABLE_NAME)) {

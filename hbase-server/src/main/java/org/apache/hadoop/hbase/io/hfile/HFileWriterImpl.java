@@ -27,6 +27,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.security.Key;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -48,6 +49,7 @@ import org.apache.hadoop.hbase.MetaCellComparator;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.IndexBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock.BlockWritable;
@@ -877,12 +879,32 @@ public class HFileWriterImpl implements HFile.Writer {
     // Write out encryption metadata before finalizing if we have a valid crypto context
     Encryption.Context cryptoContext = hFileContext.getEncryptionContext();
     if (cryptoContext != Encryption.Context.NONE) {
+      String wrapperSubject = null;
+      Key encKey = null;
+      Key wrapperKey = null;
+      ManagedKeyData kekData = cryptoContext.getKEKData();
+      String kekMetadata = null;
+      if (kekData != null) {
+        Key kek = kekData.getTheKey();
+        kekMetadata = kekData.getKeyMetadata();
+        if (kek != cryptoContext.getKey()) {
+          wrapperKey = kek;
+          encKey = cryptoContext.getKey();
+        }
+      }
+      else {
+        wrapperSubject = cryptoContext.getConf().get(
+          HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, User.getCurrent().getShortName());
+        encKey = cryptoContext.getKey();
+      }
       // Wrap the context's key and write it as the encryption metadata, the wrapper includes
       // all information needed for decryption
-      trailer.setEncryptionKey(EncryptionUtil.wrapKey(
-        cryptoContext.getConf(), cryptoContext.getConf()
-          .get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, User.getCurrent().getShortName()),
-        cryptoContext.getKey()));
+      if (encKey != null) {
+        byte[] wrappedKey = EncryptionUtil.wrapKey(cryptoContext.getConf(), wrapperSubject, encKey,
+          wrapperKey);
+        trailer.setEncryptionKey(wrappedKey);
+      }
+      trailer.setKEKMetadata(kekMetadata);
     }
     // Now we can finish the close
     trailer.setMetaIndexCount(metaNames.size());

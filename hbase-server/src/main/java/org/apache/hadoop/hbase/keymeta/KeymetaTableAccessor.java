@@ -218,7 +218,7 @@ public class KeymetaTableAccessor extends KeyManagementBase {
   private Put addMutationColumns(Put put, ManagedKeyData keyData) throws IOException {
     ManagedKeyData latestSystemKey = getServer().getSystemKeyCache().getLatestSystemKey();
     if (keyData.getTheKey() != null) {
-      byte[] dekWrappedBySTK = EncryptionUtil.wrapKey(getServer().getConfiguration(), null,
+      byte[] dekWrappedBySTK = EncryptionUtil.wrapKey(getConfiguration(), null,
         keyData.getTheKey(), latestSystemKey.getTheKey());
       put.addColumn(KEY_META_INFO_FAMILY, DEK_CHECKSUM_QUAL_BYTES,
           Bytes.toBytes(keyData.getKeyChecksum()))

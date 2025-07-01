@@ -33,7 +33,6 @@ import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
 import org.apache.commons.io.IOUtils;
-import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -115,12 +114,6 @@ public final class Encryption {
     @Override
     public Context setCipher(Cipher cipher) {
       super.setCipher(cipher);
-      return this;
-    }
-
-    @Override
-    public Context setKey(Key key) {
-      super.setKey(key);
       return this;
     }
 
