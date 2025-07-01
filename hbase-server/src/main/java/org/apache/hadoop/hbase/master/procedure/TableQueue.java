@@ -52,7 +52,6 @@ class TableQueue extends Queue<TableName> {
       case CREATE:
       case DELETE:
       case DISABLE:
-      case SNAPSHOT:
       case ENABLE:
         return true;
       case EDIT:
@@ -60,6 +59,7 @@ class TableQueue extends Queue<TableName> {
         return !proc.getTableName().equals(TableProcedureInterface.DUMMY_NAMESPACE_TABLE_NAME);
       case READ:
       case FLUSH:
+      case SNAPSHOT:
         return false;
       // region operations are using the shared-lock on the table
       // and then they will grab an xlock on the region.
