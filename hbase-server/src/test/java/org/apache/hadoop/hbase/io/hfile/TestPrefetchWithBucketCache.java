@@ -22,6 +22,7 @@ import static org.apache.hadoop.hbase.HConstants.BUCKET_CACHE_SIZE_KEY;
 import static org.apache.hadoop.hbase.io.hfile.BlockCacheFactory.BUCKET_CACHE_BUCKETS_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -39,13 +40,20 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketEntry;
+import org.apache.hadoop.hbase.regionserver.BloomType;
+import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -140,6 +148,55 @@ public class TestPrefetchWithBucketCache {
     readStoreFile(storeFile);
     Waiter.waitFor(conf, 300, () -> snapshot.size() == bc.getBackingMap().size());
     assertTrue(snapshot.get(key).getCachedTime() < bc.getBackingMap().get(key).getCachedTime());
+  }
+
+  @Test
+  public void testPrefetchRefsAfterSplit() throws Exception {
+    conf.setLong(BUCKET_CACHE_SIZE_KEY, 200);
+    blockCache = BlockCacheFactory.createBlockCache(conf);
+    cacheConf = new CacheConfig(conf, blockCache);
+
+    Path tableDir = new Path(TEST_UTIL.getDataTestDir(), "testPrefetchRefsAfterSplit");
+    RegionInfo region = RegionInfoBuilder.newBuilder(TableName.valueOf(tableDir.getName())).build();
+    Path regionDir = new Path(tableDir, region.getEncodedName());
+    Path cfDir = new Path(regionDir, "cf");
+    HRegionFileSystem regionFS =
+      HRegionFileSystem.createRegionOnFileSystem(conf, fs, tableDir, region);
+    Path storeFile = writeStoreFile(100, cfDir);
+
+    // Prefetches the file blocks
+    LOG.debug("First read should prefetch the blocks.");
+    readStoreFile(storeFile);
+    BucketCache bc = BucketCache.getBucketCacheFromCacheConfig(cacheConf).get();
+    // Our file should have 6 DATA blocks. We should wait for all of them to be cached
+    Waiter.waitFor(conf, 300, () -> bc.getBackingMap().size() == 6);
+
+    // split the file and return references to the original file
+    Random rand = ThreadLocalRandom.current();
+    byte[] splitPoint = RandomKeyValueUtil.randomOrderedKey(rand, 50);
+    HStoreFile file = new HStoreFile(fs, storeFile, conf, cacheConf, BloomType.NONE, true);
+    Path ref = regionFS.splitStoreFile(region, "cf", file, splitPoint, false,
+      new ConstantSizeRegionSplitPolicy());
+    HStoreFile refHsf = new HStoreFile(this.fs, ref, conf, cacheConf, BloomType.NONE, true);
+    // starts reader for the ref. The ref should resolve to the original file blocks
+    // and not duplicate blocks in the cache.
+    refHsf.initReader();
+    HFile.Reader reader = refHsf.getReader().getHFileReader();
+    while (!reader.prefetchComplete()) {
+      // Sleep for a bit
+      Thread.sleep(1000);
+    }
+    // the ref file blocks keys should actually resolve to the referred file blocks,
+    // so we should not see additional blocks in the cache.
+    Waiter.waitFor(conf, 300, () -> bc.getBackingMap().size() == 6);
+
+    BlockCacheKey refCacheKey = new BlockCacheKey(ref.getName(), 0);
+    Cacheable result = bc.getBlock(refCacheKey, true, false, true);
+    assertNotNull(result);
+    BlockCacheKey fileCacheKey = new BlockCacheKey(file.getPath().getName(), 0);
+    assertEquals(result, bc.getBlock(fileCacheKey, true, false, true));
+    assertNull(bc.getBackingMap().get(refCacheKey));
+    assertNotNull(bc.getBlockForReference(refCacheKey));
   }
 
   @Test
@@ -277,10 +334,19 @@ public class TestPrefetchWithBucketCache {
     return writeStoreFile(fname, meta, numKVs);
   }
 
+  private Path writeStoreFile(int numKVs, Path regionCFDir) throws IOException {
+    HFileContext meta = new HFileContextBuilder().withBlockSize(DATA_BLOCK_SIZE).build();
+    return writeStoreFile(meta, numKVs, regionCFDir);
+  }
+
   private Path writeStoreFile(String fname, HFileContext context, int numKVs) throws IOException {
-    Path storeFileParentDir = new Path(TEST_UTIL.getDataTestDir(), fname);
+    return writeStoreFile(context, numKVs, new Path(TEST_UTIL.getDataTestDir(), fname));
+  }
+
+  private Path writeStoreFile(HFileContext context, int numKVs, Path regionCFDir)
+    throws IOException {
     StoreFileWriter sfw = new StoreFileWriter.Builder(conf, cacheConf, fs)
-      .withOutputDir(storeFileParentDir).withFileContext(context).build();
+      .withOutputDir(regionCFDir).withFileContext(context).build();
     Random rand = ThreadLocalRandom.current();
     final int rowLen = 32;
     for (int i = 0; i < numKVs; ++i) {

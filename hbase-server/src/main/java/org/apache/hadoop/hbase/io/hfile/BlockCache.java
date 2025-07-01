@@ -239,6 +239,17 @@ public interface BlockCache extends Iterable<CachedBlock>, ConfigurationObserver
   }
 
   /**
+   * Evict all blocks for the given file name between the passed offset values.
+   * @param hfileName  The file for which blocks should be evicted.
+   * @param initOffset the initial offset for the range of blocks to be evicted.
+   * @param endOffset  the end offset for the range of blocks to be evicted.
+   * @return number of blocks evicted.
+   */
+  default int evictBlocksRangeByHfileName(String hfileName, long initOffset, long endOffset) {
+    return 0;
+  }
+
+  /**
    * Allows for BlockCache implementations to provide a mean to refresh their configurations. Since
    * HBASE-29249, CacheConfig implements PropagatingConfigurationObserver and registers itself
    * together with the used BlockCache implementation for notifications of dynamic configuration

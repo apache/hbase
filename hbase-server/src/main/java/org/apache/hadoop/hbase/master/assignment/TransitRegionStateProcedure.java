@@ -18,7 +18,9 @@
 package org.apache.hadoop.hbase.master.assignment;
 
 import static org.apache.hadoop.hbase.io.hfile.CacheConfig.DEFAULT_EVICT_ON_CLOSE;
+import static org.apache.hadoop.hbase.io.hfile.CacheConfig.DEFAULT_EVICT_ON_SPLIT;
 import static org.apache.hadoop.hbase.io.hfile.CacheConfig.EVICT_BLOCKS_ON_CLOSE_KEY;
+import static org.apache.hadoop.hbase.io.hfile.CacheConfig.EVICT_BLOCKS_ON_SPLIT_KEY;
 import static org.apache.hadoop.hbase.master.LoadBalancer.BOGUS_SERVER_NAME;
 import static org.apache.hadoop.hbase.master.assignment.AssignmentManager.FORCE_REGION_RETAINMENT;
 
@@ -334,7 +336,9 @@ public class TransitRegionStateProcedure
       env.getAssignmentManager().regionClosing(regionNode);
       CloseRegionProcedure closeProc = isSplit
         ? new CloseRegionProcedure(this, getRegion(), regionNode.getRegionLocation(),
-          assignCandidate, true)
+          assignCandidate,
+          env.getMasterConfiguration().getBoolean(EVICT_BLOCKS_ON_SPLIT_KEY,
+            DEFAULT_EVICT_ON_SPLIT))
         : new CloseRegionProcedure(this, getRegion(), regionNode.getRegionLocation(),
           assignCandidate, evictCache);
       addChildProcedure(closeProc);
