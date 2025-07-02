@@ -243,6 +243,7 @@ public class AsyncConnectionImpl implements AsyncConnection {
           choreService.shutdown();
           choreService = null;
         }
+        locator.getNonMetaRegionLocator().closeChoreServices();
       }
       if (metrics.isPresent()) {
         MetricsConnection.deleteMetricsConnection(metricsScope);
