@@ -433,8 +433,9 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
     if (excludeDatanodeManager == null) {
       return Collections.emptyList();
     }
-    return excludeDatanodeManager.getExcludeDNs().entrySet().stream()
-      .map(e -> e.getKey().toString() + ", " + e.getValue()).collect(Collectors.toList());
+    return excludeDatanodeManager.getExcludeDNs().entrySet().stream().map(e -> e.getKey().toString()
+      + " - " + e.getValue().getSecond() + " - " + e.getValue().getFirst())
+      .collect(Collectors.toList());
   }
 
   @Override
