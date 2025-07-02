@@ -18,7 +18,7 @@
 -->
 # HBASE Changelog
 
-## Release 2.6.3 - Unreleased (as of 2025-06-21)
+## Release 2.6.3 - Unreleased (as of 2025-07-02)
 
 
 
@@ -76,6 +76,10 @@
 | [HBASE-29029](https://issues.apache.org/jira/browse/HBASE-29029) | Refactor BackupHFileCleaner + fix test |  Minor | backup&restore |
 | [HBASE-29279](https://issues.apache.org/jira/browse/HBASE-29279) | Allow throttling alter operation via table configuration |  Major | . |
 | [HBASE-29390](https://issues.apache.org/jira/browse/HBASE-29390) | Too many logs in AsyncBatchRpcRetryingCaller when hitting RegionTooBusyException |  Major | asyncclient, Client |
+| [HBASE-29387](https://issues.apache.org/jira/browse/HBASE-29387) | Reload quotas from hbase:quota table when changes are made |  Minor | . |
+| [HBASE-29399](https://issues.apache.org/jira/browse/HBASE-29399) | Update hadoop-metrics2-hbase.properties template |  Major | conf, documentation |
+| [HBASE-28596](https://issues.apache.org/jira/browse/HBASE-28596) | Optimise BucketCache usage upon regions splits/merges. |  Major | . |
+| [HBASE-29432](https://issues.apache.org/jira/browse/HBASE-29432) | ExportSnapshot should support rack-awareness |  Minor | . |
 
 
 ### BUG FIXES:
@@ -145,6 +149,10 @@
 | [HBASE-29385](https://issues.apache.org/jira/browse/HBASE-29385) | Very slow performance when using AsyncAggregationClient for large scans |  Major | . |
 | [HBASE-29346](https://issues.apache.org/jira/browse/HBASE-29346) | Multiple Snapshot restores on same restoreDir ends up in Dataloss |  Critical | snapshots |
 | [HBASE-29146](https://issues.apache.org/jira/browse/HBASE-29146) | Incremental backups can fail due to not cleaning up the MR bulkload output directory |  Major | backup&restore |
+| [HBASE-29423](https://issues.apache.org/jira/browse/HBASE-29423) | Incremental backups broken for non-default namespaces |  Critical | backup&restore |
+| [HBASE-22335](https://issues.apache.org/jira/browse/HBASE-22335) | do add hfile ref only when replication\_scope is 1 |  Major | Replication |
+| [HBASE-28806](https://issues.apache.org/jira/browse/HBASE-28806) | ExportSnapshot failed if reference file presented |  Major | snapshots |
+| [HBASE-29386](https://issues.apache.org/jira/browse/HBASE-29386) | SnapshotProcedure and EnableTableProcedure can cause a deadlock |  Major | snapshots |
 
 
 ### SUB-TASKS:

@@ -125,6 +125,28 @@ Support for LDAP Authentication in the HBase Web UI via Hadoop's LdapAuthenticat
 We now support configuring an LDAP user as admin for all HBase Web UIs, privileged pages can only be accessed by the admin user.
 
 
+---
+
+* [HBASE-28596](https://issues.apache.org/jira/browse/HBASE-28596) | *Major* | **Optimise BucketCache usage upon regions splits/merges.**
+
+This adds a new configuration property, "hbase.rs.evictblocksonsplit”, with default value set to true, which makes all parent region blocks to get evicted on split.
+
+It has modified behaviour implemented on previous HBASE-27474, to allow prefetch to run on the daughters' refs (if hbase.rs.prefetchblocksonopen is true).
+
+It has also modified how BucketCache deals with blocks from reference files:
+1) When adding blocks for a reference file, it first resolves the reference and check if the related block from the parent file is already in the cache. If so, it doesn't add any this block to the cache. Otherwise, it will add the block with the reference as the cache key.
+2) When searching for blocks from a reference file in the cache, it first resolves the reference and check for the block from the original file, returning this one if found. Otherwise, it searches the cache again, now using the reference file as cache key.
+
+
+---
+
+* [HBASE-29432](https://issues.apache.org/jira/browse/HBASE-29432) | *Minor* | **ExportSnapshot should support rack-awareness**
+
+ExportSnapshot now supports two new options:
+--custom-file-grouper: Fully qualified class name of an implementation of ExportSnapshot.CustomFileGrouper. Used to control how input files are grouped into InputSplits for the MapReduce job.
+--file-location-resolver: Fully qualified class name of an implementation of ExportSnapshot.FileLocationResolver. Used to give hints to YARN about the locations of the data in the InputSplits.
+
+
 
 # HBASE  2.6.2 Release Notes
 
