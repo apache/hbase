@@ -510,7 +510,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     try (Scope ignored = span.makeCurrent()) {
       this.dataFsOk = true;
       this.masterless = !clusterMode();
-      MemorySizeUtil.checkForClusterFreeHeapMemoryLimit(this.conf);
+      MemorySizeUtil.validateRegionServerHeapMemoryAllocation(conf);
       HFile.checkHFileVersion(this.conf);
       checkCodecs(this.conf);
       FSUtils.setupShortCircuitRead(this.conf);

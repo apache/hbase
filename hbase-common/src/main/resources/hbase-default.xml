@@ -279,6 +279,15 @@ possible configurations would overwhelm and obscure the important.
     to ride over transient HDFS errors.</description>
   </property>
   <property>
+    <name>hbase.regionserver.free.heap.min.memory.size</name>
+    <value></value>
+    <description>Defines the minimum amount of heap memory that must remain free for the RegionServer to start,
+      specified in bytes or human-readable formats like '512m' for megabytes or '4g' for gigabytes.
+      If not set, the default is 20% of the total heap size. To disable the check entirely,
+      set this value to 0. If the combined memory usage of memstore and block cache
+      exceeds (total heap - this value), the RegionServer will fail to start.</description>
+  </property>
+  <property>
     <name>hbase.regionserver.global.memstore.size</name>
     <value></value>
     <description>Maximum size of all memstores in a region server before new
