@@ -360,9 +360,9 @@ public final class ConnectionUtils {
     if (scanMetrics == null) {
       return;
     }
-    scanMetrics.countOfRPCcalls.incrementAndGet();
+    scanMetrics.addToCounter(ScanMetrics.RPC_CALLS_METRIC_NAME, 1);
     if (isRegionServerRemote) {
-      scanMetrics.countOfRemoteRPCcalls.incrementAndGet();
+      scanMetrics.addToCounter(ScanMetrics.REMOTE_RPC_CALLS_METRIC_NAME, 1);
     }
   }
 
@@ -370,9 +370,9 @@ public final class ConnectionUtils {
     if (scanMetrics == null) {
       return;
     }
-    scanMetrics.countOfRPCRetries.incrementAndGet();
+    scanMetrics.addToCounter(ScanMetrics.RPC_RETRIES_METRIC_NAME, 1);
     if (isRegionServerRemote) {
-      scanMetrics.countOfRemoteRPCRetries.incrementAndGet();
+      scanMetrics.addToCounter(ScanMetrics.REMOTE_RPC_RETRIES_METRIC_NAME, 1);
     }
   }
 
@@ -387,9 +387,9 @@ public final class ConnectionUtils {
         resultSize += PrivateCellUtil.estimatedSerializedSizeOf(cell);
       }
     }
-    scanMetrics.countOfBytesInResults.addAndGet(resultSize);
+    scanMetrics.addToCounter(ScanMetrics.BYTES_IN_RESULTS_METRIC_NAME, resultSize);
     if (isRegionServerRemote) {
-      scanMetrics.countOfBytesInRemoteResults.addAndGet(resultSize);
+      scanMetrics.addToCounter(ScanMetrics.BYTES_IN_REMOTE_RESULTS_METRIC_NAME, resultSize);
     }
   }
 
@@ -409,7 +409,7 @@ public final class ConnectionUtils {
     if (scanMetrics == null) {
       return;
     }
-    scanMetrics.countOfRegions.incrementAndGet();
+    scanMetrics.addToCounter(ScanMetrics.REGIONS_SCANNED_METRIC_NAME, 1);
   }
 
   /**
