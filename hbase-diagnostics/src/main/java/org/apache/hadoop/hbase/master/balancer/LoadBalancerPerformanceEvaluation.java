@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -137,7 +138,7 @@ public class LoadBalancerPerformanceEvaluation extends AbstractHBaseTool {
       loadBalancerClazz = Class.forName(loadBalancerType);
     } catch (ClassNotFoundException e) {
       System.err.println("Class '" + loadBalancerType + "' not found!");
-      System.exit(1);
+      ExitHandler.getInstance().exit(1);
     }
 
     setupConf();
