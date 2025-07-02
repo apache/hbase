@@ -34,10 +34,12 @@ import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.ScannerCallable.MoreResults;
+import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
 import org.apache.hadoop.hbase.exceptions.ScannerResetException;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
@@ -135,6 +137,11 @@ public abstract class ClientScanner extends AbstractClientScanner {
     this.useScannerTimeoutForNextCalls = connectionConfiguration.isUseScannerTimeoutForNextCalls();
     this.requestAttributes = requestAttributes;
 
+    if (scan.isScanMetricsByRegionEnabled() && scan.getConsistency() == Consistency.TIMELINE) {
+      scan.setEnableScanMetricsByRegion(false);
+      scanForMetrics.setEnableScanMetricsByRegion(false);
+      LOG.warn("Scan metrics by region is not supported for timeline consistency in HBase 2");
+    }
     // check if application wants to collect scan metrics
     initScanMetrics(scan);
 
@@ -259,6 +266,9 @@ public abstract class ClientScanner extends AbstractClientScanner {
     // clear the current region, we will set a new value to it after the first call of the new
     // callable.
     this.currentRegion = null;
+    if (isScanMetricsByRegionEnabled()) {
+      scanMetrics.moveToNextRegion();
+    }
     this.callable = new ScannerCallableWithReplicas(getTable(), getConnection(),
       createScannerCallable(), pool, primaryOperationTimeout, scan, getRetries(), readRpcTimeout,
       scannerTimeout, useScannerTimeoutForNextCalls, caching, conf, caller);
@@ -281,6 +291,7 @@ public abstract class ClientScanner extends AbstractClientScanner {
     Result[] rrs = caller.callWithoutRetries(callable, scannerTimeout);
     if (currentRegion == null && updateCurrentRegion) {
       currentRegion = callable.getHRegionInfo();
+      initScanMetricsRegionInfo();
     }
     return rrs;
   }
@@ -469,7 +480,8 @@ public abstract class ClientScanner extends AbstractClientScanner {
       }
       long currentTime = EnvironmentEdgeManager.currentTime();
       if (this.scanMetrics != null) {
-        this.scanMetrics.sumOfMillisSecBetweenNexts.addAndGet(currentTime - lastNext);
+        this.scanMetrics.addToCounter(ScanMetrics.MILLIS_BETWEEN_NEXTS_METRIC_NAME,
+          currentTime - lastNext);
       }
       lastNext = currentTime;
       // Groom the array of Results that we received back from the server before adding that
@@ -620,6 +632,14 @@ public abstract class ClientScanner extends AbstractClientScanner {
   public Result next() throws IOException {
     try (Scope ignored = span.makeCurrent()) {
       return nextWithSyncCache();
+    }
+  }
+
+  private void initScanMetricsRegionInfo() {
+    if (isScanMetricsByRegionEnabled()) {
+      HRegionLocation location = callable.getLocation();
+      String encodedRegionName = location.getRegion().getEncodedName();
+      scanMetrics.initScanMetricsRegionInfo(encodedRegionName, location.getServerName());
     }
   }
 }
