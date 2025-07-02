@@ -547,4 +547,8 @@ public class CacheStats {
   private static long sum(long[] counts) {
     return Arrays.stream(counts).sum();
   }
+
+  public FastLongHistogram getAgeAtEviction() {
+    return this.ageAtEviction;
+  }
 }
