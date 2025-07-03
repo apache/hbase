@@ -56,6 +56,7 @@ public class SegmentScanner implements KeyValueScanner {
 
   // flag to indicate if this scanner is closed
   protected boolean closed = false;
+  private boolean isScanMetricsEnabled = false;
 
   /**
    * Scanners are ordered from 0 (oldest) to newest in increasing order.
@@ -63,6 +64,7 @@ public class SegmentScanner implements KeyValueScanner {
   protected SegmentScanner(Segment segment, long readPoint) {
     this.segment = segment;
     this.readPoint = readPoint;
+    this.isScanMetricsEnabled = ThreadLocalServerSideScanMetrics.isScanMetricsEnabled();
     // increase the reference count so the underlying structure will not be de-allocated
     this.segment.incScannerCount();
     iter = segment.iterator();
@@ -337,7 +339,6 @@ public class SegmentScanner implements KeyValueScanner {
    */
   protected void updateCurrent() {
     ExtendedCell next = null;
-    boolean isScanMetricsEnabled = ThreadLocalServerSideScanMetrics.isScanMetricsEnabled();
     int totalBytesRead = 0;
 
     try {

@@ -1117,12 +1117,12 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
         }
         boolean isScanMetricsEnabled = ThreadLocalServerSideScanMetrics.isScanMetricsEnabled();
         if (isScanMetricsEnabled) {
-          ThreadLocalServerSideScanMetrics
-            .addBytesReadFromBlockCache(cachedBlock.getOnDiskSizeWithHeader());
+          int cachedBlockBytesRead = cachedBlock.getOnDiskSizeWithHeader();
           // Account for the header size of the next block if it exists
           if (cachedBlock.getNextBlockOnDiskSize() > 0) {
-            ThreadLocalServerSideScanMetrics.addBytesReadFromBlockCache(cachedBlock.headerSize());
+            cachedBlockBytesRead += cachedBlock.headerSize();
           }
+          ThreadLocalServerSideScanMetrics.addBytesReadFromBlockCache(cachedBlockBytesRead);
         }
         try {
           validateBlockType(cachedBlock, expectedBlockType);
