@@ -120,7 +120,7 @@ public class CompoundBloomFilter extends CompoundBloomFilterBase implements Bloo
     return result;
   }
 
-  private HFileBlock getBloomBlock(int block) {
+  public HFileBlock getBloomBlock(int block) {
     HFileBlock bloomBlock;
     try {
       // We cache the block and use a positional read.
@@ -218,4 +218,15 @@ public class CompoundBloomFilter extends CompoundBloomFilterBase implements Bloo
     return sb.toString();
   }
 
+  public HFileBlockIndex.BlockIndexReader getBloomIndex() {
+    return index;
+  }
+
+  public int getHashCount() {
+    return hashCount;
+  }
+
+  public Hash getHash() {
+    return hash;
+  }
 }

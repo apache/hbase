@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics;
+import org.apache.hadoop.hbase.client.metrics.ThreadLocalServerSideScanMetrics;
 import org.apache.hadoop.hbase.filter.FilterWrapper;
 import org.apache.hadoop.hbase.filter.IncompatibleFilterException;
 import org.apache.hadoop.hbase.ipc.CallerDisconnectedException;
@@ -95,6 +96,10 @@ public class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
 
   private RegionServerServices rsServices;
 
+  private int bytesReadFromFs = 0;
+  private int bytesReadFromBlockCache = 0;
+  private int bytesReadFromMemstore = 0;
+
   @Override
   public RegionInfo getRegionInfo() {
     return region.getRegionInfo();
@@ -145,7 +150,18 @@ public class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
     } finally {
       region.smallestReadPointCalcLock.unlock(ReadPointCalculationLock.LockType.RECORDING_LOCK);
     }
+    boolean isScanMetricsEnabled = scan.isScanMetricsEnabled();
+    ThreadLocalServerSideScanMetrics.setScanMetricsEnabled(isScanMetricsEnabled);
+    if (isScanMetricsEnabled) {
+      ThreadLocalServerSideScanMetrics.reset();
+    }
     initializeScanners(scan, additionalScanners);
+    if (isScanMetricsEnabled) {
+      bytesReadFromFs += ThreadLocalServerSideScanMetrics.getBytesReadFromFsAndReset();
+      bytesReadFromBlockCache +=
+        ThreadLocalServerSideScanMetrics.getBytesReadFromBlockCacheAndReset();
+      bytesReadFromMemstore += ThreadLocalServerSideScanMetrics.getBytesReadFromMemstoreAndReset();
+    }
   }
 
   public ScannerContext getContext() {
@@ -279,6 +295,21 @@ public class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
       throw new UnknownScannerException("Scanner was closed");
     }
     boolean moreValues = false;
+    boolean isScanMetricsEnabled = scannerContext.isTrackingMetrics();
+    ThreadLocalServerSideScanMetrics.setScanMetricsEnabled(isScanMetricsEnabled);
+    if (isScanMetricsEnabled) {
+      ThreadLocalServerSideScanMetrics.reset();
+      ServerSideScanMetrics scanMetrics = scannerContext.getMetrics();
+      if (bytesReadFromFs > 0 || bytesReadFromBlockCache > 0 || bytesReadFromMemstore > 0) {
+        scanMetrics.addToCounter(ServerSideScanMetrics.BYTES_READ_FROM_FS_METRIC_NAME,
+          bytesReadFromFs);
+        scanMetrics.addToCounter(ServerSideScanMetrics.BYTES_READ_FROM_BLOCK_CACHE_METRIC_NAME,
+          bytesReadFromBlockCache);
+        scanMetrics.addToCounter(ServerSideScanMetrics.BYTES_READ_FROM_MEMSTORE_METRIC_NAME,
+          bytesReadFromMemstore);
+        bytesReadFromFs = bytesReadFromBlockCache = bytesReadFromMemstore = 0;
+      }
+    }
     if (outResults.isEmpty()) {
       // Usually outResults is empty. This is true when next is called
       // to handle scan or get operation.
@@ -288,7 +319,10 @@ public class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
       moreValues = nextInternal(tmpList, scannerContext);
       outResults.addAll(tmpList);
     }
-
+    if (isScanMetricsEnabled) {
+      ServerSideScanMetrics scanMetrics = scannerContext.getMetrics();
+      ThreadLocalServerSideScanMetrics.populateServerSideScanMetrics(scanMetrics);
+    }
     region.addReadRequestsCount(1);
     if (region.getMetrics() != null) {
       region.getMetrics().updateReadRequestCount();

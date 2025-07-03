@@ -615,7 +615,7 @@ public class StoreFileReader {
     return this.bulkLoadResult;
   }
 
-  BloomFilter getGeneralBloomFilter() {
+  public BloomFilter getGeneralBloomFilter() {
     return generalBloomFilter;
   }
 

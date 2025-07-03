@@ -19,7 +19,9 @@ package org.apache.hadoop.hbase.regionserver.handler;
 
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.hbase.ExtendedCell;
+import org.apache.hadoop.hbase.client.metrics.ThreadLocalServerSideScanMetrics;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
@@ -38,6 +40,9 @@ public class ParallelSeekHandler extends EventHandler {
   private long readPoint;
   private CountDownLatch latch;
   private Throwable err = null;
+  private final boolean isScanMetricsEnabled;
+  private final AtomicInteger bytesReadFromFs;
+  private final AtomicInteger bytesReadFromBlockCache;
 
   public ParallelSeekHandler(KeyValueScanner scanner, ExtendedCell keyValue, long readPoint,
     CountDownLatch latch) {
@@ -46,12 +51,25 @@ public class ParallelSeekHandler extends EventHandler {
     this.keyValue = keyValue;
     this.readPoint = readPoint;
     this.latch = latch;
+    this.isScanMetricsEnabled = ThreadLocalServerSideScanMetrics.isScanMetricsEnabled();
+    this.bytesReadFromFs = ThreadLocalServerSideScanMetrics.getBytesReadFromFsCounter();
+    this.bytesReadFromBlockCache =
+      ThreadLocalServerSideScanMetrics.getBytesReadFromBlockCacheCounter();
   }
 
   @Override
   public void process() {
     try {
+      ThreadLocalServerSideScanMetrics.setScanMetricsEnabled(isScanMetricsEnabled);
+      if (isScanMetricsEnabled) {
+        ThreadLocalServerSideScanMetrics.reset();
+      }
       scanner.seek(keyValue);
+      if (isScanMetricsEnabled) {
+        bytesReadFromFs.addAndGet(ThreadLocalServerSideScanMetrics.getBytesReadFromFsAndReset());
+        bytesReadFromBlockCache
+          .addAndGet(ThreadLocalServerSideScanMetrics.getBytesReadFromBlockCacheAndReset());
+      }
     } catch (IOException e) {
       LOG.error("", e);
       setErr(e);
