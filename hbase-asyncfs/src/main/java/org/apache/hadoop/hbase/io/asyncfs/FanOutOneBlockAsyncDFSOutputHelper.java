@@ -554,7 +554,8 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
           } catch (Exception e) {
             // exclude the broken DN next time
             toExcludeNodes.add(datanodeInfo);
-            excludeDatanodeManager.tryAddExcludeDN(datanodeInfo, "connect error");
+            excludeDatanodeManager.tryAddExcludeDN(datanodeInfo,
+              ExcludeDatanodeManager.ExcludeCause.CONNECT_ERROR.getCause());
             throw e;
           }
         }
