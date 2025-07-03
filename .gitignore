@@ -23,3 +23,4 @@ linklint/
 .java-version
 tmp
 **/.flattened-pom.xml
+.vscode/

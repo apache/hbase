@@ -226,7 +226,7 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
         // when what we need is to open scanner against new location.
         // Attach NSRE to signal client that it needs to re-setup scanner.
         if (this.scanMetrics != null) {
-          this.scanMetrics.countOfNSRE.incrementAndGet();
+          this.scanMetrics.addToCounter(ScanMetrics.NOT_SERVING_REGION_EXCEPTION_METRIC_NAME, 1);
         }
         throw new DoNotRetryIOException("Resetting the scanner -- see exception cause", ioe);
       } else if (ioe instanceof RegionServerStoppedException) {

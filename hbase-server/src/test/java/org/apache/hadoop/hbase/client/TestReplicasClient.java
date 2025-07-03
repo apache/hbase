@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.client.metrics.ScanMetrics.REGIONS_SCANNED_METRIC_NAME;
+import static org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -26,6 +28,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -42,8 +45,10 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionLocations;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.metrics.ScanMetricsRegionInfo;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
@@ -58,6 +63,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -94,6 +100,7 @@ public class TestReplicasClient {
   private static final byte[] f = HConstants.CATALOG_FAMILY;
 
   private final static int REFRESH_PERIOD = 1000;
+  private static ServerName rsServerName;
 
   /**
    * This copro is used to synchronize the tests.
@@ -232,6 +239,9 @@ public class TestReplicasClient {
     Configuration c = new Configuration(HTU.getConfiguration());
     c.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
     LOG.info("Master has stopped");
+
+    rsServerName = HTU.getHBaseCluster().getRegionServer(0).getServerName();
+    Assert.assertNotNull(rsServerName);
   }
 
   @AfterClass
@@ -774,6 +784,76 @@ public class TestReplicasClient {
         assertTrue(countOfStale <= numRows);
       } else {
         assertTrue(countOfStale < numRows);
+      }
+    }
+  }
+
+  @Test
+  public void testScanMetricsByRegion() throws Exception {
+    byte[] b1 = Bytes.toBytes("testScanMetricsByRegion");
+    openRegion(hriSecondary);
+
+    try {
+      Put p = new Put(b1);
+      p.addColumn(f, b1, b1);
+      table.put(p);
+      LOG.info("Put done");
+      flushRegion(hriPrimary);
+
+      // Sleep for 2 * REFRESH_PERIOD so that flushed data is visible to secondary replica
+      Thread.sleep(2 * REFRESH_PERIOD);
+
+      // Explicitly read replica 0
+      Scan scan = new Scan();
+      scan.setEnableScanMetricsByRegion(true);
+      scan.withStartRow(b1, true);
+      scan.withStopRow(b1, true);
+      // Assert row was read from primary replica along with asserting scan metrics by region
+      assertScanMetrics(scan, hriPrimary, false);
+      LOG.info("Scanned primary replica");
+
+      // Read from region replica
+      SlowMeCopro.getPrimaryCdl().set(new CountDownLatch(1));
+      scan = new Scan();
+      scan.setEnableScanMetricsByRegion(true);
+      scan.withStartRow(b1, true);
+      scan.withStopRow(b1, true);
+      scan.setConsistency(Consistency.TIMELINE);
+      // Assert row was read from secondary replica along with asserting no scan metrics by region
+      // for timeline consistency
+      assertScanMetrics(scan, null, true);
+      LOG.info("Scanned secondary replica ");
+    } finally {
+      SlowMeCopro.getPrimaryCdl().get().countDown();
+      Delete d = new Delete(b1);
+      table.delete(d);
+      closeRegion(hriSecondary);
+    }
+  }
+
+  private void assertScanMetrics(Scan scan, RegionInfo regionInfo, boolean isStale)
+    throws IOException {
+    try (ResultScanner rs = table.getScanner(scan);) {
+      for (Result r : rs) {
+        Assert.assertEquals(isStale, r.isStale());
+        Assert.assertFalse(r.isEmpty());
+      }
+      Map<ScanMetricsRegionInfo, Map<String, Long>> scanMetricsByRegion =
+        rs.getScanMetrics().collectMetricsByRegion(false);
+      if (isStale) {
+        Assert.assertTrue(scanMetricsByRegion.isEmpty());
+      } else {
+        Assert.assertEquals(1, scanMetricsByRegion.size());
+        for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry : scanMetricsByRegion
+          .entrySet()) {
+          ScanMetricsRegionInfo scanMetricsRegionInfo = entry.getKey();
+          Map<String, Long> metrics = entry.getValue();
+          Assert.assertEquals(rsServerName, scanMetricsRegionInfo.getServerName());
+          Assert.assertEquals(regionInfo.getEncodedName(),
+            scanMetricsRegionInfo.getEncodedRegionName());
+          Assert.assertEquals(1, (long) metrics.get(REGIONS_SCANNED_METRIC_NAME));
+          Assert.assertEquals(1, (long) metrics.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME));
+        }
       }
     }
   }

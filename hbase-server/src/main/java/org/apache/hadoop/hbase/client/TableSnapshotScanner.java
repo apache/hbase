@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
@@ -187,7 +188,7 @@ public class TableSnapshotScanner extends AbstractClientScanner {
         currentRegionScanner =
           new ClientSideRegionScanner(conf, fs, restoreDir, htd, hri, scan, scanMetrics);
         if (this.scanMetrics != null) {
-          this.scanMetrics.countOfRegions.incrementAndGet();
+          this.scanMetrics.addToCounter(ScanMetrics.REGIONS_SCANNED_METRIC_NAME, 1);
         }
       }
 

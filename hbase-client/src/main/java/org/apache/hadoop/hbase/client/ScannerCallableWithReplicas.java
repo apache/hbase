@@ -31,6 +31,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ScannerCallable.MoreResults;
@@ -466,5 +467,9 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
   @Override
   public long sleep(long pause, int tries) {
     return currentScannerCallable.sleep(pause, tries);
+  }
+
+  public HRegionLocation getLocation() {
+    return currentScannerCallable.getLocation();
   }
 }
