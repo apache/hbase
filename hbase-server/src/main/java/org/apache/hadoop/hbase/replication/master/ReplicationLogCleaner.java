@@ -76,9 +76,9 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
 
   @Override
   public void preClean() {
-    if (this.getConf() == null || isAsyncClusterConnectionClosed()) {
+    if (this.getConf() == null || isAsyncClusterConnectionClosedOrNull()) {
       LOG.warn(
-        "Skip replication log cleaner because the configuration is null or Rpc client has been stopped.");
+        "Skipping preClean because configuration is null or asyncClusterConnection is unavailable.");
       return;
     }
 
@@ -198,9 +198,9 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
       return files;
     }
 
-    if (isAsyncClusterConnectionClosed()) {
-      LOG.warn("Skip getting deletable files because Rpc client has been stopped.");
-      // Rpc client has been stopped, we shouldn't delete any files.
+    if (isAsyncClusterConnectionClosedOrNull()) {
+      LOG.warn("Skip getting deletable files because asyncClusterConnection is unavailable.");
+      // asyncClusterConnection is unavailable, we shouldn't delete any files.
       return Collections.emptyList();
     }
 
@@ -285,11 +285,11 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
   }
 
   /**
-   * Check if asyncClusterConnection is closed
-   * @return true if asyncClusterConnection is not null and is closed, false otherwise
+   * Check if asyncClusterConnection is null or closed.
+   * @return true if asyncClusterConnection is null or is closed, false otherwise
    */
-  private boolean isAsyncClusterConnectionClosed() {
+  private boolean isAsyncClusterConnectionClosedOrNull() {
     AsyncClusterConnection asyncClusterConnection = masterService.getAsyncClusterConnection();
-    return asyncClusterConnection != null && asyncClusterConnection.isClosed();
+    return asyncClusterConnection == null || asyncClusterConnection.isClosed();
   }
 }
