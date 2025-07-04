@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.RegionSplitter;
@@ -91,6 +92,13 @@ public class TableSnapshotInputFormat extends InputFormat<ImmutableBytesWritable
 
     public TableSnapshotRegionSplit(TableSnapshotInputFormatImpl.InputSplit delegate) {
       this.delegate = delegate;
+    }
+
+    @Deprecated
+    public TableSnapshotRegionSplit(TableDescriptor htd, RegionInfo regionInfo,
+      List<String> locations, Scan scan, Path restoreDir) {
+      this.delegate =
+        new TableSnapshotInputFormatImpl.InputSplit(htd, regionInfo, locations, scan, restoreDir);
     }
 
     @Override

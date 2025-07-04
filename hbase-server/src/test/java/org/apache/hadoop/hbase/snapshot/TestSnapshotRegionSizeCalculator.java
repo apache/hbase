@@ -86,9 +86,9 @@ public class TestSnapshotRegionSizeCalculator {
       SnapshotDescriptionUtils.readSnapshotInfo(TEST_UTIL.getTestFileSystem(), snapshotDir);
     SnapshotManifest manifest = SnapshotManifest.open(TEST_UTIL.getConfiguration(),
       TEST_UTIL.getTestFileSystem(), snapshotDir, snapshotDesc);
-    SnapshotRegionSizeCalculator calculator =
-      new SnapshotRegionSizeCalculator(TEST_UTIL.getConfiguration(), manifest);
-    Map<String, Long> regionSizes = calculator.calculateRegionSizes();
+
+    Map<String, Long> regionSizes =
+      SnapshotRegionSizeCalculator.calculateRegionSizes(TEST_UTIL.getConfiguration(), manifest);
 
     for (Map.Entry<String, Long> entry : regionSizes.entrySet()) {
       assertTrue("Region size should be 0.", entry.getValue() == 0);
@@ -105,8 +105,8 @@ public class TestSnapshotRegionSizeCalculator {
       SnapshotDescriptionUtils.readSnapshotInfo(TEST_UTIL.getTestFileSystem(), snapshotDir);
     manifest = SnapshotManifest.open(TEST_UTIL.getConfiguration(), TEST_UTIL.getTestFileSystem(),
       snapshotDir, snapshotDesc);
-    calculator = new SnapshotRegionSizeCalculator(TEST_UTIL.getConfiguration(), manifest);
-    regionSizes = calculator.calculateRegionSizes();
+    regionSizes =
+      SnapshotRegionSizeCalculator.calculateRegionSizes(TEST_UTIL.getConfiguration(), manifest);
     for (Map.Entry<String, Long> entry : regionSizes.entrySet()) {
       assertTrue("Region size should be greater than 0.", entry.getValue() > 0);
     }

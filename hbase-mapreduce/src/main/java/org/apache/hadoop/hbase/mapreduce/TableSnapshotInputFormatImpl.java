@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -150,6 +151,12 @@ public class TableSnapshotInputFormatImpl {
 
     // constructor for mapreduce framework / Writable
     public InputSplit() {
+    }
+
+    @Deprecated
+    public InputSplit(TableDescriptor htd, RegionInfo regionInfo, List<String> locations, Scan scan,
+      Path restoreDir) {
+      this(htd, regionInfo, locations, scan, restoreDir, 1);
     }
 
     public InputSplit(TableDescriptor htd, RegionInfo regionInfo, List<String> locations, Scan scan,
@@ -442,8 +449,8 @@ public class TableSnapshotInputFormatImpl {
       }
     }
 
-    SnapshotRegionSizeCalculator snapshotRegionSizeCalculator =
-      new SnapshotRegionSizeCalculator(conf, manifest);
+    Map<String, Long> regionSizes =
+      SnapshotRegionSizeCalculator.calculateRegionSizes(conf, manifest);
     List<InputSplit> splits = new ArrayList<>();
     for (RegionInfo hri : regionManifests) {
       // load region descriptor
@@ -459,8 +466,7 @@ public class TableSnapshotInputFormatImpl {
           hosts = calculateLocationsForInputSplit(conf, htd, hri, tableDir);
         }
       }
-
-      long snapshotRegionSize = snapshotRegionSizeCalculator.getRegionSize(hri.getEncodedName());
+      long snapshotRegionSize = regionSizes.getOrDefault(hri.getEncodedName(), 0L);
       if (numSplits > 1) {
         byte[][] sp = sa.split(hri.getStartKey(), hri.getEndKey(), numSplits, true);
         for (int i = 0; i < sp.length - 1; i++) {
