@@ -48,7 +48,9 @@ import org.apache.hadoop.hbase.procedure2.LockType;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
+import org.apache.hadoop.hbase.snapshot.SnapshotTTLExpiredException;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
@@ -224,6 +226,14 @@ public abstract class TakeSnapshotHandler extends EventHandler
       // verify the snapshot is valid
       status.setStatus("Verifying snapshot: " + snapshot.getName());
       verifier.verifySnapshot(workingDir, true);
+
+      // HBASE-29296 check snapshot is not expired 
+      if (
+        SnapshotDescriptionUtils.isExpiredSnapshot(snapshot.getTtl(),
+          snapshot.getCreationTime(), EnvironmentEdgeManager.currentTime())
+      ) {
+        throw new SnapshotTTLExpiredException(ProtobufUtil.createSnapshotDesc(snapshot));
+      }
 
       // complete the snapshot, atomically moving from tmp to .snapshot dir.
       SnapshotDescriptionUtils.completeSnapshot(this.snapshotDir, this.workingDir, this.rootFs,

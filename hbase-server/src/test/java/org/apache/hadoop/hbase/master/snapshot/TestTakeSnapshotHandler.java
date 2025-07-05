@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase.master.snapshot;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.fail;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -29,6 +31,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.snapshot.SnapshotTTLExpiredException;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
@@ -98,6 +101,14 @@ public class TestTakeSnapshotHandler {
     TableName cloned = TableName.valueOf(name.getMethodName() + "clone");
     assertEquals(-1, UTIL.getAdmin().getDescriptor(descriptor.getTableName()).getMaxFileSize());
     assertEquals(-1, UTIL.getAdmin().getDescriptor(cloned).getMaxFileSize());
+  }
+
+  @Test(expected = SnapshotTTLExpiredException.class)
+  public void testSnapshotEarlyExpiration() throws Exception {
+    UTIL.startMiniCluster();
+    Map<String, Object> snapshotProps = new HashMap<>();
+    snapshotProps.put("TTL", 1L);
+    createTableInsertDataAndTakeSnapshot(snapshotProps);
   }
 
   @After
