@@ -104,9 +104,9 @@ public class TestBackupRestoreExpiry extends TestBackupBase {
   }
 
   @Test
-  public void TestSequentially() throws Exception {
+  public void testSequentially() throws Exception {
     try {
-      TestRestoreOnExpiredFullBackup();
+      testRestoreOnExpiredFullBackup();
     } catch (Exception e) {
       throw e;
     } finally {
@@ -114,7 +114,7 @@ public class TestBackupRestoreExpiry extends TestBackupBase {
     }
 
     try {
-      TestIncrementalBackupOnExpiredFullBackup();
+      testIncrementalBackupOnExpiredFullBackup();
     } catch (Exception e) {
       throw e;
     } finally {
@@ -122,7 +122,7 @@ public class TestBackupRestoreExpiry extends TestBackupBase {
     }
   }
 
-  public void TestRestoreOnExpiredFullBackup() throws Exception {
+  public void testRestoreOnExpiredFullBackup() throws Exception {
     byte[] mobFam = Bytes.toBytes("mob");
 
     List<TableName> tables = Lists.newArrayList(table1);
@@ -157,7 +157,7 @@ public class TestBackupRestoreExpiry extends TestBackupBase {
     backupAdmin.close();
   }
 
-  public void TestIncrementalBackupOnExpiredFullBackup() throws Exception {
+  public void testIncrementalBackupOnExpiredFullBackup() throws Exception {
     byte[] mobFam = Bytes.toBytes("mob");
 
     List<TableName> tables = Lists.newArrayList(table1);
@@ -213,10 +213,10 @@ public class TestBackupRestoreExpiry extends TestBackupBase {
         backupAdmin
           .backupTables(createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR));
         fail("Should not reach here");
-      } catch (Exception e) {
-        if (e instanceof SnapshotTTLExpiredException) {
-          throw (SnapshotTTLExpiredException) e;
-        }
+      } catch (IOException e) {
+        // this assertion is required because the exception is an IOException that wraps
+        // SnapshotTTLExpiredException
+        assertTrue(e.getCause() != null && e.getCause() instanceof SnapshotTTLExpiredException);
       } finally {
         EnvironmentEdgeManager.reset();
         backupAdmin.close();
