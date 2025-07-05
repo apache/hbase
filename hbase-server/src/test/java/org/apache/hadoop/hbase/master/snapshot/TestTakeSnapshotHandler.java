@@ -18,8 +18,6 @@
 package org.apache.hadoop.hbase.master.snapshot;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.fail;
 
 import java.util.HashMap;
 import java.util.Map;

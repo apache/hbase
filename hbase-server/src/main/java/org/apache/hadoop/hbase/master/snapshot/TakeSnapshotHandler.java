@@ -227,10 +227,10 @@ public abstract class TakeSnapshotHandler extends EventHandler
       status.setStatus("Verifying snapshot: " + snapshot.getName());
       verifier.verifySnapshot(workingDir, true);
 
-      // HBASE-29296 check snapshot is not expired 
+      // HBASE-29296 check snapshot is not expired
       if (
-        SnapshotDescriptionUtils.isExpiredSnapshot(snapshot.getTtl(),
-          snapshot.getCreationTime(), EnvironmentEdgeManager.currentTime())
+        SnapshotDescriptionUtils.isExpiredSnapshot(snapshot.getTtl(), snapshot.getCreationTime(),
+          EnvironmentEdgeManager.currentTime())
       ) {
         throw new SnapshotTTLExpiredException(ProtobufUtil.createSnapshotDesc(snapshot));
       }
