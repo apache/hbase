@@ -110,17 +110,17 @@ cleanAfterRun() {
 }
 
 check_before_start(){
-    #ckeck if the process is not running
+    # check if the process is not running
     mkdir -p "$HBASE_PID_DIR"
     if [ -f $HBASE_PID ]; then
-      if kill -0 `cat $HBASE_PID` > /dev/null 2>&1; then
+      if is_process_alive `cat $HBASE_PID` "$HBASE_PROC_KEYWORD"; then
         echo $command running as process `cat $HBASE_PID`.  Stop it first.
         exit 1
       fi
     fi
 }
 
-wait_until_done ()
+wait_until_done()
 {
     p=$1
     cnt=${HBASE_SLAVE_TIMEOUT:-300}
@@ -179,6 +179,7 @@ HBASE_LOGOUT=${HBASE_LOGOUT:-"$HBASE_LOG_DIR/$HBASE_LOG_PREFIX.out"}
 HBASE_LOGGC=${HBASE_LOGGC:-"$HBASE_LOG_DIR/$HBASE_LOG_PREFIX.gc"}
 HBASE_LOGLOG=${HBASE_LOGLOG:-"${HBASE_LOG_DIR}/${HBASE_LOGFILE}"}
 HBASE_PID=$HBASE_PID_DIR/hbase-$HBASE_IDENT_STRING-$command.pid
+HBASE_PROC_KEYWORD="proc_$command"
 export HBASE_ZNODE_FILE=$HBASE_PID_DIR/hbase-$HBASE_IDENT_STRING-$command.znode
 export HBASE_AUTOSTART_FILE=$HBASE_PID_DIR/hbase-$HBASE_IDENT_STRING-$command.autostart
 
@@ -274,7 +275,7 @@ case $startStop in
     while true
     do
       hbase_rotate_log $HBASE_LOGGC
-      if [ -f $HBASE_PID ] &&  kill -0 "$(cat "$HBASE_PID")" > /dev/null 2>&1 ; then
+      if [ -f $HBASE_PID ] &&  is_process_alive "$(cat "$HBASE_PID")" "$HBASE_PROC_KEYWORD"; then
         wait "$(cat "$HBASE_PID")"
       else
         #if the file does not exist it means that it was not stopped properly by the stop command
@@ -345,15 +346,14 @@ case $startStop in
     rm -f "$HBASE_AUTOSTART_FILE"
     if [ -f $HBASE_PID ]; then
       pidToKill=`cat $HBASE_PID`
-      # kill -0 == see if the PID exists
-      if kill -0 $pidToKill > /dev/null 2>&1; then
+      if is_process_alive $pidToKill $HBASE_PROC_KEYWORD; then
         echo -n stopping $command
         echo "`date` Terminating $command" >> $HBASE_LOGLOG
         kill $pidToKill > /dev/null 2>&1
         waitForProcessEnd $pidToKill $command
       else
         retval=$?
-        echo no $command to stop because kill -0 of pid $pidToKill failed with status $retval
+        echo no $command to stop because process $pidToKill is not alive or is not $command
       fi
     else
       echo no $command to stop because no pid file $HBASE_PID
@@ -379,7 +379,7 @@ case $startStop in
 (status)
     if [ -f $HBASE_PID ]; then
       pid=`cat $HBASE_PID`
-      if kill -0 "$pid" > /dev/null 2>&1; then
+      if is_proccess_alive "$pid" "$HBASE_PROC_KEYWORD"; then
         echo "$command is running as PID $pid"
         exit 0
       fi
