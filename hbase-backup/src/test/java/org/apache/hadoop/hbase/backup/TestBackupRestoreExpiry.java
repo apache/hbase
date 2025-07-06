@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.backup;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -189,39 +188,34 @@ public class TestBackupRestoreExpiry extends TestBackupBase {
     insertIntoTable(conn, table1, famName, 3, ROWS_TO_ADD);
     insertIntoTable(conn, table1, mobFam, 4, ROWS_TO_ADD);
 
-    try (Admin admin = conn.getAdmin()) {
-      List<HRegion> currentRegions = TEST_UTIL.getHBaseCluster().getRegions(table1);
-      for (HRegion region : currentRegions) {
-        byte[] name = region.getRegionInfo().getEncodedNameAsBytes();
-        admin.splitRegionAsync(name).get();
-      }
-
-      TEST_UTIL.waitTableAvailable(table1);
-
-      // Make sure we've split regions
-      assertNotEquals(currentRegions, TEST_UTIL.getHBaseCluster().getRegions(table1));
-
-      EnvironmentEdgeManager.injectEdge(new EnvironmentEdge() {
-        // time + 30s
-        @Override
-        public long currentTime() {
-          return System.currentTimeMillis() + (30 * 1000);
-        }
-      });
-
-      try {
-        backupAdmin
-          .backupTables(createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR));
-        fail("Should not reach here");
-      } catch (IOException e) {
-        // this assertion is required because the exception is an IOException that wraps
-        // SnapshotTTLExpiredException
-        assertTrue(e.getCause() != null && e.getCause() instanceof SnapshotTTLExpiredException);
-      } finally {
-        EnvironmentEdgeManager.reset();
-        backupAdmin.close();
-      }
+    Admin admin = conn.getAdmin();
+    List<HRegion> currentRegions = TEST_UTIL.getHBaseCluster().getRegions(table1);
+    for (HRegion region : currentRegions) {
+      byte[] name = region.getRegionInfo().getEncodedNameAsBytes();
+      admin.splitRegionAsync(name).get();
     }
+
+    TEST_UTIL.waitTableAvailable(table1);
+
+    // Make sure we've split regions
+    assertNotEquals(currentRegions, TEST_UTIL.getHBaseCluster().getRegions(table1));
+
+    EnvironmentEdgeManager.injectEdge(new EnvironmentEdge() {
+      // time + 30s
+      @Override
+      public long currentTime() {
+        return System.currentTimeMillis() + (30 * 1000);
+      }
+    });
+
+    IOException e = assertThrows(IOException.class, () -> {
+      backupAdmin
+        .backupTables(createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR));
+    });
+    assertTrue(e.getCause() instanceof SnapshotTTLExpiredException);
+
+    EnvironmentEdgeManager.reset();
+    backupAdmin.close();
   }
 
   private List<LocatedFileStatus> getBackupFiles() throws IOException {
