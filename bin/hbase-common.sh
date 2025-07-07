@@ -33,7 +33,7 @@ waitForProcessEnd() {
    done
   # process still there : kill -9
   if is_process_alive $pid_killed $proc_keyword; then
-    echo -n force stopping $command with kill -9 $pid_killed
+    echo -n "force stopping $command with kill -9 $pid_killed"
     $JAVA_HOME/bin/jstack -l $pid_killed > "$logout" 2>&1
     kill -9 $pid_killed > /dev/null 2>&1
   fi

@@ -113,8 +113,8 @@ check_before_start(){
     # check if the process is not running
     mkdir -p "$HBASE_PID_DIR"
     if [ -f $HBASE_PID ]; then
-      if is_process_alive `cat $HBASE_PID` "$HBASE_PROC_KEYWORD"; then
-        echo $command running as process `cat $HBASE_PID`.  Stop it first.
+      if is_process_alive "$(cat "$HBASE_PID")" "$HBASE_PROC_KEYWORD"; then
+        echo "$command running as process $(cat "$HBASE_PID"). Stop it first."
         exit 1
       fi
     fi
@@ -345,24 +345,24 @@ case $startStop in
     echo running $command, logging to $HBASE_LOGOUT
     rm -f "$HBASE_AUTOSTART_FILE"
     if [ -f $HBASE_PID ]; then
-      pidToKill=`cat $HBASE_PID`
-      if is_process_alive $pidToKill $HBASE_PROC_KEYWORD; then
-        echo -n stopping $command
+      pidToKill=$(cat "$HBASE_PID")
+      if is_process_alive "$pidToKill" "$HBASE_PROC_KEYWORD"; then
+        echo -n "stopping $command"
         echo "`date` Terminating $command" >> $HBASE_LOGLOG
         kill $pidToKill > /dev/null 2>&1
         waitForProcessEnd $pidToKill $command
       else
         retval=$?
-        echo no $command to stop because process $pidToKill is not alive or is not $command
+        echo "no $command to stop because process $pidToKill is not alive or is not $command"
       fi
     else
-      echo no $command to stop because no pid file $HBASE_PID
+      echo "no $command to stop because no pid file $HBASE_PID"
     fi
     rm -f $HBASE_PID
   ;;
 
 (restart)
-    echo running $command, logging to $HBASE_LOGOUT
+    echo "running $command, logging to $HBASE_LOGOUT"
     # stop the command
     $thiscmd --config "${HBASE_CONF_DIR}" stop $command $args &
     wait_until_done $!
@@ -378,7 +378,7 @@ case $startStop in
 
 (status)
     if [ -f $HBASE_PID ]; then
-      pid=`cat $HBASE_PID`
+      pid=$(cat "$HBASE_PID")
       if is_proccess_alive "$pid" "$HBASE_PROC_KEYWORD"; then
         echo "$command is running as PID $pid"
         exit 0
