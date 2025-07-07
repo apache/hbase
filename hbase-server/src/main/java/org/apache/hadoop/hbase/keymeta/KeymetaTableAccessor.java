@@ -56,30 +56,30 @@ public class KeymetaTableAccessor extends KeyManagementBase {
   public static final TableName KEY_META_TABLE_NAME =
     TableName.valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "keymeta");
 
-  public static final String DEK_METADATA_QUAL_NAME = "dek_metadata";
+  public static final String DEK_METADATA_QUAL_NAME = "m";
   public static final byte[] DEK_METADATA_QUAL_BYTES = Bytes.toBytes(DEK_METADATA_QUAL_NAME);
 
-  public static final String DEK_CHECKSUM_QUAL_NAME = "dek_checksum";
+  public static final String DEK_CHECKSUM_QUAL_NAME = "c";
   public static final byte[] DEK_CHECKSUM_QUAL_BYTES = Bytes.toBytes(DEK_CHECKSUM_QUAL_NAME);
 
-  public static final String DEK_WRAPPED_BY_STK_QUAL_NAME = "dek_wrapped_by_stk";
+  public static final String DEK_WRAPPED_BY_STK_QUAL_NAME = "w";
   public static final byte[] DEK_WRAPPED_BY_STK_QUAL_BYTES =
       Bytes.toBytes(DEK_WRAPPED_BY_STK_QUAL_NAME);
 
-  public static final String STK_CHECKSUM_QUAL_NAME = "stk_checksum";
+  public static final String STK_CHECKSUM_QUAL_NAME = "s";
   public static final byte[] STK_CHECKSUM_QUAL_BYTES = Bytes.toBytes(STK_CHECKSUM_QUAL_NAME);
 
-  public static final String REFRESHED_TIMESTAMP_QUAL_NAME = "refreshed_timestamp";
+  public static final String REFRESHED_TIMESTAMP_QUAL_NAME = "t";
   public static final byte[] REFRESHED_TIMESTAMP_QUAL_BYTES =
       Bytes.toBytes(REFRESHED_TIMESTAMP_QUAL_NAME);
 
-  public static final String KEY_STATE_QUAL_NAME = "key_state";
+  public static final String KEY_STATE_QUAL_NAME = "k";
   public static final byte[] KEY_STATE_QUAL_BYTES = Bytes.toBytes(KEY_STATE_QUAL_NAME);
 
-  public static final String READ_OP_COUNT_QUAL_NAME = "read_op_count";
+  public static final String READ_OP_COUNT_QUAL_NAME = "R";
   public static final byte[] READ_OP_COUNT_QUAL_BYTES = Bytes.toBytes(READ_OP_COUNT_QUAL_NAME);
 
-  public static final String WRITE_OP_COUNT_QUAL_NAME = "write_op_count";
+  public static final String WRITE_OP_COUNT_QUAL_NAME = "W";
   public static final byte[] WRITE_OP_COUNT_QUAL_BYTES = Bytes.toBytes(WRITE_OP_COUNT_QUAL_NAME);
 
   public KeymetaTableAccessor(Server server) {
