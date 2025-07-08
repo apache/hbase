@@ -129,11 +129,11 @@ public class HFileWriterImpl implements HFile.Writer {
   /** Cache configuration for caching data on write. */
   protected final CacheConfig cacheConf;
 
-  public void setTimeRangeToTrack(Supplier<TimeRangeTracker> timeRangeToTrack) {
-    this.timeRangeToTrack = timeRangeToTrack;
+  public void setTimeRangeTrackerForTiering(Supplier<TimeRangeTracker> timeRangeTrackerForTiering) {
+    this.timeRangeTrackerForTiering = timeRangeTrackerForTiering;
   }
 
-  private Supplier<TimeRangeTracker> timeRangeToTrack;
+  private Supplier<TimeRangeTracker> timeRangeTrackerForTiering;
 
   /**
    * Name for this object used when logging or in toString. Is either the result of a toString on
@@ -196,7 +196,7 @@ public class HFileWriterImpl implements HFile.Writer {
     this.hFileContext = fileContext;
     // TODO: Move this back to upper layer
     this.timeRangeTracker = TimeRangeTracker.create(TimeRangeTracker.Type.NON_SYNC);
-    this.timeRangeToTrack = () -> this.timeRangeTracker;
+    this.timeRangeTrackerForTiering = () -> this.timeRangeTracker;
     DataBlockEncoding encoding = hFileContext.getDataBlockEncoding();
     if (encoding != DataBlockEncoding.NONE) {
       this.blockEncoder = new HFileDataBlockEncoderImpl(encoding);
@@ -598,7 +598,7 @@ public class HFileWriterImpl implements HFile.Writer {
   }
 
   private boolean shouldCacheBlock(BlockCache cache, BlockCacheKey key) {
-    Optional<Boolean> result = cache.shouldCacheBlock(key, timeRangeToTrack.get().getMax(), conf);
+    Optional<Boolean> result = cache.shouldCacheBlock(key, timeRangeTrackerForTiering.get().getMax(), conf);
     return result.orElse(true);
   }
 

@@ -57,7 +57,7 @@ public class CustomTieringMultiFileWriter extends DateTieredMultiFileWriter {
       timeRangeTracker.setMax(tieringValue);
       lowerBoundary2TimeRanger.put(entry.getKey(), timeRangeTracker);
       ((HFileWriterImpl) lowerBoundary2Writer.get(entry.getKey()).getLiveFileWriter())
-        .setTimeRangeToTrack(() -> timeRangeTracker);
+        .setTimeRangeTrackerForTiering(() -> timeRangeTracker);
     } else {
       TimeRangeTracker timeRangeTracker = entry.getValue();
       if (timeRangeTracker.getMin() > tieringValue) {

@@ -23,7 +23,7 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CompoundConfiguration;
-import org.apache.hadoop.hbase.regionserver.compactions.CustomTieredCompactionPolicy;
+import org.apache.hadoop.hbase.regionserver.compactions.CustomDateTieredCompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.CustomTieredCompactor;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -44,7 +44,7 @@ public class CustomTieredStoreEngine extends DateTieredStoreEngine {
     CompoundConfiguration config = new CompoundConfiguration();
     config.add(conf);
     config.add(store.conf);
-    config.set(DEFAULT_COMPACTION_POLICY_CLASS_KEY, CustomTieredCompactionPolicy.class.getName());
+    config.set(DEFAULT_COMPACTION_POLICY_CLASS_KEY, CustomDateTieredCompactionPolicy.class.getName());
     createCompactionPolicy(config, store);
     this.storeFileManager = new DefaultStoreFileManager(kvComparator,
       StoreFileComparators.SEQ_ID_MAX_TIMESTAMP, config, compactionPolicy.getConf());
