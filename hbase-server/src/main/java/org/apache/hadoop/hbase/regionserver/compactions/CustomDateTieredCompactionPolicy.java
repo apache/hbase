@@ -44,7 +44,7 @@ import org.slf4j.LoggerFactory;
  * if files have both younger and older data than the configured age limit.
  */
 @InterfaceAudience.Private
-public class CustomTieredCompactionPolicy extends DateTieredCompactionPolicy {
+public class CustomDateTieredCompactionPolicy extends DateTieredCompactionPolicy {
 
   public static final String AGE_LIMIT_MILLIS =
     "hbase.hstore.compaction.date.tiered.custom.age.limit.millis";
@@ -53,11 +53,11 @@ public class CustomTieredCompactionPolicy extends DateTieredCompactionPolicy {
   public static final long DEFAULT_AGE_LIMIT_MILLIS =
     (long) (10L * 365.25 * 24L * 60L * 60L * 1000L);
 
-  private static final Logger LOG = LoggerFactory.getLogger(CustomTieredCompactionPolicy.class);
+  private static final Logger LOG = LoggerFactory.getLogger(CustomDateTieredCompactionPolicy.class);
 
   private long cutOffTimestamp;
 
-  public CustomTieredCompactionPolicy(Configuration conf, StoreConfigInformation storeConfigInfo)
+  public CustomDateTieredCompactionPolicy(Configuration conf, StoreConfigInformation storeConfigInfo)
     throws IOException {
     super(conf, storeConfigInfo);
     cutOffTimestamp = EnvironmentEdgeManager.currentTime()
