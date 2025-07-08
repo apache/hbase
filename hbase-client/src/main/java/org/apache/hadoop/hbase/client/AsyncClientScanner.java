@@ -92,6 +92,8 @@ class AsyncClientScanner {
 
   private final Span span;
 
+  private final boolean isScanMetricsByRegionEnabled;
+
   public AsyncClientScanner(Scan scan, AdvancedScanResultConsumer consumer, TableName tableName,
     AsyncConnectionImpl conn, Timer retryTimer, long pauseNs, long pauseNsForServerOverloaded,
     int maxAttempts, long scanTimeoutNs, long rpcTimeoutNs, int startLogErrorsCnt) {
@@ -113,12 +115,17 @@ class AsyncClientScanner {
     this.rpcTimeoutNs = rpcTimeoutNs;
     this.startLogErrorsCnt = startLogErrorsCnt;
     this.resultCache = createScanResultCache(scan);
+    boolean isScanMetricsByRegionEnabled = false;
     if (scan.isScanMetricsEnabled()) {
       this.scanMetrics = new ScanMetrics();
       consumer.onScanMetricsCreated(scanMetrics);
+      if (this.scan.isScanMetricsByRegionEnabled()) {
+        isScanMetricsByRegionEnabled = true;
+      }
     } else {
       this.scanMetrics = null;
     }
+    this.isScanMetricsByRegionEnabled = isScanMetricsByRegionEnabled;
 
     /*
      * Assumes that the `start()` method is called immediately after construction. If this is no
@@ -243,6 +250,9 @@ class AsyncClientScanner {
   }
 
   private void openScanner() {
+    if (this.isScanMetricsByRegionEnabled) {
+      scanMetrics.moveToNextRegion();
+    }
     incRegionCountMetrics(scanMetrics);
     openScannerTries.set(1);
     addListener(timelineConsistentRead(conn.getLocator(), tableName, scan, scan.getStartRow(),
@@ -257,6 +267,11 @@ class AsyncClientScanner {
               TraceUtil.setError(span, error);
               span.end();
             }
+          }
+          if (this.isScanMetricsByRegionEnabled) {
+            HRegionLocation loc = resp.loc;
+            this.scanMetrics.initScanMetricsRegionInfo(loc.getRegion().getEncodedName(),
+              loc.getServerName());
           }
           startScan(resp);
         }

@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.PackagePrivateFieldAccessor;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics;
 import org.apache.hadoop.hbase.filter.FilterWrapper;
 import org.apache.hadoop.hbase.filter.IncompatibleFilterException;
 import org.apache.hadoop.hbase.ipc.CallerDisconnectedException;
@@ -630,7 +631,8 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
       return;
     }
 
-    scannerContext.getMetrics().countOfRowsFiltered.incrementAndGet();
+    scannerContext.getMetrics()
+      .addToCounter(ServerSideScanMetrics.COUNT_OF_ROWS_FILTERED_KEY_METRIC_NAME, 1);
   }
 
   private void incrementCountOfRowsScannedMetric(ScannerContext scannerContext) {
@@ -638,7 +640,8 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
       return;
     }
 
-    scannerContext.getMetrics().countOfRowsScanned.incrementAndGet();
+    scannerContext.getMetrics()
+      .addToCounter(ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME, 1);
   }
 
   /** Returns true when the joined heap may have data for the current row */
