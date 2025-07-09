@@ -57,8 +57,8 @@ public class CustomDateTieredCompactionPolicy extends DateTieredCompactionPolicy
 
   private long cutOffTimestamp;
 
-  public CustomDateTieredCompactionPolicy(Configuration conf, StoreConfigInformation storeConfigInfo)
-    throws IOException {
+  public CustomDateTieredCompactionPolicy(Configuration conf,
+    StoreConfigInformation storeConfigInfo) throws IOException {
     super(conf, storeConfigInfo);
     cutOffTimestamp = EnvironmentEdgeManager.currentTime()
       - conf.getLong(AGE_LIMIT_MILLIS, DEFAULT_AGE_LIMIT_MILLIS);

@@ -598,7 +598,8 @@ public class HFileWriterImpl implements HFile.Writer {
   }
 
   private boolean shouldCacheBlock(BlockCache cache, BlockCacheKey key) {
-    Optional<Boolean> result = cache.shouldCacheBlock(key, timeRangeTrackerForTiering.get().getMax(), conf);
+    Optional<Boolean> result =
+      cache.shouldCacheBlock(key, timeRangeTrackerForTiering.get().getMax(), conf);
     return result.orElse(true);
   }
 
