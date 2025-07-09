@@ -441,30 +441,22 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
 
     boolean isReplica = false;
     List<Action> unknownReplicaActions = null;
+    List<Action> locateRegionFailedActions = null;
     for (Action action : currentActions) {
       if (isOperationTimeoutExceeded()) {
-        String message = numAttempt == 1
-          ? "Operation timeout exceeded during resolution of region locations, "
-            + "prior to executing any actions."
-          : "Operation timeout exceeded during re-resolution of region locations on retry "
-            + (numAttempt - 1) + ".";
-
-        message += " Meta may be slow or operation timeout too short for batch size or retries.";
-        OperationTimeoutExceededException exception =
-          new OperationTimeoutExceededException(message);
-
-        // Clear any actions we already resolved, because none will have been executed yet
-        // We are going to fail all passed actions because there's no way we can execute any
-        // if operation timeout is exceeded.
         actionsByServer.clear();
-        for (Action actionToFail : currentActions) {
-          manageLocationError(actionToFail, exception);
-        }
+        failIncompleteActionsWithOpTimeout(currentActions, locateRegionFailedActions, numAttempt);
         return;
       }
 
       RegionLocations locs = findAllLocationsOrFail(action, true);
-      if (locs == null) continue;
+      if (locs == null) {
+        if (locateRegionFailedActions == null) {
+          locateRegionFailedActions = new ArrayList<>(1);
+        }
+        locateRegionFailedActions.add(action);
+        continue;
+      }
       boolean isReplicaAction = !RegionReplicaUtil.isDefaultReplica(action.getReplicaId());
       if (isReplica && !isReplicaAction) {
         // This is the property of the current implementation, not a requirement.
@@ -481,6 +473,10 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
         } else {
           // TODO: relies on primary location always being fetched
           manageLocationError(action, null);
+          if (locateRegionFailedActions == null) {
+            locateRegionFailedActions = new ArrayList<>(1);
+          }
+          locateRegionFailedActions.add(action);
         }
       } else {
         byte[] regionName = loc.getRegionInfo().getRegionName();
@@ -552,6 +548,39 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
       manageLocationError(action, ex);
     }
     return loc;
+  }
+
+  /**
+   * For failing all actions that were being grouped during a groupAndSendMultiAction when operation
+   * timeout was exceeded and there is no time remaining to continue grouping/sending any of the
+   * actions. We don't fail any actions which have already failed to completion during grouping due
+   * to location error (they already have an error set and had action counter decremented for)
+   * @param actions                   actions being processed by the groupAndSend when operation
+   *                                  timeout occurred
+   * @param locateRegionFailedActions actions already failed to completion due to location error
+   * @param numAttempt                the number of attempts so far
+   */
+  private void failIncompleteActionsWithOpTimeout(List<Action> actions,
+    List<Action> locateRegionFailedActions, int numAttempt) {
+    String message = numAttempt == 1
+      ? "Operation timeout exceeded during resolution of region locations, "
+        + "prior to executing any actions."
+      : "Operation timeout exceeded during re-resolution of region locations on retry "
+        + (numAttempt - 1) + ".";
+    message += " Meta may be slow or operation timeout too short for batch size or retries.";
+    OperationTimeoutExceededException exception = new OperationTimeoutExceededException(message);
+
+    for (Action actionToFail : actions) {
+      // Action equality is implemented as row equality so we check action index equality
+      // since we don't want two different actions for the same row to be considered equal here
+      boolean actionAlreadyFailed =
+        locateRegionFailedActions != null && locateRegionFailedActions.stream().anyMatch(
+          failedAction -> failedAction.getOriginalIndex() == actionToFail.getOriginalIndex()
+            && failedAction.getReplicaId() == actionToFail.getReplicaId());
+      if (!actionAlreadyFailed) {
+        manageLocationError(actionToFail, exception);
+      }
+    }
   }
 
   /**
