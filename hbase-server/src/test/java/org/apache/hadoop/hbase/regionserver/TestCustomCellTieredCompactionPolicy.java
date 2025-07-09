@@ -86,7 +86,8 @@ public class TestCustomCellTieredCompactionPolicy {
     return mockAndCreatePolicy(mockedRegionInfo);
   }
 
-  private CustomDateTieredCompactionPolicy mockAndCreatePolicy(RegionInfo regionInfo) throws Exception {
+  private CustomDateTieredCompactionPolicy mockAndCreatePolicy(RegionInfo regionInfo)
+    throws Exception {
     StoreConfigInformation mockedStoreConfig = mock(StoreConfigInformation.class);
     when(mockedStoreConfig.getRegionInfo()).thenReturn(regionInfo);
     CustomDateTieredCompactionPolicy policy =

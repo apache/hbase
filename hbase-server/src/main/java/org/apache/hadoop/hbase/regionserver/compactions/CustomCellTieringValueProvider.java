@@ -18,12 +18,12 @@
 package org.apache.hadoop.hbase.regionserver.compactions;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.Tag;
@@ -52,13 +52,8 @@ public class CustomCellTieringValueProvider implements CustomTieredCompactor.Tie
       byte[] tieringValue = null;
       // first iterates through the cells within a row, to find the tiering value for the row
       for (Cell cell : cells) {
-        byte[] qualifier = new byte[cell.getQualifierLength()];
-        System.arraycopy(cell.getQualifierArray(), cell.getQualifierOffset(), qualifier, 0,
-          cell.getQualifierLength());
-        if (Arrays.equals(qualifier, tieringQualifier)) {
-          tieringValue = new byte[cell.getValueLength()];
-          System.arraycopy(cell.getValueArray(), cell.getValueOffset(), tieringValue, 0,
-            cell.getValueLength());
+        if (CellUtil.matchingQualifier(cell, tieringQualifier)) {
+          tieringValue = CellUtil.cloneValue(cell);
           break;
         }
       }

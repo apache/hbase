@@ -44,7 +44,8 @@ public class CustomTieredStoreEngine extends DateTieredStoreEngine {
     CompoundConfiguration config = new CompoundConfiguration();
     config.add(conf);
     config.add(store.conf);
-    config.set(DEFAULT_COMPACTION_POLICY_CLASS_KEY, CustomDateTieredCompactionPolicy.class.getName());
+    config.set(DEFAULT_COMPACTION_POLICY_CLASS_KEY,
+      CustomDateTieredCompactionPolicy.class.getName());
     createCompactionPolicy(config, store);
     this.storeFileManager = new DefaultStoreFileManager(kvComparator,
       StoreFileComparators.SEQ_ID_MAX_TIMESTAMP, config, compactionPolicy.getConf());
