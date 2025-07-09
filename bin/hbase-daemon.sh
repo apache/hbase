@@ -342,7 +342,7 @@ case $startStop in
   ;;
 
 (stop)
-    echo running $command, logging to $HBASE_LOGOUT
+    echo "stopping $command, logging to $HBASE_LOGOUT"
     rm -f "$HBASE_AUTOSTART_FILE"
     if [ -f $HBASE_PID ]; then
       pidToKill=$(cat "$HBASE_PID")
@@ -353,7 +353,11 @@ case $startStop in
         waitForProcessEnd $pidToKill $command
       else
         retval=$?
-        echo "no $command to stop because process $pidToKill is not alive or is not $command"
+        if [ $retval -eq 1 ]; then
+          echo "no $command to stop because process $pidToKill is not alive"
+        else
+          echo "no $command to stop because process $pidToKill is not $command"
+        fi
       fi
     else
       echo "no $command to stop because no pid file $HBASE_PID"

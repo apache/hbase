@@ -58,6 +58,6 @@ is_process_alive() {
   if [[ "$cmdline" == *"$keyword"* ]]; then
     return 0
   else
-    return 1
+    return 2
   fi
 }
