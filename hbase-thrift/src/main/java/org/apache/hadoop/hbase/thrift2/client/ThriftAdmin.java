@@ -1372,4 +1372,19 @@ public class ThriftAdmin implements Admin {
     throw new NotImplementedException(
       "isReplicationPeerModificationEnabled not supported in ThriftAdmin");
   }
+
+  @Override
+  public void refreshHFiles(final TableName tableName) throws IOException {
+    throw new NotImplementedException("refreshHFiles not supported in ThriftAdmin");
+  }
+
+  @Override
+  public void refreshHFiles(final String namespace) throws IOException {
+    throw new NotImplementedException("refreshHFiles not supported in ThriftAdmin");
+  }
+
+  @Override
+  public void refreshHFiles() throws IOException {
+    throw new NotImplementedException("refreshHFiles not supported in ThriftAdmin");
+  }
 }

@@ -994,4 +994,19 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   public Long refreshMeta() throws IOException {
     return admin.refreshMeta();
   }
+
+  @Override
+  public void refreshHFiles(final TableName tableName) throws IOException {
+    admin.refreshHFiles(tableName);
+  }
+
+  @Override
+  public void refreshHFiles(final String namespace) throws IOException {
+    admin.refreshHFiles(namespace);
+  }
+
+  @Override
+  public void refreshHFiles() throws IOException {
+    admin.refreshHFiles();
+  }
 }

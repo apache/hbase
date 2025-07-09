@@ -2663,26 +2663,19 @@ public interface Admin extends Abortable, Closeable {
    * @param tableName table to refresh HFiles for
    * @throws IOException if a remote or network exception occurs
    */
-  default void refreshHFiles(final TableName tableName) throws IOException {
-    System.out.println("Anuj: Admin.java : table name is provided " + tableName);
-  }
+  void refreshHFiles(final TableName tableName) throws IOException;
   /**
-   * Refresh HFiles for the table
+   * Refresh HFiles for all the tables under given namespace
    *
    * @param namespace Namespace for which we should call refresh HFiles for all tables under it
    * @throws IOException if a remote or network exception occurs
    */
-  default void refreshHFiles(String namespace) throws IOException {
-    System.out.println("Anuj: Admin.java : Namespace is provided " + namespace);
-  }
+  void refreshHFiles(final String namespace) throws IOException;
+
   /**
-   * Refresh HFiles for the table
+   * Refresh HFiles for all the tables
    *
-   * @param tableName table to refresh HFiles for
    * @throws IOException if a remote or network exception occurs
    */
-  //default void refreshHFiles(final TableName tableName) throws IOException {
-  default void refreshHFiles() throws IOException {
-    System.out.println("Anuj: Admin.java : Nothing is provided");
-  }
+  void refreshHFiles() throws IOException;
 }

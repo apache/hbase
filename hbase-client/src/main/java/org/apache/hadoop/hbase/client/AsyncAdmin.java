@@ -1867,4 +1867,19 @@ public interface AsyncAdmin {
    * Perform hbase:meta table refresh
    */
   CompletableFuture<Long> refreshMeta();
+
+  /**
+   * Refresh HFiles for the table
+   */
+  CompletableFuture<Void> refreshHFiles(final TableName tableName);
+
+  /**
+   * Refresh HFiles for all the tables under given namespace
+   */
+  CompletableFuture<Void> refreshHFiles(final String namespace);
+
+  /**
+   * Refresh HFiles for all the tables
+   */
+  CompletableFuture<Void> refreshHFiles();
 }
