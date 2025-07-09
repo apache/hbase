@@ -1450,7 +1450,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       }
 
       buildSystemKeyCache();
-      managedKeyDataCache = new ManagedKeyDataCache(this, keymetaAdmin);
+      managedKeyDataCache = new ManagedKeyDataCache(this.getConfiguration(), keymetaAdmin);
 
       // hack! Maps DFSClient => RegionServer for logs. HDFS made this
       // config param for task trackers, but we can piggyback off of it.

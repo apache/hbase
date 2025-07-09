@@ -64,16 +64,17 @@ public class MockManagedKeyProvider extends MockAesKeyProvider implements Manage
 
   @Override
   public ManagedKeyData unwrapKey(String keyMetadata, byte[] wrappedKey) throws IOException {
+    String[] meta_toks = keyMetadata.split(":");
     if (allGeneratedKeys.containsKey(keyMetadata)) {
-      String[] meta_toks = keyMetadata.split(":");
       ManagedKeyState keyState = this.keyState.get(meta_toks[1]);
       ManagedKeyData managedKeyData =
-        new ManagedKeyData(meta_toks[0].getBytes(), ManagedKeyData.KEY_SPACE_GLOBAL,
+        new ManagedKeyData(meta_toks[0].getBytes(), meta_toks[2],
           allGeneratedKeys.get(keyMetadata),
           keyState == null ? ManagedKeyState.ACTIVE : keyState, keyMetadata);
       return registerKeyData(meta_toks[1], managedKeyData);
     }
-    return null;
+    return new ManagedKeyData(meta_toks[0].getBytes(), meta_toks[2],
+      null, ManagedKeyState.FAILED, keyMetadata);
   }
 
   public ManagedKeyData getLastGeneratedKeyData(String alias, String keyNamespace) {
@@ -159,7 +160,7 @@ public class MockManagedKeyProvider extends MockAesKeyProvider implements Manage
     allGeneratedKeys.put(partialMetadata, key);
     allGeneratedKeys.put(keyMetadata, key);
     ManagedKeyData managedKeyData =
-      new ManagedKeyData(key_cust, ManagedKeyData.KEY_SPACE_GLOBAL, key,
+      new ManagedKeyData(key_cust, key_namespace, key,
         keyState == null ? ManagedKeyState.ACTIVE : keyState, keyMetadata);
     return registerKeyData(alias, managedKeyData);
   }

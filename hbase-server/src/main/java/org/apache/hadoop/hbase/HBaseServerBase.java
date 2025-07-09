@@ -65,6 +65,7 @@ import org.apache.hadoop.hbase.regionserver.HeapMemoryManager;
 import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
 import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.ShutdownHook;
+import org.apache.hadoop.hbase.security.SecurityUtil;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
@@ -430,7 +431,7 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
   }
 
   protected void buildSystemKeyCache() throws IOException {
-    if (systemKeyCache == null && Server.isKeyManagementEnabled(this)) {
+    if (systemKeyCache == null && SecurityUtil.isKeyManagementEnabled(conf)) {
       systemKeyCache = SystemKeyCache.createCache(new SystemKeyAccessor(this));
     }
   }

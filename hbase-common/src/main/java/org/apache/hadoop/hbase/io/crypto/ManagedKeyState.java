@@ -67,4 +67,14 @@ public enum ManagedKeyState {
     }
     return lookupByVal.get(val);
   }
+
+  /**
+   * This is used to determine if a key is usable for encryption/decryption.
+   *
+   * @param state The key state to check
+   * @return true if the key state is ACTIVE or INACTIVE, false otherwise
+   */
+  public static boolean isUsable(ManagedKeyState state) {
+    return state == ACTIVE || state == INACTIVE;
+  }
 }

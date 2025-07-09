@@ -58,34 +58,11 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
       return activeKeys;
     }
 
-    Set<ManagedKeyData> existingKeys = new HashSet<>(activeKeys);
     int nKeysToRetrieve = perCustNamespaceActiveKeyConfCount - activeKeys.size();
-    Set<ManagedKeyData> retrievedKeys = new HashSet<>(nKeysToRetrieve);
-    ManagedKeyProvider provider = getKeyProvider();
-    for (int i = 0; i < nKeysToRetrieve; ++i) {
-      ManagedKeyData pbeKey = provider.getManagedKey(key_cust, keyNamespace);
-      if (pbeKey == null) {
-        throw new IOException("Invalid null managed key received from key provider");
-      }
-      if (retrievedKeys.contains(pbeKey) || existingKeys.contains(pbeKey)) {
-        // This typically means, the key provider is not capable of producing multiple active keys.
-        LOG.info("enableManagedKeys: specified (custodian: {}, namespace: {}) is configured "
-            + " to have {} active keys, but received only {}  unique keys.",
-          keyCust, keyNamespace, perCustNamespaceActiveKeyConfCount,
-          activeKeys.size() + retrievedKeys.size());
-        break;
-      }
-      retrievedKeys.add(pbeKey);
-      LOG.info("enableManagedKeys: got managed key with status: {} and metadata: {} for "
-          + "(custodian: {}, namespace: {})", pbeKey.getKeyState(), pbeKey.getKeyMetadata(),
-        keyCust, keyNamespace);
+    Set<ManagedKeyData> retrievedKeys = retrieveManagedKeys(
+        keyCust, key_cust, keyNamespace, nKeysToRetrieve, new HashSet<>(activeKeys));
+    for (ManagedKeyData pbeKey : retrievedKeys) {
       addKey(pbeKey);
-      if (pbeKey.getKeyState() != ManagedKeyState.ACTIVE) {
-        LOG.info("enableManagedKeys: received non-ACTIVE key with status: {} with metadata: {} for "
-            + "(custodian: {}, namespace: {})",
-          pbeKey.getKeyState(), pbeKey.getKeyMetadata(), keyCust, keyNamespace);
-        break;
-      }
     }
     return retrievedKeys.stream().toList();
   }

@@ -122,15 +122,4 @@ public interface Server extends Abortable, Stoppable {
   default boolean isStopping() {
     return false;
   }
-
-  /**
-   * From the given server, determine if key management is enabbled.
-   * @return true if key management is enabled
-   */
-  static boolean isKeyManagementEnabled(Server server) {
-    return server.getConfiguration()
-      .getBoolean(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY,
-        HConstants.CRYPTO_MANAGED_KEYS_DEFAULT_ENABLED);
-  }
-
 }

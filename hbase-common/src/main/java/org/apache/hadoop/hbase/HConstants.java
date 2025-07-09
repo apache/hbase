@@ -1333,14 +1333,14 @@ public final class HConstants {
   public static final boolean CRYPTO_MANAGED_KEYS_DYNAMIC_LOOKUP_DEFAULT_ENABLED = true;
 
   /** Maximum number of entries in the managed key data cache. */
-  public static final String CRYPTO_MANAGED_KEYS_CACHE_MAX_SIZE_CONF_KEY =
-    "hbase.crypto.managed_keys.cache.max_size";
-  public static final int CRYPTO_MANAGED_KEYS_CACHE_MAX_SIZE_DEFAULT = 1000;
+  public static final String CRYPTO_MANAGED_KEYS_L1_CACHE_MAX_ENTRIES_CONF_KEY =
+    "hbase.crypto.managed_keys.l1_cache.max_entries";
+  public static final int CRYPTO_MANAGED_KEYS_L1_CACHE_MAX_ENTRIES_DEFAULT = 1000;
 
   /** Maximum number of entries in the managed key active keys cache. */
-  public static final String CRYPTO_MANAGED_KEYS_ACTIVE_CACHE_MAX_SIZE_CONF_KEY =
-    "hbase.crypto.managed_keys.active_cache.max_size";
-  public static final int CRYPTO_MANAGED_KEYS_ACTIVE_CACHE_MAX_SIZE_DEFAULT = 100;
+  public static final String CRYPTO_MANAGED_KEYS_L1_ACTIVE_CACHE_MAX_NS_ENTRIES_CONF_KEY =
+    "hbase.crypto.managed_keys.l1_active_cache.max_ns_entries";
+  public static final int CRYPTO_MANAGED_KEYS_L1_ACTIVE_CACHE_MAX_NS_ENTRIES_DEFAULT = 100;
 
   /** Configuration key for setting RPC codec class name */
   public static final String RPC_CODEC_CONF_KEY = "hbase.client.rpc.codec";

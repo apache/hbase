@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.io.crypto;
 
 import java.io.IOException;
 import java.util.Base64;
+import edu.umd.cs.findbugs.annotations.NonNull;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -70,7 +71,7 @@ public interface ManagedKeyProvider extends KeyProvider {
    *         {@code null}
    * @throws IOException if an error occurs while generating the key
    */
-  ManagedKeyData unwrapKey(String keyMetaData, byte[] wrappedKey) throws IOException;
+  @NonNull ManagedKeyData unwrapKey(String keyMetaData, byte[] wrappedKey) throws IOException;
 
   /**
    * Decode the given key custodian which is encoded as Base64 string.
