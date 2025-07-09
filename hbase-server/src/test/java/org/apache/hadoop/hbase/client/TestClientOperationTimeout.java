@@ -330,7 +330,8 @@ public class TestClientOperationTimeout {
    * decremented properly for all actions, see last catch block
    */
   @Test
-  public void testMultiOperationTimeoutWithLocationError() throws IOException, InterruptedException {
+  public void testMultiOperationTimeoutWithLocationError()
+    throws IOException, InterruptedException {
     // Need meta delay > meta scan timeout > operation timeout (with no retries) so that the
     // meta scan for resolving region location for the first action times out after the operation
     // timeout has been exceeded leaving no time to attempt region location resolution for any
