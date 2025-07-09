@@ -156,7 +156,7 @@ public class ReplicationSourceShipper extends Thread {
     List<Entry> entries = entryBatch.getWalEntries();
     int sleepMultiplier = 0;
     if (entries.isEmpty()) {
-      updateLogPosition(entryBatch, ReplicationResult.COMMITTED);
+      updateLogPosition(entryBatch, ReplicationResult.SUBMITTED);
       return;
     }
     int currentSize = (int) entryBatch.getHeapSize();
