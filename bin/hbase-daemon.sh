@@ -379,7 +379,7 @@ case $startStop in
 (status)
     if [ -f $HBASE_PID ]; then
       pid=$(cat "$HBASE_PID")
-      if is_proccess_alive "$pid" "$HBASE_PROC_KEYWORD"; then
+      if is_process_alive "$pid" "$HBASE_PROC_KEYWORD"; then
         echo "$command is running as PID $pid"
         exit 0
       fi
