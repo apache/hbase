@@ -4557,4 +4557,19 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
           resp -> resp.getCachedFilesList()))
       .serverName(serverName).call();
   }
+
+  @Override
+  public CompletableFuture<Void> refreshHFiles(final TableName tableName){
+    return CompletableFuture.completedFuture(null);
+  }
+
+  @Override
+  public CompletableFuture<Void> refreshHFiles(final String namespace){
+    return CompletableFuture.completedFuture(null);
+  }
+
+  @Override
+  public CompletableFuture<Void> refreshHFiles(){
+    return CompletableFuture.completedFuture(null);
+  }
 }
