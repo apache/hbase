@@ -43,6 +43,7 @@ public class ParallelSeekHandler extends EventHandler {
   private final boolean isScanMetricsEnabled;
   private final AtomicInteger bytesReadFromFs;
   private final AtomicInteger bytesReadFromBlockCache;
+  private final AtomicInteger readOpsCount;
 
   public ParallelSeekHandler(KeyValueScanner scanner, ExtendedCell keyValue, long readPoint,
     CountDownLatch latch) {
@@ -55,6 +56,7 @@ public class ParallelSeekHandler extends EventHandler {
     this.bytesReadFromFs = ThreadLocalServerSideScanMetrics.getBytesReadFromFsCounter();
     this.bytesReadFromBlockCache =
       ThreadLocalServerSideScanMetrics.getBytesReadFromBlockCacheCounter();
+    this.readOpsCount = ThreadLocalServerSideScanMetrics.getReadOpsCountCounter();
   }
 
   @Override
@@ -66,9 +68,18 @@ public class ParallelSeekHandler extends EventHandler {
       }
       scanner.seek(keyValue);
       if (isScanMetricsEnabled) {
-        bytesReadFromFs.addAndGet(ThreadLocalServerSideScanMetrics.getBytesReadFromFsAndReset());
-        bytesReadFromBlockCache
-          .addAndGet(ThreadLocalServerSideScanMetrics.getBytesReadFromBlockCacheAndReset());
+        int metricValue = ThreadLocalServerSideScanMetrics.getBytesReadFromFsAndReset();
+        if (metricValue > 0) {
+          bytesReadFromFs.addAndGet(metricValue);
+        }
+        metricValue = ThreadLocalServerSideScanMetrics.getBytesReadFromBlockCacheAndReset();
+        if (metricValue > 0) {
+          bytesReadFromBlockCache.addAndGet(metricValue);
+        }
+        metricValue = ThreadLocalServerSideScanMetrics.getReadOpsCountAndReset();
+        if (metricValue > 0) {
+          readOpsCount.addAndGet(metricValue);
+        }
       }
     } catch (IOException e) {
       LOG.error("", e);

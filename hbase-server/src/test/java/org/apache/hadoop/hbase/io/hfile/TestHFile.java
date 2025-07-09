@@ -202,7 +202,12 @@ public class TestHFile {
     lru.shutdown();
   }
 
-  private void assertBytesReadFromCache(boolean isScanMetricsEnabled) throws Exception {
+  private void assertBytesReadFromCache(boolean isScanMetricsEnabled)
+    throws Exception {
+    assertBytesReadFromCache(isScanMetricsEnabled, DataBlockEncoding.NONE);
+  }
+  
+  private void assertBytesReadFromCache(boolean isScanMetricsEnabled, DataBlockEncoding encoding) throws Exception {
     // Write a store file
     Path storeFilePath = writeStoreFile();
 
@@ -241,18 +246,24 @@ public class TestHFile {
     Assert.assertEquals(0, ThreadLocalServerSideScanMetrics.getBytesReadFromBlockCacheAndReset());
 
     // Read the first block again and assert that it has been cached in the block cache.
-    block = reader.getCachedBlock(cacheKey, false, false, true, BlockType.DATA, null);
-    Assert.assertNotNull(block);
-    int bytesReadFromCache = block.getOnDiskSizeWithHeader();
-    if (block.getNextBlockOnDiskSize() > 0) {
-      bytesReadFromCache += block.headerSize();
+    block = reader.getCachedBlock(cacheKey, false, false, true, BlockType.DATA, encoding);
+    int bytesReadFromCache = 0;
+    if (encoding == DataBlockEncoding.NONE) {
+      Assert.assertNotNull(block);
+      bytesReadFromCache = block.getOnDiskSizeWithHeader();
+      if (block.getNextBlockOnDiskSize() > 0) {
+        bytesReadFromCache += block.headerSize();
+      }
+      block.release();
+      // Assert that bytes read from block cache account for same number of bytes that would have
+      // been read from FS if block cache wasn't there.
+      Assert.assertEquals(bytesReadFromFs, bytesReadFromCache);
     }
-    block.release();
+    else {
+      Assert.assertNull(block);
+    }
     Assert.assertEquals(isScanMetricsEnabled ? bytesReadFromCache : 0,
       ThreadLocalServerSideScanMetrics.getBytesReadFromBlockCacheAndReset());
-    // Assert that bytes read from block cache account for same number of bytes that would have been
-    // read from FS if block cache wasn't there.
-    Assert.assertEquals(bytesReadFromFs, bytesReadFromCache);
     Assert.assertEquals(0, ThreadLocalServerSideScanMetrics.getBytesReadFromFsAndReset());
 
     reader.close();
@@ -268,6 +279,12 @@ public class TestHFile {
   public void testBytesReadFromCacheWithScanMetricsDisabled() throws Exception {
     ThreadLocalServerSideScanMetrics.setScanMetricsEnabled(false);
     assertBytesReadFromCache(false);
+  }
+
+  @Test
+  public void testBytesReadFromCacheWithInvalidDataEncoding() throws Exception {
+    ThreadLocalServerSideScanMetrics.setScanMetricsEnabled(true);
+    assertBytesReadFromCache(true, DataBlockEncoding.FAST_DIFF);
   }
 
   private BlockCache initCombinedBlockCache(final String l1CachePolicy) {

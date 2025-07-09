@@ -96,9 +96,7 @@ public class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
 
   private RegionServerServices rsServices;
 
-  private int bytesReadFromFs = 0;
-  private int bytesReadFromBlockCache = 0;
-  private int bytesReadFromMemstore = 0;
+  private ServerSideScanMetrics scannerInitMetrics;
 
   @Override
   public RegionInfo getRegionInfo() {
@@ -153,14 +151,12 @@ public class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
     boolean isScanMetricsEnabled = scan.isScanMetricsEnabled();
     ThreadLocalServerSideScanMetrics.setScanMetricsEnabled(isScanMetricsEnabled);
     if (isScanMetricsEnabled) {
+      this.scannerInitMetrics = new ServerSideScanMetrics();
       ThreadLocalServerSideScanMetrics.reset();
     }
     initializeScanners(scan, additionalScanners);
     if (isScanMetricsEnabled) {
-      bytesReadFromFs += ThreadLocalServerSideScanMetrics.getBytesReadFromFsAndReset();
-      bytesReadFromBlockCache +=
-        ThreadLocalServerSideScanMetrics.getBytesReadFromBlockCacheAndReset();
-      bytesReadFromMemstore += ThreadLocalServerSideScanMetrics.getBytesReadFromMemstoreAndReset();
+      ThreadLocalServerSideScanMetrics.populateServerSideScanMetrics(scannerInitMetrics);
     }
   }
 
@@ -300,14 +296,9 @@ public class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
     if (isScanMetricsEnabled) {
       ThreadLocalServerSideScanMetrics.reset();
       ServerSideScanMetrics scanMetrics = scannerContext.getMetrics();
-      if (bytesReadFromFs > 0 || bytesReadFromBlockCache > 0 || bytesReadFromMemstore > 0) {
-        scanMetrics.addToCounter(ServerSideScanMetrics.BYTES_READ_FROM_FS_METRIC_NAME,
-          bytesReadFromFs);
-        scanMetrics.addToCounter(ServerSideScanMetrics.BYTES_READ_FROM_BLOCK_CACHE_METRIC_NAME,
-          bytesReadFromBlockCache);
-        scanMetrics.addToCounter(ServerSideScanMetrics.BYTES_READ_FROM_MEMSTORE_METRIC_NAME,
-          bytesReadFromMemstore);
-        bytesReadFromFs = bytesReadFromBlockCache = bytesReadFromMemstore = 0;
+      if (scannerInitMetrics != null) {
+        scannerInitMetrics.getMetricsMap().forEach(scanMetrics::addToCounter);
+        scannerInitMetrics = null;
       }
     }
     if (outResults.isEmpty()) {

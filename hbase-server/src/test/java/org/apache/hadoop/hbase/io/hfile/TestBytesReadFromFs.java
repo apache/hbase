@@ -121,6 +121,7 @@ public class TestBytesReadFromFs {
     for (BloomType bloomType : bloomTypes) {
       LOG.info("Testing bloom type: {}", bloomType);
       ThreadLocalServerSideScanMetrics.getBytesReadFromFsAndReset();
+      ThreadLocalServerSideScanMetrics.getReadOpsCountAndReset();
       keyList.clear();
       keyValues.clear();
       writeBloomFilters(path, bloomType, BLOOM_BLOCK_SIZE);
@@ -187,6 +188,7 @@ public class TestBytesReadFromFs {
     // Indexes use NoOpEncodedSeeker
     MyNoOpEncodedSeeker seeker = new MyNoOpEncodedSeeker();
     ThreadLocalServerSideScanMetrics.getBytesReadFromFsAndReset();
+    ThreadLocalServerSideScanMetrics.getReadOpsCountAndReset();
 
     int bytesRead = 0;
     int blockLevelsRead = 0;
@@ -242,6 +244,12 @@ public class TestBytesReadFromFs {
     Assert.assertEquals(bytesRead, ThreadLocalServerSideScanMetrics.getBytesReadFromFsAndReset());
     Assert.assertEquals(blockLevelsRead, trailer.getNumDataIndexLevels() + 1);
     Assert.assertEquals(0, ThreadLocalServerSideScanMetrics.getBytesReadFromBlockCacheAndReset());
+    // At every index level we read one index block and finally read data block
+    // Do +1 for the additional seek done to read the root index block header to get on disk size of
+    // the root index block
+    int readOpsCount = isScanMetricsEnabled ? blockLevelsRead + 1 : 0;
+    Assert.assertEquals(readOpsCount,
+      ThreadLocalServerSideScanMetrics.getReadOpsCountAndReset());
   }
 
   private void readLoadOnOpenDataSection(Path path, boolean hasBloomFilters) throws IOException {
@@ -251,11 +259,14 @@ public class TestBytesReadFromFs {
       new ReaderContextBuilder().withInputStreamWrapper(new FSDataInputStreamWrapper(fs, path))
         .withFilePath(path).withFileSystem(fs).withFileSize(fileSize).build();
 
+    ThreadLocalServerSideScanMetrics.getBytesReadFromFsAndReset();
+    ThreadLocalServerSideScanMetrics.getReadOpsCountAndReset();
     // Read HFile trailer
     HFileInfo hfile = new HFileInfo(readerContext, conf);
     FixedFileTrailer trailer = hfile.getTrailer();
     Assert.assertEquals(trailer.getTrailerSize(),
       ThreadLocalServerSideScanMetrics.getBytesReadFromFsAndReset());
+    Assert.assertEquals(1, ThreadLocalServerSideScanMetrics.getReadOpsCountAndReset());
 
     CacheConfig cacheConfig = new CacheConfig(conf);
     HFile.Reader reader = new HFilePreadReader(readerContext, hfile, cacheConfig, conf);
@@ -294,6 +305,7 @@ public class TestBytesReadFromFs {
 
   private boolean readEachBlockInLoadOnOpenDataSection(HFileBlock block, boolean readNextHeader)
     throws IOException {
+    int readOpsCount = readNextHeader ? 1 : 2;
     int bytesRead = block.getOnDiskSizeWithHeader();
     if (readNextHeader) {
       bytesRead -= HFileBlock.headerSize(true);
@@ -305,6 +317,7 @@ public class TestBytesReadFromFs {
     }
     block.release();
     Assert.assertEquals(bytesRead, ThreadLocalServerSideScanMetrics.getBytesReadFromFsAndReset());
+    Assert.assertEquals(readOpsCount, ThreadLocalServerSideScanMetrics.getReadOpsCountAndReset());
     return readNextHeader;
   }
 
@@ -325,6 +338,8 @@ public class TestBytesReadFromFs {
 
     // Reset bytes read from fs to 0
     ThreadLocalServerSideScanMetrics.getBytesReadFromFsAndReset();
+    // Reset read ops count to 0
+    ThreadLocalServerSideScanMetrics.getReadOpsCountAndReset();
 
     StoreFileReader reader = sf.getReader();
     BloomFilter bloomFilter = reader.getGeneralBloomFilter();
@@ -357,6 +372,7 @@ public class TestBytesReadFromFs {
     reader.close(true);
 
     Assert.assertEquals(bytesRead, ThreadLocalServerSideScanMetrics.getBytesReadFromFsAndReset());
+    Assert.assertEquals(1, ThreadLocalServerSideScanMetrics.getReadOpsCountAndReset());
   }
 
   private void writeBloomFilters(Path path, BloomType bt, int bloomBlockByteSize)

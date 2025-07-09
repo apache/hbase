@@ -378,8 +378,8 @@ public class TestDefaultMemStore {
     }
     mvcc.completeAndWait(w);
 
-    KeyValueScanner s = this.memstore.getScanners(mvcc.getReadPoint()).get(0);
     ThreadLocalServerSideScanMetrics.getBytesReadFromMemstoreAndReset();
+    KeyValueScanner s = this.memstore.getScanners(mvcc.getReadPoint()).get(0);
     assertScannerResults(s, kvs);
     return totalCellSize;
   }

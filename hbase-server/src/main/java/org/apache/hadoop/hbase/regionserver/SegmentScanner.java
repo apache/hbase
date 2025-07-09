@@ -64,12 +64,13 @@ public class SegmentScanner implements KeyValueScanner {
   protected SegmentScanner(Segment segment, long readPoint) {
     this.segment = segment;
     this.readPoint = readPoint;
-    this.isScanMetricsEnabled = ThreadLocalServerSideScanMetrics.isScanMetricsEnabled();
     // increase the reference count so the underlying structure will not be de-allocated
     this.segment.incScannerCount();
     iter = segment.iterator();
     // the initialization of the current is required for working with heap of SegmentScanners
     updateCurrent();
+    // Enable scan metrics for tracking bytes read after initialization of current
+    this.isScanMetricsEnabled = ThreadLocalServerSideScanMetrics.isScanMetricsEnabled();
     if (current == null) {
       // nothing to fetch from this scanner
       close();
@@ -350,29 +351,21 @@ public class SegmentScanner implements KeyValueScanner {
         }
         if (next.getSequenceId() <= this.readPoint) {
           current = next;
-          // Add accumulated bytes before returning
-          if (isScanMetricsEnabled && totalBytesRead > 0) {
-            ThreadLocalServerSideScanMetrics.addBytesReadFromMemstore(totalBytesRead);
-          }
           return;// skip irrelevant versions
         }
         // for backwardSeek() stay in the boundaries of a single row
         if (stopSkippingKVsIfNextRow && segment.compareRows(next, stopSkippingKVsRow) > 0) {
           current = null;
-          // Add accumulated bytes before returning
-          if (isScanMetricsEnabled && totalBytesRead > 0) {
-            ThreadLocalServerSideScanMetrics.addBytesReadFromMemstore(totalBytesRead);
-          }
           return;
         }
       } // end of while
 
       current = null; // nothing found
-      // Add accumulated bytes at the end
-      if (isScanMetricsEnabled && totalBytesRead > 0) {
+    } finally {
+      // Add accumulated bytes before returning
+      if (totalBytesRead > 0) {
         ThreadLocalServerSideScanMetrics.addBytesReadFromMemstore(totalBytesRead);
       }
-    } finally {
       if (next != null) {
         // in all cases, remember the last KV we iterated to, needed for reseek()
         last = next;

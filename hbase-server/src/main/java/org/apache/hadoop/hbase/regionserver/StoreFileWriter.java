@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCell;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -285,6 +286,7 @@ public class StoreFileWriter implements CellSink, ShipperListener {
    * For unit testing only.
    * @return the Bloom filter used by this writer.
    */
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
   public BloomFilterWriter getGeneralBloomWriter() {
     return liveFileWriter.generalBloomFilterWriter;
   }

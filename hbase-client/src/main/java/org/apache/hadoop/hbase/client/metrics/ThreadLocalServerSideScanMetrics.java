@@ -53,6 +53,13 @@ public final class ThreadLocalServerSideScanMetrics {
     }
   };
 
+  private static final ThreadLocal<AtomicInteger> readOpsCount = new ThreadLocal<>() {
+    @Override
+    protected AtomicInteger initialValue() {
+      return new AtomicInteger(0);
+    }
+  };
+
   public static final void setScanMetricsEnabled(boolean enable) {
     isScanMetricsEnabled.set(enable);
   }
@@ -67,6 +74,10 @@ public final class ThreadLocalServerSideScanMetrics {
 
   public static final int addBytesReadFromMemstore(int bytes) {
     return bytesReadFromMemstore.get().addAndGet(bytes);
+  }
+
+  public static final int addReadOpsCount(int count) {
+    return readOpsCount.get().addAndGet(count);
   }
 
   public static final boolean isScanMetricsEnabled() {
@@ -85,6 +96,10 @@ public final class ThreadLocalServerSideScanMetrics {
     return bytesReadFromMemstore.get();
   }
 
+  public static final AtomicInteger getReadOpsCountCounter() {
+    return readOpsCount.get();
+  }
+
   public static final int getBytesReadFromFsAndReset() {
     return getBytesReadFromFsCounter().getAndSet(0);
   }
@@ -97,10 +112,15 @@ public final class ThreadLocalServerSideScanMetrics {
     return getBytesReadFromMemstoreCounter().getAndSet(0);
   }
 
+  public static final int getReadOpsCountAndReset() {
+    return getReadOpsCountCounter().getAndSet(0);
+  }
+
   public static final void reset() {
     getBytesReadFromFsAndReset();
     getBytesReadFromBlockCacheAndReset();
     getBytesReadFromMemstoreAndReset();
+    getReadOpsCountAndReset();
   }
 
   public static final void populateServerSideScanMetrics(ServerSideScanMetrics metrics) {
@@ -113,5 +133,7 @@ public final class ThreadLocalServerSideScanMetrics {
       getBytesReadFromBlockCacheCounter().get());
     metrics.addToCounter(ServerSideScanMetrics.BYTES_READ_FROM_MEMSTORE_METRIC_NAME,
       getBytesReadFromMemstoreCounter().get());
+    metrics.addToCounter(ServerSideScanMetrics.READ_OPS_COUNT_METRIC_NAME,
+      getReadOpsCountCounter().get());
   }
 }

@@ -41,6 +41,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.hbase.ExtendedCell;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.metrics.ThreadLocalServerSideScanMetrics;
 import org.apache.hadoop.hbase.fs.HFileSystem;
@@ -406,6 +407,7 @@ public class HFileBlock implements Cacheable {
    *         present) read by peeking into the next block's header; use as a hint when doing a read
    *         of the next block when scanning or running over a file.
    */
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
   public int getNextBlockOnDiskSize() {
     return nextBlockOnDiskSize;
   }
@@ -627,6 +629,7 @@ public class HFileBlock implements Cacheable {
    * Retrieves the decompressed/decrypted view of this block. An encoded block remains in its
    * encoded structure. Internal structures are shared between instances where applicable.
    */
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
   public HFileBlock unpack(HFileContext fileContext, FSReader reader) throws IOException {
     if (!fileContext.isCompressedOrEncrypted()) {
       // TODO: cannot use our own fileContext here because HFileBlock(ByteBuffer, boolean),
@@ -1242,7 +1245,7 @@ public class HFileBlock implements Cacheable {
    * Iterator for reading {@link HFileBlock}s in load-on-open-section, such as root data index
    * block, meta index block, file info block etc.
    */
-  @InterfaceAudience.Private
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
   public interface BlockIterator {
     /**
      * Get the next block, or null if there are no more blocks to iterate.
@@ -1267,7 +1270,7 @@ public class HFileBlock implements Cacheable {
   }
 
   /** An HFile block reader with iteration ability. */
-  @InterfaceAudience.Private
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
   public interface FSReader {
     /**
      * Reads the block at the given offset in the file with the given on-disk size and uncompressed
@@ -1760,6 +1763,7 @@ public class HFileBlock implements Cacheable {
           headerBuf.rewind();
           if (isScanMetricsEnabled) {
             ThreadLocalServerSideScanMetrics.addBytesReadFromFs(hdrSize);
+            ThreadLocalServerSideScanMetrics.addReadOpsCount(1);
           }
         }
         onDiskSizeWithHeader = getOnDiskSizeWithHeader(headerBuf, checksumSupport);
@@ -1812,6 +1816,7 @@ public class HFileBlock implements Cacheable {
           int bytesRead =
             (onDiskSizeWithHeader - preReadHeaderSize) + (readNextHeader ? hdrSize : 0);
           ThreadLocalServerSideScanMetrics.addBytesReadFromFs(bytesRead);
+          ThreadLocalServerSideScanMetrics.addReadOpsCount(1);
         }
 
         // the call to validateChecksum for this block excludes the next block header over-read, so

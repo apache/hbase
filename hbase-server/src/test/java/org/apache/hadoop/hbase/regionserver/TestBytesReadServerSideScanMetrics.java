@@ -129,7 +129,8 @@ public class TestBytesReadServerSideScanMetrics {
       // Use oldest timestamp to make sure the fake key is not less than the first key in
       // the file containing key: row2
       KeyValue keyValue = new KeyValue(ROW2, CF, CQ, PrivateConstants.OLDEST_TIMESTAMP, VALUE);
-      assertBytesReadFromFs(tableName, scanMetrics.bytesReadFromFs.get(), keyValue);
+      assertBytesReadFromFs(tableName, scanMetrics.bytesReadFromFs.get(), keyValue,
+        scanMetrics.readOpsCount.get());
       Assert.assertEquals(0, scanMetrics.bytesReadFromBlockCache.get());
       Assert.assertEquals(0, scanMetrics.bytesReadFromMemstore.get());
     } finally {
@@ -158,7 +159,7 @@ public class TestBytesReadServerSideScanMetrics {
       // Use oldest timestamp to make sure the fake key is not less than the first key in
       // the file containing key: row2
       KeyValue keyValue = new KeyValue(ROW2, CF, CQ, PrivateConstants.OLDEST_TIMESTAMP, VALUE);
-      assertBytesReadFromFs(tableName, scanMetrics.bytesReadFromFs.get(), keyValue);
+      assertBytesReadFromFs(tableName, scanMetrics.bytesReadFromFs.get(), keyValue, scanMetrics.readOpsCount.get());
       Assert.assertEquals(0, scanMetrics.bytesReadFromBlockCache.get());
       Assert.assertEquals(0, scanMetrics.bytesReadFromMemstore.get());
     } finally {
@@ -209,9 +210,10 @@ public class TestBytesReadServerSideScanMetrics {
 
       KeyValue keyValue = new KeyValue(ROW2, CF, CQ, HConstants.LATEST_TIMESTAMP, VALUE);
       int singleKeyValueSize = Segment.getCellLength(keyValue);
-      // First key value will be read on SegementScanner creation, second one on doing seek
-      // and third one on doing next() to determine there are no more cells in the row
-      int totalKeyValueSize = 3 * singleKeyValueSize;
+      // First key value will be read on doing seek and second one on doing next() to determine
+      // there are no more cells in the row. We don't count key values read on SegmentScanner
+      // instance creation.
+      int totalKeyValueSize = 2 * singleKeyValueSize;
       Assert.assertEquals(0, scanMetrics.bytesReadFromFs.get());
       Assert.assertEquals(0, scanMetrics.bytesReadFromBlockCache.get());
       Assert.assertEquals(totalKeyValueSize, scanMetrics.bytesReadFromMemstore.get());
@@ -279,10 +281,11 @@ public class TestBytesReadServerSideScanMetrics {
   }
 
   private void assertBytesReadFromFs(TableName tableName, long actualBytesReadFromFs,
-    KeyValue keyValue) throws Exception {
+    KeyValue keyValue, long actualReadOps) throws Exception {
     List<HRegion> regions = UTIL.getMiniHBaseCluster().getRegions(tableName);
     Assert.assertEquals(1, regions.size());
     MutableInt totalExpectedBytesReadFromFs = new MutableInt(0);
+    MutableInt totalExpectedReadOps = new MutableInt(0);
     for (HRegion region : regions) {
       Assert.assertNull(region.getBlockCache());
       HStore store = region.getStore(CF);
@@ -301,12 +304,17 @@ public class TestBytesReadServerSideScanMetrics {
             if (block.getNextBlockOnDiskSize() > 0) {
               totalExpectedBytesReadFromFs.add(block.headerSize());
             }
+            totalExpectedReadOps.add(1);
           }
         };
         readHFile(hfileReader, cbf, keyValue, bytesReadFunction);
       }
     }
     Assert.assertEquals(totalExpectedBytesReadFromFs.longValue(), actualBytesReadFromFs);
+    // +1 for the additional seek done to read header of the block from the HFile which contains
+    // the row being scanned as that row is first row in the HFile and matcher creates a fake start
+    // key which is before the first key in the HFile
+    Assert.assertEquals(totalExpectedReadOps.longValue() + 1, actualReadOps);
   }
 
   private void readHFile(HFile.Reader hfileReader, CompoundBloomFilter cbf, KeyValue keyValue,
