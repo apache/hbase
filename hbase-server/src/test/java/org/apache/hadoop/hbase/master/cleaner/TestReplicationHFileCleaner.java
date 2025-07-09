@@ -39,7 +39,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.keymeta.KeymetaAdmin;
-import org.apache.hadoop.hbase.keymeta.ManagedKeyAccessor;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
 import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.replication.ReplicationException;
@@ -222,7 +222,7 @@ public class TestReplicationHFileCleaner {
       return null;
     }
 
-    @Override public ManagedKeyAccessor getManagedKeyAccessor() {
+    @Override public ManagedKeyDataCache getManagedKeyDataCache() {
       return null;
     }
 

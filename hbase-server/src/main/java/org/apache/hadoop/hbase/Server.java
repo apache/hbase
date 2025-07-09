@@ -24,7 +24,7 @@ import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.AsyncConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.keymeta.KeymetaAdmin;
-import org.apache.hadoop.hbase.keymeta.ManagedKeyAccessor;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
 import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -92,9 +92,9 @@ public interface Server extends Abortable, Stoppable {
   public SystemKeyCache getSystemKeyCache();
 
   /**
-   * @return the accessor for cluster keys.
+   * @return the cache for managed keys.
    */
-  public ManagedKeyAccessor getManagedKeyAccessor();
+  public ManagedKeyDataCache getManagedKeyDataCache();
 
   /**
    * @return the admin for keymeta.

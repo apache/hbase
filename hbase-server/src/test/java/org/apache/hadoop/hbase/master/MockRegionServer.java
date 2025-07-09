@@ -53,7 +53,7 @@ import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.keymeta.KeymetaAdmin;
-import org.apache.hadoop.hbase.keymeta.ManagedKeyAccessor;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
 import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
 import org.apache.hadoop.hbase.mob.MobFileCache;
 import org.apache.hadoop.hbase.quotas.RegionServerRpcQuotaManager;
@@ -563,7 +563,7 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
     return null;
   }
 
-  @Override public ManagedKeyAccessor getManagedKeyAccessor() {
+  @Override public ManagedKeyDataCache getManagedKeyDataCache() {
     return null;
   }
 

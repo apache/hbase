@@ -56,7 +56,7 @@ import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.ipc.SimpleRpcServer;
 import org.apache.hadoop.hbase.keymeta.KeymetaAdmin;
-import org.apache.hadoop.hbase.keymeta.ManagedKeyAccessor;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
 import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
@@ -357,7 +357,7 @@ public class TestTokenAuthentication {
       return null;
     }
 
-    @Override public ManagedKeyAccessor getManagedKeyAccessor() {
+    @Override public ManagedKeyDataCache getManagedKeyDataCache() {
       return null;
     }
 

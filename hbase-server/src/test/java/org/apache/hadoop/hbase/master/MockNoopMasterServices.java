@@ -39,7 +39,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
 import org.apache.hadoop.hbase.keymeta.KeymetaAdmin;
-import org.apache.hadoop.hbase.keymeta.ManagedKeyAccessor;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
 import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.hbck.HbckChore;
@@ -123,7 +123,7 @@ public class MockNoopMasterServices implements MasterServices {
     return null;
   }
 
-  @Override public ManagedKeyAccessor getManagedKeyAccessor() {
+  @Override public ManagedKeyDataCache getManagedKeyDataCache() {
     return null;
   }
 

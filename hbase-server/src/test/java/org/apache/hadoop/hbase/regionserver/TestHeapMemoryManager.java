@@ -47,7 +47,7 @@ import org.apache.hadoop.hbase.io.hfile.CachedBlock;
 import org.apache.hadoop.hbase.io.hfile.ResizableBlockCache;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.keymeta.KeymetaAdmin;
-import org.apache.hadoop.hbase.keymeta.ManagedKeyAccessor;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
 import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
 import org.apache.hadoop.hbase.regionserver.HeapMemoryManager.TunerContext;
 import org.apache.hadoop.hbase.regionserver.HeapMemoryManager.TunerResult;
@@ -844,7 +844,7 @@ public class TestHeapMemoryManager {
       return null;
     }
 
-    @Override public ManagedKeyAccessor getManagedKeyAccessor() {
+    @Override public ManagedKeyDataCache getManagedKeyDataCache() {
       return null;
     }
 

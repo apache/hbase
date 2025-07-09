@@ -27,7 +27,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.keymeta.KeymetaAdmin;
-import org.apache.hadoop.hbase.keymeta.ManagedKeyAccessor;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
 import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
@@ -107,7 +107,7 @@ public class MockServer implements Server {
     return null;
   }
 
-  @Override public ManagedKeyAccessor getManagedKeyAccessor() {
+  @Override public ManagedKeyDataCache getManagedKeyDataCache() {
     return null;
   }
 

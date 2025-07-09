@@ -117,12 +117,12 @@ public class KeymetaTableAccessor extends KeyManagementBase {
     Connection connection = getServer().getConnection();
     byte[] prefixForScan = Bytes.add(Bytes.toBytes(key_cust.length), key_cust,
       Bytes.toBytes(keyNamespace));
-    try (Table table = connection.getTable(KEY_META_TABLE_NAME)) {
-      PrefixFilter prefixFilter = new PrefixFilter(prefixForScan);
-      Scan scan = new Scan();
-      scan.setFilter(prefixFilter);
-      scan.addFamily(KEY_META_INFO_FAMILY);
+    PrefixFilter prefixFilter = new PrefixFilter(prefixForScan);
+    Scan scan = new Scan();
+    scan.setFilter(prefixFilter);
+    scan.addFamily(KEY_META_INFO_FAMILY);
 
+    try (Table table = connection.getTable(KEY_META_TABLE_NAME)) {
       ResultScanner scanner = table.getScanner(scan);
       List<ManagedKeyData> allKeys = new ArrayList<>();
       for (Result result : scanner) {

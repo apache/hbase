@@ -54,7 +54,7 @@ import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.keymeta.KeymetaAdmin;
 import org.apache.hadoop.hbase.keymeta.KeymetaAdminImpl;
-import org.apache.hadoop.hbase.keymeta.ManagedKeyAccessor;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
 import org.apache.hadoop.hbase.keymeta.SystemKeyAccessor;
 import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -194,7 +194,7 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
 
   private SystemKeyCache systemKeyCache;
   protected KeymetaAdminImpl keymetaAdmin;
-  protected ManagedKeyAccessor managedKeyAccessor;
+  protected ManagedKeyDataCache managedKeyDataCache;
 
   private void setupSignalHandlers() {
     if (!SystemUtils.IS_OS_WINDOWS) {
@@ -420,8 +420,8 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
   }
 
   @Override
-  public ManagedKeyAccessor getManagedKeyAccessor() {
-    return managedKeyAccessor;
+  public ManagedKeyDataCache getManagedKeyDataCache() {
+    return managedKeyDataCache;
   }
 
   @Override

@@ -25,7 +25,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.keymeta.KeymetaAdmin;
-import org.apache.hadoop.hbase.keymeta.ManagedKeyAccessor;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
 import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
 import org.apache.hadoop.hbase.master.region.MasterRegion;
 import org.apache.hadoop.hbase.master.region.MasterRegionFactory;
@@ -65,7 +65,7 @@ public class RegionProcedureStorePerformanceEvaluation
       return null;
     }
 
-    @Override public ManagedKeyAccessor getManagedKeyAccessor() {
+    @Override public ManagedKeyDataCache getManagedKeyDataCache() {
       return null;
     }
 
