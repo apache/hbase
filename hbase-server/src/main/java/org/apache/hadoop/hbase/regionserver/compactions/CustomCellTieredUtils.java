@@ -28,6 +28,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class CustomCellTieredUtils {
+  private CustomCellTieredUtils() {
+    // Utility class, no instantiation
+  }
 
   public static void checkForModifyTable(TableDescriptor newTable) throws IOException {
     for (ColumnFamilyDescriptor descriptor : newTable.getColumnFamilies()) {
