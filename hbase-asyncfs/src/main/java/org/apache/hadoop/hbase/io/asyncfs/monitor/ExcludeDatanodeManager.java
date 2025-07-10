@@ -79,7 +79,7 @@ public class ExcludeDatanodeManager implements ConfigurationObserver {
   public boolean tryAddExcludeDN(DatanodeInfo datanodeInfo, String cause) {
     boolean alreadyMarkedSlow = getExcludeDNs().containsKey(datanodeInfo);
     if (!alreadyMarkedSlow) {
-      excludeDNsCache.put(datanodeInfo, new Pair(cause, EnvironmentEdgeManager.currentTime()));
+      excludeDNsCache.put(datanodeInfo, new Pair<>(cause, EnvironmentEdgeManager.currentTime()));
       LOG.info(
         "Added datanode: {} to exclude cache by [{}] success, current excludeDNsCache size={}",
         datanodeInfo, cause, excludeDNsCache.size());
