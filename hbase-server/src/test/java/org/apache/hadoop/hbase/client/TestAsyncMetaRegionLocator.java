@@ -41,11 +41,13 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MatcherPredicate;
 import org.apache.hadoop.hbase.MiniClusterRule;
 import org.apache.hadoop.hbase.RegionLocations;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.RegionReplicaTestHelper.Locator;
 import org.apache.hadoop.hbase.client.trace.StringTraceRenderer;
+import org.apache.hadoop.hbase.ipc.CallTimeoutException;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -53,6 +55,7 @@ import org.apache.hadoop.hbase.trace.OpenTelemetryClassRule;
 import org.apache.hadoop.hbase.trace.OpenTelemetryTestRule;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.hamcrest.Matcher;
+import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -79,6 +82,7 @@ public class TestAsyncMetaRegionLocator {
     private HBaseTestingUtil testUtil;
     private AsyncMetaRegionLocator locator;
     private ConnectionRegistry registry;
+    private AsyncConnectionImpl conn;
 
     public Setup(final ConnectionRule connectionRule, final MiniClusterRule miniClusterRule) {
       this.connectionRule = connectionRule;
@@ -93,6 +97,11 @@ public class TestAsyncMetaRegionLocator {
     public AsyncMetaRegionLocator getLocator() {
       assertInitialized();
       return locator;
+    }
+
+    public AsyncConnectionImpl getConnection() {
+      assertInitialized();
+      return conn;
     }
 
     private void assertInitialized() {
@@ -110,12 +119,15 @@ public class TestAsyncMetaRegionLocator {
       registry = ConnectionRegistryFactory.create(testUtil.getConfiguration(), User.getCurrent());
       RegionReplicaTestHelper.waitUntilAllMetaReplicasAreReady(testUtil, registry);
       admin.balancerSwitch(false).get();
-      locator = new AsyncMetaRegionLocator(registry);
+      conn = new AsyncConnectionImpl(testUtil.getConfiguration(), registry,
+        registry.getClusterId().get(), null, User.getCurrent());
+      locator = new AsyncMetaRegionLocator(conn);
       initialized = true;
     }
 
     @Override
     protected void after() {
+      conn.close();
       registry.close();
     }
   }
@@ -198,6 +210,28 @@ public class TestAsyncMetaRegionLocator {
         allOf(hasName(endsWith("ConnectionRegistry.getMetaRegionLocations")),
           hasParentSpanId(parentSpan), hasKind(SpanKind.INTERNAL), hasEnded());
       assertThat(spans, hasItem(registryGetMetaRegionLocationsMatcher));
+    }
+
+    @Test
+    public void testFailedServer() {
+      final AsyncMetaRegionLocator locator = setup.getLocator();
+      final AsyncConnectionImpl conn = setup.getConnection();
+
+      HRegionLocation location =
+        locator.getRegionLocations(RegionReplicaUtil.DEFAULT_REPLICA_ID, false).join()
+          .getDefaultRegionLocation();
+
+      // the location is in the meta region cache
+      Assert.assertNotNull(locator.getCacheLocation(location));
+
+      // the region server of the location is added to FailedServers
+      ServerName failedServer = location.getServerName();
+      Throwable exception = new CallTimeoutException("test");
+      conn.rpcClient.getFailedServers().addToFailedServers(failedServer.getAddress(), exception);
+      locator.updateCachedLocationOnError(location, exception);
+
+      // the location is removed from the meta region cache
+      Assert.assertNull(locator.getCacheLocation(location));
     }
   }
 
