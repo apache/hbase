@@ -77,6 +77,7 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil.NonceProcedureRunnable;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
+import org.apache.hadoop.hbase.master.procedure.RefreshHfilesProcedure;
 import org.apache.hadoop.hbase.master.replication.AbstractPeerNoLockProcedure;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.namequeues.BalancerDecisionDetails;
@@ -3660,5 +3661,14 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
+  }
+
+  @Override
+  public MasterProtos.RefreshHfilesResponse refreshHfiles(RpcController controller,
+    MasterProtos.RefreshHfilesRequest request) throws ServiceException {
+    //TODO verify if no parameter is provided
+    //TODO Call RefreshHfilesProcedure functions
+
+    return MasterProtos.RefreshHfilesResponse.newBuilder().setProcId(123).build();
   }
 }

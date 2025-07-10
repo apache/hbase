@@ -2651,4 +2651,26 @@ public interface Admin extends Abortable, Closeable {
    * Get the list of cached files
    */
   List<String> getCachedFilesList(ServerName serverName) throws IOException;
+
+  /**
+   * Refresh HFiles for the table
+   *
+   * @param tableName table to refresh HFiles for
+   * @throws IOException if a remote or network exception occurs
+   */
+  void refreshHFiles(final TableName tableName) throws IOException;
+  /**
+   * Refresh HFiles for all the tables under given namespace
+   *
+   * @param namespace Namespace for which we should call refresh HFiles for all tables under it
+   * @throws IOException if a remote or network exception occurs
+   */
+  void refreshHFiles(final String namespace) throws IOException;
+
+  /**
+   * Refresh HFiles for all the tables
+   *
+   * @throws IOException if a remote or network exception occurs
+   */
+  void refreshHFiles() throws IOException;
 }
