@@ -19,11 +19,13 @@ package org.apache.hadoop.hbase.backup.impl;
 
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.JOB_NAME_CONF_KEY;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -71,6 +73,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 public class IncrementalTableBackupClient extends TableBackupClient {
   private static final Logger LOG = LoggerFactory.getLogger(IncrementalTableBackupClient.class);
 
+  private static final String CONVERT_TO_WAL_TO_HFILES_ATTEMPTS_KEY =
+    "backup.convert.wal.to.hfiles.attempts";
+  private static final int CONVERT_TO_WAL_TO_HFILES_ATTEMPTS_DEFAULT = 5;
+
   protected IncrementalTableBackupClient() {
   }
 
@@ -79,17 +85,17 @@ public class IncrementalTableBackupClient extends TableBackupClient {
     super(conn, backupId, request);
   }
 
-  protected List<String> filterMissingFiles(List<String> incrBackupFileList) throws IOException {
-    List<String> list = new ArrayList<>();
+  protected Set<String> filterMissingFiles(Set<String> incrBackupFileList) throws IOException {
+    Set<String> set = new HashSet<>();
     for (String file : incrBackupFileList) {
       Path p = new Path(file);
       if (fs.exists(p) || isActiveWalPath(p)) {
-        list.add(file);
+        set.add(file);
       } else {
         LOG.warn("Can't find file: " + file);
       }
     }
-    return list;
+    return set;
   }
 
   /**
@@ -370,13 +376,55 @@ public class IncrementalTableBackupClient extends TableBackupClient {
     }
   }
 
-  protected void convertWALsToHFiles() throws IOException {
-    // get incremental backup file list and prepare parameters for DistCp
-    List<String> incrBackupFileList = backupInfo.getIncrBackupFileList();
+  protected Set<String> convertWALsToHFiles() throws IOException {
+    Set<String> backupFiles = new HashSet<>(backupInfo.getIncrBackupFileList());
+    // filter missing files out (they have been copied by previous backups)
+    backupFiles = filterMissingFiles(backupFiles);
+    int attempt = 1;
+    int maxAttempts = conf.getInt(CONVERT_TO_WAL_TO_HFILES_ATTEMPTS_KEY, backupFiles.size());
+
+    while (attempt <= maxAttempts) {
+      try {
+        LOG.info("Converting WALs to HFiles. Attempt={}/{}", attempt, maxAttempts);
+        convertWALsToHFiles(backupFiles);
+        return backupFiles;
+      } catch (FileNotFoundException e) {
+        LOG.warn("Failed to convert WALs to HFiles", e);
+        // We need to deal with the possibility of the active WAL file being rolled over
+        // as we're trying to copy it
+
+        Set<String> newBackupFiles = new HashSet<>(backupFiles.size());
+        for (String file : backupFiles) {
+          Path path = new Path(file);
+          if (!isActiveWalPath(path) || fs.exists(path)) {
+            newBackupFiles.add(file);
+            continue;
+          }
+
+          Path archive = AbstractFSWALProvider.findArchivedLog(path, conf);
+          if (archive == null) {
+            throw new IOException("Could not find archive for missing WAL file " + path);
+          }
+
+          LOG.info("WAL file {} was archived during backup process, using archive {}", path,
+            archive);
+          newBackupFiles.add(archive.toString());
+        }
+
+        if (newBackupFiles.equals(backupFiles)) {
+          throw e;
+        }
+
+        backupFiles = newBackupFiles;
+        ++attempt;
+      }
+    }
+    throw new IOException("Failed to convert WALs to HFiles after " + attempt + " attempts");
+  }
+
+  private void convertWALsToHFiles(Set<String> incrBackupFileList) throws IOException {
     // Get list of tables in incremental backup set
     Set<TableName> tableSet = backupManager.getIncrementalBackupTableSet();
-    // filter missing files out (they have been copied by previous backups)
-    incrBackupFileList = filterMissingFiles(incrBackupFileList);
     List<String> tableList = new ArrayList<String>();
     for (TableName table : tableSet) {
       // Check if table exists
@@ -396,7 +444,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
     }
   }
 
-  protected void walToHFiles(List<String> dirPaths, List<String> tableList) throws IOException {
+  protected void walToHFiles(Set<String> dirPaths, List<String> tableList) throws IOException {
     Tool player = new WALPlayer();
 
     // Player reads all files in arbitrary directory structure and creates

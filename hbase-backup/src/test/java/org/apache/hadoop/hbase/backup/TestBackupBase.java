@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -116,6 +117,18 @@ public class TestBackupBase {
     public IncrementalTableBackupClientForTest(Connection conn, String backupId,
       BackupRequest request) throws IOException {
       super(conn, backupId, request);
+    }
+
+    public BackupInfo getBackupInfo() {
+      return backupInfo;
+    }
+
+    public Set<String> convertWALsToHFiles() throws IOException {
+      return super.convertWALsToHFiles();
+    }
+
+    public void releaseBackupExclusiveLock() throws IOException {
+      backupManager.finishBackupSession();
     }
 
     @Before
