@@ -61,6 +61,14 @@ message MoveServersRequest {
 message MoveServersResponse {
 }
 
+message MoveAllServersRequest {
+  required string target_group = 1;
+  required string source_group = 2;
+}
+
+message MoveAllServersResponse {
+}
+
 message MoveTablesRequest {
   required string target_group = 1;
   repeated TableName table_name = 2;
@@ -171,6 +179,9 @@ service RSGroupAdminService {
 
   rpc MoveServers(MoveServersRequest)
     returns (MoveServersResponse);
+
+  rpc MoveAllServers(MoveAllServersRequest)
+    returns (MoveAllServersResponse);
 
   rpc MoveTables(MoveTablesRequest)
     returns (MoveTablesResponse);
