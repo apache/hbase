@@ -1195,6 +1195,11 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
   public static void main(String[] args) throws Exception {
     Configuration conf = HBaseConfiguration.create();
     int ret = ToolRunner.run(conf, new BulkLoadHFilesTool(conf), args);
+    if (ret == 0) {
+      System.out.println("Bulk load completed successfully.");
+      System.out.println("IMPORTANT: Please take a backup of the table immediately if this table "
+        + "is part of continuous backup");
+    }
     System.exit(ret);
   }
 
