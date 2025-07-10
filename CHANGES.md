@@ -18,7 +18,7 @@
 -->
 # HBASE Changelog
 
-## Release 2.6.3 - Unreleased (as of 2025-07-02)
+## Release 2.6.3 - Unreleased (as of 2025-07-10)
 
 
 
@@ -78,8 +78,11 @@
 | [HBASE-29390](https://issues.apache.org/jira/browse/HBASE-29390) | Too many logs in AsyncBatchRpcRetryingCaller when hitting RegionTooBusyException |  Major | asyncclient, Client |
 | [HBASE-29387](https://issues.apache.org/jira/browse/HBASE-29387) | Reload quotas from hbase:quota table when changes are made |  Minor | . |
 | [HBASE-29399](https://issues.apache.org/jira/browse/HBASE-29399) | Update hadoop-metrics2-hbase.properties template |  Major | conf, documentation |
-| [HBASE-28596](https://issues.apache.org/jira/browse/HBASE-28596) | Optimise BucketCache usage upon regions splits/merges. |  Major | . |
 | [HBASE-29432](https://issues.apache.org/jira/browse/HBASE-29432) | ExportSnapshot should support rack-awareness |  Minor | . |
+| [HBASE-29233](https://issues.apache.org/jira/browse/HBASE-29233) | Capture scan metrics at region level |  Major | Client, metrics |
+| [HBASE-29206](https://issues.apache.org/jira/browse/HBASE-29206) | RollingBatchSuspendResumeRsAction can not actually 'resume' a region server |  Major | integration tests |
+| [HBASE-28596](https://issues.apache.org/jira/browse/HBASE-28596) | Optimise BucketCache usage upon regions splits/merges. |  Major | . |
+| [HBASE-29400](https://issues.apache.org/jira/browse/HBASE-29400) | RollingBatchRestartRsAction may fail to start region server |  Major | integration tests |
 
 
 ### BUG FIXES:
@@ -153,6 +156,9 @@
 | [HBASE-22335](https://issues.apache.org/jira/browse/HBASE-22335) | do add hfile ref only when replication\_scope is 1 |  Major | Replication |
 | [HBASE-28806](https://issues.apache.org/jira/browse/HBASE-28806) | ExportSnapshot failed if reference file presented |  Major | snapshots |
 | [HBASE-29386](https://issues.apache.org/jira/browse/HBASE-29386) | SnapshotProcedure and EnableTableProcedure can cause a deadlock |  Major | snapshots |
+| [HBASE-29325](https://issues.apache.org/jira/browse/HBASE-29325) | Gson reflection failures on TestBucketCache.testCacheSimple |  Major | . |
+| [HBASE-27781](https://issues.apache.org/jira/browse/HBASE-27781) | AssertionError in AsyncRequestFutureImpl when timing out during location resolution |  Major | Client |
+| [HBASE-29446](https://issues.apache.org/jira/browse/HBASE-29446) | Web UI styling is broken in HBase 2.6.3RC1 hadoop2 bin release |  Major | UI |
 
 
 ### SUB-TASKS:

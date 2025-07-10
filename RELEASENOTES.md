@@ -127,6 +127,22 @@ We now support configuring an LDAP user as admin for all HBase Web UIs, privileg
 
 ---
 
+* [HBASE-29387](https://issues.apache.org/jira/browse/HBASE-29387) | *Minor* | **Reload quotas from hbase:quota table when changes are made**
+
+The hbase.quota.refresh.period setting is now less important, because quota caches in RegionServers refresh immediately when quotas are changed via HMaster RPC. The default setting is now 12 hours.
+
+
+---
+
+* [HBASE-29432](https://issues.apache.org/jira/browse/HBASE-29432) | *Minor* | **ExportSnapshot should support rack-awareness**
+
+ExportSnapshot now supports two new options:
+--custom-file-grouper: Fully qualified class name of an implementation of ExportSnapshot.CustomFileGrouper. Used to control how input files are grouped into InputSplits for the MapReduce job.
+--file-location-resolver: Fully qualified class name of an implementation of ExportSnapshot.FileLocationResolver. Used to give hints to YARN about the locations of the data in the InputSplits.
+
+
+---
+
 * [HBASE-28596](https://issues.apache.org/jira/browse/HBASE-28596) | *Major* | **Optimise BucketCache usage upon regions splits/merges.**
 
 This adds a new configuration property, "hbase.rs.evictblocksonsplit”, with default value set to true, which makes all parent region blocks to get evicted on split.
@@ -140,11 +156,9 @@ It has also modified how BucketCache deals with blocks from reference files:
 
 ---
 
-* [HBASE-29432](https://issues.apache.org/jira/browse/HBASE-29432) | *Minor* | **ExportSnapshot should support rack-awareness**
+* [HBASE-29400](https://issues.apache.org/jira/browse/HBASE-29400) | *Major* | **RollingBatchRestartRsAction may fail to start region server**
 
-ExportSnapshot now supports two new options:
---custom-file-grouper: Fully qualified class name of an implementation of ExportSnapshot.CustomFileGrouper. Used to control how input files are grouped into InputSplits for the MapReduce job.
---file-location-resolver: Fully qualified class name of an implementation of ExportSnapshot.FileLocationResolver. Used to give hints to YARN about the locations of the data in the InputSplits.
+Instead of using 'kill -0', now we will check whether '/proc/$pid' exists to test whether the give process exists and then we will also check the command line arguments to see whether the process is the expected one, i.e, proc\_master or proc\_regionserver, to determine whether the master or regionserver process is still alive.
 
 
 
