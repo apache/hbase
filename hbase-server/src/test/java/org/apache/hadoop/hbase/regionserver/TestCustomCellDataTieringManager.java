@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.HConstants.BUCKET_CACHE_SIZE_KEY;
 import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.DEFAULT_ERROR_TOLERATION_DURATION;
-import static org.apache.hadoop.hbase.regionserver.TestDataTieringManager.createHStoreFile;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -81,12 +80,14 @@ import org.slf4j.LoggerFactory;
  * This class is used to test the functionality of the DataTieringManager.
  *
  * The mock online regions are stored in {@link TestCustomCellDataTieringManager#testOnlineRegions}.
- * For all tests, the setup of {@link TestCustomCellDataTieringManager#testOnlineRegions} occurs only once.
+ * For all tests, the setup of
+ *  {@link TestCustomCellDataTieringManager#testOnlineRegions} occurs only once.
  * Please refer to {@link TestCustomCellDataTieringManager#setupOnlineRegions()} for the structure.
- * Additionally, a list of all store files is maintained in {@link TestCustomCellDataTieringManager#hStoreFiles}.
+ * Additionally, a list of all store files is
+ *  maintained in {@link TestCustomCellDataTieringManager#hStoreFiles}.
  * The characteristics of these store files are listed below:
- * @formatter:off ## HStoreFile Information
- *
+ * @formatter:off
+ * ## HStoreFile Information
  * | HStoreFile       | Region             | Store               | DataTiering           | isHot |
  * |------------------|--------------------|---------------------|-----------------------|-------|
  * | hStoreFile0      | region1            | hStore11            | CUSTOM_CELL_VALUE     | true  |
