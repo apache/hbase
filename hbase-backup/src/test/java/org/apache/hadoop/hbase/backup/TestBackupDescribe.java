@@ -19,6 +19,8 @@ package org.apache.hadoop.hbase.backup;
 
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONF_CONTINUOUS_BACKUP_WAL_DIR;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_ENABLE_CONTINUOUS_BACKUP;
+import static org.apache.hadoop.hbase.replication.regionserver.ReplicationMarkerChore.REPLICATION_MARKER_ENABLED_DEFAULT;
+import static org.apache.hadoop.hbase.replication.regionserver.ReplicationMarkerChore.REPLICATION_MARKER_ENABLED_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
@@ -33,7 +35,9 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupInfo.BackupState;
 import org.apache.hadoop.hbase.backup.impl.BackupCommands;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
+import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -123,10 +127,12 @@ public class TestBackupDescribe extends TestBackupBase {
     FileSystem fs = FileSystem.get(conf1);
     fs.mkdirs(backupWalDir);
     conf1.set(CONF_CONTINUOUS_BACKUP_WAL_DIR, backupWalDir.toString());
+    conf1.setBoolean(REPLICATION_MARKER_ENABLED_KEY, true);
 
     try (BackupSystemTable table = new BackupSystemTable(TEST_UTIL.getConnection())) {
+      // Continuous backup
       String[] backupArgs = new String[] { "create", BackupType.FULL.name(), BACKUP_ROOT_DIR, "-t",
-        table2.getNameAsString(), "-" + OPTION_ENABLE_CONTINUOUS_BACKUP };
+        table1.getNameAsString(), "-" + OPTION_ENABLE_CONTINUOUS_BACKUP };
       int ret = ToolRunner.run(conf1, new BackupDriver(), backupArgs);
       assertEquals("Backup should succeed", 0, ret);
       List<BackupInfo> backups = table.getBackupHistory();
@@ -136,28 +142,57 @@ public class TestBackupDescribe extends TestBackupBase {
 
       BackupInfo info = getBackupAdmin().getBackupInfo(backupId);
       assertTrue(info.getState() == BackupState.COMPLETE);
-
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
       System.setOut(new PrintStream(baos));
 
+      // Run backup describe
       String[] args = new String[] { "describe", backupId };
-      // Run backup
       ret = ToolRunner.run(conf1, new BackupDriver(), args);
       assertTrue(ret == 0);
       String response = baos.toString();
-      assertTrue(response.indexOf(backupId) > 0);
-      assertTrue(response.indexOf("COMPLETE") > 0);
+      assertTrue(response.contains(backupId));
+      assertTrue(response.contains("COMPLETE"));
       assertTrue(response.contains("IsContinuous=true"));
-
       BackupInfo status = table.readBackupInfo(backupId);
       String desc = status.getShortDescription();
-      assertTrue(response.indexOf(desc) >= 0);
+      assertTrue(response.contains(desc));
 
+      // load table
+      Put p;
+      for (int i = 0; i < NB_ROWS_IN_BATCH; i++) {
+        p = new Put(Bytes.toBytes("row" + i));
+        p.addColumn(famName, qualName, Bytes.toBytes("val" + i));
+        TEST_UTIL.getConnection().getTable(table1).put(p);
+      }
+      Thread.sleep(5000);
+
+      // Incremental backup
+      backupArgs = new String[] { "create", BackupType.INCREMENTAL.name(), BACKUP_ROOT_DIR, "-t",
+        table1.getNameAsString() };
+      ret = ToolRunner.run(conf1, new BackupDriver(), backupArgs);
+      assertEquals("Incremental Backup should succeed", 0, ret);
+      backups = table.getBackupHistory();
+      String incrBackupId = backups.get(0).getBackupId();
+      assertTrue(checkSucceeded(incrBackupId));
+      LOG.info("Incremental backup complete");
+
+      // Run backup describe
+      args = new String[] { "describe", incrBackupId };
+      ret = ToolRunner.run(conf1, new BackupDriver(), args);
+      assertTrue(ret == 0);
+      response = baos.toString();
+      assertTrue(response.contains(incrBackupId));
+      assertTrue(response.contains("COMPLETE"));
+      assertTrue(response.contains("Committed WAL time for incremental backup="));
+      status = table.readBackupInfo(incrBackupId);
+      desc = status.getShortDescription();
+      assertTrue(response.contains(desc));
     } finally {
       if (fs.exists(backupWalDir)) {
         fs.delete(backupWalDir, true);
       }
       conf1.unset(CONF_CONTINUOUS_BACKUP_WAL_DIR);
+      conf1.setBoolean(REPLICATION_MARKER_ENABLED_KEY, REPLICATION_MARKER_ENABLED_DEFAULT);
     }
   }
 }
