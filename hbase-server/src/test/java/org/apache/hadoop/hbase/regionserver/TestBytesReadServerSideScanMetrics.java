@@ -18,7 +18,11 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.NavigableSet;
+import java.util.TreeSet;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.function.Consumer;
 import org.apache.commons.lang3.mutable.MutableInt;
@@ -54,7 +58,7 @@ import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.io.hfile.NoOpIndexBlockEncoder;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.BloomFilter;
 import org.apache.hadoop.hbase.util.BloomFilterUtil;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -68,7 +72,7 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ IOTests.class, MediumTests.class })
+@Category({ IOTests.class, LargeTests.class })
 public class TestBytesReadServerSideScanMetrics {
 
   @ClassRule
@@ -90,6 +94,8 @@ public class TestBytesReadServerSideScanMetrics {
   private static final byte[] VALUE = Bytes.toBytes("value");
 
   private static final byte[] ROW2 = Bytes.toBytes("row2");
+  private static final byte[] ROW3 = Bytes.toBytes("row3");
+  private static final byte[] ROW4 = Bytes.toBytes("row4");
 
   private Configuration conf;
 
@@ -109,8 +115,19 @@ public class TestBytesReadServerSideScanMetrics {
       TableName tableName = TableName.valueOf(name.getMethodName());
       createTable(tableName, false, BloomType.NONE);
       writeData(tableName, true);
-      ScanMetrics scanMetrics = readDataAndGetScanMetrics(tableName, false);
-      Assert.assertNull(scanMetrics);
+      Scan scan = new Scan();
+      scan.withStartRow(ROW2, true);
+      scan.withStopRow(ROW4, true);
+      scan.setCaching(1);
+      try (Table table = UTIL.getConnection().getTable(tableName);
+        ResultScanner scanner = table.getScanner(scan)) {
+        int rowCount = 0;
+        for (Result r : scanner) {
+          rowCount++;
+        }
+        Assert.assertEquals(2, rowCount);
+        Assert.assertNull(scanner.getScanMetrics());
+      }
     } finally {
       UTIL.shutdownMiniCluster();
     }
@@ -141,6 +158,7 @@ public class TestBytesReadServerSideScanMetrics {
   @Test
   public void testBytesReadFromFsForParallelSeeks() throws Exception {
     conf.setInt(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0);
+    // This property doesn't work correctly if only applied at column family level.
     conf.setBoolean(StoreScanner.STORESCANNER_PARALLEL_SEEK_ENABLE, true);
     UTIL.startMiniCluster();
     try {
@@ -159,7 +177,8 @@ public class TestBytesReadServerSideScanMetrics {
       // Use oldest timestamp to make sure the fake key is not less than the first key in
       // the file containing key: row2
       KeyValue keyValue = new KeyValue(ROW2, CF, CQ, PrivateConstants.OLDEST_TIMESTAMP, VALUE);
-      assertBytesReadFromFs(tableName, scanMetrics.bytesReadFromFs.get(), keyValue, scanMetrics.readOpsCount.get());
+      assertBytesReadFromFs(tableName, scanMetrics.bytesReadFromFs.get(), keyValue,
+        scanMetrics.readOpsCount.get());
       Assert.assertEquals(0, scanMetrics.bytesReadFromBlockCache.get());
       Assert.assertEquals(0, scanMetrics.bytesReadFromMemstore.get());
     } finally {
@@ -222,6 +241,397 @@ public class TestBytesReadServerSideScanMetrics {
     }
   }
 
+  @Test
+  public void testBytesReadWithSwitchFromPReadToStream() throws Exception {
+    // Set pread max bytes to 3 to make sure that the first row is read using pread and the second
+    // one using stream read
+    Map<String, String> configuration = new HashMap<>();
+    configuration.put(StoreScanner.STORESCANNER_PREAD_MAX_BYTES, "3");
+    UTIL.startMiniCluster();
+    try {
+      TableName tableName = TableName.valueOf(name.getMethodName());
+      createTable(tableName, true, BloomType.ROW, configuration);
+      writeData(tableName, true);
+      Scan scan = new Scan();
+      scan.withStartRow(ROW2, true);
+      scan.withStopRow(ROW4, true);
+      scan.setScanMetricsEnabled(true);
+      // Set caching to 1 so that one row is read via PREAD and other via STREAM
+      scan.setCaching(1);
+      ScanMetrics scanMetrics = null;
+      StoreScanner.resetHasSwitchedToStreamRead();
+      try (Table table = UTIL.getConnection().getTable(tableName);
+        ResultScanner scanner = table.getScanner(scan)) {
+        int rowCount = 0;
+        Assert.assertFalse(StoreScanner.hasSwitchedToStreamRead());
+        for (Result r : scanner) {
+          rowCount++;
+        }
+        Assert.assertTrue(StoreScanner.hasSwitchedToStreamRead());
+        Assert.assertEquals(2, rowCount);
+        scanMetrics = scanner.getScanMetrics();
+      }
+      int bytesReadFromFs = getBytesReadFromFsForNonGetScan(tableName, scanMetrics, 2);
+      Assert.assertEquals(bytesReadFromFs, scanMetrics.bytesReadFromFs.get());
+      Assert.assertEquals(0, scanMetrics.bytesReadFromBlockCache.get());
+      Assert.assertEquals(0, scanMetrics.bytesReadFromMemstore.get());
+      // There are 2 HFiles so, 1 read op per HFile was done by actual scan to read data block.
+      // No bloom blocks will be read as this is non Get scan and only bloom filter type is ROW.
+      // +1 for the extra header read op done for the HFile which actually contains the row.
+      Assert.assertEquals(3, scanMetrics.readOpsCount.get());
+      // With scan caching set to 1 and 2 rows being scanned, 2 RPC calls will be needed.
+      Assert.assertEquals(2, scanMetrics.countOfRPCcalls.get());
+    } finally {
+      UTIL.shutdownMiniCluster();
+    }
+  }
+
+  @Test
+  public void testBytesReadWhenFlushHappenedInTheMiddleOfScan() throws Exception {
+    UTIL.startMiniCluster();
+    try {
+      TableName tableName = TableName.valueOf(name.getMethodName());
+      createTable(tableName, true, BloomType.ROW);
+      writeData(tableName, false);
+      Scan scan = new Scan();
+      scan.withStartRow(ROW2, true);
+      scan.withStopRow(ROW4, true);
+      scan.setScanMetricsEnabled(true);
+      // Set caching to 1 so that one row is read per RPC call
+      scan.setCaching(1);
+      // Set max result size to 2 bytes so that both the rows are not read into scanner cache before
+      // even first call to scanner.next()
+      scan.setMaxResultSize(2);
+      ScanMetrics scanMetrics = null;
+      try (Table table = UTIL.getConnection().getTable(tableName);
+        ResultScanner scanner = table.getScanner(scan)) {
+        flushAndWaitUntilFlushed(tableName, true);
+        int rowCount = 0;
+        for (Result r : scanner) {
+          rowCount++;
+        }
+        Assert.assertEquals(2, rowCount);
+        scanMetrics = scanner.getScanMetrics();
+      }
+
+      // Only 1 HFile will be created and it will have only one data block.
+      int bytesReadFromFs = getBytesReadFromFsForNonGetScan(tableName, scanMetrics, 1);
+      Assert.assertEquals(bytesReadFromFs, scanMetrics.bytesReadFromFs.get());
+
+      Assert.assertEquals(0, scanMetrics.bytesReadFromBlockCache.get());
+
+      // Flush happens after first row is returned from server but before second row is returned.
+      // So, 2 cells will be read from memstore i.e. the cell for the first row and the next cell
+      // at which scanning will stop. Per row we have 1 cell.
+      int bytesReadFromMemstore =
+        Segment.getCellLength(new KeyValue(ROW2, CF, CQ, HConstants.LATEST_TIMESTAMP, VALUE));
+      Assert.assertEquals(2 * bytesReadFromMemstore, scanMetrics.bytesReadFromMemstore.get());
+
+      // There will be 1 read op to read the only data block present in the HFile.
+      Assert.assertEquals(1, scanMetrics.readOpsCount.get());
+
+      // More than 1 RPC call should be there
+      Assert.assertEquals(3, scanMetrics.countOfRPCcalls.get());
+    } finally {
+      UTIL.shutdownMiniCluster();
+    }
+  }
+
+  @Test
+  public void testBytesReadInReverseScan() throws Exception {
+    UTIL.startMiniCluster();
+    try {
+      TableName tableName = TableName.valueOf(name.getMethodName());
+      createTable(tableName, true, BloomType.ROW);
+      writeData(tableName, true);
+      Scan scan = new Scan();
+      scan.withStartRow(ROW4, true);
+      scan.withStopRow(ROW2, true);
+      scan.setScanMetricsEnabled(true);
+      scan.setReversed(true);
+      // Set caching to 1 so that one row is read per RPC call
+      scan.setCaching(1);
+      ScanMetrics scanMetrics = null;
+      try (Table table = UTIL.getConnection().getTable(tableName);
+        ResultScanner scanner = table.getScanner(scan)) {
+        int rowCount = 0;
+        for (Result r : scanner) {
+          rowCount++;
+        }
+        Assert.assertEquals(2, rowCount);
+        scanMetrics = scanner.getScanMetrics();
+        System.out.println("Scan metrics: " + scanMetrics.toString());
+      }
+
+      // 1 data block per HFile was read.
+      int bytesReadFromFs = getBytesReadFromFsForNonGetScan(tableName, scanMetrics, 2);
+      Assert.assertEquals(bytesReadFromFs, scanMetrics.bytesReadFromFs.get());
+
+      // For the HFile containing both the rows, the data block will be read from block cache when
+      // KeyValueHeap.next() will be called to read the second row.
+      // KeyValueHeap.next() will call StoreFileScanner.next() when on ROW4 which is last row of the
+      // file causing curBlock to be set to null in underlying HFileScanner. As curBlock is null,
+      // kvNext will be null and call to StoreFileScanner.seekToPreviousRow() will be made. As the
+      // curBlock of HFileScanner is null so, StoreFileScanner.seekToPreviousRow() will load data
+      // block from BlockCache. So, 1 data block will be read from block cache.
+      Assert.assertEquals(bytesReadFromFs / 2, scanMetrics.bytesReadFromBlockCache.get());
+      Assert.assertEquals(0, scanMetrics.bytesReadFromMemstore.get());
+
+      // 1 read op per HFile was done by actual scan to read data block.
+      Assert.assertEquals(2, scanMetrics.readOpsCount.get());
+
+      // 2 RPC calls will be there
+      Assert.assertEquals(2, scanMetrics.countOfRPCcalls.get());
+    } finally {
+      UTIL.shutdownMiniCluster();
+    }
+  }
+
+  @Test
+  public void testBytesReadWithLazySeek() throws Exception {
+    UTIL.startMiniCluster();
+    try {
+      TableName tableName = TableName.valueOf(name.getMethodName());
+      createTable(tableName, true, BloomType.NONE);
+      writeData(tableName, true);
+      try (Table table = UTIL.getConnection().getTable(tableName)) {
+        byte[] newValue = Bytes.toBytes("new value");
+        // Update the value of ROW2 and let it stay in memstore. Will assert that lazy seek doesn't
+        // lead to seek on the HFile.
+        table.put(new Put(ROW2).addColumn(CF, CQ, newValue));
+        Scan scan = new Scan();
+        scan.withStartRow(ROW2, true);
+        scan.withStopRow(ROW2, true);
+        scan.setScanMetricsEnabled(true);
+        Map<byte[], NavigableSet<byte[]>> familyMap = new HashMap<>();
+        familyMap.put(CF, new TreeSet<>(Bytes.BYTES_COMPARATOR));
+        familyMap.get(CF).add(CQ);
+        scan.setFamilyMap(familyMap);
+        ScanMetrics scanMetrics = null;
+        try (ResultScanner scanner = table.getScanner(scan)) {
+          int rowCount = 0;
+          for (Result r : scanner) {
+            rowCount++;
+            Assert.assertArrayEquals(newValue, r.getValue(CF, CQ));
+          }
+          Assert.assertEquals(1, rowCount);
+          scanMetrics = scanner.getScanMetrics();
+        }
+        // No real seek should be done on the HFile.
+        Assert.assertEquals(0, scanMetrics.bytesReadFromFs.get());
+        Assert.assertEquals(0, scanMetrics.bytesReadFromBlockCache.get());
+        Assert.assertEquals(0, scanMetrics.readOpsCount.get());
+
+        // The cell should be coming purely from memstore.
+        int cellSize =
+          Segment.getCellLength(new KeyValue(ROW2, CF, CQ, HConstants.LATEST_TIMESTAMP, newValue));
+        Assert.assertEquals(cellSize, scanMetrics.bytesReadFromMemstore.get());
+        Assert.assertEquals(1, scanMetrics.countOfRPCcalls.get());
+      }
+    } finally {
+      UTIL.shutdownMiniCluster();
+    }
+  }
+
+  /**
+   * Test consecutive calls to RegionScannerImpl.next() to make sure populating scan metrics from
+   * ThreadLocalServerSideScanMetrics is done correctly.
+   */
+  @Test
+  public void testConsecutiveRegionScannerNextCalls() throws Exception {
+    // We will be setting a very small block size so, make sure to set big enough pread max bytes
+    Map<String, String> configuration = new HashMap<>();
+    configuration.put(StoreScanner.STORESCANNER_PREAD_MAX_BYTES, Integer.toString(64 * 1024));
+    UTIL.startMiniCluster();
+    try {
+      TableName tableName = TableName.valueOf(name.getMethodName());
+      // Set the block size to 4 bytes to get 1 row per data block in HFile.
+      createTable(tableName, true, BloomType.NONE, 4, configuration);
+      try (Table table = UTIL.getConnection().getTable(tableName)) {
+        // Add 3 rows to the table.
+        table.put(new Put(ROW2).addColumn(CF, CQ, VALUE));
+        table.put(new Put(ROW3).addColumn(CF, CQ, VALUE));
+        table.put(new Put(ROW4).addColumn(CF, CQ, VALUE));
+
+        ScanMetrics scanMetrics = null;
+
+        // Scan the added rows. The rows should be read from memstore.
+        Scan scan = createScanToReadOneRowAtATimeFromServer(ROW2, ROW3);
+        try (ResultScanner scanner = table.getScanner(scan)) {
+          int rowCount = 0;
+          for (Result r : scanner) {
+            rowCount++;
+          }
+          Assert.assertEquals(2, rowCount);
+          scanMetrics = scanner.getScanMetrics();
+        }
+
+        // Assert that rows were read from only memstore and involved 2 RPC calls.
+        int cellSize =
+          Segment.getCellLength(new KeyValue(ROW2, CF, CQ, HConstants.LATEST_TIMESTAMP, VALUE));
+        Assert.assertEquals(0, scanMetrics.bytesReadFromFs.get());
+        Assert.assertEquals(0, scanMetrics.bytesReadFromBlockCache.get());
+        Assert.assertEquals(0, scanMetrics.readOpsCount.get());
+        Assert.assertEquals(2, scanMetrics.countOfRPCcalls.get());
+        Assert.assertEquals(3 * cellSize, scanMetrics.bytesReadFromMemstore.get());
+
+        // Flush the table and make sure that the rows are read from HFiles.
+        flushAndWaitUntilFlushed(tableName, false);
+        scan = createScanToReadOneRowAtATimeFromServer(ROW2, ROW3);
+        scanMetrics = null;
+        try (ResultScanner scanner = table.getScanner(scan)) {
+          int rowCount = 0;
+          for (Result r : scanner) {
+            rowCount++;
+          }
+          Assert.assertEquals(2, rowCount);
+          scanMetrics = scanner.getScanMetrics();
+        }
+
+        // Assert that rows were read from HFiles and involved 2 RPC calls.
+        int bytesReadFromFs = getBytesReadToReadConsecutiveDataBlocks(tableName, 1, 3, true);
+        Assert.assertEquals(bytesReadFromFs, scanMetrics.bytesReadFromFs.get());
+        Assert.assertEquals(0, scanMetrics.bytesReadFromBlockCache.get());
+        Assert.assertEquals(4, scanMetrics.readOpsCount.get());
+        Assert.assertEquals(2, scanMetrics.countOfRPCcalls.get());
+        Assert.assertEquals(0, scanMetrics.bytesReadFromMemstore.get());
+
+        // Make sure that rows are read from Blockcache now.
+        scan = createScanToReadOneRowAtATimeFromServer(ROW2, ROW3);
+        scanMetrics = null;
+        try (ResultScanner scanner = table.getScanner(scan)) {
+          int rowCount = 0;
+          for (Result r : scanner) {
+            rowCount++;
+          }
+          Assert.assertEquals(2, rowCount);
+          scanMetrics = scanner.getScanMetrics();
+        }
+
+        // Assert that rows were read from Blockcache and involved 2 RPC calls.
+        int bytesReadFromBlockCache =
+          getBytesReadToReadConsecutiveDataBlocks(tableName, 1, 3, false);
+        Assert.assertEquals(bytesReadFromBlockCache, scanMetrics.bytesReadFromBlockCache.get());
+        Assert.assertEquals(0, scanMetrics.bytesReadFromFs.get());
+        Assert.assertEquals(0, scanMetrics.readOpsCount.get());
+        Assert.assertEquals(2, scanMetrics.countOfRPCcalls.get());
+        Assert.assertEquals(0, scanMetrics.bytesReadFromMemstore.get());
+      }
+    } finally {
+      UTIL.shutdownMiniCluster();
+    }
+  }
+
+  private Scan createScanToReadOneRowAtATimeFromServer(byte[] startRow, byte[] stopRow) {
+    Scan scan = new Scan();
+    scan.withStartRow(startRow, true);
+    scan.withStopRow(stopRow, true);
+    scan.setScanMetricsEnabled(true);
+    scan.setCaching(1);
+    return scan;
+  }
+
+  private void flushAndWaitUntilFlushed(TableName tableName, boolean waitForUpdatedReaders)
+    throws Exception {
+    if (waitForUpdatedReaders) {
+      StoreScanner.resetHasUpdatedReaders();
+    }
+    UTIL.flush(tableName);
+    List<HRegion> regions = UTIL.getMiniHBaseCluster().getRegions(tableName);
+    Assert.assertEquals(1, regions.size());
+    HRegion region = regions.get(0);
+    HStore store = region.getStore(CF);
+    // In milliseconds
+    int maxWaitTime = 100000;
+    int totalWaitTime = 0;
+    int sleepTime = 10000;
+    while (
+      store.getStorefiles().size() == 0
+        || (waitForUpdatedReaders && !StoreScanner.hasUpdatedReaders())
+    ) {
+      Thread.sleep(sleepTime);
+      totalWaitTime += sleepTime;
+      if (totalWaitTime >= maxWaitTime) {
+        throw new Exception("Store files not flushed after " + maxWaitTime + "ms");
+      }
+    }
+    Assert.assertEquals(1, store.getStorefiles().size());
+  }
+
+  private int getBytesReadToReadConsecutiveDataBlocks(TableName tableName,
+    int expectedStoreFileCount, int expectedDataBlockCount, boolean isReadFromFs) throws Exception {
+    List<HRegion> regions = UTIL.getMiniHBaseCluster().getRegions(tableName);
+    Assert.assertEquals(1, regions.size());
+    HRegion region = regions.get(0);
+    HStore store = region.getStore(CF);
+    Collection<HStoreFile> storeFiles = store.getStorefiles();
+    Assert.assertEquals(expectedStoreFileCount, storeFiles.size());
+    int bytesReadFromFs = 0;
+    for (HStoreFile storeFile : storeFiles) {
+      StoreFileReader reader = storeFile.getReader();
+      HFile.Reader hfileReader = reader.getHFileReader();
+      HFileBlock.FSReader blockReader = hfileReader.getUncachedBlockReader();
+      FixedFileTrailer trailer = hfileReader.getTrailer();
+      int dataIndexLevels = trailer.getNumDataIndexLevels();
+      long loadOnOpenDataOffset = trailer.getLoadOnOpenDataOffset();
+      HFileBlock.BlockIterator blockIterator = blockReader.blockRange(0, loadOnOpenDataOffset);
+      HFileBlock block;
+      boolean readNextBlock = false;
+      int blockCount = 0;
+      while ((block = blockIterator.nextBlock()) != null) {
+        blockCount++;
+        bytesReadFromFs += block.getOnDiskSizeWithHeader();
+        if (isReadFromFs && readNextBlock) {
+          // This accounts for savings we get from prefetched header but these saving are only
+          // applicable when reading from FS and not from BlockCache.
+          bytesReadFromFs -= block.headerSize();
+          readNextBlock = false;
+        }
+        if (block.getNextBlockOnDiskSize() > 0) {
+          bytesReadFromFs += block.headerSize();
+          readNextBlock = true;
+        }
+        Assert.assertTrue(block.getBlockType().isData());
+      }
+      blockIterator.freeBlocks();
+      // No intermediate or leaf index blocks are expected.
+      Assert.assertEquals(1, dataIndexLevels);
+      Assert.assertEquals(expectedDataBlockCount, blockCount);
+    }
+    return bytesReadFromFs;
+  }
+
+  private int getBytesReadFromFsForNonGetScan(TableName tableName, ScanMetrics scanMetrics,
+    int expectedStoreFileCount) throws Exception {
+    List<HRegion> regions = UTIL.getMiniHBaseCluster().getRegions(tableName);
+    Assert.assertEquals(1, regions.size());
+    HRegion region = regions.get(0);
+    HStore store = region.getStore(CF);
+    Collection<HStoreFile> storeFiles = store.getStorefiles();
+    Assert.assertEquals(expectedStoreFileCount, storeFiles.size());
+    int bytesReadFromFs = 0;
+    for (HStoreFile storeFile : storeFiles) {
+      StoreFileReader reader = storeFile.getReader();
+      HFile.Reader hfileReader = reader.getHFileReader();
+      HFileBlock.FSReader blockReader = hfileReader.getUncachedBlockReader();
+      FixedFileTrailer trailer = hfileReader.getTrailer();
+      int dataIndexLevels = trailer.getNumDataIndexLevels();
+      // Read the first block of the HFile. First block is always expected to be a DATA block and
+      // the HFile is expected to have only one DATA block.
+      HFileBlock block = blockReader.readBlockData(0, -1, true, true, true);
+      Assert.assertTrue(block.getBlockType().isData());
+      bytesReadFromFs += block.getOnDiskSizeWithHeader();
+      if (block.getNextBlockOnDiskSize() > 0) {
+        bytesReadFromFs += block.headerSize();
+      }
+      block.release();
+      // Each of the HFiles is expected to have only root index but no intermediate or leaf index
+      // blocks.
+      Assert.assertEquals(1, dataIndexLevels);
+    }
+    return bytesReadFromFs;
+  }
+
   private ScanMetrics readDataAndGetScanMetrics(TableName tableName, boolean isScanMetricsEnabled)
     throws Exception {
     Scan scan = new Scan();
@@ -252,7 +662,7 @@ public class TestBytesReadServerSideScanMetrics {
   private void writeData(TableName tableName, boolean shouldFlush) throws Exception {
     try (Table table = UTIL.getConnection().getTable(tableName)) {
       table.put(new Put(ROW2).addColumn(CF, CQ, VALUE));
-      table.put(new Put(Bytes.toBytes("row4")).addColumn(CF, CQ, VALUE));
+      table.put(new Put(ROW4).addColumn(CF, CQ, VALUE));
       if (shouldFlush) {
         // Create a HFile
         UTIL.flush(tableName);
@@ -269,12 +679,28 @@ public class TestBytesReadServerSideScanMetrics {
 
   private void createTable(TableName tableName, boolean blockCacheEnabled, BloomType bloomType)
     throws Exception {
+    createTable(tableName, blockCacheEnabled, bloomType, HConstants.DEFAULT_BLOCKSIZE,
+      new HashMap<>());
+  }
+
+  private void createTable(TableName tableName, boolean blockCacheEnabled, BloomType bloomType,
+    Map<String, String> configuration) throws Exception {
+    createTable(tableName, blockCacheEnabled, bloomType, HConstants.DEFAULT_BLOCKSIZE,
+      configuration);
+  }
+
+  private void createTable(TableName tableName, boolean blockCacheEnabled, BloomType bloomType,
+    int blocksize, Map<String, String> configuration) throws Exception {
     Admin admin = UTIL.getAdmin();
     TableDescriptorBuilder tableDescriptorBuilder = TableDescriptorBuilder.newBuilder(tableName);
     ColumnFamilyDescriptorBuilder columnFamilyDescriptorBuilder =
       ColumnFamilyDescriptorBuilder.newBuilder(CF);
     columnFamilyDescriptorBuilder.setBloomFilterType(bloomType);
     columnFamilyDescriptorBuilder.setBlockCacheEnabled(blockCacheEnabled);
+    columnFamilyDescriptorBuilder.setBlocksize(blocksize);
+    for (Map.Entry<String, String> entry : configuration.entrySet()) {
+      columnFamilyDescriptorBuilder.setConfiguration(entry.getKey(), entry.getValue());
+    }
     tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptorBuilder.build());
     admin.createTable(tableDescriptorBuilder.build());
     UTIL.waitUntilAllRegionsAssigned(tableName);

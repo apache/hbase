@@ -96,7 +96,7 @@ public class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
 
   private RegionServerServices rsServices;
 
-  private ServerSideScanMetrics scannerInitMetrics;
+  private ServerSideScanMetrics scannerInitMetrics = null;
 
   @Override
   public RegionInfo getRegionInfo() {

@@ -1109,7 +1109,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     if (cache != null) {
       try {
         HFileBlock cachedBlock = (HFileBlock) cache.getBlock(cacheKey, cacheBlock, useLock,
-        updateCacheMetrics, expectedBlockType);
+          updateCacheMetrics, expectedBlockType);
         if (cachedBlock != null) {
           boolean isScanMetricsEnabled = ThreadLocalServerSideScanMetrics.isScanMetricsEnabled();
           if (cacheConf.shouldCacheCompressed(cachedBlock.getBlockType().getCategory())) {

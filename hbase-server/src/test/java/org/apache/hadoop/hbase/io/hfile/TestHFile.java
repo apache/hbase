@@ -202,12 +202,12 @@ public class TestHFile {
     lru.shutdown();
   }
 
-  private void assertBytesReadFromCache(boolean isScanMetricsEnabled)
-    throws Exception {
+  private void assertBytesReadFromCache(boolean isScanMetricsEnabled) throws Exception {
     assertBytesReadFromCache(isScanMetricsEnabled, DataBlockEncoding.NONE);
   }
-  
-  private void assertBytesReadFromCache(boolean isScanMetricsEnabled, DataBlockEncoding encoding) throws Exception {
+
+  private void assertBytesReadFromCache(boolean isScanMetricsEnabled, DataBlockEncoding encoding)
+    throws Exception {
     // Write a store file
     Path storeFilePath = writeStoreFile();
 
@@ -258,8 +258,7 @@ public class TestHFile {
       // Assert that bytes read from block cache account for same number of bytes that would have
       // been read from FS if block cache wasn't there.
       Assert.assertEquals(bytesReadFromFs, bytesReadFromCache);
-    }
-    else {
+    } else {
       Assert.assertNull(block);
     }
     Assert.assertEquals(isScanMetricsEnabled ? bytesReadFromCache : 0,

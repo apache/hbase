@@ -248,8 +248,7 @@ public class TestBytesReadFromFs {
     // Do +1 for the additional seek done to read the root index block header to get on disk size of
     // the root index block
     int readOpsCount = isScanMetricsEnabled ? blockLevelsRead + 1 : 0;
-    Assert.assertEquals(readOpsCount,
-      ThreadLocalServerSideScanMetrics.getReadOpsCountAndReset());
+    Assert.assertEquals(readOpsCount, ThreadLocalServerSideScanMetrics.getReadOpsCountAndReset());
   }
 
   private void readLoadOnOpenDataSection(Path path, boolean hasBloomFilters) throws IOException {
