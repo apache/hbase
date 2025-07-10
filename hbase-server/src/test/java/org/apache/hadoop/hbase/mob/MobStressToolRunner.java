@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -143,7 +144,7 @@ public class MobStressToolRunner {
           Thread.sleep(120000);
         } catch (Exception e) {
           LOG.error("MOB Stress Test FAILED", e);
-          System.exit(-1);
+          ExitHandler.getInstance().exit(-1);
         }
       }
     }
@@ -200,7 +201,7 @@ public class MobStressToolRunner {
         run = false;
       } catch (Exception e) {
         LOG.error("MOB Stress Test FAILED", e);
-        System.exit(-1);
+        ExitHandler.getInstance().exit(-1);
       }
     }
   }
@@ -293,7 +294,7 @@ public class MobStressToolRunner {
       if (HTU != null) {
         assertTrue(false);
       } else {
-        System.exit(-1);
+        ExitHandler.getInstance().exit(-1);
       }
     }
   }
