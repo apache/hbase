@@ -78,8 +78,7 @@ class RegionCoprocessorRpcChannelImpl implements RpcChannel {
     final Context context = Context.current();
     CompletableFuture<Message> future = new CompletableFuture<>();
     if (region != null && !Bytes.equals(loc.getRegion().getRegionName(), region.getRegionName())) {
-      future.completeExceptionally(new DoNotRetryIOException("Region name is changed, expected "
-        + region.getRegionNameAsString() + ", actual " + loc.getRegion().getRegionNameAsString()));
+      future.completeExceptionally(new RegionNoLongerExistsException(loc.getRegion()));
       return future;
     }
     CoprocessorServiceRequest csr = CoprocessorRpcUtils.getCoprocessorServiceRequest(method,
@@ -123,5 +122,18 @@ class RegionCoprocessorRpcChannelImpl implements RpcChannel {
 
   public byte[] getLastRegion() {
     return lastRegion;
+  }
+
+  public static class RegionNoLongerExistsException extends DoNotRetryIOException {
+    private final RegionInfo regionInfo;
+
+    public RegionNoLongerExistsException(RegionInfo regionInfo) {
+      super();
+      this.regionInfo = regionInfo;
+    }
+
+    public RegionInfo getNewRegionInfo() {
+      return regionInfo;
+    }
   }
 }

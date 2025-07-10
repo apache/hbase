@@ -34,14 +34,20 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentNavigableMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -50,6 +56,7 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.AsyncRpcRetryingCallerFactory.SingleRequestCallerBuilder;
 import org.apache.hadoop.hbase.client.ConnectionUtils.Converter;
+import org.apache.hadoop.hbase.client.RegionCoprocessorRpcChannelImpl.RegionNoLongerExistsException;
 import org.apache.hadoop.hbase.client.trace.TableOperationSpanBuilder;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
@@ -57,6 +64,7 @@ import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.trace.HBaseSemanticAttributes;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -796,53 +804,143 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
 
   private <S, R> void coprocessorServiceUntilComplete(Function<RpcChannel, S> stubMaker,
     ServiceCaller<S, R> callable, PartialResultCoprocessorCallback<S, R> callback,
-    AtomicBoolean locateFinished, AtomicInteger unfinishedRequest, RegionInfo region, Span span) {
+    MultiRegionCoprocessorServiceProgress<R> progress, RegionInfo region,
+    AtomicBoolean claimedRegionAssignment, Span span) {
     addListener(coprocessorService(stubMaker, callable, region, region.getStartKey()), (r, e) -> {
       try (Scope ignored = span.makeCurrent()) {
-        if (e != null) {
-          callback.onRegionError(region, e);
+        if (e instanceof RegionNoLongerExistsException) {
+          RegionInfo newRegion = ((RegionNoLongerExistsException) e).getNewRegionInfo();
+          if (progress.markRegionReplacedExistingAndCheckNeedsToBeRestarted(newRegion)) {
+            LOG.debug(
+              "Attempted to send a coprocessor service RPC to region {} which no"
+                + " longer exists, will attempt to send RPCs to the region(s) that replaced it",
+              region.getEncodedName());
+            restartCoprocessorServiceForRange(stubMaker, callable, callback, region.getStartKey(),
+              region.getEndKey(), newRegion, progress, span);
+          }
+          progress.markRegionFinished(region);
         } else {
-          callback.onRegionComplete(region, r);
-        }
+          if (!claimedRegionAssignment.get()) {
+            if (!progress.tryClaimRegionAssignment(region)) {
+              progress.markRegionFinished(region);
+              return;
+            } else {
+              claimedRegionAssignment.set(true);
+            }
+          }
+          progress.onResponse(region, r, e);
 
-        ServiceCaller<S, R> updatedCallable;
-        if (e == null && r != null) {
-          updatedCallable = callback.getNextCallable(r, region);
-        } else {
-          updatedCallable = null;
-        }
-
-        // If updatedCallable is non-null, we will be sending another request, so no need to
-        // decrement unfinishedRequest (recall that && short-circuits).
-        // If updatedCallable is null, and unfinishedRequest decrements to 0, we're done with the
-        // requests for this coprocessor call.
-        if (
-          updatedCallable == null && unfinishedRequest.decrementAndGet() == 0
-            && locateFinished.get()
-        ) {
-          callback.onComplete();
-        } else if (updatedCallable != null) {
-          Duration waitInterval = callback.getWaitInterval(r, region);
-          LOG.trace("Coprocessor returned incomplete result. "
-            + "Sleeping for {} before making follow-up request.", waitInterval);
-          if (!waitInterval.isZero()) {
-            AsyncConnectionImpl.RETRY_TIMER.newTimeout(
-              (timeout) -> coprocessorServiceUntilComplete(stubMaker, updatedCallable, callback,
-                locateFinished, unfinishedRequest, region, span),
-              waitInterval.toMillis(), TimeUnit.MILLISECONDS);
+          ServiceCaller<S, R> updatedCallable;
+          if (e == null && r != null) {
+            updatedCallable = callback.getNextCallable(r, region);
           } else {
-            coprocessorServiceUntilComplete(stubMaker, updatedCallable, callback, locateFinished,
-              unfinishedRequest, region, span);
+            updatedCallable = null;
+          }
+
+          // If updatedCallable is non-null, we will be sending another request, so no need to
+          // decrement unfinishedRequest (recall that && short-circuits).
+          // If updatedCallable is null, and unfinishedRequest decrements to 0, we're done with the
+          // requests for this coprocessor call.
+          if (updatedCallable == null) {
+            progress.markRegionFinished(region);
+          } else {
+            Duration waitInterval = callback.getWaitInterval(r, region);
+            LOG.trace("Coprocessor returned incomplete result. "
+              + "Sleeping for {} before making follow-up request.", waitInterval);
+            if (!waitInterval.isZero()) {
+              AsyncConnectionImpl.RETRY_TIMER.newTimeout(
+                (timeout) -> coprocessorServiceUntilComplete(stubMaker, updatedCallable, callback,
+                  progress, region, claimedRegionAssignment, span),
+                waitInterval.toMillis(), TimeUnit.MILLISECONDS);
+            } else {
+              coprocessorServiceUntilComplete(stubMaker, updatedCallable, callback, progress,
+                region, claimedRegionAssignment, span);
+            }
           }
         }
+      } catch (Throwable t) {
+        if (claimedRegionAssignment.get() || progress.tryClaimRegionAssignment(region)) {
+          LOG.error("Error processing coprocessor service response for region {}",
+            region.getEncodedName(), t);
+          progress.onResponse(region, null, t);
+        }
+        progress.markRegionFinished(region);
       }
     });
   }
 
+  private <S, R> void restartCoprocessorServiceForRange(Function<RpcChannel, S> stubMaker,
+    ServiceCaller<S, R> callable, PartialResultCoprocessorCallback<S, R> callback, byte[] startKey,
+    byte[] endKey, RegionInfo newRegion, MultiRegionCoprocessorServiceProgress<R> progress,
+    Span span) {
+    CoprocessorServiceBuilderImpl<S, R> builder = (CoprocessorServiceBuilderImpl<S,
+      R>) coprocessorService(stubMaker, callable, new PartialResultCoprocessorCallback<S, R>() {
+        final Set<RegionInfo> assignments = Collections.synchronizedSet(new HashSet<>());
+
+        @Override
+        public ServiceCaller<S, R> getNextCallable(R response, RegionInfo region) {
+          if (assignments.contains(region)) {
+            return callback.getNextCallable(response, region);
+          }
+          return null;
+        }
+
+        @Override
+        public Duration getWaitInterval(R response, RegionInfo region) {
+          return callback.getWaitInterval(response, region);
+        }
+
+        @Override
+        public void onRegionComplete(RegionInfo region, R resp) {
+          boolean hasAssignment = assignments.contains(region);
+          if (!hasAssignment) {
+            hasAssignment = progress.tryClaimRegionAssignment(region);
+            if (hasAssignment) {
+              assignments.add(region);
+            }
+          }
+          if (hasAssignment) {
+            progress.onResponse(region, resp, null);
+          }
+        }
+
+        @Override
+        public void onRegionError(RegionInfo region, Throwable error) {
+          boolean hasAssignment = assignments.contains(region);
+          if (!hasAssignment) {
+            hasAssignment = progress.tryClaimRegionAssignment(region);
+            if (hasAssignment) {
+              assignments.add(region);
+            }
+          }
+          if (hasAssignment) {
+            progress.onResponse(region, null, error);
+          }
+        }
+
+        @Override
+        public void onComplete() {
+          for (RegionInfo region : assignments) {
+            progress.markRegionFinished(region);
+          }
+          if (!assignments.contains(newRegion)) {
+            progress.markRegionFinished(newRegion);
+          }
+        }
+
+        @Override
+        public void onError(Throwable error) {
+          callback.onError(error);
+        }
+      });
+
+    builder.fromRow(startKey, true).toRow(endKey, false).withSpan(span).execute();
+  }
+
   private <S, R> void onLocateComplete(Function<RpcChannel, S> stubMaker,
     ServiceCaller<S, R> callable, PartialResultCoprocessorCallback<S, R> callback, byte[] endKey,
-    boolean endKeyInclusive, AtomicBoolean locateFinished, AtomicInteger unfinishedRequest,
-    HRegionLocation loc, Throwable error) {
+    boolean endKeyInclusive, MultiRegionCoprocessorServiceProgress<R> progress, HRegionLocation loc,
+    Throwable error) {
     final Span span = Span.current();
     if (error != null) {
       callback.onError(error);
@@ -850,21 +948,21 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
       span.end();
       return;
     }
-    unfinishedRequest.incrementAndGet();
+    progress.markRegionLocated(loc.getRegion());
     RegionInfo region = loc.getRegion();
     if (locateFinished(region, endKey, endKeyInclusive)) {
-      locateFinished.set(true);
+      progress.markLocateFinished();
     } else {
       addListener(conn.getLocator().getRegionLocation(tableName, region.getEndKey(),
         RegionLocateType.CURRENT, operationTimeoutNs), (l, e) -> {
           try (Scope ignored = span.makeCurrent()) {
-            onLocateComplete(stubMaker, callable, callback, endKey, endKeyInclusive, locateFinished,
-              unfinishedRequest, l, e);
+            onLocateComplete(stubMaker, callable, callback, endKey, endKeyInclusive, progress, l,
+              e);
           }
         });
     }
-    coprocessorServiceUntilComplete(stubMaker, callable, callback, locateFinished,
-      unfinishedRequest, region, span);
+    coprocessorServiceUntilComplete(stubMaker, callable, callback, progress, region,
+      new AtomicBoolean(false), span);
   }
 
   private final class CoprocessorServiceBuilderImpl<S, R>
@@ -883,6 +981,8 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
     private byte[] endKey = HConstants.EMPTY_END_ROW;
 
     private boolean endKeyInclusive;
+
+    private Span span;
 
     public CoprocessorServiceBuilderImpl(Function<RpcChannel, S> stubMaker,
       ServiceCaller<S, R> callable, PartialResultCoprocessorCallback<S, R> callback) {
@@ -911,10 +1011,17 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
       return this;
     }
 
+    CoprocessorServiceBuilderImpl<S, R> withSpan(Span span) {
+      this.span = span;
+      return this;
+    }
+
     @Override
     public void execute() {
-      final Span span = newTableOperationSpanBuilder()
-        .setOperation(HBaseSemanticAttributes.Operation.COPROC_EXEC).build();
+      final Span span = this.span == null
+        ? newTableOperationSpanBuilder().setOperation(HBaseSemanticAttributes.Operation.COPROC_EXEC)
+          .build()
+        : this.span;
       try (Scope ignored = span.makeCurrent()) {
         final RegionLocateType regionLocateType =
           startKeyInclusive ? RegionLocateType.CURRENT : RegionLocateType.AFTER;
@@ -923,7 +1030,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
         addListener(future, (loc, error) -> {
           try (Scope ignored1 = span.makeCurrent()) {
             onLocateComplete(stubMaker, callable, callback, endKey, endKeyInclusive,
-              new AtomicBoolean(false), new AtomicInteger(0), loc, error);
+              new MultiRegionCoprocessorServiceProgress<>(callback), loc, error);
           }
         });
       }
@@ -943,5 +1050,209 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
     Function<RpcChannel, S> stubMaker, ServiceCaller<S, R> callable,
     PartialResultCoprocessorCallback<S, R> callback) {
     return new CoprocessorServiceBuilderImpl<>(stubMaker, callable, callback);
+  }
+
+  /**
+   * Coordinates coprocessor service responses across multiple regions when executing range queries.
+   * <p>
+   * When clients send coprocessor RPCs to a range, the process involves locating every region in
+   * that range and sending an RPC to a row believed to be in each region. However, the actual
+   * region may differ from what's in the meta cache, leading to complex race conditions that this
+   * class manages.
+   * <p>
+   * Race conditions handled:
+   * <ul>
+   * <li><b>Region merges:</b> Multiple original requests consolidate into a single request; this
+   * class provides leader election to ensure only one RPC is sent for the merged range</li>
+   * <li><b>Region splits:</b> One original request becomes multiple requests; the service is
+   * restarted for the affected range to cover all resulting regions</li>
+   * <li><b>Region alignment changes:</b> When multiple original requests cover part of a new
+   * region, but it doesn't fall into a simple split or merge case, the response is deduplicated
+   * after it finishes executing</li>
+   * <li><b>Region movement during execution:</b> If a coprocessor has already started on a region
+   * but subsequent calls detect the region has changed, an error is reported as the request cannot
+   * be recovered</li>
+   * </ul>
+   * <p>
+   * The class maintains region progress state to prevent duplicate response processing and ensures
+   * proper calling of Callback::onComplete when all regions have finished processing.
+   */
+  private static class MultiRegionCoprocessorServiceProgress<R> {
+    private final AtomicBoolean locateFinished = new AtomicBoolean(false);
+    private final ConcurrentNavigableMap<RegionInfo, RegionProgress> regions =
+      new ConcurrentSkipListMap<>();
+    private final CoprocessorCallback<R> callback;
+
+    private MultiRegionCoprocessorServiceProgress(CoprocessorCallback<R> callback) {
+      this.callback = callback;
+    }
+
+    void markLocateFinished() {
+      locateFinished.set(true);
+    }
+
+    void markRegionLocated(RegionInfo region) {
+      tryUpdateRegionProgress(region, RegionProgress.NONE, RegionProgress.LOCATED);
+    }
+
+    /**
+     * Try to claim the assignment for the region in order to return the response to the caller.
+     * This ensure that there is only ever one set of RPCs returned for a region.
+     * @return true if claimed successfully, false otherwise
+     */
+    boolean tryClaimRegionAssignment(RegionInfo region) {
+      boolean isNewlyAssigned = tryUpdateRegionProgress(region,
+        EnumSet.of(RegionProgress.NONE, RegionProgress.LOCATED), RegionProgress.ASSIGNED);
+      if (!isNewlyAssigned) {
+        return false;
+      }
+      List<Pair<RegionInfo, RegionProgress>> overlappingAssignments =
+        getOverlappingRegionAssignments(region);
+      if (!overlappingAssignments.isEmpty()) {
+        callback.onRegionError(region, new DoNotRetryIOException(
+          ("Region %s has replaced a region that the coprocessor service already started on, likely"
+            + " due to a region merge. Overlapping regions: %s")
+            .formatted(region.getEncodedName(), overlappingAssignments.stream().map(Pair::getFirst)
+              .map(RegionInfo::getEncodedName).collect(Collectors.joining(", ")))));
+        tryUpdateRegionProgress(region, RegionProgress.ASSIGNED, RegionProgress.CANCELLED);
+        return false;
+      }
+
+      return true;
+    }
+
+    private List<Pair<RegionInfo, RegionProgress>>
+      getOverlappingRegionAssignments(RegionInfo region) {
+      boolean isLast = isEmptyStopRow(region.getEndKey());
+
+      List<Pair<RegionInfo, RegionProgress>> overlappingAssignments = new ArrayList<>();
+
+      Map.Entry<RegionInfo, RegionProgress> candidate =
+        isLast ? regions.lastEntry() : regions.lowerEntry(region);
+
+      while (candidate != null) {
+        boolean isOverlap =
+          (Bytes.compareTo(candidate.getKey().getStartKey(), region.getEndKey()) < 0 || isLast)
+            && Bytes.compareTo(candidate.getKey().getEndKey(), region.getStartKey()) > 0;
+        if (
+          isOverlap && EnumSet.of(RegionProgress.ASSIGNED, RegionProgress.FINISHED)
+            .contains(candidate.getValue())
+        ) {
+          if (!candidate.getKey().equals(region)) {
+            overlappingAssignments.add(new Pair<>(candidate.getKey(), candidate.getValue()));
+          }
+          candidate = regions.lowerEntry(candidate.getKey());
+        } else {
+          candidate = null;
+        }
+      }
+
+      return overlappingAssignments;
+    }
+
+    /**
+     * If the region containing the target row has changed, we'll need to backtrack, re-determine
+     * the affected region locations, and send RPCs to cover the range that the original region had.
+     * In the case that it has merged, multiple requests will be merged into a single request and
+     * this serves as a mechanism for leader election to ensure only one set of RPCs are sent for
+     * the range.
+     * @return true if a new set of RPCs should be sent, false if the region was already handled
+     */
+    boolean markRegionReplacedExistingAndCheckNeedsToBeRestarted(RegionInfo newRegion) {
+      boolean notYetRestarted =
+        tryUpdateRegionProgress(newRegion, RegionProgress.NONE, RegionProgress.LOCATED);
+
+      return notYetRestarted;
+    }
+
+    void onResponse(RegionInfo region, R response, Throwable failure) {
+      RegionProgress progress = regions.getOrDefault(region, RegionProgress.NONE);
+      if (progress != RegionProgress.ASSIGNED) {
+
+        callback.onError(
+          new DoNotRetryIOException("Received an out-of-order response, expected ASSIGNED but was "
+            + progress + ", this should not happen."));
+        return;
+      }
+
+      if (failure != null) {
+        callback.onRegionError(region, failure);
+      } else {
+        callback.onRegionComplete(region, response);
+      }
+    }
+
+    void markRegionFinished(RegionInfo region) {
+      boolean wasAssigned =
+        tryUpdateRegionProgress(region, RegionProgress.ASSIGNED, RegionProgress.FINISHED)
+          || tryUpdateRegionProgress(region, RegionProgress.LOCATED, RegionProgress.CANCELLED);
+      assert wasAssigned
+        : "Region " + region.getEncodedName() + " was marked done but it was in state "
+          + regions.get(region) + ". This should not happen.";
+
+      if (!locateFinished.get()) {
+        return;
+      }
+      boolean allRegionsFinished;
+      synchronized (regions) {
+        allRegionsFinished = EnumSet.of(RegionProgress.FINISHED, RegionProgress.CANCELLED)
+          .containsAll(regions.values());
+      }
+      if (allRegionsFinished) {
+        callback.onComplete();
+      }
+    }
+
+    private boolean tryUpdateRegionProgress(RegionInfo region, RegionProgress prevStatus,
+      RegionProgress newStatus) {
+      return tryUpdateRegionProgress(region, EnumSet.of(prevStatus), newStatus);
+    }
+
+    private boolean tryUpdateRegionProgress(RegionInfo region, EnumSet<RegionProgress> prevStatuses,
+      RegionProgress newStatus) {
+      synchronized (regions) {
+        RegionProgress existingRegionStatus = regions.getOrDefault(region, RegionProgress.NONE);
+        if (prevStatuses.contains(existingRegionStatus)) {
+          regions.put(region, newStatus);
+          return true;
+        } else {
+          return false;
+        }
+      }
+    }
+
+    enum RegionProgress {
+      /**
+       * The region is not being tracked.
+       */
+      NONE,
+
+      /**
+       * A region has been identified to send the RPC to, either through the RegionLocator or after
+       * receiving a NotServingRegionException (i.e. the actual region is not what was expected, and
+       * the newly returned region will be used instead).
+       */
+      LOCATED,
+
+      /**
+       * A region was located, but while attempting to send the RPC it was found that the region no
+       * longer exists by an underlying NotServingRegionException. The new region that the RPC
+       * should be sent to is tracked and retried.
+       */
+      CANCELLED,
+
+      /**
+       * An RPC call has returned with a response from this region, confirming it is correct.
+       * Regions assignments are tracked at the call sites of
+       * MultiRegionCoprocessorServiceProgress::onResponse.
+       */
+      ASSIGNED,
+
+      /**
+       * After being assigned, the region has finished processing, either successfully or with an
+       * error. No more responses or errors can be accepted from this region.
+       */
+      FINISHED,
+    }
   }
 }
