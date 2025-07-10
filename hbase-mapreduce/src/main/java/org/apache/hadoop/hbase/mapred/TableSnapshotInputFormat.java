@@ -56,6 +56,7 @@ public class TableSnapshotInputFormat implements InputFormat<ImmutableBytesWrita
       this.delegate = delegate;
     }
 
+    @Deprecated
     public TableSnapshotRegionSplit(TableDescriptor htd, RegionInfo regionInfo,
       List<String> locations, Scan scan, Path restoreDir) {
       this.delegate =
