@@ -34,14 +34,16 @@ public class BulkLoad {
   private final String columnFamily;
   private final String hfilePath;
   private final byte[] rowKey;
+  private final long timestamp;
 
   public BulkLoad(TableName tableName, String region, String columnFamily, String hfilePath,
-    byte[] rowKey) {
+    byte[] rowKey, long timestamp) {
     this.tableName = tableName;
     this.region = region;
     this.columnFamily = columnFamily;
     this.hfilePath = hfilePath;
     this.rowKey = rowKey;
+    this.timestamp = timestamp;
   }
 
   public TableName getTableName() {
@@ -62,6 +64,10 @@ public class BulkLoad {
 
   public byte[] getRowKey() {
     return rowKey;
+  }
+
+  public long getTimestamp() {
+    return timestamp;
   }
 
   @Override

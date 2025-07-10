@@ -555,13 +555,14 @@ public class BackupAdminImpl implements BackupAdmin {
    */
   private void defaultPointInTimeRestore(PointInTimeRestoreRequest request) throws IOException {
     long endTime = request.getToDateTime();
+    boolean isForce = request.isForce();
     validateRequestToTime(endTime);
 
     TableName[] sTableArray = request.getFromTables();
     TableName[] tTableArray = resolveTargetTables(sTableArray, request.getToTables());
 
     // Validate PITR requirements
-    validatePitr(endTime, sTableArray, tTableArray);
+    validatePitr(endTime, sTableArray, tTableArray, isForce);
 
     // If only validation is required, log and return
     if (request.isCheck()) {
@@ -629,8 +630,8 @@ public class BackupAdminImpl implements BackupAdmin {
    * @param tTableArray The target tables where the restore will be performed.
    * @throws IOException If PITR is not possible due to missing continuous backup or backup images.
    */
-  private void validatePitr(long endTime, TableName[] sTableArray, TableName[] tTableArray)
-    throws IOException {
+  private void validatePitr(long endTime, TableName[] sTableArray, TableName[] tTableArray,
+    boolean isForce) throws IOException {
     try (BackupSystemTable table = new BackupSystemTable(conn)) {
       // Retrieve the set of tables with continuous backup enabled
       Map<TableName, Long> continuousBackupTables = table.getContinuousBackupTableSet();
@@ -643,7 +644,7 @@ public class BackupAdminImpl implements BackupAdmin {
 
       // Ensure a valid backup and WALs exist for PITR
       validateBackupAvailability(sTableArray, tTableArray, endTime, continuousBackupTables,
-        backupInfos);
+        backupInfos, isForce);
     }
   }
 
@@ -669,12 +670,12 @@ public class BackupAdminImpl implements BackupAdmin {
    * the remaining duration up to the end time.
    */
   private void validateBackupAvailability(TableName[] sTableArray, TableName[] tTableArray,
-    long endTime, Map<TableName, Long> continuousBackupTables, List<BackupInfo> backupInfos)
-    throws IOException {
+    long endTime, Map<TableName, Long> continuousBackupTables, List<BackupInfo> backupInfos,
+    boolean isForce) throws IOException {
     for (int i = 0; i < sTableArray.length; i++) {
       if (
         !canPerformPitr(sTableArray[i], tTableArray[i], endTime, continuousBackupTables,
-          backupInfos)
+          backupInfos, isForce)
       ) {
         String errorMsg = "Could not find a valid backup and WALs for PITR for table: "
           + sTableArray[i].getNameAsString();
@@ -688,16 +689,16 @@ public class BackupAdminImpl implements BackupAdmin {
    * Checks whether PITR can be performed for a given source-target table pair.
    */
   private boolean canPerformPitr(TableName stableName, TableName tTableName, long endTime,
-    Map<TableName, Long> continuousBackupTables, List<BackupInfo> backupInfos) {
-    return getValidBackupInfo(stableName, tTableName, endTime, continuousBackupTables, backupInfos)
-        != null;
+    Map<TableName, Long> continuousBackupTables, List<BackupInfo> backupInfos, boolean isForce) {
+    return getValidBackupInfo(stableName, tTableName, endTime, continuousBackupTables, backupInfos,
+      isForce) != null;
   }
 
   /**
    * Finds a valid backup for PITR that meets the required conditions.
    */
   private BackupInfo getValidBackupInfo(TableName sTableName, TableName tTablename, long endTime,
-    Map<TableName, Long> continuousBackupTables, List<BackupInfo> backupInfos) {
+    Map<TableName, Long> continuousBackupTables, List<BackupInfo> backupInfos, boolean isForce) {
     for (BackupInfo info : backupInfos) {
       if (isValidBackupForPitr(info, sTableName, endTime, continuousBackupTables)) {
 
@@ -707,6 +708,10 @@ public class BackupAdminImpl implements BackupAdmin {
 
         try {
           if (validateRequest(restoreRequest)) {
+            // check if any bulkload entry exists post this backup time and before "endtime"
+            if (!isForce) {
+              checkBulkLoadAfterBackup(conn, sTableName, info, endTime);
+            }
             return info;
           }
         } catch (IOException e) {
@@ -715,6 +720,32 @@ public class BackupAdminImpl implements BackupAdmin {
       }
     }
     return null;
+  }
+
+  /**
+   * Checks if any bulk load operation occurred for the specified table post last successful backup
+   * and before restore time.
+   * @param conn       Active HBase connection
+   * @param sTableName Table for which to check bulk load history
+   * @param info       Last successful backup before the target recovery time
+   * @param endTime    Target recovery time
+   * @throws IOException if a bulkload entry is found in between backup time and endtime
+   */
+  private void checkBulkLoadAfterBackup(Connection conn, TableName sTableName, BackupInfo info,
+    long endTime) throws IOException {
+    try (BackupSystemTable backupSystemTable = new BackupSystemTable(conn)) {
+      List<BulkLoad> bulkLoads =
+        backupSystemTable.readBulkloadRows(Collections.singletonList(sTableName));
+      for (BulkLoad load : bulkLoads) {
+        long lastBackupTs =
+          (info.getType() == BackupType.FULL) ? info.getStartTs() : info.getIncrCommittedWalTs();
+        if (lastBackupTs < load.getTimestamp() && load.getTimestamp() < endTime) {
+          throw new IOException("Bulk load operation detected after last successful backup for "
+            + "table: " + sTableName + ". Please use --force flag if you still want to restore but "
+            + "these bulk-loaded files will not be part of the restored table.");
+        }
+      }
+    }
   }
 
   /**
@@ -745,8 +776,8 @@ public class BackupAdminImpl implements BackupAdmin {
   private void restoreTableWithWalReplay(TableName sourceTable, TableName targetTable, long endTime,
     Map<TableName, Long> continuousBackupTables, List<BackupInfo> backupInfos,
     PointInTimeRestoreRequest request) throws IOException {
-    BackupInfo backupInfo =
-      getValidBackupInfo(sourceTable, targetTable, endTime, continuousBackupTables, backupInfos);
+    BackupInfo backupInfo = getValidBackupInfo(sourceTable, targetTable, endTime,
+      continuousBackupTables, backupInfos, request.isForce());
     if (backupInfo == null) {
       String errorMsg = "Could not find a valid backup and WALs for PITR for table: "
         + sourceTable.getNameAsString();

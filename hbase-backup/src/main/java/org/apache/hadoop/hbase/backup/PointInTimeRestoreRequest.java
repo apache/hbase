@@ -32,6 +32,7 @@ public final class PointInTimeRestoreRequest {
   private final TableName[] toTables;
   private final boolean overwrite;
   private final long toDateTime;
+  private final boolean force;
 
   private PointInTimeRestoreRequest(Builder builder) {
     this.backupRootDir = builder.backupRootDir;
@@ -40,6 +41,7 @@ public final class PointInTimeRestoreRequest {
     this.toTables = builder.toTables;
     this.overwrite = builder.overwrite;
     this.toDateTime = builder.toDateTime;
+    this.force = builder.force;
   }
 
   public String getBackupRootDir() {
@@ -66,6 +68,10 @@ public final class PointInTimeRestoreRequest {
     return toDateTime;
   }
 
+  public boolean isForce() {
+    return force;
+  }
+
   public static class Builder {
     private String backupRootDir;
     private boolean check = false;
@@ -73,6 +79,7 @@ public final class PointInTimeRestoreRequest {
     private TableName[] toTables;
     private boolean overwrite = false;
     private long toDateTime;
+    private boolean force;
 
     public Builder withBackupRootDir(String backupRootDir) {
       this.backupRootDir = backupRootDir;
@@ -101,6 +108,11 @@ public final class PointInTimeRestoreRequest {
 
     public Builder withToDateTime(long dateTime) {
       this.toDateTime = dateTime;
+      return this;
+    }
+
+    public Builder withForce(boolean force) {
+      this.force = force;
       return this;
     }
 

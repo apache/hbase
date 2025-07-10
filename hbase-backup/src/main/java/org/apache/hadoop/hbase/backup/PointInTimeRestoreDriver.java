@@ -18,8 +18,11 @@
 package org.apache.hadoop.hbase.backup;
 
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONF_CONTINUOUS_BACKUP_WAL_DIR;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.LONG_OPTION_FORCE_RESTORE;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.LONG_OPTION_PITR_BACKUP_PATH;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.LONG_OPTION_TO_DATETIME;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_FORCE_RESTORE;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_FORCE_RESTORE_DESC;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_PITR_BACKUP_PATH;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_PITR_BACKUP_PATH_DESC;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_TO_DATETIME;
@@ -69,6 +72,12 @@ public class PointInTimeRestoreDriver extends AbstractRestoreDriver {
       return -1;
     }
 
+    boolean force = cmd.hasOption(OPTION_FORCE_RESTORE);
+    if (force) {
+      LOG.debug("Found force option (-{}) in restore command, "
+        + "will force restore in case there is no backup post a bulkload", OPTION_FORCE_RESTORE);
+    }
+
     String backupRootDir = cmd.getOptionValue(OPTION_PITR_BACKUP_PATH);
 
     try (final Connection conn = ConnectionFactory.createConnection(conf);
@@ -101,9 +110,10 @@ public class PointInTimeRestoreDriver extends AbstractRestoreDriver {
         return -5;
       }
 
-      PointInTimeRestoreRequest pointInTimeRestoreRequest = new PointInTimeRestoreRequest.Builder()
-        .withBackupRootDir(backupRootDir).withCheck(check).withFromTables(fromTables)
-        .withToTables(toTables).withOverwrite(isOverwrite).withToDateTime(endTime).build();
+      PointInTimeRestoreRequest pointInTimeRestoreRequest =
+        new PointInTimeRestoreRequest.Builder().withBackupRootDir(backupRootDir).withCheck(check)
+          .withFromTables(fromTables).withToTables(toTables).withOverwrite(isOverwrite)
+          .withToDateTime(endTime).withForce(force).build();
 
       client.pointInTimeRestore(pointInTimeRestoreRequest);
     } catch (Exception e) {
@@ -119,6 +129,7 @@ public class PointInTimeRestoreDriver extends AbstractRestoreDriver {
     addOptWithArg(OPTION_TO_DATETIME, LONG_OPTION_TO_DATETIME, OPTION_TO_DATETIME_DESC);
     addOptWithArg(OPTION_PITR_BACKUP_PATH, LONG_OPTION_PITR_BACKUP_PATH,
       OPTION_PITR_BACKUP_PATH_DESC);
+    addOptNoArg(OPTION_FORCE_RESTORE, LONG_OPTION_FORCE_RESTORE, OPTION_FORCE_RESTORE_DESC);
   }
 
   public static void main(String[] args) throws Exception {
