@@ -134,6 +134,27 @@ public class TestRpcMetrics {
     HELPER.assertCounter("processCallTime_NumOps", 1, serverSource);
     HELPER.assertCounter("totalCallTime_NumOps", 1, serverSource);
 
+    mrpc.dequeuedReadCall(100);
+    mrpc.processReadCall(101);
+    mrpc.totalReadCall(102);
+    HELPER.assertCounter("queueReadCallTime_NumOps", 1, serverSource);
+    HELPER.assertCounter("processReadCallTime_NumOps", 1, serverSource);
+    HELPER.assertCounter("totalReadCallTime_NumOps", 1, serverSource);
+
+    mrpc.dequeuedWriteCall(100);
+    mrpc.processWriteCall(101);
+    mrpc.totalWriteCall(102);
+    HELPER.assertCounter("queueWriteCallTime_NumOps", 1, serverSource);
+    HELPER.assertCounter("processWriteCallTime_NumOps", 1, serverSource);
+    HELPER.assertCounter("totalWriteCallTime_NumOps", 1, serverSource);
+
+    mrpc.dequeuedScanCall(100);
+    mrpc.processScanCall(101);
+    mrpc.totalScanCall(102);
+    HELPER.assertCounter("queueScanCallTime_NumOps", 1, serverSource);
+    HELPER.assertCounter("processScanCallTime_NumOps", 1, serverSource);
+    HELPER.assertCounter("totalScanCallTime_NumOps", 1, serverSource);
+
     mrpc.sentBytes(103);
     mrpc.sentBytes(103);
     mrpc.sentBytes(103);
