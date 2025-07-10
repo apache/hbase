@@ -34,16 +34,16 @@ from hbase.ttypes import TThriftServerType
 from hbase.Hbase import Client, ColumnDescriptor, Mutation
 
 def printVersions(row, versions):
-  print "row: " + row + ", values: ",
+  print("row: " + row + ", values: ", end=' ')
   for cell in versions:
-    print cell.value + "; ",
-  print
+    print(cell.value + "; ", end=' ')
+  print()
 
 def printRow(entry):
-  print "row: " + entry.row + ", cols:",
+  print("row: " + entry.row + ", cols:", end=' ')
   for k in sorted(entry.columns):
-    print k + " => " + entry.columns[k].value,
-  print
+    print(k + " => " + entry.columns[k].value, end=' ')
+  print()
 
 
 def demo_client(host, port, is_framed_transport):
@@ -76,14 +76,14 @@ def demo_client(host, port, is_framed_transport):
   #
   # Scan all tables, look for the demo table and delete it.
   #
-  print "scanning tables..."
+  print("scanning tables...")
   for table in client.getTableNames():
-    print "  found: %s" %(table)
+    print("  found: %s" %(table))
     if table == t:
       if client.isTableEnabled(table):
-        print "    disabling table: %s"  %(t)
+        print("    disabling table: %s"  %(t))
         client.disableTable(table)
-      print "    deleting table: %s"  %(t)
+      print("    deleting table: %s"  %(t))
       client.deleteTable(table)
 
   columns = []
@@ -96,16 +96,16 @@ def demo_client(host, port, is_framed_transport):
   columns.append(col)
 
   try:
-    print "creating table: %s" %(t)
+    print("creating table: %s" %(t))
     client.createTable(t, columns)
-  except AlreadyExists, ae:
-    print "WARN: " + ae.message
+  except AlreadyExists as ae:
+    print("WARN: " + ae.message)
 
   cols = client.getColumnDescriptors(t)
-  print "column families in %s" %(t)
-  for col_name in cols.keys():
+  print("column families in %s" %(t))
+  for col_name in list(cols.keys()):
     col = cols[col_name]
-    print "  column: %s, maxVer: %d" % (col.name, col.maxVersions)
+    print("  column: %s, maxVer: %d" % (col.name, col.maxVersions))
 
   dummy_attributes = {}
   #
@@ -116,7 +116,7 @@ def demo_client(host, port, is_framed_transport):
 
   # non-utf8 is fine for data
   mutations = [Mutation(column="entry:foo",value=invalid)]
-  print str(mutations)
+  print(str(mutations))
   client.mutateRow(t, "foo", mutations, dummy_attributes)
 
   # try empty strings
@@ -131,18 +131,18 @@ def demo_client(host, port, is_framed_transport):
   try:
     mutations = [Mutation(column="entry:foo", value=invalid)]
     client.mutateRow(t, invalid, mutations, dummy_attributes)
-  except ttypes.IOError, e:
-    print 'expected exception: %s' %(e.message)
+  except ttypes.IOError as e:
+    print('expected exception: %s' %(e.message))
 
   # Run a scanner on the rows we just created
-  print "Starting scanner..."
+  print("Starting scanner...")
   scanner = client.scannerOpen(t, "", ["entry:"], dummy_attributes)
 
   r = client.scannerGet(scanner)
   while r:
     printRow(r[0])
     r = client.scannerGet(scanner)
-  print "Scanner finished"
+  print("Scanner finished")
 
   #
   # Run some operations on a bunch of rows.
@@ -190,12 +190,12 @@ def demo_client(host, port, is_framed_transport):
       raise "shouldn't get here!"
 
   columnNames = []
-  for (col, desc) in client.getColumnDescriptors(t).items():
-    print "column with name: "+desc.name
-    print desc
+  for (col, desc) in list(client.getColumnDescriptors(t).items()):
+    print("column with name: "+desc.name)
+    print(desc)
     columnNames.append(desc.name+":")
 
-  print "Starting scanner..."
+  print("Starting scanner...")
   scanner = client.scannerOpenWithStop(t, "00020", "00040", columnNames, dummy_attributes)
 
   r = client.scannerGet(scanner)
@@ -204,7 +204,7 @@ def demo_client(host, port, is_framed_transport):
     r = client.scannerGet(scanner)
 
   client.scannerClose(scanner)
-  print "Scanner finished"
+  print("Scanner finished")
 
   transport.close()
 
@@ -213,7 +213,7 @@ if __name__ == '__main__':
 
   import sys
   if len(sys.argv) < 3:
-    print 'usage: %s <host> <port>' % __file__
+    print('usage: %s <host> <port>' % __file__)
     sys.exit(1)
 
   host = sys.argv[1]
