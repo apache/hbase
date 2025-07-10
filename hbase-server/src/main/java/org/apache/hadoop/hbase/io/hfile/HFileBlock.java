@@ -1763,7 +1763,7 @@ public class HFileBlock implements Cacheable {
           headerBuf.rewind();
           if (isScanMetricsEnabled) {
             ThreadLocalServerSideScanMetrics.addBytesReadFromFs(hdrSize);
-            ThreadLocalServerSideScanMetrics.addReadOpsCount(1);
+            ThreadLocalServerSideScanMetrics.addBlockReadOpsCount(1);
           }
         }
         onDiskSizeWithHeader = getOnDiskSizeWithHeader(headerBuf, checksumSupport);
@@ -1816,7 +1816,7 @@ public class HFileBlock implements Cacheable {
           int bytesRead =
             (onDiskSizeWithHeader - preReadHeaderSize) + (readNextHeader ? hdrSize : 0);
           ThreadLocalServerSideScanMetrics.addBytesReadFromFs(bytesRead);
-          ThreadLocalServerSideScanMetrics.addReadOpsCount(1);
+          ThreadLocalServerSideScanMetrics.addBlockReadOpsCount(1);
         }
 
         // the call to validateChecksum for this block excludes the next block header over-read, so

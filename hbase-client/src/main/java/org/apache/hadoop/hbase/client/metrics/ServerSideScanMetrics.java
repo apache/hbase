@@ -55,7 +55,7 @@ public class ServerSideScanMetrics {
     currentRegionScanMetricsData.createCounter(BYTES_READ_FROM_FS_METRIC_NAME);
     currentRegionScanMetricsData.createCounter(BYTES_READ_FROM_BLOCK_CACHE_METRIC_NAME);
     currentRegionScanMetricsData.createCounter(BYTES_READ_FROM_MEMSTORE_METRIC_NAME);
-    currentRegionScanMetricsData.createCounter(READ_OPS_COUNT_METRIC_NAME);
+    currentRegionScanMetricsData.createCounter(BLOCK_READ_OPS_COUNT_METRIC_NAME);
   }
 
   /**
@@ -76,7 +76,7 @@ public class ServerSideScanMetrics {
   public static final String BYTES_READ_FROM_BLOCK_CACHE_METRIC_NAME =
     "BYTES_READ_FROM_BLOCK_CACHE";
   public static final String BYTES_READ_FROM_MEMSTORE_METRIC_NAME = "BYTES_READ_FROM_MEMSTORE";
-  public static final String READ_OPS_COUNT_METRIC_NAME = "READ_OPS_COUNT";
+  public static final String BLOCK_READ_OPS_COUNT_METRIC_NAME = "BLOCK_READ_OPS_COUNT";
 
   /**
    * number of rows filtered during scan RPC
@@ -103,7 +103,7 @@ public class ServerSideScanMetrics {
   public final AtomicLong bytesReadFromMemstore =
     createCounter(BYTES_READ_FROM_MEMSTORE_METRIC_NAME);
 
-  public final AtomicLong readOpsCount = createCounter(READ_OPS_COUNT_METRIC_NAME);
+  public final AtomicLong blockReadOpsCount = createCounter(BLOCK_READ_OPS_COUNT_METRIC_NAME);
 
   /**
    * Sets counter with counterName to passed in value, does nothing if counter does not exist. If

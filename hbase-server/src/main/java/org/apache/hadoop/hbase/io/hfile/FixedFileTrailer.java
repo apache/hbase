@@ -411,7 +411,7 @@ public class FixedFileTrailer {
     boolean isScanMetricsEnabled = ThreadLocalServerSideScanMetrics.isScanMetricsEnabled();
     if (isScanMetricsEnabled) {
       ThreadLocalServerSideScanMetrics.addBytesReadFromFs(trailerSize);
-      ThreadLocalServerSideScanMetrics.addReadOpsCount(1);
+      ThreadLocalServerSideScanMetrics.addBlockReadOpsCount(1);
     }
     return fft;
   }

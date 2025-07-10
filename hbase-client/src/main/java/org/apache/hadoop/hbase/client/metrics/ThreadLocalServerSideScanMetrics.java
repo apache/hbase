@@ -20,6 +20,44 @@ package org.apache.hadoop.hbase.client.metrics;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.yetus.audience.InterfaceAudience;
 
+/**
+ * Thread-local storage for server-side scan metrics that captures performance data separately for
+ * each scan thread. This class works in conjunction with {@link ServerSideScanMetrics} to provide
+ * comprehensive scan performance monitoring.
+ * <h3>Purpose and Design</h3> {@link ServerSideScanMetrics} captures scan metrics on the server
+ * side and passes them back to the client in protocol buffer responses. However, the
+ * {@link ServerSideScanMetrics} instance is not readily available at deeper layers in HBase where
+ * HFiles are read and individual HFile blocks are accessed. To avoid the complexity of passing
+ * {@link ServerSideScanMetrics} instances through method calls across multiple layers, this class
+ * provides thread-local storage for metrics collection.
+ * <h3>Thread Safety and HBase Architecture</h3> This class leverages a critical aspect of HBase
+ * server design: on the server side, the thread that opens a
+ * {@link org.apache.hadoop.hbase.regionserver.RegionScanner} and calls
+ * {@link org.apache.hadoop.hbase.regionserver.RegionScanner#nextRaw(List, ScannerContext)} is the
+ * same thread that reads HFile blocks. This design allows thread-local storage to effectively
+ * capture metrics without cross-thread synchronization.
+ * <h3>Special Handling for Parallel Operations</h3> The only deviation from the single-thread model
+ * occurs when {@link org.apache.hadoop.hbase.regionserver.handler.ParallelSeekHandler} is used for
+ * parallel store file seeking. In this case, special handling ensures that metrics are captured
+ * correctly across multiple threads. The {@link ParallelSeekHandler} captures metrics from worker
+ * threads and aggregates them back to the main scan thread. Please refer to the javadoc of
+ * {@link org.apache.hadoop.hbase.regionserver.handler.ParallelSeekHandler} for detailed information
+ * about this parallel processing mechanism.
+ * <h3>Usage Pattern</h3>
+ * <ol>
+ * <li>Enable metrics collection: {@link #setScanMetricsEnabled(boolean)}</li>
+ * <li>Reset counters at scan start: {@link #reset()}</li>
+ * <li>Increment counters during I/O operations using the various {@code add*} methods</li>
+ * <li>Populate the main metrics object:
+ * {@link #populateServerSideScanMetrics(ServerSideScanMetrics)}</li>
+ * </ol>
+ * <h3>Thread Safety</h3> This class is thread-safe. Each thread maintains its own set of counters
+ * through {@link ThreadLocal} storage, ensuring that metrics from different scan operations do not
+ * interfere with each other.
+ * @see ServerSideScanMetrics
+ * @see org.apache.hadoop.hbase.regionserver.RegionScanner
+ * @see org.apache.hadoop.hbase.regionserver.handler.ParallelSeekHandler
+ */
 @InterfaceAudience.Private
 public final class ThreadLocalServerSideScanMetrics {
   private ThreadLocalServerSideScanMetrics() {
@@ -53,7 +91,7 @@ public final class ThreadLocalServerSideScanMetrics {
     }
   };
 
-  private static final ThreadLocal<AtomicInteger> readOpsCount = new ThreadLocal<>() {
+  private static final ThreadLocal<AtomicInteger> blockReadOpsCount = new ThreadLocal<>() {
     @Override
     protected AtomicInteger initialValue() {
       return new AtomicInteger(0);
@@ -76,8 +114,8 @@ public final class ThreadLocalServerSideScanMetrics {
     return bytesReadFromMemstore.get().addAndGet(bytes);
   }
 
-  public static final int addReadOpsCount(int count) {
-    return readOpsCount.get().addAndGet(count);
+  public static final int addBlockReadOpsCount(int count) {
+    return blockReadOpsCount.get().addAndGet(count);
   }
 
   public static final boolean isScanMetricsEnabled() {
@@ -96,8 +134,8 @@ public final class ThreadLocalServerSideScanMetrics {
     return bytesReadFromMemstore.get();
   }
 
-  public static final AtomicInteger getReadOpsCountCounter() {
-    return readOpsCount.get();
+  public static final AtomicInteger getBlockReadOpsCountCounter() {
+    return blockReadOpsCount.get();
   }
 
   public static final int getBytesReadFromFsAndReset() {
@@ -112,15 +150,15 @@ public final class ThreadLocalServerSideScanMetrics {
     return getBytesReadFromMemstoreCounter().getAndSet(0);
   }
 
-  public static final int getReadOpsCountAndReset() {
-    return getReadOpsCountCounter().getAndSet(0);
+  public static final int getBlockReadOpsCountAndReset() {
+    return getBlockReadOpsCountCounter().getAndSet(0);
   }
 
   public static final void reset() {
     getBytesReadFromFsAndReset();
     getBytesReadFromBlockCacheAndReset();
     getBytesReadFromMemstoreAndReset();
-    getReadOpsCountAndReset();
+    getBlockReadOpsCountAndReset();
   }
 
   public static final void populateServerSideScanMetrics(ServerSideScanMetrics metrics) {
@@ -133,7 +171,7 @@ public final class ThreadLocalServerSideScanMetrics {
       getBytesReadFromBlockCacheCounter().get());
     metrics.addToCounter(ServerSideScanMetrics.BYTES_READ_FROM_MEMSTORE_METRIC_NAME,
       getBytesReadFromMemstoreCounter().get());
-    metrics.addToCounter(ServerSideScanMetrics.READ_OPS_COUNT_METRIC_NAME,
-      getReadOpsCountCounter().get());
+    metrics.addToCounter(ServerSideScanMetrics.BLOCK_READ_OPS_COUNT_METRIC_NAME,
+      getBlockReadOpsCountCounter().get());
   }
 }

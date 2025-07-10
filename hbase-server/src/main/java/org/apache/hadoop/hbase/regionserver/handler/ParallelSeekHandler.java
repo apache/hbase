@@ -40,10 +40,17 @@ public class ParallelSeekHandler extends EventHandler {
   private long readPoint;
   private CountDownLatch latch;
   private Throwable err = null;
+
+  // Flag to enable/disable scan metrics collection and thread-local counters for capturing scan
+  // performance during parallel store file seeking.
+  // These aggregate metrics from worker threads back to the main scan thread.
   private final boolean isScanMetricsEnabled;
+  // Thread-local counter for bytes read from FS.
   private final AtomicInteger bytesReadFromFs;
+  // Thread-local counter for bytes read from BlockCache.
   private final AtomicInteger bytesReadFromBlockCache;
-  private final AtomicInteger readOpsCount;
+  // Thread-local counter for block read operations count.
+  private final AtomicInteger blockReadOpsCount;
 
   public ParallelSeekHandler(KeyValueScanner scanner, ExtendedCell keyValue, long readPoint,
     CountDownLatch latch) {
@@ -56,7 +63,7 @@ public class ParallelSeekHandler extends EventHandler {
     this.bytesReadFromFs = ThreadLocalServerSideScanMetrics.getBytesReadFromFsCounter();
     this.bytesReadFromBlockCache =
       ThreadLocalServerSideScanMetrics.getBytesReadFromBlockCacheCounter();
-    this.readOpsCount = ThreadLocalServerSideScanMetrics.getReadOpsCountCounter();
+    this.blockReadOpsCount = ThreadLocalServerSideScanMetrics.getBlockReadOpsCountCounter();
   }
 
   @Override
@@ -76,9 +83,9 @@ public class ParallelSeekHandler extends EventHandler {
         if (metricValue > 0) {
           bytesReadFromBlockCache.addAndGet(metricValue);
         }
-        metricValue = ThreadLocalServerSideScanMetrics.getReadOpsCountAndReset();
+        metricValue = ThreadLocalServerSideScanMetrics.getBlockReadOpsCountAndReset();
         if (metricValue > 0) {
-          readOpsCount.addAndGet(metricValue);
+          blockReadOpsCount.addAndGet(metricValue);
         }
       }
     } catch (IOException e) {

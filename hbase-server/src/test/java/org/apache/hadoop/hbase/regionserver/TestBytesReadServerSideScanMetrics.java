@@ -147,7 +147,7 @@ public class TestBytesReadServerSideScanMetrics {
       // the file containing key: row2
       KeyValue keyValue = new KeyValue(ROW2, CF, CQ, PrivateConstants.OLDEST_TIMESTAMP, VALUE);
       assertBytesReadFromFs(tableName, scanMetrics.bytesReadFromFs.get(), keyValue,
-        scanMetrics.readOpsCount.get());
+        scanMetrics.blockReadOpsCount.get());
       Assert.assertEquals(0, scanMetrics.bytesReadFromBlockCache.get());
       Assert.assertEquals(0, scanMetrics.bytesReadFromMemstore.get());
     } finally {
@@ -178,7 +178,7 @@ public class TestBytesReadServerSideScanMetrics {
       // the file containing key: row2
       KeyValue keyValue = new KeyValue(ROW2, CF, CQ, PrivateConstants.OLDEST_TIMESTAMP, VALUE);
       assertBytesReadFromFs(tableName, scanMetrics.bytesReadFromFs.get(), keyValue,
-        scanMetrics.readOpsCount.get());
+        scanMetrics.blockReadOpsCount.get());
       Assert.assertEquals(0, scanMetrics.bytesReadFromBlockCache.get());
       Assert.assertEquals(0, scanMetrics.bytesReadFromMemstore.get());
     } finally {
@@ -278,7 +278,7 @@ public class TestBytesReadServerSideScanMetrics {
       // There are 2 HFiles so, 1 read op per HFile was done by actual scan to read data block.
       // No bloom blocks will be read as this is non Get scan and only bloom filter type is ROW.
       // +1 for the extra header read op done for the HFile which actually contains the row.
-      Assert.assertEquals(3, scanMetrics.readOpsCount.get());
+      Assert.assertEquals(3, scanMetrics.blockReadOpsCount.get());
       // With scan caching set to 1 and 2 rows being scanned, 2 RPC calls will be needed.
       Assert.assertEquals(2, scanMetrics.countOfRPCcalls.get());
     } finally {
@@ -328,7 +328,7 @@ public class TestBytesReadServerSideScanMetrics {
       Assert.assertEquals(2 * bytesReadFromMemstore, scanMetrics.bytesReadFromMemstore.get());
 
       // There will be 1 read op to read the only data block present in the HFile.
-      Assert.assertEquals(1, scanMetrics.readOpsCount.get());
+      Assert.assertEquals(1, scanMetrics.blockReadOpsCount.get());
 
       // More than 1 RPC call should be there
       Assert.assertEquals(3, scanMetrics.countOfRPCcalls.get());
@@ -378,7 +378,7 @@ public class TestBytesReadServerSideScanMetrics {
       Assert.assertEquals(0, scanMetrics.bytesReadFromMemstore.get());
 
       // 1 read op per HFile was done by actual scan to read data block.
-      Assert.assertEquals(2, scanMetrics.readOpsCount.get());
+      Assert.assertEquals(2, scanMetrics.blockReadOpsCount.get());
 
       // 2 RPC calls will be there
       Assert.assertEquals(2, scanMetrics.countOfRPCcalls.get());
@@ -420,7 +420,7 @@ public class TestBytesReadServerSideScanMetrics {
         // No real seek should be done on the HFile.
         Assert.assertEquals(0, scanMetrics.bytesReadFromFs.get());
         Assert.assertEquals(0, scanMetrics.bytesReadFromBlockCache.get());
-        Assert.assertEquals(0, scanMetrics.readOpsCount.get());
+        Assert.assertEquals(0, scanMetrics.blockReadOpsCount.get());
 
         // The cell should be coming purely from memstore.
         int cellSize =
@@ -471,7 +471,7 @@ public class TestBytesReadServerSideScanMetrics {
           Segment.getCellLength(new KeyValue(ROW2, CF, CQ, HConstants.LATEST_TIMESTAMP, VALUE));
         Assert.assertEquals(0, scanMetrics.bytesReadFromFs.get());
         Assert.assertEquals(0, scanMetrics.bytesReadFromBlockCache.get());
-        Assert.assertEquals(0, scanMetrics.readOpsCount.get());
+        Assert.assertEquals(0, scanMetrics.blockReadOpsCount.get());
         Assert.assertEquals(2, scanMetrics.countOfRPCcalls.get());
         Assert.assertEquals(3 * cellSize, scanMetrics.bytesReadFromMemstore.get());
 
@@ -492,7 +492,7 @@ public class TestBytesReadServerSideScanMetrics {
         int bytesReadFromFs = getBytesReadToReadConsecutiveDataBlocks(tableName, 1, 3, true);
         Assert.assertEquals(bytesReadFromFs, scanMetrics.bytesReadFromFs.get());
         Assert.assertEquals(0, scanMetrics.bytesReadFromBlockCache.get());
-        Assert.assertEquals(4, scanMetrics.readOpsCount.get());
+        Assert.assertEquals(4, scanMetrics.blockReadOpsCount.get());
         Assert.assertEquals(2, scanMetrics.countOfRPCcalls.get());
         Assert.assertEquals(0, scanMetrics.bytesReadFromMemstore.get());
 
@@ -513,7 +513,7 @@ public class TestBytesReadServerSideScanMetrics {
           getBytesReadToReadConsecutiveDataBlocks(tableName, 1, 3, false);
         Assert.assertEquals(bytesReadFromBlockCache, scanMetrics.bytesReadFromBlockCache.get());
         Assert.assertEquals(0, scanMetrics.bytesReadFromFs.get());
-        Assert.assertEquals(0, scanMetrics.readOpsCount.get());
+        Assert.assertEquals(0, scanMetrics.blockReadOpsCount.get());
         Assert.assertEquals(2, scanMetrics.countOfRPCcalls.get());
         Assert.assertEquals(0, scanMetrics.bytesReadFromMemstore.get());
       }
