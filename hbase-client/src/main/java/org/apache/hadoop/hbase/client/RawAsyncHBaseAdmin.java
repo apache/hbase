@@ -265,6 +265,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RefreshMet
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RefreshMetaResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RestoreSnapshotRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RestoreSnapshotResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RefreshHfilesRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RefreshHfilesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCatalogScanRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCatalogScanResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCleanerChoreRequest;
@@ -4574,16 +4576,39 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<Void> refreshHFiles(final TableName tableName){
-    return CompletableFuture.completedFuture(null);
+    // Request builder
+    RefreshHfilesRequest.Builder request = RefreshHfilesRequest.newBuilder();
+    request.setTableName(ProtobufUtil.toProtoTableName(tableName));
+    // Set nonce
+    // Master Caller
+    return this.<Void> newMasterCaller()
+      .action((controller, stub) -> this.<RefreshHfilesRequest, RefreshHfilesResponse, Void> call(
+        controller, stub, request.build(), MasterService.Interface::refreshHfiles, resp->null))
+      .call();
   }
 
   @Override
   public CompletableFuture<Void> refreshHFiles(final String namespace){
-    return CompletableFuture.completedFuture(null);
+    // Request builder
+    RefreshHfilesRequest.Builder request = RefreshHfilesRequest.newBuilder();
+    request.setNamespace(namespace);
+    // Set nonce
+    // Master Caller
+    return this.<Void> newMasterCaller()
+      .action((controller, stub) -> this.<RefreshHfilesRequest, RefreshHfilesResponse, Void> call(
+        controller, stub, request.build(), MasterService.Interface::refreshHfiles, resp->null))
+      .call();
   }
 
   @Override
   public CompletableFuture<Void> refreshHFiles(){
-    return CompletableFuture.completedFuture(null);
+    // Request builder
+    RefreshHfilesRequest.Builder request = RefreshHfilesRequest.newBuilder();
+    // Set nonce
+    // Master Caller
+    return this.<Void> newMasterCaller()
+      .action((controller, stub) -> this.<RefreshHfilesRequest, RefreshHfilesResponse, Void> call(
+        controller, stub, request.build(), MasterService.Interface::refreshHfiles, resp->null))
+      .call();
   }
 }

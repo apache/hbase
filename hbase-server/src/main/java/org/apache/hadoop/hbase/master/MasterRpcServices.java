@@ -77,6 +77,7 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil.NonceProcedureRunnable;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
+import org.apache.hadoop.hbase.master.procedure.RefreshHfilesProcedure;
 import org.apache.hadoop.hbase.master.replication.AbstractPeerNoLockProcedure;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.namequeues.BalancerDecisionDetails;
@@ -3677,20 +3678,9 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
   @Override
   public MasterProtos.RefreshHfilesResponse refreshHfiles(RpcController controller,
     MasterProtos.RefreshHfilesRequest request) throws ServiceException {
-    // Print Table Name received
-    System.out.println("Anuj: Table name received in MasterRpcService is " + request.getTableName());
-    // Print Namespace received
-    System.out.println("Anuj: Namespace name received in MasterRpcService is " + request.getNamespace());
-
     //TODO verify if no parameter is provided
+    //TODO Call RefreshHfilesProcedure functions
 
     return MasterProtos.RefreshHfilesResponse.newBuilder().setProcId(123).build();
-//    try {
-//      Long procId =
-//        server.refreshMeta(request.getNonceGroup(), request.getNonce());
-//      return MasterProtos.RefreshMetaResponse.newBuilder().setProcId(procId).build();
-//    } catch (IOException ioe) {
-//      throw new ServiceException(ioe);
-//    }
   }
 }
