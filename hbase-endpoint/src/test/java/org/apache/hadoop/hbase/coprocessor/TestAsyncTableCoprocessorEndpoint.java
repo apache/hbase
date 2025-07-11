@@ -299,8 +299,6 @@ public class TestAsyncTableCoprocessorEndpoint {
         buildCallbackForAllRegions((region, prevRequestNumber) -> {
           if (region.equals(regionToSplit.getEncodedName())) {
             if (prevRequestNumber == 0) {
-              return true;
-            } else if (prevRequestNumber == 1) {
               try {
                 TEST_UTIL.getAdmin()
                   .splitRegionAsync(regionToSplit.getRegionName(),
@@ -329,7 +327,7 @@ public class TestAsyncTableCoprocessorEndpoint {
       responsesForSplitRegion.size());
     assertNull("First response for split region should not have an error",
       responsesForSplitRegion.get(0).getSecond());
-    assertNull("Second response for split region should have failed due to concurrent split",
+    assertNotNull("Second response for split region should have failed due to concurrent split",
       responsesForSplitRegion.get(1).getSecond());
   }
 

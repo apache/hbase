@@ -810,7 +810,14 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
       try (Scope ignored = span.makeCurrent()) {
         if (e instanceof RegionNoLongerExistsException) {
           RegionInfo newRegion = ((RegionNoLongerExistsException) e).getNewRegionInfo();
-          if (progress.markRegionReplacedExistingAndCheckNeedsToBeRestarted(newRegion)) {
+          if (claimedRegionAssignment.get()) {
+            // the region is already in progress but no longer exists, so it can't be finished nor
+            // restarted
+            callback.onRegionError(region,
+              new DoNotRetryIOException(
+                ("Region %s has been replaced by another region and can't be finished, likely"
+                  + " due to a region merge or split").formatted(region.getEncodedName())));
+          } else if (progress.markRegionReplacedExistingAndCheckNeedsToBeRestarted(newRegion)) {
             LOG.debug(
               "Attempted to send a coprocessor service RPC to region {} which no"
                 + " longer exists, will attempt to send RPCs to the region(s) that replaced it",
@@ -1109,11 +1116,14 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
       List<Pair<RegionInfo, RegionProgress>> overlappingAssignments =
         getOverlappingRegionAssignments(region);
       if (!overlappingAssignments.isEmpty()) {
-        callback.onRegionError(region, new DoNotRetryIOException(
-          ("Region %s has replaced a region that the coprocessor service already started on, likely"
-            + " due to a region merge. Overlapping regions: %s")
-            .formatted(region.getEncodedName(), overlappingAssignments.stream().map(Pair::getFirst)
-              .map(RegionInfo::getEncodedName).collect(Collectors.joining(", ")))));
+        callback.onRegionError(region,
+          new DoNotRetryIOException(
+            ("Region %s has replaced a region that was already in progress, likely"
+              + " due to a region merge or split. Overlapping regions: %s")
+              .formatted(region.getEncodedName(),
+                overlappingAssignments.stream().map(Pair::getFirst)
+                  .map(org.apache.hadoop.hbase.client.RegionInfo::getEncodedName)
+                  .collect(Collectors.joining(", ")))));
         tryUpdateRegionProgress(region, RegionProgress.ASSIGNED, RegionProgress.CANCELLED);
         return false;
       }
@@ -1127,9 +1137,14 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
 
       List<Pair<RegionInfo, RegionProgress>> overlappingAssignments = new ArrayList<>();
 
-      Map.Entry<RegionInfo, RegionProgress> candidate =
-        isLast ? regions.lastEntry() : regions.lowerEntry(region);
+      Map.Entry<RegionInfo,
+        RegionProgress> candidate = isLast
+          ? regions.lastEntry()
+          : regions.ceilingEntry(
+            RegionInfoBuilder.newBuilder(region).setStartKey(region.getEndKey()).build());
 
+      // look through the list of all regions, starting from the end key of the region and
+      // traversing backwards
       while (candidate != null) {
         boolean isOverlap =
           (Bytes.compareTo(candidate.getKey().getStartKey(), region.getEndKey()) < 0 || isLast)
