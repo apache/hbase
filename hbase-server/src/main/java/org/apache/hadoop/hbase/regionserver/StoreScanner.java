@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.NavigableSet;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.IntConsumer;
 import org.apache.hadoop.hbase.Cell;
@@ -169,8 +170,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   private boolean topChanged = false;
 
   // These are used to verify the state of the scanner during testing.
-  private static boolean hasUpdatedReaders = false;
-  private static boolean hasSwitchedToStreamRead = false;
+  private static AtomicBoolean hasUpdatedReaders;
+  private static AtomicBoolean hasSwitchedToStreamRead;
 
   /** An internal constructor. */
   private StoreScanner(HStore store, Scan scan, ScanInfo scanInfo, int numColumns, long readPt,
@@ -1037,7 +1038,9 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       if (updateReaders) {
         closeLock.unlock();
       }
-      hasUpdatedReaders = true;
+      if (hasUpdatedReaders != null) {
+        hasUpdatedReaders.set(true);
+      }
     }
     // Let the next() call handle re-creating and seeking
   }
@@ -1188,7 +1191,9 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     this.heap = newHeap;
     resetQueryMatcher(lastTop);
     scannersToClose.forEach(KeyValueScanner::close);
-    hasSwitchedToStreamRead = true;
+    if (hasSwitchedToStreamRead != null) {
+      hasSwitchedToStreamRead.set(true);
+    }
   }
 
   protected final boolean checkFlushed() {
@@ -1298,22 +1303,28 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   }
 
   @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
-  public static boolean hasUpdatedReaders() {
-    return hasUpdatedReaders;
+  static final void instrument() {
+    hasUpdatedReaders = new AtomicBoolean(false);
+    hasSwitchedToStreamRead = new AtomicBoolean(false);
   }
 
   @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
-  public static boolean hasSwitchedToStreamRead() {
-    return hasSwitchedToStreamRead;
+  static final boolean hasUpdatedReaders() {
+    return hasUpdatedReaders.get();
   }
 
   @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
-  public static void resetHasUpdatedReaders() {
-    hasUpdatedReaders = false;
+  static final boolean hasSwitchedToStreamRead() {
+    return hasSwitchedToStreamRead.get();
   }
 
   @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
-  public static void resetHasSwitchedToStreamRead() {
-    hasSwitchedToStreamRead = false;
+  static final void resetHasUpdatedReaders() {
+    hasUpdatedReaders.set(false);
+  }
+
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
+  static final void resetHasSwitchedToStreamRead() {
+    hasSwitchedToStreamRead.set(false);
   }
 }

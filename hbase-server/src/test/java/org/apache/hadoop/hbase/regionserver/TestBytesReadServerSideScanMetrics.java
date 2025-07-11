@@ -259,7 +259,7 @@ public class TestBytesReadServerSideScanMetrics {
       // Set caching to 1 so that one row is read via PREAD and other via STREAM
       scan.setCaching(1);
       ScanMetrics scanMetrics = null;
-      StoreScanner.resetHasSwitchedToStreamRead();
+      StoreScanner.instrument();
       try (Table table = UTIL.getConnection().getTable(tableName);
         ResultScanner scanner = table.getScanner(scan)) {
         int rowCount = 0;
@@ -534,7 +534,7 @@ public class TestBytesReadServerSideScanMetrics {
   private void flushAndWaitUntilFlushed(TableName tableName, boolean waitForUpdatedReaders)
     throws Exception {
     if (waitForUpdatedReaders) {
-      StoreScanner.resetHasUpdatedReaders();
+      StoreScanner.instrument();
     }
     UTIL.flush(tableName);
     List<HRegion> regions = UTIL.getMiniHBaseCluster().getRegions(tableName);
