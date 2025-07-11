@@ -277,8 +277,7 @@ public class TestBytesReadServerSideScanMetrics {
       Assert.assertEquals(0, scanMetrics.bytesReadFromMemstore.get());
       // There are 2 HFiles so, 1 read op per HFile was done by actual scan to read data block.
       // No bloom blocks will be read as this is non Get scan and only bloom filter type is ROW.
-      // +1 for the extra header read op done for the HFile which actually contains the row.
-      Assert.assertEquals(3, scanMetrics.blockReadOpsCount.get());
+      Assert.assertEquals(2, scanMetrics.blockReadOpsCount.get());
       // With scan caching set to 1 and 2 rows being scanned, 2 RPC calls will be needed.
       Assert.assertEquals(2, scanMetrics.countOfRPCcalls.get());
     } finally {
@@ -492,7 +491,7 @@ public class TestBytesReadServerSideScanMetrics {
         int bytesReadFromFs = getBytesReadToReadConsecutiveDataBlocks(tableName, 1, 3, true);
         Assert.assertEquals(bytesReadFromFs, scanMetrics.bytesReadFromFs.get());
         Assert.assertEquals(0, scanMetrics.bytesReadFromBlockCache.get());
-        Assert.assertEquals(4, scanMetrics.blockReadOpsCount.get());
+        Assert.assertEquals(3, scanMetrics.blockReadOpsCount.get());
         Assert.assertEquals(2, scanMetrics.countOfRPCcalls.get());
         Assert.assertEquals(0, scanMetrics.bytesReadFromMemstore.get());
 
@@ -737,10 +736,7 @@ public class TestBytesReadServerSideScanMetrics {
       }
     }
     Assert.assertEquals(totalExpectedBytesReadFromFs.longValue(), actualBytesReadFromFs);
-    // +1 for the additional seek done to read header of the block from the HFile which contains
-    // the row being scanned as that row is first row in the HFile and matcher creates a fake start
-    // key which is before the first key in the HFile
-    Assert.assertEquals(totalExpectedReadOps.longValue() + 1, actualReadOps);
+    Assert.assertEquals(totalExpectedReadOps.longValue(), actualReadOps);
   }
 
   private void readHFile(HFile.Reader hfileReader, CompoundBloomFilter cbf, KeyValue keyValue,

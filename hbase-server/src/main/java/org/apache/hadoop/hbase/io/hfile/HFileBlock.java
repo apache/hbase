@@ -1763,7 +1763,6 @@ public class HFileBlock implements Cacheable {
           headerBuf.rewind();
           if (isScanMetricsEnabled) {
             ThreadLocalServerSideScanMetrics.addBytesReadFromFs(hdrSize);
-            ThreadLocalServerSideScanMetrics.addBlockReadOpsCount(1);
           }
         }
         onDiskSizeWithHeader = getOnDiskSizeWithHeader(headerBuf, checksumSupport);
