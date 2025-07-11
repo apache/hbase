@@ -28,10 +28,13 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
@@ -53,7 +56,11 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.LogRoller;
+import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
+import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -61,6 +68,7 @@ import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.HFileTestUtil;
+import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.ClassRule;
@@ -434,7 +442,7 @@ public class TestIncrementalBackup extends TestBackupBase {
   }
 
   @Test
-  public void TestIncBackupRestoreHandlesArchivedFiles() throws Exception {
+  public void TestIncBackupRestoreHandlesArchivedBulkloadedHFiles() throws Exception {
     byte[] fam2 = Bytes.toBytes("f2");
     TableDescriptor newTable1Desc = TableDescriptorBuilder.newBuilder(table1Desc)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(fam2).build()).build();
@@ -497,6 +505,65 @@ public class TestIncrementalBackup extends TestBackupBase {
       int actualRowCount = TEST_UTIL.countRows(table1_restore);
       int expectedRowCount = TEST_UTIL.countRows(table1);
       assertEquals(expectedRowCount, actualRowCount);
+    }
+  }
+
+  @Test
+  public void TestIncBackupHandlesArchivedWALFiles() throws Exception {
+    BackupAdminImpl admin = new BackupAdminImpl(TEST_UTIL.getConnection());
+    List<TableName> tables = Lists.newArrayList(table1);
+    insertIntoTable(TEST_UTIL.getConnection(), table1, famName, 1, 100);
+    String fullBackupId = takeFullBackup(tables, admin, true);
+    assertTrue(checkSucceeded(fullBackupId));
+
+    insertIntoTable(TEST_UTIL.getConnection(), table1, famName, 3, 100);
+    List<ServerAndWals> walsForFam = getWALsForFam(famName);
+
+    // Trigger a WAL roll to ensure WAL files are archived
+    List<String> backupFiles = new ArrayList<>();
+    Set<String> expectedWALs = Collections.synchronizedSet(new HashSet<>());
+    for (ServerAndWals serverAndWals : walsForFam) {
+      backupFiles.addAll(serverAndWals.walNames);
+      final CountDownLatch latch = new CountDownLatch(serverAndWals.wals.size());
+      WALActionsListener listener = new WALActionsListener() {
+        @Override
+        public void postLogArchive(Path oldPath, Path newPath) throws IOException {
+          // Make sure this is a WAL file that we are tracking
+          if (serverAndWals.contains(oldPath)) {
+            latch.countDown();
+            expectedWALs.add(newPath.toString());
+          }
+        }
+      };
+
+      serverAndWals.wals.forEach(wal -> wal.registerWALActionsListener(listener));
+      TEST_UTIL.flush();
+      TEST_UTIL.getAdmin().rollWALWriter(serverAndWals.rs.getServerName());
+      latch.await();
+    }
+
+    insertIntoTable(TEST_UTIL.getConnection(), table1, famName, 2, 100);
+    // These WALs won't be archived, test mix of archived + non-archived WALs
+    walsForFam = getWALsForFam(famName);
+    for (ServerAndWals serverAndWals : walsForFam) {
+      expectedWALs.addAll(serverAndWals.walNames);
+      backupFiles.addAll(serverAndWals.walNames);
+    }
+
+    BackupRequest request = createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR);
+    String backupId = BackupRestoreConstants.BACKUPID_PREFIX + EnvironmentEdgeManager.currentTime();
+    IncrementalTableBackupClientForTest client =
+      new IncrementalTableBackupClientForTest(TEST_UTIL.getConnection(), backupId, request);
+    try {
+      // Inject the rolled WALs to trigger the FNFE
+      client.getBackupInfo().setIncrBackupFileList(backupFiles);
+      Set<String> convertedWALs = client.convertWALsToHFiles();
+      assertEquals(expectedWALs, convertedWALs);
+      admin.close();
+    } finally {
+      // Creating an IncrementalTableBackupClient will acquire a backup exclusive lock
+      // so it's necessary to release it so other tests can run
+      client.releaseBackupExclusiveLock();
     }
   }
 
@@ -575,5 +642,37 @@ public class TestIncrementalBackup extends TestBackupBase {
     }
 
     return files;
+  }
+
+  private static List<ServerAndWals> getWALsForFam(byte[] fam) {
+    List<ServerAndWals> results = new ArrayList<>();
+
+    for (JVMClusterUtil.RegionServerThread thread : TEST_UTIL.getHBaseCluster()
+      .getRegionServerThreads()) {
+      HRegionServer rs = thread.getRegionServer();
+      Set<AbstractFSWAL> wals = new HashSet<>();
+      Set<String> walNames = new HashSet<>();
+      for (HRegion region : rs.getRegions()) {
+        HStore store = region.getStore(fam);
+        if (store == null) {
+          continue;
+        }
+        AbstractFSWAL wal = (AbstractFSWAL) region.getWAL();
+        wals.add(wal);
+        // We need to track current filenames so we can track when they are
+        // archived for testing purposes. We can't use WAL#getCurrentFileName
+        // later b/c it might've changed
+        walNames.add(wal.getCurrentFileName().toString());
+      }
+      results.add(new ServerAndWals(rs, wals, walNames));
+    }
+
+    return results;
+  }
+
+  private record ServerAndWals(HRegionServer rs, Set<AbstractFSWAL> wals, Set<String> walNames) {
+    public boolean contains(Path path) {
+      return walNames.contains(path.toString());
+    }
   }
 }
