@@ -124,8 +124,8 @@ public class ManagedKeyDataCache extends KeyManagementBase {
    * @throws IOException  if an error occurs while loading from KeymetaTableAccessor
    * @throws KeyException if an error occurs while loading from KeymetaTableAccessor
    */
-  public ManagedKeyData getEntry(byte[] key_cust, String keyNamespace, String keyMetadata, byte[] wrappedKey)
-      throws IOException, KeyException {
+  public ManagedKeyData getEntry(byte[] key_cust, String keyNamespace, String keyMetadata,
+      byte[] wrappedKey) throws IOException, KeyException {
     ManagedKeyData entry = cache.get(keyMetadata, metadata -> {
       // First check if it's in the active keys cache
       ManagedKeyData keyData = getFromActiveKeysCache(key_cust, keyNamespace, keyMetadata);
@@ -161,7 +161,8 @@ public class ManagedKeyDataCache extends KeyManagementBase {
       }
 
       if (keyData == null) {
-        keyData = new ManagedKeyData(key_cust, keyNamespace, null, ManagedKeyState.FAILED, keyMetadata);
+        keyData = new ManagedKeyData(key_cust, keyNamespace, null, ManagedKeyState.FAILED,
+            keyMetadata);
       }
 
       if (ManagedKeyState.isUsable(keyData.getKeyState())) {
@@ -184,7 +185,8 @@ public class ManagedKeyDataCache extends KeyManagementBase {
    * @param keyMetadata  the key metadata
    * @return the ManagedKeyData if found, null otherwise
    */
-  private ManagedKeyData getFromActiveKeysCache(byte[] key_cust, String keyNamespace, String keyMetadata) {
+  private ManagedKeyData getFromActiveKeysCache(byte[] key_cust, String keyNamespace,
+      String keyMetadata) {
     ActiveKeysCacheKey cacheKey = new ActiveKeysCacheKey(key_cust, keyNamespace);
     List<ManagedKeyData> keyList = activeKeysCache.getIfPresent(cacheKey);
     if (keyList != null) {
@@ -271,8 +273,8 @@ public class ManagedKeyDataCache extends KeyManagementBase {
           List<ManagedKeyData> loadedKeys = keymetaAccessor.getActiveKeys(key_cust, keyNamespace);
           activeEntries.addAll(loadedKeys);
         } catch (IOException | KeyException | RuntimeException e) {
-          LOG.warn("Failed to load active keys from KeymetaTableAccessor for custodian: {} namespace: {}",
-              ManagedKeyProvider.encodeToStr(key_cust), keyNamespace, e);
+          LOG.warn("Failed to load active keys from KeymetaTableAccessor for custodian: {} "
+              + "namespace: {}", ManagedKeyProvider.encodeToStr(key_cust), keyNamespace, e);
         }
       }
 
