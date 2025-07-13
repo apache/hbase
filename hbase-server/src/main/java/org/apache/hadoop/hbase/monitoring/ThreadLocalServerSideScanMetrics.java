@@ -34,14 +34,15 @@ import org.apache.yetus.audience.InterfaceAudience;
  * <h3>Thread Safety and HBase Architecture</h3> This class leverages a critical aspect of HBase
  * server design: on the server side, the thread that opens a
  * {@link org.apache.hadoop.hbase.regionserver.RegionScanner} and calls
- * {@link org.apache.hadoop.hbase.regionserver.RegionScanner#nextRaw(List, ScannerContext)} is the
- * same thread that reads HFile blocks. This design allows thread-local storage to effectively
- * capture metrics without cross-thread synchronization.
+ * {@link org.apache.hadoop.hbase.regionserver.RegionScanner#nextRaw(java.util.List, org.apache.hadoop.hbase.regionserver.ScannerContext)}
+ * is the same thread that reads HFile blocks. This design allows thread-local storage to
+ * effectively capture metrics without cross-thread synchronization.
  * <h3>Special Handling for Parallel Operations</h3> The only deviation from the single-thread model
  * occurs when {@link org.apache.hadoop.hbase.regionserver.handler.ParallelSeekHandler} is used for
  * parallel store file seeking. In this case, special handling ensures that metrics are captured
- * correctly across multiple threads. The {@link ParallelSeekHandler} captures metrics from worker
- * threads and aggregates them back to the main scan thread. Please refer to the javadoc of
+ * correctly across multiple threads. The
+ * {@link org.apache.hadoop.hbase.regionserver.handler.ParallelSeekHandler} captures metrics from
+ * worker threads and aggregates them back to the main scan thread. Please refer to the javadoc of
  * {@link org.apache.hadoop.hbase.regionserver.handler.ParallelSeekHandler} for detailed information
  * about this parallel processing mechanism.
  * <h3>Usage Pattern</h3>
