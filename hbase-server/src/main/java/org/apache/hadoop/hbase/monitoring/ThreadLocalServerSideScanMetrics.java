@@ -15,9 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.client.metrics;
+package org.apache.hadoop.hbase.monitoring;
 
 import java.util.concurrent.atomic.AtomicLong;
+import org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
