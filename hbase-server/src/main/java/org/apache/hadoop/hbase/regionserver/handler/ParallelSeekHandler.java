@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.regionserver.handler;
 
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.client.metrics.ThreadLocalServerSideScanMetrics;
 import org.apache.hadoop.hbase.executor.EventHandler;
@@ -46,11 +46,11 @@ public class ParallelSeekHandler extends EventHandler {
   // These aggregate metrics from worker threads back to the main scan thread.
   private final boolean isScanMetricsEnabled;
   // Thread-local counter for bytes read from FS.
-  private final AtomicInteger bytesReadFromFs;
+  private final AtomicLong bytesReadFromFs;
   // Thread-local counter for bytes read from BlockCache.
-  private final AtomicInteger bytesReadFromBlockCache;
+  private final AtomicLong bytesReadFromBlockCache;
   // Thread-local counter for block read operations count.
-  private final AtomicInteger blockReadOpsCount;
+  private final AtomicLong blockReadOpsCount;
 
   public ParallelSeekHandler(KeyValueScanner scanner, ExtendedCell keyValue, long readPoint,
     CountDownLatch latch) {
@@ -75,7 +75,7 @@ public class ParallelSeekHandler extends EventHandler {
       }
       scanner.seek(keyValue);
       if (isScanMetricsEnabled) {
-        int metricValue = ThreadLocalServerSideScanMetrics.getBytesReadFromFsAndReset();
+        long metricValue = ThreadLocalServerSideScanMetrics.getBytesReadFromFsAndReset();
         if (metricValue > 0) {
           bytesReadFromFs.addAndGet(metricValue);
         }

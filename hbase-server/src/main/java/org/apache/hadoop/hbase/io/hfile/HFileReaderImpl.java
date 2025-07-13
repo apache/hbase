@@ -1105,7 +1105,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     DataBlockEncoding expectedDataBlockEncoding) throws IOException {
     // Check cache for block. If found return.
     BlockCache cache = cacheConf.getBlockCache().orElse(null);
-    int cachedBlockBytesRead = 0;
+    long cachedBlockBytesRead = 0;
     if (cache != null) {
       try {
         HFileBlock cachedBlock = (HFileBlock) cache.getBlock(cacheKey, cacheBlock, useLock,

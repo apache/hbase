@@ -247,7 +247,7 @@ public class TestHFile {
 
     // Read the first block again and assert that it has been cached in the block cache.
     block = reader.getCachedBlock(cacheKey, false, false, true, BlockType.DATA, encoding);
-    int bytesReadFromCache = 0;
+    long bytesReadFromCache = 0;
     if (encoding == DataBlockEncoding.NONE) {
       Assert.assertNotNull(block);
       bytesReadFromCache = block.getOnDiskSizeWithHeader();

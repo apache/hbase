@@ -340,7 +340,7 @@ public class SegmentScanner implements KeyValueScanner {
    */
   protected void updateCurrent() {
     ExtendedCell next = null;
-    int totalBytesRead = 0;
+    long totalBytesRead = 0;
 
     try {
       while (iter.hasNext()) {

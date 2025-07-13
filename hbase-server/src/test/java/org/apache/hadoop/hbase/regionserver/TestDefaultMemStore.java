@@ -357,7 +357,7 @@ public class TestDefaultMemStore {
     assertScannerResults(s, new KeyValue[] { kv1, kv2 });
   }
 
-  private int getBytesReadFromMemstore() throws IOException {
+  private long getBytesReadFromMemstore() throws IOException {
     final byte[] f = Bytes.toBytes("family");
     final byte[] q1 = Bytes.toBytes("q1");
     final byte[] v = Bytes.toBytes("value");
@@ -367,7 +367,7 @@ public class TestDefaultMemStore {
 
     KeyValue kv;
     KeyValue[] kvs = new KeyValue[numKvs];
-    int totalCellSize = 0;
+    long totalCellSize = 0;
     for (int i = 0; i < numKvs; i++) {
       byte[] row = Bytes.toBytes(i);
       kv = new KeyValue(row, f, q1, v);
@@ -387,7 +387,7 @@ public class TestDefaultMemStore {
   @Test
   public void testBytesReadFromMemstore() throws IOException {
     ThreadLocalServerSideScanMetrics.setScanMetricsEnabled(true);
-    int totalCellSize = getBytesReadFromMemstore();
+    long totalCellSize = getBytesReadFromMemstore();
     Assert.assertEquals(totalCellSize,
       ThreadLocalServerSideScanMetrics.getBytesReadFromMemstoreAndReset());
   }

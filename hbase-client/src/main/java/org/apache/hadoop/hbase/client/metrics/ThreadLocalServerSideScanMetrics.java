@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.client.metrics;
 
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -70,31 +70,31 @@ public final class ThreadLocalServerSideScanMetrics {
     }
   };
 
-  private static final ThreadLocal<AtomicInteger> bytesReadFromFs = new ThreadLocal<>() {
+  private static final ThreadLocal<AtomicLong> bytesReadFromFs = new ThreadLocal<>() {
     @Override
-    protected AtomicInteger initialValue() {
-      return new AtomicInteger(0);
+    protected AtomicLong initialValue() {
+      return new AtomicLong(0);
     }
   };
 
-  private static final ThreadLocal<AtomicInteger> bytesReadFromBlockCache = new ThreadLocal<>() {
+  private static final ThreadLocal<AtomicLong> bytesReadFromBlockCache = new ThreadLocal<>() {
     @Override
-    protected AtomicInteger initialValue() {
-      return new AtomicInteger(0);
+    protected AtomicLong initialValue() {
+      return new AtomicLong(0);
     }
   };
 
-  private static final ThreadLocal<AtomicInteger> bytesReadFromMemstore = new ThreadLocal<>() {
+  private static final ThreadLocal<AtomicLong> bytesReadFromMemstore = new ThreadLocal<>() {
     @Override
-    protected AtomicInteger initialValue() {
-      return new AtomicInteger(0);
+    protected AtomicLong initialValue() {
+      return new AtomicLong(0);
     }
   };
 
-  private static final ThreadLocal<AtomicInteger> blockReadOpsCount = new ThreadLocal<>() {
+  private static final ThreadLocal<AtomicLong> blockReadOpsCount = new ThreadLocal<>() {
     @Override
-    protected AtomicInteger initialValue() {
-      return new AtomicInteger(0);
+    protected AtomicLong initialValue() {
+      return new AtomicLong(0);
     }
   };
 
@@ -102,19 +102,19 @@ public final class ThreadLocalServerSideScanMetrics {
     isScanMetricsEnabled.set(enable);
   }
 
-  public static final int addBytesReadFromFs(int bytes) {
+  public static final long addBytesReadFromFs(long bytes) {
     return bytesReadFromFs.get().addAndGet(bytes);
   }
 
-  public static final int addBytesReadFromBlockCache(int bytes) {
+  public static final long addBytesReadFromBlockCache(long bytes) {
     return bytesReadFromBlockCache.get().addAndGet(bytes);
   }
 
-  public static final int addBytesReadFromMemstore(int bytes) {
+  public static final long addBytesReadFromMemstore(long bytes) {
     return bytesReadFromMemstore.get().addAndGet(bytes);
   }
 
-  public static final int addBlockReadOpsCount(int count) {
+  public static final long addBlockReadOpsCount(long count) {
     return blockReadOpsCount.get().addAndGet(count);
   }
 
@@ -122,35 +122,35 @@ public final class ThreadLocalServerSideScanMetrics {
     return isScanMetricsEnabled.get();
   }
 
-  public static final AtomicInteger getBytesReadFromFsCounter() {
+  public static final AtomicLong getBytesReadFromFsCounter() {
     return bytesReadFromFs.get();
   }
 
-  public static final AtomicInteger getBytesReadFromBlockCacheCounter() {
+  public static final AtomicLong getBytesReadFromBlockCacheCounter() {
     return bytesReadFromBlockCache.get();
   }
 
-  public static final AtomicInteger getBytesReadFromMemstoreCounter() {
+  public static final AtomicLong getBytesReadFromMemstoreCounter() {
     return bytesReadFromMemstore.get();
   }
 
-  public static final AtomicInteger getBlockReadOpsCountCounter() {
+  public static final AtomicLong getBlockReadOpsCountCounter() {
     return blockReadOpsCount.get();
   }
 
-  public static final int getBytesReadFromFsAndReset() {
+  public static final long getBytesReadFromFsAndReset() {
     return getBytesReadFromFsCounter().getAndSet(0);
   }
 
-  public static final int getBytesReadFromBlockCacheAndReset() {
+  public static final long getBytesReadFromBlockCacheAndReset() {
     return getBytesReadFromBlockCacheCounter().getAndSet(0);
   }
 
-  public static final int getBytesReadFromMemstoreAndReset() {
+  public static final long getBytesReadFromMemstoreAndReset() {
     return getBytesReadFromMemstoreCounter().getAndSet(0);
   }
 
-  public static final int getBlockReadOpsCountAndReset() {
+  public static final long getBlockReadOpsCountAndReset() {
     return getBlockReadOpsCountCounter().getAndSet(0);
   }
 

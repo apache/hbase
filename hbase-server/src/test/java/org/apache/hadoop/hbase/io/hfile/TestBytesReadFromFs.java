@@ -245,7 +245,7 @@ public class TestBytesReadFromFs {
     Assert.assertEquals(blockLevelsRead, trailer.getNumDataIndexLevels() + 1);
     Assert.assertEquals(0, ThreadLocalServerSideScanMetrics.getBytesReadFromBlockCacheAndReset());
     // At every index level we read one index block and finally read data block
-    int blockReadOpsCount = isScanMetricsEnabled ? blockLevelsRead : 0;
+    long blockReadOpsCount = isScanMetricsEnabled ? blockLevelsRead : 0;
     Assert.assertEquals(blockReadOpsCount,
       ThreadLocalServerSideScanMetrics.getBlockReadOpsCountAndReset());
   }
@@ -303,7 +303,7 @@ public class TestBytesReadFromFs {
 
   private boolean readEachBlockInLoadOnOpenDataSection(HFileBlock block, boolean readNextHeader)
     throws IOException {
-    int bytesRead = block.getOnDiskSizeWithHeader();
+    long bytesRead = block.getOnDiskSizeWithHeader();
     if (readNextHeader) {
       bytesRead -= HFileBlock.headerSize(true);
       readNextHeader = false;
@@ -357,7 +357,7 @@ public class TestBytesReadFromFs {
 
     // Read the bloom block from FS
     HFileBlock bloomBlock = cbf.getBloomBlock(block);
-    int bytesRead = bloomBlock.getOnDiskSizeWithHeader();
+    long bytesRead = bloomBlock.getOnDiskSizeWithHeader();
     if (bloomBlock.getNextBlockOnDiskSize() > 0) {
       bytesRead += HFileBlock.headerSize(true);
     }

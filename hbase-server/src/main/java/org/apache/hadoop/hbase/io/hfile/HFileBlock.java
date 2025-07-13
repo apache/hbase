@@ -1812,7 +1812,7 @@ public class HFileBlock implements Cacheable {
           onDiskSizeWithHeader - preReadHeaderSize, true, offset + preReadHeaderSize, pread);
         onDiskBlock.rewind(); // in case of moving position when copying a cached header
         if (isScanMetricsEnabled) {
-          int bytesRead =
+          long bytesRead =
             (onDiskSizeWithHeader - preReadHeaderSize) + (readNextHeader ? hdrSize : 0);
           ThreadLocalServerSideScanMetrics.addBytesReadFromFs(bytesRead);
           ThreadLocalServerSideScanMetrics.addBlockReadOpsCount(1);
