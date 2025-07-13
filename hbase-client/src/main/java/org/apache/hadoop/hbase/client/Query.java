@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -46,6 +47,7 @@ public abstract class Query extends OperationWithAttributes {
   protected Consistency consistency = Consistency.STRONG;
   protected Map<byte[], TimeRange> colFamTimeRangeMap = Maps.newTreeMap(Bytes.BYTES_COMPARATOR);
   protected Boolean loadColumnFamiliesOnDemand = null;
+  protected boolean queryMetricsEnabled = false;
 
   public Filter getFilter() {
     return filter;
@@ -155,6 +157,28 @@ public abstract class Query extends OperationWithAttributes {
   public Query setIsolationLevel(IsolationLevel level) {
     setAttribute(ISOLATION_LEVEL, level.toBytes());
     return this;
+  }
+
+  /**
+   * Enables the return of {@link QueryMetrics} alongside the corresponding result(s) for this query
+   * <p>
+   * This is intended for advanced users who need result-granular, server-side metrics
+   * <p>
+   * Does not work with calls to {@link Table#exists(Get)} and {@link Table#exists(List)}
+   * @param enabled {@code true} to enable collection of per-result query metrics {@code false} to
+   *                disable metrics collection (resulting in {@code null} metrics)
+   */
+  public Query setQueryMetricsEnabled(boolean enabled) {
+    this.queryMetricsEnabled = enabled;
+    return this;
+  }
+
+  /**
+   * Returns whether query metrics are enabled
+   * @return {@code true} if query metrics are enabled, {@code false} otherwise
+   */
+  public boolean isQueryMetricsEnabled() {
+    return queryMetricsEnabled;
   }
 
   /**

@@ -67,6 +67,7 @@ public class MobSlowDeterministicMonkeyFactory extends MonkeyFactory {
   private long restartRsHoldingMetaSleepTime;
   private float compactTableRatio;
   private float compactRandomRegionRatio;
+  private long snapshotTableTtl;
 
   @Override
   public ChaosMonkey build() {
@@ -85,10 +86,11 @@ public class MobSlowDeterministicMonkeyFactory extends MonkeyFactory {
     // They should not cause data loss, or unreliability
     // such as region stuck in transition.
     Action[] actions2 = new Action[] { new SplitRandomRegionOfTableAction(tableName),
-      new MergeRandomAdjacentRegionsOfTableAction(tableName), new SnapshotTableAction(tableName),
-      new AddColumnAction(tableName), new RemoveColumnAction(tableName, columnFamilies),
-      new ChangeEncodingAction(tableName), new ChangeCompressionAction(tableName),
-      new ChangeBloomFilterAction(tableName), new ChangeVersionsAction(tableName) };
+      new MergeRandomAdjacentRegionsOfTableAction(tableName),
+      new SnapshotTableAction(tableName, snapshotTableTtl), new AddColumnAction(tableName),
+      new RemoveColumnAction(tableName, columnFamilies), new ChangeEncodingAction(tableName),
+      new ChangeCompressionAction(tableName), new ChangeBloomFilterAction(tableName),
+      new ChangeVersionsAction(tableName) };
 
     // Destructive actions to mess things around.
     Action[] actions3 = new Action[] {
@@ -158,5 +160,8 @@ public class MobSlowDeterministicMonkeyFactory extends MonkeyFactory {
     compactRandomRegionRatio =
       Float.parseFloat(this.properties.getProperty(MonkeyConstants.COMPACT_RANDOM_REGION_RATIO,
         MonkeyConstants.DEFAULT_COMPACT_RANDOM_REGION_RATIO + ""));
+    snapshotTableTtl =
+      Long.parseLong(this.properties.getProperty(MonkeyConstants.SNAPSHOT_TABLE_TTL,
+        MonkeyConstants.DEFAULT_SNAPSHOT_TABLE_TTL + ""));
   }
 }

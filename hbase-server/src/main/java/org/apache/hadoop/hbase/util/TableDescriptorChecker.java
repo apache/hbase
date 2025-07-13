@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.conf.ConfigKey;
 import org.apache.hadoop.hbase.fs.ErasureCodingUtils;
 import org.apache.hadoop.hbase.regionserver.DefaultStoreEngine;
 import org.apache.hadoop.hbase.regionserver.HStore;
@@ -78,6 +79,15 @@ public final class TableDescriptorChecker {
 
     // Setting logs to warning instead of throwing exception if sanityChecks are disabled
     boolean logWarn = !shouldSanityCheck(conf);
+
+    // Check value types
+    warnOrThrowExceptionForFailure(logWarn, () -> ConfigKey.validate(conf));
+    warnOrThrowExceptionForFailure(logWarn, () -> {
+      for (ColumnFamilyDescriptor cfd : td.getColumnFamilies()) {
+        ConfigKey.validate(new CompoundConfiguration().addStringMap(cfd.getConfiguration())
+          .addBytesMap(cfd.getValues()));
+      }
+    });
 
     // check max file size
     long maxFileSizeLowerLimit = 2 * 1024 * 1024L; // 2M is the default lower limit

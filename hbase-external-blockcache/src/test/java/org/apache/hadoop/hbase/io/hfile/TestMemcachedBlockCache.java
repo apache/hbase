@@ -135,6 +135,8 @@ public class TestMemcachedBlockCache {
       assertEquals(expected.getBlockType(), actual.getBlockType());
       assertEquals(expected.getSerializedLength(), actual.getSerializedLength());
     }
+
+    CacheTestUtils.testConvertToJSON(cache);
   }
 
   @Test

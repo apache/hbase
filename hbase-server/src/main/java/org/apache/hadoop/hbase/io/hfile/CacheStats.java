@@ -18,16 +18,25 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import java.util.Arrays;
+import java.util.Date;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 import org.apache.hadoop.hbase.metrics.impl.FastLongHistogram;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Class that implements cache metrics.
  */
 @InterfaceAudience.Private
 public class CacheStats {
+
+  private static final Logger LOG = LoggerFactory.getLogger(CacheStats.class);
 
   /**
    * Sliding window statistics. The number of metric periods to include in sliding window hit ratio
@@ -94,6 +103,9 @@ public class CacheStats {
   private final LongAdder deleteFamilyBloomHitCount = new LongAdder();
   private final LongAdder trailerHitCount = new LongAdder();
 
+  // Executor for periodic cache stats rolling
+  private ScheduledExecutorService metricsRollerScheduler;
+
   /** The number of metrics periods to include in window */
   private final int numPeriodsInWindow;
   /** Hit counts for each period in window */
@@ -104,6 +116,8 @@ public class CacheStats {
   private final long[] requestCounts;
   /** Caching access counts for each period in window */
   private final long[] requestCachingCounts;
+  /** The initial date for each period in window */
+  private final Date[] windowPeriods;
   /** Last hit count read */
   private long lastHitCount = 0;
   /** Last hit caching count read */
@@ -120,17 +134,40 @@ public class CacheStats {
   private FastLongHistogram ageAtEviction;
   private long startTime = System.nanoTime();
 
+  private int periodTimeInMinutes;
+
   public CacheStats(final String name) {
-    this(name, DEFAULT_WINDOW_PERIODS);
+    this(name, DEFAULT_WINDOW_PERIODS, 0);
   }
 
   public CacheStats(final String name, int numPeriodsInWindow) {
+    this(name, numPeriodsInWindow, 0);
+  }
+
+  public CacheStats(final String name, int numPeriodsInWindow, int periodTimeInMinutes) {
+    this(name, numPeriodsInWindow, periodTimeInMinutes, TimeUnit.MINUTES);
+  }
+
+  CacheStats(final String name, int numPeriodsInWindow, int periodTime, TimeUnit unit) {
     this.numPeriodsInWindow = numPeriodsInWindow;
     this.hitCounts = new long[numPeriodsInWindow];
     this.hitCachingCounts = new long[numPeriodsInWindow];
     this.requestCounts = new long[numPeriodsInWindow];
     this.requestCachingCounts = new long[numPeriodsInWindow];
+    this.windowPeriods = new Date[numPeriodsInWindow];
     this.ageAtEviction = new FastLongHistogram();
+    this.periodTimeInMinutes = periodTime;
+    if (numPeriodsInWindow > 1 && periodTimeInMinutes > 0) {
+      this.metricsRollerScheduler = new ScheduledThreadPoolExecutor(1);
+      this.metricsRollerScheduler.scheduleAtFixedRate(() -> {
+        LOG.trace("Triggering metrics roll");
+        rollMetricsPeriod();
+        for (int i = 0; i < numPeriodsInWindow; i++) {
+          LOG.trace("period: {}, hit count: {}, request count: {}", i, hitCounts[i],
+            requestCounts[i]);
+        }
+      }, 1, periodTimeInMinutes, unit);
+    }
   }
 
   @Override
@@ -248,6 +285,10 @@ public class CacheStats {
     if (primary) {
       primaryEvictedBlockCount.increment();
     }
+  }
+
+  public ScheduledExecutorService getMetricsRollerScheduler() {
+    return metricsRollerScheduler;
   }
 
   public long failInsert() {
@@ -434,6 +475,8 @@ public class CacheStats {
   }
 
   public void rollMetricsPeriod() {
+    windowPeriods[windowIndex] =
+      new Date((EnvironmentEdgeManager.currentTime() - (periodTimeInMinutes * 60 * 1000L)));
     hitCounts[windowIndex] = getHitCount() - lastHitCount;
     lastHitCount = getHitCount();
     hitCachingCounts[windowIndex] = getHitCachingCount() - lastHitCachingCount;
@@ -443,6 +486,30 @@ public class CacheStats {
     requestCachingCounts[windowIndex] = getRequestCachingCount() - lastRequestCachingCount;
     lastRequestCachingCount = getRequestCachingCount();
     windowIndex = (windowIndex + 1) % numPeriodsInWindow;
+  }
+
+  public long[] getHitCounts() {
+    return hitCounts;
+  }
+
+  public long[] getRequestCounts() {
+    return requestCounts;
+  }
+
+  public Date[] getWindowPeriods() {
+    return windowPeriods;
+  }
+
+  public int getWindowIndex() {
+    return windowIndex;
+  }
+
+  public int getNumPeriodsInWindow() {
+    return numPeriodsInWindow;
+  }
+
+  public int getPeriodTimeInMinutes() {
+    return periodTimeInMinutes;
   }
 
   public long getSumHitCountsPastNPeriods() {

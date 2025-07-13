@@ -227,7 +227,7 @@ public class RegionCoprocessorHost
     @Override
     public OperationQuota checkBatchQuota(final Region region, int numWrites, int numReads)
       throws IOException, RpcThrottlingException {
-      return rpcQuotaManager.checkBatchQuota(region, numWrites, numReads);
+      return rpcQuotaManager.checkBatchQuota(region, numWrites, numReads, false);
     }
   }
 

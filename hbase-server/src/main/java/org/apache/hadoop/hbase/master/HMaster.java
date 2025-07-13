@@ -169,6 +169,7 @@ import org.apache.hadoop.hbase.master.procedure.ModifyTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
 import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
 import org.apache.hadoop.hbase.master.procedure.RSProcedureDispatcher;
+import org.apache.hadoop.hbase.master.procedure.ReloadQuotasProcedure;
 import org.apache.hadoop.hbase.master.procedure.ReopenTableRegionsProcedure;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.master.procedure.TruncateRegionProcedure;
@@ -1122,6 +1123,9 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     // wait meta to be initialized after we start procedure executor
     if (initMetaProc != null) {
       initMetaProc.await();
+      if (initMetaProc.isFailed() && initMetaProc.hasException()) {
+        throw new IOException("Failed to initialize meta table", initMetaProc.getException());
+      }
     }
     // Wake up this server to check in
     sleeper.skipSleepCycle();
@@ -2188,10 +2192,14 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
         // TODO: bulk assign
         try {
           this.assignmentManager.balance(plan);
+          this.balancer.updateClusterMetrics(getClusterMetricsWithoutCoprocessor());
+          this.balancer.throttle(plan);
         } catch (HBaseIOException hioe) {
           // should ignore failed plans here, avoiding the whole balance plans be aborted
           // later calls of balance() can fetch up the failed and skipped plans
           LOG.warn("Failed balance plan {}, skipping...", plan, hioe);
+        } catch (Exception e) {
+          LOG.warn("Failed throttling assigning a new plan.", e);
         }
         // rpCount records balance plans processed, does not care if a plan succeeds
         rpCount++;
@@ -2241,7 +2249,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
     final Set<TableName> matchingTables = getTableDescriptors(new LinkedList<>(),
       ntfp.getNamespace(), ntfp.getRegex(), ntfp.getTableNames(), false).stream()
-        .map(TableDescriptor::getTableName).collect(Collectors.toSet());
+      .map(TableDescriptor::getTableName).collect(Collectors.toSet());
     final Set<TableName> allEnabledTables =
       tableStateManager.getTablesInStates(TableState.State.ENABLED);
     final List<TableName> targetTables =
@@ -2980,6 +2988,12 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     if (!ts.isDisabled()) {
       throw new TableNotDisabledException("Not DISABLED; " + ts);
     }
+  }
+
+  public void reloadRegionServerQuotas() {
+    // multiple reloads are harmless, so no need for NonceProcedureRunnable
+    getLiveRegionServers()
+      .forEach(sn -> procedureExecutor.submitProcedure(new ReloadQuotasProcedure(sn)));
   }
 
   public ClusterMetrics getClusterMetricsWithoutCoprocessor() throws InterruptedIOException {

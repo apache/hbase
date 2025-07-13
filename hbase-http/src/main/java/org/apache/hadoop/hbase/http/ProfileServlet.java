@@ -198,6 +198,7 @@ public class ProfileServlet extends HttpServlet {
             File outputFile =
               new File(OUTPUT_DIR, "async-prof-pid-" + pid + "-" + event.name().toLowerCase() + "-"
                 + ID_GEN.incrementAndGet() + "." + output.name().toLowerCase());
+            Files.createDirectories(Paths.get(OUTPUT_DIR));
             List<String> cmd = new ArrayList<>();
             Path profilerScriptPath = Paths.get(asyncProfilerHome, "bin", PROFILER_SCRIPT);
             if (!Files.exists(profilerScriptPath)) {

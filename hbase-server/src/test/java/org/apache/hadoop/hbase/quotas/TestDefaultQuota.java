@@ -122,7 +122,6 @@ public class TestDefaultQuota {
   }
 
   private long runGetsTest(int attempts) throws Exception {
-    refreshQuotas();
     try (Table table = getTable()) {
       return ThrottleQuotaTestUtil.doGets(attempts, FAMILY, QUALIFIER, table);
     }

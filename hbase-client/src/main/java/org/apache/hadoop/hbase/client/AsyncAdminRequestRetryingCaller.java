@@ -22,6 +22,8 @@ import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.concurrent.CompletableFuture;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -48,6 +50,20 @@ public class AsyncAdminRequestRetryingCaller<T> extends AsyncRpcRetryingCaller<T
       operationTimeoutNs, rpcTimeoutNs, startLogErrorsCnt, Collections.emptyMap());
     this.serverName = serverName;
     this.callable = callable;
+  }
+
+  @Override
+  protected Throwable preProcessError(Throwable error) {
+    // This retrying caller is mainly used for admin operations, thus we do not implement
+    // complicated relocating logic. If here we get a NotServingRegionException, there is no way to
+    // recover since we just pass in the server name, which means we can not send request to another
+    // region server. So here we just wrap it with a DoNotRetryIOException to fail the request
+    // immediately
+    if (error instanceof NotServingRegionException) {
+      return new DoNotRetryIOException("region is not on " + serverName + ", give up retrying",
+        error);
+    }
+    return error;
   }
 
   @Override

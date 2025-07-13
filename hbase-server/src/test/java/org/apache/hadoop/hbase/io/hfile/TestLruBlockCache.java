@@ -223,6 +223,8 @@ public class TestLruBlockCache {
       assertEquals(buf.heapSize(), block.heapSize());
     }
 
+    CacheTestUtils.testConvertToJSON(cache);
+
     // Expect no evictions
     assertEquals(0, cache.getStats().getEvictionCount());
     Thread t = new LruBlockCache.StatisticsThread(cache);

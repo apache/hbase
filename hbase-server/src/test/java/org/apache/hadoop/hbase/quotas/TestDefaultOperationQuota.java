@@ -41,6 +41,7 @@ public class TestDefaultOperationQuota {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestDefaultOperationQuota.class);
 
+  private static final int DEFAULT_REQUESTS_PER_SECOND = 1000;
   private static ManualEnvironmentEdge envEdge = new ManualEnvironmentEdge();
   static {
     envEdge.setValue(EnvironmentEdgeManager.currentTime());
@@ -150,17 +151,18 @@ public class TestDefaultOperationQuota {
       QuotaProtos.Throttle.newBuilder().setReadNum(QuotaProtos.TimedQuota.newBuilder()
         .setSoftLimit(limit).setTimeUnit(HBaseProtos.TimeUnit.SECONDS).build()).build();
     QuotaLimiter limiter = TimeBasedLimiter.fromThrottle(throttle);
-    DefaultOperationQuota quota = new DefaultOperationQuota(new Configuration(), 65536, limiter);
+    DefaultOperationQuota quota =
+      new DefaultOperationQuota(new Configuration(), 65536, DEFAULT_REQUESTS_PER_SECOND, limiter);
 
     // use the whole limit
-    quota.checkBatchQuota(0, limit);
+    quota.checkBatchQuota(0, limit, false);
 
     // the next request should be rejected
-    assertThrows(RpcThrottlingException.class, () -> quota.checkBatchQuota(0, 1));
+    assertThrows(RpcThrottlingException.class, () -> quota.checkBatchQuota(0, 1, false));
 
     envEdge.incValue(1000);
     // after the TimeUnit, the limit should be refilled
-    quota.checkBatchQuota(0, limit);
+    quota.checkBatchQuota(0, limit, false);
   }
 
   @Test
@@ -171,17 +173,18 @@ public class TestDefaultOperationQuota {
       QuotaProtos.Throttle.newBuilder().setWriteNum(QuotaProtos.TimedQuota.newBuilder()
         .setSoftLimit(limit).setTimeUnit(HBaseProtos.TimeUnit.SECONDS).build()).build();
     QuotaLimiter limiter = TimeBasedLimiter.fromThrottle(throttle);
-    DefaultOperationQuota quota = new DefaultOperationQuota(new Configuration(), 65536, limiter);
+    DefaultOperationQuota quota =
+      new DefaultOperationQuota(new Configuration(), 65536, DEFAULT_REQUESTS_PER_SECOND, limiter);
 
     // use the whole limit
-    quota.checkBatchQuota(limit, 0);
+    quota.checkBatchQuota(limit, 0, false);
 
     // the next request should be rejected
-    assertThrows(RpcThrottlingException.class, () -> quota.checkBatchQuota(1, 0));
+    assertThrows(RpcThrottlingException.class, () -> quota.checkBatchQuota(1, 0, false));
 
     envEdge.incValue(1000);
     // after the TimeUnit, the limit should be refilled
-    quota.checkBatchQuota(limit, 0);
+    quota.checkBatchQuota(limit, 0, false);
   }
 
   @Test
@@ -192,17 +195,18 @@ public class TestDefaultOperationQuota {
       QuotaProtos.Throttle.newBuilder().setReadNum(QuotaProtos.TimedQuota.newBuilder()
         .setSoftLimit(limit).setTimeUnit(HBaseProtos.TimeUnit.SECONDS).build()).build();
     QuotaLimiter limiter = TimeBasedLimiter.fromThrottle(throttle);
-    DefaultOperationQuota quota = new DefaultOperationQuota(new Configuration(), 65536, limiter);
+    DefaultOperationQuota quota =
+      new DefaultOperationQuota(new Configuration(), 65536, DEFAULT_REQUESTS_PER_SECOND, limiter);
 
     // use more than the limit, which should succeed rather than being indefinitely blocked
-    quota.checkBatchQuota(0, 10 + limit);
+    quota.checkBatchQuota(0, 10 + limit, false);
 
     // the next request should be blocked
-    assertThrows(RpcThrottlingException.class, () -> quota.checkBatchQuota(0, 1));
+    assertThrows(RpcThrottlingException.class, () -> quota.checkBatchQuota(0, 1, false));
 
     envEdge.incValue(1000);
     // even after the TimeUnit, the limit should not be refilled because we oversubscribed
-    assertThrows(RpcThrottlingException.class, () -> quota.checkBatchQuota(0, limit));
+    assertThrows(RpcThrottlingException.class, () -> quota.checkBatchQuota(0, limit, false));
   }
 
   @Test
@@ -213,17 +217,18 @@ public class TestDefaultOperationQuota {
       QuotaProtos.Throttle.newBuilder().setWriteNum(QuotaProtos.TimedQuota.newBuilder()
         .setSoftLimit(limit).setTimeUnit(HBaseProtos.TimeUnit.SECONDS).build()).build();
     QuotaLimiter limiter = TimeBasedLimiter.fromThrottle(throttle);
-    DefaultOperationQuota quota = new DefaultOperationQuota(new Configuration(), 65536, limiter);
+    DefaultOperationQuota quota =
+      new DefaultOperationQuota(new Configuration(), 65536, DEFAULT_REQUESTS_PER_SECOND, limiter);
 
     // use more than the limit, which should succeed rather than being indefinitely blocked
-    quota.checkBatchQuota(10 + limit, 0);
+    quota.checkBatchQuota(10 + limit, 0, false);
 
     // the next request should be blocked
-    assertThrows(RpcThrottlingException.class, () -> quota.checkBatchQuota(1, 0));
+    assertThrows(RpcThrottlingException.class, () -> quota.checkBatchQuota(1, 0, false));
 
     envEdge.incValue(1000);
     // even after the TimeUnit, the limit should not be refilled because we oversubscribed
-    assertThrows(RpcThrottlingException.class, () -> quota.checkBatchQuota(limit, 0));
+    assertThrows(RpcThrottlingException.class, () -> quota.checkBatchQuota(limit, 0, false));
   }
 
   @Test
@@ -234,17 +239,18 @@ public class TestDefaultOperationQuota {
       QuotaProtos.Throttle.newBuilder().setWriteSize(QuotaProtos.TimedQuota.newBuilder()
         .setSoftLimit(limit).setTimeUnit(HBaseProtos.TimeUnit.SECONDS).build()).build();
     QuotaLimiter limiter = TimeBasedLimiter.fromThrottle(throttle);
-    DefaultOperationQuota quota = new DefaultOperationQuota(new Configuration(), 65536, limiter);
+    DefaultOperationQuota quota =
+      new DefaultOperationQuota(new Configuration(), 65536, DEFAULT_REQUESTS_PER_SECOND, limiter);
 
     // writes are estimated a 100 bytes, so this will use 2x the limit but should not be blocked
-    quota.checkBatchQuota(1, 0);
+    quota.checkBatchQuota(1, 0, false);
 
     // the next request should be blocked
-    assertThrows(RpcThrottlingException.class, () -> quota.checkBatchQuota(1, 0));
+    assertThrows(RpcThrottlingException.class, () -> quota.checkBatchQuota(1, 0, false));
 
     envEdge.incValue(1000);
     // even after the TimeUnit, the limit should not be refilled because we oversubscribed
-    assertThrows(RpcThrottlingException.class, () -> quota.checkBatchQuota(limit, 0));
+    assertThrows(RpcThrottlingException.class, () -> quota.checkBatchQuota(limit, 0, false));
   }
 
   @Test
@@ -256,18 +262,18 @@ public class TestDefaultOperationQuota {
       QuotaProtos.Throttle.newBuilder().setReadSize(QuotaProtos.TimedQuota.newBuilder()
         .setSoftLimit(limit).setTimeUnit(HBaseProtos.TimeUnit.SECONDS).build()).build();
     QuotaLimiter limiter = TimeBasedLimiter.fromThrottle(throttle);
-    DefaultOperationQuota quota =
-      new DefaultOperationQuota(new Configuration(), (int) blockSize, limiter);
+    DefaultOperationQuota quota = new DefaultOperationQuota(new Configuration(), (int) blockSize,
+      DEFAULT_REQUESTS_PER_SECOND, limiter);
 
     // reads are estimated at 1 block each, so this will use ~2x the limit but should not be blocked
-    quota.checkBatchQuota(0, 1);
+    quota.checkBatchQuota(0, 1, false);
 
     // the next request should be blocked
-    assertThrows(RpcThrottlingException.class, () -> quota.checkBatchQuota(0, 1));
+    assertThrows(RpcThrottlingException.class, () -> quota.checkBatchQuota(0, 1, false));
 
     envEdge.incValue(1000);
     // even after the TimeUnit, the limit should not be refilled because we oversubscribed
-    assertThrows(RpcThrottlingException.class, () -> quota.checkBatchQuota((int) limit, 1));
+    assertThrows(RpcThrottlingException.class, () -> quota.checkBatchQuota((int) limit, 1, false));
   }
 
   @Test
@@ -279,17 +285,17 @@ public class TestDefaultOperationQuota {
       QuotaProtos.Throttle.newBuilder().setReqSize(QuotaProtos.TimedQuota.newBuilder()
         .setSoftLimit(limit).setTimeUnit(HBaseProtos.TimeUnit.SECONDS).build()).build();
     QuotaLimiter limiter = TimeBasedLimiter.fromThrottle(throttle);
-    DefaultOperationQuota quota =
-      new DefaultOperationQuota(new Configuration(), (int) blockSize, limiter);
+    DefaultOperationQuota quota = new DefaultOperationQuota(new Configuration(), (int) blockSize,
+      DEFAULT_REQUESTS_PER_SECOND, limiter);
 
     // reads are estimated at 1 block each, so this will use ~2x the limit but should not be blocked
-    quota.checkBatchQuota(0, 1);
+    quota.checkBatchQuota(0, 1, false);
 
     // the next request should be blocked
-    assertThrows(RpcThrottlingException.class, () -> quota.checkBatchQuota(0, 1));
+    assertThrows(RpcThrottlingException.class, () -> quota.checkBatchQuota(0, 1, false));
 
     envEdge.incValue(1000);
     // even after the TimeUnit, the limit should not be refilled because we oversubscribed
-    assertThrows(RpcThrottlingException.class, () -> quota.checkBatchQuota((int) limit, 1));
+    assertThrows(RpcThrottlingException.class, () -> quota.checkBatchQuota((int) limit, 1, false));
   }
 }

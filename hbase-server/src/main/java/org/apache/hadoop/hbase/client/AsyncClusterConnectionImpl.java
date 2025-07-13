@@ -171,6 +171,6 @@ class AsyncClusterConnectionImpl extends AsyncConnectionImpl implements AsyncClu
     long rpcTimeoutNs, long operationTimeoutNs) {
     return new AsyncRegionReplicationRetryingCaller(RETRY_TIMER, this,
       ConnectionUtils.retries2Attempts(retries), rpcTimeoutNs, operationTimeoutNs, replica, entries)
-        .call();
+      .call();
   }
 }

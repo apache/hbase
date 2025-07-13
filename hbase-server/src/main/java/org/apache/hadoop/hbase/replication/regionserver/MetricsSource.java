@@ -364,7 +364,7 @@ public class MetricsSource implements BaseSource {
   public void incrSizeOfHFileRefsQueue(long size) {
     singleSourceSource.incrSizeOfHFileRefsQueue(size);
     globalSourceSource.incrSizeOfHFileRefsQueue(size);
-    lastHFileRefsQueueSize = size;
+    lastHFileRefsQueueSize += size;
   }
 
   public void decrSizeOfHFileRefsQueue(int size) {

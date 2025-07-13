@@ -153,9 +153,9 @@ public class TestHBaseTrustManager {
     X509v3CertificateBuilder certificateBuilder =
       new JcaX509v3CertificateBuilder(nameBuilder.build(), serialNumber, notBefore, notAfter,
         nameBuilder.build(), keyPair.getPublic())
-          .addExtension(Extension.basicConstraints, true, new BasicConstraints(0))
-          .addExtension(Extension.keyUsage, true,
-            new KeyUsage(KeyUsage.digitalSignature | KeyUsage.keyCertSign | KeyUsage.cRLSign));
+        .addExtension(Extension.basicConstraints, true, new BasicConstraints(0))
+        .addExtension(Extension.keyUsage, true,
+          new KeyUsage(KeyUsage.digitalSignature | KeyUsage.keyCertSign | KeyUsage.cRLSign));
 
     List<GeneralName> generalNames = new ArrayList<>();
     if (ipAddress != null) {

@@ -168,6 +168,22 @@ public class QuotaSettingsFactory {
       settings.add(ThrottleSettings.fromTimedQuota(userName, tableName, namespace, regionServer,
         ThrottleType.WRITE_CAPACITY_UNIT, throttle.getWriteCapacityUnit()));
     }
+    if (throttle.hasAtomicReadSize()) {
+      settings.add(ThrottleSettings.fromTimedQuota(userName, tableName, namespace, regionServer,
+        ThrottleType.ATOMIC_READ_SIZE, throttle.getAtomicReadSize()));
+    }
+    if (throttle.hasAtomicWriteSize()) {
+      settings.add(ThrottleSettings.fromTimedQuota(userName, tableName, namespace, regionServer,
+        ThrottleType.ATOMIC_WRITE_SIZE, throttle.getAtomicWriteSize()));
+    }
+    if (throttle.hasAtomicReqNum()) {
+      settings.add(ThrottleSettings.fromTimedQuota(userName, tableName, namespace, regionServer,
+        ThrottleType.ATOMIC_REQUEST_NUMBER, throttle.getAtomicReqNum()));
+    }
+    if (throttle.hasReqHandlerUsageMs()) {
+      settings.add(ThrottleSettings.fromTimedQuota(userName, tableName, namespace, regionServer,
+        ThrottleType.REQUEST_HANDLER_USAGE_MS, throttle.getReqHandlerUsageMs()));
+    }
     return settings;
   }
 

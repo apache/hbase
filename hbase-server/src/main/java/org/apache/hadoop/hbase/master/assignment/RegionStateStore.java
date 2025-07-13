@@ -415,7 +415,7 @@ public class RegionStateStore {
   public void mergeRegions(RegionInfo child, RegionInfo[] parents, ServerName serverName,
     TableDescriptor htd) throws IOException {
     boolean globalScope = htd.hasGlobalReplicationScope();
-    long time = HConstants.LATEST_TIMESTAMP;
+    long time = EnvironmentEdgeManager.currentTime();
     List<Mutation> mutations = new ArrayList<>();
     List<RegionInfo> replicationParents = new ArrayList<>();
     for (RegionInfo ri : parents) {

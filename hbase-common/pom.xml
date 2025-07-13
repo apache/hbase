@@ -103,16 +103,12 @@
       <artifactId>opentelemetry-api</artifactId>
     </dependency>
     <dependency>
-      <groupId>io.opentelemetry</groupId>
+      <groupId>io.opentelemetry.semconv</groupId>
       <artifactId>opentelemetry-semconv</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-crypto</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.github.ben-manes.caffeine</groupId>
-      <artifactId>caffeine</artifactId>
     </dependency>
     <dependency>
       <groupId>junit</groupId>

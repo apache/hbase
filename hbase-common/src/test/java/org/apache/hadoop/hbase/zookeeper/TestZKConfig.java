@@ -106,6 +106,8 @@ public class TestZKConfig {
     Configuration conf = HBaseConfiguration.create();
     for (String p : ZOOKEEPER_CLIENT_TLS_PROPERTIES) {
       conf.set(HConstants.ZK_CFG_PROPERTY_PREFIX + p, p);
+      String zkprop = "zookeeper." + p;
+      System.clearProperty(zkprop);
     }
 
     // Act
@@ -113,7 +115,27 @@ public class TestZKConfig {
 
     // Assert
     for (String p : ZOOKEEPER_CLIENT_TLS_PROPERTIES) {
-      assertEquals("Invalid or unset system property: " + p, p, zkClientConfig.getProperty(p));
+      assertEquals("Invalid or unset system property: " + p, p,
+        zkClientConfig.getProperty("zookeeper." + p));
+    }
+  }
+
+  @Test
+  public void testZooKeeperTlsPropertiesHQuorumPeer() {
+    // Arrange
+    Configuration conf = HBaseConfiguration.create();
+    for (String p : ZOOKEEPER_CLIENT_TLS_PROPERTIES) {
+      conf.set(HConstants.ZK_CFG_PROPERTY_PREFIX + p, p);
+      String zkprop = "zookeeper." + p;
+      System.clearProperty(zkprop);
+    }
+
+    // Act
+    Properties zkProps = ZKConfig.makeZKProps(conf);
+
+    // Assert
+    for (String p : ZOOKEEPER_CLIENT_TLS_PROPERTIES) {
+      assertEquals("Invalid or unset system property: " + p, p, zkProps.getProperty(p));
     }
   }
 
