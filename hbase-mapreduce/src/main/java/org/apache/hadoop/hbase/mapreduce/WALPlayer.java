@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -63,6 +64,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
+
 /**
  * A tool to replay WAL files as a M/R job. The WAL can be replayed for a set of tables or all
  * tables, and a time range can be provided (in milliseconds). The WAL is filtered to the passed set
@@ -84,6 +87,27 @@ public class WALPlayer extends Configured implements Tool {
   protected static final String tableSeparator = ";";
 
   private final static String JOB_NAME_CONF_KEY = "mapreduce.job.name";
+
+  // Configuration key for pluggable WAL location resolver class name
+  // Used to enable rack-aware processing by providing preferred data locality hints for WAL files
+  public static final String CONF_WAL_FILE_LOCATION_RESOLVER_CLASS =
+    "wal.backup.file.location.resolver.class";
+
+  /**
+   * Interface for resolving file locations to influence InputSplit placement for rack-aware WAL
+   * processing.
+   */
+  @InterfaceAudience.Public
+  public interface WALFileLocationResolver {
+    Set<String> getLocationsForWALFiles(final Collection<String> walFiles);
+  }
+
+  public static class NoopWALFileLocationResolver implements WALFileLocationResolver {
+    @Override
+    public Set<String> getLocationsForWALFiles(Collection<String> walFiles) {
+      return ImmutableSet.of();
+    }
+  }
 
   public WALPlayer() {
   }

@@ -99,6 +99,14 @@ public interface BackupRestoreConstants {
   String OPTION_YARN_QUEUE_NAME_DESC = "Yarn queue name to run backup create command on";
   String OPTION_YARN_QUEUE_NAME_RESTORE_DESC = "Yarn queue name to run backup restore command on";
 
+  String OPTION_WAL_LOCATION_RESOLVER = "wal-location-resolver";
+  String OPTION_WAL_LOCATION_RESOLVER_DESC =
+    "WAL file location resolver class for rack-aware incremental backup";
+
+  String OPTION_HFILE_LOCATION_RESOLVER = "hfile-location-resolver";
+  String OPTION_HFILE_LOCATION_RESOLVER_DESC =
+    "HFile location resolver class for rack-aware bulk loading during incremental backup";
+
   String JOB_NAME_CONF_KEY = "mapreduce.job.name";
 
   String BACKUP_CONFIG_STRING = BackupRestoreConstants.BACKUP_ENABLE_KEY + "=true\n"
