@@ -19,6 +19,8 @@ package org.apache.hadoop.hbase.monitoring;
 
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics;
+import org.apache.hadoop.hbase.regionserver.RegionScanner;
+import org.apache.hadoop.hbase.regionserver.ScannerContext;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -32,11 +34,10 @@ import org.apache.yetus.audience.InterfaceAudience;
  * {@link ServerSideScanMetrics} instances through method calls across multiple layers, this class
  * provides thread-local storage for metrics collection.
  * <h3>Thread Safety and HBase Architecture</h3> This class leverages a critical aspect of HBase
- * server design: on the server side, the thread that opens a
- * {@link org.apache.hadoop.hbase.regionserver.RegionScanner} and calls
- * {@link org.apache.hadoop.hbase.regionserver.RegionScanner#nextRaw(java.util.List, org.apache.hadoop.hbase.regionserver.ScannerContext)}
- * is the same thread that reads HFile blocks. This design allows thread-local storage to
- * effectively capture metrics without cross-thread synchronization.
+ * server design: on the server side, the thread that opens a {@link RegionScanner} and calls
+ * {@link RegionScanner#nextRaw(java.util.List, ScannerContext)} is the same thread that reads HFile
+ * blocks. This design allows thread-local storage to effectively capture metrics without
+ * cross-thread synchronization.
  * <h3>Special Handling for Parallel Operations</h3> The only deviation from the single-thread model
  * occurs when {@link org.apache.hadoop.hbase.regionserver.handler.ParallelSeekHandler} is used for
  * parallel store file seeking. In this case, special handling ensures that metrics are captured
@@ -57,7 +58,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * through {@link ThreadLocal} storage, ensuring that metrics from different scan operations do not
  * interfere with each other.
  * @see ServerSideScanMetrics
- * @see org.apache.hadoop.hbase.regionserver.RegionScanner
+ * @see RegionScanner
  * @see org.apache.hadoop.hbase.regionserver.handler.ParallelSeekHandler
  */
 @InterfaceAudience.Private
