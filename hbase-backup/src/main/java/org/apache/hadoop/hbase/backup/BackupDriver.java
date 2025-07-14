@@ -35,6 +35,8 @@ import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_SET;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_SET_DESC;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_TABLE;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_TABLE_DESC;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_WAL_LOCATION_RESOLVER;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_WAL_LOCATION_RESOLVER_DESC;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_WORKERS;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_WORKERS_DESC;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_YARN_QUEUE_NAME;
@@ -159,6 +161,7 @@ public class BackupDriver extends AbstractHBaseTool {
     addOptWithArg(OPTION_PATH, OPTION_PATH_DESC);
     addOptWithArg(OPTION_KEEP, OPTION_KEEP_DESC);
     addOptWithArg(OPTION_YARN_QUEUE_NAME, OPTION_YARN_QUEUE_NAME_DESC);
+    addOptWithArg(OPTION_WAL_LOCATION_RESOLVER, OPTION_WAL_LOCATION_RESOLVER_DESC);
 
   }
 
