@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.replication.EmptyEntriesPolicy;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationResult;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -156,7 +157,15 @@ public class ReplicationSourceShipper extends Thread {
     List<Entry> entries = entryBatch.getWalEntries();
     int sleepMultiplier = 0;
     if (entries.isEmpty()) {
-      updateLogPosition(entryBatch, ReplicationResult.SUBMITTED);
+      /*
+       * Delegate to the endpoint to decide how to treat empty entry batches. In most replication
+       * flows, receiving an empty entry batch means that everything so far has been successfully
+       * replicated and committed — so it's safe to mark the WAL position as committed (COMMIT).
+       * However, some endpoints (e.g., asynchronous S3 backups) may buffer writes and delay actual
+       * persistence. In such cases, we must avoid committing the WAL position prematurely.
+       */
+      final ReplicationResult result = getReplicationResult();
+      updateLogPosition(entryBatch, result);
       return;
     }
     int currentSize = (int) entryBatch.getHeapSize();
@@ -230,6 +239,13 @@ public class ReplicationSourceShipper extends Thread {
         }
       }
     }
+  }
+
+  private ReplicationResult getReplicationResult() {
+    EmptyEntriesPolicy policy = source.getReplicationEndpoint().getEmptyEntriesPolicy();
+    return (policy == EmptyEntriesPolicy.COMMIT)
+      ? ReplicationResult.COMMITTED
+      : ReplicationResult.SUBMITTED;
   }
 
   private void cleanUpHFileRefs(WALEdit edit) throws IOException {
