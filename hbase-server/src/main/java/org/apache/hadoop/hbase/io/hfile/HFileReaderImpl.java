@@ -1128,7 +1128,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
           }
 
           if (expectedDataBlockEncoding == null) {
-            // Only count bytes read when cached block is actually being returned
+            // Count bytes read as cached block is being returned
             if (isScanMetricsEnabled) {
               cachedBlockBytesRead = cachedBlock.getOnDiskSizeWithHeader();
               // Account for the header size of the next block if it exists
@@ -1175,7 +1175,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
             }
             return null;
           }
-          // Only count bytes read when cached block is actually being returned
+          // Count bytes read as cached block is being returned
           if (isScanMetricsEnabled) {
             cachedBlockBytesRead = cachedBlock.getOnDiskSizeWithHeader();
             // Account for the header size of the next block if it exists
