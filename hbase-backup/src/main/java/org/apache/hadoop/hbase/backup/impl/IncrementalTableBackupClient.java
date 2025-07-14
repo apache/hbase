@@ -70,9 +70,6 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 public class IncrementalTableBackupClient extends TableBackupClient {
   private static final Logger LOG = LoggerFactory.getLogger(IncrementalTableBackupClient.class);
-  
-  // Configuration key for WAL location resolver (must match WALPlayer.CONF_WAL_FILE_LOCATION_RESOLVER_CLASS)
-  private static final String CONF_WAL_FILE_LOCATION_RESOLVER_CLASS = "wal.backup.file.location.resolver.class";
 
   protected IncrementalTableBackupClient() {
   }
