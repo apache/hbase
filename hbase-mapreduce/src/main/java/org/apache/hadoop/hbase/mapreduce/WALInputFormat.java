@@ -71,6 +71,7 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
     private long fileSize;
     private long startTime;
     private long endTime;
+    private String[] locations;
 
     /** for serialization */
     public WALSplit() {
@@ -85,6 +86,19 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
       this.fileSize = fileSize;
       this.startTime = startTime;
       this.endTime = endTime;
+      this.locations = new String[] {};
+    }
+
+    /**
+     * Represent an WALSplit with location hints for rack-aware processing.
+     */
+    public WALSplit(String logFileName, long fileSize, long startTime, long endTime,
+      String[] locations) {
+      this.logFileName = logFileName;
+      this.fileSize = fileSize;
+      this.startTime = startTime;
+      this.endTime = endTime;
+      this.locations = locations != null ? locations : new String[] {};
     }
 
     @Override
@@ -94,8 +108,7 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
 
     @Override
     public String[] getLocations() throws IOException, InterruptedException {
-      // TODO: Find the data node with the most blocks for this WAL?
-      return new String[] {};
+      return locations;
     }
 
     public String getLogFileName() {
@@ -116,6 +129,11 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
       fileSize = in.readLong();
       startTime = in.readLong();
       endTime = in.readLong();
+      int locationsCount = in.readInt();
+      locations = new String[locationsCount];
+      for (int i = 0; i < locationsCount; i++) {
+        locations[i] = in.readUTF();
+      }
     }
 
     @Override
@@ -124,6 +142,10 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
       out.writeLong(fileSize);
       out.writeLong(startTime);
       out.writeLong(endTime);
+      out.writeInt(locations.length);
+      for (String location : locations) {
+        out.writeUTF(location);
+      }
     }
 
     @Override
@@ -328,10 +350,25 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
         throw e;
       }
     }
-    List<InputSplit> splits = new ArrayList<InputSplit>(allFiles.size());
+    // Create InputSplits with location hints for each WAL file
+    Class<? extends WALPlayer.WALFileLocationResolver> locationResolverClass =
+      conf.getClass(WALPlayer.CONF_WAL_FILE_LOCATION_RESOLVER_CLASS,
+        WALPlayer.NoopWALFileLocationResolver.class, WALPlayer.WALFileLocationResolver.class);
+
+    WALPlayer.WALFileLocationResolver locationResolver =
+      org.apache.hadoop.util.ReflectionUtils.newInstance(locationResolverClass, conf);
+
+    List<InputSplit> splits = new ArrayList<>();
     for (FileStatus file : allFiles) {
-      splits.add(new WALSplit(file.getPath().toString(), file.getLen(), startTime, endTime));
+      // Get locations for this specific WAL file
+      String[] locations = locationResolver
+        .getLocationsForWALFiles(Collections.singletonList(file.getPath().toString()))
+        .toArray(new String[0]);
+
+      splits
+        .add(new WALSplit(file.getPath().toString(), file.getLen(), startTime, endTime, locations));
     }
+
     return splits;
   }
 

@@ -22,6 +22,7 @@ import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_BANDW
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_BANDWIDTH_DESC;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_DEBUG;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_DEBUG_DESC;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_HFILE_LOCATION_RESOLVER;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_IGNORECHECKSUM;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_IGNORECHECKSUM_DESC;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_KEEP;
@@ -37,6 +38,7 @@ import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_SET_D
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_TABLE;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_TABLE_DESC;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_TABLE_LIST_DESC;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_WAL_LOCATION_RESOLVER;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_WORKERS;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_WORKERS_DESC;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_YARN_QUEUE_NAME;
@@ -82,6 +84,14 @@ public final class BackupCommands {
 
   public final static String TOP_LEVEL_NOT_ALLOWED =
     "Top level (root) folder is not allowed to be a backup destination";
+
+  // Configuration keys for location resolvers
+  // Must match WALPlayer.CONF_WAL_FILE_LOCATION_RESOLVER_CLASS
+  private static final String CONF_WAL_FILE_LOCATION_RESOLVER_CLASS =
+    "wal.backup.file.location.resolver.class";
+  // Must match HFileInputFormat.CONF_HFILE_LOCATION_RESOLVER_CLASS
+  private static final String CONF_HFILE_LOCATION_RESOLVER_CLASS =
+    "hfile.backup.input.file.location.resolver.class";
 
   public static final String USAGE = "Usage: hbase backup COMMAND [command-specific arguments]\n"
     + "where COMMAND is one of:\n" + "  create     create a new backup image\n"
@@ -146,6 +156,16 @@ public final class BackupCommands {
         String queueName = cmdline.getOptionValue(OPTION_YARN_QUEUE_NAME);
         // Set MR job queuename to configuration
         getConf().set("mapreduce.job.queuename", queueName);
+      }
+
+      if (cmdline.hasOption(OPTION_WAL_LOCATION_RESOLVER)) {
+        String resolverClass = cmdline.getOptionValue(OPTION_WAL_LOCATION_RESOLVER);
+        getConf().set(CONF_WAL_FILE_LOCATION_RESOLVER_CLASS, resolverClass);
+      }
+
+      if (cmdline.hasOption(OPTION_HFILE_LOCATION_RESOLVER)) {
+        String resolverClass = cmdline.getOptionValue(OPTION_HFILE_LOCATION_RESOLVER);
+        getConf().set(CONF_HFILE_LOCATION_RESOLVER_CLASS, resolverClass);
       }
 
       // Create connection

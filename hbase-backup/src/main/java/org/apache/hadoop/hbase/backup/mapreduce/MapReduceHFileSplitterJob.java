@@ -105,7 +105,11 @@ public class MapReduceHFileSplitterJob extends Configured implements Tool {
     job.getConfiguration().setBoolean(HFileOutputFormat2.EXTENDED_CELL_SERIALIZATION_ENABLED_KEY,
       true);
     job.setJarByClass(MapReduceHFileSplitterJob.class);
+
+    // Use standard HFileInputFormat which now supports location resolver automatically
+    // HFileInputFormat will automatically detect and log rack-awareness configuration
     job.setInputFormatClass(HFileInputFormat.class);
+
     job.setMapOutputKeyClass(ImmutableBytesWritable.class);
     String hfileOutPath = conf.get(BULK_OUTPUT_CONF_KEY);
     if (hfileOutPath != null) {
@@ -147,6 +151,11 @@ public class MapReduceHFileSplitterJob extends Configured implements Tool {
     System.err.println("Other options:");
     System.err.println("   -D " + JOB_NAME_CONF_KEY
       + "=jobName - use the specified mapreduce job name for the HFile splitter");
+
+    System.err.println("Rack-aware processing option:");
+    System.err.println("  -D" + HFileInputFormat.CONF_HFILE_LOCATION_RESOLVER_CLASS + "=<class> - "
+      + "HFile location resolver class for rack-aware processing");
+
     System.err.println("For performance also consider the following options:\n"
       + "  -Dmapreduce.map.speculative=false\n" + "  -Dmapreduce.reduce.speculative=false");
   }

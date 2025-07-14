@@ -412,6 +412,9 @@ public class IncrementalTableBackupClient extends TableBackupClient {
     conf.setBoolean(HFileOutputFormat2.TABLE_NAME_WITH_NAMESPACE_INCLUSIVE_KEY, true);
     conf.setBoolean(WALPlayer.MULTI_TABLES_SUPPORT, true);
     conf.set(JOB_NAME_CONF_KEY, jobname);
+
+    // Rack-aware WAL processing configuration is set directly via command line to the same key
+    // WALPlayer uses
     String[] playerArgs = { dirs, StringUtils.join(tableList, ",") };
 
     try {
