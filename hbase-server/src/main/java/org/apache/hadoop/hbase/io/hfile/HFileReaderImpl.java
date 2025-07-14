@@ -1107,11 +1107,12 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     BlockCache cache = cacheConf.getBlockCache().orElse(null);
     long cachedBlockBytesRead = 0;
     if (cache != null) {
+      HFileBlock cachedBlock = null;
+      boolean isScanMetricsEnabled = ThreadLocalServerSideScanMetrics.isScanMetricsEnabled();
       try {
-        HFileBlock cachedBlock = (HFileBlock) cache.getBlock(cacheKey, cacheBlock, useLock,
-          updateCacheMetrics, expectedBlockType);
+        cachedBlock = (HFileBlock) cache.getBlock(cacheKey, cacheBlock, useLock, updateCacheMetrics,
+          expectedBlockType);
         if (cachedBlock != null) {
-          boolean isScanMetricsEnabled = ThreadLocalServerSideScanMetrics.isScanMetricsEnabled();
           if (cacheConf.shouldCacheCompressed(cachedBlock.getBlockType().getCategory())) {
             HFileBlock compressedBlock = cachedBlock;
             cachedBlock = compressedBlock.unpack(hfileContext, fsBlockReader);
@@ -1124,18 +1125,11 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
             validateBlockType(cachedBlock, expectedBlockType);
           } catch (IOException e) {
             returnAndEvictBlock(cache, cacheKey, cachedBlock);
+            cachedBlock = null;
             throw e;
           }
 
           if (expectedDataBlockEncoding == null) {
-            // Count bytes read as cached block is being returned
-            if (isScanMetricsEnabled) {
-              cachedBlockBytesRead = cachedBlock.getOnDiskSizeWithHeader();
-              // Account for the header size of the next block if it exists
-              if (cachedBlock.getNextBlockOnDiskSize() > 0) {
-                cachedBlockBytesRead += cachedBlock.headerSize();
-              }
-            }
             return cachedBlock;
           }
           DataBlockEncoding actualDataBlockEncoding = cachedBlock.getDataBlockEncoding();
@@ -1173,19 +1167,20 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
               // This is an error scenario. so here we need to release the block.
               returnAndEvictBlock(cache, cacheKey, cachedBlock);
             }
+            cachedBlock = null;
             return null;
-          }
-          // Count bytes read as cached block is being returned
-          if (isScanMetricsEnabled) {
-            cachedBlockBytesRead = cachedBlock.getOnDiskSizeWithHeader();
-            // Account for the header size of the next block if it exists
-            if (cachedBlock.getNextBlockOnDiskSize() > 0) {
-              cachedBlockBytesRead += cachedBlock.headerSize();
-            }
           }
           return cachedBlock;
         }
       } finally {
+        // Count bytes read as cached block is being returned
+        if (isScanMetricsEnabled && cachedBlock != null) {
+          cachedBlockBytesRead = cachedBlock.getOnDiskSizeWithHeader();
+          // Account for the header size of the next block if it exists
+          if (cachedBlock.getNextBlockOnDiskSize() > 0) {
+            cachedBlockBytesRead += cachedBlock.headerSize();
+          }
+        }
         if (cachedBlockBytesRead > 0) {
           ThreadLocalServerSideScanMetrics.addBytesReadFromBlockCache(cachedBlockBytesRead);
         }
