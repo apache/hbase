@@ -701,8 +701,8 @@ public class HRegionServer extends Thread
       if (!isMasterNotCarryTable) {
         blockCache = BlockCacheFactory.createBlockCache(conf);
         // The call below, instantiates the DataTieringManager only when
-      // the configuration "hbase.regionserver.datatiering.enable" is set to true.
-      DataTieringManager.instantiate(conf,onlineRegions);
+        // the configuration "hbase.regionserver.datatiering.enable" is set to true.
+        DataTieringManager.instantiate(conf, onlineRegions);
         mobFileCache = new MobFileCache(conf);
       }
 
