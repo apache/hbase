@@ -79,35 +79,37 @@ import org.slf4j.LoggerFactory;
 /**
  * This class is used to test the functionality of the DataTieringManager.
  *
- * The mock online regions are stored in {@link TestDataTieringManager#testOnlineRegions}.
- * For all tests, the setup of {@link TestDataTieringManager#testOnlineRegions} occurs only once.
- * Please refer to {@link TestDataTieringManager#setupOnlineRegions()} for the structure.
- * Additionally, a list of all store files is maintained in {@link TestDataTieringManager#hStoreFiles}.
+ * The mock online regions are stored in {@link TestCustomCellDataTieringManager#testOnlineRegions}.
+ * For all tests, the setup of
+ *  {@link TestCustomCellDataTieringManager#testOnlineRegions} occurs only once.
+ * Please refer to {@link TestCustomCellDataTieringManager#setupOnlineRegions()} for the structure.
+ * Additionally, a list of all store files is
+ *  maintained in {@link TestCustomCellDataTieringManager#hStoreFiles}.
  * The characteristics of these store files are listed below:
- * @formatter:off ## HStoreFile Information
- *
+ * @formatter:off
+ * ## HStoreFile Information
  * | HStoreFile       | Region             | Store               | DataTiering           | isHot |
  * |------------------|--------------------|---------------------|-----------------------|-------|
- * | hStoreFile0      | region1            | hStore11            | TIME_RANGE            | true  |
+ * | hStoreFile0      | region1            | hStore11            | CUSTOM_CELL_VALUE     | true  |
  * | hStoreFile1      | region1            | hStore12            | NONE                  | true  |
- * | hStoreFile2      | region2            | hStore21            | TIME_RANGE            | true  |
- * | hStoreFile3      | region2            | hStore22            | TIME_RANGE            | false |
+ * | hStoreFile2      | region2            | hStore21            | CUSTOM_CELL_VALUE     | true  |
+ * | hStoreFile3      | region2            | hStore22            | CUSTOM_CELL_VALUE     | false |
  * @formatter:on
  */
 
 @Category({ RegionServerTests.class, SmallTests.class })
-public class TestDataTieringManager {
+public class TestCustomCellDataTieringManager {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestDataTieringManager.class);
+    HBaseClassTestRule.forClass(TestCustomCellDataTieringManager.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestDataTieringManager.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestCustomCellDataTieringManager.class);
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final long DAY = 24 * 60 * 60 * 1000;
   private static Configuration defaultConf;
   private static FileSystem fs;
-  private static BlockCache blockCache;
+  private BlockCache blockCache;
   private static CacheConfig cacheConf;
   private static Path testDir;
   private static final Map<String, HRegion> testOnlineRegions = new HashMap<>();
@@ -124,10 +126,10 @@ public class TestDataTieringManager {
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
-    testDir = TEST_UTIL.getDataTestDir(TestDataTieringManager.class.getSimpleName());
+    testDir = TEST_UTIL.getDataTestDir(TestCustomCellDataTieringManager.class.getSimpleName());
     defaultConf = TEST_UTIL.getConfiguration();
     updateCommonConfigurations();
-    assertTrue(DataTieringManager.instantiate(defaultConf, testOnlineRegions));
+    DataTieringManager.instantiate(defaultConf, testOnlineRegions);
     dataTieringManager = DataTieringManager.getInstance();
     rowKeyString = "";
   }
@@ -234,7 +236,7 @@ public class TestDataTieringManager {
   @Test
   public void testPrefetchWhenDataTieringEnabled() throws IOException {
     setPrefetchBlocksOnOpen();
-    initializeTestEnvironment();
+    this.blockCache = initializeTestEnvironment();
     // Evict blocks from cache by closing the files and passing evict on close.
     // Then initialize the reader again. Since Prefetch on open is set to true, it should prefetch
     // those blocks.
@@ -284,27 +286,26 @@ public class TestDataTieringManager {
   @Test
   public void testCacheCompactedBlocksOnWriteDataTieringDisabled() throws IOException {
     setCacheCompactBlocksOnWrite();
-    initializeTestEnvironment();
-
-    HRegion region = createHRegion("table3");
+    this.blockCache = initializeTestEnvironment();
+    HRegion region = createHRegion("table3", this.blockCache);
     testCacheCompactedBlocksOnWrite(region, true);
   }
 
   @Test
   public void testCacheCompactedBlocksOnWriteWithHotData() throws IOException {
     setCacheCompactBlocksOnWrite();
-    initializeTestEnvironment();
-
-    HRegion region = createHRegion("table3", getConfWithTimeRangeDataTieringEnabled(5 * DAY));
+    this.blockCache = initializeTestEnvironment();
+    HRegion region =
+      createHRegion("table3", getConfWithCustomCellDataTieringEnabled(5 * DAY), this.blockCache);
     testCacheCompactedBlocksOnWrite(region, true);
   }
 
   @Test
   public void testCacheCompactedBlocksOnWriteWithColdData() throws IOException {
     setCacheCompactBlocksOnWrite();
-    initializeTestEnvironment();
-
-    HRegion region = createHRegion("table3", getConfWithTimeRangeDataTieringEnabled(DAY));
+    this.blockCache = initializeTestEnvironment();
+    HRegion region =
+      createHRegion("table3", getConfWithCustomCellDataTieringEnabled(DAY), this.blockCache);
     testCacheCompactedBlocksOnWrite(region, false);
   }
 
@@ -339,12 +340,11 @@ public class TestDataTieringManager {
     Path storeDir = hStore.getStoreContext().getFamilyStoreDirectoryPath();
     Configuration configuration = hStore.getReadOnlyConfiguration();
 
-    createHStoreFile(storeDir, configuration, currentTime - 2 * DAY,
-      hStore.getHRegion().getRegionFileSystem());
-    createHStoreFile(storeDir, configuration, currentTime - 3 * DAY,
-      hStore.getHRegion().getRegionFileSystem());
-    createHStoreFile(storeDir, configuration, currentTime - 4 * DAY,
-      hStore.getHRegion().getRegionFileSystem());
+    HRegionFileSystem regionFS = hStore.getHRegion().getRegionFileSystem();
+
+    createHStoreFile(storeDir, configuration, currentTime - 2 * DAY, regionFS);
+    createHStoreFile(storeDir, configuration, currentTime - 3 * DAY, regionFS);
+    createHStoreFile(storeDir, configuration, currentTime - 4 * DAY, regionFS);
   }
 
   @Test
@@ -572,36 +572,23 @@ public class TestDataTieringManager {
 
   @Test
   public void testCacheConfigShouldCacheFile() throws Exception {
-    // Evict the files from cache.
-    for (HStoreFile file : hStoreFiles) {
-      file.closeStoreFile(true);
-    }
+    initializeTestEnvironment();
     // Verify that the API shouldCacheFileBlock returns the result correctly.
     // hStoreFiles[0], hStoreFiles[1], hStoreFiles[2] are hot files.
     // hStoreFiles[3] is a cold file.
-    try {
-      assertTrue(cacheConf.shouldCacheBlockOnRead(BlockCategory.DATA,
-        hStoreFiles.get(0).getFileInfo().getHFileInfo(),
-        hStoreFiles.get(0).getFileInfo().getConf()));
-      assertTrue(cacheConf.shouldCacheBlockOnRead(BlockCategory.DATA,
-        hStoreFiles.get(1).getFileInfo().getHFileInfo(),
-        hStoreFiles.get(1).getFileInfo().getConf()));
-      assertTrue(cacheConf.shouldCacheBlockOnRead(BlockCategory.DATA,
-        hStoreFiles.get(2).getFileInfo().getHFileInfo(),
-        hStoreFiles.get(2).getFileInfo().getConf()));
-      assertFalse(cacheConf.shouldCacheBlockOnRead(BlockCategory.DATA,
-        hStoreFiles.get(3).getFileInfo().getHFileInfo(),
-        hStoreFiles.get(3).getFileInfo().getConf()));
-    } finally {
-      for (HStoreFile file : hStoreFiles) {
-        file.initReader();
-      }
-    }
+    assertTrue(cacheConf.shouldCacheBlockOnRead(BlockCategory.DATA,
+      hStoreFiles.get(0).getFileInfo().getHFileInfo(), hStoreFiles.get(0).getFileInfo().getConf()));
+    assertTrue(cacheConf.shouldCacheBlockOnRead(BlockCategory.DATA,
+      hStoreFiles.get(1).getFileInfo().getHFileInfo(), hStoreFiles.get(1).getFileInfo().getConf()));
+    assertTrue(cacheConf.shouldCacheBlockOnRead(BlockCategory.DATA,
+      hStoreFiles.get(2).getFileInfo().getHFileInfo(), hStoreFiles.get(2).getFileInfo().getConf()));
+    assertFalse(cacheConf.shouldCacheBlockOnRead(BlockCategory.DATA,
+      hStoreFiles.get(3).getFileInfo().getHFileInfo(), hStoreFiles.get(3).getFileInfo().getConf()));
   }
 
   @Test
   public void testCacheOnReadColdFile() throws Exception {
-    initializeTestEnvironment();
+    this.blockCache = initializeTestEnvironment();
     // hStoreFiles[3] is a cold file. the blocks should not get loaded after a readBlock call.
     HStoreFile hStoreFile = hStoreFiles.get(3);
     BlockCacheKey cacheKey = new BlockCacheKey(hStoreFile.getPath(), 0, true, BlockType.DATA);
@@ -610,7 +597,7 @@ public class TestDataTieringManager {
 
   @Test
   public void testCacheOnReadHotFile() throws Exception {
-    initializeTestEnvironment();
+    this.blockCache = initializeTestEnvironment();
     // hStoreFiles[0] is a hot file. the blocks should get loaded after a readBlock call.
     HStoreFile hStoreFile = hStoreFiles.get(0);
     BlockCacheKey cacheKey =
@@ -624,7 +611,7 @@ public class TestDataTieringManager {
     hStoreFile.getReader().getHFileReader().readBlock(key.getOffset(), onDiskBlockSize, true, false,
       false, false, key.getBlockType(), DataBlockEncoding.NONE);
     // Validate that the hot block gets cached and cold block is not cached.
-    HFileBlock block = (HFileBlock) blockCache.getBlock(key, false, false, false, BlockType.DATA);
+    HFileBlock block = (HFileBlock) blockCache.getBlock(key, false, false, false);
     if (expectedCached) {
       assertNotNull(block);
     } else {
@@ -646,7 +633,8 @@ public class TestDataTieringManager {
           numColdBlocks++;
         }
       } catch (Exception e) {
-        fail("Unexpected exception!");
+        LOG.debug("Error validating priority for key {}", key, e);
+        fail(e.getMessage());
       }
     }
     assertEquals(expectedHotBlocks, numHotBlocks);
@@ -705,26 +693,28 @@ public class TestDataTieringManager {
     testDataTieringMethodWithKey(caller, key, expectedResult, null);
   }
 
-  private static void initializeTestEnvironment() throws IOException {
-    setupFileSystemAndCache();
-    setupOnlineRegions();
+  private static BlockCache initializeTestEnvironment() throws IOException {
+    BlockCache blockCache = setupFileSystemAndCache();
+    setupOnlineRegions(blockCache);
+    return blockCache;
   }
 
-  private static void setupFileSystemAndCache() throws IOException {
+  private static BlockCache setupFileSystemAndCache() throws IOException {
     fs = HFileSystem.get(defaultConf);
-    blockCache = BlockCacheFactory.createBlockCache(defaultConf);
+    BlockCache blockCache = BlockCacheFactory.createBlockCache(defaultConf);
     cacheConf = new CacheConfig(defaultConf, blockCache);
+    return blockCache;
   }
 
-  private static void setupOnlineRegions() throws IOException {
+  private static void setupOnlineRegions(BlockCache blockCache) throws IOException {
     testOnlineRegions.clear();
     hStoreFiles.clear();
     long day = 24 * 60 * 60 * 1000;
     long currentTime = System.currentTimeMillis();
 
-    HRegion region1 = createHRegion("table1");
+    HRegion region1 = createHRegion("table1", blockCache);
 
-    HStore hStore11 = createHStore(region1, "cf1", getConfWithTimeRangeDataTieringEnabled(day));
+    HStore hStore11 = createHStore(region1, "cf1", getConfWithCustomCellDataTieringEnabled(day));
     hStoreFiles.add(createHStoreFile(hStore11.getStoreContext().getFamilyStoreDirectoryPath(),
       hStore11.getReadOnlyConfiguration(), currentTime, region1.getRegionFileSystem()));
     hStore11.refreshStoreFiles();
@@ -736,8 +726,8 @@ public class TestDataTieringManager {
     region1.stores.put(Bytes.toBytes("cf1"), hStore11);
     region1.stores.put(Bytes.toBytes("cf2"), hStore12);
 
-    HRegion region2 =
-      createHRegion("table2", getConfWithTimeRangeDataTieringEnabled((long) (2.5 * day)));
+    HRegion region2 = createHRegion("table2",
+      getConfWithCustomCellDataTieringEnabled((long) (2.5 * day)), blockCache);
 
     HStore hStore21 = createHStore(region2, "cf1");
     hStoreFiles.add(createHStoreFile(hStore21.getStoreContext().getFamilyStoreDirectoryPath(),
@@ -759,11 +749,12 @@ public class TestDataTieringManager {
     testOnlineRegions.put(region2.getRegionInfo().getEncodedName(), region2);
   }
 
-  private static HRegion createHRegion(String table) throws IOException {
-    return createHRegion(table, defaultConf);
+  private static HRegion createHRegion(String table, BlockCache blockCache) throws IOException {
+    return createHRegion(table, defaultConf, blockCache);
   }
 
-  private static HRegion createHRegion(String table, Configuration conf) throws IOException {
+  private static HRegion createHRegion(String table, Configuration conf, BlockCache blockCache)
+    throws IOException {
     TableName tableName = TableName.valueOf(table);
 
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName)
@@ -802,14 +793,7 @@ public class TestDataTieringManager {
     return new HStore(region, columnFamilyDescriptor, conf, false);
   }
 
-  private static Configuration getConfWithTimeRangeDataTieringEnabled(long hotDataAge) {
-    Configuration conf = new Configuration(defaultConf);
-    conf.set(DataTieringManager.DATATIERING_KEY, DataTieringType.TIME_RANGE.name());
-    conf.set(DataTieringManager.DATATIERING_HOT_DATA_AGE_KEY, String.valueOf(hotDataAge));
-    return conf;
-  }
-
-  static HStoreFile createHStoreFile(Path storeDir, Configuration conf, long timestamp,
+  private static HStoreFile createHStoreFile(Path storeDir, Configuration conf, long timestamp,
     HRegionFileSystem regionFs) throws IOException {
     String columnFamily = storeDir.getName();
 
@@ -819,10 +803,16 @@ public class TestDataTieringManager {
     writeStoreFileRandomData(storeFileWriter, Bytes.toBytes(columnFamily), timestamp);
 
     StoreContext storeContext = StoreContext.getBuilder().withRegionFileSystem(regionFs).build();
-
     StoreFileTracker sft = StoreFileTrackerFactory.create(conf, true, storeContext);
     return new HStoreFile(fs, storeFileWriter.getPath(), conf, cacheConf, BloomType.NONE, true,
       sft);
+  }
+
+  private static Configuration getConfWithCustomCellDataTieringEnabled(long hotDataAge) {
+    Configuration conf = new Configuration(defaultConf);
+    conf.set(DataTieringManager.DATATIERING_KEY, DataTieringType.CUSTOM.name());
+    conf.set(DataTieringManager.DATATIERING_HOT_DATA_AGE_KEY, String.valueOf(hotDataAge));
+    return conf;
   }
 
   /**
@@ -842,6 +832,10 @@ public class TestDataTieringManager {
       }
     } finally {
       writer.appendTrackedTimestampsToMetadata();
+      TimeRangeTracker timeRangeTracker = TimeRangeTracker.create(TimeRangeTracker.Type.NON_SYNC);
+      timeRangeTracker.setMin(timestamp);
+      timeRangeTracker.setMax(timestamp);
+      writer.appendCustomCellTimestampsToMetadata(timeRangeTracker);
       writer.close();
     }
   }
