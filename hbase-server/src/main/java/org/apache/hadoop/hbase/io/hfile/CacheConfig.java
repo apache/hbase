@@ -269,7 +269,8 @@ public class CacheConfig implements PropagatingConfigurationObserver {
   public boolean shouldCacheBlockOnRead(BlockCategory category, HFileInfo hFileInfo,
     Configuration conf) {
     Optional<Boolean> cacheFileBlock = Optional.of(true);
-    if (getBlockCache().isPresent()) {
+    // For DATA blocks only, if BuckeCache is in use, we don't need to cache block again
+    if (getBlockCache().isPresent() && category.equals(BlockCategory.DATA)) {
       Optional<Boolean> result = getBlockCache().get().shouldCacheFile(hFileInfo, conf);
       if (result.isPresent()) {
         cacheFileBlock = result;
