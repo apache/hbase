@@ -132,7 +132,9 @@ abstract class AbstractRecoveredEditsOutputSink extends OutputSink {
           // with equal or more entries, we can delete the editsWriter file.
           // It happens if two RS was splitting the same WAL and both tried to rename at the same
           // time. See HBASE-28951 for more details.
-          if (deleteTmpIfDstHasNoLessEntries(editsWriter, dst)) return dst;
+          if (deleteTmpIfDstHasNoLessEntries(editsWriter, dst)) {
+            return dst;
+          }
           final String errorMsg =
             "Failed renaming recovered edits " + editsWriter.path + " to " + dst;
           updateStatusWithMsg(errorMsg);
