@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.io.hfile;
 import java.io.DataInput;
 import java.io.IOException;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.util.BloomFilter;
@@ -120,7 +121,8 @@ public class CompoundBloomFilter extends CompoundBloomFilterBase implements Bloo
     return result;
   }
 
-  private HFileBlock getBloomBlock(int block) {
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
+  public HFileBlock getBloomBlock(int block) {
     HFileBlock bloomBlock;
     try {
       // We cache the block and use a positional read.
@@ -218,4 +220,18 @@ public class CompoundBloomFilter extends CompoundBloomFilterBase implements Bloo
     return sb.toString();
   }
 
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
+  public HFileBlockIndex.BlockIndexReader getBloomIndex() {
+    return index;
+  }
+
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
+  public int getHashCount() {
+    return hashCount;
+  }
+
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
+  public Hash getHash() {
+    return hash;
+  }
 }
