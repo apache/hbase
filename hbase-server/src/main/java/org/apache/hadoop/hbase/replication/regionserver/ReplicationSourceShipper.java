@@ -151,9 +151,9 @@ public class ReplicationSourceShipper extends Thread {
   }
 
   /**
-   * Do the shipping logic
+   * Do the shipping logic. Package-private for test visibility only. Do not use outside tests.
    */
-  private void shipEdits(WALEntryBatch entryBatch) {
+  void shipEdits(WALEntryBatch entryBatch) {
     List<Entry> entries = entryBatch.getWalEntries();
     int sleepMultiplier = 0;
     if (entries.isEmpty()) {
@@ -272,7 +272,10 @@ public class ReplicationSourceShipper extends Thread {
     }
   }
 
-  private boolean updateLogPosition(WALEntryBatch batch, ReplicationResult replicated) {
+  /**
+   * Package-private for test visibility only. Do not use outside tests.
+   */
+  boolean updateLogPosition(WALEntryBatch batch, ReplicationResult replicated) {
     boolean updated = false;
     // if end of file is true, then the logPositionAndCleanOldLogs method will remove the file
     // record on zk, so let's call it. The last wal position maybe zero if end of file is true and
