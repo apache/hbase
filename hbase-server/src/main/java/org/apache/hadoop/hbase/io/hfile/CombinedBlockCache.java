@@ -26,7 +26,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
-import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -494,10 +493,10 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
   }
 
   @Override
-  public Optional<Boolean> shouldCacheBlock(BlockCacheKey key, TimeRangeTracker timeRangeTracker,
+  public Optional<Boolean> shouldCacheBlock(BlockCacheKey key, long maxTimeStamp,
     Configuration conf) {
-    return combineCacheResults(l1Cache.shouldCacheBlock(key, timeRangeTracker, conf),
-      l2Cache.shouldCacheBlock(key, timeRangeTracker, conf));
+    return combineCacheResults(l1Cache.shouldCacheBlock(key, maxTimeStamp, conf),
+      l2Cache.shouldCacheBlock(key, maxTimeStamp, conf));
   }
 
   private Optional<Boolean> combineCacheResults(Optional<Boolean> result1,
