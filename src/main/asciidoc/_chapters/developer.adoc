@@ -837,7 +837,7 @@ looking good, now is the time to tag the release candidate (You
 always remove the tag if you need to redo). To tag, do
 what follows substituting in the version appropriate to your build.
 All tags should be signed tags; i.e. pass the _-s_ option (See
-link:http://https://git-scm.com/book/id/v2/Git-Tools-Signing-Your-Work[Signing Your Work]
+link:https://git-scm.com/book/id/v2/Git-Tools-Signing-Your-Work[Signing Your Work]
 for how to set up your git environment for signing).
 
 [source,bourne]
@@ -1208,7 +1208,7 @@ For example, the tests that cover the shell commands for altering tables are con
       mvn clean test -pl hbase-shell -Dshell.test=/AdminAlterTableTest/
 ----
 
-You may also use a link:http://docs.ruby-doc.com/docs/ProgrammingRuby/html/language.html#UJ[Ruby Regular Expression
+You may also use a link:https://docs.ruby-lang.org/en/master/syntax/literals_rdoc.html#label-Regexp+Literals[Ruby Regular Expression
       literal] (in the `/pattern/` style) to select a set of test cases.
 You can run all of the HBase admin related tests, including both the normal administration and the security administration, with the command:
 

@@ -160,7 +160,7 @@ Investigation results of a self-described "we're not sure what's wrong, but it s
 === Case Study #3 (Performance Research 2010))
 
 Investigation results of general cluster performance from 2010.
-Although this research is on an older version of the codebase, this writeup is still very useful in terms of approach. http://hstack.org/hbase-performance-testing/
+Although this research is on an older version of the codebase, this writeup is still very useful in terms of approach. https://web.archive.org/web/20180503124332/http://hstack.org:80/hbase-performance-testing/
 
 [[casestudies.max.transfer.threads]]
 === Case Study #4 (max.transfer.threads Config)

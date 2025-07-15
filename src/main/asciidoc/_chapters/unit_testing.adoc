@@ -388,4 +388,4 @@ A record is inserted, a Get is performed from the same table, and the insertion 
 
 NOTE: Starting the mini-cluster takes about 20-30 seconds, but that should be appropriate for integration testing.
 
-See the paper at link:http://blog.sematext.com/2010/08/30/hbase-case-study-using-hbasetestingutility-for-local-testing-development/[HBase Case-Study: Using HBaseTestingUtility for Local Testing and Development] (2010) for more information about HBaseTestingUtility.
+See the paper at link:https://web.archive.org/web/20160214165147/http://blog.sematext.com:80/2010/08/30/hbase-case-study-using-hbasetestingutility-for-local-testing-development/[HBase Case-Study: Using HBaseTestingUtility for Local Testing and Development] (2010) for more information about HBaseTestingUtility.

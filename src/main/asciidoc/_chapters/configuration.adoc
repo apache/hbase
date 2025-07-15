@@ -593,7 +593,7 @@ Pseudo-distributed mode can run against the local filesystem or it can run again
 the _Hadoop Distributed File System_ (HDFS). Fully-distributed mode can ONLY run on HDFS.
 See the Hadoop link:https://hadoop.apache.org/docs/current/[documentation] for how to set up HDFS.
 A good walk-through for setting up HDFS on Hadoop 2 can be found at
-http://www.alexjf.net/blog/distributed-systems/hadoop-yarn-installation-definitive-guide.
+http://web.archive.org/web/20221007121526/https://www.alexjf.net/blog/distributed-systems/hadoop-yarn-installation-definitive-guide/.
 
 [[pseudo]]
 ==== Pseudo-distributed
@@ -910,7 +910,7 @@ dependency when connecting to a cluster:
 ==== Java client configuration
 
 The configuration used by a Java client is kept in an
-link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HBaseConfiguration[HBaseConfiguration]
+link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/HBaseConfiguration[HBaseConfiguration]
 instance.
 
 The factory method on HBaseConfiguration, `HBaseConfiguration.create();`, on invocation, will read
@@ -1227,7 +1227,7 @@ major compactions. See the entry for `hbase.hregion.majorcompaction` in the
 ====
 Major compactions are absolutely necessary for StoreFile clean-up. Do not disable them altogether.
 You can run major compactions manually via the HBase shell or via the
-link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Admin.html#majorCompact-org.apache.hadoop.hbase.TableName-[Admin API].
+link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Admin.html#majorCompact(org.apache.hadoop.hbase.TableName)[Admin API].
 ====
 
 For more information about compactions and the compaction file selection process, see
@@ -1264,7 +1264,7 @@ idea on the size you need by surveying RegionServer UIs; you'll see index block 
 the top of the webpage).
 
 [[nagles]]
-==== link:http://en.wikipedia.org/wiki/Nagle's_algorithm[Nagle's] or the small package problem
+==== ++link:http://en.wikipedia.org/wiki/Nagle's_algorithm[Nagle's]++ or the small package problem
 
 If a big 40ms or so occasional delay is seen in operations against HBase, try the Nagles' setting.
 For example, see the user mailing list thread,
