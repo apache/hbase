@@ -97,6 +97,8 @@ message BackupInfo {
   optional uint64 total_bytes_copied = 15;
   optional bool no_checksum_verify = 16;
   map<string, RSTimestampMap> incr_timestamp_map = 17;
+  optional bool continuous_backup_enabled = 18;
+  optional uint64 incr_committed_wal_ts = 19;
 
   message RSTimestampMap {
     map<string, uint64> rs_timestamp = 1;
