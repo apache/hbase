@@ -457,8 +457,10 @@ public final class BackupSystemTable implements Closeable {
           String path = null;
           String region = null;
           byte[] row = null;
+          long timestamp = 0L;
           for (Cell cell : res.listCells()) {
             row = CellUtil.cloneRow(cell);
+            timestamp = cell.getTimestamp();
             String rowStr = Bytes.toString(row);
             region = BackupSystemTable.getRegionNameFromOrigBulkLoadRow(rowStr);
             if (
@@ -473,7 +475,7 @@ public final class BackupSystemTable implements Closeable {
               path = Bytes.toString(CellUtil.cloneValue(cell));
             }
           }
-          result.add(new BulkLoad(table, region, fam, path, row));
+          result.add(new BulkLoad(table, region, fam, path, row, timestamp));
           LOG.debug("found orig " + path + " for " + fam + " of table " + region);
         }
       }
