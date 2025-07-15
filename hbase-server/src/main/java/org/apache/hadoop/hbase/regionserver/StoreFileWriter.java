@@ -255,6 +255,14 @@ public class StoreFileWriter implements CellSink, ShipperListener {
     }
   }
 
+  public void appendCustomCellTimestampsToMetadata(TimeRangeTracker timeRangeTracker)
+    throws IOException {
+    liveFileWriter.appendCustomCellTimestampsToMetadata(timeRangeTracker);
+    if (historicalFileWriter != null) {
+      historicalFileWriter.appendCustomCellTimestampsToMetadata(timeRangeTracker);
+    }
+  }
+
   @Override
   public void beforeShipped() throws IOException {
     liveFileWriter.beforeShipped();
@@ -662,6 +670,11 @@ public class StoreFileWriter implements CellSink, ShipperListener {
      */
     private void appendTrackedTimestampsToMetadata() throws IOException {
       writer.appendTrackedTimestampsToMetadata();
+    }
+
+    public void appendCustomCellTimestampsToMetadata(TimeRangeTracker timeRangeTracker)
+      throws IOException {
+      writer.appendCustomCellTimestampsToMetadata(timeRangeTracker);
     }
 
     private void appendGeneralBloomfilter(final Cell cell) throws IOException {

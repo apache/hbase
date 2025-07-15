@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
+import java.util.function.Function;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -33,11 +34,13 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class DateTieredMultiFileWriter extends AbstractMultiFileWriter {
 
-  private final NavigableMap<Long, StoreFileWriter> lowerBoundary2Writer = new TreeMap<>();
+  protected final NavigableMap<Long, StoreFileWriter> lowerBoundary2Writer = new TreeMap<>();
 
   private final boolean needEmptyFile;
 
   private final Map<Long, String> lowerBoundariesPolicies;
+
+  protected Function<Cell, Long> tieringFunction;
 
   /**
    * @param lowerBoundariesPolicies each window to storage policy map.
@@ -46,16 +49,29 @@ public class DateTieredMultiFileWriter extends AbstractMultiFileWriter {
    */
   public DateTieredMultiFileWriter(List<Long> lowerBoundaries,
     Map<Long, String> lowerBoundariesPolicies, boolean needEmptyFile) {
+    this(lowerBoundaries, lowerBoundariesPolicies, needEmptyFile, c -> c.getTimestamp());
+  }
+
+  /**
+   * @param lowerBoundariesPolicies each window to storage policy map.
+   * @param needEmptyFile           whether need to create an empty store file if we haven't written
+   *                                out anything.
+   */
+  public DateTieredMultiFileWriter(List<Long> lowerBoundaries,
+    Map<Long, String> lowerBoundariesPolicies, boolean needEmptyFile,
+    Function<Cell, Long> tieringFunction) {
     for (Long lowerBoundary : lowerBoundaries) {
       lowerBoundary2Writer.put(lowerBoundary, null);
     }
     this.needEmptyFile = needEmptyFile;
     this.lowerBoundariesPolicies = lowerBoundariesPolicies;
+    this.tieringFunction = tieringFunction;
   }
 
   @Override
   public void append(Cell cell) throws IOException {
-    Map.Entry<Long, StoreFileWriter> entry = lowerBoundary2Writer.floorEntry(cell.getTimestamp());
+    Map.Entry<Long, StoreFileWriter> entry =
+      lowerBoundary2Writer.floorEntry(tieringFunction.apply(cell));
     StoreFileWriter writer = entry.getValue();
     if (writer == null) {
       String lowerBoundaryStoragePolicy = lowerBoundariesPolicies.get(entry.getKey());
