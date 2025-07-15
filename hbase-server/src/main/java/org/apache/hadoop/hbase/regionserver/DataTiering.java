@@ -17,21 +17,13 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.hadoop.hbase.io.hfile.HFileInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 
-@InterfaceAudience.Public
-public enum DataTieringType {
-  NONE(null),
-  TIME_RANGE(new CellTSTiering()),
-  CUSTOM(new CustomTiering());
+@InterfaceAudience.Private
+public interface DataTiering {
+  long getTimestamp(HStoreFile hFile);
 
-  private final DataTiering instance;
+  long getTimestamp(HFileInfo hFileInfo);
 
-  DataTieringType(DataTiering instance) {
-    this.instance = instance;
-  }
-
-  public DataTiering getInstance() {
-    return instance;
-  }
 }

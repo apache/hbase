@@ -268,6 +268,10 @@ public class TestBytesReadFromFs {
 
     CacheConfig cacheConfig = new CacheConfig(conf);
     HFile.Reader reader = new HFilePreadReader(readerContext, hfile, cacheConfig, conf);
+    // Since HBASE-28466, we call fileInfo.initMetaAndIndex inside HFilePreadReader,
+    // which reads some blocks and increment the counters, so we need to reset it here.
+    ThreadLocalServerSideScanMetrics.getBytesReadFromFsAndReset();
+    ThreadLocalServerSideScanMetrics.getBlockReadOpsCountAndReset();
     HFileBlock.FSReader blockReader = reader.getUncachedBlockReader();
 
     // Create iterator for reading root index block
