@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.backup.impl;
 
-import static java.awt.SystemColor.info;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONF_CONTINUOUS_BACKUP_PITR_WINDOW_DAYS;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONF_CONTINUOUS_BACKUP_WAL_DIR;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.DEFAULT_CONTINUOUS_BACKUP_PITR_WINDOW_DAYS;
@@ -252,7 +251,8 @@ public abstract class AbstractPitrRestoreHandler {
             return backup;
           }
         } catch (IOException e) {
-          LOG.warn("Exception occurred while testing the backup : {} for restore ", info, e);
+          LOG.warn("Exception occurred while testing the backup : {} for restore ",
+            backup.getBackupId(), e);
         }
       }
     }
