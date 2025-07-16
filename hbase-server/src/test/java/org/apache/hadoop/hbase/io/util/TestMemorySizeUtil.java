@@ -56,6 +56,22 @@ public class TestMemorySizeUtil {
     conf.setFloat(MemorySizeUtil.MEMSTORE_SIZE_KEY, 0.5f);
     assertThrows(RuntimeException.class,
       () -> MemorySizeUtil.validateRegionServerHeapMemoryAllocation(conf));
+
+    // when free heap min size is set to 0, it should not throw an exception
+    conf.setFloat(MemorySizeUtil.MEMSTORE_SIZE_KEY, 0.5f);
+    conf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0.5f);
+    conf.setLong(MemorySizeUtil.HBASE_REGION_SERVER_FREE_HEAP_MIN_MEMORY_SIZE_KEY, 0L);
+    MemorySizeUtil.validateRegionServerHeapMemoryAllocation(conf);
+
+    // when free heap min size is set to a negative value, it should be regarded as default value
+    conf.setLong(MemorySizeUtil.HBASE_REGION_SERVER_FREE_HEAP_MIN_MEMORY_SIZE_KEY, -1024L);
+    conf.setFloat(MemorySizeUtil.MEMSTORE_SIZE_KEY, 0.4f);
+    conf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0.4f);
+    MemorySizeUtil.validateRegionServerHeapMemoryAllocation(conf);
+
+    conf.setFloat(MemorySizeUtil.MEMSTORE_SIZE_KEY, 0.41f);
+    assertThrows(RuntimeException.class,
+      () -> MemorySizeUtil.validateRegionServerHeapMemoryAllocation(conf));
   }
 
   @Test
