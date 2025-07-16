@@ -93,7 +93,6 @@ public class ProcedureWALPerformanceEvaluation
         "Starting new log : " + store.getActiveLogs().get(store.getActiveLogs().size() - 1));
     }
   }
-
   ///////////////////////////////
   // HELPER CLASSES
   ///////////////////////////////

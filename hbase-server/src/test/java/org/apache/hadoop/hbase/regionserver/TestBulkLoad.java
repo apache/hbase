@@ -67,18 +67,18 @@ public class TestBulkLoad extends TestBulkloadBase {
     storeFileNames.add(storeFileName);
     when(log.appendMarker(any(), any(),
       argThat(bulkLogWalEdit(WALEdit.BULK_LOAD, tableName.toBytes(), familyName, storeFileNames))))
-      .thenAnswer(new Answer() {
-        @Override
-        public Object answer(InvocationOnMock invocation) {
-          WALKeyImpl walKey = invocation.getArgument(1);
-          MultiVersionConcurrencyControl mvcc = walKey.getMvcc();
-          if (mvcc != null) {
-            MultiVersionConcurrencyControl.WriteEntry we = mvcc.begin();
-            walKey.setWriteEntry(we);
-          }
-          return 01L;
-        };
-      });
+        .thenAnswer(new Answer() {
+          @Override
+          public Object answer(InvocationOnMock invocation) {
+            WALKeyImpl walKey = invocation.getArgument(1);
+            MultiVersionConcurrencyControl mvcc = walKey.getMvcc();
+            if (mvcc != null) {
+              MultiVersionConcurrencyControl.WriteEntry we = mvcc.begin();
+              walKey.setWriteEntry(we);
+            }
+            return 01L;
+          };
+        });
     testRegionWithFamiliesAndSpecifiedTableName(tableName, family1).bulkLoadHFiles(familyPaths,
       false, null);
     verify(log).sync(anyLong());

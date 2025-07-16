@@ -144,7 +144,7 @@ public class TestSimpleRegionNormalizer {
     setupMocksForNormalizer(regionSizes, regionInfos);
     when(
       masterServices.getAssignmentManager().getRegionStates().getRegionState(any(RegionInfo.class)))
-      .thenReturn(RegionState.createForTesting(null, state));
+        .thenReturn(RegionState.createForTesting(null, state));
     assertThat(normalizer.getMergeMinRegionCount(), greaterThanOrEqualTo(regionInfos.size()));
 
     List<NormalizationPlan> plans = normalizer.computePlansForTable(tableDescriptor);
@@ -680,7 +680,7 @@ public class TestSimpleRegionNormalizer {
       .thenReturn(sn);
     when(
       masterServices.getAssignmentManager().getRegionStates().getRegionState(any(RegionInfo.class)))
-      .thenReturn(RegionState.createForTesting(null, RegionState.State.OPEN));
+        .thenReturn(RegionState.createForTesting(null, RegionState.State.OPEN));
 
     for (Map.Entry<byte[], Integer> region : regionSizes.entrySet()) {
       RegionMetrics regionLoad = Mockito.mock(RegionMetrics.class);

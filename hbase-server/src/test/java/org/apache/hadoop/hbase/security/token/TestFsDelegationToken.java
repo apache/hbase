@@ -74,7 +74,7 @@ public class TestFsDelegationToken {
       .thenReturn(webhdfsToken);
     when(
       user.getToken(SWEBHDFS_TOKEN_KIND.toString(), swebHdfsFileSystem.getCanonicalServiceName()))
-      .thenReturn(swebhdfsToken);
+        .thenReturn(swebhdfsToken);
     when(hdfsToken.getKind()).thenReturn(new Text("HDFS_DELEGATION_TOKEN"));
     when(webhdfsToken.getKind()).thenReturn(WEBHDFS_TOKEN_KIND);
     when(swebhdfsToken.getKind()).thenReturn(SWEBHDFS_TOKEN_KIND);

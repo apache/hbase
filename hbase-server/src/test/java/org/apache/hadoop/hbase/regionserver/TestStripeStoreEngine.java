@@ -81,7 +81,7 @@ public class TestStripeStoreEngine {
     se.setCompactorOverride(mockCompactor);
     when(
       mockCompactor.compact(any(), anyInt(), anyLong(), any(), any(), any(), any(), any(), any()))
-      .thenReturn(new ArrayList<>());
+        .thenReturn(new ArrayList<>());
 
     // Produce 3 L0 files.
     HStoreFile sf = createFile();

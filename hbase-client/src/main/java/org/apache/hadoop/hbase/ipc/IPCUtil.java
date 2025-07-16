@@ -202,7 +202,7 @@ class IPCUtil {
       // connection refused; include the host:port in the error
       return (IOException) new ConnectException(
         "Call to " + getCallTarget(addr, regionInfo) + " failed on connection exception: " + error)
-        .initCause(error);
+          .initCause(error);
     } else if (error instanceof SocketTimeoutException) {
       return (IOException) new SocketTimeoutException(
         "Call to " + getCallTarget(addr, regionInfo) + " failed because " + error).initCause(error);
