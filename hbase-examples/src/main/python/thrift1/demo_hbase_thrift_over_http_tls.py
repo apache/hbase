@@ -37,19 +37,19 @@ from hbase.ttypes import ColumnDescriptor
 from hbase.ttypes import Mutation
 from hbase.ttypes import IOError as HBaseIOError
 
-print "[INFO] setup connection"
+print("[INFO] setup connection")
 transport = THttpClient.THttpClient("https://{0}:{1}".format(sys.argv[1], 9090))
 client = Hbase.Client(TBinaryProtocol.TBinaryProtocol(transport))
 
 table='test:thrift_proxy_demo'
 
-print "[INFO] start client"
+print("[INFO] start client")
 transport.open()
 
-print "[INFO] list the current tables"
-print client.getTableNames()
+print("[INFO] list the current tables")
+print(client.getTableNames())
 
-print "[INFO] create a table, place some data"
+print("[INFO] create a table, place some data")
 client.createTable(table, [ColumnDescriptor(name ='family1:')])
 client.mutateRow(table, 'row1', [Mutation(column = 'family1:cq1', value = 'foo'), Mutation(column = 'family1:cq2', value = 'foo')], {})
 client.mutateRow(table, 'row2', [Mutation(column = 'family1:cq1', value = 'bar'), Mutation(column = 'family1:cq2', value = 'bar')], {})
@@ -57,15 +57,15 @@ client.mutateRow(table, 'row3', [Mutation(column = 'family1:cq1', value = 'foo')
 client.mutateRow(table, 'row4', [Mutation(column = 'family1:cq1', value = 'bar'), Mutation(column = 'family1:cq2', value = 'bar')], {})
 
 
-print "[INFO] scan"
+print("[INFO] scan")
 scan_id = client.scannerOpen(table, 'row1', [], {})
 for row in client.scannerGetList(scan_id, 25):
-  print row
+  print(row)
 client.scannerClose(scan_id)
-print "[INFO] get"
+print("[INFO] get")
 for row in client.getRow(table, 'row3', {}):
-  print row
+  print(row)
 
-print "[INFO] clean up"
+print("[INFO] clean up")
 client.disableTable(table)
 client.deleteTable(table)
