@@ -339,6 +339,20 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
       bc = new BufferChain(responseBufs);
     } catch (IOException e) {
       RpcServer.LOG.warn("Exception while creating response " + e);
+      try {
+        ResponseHeader.Builder headerBuilder = ResponseHeader.newBuilder();
+        headerBuilder.setCallId(this.id);
+        String responseErrorMsg = "Failed to create response due to: " + e.getMessage();
+        setExceptionResponse(e, responseErrorMsg, headerBuilder);
+
+        Message header = headerBuilder.build();
+        ByteBuffer headerBuf = createHeaderAndMessageBytes(null, header, 0, null);
+        bc = new BufferChain(new ByteBuffer[] { headerBuf });
+        this.isError = true;
+      } catch (IOException e2) {
+        RpcServer.LOG.error("Failed to create error response for client, connection may be dropped",
+          e2);
+      }
     }
     this.response = bc;
     // Once a response message is created and set to this.response, this Call can be treated as
