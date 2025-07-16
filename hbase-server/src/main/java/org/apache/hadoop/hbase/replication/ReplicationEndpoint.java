@@ -291,4 +291,22 @@ public interface ReplicationEndpoint extends ReplicationPeerConfigListener {
    * @throws IllegalStateException if this service's state isn't FAILED.
    */
   Throwable failureCause();
+
+  /**
+   * Defines the behavior when the replication source encounters an empty entry batch.
+   * <p>
+   * By default, this method returns {@link EmptyEntriesPolicy#COMMIT}, meaning the replication
+   * source can safely consider the WAL position as committed and move on.
+   * </p>
+   * <p>
+   * However, certain endpoints like backup or asynchronous S3 writers may delay persistence (e.g.,
+   * writing to temporary files or buffers). In those cases, returning
+   * {@link EmptyEntriesPolicy#SUBMIT} avoids incorrectly advancing WAL position and risking data
+   * loss.
+   * </p>
+   * @return the {@link EmptyEntriesPolicy} to apply for empty entry batches.
+   */
+  default EmptyEntriesPolicy getEmptyEntriesPolicy() {
+    return EmptyEntriesPolicy.COMMIT;
+  }
 }

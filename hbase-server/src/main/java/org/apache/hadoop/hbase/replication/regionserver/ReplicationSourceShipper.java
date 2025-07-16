@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.replication.regionserver;
 import static org.apache.hadoop.hbase.replication.ReplicationUtils.getAdaptiveTimeout;
 import static org.apache.hadoop.hbase.replication.ReplicationUtils.sleepForRetries;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
@@ -27,6 +28,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.replication.EmptyEntriesPolicy;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationResult;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -150,13 +152,25 @@ public class ReplicationSourceShipper extends Thread {
   }
 
   /**
-   * Do the shipping logic
+   * Do the shipping logic.
    */
-  private void shipEdits(WALEntryBatch entryBatch) {
+  @RestrictedApi(
+      explanation = "Package-private for test visibility only. Do not use outside tests.",
+      link = "",
+      allowedOnPath = "(.*/src/test/.*|.*/org/apache/hadoop/hbase/replication/regionserver/ReplicationSourceShipper.java)")
+  void shipEdits(WALEntryBatch entryBatch) {
     List<Entry> entries = entryBatch.getWalEntries();
     int sleepMultiplier = 0;
     if (entries.isEmpty()) {
-      updateLogPosition(entryBatch, ReplicationResult.COMMITTED);
+      /*
+       * Delegate to the endpoint to decide how to treat empty entry batches. In most replication
+       * flows, receiving an empty entry batch means that everything so far has been successfully
+       * replicated and committed — so it's safe to mark the WAL position as committed (COMMIT).
+       * However, some endpoints (e.g., asynchronous S3 backups) may buffer writes and delay actual
+       * persistence. In such cases, we must avoid committing the WAL position prematurely.
+       */
+      final ReplicationResult result = getReplicationResult();
+      updateLogPosition(entryBatch, result);
       return;
     }
     int currentSize = (int) entryBatch.getHeapSize();
@@ -232,6 +246,13 @@ public class ReplicationSourceShipper extends Thread {
     }
   }
 
+  private ReplicationResult getReplicationResult() {
+    EmptyEntriesPolicy policy = source.getReplicationEndpoint().getEmptyEntriesPolicy();
+    return (policy == EmptyEntriesPolicy.COMMIT)
+      ? ReplicationResult.COMMITTED
+      : ReplicationResult.SUBMITTED;
+  }
+
   private void cleanUpHFileRefs(WALEdit edit) throws IOException {
     String peerId = source.getPeerId();
     if (peerId.contains("-")) {
@@ -256,7 +277,11 @@ public class ReplicationSourceShipper extends Thread {
     }
   }
 
-  private boolean updateLogPosition(WALEntryBatch batch, ReplicationResult replicated) {
+  @RestrictedApi(
+      explanation = "Package-private for test visibility only. Do not use outside tests.",
+      link = "",
+      allowedOnPath = "(.*/src/test/.*|.*/org/apache/hadoop/hbase/replication/regionserver/ReplicationSourceShipper.java)")
+  boolean updateLogPosition(WALEntryBatch batch, ReplicationResult replicated) {
     boolean updated = false;
     // if end of file is true, then the logPositionAndCleanOldLogs method will remove the file
     // record on zk, so let's call it. The last wal position maybe zero if end of file is true and
