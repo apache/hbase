@@ -1264,7 +1264,7 @@ idea on the size you need by surveying RegionServer UIs; you'll see index block 
 the top of the webpage).
 
 [[nagles]]
-==== ++link:http://en.wikipedia.org/wiki/Nagle's_algorithm[Nagle's]++ or the small package problem
+==== link:http://en.wikipedia.org/wiki/Nagle%27s_algorithm[Nagle's] or the small package problem
 
 If a big 40ms or so occasional delay is seen in operations against HBase, try the Nagles' setting.
 For example, see the user mailing list thread,
