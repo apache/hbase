@@ -100,6 +100,14 @@ public interface BackupRestoreConstants {
   String OPTION_WAL_LOCATION_RESOLVER_DESC =
     "WAL file location resolver class for rack-aware incremental backup";
 
+  String OPTION_HFILE_CUSTOM_GROUPER = "hfile-custom-grouper";
+  String OPTION_HFILE_CUSTOM_GROUPER_DESC =
+    "HFile custom grouper class for rack-aware bulk loading during incremental backup";
+
+  String OPTION_HFILE_LOCATION_RESOLVER = "hfile-location-resolver";
+  String OPTION_HFILE_LOCATION_RESOLVER_DESC =
+    "HFile location resolver class for rack-aware bulk loading during incremental backup";
+
   String JOB_NAME_CONF_KEY = "mapreduce.job.name";
 
   String BACKUP_CONFIG_STRING =
