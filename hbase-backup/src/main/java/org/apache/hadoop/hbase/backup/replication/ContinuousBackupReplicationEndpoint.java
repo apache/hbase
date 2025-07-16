@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.io.asyncfs.monitor.StreamSlowMonitor;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.replication.BaseReplicationEndpoint;
+import org.apache.hadoop.hbase.replication.EmptyEntriesPolicy;
 import org.apache.hadoop.hbase.replication.ReplicationResult;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceInterface;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -203,6 +204,14 @@ public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint
     LOG.info("{} ContinuousBackupReplicationEndpoint started successfully.",
       Utils.logPeerId(peerId));
     notifyStarted();
+  }
+
+  @Override
+  public EmptyEntriesPolicy getEmptyEntriesPolicy() {
+    // Since this endpoint writes to S3 asynchronously, an empty entry batch
+    // does not guarantee that all previously submitted entries were persisted.
+    // Hence, avoid committing the WAL position.
+    return EmptyEntriesPolicy.SUBMIT;
   }
 
   @Override
