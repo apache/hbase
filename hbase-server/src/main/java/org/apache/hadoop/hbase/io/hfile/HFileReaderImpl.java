@@ -1133,6 +1133,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
             validateBlockType(cachedBlock, expectedBlockType);
           } catch (IOException e) {
             returnAndEvictBlock(cache, cacheKey, cachedBlock);
+            cachedBlock = null;
             throw e;
           }
 
