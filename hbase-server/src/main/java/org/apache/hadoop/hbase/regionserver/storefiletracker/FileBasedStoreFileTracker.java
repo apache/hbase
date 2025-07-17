@@ -29,6 +29,7 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreContext;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
@@ -175,5 +176,17 @@ class FileBasedStoreFileTracker extends StoreFileTrackerBase {
         LOG.trace("Set store files in store file list file: " + files);
       }
     }
+  }
+
+  @Override
+  public void removeStoreFiles(List<HStoreFile> storeFiles) throws IOException {
+    List<HStoreFile> storeFilesToBeArchived = new ArrayList<HStoreFile>(storeFiles.size());
+    for (HStoreFile storeFile : storeFiles) {
+      StoreFileInfo info = storeFile.getFileInfo();
+      if (!info.isReference() && !info.isLink()) {
+        storeFilesToBeArchived.add(storeFile);
+      }
+    }
+    archiveStoreFiles(storeFilesToBeArchived);
   }
 }
