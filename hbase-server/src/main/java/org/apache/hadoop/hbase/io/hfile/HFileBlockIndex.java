@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.ByteBufferKeyOnlyKeyValue;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KeyOnlyKeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -561,7 +562,8 @@ public class HFileBlockIndex {
    * array of offsets to the entries within the block. This allows us to do binary search for the
    * entry corresponding to the given key without having to deserialize the block.
    */
-  static abstract class BlockIndexReader implements HeapSize {
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
+  public static abstract class BlockIndexReader implements HeapSize {
 
     protected long[] blockOffsets;
     protected int[] blockDataSizes;
@@ -808,7 +810,8 @@ public class HFileBlockIndex {
      * @return the index position where the given key was found, otherwise return -1 in the case the
      *         given key is before the first key.
      */
-    static int locateNonRootIndexEntry(ByteBuff nonRootBlock, Cell key, CellComparator comparator) {
+    public static int locateNonRootIndexEntry(ByteBuff nonRootBlock, Cell key,
+      CellComparator comparator) {
       int entryIndex = binarySearchNonRootIndex(key, nonRootBlock, comparator);
 
       if (entryIndex != -1) {

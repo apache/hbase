@@ -19,9 +19,11 @@ package org.apache.hadoop.hbase.regionserver.handler;
 
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
+import org.apache.hadoop.hbase.monitoring.ThreadLocalServerSideScanMetrics;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -39,6 +41,17 @@ public class ParallelSeekHandler extends EventHandler {
   private CountDownLatch latch;
   private Throwable err = null;
 
+  // Flag to enable/disable scan metrics collection and thread-local counters for capturing scan
+  // performance during parallel store file seeking.
+  // These aggregate metrics from worker threads back to the main scan thread.
+  private final boolean isScanMetricsEnabled;
+  // Thread-local counter for bytes read from FS.
+  private final AtomicLong bytesReadFromFs;
+  // Thread-local counter for bytes read from BlockCache.
+  private final AtomicLong bytesReadFromBlockCache;
+  // Thread-local counter for block read operations count.
+  private final AtomicLong blockReadOpsCount;
+
   public ParallelSeekHandler(KeyValueScanner scanner, Cell keyValue, long readPoint,
     CountDownLatch latch) {
     super(null, EventType.RS_PARALLEL_SEEK);
@@ -46,12 +59,35 @@ public class ParallelSeekHandler extends EventHandler {
     this.keyValue = keyValue;
     this.readPoint = readPoint;
     this.latch = latch;
+    this.isScanMetricsEnabled = ThreadLocalServerSideScanMetrics.isScanMetricsEnabled();
+    this.bytesReadFromFs = ThreadLocalServerSideScanMetrics.getBytesReadFromFsCounter();
+    this.bytesReadFromBlockCache =
+      ThreadLocalServerSideScanMetrics.getBytesReadFromBlockCacheCounter();
+    this.blockReadOpsCount = ThreadLocalServerSideScanMetrics.getBlockReadOpsCountCounter();
   }
 
   @Override
   public void process() {
     try {
+      ThreadLocalServerSideScanMetrics.setScanMetricsEnabled(isScanMetricsEnabled);
+      if (isScanMetricsEnabled) {
+        ThreadLocalServerSideScanMetrics.reset();
+      }
       scanner.seek(keyValue);
+      if (isScanMetricsEnabled) {
+        long metricValue = ThreadLocalServerSideScanMetrics.getBytesReadFromFsAndReset();
+        if (metricValue > 0) {
+          bytesReadFromFs.addAndGet(metricValue);
+        }
+        metricValue = ThreadLocalServerSideScanMetrics.getBytesReadFromBlockCacheAndReset();
+        if (metricValue > 0) {
+          bytesReadFromBlockCache.addAndGet(metricValue);
+        }
+        metricValue = ThreadLocalServerSideScanMetrics.getBlockReadOpsCountAndReset();
+        if (metricValue > 0) {
+          blockReadOpsCount.addAndGet(metricValue);
+        }
+      }
     } catch (IOException e) {
       LOG.error("", e);
       setErr(e);

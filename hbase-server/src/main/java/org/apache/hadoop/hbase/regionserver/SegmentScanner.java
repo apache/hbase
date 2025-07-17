@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.monitoring.ThreadLocalServerSideScanMetrics;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -54,6 +55,7 @@ public class SegmentScanner implements KeyValueScanner {
 
   // flag to indicate if this scanner is closed
   protected boolean closed = false;
+  private boolean isScanMetricsEnabled = false;
 
   /**
    * Scanners are ordered from 0 (oldest) to newest in increasing order.
@@ -66,6 +68,8 @@ public class SegmentScanner implements KeyValueScanner {
     iter = segment.iterator();
     // the initialization of the current is required for working with heap of SegmentScanners
     updateCurrent();
+    // Enable scan metrics for tracking bytes read after initialization of current
+    this.isScanMetricsEnabled = ThreadLocalServerSideScanMetrics.isScanMetricsEnabled();
     if (current == null) {
       // nothing to fetch from this scanner
       close();
@@ -335,10 +339,15 @@ public class SegmentScanner implements KeyValueScanner {
    */
   protected void updateCurrent() {
     Cell next = null;
+    long totalBytesRead = 0;
 
     try {
       while (iter.hasNext()) {
         next = iter.next();
+        if (isScanMetricsEnabled) {
+          // Batch collect bytes to reduce method call overhead
+          totalBytesRead += Segment.getCellLength(next);
+        }
         if (next.getSequenceId() <= this.readPoint) {
           current = next;
           return;// skip irrelevant versions
@@ -352,6 +361,10 @@ public class SegmentScanner implements KeyValueScanner {
 
       current = null; // nothing found
     } finally {
+      // Add accumulated bytes before returning
+      if (totalBytesRead > 0) {
+        ThreadLocalServerSideScanMetrics.addBytesReadFromMemstore(totalBytesRead);
+      }
       if (next != null) {
         // in all cases, remember the last KV we iterated to, needed for reseek()
         last = next;
