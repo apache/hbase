@@ -103,7 +103,7 @@ def demo_client(host, port, is_framed_transport):
 
   cols = client.getColumnDescriptors(t)
   print("column families in %s" %(t))
-  for col_name in list(cols.keys()):
+  for col_name in cols.keys():
     col = cols[col_name]
     print("  column: %s, maxVer: %d" % (col.name, col.maxVersions))
 
@@ -190,7 +190,7 @@ def demo_client(host, port, is_framed_transport):
       raise Exception("shouldn't get here!")
 
   columnNames = []
-  for (col, desc) in list(client.getColumnDescriptors(t).items()):
+  for (col, desc) in client.getColumnDescriptors(t).items():
     print("column with name: "+desc.name)
     print(desc)
     columnNames.append(desc.name+":")

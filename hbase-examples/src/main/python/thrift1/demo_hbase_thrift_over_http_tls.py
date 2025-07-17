@@ -38,7 +38,7 @@ from hbase.ttypes import Mutation
 from hbase.ttypes import IOError as HBaseIOError
 
 print("[INFO] setup connection")
-transport = THttpClient.THttpClient("https://{0}:{1}".format(sys.argv[1], 9090))
+transport = THttpClient.THttpClient(f"https://{sys.argv[1]}:9090")
 client = Hbase.Client(TBinaryProtocol.TBinaryProtocol(transport))
 
 table='test:thrift_proxy_demo'
