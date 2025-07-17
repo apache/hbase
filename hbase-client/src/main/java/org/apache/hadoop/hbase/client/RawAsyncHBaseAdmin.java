@@ -263,6 +263,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.Recommissi
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RecommissionRegionServerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RestoreSnapshotRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RestoreSnapshotResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RefreshHfilesRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RefreshHfilesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCatalogScanRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCatalogScanResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCleanerChoreRequest;
@@ -4556,5 +4558,48 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
           (s, c, req, done) -> s.getCachedFilesList(c, req, done),
           resp -> resp.getCachedFilesList()))
       .serverName(serverName).call();
+  }
+
+  @Override
+  public CompletableFuture<Long> refreshHFiles(final TableName tableName){
+//        System.out.println("Anuj: RawAsyncHBaseAdmin table name provided is " + tableName.getNameAsString());
+    // Request builder
+    RefreshHfilesRequest.Builder request = RefreshHfilesRequest.newBuilder();
+    request.setTableName(ProtobufUtil.toProtoTableName(tableName));
+    // Set nonce
+    // Master Caller
+    return this.<Long> newMasterCaller()
+      .action((controller, stub) -> this.<RefreshHfilesRequest, RefreshHfilesResponse, Long> call(
+        controller, stub, request.build(), MasterService.Interface::refreshHfiles, RefreshHfilesResponse::getProcId))
+      .call();
+    //    return CompletableFuture.completedFuture(null);
+  }
+
+  @Override
+  public CompletableFuture<Long> refreshHFiles(final String namespace){
+    // Request builder
+    RefreshHfilesRequest.Builder request = RefreshHfilesRequest.newBuilder();
+    request.setNamespace(namespace);
+    // Set nonce
+    // Master Caller
+    return this.<Long> newMasterCaller()
+      .action((controller, stub) -> this.<RefreshHfilesRequest, RefreshHfilesResponse, Long> call(
+        controller, stub, request.build(), MasterService.Interface::refreshHfiles, RefreshHfilesResponse::getProcId))
+      .call();
+    //    return CompletableFuture.completedFuture(null);
+  }
+
+  @Override
+  public CompletableFuture<Long> refreshHFiles(){
+    // Request builder
+    RefreshHfilesRequest.Builder request = RefreshHfilesRequest.newBuilder();
+    // Set nonce
+    request.setNonceGroup(ng.getNonceGroup()).setNonce(ng.newNonce());
+    // Master Caller
+    return this.<Long> newMasterCaller()
+      .action((controller, stub) -> this.<RefreshHfilesRequest, RefreshHfilesResponse, Long> call(
+        controller, stub, request.build(), MasterService.Interface::refreshHfiles, RefreshHfilesResponse::getProcId))
+      .call();
+    //    return CompletableFuture.completedFuture(null);
   }
 }

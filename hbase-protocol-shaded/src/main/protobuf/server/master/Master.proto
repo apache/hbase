@@ -796,6 +796,17 @@ message ModifyColumnStoreFileTrackerResponse {
   optional uint64 proc_id = 1;
 }
 
+message RefreshHfilesRequest {
+  optional TableName table_Name = 1;
+  optional string namespace = 2;
+  optional uint64 nonce_group = 3 [default = 0];
+  optional uint64 nonce = 4 [default = 0];
+}
+
+message RefreshHfilesResponse {
+  optional uint64 proc_id = 1;
+}
+
 message FlushMasterStoreRequest {}
 message FlushMasterStoreResponse {}
 
@@ -1270,6 +1281,9 @@ service MasterService {
 
   rpc FlushTable(FlushTableRequest)
     returns(FlushTableResponse);
+
+  rpc RefreshHfiles(RefreshHfilesRequest)
+    returns(RefreshHfilesResponse);
 }
 
 // HBCK Service definitions.

@@ -77,6 +77,7 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil.NonceProcedureRunnable;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
+import org.apache.hadoop.hbase.master.procedure.RefreshHfilesProcedure;
 import org.apache.hadoop.hbase.master.replication.AbstractPeerNoLockProcedure;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.namequeues.BalancerDecisionDetails;
@@ -188,6 +189,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavor
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavoredNodesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WarmupRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WarmupRegionResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RefreshRegionHFilesRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RefreshRegionHFilesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionStoreSequenceIds;
@@ -3520,6 +3523,13 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
   }
 
   @Override
+  public RefreshRegionHFilesResponse refreshRegionHFiles(RpcController controller,
+    RefreshRegionHFilesRequest request)
+    throws ServiceException {
+    throw new ServiceException(new DoNotRetryIOException("Unsupported method on master"));
+  }
+
+  @Override
   public CloseRegionResponse closeRegion(RpcController controller, CloseRegionRequest request)
     throws ServiceException {
     throw new ServiceException(new DoNotRetryIOException("Unsupported method on master"));
@@ -3660,5 +3670,14 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
+  }
+
+  @Override
+  public MasterProtos.RefreshHfilesResponse refreshHfiles(RpcController controller,
+    MasterProtos.RefreshHfilesRequest request) throws ServiceException {
+    //TODO verify if no parameter is provided
+    //TODO Call RefreshHfilesProcedure functions
+
+    return MasterProtos.RefreshHfilesResponse.newBuilder().setProcId(123).build();
   }
 }
