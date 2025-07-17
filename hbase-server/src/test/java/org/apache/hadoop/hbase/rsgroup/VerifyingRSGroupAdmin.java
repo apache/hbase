@@ -996,17 +996,17 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   }
 
   @Override
-  public void refreshHFiles(final TableName tableName) throws IOException {
-    admin.refreshHFiles(tableName);
+  public Long refreshHFiles(final TableName tableName) throws IOException {
+    return admin.refreshHFiles(tableName);
   }
 
   @Override
-  public void refreshHFiles(final String namespace) throws IOException {
-    admin.refreshHFiles(namespace);
+  public Long refreshHFiles(final String namespace) throws IOException {
+    return admin.refreshHFiles(namespace);
   }
 
   @Override
-  public void refreshHFiles() throws IOException {
-    admin.refreshHFiles();
+  public Long refreshHFiles() throws IOException {
+    return admin.refreshHFiles();
   }
 }

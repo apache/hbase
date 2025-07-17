@@ -4575,40 +4575,45 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
 
   @Override
-  public CompletableFuture<Void> refreshHFiles(final TableName tableName){
+  public CompletableFuture<Long> refreshHFiles(final TableName tableName){
+//        System.out.println("Anuj: RawAsyncHBaseAdmin table name provided is " + tableName.getNameAsString());
     // Request builder
     RefreshHfilesRequest.Builder request = RefreshHfilesRequest.newBuilder();
     request.setTableName(ProtobufUtil.toProtoTableName(tableName));
     // Set nonce
     // Master Caller
-    return this.<Void> newMasterCaller()
-      .action((controller, stub) -> this.<RefreshHfilesRequest, RefreshHfilesResponse, Void> call(
-        controller, stub, request.build(), MasterService.Interface::refreshHfiles, resp->null))
+    return this.<Long> newMasterCaller()
+      .action((controller, stub) -> this.<RefreshHfilesRequest, RefreshHfilesResponse, Long> call(
+        controller, stub, request.build(), MasterService.Interface::refreshHfiles, RefreshHfilesResponse::getProcId))
       .call();
+    //    return CompletableFuture.completedFuture(null);
   }
 
   @Override
-  public CompletableFuture<Void> refreshHFiles(final String namespace){
+  public CompletableFuture<Long> refreshHFiles(final String namespace){
     // Request builder
     RefreshHfilesRequest.Builder request = RefreshHfilesRequest.newBuilder();
     request.setNamespace(namespace);
     // Set nonce
     // Master Caller
-    return this.<Void> newMasterCaller()
-      .action((controller, stub) -> this.<RefreshHfilesRequest, RefreshHfilesResponse, Void> call(
-        controller, stub, request.build(), MasterService.Interface::refreshHfiles, resp->null))
+    return this.<Long> newMasterCaller()
+      .action((controller, stub) -> this.<RefreshHfilesRequest, RefreshHfilesResponse, Long> call(
+        controller, stub, request.build(), MasterService.Interface::refreshHfiles, RefreshHfilesResponse::getProcId))
       .call();
+    //    return CompletableFuture.completedFuture(null);
   }
 
   @Override
-  public CompletableFuture<Void> refreshHFiles(){
+  public CompletableFuture<Long> refreshHFiles(){
     // Request builder
     RefreshHfilesRequest.Builder request = RefreshHfilesRequest.newBuilder();
     // Set nonce
+    request.setNonceGroup(ng.getNonceGroup()).setNonce(ng.newNonce());
     // Master Caller
-    return this.<Void> newMasterCaller()
-      .action((controller, stub) -> this.<RefreshHfilesRequest, RefreshHfilesResponse, Void> call(
-        controller, stub, request.build(), MasterService.Interface::refreshHfiles, resp->null))
+    return this.<Long> newMasterCaller()
+      .action((controller, stub) -> this.<RefreshHfilesRequest, RefreshHfilesResponse, Long> call(
+        controller, stub, request.build(), MasterService.Interface::refreshHfiles, RefreshHfilesResponse::getProcId))
       .call();
+    //    return CompletableFuture.completedFuture(null);
   }
 }
