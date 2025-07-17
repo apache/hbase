@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 '''
   Licensed to the Apache Software Foundation (ASF) under one
   or more contributor license agreements.  See the NOTICE file
@@ -22,16 +22,17 @@ import time
 import os
 
 # Modify this import path to point to the correct location to thrift.
-thrift_path = os.path.abspath('/Users/sergey/Downloads/thrift/lib/py/build/lib.macosx-10.8-intel-2.7')
+thrift_path = os.path.abspath(
+  '/Users/sergey/Downloads/thrift/lib/py/build/lib.macosx-10.8-intel-2.7'
+)
 sys.path.append(thrift_path)
-gen_py_path = os.path.abspath('gen-py')
+gen_py_path = os.path.abspath('gen_py')
 sys.path.append(gen_py_path)
 
-from thrift import Thrift
 from thrift.transport import TSocket, TTransport
 from thrift.protocol import TBinaryProtocol
-from hbase.ttypes import TThriftServerType
-from hbase.Hbase import Client, ColumnDescriptor, Mutation
+from gen_py.hbase import ttypes
+from gen_py.hbase.Hbase import Client, ColumnDescriptor, Mutation
 
 def printVersions(row, versions):
   print("row: " + row + ", values: ", end=' ')
@@ -68,8 +69,8 @@ def demo_client(host, port, is_framed_transport):
 
   # Check Thrift Server Type
   serverType = client.getThriftServerType()
-  if serverType != TThriftServerType.ONE:
-    raise Exception("Mismatch between client and server, server type is %s" % serverType)
+  if serverType != ttypes.TThriftServerType.ONE:
+    raise RuntimeError(f"Mismatch between client and server, server type is {serverType}")
 
   t = "demo_table"
 
@@ -78,12 +79,12 @@ def demo_client(host, port, is_framed_transport):
   #
   print("scanning tables...")
   for table in client.getTableNames():
-    print("  found: %s" %(table))
+    print(f"  found: {table}")
     if table == t:
       if client.isTableEnabled(table):
-        print("    disabling table: %s"  %(t))
+        print(f"    disabling table: {t}")
         client.disableTable(table)
-      print("    deleting table: %s"  %(t))
+      print(f"    deleting table: {t}")
       client.deleteTable(table)
 
   columns = []
@@ -96,16 +97,16 @@ def demo_client(host, port, is_framed_transport):
   columns.append(col)
 
   try:
-    print("creating table: %s" %(t))
+    print(f"creating table: {t}")
     client.createTable(t, columns)
-  except AlreadyExists as ae:
+  except ttypes.AlreadyExists as ae:
     print("WARN: " + ae.message)
 
   cols = client.getColumnDescriptors(t)
-  print("column families in %s" %(t))
+  print(f"column families in {t}")
   for col_name in cols.keys():
     col = cols[col_name]
-    print("  column: %s, maxVer: %d" % (col.name, col.maxVersions))
+    print(f"  column: {col.name}, maxVer: {col.maxVersions}")
 
   dummy_attributes = {}
   #
@@ -132,7 +133,7 @@ def demo_client(host, port, is_framed_transport):
     mutations = [Mutation(column="entry:foo", value=invalid)]
     client.mutateRow(t, invalid, mutations, dummy_attributes)
   except ttypes.IOError as e:
-    print('expected exception: %s' %(e.message))
+    print(f'expected exception: {e.message}')
 
   # Run a scanner on the rows we just created
   print("Starting scanner...")
@@ -149,7 +150,7 @@ def demo_client(host, port, is_framed_transport):
   #
   for e in range(100, 0, -1):
     # format row keys as "00000" to "00100"
-    row = "%0.5d" % (e)
+    row = f"{row:05}"
 
     mutations = [Mutation(column="unused:", value="DELETE_ME")]
     client.mutateRow(t, row, mutations, dummy_attributes)
@@ -210,10 +211,8 @@ def demo_client(host, port, is_framed_transport):
 
 
 if __name__ == '__main__':
-
-  import sys
   if len(sys.argv) < 3:
-    print('usage: %s <host> <port>' % __file__)
+    print(f'usage: {__file__} <host> <port>')
     sys.exit(1)
 
   host = sys.argv[1]

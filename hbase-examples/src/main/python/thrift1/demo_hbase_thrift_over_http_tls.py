@@ -20,7 +20,7 @@
 # test thrift server over HTTP with SSL in place
 #
 # presumes thrift python lib is installed
-# presumes you have access to hbase thrift binding (i.e. you add gen-py to PYTHONPATH)
+# presumes you have access to hbase thrift binding (i.e. you add gen_py to PYTHONPATH)
 # presumes thrift proxy is running on port 9090
 # presumes thrift proxy is running over https
 # presumes access to create and use tables in a namespace 'test'
@@ -29,13 +29,11 @@
 # ./demo_hbase_thrift_over_http_tls.py host-running-thrift1.example.com
 import sys
 
-from thrift import Thrift
 from thrift.transport import THttpClient
 from thrift.protocol import TBinaryProtocol
-from hbase import Hbase
-from hbase.ttypes import ColumnDescriptor
-from hbase.ttypes import Mutation
-from hbase.ttypes import IOError as HBaseIOError
+from gen_py.hbase import Hbase
+from gen_py.hbase.ttypes import ColumnDescriptor
+from gen_py.hbase.ttypes import Mutation
 
 print("[INFO] setup connection")
 transport = THttpClient.THttpClient(f"https://{sys.argv[1]}:9090")
@@ -51,11 +49,18 @@ print(client.getTableNames())
 
 print("[INFO] create a table, place some data")
 client.createTable(table, [ColumnDescriptor(name ='family1:')])
-client.mutateRow(table, 'row1', [Mutation(column = 'family1:cq1', value = 'foo'), Mutation(column = 'family1:cq2', value = 'foo')], {})
-client.mutateRow(table, 'row2', [Mutation(column = 'family1:cq1', value = 'bar'), Mutation(column = 'family1:cq2', value = 'bar')], {})
-client.mutateRow(table, 'row3', [Mutation(column = 'family1:cq1', value = 'foo'), Mutation(column = 'family1:cq2', value = 'foo')], {})
-client.mutateRow(table, 'row4', [Mutation(column = 'family1:cq1', value = 'bar'), Mutation(column = 'family1:cq2', value = 'bar')], {})
-
+client.mutateRow(table, 'row1',
+                 [Mutation(column = 'family1:cq1', value = 'foo'),
+                  Mutation(column = 'family1:cq2', value = 'foo')], {})
+client.mutateRow(table, 'row2',
+                 [Mutation(column = 'family1:cq1', value = 'bar'),
+                  Mutation(column = 'family1:cq2', value = 'bar')], {})
+client.mutateRow(table, 'row3',
+                 [Mutation(column = 'family1:cq1', value = 'foo'),
+                  Mutation(column = 'family1:cq2', value = 'foo')], {})
+client.mutateRow(table, 'row4',
+                 [Mutation(column = 'family1:cq1', value = 'bar'),
+                  Mutation(column = 'family1:cq2', value = 'bar')], {})
 
 print("[INFO] scan")
 scan_id = client.scannerOpen(table, 'row1', [], {})
