@@ -1130,6 +1130,13 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
               compressedBlock.release();
             }
           }
+          try {
+            validateBlockType(cachedBlock, expectedBlockType);
+          } catch (IOException e) {
+            returnAndEvictBlock(cache, cacheKey, cachedBlock);
+            cachedBlock = null;
+            throw e;
+          }
 
           if (expectedDataBlockEncoding == null) {
             return cachedBlock;
