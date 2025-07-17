@@ -3721,4 +3721,14 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   public RegionReplicationBufferManager getRegionReplicationBufferManager() {
     return regionReplicationBufferManager;
   }
+
+  public void refreshRegionHFiles(Region region) {
+    try {
+      for (Store store : region.getStores()) {
+        store.refreshStoreFiles();
+      }
+    } catch(IOException ioe) {
+      LOG.warn("Exception while trying to refresh store files: ", ioe);
+    }
+  }
 }

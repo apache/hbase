@@ -246,6 +246,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.BulkLoadDescr
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.CompactionDescriptor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.FlushDescriptor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.RegionEventDescriptor;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RefreshRegionHFilesRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RefreshRegionHFilesResponse;
 
 /**
  * Implements the regionserver RPC services.
@@ -4057,4 +4059,17 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
     Pair<String, RegionScannerHolder> pair = newRegionScanner(request, region, builder);
     return new RegionScannerContext(pair.getFirst(), pair.getSecond(), quota);
   }
+
+  @Override
+  public RefreshRegionHFilesResponse refreshRegionHFiles(RpcController controller,
+    RefreshRegionHFilesRequest request)
+    throws ServiceException {
+    try {
+      this.server.refreshRegionHFiles(getRegion(request.getRegion()));
+    } catch (Exception e) {
+      throw new ServiceException(e);
+    }
+    return RefreshRegionHFilesResponse.newBuilder().build();
+  }
+
 }
