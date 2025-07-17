@@ -188,7 +188,7 @@ def demo_client(host, port, is_framed_transport):
     r = client.get(t, row, "entry:foo", dummy_attributes)
     # just to be explicit, we get lists back, if it's empty there was no matching row.
     if len(r) > 0:
-      raise Exception("shouldn't get here!")
+      raise RuntimeError("shouldn't get here!")
 
   columnNames = []
   for (col, desc) in client.getColumnDescriptors(t).items():
