@@ -17,6 +17,12 @@ Example code.
         ${HBASE_ROOT}/hbase-thrift/src/main/resources/org/apache/hadoop/hbase/thrift/Hbase.thrift
     and re-placed at the corresponding paths. You should not have to do this generally.
 
+    For Python, modules with a dash cannot be imported. Instead, you must use an underscore or no
+    dash at all. You can generate the code in a custom directory with the following:
+    mkdir gen_py
+    thrift --gen py --out gen_py \
+        ${HBASE_ROOT}/hbase-thrift/src/main/resources/org/apache/hadoop/hbase/thrift/Hbase.thrift
+
     Before you run any Thrift examples, find a running HBase Thrift server (and a running
     hbase cluster for this server to talk to -- at a minimum start a standalone instance
     by doing ./bin/start-hbase.sh). If you start one locally (bin/hbase thrift start),
