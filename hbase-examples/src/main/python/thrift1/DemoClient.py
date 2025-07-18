@@ -20,15 +20,6 @@
 import sys
 import time
 import os
-
-# Modify this import path to point to the correct location to thrift.
-thrift_path = os.path.abspath(
-  '/Users/sergey/Downloads/thrift/lib/py/build/lib.macosx-10.8-intel-2.7'
-)
-sys.path.append(thrift_path)
-gen_py_path = os.path.abspath('gen_py')
-sys.path.append(gen_py_path)
-
 from thrift.transport import TSocket, TTransport
 from thrift.protocol import TBinaryProtocol
 from gen_py.hbase import ttypes

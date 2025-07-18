@@ -44,8 +44,8 @@ Example code.
       1. Modify the import path in the file to point to {$THRIFT_HOME}/lib/rb/lib.
       2. Execute {ruby DemoClient.rb} (or {ruby DemoClient.rb <host> <port>}).
 
-    * Python: hbase-examples/src/main/python/DemoClient.py
-      1. Modify the added system path in the file to point to {$THRIFT_HOME}/lib/py/build/lib.[YOUR SYSTEM]
+    * Python: hbase-examples/src/main/python/thrift1/DemoClient.py and hbase-examples/src/main/python/thrift2/DemoClient.py
+      1. Install the thrift package to your local Python environment: pip3 install thrift
       2. Execute {python DemoClient.py <host> <port>}.
 
     * PHP: hbase-examples/src/main/php/DemoClient.php
