@@ -95,6 +95,7 @@ public class TestMetricsRegionServer {
     HELPER.assertCounter("readRequestCount", 997, serverSource);
     HELPER.assertCounter("cpRequestCount", 998, serverSource);
     HELPER.assertCounter("filteredReadRequestCount", 1997, serverSource);
+    HELPER.assertCounter("deletedReadRequestCount", 1998, serverSource);
     HELPER.assertCounter("writeRequestCount", 707, serverSource);
     HELPER.assertCounter("checkMutateFailedCount", 401, serverSource);
     HELPER.assertCounter("checkMutatePassedCount", 405, serverSource);
