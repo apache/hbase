@@ -248,11 +248,13 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
     
     // Create list for section navigation
     sectionIds = new ArrayList<>(sectionLocations.keySet());
+    // Sort by tenant prefix to ensure lexicographic order
+    sectionIds.sort((a, b) -> Bytes.compareTo(a.get(), b.get()));
     LOG.debug("Initialized {} section IDs for navigation", sectionIds.size());
   }
   
   /**
-   * Get the number of sections.
+   * Get the number of sections in this file.
    *
    * @return The number of sections in this file
    */
@@ -1122,54 +1124,12 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
    * @param targetProgress The target position as a percentage (0.0 to 1.0) within the section
    * @return A key near the target position, or empty if not found
    */
-  private Optional<ExtendedCell> findKeyAtApproximatePosition(HFileReaderImpl reader, double targetProgress) throws IOException {
-    // If target is very close to the beginning, return first key
-    if (targetProgress <= 0.1) {
-      return reader.getFirstKey();
-    }
-    
-    // If target is very close to the end, return last key
-    if (targetProgress >= 0.9) {
-      return reader.getLastKey();
-    }
-    
-    // For middle positions, try to use the section's midkey as a reasonable approximation
-    // This is a simplification - ideally we'd scan through the section to find the exact position
-    // but that would be expensive. The section midkey provides a reasonable split point.
-    Optional<ExtendedCell> midKey = reader.midKey();
-    if (midKey.isPresent()) {
-      return midKey;
-    }
-    
-    // If no midkey available, try to get a key by scanning
-    // Create a scanner and try to position it roughly
-    HFileScanner scanner = reader.getScanner(getConf(), false, false, false);
-    if (scanner.seekTo()) {
-      // For a rough approximation, if we want position > 0.5, try to advance the scanner
-      if (targetProgress > 0.5) {
-        // Try to advance roughly halfway through the data
-        // This is a heuristic - advance the scanner several times to get deeper into the section
-        int advanceSteps = (int) ((targetProgress - 0.5) * 20); // Scale to reasonable number of steps
-        for (int i = 0; i < advanceSteps && scanner.next(); i++) {
-          // Keep advancing
-        }
-      }
-      
-      ExtendedCell key = scanner.getKey();
-      if (key != null) {
-        return Optional.of(key);
-      }
-    }
-    
-    // Last resort: return first key if available
-    return reader.getFirstKey();
-  }
+
 
   /**
-   * Override mid-key calculation to find the middle key across all sections.
+   * Override mid-key calculation to find the middle key that respects tenant boundaries.
    * For single tenant files, returns the midkey from the section.
-   * For multi-tenant files, finds the key that falls approximately in the middle
-   * of the total file size to enable proper splitting.
+   * For multi-tenant files, finds the optimal tenant boundary that best balances the split.
    * 
    * @return the middle key of the file
    * @throws IOException if an error occurs
@@ -1197,10 +1157,33 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
       return midKey;
     }
     
-    // For multiple tenants, find the key at approximately the middle of the file
+    // For multiple tenants, find the optimal tenant boundary for splitting
+    // This ensures we never split within a tenant's data range
+    return findOptimalTenantBoundaryForSplit();
+  }
+
+  /**
+   * Find the optimal tenant boundary that best balances the region split.
+   * This method ensures that splits always occur at tenant boundaries, preserving
+   * tenant isolation and maintaining proper key ordering.
+   * 
+   * @return the optimal boundary key for splitting
+   * @throws IOException if an error occurs
+   */
+  private Optional<ExtendedCell> findOptimalTenantBoundaryForSplit() throws IOException {
+    // Calculate total data volume and ideal split point
     long totalFileSize = 0;
-    for (SectionMetadata metadata : sectionLocations.values()) {
+    List<TenantSectionInfo> tenantSections = new ArrayList<>();
+    
+    for (Map.Entry<ImmutableBytesWritable, SectionMetadata> entry : sectionLocations.entrySet()) {
+      SectionMetadata metadata = entry.getValue();
       totalFileSize += metadata.getSize();
+      
+      tenantSections.add(new TenantSectionInfo(
+          entry.getKey().get(),
+          metadata.getSize(),
+          totalFileSize // cumulative size up to this point
+      ));
     }
     
     if (totalFileSize == 0) {
@@ -1208,61 +1191,112 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
       return Optional.empty();
     }
     
-    long targetMiddleOffset = totalFileSize / 2;
-    long currentOffset = 0;
+    long idealSplitSize = totalFileSize / 2;
     
-    // Find the section containing the middle point
-    for (Map.Entry<ImmutableBytesWritable, SectionMetadata> entry : sectionLocations.entrySet()) {
-      SectionMetadata metadata = entry.getValue();
-      long sectionEndOffset = currentOffset + metadata.getSize();
-      
-      if (currentOffset <= targetMiddleOffset && targetMiddleOffset < sectionEndOffset) {
-        // This section contains the middle point - this is our target section
-        byte[] sectionId = entry.getKey().get();
-        SectionReader sectionReader = getSectionReader(sectionId);
-        if (sectionReader == null) {
-          throw new IOException("Unable to create section reader for target section: " + 
-                               Bytes.toStringBinary(sectionId));
-        }
-        
-        HFileReaderImpl reader = sectionReader.getReader();
-        
-        // Calculate how far into this section the middle point is
-        long offsetIntoSection = targetMiddleOffset - currentOffset;
-        long sectionSize = metadata.getSize();
-        double sectionProgress = (double) offsetIntoSection / sectionSize;
-        
-        // Find a key that's approximately at the target position within this section
-        Optional<ExtendedCell> targetKey = findKeyAtApproximatePosition(reader, sectionProgress);
-        if (targetKey.isPresent()) {
-          LOG.debug("Multi-tenant midkey from section {} (position-based key, {}% into section): {}", 
-                   Bytes.toStringBinary(sectionId), 
-                   String.format("%.1f", sectionProgress * 100),
-                   targetKey.get());
-          return targetKey;
-        }
-        
-        // Fallback to section midkey if position-based lookup fails
-        Optional<ExtendedCell> midKey = reader.midKey();
-        if (midKey.isPresent()) {
-          LOG.debug("Multi-tenant midkey from section {} (section midkey fallback, {}% into section): {}", 
-                   Bytes.toStringBinary(sectionId),
-                   String.format("%.1f", sectionProgress * 100), 
-                   midKey.get());
-          return midKey;
-        }
-        
-        // If we can't get any key from the target section, this is a failure
-        throw new IOException("Unable to get any key from target section containing midpoint: " + 
-                             Bytes.toStringBinary(sectionId));
-      }
-      
-      currentOffset = sectionEndOffset;
+    // Find the tenant boundary that best approximates the ideal split
+    TenantSectionInfo bestBoundary = findBestTenantBoundary(tenantSections, idealSplitSize);
+    
+    if (bestBoundary == null) {
+      // Fallback: use the middle tenant if we can't find an optimal boundary
+      int middleTenantIndex = tenantSections.size() / 2;
+      bestBoundary = tenantSections.get(middleTenantIndex);
+      LOG.debug("Using middle tenant as fallback boundary: {}", 
+               Bytes.toStringBinary(bestBoundary.tenantSectionId));
     }
     
-    // This should not happen if totalFileSize > 0 and sections exist
-    throw new IOException("Unable to find section containing midpoint offset " + targetMiddleOffset + 
-                         " in file with total size " + totalFileSize);
+    // Get the first key of the selected tenant section as the split point
+    // This ensures the split happens exactly at the tenant boundary
+    SectionReader sectionReader = getSectionReader(bestBoundary.tenantSectionId);
+    if (sectionReader == null) {
+      throw new IOException("Unable to create section reader for boundary tenant: " + 
+                           Bytes.toStringBinary(bestBoundary.tenantSectionId));
+    }
+    
+    HFileReaderImpl reader = sectionReader.getReader();
+    Optional<ExtendedCell> firstKey = reader.getFirstKey();
+    
+    if (firstKey.isPresent()) {
+      LOG.info("Selected tenant boundary midkey: {} (tenant: {}, split balance: {}/{})", 
+               firstKey.get(),
+               Bytes.toStringBinary(bestBoundary.tenantSectionId),
+               bestBoundary.cumulativeSize - bestBoundary.sectionSize,
+               totalFileSize);
+      return firstKey;
+    }
+    
+    // If we can't get the first key, try the section's lastkey as fallback
+    Optional<ExtendedCell> sectionLastKey = reader.getLastKey();
+    if (sectionLastKey.isPresent()) {
+      LOG.warn("Using section last key as fallback (tenant boundary not available): {} (tenant: {})", 
+               sectionLastKey.get(),
+               Bytes.toStringBinary(bestBoundary.tenantSectionId));
+      return sectionLastKey;
+    }
+    
+    throw new IOException("Unable to get any key from selected boundary tenant: " + 
+                         Bytes.toStringBinary(bestBoundary.tenantSectionId));
+  }
+  
+  /**
+   * Find the tenant boundary that provides the most balanced split.
+   * This uses a heuristic to find the boundary that gets closest to a 50/50 split
+   * while maintaining tenant isolation.
+   * 
+   * @param tenantSections List of tenant sections with cumulative sizes
+   * @param idealSplitSize The ideal size for the first region after split
+   * @return The best tenant boundary, or null if none suitable
+   */
+  private TenantSectionInfo findBestTenantBoundary(List<TenantSectionInfo> tenantSections, 
+                                                   long idealSplitSize) {
+    TenantSectionInfo bestBoundary = null;
+    long bestDeviation = Long.MAX_VALUE;
+    
+    // Evaluate each potential tenant boundary
+    for (int i = 1; i < tenantSections.size(); i++) { // Start from 1 to exclude first tenant
+      TenantSectionInfo boundary = tenantSections.get(i);
+      
+      // Calculate how balanced this split would be
+      long leftSideSize = boundary.cumulativeSize - boundary.sectionSize; // Size before this tenant
+      long deviation = Math.abs(leftSideSize - idealSplitSize);
+      
+      // Prefer boundaries that create more balanced splits
+      if (deviation < bestDeviation) {
+        bestDeviation = deviation;
+        bestBoundary = boundary;
+      }
+      
+      LOG.debug("Evaluating tenant boundary: {} (left: {}, deviation: {})", 
+               Bytes.toStringBinary(boundary.tenantSectionId), leftSideSize, deviation);
+    }
+    
+    // Only use a boundary if it's reasonably balanced (within 30% of ideal)
+    if (bestBoundary != null) {
+      long leftSideSize = bestBoundary.cumulativeSize - bestBoundary.sectionSize;
+      double balanceRatio = Math.abs((double)leftSideSize / idealSplitSize - 1.0);
+      
+      if (balanceRatio > 0.3) { // More than 30% deviation
+        LOG.warn("Best tenant boundary has poor balance ratio: {:.1f}% (tenant: {})", 
+                balanceRatio * 100, Bytes.toStringBinary(bestBoundary.tenantSectionId));
+        // Still return it - tenant boundary is more important than perfect balance
+      }
+    }
+    
+    return bestBoundary;
+  }
+  
+  /**
+   * Helper class to track tenant section information for split analysis.
+   */
+  private static class TenantSectionInfo {
+    final byte[] tenantSectionId;
+    final long sectionSize;
+    final long cumulativeSize;
+    
+    TenantSectionInfo(byte[] tenantSectionId, long sectionSize, long cumulativeSize) {
+      this.tenantSectionId = tenantSectionId;
+      this.sectionSize = sectionSize;
+      this.cumulativeSize = cumulativeSize;
+    }
   }
 
   /**
