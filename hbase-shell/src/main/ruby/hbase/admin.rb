@@ -1005,7 +1005,7 @@ module Hbase
           r_load_source_map = sl.getReplicationLoadSourceMap
           build_source_string(r_load_source_map, r_source_string)
 
-          puts(format('    %<host>s:', host: server_name.getHostname))
+          puts(format('    %<host>s:%<port>s %<startcode>s', host: server_name.getHostname, port:server_name.getPort, startcode: server_name.getStartcode))
           if type.casecmp('SOURCE').zero?
             puts(format('%<source>s', source: r_source_string))
           elsif type.casecmp('SINK').zero?
