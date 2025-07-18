@@ -18,6 +18,134 @@
 -->
 # HBASE Changelog
 
+## Release 2.5.12 - 2025-07-25
+
+
+
+### NEW FEATURES:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-29244](https://issues.apache.org/jira/browse/HBASE-29244) | Support admin users acl setting with LDAP (Web UI only) |  Major | security, UI |
+| [HBASE-28368](https://issues.apache.org/jira/browse/HBASE-28368) | Backport "HBASE-27693 Support for Hadoop's LDAP Authentication mechanism (Web UI only)" to branch-2 |  Major | security, UI |
+| [HBASE-29131](https://issues.apache.org/jira/browse/HBASE-29131) | Introduce the option for post-compaction validation of HFiles |  Major | Compaction |
+
+
+### IMPROVEMENTS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-29400](https://issues.apache.org/jira/browse/HBASE-29400) | RollingBatchRestartRsAction may fail to start region server |  Major | integration tests |
+| [HBASE-29233](https://issues.apache.org/jira/browse/HBASE-29233) | Capture scan metrics at region level |  Major | Client, metrics |
+| [HBASE-29399](https://issues.apache.org/jira/browse/HBASE-29399) | Update hadoop-metrics2-hbase.properties template |  Major | conf, documentation |
+| [HBASE-29390](https://issues.apache.org/jira/browse/HBASE-29390) | Too many logs in AsyncBatchRpcRetryingCaller when hitting RegionTooBusyException |  Major | asyncclient, Client |
+| [HBASE-29392](https://issues.apache.org/jira/browse/HBASE-29392) | Bump requests from 2.32.0 to 2.32.4 in /dev-support/flaky-tests |  Major | dependabot, scripts, security |
+| [HBASE-29273](https://issues.apache.org/jira/browse/HBASE-29273) | Remove deprecated boxed primitive constructors in some test classes |  Minor | test |
+| [HBASE-27802](https://issues.apache.org/jira/browse/HBASE-27802) | Manage static javascript resources programatically |  Major | UI |
+| [HBASE-29307](https://issues.apache.org/jira/browse/HBASE-29307) | Add status command to hbase-daemon.sh for process state checking |  Major | scripts |
+| [HBASE-29284](https://issues.apache.org/jira/browse/HBASE-29284) | Add Region name to OutOfOrderScannerNextException message |  Minor | . |
+| [HBASE-29252](https://issues.apache.org/jira/browse/HBASE-29252) | Reduce allocations in RowIndexSeekerV1 |  Minor | . |
+| [HBASE-29109](https://issues.apache.org/jira/browse/HBASE-29109) | Process stage of TakeSnapshotHandler runs Async which is holding the EXCLUSIVE Lock of Table for around 9 mins blocking ASSIGN procedures of SCP |  Major | . |
+| [HBASE-29218](https://issues.apache.org/jira/browse/HBASE-29218) | Reduce calls to Configuration#get() in decompression path |  Minor | . |
+| [HBASE-29193](https://issues.apache.org/jira/browse/HBASE-29193) | Allow ZstdByteBuffDecompressor to take direct ByteBuffer as input and heap ByteBuffer as output, or vice versa |  Minor | . |
+| [HBASE-29258](https://issues.apache.org/jira/browse/HBASE-29258) | Change log level for 'Got brand-new ByteBuffDecompressor' in CodecPool to DEBUG instead of INFO |  Major | regionserver |
+| [HBASE-29112](https://issues.apache.org/jira/browse/HBASE-29112) | Apply KeyOnlyFilter to RowCounter |  Minor | mapreduce |
+| [HBASE-29191](https://issues.apache.org/jira/browse/HBASE-29191) | Use MetaRpcReadTimeout when accessing Meta replicas |  Trivial | . |
+| [HBASE-28754](https://issues.apache.org/jira/browse/HBASE-28754) | Verify the first argument passed to compaction\_switch |  Major | shell |
+| [HBASE-29103](https://issues.apache.org/jira/browse/HBASE-29103) | Avoid excessive allocations during reverse scanning when seeking to next row |  Major | Performance |
+| [HBASE-28832](https://issues.apache.org/jira/browse/HBASE-28832) | Upgrade from bootstrap 3.4.1 to non vulnerable version 5.3.3 |  Major | security, UI |
+| [HBASE-29201](https://issues.apache.org/jira/browse/HBASE-29201) | Add OWASP Dependency Check to check 3rd party dependencies for known vulnerabilities |  Major | build |
+| [HBASE-29162](https://issues.apache.org/jira/browse/HBASE-29162) | Fix Maven build warnings |  Minor | build |
+| [HBASE-29178](https://issues.apache.org/jira/browse/HBASE-29178) | Some ZKUtil optimizations |  Major | Zookeeper |
+| [HBASE-28388](https://issues.apache.org/jira/browse/HBASE-28388) | Avoid index based field sorting in tablesorter |  Major | UI |
+| [HBASE-29148](https://issues.apache.org/jira/browse/HBASE-29148) | BufferedMutator should be able to flush after buffering a certain number of mutations |  Minor | Client |
+| [HBASE-29135](https://issues.apache.org/jira/browse/HBASE-29135) | ZStandard decompression can operate directly on ByteBuffs |  Minor | . |
+| [HBASE-29107](https://issues.apache.org/jira/browse/HBASE-29107) | shell: Improve 'count' performance |  Major | shell |
+| [HBASE-28410](https://issues.apache.org/jira/browse/HBASE-28410) | Upgrade curator to 5.7.1 |  Minor | Zookeeper |
+| [HBASE-28836](https://issues.apache.org/jira/browse/HBASE-28836) | Parallelize the archival of compacted files |  Major | regionserver |
+| [HBASE-29123](https://issues.apache.org/jira/browse/HBASE-29123) | A faster CodecPool for HBase |  Minor | HFile, io |
+
+
+### BUG FIXES:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-29455](https://issues.apache.org/jira/browse/HBASE-29455) | Spotless upgrade breaks builds with Java 8 (branch-2.5) |  Minor | . |
+| [HBASE-29446](https://issues.apache.org/jira/browse/HBASE-29446) | Web UI styling is broken in HBase 2.6.3RC1 hadoop2 bin release |  Major | UI |
+| [HBASE-27781](https://issues.apache.org/jira/browse/HBASE-27781) | AssertionError in AsyncRequestFutureImpl when timing out during location resolution |  Major | Client |
+| [HBASE-22335](https://issues.apache.org/jira/browse/HBASE-22335) | do add hfile ref only when replication\_scope is 1 |  Major | Replication |
+| [HBASE-29346](https://issues.apache.org/jira/browse/HBASE-29346) | Multiple Snapshot restores on same restoreDir ends up in Dataloss |  Critical | snapshots |
+| [HBASE-29388](https://issues.apache.org/jira/browse/HBASE-29388) | mvn spotless:apply changes line endings (CRLF to LF) on Windows |  Major | . |
+| [HBASE-29384](https://issues.apache.org/jira/browse/HBASE-29384) | Async Profiler occasionally fails to capture profiling data |  Major | master, regionserver |
+| [HBASE-29380](https://issues.apache.org/jira/browse/HBASE-29380) | Two concurrent remove peer requests may hang |  Blocker | proc-v2, Replication |
+| [HBASE-29369](https://issues.apache.org/jira/browse/HBASE-29369) | Fix TestZKPermissionWatcher |  Major | security, test |
+| [HBASE-29363](https://issues.apache.org/jira/browse/HBASE-29363) | CompactSplit attempts to split non-default regions |  Minor | . |
+| [HBASE-29365](https://issues.apache.org/jira/browse/HBASE-29365) | Improve option parser of PerformanceEvaluation |  Major | PE |
+| [HBASE-29283](https://issues.apache.org/jira/browse/HBASE-29283) | Replication MetricsSource.sizeOfHFileRefsQueue metrics not updated correctly after remove\_peer |  Major | . |
+| [HBASE-29315](https://issues.apache.org/jira/browse/HBASE-29315) | Cancel Split/MergeTableRegionProcedure if table modification is in progress |  Minor | proc-v2 |
+| [HBASE-29345](https://issues.apache.org/jira/browse/HBASE-29345) | testWALClosureFailureAndCleanup fails due to missing lease recovery wait during close |  Major | wal |
+| [HBASE-29093](https://issues.apache.org/jira/browse/HBASE-29093) | Load userSnapshots.jsp only on master status page |  Minor | UI |
+| [HBASE-29300](https://issues.apache.org/jira/browse/HBASE-29300) | Upgrade Tomcat to 9.0.104 |  Major | . |
+| [HBASE-29313](https://issues.apache.org/jira/browse/HBASE-29313) | RecoverableZooKeeper.getZooKeeper() returns null for new object |  Minor | Zookeeper |
+| [HBASE-29294](https://issues.apache.org/jira/browse/HBASE-29294) | Master crashed because of failing to update master region |  Major | master |
+| [HBASE-29282](https://issues.apache.org/jira/browse/HBASE-29282) | Regions are left in CLOSED state after merging |  Critical | proc-v2, Region Assignment |
+| [HBASE-29254](https://issues.apache.org/jira/browse/HBASE-29254) | StoreScanner returns incorrect row after flush due to topChanged behavior |  Major | Scanners |
+| [HBASE-25338](https://issues.apache.org/jira/browse/HBASE-25338) | Client app getting "Failed to load SIMPLE, KERBEROS, and DIGEST authentication providers. Classpath is not sane." errors |  Major | Client |
+| [HBASE-29251](https://issues.apache.org/jira/browse/HBASE-29251) | Procedure gets stuck if the procedure state cannot be persisted |  Critical | . |
+| [HBASE-29259](https://issues.apache.org/jira/browse/HBASE-29259) | Master crash when loading procedures |  Critical | proc-v2, Region Assignment |
+| [HBASE-29248](https://issues.apache.org/jira/browse/HBASE-29248) | HBASE-28529 made an incompatible change to hbase.zookeeper.property handling |  Major | Zookeeper |
+| [HBASE-29156](https://issues.apache.org/jira/browse/HBASE-29156) | Sort options missing in the Table Regions section on server deployments with security mods |  Major | UI |
+| [HBASE-29195](https://issues.apache.org/jira/browse/HBASE-29195) | Get Column value with timestamp is giving wrong result as not found |  Major | REST |
+| [HBASE-29246](https://issues.apache.org/jira/browse/HBASE-29246) | Update commons-lang3 to 3.17.0 |  Major | . |
+| [HBASE-28569](https://issues.apache.org/jira/browse/HBASE-28569) | Race condition during WAL splitting leading to corrupt recovered.edits |  Major | regionserver |
+| [HBASE-28997](https://issues.apache.org/jira/browse/HBASE-28997) | Table Regions Total Locality value on the UI shows 1.0 even though some of the regions locality value is zero |  Major | UI |
+| [HBASE-29234](https://issues.apache.org/jira/browse/HBASE-29234) | Handle java.lang.reflect.InaccessibleObjectException in HFileSystem |  Major | . |
+| [HBASE-29214](https://issues.apache.org/jira/browse/HBASE-29214) | Typo in AsyncMasterRequestRpcRetryingCaller which makes us fail to clear the master stub cache |  Major | Admin, asyncclient, Client |
+| [HBASE-28983](https://issues.apache.org/jira/browse/HBASE-28983) | Static resources are not loaded on REST web UI pages in dev mode |  Major | REST, UI |
+| [HBASE-29200](https://issues.apache.org/jira/browse/HBASE-29200) | Bump netty4 to 4.1.119.Final in main repo |  Major | dependencies |
+| [HBASE-29057](https://issues.apache.org/jira/browse/HBASE-29057) | Backport missing changes in HBASE-28023 to branch-2 |  Major | integration tests |
+| [HBASE-29158](https://issues.apache.org/jira/browse/HBASE-29158) | Unknown checksum type code exception occurred while reading HFileBlock |  Major | HFile |
+| [HBASE-29080](https://issues.apache.org/jira/browse/HBASE-29080) | Validate Negotiated SASL QoP Against Requested |  Major | rpc, sasl |
+| [HBASE-29187](https://issues.apache.org/jira/browse/HBASE-29187) | Use double quote instead of single quote in Jenkinsfile scripts when there are env vars |  Major | jenkins, scripts |
+| [HBASE-28984](https://issues.apache.org/jira/browse/HBASE-28984) | Alter table causes AccessDeniedException at the client side |  Major | . |
+| [HBASE-29189](https://issues.apache.org/jira/browse/HBASE-29189) | NPE in RawAsyncTableAdmin.isTableDisabled |  Major | Admin, Client |
+| [HBASE-29172](https://issues.apache.org/jira/browse/HBASE-29172) | Fix bug in ZstdByteBuffDecompressor |  Major | . |
+| [HBASE-25839](https://issues.apache.org/jira/browse/HBASE-25839) | Bulk Import fails with java.io.IOException: Type mismatch in value from map |  Major | mapreduce |
+| [HBASE-29174](https://issues.apache.org/jira/browse/HBASE-29174) | NPE on MemstoreFlusher when flush is triggered by too many wals after a wal rolling |  Major | . |
+| [HBASE-29157](https://issues.apache.org/jira/browse/HBASE-29157) | Sorting not working in the Table Regions section |  Major | UI |
+| [HBASE-29066](https://issues.apache.org/jira/browse/HBASE-29066) | Fix NPE in rits.jsp when regions are not open |  Minor | UI |
+| [HBASE-28627](https://issues.apache.org/jira/browse/HBASE-28627) | REST ScannerModel doesn't support includeStartRow/includeStopRow |  Major | REST |
+
+
+### SUB-TASKS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-29319](https://issues.apache.org/jira/browse/HBASE-29319) | Apply fail-fast retry limit for ConnectException |  Major | . |
+| [HBASE-29344](https://issues.apache.org/jira/browse/HBASE-29344) | Update spotless to 2.44.4 |  Major | build |
+| [HBASE-29180](https://issues.apache.org/jira/browse/HBASE-29180) | Apply fail-fast retry limit for UnknownHostException |  Major | . |
+
+
+### OTHER:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-29317](https://issues.apache.org/jira/browse/HBASE-29317) | Bump hbase-thirdparty to 4.1.11 |  Major | dependencies, thirdparty |
+| [HBASE-29352](https://issues.apache.org/jira/browse/HBASE-29352) | HBase shell fails with "NotImplementedError: fstat unimplemented unsupported or native support failed to load" on Mac |  Major | shell |
+| [HBASE-29327](https://issues.apache.org/jira/browse/HBASE-29327) | Dependency manage byte-buddy and bump it to 1.15.11 |  Major | dependencies |
+| [HBASE-29293](https://issues.apache.org/jira/browse/HBASE-29293) | Upgrade to latest opentelemetry libraries |  Major | dependencies, tracing |
+| [HBASE-29182](https://issues.apache.org/jira/browse/HBASE-29182) | Bump jinja2 from 3.1.5 to 3.1.6 in /dev-support/flaky-tests |  Major | dependabot, scripts, security |
+| [HBASE-29167](https://issues.apache.org/jira/browse/HBASE-29167) | Upgrade vega and its related js libraries |  Major | security, UI |
+| [HBASE-29163](https://issues.apache.org/jira/browse/HBASE-29163) | Fix Github PR builds are broken |  Major | build |
+| [HBASE-29026](https://issues.apache.org/jira/browse/HBASE-29026) | Replace some deprecated calls |  Major | UI |
+| [HBASE-29086](https://issues.apache.org/jira/browse/HBASE-29086) | Bump hbase-thirdparty to 4.1.10 |  Major | dependencies |
+| [HBASE-28879](https://issues.apache.org/jira/browse/HBASE-28879) | Bump hbase-thirdparty to 4.1.9 |  Major | dependencies, thirdparty |
+| [HBASE-28793](https://issues.apache.org/jira/browse/HBASE-28793) | Update hbase-thirdparty to 4.1.8 |  Major | dependencies |
+| [HBASE-28512](https://issues.apache.org/jira/browse/HBASE-28512) | Update error prone to 2.26.1 |  Major | dependencies |
+| [HBASE-28511](https://issues.apache.org/jira/browse/HBASE-28511) | Update hbase-thirdparty to 4.1.7 |  Major | dependencies |
+| [HBASE-28379](https://issues.apache.org/jira/browse/HBASE-28379) | Upgrade thirdparty dep to 4.1.6 |  Major | . |
+
+
 ## Release 2.5.11 - 2025-02-10
 
 
