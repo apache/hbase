@@ -593,7 +593,7 @@ Pseudo-distributed mode can run against the local filesystem or it can run again
 the _Hadoop Distributed File System_ (HDFS). Fully-distributed mode can ONLY run on HDFS.
 See the Hadoop link:https://hadoop.apache.org/docs/current/[documentation] for how to set up HDFS.
 A good walk-through for setting up HDFS on Hadoop 2 can be found at
-http://web.archive.org/web/20221007121526/https://www.alexjf.net/blog/distributed-systems/hadoop-yarn-installation-definitive-guide/.
+https://web.archive.org/web/20221007121526/https://www.alexjf.net/blog/distributed-systems/hadoop-yarn-installation-definitive-guide/.
 
 [[pseudo]]
 ==== Pseudo-distributed
@@ -1264,7 +1264,7 @@ idea on the size you need by surveying RegionServer UIs; you'll see index block 
 the top of the webpage).
 
 [[nagles]]
-==== link:http://en.wikipedia.org/wiki/Nagle%27s_algorithm[Nagle's] or the small package problem
+==== link:https://en.wikipedia.org/wiki/Nagle%27s_algorithm[Nagle's] or the small package problem
 
 If a big 40ms or so occasional delay is seen in operations against HBase, try the Nagles' setting.
 For example, see the user mailing list thread,

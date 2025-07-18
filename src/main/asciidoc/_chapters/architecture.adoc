@@ -789,7 +789,7 @@ See link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/filter/Firs
 `HMaster` is the implementation of the Master Server.
 The Master server is responsible for monitoring all RegionServer instances in the cluster, and is the interface for all metadata changes.
 In a distributed cluster, the Master typically runs on the <<arch.hdfs.nn>>.
-J Mohamed Zahoor goes into some more detail on the Master Architecture in this blog posting, link:http://web.archive.org/web/20191211053128/http://blog.zahoor.in:80/2012/08/hbase-hmaster-architecture/[HBase HMaster Architecture ].
+J Mohamed Zahoor goes into some more detail on the Master Architecture in this blog posting, link:https://web.archive.org/web/20191211053128/http://blog.zahoor.in/2012/08/hbase-hmaster-architecture/[HBase HMaster Architecture].
 
 [[master.startup]]
 === Startup Behavior
@@ -1129,7 +1129,7 @@ If the BucketCache is deployed in off-heap mode, this memory is not managed by t
 This is why you'd use BucketCache in pre-2.0.0, so your latencies are less erratic,
 to mitigate GCs and heap fragmentation, and so you can safely use more memory.
 See Nick Dimiduk's link:http://www.n10k.com/blog/blockcache-101/[BlockCache 101] for comparisons running on-heap vs off-heap tests.
-Also see link:http://web.archive.org/web/20231109025243/http://people.apache.org/~stack/bc/[Comparing BlockCache Deploys] which finds that if your dataset fits inside your LruBlockCache deploy, use it otherwise if you are experiencing cache churn (or you want your cache to exist beyond the vagaries of java GC), use BucketCache.
+Also see link:https://web.archive.org/web/20231109025243/http://people.apache.org/~stack/bc/[Comparing BlockCache Deploys] which finds that if your dataset fits inside your LruBlockCache deploy, use it otherwise if you are experiencing cache churn (or you want your cache to exist beyond the vagaries of java GC), use BucketCache.
 +
 In pre-2.0.0,
 one can configure the BucketCache so it receives the `victim` of an LruBlockCache eviction.
@@ -1239,7 +1239,7 @@ The value allocated by `MaxDirectMemorySize` must not exceed physical RAM, and i
 You can see how much memory -- on-heap and off-heap/direct -- a RegionServer is configured to use and how much it is using at any one time by looking at the _Server Metrics: Memory_ tab in the UI.
 It can also be gotten via JMX.
 In particular the direct memory currently used by the server can be found on the `java.nio.type=BufferPool,name=direct` bean.
-Terracotta has a link:https://web.archive.org/web/20170907032911/http://terracotta.org:80/documentation/4.0/bigmemorygo/configuration/storage-options[good write up] on using off-heap memory in Java.
+Terracotta has a link:https://web.archive.org/web/20170907032911/http://terracotta.org/documentation/4.0/bigmemorygo/configuration/storage-options[good write up] on using off-heap memory in Java.
 It is for their product BigMemory but a lot of the issues noted apply in general to any attempt at going off-heap. Check it out.
 ====
 
