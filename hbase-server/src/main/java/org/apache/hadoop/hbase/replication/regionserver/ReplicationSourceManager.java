@@ -47,6 +47,7 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
@@ -64,11 +65,16 @@ import org.apache.hadoop.hbase.replication.ReplicationQueueId;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
+import org.apache.hadoop.hbase.replication.WALEntryFilter;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.AbstractWALProvider;
+import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
@@ -647,6 +653,31 @@ public class ReplicationSourceManager {
     interruptOrAbortWhenFail(() -> this.queueStorage.setOffset(source.getQueueId(), walPrefix,
       offset, entryBatch.getLastSeqIds()));
     cleanOldLogs(walName, entryBatch.isEndOfFile(), source);
+  }
+
+  void postAppend(final long size, final long time, final WALKey logkey, final WALEdit logEdit) {
+    try {
+      long walReplAppendSize = 0;
+      List<ReplicationSourceInterface> replicationSources = getSources();
+      for (ReplicationSourceInterface replicationSourceI : replicationSources) {
+        if (replicationSourceI instanceof ReplicationSource) {
+          MetricsSource source = replicationSourceI.getSourceMetrics();
+          ReplicationSource replicationSource = (ReplicationSource) replicationSourceI;
+          WALEntryFilter filter = replicationSource.getWalEntryFilter();
+          WAL.Entry filtered = filter.filter(new WAL.Entry((WALKeyImpl) logkey, logEdit));
+          if (filtered != null && filtered.getEdit() != null && !filtered.getEdit().isEmpty()) {
+            walReplAppendSize = ReplicationSourceWALReader.getEntrySizeIncludeBulkLoad(filtered);
+            // update the replication metrics source for table at the run time
+            TableName tableName = logkey.getTableName();
+            source.incrTableWalAppendBytes(tableName.getNameAsString(), walReplAppendSize);
+          }
+        }
+      }
+    } catch (Throwable t) {
+      LOG.warn("ReplicationSourceManager.postAppend meet throwable: ", t);
+      LOG.debug("ReplicationSourceManager.postAppend meet throwable, logkey is: " + logkey
+        + ",logEdit is: " + logEdit);
+    }
   }
 
   /**
