@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.ipc.CallerDisconnectedException;
 import org.apache.hadoop.hbase.ipc.RpcCall;
 import org.apache.hadoop.hbase.ipc.RpcCallback;
 import org.apache.hadoop.hbase.ipc.RpcServer;
+import org.apache.hadoop.hbase.monitoring.ThreadLocalServerSideScanMetrics;
 import org.apache.hadoop.hbase.regionserver.Region.Operation;
 import org.apache.hadoop.hbase.regionserver.ScannerContext.LimitScope;
 import org.apache.hadoop.hbase.regionserver.ScannerContext.NextState;
@@ -93,6 +94,8 @@ public class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
   private final String operationId;
 
   private RegionServerServices rsServices;
+
+  private ServerSideScanMetrics scannerInitMetrics = null;
 
   @Override
   public RegionInfo getRegionInfo() {
@@ -144,7 +147,16 @@ public class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
     } finally {
       region.smallestReadPointCalcLock.unlock(ReadPointCalculationLock.LockType.RECORDING_LOCK);
     }
+    boolean isScanMetricsEnabled = scan.isScanMetricsEnabled();
+    ThreadLocalServerSideScanMetrics.setScanMetricsEnabled(isScanMetricsEnabled);
+    if (isScanMetricsEnabled) {
+      this.scannerInitMetrics = new ServerSideScanMetrics();
+      ThreadLocalServerSideScanMetrics.reset();
+    }
     initializeScanners(scan, additionalScanners);
+    if (isScanMetricsEnabled) {
+      ThreadLocalServerSideScanMetrics.populateServerSideScanMetrics(scannerInitMetrics);
+    }
   }
 
   public ScannerContext getContext() {
@@ -277,6 +289,16 @@ public class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
       throw new UnknownScannerException("Scanner was closed");
     }
     boolean moreValues = false;
+    boolean isScanMetricsEnabled = scannerContext.isTrackingMetrics();
+    ThreadLocalServerSideScanMetrics.setScanMetricsEnabled(isScanMetricsEnabled);
+    if (isScanMetricsEnabled) {
+      ThreadLocalServerSideScanMetrics.reset();
+      ServerSideScanMetrics scanMetrics = scannerContext.getMetrics();
+      if (scannerInitMetrics != null) {
+        scannerInitMetrics.getMetricsMap().forEach(scanMetrics::addToCounter);
+        scannerInitMetrics = null;
+      }
+    }
     if (outResults.isEmpty()) {
       // Usually outResults is empty. This is true when next is called
       // to handle scan or get operation.
@@ -286,7 +308,10 @@ public class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
       moreValues = nextInternal(tmpList, scannerContext);
       outResults.addAll(tmpList);
     }
-
+    if (isScanMetricsEnabled) {
+      ServerSideScanMetrics scanMetrics = scannerContext.getMetrics();
+      ThreadLocalServerSideScanMetrics.populateServerSideScanMetrics(scanMetrics);
+    }
     region.addReadRequestsCount(1);
     if (region.getMetrics() != null) {
       region.getMetrics().updateReadRequestCount();
