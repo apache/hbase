@@ -27,10 +27,9 @@ import static org.apache.hadoop.hbase.keymeta.KeymetaTableAccessor.DEK_METADATA_
 import static org.apache.hadoop.hbase.keymeta.KeymetaTableAccessor.DEK_WRAPPED_BY_STK_QUAL_BYTES;
 import static org.apache.hadoop.hbase.keymeta.KeymetaTableAccessor.KEY_META_INFO_FAMILY;
 import static org.apache.hadoop.hbase.keymeta.KeymetaTableAccessor.KEY_STATE_QUAL_BYTES;
-import static org.apache.hadoop.hbase.keymeta.KeymetaTableAccessor.READ_OP_COUNT_QUAL_BYTES;
 import static org.apache.hadoop.hbase.keymeta.KeymetaTableAccessor.REFRESHED_TIMESTAMP_QUAL_BYTES;
 import static org.apache.hadoop.hbase.keymeta.KeymetaTableAccessor.STK_CHECKSUM_QUAL_BYTES;
-import static org.apache.hadoop.hbase.keymeta.KeymetaTableAccessor.WRITE_OP_COUNT_QUAL_BYTES;
+import static org.apache.hadoop.hbase.keymeta.KeymetaTableAccessor.constructRowKeyForCustNamespace;
 import static org.apache.hadoop.hbase.keymeta.KeymetaTableAccessor.constructRowKeyForMetadata;
 import static org.apache.hadoop.hbase.keymeta.KeymetaTableAccessor.parseFromResult;
 import static org.junit.Assert.assertEquals;
@@ -46,6 +45,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -62,7 +62,6 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -94,7 +93,6 @@ import org.mockito.MockitoAnnotations;
   TestKeymetaTableAccessor.TestAdd.class,
   TestKeymetaTableAccessor.TestAddWithNullableFields.class,
   TestKeymetaTableAccessor.TestGet.class,
-  TestKeymetaTableAccessor.TestOps.class,
 })
 @Category({ MasterTests.class, SmallTests.class })
 public class TestKeymetaTableAccessor {
@@ -171,10 +169,17 @@ public class TestKeymetaTableAccessor {
 
       accessor.addKey(keyData);
 
-      ArgumentCaptor<Put> putCaptor = ArgumentCaptor.forClass(Put.class);
+      ArgumentCaptor<List<Put>> putCaptor = ArgumentCaptor.forClass(ArrayList.class);
       verify(table).put(putCaptor.capture());
-      Put put = putCaptor.getValue();
-      assertPut(keyData, put);
+      List<Put> puts = putCaptor.getValue();
+      assertEquals(keyState == ACTIVE ? 2 : 1, puts.size());
+      if (keyState == ACTIVE) {
+        assertPut(keyData, puts.get(0), constructRowKeyForCustNamespace(keyData));
+        assertPut(keyData, puts.get(1), constructRowKeyForMetadata(keyData));
+      }
+      else {
+        assertPut(keyData, puts.get(0), constructRowKeyForMetadata(keyData));
+      }
     }
   }
 
@@ -192,9 +197,11 @@ public class TestKeymetaTableAccessor {
 
       accessor.addKey(keyData);
 
-      ArgumentCaptor<Put> putCaptor = ArgumentCaptor.forClass(Put.class);
+      ArgumentCaptor<List<Put>> putCaptor = ArgumentCaptor.forClass(ArrayList.class);
       verify(table).put(putCaptor.capture());
-      Put put = putCaptor.getValue();
+      List<Put> puts = putCaptor.getValue();
+      assertEquals(1, puts.size());
+      Put put = puts.get(0);
 
       // Verify the row key uses state value for metadata hash
       byte[] expectedRowKey = constructRowKeyForMetadata(CUST_ID, KEY_SPACE_GLOBAL,
@@ -295,7 +302,7 @@ public class TestKeymetaTableAccessor {
       assertNotNull(result);
       assertEquals(0, Bytes.compareTo(CUST_ID, result.getKeyCustodian()));
       assertEquals(KEY_NAMESPACE, result.getKeyNamespace());
-      assertEquals(KEY_METADATA, result.getKeyMetadata());
+      assertEquals(keyData.getKeyMetadata(), result.getKeyMetadata());
       assertEquals(0, Bytes.compareTo(keyData.getTheKey().getEncoded(),
         result.getTheKey().getEncoded()));
       assertEquals(ACTIVE, result.getKeyState());
@@ -347,24 +354,6 @@ public class TestKeymetaTableAccessor {
     }
 
     @Test
-    public void testGetKeyWithOps() throws Exception {
-      long readCnt = 5;
-      long writeCnt = 10;
-      when(result2.getValue(eq(KEY_META_INFO_FAMILY), eq(READ_OP_COUNT_QUAL_BYTES)))
-        .thenReturn(Bytes.toBytes(readCnt));
-      when(result2.getValue(eq(KEY_META_INFO_FAMILY), eq(WRITE_OP_COUNT_QUAL_BYTES)))
-        .thenReturn(Bytes.toBytes(writeCnt));
-      when(table.get(any(Get.class))).thenReturn(result2);
-
-      ManagedKeyData result = accessor.getKey(CUST_ID, KEY_NAMESPACE, KEY_METADATA);
-
-      verify(table).get(any(Get.class));
-      assertNotNull(result);
-      assertEquals(readCnt, result.getReadOpCount());
-      assertEquals(writeCnt, result.getWriteOpCount());
-    }
-
-    @Test
     public void testGetAllKeys() throws Exception {
       ManagedKeyData keyData = setupActiveKey(CUST_ID, result1);
 
@@ -374,23 +363,23 @@ public class TestKeymetaTableAccessor {
       List<ManagedKeyData> allKeys = accessor.getAllKeys(CUST_ID, KEY_NAMESPACE);
 
       assertEquals(2, allKeys.size());
-      assertEquals(KEY_METADATA, allKeys.get(0).getKeyMetadata());
+      assertEquals(keyData.getKeyMetadata(), allKeys.get(0).getKeyMetadata());
       assertEquals(keyMetadata2, allKeys.get(1).getKeyMetadata());
       verify(table).getScanner(any(Scan.class));
     }
 
     @Test
-    public void testGetActiveKeys() throws Exception {
+    public void testGetActiveKey() throws Exception {
       ManagedKeyData keyData = setupActiveKey(CUST_ID, result1);
 
-      when(scanner.iterator()).thenReturn(List.of(result1, result2).iterator());
-      when(table.getScanner(any(Scan.class))).thenReturn(scanner);
+      when(scanner.iterator()).thenReturn(List.of(result1).iterator());
+      when(table.get(any(Get.class))).thenReturn(result1);
 
-      List<ManagedKeyData> allKeys = accessor.getActiveKeys(CUST_ID, KEY_NAMESPACE);
+      ManagedKeyData activeKey = accessor.getActiveKey(CUST_ID, KEY_NAMESPACE);
 
-      assertEquals(1, allKeys.size());
-      assertEquals(KEY_METADATA, allKeys.get(0).getKeyMetadata());
-      verify(table).getScanner(any(Scan.class));
+      assertNotNull(activeKey);
+      assertEquals(keyData, activeKey);
+      verify(table).get(any(Get.class));
     }
 
     private ManagedKeyData setupActiveKey(byte[] custId, Result result) throws Exception {
@@ -401,53 +390,18 @@ public class TestKeymetaTableAccessor {
         .thenReturn(dekWrappedBySTK);
       when(result.getValue(eq(KEY_META_INFO_FAMILY), eq(DEK_CHECKSUM_QUAL_BYTES)))
         .thenReturn(Bytes.toBytes(keyData.getKeyChecksum()), Bytes.toBytes(0L));
+      // Update the mock to return the correct metadata from the keyData
+      when(result.getValue(eq(KEY_META_INFO_FAMILY), eq(DEK_METADATA_QUAL_BYTES)))
+        .thenReturn(keyData.getKeyMetadata().getBytes());
       when(table.get(any(Get.class))).thenReturn(result);
       return keyData;
     }
   }
 
-
-  @RunWith(Parameterized.class)
-  @Category({ MasterTests.class, SmallTests.class })
-  public static class TestOps extends TestKeymetaTableAccessor {
-    @ClassRule
-    public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestOps.class);
-
-    @Parameter(0)
-    public boolean isReadonly;
-
-    @Parameterized.Parameters(name = "{index},isReadonly={0}")
-    public static Collection<Object[]> data() {
-      return Arrays.asList(
-        new Object[][] { { true }, { false } });
-    }
-
-    @Test
-    public void testReportOperation() throws Exception {
-      long count = 5;
-
-      accessor.reportOperation(CUST_ID, KEY_NAMESPACE, KEY_METADATA, count, isReadonly);
-
-      ArgumentCaptor<Increment> incrementCaptor = ArgumentCaptor.forClass(Increment.class);
-      verify(table).increment(incrementCaptor.capture());
-      Increment increment = incrementCaptor.getValue();
-      NavigableMap<byte[], List<Cell>> familyCellMap = increment.getFamilyCellMap();
-      List<Cell> cells = familyCellMap.get(KEY_META_INFO_FAMILY);
-      assertEquals(1, cells.size());
-      Cell cell = cells.get(0);
-      assertEquals(new Bytes(isReadonly ? READ_OP_COUNT_QUAL_BYTES : WRITE_OP_COUNT_QUAL_BYTES),
-        new Bytes(cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength()));
-      assertEquals(new Bytes(Bytes.toBytes(count)),
-        new Bytes(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()));
-    }
-  }
-
-  protected void assertPut(ManagedKeyData keyData, Put put) {
+  protected void assertPut(ManagedKeyData keyData, Put put, byte[] rowKey) {
     assertEquals(Durability.SKIP_WAL, put.getDurability());
     assertEquals(HConstants.SYSTEMTABLE_QOS, put.getPriority());
-    assertTrue(Bytes.compareTo(constructRowKeyForMetadata(keyData),
-      put.getRow()) == 0);
+    assertTrue(Bytes.compareTo(rowKey, put.getRow()) == 0);
 
     Map<Bytes, Bytes> valueMap = getValueMap(put);
 

@@ -75,20 +75,6 @@ public class TestManagedKeyData {
   }
 
   @Test
-  public void testConstructorWithCounts() {
-    long refreshTimestamp = System.currentTimeMillis();
-    long readOpCount = 10;
-    long writeOpCount = 5;
-    ManagedKeyData keyDataWithCounts =
-      new ManagedKeyData(keyCust, keyNamespace, theKey, keyState, keyMetadata, refreshTimestamp,
-        readOpCount, writeOpCount);
-
-    assertEquals(refreshTimestamp, keyDataWithCounts.getRefreshTimestamp());
-    assertEquals(readOpCount, keyDataWithCounts.getReadOpCount());
-    assertEquals(writeOpCount, keyDataWithCounts.getWriteOpCount());
-  }
-
-  @Test
   public void testConstructorNullChecks() {
     assertThrows(NullPointerException.class,
       () -> new ManagedKeyData(null, keyNamespace, theKey, keyState, keyMetadata));
@@ -111,11 +97,11 @@ public class TestManagedKeyData {
   }
 
   @Test
-  public void testConstructorNegativeCountChecks() {
-    assertThrows(IllegalArgumentException.class,
-      () -> new ManagedKeyData(keyCust, keyNamespace, theKey, keyState, keyMetadata, 0, -1, 0));
-    assertThrows(IllegalArgumentException.class,
-      () -> new ManagedKeyData(keyCust, keyNamespace, theKey, keyState, keyMetadata, 0, 0, -1));
+  public void testConstructorWithRefreshTimestamp() {
+    long refreshTimestamp = System.currentTimeMillis();
+    ManagedKeyData keyDataWithTimestamp = new ManagedKeyData(keyCust, keyNamespace, theKey,
+        keyState, keyMetadata, refreshTimestamp);
+    assertEquals(refreshTimestamp, keyDataWithTimestamp.getRefreshTimestamp());
   }
 
   @Test

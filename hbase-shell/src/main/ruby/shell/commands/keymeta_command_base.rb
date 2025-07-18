@@ -23,8 +23,7 @@ module Shell
     # KeymetaCommandBase is a base class for all key management commands.
     class KeymetaCommandBase < Command
       def print_key_statuses(statuses)
-        formatter.header(%w[ENCODED-KEY NAMESPACE STATUS METADATA METADATA-HASH
-                            REFRESH-TIMESTAMP READ-OP-COUNT WRITE-OP-COUNT])
+        formatter.header(%w[ENCODED-KEY NAMESPACE STATUS METADATA METADATA-HASH REFRESH-TIMESTAMP])
         statuses.each { |status| formatter.row(format_status_row(status)) }
         formatter.footer(statuses.size)
       end
@@ -38,9 +37,7 @@ module Shell
           status.getKeyStatus.toString,
           status.getKeyMetadata,
           status.getKeyMetadataHashEncoded,
-          status.getRefreshTimestamp,
-          status.getReadOpCount,
-          status.getWriteOpCount
+          status.getRefreshTimestamp
         ]
       end
     end

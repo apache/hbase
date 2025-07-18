@@ -87,11 +87,11 @@ public class TestSystemKeyCache {
 
     // Create test key data with different checksums
     keyData1 = new ManagedKeyData(TEST_CUSTODIAN, TEST_NAMESPACE, testKey1,
-      ManagedKeyState.ACTIVE, TEST_METADATA_1, 1000L, 0, 0);
+      ManagedKeyState.ACTIVE, TEST_METADATA_1, 1000L);
     keyData2 = new ManagedKeyData(TEST_CUSTODIAN, TEST_NAMESPACE, testKey2,
-      ManagedKeyState.ACTIVE, TEST_METADATA_2, 2000L, 0, 0);
+      ManagedKeyState.ACTIVE, TEST_METADATA_2, 2000L);
     keyData3 = new ManagedKeyData(TEST_CUSTODIAN, TEST_NAMESPACE, testKey3,
-      ManagedKeyState.ACTIVE, TEST_METADATA_3, 3000L, 0, 0);
+      ManagedKeyState.ACTIVE, TEST_METADATA_3, 3000L);
 
     // Create test paths
     keyPath1 = new Path("/system/keys/key1");
@@ -273,9 +273,9 @@ public class TestSystemKeyCache {
     Key sameKey2 = new SecretKeySpec("identical-bytes".getBytes(), "AES");
 
     ManagedKeyData sameManagedKey1 = new ManagedKeyData(TEST_CUSTODIAN, TEST_NAMESPACE,
-      sameKey1, ManagedKeyState.ACTIVE, "metadata-A", 1000L, 0, 0);
+      sameKey1, ManagedKeyState.ACTIVE, "metadata-A", 1000L);
     ManagedKeyData sameManagedKey2 = new ManagedKeyData(TEST_CUSTODIAN, TEST_NAMESPACE,
-      sameKey2, ManagedKeyState.ACTIVE, "metadata-B", 2000L, 0, 0);
+      sameKey2, ManagedKeyState.ACTIVE, "metadata-B", 2000L);
 
     // Verify they have the same checksum
     assertEquals(sameManagedKey1.getKeyChecksum(), sameManagedKey2.getKeyChecksum());

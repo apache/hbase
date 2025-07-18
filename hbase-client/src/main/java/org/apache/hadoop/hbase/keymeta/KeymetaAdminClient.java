@@ -79,7 +79,7 @@ public class KeymetaAdminClient implements KeymetaAdmin {
         state.getKeyNamespace(), null,
         ManagedKeyState.forValue((byte) state.getKeyState().getNumber()),
         state.getKeyMetadata(),
-        state.getRefreshTimestamp(), state.getReadOpCount(), state.getWriteOpCount()));
+        state.getRefreshTimestamp()));
     }
     return keyStates;
   }

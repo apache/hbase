@@ -26,11 +26,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
+import static org.junit.Assume.assumeTrue;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -58,7 +57,6 @@ import org.apache.hadoop.hbase.keymeta.KeymetaTableAccessor;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -76,8 +74,6 @@ import org.junit.runners.Suite;
 @Suite.SuiteClasses({ TestKeymetaAdminImpl.TestWhenDisabled.class,
   TestKeymetaAdminImpl.TestAdminImpl.class,
   TestKeymetaAdminImpl.TestForKeyProviderNullReturn.class,
-  TestKeymetaAdminImpl.TestMultiKeyGen.class,
-  TestKeymetaAdminImpl.TestForInvalidKeyCountConfig.class,
 })
 @Category({ MasterTests.class, SmallTests.class })
 public class TestKeymetaAdminImpl {
@@ -96,7 +92,7 @@ public class TestKeymetaAdminImpl {
 
   protected FileSystem mockFileSystem = mock(FileSystem.class);
   protected Server mockServer = mock(Server.class);
-  protected DummyKeymetaAdminImpl keymetaAdmin;
+  protected KeymetaAdminImplForTest keymetaAdmin;
   KeymetaTableAccessor keymetaAccessor = mock(KeymetaTableAccessor.class);
 
   @Before
@@ -110,7 +106,7 @@ public class TestKeymetaAdminImpl {
 
     when(mockServer.getFileSystem()).thenReturn(mockFileSystem);
     when(mockServer.getConfiguration()).thenReturn(conf);
-    keymetaAdmin = new DummyKeymetaAdminImpl(mockServer, keymetaAccessor);
+    keymetaAdmin = new KeymetaAdminImplForTest(mockServer, keymetaAccessor);
   }
 
   @RunWith(BlockJUnit4ClassRunner.class)
@@ -145,141 +141,69 @@ public class TestKeymetaAdminImpl {
       HBaseClassTestRule.forClass(TestAdminImpl.class);
 
     @Parameter(0)
-    public int nKeys;
-    @Parameter(1)
     public String keySpace;
-    @Parameter(2)
+    @Parameter(1)
     public ManagedKeyState keyState;
-    @Parameter(3)
+    @Parameter(2)
     public boolean isNullKey;
 
-    @Parameters(name = "{index},nKeys={0},keySpace={1},keyState={2}")
+    @Parameters(name = "{index},keySpace={1},keyState={2}")
     public static Collection<Object[]> data() {
       return Arrays.asList(
         new Object[][] {
-          { 1, KEY_SPACE_GLOBAL, ACTIVE, false },
-          { 1, "ns1", ACTIVE, false },
-          { 1, KEY_SPACE_GLOBAL, FAILED, true },
-          { 1, KEY_SPACE_GLOBAL, INACTIVE, false },
-          { 1, KEY_SPACE_GLOBAL, DISABLED, true },
-          { 2, KEY_SPACE_GLOBAL, ACTIVE, false },
+          { KEY_SPACE_GLOBAL, ACTIVE, false },
+          { "ns1", ACTIVE, false },
+          { KEY_SPACE_GLOBAL, FAILED, true },
+          { KEY_SPACE_GLOBAL, INACTIVE, false },
+          { KEY_SPACE_GLOBAL, DISABLED, true },
         });
-    }
-
-    @Override
-    public void setUp() throws Exception {
-      super.setUp();
-      conf.set(HConstants.CRYPTO_MANAGED_KEYS_PER_CUST_NAMESPACE_ACTIVE_KEY_COUNT,
-        Integer.toString(nKeys));
     }
 
     @Test
     public void testEnableAndGet() throws Exception {
       MockManagedKeyProvider managedKeyProvider =
         (MockManagedKeyProvider) Encryption.getKeyProvider(conf);
-      String cust = "cust1";
-      managedKeyProvider.setMockedKeyState(cust, keyState);
-      String encodedCust = ManagedKeyProvider.encodeToStr(cust.getBytes());
+      managedKeyProvider.setMockedKeyState(CUST, keyState);
       List<ManagedKeyData> managedKeyStates =
-        keymetaAdmin.enableKeyManagement(encodedCust, keySpace);
+        keymetaAdmin.enableKeyManagement(ENCODED_CUST, keySpace);
       assertNotNull(managedKeyStates);
       assertEquals(1, managedKeyStates.size());
       assertEquals(keyState, managedKeyStates.get(0).getKeyState());
       verify(keymetaAccessor).addKey(argThat(
         (ManagedKeyData keyData) -> assertKeyData(keyData, keyState,
-          isNullKey ? null : managedKeyProvider.getMockedKey(cust,
+          isNullKey ? null : managedKeyProvider.getMockedKey(CUST,
             keySpace))));
-      verify(keymetaAccessor).getAllKeys(cust.getBytes(), keySpace);
+      verify(keymetaAccessor).getActiveKey(CUST.getBytes(), keySpace);
       reset(keymetaAccessor);
 
-      keymetaAdmin.getManagedKeys(encodedCust, keySpace);
-      verify(keymetaAccessor).getAllKeys(cust.getBytes(), keySpace);
-    }
-  }
-
-  @RunWith(Parameterized.class)
-  @Category({ MasterTests.class, SmallTests.class })
-  public static class TestMultiKeyGen extends TestKeymetaAdminImpl {
-    @ClassRule
-    public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestKeymetaAdminImpl.TestMultiKeyGen.class);
-
-    @Parameter(0)
-    public String keySpace;
-
-    private MockManagedKeyProvider managedKeyProvider;
-
-    @Parameters(name = "{index},keySpace={0}")
-    public static Collection<Object[]> data() {
-      return Arrays.asList(
-          new Object[][] {
-            { KEY_SPACE_GLOBAL },
-            { "ns1" },
-          });
-    }
-
-    @Override
-    public void setUp() throws Exception {
-      super.setUp();
-      conf.set(HConstants.CRYPTO_MANAGED_KEYS_PER_CUST_NAMESPACE_ACTIVE_KEY_COUNT, "3");
-      managedKeyProvider = (MockManagedKeyProvider) Encryption.getKeyProvider(conf);
-      managedKeyProvider.setMultikeyGenMode(true);
-    }
-
-    @After
-    public void tearDown() {
-      // Reset as this instance gets reused for more than 1 test.
-      managedKeyProvider.setMockedKeyState(CUST, ACTIVE);
+      keymetaAdmin.getManagedKeys(ENCODED_CUST, keySpace);
+      verify(keymetaAccessor).getAllKeys(CUST.getBytes(), keySpace);
     }
 
     @Test
-    public void testEnable() throws Exception {
-      List<ManagedKeyData> managedKeyStates;
-      // Test 1: Enable key management with 3 keys
-      managedKeyStates = keymetaAdmin.enableKeyManagement(ENCODED_CUST, keySpace);
-      assertKeys(managedKeyStates, 3);
-      verify(keymetaAccessor).getAllKeys(CUST.getBytes(), keySpace);
-      verify(keymetaAccessor, times(3)).addKey(any());
+    public void testEnableKeyManagement() throws Exception {
+      assumeTrue(keyState == ACTIVE);
+      List<ManagedKeyData> keys = keymetaAdmin.enableKeyManagement(ENCODED_CUST, "namespace1");
+      assertEquals(1, keys.size());
+      assertEquals(ManagedKeyState.ACTIVE, keys.get(0).getKeyState());
+      assertEquals(ENCODED_CUST, keys.get(0).getKeyCustodianEncoded());
+      assertEquals("namespace1", keys.get(0).getKeyNamespace());
 
-      // Test 2: Enable key management with 3 keys, but already enabled
-      reset(keymetaAccessor);
-      when(keymetaAccessor.getAllKeys(CUST.getBytes(), keySpace)).thenReturn(managedKeyStates);
-      managedKeyStates = keymetaAdmin.enableKeyManagement(ENCODED_CUST, keySpace);
-      assertKeys(managedKeyStates, 3);
-      verify(keymetaAccessor, times(0)).addKey(any());
-
-      // Test 3: Enable key management with 4 keys, but only 1 key is added
-      reset(keymetaAccessor);
-      when(keymetaAccessor.getAllKeys(CUST.getBytes(), keySpace)).thenReturn(managedKeyStates);
-      keymetaAdmin.activeKeyCountOverride = 4;
-      managedKeyStates = keymetaAdmin.enableKeyManagement(ENCODED_CUST, keySpace);
-      assertKeys(managedKeyStates, 1);
-      verify(keymetaAccessor, times(1)).addKey(any());
-
-      // Test 4: Enable key management when key provider is not able to generate any new keys
-      reset(keymetaAccessor);
-      when(keymetaAccessor.getAllKeys(CUST.getBytes(), keySpace)).thenReturn(managedKeyStates);
-      managedKeyProvider.setMultikeyGenMode(false);
-      managedKeyStates = keymetaAdmin.enableKeyManagement(ENCODED_CUST, keySpace);
-      assertKeys(managedKeyStates, 0);
-      verify(keymetaAccessor, times(0)).addKey(any());
-
-      // Test 5: Enable key management when key provider is not able to generate any new keys
-      reset(keymetaAccessor);
-      managedKeyProvider.setMockedKeyState(CUST, FAILED);
-      managedKeyStates = keymetaAdmin.enableKeyManagement(ENCODED_CUST, keySpace);
-      assertNotNull(managedKeyStates);
-      assertEquals(1, managedKeyStates.size());
-      assertEquals(FAILED, managedKeyStates.get(0).getKeyState());
-      verify(keymetaAccessor, times(1)).addKey(any());
+      // Second call should return the same keys since our mock key provider returns the same key
+      List<ManagedKeyData> keys2 = keymetaAdmin.enableKeyManagement(ENCODED_CUST, "namespace1");
+      assertEquals(1, keys2.size());
+      assertEquals(keys.get(0), keys2.get(0));
     }
 
-    private static void assertKeys(List<ManagedKeyData> managedKeyStates, int expectedCnt) {
-      assertNotNull(managedKeyStates);
-      assertEquals(expectedCnt, managedKeyStates.size());
-      for (int i = 0; i < managedKeyStates.size(); ++i) {
-        assertEquals(ACTIVE, managedKeyStates.get(i).getKeyState());
-      }
+    @Test
+    public void testEnableKeyManagementWithMultipleNamespaces() throws Exception {
+      List<ManagedKeyData> keys = keymetaAdmin.enableKeyManagement(ENCODED_CUST, "namespace1");
+      assertEquals(1, keys.size());
+      assertEquals("namespace1", keys.get(0).getKeyNamespace());
+
+      List<ManagedKeyData> keys2 = keymetaAdmin.enableKeyManagement(ENCODED_CUST, "namespace2");
+      assertEquals(1, keys2.size());
+      assertEquals("namespace2", keys2.get(0).getKeyNamespace());
     }
   }
 
@@ -315,53 +239,9 @@ public class TestKeymetaAdminImpl {
     }
   }
 
-  @RunWith(Parameterized.class)
-  @Category({ MasterTests.class, SmallTests.class })
-  public static class TestForInvalidKeyCountConfig extends TestKeymetaAdminImpl {
-    @ClassRule public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestForInvalidKeyCountConfig.class);
-
-    @Parameter(0)
-    public String keyCount;;
-    @Parameter(1)
-    public String keySpace;
-    @Parameter(2)
-    public Class expectedExType;
-    @Parameters(name = "{index},keyCount={0},keySpace={1}expectedExType={2}")
-    public static Collection<Object[]> data() {
-      return Arrays.asList(new Object[][] {
-        { "0", KEY_SPACE_GLOBAL, IOException.class },
-        { "-1", KEY_SPACE_GLOBAL, IOException.class },
-        { "abc", KEY_SPACE_GLOBAL, NumberFormatException.class },
-        { "0", "ns1", IOException.class },
-        { "-1", "ns1", IOException.class },
-        { "abc", "ns1", NumberFormatException.class },
-      });
-    }
-
-    @Test
-    public void test() throws Exception {
-      conf.set(HConstants.CRYPTO_MANAGED_KEYS_PER_CUST_NAMESPACE_ACTIVE_KEY_COUNT, keyCount);
-      String cust = "cust1";
-      String encodedCust = ManagedKeyProvider.encodeToStr(cust.getBytes());
-      assertThrows(expectedExType, () ->
-        keymetaAdmin.enableKeyManagement(encodedCust, keySpace));
-    }
-  }
-
-  private class DummyKeymetaAdminImpl extends KeymetaAdminImpl {
-    public DummyKeymetaAdminImpl(Server mockServer, KeymetaTableAccessor mockAccessor) {
+  private class KeymetaAdminImplForTest extends KeymetaAdminImpl {
+    public KeymetaAdminImplForTest(Server mockServer, KeymetaTableAccessor mockAccessor) {
       super(mockServer);
-    }
-
-    public Integer activeKeyCountOverride;
-
-    @Override
-    protected int getPerCustodianNamespaceActiveKeyConfCount() throws IOException {
-      if (activeKeyCountOverride != null) {
-        return activeKeyCountOverride;
-      }
-      return super.getPerCustodianNamespaceActiveKeyConfCount();
     }
 
     @Override
@@ -373,6 +253,12 @@ public class TestKeymetaAdminImpl {
     public List<ManagedKeyData> getAllKeys(byte[] key_cust, String keyNamespace)
       throws IOException, KeyException {
       return keymetaAccessor.getAllKeys(key_cust, keyNamespace);
+    }
+
+    @Override
+    public ManagedKeyData getActiveKey(byte[] key_cust, String keyNamespace)
+      throws IOException, KeyException {
+      return keymetaAccessor.getActiveKey(key_cust, keyNamespace);
     }
   }
 

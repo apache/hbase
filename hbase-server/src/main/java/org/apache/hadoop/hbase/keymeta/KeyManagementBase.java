@@ -19,8 +19,6 @@ package org.apache.hadoop.hbase.keymeta;
 
 import java.io.IOException;
 import java.security.KeyException;
-import java.util.HashSet;
-import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
@@ -124,65 +122,40 @@ public abstract class KeyManagementBase {
     return isKeyManagementEnabled;
   }
 
-  protected int getPerCustodianNamespaceActiveKeyConfCount() throws IOException {
-    if (perCustNamespaceActiveKeyCount == null) {
-      perCustNamespaceActiveKeyCount = getConfiguration().getInt(
-        HConstants.CRYPTO_MANAGED_KEYS_PER_CUST_NAMESPACE_ACTIVE_KEY_COUNT,
-        HConstants.CRYPTO_MANAGED_KEYS_PER_CUST_NAMESPACE_ACTIVE_KEY_DEFAULT_COUNT);
-    }
-    if (perCustNamespaceActiveKeyCount <= 0) {
-      throw new IOException("Invalid value: " + perCustNamespaceActiveKeyCount + " configured for: "
-          + HConstants.CRYPTO_MANAGED_KEYS_PER_CUST_NAMESPACE_ACTIVE_KEY_COUNT);
-    }
-    return perCustNamespaceActiveKeyCount;
-  }
-
   /**
-   * Retrieves specified number of managed keys from the key provider. An attempt is made to
-   * retrieve the specified number of keys, but the real number of keys retrieved may be less than
-   * the specified number if the key provider is not capable of producing multiple active keys. If
-   * existing keys are provided, it will be used to ensure that keys retrieved are not the same as
-   * those that are already retrieved.
+   * Utility function to retrieves a managed key from the key provider.  If an existing key is
+   * provided and the retrieved key is the same as the existing key, it will be ignored.
    *
    * @param encKeyCust the encoded key custodian
    * @param key_cust the key custodian
    * @param keyNamespace the key namespace
-   * @param nKeysToRetrieve the number of keys to retrieve
-   * @param existingKeys the existing keys, typically the active keys already retrieved from the
-   *   key provider.
-   * @return the retrieved keys
+   * @param accessor the accessor to use to persist the key. If null, the key will not be persisted.
+   * @param existingActiveKey the existing key, typically the active key already retrieved from the
+   *   key provider, can be null.
+   * @return the retrieved key, or null if no key could be retrieved
    * @throws IOException if an error occurs
    * @throws KeyException if an error occurs
    */
-  protected Set<ManagedKeyData> retrieveManagedKeys(String encKeyCust, byte[] key_cust,
-      String keyNamespace, int nKeysToRetrieve, Set<ManagedKeyData> existingKeys)
+  protected ManagedKeyData retrieveActiveKey(String encKeyCust, byte[] key_cust,
+      String keyNamespace, KeymetaTableAccessor accessor, ManagedKeyData existingActiveKey)
       throws IOException, KeyException {
-    Set<ManagedKeyData> retrievedKeys = new HashSet<>(nKeysToRetrieve);
     ManagedKeyProvider provider = getKeyProvider();
-    for (int i = 0; i < nKeysToRetrieve; ++i) {
-      ManagedKeyData pbeKey = provider.getManagedKey(key_cust, keyNamespace);
-      if (pbeKey == null) {
-        throw new IOException("Invalid null managed key received from key provider");
-      }
-      if (retrievedKeys.contains(pbeKey) || existingKeys.contains(pbeKey)) {
-        // This typically means, the key provider is not capable of producing multiple active keys.
-        LOG.info("enableManagedKeys: specified (custodian: {}, namespace: {}) is configured "
-            + " to have {} active keys, but received only {} unique keys.",
-          encKeyCust, keyNamespace, existingKeys.size() + nKeysToRetrieve,
-          existingKeys.size() + retrievedKeys.size());
-        break;
-      }
-      retrievedKeys.add(pbeKey);
-      LOG.info("enableManagedKeys: got managed key with status: {} and metadata: {} for "
-          + "(custodian: {}, namespace: {})", pbeKey.getKeyState(), pbeKey.getKeyMetadata(),
-        encKeyCust, keyNamespace);
-      if (pbeKey.getKeyState() != ManagedKeyState.ACTIVE) {
-        LOG.info("enableManagedKeys: received non-ACTIVE key with status: {} with metadata: {} for "
-            + "(custodian: {}, namespace: {})",
-          pbeKey.getKeyState(), pbeKey.getKeyMetadata(), encKeyCust, keyNamespace);
-        break;
-      }
+    ManagedKeyData pbeKey = provider.getManagedKey(key_cust, keyNamespace);
+    if (pbeKey == null) {
+      throw new IOException("Invalid null managed key received from key provider");
     }
-    return retrievedKeys;
+    if (existingActiveKey != null && existingActiveKey.equals(pbeKey)) {
+      LOG.info("retrieveManagedKey: no change in key for (custodian: {}, namespace: {}",
+        encKeyCust, keyNamespace);
+      return null;
+    }
+    LOG.info("retrieveManagedKey: got managed key with status: {} and metadata: {} for "
+        + "(custodian: {}, namespace: {})", pbeKey.getKeyState(), pbeKey.getKeyMetadata(),
+      encKeyCust, keyNamespace);
+    if (accessor != null) {
+      // TODO: If existingActiveKey is not null, we should update the key state to INACTIVE.
+      accessor.addKey(pbeKey);
+    }
+    return pbeKey;
   }
 }

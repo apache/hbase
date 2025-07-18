@@ -369,7 +369,7 @@ public class TestSystemKeyAccessorAndManager {
       Key testKey = new SecretKeySpec("test-key-bytes".getBytes(), "AES");
       ManagedKeyData testKeyData = new ManagedKeyData(
         "custodian".getBytes(), "namespace", testKey,
-        ManagedKeyState.ACTIVE, testMetadata, 1000L, 0, 0);
+        ManagedKeyState.ACTIVE, testMetadata, 1000L);
 
       // Mock key provider
       ManagedKeyProvider realProvider = mock(ManagedKeyProvider.class);

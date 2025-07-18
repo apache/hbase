@@ -19,11 +19,7 @@ package org.apache.hadoop.hbase.keymeta;
 
 import java.io.IOException;
 import java.security.KeyException;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -42,14 +38,14 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 /**
  * In-memory cache for ManagedKeyData entries, using key metadata as the cache key.  Uses two
  * independent Caffeine caches: one for general key data and one for active keys only with
- * hierarchical structure for efficient random key selection.
+ * hierarchical structure for efficient single key retrieval.
  */
 @InterfaceAudience.Private
 public class ManagedKeyDataCache extends KeyManagementBase {
   private static final Logger LOG = LoggerFactory.getLogger(ManagedKeyDataCache.class);
 
   private Cache<String, ManagedKeyData> cache;
-  private Cache<ActiveKeysCacheKey, List<ManagedKeyData>> activeKeysCache;
+  private Cache<ActiveKeysCacheKey, ManagedKeyData> activeKeysCache;
   private final KeymetaTableAccessor keymetaAccessor;
 
   /**
@@ -165,7 +161,7 @@ public class ManagedKeyDataCache extends KeyManagementBase {
             keyMetadata);
       }
 
-      if (ManagedKeyState.isUsable(keyData.getKeyState())) {
+      if (!ManagedKeyState.isUsable(keyData.getKeyState())) {
         LOG.info("Failed to get usable key data with metadata: {} for prefix: {}",
             metadata, ManagedKeyProvider.encodeToStr(key_cust));
       }
@@ -178,7 +174,7 @@ public class ManagedKeyDataCache extends KeyManagementBase {
   }
 
   /**
-   * Retrieves an existing key from the active keys.
+   * Retrieves an existing key from the active keys cache.
    *
    * @param key_cust     the key custodian
    * @param keyNamespace the key namespace
@@ -188,13 +184,9 @@ public class ManagedKeyDataCache extends KeyManagementBase {
   private ManagedKeyData getFromActiveKeysCache(byte[] key_cust, String keyNamespace,
       String keyMetadata) {
     ActiveKeysCacheKey cacheKey = new ActiveKeysCacheKey(key_cust, keyNamespace);
-    List<ManagedKeyData> keyList = activeKeysCache.getIfPresent(cacheKey);
-    if (keyList != null) {
-      for (ManagedKeyData keyData : keyList) {
-        if (keyData.getKeyMetadata().equals(keyMetadata)) {
-          return keyData;
-        }
-      }
+    ManagedKeyData keyData = activeKeysCache.getIfPresent(cacheKey);
+    if (keyData != null && keyData.getKeyMetadata().equals(keyMetadata)) {
+      return keyData;
     }
     return null;
   }
@@ -212,21 +204,10 @@ public class ManagedKeyDataCache extends KeyManagementBase {
   public ManagedKeyData removeFromActiveKeys(byte[] key_cust, String key_namespace,
       String keyMetadata) {
     ActiveKeysCacheKey cacheKey = new ActiveKeysCacheKey(key_cust, key_namespace);
-    List<ManagedKeyData> keyList = activeKeysCache.getIfPresent(cacheKey);
-    if (keyList != null) {
-      // Find and remove the matching key
-      ManagedKeyData removedEntry = null;
-      for (int i = 0; i < keyList.size(); i++) {
-        if (keyList.get(i).getKeyMetadata().equals(keyMetadata)) {
-          removedEntry = keyList.remove(i);
-          break;
-        }
-      }
-      // If the list is now empty, remove the entire cache entry
-      if (keyList.isEmpty()) {
-        activeKeysCache.invalidate(cacheKey);
-      }
-      return removedEntry;
+    ManagedKeyData keyData = activeKeysCache.getIfPresent(cacheKey);
+    if (keyData != null && keyData.getKeyMetadata().equals(keyMetadata)) {
+      activeKeysCache.invalidate(cacheKey);
+      return keyData;
     }
     return null;
   }
@@ -240,90 +221,73 @@ public class ManagedKeyDataCache extends KeyManagementBase {
   }
 
   /**
-   * @return the approximate number of entries in the active keys cache which is meant for random
-   * key selection.
+   * @return the approximate number of entries in the active keys cache
    */
   public int getActiveCacheEntryCount() {
-    int activeCacheCount = 0;
-    for (List<ManagedKeyData> keyList : activeKeysCache.asMap().values()) {
-      activeCacheCount += keyList.size();
-    }
-    return activeCacheCount;
+    return (int) activeKeysCache.estimatedSize();
   }
 
   /**
-   * Retrieves a random active entry from the cache based on its key custodian, key namespace, and
-   * filters out entries with a status other than ACTIVE. This method also loads active keys from
-   * provider if not found in cache.
+   * Retrieves the active entry from the cache based on its key custodian and key namespace.
+   * This method also loads active keys from provider if not found in cache.
    *
    * @param key_cust     The key custodian.
    * @param keyNamespace the key namespace to search for
-   * @return a random ManagedKeyData entry with the given custodian and ACTIVE status, or null if
+   * @return the ManagedKeyData entry with the given custodian and ACTIVE status, or null if
    *   not found
    */
-  public ManagedKeyData getAnActiveEntry(byte[] key_cust, String keyNamespace) {
+  public ManagedKeyData getActiveEntry(byte[] key_cust, String keyNamespace) {
     ActiveKeysCacheKey cacheKey = new ActiveKeysCacheKey(key_cust, keyNamespace);
 
-    List<ManagedKeyData> keyList = activeKeysCache.get(cacheKey, key -> {
-      List<ManagedKeyData> activeEntries = new ArrayList<>();
+    ManagedKeyData keyData = activeKeysCache.get(cacheKey, key -> {
+      ManagedKeyData retrievedKey = null;
 
-      // Try to load from KeymetaTableAccessor
-      if (keymetaAccessor != null) {
+      // First check if there are any active keys in the generic cache, which should be
+      // suitable for standalone tools.
+      retrievedKey = this.cache.asMap().values().stream()
+          .filter(cachedKeyData -> Bytes.equals(cachedKeyData.getKeyCustodian(), key_cust)
+              && cachedKeyData.getKeyNamespace().equals(keyNamespace)
+              && cachedKeyData.getKeyState() == ManagedKeyState.ACTIVE)
+          .findFirst()
+          .orElse(null);
+
+      // Try to load from KeymetaTableAccessor if not found in cache
+      if (retrievedKey == null && keymetaAccessor != null) {
         try {
-          List<ManagedKeyData> loadedKeys = keymetaAccessor.getActiveKeys(key_cust, keyNamespace);
-          activeEntries.addAll(loadedKeys);
+          retrievedKey = keymetaAccessor.getActiveKey(key_cust, keyNamespace);
         } catch (IOException | KeyException | RuntimeException e) {
-          LOG.warn("Failed to load active keys from KeymetaTableAccessor for custodian: {} "
+          LOG.warn("Failed to load active key from KeymetaTableAccessor for custodian: {} "
               + "namespace: {}", ManagedKeyProvider.encodeToStr(key_cust), keyNamespace, e);
         }
       }
 
-      // If this happens, it means there were no keys in L2, which shouldn't happpen if L2 is
-      // enabled and keys were injected using control path for this custodian and namespace. In
-      // this case, we need to retrieve the keys from provider, but before that as a quick
-      // optimization, we check if there are any active keys in the other cache, which should be
-      // suitable for standalone tools.
-      if (activeEntries.isEmpty()) {
-        this.cache.asMap().values().stream()
-            .filter(keyData -> Bytes.equals(keyData.getKeyCustodian(), key_cust)
-                && keyData.getKeyNamespace().equals(keyNamespace)
-                && keyData.getKeyState() == ManagedKeyState.ACTIVE)
-            .forEach(keyData -> {
-              activeEntries.add(keyData);
-            });
-      }
-
-      // As a last ditch effort, load active keys from provider. This typically happens for
+      // As a last ditch effort, load active key from provider. This typically happens for
       // standalone tools.
-      if (activeEntries.isEmpty() && isDynamicLookupEnabled()) {
+      if (retrievedKey == null && isDynamicLookupEnabled()) {
         try {
           String keyCust = ManagedKeyProvider.encodeToStr(key_cust);
-          Set<ManagedKeyData> retrievedKeys = retrieveManagedKeys(keyCust, key_cust, keyNamespace,
-              getPerCustodianNamespaceActiveKeyConfCount(), new HashSet<>());
-          if (keymetaAccessor != null) {
-            for (ManagedKeyData keyData : retrievedKeys) {
-              keymetaAccessor.addKey(keyData);
-            }
-          }
-          retrievedKeys.stream().filter(keyData -> keyData.getKeyState() == ManagedKeyState.ACTIVE)
-              .forEach(activeEntries::add);
+          retrievedKey = retrieveActiveKey(keyCust, key_cust, keyNamespace, keymetaAccessor, null);
         } catch (IOException | KeyException | RuntimeException e) {
-          LOG.warn("Failed to load active keys from provider for custodian: {} namespace: {}",
+          LOG.warn("Failed to load active key from provider for custodian: {} namespace: {}",
               ManagedKeyProvider.encodeToStr(key_cust), keyNamespace, e);
         }
       }
 
-      // We don't mind returning an empty list here because it will help prevent future L2/provider
-      // lookups.
-      return activeEntries;
+      return retrievedKey;
     });
 
-    // Return a random entry from active keys cache only
-    if (keyList.isEmpty()) {
-      return null;
+    if (keyData != null && keyData.getKeyState() == ManagedKeyState.ACTIVE) {
+      return keyData;
     }
+    return null;
+  }
 
-    return keyList.get((int) (Math.random() * keyList.size()));
+  /**
+   * @deprecated Use {@link #getActiveEntry(byte[], String)} instead.
+   */
+  @Deprecated
+  public ManagedKeyData getAnActiveEntry(byte[] key_cust, String keyNamespace) {
+    return getActiveEntry(key_cust, keyNamespace);
   }
 
   /**

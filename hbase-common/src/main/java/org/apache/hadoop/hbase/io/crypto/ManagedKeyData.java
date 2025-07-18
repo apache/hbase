@@ -71,8 +71,6 @@ public class ManagedKeyData {
   private final ManagedKeyState keyState;
   private final String keyMetadata;
   private final long refreshTimestamp;
-  private final long readOpCount;
-  private final long writeOpCount;
   private volatile long keyChecksum = 0;
   private byte[] keyMetadataHash;
 
@@ -88,24 +86,21 @@ public class ManagedKeyData {
   public ManagedKeyData(byte[] key_cust, String key_namespace, Key theKey, ManagedKeyState keyState,
                         String keyMetadata) {
     this(key_cust, key_namespace, theKey, keyState, keyMetadata,
-      EnvironmentEdgeManager.currentTime(), 0, 0);
+        EnvironmentEdgeManager.currentTime());
   }
 
   /**
-   * Constructs a new instance with the given parameters.
+   * Constructs a new instance with the given parameters including refresh timestamp.
    *
-   * @param key_cust         The key custodian.
-   * @param theKey           The actual key, can be {@code null}.
-   * @param keyState        The state of the key.
-   * @param keyMetadata      The metadata associated with the key.
-   * @param refreshTimestamp The timestamp when this key was last refreshed.
-   * @param readOpCount      The current number of read operations for this key.
-   * @param writeOpCount     The current number of write operations for this key.
+   * @param key_cust     The key custodian.
+   * @param theKey       The actual key, can be {@code null}.
+   * @param keyState    The state of the key.
+   * @param keyMetadata  The metadata associated with the key.
+   * @param refreshTimestamp The refresh timestamp for the key.
    * @throws NullPointerException if any of key_cust, keyState or keyMetadata is null.
    */
   public ManagedKeyData(byte[] key_cust, String key_namespace, Key theKey, ManagedKeyState keyState,
-                        String keyMetadata, long refreshTimestamp, long readOpCount,
-                        long writeOpCount) {
+                        String keyMetadata, long refreshTimestamp) {
     Preconditions.checkNotNull(key_cust, "key_cust should not be null");
     Preconditions.checkNotNull(key_namespace, "key_namespace should not be null");
     Preconditions.checkNotNull(keyState,  "keyState should not be null");
@@ -113,10 +108,6 @@ public class ManagedKeyData {
     if (keyState != ManagedKeyState.FAILED) {
       Preconditions.checkNotNull(keyMetadata, "keyMetadata should not be null");
     }
-    Preconditions.checkArgument(readOpCount >= 0, "readOpCount: " + readOpCount +
-      " should be >= 0");
-    Preconditions.checkArgument(writeOpCount >= 0, "writeOpCount: " + writeOpCount +
-      " should be >= 0");
 
     this.keyCustodian = key_cust;
     this.keyNamespace = key_namespace;
@@ -124,14 +115,12 @@ public class ManagedKeyData {
     this.keyState = keyState;
     this.keyMetadata = keyMetadata;
     this.refreshTimestamp = refreshTimestamp;
-    this.readOpCount = readOpCount;
-    this.writeOpCount = writeOpCount;
   }
 
   @InterfaceAudience.Private
   public ManagedKeyData cloneWithoutKey() {
     return new ManagedKeyData(keyCustodian, keyNamespace, null, keyState, keyMetadata,
-      refreshTimestamp, readOpCount, writeOpCount);
+        refreshTimestamp);
   }
 
   /**
@@ -188,6 +177,15 @@ public class ManagedKeyData {
     return keyMetadata;
   }
 
+  /**
+   * Returns the refresh timestamp of the key.
+   *
+   * @return The refresh timestamp as a long value.
+   */
+  public long getRefreshTimestamp() {
+    return refreshTimestamp;
+  }
+
   @Override
   public String toString() {
     return "ManagedKeyData{" +
@@ -198,26 +196,6 @@ public class ManagedKeyData {
         ", refreshTimestamp=" + refreshTimestamp +
         ", keyChecksum=" + getKeyChecksum() +
         '}';
-  }
-
-  public long getRefreshTimestamp() {
-    return refreshTimestamp;
-  }
-
-  /**
-   * @return the number of times this key has been used for read operations as of the time this
-   *   key data was initialized.
-   */
-  public long getReadOpCount() {
-    return readOpCount;
-  }
-
-  /**
-   * @return the number of times this key has been used for write operations as of the time this
-   *   key data was initialized.
-   */
-  public long getWriteOpCount() {
-    return writeOpCount;
   }
 
   /**

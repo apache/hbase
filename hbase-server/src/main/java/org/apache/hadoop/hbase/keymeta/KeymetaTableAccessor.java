@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.security.Key;
 import java.security.KeyException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -31,7 +32,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -76,12 +76,6 @@ public class KeymetaTableAccessor extends KeyManagementBase {
   public static final String KEY_STATE_QUAL_NAME = "k";
   public static final byte[] KEY_STATE_QUAL_BYTES = Bytes.toBytes(KEY_STATE_QUAL_NAME);
 
-  public static final String READ_OP_COUNT_QUAL_NAME = "R";
-  public static final byte[] READ_OP_COUNT_QUAL_BYTES = Bytes.toBytes(READ_OP_COUNT_QUAL_NAME);
-
-  public static final String WRITE_OP_COUNT_QUAL_NAME = "W";
-  public static final byte[] WRITE_OP_COUNT_QUAL_BYTES = Bytes.toBytes(WRITE_OP_COUNT_QUAL_NAME);
-
   public KeymetaTableAccessor(Server server) {
     super(server);
   }
@@ -93,11 +87,17 @@ public class KeymetaTableAccessor extends KeyManagementBase {
    */
   public void addKey(ManagedKeyData keyData) throws IOException {
     assertKeyManagementEnabled();
+    List<Put> puts = new ArrayList<>(2);
+    if (keyData.getKeyState() == ManagedKeyState.ACTIVE) {
+      puts.add(addMutationColumns(new Put(constructRowKeyForCustNamespace(keyData)),
+          keyData));
+    }
     final Put putForMetadata = addMutationColumns(new Put(constructRowKeyForMetadata(keyData)),
       keyData);
+    puts.add(putForMetadata);
     Connection connection = getServer().getConnection();
     try (Table table = connection.getTable(KEY_META_TABLE_NAME)) {
-      table.put(putForMetadata);
+      table.put(puts);
     }
   }
 
@@ -136,24 +136,26 @@ public class KeymetaTableAccessor extends KeyManagementBase {
   }
 
   /**
-   * Get all the active keys for the specified key_cust and key_namespace.
+   * Get the active key for the specified key_cust and key_namespace.
    *
    * @param key_cust The prefix
    * @param keyNamespace The namespace
-   * @return a list of key data, one for each active key, can be empty when none were found.
+   * @return the active key data, or null if no active key found
    * @throws IOException when there is an underlying IOException.
    * @throws KeyException when there is an underlying KeyException.
    */
-  public List<ManagedKeyData> getActiveKeys(byte[] key_cust, String keyNamespace)
+  public ManagedKeyData getActiveKey(byte[] key_cust, String keyNamespace)
     throws IOException, KeyException {
     assertKeyManagementEnabled();
-    List<ManagedKeyData> activeKeys = new ArrayList<>();
-    for (ManagedKeyData keyData : getAllKeys(key_cust, keyNamespace)) {
-      if (keyData.getKeyState() == ManagedKeyState.ACTIVE) {
-        activeKeys.add(keyData);
-      }
+    Connection connection = getServer().getConnection();
+    byte[] rowkeyForGet = constructRowKeyForCustNamespace(key_cust, keyNamespace);
+    Get get = new Get(rowkeyForGet);
+    get.addColumn(KEY_META_INFO_FAMILY, KEY_STATE_QUAL_BYTES);
+
+    try (Table table = connection.getTable(KEY_META_TABLE_NAME)) {
+      Result result = table.get(get);
+      return parseFromResult(getServer(), key_cust, keyNamespace, result);
     }
-    return activeKeys;
   }
 
   /**
@@ -209,30 +211,6 @@ public class KeymetaTableAccessor extends KeyManagementBase {
   }
 
   /**
-   * Report read or write operation count on the specific key identified by key_cust, keyNamespace
-   * and keyMetadata. The reported value is added to the existing operation count using the
-   * Increment mutation.
-   * @param key_cust    The prefix.
-   * @param keyNamespace The namespace.
-   * @param keyMetadata  The metadata.
-   * @throws IOException when there is an underlying IOException.
-   */
-  public void reportOperation(byte[] key_cust, String keyNamespace, String keyMetadata, long count,
-      boolean isReadOperation) throws IOException {
-    assertKeyManagementEnabled();
-    Connection connection = getServer().getConnection();
-    try (Table table = connection.getTable(KEY_META_TABLE_NAME)) {
-      byte[] rowKey = constructRowKeyForMetadata(key_cust, keyNamespace,
-        ManagedKeyData.constructMetadataHash(keyMetadata));
-      Increment incr = new Increment(rowKey)
-        .addColumn(KEY_META_INFO_FAMILY,
-          isReadOperation ? READ_OP_COUNT_QUAL_BYTES : WRITE_OP_COUNT_QUAL_BYTES,
-          count);
-      table.increment(incr);
-    }
-  }
-
-  /**
    * Add the mutation columns to the given Put that are derived from the keyData.
    */
   private Put addMutationColumns(Put put, ManagedKeyData keyData) throws IOException {
@@ -280,9 +258,18 @@ public class KeymetaTableAccessor extends KeyManagementBase {
   @InterfaceAudience.Private
   public static byte[] constructRowKeyForMetadata(byte[] key_cust, String keyNamespace,
       byte[] keyMetadataHash) {
+    return Bytes.add(constructRowKeyForCustNamespace(key_cust, keyNamespace), keyMetadataHash);
+  }
+
+  @InterfaceAudience.Private
+  public static byte[] constructRowKeyForCustNamespace(ManagedKeyData keyData) {
+    return constructRowKeyForCustNamespace(keyData.getKeyCustodian(), keyData.getKeyNamespace());
+  }
+
+  @InterfaceAudience.Private
+  public static byte[] constructRowKeyForCustNamespace(byte[] key_cust, String keyNamespace) {
     int custLength = key_cust.length;
-    return Bytes.add(Bytes.toBytes(custLength), key_cust, Bytes.toBytesBinary(keyNamespace),
-      keyMetadataHash);
+    return Bytes.add(Bytes.toBytes(custLength), key_cust, Bytes.toBytesBinary(keyNamespace));
   }
 
   @InterfaceAudience.Private
@@ -315,13 +302,9 @@ public class KeymetaTableAccessor extends KeyManagementBase {
     }
     long refreshedTimestamp = Bytes.toLong(result.getValue(KEY_META_INFO_FAMILY,
       REFRESHED_TIMESTAMP_QUAL_BYTES));
-    byte[] readOpValue = result.getValue(KEY_META_INFO_FAMILY, READ_OP_COUNT_QUAL_BYTES);
-    long readOpCount = readOpValue != null ? Bytes.toLong(readOpValue) : 0;
-    byte[] writeOpValue = result.getValue(KEY_META_INFO_FAMILY, WRITE_OP_COUNT_QUAL_BYTES);
-    long writeOpCount = writeOpValue != null ? Bytes.toLong(writeOpValue) : 0;
     ManagedKeyData
       dekKeyData = new ManagedKeyData(key_cust, keyNamespace, dek, keyState, dekMetadata,
-      refreshedTimestamp, readOpCount, writeOpCount);
+      refreshedTimestamp);
     if (dek != null) {
       long dekChecksum = Bytes.toLong(result.getValue(KEY_META_INFO_FAMILY,
         DEK_CHECKSUM_QUAL_BYTES));

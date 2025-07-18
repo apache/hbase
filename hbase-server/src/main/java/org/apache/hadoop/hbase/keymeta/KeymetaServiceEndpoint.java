@@ -160,8 +160,6 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
           keyData.getKeyState().getVal()))
         .setKeyMetadata(keyData.getKeyMetadata())
         .setRefreshTimestamp(keyData.getRefreshTimestamp())
-        .setReadOpCount(keyData.getReadOpCount())
-        .setWriteOpCount(keyData.getWriteOpCount())
       ;
       responseBuilder.addState(builder.build());
     }

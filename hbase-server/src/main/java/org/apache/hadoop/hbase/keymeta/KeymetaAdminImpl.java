@@ -19,14 +19,12 @@ package org.apache.hadoop.hbase.keymeta;
 
 import java.io.IOException;
 import java.security.KeyException;
-import java.util.HashSet;
+import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
-import org.apache.hadoop.hbase.io.crypto.ManagedKeyState;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,25 +44,22 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
     LOG.info("Trying to enable key management on custodian: {} under namespace: {}", keyCust,
       keyNamespace);
     byte[] key_cust = ManagedKeyProvider.decodeToBytes(keyCust);
-    int perCustNamespaceActiveKeyConfCount = getPerCustodianNamespaceActiveKeyConfCount();
 
-    // Check if (cust, namespace) pair is already enabled and if there are enough number of
-    // active keys.
-    List<ManagedKeyData> activeKeys = getActiveKeys(key_cust, keyNamespace);
-    if (activeKeys.size() >= perCustNamespaceActiveKeyConfCount) {
+    // Check if (cust, namespace) pair is already enabled and has an active key.
+    ManagedKeyData activeKey = getActiveKey(key_cust, keyNamespace);
+    if (activeKey != null) {
       LOG.info("enableManagedKeys: specified (custodian: {}, namespace: {}) already has "
-          + " {} number of  managed keys active, which satisfies the configured minimum: {}",
-        keyCust, keyNamespace, activeKeys.size(), perCustNamespaceActiveKeyConfCount);
-      return activeKeys;
+          + "an active managed key with metadata: {}", keyCust, keyNamespace,
+          activeKey.getKeyMetadata());
+      return Collections.singletonList(activeKey);
     }
 
-    int nKeysToRetrieve = perCustNamespaceActiveKeyConfCount - activeKeys.size();
-    Set<ManagedKeyData> retrievedKeys = retrieveManagedKeys(
-        keyCust, key_cust, keyNamespace, nKeysToRetrieve, new HashSet<>(activeKeys));
-    for (ManagedKeyData pbeKey : retrievedKeys) {
-      addKey(pbeKey);
+    // Retrieve a single key from provider
+    ManagedKeyData retrievedKey = retrieveActiveKey(keyCust, key_cust, keyNamespace, this, null);
+    if (retrievedKey != null) {
+      return Collections.singletonList(retrievedKey);
     }
-    return retrievedKeys.stream().toList();
+    return Collections.emptyList();
   }
 
   @Override
