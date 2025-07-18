@@ -1190,9 +1190,63 @@ public class HStore
 
       return doCompaction(cr, filesToCompact, user, compactionStartTime,
         compaction.compact(throughputController, user));
+    } catch (IOException ioe){
+      try {
+        // To ensure strong data consistency, after compacting fails, new files
+        // that have not yet been loaded into memory are processed to prevent new files from
+        // being loaded after a long time.
+        processCompactedButNotLoadFiles();
+      } catch (Throwable e) {
+        LOG.warn("load compacted not load files is filed，e:{}", e);
+      }
+      throw ioe;
     } finally {
       finishCompactionRequest(cr);
     }
+  }
+
+  private void processCompactedButNotLoadFiles() throws IOException{
+    List<StoreFileInfo> compactedButNotLoadFiles = getCompactedButNotLoadFiles();
+    if (!compactedButNotLoadFiles.isEmpty()) {
+      loadCompactedNotLoadFiles(compactedButNotLoadFiles);
+    }
+  }
+
+  private void loadCompactedNotLoadFiles(List<StoreFileInfo> compactedButNotLoadFiles)
+      throws IOException {
+    List<HStoreFile> sfs = new ArrayList<>();
+    LOG.info("add new " + compactedButNotLoadFiles + " to storeFiles");
+    for (StoreFileInfo storeFileInfo : compactedButNotLoadFiles){
+      HStoreFile sf = storeEngine.createStoreFileAndReader(storeFileInfo);
+      StoreFileReader r = sf.getReader();
+      this.storeSize.addAndGet(r.length());
+      this.totalUncompressedBytes.addAndGet(r.getTotalUncompressedBytes());
+      sfs.add(sf);
+    }
+    this.storeEngine.writeLock();
+    try {
+      this.storeEngine.getStoreFileManager().insertNewFiles(sfs);
+    } finally {
+      this.storeEngine.writeUnlock();
+    }
+  }
+
+  private List<StoreFileInfo> getCompactedButNotLoadFiles() throws IOException {
+    List<StoreFileInfo> compactedButNotLoadFiles = new ArrayList<>();
+    Collection<StoreFileInfo> storeFileInfos = this.storeEngine.getStoreFiles();
+    if (storeFileInfos.isEmpty()) {
+      return compactedButNotLoadFiles;
+    }
+    List<String> compactedFilesPathName =
+        this.getStoreEngine().getStoreFileManager().getCompactedfiles().stream().map(HStoreFile::getPathName).collect(
+            Collectors.toList());
+    List<String> memoryStoreFilesPathName =
+        this.getStorefiles().stream().map(HStoreFile::getPathName).collect(Collectors.toList());
+    compactedButNotLoadFiles = storeFileInfos.stream()
+        .filter(storeFileInfo -> !compactedFilesPathName.contains(storeFileInfo.getPathName()))
+        .filter(storeFileInfo -> !memoryStoreFilesPathName.contains(storeFileInfo.getPathName()))
+        .collect(Collectors.toList());
+    return compactedButNotLoadFiles;
   }
 
   protected List<HStoreFile> doCompaction(CompactionRequestImpl cr,
