@@ -205,7 +205,7 @@ public class TestIncrementalBackupWithContinuous extends TestContinuousBackup {
   }
 
   @Test
-  public void testForcePITR() throws Exception {
+  public void testPitrFailureDueToMissingBackupPostBulkload() throws Exception {
     conf1.setBoolean(REPLICATION_MARKER_ENABLED_KEY, true);
     String methodName = Thread.currentThread().getStackTrace()[1].getMethodName();
     TableName tableName1 = TableName.valueOf("table_" + methodName);
@@ -251,12 +251,6 @@ public class TestIncrementalBackupWithContinuous extends TestContinuousBackup {
         new TableName[] { restoredTable }, restoreTs);
       int ret = ToolRunner.run(conf1, new PointInTimeRestoreDriver(), args);
       assertNotEquals("Restore should fail since there is one bulkload without any backup", 0, ret);
-
-      // force restore
-      args = TestPointInTimeRestore.buildPITRArgs(new TableName[] { tableName1 },
-        new TableName[] { restoredTable }, restoreTs, true);
-      ret = ToolRunner.run(conf1, new PointInTimeRestoreDriver(), args);
-      assertEquals("Restore should succeed", 0, ret);
     } finally {
       conf1.setBoolean(REPLICATION_MARKER_ENABLED_KEY, REPLICATION_MARKER_ENABLED_DEFAULT);
     }

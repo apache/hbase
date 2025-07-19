@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.backup;
 
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONF_CONTINUOUS_BACKUP_WAL_DIR;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_ENABLE_CONTINUOUS_BACKUP;
-import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_FORCE_RESTORE;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_TABLE;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_TABLE_MAPPING;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_TO_DATETIME;
@@ -231,25 +230,14 @@ public class TestPointInTimeRestore extends TestBackupBase {
 
   public static String[] buildPITRArgs(TableName[] sourceTables, TableName[] targetTables,
     long endTime) {
-    return buildPITRArgs(sourceTables, targetTables, endTime, false);
-  }
-
-  public static String[] buildPITRArgs(TableName[] sourceTables, TableName[] targetTables,
-    long endTime, boolean force) {
     String sourceTableNames =
       Arrays.stream(sourceTables).map(TableName::getNameAsString).collect(Collectors.joining(","));
 
     String targetTableNames =
       Arrays.stream(targetTables).map(TableName::getNameAsString).collect(Collectors.joining(","));
 
-    if (force) {
-      return new String[] { "-" + OPTION_TABLE, sourceTableNames, "-" + OPTION_TABLE_MAPPING,
-        targetTableNames, "-" + OPTION_TO_DATETIME, String.valueOf(endTime),
-        "-" + OPTION_FORCE_RESTORE };
-    } else {
-      return new String[] { "-" + OPTION_TABLE, sourceTableNames, "-" + OPTION_TABLE_MAPPING,
-        targetTableNames, "-" + OPTION_TO_DATETIME, String.valueOf(endTime) };
-    }
+    return new String[] { "-" + OPTION_TABLE, sourceTableNames, "-" + OPTION_TABLE_MAPPING,
+      targetTableNames, "-" + OPTION_TO_DATETIME, String.valueOf(endTime) };
   }
 
   private static String[] buildBackupArgs(String backupType, TableName[] tables,

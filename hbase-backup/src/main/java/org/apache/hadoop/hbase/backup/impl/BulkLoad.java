@@ -87,13 +87,14 @@ public class BulkLoad {
   @Override
   public int hashCode() {
     return new HashCodeBuilder().append(tableName).append(region).append(columnFamily)
-      .append(hfilePath).append(rowKey).toHashCode();
+      .append(hfilePath).append(rowKey).append(timestamp).toHashCode();
   }
 
   @Override
   public String toString() {
     return new ToStringBuilder(this, ToStringStyle.NO_CLASS_NAME_STYLE)
       .append("tableName", tableName).append("region", region).append("columnFamily", columnFamily)
-      .append("hfilePath", hfilePath).append("rowKey", rowKey).toString();
+      .append("hfilePath", hfilePath).append("rowKey", rowKey).append("timestamp", timestamp)
+      .toString();
   }
 }

@@ -116,12 +116,6 @@ public interface BackupRestoreConstants {
     "Specifies a custom backup location for Point-In-Time Recovery (PITR). "
       + "If provided, this location will be used exclusively instead of deriving the path from the system table.";
 
-  String OPTION_FORCE_RESTORE = "f";
-  String LONG_OPTION_FORCE_RESTORE = "force";
-  String OPTION_FORCE_RESTORE_DESC =
-    "Flag to force Point-In-Time Recovery in case there is no backup post bulkload operation. "
-      + "This might result in data loss as these bulkloaded files will not be part of the restored table.";
-
   String JOB_NAME_CONF_KEY = "mapreduce.job.name";
 
   String BACKUP_CONFIG_STRING =
