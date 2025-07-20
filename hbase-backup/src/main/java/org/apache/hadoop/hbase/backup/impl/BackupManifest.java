@@ -159,7 +159,8 @@ public class BackupManifest {
         ? BackupType.FULL
         : BackupType.INCREMENTAL;
 
-      BackupImage image = new BackupImage(backupId, type, rootDir, tableList, startTs, completeTs, incrCommittedWalTs);
+      BackupImage image = new BackupImage(backupId, type, rootDir, tableList, startTs, completeTs,
+        incrCommittedWalTs);
       for (BackupProtos.BackupImage img : ancestorList) {
         image.addAncestor(fromProto(img));
       }
@@ -296,9 +297,13 @@ public class BackupManifest {
       return completeTs;
     }
 
-    public long getIncrCommittedWalTs() { return incrCommittedWalTs; }
+    public long getIncrCommittedWalTs() {
+      return incrCommittedWalTs;
+    }
 
-    public void setIncrCommittedWalTs(long incrCommittedWalTs) { this.incrCommittedWalTs = incrCommittedWalTs; }
+    public void setIncrCommittedWalTs(long incrCommittedWalTs) {
+      this.incrCommittedWalTs = incrCommittedWalTs;
+    }
 
     private void setCompleteTs(long completeTs) {
       this.completeTs = completeTs;

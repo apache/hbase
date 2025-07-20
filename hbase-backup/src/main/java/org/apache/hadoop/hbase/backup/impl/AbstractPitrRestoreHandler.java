@@ -26,7 +26,6 @@ import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplica
 import static org.apache.hadoop.hbase.mapreduce.WALPlayer.IGNORE_EMPTY_FILES;
 
 import java.io.IOException;
-import org.apache.hadoop.hbase.backup.BackupType;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -42,6 +41,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.backup.BackupType;
 import org.apache.hadoop.hbase.backup.PointInTimeRestoreRequest;
 import org.apache.hadoop.hbase.backup.RestoreRequest;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
@@ -271,14 +271,14 @@ public abstract class AbstractPitrRestoreHandler {
    * @param endTime    Target recovery time
    * @throws IOException if a bulkload entry is found in between backup time and endtime
    */
-  private void checkBulkLoadAfterBackup(Connection conn, TableName sTableName, PitrBackupMetadata backup,
-    long endTime) throws IOException {
+  private void checkBulkLoadAfterBackup(Connection conn, TableName sTableName,
+    PitrBackupMetadata backup, long endTime) throws IOException {
     try (BackupSystemTable backupSystemTable = new BackupSystemTable(conn)) {
-      List<BulkLoad> bulkLoads =
-        backupSystemTable.readBulkloadRows(List.of(sTableName));
+      List<BulkLoad> bulkLoads = backupSystemTable.readBulkloadRows(List.of(sTableName));
       for (BulkLoad load : bulkLoads) {
-        long lastBackupTs =
-          (backup.getType() == BackupType.FULL) ? backup.getStartTs() : backup.getIncrCommittedWalTs();
+        long lastBackupTs = (backup.getType() == BackupType.FULL)
+          ? backup.getStartTs()
+          : backup.getIncrCommittedWalTs();
         if (lastBackupTs < load.getTimestamp() && load.getTimestamp() < endTime) {
           throw new IOException("Bulk load operation detected after last successful backup for "
             + "table: " + sTableName);

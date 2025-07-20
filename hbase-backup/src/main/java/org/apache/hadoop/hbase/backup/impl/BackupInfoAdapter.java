@@ -60,8 +60,12 @@ public class BackupInfoAdapter implements PitrBackupMetadata {
   }
 
   @Override
-  public BackupType getType() { return info.getType(); }
+  public BackupType getType() {
+    return info.getType();
+  }
 
   @Override
-  public long getIncrCommittedWalTs() { return info.getIncrCommittedWalTs(); }
+  public long getIncrCommittedWalTs() {
+    return info.getIncrCommittedWalTs();
+  }
 }
