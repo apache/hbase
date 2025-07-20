@@ -247,8 +247,8 @@ public class TestIncrementalBackupWithContinuous extends TestContinuousBackup {
 
       // expect restore failure due to no backup post bulkPostIncr bulkload
       TableName restoredTable = TableName.valueOf("restoredTable");
-      String[] args = TestPointInTimeRestore.buildPITRArgs(new TableName[] { tableName1 },
-        new TableName[] { restoredTable }, restoreTs);
+      String[] args = PITRTestUtil.buildPITRArgs(new TableName[] { tableName1 },
+        new TableName[] { restoredTable }, restoreTs, null);
       int ret = ToolRunner.run(conf1, new PointInTimeRestoreDriver(), args);
       assertNotEquals("Restore should fail since there is one bulkload without any backup", 0, ret);
     } finally {

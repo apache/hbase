@@ -33,19 +33,17 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.io.asyncfs.monitor.StreamSlowMonitor;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.replication.BaseReplicationEndpoint;
+import org.apache.hadoop.hbase.replication.EmptyEntriesPolicy;
 import org.apache.hadoop.hbase.replication.ReplicationResult;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceInterface;
-import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.FSHLogProvider;
 import org.apache.hadoop.hbase.wal.WAL;
@@ -56,8 +54,8 @@ import org.slf4j.LoggerFactory;
 /**
  * ContinuousBackupReplicationEndpoint is responsible for replicating WAL entries to a backup
  * storage. It organizes WAL entries by day and periodically flushes the data, ensuring that WAL
- * files do not exceed the configured size. The class includes mechanisms for handling the WAL
- * files, performing bulk load backups, and ensuring that the replication process is safe.
+ * files do not exceed the configured size. The class includes mechanisms for handling the WAL files
+ * and ensuring that the replication process is safe.
  */
 @InterfaceAudience.Private
 public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint {
@@ -209,6 +207,14 @@ public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint
   }
 
   @Override
+  public EmptyEntriesPolicy getEmptyEntriesPolicy() {
+    // Since this endpoint writes to S3 asynchronously, an empty entry batch
+    // does not guarantee that all previously submitted entries were persisted.
+    // Hence, avoid committing the WAL position.
+    return EmptyEntriesPolicy.SUBMIT;
+  }
+
+  @Override
   public ReplicationResult replicate(ReplicateContext replicateContext) {
     final List<WAL.Entry> entries = replicateContext.getEntries();
     if (entries.isEmpty()) {
@@ -292,20 +298,11 @@ public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint
 
     try {
       FSHLogProvider.Writer walWriter = walWriters.computeIfAbsent(day, this::createWalWriter);
-      List<Path> bulkLoadFiles = BulkLoadProcessor.processBulkLoadFiles(walEntries);
-
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("{} Processed {} bulk load files for WAL entries", Utils.logPeerId(peerId),
-          bulkLoadFiles.size());
-        LOG.trace("{} Bulk load files: {}", Utils.logPeerId(peerId),
-          bulkLoadFiles.stream().map(Path::toString).collect(Collectors.joining(", ")));
-      }
 
       for (WAL.Entry entry : walEntries) {
         walWriter.append(entry);
       }
       walWriter.sync(true);
-      uploadBulkLoadFiles(day, bulkLoadFiles);
     } catch (UncheckedIOException e) {
       String errorMsg = Utils.logPeerId(peerId) + " Failed to get or create WAL Writer for " + day;
       LOG.error("{} Backup failed for day {}. Error: {}", Utils.logPeerId(peerId), day,
@@ -375,41 +372,6 @@ public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint
     }
   }
 
-  private void uploadBulkLoadFiles(long dayInMillis, List<Path> bulkLoadFiles) throws IOException {
-    LOG.debug("{} Starting upload of {} bulk load files", Utils.logPeerId(peerId),
-      bulkLoadFiles.size());
-
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("{} Bulk load files to upload: {}", Utils.logPeerId(peerId),
-        bulkLoadFiles.stream().map(Path::toString).collect(Collectors.joining(", ")));
-    }
-    String dayDirectoryName = formatToDateString(dayInMillis);
-    Path bulkloadDir = new Path(backupFileSystemManager.getBulkLoadFilesDir(), dayDirectoryName);
-    backupFileSystemManager.getBackupFs().mkdirs(bulkloadDir);
-
-    for (Path file : bulkLoadFiles) {
-      Path sourcePath = getBulkLoadFileStagingPath(file);
-      Path destPath = new Path(bulkloadDir, file);
-
-      try {
-        LOG.debug("{} Copying bulk load file from {} to {}", Utils.logPeerId(peerId), sourcePath,
-          destPath);
-
-        FileUtil.copy(CommonFSUtils.getRootDirFileSystem(conf), sourcePath,
-          backupFileSystemManager.getBackupFs(), destPath, false, conf);
-
-        LOG.info("{} Bulk load file {} successfully backed up to {}", Utils.logPeerId(peerId), file,
-          destPath);
-      } catch (IOException e) {
-        LOG.error("{} Failed to back up bulk load file {}: {}", Utils.logPeerId(peerId), file,
-          e.getMessage(), e);
-        throw e;
-      }
-    }
-
-    LOG.debug("{} Completed upload of bulk load files", Utils.logPeerId(peerId));
-  }
-
   /**
    * Convert dayInMillis to "yyyy-MM-dd" format
    */
@@ -417,48 +379,6 @@ public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint
     SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
     dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
     return dateFormat.format(new Date(dayInMillis));
-  }
-
-  private Path getBulkLoadFileStagingPath(Path relativePathFromNamespace) throws IOException {
-    FileSystem rootFs = CommonFSUtils.getRootDirFileSystem(conf);
-    Path rootDir = CommonFSUtils.getRootDir(conf);
-    Path baseNSDir = new Path(HConstants.BASE_NAMESPACE_DIR);
-    Path baseNamespaceDir = new Path(rootDir, baseNSDir);
-    Path hFileArchiveDir =
-      new Path(rootDir, new Path(HConstants.HFILE_ARCHIVE_DIRECTORY, baseNSDir));
-
-    LOG.debug("{} Searching for bulk load file: {} in paths: {}, {}", Utils.logPeerId(peerId),
-      relativePathFromNamespace, baseNamespaceDir, hFileArchiveDir);
-
-    Path result =
-      findExistingPath(rootFs, baseNamespaceDir, hFileArchiveDir, relativePathFromNamespace);
-
-    if (result == null) {
-      LOG.error("{} No bulk loaded file found in relative path: {}", Utils.logPeerId(peerId),
-        relativePathFromNamespace);
-      throw new IOException(
-        "No Bulk loaded file found in relative path: " + relativePathFromNamespace);
-    }
-
-    LOG.debug("{} Bulk load file found at {}", Utils.logPeerId(peerId), result);
-    return result;
-  }
-
-  private static Path findExistingPath(FileSystem rootFs, Path baseNamespaceDir,
-    Path hFileArchiveDir, Path filePath) throws IOException {
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("Checking for bulk load file at: {} and {}", new Path(baseNamespaceDir, filePath),
-        new Path(hFileArchiveDir, filePath));
-    }
-
-    for (Path candidate : new Path[] { new Path(baseNamespaceDir, filePath),
-      new Path(hFileArchiveDir, filePath) }) {
-      if (rootFs.exists(candidate)) {
-        LOG.debug("Found bulk load file at: {}", candidate);
-        return candidate;
-      }
-    }
-    return null;
   }
 
   private void shutdownFlushExecutor() {
