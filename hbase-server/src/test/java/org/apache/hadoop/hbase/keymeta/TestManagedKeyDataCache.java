@@ -270,8 +270,6 @@ public class TestManagedKeyDataCache {
     @Test
     public void testGenericCacheOperations() throws Exception {
       ManagedKeyData globalKey1 = testProvider.getManagedKey(CUST_ID, KEY_SPACE_GLOBAL);
-      assertNull(cache.removeEntry(globalKey1.getKeyMetadata()));
-      assertGenericCacheEntries(globalKey1);
       ManagedKeyData nsKey1 = testProvider.getManagedKey(CUST_ID, "namespace1");
       assertGenericCacheEntries(nsKey1, globalKey1);
       ManagedKeyData globalKey2 = testProvider.getManagedKey(CUST_ID,
@@ -280,22 +278,6 @@ public class TestManagedKeyDataCache {
       ManagedKeyData nsKey2 = testProvider.getManagedKey(CUST_ID,
         "namespace1");
       assertGenericCacheEntries(nsKey2, globalKey2, nsKey1, globalKey1);
-
-      assertEquals(globalKey1, cache.removeEntry(globalKey1.getKeyMetadata()));
-      assertGenericCacheEntries(nsKey2, globalKey2, nsKey1);
-      assertNull(cache.removeEntry(globalKey1.getKeyMetadata()));
-      // It should be able to retrieve the once removed.
-      assertGenericCacheEntries(nsKey2, globalKey2, nsKey1, globalKey1);
-      assertEquals(globalKey1, cache.removeEntry(globalKey1.getKeyMetadata()));
-      assertEquals(nsKey2, cache.removeEntry(nsKey2.getKeyMetadata()));
-      assertGenericCacheEntries(globalKey2, nsKey1);
-      assertEquals(nsKey1, cache.removeEntry(nsKey1.getKeyMetadata()));
-      assertGenericCacheEntries(globalKey2);
-      assertEquals(globalKey2, cache.removeEntry(globalKey2.getKeyMetadata()));
-      cache.invalidateAll();
-      assertEquals(0, cache.getGenericCacheEntryCount());
-      // Sholld be functional after innvalidation.
-      assertGenericCacheEntries(globalKey1);
     }
 
     @Test
@@ -308,30 +290,11 @@ public class TestManagedKeyDataCache {
       verify(testProvider, never()).getManagedKey(any(), any(String.class));
     }
 
-    private void removeFromActiveKeys(ManagedKeyData key) {
-      cache.removeFromActiveKeys(key.getKeyCustodian(), key.getKeyNamespace(),
-          key.getKeyMetadata());
-    }
-
     @Test
     public void testActiveKeysCacheOperations() throws Exception {
-      ManagedKeyData key = testProvider.getManagedKey(CUST_ID, KEY_SPACE_GLOBAL);
-      assertNull(cache.removeFromActiveKeys(CUST_ID, KEY_SPACE_GLOBAL, key.getKeyMetadata()));
-
       assertNotNull(cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL));
       assertNotNull(cache.getActiveEntry(CUST_ID, "namespace1"));
       assertEquals(2, cache.getActiveCacheEntryCount());
-
-      key = cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL);
-      removeFromActiveKeys(key);
-      assertEquals(1, cache.getActiveCacheEntryCount());
-      assertNull(cache.removeFromActiveKeys(CUST_ID, KEY_SPACE_GLOBAL, key.getKeyMetadata()));
-      assertEquals(1, cache.getActiveCacheEntryCount());
-      removeFromActiveKeys(cache.getActiveEntry(CUST_ID, "namespace1"));
-      assertEquals(0, cache.getActiveCacheEntryCount());
-      // It should be able to retrieve the keys again
-      assertNotNull(cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL));
-      assertEquals(1, cache.getActiveCacheEntryCount());
 
       cache.invalidateAll();
       assertEquals(0, cache.getActiveCacheEntryCount());

@@ -44,7 +44,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 public class ManagedKeyDataCache extends KeyManagementBase {
   private static final Logger LOG = LoggerFactory.getLogger(ManagedKeyDataCache.class);
 
-  private Cache<String, ManagedKeyData> cache;
+  private Cache<String, ManagedKeyData> cacheByMetadata;
   private Cache<ActiveKeysCacheKey, ManagedKeyData> activeKeysCache;
   private final KeymetaTableAccessor keymetaAccessor;
 
@@ -99,7 +99,7 @@ public class ManagedKeyDataCache extends KeyManagementBase {
     int activeKeysMaxEntries = conf.getInt(
         HConstants.CRYPTO_MANAGED_KEYS_L1_ACTIVE_CACHE_MAX_NS_ENTRIES_CONF_KEY,
         HConstants.CRYPTO_MANAGED_KEYS_L1_ACTIVE_CACHE_MAX_NS_ENTRIES_DEFAULT);
-    this.cache = Caffeine.newBuilder()
+    this.cacheByMetadata = Caffeine.newBuilder()
         .maximumSize(maxEntries)
         .build();
     this.activeKeysCache = Caffeine.newBuilder()
@@ -122,7 +122,7 @@ public class ManagedKeyDataCache extends KeyManagementBase {
    */
   public ManagedKeyData getEntry(byte[] key_cust, String keyNamespace, String keyMetadata,
       byte[] wrappedKey) throws IOException, KeyException {
-    ManagedKeyData entry = cache.get(keyMetadata, metadata -> {
+    ManagedKeyData entry = cacheByMetadata.get(keyMetadata, metadata -> {
       // First check if it's in the active keys cache
       ManagedKeyData keyData = getFromActiveKeysCache(key_cust, keyNamespace, keyMetadata);
 
@@ -192,32 +192,11 @@ public class ManagedKeyDataCache extends KeyManagementBase {
   }
 
   /**
-   * Removes an entry from generic cache based on its key metadata.
-   *
-   * @param keyMetadata the key metadata of the entry to be removed
-   * @return the removed ManagedKeyData entry, or null if not found
-   */
-  public ManagedKeyData removeEntry(String keyMetadata) {
-    return cache.asMap().remove(keyMetadata);
-  }
-
-  public ManagedKeyData removeFromActiveKeys(byte[] key_cust, String key_namespace,
-      String keyMetadata) {
-    ActiveKeysCacheKey cacheKey = new ActiveKeysCacheKey(key_cust, key_namespace);
-    ManagedKeyData keyData = activeKeysCache.getIfPresent(cacheKey);
-    if (keyData != null && keyData.getKeyMetadata().equals(keyMetadata)) {
-      activeKeysCache.invalidate(cacheKey);
-      return keyData;
-    }
-    return null;
-  }
-
-  /**
    * @return the approximate number of entries in the main cache which is meant for general lookup
    * by key metadata.
    */
   public int getGenericCacheEntryCount() {
-    return (int) cache.estimatedSize();
+    return (int) cacheByMetadata.estimatedSize();
   }
 
   /**
@@ -244,7 +223,7 @@ public class ManagedKeyDataCache extends KeyManagementBase {
 
       // First check if there are any active keys in the generic cache, which should be
       // suitable for standalone tools.
-      retrievedKey = this.cache.asMap().values().stream()
+      retrievedKey = this.cacheByMetadata.asMap().values().stream()
           .filter(cachedKeyData -> Bytes.equals(cachedKeyData.getKeyCustodian(), key_cust)
               && cachedKeyData.getKeyNamespace().equals(keyNamespace)
               && cachedKeyData.getKeyState() == ManagedKeyState.ACTIVE)
@@ -291,7 +270,7 @@ public class ManagedKeyDataCache extends KeyManagementBase {
    * Invalidates all entries in the cache.
    */
   public void invalidateAll() {
-    cache.invalidateAll();
+    cacheByMetadata.invalidateAll();
     activeKeysCache.invalidateAll();
   }
 }
