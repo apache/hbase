@@ -273,6 +273,11 @@ public class ManagedKeyDataCache extends KeyManagementBase {
         }
       }
 
+      if (retrievedKey == null) {
+        retrievedKey = new ManagedKeyData(key_cust, keyNamespace, null, ManagedKeyState.FAILED,
+        null);
+      }
+
       return retrievedKey;
     });
 
@@ -280,14 +285,6 @@ public class ManagedKeyDataCache extends KeyManagementBase {
       return keyData;
     }
     return null;
-  }
-
-  /**
-   * @deprecated Use {@link #getActiveEntry(byte[], String)} instead.
-   */
-  @Deprecated
-  public ManagedKeyData getAnActiveEntry(byte[] key_cust, String keyNamespace) {
-    return getActiveEntry(key_cust, keyNamespace);
   }
 
   /**

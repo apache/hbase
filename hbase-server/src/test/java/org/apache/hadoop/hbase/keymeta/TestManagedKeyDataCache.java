@@ -535,12 +535,13 @@ public class TestManagedKeyDataCache {
     }
 
     @Test
-    public void testActiveKeysCacheDynamicLookupUnexpectedException() throws Exception {
+    public void testActiveKeysCacheDynamicLookupWithUnexpectedException() throws Exception {
       doThrow(new RuntimeException("Test exception")).when(testProvider).getManagedKey(any(),
           any(String.class));
       assertNull(cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL));
       verify(testProvider).getManagedKey(any(), any(String.class));
       clearInvocations(testProvider);
+      // A 2nd invocation should not result in a call to the provider.
       assertNull(cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL));
       verify(testProvider, never()).getManagedKey(any(), any(String.class));
     }
