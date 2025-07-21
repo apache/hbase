@@ -161,6 +161,11 @@ public class ManagedKeyDataCache extends KeyManagementBase {
             keyMetadata);
       }
 
+      // Also update activeKeysCache if relevant and is missing.
+      if (keyData.getKeyState() == ManagedKeyState.ACTIVE) {
+        activeKeysCache.asMap().putIfAbsent(new ActiveKeysCacheKey(key_cust, keyNamespace), keyData);
+      }
+
       if (!ManagedKeyState.isUsable(keyData.getKeyState())) {
         LOG.info("Failed to get usable key data with metadata: {} for prefix: {}",
             metadata, ManagedKeyProvider.encodeToStr(key_cust));
@@ -221,17 +226,8 @@ public class ManagedKeyDataCache extends KeyManagementBase {
     ManagedKeyData keyData = activeKeysCache.get(cacheKey, key -> {
       ManagedKeyData retrievedKey = null;
 
-      // First check if there are any active keys in the generic cache, which should be
-      // suitable for standalone tools.
-      retrievedKey = this.cacheByMetadata.asMap().values().stream()
-          .filter(cachedKeyData -> Bytes.equals(cachedKeyData.getKeyCustodian(), key_cust)
-              && cachedKeyData.getKeyNamespace().equals(keyNamespace)
-              && cachedKeyData.getKeyState() == ManagedKeyState.ACTIVE)
-          .findFirst()
-          .orElse(null);
-
       // Try to load from KeymetaTableAccessor if not found in cache
-      if (retrievedKey == null && keymetaAccessor != null) {
+      if (keymetaAccessor != null) {
         try {
           retrievedKey = keymetaAccessor.getActiveKey(key_cust, keyNamespace);
         } catch (IOException | KeyException | RuntimeException e) {
@@ -254,13 +250,13 @@ public class ManagedKeyDataCache extends KeyManagementBase {
 
       if (retrievedKey == null) {
         retrievedKey = new ManagedKeyData(key_cust, keyNamespace, null, ManagedKeyState.FAILED,
-        null);
+            null);
       }
 
       return retrievedKey;
     });
 
-    if (keyData != null && keyData.getKeyState() == ManagedKeyState.ACTIVE) {
+    if (keyData.getKeyState() == ManagedKeyState.ACTIVE) {
       return keyData;
     }
     return null;
@@ -272,15 +268,5 @@ public class ManagedKeyDataCache extends KeyManagementBase {
   public void invalidateAll() {
     cacheByMetadata.invalidateAll();
     activeKeysCache.invalidateAll();
-  }
-
-  @InterfaceAudience.LimitedPrivate({ HBaseInterfaceAudience.UNITTEST })
-  public ManagedKeyData removeEntry(String keyMetadata) {
-    return cacheByMetadata.asMap().remove(keyMetadata);
-  }
-
-  @InterfaceAudience.LimitedPrivate({ HBaseInterfaceAudience.UNITTEST })
-  public ManagedKeyData removeFromActiveKeys(byte[] key_cust, String keyNamespace) {
-    return activeKeysCache.asMap().remove(new ActiveKeysCacheKey(key_cust, keyNamespace));
   }
 }

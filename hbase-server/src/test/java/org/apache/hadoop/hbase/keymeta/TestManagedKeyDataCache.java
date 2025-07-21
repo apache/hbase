@@ -19,7 +19,9 @@ package org.apache.hadoop.hbase.keymeta;
 
 import static org.apache.hadoop.hbase.io.crypto.ManagedKeyData.KEY_SPACE_GLOBAL;
 import static org.apache.hadoop.hbase.io.crypto.ManagedKeyState.ACTIVE;
+import static org.apache.hadoop.hbase.io.crypto.ManagedKeyState.DISABLED;
 import static org.apache.hadoop.hbase.io.crypto.ManagedKeyState.FAILED;
+import static org.apache.hadoop.hbase.io.crypto.ManagedKeyState.INACTIVE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
@@ -39,6 +41,8 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.Arrays;
+import java.util.stream.Collectors;
 
 import net.bytebuddy.ByteBuddy;
 import net.bytebuddy.dynamic.loading.ClassLoadingStrategy;
@@ -66,6 +70,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyState;
 import org.apache.hadoop.hbase.io.crypto.MockManagedKeyProvider;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -273,8 +278,7 @@ public class TestManagedKeyDataCache {
       ManagedKeyData globalKey1 = testProvider.getManagedKey(CUST_ID, KEY_SPACE_GLOBAL);
       ManagedKeyData nsKey1 = testProvider.getManagedKey(CUST_ID, "namespace1");
       assertGenericCacheEntries(nsKey1, globalKey1);
-      ManagedKeyData globalKey2 = testProvider.getManagedKey(CUST_ID,
-        KEY_SPACE_GLOBAL);
+      ManagedKeyData globalKey2 = testProvider.getManagedKey(CUST_ID, KEY_SPACE_GLOBAL);
       assertGenericCacheEntries(globalKey2, nsKey1, globalKey1);
       ManagedKeyData nsKey2 = testProvider.getManagedKey(CUST_ID,
         "namespace1");
@@ -312,31 +316,39 @@ public class TestManagedKeyDataCache {
     }
 
     @Test
-    public void testActiveKeysCacheSkippingProviderWhenGenericCacheEntriesExist() throws Exception {
+    public void testThatActiveKeysCache_SkipsProvider_WhenLoadedViaGenericCache() throws Exception {
       ManagedKeyData key1 = testProvider.getManagedKey(CUST_ID, KEY_SPACE_GLOBAL);
       assertEquals(key1, cache.getEntry(CUST_ID, KEY_SPACE_GLOBAL, key1.getKeyMetadata(), null));
       ManagedKeyData key2 = testProvider.getManagedKey(CUST_ID, "namespace1");
       assertEquals(key2, cache.getEntry(CUST_ID, "namespace1", key2.getKeyMetadata(), null));
       verify(testProvider, times(2)).getManagedKey(any(), any(String.class));
+      assertEquals(2, cache.getActiveCacheEntryCount());
       clearInvocations(testProvider);
       assertEquals(key1, cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL));
-      // In this case, the provider is not called because the existing keys in generic cache are
-      // used first (before checking keymetaAccessor).
+      assertEquals(key2, cache.getActiveEntry(CUST_ID, "namespace1"));
+      // ACTIVE keys are automatically added to activeKeysCache when loaded
+      // via getEntry, so getActiveEntry will find them there and won't call the provider
       verify(testProvider, never()).getManagedKey(any(), any(String.class));
-      assertEquals(1, cache.getActiveCacheEntryCount());
       cache.invalidateAll();
       assertEquals(0, cache.getActiveCacheEntryCount());
     }
 
     @Test
-    public void testActiveKeysCacheIgnnoreFailedKeyInGenericCache() throws Exception {
+    public void testThatNonActiveKey_IsIgnored_WhenLoadedViaGenericCache() throws Exception {
       testProvider.setMockedKeyState(ALIAS, FAILED);
       ManagedKeyData key = testProvider.getManagedKey(CUST_ID, KEY_SPACE_GLOBAL);
       assertNull(cache.getEntry(CUST_ID, KEY_SPACE_GLOBAL, key.getKeyMetadata(), null));
-      clearInvocations(testProvider);
-      testProvider.setMockedKeyState(ALIAS, ACTIVE);
-      assertNotNull(cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL));
-      verify(testProvider).getManagedKey(any(), any(String.class));
+      assertEquals(0, cache.getActiveCacheEntryCount());
+
+      testProvider.setMockedKeyState(ALIAS, DISABLED);
+      key = testProvider.getManagedKey(CUST_ID, KEY_SPACE_GLOBAL);
+      assertNull(cache.getEntry(CUST_ID, KEY_SPACE_GLOBAL, key.getKeyMetadata(), null));
+      assertEquals(0, cache.getActiveCacheEntryCount());
+
+      testProvider.setMockedKeyState(ALIAS, INACTIVE);
+      key = testProvider.getManagedKey(CUST_ID, "namespace1");
+      assertEquals(key, cache.getEntry(CUST_ID, "namespace1", key.getKeyMetadata(), null));
+      assertEquals(0, cache.getActiveCacheEntryCount());
     }
 
     @Test
@@ -348,6 +360,7 @@ public class TestManagedKeyDataCache {
       ManagedKeyData key2 = testProvider.getManagedKey(cust_id2, KEY_SPACE_GLOBAL);
       assertNotNull(cache.getEntry(CUST_ID, KEY_SPACE_GLOBAL, key2.getKeyMetadata(), null));
       assertNotNull(cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL));
+      // ACTIVE keys are automatically added to activeKeysCache when loaded.
       assertEquals(1, cache.getActiveCacheEntryCount());
     }
 
@@ -543,9 +556,7 @@ public class TestManagedKeyDataCache {
     }
 
     @Test
-    public void testGetOlerEntryFromGenericCache() throws Exception {
-      testProvider.setMultikeyGenMode(true);
-
+    public void testGetOlderEntryFromGenericCache() throws Exception {
       // Get one version of the key in to ActiveKeysCache
       ManagedKeyData key1 = cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL);
       assertNotNull(key1);
@@ -558,7 +569,7 @@ public class TestManagedKeyDataCache {
     }
 
     @Test
-    public void testActiveKeysCacheUsesGenericCacheFirst() throws Exception {
+    public void testThatActiveKeysCache_PopulatedByGenericCache() throws Exception {
       // First populate the generic cache with an active key
       ManagedKeyData key = testProvider.getManagedKey(CUST_ID, KEY_SPACE_GLOBAL);
       assertEquals(key, cache.getEntry(CUST_ID, KEY_SPACE_GLOBAL, key.getKeyMetadata(), null));
@@ -567,7 +578,7 @@ public class TestManagedKeyDataCache {
       // Clear invocations to reset the mock state
       clearInvocations(testProvider);
 
-      // Now get the active entry - it should use the generic cache first, not call keymetaAccessor
+      // Now get the active entry - it should already be there due to the generic cache first
       assertEquals(key, cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL));
       verify(testProvider, never()).unwrapKey(any(String.class), any());
     }
@@ -579,6 +590,12 @@ public class TestManagedKeyDataCache {
           key.getKeyMetadata(), null));
     }
     assertEquals(keys.length, cache.getGenericCacheEntryCount());
-    assertEquals(0, cache.getActiveCacheEntryCount());
+    int activeKeysCount = Arrays.stream(keys)
+      .filter(key -> key.getKeyState() == ManagedKeyState.ACTIVE)
+      .map(key -> new ManagedKeyDataCache.ActiveKeysCacheKey(key.getKeyCustodian(),
+            key.getKeyNamespace()))
+      .collect(Collectors.toSet())
+      .size();
+    assertEquals(activeKeysCount, cache.getActiveCacheEntryCount());
   }
 }
