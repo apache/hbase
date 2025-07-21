@@ -56,10 +56,7 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
 
     // Retrieve a single key from provider
     ManagedKeyData retrievedKey = retrieveActiveKey(keyCust, key_cust, keyNamespace, this, null);
-    if (retrievedKey != null) {
-      return Collections.singletonList(retrievedKey);
-    }
-    return Collections.emptyList();
+    return Collections.singletonList(retrievedKey);
   }
 
   @Override

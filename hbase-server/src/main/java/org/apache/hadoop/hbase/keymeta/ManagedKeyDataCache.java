@@ -163,7 +163,8 @@ public class ManagedKeyDataCache extends KeyManagementBase {
 
       // Also update activeKeysCache if relevant and is missing.
       if (keyData.getKeyState() == ManagedKeyState.ACTIVE) {
-        activeKeysCache.asMap().putIfAbsent(new ActiveKeysCacheKey(key_cust, keyNamespace), keyData);
+        activeKeysCache.asMap().putIfAbsent(new ActiveKeysCacheKey(key_cust, keyNamespace),
+            keyData);
       }
 
       if (!ManagedKeyState.isUsable(keyData.getKeyState())) {

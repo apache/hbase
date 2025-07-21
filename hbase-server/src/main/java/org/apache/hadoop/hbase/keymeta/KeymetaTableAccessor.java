@@ -22,7 +22,9 @@ import java.security.Key;
 import java.security.KeyException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
@@ -124,14 +126,14 @@ public class KeymetaTableAccessor extends KeyManagementBase {
 
     try (Table table = connection.getTable(KEY_META_TABLE_NAME)) {
       ResultScanner scanner = table.getScanner(scan);
-      List<ManagedKeyData> allKeys = new ArrayList<>();
+      Set<ManagedKeyData> allKeys = new HashSet<>();
       for (Result result : scanner) {
         ManagedKeyData keyData = parseFromResult(getServer(), key_cust, keyNamespace, result);
         if (keyData != null) {
           allKeys.add(keyData);
         }
       }
-      return allKeys;
+      return allKeys.stream().toList();
     }
   }
 

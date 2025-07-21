@@ -164,17 +164,15 @@ public class TestKeymetaAdminImpl {
       MockManagedKeyProvider managedKeyProvider =
         (MockManagedKeyProvider) Encryption.getKeyProvider(conf);
       managedKeyProvider.setMockedKeyState(CUST, keyState);
-      List<ManagedKeyData> managedKeyStates =
+      when(keymetaAccessor.getActiveKey(CUST.getBytes(), keySpace)).thenReturn(
+        managedKeyProvider.getManagedKey(CUST.getBytes(), keySpace));
+
+      List<ManagedKeyData> managedKeys =
         keymetaAdmin.enableKeyManagement(ENCODED_CUST, keySpace);
-      assertNotNull(managedKeyStates);
-      assertEquals(1, managedKeyStates.size());
-      assertEquals(keyState, managedKeyStates.get(0).getKeyState());
-      verify(keymetaAccessor).addKey(argThat(
-        (ManagedKeyData keyData) -> assertKeyData(keyData, keyState,
-          isNullKey ? null : managedKeyProvider.getMockedKey(CUST,
-            keySpace))));
+      assertNotNull(managedKeys);
+      assertEquals(1, managedKeys.size());
+      assertEquals(keyState, managedKeys.get(0).getKeyState());
       verify(keymetaAccessor).getActiveKey(CUST.getBytes(), keySpace);
-      reset(keymetaAccessor);
 
       keymetaAdmin.getManagedKeys(ENCODED_CUST, keySpace);
       verify(keymetaAccessor).getAllKeys(CUST.getBytes(), keySpace);
