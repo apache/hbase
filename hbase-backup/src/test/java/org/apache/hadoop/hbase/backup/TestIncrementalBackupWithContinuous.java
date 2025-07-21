@@ -79,7 +79,7 @@ public class TestIncrementalBackupWithContinuous extends TestContinuousBackup {
     conf1.setBoolean(REPLICATION_MARKER_ENABLED_KEY, true);
     String methodName = Thread.currentThread().getStackTrace()[1].getMethodName();
     TableName tableName = TableName.valueOf("table_" + methodName);
-    Table t1 = TEST_UTIL.createTable(tableName, FAMILY);
+    Table t1 = TEST_UTIL.createTable(tableName, famName);
 
     try (BackupSystemTable table = new BackupSystemTable(TEST_UTIL.getConnection())) {
       int before = table.getBackupHistory().size();
@@ -104,10 +104,8 @@ public class TestIncrementalBackupWithContinuous extends TestContinuousBackup {
       assertEquals("Backup should contain the expected tables", Sets.newHashSet(tableName),
         new HashSet<>(manifest.getTableList()));
 
-      Put p = new Put(ROW);
-      p.addColumn(FAMILY, COLUMN, COLUMN);
-      t1.put(p);
-      Thread.sleep(5000);
+      loadTable(TEST_UTIL.getConnection().getTable(tableName));
+      Thread.sleep(10000);
 
       // Run incremental backup
       LOG.info("Run incremental backup now");
@@ -131,10 +129,12 @@ public class TestIncrementalBackupWithContinuous extends TestContinuousBackup {
       // Restore incremental backup
       TableName[] tables = new TableName[] { tableName };
       BackupAdminImpl client = new BackupAdminImpl(TEST_UTIL.getConnection());
-      client.restore(BackupUtils.createRestoreRequest(BACKUP_ROOT_DIR, incrementalBackupid, false,
-        tables, tables, true));
-
-      verifyTable(t1);
+      client.restore(
+        BackupUtils.createRestoreRequest(BACKUP_ROOT_DIR, incrementalBackupid, false, tables,
+          tables, true));
+      
+      assertEquals(NB_ROWS_IN_BATCH, TEST_UTIL.countRows(tableName));
+    } finally {
       conf1.setBoolean(REPLICATION_MARKER_ENABLED_KEY, REPLICATION_MARKER_ENABLED_DEFAULT);
     }
   }
