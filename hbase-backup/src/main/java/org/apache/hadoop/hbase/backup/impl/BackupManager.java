@@ -356,6 +356,11 @@ public class BackupManager implements Closeable {
     return systemTable.readRegionServerLastLogRollResult(backupInfo.getBackupRootDir());
   }
 
+  public List<BulkLoad> readBulkloadRows(List<TableName> tableList, long endTimestamp)
+    throws IOException {
+    return systemTable.readBulkloadRows(tableList, endTimestamp);
+  }
+
   public List<BulkLoad> readBulkloadRows(List<TableName> tableList) throws IOException {
     return systemTable.readBulkloadRows(tableList);
   }
