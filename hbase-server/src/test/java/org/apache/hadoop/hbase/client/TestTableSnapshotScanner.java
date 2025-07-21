@@ -17,9 +17,13 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.client.metrics.ScanMetrics.REGIONS_SCANNED_METRIC_NAME;
+import static org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME;
+
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -31,6 +35,8 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
+import org.apache.hadoop.hbase.client.metrics.ScanMetricsRegionInfo;
 import org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -242,6 +248,84 @@ public class TestTableSnapshotScanner {
   @Test
   public void testWithOfflineHBaseMultiRegion() throws Exception {
     testScanner(UTIL, "testWithMultiRegion", 20, true);
+  }
+
+  private ScanMetrics createTableSnapshotScannerAndGetScanMetrics(boolean enableScanMetrics,
+    boolean enableScanMetricsByRegion, byte[] endKey) throws Exception {
+    TableName tableName = TableName.valueOf(name.getMethodName() + "_TABLE");
+    String snapshotName = name.getMethodName() + "_SNAPSHOT";
+    try {
+      createTableAndSnapshot(UTIL, tableName, snapshotName, 50);
+      Path restoreDir = UTIL.getDataTestDirOnTestFS(snapshotName);
+      Scan scan = new Scan().withStartRow(bbb).withStopRow(endKey);
+      scan.setScanMetricsEnabled(enableScanMetrics);
+      scan.setEnableScanMetricsByRegion(enableScanMetricsByRegion);
+      Configuration conf = UTIL.getConfiguration();
+
+      TableSnapshotScanner snapshotScanner =
+        new TableSnapshotScanner(conf, restoreDir, snapshotName, scan);
+      verifyScanner(snapshotScanner, bbb, endKey);
+      return snapshotScanner.getScanMetrics();
+    } finally {
+      UTIL.getAdmin().deleteSnapshot(snapshotName);
+      UTIL.deleteTable(tableName);
+    }
+  }
+
+  @Test
+  public void testScanMetricsDisabled() throws Exception {
+    ScanMetrics scanMetrics = createTableSnapshotScannerAndGetScanMetrics(false, false, yyy);
+    Assert.assertNull(scanMetrics);
+  }
+
+  @Test
+  public void testScanMetricsWithScanMetricsByRegionDisabled() throws Exception {
+    ScanMetrics scanMetrics = createTableSnapshotScannerAndGetScanMetrics(true, false, yyy);
+    Assert.assertNotNull(scanMetrics);
+    int rowsScanned = 0;
+    for (byte[] row : HBaseTestingUtil.ROWS) {
+      if (Bytes.compareTo(row, bbb) >= 0 && Bytes.compareTo(row, yyy) < 0) {
+        rowsScanned++;
+      }
+    }
+    Map<String, Long> metricsMap = scanMetrics.getMetricsMap();
+    Assert.assertEquals(rowsScanned, (long) metricsMap.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME));
+  }
+
+  @Test
+  public void testScanMetricsByRegionForSingleRegion() throws Exception {
+    // Scan single row with row key bbb
+    byte[] bbc = Bytes.toBytes("bbc");
+    ScanMetrics scanMetrics = createTableSnapshotScannerAndGetScanMetrics(true, true, bbc);
+    Assert.assertNotNull(scanMetrics);
+    Map<ScanMetricsRegionInfo, Map<String, Long>> scanMetricsByRegion =
+      scanMetrics.collectMetricsByRegion();
+    Assert.assertEquals(1, scanMetricsByRegion.size());
+    for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry : scanMetricsByRegion
+      .entrySet()) {
+      ScanMetricsRegionInfo scanMetricsRegionInfo = entry.getKey();
+      Map<String, Long> metricsMap = entry.getValue();
+      Assert.assertNull(scanMetricsRegionInfo.getServerName());
+      Assert.assertNotNull(scanMetricsRegionInfo.getEncodedRegionName());
+      Assert.assertEquals(1, (long) metricsMap.get(REGIONS_SCANNED_METRIC_NAME));
+      Assert.assertEquals(1, (long) metricsMap.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME));
+    }
+  }
+
+  @Test
+  public void testScanMetricsByRegionForMultiRegion() throws Exception {
+    ScanMetrics scanMetrics = createTableSnapshotScannerAndGetScanMetrics(true, true, yyy);
+    Assert.assertNotNull(scanMetrics);
+    Map<ScanMetricsRegionInfo, Map<String, Long>> scanMetricsByRegion =
+      scanMetrics.collectMetricsByRegion();
+    for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry : scanMetricsByRegion
+      .entrySet()) {
+      ScanMetricsRegionInfo scanMetricsRegionInfo = entry.getKey();
+      Map<String, Long> metricsMap = entry.getValue();
+      Assert.assertNull(scanMetricsRegionInfo.getServerName());
+      Assert.assertNotNull(scanMetricsRegionInfo.getEncodedRegionName());
+      Assert.assertEquals(1, (long) metricsMap.get(REGIONS_SCANNED_METRIC_NAME));
+    }
   }
 
   @Test

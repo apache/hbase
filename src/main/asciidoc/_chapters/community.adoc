@@ -75,7 +75,7 @@ We also are currently in violation of this basic tenet -- replication at least k
 === Release Managers
 
 Each maintained release branch has a release manager, who volunteers to coordinate new features and bug fixes are backported to that release.
-The release managers are link:https://hbase.apache.org/team-list.html[committers].
+The release managers are link:https://hbase.apache.org/team.html[committers].
 If you would like your feature or bug fix to be included in a given release, communicate with that release manager.
 If this list goes out of date or you can't reach the listed person, reach out to someone else on the list.
 

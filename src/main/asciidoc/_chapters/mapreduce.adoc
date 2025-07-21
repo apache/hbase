@@ -30,12 +30,10 @@
 Apache MapReduce is a software framework used to analyze large amounts of data. It is provided by link:https://hadoop.apache.org/[Apache Hadoop].
 MapReduce itself is out of the scope of this document.
 A good place to get started with MapReduce is https://hadoop.apache.org/docs/r2.6.0/hadoop-mapreduce-client/hadoop-mapreduce-client-core/MapReduceTutorial.html.
-MapReduce version 2 (MR2)is now part of link:https://hadoop.apache.org/docs/r2.3.0/hadoop-yarn/hadoop-yarn-site/[YARN].
+MapReduce version 2 (MR2)is now part of link:https://hadoop.apache.org/docs/r2.6.0/hadoop-yarn/hadoop-yarn-site/[YARN].
 
 This chapter discusses specific configuration steps you need to take to use MapReduce on data within HBase.
-In addition, it discusses other interactions and issues between HBase and MapReduce
-jobs. Finally, it discusses <<cascading,Cascading>>, an
-link:http://www.cascading.org/[alternative API] for MapReduce.
+In addition, it discusses other interactions and issues between HBase and MapReduce jobs.
 
 .`mapred` and `mapreduce`
 [NOTE]
@@ -70,7 +68,7 @@ job runner letting hbase utility pick out from the full-on classpath what it nee
 MapReduce job configuration (See the source at `TableMapReduceUtil#addDependencyJars(org.apache.hadoop.mapreduce.Job)` for how this is done).
 
 
-The following example runs the bundled HBase link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/RowCounter.html[RowCounter] MapReduce job against a table named `usertable`.
+The following example runs the bundled HBase link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/mapreduce/RowCounter.html[RowCounter] MapReduce job against a table named `usertable`.
 It sets into `HADOOP_CLASSPATH` the jars hbase needs to run in an MapReduce context (including configuration files such as hbase-site.xml).
 Be sure to use the correct version of the HBase JAR for your system; replace the VERSION string in the below command line w/ the version of
 your local hbase install.  The backticks (``` symbols) cause the shell to execute the sub-commands, setting the output of `hbase classpath` into `HADOOP_CLASSPATH`.
@@ -229,7 +227,7 @@ If you think of the scan as a shovel, a bigger cache setting is analogous to a b
 
 The list of priorities mentioned above allows you to set a reasonable default, and override it for specific operations.
 
-See the API documentation for link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html[Scan] for more details.
+See the API documentation for link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Scan.html[Scan] for more details.
 
 == Bundled HBase MapReduce Jobs
 
@@ -259,10 +257,10 @@ $ ${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/hbase-mapreduce-VERSION.jar rowcou
 
 == HBase as a MapReduce Job Data Source and Data Sink
 
-HBase can be used as a data source, link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/TableInputFormat.html[TableInputFormat], and data sink, link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/TableOutputFormat.html[TableOutputFormat] or link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/MultiTableOutputFormat.html[MultiTableOutputFormat], for MapReduce jobs.
-Writing MapReduce jobs that read or write HBase, it is advisable to subclass link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/TableMapper.html[TableMapper]        and/or link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/TableReducer.html[TableReducer].
-See the do-nothing pass-through classes link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/IdentityTableMapper.html[IdentityTableMapper] and link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/IdentityTableReducer.html[IdentityTableReducer] for basic usage.
-For a more involved example, see link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/RowCounter.html[RowCounter] or review the `org.apache.hadoop.hbase.mapreduce.TestTableMapReduce` unit test.
+HBase can be used as a data source, link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/mapreduce/TableInputFormat.html[TableInputFormat], and data sink, link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/mapreduce/TableOutputFormat.html[TableOutputFormat] or link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/mapreduce/MultiTableOutputFormat.html[MultiTableOutputFormat], for MapReduce jobs.
+Writing MapReduce jobs that read or write HBase, it is advisable to subclass link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/mapreduce/TableMapper.html[TableMapper]        and/or link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/mapreduce/TableReducer.html[TableReducer].
+See the do-nothing pass-through classes link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/mapreduce/IdentityTableMapper.html[IdentityTableMapper] and link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/mapreduce/IdentityTableReducer.html[IdentityTableReducer] for basic usage.
+For a more involved example, see link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/mapreduce/RowCounter.html[RowCounter] or review the `org.apache.hadoop.hbase.mapreduce.TestTableMapReduce` unit test.
 
 If you run MapReduce jobs that use HBase as source or sink, need to specify source and sink table and column names in your configuration.
 
@@ -275,7 +273,7 @@ On insert, HBase 'sorts' so there is no point double-sorting (and shuffling data
 If you do not need the Reduce, your map might emit counts of records processed for reporting at the end of the job, or set the number of Reduces to zero and use TableOutputFormat.
 If running the Reduce step makes sense in your case, you should typically use multiple reducers so that load is spread across the HBase cluster.
 
-A new HBase partitioner, the link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/HRegionPartitioner.html[HRegionPartitioner], can run as many reducers the number of existing regions.
+A new HBase partitioner, the link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/mapreduce/HRegionPartitioner.html[HRegionPartitioner], can run as many reducers the number of existing regions.
 The HRegionPartitioner is suitable when your table is large and your upload will not greatly alter the number of existing regions upon completion.
 Otherwise use the default partitioner.
 
@@ -286,7 +284,7 @@ For more on how this mechanism works, see <<arch.bulk.load>>.
 
 == RowCounter Example
 
-The included link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/RowCounter.html[RowCounter] MapReduce job uses `TableInputFormat` and does a count of all rows in the specified table.
+The included link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/mapreduce/RowCounter.html[RowCounter] MapReduce job uses `TableInputFormat` and does a count of all rows in the specified table.
 To run it, use the following command:
 
 [source,bash]
@@ -306,13 +304,13 @@ If you have classpath errors, see <<hbase.mapreduce.classpath>>.
 [[splitter.default]]
 === The Default HBase MapReduce Splitter
 
-When link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/TableInputFormat.html[TableInputFormat] is used to source an HBase table in a MapReduce job, its splitter will make a map task for each region of the table.
+When link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/mapreduce/TableInputFormat.html[TableInputFormat] is used to source an HBase table in a MapReduce job, its splitter will make a map task for each region of the table.
 Thus, if there are 100 regions in the table, there will be 100 map-tasks for the job - regardless of how many column families are selected in the Scan.
 
 [[splitter.custom]]
 === Custom Splitters
 
-For those interested in implementing custom splitters, see the method `getSplits` in link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/TableInputFormatBase.html[TableInputFormatBase].
+For those interested in implementing custom splitters, see the method `getSplits` in link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/mapreduce/TableInputFormatBase.html[TableInputFormatBase].
 That is where the logic for map-task assignment resides.
 
 [[mapreduce.example]]
@@ -352,7 +350,7 @@ if (!b) {
 }
 ----
 
-...and the mapper instance would extend link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/TableMapper.html[TableMapper]...
+...and the mapper instance would extend link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/mapreduce/TableMapper.html[TableMapper]...
 
 [source,java]
 ----
@@ -400,7 +398,7 @@ if (!b) {
 }
 ----
 
-An explanation is required of what `TableMapReduceUtil` is doing, especially with the reducer. link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/TableOutputFormat.html[TableOutputFormat] is being used as the outputFormat class, and several parameters are being set on the config (e.g., `TableOutputFormat.OUTPUT_TABLE`), as well as setting the reducer output key to `ImmutableBytesWritable` and reducer value to `Writable`.
+An explanation is required of what `TableMapReduceUtil` is doing, especially with the reducer. link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/mapreduce/TableOutputFormat.html[TableOutputFormat] is being used as the outputFormat class, and several parameters are being set on the config (e.g., `TableOutputFormat.OUTPUT_TABLE`), as well as setting the reducer output key to `ImmutableBytesWritable` and reducer value to `Writable`.
 These could be set by the programmer on the job and conf, but `TableMapReduceUtil` tries to make things easier.
 
 The following is the example mapper, which will create a `Put` and matching the input `Result` and emit it.
@@ -640,50 +638,3 @@ This can either be done on a per-Job basis through properties, or on the entire 
 Especially for longer running jobs, speculative execution will create duplicate map-tasks which will double-write your data to HBase; this is probably not what you want.
 
 See <<spec.ex,spec.ex>> for more information.
-
-[[cascading]]
-== Cascading
-
-link:http://www.cascading.org/[Cascading] is an alternative API for MapReduce, which
-actually uses MapReduce, but allows you to write your MapReduce code in a simplified
-way.
-
-The following example shows a Cascading `Flow` which "sinks" data into an HBase cluster. The same
-`hBaseTap` API could be used to "source" data as well.
-
-[source, java]
-----
-// read data from the default filesystem
-// emits two fields: "offset" and "line"
-Tap source = new Hfs( new TextLine(), inputFileLhs );
-
-// store data in an HBase cluster
-// accepts fields "num", "lower", and "upper"
-// will automatically scope incoming fields to their proper familyname, "left" or "right"
-Fields keyFields = new Fields( "num" );
-String[] familyNames = {"left", "right"};
-Fields[] valueFields = new Fields[] {new Fields( "lower" ), new Fields( "upper" ) };
-Tap hBaseTap = new HBaseTap( "multitable", new HBaseScheme( keyFields, familyNames, valueFields ), SinkMode.REPLACE );
-
-// a simple pipe assembly to parse the input into fields
-// a real app would likely chain multiple Pipes together for more complex processing
-Pipe parsePipe = new Each( "insert", new Fields( "line" ), new RegexSplitter( new Fields( "num", "lower", "upper" ), " " ) );
-
-// "plan" a cluster executable Flow
-// this connects the source Tap and hBaseTap (the sink Tap) to the parsePipe
-Flow parseFlow = new FlowConnector( properties ).connect( source, hBaseTap, parsePipe );
-
-// start the flow, and block until complete
-parseFlow.complete();
-
-// open an iterator on the HBase table we stuffed data into
-TupleEntryIterator iterator = parseFlow.openSink();
-
-while(iterator.hasNext())
-  {
-  // print out each tuple from HBase
-  System.out.println( "iterator.next() = " + iterator.next() );
-  }
-
-iterator.close();
-----

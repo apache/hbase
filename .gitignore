@@ -29,5 +29,5 @@ tmp
 ID
 filenametags
 tags
-.codegenie
-.vscode
+.codegenie/
+.vscode/
