@@ -49,9 +49,7 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -59,7 +57,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Integration test for HFile v4 multi-tenant splitting logic.
+ * Integration test for HFile v4 multi-tenant splitting logic using isolated test pattern.
+ * 
+ * <p>Each test method runs independently with its own fresh cluster to ensure complete isolation
+ * and avoid connection interference issues between tests.
  * 
  * <p>This test validates the complete multi-tenant HFile v4 splitting workflow:
  * <ol>
@@ -69,9 +70,6 @@ import org.slf4j.LoggerFactory;
  * <li><strong>Splitting:</strong> Tests midkey calculation and file splitting</li>
  * <li><strong>Verification:</strong> Validates split balance and data integrity</li>
  * </ol>
- * 
- * <p>The test covers various tenant distribution patterns to ensure proper splitting behavior
- * across different real-world scenarios.
  */
 @Category(MediumTests.class)
 public class MultiTenantHFileSplittingTest {
@@ -82,21 +80,21 @@ public class MultiTenantHFileSplittingTest {
 
   private static final Logger LOG = LoggerFactory.getLogger(MultiTenantHFileSplittingTest.class);
   
-  private static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
+  private HBaseTestingUtil testUtil;
   
   private static final byte[] FAMILY = Bytes.toBytes("f");
   private static final byte[] QUALIFIER = Bytes.toBytes("q");
   private static final int TENANT_PREFIX_LENGTH = 3;
   
-  // Track whether we're in the middle of a critical operation
-  private static volatile boolean inCriticalOperation = false;
-  
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
-    LOG.info("=== Setting up Multi-Tenant HFile Splitting Test class ===");
+  @Before
+  public void setUp() throws Exception {
+    LOG.info("=== Setting up isolated test environment ===");
     
-    // Configure test settings BEFORE creating the configuration
-    Configuration conf = TEST_UTIL.getConfiguration();
+    // Create fresh testing utility for each test
+    testUtil = new HBaseTestingUtil();
+    
+    // Configure test settings
+    Configuration conf = testUtil.getConfiguration();
     
     // Set HFile format version for multi-tenant support
     conf.setInt(HFile.FORMAT_VERSION_KEY, HFile.MIN_FORMAT_VERSION_WITH_MULTI_TENANT);
@@ -104,14 +102,13 @@ public class MultiTenantHFileSplittingTest {
     
     // Set smaller region size to make splits easier to trigger
     conf.setLong("hbase.hregion.max.filesize", 10 * 1024 * 1024); // 10MB
-    conf.setInt("hbase.regionserver.region.split.policy.check.period", 1000); // Check every second
+    conf.setInt("hbase.regionserver.region.split.policy.check.period", 1000);
     
-    // Use IncreasingToUpperBoundRegionSplitPolicy which allows manual splits
-    // but still prevents automatic splits if we set the file size high enough
+    // Use policy that allows manual splits
     conf.set("hbase.regionserver.region.split.policy", 
              "org.apache.hadoop.hbase.regionserver.IncreasingToUpperBoundRegionSplitPolicy");
     
-    // Configure mini cluster settings
+    // Configure mini cluster settings for stability
     conf.setInt("hbase.regionserver.msginterval", 100);
     conf.setInt("hbase.client.pause", 250);
     conf.setInt("hbase.client.retries.number", 6);
@@ -121,100 +118,31 @@ public class MultiTenantHFileSplittingTest {
     conf.setLong("hbase.regionserver.fileSplitTimeout", 600000); // 10 minutes
     conf.setInt("hbase.client.operation.timeout", 600000); // 10 minutes
     
-    // Ensure the HFile format version is set
     LOG.info("Configured HFile format version: {}", 
              conf.getInt(HFile.FORMAT_VERSION_KEY, -1));
     
-    // Start mini cluster
-    LOG.info("Starting mini cluster with multi-tenant HFile configuration");
-    TEST_UTIL.startMiniCluster(1);
+    // Start fresh mini cluster for this test
+    LOG.info("Starting fresh mini cluster for test");
+    testUtil.startMiniCluster(1);
     
-    // Wait for cluster to be fully ready
-    LOG.info("Waiting for cluster to be ready...");
-    TEST_UTIL.waitUntilAllRegionsAssigned(TableName.META_TABLE_NAME);
+    // Wait for cluster to be ready
+    testUtil.waitUntilAllRegionsAssigned(TableName.META_TABLE_NAME);
     
-    // Verify the configuration persisted after cluster start
-    int postStartVersion = TEST_UTIL.getConfiguration().getInt(HFile.FORMAT_VERSION_KEY, -1);
-    LOG.info("HFile format version after cluster start: {}", postStartVersion);
-    
-    if (postStartVersion != HFile.MIN_FORMAT_VERSION_WITH_MULTI_TENANT) {
-      LOG.warn("HFile format version changed after cluster start. Re-setting...");
-      TEST_UTIL.getConfiguration().setInt(HFile.FORMAT_VERSION_KEY, 
-                                         HFile.MIN_FORMAT_VERSION_WITH_MULTI_TENANT);
-    }
-    
-    LOG.info("Mini cluster started successfully");
-  }
-  
-  @AfterClass
-  public static void tearDownAfterClass() throws Exception {
-    LOG.info("=== Tearing down Multi-Tenant HFile Splitting Test class ===");
-    
-    // Wait for any critical operations to complete
-    int waitCount = 0;
-    while (inCriticalOperation && waitCount < 60) { // Wait up to 60 seconds
-      LOG.info("Waiting for critical operation to complete before teardown... ({}s)", waitCount);
-      Thread.sleep(1000);
-      waitCount++;
-    }
-    
-    if (inCriticalOperation) {
-      LOG.warn("Critical operation still in progress after 60s wait, proceeding with teardown");
-    }
-    
-    try {
-      TEST_UTIL.shutdownMiniCluster();
-      LOG.info("Mini cluster shut down successfully");
-    } catch (Exception e) {
-      LOG.warn("Error during mini cluster shutdown", e);
-    }
-  }
-  
-  @Before
-  public void setUp() throws Exception {
-    LOG.info("=== Per-test setup ===");
-    // Reset critical operation flag
-    inCriticalOperation = false;
+    LOG.info("Fresh cluster ready for test");
   }
   
   @After
   public void tearDown() throws Exception {
-    LOG.info("=== Per-test cleanup ===");
+    LOG.info("=== Cleaning up isolated test environment ===");
     
-    // Check if cluster is still running before trying to clean up
-    if (TEST_UTIL.getMiniHBaseCluster() == null) {
-      LOG.warn("Mini cluster is not running, skipping table cleanup");
-      return;
-    }
-    
-    // Clean up any tables created during tests using TEST_UTIL pattern
-    TableName[] testTables = {
-      TableName.valueOf("TestSingleTenant"),
-      TableName.valueOf("TestEvenDistribution"),
-      TableName.valueOf("TestUnevenDistribution"),
-      TableName.valueOf("TestSkewedDistribution"),
-      TableName.valueOf("TestManySmallTenants"),
-      TableName.valueOf("TestFewLargeTenants"),
-      TableName.valueOf("TestCoreRegionSplitting"),
-      TableName.valueOf("TestDataConsistency"),
-      TableName.valueOf("TestRegionBoundaries"),
-      TableName.valueOf("TestClusterHealthCheck"),
-      TableName.valueOf("TestBasicFunctionality")
-    };
-    
-    for (TableName tableName : testTables) {
+    if (testUtil != null) {
       try {
-        if (TEST_UTIL.getAdmin() != null && TEST_UTIL.getAdmin().tableExists(tableName)) {
-          TEST_UTIL.deleteTable(tableName);
-          LOG.info("Deleted test table: {}", tableName);
-        }
+        testUtil.shutdownMiniCluster();
+        LOG.info("Successfully shut down test cluster");
       } catch (Exception e) {
-        LOG.warn("Failed to clean up table: {}", tableName, e);
+        LOG.warn("Error during cluster shutdown", e);
       }
     }
-    
-    // Reset critical operation flag
-    inCriticalOperation = false;
   }
   
   /**
@@ -225,7 +153,7 @@ public class MultiTenantHFileSplittingTest {
     String[] tenants = {"T01"};
     int[] rowsPerTenant = {10000};
     
-    executeTestScenario("TestSingleTenant", tenants, rowsPerTenant);
+    executeTestScenario(tenants, rowsPerTenant);
   }
   
   /**
@@ -236,7 +164,7 @@ public class MultiTenantHFileSplittingTest {
     String[] tenants = {"T01", "T02", "T03"};
     int[] rowsPerTenant = {3000, 3000, 3000};
     
-    executeTestScenario("TestEvenDistribution", tenants, rowsPerTenant);
+    executeTestScenario(tenants, rowsPerTenant);
   }
   
   /**
@@ -247,7 +175,7 @@ public class MultiTenantHFileSplittingTest {
     String[] tenants = {"T01", "T02", "T03"};
     int[] rowsPerTenant = {1000, 2000, 1000};
     
-    executeTestScenario("TestUnevenDistribution", tenants, rowsPerTenant);
+    executeTestScenario(tenants, rowsPerTenant);
   }
   
   /**
@@ -258,7 +186,7 @@ public class MultiTenantHFileSplittingTest {
     String[] tenants = {"T01", "T02", "T03", "T04"};
     int[] rowsPerTenant = {100, 100, 5000, 100};
     
-    executeTestScenario("TestSkewedDistribution", tenants, rowsPerTenant);
+    executeTestScenario(tenants, rowsPerTenant);
   }
   
   /**
@@ -269,7 +197,7 @@ public class MultiTenantHFileSplittingTest {
     String[] tenants = {"T01", "T02", "T03", "T04", "T05", "T06", "T07", "T08", "T09", "T10"};
     int[] rowsPerTenant = {500, 500, 500, 500, 500, 500, 500, 500, 500, 500};
     
-    executeTestScenario("TestManySmallTenants", tenants, rowsPerTenant);
+    executeTestScenario(tenants, rowsPerTenant);
   }
   
   /**
@@ -280,66 +208,79 @@ public class MultiTenantHFileSplittingTest {
     String[] tenants = {"T01", "T02"};
     int[] rowsPerTenant = {5000, 5000};
     
-    executeTestScenario("TestFewLargeTenants", tenants, rowsPerTenant);
+    executeTestScenario(tenants, rowsPerTenant);
   }
   
   /**
    * Execute a test scenario with the given configuration.
+   * The table will be created fresh for this test.
    */
-  private void executeTestScenario(String tableName, String[] tenants, int[] rowsPerTenant) 
+  private void executeTestScenario(String[] tenants, int[] rowsPerTenant) 
       throws Exception {
-    TableName table = TableName.valueOf(tableName);
-    LOG.info("=== Starting test scenario: {} ===", tableName);
+    LOG.info("=== Starting test scenario ===");
+    
+    // Generate unique table name for this test
+    String testName = Thread.currentThread().getStackTrace()[2].getMethodName();
+    TableName tableName = TableName.valueOf(testName + "_" + System.currentTimeMillis());
+    
+    // Validate input parameters
+    if (tenants.length != rowsPerTenant.length) {
+      throw new IllegalArgumentException("Tenants and rowsPerTenant arrays must have same length");
+    }
     
     try {
-      // Phase 1: Create table
-      LOG.info("Phase 1: Creating table {}", tableName);
-      createTestTable(table);
+      // Phase 1: Create fresh table
+      LOG.info("Phase 1: Creating fresh table {}", tableName);
+      createTestTable(tableName);
+      
+      // Wait for table to be ready
+      Thread.sleep(1000);
       
       // Phase 2: Write test data
       LOG.info("Phase 2: Writing test data");
-      writeTestData(table, tenants, rowsPerTenant);
+      writeTestData(tableName, tenants, rowsPerTenant);
       
       // Phase 3: Flush memstore to create HFiles
       LOG.info("Phase 3: Flushing table");
-      TEST_UTIL.flush(table);
+      testUtil.flush(tableName);
       
-      // Wait a bit for flush to complete
-      Thread.sleep(1000);
+      // Wait for flush to complete
+      Thread.sleep(2000);
       
       // Phase 4: Verify midkey before split
       LOG.info("Phase 4: Verifying midkey calculation");
-      verifyMidkeyCalculation(table, tenants, rowsPerTenant);
+      verifyMidkeyCalculation(tableName, tenants, rowsPerTenant);
       
-      // Phase 5: Trigger split - mark as critical operation
+      // Phase 5: Trigger split
       LOG.info("Phase 5: Triggering region split");
-      inCriticalOperation = true;
-      try {
-        triggerRegionSplit(tenants, rowsPerTenant, table);
-      } finally {
-        inCriticalOperation = false;
-      }
+      triggerRegionSplit(tenants, rowsPerTenant, tableName);
       
       // Phase 6: Compact after split to ensure proper HFile structure
       LOG.info("Phase 6: Compacting table after split");
-      TEST_UTIL.compact(table, true); // Major compaction
+      testUtil.compact(tableName, true); // Major compaction
       
       // Wait for compaction to complete
-      Thread.sleep(2000);
+      Thread.sleep(3000);
       
       // Phase 7: Comprehensive data integrity verification after split
       LOG.info("Phase 7: Starting comprehensive data integrity verification after split");
-      verifyDataIntegrityWithScanning(table, tenants, rowsPerTenant);
-      verifyDataIntegrityAfterSplit(table, tenants, rowsPerTenant);
+      verifyDataIntegrityWithScanning(tableName, tenants, rowsPerTenant);
+      verifyDataIntegrityAfterSplit(tableName, tenants, rowsPerTenant);
       
-      LOG.info("=== Test scenario completed successfully: {} ===", tableName);
+      LOG.info("=== Test scenario completed successfully ===");
       
     } catch (Exception e) {
-      LOG.error("Test scenario failed: {}", tableName, e);
+      LOG.error("Test scenario failed", e);
       throw e;
     } finally {
-      // Ensure critical operation flag is reset
-      inCriticalOperation = false;
+      // Clean up table
+      try {
+        if (testUtil.getAdmin() != null && testUtil.getAdmin().tableExists(tableName)) {
+          testUtil.deleteTable(tableName);
+        }
+      } catch (Exception cleanupException) {
+        LOG.warn("Failed to cleanup table {}: {}", tableName, cleanupException.getMessage());
+      }
     }
   }
   
@@ -369,7 +310,7 @@ public class MultiTenantHFileSplittingTest {
     tableBuilder.setColumnFamily(cfBuilder.build());
     
     // Create the table
-    TEST_UTIL.createTable(tableBuilder.build(), null);
+    testUtil.createTable(tableBuilder.build(), null);
     
     LOG.info("Created table {} with multi-tenant configuration", tableName);
   }
@@ -378,7 +319,7 @@ public class MultiTenantHFileSplittingTest {
    * Write test data for all tenants in lexicographic order to avoid key ordering violations.
    */
   private void writeTestData(TableName tableName, String[] tenants, int[] rowsPerTenant) throws IOException {
-    try (Connection connection = TEST_UTIL.getConnection();
+    try (Connection connection = ConnectionFactory.createConnection(testUtil.getConfiguration());
          Table table = connection.getTable(tableName)) {
       
       List<Put> batchPuts = new ArrayList<>();
@@ -421,11 +362,11 @@ public class MultiTenantHFileSplittingTest {
     Path hfilePath = hfilePaths.get(0); // Use the first HFile
     LOG.info("Checking midkey for HFile: {}", hfilePath);
     
-    FileSystem fs = TEST_UTIL.getTestFileSystem();
-    CacheConfig cacheConf = new CacheConfig(TEST_UTIL.getConfiguration());
+    FileSystem fs = testUtil.getTestFileSystem();
+    CacheConfig cacheConf = new CacheConfig(testUtil.getConfiguration());
     
     try (HFile.Reader reader = HFile.createReader(fs, hfilePath, cacheConf, true, 
-                                                 TEST_UTIL.getConfiguration())) {
+                                                 testUtil.getConfiguration())) {
       assertTrue("Reader should be AbstractMultiTenantReader", 
                  reader instanceof AbstractMultiTenantReader);
       
@@ -498,7 +439,7 @@ public class MultiTenantHFileSplittingTest {
       throws Exception {
     LOG.info("=== Comprehensive Scanning Verification After Split ===");
     
-    try (Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
+    try (Connection conn = ConnectionFactory.createConnection(testUtil.getConfiguration());
          Table table = conn.getTable(tableName)) {
       
       // Test 1: Full table scan verification
@@ -541,8 +482,22 @@ public class MultiTenantHFileSplittingTest {
         seenRowsPerTenant[i] = new java.util.HashSet<>();
       }
       
+      String previousRowKey = null;
+      
       for (org.apache.hadoop.hbase.client.Result result : scanner) {
+        if (result.isEmpty()) {
+          LOG.warn("Empty result encountered during scan");
+          continue;
+        }
+        
         String rowKey = Bytes.toString(result.getRow());
+        
+        // Verify row ordering
+        if (previousRowKey != null) {
+          assertTrue("Rows should be in lexicographic order: " + previousRowKey + " should be <= " + rowKey,
+                    Bytes.compareTo(Bytes.toBytes(previousRowKey), Bytes.toBytes(rowKey)) <= 0);
+        }
+        
         String tenantPrefix = rowKey.substring(0, TENANT_PREFIX_LENGTH);
         
         // Find which tenant this row belongs to
@@ -572,47 +527,76 @@ public class MultiTenantHFileSplittingTest {
         
         tenantRowCounts[tenantIndex]++;
         seenRowsPerTenant[tenantIndex].add(rowKey);
-        // Per-row logging to trace scan order and locate gaps
-        LOG.info("SCANNED_ROW {}", rowKey);
+        
+        // Log every 1000th row for progress tracking
+        if (totalRowsScanned % 1000 == 0) {
+          LOG.info("Scanned {} rows so far, current row: {}", totalRowsScanned, rowKey);
+        }
+        
+        previousRowKey = rowKey;
         totalRowsScanned++;
       }
       
-      // NEW DEBUG LOGGING: dump per-tenant counts before assertions
+      // Detailed logging of per-tenant counts before assertions
       StringBuilder sb = new StringBuilder();
-      sb.append("Per-tenant counts: ");
+      sb.append("Per-tenant scan results: ");
       for (int i = 0; i < tenants.length; i++) {
-        sb.append(tenants[i]).append('=')
-          .append(tenantRowCounts[i]).append(", ");
+        sb.append(tenants[i]).append("=")
+          .append(tenantRowCounts[i]).append("/").append(rowsPerTenant[i])
+          .append(", ");
       }
       sb.append("total=").append(totalRowsScanned);
       LOG.info(sb.toString());
       
       // Verify total row count
       int expectedTotal = Arrays.stream(rowsPerTenant).sum();
-      assertEquals("Full scan should return all rows after split", expectedTotal, totalRowsScanned);
+      if (totalRowsScanned != expectedTotal) {
+        LOG.error("Row count mismatch in full scan:");
+        LOG.error("  Expected: {}", expectedTotal);
+        LOG.error("  Scanned: {}", totalRowsScanned);
+        
+        // Log missing rows per tenant
+        for (int i = 0; i < tenants.length; i++) {
+          if (tenantRowCounts[i] != rowsPerTenant[i]) {
+            java.util.List<String> missing = new java.util.ArrayList<>();
+            for (int r = 0; r < rowsPerTenant[i]; r++) {
+              String expectedKey = String.format("%srow%05d", tenants[i], r);
+              if (!seenRowsPerTenant[i].contains(expectedKey)) {
+                missing.add(expectedKey);
+              }
+            }
+            LOG.error("Missing rows for tenant {} ({} missing): {}", 
+                     tenants[i], missing.size(), missing.size() <= 10 ? missing : missing.subList(0, 10) + "...");
+          }
+        }
+        
+        fail("Full scan should return all rows after split. Expected: " + expectedTotal + ", Got: " + totalRowsScanned);
+      }
       
       // Verify per-tenant row counts
       for (int i = 0; i < tenants.length; i++) {
-        assertEquals("Row count mismatch for tenant " + tenants[i] + " in full scan", 
-                    rowsPerTenant[i], tenantRowCounts[i]);
-      }
-      
-      LOG.info("Full table scan verified: {}/{} rows scanned successfully", 
-               totalRowsScanned, expectedTotal);
-      
-      // Identify and log missing rows per tenant
-      for (int i = 0; i < tenants.length; i++) {
         if (tenantRowCounts[i] != rowsPerTenant[i]) {
+          LOG.error("Row count mismatch for tenant {} in full scan: expected {}, got {}", 
+                   tenants[i], rowsPerTenant[i], tenantRowCounts[i]);
+          
+          // Log some missing rows for debugging
           java.util.List<String> missing = new java.util.ArrayList<>();
           for (int r = 0; r < rowsPerTenant[i]; r++) {
             String expectedKey = String.format("%srow%05d", tenants[i], r);
             if (!seenRowsPerTenant[i].contains(expectedKey)) {
               missing.add(expectedKey);
+              if (missing.size() >= 5) break; // Show first 5 missing rows
             }
           }
-          LOG.error("Missing rows for tenant {} ({} rows): {}", tenants[i], missing.size(), missing);
+          LOG.error("Sample missing rows for tenant {}: {}", tenants[i], missing);
+          
+          fail("Row count mismatch for tenant " + tenants[i] + " in full scan: expected " + 
+               rowsPerTenant[i] + ", got " + tenantRowCounts[i]);
         }
       }
+      
+      LOG.info("Full table scan verified successfully: {}/{} rows scanned", 
+               totalRowsScanned, expectedTotal);
     }
   }
   
@@ -803,7 +787,7 @@ public class MultiTenantHFileSplittingTest {
       throws Exception {
     LOG.info("Verifying data integrity with GET operations");
     
-    try (Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
+    try (Connection conn = ConnectionFactory.createConnection(testUtil.getConfiguration());
          Table table = conn.getTable(tableName)) {
       
       int totalRowsVerified = 0;
@@ -841,18 +825,18 @@ public class MultiTenantHFileSplittingTest {
   private List<Path> findHFilePaths(TableName tableName) throws IOException {
     List<Path> hfilePaths = new ArrayList<>();
     
-    Path rootDir = TEST_UTIL.getDataTestDirOnTestFS();
+    Path rootDir = testUtil.getDataTestDirOnTestFS();
     Path tableDir = new Path(rootDir, "data/default/" + tableName.getNameAsString());
     
-    if (TEST_UTIL.getTestFileSystem().exists(tableDir)) {
-      FileStatus[] regionDirs = TEST_UTIL.getTestFileSystem().listStatus(tableDir);
+    if (testUtil.getTestFileSystem().exists(tableDir)) {
+      FileStatus[] regionDirs = testUtil.getTestFileSystem().listStatus(tableDir);
       
       for (FileStatus regionDir : regionDirs) {
         if (regionDir.isDirectory() && !regionDir.getPath().getName().startsWith(".")) {
           Path familyDir = new Path(regionDir.getPath(), Bytes.toString(FAMILY));
           
-          if (TEST_UTIL.getTestFileSystem().exists(familyDir)) {
-            FileStatus[] hfiles = TEST_UTIL.getTestFileSystem().listStatus(familyDir);
+          if (testUtil.getTestFileSystem().exists(familyDir)) {
+            FileStatus[] hfiles = testUtil.getTestFileSystem().listStatus(familyDir);
             
             for (FileStatus hfile : hfiles) {
               if (!hfile.getPath().getName().startsWith(".") && 
@@ -882,13 +866,16 @@ public class MultiTenantHFileSplittingTest {
     LOG.info("Checking cluster health before split");
     try {
       // Verify cluster is running
-      assertTrue("Mini cluster should be running", TEST_UTIL.getMiniHBaseCluster() != null);
+      assertTrue("Mini cluster should be running", testUtil.getMiniHBaseCluster() != null);
       LOG.info("Mini cluster is up and running");
       
       // Add more debug info about cluster state
-      LOG.info("Master is active: {}", TEST_UTIL.getMiniHBaseCluster().getMaster().isActiveMaster());
-      LOG.info("Number of region servers: {}", TEST_UTIL.getMiniHBaseCluster().getNumLiveRegionServers());
-      LOG.info("Master address: {}", TEST_UTIL.getMiniHBaseCluster().getMaster().getServerName());
+      LOG.info("Master is active: {}", testUtil.getMiniHBaseCluster().getMaster().isActiveMaster());
+      LOG.info("Number of region servers: {}", testUtil.getMiniHBaseCluster().getNumLiveRegionServers());
+      LOG.info("Master address: {}", testUtil.getMiniHBaseCluster().getMaster().getServerName());
+      
+      // Ensure no regions are in transition before starting split
+      testUtil.waitUntilNoRegionsInTransition(60000);
       
     } catch (Exception e) {
       LOG.warn("Cluster health check failed: {}", e.getMessage());
@@ -897,7 +884,7 @@ public class MultiTenantHFileSplittingTest {
     
     // Get initial region count and submit split request
     LOG.info("Getting initial region count and submitting split");
-    try (Connection connection = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
+    try (Connection connection = ConnectionFactory.createConnection(testUtil.getConfiguration());
          Admin admin = connection.getAdmin()) {
       
       // Ensure table exists and is available
@@ -907,43 +894,104 @@ public class MultiTenantHFileSplittingTest {
         throw new RuntimeException("Table " + tableName + " does not exist before split");
       }
       
-      LOG.info("Table {} exists", tableName);
+      // Ensure table is enabled
+      if (!admin.isTableEnabled(tableName)) {
+        LOG.info("Table {} is disabled, enabling it", tableName);
+        admin.enableTable(tableName);
+        testUtil.waitTableEnabled(tableName.getName(), 30000);
+      }
+      
+      LOG.info("Table {} exists and is enabled", tableName);
       
       List<RegionInfo> regions = admin.getRegions(tableName);
       assertEquals("Should have exactly one region before split", 1, regions.size());
       LOG.info("Pre-split verification passed. Table {} has {} region(s)", tableName, regions.size());
       
+      RegionInfo regionToSplit = regions.get(0);
+      LOG.info("Region to split: {} [{} -> {}]", 
+               regionToSplit.getEncodedName(),
+               Bytes.toStringBinary(regionToSplit.getStartKey()),
+               Bytes.toStringBinary(regionToSplit.getEndKey()));
+      
       // Trigger the split - let HBase choose the split point based on midkey calculation
       LOG.info("Submitting split request for table: {}", tableName);
       admin.split(tableName);
       LOG.info("Split request submitted successfully for table: {}", tableName);
+      
+      // Wait a moment for split request to be processed
+      Thread.sleep(2000);
     }
     
     // Wait for split to complete using HBaseTestingUtil methods with extended timeouts
     LOG.info("Waiting for split processing to complete...");
-    TEST_UTIL.waitUntilNoRegionsInTransition(120000); // Increase timeout to 2 minutes
     
-    // Give some time for the split to stabilize
-    Thread.sleep(2000);
+    // First wait for no regions in transition
+    boolean splitCompleted = false;
+    int maxWaitCycles = 12; // 12 * 10 seconds = 2 minutes max
+    int waitCycle = 0;
     
-    // Verify split completed by checking region count
-    LOG.info("Verifying split completion...");
-    try (Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
-         Admin splitAdmin = conn.getAdmin()) {
-      List<RegionInfo> regionsAfterSplit = splitAdmin.getRegions(tableName);
+    while (!splitCompleted && waitCycle < maxWaitCycles) {
+      waitCycle++;
+      LOG.info("Split wait cycle {}/{}: Waiting for regions to stabilize...", waitCycle, maxWaitCycles);
+      
+      try {
+        // Wait for no regions in transition (10 second timeout per cycle)
+        testUtil.waitUntilNoRegionsInTransition(10000);
+        
+        // Check if split actually completed
+        try (Connection conn = ConnectionFactory.createConnection(testUtil.getConfiguration());
+             Admin checkAdmin = conn.getAdmin()) {
+          
+          List<RegionInfo> currentRegions = checkAdmin.getRegions(tableName);
+          if (currentRegions.size() > 1) {
+            splitCompleted = true;
+            LOG.info("Split completed successfully! Regions after split: {}", currentRegions.size());
+          } else {
+            LOG.info("Split not yet complete, still {} region(s). Waiting...", currentRegions.size());
+            Thread.sleep(5000); // Wait 5 seconds before next check
+          }
+        }
+        
+      } catch (Exception e) {
+        LOG.warn("Error during split wait cycle {}: {}", waitCycle, e.getMessage());
+        if (waitCycle == maxWaitCycles) {
+          throw new RuntimeException("Split failed after maximum wait time", e);
+        }
+        Thread.sleep(5000); // Wait before retrying
+      }
+    }
+    
+    if (!splitCompleted) {
+      throw new RuntimeException("Region split did not complete within timeout period");
+    }
+    
+    // Give additional time for the split to fully stabilize
+    LOG.info("Split completed, waiting for final stabilization...");
+    Thread.sleep(3000);
+    
+    // Final verification of split completion
+    LOG.info("Performing final verification of split completion...");
+    try (Connection conn = ConnectionFactory.createConnection(testUtil.getConfiguration());
+         Admin finalAdmin = conn.getAdmin()) {
+      
+      List<RegionInfo> regionsAfterSplit = finalAdmin.getRegions(tableName);
       if (regionsAfterSplit.size() <= 1) {
         fail("Region split did not complete successfully. Expected > 1 region, got: " 
              + regionsAfterSplit.size());
       }
-      LOG.info("Split completed successfully. Regions after split: {}", regionsAfterSplit.size());
+      LOG.info("Final verification passed. Regions after split: {}", regionsAfterSplit.size());
       
-      // Log region details
-      for (RegionInfo region : regionsAfterSplit) {
-        LOG.info("Region: {} [{} -> {}]", 
+      // Log region details for debugging
+      for (int i = 0; i < regionsAfterSplit.size(); i++) {
+        RegionInfo region = regionsAfterSplit.get(i);
+        LOG.info("Region {}: {} [{} -> {}]", 
+                i + 1,
                 region.getEncodedName(),
                 Bytes.toStringBinary(region.getStartKey()),
                 Bytes.toStringBinary(region.getEndKey()));
       }
+      
+      LOG.info("Split operation completed successfully.");
     }
   }
 } 
