@@ -273,4 +273,14 @@ public class ManagedKeyDataCache extends KeyManagementBase {
     cacheByMetadata.invalidateAll();
     activeKeysCache.invalidateAll();
   }
+
+  @InterfaceAudience.LimitedPrivate({ HBaseInterfaceAudience.UNITTEST })
+  public ManagedKeyData removeEntry(String keyMetadata) {
+    return cacheByMetadata.asMap().remove(keyMetadata);
+  }
+
+  @InterfaceAudience.LimitedPrivate({ HBaseInterfaceAudience.UNITTEST })
+  public ManagedKeyData removeFromActiveKeys(byte[] key_cust, String keyNamespace) {
+    return activeKeysCache.asMap().remove(new ActiveKeysCacheKey(key_cust, keyNamespace));
+  }
 }

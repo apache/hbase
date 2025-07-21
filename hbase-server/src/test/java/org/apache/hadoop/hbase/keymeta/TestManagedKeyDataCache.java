@@ -22,6 +22,7 @@ import static org.apache.hadoop.hbase.io.crypto.ManagedKeyState.ACTIVE;
 import static org.apache.hadoop.hbase.io.crypto.ManagedKeyState.FAILED;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertNotNull;
@@ -518,17 +519,57 @@ public class TestManagedKeyDataCache {
     }
 
     @Test
+    public void testGenericCacheUsesActiveKeysCacheFirst() throws Exception {
+      // First populate the active keys cache with an active key
+      ManagedKeyData key1 = cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL);
+      verify(testProvider).getManagedKey(any(), any(String.class));
+      clearInvocations(testProvider);
+
+      // Now get the generic cache entry - it should use the active keys cache first, not call
+      // keymetaAccessor
+      assertEquals(key1, cache.getEntry(CUST_ID, KEY_SPACE_GLOBAL, key1.getKeyMetadata(), null));
+      verify(testProvider, never()).getManagedKey(any(), any(String.class));
+
+      // Lookup a diffrent key.
+      ManagedKeyData key2 = cache.getActiveEntry(CUST_ID, "namespace1");
+      assertNotEquals(key1, key2);
+      verify(testProvider).getManagedKey(any(), any(String.class));
+      clearInvocations(testProvider);
+
+      // Now get the generic cache entry - it should use the active keys cache first, not call
+      // keymetaAccessor
+      assertEquals(key2, cache.getEntry(CUST_ID, "namespace1", key2.getKeyMetadata(), null));
+      verify(testProvider, never()).getManagedKey(any(), any(String.class));
+    }
+
+    @Test
+    public void testGetOlerEntryFromGenericCache() throws Exception {
+      testProvider.setMultikeyGenMode(true);
+
+      // Get one version of the key in to ActiveKeysCache
+      ManagedKeyData key1 = cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL);
+      assertNotNull(key1);
+      clearInvocations(testProvider);
+
+      // Now try to lookup another version of the key, it should lookup and discard the active key.
+      ManagedKeyData key2 = testProvider.getManagedKey(CUST_ID, KEY_SPACE_GLOBAL);
+      assertEquals(key2, cache.getEntry(CUST_ID, KEY_SPACE_GLOBAL, key2.getKeyMetadata(), null));
+      verify(testProvider).unwrapKey(any(String.class), any());
+    }
+
+    @Test
     public void testActiveKeysCacheUsesGenericCacheFirst() throws Exception {
       // First populate the generic cache with an active key
       ManagedKeyData key = testProvider.getManagedKey(CUST_ID, KEY_SPACE_GLOBAL);
       assertEquals(key, cache.getEntry(CUST_ID, KEY_SPACE_GLOBAL, key.getKeyMetadata(), null));
+      verify(testProvider).unwrapKey(any(String.class), any());
 
       // Clear invocations to reset the mock state
-      clearInvocations(mockL2);
+      clearInvocations(testProvider);
 
       // Now get the active entry - it should use the generic cache first, not call keymetaAccessor
       assertEquals(key, cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL));
-      verify(mockL2, never()).getActiveKey(any(), any(String.class));
+      verify(testProvider, never()).unwrapKey(any(String.class), any());
     }
   }
 
