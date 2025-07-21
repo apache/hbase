@@ -23,6 +23,70 @@ module IRB
 
   # Subclass of IRB so can intercept methods
   class HIRB < Irb
+      # Method for checking the variable name conflict with the hbase command name
+        def check_variable_assignment_conflict(line)
+          # checks when a single variable is defined at a time (eg a = 10) or multiple variable assignment (e.g., a,b,c = 1,2,3)
+          single_match = line.strip.match(/^([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*(.+)/)
+          multiple_match = line.strip.match(/^([a-zA-Z_][a-zA-Z0-9_]*(?:\s*,\s*[a-zA-Z_][a-zA-Z0-9_]*)+)\s*=\s*(.+)/)
+
+          # Match comma-based expressions that may result in nil assignment to a variable
+          comma_expression = line.strip.match(/^([a-zA-Z_][a-zA-Z0-9_]*)\s*,\s*(.+)/)
+
+          variable_names = []
+
+          if multiple_match
+            # Extract all variable names during multiple assignment
+            left_side = multiple_match[1]
+            variable_names = left_side.split(',').map(&:strip)
+          elsif single_match
+            # Extracting variable name for single assignment
+            variable_names = [single_match[1]]
+          elsif comma_expression
+            # Handle comma expressions that create variables (like list_namespace,'ns.*')
+            variable_names = [comma_expression[1]]
+          else
+            # if no assignment pattern found
+            return false
+          end
+
+          # return false if variable_names is empty
+          return false if variable_names.empty?
+
+          receiver = @context.workspace.binding.receiver
+          conflicting_variables = []
+
+          # Checking variable names for conflicts with the HBase shell command names
+          variable_names.each do |variable_name|
+            conflicts = []
+
+            # if variable is defined as the command name adding it to conflicts list
+            if defined?(::Shell) && ::Shell.respond_to?(:commands) && ::Shell.commands.key?(variable_name)
+              conflicts << "HBase command"
+            end
+
+            # If this variable has conflicts, add it to the list
+            unless conflicts.empty?
+              conflicting_variables << {
+                name: variable_name,
+                conflicts: conflicts
+              }
+            end
+          end
+
+          # If any conflicts found, block the entire assignment
+          unless conflicting_variables.empty?
+            puts "ERROR: Cannot create variable assignment"
+            conflicting_variables.each do |var_info|
+              puts "'#{var_info[:name]}' conflicts with: #{var_info[:conflicts].join(', ')}"
+            end
+            puts "This could cause unexpected behavior or make commands unusable"
+            puts "Please use different variable names"
+            puts
+            return true  # Block assignment
+          end
+          return false  # Allow assignment
+        end
+
     def initialize(workspace = nil, interactive = true, input_method = nil)
       # This is ugly.  Our 'help' method above provokes the following message
       # on irb construction: 'irb: warn: can't alias help from irb_help.'
@@ -112,6 +176,7 @@ module IRB
         signal_status(:IN_EVAL) do
           begin
             line.untaint
+            next if check_variable_assignment_conflict(line)
             @context.evaluate(line, line_no)
             output_value if @context.echo?
             exc = nil
