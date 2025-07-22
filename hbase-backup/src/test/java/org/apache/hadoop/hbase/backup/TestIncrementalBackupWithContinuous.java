@@ -34,17 +34,13 @@ import java.util.Set;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupAdminImpl;
 import org.apache.hadoop.hbase.backup.impl.BackupManifest;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
-import org.apache.hadoop.hbase.backup.impl.BulkLoad;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
-import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
@@ -71,7 +67,6 @@ public class TestIncrementalBackupWithContinuous extends TestContinuousBackup {
     LoggerFactory.getLogger(TestIncrementalBackupWithContinuous.class);
 
   private byte[] ROW = Bytes.toBytes("row1");
-  private final byte[] FAMILY = Bytes.toBytes("family");
   private final byte[] COLUMN = Bytes.toBytes("col");
   private static final int ROWS_IN_BULK_LOAD = 100;
 
@@ -81,7 +76,7 @@ public class TestIncrementalBackupWithContinuous extends TestContinuousBackup {
     conf1.setBoolean(REPLICATION_MARKER_ENABLED_KEY, true);
     String methodName = Thread.currentThread().getStackTrace()[1].getMethodName();
     TableName tableName = TableName.valueOf("table_" + methodName);
-    Table t1 = TEST_UTIL.createTable(tableName, FAMILY);
+    Table t1 = TEST_UTIL.createTable(tableName, famName);
 
     try (BackupSystemTable table = new BackupSystemTable(TEST_UTIL.getConnection())) {
       int before = table.getBackupHistory().size();
@@ -106,10 +101,8 @@ public class TestIncrementalBackupWithContinuous extends TestContinuousBackup {
       assertEquals("Backup should contain the expected tables", Sets.newHashSet(tableName),
         new HashSet<>(manifest.getTableList()));
 
-      Put p = new Put(ROW);
-      p.addColumn(FAMILY, COLUMN, COLUMN);
-      t1.put(p);
-      Thread.sleep(5000);
+      loadTable(t1);
+      Thread.sleep(10000);
 
       // Run incremental backup
       LOG.info("Run incremental backup now");
@@ -136,69 +129,56 @@ public class TestIncrementalBackupWithContinuous extends TestContinuousBackup {
       client.restore(BackupUtils.createRestoreRequest(BACKUP_ROOT_DIR, incrementalBackupid, false,
         tables, tables, true));
 
-      verifyTable(t1);
+      assertEquals(NB_ROWS_IN_BATCH, TEST_UTIL.countRows(tableName));
+    } finally {
       conf1.setBoolean(REPLICATION_MARKER_ENABLED_KEY, REPLICATION_MARKER_ENABLED_DEFAULT);
     }
   }
 
   @Test
-  public void testContinuousBackupWithIncrementalBackupAndBulkloadSuccess() throws Exception {
+  public void testIncrementalBackupCopyingBulkloadTillIncrCommittedWalTs() throws Exception {
     conf1.setBoolean(REPLICATION_MARKER_ENABLED_KEY, true);
     String methodName = Thread.currentThread().getStackTrace()[1].getMethodName();
+    TableName tableName1 = TableName.valueOf("table_" + methodName);
+    TEST_UTIL.createTable(tableName1, famName);
     try (BackupSystemTable systemTable = new BackupSystemTable(TEST_UTIL.getConnection())) {
-      int expectedRowCount = TEST_UTIL.countRows(table1);
-      int bulkloadRowCount = systemTable.readBulkloadRows(List.of(table1)).size();
 
-      // Bulk loads aren't tracked if the table isn't backed up yet
-      performBulkLoad("bulk1", methodName, table1);
-      expectedRowCount += ROWS_IN_BULK_LOAD;
-      assertEquals(expectedRowCount, TEST_UTIL.countRows(table1));
-      assertEquals(bulkloadRowCount, systemTable.readBulkloadRows(List.of(table1)).size());
+      // The test starts with no data, and no bulk loaded rows.
+      int expectedRowCount = 0;
+      assertEquals(expectedRowCount, TEST_UTIL.countRows(tableName1));
+      assertTrue(systemTable.readBulkloadRows(List.of(tableName1)).isEmpty());
 
-      // Create a backup, bulk loads are now being tracked
-      String backup1 = backupTables(BackupType.FULL, List.of(table1), BACKUP_ROOT_DIR, true);
+      // Create continuous backup, bulk loads are now being tracked
+      String backup1 = backupTables(BackupType.FULL, List.of(tableName1), BACKUP_ROOT_DIR, true);
       assertTrue(checkSucceeded(backup1));
 
-      loadTable(TEST_UTIL.getConnection().getTable(table1));
+      loadTable(TEST_UTIL.getConnection().getTable(tableName1));
       expectedRowCount = expectedRowCount + NB_ROWS_IN_BATCH;
-      assertEquals(expectedRowCount, TEST_UTIL.countRows(table1));
-      performBulkLoad("bulk2", methodName, table1);
+      performBulkLoad("bulkPreIncr", methodName, tableName1);
       expectedRowCount += ROWS_IN_BULK_LOAD;
-      bulkloadRowCount++;
-      assertEquals(expectedRowCount, TEST_UTIL.countRows(table1));
-      assertEquals(bulkloadRowCount, systemTable.readBulkloadRows(List.of(table1)).size());
+      assertEquals(expectedRowCount, TEST_UTIL.countRows(tableName1));
+      assertEquals(1, systemTable.readBulkloadRows(List.of(tableName1)).size());
+      loadTable(TEST_UTIL.getConnection().getTable(tableName1));
+      Thread.sleep(10000);
 
-      // Creating an incremental backup clears the bulk loads
-      performBulkLoad("bulk4", methodName, table1);
-      performBulkLoad("bulk5", methodName, table1);
-      performBulkLoad("bulk6", methodName, table1);
-      expectedRowCount += 3 * ROWS_IN_BULK_LOAD;
-      bulkloadRowCount += 3;
-      assertEquals(expectedRowCount, TEST_UTIL.countRows(table1));
-      assertEquals(bulkloadRowCount, systemTable.readBulkloadRows(List.of(table1)).size());
-      String backup2 = backupTables(BackupType.INCREMENTAL, List.of(table1), BACKUP_ROOT_DIR, true);
+      performBulkLoad("bulkPostIncr", methodName, tableName1);
+      assertEquals(2, systemTable.readBulkloadRows(List.of(tableName1)).size());
+
+      // Incremental backup
+      String backup2 =
+        backupTables(BackupType.INCREMENTAL, List.of(tableName1), BACKUP_ROOT_DIR, true);
       assertTrue(checkSucceeded(backup2));
-      assertEquals(expectedRowCount, TEST_UTIL.countRows(table1));
-      assertEquals(0, systemTable.readBulkloadRows(List.of(table1)).size());
-      int rowCountAfterBackup2 = expectedRowCount;
 
-      // Doing another bulk load, to check that this data will disappear after a restore operation
-      performBulkLoad("bulk7", methodName, table1);
-      expectedRowCount += ROWS_IN_BULK_LOAD;
-      assertEquals(expectedRowCount, TEST_UTIL.countRows(table1));
-      List<BulkLoad> bulkloadsTemp = systemTable.readBulkloadRows(List.of(table1));
-      assertEquals(1, bulkloadsTemp.size());
-      BulkLoad bulk7 = bulkloadsTemp.get(0);
+      // bulkPostIncr Bulkload entry should not be deleted post incremental backup
+      assertEquals(1, systemTable.readBulkloadRows(List.of(tableName1)).size());
 
-      // Doing a restore. Overwriting the table implies clearing the bulk loads,
-      // but the loading of restored data involves loading bulk data, we expect 2 bulk loads
-      // associated with backup 3 (loading of full backup, loading of incremental backup).
-      BackupAdmin client = getBackupAdmin();
-      client.restore(BackupUtils.createRestoreRequest(BACKUP_ROOT_DIR, backup2, false,
-        new TableName[] { table1 }, new TableName[] { table1 }, true));
-      assertEquals(rowCountAfterBackup2, TEST_UTIL.countRows(table1));
-      List<BulkLoad> bulkLoads = systemTable.readBulkloadRows(List.of(table1));
-      assertEquals(3, bulkLoads.size());
+      TEST_UTIL.truncateTable(tableName1);
+      // Restore incremental backup
+      TableName[] tables = new TableName[] { tableName1 };
+      BackupAdminImpl client = new BackupAdminImpl(TEST_UTIL.getConnection());
+      client.restore(
+        BackupUtils.createRestoreRequest(BACKUP_ROOT_DIR, backup2, false, tables, tables, true));
+      assertEquals(expectedRowCount, TEST_UTIL.countRows(tableName1));
     } finally {
       conf1.setBoolean(REPLICATION_MARKER_ENABLED_KEY, REPLICATION_MARKER_ENABLED_DEFAULT);
     }
@@ -253,13 +233,6 @@ public class TestIncrementalBackupWithContinuous extends TestContinuousBackup {
     } finally {
       conf1.setBoolean(REPLICATION_MARKER_ENABLED_KEY, REPLICATION_MARKER_ENABLED_DEFAULT);
     }
-  }
-
-  private void verifyTable(Table t1) throws IOException {
-    Get g = new Get(ROW);
-    Result r = t1.get(g);
-    assertEquals(1, r.size());
-    assertTrue(CellUtil.matchingQualifier(r.rawCells()[0], COLUMN));
   }
 
   private void performBulkLoad(String keyPrefix, String testDir, TableName tableName)
