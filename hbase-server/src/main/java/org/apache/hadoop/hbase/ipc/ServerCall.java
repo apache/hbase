@@ -294,6 +294,7 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
       bc = new BufferChain(responseBufs);
     } catch (IOException e) {
       RpcServer.LOG.warn("Exception while creating response " + e);
+      bc = createFallbackErrorResponse(e);
     }
     this.response = bc;
     // Once a response message is created and set to this.response, this Call can be treated as
@@ -328,6 +329,32 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
     }
     // Set the exception as the result of the method invocation.
     headerBuilder.setException(exceptionBuilder.build());
+  }
+
+  /*
+   * Creates a fallback error response when the primary response creation fails. This method is
+   * invoked as a last resort when an IOException occurs during the normal response creation
+   * process. It attempts to create a minimal error response containing only the error information,
+   * without any cell blocks or additional data. The purpose is to ensure that the client receives
+   * some indication of the failure rather than experiencing a silent connection drop. This provides
+   * better error handling on the client side.
+   */
+  private BufferChain createFallbackErrorResponse(IOException originalException) {
+    try {
+      ResponseHeader.Builder headerBuilder = ResponseHeader.newBuilder();
+      headerBuilder.setCallId(this.id);
+      String responseErrorMsg =
+        "Failed to create response due to: " + originalException.getMessage();
+      setExceptionResponse(originalException, responseErrorMsg, headerBuilder);
+      Message header = headerBuilder.build();
+      ByteBuffer headerBuf = createHeaderAndMessageBytes(null, header, 0, null);
+      this.isError = true;
+      return new BufferChain(new ByteBuffer[] { headerBuf });
+    } catch (IOException e) {
+      RpcServer.LOG.error("Failed to create error response for client, connection may be dropped",
+        e);
+      return null;
+    }
   }
 
   static ByteBuffer createHeaderAndMessageBytes(Message result, Message header, int cellBlockSize,
