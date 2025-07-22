@@ -229,7 +229,6 @@ public class TestIncrementalBackupWithContinuous extends TestContinuousBackup {
       assertEquals(1, systemTable.readBulkloadRows(List.of(tableName1)).size());
 
       loadTable(TEST_UTIL.getConnection().getTable(tableName1));
-      expectedRowCount = expectedRowCount + NB_ROWS_IN_BATCH;
       Thread.sleep(5000);
 
       // Incremental backup
