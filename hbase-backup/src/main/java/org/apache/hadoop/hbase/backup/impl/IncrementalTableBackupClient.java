@@ -138,7 +138,13 @@ public class IncrementalTableBackupClient extends TableBackupClient {
    */
   protected List<BulkLoad> handleBulkLoad(List<TableName> tablesToBackup) throws IOException {
     Map<TableName, MergeSplitBulkloadInfo> toBulkload = new HashMap<>();
-    List<BulkLoad> bulkLoads = backupManager.readBulkloadRows(tablesToBackup);
+    List<BulkLoad> bulkLoads;
+    if (backupInfo.isContinuousBackupEnabled()) {
+      bulkLoads =
+        backupManager.readBulkloadRows(tablesToBackup, backupInfo.getIncrCommittedWalTs());
+    } else {
+      bulkLoads = backupManager.readBulkloadRows(tablesToBackup);
+    }
     FileSystem tgtFs;
     try {
       tgtFs = FileSystem.get(new URI(backupInfo.getBackupRootDir()), conf);
