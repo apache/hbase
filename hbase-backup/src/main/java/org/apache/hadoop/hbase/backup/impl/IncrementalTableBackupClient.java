@@ -136,7 +136,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
   protected List<BulkLoad> handleBulkLoad(List<TableName> tablesToBackup) throws IOException {
     List<String> activeFiles = new ArrayList<>();
     List<String> archiveFiles = new ArrayList<>();
-    List<BulkLoad> bulkLoads = new ArrayList<>();
+    List<BulkLoad> bulkLoads;
     if (backupInfo.isContinuousBackupEnabled()) {
       bulkLoads =
         backupManager.readBulkloadRows(tablesToBackup, backupInfo.getIncrCommittedWalTs());

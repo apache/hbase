@@ -69,7 +69,6 @@ public class TestIncrementalBackupWithContinuous extends TestContinuousBackup {
     LoggerFactory.getLogger(TestIncrementalBackupWithContinuous.class);
 
   private byte[] ROW = Bytes.toBytes("row1");
-  private final byte[] FAMILY = Bytes.toBytes("family");
   private final byte[] COLUMN = Bytes.toBytes("col");
   private static final int ROWS_IN_BULK_LOAD = 100;
 
@@ -104,7 +103,7 @@ public class TestIncrementalBackupWithContinuous extends TestContinuousBackup {
       assertEquals("Backup should contain the expected tables", Sets.newHashSet(tableName),
         new HashSet<>(manifest.getTableList()));
 
-      loadTable(TEST_UTIL.getConnection().getTable(tableName));
+      loadTable(t1);
       Thread.sleep(10000);
 
       // Run incremental backup
@@ -129,10 +128,9 @@ public class TestIncrementalBackupWithContinuous extends TestContinuousBackup {
       // Restore incremental backup
       TableName[] tables = new TableName[] { tableName };
       BackupAdminImpl client = new BackupAdminImpl(TEST_UTIL.getConnection());
-      client.restore(
-        BackupUtils.createRestoreRequest(BACKUP_ROOT_DIR, incrementalBackupid, false, tables,
-          tables, true));
-      
+      client.restore(BackupUtils.createRestoreRequest(BACKUP_ROOT_DIR, incrementalBackupid, false,
+        tables, tables, true));
+
       assertEquals(NB_ROWS_IN_BATCH, TEST_UTIL.countRows(tableName));
     } finally {
       conf1.setBoolean(REPLICATION_MARKER_ENABLED_KEY, REPLICATION_MARKER_ENABLED_DEFAULT);
