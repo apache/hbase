@@ -445,6 +445,16 @@ public final class BackupSystemTable implements Closeable {
    * @param tableList list of table names
    */
   public List<BulkLoad> readBulkloadRows(List<TableName> tableList) throws IOException {
+    return readBulkloadRows(tableList, Long.MAX_VALUE);
+  }
+
+  /**
+   * Reads the rows from backup table recording bulk loaded hfiles
+   * @param tableList    list of table names
+   * @param endTimestamp upper bound timestamp for bulkload entries retrieval
+   */
+  public List<BulkLoad> readBulkloadRows(List<TableName> tableList, long endTimestamp)
+    throws IOException {
     List<BulkLoad> result = new ArrayList<>();
     for (TableName table : tableList) {
       Scan scan = BackupSystemTable.createScanForOrigBulkLoadedFiles(table);
@@ -457,8 +467,10 @@ public final class BackupSystemTable implements Closeable {
           String path = null;
           String region = null;
           byte[] row = null;
+          long timestamp = 0L;
           for (Cell cell : res.listCells()) {
             row = CellUtil.cloneRow(cell);
+            timestamp = cell.getTimestamp();
             String rowStr = Bytes.toString(row);
             region = BackupSystemTable.getRegionNameFromOrigBulkLoadRow(rowStr);
             if (
@@ -473,8 +485,11 @@ public final class BackupSystemTable implements Closeable {
               path = Bytes.toString(CellUtil.cloneValue(cell));
             }
           }
-          result.add(new BulkLoad(table, region, fam, path, row));
-          LOG.debug("found orig " + path + " for " + fam + " of table " + region);
+          LOG.debug("found orig {} for {} of table {} with timestamp {}", path, fam, region,
+            timestamp);
+          if (timestamp <= endTimestamp) {
+            result.add(new BulkLoad(table, region, fam, path, row, timestamp));
+          }
         }
       }
     }
