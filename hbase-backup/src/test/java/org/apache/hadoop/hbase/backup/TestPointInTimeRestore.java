@@ -67,8 +67,8 @@ public class TestPointInTimeRestore extends TestBackupBase {
     // Simulate a backup taken 20 days ago
     EnvironmentEdgeManager
       .injectEdge(() -> System.currentTimeMillis() - 20 * ONE_DAY_IN_MILLISECONDS);
-    PITRTestUtil.loadRandomData(TEST_UTIL, table1, famName, 1000); // Insert initial data into
-                                                                   // table1
+    // Insert initial data into table1
+    PITRTestUtil.loadRandomData(TEST_UTIL, table1, famName, 1000);
 
     // Perform a full backup for table1 with continuous backup enabled
     String[] args =

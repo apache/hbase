@@ -101,6 +101,11 @@ public class BackupManifest {
         return this;
       }
 
+      Builder withIncrCommittedWalTs(long incrCommittedWalTs) {
+        image.setIncrCommittedWalTs(incrCommittedWalTs);
+        return this;
+      }
+
       BackupImage build() {
         return image;
       }
@@ -115,6 +120,7 @@ public class BackupManifest {
     private long completeTs;
     private ArrayList<BackupImage> ancestors;
     private Map<TableName, Map<String, Long>> incrTimeRanges;
+    private long incrCommittedWalTs;
 
     static Builder newBuilder() {
       return new Builder();
@@ -125,13 +131,14 @@ public class BackupManifest {
     }
 
     private BackupImage(String backupId, BackupType type, String rootDir, List<TableName> tableList,
-      long startTs, long completeTs) {
+      long startTs, long completeTs, long incrCommittedWalTs) {
       this.backupId = backupId;
       this.type = type;
       this.rootDir = rootDir;
       this.tableList = tableList;
       this.startTs = startTs;
       this.completeTs = completeTs;
+      this.incrCommittedWalTs = incrCommittedWalTs;
     }
 
     static BackupImage fromProto(BackupProtos.BackupImage im) {
@@ -139,6 +146,7 @@ public class BackupManifest {
       String rootDir = im.getBackupRootDir();
       long startTs = im.getStartTs();
       long completeTs = im.getCompleteTs();
+      long incrCommittedWalTs = im.getIncrCommittedWalTs();
       List<HBaseProtos.TableName> tableListList = im.getTableListList();
       List<TableName> tableList = new ArrayList<>();
       for (HBaseProtos.TableName tn : tableListList) {
@@ -151,7 +159,8 @@ public class BackupManifest {
         ? BackupType.FULL
         : BackupType.INCREMENTAL;
 
-      BackupImage image = new BackupImage(backupId, type, rootDir, tableList, startTs, completeTs);
+      BackupImage image = new BackupImage(backupId, type, rootDir, tableList, startTs, completeTs,
+        incrCommittedWalTs);
       for (BackupProtos.BackupImage img : ancestorList) {
         image.addAncestor(fromProto(img));
       }
@@ -170,6 +179,7 @@ public class BackupManifest {
       builder.setBackupId(backupId);
       builder.setCompleteTs(completeTs);
       builder.setStartTs(startTs);
+      builder.setIncrCommittedWalTs(incrCommittedWalTs);
       if (type == BackupType.FULL) {
         builder.setBackupType(BackupProtos.BackupType.FULL);
       } else {
@@ -285,6 +295,14 @@ public class BackupManifest {
 
     public long getCompleteTs() {
       return completeTs;
+    }
+
+    public long getIncrCommittedWalTs() {
+      return incrCommittedWalTs;
+    }
+
+    public void setIncrCommittedWalTs(long incrCommittedWalTs) {
+      this.incrCommittedWalTs = incrCommittedWalTs;
     }
 
     private void setCompleteTs(long completeTs) {
