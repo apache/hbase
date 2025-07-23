@@ -82,7 +82,7 @@ public class MemorySizeUtil {
   }
 
   /**
-   * Validates that heap allocations for memStore and block cache do not exceed the allowed limit,
+   * Validates that heap allocations for MemStore and block cache do not exceed the allowed limit,
    * ensuring enough free heap remains for other RegionServer tasks.
    * @param conf the configuration to validate
    * @throws RuntimeException if the combined allocation exceeds the threshold
@@ -103,12 +103,10 @@ public class MemorySizeUtil {
 
     if (usedPercent > maxAllowedUsed) {
       throw new RuntimeException(String.format(
-        "RegionServer heap memory allocation is invalid: "
-          + "memStore=%d%%, blockCache=%d%%, requiredFreeHeap=%d%%. "
-          + "Combined usage %d%% exceeds allowed maximum %d%%. "
+        "RegionServer heap memory allocation is invalid: total memory usage exceeds 100%% "
+          + "(memStore + blockCache + requiredFreeHeap). "
           + "Check the following configuration values:%n" + "  - %s = %.2f%n" + "  - %s = %s%n"
           + "  - %s = %s%n" + "  - %s = %s",
-        memStorePercent, blockCachePercent, minFreeHeapPercent, usedPercent, maxAllowedUsed,
         MEMSTORE_SIZE_KEY, memStoreFraction, HConstants.HFILE_BLOCK_CACHE_MEMORY_SIZE_KEY,
         conf.get(HConstants.HFILE_BLOCK_CACHE_MEMORY_SIZE_KEY),
         HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, conf.get(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY),
