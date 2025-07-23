@@ -444,8 +444,8 @@ public final class BackupSystemTable implements Closeable {
             path = Bytes.toString(CellUtil.cloneValue(cell));
           }
         }
-        result.add(new BulkLoad(table, region, fam, path, row));
-        LOG.debug("Found bulk load entry for table {}, family {}: {}", table, fam, path);
+        LOG.debug("Found orig path {} for family {} of table {} and region {} with timestamp {}",
+          path, fam, table, region, timestamp);
         if (timestamp <= endTimestamp) {
           result.add(new BulkLoad(table, region, fam, path, row, timestamp));
         }
