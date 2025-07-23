@@ -66,8 +66,6 @@ public class TestIncrementalBackupWithContinuous extends TestContinuousBackup {
   private static final Logger LOG =
     LoggerFactory.getLogger(TestIncrementalBackupWithContinuous.class);
 
-  private byte[] ROW = Bytes.toBytes("row1");
-  private final byte[] COLUMN = Bytes.toBytes("col");
   private static final int ROWS_IN_BULK_LOAD = 100;
 
   @Test
