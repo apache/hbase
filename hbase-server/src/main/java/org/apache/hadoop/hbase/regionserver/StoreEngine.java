@@ -463,7 +463,13 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
           // Write-out finished successfully, move into the right spot
           committedPath = hfs.commitStoreFile(familyName, file);
         }
-        HStoreFile sf = createStoreFileAndReader(committedPath);
+        HStoreFile sf = null;
+        try{
+          sf = createStoreFileAndReader(committedPath);
+        } catch (IOException e){
+          hfs.deleteDir(committedPath);
+          throw new IOException("Failed createStoreFileAndReader committedPath: " + committedPath, e);
+        }
         committedFiles.add(sf);
       } catch (IOException e) {
         LOG.error("Failed to commit store file {}", file, e);
