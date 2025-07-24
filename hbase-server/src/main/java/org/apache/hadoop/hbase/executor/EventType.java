@@ -303,7 +303,13 @@ public enum EventType {
    * RS reload quotas.<br>
    * RS_RELOAD_QUOTAS
    */
-  RS_RELOAD_QUOTAS(90, ExecutorType.RS_RELOAD_QUOTAS_OPERATIONS);
+  RS_RELOAD_QUOTAS(90, ExecutorType.RS_RELOAD_QUOTAS_OPERATIONS),
+
+  /**
+   * RS flush regions.<br>
+   * RS_FLUSH_OPERATIONS
+   */
+  RS_REFRESH_HFILES(91, ExecutorType.RS_REFRESH_HFILES);
 
   private final int code;
   private final ExecutorType executor;
