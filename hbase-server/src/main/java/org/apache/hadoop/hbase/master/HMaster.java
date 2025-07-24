@@ -171,7 +171,7 @@ import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
 import org.apache.hadoop.hbase.master.procedure.RSProcedureDispatcher;
 import org.apache.hadoop.hbase.master.procedure.RefreshMetaProcedure;
 import org.apache.hadoop.hbase.master.procedure.ReloadQuotasProcedure;
-import org.apache.hadoop.hbase.master.procedure.RefreshHfilesProcedure;
+import org.apache.hadoop.hbase.master.procedure.RefreshHFilesTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.ReopenTableRegionsProcedure;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.master.procedure.TruncateRegionProcedure;
@@ -249,7 +249,6 @@ import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.SecurityConstants;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.UserProvider;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -4585,14 +4584,14 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
       .submitProcedure(new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
         @Override
         protected void run() throws IOException {
-          LOG.info("Submitting RefreshHfilesProcedure");
+          LOG.info("Submitting RefreshHfilesTableProcedure for a table");
           submitProcedure(
-            new RefreshHfilesProcedure(procedureExecutor.getEnvironment(), tableName));
+            new RefreshHFilesTableProcedure(procedureExecutor.getEnvironment(), tableName));
         }
 
         @Override
         protected String getDescription() {
-          return "RefreshHfilesProcedure";
+          return "RefreshHfilesProcedure for a table";
         }
       });
   }
@@ -4600,11 +4599,39 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   public Long refreshHfiles(final String namespace, final long nonceGroup, final long nonce) throws IOException {
     System.out.println("Anuj: HMaster refresh with namespace is called, namespace: " + namespace);
     // TODO Check if namespace exists otherwise send exception.
-    return 122L;
+//    return 122L;
+    return MasterProcedureUtil
+      .submitProcedure(new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
+        @Override
+        protected void run() throws IOException {
+          LOG.info("Submitting RefreshHfilesProcedure for namespace");
+          submitProcedure(
+            new RefreshHFilesTableProcedure(procedureExecutor.getEnvironment(), namespace));
+        }
+
+        @Override
+        protected String getDescription() {
+          return "RefreshHfilesProcedure for namespace";
+        }
+      });
   }
 
   public Long refreshHfiles(final long nonceGroup, final long nonce) throws IOException {
     System.out.println("Anuj: HMaster refresh without a parameter is called.");
-    return 123L;
+//    return 123L;
+    return MasterProcedureUtil
+      .submitProcedure(new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
+        @Override
+        protected void run() throws IOException {
+          LOG.info("Submitting RefreshHfilesProcedure for all tables");
+          submitProcedure(
+            new RefreshHFilesTableProcedure(procedureExecutor.getEnvironment()));
+        }
+
+        @Override
+        protected String getDescription() {
+          return "RefreshHfilesProcedure for all tables";
+        }
+      });
   }
 }

@@ -20,7 +20,9 @@ package org.apache.hadoop.hbase.master.procedure;
 
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -91,7 +93,7 @@ public class RefreshHFilesTableProcedure extends AbstractStateMachineTableProced
     try {
       return switch (RefreshHFilesTableProcedureState) {
         case REFRESH_HFILES_PREPARE -> prepare(env);
-        case REFRESH_HFILES_REFRESH_REGION -> refreshRegionHFiles();
+        case REFRESH_HFILES_REFRESH_REGION -> refreshRegionHFiles(env);
         case REFRESH_HFILES_FINISH -> finish();
         default -> throw new UnsupportedOperationException("Unhandled state: " + RefreshHFilesTableProcedureState);
       };
@@ -110,16 +112,21 @@ public class RefreshHFilesTableProcedure extends AbstractStateMachineTableProced
     List<RegionInfo> regions = am.getRegionStates().getRegionsOfTable(tableName);
 
     // For each region get the server where it is hosted and then call refreshHfile on that server with given region as parameter
-//    for(RegionInfo region : regions){
+    for(RegionInfo region : regions){
+       System.out.println("Anuj: Region Names for Table " + tableName.getNameAsString() + " : " + region.getRegionNameAsString());
 //      ServerName server  = regionStates.getRegionServerOfRegion(region);
-//      // Refresh Region on the region server
-//
-//    }
+      // Refresh Region on the region server
+
+    }
+    setNextState(RefreshHFilesTableProcedureState.REFRESH_HFILES_REFRESH_REGION);
     return Flow.HAS_MORE_STATE;
   }
 
-  private Flow refreshRegionHFiles(){
+  private Flow refreshRegionHFiles(final MasterProcedureEnv env){
     System.out.println("Anuj: In Refresh Region State");
+    addChildProcedure(env.getAssignmentManager().getTableRegions(getTableName(), true).stream()
+      .map(r -> new RefreshHFilesRegionProcedure(r)).toArray(RefreshHFilesRegionProcedure[]::new));
+    setNextState(RefreshHFilesTableProcedureState.REFRESH_HFILES_FINISH);
     return Flow.HAS_MORE_STATE;
   }
 

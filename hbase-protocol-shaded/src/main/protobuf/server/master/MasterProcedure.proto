@@ -860,3 +860,11 @@ enum RefreshHFilesTableProcedureState {
 
 message RefreshHFilesTableProcedureStateData {
 }
+
+message RefreshHFilesRegionProcedureStateData {
+  required RegionInfo region = 1;
+}
+
+message RefreshHFilesRegionParameter {
+  required RegionInfo region = 1;
+}
