@@ -77,7 +77,6 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil.NonceProcedureRunnable;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
-import org.apache.hadoop.hbase.master.procedure.RefreshHfilesProcedure;
 import org.apache.hadoop.hbase.master.replication.AbstractPeerNoLockProcedure;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.namequeues.BalancerDecisionDetails;
@@ -3685,11 +3684,53 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
   }
 
   @Override
-  public MasterProtos.RefreshHfilesResponse refreshHfiles(RpcController controller,
-    MasterProtos.RefreshHfilesRequest request) throws ServiceException {
-    //TODO verify if no parameter is provided
-    //TODO Call RefreshHfilesProcedure functions
+  public MasterProtos.RefreshHFilesResponse refreshHFiles(RpcController controller,
+    MasterProtos.RefreshHFilesRequest request) throws ServiceException {
+    try {
+      Long procId;
+      if (request.hasTableName()) { // if we have provided table name as parameter
+        // Print Table Name received
+        System.out.println("Anuj: Table name received in MasterRpcService is " + ProtobufUtil.toTableName(request.getTableName()));
+        // refreshHfiles for the given user tables
+        procId = server.refreshHfiles(ProtobufUtil.toTableName(request.getTableName()), request.getNonceGroup(), request.getNonce());
+      } else if (request.hasNamespace()) { // if we have provided namespace as parameter
+        // Print Namespace received
+        System.out.println("Anuj: Namespace name received in MasterRpcService is " + request.getNamespace());
+        // refreshHfiles for all the user tables under the namespace
+        procId = server.refreshHfiles(request.getNamespace(), request.getNonceGroup(), request.getNonce());
+      } else { // When no parameter is provided
+        System.out.println("Anuj: No param provided, refreshing all tables");
+        // refreshHfiles for all the user tables in HBase
+        procId = server.refreshHfiles(request.getNonceGroup(), request.getNonce());
+      }
+      return MasterProtos.RefreshHFilesResponse.newBuilder().setProcId(procId).build();
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
+    }
 
-    return MasterProtos.RefreshHfilesResponse.newBuilder().setProcId(123).build();
+    //    final AssignmentManager assignmentManager = server.getAssignmentManager();
+    //    RegionStates regionStates = assignmentManager.getRegionStates();
+    //
+    //    if (request.hasTableName()){ // if we have provided table name as parameter
+    //      // Print Table Name received
+    //      System.out.println("Anuj: Table name received in MasterRpcService is " + ProtobufUtil.toTableName(request.getTableName()));
+    //      // TODO Check if table exists otherwise send exception.
+    //      // Get list of regions for the table
+    //      TableName tableName = ProtobufUtil.toTableName(request.getTableName());
+    //      List<RegionInfo> regions = assignmentManager.getRegionStates().getRegionsOfTable(tableName);
+    //
+    //      // For each region get the server where it is hosted and then call refreshHfile on that server with given region as parameter
+    //      for(RegionInfo region : regions){
+    //        ServerName server  = regionStates.getRegionServerOfRegion(region);
+    //        // Refresh Region on the region server
+    //
+    //      }
+    //
+    //    } else if (request.hasNamespace()) { // if we have provided namespace as parameter
+    //      // Print Namespace received
+    //      System.out.println("Anuj: Namespace name received in MasterRpcService is " + request.getNamespace());
+    //    } else{ // When no parameter is provided
+    //      System.out.println("Anuj: No param provided, refreshing all tables");
+    //    }
   }
 }

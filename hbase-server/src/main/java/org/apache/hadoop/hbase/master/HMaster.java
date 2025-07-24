@@ -171,6 +171,7 @@ import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
 import org.apache.hadoop.hbase.master.procedure.RSProcedureDispatcher;
 import org.apache.hadoop.hbase.master.procedure.RefreshMetaProcedure;
 import org.apache.hadoop.hbase.master.procedure.ReloadQuotasProcedure;
+import org.apache.hadoop.hbase.master.procedure.RefreshHfilesProcedure;
 import org.apache.hadoop.hbase.master.procedure.ReopenTableRegionsProcedure;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.master.procedure.TruncateRegionProcedure;
@@ -248,6 +249,7 @@ import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.SecurityConstants;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -4573,5 +4575,36 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
           return "RefreshMetaProcedure";
         }
       });
+  }
+
+  public Long refreshHfiles(final TableName tableName, final long nonceGroup, final long nonce) throws IOException {
+    System.out.println("Anuj: HMaster refresh with Table name is called, Table: " + tableName.getNameAsString());
+    // TODO Check if table exists otherwise send exception.
+//    return 121L;
+    return MasterProcedureUtil
+      .submitProcedure(new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
+        @Override
+        protected void run() throws IOException {
+          LOG.info("Submitting RefreshHfilesProcedure");
+          submitProcedure(
+            new RefreshHfilesProcedure(procedureExecutor.getEnvironment(), tableName));
+        }
+
+        @Override
+        protected String getDescription() {
+          return "RefreshHfilesProcedure";
+        }
+      });
+  }
+
+  public Long refreshHfiles(final String namespace, final long nonceGroup, final long nonce) throws IOException {
+    System.out.println("Anuj: HMaster refresh with namespace is called, namespace: " + namespace);
+    // TODO Check if namespace exists otherwise send exception.
+    return 122L;
+  }
+
+  public Long refreshHfiles(final long nonceGroup, final long nonce) throws IOException {
+    System.out.println("Anuj: HMaster refresh without a parameter is called.");
+    return 123L;
   }
 }
