@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import java.io.DataInput;
+import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -187,14 +188,14 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
    */
   private void loadTenantIndexStructureInfo() {
     // Get tenant index level information
-    byte[] tenantIndexLevelsBytes = fileInfo.get(Bytes.toBytes("TENANT_INDEX_LEVELS"));
+    byte[] tenantIndexLevelsBytes = fileInfo.get(Bytes.toBytes(MultiTenantHFileWriter.FILEINFO_TENANT_INDEX_LEVELS));
     if (tenantIndexLevelsBytes != null) {
       tenantIndexLevels = Bytes.toInt(tenantIndexLevelsBytes);
     }
     
     // Get chunk size for multi-level indices
     if (tenantIndexLevels > 1) {
-      byte[] chunkSizeBytes = fileInfo.get(Bytes.toBytes("TENANT_INDEX_MAX_CHUNK"));
+      byte[] chunkSizeBytes = fileInfo.get(Bytes.toBytes(MultiTenantHFileWriter.FILEINFO_TENANT_INDEX_MAX_CHUNK));
       if (chunkSizeBytes != null) {
         tenantIndexMaxChunkSize = Bytes.toInt(chunkSizeBytes);
       }
@@ -1558,6 +1559,87 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
    */
   public boolean isFileInfoLoaded() {
     return true;
+  }
+
+  /**
+   * Override getHFileInfo to properly load FileInfo metadata for v4 files.
+   * <p>
+   * Since initMetaAndIndex() is skipped for v4 files, we need to manually load
+   * the FileInfo block to expose the metadata written during file creation.
+   * <p>
+   * This method ensures that the FileInfo block is loaded on-demand when
+   * HFilePrettyPrinter or other tools request the file metadata.
+   * 
+   * @return The HFileInfo object with loaded metadata
+   */
+  @Override
+  public HFileInfo getHFileInfo() {
+    // For v4 files, ensure FileInfo block is loaded on-demand
+    if (fileInfo.isEmpty()) {
+      try {
+        loadFileInfoBlock();
+      } catch (IOException e) {
+        LOG.error("Failed to load FileInfo block for multi-tenant HFile", e);
+        // Continue with empty fileInfo rather than throwing exception
+      }
+    }
+    
+    return fileInfo;
+  }
+
+  /**
+   * Manually load the FileInfo block for multi-tenant HFiles.
+   * <p>
+   * This method replicates the FileInfo loading logic from HFileInfo.loadMetaInfo()
+   * but adapted for the multi-tenant file structure.
+   * 
+   * @throws IOException if an error occurs loading the FileInfo block
+   */
+  private void loadFileInfoBlock() throws IOException {
+    FixedFileTrailer trailer = getTrailer();
+    
+    // Get the FileInfo block offset from the trailer
+    long fileInfoOffset = trailer.getFileInfoOffset();
+    if (fileInfoOffset == 0) {
+      LOG.debug("No FileInfo block found in multi-tenant HFile");
+      return;
+    }
+    
+    // Access the input stream through the context
+    FSDataInputStreamWrapper fsWrapper = context.getInputStreamWrapper();
+    FSDataInputStream fsdis = fsWrapper.getStream(fsWrapper.shouldUseHBaseChecksum());
+    long originalPosition = fsdis.getPos();
+    
+    try {
+      LOG.debug("Loading FileInfo block from offset {}", fileInfoOffset);
+      
+      // Read the FileInfo block
+      HFileBlock fileInfoBlock = getUncachedBlockReader().readBlockData(
+          fileInfoOffset, -1, true, false, false);
+      
+      // Validate this is a FileInfo block
+      if (fileInfoBlock.getBlockType() != BlockType.FILE_INFO) {
+        throw new IOException("Expected FILE_INFO block at offset " + fileInfoOffset + 
+                             ", found " + fileInfoBlock.getBlockType());
+      }
+      
+      // Parse the FileInfo data using the HFileInfo.read() method
+      try (DataInputStream dis = new DataInputStream(fileInfoBlock.getByteStream())) {
+        fileInfo.read(dis);
+      }
+      
+      LOG.debug("Successfully loaded FileInfo with {} entries", fileInfo.size());
+    } catch (IOException e) {
+      LOG.error("Failed to load FileInfo block from offset {}", fileInfoOffset, e);
+      throw e;
+    } finally {
+      // Restore original position
+      try {
+        fsdis.seek(originalPosition);
+      } catch (IOException e) {
+        LOG.warn("Failed to restore stream position", e);
+      }
+    }
   }
 
   /**

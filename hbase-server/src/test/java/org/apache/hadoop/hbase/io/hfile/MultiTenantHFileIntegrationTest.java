@@ -724,7 +724,7 @@ public class MultiTenantHFileIntegrationTest {
     }
     
     // Verify section count metadata
-    byte[] sectionCountBytes = fileInfo.get(Bytes.toBytes("SECTION_COUNT"));
+    byte[] sectionCountBytes = fileInfo.get(Bytes.toBytes(MultiTenantHFileWriter.FILEINFO_SECTION_COUNT));
     if (sectionCountBytes != null) {
       int sectionCount = Bytes.toInt(sectionCountBytes);
       LOG.info("    - HFile section count: {}", sectionCount);
@@ -736,7 +736,7 @@ public class MultiTenantHFileIntegrationTest {
     }
     
     // Verify tenant index structure metadata
-    byte[] tenantIndexLevelsBytes = fileInfo.get(Bytes.toBytes("TENANT_INDEX_LEVELS"));
+    byte[] tenantIndexLevelsBytes = fileInfo.get(Bytes.toBytes(MultiTenantHFileWriter.FILEINFO_TENANT_INDEX_LEVELS));
     if (tenantIndexLevelsBytes != null) {
       int tenantIndexLevels = Bytes.toInt(tenantIndexLevelsBytes);
       LOG.info("    - Tenant index levels: {}", tenantIndexLevels);

@@ -45,8 +45,11 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.regionserver.BloomType;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import static org.apache.hadoop.hbase.io.hfile.BlockCompressedSizePredicator.MAX_BLOCK_SIZE_UNCOMPRESSED;
+import static org.apache.hadoop.hbase.io.hfile.HFileWriterImpl.KEY_VALUE_VERSION;
+import static org.apache.hadoop.hbase.io.hfile.HFileWriterImpl.KEY_VALUE_VER_WITH_MEMSTORE;
 
 /**
  * An HFile writer that supports multiple tenants by sectioning the data within a single file.
@@ -78,6 +81,14 @@ public class MultiTenantHFileWriter implements HFile.Writer {
   
   /** Table-level property to enable/disable multi-tenant sectioning */
   public static final String TABLE_MULTI_TENANT_ENABLED = "MULTI_TENANT_HFILE";
+  
+  /** FileInfo keys for multi-tenant HFile metadata */
+  public static final String FILEINFO_SECTION_COUNT = "SECTION_COUNT";
+  public static final String FILEINFO_TENANT_INDEX_LEVELS = "TENANT_INDEX_LEVELS";
+  public static final String FILEINFO_TENANT_INDEX_MAX_CHUNK = "TENANT_INDEX_MAX_CHUNK";
+  public static final String FILEINFO_TENANT_ID = "TENANT_ID";
+  public static final String FILEINFO_TENANT_SECTION_ID = "TENANT_SECTION_ID";
+  
   /** Empty prefix for default tenant */
   private static final byte[] DEFAULT_TENANT_PREFIX = new byte[0];
   
@@ -130,8 +141,12 @@ public class MultiTenantHFileWriter implements HFile.Writer {
   private long totalValueLength = 0;
   /** Length of the biggest cell */
   private long lenOfBiggestCell = 0;
+  /** Maximum memstore timestamp */
+  private long maxMemstoreTS = 0;
   /** Maximum tags length encountered */
   private int maxTagsLength = 0;
+  /** Bulk load timestamp for file info */
+  private long bulkloadTime = 0;
   /** Total uncompressed bytes */
   private long totalUncompressedBytes = 0;
   
@@ -201,6 +216,9 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     // Create output stream directly to the provided path - no temporary file management here
     // The caller (StoreFileWriter or integration test framework) handles temporary files
     this.outputStream = HFileWriterImpl.createOutputStream(conf, fs, path, null);
+    
+    // Initialize bulk load timestamp for comprehensive file info
+    this.bulkloadTime = EnvironmentEdgeManager.currentTime();
     
     // Initialize meta block index writer
     this.metaBlockIndexWriter = new HFileBlockIndex.BlockIndexWriter();
@@ -336,6 +354,12 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     int cellSize = PrivateCellUtil.estimatedSerializedSizeOf(cell);
     if (lenOfBiggestCell < cellSize) {
       lenOfBiggestCell = cellSize;
+    }
+    
+    // Track maximum memstore timestamp across all cells
+    long cellMemstoreTS = cell.getSequenceId();
+    if (cellMemstoreTS > maxMemstoreTS) {
+      maxMemstoreTS = cellMemstoreTS;
     }
     
     int tagsLength = cell.getTagsLength();
@@ -601,10 +625,10 @@ public class MultiTenantHFileWriter implements HFile.Writer {
   }
   
   /**
-   * Finish file info preparation for multi-tenant HFile.
+   * Finish file info preparation for multi-tenant HFile v4.
    * <p>
-   * Excludes global first/last keys for tenant isolation while including
-   * essential metadata like section count and tenant index structure.
+   * Includes standard HFile metadata fields for compatibility with existing tooling,
+   * plus multi-tenant specific information.
    * 
    * @throws IOException if file info preparation fails
    */
@@ -612,12 +636,14 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     // Don't store the last key in global file info for tenant isolation
     // This is intentionally removed to ensure we don't track first/last keys globally
     
-    // Average key length
+    // Average key length across all sections
     int avgKeyLen = entryCount == 0 ? 0 : (int) (totalKeyLength / entryCount);
     fileInfo.append(HFileInfo.AVG_KEY_LEN, Bytes.toBytes(avgKeyLen), false);
+    
+    // File creation timestamp
     fileInfo.append(HFileInfo.CREATE_TIME_TS, Bytes.toBytes(fileContext.getFileCreateTime()), false);
 
-    // Average value length
+    // Average value length across all sections
     int avgValueLength = entryCount == 0 ? 0 : (int) (totalValueLength / entryCount);
     fileInfo.append(HFileInfo.AVG_VALUE_LEN, Bytes.toBytes(avgValueLength), false);
 
@@ -627,7 +653,16 @@ public class MultiTenantHFileWriter implements HFile.Writer {
       fileInfo.append(HFileInfo.LEN_OF_BIGGEST_CELL, Bytes.toBytes(lenOfBiggestCell), false);
     }
 
-    // Tags metadata
+    // Bulk load timestamp - when this file was created/written
+    fileInfo.append(HStoreFile.BULKLOAD_TIME_KEY, Bytes.toBytes(bulkloadTime), false);
+    
+    // Memstore and version metadata
+    if (fileContext.isIncludesMvcc()) {
+      fileInfo.append(MAX_MEMSTORE_TS_KEY, Bytes.toBytes(maxMemstoreTS), false);
+      fileInfo.append(KEY_VALUE_VERSION, Bytes.toBytes(KEY_VALUE_VER_WITH_MEMSTORE), false);
+    }
+
+    // Tags metadata  
     if (fileContext.isIncludesTags()) {
       fileInfo.append(HFileInfo.MAX_TAGS_LEN, Bytes.toBytes(maxTagsLength), false);
       boolean tagsCompressed = (fileContext.getDataBlockEncoding() != DataBlockEncoding.NONE)
@@ -635,16 +670,19 @@ public class MultiTenantHFileWriter implements HFile.Writer {
       fileInfo.append(HFileInfo.TAGS_COMPRESSED, Bytes.toBytes(tagsCompressed), false);
     }
     
-    // Section count information - this ensures fileInfo always has meaningful data
-    fileInfo.append(Bytes.toBytes("SECTION_COUNT"), Bytes.toBytes(sectionCount), false);
+    // === MULTI-TENANT SPECIFIC METADATA (v4 enhancements) ===
     
-    // Record tenant index structure information
+    // Section and tenant information
+    fileInfo.append(Bytes.toBytes(FILEINFO_SECTION_COUNT), Bytes.toBytes(sectionCount), false);
+    
+    // Tenant index structure information
     int tenantIndexLevels = sectionIndexWriter.getNumLevels();
-    fileInfo.append(Bytes.toBytes("TENANT_INDEX_LEVELS"),
-                    Bytes.toBytes(tenantIndexLevels), false);
+    fileInfo.append(Bytes.toBytes(FILEINFO_TENANT_INDEX_LEVELS), Bytes.toBytes(tenantIndexLevels), false);
     
-    // Multi-tenant configuration is stored in the trailer for v4 files
-    // This allows readers to access this information before file info is fully loaded
+    // Store the configured max chunk size for tenant index
+    int maxChunkSize = conf.getInt(SectionIndexManager.SECTION_INDEX_MAX_CHUNK_SIZE, 
+                                   SectionIndexManager.DEFAULT_MAX_CHUNK_SIZE);
+    fileInfo.append(Bytes.toBytes(FILEINFO_TENANT_INDEX_MAX_CHUNK), Bytes.toBytes(maxChunkSize), false);
   }
   
   @Override
@@ -801,12 +839,12 @@ public class MultiTenantHFileWriter implements HFile.Writer {
       
       // Store the tenant ID in the file info
       if (tenantId != null && tenantId.length > 0) {
-        appendFileInfo(Bytes.toBytes("TENANT_ID"), tenantId);
+        appendFileInfo(Bytes.toBytes(FILEINFO_TENANT_ID), tenantId);
       }
       
       // Store the section ID for reference
       if (tenantSectionId != null) {
-        appendFileInfo(Bytes.toBytes("TENANT_SECTION_ID"), tenantSectionId);
+        appendFileInfo(Bytes.toBytes(FILEINFO_TENANT_SECTION_ID), tenantSectionId);
       }
       
       LOG.debug("Created section writer at offset {} for tenant section {}, tenant ID {}", 

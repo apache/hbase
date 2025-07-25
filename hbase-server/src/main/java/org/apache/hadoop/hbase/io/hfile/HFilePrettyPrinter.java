@@ -86,6 +86,36 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.PosixParser;
 
 /**
  * Implements pretty-printing functionality for {@link HFile}s.
+ * 
+ * <p>This tool supports all HFile versions (v2, v3, and v4) with version-specific enhancements:
+ * <ul>
+ * <li><b>HFile v2:</b> Basic file inspection, metadata, block headers, and key/value display</li>
+ * <li><b>HFile v3:</b> All v2 features plus tag support and encryption metadata</li>
+ * <li><b>HFile v4:</b> All v3 features plus multi-tenant support, tenant section display, 
+ *     and enhanced metadata for tenant isolation</li>
+ * </ul>
+ * 
+ * <p>Key improvements for HFile v4 multi-tenant support:
+ * <ul>
+ * <li>Version-aware block index handling (graceful fallback for v4)</li>
+ * <li>Enhanced block header display with tenant-aware error handling</li>
+ * <li>Tenant-specific information display with -t option</li>
+ * <li>Tenant boundary detection in key/value output</li>
+ * <li>V4-specific trailer field display (multi-tenant flags, tenant prefix length)</li>
+ * <li>Tenant isolation considerations (suppressed last key)</li>
+ * </ul>
+ * 
+ * <p>Usage examples:
+ * <pre>
+ * # Basic metadata for any HFile version
+ * hbase hfile -m -f /path/to/hfile
+ * 
+ * # Key/value pairs with tenant information (v4 files)
+ * hbase hfile -p -v -t -f /path/to/v4/hfile
+ * 
+ * # Block analysis (works across all versions)
+ * hbase hfile -b -h -f /path/to/hfile
+ * </pre>
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 @InterfaceStability.Evolving
@@ -107,11 +137,16 @@ public class HFilePrettyPrinter extends Configured implements Tool {
   private boolean checkFamily;
   private boolean isSeekToRow = false;
   private boolean checkMobIntegrity = false;
+  private boolean printTenantInfo = false;
   private Map<String, List<Path>> mobFileLocations;
   private static final int FOUND_MOB_FILES_CACHE_CAPACITY = 50;
   private static final int MISSING_MOB_FILES_CACHE_CAPACITY = 20;
   private PrintStream out = System.out;
   private PrintStream err = System.err;
+
+  // Configurable block display limits
+  private int maxBlocksToShow;
+  private static final int DEFAULT_MAX_BLOCKS = 50;
 
   /**
    * The row which the user wants to specify and print all the KeyValues for.
@@ -150,6 +185,10 @@ public class HFilePrettyPrinter extends Configured implements Tool {
       "Print detailed statistics, including counts by range");
     options.addOption("i", "checkMobIntegrity", false,
       "Print all cells whose mob files are missing");
+    options.addOption("t", "tenantinfo", false,
+      "Print tenant information for multi-tenant HFiles (v4+)");
+    options.addOption("l", "blocklimit", true,
+      "Maximum number of blocks to display (default: 50)");
 
     OptionGroup files = new OptionGroup();
     files.addOption(new Option("f", "file", true,
@@ -184,6 +223,22 @@ public class HFilePrettyPrinter extends Configured implements Tool {
     checkRow = cmd.hasOption("k");
     checkFamily = cmd.hasOption("a");
     checkMobIntegrity = cmd.hasOption("i");
+    printTenantInfo = cmd.hasOption("t");
+
+    if (cmd.hasOption("l")) {
+      try {
+        int limit = Integer.parseInt(cmd.getOptionValue("l"));
+        if (limit > 0) {
+          maxBlocksToShow = limit;
+        } else {
+          err.println("Invalid block limit: " + limit + ". Must be a positive number.");
+          System.exit(-1);
+        }
+      } catch (NumberFormatException e) {
+        err.println("Invalid block limit format: " + cmd.getOptionValue("l"));
+        System.exit(-1);
+      }
+    }
 
     if (cmd.hasOption("f")) {
       files.add(new Path(cmd.getOptionValue("f")));
@@ -306,6 +361,9 @@ public class HFilePrettyPrinter extends Configured implements Tool {
     HFile.Reader reader = HFile.createReader(fs, file, CacheConfig.DISABLED, true, getConf());
 
     Map<byte[], byte[]> fileInfo = reader.getHFileInfo();
+    FixedFileTrailer trailer = reader.getTrailer();
+    int majorVersion = trailer.getMajorVersion();
+    boolean isV4 = majorVersion == HFile.MIN_FORMAT_VERSION_WITH_MULTI_TENANT;
 
     KeyValueStatsCollector fileStats = null;
 
@@ -327,31 +385,20 @@ public class HFilePrettyPrinter extends Configured implements Tool {
 
     // print meta data
     if (shouldPrintMeta) {
-      printMeta(reader, fileInfo);
+      printMeta(reader, fileInfo, isV4);
+    }
+
+    // print tenant information for v4 files
+    if (printTenantInfo && isV4) {
+      printTenantInformation(reader);
     }
 
     if (printBlockIndex) {
-      out.println("Block Index:");
-      out.println(reader.getDataBlockIndexReader());
+      printBlockIndex(reader, isV4);
     }
 
     if (printBlockHeaders) {
-      out.println("Block Headers:");
-      /*
-       * TODO: this same/similar block iteration logic is used in HFileBlock#blockRange and
-       * TestLazyDataBlockDecompression. Refactor?
-       */
-      FSDataInputStreamWrapper fsdis = new FSDataInputStreamWrapper(fs, file);
-      long fileSize = fs.getFileStatus(file).getLen();
-      FixedFileTrailer trailer = FixedFileTrailer.readFromStream(fsdis.getStream(false), fileSize);
-      long offset = trailer.getFirstDataBlockOffset(), max = trailer.getLastDataBlockOffset();
-      HFileBlock block;
-      while (offset <= max) {
-        block = reader.readBlock(offset, -1, /* cacheBlock */ false, /* pread */ false,
-          /* isCompaction */ false, /* updateCacheMetrics */ false, null, null);
-        offset += block.getOnDiskSizeWithHeader();
-        out.println(block);
-      }
+      printBlockHeaders(reader, file, fs, isV4);
     }
 
     if (printStats) {
@@ -363,12 +410,42 @@ public class HFilePrettyPrinter extends Configured implements Tool {
     return 0;
   }
 
+  /**
+   * Get the effective block limit based on user configuration.
+   * 
+   * @return the effective block limit to use
+   */
+  private int getEffectiveBlockLimit() {
+    // If user specified a custom limit (> 0), use it
+    if (maxBlocksToShow > 0) {
+      return maxBlocksToShow;
+    }
+    // Otherwise use default
+    return DEFAULT_MAX_BLOCKS;
+  }
+
   private void scanKeysValues(Path file, KeyValueStatsCollector fileStats, HFileScanner scanner,
     byte[] row) throws IOException {
     Cell pCell = null;
     FileSystem fs = FileSystem.get(getConf());
     Set<String> foundMobFiles = new LinkedHashSet<>(FOUND_MOB_FILES_CACHE_CAPACITY);
     Set<String> missingMobFiles = new LinkedHashSet<>(MISSING_MOB_FILES_CACHE_CAPACITY);
+    
+    // Check if this is a v4 file for enhanced output
+    boolean isV4 = false;
+    String currentTenantId = null;
+    try {
+      HFile.Reader reader = scanner.getReader();
+      if (reader != null && reader.getTrailer().getMajorVersion() == HFile.MIN_FORMAT_VERSION_WITH_MULTI_TENANT) {
+        isV4 = true;
+        if (verbose) {
+          out.println("Scanning HFile v4 - tenant boundaries may be shown");
+        }
+      }
+    } catch (Exception e) {
+      // Continue without tenant-specific processing
+    }
+    
     do {
       ExtendedCell cell = scanner.getCell();
       if (row != null && row.length != 0) {
@@ -379,6 +456,19 @@ public class HFilePrettyPrinter extends Configured implements Tool {
           continue;
         }
       }
+      
+      // For multi-tenant v4 files, try to extract tenant information
+      if (isV4 && printKey) {
+        String extractedTenantId = extractTenantIdFromCell(cell, scanner.getReader());
+        if (extractedTenantId != null && !extractedTenantId.equals(currentTenantId)) {
+          if (currentTenantId != null) {
+            out.println("--- End of tenant section: " + currentTenantId + " ---");
+          }
+          currentTenantId = extractedTenantId;
+          out.println("--- Start of tenant section: " + currentTenantId + " ---");
+        }
+      }
+      
       // collect stats
       if (printStats) {
         fileStats.collect(cell, printStatRanges);
@@ -394,6 +484,10 @@ public class HFilePrettyPrinter extends Configured implements Tool {
           for (Tag tag : tags) {
             out.print(String.format(" T[%d]: %s", i++, tag.toString()));
           }
+        }
+        // Show tenant ID if available and verbose mode is on
+        if (isV4 && verbose && currentTenantId != null) {
+          out.print(" [Tenant: " + currentTenantId + "]");
         }
         out.println();
       }
@@ -443,6 +537,42 @@ public class HFilePrettyPrinter extends Configured implements Tool {
       pCell = cell;
       ++count;
     } while (scanner.next());
+    
+    // Close final tenant section if we were tracking it
+    if (isV4 && printKey && currentTenantId != null) {
+      out.println("--- End of tenant section: " + currentTenantId + " ---");
+    }
+  }
+
+  /**
+   * Enhanced tenant ID extraction that uses trailer information when available.
+   */
+  private String extractTenantIdFromCell(ExtendedCell cell, HFile.Reader reader) {
+    try {
+      FixedFileTrailer trailer = reader.getTrailer();
+      int tenantPrefixLength = 4; // fallback default
+      
+      // For v4 files, always try to get the actual tenant prefix length from trailer
+      if (trailer.getMajorVersion() == HFile.MIN_FORMAT_VERSION_WITH_MULTI_TENANT) {
+        tenantPrefixLength = trailer.getTenantPrefixLength();
+      }
+      
+      byte[] rowKey = CellUtil.cloneRow(cell);
+      if (rowKey.length >= tenantPrefixLength) {
+        return Bytes.toStringBinary(rowKey, 0, tenantPrefixLength);
+      } else {
+        // Row key is shorter than expected tenant prefix
+        if (verbose && rowKey.length > 0) {
+          err.println("Warning: Row key length (" + rowKey.length + ") is shorter than tenant prefix length (" + tenantPrefixLength + ")");
+        }
+        return rowKey.length > 0 ? Bytes.toStringBinary(rowKey) : null;
+      }
+    } catch (Exception e) {
+      if (verbose) {
+        err.println("Warning: Error extracting tenant ID from cell: " + e.getMessage());
+      }
+    }
+    return null;
   }
 
   /**
@@ -508,10 +638,19 @@ public class HFilePrettyPrinter extends Configured implements Tool {
     return keyValueStr.replaceAll(", ([a-zA-Z]+=)", ",\n" + FOUR_SPACES + "$1");
   }
 
-  private void printMeta(HFile.Reader reader, Map<byte[], byte[]> fileInfo) throws IOException {
+  private void printMeta(HFile.Reader reader, Map<byte[], byte[]> fileInfo, boolean isV4)
+    throws IOException {
     out.println("Block index size as per heapsize: " + reader.indexSize());
     out.println(asSeparateLines(reader.toString()));
-    out.println("Trailer:\n    " + asSeparateLines(reader.getTrailer().toString()));
+    
+    FixedFileTrailer trailer = reader.getTrailer();
+    out.println("Trailer:\n    " + asSeparateLines(trailer.toString()));
+    
+    // Print v4-specific trailer information if available
+    if (isV4) {
+      printV4SpecificTrailerInfo(trailer);
+    }
+    
     out.println("Fileinfo:");
     for (Map.Entry<byte[], byte[]> e : fileInfo.entrySet()) {
       out.print(FOUR_SPACES + Bytes.toString(e.getKey()) + " = ");
@@ -529,9 +668,12 @@ public class HFilePrettyPrinter extends Configured implements Tool {
         out.println(timeRangeTracker.getMin() + "...." + timeRangeTracker.getMax());
       } else if (
         Bytes.equals(e.getKey(), HFileInfo.AVG_KEY_LEN)
-          || Bytes.equals(e.getKey(), HFileInfo.AVG_VALUE_LEN)
-          || Bytes.equals(e.getKey(), HFileWriterImpl.KEY_VALUE_VERSION)
-          || Bytes.equals(e.getKey(), HFileInfo.MAX_TAGS_LEN)
+                  || Bytes.equals(e.getKey(), HFileInfo.AVG_VALUE_LEN)
+        || Bytes.equals(e.getKey(), HFileWriterImpl.KEY_VALUE_VERSION)
+        || Bytes.equals(e.getKey(), HFileInfo.MAX_TAGS_LEN)
+        || Bytes.equals(e.getKey(), Bytes.toBytes(MultiTenantHFileWriter.FILEINFO_SECTION_COUNT))
+        || Bytes.equals(e.getKey(), Bytes.toBytes(MultiTenantHFileWriter.FILEINFO_TENANT_INDEX_LEVELS))
+        || Bytes.equals(e.getKey(), Bytes.toBytes(MultiTenantHFileWriter.FILEINFO_TENANT_INDEX_MAX_CHUNK))
       ) {
         out.println(Bytes.toInt(e.getValue()));
       } else if (
@@ -548,6 +690,13 @@ public class HFilePrettyPrinter extends Configured implements Tool {
       }
     }
 
+    // For v4 files, also print section-level trailers and FileInfo
+    if (isV4 && reader instanceof AbstractMultiTenantReader) {
+      printSectionTrailers((AbstractMultiTenantReader) reader);
+      printSectionFileInfo((AbstractMultiTenantReader) reader);
+    }
+
+    // Mid-key handling for different versions
     try {
       out.println("Mid-key: " + reader.midKey().map(CellUtil::getCellKeyAsString));
     } catch (Exception e) {
@@ -578,6 +727,577 @@ public class HFilePrettyPrinter extends Configured implements Tool {
         + bloomFilter.toString().replaceAll(BloomFilterUtil.STATS_RECORD_SEP, "\n" + FOUR_SPACES));
     } else {
       out.println(FOUR_SPACES + "Not present");
+    }
+
+    // For v4 files, also print section-level bloom filter information
+    if (isV4 && reader instanceof AbstractMultiTenantReader) {
+      printSectionBloomFilters((AbstractMultiTenantReader) reader);
+    }
+  }
+
+  /**
+   * Print trailer information for each section in a multi-tenant HFile v4.
+   * Each section is essentially an HFile v3 with its own trailer.
+   * 
+   * @param mtReader the multi-tenant reader to get section information from
+   */
+  private void printSectionTrailers(AbstractMultiTenantReader mtReader) {
+    try {
+      byte[][] tenantSectionIds = mtReader.getAllTenantSectionIds();
+      
+      if (tenantSectionIds != null && tenantSectionIds.length > 0) {
+        out.println("Section-level Trailers:");
+        
+        for (int i = 0; i < tenantSectionIds.length; i++) {
+          byte[] sectionId = tenantSectionIds[i];
+          out.println(FOUR_SPACES + "--- Section " + i + ": " + 
+                     Bytes.toStringBinary(sectionId) + " ---");
+          
+          try {
+            AbstractMultiTenantReader.SectionReader sectionReader = mtReader.getSectionReader(sectionId);
+            if (sectionReader != null) {
+              HFileReaderImpl sectionHFileReader = sectionReader.getReader();
+              if (sectionHFileReader != null) {
+                FixedFileTrailer sectionTrailer = sectionHFileReader.getTrailer();
+                if (sectionTrailer != null) {
+                  out.println(FOUR_SPACES + FOUR_SPACES + "Section Trailer:");
+                  String trailerStr = sectionTrailer.toString();
+                  String[] lines = trailerStr.split("\n");
+                  for (String line : lines) {
+                    out.println(FOUR_SPACES + FOUR_SPACES + FOUR_SPACES + line);
+                  }
+                } else {
+                  out.println(FOUR_SPACES + FOUR_SPACES + "Section trailer not available");
+                }
+              } else {
+                out.println(FOUR_SPACES + FOUR_SPACES + "Section reader not initialized");
+              }
+            } else {
+              out.println(FOUR_SPACES + FOUR_SPACES + "Could not create section reader");
+            }
+          } catch (Exception sectionException) {
+            out.println(FOUR_SPACES + FOUR_SPACES + "Error accessing section trailer: " + sectionException.getMessage());
+          }
+          
+          if (i < tenantSectionIds.length - 1) {
+            out.println(); // Add spacing between sections
+          }
+        }
+      } else {
+        out.println("Section-level Trailers: No sections found");
+      }
+    } catch (Exception e) {
+      out.println("Error reading section trailers: " + e.getMessage());
+    }
+  }
+
+  /**
+   * Print FileInfo for each section in a multi-tenant HFile v4.
+   * Each section is essentially an HFile v3 with its own FileInfo block.
+   * 
+   * @param mtReader the multi-tenant reader to get section information from
+   */
+  private void printSectionFileInfo(AbstractMultiTenantReader mtReader) {
+    try {
+      byte[][] tenantSectionIds = mtReader.getAllTenantSectionIds();
+      
+      if (tenantSectionIds != null && tenantSectionIds.length > 0) {
+        out.println("Section-level FileInfo:");
+        
+        for (int i = 0; i < tenantSectionIds.length; i++) {
+          byte[] sectionId = tenantSectionIds[i];
+          out.println(FOUR_SPACES + "--- Section " + i + ": " + 
+                     Bytes.toStringBinary(sectionId) + " ---");
+          
+          try {
+            AbstractMultiTenantReader.SectionReader sectionReader = mtReader.getSectionReader(sectionId);
+            if (sectionReader != null) {
+              HFileReaderImpl sectionHFileReader = sectionReader.getReader();
+              if (sectionHFileReader != null) {
+                Map<byte[], byte[]> sectionFileInfo = sectionHFileReader.getHFileInfo();
+                if (sectionFileInfo != null && !sectionFileInfo.isEmpty()) {
+                  out.println(FOUR_SPACES + FOUR_SPACES + "Section FileInfo:");
+                  for (Map.Entry<byte[], byte[]> e : sectionFileInfo.entrySet()) {
+                    out.print(FOUR_SPACES + FOUR_SPACES + FOUR_SPACES + Bytes.toString(e.getKey()) + " = ");
+                    if (
+                      Bytes.equals(e.getKey(), HStoreFile.MAX_SEQ_ID_KEY)
+                        || Bytes.equals(e.getKey(), HStoreFile.DELETE_FAMILY_COUNT)
+                        || Bytes.equals(e.getKey(), HStoreFile.EARLIEST_PUT_TS)
+                        || Bytes.equals(e.getKey(), HFileWriterImpl.MAX_MEMSTORE_TS_KEY)
+                        || Bytes.equals(e.getKey(), HFileInfo.CREATE_TIME_TS)
+                        || Bytes.equals(e.getKey(), HStoreFile.BULKLOAD_TIME_KEY)
+                    ) {
+                      out.println(Bytes.toLong(e.getValue()));
+                    } else if (Bytes.equals(e.getKey(), HStoreFile.TIMERANGE_KEY)) {
+                      TimeRangeTracker timeRangeTracker = TimeRangeTracker.parseFrom(e.getValue());
+                      out.println(timeRangeTracker.getMin() + "...." + timeRangeTracker.getMax());
+                    } else if (
+                      Bytes.equals(e.getKey(), HFileInfo.AVG_KEY_LEN)
+                        || Bytes.equals(e.getKey(), HFileInfo.AVG_VALUE_LEN)
+                        || Bytes.equals(e.getKey(), HFileWriterImpl.KEY_VALUE_VERSION)
+                        || Bytes.equals(e.getKey(), HFileInfo.MAX_TAGS_LEN)
+                    ) {
+                      out.println(Bytes.toInt(e.getValue()));
+                    } else if (
+                      Bytes.equals(e.getKey(), HStoreFile.MAJOR_COMPACTION_KEY)
+                        || Bytes.equals(e.getKey(), HFileInfo.TAGS_COMPRESSED)
+                        || Bytes.equals(e.getKey(), HStoreFile.EXCLUDE_FROM_MINOR_COMPACTION_KEY)
+                        || Bytes.equals(e.getKey(), HStoreFile.HISTORICAL_KEY)
+                    ) {
+                      out.println(Bytes.toBoolean(e.getValue()));
+                    } else if (Bytes.equals(e.getKey(), HFileInfo.LASTKEY)) {
+                      out.println(new KeyValue.KeyOnlyKeyValue(e.getValue()).toString());
+                    } else {
+                      out.println(Bytes.toStringBinary(e.getValue()));
+                    }
+                  }
+                } else {
+                  out.println(FOUR_SPACES + FOUR_SPACES + "Section FileInfo not available or empty");
+                }
+              } else {
+                out.println(FOUR_SPACES + FOUR_SPACES + "Section reader not initialized");
+              }
+            } else {
+              out.println(FOUR_SPACES + FOUR_SPACES + "Could not create section reader");
+            }
+          } catch (Exception sectionException) {
+            out.println(FOUR_SPACES + FOUR_SPACES + "Error accessing section FileInfo: " + sectionException.getMessage());
+          }
+          
+          if (i < tenantSectionIds.length - 1) {
+            out.println(); // Add spacing between sections
+          }
+        }
+      } else {
+        out.println("Section-level FileInfo: No sections found");
+      }
+    } catch (Exception e) {
+      out.println("Error reading section FileInfo: " + e.getMessage());
+    }
+  }
+
+  /**
+   * Print bloom filter information for each section in a multi-tenant HFile v4.
+   * 
+   * @param mtReader the multi-tenant reader to get section information from
+   */
+  private void printSectionBloomFilters(AbstractMultiTenantReader mtReader) {
+    try {
+      byte[][] tenantSectionIds = mtReader.getAllTenantSectionIds();
+      
+      if (tenantSectionIds != null && tenantSectionIds.length > 0) {
+        out.println("Section-level Bloom filters:");
+        
+        for (int i = 0; i < tenantSectionIds.length; i++) {
+          byte[] sectionId = tenantSectionIds[i];
+          out.println(FOUR_SPACES + "--- Section " + i + ": " + 
+                     Bytes.toStringBinary(sectionId) + " ---");
+          
+          try {
+            AbstractMultiTenantReader.SectionReader sectionReader = mtReader.getSectionReader(sectionId);
+            if (sectionReader != null) {
+              HFileReaderImpl sectionHFileReader = sectionReader.getReader();
+              if (sectionHFileReader != null) {
+                
+                // Print general bloom filter for this section
+                DataInput bloomMeta = sectionHFileReader.getGeneralBloomFilterMetadata();
+                BloomFilter bloomFilter = null;
+                if (bloomMeta != null) {
+                  bloomFilter = BloomFilterFactory.createFromMeta(bloomMeta, sectionHFileReader);
+                }
+                
+                out.println(FOUR_SPACES + FOUR_SPACES + FOUR_SPACES + "General Bloom filter:");
+                if (bloomFilter != null) {
+                  String bloomDetails = bloomFilter.toString().replaceAll(BloomFilterUtil.STATS_RECORD_SEP, 
+                                                                         "\n" + FOUR_SPACES + FOUR_SPACES + FOUR_SPACES);
+                  out.println(FOUR_SPACES + FOUR_SPACES + FOUR_SPACES + bloomDetails);
+                } else {
+                  out.println(FOUR_SPACES + FOUR_SPACES + FOUR_SPACES + "Not present");
+                }
+                
+                // Print delete bloom filter for this section
+                bloomMeta = sectionHFileReader.getDeleteBloomFilterMetadata();
+                bloomFilter = null;
+                if (bloomMeta != null) {
+                  bloomFilter = BloomFilterFactory.createFromMeta(bloomMeta, sectionHFileReader);
+                }
+                
+                out.println(FOUR_SPACES + FOUR_SPACES + "Delete Family Bloom filter:");
+                if (bloomFilter != null) {
+                  String bloomDetails = bloomFilter.toString().replaceAll(BloomFilterUtil.STATS_RECORD_SEP, 
+                                                                         "\n" + FOUR_SPACES + FOUR_SPACES + FOUR_SPACES);
+                  out.println(FOUR_SPACES + FOUR_SPACES + FOUR_SPACES + bloomDetails);
+                } else {
+                  out.println(FOUR_SPACES + FOUR_SPACES + FOUR_SPACES + "Not present");
+                }
+                
+              } else {
+                out.println(FOUR_SPACES + FOUR_SPACES + "Section reader not initialized");
+              }
+            } else {
+              out.println(FOUR_SPACES + FOUR_SPACES + "Could not create section reader");
+            }
+          } catch (Exception sectionException) {
+            out.println(FOUR_SPACES + FOUR_SPACES + "Error accessing section bloom filters: " + sectionException.getMessage());
+          }
+          
+          if (i < tenantSectionIds.length - 1) {
+            out.println(); // Add spacing between sections
+          }
+        }
+      } else {
+        out.println("Section-level Bloom filters: No sections found");
+      }
+    } catch (Exception e) {
+      out.println("Error reading section bloom filters: " + e.getMessage());
+    }
+  }
+
+  private void printV4SpecificTrailerInfo(FixedFileTrailer trailer) {
+    out.println("HFile v4 Specific Information:");
+    try {
+      // Access v4-specific trailer fields directly (no reflection needed)
+      boolean isMultiTenant = trailer.isMultiTenant();
+      out.println(FOUR_SPACES + "Multi-tenant enabled: " + isMultiTenant);
+      
+      if (isMultiTenant) {
+        int tenantPrefixLength = trailer.getTenantPrefixLength();
+        out.println(FOUR_SPACES + "Tenant prefix length: " + tenantPrefixLength);
+      }
+      
+      // Check for encryption key field that was added in v3/v4
+      try {
+        byte[] encryptionKey = trailer.getEncryptionKey();
+        if (encryptionKey != null && encryptionKey.length > 0) {
+          out.println(FOUR_SPACES + "Encryption key present: true (length: " + encryptionKey.length + " bytes)");
+        } else {
+          out.println(FOUR_SPACES + "Encryption key present: false");
+        }
+      } catch (Exception e) {
+        // Encryption key method might not be available
+        out.println(FOUR_SPACES + "Encryption key information: not available");
+      }
+      
+    } catch (Exception e) {
+      out.println(FOUR_SPACES + "Unable to retrieve v4-specific trailer information: " + e.getMessage());
+    }
+  }
+
+  private void printTenantInformation(HFile.Reader reader) throws IOException {
+    out.println("Tenant Information:");
+    
+    FixedFileTrailer trailer = reader.getTrailer();
+    if (trailer.getMajorVersion() == HFile.MIN_FORMAT_VERSION_WITH_MULTI_TENANT) {
+      // Check if this is actually a multi-tenant file in the trailer
+      try {
+        // Access multi-tenant specific fields directly from trailer (no reflection needed)
+        boolean isMultiTenant = trailer.isMultiTenant();
+        
+        if (isMultiTenant) {
+          out.println(FOUR_SPACES + "Multi-tenant: true");
+          
+          int tenantPrefixLength = trailer.getTenantPrefixLength();
+          out.println(FOUR_SPACES + "Tenant prefix length: " + tenantPrefixLength);
+          
+          // Try to access tenant section information if available
+          if (reader instanceof AbstractMultiTenantReader) {
+            AbstractMultiTenantReader mtReader = (AbstractMultiTenantReader) reader;
+            out.println(FOUR_SPACES + "Reader type: " + reader.getClass().getSimpleName());
+            try {
+              byte[][] tenantSectionIds = mtReader.getAllTenantSectionIds();
+              if (tenantSectionIds != null && tenantSectionIds.length > 0) {
+                out.println(FOUR_SPACES + "Number of tenant sections: " + tenantSectionIds.length);
+                for (int i = 0; i < Math.min(tenantSectionIds.length, 10); i++) {
+                  out.println(FOUR_SPACES + "Tenant section " + i + ": " + 
+                            Bytes.toStringBinary(tenantSectionIds[i]));
+                }
+                if (tenantSectionIds.length > 10) {
+                  out.println(FOUR_SPACES + "... and " + (tenantSectionIds.length - 10) + " more sections");
+                }
+              }
+            } catch (Exception e) {
+              out.println(FOUR_SPACES + "Unable to retrieve tenant section information: " + e.getMessage());
+            }
+          }
+        } else {
+          out.println(FOUR_SPACES + "Multi-tenant: false (HFile v4 format but single tenant)");
+        }
+      } catch (Exception e) {
+        out.println(FOUR_SPACES + "Unable to retrieve multi-tenant information: " + e.getMessage());
+      }
+    } else {
+      out.println(FOUR_SPACES + "Not a multi-tenant HFile (version " + trailer.getMajorVersion() + ")");
+    }
+  }
+
+  private void printBlockIndex(HFile.Reader reader, boolean isV4) throws IOException {
+    out.println("Block Index:");
+    
+    if (isV4) {
+      // For v4 files, show block index for each tenant section
+      if (reader instanceof AbstractMultiTenantReader) {
+        AbstractMultiTenantReader mtReader = (AbstractMultiTenantReader) reader;
+        byte[][] tenantSectionIds = mtReader.getAllTenantSectionIds();
+        
+        if (tenantSectionIds != null && tenantSectionIds.length > 0) {
+          out.println(FOUR_SPACES + "HFile v4 contains " + tenantSectionIds.length + " tenant sections:");
+          
+          for (int i = 0; i < tenantSectionIds.length; i++) {
+            byte[] sectionId = tenantSectionIds[i];
+            out.println(FOUR_SPACES + "--- Tenant Section " + i + ": " + 
+                       Bytes.toStringBinary(sectionId) + " ---");
+            
+            try {
+              // Always show basic section information first
+              java.util.Map<String, Object> sectionInfo = mtReader.getSectionInfo(sectionId);
+              if (sectionInfo != null && (Boolean) sectionInfo.get("exists")) {
+                out.println(FOUR_SPACES + FOUR_SPACES + "Section offset: " + sectionInfo.get("offset"));
+                out.println(FOUR_SPACES + FOUR_SPACES + "Section size: " + sectionInfo.get("size") + " bytes");
+              } else {
+                out.println(FOUR_SPACES + FOUR_SPACES + "Section metadata not available");
+                continue;
+              }
+              
+              // Get the actual block index from the section reader
+              try {
+                AbstractMultiTenantReader.SectionReader sectionReader = mtReader.getSectionReader(sectionId);
+                if (sectionReader != null) {
+                  HFileReaderImpl sectionHFileReader = sectionReader.getReader();
+                  if (sectionHFileReader != null) {
+                    HFileBlockIndex.CellBasedKeyBlockIndexReader indexReader = sectionHFileReader.getDataBlockIndexReader();
+                    if (indexReader != null) {
+                      out.println(FOUR_SPACES + FOUR_SPACES + "Block index details:");
+                      String indexDetails = indexReader.toString();
+                      // Indent the index details for better readability
+                      String[] lines = indexDetails.split("\n");
+                      for (String line : lines) {
+                        out.println(FOUR_SPACES + FOUR_SPACES + FOUR_SPACES + line);
+                      }
+                    } else {
+                      out.println(FOUR_SPACES + FOUR_SPACES + "Block index not available for this section");
+                    }
+                  } else {
+                    out.println(FOUR_SPACES + FOUR_SPACES + "Section reader not initialized");
+                  }
+                } else {
+                  out.println(FOUR_SPACES + FOUR_SPACES + "Could not create section reader");
+                }
+              } catch (Exception sectionException) {
+                out.println(FOUR_SPACES + FOUR_SPACES + "Error accessing section reader: " + sectionException.getMessage());
+              }
+              
+            } catch (Exception e) {
+              out.println(FOUR_SPACES + FOUR_SPACES + "Error reading section block index: " + e.getMessage());
+            }
+            
+            if (i < tenantSectionIds.length - 1) {
+              out.println(); // Add spacing between sections
+            }
+          }
+        } else {
+          out.println(FOUR_SPACES + "No tenant sections found in HFile v4");
+        }
+      } else {
+        out.println(FOUR_SPACES + "Reader is not a multi-tenant reader for v4 file");
+      }
+    } else {
+      // For v2/v3 files, use standard approach
+      HFileBlockIndex.CellBasedKeyBlockIndexReader indexReader = reader.getDataBlockIndexReader();
+      if (indexReader != null) {
+        out.println(indexReader);
+      } else {
+        out.println(FOUR_SPACES + "Block index not available");
+      }
+    }
+  }
+
+  private void printBlockHeaders(HFile.Reader reader, Path file, FileSystem fs, boolean isV4)
+    throws IOException {
+    out.println("Block Headers:");
+    
+    if (isV4) {
+      // For v4 files, show block headers for each tenant section
+      if (reader instanceof AbstractMultiTenantReader) {
+        AbstractMultiTenantReader mtReader = (AbstractMultiTenantReader) reader;
+        byte[][] tenantSectionIds = mtReader.getAllTenantSectionIds();
+        
+        if (tenantSectionIds != null && tenantSectionIds.length > 0) {
+          out.println(FOUR_SPACES + "HFile v4 contains " + tenantSectionIds.length + " tenant sections:");
+          
+          for (int i = 0; i < tenantSectionIds.length; i++) {
+            byte[] sectionId = tenantSectionIds[i];
+            out.println(FOUR_SPACES + "--- Tenant Section " + i + ": " + 
+                       Bytes.toStringBinary(sectionId) + " ---");
+            
+            try {
+              // Always show basic section information first
+              java.util.Map<String, Object> sectionInfo = mtReader.getSectionInfo(sectionId);
+              if (sectionInfo != null && (Boolean) sectionInfo.get("exists")) {
+                out.println(FOUR_SPACES + FOUR_SPACES + "Section offset: " + sectionInfo.get("offset"));
+                out.println(FOUR_SPACES + FOUR_SPACES + "Section size: " + sectionInfo.get("size") + " bytes");
+              } else {
+                out.println(FOUR_SPACES + FOUR_SPACES + "Section metadata not available");
+                continue;
+              }
+              
+              // Get the actual block headers from the section reader
+              try {
+                AbstractMultiTenantReader.SectionReader sectionReader = mtReader.getSectionReader(sectionId);
+                if (sectionReader != null) {
+                  HFileReaderImpl sectionHFileReader = sectionReader.getReader();
+                  if (sectionHFileReader != null) {
+                    out.println(FOUR_SPACES + FOUR_SPACES + "Block headers:");
+                    // Create a section-specific path for block header reading
+                    // Use the original file path since block reading handles section offsets internally
+                    printSectionBlockHeaders(sectionHFileReader, file, fs, FOUR_SPACES + FOUR_SPACES + FOUR_SPACES);
+                  } else {
+                    out.println(FOUR_SPACES + FOUR_SPACES + "Section reader not initialized");
+                  }
+                } else {
+                  out.println(FOUR_SPACES + FOUR_SPACES + "Could not create section reader");
+                }
+              } catch (Exception sectionException) {
+                out.println(FOUR_SPACES + FOUR_SPACES + "Error accessing section reader: " + sectionException.getMessage());
+              }
+              
+            } catch (Exception e) {
+              out.println(FOUR_SPACES + FOUR_SPACES + "Error reading section block headers: " + e.getMessage());
+            }
+            
+            if (i < tenantSectionIds.length - 1) {
+              out.println(); // Add spacing between sections
+            }
+          }
+        } else {
+          out.println(FOUR_SPACES + "No tenant sections found in HFile v4");
+        }
+      } else {
+        out.println(FOUR_SPACES + "Reader is not a multi-tenant reader for v4 file");
+      }
+    } else {
+      // For v2/v3 files, use standard approach
+      printStandardBlockHeaders(reader, file, fs);
+    }
+  }
+
+  /**
+   * Print block headers using the standard approach for v2/v3 files.
+   */
+  private void printStandardBlockHeaders(HFile.Reader reader, Path file, FileSystem fs) throws IOException {
+    try {
+      FSDataInputStreamWrapper fsdis = new FSDataInputStreamWrapper(fs, file);
+      long fileSize = fs.getFileStatus(file).getLen();
+      FixedFileTrailer trailer = FixedFileTrailer.readFromStream(fsdis.getStream(false), fileSize);
+      long offset = trailer.getFirstDataBlockOffset();
+      long max = trailer.getLastDataBlockOffset();
+      
+      if (offset > max || offset < 0 || max < 0) {
+        out.println(FOUR_SPACES + "Invalid block offset range: " + offset + " to " + max);
+        return;
+      }
+      
+      int blockCount = 0;
+      final int effectiveLimit = getEffectiveBlockLimit();
+      
+      HFileBlock block;
+      while (offset <= max && blockCount < effectiveLimit) {
+        try {
+          block = reader.readBlock(offset, -1, /* cacheBlock */ false, /* pread */ false,
+            /* isCompaction */ false, /* updateCacheMetrics */ false, null, null);
+          
+          if (block == null) {
+            out.println(FOUR_SPACES + "Warning: null block at offset " + offset);
+            break;
+          }
+          
+          out.println(block);
+          offset += block.getOnDiskSizeWithHeader();
+          blockCount++;
+          
+        } catch (Exception e) {
+          out.println(FOUR_SPACES + "Error reading block at offset " + offset + ": " + e.getMessage());
+          // For non-v4 files, try to continue with next logical offset
+          offset += 64; // Skip ahead and try again
+          if (offset > max) break;
+        }
+      }
+      
+      if (blockCount >= effectiveLimit) {
+        out.println(FOUR_SPACES + "... (truncated after " + effectiveLimit + " blocks)");
+      }
+      
+      out.println(FOUR_SPACES + "Total blocks shown: " + blockCount);
+      
+    } catch (Exception e) {
+      out.println(FOUR_SPACES + "Unable to read block headers: " + e.getMessage());
+    }
+  }
+
+  /**
+   * Print block headers for a specific section reader with custom indentation.
+   * 
+   * @param sectionReader the section reader to get block headers from
+   * @param file the original file path (for context)
+   * @param fs the file system
+   * @param indent the indentation string to use for output
+   * @throws IOException if an error occurs reading block headers
+   */
+  private void printSectionBlockHeaders(HFileReaderImpl sectionReader, Path file, FileSystem fs, String indent) throws IOException {
+    try {
+      FixedFileTrailer sectionTrailer = sectionReader.getTrailer();
+      long firstDataBlockOffset = sectionTrailer.getFirstDataBlockOffset();
+      long lastDataBlockOffset = sectionTrailer.getLastDataBlockOffset();
+      
+      if (firstDataBlockOffset == -1 || lastDataBlockOffset == -1) {
+        out.println(indent + "No data blocks in this section");
+        return;
+      }
+      
+      if (firstDataBlockOffset > lastDataBlockOffset || firstDataBlockOffset < 0 || lastDataBlockOffset < 0) {
+        out.println(indent + "Invalid block offset range: " + firstDataBlockOffset + " to " + lastDataBlockOffset);
+        return;
+      }
+      
+      int blockCount = 0;
+      final int effectiveLimit = getEffectiveBlockLimit();
+      long offset = firstDataBlockOffset;
+      
+      while (offset <= lastDataBlockOffset && blockCount < effectiveLimit) {
+        try {
+          HFileBlock block = sectionReader.readBlock(offset, -1, /* cacheBlock */ false, /* pread */ false,
+            /* isCompaction */ false, /* updateCacheMetrics */ false, null, null);
+          
+          if (block == null) {
+            out.println(indent + "Warning: null block at offset " + offset);
+            break;
+          }
+          
+          // Print block header with proper indentation
+          String blockHeader = block.toString();
+          String[] lines = blockHeader.split("\n");
+          for (String line : lines) {
+            out.println(indent + line);
+          }
+          
+          offset += block.getOnDiskSizeWithHeader();
+          blockCount++;
+          
+        } catch (Exception e) {
+          out.println(indent + "Error reading block at offset " + offset + ": " + e.getMessage());
+          // Try to continue with next logical offset
+          offset += 64; // Skip ahead and try again
+          if (offset > lastDataBlockOffset) break;
+        }
+      }
+      
+      if (blockCount >= effectiveLimit) {
+        out.println(indent + "... (truncated after " + effectiveLimit + " blocks)");
+      }
+      
+      out.println(indent + "Total blocks shown: " + blockCount);
+      
+    } catch (Exception e) {
+      out.println(indent + "Unable to read section block headers: " + e.getMessage());
     }
   }
 
