@@ -143,6 +143,15 @@ public interface AsyncTableBuilder<C extends ScanResultConsumerBase> {
   AsyncTableBuilder<C> setRequestAttribute(String key, byte[] value);
 
   /**
+   * Set a factory for creating request attributes per request. This will be called with any
+   * attributes set by {@link #setRequestAttribute(String, byte[])}.
+   */
+  default AsyncTableBuilder<C>
+    setRequestAttributesFactory(RequestAttributesFactory requestAttributesFactory) {
+    throw new UnsupportedOperationException("Not implemented");
+  }
+
+  /**
    * Create the {@link AsyncTable} instance.
    */
   AsyncTable<C> build();
