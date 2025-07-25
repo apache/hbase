@@ -31,7 +31,7 @@ import org.apache.yetus.audience.InterfaceStability;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.REPLICATION)
 @InterfaceStability.Evolving
-public class ClusterMarkingEntryFilter implements WALEntryFilter {
+public class ClusterMarkingEntryFilter extends WALEntryFilterBase {
   private UUID clusterId;
   private UUID peerClusterId;
   private ReplicationEndpoint replicationEndpoint;
@@ -64,6 +64,6 @@ public class ClusterMarkingEntryFilter implements WALEntryFilter {
         return entry;
       }
     }
-    return null;
+    return clearOrNull(entry);
   }
 }
