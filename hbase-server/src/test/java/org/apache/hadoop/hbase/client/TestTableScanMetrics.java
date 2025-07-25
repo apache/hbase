@@ -21,6 +21,8 @@ import static org.apache.hadoop.hbase.HConstants.EMPTY_BYTE_ARRAY;
 import static org.apache.hadoop.hbase.client.metrics.ScanMetrics.REGIONS_SCANNED_METRIC_NAME;
 import static org.apache.hadoop.hbase.client.metrics.ScanMetrics.RPC_RETRIES_METRIC_NAME;
 import static org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME;
+import static org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics.RPC_QUEUE_WAIT_TIME_METRIC_NAME;
+import static org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics.RPC_SCAN_TIME_METRIC_NAME;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
@@ -330,6 +332,8 @@ public class TestTableScanMetrics extends FromClientSideBase {
           .entrySet()) {
           ScanMetricsRegionInfo scanMetricsRegionInfo = entry.getKey();
           Map<String, Long> metricsMap = entry.getValue();
+          metricsMap.remove(RPC_SCAN_TIME_METRIC_NAME);
+          metricsMap.remove(RPC_QUEUE_WAIT_TIME_METRIC_NAME);
           Assert.assertNotNull(scanMetricsRegionInfo.getEncodedRegionName());
           Assert.assertNotNull(scanMetricsRegionInfo.getServerName());
           Assert.assertEquals(1, (long) metricsMap.get(REGIONS_SCANNED_METRIC_NAME));
@@ -578,6 +582,8 @@ public class TestTableScanMetrics extends FromClientSideBase {
     for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry : srcMap.entrySet()) {
       ScanMetricsRegionInfo scanMetricsRegionInfo = entry.getKey();
       Map<String, Long> metricsMap = entry.getValue();
+      metricsMap.remove(RPC_SCAN_TIME_METRIC_NAME);
+      metricsMap.remove(RPC_QUEUE_WAIT_TIME_METRIC_NAME);
       if (dstMap.containsKey(scanMetricsRegionInfo)) {
         Map<String, Long> dstMetricsMap = dstMap.get(scanMetricsRegionInfo);
         for (Map.Entry<String, Long> metricEntry : metricsMap.entrySet()) {

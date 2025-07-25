@@ -41,6 +41,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
+import org.apache.commons.lang3.mutable.MutableObject;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -3316,7 +3317,8 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
   // return whether we have more results in region.
   private void scan(HBaseRpcController controller, ScanRequest request, RegionScannerHolder rsh,
     long maxQuotaResultSize, int maxResults, int limitOfRows, List<Result> results,
-    ScanResponse.Builder builder, RpcCall rpcCall) throws IOException {
+    ScanResponse.Builder builder, RpcCall rpcCall,
+    MutableObject<ServerSideScanMetrics> scanMetricsWrapper) throws IOException {
     HRegion region = rsh.r;
     RegionScanner scanner = rsh.s;
     long maxResultSize;
@@ -3515,26 +3517,16 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
         // Check to see if the client requested that we track metrics server side. If the
         // client requested metrics, retrieve the metrics from the scanner context.
         if (trackMetrics) {
+          ServerSideScanMetrics metrics = scannerContext.getMetrics();
+          scanMetricsWrapper.setValue(metrics);
           // rather than increment yet another counter in StoreScanner, just set the value here
           // from block size progress before writing into the response
-          scannerContext.getMetrics().setCounter(
-            ServerSideScanMetrics.BLOCK_BYTES_SCANNED_KEY_METRIC_NAME,
+          metrics.setCounter(ServerSideScanMetrics.BLOCK_BYTES_SCANNED_KEY_METRIC_NAME,
             scannerContext.getBlockSizeProgress());
           if (rpcCall != null) {
-            scannerContext.getMetrics().setCounter(ServerSideScanMetrics.FS_READ_TIME_METRIC_NAME,
+            metrics.setCounter(ServerSideScanMetrics.FS_READ_TIME_METRIC_NAME,
               rpcCall.getFsReadTime());
           }
-          Map<String, Long> metrics = scannerContext.getMetrics().getMetricsMap();
-          ScanMetrics.Builder metricBuilder = ScanMetrics.newBuilder();
-          NameInt64Pair.Builder pairBuilder = NameInt64Pair.newBuilder();
-
-          for (Entry<String, Long> entry : metrics.entrySet()) {
-            pairBuilder.setName(entry.getKey());
-            pairBuilder.setValue(entry.getValue());
-            metricBuilder.addMetrics(pairBuilder.build());
-          }
-
-          builder.setScanMetrics(metricBuilder.build());
         }
       }
     } finally {
@@ -3671,6 +3663,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
     boolean scannerClosed = false;
     try {
       List<Result> results = new ArrayList<>(Math.min(rows, 512));
+      MutableObject<ServerSideScanMetrics> scanMetricsWrapper = new MutableObject<>();
       if (rows > 0) {
         boolean done = false;
         // Call coprocessor. Get region info from scanner.
@@ -3690,7 +3683,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
         }
         if (!done) {
           scan((HBaseRpcController) controller, request, rsh, maxQuotaResultSize, rows, limitOfRows,
-            results, builder, rpcCall);
+            results, builder, rpcCall, scanMetricsWrapper);
         } else {
           builder.setMoreResultsInRegion(!results.isEmpty());
         }
@@ -3740,6 +3733,28 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
       // There's no point returning to a timed out client. Throwing ensures scanner is closed
       if (rpcCall != null && EnvironmentEdgeManager.currentTime() > rpcCall.getDeadline()) {
         throw new TimeoutIOException("Client deadline exceeded, cannot return results");
+      }
+
+      ServerSideScanMetrics scanMetrics = scanMetricsWrapper.get();
+      if (scanMetrics != null) {
+        if (rpcCall != null) {
+          long rpcScanTime = EnvironmentEdgeManager.currentTime() - rpcCall.getStartTime();
+          long rpcQueueWaitTime = rpcCall.getStartTime() - rpcCall.getReceiveTime();
+          scanMetrics.addToCounter(ServerSideScanMetrics.RPC_SCAN_TIME_METRIC_NAME, rpcScanTime);
+          scanMetrics.addToCounter(ServerSideScanMetrics.RPC_QUEUE_WAIT_TIME_METRIC_NAME,
+            rpcQueueWaitTime);
+        }
+        Map<String, Long> metrics = scanMetrics.getMetricsMap();
+        ScanMetrics.Builder metricBuilder = ScanMetrics.newBuilder();
+        NameInt64Pair.Builder pairBuilder = NameInt64Pair.newBuilder();
+
+        for (Entry<String, Long> entry : metrics.entrySet()) {
+          pairBuilder.setName(entry.getKey());
+          pairBuilder.setValue(entry.getValue());
+          metricBuilder.addMetrics(pairBuilder.build());
+        }
+
+        builder.setScanMetrics(metricBuilder.build());
       }
 
       return builder.build();
