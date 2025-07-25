@@ -18,10 +18,14 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.io.IOException;
+import java.util.NavigableMap;
+import org.apache.commons.collections.MapUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.replication.ScopeWALEntryFilter;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
@@ -44,6 +48,10 @@ public class SerialReplicationSourceWALReader extends ReplicationSourceWALReader
   // skip filtering.
   private Cell firstCellInEntryBeforeFiltering;
 
+  private String encodedRegionName;
+
+  private long sequenceId = HConstants.NO_SEQNUM;
+
   private final SerialReplicationChecker checker;
 
   public SerialReplicationSourceWALReader(FileSystem fs, Configuration conf,
@@ -51,6 +59,33 @@ public class SerialReplicationSourceWALReader extends ReplicationSourceWALReader
     ReplicationSource source, String walGroupId) {
     super(fs, conf, logQueue, startPosition, filter, source, walGroupId);
     checker = new SerialReplicationChecker(conf, source);
+  }
+
+  // Under some special cases, we may filter out some entries but we still need to record the last
+  // pushed sequence id for these entries. For example, when we setup a bidirection replication A
+  // <-> B, if we write to both cluster A and cluster B, cluster A will not replicate the entries
+  // which are replicated from cluster B, which means we may have holes in the replication sequence
+  // ids. So if the region is closed abnormally, i.e, we do not have a close event for the region,
+  // and before the closeing, we have some entries from cluster B, then the replication from cluster
+  // A to cluster B will be stuck if we do not record the last pushed sequence id of these entries
+  // because we will find out that the previous sequence id range will never finish. So we need to
+  // record the sequence id for these entries so the last pushed sequence id can reach the region
+  // barrier.
+  // So here we need to determine whether the entry has something need to replicated only through
+  // the replication scope, if so, we need to record the last pushed sequence id, no matter whether
+  // it will be filtered out later.
+  // Please see HBASE-29463
+  private boolean hasGlobalScope(Entry entry) {
+    NavigableMap<byte[], Integer> scopes = entry.getKey().getReplicationScopes();
+    if (MapUtils.isEmpty(scopes)) {
+      return false;
+    }
+    for (byte[] family : entry.getEdit().getFamilies()) {
+      if (ScopeWALEntryFilter.hasGlobalScope(scopes, family)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   @Override
@@ -70,6 +105,12 @@ public class SerialReplicationSourceWALReader extends ReplicationSourceWALReader
         // row key for the edit. And we need to do this before filtering since all the cells may
         // be filtered out, especially that for the markers.
         firstCellInEntryBeforeFiltering = entry.getEdit().getCells().get(0);
+        if (hasGlobalScope(entry)) {
+          // this is for recording last pushed sequence id, see the above comments for
+          // hasGlobalScope
+          encodedRegionName = Bytes.toString(entry.getKey().getEncodedRegionName());
+          sequenceId = entry.getKey().getSequenceId();
+        }
       } else {
         // if this is not null then we know that the entry has already been filtered.
         doFiltering = false;
@@ -97,9 +138,6 @@ public class SerialReplicationSourceWALReader extends ReplicationSourceWALReader
           }
           sleepMultiplier = sleep(sleepMultiplier);
         }
-        // arrive here means we can push the entry, record the last sequence id
-        batch.setLastSeqId(Bytes.toString(entry.getKey().getEncodedRegionName()),
-          entry.getKey().getSequenceId());
         // actually remove the entry.
         removeEntryFromStream(entryStream, batch);
         if (addEntryToBatch(batch, entry)) {
@@ -127,7 +165,12 @@ public class SerialReplicationSourceWALReader extends ReplicationSourceWALReader
 
   private void removeEntryFromStream(WALEntryStream entryStream, WALEntryBatch batch) {
     entryStream.next();
-    firstCellInEntryBeforeFiltering = null;
     batch.setLastWalPosition(entryStream.getPosition());
+    // record last pushed sequence id if needed
+    if (encodedRegionName != null) {
+      batch.setLastSeqId(encodedRegionName, sequenceId);
+      encodedRegionName = null;
+    }
+    firstCellInEntryBeforeFiltering = null;
   }
 }
