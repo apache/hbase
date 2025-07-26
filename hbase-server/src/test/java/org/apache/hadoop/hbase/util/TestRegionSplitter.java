@@ -24,6 +24,7 @@ import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -106,6 +107,35 @@ public class TestRegionSplitter {
     // Do table creation/pre-splitting and verification of region boundaries
     preSplitTableAndVerify(expectedBounds, HexStringSplit.class.getSimpleName(),
       TableName.valueOf(name.getMethodName()));
+  }
+
+  /**
+   * Test creating a pre-split table and splitting it again using the HexStringSplit and
+   * DecimalStringSplit algorithms.
+   */
+  @Test
+  public void testSplitPresplitTable() throws Exception {
+    testSplitPresplitTable(new HexStringSplit());
+    testSplitPresplitTable(new DecimalStringSplit());
+  }
+
+  private void testSplitPresplitTable(RegionSplitter.NumberStringSplit splitter) throws Exception {
+    final List<byte[]> initialBounds = new ArrayList<>();
+    initialBounds.add(ArrayUtils.EMPTY_BYTE_ARRAY);
+    initialBounds.addAll(Arrays.asList(splitter.split(8)));
+    initialBounds.add(ArrayUtils.EMPTY_BYTE_ARRAY);
+
+    // Do table creation/pre-splitting and verification of region boundaries
+    final String className = splitter.getClass().getSimpleName();
+    final TableName tableName = TableName.valueOf(className);
+    preSplitTableAndVerify(initialBounds, className, tableName);
+
+    // Split the table again and verify the new region boundaries
+    final List<byte[]> expectedBounds = new ArrayList<>();
+    expectedBounds.add(ArrayUtils.EMPTY_BYTE_ARRAY);
+    expectedBounds.addAll(Arrays.asList(splitter.split(16)));
+    expectedBounds.add(ArrayUtils.EMPTY_BYTE_ARRAY);
+    rollingSplitAndVerify(tableName, className, expectedBounds);
   }
 
   /**
