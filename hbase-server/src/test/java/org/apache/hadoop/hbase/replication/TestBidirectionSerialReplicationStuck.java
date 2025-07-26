@@ -74,6 +74,6 @@ public class TestBidirectionSerialReplicationStuck extends TestReplicationBase {
 
     // enable peer cluster1 -> cluster2, the new row should be replicated to cluster2
     hbaseAdmin.enableReplicationPeer(PEER_ID2);
-    UTIL1.waitFor(30000000, () -> htable2.exists(new Get(Bytes.toBytes("aaa-3"))));
+    UTIL1.waitFor(30000, () -> htable2.exists(new Get(Bytes.toBytes("aaa-3"))));
   }
 }
