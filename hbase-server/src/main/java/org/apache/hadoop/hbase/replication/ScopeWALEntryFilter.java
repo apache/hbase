@@ -39,13 +39,14 @@ public class ScopeWALEntryFilter implements WALEntryFilter, WALCellFilter {
 
   @Override
   public Entry filter(Entry entry) {
-    // Do not filter out an entire entry by replication scopes. As now we support serial
-    // replication, the sequence id of a marker is also needed by upper layer. We will filter out
-    // all the cells in the filterCell method below if the replication scopes is null or empty.
+    NavigableMap<byte[], Integer> scopes = entry.getKey().getReplicationScopes();
+    if (scopes == null || scopes.isEmpty()) {
+      return null;
+    }
     return entry;
   }
 
-  private boolean hasGlobalScope(NavigableMap<byte[], Integer> scopes, byte[] family) {
+  public static boolean hasGlobalScope(NavigableMap<byte[], Integer> scopes, byte[] family) {
     Integer scope = scopes.get(family);
     return scope != null && scope.intValue() == HConstants.REPLICATION_SCOPE_GLOBAL;
   }
