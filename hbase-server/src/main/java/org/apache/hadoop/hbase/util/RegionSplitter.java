@@ -978,6 +978,9 @@ public class RegionSplitter {
      * @return the midpoint of the 2 numbers
      */
     public BigInteger split2(BigInteger a, BigInteger b) {
+      if (b.equals(lastRowInt)) {
+        b = b.add(BigInteger.ONE);
+      }
       return a.add(b).divide(BigInteger.valueOf(2)).abs();
     }
 
