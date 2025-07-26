@@ -175,6 +175,72 @@ public class ZKProcedureCoordinator implements ProcedureCoordinatorRpcs {
   }
 
   /**
+   * Delete acquired barrier node that are no longer in use.
+   */
+  @Override
+  final public void cleanupBarrierAcquired(Procedure proc) throws IOException {
+    String procName = proc.getName();
+    boolean stillGettingNotifications = false;
+    do {
+      try {
+        LOG.debug("Attempting to clean up acquired barrier node for procedure:" + procName);
+        zkProc.clearAcquiredBarrierNode(procName);
+        stillGettingNotifications = false;
+      } catch (KeeperException.NotEmptyException e) {
+        stillGettingNotifications = true;
+      } catch (KeeperException e) {
+        String msg = "Failed to complete clean up acquired barrier node for procedure " + procName;
+        LOG.error(msg, e);
+        throw new IOException(msg, e);
+      }
+    } while (stillGettingNotifications);
+  }
+
+  /**
+   * Delete reached barrier node that are no longer in use.
+   */
+  @Override
+  final public void cleanupBarrierReached(Procedure proc) throws IOException {
+    String procName = proc.getName();
+    boolean stillGettingNotifications = false;
+    do {
+      try {
+        LOG.debug("Attempting to clean up reached barrier node for procedure:" + procName);
+        zkProc.clearReachedBarrierNode(procName);
+        stillGettingNotifications = false;
+      } catch (KeeperException.NotEmptyException e) {
+        stillGettingNotifications = true;
+      } catch (KeeperException e) {
+        String msg = "Failed to complete clean up reached barrier node for procedure " + procName;
+        LOG.error(msg, e);
+        throw new IOException(msg, e);
+      }
+    } while (stillGettingNotifications);
+  }
+
+  /**
+   * Delete aborted node that are no longer in use.
+   */
+  @Override
+  final public void cleanupBarrierAborted(Procedure proc) throws IOException {
+    String procName = proc.getName();
+    boolean stillGettingNotifications = false;
+    do {
+      try {
+        LOG.debug("Attempting to clean up aborted node for procedure:" + procName);
+        zkProc.clearAbortedNode(procName);
+        stillGettingNotifications = false;
+      } catch (KeeperException.NotEmptyException e) {
+        stillGettingNotifications = true;
+      } catch (KeeperException e) {
+        String msg = "Failed to complete clean up aborted node for procedure " + procName;
+        LOG.error(msg, e);
+        throw new IOException(msg, e);
+      }
+    } while (stillGettingNotifications);
+  }
+
+  /**
    * Start monitoring znodes in ZK - subclass hook to start monitoring znodes they are about.
    * @return true if succeed, false if encountered initialization errors.
    */
