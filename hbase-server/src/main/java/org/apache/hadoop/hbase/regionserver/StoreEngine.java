@@ -351,8 +351,7 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
       results.removeAll(filesToRemove);
       if (!filesToRemove.isEmpty() && ctx.isPrimaryReplicaStore()) {
         LOG.debug("Moving the files {} to archive", filesToRemove);
-        ctx.getRegionFileSystem().removeStoreFiles(ctx.getFamily().getNameAsString(),
-          filesToRemove);
+        storeFileTracker.removeStoreFiles(filesToRemove);
       }
     }
 

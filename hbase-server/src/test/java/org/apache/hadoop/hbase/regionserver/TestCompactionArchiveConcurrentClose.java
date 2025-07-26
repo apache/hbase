@@ -22,7 +22,6 @@ import static org.junit.Assert.assertFalse;
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -189,23 +188,6 @@ public class TestCompactionArchiveConcurrentClose {
     public WaitingHRegionFileSystem(final Configuration conf, final FileSystem fs,
       final Path tableDir, final RegionInfo regionInfo) {
       super(conf, fs, tableDir, regionInfo);
-    }
-
-    @Override
-    public void removeStoreFiles(String familyName, Collection<HStoreFile> storeFiles)
-      throws IOException {
-      super.removeStoreFiles(familyName, storeFiles);
-      archived.set(true);
-      synchronized (archived) {
-        archived.notifyAll();
-      }
-      try {
-        // unfortunately we can't use a stronger barrier here as the fix synchronizing
-        // the race condition will then block
-        Thread.sleep(100);
-      } catch (InterruptedException ie) {
-        throw new InterruptedIOException("Interrupted waiting for latch");
-      }
     }
   }
 }

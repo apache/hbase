@@ -26,6 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreContext;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -109,4 +110,10 @@ class DefaultStoreFileTracker extends StoreFileTrackerBase {
     }
     return storeFiles;
   }
+
+  @Override
+  public void removeStoreFiles(List<HStoreFile> storeFiles) throws IOException {
+    archiveStoreFiles(storeFiles);
+  }
+
 }
