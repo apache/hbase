@@ -68,6 +68,17 @@ public class BackupMasterObserver implements MasterCoprocessor, MasterObserver {
   }
 
   @Override
+  public void preTruncateTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
+    TableName tableName) throws IOException {
+    Configuration cfg = ctx.getEnvironment().getConfiguration();
+    if (!BackupManager.isBackupEnabled(cfg)) {
+      LOG.debug("Skipping preTruncateTable hook since backup is disabled");
+      return;
+    }
+    disallowIncrementalBackups(ctx.getEnvironment(), tableName);
+  }
+
+  @Override
   public void postTruncateTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
     TableName tableName) throws IOException {
     Configuration cfg = ctx.getEnvironment().getConfiguration();
@@ -76,6 +87,7 @@ public class BackupMasterObserver implements MasterCoprocessor, MasterObserver {
       return;
     }
     deleteBulkLoads(cfg, tableName, (ignored) -> true);
+    disallowIncrementalBackups(ctx.getEnvironment(), tableName);
   }
 
   @Override
@@ -111,6 +123,22 @@ public class BackupMasterObserver implements MasterCoprocessor, MasterObserver {
       List<byte[]> rowsToDelete =
         bulkLoads.stream().filter(filter).map(BulkLoad::getRowKey).toList();
       tbl.deleteBulkLoadedRows(rowsToDelete);
+    }
+  }
+
+  private static void disallowIncrementalBackups(MasterCoprocessorEnvironment env,
+    TableName tableName) throws IOException {
+    Configuration conf = env.getConfiguration();
+    if (tableName.equals(BackupSystemTable.getTableName(conf))) {
+      return;
+    }
+
+    BackupSystemTable table = new BackupSystemTable(env.getConnection());
+    try {
+      table.startBackupExclusiveOperation();
+      table.disallowFurtherIncrementals(tableName);
+    } finally {
+      table.finishBackupExclusiveOperation();
     }
   }
 }
