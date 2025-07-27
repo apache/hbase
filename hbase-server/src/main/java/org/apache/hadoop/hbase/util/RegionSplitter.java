@@ -462,11 +462,9 @@ public class RegionSplitter {
 
               // Round-robin through the ServerName list. Choose the lightest-loaded servers
               // first to keep the master from load-balancing regions as we split.
-              for (Map.Entry<ServerName,
-                LinkedList<Pair<byte[], byte[]>>> daughterRegion : daughterRegions.entrySet()) {
+              for (final ServerName rsLoc : Lists.newArrayList(daughterRegions.keySet())) {
                 Pair<byte[], byte[]> dr = null;
-                ServerName rsLoc = daughterRegion.getKey();
-                LinkedList<Pair<byte[], byte[]>> regionList = daughterRegion.getValue();
+                final LinkedList<Pair<byte[], byte[]>> regionList = daughterRegions.get(rsLoc);
 
                 // Find a region in the ServerName list that hasn't been moved
                 LOG.debug("Finding a region on " + rsLoc);
