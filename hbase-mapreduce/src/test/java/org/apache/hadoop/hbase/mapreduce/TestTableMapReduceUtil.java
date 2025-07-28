@@ -29,15 +29,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
-import org.apache.hadoop.hbase.security.HBaseKerberosUtils;
-import org.apache.hadoop.hbase.security.access.AccessController;
-import org.apache.hadoop.hbase.security.access.PermissionStorage;
-import org.apache.hadoop.hbase.security.access.SecureTestUtil;
 import org.apache.hadoop.hbase.security.provider.SaslClientAuthenticationProviders;
 import org.apache.hadoop.hbase.security.token.AuthenticationTokenIdentifier;
-import org.apache.hadoop.hbase.security.token.TokenProvider;
-import org.apache.hadoop.hbase.security.visibility.VisibilityTestUtil;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -48,7 +41,6 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.junit.After;
@@ -134,33 +126,6 @@ public class TestTableMapReduceUtil {
     assertEquals("Table", job.getConfiguration().get(TableInputFormat.INPUT_TABLE));
   }
 
-  private static Closeable startSecureMiniCluster(HBaseTestingUtility util, MiniKdc kdc,
-    String principal) throws Exception {
-    Configuration conf = util.getConfiguration();
-
-    SecureTestUtil.enableSecurity(conf);
-    VisibilityTestUtil.enableVisiblityLabels(conf);
-    SecureTestUtil.verifyConfiguration(conf);
-
-    conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
-      AccessController.class.getName() + ',' + TokenProvider.class.getName());
-
-    HBaseKerberosUtils.setSecuredConfiguration(conf, principal + '@' + kdc.getRealm(),
-      HTTP_PRINCIPAL + '@' + kdc.getRealm());
-
-    KerberosName.resetDefaultRealm();
-
-    util.startMiniCluster();
-    try {
-      util.waitUntilAllRegionsAssigned(PermissionStorage.ACL_TABLE_NAME);
-    } catch (Exception e) {
-      util.shutdownMiniCluster();
-      throw e;
-    }
-
-    return util::shutdownMiniCluster;
-  }
-
   @Test
   public void testInitCredentialsForCluster1() throws Exception {
     HBaseTestingUtility util1 = new HBaseTestingUtility();
@@ -199,8 +164,9 @@ public class TestTableMapReduceUtil {
     kdc.createPrincipal(keytab, userPrincipal, HTTP_PRINCIPAL);
     loginUserFromKeytab(userPrincipal + '@' + kdc.getRealm(), keytab.getAbsolutePath());
 
-    try (Closeable util1Closeable = startSecureMiniCluster(util1, kdc, userPrincipal);
-      Closeable util2Closeable = startSecureMiniCluster(util2, kdc, userPrincipal)) {
+    try (
+      Closeable util1Closeable = util1.startSecureMiniCluster(kdc, userPrincipal, HTTP_PRINCIPAL);
+      Closeable util2Closeable = util2.startSecureMiniCluster(kdc, userPrincipal, HTTP_PRINCIPAL)) {
       try {
         Configuration conf1 = util1.getConfiguration();
         Job job = Job.getInstance(conf1);
@@ -233,7 +199,8 @@ public class TestTableMapReduceUtil {
     kdc.createPrincipal(keytab, userPrincipal, HTTP_PRINCIPAL);
     loginUserFromKeytab(userPrincipal + '@' + kdc.getRealm(), keytab.getAbsolutePath());
 
-    try (Closeable util1Closeable = startSecureMiniCluster(util1, kdc, userPrincipal)) {
+    try (
+      Closeable util1Closeable = util1.startSecureMiniCluster(kdc, userPrincipal, HTTP_PRINCIPAL)) {
       try {
         HBaseTestingUtility util2 = new HBaseTestingUtility();
         // Assume util2 is insecure cluster
@@ -269,7 +236,8 @@ public class TestTableMapReduceUtil {
     kdc.createPrincipal(keytab, userPrincipal, HTTP_PRINCIPAL);
     loginUserFromKeytab(userPrincipal + '@' + kdc.getRealm(), keytab.getAbsolutePath());
 
-    try (Closeable util2Closeable = startSecureMiniCluster(util2, kdc, userPrincipal)) {
+    try (
+      Closeable util2Closeable = util2.startSecureMiniCluster(kdc, userPrincipal, HTTP_PRINCIPAL)) {
       try {
         Configuration conf1 = util1.getConfiguration();
         Job job = Job.getInstance(conf1);
