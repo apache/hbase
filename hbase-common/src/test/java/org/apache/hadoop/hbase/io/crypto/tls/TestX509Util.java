@@ -96,7 +96,16 @@ public class TestX509Util extends AbstractTestX509Parameterized {
   public void testCreateSSLContextWithoutCustomProtocol() throws Exception {
     SslContext sslContext = X509Util.createSslContextForClient(conf);
     ByteBufAllocator byteBufAllocatorMock = mock(ByteBufAllocator.class);
-    assertArrayEquals(new String[] { X509Util.DEFAULT_PROTOCOL },
+    assertArrayEquals(new String[] { "TLSv1.3", "TLSv1.2" },
+      sslContext.newEngine(byteBufAllocatorMock).getEnabledProtocols());
+  }
+
+  @Test
+  public void testCreateTcNativeSSLContextWithoutCustomProtocol() throws Exception {
+    conf.set(X509Util.TLS_USE_OPENSSL, "true");
+    SslContext sslContext = X509Util.createSslContextForClient(conf);
+    ByteBufAllocator byteBufAllocatorMock = mock(ByteBufAllocator.class);
+    assertArrayEquals(new String[] { "TLSv1.3", "TLSv1.2" },
       sslContext.newEngine(byteBufAllocatorMock).getEnabledProtocols());
   }
 
