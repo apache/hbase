@@ -4577,7 +4577,6 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   }
 
   public Long refreshHfiles(final TableName tableName, final long nonceGroup, final long nonce) throws IOException {
-    System.out.println("Anuj: HMaster refresh with Table name is called, Table: " + tableName.getNameAsString());
     // TODO Check if table exists otherwise send exception.
 //    return 121L;
     return MasterProcedureUtil
@@ -4597,7 +4596,6 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   }
 
   public Long refreshHfiles(final String namespace, final long nonceGroup, final long nonce) throws IOException {
-    System.out.println("Anuj: HMaster refresh with namespace is called, namespace: " + namespace);
     // TODO Check if namespace exists otherwise send exception.
 //    return 122L;
     return MasterProcedureUtil
@@ -4617,7 +4615,6 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   }
 
   public Long refreshHfiles(final long nonceGroup, final long nonce) throws IOException {
-    System.out.println("Anuj: HMaster refresh without a parameter is called.");
 //    return 123L;
     return MasterProcedureUtil
       .submitProcedure(new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {

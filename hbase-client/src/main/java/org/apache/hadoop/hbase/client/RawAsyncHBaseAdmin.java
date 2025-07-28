@@ -4576,7 +4576,6 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<Long> refreshHFiles(final TableName tableName){
-//        System.out.println("Anuj: RawAsyncHBaseAdmin table name provided is " + tableName.getNameAsString());
     // Request builder
     RefreshHFilesRequest.Builder request = RefreshHFilesRequest.newBuilder();
     request.setTableName(ProtobufUtil.toProtoTableName(tableName));

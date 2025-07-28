@@ -105,7 +105,6 @@ public class RefreshHFilesTableProcedure extends AbstractStateMachineTableProced
   }
 
   private Flow prepare(final MasterProcedureEnv env){
-    System.out.println("Anuj: In Prepare State");
     // TODO Check if table exists otherwise send exception.
     // Get list of regions for the table
     AssignmentManager am = env.getAssignmentManager();
@@ -113,17 +112,13 @@ public class RefreshHFilesTableProcedure extends AbstractStateMachineTableProced
 
     // For each region get the server where it is hosted and then call refreshHfile on that server with given region as parameter
     for(RegionInfo region : regions){
-       System.out.println("Anuj: Region Names for Table " + tableName.getNameAsString() + " : " + region.getRegionNameAsString());
-//      ServerName server  = regionStates.getRegionServerOfRegion(region);
-      // Refresh Region on the region server
-
+      // TODO verify if region is alive or not
     }
     setNextState(RefreshHFilesTableProcedureState.REFRESH_HFILES_REFRESH_REGION);
     return Flow.HAS_MORE_STATE;
   }
 
   private Flow refreshRegionHFiles(final MasterProcedureEnv env){
-    System.out.println("Anuj: In Refresh Region State");
     addChildProcedure(env.getAssignmentManager().getTableRegions(getTableName(), true).stream()
       .map(r -> new RefreshHFilesRegionProcedure(r)).toArray(RefreshHFilesRegionProcedure[]::new));
     setNextState(RefreshHFilesTableProcedureState.REFRESH_HFILES_FINISH);
@@ -131,7 +126,6 @@ public class RefreshHFilesTableProcedure extends AbstractStateMachineTableProced
   }
 
   private Flow finish(){
-    System.out.println("Anuj: In Finish State");
     return Flow.NO_MORE_STATE;
   }
 }

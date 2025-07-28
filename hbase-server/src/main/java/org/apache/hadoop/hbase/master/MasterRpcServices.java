@@ -3680,17 +3680,12 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
     try {
       Long procId;
       if (request.hasTableName()) { // if we have provided table name as parameter
-        // Print Table Name received
-        System.out.println("Anuj: Table name received in MasterRpcService is " + ProtobufUtil.toTableName(request.getTableName()));
         // refreshHfiles for the given user tables
         procId = server.refreshHfiles(ProtobufUtil.toTableName(request.getTableName()), request.getNonceGroup(), request.getNonce());
       } else if (request.hasNamespace()) { // if we have provided namespace as parameter
-        // Print Namespace received
-        System.out.println("Anuj: Namespace name received in MasterRpcService is " + request.getNamespace());
         // refreshHfiles for all the user tables under the namespace
         procId = server.refreshHfiles(request.getNamespace(), request.getNonceGroup(), request.getNonce());
       } else { // When no parameter is provided
-        System.out.println("Anuj: No param provided, refreshing all tables");
         // refreshHfiles for all the user tables in HBase
         procId = server.refreshHfiles(request.getNonceGroup(), request.getNonce());
       }
@@ -3698,30 +3693,5 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
-
-    //    final AssignmentManager assignmentManager = server.getAssignmentManager();
-    //    RegionStates regionStates = assignmentManager.getRegionStates();
-    //
-    //    if (request.hasTableName()){ // if we have provided table name as parameter
-    //      // Print Table Name received
-    //      System.out.println("Anuj: Table name received in MasterRpcService is " + ProtobufUtil.toTableName(request.getTableName()));
-    //      // TODO Check if table exists otherwise send exception.
-    //      // Get list of regions for the table
-    //      TableName tableName = ProtobufUtil.toTableName(request.getTableName());
-    //      List<RegionInfo> regions = assignmentManager.getRegionStates().getRegionsOfTable(tableName);
-    //
-    //      // For each region get the server where it is hosted and then call refreshHfile on that server with given region as parameter
-    //      for(RegionInfo region : regions){
-    //        ServerName server  = regionStates.getRegionServerOfRegion(region);
-    //        // Refresh Region on the region server
-    //
-    //      }
-    //
-    //    } else if (request.hasNamespace()) { // if we have provided namespace as parameter
-    //      // Print Namespace received
-    //      System.out.println("Anuj: Namespace name received in MasterRpcService is " + request.getNamespace());
-    //    } else{ // When no parameter is provided
-    //      System.out.println("Anuj: No param provided, refreshing all tables");
-    //    }
   }
 }
