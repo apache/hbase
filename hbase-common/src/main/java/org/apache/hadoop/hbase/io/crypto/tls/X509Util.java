@@ -87,7 +87,6 @@ public final class X509Util {
   public static final String TLS_CIPHER_SUITES = CONFIG_PREFIX + "ciphersuites";
   public static final String TLS_CERT_RELOAD = CONFIG_PREFIX + "certReload";
   public static final String TLS_USE_OPENSSL = CONFIG_PREFIX + "useOpenSsl";
-  public static final String DEFAULT_PROTOCOL = "TLSv1.2";
 
   //
   // Server-side specific configs
@@ -206,7 +205,10 @@ public final class X509Util {
     }
 
     sslContextBuilder.enableOcsp(sslOcspEnabled);
-    sslContextBuilder.protocols(getEnabledProtocols(config));
+    String[] enabledProtocols = getEnabledProtocols(config);
+    if (enabledProtocols != null) {
+      sslContextBuilder.protocols(enabledProtocols);
+    }
     String[] cipherSuites = getCipherSuites(config);
     if (cipherSuites != null) {
       sslContextBuilder.ciphers(Arrays.asList(cipherSuites));
@@ -276,7 +278,10 @@ public final class X509Util {
     }
 
     sslContextBuilder.enableOcsp(sslOcspEnabled);
-    sslContextBuilder.protocols(getEnabledProtocols(config));
+    String[] enabledProtocols = getEnabledProtocols(config);
+    if (enabledProtocols != null) {
+      sslContextBuilder.protocols(enabledProtocols);
+    }
     String[] cipherSuites = getCipherSuites(config);
     if (cipherSuites != null) {
       sslContextBuilder.ciphers(Arrays.asList(cipherSuites));
@@ -391,9 +396,13 @@ public final class X509Util {
   private static String[] getEnabledProtocols(Configuration config) {
     String enabledProtocolsInput = config.get(TLS_ENABLED_PROTOCOLS);
     if (enabledProtocolsInput == null) {
-      return new String[] { config.get(TLS_CONFIG_PROTOCOL, DEFAULT_PROTOCOL) };
+      enabledProtocolsInput = config.get(TLS_CONFIG_PROTOCOL);
     }
-    return enabledProtocolsInput.split(",");
+    if (enabledProtocolsInput != null) {
+      return enabledProtocolsInput.split(",");
+    } else {
+      return null;
+    }
   }
 
   private static String[] getCipherSuites(Configuration config) {
