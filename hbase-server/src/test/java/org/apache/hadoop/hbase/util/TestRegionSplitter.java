@@ -72,7 +72,7 @@ public class TestRegionSplitter {
 
   @BeforeClass
   public static void setup() throws Exception {
-    UTIL.startMiniCluster();
+    UTIL.startMiniCluster(2);
   }
 
   @AfterClass
