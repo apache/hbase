@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
+import java.net.ConnectException;
 import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.List;
@@ -45,7 +46,9 @@ public class RSProcDispatcher extends RSProcedureDispatcher {
 
   private static final List<IOException> ERRORS =
     Arrays.asList(new ConnectionClosedException("test connection closed error..."),
-      new UnknownHostException("test unknown host error..."));
+      new UnknownHostException("test unknown host error..."),
+      new ConnectException("test connect error..."));
+
   private static final AtomicInteger ERROR_IDX = new AtomicInteger();
 
   public RSProcDispatcher(MasterServices master) {

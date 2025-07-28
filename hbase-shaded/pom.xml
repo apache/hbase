@@ -90,7 +90,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-shade-plugin</artifactId>
-          <version>3.5.1</version>
+          <version>3.6.0</version>
           <executions>
             <execution>
               <id>aggregate-into-a-jar-with-relocated-third-parties</id>
@@ -132,6 +132,7 @@
                     <exclude>commons-logging:*</exclude>
                     <exclude>org.javassist:*</exclude>
                     <exclude>io.opentelemetry:*</exclude>
+                    <exclude>io.opentelemetry.semconv:*</exclude>
                   </excludes>
                 </artifactSet>
                 <relocations>

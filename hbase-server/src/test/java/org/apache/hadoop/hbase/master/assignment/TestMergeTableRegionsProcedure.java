@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureTestingUtility;
+import org.apache.hadoop.hbase.master.procedure.ModifyTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.TestSnapshotProcedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
@@ -100,6 +101,8 @@ public class TestMergeTableRegionsProcedure {
     conf.setInt("hbase.master.maximum.ping.server.attempts", 3);
     conf.setInt("hbase.master.ping.server.retry.sleep.interval", 1);
     conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
+    conf.set("hbase.coprocessor.region.classes",
+      RegionServerHostingReplicaSlowOpenCoprocessor.class.getName());
   }
 
   @BeforeClass
@@ -389,6 +392,32 @@ public class TestMergeTableRegionsProcedure {
 
     assertProcFailed(procExec, mergeProcId);
     assertEquals(initialRegionCount, UTIL.getAdmin().getRegions(tableName).size());
+  }
+
+  @Test
+  public void testMergeDetectsModifyTableProcedure() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
+
+    List<RegionInfo> regions = createTable(tableName);
+
+    RegionServerHostingReplicaSlowOpenCoprocessor.slowDownReplicaOpen = true;
+    TableDescriptor td = TableDescriptorBuilder.newBuilder(admin.getDescriptor(tableName))
+      .setRegionReplication(2).build();
+    long modifyProcId =
+      procExec.submitProcedure(new ModifyTableProcedure(procExec.getEnvironment(), td));
+
+    // Merge regions of the table, the MergeTableRegionsProcedure will fail because there is a
+    // ModifyTableProcedure in progress
+    MergeTableRegionsProcedure mergeProcedure = new MergeTableRegionsProcedure(
+      procExec.getEnvironment(), regions.toArray(new RegionInfo[0]), false);
+    long mergeProcId = procExec.submitProcedure(mergeProcedure);
+    ProcedureTestingUtility.waitProcedure(procExec, mergeProcId);
+    ProcedureTestingUtility.assertProcFailed(procExec, mergeProcId);
+
+    RegionServerHostingReplicaSlowOpenCoprocessor.slowDownReplicaOpen = false;
+    ProcedureTestingUtility.waitProcedure(procExec, modifyProcId);
+    ProcedureTestingUtility.assertProcNotFailed(procExec, modifyProcId);
   }
 
   private List<RegionInfo> createTable(final TableName tableName) throws Exception {

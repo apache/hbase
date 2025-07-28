@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
-import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MetricsSnapshot;
 import org.apache.hadoop.hbase.master.assignment.MergeTableRegionsProcedure;
 import org.apache.hadoop.hbase.master.assignment.SplitTableRegionProcedure;
@@ -104,30 +103,6 @@ public class SnapshotProcedure extends AbstractStateMachineTableProcedure<Snapsh
   @Override
   public TableOperationType getTableOperationType() {
     return TableOperationType.SNAPSHOT;
-  }
-
-  @Override
-  protected LockState acquireLock(MasterProcedureEnv env) {
-    // AbstractStateMachineTableProcedure acquires exclusive table lock by default,
-    // but we may need to downgrade it to shared lock for some reasons:
-    // a. exclusive lock has a negative effect on assigning region. See HBASE-21480 for details.
-    // b. we want to support taking multiple different snapshots on same table on the same time.
-    if (env.getProcedureScheduler().waitTableSharedLock(this, getTableName())) {
-      return LockState.LOCK_EVENT_WAIT;
-    }
-    return LockState.LOCK_ACQUIRED;
-  }
-
-  @Override
-  protected void releaseLock(MasterProcedureEnv env) {
-    env.getProcedureScheduler().wakeTableSharedLock(this, getTableName());
-  }
-
-  @Override
-  protected boolean holdLock(MasterProcedureEnv env) {
-    // In order to avoid enabling/disabling/modifying/deleting table during snapshot,
-    // we don't release lock during suspend
-    return true;
   }
 
   @Override
@@ -308,22 +283,12 @@ public class SnapshotProcedure extends AbstractStateMachineTableProcedure<Snapsh
 
   private void preSnapshot(MasterProcedureEnv env) throws IOException {
     env.getMasterServices().getSnapshotManager().prepareWorkingDirectory(snapshot);
-
-    MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
-    if (cpHost != null) {
-      cpHost.preSnapshot(ProtobufUtil.createSnapshotDesc(snapshot), htd, getUser());
-    }
   }
 
   private void postSnapshot(MasterProcedureEnv env) throws IOException {
     SnapshotManager sm = env.getMasterServices().getSnapshotManager();
     if (sm != null) {
       sm.unregisterSnapshotProcedure(snapshot, getProcId());
-    }
-
-    MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
-    if (cpHost != null) {
-      cpHost.postSnapshot(ProtobufUtil.createSnapshotDesc(snapshot), htd, getUser());
     }
   }
 

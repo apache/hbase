@@ -25,3 +25,5 @@ linklint/
 **/*.log
 tmp
 **/.flattened-pom.xml
+.vscode/
+**/__pycache__
