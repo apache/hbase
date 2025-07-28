@@ -42,7 +42,6 @@ public class RefreshHFilesRegionProcedure extends Procedure<MasterProcedureEnv>
   protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
     MasterProcedureProtos.RefreshHFilesRegionProcedureStateData data =
       serializer.deserialize(MasterProcedureProtos.RefreshHFilesRegionProcedureStateData.class);
-    System.out.println("Anuj: RefreshHFilesRegionProcedure -> deserializeStateData");
     this.region = ProtobufUtil.toRegionInfo(data.getRegion());
     // TODO Get the Data from region server
   }
@@ -50,7 +49,6 @@ public class RefreshHFilesRegionProcedure extends Procedure<MasterProcedureEnv>
   @Override
   protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     MasterProcedureProtos.RefreshHFilesRegionProcedureStateData.Builder builder = MasterProcedureProtos.RefreshHFilesRegionProcedureStateData.newBuilder();
-    System.out.println("Anuj: RefreshHFilesRegionProcedure -> serializeStateData");
     builder.setRegion(ProtobufUtil.toRegionInfo(region));
     // TODO add data that you want to pass to region server
     serializer.serialize(builder.build());
@@ -69,7 +67,6 @@ public class RefreshHFilesRegionProcedure extends Procedure<MasterProcedureEnv>
   @Override
   protected Procedure<MasterProcedureEnv>[] execute(MasterProcedureEnv env)
     throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
-    System.out.println("Anuj: RefreshHFilesRegionProcedure -> execute");
     RegionStates regionStates = env.getAssignmentManager().getRegionStates();
     RegionStateNode regionNode = regionStates.getRegionStateNode(region);
 
@@ -97,19 +94,16 @@ public class RefreshHFilesRegionProcedure extends Procedure<MasterProcedureEnv>
 
   @Override
   public void remoteOperationFailed(MasterProcedureEnv env, RemoteProcedureException error) {
-    System.out.println("Anuj: RefreshHFilesRegionProcedure -> remoteOperationFailed");
     // TODO redo the same thing again till retry count else send the error to client.
   }
 
   public void remoteOperationCompleted(MasterProcedureEnv env) {
-    System.out.println("Anuj: RefreshHFilesRegionProcedure -> remoteOperationCompleted");
     // TODO Do nothing just LOG completed successfully as everything is completed successfully
   }
 
 
   @Override
   public void remoteCallFailed(MasterProcedureEnv env, ServerName serverName, IOException e) {
-    System.out.println("Anuj: RefreshHFilesRegionProcedure -> remoteCallFailed");
     // TODO redo the same thing again till retry count else send the error to client.
   }
 
@@ -117,16 +111,7 @@ public class RefreshHFilesRegionProcedure extends Procedure<MasterProcedureEnv>
   public Optional<RemoteProcedureDispatcher.RemoteOperation> remoteCallBuild(MasterProcedureEnv env, ServerName serverName) {
     MasterProcedureProtos.RefreshHFilesRegionParameter.Builder builder = MasterProcedureProtos.RefreshHFilesRegionParameter.newBuilder();
     builder.setRegion(ProtobufUtil.toRegionInfo(region));
-    System.out.println("Anuj: RefreshHFilesRegionProcedure -> remoteCallBuild");
-    System.out.println("Anuj: RefreshHFilesRegionProcedure -> remoteCallBuild calling for region : " + region.getRegionNameAsString());
     // TODO Add logic on how to build remote call
-//    if (columnFamilies != null) {
-//      for (byte[] columnFamily : columnFamilies) {
-//        if (columnFamily != null && columnFamily.length > 0) {
-//          builder.addColumnFamily(UnsafeByteOperations.unsafeWrap(columnFamily));
-//        }
-//      }
-//    }
     return Optional
       .of(new RSProcedureDispatcher.ServerOperation(this, getProcId(), RefreshHFilesCallable.class,
         builder.build().toByteArray(), env.getMasterServices().getMasterActiveTime()));

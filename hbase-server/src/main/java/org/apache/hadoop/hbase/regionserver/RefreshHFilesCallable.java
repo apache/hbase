@@ -22,13 +22,11 @@ public class RefreshHFilesCallable extends BaseRSProcedureCallable  {
 
   @Override
   protected void doCall() throws Exception {
-    System.out.println("Anuj: RefreshHFilesCallable -> doCall in region Server Code");
     HRegion region = rs.getRegion(regionInfo.getEncodedName());
     LOG.debug("Starting refrehHfiles operation on region {}", region);
 
     try {
       for (Store store : region.getStores()) {
-        System.out.println("Anuj: RefreshHFilesCallable Column Family name for region : " + region.getRegionInfo().getRegionNameAsString() + " is : "+ store.getColumnFamilyName());
         store.refreshStoreFiles();
       }
     } catch(IOException ioe) {
@@ -39,14 +37,12 @@ public class RefreshHFilesCallable extends BaseRSProcedureCallable  {
 
   @Override
   protected void initParameter(byte[] parameter) throws Exception {
-    System.out.println("Anuj: RefreshHFilesCallable -> initParameter in region Server Code");
     MasterProcedureProtos.RefreshHFilesRegionParameter param = MasterProcedureProtos.RefreshHFilesRegionParameter.parseFrom(parameter);
     this.regionInfo = ProtobufUtil.toRegionInfo(param.getRegion());
   }
 
   @Override
   public EventType getEventType() {
-    System.out.println("Anuj: RefreshHFilesCallable -> getEventTypes in region Server Code");
     return EventType.RS_REFRESH_HFILES;
   }
 }
