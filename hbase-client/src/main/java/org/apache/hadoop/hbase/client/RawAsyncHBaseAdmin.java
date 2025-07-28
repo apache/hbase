@@ -261,10 +261,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.OfflineReg
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.OfflineRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RecommissionRegionServerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RecommissionRegionServerResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RestoreSnapshotRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RestoreSnapshotResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RefreshHFilesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RefreshHFilesResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RestoreSnapshotRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RestoreSnapshotResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCatalogScanRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCatalogScanResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCleanerChoreRequest;
@@ -4561,7 +4561,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Long> refreshHFiles(final TableName tableName){
+  public CompletableFuture<Long> refreshHFiles(final TableName tableName) {
     // Request builder
     RefreshHFilesRequest.Builder request = RefreshHFilesRequest.newBuilder();
     request.setTableName(ProtobufUtil.toProtoTableName(tableName));
@@ -4569,13 +4569,14 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     // Master Caller
     return this.<Long> newMasterCaller()
       .action((controller, stub) -> this.<RefreshHFilesRequest, RefreshHFilesResponse, Long> call(
-        controller, stub, request.build(), MasterService.Interface::refreshHFiles, RefreshHFilesResponse::getProcId))
+        controller, stub, request.build(), MasterService.Interface::refreshHFiles,
+        RefreshHFilesResponse::getProcId))
       .call();
-    //    return CompletableFuture.completedFuture(null);
+    // return CompletableFuture.completedFuture(null);
   }
 
   @Override
-  public CompletableFuture<Long> refreshHFiles(final String namespace){
+  public CompletableFuture<Long> refreshHFiles(final String namespace) {
     // Request builder
     RefreshHFilesRequest.Builder request = RefreshHFilesRequest.newBuilder();
     request.setNamespace(namespace);
@@ -4583,13 +4584,14 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     // Master Caller
     return this.<Long> newMasterCaller()
       .action((controller, stub) -> this.<RefreshHFilesRequest, RefreshHFilesResponse, Long> call(
-        controller, stub, request.build(), MasterService.Interface::refreshHFiles, RefreshHFilesResponse::getProcId))
+        controller, stub, request.build(), MasterService.Interface::refreshHFiles,
+        RefreshHFilesResponse::getProcId))
       .call();
-    //    return CompletableFuture.completedFuture(null);
+    // return CompletableFuture.completedFuture(null);
   }
 
   @Override
-  public CompletableFuture<Long> refreshHFiles(){
+  public CompletableFuture<Long> refreshHFiles() {
     // Request builder
     RefreshHFilesRequest.Builder request = RefreshHFilesRequest.newBuilder();
     // Set nonce
@@ -4597,8 +4599,9 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     // Master Caller
     return this.<Long> newMasterCaller()
       .action((controller, stub) -> this.<RefreshHFilesRequest, RefreshHFilesResponse, Long> call(
-        controller, stub, request.build(), MasterService.Interface::refreshHFiles, RefreshHFilesResponse::getProcId))
+        controller, stub, request.build(), MasterService.Interface::refreshHFiles,
+        RefreshHFilesResponse::getProcId))
       .call();
-    //    return CompletableFuture.completedFuture(null);
+    // return CompletableFuture.completedFuture(null);
   }
 }
