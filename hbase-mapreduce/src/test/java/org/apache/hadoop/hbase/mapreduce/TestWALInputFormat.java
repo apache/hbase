@@ -159,11 +159,6 @@ public class TestWALInputFormat {
       Path[] getInputPaths(Configuration conf) {
         return new Path[] { new Path("/input") };
       }
-
-      @Override
-      List<FileStatus> getFiles(FileSystem fs, Path inputPath, long startTime, long endTime) {
-        return Collections.singletonList(emptyFile);
-      }
     };
 
     return inputFormat.getSplits(jobContext, "", "");

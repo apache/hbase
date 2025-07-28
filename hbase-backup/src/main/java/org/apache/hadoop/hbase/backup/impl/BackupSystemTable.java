@@ -391,7 +391,7 @@ public final class BackupSystemTable implements Closeable {
    * Reads the rows from backup table recording bulk loaded hfiles
    * @param tableList list of table names
    */
-  public List<BulkLoad> readBulkloadRows(List<TableName> tableList) throws IOException {
+  public List<BulkLoad> readBulkloadRows(Collection<TableName> tableList) throws IOException {
     return readBulkloadRows(tableList, Long.MAX_VALUE);
   }
 
