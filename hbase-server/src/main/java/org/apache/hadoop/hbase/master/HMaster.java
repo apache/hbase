@@ -4577,8 +4577,10 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   }
 
   public Long refreshHfiles(final TableName tableName, final long nonceGroup, final long nonce) throws IOException {
+  public Long refreshHfiles(final TableName tableName, final long nonceGroup, final long nonce)
+    throws IOException {
     // TODO Check if table exists otherwise send exception.
-//    return 121L;
+    // return 121L;
     return MasterProcedureUtil
       .submitProcedure(new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
         @Override
@@ -4595,9 +4597,10 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
       });
   }
 
-  public Long refreshHfiles(final String namespace, final long nonceGroup, final long nonce) throws IOException {
+  public Long refreshHfiles(final String namespace, final long nonceGroup, final long nonce)
+    throws IOException {
     // TODO Check if namespace exists otherwise send exception.
-//    return 122L;
+    // return 122L;
     return MasterProcedureUtil
       .submitProcedure(new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
         @Override
@@ -4615,14 +4618,13 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   }
 
   public Long refreshHfiles(final long nonceGroup, final long nonce) throws IOException {
-//    return 123L;
+    // return 123L;
     return MasterProcedureUtil
       .submitProcedure(new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
         @Override
         protected void run() throws IOException {
           LOG.info("Submitting RefreshHfilesProcedure for all tables");
-          submitProcedure(
-            new RefreshHFilesTableProcedure(procedureExecutor.getEnvironment()));
+          submitProcedure(new RefreshHFilesTableProcedure(procedureExecutor.getEnvironment()));
         }
 
         @Override

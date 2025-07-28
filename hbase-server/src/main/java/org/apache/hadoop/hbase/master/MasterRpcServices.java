@@ -3677,14 +3677,17 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
   @Override
   public MasterProtos.RefreshHFilesResponse refreshHFiles(RpcController controller,
     MasterProtos.RefreshHFilesRequest request) throws ServiceException {
+    // TODO Check if table exists otherwise send exception.
     try {
       Long procId;
       if (request.hasTableName()) { // if we have provided table name as parameter
         // refreshHfiles for the given user tables
-        procId = server.refreshHfiles(ProtobufUtil.toTableName(request.getTableName()), request.getNonceGroup(), request.getNonce());
+        procId = server.refreshHfiles(ProtobufUtil.toTableName(request.getTableName()),
+          request.getNonceGroup(), request.getNonce());
       } else if (request.hasNamespace()) { // if we have provided namespace as parameter
         // refreshHfiles for all the user tables under the namespace
-        procId = server.refreshHfiles(request.getNamespace(), request.getNonceGroup(), request.getNonce());
+        procId =
+          server.refreshHfiles(request.getNamespace(), request.getNonceGroup(), request.getNonce());
       } else { // When no parameter is provided
         // refreshHfiles for all the user tables in HBase
         procId = server.refreshHfiles(request.getNonceGroup(), request.getNonce());

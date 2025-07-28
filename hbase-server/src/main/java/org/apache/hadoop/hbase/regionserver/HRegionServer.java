@@ -1970,7 +1970,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       executorService.new ExecutorConfig().setExecutorType(ExecutorType.RS_RELOAD_QUOTAS_OPERATIONS)
         .setCorePoolSize(rsRefreshQuotasThreads));
     final int rsRefreshHFilesThreads =
-    conf.getInt("hbase.regionserver.executor.refresh.hfiles.threads", 3);
+      conf.getInt("hbase.regionserver.executor.refresh.hfiles.threads", 3);
     executorService.startExecutorService(executorService.new ExecutorConfig()
       .setExecutorType(ExecutorType.RS_REFRESH_HFILES).setCorePoolSize(rsRefreshHFilesThreads));
 

@@ -15,23 +15,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.procedure;
 
+import java.io.IOException;
+import java.util.List;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.io.IOException;
-import java.util.List;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RefreshHFilesTableProcedureState;
 
 @InterfaceAudience.Private
-public class RefreshHFilesTableProcedure extends AbstractStateMachineTableProcedure<RefreshHFilesTableProcedureState> {
+public class RefreshHFilesTableProcedure
+  extends AbstractStateMachineTableProcedure<RefreshHFilesTableProcedureState> {
   private static final Logger LOG = LoggerFactory.getLogger(RefreshHFilesTableProcedure.class);
 
   private TableName tableName;
@@ -54,6 +53,7 @@ public class RefreshHFilesTableProcedure extends AbstractStateMachineTableProced
     super(env);
     this.namespace = namespace;
   }
+
   @Override
   public TableOperationType getTableOperationType() {
     return TableOperationType.REFRESH_HFILES;
@@ -80,53 +80,59 @@ public class RefreshHFilesTableProcedure extends AbstractStateMachineTableProced
   }
 
   @Override
-  protected void rollbackState(MasterProcedureEnv env, RefreshHFilesTableProcedureState RefreshHFilesTableProcedureState)
+  protected void rollbackState(MasterProcedureEnv env,
+    RefreshHFilesTableProcedureState RefreshHFilesTableProcedureState)
     throws IOException, InterruptedException {
     // Refresh HFiles is idempotent operation hence rollback is not needed
-    LOG.trace("Rollback not implemented for RefreshHFilesTableProcedure state: {}", RefreshHFilesTableProcedureState);
+    LOG.trace("Rollback not implemented for RefreshHFilesTableProcedure state: {}",
+      RefreshHFilesTableProcedureState);
   }
 
   @Override
-  protected Flow executeFromState(MasterProcedureEnv env, RefreshHFilesTableProcedureState RefreshHFilesTableProcedureState) {
-    LOG.info("Executing RefreshHFilesTableProcedureState state: {}", RefreshHFilesTableProcedureState);
+  protected Flow executeFromState(MasterProcedureEnv env,
+    RefreshHFilesTableProcedureState RefreshHFilesTableProcedureState) {
+    LOG.info("Executing RefreshHFilesTableProcedureState state: {}",
+      RefreshHFilesTableProcedureState);
 
     try {
       return switch (RefreshHFilesTableProcedureState) {
         case REFRESH_HFILES_PREPARE -> prepare(env);
         case REFRESH_HFILES_REFRESH_REGION -> refreshRegionHFiles(env);
         case REFRESH_HFILES_FINISH -> finish();
-        default -> throw new UnsupportedOperationException("Unhandled state: " + RefreshHFilesTableProcedureState);
+        default -> throw new UnsupportedOperationException(
+          "Unhandled state: " + RefreshHFilesTableProcedureState);
       };
     } catch (Exception ex) {
-      LOG.error("Error in RefreshHFilesTableProcedure state {}", RefreshHFilesTableProcedureState, ex);
+      LOG.error("Error in RefreshHFilesTableProcedure state {}", RefreshHFilesTableProcedureState,
+        ex);
       setFailure("RefreshHFilesTableProcedure", ex);
       return Flow.NO_MORE_STATE;
     }
   }
 
-  private Flow prepare(final MasterProcedureEnv env){
+  private Flow prepare(final MasterProcedureEnv env) {
     // TODO Check if table exists otherwise send exception.
     // Get list of regions for the table
     AssignmentManager am = env.getAssignmentManager();
     List<RegionInfo> regions = am.getRegionStates().getRegionsOfTable(tableName);
 
-    // For each region get the server where it is hosted and then call refreshHfile on that server with given region as parameter
-    for(RegionInfo region : regions){
+    // For each region get the server where it is hosted and then call refreshHfile on that server
+    // with given region as parameter
+    for (RegionInfo region : regions) {
       // TODO verify if region is alive or not
     }
     setNextState(RefreshHFilesTableProcedureState.REFRESH_HFILES_REFRESH_REGION);
     return Flow.HAS_MORE_STATE;
   }
 
-  private Flow refreshRegionHFiles(final MasterProcedureEnv env){
+  private Flow refreshRegionHFiles(final MasterProcedureEnv env) {
     addChildProcedure(env.getAssignmentManager().getTableRegions(getTableName(), true).stream()
       .map(r -> new RefreshHFilesRegionProcedure(r)).toArray(RefreshHFilesRegionProcedure[]::new));
     setNextState(RefreshHFilesTableProcedureState.REFRESH_HFILES_FINISH);
     return Flow.HAS_MORE_STATE;
   }
 
-  private Flow finish(){
+  private Flow finish() {
     return Flow.NO_MORE_STATE;
   }
 }
-
