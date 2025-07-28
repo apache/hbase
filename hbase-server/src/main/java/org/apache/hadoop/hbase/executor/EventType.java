@@ -306,8 +306,8 @@ public enum EventType {
   RS_RELOAD_QUOTAS(90, ExecutorType.RS_RELOAD_QUOTAS_OPERATIONS),
 
   /**
-   * RS flush regions.<br>
-   * RS_FLUSH_OPERATIONS
+   * RS refresh hfiles for a region.<br>
+   * RS_REFRESH_HFILES
    */
   RS_REFRESH_HFILES(91, ExecutorType.RS_REFRESH_HFILES);
 
