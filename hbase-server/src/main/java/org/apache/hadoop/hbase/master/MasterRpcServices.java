@@ -188,8 +188,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavor
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavoredNodesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WarmupRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WarmupRegionResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RefreshRegionHFilesRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RefreshRegionHFilesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionStoreSequenceIds;
@@ -3518,13 +3516,6 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
 
   @Override
   public WarmupRegionResponse warmupRegion(RpcController controller, WarmupRegionRequest request)
-    throws ServiceException {
-    throw new ServiceException(new DoNotRetryIOException("Unsupported method on master"));
-  }
-
-  @Override
-  public RefreshRegionHFilesResponse refreshRegionHFiles(RpcController controller,
-    RefreshRegionHFilesRequest request)
     throws ServiceException {
     throw new ServiceException(new DoNotRetryIOException("Unsupported method on master"));
   }

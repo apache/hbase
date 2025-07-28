@@ -123,8 +123,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavor
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavoredNodesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WarmupRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WarmupRegionResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RefreshRegionHFilesRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RefreshRegionHFilesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.BulkLoadHFileResponse;
@@ -476,13 +474,6 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
 
   @Override
   public WarmupRegionResponse warmupRegion(RpcController controller, WarmupRegionRequest request)
-    throws ServiceException {
-    return null;
-  }
-
-  @Override
-  public RefreshRegionHFilesResponse refreshRegionHFiles(RpcController controller,
-    RefreshRegionHFilesRequest request)
     throws ServiceException {
     return null;
   }

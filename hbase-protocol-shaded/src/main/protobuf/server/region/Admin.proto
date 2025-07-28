@@ -342,13 +342,6 @@ message ClearSlowLogResponses {
   required bool is_cleaned = 1;
 }
 
-message RefreshRegionHFilesRequest {
-  required RegionSpecifier region = 1;
-}
-
-message RefreshRegionHFilesResponse {
-}
-
 service AdminService {
   rpc GetRegionInfo(GetRegionInfoRequest)
     returns(GetRegionInfoResponse);
@@ -427,7 +420,4 @@ service AdminService {
 
   rpc GetCachedFilesList(GetCachedFilesListRequest)
     returns(GetCachedFilesListResponse);
-
-  rpc RefreshRegionHFiles(RefreshRegionHFilesRequest)
-    returns(RefreshRegionHFilesResponse);
 }
