@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+//import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.junit.After;
@@ -57,6 +58,7 @@ public class TestTableOutputFormat {
   private static RecordWriter<Null, Mutation> writer;
   private static TaskAttemptContext context;
   private static TableOutputFormat<Null> tableOutputFormat;
+  private static final TableOutputCommitter CUSTOM_COMMITTER = new TableOutputCommitter() {};
 
   @BeforeClass
   public static void setUp() throws Exception {
@@ -126,5 +128,22 @@ public class TestTableOutputFormat {
     // verifying whether durability of mutation got changed from USE_DEFAULT to the SKIP_WAL or not.
     Assert.assertEquals("Durability of the mutation should be SKIP_WAL", Durability.SKIP_WAL,
       delete.getDurability());
+  }
+
+  @Test
+  public void testOutputCommitterConfiguration() throws IOException, InterruptedException {
+    // 1. Verify it returns the default committer when the property is not set.
+    conf.unset(TableOutputFormat.OUTPUT_COMMITTER_CLASS);
+    tableOutputFormat.setConf(conf);
+    Assert.assertEquals("Should use default committer",
+      TableOutputCommitter.class,
+      tableOutputFormat.getOutputCommitter(context).getClass());
+
+    // 2. Verify it returns the custom committer when the property is set.
+    conf.set(TableOutputFormat.OUTPUT_COMMITTER_CLASS, CUSTOM_COMMITTER.getClass().getName());
+    tableOutputFormat.setConf(conf);
+    Assert.assertEquals("Should use custom committer",
+      CUSTOM_COMMITTER.getClass(),
+      tableOutputFormat.getOutputCommitter(context).getClass());
   }
 }
