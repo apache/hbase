@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.backup.impl;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -175,8 +176,11 @@ public class BackupAdminImpl implements BackupAdmin {
    * @param table       backup system table
    * @throws IOException if a table operation fails
    */
-  private void finalizeDelete(List<String> backupRoots, BackupSystemTable table)
-    throws IOException {
+  @RestrictedApi(
+      explanation = "Package-private for test visibility only. Do not use outside tests.",
+      link = "",
+      allowedOnPath = "(.*/src/test/.*|.*/org/apache/hadoop/hbase/backup/impl/BackupAdminImpl.java)")
+  void finalizeDelete(List<String> backupRoots, BackupSystemTable table) throws IOException {
     for (String backupRoot : backupRoots) {
       Set<TableName> incrTableSet = table.getIncrementalBackupTableSet(backupRoot);
       Map<TableName, List<BackupInfo>> tableMap =
@@ -212,7 +216,11 @@ public class BackupAdminImpl implements BackupAdmin {
    * @return total number of deleted backup images
    * @throws IOException if deleting the backup fails
    */
-  private int deleteBackup(String backupId, BackupSystemTable sysTable) throws IOException {
+  @RestrictedApi(
+      explanation = "Package-private for test visibility only. Do not use outside tests.",
+      link = "",
+      allowedOnPath = "(.*/src/test/.*|.*/org/apache/hadoop/hbase/backup/impl/BackupAdminImpl.java)")
+  int deleteBackup(String backupId, BackupSystemTable sysTable) throws IOException {
     BackupInfo backupInfo = sysTable.readBackupInfo(backupId);
 
     int totalDeleted = 0;
@@ -274,7 +282,11 @@ public class BackupAdminImpl implements BackupAdmin {
     return totalDeleted;
   }
 
-  private void removeTableFromBackupImage(BackupInfo info, TableName tn, BackupSystemTable sysTable)
+  @RestrictedApi(
+      explanation = "Package-private for test visibility only. Do not use outside tests.",
+      link = "",
+      allowedOnPath = "(.*/src/test/.*|.*/org/apache/hadoop/hbase/backup/impl/BackupAdminImpl.java)")
+  void removeTableFromBackupImage(BackupInfo info, TableName tn, BackupSystemTable sysTable)
     throws IOException {
     List<TableName> tables = info.getTableNames();
     LOG.debug(
@@ -297,7 +309,11 @@ public class BackupAdminImpl implements BackupAdmin {
     }
   }
 
-  private List<BackupInfo> getAffectedBackupSessions(BackupInfo backupInfo, TableName tn,
+  @RestrictedApi(
+      explanation = "Package-private for test visibility only. Do not use outside tests.",
+      link = "",
+      allowedOnPath = "(.*/src/test/.*|.*/org/apache/hadoop/hbase/backup/impl/BackupAdminImpl.java)")
+  List<BackupInfo> getAffectedBackupSessions(BackupInfo backupInfo, TableName tn,
     BackupSystemTable table) throws IOException {
     LOG.debug("GetAffectedBackupInfos for: " + backupInfo.getBackupId() + " table=" + tn);
     long ts = backupInfo.getStartTs();
@@ -329,7 +345,11 @@ public class BackupAdminImpl implements BackupAdmin {
    * Clean up the data at target directory
    * @throws IOException if cleaning up the backup directory fails
    */
-  private void cleanupBackupDir(BackupInfo backupInfo, TableName table, Configuration conf)
+  @RestrictedApi(
+      explanation = "Package-private for test visibility only. Do not use outside tests.",
+      link = "",
+      allowedOnPath = "(.*/src/test/.*|.*/org/apache/hadoop/hbase/backup/impl/BackupAdminImpl.java)")
+  void cleanupBackupDir(BackupInfo backupInfo, TableName table, Configuration conf)
     throws IOException {
     try {
       // clean up the data at target directory
@@ -339,7 +359,7 @@ public class BackupAdminImpl implements BackupAdmin {
         return;
       }
 
-      FileSystem outputFs = FileSystem.get(new Path(backupInfo.getBackupRootDir()).toUri(), conf);
+      FileSystem outputFs = getFileSystem(new Path(backupInfo.getBackupRootDir()), conf);
 
       Path targetDirPath = new Path(BackupUtils.getTableBackupDir(backupInfo.getBackupRootDir(),
         backupInfo.getBackupId(), table));
@@ -355,7 +375,19 @@ public class BackupAdminImpl implements BackupAdmin {
     }
   }
 
-  private boolean isLastBackupSession(BackupSystemTable table, TableName tn, long startTime)
+  @RestrictedApi(
+      explanation = "Package-private for test visibility only. Do not use outside tests.",
+      link = "",
+      allowedOnPath = "(.*/src/test/.*|.*/org/apache/hadoop/hbase/backup/impl/BackupAdminImpl.java)")
+  FileSystem getFileSystem(Path path, Configuration conf) throws IOException {
+    return FileSystem.get(path.toUri(), conf);
+  }
+
+  @RestrictedApi(
+      explanation = "Package-private for test visibility only. Do not use outside tests.",
+      link = "",
+      allowedOnPath = "(.*/src/test/.*|.*/org/apache/hadoop/hbase/backup/impl/BackupAdminImpl.java)")
+  boolean isLastBackupSession(BackupSystemTable table, TableName tn, long startTime)
     throws IOException {
     List<BackupInfo> history = table.getBackupHistory();
     for (BackupInfo info : history) {
@@ -682,8 +714,11 @@ public class BackupAdminImpl implements BackupAdmin {
    * @param table     backup system table
    * @throws IOException if the backup image is not valid for merge
    */
-  private void checkIfValidForMerge(String[] backupIds, BackupSystemTable table)
-    throws IOException {
+  @RestrictedApi(
+      explanation = "Package-private for test visibility only. Do not use outside tests.",
+      link = "",
+      allowedOnPath = "(.*/src/test/.*|.*/org/apache/hadoop/hbase/backup/impl/BackupAdminImpl.java)")
+  void checkIfValidForMerge(String[] backupIds, BackupSystemTable table) throws IOException {
     String backupRoot = null;
 
     final Set<TableName> allTables = new HashSet<>();
