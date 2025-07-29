@@ -74,8 +74,11 @@ public class InfoServer {
           c.get("ssl.server.keystore.type", "jks"))
         .trustStore(c.get("ssl.server.truststore.location"),
           HBaseConfiguration.getPassword(c, "ssl.server.truststore.password", null),
-          c.get("ssl.server.truststore.type", "jks"));
-      builder.excludeCiphers(c.get("ssl.server.exclude.cipher.list"));
+          c.get("ssl.server.truststore.type", "jks"))
+        .setIncludeProtocols(c.get("ssl.server.include.protocols"))
+        .setExcludeProtocols(c.get("ssl.server.exclude.protocols"))
+        .setIncludeCiphers(c.get("ssl.server.include.cipher.list"))
+        .setExcludeCiphers(c.get("ssl.server.exclude.cipher.list"));
     }
 
     final String httpAuthType = c.get(HttpServer.HTTP_UI_AUTHENTICATION, "").toLowerCase();
