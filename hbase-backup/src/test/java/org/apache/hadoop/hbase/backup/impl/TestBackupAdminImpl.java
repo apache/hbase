@@ -328,6 +328,37 @@ public class TestBackupAdminImpl {
     assertTrue(result.containsAll(List.of(b2, b4)));
   }
 
+  /**
+   * Tests that a full backup for a different table is ignored and does not reset the affected list.
+   * Only full backups for the same table act as reset boundaries.
+   */
+  @Test
+  public void testGetAffectedBackupSessions_ignoresFullBackupOfOtherTable() throws IOException {
+    BackupInfo current = mock(BackupInfo.class);
+    TableName table = TableName.valueOf("test_table");
+
+    when(current.getStartTs()).thenReturn(1000L);
+    when(current.getBackupId()).thenReturn("backup_001");
+    when(current.getBackupRootDir()).thenReturn("/backup/root");
+
+    BackupInfo b0 = createBackupInfo("backup_000", 500L, BackupType.FULL, table);
+    BackupInfo b1 = createBackupInfo("backup_001", 1000L, BackupType.INCREMENTAL, table); // current
+    // Full backup for other table - should be ignored
+    BackupInfo b2 =
+      createBackupInfo("backup_002", 2000L, BackupType.FULL, TableName.valueOf("other_table"));
+    BackupInfo b3 = createBackupInfo("backup_003", 3000L, BackupType.INCREMENTAL, table);
+    BackupInfo b4 = createBackupInfo("backup_004", 4000L, BackupType.INCREMENTAL, table);
+
+    when(mockTable.getBackupHistory("/backup/root")).thenReturn(List.of(b4, b3, b2, b1, b0));
+
+    List<BackupInfo> result = backupAdminImpl.getAffectedBackupSessions(current, table, mockTable);
+
+    // Full backup of other table should not reset, so we expect both incremental backups after
+    // current
+    assertEquals(2, result.size());
+    assertTrue(result.containsAll(List.of(b3, b4)));
+  }
+
   private BackupInfo createBackupInfo(String id, long ts, BackupType type, TableName... tables) {
     BackupInfo info = mock(BackupInfo.class);
     when(info.getBackupId()).thenReturn(id);
@@ -529,7 +560,7 @@ public class TestBackupAdminImpl {
    * Tests that deleteBackup will remove bulk-loaded files and handle exceptions gracefully.
    */
   @Test
-  public void testDeleteBackupWithBulkLoadedFiles() throws Exception {
+  public void testDeleteBackupWithBulkLoadedFiles() throws IOException {
     // Set up test data
     TableName table = TableName.valueOf("ns", "t1");
     String backupId = "backup_with_bulkload";
