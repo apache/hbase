@@ -230,18 +230,19 @@ abstract class AbstractRecoveredEditsOutputSink extends OutputSink {
     }
 
     if (isDstHasFewerEntries(editsWriter, dst)) {
-      LOG.warn(
-        "Found existing old edits file. It could be the result of a previous failed split attempt or we have duplicated wal entries. Deleting {}, length={} and will retry",
-        dst, walSplitter.walFS.getFileStatus(dst).getLen());
+      LOG.warn("Found existing old edits file. It could be the result of a previous failed"
+        + " split attempt or we have duplicated wal entries. Deleting " + dst + ", length="
+        + walSplitter.walFS.getFileStatus(dst).getLen() + " and retry is needed");
       if (!walSplitter.walFS.delete(dst, false)) {
         LOG.warn("Failed deleting of old {}", dst);
         throw new IOException("Failed deleting of old " + dst);
       }
       return true;
     } else {
-      LOG.warn(
-        "Found existing old edits file and we have less entries. Deleting {}, length={} and no retry needed as dst is present ",
-        editsWriter.path, walSplitter.walFS.getFileStatus(editsWriter.path).getLen());
+      LOG
+        .warn("Found existing old edits file and we have less entries. Deleting " + editsWriter.path
+          + ", length=" + walSplitter.walFS.getFileStatus(editsWriter.path).getLen()
+          + " and no retry needed as dst has all edits");
       if (!walSplitter.walFS.delete(editsWriter.path, false)) {
         LOG.warn("Failed deleting of {}", editsWriter.path);
         throw new IOException("Failed deleting of " + editsWriter.path);
