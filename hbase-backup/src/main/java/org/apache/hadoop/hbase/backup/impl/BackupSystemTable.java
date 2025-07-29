@@ -400,7 +400,8 @@ public final class BackupSystemTable implements Closeable {
    * @param tableList    list of table names
    * @param endTimestamp upper bound timestamp for bulkload entries retrieval
    */
-  public List<BulkLoad> readBulkloadRows(Collection<TableName> tableList, long endTimestamp) throws IOException {
+  public List<BulkLoad> readBulkloadRows(Collection<TableName> tableList, long endTimestamp)
+    throws IOException {
     List<BulkLoad> result = new ArrayList<>();
     for (TableName table : tableList) {
       Scan scan = BackupSystemTable.createScanForOrigBulkLoadedFiles(table);

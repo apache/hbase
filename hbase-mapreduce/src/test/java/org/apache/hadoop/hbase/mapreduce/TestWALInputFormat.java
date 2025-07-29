@@ -161,7 +161,8 @@ public class TestWALInputFormat {
       }
 
       @Override
-      List<FileStatus> getFiles(FileSystem fs, Path inputPath, long startTime, long endTime) {
+      List<FileStatus> getFiles(FileSystem fs, Path inputPath, long startTime, long endTime,
+        Configuration conf) {
         return Collections.singletonList(emptyFile);
       }
     };
