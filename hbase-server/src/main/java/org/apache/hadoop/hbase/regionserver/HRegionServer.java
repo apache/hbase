@@ -635,7 +635,7 @@ public class HRegionServer extends Thread
       this.dataFsOk = true;
       this.masterless = conf.getBoolean(MASTERLESS_CONFIG_NAME, false);
       this.eventLoopGroupConfig = setupNetty(this.conf);
-      MemorySizeUtil.checkForClusterFreeHeapMemoryLimit(this.conf);
+      MemorySizeUtil.validateRegionServerHeapMemoryAllocation(conf);
       HFile.checkHFileVersion(this.conf);
       checkCodecs(this.conf);
       this.userProvider = UserProvider.instantiate(conf);
