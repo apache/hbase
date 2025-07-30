@@ -428,7 +428,9 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       LOG.warn("Secure bulk load has been integrated into HBase core.");
     }
 
-    fsDelegationToken.acquireDelegationToken(queue.peek().getFilePath().getFileSystem(getConf()));
+    Path path = queue.peek().getFilePath();
+    FileSystem fs = path.getFileSystem(getConf()).resolvePath(path).getFileSystem(getConf());
+    fsDelegationToken.acquireDelegationToken(fs);
     bulkToken = secureClient.prepareBulkLoad(admin.getConnection());
     Pair<Multimap<ByteBuffer, LoadQueueItem>, Set<String>> pair = null;
 
