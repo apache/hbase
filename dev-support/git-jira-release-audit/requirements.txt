@@ -30,10 +30,10 @@ oauthlib==3.1.0
 pbr==5.4.4
 pycparser==2.19
 PyJWT==2.4.0
-requests==2.32.2
+requests==2.32.4
 requests-oauthlib==1.3.0
 requests-toolbelt==0.9.1
 six==1.14.0
 smmap2==2.0.5
-urllib3==1.26.19
+urllib3==2.5.0
 wcwidth==0.1.8

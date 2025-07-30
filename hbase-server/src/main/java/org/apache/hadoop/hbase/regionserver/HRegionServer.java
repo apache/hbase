@@ -510,7 +510,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     try (Scope ignored = span.makeCurrent()) {
       this.dataFsOk = true;
       this.masterless = !clusterMode();
-      MemorySizeUtil.checkForClusterFreeHeapMemoryLimit(this.conf);
+      MemorySizeUtil.validateRegionServerHeapMemoryAllocation(conf);
       HFile.checkHFileVersion(this.conf);
       checkCodecs(this.conf);
       FSUtils.setupShortCircuitRead(this.conf);
@@ -1960,6 +1960,11 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       conf.getInt("hbase.regionserver.executor.flush.operations.threads", 3);
     executorService.startExecutorService(executorService.new ExecutorConfig()
       .setExecutorType(ExecutorType.RS_FLUSH_OPERATIONS).setCorePoolSize(rsFlushOperationThreads));
+    final int rsRefreshQuotasThreads =
+      conf.getInt("hbase.regionserver.executor.refresh.quotas.threads", 1);
+    executorService.startExecutorService(
+      executorService.new ExecutorConfig().setExecutorType(ExecutorType.RS_RELOAD_QUOTAS_OPERATIONS)
+        .setCorePoolSize(rsRefreshQuotasThreads));
 
     Threads.setDaemonThreadRunning(this.walRoller, getName() + ".logRoller",
       uncaughtExceptionHandler);
@@ -2078,6 +2083,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
 
     // Setup the Quota Manager
     rsQuotaManager = new RegionServerRpcQuotaManager(this);
+    configurationManager.registerObserver(rsQuotaManager);
     rsSpaceQuotaManager = new RegionServerSpaceQuotaManager(this);
 
     if (QuotaUtil.isQuotaEnabled(conf)) {

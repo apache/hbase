@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.chaos;
 
+import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.Collection;
@@ -25,6 +26,7 @@ import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.ScheduledChore;
+import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -76,8 +78,11 @@ public class ChaosService {
       case CHAOSAGENT:
         ChaosAgent.stopChaosAgent.set(false);
         try {
-          Thread t = new Thread(
-            new ChaosAgent(conf, ChaosUtils.getZKQuorum(conf), ChaosUtils.getHostName()));
+          String hostname = InetAddress.getLocalHost().getHostName();
+          String quorum = ZKConfig.getZKQuorumServersString(conf);
+          LOG.info("Starting the ChaosAgent with hostname: {}, quorum: {}", hostname, quorum);
+
+          Thread t = new Thread(new ChaosAgent(conf, quorum, hostname));
           t.start();
           t.join();
         } catch (InterruptedException | UnknownHostException e) {

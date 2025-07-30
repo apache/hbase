@@ -126,7 +126,7 @@ public class TestProxyUserSpnegoHttpServer extends HttpServerFunctionalTest {
     setupUser(kdc, infoServerKeytab, serverPrincipal);
 
     buildSpnegoConfiguration(conf, serverPrincipal, infoServerKeytab);
-    AccessControlList acl = buildAdminAcl(conf);
+    AccessControlList acl = InfoServer.buildAdminAcl(conf);
 
     server = createTestServerWithSecurityAndAcl(conf, acl);
     server.addPrivilegedServlet("echo", "/echo", EchoServlet.class);
@@ -180,21 +180,6 @@ public class TestProxyUserSpnegoHttpServer extends HttpServerFunctionalTest {
     conf.set("hadoop.proxyuser.wheel.hosts", "*");
     conf.set("hadoop.proxyuser.wheel.users", PRIVILEGED_PRINCIPAL + "," + UNPRIVILEGED_PRINCIPAL);
     return conf;
-  }
-
-  /**
-   * Builds an ACL that will restrict the users who can issue commands to endpoints on the UI which
-   * are meant only for administrators.
-   */
-  public static AccessControlList buildAdminAcl(Configuration conf) {
-    final String userGroups = conf.get(HttpServer.HTTP_SPNEGO_AUTHENTICATION_ADMIN_USERS_KEY, null);
-    final String adminGroups =
-      conf.get(HttpServer.HTTP_SPNEGO_AUTHENTICATION_ADMIN_GROUPS_KEY, null);
-    if (userGroups == null && adminGroups == null) {
-      // Backwards compatibility - if the user doesn't have anything set, allow all users in.
-      return new AccessControlList("*", null);
-    }
-    return new AccessControlList(userGroups, adminGroups);
   }
 
   @Test

@@ -137,7 +137,7 @@ A number of properties exist to configure SPNEGO authentication for the web serv
 </property>
 ----
 
-=== Defining administrators of the Web UI
+=== Defining administrators of the Web UI with SPNEGO
 
 In the previous section, we cover how to enable authentication for the Web UI via SPNEGO.
 However, some portions of the Web UI could be used to impact the availability and performance
@@ -255,7 +255,34 @@ A number of properties exist to configure LDAP authentication for the web server
   of Active Directory server.</description>
 </property>
 ----
+=== Defining Administrators of the Web UI with LDAP
 
+In the previous section, we discussed enabling authentication for the Web UI via LDAP. Certain portions of the Web UI can impact the availability and performance of an HBase cluster. To safeguard these sensitive endpoints, it is essential to restrict access to authorized administrators only.
+
+HBase provides a mechanism to define administrators for the Web UI through a list of usernames in the `hbase-site.xml` configuration file.
+
+To specify the administrators, use the following property in `hbase-site.xml`:
+
+[source,xml]
+----
+<property>
+  <name>hbase.security.authentication.ldap.admin.users</name>
+  <value>admin1,admin2,admin3</value>
+</property>
+----
+
+The usernames listed in the above property should correspond to the LDAP usernames of the administrators.
+
+==== Notes
+
+* This feature is supported by only versions of HBase having https://issues.apache.org/jira/browse/HBASE-29244[HBASE-29244]
+* Ensure that the LDAP server is properly configured and running. See the previous section for details.
+* Only users explicitly listed in the `hbase.security.authentication.ldap.admin.users` property will have access to sensitive endpoints.
+* Non-administrative users can still access non-sensitive endpoints, provided they are authenticated.
+
+By defining administrators in this way, you can ensure that only authorized personnel can interact with critical Web UI functionalities, thereby enhancing the security and stability of your HBase cluster.
+
+---
 === Other UI security-related configuration
 
 While it is a clear anti-pattern for HBase developers, the developers acknowledge that the HBase
@@ -758,7 +785,7 @@ This is future work.
 == Transport Level Security (TLS) in HBase RPC communication
 
 Since version `2.6.0` HBase supports TLS encryption in server-client and Master-RegionServer communication.
-link:https://en.wikipedia.org/wiki/Transport_Layer_Security/[Transport Layer Security (TLS)] is a standard
+link:https://en.wikipedia.org/wiki/Transport_Layer_Security[Transport Layer Security (TLS)] is a standard
 cryptographic protocol designed to provide communications security over a computer network. HBase TLS implementation
 works exactly how secure websites are accessed via *https* prefix in a web browser: once established all communication
 on the channel will be securely hidden from malicious access.
@@ -789,7 +816,7 @@ The CLI interface for accessing the Hadoop Credential Shell is also available in
 === Server side configuration
 
 We need to set up Java key store for the server. Key store is the list of private keys that a server can use to configure TLS
-encryption. See link:https://en.wikipedia.org/wiki/Transport_Layer_Security/[TLS wikipedia page]
+encryption. See link:https://en.wikipedia.org/wiki/Transport_Layer_Security[TLS wikipedia page]
 for further details of the protocol. Add the following configuration to `hbase-site.xml` on Master, Region Servers and HBase
 clients:
 
@@ -1095,8 +1122,6 @@ HBase enforces the posix-like permissions 700 (`rwx------`) to its root director
 sudo -u hdfs hadoop fs -chmod 700 /hbase
 ----
 You should change `/hbase` if you are using a different `hbase.rootdir`.
-
-In secure mode, SecureBulkLoadEndpoint should be configured and used for properly handing of users files created from MR jobs to the HBase daemons and HBase user. The staging directory in the distributed file system used for bulk load (`hbase.bulkload.staging.dir`, defaults to `/tmp/hbase-staging`) should have (mode 711, or `rwx--x--x`) so that users can access the staging directory created under that parent directory, but cannot do any other operation. See <<hbase.secure.bulkload>> for how to configure SecureBulkLoadEndPoint.
 
 == Securing Access To Your Data
 
@@ -1882,11 +1907,11 @@ When you issue a Scan or Get, HBase uses your default set of authorizations to
 filter out cells that you do not have access to. A superuser can set the default
 set of authorizations for a given user by using the `set_auths` HBase Shell command
 or the
-link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/security/visibility/VisibilityClient.html#setAuths-org.apache.hadoop.hbase.client.Connection-java.lang.String:A-java.lang.String-[VisibilityClient.setAuths()] method.
+link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/security/visibility/VisibilityClient.html#setAuths(org.apache.hadoop.hbase.client.Connection,java.lang.String%5B%5D,java.lang.String)[VisibilityClient.setAuths()] method.
 
 You can specify a different authorization during the Scan or Get, by passing the
 AUTHORIZATIONS option in HBase Shell, or the
-link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html#setAuthorizations-org.apache.hadoop.hbase.security.visibility.Authorizations-[Scan.setAuthorizations()]
+link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Scan.html#setAuthorizations(org.apache.hadoop.hbase.security.visibility.Authorizations)[Scan.setAuthorizations()]
 method if you use the API. This authorization will be combined with your default
 set as an additional filter. It will further filter your results, rather than
 giving you additional authorization.
@@ -2177,54 +2202,6 @@ Rotate the Master Key::
   Then update the KeyStore to contain a new master key, and keep the old master key in the KeyStore using a different alias.
   Next, configure fallback to the old master key in the _hbase-site.xml_ file.
 
-
-[[hbase.secure.bulkload]]
-=== Secure Bulk Load
-
-Bulk loading in secure mode is a bit more involved than normal setup, since the client has to transfer the ownership of the files generated from the MapReduce job to HBase.
-Secure bulk loading is implemented by a coprocessor, named
-link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/security/access/SecureBulkLoadEndpoint.html[SecureBulkLoadEndpoint],
-which uses a staging directory configured by the configuration property `hbase.bulkload.staging.dir`, which defaults to
-_/tmp/hbase-staging/_.
-
-.Secure Bulk Load Algorithm
-
-* One time only, create a staging directory which is world-traversable and owned by the user which runs HBase (mode 711, or `rwx--x--x`). A listing of this directory will look similar to the following:
-+
-[source,bash]
-----
-$ ls -ld /tmp/hbase-staging
-drwx--x--x  2 hbase  hbase  68  3 Sep 14:54 /tmp/hbase-staging
-----
-
-* A user writes out data to a secure output directory owned by that user.
-  For example, _/user/foo/data_.
-* Internally, HBase creates a secret staging directory which is globally readable/writable (`-rwxrwxrwx, 777`). For example, _/tmp/hbase-staging/averylongandrandomdirectoryname_.
-  The name and location of this directory is not exposed to the user.
-  HBase manages creation and deletion of this directory.
-* The user makes the data world-readable and world-writable, moves it into the random staging directory, then calls the `SecureBulkLoadClient#bulkLoadHFiles` method.
-
-The strength of the security lies in the length and randomness of the secret directory.
-
-To enable secure bulk load, add the following properties to _hbase-site.xml_.
-
-[source,xml]
-----
-<property>
-  <name>hbase.security.authorization</name>
-  <value>true</value>
-</property>
-<property>
-  <name>hbase.bulkload.staging.dir</name>
-  <value>/tmp/hbase-staging</value>
-</property>
-<property>
-  <name>hbase.coprocessor.region.classes</name>
-  <value>org.apache.hadoop.hbase.security.token.TokenProvider,
-  org.apache.hadoop.hbase.security.access.AccessController,org.apache.hadoop.hbase.security.access.SecureBulkLoadEndpoint</value>
-</property>
-----
-
 [[hbase.secure.enable]]
 === Secure Enable
 After hbase-2.x, the default 'hbase.security.authorization' changed.
@@ -2326,16 +2303,6 @@ All options have been discussed separately in the sections above.
 <property>
   <name>hbase.crypto.master.alternate.key.name</name>
   <value>hbase.old</value>
-</property>
-<!-- Secure Bulk Load -->
-<property>
-  <name>hbase.bulkload.staging.dir</name>
-  <value>/tmp/hbase-staging</value>
-</property>
-<property>
-  <name>hbase.coprocessor.region.classes</name>
-  <value>org.apache.hadoop.hbase.security.token.TokenProvider,
-  org.apache.hadoop.hbase.security.access.AccessController,org.apache.hadoop.hbase.security.access.SecureBulkLoadEndpoint</value>
 </property>
 ----
 ====

@@ -43,6 +43,7 @@ class ServerQueue extends Queue<ServerName> {
       case CLAIM_REPLICATION_QUEUES:
       case CLAIM_REPLICATION_QUEUE_REMOTE:
       case VERIFY_SNAPSHOT:
+      case RELOAD_QUOTAS:
         return false;
       default:
         break;

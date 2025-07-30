@@ -44,7 +44,7 @@ public class CellSet<T extends Cell> implements NavigableSet<T> {
   // is not already present.", this implementation "Adds the specified element to this set EVEN
   // if it is already present overwriting what was there previous".
   // Otherwise, has same attributes as ConcurrentSkipListSet
-  private final NavigableMap<T, T> delegatee; ///
+  private final NavigableMap<T, T> delegatee;
 
   private final int numUniqueKeys;
 

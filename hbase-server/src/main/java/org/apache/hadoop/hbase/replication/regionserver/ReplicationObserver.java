@@ -23,6 +23,7 @@ import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.CoreCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.HasRegionServerServices;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -31,6 +32,7 @@ import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -65,11 +67,23 @@ public class ReplicationObserver implements RegionCoprocessor, RegionObserver {
         + "data replication.");
       return;
     }
+    TableName tableName = env.getRegionInfo().getTable();
+    if (
+      env.getRegion().getTableDescriptor().getColumnFamily(family).getScope()
+          != HConstants.REPLICATION_SCOPE_GLOBAL
+    ) {
+      LOG
+        .debug("Skipping recording bulk load entries in preCommitStoreFile for table:{}, family:{},"
+          + " Because the replication is not enabled", tableName, Bytes.toString(family));
+      return;
+    }
+
     // This is completely cheating AND getting a HRegionServer from a RegionServerEnvironment is
     // just going to break. This is all private. Not allowed. Regions shouldn't assume they are
     // hosted in a RegionServer. TODO: fix.
     RegionServerServices rss = ((HasRegionServerServices) env).getRegionServerServices();
     Replication rep = (Replication) ((HRegionServer) rss).getReplicationSourceService();
-    rep.addHFileRefsToQueue(env.getRegionInfo().getTable(), family, pairs);
+
+    rep.addHFileRefsToQueue(tableName, family, pairs);
   }
 }

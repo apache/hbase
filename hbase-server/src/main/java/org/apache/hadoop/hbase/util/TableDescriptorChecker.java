@@ -84,7 +84,8 @@ public final class TableDescriptorChecker {
     warnOrThrowExceptionForFailure(logWarn, () -> ConfigKey.validate(conf));
     warnOrThrowExceptionForFailure(logWarn, () -> {
       for (ColumnFamilyDescriptor cfd : td.getColumnFamilies()) {
-        ConfigKey.validate(new CompoundConfiguration().addBytesMap(cfd.getValues()));
+        ConfigKey.validate(new CompoundConfiguration().addStringMap(cfd.getConfiguration())
+          .addBytesMap(cfd.getValues()));
       }
     });
 

@@ -318,7 +318,7 @@ See also <<perf.compression.however>> for compression caveats.
 [[schema.regionsize]]
 === Table RegionSize
 
-The regionsize can be set on a per-table basis via `setFileSize` on link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HTableDescriptor.html[HTableDescriptor] in the event where certain tables require different regionsizes than the configured default regionsize.
+The regionsize can be set on a per-table basis via `setMaxFileSize` on link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/TableDescriptorBuilder.html[TableDescriptorBuilder] in the event where certain tables require different regionsizes than the configured default regionsize.
 
 See <<ops.capacity.regions>> for more information.
 
@@ -370,7 +370,7 @@ Bloom filters are enabled on a Column Family.
 You can do this by using the setBloomFilterType method of HColumnDescriptor or using the HBase API.
 Valid values are `NONE`, `ROW` (default), or `ROWCOL`.
 See <<bloom.filters.when>> for more information on `ROW` versus `ROWCOL`.
-See also the API documentation for link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html[HColumnDescriptor].
+See also the API documentation for link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/ColumnFamilyDescriptorBuilder.html[ColumnFamilyDescriptorBuilder].
 
 The following example creates a table and enables a ROWCOL Bloom filter on the `colfam1` column family.
 
@@ -429,7 +429,7 @@ The blocksize can be configured for each ColumnFamily in a table, and defaults t
 Larger cell values require larger blocksizes.
 There is an inverse relationship between blocksize and the resulting StoreFile indexes (i.e., if the blocksize is doubled then the resulting indexes should be roughly halved).
 
-See link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html[HColumnDescriptor] and <<store>>for more information.
+See link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/ColumnFamilyDescriptorBuilder.html[ColumnFamilyDescriptorBuilder] and <<store>>for more information.
 
 [[cf.in.memory]]
 === In-Memory ColumnFamilies
@@ -438,7 +438,7 @@ ColumnFamilies can optionally be defined as in-memory.
 Data is still persisted to disk, just like any other ColumnFamily.
 In-memory blocks have the highest priority in the <<block.cache>>, but it is not a guarantee that the entire table will be in memory.
 
-See link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html[HColumnDescriptor] for more information.
+See link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/ColumnFamilyDescriptorBuilder.html[ColumnFamilyDescriptorBuilder] for more information.
 
 [[perf.compression]]
 === Compression
@@ -547,7 +547,7 @@ If deferred log flush is used, WAL edits are kept in memory until the flush peri
 The benefit is aggregated and asynchronous `WAL`- writes, but the potential downside is that if the RegionServer goes down the yet-to-be-flushed edits are lost.
 This is safer, however, than not using WAL at all with Puts.
 
-Deferred log flush can be configured on tables via link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HTableDescriptor.html[HTableDescriptor].
+Deferred log flush can be configured on tables via link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/TableDescriptorBuilder.html[TableDescriptorBuilder].
 The default value of `hbase.regionserver.optionallogflushinterval` is 1000ms.
 
 [[perf.hbase.client.putwal]]
@@ -572,7 +572,7 @@ There is a utility `HTableUtil` currently on MASTER that does this, but you can 
 [[perf.hbase.write.mr.reducer]]
 === MapReduce: Skip The Reducer
 
-When writing a lot of data to an HBase table from a MR job (e.g., with link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/TableOutputFormat.html[TableOutputFormat]), and specifically where Puts are being emitted from the Mapper, skip the Reducer step.
+When writing a lot of data to an HBase table from a MR job (e.g., with link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/mapreduce/TableOutputFormat.html[TableOutputFormat]), and specifically where Puts are being emitted from the Mapper, skip the Reducer step.
 When a Reducer step is used, all of the output (Puts) from the Mapper will get spooled to disk, then sorted/shuffled to other Reducers that will most likely be off-node.
 It's far more efficient to just write directly to HBase.
 
@@ -585,7 +585,7 @@ If all your data is being written to one region at a time, then re-read the sect
 
 Also, if you are pre-splitting regions and all your data is _still_ winding up in a single region even though your keys aren't monotonically increasing, confirm that your keyspace actually works with the split strategy.
 There are a variety of reasons that regions may appear "well split" but won't work with your data.
-As the HBase client communicates directly with the RegionServers, this can be obtained via link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/RegionLocator.html#getRegionLocation-byte:A-[RegionLocator.getRegionLocation].
+As the HBase client communicates directly with the RegionServers, this can be obtained via link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/RegionLocator.html#getRegionLocation(byte%5B%5D)[RegionLocator.getRegionLocation].
 
 See <<precreate.regions>>, as well as <<perf.configurations>>
 
@@ -597,7 +597,7 @@ The mailing list can help if you are having performance issues.
 [[perf.hbase.client.caching]]
 === Scan Caching
 
-If HBase is used as an input source for a MapReduce job, for example, make sure that the input link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html[Scan] instance to the MapReduce job has `setCaching` set to something greater than the default (which is 1). Using the default value means that the map-task will make call back to the region-server for every record processed.
+If HBase is used as an input source for a MapReduce job, for example, make sure that the input link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Scan.html[Scan] instance to the MapReduce job has `setCaching` set to something greater than the default (which is 1). Using the default value means that the map-task will make call back to the region-server for every record processed.
 Setting this value to 500, for example, will transfer 500 rows at a time to the client to be processed.
 There is a cost/benefit to have the cache value be large because it costs more in memory for both client and RegionServer, so bigger isn't always better.
 
@@ -646,7 +646,7 @@ For MapReduce jobs that use HBase tables as a source, if there a pattern where t
 === Close ResultScanners
 
 This isn't so much about improving performance but rather _avoiding_ performance problems.
-If you forget to close link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/ResultScanner.html[ResultScanners] you can cause problems on the RegionServers.
+If you forget to close link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/ResultScanner.html[ResultScanners] you can cause problems on the RegionServers.
 Always have ResultScanner processing enclosed in try/catch blocks.
 
 [source,java]
@@ -666,7 +666,7 @@ table.close();
 [[perf.hbase.client.blockcache]]
 === Block Cache
 
-link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html[Scan] instances can be set to use the block cache in the RegionServer via the `setCacheBlocks` method.
+link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Scan.html[Scan] instances can be set to use the block cache in the RegionServer via the `setCacheBlocks` method.
 For input Scans to MapReduce jobs, this should be `false`.
 For frequently accessed rows, it is advisable to use the block cache.
 
@@ -676,8 +676,8 @@ See <<offheap.blockcache>>
 [[perf.hbase.client.rowkeyonly]]
 === Optimal Loading of Row Keys
 
-When performing a table link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html[scan] where only the row keys are needed (no families, qualifiers, values or timestamps), add a FilterList with a `MUST_PASS_ALL` operator to the scanner using `setFilter`.
-The filter list should include both a link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/FirstKeyOnlyFilter.html[FirstKeyOnlyFilter] and a link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/KeyOnlyFilter.html[KeyOnlyFilter].
+When performing a table link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Scan.html[scan] where only the row keys are needed (no families, qualifiers, values or timestamps), add a FilterList with a `MUST_PASS_ALL` operator to the scanner using `setFilter`.
+The filter list should include both a link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/filter/FirstKeyOnlyFilter.html[FirstKeyOnlyFilter] and a link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/filter/KeyOnlyFilter.html[KeyOnlyFilter].
 Using this filter combination will result in a worst case scenario of a RegionServer reading a single value from disk and minimal network traffic to the client for a single row.
 
 [[perf.hbase.read.dist]]
@@ -815,7 +815,7 @@ In this case, special care must be taken to regularly perform major compactions 
 As is documented in <<datamodel>>, marking rows as deleted creates additional StoreFiles which then need to be processed on reads.
 Tombstones only get cleaned up with major compactions.
 
-See also <<compaction>> and link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Admin.html#majorCompact-org.apache.hadoop.hbase.TableName-[Admin.majorCompact].
+See also <<compaction>> and link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Admin.html#majorCompact(org.apache.hadoop.hbase.TableName)[Admin.majorCompact].
 
 [[perf.deleting.rpc]]
 === Delete RPC Behavior
@@ -824,7 +824,7 @@ Be aware that `Table.delete(Delete)` doesn't use the writeBuffer.
 It will execute an RegionServer RPC with each invocation.
 For a large number of deletes, consider `Table.delete(List)`.
 
-See link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#delete-org.apache.hadoop.hbase.client.Delete-[hbase.client.Delete]
+See link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Table.html#delete(org.apache.hadoop.hbase.client.Delete)[hbase.client.Delete]
 
 [[perf.hdfs]]
 == HDFS

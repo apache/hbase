@@ -263,7 +263,7 @@ public class TestFileSystemUtilizationChore {
     final FileSystemUtilizationChore chore = new FileSystemUtilizationChore(rs);
     doAnswer(
       new ExpectedRegionSizeSummationAnswer(sum(Arrays.asList(r1HFileSizeSum, r2HFileSizeSum))))
-        .when(rs).reportRegionSizesForQuotas(any(RegionSizeStore.class));
+      .when(rs).reportRegionSizesForQuotas(any(RegionSizeStore.class));
 
     final Region r1 = mockRegionWithHFileLinks(r1StoreFileSizes, r1HFileSizes);
     final Region r2 = mockRegionWithHFileLinks(r2StoreFileSizes, r2HFileSizes);

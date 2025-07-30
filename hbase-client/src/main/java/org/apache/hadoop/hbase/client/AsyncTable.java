@@ -223,7 +223,7 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
     Preconditions.checkNotNull(family, "family is null");
     return increment(
       new Increment(row).addColumn(family, qualifier, amount).setDurability(durability))
-        .thenApply(r -> Bytes.toLong(r.getValue(family, qualifier)));
+      .thenApply(r -> Bytes.toLong(r.getValue(family, qualifier)));
   }
 
   /**

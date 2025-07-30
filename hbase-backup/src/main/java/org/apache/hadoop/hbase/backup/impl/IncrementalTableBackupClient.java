@@ -468,7 +468,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
   private Path getTargetDirForTable(TableName table) {
     Path path = new Path(backupInfo.getBackupRootDir() + Path.SEPARATOR + backupInfo.getBackupId());
     path = new Path(path, table.getNamespaceAsString());
-    path = new Path(path, table.getNameAsString());
+    path = new Path(path, table.getQualifierAsString());
     return path;
   }
 

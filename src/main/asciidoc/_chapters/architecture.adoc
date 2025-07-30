@@ -101,7 +101,7 @@ The `hbase:meta` table structure is as follows:
 
 .Values
 
-* `info:regioninfo` (serialized link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HRegionInfo.html[HRegionInfo] instance for this region)
+* `info:regioninfo` (serialized link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/RegionInfo.html[RegionInfo] instance for this region)
 * `info:server` (server:port of the RegionServer containing this region)
 * `info:serverstartcode` (start-time of the RegionServer process containing this region)
 
@@ -119,7 +119,7 @@ If a region has both an empty start and an empty end key, it is the only region 
 ====
 
 In the (hopefully unlikely) event that programmatic processing of catalog metadata
-is required, see the link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/RegionInfo.html#parseFrom-byte:A-[RegionInfo.parseFrom] utility.
+is required, see the link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/RegionInfo.html#parseFrom(byte%5B%5D)[RegionInfo.parseFrom] utility.
 
 [[arch.catalog.startup]]
 === Startup Sequencing
@@ -141,7 +141,7 @@ Should a region be reassigned either by the master load balancer or because a Re
 
 See <<master.runtime>> for more information about the impact of the Master on HBase Client communication.
 
-Administrative functions are done via an instance of link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Admin.html[Admin]
+Administrative functions are done via an instance of link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Admin.html[Admin]
 
 [[client.connections]]
 === Cluster Connections
@@ -161,8 +161,8 @@ See the link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/pac
 
 ==== API before HBase 1.0.0
 
-Instances of `HTable` are the way to interact with an HBase cluster earlier than 1.0.0. _link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html[Table] instances are not thread-safe_. Only one thread can use an instance of Table at any given time.
-When creating Table instances, it is advisable to use the same link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HBaseConfiguration[HBaseConfiguration] instance.
+Instances of `HTable` are the way to interact with an HBase cluster earlier than 1.0.0. _link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Table.html[Table] instances are not thread-safe_. Only one thread can use an instance of Table at any given time.
+When creating Table instances, it is advisable to use the same link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/HBaseConfiguration[HBaseConfiguration] instance.
 This will ensure sharing of ZooKeeper and socket instances to the RegionServers which is usually what you want.
 For example, this is preferred:
 
@@ -183,7 +183,7 @@ HBaseConfiguration conf2 = HBaseConfiguration.create();
 HTable table2 = new HTable(conf2, "myTable");
 ----
 
-For more information about how connections are handled in the HBase client, see link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/ConnectionFactory.html[ConnectionFactory].
+For more information about how connections are handled in the HBase client, see link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/ConnectionFactory.html[ConnectionFactory].
 
 [[client.connection.pooling]]
 ===== Connection Pooling
@@ -207,19 +207,19 @@ try (Connection connection = ConnectionFactory.createConnection(conf);
 [WARNING]
 ====
 Previous versions of this guide discussed `HTablePool`, which was deprecated in HBase 0.94, 0.95, and 0.96, and removed in 0.98.1, by link:https://issues.apache.org/jira/browse/HBASE-6580[HBASE-6580], or `HConnection`, which is deprecated in HBase 1.0 by `Connection`.
-Please use link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Connection.html[Connection] instead.
+Please use link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Connection.html[Connection] instead.
 ====
 
 [[client.writebuffer]]
 === WriteBuffer and Batch Methods
 
-In HBase 1.0 and later, link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/HTable.html[HTable] is deprecated in favor of link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html[Table]. `Table` does not use autoflush. To do buffered writes, use the BufferedMutator class.
+In HBase 1.0 and later, link:https://hbase.apache.org/1.4/devapidocs/org/apache/hadoop/hbase/client/HTable.html[HTable] is deprecated in favor of link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Table.html[Table]. `Table` does not use autoflush. To do buffered writes, use the BufferedMutator class.
 
-In HBase 2.0 and later, link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/HTable.html[HTable] does not use BufferedMutator to execute the ``Put`` operation. Refer to link:https://issues.apache.org/jira/browse/HBASE-18500[HBASE-18500] for more information.
+In HBase 2.0 and later, link:https://hbase.apache.org/2.6/devapidocs/org/apache/hadoop/hbase/client/HTable.html[HTable] does not use BufferedMutator to execute the ``Put`` operation. Refer to link:https://issues.apache.org/jira/browse/HBASE-18500[HBASE-18500] for more information.
 
 For additional information on write durability, review the link:/acid-semantics.html[ACID semantics] page.
 
-For fine-grained control of batching of ``Put``s or ``Delete``s, see the link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#batch-java.util.List-java.lang.Object:A-[batch] methods on Table.
+For fine-grained control of batching of ``Put``s or ``Delete``s, see the link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Table.html#batch(java.util.List,java.lang.Object%5B%5D)[batch] methods on Table.
 
 [[async.client]]
 === Asynchronous Client ===
@@ -486,7 +486,7 @@ your own risk.
 [[client.filter]]
 == Client Request Filters
 
-link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Get.html[Get] and link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html[Scan] instances can be optionally configured with link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/Filter.html[filters] which are applied on the RegionServer.
+link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Get.html[Get] and link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Scan.html[Scan] instances can be optionally configured with link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/filter/Filter.html[filters] which are applied on the RegionServer.
 
 Filters can be confusing because there are many different types, and it is best to approach them by understanding the groups of Filter functionality.
 
@@ -498,7 +498,7 @@ Structural Filters contain other Filters.
 [[client.filter.structural.fl]]
 ==== FilterList
 
-link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/FilterList.html[FilterList] represents a list of Filters with a relationship of `FilterList.Operator.MUST_PASS_ALL` or `FilterList.Operator.MUST_PASS_ONE` between the Filters.
+link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/filter/FilterList.html[FilterList] represents a list of Filters with a relationship of `FilterList.Operator.MUST_PASS_ALL` or `FilterList.Operator.MUST_PASS_ONE` between the Filters.
 The following example shows an 'or' between two Filters (checking for either 'my value' or 'my other value' on the same attribute).
 
 [source,java]
@@ -528,7 +528,7 @@ scan.setFilter(list);
 ==== SingleColumnValueFilter
 
 A SingleColumnValueFilter (see:
-https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/SingleColumnValueFilter.html)
+https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/filter/SingleColumnValueFilter.html)
 can be used to test column values for equivalence (`CompareOperaor.EQUAL`),
 inequality (`CompareOperaor.NOT_EQUAL`), or ranges (e.g., `CompareOperaor.GREATER`). The following is an
 example of testing equivalence of a column to a String value "my value"...
@@ -588,7 +588,7 @@ These Comparators are used in concert with other Filters, such as <<client.filte
 [[client.filter.cvp.rcs]]
 ==== RegexStringComparator
 
-link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/RegexStringComparator.html[RegexStringComparator] supports regular expressions for value comparisons.
+link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/filter/RegexStringComparator.html[RegexStringComparator] supports regular expressions for value comparisons.
 
 [source,java]
 ----
@@ -607,7 +607,7 @@ See the Oracle JavaDoc for link:http://download.oracle.com/javase/6/docs/api/jav
 [[client.filter.cvp.substringcomparator]]
 ==== SubstringComparator
 
-link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/SubstringComparator.html[SubstringComparator] can be used to determine if a given substring exists in a value.
+link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/filter/SubstringComparator.html[SubstringComparator] can be used to determine if a given substring exists in a value.
 The comparison is case-insensitive.
 
 [source,java]
@@ -626,17 +626,17 @@ scan.setFilter(filter);
 [[client.filter.cvp.bfp]]
 ==== BinaryPrefixComparator
 
-See link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/BinaryPrefixComparator.html[BinaryPrefixComparator].
+See link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/filter/BinaryPrefixComparator.html[BinaryPrefixComparator].
 
 [[client.filter.cvp.bc]]
 ==== BinaryComparator
 
-See link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/BinaryComparator.html[BinaryComparator].
+See link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/filter/BinaryComparator.html[BinaryComparator].
 
 [[client.filter.cvp.bcc]]
 ==== BinaryComponentComparator
 
-link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/BinaryComponentComparator.html[BinaryComponentComparator] can be used to compare specific value at specific location with in the cell value. The comparison can be done for both ascii and binary data.
+link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/filter/BinaryComponentComparator.html[BinaryComponentComparator] can be used to compare specific value at specific location with in the cell value. The comparison can be done for both ascii and binary data.
 
 [source,java]
 ----
@@ -655,18 +655,18 @@ As HBase stores data internally as KeyValue pairs, KeyValue Metadata Filters eva
 [[client.filter.kvm.ff]]
 ==== FamilyFilter
 
-link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/FamilyFilter.html[FamilyFilter] can be used to filter on the ColumnFamily.
+link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/filter/FamilyFilter.html[FamilyFilter] can be used to filter on the ColumnFamily.
 It is generally a better idea to select ColumnFamilies in the Scan than to do it with a Filter.
 
 [[client.filter.kvm.qf]]
 ==== QualifierFilter
 
-link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/QualifierFilter.html[QualifierFilter] can be used to filter based on Column (aka Qualifier) name.
+link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/filter/QualifierFilter.html[QualifierFilter] can be used to filter based on Column (aka Qualifier) name.
 
 [[client.filter.kvm.cpf]]
 ==== ColumnPrefixFilter
 
-link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/ColumnPrefixFilter.html[ColumnPrefixFilter] can be used to filter based on the lead portion of Column (aka Qualifier) names.
+link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/filter/ColumnPrefixFilter.html[ColumnPrefixFilter] can be used to filter based on the lead portion of Column (aka Qualifier) names.
 
 A ColumnPrefixFilter seeks ahead to the first column matching the prefix in each row and for each involved column family.
 It can be used to efficiently get a subset of the columns in very wide rows.
@@ -699,7 +699,7 @@ rs.close();
 [[client.filter.kvm.mcpf]]
 ==== MultipleColumnPrefixFilter
 
-link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/MultipleColumnPrefixFilter.html[MultipleColumnPrefixFilter] behaves like ColumnPrefixFilter but allows specifying multiple prefixes.
+link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/filter/MultipleColumnPrefixFilter.html[MultipleColumnPrefixFilter] behaves like ColumnPrefixFilter but allows specifying multiple prefixes.
 
 Like ColumnPrefixFilter, MultipleColumnPrefixFilter efficiently seeks ahead to the first column matching the lowest prefix and also seeks past ranges of columns between prefixes.
 It can be used to efficiently get discontinuous sets of columns from very wide rows.
@@ -729,7 +729,7 @@ rs.close();
 [[client.filter.kvm.crf]]
 ==== ColumnRangeFilter
 
-A link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/ColumnRangeFilter.html[ColumnRangeFilter] allows efficient intra row scanning.
+A link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/filter/ColumnRangeFilter.html[ColumnRangeFilter] allows efficient intra row scanning.
 
 A ColumnRangeFilter can seek ahead to the first matching column for each involved column family.
 It can be used to efficiently get a 'slice' of the columns of a very wide row.
@@ -770,9 +770,9 @@ Note:  Introduced in HBase 0.92
 [[client.filter.row.rf]]
 ==== RowFilter
 
-It is generally a better idea to use the startRow/stopRow methods on Scan for row selection, however link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/RowFilter.html[RowFilter] can also be used.
+It is generally a better idea to use the startRow/stopRow methods on Scan for row selection, however link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/filter/RowFilter.html[RowFilter] can also be used.
 
-You can supplement a scan (both bounded and unbounded) with RowFilter constructed from link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/BinaryComponentComparator.html[BinaryComponentComparator] for further filtering out or filtering in rows. See link:https://issues.apache.org/jira/browse/HBASE-22969[HBASE-22969] for use cases and other details.
+You can supplement a scan (both bounded and unbounded) with RowFilter constructed from link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/filter/BinaryComponentComparator.html[BinaryComponentComparator] for further filtering out or filtering in rows. See link:https://issues.apache.org/jira/browse/HBASE-22969[HBASE-22969] for use cases and other details.
 
 [[client.filter.utility]]
 === Utility
@@ -781,7 +781,7 @@ You can supplement a scan (both bounded and unbounded) with RowFilter constructe
 ==== FirstKeyOnlyFilter
 
 This is primarily used for rowcount jobs.
-See link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/FirstKeyOnlyFilter.html[FirstKeyOnlyFilter].
+See link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/filter/FirstKeyOnlyFilter.html[FirstKeyOnlyFilter].
 
 [[architecture.master]]
 == Master
@@ -789,7 +789,7 @@ See link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/FirstKe
 `HMaster` is the implementation of the Master Server.
 The Master server is responsible for monitoring all RegionServer instances in the cluster, and is the interface for all metadata changes.
 In a distributed cluster, the Master typically runs on the <<arch.hdfs.nn>>.
-J Mohamed Zahoor goes into some more detail on the Master Architecture in this blog posting, link:http://blog.zahoor.in/2012/08/hbase-hmaster-architecture/[HBase HMaster Architecture ].
+J Mohamed Zahoor goes into some more detail on the Master Architecture in this blog posting, link:https://web.archive.org/web/20191211053128/http://blog.zahoor.in/2012/08/hbase-hmaster-architecture/[HBase HMaster Architecture].
 
 [[master.startup]]
 === Startup Behavior
@@ -1129,7 +1129,7 @@ If the BucketCache is deployed in off-heap mode, this memory is not managed by t
 This is why you'd use BucketCache in pre-2.0.0, so your latencies are less erratic,
 to mitigate GCs and heap fragmentation, and so you can safely use more memory.
 See Nick Dimiduk's link:http://www.n10k.com/blog/blockcache-101/[BlockCache 101] for comparisons running on-heap vs off-heap tests.
-Also see link:https://people.apache.org/~stack/bc/[Comparing BlockCache Deploys] which finds that if your dataset fits inside your LruBlockCache deploy, use it otherwise if you are experiencing cache churn (or you want your cache to exist beyond the vagaries of java GC), use BucketCache.
+Also see link:https://web.archive.org/web/20231109025243/http://people.apache.org/~stack/bc/[Comparing BlockCache Deploys] which finds that if your dataset fits inside your LruBlockCache deploy, use it otherwise if you are experiencing cache churn (or you want your cache to exist beyond the vagaries of java GC), use BucketCache.
 +
 In pre-2.0.0,
 one can configure the BucketCache so it receives the `victim` of an LruBlockCache eviction.
@@ -1239,7 +1239,7 @@ The value allocated by `MaxDirectMemorySize` must not exceed physical RAM, and i
 You can see how much memory -- on-heap and off-heap/direct -- a RegionServer is configured to use and how much it is using at any one time by looking at the _Server Metrics: Memory_ tab in the UI.
 It can also be gotten via JMX.
 In particular the direct memory currently used by the server can be found on the `java.nio.type=BufferPool,name=direct` bean.
-Terracotta has a link:http://terracotta.org/documentation/4.0/bigmemorygo/configuration/storage-options[good write up] on using off-heap memory in Java.
+Terracotta has a link:https://web.archive.org/web/20170907032911/http://terracotta.org/documentation/4.0/bigmemorygo/configuration/storage-options[good write up] on using off-heap memory in Java.
 It is for their product BigMemory but a lot of the issues noted apply in general to any attempt at going off-heap. Check it out.
 ====
 
@@ -1308,6 +1308,15 @@ The CacheAwareLoadBalancer can be enabled in the cluster by setting the followin
 </property>
 ----
 
+Within HBASE-29168, the CacheAwareLoadBalancer implements region move throttling. This mitigates
+the impact of "losing" cache factor when balancing mainly due to region skewness, i.e. when new
+region servers are added to the cluster, a large bulk of cached regions may move to the new servers
+at once, which can cause noticeable read performance impacts for cache sensitive use cases. The
+throttling sleep time is determined by the *hbase.master.balancer.move.throttlingMillis* property,
+and it defaults to 60000 millis. If a region planned to be moved has a cache ratio on the target
+server above the thershold configurable by the
+*hbase.master.balancer.stochastic.throttling.cacheRatio* property (80% by default), no throttling
+will be applied in this region move.
 
 [[regionserver_splitting_implementation]]
 === RegionServer Splitting Implementation

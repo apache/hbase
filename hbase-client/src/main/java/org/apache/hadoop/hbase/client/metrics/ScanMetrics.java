@@ -96,8 +96,22 @@ public class ScanMetrics extends ServerSideScanMetrics {
   public final AtomicLong countOfRemoteRPCRetries = createCounter(REMOTE_RPC_RETRIES_METRIC_NAME);
 
   /**
-   * constructor
+   * Constructor
    */
   public ScanMetrics() {
+  }
+
+  @Override
+  public void moveToNextRegion() {
+    super.moveToNextRegion();
+    currentRegionScanMetricsData.createCounter(RPC_CALLS_METRIC_NAME);
+    currentRegionScanMetricsData.createCounter(REMOTE_RPC_CALLS_METRIC_NAME);
+    currentRegionScanMetricsData.createCounter(MILLIS_BETWEEN_NEXTS_METRIC_NAME);
+    currentRegionScanMetricsData.createCounter(NOT_SERVING_REGION_EXCEPTION_METRIC_NAME);
+    currentRegionScanMetricsData.createCounter(BYTES_IN_RESULTS_METRIC_NAME);
+    currentRegionScanMetricsData.createCounter(BYTES_IN_REMOTE_RESULTS_METRIC_NAME);
+    currentRegionScanMetricsData.createCounter(REGIONS_SCANNED_METRIC_NAME);
+    currentRegionScanMetricsData.createCounter(RPC_RETRIES_METRIC_NAME);
+    currentRegionScanMetricsData.createCounter(REMOTE_RPC_RETRIES_METRIC_NAME);
   }
 }

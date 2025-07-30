@@ -962,7 +962,9 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
     throws IOException {
     int count = 0;
 
-    fsDelegationToken.acquireDelegationToken(queue.peek().getFilePath().getFileSystem(getConf()));
+    Path path = queue.peek().getFilePath();
+    FileSystem fs = path.getFileSystem(getConf()).resolvePath(path).getFileSystem(getConf());
+    fsDelegationToken.acquireDelegationToken(fs);
     bulkToken = FutureUtils.get(conn.prepareBulkLoad(tableName));
     Pair<Multimap<ByteBuffer, LoadQueueItem>, Set<String>> pair = null;
 

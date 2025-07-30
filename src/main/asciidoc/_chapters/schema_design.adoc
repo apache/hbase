@@ -47,7 +47,7 @@ See also Robert Yokota's link:https://blogs.apache.org/hbase/entry/hbase-applica
 [[schema.creation]]
 ==  Schema Creation
 
-HBase schemas can be created or updated using the <<shell>> or by using link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Admin.html[Admin] in the Java API.
+HBase schemas can be created or updated using the <<shell>> or by using link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Admin.html[Admin] in the Java API.
 
 Tables must be disabled when making ColumnFamily modifications, for example:
 
@@ -339,7 +339,7 @@ This is the main trade-off.
 ====
 link:https://issues.apache.org/jira/browse/HBASE-4811[HBASE-4811] implements an API to scan a table or a range within a table in reverse, reducing the need to optimize your schema for forward or reverse scanning.
 This feature is available in HBase 0.98 and later.
-See link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html#setReversed-boolean-[Scan.setReversed()] for more information.
+See link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Scan.html#setReversed(boolean)[Scan.setReversed()] for more information.
 ====
 
 A common problem in database processing is quickly finding the most recent version of a value.
@@ -444,14 +444,14 @@ It is not recommended setting the number of max versions to an exceedingly high 
 [[schema.minversions]]
 ===  Minimum Number of Versions
 
-Like maximum number of row versions, the minimum number of row versions to keep is configured per column family via link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html[HColumnDescriptor].
+Like maximum number of row versions, the minimum number of row versions to keep is configured per column family via link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/ColumnFamilyDescriptorBuilder.html[ColumnFamilyDescriptorBuilder].
 The default for min versions is 0, which means the feature is disabled.
 The minimum number of row versions parameter is used together with the time-to-live parameter and can be combined with the number of row versions parameter to allow configurations such as "keep the last T minutes worth of data, at most N versions, _but keep at least M versions around_" (where M is the value for minimum number of row versions, M<N). This parameter should only be set when time-to-live is enabled for a column family and must be less than the number of row versions.
 
 [[supported.datatypes]]
 ==  Supported Datatypes
 
-HBase supports a "bytes-in/bytes-out" interface via link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Put.html[Put] and link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Result.html[Result], so anything that can be converted to an array of bytes can be stored as a value.
+HBase supports a "bytes-in/bytes-out" interface via link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Put.html[Put] and link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Result.html[Result], so anything that can be converted to an array of bytes can be stored as a value.
 Input could be strings, numbers, complex objects, or even images as long as they can rendered as bytes.
 
 There are practical limits to the size of values (e.g., storing 10-50MB objects in HBase would probably be too much to ask); search the mailing list for conversations on this topic.
@@ -460,7 +460,7 @@ Take that into consideration when making your design, as well as block size for 
 
 === Counters
 
-One supported datatype that deserves special mention are "counters" (i.e., the ability to do atomic increments of numbers). See link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#increment%28org.apache.hadoop.hbase.client.Increment%29[Increment] in `Table`.
+One supported datatype that deserves special mention are "counters" (i.e., the ability to do atomic increments of numbers). See link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Table.html#increment(org.apache.hadoop.hbase.client.Increment)[Increment] in `Table`.
 
 Synchronization on counters are done on the RegionServer, not in the client.
 
@@ -495,7 +495,7 @@ There are two notable differences between cell TTL handling and ColumnFamily TTL
 ==  Keeping Deleted Cells
 
 By default, delete markers extend back to the beginning of time.
-Therefore, link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Get.html[Get] or link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html[Scan] operations will not see a deleted cell (row or column), even when the Get or Scan operation indicates a time range before the delete marker was placed.
+Therefore, link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Get.html[Get] or link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Scan.html[Scan] operations will not see a deleted cell (row or column), even when the Get or Scan operation indicates a time range before the delete marker was placed.
 
 ColumnFamilies can optionally keep deleted cells.
 In this case, deleted cells can still be retrieved, as long as these operations specify a time range that ends before the timestamp of any delete that would affect the cells.
@@ -759,7 +759,7 @@ Neither approach is wrong, it just depends on what is most appropriate for the s
 ====
 link:https://issues.apache.org/jira/browse/HBASE-4811[HBASE-4811] implements an API to scan a table or a range within a table in reverse, reducing the need to optimize your schema for forward or reverse scanning.
 This feature is available in HBase 0.98 and later.
-See link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html#setReversed-boolean-[Scan.setReversed()] for more information.
+See link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Scan.html#setReversed(boolean)[Scan.setReversed()] for more information.
 ====
 
 [[schema.casestudies.log_timeseries.varkeys]]
@@ -788,7 +788,7 @@ The rowkey of LOG_TYPES would be:
 * `[bytes]` variable length bytes for raw hostname or event-type.
 
 A column for this rowkey could be a long with an assigned number, which could be obtained
-by using an link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#incrementColumnValue-byte:A-byte:A-byte:A-long-[HBase counter]
+by using an link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Table.html#incrementColumnValue(byte%5B%5D,byte%5B%5D,byte%5B%5D,long)[HBase counter]
 
 So the resulting composite rowkey would be:
 

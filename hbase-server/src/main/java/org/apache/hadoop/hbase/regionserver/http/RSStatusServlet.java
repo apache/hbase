@@ -37,7 +37,12 @@ public class RSStatusServlet extends HttpServlet {
       (HRegionServer) getServletContext().getAttribute(HRegionServer.REGIONSERVER);
     assert hrs != null : "No RS in context!";
 
-    resp.setContentType("text/html");
+    String format = req.getParameter("format");
+    if ("json".equals(format)) {
+      resp.setContentType("application/json");
+    } else {
+      resp.setContentType("text/html");
+    }
 
     if (!hrs.isOnline()) {
       resp.getWriter().write("The RegionServer is initializing!");
@@ -46,7 +51,7 @@ public class RSStatusServlet extends HttpServlet {
     }
 
     RSStatusTmpl tmpl = new RSStatusTmpl();
-    if (req.getParameter("format") != null) tmpl.setFormat(req.getParameter("format"));
+    if (format != null) tmpl.setFormat(format);
     if (req.getParameter("filter") != null) tmpl.setFilter(req.getParameter("filter"));
     if (req.getParameter("bcn") != null) tmpl.setBcn(req.getParameter("bcn"));
     if (req.getParameter("bcv") != null) tmpl.setBcv(req.getParameter("bcv"));

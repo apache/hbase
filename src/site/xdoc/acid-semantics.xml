@@ -218,7 +218,7 @@ under the License.
       <p>[1] A consistent view is not guaranteed intra-row scanning -- i.e. fetching a portion of
           a row in one RPC then going back to fetch another portion of the row in a subsequent RPC.
           Intra-row scanning happens when you set a limit on how many values to return per Scan#next
-          (See <a href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html#setBatch(int)">Scan#setBatch(int)</a>).
+          (See <a href="http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Scan.html#setBatch(int)">Scan#setBatch(int)</a>).
       </p>
 
       <p>[2] In the context of Apache HBase, &quot;durably on disk&quot; implies an hflush() call on the transaction

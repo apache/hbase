@@ -37,7 +37,4 @@ TODO: Describe setup of YCSB for HBase.
 In particular, presplit your tables before you start a run.
 See link:https://issues.apache.org/jira/browse/HBASE-4163[HBASE-4163 Create Split Strategy for YCSB Benchmark] for why and a little shell command for how to do it.
 
-Ted Dunning redid YCSB so it's mavenized and added facility for verifying workloads.
-See link:https://github.com/tdunning/YCSB[Ted Dunning's YCSB].
-
 :numbered:

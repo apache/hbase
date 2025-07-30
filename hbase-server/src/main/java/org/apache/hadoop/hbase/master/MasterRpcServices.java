@@ -608,7 +608,8 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
   }
 
   @Override
-  @QosPriority(priority = HConstants.ADMIN_QOS)
+  // priority for all RegionServerStatusProtos rpc's are set HIGH_QOS in
+  // MasterAnnotationReadingPriorityFunction itself
   public GetLastFlushedSequenceIdResponse getLastFlushedSequenceId(RpcController controller,
     GetLastFlushedSequenceIdRequest request) throws ServiceException {
     try {
@@ -623,7 +624,6 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
   }
 
   @Override
-  @QosPriority(priority = HConstants.ADMIN_QOS)
   public RegionServerReportResponse regionServerReport(RpcController controller,
     RegionServerReportRequest request) throws ServiceException {
     try {
@@ -659,7 +659,6 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
   }
 
   @Override
-  @QosPriority(priority = HConstants.ADMIN_QOS)
   public RegionServerStartupResponse regionServerStartup(RpcController controller,
     RegionServerStartupRequest request) throws ServiceException {
     // Register with server manager
@@ -691,7 +690,6 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
   }
 
   @Override
-  @QosPriority(priority = HConstants.ADMIN_QOS)
   public ReportRSFatalErrorResponse reportRSFatalError(RpcController controller,
     ReportRSFatalErrorRequest request) throws ServiceException {
     String errorText = request.getErrorMessage();
@@ -1874,7 +1872,10 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
   public SetQuotaResponse setQuota(RpcController c, SetQuotaRequest req) throws ServiceException {
     try {
       server.checkInitialized();
-      return server.getMasterQuotaManager().setQuota(req);
+      SetQuotaResponse response = server.getMasterQuotaManager().setQuota(req);
+      server.reloadRegionServerQuotas();
+
+      return response;
     } catch (Exception e) {
       throw new ServiceException(e);
     }

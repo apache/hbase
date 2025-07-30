@@ -61,7 +61,7 @@ coprocessor can severely degrade cluster performance and stability.
 
 In HBase, you fetch data using a `Get` or `Scan`, whereas in an RDBMS you use a SQL
 query. In order to fetch only the relevant data, you filter it using a HBase
-link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/Filter.html[Filter]
+link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/filter/Filter.html[Filter]
 , whereas in an RDBMS you use a `WHERE` predicate.
 
 After fetching the data, you perform computations on it. This paradigm works well
@@ -112,7 +112,7 @@ using HBase Shell. For more details see <<cp_loading,Loading Coprocessors>>.
 transparently.
 
 The framework API is provided in the
-link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/coprocessor/package-summary.html[coprocessor]
+link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/package-summary.html[coprocessor]
 package.
 
 == Types of Coprocessors
@@ -121,8 +121,8 @@ package.
 
 Observer coprocessors are triggered either before or after a specific event occurs.
 Observers that happen before an event use methods that start with a `pre` prefix,
-such as link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/RegionObserver.html#prePut-org.apache.hadoop.hbase.coprocessor.ObserverContext-org.apache.hadoop.hbase.client.Put-org.apache.hadoop.hbase.wal.WALEdit-org.apache.hadoop.hbase.client.Durability-[`prePut`]. Observers that happen just after an event override methods that start
-with a `post` prefix, such as link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/RegionObserver.html#postPut-org.apache.hadoop.hbase.coprocessor.ObserverContext-org.apache.hadoop.hbase.client.Put-org.apache.hadoop.hbase.wal.WALEdit-org.apache.hadoop.hbase.client.Durability-[`postPut`].
+such as link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/RegionObserver.html#prePut(org.apache.hadoop.hbase.coprocessor.ObserverContext,org.apache.hadoop.hbase.client.Put,org.apache.hadoop.hbase.wal.WALEdit)[`prePut`]. Observers that happen just after an event override methods that start
+with a `post` prefix, such as link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/RegionObserver.html#postPut(org.apache.hadoop.hbase.coprocessor.ObserverContext,org.apache.hadoop.hbase.client.Put,org.apache.hadoop.hbase.wal.WALEdit)[`postPut`].
 
 
 ==== Use Cases for Observer Coprocessors
@@ -178,7 +178,7 @@ average or summation for an entire table which spans hundreds of regions.
 
 In contrast to observer coprocessors, where your code is run transparently, endpoint
 coprocessors must be explicitly invoked using the
-link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/AsyncTable.html#coprocessorService-java.util.function.Function-org.apache.hadoop.hbase.client.ServiceCaller-byte:A-[CoprocessorService()]
+link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/AsyncTable.html#coprocessorService(java.util.function.Function,org.apache.hadoop.hbase.client.ServiceCaller,byte%5B%5D)[CoprocessorService()]
 method available in
 link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/AsyncTable.html[AsyncTable].
 
@@ -197,7 +197,7 @@ our async implementation).
 
 Since coprocessor is an advanced feature, we believe it is OK for coprocessor users to
 instead switch over to use `AsyncTable`. There is a lightweight
-link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Connection.html#toAsyncConnection--[toAsyncConnection]
+link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Connection.html#toAsyncConnection()[toAsyncConnection]
 method to get an `AsyncConnection` from `Connection` if needed.
 ====
 

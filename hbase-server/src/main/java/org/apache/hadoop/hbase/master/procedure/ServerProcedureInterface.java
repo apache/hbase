@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.quotas.QuotaCache;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -55,7 +56,12 @@ public interface ServerProcedureInterface {
     /**
      * send verify snapshot request to region server and handle the response
      */
-    VERIFY_SNAPSHOT
+    VERIFY_SNAPSHOT,
+
+    /**
+     * Re-read the hbase:quotas table and update {@link QuotaCache}.
+     */
+    RELOAD_QUOTAS,
   }
 
   /** Returns Name of this server instance. */

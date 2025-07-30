@@ -337,7 +337,7 @@ public class TestBackupBase {
     if (useSecondCluster) {
       BACKUP_REMOTE_ROOT_DIR = new Path(
         new Path(TEST_UTIL2.getConfiguration().get("fs.defaultFS")) + BACKUP_REMOTE_ROOT_DIR)
-          .toString();
+        .toString();
       LOG.info("REMOTE ROOTDIR " + BACKUP_REMOTE_ROOT_DIR);
     }
     createTables();

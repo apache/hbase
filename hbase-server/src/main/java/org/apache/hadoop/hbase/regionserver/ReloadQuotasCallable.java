@@ -15,31 +15,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.chaos;
+package org.apache.hadoop.hbase.regionserver;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.executor.EventType;
+import org.apache.hadoop.hbase.procedure2.BaseRSProcedureCallable;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-/**
- * ChaosUtils holds a bunch of useful functions like getting hostname and getting ZooKeeper quorum.
- */
 @InterfaceAudience.Private
-public class ChaosUtils {
+public class ReloadQuotasCallable extends BaseRSProcedureCallable {
 
-  public static String getHostName() throws UnknownHostException {
-    return InetAddress.getLocalHost().getHostName();
+  private static final Logger LOG = LoggerFactory.getLogger(ReloadQuotasCallable.class);
+
+  @Override
+  protected void doCall() throws Exception {
+    LOG.info("Reloading quotas");
+    rs.getRegionServerRpcQuotaManager().reload();
   }
 
-  public static String getZKQuorum(Configuration conf) {
-    String port = Integer.toString(conf.getInt(HConstants.ZOOKEEPER_CLIENT_PORT, 2181));
-    String[] serverHosts = conf.getStrings(HConstants.ZOOKEEPER_QUORUM, "localhost");
-    for (int i = 0; i < serverHosts.length; i++) {
-      serverHosts[i] = serverHosts[i] + ":" + port;
-    }
-    return String.join(",", serverHosts);
+  @Override
+  protected void initParameter(byte[] parameter) throws Exception {
+
   }
 
+  @Override
+  public EventType getEventType() {
+    return EventType.RS_RELOAD_QUOTAS;
+  }
 }
