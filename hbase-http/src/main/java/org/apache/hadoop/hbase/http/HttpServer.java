@@ -405,7 +405,7 @@ public class HttpServer implements FilterContainer {
     }
 
     @Deprecated
-    // Use setExcludeCiphers() which supports the fluid builder API
+    // Use setExcludeCiphers() which supports the fluent builder API
     public void excludeCiphers(String excludeCiphers) {
       this.excludeCiphers = excludeCiphers;
     }
