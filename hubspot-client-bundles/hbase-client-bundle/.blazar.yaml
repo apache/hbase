@@ -1,5 +1,6 @@
 buildpack:
   name: Blazar-Buildpack-Java
+  branch: rm-test-hbase
 
 env:
   # Below variables are generated in prepare_environment.sh.
