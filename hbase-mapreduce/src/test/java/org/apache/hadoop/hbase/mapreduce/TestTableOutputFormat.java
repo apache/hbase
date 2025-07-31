@@ -29,6 +29,8 @@ import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.junit.After;
@@ -57,7 +59,6 @@ public class TestTableOutputFormat {
   private static RecordWriter<Null, Mutation> writer;
   private static TaskAttemptContext context;
   private static TableOutputFormat<Null> tableOutputFormat;
-  private static final TableOutputCommitter CUSTOM_COMMITTER = new TableOutputCommitter() {};
 
   @BeforeClass
   public static void setUp() throws Exception {
@@ -139,10 +140,30 @@ public class TestTableOutputFormat {
       tableOutputFormat.getOutputCommitter(context).getClass());
 
     // 2. Verify it returns the custom committer when the property is set.
-    conf.set(TableOutputFormat.OUTPUT_COMMITTER_CLASS, CUSTOM_COMMITTER.getClass().getName());
+    conf.set(TableOutputFormat.OUTPUT_COMMITTER_CLASS, DummyCommitter.class.getName());
     tableOutputFormat.setConf(conf);
     Assert.assertEquals("Should use custom committer",
-      CUSTOM_COMMITTER.getClass(),
+      DummyCommitter.class,
       tableOutputFormat.getOutputCommitter(context).getClass());
+  }
+
+  // Simple dummy committer for testing
+  public static class DummyCommitter extends OutputCommitter {
+    @Override
+    public void setupJob(JobContext jobContext) {}
+
+    @Override
+    public void setupTask(TaskAttemptContext taskContext) {}
+
+    @Override
+    public boolean needsTaskCommit(TaskAttemptContext taskContext) {
+      return false;
+    }
+
+    @Override
+    public void commitTask(TaskAttemptContext taskContext) {}
+
+    @Override
+    public void abortTask(TaskAttemptContext taskContext) {}
   }
 }
