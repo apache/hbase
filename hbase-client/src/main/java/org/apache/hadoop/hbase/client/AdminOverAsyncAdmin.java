@@ -1136,4 +1136,19 @@ class AdminOverAsyncAdmin implements Admin {
   public List<String> getCachedFilesList(ServerName serverName) throws IOException {
     return get(admin.getCachedFilesList(serverName));
   }
+
+  @Override
+  public Long refreshHFiles(final TableName tableName) throws IOException {
+    return get(admin.refreshHFiles(tableName));
+  }
+
+  @Override
+  public Long refreshHFiles(final String namespace) throws IOException {
+    return get(admin.refreshHFiles(namespace));
+  }
+
+  @Override
+  public Long refreshHFiles() throws IOException {
+    return get(admin.refreshHFiles());
+  }
 }

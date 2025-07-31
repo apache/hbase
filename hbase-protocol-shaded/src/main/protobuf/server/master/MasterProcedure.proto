@@ -821,3 +821,20 @@ enum CloseTableRegionsProcedureState {
 message CloseTableRegionsProcedureStateData {
   required TableName table_name = 1;
 }
+
+enum RefreshHFilesTableProcedureState {
+  REFRESH_HFILES_PREPARE = 1;
+  REFRESH_HFILES_REFRESH_REGION = 2;
+  REFRESH_HFILES_FINISH = 3;
+}
+
+message RefreshHFilesTableProcedureStateData {
+}
+
+message RefreshHFilesRegionProcedureStateData {
+  required RegionInfo region = 1;
+}
+
+message RefreshHFilesRegionParameter {
+  required RegionInfo region = 1;
+}

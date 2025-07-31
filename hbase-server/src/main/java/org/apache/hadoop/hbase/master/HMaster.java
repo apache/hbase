@@ -169,6 +169,7 @@ import org.apache.hadoop.hbase.master.procedure.ModifyTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
 import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
 import org.apache.hadoop.hbase.master.procedure.RSProcedureDispatcher;
+import org.apache.hadoop.hbase.master.procedure.RefreshHFilesTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.ReopenTableRegionsProcedure;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.master.procedure.TruncateRegionProcedure;
@@ -4540,6 +4541,61 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
         @Override
         protected String getDescription() {
           return "FlushTableProcedure";
+        }
+      });
+  }
+
+  public Long refreshHfiles(final TableName tableName, final long nonceGroup, final long nonce)
+    throws IOException {
+    // TODO Check if table exists otherwise send exception.
+    return MasterProcedureUtil
+      .submitProcedure(new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
+        @Override
+        protected void run() throws IOException {
+          LOG.info("Submitting RefreshHfilesTableProcedure for table {}",
+            tableName.getNameAsString());
+          submitProcedure(
+            new RefreshHFilesTableProcedure(procedureExecutor.getEnvironment(), tableName));
+        }
+
+        @Override
+        protected String getDescription() {
+          return "RefreshHfilesProcedure for a table";
+        }
+      });
+  }
+
+  public Long refreshHfiles(final String namespace, final long nonceGroup, final long nonce)
+    throws IOException {
+    // TODO Check if namespace exists otherwise send exception.
+    return MasterProcedureUtil
+      .submitProcedure(new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
+        @Override
+        protected void run() throws IOException {
+          LOG.info("Submitting RefreshHfilesProcedure for namespace {}", namespace);
+          submitProcedure(
+            new RefreshHFilesTableProcedure(procedureExecutor.getEnvironment(), namespace));
+        }
+
+        @Override
+        protected String getDescription() {
+          return "RefreshHfilesProcedure for namespace";
+        }
+      });
+  }
+
+  public Long refreshHfiles(final long nonceGroup, final long nonce) throws IOException {
+    return MasterProcedureUtil
+      .submitProcedure(new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
+        @Override
+        protected void run() throws IOException {
+          LOG.info("Submitting RefreshHfilesProcedure for all tables");
+          submitProcedure(new RefreshHFilesTableProcedure(procedureExecutor.getEnvironment()));
+        }
+
+        @Override
+        protected String getDescription() {
+          return "RefreshHfilesProcedure for all tables";
         }
       });
   }
