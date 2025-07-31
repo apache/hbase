@@ -68,8 +68,8 @@ public class InfoServer {
     }
     if (httpConfig.isSecure()) {
       // We are using the Hadoop HTTP server config properties.
-      // This makes easy to keep in sync with Hadoop's UI servers, but hard to set this separately
-      // for HBase
+      // This makes it easy to keep in sync with Hadoop's UI servers, but hard to set this
+      // separately for HBase.
       builder
         .keyPassword(HBaseConfiguration.getPassword(c, "ssl.server.keystore.keypassword", null))
         .keyStore(c.get("ssl.server.keystore.location"),
