@@ -55,7 +55,6 @@ public class RefreshHFilesRegionProcedure extends Procedure<MasterProcedureEnv>
     MasterProcedureProtos.RefreshHFilesRegionProcedureStateData data =
       serializer.deserialize(MasterProcedureProtos.RefreshHFilesRegionProcedureStateData.class);
     this.region = ProtobufUtil.toRegionInfo(data.getRegion());
-    // TODO Get the Data from region server
   }
 
   @Override
@@ -63,7 +62,6 @@ public class RefreshHFilesRegionProcedure extends Procedure<MasterProcedureEnv>
     MasterProcedureProtos.RefreshHFilesRegionProcedureStateData.Builder builder =
       MasterProcedureProtos.RefreshHFilesRegionProcedureStateData.newBuilder();
     builder.setRegion(ProtobufUtil.toRegionInfo(region));
-    // TODO add data that you want to pass to region server
     serializer.serialize(builder.build());
   }
 
@@ -124,7 +122,6 @@ public class RefreshHFilesRegionProcedure extends Procedure<MasterProcedureEnv>
     MasterProcedureProtos.RefreshHFilesRegionParameter.Builder builder =
       MasterProcedureProtos.RefreshHFilesRegionParameter.newBuilder();
     builder.setRegion(ProtobufUtil.toRegionInfo(region));
-    // TODO Add logic on how to build remote call
     return Optional
       .of(new RSProcedureDispatcher.ServerOperation(this, getProcId(), RefreshHFilesCallable.class,
         builder.build().toByteArray(), env.getMasterServices().getMasterActiveTime()));

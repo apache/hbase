@@ -4572,7 +4572,6 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         controller, stub, request.build(), MasterService.Interface::refreshHFiles,
         RefreshHFilesResponse::getProcId))
       .call();
-    // return CompletableFuture.completedFuture(null);
   }
 
   @Override
@@ -4587,7 +4586,6 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         controller, stub, request.build(), MasterService.Interface::refreshHFiles,
         RefreshHFilesResponse::getProcId))
       .call();
-    // return CompletableFuture.completedFuture(null);
   }
 
   @Override
@@ -4602,6 +4600,5 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         controller, stub, request.build(), MasterService.Interface::refreshHFiles,
         RefreshHFilesResponse::getProcId))
       .call();
-    // return CompletableFuture.completedFuture(null);
   }
 }

@@ -797,7 +797,7 @@ message ModifyColumnStoreFileTrackerResponse {
 }
 
 message RefreshHFilesRequest {
-  optional TableName table_Name = 1;
+  optional TableName table_name = 1;
   optional string namespace = 2;
   optional uint64 nonce_group = 3 [default = 0];
   optional uint64 nonce = 4 [default = 0];
