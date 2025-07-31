@@ -76,13 +76,14 @@ public class TableOutputFormat<KEY> extends OutputFormat<KEY, Mutation> implemen
   public static final String OUTPUT_CLUSTER = "hbase.mapred.outputcluster";
 
   /**
-   * The configuration key for specifying a custom {@link org.apache.hadoop.mapreduce.OutputCommitter}
-   * implementation to be used by {@link TableOutputFormat}.
-   * The value for this property should be the fully qualified class name of the
-   * custom committer. If this property is not set, {@link TableOutputCommitter}
-   * will be used by default.
+   * The configuration key for specifying a custom
+   * {@link org.apache.hadoop.mapreduce.OutputCommitter} implementation to be used by
+   * {@link TableOutputFormat}. The value for this property should be the fully qualified class name
+   * of the custom committer. If this property is not set, {@link TableOutputCommitter} will be used
+   * by default.
    */
-  public static final String OUTPUT_COMMITTER_CLASS = "hbase.mapreduce.tableoutputformat.output.committer.class";
+  public static final String OUTPUT_COMMITTER_CLASS =
+    "hbase.mapreduce.tableoutputformat.output.committer.class";
 
   /**
    * Prefix for configuration property overrides to apply in {@link #setConf(Configuration)}. For
@@ -268,8 +269,8 @@ public class TableOutputFormat<KEY> extends OutputFormat<KEY, Mutation> implemen
     }
 
     try {
-      Class<? extends OutputCommitter> outputCommitter = hConf.getClass(OUTPUT_COMMITTER_CLASS,
-        TableOutputCommitter.class, OutputCommitter.class);
+      Class<? extends OutputCommitter> outputCommitter =
+        hConf.getClass(OUTPUT_COMMITTER_CLASS, TableOutputCommitter.class, OutputCommitter.class);
       return ReflectionUtils.newInstance(outputCommitter);
     } catch (Exception e) {
       throw new IOException("Could not create the configured OutputCommitter", e);

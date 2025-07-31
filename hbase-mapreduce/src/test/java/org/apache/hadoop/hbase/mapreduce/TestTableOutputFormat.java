@@ -135,25 +135,25 @@ public class TestTableOutputFormat {
     // 1. Verify it returns the default committer when the property is not set.
     conf.unset(TableOutputFormat.OUTPUT_COMMITTER_CLASS);
     tableOutputFormat.setConf(conf);
-    Assert.assertEquals("Should use default committer",
-      TableOutputCommitter.class,
+    Assert.assertEquals("Should use default committer", TableOutputCommitter.class,
       tableOutputFormat.getOutputCommitter(context).getClass());
 
     // 2. Verify it returns the custom committer when the property is set.
     conf.set(TableOutputFormat.OUTPUT_COMMITTER_CLASS, DummyCommitter.class.getName());
     tableOutputFormat.setConf(conf);
-    Assert.assertEquals("Should use custom committer",
-      DummyCommitter.class,
+    Assert.assertEquals("Should use custom committer", DummyCommitter.class,
       tableOutputFormat.getOutputCommitter(context).getClass());
   }
 
   // Simple dummy committer for testing
   public static class DummyCommitter extends OutputCommitter {
     @Override
-    public void setupJob(JobContext jobContext) {}
+    public void setupJob(JobContext jobContext) {
+    }
 
     @Override
-    public void setupTask(TaskAttemptContext taskContext) {}
+    public void setupTask(TaskAttemptContext taskContext) {
+    }
 
     @Override
     public boolean needsTaskCommit(TaskAttemptContext taskContext) {
@@ -161,9 +161,11 @@ public class TestTableOutputFormat {
     }
 
     @Override
-    public void commitTask(TaskAttemptContext taskContext) {}
+    public void commitTask(TaskAttemptContext taskContext) {
+    }
 
     @Override
-    public void abortTask(TaskAttemptContext taskContext) {}
+    public void abortTask(TaskAttemptContext taskContext) {
+    }
   }
 }
