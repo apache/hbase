@@ -4560,18 +4560,21 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       .serverName(serverName).call();
   }
 
+  private CompletableFuture<Long> internalRefershHFiles(RefreshHFilesRequest request) {
+    return this.<Long> newMasterCaller()
+      .action((controller, stub) -> this.<RefreshHFilesRequest, RefreshHFilesResponse, Long> call(
+        controller, stub, request, MasterService.Interface::refreshHFiles,
+        RefreshHFilesResponse::getProcId))
+      .call();
+  }
+
   @Override
   public CompletableFuture<Long> refreshHFiles(final TableName tableName) {
     // Request builder
     RefreshHFilesRequest.Builder request = RefreshHFilesRequest.newBuilder();
     request.setTableName(ProtobufUtil.toProtoTableName(tableName));
-    // Set nonce
-    // Master Caller
-    return this.<Long> newMasterCaller()
-      .action((controller, stub) -> this.<RefreshHFilesRequest, RefreshHFilesResponse, Long> call(
-        controller, stub, request.build(), MasterService.Interface::refreshHFiles,
-        RefreshHFilesResponse::getProcId))
-      .call();
+    request.setNonceGroup(ng.getNonceGroup()).setNonce(ng.newNonce());
+    return internalRefershHFiles(request.build());
   }
 
   @Override
@@ -4579,13 +4582,8 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     // Request builder
     RefreshHFilesRequest.Builder request = RefreshHFilesRequest.newBuilder();
     request.setNamespace(namespace);
-    // Set nonce
-    // Master Caller
-    return this.<Long> newMasterCaller()
-      .action((controller, stub) -> this.<RefreshHFilesRequest, RefreshHFilesResponse, Long> call(
-        controller, stub, request.build(), MasterService.Interface::refreshHFiles,
-        RefreshHFilesResponse::getProcId))
-      .call();
+    request.setNonceGroup(ng.getNonceGroup()).setNonce(ng.newNonce());
+    return internalRefershHFiles(request.build());
   }
 
   @Override
@@ -4594,11 +4592,6 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     RefreshHFilesRequest.Builder request = RefreshHFilesRequest.newBuilder();
     // Set nonce
     request.setNonceGroup(ng.getNonceGroup()).setNonce(ng.newNonce());
-    // Master Caller
-    return this.<Long> newMasterCaller()
-      .action((controller, stub) -> this.<RefreshHFilesRequest, RefreshHFilesResponse, Long> call(
-        controller, stub, request.build(), MasterService.Interface::refreshHFiles,
-        RefreshHFilesResponse::getProcId))
-      .call();
+    return internalRefershHFiles(request.build());
   }
 }
