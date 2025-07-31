@@ -67,6 +67,9 @@ public class InfoServer {
       builder.setLogDir(logDir);
     }
     if (httpConfig.isSecure()) {
+      // We are using the Hadoop HTTP server config properties.
+      // This makes it easy to keep in sync with Hadoop's UI servers, but hard to set this
+      // separately for HBase.
       builder
         .keyPassword(HBaseConfiguration.getPassword(c, "ssl.server.keystore.keypassword", null))
         .keyStore(c.get("ssl.server.keystore.location"),
@@ -74,8 +77,12 @@ public class InfoServer {
           c.get("ssl.server.keystore.type", "jks"))
         .trustStore(c.get("ssl.server.truststore.location"),
           HBaseConfiguration.getPassword(c, "ssl.server.truststore.password", null),
-          c.get("ssl.server.truststore.type", "jks"));
-      builder.excludeCiphers(c.get("ssl.server.exclude.cipher.list"));
+          c.get("ssl.server.truststore.type", "jks"))
+        // The ssl.server.*.protocols properties do not exist in Hadoop at the time of writing.
+        .setIncludeProtocols(c.get("ssl.server.include.protocols"))
+        .setExcludeProtocols(c.get("ssl.server.exclude.protocols"))
+        .setIncludeCiphers(c.get("ssl.server.include.cipher.list"))
+        .setExcludeCiphers(c.get("ssl.server.exclude.cipher.list"));
     }
 
     final String httpAuthType = c.get(HttpServer.HTTP_UI_AUTHENTICATION, "").toLowerCase();
