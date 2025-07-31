@@ -3680,16 +3680,13 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
     // TODO Check if table exists otherwise send exception.
     try {
       Long procId;
-      if (request.hasTableName()) { // if we have provided table name as parameter
-        // refreshHfiles for the given user tables
+      if (request.hasTableName()) {
         procId = server.refreshHfiles(ProtobufUtil.toTableName(request.getTableName()),
           request.getNonceGroup(), request.getNonce());
-      } else if (request.hasNamespace()) { // if we have provided namespace as parameter
-        // refreshHfiles for all the user tables under the namespace
+      } else if (request.hasNamespace()) {
         procId =
           server.refreshHfiles(request.getNamespace(), request.getNonceGroup(), request.getNonce());
-      } else { // When no parameter is provided
-        // refreshHfiles for all the user tables in HBase
+      } else {
         procId = server.refreshHfiles(request.getNonceGroup(), request.getNonce());
       }
       return MasterProtos.RefreshHFilesResponse.newBuilder().setProcId(procId).build();

@@ -37,7 +37,7 @@ public class RefreshHFilesCallable extends BaseRSProcedureCallable {
   @Override
   protected void doCall() throws Exception {
     HRegion region = rs.getRegion(regionInfo.getEncodedName());
-    LOG.debug("Starting refrehHfiles operation on region {}", region);
+    LOG.debug("Starting refreshHfiles operation on region {}", region);
 
     try {
       for (Store store : region.getStores()) {

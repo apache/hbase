@@ -81,29 +81,29 @@ public class RefreshHFilesTableProcedure
 
   @Override
   protected void rollbackState(MasterProcedureEnv env,
-    RefreshHFilesTableProcedureState RefreshHFilesTableProcedureState)
+    RefreshHFilesTableProcedureState state)
     throws IOException, InterruptedException {
     // Refresh HFiles is idempotent operation hence rollback is not needed
     LOG.trace("Rollback not implemented for RefreshHFilesTableProcedure state: {}",
-      RefreshHFilesTableProcedureState);
+      state);
   }
 
   @Override
   protected Flow executeFromState(MasterProcedureEnv env,
-    RefreshHFilesTableProcedureState RefreshHFilesTableProcedureState) {
+    RefreshHFilesTableProcedureState state) {
     LOG.info("Executing RefreshHFilesTableProcedureState state: {}",
-      RefreshHFilesTableProcedureState);
+      state);
 
     try {
-      return switch (RefreshHFilesTableProcedureState) {
+      return switch (state) {
         case REFRESH_HFILES_PREPARE -> prepare(env);
         case REFRESH_HFILES_REFRESH_REGION -> refreshRegionHFiles(env);
         case REFRESH_HFILES_FINISH -> finish();
         default -> throw new UnsupportedOperationException(
-          "Unhandled state: " + RefreshHFilesTableProcedureState);
+          "Unhandled state: " + state);
       };
     } catch (Exception ex) {
-      LOG.error("Error in RefreshHFilesTableProcedure state {}", RefreshHFilesTableProcedureState,
+      LOG.error("Error in RefreshHFilesTableProcedure state {}", state,
         ex);
       setFailure("RefreshHFilesTableProcedure", ex);
       return Flow.NO_MORE_STATE;
