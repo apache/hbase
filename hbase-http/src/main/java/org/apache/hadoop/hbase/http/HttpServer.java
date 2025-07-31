@@ -204,7 +204,10 @@ public class HttpServer implements FilterContainer {
     private String usernameConfKey;
     private String keytabConfKey;
     private boolean needsClientAuth;
+    private String includeCiphers;
     private String excludeCiphers;
+    private String includeProtocols;
+    private String excludeProtocols;
 
     private String hostName;
     private String appDir = APP_DIR;
@@ -377,8 +380,30 @@ public class HttpServer implements FilterContainer {
       return this;
     }
 
+    @Deprecated
+    // Use setExcludeCiphers() which supports the fluent builder API
     public void excludeCiphers(String excludeCiphers) {
       this.excludeCiphers = excludeCiphers;
+    }
+
+    public Builder setExcludeCiphers(String excludeCiphers) {
+      this.excludeCiphers = excludeCiphers;
+      return this;
+    }
+
+    public Builder setIncludeCiphers(String includeCiphers) {
+      this.includeCiphers = includeCiphers;
+      return this;
+    }
+
+    public Builder setIncludeProtocols(String includeProtocols) {
+      this.includeProtocols = includeProtocols;
+      return this;
+    }
+
+    public Builder setExcludeProtocols(String excludeProtocols) {
+      this.excludeProtocols = excludeProtocols;
+      return this;
     }
 
     public HttpServer build() throws IOException {
@@ -440,6 +465,21 @@ public class HttpServer implements FilterContainer {
             sslCtxFactory.setTrustStorePath(trustStore);
             sslCtxFactory.setTrustStoreType(trustStoreType);
             sslCtxFactory.setTrustStorePassword(trustStorePassword);
+          }
+
+          if (includeProtocols != null && !includeProtocols.trim().isEmpty()) {
+            sslCtxFactory.setIncludeProtocols(StringUtils.getTrimmedStrings(includeProtocols));
+            LOG.debug("Included TLS Protocol List:" + includeProtocols);
+          }
+
+          if (excludeProtocols != null && !excludeProtocols.trim().isEmpty()) {
+            sslCtxFactory.setExcludeProtocols(StringUtils.getTrimmedStrings(excludeProtocols));
+            LOG.debug("Excluded TLS Protocol List:" + excludeProtocols);
+          }
+
+          if (includeCiphers != null && !includeCiphers.trim().isEmpty()) {
+            sslCtxFactory.setIncludeCipherSuites(StringUtils.getTrimmedStrings(includeCiphers));
+            LOG.debug("Included SSL Cipher List:" + includeCiphers);
           }
 
           if (excludeCiphers != null && !excludeCiphers.trim().isEmpty()) {
