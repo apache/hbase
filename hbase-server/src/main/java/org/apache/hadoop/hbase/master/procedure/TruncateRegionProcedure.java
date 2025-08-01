@@ -274,6 +274,11 @@ public class TruncateRegionProcedure
 
   @Override
   protected boolean holdLock(MasterProcedureEnv env) {
-    return false;
+    if (RecoverySnapshotUtils.isRecoveryEnabled(env)) {
+      // If we are to take a recovery snapshot before deleting the region we will need to allow the
+      // snapshot procedure to lock the table.
+      return false;
+    }
+    return super.holdLock(env);
   }
 }
