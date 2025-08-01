@@ -60,6 +60,8 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
   private boolean deleteColumnFamilyInModify;
   private boolean shouldCheckDescriptor;
   private boolean reopenRegions;
+  private String recoverySnapshotName;
+
   /**
    * List of column families that cannot be deleted from the hbase:meta table. They are critical to
    * cluster operation. This is a bit of an odd place to keep this list but then this is the tooling
@@ -188,10 +190,26 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
           // We cannot allow changes to region replicas when 'reopenRegions==false',
           // as this mode bypasses the state management required for modifying region replicas.
           if (reopenRegions) {
-            setNextState(ModifyTableState.MODIFY_TABLE_CLOSE_EXCESS_REPLICAS);
+            // Check if we should create a recovery snapshot for column family deletion
+            if (deleteColumnFamilyInModify && RecoverySnapshotUtils.isRecoveryEnabled(env)) {
+              setNextState(ModifyTableState.MODIFY_TABLE_SNAPSHOT);
+            } else {
+              setNextState(ModifyTableState.MODIFY_TABLE_CLOSE_EXCESS_REPLICAS);
+            }
           } else {
             setNextState(ModifyTableState.MODIFY_TABLE_UPDATE_TABLE_DESCRIPTOR);
           }
+          break;
+        case MODIFY_TABLE_SNAPSHOT:
+          // Create recovery snapshot procedure as child procedure
+          recoverySnapshotName = RecoverySnapshotUtils.generateSnapshotName(getTableName());
+          SnapshotProcedure snapshotProcedure = RecoverySnapshotUtils.createSnapshotProcedure(env,
+            getTableName(), recoverySnapshotName);
+          // Submit snapshot procedure as child procedure
+          addChildProcedure(snapshotProcedure);
+          LOG.debug("Creating recovery snapshot {} for table {} before column deletion",
+            recoverySnapshotName, getTableName());
+          setNextState(ModifyTableState.MODIFY_TABLE_CLOSE_EXCESS_REPLICAS);
           break;
         case MODIFY_TABLE_CLOSE_EXCESS_REPLICAS:
           if (isTableEnabled(env)) {
@@ -275,24 +293,35 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
   @Override
   protected void rollbackState(final MasterProcedureEnv env, final ModifyTableState state)
     throws IOException {
-    if (
-      state == ModifyTableState.MODIFY_TABLE_PREPARE
-        || state == ModifyTableState.MODIFY_TABLE_PRE_OPERATION
-    ) {
-      // nothing to rollback, pre-modify is just checks.
-      // TODO: coprocessor rollback semantic is still undefined.
-      return;
+    switch (state) {
+      case MODIFY_TABLE_PREPARE:
+      case MODIFY_TABLE_PRE_OPERATION:
+        // Nothing to roll back.
+        // TODO: Coprocessor rollback semantic is still undefined.
+        break;
+      case MODIFY_TABLE_SNAPSHOT:
+        // Handle recovery snapshot rollback. There is no DeleteSnapshotProcedure as such to use
+        // here directly as a child procedure, so we call a utility method to delete the snapshot
+        // which uses the SnapshotManager to delete the snapshot.
+        if (recoverySnapshotName != null) {
+          RecoverySnapshotUtils.deleteRecoverySnapshot(env, recoverySnapshotName, getTableName());
+          recoverySnapshotName = null;
+        }
+        break;
+      default:
+        // Modify from other states doesn't have a rollback. The execution will succeed, at some
+        // point.
+        throw new UnsupportedOperationException("unhandled state=" + state);
     }
-
-    // The delete doesn't have a rollback. The execution will succeed, at some point.
-    throw new UnsupportedOperationException("unhandled state=" + state);
   }
 
   @Override
   protected boolean isRollbackSupported(final ModifyTableState state) {
     switch (state) {
-      case MODIFY_TABLE_PRE_OPERATION:
       case MODIFY_TABLE_PREPARE:
+      case MODIFY_TABLE_PRE_OPERATION:
+      case MODIFY_TABLE_SNAPSHOT:
+      case MODIFY_TABLE_CLOSE_EXCESS_REPLICAS:
         return true;
       default:
         return false;
@@ -335,6 +364,10 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
         .setUnmodifiedTableSchema(ProtobufUtil.toTableSchema(unmodifiedTableDescriptor));
     }
 
+    if (recoverySnapshotName != null) {
+      modifyTableMsg.setSnapshotName(recoverySnapshotName);
+    }
+
     serializer.serialize(modifyTableMsg.build());
   }
 
@@ -355,6 +388,10 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
     if (modifyTableMsg.hasUnmodifiedTableSchema()) {
       unmodifiedTableDescriptor =
         ProtobufUtil.toTableDescriptor(modifyTableMsg.getUnmodifiedTableSchema());
+    }
+
+    if (modifyTableMsg.hasSnapshotName()) {
+      recoverySnapshotName = modifyTableMsg.getSnapshotName();
     }
   }
 
