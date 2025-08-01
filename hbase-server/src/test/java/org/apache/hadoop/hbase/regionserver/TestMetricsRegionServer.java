@@ -336,20 +336,20 @@ public class TestMetricsRegionServer {
     rsm.recordThrottleException(RpcThrottlingException.Type.NumRequestsExceeded, "alice", "users");
 
     // Verify the specific counters were created and have correct values using HELPER
-    HELPER.assertCounter("Type_NumRequestsExceeded_User_alice_Table_users", 3L, serverSource);
-    HELPER.assertCounter("Type_WriteSizeExceeded_User_bob_Table_logs", 1L, serverSource);
-    HELPER.assertCounter("Type_ReadSizeExceeded_User_charlie_Table_metadata", 1L, serverSource);
+    HELPER.assertCounter("RpcThrottlingException_Type_NumRequestsExceeded_User_alice_Table_users", 3L, serverSource);
+    HELPER.assertCounter("RpcThrottlingException_Type_WriteSizeExceeded_User_bob_Table_logs", 1L, serverSource);
+    HELPER.assertCounter("RpcThrottlingException_Type_ReadSizeExceeded_User_charlie_Table_metadata", 1L, serverSource);
 
     // Test metric name sanitization through the integration
     rsm.recordThrottleException(RpcThrottlingException.Type.RequestSizeExceeded,
       "user.with@special", "table:with,problematic=chars");
     HELPER.assertCounter(
-      "Type_RequestSizeExceeded_User_user.with@special_Table_table_with_problematic_chars", 1L,
+      "RpcThrottlingException_Type_RequestSizeExceeded_User_user.with@special_Table_table_with_problematic_chars", 1L,
       serverSource);
 
     // Test null handling through the integration
     rsm.recordThrottleException(RpcThrottlingException.Type.ReadCapacityUnitExceeded, null, null);
-    HELPER.assertCounter("Type_ReadCapacityUnitExceeded_User_unknown_Table_unknown", 1L,
+    HELPER.assertCounter("RpcThrottlingException_Type_ReadCapacityUnitExceeded_User_unknown_Table_unknown", 1L,
       serverSource);
   }
 }
