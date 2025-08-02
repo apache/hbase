@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.replication;
 
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -107,15 +106,12 @@ public class TestReplicationWALEntryFilters {
     Entry userEntryEmpty = createEntry(null);
 
     // no scopes
-    // now we will not filter out entries without a replication scope since serial replication still
-    // need the sequence id, but the cells will all be filtered out.
-    assertTrue(filter.filter(userEntry).getEdit().isEmpty());
+    assertNull(filter.filter(userEntry));
 
     // empty scopes
-    // ditto
     TreeMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     userEntry = createEntry(scopes, a, b);
-    assertTrue(filter.filter(userEntry).getEdit().isEmpty());
+    assertNull(filter.filter(userEntry));
 
     // different scope
     scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
