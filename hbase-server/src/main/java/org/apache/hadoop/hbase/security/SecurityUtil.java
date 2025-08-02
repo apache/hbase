@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.security;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
@@ -44,5 +46,15 @@ public class SecurityUtil {
   public static String getPrincipalWithoutRealm(final String principal) {
     int i = principal.indexOf("@");
     return (i > -1) ? principal.substring(0, i) : principal;
+  }
+
+  /**
+   * From the given configuration, determine if key management is enabled.
+   * @param conf the configuration to check
+   * @return true if key management is enabled
+   */
+  public static boolean isKeyManagementEnabled(Configuration conf) {
+    return conf.getBoolean(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY,
+      HConstants.CRYPTO_MANAGED_KEYS_DEFAULT_ENABLED);
   }
 }
