@@ -65,7 +65,8 @@ public class TestMetricsThrottleExceptions {
       "alice", "users");
 
     // Verify the counter exists and has correct value
-    Optional<Metric> metric = testRegistry.get("RpcThrottlingException_Type_NumRequestsExceeded_User_alice_Table_users");
+    Optional<Metric> metric =
+      testRegistry.get("RpcThrottlingException_Type_NumRequestsExceeded_User_alice_Table_users");
     assertTrue("Counter metric should be present", metric.isPresent());
     assertTrue("Metric should be a counter", metric.get() instanceof Counter);
 
@@ -89,9 +90,12 @@ public class TestMetricsThrottleExceptions {
       "metadata");
 
     // Verify all three counters were created
-    verifyCounter(testRegistry, "RpcThrottlingException_Type_NumRequestsExceeded_User_alice_Table_users", 1);
-    verifyCounter(testRegistry, "RpcThrottlingException_Type_WriteSizeExceeded_User_bob_Table_logs", 1);
-    verifyCounter(testRegistry, "RpcThrottlingException_Type_ReadSizeExceeded_User_charlie_Table_metadata", 1);
+    verifyCounter(testRegistry,
+      "RpcThrottlingException_Type_NumRequestsExceeded_User_alice_Table_users", 1);
+    verifyCounter(testRegistry, "RpcThrottlingException_Type_WriteSizeExceeded_User_bob_Table_logs",
+      1);
+    verifyCounter(testRegistry,
+      "RpcThrottlingException_Type_ReadSizeExceeded_User_charlie_Table_metadata", 1);
   }
 
   @Test
@@ -126,7 +130,8 @@ public class TestMetricsThrottleExceptions {
       "user.name@company", "my-table-prod");
 
     // Verify meaningful characters are preserved, only JMX-problematic chars are replaced
-    String expectedMetricName = "RpcThrottlingException_Type_WriteSizeExceeded_User_user.name@company_Table_my-table-prod";
+    String expectedMetricName =
+      "RpcThrottlingException_Type_WriteSizeExceeded_User_user.name@company_Table_my-table-prod";
     verifyCounter(testRegistry, expectedMetricName, 1);
 
     // Test that JMX-problematic characters are sanitized
@@ -153,9 +158,12 @@ public class TestMetricsThrottleExceptions {
       "users");
 
     // Verify null values are replaced with "unknown"
-    verifyCounter(testRegistry, "RpcThrottlingException_Type_NumRequestsExceeded_User_unknown_Table_unknown", 1);
-    verifyCounter(testRegistry, "RpcThrottlingException_Type_WriteSizeExceeded_User_alice_Table_unknown", 1);
-    verifyCounter(testRegistry, "RpcThrottlingException_Type_ReadSizeExceeded_User_unknown_Table_users", 1);
+    verifyCounter(testRegistry,
+      "RpcThrottlingException_Type_NumRequestsExceeded_User_unknown_Table_unknown", 1);
+    verifyCounter(testRegistry,
+      "RpcThrottlingException_Type_WriteSizeExceeded_User_alice_Table_unknown", 1);
+    verifyCounter(testRegistry,
+      "RpcThrottlingException_Type_ReadSizeExceeded_User_unknown_Table_users", 1);
   }
 
   @Test
@@ -199,7 +207,8 @@ public class TestMetricsThrottleExceptions {
     assertEquals("No exceptions should occur during concurrent access", 0, exceptions.get());
 
     // Verify the final counter value
-    verifyCounter(testRegistry, "RpcThrottlingException_Type_NumRequestsExceeded_User_alice_Table_users",
+    verifyCounter(testRegistry,
+      "RpcThrottlingException_Type_NumRequestsExceeded_User_alice_Table_users",
       numThreads * incrementsPerThread);
 
     executor.shutdown();
@@ -221,10 +230,13 @@ public class TestMetricsThrottleExceptions {
       "user_123", "test_table_v2");
 
     // Verify common patterns are preserved correctly (note: colon gets replaced with underscore)
-    verifyCounter(testRegistry, "RpcThrottlingException_Type_NumRequestsExceeded_User_service-user_Table_my-app-logs", 1);
     verifyCounter(testRegistry,
-      "RpcThrottlingException_Type_WriteSizeExceeded_User_batch.process_Table_namespace_table-name", 1);
-    verifyCounter(testRegistry, "RpcThrottlingException_Type_ReadSizeExceeded_User_user_123_Table_test_table_v2", 1);
+      "RpcThrottlingException_Type_NumRequestsExceeded_User_service-user_Table_my-app-logs", 1);
+    verifyCounter(testRegistry,
+      "RpcThrottlingException_Type_WriteSizeExceeded_User_batch.process_Table_namespace_table-name",
+      1);
+    verifyCounter(testRegistry,
+      "RpcThrottlingException_Type_ReadSizeExceeded_User_user_123_Table_test_table_v2", 1);
   }
 
   @Test
@@ -255,7 +267,8 @@ public class TestMetricsThrottleExceptions {
 
     // Verify all counters were created with correct values
     for (RpcThrottlingException.Type throttleType : throttleTypes) {
-      String expectedMetricName = "RpcThrottlingException_Type_" + throttleType.name() + "_User_testuser_Table_testtable";
+      String expectedMetricName =
+        "RpcThrottlingException_Type_" + throttleType.name() + "_User_testuser_Table_testtable";
       verifyCounter(testRegistry, expectedMetricName, 1);
     }
   }
@@ -277,8 +290,10 @@ public class TestMetricsThrottleExceptions {
       "table2");
 
     // Verify both counters exist in the shared registry
-    verifyCounter(testRegistry, "RpcThrottlingException_Type_NumRequestsExceeded_User_alice_Table_table1", 1);
-    verifyCounter(testRegistry, "RpcThrottlingException_Type_WriteSizeExceeded_User_bob_Table_table2", 1);
+    verifyCounter(testRegistry,
+      "RpcThrottlingException_Type_NumRequestsExceeded_User_alice_Table_table1", 1);
+    verifyCounter(testRegistry,
+      "RpcThrottlingException_Type_WriteSizeExceeded_User_bob_Table_table2", 1);
   }
 
   /**

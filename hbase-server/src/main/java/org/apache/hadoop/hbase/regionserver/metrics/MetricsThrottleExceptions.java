@@ -64,8 +64,8 @@ public class MetricsThrottleExceptions {
 
   private static String qualifyThrottleMetric(RpcThrottlingException.Type throttleType, String user,
     String table) {
-    return String.format("RpcThrottlingException_Type_%s_User_%s_Table_%s", throttleType.name(), sanitizeMetricName(user),
-      sanitizeMetricName(table));
+    return String.format("RpcThrottlingException_Type_%s_User_%s_Table_%s", throttleType.name(),
+      sanitizeMetricName(user), sanitizeMetricName(table));
   }
 
   private static String sanitizeMetricName(String name) {
