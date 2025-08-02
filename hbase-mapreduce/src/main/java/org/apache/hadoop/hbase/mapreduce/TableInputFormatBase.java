@@ -23,6 +23,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import org.apache.hadoop.hbase.HConstants;
@@ -307,14 +308,15 @@ public abstract class TableInputFormatBase extends InputFormat<ImmutableBytesWri
       splits.add(split);
       return splits;
     }
+    boolean reverseScan = scan.isReversed();
+    byte[] startRow = reverseScan ? scan.getStopRow() : scan.getStartRow();
+    byte[] stopRow = reverseScan ? scan.getStartRow() : scan.getStopRow();
     List<InputSplit> splits = new ArrayList<>(keys.getFirst().length);
     for (int i = 0; i < keys.getFirst().length; i++) {
       if (!includeRegionInSplit(keys.getFirst()[i], keys.getSecond()[i])) {
         continue;
       }
 
-      byte[] startRow = scan.getStartRow();
-      byte[] stopRow = scan.getStopRow();
       // determine if the given start an stop key fall into the region
       if (
         (startRow.length == 0 || keys.getSecond()[i].length == 0
@@ -345,13 +347,19 @@ public abstract class TableInputFormatBase extends InputFormat<ImmutableBytesWri
         // In the table input format for single table we do not need to
         // store the scan object in table split because it can be memory intensive and redundant
         // information to what is already stored in conf SCAN. See HBASE-25212
-        TableSplit split = new TableSplit(tableName, null, splitStart, splitStop, regionLocation,
-          encodedRegionName, regionSize);
+        TableSplit split = reverseScan
+          ? new TableSplit(tableName, null, splitStop, splitStart, regionLocation,
+            encodedRegionName, regionSize)
+          : new TableSplit(tableName, null, splitStart, splitStop, regionLocation,
+            encodedRegionName, regionSize);
         splits.add(split);
         if (LOG.isDebugEnabled()) {
           LOG.debug("getSplits: split -> " + i + " -> " + split);
         }
       }
+    }
+    if (reverseScan) {
+      Collections.reverse(splits);
     }
     return splits;
   }
@@ -387,34 +395,46 @@ public abstract class TableInputFormatBase extends InputFormat<ImmutableBytesWri
     byte[] startRow = ts.getStartRow();
     byte[] endRow = ts.getEndRow();
 
+    boolean reverseScan = getScan().isReversed();
     // For special case: startRow or endRow is empty
     if (startRow.length == 0 && endRow.length == 0) {
       startRow = new byte[1];
       endRow = new byte[1];
-      startRow[0] = 0;
-      endRow[0] = -1;
+      startRow[0] = reverseScan ? (byte) -1 : 0;
+      endRow[0] = reverseScan ? (byte) 0 : -1;
     }
     if (startRow.length == 0 && endRow.length != 0) {
-      startRow = new byte[1];
-      startRow[0] = 0;
+      startRow = new byte[endRow.length];
+      for (int k = 0; k < endRow.length; k++) {
+        startRow[k] = reverseScan ? (byte) -1 : 0;
+      }
     }
     if (startRow.length != 0 && endRow.length == 0) {
       endRow = new byte[startRow.length];
       for (int k = 0; k < startRow.length; k++) {
-        endRow[k] = -1;
+        endRow[k] = reverseScan ? (byte) 0 : -1;
       }
     }
 
     // Split Region into n chunks evenly
-    byte[][] splitKeys = Bytes.split(startRow, endRow, true, n - 1);
+    byte[][] splitKeys = reverseScan
+      ? Bytes.split(endRow, startRow, true, n - 1)
+      : Bytes.split(startRow, endRow, true, n - 1);
     for (int i = 0; i < splitKeys.length - 1; i++) {
       // In the table input format for single table we do not need to
       // store the scan object in table split because it can be memory intensive and redundant
       // information to what is already stored in conf SCAN. See HBASE-25212
       // notice that the regionSize parameter may be not very accurate
-      TableSplit tsplit = new TableSplit(tableName, null, splitKeys[i], splitKeys[i + 1],
-        regionLocation, encodedRegionName, regionSize / n);
+      TableSplit tsplit = reverseScan
+        ? new TableSplit(tableName, null, splitKeys[i + 1], splitKeys[i], regionLocation,
+          encodedRegionName, regionSize / n)
+        : new TableSplit(tableName, null, splitKeys[i], splitKeys[i + 1], regionLocation,
+          encodedRegionName, regionSize / n);
       res.add(tsplit);
+    }
+
+    if (reverseScan) {
+      Collections.reverse(res);
     }
     return res;
   }
