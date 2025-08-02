@@ -74,6 +74,8 @@ import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.regionserver.StoreUtils;
+import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.token.TokenUtil;
 import org.apache.hadoop.hbase.util.BloomFilterUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -753,7 +755,7 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
    * @see #REMOTE_CLUSTER_ZOOKEEPER_CLIENT_PORT_CONF_KEY
    * @see #REMOTE_CLUSTER_ZOOKEEPER_ZNODE_PARENT_CONF_KEY
    */
-  public static void configureRemoteCluster(Job job, Configuration clusterConf) {
+  public static void configureRemoteCluster(Job job, Configuration clusterConf) throws IOException {
     Configuration conf = job.getConfiguration();
 
     if (!conf.getBoolean(LOCALITY_SENSITIVE_CONF_KEY, DEFAULT_LOCALITY_SENSITIVE)) {
@@ -770,6 +772,14 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
     conf.setInt(REMOTE_CLUSTER_ZOOKEEPER_CLIENT_PORT_CONF_KEY, clientPort);
     conf.set(REMOTE_CLUSTER_ZOOKEEPER_ZNODE_PARENT_CONF_KEY, parent);
 
+    if (User.isHBaseSecurityEnabled(clusterConf)) {
+      try (Connection remoteCluster = ConnectionFactory.createConnection(clusterConf)) {
+        TokenUtil.addTokenForJob(remoteCluster, User.getCurrent(), job);
+      } catch (InterruptedException e) {
+        LOG.error("Interrupted obtaining remote cluster token.");
+        Thread.currentThread().interrupt();
+      }
+    }
     LOG.info("ZK configs for remote cluster of bulkload is configured: " + quorum + ":" + clientPort
       + "/" + parent);
   }
