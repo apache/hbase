@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.rest.filter.RestCsrfPreventionFilter;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.DNS;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.util.Strings;
@@ -126,7 +127,7 @@ public class RESTServer implements Constants {
       "\nTo run the REST server as a daemon, execute "
         + "hbase-daemon.sh start|stop rest [-i <port>] [-p <port>] [-ro]\n",
       true);
-    System.exit(exitCode);
+    ExitHandler.getInstance().exit(exitCode);
   }
 
   void addCSRFFilter(ServletContextHandler ctxHandler, Configuration conf) {
@@ -226,7 +227,7 @@ public class RESTServer implements Constants {
     if ("start".equals(command)) {
       // continue and start container
     } else if ("stop".equals(command)) {
-      System.exit(1);
+      ExitHandler.getInstance().exit(1);
     } else {
       printUsageAndExit(options, 1);
     }
@@ -473,7 +474,7 @@ public class RESTServer implements Constants {
       server.join();
     } catch (Exception e) {
       LOG.error(HBaseMarkers.FATAL, "Failed to start server", e);
-      System.exit(1);
+      ExitHandler.getInstance().exit(1);
     }
 
     LOG.info("***** STOPPING service '" + RESTServer.class.getSimpleName() + "' *****");

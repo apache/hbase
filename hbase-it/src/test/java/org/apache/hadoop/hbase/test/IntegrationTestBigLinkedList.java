@@ -81,6 +81,7 @@ import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.hbase.util.Random64;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -1614,7 +1615,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
         System.err.println();
         HelpFormatter formatter = new HelpFormatter();
         formatter.printHelp(getClass().getSimpleName(), options);
-        System.exit(-1);
+        ExitHandler.getInstance().exit(-1);
       }
 
       Connection connection = ConnectionFactory.createConnection(getConf());
@@ -1737,7 +1738,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
         System.err.println();
         HelpFormatter formatter = new HelpFormatter();
         formatter.printHelp(getClass().getSimpleName(), options);
-        System.exit(-1);
+        ExitHandler.getInstance().exit(-1);
       }
 
       long maxQueries = Long.MAX_VALUE;
@@ -1994,6 +1995,6 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
     Configuration conf = HBaseConfiguration.create();
     IntegrationTestingUtility.setUseDistributedCluster(conf);
     int ret = ToolRunner.run(conf, new IntegrationTestBigLinkedList(), args);
-    System.exit(ret);
+    ExitHandler.getInstance().exit(ret);
   }
 }
