@@ -67,6 +67,7 @@ public class DeleteTableProcedure extends AbstractStateMachineTableProcedure<Del
   private List<RegionInfo> regions;
   private TableName tableName;
   private RetryCounter retryCounter;
+  private String recoverySnapshotName;
 
   public DeleteTableProcedure() {
     // Required by the Procedure framework to create the procedure on replay
@@ -110,6 +111,22 @@ public class DeleteTableProcedure extends AbstractStateMachineTableProcedure<Del
           // Call coprocessors
           preDelete(env);
 
+          // Check if we should create a recover snapshot
+          if (RecoverySnapshotUtils.isRecoveryEnabled(env)) {
+            setNextState(DeleteTableState.DELETE_TABLE_SNAPSHOT);
+          } else {
+            setNextState(DeleteTableState.DELETE_TABLE_CLEAR_FS_LAYOUT);
+          }
+          break;
+        case DELETE_TABLE_SNAPSHOT:
+          // Create recovery snapshot procedure as child procedure
+          recoverySnapshotName = RecoverySnapshotUtils.generateSnapshotName(getTableName());
+          SnapshotProcedure snapshotProcedure = RecoverySnapshotUtils.createSnapshotProcedure(env,
+            getTableName(), recoverySnapshotName);
+          // Submit snapshot procedure as child procedure
+          addChildProcedure(snapshotProcedure);
+          LOG.debug("Creating recovery snapshot {} for table {} before deletion",
+            recoverySnapshotName, getTableName());
           setNextState(DeleteTableState.DELETE_TABLE_CLEAR_FS_LAYOUT);
           break;
         case DELETE_TABLE_CLEAR_FS_LAYOUT:
@@ -171,22 +188,34 @@ public class DeleteTableProcedure extends AbstractStateMachineTableProcedure<Del
 
   @Override
   protected void rollbackState(final MasterProcedureEnv env, final DeleteTableState state) {
-    if (state == DeleteTableState.DELETE_TABLE_PRE_OPERATION) {
-      // nothing to rollback, pre-delete is just table-state checks.
-      // We can fail if the table does not exist or is not disabled.
-      // TODO: coprocessor rollback semantic is still undefined.
-      releaseSyncLatch();
-      return;
+    switch (state) {
+      case DELETE_TABLE_PRE_OPERATION:
+        // nothing to rollback, pre-delete is just table-state checks.
+        // We can fail if the table does not exist or is not disabled.
+        // TODO: coprocessor rollback semantic is still undefined.
+        releaseSyncLatch();
+        return;
+      case DELETE_TABLE_SNAPSHOT:
+        // Handle recovery snapshot rollback. There is no DeleteSnapshotProcedure as such to use
+        // here directly as a child procedure, so we call a utility method to delete the snapshot
+        // which uses the SnapshotManager to delete the snapshot.
+        if (recoverySnapshotName != null) {
+          RecoverySnapshotUtils.deleteRecoverySnapshot(env, recoverySnapshotName, getTableName());
+          recoverySnapshotName = null;
+        }
+        return;
+      default:
+        // Delete from other states doesn't have a rollback. The execution will succeed, at some
+        // point.
+        throw new UnsupportedOperationException("unhandled state=" + state);
     }
-
-    // The delete doesn't have a rollback. The execution will succeed, at some point.
-    throw new UnsupportedOperationException("unhandled state=" + state);
   }
 
   @Override
   protected boolean isRollbackSupported(final DeleteTableState state) {
     switch (state) {
       case DELETE_TABLE_PRE_OPERATION:
+      case DELETE_TABLE_SNAPSHOT:
         return true;
       default:
         return false;
@@ -236,6 +265,9 @@ public class DeleteTableProcedure extends AbstractStateMachineTableProcedure<Del
         state.addRegionInfo(ProtobufUtil.toRegionInfo(hri));
       }
     }
+    if (recoverySnapshotName != null) {
+      state.setSnapshotName(recoverySnapshotName);
+    }
     serializer.serialize(state.build());
   }
 
@@ -254,6 +286,9 @@ public class DeleteTableProcedure extends AbstractStateMachineTableProcedure<Del
       for (HBaseProtos.RegionInfo hri : state.getRegionInfoList()) {
         regions.add(ProtobufUtil.toRegionInfo(hri));
       }
+    }
+    if (state.hasSnapshotName()) {
+      recoverySnapshotName = state.getSnapshotName();
     }
   }
 

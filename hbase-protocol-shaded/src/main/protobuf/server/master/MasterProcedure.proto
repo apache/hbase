@@ -77,6 +77,7 @@ enum ModifyTableState {
   MODIFY_TABLE_CLOSE_EXCESS_REPLICAS = 8;
   MODIFY_TABLE_ASSIGN_NEW_REPLICAS = 9;
   MODIFY_TABLE_SYNC_ERASURE_CODING_POLICY = 10;
+  MODIFY_TABLE_SNAPSHOT = 11;
 }
 
 message ModifyTableStateData {
@@ -86,6 +87,7 @@ message ModifyTableStateData {
   required bool delete_column_family_in_modify = 4;
   optional bool should_check_descriptor = 5;
   optional bool reopen_regions = 6;
+  optional string snapshot_name = 7;
 }
 
 enum TruncateTableState {
@@ -96,6 +98,7 @@ enum TruncateTableState {
   TRUNCATE_TABLE_ADD_TO_META = 5;
   TRUNCATE_TABLE_ASSIGN_REGIONS = 6;
   TRUNCATE_TABLE_POST_OPERATION = 7;
+  TRUNCATE_TABLE_SNAPSHOT = 8;
 }
 
 message TruncateTableStateData {
@@ -104,6 +107,7 @@ message TruncateTableStateData {
   optional TableName table_name = 3;
   optional TableSchema table_schema = 4;
   repeated RegionInfo region_info = 5;
+  optional string snapshot_name = 6;
 }
 
 enum TruncateRegionState {
@@ -112,6 +116,13 @@ enum TruncateRegionState {
   TRUNCATE_REGION_REMOVE = 3;
   TRUNCATE_REGION_MAKE_ONLINE = 4;
   TRUNCATE_REGION_POST_OPERATION = 5;
+  TRUNCATE_REGION_SNAPSHOT = 6;
+}
+
+message TruncateRegionStateData {
+  required UserInformation user_info = 1;
+  required RegionInfo region_info = 2;
+  optional string snapshot_name = 3;
 }
 
 enum DeleteTableState {
@@ -121,12 +132,14 @@ enum DeleteTableState {
   DELETE_TABLE_UPDATE_DESC_CACHE = 4;
   DELETE_TABLE_UNASSIGN_REGIONS = 5;
   DELETE_TABLE_POST_OPERATION = 6;
+  DELETE_TABLE_SNAPSHOT = 7;
 }
 
 message DeleteTableStateData {
   required UserInformation user_info = 1;
   required TableName table_name = 2;
   repeated RegionInfo region_info = 3;
+  optional string snapshot_name = 4;
 }
 
 enum CreateNamespaceState {
