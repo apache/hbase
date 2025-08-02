@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.regionserver.CreateStoreFileWriterParams;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -146,4 +147,10 @@ public interface StoreFileTracker {
   String createFromHFileLink(final String hfileName, final boolean createBackRef)
     throws IOException;
 
+  /**
+   * Closes and archives the specified store files from the specified family.
+   * @param storeFiles set of store files to remove
+   * @throws IOException if the archiving fails
+   */
+  void removeStoreFiles(List<HStoreFile> storeFiles) throws IOException;
 }
