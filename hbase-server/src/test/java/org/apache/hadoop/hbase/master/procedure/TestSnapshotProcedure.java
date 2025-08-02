@@ -27,6 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.SnapshotType;
 import org.apache.hadoop.hbase.client.Table;
@@ -72,6 +73,7 @@ public class TestSnapshotProcedure {
   protected String SNAPSHOT_NAME;
   protected SnapshotDescription snapshot;
   protected SnapshotProtos.SnapshotDescription snapshotProto;
+  protected Admin admin;
 
   public static final class DelaySnapshotProcedure extends SnapshotProcedure {
     public DelaySnapshotProcedure() {
@@ -109,6 +111,7 @@ public class TestSnapshotProcedure {
     config.setInt(RemoteProcedureDispatcher.DISPATCH_MAX_QUEUE_SIZE_CONF_KEY, 128);
     TEST_UTIL.startMiniCluster(3);
     master = TEST_UTIL.getHBaseCluster().getMaster();
+    admin = TEST_UTIL.getAdmin();
     TABLE_NAME = TableName.valueOf(Bytes.toBytes("SPTestTable"));
     CF = Bytes.toBytes("cf");
     SNAPSHOT_NAME = "SnapshotProcedureTest";
