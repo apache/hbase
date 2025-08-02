@@ -23,8 +23,10 @@ import java.lang.management.ManagementFactory;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import javax.servlet.DispatcherType;
 import org.apache.commons.lang3.ArrayUtils;
@@ -57,7 +59,11 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.HelpFormatter;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.Options;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.ParseException;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.PosixParser;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.ee8.servlet.FilterHolder;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.ee8.servlet.ServletContextHandler;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.ee8.servlet.ServletHolder;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.http.HttpVersion;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.http.UriCompliance;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.jmx.MBeanContainer;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.HttpConfiguration;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.HttpConnectionFactory;
@@ -65,9 +71,6 @@ import org.apache.hbase.thirdparty.org.eclipse.jetty.server.SecureRequestCustomi
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.Server;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.ServerConnector;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.SslConnectionFactory;
-import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.FilterHolder;
-import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.ServletContextHandler;
-import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.ServletHolder;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.apache.hbase.thirdparty.org.glassfish.jersey.server.ResourceConfig;
@@ -287,6 +290,13 @@ public class RESTServer implements Constants {
     httpConfig.setSendServerVersion(false);
     httpConfig.setSendDateHeader(false);
 
+    // In Jetty 12, ambiguous path separators, suspicious path characters, and ambiguous empty
+    // segments are considered violations of the URI specification and hence are not allowed.
+    // Refer to https://github.com/jetty/jetty.project/issues/11890#issuecomment-2156449534
+    // We must set a URI compliance to allow for this violation so that client requests are not
+    // automatically rejected. Our rest endpoints rely on this behavior to handle encoded uri paths.
+    setUriComplianceRules(httpConfig);
+
     ServerConnector serverConnector;
     boolean isSecure = false;
     if (conf.getBoolean(REST_SSL_ENABLED, false)) {
@@ -398,6 +408,14 @@ public class RESTServer implements Constants {
     }
     // start server
     server.start();
+  }
+
+  private static void setUriComplianceRules(HttpConfiguration httpConfig) {
+    Set<UriCompliance.Violation> complianceViolationSet = new HashSet<>();
+    complianceViolationSet.add(UriCompliance.Violation.AMBIGUOUS_PATH_SEPARATOR);
+    complianceViolationSet.add(UriCompliance.Violation.SUSPICIOUS_PATH_CHARACTERS);
+    complianceViolationSet.add(UriCompliance.Violation.AMBIGUOUS_EMPTY_SEGMENT);
+    httpConfig.setUriCompliance(UriCompliance.from(complianceViolationSet));
   }
 
   private static String getHostName(Configuration conf) throws UnknownHostException {

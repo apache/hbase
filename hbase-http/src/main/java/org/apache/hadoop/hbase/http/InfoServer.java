@@ -29,7 +29,7 @@ import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.net.HostAndPort;
-import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.ServletHolder;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.ee8.servlet.ServletHolder;
 
 /**
  * Create a Jetty embedded server to answer http requests. The primary goal is to serve up status

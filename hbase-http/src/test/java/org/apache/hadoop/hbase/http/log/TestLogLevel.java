@@ -235,7 +235,10 @@ public class TestLogLevel {
    * @throws Exception if unable to create or start a Jetty server
    */
   private HttpServer createServer(String protocol, boolean isSpnego) throws Exception {
-    HttpServer.Builder builder = new HttpServer.Builder().setName("..")
+    // Changed to "" as ".." moves it a steps back in path because the path is relative to the
+    // current working directory. throws "java.lang.IllegalArgumentException: Base Resource is not
+    // valid: hbase-http/target/test-classes/static" as it is not able to find the static folder.
+    HttpServer.Builder builder = new HttpServer.Builder().setName("")
       .addEndpoint(new URI(protocol + "://localhost:0")).setFindPort(true).setConf(serverConf);
     if (isSpnego) {
       // Set up server Kerberos credentials.

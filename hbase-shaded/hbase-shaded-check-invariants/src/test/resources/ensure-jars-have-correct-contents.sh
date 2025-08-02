@@ -96,6 +96,8 @@ allowed_expr+="|^PropertyList-1.0.dtd$"
 # Shaded jetty resources
 allowed_expr+="|^about.html$"
 allowed_expr+="|^jetty-dir.css$"
+# Required by jetty 12 on ee8
+allowed_expr="(|^javax/$)"
 # Coming from Guava, see https://github.com/google/guava/commit/2cc8c5eddb587db3ac12dacdd5563e79a4681ec4
 allowed_expr+="|^org/jspecify/$|^org/jspecify/annotations/$|^org/jspecify/annotations/.*\.class$"
 

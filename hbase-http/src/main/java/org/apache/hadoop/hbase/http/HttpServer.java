@@ -72,6 +72,12 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.ee8.servlet.DefaultServlet;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.ee8.servlet.FilterHolder;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.ee8.servlet.FilterMapping;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.ee8.servlet.ServletContextHandler;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.ee8.servlet.ServletHolder;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.ee8.webapp.WebAppContext;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.http.HttpVersion;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.Handler;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.HttpConfiguration;
@@ -84,18 +90,10 @@ import org.apache.hbase.thirdparty.org.eclipse.jetty.server.SslConnectionFactory
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.SymlinkAllowedResourceAliasChecker;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.handler.ContextHandlerCollection;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.handler.ErrorHandler;
-import org.apache.hbase.thirdparty.org.eclipse.jetty.server.handler.HandlerCollection;
-import org.apache.hbase.thirdparty.org.eclipse.jetty.server.handler.RequestLogHandler;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.handler.gzip.GzipHandler;
-import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.DefaultServlet;
-import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.FilterHolder;
-import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.FilterMapping;
-import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.ServletContextHandler;
-import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.ServletHolder;
-import org.apache.hbase.thirdparty.org.eclipse.jetty.util.MultiException;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.util.ExceptionUtil;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.util.thread.QueuedThreadPool;
-import org.apache.hbase.thirdparty.org.eclipse.jetty.webapp.WebAppContext;
 import org.apache.hbase.thirdparty.org.glassfish.jersey.server.ResourceConfig;
 import org.apache.hbase.thirdparty.org.glassfish.jersey.servlet.ServletContainer;
 
@@ -654,23 +652,21 @@ public class HttpServer implements FilterContainer {
 
     Preconditions.checkNotNull(webAppContext);
 
-    HandlerCollection handlerCollection = new HandlerCollection();
+    Handler.Sequence handlers = new Handler.Sequence();
 
     ContextHandlerCollection contexts = new ContextHandlerCollection();
     RequestLog requestLog = HttpRequestLog.getRequestLog(name);
 
     if (requestLog != null) {
-      RequestLogHandler requestLogHandler = new RequestLogHandler();
-      requestLogHandler.setRequestLog(requestLog);
-      handlerCollection.addHandler(requestLogHandler);
+      webServer.setRequestLog(requestLog);
     }
 
     final String appDir = getWebAppsPath(name);
 
-    handlerCollection.addHandler(contexts);
-    handlerCollection.addHandler(webAppContext);
+    handlers.addHandler(contexts);
+    handlers.addHandler(webAppContext);
 
-    webServer.setHandler(handlerCollection);
+    webServer.setHandler(handlers);
 
     webAppContext.setAttribute(ADMINS_ACL, adminsAcl);
 
@@ -715,8 +711,9 @@ public class HttpServer implements FilterContainer {
     // Check if disable stack trace property is configured
     if (!conf.getBoolean(HTTP_UI_SHOW_STACKTRACE_KEY, true)) {
       // Disable stack traces for server errors in UI
-      webServer.setErrorHandler(new ErrorHandler());
-      webServer.getErrorHandler().setShowStacks(false);
+      ErrorHandler errorHandler = new ErrorHandler();
+      errorHandler.setShowStacks(false);
+      webServer.setErrorHandler(errorHandler);
       // Disable stack traces for web app errors in UI
       webAppContext.getErrorHandler().setShowStacks(false);
     }
@@ -841,7 +838,8 @@ public class HttpServer implements FilterContainer {
       if (context.getAliasChecks().stream().anyMatch(aliasCheckerClass::isInstance)) {
         LOG.debug("{} is already part of alias check list", aliasCheckerClass.getName());
       } else {
-        context.addAliasCheck(new SymlinkAllowedResourceAliasChecker(context));
+        context
+          .addAliasCheck(new SymlinkAllowedResourceAliasChecker(context.getCoreContextHandler()));
         LOG.debug("{} added to the alias check list", aliasCheckerClass.getName());
       }
       LOG.info("Serving aliases allowed for /logs context");
@@ -1258,14 +1256,14 @@ public class HttpServer implements FilterContainer {
       } catch (IOException ex) {
         LOG.info("HttpServer.start() threw a non Bind IOException", ex);
         throw ex;
-      } catch (MultiException ex) {
-        LOG.info("HttpServer.start() threw a MultiException", ex);
+      } catch (Exception ex) {
+        LOG.info("HttpServer.start() threw a Exception", ex);
         throw ex;
       }
       // Make sure there is no handler failures.
-      Handler[] handlers = webServer.getHandlers();
-      for (int i = 0; i < handlers.length; i++) {
-        if (handlers[i].isFailed()) {
+      List<Handler> handlers = webServer.getHandlers();
+      for (Handler handler : handlers) {
+        if (handler.isFailed()) {
           throw new IOException("Problem in starting http server. Server handlers failed");
         }
       }
@@ -1335,7 +1333,7 @@ public class HttpServer implements FilterContainer {
    * stop the server
    */
   public void stop() throws Exception {
-    MultiException exception = null;
+    ExceptionUtil.MultiException exception = null;
     for (ListenerInfo li : listeners) {
       if (!li.isManaged) {
         continue;
@@ -1372,9 +1370,10 @@ public class HttpServer implements FilterContainer {
 
   }
 
-  private MultiException addMultiException(MultiException exception, Exception e) {
+  private ExceptionUtil.MultiException addMultiException(ExceptionUtil.MultiException exception,
+    Exception e) {
     if (exception == null) {
-      exception = new MultiException();
+      exception = new ExceptionUtil.MultiException();
     }
     exception.add(e);
     return exception;
