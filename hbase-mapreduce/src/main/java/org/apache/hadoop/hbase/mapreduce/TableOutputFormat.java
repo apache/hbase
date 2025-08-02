@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.OutputFormat;
@@ -71,6 +72,16 @@ public class TableOutputFormat<KEY> extends OutputFormat<KEY, Mutation> implemen
    * the {@code TableOutputFormat} configuration and not the input configuration.
    */
   public static final String OUTPUT_CONF_PREFIX = "hbase.mapred.output.";
+
+  /**
+   * The configuration key for specifying a custom
+   * {@link org.apache.hadoop.mapreduce.OutputCommitter} implementation to be used by
+   * {@link TableOutputFormat}. The value for this property should be the fully qualified class name
+   * of the custom committer. If this property is not set, {@link TableOutputCommitter} will be used
+   * by default.
+   */
+  public static final String OUTPUT_COMMITTER_CLASS =
+    "hbase.mapreduce.tableoutputformat.output.committer.class";
 
   /**
    * Optional job parameter to specify a peer cluster. Used specifying remote cluster when copying
@@ -216,7 +227,18 @@ public class TableOutputFormat<KEY> extends OutputFormat<KEY, Mutation> implemen
   @Override
   public OutputCommitter getOutputCommitter(TaskAttemptContext context)
     throws IOException, InterruptedException {
-    return new TableOutputCommitter();
+    Configuration hConf = getConf();
+    if (hConf == null) {
+      hConf = context.getConfiguration();
+    }
+
+    try {
+      Class<? extends OutputCommitter> outputCommitter =
+        hConf.getClass(OUTPUT_COMMITTER_CLASS, TableOutputCommitter.class, OutputCommitter.class);
+      return ReflectionUtils.newInstance(outputCommitter);
+    } catch (Exception e) {
+      throw new IOException("Could not create the configured OutputCommitter", e);
+    }
   }
 
   @Override
