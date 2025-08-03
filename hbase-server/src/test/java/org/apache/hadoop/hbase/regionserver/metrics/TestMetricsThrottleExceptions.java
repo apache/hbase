@@ -47,6 +47,9 @@ public class TestMetricsThrottleExceptions {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestMetricsThrottleExceptions.class);
 
+  private MetricRegistry testRegistry;
+  private MetricsThrottleExceptions throttleMetrics;
+
   @After
   public void cleanup() {
     // Clean up global registries after each test to avoid interference
@@ -55,10 +58,7 @@ public class TestMetricsThrottleExceptions {
 
   @Test
   public void testBasicThrottleMetricsRecording() {
-    // Create a test registry for the metrics
-    MetricRegistryInfo registryInfo = getRegistryInfo();
-    MetricRegistry testRegistry = MetricRegistries.global().create(registryInfo);
-    MetricsThrottleExceptions throttleMetrics = new MetricsThrottleExceptions(testRegistry);
+    setupTestMetrics();
 
     // Record a throttle exception
     throttleMetrics.recordThrottleException(RpcThrottlingException.Type.NumRequestsExceeded,
@@ -76,10 +76,7 @@ public class TestMetricsThrottleExceptions {
 
   @Test
   public void testMultipleThrottleTypes() {
-    // Create a test registry for the metrics
-    MetricRegistryInfo registryInfo = getRegistryInfo();
-    MetricRegistry testRegistry = MetricRegistries.global().create(registryInfo);
-    MetricsThrottleExceptions throttleMetrics = new MetricsThrottleExceptions(testRegistry);
+    setupTestMetrics();
 
     // Record different types of throttle exceptions
     throttleMetrics.recordThrottleException(RpcThrottlingException.Type.NumRequestsExceeded,
@@ -100,10 +97,7 @@ public class TestMetricsThrottleExceptions {
 
   @Test
   public void testCounterIncrement() {
-    // Create a test registry for the metrics
-    MetricRegistryInfo registryInfo = getRegistryInfo();
-    MetricRegistry testRegistry = MetricRegistries.global().create(registryInfo);
-    MetricsThrottleExceptions throttleMetrics = new MetricsThrottleExceptions(testRegistry);
+    setupTestMetrics();
 
     // Record the same throttle exception multiple times
     String metricName = "RpcThrottlingException_Type_NumRequestsExceeded_User_alice_Table_users";
@@ -120,10 +114,7 @@ public class TestMetricsThrottleExceptions {
 
   @Test
   public void testMetricNameSanitization() {
-    // Create a test registry for the metrics
-    MetricRegistryInfo registryInfo = getRegistryInfo();
-    MetricRegistry testRegistry = MetricRegistries.global().create(registryInfo);
-    MetricsThrottleExceptions throttleMetrics = new MetricsThrottleExceptions(testRegistry);
+    setupTestMetrics();
 
     // Test that meaningful characters are preserved (hyphens, periods, etc.)
     throttleMetrics.recordThrottleException(RpcThrottlingException.Type.WriteSizeExceeded,
@@ -144,10 +135,7 @@ public class TestMetricsThrottleExceptions {
 
   @Test
   public void testNullHandling() {
-    // Create a test registry for the metrics
-    MetricRegistryInfo registryInfo = getRegistryInfo();
-    MetricRegistry testRegistry = MetricRegistries.global().create(registryInfo);
-    MetricsThrottleExceptions throttleMetrics = new MetricsThrottleExceptions(testRegistry);
+    setupTestMetrics();
 
     // Test null user and table names
     throttleMetrics.recordThrottleException(RpcThrottlingException.Type.NumRequestsExceeded, null,
@@ -168,10 +156,7 @@ public class TestMetricsThrottleExceptions {
 
   @Test
   public void testConcurrentAccess() throws InterruptedException {
-    // Create a test registry for the metrics
-    MetricRegistryInfo registryInfo = getRegistryInfo();
-    MetricRegistry testRegistry = MetricRegistries.global().create(registryInfo);
-    MetricsThrottleExceptions throttleMetrics = new MetricsThrottleExceptions(testRegistry);
+    setupTestMetrics();
 
     int numThreads = 10;
     int incrementsPerThread = 100;
@@ -216,10 +201,7 @@ public class TestMetricsThrottleExceptions {
 
   @Test
   public void testCommonTableNamePatterns() {
-    // Create a test registry for the metrics
-    MetricRegistryInfo registryInfo = getRegistryInfo();
-    MetricRegistry testRegistry = MetricRegistries.global().create(registryInfo);
-    MetricsThrottleExceptions throttleMetrics = new MetricsThrottleExceptions(testRegistry);
+    setupTestMetrics();
 
     // Test common HBase table name patterns that should be preserved
     throttleMetrics.recordThrottleException(RpcThrottlingException.Type.NumRequestsExceeded,
@@ -241,24 +223,10 @@ public class TestMetricsThrottleExceptions {
 
   @Test
   public void testAllThrottleExceptionTypes() {
-    // Create a test registry for the metrics
-    MetricRegistryInfo registryInfo = getRegistryInfo();
-    MetricRegistry testRegistry = MetricRegistries.global().create(registryInfo);
-    MetricsThrottleExceptions throttleMetrics = new MetricsThrottleExceptions(testRegistry);
+    setupTestMetrics();
 
     // Test all 13 throttle exception types from RpcThrottlingException.Type enum
-    RpcThrottlingException.Type[] throttleTypes = { RpcThrottlingException.Type.NumRequestsExceeded,
-      RpcThrottlingException.Type.RequestSizeExceeded,
-      RpcThrottlingException.Type.NumReadRequestsExceeded,
-      RpcThrottlingException.Type.NumWriteRequestsExceeded,
-      RpcThrottlingException.Type.WriteSizeExceeded, RpcThrottlingException.Type.ReadSizeExceeded,
-      RpcThrottlingException.Type.RequestCapacityUnitExceeded,
-      RpcThrottlingException.Type.ReadCapacityUnitExceeded,
-      RpcThrottlingException.Type.WriteCapacityUnitExceeded,
-      RpcThrottlingException.Type.AtomicRequestNumberExceeded,
-      RpcThrottlingException.Type.AtomicReadSizeExceeded,
-      RpcThrottlingException.Type.AtomicWriteSizeExceeded,
-      RpcThrottlingException.Type.RequestHandlerUsageTimeExceeded };
+    RpcThrottlingException.Type[] throttleTypes = RpcThrottlingException.Type.values();
 
     // Record one exception for each type
     for (RpcThrottlingException.Type throttleType : throttleTypes) {
@@ -275,9 +243,7 @@ public class TestMetricsThrottleExceptions {
 
   @Test
   public void testMultipleInstances() {
-    // Create a test registry for the metrics
-    MetricRegistryInfo registryInfo = getRegistryInfo();
-    MetricRegistry testRegistry = MetricRegistries.global().create(registryInfo);
+    setupTestMetrics();
 
     // Test that multiple instances of MetricsThrottleExceptions work with the same registry
     MetricsThrottleExceptions metrics1 = new MetricsThrottleExceptions(testRegistry);
@@ -294,6 +260,15 @@ public class TestMetricsThrottleExceptions {
       "RpcThrottlingException_Type_NumRequestsExceeded_User_alice_Table_table1", 1);
     verifyCounter(testRegistry,
       "RpcThrottlingException_Type_WriteSizeExceeded_User_bob_Table_table2", 1);
+  }
+
+  /**
+   * Helper method to set up test metrics registry and instance
+   */
+  private void setupTestMetrics() {
+    MetricRegistryInfo registryInfo = getRegistryInfo();
+    testRegistry = MetricRegistries.global().create(registryInfo);
+    throttleMetrics = new MetricsThrottleExceptions(testRegistry);
   }
 
   /**
