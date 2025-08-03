@@ -53,13 +53,11 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.hbase.thirdparty.com.google.common.cache.CacheLoader;
 import org.apache.hbase.thirdparty.com.google.common.cache.LoadingCache;
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 
 /**
  * Cache that keeps track of the quota settings for the users and tables that are interacting with
- * it. To avoid blocking the operations if the requested quota is not in cache an "empty quota" will
- * be returned and the request to fetch the quota information will be enqueued for the next refresh.
- * TODO: At the moment the Cache has a Chore that will be triggered every 5min or on cache-miss
- * events. Later the Quotas will be pushed using the notification system.
+ * it.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -99,6 +97,57 @@ public class QuotaCache implements Stoppable {
 
   private QuotaRefresherChore refreshChore;
   private boolean stopped = true;
+
+  private final Fetcher<String, UserQuotaState> userQuotaStateFetcher = new Fetcher<>() {
+    @Override
+    public Get makeGet(final String user) {
+      final Set<String> namespaces = QuotaCache.this.namespaceQuotaCache.keySet();
+      final Set<TableName> tables = QuotaCache.this.tableQuotaCache.keySet();
+      return QuotaUtil.makeGetForUserQuotas(user, tables, namespaces);
+    }
+
+    @Override
+    public Map<String, UserQuotaState> fetchEntries(final List<Get> gets) throws IOException {
+      return QuotaUtil.fetchUserQuotas(rsServices.getConnection(), gets, tableMachineQuotaFactors,
+        machineQuotaFactor);
+    }
+  };
+
+  private final Fetcher<String, QuotaState> regionServerQuotaStateFetcher = new Fetcher<>() {
+    @Override
+    public Get makeGet(final String regionServer) {
+      return QuotaUtil.makeGetForRegionServerQuotas(regionServer);
+    }
+
+    @Override
+    public Map<String, QuotaState> fetchEntries(final List<Get> gets) throws IOException {
+      return QuotaUtil.fetchRegionServerQuotas(rsServices.getConnection(), gets);
+    }
+  };
+
+  private final Fetcher<TableName, QuotaState> tableQuotaStateFetcher = new Fetcher<>() {
+    @Override
+    public Get makeGet(final TableName table) {
+      return QuotaUtil.makeGetForTableQuotas(table);
+    }
+
+    @Override
+    public Map<TableName, QuotaState> fetchEntries(final List<Get> gets) throws IOException {
+      return QuotaUtil.fetchTableQuotas(rsServices.getConnection(), gets, tableMachineQuotaFactors);
+    }
+  };
+
+  private final Fetcher<String, QuotaState> namespaceQuotaStateFetcher = new Fetcher<>() {
+    @Override
+    public Get makeGet(final String namespace) {
+      return QuotaUtil.makeGetForNamespaceQuotas(namespace);
+    }
+
+    @Override
+    public Map<String, QuotaState> fetchEntries(final List<Get> gets) throws IOException {
+      return QuotaUtil.fetchNamespaceQuotas(rsServices.getConnection(), gets, machineQuotaFactor);
+    }
+  };
 
   public QuotaCache(final RegionServerServices rsServices) {
     this.rsServices = rsServices;
@@ -153,8 +202,12 @@ public class QuotaCache implements Stoppable {
    * @return the quota info associated to specified user
    */
   public UserQuotaState getUserQuotaState(final UserGroupInformation ugi) {
-    return computeIfAbsent(userQuotaCache, getQuotaUserName(ugi),
-      () -> QuotaUtil.buildDefaultUserQuotaState(rsServices.getConfiguration(), 0L));
+    String user = getQuotaUserName(ugi);
+    return computeIfAbsent(userQuotaCache, user, () -> {
+      Optional<UserQuotaState> userQuota = fetchOne(user, userQuotaStateFetcher);
+      return userQuota
+        .orElseGet(() -> QuotaUtil.buildDefaultUserQuotaState(rsServices.getConfiguration(), 0L));
+    });
   }
 
   /**
@@ -163,7 +216,8 @@ public class QuotaCache implements Stoppable {
    * @return the limiter associated to the specified table
    */
   public QuotaLimiter getTableLimiter(final TableName table) {
-    return getQuotaState(this.tableQuotaCache, table).getGlobalLimiter();
+    return computeIfAbsent(this.tableQuotaCache, table,
+      () -> fetchOne(table, tableQuotaStateFetcher).orElse(new QuotaState())).getGlobalLimiter();
   }
 
   /**
@@ -172,7 +226,9 @@ public class QuotaCache implements Stoppable {
    * @return the limiter associated to the specified namespace
    */
   public QuotaLimiter getNamespaceLimiter(final String namespace) {
-    return getQuotaState(this.namespaceQuotaCache, namespace).getGlobalLimiter();
+    return computeIfAbsent(this.namespaceQuotaCache, namespace,
+      () -> fetchOne(namespace, namespaceQuotaStateFetcher).orElse(new QuotaState()))
+      .getGlobalLimiter();
   }
 
   /**
@@ -181,11 +237,32 @@ public class QuotaCache implements Stoppable {
    * @return the limiter associated to the specified region server
    */
   public QuotaLimiter getRegionServerQuotaLimiter(final String regionServer) {
-    return getQuotaState(this.regionServerQuotaCache, regionServer).getGlobalLimiter();
+    return computeIfAbsent(this.regionServerQuotaCache, regionServer,
+      () -> fetchOne(regionServer, regionServerQuotaStateFetcher).orElse(new QuotaState()))
+      .getGlobalLimiter();
   }
 
   protected boolean isExceedThrottleQuotaEnabled() {
     return exceedThrottleQuotaEnabled;
+  }
+
+  private <K, V extends QuotaState> Optional<V> fetchOne(final K key, final Fetcher<K, V> fetcher) {
+    Get get = fetcher.makeGet(key);
+    Map<K, V> map;
+    try {
+      map = fetcher.fetchEntries(List.of(get));
+    } catch (IOException e) {
+      LOG.warn("Unable to read quota for {}", key);
+      return Optional.empty();
+    }
+    if (map.isEmpty()) {
+      return Optional.empty();
+    } else if (map.size() > 1) {
+      throw new IllegalStateException(
+        String.format("Got multiple quotas for key %s, this is unexpected", key));
+    } else {
+      return Optional.of(Iterables.getOnlyElement(map.values()));
+    }
   }
 
   /**
@@ -210,24 +287,12 @@ public class QuotaCache implements Stoppable {
     return Bytes.toString(override);
   }
 
-  /**
-   * Returns the QuotaState requested. If the quota info is not in cache an empty one will be
-   * returned and the quota request will be enqueued for the next cache refresh.
-   */
-  private <K> QuotaState getQuotaState(final ConcurrentMap<K, QuotaState> quotasMap, final K key) {
-    return computeIfAbsent(quotasMap, key, QuotaState::new);
-  }
-
   void triggerCacheRefresh() {
     refreshChore.triggerNow();
   }
 
   void forceSynchronousCacheRefresh() {
     refreshChore.chore();
-  }
-
-  long getLastUpdate() {
-    return refreshChore.lastUpdate;
   }
 
   Map<String, QuotaState> getNamespaceQuotaCache() {
@@ -248,8 +313,6 @@ public class QuotaCache implements Stoppable {
 
   // TODO: Remove this once we have the notification bus
   private class QuotaRefresherChore extends ScheduledChore {
-    private long lastUpdate = 0;
-
     // Querying cluster metrics so often, per-RegionServer, limits horizontal scalability.
     // So we cache the results to reduce that load.
     private final RefreshableExpiringValueCache<ClusterMetrics> tableRegionStatesClusterMetrics;
@@ -307,74 +370,11 @@ public class QuotaCache implements Stoppable {
         .computeIfAbsent(QuotaTableUtil.QUOTA_REGION_SERVER_ROW_KEY, key -> new QuotaState());
 
       updateQuotaFactors();
-      fetchNamespaceQuotaState();
-      fetchTableQuotaState();
-      fetchUserQuotaState();
-      fetchRegionServerQuotaState();
+      fetch("namespace", QuotaCache.this.namespaceQuotaCache, namespaceQuotaStateFetcher);
+      fetch("table", QuotaCache.this.tableQuotaCache, tableQuotaStateFetcher);
+      fetch("user", QuotaCache.this.userQuotaCache, userQuotaStateFetcher);
+      fetch("regionServer", QuotaCache.this.regionServerQuotaCache, regionServerQuotaStateFetcher);
       fetchExceedThrottleQuota();
-      lastUpdate = EnvironmentEdgeManager.currentTime();
-    }
-
-    private void fetchNamespaceQuotaState() {
-      fetch("namespace", QuotaCache.this.namespaceQuotaCache, new Fetcher<String, QuotaState>() {
-        @Override
-        public Get makeGet(final Map.Entry<String, QuotaState> entry) {
-          return QuotaUtil.makeGetForNamespaceQuotas(entry.getKey());
-        }
-
-        @Override
-        public Map<String, QuotaState> fetchEntries(final List<Get> gets) throws IOException {
-          return QuotaUtil.fetchNamespaceQuotas(rsServices.getConnection(), gets,
-            machineQuotaFactor);
-        }
-      });
-    }
-
-    private void fetchTableQuotaState() {
-      fetch("table", QuotaCache.this.tableQuotaCache, new Fetcher<TableName, QuotaState>() {
-        @Override
-        public Get makeGet(final Map.Entry<TableName, QuotaState> entry) {
-          return QuotaUtil.makeGetForTableQuotas(entry.getKey());
-        }
-
-        @Override
-        public Map<TableName, QuotaState> fetchEntries(final List<Get> gets) throws IOException {
-          return QuotaUtil.fetchTableQuotas(rsServices.getConnection(), gets,
-            tableMachineQuotaFactors);
-        }
-      });
-    }
-
-    private void fetchUserQuotaState() {
-      final Set<String> namespaces = QuotaCache.this.namespaceQuotaCache.keySet();
-      final Set<TableName> tables = QuotaCache.this.tableQuotaCache.keySet();
-      fetch("user", QuotaCache.this.userQuotaCache, new Fetcher<String, UserQuotaState>() {
-        @Override
-        public Get makeGet(final Map.Entry<String, UserQuotaState> entry) {
-          return QuotaUtil.makeGetForUserQuotas(entry.getKey(), tables, namespaces);
-        }
-
-        @Override
-        public Map<String, UserQuotaState> fetchEntries(final List<Get> gets) throws IOException {
-          return QuotaUtil.fetchUserQuotas(rsServices.getConnection(), gets,
-            tableMachineQuotaFactors, machineQuotaFactor);
-        }
-      });
-    }
-
-    private void fetchRegionServerQuotaState() {
-      fetch("regionServer", QuotaCache.this.regionServerQuotaCache,
-        new Fetcher<String, QuotaState>() {
-          @Override
-          public Get makeGet(final Map.Entry<String, QuotaState> entry) {
-            return QuotaUtil.makeGetForRegionServerQuotas(entry.getKey());
-          }
-
-          @Override
-          public Map<String, QuotaState> fetchEntries(final List<Get> gets) throws IOException {
-            return QuotaUtil.fetchRegionServerQuotas(rsServices.getConnection(), gets);
-          }
-        });
     }
 
     private void fetchExceedThrottleQuota() {
@@ -398,7 +398,7 @@ public class QuotaCache implements Stoppable {
         if (lastQuery > 0 && (now - lastQuery) >= evictPeriod) {
           toRemove.add(entry.getKey());
         } else {
-          gets.add(fetcher.makeGet(entry));
+          gets.add(fetcher.makeGet(entry.getKey()));
         }
       }
 
@@ -544,7 +544,7 @@ public class QuotaCache implements Stoppable {
   }
 
   static interface Fetcher<Key, Value> {
-    Get makeGet(Map.Entry<Key, Value> entry);
+    Get makeGet(Key key);
 
     Map<Key, Value> fetchEntries(List<Get> gets) throws IOException;
   }
