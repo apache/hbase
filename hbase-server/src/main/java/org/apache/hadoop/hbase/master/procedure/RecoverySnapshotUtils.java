@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master.procedure;
 import java.io.IOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotDoesNotExistException;
@@ -55,11 +56,31 @@ public class RecoverySnapshotUtils {
   }
 
   /**
-   * Gets the TTL that should be usedfor snapshots created before destructive schema actions.
-   * @param env MasterProcedureEnv
+   * Gets the TTL that should be used for snapshots created before destructive schema actions.
+   * Checks for table-level override first, then falls back to site configuration.
+   * @param env             MasterProcedureEnv
+   * @param tableDescriptor the table descriptor to check for table-level TTL override
    * @return TTL in seconds
    */
-  public static long getRecoverySnapshotTtl(final MasterProcedureEnv env) {
+  public static long getRecoverySnapshotTtl(final MasterProcedureEnv env,
+    final TableDescriptor tableDescriptor) {
+    // Check table-level override first
+    if (tableDescriptor != null) {
+      String tableLevelTtl = tableDescriptor.getValue(HConstants.TABLE_RECOVERY_SNAPSHOT_TTL_KEY);
+      if (tableLevelTtl != null) {
+        try {
+          long ttl = Long.parseLong(tableLevelTtl);
+          LOG.debug("Using table-level recovery snapshot TTL {} seconds for table {}", ttl,
+            tableDescriptor.getTableName());
+          return ttl;
+        } catch (NumberFormatException e) {
+          LOG.warn("Invalid table-level recovery snapshot TTL '{}' for table {}, using default",
+            tableLevelTtl, tableDescriptor.getTableName());
+        }
+      }
+    }
+
+    // Fall back to site configuration
     return env.getMasterConfiguration().getLong(
       HConstants.SNAPSHOT_BEFORE_DESTRUCTIVE_ACTION_TTL_KEY,
       HConstants.DEFAULT_SNAPSHOT_BEFORE_DESTRUCTIVE_ACTION_TTL);
@@ -114,16 +135,18 @@ public class RecoverySnapshotUtils {
    * Creates a SnapshotProcedure for soft drop functionality.
    * <p>
    * This method should be called from procedures that need to create a snapshot before performing
-   * destructive operations.
-   * @param env          MasterProcedureEnv
-   * @param tableName    the table name
-   * @param snapshotName the name for the snapshot
+   * destructive operations. It will check for table-level TTL overrides.
+   * @param env             MasterProcedureEnv
+   * @param tableName       the table name
+   * @param snapshotName    the name for the snapshot
+   * @param tableDescriptor the table descriptor to check for table-level TTL override
    * @return SnapshotProcedure that can be added as a child procedure
    * @throws IOException if snapshot creation fails
    */
   public static SnapshotProcedure createSnapshotProcedure(final MasterProcedureEnv env,
-    final TableName tableName, final String snapshotName) throws IOException {
-    long ttl = getRecoverySnapshotTtl(env);
+    final TableName tableName, final String snapshotName, final TableDescriptor tableDescriptor)
+    throws IOException {
+    long ttl = getRecoverySnapshotTtl(env, tableDescriptor);
     SnapshotProtos.SnapshotDescription snapshotDesc =
       buildSnapshotDescription(tableName, snapshotName, ttl);
     return new SnapshotProcedure(env, snapshotDesc);
