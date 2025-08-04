@@ -1542,6 +1542,9 @@ public final class HConstants {
     "hbase.snapshot.before.destructive.action.ttl";
   public static final long DEFAULT_SNAPSHOT_BEFORE_DESTRUCTIVE_ACTION_TTL = 86400; // 1 day
 
+  // Table-level attribute name for recovery snapshot TTL override
+  public static final String TABLE_RECOVERY_SNAPSHOT_TTL_KEY = "RECOVERY_SNAPSHOT_TTL";
+
   // Regions Recovery based on high storeFileRefCount threshold value
   public static final String STORE_FILE_REF_COUNT_THRESHOLD =
     "hbase.regions.recovery.store.file.ref.count";

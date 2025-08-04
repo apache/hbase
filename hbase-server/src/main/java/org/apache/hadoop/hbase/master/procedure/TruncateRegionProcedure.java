@@ -91,8 +91,9 @@ public class TruncateRegionProcedure
         case TRUNCATE_REGION_SNAPSHOT:
           // Create recovery snapshot procedure as child procedure
           recoverySnapshotName = RecoverySnapshotUtils.generateSnapshotName(getTableName());
-          SnapshotProcedure snapshotProcedure = RecoverySnapshotUtils.createSnapshotProcedure(env,
-            getTableName(), recoverySnapshotName);
+          SnapshotProcedure snapshotProcedure =
+            RecoverySnapshotUtils.createSnapshotProcedure(env, getTableName(), recoverySnapshotName,
+              env.getMasterServices().getTableDescriptors().get(getTableName()));
           // Submit snapshot procedure as child procedure
           addChildProcedure(snapshotProcedure);
           LOG.debug("Creating recovery snapshot {} for table {} before truncating region {}",

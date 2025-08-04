@@ -109,8 +109,8 @@ public class TruncateTableProcedure extends AbstractStateMachineTableProcedure<T
         case TRUNCATE_TABLE_SNAPSHOT:
           // Create recovery snapshot procedure as child procedure
           recoverySnapshotName = RecoverySnapshotUtils.generateSnapshotName(tableName);
-          SnapshotProcedure snapshotProcedure =
-            RecoverySnapshotUtils.createSnapshotProcedure(env, tableName, recoverySnapshotName);
+          SnapshotProcedure snapshotProcedure = RecoverySnapshotUtils.createSnapshotProcedure(env,
+            tableName, recoverySnapshotName, tableDescriptor);
           // Submit snapshot procedure as child procedure
           addChildProcedure(snapshotProcedure);
           LOG.debug("Creating recovery snapshot {} for table {} before truncation",

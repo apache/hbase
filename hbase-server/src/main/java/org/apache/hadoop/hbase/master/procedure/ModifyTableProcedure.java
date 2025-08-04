@@ -204,7 +204,7 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
           // Create recovery snapshot procedure as child procedure
           recoverySnapshotName = RecoverySnapshotUtils.generateSnapshotName(getTableName());
           SnapshotProcedure snapshotProcedure = RecoverySnapshotUtils.createSnapshotProcedure(env,
-            getTableName(), recoverySnapshotName);
+            getTableName(), recoverySnapshotName, unmodifiedTableDescriptor);
           // Submit snapshot procedure as child procedure
           addChildProcedure(snapshotProcedure);
           LOG.debug("Creating recovery snapshot {} for table {} before column deletion",
