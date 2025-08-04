@@ -25,7 +25,7 @@ import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.SnapshotType;
@@ -53,7 +53,7 @@ public class TestSnapshotProcedureEarlyExpiration extends TestSnapshotProcedure 
   @Override
   public void setup() throws Exception { // Copied from TestSnapshotProcedure with modified
                                          // SnapshotDescription
-    TEST_UTIL = new HBaseTestingUtil();
+    TEST_UTIL = new HBaseTestingUtility();
     Configuration config = TEST_UTIL.getConfiguration();
     // using SnapshotVerifyProcedure to verify snapshot
     config.setInt("hbase.snapshot.remote.verify.threshold", 1);
