@@ -29,7 +29,7 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupAdminImpl;
@@ -64,7 +64,7 @@ public class TestBackupRestoreExpiry extends TestBackupBase {
 
   @BeforeClass
   public static void setUp() throws Exception {
-    TEST_UTIL = new HBaseTestingUtil();
+    TEST_UTIL = new HBaseTestingUtility();
     conf1 = TEST_UTIL.getConfiguration();
     conf1.setLong(HConstants.DEFAULT_SNAPSHOT_TTL_CONFIG_KEY, 30);
     autoRestoreOnFailure = true;
