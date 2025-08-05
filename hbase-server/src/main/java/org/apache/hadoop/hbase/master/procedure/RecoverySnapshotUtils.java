@@ -113,17 +113,31 @@ public class RecoverySnapshotUtils {
    * Creates a SnapshotDescription for the recovery snapshot for a given operation.
    * @param tableName    the table name
    * @param snapshotName the snapshot name
-   * @param ttl          the TTL for the snapshot in seconds (0 means no TTL)
    * @return SnapshotDescription for the recovery snapshot
    */
   public static SnapshotProtos.SnapshotDescription
-    buildSnapshotDescription(final TableName tableName, final String snapshotName, final long ttl) {
+    buildSnapshotDescription(final TableName tableName, final String snapshotName) {
+    return buildSnapshotDescription(tableName, snapshotName, 0,
+      SnapshotProtos.SnapshotDescription.Type.FLUSH);
+  }
+
+  /**
+   * Creates a SnapshotDescription for the recovery snapshot for a given operation.
+   * @param tableName    the table name
+   * @param snapshotName the snapshot name
+   * @param ttl          the TTL for the snapshot in seconds (0 means no TTL)
+   * @param type         the type of snapshot to create
+   * @return SnapshotDescription for the recovery snapshot
+   */
+  public static SnapshotProtos.SnapshotDescription buildSnapshotDescription(
+    final TableName tableName, final String snapshotName, final long ttl,
+    final SnapshotProtos.SnapshotDescription.Type type) {
     SnapshotProtos.SnapshotDescription.Builder builder =
       SnapshotProtos.SnapshotDescription.newBuilder();
     builder.setVersion(SnapshotDescriptionUtils.SNAPSHOT_LAYOUT_VERSION);
     builder.setName(snapshotName);
     builder.setTable(tableName.getNameAsString());
-    builder.setType(SnapshotProtos.SnapshotDescription.Type.FLUSH);
+    builder.setType(type);
     builder.setCreationTime(EnvironmentEdgeManager.currentTime());
     builder.setTtl(ttl);
     return builder.build();
@@ -144,10 +158,13 @@ public class RecoverySnapshotUtils {
   public static SnapshotProcedure createSnapshotProcedure(final MasterProcedureEnv env,
     final TableName tableName, final String snapshotName, final TableDescriptor tableDescriptor)
     throws IOException {
-    long ttl = getRecoverySnapshotTtl(env, tableDescriptor);
-    SnapshotProtos.SnapshotDescription snapshotDesc =
-      buildSnapshotDescription(tableName, snapshotName, ttl);
-    return new SnapshotProcedure(env, snapshotDesc);
+    return new SnapshotProcedure(env,
+      buildSnapshotDescription(tableName, snapshotName,
+        getRecoverySnapshotTtl(env, tableDescriptor),
+        env.getMasterServices().getTableStateManager().isTableState(tableName,
+          org.apache.hadoop.hbase.client.TableState.State.DISABLED)
+            ? SnapshotProtos.SnapshotDescription.Type.SKIPFLUSH
+            : SnapshotProtos.SnapshotDescription.Type.FLUSH));
   }
 
   /**
@@ -172,9 +189,7 @@ public class RecoverySnapshotUtils {
       }
       // Delete the snapshot using the snapshot manager. The SnapshotManager will handle existence
       // checks.
-      SnapshotProtos.SnapshotDescription snapshotDesc =
-        buildSnapshotDescription(tableName, snapshotName, 0);
-      snapshotManager.deleteSnapshot(snapshotDesc);
+      snapshotManager.deleteSnapshot(buildSnapshotDescription(tableName, snapshotName));
       LOG.info("Successfully deleted recovery snapshot {} for table {} during rollback",
         snapshotName, tableName);
     } catch (SnapshotDoesNotExistException e) {
