@@ -120,14 +120,12 @@ public class RecoverySnapshotUtils {
     buildSnapshotDescription(final TableName tableName, final String snapshotName, final long ttl) {
     SnapshotProtos.SnapshotDescription.Builder builder =
       SnapshotProtos.SnapshotDescription.newBuilder();
+    builder.setVersion(SnapshotDescriptionUtils.SNAPSHOT_LAYOUT_VERSION);
     builder.setName(snapshotName);
     builder.setTable(tableName.getNameAsString());
     builder.setType(SnapshotProtos.SnapshotDescription.Type.FLUSH);
     builder.setCreationTime(EnvironmentEdgeManager.currentTime());
-    if (ttl > 0) {
-      builder.setTtl(ttl);
-    }
-    builder.setVersion(SnapshotDescriptionUtils.SNAPSHOT_LAYOUT_VERSION);
+    builder.setTtl(ttl);
     return builder.build();
   }
 
