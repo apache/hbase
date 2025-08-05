@@ -66,6 +66,7 @@ public class MasterFileSystem {
   private final FileSystem walFs;
   // root log directory on the FS
   private final Path rootdir;
+  private final Path systemKeyDir;
   // hbase temp directory used for table construction and deletion
   private final Path tempdir;
   // root hbase directory on the FS
@@ -96,6 +97,7 @@ public class MasterFileSystem {
     // default localfs. Presumption is that rootdir is fully-qualified before
     // we get to here with appropriate fs scheme.
     this.rootdir = CommonFSUtils.getRootDir(conf);
+    this.systemKeyDir = CommonFSUtils.getSystemKeyDir(conf);
     this.tempdir = new Path(this.rootdir, HConstants.HBASE_TEMP_DIRECTORY);
     // Cover both bases, the old way of setting default fs and the new.
     // We're supposed to run on 0.20 and 0.21 anyways.
@@ -134,6 +136,7 @@ public class MasterFileSystem {
         HConstants.CORRUPT_DIR_NAME, ReplicationUtils.REMOTE_WAL_DIR_NAME };
     // check if the root directory exists
     checkRootDir(this.rootdir, conf, this.fs);
+    checkSubDir(this.systemKeyDir, HBASE_DIR_PERMS);
 
     // Check the directories under rootdir.
     checkTempDir(this.tempdir, conf, this.fs);
@@ -158,6 +161,7 @@ public class MasterFileSystem {
     if (isSecurityEnabled) {
       fs.setPermission(new Path(rootdir, HConstants.VERSION_FILE_NAME), secureRootFilePerms);
       fs.setPermission(new Path(rootdir, HConstants.CLUSTER_ID_FILE_NAME), secureRootFilePerms);
+      fs.setPermission(systemKeyDir, secureRootFilePerms);
     }
     FsPermission currentRootPerms = fs.getFileStatus(this.rootdir).getPermission();
     if (

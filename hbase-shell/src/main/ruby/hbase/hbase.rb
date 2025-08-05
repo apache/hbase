@@ -59,6 +59,10 @@ module Hbase
       ::Hbase::RSGroupAdmin.new(self.connection)
     end
 
+    def keymeta_admin
+      ::Hbase::KeymetaAdmin.new(@connection)
+    end
+
     def taskmonitor
       ::Hbase::TaskMonitor.new(configuration)
     end
