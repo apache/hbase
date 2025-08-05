@@ -1095,7 +1095,7 @@ public class AssignmentManager {
   }
 
   /**
-   * Called by DsiableTableProcedure to unassign all regions for a table. Will skip submit unassign
+   * Called by DisableTableProcedure to unassign all regions for a table. Will skip submit unassign
    * procedure if the region is in transition, so you may need to call this method multiple times.
    * @param tableName the table for closing excess region replicas
    * @param submit    for submitting procedure
