@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
  * dropping tables, truncating tables, or deleting column families.
  */
 @InterfaceAudience.Private
-public class RecoverySnapshotUtils {
+public final class RecoverySnapshotUtils {
   private static final Logger LOG = LoggerFactory.getLogger(RecoverySnapshotUtils.class);
 
   private RecoverySnapshotUtils() {
