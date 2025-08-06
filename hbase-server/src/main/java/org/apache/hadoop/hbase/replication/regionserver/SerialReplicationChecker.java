@@ -202,7 +202,7 @@ class SerialReplicationChecker {
     // start from 1. Here we choose the latter one.
     if (index < 0) {
       index = -index - 1;
-    } else if (index >= 0 && index < barriers.length && barriers[index] == seqId) {
+    } else if (index > 0 && index < barriers.length && barriers[index] == seqId) {
       // Bug HBASE-29499
       // Sometimes* we can end up with barriers [x, y, z], seqId = y and pushedSeqId = y-2
       // In this case the previous range of the edit is x, *NOT* y
@@ -212,7 +212,7 @@ class SerialReplicationChecker {
       //
       // * Especially this can happen when an RS crashes right after opening a region but
       // before pushing the edits of the last range for that region.
-      LOG.debug("{} has seqId equal to barrier: {} == {}", entry, seqId, barriers[index]);
+      LOG.debug("{} has seqId equal to non-first barrier: {} == {}", entry, seqId, barriers[index]);
     } else {
       index++;
     }
