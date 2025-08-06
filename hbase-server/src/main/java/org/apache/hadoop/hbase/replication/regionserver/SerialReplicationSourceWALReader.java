@@ -96,6 +96,11 @@ public class SerialReplicationSourceWALReader extends ReplicationSourceWALReader
             break;
           }
           sleepMultiplier = sleep(sleepMultiplier);
+          // Always make sure to break after handling the exception.
+          // Otherwise we will drop down below into logic to push the entry,
+          // but since we don't know if the entry can be pushed we may push
+          // the entry out of order, breaking serial replication guarantees.
+          break;
         }
         // arrive here means we can push the entry, record the last sequence id
         batch.setLastSeqId(Bytes.toString(entry.getKey().getEncodedRegionName()),
