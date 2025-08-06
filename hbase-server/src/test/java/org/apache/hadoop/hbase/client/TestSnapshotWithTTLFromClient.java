@@ -143,7 +143,7 @@ public class TestSnapshotWithTTLFromClient {
     assertTrue(UTIL.getAdmin().tableExists(TABLE_NAME));
 
     // create snapshot fo given table with specified ttl
-    createSnapshotWithTTL(TABLE_NAME, snapshotName, 1);
+    createSnapshotWithTTL(TABLE_NAME, snapshotName, 5);
     Admin admin = UTIL.getAdmin();
 
     // Disable and drop table
@@ -152,7 +152,7 @@ public class TestSnapshotWithTTLFromClient {
     assertFalse(UTIL.getAdmin().tableExists(TABLE_NAME));
 
     // Sleep so that TTL may expire
-    Threads.sleep(2000);
+    Threads.sleep(10000);
 
     // restore snapshot which has expired
     try {
@@ -192,13 +192,13 @@ public class TestSnapshotWithTTLFromClient {
     assertTrue(UTIL.getAdmin().tableExists(TABLE_NAME));
 
     // create snapshot fo given table with specified ttl
-    createSnapshotWithTTL(TABLE_NAME, snapshotName, 1);
+    createSnapshotWithTTL(TABLE_NAME, snapshotName, 5);
     Admin admin = UTIL.getAdmin();
 
     assertTrue(UTIL.getAdmin().tableExists(TABLE_NAME));
 
     // Sleep so that TTL may expire
-    Threads.sleep(2000);
+    Threads.sleep(10000);
 
     // clone snapshot which has expired
     try {
