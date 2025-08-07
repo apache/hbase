@@ -507,6 +507,106 @@ public class TestRegionReplicaReplicationEndpoint {
     }
   }
 
+  @Test
+  public void testMetaCacheMissTriggersRefresh() throws Exception {
+    TableName tableName = TableName.valueOf(name.getMethodName());
+    int regionReplication = 3;
+    HTableDescriptor htd = HTU.createTableDescriptor(tableName);
+    htd.setRegionReplication(regionReplication);
+    createOrEnableTableWithRetries(htd, true);
+
+    Connection connection = ConnectionFactory.createConnection(HTU.getConfiguration());
+    Table table = connection.getTable(tableName);
+
+    try {
+      HTU.loadNumericRows(table, HBaseTestingUtility.fam1, 0, 100);
+
+      RegionLocator rl = connection.getRegionLocator(tableName);
+      HRegionLocation hrl = rl.getRegionLocation(HConstants.EMPTY_BYTE_ARRAY);
+      byte[] encodedRegionName = hrl.getRegionInfo().getEncodedNameAsBytes();
+      rl.close();
+
+      AtomicLong skippedEdits = new AtomicLong();
+      RegionReplicaReplicationEndpoint.RegionReplicaOutputSink sink =
+        mock(RegionReplicaReplicationEndpoint.RegionReplicaOutputSink.class);
+      when(sink.getSkippedEditsCounter()).thenReturn(skippedEdits);
+
+      FSTableDescriptors fstd =
+        new FSTableDescriptors(FileSystem.get(HTU.getConfiguration()), HTU.getDefaultRootDirPath());
+
+      RegionReplicaReplicationEndpoint.RegionReplicaSinkWriter sinkWriter =
+        new RegionReplicaReplicationEndpoint.RegionReplicaSinkWriter(sink,
+          (ClusterConnection) connection, Executors.newSingleThreadExecutor(), Integer.MAX_VALUE,
+          fstd);
+
+      Cell cell = CellBuilderFactory.create(CellBuilderType.DEEP_COPY)
+        .setRow(Bytes.toBytes("testRow")).setFamily(HBaseTestingUtility.fam1)
+        .setValue(Bytes.toBytes("testValue")).setType(Type.Put).build();
+
+      Entry entry =
+        new Entry(new WALKeyImpl(encodedRegionName, tableName, 1), new WALEdit().add(cell));
+
+      sinkWriter.append(tableName, encodedRegionName, Bytes.toBytes("testRow"),
+        Lists.newArrayList(entry));
+
+      assertEquals("No entries should be skipped for valid table", 0, skippedEdits.get());
+
+    } finally {
+      table.close();
+      connection.close();
+    }
+  }
+
+  @Test
+  public void testMetaCacheSkippedForSingleReplicaTable() throws Exception {
+    TableName tableName = TableName.valueOf(name.getMethodName());
+    int regionReplication = 1;
+    HTableDescriptor htd = HTU.createTableDescriptor(tableName);
+    htd.setRegionReplication(regionReplication);
+    createOrEnableTableWithRetries(htd, true);
+
+    Connection connection = ConnectionFactory.createConnection(HTU.getConfiguration());
+    Table table = connection.getTable(tableName);
+
+    try {
+      HTU.loadNumericRows(table, HBaseTestingUtility.fam1, 0, 100);
+
+      RegionLocator rl = connection.getRegionLocator(tableName);
+      HRegionLocation hrl = rl.getRegionLocation(HConstants.EMPTY_BYTE_ARRAY);
+      byte[] encodedRegionName = hrl.getRegionInfo().getEncodedNameAsBytes();
+      rl.close();
+
+      AtomicLong skippedEdits = new AtomicLong();
+      RegionReplicaReplicationEndpoint.RegionReplicaOutputSink sink =
+        mock(RegionReplicaReplicationEndpoint.RegionReplicaOutputSink.class);
+      when(sink.getSkippedEditsCounter()).thenReturn(skippedEdits);
+
+      FSTableDescriptors fstd =
+        new FSTableDescriptors(FileSystem.get(HTU.getConfiguration()), HTU.getDefaultRootDirPath());
+
+      RegionReplicaReplicationEndpoint.RegionReplicaSinkWriter sinkWriter =
+        new RegionReplicaReplicationEndpoint.RegionReplicaSinkWriter(sink,
+          (ClusterConnection) connection, Executors.newSingleThreadExecutor(), Integer.MAX_VALUE,
+          fstd);
+
+      Cell cell = CellBuilderFactory.create(CellBuilderType.DEEP_COPY)
+        .setRow(Bytes.toBytes("testRow")).setFamily(HBaseTestingUtility.fam1)
+        .setValue(Bytes.toBytes("testValue")).setType(Type.Put).build();
+
+      Entry entry =
+        new Entry(new WALKeyImpl(encodedRegionName, tableName, 1), new WALEdit().add(cell));
+
+      sinkWriter.append(tableName, encodedRegionName, Bytes.toBytes("testRow"),
+        Lists.newArrayList(entry));
+
+      assertEquals("No entries should be skipped for single replica table", 0, skippedEdits.get());
+
+    } finally {
+      table.close();
+      connection.close();
+    }
+  }
+
   private void createOrEnableTableWithRetries(TableDescriptor htd, boolean createTableOperation) {
     // Helper function to run create/enable table operations with a retry feature
     boolean continueToRetry = true;
