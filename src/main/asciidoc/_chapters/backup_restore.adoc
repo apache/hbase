@@ -889,6 +889,16 @@ DistCp MapReduce job would likely dominate the actual time taken to copy the dat
 Backup operations cannot be run concurrently. An operation includes actions like create, delete, restore, and merge. Only one active backup session is supported. link:https://issues.apache.org/jira/browse/HBASE-16391[HBASE-16391]
 will introduce multiple-backup sessions support.
 
+To improve usability, a retry mechanism has been introduced. If a backup operation fails to acquire the exclusive lock because another operation is in progress, it will automatically retry every second until a configurable timeout is reached.
+
+The following configuration controls the timeout duration:
+[source]
+----
+hbase.backup.exclusive.op.timeout.seconds (default: 3600)
+----
+If the lock is not acquired within the timeout, the operation will fail with an appropriate error message. This reduces the need for users to implement custom retry logic.
+link:https://issues.apache.org/jira/browse/HBASE-19441[HBASE-19441]
+
 *No means to cancel backups*
 
 Both backup and restore operations cannot be canceled. (link:https://issues.apache.org/jira/browse/HBASE-15997[HBASE-15997], link:https://issues.apache.org/jira/browse/HBASE-15998[HBASE-15998]).
