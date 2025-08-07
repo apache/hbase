@@ -102,6 +102,36 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
 
   private static String BACKUP_ROOT_DIR = "backupIT";
 
+  /*
+  This class is used to run the backup and restore thread(s). Throwing an exception in this
+  thread will not cause the test to fail, so the purpose of this class is to both kick off the
+  backup and restore and record any exceptions that occur so they can be thrown in the main
+  thread.
+  */
+  protected class BackupAndRestoreThread implements Runnable {
+    private final TableName table;
+    private Exception exc;
+
+    public BackupAndRestoreThread(TableName table) {
+      this.table = table;
+      this.exc = null;
+    }
+
+    public Exception getException() {
+      return this.exc;
+    }
+
+    @Override
+    public void run() {
+      try {
+        runTestSingle(this.table);
+      } catch (Exception e) {
+        LOG.error("An exception occurred in thread {}: ", Thread.currentThread().getName(), e);
+        this.exc = e;
+      }
+    }
+  }
+
   @Override
   @Before
   public void setUp() throws Exception {
@@ -175,28 +205,26 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
     runTestMulti();
   }
 
-  private void runTestMulti() throws IOException {
+  private void runTestMulti() throws Exception {
     LOG.info("IT backup & restore started");
     Thread[] workers = new Thread[numTables];
+    BackupAndRestoreThread[] backupAndRestoreThreads = new BackupAndRestoreThread[numTables];
     for (int i = 0; i < numTables; i++) {
       final TableName table = tableNames[i];
-      Runnable r = new Runnable() {
-        @Override
-        public void run() {
-          try {
-            runTestSingle(table);
-          } catch (IOException e) {
-            LOG.error("Failed", e);
-            Assert.fail(e.getMessage());
-          }
-        }
-      };
-      workers[i] = new Thread(r);
+      BackupAndRestoreThread backupAndRestoreThread
+        = new BackupAndRestoreThread(table);
+      backupAndRestoreThreads[i] = backupAndRestoreThread;
+      workers[i] = new Thread(backupAndRestoreThread);
       workers[i].start();
     }
-    // Wait all workers to finish
-    for (Thread t : workers) {
-      Uninterruptibles.joinUninterruptibly(t);
+    // Wait for all workers to finish and check for errors
+    Exception threadException;
+    for (int i = 0; i < numTables; i++) {
+      Uninterruptibles.joinUninterruptibly(workers[i]);
+      threadException = backupAndRestoreThreads[i].getException();
+      if (threadException != null) {
+        throw backupAndRestoreThreads[i].getException();
+      }
     }
     LOG.info("IT backup & restore finished");
   }
@@ -229,8 +257,7 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
   }
 
   private String backup(BackupRequest request, BackupAdmin client) throws IOException {
-    String backupId = client.backupTables(request);
-    return backupId;
+    return client.backupTables(request);
   }
 
   private void restore(RestoreRequest request, BackupAdmin client) throws IOException {
@@ -300,7 +327,6 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
 
   private void restoreVerifyTable(Connection conn, BackupAdmin client, TableName table,
     String backupId, long expectedRows) throws IOException {
-
     TableName[] tablesRestoreIncMultiple = new TableName[] { table };
     restore(
       createRestoreRequest(BACKUP_ROOT_DIR, backupId, false, tablesRestoreIncMultiple, null, true),
