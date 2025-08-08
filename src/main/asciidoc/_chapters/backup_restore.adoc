@@ -341,6 +341,12 @@ This command restores two tables of an incremental backup image. In this example
 • `backupId_1467823988425` is the backup ID.
 • `mytable1` and `mytable2` are the names of tables in the backup image to be restored.
 
+[NOTE]
+====
+If the namespace of a table being restored does not exist in the target environment, it will be automatically created during the restore operation.
+link:https://issues.apache.org/jira/browse/HBASE-25707[HBASE-25707]
+====
+
 // hbase backup merge
 
 [[br.merge.backup]]
