@@ -1634,6 +1634,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       .setTotalStaticBloomSizeKB(totalStaticBloomSizeKB)
       .setReadRequestsCount(r.getReadRequestsCount()).setCpRequestsCount(r.getCpRequestsCount())
       .setFilteredReadRequestsCount(r.getFilteredReadRequestsCount())
+      .setDeletedReadRequestsCount(r.getDeletedReadRequestsCount())
       .setWriteRequestsCount(r.getWriteRequestsCount()).setTotalCompactingKVs(totalCompactingKVs)
       .setCurrentCompactedKVs(currentCompactedKVs).setDataLocality(dataLocality)
       .setDataLocalityForSsd(dataLocalityForSsd).setBlocksLocalWeight(blocksLocalWeight)
