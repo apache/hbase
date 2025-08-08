@@ -261,6 +261,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.OfflineReg
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.OfflineRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RecommissionRegionServerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RecommissionRegionServerResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RefreshMetaRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RefreshMetaResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RestoreSnapshotRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RestoreSnapshotResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCatalogScanRequest;
@@ -4557,4 +4559,16 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
           resp -> resp.getCachedFilesList()))
       .serverName(serverName).call();
   }
+
+  @Override
+  public CompletableFuture<Long> refreshMeta() {
+    RefreshMetaRequest.Builder request = RefreshMetaRequest.newBuilder();
+    request.setNonceGroup(ng.getNonceGroup()).setNonce(ng.newNonce());
+    return this.<Long> newMasterCaller()
+      .action((controller, stub) -> this.<RefreshMetaRequest, RefreshMetaResponse, Long> call(
+        controller, stub, request.build(), MasterService.Interface::refreshMeta,
+        RefreshMetaResponse::getProcId))
+      .call();
+  }
+
 }
