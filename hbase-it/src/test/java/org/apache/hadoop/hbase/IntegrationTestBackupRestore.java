@@ -103,11 +103,11 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
   private static String BACKUP_ROOT_DIR = "backupIT";
 
   /*
-  This class is used to run the backup and restore thread(s). Throwing an exception in this
-  thread will not cause the test to fail, so the purpose of this class is to both kick off the
-  backup and restore and record any exceptions that occur so they can be thrown in the main
-  thread.
-  */
+   * This class is used to run the backup and restore thread(s). Throwing an exception in this
+   * thread will not cause the test to fail, so the purpose of this class is to both kick off the
+   * backup and restore and record any exceptions that occur so they can be thrown in the main
+   * thread.
+   */
   protected class BackupAndRestoreThread implements Runnable {
     private final TableName table;
     private Exception exc;
@@ -211,8 +211,7 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
     BackupAndRestoreThread[] backupAndRestoreThreads = new BackupAndRestoreThread[numTables];
     for (int i = 0; i < numTables; i++) {
       final TableName table = tableNames[i];
-      BackupAndRestoreThread backupAndRestoreThread
-        = new BackupAndRestoreThread(table);
+      BackupAndRestoreThread backupAndRestoreThread = new BackupAndRestoreThread(table);
       backupAndRestoreThreads[i] = backupAndRestoreThread;
       workers[i] = new Thread(backupAndRestoreThread);
       workers[i].start();
