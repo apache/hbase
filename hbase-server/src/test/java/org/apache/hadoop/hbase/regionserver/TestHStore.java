@@ -1033,8 +1033,10 @@ public class TestHStore {
     for (int i = 0; i <= index; i++) {
       sf = it.next();
     }
-    store.getRegionFileSystem().removeStoreFiles(store.getColumnFamilyName(),
-      Lists.newArrayList(sf));
+    StoreFileTracker sft =
+      StoreFileTrackerFactory.create(store.getRegionFileSystem().getFileSystem().getConf(),
+        store.isPrimaryReplicaStore(), store.getStoreContext());
+    sft.removeStoreFiles(Lists.newArrayList(sf));
   }
 
   private void closeCompactedFile(int index) throws IOException {

@@ -2328,8 +2328,9 @@ public class HStore
         LOG.debug("Moving the files {} to archive", filesToRemove);
         // Only if this is successful it has to be removed
         try {
-          getRegionFileSystem().removeStoreFiles(this.getColumnFamilyDescriptor().getNameAsString(),
-            filesToRemove);
+          StoreFileTracker storeFileTracker =
+            StoreFileTrackerFactory.create(conf, isPrimaryReplicaStore(), storeContext);
+          storeFileTracker.removeStoreFiles(filesToRemove);
         } catch (FailedArchiveException fae) {
           // Even if archiving some files failed, we still need to clear out any of the
           // files which were successfully archived. Otherwise we will receive a
