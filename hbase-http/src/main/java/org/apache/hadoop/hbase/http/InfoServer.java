@@ -42,6 +42,9 @@ public class InfoServer {
   private static final String HBASE_APP_DIR = "hbase-webapps";
   private final org.apache.hadoop.hbase.http.HttpServer httpServer;
 
+  private static final String HADOOP_WEB_TLS_CONFIG_PREFIX = "ssl.server.";
+  private static final String HBASE_WEB_TLS_CONFIG_PREFIX = "hbase.infoserver.";
+
   /**
    * Create a status server on the given port. The jsp scripts are taken from
    * src/hbase-webapps/<code>name</code>.
@@ -70,19 +73,16 @@ public class InfoServer {
       // We are using the Hadoop HTTP server config properties.
       // This makes it easy to keep in sync with Hadoop's UI servers, but hard to set this
       // separately for HBase.
-      builder
-        .keyPassword(HBaseConfiguration.getPassword(c, "ssl.server.keystore.keypassword", null))
-        .keyStore(c.get("ssl.server.keystore.location"),
-          HBaseConfiguration.getPassword(c, "ssl.server.keystore.password", null),
-          c.get("ssl.server.keystore.type", "jks"))
-        .trustStore(c.get("ssl.server.truststore.location"),
-          HBaseConfiguration.getPassword(c, "ssl.server.truststore.password", null),
-          c.get("ssl.server.truststore.type", "jks"))
+      builder.keyPassword(getTLSPassword(c, "keystore.keypassword"))
+        .keyStore(getTLSProperty(c, "keystore.location"), getTLSPassword(c, "keystore.password"),
+          getTLSProperty(c, "keystore.type", "jks"))
+        .trustStore(getTLSProperty(c, "truststore.location"),
+          getTLSPassword(c, "truststore.password"), getTLSProperty(c, "truststore.type", "jks"))
         // The ssl.server.*.protocols properties do not exist in Hadoop at the time of writing.
-        .setIncludeProtocols(c.get("ssl.server.include.protocols"))
-        .setExcludeProtocols(c.get("ssl.server.exclude.protocols"))
-        .setIncludeCiphers(c.get("ssl.server.include.cipher.list"))
-        .setExcludeCiphers(c.get("ssl.server.exclude.cipher.list"));
+        .setIncludeProtocols(getTLSProperty(c, "include.protocols"))
+        .setExcludeProtocols(getTLSProperty(c, "exclude.protocols"))
+        .setIncludeCiphers(getTLSProperty(c, "include.cipher.list"))
+        .setExcludeCiphers(getTLSProperty(c, "exclude.cipher.list"));
     }
 
     final String httpAuthType = c.get(HttpServer.HTTP_UI_AUTHENTICATION, "").toLowerCase();
@@ -102,6 +102,20 @@ public class InfoServer {
     }
 
     this.httpServer = builder.build();
+  }
+
+  private String getTLSPassword(Configuration c, String postfix) throws IOException {
+    return HBaseConfiguration.getPassword(c, HBASE_WEB_TLS_CONFIG_PREFIX + postfix,
+      HBaseConfiguration.getPassword(c, HADOOP_WEB_TLS_CONFIG_PREFIX + postfix, null));
+  }
+
+  private String getTLSProperty(Configuration c, String postfix) {
+    return getTLSProperty(c, postfix, null);
+  }
+
+  private String getTLSProperty(Configuration c, String postfix, String defaultValue) {
+    return c.get(HBASE_WEB_TLS_CONFIG_PREFIX + postfix,
+      c.get(HADOOP_WEB_TLS_CONFIG_PREFIX + postfix, defaultValue));
   }
 
   /**
