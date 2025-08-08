@@ -1029,11 +1029,11 @@ module Hbase
             puts('    no active tasks')
           end
         end
-        puts(format('%d live servers', cluster_metrics.getServersSize))
-        for server in cluster_metrics.getServers
-          puts(format('    %s:%d %d', server.getHostname, server.getPort, server.getStartcode))
+        puts(format('%d live servers', cluster_metrics.getLiveServerMetrics.size))
+        cluster_metrics.getLiveServerMetrics.keySet.each do |server_name|
+          puts(format('    %s:%d %d', server_name.getHostname, server_name.getPort, server_name.getStartcode))
           printed = false
-          for task in cluster_metrics.getLiveServerMetrics.get(server).getTasks
+          for task in cluster_metrics.getLiveServerMetrics.get(server_name).getTasks
             next unless task.getState.name == 'RUNNING'
             puts(format('        %s', task.toString))
             printed = true
