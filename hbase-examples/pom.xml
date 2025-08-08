@@ -34,7 +34,7 @@
       Version of protobuf that hbase uses internally (we shade our pb) Must match what is out
       in hbase-thirdparty include.
     -->
-    <internal.protobuf.version>4.30.2</internal.protobuf.version>
+    <internal.protobuf.version>4.31.1</internal.protobuf.version>
   </properties>
   <dependencies>
     <dependency>

@@ -816,7 +816,7 @@
       in the dependencyManagement section as it could still lead to different versions of netty
       modules and cause trouble if we only rely on transitive dependencies.
     -->
-    <netty4.version>4.1.121.Final</netty4.version>
+    <netty4.version>4.1.123.Final</netty4.version>
     <!-- end HBASE-15925 default hadoop compatibility values -->
     <audience-annotations.version>0.15.0</audience-annotations.version>
     <javadoc.audience-annotations.version>0.15.0</javadoc.audience-annotations.version>
@@ -836,8 +836,8 @@
       Note that the version of jackson-[annotations,core,databind] must be kept in sync with the
       version of jackson-jaxrs-json-provider shipped in hbase-thirdparty.
     -->
-    <jackson.version>2.19.0</jackson.version>
-    <jackson.databind.version>2.19.0</jackson.databind.version>
+    <jackson.version>2.19.2</jackson.version>
+    <jackson.databind.version>2.19.2</jackson.databind.version>
     <jaxb-api.version>2.3.1</jaxb-api.version>
     <servlet.api.version>3.1.0</servlet.api.version>
     <wx.rs.api.version>2.1.1</wx.rs.api.version>
@@ -855,7 +855,7 @@
       Version of protobuf that hbase uses internally (we shade our pb) Must match what is out
       in hbase-thirdparty include.
     -->
-    <internal.protobuf.version>4.30.2</internal.protobuf.version>
+    <internal.protobuf.version>4.31.1</internal.protobuf.version>
     <protobuf.plugin.version>0.6.1</protobuf.plugin.version>
     <thrift.path>thrift</thrift.path>
     <thrift.version>0.14.1</thrift.version>
@@ -881,7 +881,7 @@
     -->
     <checkstyle.version>8.29</checkstyle.version>
     <exec.maven.version>3.1.0</exec.maven.version>
-    <error-prone.version>2.38.0</error-prone.version>
+    <error-prone.version>2.41.0</error-prone.version>
     <jamon.plugin.version>2.4.2</jamon.plugin.version>
     <lifecycle.mapping.version>1.0.0</lifecycle.mapping.version>
     <maven.antrun.version>1.8</maven.antrun.version>
@@ -915,7 +915,7 @@
         databind] must be kept in sync with the version of jackson-jaxrs-json-provider shipped in
         hbase-thirdparty.
     -->
-    <hbase-thirdparty.version>4.1.11</hbase-thirdparty.version>
+    <hbase-thirdparty.version>4.1.12</hbase-thirdparty.version>
     <!-- for.exclusion version are NOT for direct dependencies. To use the provided
     scope to transitively exclude some transitive dependencies, we need to specify
     some existing version to for maven. -->
@@ -1847,6 +1847,14 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
+  <!-- TODO Remove below block, added just for testing -->
+  <repositories>
+    <repository>
+      <id>staging</id>
+      <name>staging</name>
+      <url>https://repository.apache.org/content/repositories/orgapachehbase-1586</url>
+    </repository>
+  </repositories>
   <build>
     <!-- Plugin versions are inherited from ASF parent pom: https://maven.apache.org/pom/asf/
          For specific version use a property and define it in the parent pom.
