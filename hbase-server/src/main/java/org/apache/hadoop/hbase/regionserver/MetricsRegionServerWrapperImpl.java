@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.io.asyncfs.monitor.ExcludeDatanodeManager;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
 import org.apache.hadoop.hbase.io.hfile.CombinedBlockCache;
+import org.apache.hadoop.hbase.metrics.impl.FastLongHistogram;
 import org.apache.hadoop.hbase.mob.MobFileCache;
 import org.apache.hadoop.hbase.regionserver.wal.MetricsWALSource;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -733,6 +734,11 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
   @Override
   public int getActiveScanners() {
     return regionServer.getRpcServices().getScannersCount();
+  }
+
+  @Override
+  public FastLongHistogram getAgeAtEviction() {
+    return cacheStats.getAgeAtEviction();
   }
 
   private static final class RegionMetricAggregate {
