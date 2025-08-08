@@ -276,6 +276,8 @@ public class MemorySizeUtil {
   public static long getOnHeapCacheSize(final Configuration conf) {
     final float cachePercentage = getBlockCacheHeapPercent(conf);
     if (cachePercentage <= 0.0001f) {
+      LOG.debug("On heap cache is disabled due to " + HConstants.HFILE_BLOCK_CACHE_SIZE_KEY
+        + " is set to " + cachePercentage + " <= 0.0001");
       return -1;
     }
     if (cachePercentage > 1.0) {
