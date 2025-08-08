@@ -21,6 +21,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
+import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -41,9 +43,13 @@ public class ReaderContext {
   private final boolean primaryReplicaReader;
   private final ReaderType type;
   private final boolean preadAllBytes;
+  private final String keyNamespace;
+  private final SystemKeyCache systemKeyCache;
+  private final ManagedKeyDataCache managedKeyDataCache;
 
   public ReaderContext(Path filePath, FSDataInputStreamWrapper fsdis, long fileSize,
-    HFileSystem hfs, boolean primaryReplicaReader, ReaderType type) {
+    HFileSystem hfs, boolean primaryReplicaReader, ReaderType type,
+    String keyNamespace, SystemKeyCache systemKeyCache, ManagedKeyDataCache managedKeyDataCache) {
     this.filePath = filePath;
     this.fsdis = fsdis;
     this.fileSize = fileSize;
@@ -52,6 +58,9 @@ public class ReaderContext {
     this.type = type;
     this.preadAllBytes = hfs.getConf().getBoolean(HConstants.HFILE_PREAD_ALL_BYTES_ENABLED_KEY,
       HConstants.HFILE_PREAD_ALL_BYTES_ENABLED_DEFAULT);
+    this.keyNamespace = keyNamespace;
+    this.systemKeyCache = systemKeyCache;
+    this.managedKeyDataCache = managedKeyDataCache;
   }
 
   public Path getFilePath() {
@@ -80,5 +89,17 @@ public class ReaderContext {
 
   public boolean isPreadAllBytes() {
     return preadAllBytes;
+  }
+
+  public String getKeyNamespace() {
+    return this.keyNamespace;
+  }
+
+  public SystemKeyCache getSystemKeyCache() {
+    return this.systemKeyCache;
+  }
+
+  public ManagedKeyDataCache getManagedKeyDataCache() {
+    return this.managedKeyDataCache;
   }
 }

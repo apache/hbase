@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
+import org.apache.hadoop.hbase.regionserver.StoreContext;
 import org.apache.hadoop.hbase.Server;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
@@ -38,6 +39,7 @@ import org.apache.yetus.audience.InterfaceStability;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class SecurityUtil {
+  private static Boolean isKeyManagementEnabled;
 
   /**
    * Get the user name from a principal
@@ -76,11 +78,10 @@ public class SecurityUtil {
           + "' configured with type '" + cipherName + "' but the encryption feature is disabled");
       }
       Cipher cipher = null;
-      String keyNamespace = null;
       Key key = null;
       ManagedKeyData kekKeyData = null;
       if (server != null && isKeyManagementEnabled(conf)) {
-        keyNamespace = constructKeyNamespace(tableDescriptor, family);
+        String keyNamespace = constructKeyNamespace(tableDescriptor, family);
         kekKeyData = server.getManagedKeyDataCache().getActiveEntry(
           ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES, keyNamespace);
         if (kekKeyData == null) {
@@ -98,6 +99,7 @@ public class SecurityUtil {
         }
         else {
           key = kekKeyData.getTheKey();
+          kekKeyData = server.getSystemKeyCache().getLatestSystemKey();
         }
       } else {
         byte[] keyBytes = family.getEncryptionKey();
@@ -143,13 +145,21 @@ public class SecurityUtil {
         + family.getNameAsString();
   }
 
+  public static String constructKeyNamespace(StoreContext storeContext) {
+    return storeContext.getTableName().getNamespaceAsString() + "/"
+        + storeContext.getFamily().getNameAsString();
+  }
+
   /**
    * From the given configuration, determine if key management is enabled.
    * @param conf the configuration to check
    * @return true if key management is enabled
    */
   public static boolean isKeyManagementEnabled(Configuration conf) {
-    return conf.getBoolean(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY,
-      HConstants.CRYPTO_MANAGED_KEYS_DEFAULT_ENABLED);
+    if (isKeyManagementEnabled == null) {
+      isKeyManagementEnabled = conf.getBoolean(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY,
+        HConstants.CRYPTO_MANAGED_KEYS_DEFAULT_ENABLED);
+    }
+    return isKeyManagementEnabled;
   }
 }

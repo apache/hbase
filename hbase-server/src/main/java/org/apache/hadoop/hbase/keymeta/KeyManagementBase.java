@@ -44,8 +44,6 @@ public abstract class KeyManagementBase {
   private final Configuration configuration;
 
   private Boolean isDynamicLookupEnabled;
-  private Boolean isKeyManagementEnabled;
-  private Integer perCustNamespaceActiveKeyCount;
 
   /**
    * Construct with a server instance. Configuration is derived from the server.
@@ -110,16 +108,9 @@ public abstract class KeyManagementBase {
    * @throws IOException if key management is not enabled.
    */
   protected void assertKeyManagementEnabled() throws IOException {
-    if (!isKeyManagementEnabled()) {
+    if (!SecurityUtil.isKeyManagementEnabled(getConfiguration())) {
       throw new IOException("Key manage is currently not enabled in HBase configuration");
     }
-  }
-
-  protected boolean isKeyManagementEnabled() {
-    if (isKeyManagementEnabled == null) {
-      isKeyManagementEnabled = SecurityUtil.isKeyManagementEnabled(getConfiguration());
-    }
-    return isKeyManagementEnabled;
   }
 
   /**

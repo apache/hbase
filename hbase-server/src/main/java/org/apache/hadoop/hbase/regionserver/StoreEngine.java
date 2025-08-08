@@ -41,12 +41,15 @@ import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.conf.ConfigKey;
 import org.apache.hadoop.hbase.io.hfile.BloomFilterMetrics;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
+import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.Compactor;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
+import org.apache.hadoop.hbase.security.SecurityUtil;
 import org.apache.hadoop.hbase.util.IOExceptionRunnable;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -115,6 +118,10 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
   private StoreFileTracker storeFileTracker;
 
   private final ReadWriteLock storeLock = new ReentrantReadWriteLock();
+
+  private ManagedKeyDataCache managedKeyDataCache;
+
+  private SystemKeyCache systemKeyCache;
 
   /**
    * The name of the configuration parameter that specifies the class of a store engine that is used
@@ -208,6 +215,9 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
     this.coprocessorHost = store.getHRegion().getCoprocessorHost();
     this.openStoreFileThreadPoolCreator = store.getHRegion()::getStoreFileOpenAndCloseThreadPool;
     this.storeFileTracker = createStoreFileTracker(conf, store);
+    this.managedKeyDataCache = store.getHRegion().getRegionServicesForStores()
+      .getManagedKeyDataCache();
+    this.systemKeyCache = store.getHRegion().getRegionServicesForStores().getSystemKeyCache();
     assert compactor != null && compactionPolicy != null && storeFileManager != null
       && storeFlusher != null;
   }
@@ -228,7 +238,8 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
   public HStoreFile createStoreFileAndReader(StoreFileInfo info) throws IOException {
     info.setRegionCoprocessorHost(coprocessorHost);
     HStoreFile storeFile = new HStoreFile(info, ctx.getFamily().getBloomFilterType(),
-      ctx.getCacheConf(), bloomFilterMetrics);
+      ctx.getCacheConf(), bloomFilterMetrics, SecurityUtil.constructKeyNamespace(ctx),
+      systemKeyCache, managedKeyDataCache);
     storeFile.initReader();
     return storeFile;
   }

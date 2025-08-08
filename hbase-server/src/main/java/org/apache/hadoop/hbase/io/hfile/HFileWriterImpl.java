@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.io.encoding.IndexBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock.BlockWritable;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
+import org.apache.hadoop.hbase.security.SecurityUtil;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
@@ -884,13 +885,12 @@ public class HFileWriterImpl implements HFile.Writer {
       Key wrapperKey = null;
       ManagedKeyData kekData = cryptoContext.getKEKData();
       String kekMetadata = null;
+      long kekChecksum = 0;
       if (kekData != null) {
-        Key kek = kekData.getTheKey();
         kekMetadata = kekData.getKeyMetadata();
-        if (kek != cryptoContext.getKey()) {
-          wrapperKey = kek;
-          encKey = cryptoContext.getKey();
-        }
+        kekChecksum = kekData.getKeyChecksum();
+        wrapperKey = kekData.getTheKey();
+        encKey = cryptoContext.getKey();
       }
       else {
         wrapperSubject = cryptoContext.getConf().get(
@@ -905,6 +905,7 @@ public class HFileWriterImpl implements HFile.Writer {
         trailer.setEncryptionKey(wrappedKey);
       }
       trailer.setKEKMetadata(kekMetadata);
+      trailer.setKEKChecksum(kekChecksum);
     }
     // Now we can finish the close
     trailer.setMetaIndexCount(metaNames.size());

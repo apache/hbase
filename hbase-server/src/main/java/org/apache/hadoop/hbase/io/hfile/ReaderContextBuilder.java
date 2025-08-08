@@ -26,6 +26,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext.ReaderType;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
+import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
+import org.apache.hadoop.hbase.security.SecurityUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -39,6 +42,9 @@ public class ReaderContextBuilder {
   private HFileSystem hfs;
   private boolean primaryReplicaReader = true;
   private ReaderType type = ReaderType.PREAD;
+  private String keyNamespace;
+  private SystemKeyCache systemKeyCache;
+  private ManagedKeyDataCache managedKeyDataCache;
 
   public ReaderContextBuilder() {
   }
@@ -101,9 +107,41 @@ public class ReaderContextBuilder {
     return this;
   }
 
+  public ReaderContextBuilder withKeyNamespace(String keyNamespace) {
+    this.keyNamespace = keyNamespace;
+    return this;
+  }
+
+  public ReaderContextBuilder withManagedKeyDataCache(ManagedKeyDataCache managedKeyDataCache) {
+    this.managedKeyDataCache = managedKeyDataCache;
+    return this;
+  }
+
+  public ReaderContextBuilder withSystemKeyCache(SystemKeyCache systemKeyCache) {
+    this.systemKeyCache = systemKeyCache;
+    return this;
+  }
+
   public ReaderContext build() {
     validateFields();
-    return new ReaderContext(filePath, fsdis, fileSize, hfs, primaryReplicaReader, type);
+    if (SecurityUtil.isKeyManagementEnabled(hfs.getConf())) {
+      if (systemKeyCache == null) {
+        try {
+          systemKeyCache = SystemKeyCache.createCache(hfs.getConf(), hfs);
+        } catch (IOException e) {
+          throw new RuntimeException("Failed to create system key cache", e);
+        }
+      }
+      if (managedKeyDataCache == null) {
+        managedKeyDataCache = new ManagedKeyDataCache(hfs.getConf(), null);
+      }
+    }
+    else {
+      systemKeyCache = null;
+      managedKeyDataCache = null;
+    }
+    return new ReaderContext(filePath, fsdis, fileSize, hfs, primaryReplicaReader, type,
+      keyNamespace, systemKeyCache, managedKeyDataCache);
   }
 
   private void validateFields() throws IllegalArgumentException {

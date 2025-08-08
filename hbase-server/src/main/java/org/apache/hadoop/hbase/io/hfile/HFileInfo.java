@@ -17,12 +17,15 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import static org.apache.hadoop.hbase.io.crypto.ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES;
+
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.SequenceInputStream;
 import java.security.Key;
+import java.security.KeyException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -41,8 +44,12 @@ import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
+import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
 import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
+import org.apache.hadoop.hbase.security.SecurityUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -351,7 +358,7 @@ public class HFileInfo implements SortedMap<byte[], byte[]> {
         context.getInputStreamWrapper().getStream(isHBaseChecksum), context.getFileSize());
       Path path = context.getFilePath();
       checkFileVersion(path);
-      this.hfileContext = createHFileContext(path, trailer, conf);
+      this.hfileContext = createHFileContext(context, path, trailer, conf);
       context.getInputStreamWrapper().unbuffer();
     } catch (Throwable t) {
       IOUtils.closeQuietly(context.getInputStreamWrapper(),
@@ -409,8 +416,8 @@ public class HFileInfo implements SortedMap<byte[], byte[]> {
     initialized = true;
   }
 
-  private HFileContext createHFileContext(Path path, FixedFileTrailer trailer, Configuration conf)
-    throws IOException {
+  private HFileContext createHFileContext(ReaderContext readerContext, Path path, FixedFileTrailer
+    trailer, Configuration conf) throws IOException {
     HFileContextBuilder builder = new HFileContextBuilder().withHBaseCheckSum(true)
       .withHFileName(path.getName()).withCompression(trailer.getCompressionCodec())
       .withDecompressionContext(
@@ -420,7 +427,53 @@ public class HFileInfo implements SortedMap<byte[], byte[]> {
     byte[] keyBytes = trailer.getEncryptionKey();
     if (keyBytes != null) {
       Encryption.Context cryptoContext = Encryption.newContext(conf);
-      Key key = EncryptionUtil.unwrapKey(conf, keyBytes);
+      Key kek = null;
+      // When the KEK medata is available, we will try to unwrap the encrypted key using the KEK,
+      // otherwise we will use the system keys starting from the latest to the oldest.
+      if (trailer.getKEKMetadata() != null) {
+        ManagedKeyDataCache managedKeyDataCache = readerContext.getManagedKeyDataCache();
+        if (managedKeyDataCache == null) {
+          throw new IOException("Key management is enabled, but ManagedKeyDataCache is null");
+        }
+        ManagedKeyData keyData = null;
+        Throwable cause = null;
+        try {
+          keyData = managedKeyDataCache.getEntry(KEY_GLOBAL_CUSTODIAN_BYTES,
+            readerContext.getKeyNamespace(), trailer.getKEKMetadata(), keyBytes);
+        } catch (KeyException | IOException e) {
+          cause = e;
+        }
+        if (keyData == null) {
+          throw new IOException("Failed to get key data for KEK metadata: " +
+            trailer.getKEKMetadata(), cause);
+        }
+        kek = keyData.getTheKey();
+      } else {
+        if (SecurityUtil.isKeyManagementEnabled(conf)) {
+          SystemKeyCache systemKeyCache = readerContext.getSystemKeyCache();
+          if (systemKeyCache == null) {
+            throw new IOException("Key management is enabled, but SystemKeyCache is null");
+          }
+          ManagedKeyData systemKeyData = systemKeyCache.getSystemKeyByChecksum(
+            trailer.getKEKChecksum());
+          if (systemKeyData == null) {
+            throw new IOException("Failed to get system key by checksum: " +
+              trailer.getKEKChecksum());
+          }
+          kek = systemKeyData.getTheKey();
+        }
+      }
+      Key key;
+      if (kek != null) {
+        try {
+          key = EncryptionUtil.unwrapKey(conf, null, keyBytes, kek);
+        } catch (KeyException | IOException e) {
+          throw new IOException("Failed to unwrap key with KEK checksum: " +
+            trailer.getKEKChecksum() + ", metadata: " + trailer.getKEKMetadata(), e);
+        }
+      } else {
+        key = EncryptionUtil.unwrapKey(conf, keyBytes);
+      }
       // Use the algorithm the key wants
       Cipher cipher = Encryption.getCipher(conf, key.getAlgorithm());
       if (cipher == null) {

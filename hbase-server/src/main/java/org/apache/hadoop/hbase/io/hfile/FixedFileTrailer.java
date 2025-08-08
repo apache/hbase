@@ -131,6 +131,11 @@ public class FixedFileTrailer {
   private byte[] encryptionKey;
 
   /**
+   * The KEK checksum
+   */
+  private long kekChecksum;
+
+  /**
    * The KEK metadata
    */
   private String kekMetadata;
@@ -218,6 +223,9 @@ public class FixedFileTrailer {
     }
     if (kekMetadata != null) {
       builder.setKekMetadata(kekMetadata);
+    }
+    if (kekChecksum != 0) {
+      builder.setKekChecksum(kekChecksum);
     }
     return builder.build();
   }
@@ -320,6 +328,12 @@ public class FixedFileTrailer {
     }
     if (trailerProto.hasEncryptionKey()) {
       encryptionKey = trailerProto.getEncryptionKey().toByteArray();
+    }
+    if (trailerProto.hasKekMetadata()) {
+      kekMetadata = trailerProto.getKekMetadata();
+    }
+    if (trailerProto.hasKekChecksum()) {
+      kekChecksum = trailerProto.getKekChecksum();
     }
   }
 
@@ -569,27 +583,27 @@ public class FixedFileTrailer {
     throws IOException {
     Class<? extends CellComparator> comparatorKlass;
     // for backward compatibility
-    // We will force comparator class name to be "KeyValue" and
-    // "KeyValue" on 2.x although we do not use them on newer 2.x versions, for
+    // We will force comparator class name to be "KeyValue$KVComparator" and
+    // "KeyValue$MetaComparator" on 2.x although we do not use them on newer 2.x versions, for
     // maintaining compatibility while upgrading and downgrading between different 2.x versions. So
     // here on 3.x, we still need to check these two class names although the actual classes have
     // already been purged.
     if (
-      comparatorClassName.equals("org.apache.hadoop.hbase.KeyValue")
+      comparatorClassName.equals("org.apache.hadoop.hbase.KeyValue$KVComparator")
         || comparatorClassName.equals("org.apache.hadoop.hbase.CellComparator")
     ) {
       comparatorKlass = InnerStoreCellComparator.class;
     } else if (
-      comparatorClassName.equals("org.apache.hadoop.hbase.KeyValue")
-        || comparatorClassName.equals("org.apache.hadoop.hbase.CellComparator")
+      comparatorClassName.equals("org.apache.hadoop.hbase.KeyValue$MetaComparator")
+        || comparatorClassName.equals("org.apache.hadoop.hbase.CellComparator$MetaCellComparator")
         || comparatorClassName
-          .equals("org.apache.hadoop.hbase.CellComparatorImpl")
+          .equals("org.apache.hadoop.hbase.CellComparatorImpl$MetaCellComparator")
         || comparatorClassName.equals("org.apache.hadoop.hbase.MetaCellComparator")
     ) {
       comparatorKlass = MetaCellComparator.class;
     } else if (
-      comparatorClassName.equals("org.apache.hadoop.hbase.KeyValue")
-        || comparatorClassName.equals("org.apache.hadoop.hbase.util.Bytes")
+      comparatorClassName.equals("org.apache.hadoop.hbase.KeyValue$RawBytesComparator")
+        || comparatorClassName.equals("org.apache.hadoop.hbase.util.Bytes$ByteArrayComparator")
     ) {
       // When the comparator to be used is Bytes.BYTES_RAWCOMPARATOR, we just return null from here
       // Bytes.BYTES_RAWCOMPARATOR is not a CellComparator
@@ -647,6 +661,14 @@ public class FixedFileTrailer {
     // if fine for this feature.
     expectAtLeastMajorVersion(2);
     return encryptionKey;
+  }
+
+  public void setKEKChecksum(long kekChecksum) {
+    this.kekChecksum = kekChecksum;
+  }
+
+  public long getKEKChecksum() {
+    return kekChecksum;
   }
 
   public void setEncryptionKey(byte[] keyBytes) {

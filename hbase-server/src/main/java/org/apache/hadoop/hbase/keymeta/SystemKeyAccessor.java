@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -40,11 +41,17 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class SystemKeyAccessor extends KeyManagementBase {
+  private final FileSystem fs;
   protected final Path systemKeyDir;
 
   public SystemKeyAccessor(Server server) throws IOException {
-    super(server);
-    this.systemKeyDir = CommonFSUtils.getSystemKeyDir(server.getConfiguration());
+    this(server.getConfiguration(), server.getFileSystem());
+  }
+
+  public SystemKeyAccessor(Configuration configuration, FileSystem fs) throws IOException {
+    super(configuration);
+    this.systemKeyDir = CommonFSUtils.getSystemKeyDir(configuration);
+    this.fs = fs;
   }
 
   /**
@@ -78,7 +85,6 @@ public class SystemKeyAccessor extends KeyManagementBase {
     if (!SecurityUtil.isKeyManagementEnabled(getConfiguration())) {
       return null;
     }
-    FileSystem fs = getServer().getFileSystem();
     Map<Integer, Path> clusterKeys = new TreeMap<>(Comparator.reverseOrder());
     for (FileStatus st : fs.globStatus(new Path(systemKeyDir,
       SYSTEM_KEY_FILE_PREFIX + "*"))) {
@@ -135,7 +141,7 @@ public class SystemKeyAccessor extends KeyManagementBase {
   }
 
   protected String loadKeyMetadata(Path keyPath) throws IOException {
-    try (FSDataInputStream fin = getServer().getFileSystem().open(keyPath)) {
+    try (FSDataInputStream fin = fs.open(keyPath)) {
       return fin.readUTF();
     }
   }

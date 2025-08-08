@@ -1343,13 +1343,6 @@ public final class HConstants {
     "hbase.crypto.managed_keys.local_key_gen_per_file.enabled";
   public static final boolean CRYPTO_MANAGED_KEYS_LOCAL_KEY_GEN_PER_FILE_DEFAULT_ENABLED = false;
 
-  /** Enables or disables storing encrypted wrapping key in trailer. This is disabled by default
-   *  the key metadata is always stored and is sufficient for most use cases. */
-  public static final String CRYPTO_MANAGED_KEYS_STORE_WRAPPING_KEY_IN_TRAILER_ENABLED_CONF_KEY =
-    "hbase.crypto.managed_keys.store_wrapping_key_in_trailer.enabled";
-  public static final boolean CRYPTO_MANAGED_KEYS_STORE_WRAPPING_KEY_IN_TRAILER_DEFAULT_ENABLED =
-    false;
-
   /** Configuration key for setting RPC codec class name */
   public static final String RPC_CODEC_CONF_KEY = "hbase.client.rpc.codec";
 
