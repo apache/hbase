@@ -493,7 +493,7 @@ public class TestCompaction {
         null);
       // wait for the latch to complete.
       latch.await(120, TimeUnit.SECONDS);
-
+      metricsWrapper.updateMetricsAtOnce();
       // compaction should have completed and been marked as failed due to error in split request
       long postCompletedCount = metricsWrapper.getNumCompactionsCompleted();
       long postFailedCount = metricsWrapper.getNumCompactionsFailed();
