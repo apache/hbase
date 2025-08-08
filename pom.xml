@@ -895,7 +895,7 @@
     <jaxb-api.version>2.3.1</jaxb-api.version>
     <servlet.api.version>4.0.1</servlet.api.version>
     <wx.rs.api.version>2.1.1</wx.rs.api.version>
-    <tomcat.jasper.version>9.0.107</tomcat.jasper.version>
+    <tomcat.jasper.version>9.0.108</tomcat.jasper.version>
     <jruby.version>9.4.12.1</jruby.version>
     <junit.version>4.13.2</junit.version>
     <hamcrest.version>1.3</hamcrest.version>
@@ -1912,12 +1912,9 @@
   <!-- TODO Remove below block, added just for testing -->
   <repositories>
     <repository>
-      <snapshots>
-        <enabled>true</enabled>
-        <updatePolicy>always</updatePolicy>
-      </snapshots>
-      <id>apache.snapshots</id>
-      <url>https://repository.apache.org/content/repositories/snapshots</url>
+      <id>staging</id>
+      <name>staging</name>
+      <url>https://repository.apache.org/content/repositories/orgapachehbase-1586</url>
     </repository>
   </repositories>
   <build>
