@@ -25,14 +25,21 @@ import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
@@ -50,6 +57,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.client.RegionReplicaTestHelper.Locator;
+import org.apache.hadoop.hbase.ipc.CallTimeoutException;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -67,6 +75,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
@@ -541,5 +550,89 @@ public class TestAsyncNonMetaRegionLocator {
         assertNotNull(fromCache);
       }
     }
+  }
+
+  @Test
+  public void testRemoveCachedLocationForServerOnError() throws Exception {
+    // create multiple tables
+    createMultiRegionTable();
+    TableName tableName2 = TableName.valueOf("async2");
+
+    try (Table ignored = TEST_UTIL.createTable(tableName2, FAMILY, SPLIT_KEYS)) {
+      TEST_UTIL.waitTableAvailable(tableName2);
+
+      List<RegionInfo> allRegions1 = TEST_UTIL.getAdmin().getRegions(TABLE_NAME);
+      List<RegionInfo> allRegions2 = TEST_UTIL.getAdmin().getRegions(tableName2);
+      Map<TableName, List<RegionInfo>> tableToRegions =
+        new HashMap<>(ImmutableMap.of(TABLE_NAME, allRegions1, tableName2, allRegions2));
+
+      // cache all locations
+      for (Map.Entry<TableName, List<RegionInfo>> entry : tableToRegions.entrySet()) {
+        for (RegionInfo region : entry.getValue()) {
+          RegionLocations locs = locator.getRegionLocations(entry.getKey(), region.getStartKey(),
+            RegionReplicaUtil.DEFAULT_REPLICA_ID, RegionLocateType.CURRENT, false).get();
+          assertNotNull(locs);
+        }
+      }
+
+      // due to timing issue when CatalogReplicaMode is LOAD_BALANCE
+      Thread.sleep(100);
+
+      // One region server is added to FailedServers
+      HRegionLocation locOnError =
+        locator.getRegionLocationInCache(TABLE_NAME, allRegions1.get(0).getStartKey())
+          .getDefaultRegionLocation();
+      ServerName failedServer = locOnError.getServerName();
+      Throwable exception = new CallTimeoutException("test");
+      conn.rpcClient.getFailedServers().addToFailedServers(failedServer.getAddress(), exception);
+      locator.updateCachedLocationOnError(locOnError, exception);
+
+      // All location cache on the failed server should be removed
+      int cacheRemovedCount = 0;
+      int cacheRemainedCount = 0;
+      for (Map.Entry<TableName, List<RegionInfo>> entry : tableToRegions.entrySet()) {
+        for (RegionInfo region : entry.getValue()) {
+          RegionLocations locs =
+            locator.getRegionLocationInCache(entry.getKey(), region.getStartKey());
+          if (locs == null) {
+            cacheRemovedCount++;
+            continue;
+          }
+
+          HRegionLocation loc = locs.getDefaultRegionLocation();
+          assertNotEquals(failedServer, loc.getServerName());
+          cacheRemainedCount++;
+        }
+      }
+      assertEquals(allRegions1.size() + allRegions2.size(), cacheRemovedCount + cacheRemainedCount);
+    } finally {
+      TEST_UTIL.deleteTableIfAny(tableName2);
+    }
+  }
+
+  @Test
+  public void testCallRemoveServerLocationFromCache()
+    throws IOException, InterruptedException, ExecutionException {
+    createSingleRegionTable();
+    AsyncNonMetaRegionLocator locator = spy(new AsyncNonMetaRegionLocator(conn));
+
+    Exception exception = new CallTimeoutException("test");
+    HRegionLocation locOnError;
+
+    // If a server is not added to FailedServers, removeServerLocationFromCache should not be called
+    locOnError =
+      locator.getRegionLocations(TABLE_NAME, EMPTY_START_ROW, RegionReplicaUtil.DEFAULT_REPLICA_ID,
+        RegionLocateType.CURRENT, false).get().getDefaultRegionLocation();
+    locator.updateCachedLocationOnError(locOnError, exception);
+    verify(locator, times(0)).removeServerLocationFromCache(any());
+
+    // If a server is added to FailedServers, removeServerLocationFromCache should be called
+    locOnError =
+      locator.getRegionLocations(TABLE_NAME, EMPTY_START_ROW, RegionReplicaUtil.DEFAULT_REPLICA_ID,
+        RegionLocateType.CURRENT, false).get().getDefaultRegionLocation();
+    ServerName failedServer = locOnError.getServerName();
+    conn.rpcClient.getFailedServers().addToFailedServers(failedServer.getAddress(), exception);
+    locator.updateCachedLocationOnError(locOnError, exception);
+    verify(locator, times(1)).removeServerLocationFromCache(any());
   }
 }
