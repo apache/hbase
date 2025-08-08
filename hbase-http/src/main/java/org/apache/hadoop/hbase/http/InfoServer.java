@@ -43,7 +43,7 @@ public class InfoServer {
   private final org.apache.hadoop.hbase.http.HttpServer httpServer;
 
   private static final String HADOOP_WEB_TLS_CONFIG_PREFIX = "ssl.server.";
-  private static final String HBASE_WEB_TLS_CONFIG_PREFIX = "hbase.infoserver.";
+  private static final String HBASE_WEB_TLS_CONFIG_PREFIX = "hbase.ui.ssl.";
 
   /**
    * Create a status server on the given port. The jsp scripts are taken from
