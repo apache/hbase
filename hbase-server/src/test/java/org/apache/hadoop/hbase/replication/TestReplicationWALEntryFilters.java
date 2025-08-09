@@ -107,15 +107,20 @@ public class TestReplicationWALEntryFilters {
     Entry userEntryEmpty = createEntry(null);
 
     // no scopes
-    // now we will not filter out entries without a replication scope since serial replication still
-    // need the sequence id, but the cells will all be filtered out.
+    assertNull(filter.filter(userEntry));
+    // now for serial replication, we will not filter out entries without a replication scope since
+    // serial replication still need the sequence id, but the cells will all be filtered out.
+    filter.setSerial(true);
     assertTrue(filter.filter(userEntry).getEdit().isEmpty());
+    filter.setSerial(false);
 
     // empty scopes
-    // ditto
     TreeMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     userEntry = createEntry(scopes, a, b);
+    assertNull(filter.filter(userEntry));
+    filter.setSerial(true);
     assertTrue(filter.filter(userEntry).getEdit().isEmpty());
+    filter.setSerial(false);
 
     // different scope
     scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);

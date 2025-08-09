@@ -28,24 +28,26 @@ import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Predicate;
+import org.apache.hbase.thirdparty.org.apache.commons.collections4.MapUtils;
 
 /**
  * Keeps KVs that are scoped other than local
  */
 @InterfaceAudience.Private
-public class ScopeWALEntryFilter implements WALEntryFilter, WALCellFilter {
+public class ScopeWALEntryFilter extends WALEntryFilterBase implements WALCellFilter {
 
   private final BulkLoadCellFilter bulkLoadFilter = new BulkLoadCellFilter();
 
   @Override
   public Entry filter(Entry entry) {
-    // Do not filter out an entire entry by replication scopes. As now we support serial
-    // replication, the sequence id of a marker is also needed by upper layer. We will filter out
-    // all the cells in the filterCell method below if the replication scopes is null or empty.
-    return entry;
+    NavigableMap<byte[], Integer> scopes = entry.getKey().getReplicationScopes();
+    if (MapUtils.isNotEmpty(scopes)) {
+      return entry;
+    }
+    return clearOrNull(entry);
   }
 
-  private boolean hasGlobalScope(NavigableMap<byte[], Integer> scopes, byte[] family) {
+  private static boolean hasGlobalScope(NavigableMap<byte[], Integer> scopes, byte[] family) {
     Integer scope = scopes.get(family);
     return scope != null && scope.intValue() == HConstants.REPLICATION_SCOPE_GLOBAL;
   }
@@ -54,7 +56,7 @@ public class ScopeWALEntryFilter implements WALEntryFilter, WALCellFilter {
   public Cell filterCell(Entry entry, Cell cell) {
     ExtendedCell extendedCell = PrivateCellUtil.ensureExtendedCell(cell);
     NavigableMap<byte[], Integer> scopes = entry.getKey().getReplicationScopes();
-    if (scopes == null || scopes.isEmpty()) {
+    if (MapUtils.isEmpty(scopes)) {
       return null;
     }
     byte[] family = CellUtil.cloneFamily(cell);
