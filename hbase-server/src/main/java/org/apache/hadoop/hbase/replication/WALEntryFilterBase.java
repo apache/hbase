@@ -36,7 +36,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * B will be stuck if we do not record the last pushed sequence id of these entries because we will
  * find out that the previous sequence id range will never finish. So we need to record the sequence
  * id for these entries so the last pushed sequence id can reach the region barrier.
- * @see https://issues.apache.org/jira/browse/HBASE-29463
+ * @see <a href="https://issues.apache.org/jira/browse/HBASE-29463">HBASE-29463</a>
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.REPLICATION)
 public abstract class WALEntryFilterBase implements WALEntryFilter {
