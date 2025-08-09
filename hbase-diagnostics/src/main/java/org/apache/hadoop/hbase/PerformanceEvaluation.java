@@ -2740,7 +2740,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       + "Default: opts.perClientRunRows / 10 = " + DEFAULT_OPTS.getPerClientRunRows() / 10);
     System.err.println(" cycles          How many times to cycle the test. Defaults: 1.");
     System.err.println(" traceRate       Legacy option for enabling HTrace, no effect now."
-      + " Will be removed in 4.0.0 release.");
+      + " Will be removed in 4.0.0 release. Default: 0");
     System.err.println(" latency         Set to report operation latencies. Default: False");
     System.err.println(" latencyThreshold  Set to report number of operations with latency "
       + "over lantencyThreshold, unit in millisecond, default 0");
