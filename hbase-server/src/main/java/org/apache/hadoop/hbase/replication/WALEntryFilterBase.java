@@ -28,14 +28,15 @@ import org.apache.yetus.audience.InterfaceAudience;
  * Why need to treat serial replication specially:
  * <p>
  * Under some special cases, we may filter out some entries but we still need to record the last
- * pushed sequence id for these entries. For example, when we setup a bidirection replication A <->
- * B, if we write to both cluster A and cluster B, cluster A will not replicate the entries which
- * are replicated from cluster B, which means we may have holes in the replication sequence ids. So
- * if the region is closed abnormally, i.e, we do not have a close event for the region, and before
- * the closeing, we have some entries from cluster B, then the replication from cluster A to cluster
- * B will be stuck if we do not record the last pushed sequence id of these entries because we will
- * find out that the previous sequence id range will never finish. So we need to record the sequence
- * id for these entries so the last pushed sequence id can reach the region barrier.
+ * pushed sequence id for these entries. For example, when we setup a bidirection replication A
+ * &lt;-&gt; B, if we write to both cluster A and cluster B, cluster A will not replicate the
+ * entries which are replicated from cluster B, which means we may have holes in the replication
+ * sequence ids. So if the region is closed abnormally, i.e, we do not have a close event for the
+ * region, and before the closing, we have some entries from cluster B, then the replication from
+ * cluster A to cluster B will be stuck if we do not record the last pushed sequence id of these
+ * entries because we will find out that the previous sequence id range will never finish. So we
+ * need to record the sequence id for these entries so the last pushed sequence id can reach the
+ * region barrier.
  * @see <a href="https://issues.apache.org/jira/browse/HBASE-29463">HBASE-29463</a>
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.REPLICATION)
