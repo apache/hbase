@@ -323,7 +323,6 @@ public class TestMetricsRegionServer {
     HELPER.assertGauge("activeScanners", 0, serverSource);
   }
 
-
   @Test
   public void testThrottleExceptionMetricsIntegration() {
     // Record different types of throttle exceptions
