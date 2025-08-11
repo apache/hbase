@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 import org.apache.hadoop.hbase.metrics.Interns;
+import org.apache.hadoop.hbase.metrics.impl.FastLongHistogram;
 import org.apache.hadoop.metrics2.MetricHistogram;
 import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
@@ -512,7 +513,7 @@ public class MetricsRegionServerSourceImpl extends BaseSourceImpl
   }
 
   private MetricsRecordBuilder addGaugesToMetricsRecordBuilder(MetricsRecordBuilder mrb) {
-    return mrb.addGauge(Interns.info(REGION_COUNT, REGION_COUNT_DESC), rsWrap.getNumOnlineRegions())
+    mrb.addGauge(Interns.info(REGION_COUNT, REGION_COUNT_DESC), rsWrap.getNumOnlineRegions())
       .addGauge(Interns.info(STORE_COUNT, STORE_COUNT_DESC), rsWrap.getNumStores())
       .addGauge(Interns.info(WALFILE_COUNT, WALFILE_COUNT_DESC), rsWrap.getNumWALFiles())
       .addGauge(Interns.info(WALFILE_SIZE, WALFILE_SIZE_DESC), rsWrap.getWALFileSize())
@@ -644,6 +645,39 @@ public class MetricsRegionServerSourceImpl extends BaseSourceImpl
       .addGauge(Interns.info(BYTE_BUFF_ALLOCATOR_USED_BUFFER_COUNT,
         BYTE_BUFF_ALLOCATOR_USED_BUFFER_COUNT_DESC), rsWrap.getByteBuffAllocatorUsedBufferCount())
       .addGauge(Interns.info(ACTIVE_SCANNERS, ACTIVE_SCANNERS_DESC), rsWrap.getActiveScanners());
+    addFastLongHistStats(mrb, rsWrap.getAgeAtEviction(), AGE_AT_EVICTION);
+    return mrb;
+  }
+
+  private void addFastLongHistStats(MetricsRecordBuilder mrb, FastLongHistogram flHistogram,
+    String metricsKey) {
+    mrb.addGauge(Interns.info(metricsKey + MetricHistogram.MIN_METRIC_NAME, ""),
+      flHistogram.getMin());
+    mrb.addGauge(Interns.info(metricsKey + MetricHistogram.MAX_METRIC_NAME, ""),
+      flHistogram.getMax());
+    mrb.addGauge(Interns.info(metricsKey + MetricHistogram.MEAN_METRIC_NAME, ""),
+      flHistogram.getMean());
+    long[] quantiles = flHistogram.getQuantiles();
+
+    mrb.addGauge(Interns.info(metricsKey + MetricHistogram.TWENTY_FIFTH_PERCENTILE_METRIC_NAME, ""),
+      quantiles[0]);
+    mrb.addGauge(Interns.info(metricsKey + MetricHistogram.MEDIAN_METRIC_NAME, ""), quantiles[1]);
+    mrb.addGauge(
+      Interns.info(metricsKey + MetricHistogram.SEVENTY_FIFTH_PERCENTILE_METRIC_NAME, ""),
+      quantiles[2]);
+    mrb.addGauge(Interns.info(metricsKey + MetricHistogram.NINETIETH_PERCENTILE_METRIC_NAME, ""),
+      quantiles[3]);
+    mrb.addGauge(Interns.info(metricsKey + MetricHistogram.NINETY_FIFTH_PERCENTILE_METRIC_NAME, ""),
+      quantiles[4]);
+    mrb.addGauge(
+      Interns.info(metricsKey + MetricHistogram.NINETY_EIGHTH_PERCENTILE_METRIC_NAME, ""),
+      quantiles[5]);
+    mrb.addGauge(
+      Interns.info(metricsKey + MetricHistogram.NINETY_NINETH_PERCENTILE_METRIC_NAME, ""),
+      quantiles[6]);
+    mrb.addGauge(Interns
+      .info(metricsKey + MetricHistogram.NINETY_NINE_POINT_NINETH_PERCENTILE_METRIC_NAME, ""),
+      quantiles[7]);
   }
 
   @Override
