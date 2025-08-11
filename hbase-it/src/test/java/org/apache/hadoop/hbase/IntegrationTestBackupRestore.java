@@ -126,7 +126,9 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
       try {
         runTestSingle(this.table);
       } catch (Exception e) {
-        LOG.error("An exception occurred in thread {}: ", Thread.currentThread().getName(), e);
+        LOG.error(
+          "An exception occurred in thread {} when performing a backup and restore with table {}: ",
+          Thread.currentThread().getName(), this.table.getNameAsString(), e);
         this.exc = e;
       }
     }
@@ -217,13 +219,23 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
       workers[i].start();
     }
     // Wait for all workers to finish and check for errors
-    Exception threadException;
+    Exception error = null;
+    Exception threadExc;
     for (int i = 0; i < numTables; i++) {
       Uninterruptibles.joinUninterruptibly(workers[i]);
-      threadException = backupAndRestoreThreads[i].getException();
-      if (threadException != null) {
-        throw backupAndRestoreThreads[i].getException();
+      threadExc = backupAndRestoreThreads[i].getException();
+      if (threadExc == null) {
+        continue;
       }
+      if (error == null) {
+        error = threadExc;
+      } else {
+        error.addSuppressed(threadExc);
+      }
+    }
+    // Throw any found errors after all threads have completed
+    if (error != null) {
+      throw error;
     }
     LOG.info("IT backup & restore finished");
   }
