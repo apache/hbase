@@ -45,20 +45,6 @@ public class SimpleTotalOrderPartitioner<VALUE> extends Partitioner<ImmutableByt
   implements Configurable {
   private final static Logger LOG = LoggerFactory.getLogger(SimpleTotalOrderPartitioner.class);
 
-  /**
-   * @deprecated since 0.90.0
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-1923">HBASE-1923</a>
-   */
-  @Deprecated
-  public static final String START = "hbase.simpletotalorder.start";
-
-  /**
-   * @deprecated since 0.90.0
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-1923">HBASE-1923</a>
-   */
-  @Deprecated
-  public static final String END = "hbase.simpletotalorder.end";
-
   static final String START_BASE64 = "hbase.simpletotalorder.start.base64";
   static final String END_BASE64 = "hbase.simpletotalorder.end.base64";
 
@@ -76,28 +62,21 @@ public class SimpleTotalOrderPartitioner<VALUE> extends Partitioner<ImmutableByt
     conf.set(END_BASE64, Bytes.toString(Base64.getEncoder().encode(endKey)));
   }
 
-  @SuppressWarnings("deprecation")
   static byte[] getStartKey(Configuration conf) {
-    return getKeyFromConf(conf, START_BASE64, START);
+    return getKeyFromConf(conf, START_BASE64);
   }
 
-  @SuppressWarnings("deprecation")
   static byte[] getEndKey(Configuration conf) {
-    return getKeyFromConf(conf, END_BASE64, END);
+    return getKeyFromConf(conf, END_BASE64);
   }
 
-  private static byte[] getKeyFromConf(Configuration conf, String base64Key, String deprecatedKey) {
+  private static byte[] getKeyFromConf(Configuration conf, String base64Key) {
     String encoded = conf.get(base64Key);
     if (encoded != null) {
       return Base64.getDecoder().decode(encoded);
-    }
-    String oldStyleVal = conf.get(deprecatedKey);
-    if (oldStyleVal == null) {
+    } else {
       return null;
     }
-    LOG.warn("Using deprecated configuration " + deprecatedKey
-      + " - please use static accessor methods instead.");
-    return Bytes.toBytesBinary(oldStyleVal);
   }
 
   @Override
