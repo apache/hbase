@@ -63,20 +63,19 @@ public class SimpleTotalOrderPartitioner<VALUE> extends Partitioner<ImmutableByt
   }
 
   static byte[] getStartKey(Configuration conf) {
-    return getKeyFromConf(conf, START_BASE64);
+    return getBase64KeyFromConf(conf, START_BASE64);
   }
 
   static byte[] getEndKey(Configuration conf) {
-    return getKeyFromConf(conf, END_BASE64);
+    return getBase64KeyFromConf(conf, END_BASE64);
   }
 
-  private static byte[] getKeyFromConf(Configuration conf, String base64Key) {
+  private static byte[] getBase64KeyFromConf(Configuration conf, String base64Key) {
     String encoded = conf.get(base64Key);
     if (encoded != null) {
       return Base64.getDecoder().decode(encoded);
-    } else {
-      return null;
     }
+    return null;
   }
 
   @Override
