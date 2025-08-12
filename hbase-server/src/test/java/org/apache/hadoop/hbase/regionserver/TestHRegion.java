@@ -66,6 +66,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -5710,7 +5711,6 @@ public class TestHRegion {
 
       // move the file of the primary region to the archive, simulating a compaction
       Collection<HStoreFile> storeFiles = primaryRegion.getStore(families[0]).getStorefiles();
-      primaryRegion.getRegionFileSystem().removeStoreFiles(Bytes.toString(families[0]), storeFiles);
       HRegionFileSystem regionFs = primaryRegion.getRegionFileSystem();
       StoreFileTracker sft = StoreFileTrackerFactory.create(primaryRegion.getBaseConf(), false,
         StoreContext.getBuilder()
@@ -5718,6 +5718,7 @@ public class TestHRegion {
           .withFamilyStoreDirectoryPath(
             new Path(regionFs.getRegionDir(), Bytes.toString(families[0])))
           .withRegionFileSystem(regionFs).build());
+      sft.removeStoreFiles(storeFiles.stream().collect(Collectors.toList()));
       Collection<StoreFileInfo> storeFileInfos = sft.load();
       Assert.assertTrue(storeFileInfos == null || storeFileInfos.isEmpty());
 

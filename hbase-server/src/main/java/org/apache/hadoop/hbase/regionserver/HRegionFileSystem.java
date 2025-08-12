@@ -441,29 +441,6 @@ public class HRegionFileSystem {
   }
 
   /**
-   * Archives the specified store file from the specified family.
-   * @param familyName Family that contains the store files
-   * @param filePath   {@link Path} to the store file to remove
-   * @throws IOException if the archiving fails
-   */
-  public void removeStoreFile(final String familyName, final Path filePath) throws IOException {
-    HFileArchiver.archiveStoreFile(this.conf, this.fs, this.regionInfoForFs, this.tableDir,
-      Bytes.toBytes(familyName), filePath);
-  }
-
-  /**
-   * Closes and archives the specified store files from the specified family.
-   * @param familyName Family that contains the store files
-   * @param storeFiles set of store files to remove
-   * @throws IOException if the archiving fails
-   */
-  public void removeStoreFiles(String familyName, Collection<HStoreFile> storeFiles)
-    throws IOException {
-    HFileArchiver.archiveStoreFiles(this.conf, this.fs, this.regionInfoForFs, this.tableDir,
-      Bytes.toBytes(familyName), storeFiles);
-  }
-
-  /**
    * Bulk load: Add a specified store file to the specified family. If the source file is on the
    * same different file-system is moved from the source location to the destination location,
    * otherwise is copied over.
