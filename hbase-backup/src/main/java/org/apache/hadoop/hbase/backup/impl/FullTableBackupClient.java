@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.backup.impl;
 
+import static org.apache.hadoop.hbase.HConstants.REPLICATION_BULKLOAD_ENABLE_KEY;
 import static org.apache.hadoop.hbase.HConstants.REPLICATION_SCOPE_GLOBAL;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.BACKUP_ATTEMPTS_PAUSE_MS_KEY;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.BACKUP_MAX_ATTEMPTS_KEY;
@@ -191,7 +192,7 @@ public class FullTableBackupClient extends TableBackupClient {
     // After this checkpoint, even if entering cancel process, will let the backup finished
     backupInfo.setState(BackupState.COMPLETE);
 
-    if (!conf.getBoolean("hbase.replication.bulkload.enabled", false)) {
+    if (!conf.getBoolean(REPLICATION_BULKLOAD_ENABLE_KEY, false)) {
       System.out.println("NOTE: Bulkload replication is not enabled. "
         + "Bulk loaded files will not be backed up as part of continuous backup. "
         + "To ensure bulk loaded files are included in the backup, please enable bulkload replication "
