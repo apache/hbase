@@ -34,7 +34,7 @@ public class ServerTooBusyException extends DoNotRetryIOException {
   }
 
   /**
-   * @deprecated Since 3.0.0, will be removed in 4.0.0.
+   * @deprecated Since 1.7.0, 2.4.18 and 2.5.0, will be removed in 4.0.0.
    */
   @Deprecated
   public ServerTooBusyException(InetSocketAddress address, long count) {
