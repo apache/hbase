@@ -75,7 +75,8 @@ public class Address implements Comparable<Address> {
   }
 
   /**
-   * @deprecated Use {@link #getHostName()} instead
+   * @deprecated Since 1.7.0, 2.4.18 and 2.5.0, will be removed in 4.0.0. Use {@link #getHostName()}
+   *             instead.
    */
   @Deprecated
   public String getHostname() {
