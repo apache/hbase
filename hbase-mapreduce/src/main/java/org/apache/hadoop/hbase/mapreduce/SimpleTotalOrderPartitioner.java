@@ -29,16 +29,14 @@ import org.slf4j.LoggerFactory;
 
 /**
  * A partitioner that takes start and end keys and uses bigdecimal to figure which reduce a key
- * belongs to. Pass the start and end keys in the Configuration using
- * <code>hbase.simpletotalorder.start</code> and <code>hbase.simpletotalorder.end</code>. The end
- * key needs to be exclusive; i.e. one larger than the biggest key in your key space. You may be
- * surprised at how this class partitions the space; it may not align with preconceptions; e.g. a
- * start key of zero and an end key of 100 divided in ten will not make regions whose range is 0-10,
- * 10-20, and so on. Make your own partitioner if you need the region spacing to come out a
- * particular way.
- * @param <VALUE>
- * @see #START
- * @see #END
+ * belongs to. Pass the start and end keys in the Configuration using {@value #START_BASE64} and
+ * {@value #END_BASE64}. The end key needs to be exclusive; i.e. one larger than the biggest key in
+ * your key space. You may be surprised at how this class partitions the space; it may not align
+ * with preconceptions; e.g. a start key of zero and an end key of 100 divided in ten will not make
+ * regions whose range is 0-10, 10-20, and so on. Make your own partitioner if you need the region
+ * spacing to come out a particular way.
+ * @see #START_BASE64
+ * @see #END_BASE64
  */
 @InterfaceAudience.Public
 public class SimpleTotalOrderPartitioner<VALUE> extends Partitioner<ImmutableBytesWritable, VALUE>
