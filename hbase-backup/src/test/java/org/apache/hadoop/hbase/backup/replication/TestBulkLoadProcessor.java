@@ -113,11 +113,8 @@ public class TestBulkLoadProcessor {
       "cf1", "file1", "file2");
 
     List<Path> paths = BulkLoadProcessor.processBulkLoadFiles(Collections.singletonList(entry));
-    System.out.println(paths);
 
     assertEquals(2, paths.size());
-    System.out.println(paths);
-
     assertTrue(paths.get(0).toString().contains("ns/tbl/region123/cf1/file1"));
     assertTrue(paths.get(1).toString().contains("ns/tbl/region123/cf1/file2"));
   }
@@ -161,7 +158,6 @@ public class TestBulkLoadProcessor {
       createBulkLoadWalEntry(TableName.valueOf("ns", "tbl"), "regionXYZ", true, "cf2", "fileA");
 
     List<Path> paths = BulkLoadProcessor.processBulkLoadFiles(Arrays.asList(entry, entry2));
-    System.out.println(paths);
 
     assertEquals(2, paths.size());
     assertTrue(paths.stream().anyMatch(p -> p.toString().contains("cf1/file1")));
