@@ -272,16 +272,27 @@ public class TestReplicationBase {
   }
 
   private boolean peerExist(String peerId) throws IOException {
-    return hbaseAdmin.listReplicationPeers().stream().anyMatch(p -> peerId.equals(p.getPeerId()));
+    return peerExist(peerId, UTIL1);
+  }
+
+  private boolean peerExist(String peerId, HBaseTestingUtility util) throws IOException {
+    return util.getAdmin().listReplicationPeers().stream()
+      .anyMatch(p -> peerId.equals(p.getPeerId()));
   }
 
   protected final void addPeer(String peerId, TableName tableName) throws Exception {
-    if (!peerExist(peerId)) {
-      ReplicationPeerConfigBuilder builder = ReplicationPeerConfig.newBuilder()
-        .setClusterKey(UTIL2.getClusterKey()).setSerial(isSerialPeer())
-        .setReplicationEndpointImpl(ReplicationEndpointTest.class.getName());
-      hbaseAdmin.addReplicationPeer(peerId, builder.build());
+    addPeer(peerId, tableName, UTIL1, UTIL2);
+  }
+
+  protected final void addPeer(String peerId, TableName tableName, HBaseTestingUtility source,
+    HBaseTestingUtility target) throws Exception {
+    if (peerExist(peerId, source)) {
+      return;
     }
+    ReplicationPeerConfigBuilder builder = ReplicationPeerConfig.newBuilder()
+      .setClusterKey(target.getClusterKey()).setSerial(isSerialPeer())
+      .setReplicationEndpointImpl(ReplicationEndpointTest.class.getName());
+    source.getAdmin().addReplicationPeer(peerId, builder.build());
   }
 
   @Before
@@ -290,8 +301,12 @@ public class TestReplicationBase {
   }
 
   protected final void removePeer(String peerId) throws Exception {
-    if (peerExist(peerId)) {
-      hbaseAdmin.removeReplicationPeer(peerId);
+    removePeer(peerId, UTIL1);
+  }
+
+  protected final void removePeer(String peerId, HBaseTestingUtility util) throws Exception {
+    if (peerExist(peerId, util)) {
+      util.getAdmin().removeReplicationPeer(peerId);
     }
   }
 
