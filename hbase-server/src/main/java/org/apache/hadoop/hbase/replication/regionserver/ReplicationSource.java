@@ -335,6 +335,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
     }
     filters.add(new ClusterMarkingEntryFilter(clusterId, peerClusterId, replicationEndpoint));
     this.walEntryFilter = new ChainWALEntryFilter(filters);
+    this.walEntryFilter.setSerial(replicationPeer.getPeerConfig().isSerial());
   }
 
   private void tryStartNewShipper(String walGroupId) {
