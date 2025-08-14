@@ -104,7 +104,7 @@ public class TestTakeSnapshotHandler {
     assertEquals(-1, UTIL.getAdmin().getDescriptor(cloned).getMaxFileSize());
   }
 
-  @Test()
+  @Test
   public void testSnapshotEarlyExpiration() throws Exception {
     UTIL.startMiniCluster();
     Map<String, Object> snapshotProps = new HashMap<>();
