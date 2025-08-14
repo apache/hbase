@@ -19,9 +19,15 @@ package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
+import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
+import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,6 +63,22 @@ public class RefreshHFilesTableProcedure
   @Override
   public TableOperationType getTableOperationType() {
     return TableOperationType.REFRESH_HFILES;
+  }
+
+  @Override
+  protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
+    super.serializeStateData(serializer);
+    MasterProcedureProtos.RefreshHFilesTableProcedureStateData.Builder builder = MasterProcedureProtos.RefreshHFilesTableProcedureStateData.newBuilder();
+    builder.setTableName(ProtobufUtil.toProtoTableName(tableName));
+    serializer.serialize(builder.build());
+  }
+
+  @Override
+  protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
+    super.deserializeStateData(serializer);
+    MasterProcedureProtos.RefreshHFilesTableProcedureStateData
+      data = serializer.deserialize(MasterProcedureProtos.RefreshHFilesTableProcedureStateData.class);
+    this.tableName = ProtobufUtil.toTableName(data.getTableName());
   }
 
   @Override
