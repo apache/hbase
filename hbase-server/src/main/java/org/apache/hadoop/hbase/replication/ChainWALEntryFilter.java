@@ -53,6 +53,13 @@ public class ChainWALEntryFilter implements WALEntryFilter {
     initCellFilters();
   }
 
+  @Override
+  public void setSerial(boolean serial) {
+    for (WALEntryFilter filter : filters) {
+      filter.setSerial(serial);
+    }
+  }
+
   public void initCellFilters() {
     ArrayList<WALCellFilter> cellFilters = new ArrayList<>(filters.length);
     for (WALEntryFilter filter : filters) {
