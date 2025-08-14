@@ -7745,26 +7745,25 @@ public class TestHRegion {
     assertNull(region.getCoprocessorHost());
 
     // set and verify the system coprocessors for region and user region
-    Configuration newConf = new Configuration(conf);
-    newConf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, MetaTableMetrics.class.getName());
-    newConf.set(CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY,
+    conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, MetaTableMetrics.class.getName());
+    conf.set(CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY,
       NoOpRegionCoprocessor.class.getName());
     // trigger configuration change
-    region.onConfigurationChange(newConf);
-    assertTrue(region.getCoprocessorHost() != null);
+    region.onConfigurationChange(conf);
+    assertNotNull(region.getCoprocessorHost());
     Set<String> coprocessors = region.getCoprocessorHost().getCoprocessors();
-    assertTrue(coprocessors.size() == 2);
+    assertEquals(2, coprocessors.size());
     assertTrue(region.getCoprocessorHost().getCoprocessors()
       .contains(MetaTableMetrics.class.getSimpleName()));
     assertTrue(region.getCoprocessorHost().getCoprocessors()
       .contains(NoOpRegionCoprocessor.class.getSimpleName()));
 
     // remove region coprocessor and keep only user region coprocessor
-    newConf.unset(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY);
-    region.onConfigurationChange(newConf);
-    assertTrue(region.getCoprocessorHost() != null);
+    conf.unset(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY);
+    region.onConfigurationChange(conf);
+    assertNotNull(region.getCoprocessorHost());
     coprocessors = region.getCoprocessorHost().getCoprocessors();
-    assertTrue(coprocessors.size() == 1);
+    assertEquals(1, coprocessors.size());
     assertTrue(region.getCoprocessorHost().getCoprocessors()
       .contains(NoOpRegionCoprocessor.class.getSimpleName()));
   }
