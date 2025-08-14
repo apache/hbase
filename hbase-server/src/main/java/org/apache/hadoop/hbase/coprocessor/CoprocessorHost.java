@@ -116,9 +116,9 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
   }
 
   /**
-   * Get the full class names of all loaded coprocessors.
-   * This method returns the complete class names including package information,
-   * which is useful for precise coprocessor identification and comparison.
+   * Get the full class names of all loaded coprocessors. This method returns the complete class
+   * names including package information, which is useful for precise coprocessor identification and
+   * comparison.
    */
   public Set<String> getCoprocessorClassNames() {
     Set<String> returnValue = new TreeSet<>();

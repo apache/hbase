@@ -17,15 +17,13 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import org.apache.commons.lang3.StringUtils;
+import java.util.HashSet;
+import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
-import java.util.HashSet;
-import java.util.Set;
-
 import org.apache.hbase.thirdparty.com.google.common.base.Strings;
 
 /**
@@ -41,9 +39,8 @@ public final class CoprocessorConfigurationUtil {
    * Check configuration change by comparing current loaded coprocessors with configuration values.
    * This method is useful when the configuration object has been updated but we need to determine
    * if coprocessor configuration has actually changed compared to what's currently loaded.
-   *
-   * @param coprocessorHost the coprocessor host to check current loaded coprocessors (can be null)
-   * @param conf the configuration to check
+   * @param coprocessorHost  the coprocessor host to check current loaded coprocessors (can be null)
+   * @param conf             the configuration to check
    * @param configurationKey the configuration keys to check
    * @return true if configuration has changed, false otherwise
    */
@@ -84,8 +81,10 @@ public final class CoprocessorConfigurationUtil {
    * Helper method to check if there are any coprocessors configured.
    */
   private static boolean hasCoprocessorsConfigured(Configuration conf, String... configurationKey) {
-    if (!conf.getBoolean(CoprocessorHost.COPROCESSORS_ENABLED_CONF_KEY,
-      CoprocessorHost.DEFAULT_COPROCESSORS_ENABLED)) {
+    if (
+      !conf.getBoolean(CoprocessorHost.COPROCESSORS_ENABLED_CONF_KEY,
+        CoprocessorHost.DEFAULT_COPROCESSORS_ENABLED)
+    ) {
       return false;
     }
 
