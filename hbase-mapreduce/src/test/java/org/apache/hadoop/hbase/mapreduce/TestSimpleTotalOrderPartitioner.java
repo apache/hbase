@@ -19,6 +19,8 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import static org.junit.Assert.assertEquals;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -50,8 +52,10 @@ public class TestSimpleTotalOrderPartitioner {
     String end = "{";
     SimpleTotalOrderPartitioner<byte[]> p = new SimpleTotalOrderPartitioner<>();
 
-    this.conf.set(SimpleTotalOrderPartitioner.START, start);
-    this.conf.set(SimpleTotalOrderPartitioner.END, end);
+    this.conf.set(SimpleTotalOrderPartitioner.START_BASE64,
+      Base64.getEncoder().encodeToString(start.getBytes(StandardCharsets.UTF_8)));
+    this.conf.set(SimpleTotalOrderPartitioner.END_BASE64,
+      Base64.getEncoder().encodeToString(end.getBytes(StandardCharsets.UTF_8)));
     p.setConf(this.conf);
     ImmutableBytesWritable c = new ImmutableBytesWritable(Bytes.toBytes("c"));
     // If one reduce, partition should be 0.
