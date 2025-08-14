@@ -22,26 +22,38 @@ import java.util.Optional;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.procedure2.FailedRemoteDispatchException;
 import org.apache.hadoop.hbase.procedure2.Procedure;
+import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
+import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureException;
 import org.apache.hadoop.hbase.regionserver.RefreshHFilesCallable;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
+import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class RefreshHFilesRegionProcedure extends Procedure<MasterProcedureEnv>
   implements TableProcedureInterface,
   RemoteProcedureDispatcher.RemoteProcedure<MasterProcedureEnv, ServerName> {
+  private static final Logger LOG = LoggerFactory.getLogger(RefreshHFilesRegionProcedure.class);
   private RegionInfo region;
+  private ProcedureEvent<?> event;
+  private boolean dispatched;
+  private boolean succ;
+  private RetryCounter retryCounter;
 
   public RefreshHFilesRegionProcedure() {
   }
@@ -75,21 +87,60 @@ public class RefreshHFilesRegionProcedure extends Procedure<MasterProcedureEnv>
     throw new UnsupportedOperationException();
   }
 
+  private void setTimeoutForSuspend(MasterProcedureEnv env, String reason) {
+    if (retryCounter == null) {
+      retryCounter = ProcedureUtil.createRetryCounter(env.getMasterConfiguration());
+    }
+    long backoff = retryCounter.getBackoffTimeAndIncrementAttempts();
+    LOG.warn("{} can not run currently because {}, wait {} ms to retry", this, reason, backoff);
+    setTimeout(Math.toIntExact(backoff));
+    setState(ProcedureProtos.ProcedureState.WAITING_TIMEOUT);
+    skipPersistence();
+  }
+
   @Override
   protected Procedure<MasterProcedureEnv>[] execute(MasterProcedureEnv env)
     throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
+    if (dispatched) {
+      if (succ) {
+        return null;
+      }
+      dispatched = false;
+    }
+
     RegionStates regionStates = env.getAssignmentManager().getRegionStates();
     RegionStateNode regionNode = regionStates.getRegionStateNode(region);
 
-    ServerName targetServer = regionNode.getRegionLocation();
-
-    try {
-      env.getRemoteDispatcher().addOperationToNode(targetServer, this);
-    } catch (FailedRemoteDispatchException e) {
+    if (regionNode.getProcedure() != null) {
+      setTimeoutForSuspend(env, String.format("region %s has a TRSP attached %s",
+        region.getRegionNameAsString(), regionNode.getProcedure()));
       throw new ProcedureSuspendedException();
     }
 
-    return null;
+    if (!regionNode.isInState(RegionState.State.OPEN)) {
+      LOG.info("State of region {} is not OPEN. Skip {} ...", region, this);
+      setTimeoutForSuspend(env, String.format("region state of %s is %s",
+        region.getRegionNameAsString(), regionNode.getState()));
+      return null;
+    }
+
+    ServerName targetServer = regionNode.getRegionLocation();
+    if (targetServer == null) {
+      setTimeoutForSuspend(env,
+        String.format("target server of region %s is null", region.getRegionNameAsString()));
+      throw new ProcedureSuspendedException();
+    }
+
+    try {
+      env.getRemoteDispatcher().addOperationToNode(targetServer, this);
+      dispatched = true;
+      event = new ProcedureEvent<>(this);
+      event.suspendIfNotReady(this);
+      throw new ProcedureSuspendedException();
+    } catch (FailedRemoteDispatchException e) {
+      setTimeoutForSuspend(env, "Failed send request to " + targetServer);
+      throw new ProcedureSuspendedException();
+    }
   }
 
   @Override
@@ -104,16 +155,33 @@ public class RefreshHFilesRegionProcedure extends Procedure<MasterProcedureEnv>
 
   @Override
   public void remoteOperationFailed(MasterProcedureEnv env, RemoteProcedureException error) {
-    // TODO redo the same thing again till retry count else send the error to client.
+    complete(env, error);
   }
 
   public void remoteOperationCompleted(MasterProcedureEnv env) {
-    // TODO Do nothing just LOG completed successfully as everything is completed successfully
+    complete(env, null);
   }
 
   @Override
   public void remoteCallFailed(MasterProcedureEnv env, ServerName serverName, IOException e) {
-    // TODO redo the same thing again till retry count else send the error to client.
+    complete(env, e);
+  }
+
+  private void complete(MasterProcedureEnv env, Throwable error) {
+    if (isFinished()) {
+      LOG.info("This procedure {} is already finished, skip the rest processes", this.getProcId());
+      return;
+    }
+    if (event == null) {
+      LOG.warn("procedure event for {} is null, maybe the procedure is created when recovery",
+        getProcId());
+      return;
+    }
+    if (error == null) {
+      succ = true;
+    }
+    event.wake(env.getProcedureScheduler());
+    event = null;
   }
 
   @Override
