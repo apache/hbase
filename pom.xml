@@ -626,7 +626,7 @@
     <joni.version>2.2.1</joni.version>
     <jcodings.version>1.0.58</jcodings.version>
     <spy.version>2.12.3</spy.version>
-    <bouncycastle.version>1.78</bouncycastle.version>
+    <bouncycastle.version>1.81</bouncycastle.version>
     <skyscreamer.version>1.5.1</skyscreamer.version>
     <kerby.version>1.0.1</kerby.version>
     <commons-crypto.version>1.1.0</commons-crypto.version>
