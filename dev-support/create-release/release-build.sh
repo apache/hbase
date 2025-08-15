@@ -215,7 +215,14 @@ log "Checked out ${PROJECT} at ${GIT_REF} commit $git_hash"
 if [ -z "${RELEASE_VERSION}" ]; then
   RELEASE_VERSION="$(maven_get_version)"
 fi
-init_java_17
+init_java17
+
+# We need to do following as hbase-thirdparty requires toolchains setup
+if [[ "${PROJECT}" == "hbase-thirdparty" ]]; then
+  log "Setting up toolchains and JDK for hbase-thirdparty"
+  set_java17_as_default_java
+  init_toolchains
+fi
 
 # This is a band-aid fix to avoid the failure of Maven nightly snapshot in some Jenkins
 # machines by explicitly calling /usr/sbin/lsof. Please see SPARK-22377 and the discussion

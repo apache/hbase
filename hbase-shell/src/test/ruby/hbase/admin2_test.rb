@@ -84,6 +84,12 @@ module Hbase
       assert output.include? 'regionsInTransition'
     end
 
+    define_test 'Get tasks status' do
+      output = capture_stdout { admin.status('tasks', '') }
+      puts "Status output:\n#{output}"
+      assert output.include? 'live servers'
+    end
+
     define_test 'hbck_chore_run' do
       command(:hbck_chore_run)
     end
