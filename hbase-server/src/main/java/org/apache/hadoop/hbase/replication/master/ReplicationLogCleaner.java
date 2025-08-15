@@ -28,6 +28,7 @@ import java.util.stream.Stream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.cleaner.BaseLogCleanerDelegate;
@@ -65,6 +66,7 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
   // queue for a given peer, that why we can use a String peerId as key instead of
   // ReplicationQueueId.
   private Map<ServerName, Map<String, Map<String, ReplicationGroupOffset>>> replicationOffsets;
+  private MasterServices masterService;
   private ReplicationLogCleanerBarrier barrier;
   private ReplicationPeerManager rpm;
   private Supplier<Set<ServerName>> getNotFullyDeadServers;
@@ -74,9 +76,12 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
 
   @Override
   public void preClean() {
-    if (this.getConf() == null) {
+    if (this.getConf() == null || isAsyncClusterConnectionClosedOrNull()) {
+      LOG.warn(
+        "Skipping preClean because configuration is null or asyncClusterConnection is unavailable.");
       return;
     }
+
     try {
       if (!rpm.getQueueStorage().hasData()) {
         return;
@@ -192,6 +197,13 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
     if (this.getConf() == null) {
       return files;
     }
+
+    if (isAsyncClusterConnectionClosedOrNull()) {
+      LOG.warn("Skip getting deletable files because asyncClusterConnection is unavailable.");
+      // asyncClusterConnection is unavailable, we shouldn't delete any files.
+      return Collections.emptyList();
+    }
+
     try {
       if (!rpm.getQueueStorage().hasData()) {
         return files;
@@ -251,11 +263,11 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
     super.init(params);
     if (MapUtils.isNotEmpty(params)) {
       Object master = params.get(HMaster.MASTER);
-      if (master != null && master instanceof MasterServices) {
-        MasterServices m = (MasterServices) master;
-        barrier = m.getReplicationLogCleanerBarrier();
-        rpm = m.getReplicationPeerManager();
-        getNotFullyDeadServers = () -> getNotFullyDeadServers(m);
+      if (master instanceof MasterServices) {
+        masterService = (MasterServices) master;
+        barrier = masterService.getReplicationLogCleanerBarrier();
+        rpm = masterService.getReplicationPeerManager();
+        getNotFullyDeadServers = () -> getNotFullyDeadServers(masterService);
         return;
       }
     }
@@ -270,5 +282,14 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
   @Override
   public boolean isStopped() {
     return this.stopped;
+  }
+
+  /**
+   * Check if asyncClusterConnection is null or closed.
+   * @return true if asyncClusterConnection is null or is closed, false otherwise
+   */
+  private boolean isAsyncClusterConnectionClosedOrNull() {
+    AsyncClusterConnection asyncClusterConnection = masterService.getAsyncClusterConnection();
+    return asyncClusterConnection == null || asyncClusterConnection.isClosed();
   }
 }
