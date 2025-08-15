@@ -439,7 +439,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
           // Replicas can take a while to come online. The cache may have only the primary. If we
           // keep going to the cache, we will not learn of the replicas and their locations after
           // they come online.
-          if (useCache && locations.size() == 1 && TableName.isMetaTableName(tableName)) {
+          if (useCache && locations.size() == 1) {
             if (tableDescriptors.get(tableName).getRegionReplication() > 1) {
               // Make an obnoxious log here. See how bad this issue is. Add a timer if happening
               // too much.
@@ -488,6 +488,13 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
       }
 
       if (locations.size() == 1) {
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Skipping {} entries in table {} because only one region location was found",
+            entries.size(), tableName);
+          for (Entry entry : entries) {
+            LOG.trace("Skipping: {}", entry);
+          }
+        }
         return;
       }
 
