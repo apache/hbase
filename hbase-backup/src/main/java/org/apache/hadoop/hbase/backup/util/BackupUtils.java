@@ -496,7 +496,7 @@ public final class BackupUtils {
    * @param historyList history list
    * @return sorted list of BackupCompleteData
    */
-  public static ArrayList<BackupInfo> sortHistoryListDesc(ArrayList<BackupInfo> historyList) {
+  public static ArrayList<BackupInfo> sortHistoryListDesc(List<BackupInfo> historyList) {
     ArrayList<BackupInfo> list = new ArrayList<>();
     TreeMap<String, BackupInfo> map = new TreeMap<>();
     for (BackupInfo h : historyList) {
