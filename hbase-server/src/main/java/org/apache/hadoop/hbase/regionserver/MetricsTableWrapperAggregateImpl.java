@@ -76,8 +76,10 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
 
             mt.storeFileCount += store.getStorefilesCount();
             mt.maxStoreFileCount = Math.max(mt.maxStoreFileCount, store.getStorefilesCount());
-            mt.memstoreSize += (store.getMemStoreSize().getDataSize()
-              + store.getMemStoreSize().getHeapSize() + store.getMemStoreSize().getOffHeapSize());
+            final MemStoreSize memstoreSize = store.getMemStoreSize();
+            mt.memstoreSize += memstoreSize.getDataSize();
+            mt.memstoreHeapSize += memstoreSize.getHeapSize();
+            mt.memstoreOffHeapSize += memstoreSize.getOffHeapSize();
             mt.storeFileSize += store.getStorefilesSize();
             mt.referenceFileCount += store.getNumReferenceFiles();
             if (store.getMaxStoreFileAge().isPresent()) {
@@ -223,6 +225,26 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
       return 0;
     } else {
       return metricsTable.memstoreSize;
+    }
+  }
+
+  @Override
+  public long getMemStoreHeapSize(String table) {
+    MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
+    if (metricsTable == null) {
+      return 0;
+    } else {
+      return metricsTable.memstoreHeapSize;
+    }
+  }
+
+  @Override
+  public long getMemStoreOffHeapSize(String table) {
+    MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
+    if (metricsTable == null) {
+      return 0;
+    } else {
+      return metricsTable.memstoreOffHeapSize;
     }
   }
 
@@ -399,6 +421,8 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
     long filteredReadRequestCount;
     long writeRequestCount;
     long memstoreSize;
+    long memstoreHeapSize;
+    long memstoreOffHeapSize;
     long regionCount;
     long storeCount;
     long storeFileCount;
