@@ -578,32 +578,45 @@ $ hbase backup describe backupId_1467823988425
 // hbase backup delete
 
 [[br.delete.backup]]
-=== Deleting a Backup Image
+=== Deleting Backup Images
 
-This command can be used to delete a backup image which is no longer needed.
+The `hbase backup delete` command deletes backup images that are no longer needed.
+
+[[br.delete.backup.syntax]]
+==== Syntax
 
 [source]
 ----
-$ hbase backup delete <backup_id>
+$ hbase backup delete -l <backup_id1,backup_id2,...>
+$ hbase backup delete -k <days>
 ----
-
-[[br.delete.backup.positional.cli.arguments]]
-==== Positional Command-Line Arguments
-
-_backup_id_::
-  The ID to the backup image which should be deleted.
 
 [[br.delete.backup.named.cli.arguments]]
 ==== Named Command-Line Arguments
 
-None.
+_-l <backup_id1,backup_id2,...>_::
+Comma-separated list of backup IDs to delete.
+
+_-k <days>_::
+Deletes all backup images completed more than the specified number of days ago.
+
+NOTE: These options are **mutually exclusive**. Only one of `-l` or `-k` may be used at a time.
 
 [[br.delete.backup.example]]
-==== Example usage
+==== Example Usage
+
+Delete specific backup images by ID:
 
 [source]
 ----
-$ hbase backup delete backupId_1467823988425
+$ hbase backup delete -l backupId_1467823988425,backupId_1467824989999
+----
+
+Delete all backup images older than 30 days:
+
+[source]
+----
+$ hbase backup delete -k 30
 ----
 
 // hbase backup repair
