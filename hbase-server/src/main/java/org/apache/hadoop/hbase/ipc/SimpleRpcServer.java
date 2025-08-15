@@ -68,8 +68,9 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
  * while the server is up. CallRunner#run executes the call. When done, asks the included Call to
  * put itself on new queue for Responder to pull from and return result to client.
  * @see BlockingRpcClient
+ * @deprecated Since 2.4.14, 2.5.0, will be removed in 4.0.0. Use {@link NettyRpcServer} instead.
  */
-@Deprecated()
+@Deprecated
 @InterfaceAudience.LimitedPrivate({ HBaseInterfaceAudience.CONFIG })
 public class SimpleRpcServer extends RpcServer {
 
