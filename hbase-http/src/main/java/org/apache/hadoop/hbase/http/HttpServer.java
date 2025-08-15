@@ -35,6 +35,8 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Timer;
 import java.util.stream.Collectors;
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -62,6 +64,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.authorize.ProxyUsers;
+import org.apache.hadoop.security.ssl.FileBasedKeyStoresFactory;
+import org.apache.hadoop.security.ssl.FileMonitoringTimerTask;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -184,6 +188,7 @@ public class HttpServer implements FilterContainer {
       .build();
 
   private final AccessControlList adminsAcl;
+  private Optional<Timer> configurationChangeMonitor = Optional.empty();
 
   protected final Server webServer;
   protected String appDir;
@@ -511,6 +516,15 @@ public class HttpServer implements FilterContainer {
             LOG.debug("Excluded SSL Cipher List:" + excludeCiphers);
           }
 
+          long storesReloadInterval =
+            conf.getLong(FileBasedKeyStoresFactory.SSL_STORES_RELOAD_INTERVAL_TPL_KEY,
+              FileBasedKeyStoresFactory.DEFAULT_SSL_STORES_RELOAD_INTERVAL);
+
+          if (storesReloadInterval > 0 && (keyStore != null || trustStore != null)) {
+            server.configurationChangeMonitor =
+              Optional.of(this.makeConfigurationChangeMonitor(storesReloadInterval, sslCtxFactory));
+          }
+
           listener = new ServerConnector(server.webServer,
             new SslConnectionFactory(sslCtxFactory, HttpVersion.HTTP_1_1.toString()),
             new HttpConnectionFactory(httpsConfig));
@@ -539,6 +553,25 @@ public class HttpServer implements FilterContainer {
       server.loadListeners();
       return server;
 
+    }
+
+    private Timer makeConfigurationChangeMonitor(long reloadInterval,
+      SslContextFactory.Server sslContextFactory) {
+      Timer timer = new Timer("SSL Certificates Store Monitor", true);
+      //
+      // The Jetty SSLContextFactory provides a 'reload' method which will reload both
+      // truststore and keystore certificates.
+      //
+      timer.schedule(new FileMonitoringTimerTask(Paths.get(keyStore), path -> {
+        LOG.info("Reloading certificates from store keystore " + keyStore);
+        try {
+          sslContextFactory.reload(factory -> {
+          });
+        } catch (Exception ex) {
+          LOG.error("Failed to reload SSL keystore certificates", ex);
+        }
+      }, null), reloadInterval, reloadInterval);
+      return timer;
     }
 
   }
@@ -1336,6 +1369,15 @@ public class HttpServer implements FilterContainer {
    */
   public void stop() throws Exception {
     MultiException exception = null;
+    if (this.configurationChangeMonitor.isPresent()) {
+      try {
+        this.configurationChangeMonitor.get().cancel();
+      } catch (Exception e) {
+        LOG.error("Error while canceling configuration monitoring timer for webapp"
+          + webAppContext.getDisplayName(), e);
+        exception = addMultiException(exception, e);
+      }
+    }
     for (ListenerInfo li : listeners) {
       if (!li.isManaged) {
         continue;
