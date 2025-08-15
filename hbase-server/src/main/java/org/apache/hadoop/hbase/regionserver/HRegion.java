@@ -927,8 +927,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
     }
 
-    minBlockSizeBytes = Arrays.stream(this.htableDescriptor.getColumnFamilies())
-      .mapToInt(ColumnFamilyDescriptor::getBlocksize).min().orElse(HConstants.DEFAULT_BLOCKSIZE);
+    minBlockSizeBytes = Math.min(
+      Arrays.stream(this.htableDescriptor.getColumnFamilies())
+        .mapToInt(ColumnFamilyDescriptor::getBlocksize).min().orElse(HConstants.DEFAULT_BLOCKSIZE),
+      conf.getInt(HFile.BLOCK_SIZE_KEY, HConstants.DEFAULT_BLOCKSIZE));
   }
 
   private void setHTableSpecificConf() {
