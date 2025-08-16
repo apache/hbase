@@ -22,6 +22,7 @@ import static org.apache.hadoop.hbase.wal.WALSplitUtil.getRegionSplitEditsPath;
 
 import java.io.EOFException;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -85,10 +86,14 @@ abstract class AbstractRecoveredEditsOutputSink extends OutputSink {
     if (walSplitter.rsServices == null) {
       return "";
     }
-    return URLEncoder.encode(
-      walSplitter.rsServices.getServerName().toShortString()
-        .replace(Addressing.HOSTNAME_PORT_SEPARATOR, ServerName.SERVERNAME_SEPARATOR),
-      StandardCharsets.UTF_8);
+    try {
+      return URLEncoder.encode(
+        walSplitter.rsServices.getServerName().toShortString()
+          .replace(Addressing.HOSTNAME_PORT_SEPARATOR, ServerName.SERVERNAME_SEPARATOR),
+        StandardCharsets.UTF_8.name());
+    } catch (UnsupportedEncodingException e) {
+      throw new RuntimeException("URLEncoder doesn't support UTF-8", e);
+    }
   }
 
   /**
