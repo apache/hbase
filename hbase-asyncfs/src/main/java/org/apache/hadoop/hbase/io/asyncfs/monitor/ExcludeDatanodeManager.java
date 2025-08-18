@@ -97,8 +97,8 @@ public class ExcludeDatanodeManager implements ConfigurationObserver {
   }
 
   /**
-   * Enumerates the reasons for excluding a datanode from certain operations. Each enum constant
-   * represents a specific cause leading to exclusion.
+   * Enumerates the reason of excluding a Datanode from WAL Write due to specific cause. Each enum
+   * constant represents a specific cause leading to exclusion.
    */
   public enum ExcludeCause {
     CONNECT_ERROR("connect error"),
