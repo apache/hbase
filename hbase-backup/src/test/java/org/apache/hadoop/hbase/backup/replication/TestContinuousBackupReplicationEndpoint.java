@@ -412,6 +412,16 @@ public class TestContinuousBackupReplicationEndpoint {
     Path dst = new Path("/dst/file");
     Configuration conf = new Configuration();
 
+    FileStatus srcStatus = mock(FileStatus.class);
+    FileStatus dstStatus = mock(FileStatus.class);
+
+    when(srcFS.getFileStatus(src)).thenReturn(srcStatus);
+    when(dstFS.getFileStatus(dst)).thenReturn(dstStatus);
+
+    // lengths differ -> should attempt to overwrite and then cleanup
+    when(srcStatus.getLen()).thenReturn(200L);
+    when(dstStatus.getLen()).thenReturn(100L);
+
     // Simulate FileUtil.copy failing
     try (MockedStatic<FileUtil> mockedFileUtil = mockStatic(FileUtil.class)) {
       mockedFileUtil.when(

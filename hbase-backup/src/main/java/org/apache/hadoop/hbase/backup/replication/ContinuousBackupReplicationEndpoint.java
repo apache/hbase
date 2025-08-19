@@ -34,6 +34,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
@@ -325,12 +326,7 @@ public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint
         bulkLoadFiles.stream().map(Path::toString).collect(Collectors.joining(", ")));
     }
 
-    try {
-      uploadBulkLoadFiles(day, bulkLoadFiles);
-    } catch (BulkLoadUploadException blue) {
-      LOG.error("{} Bulk load upload failed: {}", Utils.logPeerId(peerId), blue.getMessage(), blue);
-      throw blue;
-    }
+    uploadBulkLoadFiles(day, bulkLoadFiles);
   }
 
   private FSHLogProvider.Writer createWalWriter(long dayInMillis) {
@@ -470,8 +466,18 @@ public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint
     Configuration conf) throws IOException {
     try {
       if (dstFS.exists(dst)) {
-        LOG.warn("Destination file {} already exists. "
-          + "This may be from a previous partial upload. Overwriting now.", dst);
+        FileStatus srcStatus = srcFS.getFileStatus(src);
+        FileStatus dstStatus = dstFS.getFileStatus(dst);
+
+        if (srcStatus.getLen() == dstStatus.getLen()) {
+          LOG.info("Destination file {} already exists with same length ({}). Skipping copy.", dst,
+            dstStatus.getLen());
+          return; // Skip upload
+        } else {
+          LOG.warn(
+            "Destination file {} exists but length differs (src={}, dst={}). " + "Overwriting now.",
+            dst, srcStatus.getLen(), dstStatus.getLen());
+        }
       }
 
       // Always overwrite in case previous copy left partial data
