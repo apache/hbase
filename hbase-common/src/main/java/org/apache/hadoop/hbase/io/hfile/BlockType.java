@@ -80,6 +80,14 @@ public enum BlockType {
   /** Fixed file trailer, both versions (always just a magic string) */
   TRAILER("TRABLK\"$", BlockCategory.META),
 
+  // Pseudo block
+
+  /**
+   * Cells of a row for row cache. This is a pseudo block type. It only exists to share the
+   * BlockCache interface.
+   */
+  ROW_CELLS("ROWCELLS", BlockCategory.ROW),
+
   // Legacy blocks
 
   /** Block index magic string in version 1 */
@@ -91,6 +99,7 @@ public enum BlockType {
     INDEX,
     BLOOM,
     ALL_CATEGORIES,
+    ROW,
     UNKNOWN;
 
     /**

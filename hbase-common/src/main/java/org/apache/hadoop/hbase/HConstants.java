@@ -1034,6 +1034,14 @@ public final class HConstants {
     32 * 1024 * 1024L;
 
   /**
+   * Configuration key for the minimum number of HFiles required to activate the Row Cache. If the
+   * number of HFiles is less than this value, the Row Cache does not operate even if it is enabled
+   * at the table level.
+   */
+  public static final String ROW_CACHE_ACTIVATE_MIN_HFILES_KEY = "row.cache.activate.min.hfiles";
+  public static final int ROW_CACHE_ACTIVATE_MIN_HFILES_DEFAULT = 2;
+
+  /**
    * Configuration key for setting pread must read both necessaryLen and extraLen, default is
    * disabled. This is an optimized flag for reading HFile from blob storage.
    */

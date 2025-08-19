@@ -3408,6 +3408,9 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       }
     }
 
+    // evict the entire row cache
+    evictedBlocks += blockCache.evictBlocksByHfileName(region.getRegionInfo().getEncodedName());
+
     return CacheEvictionStats.builder().withEvictedBlocks(evictedBlocks).build();
   }
 

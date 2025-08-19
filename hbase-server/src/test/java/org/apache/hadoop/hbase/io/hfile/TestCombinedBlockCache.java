@@ -133,6 +133,12 @@ public class TestCombinedBlockCache {
     testCombinedBlockCacheStats(null, 0, 1);
   }
 
+  @Test
+  public void testCombinedBlockCacheStatsWithRowCellsBlockType() throws Exception {
+    // ROW_CELLS type is cached only in the L1 cache, since it is not a DATA block type
+    testCombinedBlockCacheStats(BlockType.ROW_CELLS, 1, 0);
+  }
+
   private CombinedBlockCache createCombinedBlockCache() {
     Configuration conf = UTIL.getConfiguration();
     conf.set(BUCKET_CACHE_IOENGINE_KEY, "offheap");

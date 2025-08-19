@@ -65,6 +65,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -432,6 +433,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * The sequence ID that was enLongAddered when this region was opened.
    */
   private long openSeqNum = HConstants.NO_SEQNUM;
+
+  /**
+   * Basically the same as openSeqNum, but it is updated when bulk load is done.
+   */
+  private final AtomicLong rowCacheSeqNum = new AtomicLong(HConstants.NO_SEQNUM);
 
   /**
    * The default setting for whether to enable on-demand CF loading for scan requests to this
@@ -7868,6 +7874,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       LOG.debug("checking classloading for " + this.getRegionInfo().getEncodedName());
       TableDescriptorChecker.checkClassLoading(cConfig, htableDescriptor);
       this.openSeqNum = initialize(reporter);
+      this.rowCacheSeqNum.set(this.openSeqNum);
       this.mvcc.advanceTo(openSeqNum);
       // The openSeqNum must be increased every time when a region is assigned, as we rely on it to
       // determine whether a region has been successfully reopened. So here we always write open
@@ -8694,6 +8701,17 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   /** Returns the latest sequence number that was read from storage when this region was opened */
   public long getOpenSeqNum() {
     return this.openSeqNum;
+  }
+
+  public long getRowCacheSeqNum() {
+    return this.rowCacheSeqNum.get();
+  }
+
+  /**
+   * This is used to invalidate the entire row cache after bulk loading.
+   */
+  public void increaseRowCacheSeqNum() {
+    this.rowCacheSeqNum.incrementAndGet();
   }
 
   @Override

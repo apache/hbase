@@ -1145,6 +1145,11 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
   }
 
   @Override
+  public long getRowMissCount() {
+    return this.cacheStats != null ? this.cacheStats.getRowMissCount() : 0L;
+  }
+
+  @Override
   public long getDataHitCount() {
     return this.cacheStats != null ? this.cacheStats.getDataHitCount() : 0L;
   }
@@ -1192,6 +1197,11 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
   @Override
   public long getTrailerHitCount() {
     return this.cacheStats != null ? this.cacheStats.getTrailerHitCount() : 0L;
+  }
+
+  @Override
+  public long getRowHitCount() {
+    return this.cacheStats != null ? this.cacheStats.getRowHitCount() : 0L;
   }
 
   @Override
