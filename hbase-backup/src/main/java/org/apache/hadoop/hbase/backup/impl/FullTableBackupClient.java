@@ -193,11 +193,12 @@ public class FullTableBackupClient extends TableBackupClient {
     backupInfo.setState(BackupState.COMPLETE);
 
     if (!conf.getBoolean(REPLICATION_BULKLOAD_ENABLE_KEY, false)) {
-      System.out.println("NOTE: Bulkload replication is not enabled. "
-        + "Bulk loaded files will not be backed up as part of continuous backup. "
-        + "To ensure bulk loaded files are included in the backup, please enable bulkload replication "
-        + "(hbase.replication.bulkload.enabled=true) and configure other necessary settings "
-        + "to properly enable bulkload replication.");
+      System.out.println("WARNING: Bulkload replication is not enabled. "
+        + "Since continuous backup is using HBase replication, bulk loaded files won't be backup up as part of continuous backup. "
+        + "To ensure bulk-loaded files are backed up, enable bulkload replication "
+        + "(hbase.replication.bulkload.enabled=true) and configure a unique cluster ID using "
+        + "hbase.replication.cluster.id. This cluster ID is required by the replication framework "
+        + "to uniquely identify clusters, even if continuous backup itself does not directly rely on it.");
     }
   }
 

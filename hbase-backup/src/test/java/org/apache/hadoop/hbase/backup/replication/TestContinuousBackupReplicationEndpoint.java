@@ -29,11 +29,18 @@ import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplica
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.DATE_FORMAT;
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.ONE_DAY_IN_MILLISECONDS;
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.WAL_FILE_PREFIX;
+import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.copyWithCleanup;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -48,8 +55,10 @@ import java.util.TimeZone;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
@@ -78,6 +87,7 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.mockito.MockedStatic;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -324,6 +334,194 @@ public class TestContinuousBackupReplicationEndpoint {
     deleteTable(tableName);
   }
 
+  /**
+   * Simulates a one-time failure during bulk load file upload. This validates that the retry logic
+   * in the replication endpoint works as expected.
+   */
+  @Test
+  public void testBulkLoadFileUploadRetry() throws IOException {
+    String methodName = Thread.currentThread().getStackTrace()[1].getMethodName();
+    TableName tableName = TableName.valueOf("table_" + methodName);
+    String peerId = "peerId";
+
+    // Reset static failure flag before test
+    FailingOnceContinuousBackupReplicationEndpoint.reset();
+
+    createTable(tableName);
+
+    Path backupRootDir = new Path(root, methodName);
+    fs.mkdirs(backupRootDir);
+
+    Map<TableName, List<String>> tableMap = new HashMap<>();
+    tableMap.put(tableName, new ArrayList<>());
+
+    addReplicationPeer(peerId, backupRootDir, tableMap,
+      FailingOnceContinuousBackupReplicationEndpoint.class.getName());
+
+    loadRandomData(tableName, 100);
+    assertEquals(100, getRowCount(tableName));
+
+    Path dir = TEST_UTIL.getDataTestDirOnTestFS("testBulkLoadByFamily");
+    generateHFiles(dir);
+    bulkLoadHFiles(tableName, dir);
+    assertEquals(1100, getRowCount(tableName));
+
+    // Replication: first attempt fails, second attempt succeeds
+    waitForReplication(15000);
+    deleteReplicationPeer(peerId);
+
+    verifyBackup(backupRootDir.toString(), true, Map.of(tableName, 1100));
+
+    deleteTable(tableName);
+  }
+
+  /**
+   * Replication endpoint that fails only once on first upload attempt, then succeeds on retry.
+   */
+  public static class FailingOnceContinuousBackupReplicationEndpoint
+    extends ContinuousBackupReplicationEndpoint {
+
+    private static boolean failedOnce = false;
+
+    @Override
+    protected void uploadBulkLoadFiles(long dayInMillis, List<Path> bulkLoadFiles)
+      throws BulkLoadUploadException {
+      if (!failedOnce) {
+        failedOnce = true;
+        throw new BulkLoadUploadException("Simulated upload failure on first attempt");
+      }
+      super.uploadBulkLoadFiles(dayInMillis, bulkLoadFiles);
+    }
+
+    /** Reset failure state for new tests */
+    public static void reset() {
+      failedOnce = false;
+    }
+  }
+
+  /**
+   * Unit test for verifying cleanup of partial files. Simulates a failure during
+   * {@link FileUtil#copy(FileSystem, Path, FileSystem, Path, boolean, boolean, Configuration)} and
+   * checks that the destination file is deleted.
+   */
+  @Test
+  public void testCopyWithCleanupDeletesPartialFile() throws Exception {
+    FileSystem srcFS = mock(FileSystem.class);
+    FileSystem dstFS = mock(FileSystem.class);
+    Path src = new Path("/src/file");
+    Path dst = new Path("/dst/file");
+    Configuration conf = new Configuration();
+
+    // Simulate FileUtil.copy failing
+    try (MockedStatic<FileUtil> mockedFileUtil = mockStatic(FileUtil.class)) {
+      mockedFileUtil.when(
+        () -> FileUtil.copy(eq(srcFS), eq(src), eq(dstFS), eq(dst), eq(false), eq(true), eq(conf)))
+        .thenThrow(new IOException("simulated copy failure"));
+
+      // Pretend partial file exists in destination
+      when(dstFS.exists(dst)).thenReturn(true);
+
+      // Run the method under test
+      assertThrows(IOException.class, () -> copyWithCleanup(srcFS, src, dstFS, dst, conf));
+
+      // Verify cleanup happened
+      verify(dstFS).delete(dst, true);
+    }
+  }
+
+  /**
+   * Simulates a stale/partial file left behind after a failed bulk load. On retry, the stale file
+   * should be overwritten and replication succeeds.
+   */
+  @Test
+  public void testBulkLoadFileUploadWithStaleFileRetry() throws Exception {
+    String methodName = Thread.currentThread().getStackTrace()[1].getMethodName();
+    TableName tableName = TableName.valueOf("table_" + methodName);
+    String peerId = "peerId";
+
+    // Reset static failure flag before test
+    PartiallyUploadedBulkloadFileEndpoint.reset();
+
+    createTable(tableName);
+
+    Path backupRootDir = new Path(root, methodName);
+    fs.mkdirs(backupRootDir);
+    conf.set(CONF_BACKUP_ROOT_DIR, backupRootDir.toString());
+
+    Map<TableName, List<String>> tableMap = new HashMap<>();
+    tableMap.put(tableName, new ArrayList<>());
+
+    addReplicationPeer(peerId, backupRootDir, tableMap,
+      PartiallyUploadedBulkloadFileEndpoint.class.getName());
+
+    loadRandomData(tableName, 100);
+    assertEquals(100, getRowCount(tableName));
+
+    Path dir = TEST_UTIL.getDataTestDirOnTestFS("testBulkLoadByFamily");
+    generateHFiles(dir);
+    bulkLoadHFiles(tableName, dir);
+    assertEquals(1100, getRowCount(tableName));
+
+    // first attempt will fail leaving stale file, second attempt should overwrite and succeed
+    waitForReplication(15000);
+    deleteReplicationPeer(peerId);
+
+    verifyBackup(backupRootDir.toString(), true, Map.of(tableName, 1100));
+
+    deleteTable(tableName);
+  }
+
+  /**
+   * Replication endpoint that simulates leaving a partial file behind on first attempt, then
+   * succeeds on second attempt by overwriting it.
+   */
+  public static class PartiallyUploadedBulkloadFileEndpoint
+    extends ContinuousBackupReplicationEndpoint {
+
+    private static boolean firstAttempt = true;
+
+    @Override
+    protected void uploadBulkLoadFiles(long dayInMillis, List<Path> bulkLoadFiles)
+      throws BulkLoadUploadException {
+      if (firstAttempt) {
+        firstAttempt = false;
+        try {
+          // Construct destination path and create a partial file
+          String dayDirectoryName = formatToDateString(dayInMillis);
+          BackupFileSystemManager backupFileSystemManager =
+            new BackupFileSystemManager("peer1", conf, conf.get(CONF_BACKUP_ROOT_DIR));
+          Path bulkloadDir =
+            new Path(backupFileSystemManager.getBulkLoadFilesDir(), dayDirectoryName);
+
+          FileSystem dstFs = backupFileSystemManager.getBackupFs();
+          if (!dstFs.exists(bulkloadDir)) {
+            dstFs.mkdirs(bulkloadDir);
+          }
+
+          for (Path file : bulkLoadFiles) {
+            Path destPath = new Path(bulkloadDir, file);
+            try (FSDataOutputStream out = dstFs.create(destPath, true)) {
+              out.writeBytes("partial-data"); // simulate incomplete upload
+            }
+          }
+        } catch (IOException e) {
+          throw new BulkLoadUploadException("Simulated failure while creating partial file", e);
+        }
+
+        // Fail after leaving partial files behind
+        throw new BulkLoadUploadException("Simulated upload failure on first attempt");
+      }
+
+      // Retry succeeds, overwriting stale files
+      super.uploadBulkLoadFiles(dayInMillis, bulkLoadFiles);
+    }
+
+    /** Reset for new tests */
+    public static void reset() {
+      firstAttempt = true;
+    }
+  }
+
   private void createTable(TableName tableName) throws IOException {
     ColumnFamilyDescriptor columnFamilyDescriptor =
       ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(CF_NAME)).setScope(1).build();
@@ -344,6 +542,12 @@ public class TestContinuousBackupReplicationEndpoint {
 
   private void addReplicationPeer(String peerId, Path backupRootDir,
     Map<TableName, List<String>> tableMap) throws IOException {
+    addReplicationPeer(peerId, backupRootDir, tableMap, replicationEndpoint);
+  }
+
+  private void addReplicationPeer(String peerId, Path backupRootDir,
+    Map<TableName, List<String>> tableMap, String customReplicationEndpointImpl)
+    throws IOException {
     Map<String, String> additionalArgs = new HashMap<>();
     additionalArgs.put(CONF_PEER_UUID, UUID.randomUUID().toString());
     additionalArgs.put(CONF_BACKUP_ROOT_DIR, backupRootDir.toString());
@@ -352,7 +556,7 @@ public class TestContinuousBackupReplicationEndpoint {
     additionalArgs.put(CONF_STAGED_WAL_FLUSH_INTERVAL, "10");
 
     ReplicationPeerConfig peerConfig = ReplicationPeerConfig.newBuilder()
-      .setReplicationEndpointImpl(replicationEndpoint).setReplicateAllUserTables(false)
+      .setReplicationEndpointImpl(customReplicationEndpointImpl).setReplicateAllUserTables(false)
       .setTableCFsMap(tableMap).putAllConfiguration(additionalArgs).build();
 
     admin.addReplicationPeer(peerId, peerConfig);
