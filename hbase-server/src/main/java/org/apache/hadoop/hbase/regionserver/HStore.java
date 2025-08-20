@@ -336,8 +336,9 @@ public class HStore
 
   private StoreContext initializeStoreContext(ColumnFamilyDescriptor family) throws IOException {
     return new StoreContext.Builder().withBlockSize(family.getBlocksize())
-      .withEncryptionContext(SecurityUtil.createEncryptionContext(conf,
-            region.getRegionServerServices(), region.getTableDescriptor(), family))
+      .withEncryptionContext(SecurityUtil.createEncryptionContext(conf, family,
+            region.getManagedKeyDataCache(), region.getSystemKeyCache(),
+            SecurityUtil.constructKeyNamespace(region.getTableDescriptor(), family)))
       .withBloomType(family.getBloomFilterType()).withCacheConfig(createCacheConf(family))
       .withCellComparator(region.getTableDescriptor().isMetaTable() || conf
         .getBoolean(HRegion.USE_META_CELL_COMPARATOR, HRegion.DEFAULT_USE_META_CELL_COMPARATOR)

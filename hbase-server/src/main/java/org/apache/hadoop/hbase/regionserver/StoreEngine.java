@@ -215,9 +215,8 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
     this.coprocessorHost = store.getHRegion().getCoprocessorHost();
     this.openStoreFileThreadPoolCreator = store.getHRegion()::getStoreFileOpenAndCloseThreadPool;
     this.storeFileTracker = createStoreFileTracker(conf, store);
-    this.managedKeyDataCache = store.getHRegion().getRegionServicesForStores()
-      .getManagedKeyDataCache();
-    this.systemKeyCache = store.getHRegion().getRegionServicesForStores().getSystemKeyCache();
+    this.managedKeyDataCache = store.getHRegion().getManagedKeyDataCache();
+    this.systemKeyCache = store.getHRegion().getSystemKeyCache();
     assert compactor != null && compactionPolicy != null && storeFileManager != null
       && storeFlusher != null;
   }

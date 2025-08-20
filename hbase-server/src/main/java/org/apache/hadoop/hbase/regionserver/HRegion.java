@@ -146,6 +146,8 @@ import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.RpcCall;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.ServerCall;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
+import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
 import org.apache.hadoop.hbase.mob.MobFileCache;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
@@ -166,6 +168,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALSyncTimeoutIOException;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationObserver;
+import org.apache.hadoop.hbase.security.SecurityUtil;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
@@ -382,6 +385,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   private final Configuration baseConf;
   private final int rowLockWaitDuration;
   static final int DEFAULT_ROWLOCK_WAIT_DURATION = 30000;
+  private ManagedKeyDataCache managedKeyDataCache;
+  private SystemKeyCache systemKeyCache;
 
   private Path regionWalDir;
   private FileSystem walFS;
@@ -929,6 +934,20 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     minBlockSizeBytes = Arrays.stream(this.htableDescriptor.getColumnFamilies())
       .mapToInt(ColumnFamilyDescriptor::getBlocksize).min().orElse(HConstants.DEFAULT_BLOCKSIZE);
+
+    if (SecurityUtil.isKeyManagementEnabled(conf)) {
+      if (rsServices != null) {
+        this.managedKeyDataCache = rsServices.getManagedKeyDataCache();
+        this.systemKeyCache = rsServices.getSystemKeyCache();
+      } else {
+        this.managedKeyDataCache = new ManagedKeyDataCache(conf, null);
+        try {
+          this.systemKeyCache = SystemKeyCache.createCache(conf, fs.getFileSystem());
+        } catch (IOException e) {
+          throw new RuntimeException("Failed to create system key cache", e);
+        }
+      }
+    }
   }
 
   private void setHTableSpecificConf() {
@@ -2120,6 +2139,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   public BlockCache getBlockCache() {
     return this.blockCache;
+  }
+
+  public ManagedKeyDataCache getManagedKeyDataCache() {
+    return this.managedKeyDataCache;
+  }
+
+  public SystemKeyCache getSystemKeyCache() {
+    return this.systemKeyCache;
   }
 
   /**

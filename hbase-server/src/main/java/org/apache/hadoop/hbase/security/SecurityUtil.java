@@ -22,12 +22,16 @@ import java.security.Key;
 import java.security.KeyException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
+import org.apache.hadoop.hbase.io.hfile.FixedFileTrailer;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
+import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
 import org.apache.hadoop.hbase.regionserver.StoreContext;
 import org.apache.hadoop.hbase.Server;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -61,15 +65,19 @@ public class SecurityUtil {
   }
 
   /**
-   * Helper to create an encyption context.
+   * Helper to create an encyption context with current encryption key, suitable for writes.
    * @param conf   The current configuration.
    * @param family The current column descriptor.
+   * @param managedKeyDataCache The managed key data cache.
+   * @param systemKeyCache The system key cache.
+   * @param keyNamespace The key namespace.
    * @return The created encryption context.
    * @throws IOException           if an encryption key for the column cannot be unwrapped
    * @throws IllegalStateException in case of encryption related configuration errors
    */
-  public static Encryption.Context createEncryptionContext(Configuration conf, Server server,
-      TableDescriptor tableDescriptor, ColumnFamilyDescriptor family) throws IOException {
+  public static Encryption.Context createEncryptionContext(Configuration conf,
+    ColumnFamilyDescriptor family, ManagedKeyDataCache managedKeyDataCache,
+    SystemKeyCache systemKeyCache, String keyNamespace) throws IOException {
     Encryption.Context cryptoContext = Encryption.Context.NONE;
     String cipherName = family.getEncryptionType();
     if (cipherName != null) {
@@ -80,9 +88,8 @@ public class SecurityUtil {
       Cipher cipher = null;
       Key key = null;
       ManagedKeyData kekKeyData = null;
-      if (server != null && isKeyManagementEnabled(conf)) {
-        String keyNamespace = constructKeyNamespace(tableDescriptor, family);
-        kekKeyData = server.getManagedKeyDataCache().getActiveEntry(
+      if (isKeyManagementEnabled(conf)) {
+        kekKeyData = managedKeyDataCache.getActiveEntry(
           ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES, keyNamespace);
         if (kekKeyData == null) {
           throw new IOException("No active key found for custodian: "
@@ -99,7 +106,7 @@ public class SecurityUtil {
         }
         else {
           key = kekKeyData.getTheKey();
-          kekKeyData = server.getSystemKeyCache().getLatestSystemKey();
+          kekKeyData = systemKeyCache.getLatestSystemKey();
         }
       } else {
         byte[] keyBytes = family.getEncryptionKey();
@@ -137,6 +144,82 @@ public class SecurityUtil {
       }
     }
     return cryptoContext;
+  }
+
+  /**
+   * Create an encryption context from encryption key found in a file trailer, suitable for read.
+   * @param conf The current configuration.
+   * @param path The path of the file.
+   * @param trailer The file trailer.
+   * @param managedKeyDataCache The managed key data cache.
+   * @param systemKeyCache The system key cache.
+   * @param keyNamespace The key namespace.
+   * @return The created encryption context or null if no key material is available.
+   * @throws IOException if an encryption key for the file cannot be unwrapped
+   */
+  public static Encryption.Context createEncryptionContext(Configuration conf, Path path,
+    FixedFileTrailer trailer, ManagedKeyDataCache managedKeyDataCache,
+    SystemKeyCache systemKeyCache, String keyNamespace) throws IOException {
+    byte[] keyBytes = trailer.getEncryptionKey();
+    // Check for any key material available
+    if (keyBytes != null) {
+      Encryption.Context cryptoContext = Encryption.newContext(conf);
+      Key kek = null;
+      // When the KEK medata is available, we will try to unwrap the encrypted key using the KEK,
+      // otherwise we will use the system keys starting from the latest to the oldest.
+      if (trailer.getKEKMetadata() != null) {
+        if (managedKeyDataCache == null) {
+          throw new IOException("Key management is enabled, but ManagedKeyDataCache is null");
+        }
+        ManagedKeyData keyData = null;
+        Throwable cause = null;
+        try {
+          keyData = managedKeyDataCache.getEntry(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES,
+            keyNamespace, trailer.getKEKMetadata(), keyBytes);
+        } catch (KeyException | IOException e) {
+          cause = e;
+        }
+        if (keyData == null) {
+          throw new IOException("Failed to get key data for KEK metadata: " +
+            trailer.getKEKMetadata(), cause);
+        }
+        kek = keyData.getTheKey();
+      } else {
+        if (SecurityUtil.isKeyManagementEnabled(conf)) {
+          if (systemKeyCache == null) {
+            throw new IOException("Key management is enabled, but SystemKeyCache is null");
+          }
+          ManagedKeyData systemKeyData = systemKeyCache.getSystemKeyByChecksum(
+            trailer.getKEKChecksum());
+          if (systemKeyData == null) {
+            throw new IOException("Failed to get system key by checksum: " +
+              trailer.getKEKChecksum());
+          }
+          kek = systemKeyData.getTheKey();
+        }
+      }
+      Key key;
+      if (kek != null) {
+        try {
+          key = EncryptionUtil.unwrapKey(conf, null, keyBytes, kek);
+        } catch (KeyException | IOException e) {
+          throw new IOException("Failed to unwrap key with KEK checksum: " +
+            trailer.getKEKChecksum() + ", metadata: " + trailer.getKEKMetadata(), e);
+        }
+      } else {
+        key = EncryptionUtil.unwrapKey(conf, keyBytes);
+      }
+      // Use the algorithm the key wants
+      Cipher cipher = Encryption.getCipher(conf, key.getAlgorithm());
+      if (cipher == null) {
+        throw new IOException(
+          "Cipher '" + key.getAlgorithm() + "' is not available" + ", path=" + path);
+      }
+      cryptoContext.setCipher(cipher);
+      cryptoContext.setKey(key);
+      return cryptoContext;
+    }
+    return null;
   }
 
   public static String constructKeyNamespace(TableDescriptor tableDescriptor,

@@ -418,74 +418,16 @@ public class HFileInfo implements SortedMap<byte[], byte[]> {
 
   private HFileContext createHFileContext(ReaderContext readerContext, Path path, FixedFileTrailer
     trailer, Configuration conf) throws IOException {
-    HFileContextBuilder builder = new HFileContextBuilder().withHBaseCheckSum(true)
+    return new HFileContextBuilder().withHBaseCheckSum(true)
       .withHFileName(path.getName()).withCompression(trailer.getCompressionCodec())
       .withDecompressionContext(
         trailer.getCompressionCodec().getHFileDecompressionContextForConfiguration(conf))
-      .withCellComparator(FixedFileTrailer.createComparator(trailer.getComparatorClassName()));
-    // Check for any key material available
-    byte[] keyBytes = trailer.getEncryptionKey();
-    if (keyBytes != null) {
-      Encryption.Context cryptoContext = Encryption.newContext(conf);
-      Key kek = null;
-      // When the KEK medata is available, we will try to unwrap the encrypted key using the KEK,
-      // otherwise we will use the system keys starting from the latest to the oldest.
-      if (trailer.getKEKMetadata() != null) {
-        ManagedKeyDataCache managedKeyDataCache = readerContext.getManagedKeyDataCache();
-        if (managedKeyDataCache == null) {
-          throw new IOException("Key management is enabled, but ManagedKeyDataCache is null");
-        }
-        ManagedKeyData keyData = null;
-        Throwable cause = null;
-        try {
-          keyData = managedKeyDataCache.getEntry(KEY_GLOBAL_CUSTODIAN_BYTES,
-            readerContext.getKeyNamespace(), trailer.getKEKMetadata(), keyBytes);
-        } catch (KeyException | IOException e) {
-          cause = e;
-        }
-        if (keyData == null) {
-          throw new IOException("Failed to get key data for KEK metadata: " +
-            trailer.getKEKMetadata(), cause);
-        }
-        kek = keyData.getTheKey();
-      } else {
-        if (SecurityUtil.isKeyManagementEnabled(conf)) {
-          SystemKeyCache systemKeyCache = readerContext.getSystemKeyCache();
-          if (systemKeyCache == null) {
-            throw new IOException("Key management is enabled, but SystemKeyCache is null");
-          }
-          ManagedKeyData systemKeyData = systemKeyCache.getSystemKeyByChecksum(
-            trailer.getKEKChecksum());
-          if (systemKeyData == null) {
-            throw new IOException("Failed to get system key by checksum: " +
-              trailer.getKEKChecksum());
-          }
-          kek = systemKeyData.getTheKey();
-        }
-      }
-      Key key;
-      if (kek != null) {
-        try {
-          key = EncryptionUtil.unwrapKey(conf, null, keyBytes, kek);
-        } catch (KeyException | IOException e) {
-          throw new IOException("Failed to unwrap key with KEK checksum: " +
-            trailer.getKEKChecksum() + ", metadata: " + trailer.getKEKMetadata(), e);
-        }
-      } else {
-        key = EncryptionUtil.unwrapKey(conf, keyBytes);
-      }
-      // Use the algorithm the key wants
-      Cipher cipher = Encryption.getCipher(conf, key.getAlgorithm());
-      if (cipher == null) {
-        throw new IOException(
-          "Cipher '" + key.getAlgorithm() + "' is not available" + ", path=" + path);
-      }
-      cryptoContext.setCipher(cipher);
-      cryptoContext.setKey(key);
-      builder.withEncryptionContext(cryptoContext);
-    }
-    HFileContext context = builder.build();
-    return context;
+      .withCellComparator(FixedFileTrailer.createComparator(trailer.getComparatorClassName()))
+      .withEncryptionContext(
+        SecurityUtil.createEncryptionContext(conf, path, trailer,
+          readerContext.getManagedKeyDataCache(), readerContext.getSystemKeyCache(),
+          readerContext.getKeyNamespace()))
+      .build();
   }
 
   private void loadMetaInfo(HFileBlock.BlockIterator blockIter, HFileContext hfileContext)
