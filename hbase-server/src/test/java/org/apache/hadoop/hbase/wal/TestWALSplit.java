@@ -62,6 +62,8 @@ import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.coordination.SplitLogWorkerCoordination;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.wal.FaultyProtobufLogReader;
+import org.apache.hadoop.hbase.regionserver.LastSequenceId;
+import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.wal.InstrumentedLogWriter;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader;
 import org.apache.hadoop.hbase.security.User;
@@ -100,6 +102,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 
 /**
@@ -366,6 +369,70 @@ public class TestWALSplit {
     }
   }
 
+  // If another worker is assigned to split a WAl and last worker is still running, both should not
+  // impact each other's progress
+  @Test
+  public void testTwoWorkerSplittingSameWAL() throws IOException, InterruptedException {
+    int numWriter = 1, entries = 10;
+    generateWALs(numWriter, entries, -1, 0);
+    FileStatus logfile = fs.listStatus(WALDIR)[0];
+    FileSystem spiedFs = Mockito.spy(fs);
+    RegionServerServices zombieRSServices = Mockito.mock(RegionServerServices.class);
+    RegionServerServices newWorkerRSServices = Mockito.mock(RegionServerServices.class);
+    Mockito.when(zombieRSServices.getServerName())
+      .thenReturn(ServerName.valueOf("zombie-rs.abc.com,1234,1234567890"));
+    Mockito.when(newWorkerRSServices.getServerName())
+      .thenReturn(ServerName.valueOf("worker-rs.abc.com,1234,1234569870"));
+    Thread zombieWorker = new SplitWALWorker(logfile, spiedFs, zombieRSServices);
+    Thread newWorker = new SplitWALWorker(logfile, spiedFs, newWorkerRSServices);
+    zombieWorker.start();
+    newWorker.start();
+    newWorker.join();
+    zombieWorker.join();
+
+    for (String region : REGIONS) {
+      Path[] logfiles = getLogForRegion(TABLE_NAME, region);
+      assertEquals("wrong number of split files for region", numWriter, logfiles.length);
+
+      int count = 0;
+      for (Path lf : logfiles) {
+        count += countWAL(lf);
+      }
+      assertEquals("wrong number of edits for region " + region, entries, count);
+    }
+  }
+
+  private class SplitWALWorker extends Thread implements LastSequenceId {
+    final FileStatus logfile;
+    final FileSystem fs;
+    final RegionServerServices rsServices;
+
+    public SplitWALWorker(FileStatus logfile, FileSystem fs, RegionServerServices rsServices) {
+      super(rsServices.getServerName().toShortString());
+      setDaemon(true);
+      this.fs = fs;
+      this.logfile = logfile;
+      this.rsServices = rsServices;
+    }
+
+    @Override
+    public void run() {
+      try {
+        boolean ret =
+          WALSplitter.splitLogFile(HBASEDIR, logfile, fs, conf, null, this, null, wals, rsServices);
+        assertTrue("Both splitting should pass", ret);
+      } catch (IOException e) {
+        LOG.warn(getName() + " Worker exiting " + e);
+      }
+    }
+
+    @Override
+    public ClusterStatusProtos.RegionStoreSequenceIds getLastSequenceId(byte[] encodedRegionName) {
+      return ClusterStatusProtos.RegionStoreSequenceIds.newBuilder()
+        .setLastFlushedSequenceId(HConstants.NO_SEQNUM).build();
+    }
+  }
+
   /**
    * @see "https://issues.apache.org/jira/browse/HBASE-3020"
    */
@@ -397,7 +464,7 @@ public class TestWALSplit {
   private Path createRecoveredEditsPathForRegion() throws IOException {
     byte[] encoded = RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedNameAsBytes();
     Path p = WALSplitUtil.getRegionSplitEditsPath(TableName.META_TABLE_NAME, encoded, 1,
-      FILENAME_BEING_SPLIT, TMPDIRNAME, conf);
+      FILENAME_BEING_SPLIT, TMPDIRNAME, conf, "");
     return p;
   }
 

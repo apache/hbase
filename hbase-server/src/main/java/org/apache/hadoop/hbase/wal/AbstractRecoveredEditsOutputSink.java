@@ -22,6 +22,9 @@ import static org.apache.hadoop.hbase.wal.WALSplitUtil.getRegionSplitEditsPath;
 
 import java.io.EOFException;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -30,8 +33,10 @@ import java.util.concurrent.ConcurrentMap;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
+import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -45,6 +50,7 @@ abstract class AbstractRecoveredEditsOutputSink extends OutputSink {
   private static final Logger LOG = LoggerFactory.getLogger(RecoveredEditsOutputSink.class);
   private final WALSplitter walSplitter;
   private final ConcurrentMap<String, Long> regionMaximumEditLogSeqNum = new ConcurrentHashMap<>();
+  private static final int MAX_RENAME_RETRY_COUNT = 5;
 
   public AbstractRecoveredEditsOutputSink(WALSplitter walSplitter,
     WALSplitter.PipelineController controller, EntryBuffers entryBuffers, int numWriters) {
@@ -55,9 +61,12 @@ abstract class AbstractRecoveredEditsOutputSink extends OutputSink {
   /** Returns a writer that wraps a {@link WALProvider.Writer} and its Path. Caller should close. */
   protected RecoveredEditsWriter createRecoveredEditsWriter(TableName tableName, byte[] region,
     long seqId) throws IOException {
+    // If multiple worker are splitting a WAL at a same time, both should use unique file name to
+    // avoid conflict
     Path regionEditsPath = getRegionSplitEditsPath(tableName, region, seqId,
       walSplitter.getFileBeingSplit().getPath().getName(), walSplitter.getTmpDirName(),
-      walSplitter.conf);
+      walSplitter.conf, getWorkerNameComponent());
+
     if (walSplitter.walFS.exists(regionEditsPath)) {
       LOG.warn("Found old edits file. It could be the "
         + "result of a previous failed split attempt. Deleting " + regionEditsPath + ", length="
@@ -71,6 +80,20 @@ abstract class AbstractRecoveredEditsOutputSink extends OutputSink {
     LOG.info(msg);
     updateStatusWithMsg(msg);
     return new RecoveredEditsWriter(region, regionEditsPath, w, seqId);
+  }
+
+  private String getWorkerNameComponent() {
+    if (walSplitter.rsServices == null) {
+      return "";
+    }
+    try {
+      return URLEncoder.encode(
+        walSplitter.rsServices.getServerName().toShortString()
+          .replace(Addressing.HOSTNAME_PORT_SEPARATOR, ServerName.SERVERNAME_SEPARATOR),
+        StandardCharsets.UTF_8.name());
+    } catch (UnsupportedEncodingException e) {
+      throw new RuntimeException("URLEncoder doesn't support UTF-8", e);
+    }
   }
 
   /**
@@ -103,22 +126,40 @@ abstract class AbstractRecoveredEditsOutputSink extends OutputSink {
     Path dst = getCompletedRecoveredEditsFilePath(editsWriter.path,
       regionMaximumEditLogSeqNum.get(Bytes.toString(editsWriter.encodedRegionName)));
     try {
-      if (!dst.equals(editsWriter.path) && walSplitter.walFS.exists(dst)) {
-        deleteOneWithFewerEntries(editsWriter, dst);
-      }
       // Skip the unit tests which create a splitter that reads and
       // writes the data without touching disk.
       // TestHLogSplit#testThreading is an example.
       if (walSplitter.walFS.exists(editsWriter.path)) {
-        if (!walSplitter.walFS.rename(editsWriter.path, dst)) {
-          final String errorMsg =
-            "Failed renaming recovered edits " + editsWriter.path + " to " + dst;
+        boolean retry;
+        int retryCount = 0;
+        do {
+          retry = false;
+          retryCount++;
+          // If rename is successful, it means recovered edits are successfully places at right
+          // place but if rename fails, there can be below reasons
+          // 1. dst already exist - in this case if dst have desired edits we will keep the dst,
+          // delete the editsWriter.path and consider this success else if dst have fewer edits, we
+          // will delete the dst and retry the rename
+          // 2. parent directory does not exit - in one edge case this is possible when this worker
+          // got stuck before rename and HMaster get another worker to split the wal, SCP will
+          // proceed and once region get opened on one RS, we delete the recovered.edits directory,
+          // in this case there is no harm in failing this procedure after retry exhausted.
+          if (!walSplitter.walFS.rename(editsWriter.path, dst)) {
+            retry = deleteOneWithFewerEntriesToRetry(editsWriter, dst);
+          }
+        } while (retry && retryCount < MAX_RENAME_RETRY_COUNT);
+
+        // If we are out of loop with retry flag `true` it means we have exhausted the retries.
+        if (retry) {
+          final String errorMsg = "Failed renaming recovered edits " + editsWriter.path + " to "
+            + dst + " in " + MAX_RENAME_RETRY_COUNT + " retries";
           updateStatusWithMsg(errorMsg);
           throw new IOException(errorMsg);
+        } else {
+          final String renameEditMsg = "Rename recovered edits " + editsWriter.path + " to " + dst;
+          LOG.info(renameEditMsg);
+          updateStatusWithMsg(renameEditMsg);
         }
-        final String renameEditMsg = "Rename recovered edits " + editsWriter.path + " to " + dst;
-        LOG.info(renameEditMsg);
-        updateStatusWithMsg(renameEditMsg);
       }
     } catch (IOException ioe) {
       final String errorMsg = "Could not rename recovered edits " + editsWriter.path + " to " + dst;
@@ -186,7 +227,36 @@ abstract class AbstractRecoveredEditsOutputSink extends OutputSink {
   }
 
   // delete the one with fewer wal entries
-  private void deleteOneWithFewerEntries(RecoveredEditsWriter editsWriter, Path dst)
+  private boolean deleteOneWithFewerEntriesToRetry(RecoveredEditsWriter editsWriter, Path dst)
+    throws IOException {
+    if (!walSplitter.walFS.exists(dst)) {
+      LOG.info("dst {} doesn't exist, need to retry ", dst);
+      return true;
+    }
+
+    if (isDstHasFewerEntries(editsWriter, dst)) {
+      LOG.warn("Found existing old edits file. It could be the result of a previous failed"
+        + " split attempt or we have duplicated wal entries. Deleting " + dst + ", length="
+        + walSplitter.walFS.getFileStatus(dst).getLen() + " and retry is needed");
+      if (!walSplitter.walFS.delete(dst, false)) {
+        LOG.warn("Failed deleting of old {}", dst);
+        throw new IOException("Failed deleting of old " + dst);
+      }
+      return true;
+    } else {
+      LOG
+        .warn("Found existing old edits file and we have less entries. Deleting " + editsWriter.path
+          + ", length=" + walSplitter.walFS.getFileStatus(editsWriter.path).getLen()
+          + " and no retry needed as dst has all edits");
+      if (!walSplitter.walFS.delete(editsWriter.path, false)) {
+        LOG.warn("Failed deleting of {}", editsWriter.path);
+        throw new IOException("Failed deleting of " + editsWriter.path);
+      }
+      return false;
+    }
+  }
+
+  private boolean isDstHasFewerEntries(RecoveredEditsWriter editsWriter, Path dst)
     throws IOException {
     long dstMinLogSeqNum = -1L;
     try (WAL.Reader reader = walSplitter.getWalFactory().createReader(walSplitter.walFS, dst)) {
@@ -198,23 +268,7 @@ abstract class AbstractRecoveredEditsOutputSink extends OutputSink {
       LOG.debug("Got EOF when reading first WAL entry from {}, an empty or broken WAL file?", dst,
         e);
     }
-    if (editsWriter.minLogSeqNum < dstMinLogSeqNum) {
-      LOG.warn("Found existing old edits file. It could be the result of a previous failed"
-        + " split attempt or we have duplicated wal entries. Deleting " + dst + ", length="
-        + walSplitter.walFS.getFileStatus(dst).getLen());
-      if (!walSplitter.walFS.delete(dst, false)) {
-        LOG.warn("Failed deleting of old {}", dst);
-        throw new IOException("Failed deleting of old " + dst);
-      }
-    } else {
-      LOG
-        .warn("Found existing old edits file and we have less entries. Deleting " + editsWriter.path
-          + ", length=" + walSplitter.walFS.getFileStatus(editsWriter.path).getLen());
-      if (!walSplitter.walFS.delete(editsWriter.path, false)) {
-        LOG.warn("Failed deleting of {}", editsWriter.path);
-        throw new IOException("Failed deleting of " + editsWriter.path);
-      }
-    }
+    return editsWriter.minLogSeqNum < dstMinLogSeqNum;
   }
 
   /**
