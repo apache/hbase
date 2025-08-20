@@ -335,9 +335,6 @@ public class HStore
   }
 
   private StoreContext initializeStoreContext(ColumnFamilyDescriptor family) throws IOException {
-    region.getTableDescriptor().getTableName().getNamespaceAsString();
-    family.getNameAsString();
-
     return new StoreContext.Builder().withBlockSize(family.getBlocksize())
       .withEncryptionContext(SecurityUtil.createEncryptionContext(conf,
             region.getRegionServerServices(), region.getTableDescriptor(), family))

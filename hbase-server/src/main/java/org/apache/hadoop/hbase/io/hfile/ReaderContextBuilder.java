@@ -59,6 +59,9 @@ public class ReaderContextBuilder {
     this.fileSize = readerContext.getFileSize();
     this.hfs = readerContext.getFileSystem();
     this.type = readerContext.getReaderType();
+    this.systemKeyCache = readerContext.getSystemKeyCache();
+    this.managedKeyDataCache = readerContext.getManagedKeyDataCache();
+    this.keyNamespace = readerContext.getKeyNamespace();
   }
 
   public ReaderContextBuilder withFilePath(Path filePath) {
@@ -124,22 +127,6 @@ public class ReaderContextBuilder {
 
   public ReaderContext build() {
     validateFields();
-    if (SecurityUtil.isKeyManagementEnabled(hfs.getConf())) {
-      if (systemKeyCache == null) {
-        try {
-          systemKeyCache = SystemKeyCache.createCache(hfs.getConf(), hfs);
-        } catch (IOException e) {
-          throw new RuntimeException("Failed to create system key cache", e);
-        }
-      }
-      if (managedKeyDataCache == null) {
-        managedKeyDataCache = new ManagedKeyDataCache(hfs.getConf(), null);
-      }
-    }
-    else {
-      systemKeyCache = null;
-      managedKeyDataCache = null;
-    }
     return new ReaderContext(filePath, fsdis, fileSize, hfs, primaryReplicaReader, type,
       keyNamespace, systemKeyCache, managedKeyDataCache);
   }
