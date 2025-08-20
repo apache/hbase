@@ -26,18 +26,20 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Initializes and organizes backup directories for continuous Write-Ahead Logs (WALs) files within
- * the specified backup root directory.
+ * Initializes and organizes backup directories for continuous Write-Ahead Logs (WALs) and
+ * bulk-loaded files within the specified backup root directory.
  */
 @InterfaceAudience.Private
 public class BackupFileSystemManager {
   private static final Logger LOG = LoggerFactory.getLogger(BackupFileSystemManager.class);
 
   public static final String WALS_DIR = "WALs";
+  public static final String BULKLOAD_FILES_DIR = "bulk-load-files";
   private final String peerId;
   private final FileSystem backupFs;
   private final Path backupRootDir;
   private final Path walsDir;
+  private final Path bulkLoadFilesDir;
 
   public BackupFileSystemManager(String peerId, Configuration conf, String backupRootDirStr)
     throws IOException {
@@ -45,6 +47,7 @@ public class BackupFileSystemManager {
     this.backupRootDir = new Path(backupRootDirStr);
     this.backupFs = FileSystem.get(backupRootDir.toUri(), conf);
     this.walsDir = createDirectory(WALS_DIR);
+    this.bulkLoadFilesDir = createDirectory(BULKLOAD_FILES_DIR);
   }
 
   private Path createDirectory(String dirName) throws IOException {
@@ -56,6 +59,10 @@ public class BackupFileSystemManager {
 
   public Path getWalsDir() {
     return walsDir;
+  }
+
+  public Path getBulkLoadFilesDir() {
+    return bulkLoadFilesDir;
   }
 
   public FileSystem getBackupFs() {
