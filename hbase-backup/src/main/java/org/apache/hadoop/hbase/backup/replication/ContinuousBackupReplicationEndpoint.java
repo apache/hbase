@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.backup.replication;
 
+import com.google.errorprone.annotations.RestrictedApi;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.text.SimpleDateFormat;
@@ -32,9 +34,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -44,6 +49,7 @@ import org.apache.hadoop.hbase.replication.BaseReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.EmptyEntriesPolicy;
 import org.apache.hadoop.hbase.replication.ReplicationResult;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceInterface;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.FSHLogProvider;
 import org.apache.hadoop.hbase.wal.WAL;
@@ -54,8 +60,8 @@ import org.slf4j.LoggerFactory;
 /**
  * ContinuousBackupReplicationEndpoint is responsible for replicating WAL entries to a backup
  * storage. It organizes WAL entries by day and periodically flushes the data, ensuring that WAL
- * files do not exceed the configured size. The class includes mechanisms for handling the WAL files
- * and ensuring that the replication process is safe.
+ * files do not exceed the configured size. The class includes mechanisms for handling the WAL
+ * files, performing bulk load backups, and ensuring that the replication process is safe.
  */
 @InterfaceAudience.Private
 public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint {
@@ -302,6 +308,7 @@ public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint
       for (WAL.Entry entry : walEntries) {
         walWriter.append(entry);
       }
+
       walWriter.sync(true);
     } catch (UncheckedIOException e) {
       String errorMsg = Utils.logPeerId(peerId) + " Failed to get or create WAL Writer for " + day;
@@ -309,6 +316,17 @@ public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint
         e.getMessage(), e);
       throw new IOException(errorMsg, e);
     }
+
+    List<Path> bulkLoadFiles = BulkLoadProcessor.processBulkLoadFiles(walEntries);
+
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("{} Processed {} bulk load files for WAL entries", Utils.logPeerId(peerId),
+        bulkLoadFiles.size());
+      LOG.trace("{} Bulk load files: {}", Utils.logPeerId(peerId),
+        bulkLoadFiles.stream().map(Path::toString).collect(Collectors.joining(", ")));
+    }
+
+    uploadBulkLoadFiles(day, bulkLoadFiles);
   }
 
   private FSHLogProvider.Writer createWalWriter(long dayInMillis) {
@@ -372,13 +390,157 @@ public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint
     }
   }
 
+  @RestrictedApi(
+      explanation = "Package-private for test visibility only. Do not use outside tests.",
+      link = "",
+      allowedOnPath = "(.*/src/test/.*|.*/org/apache/hadoop/hbase/backup/replication/ContinuousBackupReplicationEndpoint.java)")
+  void uploadBulkLoadFiles(long dayInMillis, List<Path> bulkLoadFiles)
+    throws BulkLoadUploadException {
+    if (bulkLoadFiles.isEmpty()) {
+      LOG.debug("{} No bulk load files to upload for {}", Utils.logPeerId(peerId), dayInMillis);
+      return;
+    }
+
+    LOG.debug("{} Starting upload of {} bulk load files", Utils.logPeerId(peerId),
+      bulkLoadFiles.size());
+
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("{} Bulk load files to upload: {}", Utils.logPeerId(peerId),
+        bulkLoadFiles.stream().map(Path::toString).collect(Collectors.joining(", ")));
+    }
+    String dayDirectoryName = formatToDateString(dayInMillis);
+    Path bulkloadDir = new Path(backupFileSystemManager.getBulkLoadFilesDir(), dayDirectoryName);
+    try {
+      backupFileSystemManager.getBackupFs().mkdirs(bulkloadDir);
+    } catch (IOException e) {
+      throw new BulkLoadUploadException(
+        String.format("%s Failed to create bulkload directory in backupFS: %s",
+          Utils.logPeerId(peerId), bulkloadDir),
+        e);
+    }
+
+    for (Path file : bulkLoadFiles) {
+      Path sourcePath;
+      try {
+        sourcePath = getBulkLoadFileStagingPath(file);
+      } catch (FileNotFoundException fnfe) {
+        throw new BulkLoadUploadException(
+          String.format("%s Bulk load file not found: %s", Utils.logPeerId(peerId), file), fnfe);
+      } catch (IOException ioe) {
+        throw new BulkLoadUploadException(
+          String.format("%s Failed to resolve source path for: %s", Utils.logPeerId(peerId), file),
+          ioe);
+      }
+
+      Path destPath = new Path(bulkloadDir, file);
+
+      try {
+        LOG.debug("{} Copying bulk load file from {} to {}", Utils.logPeerId(peerId), sourcePath,
+          destPath);
+
+        copyWithCleanup(CommonFSUtils.getRootDirFileSystem(conf), sourcePath,
+          backupFileSystemManager.getBackupFs(), destPath, conf);
+
+        LOG.info("{} Bulk load file {} successfully backed up to {}", Utils.logPeerId(peerId), file,
+          destPath);
+      } catch (IOException e) {
+        throw new BulkLoadUploadException(
+          String.format("%s Failed to copy bulk load file %s to %s on day %s",
+            Utils.logPeerId(peerId), file, destPath, formatToDateString(dayInMillis)),
+          e);
+      }
+    }
+
+    LOG.debug("{} Completed upload of bulk load files", Utils.logPeerId(peerId));
+  }
+
+  /**
+   * Copy a file with cleanup logic in case of failure. Always overwrite destination to avoid
+   * leaving corrupt partial files.
+   */
+  @RestrictedApi(
+      explanation = "Package-private for test visibility only. Do not use outside tests.",
+      link = "",
+      allowedOnPath = "(.*/src/test/.*|.*/org/apache/hadoop/hbase/backup/replication/ContinuousBackupReplicationEndpoint.java)")
+  static void copyWithCleanup(FileSystem srcFS, Path src, FileSystem dstFS, Path dst,
+    Configuration conf) throws IOException {
+    try {
+      if (dstFS.exists(dst)) {
+        FileStatus srcStatus = srcFS.getFileStatus(src);
+        FileStatus dstStatus = dstFS.getFileStatus(dst);
+
+        if (srcStatus.getLen() == dstStatus.getLen()) {
+          LOG.info("Destination file {} already exists with same length ({}). Skipping copy.", dst,
+            dstStatus.getLen());
+          return; // Skip upload
+        } else {
+          LOG.warn(
+            "Destination file {} exists but length differs (src={}, dst={}). " + "Overwriting now.",
+            dst, srcStatus.getLen(), dstStatus.getLen());
+        }
+      }
+
+      // Always overwrite in case previous copy left partial data
+      FileUtil.copy(srcFS, src, dstFS, dst, false, true, conf);
+    } catch (IOException e) {
+      try {
+        if (dstFS.exists(dst)) {
+          dstFS.delete(dst, true);
+          LOG.warn("Deleted partial/corrupt destination file {} after copy failure", dst);
+        }
+      } catch (IOException cleanupEx) {
+        LOG.warn("Failed to cleanup destination file {} after copy failure", dst, cleanupEx);
+      }
+      throw e;
+    }
+  }
+
   /**
    * Convert dayInMillis to "yyyy-MM-dd" format
    */
-  private String formatToDateString(long dayInMillis) {
+  @RestrictedApi(
+      explanation = "Package-private for test visibility only. Do not use outside tests.",
+      link = "",
+      allowedOnPath = "(.*/src/test/.*|.*/org/apache/hadoop/hbase/backup/replication/ContinuousBackupReplicationEndpoint.java)")
+  String formatToDateString(long dayInMillis) {
     SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
     dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
     return dateFormat.format(new Date(dayInMillis));
+  }
+
+  private Path getBulkLoadFileStagingPath(Path relativePathFromNamespace) throws IOException {
+    FileSystem rootFs = CommonFSUtils.getRootDirFileSystem(conf);
+    Path rootDir = CommonFSUtils.getRootDir(conf);
+    Path baseNSDir = new Path(HConstants.BASE_NAMESPACE_DIR);
+    Path baseNamespaceDir = new Path(rootDir, baseNSDir);
+    Path hFileArchiveDir =
+      new Path(rootDir, new Path(HConstants.HFILE_ARCHIVE_DIRECTORY, baseNSDir));
+
+    LOG.debug("{} Searching for bulk load file: {} in paths: {}, {}", Utils.logPeerId(peerId),
+      relativePathFromNamespace, baseNamespaceDir, hFileArchiveDir);
+
+    Path result =
+      findExistingPath(rootFs, baseNamespaceDir, hFileArchiveDir, relativePathFromNamespace);
+    LOG.debug("{} Bulk load file found at {}", Utils.logPeerId(peerId), result);
+    return result;
+  }
+
+  private static Path findExistingPath(FileSystem rootFs, Path baseNamespaceDir,
+    Path hFileArchiveDir, Path filePath) throws IOException {
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Checking for bulk load file at: {} and {}", new Path(baseNamespaceDir, filePath),
+        new Path(hFileArchiveDir, filePath));
+    }
+
+    for (Path candidate : new Path[] { new Path(baseNamespaceDir, filePath),
+      new Path(hFileArchiveDir, filePath) }) {
+      if (rootFs.exists(candidate)) {
+        return candidate;
+      }
+    }
+
+    throw new FileNotFoundException("Bulk load file not found at either: "
+      + new Path(baseNamespaceDir, filePath) + " or " + new Path(hFileArchiveDir, filePath));
   }
 
   private void shutdownFlushExecutor() {
