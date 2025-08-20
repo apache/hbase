@@ -23,6 +23,8 @@ import org.apache.hadoop.hbase.metrics.Meter;
 import org.apache.hadoop.hbase.metrics.MetricRegistries;
 import org.apache.hadoop.hbase.metrics.MetricRegistry;
 import org.apache.hadoop.hbase.metrics.Timer;
+import org.apache.hadoop.hbase.quotas.RpcThrottlingException;
+import org.apache.hadoop.hbase.regionserver.metrics.MetricsThrottleExceptions;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
@@ -47,6 +49,7 @@ public class MetricsRegionServer {
   private MetricsRegionServerQuotaSource quotaSource;
 
   private MetricRegistry metricRegistry;
+  private MetricsThrottleExceptions throttleMetrics;
   private Timer bulkLoadTimer;
   // Incremented once for each call to Scan#nextRaw
   private Meter serverReadQueryMeter;
@@ -78,6 +81,8 @@ public class MetricsRegionServer {
       serverReadQueryMeter = metricRegistry.meter("ServerReadQueryPerSecond");
       serverWriteQueryMeter = metricRegistry.meter("ServerWriteQueryPerSecond");
     }
+
+    throttleMetrics = new MetricsThrottleExceptions(metricRegistry);
   }
 
   MetricsRegionServer(MetricsRegionServerWrapper regionServerWrapper,
@@ -294,6 +299,17 @@ public class MetricsRegionServer {
 
   public void incrScannerLeaseExpired() {
     serverSource.incrScannerLeaseExpired();
+  }
+
+  /**
+   * Record a throttle exception with contextual information.
+   * @param throttleType the type of throttle exception from RpcThrottlingException.Type enum
+   * @param user         the user who triggered the throttle
+   * @param table        the table that was being accessed
+   */
+  public void recordThrottleException(RpcThrottlingException.Type throttleType, String user,
+    String table) {
+    throttleMetrics.recordThrottleException(throttleType, user, table);
   }
 
 }
