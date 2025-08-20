@@ -65,16 +65,7 @@ public class MetricsThrottleExceptions {
   private static String qualifyThrottleMetric(RpcThrottlingException.Type throttleType, String user,
     String table) {
     return String.format("RpcThrottlingException_Type_%s_User_%s_Table_%s", throttleType.name(),
-      sanitizeMetricName(user), sanitizeMetricName(table));
-  }
-
-  private static String sanitizeMetricName(String name) {
-    if (name == null) {
-      return "unknown";
-    }
-    // Only replace characters that are problematic for JMX ObjectNames
-    // Keep meaningful characters like hyphens, periods, etc.
-    return name.replaceAll("[,=:*?\"\\n]", "_");
+      user, table);
   }
 
 }
