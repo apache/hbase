@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.hbase.backup.replication;
 
+import static org.apache.hadoop.hbase.HConstants.REPLICATION_BULKLOAD_ENABLE_KEY;
 import static org.apache.hadoop.hbase.HConstants.REPLICATION_CLUSTER_ID;
+import static org.apache.hadoop.hbase.backup.replication.BackupFileSystemManager.BULKLOAD_FILES_DIR;
 import static org.apache.hadoop.hbase.backup.replication.BackupFileSystemManager.WALS_DIR;
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.CONF_BACKUP_MAX_WAL_SIZE;
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.CONF_BACKUP_ROOT_DIR;
@@ -27,11 +29,18 @@ import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplica
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.DATE_FORMAT;
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.ONE_DAY_IN_MILLISECONDS;
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.WAL_FILE_PREFIX;
+import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.copyWithCleanup;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -46,8 +55,10 @@ import java.util.TimeZone;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
@@ -64,8 +75,11 @@ import org.apache.hadoop.hbase.mapreduce.WALPlayer;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
+import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
+import org.apache.hadoop.hbase.tool.BulkLoadHFilesTool;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
+import org.apache.hadoop.hbase.util.HFileTestUtil;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.AfterClass;
@@ -73,6 +87,7 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.mockito.MockedStatic;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -91,12 +106,14 @@ public class TestContinuousBackupReplicationEndpoint {
 
   private final String replicationEndpoint = ContinuousBackupReplicationEndpoint.class.getName();
   private static final String CF_NAME = "cf";
+  private static final byte[] QUALIFIER = Bytes.toBytes("my-qualifier");
   static FileSystem fs = null;
   static Path root;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     // Set the configuration properties as required
+    conf.setBoolean(REPLICATION_BULKLOAD_ENABLE_KEY, true);
     conf.set(REPLICATION_CLUSTER_ID, "clusterId1");
 
     TEST_UTIL.startMiniZKCluster();
@@ -115,7 +132,7 @@ public class TestContinuousBackupReplicationEndpoint {
   }
 
   @Test
-  public void testWALBackup() throws IOException {
+  public void testWALAndBulkLoadFileBackup() throws IOException {
     String methodName = Thread.currentThread().getStackTrace()[1].getMethodName();
     TableName tableName = TableName.valueOf("table_" + methodName);
     String peerId = "peerId";
@@ -133,10 +150,15 @@ public class TestContinuousBackupReplicationEndpoint {
     loadRandomData(tableName, 100);
     assertEquals(100, getRowCount(tableName));
 
+    Path dir = TEST_UTIL.getDataTestDirOnTestFS("testBulkLoadByFamily");
+    generateHFiles(dir);
+    bulkLoadHFiles(tableName, dir);
+    assertEquals(1100, getRowCount(tableName));
+
     waitForReplication(15000);
     deleteReplicationPeer(peerId);
 
-    verifyBackup(backupRootDir.toString(), Map.of(tableName, 100));
+    verifyBackup(backupRootDir.toString(), true, Map.of(tableName, 1100));
 
     deleteTable(tableName);
   }
@@ -184,7 +206,7 @@ public class TestContinuousBackupReplicationEndpoint {
     waitForReplication(15000);
     deleteReplicationPeer(peerId);
 
-    verifyBackup(backupRootDir.toString(), Map.of(table1, 100, table2, 100, table3, 50));
+    verifyBackup(backupRootDir.toString(), false, Map.of(table1, 100, table2, 100, table3, 50));
 
     for (TableName table : List.of(table1, table2, table3)) {
       deleteTable(table);
@@ -242,7 +264,7 @@ public class TestContinuousBackupReplicationEndpoint {
     waitForReplication(20000);
     deleteReplicationPeer(peerId);
 
-    verifyBackup(backupRootDir.toString(), Map.of(tableName, getRowCount(tableName)));
+    verifyBackup(backupRootDir.toString(), false, Map.of(tableName, getRowCount(tableName)));
 
     deleteTable(tableName);
   }
@@ -289,7 +311,7 @@ public class TestContinuousBackupReplicationEndpoint {
     waitForReplication(15000);
     deleteReplicationPeer(peerId);
 
-    verifyBackup(backupRootDir.toString(), Map.of(tableName, 200));
+    verifyBackup(backupRootDir.toString(), false, Map.of(tableName, 200));
 
     // Verify that WALs are stored in two directories, one for each day
     Path walDir = new Path(backupRootDir, WALS_DIR);
@@ -312,6 +334,204 @@ public class TestContinuousBackupReplicationEndpoint {
     deleteTable(tableName);
   }
 
+  /**
+   * Simulates a one-time failure during bulk load file upload. This validates that the retry logic
+   * in the replication endpoint works as expected.
+   */
+  @Test
+  public void testBulkLoadFileUploadRetry() throws IOException {
+    String methodName = Thread.currentThread().getStackTrace()[1].getMethodName();
+    TableName tableName = TableName.valueOf("table_" + methodName);
+    String peerId = "peerId";
+
+    // Reset static failure flag before test
+    FailingOnceContinuousBackupReplicationEndpoint.reset();
+
+    createTable(tableName);
+
+    Path backupRootDir = new Path(root, methodName);
+    fs.mkdirs(backupRootDir);
+
+    Map<TableName, List<String>> tableMap = new HashMap<>();
+    tableMap.put(tableName, new ArrayList<>());
+
+    addReplicationPeer(peerId, backupRootDir, tableMap,
+      FailingOnceContinuousBackupReplicationEndpoint.class.getName());
+
+    loadRandomData(tableName, 100);
+    assertEquals(100, getRowCount(tableName));
+
+    Path dir = TEST_UTIL.getDataTestDirOnTestFS("testBulkLoadByFamily");
+    generateHFiles(dir);
+    bulkLoadHFiles(tableName, dir);
+    assertEquals(1100, getRowCount(tableName));
+
+    // Replication: first attempt fails, second attempt succeeds
+    waitForReplication(15000);
+    deleteReplicationPeer(peerId);
+
+    verifyBackup(backupRootDir.toString(), true, Map.of(tableName, 1100));
+
+    deleteTable(tableName);
+  }
+
+  /**
+   * Replication endpoint that fails only once on first upload attempt, then succeeds on retry.
+   */
+  public static class FailingOnceContinuousBackupReplicationEndpoint
+    extends ContinuousBackupReplicationEndpoint {
+
+    private static boolean failedOnce = false;
+
+    @Override
+    protected void uploadBulkLoadFiles(long dayInMillis, List<Path> bulkLoadFiles)
+      throws BulkLoadUploadException {
+      if (!failedOnce) {
+        failedOnce = true;
+        throw new BulkLoadUploadException("Simulated upload failure on first attempt");
+      }
+      super.uploadBulkLoadFiles(dayInMillis, bulkLoadFiles);
+    }
+
+    /** Reset failure state for new tests */
+    public static void reset() {
+      failedOnce = false;
+    }
+  }
+
+  /**
+   * Unit test for verifying cleanup of partial files. Simulates a failure during
+   * {@link FileUtil#copy(FileSystem, Path, FileSystem, Path, boolean, boolean, Configuration)} and
+   * checks that the destination file is deleted.
+   */
+  @Test
+  public void testCopyWithCleanupDeletesPartialFile() throws Exception {
+    FileSystem srcFS = mock(FileSystem.class);
+    FileSystem dstFS = mock(FileSystem.class);
+    Path src = new Path("/src/file");
+    Path dst = new Path("/dst/file");
+    Configuration conf = new Configuration();
+
+    FileStatus srcStatus = mock(FileStatus.class);
+    FileStatus dstStatus = mock(FileStatus.class);
+
+    when(srcFS.getFileStatus(src)).thenReturn(srcStatus);
+    when(dstFS.getFileStatus(dst)).thenReturn(dstStatus);
+
+    // lengths differ -> should attempt to overwrite and then cleanup
+    when(srcStatus.getLen()).thenReturn(200L);
+    when(dstStatus.getLen()).thenReturn(100L);
+
+    // Simulate FileUtil.copy failing
+    try (MockedStatic<FileUtil> mockedFileUtil = mockStatic(FileUtil.class)) {
+      mockedFileUtil.when(
+        () -> FileUtil.copy(eq(srcFS), eq(src), eq(dstFS), eq(dst), eq(false), eq(true), eq(conf)))
+        .thenThrow(new IOException("simulated copy failure"));
+
+      // Pretend partial file exists in destination
+      when(dstFS.exists(dst)).thenReturn(true);
+
+      // Run the method under test
+      assertThrows(IOException.class, () -> copyWithCleanup(srcFS, src, dstFS, dst, conf));
+
+      // Verify cleanup happened
+      verify(dstFS).delete(dst, true);
+    }
+  }
+
+  /**
+   * Simulates a stale/partial file left behind after a failed bulk load. On retry, the stale file
+   * should be overwritten and replication succeeds.
+   */
+  @Test
+  public void testBulkLoadFileUploadWithStaleFileRetry() throws Exception {
+    String methodName = Thread.currentThread().getStackTrace()[1].getMethodName();
+    TableName tableName = TableName.valueOf("table_" + methodName);
+    String peerId = "peerId";
+
+    // Reset static failure flag before test
+    PartiallyUploadedBulkloadFileEndpoint.reset();
+
+    createTable(tableName);
+
+    Path backupRootDir = new Path(root, methodName);
+    fs.mkdirs(backupRootDir);
+    conf.set(CONF_BACKUP_ROOT_DIR, backupRootDir.toString());
+
+    Map<TableName, List<String>> tableMap = new HashMap<>();
+    tableMap.put(tableName, new ArrayList<>());
+
+    addReplicationPeer(peerId, backupRootDir, tableMap,
+      PartiallyUploadedBulkloadFileEndpoint.class.getName());
+
+    loadRandomData(tableName, 100);
+    assertEquals(100, getRowCount(tableName));
+
+    Path dir = TEST_UTIL.getDataTestDirOnTestFS("testBulkLoadByFamily");
+    generateHFiles(dir);
+    bulkLoadHFiles(tableName, dir);
+    assertEquals(1100, getRowCount(tableName));
+
+    // first attempt will fail leaving stale file, second attempt should overwrite and succeed
+    waitForReplication(15000);
+    deleteReplicationPeer(peerId);
+
+    verifyBackup(backupRootDir.toString(), true, Map.of(tableName, 1100));
+
+    deleteTable(tableName);
+  }
+
+  /**
+   * Replication endpoint that simulates leaving a partial file behind on first attempt, then
+   * succeeds on second attempt by overwriting it.
+   */
+  public static class PartiallyUploadedBulkloadFileEndpoint
+    extends ContinuousBackupReplicationEndpoint {
+
+    private static boolean firstAttempt = true;
+
+    @Override
+    protected void uploadBulkLoadFiles(long dayInMillis, List<Path> bulkLoadFiles)
+      throws BulkLoadUploadException {
+      if (firstAttempt) {
+        firstAttempt = false;
+        try {
+          // Construct destination path and create a partial file
+          String dayDirectoryName = formatToDateString(dayInMillis);
+          BackupFileSystemManager backupFileSystemManager =
+            new BackupFileSystemManager("peer1", conf, conf.get(CONF_BACKUP_ROOT_DIR));
+          Path bulkloadDir =
+            new Path(backupFileSystemManager.getBulkLoadFilesDir(), dayDirectoryName);
+
+          FileSystem dstFs = backupFileSystemManager.getBackupFs();
+          if (!dstFs.exists(bulkloadDir)) {
+            dstFs.mkdirs(bulkloadDir);
+          }
+
+          for (Path file : bulkLoadFiles) {
+            Path destPath = new Path(bulkloadDir, file);
+            try (FSDataOutputStream out = dstFs.create(destPath, true)) {
+              out.writeBytes("partial-data"); // simulate incomplete upload
+            }
+          }
+        } catch (IOException e) {
+          throw new BulkLoadUploadException("Simulated failure while creating partial file", e);
+        }
+
+        // Fail after leaving partial files behind
+        throw new BulkLoadUploadException("Simulated upload failure on first attempt");
+      }
+
+      // Retry succeeds, overwriting stale files
+      super.uploadBulkLoadFiles(dayInMillis, bulkLoadFiles);
+    }
+
+    /** Reset for new tests */
+    public static void reset() {
+      firstAttempt = true;
+    }
+  }
+
   private void createTable(TableName tableName) throws IOException {
     ColumnFamilyDescriptor columnFamilyDescriptor =
       ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(CF_NAME)).setScope(1).build();
@@ -332,6 +552,12 @@ public class TestContinuousBackupReplicationEndpoint {
 
   private void addReplicationPeer(String peerId, Path backupRootDir,
     Map<TableName, List<String>> tableMap) throws IOException {
+    addReplicationPeer(peerId, backupRootDir, tableMap, replicationEndpoint);
+  }
+
+  private void addReplicationPeer(String peerId, Path backupRootDir,
+    Map<TableName, List<String>> tableMap, String customReplicationEndpointImpl)
+    throws IOException {
     Map<String, String> additionalArgs = new HashMap<>();
     additionalArgs.put(CONF_PEER_UUID, UUID.randomUUID().toString());
     additionalArgs.put(CONF_BACKUP_ROOT_DIR, backupRootDir.toString());
@@ -340,7 +566,7 @@ public class TestContinuousBackupReplicationEndpoint {
     additionalArgs.put(CONF_STAGED_WAL_FLUSH_INTERVAL, "10");
 
     ReplicationPeerConfig peerConfig = ReplicationPeerConfig.newBuilder()
-      .setReplicationEndpointImpl(replicationEndpoint).setReplicateAllUserTables(false)
+      .setReplicationEndpointImpl(customReplicationEndpointImpl).setReplicateAllUserTables(false)
       .setTableCFsMap(tableMap).putAllConfiguration(additionalArgs).build();
 
     admin.addReplicationPeer(peerId, peerConfig);
@@ -358,6 +584,42 @@ public class TestContinuousBackupReplicationEndpoint {
     }
   }
 
+  private void bulkLoadHFiles(TableName tableName, Path inputDir) throws IOException {
+    TEST_UTIL.getConfiguration().setBoolean(BulkLoadHFilesTool.BULK_LOAD_HFILES_BY_FAMILY, true);
+
+    try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
+      BulkLoadHFiles loader = new BulkLoadHFilesTool(TEST_UTIL.getConfiguration());
+      loader.bulkLoad(table.getName(), inputDir);
+    } finally {
+      TEST_UTIL.getConfiguration().setBoolean(BulkLoadHFilesTool.BULK_LOAD_HFILES_BY_FAMILY, false);
+    }
+  }
+
+  private void bulkLoadHFiles(TableName tableName, Map<byte[], List<Path>> family2Files)
+    throws IOException {
+    TEST_UTIL.getConfiguration().setBoolean(BulkLoadHFilesTool.BULK_LOAD_HFILES_BY_FAMILY, true);
+
+    try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
+      BulkLoadHFiles loader = new BulkLoadHFilesTool(TEST_UTIL.getConfiguration());
+      loader.bulkLoad(table.getName(), family2Files);
+    } finally {
+      TEST_UTIL.getConfiguration().setBoolean(BulkLoadHFilesTool.BULK_LOAD_HFILES_BY_FAMILY, false);
+    }
+  }
+
+  private void generateHFiles(Path outputDir) throws IOException {
+    String hFileName = "MyHFile";
+    int numRows = 1000;
+    outputDir = outputDir.makeQualified(fs.getUri(), fs.getWorkingDirectory());
+
+    byte[] from = Bytes.toBytes(CF_NAME + "begin");
+    byte[] to = Bytes.toBytes(CF_NAME + "end");
+
+    Path familyDir = new Path(outputDir, CF_NAME);
+    HFileTestUtil.createHFile(TEST_UTIL.getConfiguration(), fs, new Path(familyDir, hFileName),
+      Bytes.toBytes(CF_NAME), QUALIFIER, from, to, numRows);
+  }
+
   private void waitForReplication(int durationInMillis) {
     LOG.info("Waiting for replication to complete for {} ms", durationInMillis);
     try {
@@ -370,12 +632,17 @@ public class TestContinuousBackupReplicationEndpoint {
 
   /**
    * Verifies the backup process by: 1. Checking whether any WAL (Write-Ahead Log) files were
-   * generated in the backup directory. 2. Replaying the WAL files to restore data and check
-   * consistency by verifying that the restored data matches the expected row count for each table.
+   * generated in the backup directory. 2. Checking whether any bulk-loaded files were generated in
+   * the backup directory. 3. Replaying the WAL and bulk-loaded files (if present) to restore data
+   * and check consistency by verifying that the restored data matches the expected row count for
+   * each table.
    */
-  private void verifyBackup(String backupRootDir, Map<TableName, Integer> tablesWithExpectedRows)
-    throws IOException {
+  private void verifyBackup(String backupRootDir, boolean hasBulkLoadFiles,
+    Map<TableName, Integer> tablesWithExpectedRows) throws IOException {
     verifyWALBackup(backupRootDir);
+    if (hasBulkLoadFiles) {
+      verifyBulkLoadBackup(backupRootDir);
+    }
 
     for (Map.Entry<TableName, Integer> entry : tablesWithExpectedRows.entrySet()) {
       TableName tableName = entry.getKey();
@@ -386,6 +653,21 @@ public class TestContinuousBackupReplicationEndpoint {
       assertEquals(0, getRowCount(tableName));
 
       replayWALs(new Path(backupRootDir, WALS_DIR).toString(), tableName);
+
+      // replay Bulk loaded HFiles if Present
+      try {
+        Path bulkloadDir = new Path(backupRootDir, BULKLOAD_FILES_DIR);
+        if (fs.exists(bulkloadDir)) {
+          FileStatus[] directories = fs.listStatus(bulkloadDir);
+          for (FileStatus dirStatus : directories) {
+            if (dirStatus.isDirectory()) {
+              replayBulkLoadHFilesIfPresent(dirStatus.getPath().toString(), tableName);
+            }
+          }
+        }
+      } catch (Exception e) {
+        fail("Failed to replay BulkLoad HFiles properly: " + e.getMessage());
+      }
 
       assertEquals(expectedRows, getRowCount(tableName));
     }
@@ -412,6 +694,15 @@ public class TestContinuousBackupReplicationEndpoint {
     assertFalse("Expected some WAL files but found none!", walFiles.isEmpty());
   }
 
+  private void verifyBulkLoadBackup(String backupRootDir) throws IOException {
+    Path bulkLoadFilesDir = new Path(backupRootDir, BULKLOAD_FILES_DIR);
+    assertTrue("BulkLoad Files directory does not exist!", fs.exists(bulkLoadFilesDir));
+
+    FileStatus[] bulkLoadFiles = fs.listStatus(bulkLoadFilesDir);
+    assertNotNull("No Bulk load files found!", bulkLoadFiles);
+    assertTrue("Expected some Bulk load files but found none!", bulkLoadFiles.length > 0);
+  }
+
   private void replayWALs(String walDir, TableName tableName) {
     WALPlayer player = new WALPlayer();
     try {
@@ -419,6 +710,28 @@ public class TestContinuousBackupReplicationEndpoint {
         new String[] { walDir, tableName.getQualifierAsString() }));
     } catch (Exception e) {
       fail("Failed to replay WALs properly: " + e.getMessage());
+    }
+  }
+
+  private void replayBulkLoadHFilesIfPresent(String bulkLoadDir, TableName tableName) {
+    try {
+      Path tableBulkLoadDir = new Path(bulkLoadDir + "/default/" + tableName);
+      if (fs.exists(tableBulkLoadDir)) {
+        RemoteIterator<LocatedFileStatus> fileStatusIterator = fs.listFiles(tableBulkLoadDir, true);
+        List<Path> bulkLoadFiles = new ArrayList<>();
+
+        while (fileStatusIterator.hasNext()) {
+          LocatedFileStatus fileStatus = fileStatusIterator.next();
+          Path filePath = fileStatus.getPath();
+
+          if (!fileStatus.isDirectory()) {
+            bulkLoadFiles.add(filePath);
+          }
+        }
+        bulkLoadHFiles(tableName, Map.of(Bytes.toBytes(CF_NAME), bulkLoadFiles));
+      }
+    } catch (Exception e) {
+      fail("Failed to replay BulkLoad HFiles properly: " + e.getMessage());
     }
   }
 
