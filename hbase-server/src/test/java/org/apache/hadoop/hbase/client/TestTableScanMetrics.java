@@ -36,16 +36,21 @@ import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.client.metrics.ScanMetricsRegionInfo;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.junit.AfterClass;
@@ -57,7 +62,7 @@ import org.junit.experimental.categories.Category;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 
-@Category({ ClientTests.class, MediumTests.class })
+@Category({ ClientTests.class, LargeTests.class })
 public class TestTableScanMetrics extends FromClientSideBase {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -346,6 +351,56 @@ public class TestTableScanMetrics extends FromClientSideBase {
 
       // Assert on scan metrics by region
       Assert.assertEquals(expectedScanMetricsByRegion, concurrentScanMetricsByRegion);
+    } finally {
+      TEST_UTIL.deleteTable(tableName);
+    }
+  }
+
+  @Test
+  public void testRPCCallProcessingAndQueueWaitTimeMetrics() throws Exception {
+    final int numThreads = 90;
+    Configuration conf = TEST_UTIL.getConfiguration();
+    int handlerCount = conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT,
+      HConstants.DEFAULT_REGION_SERVER_HANDLER_COUNT);
+    Assert.assertTrue(numThreads > 3 * handlerCount);
+    ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(numThreads);
+    TableName tableName = TableName.valueOf(TestTableScanMetrics.class.getSimpleName()
+      + "_testRPCCallProcessingAndQueueWaitTimeMetrics");
+    AtomicLong totalScanRpcTime = new AtomicLong(0);
+    AtomicLong totalQueueWaitTime = new AtomicLong(0);
+    CountDownLatch latch = new CountDownLatch(numThreads);
+    try (Table table = TEST_UTIL.createMultiRegionTable(tableName, CF)) {
+      TEST_UTIL.loadTable(table, CF);
+      for (int i = 0; i < numThreads; i++) {
+        executor.execute(new Runnable() {
+          @Override
+          public void run() {
+            try {
+              Scan scan = generateScan(EMPTY_BYTE_ARRAY, EMPTY_BYTE_ARRAY);
+              scan.setEnableScanMetricsByRegion(true);
+              scan.setCaching(2);
+              try (ResultScanner rs = table.getScanner(scan)) {
+                Result r;
+                while ((r = rs.next()) != null) {
+                  Assert.assertFalse(r.isEmpty());
+                }
+                ScanMetrics scanMetrics = rs.getScanMetrics();
+                Map<String, Long> metricsMap = scanMetrics.getMetricsMap();
+                totalScanRpcTime.addAndGet(metricsMap.get(RPC_SCAN_TIME_METRIC_NAME));
+                totalQueueWaitTime.addAndGet(metricsMap.get(RPC_QUEUE_WAIT_TIME_METRIC_NAME));
+              }
+              latch.countDown();
+            } catch (IOException e) {
+              throw new RuntimeException(e);
+            }
+          }
+        });
+      }
+      latch.await();
+      executor.shutdown();
+      executor.awaitTermination(10, TimeUnit.SECONDS);
+      Assert.assertTrue(totalScanRpcTime.get() > 0);
+      Assert.assertTrue(totalQueueWaitTime.get() > 0);
     } finally {
       TEST_UTIL.deleteTable(tableName);
     }
