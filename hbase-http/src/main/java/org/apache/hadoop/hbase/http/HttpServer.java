@@ -815,7 +815,7 @@ public class HttpServer implements FilterContainer {
     // set up the context for "/static/*"
     ServletContextHandler staticContext = new ServletContextHandler(parent, "/static");
     staticContext.setResourceBase(appDir + "/static");
-    staticContext.addServlet(DefaultServlet.class, "/*");
+    staticContext.addServlet(AdminAuthorizedServlet.class, "/*");
     staticContext.setDisplayName("static");
     setContextAttributes(staticContext, conf);
     defaultContexts.put(staticContext, true);
