@@ -859,7 +859,8 @@ enum RefreshHFilesTableProcedureState {
 }
 
 message RefreshHFilesTableProcedureStateData {
-  required TableName table_name = 1;
+  optional TableName table_name = 1;
+  optional string namespace_name = 2;
 }
 
 message RefreshHFilesRegionProcedureStateData {

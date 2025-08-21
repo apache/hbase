@@ -18,10 +18,14 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
+import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -40,7 +44,7 @@ public class RefreshHFilesTableProcedure
   private static final Logger LOG = LoggerFactory.getLogger(RefreshHFilesTableProcedure.class);
 
   private TableName tableName;
-  private String namespace;
+  private String namespaceName;
 
   public RefreshHFilesTableProcedure() {
     super();
@@ -55,9 +59,9 @@ public class RefreshHFilesTableProcedure
     this.tableName = tableName;
   }
 
-  public RefreshHFilesTableProcedure(MasterProcedureEnv env, String namespace) {
+  public RefreshHFilesTableProcedure(MasterProcedureEnv env, String namespaceName) {
     super(env);
-    this.namespace = namespace;
+    this.namespaceName = namespaceName;
   }
 
   @Override
@@ -69,7 +73,12 @@ public class RefreshHFilesTableProcedure
   protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.serializeStateData(serializer);
     MasterProcedureProtos.RefreshHFilesTableProcedureStateData.Builder builder = MasterProcedureProtos.RefreshHFilesTableProcedureStateData.newBuilder();
-    builder.setTableName(ProtobufUtil.toProtoTableName(tableName));
+    if (tableName != null && namespaceName == null){
+      builder.setTableName(ProtobufUtil.toProtoTableName(tableName));
+    }
+    else if(tableName == null && namespaceName != null){
+      builder.setNamespaceName(namespaceName);
+    }
     serializer.serialize(builder.build());
   }
 
@@ -78,12 +87,20 @@ public class RefreshHFilesTableProcedure
     super.deserializeStateData(serializer);
     MasterProcedureProtos.RefreshHFilesTableProcedureStateData
       data = serializer.deserialize(MasterProcedureProtos.RefreshHFilesTableProcedureStateData.class);
-    this.tableName = ProtobufUtil.toTableName(data.getTableName());
+    if (data.hasTableName() && !data.hasNamespaceName()){
+      this.tableName = ProtobufUtil.toTableName(data.getTableName());
+    }
+    else if(!data.hasTableName() && data.hasNamespaceName()){
+      this.namespaceName = data.getNamespaceName();
+    }
   }
 
   @Override
   public TableName getTableName() {
-    return tableName;
+    if (tableName != null && namespaceName == null){
+      return tableName;
+    }
+      return DUMMY_NAMESPACE_TABLE_NAME;
   }
 
   @Override
@@ -135,21 +152,42 @@ public class RefreshHFilesTableProcedure
   private Flow prepare(final MasterProcedureEnv env) {
     // TODO Check if table exists otherwise send exception.
     // Get list of regions for the table
-    AssignmentManager am = env.getAssignmentManager();
-    List<RegionInfo> regions = am.getRegionStates().getRegionsOfTable(tableName);
-
-    // For each region get the server where it is hosted and then call refreshHfile on that server
-    // with given region as parameter
-    for (RegionInfo region : regions) {
-      // TODO verify if region is alive or not
-    }
+//    AssignmentManager am = env.getAssignmentManager();
+//    List<RegionInfo> regions = am.getRegionStates().getRegionsOfTable(tableName);
+//
+//    // For each region get the server where it is hosted and then call refreshHfile on that server
+//    // with given region as parameter
+//    for (RegionInfo region : regions) {
+//      // TODO verify if region is alive or not
+//    }
     setNextState(RefreshHFilesTableProcedureState.REFRESH_HFILES_REFRESH_REGION);
     return Flow.HAS_MORE_STATE;
   }
 
-  private Flow refreshRegionHFiles(final MasterProcedureEnv env) {
-    addChildProcedure(env.getAssignmentManager().getTableRegions(getTableName(), true).stream()
+  private void refreshHFilesForTable(final MasterProcedureEnv env, TableName tableName){
+    addChildProcedure(env.getAssignmentManager().getTableRegions(tableName, true).stream()
       .map(r -> new RefreshHFilesRegionProcedure(r)).toArray(RefreshHFilesRegionProcedure[]::new));
+  }
+
+  private Flow refreshRegionHFiles(final MasterProcedureEnv env) throws IOException {
+    if (tableName != null && namespaceName == null){
+      refreshHFilesForTable(env, tableName);
+    }
+    else if(tableName == null && namespaceName != null){
+      final List<TableName> tables = env.getMasterServices().listTableNamesByNamespace(namespaceName);
+      for (TableName table : tables){
+        refreshHFilesForTable(env, table);
+      }
+    }
+    else{
+      final List<TableName> tables = env.getMasterServices().getTableDescriptors().getAll().values().stream().map(TableDescriptor::getTableName).toList();
+      for (TableName table : tables){
+        if(!table.isSystemTable()){
+          refreshHFilesForTable(env, table);
+        }
+      }
+    }
+
     setNextState(RefreshHFilesTableProcedureState.REFRESH_HFILES_FINISH);
     return Flow.HAS_MORE_STATE;
   }

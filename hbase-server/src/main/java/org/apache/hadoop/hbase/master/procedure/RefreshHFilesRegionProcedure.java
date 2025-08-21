@@ -158,6 +158,7 @@ public class RefreshHFilesRegionProcedure extends Procedure<MasterProcedureEnv>
     complete(env, error);
   }
 
+  @Override
   public void remoteOperationCompleted(MasterProcedureEnv env) {
     complete(env, null);
   }
