@@ -39,7 +39,6 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -358,14 +357,14 @@ public class TestTableScanMetrics extends FromClientSideBase {
 
   @Test
   public void testRPCCallProcessingAndQueueWaitTimeMetrics() throws Exception {
-    final int numThreads = 90;
+    final int numThreads = 20;
     Configuration conf = TEST_UTIL.getConfiguration();
     int handlerCount = conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT,
       HConstants.DEFAULT_REGION_SERVER_HANDLER_COUNT);
-    Assert.assertTrue(numThreads > 3 * handlerCount);
+    Assert.assertTrue(numThreads > 6 * handlerCount);
     ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(numThreads);
-    TableName tableName = TableName.valueOf(TestTableScanMetrics.class.getSimpleName()
-      + "_testRPCCallProcessingAndQueueWaitTimeMetrics");
+    TableName tableName = TableName.valueOf(
+      TestTableScanMetrics.class.getSimpleName() + "_testRPCCallProcessingAndQueueWaitTimeMetrics");
     AtomicLong totalScanRpcTime = new AtomicLong(0);
     AtomicLong totalQueueWaitTime = new AtomicLong(0);
     CountDownLatch latch = new CountDownLatch(numThreads);
