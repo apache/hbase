@@ -136,7 +136,7 @@ public class RefreshHFilesTableProcedure
     try {
       return switch (state) {
         case REFRESH_HFILES_PREPARE -> prepare(env);
-        case REFRESH_HFILES_REFRESH_REGION -> refreshRegionHFiles(env);
+        case REFRESH_HFILES_REFRESH_REGION -> refreshHFiles(env);
         case REFRESH_HFILES_FINISH -> finish();
         default -> throw new UnsupportedOperationException(
           "Unhandled state: " + state);
@@ -151,15 +151,7 @@ public class RefreshHFilesTableProcedure
 
   private Flow prepare(final MasterProcedureEnv env) {
     // TODO Check if table exists otherwise send exception.
-    // Get list of regions for the table
-//    AssignmentManager am = env.getAssignmentManager();
-//    List<RegionInfo> regions = am.getRegionStates().getRegionsOfTable(tableName);
-//
-//    // For each region get the server where it is hosted and then call refreshHfile on that server
-//    // with given region as parameter
-//    for (RegionInfo region : regions) {
-//      // TODO verify if region is alive or not
-//    }
+    // TODO verify if region is alive or not
     setNextState(RefreshHFilesTableProcedureState.REFRESH_HFILES_REFRESH_REGION);
     return Flow.HAS_MORE_STATE;
   }
@@ -169,7 +161,7 @@ public class RefreshHFilesTableProcedure
       .map(r -> new RefreshHFilesRegionProcedure(r)).toArray(RefreshHFilesRegionProcedure[]::new));
   }
 
-  private Flow refreshRegionHFiles(final MasterProcedureEnv env) throws IOException {
+  private Flow refreshHFiles(final MasterProcedureEnv env) throws IOException {
     if (tableName != null && namespaceName == null){
       refreshHFilesForTable(env, tableName);
     }
