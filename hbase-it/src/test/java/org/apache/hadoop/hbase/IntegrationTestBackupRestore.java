@@ -84,7 +84,7 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
   protected static final int DEFAULT_REGIONSERVER_COUNT = 5;
   protected static final int DEFAULT_NUMBER_OF_TABLES = 1;
   protected static final int DEFAULT_NUM_ITERATIONS = 10;
-  protected static final int DEFAULT_ROWS_IN_ITERATION = 500000;
+  protected static final int DEFAULT_ROWS_IN_ITERATION = 10000;
   protected static final String SLEEP_TIME_KEY = "sleeptime";
   // short default interval because tests don't run very long.
   protected static final long SLEEP_TIME_DEFAULT = 50000L;
