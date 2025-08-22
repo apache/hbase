@@ -172,24 +172,22 @@
 
 <%
   // handle the case for fqtn is not null with IllegalArgumentException message + redirect
-  if (fqtn != null) {
-    try {
-      TableName tn = TableName.valueOf(fqtn);
-      TableName.isLegalNamespaceName(tn.getNamespace());
-      TableName.isLegalTableQualifierName(tn.getQualifier());
-    } catch (IllegalArgumentException e) {
+  try {
+    TableName tn = TableName.valueOf(fqtn);
+    TableName.isLegalNamespaceName(tn.getNamespace());
+    TableName.isLegalTableQualifierName(tn.getQualifier());
+  } catch (IllegalArgumentException e) {
 %>
-      <div class="container-fluid content">
-        <div class="row inner_header">
-          <div class="page-header">
-            <h1>Table not legal</h1>
-          </div>
+    <div class="container-fluid content">
+      <div class="row inner_header">
+        <div class="page-header">
+          <h1>Table not legal</h1>
         </div>
-        <p><hr><p>
-        <jsp:include page="redirect.jsp" />
       </div>
-  <%  return;
-    }  
+      <p><hr><p>
+      <jsp:include page="redirect.jsp" />
+    </div>
+<%  return;
   } %> 
 
 <%
