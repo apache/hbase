@@ -359,8 +359,11 @@ public class TestTableScanMetrics extends FromClientSideBase {
   public void testRPCCallProcessingAndQueueWaitTimeMetrics() throws Exception {
     final int numThreads = 20;
     Configuration conf = TEST_UTIL.getConfiguration();
+    // Handler count is 3 by default.
     int handlerCount = conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT,
       HConstants.DEFAULT_REGION_SERVER_HANDLER_COUNT);
+    // Keep the number of threads to be high enough for RPC calls to queue up. For now going with 6
+    // times the handler count.
     Assert.assertTrue(numThreads > 6 * handlerCount);
     ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(numThreads);
     TableName tableName = TableName.valueOf(
