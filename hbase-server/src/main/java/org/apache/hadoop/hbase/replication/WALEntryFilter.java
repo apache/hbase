@@ -50,4 +50,18 @@ public interface WALEntryFilter {
    *         the entry to be skipped for replication.
    */
   Entry filter(Entry entry);
+
+  /**
+   * Tell the filter whether the peer is a serial replication peer.
+   * <p>
+   * For serial replication, usually you should not filter out an entire entry, unless the peer
+   * config does not contain the table, because we need the region name and sequence id of the entry
+   * to advance the pushed sequence id, otherwise the replication may be blocked. You can just
+   * filter out all the cells of the entry to stop it being replicated to peer cluster,or just rely
+   * on the {@link WALCellFilter#filterCell(Entry, org.apache.hadoop.hbase.Cell)} method to filter
+   * all the cells out.
+   * @param serial {@code true} if the peer is a serial replication peer, otherwise {@code false}
+   */
+  default void setSerial(boolean serial) {
+  }
 }

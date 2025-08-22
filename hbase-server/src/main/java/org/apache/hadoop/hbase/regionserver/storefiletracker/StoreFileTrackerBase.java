@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.HFileLink;
@@ -44,6 +45,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.regionserver.CreateStoreFileWriterParams;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreContext;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
@@ -371,6 +373,16 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
     }
     return createHFileLink(TableName.valueOf(m.group(1), m.group(2)), m.group(3), m.group(4),
       createBackRef);
+  }
+
+  public void removeStoreFiles(List<HStoreFile> storeFiles) throws IOException {
+    archiveStoreFiles(storeFiles);
+  }
+
+  protected void archiveStoreFiles(List<HStoreFile> storeFiles) throws IOException {
+    HFileArchiver.archiveStoreFiles(this.conf, ctx.getRegionFileSystem().getFileSystem(),
+      ctx.getRegionInfo(), ctx.getRegionFileSystem().getTableDir(), ctx.getFamily().getName(),
+      storeFiles);
   }
 
   /**
