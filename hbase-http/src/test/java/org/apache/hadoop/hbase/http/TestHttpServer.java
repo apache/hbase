@@ -507,7 +507,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
 
   @SuppressWarnings("unchecked")
   private static Map<String, Object> parse(String jsonString) {
-    return (Map<String, Object>) JSON.parse(jsonString);
+    return (Map<String, Object>) new JSON().fromJSON(jsonString);
   }
 
   @Test
@@ -615,6 +615,9 @@ public class TestHttpServer extends HttpServerFunctionalTest {
       ServerConnector listener = server.getServerConnectors().get(0);
 
       assertEquals(port, listener.getPort());
+      // We are doing this as otherwise testBindAddress fails, not sure how we were even starting
+      // server in jetty 9 without this call
+      server.start();
       // verify hostname is what was given
       server.openListeners();
       assertEquals(host, server.getConnectorAddress(0).getHostName());
