@@ -321,6 +321,11 @@ public class TestGetAndPutResource extends RowResourceBase {
 
   @Test
   public void testURLEncodedKey() throws IOException, JAXBException {
+    // Requires UriCompliance.Violation.AMBIGUOUS_PATH_SEPARATOR
+    // Otherwise fails with "400: Ambiguous URI path separator"
+    // In this test, request url resolves to "/TestRowResource/http%3A%2F%2Fexample.com%2Ffoo/a:1"
+    // and is considered ambiguous by Jetty 12.
+    // Basically we are having a URL encoded string as row key here!
     String urlKey = "http://example.com/foo";
     StringBuilder path = new StringBuilder();
     path.append('/');
