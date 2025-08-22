@@ -229,6 +229,10 @@ public class StoreFileInfo implements Configurable {
       this.conf.getBoolean(STORE_FILE_READER_NO_READAHEAD, DEFAULT_STORE_FILE_READER_NO_READAHEAD);
   }
 
+  public HFileLink getLink() {
+    return link;
+  }
+
   @Override
   public Configuration getConf() {
     return conf;
@@ -738,7 +742,7 @@ public class StoreFileInfo implements Configurable {
     }
   }
 
-  FileSystem getFileSystem() {
+  public FileSystem getFileSystem() {
     return this.fs;
   }
 

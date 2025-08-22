@@ -238,9 +238,11 @@ public class HStoreFile implements StoreFile {
    *                       ignored.
    * @param primaryReplica true if this is a store file for primary replica, otherwise false.
    */
-  public HStoreFile(FileSystem fs, Path p, Configuration conf, CacheConfig cacheConf,
+public HStoreFile(FileSystem fs, Path p, Configuration conf, CacheConfig cacheConf,
     BloomType cfBloomType, boolean primaryReplica, StoreFileTracker sft) throws IOException {
-    this(sft.getStoreFileInfo(p, primaryReplica), cfBloomType, cacheConf, null, null, null, null);
+    this(sft.getStoreFileInfo(p, primaryReplica), cfBloomType, cacheConf, null,
+      SecurityUtil.constructKeyNamespace(sft.getStoreContext()),
+      SystemKeyCache.createCache(conf, fs), new ManagedKeyDataCache(conf, null));
   }
 
   /**
@@ -257,8 +259,12 @@ public class HStoreFile implements StoreFile {
  * @param managedKeyDataCache2
  * @param bloomFilterMetrics
    */
-  public HStoreFile(StoreFileInfo fileInfo, BloomType cfBloomType, CacheConfig cacheConf) {
-    this(fileInfo, cfBloomType, cacheConf, null, null, null, null);
+  public HStoreFile(StoreFileInfo fileInfo, BloomType cfBloomType, CacheConfig cacheConf)
+    throws IOException {
+    this(fileInfo, cfBloomType, cacheConf, null,
+      SecurityUtil.constructKeyNamespace(fileInfo),
+      SystemKeyCache.createCache(fileInfo.getConf(), fileInfo.getFileSystem()),
+      new ManagedKeyDataCache(fileInfo.getConf(), null));
   }
 
   /**

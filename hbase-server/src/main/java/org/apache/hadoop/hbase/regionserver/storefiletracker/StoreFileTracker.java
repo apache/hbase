@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.regionserver.CreateStoreFileWriterParams;
+import org.apache.hadoop.hbase.regionserver.StoreContext;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
@@ -153,4 +154,11 @@ public interface StoreFileTracker {
    * @throws IOException if the archiving fails
    */
   void removeStoreFiles(List<HStoreFile> storeFiles) throws IOException;
+
+  /**
+   * Get the store context.
+   * Get the store context.
+   * @return the store context.
+   */
+  StoreContext getStoreContext();
 }

@@ -33,7 +33,8 @@ import org.apache.hadoop.hbase.io.hfile.FixedFileTrailer;
 import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
 import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
 import org.apache.hadoop.hbase.regionserver.StoreContext;
-import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
@@ -231,6 +232,11 @@ public class SecurityUtil {
   public static String constructKeyNamespace(StoreContext storeContext) {
     return storeContext.getTableName().getNamespaceAsString() + "/"
         + storeContext.getFamily().getNameAsString();
+  }
+
+  public static String constructKeyNamespace(StoreFileInfo fileInfo) {
+    Pair<String, String> tableNameAndFamilyName = fileInfo.getLink().getTableNameAndFamilyName();
+    return tableNameAndFamilyName.getFirst() + "/" + tableNameAndFamilyName.getSecond();
   }
 
   /**
