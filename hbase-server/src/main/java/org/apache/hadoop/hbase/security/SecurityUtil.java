@@ -25,16 +25,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
-import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.hfile.FixedFileTrailer;
 import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
 import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
-import org.apache.hadoop.hbase.regionserver.StoreContext;
-import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
-import org.apache.hadoop.hbase.util.Pair;
+
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
@@ -223,21 +220,7 @@ public class SecurityUtil {
     return null;
   }
 
-  public static String constructKeyNamespace(TableDescriptor tableDescriptor,
-      ColumnFamilyDescriptor family) {
-    return tableDescriptor.getTableName().getNamespaceAsString() + "/"
-        + family.getNameAsString();
-  }
 
-  public static String constructKeyNamespace(StoreContext storeContext) {
-    return storeContext.getTableName().getNamespaceAsString() + "/"
-        + storeContext.getFamily().getNameAsString();
-  }
-
-  public static String constructKeyNamespace(StoreFileInfo fileInfo) {
-    Pair<String, String> tableNameAndFamilyName = fileInfo.getLink().getTableNameAndFamilyName();
-    return tableNameAndFamilyName.getFirst() + "/" + tableNameAndFamilyName.getSecond();
-  }
 
   /**
    * From the given configuration, determine if key management is enabled.

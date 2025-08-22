@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.io.hfile.ReaderContext.ReaderType;
 import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
 import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.keymeta.KeyNamespaceUtil;
 import org.apache.hadoop.hbase.security.SecurityUtil;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -241,7 +242,7 @@ public class HStoreFile implements StoreFile {
 public HStoreFile(FileSystem fs, Path p, Configuration conf, CacheConfig cacheConf,
     BloomType cfBloomType, boolean primaryReplica, StoreFileTracker sft) throws IOException {
     this(sft.getStoreFileInfo(p, primaryReplica), cfBloomType, cacheConf, null,
-      SecurityUtil.constructKeyNamespace(sft.getStoreContext()),
+      KeyNamespaceUtil.constructKeyNamespace(sft.getStoreContext()),
       SystemKeyCache.createCache(conf, fs), new ManagedKeyDataCache(conf, null));
   }
 
@@ -262,7 +263,7 @@ public HStoreFile(FileSystem fs, Path p, Configuration conf, CacheConfig cacheCo
   public HStoreFile(StoreFileInfo fileInfo, BloomType cfBloomType, CacheConfig cacheConf)
     throws IOException {
     this(fileInfo, cfBloomType, cacheConf, null,
-      SecurityUtil.constructKeyNamespace(fileInfo),
+      KeyNamespaceUtil.constructKeyNamespace(fileInfo),
       SystemKeyCache.createCache(fileInfo.getConf(), fileInfo.getFileSystem()),
       new ManagedKeyDataCache(fileInfo.getConf(), null));
   }

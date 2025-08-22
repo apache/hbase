@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.Compactor;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
+import org.apache.hadoop.hbase.keymeta.KeyNamespaceUtil;
 import org.apache.hadoop.hbase.security.SecurityUtil;
 import org.apache.hadoop.hbase.util.IOExceptionRunnable;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
@@ -237,7 +238,7 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
   public HStoreFile createStoreFileAndReader(StoreFileInfo info) throws IOException {
     info.setRegionCoprocessorHost(coprocessorHost);
     HStoreFile storeFile = new HStoreFile(info, ctx.getFamily().getBloomFilterType(),
-      ctx.getCacheConf(), bloomFilterMetrics, SecurityUtil.constructKeyNamespace(ctx),
+      ctx.getCacheConf(), bloomFilterMetrics, KeyNamespaceUtil.constructKeyNamespace(ctx),
       systemKeyCache, managedKeyDataCache);
     storeFile.initReader();
     return storeFile;
