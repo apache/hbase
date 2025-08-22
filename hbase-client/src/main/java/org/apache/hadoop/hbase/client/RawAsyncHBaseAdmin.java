@@ -4586,6 +4586,10 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<Long> refreshHFiles(final TableName tableName) {
+    if(tableName.isSystemTable()){
+      LOG.warn("Refreshing HFiles for system table {} is not allowed", tableName.getNameAsString());
+      throw new IllegalArgumentException("Not allowed to refresh HFiles for system table '" + tableName.getNameAsString() + "'");
+    }
     // Request builder
     RefreshHFilesRequest.Builder request = RefreshHFilesRequest.newBuilder();
     request.setTableName(ProtobufUtil.toProtoTableName(tableName));
@@ -4595,6 +4599,10 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<Long> refreshHFiles(final String namespace) {
+    if(namespace.equals(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR) || namespace.equals(NamespaceDescriptor.BACKUP_NAMESPACE_NAME_STR)){
+      LOG.warn("Refreshing HFiles for reserve namespace {} is not allowed", namespace);
+      throw new IllegalArgumentException("Not allowed to refresh HFiles for reserve namespace '" + namespace + "'");
+    }
     // Request builder
     RefreshHFilesRequest.Builder request = RefreshHFilesRequest.newBuilder();
     request.setNamespace(namespace);
