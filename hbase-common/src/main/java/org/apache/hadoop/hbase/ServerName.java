@@ -19,8 +19,12 @@ package org.apache.hadoop.hbase;
 
 import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
+import java.net.Inet6Address;
+import java.net.InetAddress;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
+import java.net.UnknownHostException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -66,11 +70,6 @@ public class ServerName implements Comparable<ServerName>, Serializable {
   private static final short VERSION = 0;
   static final byte[] VERSION_BYTES = Bytes.toBytes(VERSION);
   private static final String COLON_ENCODED_VALUE = "%3a";
-
-  public static final String COLON = ":";
-
-  // IPV6 address length separated by COLON(:), eg: "0:0:0:0:0:0:0:1".split(colon).length
-  private static final int IPV6_SPLIT_COLON_LENGTH = 8;
 
   /**
    * What to use if no startcode supplied.
@@ -339,12 +338,12 @@ public class ServerName implements Comparable<ServerName>, Serializable {
     ServerName sn =
       SERVERNAME_PATTERN.matcher(str).matches() ? valueOf(str) : valueOf(str, NON_STARTCODE);
     String hostname = sn.getHostname();
-    // if IPV6 address is in encoded format, need to check and validate its address length
-    // eg: if address is like "0%3a0%3a0%3a0%3a0%3a0%3a0%3a0%3a1,16020,1720673488765" decode to
-    // "0:0:0:0:0:0:0:1,16020,1720673488765"
-    if (isIpv6ServerName(hostname, COLON_ENCODED_VALUE)) {
+    // Decodes the WAL directory name back into a ServerName.
+    // This reverses the URL encoding of IPv6 addresses done during path creation,
+    // decoding "%3A" back to colons (:) before reconstructing ServerName.
+    if (hostname.contains(COLON_ENCODED_VALUE)) {
       try {
-        hostname = URLDecoder.decode(sn.getHostname(), "UTF8");
+        hostname = URLDecoder.decode(sn.getHostname(), StandardCharsets.UTF_8.name());
         return ServerName.valueOf(hostname, sn.getPort(), sn.getStartCode());
       } catch (UnsupportedEncodingException e) {
         throw new IllegalArgumentException("Exception occurred while decoding server name", e);
@@ -354,28 +353,35 @@ public class ServerName implements Comparable<ServerName>, Serializable {
   }
 
   /**
-   * Verify the ServerAddress is in IPV6 format or not
-   * @param serverAddress    IP address
-   * @param addressSeparator IPV6 address separator
-   * @return true if server address is in IPV6 format
+   * Checks if the provided server address is formatted as an IPv6 address. This method uses Java's
+   * InetAddress to parse the input and confirms if the address is an instance of Inet6Address for
+   * robust validation instead of relying on string splitting.
+   * @param serverAddress The address string to validate (can be a hostname or IP)
+   * @return true if the address is a valid IPv6 address; false otherwise.
    */
-  public static boolean isIpv6ServerName(String serverAddress, String addressSeparator) {
-    return serverAddress.contains(addressSeparator)
-      && serverAddress.split(addressSeparator).length == IPV6_SPLIT_COLON_LENGTH;
+  public static boolean isIpv6ServerName(String serverAddress) {
+    try {
+      InetAddress address = InetAddress.getByName(serverAddress);
+      return address instanceof Inet6Address;
+    } catch (UnknownHostException e) {
+      return false; // Not a valid IP, let the logic fall through
+    }
   }
 
   /**
-   * Encode the Server Address
-   * @param str Either an instance of {@link #toString()} or a "'&lt;hostname&gt;' ':'
-   *            '&lt;port&gt;'".
-   * @return ServerName instance
+   * Encodes the IPv6 address component of ServerName to escape colon characters which are not
+   * allowed in HDFS paths (e.g., WAL directory names). This encoding ensures WAL paths are valid
+   * and portable across filesystems.
+   * @param serverName the ServerName instance containing IPv6 address.
+   * @return encoded string safe for filesystem path usage.
    */
-  public static ServerName getEncodedServerName(final String str) {
-    ServerName sn =
-      SERVERNAME_PATTERN.matcher(str).matches() ? valueOf(str) : valueOf(str, NON_STARTCODE);
+  public static ServerName getEncodedServerName(final String serverName) {
+    ServerName sn = SERVERNAME_PATTERN.matcher(serverName).matches()
+      ? valueOf(serverName)
+      : valueOf(serverName, NON_STARTCODE);
     try {
-      return ServerName.valueOf(URLEncoder.encode(sn.getHostname(), "UTF8"), sn.getPort(),
-        sn.getStartCode());
+      return ServerName.valueOf(URLEncoder.encode(sn.getHostname(), StandardCharsets.UTF_8.name()),
+        sn.getPort(), sn.getStartCode());
     } catch (UnsupportedEncodingException e) {
       throw new IllegalArgumentException("Exception occurred while encoding server name", e);
     }

@@ -1413,15 +1413,26 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
               && InetAddresses.isInetAddress(getActiveMaster().get().getHostname())
           ) {
             expectedHostName = rpcServices.getSocketAddress().getAddress().getHostAddress();
+            if (ServerName.isIpv6ServerName(expectedHostName)) {
+              expectedHostName = normalizeIPv6Address(expectedHostName);
+            }
           }
-          boolean isHostnameConsist = StringUtils.isBlank(useThisHostnameInstead)
+
+          String customHostName = useThisHostnameInstead;
+          // Need to normalize for IPv6 address leading and trailing square brackets if present,
+          // because HMaster point of view RegionServer is recognised IP address without brackets.
+          if (
+            !StringUtils.isBlank(useThisHostnameInstead)
+              && ServerName.isIpv6ServerName(customHostName)
+          ) {
+            customHostName = normalizeIPv6Address(useThisHostnameInstead);
+          }
+          boolean isHostnameConsist = StringUtils.isBlank(customHostName)
             ? hostnameFromMasterPOV.equals(expectedHostName)
-            : hostnameFromMasterPOV.equals(useThisHostnameInstead);
+            : hostnameFromMasterPOV.equals(customHostName);
           if (!isHostnameConsist) {
             String msg = "Master passed us a different hostname to use; was="
-              + (StringUtils.isBlank(useThisHostnameInstead)
-                ? expectedHostName
-                : this.useThisHostnameInstead)
+              + (StringUtils.isBlank(customHostName) ? expectedHostName : customHostName)
               + ", but now=" + hostnameFromMasterPOV;
             LOG.error(msg);
             throw new IOException(msg);
@@ -1494,6 +1505,32 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     } finally {
       sleeper.skipSleepCycle();
     }
+  }
+
+  /**
+   * Normalizes an IPv6 address string by removing leading and trailing square brackets if present,
+   * returning the canonical IPv6 address form.
+   * <p>
+   * This method is intended to convert IPv6 addresses from URI or config contexts, where brackets
+   * may be used, into a format accepted by standard Java networking APIs.
+   * <p>
+   * Examples:
+   *
+   * <pre>
+   *   normalizeIPv6Address("[2001:db8::1]") returns "2001:db8::1"
+   *   normalizeIPv6Address("2001:db8::1")  returns "2001:db8::1"
+   *   normalizeIPv6Address("[::1]")        returns "::1"
+   * </pre>
+   *
+   * @param address the input IPv6 address, possibly with square brackets
+   * @return the normalized IPv6 address string without brackets
+   */
+  private String normalizeIPv6Address(String address) {
+    // Remove leading and trailing brackets if present
+    if (address.startsWith("[") && address.endsWith("]")) {
+      return address.substring(1, address.length() - 1);
+    }
+    return address;
   }
 
   private void startHeapMemoryManager() {

@@ -308,13 +308,9 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>>
    *         <code>serverName</code> passed is <code>1.example.org,60030,12345</code>
    */
   public static String getWALDirectoryName(String serverName) {
-    // If ServerName is IPV6 address, then need to encode server address
-    if (ServerName.isIpv6ServerName(serverName, ServerName.COLON)) {
-      serverName = ServerName.getEncodedServerName(serverName).getServerName();
-    }
     StringBuilder dirName = new StringBuilder(HConstants.HREGION_LOGDIR_NAME);
     dirName.append(Path.SEPARATOR);
-    dirName.append(serverName);
+    dirName.append(getServerName(serverName));
     return dirName.toString();
   }
 
@@ -328,14 +324,20 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>>
   public static String getWALArchiveDirectoryName(Configuration conf, String serverName) {
     StringBuilder dirName = new StringBuilder(HConstants.HREGION_OLDLOGDIR_NAME);
     if (conf.getBoolean(SEPARATE_OLDLOGDIR, DEFAULT_SEPARATE_OLDLOGDIR)) {
-      // If ServerName is IPV6 address, then need to encode server address
-      if (ServerName.isIpv6ServerName(serverName, ServerName.COLON)) {
-        serverName = ServerName.getEncodedServerName(serverName).getServerName();
-      }
       dirName.append(Path.SEPARATOR);
-      dirName.append(serverName);
+      dirName.append(getServerName(serverName));
     }
     return dirName.toString();
+  }
+
+  private static String getServerName(String serverName) {
+    String address =
+      ServerName.isFullServerName(serverName) ? ServerName.valueOf(serverName).getHostname() : null;
+    // If ServerName is IPV6 address, then need to encode server address
+    if (address != null && ServerName.isIpv6ServerName(address)) {
+      serverName = ServerName.getEncodedServerName(serverName).getServerName();
+    }
+    return serverName;
   }
 
   /**

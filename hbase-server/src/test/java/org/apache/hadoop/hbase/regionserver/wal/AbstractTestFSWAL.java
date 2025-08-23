@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver.wal;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -701,6 +702,22 @@ public abstract class AbstractTestFSWAL {
       region.close();
       wal.close();
     }
+  }
+
+  @Test
+  public void testEncodeDecodeIPv6InWalPath() throws Exception {
+    String ipv6Address = "2001:0db8:85a3:0000:0000:8a2e:0370:7334";
+    ServerName serverName = ServerName.valueOf(ipv6Address, 16020, 12345L);
+
+    // Assume method encodeServerName(ServerName) encodes IPv6 address properly for WAL path
+    String encoded = AbstractFSWALProvider.getWALDirectoryName(serverName.getServerName());
+    assertFalse("Encoded WAL path should not contain raw colon", encoded.contains(":"));
+
+    // Assume method decodeServerName(String) reverses the encoding
+    ServerName decoded = ServerName.parseServerName(encoded);
+    assertEquals("Decoded ServerName hostname should match original", ipv6Address,
+      decoded.getHostname().split(Path.SEPARATOR)[1]);
+    assertEquals("Decoded ServerName port should match", 16020, decoded.getPort());
   }
 
   public static final class FlushSpecificStoresPolicy extends FlushPolicy {
