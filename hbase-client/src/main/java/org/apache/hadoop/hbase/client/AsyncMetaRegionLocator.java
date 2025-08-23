@@ -36,15 +36,15 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 class AsyncMetaRegionLocator {
 
-  private final ConnectionRegistry registry;
+  private final AsyncConnectionImpl conn;
 
   private final AtomicReference<RegionLocations> metaRegionLocations = new AtomicReference<>();
 
   private final AtomicReference<CompletableFuture<RegionLocations>> metaRelocateFuture =
     new AtomicReference<>();
 
-  AsyncMetaRegionLocator(ConnectionRegistry registry) {
-    this.registry = registry;
+  AsyncMetaRegionLocator(AsyncConnectionImpl conn) {
+    this.conn = conn;
   }
 
   /**
@@ -58,10 +58,11 @@ class AsyncMetaRegionLocator {
    */
   CompletableFuture<RegionLocations> getRegionLocations(int replicaId, boolean reload) {
     return ConnectionUtils.getOrFetch(metaRegionLocations, metaRelocateFuture, reload,
-      registry::getMetaRegionLocations, locs -> isGood(locs, replicaId), "meta region location");
+      conn.registry::getMetaRegionLocations, locs -> isGood(locs, replicaId),
+      "meta region location");
   }
 
-  private HRegionLocation getCacheLocation(HRegionLocation loc) {
+  HRegionLocation getCacheLocation(HRegionLocation loc) {
     RegionLocations locs = metaRegionLocations.get();
     return locs != null ? locs.getRegionLocation(loc.getRegion().getReplicaId()) : null;
   }
@@ -107,9 +108,16 @@ class AsyncMetaRegionLocator {
     }
   }
 
+  void removeServerLocationFromCache(HRegionLocation loc) {
+    clearCache(loc.getServerName());
+  }
+
   void updateCachedLocationOnError(HRegionLocation loc, Throwable exception) {
+    boolean isServerFailure =
+      conn.rpcClient.getFailedServers().isFailedServer(loc.getServerName().getAddress());
     AsyncRegionLocatorHelper.updateCachedLocationOnError(loc, exception, this::getCacheLocation,
-      this::addLocationToCache, this::removeLocationFromCache, null);
+      this::addLocationToCache, this::removeLocationFromCache, this::removeServerLocationFromCache,
+      null, isServerFailure);
   }
 
   void clearCache() {

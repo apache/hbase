@@ -58,7 +58,8 @@ final class AsyncRegionLocatorHelper {
   static void updateCachedLocationOnError(HRegionLocation loc, Throwable exception,
     Function<HRegionLocation, HRegionLocation> cachedLocationSupplier,
     Consumer<HRegionLocation> addToCache, Consumer<HRegionLocation> removeFromCache,
-    MetricsConnection metrics) {
+    Consumer<HRegionLocation> removeServerFromCache, MetricsConnection metrics,
+    boolean isServerFailure) {
     HRegionLocation oldLoc = cachedLocationSupplier.apply(loc);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Try updating {} , the old value is {}, error={}", loc, oldLoc,
@@ -85,11 +86,20 @@ final class AsyncRegionLocatorHelper {
         rme.toString());
       addToCache.accept(newLoc);
     } else {
-      LOG.debug("Try removing {} from cache", loc);
       if (metrics != null) {
         metrics.incrCacheDroppingExceptions(exception);
       }
-      removeFromCache.accept(loc);
+      if (isServerFailure) {
+        // We might not be able to connect to that server for a while due to server failure.
+        // If we don't clear the caches, we might get the same exceptions
+        // as many times as the number of location caches of that server.
+        LOG.debug("Try clearing all region locations of the server {} from cache "
+          + "because of server failure", loc.getServerName());
+        removeServerFromCache.accept(loc);
+      } else {
+        LOG.debug("Try removing {} from cache", loc);
+        removeFromCache.accept(loc);
+      }
     }
   }
 

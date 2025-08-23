@@ -35,6 +35,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.ipc.FailedServers;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
 import org.apache.hadoop.hbase.security.User;
@@ -122,6 +123,11 @@ public class TestRpcBasedRegistryHedgedReads {
     @Override
     public boolean hasCellBlockSupport() {
       return false;
+    }
+
+    @Override
+    public FailedServers getFailedServers() {
+      return null;
     }
   }
 

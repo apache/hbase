@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -29,10 +30,13 @@ import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.FutureUtils;
+import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
 @Category({ ClientTests.class, SmallTests.class })
 public class TestAsyncMetaRegionLocatorFailFast {
@@ -42,7 +46,7 @@ public class TestAsyncMetaRegionLocatorFailFast {
     HBaseClassTestRule.forClass(TestAsyncMetaRegionLocatorFailFast.class);
 
   private static Configuration CONF = HBaseConfiguration.create();
-
+  private static AsyncConnectionImpl CONN;
   private static AsyncMetaRegionLocator LOCATOR;
 
   private static final class FaultyConnectionRegistry extends DoNothingConnectionRegistry {
@@ -58,9 +62,17 @@ public class TestAsyncMetaRegionLocatorFailFast {
   }
 
   @BeforeClass
-  public static void setUp() throws IOException {
-    LOCATOR = new AsyncMetaRegionLocator(
-      new FaultyConnectionRegistry(CONF, UserProvider.instantiate(CONF).getCurrent()));
+  public static void setUp() throws IOException, ExecutionException, InterruptedException {
+    FaultyConnectionRegistry registry =
+      new FaultyConnectionRegistry(CONF, UserProvider.instantiate(CONF).getCurrent());
+    CONN = new AsyncConnectionImpl(CONF, registry, registry.getClusterId().get(), null,
+      User.getCurrent());
+    LOCATOR = new AsyncMetaRegionLocator(CONN);
+  }
+
+  @AfterClass
+  public static void tearDown() throws Exception {
+    Closeables.close(CONN, true);
   }
 
   @Test(expected = DoNotRetryIOException.class)
