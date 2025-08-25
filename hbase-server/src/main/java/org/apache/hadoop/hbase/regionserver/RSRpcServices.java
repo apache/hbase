@@ -41,7 +41,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
-import org.apache.commons.lang3.mutable.MutableObject;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -3317,8 +3316,8 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
   // return whether we have more results in region.
   private void scan(HBaseRpcController controller, ScanRequest request, RegionScannerHolder rsh,
     long maxQuotaResultSize, int maxResults, int limitOfRows, List<Result> results,
-    ScanResponse.Builder builder, RpcCall rpcCall,
-    MutableObject<ServerSideScanMetrics> scanMetricsWrapper) throws IOException {
+    ScanResponse.Builder builder, RpcCall rpcCall, ServerSideScanMetrics scanMetrics)
+    throws IOException {
     HRegion region = rsh.r;
     RegionScanner scanner = rsh.s;
     long maxResultSize;
@@ -3371,8 +3370,6 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
         final LimitScope timeScope =
           allowHeartbeatMessages ? LimitScope.BETWEEN_CELLS : LimitScope.BETWEEN_ROWS;
 
-        boolean trackMetrics = request.hasTrackScanMetrics() && request.getTrackScanMetrics();
-
         // Configure with limits for this RPC. Set keep progress true since size progress
         // towards size limit should be kept between calls to nextRaw
         ScannerContext.Builder contextBuilder = ScannerContext.newBuilder(true);
@@ -3394,7 +3391,8 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
         contextBuilder.setSizeLimit(sizeScope, maxCellSize, maxCellSize, maxBlockSize);
         contextBuilder.setBatchLimit(scanner.getBatch());
         contextBuilder.setTimeLimit(timeScope, timeLimit);
-        contextBuilder.setTrackMetrics(trackMetrics);
+        contextBuilder.setTrackMetrics(scanMetrics != null);
+        contextBuilder.setScanMetrics(scanMetrics);
         ScannerContext scannerContext = contextBuilder.build();
         boolean limitReached = false;
         long blockBytesScannedBefore = 0;
@@ -3516,15 +3514,13 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
         builder.setMoreResultsInRegion(moreRows);
         // Check to see if the client requested that we track metrics server side. If the
         // client requested metrics, retrieve the metrics from the scanner context.
-        if (trackMetrics) {
-          ServerSideScanMetrics metrics = scannerContext.getMetrics();
-          scanMetricsWrapper.setValue(metrics);
+        if (scanMetrics != null) {
           // rather than increment yet another counter in StoreScanner, just set the value here
           // from block size progress before writing into the response
-          metrics.setCounter(ServerSideScanMetrics.BLOCK_BYTES_SCANNED_KEY_METRIC_NAME,
+          scanMetrics.setCounter(ServerSideScanMetrics.BLOCK_BYTES_SCANNED_KEY_METRIC_NAME,
             scannerContext.getBlockSizeProgress());
           if (rpcCall != null) {
-            metrics.setCounter(ServerSideScanMetrics.FS_READ_TIME_METRIC_NAME,
+            scanMetrics.setCounter(ServerSideScanMetrics.FS_READ_TIME_METRIC_NAME,
               rpcCall.getFsReadTime());
           }
         }
@@ -3663,7 +3659,8 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
     boolean scannerClosed = false;
     try {
       List<Result> results = new ArrayList<>(Math.min(rows, 512));
-      MutableObject<ServerSideScanMetrics> scanMetricsWrapper = new MutableObject<>();
+      boolean trackMetrics = request.hasTrackScanMetrics() && request.getTrackScanMetrics();
+      ServerSideScanMetrics scanMetrics = trackMetrics ? new ServerSideScanMetrics() : null;
       if (rows > 0) {
         boolean done = false;
         // Call coprocessor. Get region info from scanner.
@@ -3683,7 +3680,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
         }
         if (!done) {
           scan((HBaseRpcController) controller, request, rsh, maxQuotaResultSize, rows, limitOfRows,
-            results, builder, rpcCall, scanMetricsWrapper);
+            results, builder, rpcCall, scanMetrics);
         } else {
           builder.setMoreResultsInRegion(!results.isEmpty());
         }
@@ -3735,7 +3732,6 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
         throw new TimeoutIOException("Client deadline exceeded, cannot return results");
       }
 
-      ServerSideScanMetrics scanMetrics = scanMetricsWrapper.get();
       if (scanMetrics != null) {
         if (rpcCall != null) {
           long rpcScanTime = EnvironmentEdgeManager.currentTime() - rpcCall.getStartTime();
