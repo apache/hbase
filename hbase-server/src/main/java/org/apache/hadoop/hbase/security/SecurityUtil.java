@@ -97,11 +97,9 @@ public class SecurityUtil {
                 HConstants.CRYPTO_MANAGED_KEYS_LOCAL_KEY_GEN_PER_FILE_DEFAULT_ENABLED)) {
           cipher = getCipherIfValid(conf, cipherName, kekKeyData.getTheKey(),
             family.getNameAsString());
-          key = cipher.getRandomKey();
         }
         else {
           key = kekKeyData.getTheKey();
-          cipher = getCipherIfValid(conf, cipherName, key, family.getNameAsString());
           kekKeyData = systemKeyCache.getLatestSystemKey();
         }
       } else {
@@ -109,15 +107,19 @@ public class SecurityUtil {
         if (keyBytes != null) {
           // Family provides specific key material
           key = EncryptionUtil.unwrapKey(conf, keyBytes);
-          cipher = getCipherIfValid(conf, cipherName, key, family.getNameAsString());
         }
         else {
           cipher = getCipherIfValid(conf, cipherName, null, null);
+        }
+      }
+      if (key != null || cipher != null) {
+        if (key == null) {
           // Family does not provide key material, create a random key
           key = cipher.getRandomKey();
         }
-      }
-      if (key != null) {
+        if (cipher == null) {
+          cipher = getCipherIfValid(conf, cipherName, key, family.getNameAsString());
+        }
         cryptoContext = Encryption.newContext(conf);
         cryptoContext.setCipher(cipher);
         cryptoContext.setKey(key);
@@ -160,6 +162,7 @@ public class SecurityUtil {
         } catch (KeyException | IOException e) {
           cause = e;
         }
+        // When getEntry returns null we treat it the same as exception case.
         if (kekKeyData == null) {
           throw new IOException("Failed to get key data for KEK metadata: " +
             trailer.getKEKMetadata(), cause);
