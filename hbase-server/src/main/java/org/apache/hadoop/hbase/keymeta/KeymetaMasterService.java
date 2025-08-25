@@ -49,7 +49,7 @@ public class KeymetaMasterService extends KeyManagementBase {
   }
 
   public void init() throws IOException {
-    if (!SecurityUtil.isKeyManagementEnabled(getConfiguration())) {
+    if (!isKeyManagementEnabled()) {
       return;
     }
     if (!master.getTableDescriptors().exists(KeymetaTableAccessor.KEY_META_TABLE_NAME)) {

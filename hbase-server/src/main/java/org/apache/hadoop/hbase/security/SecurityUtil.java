@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
+import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.io.hfile.FixedFileTrailer;
 import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
 import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
@@ -41,8 +42,6 @@ import org.apache.yetus.audience.InterfaceStability;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class SecurityUtil {
-  private static Boolean isKeyManagementEnabled;
-
   /**
    * Get the user name from a principal
    */
@@ -96,14 +95,13 @@ public class SecurityUtil {
         if (conf.getBoolean(
                 HConstants.CRYPTO_MANAGED_KEYS_LOCAL_KEY_GEN_PER_FILE_ENABLED_CONF_KEY,
                 HConstants.CRYPTO_MANAGED_KEYS_LOCAL_KEY_GEN_PER_FILE_DEFAULT_ENABLED)) {
-          cipher = Encryption.getCipher(conf, kekKeyData.getTheKey().getAlgorithm());
-          if (cipher == null) {
-            throw new IllegalStateException("Cipher '" + cipherName + "' is not available");
-          }
+          cipher = getCipherIfValid(conf, cipherName, kekKeyData.getTheKey(),
+            family.getNameAsString());
           key = cipher.getRandomKey();
         }
         else {
           key = kekKeyData.getTheKey();
+          cipher = getCipherIfValid(conf, cipherName, key, family.getNameAsString());
           kekKeyData = systemKeyCache.getLatestSystemKey();
         }
       } else {
@@ -111,26 +109,11 @@ public class SecurityUtil {
         if (keyBytes != null) {
           // Family provides specific key material
           key = EncryptionUtil.unwrapKey(conf, keyBytes);
-          // Use the algorithm the key wants
-          cipher = Encryption.getCipher(conf, key.getAlgorithm());
-          if (cipher == null) {
-            throw new IllegalStateException("Cipher '" + key.getAlgorithm() + "' is not available");
-          }
-          // Fail if misconfigured
-          // We use the encryption type specified in the column schema as a sanity check
-          // on
-          // what the wrapped key is telling us
-          if (!cipher.getName().equalsIgnoreCase(cipherName)) {
-            throw new IllegalStateException(
-                "Encryption for family '" + family.getNameAsString() + "' configured with type '"
-                    + cipherName + "' but key specifies algorithm '" + cipher.getName() + "'");
-          }
-        } else {
+          cipher = getCipherIfValid(conf, cipherName, key, family.getNameAsString());
+        }
+        else {
+          cipher = getCipherIfValid(conf, cipherName, null, null);
           // Family does not provide key material, create a random key
-          cipher = Encryption.getCipher(conf, cipherName);
-          if (cipher == null) {
-            throw new IllegalStateException("Cipher '" + cipherName + "' is not available");
-          }
           key = cipher.getRandomKey();
         }
       }
@@ -158,6 +141,7 @@ public class SecurityUtil {
   public static Encryption.Context createEncryptionContext(Configuration conf, Path path,
     FixedFileTrailer trailer, ManagedKeyDataCache managedKeyDataCache,
     SystemKeyCache systemKeyCache, String keyNamespace) throws IOException {
+    ManagedKeyData kekKeyData = null;
     byte[] keyBytes = trailer.getEncryptionKey();
     // Check for any key material available
     if (keyBytes != null) {
@@ -169,19 +153,18 @@ public class SecurityUtil {
         if (managedKeyDataCache == null) {
           throw new IOException("Key management is enabled, but ManagedKeyDataCache is null");
         }
-        ManagedKeyData keyData = null;
         Throwable cause = null;
         try {
-          keyData = managedKeyDataCache.getEntry(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES,
+          kekKeyData = managedKeyDataCache.getEntry(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES,
             keyNamespace, trailer.getKEKMetadata(), keyBytes);
         } catch (KeyException | IOException e) {
           cause = e;
         }
-        if (keyData == null) {
+        if (kekKeyData == null) {
           throw new IOException("Failed to get key data for KEK metadata: " +
             trailer.getKEKMetadata(), cause);
         }
-        kek = keyData.getTheKey();
+        kek = kekKeyData.getTheKey();
       } else {
         if (SecurityUtil.isKeyManagementEnabled(conf)) {
           if (systemKeyCache == null) {
@@ -194,6 +177,7 @@ public class SecurityUtil {
               trailer.getKEKChecksum());
           }
           kek = systemKeyData.getTheKey();
+          kekKeyData = systemKeyData;
         }
       }
       Key key;
@@ -215,12 +199,39 @@ public class SecurityUtil {
       }
       cryptoContext.setCipher(cipher);
       cryptoContext.setKey(key);
+      cryptoContext.setKEKData(kekKeyData);
       return cryptoContext;
     }
     return null;
   }
 
-
+  /**
+   * Get the cipher if the cipher name is valid, otherwise throw an exception.
+   * @param conf the configuration
+   * @param cipherName the cipher name to check
+   * @param key the key to check
+   * @param familyName the family name
+   * @return the cipher if the cipher name is valid
+   * @throws IllegalStateException if the cipher name is not valid
+   */
+  private static Cipher getCipherIfValid(Configuration conf, String cipherName, Key key,
+    String familyName) {
+    // Fail if misconfigured
+    // We use the encryption type specified in the column schema as a sanity check
+    // on
+    // what the wrapped key is telling us
+    if (key != null && !key.getAlgorithm().equalsIgnoreCase(cipherName)) {
+      throw new IllegalStateException(
+          "Encryption for family '" + familyName + "' configured with type '"
+              + cipherName + "' but key specifies algorithm '" + key.getAlgorithm() + "'");
+    }
+    // Use the algorithm the key wants
+    Cipher cipher = Encryption.getCipher(conf, cipherName);
+    if (cipher == null) {
+      throw new IllegalStateException("Cipher '" + cipherName + "' is not available");
+    }
+    return cipher;
+  }
 
   /**
    * From the given configuration, determine if key management is enabled.
@@ -228,10 +239,7 @@ public class SecurityUtil {
    * @return true if key management is enabled
    */
   public static boolean isKeyManagementEnabled(Configuration conf) {
-    if (isKeyManagementEnabled == null) {
-      isKeyManagementEnabled = conf.getBoolean(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY,
-        HConstants.CRYPTO_MANAGED_KEYS_DEFAULT_ENABLED);
-    }
-    return isKeyManagementEnabled;
+    return conf.getBoolean(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY,
+      HConstants.CRYPTO_MANAGED_KEYS_DEFAULT_ENABLED);
   }
 }

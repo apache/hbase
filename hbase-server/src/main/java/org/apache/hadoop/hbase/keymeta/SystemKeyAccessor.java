@@ -61,7 +61,7 @@ public class SystemKeyAccessor extends KeyManagementBase {
    *    is initialized yet.
    */
   public Pair<Path,List<Path>> getLatestSystemKeyFile() throws IOException {
-    if (! SecurityUtil.isKeyManagementEnabled(getConfiguration())) {
+    if (! isKeyManagementEnabled()) {
       return new Pair<>(null, null);
     }
     List<Path> allClusterKeyFiles = getAllSystemKeyFiles();
@@ -82,7 +82,7 @@ public class SystemKeyAccessor extends KeyManagementBase {
    * @throws IOException if there is an error getting the cluster key files
    */
   public List<Path> getAllSystemKeyFiles() throws IOException {
-    if (!SecurityUtil.isKeyManagementEnabled(getConfiguration())) {
+    if (!isKeyManagementEnabled()) {
       return null;
     }
     Map<Integer, Path> clusterKeys = new TreeMap<>(Comparator.reverseOrder());

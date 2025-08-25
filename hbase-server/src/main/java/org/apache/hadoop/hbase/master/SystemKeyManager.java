@@ -43,7 +43,7 @@ public class SystemKeyManager extends SystemKeyAccessor {
   }
 
   public void ensureSystemKeyInitialized() throws IOException {
-    if (! SecurityUtil.isKeyManagementEnabled(getConfiguration())) {
+    if (! isKeyManagementEnabled()) {
       return;
     }
     List<Path> clusterKeys = getAllSystemKeyFiles();
@@ -64,7 +64,7 @@ public class SystemKeyManager extends SystemKeyAccessor {
   }
 
   public ManagedKeyData rotateSystemKeyIfChanged() throws IOException {
-    if (! SecurityUtil.isKeyManagementEnabled(getConfiguration())) {
+    if (! isKeyManagementEnabled()) {
       return null;
     }
     Pair<Path, List<Path>> latestFileResult = getLatestSystemKeyFile();
