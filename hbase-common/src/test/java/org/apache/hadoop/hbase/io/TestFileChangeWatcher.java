@@ -125,7 +125,7 @@ public class TestFileChangeWatcher {
       });
       watcher.start();
       watcher.waitForState(FileChangeWatcher.State.RUNNING);
-      Thread.sleep(1000L); // TODO hack
+      Thread.sleep(1100L); // Ensure mtime changes on Java 8 (second granularity)
       assertEquals("Should not have been notified", 0, notifiedPaths.size());
     } finally {
       if (watcher != null) {
@@ -149,8 +149,8 @@ public class TestFileChangeWatcher {
       });
       watcher.start();
       watcher.waitForState(FileChangeWatcher.State.RUNNING);
-      Thread.sleep(1000L); // TODO hack
       for (int i = 0; i < 3; i++) {
+        Thread.sleep(1100L); // Ensure mtime changes on Java 8 (second granularity)
         LOG.info("Modifying file, attempt {}", (i + 1));
         FileUtils.writeStringToFile(tempFile, "Hello world " + i + "\n", StandardCharsets.UTF_8,
           true);
@@ -185,7 +185,7 @@ public class TestFileChangeWatcher {
       });
       watcher.start();
       watcher.waitForState(FileChangeWatcher.State.RUNNING);
-      Thread.sleep(1000L); // TODO hack
+      Thread.sleep(1100L); // Ensure mtime changes on Java 8 (second granularity)
       LOG.info("Touching file");
       FileUtils.touch(tempFile);
       synchronized (notifiedPaths) {
@@ -223,7 +223,7 @@ public class TestFileChangeWatcher {
       });
       watcher.start();
       watcher.waitForState(FileChangeWatcher.State.RUNNING);
-      Thread.sleep(1000L); // TODO hack
+      Thread.sleep(1100L); // Ensure mtime changes on Java 8 (second granularity)
       LOG.info("Modifying file");
       FileUtils.writeStringToFile(tempFile, "Hello world\n", StandardCharsets.UTF_8, true);
       synchronized (callCount) {
@@ -231,6 +231,7 @@ public class TestFileChangeWatcher {
           callCount.wait(FS_TIMEOUT);
         }
       }
+      Thread.sleep(1100L); // Ensure mtime changes on Java 8 (second granularity)
       LOG.info("Modifying file again");
       FileUtils.writeStringToFile(tempFile, "Hello world again\n", StandardCharsets.UTF_8, true);
       synchronized (callCount) {
