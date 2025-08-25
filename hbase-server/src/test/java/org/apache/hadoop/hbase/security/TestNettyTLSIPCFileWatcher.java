@@ -190,6 +190,8 @@ public class TestNettyTLSIPCFileWatcher {
       final Path trustStorePath = Paths.get(CONF.get(X509Util.TLS_CONFIG_TRUSTSTORE_LOCATION));
       createAndStartFileWatcher(trustStorePath, latch, Duration.ofMillis(20));
 
+      Thread.sleep(1100L); // Ensure mtime changes on Java 8 (second granularity)
+
       // Replace keystore
       x509TestContext.regenerateStores(keyType, keyType, storeFileType, storeFileType);
 
@@ -239,6 +241,8 @@ public class TestNettyTLSIPCFileWatcher {
 
         final Path trustStorePath = Paths.get(CONF.get(X509Util.TLS_CONFIG_TRUSTSTORE_LOCATION));
         createAndStartFileWatcher(trustStorePath, latch, Duration.ofMillis(20));
+
+        Thread.sleep(1100L); // Ensure mtime changes on Java 8 (second granularity)
 
         // Replace keystore and cancel client connections
         x509TestContext.regenerateStores(keyType, keyType, storeFileType, storeFileType);
