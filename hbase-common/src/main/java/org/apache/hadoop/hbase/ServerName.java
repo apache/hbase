@@ -71,6 +71,9 @@ public class ServerName implements Comparable<ServerName>, Serializable {
   static final byte[] VERSION_BYTES = Bytes.toBytes(VERSION);
   private static final String COLON_ENCODED_VALUE = "%3a";
 
+  // IPV6 address separated by COLON(:)
+  public static final String COLON = ":";
+
   /**
    * What to use if no startcode supplied.
    */
@@ -356,13 +359,14 @@ public class ServerName implements Comparable<ServerName>, Serializable {
    * Checks if the provided server address is formatted as an IPv6 address. This method uses Java's
    * InetAddress to parse the input and confirms if the address is an instance of Inet6Address for
    * robust validation instead of relying on string splitting.
-   * @param serverAddress The address string to validate (can be a hostname or IP)
+   * @param serverAddress The address string to validate
    * @return true if the address is a valid IPv6 address; false otherwise.
    */
   public static boolean isIpv6ServerName(String serverAddress) {
     try {
       InetAddress address = InetAddress.getByName(serverAddress);
-      return address instanceof Inet6Address;
+      return address instanceof Inet6Address && !address.getHostName().equals(serverAddress)
+        && serverAddress.contains(COLON);
     } catch (UnknownHostException e) {
       return false; // Not a valid IP, let the logic fall through
     }
