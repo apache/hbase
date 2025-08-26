@@ -110,26 +110,26 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
    */
   protected class BackupAndRestoreThread implements Runnable {
     private final TableName table;
-    private Exception exc;
+    private Throwable throwable;
 
     public BackupAndRestoreThread(TableName table) {
       this.table = table;
-      this.exc = null;
+      this.throwable = null;
     }
 
-    public Exception getException() {
-      return this.exc;
+    public Throwable getThrowable() {
+      return this.throwable;
     }
 
     @Override
     public void run() {
       try {
         runTestSingle(this.table);
-      } catch (Exception e) {
+      } catch (Throwable t) {
         LOG.error(
-          "An exception occurred in thread {} when performing a backup and restore with table {}: ",
-          Thread.currentThread().getName(), this.table.getNameAsString(), e);
-        this.exc = e;
+          "An error occurred in thread {} when performing a backup and restore with table {}: ",
+          Thread.currentThread().getName(), this.table.getNameAsString(), t);
+        this.throwable = t;
       }
     }
   }
@@ -219,23 +219,23 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
       workers[i].start();
     }
     // Wait for all workers to finish and check for errors
-    Exception error = null;
-    Exception threadExc;
+    Throwable error = null;
+    Throwable threadThrowable;
     for (int i = 0; i < numTables; i++) {
       Uninterruptibles.joinUninterruptibly(workers[i]);
-      threadExc = backupAndRestoreThreads[i].getException();
-      if (threadExc == null) {
+      threadThrowable = backupAndRestoreThreads[i].getThrowable();
+      if (threadThrowable == null) {
         continue;
       }
       if (error == null) {
-        error = threadExc;
+        error = threadThrowable;
       } else {
-        error.addSuppressed(threadExc);
+        error.addSuppressed(threadThrowable);
       }
     }
     // Throw any found errors after all threads have completed
     if (error != null) {
-      throw error;
+      throw new AssertionError("An error occurred in a backup and restore thread", error);
     }
     LOG.info("IT backup & restore finished");
   }
