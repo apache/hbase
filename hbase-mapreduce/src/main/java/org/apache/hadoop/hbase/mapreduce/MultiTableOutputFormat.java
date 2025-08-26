@@ -18,9 +18,12 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.BufferedMutator;
@@ -31,7 +34,9 @@ import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.OutputFormat;
@@ -56,7 +61,8 @@ import org.slf4j.LoggerFactory;
  * </p>
  */
 @InterfaceAudience.Public
-public class MultiTableOutputFormat extends OutputFormat<ImmutableBytesWritable, Mutation> {
+public class MultiTableOutputFormat
+  extends OutputFormat<ImmutableBytesWritable, Pair<Mutation, List<String>>> {
   /** Set this to {@link #WAL_OFF} to turn off write-ahead logging (WAL) */
   public static final String WAL_PROPERTY = "hbase.mapreduce.multitableoutputformat.wal";
   /** Property value to use write-ahead logging */
@@ -68,7 +74,7 @@ public class MultiTableOutputFormat extends OutputFormat<ImmutableBytesWritable,
    * Record writer for outputting to multiple HTables.
    */
   protected static class MultiTableRecordWriter
-    extends RecordWriter<ImmutableBytesWritable, Mutation> {
+    extends RecordWriter<ImmutableBytesWritable, Pair<Mutation, List<String>>> {
     private static final Logger LOG = LoggerFactory.getLogger(MultiTableRecordWriter.class);
     Connection connection;
     Map<ImmutableBytesWritable, BufferedMutator> mutatorMap = new HashMap<>();
@@ -119,7 +125,17 @@ public class MultiTableOutputFormat extends OutputFormat<ImmutableBytesWritable,
      * either a put or a delete. if the action is not a put or a delete.
      */
     @Override
-    public void write(ImmutableBytesWritable tableName, Mutation action) throws IOException {
+    public void write(ImmutableBytesWritable tableName, Pair<Mutation, List<String>> action)
+      throws IOException {
+      if (action.getFirst() != null) {
+        handleMutation(tableName, action.getFirst());
+        return;
+      }
+      handleBulkLoad(tableName, action.getSecond());
+    }
+
+    private void handleMutation(ImmutableBytesWritable tableName, Mutation action)
+      throws IOException {
       BufferedMutator mutator = getBufferedMutator(tableName);
       // The actions are not immutable, so we defensively copy them
       if (action instanceof Put) {
@@ -130,6 +146,39 @@ public class MultiTableOutputFormat extends OutputFormat<ImmutableBytesWritable,
         Delete delete = new Delete((Delete) action);
         mutator.mutate(delete);
       } else throw new IllegalArgumentException("action must be either Delete or Put");
+    }
+
+    private void handleBulkLoad(ImmutableBytesWritable tableName, List<String> bulkLoadFiles)
+      throws IOException {
+
+      TableName table = TableName.valueOf(tableName.get());
+      LOG.info("Starting bulk load for table: {}", table);
+
+      BulkLoadHFiles bulkLoader = BulkLoadHFiles.create(conf);
+      LOG.info("Processing {} HFiles for bulk loading into table: {}", bulkLoadFiles.size(), table);
+
+      // This map will hold the family-to-files mapping needed for the bulk load operation
+      Map<byte[], List<Path>> family2Files = new HashMap<>();
+
+      try {
+        for (String file : bulkLoadFiles) {
+          Path filePath = new Path(file);
+          String family = filePath.getParent().getName();
+          byte[] familyBytes = Bytes.toBytes(family);
+
+          // Add the file to the list of files for the corresponding column family
+          family2Files.computeIfAbsent(familyBytes, k -> new ArrayList<>()).add(filePath);
+          LOG.info("Mapped file {} to family {}", filePath, family);
+        }
+
+        LOG.info("Executing bulk load into table: {}", table);
+        bulkLoader.bulkLoad(table, family2Files);
+
+        LOG.info("Bulk load completed successfully for table: {}", table);
+      } catch (IOException e) {
+        LOG.error("Error during bulk load for table: {}. Exception: {}", table, e.getMessage(), e);
+        throw new IOException("Failed to complete bulk load for table: " + table, e);
+      }
     }
   }
 
@@ -146,8 +195,8 @@ public class MultiTableOutputFormat extends OutputFormat<ImmutableBytesWritable,
   }
 
   @Override
-  public RecordWriter<ImmutableBytesWritable, Mutation> getRecordWriter(TaskAttemptContext context)
-    throws IOException, InterruptedException {
+  public RecordWriter<ImmutableBytesWritable, Pair<Mutation, List<String>>>
+    getRecordWriter(TaskAttemptContext context) throws IOException, InterruptedException {
     Configuration conf = context.getConfiguration();
     return new MultiTableRecordWriter(HBaseConfiguration.create(conf),
       conf.getBoolean(WAL_PROPERTY, WAL_ON));

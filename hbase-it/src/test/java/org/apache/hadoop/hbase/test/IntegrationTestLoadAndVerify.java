@@ -70,6 +70,7 @@ import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.io.BytesWritable;
@@ -387,8 +388,8 @@ public class IntegrationTestLoadAndVerify extends IntegrationTestBase {
       private AtomicInteger rows = new AtomicInteger(0);
 
       @Override
-      public void setup(Mapper<WALKey, WALEdit, ImmutableBytesWritable, Mutation>.Context context)
-        throws IOException {
+      public void setup(Mapper<WALKey, WALEdit, ImmutableBytesWritable,
+        Pair<Mutation, List<String>>>.Context context) throws IOException {
         super.setup(context);
         try {
           this.keysToFind = readKeysToSearch(context.getConfiguration());
