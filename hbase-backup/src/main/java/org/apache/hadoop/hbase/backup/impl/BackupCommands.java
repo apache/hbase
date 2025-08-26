@@ -1069,7 +1069,9 @@ public final class BackupCommands {
           if (dayStart + ONE_DAY_IN_MILLISECONDS - 1 < cutoffTime) {
             System.out.println("Deleting outdated WAL directory: " + dirPath);
             fs.delete(dirPath, true);
-            fs.delete(new Path(bulkloadDir, dirName), true);
+            Path bulkloadPath = new Path(bulkloadDir, dirName);
+            System.out.println("Deleting corresponding bulk-load directory: " + bulkloadPath);
+            fs.delete(bulkloadPath, true);
           }
         } catch (ParseException e) {
           System.out.println("WARNING: Failed to parse directory name '" + dirName
