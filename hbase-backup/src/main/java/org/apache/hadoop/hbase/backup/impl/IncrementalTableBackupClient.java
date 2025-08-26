@@ -19,9 +19,11 @@ package org.apache.hadoop.hbase.backup.impl;
 
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONF_CONTINUOUS_BACKUP_WAL_DIR;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.JOB_NAME_CONF_KEY;
+import static org.apache.hadoop.hbase.backup.replication.BackupFileSystemManager.BULKLOAD_FILES_DIR;
 import static org.apache.hadoop.hbase.backup.replication.BackupFileSystemManager.WALS_DIR;
-import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.DATE_FORMAT;
+import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.CONF_BACKUP_ROOT_DIR;
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.ONE_DAY_IN_MILLISECONDS;
+import static org.apache.hadoop.hbase.backup.util.BackupUtils.DATE_FORMAT;
 
 import java.io.IOException;
 import java.net.URI;
@@ -165,6 +167,25 @@ public class IncrementalTableBackupClient extends TableBackupClient {
       }
       Path tblDir = CommonFSUtils.getTableDir(rootdir, srcTable);
       Path p = new Path(tblDir, regionName + Path.SEPARATOR + fam + Path.SEPARATOR + filename);
+
+      // For continuous backup, bulkload files are copied from backup directory defined by
+      // CONF_BACKUP_ROOT_DIR, instead of source cluster.
+      String backupRootDir = conf.get(CONF_BACKUP_ROOT_DIR);
+      if (backupInfo.isContinuousBackupEnabled() && !Strings.isNullOrEmpty(backupRootDir)) {
+        long bulkloadTs = bulkLoad.getTimestamp();
+        String dayDirectoryName = BackupUtils.formatToDateString(bulkloadTs);
+        Path blkLoadBkpPath =
+          new Path(backupRootDir, BULKLOAD_FILES_DIR + Path.SEPARATOR + dayDirectoryName);
+        Path bulkloadDir = new Path(blkLoadBkpPath,
+          srcTable.getNamespaceAsString() + Path.SEPARATOR + srcTable.getNameAsString());
+        FileSystem bkpFs = FileSystem.get(bulkloadDir.toUri(), conf);
+        // bulkloadDir.getFileSystem(conf);
+        Path bkpbldPath =
+          new Path(bulkloadDir, regionName + Path.SEPARATOR + fam + Path.SEPARATOR + filename);
+        if (bkpFs.exists(bkpbldPath)) {
+          p = bkpbldPath;
+        }
+      }
 
       String srcTableQualifier = srcTable.getQualifierAsString();
       String srcTableNs = srcTable.getNamespaceAsString();

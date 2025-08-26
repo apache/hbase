@@ -17,8 +17,11 @@
  */
 package org.apache.hadoop.hbase.backup;
 
+import static org.apache.hadoop.hbase.HConstants.REPLICATION_CLUSTER_ID;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONTINUOUS_BACKUP_REPLICATION_PEER;
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.CONF_BACKUP_MAX_WAL_SIZE;
+import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.CONF_BACKUP_ROOT_DIR;
+import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.CONF_PEER_UUID;
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.CONF_STAGED_WAL_FLUSH_INITIAL_DELAY;
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.CONF_STAGED_WAL_FLUSH_INTERVAL;
 
@@ -31,6 +34,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.UUID;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -46,11 +50,13 @@ import org.apache.hadoop.hbase.backup.BackupInfo.BackupPhase;
 import org.apache.hadoop.hbase.backup.BackupInfo.BackupState;
 import org.apache.hadoop.hbase.backup.impl.BackupAdminImpl;
 import org.apache.hadoop.hbase.backup.impl.BackupManager;
+import org.apache.hadoop.hbase.backup.impl.BackupManifest;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.backup.impl.FullTableBackupClient;
 import org.apache.hadoop.hbase.backup.impl.IncrementalBackupManager;
 import org.apache.hadoop.hbase.backup.impl.IncrementalTableBackupClient;
 import org.apache.hadoop.hbase.backup.master.LogRollMasterProcedureManager;
+import org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -64,6 +70,7 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.cleaner.LogCleaner;
 import org.apache.hadoop.hbase.master.cleaner.TimeToLiveLogCleaner;
 import org.apache.hadoop.hbase.regionserver.LogRoller;
+import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.security.HadoopSecurityEnabledUserProviderForTesting;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.SecureTestUtil;
@@ -113,6 +120,8 @@ public class TestBackupBase {
 
   protected static boolean autoRestoreOnFailure;
   protected static boolean useSecondCluster;
+
+  private final String replicationEndpoint = ContinuousBackupReplicationEndpoint.class.getName();
 
   static class IncrementalTableBackupClientForTest extends IncrementalTableBackupClient {
     public IncrementalTableBackupClientForTest() {
@@ -304,6 +313,7 @@ public class TestBackupBase {
     conf1.set(CONF_BACKUP_MAX_WAL_SIZE, "10240");
     conf1.set(CONF_STAGED_WAL_FLUSH_INITIAL_DELAY, "10");
     conf1.set(CONF_STAGED_WAL_FLUSH_INTERVAL, "10");
+    conf1.set(REPLICATION_CLUSTER_ID, "clusterId1");
 
     if (secure) {
       // set the always on security provider
@@ -569,6 +579,34 @@ public class TestBackupBase {
     while (it.hasNext()) {
       LOG.debug(Objects.toString(it.next().getPath()));
     }
+  }
+
+  BackupManifest getLatestBackupManifest(List<BackupInfo> backups) throws IOException {
+    BackupInfo newestBackup = backups.get(0);
+    return HBackupFileSystem.getManifest(conf1, new Path(BACKUP_ROOT_DIR),
+      newestBackup.getBackupId());
+  }
+
+  public void addReplicationPeer(String peerId, Path backupRootDir,
+    Map<TableName, List<String>> tableMap, Admin admin) throws IOException {
+    addReplicationPeer(peerId, backupRootDir, tableMap, admin, replicationEndpoint);
+  }
+
+  public void addReplicationPeer(String peerId, Path backupRootDir,
+    Map<TableName, List<String>> tableMap, Admin admin, String customReplicationEndpointImpl)
+    throws IOException {
+    Map<String, String> additionalArgs = new HashMap<>();
+    additionalArgs.put(CONF_PEER_UUID, UUID.randomUUID().toString());
+    additionalArgs.put(CONF_BACKUP_ROOT_DIR, backupRootDir.toString());
+    additionalArgs.put(CONF_BACKUP_MAX_WAL_SIZE, "10240");
+    additionalArgs.put(CONF_STAGED_WAL_FLUSH_INITIAL_DELAY, "10");
+    additionalArgs.put(CONF_STAGED_WAL_FLUSH_INTERVAL, "10");
+
+    ReplicationPeerConfig peerConfig = ReplicationPeerConfig.newBuilder()
+      .setReplicationEndpointImpl(customReplicationEndpointImpl).setReplicateAllUserTables(false)
+      .setTableCFsMap(tableMap).putAllConfiguration(additionalArgs).build();
+
+    admin.addReplicationPeer(peerId, peerConfig);
   }
 
   void deleteContinuousBackupReplicationPeerIfExists(Admin admin) throws IOException {

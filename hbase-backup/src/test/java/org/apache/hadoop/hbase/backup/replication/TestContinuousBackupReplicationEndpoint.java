@@ -21,15 +21,11 @@ import static org.apache.hadoop.hbase.HConstants.REPLICATION_BULKLOAD_ENABLE_KEY
 import static org.apache.hadoop.hbase.HConstants.REPLICATION_CLUSTER_ID;
 import static org.apache.hadoop.hbase.backup.replication.BackupFileSystemManager.BULKLOAD_FILES_DIR;
 import static org.apache.hadoop.hbase.backup.replication.BackupFileSystemManager.WALS_DIR;
-import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.CONF_BACKUP_MAX_WAL_SIZE;
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.CONF_BACKUP_ROOT_DIR;
-import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.CONF_PEER_UUID;
-import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.CONF_STAGED_WAL_FLUSH_INITIAL_DELAY;
-import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.CONF_STAGED_WAL_FLUSH_INTERVAL;
-import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.DATE_FORMAT;
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.ONE_DAY_IN_MILLISECONDS;
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.WAL_FILE_PREFIX;
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.copyWithCleanup;
+import static org.apache.hadoop.hbase.backup.util.BackupUtils.DATE_FORMAT;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -52,7 +48,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TimeZone;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -65,6 +60,8 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.backup.TestBackupBase;
+import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -92,7 +89,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Category({ ReplicationTests.class, LargeTests.class })
-public class TestContinuousBackupReplicationEndpoint {
+public class TestContinuousBackupReplicationEndpoint extends TestBackupBase {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestContinuousBackupReplicationEndpoint.class);
@@ -102,13 +99,12 @@ public class TestContinuousBackupReplicationEndpoint {
 
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final Configuration conf = TEST_UTIL.getConfiguration();
-  private static Admin admin;
 
-  private final String replicationEndpoint = ContinuousBackupReplicationEndpoint.class.getName();
   private static final String CF_NAME = "cf";
   private static final byte[] QUALIFIER = Bytes.toBytes("my-qualifier");
   static FileSystem fs = null;
   static Path root;
+  private static Admin admin;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -145,7 +141,7 @@ public class TestContinuousBackupReplicationEndpoint {
     Map<TableName, List<String>> tableMap = new HashMap<>();
     tableMap.put(tableName, new ArrayList<>());
 
-    addReplicationPeer(peerId, backupRootDir, tableMap);
+    addReplicationPeer(peerId, backupRootDir, tableMap, admin);
 
     loadRandomData(tableName, 100);
     assertEquals(100, getRowCount(tableName));
@@ -182,7 +178,7 @@ public class TestContinuousBackupReplicationEndpoint {
     initialTableMap.put(table1, new ArrayList<>());
     initialTableMap.put(table2, new ArrayList<>());
 
-    addReplicationPeer(peerId, backupRootDir, initialTableMap);
+    addReplicationPeer(peerId, backupRootDir, initialTableMap, admin);
 
     for (TableName table : List.of(table1, table2, table3)) {
       loadRandomData(table, 50);
@@ -227,7 +223,7 @@ public class TestContinuousBackupReplicationEndpoint {
     Map<TableName, List<String>> tableMap = new HashMap<>();
     tableMap.put(tableName, new ArrayList<>());
 
-    addReplicationPeer(peerId, backupRootDir, tableMap);
+    addReplicationPeer(peerId, backupRootDir, tableMap, admin);
 
     AtomicBoolean stopLoading = new AtomicBoolean(false);
 
@@ -283,7 +279,7 @@ public class TestContinuousBackupReplicationEndpoint {
     Map<TableName, List<String>> tableMap = new HashMap<>();
     tableMap.put(tableName, new ArrayList<>());
 
-    addReplicationPeer(peerId, backupRootDir, tableMap);
+    addReplicationPeer(peerId, backupRootDir, tableMap, admin);
 
     // Mock system time using ManualEnvironmentEdge
     ManualEnvironmentEdge manualEdge = new ManualEnvironmentEdge();
@@ -355,7 +351,7 @@ public class TestContinuousBackupReplicationEndpoint {
     Map<TableName, List<String>> tableMap = new HashMap<>();
     tableMap.put(tableName, new ArrayList<>());
 
-    addReplicationPeer(peerId, backupRootDir, tableMap,
+    addReplicationPeer(peerId, backupRootDir, tableMap, admin,
       FailingOnceContinuousBackupReplicationEndpoint.class.getName());
 
     loadRandomData(tableName, 100);
@@ -461,7 +457,7 @@ public class TestContinuousBackupReplicationEndpoint {
     Map<TableName, List<String>> tableMap = new HashMap<>();
     tableMap.put(tableName, new ArrayList<>());
 
-    addReplicationPeer(peerId, backupRootDir, tableMap,
+    addReplicationPeer(peerId, backupRootDir, tableMap, admin,
       PartiallyUploadedBulkloadFileEndpoint.class.getName());
 
     loadRandomData(tableName, 100);
@@ -497,7 +493,7 @@ public class TestContinuousBackupReplicationEndpoint {
         firstAttempt = false;
         try {
           // Construct destination path and create a partial file
-          String dayDirectoryName = formatToDateString(dayInMillis);
+          String dayDirectoryName = BackupUtils.formatToDateString(dayInMillis);
           BackupFileSystemManager backupFileSystemManager =
             new BackupFileSystemManager("peer1", conf, conf.get(CONF_BACKUP_ROOT_DIR));
           Path bulkloadDir =
@@ -548,28 +544,6 @@ public class TestContinuousBackupReplicationEndpoint {
     admin.truncateTable(tableName, false);
     admin.disableTable(tableName);
     admin.deleteTable(tableName);
-  }
-
-  private void addReplicationPeer(String peerId, Path backupRootDir,
-    Map<TableName, List<String>> tableMap) throws IOException {
-    addReplicationPeer(peerId, backupRootDir, tableMap, replicationEndpoint);
-  }
-
-  private void addReplicationPeer(String peerId, Path backupRootDir,
-    Map<TableName, List<String>> tableMap, String customReplicationEndpointImpl)
-    throws IOException {
-    Map<String, String> additionalArgs = new HashMap<>();
-    additionalArgs.put(CONF_PEER_UUID, UUID.randomUUID().toString());
-    additionalArgs.put(CONF_BACKUP_ROOT_DIR, backupRootDir.toString());
-    additionalArgs.put(CONF_BACKUP_MAX_WAL_SIZE, "10240");
-    additionalArgs.put(CONF_STAGED_WAL_FLUSH_INITIAL_DELAY, "10");
-    additionalArgs.put(CONF_STAGED_WAL_FLUSH_INTERVAL, "10");
-
-    ReplicationPeerConfig peerConfig = ReplicationPeerConfig.newBuilder()
-      .setReplicationEndpointImpl(customReplicationEndpointImpl).setReplicateAllUserTables(false)
-      .setTableCFsMap(tableMap).putAllConfiguration(additionalArgs).build();
-
-    admin.addReplicationPeer(peerId, peerConfig);
   }
 
   private void deleteReplicationPeer(String peerId) throws IOException {
