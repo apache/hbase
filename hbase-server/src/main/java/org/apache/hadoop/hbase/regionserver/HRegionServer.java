@@ -1508,13 +1508,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   }
 
   /**
-   * Normalizes an IPv6 address string by removing leading and trailing square brackets if present,
-   * returning the canonical IPv6 address form.
-   * <p>
-   * This method is intended to convert IPv6 addresses from URI or config contexts, where brackets
-   * may be used, into a format accepted by standard Java networking APIs.
-   * <p>
-   * Examples:
+   * Removes leading and trailing square brackets from an IPv6 address string, if present. Examples:
    *
    * <pre>
    *   normalizeIPv6Address("[2001:db8::1]") returns "2001:db8::1"
