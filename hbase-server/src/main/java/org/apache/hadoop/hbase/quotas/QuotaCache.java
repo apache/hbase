@@ -48,6 +48,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.hbase.thirdparty.com.google.common.cache.CacheLoader;
 import org.apache.hbase.thirdparty.com.google.common.cache.LoadingCache;
@@ -202,7 +203,8 @@ public class QuotaCache implements Stoppable {
   public UserQuotaState getUserQuotaState(final UserGroupInformation ugi) {
     String user = getQuotaUserName(ugi);
     if (!userQuotaCache.containsKey(user)) {
-      userQuotaCache.put(user, QuotaUtil.buildDefaultUserQuotaState(rsServices.getConfiguration(), 0L));
+      userQuotaCache.put(user,
+        QuotaUtil.buildDefaultUserQuotaState(rsServices.getConfiguration(), 0L));
       fetch("user", userQuotaCache, userQuotaStateFetcher);
     }
     return userQuotaCache.get(user);
@@ -270,8 +272,8 @@ public class QuotaCache implements Stoppable {
     }
   }
 
-  private <K, V extends QuotaState> void fetch(final String type,
-    final Map<K, V> quotasMap, final Fetcher<K, V> fetcher) {
+  private <K, V extends QuotaState> void fetch(final String type, final Map<K, V> quotasMap,
+    final Fetcher<K, V> fetcher) {
     // Find the quota entries to update
     List<Get> gets = quotasMap.keySet().stream().map(fetcher::makeGet).collect(Collectors.toList());
 
@@ -402,7 +404,8 @@ public class QuotaCache implements Stoppable {
       fetchAndEvict("namespace", QuotaCache.this.namespaceQuotaCache, namespaceQuotaStateFetcher);
       fetchAndEvict("table", QuotaCache.this.tableQuotaCache, tableQuotaStateFetcher);
       fetchAndEvict("user", QuotaCache.this.userQuotaCache, userQuotaStateFetcher);
-      fetchAndEvict("regionServer", QuotaCache.this.regionServerQuotaCache, regionServerQuotaStateFetcher);
+      fetchAndEvict("regionServer", QuotaCache.this.regionServerQuotaCache,
+        regionServerQuotaStateFetcher);
       fetchExceedThrottleQuota();
     }
 
