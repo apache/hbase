@@ -202,13 +202,16 @@ class SerialReplicationChecker {
     // start from 1. Here we choose the latter one.
     if (index < 0) {
       index = -index - 1;
-    } else if (index > 0 && index < barriers.length && barriers[index] == seqId) {
+    } else if (index > 0 && index < barriers.length && barriers.length > 2 && barriers[index] == seqId) {
       // Bug HBASE-29499
       // Sometimes* we can end up with barriers [x, y, z], seqId = y and pushedSeqId = y-2
       // In this case the previous range of the edit is x, *NOT* y
       // e.g. we want barriers[index - 1] = x and barriers[index] = y.
       // Thus we must not increment the index. Otherwise we can end up blocking the
       // replication indefinitely.
+      //
+      // An exception to this is barriers [x, y] and seqId = y, where we should calculate
+      // barriers[index-1] = y and index == barriers.length
       //
       // * Especially this can happen when an RS crashes right after opening a region but
       // before pushing the edits of the last range for that region.
