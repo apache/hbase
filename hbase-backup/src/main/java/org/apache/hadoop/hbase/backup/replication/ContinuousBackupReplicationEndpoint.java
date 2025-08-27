@@ -432,7 +432,7 @@ public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint
       Path destPath = new Path(bulkloadDir, file);
 
       try {
-        LOG.debug("{} Copying bulk load file from {} to {}", Utils.logPeerId(peerId), sourcePath,
+        LOG.debug("{} ANKIT Copying bulk load file from {} to {}", Utils.logPeerId(peerId), sourcePath,
           destPath);
 
         copyWithCleanup(CommonFSUtils.getRootDirFileSystem(conf), sourcePath,

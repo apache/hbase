@@ -79,15 +79,17 @@ public class TestIncrementalBackupWithContinuous extends TestBackupBase {
   private static final int ROWS_IN_BULK_LOAD = 100;
   private String backupWalDirName = "TestContinuousBackupWalDir";
 
+  /*
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     // Set the configuration properties as required
-    conf1.setBoolean(REPLICATION_BULKLOAD_ENABLE_KEY, true);
-    conf1.set(REPLICATION_CLUSTER_ID, "clusterId1");
+    //conf1.setBoolean(REPLICATION_BULKLOAD_ENABLE_KEY, true);
+    //conf1.set(REPLICATION_CLUSTER_ID, "clusterId1");
 
     // TEST_UTIL.startMiniZKCluster();
     // TEST_UTIL.startMiniCluster(3);
   }
+   */
 
   @Before
   public void beforeTest() throws IOException {
@@ -173,17 +175,19 @@ public class TestIncrementalBackupWithContinuous extends TestBackupBase {
   @Test
   public void testIncrementalBackupCopyingBulkloadTillIncrCommittedWalTs() throws Exception {
     conf1.setBoolean(REPLICATION_MARKER_ENABLED_KEY, true);
-    conf1.set(CONF_BACKUP_ROOT_DIR, BACKUP_ROOT_DIR);
+    // conf1.set(CONF_BACKUP_ROOT_DIR, BACKUP_ROOT_DIR);
     String methodName = Thread.currentThread().getStackTrace()[1].getMethodName();
     TableName tableName1 = TableName.valueOf("table_" + methodName);
-    String peerId = "peerId";
+    //String peerId = "peerId";
     TEST_UTIL.createTable(tableName1, famName);
-    Path backupRootDir = new Path(BACKUP_ROOT_DIR, methodName);
-    TEST_UTIL.getTestFileSystem().mkdirs(backupRootDir);
+    //Path backupRootDir = new Path(BACKUP_ROOT_DIR, methodName);
+    //TEST_UTIL.getTestFileSystem().mkdirs(backupRootDir);
+    //Path backupRootDir = new Path(TEST_UTIL.getDataTestDirOnTestFS(), methodName);
+    //conf1.set(CONF_BACKUP_ROOT_DIR, backupRootDir);
 
-    Map<TableName, List<String>> tableMap = new HashMap<>();
-    tableMap.put(tableName1, new ArrayList<>());
-    addReplicationPeer(peerId, backupRootDir, tableMap, TEST_UTIL.getAdmin());
+    //Map<TableName, List<String>> tableMap = new HashMap<>();
+    //tableMap.put(tableName1, new ArrayList<>());
+    //addReplicationPeer(peerId, backupRootDir, tableMap, TEST_UTIL.getAdmin());
 
     try (BackupSystemTable systemTable = new BackupSystemTable(TEST_UTIL.getConnection())) {
 
@@ -196,6 +200,8 @@ public class TestIncrementalBackupWithContinuous extends TestBackupBase {
       String backup1 = backupTables(BackupType.FULL, List.of(tableName1), BACKUP_ROOT_DIR, true);
       assertTrue(checkSucceeded(backup1));
 
+      boolean rep = conf1.getBoolean(REPLICATION_BULKLOAD_ENABLE_KEY, false);
+      String[] clusterid = conf1.getStrings(REPLICATION_CLUSTER_ID);
       loadTable(TEST_UTIL.getConnection().getTable(tableName1));
       expectedRowCount = expectedRowCount + NB_ROWS_IN_BATCH;
       performBulkLoad("bulkPreIncr", methodName, tableName1);
@@ -203,7 +209,7 @@ public class TestIncrementalBackupWithContinuous extends TestBackupBase {
       assertEquals(expectedRowCount, TEST_UTIL.countRows(tableName1));
       assertEquals(1, systemTable.readBulkloadRows(List.of(tableName1)).size());
       loadTable(TEST_UTIL.getConnection().getTable(tableName1));
-      Thread.sleep(20000);
+      Thread.sleep(15000);
 
       performBulkLoad("bulkPostIncr", methodName, tableName1);
       assertEquals(2, systemTable.readBulkloadRows(List.of(tableName1)).size());

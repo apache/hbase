@@ -169,8 +169,8 @@ public class IncrementalTableBackupClient extends TableBackupClient {
       Path p = new Path(tblDir, regionName + Path.SEPARATOR + fam + Path.SEPARATOR + filename);
 
       // For continuous backup, bulkload files are copied from backup directory defined by
-      // CONF_BACKUP_ROOT_DIR, instead of source cluster.
-      String backupRootDir = conf.get(CONF_BACKUP_ROOT_DIR);
+      // CONF_CONTINUOUS_BACKUP_WAL_DIR, instead of source cluster.
+      String backupRootDir = conf.get(CONF_CONTINUOUS_BACKUP_WAL_DIR);
       if (backupInfo.isContinuousBackupEnabled() && !Strings.isNullOrEmpty(backupRootDir)) {
         long bulkloadTs = bulkLoad.getTimestamp();
         String dayDirectoryName = BackupUtils.formatToDateString(bulkloadTs);
@@ -178,11 +178,13 @@ public class IncrementalTableBackupClient extends TableBackupClient {
           new Path(backupRootDir, BULKLOAD_FILES_DIR + Path.SEPARATOR + dayDirectoryName);
         Path bulkloadDir = new Path(blkLoadBkpPath,
           srcTable.getNamespaceAsString() + Path.SEPARATOR + srcTable.getNameAsString());
-        FileSystem bkpFs = FileSystem.get(bulkloadDir.toUri(), conf);
+        FileSystem backupFs = FileSystem.get(bulkloadDir.toUri(), conf);
         // bulkloadDir.getFileSystem(conf);
         Path bkpbldPath =
           new Path(bulkloadDir, regionName + Path.SEPARATOR + fam + Path.SEPARATOR + filename);
-        if (bkpFs.exists(bkpbldPath)) {
+        LOG.info("ANKIT Found backup bulkload file {}", bkpbldPath);
+        if (backupFs.exists(bkpbldPath)) {
+          LOG.info("ANKIT Found backup bulkload file {}", bkpbldPath);
           p = bkpbldPath;
         }
       }
