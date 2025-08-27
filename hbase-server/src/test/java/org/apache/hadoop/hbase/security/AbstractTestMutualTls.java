@@ -224,7 +224,8 @@ public abstract class AbstractTestMutualTls {
         }
         current = current.getCause();
       } while (current != null);
-      assertTrue("Exception chain does not include SSLHandshakeException", seenSSLHandshakeException);
+      assertTrue("Exception chain does not include SSLHandshakeException",
+        seenSSLHandshakeException);
     }
   }
 
