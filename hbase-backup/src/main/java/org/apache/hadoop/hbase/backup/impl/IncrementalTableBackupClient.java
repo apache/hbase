@@ -180,10 +180,10 @@ public class IncrementalTableBackupClient extends TableBackupClient {
         Path fullBulkLoadBackupPath =
           new Path(bulkLoadDir, regionName + Path.SEPARATOR + fam + Path.SEPARATOR + filename);
         if (backupFs.exists(fullBulkLoadBackupPath)) {
-          LOG.info("Backup bulkload file {} found", fullBulkLoadBackupPath);
+          LOG.debug("Backup bulkload file found {}", fullBulkLoadBackupPath);
           p = fullBulkLoadBackupPath;
         } else {
-          LOG.warn("Backup bulkload file {} NOT found", fullBulkLoadBackupPath);
+          LOG.warn("Backup bulkload file not found {}", fullBulkLoadBackupPath);
         }
       }
 

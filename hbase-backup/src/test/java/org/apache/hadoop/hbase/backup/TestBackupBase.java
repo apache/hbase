@@ -307,6 +307,8 @@ public class TestBackupBase {
     conf1.set(CONF_BACKUP_MAX_WAL_SIZE, "10240");
     conf1.set(CONF_STAGED_WAL_FLUSH_INITIAL_DELAY, "10");
     conf1.set(CONF_STAGED_WAL_FLUSH_INTERVAL, "10");
+    conf1.setBoolean(REPLICATION_BULKLOAD_ENABLE_KEY, true);
+    conf1.set(REPLICATION_CLUSTER_ID, "clusterId1");
 
     if (secure) {
       // set the always on security provider
