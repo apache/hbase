@@ -288,17 +288,45 @@ public final class CommonFSUtils {
    * @throws IOException e
    */
   public static Path getRootDir(final Configuration c) throws IOException {
-    Path p = new Path(c.get(HConstants.HBASE_DIR));
+    return getRootDir(c, HConstants.HBASE_DIR);
+  }
+
+  /**
+   * Get the path for the original root data directory, which could be different from the current
+   * root directory, in case it was changed.
+   * @param c configuration
+   * @return {@link Path} to hbase original root directory from configuration as a qualified Path.
+   * @throws IOException e
+   */
+  public static Path getOriginalRootDir(final Configuration c) throws IOException {
+    return getRootDir(c, c.get(HConstants.HBASE_ORIGINAL_DIR) == null ? HConstants.HBASE_DIR
+      : HConstants.HBASE_ORIGINAL_DIR);
+  }
+
+  /**
+   * Get the path for the root data directory
+   * @param c configuration
+   * @param rootDirProp the property name for the root directory
+   * @return {@link Path} to hbase root directory from configuration as a qualified Path.
+   * @throws IOException e
+   */
+  public static Path getRootDir(final Configuration c, final String rootDirProp) throws IOException {
+    Path p = new Path(c.get(rootDirProp));
     FileSystem fs = p.getFileSystem(c);
     return p.makeQualified(fs.getUri(), fs.getWorkingDirectory());
   }
 
   public static void setRootDir(final Configuration c, final Path root) {
+    // Keep track of the original root dir.
+    if (c.get(HConstants.HBASE_ORIGINAL_DIR) == null) {
+      c.set(HConstants.HBASE_ORIGINAL_DIR, c.get(HConstants.HBASE_DIR));
+    }
     c.set(HConstants.HBASE_DIR, root.toString());
   }
 
   public static Path getSystemKeyDir(final Configuration c) throws IOException {
-    return new Path(getRootDir(c), HConstants.SYSTEM_KEYS_DIRECTORY);
+    // Always use the original root dir for system key dir, in case it was changed..
+    return new Path(getOriginalRootDir(c), HConstants.SYSTEM_KEYS_DIRECTORY);
   }
 
   public static void setFsDefault(final Configuration c, final Path root) {

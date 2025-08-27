@@ -343,6 +343,7 @@ public final class HConstants {
 
   /** Parameter name for HBase instance root directory */
   public static final String HBASE_DIR = "hbase.rootdir";
+  public static final String HBASE_ORIGINAL_DIR = "hbase.originalRootdir";
 
   /** Parameter name for HBase client IPC pool type */
   public static final String HBASE_CLIENT_IPC_POOL_TYPE = "hbase.client.ipc.pool.type";

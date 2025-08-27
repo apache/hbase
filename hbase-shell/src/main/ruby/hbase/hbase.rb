@@ -60,7 +60,7 @@ module Hbase
     end
 
     def keymeta_admin
-      ::Hbase::KeymetaAdmin.new(@connection)
+      ::Hbase::KeymetaAdmin.new(self.connection)
     end
 
     def taskmonitor

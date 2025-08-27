@@ -34,13 +34,16 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
-import org.apache.hadoop.hbase.security.SecurityUtil;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class SystemKeyAccessor extends KeyManagementBase {
+  private static final Logger LOG = LoggerFactory.getLogger(SystemKeyAccessor.class);
+
   private final FileSystem fs;
   protected final Path systemKeyDir;
 
@@ -61,9 +64,7 @@ public class SystemKeyAccessor extends KeyManagementBase {
    *    is initialized yet.
    */
   public Pair<Path,List<Path>> getLatestSystemKeyFile() throws IOException {
-    if (! isKeyManagementEnabled()) {
-      return new Pair<>(null, null);
-    }
+    assertKeyManagementEnabled();
     List<Path> allClusterKeyFiles = getAllSystemKeyFiles();
     if (allClusterKeyFiles.isEmpty()) {
       throw new RuntimeException("No cluster key initialized yet");
@@ -82,17 +83,15 @@ public class SystemKeyAccessor extends KeyManagementBase {
    * @throws IOException if there is an error getting the cluster key files
    */
   public List<Path> getAllSystemKeyFiles() throws IOException {
-    if (!isKeyManagementEnabled()) {
-      return null;
-    }
+    assertKeyManagementEnabled();
+    LOG.info("Getting all system key files from: {} matching prefix: {}", systemKeyDir,
+      SYSTEM_KEY_FILE_PREFIX + "*");
     Map<Integer, Path> clusterKeys = new TreeMap<>(Comparator.reverseOrder());
-    for (FileStatus st : fs.globStatus(new Path(systemKeyDir,
-      SYSTEM_KEY_FILE_PREFIX + "*"))) {
+    for (FileStatus st : fs.globStatus(new Path(systemKeyDir, SYSTEM_KEY_FILE_PREFIX + "*"))) {
       Path keyPath = st.getPath();
       int seqNum = extractSystemKeySeqNum(keyPath);
       clusterKeys.put(seqNum, keyPath);
     }
-
     return new ArrayList<>(clusterKeys.values());
   }
 
