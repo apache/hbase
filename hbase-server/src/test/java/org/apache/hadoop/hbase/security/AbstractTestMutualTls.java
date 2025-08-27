@@ -18,8 +18,6 @@
 package org.apache.hadoop.hbase.security;
 
 import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.SERVICE;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
