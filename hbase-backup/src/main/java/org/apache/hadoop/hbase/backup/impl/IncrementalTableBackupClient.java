@@ -21,7 +21,6 @@ import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONF_CONTINU
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.JOB_NAME_CONF_KEY;
 import static org.apache.hadoop.hbase.backup.replication.BackupFileSystemManager.BULKLOAD_FILES_DIR;
 import static org.apache.hadoop.hbase.backup.replication.BackupFileSystemManager.WALS_DIR;
-import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.CONF_BACKUP_ROOT_DIR;
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.ONE_DAY_IN_MILLISECONDS;
 import static org.apache.hadoop.hbase.backup.util.BackupUtils.DATE_FORMAT;
 
@@ -169,23 +168,22 @@ public class IncrementalTableBackupClient extends TableBackupClient {
       Path p = new Path(tblDir, regionName + Path.SEPARATOR + fam + Path.SEPARATOR + filename);
 
       // For continuous backup, bulkload files are copied from backup directory defined by
-      // CONF_CONTINUOUS_BACKUP_WAL_DIR, instead of source cluster.
+      // CONF_CONTINUOUS_BACKUP_WAL_DIR instead of source cluster.
       String backupRootDir = conf.get(CONF_CONTINUOUS_BACKUP_WAL_DIR);
       if (backupInfo.isContinuousBackupEnabled() && !Strings.isNullOrEmpty(backupRootDir)) {
-        long bulkloadTs = bulkLoad.getTimestamp();
-        String dayDirectoryName = BackupUtils.formatToDateString(bulkloadTs);
-        Path blkLoadBkpPath =
+        String dayDirectoryName = BackupUtils.formatToDateString(bulkLoad.getTimestamp());
+        Path bulkLoadBackupPath =
           new Path(backupRootDir, BULKLOAD_FILES_DIR + Path.SEPARATOR + dayDirectoryName);
-        Path bulkloadDir = new Path(blkLoadBkpPath,
+        Path bulkLoadDir = new Path(bulkLoadBackupPath,
           srcTable.getNamespaceAsString() + Path.SEPARATOR + srcTable.getNameAsString());
-        FileSystem backupFs = FileSystem.get(bulkloadDir.toUri(), conf);
-        // bulkloadDir.getFileSystem(conf);
-        Path bkpbldPath =
-          new Path(bulkloadDir, regionName + Path.SEPARATOR + fam + Path.SEPARATOR + filename);
-        LOG.info("ANKIT Found backup bulkload file {}", bkpbldPath);
-        if (backupFs.exists(bkpbldPath)) {
-          LOG.info("ANKIT Found backup bulkload file {}", bkpbldPath);
-          p = bkpbldPath;
+        FileSystem backupFs = FileSystem.get(bulkLoadDir.toUri(), conf);
+        Path fullBulkLoadBackupPath =
+          new Path(bulkLoadDir, regionName + Path.SEPARATOR + fam + Path.SEPARATOR + filename);
+        if (backupFs.exists(fullBulkLoadBackupPath)) {
+          LOG.info("Backup bulkload file {} found", fullBulkLoadBackupPath);
+          p = fullBulkLoadBackupPath;
+        } else {
+          LOG.warn("Backup bulkload file {} NOT found", fullBulkLoadBackupPath);
         }
       }
 
