@@ -52,7 +52,6 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.hbase.thirdparty.com.google.common.cache.CacheLoader;
 import org.apache.hbase.thirdparty.com.google.common.cache.LoadingCache;
-import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 
 /**
  * Cache that keeps track of the quota settings for the users and tables that are interacting with
@@ -251,25 +250,6 @@ public class QuotaCache implements Stoppable {
 
   protected boolean isExceedThrottleQuotaEnabled() {
     return exceedThrottleQuotaEnabled;
-  }
-
-  private <K, V extends QuotaState> Optional<V> fetchOne(final K key, final Fetcher<K, V> fetcher) {
-    Get get = fetcher.makeGet(key);
-    Map<K, V> map;
-    try {
-      map = fetcher.fetchEntries(List.of(get));
-    } catch (IOException e) {
-      LOG.warn("Unable to read quota for {}", key);
-      return Optional.empty();
-    }
-    if (map.isEmpty()) {
-      return Optional.empty();
-    } else if (map.size() > 1) {
-      throw new IllegalStateException(
-        String.format("Got multiple quotas for key %s, this is unexpected", key));
-    } else {
-      return Optional.of(Iterables.getOnlyElement(map.values()));
-    }
   }
 
   private <K, V extends QuotaState> void fetch(final String type, final Map<K, V> quotasMap,
