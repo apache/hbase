@@ -1862,4 +1862,19 @@ public interface AsyncAdmin {
    * Get the list of cached files
    */
   CompletableFuture<List<String>> getCachedFilesList(ServerName serverName);
+
+  /**
+   * Refresh HFiles for the table
+   */
+  CompletableFuture<Long> refreshHFiles(final TableName tableName);
+
+  /**
+   * Refresh HFiles for all the tables under given namespace
+   */
+  CompletableFuture<Long> refreshHFiles(final String namespace);
+
+  /**
+   * Refresh HFiles for all the tables
+   */
+  CompletableFuture<Long> refreshHFiles();
 }

@@ -1917,6 +1917,26 @@ module Hbase
     def list_tables_by_state(isEnabled)
       @admin.listTableNamesByState(isEnabled).map(&:getNameAsString)
     end
+
+    #----------------------------------------------------------------------------------------------
+    # Refresh HFiles for the table
+    def refresh_hfiles(args = {})
+      table_name = args.fetch(TABLE_NAME, nil)
+      namespace = args.fetch(NAMESPACE, nil)
+      if namespace && table_name
+        raise ArgumentError, "Specify either a TABLE_NAME or a NAMESPACE, not both"
+      elsif namespace == "" || table_name == ""
+        raise ArgumentError, "TABLE_NAME or NAMESPACE cannot be empty string"
+      elsif namespace.is_a?(Array) || table_name.is_a?(Array)
+        raise ArgumentError, "TABLE_NAME or NAMESPACE must be a single string, not an array"
+      elsif namespace
+        @admin.refreshHFiles(namespace)
+      elsif table_name
+        @admin.refreshHFiles(org.apache.hadoop.hbase.TableName.valueOf(table_name))
+      else
+        @admin.refreshHFiles()
+      end
+    end
   end
   # rubocop:enable Metrics/ClassLength
 end
