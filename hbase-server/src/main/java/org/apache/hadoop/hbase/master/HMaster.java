@@ -170,8 +170,8 @@ import org.apache.hadoop.hbase.master.procedure.ModifyTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
 import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
 import org.apache.hadoop.hbase.master.procedure.RSProcedureDispatcher;
-import org.apache.hadoop.hbase.master.procedure.ReloadQuotasProcedure;
 import org.apache.hadoop.hbase.master.procedure.RefreshHFilesTableProcedure;
+import org.apache.hadoop.hbase.master.procedure.ReloadQuotasProcedure;
 import org.apache.hadoop.hbase.master.procedure.ReopenTableRegionsProcedure;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.master.procedure.TruncateRegionProcedure;
@@ -4558,7 +4558,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     checkInitialized();
 
     if (!tableDescriptors.exists(tableName)) {
-      LOG.info("RefreshHfilesProcedure failed because table {} does not exist", tableName.getNameAsString());
+      LOG.info("RefreshHfilesProcedure failed because table {} does not exist",
+        tableName.getNameAsString());
       throw new TableNotFoundException(tableName);
     }
 
@@ -4583,7 +4584,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     throws IOException {
     checkInitialized();
 
-    try{
+    try {
       this.clusterSchemaService.getNamespace(namespace);
     } catch (IOException e) {
       LOG.info("RefreshHfilesProcedure failed because namespace {} does not exist", namespace);
