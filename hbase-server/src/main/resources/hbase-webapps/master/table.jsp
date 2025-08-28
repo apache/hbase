@@ -188,7 +188,7 @@
       <jsp:include page="redirect.jsp" />
     </div>
 <%  return;
-  } %> 
+  } %>
 
 <%
   final String escaped_fqtn = StringEscapeUtils.escapeHtml4(fqtn);
