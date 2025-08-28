@@ -150,8 +150,6 @@ public class RefreshHFilesTableProcedure
   }
 
   private Flow prepare(final MasterProcedureEnv env) {
-    // TODO Check if table exists otherwise send exception.
-    // TODO verify if region is alive or not
     setNextState(RefreshHFilesTableProcedureState.REFRESH_HFILES_REFRESH_REGION);
     return Flow.HAS_MORE_STATE;
   }
