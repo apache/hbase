@@ -18,24 +18,16 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
-import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
-import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
-import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
-import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RefreshHFilesTableProcedureState;
 
 @InterfaceAudience.Private
@@ -72,11 +64,11 @@ public class RefreshHFilesTableProcedure
   @Override
   protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.serializeStateData(serializer);
-    MasterProcedureProtos.RefreshHFilesTableProcedureStateData.Builder builder = MasterProcedureProtos.RefreshHFilesTableProcedureStateData.newBuilder();
-    if (tableName != null && namespaceName == null){
+    MasterProcedureProtos.RefreshHFilesTableProcedureStateData.Builder builder =
+      MasterProcedureProtos.RefreshHFilesTableProcedureStateData.newBuilder();
+    if (tableName != null && namespaceName == null) {
       builder.setTableName(ProtobufUtil.toProtoTableName(tableName));
-    }
-    else if(tableName == null && namespaceName != null){
+    } else if (tableName == null && namespaceName != null) {
       builder.setNamespaceName(namespaceName);
     }
     serializer.serialize(builder.build());
@@ -85,22 +77,21 @@ public class RefreshHFilesTableProcedure
   @Override
   protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.deserializeStateData(serializer);
-    MasterProcedureProtos.RefreshHFilesTableProcedureStateData
-      data = serializer.deserialize(MasterProcedureProtos.RefreshHFilesTableProcedureStateData.class);
-    if (data.hasTableName() && !data.hasNamespaceName()){
+    MasterProcedureProtos.RefreshHFilesTableProcedureStateData data =
+      serializer.deserialize(MasterProcedureProtos.RefreshHFilesTableProcedureStateData.class);
+    if (data.hasTableName() && !data.hasNamespaceName()) {
       this.tableName = ProtobufUtil.toTableName(data.getTableName());
-    }
-    else if(!data.hasTableName() && data.hasNamespaceName()){
+    } else if (!data.hasTableName() && data.hasNamespaceName()) {
       this.namespaceName = data.getNamespaceName();
     }
   }
 
   @Override
   public TableName getTableName() {
-    if (tableName != null && namespaceName == null){
+    if (tableName != null && namespaceName == null) {
       return tableName;
     }
-      return DUMMY_NAMESPACE_TABLE_NAME;
+    return DUMMY_NAMESPACE_TABLE_NAME;
   }
 
   @Override
@@ -119,31 +110,25 @@ public class RefreshHFilesTableProcedure
   }
 
   @Override
-  protected void rollbackState(MasterProcedureEnv env,
-    RefreshHFilesTableProcedureState state)
+  protected void rollbackState(MasterProcedureEnv env, RefreshHFilesTableProcedureState state)
     throws IOException, InterruptedException {
     // Refresh HFiles is idempotent operation hence rollback is not needed
-    LOG.trace("Rollback not implemented for RefreshHFilesTableProcedure state: {}",
-      state);
+    LOG.trace("Rollback not implemented for RefreshHFilesTableProcedure state: {}", state);
   }
 
   @Override
-  protected Flow executeFromState(MasterProcedureEnv env,
-    RefreshHFilesTableProcedureState state) {
-    LOG.info("Executing RefreshHFilesTableProcedureState state: {}",
-      state);
+  protected Flow executeFromState(MasterProcedureEnv env, RefreshHFilesTableProcedureState state) {
+    LOG.info("Executing RefreshHFilesTableProcedureState state: {}", state);
 
     try {
       return switch (state) {
         case REFRESH_HFILES_PREPARE -> prepare(env);
         case REFRESH_HFILES_REFRESH_REGION -> refreshHFiles(env);
         case REFRESH_HFILES_FINISH -> finish();
-        default -> throw new UnsupportedOperationException(
-          "Unhandled state: " + state);
+        default -> throw new UnsupportedOperationException("Unhandled state: " + state);
       };
     } catch (Exception ex) {
-      LOG.error("Error in RefreshHFilesTableProcedure state {}", state,
-        ex);
+      LOG.error("Error in RefreshHFilesTableProcedure state {}", state, ex);
       setFailure("RefreshHFilesTableProcedure", ex);
       return Flow.NO_MORE_STATE;
     }
@@ -154,25 +139,25 @@ public class RefreshHFilesTableProcedure
     return Flow.HAS_MORE_STATE;
   }
 
-  private void refreshHFilesForTable(final MasterProcedureEnv env, TableName tableName){
+  private void refreshHFilesForTable(final MasterProcedureEnv env, TableName tableName) {
     addChildProcedure(env.getAssignmentManager().getTableRegions(tableName, true).stream()
       .map(r -> new RefreshHFilesRegionProcedure(r)).toArray(RefreshHFilesRegionProcedure[]::new));
   }
 
   private Flow refreshHFiles(final MasterProcedureEnv env) throws IOException {
-    if (tableName != null && namespaceName == null){
+    if (tableName != null && namespaceName == null) {
       refreshHFilesForTable(env, tableName);
-    }
-    else if(tableName == null && namespaceName != null){
-      final List<TableName> tables = env.getMasterServices().listTableNamesByNamespace(namespaceName);
-      for (TableName table : tables){
+    } else if (tableName == null && namespaceName != null) {
+      final List<TableName> tables =
+        env.getMasterServices().listTableNamesByNamespace(namespaceName);
+      for (TableName table : tables) {
         refreshHFilesForTable(env, table);
       }
-    }
-    else{
-      final List<TableName> tables = env.getMasterServices().getTableDescriptors().getAll().values().stream().map(TableDescriptor::getTableName).toList();
-      for (TableName table : tables){
-        if(!table.isSystemTable()){
+    } else {
+      final List<TableName> tables = env.getMasterServices().getTableDescriptors().getAll().values()
+        .stream().map(TableDescriptor::getTableName).toList();
+      for (TableName table : tables) {
+        if (!table.isSystemTable()) {
           refreshHFilesForTable(env, table);
         }
       }
