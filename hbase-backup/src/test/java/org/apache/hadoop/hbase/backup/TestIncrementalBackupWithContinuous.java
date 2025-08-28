@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.backup;
 
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONF_CONTINUOUS_BACKUP_WAL_DIR;
-import static org.apache.hadoop.hbase.mapreduce.WALPlayer.IGNORE_MISSING_FILES;
 import static org.apache.hadoop.hbase.replication.regionserver.ReplicationMarkerChore.REPLICATION_MARKER_ENABLED_DEFAULT;
 import static org.apache.hadoop.hbase.replication.regionserver.ReplicationMarkerChore.REPLICATION_MARKER_ENABLED_KEY;
 import static org.junit.Assert.assertEquals;
@@ -78,7 +77,6 @@ public class TestIncrementalBackupWithContinuous extends TestBackupBase {
     Path root = TEST_UTIL.getDataTestDirOnTestFS();
     Path backupWalDir = new Path(root, backupWalDirName);
     conf1.set(CONF_CONTINUOUS_BACKUP_WAL_DIR, backupWalDir.toString());
-    conf1.setBoolean(IGNORE_MISSING_FILES, true);
     conf1.setBoolean(REPLICATION_MARKER_ENABLED_KEY, true);
   }
 
