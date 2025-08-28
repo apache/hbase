@@ -271,12 +271,6 @@ public class TestContinuousBackup extends TestBackupBase {
     }
   }
 
-  BackupManifest getLatestBackupManifest(List<BackupInfo> backups) throws IOException {
-    BackupInfo newestBackup = backups.get(0);
-    return HBackupFileSystem.getManifest(conf1, new Path(BACKUP_ROOT_DIR),
-      newestBackup.getBackupId());
-  }
-
   private void verifyTableInBackupSystemTable(TableName table) throws IOException {
     try (BackupSystemTable backupTable = new BackupSystemTable(TEST_UTIL.getConnection())) {
       Map<TableName, Long> tableBackupMap = backupTable.getContinuousBackupTableSet();
