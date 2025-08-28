@@ -3677,7 +3677,6 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
   @Override
   public MasterProtos.RefreshHFilesResponse refreshHFiles(RpcController controller,
     MasterProtos.RefreshHFilesRequest request) throws ServiceException {
-    // TODO Check if table exists otherwise send exception.
     try {
       Long procId;
       if (request.hasTableName()) {

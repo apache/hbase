@@ -84,6 +84,7 @@ import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.NamespaceNotFoundException;
 import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.PleaseRestartMasterException;
 import org.apache.hadoop.hbase.RegionMetrics;
@@ -4579,7 +4580,11 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   public Long refreshHfiles(final TableName tableName, final long nonceGroup, final long nonce) throws IOException {
   public Long refreshHfiles(final TableName tableName, final long nonceGroup, final long nonce)
     throws IOException {
-    // TODO Check if table exists otherwise send exception.
+    if (!tableDescriptors.exists(tableName)) {
+      LOG.info("RefreshHfilesProcedure failed because table {} does not exist", tableName.getNameAsString());
+      throw new TableNotFoundException(tableName);
+    }
+
     return MasterProcedureUtil
       .submitProcedure(new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
         @Override
@@ -4599,7 +4604,13 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
   public Long refreshHfiles(final String namespace, final long nonceGroup, final long nonce)
     throws IOException {
-    // TODO Check if namespace exists otherwise send exception.
+    try{
+      this.clusterSchemaService.getNamespace(namespace);
+    } catch (IOException e) {
+      LOG.info("RefreshHfilesProcedure failed because namespace {} does not exist", namespace);
+      throw new NamespaceNotFoundException(namespace);
+    }
+
     return MasterProcedureUtil
       .submitProcedure(new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
         @Override
