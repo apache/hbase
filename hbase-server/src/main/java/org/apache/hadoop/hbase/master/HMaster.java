@@ -4580,6 +4580,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   public Long refreshHfiles(final TableName tableName, final long nonceGroup, final long nonce) throws IOException {
   public Long refreshHfiles(final TableName tableName, final long nonceGroup, final long nonce)
     throws IOException {
+    checkInitialized();
+
     if (!tableDescriptors.exists(tableName)) {
       LOG.info("RefreshHfilesProcedure failed because table {} does not exist", tableName.getNameAsString());
       throw new TableNotFoundException(tableName);
@@ -4604,6 +4606,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
   public Long refreshHfiles(final String namespace, final long nonceGroup, final long nonce)
     throws IOException {
+    checkInitialized();
+
     try{
       this.clusterSchemaService.getNamespace(namespace);
     } catch (IOException e) {
@@ -4628,6 +4632,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   }
 
   public Long refreshHfiles(final long nonceGroup, final long nonce) throws IOException {
+    checkInitialized();
+
     return MasterProcedureUtil
       .submitProcedure(new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
         @Override
