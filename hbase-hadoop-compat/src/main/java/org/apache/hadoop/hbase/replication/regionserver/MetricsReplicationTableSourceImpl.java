@@ -35,8 +35,11 @@ public class MetricsReplicationTableSourceImpl implements MetricsReplicationTabl
 
   private final String shippedBytesKey;
 
+  private final String walAppendBytesKey;
+
   private final MutableHistogram ageOfLastShippedOpHist;
   private final MutableFastCounter shippedBytesCounter;
+  private final MutableFastCounter walAppendBytesCounter;
 
   public MetricsReplicationTableSourceImpl(MetricsReplicationSourceImpl rms, String tableName) {
     this.rms = rms;
@@ -48,6 +51,9 @@ public class MetricsReplicationTableSourceImpl implements MetricsReplicationTabl
 
     shippedBytesKey = this.keyPrefix + "shippedBytes";
     shippedBytesCounter = rms.getMetricsRegistry().getCounter(shippedBytesKey, 0L);
+
+    walAppendBytesKey = this.keyPrefix + "walAppendBytes";
+    walAppendBytesCounter = rms.getMetricsRegistry().getCounter(walAppendBytesKey, 0L);
   }
 
   @Override
@@ -64,6 +70,7 @@ public class MetricsReplicationTableSourceImpl implements MetricsReplicationTabl
   public void clear() {
     rms.removeMetric(ageOfLastShippedOpKey);
     rms.removeMetric(shippedBytesKey);
+    rms.removeMetric(walAppendBytesKey);
   }
 
   @Override
@@ -74,6 +81,16 @@ public class MetricsReplicationTableSourceImpl implements MetricsReplicationTabl
   @Override
   public long getShippedBytes() {
     return shippedBytesCounter.value();
+  }
+
+  @Override
+  public void incrWalAppendBytes(long size) {
+    walAppendBytesCounter.incr(size);
+  }
+
+  @Override
+  public long getWalAppendBytes() {
+    return walAppendBytesCounter.value();
   }
 
   @Override

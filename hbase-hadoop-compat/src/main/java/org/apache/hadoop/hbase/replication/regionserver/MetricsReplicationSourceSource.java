@@ -52,6 +52,8 @@ public interface MetricsReplicationSourceSource extends BaseSource {
   // This is to track the num of replication sources getting initialized
   public static final String SOURCE_INITIALIZING = "source.numInitializing";
 
+  public static final String SOURCE_WAL_APPEND_BYTES = "source.walAppendBytes";
+
   void setLastShippedAge(long age);
 
   void incrSizeOfLogQueue(int size);
@@ -117,4 +119,8 @@ public interface MetricsReplicationSourceSource extends BaseSource {
   void decrSourceInitializing();
 
   int getSourceInitializing();
+
+  long getWalAppendBytes();
+
+  void incrWalAppendBytes(long size);
 }
