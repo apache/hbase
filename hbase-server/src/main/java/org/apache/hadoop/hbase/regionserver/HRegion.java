@@ -5576,7 +5576,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         }
       } catch (EOFException eof) {
         if (!conf.getBoolean(RECOVERED_EDITS_IGNORE_EOF, false)) {
-          Path p = WALSplitUtil.moveAsideBadEditsFile(walFS, edits);
+          Path p = WALSplitUtil.moveAsideBadEditsFile(fs, edits);
           msg = "EnLongAddered EOF. Most likely due to Master failure during "
             + "wal splitting, so we have this data in another edit. Continuing, but renaming "
             + edits + " as " + p + " for region " + this;
@@ -5590,7 +5590,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         // If the IOE resulted from bad file format,
         // then this problem is idempotent and retrying won't help
         if (ioe.getCause() instanceof ParseException) {
-          Path p = WALSplitUtil.moveAsideBadEditsFile(walFS, edits);
+          Path p = WALSplitUtil.moveAsideBadEditsFile(fs, edits);
           msg =
             "File corruption enLongAddered!  " + "Continuing, but renaming " + edits + " as " + p;
           LOG.warn(msg, ioe);
