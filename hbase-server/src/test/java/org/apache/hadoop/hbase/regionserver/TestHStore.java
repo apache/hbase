@@ -2964,6 +2964,36 @@ public class TestHStore {
     }
   }
 
+  @Test
+  public void testLimitCompactionQueuedCount() throws IOException {
+    init(this.name.getMethodName());
+    // Write a store file.
+    store.add(new KeyValue(row, family, qf2, 1, (byte[]) null), null);
+    flush(1);
+    assertEquals(1, store.getStorefilesCount());
+
+    // We have 1 file, not need compact
+    assertFalse(store.needsCompaction());
+
+    // We have 3 file, need compact
+    addStoreFile();
+    addStoreFile();
+    store.refreshStoreFiles();
+    assertTrue(store.needsCompaction());
+
+    // A compaction queued, not need more
+    store.incrementCompactionsQueuedCount();
+    assertFalse(store.needsCompaction());
+
+    // We have 13 file now, then need one compaction more
+    int storeFileNum = 10;
+    for (int s = 0; s < storeFileNum; s++) {
+      addStoreFile();
+    }
+    store.refreshStoreFiles();
+    assertTrue(store.needsCompaction());
+  }
+
   private HStoreFile mockStoreFileWithLength(long length) {
     HStoreFile sf = mock(HStoreFile.class);
     StoreFileReader sfr = mock(StoreFileReader.class);
