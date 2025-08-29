@@ -635,8 +635,7 @@ public class StoreFileReader {
     return this.bulkLoadResult;
   }
 
-  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
-  public BloomFilter getGeneralBloomFilter() {
+  BloomFilter getGeneralBloomFilter() {
     return generalBloomFilter;
   }
 

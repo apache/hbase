@@ -27,12 +27,10 @@ import java.nio.ByteBuffer;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellComparatorImpl;
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.InnerStoreCellComparator;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MetaCellComparator;
 import org.apache.hadoop.hbase.io.compress.Compression;
-import org.apache.hadoop.hbase.monitoring.ThreadLocalServerSideScanMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -412,11 +410,6 @@ public class FixedFileTrailer {
     FixedFileTrailer fft = new FixedFileTrailer(majorVersion, minorVersion);
     fft.deserialize(new DataInputStream(new ByteArrayInputStream(buf.array(),
       buf.arrayOffset() + bufferSize - trailerSize, trailerSize)));
-    boolean isScanMetricsEnabled = ThreadLocalServerSideScanMetrics.isScanMetricsEnabled();
-    if (isScanMetricsEnabled) {
-      ThreadLocalServerSideScanMetrics.addBytesReadFromFs(trailerSize);
-      ThreadLocalServerSideScanMetrics.addBlockReadOpsCount(1);
-    }
     return fft;
   }
 
@@ -655,8 +648,7 @@ public class FixedFileTrailer {
     }
   }
 
-  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
-  public CellComparator createComparator() throws IOException {
+  CellComparator createComparator() throws IOException {
     expectAtLeastMajorVersion(2);
     return createComparator(comparatorClassName);
   }
