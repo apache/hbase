@@ -30,6 +30,6 @@ public class TestShell extends BaseTestShell {
 
   @Override
   protected String getSuitePattern() {
-    return "**/*_shell_test.rb";
+    return "**/*_test_cluster.rb";
   }
 }
