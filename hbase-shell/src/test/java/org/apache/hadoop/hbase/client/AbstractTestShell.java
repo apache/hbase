@@ -43,6 +43,19 @@ public abstract class AbstractTestShell {
   protected final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   protected final static ScriptingContainer jruby = new ScriptingContainer();
 
+  private PathType pathType;
+  private String scriptName;
+
+  public AbstractTestShell() {
+    this(PathType.ABSOLUTE, "src/test/ruby/tests_runner.rb");
+  }
+
+  public AbstractTestShell(PathType pathType, String scriptName) {
+    super();
+    this.pathType = pathType;
+    this.scriptName = scriptName;
+  }
+
   protected static void setUpConfig() throws IOException {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setInt("hbase.regionserver.msginterval", 100);
@@ -92,8 +105,9 @@ public abstract class AbstractTestShell {
     if (!excludes.isEmpty()) {
       System.setProperty("shell.test.exclude", excludes);
     }
-    LOG.info("Starting ruby tests. includes: {} excludes: {}", tests, excludes);
-    jruby.runScriptlet(PathType.ABSOLUTE, "src/test/ruby/tests_runner.rb");
+    LOG.info("Starting ruby tests on script: {} includes: {} excludes: {}", scriptName, tests,
+      excludes);
+    jruby.runScriptlet(pathType, scriptName);
   }
 
   @BeforeClass

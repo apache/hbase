@@ -17,14 +17,20 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.io.IOException;
+
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.ClassRule;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({ ClientTests.class, MediumTests.class })
 public class TestTableShell extends AbstractTestShell {
+  private static final Logger LOG = LoggerFactory.getLogger(TestTableShell.class);
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -33,5 +39,12 @@ public class TestTableShell extends AbstractTestShell {
   @Override
   protected String getIncludeList() {
     return "table_test.rb";
+  }
+
+  @Override
+  @Test
+  public void testRunShellTests() throws IOException {
+    LOG.info("Start ruby tests with cluster");
+    super.testRunShellTests();
   }
 }

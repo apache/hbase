@@ -17,88 +17,23 @@
 # limitations under the License.
 #
 
-require 'rubygems'
-require 'rake'
-require 'set'
+# This runner will launch shell tests that require a HBase cluster running.
+# Please keep any relevant changes in sync between all *tests_runner.rb
+
+require_relative 'base_test_runner'
 
 puts "Ruby description: #{RUBY_DESCRIPTION}"
 
-unless defined?($TEST_CLUSTER)
-  include Java
-
-  # Set logging level to avoid verboseness
-  log_level = 'OFF'
-  org.apache.hadoop.hbase.logging.Log4jUtils.setRootLevel(log_level)
-  org.apache.hadoop.hbase.logging.Log4jUtils.setAllLevels('org.apache.zookeeper', log_level)
-  org.apache.hadoop.hbase.logging.Log4jUtils.setAllLevels('org.apache.hadoop.hdfs', log_level)
-  org.apache.hadoop.hbase.logging.Log4jUtils.setAllLevels('org.apache.hadoop.hbase', log_level)
-  org.apache.hadoop.hbase.logging.Log4jUtils
-    .setAllLevels('org.apache.hadoop.ipc.HBaseServer', log_level)
-
-  java_import org.apache.hadoop.hbase.HBaseTestingUtility
-
-  $TEST_CLUSTER = HBaseTestingUtility.new
-  $TEST_CLUSTER.configuration.setInt("hbase.regionserver.msginterval", 100)
-  $TEST_CLUSTER.configuration.setInt("hbase.client.pause", 250)
-  $TEST_CLUSTER.configuration.set("hbase.quota.enabled", "true")
-  $TEST_CLUSTER.configuration.set('hbase.master.quotas.snapshot.chore.period', 5000)
-  $TEST_CLUSTER.configuration.set('hbase.master.quotas.snapshot.chore.delay', 5000)
-  $TEST_CLUSTER.configuration.setInt(org.apache.hadoop.hbase.HConstants::HBASE_CLIENT_RETRIES_NUMBER, 6)
-  $TEST_CLUSTER.startMiniCluster
-  @own_cluster = true
-end
-
 require 'test_helper'
 
-puts "Running tests..."
+puts "Running tests with a cluster..."
 
-if java.lang.System.get_property('shell.test.include')
-  includes = Set.new(java.lang.System.get_property('shell.test.include').split(','))
-end
+# Get test filters and runner args
+includes, excludes = BaseTestRunner.get_test_filters
+runner_args = BaseTestRunner.get_runner_args
 
-if java.lang.System.get_property('shell.test.exclude')
-  excludes = Set.new(java.lang.System.get_property('shell.test.exclude').split(','))
-end
+# Load test files
+BaseTestRunner.load_test_files("*_test.rb", includes, excludes)
 
-files = Dir[ File.dirname(__FILE__) + "/**/*_test.rb" ]
-files.each do |file|
-  filename = File.basename(file)
-  if includes != nil && !includes.include?(filename)
-    puts "Skip #{filename} because of not included"
-    next
-  end
-  if excludes != nil && excludes.include?(filename)
-    puts "Skip #{filename} because of excluded"
-    next
-  end
-  begin
-    puts "loading test file '#{filename}'."
-    load(file)
-  rescue => e
-    puts "ERROR: #{e}"
-    raise
-  end
-end
-
-# If this system property is set, we'll use it to filter the test cases.
-runner_args = []
-if java.lang.System.get_property('shell.test')
-  shell_test_pattern = java.lang.System.get_property('shell.test')
-  puts "Only running tests that match #{shell_test_pattern}"
-  runner_args << "--testcase=#{shell_test_pattern}"
-end
-begin
-  # first couple of args are to match the defaults, so we can pass options to limit the tests run
-  unless Test::Unit::AutoRunner.run(false, nil, runner_args)
-    raise 'Shell unit tests failed. Check output file for details.'
-  end
-rescue SystemExit => e
-  # Unit tests should not raise uncaught SystemExit exceptions. This could cause tests to be ignored.
-  raise 'Caught SystemExit during unit test execution! Check output file for details.'
-end
-
-puts "Done with tests! Shutting down the cluster..."
-if @own_cluster
-  $TEST_CLUSTER.shutdownMiniCluster
-  java.lang.System.exit(0)
-end
+# Run tests
+BaseTestRunner.run_tests("cluster", runner_args)

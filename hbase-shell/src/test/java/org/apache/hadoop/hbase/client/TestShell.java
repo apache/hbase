@@ -17,21 +17,38 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.io.IOException;
+
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.jruby.embed.PathType;
 import org.junit.ClassRule;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({ ClientTests.class, LargeTests.class })
 public class TestShell extends AbstractTestShell {
+  private static final Logger LOG = LoggerFactory.getLogger(TestShell.class);
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestShell.class);
+
+  public TestShell() {
+    super(PathType.CLASSPATH, "tests_runner.rb");
+  }
 
   @Override
   protected String getExcludeList() {
     return "replication_admin_test.rb,rsgroup_shell_test.rb,admin_test.rb,table_test.rb,"
       + "quotas_test.rb,admin2_test.rb,list_tables_test.rb";
+  }
+  @Override
+  @Test
+  public void testRunShellTests() throws IOException {
+    LOG.info("Start ruby tests with cluster");
+    super.testRunShellTests();
   }
 }

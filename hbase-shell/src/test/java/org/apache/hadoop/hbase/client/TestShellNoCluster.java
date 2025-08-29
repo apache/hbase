@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -39,6 +40,10 @@ public class TestShellNoCluster extends AbstractTestShell {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestShellNoCluster.class);
+
+  public TestShellNoCluster() {
+    super(PathType.CLASSPATH, "no_cluster_tests_runner.rb");
+  }
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -62,6 +67,6 @@ public class TestShellNoCluster extends AbstractTestShell {
   @Test
   public void testRunShellTests() throws IOException {
     LOG.info("Start ruby tests without cluster");
-    jruby.runScriptlet(PathType.CLASSPATH, "no_cluster_tests_runner.rb");
+    super.testRunShellTests();
   }
 }
