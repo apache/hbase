@@ -67,7 +67,7 @@ public class TestServerCall {
   private Message mockParam;
   private ByteBuffAllocator mockAllocator;
   private CellBlockBuilder mockCellBlockBuilder;
-  private InetAddress mockAddr;
+  private InetAddress lbAddr;
   private BlockingService mockService;
   private MethodDescriptor mockMethodDescriptor;
 
@@ -80,7 +80,7 @@ public class TestServerCall {
     mockParam = mock(Message.class);
     mockAllocator = mock(ByteBuffAllocator.class);
     mockCellBlockBuilder = mock(CellBlockBuilder.class);
-    mockAddr = mock(InetAddress.class);
+    lbAddr = InetAddress.getLoopbackAddress();
 
     mockMethodDescriptor =
       org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService.getDescriptor()
@@ -105,7 +105,7 @@ public class TestServerCall {
 
     // Create NettyServerCall instance
     NettyServerCall call = new NettyServerCall(1, mockService, mockMethodDescriptor, header,
-      mockParam, null, mockConnection, 100, mockAddr, System.currentTimeMillis(), 60000,
+      mockParam, null, mockConnection, 100, lbAddr, System.currentTimeMillis(), 60000,
       mockAllocator, failingCellBlockBuilder, null);
 
     // Set a successful response, but CellBlockBuilder will fail
@@ -138,7 +138,7 @@ public class TestServerCall {
       any(), any());
 
     NettyServerCall call = new NettyServerCall(1, mockService, mockMethodDescriptor, header,
-      mockParam, null, mockConnection, 100, mockAddr, System.currentTimeMillis(), 60000,
+      mockParam, null, mockConnection, 100, lbAddr, System.currentTimeMillis(), 60000,
       mockAllocator, failingCellBlockBuilder, null);
 
     Message mockResponse = mock(Message.class);
@@ -158,7 +158,7 @@ public class TestServerCall {
     when(normalCellBlockBuilder.buildCellBlock(any(), any(), any())).thenReturn(null);
 
     NettyServerCall call = new NettyServerCall(1, mockService, mockMethodDescriptor, header,
-      mockParam, null, mockConnection, 100, mockAddr, System.currentTimeMillis(), 60000,
+      mockParam, null, mockConnection, 100, lbAddr, System.currentTimeMillis(), 60000,
       mockAllocator, normalCellBlockBuilder, null);
 
     RPCProtos.CellBlockMeta mockResponse =
