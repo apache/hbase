@@ -44,6 +44,6 @@ public class TestShellNoCluster extends AbstractTestShell {
 
   @Override
   protected String getSuitePattern() {
-    return "**/*_no_cluster_test.rb";
+    return "**/*_test_no_cluster.rb";
   }
 }
