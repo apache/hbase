@@ -115,11 +115,14 @@ public abstract class AbstractTestShell {
     // Start mini cluster
     // 3 datanodes needed for erasure coding checks
     TEST_UTIL.startMiniCluster(3);
+
+    setUpJRubyRuntime();
+  }
+
+  protected static void setupDFS() throws IOException {
     DistributedFileSystem dfs =
       (DistributedFileSystem) FileSystem.get(TEST_UTIL.getConfiguration());
     dfs.enableErasureCodingPolicy("XOR-2-1-1024k");
-
-    setUpJRubyRuntime();
   }
 
   @AfterClass

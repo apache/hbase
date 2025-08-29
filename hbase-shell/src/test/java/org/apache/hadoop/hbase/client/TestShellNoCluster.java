@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -27,15 +26,10 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
-import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Category({ ClientTests.class, MediumTests.class })
 public class TestShellNoCluster extends AbstractTestShell {
-  private static final Logger LOG = LoggerFactory.getLogger(TestShellNoCluster.class);
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestShellNoCluster.class);
@@ -60,13 +54,5 @@ public class TestShellNoCluster extends AbstractTestShell {
   @Override
   protected String getSuitePattern() {
     return "**/*_no_cluster_test.rb";
-  }
-
-  // Keep the same name so we override the with-a-cluster test
-  @Override
-  @Test
-  public void testRunShellTests() throws IOException {
-    LOG.info("Start ruby tests without cluster");
-    super.testRunShellTests();
   }
 }

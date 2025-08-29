@@ -17,20 +17,12 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.junit.BeforeClass;
 
-@Category({ ClientTests.class, LargeTests.class })
-public class TestChangeSftShell extends BaseTestShell {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestChangeSftShell.class);
-
-  @Override
-  protected String getIncludeList() {
-    return "sftchange_shell_test.rb";
+public abstract class BaseTestShell extends AbstractTestShell {
+  @BeforeClass
+  public static void setUpBeforeClass() throws Exception {
+    AbstractTestShell.setUpBeforeClass();
+    AbstractTestShell.setupDFS();
   }
 }

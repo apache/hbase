@@ -29,7 +29,7 @@ test_suite_name = java.lang.System.get_property('shell.test.suite_name')
 
 test_suite_pattern = java.lang.System.get_property('shell.test.suite_pattern')
 
-puts "Running tests for ${test_suite_name} with pattern: ${test_suite_pattern} ..."
+puts "Running tests for #{test_suite_name} with pattern: #{test_suite_pattern} ..."
 
 if java.lang.System.get_property('shell.test.include')
   includes = Set.new(java.lang.System.get_property('shell.test.include').split(','))
@@ -39,7 +39,7 @@ if java.lang.System.get_property('shell.test.exclude')
   excludes = Set.new(java.lang.System.get_property('shell.test.exclude').split(','))
 end
 
-files = Dir[ File.dirname(__FILE__) + "/**/*_test.rb" ]
+files = Dir[ File.dirname(__FILE__) + test_suite_pattern ]
 files.each do |file|
   filename = File.basename(file)
   if includes != nil && !includes.include?(filename)
