@@ -31,6 +31,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.jruby.embed.PathType;
 import org.jruby.embed.ScriptingContainer;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -42,19 +43,6 @@ public abstract class AbstractTestShell {
 
   protected final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   protected final static ScriptingContainer jruby = new ScriptingContainer();
-
-  private PathType pathType;
-  private String scriptName;
-
-  public AbstractTestShell() {
-    this(PathType.ABSOLUTE, "src/test/ruby/tests_runner.rb");
-  }
-
-  public AbstractTestShell(PathType pathType, String scriptName) {
-    super();
-    this.pathType = pathType;
-    this.scriptName = scriptName;
-  }
 
   protected static void setUpConfig() throws IOException {
     Configuration conf = TEST_UTIL.getConfiguration();
@@ -95,6 +83,16 @@ public abstract class AbstractTestShell {
     return "";
   }
 
+  protected String getSuitePattern() {
+    return "**/*_test.rb";
+  }
+
+  @Before
+  public void setUp() {
+    System.setProperty("shell.test.suite_name", getClass().getSimpleName());
+    System.setProperty("shell.test.suite_pattern", getSuitePattern());
+  }
+
   @Test
   public void testRunShellTests() throws IOException {
     final String tests = getIncludeList();
@@ -105,9 +103,9 @@ public abstract class AbstractTestShell {
     if (!excludes.isEmpty()) {
       System.setProperty("shell.test.exclude", excludes);
     }
-    LOG.info("Starting ruby tests on script: {} includes: {} excludes: {}", scriptName, tests,
-      excludes);
-    jruby.runScriptlet(pathType, scriptName);
+    LOG.info("Starting ruby tests on script: {} includes: {} excludes: {}",
+      getClass().getSimpleName(), tests, excludes);
+    jruby.runScriptlet(PathType.ABSOLUTE, "src/test/ruby/tests_runner.rb");
   }
 
   @BeforeClass

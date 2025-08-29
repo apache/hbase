@@ -24,7 +24,6 @@ import java.util.List;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.jruby.embed.PathType;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -41,10 +40,6 @@ public class TestShellNoCluster extends AbstractTestShell {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestShellNoCluster.class);
 
-  public TestShellNoCluster() {
-    super(PathType.CLASSPATH, "no_cluster_tests_runner.rb");
-  }
-
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     // no cluster
@@ -60,6 +55,11 @@ public class TestShellNoCluster extends AbstractTestShell {
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     // no cluster
+  }
+
+  @Override
+  protected String getSuitePattern() {
+    return "**/*_no_cluster_test.rb";
   }
 
   // Keep the same name so we override the with-a-cluster test
