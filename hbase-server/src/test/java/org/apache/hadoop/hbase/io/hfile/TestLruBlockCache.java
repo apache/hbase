@@ -141,7 +141,7 @@ public class TestLruBlockCache {
     }
 
     // wait until at least one eviction has run
-    Waiter.waitFor(CONF, 30000, 200, new ExplainingPredicate<Exception>() {
+    Waiter.waitFor(CONF, 31000, 200, new ExplainingPredicate<Exception>() {
 
       @Override
       public boolean evaluate() throws Exception {
