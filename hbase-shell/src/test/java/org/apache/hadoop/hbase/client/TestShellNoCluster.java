@@ -17,9 +17,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -37,13 +34,7 @@ public class TestShellNoCluster extends AbstractTestShell {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     // no cluster
-    List<String> loadPaths = new ArrayList<>(2);
-    loadPaths.add("src/test/ruby");
-    jruby.setLoadPaths(loadPaths);
-    jruby.put("$TEST_CLUSTER", TEST_UTIL);
-    System.setProperty("jruby.jit.logging.verbose", "true");
-    System.setProperty("jruby.jit.logging", "true");
-    System.setProperty("jruby.native.verbose", "true");
+    AbstractTestShell.setUpJRubyRuntime();
   }
 
   @AfterClass

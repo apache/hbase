@@ -46,6 +46,6 @@ public class TestRSGroupShell extends AbstractTestShell {
 
   @Override
   protected String getIncludeList() {
-    return "rsgroup_shell_test.rb";
+    return "rsgroup_test.rb";
   }
 }

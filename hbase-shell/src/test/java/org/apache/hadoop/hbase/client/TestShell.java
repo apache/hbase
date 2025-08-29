@@ -29,8 +29,7 @@ public class TestShell extends BaseTestShell {
   public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestShell.class);
 
   @Override
-  protected String getExcludeList() {
-    return "replication_admin_test.rb,rsgroup_shell_test.rb,admin_test.rb,table_test.rb,"
-      + "quotas_test.rb,admin2_test.rb,list_tables_test.rb";
+  protected String getSuitePattern() {
+    return "**/*_shell_test.rb";
   }
 }
