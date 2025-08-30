@@ -35,6 +35,7 @@ public interface RubyShellTest {
   static Logger LOG = LoggerFactory.getLogger(RubyShellTest.class);
 
   HBaseTestingUtil getTEST_UTIL();
+
   ScriptingContainer getJRuby();
 
   /** Returns comma separated list of ruby script names for tests */
