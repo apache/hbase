@@ -30,7 +30,7 @@ public class TestListTablesShell extends AbstractTestShell {
     HBaseClassTestRule.forClass(TestListTablesShell.class);
 
   @Override
-  protected String getIncludeList() {
+  public String getIncludeList() {
     return "list_tables_test.rb";
   }
 }

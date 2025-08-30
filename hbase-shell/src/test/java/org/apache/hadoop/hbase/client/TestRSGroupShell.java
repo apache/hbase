@@ -21,7 +21,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.rsgroup.RSGroupUtil;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.junit.BeforeClass;
+import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
@@ -32,20 +32,15 @@ public class TestRSGroupShell extends AbstractTestShell {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestRSGroupShell.class);
 
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
-    setUpConfig();
-
+  @Before
+  public void setUp() throws Exception {
     // enable rs group
     RSGroupUtil.enableRSGroup(TEST_UTIL.getConfiguration());
-
-    TEST_UTIL.startMiniCluster(3);
-
-    setUpJRubyRuntime();
+    super.setUp();
   }
 
   @Override
-  protected String getIncludeList() {
+  public String getIncludeList() {
     return "rsgroup_shell_test.rb";
   }
 }

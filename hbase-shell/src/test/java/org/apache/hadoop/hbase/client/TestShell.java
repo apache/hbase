@@ -29,7 +29,7 @@ public class TestShell extends BaseTestShell {
   public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestShell.class);
 
   @Override
-  protected String getSuitePattern() {
+  public String getSuitePattern() {
     return "**/*_test_cluster.rb";
   }
 }

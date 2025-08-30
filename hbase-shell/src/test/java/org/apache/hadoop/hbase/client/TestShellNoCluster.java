@@ -20,8 +20,8 @@ package org.apache.hadoop.hbase.client;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
@@ -31,19 +31,24 @@ public class TestShellNoCluster extends AbstractTestShell {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestShellNoCluster.class);
 
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
+  @Before
+  public void setUp() throws Exception {
+    RubyShellTest.setUpConfig(this);
+
     // no cluster
-    AbstractTestShell.setUpJRubyRuntime();
+
+    RubyShellTest.setUpJRubyRuntime(this);
+
+    RubyShellTest.doTestSetup(this);
   }
 
-  @AfterClass
-  public static void tearDownAfterClass() throws Exception {
+  @After
+  public void tearDown() throws Exception {
     // no cluster
   }
 
   @Override
-  protected String getSuitePattern() {
+  public String getSuitePattern() {
     return "**/*_test_no_cluster.rb";
   }
 }

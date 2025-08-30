@@ -30,7 +30,7 @@ public class TestReplicationShell extends BaseTestShell {
     HBaseClassTestRule.forClass(TestReplicationShell.class);
 
   @Override
-  protected String getIncludeList() {
+  public String getIncludeList() {
     return "replication_admin_test.rb";
   }
 }

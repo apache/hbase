@@ -18,115 +18,56 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
-import org.apache.hadoop.hbase.security.access.SecureTestUtil;
-import org.apache.hadoop.hbase.security.visibility.VisibilityTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.jruby.embed.PathType;
 import org.jruby.embed.ScriptingContainer;
-import org.junit.AfterClass;
+import org.junit.After;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-public abstract class AbstractTestShell {
+public abstract class AbstractTestShell implements RubyShellTest {
+  protected final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
+  protected final ScriptingContainer jruby = new ScriptingContainer();
 
-  private static final Logger LOG = LoggerFactory.getLogger(AbstractTestShell.class);
-
-  protected final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
-  protected final static ScriptingContainer jruby = new ScriptingContainer();
-
-  protected static void setUpConfig() throws IOException {
-    Configuration conf = TEST_UTIL.getConfiguration();
-    conf.setInt("hbase.regionserver.msginterval", 100);
-    conf.setInt("hbase.client.pause", 250);
-    conf.setBoolean("hbase.quota.enabled", true);
-    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 6);
-    conf.setBoolean(CoprocessorHost.ABORT_ON_ERROR_KEY, false);
-    conf.setInt("hfile.format.version", 3);
-
-    // Below settings are necessary for task monitor test.
-    conf.setInt(HConstants.MASTER_INFO_PORT, 0);
-    conf.setInt(HConstants.REGIONSERVER_INFO_PORT, 0);
-    conf.setBoolean(HConstants.REGIONSERVER_INFO_PORT_AUTO, true);
-    // Security setup configuration
-    SecureTestUtil.enableSecurity(conf);
-    VisibilityTestUtil.enableVisiblityLabels(conf);
+  public HBaseTestingUtil getTEST_UTIL() {
+    return TEST_UTIL;
   }
 
-  protected static void setUpJRubyRuntime() {
-    LOG.debug("Configure jruby runtime, cluster set to {}", TEST_UTIL);
-    List<String> loadPaths = new ArrayList<>(2);
-    loadPaths.add("src/test/ruby");
-    jruby.setLoadPaths(loadPaths);
-    jruby.put("$TEST_CLUSTER", TEST_UTIL);
-    System.setProperty("jruby.jit.logging.verbose", "true");
-    System.setProperty("jruby.jit.logging", "true");
-    System.setProperty("jruby.native.verbose", "true");
+  public ScriptingContainer getJRuby() {
+    return jruby;
   }
 
-  /** Returns comma separated list of ruby script names for tests */
-  protected String getIncludeList() {
-    return "";
-  }
-
-  /** Returns comma separated list of ruby script names for tests to skip */
-  protected String getExcludeList() {
-    return "";
-  }
-
-  protected String getSuitePattern() {
+  public String getSuitePattern() {
     return "**/*_test.rb";
   }
 
   @Before
-  public void setUp() {
-    System.setProperty("shell.test.suite_name", getClass().getSimpleName());
-    System.setProperty("shell.test.suite_pattern", getSuitePattern());
-  }
-
-  @Test
-  public void testRunShellTests() throws IOException {
-    final String tests = getIncludeList();
-    final String excludes = getExcludeList();
-    if (!tests.isEmpty()) {
-      System.setProperty("shell.test.include", tests);
-    }
-    if (!excludes.isEmpty()) {
-      System.setProperty("shell.test.exclude", excludes);
-    }
-    LOG.info("Starting ruby tests on script: {} includes: {} excludes: {}",
-      getClass().getSimpleName(), tests, excludes);
-    jruby.runScriptlet(PathType.ABSOLUTE, "src/test/ruby/tests_runner.rb");
-  }
-
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
-    setUpConfig();
+  public void setUp() throws Exception {
+    RubyShellTest.setUpConfig(this);
 
     // Start mini cluster
     // 3 datanodes needed for erasure coding checks
     TEST_UTIL.startMiniCluster(3);
 
-    setUpJRubyRuntime();
+    RubyShellTest.setUpJRubyRuntime(this);
+
+    RubyShellTest.doTestSetup(this);
   }
 
-  protected static void setupDFS() throws IOException {
+  protected void setupDFS() throws IOException {
     DistributedFileSystem dfs =
       (DistributedFileSystem) FileSystem.get(TEST_UTIL.getConfiguration());
     dfs.enableErasureCodingPolicy("XOR-2-1-1024k");
   }
 
-  @AfterClass
-  public static void tearDownAfterClass() throws Exception {
+  @After
+  public void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
+  }
+
+  @Test
+  public void testRunShellTests() throws IOException {
+    RubyShellTest.testRunShellTests(this);
   }
 }

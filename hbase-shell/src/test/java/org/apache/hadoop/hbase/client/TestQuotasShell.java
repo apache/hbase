@@ -30,7 +30,7 @@ public class TestQuotasShell extends BaseTestShell {
     HBaseClassTestRule.forClass(TestQuotasShell.class);
 
   @Override
-  protected String getIncludeList() {
+  public String getIncludeList() {
     return "quotas_test.rb";
   }
 }

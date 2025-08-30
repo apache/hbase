@@ -17,12 +17,12 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.junit.BeforeClass;
+import org.junit.Before;
 
 public abstract class BaseTestShell extends AbstractTestShell {
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
-    AbstractTestShell.setUpBeforeClass();
-    AbstractTestShell.setupDFS();
+  @Before
+  public void setUp() throws Exception {
+    super.setUp();
+    super.setupDFS();
   }
 }
