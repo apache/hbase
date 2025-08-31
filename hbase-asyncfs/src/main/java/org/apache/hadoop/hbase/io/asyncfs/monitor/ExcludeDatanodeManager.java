@@ -23,6 +23,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -52,7 +53,7 @@ public class ExcludeDatanodeManager implements ConfigurationObserver {
     "hbase.regionserver.async.wal.exclude.datanode.info.ttl.hour";
   public static final int DEFAULT_WAL_EXCLUDE_DATANODE_TTL = 6; // 6 hours
 
-  private volatile Cache<DatanodeInfo, Long> excludeDNsCache;
+  private volatile Cache<DatanodeInfo, Pair<String, Long>> excludeDNsCache;
   private final int maxExcludeDNCount;
   private final Configuration conf;
   // This is a map of providerId->StreamSlowMonitor
@@ -78,7 +79,7 @@ public class ExcludeDatanodeManager implements ConfigurationObserver {
   public boolean tryAddExcludeDN(DatanodeInfo datanodeInfo, String cause) {
     boolean alreadyMarkedSlow = getExcludeDNs().containsKey(datanodeInfo);
     if (!alreadyMarkedSlow) {
-      excludeDNsCache.put(datanodeInfo, EnvironmentEdgeManager.currentTime());
+      excludeDNsCache.put(datanodeInfo, new Pair<>(cause, EnvironmentEdgeManager.currentTime()));
       LOG.info(
         "Added datanode: {} to exclude cache by [{}] success, current excludeDNsCache size={}",
         datanodeInfo, cause, excludeDNsCache.size());
@@ -95,7 +96,31 @@ public class ExcludeDatanodeManager implements ConfigurationObserver {
     return streamSlowMonitors.computeIfAbsent(key, k -> new StreamSlowMonitor(conf, key, this));
   }
 
-  public Map<DatanodeInfo, Long> getExcludeDNs() {
+  /**
+   * Enumerates the reasons for excluding a datanode from certain operations. Each enum constant
+   * represents a specific cause leading to exclusion.
+   */
+  public enum ExcludeCause {
+    CONNECT_ERROR("connect error"),
+    SLOW_PACKET_ACK("slow packet ack");
+
+    private final String cause;
+
+    ExcludeCause(String cause) {
+      this.cause = cause;
+    }
+
+    public String getCause() {
+      return cause;
+    }
+
+    @Override
+    public String toString() {
+      return cause;
+    }
+  }
+
+  public Map<DatanodeInfo, Pair<String, Long>> getExcludeDNs() {
     return excludeDNsCache.asMap();
   }
 
