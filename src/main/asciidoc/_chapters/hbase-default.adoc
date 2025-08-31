@@ -724,6 +724,16 @@ Client scanner lease period in milliseconds.
 .Default
 `2`
 
+[[hbase.client.connection.metacache.invalidate-interval.ms]]
+*`hbase.client.connection.metacache.invalidate-interval.ms`*::
++
+.Description
+Interval in milliseconds of checking and invalidating meta cache when table
+      disabled or dropped, when set to zero means disable checking, suggest set it to 24h
+      or a higher value, because disable/delete table usually not very frequently.
++
+.Default
+`0`
 
 [[hbase.bulkload.retries.number]]
 *`hbase.bulkload.retries.number`*::
