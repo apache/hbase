@@ -306,6 +306,74 @@ public class StoreFileWriter implements CellSink, ShipperListener {
   }
 
   /**
+   * Thread compaction context into the writer so downstream formats (e.g., v4 sections) can
+   * reflect MAJOR_COMPACTION_KEY/HISTORICAL/COMPACTION_EVENT_KEY consistently.
+   * Should be called immediately after writer creation and before any cells are appended.
+   * <p>
+   * Effects:
+   * <ul>
+   * <li>Writes {@link HStoreFile#MAJOR_COMPACTION_KEY} to indicate major/minor compaction.</li>
+   * <li>Writes {@link HStoreFile#COMPACTION_EVENT_KEY} built from the compaction input set.
+   *     See {@link #buildCompactionEventTrackerBytes(java.util.function.Supplier, java.util.Collection)}
+   *     for inclusion semantics.</li>
+   * <li>Writes {@link HStoreFile#HISTORICAL_KEY}: {@code false} for the live writer and
+   *     {@code true} for the historical writer (when dual-writing is enabled).</li>
+   * </ul>
+   * For HFile v4 (multi-tenant) writers, these file info entries are propagated to each newly
+   * created tenant section so that every section reflects the real compaction context.
+   *
+   * @param majorCompaction {@code true} if this compaction is major, otherwise {@code false}
+   * @param storeFiles the set of input store files being compacted into this writer
+   * @throws IOException if writing file info fails
+   */
+  public void appendCompactionContext(final boolean majorCompaction,
+    final Collection<HStoreFile> storeFiles) throws IOException {
+    byte[] eventBytes = buildCompactionEventTrackerBytes(this.compactedFilesSupplier, storeFiles);
+    // live file
+    liveFileWriter.appendFileInfo(MAJOR_COMPACTION_KEY, Bytes.toBytes(majorCompaction));
+    liveFileWriter.appendFileInfo(COMPACTION_EVENT_KEY, eventBytes);
+    liveFileWriter.appendFileInfo(HISTORICAL_KEY, Bytes.toBytes(false));
+    // historical file if enabled
+    if (historicalFileWriter != null) {
+      historicalFileWriter.appendFileInfo(MAJOR_COMPACTION_KEY, Bytes.toBytes(majorCompaction));
+      historicalFileWriter.appendFileInfo(COMPACTION_EVENT_KEY, eventBytes);
+      historicalFileWriter.appendFileInfo(HISTORICAL_KEY, Bytes.toBytes(true));
+    }
+  }
+
+  /**
+   * Used when write {@link HStoreFile#COMPACTION_EVENT_KEY} to new file's file info. The compacted
+   * store files' names are needed. If a compacted store file is itself the result of compaction,
+   * its compacted files which are still not archived are needed, too. We do not add compacted files
+   * recursively.
+   * <p>
+   * Example: If files A, B, C compacted to new file D, and file D compacted to new file E, we will
+   * write A, B, C, D to file E's compacted files. If later file E compacted to new file F, we will
+   * add E to F's compacted files first, then add E's compacted files (A, B, C, D) to it. There is
+   * no need to add D's compacted file again, as D's compacted files have already been included in
+   * E's compacted files. See HBASE-20724 for more details.
+   *
+   * @param compactedFilesSupplier supplier returning store files compacted but not yet archived
+   * @param storeFiles the compacted store files to generate this new file
+   * @return bytes of CompactionEventTracker
+   */
+  private static byte[] buildCompactionEventTrackerBytes(
+    Supplier<Collection<HStoreFile>> compactedFilesSupplier, Collection<HStoreFile> storeFiles) {
+    Set<String> notArchivedCompactedStoreFiles = compactedFilesSupplier.get().stream()
+      .map(sf -> sf.getPath().getName()).collect(Collectors.toSet());
+    Set<String> compactedStoreFiles = new HashSet<>();
+    for (HStoreFile storeFile : storeFiles) {
+      compactedStoreFiles.add(storeFile.getFileInfo().getPath().getName());
+      for (String csf : storeFile.getCompactedStoreFiles()) {
+        if (notArchivedCompactedStoreFiles.contains(csf)) {
+          compactedStoreFiles.add(csf);
+        }
+      }
+    }
+    return ProtobufUtil.toCompactionEventTrackerBytes(compactedStoreFiles);
+  }
+
+  /**
    * For use in testing.
    */
   HFile.Writer getLiveFileWriter() {
@@ -607,36 +675,12 @@ public class StoreFileWriter implements CellSink, ShipperListener {
       final Collection<HStoreFile> storeFiles) throws IOException {
       writer.appendFileInfo(MAX_SEQ_ID_KEY, Bytes.toBytes(maxSequenceId));
       writer.appendFileInfo(MAJOR_COMPACTION_KEY, Bytes.toBytes(majorCompaction));
-      writer.appendFileInfo(COMPACTION_EVENT_KEY, toCompactionEventTrackerBytes(storeFiles));
+      writer.appendFileInfo(COMPACTION_EVENT_KEY,
+        StoreFileWriter.buildCompactionEventTrackerBytes(this.compactedFilesSupplier, storeFiles));
       appendTrackedTimestampsToMetadata();
     }
 
-    /**
-     * Used when write {@link HStoreFile#COMPACTION_EVENT_KEY} to new file's file info. The
-     * compacted store files's name is needed. But if the compacted store file is a result of
-     * compaction, it's compacted files which still not archived is needed, too. And don't need to
-     * add compacted files recursively. If file A, B, C compacted to new file D, and file D
-     * compacted to new file E, will write A, B, C, D to file E's compacted files. So if file E
-     * compacted to new file F, will add E to F's compacted files first, then add E's compacted
-     * files: A, B, C, D to it. And no need to add D's compacted file, as D's compacted files has
-     * been in E's compacted files, too. See HBASE-20724 for more details.
-     * @param storeFiles The compacted store files to generate this new file
-     * @return bytes of CompactionEventTracker
-     */
-    private byte[] toCompactionEventTrackerBytes(Collection<HStoreFile> storeFiles) {
-      Set<String> notArchivedCompactedStoreFiles = this.compactedFilesSupplier.get().stream()
-        .map(sf -> sf.getPath().getName()).collect(Collectors.toSet());
-      Set<String> compactedStoreFiles = new HashSet<>();
-      for (HStoreFile storeFile : storeFiles) {
-        compactedStoreFiles.add(storeFile.getFileInfo().getPath().getName());
-        for (String csf : storeFile.getCompactedStoreFiles()) {
-          if (notArchivedCompactedStoreFiles.contains(csf)) {
-            compactedStoreFiles.add(csf);
-          }
-        }
-      }
-      return ProtobufUtil.toCompactionEventTrackerBytes(compactedStoreFiles);
-    }
+    
 
     /**
      * Writes meta data. Call before {@link #close()} since its written as meta data to this file.

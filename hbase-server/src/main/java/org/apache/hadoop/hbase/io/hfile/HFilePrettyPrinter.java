@@ -965,19 +965,6 @@ public class HFilePrettyPrinter extends Configured implements Tool {
         out.println(FOUR_SPACES + "Tenant prefix length: " + tenantPrefixLength);
       }
       
-      // Check for encryption key field that was added in v3/v4
-      try {
-        byte[] encryptionKey = trailer.getEncryptionKey();
-        if (encryptionKey != null && encryptionKey.length > 0) {
-          out.println(FOUR_SPACES + "Encryption key present: true (length: " + encryptionKey.length + " bytes)");
-        } else {
-          out.println(FOUR_SPACES + "Encryption key present: false");
-        }
-      } catch (Exception e) {
-        // Encryption key method might not be available
-        out.println(FOUR_SPACES + "Encryption key information: not available");
-      }
-      
     } catch (Exception e) {
       out.println(FOUR_SPACES + "Unable to retrieve v4-specific trailer information: " + e.getMessage());
     }

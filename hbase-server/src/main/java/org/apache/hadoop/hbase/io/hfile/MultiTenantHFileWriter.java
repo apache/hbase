@@ -104,8 +104,6 @@ public class MultiTenantHFileWriter implements HFile.Writer {
   
   /** Extractor for tenant information */
   private final TenantExtractor tenantExtractor;
-  /** Filesystem to write to */
-  private final FileSystem fs;
   /** Path for the HFile */
   private final Path path;
   /** Configuration settings */
@@ -150,15 +148,12 @@ public class MultiTenantHFileWriter implements HFile.Writer {
   /** Total uncompressed bytes */
   private long totalUncompressedBytes = 0;
   
-  /** Major version for HFile v4 */
-  private int majorVersion = HFile.MIN_FORMAT_VERSION_WITH_MULTI_TENANT;
-  
   /** HFile v4 trailer */
   private FixedFileTrailer trailer;
-  /** Meta block index writer */
-  private HFileBlockIndex.BlockIndexWriter metaBlockIndexWriter;
   /** File info for metadata */
   private HFileInfo fileInfo = new HFileInfo();
+  /** Defaults to apply to each new section's FileInfo (e.g., compaction context) */
+  private final HFileInfo sectionDefaultFileInfo = new HFileInfo();
   
   /** Whether write verification is enabled */
   private boolean enableWriteVerification;
@@ -176,6 +171,32 @@ public class MultiTenantHFileWriter implements HFile.Writer {
   private boolean bloomFilterEnabled;
   /** Type of bloom filter to use */
   private BloomType bloomFilterType;
+  /** Per-section delete family bloom filter writer */
+  private BloomFilterWriter currentDeleteFamilyBloomFilterWriter;
+  /** Per-section general bloom context for dedupe and LAST_BLOOM_KEY */
+  private org.apache.hadoop.hbase.util.BloomContext currentGeneralBloomContext;
+  /** Per-section delete family bloom context */
+  private org.apache.hadoop.hbase.util.BloomContext currentDeleteFamilyBloomContext;
+  /** Per-section time range tracker */
+  private org.apache.hadoop.hbase.regionserver.TimeRangeTracker currentSectionTimeRangeTracker;
+  /** Per-section earliest put timestamp */
+  private long currentSectionEarliestPutTs = org.apache.hadoop.hbase.HConstants.LATEST_TIMESTAMP;
+  /** Per-section delete family counter */
+  private long currentSectionDeleteFamilyCnt = 0;
+  /** Per-section max sequence id */
+  private long currentSectionMaxSeqId = 0;
+  /** Bloom param (e.g., rowprefix length) for the section */
+  private byte[] currentGeneralBloomParam;
+  
+  /**
+   * Only these FileInfo keys are propagated as per-section defaults across tenant sections.
+   * This avoids unintentionally overriding section-local metadata.
+   */
+  private static boolean isPropagatedDefaultKey(byte[] key) {
+    return Bytes.equals(key, org.apache.hadoop.hbase.regionserver.HStoreFile.MAJOR_COMPACTION_KEY)
+      || Bytes.equals(key, org.apache.hadoop.hbase.regionserver.HStoreFile.COMPACTION_EVENT_KEY)
+      || Bytes.equals(key, org.apache.hadoop.hbase.regionserver.HStoreFile.HISTORICAL_KEY);
+  }
   
   /**
    * Creates a multi-tenant HFile writer that writes sections to a single file.
@@ -199,7 +220,6 @@ public class MultiTenantHFileWriter implements HFile.Writer {
       BloomType bloomType) throws IOException {
     // Follow HFileWriterImpl pattern: accept path and create outputStream
     this.path = path;
-    this.fs = fs;
     this.conf = conf;
     this.cacheConf = cacheConf;
     this.tenantExtractor = tenantExtractor;
@@ -220,8 +240,6 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     // Initialize bulk load timestamp for comprehensive file info
     this.bulkloadTime = EnvironmentEdgeManager.currentTime();
     
-    // Initialize meta block index writer
-    this.metaBlockIndexWriter = new HFileBlockIndex.BlockIndexWriter();
     // initialize blockWriter and sectionIndexWriter after creating stream
     initialize();
   }
@@ -336,13 +354,37 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     // Write the cell to the current section
     currentSectionWriter.append(cell);
     
-    // Add to bloom filter if enabled
-    if (bloomFilterEnabled && currentBloomFilterWriter != null) {
+    // Update per-section metadata
+    // 1) General bloom (deduped by context)
+    if (bloomFilterEnabled && currentGeneralBloomContext != null) {
       try {
-        currentBloomFilterWriter.append(cell);
+        currentGeneralBloomContext.writeBloom(cell);
       } catch (IOException e) {
-        LOG.warn("Error adding cell to bloom filter", e);
+        LOG.warn("Error adding cell to general bloom filter", e);
       }
+    }
+    // 2) Delete family bloom and counter
+    if (org.apache.hadoop.hbase.PrivateCellUtil.isDeleteFamily(cell)
+        || org.apache.hadoop.hbase.PrivateCellUtil.isDeleteFamilyVersion(cell)) {
+      currentSectionDeleteFamilyCnt++;
+      if (currentDeleteFamilyBloomContext != null) {
+        try {
+          currentDeleteFamilyBloomContext.writeBloom(cell);
+        } catch (IOException e) {
+          LOG.warn("Error adding cell to delete family bloom filter", e);
+        }
+      }
+    }
+    // 3) Time range and earliest put ts
+    if (currentSectionTimeRangeTracker != null) {
+      currentSectionTimeRangeTracker.includeTimestamp(cell);
+    }
+    if (cell.getType() == Cell.Type.Put) {
+      currentSectionEarliestPutTs = Math.min(currentSectionEarliestPutTs, cell.getTimestamp());
+    }
+    // 4) Max seq id
+    if (cell.getSequenceId() > currentSectionMaxSeqId) {
+      currentSectionMaxSeqId = cell.getSequenceId();
     }
     
     // Track statistics for the entire file
@@ -388,23 +430,65 @@ public class MultiTenantHFileWriter implements HFile.Writer {
             Bytes.toStringBinary(currentTenantSectionId));
       }
       
-      // Add bloom filter to the section if enabled
+      // Add general bloom filter and metadata to the section if enabled
       if (bloomFilterEnabled && currentBloomFilterWriter != null) {
         long keyCount = currentBloomFilterWriter.getKeyCount();
         if (keyCount > 0) {
-          LOG.debug("Adding section-specific bloom filter with {} keys for section: {}", 
+          LOG.debug("Adding section-specific bloom filter with {} keys for section: {}",
               keyCount, Bytes.toStringBinary(currentTenantSectionId));
-          // Compact the bloom filter before adding it
           currentBloomFilterWriter.compactBloom();
-          // Add the bloom filter to the current section
           currentSectionWriter.addGeneralBloomFilter(currentBloomFilterWriter);
+          // Append bloom metadata similar to StoreFileWriter
+          currentSectionWriter.appendFileInfo(
+              org.apache.hadoop.hbase.regionserver.HStoreFile.BLOOM_FILTER_TYPE_KEY,
+              Bytes.toBytes(bloomFilterType.toString()));
+          if (currentGeneralBloomParam != null) {
+            currentSectionWriter.appendFileInfo(
+                org.apache.hadoop.hbase.regionserver.HStoreFile.BLOOM_FILTER_PARAM_KEY,
+                currentGeneralBloomParam);
+          }
+          // LAST_BLOOM_KEY
+          if (currentGeneralBloomContext != null) {
+            try {
+              currentGeneralBloomContext.addLastBloomKey(currentSectionWriter);
+            } catch (IOException e) {
+              LOG.warn("Failed to append LAST_BLOOM_KEY for section: {}",
+                  Bytes.toStringBinary(currentTenantSectionId), e);
+            }
+          }
         } else {
-          LOG.debug("No keys to add to bloom filter for section: {}", 
+          LOG.debug("No keys to add to general bloom filter for section: {}",
               Bytes.toStringBinary(currentTenantSectionId));
         }
-        // Clear the bloom filter writer for the next section
-        currentBloomFilterWriter = null;
       }
+      // Add delete family bloom filter and count
+      if (currentDeleteFamilyBloomFilterWriter != null) {
+        boolean hasDeleteFamilyBloom = currentDeleteFamilyBloomFilterWriter.getKeyCount() > 0;
+        if (hasDeleteFamilyBloom) {
+          currentDeleteFamilyBloomFilterWriter.compactBloom();
+          currentSectionWriter.addDeleteFamilyBloomFilter(currentDeleteFamilyBloomFilterWriter);
+        }
+      }
+      // Always append delete family count
+      currentSectionWriter.appendFileInfo(
+          org.apache.hadoop.hbase.regionserver.HStoreFile.DELETE_FAMILY_COUNT,
+          Bytes.toBytes(this.currentSectionDeleteFamilyCnt));
+      
+      // Append per-section time range and earliest put ts
+      if (currentSectionTimeRangeTracker != null) {
+        currentSectionWriter.appendFileInfo(
+            org.apache.hadoop.hbase.regionserver.HStoreFile.TIMERANGE_KEY,
+            org.apache.hadoop.hbase.regionserver.TimeRangeTracker
+                .toByteArray(currentSectionTimeRangeTracker));
+      }
+      currentSectionWriter.appendFileInfo(
+          org.apache.hadoop.hbase.regionserver.HStoreFile.EARLIEST_PUT_TS,
+          Bytes.toBytes(this.currentSectionEarliestPutTs));
+      
+      // Append per-section MAX_SEQ_ID_KEY
+      currentSectionWriter.appendFileInfo(
+          org.apache.hadoop.hbase.regionserver.HStoreFile.MAX_SEQ_ID_KEY,
+          Bytes.toBytes(this.currentSectionMaxSeqId));
       
       // Finish writing the current section
       currentSectionWriter.close();
@@ -445,6 +529,16 @@ public class MultiTenantHFileWriter implements HFile.Writer {
       throw e;
     } finally {
       currentSectionWriter = null;
+      // Clear per-section trackers
+      currentBloomFilterWriter = null;
+      currentDeleteFamilyBloomFilterWriter = null;
+      currentGeneralBloomContext = null;
+      currentDeleteFamilyBloomContext = null;
+      currentSectionTimeRangeTracker = null;
+      currentSectionEarliestPutTs = org.apache.hadoop.hbase.HConstants.LATEST_TIMESTAMP;
+      currentSectionDeleteFamilyCnt = 0;
+      currentSectionMaxSeqId = 0;
+      currentGeneralBloomParam = null;
     }
   }
   
@@ -461,7 +555,6 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     LOG.debug("Verifying section at offset {} with size {}", sectionStartOffset, sectionSize);
     
     // Basic verification: check that we can read the trailer
-    long currentPos = outputStream.getPos();
     try {
       // Seek to trailer position
       int trailerSize = FixedFileTrailer.getTrailerSize(3); // v3 sections
@@ -505,16 +598,83 @@ public class MultiTenantHFileWriter implements HFile.Writer {
         tenantId,
         sectionStartOffset);
     
-    // Create a new bloom filter for this section if enabled
+    // Initialize per-section trackers
+    this.currentSectionTimeRangeTracker =
+        org.apache.hadoop.hbase.regionserver.TimeRangeTracker.create(
+            org.apache.hadoop.hbase.regionserver.TimeRangeTracker.Type.NON_SYNC);
+    this.currentSectionEarliestPutTs = org.apache.hadoop.hbase.HConstants.LATEST_TIMESTAMP;
+    this.currentSectionDeleteFamilyCnt = 0;
+    this.currentSectionMaxSeqId = 0;
+
+    // Default per-section flags to ensure consistent presence across sections
+    currentSectionWriter.appendFileInfo(
+        org.apache.hadoop.hbase.regionserver.HStoreFile.MAJOR_COMPACTION_KEY,
+        Bytes.toBytes(false));
+    currentSectionWriter.appendFileInfo(
+        org.apache.hadoop.hbase.regionserver.HStoreFile.HISTORICAL_KEY,
+        Bytes.toBytes(false));
+    try {
+      byte[] emptyEvent = org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil
+          .toCompactionEventTrackerBytes(java.util.Collections.emptySet());
+      currentSectionWriter.appendFileInfo(
+          org.apache.hadoop.hbase.regionserver.HStoreFile.COMPACTION_EVENT_KEY,
+          emptyEvent);
+    } catch (Exception e) {
+      LOG.debug("Unable to append default COMPACTION_EVENT_KEY for section: {}",
+          tenantSectionId == null ? "null" : Bytes.toStringBinary(tenantSectionId), e);
+    }
+
+    // Apply only whitelisted section defaults (e.g., compaction context). Values here override above
+    for (java.util.Map.Entry<byte[], byte[]> e : sectionDefaultFileInfo.entrySet()) {
+      currentSectionWriter.appendFileInfo(e.getKey(), e.getValue());
+    }
+
+    // Create a new general bloom filter and contexts for this section if enabled
     if (bloomFilterEnabled) {
       currentBloomFilterWriter = BloomFilterFactory.createGeneralBloomAtWrite(
-          conf, 
+          conf,
           cacheConf,
           bloomFilterType,
-          0,  // Don't need to specify maxKeys here
-          currentSectionWriter); // Pass the section writer
-      
-      LOG.debug("Created new bloom filter for tenant section ID: {}", 
+          0,
+          currentSectionWriter);
+      if (currentBloomFilterWriter != null) {
+        // Create BloomContext matching type for dedupe and LAST_BLOOM_KEY
+        switch (bloomFilterType) {
+          case ROW:
+            currentGeneralBloomContext = new org.apache.hadoop.hbase.util.RowBloomContext(
+                currentBloomFilterWriter, fileContext.getCellComparator());
+            break;
+          case ROWCOL:
+            currentGeneralBloomContext = new org.apache.hadoop.hbase.util.RowColBloomContext(
+                currentBloomFilterWriter, fileContext.getCellComparator());
+            break;
+          case ROWPREFIX_FIXED_LENGTH:
+            currentGeneralBloomContext = new org.apache.hadoop.hbase.util.RowPrefixFixedLengthBloomContext(
+                currentBloomFilterWriter, fileContext.getCellComparator(),
+                org.apache.hadoop.hbase.util.Bytes.toInt(
+                    (currentGeneralBloomParam = org.apache.hadoop.hbase.util.BloomFilterUtil
+                        .getBloomFilterParam(bloomFilterType, conf))));
+            break;
+          default:
+            // Unsupported bloom type here should not happen as StoreFileWriter guards it
+            currentGeneralBloomContext = null;
+            break;
+        }
+        if (currentGeneralBloomParam == null) {
+          currentGeneralBloomParam = org.apache.hadoop.hbase.util.BloomFilterUtil
+              .getBloomFilterParam(bloomFilterType, conf);
+        }
+      }
+      // Initialize delete family bloom filter unless ROWCOL per StoreFileWriter semantics
+      if (bloomFilterType != BloomType.ROWCOL) {
+        currentDeleteFamilyBloomFilterWriter = BloomFilterFactory.createDeleteBloomAtWrite(
+            conf, cacheConf, 0, currentSectionWriter);
+        if (currentDeleteFamilyBloomFilterWriter != null) {
+          currentDeleteFamilyBloomContext = new org.apache.hadoop.hbase.util.RowBloomContext(
+              currentDeleteFamilyBloomFilterWriter, fileContext.getCellComparator());
+        }
+      }
+      LOG.debug("Initialized bloom filters for tenant section ID: {}",
           tenantSectionId == null ? "null" : Bytes.toStringBinary(tenantSectionId));
     }
     
@@ -687,6 +847,11 @@ public class MultiTenantHFileWriter implements HFile.Writer {
   
   @Override
   public void appendFileInfo(byte[] key, byte[] value) throws IOException {
+    // Propagate only known-safe defaults across sections
+    if (isPropagatedDefaultKey(key)) {
+      sectionDefaultFileInfo.append(key, value, true);
+    }
+    // If a section is active, also apply immediately
     if (currentSectionWriter != null) {
       currentSectionWriter.appendFileInfo(key, value);
     }
