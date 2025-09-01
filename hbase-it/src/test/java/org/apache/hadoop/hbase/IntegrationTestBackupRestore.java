@@ -85,7 +85,7 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
   protected static final int DEFAULT_REGIONSERVER_COUNT = 5;
   protected static final int DEFAULT_NUMBER_OF_TABLES = 1;
   protected static final int DEFAULT_NUM_ITERATIONS = 10;
-  protected static final int DEFAULT_ROWS_IN_ITERATION = 500000;
+  protected static final int DEFAULT_ROWS_IN_ITERATION = 10000;
   protected static final String SLEEP_TIME_KEY = "sleeptime";
   // short default interval because tests don't run very long.
   protected static final long SLEEP_TIME_DEFAULT = 50000L;
@@ -101,6 +101,38 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
   protected static Object lock = new Object();
 
   private static String BACKUP_ROOT_DIR = "backupIT";
+
+  /*
+   * This class is used to run the backup and restore thread(s). Throwing an exception in this
+   * thread will not cause the test to fail, so the purpose of this class is to both kick off the
+   * backup and restore and record any exceptions that occur so they can be thrown in the main
+   * thread.
+   */
+  protected class BackupAndRestoreThread implements Runnable {
+    private final TableName table;
+    private Throwable throwable;
+
+    public BackupAndRestoreThread(TableName table) {
+      this.table = table;
+      this.throwable = null;
+    }
+
+    public Throwable getThrowable() {
+      return this.throwable;
+    }
+
+    @Override
+    public void run() {
+      try {
+        runTestSingle(this.table);
+      } catch (Throwable t) {
+        LOG.error(
+          "An error occurred in thread {} when performing a backup and restore with table {}: ",
+          Thread.currentThread().getName(), this.table.getNameAsString(), t);
+        this.throwable = t;
+      }
+    }
+  }
 
   @Override
   @Before
@@ -175,28 +207,35 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
     runTestMulti();
   }
 
-  private void runTestMulti() throws IOException {
+  private void runTestMulti() throws Exception {
     LOG.info("IT backup & restore started");
     Thread[] workers = new Thread[numTables];
+    BackupAndRestoreThread[] backupAndRestoreThreads = new BackupAndRestoreThread[numTables];
     for (int i = 0; i < numTables; i++) {
       final TableName table = tableNames[i];
-      Runnable r = new Runnable() {
-        @Override
-        public void run() {
-          try {
-            runTestSingle(table);
-          } catch (IOException e) {
-            LOG.error("Failed", e);
-            Assert.fail(e.getMessage());
-          }
-        }
-      };
-      workers[i] = new Thread(r);
+      BackupAndRestoreThread backupAndRestoreThread = new BackupAndRestoreThread(table);
+      backupAndRestoreThreads[i] = backupAndRestoreThread;
+      workers[i] = new Thread(backupAndRestoreThread);
       workers[i].start();
     }
-    // Wait all workers to finish
-    for (Thread t : workers) {
-      Uninterruptibles.joinUninterruptibly(t);
+    // Wait for all workers to finish and check for errors
+    Throwable error = null;
+    Throwable threadThrowable;
+    for (int i = 0; i < numTables; i++) {
+      Uninterruptibles.joinUninterruptibly(workers[i]);
+      threadThrowable = backupAndRestoreThreads[i].getThrowable();
+      if (threadThrowable == null) {
+        continue;
+      }
+      if (error == null) {
+        error = threadThrowable;
+      } else {
+        error.addSuppressed(threadThrowable);
+      }
+    }
+    // Throw any found errors after all threads have completed
+    if (error != null) {
+      throw new AssertionError("An error occurred in a backup and restore thread", error);
     }
     LOG.info("IT backup & restore finished");
   }
@@ -229,8 +268,7 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
   }
 
   private String backup(BackupRequest request, BackupAdmin client) throws IOException {
-    String backupId = client.backupTables(request);
-    return backupId;
+    return client.backupTables(request);
   }
 
   private void restore(RestoreRequest request, BackupAdmin client) throws IOException {
@@ -300,7 +338,6 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
 
   private void restoreVerifyTable(Connection conn, BackupAdmin client, TableName table,
     String backupId, long expectedRows) throws IOException {
-
     TableName[] tablesRestoreIncMultiple = new TableName[] { table };
     restore(
       createRestoreRequest(BACKUP_ROOT_DIR, backupId, false, tablesRestoreIncMultiple, null, true),

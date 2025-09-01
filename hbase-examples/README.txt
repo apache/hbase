@@ -17,6 +17,12 @@ Example code.
         ${HBASE_ROOT}/hbase-thrift/src/main/resources/org/apache/hadoop/hbase/thrift/Hbase.thrift
     and re-placed at the corresponding paths. You should not have to do this generally.
 
+    For Python, modules with a dash cannot be imported. Instead, you must use an underscore or no
+    dash at all. You can generate the code in a custom directory with the following:
+    mkdir gen_py
+    thrift --gen py --out gen_py \
+        ${HBASE_ROOT}/hbase-thrift/src/main/resources/org/apache/hadoop/hbase/thrift/Hbase.thrift
+
     Before you run any Thrift examples, find a running HBase Thrift server (and a running
     hbase cluster for this server to talk to -- at a minimum start a standalone instance
     by doing ./bin/start-hbase.sh). If you start one locally (bin/hbase thrift start),
@@ -38,8 +44,8 @@ Example code.
       1. Modify the import path in the file to point to {$THRIFT_HOME}/lib/rb/lib.
       2. Execute {ruby DemoClient.rb} (or {ruby DemoClient.rb <host> <port>}).
 
-    * Python: hbase-examples/src/main/python/DemoClient.py
-      1. Modify the added system path in the file to point to {$THRIFT_HOME}/lib/py/build/lib.[YOUR SYSTEM]
+    * Python: hbase-examples/src/main/python/thrift1/DemoClient.py and hbase-examples/src/main/python/thrift2/DemoClient.py
+      1. Install the thrift package to your local Python environment: pip3 install thrift
       2. Execute {python DemoClient.py <host> <port>}.
 
     * PHP: hbase-examples/src/main/php/DemoClient.php

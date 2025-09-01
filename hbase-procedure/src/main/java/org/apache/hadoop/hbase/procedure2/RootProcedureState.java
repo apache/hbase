@@ -135,7 +135,7 @@ class RootProcedureState<TEnvironment> {
   /**
    * Called by the ProcedureExecutor to mark the procedure step as running.
    */
-  protected synchronized boolean acquire(Procedure<TEnvironment> proc) {
+  protected synchronized boolean acquire() {
     if (state != State.RUNNING) {
       return false;
     }
@@ -147,7 +147,7 @@ class RootProcedureState<TEnvironment> {
   /**
    * Called by the ProcedureExecutor to mark the procedure step as finished.
    */
-  protected synchronized void release(Procedure<TEnvironment> proc) {
+  protected synchronized void release() {
     running--;
   }
 

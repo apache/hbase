@@ -29,7 +29,7 @@ import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.net.HostAndPort;
-import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.ServletHolder;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.ee8.servlet.ServletHolder;
 
 /**
  * Create a Jetty embedded server to answer http requests. The primary goal is to serve up status
@@ -41,6 +41,9 @@ import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.ServletHolder;
 public class InfoServer {
   private static final String HBASE_APP_DIR = "hbase-webapps";
   private final org.apache.hadoop.hbase.http.HttpServer httpServer;
+
+  private static final String HADOOP_WEB_TLS_CONFIG_PREFIX = "ssl.server.";
+  private static final String HBASE_WEB_TLS_CONFIG_PREFIX = "hbase.ui.ssl.";
 
   /**
    * Create a status server on the given port. The jsp scripts are taken from
@@ -67,44 +70,79 @@ public class InfoServer {
       builder.setLogDir(logDir);
     }
     if (httpConfig.isSecure()) {
-      builder
-        .keyPassword(HBaseConfiguration.getPassword(c, "ssl.server.keystore.keypassword", null))
-        .keyStore(c.get("ssl.server.keystore.location"),
-          HBaseConfiguration.getPassword(c, "ssl.server.keystore.password", null),
-          c.get("ssl.server.keystore.type", "jks"))
-        .trustStore(c.get("ssl.server.truststore.location"),
-          HBaseConfiguration.getPassword(c, "ssl.server.truststore.password", null),
-          c.get("ssl.server.truststore.type", "jks"));
-      builder.excludeCiphers(c.get("ssl.server.exclude.cipher.list"));
+      // We are using the Hadoop HTTP server config properties.
+      // This makes it easy to keep in sync with Hadoop's UI servers, but hard to set this
+      // separately for HBase.
+      builder.keyPassword(getTLSPassword(c, "keystore.keypassword"))
+        .keyStore(getTLSProperty(c, "keystore.location"), getTLSPassword(c, "keystore.password"),
+          getTLSProperty(c, "keystore.type", "jks"))
+        .trustStore(getTLSProperty(c, "truststore.location"),
+          getTLSPassword(c, "truststore.password"), getTLSProperty(c, "truststore.type", "jks"))
+        // The ssl.server.*.protocols properties do not exist in Hadoop at the time of writing.
+        .setIncludeProtocols(getTLSProperty(c, "include.protocols"))
+        .setExcludeProtocols(getTLSProperty(c, "exclude.protocols"))
+        .setIncludeCiphers(getTLSProperty(c, "include.cipher.list"))
+        .setExcludeCiphers(getTLSProperty(c, "exclude.cipher.list"));
     }
+
+    final String httpAuthType = c.get(HttpServer.HTTP_UI_AUTHENTICATION, "").toLowerCase();
     // Enable SPNEGO authentication
-    if ("kerberos".equalsIgnoreCase(c.get(HttpServer.HTTP_UI_AUTHENTICATION, null))) {
+    if ("kerberos".equals(httpAuthType)) {
       builder.setUsernameConfKey(HttpServer.HTTP_SPNEGO_AUTHENTICATION_PRINCIPAL_KEY)
         .setKeytabConfKey(HttpServer.HTTP_SPNEGO_AUTHENTICATION_KEYTAB_KEY)
         .setKerberosNameRulesKey(HttpServer.HTTP_SPNEGO_AUTHENTICATION_KRB_NAME_KEY)
         .setSignatureSecretFileKey(HttpServer.HTTP_AUTHENTICATION_SIGNATURE_SECRET_FILE_KEY)
         .setSecurityEnabled(true);
+    }
 
-      // Set an admin ACL on sensitive webUI endpoints
+    // Set an admin ACL on sensitive webUI endpoints (works only if SPNEGO or LDAP is enabled)
+    if ("ldap".equals(httpAuthType) || "kerberos".equals(httpAuthType)) {
       AccessControlList acl = buildAdminAcl(c);
       builder.setACL(acl);
     }
+
     this.httpServer = builder.build();
+  }
+
+  private String getTLSPassword(Configuration c, String postfix) throws IOException {
+    return HBaseConfiguration.getPassword(c, HBASE_WEB_TLS_CONFIG_PREFIX + postfix,
+      HBaseConfiguration.getPassword(c, HADOOP_WEB_TLS_CONFIG_PREFIX + postfix, null));
+  }
+
+  private String getTLSProperty(Configuration c, String postfix) {
+    return getTLSProperty(c, postfix, null);
+  }
+
+  private String getTLSProperty(Configuration c, String postfix, String defaultValue) {
+    return c.get(HBASE_WEB_TLS_CONFIG_PREFIX + postfix,
+      c.get(HADOOP_WEB_TLS_CONFIG_PREFIX + postfix, defaultValue));
   }
 
   /**
    * Builds an ACL that will restrict the users who can issue commands to endpoints on the UI which
    * are meant only for administrators.
    */
-  AccessControlList buildAdminAcl(Configuration conf) {
-    final String userGroups = conf.get(HttpServer.HTTP_SPNEGO_AUTHENTICATION_ADMIN_USERS_KEY, null);
+  static AccessControlList buildAdminAcl(Configuration conf) {
+    // Initialize admin users based on whether http ui auth is set to ldap or kerberos
+    String httpAuthType = conf.get(HttpServer.HTTP_UI_AUTHENTICATION, "").toLowerCase();
+    final String adminUsers = getAdminUsers(conf, httpAuthType);
     final String adminGroups =
       conf.get(HttpServer.HTTP_SPNEGO_AUTHENTICATION_ADMIN_GROUPS_KEY, null);
-    if (userGroups == null && adminGroups == null) {
+    if (adminUsers == null && adminGroups == null) {
       // Backwards compatibility - if the user doesn't have anything set, allow all users in.
       return new AccessControlList("*", null);
     }
-    return new AccessControlList(userGroups, adminGroups);
+    return new AccessControlList(adminUsers, adminGroups);
+  }
+
+  private static String getAdminUsers(Configuration conf, String httpAuthType) {
+    if ("kerberos".equals(httpAuthType)) {
+      return conf.get(HttpServer.HTTP_SPNEGO_AUTHENTICATION_ADMIN_USERS_KEY, null);
+    } else if ("ldap".equals(httpAuthType)) {
+      return conf.get(HttpServer.HTTP_LDAP_AUTHENTICATION_ADMIN_USERS_KEY, null);
+    }
+    // If the auth type is not kerberos or ldap, return null
+    return null;
   }
 
   /**

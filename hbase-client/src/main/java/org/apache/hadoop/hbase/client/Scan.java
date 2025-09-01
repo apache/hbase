@@ -115,6 +115,8 @@ public class Scan extends Query {
   // define this attribute with the appropriate table name by calling
   // scan.setAttribute(Scan.SCAN_ATTRIBUTES_TABLE_NAME, Bytes.toBytes(tableName))
   static public final String SCAN_ATTRIBUTES_TABLE_NAME = "scan.attributes.table.name";
+  static private final String SCAN_ATTRIBUTES_METRICS_BY_REGION_ENABLE =
+    "scan.attributes.metrics.byregion.enable";
 
   /**
    * -1 means no caching specified and the value of {@link HConstants#HBASE_CLIENT_SCANNER_CACHING}
@@ -217,6 +219,7 @@ public class Scan extends Query {
     setPriority(scan.getPriority());
     readType = scan.getReadType();
     super.setReplicaId(scan.getReplicaId());
+    super.setQueryMetricsEnabled(scan.isQueryMetricsEnabled());
   }
 
   /**
@@ -249,6 +252,7 @@ public class Scan extends Query {
     this.mvccReadPoint = -1L;
     setPriority(get.getPriority());
     super.setReplicaId(get.getReplicaId());
+    super.setQueryMetricsEnabled(get.isQueryMetricsEnabled());
   }
 
   public boolean isGetScan() {
@@ -826,6 +830,7 @@ public class Scan extends Query {
       map.put("colFamTimeRangeMap", colFamTimeRangeMapStr);
     }
     map.put("priority", getPriority());
+    map.put("queryMetricsEnabled", queryMetricsEnabled);
     return map;
   }
 
@@ -902,11 +907,15 @@ public class Scan extends Query {
   }
 
   /**
-   * Enable collection of {@link ScanMetrics}. For advanced users.
+   * Enable collection of {@link ScanMetrics}. For advanced users. While disabling scan metrics,
+   * will also disable region level scan metrics.
    * @param enabled Set to true to enable accumulating scan metrics
    */
   public Scan setScanMetricsEnabled(final boolean enabled) {
     setAttribute(Scan.SCAN_ATTRIBUTES_METRICS_ENABLE, Bytes.toBytes(Boolean.valueOf(enabled)));
+    if (!enabled) {
+      setEnableScanMetricsByRegion(false);
+    }
     return this;
   }
 
@@ -1029,5 +1038,23 @@ public class Scan extends Query {
    */
   public static Scan createScanFromCursor(Cursor cursor) {
     return new Scan().withStartRow(cursor.getRow());
+  }
+
+  /**
+   * Enables region level scan metrics. If scan metrics are disabled then first enables scan metrics
+   * followed by region level scan metrics.
+   * @param enable Set to true to enable region level scan metrics.
+   */
+  public Scan setEnableScanMetricsByRegion(final boolean enable) {
+    if (enable) {
+      setScanMetricsEnabled(true);
+    }
+    setAttribute(Scan.SCAN_ATTRIBUTES_METRICS_BY_REGION_ENABLE, Bytes.toBytes(enable));
+    return this;
+  }
+
+  public boolean isScanMetricsByRegionEnabled() {
+    byte[] attr = getAttribute(Scan.SCAN_ATTRIBUTES_METRICS_BY_REGION_ENABLE);
+    return attr != null && Bytes.toBoolean(attr);
   }
 }

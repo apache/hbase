@@ -311,6 +311,12 @@
       <timezone>-8</timezone>
     </developer>
     <developer>
+      <id>junegunn</id>
+      <name>Junegunn Choi</name>
+      <email>junegunn@apache.org</email>
+      <timezone>+9</timezone>
+    </developer>
+    <developer>
       <id>jxiang</id>
       <name>Jimmy Xiang</name>
       <email>jxiang@apache.org</email>
@@ -368,6 +374,12 @@
       <id>liyu</id>
       <name>Yu Li</name>
       <email>liyu@apache.org</email>
+      <timezone>+8</timezone>
+    </developer>
+    <developer>
+      <id>lupeng</id>
+      <name>Peng Lu</name>
+      <email>lupeng@apache.org</email>
       <timezone>+8</timezone>
     </developer>
     <developer>
@@ -693,6 +705,24 @@
       <email>heliangjun@apache.org</email>
       <timezone>+8</timezone>
     </developer>
+    <developer>
+      <id>cconnell</id>
+      <name>Charles Connell</name>
+      <email>cconnell@apache.org</email>
+      <timezone>-5</timezone>
+    </developer>
+    <developer>
+      <id>chandrakambham</id>
+      <name>Chandra Kambham</name>
+      <email>chandra@apache.org</email>
+      <timezone>+5</timezone>
+    </developer>
+    <developer>
+      <id>paksyd</id>
+      <name>Dávid Paksy</name>
+      <email>paksyd@apache.org</email>
+      <timezone>+1</timezone>
+    </developer>
   </developers>
   <mailingLists>
     <mailingList>
@@ -840,7 +870,7 @@
       in the dependencyManagement section as it could still lead to different versions of netty
       modules and cause trouble if we only rely on transitive dependencies.
     -->
-    <netty4.version>4.1.119.Final</netty4.version>
+    <netty4.version>4.1.123.Final</netty4.version>
     <!-- end HBASE-15925 default hadoop compatibility values -->
     <audience-annotations.version>0.15.0</audience-annotations.version>
     <javadoc.audience-annotations.version>0.15.0</javadoc.audience-annotations.version>
@@ -849,7 +879,7 @@
     <commons-codec.version>1.15</commons-codec.version>
     <commons-validator.version>1.7</commons-validator.version>
     <commons-io.version>2.18.0</commons-io.version>
-    <commons-lang3.version>3.17.0</commons-lang3.version>
+    <commons-lang3.version>3.18.0</commons-lang3.version>
     <commons-math.version>3.6.1</commons-math.version>
     <commons-cli.version>1.5.0</commons-cli.version>
     <disruptor.version>3.4.4</disruptor.version>
@@ -860,24 +890,26 @@
       Note that the version of jackson-[annotations,core,databind] must be kept in sync with the
       version of jackson-jaxrs-json-provider shipped in hbase-thirdparty.
     -->
-    <jackson.version>2.17.2</jackson.version>
-    <jackson.databind.version>2.17.2</jackson.databind.version>
+    <jackson.version>2.19.2</jackson.version>
+    <jackson.databind.version>2.19.2</jackson.databind.version>
     <jaxb-api.version>2.3.1</jaxb-api.version>
-    <servlet.api.version>3.1.0</servlet.api.version>
+    <servlet.api.version>4.0.1</servlet.api.version>
     <wx.rs.api.version>2.1.1</wx.rs.api.version>
-    <tomcat.jasper.version>9.0.93</tomcat.jasper.version>
-    <jruby.version>9.4.9.0</jruby.version>
+    <tomcat.jasper.version>9.0.108</tomcat.jasper.version>
+    <jruby.version>9.4.12.1</jruby.version>
     <junit.version>4.13.2</junit.version>
     <hamcrest.version>1.3</hamcrest.version>
-    <opentelemetry.version>1.15.0</opentelemetry.version>
-    <opentelemetry-javaagent.version>1.15.0</opentelemetry-javaagent.version>
+    <opentelemetry.version>1.49.0</opentelemetry.version>
+    <opentelemetry-semconv.version>1.29.0-alpha</opentelemetry-semconv.version>
+    <opentelemetry-javaagent.version>2.15.0</opentelemetry-javaagent.version>
     <log4j2.version>2.17.2</log4j2.version>
     <mockito.version>4.11.0</mockito.version>
+    <byte-buddy.version>1.15.11</byte-buddy.version>
     <!--
       Version of protobuf that hbase uses internally (we shade our pb) Must match what is out
       in hbase-thirdparty include.
     -->
-    <internal.protobuf.version>4.28.2</internal.protobuf.version>
+    <internal.protobuf.version>4.31.1</internal.protobuf.version>
     <protobuf.plugin.version>0.6.1</protobuf.plugin.version>
     <thrift.path>thrift</thrift.path>
     <thrift.version>0.14.1</thrift.version>
@@ -888,10 +920,10 @@
     <jamon-runtime.version>2.4.1</jamon-runtime.version>
     <jettison.version>1.5.4</jettison.version>
     <!--Make sure these joni/jcodings are compatible with the versions used by jruby-->
-    <joni.version>2.2.1</joni.version>
-    <jcodings.version>1.0.58</jcodings.version>
+    <joni.version>2.2.3</joni.version>
+    <jcodings.version>1.0.61</jcodings.version>
     <spy.version>2.12.3</spy.version>
-    <bouncycastle.version>1.78</bouncycastle.version>
+    <bouncycastle.version>1.81</bouncycastle.version>
     <skyscreamer.version>1.5.1</skyscreamer.version>
     <commons-crypto.version>1.1.0</commons-crypto.version>
     <curator.version>5.7.1</curator.version>
@@ -905,7 +937,7 @@
     -->
     <checkstyle.version>8.29</checkstyle.version>
     <exec.maven.version>3.1.0</exec.maven.version>
-    <error-prone.version>2.28.0</error-prone.version>
+    <error-prone.version>2.41.0</error-prone.version>
     <jamon.plugin.version>2.4.2</jamon.plugin.version>
     <lifecycle.mapping.version>1.0.0</lifecycle.mapping.version>
     <maven.antrun.version>1.8</maven.antrun.version>
@@ -914,6 +946,7 @@
     <maven.eclipse.version>2.10</maven.eclipse.version>
     <maven.gpg.version>3.0.1</maven.gpg.version>
     <maven.javadoc.version>3.4.0</maven.javadoc.version>
+    <maven.dependency.version>3.8.1</maven.dependency.version>
     <maven.warbucks.version>1.1.0</maven.warbucks.version>
     <maven.project.info.report.version>3.1.2</maven.project.info.report.version>
     <maven-owasp-plugin.version>12.1.0</maven-owasp-plugin.version>
@@ -924,25 +957,25 @@
     <surefire.version>3.1.0</surefire.version>
     <wagon.ssh.version>2.12</wagon.ssh.version>
     <xml.maven.version>1.0.1</xml.maven.version>
-    <spotless.version>2.27.2</spotless.version>
+    <spotless.version>2.44.4</spotless.version>
     <maven-site.version>3.12.0</maven-site.version>
     <!-- compression -->
     <aircompressor.version>0.27</aircompressor.version>
     <brotli4j.version>1.11.0</brotli4j.version>
     <lz4.version>1.8.0</lz4.version>
     <snappy.version>1.1.10.4</snappy.version>
-    <zstd-jni.version>1.5.5-2</zstd-jni.version>
+    <zstd-jni.version>1.5.7-2</zstd-jni.version>
     <!--
         Note that the version of protobuf shipped in hbase-thirdparty must match the version used
         in hbase-protocol-shaded and hbase-examples. The version of jackson-[annotations,core,
         databind] must be kept in sync with the version of jackson-jaxrs-json-provider shipped in
         hbase-thirdparty.
     -->
-    <hbase-thirdparty.version>4.1.10</hbase-thirdparty.version>
+    <hbase-thirdparty.version>4.1.12</hbase-thirdparty.version>
     <!-- for.exclusion version are NOT for direct dependencies. To use the provided
     scope to transitively exclude some transitive dependencies, we need to specify
     some existing version to for maven. -->
-    <tomcat.version.for.exclusion>9.0.93</tomcat.version.for.exclusion>
+    <tomcat.version.for.exclusion>${tomcat.jasper.version}</tomcat.version.for.exclusion>
     <!-- Coverage properties -->
     <jacoco.version>0.8.8</jacoco.version>
     <jacocoArgLine/>
@@ -1040,6 +1073,13 @@
     <apacheds.version>2.0.0.AM26</apacheds.version>
     <ldap-api.version>2.0.0</ldap-api.version>
     <webjars-dir>${project.build.directory}/META-INF/resources/webjars</webjars-dir>
+    <!-- Web UI dependencies -->
+    <bootstrap.version>5.3.3</bootstrap.version>
+    <jquery.version>3.7.1</jquery.version>
+    <tablesorter.version>2.32.0</tablesorter.version>
+    <vega.version>5.32.0</vega.version>
+    <vega-embed.version>6.29.0</vega-embed.version>
+    <vega-lite.version>5.23.0</vega-lite.version>
   </properties>
   <!-- Sorted by groups of dependencies then groupId and artifactId -->
   <dependencyManagement>
@@ -1640,6 +1680,16 @@
         <version>${hamcrest.version}</version>
       </dependency>
       <dependency>
+        <groupId>net.bytebuddy</groupId>
+        <artifactId>byte-buddy</artifactId>
+        <version>${byte-buddy.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>net.bytebuddy</groupId>
+        <artifactId>byte-buddy-agent</artifactId>
+        <version>${byte-buddy.version}</version>
+      </dependency>
+      <dependency>
         <groupId>org.mockito</groupId>
         <artifactId>mockito-bom</artifactId>
         <version>${mockito.version}</version>
@@ -1654,9 +1704,9 @@
         <scope>import</scope>
       </dependency>
       <dependency>
-        <groupId>io.opentelemetry</groupId>
+        <groupId>io.opentelemetry.semconv</groupId>
         <artifactId>opentelemetry-semconv</artifactId>
-        <version>${opentelemetry.version}-alpha</version>
+        <version>${opentelemetry-semconv.version}</version>
       </dependency>
       <dependency>
         <groupId>io.opentelemetry.javaagent</groupId>
@@ -1797,7 +1847,12 @@
       </dependency>
       <dependency>
         <groupId>org.apache.hbase.thirdparty</groupId>
-        <artifactId>hbase-shaded-jetty</artifactId>
+        <artifactId>hbase-shaded-jetty-12-plus-core</artifactId>
+        <version>${hbase-thirdparty.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase.thirdparty</groupId>
+        <artifactId>hbase-shaded-jetty-12-plus-ee8</artifactId>
         <version>${hbase-thirdparty.version}</version>
       </dependency>
       <dependency>
@@ -2756,7 +2811,7 @@
         <artifactId>maven-dependency-plugin</artifactId>
         <executions>
           <execution>
-            <id>unpack</id>
+            <id>unpack-website-resources</id>
             <goals>
               <goal>unpack</goal>
             </goals>
@@ -2975,9 +3030,9 @@
         <artifactId>maven-antrun-plugin</artifactId>
         <version>${maven.antrun.version}</version>
         <inherited>false</inherited>
-        <!-- Rename the book.pdf generated by asciidoctor -->
         <executions>
           <execution>
+            <!-- Rename the book.pdf generated by asciidoctor -->
             <id>rename-pdf</id>
             <goals>
               <goal>run</goal>
@@ -2989,8 +3044,8 @@
               </target>
             </configuration>
           </execution>
-          <!-- Copy static CSS and JS files for the website. -->
           <execution>
+            <!-- Copy static CSS and JS files for the website. -->
             <id>copy-css-js-to-site</id>
             <goals>
               <goal>run</goal>
@@ -3068,6 +3123,20 @@
         <artifactId>spotless-maven-plugin</artifactId>
         <version>${spotless.version}</version>
         <configuration>
+          <upToDateChecking>
+            <!--
+              we need to process some files twice with spotless so we need to disable up to date
+              check, see https://github.com/diffplug/spotless/issues/1767
+            -->
+            <enabled>false</enabled>
+          </upToDateChecking>
+          <!--
+            On Windows, spotless might convert the line endings of these files to LF.
+            We're instructing it to respect the line ending definitions in .gitattributes
+            for these files.
+            For more details, please refer to HBASE-29388.
+          -->
+          <lineEndings>GIT_ATTRIBUTES</lineEndings>
           <!-- define a language-specific format -->
           <java>
             <excludes>

@@ -1041,7 +1041,8 @@ public final class HConstants {
   public static final boolean HFILE_PREAD_ALL_BYTES_ENABLED_DEFAULT = false;
 
   /*
-   * Minimum percentage of free heap necessary for a successful cluster startup.
+   * Default minimum fraction (20%) of free heap required for RegionServer startup, used only when
+   * 'hbase.regionserver.free.heap.min.memory.size' is not explicitly set.
    */
   public static final float HBASE_CLUSTER_MINIMUM_MEMORY_THRESHOLD = 0.2f;
 
@@ -1531,6 +1532,18 @@ public final class HConstants {
 
   // User defined Default TTL config key
   public static final String DEFAULT_SNAPSHOT_TTL_CONFIG_KEY = "hbase.master.snapshot.ttl";
+
+  // Soft drop for destructive table actions configuration
+  public static final String SNAPSHOT_BEFORE_DESTRUCTIVE_ACTION_ENABLED_KEY =
+    "hbase.snapshot.before.destructive.action.enabled";
+  public static final boolean DEFAULT_SNAPSHOT_BEFORE_DESTRUCTIVE_ACTION_ENABLED = false;
+
+  public static final String SNAPSHOT_BEFORE_DESTRUCTIVE_ACTION_TTL_KEY =
+    "hbase.snapshot.before.destructive.action.ttl";
+  public static final long DEFAULT_SNAPSHOT_BEFORE_DESTRUCTIVE_ACTION_TTL = 86400; // 1 day
+
+  // Table-level attribute name for recovery snapshot TTL override
+  public static final String TABLE_RECOVERY_SNAPSHOT_TTL_KEY = "RECOVERY_SNAPSHOT_TTL";
 
   // Regions Recovery based on high storeFileRefCount threshold value
   public static final String STORE_FILE_REF_COUNT_THRESHOLD =

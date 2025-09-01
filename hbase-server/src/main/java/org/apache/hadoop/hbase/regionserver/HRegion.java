@@ -114,6 +114,7 @@ import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.QueryMetrics;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
@@ -2247,6 +2248,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   // These methods are meant to be called periodically by the HRegionServer for
   // upkeep.
   //////////////////////////////////////////////////////////////////////////////
+
   /**
    * Do preparation for pending compaction.
    */
@@ -5129,7 +5131,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         // we'll get the latest on this row.
         boolean matches = false;
         long cellTs = 0;
-        try (RegionScanner scanner = getScanner(new Scan(get))) {
+        QueryMetrics metrics = null;
+        try (RegionScannerImpl scanner = getScanner(new Scan(get))) {
           // NOTE: Please don't use HRegion.get() instead,
           // because it will copy cells to heap. See HBASE-26036
           List<ExtendedCell> result = new ArrayList<>(1);
@@ -5153,6 +5156,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
               int compareResult = PrivateCellUtil.compareValue(kv, comparator);
               matches = matches(op, compareResult);
             }
+          }
+          if (checkAndMutate.isQueryMetricsEnabled()) {
+            metrics = new QueryMetrics(scanner.getContext().getBlockSizeProgress());
           }
         }
 
@@ -5190,10 +5196,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             r = mutateRow(rowMutations, nonceGroup, nonce);
           }
           this.checkAndMutateChecksPassed.increment();
-          return new CheckAndMutateResult(true, r);
+          return new CheckAndMutateResult(true, r).setMetrics(metrics);
         }
         this.checkAndMutateChecksFailed.increment();
-        return new CheckAndMutateResult(false, null);
+        return new CheckAndMutateResult(false, null).setMetrics(metrics);
       } finally {
         rowLock.release();
       }
@@ -5823,7 +5829,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         }
       } catch (EOFException eof) {
         if (!conf.getBoolean(RECOVERED_EDITS_IGNORE_EOF, false)) {
-          Path p = WALSplitUtil.moveAsideBadEditsFile(walFS, edits);
+          Path p = WALSplitUtil.moveAsideBadEditsFile(fs, edits);
           msg = "EnLongAddered EOF. Most likely due to Master failure during "
             + "wal splitting, so we have this data in another edit. Continuing, but renaming "
             + edits + " as " + p + " for region " + this;
@@ -5837,7 +5843,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         // If the IOE resulted from bad file format,
         // then this problem is idempotent and retrying won't help
         if (ioe.getCause() instanceof ParseException) {
-          Path p = WALSplitUtil.moveAsideBadEditsFile(walFS, edits);
+          Path p = WALSplitUtil.moveAsideBadEditsFile(fs, edits);
           msg =
             "File corruption enLongAddered!  " + "Continuing, but renaming " + edits + " as " + p;
           LOG.warn(msg, ioe);

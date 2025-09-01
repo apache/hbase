@@ -36,6 +36,7 @@ import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.ReentrantLock;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -1151,8 +1152,8 @@ public class LruBlockCache implements FirstLevelBlockCache {
   }
 
   // Simple calculators of sizes given factors and maxSize
-
-  long acceptableSize() {
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
+  public long acceptableSize() {
     return (long) Math.floor(this.maxSize * this.acceptableFactor);
   }
 

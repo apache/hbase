@@ -29,7 +29,6 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -41,6 +40,8 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerForTest;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -71,6 +72,9 @@ public class TestCompactionArchiveConcurrentClose {
   private Path testDir;
   private AtomicBoolean archived = new AtomicBoolean();
 
+  // Static field to track archived state for the static inner class
+  private static final AtomicBoolean STATIC_ARCHIVED = new AtomicBoolean();
+
   @Rule
   public TestName name = new TestName();
 
@@ -79,6 +83,11 @@ public class TestCompactionArchiveConcurrentClose {
     testUtil = new HBaseTestingUtil();
     testDir = testUtil.getDataTestDir("TestStoreFileRefresherChore");
     CommonFSUtils.setRootDir(testUtil.getConfiguration(), testDir);
+    // Configure the test to use our custom WaitingStoreFileTracker
+    testUtil.getConfiguration().set(StoreFileTrackerFactory.TRACKER_IMPL,
+      WaitingStoreFileTracker.class.getName());
+    // Reset the static archived flag
+    STATIC_ARCHIVED.set(false);
   }
 
   @After
@@ -127,6 +136,7 @@ public class TestCompactionArchiveConcurrentClose {
     for (HStoreFile file : storefiles) {
       assertFalse(file.isCompactedAway());
     }
+    System.out.println("Finished compaction ");
     // Do compaction
     region.compact(true);
 
@@ -139,9 +149,9 @@ public class TestCompactionArchiveConcurrentClose {
     };
     cleanerThread.start();
     // wait for cleaner to pause
-    synchronized (archived) {
-      if (!archived.get()) {
-        archived.wait();
+    synchronized (STATIC_ARCHIVED) {
+      if (!STATIC_ARCHIVED.get()) {
+        STATIC_ARCHIVED.wait();
       }
     }
     final AtomicReference<Exception> closeException = new AtomicReference<>();
@@ -171,7 +181,7 @@ public class TestCompactionArchiveConcurrentClose {
     Path tableDir = CommonFSUtils.getTableDir(testDir, htd.getTableName());
 
     HRegionFileSystem fs =
-      new WaitingHRegionFileSystem(conf, tableDir.getFileSystem(conf), tableDir, info);
+      new HRegionFileSystem(conf, tableDir.getFileSystem(conf), tableDir, info);
     ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null,
       MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     final Configuration walConf = new Configuration(conf);
@@ -184,20 +194,18 @@ public class TestCompactionArchiveConcurrentClose {
     return region;
   }
 
-  private class WaitingHRegionFileSystem extends HRegionFileSystem {
+  public static class WaitingStoreFileTracker extends StoreFileTrackerForTest {
 
-    public WaitingHRegionFileSystem(final Configuration conf, final FileSystem fs,
-      final Path tableDir, final RegionInfo regionInfo) {
-      super(conf, fs, tableDir, regionInfo);
+    public WaitingStoreFileTracker(Configuration conf, boolean isPrimaryReplica, StoreContext ctx) {
+      super(conf, isPrimaryReplica, ctx);
     }
 
     @Override
-    public void removeStoreFiles(String familyName, Collection<HStoreFile> storeFiles)
-      throws IOException {
-      super.removeStoreFiles(familyName, storeFiles);
-      archived.set(true);
-      synchronized (archived) {
-        archived.notifyAll();
+    public void removeStoreFiles(List<HStoreFile> storeFiles) throws IOException {
+      super.removeStoreFiles(storeFiles);
+      STATIC_ARCHIVED.set(true);
+      synchronized (STATIC_ARCHIVED) {
+        STATIC_ARCHIVED.notifyAll();
       }
       try {
         // unfortunately we can't use a stronger barrier here as the fix synchronizing

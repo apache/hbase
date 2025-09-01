@@ -29,6 +29,8 @@ import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.junit.After;
@@ -126,5 +128,44 @@ public class TestTableOutputFormat {
     // verifying whether durability of mutation got changed from USE_DEFAULT to the SKIP_WAL or not.
     Assert.assertEquals("Durability of the mutation should be SKIP_WAL", Durability.SKIP_WAL,
       delete.getDurability());
+  }
+
+  @Test
+  public void testOutputCommitterConfiguration() throws IOException, InterruptedException {
+    // 1. Verify it returns the default committer when the property is not set.
+    conf.unset(TableOutputFormat.OUTPUT_COMMITTER_CLASS);
+    tableOutputFormat.setConf(conf);
+    Assert.assertEquals("Should use default committer", TableOutputCommitter.class,
+      tableOutputFormat.getOutputCommitter(context).getClass());
+
+    // 2. Verify it returns the custom committer when the property is set.
+    conf.set(TableOutputFormat.OUTPUT_COMMITTER_CLASS, DummyCommitter.class.getName());
+    tableOutputFormat.setConf(conf);
+    Assert.assertEquals("Should use custom committer", DummyCommitter.class,
+      tableOutputFormat.getOutputCommitter(context).getClass());
+  }
+
+  // Simple dummy committer for testing
+  public static class DummyCommitter extends OutputCommitter {
+    @Override
+    public void setupJob(JobContext jobContext) {
+    }
+
+    @Override
+    public void setupTask(TaskAttemptContext taskContext) {
+    }
+
+    @Override
+    public boolean needsTaskCommit(TaskAttemptContext taskContext) {
+      return false;
+    }
+
+    @Override
+    public void commitTask(TaskAttemptContext taskContext) {
+    }
+
+    @Override
+    public void abortTask(TaskAttemptContext taskContext) {
+    }
   }
 }

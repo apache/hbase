@@ -27,16 +27,20 @@ import java.util.Arrays;
 import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.RetryCounter;
@@ -76,7 +80,7 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
     LOG.info("BOOTSTRAP: creating hbase:meta region");
     FileSystem fs = rootDir.getFileSystem(conf);
     Path tableDir = CommonFSUtils.getTableDir(rootDir, TableName.META_TABLE_NAME);
-    if (fs.exists(tableDir) && !fs.delete(tableDir, true)) {
+    if (fs.exists(tableDir) && !deleteMetaTableDirectoryIfPartial(fs, tableDir)) {
       LOG.warn("Can not delete partial created meta table, continue...");
     }
     // Bootstrapping, make sure blockcache is off. Else, one will be
@@ -190,5 +194,38 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
 
   public void await() throws InterruptedException {
     latch.await();
+  }
+
+  private static boolean deleteMetaTableDirectoryIfPartial(FileSystem rootDirectoryFs,
+    Path metaTableDir) throws IOException {
+    boolean isPartial = true;
+    try {
+      TableDescriptor metaDescriptor =
+        FSTableDescriptors.getTableDescriptorFromFs(rootDirectoryFs, metaTableDir);
+      // when entering the state of INIT_META_WRITE_FS_LAYOUT, if a meta table directory is found,
+      // the meta table should not have any useful data and considers as partial.
+      // if we find any valid HFiles, operator should fix the meta e.g. via HBCK.
+      if (metaDescriptor != null && metaDescriptor.getColumnFamilyCount() > 0) {
+        RemoteIterator<LocatedFileStatus> iterator = rootDirectoryFs.listFiles(metaTableDir, true);
+        while (iterator.hasNext()) {
+          LocatedFileStatus status = iterator.next();
+          if (
+            StoreFileInfo.isHFile(status.getPath())
+              && HFile.isHFileFormat(rootDirectoryFs, status.getPath())
+          ) {
+            isPartial = false;
+            break;
+          }
+        }
+      }
+    } finally {
+      if (!isPartial) {
+        throw new IOException("Meta table is not partial, please sideline this meta directory "
+          + "or run HBCK to fix this meta table, e.g. rebuild the server hostname in ZNode for the "
+          + "meta region");
+      }
+      return rootDirectoryFs.delete(metaTableDir, true);
+    }
+
   }
 }

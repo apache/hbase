@@ -55,7 +55,8 @@ public class MobNoKillMonkeyFactory extends MonkeyFactory {
       new MoveRandomRegionOfTableAction(tableName) };
 
     Action[] actions2 = new Action[] { new SplitRandomRegionOfTableAction(tableName),
-      new MergeRandomAdjacentRegionsOfTableAction(tableName), new SnapshotTableAction(tableName),
+      new MergeRandomAdjacentRegionsOfTableAction(tableName),
+      new SnapshotTableAction(tableName, MonkeyConstants.DEFAULT_SNAPSHOT_TABLE_TTL),
       new AddColumnAction(tableName), new RemoveColumnAction(tableName, columnFamilies),
       new ChangeEncodingAction(tableName), new ChangeCompressionAction(tableName),
       new ChangeBloomFilterAction(tableName), new ChangeVersionsAction(tableName) };

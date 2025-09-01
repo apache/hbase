@@ -118,10 +118,6 @@ abstract class CostFunction {
     ) {
       return 0;
     }
-    if (max <= min || Math.abs(max - min) <= costEpsilon) {
-      return 0;
-    }
-
     return Math.max(0d, Math.min(1d, (value - min) / (max - min)));
   }
 }

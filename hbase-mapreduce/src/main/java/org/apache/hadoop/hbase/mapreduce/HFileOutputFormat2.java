@@ -753,7 +753,7 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
    * @see #REMOTE_CLUSTER_ZOOKEEPER_CLIENT_PORT_CONF_KEY
    * @see #REMOTE_CLUSTER_ZOOKEEPER_ZNODE_PARENT_CONF_KEY
    */
-  public static void configureRemoteCluster(Job job, Configuration clusterConf) {
+  public static void configureRemoteCluster(Job job, Configuration clusterConf) throws IOException {
     Configuration conf = job.getConfiguration();
 
     if (!conf.getBoolean(LOCALITY_SENSITIVE_CONF_KEY, DEFAULT_LOCALITY_SENSITIVE)) {
@@ -769,6 +769,8 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
     conf.set(REMOTE_CLUSTER_ZOOKEEPER_QUORUM_CONF_KEY, quorum);
     conf.setInt(REMOTE_CLUSTER_ZOOKEEPER_CLIENT_PORT_CONF_KEY, clientPort);
     conf.set(REMOTE_CLUSTER_ZOOKEEPER_ZNODE_PARENT_CONF_KEY, parent);
+
+    TableMapReduceUtil.initCredentialsForCluster(job, clusterConf);
 
     LOG.info("ZK configs for remote cluster of bulkload is configured: " + quorum + ":" + clientPort
       + "/" + parent);
@@ -889,8 +891,8 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
     FileSystem fs = FileSystem.get(conf);
     String hbaseTmpFsDir =
       conf.get(HConstants.TEMPORARY_FS_DIRECTORY_KEY, fs.getHomeDirectory() + "/hbase-staging");
-    Path partitionsPath = new Path(hbaseTmpFsDir, "partitions_" + UUID.randomUUID());
-    fs.makeQualified(partitionsPath);
+    Path partitionsPath =
+      fs.makeQualified(new Path(hbaseTmpFsDir, "partitions_" + UUID.randomUUID()));
     writePartitions(conf, partitionsPath, splitPoints, writeMultipleTables);
     fs.deleteOnExit(partitionsPath);
 

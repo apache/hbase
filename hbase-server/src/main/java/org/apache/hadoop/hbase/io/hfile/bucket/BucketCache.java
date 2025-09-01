@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
+import static org.apache.hadoop.hbase.io.hfile.BlockCacheFactory.BLOCKCACHE_STATS_PERIODS;
+import static org.apache.hadoop.hbase.io.hfile.BlockCacheFactory.BLOCKCACHE_STATS_PERIOD_MINUTES_KEY;
+import static org.apache.hadoop.hbase.io.hfile.BlockCacheFactory.DEFAULT_BLOCKCACHE_STATS_PERIODS;
+import static org.apache.hadoop.hbase.io.hfile.BlockCacheFactory.DEFAULT_BLOCKCACHE_STATS_PERIOD_MINUTES;
 import static org.apache.hadoop.hbase.io.hfile.CacheConfig.BUCKETCACHE_PERSIST_INTERVAL_KEY;
 
 import java.io.File;
@@ -144,11 +148,11 @@ public class BucketCache implements BlockCache, HeapSize {
   static final float DEFAULT_MEMORY_FACTOR = 0.25f;
   static final float DEFAULT_MIN_FACTOR = 0.85f;
 
-  private static final float DEFAULT_EXTRA_FREE_FACTOR = 0.10f;
-  private static final float DEFAULT_ACCEPT_FACTOR = 0.95f;
+  static final float DEFAULT_EXTRA_FREE_FACTOR = 0.10f;
+  static final float DEFAULT_ACCEPT_FACTOR = 0.95f;
 
   // Number of blocks to clear for each of the bucket size that is full
-  private static final int DEFAULT_FREE_ENTIRE_BLOCK_FACTOR = 2;
+  static final int DEFAULT_FREE_ENTIRE_BLOCK_FACTOR = 2;
 
   /** Statistics thread */
   private static final int statThreadPeriod = 5 * 60;
@@ -225,7 +229,7 @@ public class BucketCache implements BlockCache, HeapSize {
 
   private static final int DEFAULT_CACHE_WAIT_TIME = 50;
 
-  private final BucketCacheStats cacheStats = new BucketCacheStats();
+  private final BucketCacheStats cacheStats;
   private final String persistencePath;
   static AtomicBoolean isCacheInconsistent = new AtomicBoolean(false);
   private final long cacheCapacity;
@@ -288,7 +292,7 @@ public class BucketCache implements BlockCache, HeapSize {
     "hbase.bucketcache.persistent.file.integrity.check.algorithm";
   private static final String DEFAULT_FILE_VERIFY_ALGORITHM = "MD5";
 
-  public static final String QUEUE_ADDITION_WAIT_TIME = "hbase.bucketcache.queue.addition.waittime";
+  static final String QUEUE_ADDITION_WAIT_TIME = "hbase.bucketcache.queue.addition.waittime";
   private static final long DEFAULT_QUEUE_ADDITION_WAIT_TIME = 0;
   private long queueAdditionWaitTime;
   /**
@@ -344,22 +348,11 @@ public class BucketCache implements BlockCache, HeapSize {
       throw new IllegalArgumentException("Cache capacity is too large, only support 32TB now");
     }
 
-    this.acceptableFactor = conf.getFloat(ACCEPT_FACTOR_CONFIG_NAME, DEFAULT_ACCEPT_FACTOR);
-    this.minFactor = conf.getFloat(MIN_FACTOR_CONFIG_NAME, DEFAULT_MIN_FACTOR);
-    this.extraFreeFactor = conf.getFloat(EXTRA_FREE_FACTOR_CONFIG_NAME, DEFAULT_EXTRA_FREE_FACTOR);
-    this.singleFactor = conf.getFloat(SINGLE_FACTOR_CONFIG_NAME, DEFAULT_SINGLE_FACTOR);
-    this.multiFactor = conf.getFloat(MULTI_FACTOR_CONFIG_NAME, DEFAULT_MULTI_FACTOR);
-    this.memoryFactor = conf.getFloat(MEMORY_FACTOR_CONFIG_NAME, DEFAULT_MEMORY_FACTOR);
-    this.queueAdditionWaitTime =
-      conf.getLong(QUEUE_ADDITION_WAIT_TIME, DEFAULT_QUEUE_ADDITION_WAIT_TIME);
-    this.bucketcachePersistInterval = conf.getLong(BUCKETCACHE_PERSIST_INTERVAL_KEY, 1000);
-    this.persistenceChunkSize =
-      conf.getLong(BACKING_MAP_PERSISTENCE_CHUNK_SIZE, DEFAULT_BACKING_MAP_PERSISTENCE_CHUNK_SIZE);
-    if (this.persistenceChunkSize <= 0) {
-      persistenceChunkSize = DEFAULT_BACKING_MAP_PERSISTENCE_CHUNK_SIZE;
-    }
-
-    sanityCheckConfigs();
+    // these sets the dynamic configs
+    this.onConfigurationChange(conf);
+    this.cacheStats =
+      new BucketCacheStats(conf.getInt(BLOCKCACHE_STATS_PERIODS, DEFAULT_BLOCKCACHE_STATS_PERIODS),
+        conf.getInt(BLOCKCACHE_STATS_PERIOD_MINUTES_KEY, DEFAULT_BLOCKCACHE_STATS_PERIOD_MINUTES));
 
     LOG.info("Instantiating BucketCache with acceptableFactor: " + acceptableFactor
       + ", minFactor: " + minFactor + ", extraFreeFactor: " + extraFreeFactor + ", singleFactor: "
@@ -450,6 +443,9 @@ public class BucketCache implements BlockCache, HeapSize {
     Preconditions.checkArgument((singleFactor + multiFactor + memoryFactor) == 1,
       SINGLE_FACTOR_CONFIG_NAME + ", " + MULTI_FACTOR_CONFIG_NAME + ", and "
         + MEMORY_FACTOR_CONFIG_NAME + " segments must add up to 1.0");
+    if (this.persistenceChunkSize <= 0) {
+      persistenceChunkSize = DEFAULT_BACKING_MAP_PERSISTENCE_CHUNK_SIZE;
+    }
   }
 
   /**
@@ -603,7 +599,7 @@ public class BucketCache implements BlockCache, HeapSize {
     LOG.trace("Caching key={}, item={}", cacheKey, cachedItem);
     // Stuff the entry into the RAM cache so it can get drained to the persistent store
     RAMQueueEntry re = new RAMQueueEntry(cacheKey, cachedItem, accessCount.incrementAndGet(),
-      inMemory, isCachePersistent() && ioEngine instanceof FileIOEngine);
+      inMemory, isCachePersistent() && ioEngine instanceof FileIOEngine, wait);
     /**
      * Don't use ramCache.put(cacheKey, re) here. because there may be a existing entry with same
      * key in ramCache, the heap size of bucket cache need to update if replacing entry from
@@ -909,6 +905,38 @@ public class BucketCache implements BlockCache, HeapSize {
       return doEvictBlock(blockCacheKey, bucketEntry, true);
     }
     return false;
+  }
+
+  /**
+   * Since HBASE-29249, the following properties governin freeSpace behaviour and block priorities
+   * were made dynamically configurable: - hbase.bucketcache.acceptfactor -
+   * hbase.bucketcache.minfactor - hbase.bucketcache.extrafreefactor -
+   * hbase.bucketcache.single.factor - hbase.bucketcache.multi.factor -
+   * hbase.bucketcache.multi.factor - hbase.bucketcache.memory.factor The
+   * hbase.bucketcache.queue.addition.waittime property allows for introducing a delay in the
+   * publishing of blocks for the cache writer threads during prefetch reads only (client reads
+   * wouldn't get delayed). It has also been made dynamic configurable since HBASE-29249. The
+   * hbase.bucketcache.persist.intervalinmillis propperty determines the frequency for saving the
+   * persistent cache, and it has also been made dynamically configurable since HBASE-29249. The
+   * hbase.bucketcache.persistence.chunksize property determines the size of the persistent file
+   * splits (due to the limitation of maximum allowed protobuff size), and it has also been made
+   * dynamically configurable since HBASE-29249.
+   * @param config the new configuration to be updated.
+   */
+  @Override
+  public void onConfigurationChange(Configuration config) {
+    this.acceptableFactor = conf.getFloat(ACCEPT_FACTOR_CONFIG_NAME, DEFAULT_ACCEPT_FACTOR);
+    this.minFactor = conf.getFloat(MIN_FACTOR_CONFIG_NAME, DEFAULT_MIN_FACTOR);
+    this.extraFreeFactor = conf.getFloat(EXTRA_FREE_FACTOR_CONFIG_NAME, DEFAULT_EXTRA_FREE_FACTOR);
+    this.singleFactor = conf.getFloat(SINGLE_FACTOR_CONFIG_NAME, DEFAULT_SINGLE_FACTOR);
+    this.multiFactor = conf.getFloat(MULTI_FACTOR_CONFIG_NAME, DEFAULT_MULTI_FACTOR);
+    this.memoryFactor = conf.getFloat(MEMORY_FACTOR_CONFIG_NAME, DEFAULT_MEMORY_FACTOR);
+    this.queueAdditionWaitTime =
+      conf.getLong(QUEUE_ADDITION_WAIT_TIME, DEFAULT_QUEUE_ADDITION_WAIT_TIME);
+    this.bucketcachePersistInterval = conf.getLong(BUCKETCACHE_PERSIST_INTERVAL_KEY, 1000);
+    this.persistenceChunkSize =
+      conf.getLong(BACKING_MAP_PERSISTENCE_CHUNK_SIZE, DEFAULT_BACKING_MAP_PERSISTENCE_CHUNK_SIZE);
+    sanityCheckConfigs();
   }
 
   protected boolean removeFromRamCache(BlockCacheKey cacheKey) {
@@ -1375,8 +1403,8 @@ public class BucketCache implements BlockCache, HeapSize {
         // transferred with our current IOEngines. Should take care, when we have new kinds of
         // IOEngine in the future.
         metaBuff.clear();
-        BucketEntry bucketEntry =
-          re.writeToCache(ioEngine, bucketAllocator, realCacheSize, this::createRecycler, metaBuff);
+        BucketEntry bucketEntry = re.writeToCache(ioEngine, bucketAllocator, realCacheSize,
+          this::createRecycler, metaBuff, acceptableSize());
         // Successfully added. Up index and add bucketEntry. Clear io exceptions.
         bucketEntries[index] = bucketEntry;
         if (ioErrorStartTime > 0) {
@@ -1397,8 +1425,11 @@ public class BucketCache implements BlockCache, HeapSize {
         index++;
       } catch (CacheFullException cfe) {
         // Cache full when we tried to add. Try freeing space and then retrying (don't up index)
-        if (!freeInProgress) {
+        if (!freeInProgress && !re.isPrefetch()) {
           freeSpace("Full!");
+        } else if (re.isPrefetch()) {
+          bucketEntries[index] = null;
+          index++;
         } else {
           Thread.sleep(50);
         }
@@ -1452,13 +1483,13 @@ public class BucketCache implements BlockCache, HeapSize {
           return null;
         });
       }
+      long used = bucketAllocator.getUsedSize();
+      if (!entries.get(i).isPrefetch() && used > acceptableSize()) {
+        LOG.debug("Calling freeSpace for block: {}", entries.get(i).getKey());
+        freeSpace("Used=" + used + " > acceptable=" + acceptableSize());
+      }
     }
 
-    long used = bucketAllocator.getUsedSize();
-    if (used > acceptableSize()) {
-      freeSpace("Used=" + used + " > acceptable=" + acceptableSize());
-    }
-    return;
   }
 
   /**
@@ -1750,6 +1781,9 @@ public class BucketCache implements BlockCache, HeapSize {
       this.fullyCachedFiles.clear();
       this.regionCachedSize.clear();
     }
+    if (cacheStats.getMetricsRollerScheduler() != null) {
+      cacheStats.getMetricsRollerScheduler().shutdownNow();
+    }
   }
 
   private void join() throws InterruptedException {
@@ -1936,13 +1970,16 @@ public class BucketCache implements BlockCache, HeapSize {
     private boolean inMemory;
     private boolean isCachePersistent;
 
+    private boolean isPrefetch;
+
     RAMQueueEntry(BlockCacheKey bck, Cacheable data, long accessCounter, boolean inMemory,
-      boolean isCachePersistent) {
+      boolean isCachePersistent, boolean isPrefetch) {
       this.key = bck;
       this.data = data;
       this.accessCounter = accessCounter;
       this.inMemory = inMemory;
       this.isCachePersistent = isCachePersistent;
+      this.isPrefetch = isPrefetch;
     }
 
     public Cacheable getData() {
@@ -1951,6 +1988,10 @@ public class BucketCache implements BlockCache, HeapSize {
 
     public BlockCacheKey getKey() {
       return key;
+    }
+
+    public boolean isPrefetch() {
+      return isPrefetch;
     }
 
     public void access(long accessCounter) {
@@ -1966,7 +2007,7 @@ public class BucketCache implements BlockCache, HeapSize {
 
     public BucketEntry writeToCache(final IOEngine ioEngine, final BucketAllocator alloc,
       final LongAdder realCacheSize, Function<BucketEntry, Recycler> createRecycler,
-      ByteBuffer metaBuff) throws IOException {
+      ByteBuffer metaBuff, final Long acceptableSize) throws IOException {
       int len = data.getSerializedLength();
       // This cacheable thing can't be serialized
       if (len == 0) {
@@ -1977,6 +2018,14 @@ public class BucketCache implements BlockCache, HeapSize {
                            // recovery
       }
       long offset = alloc.allocateBlock(len);
+      // In the case of prefetch, we want to avoid freeSpace runs when the cache is full.
+      // this makes the cache allocation more predictable, and is particularly important
+      // when persistent cache is enabled, as it won't trigger evictions of the recovered blocks,
+      // which are likely the most accessed and relevant blocks in the cache.
+      if (isPrefetch() && alloc.getUsedSize() > acceptableSize) {
+        alloc.freeBlock(offset, len);
+        return null;
+      }
       boolean succ = false;
       BucketEntry bucketEntry = null;
       try {
@@ -2155,6 +2204,18 @@ public class BucketCache implements BlockCache, HeapSize {
 
   float getMemoryFactor() {
     return memoryFactor;
+  }
+
+  long getQueueAdditionWaitTime() {
+    return queueAdditionWaitTime;
+  }
+
+  long getPersistenceChunkSize() {
+    return persistenceChunkSize;
+  }
+
+  long getBucketcachePersistInterval() {
+    return bucketcachePersistInterval;
   }
 
   public String getPersistencePath() {

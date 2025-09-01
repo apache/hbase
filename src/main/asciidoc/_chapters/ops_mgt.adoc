@@ -653,7 +653,7 @@ and doPuts to false would give same effect as setting dryrun to true.
 [NOTE]
 ====
 "doDeletes/doPuts" were only added by
-link:https://jira.apache.org/jira/browse/HBASE-20305[HBASE-20305], so these may not be available on
+link:https://issues.apache.org/jira/browse/HBASE-20305[HBASE-20305], so these may not be available on
 all released versions.
 For major 1.x versions, minimum minor release including it is *1.4.10*.
 For major 2.x versions, minimum minor release including it is *2.1.5*.
@@ -687,7 +687,7 @@ which does not give any meaningful result.
 [NOTE]
 ====
 Often, remote clusters may be deployed on different Kerberos Realms.
-link:https://jira.apache.org/jira/browse/HBASE-20586[HBASE-20586] added SyncTable support for
+link:https://issues.apache.org/jira/browse/HBASE-20586[HBASE-20586] added SyncTable support for
 cross realm authentication, allowing a SyncTable process running on target cluster to connect to
 source cluster and read both HashTable output files and the given HBase table when performing the
 required comparisons.
@@ -969,7 +969,7 @@ For performance also consider the following options:
 [[rowcounter]]
 === RowCounter
 
-link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/RowCounter.html[RowCounter] is a mapreduce job to count all the rows of a table.
+link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/mapreduce/RowCounter.html[RowCounter] is a mapreduce job to count all the rows of a table.
 This is a good utility to use as a sanity check to ensure that HBase can read all the blocks of a table if there are any concerns of metadata inconsistency.
 It will run the mapreduce all in a single process but it will run faster if you have a MapReduce cluster in place for it to exploit.
 It is possible to limit the time range of data to be scanned by using the `--starttime=[starttime]` and `--endtime=[endtime]` flags.
@@ -986,7 +986,7 @@ For performance consider to use `-Dhbase.client.scanner.caching=100` and `-Dmapr
 [[cellcounter]]
 === CellCounter
 
-HBase ships another diagnostic mapreduce job called link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/CellCounter.html[CellCounter].
+HBase ships another diagnostic mapreduce job called link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/mapreduce/CellCounter.html[CellCounter].
 Like RowCounter, it gathers more fine-grained statistics about your table.
 The statistics gathered by CellCounter are more fine-grained and include:
 
@@ -1330,7 +1330,7 @@ $ bin/hbase org.apache.hadoop.hbase.util.HBaseConfTool <configuration_key>
 [[ops.regionmgt.majorcompact]]
 === Major Compaction
 
-Major compactions can be requested via the HBase shell or link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Admin.html#majorCompact-org.apache.hadoop.hbase.TableName-[Admin.majorCompact].
+Major compactions can be requested via the HBase shell or link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Admin.html#majorCompact(org.apache.hadoop.hbase.TableName)[Admin.majorCompact].
 
 Note: major compactions do NOT do region merges.
 See <<compaction,compaction>> for more information about compactions.
@@ -2415,7 +2415,7 @@ A single WAL edit goes through several steps in order to be replicated to a slav
 . The edit is tagged with the master's UUID and added to a buffer.
   When the buffer is filled, or the reader reaches the end of the file, the buffer is sent to a random region server on the slave cluster.
 . The region server reads the edits sequentially and separates them into buffers, one buffer per table.
-  After all edits are read, each buffer is flushed using link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html[Table], HBase's normal client.
+  After all edits are read, each buffer is flushed using link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Table.html[Table], HBase's normal client.
   The master's UUID and the UUIDs of slaves which have already consumed the data are preserved in the edits they are applied, in order to prevent replication loops.
 . In the master, the offset for the WAL that is currently being replicated is registered in ZooKeeper.
 
@@ -3269,7 +3269,7 @@ SNAPSHOT                                      SIZE
 There are two broad strategies for performing HBase backups: backing up with a full cluster shutdown, and backing up on a live cluster.
 Each approach has pros and cons.
 
-For additional information, see link:http://blog.sematext.com/2011/03/11/hbase-backup-options/[HBase Backup
+For additional information, see link:https://web.archive.org/web/20160110232448/http://blog.sematext.com/2011/03/11/hbase-backup-options/[HBase Backup
         Options] over on the Sematext Blog.
 
 [[ops.backup.fullshutdown]]
@@ -3686,7 +3686,7 @@ See <<gcpause,gcpause>>, <<trouble.log.gc,trouble.log.gc>> and elsewhere (TODO: 
 Generally less regions makes for a smoother running cluster (you can always manually split the big regions later (if necessary) to spread the data, or request load, over the cluster); 20-200 regions per RS is a reasonable range.
 The number of regions cannot be configured directly (unless you go for fully <<disable.splitting,disable.splitting>>); adjust the region size to achieve the target region size given table size.
 
-When configuring regions for multiple tables, note that most region settings can be set on a per-table basis via link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HTableDescriptor.html[HTableDescriptor], as well as shell commands.
+When configuring regions for multiple tables, note that most region settings can be set on a per-table basis via link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/TableDescriptorBuilder.html[TableDescriptorBuilder], as well as shell commands.
 These settings will override the ones in `hbase-site.xml`.
 That is useful if your tables have different workloads/use cases.
 
@@ -4107,7 +4107,7 @@ when the schema includes timestamp in the rowkey, as it will automatically
 merge away regions whose contents have expired.
 
 (The bulk of the below detail was copied wholesale from the blog by Romil Choksi at
-link:https://community.hortonworks.com/articles/54987/hbase-region-normalizer.html[HBase Region Normalizer]).
+link:https://community.cloudera.com/t5/Community-Articles/HBase-Region-Normalizer/ta-p/247266[HBase Region Normalizer]).
 
 The Region Normalizer is feature available since HBase-1.2. It runs a set of
 pre-calculated merge/split actions to resize regions that are either too

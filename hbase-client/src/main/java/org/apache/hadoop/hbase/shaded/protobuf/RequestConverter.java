@@ -201,7 +201,7 @@ public final class RequestConverter {
   public static MutateRequest buildMutateRequest(final byte[] regionName, final byte[] row,
     final byte[] family, final byte[] qualifier, final CompareOperator op, final byte[] value,
     final Filter filter, final TimeRange timeRange, final Mutation mutation, long nonceGroup,
-    long nonce) throws IOException {
+    long nonce, boolean queryMetricsEnabled) throws IOException {
     MutateRequest.Builder builder = MutateRequest.newBuilder();
     if (mutation instanceof Increment || mutation instanceof Append) {
       builder.setMutation(ProtobufUtil.toMutation(getMutationType(mutation), mutation, nonce))
@@ -210,7 +210,8 @@ public final class RequestConverter {
       builder.setMutation(ProtobufUtil.toMutation(getMutationType(mutation), mutation));
     }
     return builder.setRegion(buildRegionSpecifier(RegionSpecifierType.REGION_NAME, regionName))
-      .setCondition(ProtobufUtil.toCondition(row, family, qualifier, op, value, filter, timeRange))
+      .setCondition(ProtobufUtil.toCondition(row, family, qualifier, op, value, filter, timeRange,
+        queryMetricsEnabled))
       .build();
   }
 
@@ -221,10 +222,10 @@ public final class RequestConverter {
   public static ClientProtos.MultiRequest buildMultiRequest(final byte[] regionName,
     final byte[] row, final byte[] family, final byte[] qualifier, final CompareOperator op,
     final byte[] value, final Filter filter, final TimeRange timeRange,
-    final RowMutations rowMutations, long nonceGroup, long nonce) throws IOException {
-    return buildMultiRequest(regionName, rowMutations,
-      ProtobufUtil.toCondition(row, family, qualifier, op, value, filter, timeRange), nonceGroup,
-      nonce);
+    final RowMutations rowMutations, long nonceGroup, long nonce, boolean queryMetricsEnabled)
+    throws IOException {
+    return buildMultiRequest(regionName, rowMutations, ProtobufUtil.toCondition(row, family,
+      qualifier, op, value, filter, timeRange, queryMetricsEnabled), nonceGroup, nonce);
   }
 
   /**
@@ -559,9 +560,9 @@ public final class RequestConverter {
       getRegionActionBuilderWithRegion(builder, regionName);
 
       CheckAndMutate cam = (CheckAndMutate) action.getAction();
-      builder
-        .setCondition(ProtobufUtil.toCondition(cam.getRow(), cam.getFamily(), cam.getQualifier(),
-          cam.getCompareOp(), cam.getValue(), cam.getFilter(), cam.getTimeRange()));
+      builder.setCondition(ProtobufUtil.toCondition(cam.getRow(), cam.getFamily(),
+        cam.getQualifier(), cam.getCompareOp(), cam.getValue(), cam.getFilter(), cam.getTimeRange(),
+        cam.isQueryMetricsEnabled()));
 
       if (cam.getAction() instanceof Put) {
         actionBuilder.clear();

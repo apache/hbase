@@ -226,7 +226,7 @@ For more information on GC pauses, see the link:https://blog.cloudera.com/blog/2
 [[trouble.resources.lists]]
 === Mailing Lists
 
-Ask a question on the link:https://hbase.apache.org/mail-lists.html[Apache HBase mailing lists].
+Ask a question on the link:https://hbase.apache.org/mailing-lists.html[Apache HBase mailing lists].
 The 'dev' mailing list is aimed at the community of developers actually building Apache HBase and for features currently under development, and 'user' is generally used for questions on released versions of Apache HBase.
 Before going to the mailing list, make sure your question has not already been answered by searching the mailing list
 archives first. For those who prefer to communicate in Chinese, they can use the 'user-zh' mailing list instead of the
@@ -1529,7 +1529,7 @@ kernel: java: page allocation failure. order:4, mode:0x20
 ----
 
 Raising the value of `min_free_kbytes` was reported to fix this problem.
-This parameter is set to a percentage of the amount of RAM on your system, and is described in more detail at http://www.centos.org/docs/5/html/5.1/Deployment_Guide/s3-proc-sys-vm.html.
+This parameter is set to a percentage of the amount of RAM on your system, and is described in more detail at https://docs.kernel.org/admin-guide/sysctl/vm.html#min-free-kbytes.
 
 To find the current value on your system, run the following command:
 

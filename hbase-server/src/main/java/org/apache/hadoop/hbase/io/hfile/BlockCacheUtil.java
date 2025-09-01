@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.io.hfile;
 import static org.apache.hadoop.hbase.io.hfile.HFileBlock.FILL_HEADER;
 
 import java.io.IOException;
+import java.lang.reflect.Modifier;
 import java.nio.ByteBuffer;
 import java.util.HashSet;
 import java.util.Map;
@@ -58,29 +59,30 @@ public class BlockCacheUtil {
   /**
    * Needed generating JSON.
    */
-  private static final Gson GSON = GsonUtil.createGson()
-    .registerTypeAdapter(FastLongHistogram.class, new TypeAdapter<FastLongHistogram>() {
+  private static final Gson GSON =
+    GsonUtil.createGson().excludeFieldsWithModifiers(Modifier.PRIVATE)
+      .registerTypeAdapter(FastLongHistogram.class, new TypeAdapter<FastLongHistogram>() {
 
-      @Override
-      public void write(JsonWriter out, FastLongHistogram value) throws IOException {
-        AgeSnapshot snapshot = new AgeSnapshot(value);
-        out.beginObject();
-        out.name("mean").value(snapshot.getMean());
-        out.name("min").value(snapshot.getMin());
-        out.name("max").value(snapshot.getMax());
-        out.name("75thPercentile").value(snapshot.get75thPercentile());
-        out.name("95thPercentile").value(snapshot.get95thPercentile());
-        out.name("98thPercentile").value(snapshot.get98thPercentile());
-        out.name("99thPercentile").value(snapshot.get99thPercentile());
-        out.name("999thPercentile").value(snapshot.get999thPercentile());
-        out.endObject();
-      }
+        @Override
+        public void write(JsonWriter out, FastLongHistogram value) throws IOException {
+          AgeSnapshot snapshot = new AgeSnapshot(value);
+          out.beginObject();
+          out.name("mean").value(snapshot.getMean());
+          out.name("min").value(snapshot.getMin());
+          out.name("max").value(snapshot.getMax());
+          out.name("75thPercentile").value(snapshot.get75thPercentile());
+          out.name("95thPercentile").value(snapshot.get95thPercentile());
+          out.name("98thPercentile").value(snapshot.get98thPercentile());
+          out.name("99thPercentile").value(snapshot.get99thPercentile());
+          out.name("999thPercentile").value(snapshot.get999thPercentile());
+          out.endObject();
+        }
 
-      @Override
-      public FastLongHistogram read(JsonReader in) throws IOException {
-        throw new UnsupportedOperationException();
-      }
-    }).setPrettyPrinting().create();
+        @Override
+        public FastLongHistogram read(JsonReader in) throws IOException {
+          throw new UnsupportedOperationException();
+        }
+      }).setPrettyPrinting().create();
 
   /** Returns The block content as String. */
   public static String toString(final CachedBlock cb, final long now) {
@@ -285,6 +287,7 @@ public class BlockCacheUtil {
       .withPrevBlockOffset(block.getPrevBlockOffset()).withByteBuff(buff)
       .withFillHeader(FILL_HEADER).withOffset(block.getOffset()).withNextBlockOnDiskSize(-1)
       .withOnDiskDataSizeWithHeader(block.getOnDiskDataSizeWithHeader() + numBytes)
+      .withNextBlockOnDiskSize(block.getNextBlockOnDiskSize())
       .withHFileContext(cloneContext(block.getHFileContext()))
       .withByteBuffAllocator(cacheConf.getByteBuffAllocator()).withShared(!buff.hasArray()).build();
   }
