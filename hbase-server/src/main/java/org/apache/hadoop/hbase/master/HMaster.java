@@ -1872,9 +1872,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     int numThreads =
       conf.getInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, defaultNumThreads);
     if (numThreads <= 0) {
-      LOG.warn(MasterProcedureConstants.MASTER_PROCEDURE_THREADS
-        + " is set to {}, which is invalid, " + "using default value {} instead", numThreads,
-        defaultNumThreads);
+      LOG.warn("{} is set to {}, which is invalid, using default value {} instead",
+        MasterProcedureConstants.MASTER_PROCEDURE_THREADS, numThreads, defaultNumThreads);
       numThreads = defaultNumThreads;
     }
     final boolean abortOnCorruption =
