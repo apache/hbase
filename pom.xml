@@ -872,7 +872,6 @@
     <bouncycastle.version>1.81</bouncycastle.version>
     <skyscreamer.version>1.5.1</skyscreamer.version>
     <commons-crypto.version>1.1.0</commons-crypto.version>
-    <curator.version>5.7.1</curator.version>
     <!-- Plugin Dependencies -->
     <build.helper.maven.version>3.0.0</build.helper.maven.version>
     <buildnumber.maven.version>1.4</buildnumber.maven.version>
@@ -1692,47 +1691,6 @@
           <exclusion>
             <groupId>net.java.dev.jna</groupId>
             <artifactId>jna</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.curator</groupId>
-        <artifactId>curator-framework</artifactId>
-        <version>${curator.version}</version>
-        <exclusions>
-          <exclusion>
-            <groupId>org.apache.zookeeper</groupId>
-            <artifactId>zookeeper</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.curator</groupId>
-        <artifactId>curator-client</artifactId>
-        <version>${curator.version}</version>
-        <exclusions>
-          <exclusion>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>org.apache.zookeeper</groupId>
-            <artifactId>zookeeper</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.curator</groupId>
-        <artifactId>curator-recipes</artifactId>
-        <version>${curator.version}</version>
-        <exclusions>
-          <exclusion>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>org.apache.zookeeper</groupId>
-            <artifactId>zookeeper</artifactId>
           </exclusion>
         </exclusions>
       </dependency>
@@ -2584,6 +2542,14 @@
                     <bannedImport>org.apache.commons.collections.**</bannedImport>
                     <bannedImport>org.apache.commons.collections4.**</bannedImport>
                     <bannedImport>org.apache.hadoop.thirdparty.**</bannedImport>
+                  </bannedImports>
+                </restrictImports>
+                <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
+                  <includeTestCode>true</includeTestCode>
+                  <commentLineBufferSize>512</commentLineBufferSize>
+                  <reason>Use ZooKeeper directly</reason>
+                  <bannedImports>
+                    <bannedImport>org.apache.curator.**</bannedImport>
                   </bannedImports>
                 </restrictImports>
                 <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
