@@ -45,12 +45,9 @@ import org.junit.experimental.categories.Category;
 import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
 
-@Category(MediumTests.class)
 @RunWith(Enclosed.class)
+@SuppressWarnings("JUnit4TestNotRun")
 public class TestExpiredMobFileCleanerChore {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestExpiredMobFileCleanerChore.class);
 
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private final static TableName tableName = TableName.valueOf("TestExpiredMobFileCleaner");
@@ -66,7 +63,12 @@ public class TestExpiredMobFileCleanerChore {
   private static BufferedMutator table2;
 
   @Category(MediumTests.class)
-  public static class SingleThreadTest {
+  @SuppressWarnings("JUnit4TestNotRun")
+  public static class TestWithSingleThread {
+    @ClassRule
+    public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestWithSingleThread.class);
+
     @BeforeClass
     public static void setUpBeforeClass() throws Exception {
       TEST_UTIL.getConfiguration().setInt("hfile.format.version", 3);
@@ -97,7 +99,13 @@ public class TestExpiredMobFileCleanerChore {
   }
 
   @Category(MediumTests.class)
-  public static class MultiThreadTest {
+  @SuppressWarnings("JUnit4TestNotRun")
+  public static class TestWithMultiThread {
+
+    @ClassRule
+    public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestWithMultiThread.class);
+
     @BeforeClass
     public static void setUpBeforeClass() throws Exception {
       TEST_UTIL.getConfiguration().setInt("hfile.format.version", 3);
