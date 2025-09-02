@@ -167,7 +167,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
       Path tblDir = CommonFSUtils.getTableDir(rootdir, srcTable);
       Path p = new Path(tblDir, regionName + Path.SEPARATOR + fam + Path.SEPARATOR + filename);
 
-      // For continuous backup, bulkload files are copied from backup directory defined by
+      // For continuous backup: bulkload files are copied from backup directory defined by
       // CONF_CONTINUOUS_BACKUP_WAL_DIR instead of source cluster.
       String backupRootDir = conf.get(CONF_CONTINUOUS_BACKUP_WAL_DIR);
       if (backupInfo.isContinuousBackupEnabled() && !Strings.isNullOrEmpty(backupRootDir)) {
