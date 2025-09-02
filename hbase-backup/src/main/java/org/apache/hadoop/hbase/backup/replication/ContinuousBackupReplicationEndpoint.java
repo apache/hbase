@@ -21,11 +21,8 @@ import com.google.errorprone.annotations.RestrictedApi;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.TimeZone;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
@@ -41,6 +38,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
+import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.io.asyncfs.monitor.StreamSlowMonitor;
@@ -94,7 +92,6 @@ public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint
 
   public static final long ONE_DAY_IN_MILLISECONDS = TimeUnit.DAYS.toMillis(1);
   public static final String WAL_FILE_PREFIX = "wal_file.";
-  public static final String DATE_FORMAT = "yyyy-MM-dd";
 
   @Override
   public void init(Context context) throws IOException {
@@ -330,7 +327,7 @@ public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint
   }
 
   private FSHLogProvider.Writer createWalWriter(long dayInMillis) {
-    String dayDirectoryName = formatToDateString(dayInMillis);
+    String dayDirectoryName = BackupUtils.formatToDateString(dayInMillis);
 
     FileSystem fs = backupFileSystemManager.getBackupFs();
     Path walsDir = backupFileSystemManager.getWalsDir();
@@ -408,7 +405,7 @@ public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint
       LOG.trace("{} Bulk load files to upload: {}", Utils.logPeerId(peerId),
         bulkLoadFiles.stream().map(Path::toString).collect(Collectors.joining(", ")));
     }
-    String dayDirectoryName = formatToDateString(dayInMillis);
+    String dayDirectoryName = BackupUtils.formatToDateString(dayInMillis);
     Path bulkloadDir = new Path(backupFileSystemManager.getBulkLoadFilesDir(), dayDirectoryName);
     try {
       backupFileSystemManager.getBackupFs().mkdirs(bulkloadDir);
@@ -446,7 +443,7 @@ public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint
       } catch (IOException e) {
         throw new BulkLoadUploadException(
           String.format("%s Failed to copy bulk load file %s to %s on day %s",
-            Utils.logPeerId(peerId), file, destPath, formatToDateString(dayInMillis)),
+            Utils.logPeerId(peerId), file, destPath, BackupUtils.formatToDateString(dayInMillis)),
           e);
       }
     }
@@ -493,19 +490,6 @@ public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint
       }
       throw e;
     }
-  }
-
-  /**
-   * Convert dayInMillis to "yyyy-MM-dd" format
-   */
-  @RestrictedApi(
-      explanation = "Package-private for test visibility only. Do not use outside tests.",
-      link = "",
-      allowedOnPath = "(.*/src/test/.*|.*/org/apache/hadoop/hbase/backup/replication/ContinuousBackupReplicationEndpoint.java)")
-  String formatToDateString(long dayInMillis) {
-    SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
-    dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
-    return dateFormat.format(new Date(dayInMillis));
   }
 
   private Path getBulkLoadFileStagingPath(Path relativePathFromNamespace) throws IOException {

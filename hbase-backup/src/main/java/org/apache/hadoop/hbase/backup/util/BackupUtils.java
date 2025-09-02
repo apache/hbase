@@ -24,14 +24,17 @@ import static org.apache.hadoop.hbase.replication.regionserver.ReplicationMarker
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URLDecoder;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.TimeZone;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import org.apache.hadoop.conf.Configuration;
@@ -86,6 +89,7 @@ public final class BackupUtils {
   private static final Logger LOG = LoggerFactory.getLogger(BackupUtils.class);
   public static final String LOGNAME_SEPARATOR = ".";
   public static final int MILLISEC_IN_HOUR = 3600000;
+  public static final String DATE_FORMAT = "yyyy-MM-dd";
 
   private BackupUtils() {
     throw new AssertionError("Instantiating utility class...");
@@ -931,5 +935,14 @@ public final class BackupUtils {
   private static boolean continuousBackupReplicationPeerExists(Admin admin) throws IOException {
     return admin.listReplicationPeers().stream()
       .anyMatch(peer -> peer.getPeerId().equals(CONTINUOUS_BACKUP_REPLICATION_PEER));
+  }
+
+  /**
+   * Convert dayInMillis to "yyyy-MM-dd" format
+   */
+  public static String formatToDateString(long dayInMillis) {
+    SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
+    dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+    return dateFormat.format(new Date(dayInMillis));
   }
 }
