@@ -1867,13 +1867,14 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     configurationManager.registerObserver(procEnv);
 
     int cpus = Runtime.getRuntime().availableProcessors();
-    int defaultNumThreads = Math.max(
-      (cpus > 0 ? cpus / 4 : 0), 
+    int defaultNumThreads = Math.max((cpus > 0 ? cpus / 4 : 0),
       MasterProcedureConstants.DEFAULT_MIN_MASTER_PROCEDURE_THREADS);
-    int numThreads = conf.getInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, defaultNumThreads);
+    int numThreads =
+      conf.getInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, defaultNumThreads);
     if (numThreads <= 0) {
-      LOG.warn(MasterProcedureConstants.MASTER_PROCEDURE_THREADS + " is set to {}, which is invalid, "
-        + "using default value {} instead", numThreads, defaultNumThreads);
+      LOG.warn(MasterProcedureConstants.MASTER_PROCEDURE_THREADS
+        + " is set to {}, which is invalid, " + "using default value {} instead", numThreads,
+        defaultNumThreads);
       numThreads = defaultNumThreads;
     }
     final boolean abortOnCorruption =
