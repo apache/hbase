@@ -19,7 +19,9 @@ package org.apache.hadoop.hbase.master.balancer;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -547,5 +549,43 @@ public class TestCacheAwareLoadBalancer extends BalancerTestBase {
     assertEquals(5, regionsMovedFromServer0.size());
     assertEquals(5, targetServers.get(server1).size());
     assertTrue(targetServers.get(server1).containsAll(oldCachedRegions));
+  }
+
+  @Test
+  public void testBalancerNotThrowNPEWhenBalancerPlansIsNull() throws Exception {
+    Map<ServerName, List<RegionInfo>> clusterState = new HashMap<>();
+    ServerName server0 = servers.get(0);
+    ServerName server1 = servers.get(1);
+    ServerName server2 = servers.get(2);
+
+    List<RegionInfo> regionsOnServer0 = randomRegions(5);
+    List<RegionInfo> regionsOnServer1 = randomRegions(5);
+    List<RegionInfo> regionsOnServer2 = randomRegions(5);
+
+    clusterState.put(server0, regionsOnServer0);
+    clusterState.put(server1, regionsOnServer1);
+    clusterState.put(server2, regionsOnServer2);
+
+    // Mock cluster metrics
+    Map<ServerName, ServerMetrics> serverMetricsMap = new TreeMap<>();
+    serverMetricsMap.put(server0, mockServerMetricsWithRegionCacheInfo(server0, regionsOnServer0,
+      0.0f, new ArrayList<>(), 0, 10));
+    serverMetricsMap.put(server1, mockServerMetricsWithRegionCacheInfo(server1, regionsOnServer1,
+      0.0f, new ArrayList<>(), 0, 10));
+    serverMetricsMap.put(server2, mockServerMetricsWithRegionCacheInfo(server2, regionsOnServer2,
+      0.0f, new ArrayList<>(), 0, 10));
+    ClusterMetrics clusterMetrics = mock(ClusterMetrics.class);
+    when(clusterMetrics.getLiveServerMetrics()).thenReturn(serverMetricsMap);
+    loadBalancer.updateClusterMetrics(clusterMetrics);
+
+    Map<TableName, Map<ServerName, List<RegionInfo>>> LoadOfAllTable =
+      (Map) mockClusterServersWithTables(clusterState);
+    try {
+      List<RegionPlan> plans = loadBalancer.balanceCluster(LoadOfAllTable);
+      assertNull(plans);
+    } catch (NullPointerException npe) {
+      fail("NPE should not be thrown");
+    }
+
   }
 }
