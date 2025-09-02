@@ -135,6 +135,7 @@ public class TestIncrementalBackupWithContinuous extends TestContinuousBackup {
 
   @Test
   public void testIncrementalBackupCopyingBulkloadTillIncrCommittedWalTs() throws Exception {
+    LOG.info("Testing incremental backup with continuous backup test");
     conf1.setBoolean(REPLICATION_MARKER_ENABLED_KEY, true);
     String methodName = Thread.currentThread().getStackTrace()[1].getMethodName();
     TableName tableName1 = TableName.valueOf("table_" + methodName);
