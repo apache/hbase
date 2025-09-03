@@ -229,12 +229,7 @@ public final class MetaTableAccessor {
    */
   public static Result getRegionResult(Connection connection, RegionInfo regionInfo)
     throws IOException {
-    Get get = new Get(CatalogFamilyFormat.getMetaKeyForRegion(regionInfo));
-    get.addFamily(HConstants.CATALOG_FAMILY);
-    get.setPriority(RSAnnotationReadingPriorityFunction.INTERNAL_READ_QOS);
-    try (Table t = getMetaHTable(connection)) {
-      return t.get(get);
-    }
+    return getCatalogFamilyRow(connection, regionInfo);
   }
 
   /**
