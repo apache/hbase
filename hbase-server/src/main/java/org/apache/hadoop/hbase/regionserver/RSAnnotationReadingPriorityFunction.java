@@ -56,7 +56,7 @@ public class RSAnnotationReadingPriorityFunction
   public static final String SCAN_VTIME_WEIGHT_CONF_KEY = "hbase.ipc.server.scan.vtime.weight";
 
   // QOS for internal meta read requests
-  public static int INTERNAL_READ_QOS = 250;
+  public static final int INTERNAL_READ_QOS = 250;
 
   @SuppressWarnings("unchecked")
   private final Class<? extends Message>[] knownArgumentClasses =
