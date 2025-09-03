@@ -127,8 +127,8 @@ public class TestSystemKeyAccessorAndManager {
     }
 
     @Test public void test() throws Exception {
-      assertNull(systemKeyManager.getAllSystemKeyFiles());
-      assertNull(systemKeyManager.getLatestSystemKeyFile().getFirst());
+      assertThrows(IOException.class, () -> systemKeyManager.getAllSystemKeyFiles());
+      assertThrows(IOException.class, () -> systemKeyManager.getLatestSystemKeyFile().getFirst());
     }
   }
 

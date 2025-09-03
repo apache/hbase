@@ -21,7 +21,7 @@ import java.io.IOException;
 import java.security.Key;
 import java.security.KeyException;
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -124,7 +124,7 @@ public class KeymetaTableAccessor extends KeyManagementBase {
 
     try (Table table = connection.getTable(KEY_META_TABLE_NAME)) {
       ResultScanner scanner = table.getScanner(scan);
-      Set<ManagedKeyData> allKeys = new HashSet<>();
+      Set<ManagedKeyData> allKeys = new LinkedHashSet<>();
       for (Result result : scanner) {
         ManagedKeyData keyData = parseFromResult(getServer(), key_cust, keyNamespace, result);
         if (keyData != null) {
@@ -150,7 +150,6 @@ public class KeymetaTableAccessor extends KeyManagementBase {
     Connection connection = getServer().getConnection();
     byte[] rowkeyForGet = constructRowKeyForCustNamespace(key_cust, keyNamespace);
     Get get = new Get(rowkeyForGet);
-    get.addColumn(KEY_META_INFO_FAMILY, KEY_STATE_QUAL_BYTES);
 
     try (Table table = connection.getTable(KEY_META_TABLE_NAME)) {
       Result result = table.get(get);

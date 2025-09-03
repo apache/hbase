@@ -88,6 +88,11 @@ public class SecurityUtil {
       if (isKeyManagementEnabled(conf)) {
         kekKeyData = managedKeyDataCache.getActiveEntry(
           ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES, keyNamespace);
+        // If no active key found in the specific namespace, try the global namespace
+        if (kekKeyData == null) {
+          kekKeyData = managedKeyDataCache.getActiveEntry(
+            ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES, ManagedKeyData.KEY_SPACE_GLOBAL);
+        }
         if (kekKeyData == null) {
           throw new IOException("No active key found for custodian: "
             + ManagedKeyData.KEY_GLOBAL_CUSTODIAN + " in namespaces: " + keyNamespace + " and "

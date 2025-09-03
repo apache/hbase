@@ -27,26 +27,25 @@ require 'hbase/table'
 module Hbase
   class KeymetaAdminTest < Test::Unit::TestCase
     include TestHelpers
-    include HBaseConstants
 
     def setup
       setup_hbase
-      @test_table = 'enctest'
-      #@shell.command('create', @test_table, {'NAME' => 'f', 'ENCRYPTION' => 'AES'})
     end
 
     define_test 'Test enable key management' do
-      #namespace = @test_table + '/' + 'f'
       custAndNamespace = $CUST1_ENCODED + ':*'
-      output = capture_stdout { @shell.command('enable_key_management', custAndNamespace) }
-      puts "enable_key_management output: #{output}"
-      assert(output.include?($CUST1_ENCODED +' * ACTIVE'))
+      # Repeat the enable twice in a loop and ensure multiple enables succeed and return the same output.
+      (0..1).each do |i|
+        output = capture_stdout { @shell.command('enable_key_management', custAndNamespace) }
+        puts "enable_key_management #{i} output: #{output}"
+        assert(output.include?($CUST1_ENCODED +' * ACTIVE'))
+      end
       output = capture_stdout { @shell.command('show_key_status', custAndNamespace) }
       puts "show_key_status output: #{output}"
       assert(output.include?($CUST1_ENCODED +' * ACTIVE'))
 
       # The ManagedKeyStoreKeyProvider doesn't support specific namespaces, so it will return the global key.
-      custAndNamespace = $CUST1_ENCODED + ':' + @test_table + '/' + 'f'
+      custAndNamespace = $CUST1_ENCODED + ':' + 'test_table/f'
       output = capture_stdout { @shell.command('enable_key_management', custAndNamespace) }
       puts "enable_key_management output: #{output}"
       assert(output.include?($CUST1_ENCODED +' * ACTIVE'))

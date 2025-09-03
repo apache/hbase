@@ -228,6 +228,9 @@ public class TestSecurityUtil {
       when(mockManagedKeyDataCache.getActiveEntry(
           eq(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES), eq("test-namespace")))
           .thenReturn(null);
+      when(mockManagedKeyDataCache.getActiveEntry(
+          eq(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES), eq(ManagedKeyData.KEY_SPACE_GLOBAL)))
+          .thenReturn(null);
 
       try (MockedStatic<Encryption> mockedEncryption = Mockito.mockStatic(Encryption.class)) {
         mockedEncryption.when(() -> Encryption.isEncryptionEnabled(conf)).thenReturn(true);
@@ -298,13 +301,42 @@ public class TestSecurityUtil {
     }
 
     @Test
-    public void testWithKeyManagement_UseSystemKey() throws IOException {
+    public void testWithKeyManagement_UseSystemKeyWithNSSpecificActiveKey() throws IOException {
       // Enable key management, but disable local key generation
       conf.setBoolean(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, true);
       conf.setBoolean(HConstants.CRYPTO_MANAGED_KEYS_LOCAL_KEY_GEN_PER_FILE_ENABLED_CONF_KEY, false);
 
       when(mockManagedKeyDataCache.getActiveEntry(
           eq(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES), eq("test-namespace")))
+          .thenReturn(mockManagedKeyData);
+      when(mockSystemKeyCache.getLatestSystemKey()).thenReturn(mockManagedKeyData);
+
+      try (MockedStatic<Encryption> mockedEncryption = Mockito.mockStatic(Encryption.class)) {
+        mockedEncryption.when(() -> Encryption.isEncryptionEnabled(conf)).thenReturn(true);
+        mockedEncryption.when(() -> Encryption.getCipher(conf, "AES")).thenReturn(mockCipher);
+
+        // Create a proper encryption context
+        Encryption.Context mockContext = mock(Encryption.Context.class);
+        mockedEncryption.when(() -> Encryption.newContext(conf)).thenReturn(mockContext);
+
+        Encryption.Context result = SecurityUtil.createEncryptionContext(
+            conf, mockFamily, mockManagedKeyDataCache, mockSystemKeyCache, "test-namespace");
+
+        verifyContext(result);
+      }
+    }
+
+    @Test
+    public void testWithKeyManagement_UseSystemKeyWithoutNSSpecificActiveKey() throws IOException {
+      // Enable key management, but disable local key generation
+      conf.setBoolean(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, true);
+      conf.setBoolean(HConstants.CRYPTO_MANAGED_KEYS_LOCAL_KEY_GEN_PER_FILE_ENABLED_CONF_KEY, false);
+
+      when(mockManagedKeyDataCache.getActiveEntry(
+          eq(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES), eq("test-namespace")))
+          .thenReturn(null);
+      when(mockManagedKeyDataCache.getActiveEntry(
+          eq(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES), eq(ManagedKeyData.KEY_SPACE_GLOBAL)))
           .thenReturn(mockManagedKeyData);
       when(mockSystemKeyCache.getLatestSystemKey()).thenReturn(mockManagedKeyData);
 
