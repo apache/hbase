@@ -39,21 +39,24 @@
 <%@ page import="org.apache.hadoop.hbase.master.janitor.CatalogJanitorReport" %>
 <%@ page import="java.util.Optional" %>
 <%@ page import="org.apache.hadoop.hbase.util.EnvironmentEdgeManager" %>
+<%@ page import="org.apache.hbase.thirdparty.com.google.protobuf.ServiceException" %>
 <%
   final String cacheParameterValue = request.getParameter("cache");
   final HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
   pageContext.setAttribute("pageTitle", "HBase Master HBCK Report: " + master.getServerName());
+  String hbckChoreErrorMessage = null;
+  String catalogJanitorErrorMessage = null;
   if (!Boolean.parseBoolean(cacheParameterValue)) {
     // Run the two reporters inline w/ drawing of the page. If exception, will show in page draw.
     try {
       master.getMasterRpcServices().runHbckChore(null, null);
-    } catch (org.apache.hbase.thirdparty.com.google.protobuf.ServiceException se) {
-      out.write("Failed generating a new hbck_chore report; using cache; try again or run hbck_chore_run in the shell: " + se.getMessage() + "\n");
+    } catch (ServiceException se) {
+      hbckChoreErrorMessage = "Failed generating a new hbck_chore report; using cache; try again or run hbck_chore_run in the shell: " + se.getMessage();
     } 
     try {
       master.getMasterRpcServices().runCatalogScan(null, null);
-    } catch (org.apache.hbase.thirdparty.com.google.protobuf.ServiceException se) {
-      out.write("Failed generating a new catalogjanitor report; using cache; try again or run catalogjanitor_run in the shell: " + se.getMessage() + "\n");
+    } catch (ServiceException se) {
+      catalogJanitorErrorMessage = "Failed generating a new catalogjanitor report; using cache; try again or run catalogjanitor_run in the shell: " + se.getMessage();
     } 
   }
   HbckChore hbckChore = master.getHbckChore();
@@ -118,6 +121,12 @@
       </p>
     </div>
   </div>
+
+  <% if(hbckChoreErrorMessage != null) { %>
+    <div class="alert alert-danger" role="alert">
+      <%= hbckChoreErrorMessage %>
+    </div>
+  <% } %>
 
   <% if (hbckReport != null && hbckReport.getInconsistentRegions().size() > 0) { %>
   <div class="row">
@@ -230,6 +239,13 @@
         <% } %>
     </div>
   </div>
+
+  <% if(catalogJanitorErrorMessage != null) { %>
+  <div class="alert alert-danger" role="alert">
+    <%= catalogJanitorErrorMessage %>
+  </div>
+  <% } %>
+
   <% if (cjReport != null && !cjReport.isEmpty()) { %>
       <% if (!cjReport.getHoles().isEmpty()) { %>
           <div class="row inner_header">
