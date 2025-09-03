@@ -1803,8 +1803,15 @@ public class HMaster extends HRegionServer implements MasterServices {
     configurationManager.registerObserver(procEnv);
 
     int cpus = Runtime.getRuntime().availableProcessors();
-    final int numThreads = conf.getInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, Math.max(
-      (cpus > 0 ? cpus / 4 : 0), MasterProcedureConstants.DEFAULT_MIN_MASTER_PROCEDURE_THREADS));
+    int defaultNumThreads = Math.max((cpus > 0 ? cpus / 4 : 0),
+      MasterProcedureConstants.DEFAULT_MIN_MASTER_PROCEDURE_THREADS);
+    int numThreads =
+      conf.getInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, defaultNumThreads);
+    if (numThreads <= 0) {
+      LOG.warn("{} is set to {}, which is invalid, using default value {} instead",
+        MasterProcedureConstants.MASTER_PROCEDURE_THREADS, numThreads, defaultNumThreads);
+      numThreads = defaultNumThreads;
+    }
     final boolean abortOnCorruption =
       conf.getBoolean(MasterProcedureConstants.EXECUTOR_ABORT_ON_CORRUPTION,
         MasterProcedureConstants.DEFAULT_EXECUTOR_ABORT_ON_CORRUPTION);
