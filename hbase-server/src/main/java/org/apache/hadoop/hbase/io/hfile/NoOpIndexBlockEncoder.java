@@ -27,7 +27,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.IndexBlockEncoding;
@@ -128,8 +127,7 @@ public class NoOpIndexBlockEncoder implements HFileIndexBlockEncoder {
     return getClass().getSimpleName();
   }
 
-  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
-  public static class NoOpEncodedSeeker implements EncodedSeeker {
+  protected static class NoOpEncodedSeeker implements EncodedSeeker {
 
     protected long[] blockOffsets;
     protected int[] blockDataSizes;
