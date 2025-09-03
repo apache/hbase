@@ -90,7 +90,8 @@ public class SecurityUtil {
           ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES, keyNamespace);
         if (kekKeyData == null) {
           throw new IOException("No active key found for custodian: "
-            + ManagedKeyData.KEY_GLOBAL_CUSTODIAN + " namespace: " + keyNamespace);
+            + ManagedKeyData.KEY_GLOBAL_CUSTODIAN + " in namespaces: " + keyNamespace + " and "
+            + ManagedKeyData.KEY_SPACE_GLOBAL);
         }
         if (conf.getBoolean(
                 HConstants.CRYPTO_MANAGED_KEYS_LOCAL_KEY_GEN_PER_FILE_ENABLED_CONF_KEY,

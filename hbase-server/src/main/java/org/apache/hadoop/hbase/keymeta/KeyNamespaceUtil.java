@@ -40,7 +40,7 @@ public class KeyNamespaceUtil {
    */
   public static String constructKeyNamespace(TableDescriptor tableDescriptor,
       ColumnFamilyDescriptor family) {
-    return tableDescriptor.getTableName().getNamespaceAsString() + "/"
+    return tableDescriptor.getTableName().getNameAsString() + "/"
         + family.getNameAsString();
   }
 
@@ -50,7 +50,7 @@ public class KeyNamespaceUtil {
    * @return The constructed key namespace
    */
   public static String constructKeyNamespace(StoreContext storeContext) {
-    return storeContext.getTableName().getNamespaceAsString() + "/"
+    return storeContext.getTableName().getNameAsString() + "/"
         + storeContext.getFamily().getNameAsString();
   }
 

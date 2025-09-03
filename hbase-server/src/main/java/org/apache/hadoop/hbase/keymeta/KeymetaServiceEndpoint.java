@@ -141,8 +141,7 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
   @InterfaceAudience.Private
   public static ManagedKeysResponse.Builder getResponseBuilder(RpcController controller,
     ManagedKeysRequest request) {
-    ManagedKeysResponse.Builder builder = ManagedKeysResponse.newBuilder()
-      .setKeyNamespace(request.getKeyNamespace());
+    ManagedKeysResponse.Builder builder = ManagedKeysResponse.newBuilder();
     byte[] key_cust = convertToKeyCustBytes(controller, request, builder);
     if (key_cust != null) {
       builder.setKeyCustBytes(ByteString.copyFrom(key_cust));
@@ -156,10 +155,11 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
     List<ManagedKeyData> managedKeyStates, ManagedKeysResponse.Builder builder) {
     GetManagedKeysResponse.Builder responseBuilder = GetManagedKeysResponse.newBuilder();
     for (ManagedKeyData keyData: managedKeyStates) {
-      builder.setKeyState(ManagedKeysProtos.ManagedKeyState.valueOf(
+      builder.setKeyState(ManagedKeysProtos.ManagedKeyState.forNumber(
           keyData.getKeyState().getVal()))
         .setKeyMetadata(keyData.getKeyMetadata())
         .setRefreshTimestamp(keyData.getRefreshTimestamp())
+        .setKeyNamespace(keyData.getKeyNamespace())
       ;
       responseBuilder.addState(builder.build());
     }

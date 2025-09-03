@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.io.crypto;
 
-import static org.apache.hadoop.hbase.io.crypto.ManagedKeyData.KEY_GLOBAL_CUSTODIAN;
 import static org.apache.hadoop.hbase.io.crypto.ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES;
 import static org.apache.hadoop.hbase.io.crypto.ManagedKeyStoreKeyProvider.KEY_METADATA_ALIAS;
 import static org.apache.hadoop.hbase.io.crypto.ManagedKeyStoreKeyProvider.KEY_METADATA_CUST;
@@ -28,14 +27,12 @@ import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 import java.security.KeyStore;
-import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
-import javax.crypto.spec.SecretKeySpec;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -93,36 +90,18 @@ public class TestManagedKeyProvider {
       for (int i = 0; i < nCustodians; ++i) {
         String custodian = "custodian+ " + i;
         String alias = custodian + "-alias";
-        addEntry(store, alias, custodian);
-        passwdProps.setProperty(alias, PASSWORD);
-
-        clusterId = UUID.randomUUID().toString();
-        systemKey = MessageDigest.getInstance("SHA-256").digest(
-          Bytes.toBytes(SYSTEM_KEY_ALIAS));
-        store.setEntry(SYSTEM_KEY_ALIAS, new KeyStore.SecretKeyEntry(
-            new SecretKeySpec(systemKey, "AES")),
-          new KeyStore.PasswordProtection(withPasswordOnAlias ? PASSWORD.toCharArray() :
-            new char[0]));
-
-        conf.set(HConstants.CRYPTO_MANAGED_KEY_STORE_SYSTEM_KEY_NAME_CONF_KEY, SYSTEM_KEY_ALIAS);
-
-        passwdProps.setProperty(SYSTEM_KEY_ALIAS, PASSWORD);
+        KeyProviderTestUtils.addEntry(conf, 256, store, alias, custodian, withPasswordOnAlias, cust2key,
+          cust2alias, passwdProps);
       }
-      addEntry(store, "global-cust-alias", "*");
-      passwdProps.setProperty("global-cust-alias", PASSWORD);
-    }
 
-    private void addEntry(KeyStore store, String alias, String custodian) throws Exception {
-      byte[] key = MessageDigest.getInstance("SHA-256").digest(Bytes.toBytes(alias));
-      cust2alias.put(new Bytes(custodian.getBytes()), alias);
-      cust2key.put(new Bytes(custodian.getBytes()), new Bytes(key));
-      store.setEntry(alias, new KeyStore.SecretKeyEntry(new SecretKeySpec(key, "AES")),
-        new KeyStore.PasswordProtection(
-          withPasswordOnAlias ? PASSWORD.toCharArray() : new char[0]));
-      String encCust = Base64.getEncoder().encodeToString(custodian.getBytes());
-      String confKey = HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + encCust + "."
-          + "alias";
-      conf.set(confKey, alias);
+      clusterId = UUID.randomUUID().toString();
+      KeyProviderTestUtils.addEntry(conf, 256, store, SYSTEM_KEY_ALIAS, clusterId, withPasswordOnAlias,
+        cust2key, cust2alias, passwdProps);
+      systemKey = cust2key.get(new Bytes(clusterId.getBytes())).get();
+      conf.set(HConstants.CRYPTO_MANAGED_KEY_STORE_SYSTEM_KEY_NAME_CONF_KEY, SYSTEM_KEY_ALIAS);
+
+      KeyProviderTestUtils.addEntry(conf, 256, store, "global-cust-alias", "*", withPasswordOnAlias,
+        cust2key, cust2alias, passwdProps);
     }
 
     @Test

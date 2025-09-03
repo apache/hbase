@@ -153,7 +153,7 @@ public abstract class KeyManagementBase {
      */
     LOG.info("retrieveManagedKey: got managed key with status: {} and metadata: {} for "
         + "(custodian: {}, namespace: {})", pbeKey.getKeyState(), pbeKey.getKeyMetadata(),
-      encKeyCust, keyNamespace);
+      encKeyCust, pbeKey.getKeyNamespace());
     if (accessor != null) {
       accessor.addKey(pbeKey);
     }

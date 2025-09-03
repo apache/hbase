@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.security.Key;
 import java.security.KeyException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -117,8 +116,7 @@ public class KeymetaTableAccessor extends KeyManagementBase {
     throws IOException, KeyException {
     assertKeyManagementEnabled();
     Connection connection = getServer().getConnection();
-    byte[] prefixForScan = Bytes.add(Bytes.toBytes(key_cust.length), key_cust,
-      Bytes.toBytes(keyNamespace));
+    byte[] prefixForScan = constructRowKeyForCustNamespace(key_cust, keyNamespace);
     PrefixFilter prefixFilter = new PrefixFilter(prefixForScan);
     Scan scan = new Scan();
     scan.setFilter(prefixFilter);
@@ -271,7 +269,7 @@ public class KeymetaTableAccessor extends KeyManagementBase {
   @InterfaceAudience.Private
   public static byte[] constructRowKeyForCustNamespace(byte[] key_cust, String keyNamespace) {
     int custLength = key_cust.length;
-    return Bytes.add(Bytes.toBytes(custLength), key_cust, Bytes.toBytesBinary(keyNamespace));
+    return Bytes.add(Bytes.toBytes(custLength), key_cust, Bytes.toBytes(keyNamespace));
   }
 
   @InterfaceAudience.Private
