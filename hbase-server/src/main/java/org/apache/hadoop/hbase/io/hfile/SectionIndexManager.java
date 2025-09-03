@@ -21,7 +21,6 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -38,7 +37,7 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 public class SectionIndexManager {
-  private static final Logger LOG = LoggerFactory.getLogger(SectionIndexManager.class);
+  
   
   /**
    * Default maximum number of entries in a single index block
@@ -212,9 +211,11 @@ public class SectionIndexManager {
     private final List<SectionIndexEntry> entries = new ArrayList<>();
     /** Block writer to use for index blocks */
     private final HFileBlock.Writer blockWriter;
-    /** Cache configuration */
+    /** Cache configuration (unused for section index blocks) */
+    @SuppressWarnings("unused")
     private final CacheConfig cacheConf;
-    /** File name to use for caching, or null if no caching */
+    /** File name to use for caching, or null if no caching (unused) */
+    @SuppressWarnings("unused")
     private final String nameForCaching;
     
     /** Maximum number of entries in a single index block */
@@ -448,22 +449,37 @@ public class SectionIndexManager {
      * Write all intermediate-level blocks.
      */
     private void writeIntermediateBlocks(FSDataOutputStream out) throws IOException {
-      for (SectionIndexBlock block : intermediateBlocks) {
-        // Write intermediate block
+      for (int blockIndex = 0; blockIndex < intermediateBlocks.size(); blockIndex++) {
+        SectionIndexBlock block = intermediateBlocks.get(blockIndex);
         long blockOffset = out.getPos();
-        List<SectionIndexEntry> blockEntries = block.getEntries();
         DataOutputStream dos = blockWriter.startWriting(BlockType.INTERMEDIATE_INDEX);
-        
-        // For intermediate blocks, we include offset/size of target blocks
-        writeIntermediateBlock(dos, blockEntries);
+
+        int entryCount = block.getEntryCount();
+        dos.writeInt(entryCount);
+
+        // Entries in this intermediate block correspond to leaf blocks in range
+        // [startIndex, startIndex + entryCount)
+        int startIndex = blockIndex * maxChunkSize;
+        for (int i = 0; i < entryCount; i++) {
+          int leafIndex = startIndex + i;
+          SectionIndexBlock leafBlock = leafBlocks.get(leafIndex);
+          SectionIndexEntry firstEntry = leafBlock.getFirstEntry();
+
+          byte[] prefix = firstEntry.getTenantPrefix();
+          dos.writeInt(prefix.length);
+          dos.write(prefix);
+          dos.writeLong(leafBlock.getBlockOffset());
+          dos.writeInt(leafBlock.getBlockSize());
+        }
+
         blockWriter.writeHeaderAndData(out);
-        
+
         // Record block metadata for higher levels
         block.setBlockMetadata(blockOffset, blockWriter.getOnDiskSizeWithHeader());
-        
+
         // Update metrics
         totalUncompressedSize += blockWriter.getUncompressedSizeWithHeader();
-        
+
         LOG.debug("Wrote intermediate section index block with {} entries at offset {}",
             block.getEntryCount(), blockOffset);
       }
@@ -511,39 +527,6 @@ public class SectionIndexManager {
       // Write each entry using helper
       for (SectionIndexEntry entry : blockEntries) {
         writeEntry(out, entry);
-      }
-    }
-    
-    /**
-     * Write an intermediate block with references to other blocks.
-     */
-    private void writeIntermediateBlock(DataOutputStream out, List<SectionIndexEntry> blockEntries)
-        throws IOException {
-      // Write entry count
-      out.writeInt(blockEntries.size());
-      
-      // For intermediate blocks, we only write the first entry's tenant prefix
-      // and the target block information
-      for (int i = 0; i < blockEntries.size(); i++) {
-        SectionIndexEntry entry = blockEntries.get(i);
-        
-        // Write tenant prefix
-        byte[] prefix = entry.getTenantPrefix();
-        out.writeInt(prefix.length);
-        out.write(prefix);
-        
-        // Write target leaf block offset and size
-        int leafBlockIndex = i * maxChunkSize;
-        if (leafBlockIndex < leafBlocks.size()) {
-          SectionIndexBlock leafBlock = leafBlocks.get(leafBlockIndex);
-          out.writeLong(leafBlock.getBlockOffset());
-          out.writeInt(leafBlock.getBlockSize());
-        } else {
-          // This shouldn't happen but we need to write something
-          out.writeLong(0);
-          out.writeInt(0);
-          LOG.warn("Invalid leaf block index in intermediate block: {}", leafBlockIndex);
-        }
       }
     }
     
@@ -658,6 +641,122 @@ public class SectionIndexManager {
         LOG.error("Failed to load section index", e);
         sections.clear();
         throw e;
+      }
+    }
+
+    /**
+     * Load a (potentially multi-level) section index from the given root index block.
+     * This API requires the number of index levels (from the trailer) and an FS reader
+     * for fetching intermediate/leaf blocks when needed.
+     *
+     * @param rootBlock the ROOT_INDEX block where the section index starts
+     * @param levels the number of index levels; 1 for single-level, >=2 for multi-level
+     * @param fsReader the filesystem block reader to fetch child index blocks
+     */
+    public void loadSectionIndex(HFileBlock rootBlock, int levels, HFileBlock.FSReader fsReader)
+        throws IOException {
+      if (rootBlock.getBlockType() != BlockType.ROOT_INDEX) {
+        throw new IOException("Block is not a ROOT_INDEX for section index: "
+            + rootBlock.getBlockType());
+      }
+      if (levels < 1) {
+        throw new IOException("Invalid index level count: " + levels);
+      }
+      sections.clear();
+      this.numLevels = levels;
+
+      if (levels == 1) {
+        // Single-level index: entries are directly in the root
+        loadSectionIndex(rootBlock);
+        return;
+      }
+
+      if (fsReader == null) {
+        throw new IOException("FSReader is required to read multi-level section index");
+      }
+
+      // Multi-level: root contains pointers to next-level blocks.
+      DataInputStream in = rootBlock.getByteStream();
+      int fanout = in.readInt();
+      if (fanout < 0) {
+        throw new IOException("Negative root entry count in section index: " + fanout);
+      }
+      for (int i = 0; i < fanout; i++) {
+        // Root entry: first leaf entry (prefix, offset, size) + child pointer (offset, size)
+        int prefixLength = in.readInt();
+        byte[] prefix = new byte[prefixLength];
+        in.readFully(prefix);
+        in.readLong(); // first entry offset (ignored)
+        in.readInt();  // first entry size (ignored)
+        long childBlockOffset = in.readLong();
+        int childBlockSize = in.readInt();
+
+        readChildIndexSubtree(childBlockOffset, childBlockSize, levels - 1, fsReader);
+      }
+
+      LOG.debug("Loaded multi-level section index: levels={}, sections={}", this.numLevels, sections.size());
+    }
+
+    /**
+     * Recursively read intermediate/leaf index blocks and collect section entries.
+     */
+    private void readChildIndexSubtree(long blockOffset, int blockSize, int levelsRemaining,
+        HFileBlock.FSReader fsReader) throws IOException {
+      HFileBlock child = fsReader.readBlockData(blockOffset, blockSize, true, true, true);
+      try {
+        if (levelsRemaining == 1) {
+          // Leaf level: contains actual section entries
+          if (child.getBlockType() != BlockType.LEAF_INDEX) {
+            LOG.warn("Expected LEAF_INDEX at leaf level but found {}", child.getBlockType());
+          }
+          readLeafBlock(child);
+          return;
+        }
+
+        // Intermediate level: each entry points to a child block
+        if (child.getBlockType() != BlockType.INTERMEDIATE_INDEX) {
+          LOG.warn("Expected INTERMEDIATE_INDEX at level {} but found {}", levelsRemaining,
+              child.getBlockType());
+        }
+        DataInputStream in = child.getByteStream();
+        int entryCount = in.readInt();
+        if (entryCount < 0) {
+          throw new IOException("Negative intermediate entry count in section index: " + entryCount);
+        }
+        for (int i = 0; i < entryCount; i++) {
+          int prefixLength = in.readInt();
+          byte[] prefix = new byte[prefixLength];
+          in.readFully(prefix);
+          long nextOffset = in.readLong();
+          int nextSize = in.readInt();
+          readChildIndexSubtree(nextOffset, nextSize, levelsRemaining - 1, fsReader);
+        }
+      } finally {
+        // Release as these are non-root, transient blocks
+        try {
+          child.release();
+        } catch (Throwable t) {
+          // ignore
+        }
+      }
+    }
+
+    /**
+     * Parse a leaf index block and append all section entries.
+     */
+    private void readLeafBlock(HFileBlock leafBlock) throws IOException {
+      DataInputStream in = leafBlock.getByteStream();
+      int num = in.readInt();
+      if (num < 0) {
+        throw new IOException("Negative leaf entry count in section index: " + num);
+      }
+      for (int i = 0; i < num; i++) {
+        int prefixLength = in.readInt();
+        byte[] prefix = new byte[prefixLength];
+        in.readFully(prefix);
+        long offset = in.readLong();
+        int size = in.readInt();
+        sections.add(new SectionIndexEntry(prefix, offset, size));
       }
     }
     

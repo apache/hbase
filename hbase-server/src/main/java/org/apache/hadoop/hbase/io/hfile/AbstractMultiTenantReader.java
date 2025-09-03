@@ -164,8 +164,13 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
             rootIndexBlock.getBlockType() + " at offset " + trailer.getLoadOnOpenDataOffset());
       }
       
-      // Load the section index from the root block
-      sectionIndexReader.loadSectionIndex(rootIndexBlock);
+      // Load the section index from the root block (support multi-level traversal)
+      int levels = trailer.getNumDataIndexLevels();
+      if (levels <= 1) {
+        sectionIndexReader.loadSectionIndex(rootIndexBlock);
+      } else {
+        sectionIndexReader.loadSectionIndex(rootIndexBlock, levels, getUncachedBlockReader());
+      }
       
       // Copy section info to our internal data structures
       initSectionLocations();
