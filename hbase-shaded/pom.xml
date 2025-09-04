@@ -541,6 +541,12 @@
                       <exclude>keytab.txt</exclude>
                     </excludes>
                   </filter>
+                  <filter>
+                    <artifact>org.codehaus.janino:*</artifact>
+                    <excludes>
+                      <exclude>META-INF/DUMMY.*</exclude>
+                    </excludes>
+                  </filter>
                 </filters>
               </configuration>
             </execution>

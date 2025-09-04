@@ -144,6 +144,7 @@ import org.apache.hadoop.hbase.regionserver.handler.CloseRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.RSProcedureHandler;
 import org.apache.hadoop.hbase.regionserver.handler.RegionReplicaFlushHandler;
 import org.apache.hadoop.hbase.regionserver.http.RSDumpServlet;
+import org.apache.hadoop.hbase.regionserver.http.RSRequestServlet;
 import org.apache.hadoop.hbase.regionserver.http.RSStatusServlet;
 import org.apache.hadoop.hbase.regionserver.regionreplication.RegionReplicationBufferManager;
 import org.apache.hadoop.hbase.regionserver.throttle.FlushThroughputControllerFactory;
@@ -622,6 +623,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   @Override
   protected void configureInfoServer(InfoServer infoServer) {
     infoServer.addUnprivilegedServlet("rs-status", "/rs-status", RSStatusServlet.class);
+    infoServer.addPrivilegedServlet("requests", "/requests/*", RSRequestServlet.class);
     infoServer.setAttribute(REGIONSERVER, this);
   }
 
