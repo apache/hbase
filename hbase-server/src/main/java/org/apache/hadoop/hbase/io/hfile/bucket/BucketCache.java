@@ -79,9 +79,11 @@ import org.apache.hadoop.hbase.io.hfile.CachedBlock;
 import org.apache.hadoop.hbase.io.hfile.CombinedBlockCache;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
+import org.apache.hadoop.hbase.io.hfile.HFileInfo;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.RefCnt;
 import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
+import org.apache.hadoop.hbase.regionserver.DataTieringManager;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -1152,6 +1154,13 @@ public class BucketCache implements BlockCache, HeapSize {
       // the cached time is recored in nanos, so we need to convert the grace period accordingly
       long orphanGracePeriodNanos = orphanBlockGracePeriod * 1000000;
       long bytesFreed = 0;
+      // Check the list of files to determine the cold files which can be readily evicted.
+      Map<String, String> coldFiles = null;
+
+      DataTieringManager dataTieringManager = DataTieringManager.getInstance();
+      if (dataTieringManager != null) {
+        coldFiles = dataTieringManager.getColdFilesList();
+      }
       // Scan entire map putting bucket entry into appropriate bucket entry
       // group
       for (Map.Entry<BlockCacheKey, BucketEntry> bucketEntryWithKey : backingMap.entrySet()) {
@@ -1184,6 +1193,18 @@ public class BucketCache implements BlockCache, HeapSize {
             }
           }
         }
+
+        if (
+          bytesFreed < bytesToFreeWithExtra && coldFiles != null
+            && coldFiles.containsKey(bucketEntryWithKey.getKey().getHfileName())
+        ) {
+          int freedBlockSize = bucketEntryWithKey.getValue().getLength();
+          if (evictBlockIfNoRpcReferenced(bucketEntryWithKey.getKey())) {
+            bytesFreed += freedBlockSize;
+          }
+          continue;
+        }
+
         switch (entry.getPriority()) {
           case SINGLE: {
             bucketSingle.add(bucketEntryWithKey);
@@ -1199,6 +1220,22 @@ public class BucketCache implements BlockCache, HeapSize {
           }
         }
       }
+
+      // Check if the cold file eviction is sufficient to create enough space.
+      bytesToFreeWithExtra -= bytesFreed;
+      if (bytesToFreeWithExtra <= 0) {
+        LOG.debug("Bucket cache free space completed; freed space : {} bytes of cold data blocks.",
+          StringUtils.byteDesc(bytesFreed));
+        return;
+      }
+
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(
+          "Bucket cache free space completed; freed space : {} "
+            + "bytes of cold data blocks. {} more bytes required to be freed.",
+          StringUtils.byteDesc(bytesFreed), bytesToFreeWithExtra);
+      }
+
       PriorityQueue<BucketEntryGroup> bucketQueue =
         new PriorityQueue<>(3, Comparator.comparingLong(BucketEntryGroup::overflow));
 
@@ -1207,7 +1244,6 @@ public class BucketCache implements BlockCache, HeapSize {
       bucketQueue.add(bucketMemory);
 
       int remainingBuckets = bucketQueue.size();
-
       BucketEntryGroup bucketGroup;
       while ((bucketGroup = bucketQueue.poll()) != null) {
         long overflow = bucketGroup.overflow();
@@ -2410,9 +2446,27 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   @Override
-  public Optional<Boolean> shouldCacheFile(String fileName) {
+  public Optional<Boolean> shouldCacheFile(HFileInfo hFileInfo, Configuration conf) {
+    String fileName = hFileInfo.getHFileContext().getHFileName();
+    DataTieringManager dataTieringManager = DataTieringManager.getInstance();
+    if (dataTieringManager != null && !dataTieringManager.isHotData(hFileInfo, conf)) {
+      LOG.debug("Data tiering is enabled for file: '{}' and it is not hot data", fileName);
+      return Optional.of(false);
+    }
     // if we don't have the file in fullyCachedFiles, we should cache it
     return Optional.of(!fullyCachedFiles.containsKey(fileName));
+  }
+
+  @Override
+  public Optional<Boolean> shouldCacheBlock(BlockCacheKey key, long maxTimestamp,
+    Configuration conf) {
+    DataTieringManager dataTieringManager = DataTieringManager.getInstance();
+    if (dataTieringManager != null && !dataTieringManager.isHotData(maxTimestamp, conf)) {
+      LOG.debug("Data tiering is enabled for file: '{}' and it is not hot data",
+        key.getHfileName());
+      return Optional.of(false);
+    }
+    return Optional.of(true);
   }
 
   @Override

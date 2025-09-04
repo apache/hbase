@@ -535,6 +535,10 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       regionServerAccounting = new RegionServerAccounting(conf);
 
       blockCache = BlockCacheFactory.createBlockCache(conf);
+      // The call below, instantiates the DataTieringManager only when
+      // the configuration "hbase.regionserver.datatiering.enable" is set to true.
+      DataTieringManager.instantiate(conf, onlineRegions);
+
       mobFileCache = new MobFileCache(conf);
 
       rsSnapshotVerifier = new RSSnapshotVerifier(conf);

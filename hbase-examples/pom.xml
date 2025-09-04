@@ -34,7 +34,7 @@
       Version of protobuf that hbase uses internally (we shade our pb) Must match what is out
       in hbase-thirdparty include.
     -->
-    <internal.protobuf.version>4.30.2</internal.protobuf.version>
+    <internal.protobuf.version>4.31.1</internal.protobuf.version>
   </properties>
   <dependencies>
     <dependency>
@@ -126,18 +126,6 @@
       <groupId>com.google.protobuf</groupId>
       <artifactId>protobuf-java</artifactId>
       <version>${internal.protobuf.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.curator</groupId>
-      <artifactId>curator-framework</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.curator</groupId>
-      <artifactId>curator-client</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.curator</groupId>
-      <artifactId>curator-recipes</artifactId>
     </dependency>
     <dependency>
       <groupId>com.github.stephenc.findbugs</groupId>

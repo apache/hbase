@@ -22,11 +22,11 @@ import javax.servlet.DispatcherType;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hbase.thirdparty.org.eclipse.jetty.security.ConstraintMapping;
-import org.apache.hbase.thirdparty.org.eclipse.jetty.security.ConstraintSecurityHandler;
-import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.FilterHolder;
-import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.ServletContextHandler;
-import org.apache.hbase.thirdparty.org.eclipse.jetty.util.security.Constraint;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.ee8.nested.ServletConstraint;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.ee8.security.ConstraintMapping;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.ee8.security.ConstraintSecurityHandler;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.ee8.servlet.FilterHolder;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.ee8.servlet.ServletContextHandler;
 
 /**
  * HttpServer utility.
@@ -43,7 +43,7 @@ public final class HttpServerUtil {
    */
   public static void constrainHttpMethods(ServletContextHandler ctxHandler,
     boolean allowOptionsMethod) {
-    Constraint c = new Constraint();
+    ServletConstraint c = new ServletConstraint();
     c.setAuthenticate(true);
 
     ConstraintMapping cmt = new ConstraintMapping();

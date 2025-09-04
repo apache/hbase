@@ -15,23 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.client;
+package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.apache.hadoop.hbase.io.hfile.HFileInfo;
+import org.apache.yetus.audience.InterfaceAudience;
 
-@Category({ ClientTests.class, LargeTests.class })
-public class TestAdminShell extends AbstractTestShell {
+@InterfaceAudience.Private
+public interface DataTiering {
+  long getTimestamp(HStoreFile hFile);
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAdminShell.class);
+  long getTimestamp(HFileInfo hFileInfo);
 
-  @Override
-  protected String getIncludeList() {
-    return "admin_test.rb";
-  }
 }
