@@ -25,13 +25,12 @@ import org.junit.experimental.categories.Category;
 
 @Category({ ClientTests.class, LargeTests.class })
 public class TestReplicationShell extends AbstractTestShell {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestReplicationShell.class);
 
   @Override
-  protected String getIncludeList() {
+  public String getIncludeList() {
     return "replication_admin_test.rb";
   }
 }

@@ -24,7 +24,7 @@ import org.apache.hadoop.hbase.rsgroup.RSGroupAdminEndpoint;
 import org.apache.hadoop.hbase.rsgroup.RSGroupBasedLoadBalancer;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.junit.BeforeClass;
+import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
@@ -35,9 +35,9 @@ public class TestRSGroupShell extends AbstractTestShell {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestRSGroupShell.class);
 
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
-    setUpConfig();
+  @Before
+  public void setUp() throws Exception {
+    RubyShellTest.setUpConfig(this);
 
     // enable rs group
     TEST_UTIL.getConfiguration().set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
@@ -48,11 +48,13 @@ public class TestRSGroupShell extends AbstractTestShell {
 
     TEST_UTIL.startMiniCluster(3);
 
-    setUpJRubyRuntime();
+    RubyShellTest.setUpJRubyRuntime(this);
+
+    RubyShellTest.doTestSetup(this);
   }
 
   @Override
-  protected String getIncludeList() {
+  public String getIncludeList() {
     return "rsgroup_shell_test.rb";
   }
 }
