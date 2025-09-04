@@ -21,7 +21,6 @@ import java.io.IOException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.fs.ErasureCodingUtils;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.jruby.embed.ScriptingContainer;
 import org.junit.After;
 import org.junit.Before;
