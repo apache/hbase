@@ -3736,8 +3736,9 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
         if (rpcCall != null) {
           long rpcScanTime = EnvironmentEdgeManager.currentTime() - rpcCall.getStartTime();
           long rpcQueueWaitTime = rpcCall.getStartTime() - rpcCall.getReceiveTime();
-          scanMetrics.addToCounter(ServerSideScanMetrics.RPC_SCAN_TIME_METRIC_NAME, rpcScanTime);
-          scanMetrics.addToCounter(ServerSideScanMetrics.RPC_QUEUE_WAIT_TIME_METRIC_NAME,
+          scanMetrics.addToCounter(ServerSideScanMetrics.RPC_SCAN_PROCESSING_TIME_METRIC_NAME,
+            rpcScanTime);
+          scanMetrics.addToCounter(ServerSideScanMetrics.RPC_SCAN_QUEUE_WAIT_TIME_METRIC_NAME,
             rpcQueueWaitTime);
         }
         Map<String, Long> metrics = scanMetrics.getMetricsMap();
