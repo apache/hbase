@@ -24,7 +24,6 @@ import java.util.Properties;
 import java.util.UUID;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -62,12 +61,6 @@ public class TestKeymetaAdminShell extends ManagedKeyTestBase implements RubyShe
     conf.set("hbase.ipc.client.socket.timeout.read", "6000000");
     conf.set("hbase.ipc.client.socket.timeout.write", "6000000");
     conf.set("hbase.master.start.timeout.localHBaseCluster", "6000000");
-    // TODO:
-    // - ManagedKeyTestBase has the configuration and the logic to start the cluster.
-    // - TestKeyStoreKeyProvider has the logic to build keystore
-    // - TestManagedKeyStoreKeyProvider makes use of the above to test the default managed key provider
-    // - We need to combine the logic of the above two tests and generate a test keystore before
-    //   configuring with its path and starting cluster.
     Map<Bytes, Bytes> cust2key = new HashMap<>();
     Map<Bytes, String> cust2alias = new HashMap<>();
     String clusterId = UUID.randomUUID().toString();
