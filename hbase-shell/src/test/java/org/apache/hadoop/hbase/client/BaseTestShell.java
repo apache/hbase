@@ -17,21 +17,12 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.junit.Before;
 
-@Category({ ClientTests.class, LargeTests.class })
-public class TestAdminShell2 extends AbstractTestShell {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAdminShell2.class);
-
-  @Override
-  protected String getIncludeList() {
-    return "admin2_test.rb";
+public abstract class BaseTestShell extends AbstractTestShell {
+  @Before
+  public void setUp() throws Exception {
+    super.setUp();
+    super.setupDFS();
   }
 }
