@@ -65,7 +65,7 @@ public class RefreshHFilesEndpoint extends RefreshHFilesProtos.RefreshHFilesServ
       for (Store store : env.getRegion().getStores()) {
         LOG.debug("Refreshing HFiles for region: " + store.getRegionInfo().getRegionNameAsString()
           + " and store: " + store.getColumnFamilyName() + "class:" + store.getClass());
-        store.refreshStoreFiles();
+        store.refreshStoreFiles(true);
       }
     } catch (IOException ioe) {
       LOG.error("Exception while trying to refresh store files: ", ioe);
