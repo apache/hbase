@@ -17,10 +17,13 @@
  */
 package org.apache.hadoop.hbase.backup;
 
+import static org.apache.hadoop.hbase.HConstants.REPLICATION_BULKLOAD_ENABLE_KEY;
+import static org.apache.hadoop.hbase.HConstants.REPLICATION_CLUSTER_ID;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONTINUOUS_BACKUP_REPLICATION_PEER;
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.CONF_BACKUP_MAX_WAL_SIZE;
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.CONF_STAGED_WAL_FLUSH_INITIAL_DELAY;
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.CONF_STAGED_WAL_FLUSH_INTERVAL;
+import static org.apache.hadoop.hbase.mapreduce.WALPlayer.IGNORE_EMPTY_FILES;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -46,6 +49,7 @@ import org.apache.hadoop.hbase.backup.BackupInfo.BackupPhase;
 import org.apache.hadoop.hbase.backup.BackupInfo.BackupState;
 import org.apache.hadoop.hbase.backup.impl.BackupAdminImpl;
 import org.apache.hadoop.hbase.backup.impl.BackupManager;
+import org.apache.hadoop.hbase.backup.impl.BackupManifest;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.backup.impl.FullTableBackupClient;
 import org.apache.hadoop.hbase.backup.impl.IncrementalBackupManager;
@@ -304,6 +308,9 @@ public class TestBackupBase {
     conf1.set(CONF_BACKUP_MAX_WAL_SIZE, "10240");
     conf1.set(CONF_STAGED_WAL_FLUSH_INITIAL_DELAY, "10");
     conf1.set(CONF_STAGED_WAL_FLUSH_INTERVAL, "10");
+    conf1.setBoolean(REPLICATION_BULKLOAD_ENABLE_KEY, true);
+    conf1.set(REPLICATION_CLUSTER_ID, "clusterId1");
+    conf1.setBoolean(IGNORE_EMPTY_FILES, true);
 
     if (secure) {
       // set the always on security provider
@@ -569,6 +576,12 @@ public class TestBackupBase {
     while (it.hasNext()) {
       LOG.debug(Objects.toString(it.next().getPath()));
     }
+  }
+
+  BackupManifest getLatestBackupManifest(List<BackupInfo> backups) throws IOException {
+    BackupInfo newestBackup = backups.get(0);
+    return HBackupFileSystem.getManifest(conf1, new Path(BACKUP_ROOT_DIR),
+      newestBackup.getBackupId());
   }
 
   void deleteContinuousBackupReplicationPeerIfExists(Admin admin) throws IOException {
