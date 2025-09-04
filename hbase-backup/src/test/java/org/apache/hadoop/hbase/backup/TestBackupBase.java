@@ -23,6 +23,7 @@ import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONTINUOUS_B
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.CONF_BACKUP_MAX_WAL_SIZE;
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.CONF_STAGED_WAL_FLUSH_INITIAL_DELAY;
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.CONF_STAGED_WAL_FLUSH_INTERVAL;
+import static org.apache.hadoop.hbase.mapreduce.WALPlayer.IGNORE_EMPTY_FILES;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -309,6 +310,7 @@ public class TestBackupBase {
     conf1.set(CONF_STAGED_WAL_FLUSH_INTERVAL, "10");
     conf1.setBoolean(REPLICATION_BULKLOAD_ENABLE_KEY, true);
     conf1.set(REPLICATION_CLUSTER_ID, "clusterId1");
+    conf1.setBoolean(IGNORE_EMPTY_FILES, true);
 
     if (secure) {
       // set the always on security provider
