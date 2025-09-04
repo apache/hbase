@@ -1066,6 +1066,9 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
           conf.getInt(CONF_COPY_MANIFEST_THREADS, DEFAULT_COPY_MANIFEST_THREADS));
       copySucceeded = true;
     } catch (IOException e) {
+      if (outputFs.exists(initialOutputSnapshotDir)) {
+        outputFs.delete(initialOutputSnapshotDir, true);
+      }
       throw new ExportSnapshotException("Failed to copy the snapshot directory: from=" + snapshotDir
         + " to=" + initialOutputSnapshotDir, e);
     } finally {
