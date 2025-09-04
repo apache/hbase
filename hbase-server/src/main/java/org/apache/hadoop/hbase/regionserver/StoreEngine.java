@@ -364,9 +364,9 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
     storeFileManager.loadFiles(files);
   }
 
-  public void refreshStoreFiles() throws IOException {
+  public void refreshStoreFiles(boolean isManualRefresh) throws IOException {
     List<StoreFileInfo> fileInfos = storeFileTracker.load();
-    refreshStoreFilesInternal(fileInfos);
+    refreshStoreFilesInternal(fileInfos, isManualRefresh);
   }
 
   public void refreshStoreFiles(Collection<String> newFiles) throws IOException {
@@ -375,7 +375,7 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
       storeFiles.add(ctx.getRegionFileSystem().getStoreFileInfo(ctx.getFamily().getNameAsString(),
         file, storeFileTracker));
     }
-    refreshStoreFilesInternal(storeFiles);
+    refreshStoreFilesInternal(storeFiles, false);
   }
 
   /**
@@ -383,9 +383,11 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
    * the store file readers for store files no longer available. Mainly used by secondary region
    * replicas to keep up to date with the primary region files.
    */
-  private void refreshStoreFilesInternal(Collection<StoreFileInfo> newFiles) throws IOException {
+  private void refreshStoreFilesInternal(Collection<StoreFileInfo> newFiles,
+    boolean isManualRefresh) throws IOException {
     Collection<HStoreFile> currentFiles = storeFileManager.getStoreFiles();
-    Collection<HStoreFile> compactedFiles = storeFileManager.getCompactedfiles();
+    Collection<HStoreFile> compactedFiles =
+      isManualRefresh ? null : storeFileManager.getCompactedfiles();
     if (currentFiles == null) {
       currentFiles = Collections.emptySet();
     }

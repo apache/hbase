@@ -470,7 +470,7 @@ public class TestRegionReplicas {
 
       // Refresh store files on the secondary
       Region secondaryRegion = getRS().getRegion(hriSecondary.getEncodedName());
-      secondaryRegion.getStore(f).refreshStoreFiles();
+      secondaryRegion.getStore(f).refreshStoreFiles(false);
       Assert.assertEquals(3, secondaryRegion.getStore(f).getStorefilesCount());
 
       // force compaction
