@@ -528,8 +528,8 @@ public class HStore
   }
 
   @Override
-  public void refreshStoreFiles(boolean isManualRefresh) throws IOException {
-    storeEngine.refreshStoreFiles(isManualRefresh);
+  public void refreshStoreFiles() throws IOException {
+    storeEngine.refreshStoreFiles();
     postRefreshStoreFiles();
   }
 

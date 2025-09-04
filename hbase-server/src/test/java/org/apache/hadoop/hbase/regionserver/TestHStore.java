@@ -1061,7 +1061,7 @@ public class TestHStore {
     assertEquals(0, this.store.getStorefilesCount());
 
     // Test refreshing store files when no store files are there
-    store.refreshStoreFiles(false);
+    store.refreshStoreFiles();
     assertEquals(0, this.store.getStorefilesCount());
 
     // add some data, flush
@@ -1073,7 +1073,7 @@ public class TestHStore {
     addStoreFile();
 
     assertEquals(1, this.store.getStorefilesCount());
-    store.refreshStoreFiles(false);
+    store.refreshStoreFiles();
     assertEquals(2, this.store.getStorefilesCount());
 
     // add three more files
@@ -1082,14 +1082,14 @@ public class TestHStore {
     addStoreFile();
 
     assertEquals(2, this.store.getStorefilesCount());
-    store.refreshStoreFiles(false);
+    store.refreshStoreFiles();
     assertEquals(5, this.store.getStorefilesCount());
 
     closeCompactedFile(0);
     archiveStoreFile(0);
 
     assertEquals(5, this.store.getStorefilesCount());
-    store.refreshStoreFiles(false);
+    store.refreshStoreFiles();
     assertEquals(4, this.store.getStorefilesCount());
 
     archiveStoreFile(0);
@@ -1097,11 +1097,11 @@ public class TestHStore {
     archiveStoreFile(2);
 
     assertEquals(4, this.store.getStorefilesCount());
-    store.refreshStoreFiles(false);
+    store.refreshStoreFiles();
     assertEquals(1, this.store.getStorefilesCount());
 
     archiveStoreFile(0);
-    store.refreshStoreFiles(false);
+    store.refreshStoreFiles();
     assertEquals(0, this.store.getStorefilesCount());
   }
 
@@ -1120,12 +1120,12 @@ public class TestHStore {
     StoreEngine<?, ?, ?, ?> spiedStoreEngine = spy(store.getStoreEngine());
 
     // call first time after files changed
-    spiedStoreEngine.refreshStoreFiles(false);
+    spiedStoreEngine.refreshStoreFiles();
     assertEquals(2, this.store.getStorefilesCount());
     verify(spiedStoreEngine, times(1)).replaceStoreFiles(any(), any(), any(), any());
 
     // call second time
-    spiedStoreEngine.refreshStoreFiles(false);
+    spiedStoreEngine.refreshStoreFiles();
 
     // ensure that replaceStoreFiles is not called, i.e, the times does not change, if files are not
     // refreshed,

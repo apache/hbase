@@ -203,7 +203,7 @@ public interface Store {
    * the store file readers for store files no longer available. Mainly used by secondary region
    * replicas to keep up to date with the primary region files.
    */
-  void refreshStoreFiles(boolean isManualRefresh) throws IOException;
+  void refreshStoreFiles() throws IOException;
 
   /**
    * This value can represent the degree of emergency of compaction for this store. It should be

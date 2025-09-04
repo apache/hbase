@@ -6864,7 +6864,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           long maxSeqIdBefore = store.getMaxSequenceId().orElse(0L);
 
           // refresh the store files. This is similar to observing a region open wal marker.
-          store.refreshStoreFiles(false);
+          store.refreshStoreFiles();
 
           long storeSeqId = store.getMaxSequenceId().orElse(0L);
           if (storeSeqId < smallestSeqIdInStores) {
