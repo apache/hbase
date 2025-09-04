@@ -86,7 +86,6 @@ public class ServerSideScanMetrics {
    * number of rows filtered during scan RPC
    */
   public final AtomicLong countOfRowsFiltered =
-
     createCounter(COUNT_OF_ROWS_FILTERED_KEY_METRIC_NAME);
 
   /**
