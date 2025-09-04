@@ -41,7 +41,7 @@ public class RefreshHFilesCallable extends BaseRSProcedureCallable {
 
     try {
       for (Store store : region.getStores()) {
-        store.refreshStoreFiles();
+        store.refreshStoreFiles(true);
       }
     } catch (IOException ioe) {
       LOG.warn("Exception while trying to refresh store files: ", ioe);

@@ -104,7 +104,7 @@ public class StorefileRefresherChore extends ScheduledChore {
           // TODO: some stores might see new data from flush, while others do not which
           // MIGHT break atomic edits across column families. We can fix this with setting
           // mvcc read numbers that we know every store has seen
-          store.refreshStoreFiles();
+          store.refreshStoreFiles(false);
         }
       } catch (IOException ex) {
         LOG.warn("Exception while trying to refresh store files for region:" + r.getRegionInfo()

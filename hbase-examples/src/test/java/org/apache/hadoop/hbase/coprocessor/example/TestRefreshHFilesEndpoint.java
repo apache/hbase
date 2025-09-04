@@ -114,7 +114,7 @@ public class TestRefreshHFilesEndpoint extends TestRefreshHFilesBase {
     }
 
     @Override
-    public void refreshStoreFiles() throws IOException {
+    public void refreshStoreFiles(boolean isManualRefresh) throws IOException {
       throw new IOException();
     }
   }
