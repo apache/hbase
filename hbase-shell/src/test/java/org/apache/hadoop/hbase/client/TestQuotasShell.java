@@ -25,13 +25,12 @@ import org.junit.experimental.categories.Category;
 
 @Category({ ClientTests.class, LargeTests.class })
 public class TestQuotasShell extends AbstractTestShell {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestQuotasShell.class);
 
   @Override
-  protected String getIncludeList() {
+  public String getIncludeList() {
     return "quotas_test.rb";
   }
 }

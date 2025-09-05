@@ -25,13 +25,11 @@ import org.junit.experimental.categories.Category;
 
 @Category({ ClientTests.class, LargeTests.class })
 public class TestShell extends AbstractTestShell {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestShell.class);
 
   @Override
-  protected String getExcludeList() {
-    return "replication_admin_test.rb,rsgroup_shell_test.rb,admin_test.rb,table_test.rb,"
-      + "quotas_test.rb,admin2_test.rb,list_tables_test.rb";
+  public String getSuitePattern() {
+    return "**/*_test_cluster.rb";
   }
 }

@@ -23,34 +23,13 @@ require 'set'
 
 puts "Ruby description: #{RUBY_DESCRIPTION}"
 
-unless defined?($TEST_CLUSTER)
-  include Java
-
-  # Set logging level to avoid verboseness
-  log_level = 'OFF'
-  org.apache.hadoop.hbase.logging.Log4jUtils.setRootLevel(log_level)
-  org.apache.hadoop.hbase.logging.Log4jUtils.setAllLevels('org.apache.zookeeper', log_level)
-  org.apache.hadoop.hbase.logging.Log4jUtils.setAllLevels('org.apache.hadoop.hdfs', log_level)
-  org.apache.hadoop.hbase.logging.Log4jUtils.setAllLevels('org.apache.hadoop.hbase', log_level)
-  org.apache.hadoop.hbase.logging.Log4jUtils
-    .setAllLevels('org.apache.hadoop.ipc.HBaseServer', log_level)
-
-  java_import org.apache.hadoop.hbase.HBaseTestingUtility
-
-  $TEST_CLUSTER = HBaseTestingUtility.new
-  $TEST_CLUSTER.configuration.setInt("hbase.regionserver.msginterval", 100)
-  $TEST_CLUSTER.configuration.setInt("hbase.client.pause", 250)
-  $TEST_CLUSTER.configuration.set("hbase.quota.enabled", "true")
-  $TEST_CLUSTER.configuration.set('hbase.master.quotas.snapshot.chore.period', 5000)
-  $TEST_CLUSTER.configuration.set('hbase.master.quotas.snapshot.chore.delay', 5000)
-  $TEST_CLUSTER.configuration.setInt(org.apache.hadoop.hbase.HConstants::HBASE_CLIENT_RETRIES_NUMBER, 6)
-  $TEST_CLUSTER.startMiniCluster
-  @own_cluster = true
-end
-
 require 'test_helper'
 
-puts "Running tests..."
+test_suite_name = java.lang.System.get_property('shell.test.suite_name')
+
+test_suite_pattern = java.lang.System.get_property('shell.test.suite_pattern')
+
+puts "Running tests for #{test_suite_name} with pattern: #{test_suite_pattern} ..."
 
 if java.lang.System.get_property('shell.test.include')
   includes = Set.new(java.lang.System.get_property('shell.test.include').split(','))
@@ -60,7 +39,7 @@ if java.lang.System.get_property('shell.test.exclude')
   excludes = Set.new(java.lang.System.get_property('shell.test.exclude').split(','))
 end
 
-files = Dir[ File.dirname(__FILE__) + "/**/*_test.rb" ]
+files = Dir[ File.dirname(__FILE__) + "/" + test_suite_pattern ]
 files.each do |file|
   filename = File.basename(file)
   if includes != nil && !includes.include?(filename)
@@ -95,10 +74,4 @@ begin
 rescue SystemExit => e
   # Unit tests should not raise uncaught SystemExit exceptions. This could cause tests to be ignored.
   raise 'Caught SystemExit during unit test execution! Check output file for details.'
-end
-
-puts "Done with tests! Shutting down the cluster..."
-if @own_cluster
-  $TEST_CLUSTER.shutdownMiniCluster
-  java.lang.System.exit(0)
 end

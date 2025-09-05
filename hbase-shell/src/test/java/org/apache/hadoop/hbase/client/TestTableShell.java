@@ -25,13 +25,12 @@ import org.junit.experimental.categories.Category;
 
 @Category({ ClientTests.class, MediumTests.class })
 public class TestTableShell extends AbstractTestShell {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestTableShell.class);
 
   @Override
-  protected String getIncludeList() {
+  public String getIncludeList() {
     return "table_test.rb";
   }
 }
