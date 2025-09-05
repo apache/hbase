@@ -32,11 +32,19 @@ public class TestRSGroupShell extends AbstractTestShell {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestRSGroupShell.class);
 
+  @Override
   @Before
   public void setUp() throws Exception {
+    RubyShellTest.setUpConfig(this);
     // enable rs group
     RSGroupUtil.enableRSGroup(TEST_UTIL.getConfiguration());
-    super.setUp();
+
+    // Start mini cluster, need 3 nodes
+    TEST_UTIL.startMiniCluster(3);
+
+    RubyShellTest.setUpJRubyRuntime(this);
+
+    RubyShellTest.doTestSetup(this);
   }
 
   @Override
