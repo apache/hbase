@@ -124,6 +124,11 @@ public class ScannerContext {
   final ServerSideScanMetrics metrics;
 
   ScannerContext(boolean keepProgress, LimitFields limitsToCopy, boolean trackMetrics) {
+    this(keepProgress, limitsToCopy, trackMetrics, null);
+  }
+
+  ScannerContext(boolean keepProgress, LimitFields limitsToCopy, boolean trackMetrics,
+    ServerSideScanMetrics scanMetrics) {
     this.limits = new LimitFields();
     if (limitsToCopy != null) {
       this.limits.copy(limitsToCopy);
@@ -134,7 +139,8 @@ public class ScannerContext {
 
     this.keepProgress = keepProgress;
     this.scannerState = DEFAULT_STATE;
-    this.metrics = trackMetrics ? new ServerSideScanMetrics() : null;
+    this.metrics =
+      trackMetrics ? (scanMetrics != null ? scanMetrics : new ServerSideScanMetrics()) : null;
   }
 
   public boolean isTrackingMetrics() {
@@ -449,6 +455,7 @@ public class ScannerContext {
     boolean keepProgress = DEFAULT_KEEP_PROGRESS;
     boolean trackMetrics = false;
     LimitFields limits = new LimitFields();
+    ServerSideScanMetrics scanMetrics = null;
 
     private Builder() {
     }
@@ -487,8 +494,13 @@ public class ScannerContext {
       return this;
     }
 
+    public Builder setScanMetrics(ServerSideScanMetrics scanMetrics) {
+      this.scanMetrics = scanMetrics;
+      return this;
+    }
+
     public ScannerContext build() {
-      return new ScannerContext(keepProgress, limits, trackMetrics);
+      return new ScannerContext(keepProgress, limits, trackMetrics, scanMetrics);
     }
   }
 
