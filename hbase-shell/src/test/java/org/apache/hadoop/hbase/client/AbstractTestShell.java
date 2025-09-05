@@ -54,6 +54,7 @@ public abstract class AbstractTestShell implements RubyShellTest {
 
     RubyShellTest.doTestSetup(this);
   }
+
   @After
   public void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
