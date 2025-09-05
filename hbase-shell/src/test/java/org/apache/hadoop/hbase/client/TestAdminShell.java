@@ -23,7 +23,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.fs.ErasureCodingUtils;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.junit.BeforeClass;
+import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
@@ -38,15 +38,15 @@ public class TestAdminShell extends AbstractTestShell {
     HBaseClassTestRule.forClass(TestAdminShell.class);
 
   @Override
-  protected String getIncludeList() {
+  public String getIncludeList() {
     return "admin_test.rb";
   }
 
-  protected static boolean erasureCodingSupported = false;
+  protected boolean erasureCodingSupported = false;
 
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
-    setUpConfig();
+  @Before
+  public void setUp() throws Exception {
+    RubyShellTest.setUpConfig(this);
 
     // Start mini cluster
     // 3 datanodes needed for erasure coding checks
@@ -61,7 +61,9 @@ public class TestAdminShell extends AbstractTestShell {
     }
 
     // we'll use this extra variable to trigger some differences in the tests
-    setUpJRubyRuntime(
+    RubyShellTest.setUpJRubyRuntime(this,
       Collections.singletonMap("$ERASURE_CODING_SUPPORTED", erasureCodingSupported));
+
+    RubyShellTest.doTestSetup(this);
   }
 }
