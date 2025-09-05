@@ -23,6 +23,8 @@ import static org.apache.hadoop.hbase.client.metrics.ScanMetrics.NOT_SERVING_REG
 import static org.apache.hadoop.hbase.client.metrics.ScanMetrics.REGIONS_SCANNED_METRIC_NAME;
 import static org.apache.hadoop.hbase.client.metrics.ScanMetrics.RPC_RETRIES_METRIC_NAME;
 import static org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME;
+import static org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics.RPC_SCAN_PROCESSING_TIME_METRIC_NAME;
+import static org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics.RPC_SCAN_QUEUE_WAIT_TIME_METRIC_NAME;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
@@ -36,16 +38,20 @@ import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.client.metrics.ScanMetricsRegionInfo;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.junit.AfterClass;
@@ -57,7 +63,7 @@ import org.junit.experimental.categories.Category;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 
-@Category({ ClientTests.class, MediumTests.class })
+@Category({ ClientTests.class, LargeTests.class })
 public class TestTableScanMetrics extends FromClientSideBase {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -334,6 +340,8 @@ public class TestTableScanMetrics extends FromClientSideBase {
           Map<String, Long> metricsMap = entry.getValue();
           // Remove millis between nexts metric as it is not deterministic
           metricsMap.remove(MILLIS_BETWEEN_NEXTS_METRIC_NAME);
+          metricsMap.remove(RPC_SCAN_PROCESSING_TIME_METRIC_NAME);
+          metricsMap.remove(RPC_SCAN_QUEUE_WAIT_TIME_METRIC_NAME);
           Assert.assertNotNull(scanMetricsRegionInfo.getEncodedRegionName());
           Assert.assertNotNull(scanMetricsRegionInfo.getServerName());
           Assert.assertEquals(1, (long) metricsMap.get(REGIONS_SCANNED_METRIC_NAME));
@@ -346,6 +354,59 @@ public class TestTableScanMetrics extends FromClientSideBase {
 
       // Assert on scan metrics by region
       Assert.assertEquals(expectedScanMetricsByRegion, concurrentScanMetricsByRegion);
+    } finally {
+      TEST_UTIL.deleteTable(tableName);
+    }
+  }
+
+  @Test
+  public void testRPCCallProcessingAndQueueWaitTimeMetrics() throws Exception {
+    final int numThreads = 20;
+    Configuration conf = TEST_UTIL.getConfiguration();
+    // Handler count is 3 by default.
+    int handlerCount = conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT,
+      HConstants.DEFAULT_REGION_SERVER_HANDLER_COUNT);
+    // Keep the number of threads to be high enough for RPC calls to queue up. For now going with 6
+    // times the handler count.
+    Assert.assertTrue(numThreads > 6 * handlerCount);
+    ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(numThreads);
+    TableName tableName = TableName.valueOf(
+      TestTableScanMetrics.class.getSimpleName() + "_testRPCCallProcessingAndQueueWaitTimeMetrics");
+    AtomicLong totalScanRpcTime = new AtomicLong(0);
+    AtomicLong totalQueueWaitTime = new AtomicLong(0);
+    CountDownLatch latch = new CountDownLatch(numThreads);
+    try (Table table = TEST_UTIL.createMultiRegionTable(tableName, CF)) {
+      TEST_UTIL.loadTable(table, CF);
+      for (int i = 0; i < numThreads; i++) {
+        executor.execute(new Runnable() {
+          @Override
+          public void run() {
+            try {
+              Scan scan = generateScan(EMPTY_BYTE_ARRAY, EMPTY_BYTE_ARRAY);
+              scan.setEnableScanMetricsByRegion(true);
+              scan.setCaching(2);
+              try (ResultScanner rs = table.getScanner(scan)) {
+                Result r;
+                while ((r = rs.next()) != null) {
+                  Assert.assertFalse(r.isEmpty());
+                }
+                ScanMetrics scanMetrics = rs.getScanMetrics();
+                Map<String, Long> metricsMap = scanMetrics.getMetricsMap();
+                totalScanRpcTime.addAndGet(metricsMap.get(RPC_SCAN_PROCESSING_TIME_METRIC_NAME));
+                totalQueueWaitTime.addAndGet(metricsMap.get(RPC_SCAN_QUEUE_WAIT_TIME_METRIC_NAME));
+              }
+              latch.countDown();
+            } catch (IOException e) {
+              throw new RuntimeException(e);
+            }
+          }
+        });
+      }
+      latch.await();
+      executor.shutdown();
+      executor.awaitTermination(10, TimeUnit.SECONDS);
+      Assert.assertTrue(totalScanRpcTime.get() > 0);
+      Assert.assertTrue(totalQueueWaitTime.get() > 0);
     } finally {
       TEST_UTIL.deleteTable(tableName);
     }
@@ -591,6 +652,8 @@ public class TestTableScanMetrics extends FromClientSideBase {
       Map<String, Long> metricsMap = entry.getValue();
       // Remove millis between nexts metric as it is not deterministic
       metricsMap.remove(MILLIS_BETWEEN_NEXTS_METRIC_NAME);
+      metricsMap.remove(RPC_SCAN_PROCESSING_TIME_METRIC_NAME);
+      metricsMap.remove(RPC_SCAN_QUEUE_WAIT_TIME_METRIC_NAME);
       if (dstMap.containsKey(scanMetricsRegionInfo)) {
         Map<String, Long> dstMetricsMap = dstMap.get(scanMetricsRegionInfo);
         for (Map.Entry<String, Long> metricEntry : metricsMap.entrySet()) {
