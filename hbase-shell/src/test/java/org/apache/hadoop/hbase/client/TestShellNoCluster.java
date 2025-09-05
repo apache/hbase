@@ -31,6 +31,7 @@ public class TestShellNoCluster extends AbstractTestShell {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestShellNoCluster.class);
 
+  @Override
   @Before
   public void setUp() throws Exception {
     RubyShellTest.setUpConfig(this);
@@ -42,6 +43,7 @@ public class TestShellNoCluster extends AbstractTestShell {
     RubyShellTest.doTestSetup(this);
   }
 
+  @Override
   @After
   public void tearDown() throws Exception {
     // no cluster

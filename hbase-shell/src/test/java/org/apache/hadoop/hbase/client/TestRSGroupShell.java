@@ -35,6 +35,7 @@ public class TestRSGroupShell extends AbstractTestShell {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestRSGroupShell.class);
 
+  @Override
   @Before
   public void setUp() throws Exception {
     RubyShellTest.setUpConfig(this);

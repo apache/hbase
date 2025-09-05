@@ -30,16 +30,17 @@ public abstract class AbstractTestShell implements RubyShellTest {
   protected final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   protected final ScriptingContainer jruby = new ScriptingContainer();
 
-  protected boolean erasureCodingSupported = false;
-
+  @Override
   public HBaseTestingUtility getTEST_UTIL() {
     return TEST_UTIL;
   }
 
+  @Override
   public ScriptingContainer getJRuby() {
     return jruby;
   }
 
+  @Override
   public String getSuitePattern() {
     return "**/*_test.rb";
   }
@@ -54,17 +55,6 @@ public abstract class AbstractTestShell implements RubyShellTest {
     RubyShellTest.setUpJRubyRuntime(this);
 
     RubyShellTest.doTestSetup(this);
-  }
-
-  protected void setupDFS() throws IOException {
-    try {
-      ErasureCodingUtils.enablePolicy(FileSystem.get(TEST_UTIL.getConfiguration()),
-        "XOR-2-1-1024k");
-      erasureCodingSupported = true;
-    } catch (UnsupportedOperationException e) {
-      LOG.info(
-        "Current hadoop version does not support erasure coding, only validation tests will run.");
-    }
   }
 
   @After
