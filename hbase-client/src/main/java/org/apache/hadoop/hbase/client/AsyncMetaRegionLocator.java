@@ -134,4 +134,10 @@ class AsyncMetaRegionLocator {
       }
     }
   }
+
+  // only used for testing whether we have cached the location for a table.
+  int getNumberOfCachedRegionLocations() {
+    RegionLocations locs = metaRegionLocations.get();
+    return locs != null ? locs.numNonNullElements() : 0;
+  }
 }

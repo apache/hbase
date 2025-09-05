@@ -25,6 +25,7 @@ import static org.apache.hadoop.hbase.HConstants.ZEROES;
 import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
 import static org.apache.hadoop.hbase.client.AsyncRegionLocatorHelper.createRegionLocations;
 import static org.apache.hadoop.hbase.client.AsyncRegionLocatorHelper.isGood;
+import static org.apache.hadoop.hbase.client.ConnectionConfiguration.HBASE_CLIENT_META_CACHE_INVALIDATE_INTERVAL;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.createClosestRowAfter;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.isEmptyStopRow;
 import static org.apache.hadoop.hbase.client.RegionInfo.createRegionName;
@@ -57,9 +58,14 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Scan.ReadType;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
+import org.apache.hbase.thirdparty.io.netty.util.Timeout;
+import org.apache.hbase.thirdparty.io.netty.util.TimerTask;
 
 /**
  * The asynchronous locator for regions other than meta.
@@ -90,6 +96,8 @@ class AsyncNonMetaRegionLocator {
   private CatalogReplicaLoadBalanceSelector metaReplicaSelector;
 
   private final ConcurrentMap<TableName, TableCache> cache = new ConcurrentHashMap<>();
+
+  private final HashedWheelTimer retryTimer;
 
   private static final class LocateRequest {
 
@@ -212,7 +220,7 @@ class AsyncNonMetaRegionLocator {
     }
   }
 
-  AsyncNonMetaRegionLocator(AsyncConnectionImpl conn) {
+  AsyncNonMetaRegionLocator(AsyncConnectionImpl conn, HashedWheelTimer retryTimer) {
     this.conn = conn;
     this.maxConcurrentLocateRequestPerTable = conn.getConfiguration().getInt(
       MAX_CONCURRENT_LOCATE_REQUEST_PER_TABLE, DEFAULT_MAX_CONCURRENT_LOCATE_REQUEST_PER_TABLE);
@@ -253,6 +261,20 @@ class AsyncNonMetaRegionLocator {
         break;
       default:
         // Doing nothing
+    }
+
+    // The interval of invalidate meta cache task,
+    // if disable/delete table using same connection or usually create a new connection, no need to
+    // set it.
+    // Suggest set it to 24h or a higher value, because disable/delete table usually not very
+    // frequently.
+    this.retryTimer = retryTimer;
+    long metaCacheInvalidateInterval =
+      conn.getConfiguration().getLong(HBASE_CLIENT_META_CACHE_INVALIDATE_INTERVAL, 0L);
+    if (metaCacheInvalidateInterval > 0) {
+      TimerTask invalidateMetaCacheTask = getInvalidateMetaCacheTask(metaCacheInvalidateInterval);
+      this.retryTimer.newTimeout(invalidateMetaCacheTask, metaCacheInvalidateInterval,
+        TimeUnit.MILLISECONDS);
     }
   }
 
@@ -610,4 +632,68 @@ class AsyncNonMetaRegionLocator {
     return locateRowInCache(tableCache, row, RegionReplicaUtil.DEFAULT_REPLICA_ID);
   }
 
+  // only used for testing whether we have cached the location for a table.
+  int getNumberOfCachedRegionLocations(TableName tableName) {
+    TableCache tableCache = cache.get(tableName);
+    if (tableCache == null) {
+      return 0;
+    }
+    return tableCache.regionLocationCache.getAll().stream()
+      .mapToInt(RegionLocations::numNonNullElements).sum();
+  }
+
+  private TimerTask getInvalidateMetaCacheTask(long metaCacheInvalidateInterval) {
+    return new TimerTask() {
+      @Override
+      public void run(Timeout timeout) throws Exception {
+        FutureUtils.addListener(invalidateTableCache(), (res, err) -> {
+          if (err != null) {
+            LOG.warn("InvalidateTableCache failed.", err);
+          }
+          AsyncConnectionImpl.RETRY_TIMER.newTimeout(this, metaCacheInvalidateInterval,
+            TimeUnit.MILLISECONDS);
+        });
+      }
+    };
+  }
+
+  private CompletableFuture<Void> invalidateTableCache() {
+    CompletableFuture<Void> future = new CompletableFuture<>();
+    Iterator<TableName> tbnIter = cache.keySet().iterator();
+    AsyncAdmin admin = conn.getAdmin();
+    invalidateCache(future, tbnIter, admin);
+    return future;
+  }
+
+  private void invalidateCache(CompletableFuture<Void> future, Iterator<TableName> tbnIter,
+    AsyncAdmin admin) {
+    if (tbnIter.hasNext()) {
+      TableName tableName = tbnIter.next();
+      FutureUtils.addListener(admin.isTableDisabled(tableName), (tableDisabled, err) -> {
+        boolean shouldInvalidateCache = false;
+        if (err != null) {
+          if (err instanceof TableNotFoundException) {
+            LOG.info("Table {} was not exist, will invalidate its cache.", tableName);
+            shouldInvalidateCache = true;
+          } else {
+            // If other exception occurred, just skip to invalidate it cache.
+            LOG.warn("Get table state of {} failed, skip to invalidate its cache.", tableName, err);
+            return;
+          }
+        } else if (tableDisabled) {
+          LOG.info("Table {} was disabled, will invalidate its cache.", tableName);
+          shouldInvalidateCache = true;
+        }
+        if (shouldInvalidateCache) {
+          clearCache(tableName);
+          LOG.info("Invalidate cache for {} succeed.", tableName);
+        } else {
+          LOG.debug("Table {} is normal, no need to invalidate its cache.", tableName);
+        }
+        invalidateCache(future, tbnIter, admin);
+      });
+    } else {
+      future.complete(null);
+    }
+  }
 }

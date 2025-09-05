@@ -58,7 +58,8 @@ public class TestAsyncTableLocatePrefetch {
     TEST_UTIL.createMultiRegionTable(TABLE_NAME, FAMILY);
     TEST_UTIL.waitTableAvailable(TABLE_NAME);
     CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
-    LOCATOR = new AsyncNonMetaRegionLocator((AsyncConnectionImpl) CONN);
+    LOCATOR =
+      new AsyncNonMetaRegionLocator((AsyncConnectionImpl) CONN, AsyncConnectionImpl.RETRY_TIMER);
   }
 
   @AfterClass
