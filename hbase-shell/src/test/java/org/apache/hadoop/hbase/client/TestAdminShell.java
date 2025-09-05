@@ -17,40 +17,49 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.io.IOException;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.After;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-@Category({ ClientTests.class, MediumTests.class })
-public class TestShellNoCluster extends AbstractTestShell {
+@Category({ ClientTests.class, LargeTests.class })
+public class TestAdminShell extends AbstractTestShell {
+  private static final Logger LOG = LoggerFactory.getLogger(TestAdminShell.class);
+
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestShellNoCluster.class);
+    HBaseClassTestRule.forClass(TestAdminShell.class);
 
   @Override
+  public String getIncludeList() {
+    return "admin_test.rb";
+  }
+
   @Before
   public void setUp() throws Exception {
     RubyShellTest.setUpConfig(this);
 
-    // no cluster
+    // Start mini cluster
+    // 3 datanodes needed for erasure coding checks
+    TEST_UTIL.startMiniCluster(3);
+
+    setupDFS();
 
     RubyShellTest.setUpJRubyRuntime(this);
 
     RubyShellTest.doTestSetup(this);
   }
 
-  @Override
-  @After
-  public void tearDown() throws Exception {
-    // no cluster
-  }
-
-  @Override
-  public String getSuitePattern() {
-    return "**/*_test_no_cluster.rb";
+  protected void setupDFS() throws IOException {
+    DistributedFileSystem dfs =
+      (DistributedFileSystem) FileSystem.get(TEST_UTIL.getConfiguration());
+    dfs.enableErasureCodingPolicy("XOR-2-1-1024k");
   }
 }
