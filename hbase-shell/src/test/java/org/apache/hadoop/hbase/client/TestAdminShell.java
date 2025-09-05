@@ -44,6 +44,7 @@ public class TestAdminShell extends AbstractTestShell {
 
   protected boolean erasureCodingSupported = false;
 
+  @Override
   @Before
   public void setUp() throws Exception {
     RubyShellTest.setUpConfig(this);
