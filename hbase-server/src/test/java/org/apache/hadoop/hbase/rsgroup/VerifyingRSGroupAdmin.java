@@ -526,6 +526,11 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
     admin.rollWALWriter(serverName);
   }
 
+  @Override
+  public void rollAllWALWriters() throws IOException {
+    admin.rollAllWALWriters();
+  }
+
   public CompactionState getCompactionState(TableName tableName) throws IOException {
     return admin.getCompactionState(tableName);
   }
@@ -988,5 +993,10 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   @Override
   public boolean isReplicationPeerModificationEnabled() throws IOException {
     return admin.isReplicationPeerModificationEnabled();
+  }
+
+  @Override
+  public long getHighestWALFilenum(ServerName serverName) throws IOException {
+    return admin.getHighestWALFilenum(serverName);
   }
 }

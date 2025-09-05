@@ -692,6 +692,11 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
+  public CompletableFuture<Void> rollAllWALWriters() {
+    return wrap(rawAdmin.rollAllWALWriters());
+  }
+
+  @Override
   public CompletableFuture<Void> clearCompactionQueues(ServerName serverName, Set<String> queues) {
     return wrap(rawAdmin.clearCompactionQueues(serverName, queues));
   }
@@ -1004,5 +1009,10 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   @Override
   public CompletableFuture<List<String>> getCachedFilesList(ServerName serverName) {
     return wrap(rawAdmin.getCachedFilesList(serverName));
+  }
+
+  @Override
+  public CompletableFuture<Long> getHighestWALFilenum(ServerName serverName) {
+    return wrap(rawAdmin.getHighestWALFilenum(serverName));
   }
 }

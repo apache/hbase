@@ -636,6 +636,11 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
+  public void rollAllWALWriters() throws IOException {
+    get(admin.rollAllWALWriters());
+  }
+
+  @Override
   public CompactionState getCompactionState(TableName tableName) throws IOException {
     return get(admin.getCompactionState(tableName));
   }
@@ -1135,5 +1140,10 @@ class AdminOverAsyncAdmin implements Admin {
   @Override
   public List<String> getCachedFilesList(ServerName serverName) throws IOException {
     return get(admin.getCachedFilesList(serverName));
+  }
+
+  @Override
+  public long getHighestWALFilenum(ServerName serverName) throws IOException {
+    return get(admin.getHighestWALFilenum(serverName));
   }
 }

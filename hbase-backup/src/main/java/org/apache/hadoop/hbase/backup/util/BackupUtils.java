@@ -49,6 +49,8 @@ import org.apache.hadoop.hbase.backup.HBackupFileSystem;
 import org.apache.hadoop.hbase.backup.RestoreRequest;
 import org.apache.hadoop.hbase.backup.impl.BackupManifest;
 import org.apache.hadoop.hbase.backup.impl.BackupManifest.BackupImage;
+import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
+import org.apache.hadoop.hbase.backup.master.LogRollMasterProcedureManager;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -65,6 +67,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterators;
 
@@ -770,4 +773,54 @@ public final class BackupUtils {
     return BackupRestoreConstants.BACKUPID_PREFIX + recentTimestamp;
   }
 
+  /**
+   * roll WAL writer for all region servers and record the newest log roll result
+   */
+  public static void logRoll(Connection conn, String backupRootDir, Configuration conf)
+    throws IOException {
+    boolean legacy = conf.getBoolean("hbase.backup.logroll.legacy.used", false);
+    if (legacy) {
+      logRollV1(conn, backupRootDir);
+    } else {
+      logRollV2(conn, backupRootDir);
+    }
+  }
+
+  private static void logRollV1(Connection conn, String backupRootDir) throws IOException {
+    try (Admin admin = conn.getAdmin()) {
+      admin.execProcedure(LogRollMasterProcedureManager.ROLLLOG_PROCEDURE_SIGNATURE,
+        LogRollMasterProcedureManager.ROLLLOG_PROCEDURE_NAME,
+        ImmutableMap.of("backupRoot", backupRootDir));
+    }
+  }
+
+  private static void logRollV2(Connection conn, String backupRootDir) throws IOException {
+    BackupSystemTable backupSystemTable = new BackupSystemTable(conn);
+    HashMap<String, Long> lastLogRollResult =
+      backupSystemTable.readRegionServerLastLogRollResult(backupRootDir);
+    try (Admin admin = conn.getAdmin()) {
+      admin.rollAllWALWriters();
+
+      for (ServerName serverName : admin.getRegionServers()) {
+        try {
+          String address = serverName.getAddress().toString();
+          Long lastHighestWALFilenum = lastLogRollResult.get(address);
+          long newHighestWALFilenum = admin.getHighestWALFilenum(serverName);
+          if (lastHighestWALFilenum != null && lastHighestWALFilenum >= newHighestWALFilenum) {
+            LOG.warn("Won't update last roll log result for server {}: current = {}, new = {}",
+              serverName, lastHighestWALFilenum, newHighestWALFilenum);
+          } else {
+            backupSystemTable.writeRegionServerLastLogRollResult(address, newHighestWALFilenum,
+              backupRootDir);
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("updated last roll log result for {} from {} to {}", serverName,
+                lastHighestWALFilenum, newHighestWALFilenum);
+            }
+          }
+        } catch (IOException e) {
+          LOG.warn("Failed update log roll result for server {}", serverName, e);
+        }
+      }
+    }
+  }
 }

@@ -136,6 +136,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegion
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetCachedFilesListRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetCachedFilesListResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetHighestWALFilenumRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetHighestWALFilenumResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoRequest;
@@ -263,6 +265,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.Recommissi
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RecommissionRegionServerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RestoreSnapshotRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RestoreSnapshotResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RollAllWALWritersRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RollAllWALWritersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCatalogScanRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCatalogScanResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCleanerChoreRequest;
@@ -2740,12 +2744,12 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
     @Override
     void onFinished() {
-      LOG.info(getDescription() + " completed");
+      LOG.info("{} completed", getDescription());
     }
 
     @Override
     void onError(Throwable error) {
-      LOG.info(getDescription() + " failed with " + error.getMessage());
+      LOG.info("{} failed with {}", getDescription(), error.getMessage());
     }
   }
 
@@ -2999,12 +3003,25 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
     @Override
     void onFinished() {
-      LOG.info(getDescription() + " completed");
+      LOG.info("{} completed", getDescription());
     }
 
     @Override
     void onError(Throwable error) {
-      LOG.info(getDescription() + " failed with " + error.getMessage());
+      LOG.info("{} failed with {}", getDescription(), error.getMessage());
+    }
+  }
+
+  private static final class RollAllWALWritersBiConsumer extends ProcedureBiConsumer {
+
+    @Override
+    void onFinished() {
+      LOG.info("Rolling all WAL writers completed");
+    }
+
+    @Override
+    void onError(Throwable error) {
+      LOG.warn("Rolling all WAL writers failed with {}", error.getMessage());
     }
   }
 
@@ -3186,6 +3203,14 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         Void> adminCall(controller, stub, RequestConverter.buildRollWALWriterRequest(),
           (s, c, req, done) -> s.rollWALWriter(controller, req, done), resp -> null))
       .serverName(serverName).call();
+  }
+
+  @Override
+  public CompletableFuture<Void> rollAllWALWriters() {
+    return this.<RollAllWALWritersRequest, RollAllWALWritersResponse> procedureCall(
+      RequestConverter.buildRollAllWALWritersRequest(ng.getNonceGroup(), ng.newNonce()),
+      (s, c, req, done) -> s.rollAllWALWriters(c, req, done), (resp) -> resp.getProcId(),
+      new RollAllWALWritersBiConsumer());
   }
 
   @Override
@@ -4555,6 +4580,16 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         List<String>> adminCall(controller, stub, request.build(),
           (s, c, req, done) -> s.getCachedFilesList(c, req, done),
           resp -> resp.getCachedFilesList()))
+      .serverName(serverName).call();
+  }
+
+  @Override
+  public CompletableFuture<Long> getHighestWALFilenum(ServerName serverName) {
+    return this.<Long> newAdminCaller()
+      .action((controller, stub) -> this.<GetHighestWALFilenumRequest, GetHighestWALFilenumResponse,
+        Long> adminCall(controller, stub, GetHighestWALFilenumRequest.getDefaultInstance(),
+          (s, c, req, done) -> s.getHighestWALFilenum(c, req, done),
+          resp -> resp.getHighestWalFilenum()))
       .serverName(serverName).call();
   }
 }

@@ -1405,6 +1405,15 @@ public interface Admin extends Abortable, Closeable {
   void rollWALWriter(ServerName serverName) throws IOException, FailedLogCloseException;
 
   /**
+   * Roll log writer for all RegionServers. Note that unlike
+   * {@link Admin#rollWALWriter(ServerName)}, this method is synchronous, which means it will block
+   * until all RegionServers have completed the log roll, or a RegionServer fails due to an
+   * exception that retry will not work.
+   * @throws IOException if a remote or network exception occurs
+   */
+  void rollAllWALWriters() throws IOException;
+
+  /**
    * Helper that delegates to getClusterMetrics().getMasterCoprocessorNames().
    * @return an array of master coprocessors
    * @see org.apache.hadoop.hbase.ClusterMetrics#getMasterCoprocessorNames()
@@ -2651,4 +2660,10 @@ public interface Admin extends Abortable, Closeable {
    * Get the list of cached files
    */
   List<String> getCachedFilesList(ServerName serverName) throws IOException;
+
+  /**
+   * Get the highest WAL filenum for the specific region server. Note that filenum means the
+   * timestamp (in ms) when the log file was created.
+   */
+  long getHighestWALFilenum(ServerName serverName) throws IOException;
 }

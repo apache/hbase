@@ -166,6 +166,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegion
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetCachedFilesListRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetCachedFilesListResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetHighestWALFilenumRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetHighestWALFilenumResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoRequest;
@@ -321,6 +323,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.Recommissi
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RegionSpecifierAndState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RestoreSnapshotRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RestoreSnapshotResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RollAllWALWritersRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RollAllWALWritersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCatalogScanRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCatalogScanResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCleanerChoreRequest;
@@ -3617,6 +3621,12 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
   }
 
   @Override
+  public GetHighestWALFilenumResponse getHighestWALFilenum(RpcController controller,
+    GetHighestWALFilenumRequest request) throws ServiceException {
+    throw new ServiceException(new DoNotRetryIOException("Unsupported method on master"));
+  }
+
+  @Override
   public GetLiveRegionServersResponse getLiveRegionServers(RpcController controller,
     GetLiveRegionServersRequest request) throws ServiceException {
     List<ServerName> regionServers = new ArrayList<>(server.getLiveRegionServers());
@@ -3658,6 +3668,17 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
       long procId =
         server.flushTable(tableName, columnFamilies, req.getNonceGroup(), req.getNonce());
       return FlushTableResponse.newBuilder().setProcId(procId).build();
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
+    }
+  }
+
+  @Override
+  public RollAllWALWritersResponse rollAllWALWriters(RpcController rpcController,
+    RollAllWALWritersRequest request) throws ServiceException {
+    try {
+      long procId = server.rollAllWALWriters(request.getNonceGroup(), request.getNonce());
+      return RollAllWALWritersResponse.newBuilder().setProcId(procId).build();
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }

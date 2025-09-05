@@ -1271,6 +1271,14 @@ public interface AsyncAdmin {
   CompletableFuture<Void> rollWALWriter(ServerName serverName);
 
   /**
+   * Roll log writer for all RegionServers. Note that unlike
+   * {@link Admin#rollWALWriter(ServerName)}, this method is synchronous, which means it will block
+   * until all RegionServers have completed the log roll, or a RegionServer fails due to an
+   * exception that retry will not work.
+   */
+  CompletableFuture<Void> rollAllWALWriters();
+
+  /**
    * Clear compacting queues on a region server.
    * @param serverName The servername of the region server.
    * @param queues     the set of queue name
@@ -1862,4 +1870,10 @@ public interface AsyncAdmin {
    * Get the list of cached files
    */
   CompletableFuture<List<String>> getCachedFilesList(ServerName serverName);
+
+  /**
+   * Get the highest WAL filenum for the specific region server. Note that filenum means the
+   * timestamp (in ms) when the log file was created.
+   */
+  CompletableFuture<Long> getHighestWALFilenum(ServerName serverName);
 }

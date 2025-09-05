@@ -122,6 +122,7 @@ import org.apache.hadoop.hbase.regionserver.handler.OpenMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenPriorityRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.UnassignRegionHandler;
+import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.regionserver.RejectReplicationRequestStateChecker;
 import org.apache.hadoop.hbase.replication.regionserver.RejectRequestsFromClientStateChecker;
@@ -175,6 +176,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegion
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetCachedFilesListRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetCachedFilesListResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetHighestWALFilenumRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetHighestWALFilenumResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoRequest;
@@ -4044,5 +4047,13 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
       getRpcQuotaManager().checkScanQuota(region, request, maxScannerResultSize, 0L, 0L);
     Pair<String, RegionScannerHolder> pair = newRegionScanner(request, region, builder);
     return new RegionScannerContext(pair.getFirst(), pair.getSecond(), quota);
+  }
+
+  @Override
+  public GetHighestWALFilenumResponse getHighestWALFilenum(RpcController controller,
+    GetHighestWALFilenumRequest request) throws ServiceException {
+    long highest = server.getWALs().stream().mapToLong(wal -> ((AbstractFSWAL<?>) wal).getFilenum())
+      .max().orElse(-1L);
+    return GetHighestWALFilenumResponse.newBuilder().setHighestWalFilenum(highest).build();
   }
 }

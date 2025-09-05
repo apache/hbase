@@ -839,3 +839,18 @@ message ReloadQuotasProcedureStateData {
   required ServerName target_server = 1;
   optional ForeignExceptionMessage error = 2;
 }
+
+enum LogRollState {
+  LOG_ROLL_ROLL_LOG_ON_RS = 1;
+  LOG_ROLL_UNREGISTER_SERVER_LISTENER = 2;
+}
+
+message LogRollData {
+}
+
+message LogRollRemoteData {
+  required ServerName target_server = 1;
+}
+
+message RSLogRollParameter {
+}

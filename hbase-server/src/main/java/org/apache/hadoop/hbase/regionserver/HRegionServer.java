@@ -1965,6 +1965,9 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     executorService.startExecutorService(
       executorService.new ExecutorConfig().setExecutorType(ExecutorType.RS_RELOAD_QUOTAS_OPERATIONS)
         .setCorePoolSize(rsRefreshQuotasThreads));
+    final int logRollThreads = conf.getInt("hbase.regionserver.executor.log.roll.threads", 1);
+    executorService.startExecutorService(executorService.new ExecutorConfig()
+      .setExecutorType(ExecutorType.RS_LOG_ROLL).setCorePoolSize(logRollThreads));
 
     Threads.setDaemonThreadRunning(this.walRoller, getName() + ".logRoller",
       uncaughtExceptionHandler);
@@ -2199,7 +2202,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
    */
   public void stop(final String msg, final boolean force, final User user) {
     if (!this.stopped) {
-      LOG.info("***** STOPPING region server '" + this + "' *****");
+      LOG.info("***** STOPPING region server '{}' *****", this);
       if (this.rsHost != null) {
         // when forced via abort don't allow CPs to override
         try {
