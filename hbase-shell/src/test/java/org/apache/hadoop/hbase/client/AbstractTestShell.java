@@ -18,9 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.fs.ErasureCodingUtils;
 import org.jruby.embed.ScriptingContainer;
 import org.junit.After;
 import org.junit.Before;
