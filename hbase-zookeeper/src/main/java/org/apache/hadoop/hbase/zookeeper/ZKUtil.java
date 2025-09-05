@@ -966,7 +966,7 @@ public final class ZKUtil {
         ops.add(ZKUtilOp.deleteNodeFailSilent(children.get(i)));
       }
       try {
-        if (zkw.getRecoverableZooKeeper().exists(eachRoot, zkw) != null) {
+        if (zkw.getRecoverableZooKeeper().exists(eachRoot, null) != null) {
           ops.add(ZKUtilOp.deleteNodeFailSilent(eachRoot));
         }
       } catch (InterruptedException e) {
