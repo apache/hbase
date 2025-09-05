@@ -18,9 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.jruby.embed.ScriptingContainer;
 import org.junit.After;
 import org.junit.Before;
@@ -30,14 +28,17 @@ public abstract class AbstractTestShell implements RubyShellTest {
   protected final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   protected final ScriptingContainer jruby = new ScriptingContainer();
 
+  @Override
   public HBaseTestingUtil getTEST_UTIL() {
     return TEST_UTIL;
   }
 
+  @Override
   public ScriptingContainer getJRuby() {
     return jruby;
   }
 
+  @Override
   public String getSuitePattern() {
     return "**/*_test.rb";
   }
@@ -47,20 +48,12 @@ public abstract class AbstractTestShell implements RubyShellTest {
     RubyShellTest.setUpConfig(this);
 
     // Start mini cluster
-    // 3 datanodes needed for erasure coding checks
-    TEST_UTIL.startMiniCluster(3);
+    TEST_UTIL.startMiniCluster(1);
 
     RubyShellTest.setUpJRubyRuntime(this);
 
     RubyShellTest.doTestSetup(this);
   }
-
-  protected void setupDFS() throws IOException {
-    DistributedFileSystem dfs =
-      (DistributedFileSystem) FileSystem.get(TEST_UTIL.getConfiguration());
-    dfs.enableErasureCodingPolicy("XOR-2-1-1024k");
-  }
-
   @After
   public void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
