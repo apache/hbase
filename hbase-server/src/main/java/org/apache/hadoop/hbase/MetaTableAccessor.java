@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.RowFilter;
 import org.apache.hadoop.hbase.filter.SubstringComparator;
 import org.apache.hadoop.hbase.master.RegionState;
+import org.apache.hadoop.hbase.regionserver.RSAnnotationReadingPriorityFunction;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
@@ -185,6 +186,7 @@ public final class MetaTableAccessor {
     }
     Get get = new Get(row);
     get.addFamily(HConstants.CATALOG_FAMILY);
+    get.setPriority(RSAnnotationReadingPriorityFunction.INTERNAL_READ_QOS);
     Result r;
     try (Table t = getMetaHTable(connection)) {
       r = t.get(get);
@@ -213,6 +215,7 @@ public final class MetaTableAccessor {
     throws IOException {
     Get get = new Get(CatalogFamilyFormat.getMetaKeyForRegion(ri));
     get.addFamily(HConstants.CATALOG_FAMILY);
+    get.setPriority(RSAnnotationReadingPriorityFunction.INTERNAL_READ_QOS);
     try (Table t = getMetaHTable(connection)) {
       return t.get(get);
     }
@@ -226,11 +229,7 @@ public final class MetaTableAccessor {
    */
   public static Result getRegionResult(Connection connection, RegionInfo regionInfo)
     throws IOException {
-    Get get = new Get(CatalogFamilyFormat.getMetaKeyForRegion(regionInfo));
-    get.addFamily(HConstants.CATALOG_FAMILY);
-    try (Table t = getMetaHTable(connection)) {
-      return t.get(get);
-    }
+    return getCatalogFamilyRow(connection, regionInfo);
   }
 
   /**
@@ -341,6 +340,7 @@ public final class MetaTableAccessor {
       scan.setReadType(Scan.ReadType.PREAD);
     }
     scan.setCaching(scannerCaching);
+    scan.setPriority(RSAnnotationReadingPriorityFunction.INTERNAL_READ_QOS);
     return scan;
   }
 
@@ -368,7 +368,7 @@ public final class MetaTableAccessor {
     final boolean excludeOfflinedSplitParents) throws IOException {
     if (tableName != null && tableName.equals(TableName.META_TABLE_NAME)) {
       throw new IOException(
-        "This method can't be used to locate meta regions;" + " use MetaTableLocator instead");
+        "This method can't be used to locate meta regions; use MetaTableLocator instead");
     }
     // Make a version of CollectingVisitor that collects RegionInfo and ServerAddress
     ClientMetaTableAccessor.CollectRegionLocationsVisitor visitor =
@@ -385,10 +385,10 @@ public final class MetaTableAccessor {
       if (r == null || r.isEmpty()) {
         return true;
       }
-      LOG.info("fullScanMetaAndPrint.Current Meta Row: " + r);
+      LOG.info("fullScanMetaAndPrint.Current Meta Row: {}", r);
       TableState state = CatalogFamilyFormat.getTableState(r);
       if (state != null) {
-        LOG.info("fullScanMetaAndPrint.Table State={}" + state);
+        LOG.info("fullScanMetaAndPrint.Table State={}", state);
       } else {
         RegionLocations locations = CatalogFamilyFormat.getRegionLocations(r);
         if (locations == null) {
@@ -461,6 +461,15 @@ public final class MetaTableAccessor {
     scanMeta(connection, startRow, stopRow, type, null, maxRows, visitor);
   }
 
+  /**
+   * Performs a scan of META table.
+   * @param connection connection we're using
+   * @param startRow   Where to start the scan. Pass null if want to begin scan at first row.
+   * @param stopRow    Where to stop the scan. Pass null if want to scan all rows from the start one
+   * @param type       scanned part of meta
+   * @param maxRows    maximum rows to return
+   * @param visitor    Visitor invoked against each row.
+   */
   public static void scanMeta(Connection connection, @Nullable final byte[] startRow,
     @Nullable final byte[] stopRow, QueryType type, @Nullable Filter filter, int maxRows,
     final ClientMetaTableAccessor.Visitor visitor) throws IOException {
@@ -481,9 +490,11 @@ public final class MetaTableAccessor {
     }
 
     if (LOG.isTraceEnabled()) {
-      LOG.trace("Scanning META" + " starting at row=" + Bytes.toStringBinary(startRow)
-        + " stopping at row=" + Bytes.toStringBinary(stopRow) + " for max=" + rowUpperLimit
-        + " with caching=" + scan.getCaching());
+      LOG.trace(
+        "Scanning META starting at row={} stopping at row={} for max={} with caching={} "
+          + "priority={}",
+        Bytes.toStringBinary(startRow), Bytes.toStringBinary(stopRow), rowUpperLimit,
+        scan.getCaching(), scan.getPriority());
     }
 
     int currentRow = 0;
@@ -912,7 +923,7 @@ public final class MetaTableAccessor {
     addRegionInfo(put, regionInfo);
     addLocation(put, sn, openSeqNum, regionInfo.getReplicaId());
     putToMetaTable(connection, put);
-    LOG.info("Updated row {} with server=", regionInfo.getRegionNameAsString(), sn);
+    LOG.info("Updated row {} with server = {}", regionInfo.getRegionNameAsString(), sn);
   }
 
   public static Put addRegionInfo(final Put p, final RegionInfo hri) throws IOException {
@@ -937,7 +948,7 @@ public final class MetaTableAccessor {
       .add(builder.clear().setRow(p.getRow()).setFamily(HConstants.CATALOG_FAMILY)
         .setQualifier(CatalogFamilyFormat.getStartCodeColumn(replicaId))
         .setTimestamp(p.getTimestamp()).setType(Cell.Type.Put)
-        .setValue(Bytes.toBytes(sn.getStartcode())).build())
+        .setValue(Bytes.toBytes(sn.getStartCode())).build())
       .add(builder.clear().setRow(p.getRow()).setFamily(HConstants.CATALOG_FAMILY)
         .setQualifier(CatalogFamilyFormat.getSeqNumColumn(replicaId)).setTimestamp(p.getTimestamp())
         .setType(Type.Put).setValue(Bytes.toBytes(openSeqNum)).build());

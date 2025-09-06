@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandlerImpl;
+import org.apache.hadoop.hbase.regionserver.RSAnnotationReadingPriorityFunction;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -108,7 +109,7 @@ public class TestSimpleRpcScheduler {
     RpcScheduler scheduler = new SimpleRpcScheduler(conf, 10, 0, 0, qosFunction, 0);
     scheduler.init(CONTEXT);
     scheduler.start();
-    CallRunner task = createMockTask();
+    CallRunner task = createMockTask(HConstants.NORMAL_QOS);
     task.setStatus(new MonitoredRPCHandlerImpl("test"));
     scheduler.dispatch(task);
     verify(task, timeout(10000)).run();
@@ -163,7 +164,7 @@ public class TestSimpleRpcScheduler {
 
     int totalCallMethods = 10;
     for (int i = totalCallMethods; i > 0; i--) {
-      CallRunner task = createMockTask();
+      CallRunner task = createMockTask(HConstants.NORMAL_QOS);
       task.setStatus(new MonitoredRPCHandlerImpl("test"));
       scheduler.dispatch(task);
     }
@@ -185,9 +186,9 @@ public class TestSimpleRpcScheduler {
 
   @Test
   public void testHandlerIsolation() throws IOException, InterruptedException {
-    CallRunner generalTask = createMockTask();
-    CallRunner priorityTask = createMockTask();
-    CallRunner replicationTask = createMockTask();
+    CallRunner generalTask = createMockTask(HConstants.NORMAL_QOS);
+    CallRunner priorityTask = createMockTask(HConstants.HIGH_QOS + 1);
+    CallRunner replicationTask = createMockTask(HConstants.REPLICATION_QOS);
     List<CallRunner> tasks = ImmutableList.of(generalTask, priorityTask, replicationTask);
     Map<CallRunner, Integer> qos = ImmutableMap.of(generalTask, 0, priorityTask,
       HConstants.HIGH_QOS + 1, replicationTask, HConstants.REPLICATION_QOS);
@@ -227,10 +228,12 @@ public class TestSimpleRpcScheduler {
     assertEquals(3, ImmutableSet.copyOf(handlerThreads.values()).size());
   }
 
-  private CallRunner createMockTask() {
+  private CallRunner createMockTask(int priority) {
     ServerCall call = mock(ServerCall.class);
     CallRunner task = mock(CallRunner.class);
+    RequestHeader header = RequestHeader.newBuilder().setPriority(priority).build();
     when(task.getRpcCall()).thenReturn(call);
+    when(call.getHeader()).thenReturn(header);
     return task;
   }
 
@@ -707,7 +710,7 @@ public class TestSimpleRpcScheduler {
   @Test
   public void testMetaRWScanQueues() throws Exception {
     Configuration schedConf = HBaseConfiguration.create();
-    schedConf.setFloat(RpcExecutor.CALL_QUEUE_HANDLER_FACTOR_CONF_KEY, 1.0f);
+    schedConf.setFloat(MetaRWQueueRpcExecutor.META_CALL_QUEUE_HANDLER_FACTOR_CONF_KEY, 1.0f);
     schedConf.setFloat(MetaRWQueueRpcExecutor.META_CALL_QUEUE_READ_SHARE_CONF_KEY, 0.7f);
     schedConf.setFloat(MetaRWQueueRpcExecutor.META_CALL_QUEUE_SCAN_SHARE_CONF_KEY, 0.5f);
 
@@ -728,36 +731,37 @@ public class TestSimpleRpcScheduler {
       when(putCall.getHeader()).thenReturn(putHead);
       when(putCall.getParam()).thenReturn(putCall.param);
 
-      CallRunner getCallTask = mock(CallRunner.class);
-      ServerCall getCall = mock(ServerCall.class);
-      RequestHeader getHead = RequestHeader.newBuilder().setMethodName("get").build();
-      when(getCallTask.getRpcCall()).thenReturn(getCall);
-      when(getCall.getHeader()).thenReturn(getHead);
+      CallRunner clientReadCallTask = mock(CallRunner.class);
+      ServerCall clientReadCall = mock(ServerCall.class);
+      RequestHeader clientReadHead = RequestHeader.newBuilder().setMethodName("get").build();
+      when(clientReadCallTask.getRpcCall()).thenReturn(clientReadCall);
+      when(clientReadCall.getHeader()).thenReturn(clientReadHead);
 
-      CallRunner scanCallTask = mock(CallRunner.class);
-      ServerCall scanCall = mock(ServerCall.class);
-      scanCall.param = ScanRequest.newBuilder().build();
-      RequestHeader scanHead = RequestHeader.newBuilder().setMethodName("scan").build();
-      when(scanCallTask.getRpcCall()).thenReturn(scanCall);
-      when(scanCall.getHeader()).thenReturn(scanHead);
-      when(scanCall.getParam()).thenReturn(scanCall.param);
+      CallRunner internalReadCallTask = mock(CallRunner.class);
+      ServerCall internalReadCall = mock(ServerCall.class);
+      internalReadCall.param = ScanRequest.newBuilder().build();
+      RequestHeader masterReadHead = RequestHeader.newBuilder().setMethodName("scan")
+        .setPriority(RSAnnotationReadingPriorityFunction.INTERNAL_READ_QOS).build();
+      when(internalReadCallTask.getRpcCall()).thenReturn(internalReadCall);
+      when(internalReadCall.getHeader()).thenReturn(masterReadHead);
+      when(internalReadCall.getParam()).thenReturn(internalReadCall.param);
 
       ArrayList<Integer> work = new ArrayList<>();
       doAnswerTaskExecution(putCallTask, work, 1, 1000);
-      doAnswerTaskExecution(getCallTask, work, 2, 1000);
-      doAnswerTaskExecution(scanCallTask, work, 3, 1000);
+      doAnswerTaskExecution(clientReadCallTask, work, 2, 1000);
+      doAnswerTaskExecution(internalReadCallTask, work, 3, 1000);
 
       // There are 3 queues: [puts], [gets], [scans]
       // so the calls will be interleaved
       scheduler.dispatch(putCallTask);
       scheduler.dispatch(putCallTask);
       scheduler.dispatch(putCallTask);
-      scheduler.dispatch(getCallTask);
-      scheduler.dispatch(getCallTask);
-      scheduler.dispatch(getCallTask);
-      scheduler.dispatch(scanCallTask);
-      scheduler.dispatch(scanCallTask);
-      scheduler.dispatch(scanCallTask);
+      scheduler.dispatch(clientReadCallTask);
+      scheduler.dispatch(clientReadCallTask);
+      scheduler.dispatch(clientReadCallTask);
+      scheduler.dispatch(internalReadCallTask);
+      scheduler.dispatch(internalReadCallTask);
+      scheduler.dispatch(internalReadCallTask);
 
       while (work.size() < 6) {
         Thread.sleep(100);
