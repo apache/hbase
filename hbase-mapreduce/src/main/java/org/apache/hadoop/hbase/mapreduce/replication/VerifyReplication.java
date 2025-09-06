@@ -61,6 +61,7 @@ import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
@@ -952,6 +953,6 @@ public class VerifyReplication extends Configured implements Tool {
    */
   public static void main(String[] args) throws Exception {
     int res = ToolRunner.run(HBaseConfiguration.create(), new VerifyReplication(), args);
-    System.exit(res);
+    ExitHandler.getInstance().exit(res);
   }
 }

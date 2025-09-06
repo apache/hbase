@@ -22,6 +22,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.hbase.util.LoadTestTool;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.experimental.categories.Category;
@@ -68,6 +69,6 @@ public class IntegrationTestTimeBoundedMultiGetRequestsWithRegionReplicas
     IntegrationTestingUtility.setUseDistributedCluster(conf);
     int ret = ToolRunner.run(conf,
       new IntegrationTestTimeBoundedMultiGetRequestsWithRegionReplicas(), args);
-    System.exit(ret);
+    ExitHandler.getInstance().exit(ret);
   }
 }

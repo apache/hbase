@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.thrift.HBaseServiceHandler;
 import org.apache.hadoop.hbase.thrift.HbaseHandlerMetricsProxy;
 import org.apache.hadoop.hbase.thrift.ThriftMetrics;
 import org.apache.hadoop.hbase.thrift2.generated.THBaseService;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.thrift.TProcessor;
@@ -108,7 +109,7 @@ public class ThriftServer extends org.apache.hadoop.hbase.thrift.ThriftServer {
     final Configuration conf = HBaseConfiguration.create();
     // for now, only time we return is on an argument error.
     final int status = ToolRunner.run(conf, new ThriftServer(conf), args);
-    System.exit(status);
+    ExitHandler.getInstance().exit(status);
   }
 
 }
