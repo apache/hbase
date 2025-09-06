@@ -125,26 +125,31 @@ public class ServerRegionReplicaUtil extends RegionReplicaUtil {
 
     // if this is a primary region, just return the StoreFileInfo constructed from path
     if (RegionInfo.COMPARATOR.compare(regionInfo, regionInfoForFs) == 0) {
-      return tracker.getStoreFileInfo(path, true);
+    	return tracker.getStoreFileInfo(path, true);
     }
 
     // else create a store file link. The link file does not exists on filesystem though.
+    Path tableDir = CommonFSUtils.getTableDir(new Path("./"), regionInfoForFs.getTable());
+	Path initialPath = new Path(tableDir, new Path(regionInfoForFs.getEncodedName(), new Path(familyName, HFileLink
+			.createHFileLinkName(regionInfoForFs.getTable(), regionInfoForFs.getEncodedName(), path.getName()))));
     if (HFileLink.isHFileLink(path) || StoreFileInfo.isHFile(path)) {
       HFileLink link = HFileLink.build(conf, regionInfoForFs.getTable(),
         regionInfoForFs.getEncodedName(), familyName, path.getName());
-      return new StoreFileInfo(conf, fs, link.getFileStatus(fs), link);
+      return new StoreFileInfo(conf, fs, initialPath , link);
     } else if (StoreFileInfo.isReference(path)) {
       Reference reference = tracker.readReference(path);
       Path referencePath = StoreFileInfo.getReferredToFile(path);
       if (HFileLink.isHFileLink(referencePath)) {
         // HFileLink Reference
         HFileLink link = HFileLink.buildFromHFileLinkPattern(conf, referencePath);
-        return new StoreFileInfo(conf, fs, link.getFileStatus(fs), reference, link);
+        initialPath = new Path(tableDir, new Path(regionInfoForFs.getEncodedName(), new Path(familyName, HFileLink
+    			.createHFileLinkName(regionInfoForFs.getTable(), regionInfoForFs.getEncodedName(), referencePath.getName()))));
+        return new StoreFileInfo(conf, fs, initialPath, reference, link);
       } else {
         // Reference
         HFileLink link = HFileLink.build(conf, regionInfoForFs.getTable(),
           regionInfoForFs.getEncodedName(), familyName, path.getName());
-        return new StoreFileInfo(conf, fs, link.getFileStatus(fs), reference);
+        return new StoreFileInfo(conf, fs, initialPath, link);
       }
     } else {
       throw new IOException("path=" + path + " doesn't look like a valid StoreFile");
