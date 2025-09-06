@@ -144,6 +144,12 @@ public final class MobConstants {
   public static final String MOB_COMPACTION_THREADS_MAX = "hbase.mob.compaction.threads.max";
   public static final int DEFAULT_MOB_COMPACTION_THREADS_MAX = 1;
 
+  public static final String MOB_CLEANER_THREAD_COUNT = "hbase.master.mob.cleaner.threads";
+  public static final int DEFAULT_MOB_CLEANER_THREAD_COUNT = 1;
+  public static final String MOB_FILE_CLEANER_CHORE_TIME_OUT =
+    "hbase.master.mob.cleaner.chore.timeout";
+  public static final int DEFAULT_MOB_FILE_CLEANER_CHORE_TIME_OUT = 5 * 60; // 5 minutes
+
   private MobConstants() {
 
   }
