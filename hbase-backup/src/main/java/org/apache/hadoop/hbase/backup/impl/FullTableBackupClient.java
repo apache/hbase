@@ -25,7 +25,6 @@ import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.JOB_NAME_CON
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.hbase.TableName;
@@ -36,7 +35,6 @@ import org.apache.hadoop.hbase.backup.BackupInfo.BackupState;
 import org.apache.hadoop.hbase.backup.BackupRequest;
 import org.apache.hadoop.hbase.backup.BackupRestoreFactory;
 import org.apache.hadoop.hbase.backup.BackupType;
-import org.apache.hadoop.hbase.backup.master.LogRollMasterProcedureManager;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
@@ -158,10 +156,7 @@ public class FullTableBackupClient extends TableBackupClient {
       // snapshots for the same reason as the log rolls.
       List<BulkLoad> bulkLoadsToDelete = backupManager.readBulkloadRows(tableList);
 
-      Map<String, String> props = new HashMap<>();
-      props.put("backupRoot", backupInfo.getBackupRootDir());
-      admin.execProcedure(LogRollMasterProcedureManager.ROLLLOG_PROCEDURE_SIGNATURE,
-        LogRollMasterProcedureManager.ROLLLOG_PROCEDURE_NAME, props);
+      BackupUtils.logRoll(conn, backupInfo.getBackupRootDir(), conf);
 
       newTimestamps = backupManager.readRegionServerLastLogRollResult();
 

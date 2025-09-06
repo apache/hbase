@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.backup;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -45,7 +44,6 @@ import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.backup.impl.FullTableBackupClient;
 import org.apache.hadoop.hbase.backup.impl.IncrementalBackupManager;
 import org.apache.hadoop.hbase.backup.impl.IncrementalTableBackupClient;
-import org.apache.hadoop.hbase.backup.master.LogRollMasterProcedureManager;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -239,10 +237,7 @@ public class TestBackupBase {
         // the snapshot.
         LOG.info("Execute roll log procedure for full backup ...");
 
-        Map<String, String> props = new HashMap<>();
-        props.put("backupRoot", backupInfo.getBackupRootDir());
-        admin.execProcedure(LogRollMasterProcedureManager.ROLLLOG_PROCEDURE_SIGNATURE,
-          LogRollMasterProcedureManager.ROLLLOG_PROCEDURE_NAME, props);
+        BackupUtils.logRoll(conn, backupInfo.getBackupRootDir(), conf);
         failStageIf(Stage.stage_2);
         newTimestamps = backupManager.readRegionServerLastLogRollResult();
 

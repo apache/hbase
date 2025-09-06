@@ -526,6 +526,11 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
     admin.rollWALWriter(serverName);
   }
 
+  @Override
+  public Map<ServerName, Long> rollAllWALWriters() throws IOException {
+    return admin.rollAllWALWriters();
+  }
+
   public CompactionState getCompactionState(TableName tableName) throws IOException {
     return admin.getCompactionState(tableName);
   }
