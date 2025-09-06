@@ -45,7 +45,6 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
@@ -333,8 +332,6 @@ public class QuotaUtil extends QuotaTableUtil {
 
   public static Map<String, UserQuotaState> fetchUserQuotas(final Connection connection,
     Map<TableName, Double> tableMachineQuotaFactors, double factor) throws IOException {
-    long nowTs = EnvironmentEdgeManager.currentTime();
-
     Map<String, UserQuotaState> userQuotas = new HashMap<>();
     try (Table table = connection.getTable(QUOTA_TABLE_NAME)) {
       Scan scan = new Scan();
@@ -346,7 +343,7 @@ public class QuotaUtil extends QuotaTableUtil {
           assert isUserRowKey(key);
           String user = getUserFromRowKey(key);
 
-          final UserQuotaState quotaInfo = new UserQuotaState(nowTs);
+          final UserQuotaState quotaInfo = new UserQuotaState();
           userQuotas.put(user, quotaInfo);
 
           try {
@@ -383,7 +380,7 @@ public class QuotaUtil extends QuotaTableUtil {
     return userQuotas;
   }
 
-  protected static UserQuotaState buildDefaultUserQuotaState(Configuration conf, long nowTs) {
+  protected static UserQuotaState buildDefaultUserQuotaState(Configuration conf) {
     QuotaProtos.Throttle.Builder throttleBuilder = QuotaProtos.Throttle.newBuilder();
 
     buildDefaultTimedQuota(conf, QUOTA_DEFAULT_USER_MACHINE_READ_NUM)
@@ -407,7 +404,7 @@ public class QuotaUtil extends QuotaTableUtil {
     buildDefaultTimedQuota(conf, QUOTA_DEFAULT_USER_MACHINE_REQUEST_HANDLER_USAGE_MS)
       .ifPresent(throttleBuilder::setReqHandlerUsageMs);
 
-    UserQuotaState state = new UserQuotaState(nowTs);
+    UserQuotaState state = new UserQuotaState();
     QuotaProtos.Quotas defaultQuotas =
       QuotaProtos.Quotas.newBuilder().setThrottle(throttleBuilder.build()).build();
     state.setQuotas(defaultQuotas);
@@ -482,7 +479,6 @@ public class QuotaUtil extends QuotaTableUtil {
 
   public static <K> Map<K, QuotaState> fetchGlobalQuotas(final String type, final Scan scan,
     final Connection connection, final KeyFromRow<K> kfr) throws IOException {
-    long nowTs = EnvironmentEdgeManager.currentTime();
 
     Map<K, QuotaState> globalQuotas = new HashMap<>();
     try (Table table = connection.getTable(QUOTA_TABLE_NAME)) {
@@ -492,7 +488,7 @@ public class QuotaUtil extends QuotaTableUtil {
           byte[] row = result.getRow();
           K key = kfr.getKeyFromRow(row);
 
-          QuotaState quotaInfo = new QuotaState(nowTs);
+          QuotaState quotaInfo = new QuotaState();
           globalQuotas.put(key, quotaInfo);
 
           byte[] data = result.getValue(QUOTA_FAMILY_INFO, QUOTA_QUALIFIER_SETTINGS);

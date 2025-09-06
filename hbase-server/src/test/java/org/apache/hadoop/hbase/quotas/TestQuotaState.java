@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -82,66 +81,37 @@ public class TestQuotaState {
   }
 
   @Test
-  public void testQuotaStateUpdateBypassThrottle() {
-    final long LAST_UPDATE = 10;
-
-    UserQuotaState quotaInfo = new UserQuotaState();
-    assertEquals(0, quotaInfo.getLastUpdate());
-    assertTrue(quotaInfo.isBypass());
-
-    UserQuotaState otherQuotaState = new UserQuotaState(LAST_UPDATE);
-    assertEquals(LAST_UPDATE, otherQuotaState.getLastUpdate());
-    assertTrue(otherQuotaState.isBypass());
-
-    quotaInfo.update(otherQuotaState);
-    assertEquals(LAST_UPDATE, quotaInfo.getLastUpdate());
-    assertTrue(quotaInfo.isBypass());
-    assertTrue(quotaInfo.getGlobalLimiter() == quotaInfo.getTableLimiter(UNKNOWN_TABLE_NAME));
-    assertNoopLimiter(quotaInfo.getTableLimiter(UNKNOWN_TABLE_NAME));
-  }
-
-  @Test
   public void testQuotaStateUpdateGlobalThrottle() {
     final int NUM_GLOBAL_THROTTLE_1 = 3;
     final int NUM_GLOBAL_THROTTLE_2 = 11;
-    final long LAST_UPDATE_1 = 10;
-    final long LAST_UPDATE_2 = 20;
-    final long LAST_UPDATE_3 = 30;
 
     QuotaState quotaInfo = new QuotaState();
-    assertEquals(0, quotaInfo.getLastUpdate());
     assertTrue(quotaInfo.isBypass());
 
     // Add global throttle
-    QuotaState otherQuotaState = new QuotaState(LAST_UPDATE_1);
+    QuotaState otherQuotaState = new QuotaState();
     otherQuotaState.setQuotas(buildReqNumThrottle(NUM_GLOBAL_THROTTLE_1));
-    assertEquals(LAST_UPDATE_1, otherQuotaState.getLastUpdate());
     assertFalse(otherQuotaState.isBypass());
 
     quotaInfo.update(otherQuotaState);
-    assertEquals(LAST_UPDATE_1, quotaInfo.getLastUpdate());
     assertFalse(quotaInfo.isBypass());
     assertThrottleException(quotaInfo.getGlobalLimiter(), NUM_GLOBAL_THROTTLE_1);
 
     // Update global Throttle
-    otherQuotaState = new QuotaState(LAST_UPDATE_2);
+    otherQuotaState = new QuotaState();
     otherQuotaState.setQuotas(buildReqNumThrottle(NUM_GLOBAL_THROTTLE_2));
-    assertEquals(LAST_UPDATE_2, otherQuotaState.getLastUpdate());
     assertFalse(otherQuotaState.isBypass());
 
     quotaInfo.update(otherQuotaState);
-    assertEquals(LAST_UPDATE_2, quotaInfo.getLastUpdate());
     assertFalse(quotaInfo.isBypass());
     assertThrottleException(quotaInfo.getGlobalLimiter(),
       NUM_GLOBAL_THROTTLE_2 - NUM_GLOBAL_THROTTLE_1);
 
     // Remove global throttle
-    otherQuotaState = new QuotaState(LAST_UPDATE_3);
-    assertEquals(LAST_UPDATE_3, otherQuotaState.getLastUpdate());
+    otherQuotaState = new QuotaState();
     assertTrue(otherQuotaState.isBypass());
 
     quotaInfo.update(otherQuotaState);
-    assertEquals(LAST_UPDATE_3, quotaInfo.getLastUpdate());
     assertTrue(quotaInfo.isBypass());
     assertNoopLimiter(quotaInfo.getGlobalLimiter());
   }
@@ -155,37 +125,29 @@ public class TestQuotaState {
     final int TABLE_A_THROTTLE_2 = 11;
     final int TABLE_B_THROTTLE = 4;
     final int TABLE_C_THROTTLE = 5;
-    final long LAST_UPDATE_1 = 10;
-    final long LAST_UPDATE_2 = 20;
-    final long LAST_UPDATE_3 = 30;
 
     UserQuotaState quotaInfo = new UserQuotaState();
-    assertEquals(0, quotaInfo.getLastUpdate());
     assertTrue(quotaInfo.isBypass());
 
     // Add A B table limiters
-    UserQuotaState otherQuotaState = new UserQuotaState(LAST_UPDATE_1);
+    UserQuotaState otherQuotaState = new UserQuotaState();
     otherQuotaState.setQuotas(tableNameA, buildReqNumThrottle(TABLE_A_THROTTLE_1));
     otherQuotaState.setQuotas(tableNameB, buildReqNumThrottle(TABLE_B_THROTTLE));
-    assertEquals(LAST_UPDATE_1, otherQuotaState.getLastUpdate());
     assertFalse(otherQuotaState.isBypass());
 
     quotaInfo.update(otherQuotaState);
-    assertEquals(LAST_UPDATE_1, quotaInfo.getLastUpdate());
     assertFalse(quotaInfo.isBypass());
     assertThrottleException(quotaInfo.getTableLimiter(tableNameA), TABLE_A_THROTTLE_1);
     assertThrottleException(quotaInfo.getTableLimiter(tableNameB), TABLE_B_THROTTLE);
     assertNoopLimiter(quotaInfo.getTableLimiter(tableNameC));
 
     // Add C, Remove B, Update A table limiters
-    otherQuotaState = new UserQuotaState(LAST_UPDATE_2);
+    otherQuotaState = new UserQuotaState();
     otherQuotaState.setQuotas(tableNameA, buildReqNumThrottle(TABLE_A_THROTTLE_2));
     otherQuotaState.setQuotas(tableNameC, buildReqNumThrottle(TABLE_C_THROTTLE));
-    assertEquals(LAST_UPDATE_2, otherQuotaState.getLastUpdate());
     assertFalse(otherQuotaState.isBypass());
 
     quotaInfo.update(otherQuotaState);
-    assertEquals(LAST_UPDATE_2, quotaInfo.getLastUpdate());
     assertFalse(quotaInfo.isBypass());
     assertThrottleException(quotaInfo.getTableLimiter(tableNameA),
       TABLE_A_THROTTLE_2 - TABLE_A_THROTTLE_1);
@@ -193,12 +155,10 @@ public class TestQuotaState {
     assertNoopLimiter(quotaInfo.getTableLimiter(tableNameB));
 
     // Remove table limiters
-    otherQuotaState = new UserQuotaState(LAST_UPDATE_3);
-    assertEquals(LAST_UPDATE_3, otherQuotaState.getLastUpdate());
+    otherQuotaState = new UserQuotaState();
     assertTrue(otherQuotaState.isBypass());
 
     quotaInfo.update(otherQuotaState);
-    assertEquals(LAST_UPDATE_3, quotaInfo.getLastUpdate());
     assertTrue(quotaInfo.isBypass());
     assertNoopLimiter(quotaInfo.getTableLimiter(UNKNOWN_TABLE_NAME));
   }
@@ -207,20 +167,16 @@ public class TestQuotaState {
   public void testTableThrottleWithBatch() {
     final TableName TABLE_A = TableName.valueOf("TableA");
     final int TABLE_A_THROTTLE_1 = 3;
-    final long LAST_UPDATE_1 = 10;
 
     UserQuotaState quotaInfo = new UserQuotaState();
-    assertEquals(0, quotaInfo.getLastUpdate());
     assertTrue(quotaInfo.isBypass());
 
     // Add A table limiters
-    UserQuotaState otherQuotaState = new UserQuotaState(LAST_UPDATE_1);
+    UserQuotaState otherQuotaState = new UserQuotaState();
     otherQuotaState.setQuotas(TABLE_A, buildReqNumThrottle(TABLE_A_THROTTLE_1));
-    assertEquals(LAST_UPDATE_1, otherQuotaState.getLastUpdate());
     assertFalse(otherQuotaState.isBypass());
 
     quotaInfo.update(otherQuotaState);
-    assertEquals(LAST_UPDATE_1, quotaInfo.getLastUpdate());
     assertFalse(quotaInfo.isBypass());
     QuotaLimiter limiter = quotaInfo.getTableLimiter(TABLE_A);
     try {

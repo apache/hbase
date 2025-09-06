@@ -170,7 +170,7 @@ public class QuotaCache implements Stoppable {
     // local reference because the chore thread may assign to userQuotaCache
     Map<String, UserQuotaState> cache = userQuotaCache;
     if (!cache.containsKey(user)) {
-      cache.put(user, QuotaUtil.buildDefaultUserQuotaState(rsServices.getConfiguration(), 0L));
+      cache.put(user, QuotaUtil.buildDefaultUserQuotaState(rsServices.getConfiguration()));
     }
     return cache.get(user);
   }
@@ -305,35 +305,41 @@ public class QuotaCache implements Stoppable {
       return super.triggerNow();
     }
 
-    /**
-     * Chore runs completely reset the state of the QuotaCache. This means that users get their full
-     * usage allotment back, since we throw away the accounting that was tracking their progress
-     * toward their limits. For this reason, it's recommended that chore runs should be infrequent.
-     */
     @Override
     protected void chore() {
       updateQuotaFactors();
 
       try {
-        userQuotaCache = new HashMap<>(fetchUserQuotaStateEntries());
+        Map<String, UserQuotaState> newUserQuotaCache = new HashMap<>(fetchUserQuotaStateEntries());
+        updateNewCacheFromOld(userQuotaCache, newUserQuotaCache);
+        userQuotaCache = newUserQuotaCache;
       } catch (IOException e) {
         LOG.error("Error while fetching user quotas", e);
       }
 
       try {
-        regionServerQuotaCache = new HashMap<>(fetchRegionServerQuotaStateEntries());
+        Map<String, QuotaState> newRegionServerQuotaCache =
+          new HashMap<>(fetchRegionServerQuotaStateEntries());
+        updateNewCacheFromOld(regionServerQuotaCache, newRegionServerQuotaCache);
+        regionServerQuotaCache = newRegionServerQuotaCache;
       } catch (IOException e) {
         LOG.error("Error while fetching region server quotas", e);
       }
 
       try {
-        tableQuotaCache = new HashMap<>(fetchTableQuotaStateEntries());
+        Map<TableName, QuotaState> newTableQuotaCache =
+          new HashMap<>(fetchTableQuotaStateEntries());
+        updateNewCacheFromOld(tableQuotaCache, newTableQuotaCache);
+        tableQuotaCache = newTableQuotaCache;
       } catch (IOException e) {
         LOG.error("Error while refreshing table quotas", e);
       }
 
       try {
-        namespaceQuotaCache = new HashMap<>(fetchNamespaceQuotaStateEntries());
+        Map<String, QuotaState> newNamespaceQuotaCache =
+          new HashMap<>(fetchNamespaceQuotaStateEntries());
+        updateNewCacheFromOld(namespaceQuotaCache, newNamespaceQuotaCache);
+        namespaceQuotaCache = newNamespaceQuotaCache;
       } catch (IOException e) {
         LOG.error("Error while refreshing namespace quotas", e);
       }
@@ -421,6 +427,19 @@ public class QuotaCache implements Stoppable {
       if (rsSize != 0) {
         // TODO if use rs group, the cluster limit should be shared by the rs group
         machineQuotaFactor = 1.0 / rsSize;
+      }
+    }
+  }
+
+  /** visible for testing */
+  static <K, V extends QuotaState> void updateNewCacheFromOld(Map<K, V> oldCache,
+    Map<K, V> newCache) {
+    for (K key : oldCache.keySet()) {
+      if (newCache.containsKey(key)) {
+        V newState = newCache.get(key);
+        V oldState = oldCache.get(key);
+        oldState.update(newState);
+        newCache.put(key, oldState);
       }
     }
   }
