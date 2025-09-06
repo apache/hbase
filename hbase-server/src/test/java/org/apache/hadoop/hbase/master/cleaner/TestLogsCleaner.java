@@ -211,7 +211,7 @@ public class TestLogsCleaner {
     }
     // Case 4: the newest 3 WALs will be kept because they are beyond the replication offset
     masterServices.getReplicationPeerManager().listPeers(null)
-      .add(new ReplicationPeerDescription(peerId, true, null, null));
+      .add(new ReplicationPeerDescription(peerId, true, null, null, null));
     queueStorage.setOffset(new ReplicationQueueId(server.getServerName(), peerId), fakeMachineName,
       new ReplicationGroupOffset(fakeMachineName + "." + (now - 3), 0), Collections.emptyMap());
     // Case 5: 5 Procedure WALs that are new, will stay
