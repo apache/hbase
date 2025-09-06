@@ -829,7 +829,7 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
-  public void rollAllWALWriters() {
+  public Map<ServerName, Long> rollAllWALWriters() {
     throw new NotImplementedException("rollAllWALWriters not supported in ThriftAdmin");
   }
 
@@ -1370,10 +1370,5 @@ public class ThriftAdmin implements Admin {
   public boolean isReplicationPeerModificationEnabled() throws IOException {
     throw new NotImplementedException(
       "isReplicationPeerModificationEnabled not supported in ThriftAdmin");
-  }
-
-  @Override
-  public long getHighestWALFilenum(ServerName serverName) throws IOException {
-    throw new NotImplementedException("getHighestWALFilenum not supported in ThriftAdmin");
   }
 }

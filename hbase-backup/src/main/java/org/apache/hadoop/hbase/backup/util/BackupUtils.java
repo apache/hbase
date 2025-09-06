@@ -799,26 +799,24 @@ public final class BackupUtils {
     HashMap<String, Long> lastLogRollResult =
       backupSystemTable.readRegionServerLastLogRollResult(backupRootDir);
     try (Admin admin = conn.getAdmin()) {
-      admin.rollAllWALWriters();
+      Map<ServerName, Long> newLogRollResult = admin.rollAllWALWriters();
 
-      for (ServerName serverName : admin.getRegionServers()) {
-        try {
-          String address = serverName.getAddress().toString();
-          Long lastHighestWALFilenum = lastLogRollResult.get(address);
-          long newHighestWALFilenum = admin.getHighestWALFilenum(serverName);
-          if (lastHighestWALFilenum != null && lastHighestWALFilenum >= newHighestWALFilenum) {
-            LOG.warn("Won't update last roll log result for server {}: current = {}, new = {}",
-              serverName, lastHighestWALFilenum, newHighestWALFilenum);
-          } else {
-            backupSystemTable.writeRegionServerLastLogRollResult(address, newHighestWALFilenum,
-              backupRootDir);
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("updated last roll log result for {} from {} to {}", serverName,
-                lastHighestWALFilenum, newHighestWALFilenum);
-            }
+      for (Map.Entry<ServerName, Long> entry : newLogRollResult.entrySet()) {
+        ServerName serverName = entry.getKey();
+        long newHighestWALFilenum = entry.getValue();
+
+        String address = serverName.getAddress().toString();
+        Long lastHighestWALFilenum = lastLogRollResult.get(address);
+        if (lastHighestWALFilenum != null && lastHighestWALFilenum >= newHighestWALFilenum) {
+          LOG.warn("Won't update last roll log result for server {}: current = {}, new = {}",
+            serverName, lastHighestWALFilenum, newHighestWALFilenum);
+        } else {
+          backupSystemTable.writeRegionServerLastLogRollResult(address, newHighestWALFilenum,
+            backupRootDir);
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("updated last roll log result for {} from {} to {}", serverName,
+              lastHighestWALFilenum, newHighestWALFilenum);
           }
-        } catch (IOException e) {
-          LOG.warn("Failed update log roll result for server {}", serverName, e);
         }
       }
     }

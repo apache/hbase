@@ -1409,9 +1409,10 @@ public interface Admin extends Abortable, Closeable {
    * {@link Admin#rollWALWriter(ServerName)}, this method is synchronous, which means it will block
    * until all RegionServers have completed the log roll, or a RegionServer fails due to an
    * exception that retry will not work.
+   * @return server and the highest wal filenum of server after completing log roll
    * @throws IOException if a remote or network exception occurs
    */
-  void rollAllWALWriters() throws IOException;
+  Map<ServerName, Long> rollAllWALWriters() throws IOException;
 
   /**
    * Helper that delegates to getClusterMetrics().getMasterCoprocessorNames().
@@ -2660,10 +2661,4 @@ public interface Admin extends Abortable, Closeable {
    * Get the list of cached files
    */
   List<String> getCachedFilesList(ServerName serverName) throws IOException;
-
-  /**
-   * Get the highest WAL filenum for the specific region server. Note that filenum means the
-   * timestamp (in ms) when the log file was created.
-   */
-  long getHighestWALFilenum(ServerName serverName) throws IOException;
 }

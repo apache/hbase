@@ -840,15 +840,13 @@ message ReloadQuotasProcedureStateData {
   optional ForeignExceptionMessage error = 2;
 }
 
-enum LogRollState {
+enum LogRollProcedureState {
   LOG_ROLL_ROLL_LOG_ON_RS = 1;
-  LOG_ROLL_UNREGISTER_SERVER_LISTENER = 2;
+  LOG_ROLL_COLLECT_RS_HIGHEST_WAL_FILENUM = 2;
+  LOG_ROLL_UNREGISTER_SERVER_LISTENER = 3;
 }
 
-message LogRollData {
-}
-
-message LogRollRemoteData {
+message LogRollRemoteProcedureStateData {
   required ServerName target_server = 1;
 }
 

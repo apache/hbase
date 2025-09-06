@@ -636,8 +636,8 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
-  public void rollAllWALWriters() throws IOException {
-    get(admin.rollAllWALWriters());
+  public Map<ServerName, Long> rollAllWALWriters() throws IOException {
+    return get(admin.rollAllWALWriters());
   }
 
   @Override
@@ -1140,10 +1140,5 @@ class AdminOverAsyncAdmin implements Admin {
   @Override
   public List<String> getCachedFilesList(ServerName serverName) throws IOException {
     return get(admin.getCachedFilesList(serverName));
-  }
-
-  @Override
-  public long getHighestWALFilenum(ServerName serverName) throws IOException {
-    return get(admin.getHighestWALFilenum(serverName));
   }
 }

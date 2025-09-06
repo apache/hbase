@@ -20,23 +20,27 @@ package org.apache.hadoop.hbase.master.procedure;
 import java.io.IOException;
 import java.util.List;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.master.ServerListener;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
 import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
+import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.LogRollState;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RSHighestWalFilenum;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.LogRollProcedureState;
 
 /**
  * The procedure to perform WAL rolling on all of RegionServers.
  */
 @InterfaceAudience.Private
-public class LogRollProcedure extends StateMachineProcedure<MasterProcedureEnv, LogRollState>
+public class LogRollProcedure
+  extends StateMachineProcedure<MasterProcedureEnv, LogRollProcedureState>
   implements GlobalProcedureInterface {
 
   private static final Logger LOG = LoggerFactory.getLogger(LogRollProcedure.class);
@@ -45,25 +49,38 @@ public class LogRollProcedure extends StateMachineProcedure<MasterProcedureEnv, 
   }
 
   @Override
-  protected Flow executeFromState(MasterProcedureEnv env, LogRollState state)
+  protected Flow executeFromState(MasterProcedureEnv env, LogRollProcedureState state)
     throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
     LOG.info("{} execute state={}", this, state);
+
+    final ServerManager serverManager = env.getMasterServices().getServerManager();
 
     try {
       switch (state) {
         case LOG_ROLL_ROLL_LOG_ON_RS:
-          final ServerManager serverManager = env.getMasterServices().getServerManager();
           // avoid potential new region server missing
           serverManager.registerListener(new NewServerWALRoller(env));
 
           final List<LogRollRemoteProcedure> subProcedures =
             serverManager.getOnlineServersList().stream().map(LogRollRemoteProcedure::new).toList();
           addChildProcedure(subProcedures.toArray(new LogRollRemoteProcedure[0]));
-          setNextState(LogRollState.LOG_ROLL_UNREGISTER_SERVER_LISTENER);
+          setNextState(LogRollProcedureState.LOG_ROLL_COLLECT_RS_HIGHEST_WAL_FILENUM);
+          return Flow.HAS_MORE_STATE;
+        case LOG_ROLL_COLLECT_RS_HIGHEST_WAL_FILENUM:
+          AsyncClusterConnection asyncClusterConn =
+            env.getMasterServices().getAsyncClusterConnection();
+          RSHighestWalFilenum.Builder builder = RSHighestWalFilenum.newBuilder();
+          for (ServerName serverName : serverManager.getOnlineServersList()) {
+            long highestWALFilenum = FutureUtils
+              .get(asyncClusterConn.getRegionServerAdmin(serverName).getHighestWALFilenum())
+              .getHighestWalFilenum();
+            builder.putFileNumMap(serverName.toString(), highestWALFilenum);
+          }
+          setResult(builder.build().toByteArray());
+          setNextState(LogRollProcedureState.LOG_ROLL_UNREGISTER_SERVER_LISTENER);
           return Flow.HAS_MORE_STATE;
         case LOG_ROLL_UNREGISTER_SERVER_LISTENER:
-          env.getMasterServices().getServerManager()
-            .unregisterListenerIf(l -> l instanceof NewServerWALRoller);
+          serverManager.unregisterListenerIf(l -> l instanceof NewServerWALRoller);
           return Flow.NO_MORE_STATE;
       }
     } catch (Exception e) {
@@ -87,23 +104,23 @@ public class LogRollProcedure extends StateMachineProcedure<MasterProcedureEnv, 
   }
 
   @Override
-  protected void rollbackState(MasterProcedureEnv env, LogRollState state) {
+  protected void rollbackState(MasterProcedureEnv env, LogRollProcedureState state) {
     // nothing to rollback
   }
 
   @Override
-  protected LogRollState getState(int stateId) {
-    return LogRollState.forNumber(stateId);
+  protected LogRollProcedureState getState(int stateId) {
+    return LogRollProcedureState.forNumber(stateId);
   }
 
   @Override
-  protected int getStateId(LogRollState state) {
+  protected int getStateId(LogRollProcedureState state) {
     return state.getNumber();
   }
 
   @Override
-  protected LogRollState getInitialState() {
-    return LogRollState.LOG_ROLL_ROLL_LOG_ON_RS;
+  protected LogRollProcedureState getInitialState() {
+    return LogRollProcedureState.LOG_ROLL_ROLL_LOG_ON_RS;
   }
 
   @Override
@@ -113,12 +130,33 @@ public class LogRollProcedure extends StateMachineProcedure<MasterProcedureEnv, 
 
   @Override
   protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
-    // nothing to persist
+    super.serializeStateData(serializer);
+
+    if (getResult() != null && getResult().length > 0) {
+      serializer.serialize((RSHighestWalFilenum.parseFrom(getResult())));
+    } else {
+      serializer.serialize(RSHighestWalFilenum.getDefaultInstance());
+    }
   }
 
   @Override
   protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
-    // nothing to persist
+    super.deserializeStateData(serializer);
+
+    if (getResult() == null) {
+      RSHighestWalFilenum rsHighestWalFilenumMap =
+        serializer.deserialize(RSHighestWalFilenum.class);
+      if (rsHighestWalFilenumMap != null) {
+        if (rsHighestWalFilenumMap.getFileNumMapMap().isEmpty()) {
+          if (getCurrentState() == LogRollProcedureState.LOG_ROLL_UNREGISTER_SERVER_LISTENER) {
+            LOG.warn("pid = {}, current state is the last state, but rsHighestWalFilenumMap is "
+              + "empty, this should not happen. Are all region servers down ?", getProcId());
+          }
+        } else {
+          setResult(rsHighestWalFilenumMap.toByteArray());
+        }
+      }
+    }
   }
 
   @Override

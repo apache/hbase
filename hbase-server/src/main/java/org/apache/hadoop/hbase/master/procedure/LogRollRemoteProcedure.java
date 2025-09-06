@@ -27,7 +27,7 @@ import org.apache.hadoop.hbase.regionserver.LogRollCallable;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.LogRollRemoteData;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.LogRollRemoteProcedureStateData;
 
 /**
  * The remote procedure to perform WAL rolling on the specific RegionServer without retrying.
@@ -55,20 +55,21 @@ public class LogRollRemoteProcedure extends ServerRemoteProcedure
 
   @Override
   protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
-    serializer.serialize(LogRollRemoteData.newBuilder()
+    serializer.serialize(LogRollRemoteProcedureStateData.newBuilder()
       .setTargetServer(ProtobufUtil.toServerName(targetServer)).build());
   }
 
   @Override
   protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
-    LogRollRemoteData data = serializer.deserialize(LogRollRemoteData.class);
+    LogRollRemoteProcedureStateData data =
+      serializer.deserialize(LogRollRemoteProcedureStateData.class);
     this.targetServer = ProtobufUtil.toServerName(data.getTargetServer());
   }
 
   @Override
   public Optional<RemoteOperation> remoteCallBuild(MasterProcedureEnv env, ServerName serverName) {
     return Optional.of(new ServerOperation(this, getProcId(), LogRollCallable.class,
-      LogRollRemoteData.getDefaultInstance().toByteArray(),
+      LogRollRemoteProcedureStateData.getDefaultInstance().toByteArray(),
       env.getMasterServices().getMasterActiveTime()));
   }
 

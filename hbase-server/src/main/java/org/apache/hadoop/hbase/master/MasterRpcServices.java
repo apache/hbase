@@ -1376,7 +1376,7 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
   @Override
   public GetProcedureResultResponse getProcedureResult(RpcController controller,
     GetProcedureResultRequest request) throws ServiceException {
-    LOG.debug("Checking to see if procedure is done pid=" + request.getProcId());
+    LOG.debug("Checking to see if procedure is done pid={}", request.getProcId());
     try {
       server.checkInitialized();
       GetProcedureResultResponse.Builder builder = GetProcedureResultResponse.newBuilder();

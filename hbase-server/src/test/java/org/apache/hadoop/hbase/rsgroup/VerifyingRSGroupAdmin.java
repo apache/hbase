@@ -527,8 +527,8 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   }
 
   @Override
-  public void rollAllWALWriters() throws IOException {
-    admin.rollAllWALWriters();
+  public Map<ServerName, Long> rollAllWALWriters() throws IOException {
+    return admin.rollAllWALWriters();
   }
 
   public CompactionState getCompactionState(TableName tableName) throws IOException {
@@ -993,10 +993,5 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   @Override
   public boolean isReplicationPeerModificationEnabled() throws IOException {
     return admin.isReplicationPeerModificationEnabled();
-  }
-
-  @Override
-  public long getHighestWALFilenum(ServerName serverName) throws IOException {
-    return admin.getHighestWALFilenum(serverName);
   }
 }
