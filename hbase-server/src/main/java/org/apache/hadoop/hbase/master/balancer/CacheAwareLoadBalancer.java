@@ -206,6 +206,9 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
     final Map<String, Pair<ServerName, Float>> snapshot = new HashMap<>();
     snapshot.putAll(this.regionCacheRatioOnOldServerMap);
     List<RegionPlan> plans = super.balanceTable(tableName, loadOfOneTable);
+    if (plans == null) {
+      return plans;
+    }
     plans.sort((p1, p2) -> {
       Pair<ServerName, Float> pair1 = snapshot.get(p1.getRegionName());
       Float ratio1 =
