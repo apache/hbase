@@ -41,7 +41,7 @@ public class TestQuotaCache2 {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestQuotaCache.class);
+    HBaseClassTestRule.forClass(TestQuotaCache2.class);
 
   @Test
   public void testPreserveLimiterAvailability() throws Exception {
