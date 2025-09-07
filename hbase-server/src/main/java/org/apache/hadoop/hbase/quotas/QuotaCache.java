@@ -434,10 +434,11 @@ public class QuotaCache implements Stoppable {
   /** visible for testing */
   static <K, V extends QuotaState> void updateNewCacheFromOld(Map<K, V> oldCache,
     Map<K, V> newCache) {
-    for (K key : oldCache.keySet()) {
+    for (Map.Entry<K, V> entry : oldCache.entrySet()) {
+      K key = entry.getKey();
       if (newCache.containsKey(key)) {
         V newState = newCache.get(key);
-        V oldState = oldCache.get(key);
+        V oldState = entry.getValue();
         oldState.update(newState);
         newCache.put(key, oldState);
       }

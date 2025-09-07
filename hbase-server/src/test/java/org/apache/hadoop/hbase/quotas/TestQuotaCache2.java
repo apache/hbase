@@ -23,7 +23,12 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.HashMap;
 import java.util.Map;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.ClassRule;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
@@ -31,7 +36,12 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
 /**
  * Tests of QuotaCache that don't require a minicluster, unlike in TestQuotaCache
  */
+@Category({ RegionServerTests.class, SmallTests.class })
 public class TestQuotaCache2 {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(TestQuotaCache.class);
 
   @Test
   public void testPreserveLimiterAvailability() throws Exception {
