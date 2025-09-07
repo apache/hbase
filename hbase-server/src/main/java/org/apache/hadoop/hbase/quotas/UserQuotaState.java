@@ -45,7 +45,9 @@ public class UserQuotaState extends QuotaState {
   public synchronized String toString() {
     StringBuilder builder = new StringBuilder();
     builder.append("UserQuotaState(");
-    if (bypassGlobals) builder.append("bypass-globals");
+    if (bypassGlobals) {
+      builder.append("bypass-globals");
+    }
 
     if (isBypass()) {
       builder.append(" bypass");
