@@ -58,7 +58,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
@@ -70,6 +69,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyState;
 import org.apache.hadoop.hbase.io.crypto.MockManagedKeyProvider;
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -102,7 +102,7 @@ public class TestKeymetaTableAccessor {
   protected static String KEY_METADATA = "metadata1";
 
   @Mock
-  protected Server server;
+  protected MasterServices server;
   @Mock
   protected Connection connection;
   @Mock

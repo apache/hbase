@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.keymeta.KeyManagementService;
 import org.apache.hadoop.hbase.keymeta.KeymetaAdmin;
 import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
 import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
@@ -369,18 +370,6 @@ public class ReplicationSyncUp extends Configured implements Tool {
       return null;
     }
 
-    @Override public SystemKeyCache getSystemKeyCache() {
-      return null;
-    }
-
-    @Override public ManagedKeyDataCache getManagedKeyDataCache() {
-      return null;
-    }
-
-    @Override public KeymetaAdmin getKeymetaAdmin() {
-      return null;
-    }
-
     @Override
     public FileSystem getFileSystem() {
       return null;
@@ -398,6 +387,11 @@ public class ReplicationSyncUp extends Configured implements Tool {
 
     @Override
     public AsyncClusterConnection getAsyncClusterConnection() {
+      return null;
+    }
+
+    @Override
+    public KeyManagementService getKeyManagementService() {
       return null;
     }
   }

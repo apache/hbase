@@ -61,6 +61,8 @@ public class TestKeymetaAdminShell extends ManagedKeyTestBase implements RubyShe
     conf.set("hbase.ipc.client.socket.timeout.read", "6000000");
     conf.set("hbase.ipc.client.socket.timeout.write", "6000000");
     conf.set("hbase.master.start.timeout.localHBaseCluster", "6000000");
+    conf.set("hbase.master.init.timeout.localHBaseCluster", "6000000");
+    conf.set("hbase.client.sync.wait.timeout.msec", "6000000");
     Map<Bytes, Bytes> cust2key = new HashMap<>();
     Map<Bytes, String> cust2alias = new HashMap<>();
     String clusterId = UUID.randomUUID().toString();

@@ -33,6 +33,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.keymeta.KeyManagementService;
 import org.apache.hadoop.hbase.keymeta.KeymetaAdmin;
 import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
 import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
@@ -331,15 +332,8 @@ public class TestActiveMasterManager {
       return activeMasterManager;
     }
 
-    @Override public SystemKeyCache getSystemKeyCache() {
-      return null;
-    }
-
-    @Override public ManagedKeyDataCache getManagedKeyDataCache() {
-      return null;
-    }
-
-    @Override public KeymetaAdmin getKeymetaAdmin() {
+    @Override
+    public KeyManagementService getKeyManagementService() {
       return null;
     }
   }

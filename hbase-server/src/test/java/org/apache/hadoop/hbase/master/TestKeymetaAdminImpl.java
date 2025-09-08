@@ -44,7 +44,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
@@ -52,6 +51,7 @@ import org.apache.hadoop.hbase.io.crypto.ManagedKeyState;
 import org.apache.hadoop.hbase.io.crypto.MockManagedKeyProvider;
 import org.apache.hadoop.hbase.keymeta.KeymetaAdminImpl;
 import org.apache.hadoop.hbase.keymeta.KeymetaTableAccessor;
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -89,7 +89,7 @@ public class TestKeymetaAdminImpl {
   protected FileSystem fs;
 
   protected FileSystem mockFileSystem = mock(FileSystem.class);
-  protected Server mockServer = mock(Server.class);
+  protected MasterServices mockServer = mock(MasterServices.class);
   protected KeymetaAdminImplForTest keymetaAdmin;
   KeymetaTableAccessor keymetaAccessor = mock(KeymetaTableAccessor.class);
 
@@ -236,7 +236,7 @@ public class TestKeymetaAdminImpl {
   }
 
   private class KeymetaAdminImplForTest extends KeymetaAdminImpl {
-    public KeymetaAdminImplForTest(Server mockServer, KeymetaTableAccessor mockAccessor) {
+    public KeymetaAdminImplForTest(MasterServices mockServer, KeymetaTableAccessor mockAccessor) {
       super(mockServer);
     }
 

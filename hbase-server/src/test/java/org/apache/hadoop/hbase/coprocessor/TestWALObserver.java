@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.regionserver.wal.WALCoprocessorHost;
 import org.apache.hadoop.hbase.security.User;
@@ -351,8 +352,9 @@ public class TestWALObserver {
             .valueOf(currentTest.getMethodName() + "2", 16010, EnvironmentEdgeManager.currentTime())
             .toString());
         WAL wal2 = wals2.getWAL(null);
-        HRegion region = HRegion.openHRegion(newConf, FileSystem.get(newConf), hbaseRootDir, hri,
-          htd, wal2, TEST_UTIL.getHBaseCluster().getRegionServer(0), null);
+        HRegionServer server = TEST_UTIL.getHBaseCluster().getRegionServer(0); HRegion region =
+        HRegion.openHRegion(newConf, FileSystem.get(newConf), hbaseRootDir, hri, htd, wal2, server,
+        server.getKeyManagementService(), null);
 
         SampleRegionWALCoprocessor cp2 =
           region.getCoprocessorHost().findCoprocessor(SampleRegionWALCoprocessor.class);

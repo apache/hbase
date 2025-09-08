@@ -29,7 +29,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.RegionTooBusyException;
-import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
@@ -44,6 +43,7 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.ipc.RpcCall;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegion.FlushResult;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
@@ -114,7 +114,7 @@ public final class MasterRegion {
 
   private static final int REGION_ID = 1;
 
-  private final Server server;
+  private final MasterServices server;
 
   private final WALFactory walFactory;
 
@@ -128,7 +128,7 @@ public final class MasterRegion {
 
   private final long regionUpdateRetryPauseTime;
 
-  private MasterRegion(Server server, HRegion region, WALFactory walFactory,
+  private MasterRegion(MasterServices server, HRegion region, WALFactory walFactory,
     MasterRegionFlusherAndCompactor flusherAndCompactor, MasterRegionWALRoller walRoller) {
     this.server = server;
     this.region = region;
@@ -301,14 +301,14 @@ public final class MasterRegion {
 
   private static HRegion bootstrap(Configuration conf, TableDescriptor td, FileSystem fs,
     Path rootDir, FileSystem walFs, Path walRootDir, WALFactory walFactory,
-    MasterRegionWALRoller walRoller, String serverName, boolean touchInitializingFlag)
+    MasterRegionWALRoller walRoller, MasterServices server, boolean touchInitializingFlag)
     throws IOException {
     TableName tn = td.getTableName();
     RegionInfo regionInfo = RegionInfoBuilder.newBuilder(tn).setRegionId(REGION_ID).build();
     Path tableDir = CommonFSUtils.getTableDir(rootDir, tn);
     // persist table descriptor
     FSTableDescriptors.createTableDescriptorForTableDirectory(fs, tableDir, td, true);
-    HRegion.createHRegion(conf, regionInfo, fs, tableDir, td).close();
+    HRegion.createHRegion(conf, regionInfo, fs, tableDir, td, server.getKeyManagementService()).close();
     Path initializedFlag = new Path(tableDir, INITIALIZED_FLAG);
     if (!fs.mkdirs(initializedFlag)) {
       throw new IOException("Can not touch initialized flag: " + initializedFlag);
@@ -317,8 +317,9 @@ public final class MasterRegion {
     if (!fs.delete(initializingFlag, true)) {
       LOG.warn("failed to clean up initializing flag: " + initializingFlag);
     }
-    WAL wal = createWAL(walFactory, walRoller, serverName, walFs, walRootDir, regionInfo);
-    return HRegion.openHRegionFromTableDir(conf, fs, tableDir, regionInfo, td, wal, null, null);
+    WAL wal = createWAL(walFactory, walRoller, server.getServerName().toString(), walFs, walRootDir, regionInfo);
+    return HRegion.openHRegionFromTableDir(conf, fs, tableDir, regionInfo, td, wal, null,
+      server.getKeyManagementService(), null);
   }
 
   private static RegionInfo loadRegionInfo(FileSystem fs, Path tableDir) throws IOException {
@@ -330,7 +331,7 @@ public final class MasterRegion {
 
   private static HRegion open(Configuration conf, TableDescriptor td, RegionInfo regionInfo,
     FileSystem fs, Path rootDir, FileSystem walFs, Path walRootDir, WALFactory walFactory,
-    MasterRegionWALRoller walRoller, String serverName) throws IOException {
+    MasterRegionWALRoller walRoller, MasterServices server) throws IOException {
     Path tableDir = CommonFSUtils.getTableDir(rootDir, td.getTableName());
     Path walRegionDir = FSUtils.getRegionDirFromRootDir(walRootDir, regionInfo);
     Path replayEditsDir = new Path(walRegionDir, REPLAY_EDITS_DIR);
@@ -346,7 +347,8 @@ public final class MasterRegion {
     // to always exist in normal situations, but we should guard against users changing the
     // filesystem outside of HBase's line of sight.
     if (walFs.exists(walsDir)) {
-      replayWALs(conf, walFs, walRootDir, walsDir, regionInfo, serverName, replayEditsDir);
+      replayWALs(conf, walFs, walRootDir, walsDir, regionInfo, server.getServerName().toString(),
+        replayEditsDir);
     } else {
       LOG.error(
         "UNEXPECTED: WAL directory for MasterRegion is missing." + " {} is unexpectedly missing.",
@@ -354,13 +356,15 @@ public final class MasterRegion {
     }
 
     // Create a new WAL
-    WAL wal = createWAL(walFactory, walRoller, serverName, walFs, walRootDir, regionInfo);
+    WAL wal = createWAL(walFactory, walRoller, server.getServerName().toString(), walFs, walRootDir,
+      regionInfo);
     conf.set(HRegion.SPECIAL_RECOVERED_EDITS_DIR,
       replayEditsDir.makeQualified(walFs.getUri(), walFs.getWorkingDirectory()).toString());
     // we do not do WAL splitting here so it is possible to have uncleanly closed WAL files, so we
     // need to ignore EOFException.
     conf.setBoolean(HRegion.RECOVERED_EDITS_IGNORE_EOF, true);
-    return HRegion.openHRegionFromTableDir(conf, fs, tableDir, regionInfo, td, wal, null, null);
+    return HRegion.openHRegionFromTableDir(conf, fs, tableDir, regionInfo, td, wal, null,
+      server, null);
   }
 
   private static void replayWALs(Configuration conf, FileSystem walFs, Path walRootDir,
@@ -437,7 +441,7 @@ public final class MasterRegion {
   public static MasterRegion create(MasterRegionParams params) throws IOException {
     TableDescriptor td = params.tableDescriptor();
     LOG.info("Create or load local region for table " + td);
-    Server server = params.server();
+    MasterServices server = params.server();
     Configuration baseConf = server.getConfiguration();
     FileSystem fs = CommonFSUtils.getRootDirFileSystem(baseConf);
     FileSystem walFs = CommonFSUtils.getWALFileSystem(baseConf);
@@ -477,7 +481,7 @@ public final class MasterRegion {
         throw new IOException("Can not touch initialized flag");
       }
       region = bootstrap(conf, td, fs, rootDir, walFs, walRootDir, walFactory, walRoller,
-        server.getServerName().toString(), true);
+        server, true);
     } else {
       if (!fs.exists(initializedFlag)) {
         if (!fs.exists(initializingFlag)) {
@@ -495,7 +499,7 @@ public final class MasterRegion {
           RegionInfo regionInfo = loadRegionInfo(fs, tableDir);
           tryMigrate(conf, fs, tableDir, regionInfo, oldTd, td);
           region = open(conf, td, regionInfo, fs, rootDir, walFs, walRootDir, walFactory, walRoller,
-            server.getServerName().toString());
+            server);
         } else {
           // delete all contents besides the initializing flag, here we can make sure tableDir
           // exists(unless someone delete it manually...), so we do not do null check here.
@@ -505,7 +509,7 @@ public final class MasterRegion {
             }
           }
           region = bootstrap(conf, td, fs, rootDir, walFs, walRootDir, walFactory, walRoller,
-            server.getServerName().toString(), false);
+            server, false);
         }
       } else {
         if (fs.exists(initializingFlag) && !fs.delete(initializingFlag, true)) {
@@ -516,7 +520,7 @@ public final class MasterRegion {
         RegionInfo regionInfo = loadRegionInfo(fs, tableDir);
         tryMigrate(conf, fs, tableDir, regionInfo, oldTd, td);
         region = open(conf, td, regionInfo, fs, rootDir, walFs, walRootDir, walFactory, walRoller,
-          server.getServerName().toString());
+          server);
       }
     }
 

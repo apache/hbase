@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.io.hfile.CachedBlock;
 import org.apache.hadoop.hbase.io.hfile.ResizableBlockCache;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
+import org.apache.hadoop.hbase.keymeta.KeyManagementService;
 import org.apache.hadoop.hbase.keymeta.KeymetaAdmin;
 import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
 import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
@@ -840,18 +841,6 @@ public class TestHeapMemoryManager {
       return null;
     }
 
-    @Override public SystemKeyCache getSystemKeyCache() {
-      return null;
-    }
-
-    @Override public ManagedKeyDataCache getManagedKeyDataCache() {
-      return null;
-    }
-
-    @Override public KeymetaAdmin getKeymetaAdmin() {
-      return null;
-    }
-
     @Override
     public FileSystem getFileSystem() {
       return null;
@@ -869,6 +858,11 @@ public class TestHeapMemoryManager {
 
     @Override
     public AsyncClusterConnection getAsyncClusterConnection() {
+      return null;
+    }
+
+    @Override
+    public KeyManagementService getKeyManagementService() {
       return null;
     }
   }

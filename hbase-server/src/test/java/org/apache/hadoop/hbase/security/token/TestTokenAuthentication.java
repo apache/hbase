@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.ipc.RpcServerFactory;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.ipc.SimpleRpcServer;
+import org.apache.hadoop.hbase.keymeta.KeyManagementService;
 import org.apache.hadoop.hbase.keymeta.KeymetaAdmin;
 import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
 import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
@@ -353,18 +354,6 @@ public class TestTokenAuthentication {
       return null;
     }
 
-    @Override public SystemKeyCache getSystemKeyCache() {
-      return null;
-    }
-
-    @Override public ManagedKeyDataCache getManagedKeyDataCache() {
-      return null;
-    }
-
-    @Override public KeymetaAdmin getKeymetaAdmin() {
-      return null;
-    }
-
     @Override
     public Connection createConnection(Configuration conf) throws IOException {
       return null;
@@ -372,6 +361,11 @@ public class TestTokenAuthentication {
 
     @Override
     public AsyncClusterConnection getAsyncClusterConnection() {
+      return null;
+    }
+
+    @Override
+    public KeyManagementService getKeyManagementService() {
       return null;
     }
   }

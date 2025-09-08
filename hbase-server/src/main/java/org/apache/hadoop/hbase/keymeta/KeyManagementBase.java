@@ -22,12 +22,11 @@ import java.security.KeyException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.keymeta.KeyManagementService;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.KeyProvider;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
-import org.apache.hadoop.hbase.io.crypto.ManagedKeyState;
 import org.apache.hadoop.hbase.security.SecurityUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -40,7 +39,7 @@ import org.slf4j.LoggerFactory;
 public abstract class KeyManagementBase {
   protected static final Logger LOG = LoggerFactory.getLogger(KeyManagementBase.class);
 
-  private Server server;
+  private KeyManagementService keyManagementService;
   private final Configuration configuration;
 
   private Boolean isDynamicLookupEnabled;
@@ -51,9 +50,9 @@ public abstract class KeyManagementBase {
    *
    * @param server the server instance
    */
-  public KeyManagementBase(Server server) {
-    this(server.getConfiguration());
-    this.server = server;
+  public KeyManagementBase(KeyManagementService keyManagementService) {
+    this(keyManagementService.getConfiguration());
+    this.keyManagementService = keyManagementService;
   }
 
   /**
@@ -68,8 +67,8 @@ public abstract class KeyManagementBase {
     this.configuration = configuration;
   }
 
-  protected Server getServer() {
-    return server;
+  protected KeyManagementService getKeyManagementService() {
+    return keyManagementService;
   }
 
   protected Configuration getConfiguration() {

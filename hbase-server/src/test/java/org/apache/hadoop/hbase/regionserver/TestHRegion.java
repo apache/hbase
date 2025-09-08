@@ -5149,7 +5149,8 @@ public class TestHRegion {
       tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
       info = RegionInfoBuilder.newBuilder(tableName).build();
       Path path = new Path(dir + "testStatusSettingToAbortIfAnyExceptionDuringRegionInitilization");
-      region = HRegion.newHRegion(path, null, fs, CONF, info, tableDescriptorBuilder.build(), null);
+      region = HRegion.newHRegion(path, null, fs, CONF, info, tableDescriptorBuilder.build(), null,
+        null);
       // region initialization throws IOException and set task state to ABORTED.
       region.initialize();
       fail("Region initialization should fail due to IOException");
@@ -7203,7 +7204,8 @@ public class TestHRegion {
     final TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam1)).build();
     region = HRegion.createHRegion(hri, TEST_UTIL.getDataTestDir(), conf, htd,
-      HBaseTestingUtil.createWal(conf, TEST_UTIL.getDataTestDirOnTestFS(method + ".log"), hri));
+      HBaseTestingUtil.createWal(conf, TEST_UTIL.getDataTestDirOnTestFS(method + ".log"), hri),
+      null);
 
     Mutation[] mutations = new Mutation[] {
       new Put(a).add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(a)

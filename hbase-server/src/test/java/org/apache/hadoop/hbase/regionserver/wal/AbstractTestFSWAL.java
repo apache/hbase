@@ -571,7 +571,8 @@ public abstract class AbstractTestFSWAL {
     RegionServerServices rsServices = mock(RegionServerServices.class);
     when(rsServices.getServerName()).thenReturn(ServerName.valueOf("localhost:12345", 123456));
     when(rsServices.getConfiguration()).thenReturn(conf);
-    return HRegion.openHRegion(TEST_UTIL.getDataTestDir(), hri, htd, wal, conf, rsServices, null);
+    return HRegion.openHRegion(TEST_UTIL.getDataTestDir(), hri, htd, wal, conf, rsServices,
+      rsServices.getKeyManagementService(), null);
   }
 
   private void doPutWithAsyncWAL(ExecutorService exec, HRegion region, Put put,

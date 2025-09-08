@@ -25,7 +25,7 @@ import static org.mockito.Mockito.when;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.ClassRule;
@@ -45,7 +45,7 @@ public class TestKeyManagementBase {
     conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY,
         "org.apache.hadoop.hbase.keymeta.DummyKeyProvider");
 
-    Server mockServer = mock(Server.class);
+    MasterServices mockServer = mock(MasterServices.class);
     when(mockServer.getConfiguration()).thenReturn(conf);
 
     KeyManagementBase keyMgmt = new TestKeyManagement(mockServer);
@@ -59,7 +59,7 @@ public class TestKeyManagementBase {
   }
 
   private static class TestKeyManagement extends KeyManagementBase {
-    public TestKeyManagement(Server server) {
+    public TestKeyManagement(MasterServices server) {
       super(server);
     }
   }

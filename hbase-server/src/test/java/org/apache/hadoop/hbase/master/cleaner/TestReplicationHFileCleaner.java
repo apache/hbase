@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.keymeta.KeyManagementService;
 import org.apache.hadoop.hbase.keymeta.KeymetaAdmin;
 import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
 import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
@@ -218,18 +219,6 @@ public class TestReplicationHFileCleaner {
       }
     }
 
-    @Override public SystemKeyCache getSystemKeyCache() {
-      return null;
-    }
-
-    @Override public ManagedKeyDataCache getManagedKeyDataCache() {
-      return null;
-    }
-
-    @Override public KeymetaAdmin getKeymetaAdmin() {
-      return null;
-    }
-
     @Override
     public FileSystem getFileSystem() {
       try {
@@ -237,6 +226,11 @@ public class TestReplicationHFileCleaner {
       } catch (IOException e) {
         throw new UncheckedIOException(e);
       }
+    }
+
+    @Override
+    public KeyManagementService getKeyManagementService() {
+      return null;
     }
   }
 }

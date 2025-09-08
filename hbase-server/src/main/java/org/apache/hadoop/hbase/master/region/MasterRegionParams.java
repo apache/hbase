@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master.region;
 
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -27,7 +28,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class MasterRegionParams {
 
-  private Server server;
+  private MasterServices server;
 
   private String regionDirName;
 
@@ -55,7 +56,7 @@ public class MasterRegionParams {
 
   private Boolean useMetaCellComparator;
 
-  public MasterRegionParams server(Server server) {
+  public MasterRegionParams server(MasterServices server) {
     this.server = server;
     return this;
   }
@@ -125,7 +126,7 @@ public class MasterRegionParams {
     return this;
   }
 
-  public Server server() {
+  public MasterServices server() {
     return server;
   }
 

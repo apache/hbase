@@ -75,10 +75,10 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
     return TableOperationType.CREATE;
   }
 
-  private static TableDescriptor writeFsLayout(Path rootDir, Configuration conf)
+  private static TableDescriptor writeFsLayout(Path rootDir, MasterProcedureEnv env)
     throws IOException {
     LOG.info("BOOTSTRAP: creating hbase:meta region");
-    FileSystem fs = rootDir.getFileSystem(conf);
+    FileSystem fs = rootDir.getFileSystem(env.getMasterConfiguration());
     Path tableDir = CommonFSUtils.getTableDir(rootDir, TableName.META_TABLE_NAME);
     if (fs.exists(tableDir) && !deleteMetaTableDirectoryIfPartial(fs, tableDir)) {
       LOG.warn("Can not delete partial created meta table, continue...");
@@ -88,10 +88,10 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
     // not make it in first place. Turn off block caching for bootstrap.
     // Enable after.
     TableDescriptor metaDescriptor =
-      FSTableDescriptors.tryUpdateAndGetMetaTableDescriptor(conf, fs, rootDir);
-    HRegion
-      .createHRegion(RegionInfoBuilder.FIRST_META_REGIONINFO, rootDir, conf, metaDescriptor, null)
-      .close();
+      FSTableDescriptors.tryUpdateAndGetMetaTableDescriptor(env.getMasterConfiguration(), fs, rootDir);
+    HRegion.createHRegion(RegionInfoBuilder.FIRST_META_REGIONINFO, rootDir,
+      env.getMasterConfiguration(), metaDescriptor, null,
+      env.getMasterServices().getKeyManagementService()).close();
     return metaDescriptor;
   }
 
@@ -104,7 +104,7 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
         case INIT_META_WRITE_FS_LAYOUT:
           Configuration conf = env.getMasterConfiguration();
           Path rootDir = CommonFSUtils.getRootDir(conf);
-          TableDescriptor td = writeFsLayout(rootDir, conf);
+          TableDescriptor td = writeFsLayout(rootDir, env);
           env.getMasterServices().getTableDescriptors().update(td, true);
           setNextState(InitMetaState.INIT_META_ASSIGN_META);
           return Flow.HAS_MORE_STATE;

@@ -25,6 +25,8 @@ require 'hbase/table'
 
 java_import org.apache.hadoop.hbase.client.Get
 java_import org.apache.hadoop.hbase.util.Bytes
+java_import org.apache.hadoop.hbase.io.hfile.FixedFileTrailer
+java_import org.apache.hadoop.fs.FSDataInputStream
 
 
 module Hbase
@@ -34,6 +36,7 @@ module Hbase
     def setup
       setup_hbase
       @test_table = 'enctest'
+      @connection = $TEST_CLUSTER.getConnection
     end
 
     define_test 'Test table put/get with encryption' do
@@ -44,6 +47,49 @@ module Hbase
       test_table.put('1', 'f:a', '2')
       puts "Added a row, now flushing table #{@test_table}"
       command(:flush, @test_table)
+
+      tableName = TableName.valueOf(@test_table)
+      storeFileInfo = nil
+      $TEST_CLUSTER.getRSForFirstRegionInTable(tableName).getRegions(tableName).each do |region|
+        region.getStores.each do |store|
+          store.getStorefiles.each do |storefile|
+            storeFileInfo = storefile.getFileInfo
+          end
+        end
+      end
+      assert_not_nil(storeFileInfo)
+      hfileInfo = storeFileInfo.getHFileInfo
+      assert_not_nil(hfileInfo)
+      live_trailer = hfileInfo.getTrailer
+      assert_not_nil(live_trailer)
+      assert_not_nil(live_trailer.getEncryptionKey)
+      assert_not_nil(live_trailer.getKEKMetadata)
+      assert_not_nil(live_trailer.getKEKChecksum)
+
+      ## Disable table to ensure that the stores are not cached.
+      command(:disable, @test_table)
+      assert(!command(:is_enabled, @test_table))
+
+      # Open FSDataInputStream to the path pointed to by the storeFileInfo
+      fs = storeFileInfo.getFileSystem()
+      fio = fs.open(storeFileInfo.getPath())
+      assert_not_nil(fio)
+      # Read trailer using FiledFileTrailer
+      offline_trailer = FixedFileTrailer.readFromStream(fio,
+        fs.getFileStatus(storeFileInfo.getPath()).getLen())
+      assert_not_nil(offline_trailer)
+      assert_not_nil(offline_trailer.getEncryptionKey)
+      assert_not_nil(offline_trailer.getKEKMetadata)
+      assert_not_nil(offline_trailer.getKEKChecksum)
+
+      assert_equal(live_trailer.getEncryptionKey, offline_trailer.getEncryptionKey)
+      assert_equal(live_trailer.getKEKMetadata, offline_trailer.getKEKMetadata)
+      assert_equal(live_trailer.getKEKChecksum, offline_trailer.getKEKChecksum)
+
+      ## Enable back the table to be able to query.
+      command(:enable, @test_table)
+      assert(command(:is_enabled, @test_table))
+
       get = Get.new(Bytes.toBytes('1'))
       res = test_table.table.get(get)
       puts "res for row '1' and column f:a: #{res}"

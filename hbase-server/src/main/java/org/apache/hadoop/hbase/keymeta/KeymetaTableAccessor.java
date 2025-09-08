@@ -77,8 +77,15 @@ public class KeymetaTableAccessor extends KeyManagementBase {
   public static final String KEY_STATE_QUAL_NAME = "k";
   public static final byte[] KEY_STATE_QUAL_BYTES = Bytes.toBytes(KEY_STATE_QUAL_NAME);
 
+  private Server server;
+
   public KeymetaTableAccessor(Server server) {
-    super(server);
+    super(server.getKeyManagementService());
+    this.server = server;
+  }
+
+  public Server getServer() {
+    return server;
   }
 
   /**
@@ -126,7 +133,8 @@ public class KeymetaTableAccessor extends KeyManagementBase {
       ResultScanner scanner = table.getScanner(scan);
       Set<ManagedKeyData> allKeys = new LinkedHashSet<>();
       for (Result result : scanner) {
-        ManagedKeyData keyData = parseFromResult(getServer(), key_cust, keyNamespace, result);
+        ManagedKeyData keyData = parseFromResult(getKeyManagementService(), key_cust, keyNamespace,
+        result);
         if (keyData != null) {
           allKeys.add(keyData);
         }
@@ -153,7 +161,7 @@ public class KeymetaTableAccessor extends KeyManagementBase {
 
     try (Table table = connection.getTable(KEY_META_TABLE_NAME)) {
       Result result = table.get(get);
-      return parseFromResult(getServer(), key_cust, keyNamespace, result);
+      return parseFromResult(getKeyManagementService(), key_cust, keyNamespace, result);
     }
   }
 
@@ -205,7 +213,7 @@ public class KeymetaTableAccessor extends KeyManagementBase {
     try (Table table = connection.getTable(KEY_META_TABLE_NAME)) {
       byte[] rowKey = constructRowKeyForMetadata(key_cust, keyNamespace, keyMetadataHash);
       Result result = table.get(new Get(rowKey));
-      return parseFromResult(getServer(), key_cust, keyNamespace, result);
+      return parseFromResult(getKeyManagementService(), key_cust, keyNamespace, result);
     }
   }
 
@@ -213,7 +221,8 @@ public class KeymetaTableAccessor extends KeyManagementBase {
    * Add the mutation columns to the given Put that are derived from the keyData.
    */
   private Put addMutationColumns(Put put, ManagedKeyData keyData) throws IOException {
-    ManagedKeyData latestSystemKey = getServer().getSystemKeyCache().getLatestSystemKey();
+    ManagedKeyData latestSystemKey = getKeyManagementService().getSystemKeyCache()
+      .getLatestSystemKey();
     if (keyData.getTheKey() != null) {
       byte[] dekWrappedBySTK = EncryptionUtil.wrapKey(getConfiguration(), null,
         keyData.getTheKey(), latestSystemKey.getTheKey());
@@ -272,8 +281,8 @@ public class KeymetaTableAccessor extends KeyManagementBase {
   }
 
   @InterfaceAudience.Private
-  public static ManagedKeyData parseFromResult(Server server, byte[] key_cust, String keyNamespace,
-      Result result) throws IOException, KeyException {
+  public static ManagedKeyData parseFromResult(KeyManagementService keyManagementService, byte[]
+    key_cust, String keyNamespace, Result result) throws IOException, KeyException {
     if (result == null || result.isEmpty()) {
       return null;
     }
@@ -290,13 +299,14 @@ public class KeymetaTableAccessor extends KeyManagementBase {
     if (dekWrappedByStk != null) {
       long stkChecksum =
         Bytes.toLong(result.getValue(KEY_META_INFO_FAMILY, STK_CHECKSUM_QUAL_BYTES));
-      ManagedKeyData clusterKey = server.getSystemKeyCache().getSystemKeyByChecksum(stkChecksum);
+      ManagedKeyData clusterKey = keyManagementService.getSystemKeyCache().getSystemKeyByChecksum(
+        stkChecksum);
       if (clusterKey == null) {
         LOG.error("Dropping key with metadata: {} as STK with checksum: {} is unavailable",
           dekMetadata, stkChecksum);
         return null;
       }
-      dek = EncryptionUtil.unwrapKey(server.getConfiguration(), null, dekWrappedByStk,
+      dek = EncryptionUtil.unwrapKey(keyManagementService.getConfiguration(), null, dekWrappedByStk,
         clusterKey.getTheKey());
     }
     long refreshedTimestamp = Bytes.toLong(result.getValue(KEY_META_INFO_FAMILY,
