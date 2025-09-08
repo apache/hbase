@@ -21,6 +21,8 @@ import static org.apache.hadoop.hbase.mob.MobConstants.MOB_CLEANER_BATCH_SIZE_UP
 import static org.apache.hadoop.hbase.mob.MobConstants.MOB_CLEANER_THREAD_COUNT;
 import static org.junit.Assert.assertEquals;
 
+import java.util.Arrays;
+import java.util.List;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -38,17 +40,19 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
-@RunWith(Enclosed.class)
-@SuppressWarnings("JUnit4TestNotRun")
+@RunWith(Parameterized.class)
+@Category(MediumTests.class)
 public class TestExpiredMobFileCleanerChore {
 
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(TestExpiredMobFileCleanerChore.class);
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private final static TableName tableName = TableName.valueOf("TestExpiredMobFileCleaner");
   private final static TableName tableName2 = TableName.valueOf("TestExpiredMobFileCleaner2");
@@ -61,79 +65,36 @@ public class TestExpiredMobFileCleanerChore {
   private static BufferedMutator table;
   private static Admin admin;
   private static BufferedMutator table2;
+  @Parameterized.Parameter()
+  public int mobCleanerThreadCount;
 
-  @Category(MediumTests.class)
-  @SuppressWarnings("JUnit4TestNotRun")
-  public static class TestWithSingleThread {
-    @ClassRule
-    public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestWithSingleThread.class);
-
-    @BeforeClass
-    public static void setUpBeforeClass() throws Exception {
-      TEST_UTIL.getConfiguration().setInt("hfile.format.version", 3);
-      TEST_UTIL.getConfiguration().setInt(MOB_CLEANER_BATCH_SIZE_UPPER_BOUND, 2);
-      TEST_UTIL.getConfiguration().setInt(MOB_CLEANER_THREAD_COUNT, 1);
-    }
-
-    @Before
-    public void setUp() throws Exception {
-      TEST_UTIL.startMiniCluster(1);
-    }
-
-    @After
-    public void tearDown() throws Exception {
-      admin.disableTable(tableName);
-      admin.deleteTable(tableName);
-      admin.disableTable(tableName2);
-      admin.deleteTable(tableName2);
-      admin.close();
-      TEST_UTIL.shutdownMiniCluster();
-      TEST_UTIL.getTestFileSystem().delete(TEST_UTIL.getDataTestDir(), true);
-    }
-
-    @Test
-    public void testCleaner() throws Exception {
-      testCleanerInternal();
-    }
+  @Parameterized.Parameters
+  public static List<Integer> params() {
+    return Arrays.asList(1, 2);
   }
 
-  @Category(MediumTests.class)
-  @SuppressWarnings("JUnit4TestNotRun")
-  public static class TestWithMultiThread {
+  @Before
+  public void setUp() throws Exception {
+    TEST_UTIL.getConfiguration().setInt("hfile.format.version", 3);
+    TEST_UTIL.getConfiguration().setInt(MOB_CLEANER_BATCH_SIZE_UPPER_BOUND, 2);
+    TEST_UTIL.getConfiguration().setInt(MOB_CLEANER_THREAD_COUNT, mobCleanerThreadCount);
+    TEST_UTIL.startMiniCluster(1);
+  }
 
-    @ClassRule
-    public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestWithMultiThread.class);
+  @After
+  public void tearDown() throws Exception {
+    admin.disableTable(tableName);
+    admin.deleteTable(tableName);
+    admin.disableTable(tableName2);
+    admin.deleteTable(tableName2);
+    admin.close();
+    TEST_UTIL.shutdownMiniCluster();
+    TEST_UTIL.getTestFileSystem().delete(TEST_UTIL.getDataTestDir(), true);
+  }
 
-    @BeforeClass
-    public static void setUpBeforeClass() throws Exception {
-      TEST_UTIL.getConfiguration().setInt("hfile.format.version", 3);
-      TEST_UTIL.getConfiguration().setInt(MOB_CLEANER_BATCH_SIZE_UPPER_BOUND, 2);
-      TEST_UTIL.getConfiguration().setInt(MOB_CLEANER_THREAD_COUNT, 2);
-
-    }
-
-    @Before
-    public void setUp() throws Exception {
-      TEST_UTIL.startMiniCluster(1);
-    }
-
-    @After
-    public void tearDown() throws Exception {
-      admin.disableTable(tableName);
-      admin.deleteTable(tableName);
-      admin.disableTable(tableName2);
-      admin.deleteTable(tableName2);
-      admin.close();
-      TEST_UTIL.shutdownMiniCluster();
-      TEST_UTIL.getTestFileSystem().delete(TEST_UTIL.getDataTestDir(), true);
-    }
-
-    @Test
-    public void testCleaner() throws Exception {
-      testCleanerInternal();
-    }
+  @Test
+  public void testCleaner() throws Exception {
+    testCleanerInternal();
   }
 
   private static void init() throws Exception {
