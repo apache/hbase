@@ -85,6 +85,9 @@ public class ConnectionConfiguration {
   public static final boolean HBASE_CLIENT_USE_SCANNER_TIMEOUT_PERIOD_FOR_NEXT_CALLS_DEFAULT =
     false;
 
+  public static final String HBASE_CLIENT_META_CACHE_INVALIDATE_INTERVAL =
+    "hbase.client.connection.metacache.invalidate-interval.ms";
+
   private final long writeBufferSize;
   private final long writeBufferPeriodicFlushTimeoutMs;
   private final long writeBufferPeriodicFlushTimerTickMs;

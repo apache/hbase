@@ -1120,6 +1120,15 @@ possible configurations would overwhelm and obscure the important.
       before retries exhausted, it will break early and throw SocketTimeoutException.</description>
   </property>
   <property>
+    <name>hbase.client.connection.metacache.invalidate-interval.ms</name>
+    <value>0</value>
+    <description>Interval in milliseconds of checking and invalidating meta cache when table
+      disabled or dropped, when set to zero means disable checking, suggest set it to 24h
+      or a higher value, because disable/delete table usually not very frequently.
+      Notice: this only support async client.
+    </description>
+  </property>
+  <property>
     <name>hbase.cells.scanned.per.heartbeat.check</name>
     <value>10000</value>
     <description>The number of cells scanned in between heartbeat checks. Heartbeat

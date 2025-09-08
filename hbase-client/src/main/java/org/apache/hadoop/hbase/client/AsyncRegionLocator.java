@@ -71,7 +71,7 @@ class AsyncRegionLocator {
   AsyncRegionLocator(AsyncConnectionImpl conn, HashedWheelTimer retryTimer) {
     this.conn = conn;
     this.metaRegionLocator = new AsyncMetaRegionLocator(conn.registry);
-    this.nonMetaRegionLocator = new AsyncNonMetaRegionLocator(conn);
+    this.nonMetaRegionLocator = new AsyncNonMetaRegionLocator(conn, retryTimer);
     this.retryTimer = retryTimer;
   }
 
@@ -248,5 +248,14 @@ class AsyncRegionLocator {
 
   AsyncNonMetaRegionLocator getNonMetaRegionLocator() {
     return nonMetaRegionLocator;
+  }
+
+  // only used for testing whether we have cached the location for a table.
+  int getNumberOfCachedRegionLocations(TableName tableName) {
+    if (TableName.isMetaTableName(tableName)) {
+      return metaRegionLocator.getNumberOfCachedRegionLocations();
+    } else {
+      return nonMetaRegionLocator.getNumberOfCachedRegionLocations(tableName);
+    }
   }
 }
