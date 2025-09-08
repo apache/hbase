@@ -19,9 +19,10 @@ package org.apache.hadoop.hbase.backup.impl;
 
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONF_CONTINUOUS_BACKUP_WAL_DIR;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.JOB_NAME_CONF_KEY;
+import static org.apache.hadoop.hbase.backup.replication.BackupFileSystemManager.BULKLOAD_FILES_DIR;
 import static org.apache.hadoop.hbase.backup.replication.BackupFileSystemManager.WALS_DIR;
-import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.DATE_FORMAT;
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.ONE_DAY_IN_MILLISECONDS;
+import static org.apache.hadoop.hbase.backup.util.BackupUtils.DATE_FORMAT;
 
 import java.io.IOException;
 import java.net.URI;
@@ -169,6 +170,26 @@ public class IncrementalTableBackupClient extends TableBackupClient {
       }
       Path tblDir = CommonFSUtils.getTableDir(rootdir, srcTable);
       Path p = new Path(tblDir, regionName + Path.SEPARATOR + fam + Path.SEPARATOR + filename);
+
+      // For continuous backup: bulkload files are copied from backup directory defined by
+      // CONF_CONTINUOUS_BACKUP_WAL_DIR instead of source cluster.
+      String backupRootDir = conf.get(CONF_CONTINUOUS_BACKUP_WAL_DIR);
+      if (backupInfo.isContinuousBackupEnabled() && !Strings.isNullOrEmpty(backupRootDir)) {
+        String dayDirectoryName = BackupUtils.formatToDateString(bulkLoad.getTimestamp());
+        Path bulkLoadBackupPath =
+          new Path(backupRootDir, BULKLOAD_FILES_DIR + Path.SEPARATOR + dayDirectoryName);
+        Path bulkLoadDir = new Path(bulkLoadBackupPath,
+          srcTable.getNamespaceAsString() + Path.SEPARATOR + srcTable.getNameAsString());
+        FileSystem backupFs = FileSystem.get(bulkLoadDir.toUri(), conf);
+        Path fullBulkLoadBackupPath =
+          new Path(bulkLoadDir, regionName + Path.SEPARATOR + fam + Path.SEPARATOR + filename);
+        if (backupFs.exists(fullBulkLoadBackupPath)) {
+          LOG.debug("Backup bulkload file found {}", fullBulkLoadBackupPath);
+          p = fullBulkLoadBackupPath;
+        } else {
+          LOG.warn("Backup bulkload file not found {}", fullBulkLoadBackupPath);
+        }
+      }
 
       String srcTableQualifier = srcTable.getQualifierAsString();
       String srcTableNs = srcTable.getNamespaceAsString();
