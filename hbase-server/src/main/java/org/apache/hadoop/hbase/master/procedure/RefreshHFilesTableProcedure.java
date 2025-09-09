@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
-import java.util.List;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
@@ -151,8 +150,8 @@ public class RefreshHFilesTableProcedure
       env.getMasterServices().listTableNamesByNamespace(namespaceName)
         .forEach(table -> refreshHFilesForTable(env, table));
     } else {
-      env.getMasterServices().getTableDescriptors().getAll().values()
-        .stream().map(TableDescriptor::getTableName).filter(table -> !table.isSystemTable())
+      env.getMasterServices().getTableDescriptors().getAll().values().stream()
+        .map(TableDescriptor::getTableName).filter(table -> !table.isSystemTable())
         .forEach(table -> refreshHFilesForTable(env, table));
     }
 

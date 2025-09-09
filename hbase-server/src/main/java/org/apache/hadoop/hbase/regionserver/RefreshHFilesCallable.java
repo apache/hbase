@@ -29,10 +29,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 
 /**
- * This is a RegionServer-side callable used by the HBase Master Procedure framework to perform
- * the actual HFiles refresh operation on a specific region.
- * It is dispatched from the {@link org.apache.hadoop.hbase.master.procedure.RefreshHFilesRegionProcedure}
- * to the RegionServer and executes the logic to refresh store files in each store of the region.
+ * This is a RegionServer-side callable used by the HBase Master Procedure framework to perform the
+ * actual HFiles refresh operation on a specific region. It is dispatched from the
+ * {@link org.apache.hadoop.hbase.master.procedure.RefreshHFilesRegionProcedure} to the RegionServer
+ * and executes the logic to refresh store files in each store of the region.
  */
 
 @InterfaceAudience.Private

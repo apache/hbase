@@ -45,12 +45,12 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 
 /**
- * A master-side procedure that handles refreshing HFiles (store files) for a specific region in HBase.
- * It performs remote procedure dispatch to the RegionServer hosting the region and manages retries,
- * suspensions, and timeouts as needed. This procedure ensures safe execution by verifying the region
- * state, handling remote operation results, and applying retry mechanisms in case of failures.
- *
- * It gives the call to {@link RefreshHFilesCallable} which gets executed on region server.
+ * A master-side procedure that handles refreshing HFiles (store files) for a specific region in
+ * HBase. It performs remote procedure dispatch to the RegionServer hosting the region and manages
+ * retries, suspensions, and timeouts as needed. This procedure ensures safe execution by verifying
+ * the region state, handling remote operation results, and applying retry mechanisms in case of
+ * failures. It gives the call to {@link RefreshHFilesCallable} which gets executed on region
+ * server.
  */
 
 @InterfaceAudience.Private
@@ -179,7 +179,8 @@ public class RefreshHFilesRegionProcedure extends Procedure<MasterProcedureEnv>
 
   private void complete(MasterProcedureEnv env, Throwable error) {
     if (isFinished()) {
-      LOG.info("This procedure {} is already finished. Skip the rest of the processes", this.getProcId());
+      LOG.info("This procedure {} is already finished. Skip the rest of the processes",
+        this.getProcId());
       return;
     }
     if (event == null) {
