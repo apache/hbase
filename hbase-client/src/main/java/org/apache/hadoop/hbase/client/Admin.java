@@ -2661,4 +2661,7 @@ public interface Admin extends Abortable, Closeable {
    * Get the list of cached files
    */
   List<String> getCachedFilesList(ServerName serverName) throws IOException;
+
+  @InterfaceAudience.Private
+  void restoreBackupSystemTable(String snapshotName) throws IOException;
 }
