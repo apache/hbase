@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext.ReaderType;
 import org.apache.hadoop.hbase.ipc.RpcServer;
+import org.apache.hadoop.hbase.keymeta.KeyManagementService;
 import org.apache.hadoop.hbase.regionserver.CellSink;
 import org.apache.hadoop.hbase.regionserver.ShipperListener;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
@@ -554,10 +555,14 @@ public final class HFile {
     boolean primaryReplicaReader, Configuration conf) throws IOException {
     Preconditions.checkNotNull(cacheConf, "Cannot create Reader with null CacheConf");
     FSDataInputStreamWrapper stream = new FSDataInputStreamWrapper(fs, path);
+    KeyManagementService keyManagementService = KeyManagementService.createDefault(conf, fs);
     ReaderContext context =
       new ReaderContextBuilder().withFilePath(path).withInputStreamWrapper(stream)
         .withFileSize(fs.getFileStatus(path).getLen()).withFileSystem(stream.getHfs())
-        .withPrimaryReplicaReader(primaryReplicaReader).withReaderType(ReaderType.PREAD).build();
+        .withPrimaryReplicaReader(primaryReplicaReader).withReaderType(ReaderType.PREAD)
+        .withManagedKeyDataCache(keyManagementService.getManagedKeyDataCache())
+        .withSystemKeyCache(keyManagementService.getSystemKeyCache())
+        .build();
     HFileInfo fileInfo = new HFileInfo(context, conf);
     Reader reader = createReader(context, fileInfo, cacheConf, conf);
     fileInfo.initMetaAndIndex(reader);

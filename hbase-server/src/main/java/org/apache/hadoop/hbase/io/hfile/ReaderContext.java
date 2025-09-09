@@ -43,13 +43,12 @@ public class ReaderContext {
   private final boolean primaryReplicaReader;
   private final ReaderType type;
   private final boolean preadAllBytes;
-  private final String keyNamespace;
   private final SystemKeyCache systemKeyCache;
   private final ManagedKeyDataCache managedKeyDataCache;
 
   public ReaderContext(Path filePath, FSDataInputStreamWrapper fsdis, long fileSize,
     HFileSystem hfs, boolean primaryReplicaReader, ReaderType type,
-    String keyNamespace, SystemKeyCache systemKeyCache, ManagedKeyDataCache managedKeyDataCache) {
+    SystemKeyCache systemKeyCache, ManagedKeyDataCache managedKeyDataCache) {
     this.filePath = filePath;
     this.fsdis = fsdis;
     this.fileSize = fileSize;
@@ -58,7 +57,6 @@ public class ReaderContext {
     this.type = type;
     this.preadAllBytes = hfs.getConf().getBoolean(HConstants.HFILE_PREAD_ALL_BYTES_ENABLED_KEY,
       HConstants.HFILE_PREAD_ALL_BYTES_ENABLED_DEFAULT);
-    this.keyNamespace = keyNamespace;
     this.systemKeyCache = systemKeyCache;
     this.managedKeyDataCache = managedKeyDataCache;
   }
@@ -89,10 +87,6 @@ public class ReaderContext {
 
   public boolean isPreadAllBytes() {
     return preadAllBytes;
-  }
-
-  public String getKeyNamespace() {
-    return this.keyNamespace;
   }
 
   public SystemKeyCache getSystemKeyCache() {

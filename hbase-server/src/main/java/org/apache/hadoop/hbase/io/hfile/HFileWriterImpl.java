@@ -884,6 +884,7 @@ public class HFileWriterImpl implements HFile.Writer {
       Key encKey = null;
       Key wrapperKey = null;
       ManagedKeyData kekData = cryptoContext.getKEKData();
+      String keyNamespace = cryptoContext.getKeyNamespace();
       String kekMetadata = null;
       long kekChecksum = 0;
       if (kekData != null) {
@@ -904,6 +905,7 @@ public class HFileWriterImpl implements HFile.Writer {
           wrapperKey);
         trailer.setEncryptionKey(wrappedKey);
       }
+      trailer.setKeyNamespace(keyNamespace);
       trailer.setKEKMetadata(kekMetadata);
       trailer.setKEKChecksum(kekChecksum);
     }

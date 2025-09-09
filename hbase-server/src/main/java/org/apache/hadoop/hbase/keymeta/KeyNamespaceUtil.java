@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.keymeta;
 
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.regionserver.StoreContext;
@@ -55,12 +56,32 @@ public class KeyNamespaceUtil {
   }
 
   /**
-   * Construct a key namespace from store file info.
+   * Construct a key namespace by deriving table name and family name from a store file info.
    * @param fileInfo The store file info
    * @return The constructed key namespace
    */
   public static String constructKeyNamespace(StoreFileInfo fileInfo) {
-    Pair<String, String> tableNameAndFamilyName = fileInfo.getLink().getTableNameAndFamilyName();
-    return tableNameAndFamilyName.getFirst() + "/" + tableNameAndFamilyName.getSecond();
+    return constructKeyNamespace(fileInfo.isLink() ? fileInfo.getLink().getOriginPath() :
+      fileInfo.getPath());
+  }
+
+  /**
+   * Construct a key namespace by deriving table name and family name from a store file path.
+   * @param path The path
+   * @return The constructed key namespace
+   */
+  public static String constructKeyNamespace(Path path) {
+    return constructKeyNamespace(path.getParent().getParent().getParent().getName(),
+      path.getParent().getName());
+  }
+
+  /**
+   * Construct a key namespace from a table name and family name.
+   * @param tableName The table name
+   * @param family The family name
+   * @return The constructed key namespace
+   */
+  public static String constructKeyNamespace(String tableName, String family) {
+    return tableName + "/" + family;
   }
 }

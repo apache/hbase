@@ -387,8 +387,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   private final Configuration baseConf;
   private final int rowLockWaitDuration;
   static final int DEFAULT_ROWLOCK_WAIT_DURATION = 30000;
-  private ManagedKeyDataCache managedKeyDataCache;
-  private SystemKeyCache systemKeyCache;
+  private KeyManagementService keyManagementService;
 
   private Path regionWalDir;
   private FileSystem walFS;
@@ -987,15 +986,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     if (SecurityUtil.isKeyManagementEnabled(conf)) {
       if (keyManagementService != null) {
-        this.managedKeyDataCache = keyManagementService.getManagedKeyDataCache();
-        this.systemKeyCache = keyManagementService.getSystemKeyCache();
+        this.keyManagementService = keyManagementService;
       } else {
-        this.managedKeyDataCache = new ManagedKeyDataCache(conf, null);
-        try {
-          this.systemKeyCache = SystemKeyCache.createCache(conf, fs.getFileSystem());
-        } catch (IOException e) {
-          throw new RuntimeException("Failed to create system key cache", e);
-        }
+        this.keyManagementService = KeyManagementService.createDefault(conf, fs.getFileSystem());
       }
     }
   }
@@ -2192,11 +2185,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   public ManagedKeyDataCache getManagedKeyDataCache() {
-    return this.managedKeyDataCache;
+    return this.keyManagementService.getManagedKeyDataCache();
   }
 
   public SystemKeyCache getSystemKeyCache() {
-    return this.systemKeyCache;
+    return this.keyManagementService.getSystemKeyCache();
   }
 
   /**

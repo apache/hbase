@@ -425,8 +425,7 @@ public class HFileInfo implements SortedMap<byte[], byte[]> {
       .withCellComparator(FixedFileTrailer.createComparator(trailer.getComparatorClassName()))
       .withEncryptionContext(
         SecurityUtil.createEncryptionContext(conf, path, trailer,
-          readerContext.getManagedKeyDataCache(), readerContext.getSystemKeyCache(),
-          readerContext.getKeyNamespace()))
+          readerContext.getManagedKeyDataCache(), readerContext.getSystemKeyCache()))
       .build();
   }
 

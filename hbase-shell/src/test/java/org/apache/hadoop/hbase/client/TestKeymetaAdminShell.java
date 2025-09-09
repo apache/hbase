@@ -66,7 +66,6 @@ public class TestKeymetaAdminShell extends ManagedKeyTestBase implements RubyShe
     Map<Bytes, Bytes> cust2key = new HashMap<>();
     Map<Bytes, String> cust2alias = new HashMap<>();
     String clusterId = UUID.randomUUID().toString();
-    byte[] systemKey;
     String SYSTEM_KEY_ALIAS = "system-key-alias";
     String CUST1 = "cust1";
     String CUST1_ALIAS = "cust1-alias";
@@ -85,7 +84,7 @@ public class TestKeymetaAdminShell extends ManagedKeyTestBase implements RubyShe
       }
       return p;
     });
-    systemKey = cust2key.get(new Bytes(clusterId.getBytes())).get();
+    //byte[] systemKey = cust2key.get(new Bytes(clusterId.getBytes())).get();
     conf.set(HConstants.CRYPTO_MANAGED_KEY_STORE_SYSTEM_KEY_NAME_CONF_KEY,
       SYSTEM_KEY_ALIAS);
     conf.set(HConstants.CRYPTO_KEYPROVIDER_PARAMETERS_KEY, providerParams);

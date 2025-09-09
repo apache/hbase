@@ -453,9 +453,10 @@ public class TestSecurityUtil {
     @Test
     public void testWithNoKeyMaterial() throws IOException {
       when(mockTrailer.getEncryptionKey()).thenReturn(null);
+      when(mockTrailer.getKeyNamespace()).thenReturn("test-namespace");
 
       Encryption.Context result = SecurityUtil.createEncryptionContext(
-          conf, testPath, mockTrailer, mockManagedKeyDataCache, mockSystemKeyCache, "test-namespace");
+          conf, testPath, mockTrailer, mockManagedKeyDataCache, mockSystemKeyCache);
 
       assertNull(result);
     }
@@ -478,6 +479,7 @@ public class TestSecurityUtil {
       String kekMetadata = "test-kek-metadata";
 
       when(mockTrailer.getEncryptionKey()).thenReturn(keyBytes);
+      when(mockTrailer.getKeyNamespace()).thenReturn("test-namespace");
       when(mockTrailer.getKEKMetadata()).thenReturn(kekMetadata);
       when(mockTrailer.getKEKChecksum()).thenReturn(12345L);
 
@@ -496,7 +498,7 @@ public class TestSecurityUtil {
             .thenReturn(mockKey);
 
         Encryption.Context result = SecurityUtil.createEncryptionContext(
-            conf, testPath, mockTrailer, mockManagedKeyDataCache, mockSystemKeyCache, "test-namespace");
+            conf, testPath, mockTrailer, mockManagedKeyDataCache, mockSystemKeyCache);
 
         verifyContext(result);
       }
@@ -509,6 +511,7 @@ public class TestSecurityUtil {
 
       when(mockTrailer.getEncryptionKey()).thenReturn(keyBytes);
       when(mockTrailer.getKEKMetadata()).thenReturn(kekMetadata);
+      when(mockTrailer.getKeyNamespace()).thenReturn("test-namespace");
 
       when(mockManagedKeyDataCache.getEntry(
           eq(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES), eq("test-namespace"),
@@ -520,7 +523,7 @@ public class TestSecurityUtil {
 
         IOException exception = assertThrows(IOException.class, () -> {
           SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer,
-              mockManagedKeyDataCache, mockSystemKeyCache, "test-namespace");
+              mockManagedKeyDataCache, mockSystemKeyCache);
         });
 
         assertTrue(exception.getMessage().contains("Failed to get key data"));
@@ -535,6 +538,7 @@ public class TestSecurityUtil {
       when(mockTrailer.getEncryptionKey()).thenReturn(keyBytes);
       when(mockTrailer.getKEKMetadata()).thenReturn(null);
       when(mockTrailer.getKEKChecksum()).thenReturn(kekChecksum);
+      when(mockTrailer.getKeyNamespace()).thenReturn("test-namespace");
 
       // Enable key management
       conf.setBoolean(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, true);
@@ -551,7 +555,7 @@ public class TestSecurityUtil {
             .thenReturn(mockKey);
 
         Encryption.Context result = SecurityUtil.createEncryptionContext(
-            conf, testPath, mockTrailer, mockManagedKeyDataCache, mockSystemKeyCache, "test-namespace");
+            conf, testPath, mockTrailer, mockManagedKeyDataCache, mockSystemKeyCache);
 
         verifyContext(result);
       }
@@ -565,6 +569,7 @@ public class TestSecurityUtil {
       when(mockTrailer.getEncryptionKey()).thenReturn(keyBytes);
       when(mockTrailer.getKEKMetadata()).thenReturn(null);
       when(mockTrailer.getKEKChecksum()).thenReturn(kekChecksum);
+      when(mockTrailer.getKeyNamespace()).thenReturn("test-namespace");
 
       // Enable key management
       conf.setBoolean(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, true);
@@ -576,7 +581,7 @@ public class TestSecurityUtil {
 
         IOException exception = assertThrows(IOException.class, () -> {
           SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer,
-              mockManagedKeyDataCache, mockSystemKeyCache, "test-namespace");
+              mockManagedKeyDataCache, mockSystemKeyCache);
         });
 
         assertTrue(exception.getMessage().contains("Failed to get system key"));
@@ -589,6 +594,7 @@ public class TestSecurityUtil {
 
       when(mockTrailer.getEncryptionKey()).thenReturn(keyBytes);
       when(mockTrailer.getKEKMetadata()).thenReturn(null);
+      when(mockTrailer.getKeyNamespace()).thenReturn("test-namespace");
 
       // Disable key management
       conf.setBoolean(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, false);
@@ -602,7 +608,7 @@ public class TestSecurityUtil {
         mockedEncryptionUtil.when(() -> EncryptionUtil.unwrapKey(eq(conf), eq(keyBytes))).thenReturn(mockKey);
 
         Encryption.Context result = SecurityUtil.createEncryptionContext(
-            conf, testPath, mockTrailer, mockManagedKeyDataCache, mockSystemKeyCache, "test-namespace");
+            conf, testPath, mockTrailer, mockManagedKeyDataCache, mockSystemKeyCache);
 
         verifyContext(result, false);
       }
@@ -614,6 +620,7 @@ public class TestSecurityUtil {
 
       when(mockTrailer.getEncryptionKey()).thenReturn(keyBytes);
       when(mockTrailer.getKEKMetadata()).thenReturn(null);
+      when(mockTrailer.getKeyNamespace()).thenReturn("test-namespace");
 
       // Disable key management
       conf.setBoolean(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, false);
@@ -628,7 +635,7 @@ public class TestSecurityUtil {
 
         IOException exception = assertThrows(IOException.class, () -> {
           SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer,
-              mockManagedKeyDataCache, mockSystemKeyCache, "test-namespace");
+              mockManagedKeyDataCache, mockSystemKeyCache);
         });
 
         assertTrue(exception.getMessage().contains("Invalid key"));
@@ -641,6 +648,7 @@ public class TestSecurityUtil {
 
       when(mockTrailer.getEncryptionKey()).thenReturn(keyBytes);
       when(mockTrailer.getKEKMetadata()).thenReturn(null);
+      when(mockTrailer.getKeyNamespace()).thenReturn("test-namespace");
 
       // Disable key management
       conf.setBoolean(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, false);
@@ -658,7 +666,7 @@ public class TestSecurityUtil {
 
         IOException exception = assertThrows(IOException.class, () -> {
           SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer,
-              mockManagedKeyDataCache, mockSystemKeyCache, "test-namespace");
+              mockManagedKeyDataCache, mockSystemKeyCache);
         });
 
         assertTrue(exception.getMessage().contains("not available"));
@@ -672,6 +680,7 @@ public class TestSecurityUtil {
 
       when(mockTrailer.getEncryptionKey()).thenReturn(keyBytes);
       when(mockTrailer.getKEKMetadata()).thenReturn(kekMetadata);
+      when(mockTrailer.getKeyNamespace()).thenReturn("test-namespace");
 
       // Enable key management
       conf.setBoolean(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, true);
@@ -683,7 +692,7 @@ public class TestSecurityUtil {
 
         IOException exception = assertThrows(IOException.class, () -> {
           SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer,
-              null, mockSystemKeyCache, "test-namespace");
+              null, mockSystemKeyCache);
         });
 
         assertTrue(exception.getMessage().contains("ManagedKeyDataCache is null"));
@@ -696,6 +705,7 @@ public class TestSecurityUtil {
 
       when(mockTrailer.getEncryptionKey()).thenReturn(keyBytes);
       when(mockTrailer.getKEKMetadata()).thenReturn(null);
+      when(mockTrailer.getKeyNamespace()).thenReturn("test-namespace");
 
       // Enable key management
       conf.setBoolean(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, true);
@@ -707,7 +717,7 @@ public class TestSecurityUtil {
 
         IOException exception = assertThrows(IOException.class, () -> {
           SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer,
-              mockManagedKeyDataCache, null, "test-namespace");
+              mockManagedKeyDataCache, null);
         });
 
         assertTrue(exception.getMessage().contains("SystemKeyCache is null"));
@@ -745,6 +755,7 @@ public class TestSecurityUtil {
         when(mockTrailer.getEncryptionKey()).thenReturn(keyBytes);
         when(mockTrailer.getKEKMetadata()).thenReturn(kekMetadata);
         when(mockTrailer.getKEKChecksum()).thenReturn(kekChecksum);
+        when(mockTrailer.getKeyNamespace()).thenReturn("test-namespace");
 
         when(mockManagedKeyDataCache.getEntry(
             eq(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES), eq("test-namespace"),
@@ -762,7 +773,7 @@ public class TestSecurityUtil {
 
         IOException exception = assertThrows(IOException.class, () -> {
             SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer,
-                mockManagedKeyDataCache, mockSystemKeyCache, "test-namespace");
+                mockManagedKeyDataCache, mockSystemKeyCache);
         });
 
         assertTrue(exception.getMessage().contains("Failed to unwrap key with KEK checksum: " + kekChecksum + ", metadata: " + kekMetadata));
@@ -779,6 +790,7 @@ public class TestSecurityUtil {
         when(mockTrailer.getEncryptionKey()).thenReturn(keyBytes);
         when(mockTrailer.getKEKMetadata()).thenReturn(null);
         when(mockTrailer.getKEKChecksum()).thenReturn(kekChecksum);
+        when(mockTrailer.getKeyNamespace()).thenReturn("test-namespace");
 
         // Enable key management
         conf.setBoolean(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, true);
@@ -796,7 +808,7 @@ public class TestSecurityUtil {
 
         IOException exception = assertThrows(IOException.class, () -> {
             SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer,
-                mockManagedKeyDataCache, mockSystemKeyCache, "test-namespace");
+                mockManagedKeyDataCache, mockSystemKeyCache);
         });
 
         assertTrue(exception.getMessage().contains("Failed to unwrap key with KEK checksum: " + kekChecksum + ", metadata: null"));

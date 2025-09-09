@@ -131,6 +131,11 @@ public class FixedFileTrailer {
   private byte[] encryptionKey;
 
   /**
+   * The key namespace
+   */
+  private String keyNamespace;
+
+  /**
    * The KEK checksum
    */
   private long kekChecksum;
@@ -220,6 +225,9 @@ public class FixedFileTrailer {
       .setCompressionCodec(compressionCodec.ordinal());
     if (encryptionKey != null) {
       builder.setEncryptionKey(UnsafeByteOperations.unsafeWrap(encryptionKey));
+    }
+    if (keyNamespace != null) {
+      builder.setKeyNamespace(keyNamespace);
     }
     if (kekMetadata != null) {
       builder.setKekMetadata(kekMetadata);
@@ -329,6 +337,9 @@ public class FixedFileTrailer {
     if (trailerProto.hasEncryptionKey()) {
       encryptionKey = trailerProto.getEncryptionKey().toByteArray();
     }
+    if (trailerProto.hasKeyNamespace()) {
+      keyNamespace = trailerProto.getKeyNamespace();
+    }
     if (trailerProto.hasKekMetadata()) {
       kekMetadata = trailerProto.getKekMetadata();
     }
@@ -383,6 +394,9 @@ public class FixedFileTrailer {
     append(sb, "comparatorClassName=" + comparatorClassName);
     if (majorVersion >= 3) {
       append(sb, "encryptionKey=" + (encryptionKey != null ? "PRESENT" : "NONE"));
+    }
+    if (keyNamespace != null) {
+      append(sb, "keyNamespace=" + keyNamespace);
     }
     append(sb, "majorVersion=" + majorVersion);
     append(sb, "minorVersion=" + minorVersion);
@@ -661,6 +675,14 @@ public class FixedFileTrailer {
     // if fine for this feature.
     expectAtLeastMajorVersion(2);
     return encryptionKey;
+  }
+
+  public String getKeyNamespace() {
+    return keyNamespace;
+  }
+
+  public void setKeyNamespace(String keyNamespace) {
+    this.keyNamespace = keyNamespace;
   }
 
   public void setKEKChecksum(long kekChecksum) {

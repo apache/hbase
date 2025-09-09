@@ -42,7 +42,6 @@ public class ReaderContextBuilder {
   private HFileSystem hfs;
   private boolean primaryReplicaReader = true;
   private ReaderType type = ReaderType.PREAD;
-  private String keyNamespace;
   private SystemKeyCache systemKeyCache;
   private ManagedKeyDataCache managedKeyDataCache;
 
@@ -61,7 +60,6 @@ public class ReaderContextBuilder {
     this.type = readerContext.getReaderType();
     this.systemKeyCache = readerContext.getSystemKeyCache();
     this.managedKeyDataCache = readerContext.getManagedKeyDataCache();
-    this.keyNamespace = readerContext.getKeyNamespace();
   }
 
   public ReaderContextBuilder withFilePath(Path filePath) {
@@ -110,11 +108,6 @@ public class ReaderContextBuilder {
     return this;
   }
 
-  public ReaderContextBuilder withKeyNamespace(String keyNamespace) {
-    this.keyNamespace = keyNamespace;
-    return this;
-  }
-
   public ReaderContextBuilder withManagedKeyDataCache(ManagedKeyDataCache managedKeyDataCache) {
     this.managedKeyDataCache = managedKeyDataCache;
     return this;
@@ -128,7 +121,7 @@ public class ReaderContextBuilder {
   public ReaderContext build() {
     validateFields();
     return new ReaderContext(filePath, fsdis, fileSize, hfs, primaryReplicaReader, type,
-      keyNamespace, systemKeyCache, managedKeyDataCache);
+      systemKeyCache, managedKeyDataCache);
   }
 
   private void validateFields() throws IllegalArgumentException {

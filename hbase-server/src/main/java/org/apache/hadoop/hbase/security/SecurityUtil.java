@@ -92,6 +92,7 @@ public class SecurityUtil {
         if (kekKeyData == null) {
           kekKeyData = managedKeyDataCache.getActiveEntry(
             ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES, ManagedKeyData.KEY_SPACE_GLOBAL);
+            keyNamespace = ManagedKeyData.KEY_SPACE_GLOBAL;
         }
         if (kekKeyData == null) {
           throw new IOException("No active key found for custodian: "
@@ -129,6 +130,7 @@ public class SecurityUtil {
         cryptoContext = Encryption.newContext(conf);
         cryptoContext.setCipher(cipher);
         cryptoContext.setKey(key);
+        cryptoContext.setKeyNamespace(keyNamespace);
         cryptoContext.setKEKData(kekKeyData);
       }
     }
@@ -142,13 +144,12 @@ public class SecurityUtil {
    * @param trailer The file trailer.
    * @param managedKeyDataCache The managed key data cache.
    * @param systemKeyCache The system key cache.
-   * @param keyNamespace The key namespace.
    * @return The created encryption context or null if no key material is available.
    * @throws IOException if an encryption key for the file cannot be unwrapped
    */
   public static Encryption.Context createEncryptionContext(Configuration conf, Path path,
-    FixedFileTrailer trailer, ManagedKeyDataCache managedKeyDataCache,
-    SystemKeyCache systemKeyCache, String keyNamespace) throws IOException {
+    FixedFileTrailer trailer, ManagedKeyDataCache managedKeyDataCache, SystemKeyCache systemKeyCache)
+    throws IOException {
     ManagedKeyData kekKeyData = null;
     byte[] keyBytes = trailer.getEncryptionKey();
     // Check for any key material available
@@ -164,7 +165,7 @@ public class SecurityUtil {
         Throwable cause = null;
         try {
           kekKeyData = managedKeyDataCache.getEntry(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES,
-            keyNamespace, trailer.getKEKMetadata(), keyBytes);
+            trailer.getKeyNamespace(), trailer.getKEKMetadata(), keyBytes);
         } catch (KeyException | IOException e) {
           cause = e;
         }

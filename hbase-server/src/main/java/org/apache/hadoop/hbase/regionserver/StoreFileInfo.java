@@ -327,8 +327,7 @@ public class StoreFileInfo implements Configurable {
     ReaderContextBuilder contextBuilder =
       new ReaderContextBuilder().withInputStreamWrapper(in).withFileSize(length)
         .withPrimaryReplicaReader(this.primaryReplica).withReaderType(type).withFileSystem(fs)
-        .withSystemKeyCache(systemKeyCache).withKeyNamespace(keyNamespace)
-        .withManagedKeyDataCache(managedKeyDataCache);
+        .withSystemKeyCache(systemKeyCache).withManagedKeyDataCache(managedKeyDataCache);
     if (this.reference != null) {
       contextBuilder.withFilePath(this.getPath());
     } else {
