@@ -44,6 +44,15 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 
+/**
+ * A master-side procedure that handles refreshing HFiles (store files) for a specific region in HBase.
+ * It performs remote procedure dispatch to the RegionServer hosting the region and manages retries,
+ * suspensions, and timeouts as needed. This procedure ensures safe execution by verifying the region
+ * state, handling remote operation results, and applying retry mechanisms in case of failures.
+ *
+ * It gives the call to {@link RefreshHFilesCallable} which gets executed on region server.
+ */
+
 @InterfaceAudience.Private
 public class RefreshHFilesRegionProcedure extends Procedure<MasterProcedureEnv>
   implements TableProcedureInterface,
@@ -118,10 +127,10 @@ public class RefreshHFilesRegionProcedure extends Procedure<MasterProcedureEnv>
     }
 
     if (!regionNode.isInState(RegionState.State.OPEN)) {
-      LOG.info("State of region {} is not OPEN. Skip {} ...", region, this);
+      LOG.warn("State of region {} is not OPEN. Skip {} ...", region, this);
       setTimeoutForSuspend(env, String.format("region state of %s is %s",
         region.getRegionNameAsString(), regionNode.getState()));
-      return null;
+      throw new ProcedureSuspendedException();
     }
 
     ServerName targetServer = regionNode.getRegionLocation();
@@ -170,7 +179,7 @@ public class RefreshHFilesRegionProcedure extends Procedure<MasterProcedureEnv>
 
   private void complete(MasterProcedureEnv env, Throwable error) {
     if (isFinished()) {
-      LOG.info("This procedure {} is already finished, skip the rest processes", this.getProcId());
+      LOG.info("This procedure {} is already finished. Skip the rest of the processes", this.getProcId());
       return;
     }
     if (event == null) {

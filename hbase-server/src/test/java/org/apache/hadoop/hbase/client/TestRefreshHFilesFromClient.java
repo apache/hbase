@@ -55,10 +55,10 @@ public class TestRefreshHFilesFromClient {
   private static Admin admin;
   private static Configuration conf;
   private static final TableName TEST_TABLE = TableName.valueOf("testRefreshHFilesTable");
-  private static final TableName TEST_INVALID_TABLE =
-    TableName.valueOf("testRefreshHFilesInvalidTable");
+  private static final TableName TEST_NONEXISTENT_TABLE =
+    TableName.valueOf("testRefreshHFilesNonExistentTable");
   private static final String TEST_NAMESPACE = "testRefreshHFilesNamespace";
-  private static final String TEST_INVALID_NAMESPACE = "testRefreshHFilesInvalidNamespace";
+  private static final String TEST_NONEXISTENT_NAMESPACE = "testRefreshHFilesNonExistentNamespace";
   private static final String TEST_TABLE_IN_NAMESPACE = TEST_NAMESPACE + ":testTableInNamespace";
   private static final byte[] TEST_FAMILY = Bytes.toBytes("testRefreshHFilesCF1");
 
@@ -134,9 +134,9 @@ public class TestRefreshHFilesFromClient {
 
   // Not creating table hence refresh should throw exception
   @Test(expected = TableNotFoundException.class)
-  public void testRefreshHFilesForInvalidTable() throws Exception {
+  public void testRefreshHFilesForNonExistentTable() throws Exception {
     // RefreshHFiles for table
-    admin.refreshHFiles(TEST_INVALID_TABLE);
+    admin.refreshHFiles(TEST_NONEXISTENT_TABLE);
   }
 
   @Test
@@ -162,9 +162,9 @@ public class TestRefreshHFilesFromClient {
   }
 
   @Test(expected = NamespaceNotFoundException.class)
-  public void testRefreshHFilesForInvalidNamespace() throws Exception {
+  public void testRefreshHFilesForNonExistentNamespace() throws Exception {
     // RefreshHFiles for namespace
-    admin.refreshHFiles(TEST_INVALID_NAMESPACE);
+    admin.refreshHFiles(TEST_NONEXISTENT_NAMESPACE);
   }
 
   @Test

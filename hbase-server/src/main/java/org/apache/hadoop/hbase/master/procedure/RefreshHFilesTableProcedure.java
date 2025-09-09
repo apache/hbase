@@ -141,26 +141,19 @@ public class RefreshHFilesTableProcedure
 
   private void refreshHFilesForTable(final MasterProcedureEnv env, TableName tableName) {
     addChildProcedure(env.getAssignmentManager().getTableRegions(tableName, true).stream()
-      .map(r -> new RefreshHFilesRegionProcedure(r)).toArray(RefreshHFilesRegionProcedure[]::new));
+      .map(RefreshHFilesRegionProcedure::new).toArray(RefreshHFilesRegionProcedure[]::new));
   }
 
   private Flow refreshHFiles(final MasterProcedureEnv env) throws IOException {
     if (tableName != null && namespaceName == null) {
       refreshHFilesForTable(env, tableName);
     } else if (tableName == null && namespaceName != null) {
-      final List<TableName> tables =
-        env.getMasterServices().listTableNamesByNamespace(namespaceName);
-      for (TableName table : tables) {
-        refreshHFilesForTable(env, table);
-      }
+      env.getMasterServices().listTableNamesByNamespace(namespaceName)
+        .forEach(table -> refreshHFilesForTable(env, table));
     } else {
-      final List<TableName> tables = env.getMasterServices().getTableDescriptors().getAll().values()
-        .stream().map(TableDescriptor::getTableName).toList();
-      for (TableName table : tables) {
-        if (!table.isSystemTable()) {
-          refreshHFilesForTable(env, table);
-        }
-      }
+      env.getMasterServices().getTableDescriptors().getAll().values()
+        .stream().map(TableDescriptor::getTableName).filter(table -> !table.isSystemTable())
+        .forEach(table -> refreshHFilesForTable(env, table));
     }
 
     setNextState(RefreshHFilesTableProcedureState.REFRESH_HFILES_FINISH);
