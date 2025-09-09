@@ -1256,6 +1256,221 @@ In 1.0, it should be more straight-forward.
 Onheap LruBlockCache size is set as a fraction of java heap using `hfile.block.cache.size setting` (not the best name) and BucketCache is set as above in absolute Megabytes.
 ====
 
+==== Time Based Priority for BucketCache
+
+link:https://issues.apache.org/jira/browse/HBASE-28463[HBASE-28463] introduced time based priority
+for blocks in BucketCache. It allows for defining
+an age threshold at individual column families' configuration, whereby blocks older than this
+configured threshold would be targeted first for eviction.
+
+Blocks from column families that don't define the age threshold wouldn't be evaluated by
+the time based priority, and would only be evicted following the LRU eviction logic.
+
+This feature is mostly useful for use cases where most recent data is more frequently accessed,
+and therefore should get higher priority in the cache. Configuring Time Based Priority with the
+"age" of most accessed data would then give a finer control over blocks allocation in
+the BucketCache then the built-in LRU eviction logic.
+
+Time Based Priority for BucketCache provides three different strategies for defining data age:
+
+* Cell timestamps: Uses the timestamp portion of HBase cells for comparing the data age;
+* Custom cell qualifiers: Uses a custom-defined date qualifier for comparing the data age.
+It uses that value to tier the entire row containing the given qualifier value.
+This requires that the custom qualifier be a valid Java long timestamp.
+* Custom value provider: Allows for defining a pluggable implementation that
+contains the logic for identifying the date value to be used for comparison.
+This also provides additional flexibility for different use cases that might have the date stored
+in other formats or embedded with other data in various portions of a given row.
+
+For use cases where priority is determined by the order of record ingestion in HBase
+(with the most recent being the most relevant), the built-in cell timestamp offers the most
+convenient and efficient method for configuring age-based priority.
+
+Some applications may utilize a custom date column to define the priority of table records.
+In such instances, a custom cell qualifier-based priority is advisable.
+
+Finally, more intricate schemas may incorporate domain-specific logic for defining the age of
+each record. The custom value provider facilitates the integration of custom code to implement
+the appropriate parsing of the date value that should be used for the priority comparison.
+
+With Time Based Priority for BucketCache, blocks age is evaluated when deciding if a block should
+be cached (i.e. during reads, writes, compaction and prefetch), as well as during the cache
+freeSpace run (mass eviction), prior to executing the LRU logic.
+
+Because blocks don't hold any specific meta information other than type,
+it's necessary to group blocks of same "age group" on separate files, using specialized compaction
+implementations (see more details in the configuration section below). The time range of all blocks
+in each file is then appended at the file meta info section, and is used for evaluating the age of
+blocks that should be considered in the Time Based Priority logic.
+
+[[enable.timebasedpriorityforbucketcache]]
+===== Configuring Time Based Priority for BucketCache
+
+Finding the age of each block involves an extra overhead, therefore the feature is disabled by
+default at a global configuration level.
+
+To enable it, the following configuration should be set on RegionServers' _hbase-site.xml_:
+
+[source,xml]
+----
+<property>
+  <name>hbase.regionserver.datatiering.enable</name>
+  <value>true</value>
+</property>
+----
+
+Once enabled globally, it's necessary to define the desired strategy specific settings at
+individual column family level.
+
+
+====== Using Cell timestamps for Time Based Priority
+
+This strategy is the most efficient to run, as it uses the timestamp
+portion of each cell containing the data for comparing the age of blocks. It requires
+DateTieredCompaction for splitting the blocks into separate files according to blocks' ages.
+
+The example below sets the hot age threshold to one week (in milliseconds)
+for the column family 'cf1' in table 'orders':
+
+[source]
+----
+hbase(main):003:0> alter 'orders', {NAME => 'cf1',
+  CONFIGURATION => {'hbase.hstore.datatiering.type' => 'TIME_RANGE',
+    'hbase.hstore.datatiering.hot.age.millis' => '604800000',
+    'hbase.hstore.engine.class' => 'org.apache.hadoop.hbase.regionserver.DateTieredStoreEngine',
+    'hbase.hstore.blockingStoreFiles' => '60',
+    'hbase.hstore.compaction.min'=>'2',
+    'hbase.hstore.compaction.max'=>'60'
+  }
+}
+----
+
+.Date Tiered Compaction specific tunings
+[NOTE]
+====
+In the example above, the properties governing the number of windows and period of each window in
+the date tiered compaction were not set. With the default settings, the compaction will create
+initially four windows of six hours, then four windows of one day each, then another four
+windows of four days each and so on until the minimum timestamp among the selected files is covered.
+This can create a large number of files, therefore, additional changes to the
+'hbase.hstore.blockingStoreFiles', 'hbase.hstore.compaction.min' and 'hbase.hstore.compaction.max'
+are recommended.
+
+Alternatively, consider to adjust the initial window size to the same as the hot age threshold, and
+two windows only per tier:
+
+[source]
+----
+hbase(main):003:0> alter 'orders', {NAME => 'cf1',
+  CONFIGURATION => {'hbase.hstore.datatiering.type' => 'TIME_RANGE',
+    'hbase.hstore.datatiering.hot.age.millis' => '604800000',
+    'hbase.hstore.engine.class' => 'org.apache.hadoop.hbase.regionserver.DateTieredStoreEngine',
+    'hbase.hstore.compaction.date.tiered.base.window.millis' => '604800000',
+    'hbase.hstore.compaction.date.tiered.windows.per.tier' => '2'
+  }
+}
+----
+====
+
+====== Using Custom Cell Qualifiers for Time Based Priority
+
+This strategy uses a new compaction implementation designed for Time Based Priority. It extends
+date tiered compaction, but instead of producing multiple tiers of various time windows, it only
+simply splits files into two groups: the "cold" group, where all blocks are older than the defined
+threshold age, and the "hot" group, where all blocks are newer than the threshold age.
+
+The example below defines a cell qualifier 'event_date' to be used for comparing the age of blocks
+within the custom cell qualifier strategy:
+
+[source]
+----
+hbase(main):003:0> alter 'orders', {NAME => 'cf1',
+  CONFIGURATION => {'hbase.hstore.datatiering.type' => 'CUSTOM',
+    'TIERING_CELL_QUALIFIER' => 'event_date',
+    'hbase.hstore.datatiering.hot.age.millis' => '604800000',
+    'hbase.hstore.engine.class' => 'org.apache.hadoop.hbase.regionserver.CustomTieredStoreEngine',
+    'hbase.hstore.compaction.date.tiered.custom.age.limit.millis' => '604800000'
+  }
+}
+----
+
+.Time Based Priority x Compaction Age Threshold Configurations
+[NOTE]
+====
+Note that there are two different configurations for defining the hot age threshold.
+This is because the Time Based Priority enforcer operates independently of the compaction
+implementation.
+====
+
+====== Using a Custom value provider for Time Based Priority
+
+It's also possible to hook in domain-specific logic for defining the data age of each row to be
+used for comparing blocks priorities. The Custom Time Based Priority framework defines the
+`CustomTieredCompactor.TieringValueProvider` interface, which can be implemented to provide the
+specific date value to be used by compaction for grouping the blocks according to the threshold age.
+
+In the following example, the `RowKeyPortionTieringValueProvider` implements the
+`getTieringValue` method. This method parses the date from a segment of the row key value,
+specifically between positions 14 and 29, using the "yyyyMMddHHmmss" format.
+The parsed date is then returned as a long timestamp, which is then used by custom tiered compaction
+to group the blocks based on the defined hot age threshold:
+
+[source,java]
+----
+public class RowKeyPortionTieringValueProvider implements CustomTieredCompactor.TieringValueProvider {
+   private SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss");
+   @Override
+   public void init(Configuration configuration) throws Exception {}
+      @Override
+      public long getTieringValue(Cell cell) {
+       byte[] rowArray = new byte[cell.getRowLength()];
+       System.arraycopy(cell.getRowArray(), cell.getRowOffset(), rowArray, 0, cell.getRowLength());
+       String datePortion = Bytes.toString(rowArray).substring(14, 29).trim();
+       try {
+           return sdf.parse(datePortion).getTime();
+       } catch (ParseException e) {
+           //handle error
+       }
+       return Long.MAX_VALUE;
+   }
+}
+----
+
+The Tiering Value Provider above can then be configured for Time Based Priority as follows:
+
+[source]
+----
+hbase(main):003:0> alter 'orders', {NAME => 'cf1',
+  CONFIGURATION => {'hbase.hstore.datatiering.type' => 'CUSTOM',
+    'hbase.hstore.custom-tiering-value.provider.class' =>
+      'org.apache.hbase.client.example.RowKeyPortionTieringValueProvider'
+    'hbase.hstore.datatiering.hot.age.millis' => '604800000',
+    'hbase.hstore.engine.class' => 'org.apache.hadoop.hbase.regionserver.CustomTieredStoreEngine',
+    'hbase.hstore.compaction.date.tiered.custom.age.limit.millis' => '604800000'
+  }
+}
+----
+
+[NOTE]
+====
+Upon enabling Custom Time Based Priority (either the custom qualifier or custom value provider)
+in the column family configuration, it is imperative that major compaction be executed twice on
+the specified tables to ensure the effective application of the newly configured priorities
+within the bucket cache.
+====
+
+
+[NOTE]
+====
+Time Based Priority was originally implemented with the cell timestamp strategy only. The original
+design covering cell timestamp based strategy is available
+link:https://docs.google.com/document/d/1Qd3kvZodBDxHTFCIRtoePgMbvyuUSxeydi2SEWQFQro/edit?tab=t.0#heading=h.gjdgxs[here].
+
+The second phase including the two custom strategies mentioned above is detailed in
+link:https://docs.google.com/document/d/1uBGIO9IQ-FbSrE5dnUMRtQS23NbCbAmRVDkAOADcU_E/edit?tab=t.0[this separate design doc].
+====
+
+
 ==== Compressed BlockCache
 
 link:https://issues.apache.org/jira/browse/HBASE-11331[HBASE-11331] introduced lazy BlockCache decompression, more simply referred to as compressed BlockCache.
