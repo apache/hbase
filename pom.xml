@@ -981,7 +981,6 @@
     <jacocoArgLine/>
     <sonar-maven-plugin.version>3.9.1.2184</sonar-maven-plugin.version>
     <shell-executable>bash</shell-executable>
-    <surefire.provider>surefire-junit47</surefire.provider>
     <!-- default: run small & medium, medium with 2 threads -->
     <surefire.skipFirstPart>false</surefire.skipFirstPart>
     <surefire.skipSecondPart>false</surefire.skipSecondPart>
@@ -1963,16 +1962,6 @@
               </property>
             </properties>
           </configuration>
-          <dependencies>
-            <!-- by default surefire selects dynamically the connector to the unit tests
-              tool. We want to use always the same as the different connectors can have different
-              bugs and behaviour. -->
-            <dependency>
-              <groupId>org.apache.maven.surefire</groupId>
-              <artifactId>${surefire.provider}</artifactId>
-              <version>${surefire.version}</version>
-            </dependency>
-          </dependencies>
           <executions>
             <execution>
               <id>secondPartTestsExecution</id>
@@ -4733,7 +4722,6 @@
         </property>
       </activation>
       <properties>
-        <surefire.provider>surefire-junit4</surefire.provider>
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
         <surefire.firstPartGroups/>
