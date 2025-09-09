@@ -21,13 +21,20 @@ import static org.apache.hadoop.hbase.HConstants.HBASE_CLIENT_RETRIES_NUMBER;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.master.procedure.RefreshHFilesTableProcedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
+import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.security.access.ReadOnlyController;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.Before;
+import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,6 +44,9 @@ public class TestRefreshHFilesBase {
 
   protected static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   protected Admin admin;
+  protected HMaster master;
+  List<HRegionServer> regionServers;
+  protected SingleProcessHBaseCluster cluster;
   protected ProcedureExecutor<MasterProcedureEnv> procExecutor;
   protected static Configuration conf;
   protected static final TableName TEST_TABLE = TableName.valueOf("testRefreshHFilesTable");
@@ -90,8 +100,33 @@ public class TestRefreshHFilesBase {
     }
   }
 
-  @Before
-  public void setup() throws Exception {
+  protected void submitProcedureAndAssertNotFailed(RefreshHFilesTableProcedure procedure) {
+    long procId = procExecutor.submitProcedure(procedure);
+    ProcedureTestingUtility.waitProcedure(procExecutor, procId);
+    ProcedureTestingUtility.assertProcNotFailed(procExecutor.getResult(procId));
+  }
+
+  protected void setReadOnlyMode(boolean isReadOnly) {
+    conf.setBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, isReadOnly);
+    notifyConfigurationObservers();
+  }
+
+  private void notifyConfigurationObservers() {
+    master.getConfigurationManager().notifyAllObservers(TEST_UTIL.getConfiguration());
+    for (HRegionServer rs : regionServers) {
+      rs.getConfigurationManager().notifyAllObservers(TEST_UTIL.getConfiguration());
+    }
+  }
+
+  private void setupReadOnlyConf(boolean addReadOnlyConf) {
+    if (!addReadOnlyConf) return;
+    conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, ReadOnlyController.class.getName());
+    conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, ReadOnlyController.class.getName());
+    // Keep ReadOnly property to false at the beginning so that create table succeed.
+    conf.setBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, false);
+  }
+
+  protected void baseSetup(boolean addReadOnlyConf) throws Exception {
     conf = TEST_UTIL.getConfiguration();
     // Shorten the run time of failed unit tests by limiting retries and the session timeout
     // threshold
@@ -100,19 +135,23 @@ public class TestRefreshHFilesBase {
     conf.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, 60000);
     conf.setInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT, 120000);
 
+    setupReadOnlyConf(addReadOnlyConf);
+
     try {
       // Start the test cluster
-      TEST_UTIL.startMiniCluster(1);
+      cluster = TEST_UTIL.startMiniCluster(1);
       admin = TEST_UTIL.getAdmin();
       procExecutor = TEST_UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor();
+      master = TEST_UTIL.getHBaseCluster().getMaster();
+      regionServers = cluster.getRegionServerThreads().stream()
+        .map(JVMClusterUtil.RegionServerThread::getRegionServer).collect(Collectors.toList());
     } catch (Exception e) {
       TEST_UTIL.shutdownMiniCluster();
       throw new RuntimeException(e);
     }
   }
 
-  @After
-  public void tearDown() throws Exception {
+  protected void baseTearDown() throws Exception {
     if (admin != null) {
       admin.close();
     }

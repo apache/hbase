@@ -15,41 +15,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.client;
+package org.apache.hadoop.hbase.master.procedure;
 
-import static org.junit.Assert.assertTrue;
-
-import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.NamespaceNotFoundException;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableNotFoundException;
+import java.io.IOException;
 import org.apache.hadoop.hbase.TestRefreshHFilesBase;
-import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
-import org.junit.ClassRule;
 import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-@Category({ MediumTests.class, ClientTests.class })
-public class TestRefreshHFilesFromClient extends TestRefreshHFilesBase {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRefreshHFilesFromClient.class);
-
-  private static final Logger LOG = LoggerFactory.getLogger(TestRefreshHFilesFromClient.class);
-
-  private static final TableName TEST_NONEXISTENT_TABLE =
-    TableName.valueOf("testRefreshHFilesNonExistentTable");
-  private static final String TEST_NONEXISTENT_NAMESPACE = "testRefreshHFilesNonExistentNamespace";
+public class TestRefreshHFilesProcedureWithReadOnlyConf extends TestRefreshHFilesBase {
 
   @Before
   public void setup() throws Exception {
-    baseSetup(false);
+    // When true is passed only setup for readonly property is done.
+    // The initial ReadOnly property will be false for table creation
+    baseSetup(true);
   }
 
   @After
@@ -58,46 +38,42 @@ public class TestRefreshHFilesFromClient extends TestRefreshHFilesBase {
   }
 
   @Test
-  public void testRefreshHFilesForTable() throws Exception {
+  public void testRefreshHFilesProcedureForTable() throws IOException {
     try {
       // Create table in default namespace
       createTableAndWait(TEST_TABLE, TEST_FAMILY);
 
-      // RefreshHFiles for table
-      Long procId = admin.refreshHFiles(TEST_TABLE);
-      assertTrue(procId >= 0);
+      setReadOnlyMode(true);
+      RefreshHFilesTableProcedure procedure =
+        new RefreshHFilesTableProcedure(procExecutor.getEnvironment(), TEST_TABLE);
+      submitProcedureAndAssertNotFailed(procedure);
+
     } catch (Exception e) {
-      Assert.fail("RefreshHFilesForTable Should Not Throw Exception: " + e);
       throw new RuntimeException(e);
     } finally {
+      setReadOnlyMode(false);
       // Delete table name post test execution
       deleteTable(TEST_TABLE);
     }
   }
 
-  // Not creating table hence refresh should throw exception
-  @Test(expected = TableNotFoundException.class)
-  public void testRefreshHFilesForNonExistentTable() throws Exception {
-    // RefreshHFiles for table
-    admin.refreshHFiles(TEST_NONEXISTENT_TABLE);
-  }
-
   @Test
-  public void testRefreshHFilesForNamespace() throws Exception {
+  public void testRefreshHFilesProcedureForNamespace() {
     try {
       createNamespace(TEST_NAMESPACE);
 
       // Create table under test namespace
       createTableInNamespaceAndWait(TEST_NAMESPACE, TEST_TABLE, TEST_FAMILY);
 
-      // RefreshHFiles for namespace
-      Long procId = admin.refreshHFiles(TEST_NAMESPACE);
-      assertTrue(procId >= 0);
+      setReadOnlyMode(true);
+      RefreshHFilesTableProcedure procedure =
+        new RefreshHFilesTableProcedure(procExecutor.getEnvironment(), TEST_NAMESPACE);
+      submitProcedureAndAssertNotFailed(procedure);
 
     } catch (Exception e) {
-      Assert.fail("RefreshHFilesForAllNamespace Should Not Throw Exception: " + e);
       throw new RuntimeException(e);
     } finally {
+      setReadOnlyMode(false);
       // Delete namespace post test execution
       // This will delete all tables under namespace hence no explicit table
       // deletion for table under namespace is needed.
@@ -105,14 +81,8 @@ public class TestRefreshHFilesFromClient extends TestRefreshHFilesBase {
     }
   }
 
-  @Test(expected = NamespaceNotFoundException.class)
-  public void testRefreshHFilesForNonExistentNamespace() throws Exception {
-    // RefreshHFiles for namespace
-    admin.refreshHFiles(TEST_NONEXISTENT_NAMESPACE);
-  }
-
   @Test
-  public void testRefreshHFilesForAllTables() throws Exception {
+  public void testRefreshHFilesProcedureForAllTables() throws IOException {
     try {
       // Create table in default namespace
       createTableAndWait(TEST_TABLE, TEST_FAMILY);
@@ -123,14 +93,15 @@ public class TestRefreshHFilesFromClient extends TestRefreshHFilesBase {
       // Create table under test namespace
       createTableInNamespaceAndWait(TEST_NAMESPACE, TEST_TABLE, TEST_FAMILY);
 
-      // RefreshHFiles for all the tables
-      Long procId = admin.refreshHFiles();
-      assertTrue(procId >= 0);
+      setReadOnlyMode(true);
+      RefreshHFilesTableProcedure procedure =
+        new RefreshHFilesTableProcedure(procExecutor.getEnvironment());
+      submitProcedureAndAssertNotFailed(procedure);
 
     } catch (Exception e) {
-      Assert.fail("RefreshHFilesForAllTables Should Not Throw Exception: " + e);
       throw new RuntimeException(e);
     } finally {
+      setReadOnlyMode(false);
       // Delete table name post test execution
       deleteTable(TEST_TABLE);
 

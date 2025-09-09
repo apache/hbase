@@ -20,9 +20,10 @@ package org.apache.hadoop.hbase.master.procedure;
 import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TestRefreshHFilesBase;
-import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -34,10 +35,14 @@ public class TestRefreshHFilesProcedure extends TestRefreshHFilesBase {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestRefreshHFilesProcedure.class);
 
-  private void submitProcedureAndAssertNotFailed(RefreshHFilesTableProcedure procedure) {
-    long procId = procExecutor.submitProcedure(procedure);
-    ProcedureTestingUtility.waitProcedure(procExecutor, procId);
-    ProcedureTestingUtility.assertProcNotFailed(procExecutor.getResult(procId));
+  @Before
+  public void setup() throws Exception {
+    baseSetup(false);
+  }
+
+  @After
+  public void tearDown() throws Exception {
+    baseTearDown();
   }
 
   @Test
