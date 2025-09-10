@@ -1319,8 +1319,8 @@ To enable it, the following configuration should be set on RegionServers' _hbase
 </property>
 ----
 
-Once enabled globally, it's necessary to define the desired strategy specific settings at
-individual column family level.
+Once enabled globally, it's necessary to define the desired strategy-specific settings at
+the individual column family level.
 
 
 ====== Using Cell timestamps for Time Based Priority
