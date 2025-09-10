@@ -1298,7 +1298,7 @@ be cached (i.e. during reads, writes, compaction and prefetch), as well as durin
 freeSpace run (mass eviction), prior to executing the LRU logic.
 
 Because blocks don't hold any specific meta information other than type,
-it's necessary to group blocks of same "age group" on separate files, using specialized compaction
+it's necessary to group blocks of the same "age group" on separate files, using specialized compaction
 implementations (see more details in the configuration section below). The time range of all blocks
 in each file is then appended at the file meta info section, and is used for evaluating the age of
 blocks that should be considered in the Time Based Priority logic.
