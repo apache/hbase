@@ -34,6 +34,7 @@
          import="org.apache.hadoop.hbase.zookeeper.MasterAddressTracker" %>
 
 <%!
+  // TODO: Can we share with softwareAttributes.jsp?
   public String formatZKString(HRegionServer regionServer) {
     StringBuilder quorums = new StringBuilder();
     String zkQuorum = regionServer.getZooKeeper().getQuorum();
@@ -134,8 +135,11 @@
 
     <section>
       <h2>Block Cache</h2>
-      <& BlockCacheTmpl; cacheConfig = new CacheConfig(regionServer.getConfiguration()); config = regionServer.getConfiguration(); bc = regionServer.getBlockCache().orElse(null) &>
+      <jsp:include page="blockCache.jsp"/>
     </section>
+
+
+    <%-- TODO: Migrate rest of RSStatusTmpl.jamon  --%>
 
   </div>
 </div> <!-- /.container-fluid content -->
