@@ -22,9 +22,10 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.regionserver.StoreContext;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * Utility class for constructing key namespaces used in key management operations.
@@ -82,6 +83,9 @@ public class KeyNamespaceUtil {
    * @return The constructed key namespace
    */
   public static String constructKeyNamespace(String tableName, String family) {
+    // Add precoditions for null check
+    Preconditions.checkNotNull(tableName, "tableName should not be null");
+    Preconditions.checkNotNull(family, "family should not be null");
     return tableName + "/" + family;
   }
 }

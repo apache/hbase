@@ -90,17 +90,17 @@ public class TestManagedKeyProvider {
       for (int i = 0; i < nCustodians; ++i) {
         String custodian = "custodian+ " + i;
         String alias = custodian + "-alias";
-        KeyProviderTestUtils.addEntry(conf, 256, store, alias, custodian, withPasswordOnAlias, cust2key,
+        KeymetaTestUtils.addEntry(conf, 256, store, alias, custodian, withPasswordOnAlias, cust2key,
           cust2alias, passwdProps);
       }
 
       clusterId = UUID.randomUUID().toString();
-      KeyProviderTestUtils.addEntry(conf, 256, store, SYSTEM_KEY_ALIAS, clusterId, withPasswordOnAlias,
+      KeymetaTestUtils.addEntry(conf, 256, store, SYSTEM_KEY_ALIAS, clusterId, withPasswordOnAlias,
         cust2key, cust2alias, passwdProps);
       systemKey = cust2key.get(new Bytes(clusterId.getBytes())).get();
       conf.set(HConstants.CRYPTO_MANAGED_KEY_STORE_SYSTEM_KEY_NAME_CONF_KEY, SYSTEM_KEY_ALIAS);
 
-      KeyProviderTestUtils.addEntry(conf, 256, store, "global-cust-alias", "*", withPasswordOnAlias,
+      KeymetaTestUtils.addEntry(conf, 256, store, "global-cust-alias", "*", withPasswordOnAlias,
         cust2key, cust2alias, passwdProps);
     }
 

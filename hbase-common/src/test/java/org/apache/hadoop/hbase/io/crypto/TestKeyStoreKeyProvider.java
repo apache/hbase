@@ -19,8 +19,8 @@ package org.apache.hadoop.hbase.io.crypto;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.apache.hadoop.hbase.io.crypto.KeyProviderTestUtils.ALIAS;
-import static org.apache.hadoop.hbase.io.crypto.KeyProviderTestUtils.PASSWORD;
+import static org.apache.hadoop.hbase.io.crypto.KeymetaTestUtils.ALIAS;
+import static org.apache.hadoop.hbase.io.crypto.KeymetaTestUtils.PASSWORD;
 
 import java.security.Key;
 import java.security.KeyStore;
@@ -73,7 +73,7 @@ public class TestKeyStoreKeyProvider {
   @Before
   public void setUp() throws Exception {
     KEY = MessageDigest.getInstance("SHA-256").digest(Bytes.toBytes(ALIAS));
-    String providerParams = KeyProviderTestUtils.setupTestKeyStore(TEST_UTIL, withPasswordOnAlias,
+    String providerParams = KeymetaTestUtils.setupTestKeyStore(TEST_UTIL, withPasswordOnAlias,
       withPasswordFile, store -> {
         Properties p = new Properties();
         try {

@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.io.crypto;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.net.URLEncoder;
@@ -26,17 +29,18 @@ import java.util.Base64;
 import java.util.Map;
 import java.util.Properties;
 import java.util.function.Function;
-
 import javax.crypto.spec.SecretKeySpec;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
-public class KeyProviderTestUtils {
+public class KeymetaTestUtils {
   public static final String ALIAS = "test";
   public static final String PASSWORD = "password";
 
@@ -100,5 +104,30 @@ public class KeyProviderTestUtils {
       providerParams = "jceks://" + storeFile.toURI().getPath() + "?password=" + PASSWORD;
     }
     return providerParams;
+  }
+
+  public static FileStatus createMockFile(String fileName) {
+    Path mockPath = mock(Path.class);
+    when(mockPath.getName()).thenReturn(fileName);
+    FileStatus mockFileStatus = mock(FileStatus.class);
+    when(mockFileStatus.getPath()).thenReturn(mockPath);
+    return mockFileStatus;
+  }
+
+  public static Path createMockPath(String tableName, String family) {
+    Path mockPath = mock(Path.class);
+    Path mockRegionDir = mock(Path.class);
+    Path mockTableDir = mock(Path.class);
+    Path mockNamespaceDir = mock(Path.class);
+    Path mockFamilyDir = mock(Path.class);
+    Path mockDataDir = mock(Path.class);
+    when(mockPath.getParent()).thenReturn(mockFamilyDir);
+    when(mockFamilyDir.getParent()).thenReturn(mockRegionDir);
+    when(mockRegionDir.getParent()).thenReturn(mockTableDir);
+    when(mockTableDir.getParent()).thenReturn(mockNamespaceDir);
+    when(mockNamespaceDir.getParent()).thenReturn(mockDataDir);
+    when(mockTableDir.getName()).thenReturn(tableName);
+    when(mockFamilyDir.getName()).thenReturn(family);
+    return mockPath;
   }
 }

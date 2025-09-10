@@ -27,7 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.io.crypto.KeyProviderTestUtils;
+import org.apache.hadoop.hbase.io.crypto.KeymetaTestUtils;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyStoreKeyProvider;
 import org.apache.hadoop.hbase.keymeta.ManagedKeyTestBase;
@@ -70,14 +70,14 @@ public class TestKeymetaAdminShell extends ManagedKeyTestBase implements RubyShe
     String CUST1 = "cust1";
     String CUST1_ALIAS = "cust1-alias";
     String GLOB_CUST_ALIAS = "glob-cust-alias";
-    String providerParams = KeyProviderTestUtils.setupTestKeyStore(TEST_UTIL, true, true, store -> {
+    String providerParams = KeymetaTestUtils.setupTestKeyStore(TEST_UTIL, true, true, store -> {
       Properties p = new Properties();
       try {
-        KeyProviderTestUtils.addEntry(conf, 128, store, CUST1_ALIAS, CUST1,
+        KeymetaTestUtils.addEntry(conf, 128, store, CUST1_ALIAS, CUST1,
           true, cust2key, cust2alias, p);
-        KeyProviderTestUtils.addEntry(conf, 128, store, GLOB_CUST_ALIAS,
+        KeymetaTestUtils.addEntry(conf, 128, store, GLOB_CUST_ALIAS,
           "*", true, cust2key, cust2alias, p);
-        KeyProviderTestUtils.addEntry(conf, 128, store, SYSTEM_KEY_ALIAS,
+        KeymetaTestUtils.addEntry(conf, 128, store, SYSTEM_KEY_ALIAS,
           clusterId, true, cust2key, cust2alias, p);
       } catch (Exception e) {
         throw new RuntimeException(e);

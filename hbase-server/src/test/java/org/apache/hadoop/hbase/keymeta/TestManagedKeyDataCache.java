@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.keymeta;
 
 import static org.apache.hadoop.hbase.io.crypto.ManagedKeyData.KEY_SPACE_GLOBAL;
-import static org.apache.hadoop.hbase.io.crypto.ManagedKeyState.ACTIVE;
 import static org.apache.hadoop.hbase.io.crypto.ManagedKeyState.DISABLED;
 import static org.apache.hadoop.hbase.io.crypto.ManagedKeyState.FAILED;
 import static org.apache.hadoop.hbase.io.crypto.ManagedKeyState.INACTIVE;

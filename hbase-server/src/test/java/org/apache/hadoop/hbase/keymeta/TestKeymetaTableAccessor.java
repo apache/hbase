@@ -130,6 +130,7 @@ public class TestKeymetaTableAccessor {
     when(connection.getTable(KeymetaTableAccessor.KEY_META_TABLE_NAME)).thenReturn(table);
     when(server.getSystemKeyCache()).thenReturn(systemKeyCache);
     when(server.getConfiguration()).thenReturn(conf);
+    when(server.getKeyManagementService()).thenReturn(server);
 
     accessor = new KeymetaTableAccessor(server);
     managedKeyProvider = new MockManagedKeyProvider();

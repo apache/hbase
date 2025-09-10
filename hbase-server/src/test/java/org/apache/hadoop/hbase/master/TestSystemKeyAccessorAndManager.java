@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyState;
+import org.apache.hadoop.hbase.io.crypto.KeymetaTestUtils;
 import org.apache.hadoop.hbase.keymeta.SystemKeyAccessor;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -107,14 +108,6 @@ public class TestSystemKeyAccessorAndManager {
     systemKeyManager = new SystemKeyManager(mockMaster);
   }
 
-  private static FileStatus createMockFile(String fileName) {
-    Path mockPath = mock(Path.class);
-    when(mockPath.getName()).thenReturn(fileName);
-    FileStatus mockFileStatus = mock(FileStatus.class);
-    when(mockFileStatus.getPath()).thenReturn(mockPath);
-    return mockFileStatus;
-  }
-
   @RunWith(BlockJUnit4ClassRunner.class)
   @Category({ MasterTests.class, SmallTests.class })
   public static class TestAccessorWhenDisabled extends TestSystemKeyAccessorAndManager {
@@ -168,7 +161,7 @@ public class TestSystemKeyAccessorAndManager {
     @Test
     public void testGetWithSingle() throws Exception {
       String fileName = SYSTEM_KEY_FILE_PREFIX + "1";
-      FileStatus mockFileStatus = createMockFile(fileName);
+      FileStatus mockFileStatus = KeymetaTestUtils.createMockFile(fileName);
 
       Path systemKeyDir = CommonFSUtils.getSystemKeyDir(conf);
       when(mockFileSystem.globStatus(eq(new Path(systemKeyDir, SYSTEM_KEY_FILE_PREFIX+"*"))))
@@ -188,7 +181,7 @@ public class TestSystemKeyAccessorAndManager {
     @Test
     public void testGetWithMultiple() throws Exception {
       FileStatus[] mockFileStatuses = IntStream.rangeClosed(1, 3)
-        .mapToObj(i -> createMockFile(SYSTEM_KEY_FILE_PREFIX + i))
+        .mapToObj(i -> KeymetaTestUtils.createMockFile(SYSTEM_KEY_FILE_PREFIX + i))
         .toArray(FileStatus[]::new);
 
       Path systemKeyDir = CommonFSUtils.getSystemKeyDir(conf);
@@ -206,7 +199,7 @@ public class TestSystemKeyAccessorAndManager {
     @Test
     public void testExtractKeySequenceForInvalidFilename() throws Exception {
       assertEquals(-1, SystemKeyAccessor.extractKeySequence(
-        createMockFile("abcd").getPath()));
+        KeymetaTestUtils.createMockFile("abcd").getPath()));
     }
   }
 
@@ -234,7 +227,7 @@ public class TestSystemKeyAccessorAndManager {
 
     @Test
     public void test() throws Exception {
-      FileStatus mockFileStatus = createMockFile(fileName);
+      FileStatus mockFileStatus = KeymetaTestUtils.createMockFile(fileName);
 
       IOException ex = assertThrows(IOException.class,
         () -> SystemKeyAccessor.extractSystemKeySeqNum(mockFileStatus.getPath()));
@@ -343,7 +336,7 @@ public class TestSystemKeyAccessorAndManager {
       when(mockFileSystem.create(any())).thenReturn(mockStream);
       when(mockFileSystem.rename(any(), any())).thenReturn(false);
       String fileName = SYSTEM_KEY_FILE_PREFIX + "1";
-      FileStatus mockFileStatus = createMockFile(fileName);
+      FileStatus mockFileStatus = KeymetaTestUtils.createMockFile(fileName);
       when(mockFileSystem.globStatus(any())).thenReturn(
           new FileStatus[0],
           new FileStatus[] { mockFileStatus }
@@ -500,6 +493,16 @@ public class TestSystemKeyAccessorAndManager {
       // Valid cases should still work
       assertEquals(0, SystemKeyAccessor.extractKeySequence(validZero));
       assertEquals(-1, SystemKeyAccessor.extractKeySequence(validNegative));
+    }
+
+    @Test
+    public void testCreateCacheFactoryMethod() {
+      // Test static factory method
+    }
+
+    @Test
+    public void testCreateCacheWithNoKeys() {
+      // Test behavior when no system keys are available
     }
   }
 

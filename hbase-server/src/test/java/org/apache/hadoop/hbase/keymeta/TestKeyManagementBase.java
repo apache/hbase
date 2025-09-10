@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.keymeta;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -48,19 +49,33 @@ public class TestKeyManagementBase {
     MasterServices mockServer = mock(MasterServices.class);
     when(mockServer.getConfiguration()).thenReturn(conf);
 
-    KeyManagementBase keyMgmt = new TestKeyManagement(mockServer);
+    final KeyManagementBase keyMgmt = new TestKeyManagement(mockServer);
+    assertEquals(mockServer, keyMgmt.getKeyManagementService());
 
     // Should throw RuntimeException when provider is not ManagedKeyProvider
     RuntimeException exception = assertThrows(RuntimeException.class, () -> {
       keyMgmt.getKeyProvider();
     });
-
     assertTrue(exception.getMessage().contains("expected to be of type ManagedKeyProvider"));
+    exception = assertThrows(RuntimeException.class, () -> {
+      KeyManagementBase keyMgmt2 = new TestKeyManagement(conf);
+      keyMgmt2.getKeyProvider();
+    });
+    assertTrue(exception.getMessage().contains("expected to be of type ManagedKeyProvider"));
+
+    assertThrows(IllegalArgumentException.class, () -> {
+      Configuration configuration = null;
+      new TestKeyManagement(configuration);
+    });
   }
 
   private static class TestKeyManagement extends KeyManagementBase {
     public TestKeyManagement(MasterServices server) {
       super(server);
+    }
+
+    public TestKeyManagement(Configuration configuration) {
+      super(configuration);
     }
   }
 }

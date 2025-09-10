@@ -75,11 +75,11 @@ import org.junit.runners.Suite;
 })
 @Category({ MasterTests.class, SmallTests.class })
 public class TestKeymetaAdminImpl {
-  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private static final String CUST = "cust1";
   private static final String ENCODED_CUST = ManagedKeyProvider.encodeToStr(CUST.getBytes());
 
+  private final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   @Rule
   public TestName name = new TestName();
