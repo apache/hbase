@@ -1273,7 +1273,7 @@ the BucketCache then the built-in LRU eviction logic.
 
 Time Based Priority for BucketCache provides three different strategies for defining data age:
 
-* Cell timestamps: Uses the timestamp portion of HBase cells for comparing the data age;
+* Cell timestamps: Uses the timestamp portion of HBase cells for comparing the data age.
 * Custom cell qualifiers: Uses a custom-defined date qualifier for comparing the data age.
 It uses that value to tier the entire row containing the given qualifier value.
 This requires that the custom qualifier be a valid Java long timestamp.
