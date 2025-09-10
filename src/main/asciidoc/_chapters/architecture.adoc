@@ -1356,7 +1356,7 @@ This can create a large number of files, therefore, additional changes to the
 'hbase.hstore.blockingStoreFiles', 'hbase.hstore.compaction.min' and 'hbase.hstore.compaction.max'
 are recommended.
 
-Alternatively, consider to adjust the initial window size to the same as the hot age threshold, and
+Alternatively, consider adjusting the initial window size to the same as the hot age threshold, and
 two windows only per tier:
 
 [source]
