@@ -1269,7 +1269,7 @@ the time based priority, and would only be evicted following the LRU eviction lo
 This feature is mostly useful for use cases where most recent data is more frequently accessed,
 and therefore should get higher priority in the cache. Configuring Time Based Priority with the
 "age" of most accessed data would then give a finer control over blocks allocation in
-the BucketCache then the built-in LRU eviction logic.
+the BucketCache than the built-in LRU eviction logic.
 
 Time Based Priority for BucketCache provides three different strategies for defining data age:
 
