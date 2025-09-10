@@ -1285,13 +1285,17 @@ in other formats or embedded with other data in various portions of a given row.
 For use cases where priority is determined by the order of record ingestion in HBase
 (with the most recent being the most relevant), the built-in cell timestamp offers the most
 convenient and efficient method for configuring age-based priority.
+See <<cellts.timebasedpriorityforbucketcache>>.
 
 Some applications may utilize a custom date column to define the priority of table records.
 In such instances, a custom cell qualifier-based priority is advisable.
+See <<customcellqualifier.timebasedpriorityforbucketcache>>.
+
 
 Finally, more intricate schemas may incorporate domain-specific logic for defining the age of
 each record. The custom value provider facilitates the integration of custom code to implement
 the appropriate parsing of the date value that should be used for the priority comparison.
+See <<customvalueprovider.timebasedpriorityforbucketcache>>.
 
 With Time Based Priority for BucketCache, blocks age is evaluated when deciding if a block should
 be cached (i.e. during reads, writes, compaction and prefetch), as well as during the cache
@@ -1322,7 +1326,7 @@ To enable it, the following configuration should be set on RegionServers' _hbase
 Once enabled globally, it's necessary to define the desired strategy-specific settings at
 the individual column family level.
 
-
+[[cellts.timebasedpriorityforbucketcache]]
 ====== Using Cell timestamps for Time Based Priority
 
 This strategy is the most efficient to run, as it uses the timestamp
@@ -1372,6 +1376,7 @@ hbase(main):003:0> alter 'orders', {NAME => 'cf1',
 ----
 ====
 
+[[customcellqualifier.timebasedpriorityforbucketcache]]
 ====== Using Custom Cell Qualifiers for Time Based Priority
 
 This strategy uses a new compaction implementation designed for Time Based Priority. It extends
@@ -1402,6 +1407,7 @@ This is because the Time Based Priority enforcer operates independently of the c
 implementation.
 ====
 
+[[customvalueprovider.timebasedpriorityforbucketcache]]
 ====== Using a Custom value provider for Time Based Priority
 
 It's also possible to hook in domain-specific logic for defining the data age of each row to be
