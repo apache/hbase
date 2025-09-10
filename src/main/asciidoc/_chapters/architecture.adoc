@@ -1443,7 +1443,7 @@ The Tiering Value Provider above can then be configured for Time Based Priority 
 hbase(main):003:0> alter 'orders', {NAME => 'cf1',
   CONFIGURATION => {'hbase.hstore.datatiering.type' => 'CUSTOM',
     'hbase.hstore.custom-tiering-value.provider.class' =>
-      'org.apache.hbase.client.example.RowKeyPortionTieringValueProvider'
+      'org.apache.hbase.client.example.RowKeyPortionTieringValueProvider',
     'hbase.hstore.datatiering.hot.age.millis' => '604800000',
     'hbase.hstore.engine.class' => 'org.apache.hadoop.hbase.regionserver.CustomTieredStoreEngine',
     'hbase.hstore.compaction.date.tiered.custom.age.limit.millis' => '604800000'
