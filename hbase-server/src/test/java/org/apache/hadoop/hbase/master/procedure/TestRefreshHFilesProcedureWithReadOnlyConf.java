@@ -18,12 +18,22 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TestRefreshHFilesBase;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
+@Category({ MasterTests.class, MediumTests.class })
 public class TestRefreshHFilesProcedureWithReadOnlyConf extends TestRefreshHFilesBase {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(TestRefreshHFilesProcedureWithReadOnlyConf.class);
 
   @Before
   public void setup() throws Exception {

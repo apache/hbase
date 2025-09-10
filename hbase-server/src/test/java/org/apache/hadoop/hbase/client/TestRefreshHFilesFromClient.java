@@ -32,16 +32,12 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Category({ MediumTests.class, ClientTests.class })
 public class TestRefreshHFilesFromClient extends TestRefreshHFilesBase {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestRefreshHFilesFromClient.class);
-
-  private static final Logger LOG = LoggerFactory.getLogger(TestRefreshHFilesFromClient.class);
 
   private static final TableName TEST_NONEXISTENT_TABLE =
     TableName.valueOf("testRefreshHFilesNonExistentTable");
