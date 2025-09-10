@@ -1375,7 +1375,7 @@ hbase(main):003:0> alter 'orders', {NAME => 'cf1',
 ====== Using Custom Cell Qualifiers for Time Based Priority
 
 This strategy uses a new compaction implementation designed for Time Based Priority. It extends
-date tiered compaction, but instead of producing multiple tiers of various time windows, it only
+date tiered compaction, but instead of producing multiple tiers of various time windows, it
 simply splits files into two groups: the "cold" group, where all blocks are older than the defined
 threshold age, and the "hot" group, where all blocks are newer than the threshold age.
 
