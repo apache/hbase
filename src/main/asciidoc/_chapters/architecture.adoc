@@ -1339,8 +1339,8 @@ hbase(main):003:0> alter 'orders', {NAME => 'cf1',
     'hbase.hstore.datatiering.hot.age.millis' => '604800000',
     'hbase.hstore.engine.class' => 'org.apache.hadoop.hbase.regionserver.DateTieredStoreEngine',
     'hbase.hstore.blockingStoreFiles' => '60',
-    'hbase.hstore.compaction.min'=>'2',
-    'hbase.hstore.compaction.max'=>'60'
+    'hbase.hstore.compaction.min' => '2',
+    'hbase.hstore.compaction.max' => '60'
   }
 }
 ----
