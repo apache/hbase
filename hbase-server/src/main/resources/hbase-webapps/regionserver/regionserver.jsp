@@ -31,37 +31,7 @@
          import="org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil"
          import="org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ServerInfo"
          import="org.apache.hadoop.hbase.util.JvmVersion"
-         import="org.apache.hadoop.hbase.zookeeper.MasterAddressTracker" %>
-
-<%!
-  // TODO: Can we share with softwareAttributes.jsp?
-  public String formatZKString(HRegionServer regionServer) {
-    StringBuilder quorums = new StringBuilder();
-    String zkQuorum = regionServer.getZooKeeper().getQuorum();
-
-    if (null == zkQuorum) {
-      return quorums.toString();
-    }
-
-    String[] zks = zkQuorum.split(",");
-
-    if (zks.length == 0) {
-      return quorums.toString();
-    }
-
-    for(int i = 0; i < zks.length; ++i) {
-      quorums.append(zks[i].trim());
-
-      if (i != (zks.length - 1)) {
-        quorums.append("<br/>");
-      }
-    }
-
-    return quorums.toString();
-  }
-%>
-
-<%
+         import="org.apache.hadoop.hbase.zookeeper.MasterAddressTracker" %><%
   HRegionServer regionServer =
     (HRegionServer) getServletContext().getAttribute(HRegionServer.REGIONSERVER);
 
@@ -87,12 +57,16 @@
   }
   String bcn = request.getParameter("bcn");
   String bcv = request.getParameter("bcv");
-%>
-
-<%-- If json AND bcn is NOT an empty string presume it a block cache view request. --%>
-<% if (format.equals("json") && bcn != null && bcn.length() > 0) {  %>
-  <%-- TODO: Migrate BlockCacheViewTmpl  --%>
-  <& BlockCacheViewTmpl; conf = regionServer.getConfiguration(); cacheConfig = new CacheConfig(regionServer.getConfiguration()); bcn = bcn; bcv = bcv; blockCache = regionServer.getBlockCache().orElse(null)  &>
+  if (bcv == null) {
+    bcv = "";
+  }
+  // If json AND bcn is NOT an empty string presume it a block cache view request.
+  if (format.equals("json") && bcn != null && bcn.length() > 0) {
+    request.setAttribute("conf", regionServer.getConfiguration());
+    request.setAttribute("bcn", bcn);
+    request.setAttribute("bcv", bcv);
+    request.setAttribute("blockCache", regionServer.getBlockCache().orElse(null));
+%><jsp:include page="blockCacheView.jsp"/>
 <%
     return;
   }
@@ -138,11 +112,18 @@
       <jsp:include page="blockCache.jsp"/>
     </section>
 
+    <section>
+      <% request.setAttribute("parent", "/regionserver.jsp"); %>
+      <jsp:include page="taskMonitor.jsp"/>
+    </section>
+
 
     <%-- TODO: Migrate rest of RSStatusTmpl.jamon  --%>
 
   </div>
 </div> <!-- /.container-fluid content -->
+
+<%-- TODO: We also need /static/js/jquery.tablesorter.min.js and the init JS code here!  --%>
 
 <jsp:include page="footer.jsp"/>
 
