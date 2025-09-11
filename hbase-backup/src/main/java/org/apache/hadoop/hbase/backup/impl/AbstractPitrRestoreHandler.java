@@ -41,7 +41,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.backup.BackupType;
 import org.apache.hadoop.hbase.backup.PointInTimeRestoreRequest;
 import org.apache.hadoop.hbase.backup.RestoreRequest;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
@@ -249,8 +248,6 @@ public abstract class AbstractPitrRestoreHandler {
 
         try {
           if (backupAdmin.validateRequest(restoreRequest)) {
-            // check if any bulkload entry exists post this backup time and before "endtime"
-            checkBulkLoadAfterBackup(conn, sTableName, backup, endTime);
             return backup;
           }
         } catch (IOException e) {
@@ -260,31 +257,6 @@ public abstract class AbstractPitrRestoreHandler {
       }
     }
     return null;
-  }
-
-  /**
-   * Checks if any bulk load operation occurred for the specified table post last successful backup
-   * and before restore time.
-   * @param conn       Active HBase connection
-   * @param sTableName Table for which to check bulk load history
-   * @param backup     Last successful backup before the target recovery time
-   * @param endTime    Target recovery time
-   * @throws IOException if a bulkload entry is found in between backup time and endtime
-   */
-  private void checkBulkLoadAfterBackup(Connection conn, TableName sTableName,
-    PitrBackupMetadata backup, long endTime) throws IOException {
-    try (BackupSystemTable backupSystemTable = new BackupSystemTable(conn)) {
-      List<BulkLoad> bulkLoads = backupSystemTable.readBulkloadRows(List.of(sTableName));
-      for (BulkLoad load : bulkLoads) {
-        long lastBackupTs = (backup.getType() == BackupType.FULL)
-          ? backup.getStartTs()
-          : backup.getIncrCommittedWalTs();
-        if (lastBackupTs < load.getTimestamp() && load.getTimestamp() < endTime) {
-          throw new IOException("Bulk load operation detected after last successful backup for "
-            + "table: " + sTableName);
-        }
-      }
-    }
   }
 
   /**
