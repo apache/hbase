@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.backup.impl;
 
 import java.util.List;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.backup.BackupType;
 import org.apache.hadoop.hbase.backup.impl.BackupManifest.BackupImage;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -57,15 +56,5 @@ public class BackupImageAdapter implements PitrBackupMetadata {
   @Override
   public String getRootDir() {
     return image.getRootDir();
-  }
-
-  @Override
-  public BackupType getType() {
-    return image.getType();
-  }
-
-  @Override
-  public long getIncrCommittedWalTs() {
-    return image.getIncrCommittedWalTs();
   }
 }
