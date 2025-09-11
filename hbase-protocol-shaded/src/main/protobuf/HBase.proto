@@ -290,6 +290,6 @@ message RotateFileData {
   required bytes data = 2;
 }
 
-message RSHighestWalFilenum {
-  map<string, uint64> file_num_map = 1;
+message LastHighestWalFilenum {
+  map<string, uint64> file_num = 1;
 }

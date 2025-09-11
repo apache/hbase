@@ -807,7 +807,7 @@ public final class BackupUtils {
 
         String address = serverName.getAddress().toString();
         Long lastHighestWALFilenum = lastLogRollResult.get(address);
-        if (lastHighestWALFilenum != null && lastHighestWALFilenum >= newHighestWALFilenum) {
+        if (lastHighestWALFilenum != null && lastHighestWALFilenum > newHighestWALFilenum) {
           LOG.warn("Won't update last roll log result for server {}: current = {}, new = {}",
             serverName, lastHighestWALFilenum, newHighestWALFilenum);
         } else {

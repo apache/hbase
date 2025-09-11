@@ -20,20 +20,21 @@ package org.apache.hadoop.hbase.master.procedure;
 import java.io.IOException;
 import java.util.List;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.master.ServerListener;
 import org.apache.hadoop.hbase.master.ServerManager;
+import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
 import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
-import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RSHighestWalFilenum;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.LastHighestWalFilenum;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.LogRollProcedureState;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.LogRollRemoteProcedureResult;
 
 /**
  * The procedure to perform WAL rolling on all of RegionServers.
@@ -67,14 +68,18 @@ public class LogRollProcedure
           setNextState(LogRollProcedureState.LOG_ROLL_COLLECT_RS_HIGHEST_WAL_FILENUM);
           return Flow.HAS_MORE_STATE;
         case LOG_ROLL_COLLECT_RS_HIGHEST_WAL_FILENUM:
-          AsyncClusterConnection asyncClusterConn =
-            env.getMasterServices().getAsyncClusterConnection();
-          RSHighestWalFilenum.Builder builder = RSHighestWalFilenum.newBuilder();
-          for (ServerName serverName : serverManager.getOnlineServersList()) {
-            long highestWALFilenum = FutureUtils
-              .get(asyncClusterConn.getRegionServerAdmin(serverName).getHighestWALFilenum())
-              .getHighestWalFilenum();
-            builder.putFileNumMap(serverName.toString(), highestWALFilenum);
+          // get children procedure
+          List<LogRollRemoteProcedure> children =
+            env.getMasterServices().getMasterProcedureExecutor().getProcedures().stream()
+              .filter(p -> p instanceof LogRollRemoteProcedure)
+              .filter(p -> p.getParentProcId() == getProcId()).map(p -> (LogRollRemoteProcedure) p)
+              .toList();
+          LastHighestWalFilenum.Builder builder = LastHighestWalFilenum.newBuilder();
+          for (Procedure<MasterProcedureEnv> child : children) {
+            LogRollRemoteProcedureResult result =
+              LogRollRemoteProcedureResult.parseFrom(child.getResult());
+            builder.putFileNum(ProtobufUtil.toServerName(result.getServerName()).toString(),
+              result.getLastHighestWalFilenum());
           }
           setResult(builder.build().toByteArray());
           setNextState(LogRollProcedureState.LOG_ROLL_UNREGISTER_SERVER_LISTENER);
@@ -133,9 +138,9 @@ public class LogRollProcedure
     super.serializeStateData(serializer);
 
     if (getResult() != null && getResult().length > 0) {
-      serializer.serialize((RSHighestWalFilenum.parseFrom(getResult())));
+      serializer.serialize(LastHighestWalFilenum.parseFrom(getResult()));
     } else {
-      serializer.serialize(RSHighestWalFilenum.getDefaultInstance());
+      serializer.serialize(LastHighestWalFilenum.getDefaultInstance());
     }
   }
 
@@ -144,16 +149,17 @@ public class LogRollProcedure
     super.deserializeStateData(serializer);
 
     if (getResult() == null) {
-      RSHighestWalFilenum rsHighestWalFilenumMap =
-        serializer.deserialize(RSHighestWalFilenum.class);
-      if (rsHighestWalFilenumMap != null) {
-        if (rsHighestWalFilenumMap.getFileNumMapMap().isEmpty()) {
-          if (getCurrentState() == LogRollProcedureState.LOG_ROLL_UNREGISTER_SERVER_LISTENER) {
-            LOG.warn("pid = {}, current state is the last state, but rsHighestWalFilenumMap is "
-              + "empty, this should not happen. Are all region servers down ?", getProcId());
-          }
+      LastHighestWalFilenum lastHighestWalFilenum =
+        serializer.deserialize(LastHighestWalFilenum.class);
+      if (lastHighestWalFilenum != null) {
+        if (
+          lastHighestWalFilenum.getFileNumMap().isEmpty()
+            && getCurrentState() == LogRollProcedureState.LOG_ROLL_UNREGISTER_SERVER_LISTENER
+        ) {
+          LOG.warn("pid = {}, current state is the last state, but rsHighestWalFilenumMap is "
+            + "empty, this should not happen. Are all region servers down ?", getProcId());
         } else {
-          setResult(rsHighestWalFilenumMap.toByteArray());
+          setResult(lastHighestWalFilenum.toByteArray());
         }
       }
     }

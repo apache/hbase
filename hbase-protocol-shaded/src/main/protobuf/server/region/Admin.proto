@@ -342,13 +342,6 @@ message ClearSlowLogResponses {
   required bool is_cleaned = 1;
 }
 
-message GetHighestWALFilenumRequest {
-}
-
-message GetHighestWALFilenumResponse {
-  optional uint64 highest_wal_filenum = 1;
-}
-
 service AdminService {
   rpc GetRegionInfo(GetRegionInfoRequest)
     returns(GetRegionInfoResponse);
@@ -427,7 +420,4 @@ service AdminService {
 
   rpc GetCachedFilesList(GetCachedFilesListRequest)
     returns(GetCachedFilesListResponse);
-
-  rpc GetHighestWALFilenum(GetHighestWALFilenumRequest)
-    returns(GetHighestWALFilenumResponse);
 }

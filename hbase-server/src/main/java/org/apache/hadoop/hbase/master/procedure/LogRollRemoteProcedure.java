@@ -100,6 +100,13 @@ public class LogRollRemoteProcedure extends ServerRemoteProcedure
   }
 
   @Override
+  public synchronized void remoteOperationCompleted(MasterProcedureEnv env,
+    byte[] remoteResultData) {
+    setResult(remoteResultData);
+    super.remoteOperationCompleted(env, remoteResultData);
+  }
+
+  @Override
   protected void toStringClassDetails(StringBuilder sb) {
     sb.append(getClass().getSimpleName()).append(" targetServer=").append(targetServer);
   }

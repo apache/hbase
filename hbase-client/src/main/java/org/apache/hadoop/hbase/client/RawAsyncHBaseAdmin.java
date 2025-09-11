@@ -150,9 +150,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerR
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.LastHighestWalFilenum;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RSHighestWalFilenum;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchema;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
@@ -3259,15 +3259,16 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<Map<ServerName, Long>> rollAllWALWriters() {
-    return this.<RollAllWALWritersRequest, RollAllWALWritersResponse,
-      Map<ServerName,
-        Long>> procedureCall(
-          RequestConverter.buildRollAllWALWritersRequest(ng.getNonceGroup(), ng.newNonce()),
-          (s, c, req, done) -> s.rollAllWALWriters(c, req, done), resp -> resp.getProcId(),
-          result -> RSHighestWalFilenum.parseFrom(result.toByteArray()).getFileNumMapMap()
-            .entrySet().stream().collect(Collectors
-              .toUnmodifiableMap(e -> ServerName.valueOf(e.getKey()), Map.Entry::getValue)),
-          new RollAllWALWritersBiConsumer());
+    return this
+      .<RollAllWALWritersRequest, RollAllWALWritersResponse,
+        Map<ServerName,
+          Long>> procedureCall(
+            RequestConverter.buildRollAllWALWritersRequest(ng.getNonceGroup(), ng.newNonce()),
+            (s, c, req, done) -> s.rollAllWALWriters(c, req, done), resp -> resp.getProcId(),
+            result -> LastHighestWalFilenum.parseFrom(result.toByteArray()).getFileNumMap()
+              .entrySet().stream().collect(Collectors
+                .toUnmodifiableMap(e -> ServerName.valueOf(e.getKey()), Map.Entry::getValue)),
+            new RollAllWALWritersBiConsumer());
   }
 
   @Override

@@ -3550,9 +3550,9 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       .submit(new RSProcedureHandler(this, procId, initiatingMasterActiveTime, callable));
   }
 
-  public void remoteProcedureComplete(long procId, long initiatingMasterActiveTime,
-    Throwable error) {
-    procedureResultReporter.complete(procId, initiatingMasterActiveTime, error);
+  public void remoteProcedureComplete(long procId, long initiatingMasterActiveTime, Throwable error,
+    byte[] procResultData) {
+    procedureResultReporter.complete(procId, initiatingMasterActiveTime, error, procResultData);
   }
 
   void reportProcedureDone(ReportProcedureDoneRequest request) throws IOException {

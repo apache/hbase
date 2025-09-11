@@ -1409,7 +1409,7 @@ public interface Admin extends Abortable, Closeable {
    * {@link Admin#rollWALWriter(ServerName)}, this method is synchronous, which means it will block
    * until all RegionServers have completed the log roll, or a RegionServer fails due to an
    * exception that retry will not work.
-   * @return server and the highest wal filenum of server after completing log roll
+   * @return server and the highest wal filenum of server before performing log roll
    * @throws IOException if a remote or network exception occurs
    */
   Map<ServerName, Long> rollAllWALWriters() throws IOException;

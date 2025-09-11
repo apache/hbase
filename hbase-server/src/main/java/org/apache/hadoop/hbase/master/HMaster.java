@@ -4195,11 +4195,11 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     return (RemoteProcedure<MasterProcedureEnv, ?>) procedure;
   }
 
-  public void remoteProcedureCompleted(long procId) {
+  public void remoteProcedureCompleted(long procId, byte[] remoteResultData) {
     LOG.debug("Remote procedure done, pid={}", procId);
     RemoteProcedure<MasterProcedureEnv, ?> procedure = getRemoteProcedure(procId);
     if (procedure != null) {
-      procedure.remoteOperationCompleted(procedureExecutor.getEnvironment());
+      procedure.remoteOperationCompleted(procedureExecutor.getEnvironment(), remoteResultData);
     }
   }
 

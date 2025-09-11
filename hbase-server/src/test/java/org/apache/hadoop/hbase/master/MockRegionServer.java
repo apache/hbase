@@ -99,8 +99,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegion
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetCachedFilesListRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetCachedFilesListResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetHighestWALFilenumRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetHighestWALFilenumResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoRequest;
@@ -757,12 +755,6 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
   @Override
   public ReplicateWALEntryResponse replicateToReplica(RpcController controller,
     ReplicateWALEntryRequest request) throws ServiceException {
-    return null;
-  }
-
-  @Override
-  public GetHighestWALFilenumResponse getHighestWALFilenum(RpcController controller,
-    GetHighestWALFilenumRequest request) throws ServiceException {
     return null;
   }
 }

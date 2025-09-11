@@ -166,8 +166,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegion
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetCachedFilesListRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetCachedFilesListResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetHighestWALFilenumRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetHighestWALFilenumResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoRequest;
@@ -2579,7 +2577,9 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
     }
     request.getResultList().forEach(result -> {
       if (result.getStatus() == RemoteProcedureResult.Status.SUCCESS) {
-        server.remoteProcedureCompleted(result.getProcId());
+        byte[] remoteResultData =
+          result.hasProcResultData() ? result.getProcResultData().toByteArray() : null;
+        server.remoteProcedureCompleted(result.getProcId(), remoteResultData);
       } else {
         server.remoteProcedureFailed(result.getProcId(),
           RemoteProcedureException.fromProto(result.getError()));
@@ -3617,12 +3617,6 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
   @Override
   public GetCachedFilesListResponse getCachedFilesList(RpcController controller,
     GetCachedFilesListRequest request) throws ServiceException {
-    throw new ServiceException(new DoNotRetryIOException("Unsupported method on master"));
-  }
-
-  @Override
-  public GetHighestWALFilenumResponse getHighestWALFilenum(RpcController controller,
-    GetHighestWALFilenumRequest request) throws ServiceException {
     throw new ServiceException(new DoNotRetryIOException("Unsupported method on master"));
   }
 

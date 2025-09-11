@@ -27,6 +27,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.LogRollRemoteProcedureResult;
+
 @InterfaceAudience.Private
 public class LogRollCallable extends BaseRSProcedureCallable {
 
@@ -35,7 +38,7 @@ public class LogRollCallable extends BaseRSProcedureCallable {
   private int maxRollRetry;
 
   @Override
-  protected void doCall() throws Exception {
+  protected byte[] doCall() throws Exception {
     for (int nAttempt = 0; nAttempt < maxRollRetry; nAttempt++) {
       try {
         Pair<Long, Long> filenumPairBefore = getFilenumPair();
@@ -49,6 +52,9 @@ public class LogRollCallable extends BaseRSProcedureCallable {
             + "rolling log, highest filenum = {} default WAL filenum = {}",
           filenumPairBefore.getFirst(), filenumPairBefore.getSecond(), filenumPairAfter.getFirst(),
           filenumPairAfter.getSecond());
+        return LogRollRemoteProcedureResult.newBuilder()
+          .setServerName(ProtobufUtil.toServerName(rs.getServerName()))
+          .setLastHighestWalFilenum(filenumPairBefore.getFirst()).build().toByteArray();
       } catch (Exception e) {
         LOG.warn("Failed rolling log on attempt={}", nAttempt, e);
         if (nAttempt == maxRollRetry - 1) {
@@ -56,6 +62,7 @@ public class LogRollCallable extends BaseRSProcedureCallable {
         }
       }
     }
+    return null;
   }
 
   private Pair<Long, Long> getFilenumPair() throws IOException {

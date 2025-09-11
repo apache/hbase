@@ -32,8 +32,9 @@ public class SnapshotVerifyCallable extends BaseRSProcedureCallable {
   private RegionInfo region;
 
   @Override
-  protected void doCall() throws Exception {
+  protected byte[] doCall() throws Exception {
     rs.getRsSnapshotVerifier().verifyRegion(snapshot, region);
+    return null;
   }
 
   @Override
