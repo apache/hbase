@@ -77,7 +77,7 @@ public class TestCompactionAfterBulkLoad extends TestBulkloadBase {
       MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     // TODO We need a way to do this without creating files
     return HRegion.createHRegion(hRegionInfo, new Path(testFolder.newFolder().toURI()), conf,
-      builder.build(), log, true, regionServerServices, regionServerServices);
+      builder.build(), log, true, regionServerServices);
 
   }
 

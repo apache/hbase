@@ -318,8 +318,8 @@ public final class MasterRegion {
       LOG.warn("failed to clean up initializing flag: " + initializingFlag);
     }
     WAL wal = createWAL(walFactory, walRoller, server.getServerName().toString(), walFs, walRootDir, regionInfo);
-    return HRegion.openHRegionFromTableDir(conf, fs, tableDir, regionInfo, td, wal, null,
-      server.getKeyManagementService(), null);
+    return HRegion.openHRegionFromTableDir(conf, fs, tableDir, regionInfo, td, wal, null, null,
+       server.getKeyManagementService());
   }
 
   private static RegionInfo loadRegionInfo(FileSystem fs, Path tableDir) throws IOException {
@@ -363,8 +363,8 @@ public final class MasterRegion {
     // we do not do WAL splitting here so it is possible to have uncleanly closed WAL files, so we
     // need to ignore EOFException.
     conf.setBoolean(HRegion.RECOVERED_EDITS_IGNORE_EOF, true);
-    return HRegion.openHRegionFromTableDir(conf, fs, tableDir, regionInfo, td, wal, null,
-      server, null);
+    return HRegion.openHRegionFromTableDir(conf, fs, tableDir, regionInfo, td, wal, null, null,
+      server);
   }
 
   private static void replayWALs(Configuration conf, FileSystem walFs, Path walRootDir,

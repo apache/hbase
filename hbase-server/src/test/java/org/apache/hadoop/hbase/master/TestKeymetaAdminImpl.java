@@ -102,6 +102,7 @@ public class TestKeymetaAdminImpl {
     conf.set(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, "true");
     conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, MockManagedKeyProvider.class.getName());
 
+    when(mockServer.getKeyManagementService()).thenReturn(mockServer);
     when(mockServer.getFileSystem()).thenReturn(mockFileSystem);
     when(mockServer.getConfiguration()).thenReturn(conf);
     keymetaAdmin = new KeymetaAdminImplForTest(mockServer, keymetaAccessor);

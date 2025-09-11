@@ -587,6 +587,6 @@ public class MockNoopMasterServices implements MasterServices {
 
   @Override
   public KeyManagementService getKeyManagementService() {
-    return null;
+    return this;
   }
 }

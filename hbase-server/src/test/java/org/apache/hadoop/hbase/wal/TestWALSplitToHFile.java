@@ -532,8 +532,7 @@ public class TestWALSplitToHFile {
     Configuration customConf = new Configuration(this.conf);
     customConf.set(DefaultStoreEngine.DEFAULT_STORE_FLUSHER_CLASS_KEY,
       AbstractTestWALReplay.CustomStoreFlusher.class.getName());
-    HRegion region = HRegion.openHRegion(this.rootDir, ri, td, wal, customConf, rsServices,
-      rsServices.getKeyManagementService(), null);
+    HRegion region = HRegion.openHRegion(this.rootDir, ri, td, wal, customConf, rsServices, null);
     int writtenRowCount = 10;
     List<ColumnFamilyDescriptor> families = Arrays.asList(td.getColumnFamilies());
     for (int i = 0; i < writtenRowCount; i++) {
@@ -584,8 +583,7 @@ public class TestWALSplitToHFile {
     WALSplitter.split(rootDir, logDir, oldLogDir, FileSystem.get(this.conf), this.conf, wals);
     WAL wal2 = createWAL(this.conf, rootDir, logName);
     Mockito.doReturn(false).when(rsServices).isAborted();
-    HRegion region2 = HRegion.openHRegion(this.rootDir, ri, td, wal2, this.conf, rsServices,
-      rsServices.getKeyManagementService(), null);
+    HRegion region2 = HRegion.openHRegion(this.rootDir, ri, td, wal2, this.conf, rsServices, null);
     scanner = region2.getScanner(new Scan());
     assertEquals(writtenRowCount, getScannedCount(scanner));
   }

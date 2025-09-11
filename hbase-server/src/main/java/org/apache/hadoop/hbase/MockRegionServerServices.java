@@ -405,6 +405,6 @@ public class MockRegionServerServices implements RegionServerServices {
 
   @Override
   public KeyManagementService getKeyManagementService() {
-    return null;
+    return this;
   }
 }

@@ -218,11 +218,10 @@ public class TestReplicateToReplica {
 
     walFactory = new WALFactory(conf, UUID.randomUUID().toString());
     WAL wal = walFactory.getWAL(primaryHri);
-    primary = HRegion.createHRegion(primaryHri, testDir, conf, td, wal, null);
+    primary = HRegion.createHRegion(primaryHri, testDir, conf, td, wal);
     primary.close();
 
-    primary = HRegion.openHRegion(testDir, primaryHri, td, wal, conf, rss,
-      rss.getKeyManagementService(), null);
+    primary = HRegion.openHRegion(testDir, primaryHri, td, wal, conf, rss, null);
     secondary = HRegion.openHRegion(secondaryHri, td, null, conf, rss, null);
 
     when(rss.getRegions()).then(i -> {
@@ -382,7 +381,7 @@ public class TestReplicateToReplica {
 
     // reopen
     primary = HRegion.openHRegion(testDir, primary.getRegionInfo(), td, primary.getWAL(),
-      UTIL.getConfiguration(), rss, rss.getKeyManagementService(), null);
+      UTIL.getConfiguration(), rss, null);
     replicateAll();
     // we should have the row now
     assertEquals(1, Bytes.toInt(secondary.get(new Get(row)).getValue(FAMILY, QUAL)));

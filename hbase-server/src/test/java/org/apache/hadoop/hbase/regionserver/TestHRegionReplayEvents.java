@@ -199,14 +199,13 @@ public class TestHRegionReplayEvents {
     es.startExecutorService(es.new ExecutorConfig().setCorePoolSize(1)
       .setExecutorType(ExecutorType.RS_COMPACTED_FILES_DISCHARGER));
     when(rss.getExecutorService()).thenReturn(es);
-    primaryRegion = HRegion.createHRegion(primaryHri, rootDir, CONF, htd, walPrimary, null);
+    primaryRegion = HRegion.createHRegion(primaryHri, rootDir, CONF, htd, walPrimary);
     primaryRegion.close();
     List<HRegion> regions = new ArrayList<>();
     regions.add(primaryRegion);
     Mockito.doReturn(regions).when(rss).getRegions();
 
-    primaryRegion = HRegion.openHRegion(rootDir, primaryHri, htd, walPrimary, CONF, rss,
-      rss.getKeyManagementService(), null);
+    primaryRegion = HRegion.openHRegion(rootDir, primaryHri, htd, walPrimary, CONF, rss, null);
     secondaryRegion = HRegion.openHRegion(secondaryHri, htd, null, CONF, rss, null);
 
     reader = null;
@@ -854,8 +853,7 @@ public class TestHRegionReplayEvents {
 
     // close the region and open again.
     primaryRegion.close();
-    primaryRegion = HRegion.openHRegion(rootDir, primaryHri, htd, walPrimary, CONF, rss,
-      rss.getKeyManagementService(), null);
+    primaryRegion = HRegion.openHRegion(rootDir, primaryHri, htd, walPrimary, CONF, rss, null);
 
     // now replay the edits and the flush marker
     reader = createWALReaderForPrimary();
@@ -935,8 +933,7 @@ public class TestHRegionReplayEvents {
 
     // close the region and open again.
     primaryRegion.close();
-    primaryRegion = HRegion.openHRegion(rootDir, primaryHri, htd, walPrimary, CONF, rss,
-      rss.getKeyManagementService(), null);
+    primaryRegion = HRegion.openHRegion(rootDir, primaryHri, htd, walPrimary, CONF, rss, null);
 
     // now replay the edits and the flush marker
     reader = createWALReaderForPrimary();
@@ -1015,8 +1012,7 @@ public class TestHRegionReplayEvents {
 
     // close the region and open again.
     primaryRegion.close();
-    primaryRegion = HRegion.openHRegion(rootDir, primaryHri, htd, walPrimary, CONF, rss,
-      rss.getKeyManagementService(), null);
+    primaryRegion = HRegion.openHRegion(rootDir, primaryHri, htd, walPrimary, CONF, rss, null);
 
     // now replay the edits and the flush marker
     reader = createWALReaderForPrimary();
@@ -1354,8 +1350,7 @@ public class TestHRegionReplayEvents {
     disableReads(secondaryRegion);
 
     primaryRegion.close();
-    primaryRegion = HRegion.openHRegion(rootDir, primaryHri, htd, walPrimary, CONF, rss,
-      rss.getKeyManagementService(), null);
+    primaryRegion = HRegion.openHRegion(rootDir, primaryHri, htd, walPrimary, CONF, rss, null);
 
     reader = createWALReaderForPrimary();
     while (true) {
@@ -1505,8 +1500,7 @@ public class TestHRegionReplayEvents {
 
     // close the region and open again.
     primaryRegion.close();
-    primaryRegion = HRegion.openHRegion(rootDir, primaryHri, htd, walPrimary, CONF, rss,
-      rss.getKeyManagementService(), null);
+    primaryRegion = HRegion.openHRegion(rootDir, primaryHri, htd, walPrimary, CONF, rss, null);
 
     // bulk load a file into primary region
     byte[] randomValues = new byte[20];

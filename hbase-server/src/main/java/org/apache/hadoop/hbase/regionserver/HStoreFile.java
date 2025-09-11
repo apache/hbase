@@ -227,7 +227,8 @@ public class HStoreFile implements StoreFile {
 
   /**
    * Constructor, loads a reader and it's indices, etc. May allocate a substantial amount of ram
-   * depending on the underlying files (10-20MB?).
+   * depending on the underlying files (10-20MB?). Since this is used only in read path,
+   * key namespace is not needed.
    * @param fs             The current file system to use.
    * @param p              The path of the file.
    * @param conf           The current configuration.
@@ -241,9 +242,9 @@ public class HStoreFile implements StoreFile {
    */
 public HStoreFile(FileSystem fs, Path p, Configuration conf, CacheConfig cacheConf,
     BloomType cfBloomType, boolean primaryReplica, StoreFileTracker sft) throws IOException {
-    this(sft.getStoreFileInfo(p, primaryReplica), cfBloomType, cacheConf, null,
-      KeyNamespaceUtil.constructKeyNamespace(sft.getStoreContext()),
-      SystemKeyCache.createCache(conf, fs), new ManagedKeyDataCache(conf, null));
+    this(sft.getStoreFileInfo(p, primaryReplica), cfBloomType, cacheConf, null, null,
+      SecurityUtil.isKeyManagementEnabled(conf) ? SystemKeyCache.createCache(conf, fs) : null,
+      SecurityUtil.isKeyManagementEnabled(conf) ? new ManagedKeyDataCache(conf, null) : null);
   }
 
   /**
@@ -264,8 +265,10 @@ public HStoreFile(FileSystem fs, Path p, Configuration conf, CacheConfig cacheCo
     throws IOException {
     this(fileInfo, cfBloomType, cacheConf, null,
       KeyNamespaceUtil.constructKeyNamespace(fileInfo),
-      SystemKeyCache.createCache(fileInfo.getConf(), fileInfo.getFileSystem()),
-      new ManagedKeyDataCache(fileInfo.getConf(), null));
+      SecurityUtil.isKeyManagementEnabled(fileInfo.getConf()) ?
+        SystemKeyCache.createCache(fileInfo.getConf(), fileInfo.getFileSystem()) : null,
+      SecurityUtil.isKeyManagementEnabled(fileInfo.getConf()) ? new
+        ManagedKeyDataCache(fileInfo.getConf(), null) : null);
   }
 
   /**

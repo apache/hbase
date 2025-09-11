@@ -648,8 +648,7 @@ public abstract class AbstractTestWALReplay {
     customConf.set(DefaultStoreEngine.DEFAULT_STORE_FLUSHER_CLASS_KEY,
       CustomStoreFlusher.class.getName());
     HRegion region =
-      HRegion.openHRegion(this.hbaseRootDir, hri, htd, wal, customConf, rsServices,
-      rsServices.getKeyManagementService(), null);
+      HRegion.openHRegion(this.hbaseRootDir, hri, htd, wal, customConf, rsServices, null);
     int writtenRowCount = 10;
     List<ColumnFamilyDescriptor> families = Arrays.asList((htd.getColumnFamilies()));
     for (int i = 0; i < writtenRowCount; i++) {
@@ -701,8 +700,7 @@ public abstract class AbstractTestWALReplay {
     WAL wal2 = createWAL(this.conf, hbaseRootDir, logName);
     Mockito.doReturn(false).when(rsServices).isAborted();
     HRegion region2 =
-      HRegion.openHRegion(this.hbaseRootDir, hri, htd, wal2, this.conf, rsServices,
-      rsServices.getKeyManagementService(), null);
+      HRegion.openHRegion(this.hbaseRootDir, hri, htd, wal2, this.conf, rsServices, null);
     scanner = region2.getScanner(new Scan());
     assertEquals(writtenRowCount, getScannedCount(scanner));
   }
