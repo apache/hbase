@@ -23,6 +23,7 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
@@ -33,11 +34,14 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.CellSortReducer;
 import org.apache.hadoop.hbase.mapreduce.HFileInputFormat;
 import org.apache.hadoop.hbase.mapreduce.HFileOutputFormat2;
+import org.apache.hadoop.hbase.mapreduce.KeyOnlyCellComparable;
+import org.apache.hadoop.hbase.mapreduce.PreSortedCellsReducer;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.snapshot.SnapshotRegionLocator;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.MapReduceExtendedCell;
 import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
@@ -71,18 +75,28 @@ public class MapReduceHFileSplitterJob extends Configured implements Tool {
   /**
    * A mapper that just writes out cells. This one can be used together with {@link CellSortReducer}
    */
-  static class HFileCellMapper extends Mapper<NullWritable, Cell, ImmutableBytesWritable, Cell> {
+  static class HFileCellMapper extends Mapper<NullWritable, Cell, WritableComparable<?>, Cell> {
+
+    private boolean diskBasedSortingEnabled = false;
 
     @Override
     public void map(NullWritable key, Cell value, Context context)
       throws IOException, InterruptedException {
-      context.write(new ImmutableBytesWritable(CellUtil.cloneRow(value)),
-        new MapReduceExtendedCell(value));
+      ExtendedCell extendedCell = (ExtendedCell) value;
+      context.write(wrap(extendedCell), new MapReduceExtendedCell(extendedCell));
     }
 
     @Override
     public void setup(Context context) throws IOException {
-      // do nothing
+      diskBasedSortingEnabled =
+        HFileOutputFormat2.diskBasedSortingEnabled(context.getConfiguration());
+    }
+
+    private WritableComparable<?> wrap(ExtendedCell cell) {
+      if (diskBasedSortingEnabled) {
+        return new KeyOnlyCellComparable(cell);
+      }
+      return new ImmutableBytesWritable(CellUtil.cloneRow(cell));
     }
   }
 
@@ -106,13 +120,23 @@ public class MapReduceHFileSplitterJob extends Configured implements Tool {
       true);
     job.setJarByClass(MapReduceHFileSplitterJob.class);
     job.setInputFormatClass(HFileInputFormat.class);
-    job.setMapOutputKeyClass(ImmutableBytesWritable.class);
     String hfileOutPath = conf.get(BULK_OUTPUT_CONF_KEY);
+    boolean diskBasedSortingEnabled = HFileOutputFormat2.diskBasedSortingEnabled(conf);
+    if (diskBasedSortingEnabled) {
+      job.setMapOutputKeyClass(KeyOnlyCellComparable.class);
+      job.setSortComparatorClass(KeyOnlyCellComparable.KeyOnlyCellComparator.class);
+    } else {
+      job.setMapOutputKeyClass(ImmutableBytesWritable.class);
+    }
     if (hfileOutPath != null) {
       LOG.debug("add incremental job :" + hfileOutPath + " from " + inputDirs);
       TableName tableName = TableName.valueOf(tabName);
       job.setMapperClass(HFileCellMapper.class);
-      job.setReducerClass(CellSortReducer.class);
+      if (diskBasedSortingEnabled) {
+        job.setReducerClass(PreSortedCellsReducer.class);
+      } else {
+        job.setReducerClass(CellSortReducer.class);
+      }
       Path outputDir = new Path(hfileOutPath);
       FileOutputFormat.setOutputPath(job, outputDir);
       job.setMapOutputValueClass(MapReduceExtendedCell.class);
