@@ -1011,4 +1011,8 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
     return admin.isReplicationPeerModificationEnabled();
   }
 
+  @Override
+  public Long refreshMeta() throws IOException {
+    return admin.refreshMeta();
+  }
 }
