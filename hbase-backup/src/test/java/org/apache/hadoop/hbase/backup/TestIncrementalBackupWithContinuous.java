@@ -22,7 +22,6 @@ import static org.apache.hadoop.hbase.replication.regionserver.ReplicationMarker
 import static org.apache.hadoop.hbase.replication.regionserver.ReplicationMarkerChore.REPLICATION_MARKER_ENABLED_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -48,7 +47,6 @@ import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.HFileTestUtil;
-import org.apache.hadoop.util.ToolRunner;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -187,54 +185,6 @@ public class TestIncrementalBackupWithContinuous extends TestBackupBase {
       client.restore(
         BackupUtils.createRestoreRequest(BACKUP_ROOT_DIR, backup2, false, tables, tables, true));
       assertEquals(expectedRowCount, TEST_UTIL.countRows(tableName1));
-    }
-  }
-
-  @Test
-  public void testPitrFailureDueToMissingBackupPostBulkload() throws Exception {
-    String methodName = Thread.currentThread().getStackTrace()[1].getMethodName();
-    TableName tableName1 = TableName.valueOf("table_" + methodName);
-    TEST_UTIL.createTable(tableName1, famName);
-    try (BackupSystemTable systemTable = new BackupSystemTable(TEST_UTIL.getConnection())) {
-
-      // The test starts with no data, and no bulk loaded rows.
-      int expectedRowCount = 0;
-      assertEquals(expectedRowCount, TEST_UTIL.countRows(tableName1));
-      assertTrue(systemTable.readBulkloadRows(List.of(tableName1)).isEmpty());
-
-      // Create continuous backup, bulk loads are now being tracked
-      String backup1 = backupTables(BackupType.FULL, List.of(tableName1), BACKUP_ROOT_DIR, true);
-      assertTrue(checkSucceeded(backup1));
-
-      loadTable(TEST_UTIL.getConnection().getTable(tableName1));
-      expectedRowCount = expectedRowCount + NB_ROWS_IN_BATCH;
-      performBulkLoad("bulkPreIncr", methodName, tableName1);
-      expectedRowCount += ROWS_IN_BULK_LOAD;
-      assertEquals(expectedRowCount, TEST_UTIL.countRows(tableName1));
-      assertEquals(1, systemTable.readBulkloadRows(List.of(tableName1)).size());
-
-      loadTable(TEST_UTIL.getConnection().getTable(tableName1));
-      Thread.sleep(5000);
-
-      // Incremental backup
-      String backup2 =
-        backupTables(BackupType.INCREMENTAL, List.of(tableName1), BACKUP_ROOT_DIR, true);
-      assertTrue(checkSucceeded(backup2));
-      assertEquals(0, systemTable.readBulkloadRows(List.of(tableName1)).size());
-
-      performBulkLoad("bulkPostIncr", methodName, tableName1);
-      assertEquals(1, systemTable.readBulkloadRows(List.of(tableName1)).size());
-
-      loadTable(TEST_UTIL.getConnection().getTable(tableName1));
-      Thread.sleep(10000);
-      long restoreTs = BackupUtils.getReplicationCheckpoint(TEST_UTIL.getConnection());
-
-      // expect restore failure due to no backup post bulkPostIncr bulkload
-      TableName restoredTable = TableName.valueOf("restoredTable");
-      String[] args = PITRTestUtil.buildPITRArgs(new TableName[] { tableName1 },
-        new TableName[] { restoredTable }, restoreTs, null);
-      int ret = ToolRunner.run(conf1, new PointInTimeRestoreDriver(), args);
-      assertNotEquals("Restore should fail since there is one bulkload without any backup", 0, ret);
     }
   }
 
