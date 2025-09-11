@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.backup.impl;
 import java.util.List;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupInfo;
-import org.apache.hadoop.hbase.backup.BackupType;
 import org.apache.hadoop.hbase.backup.impl.BackupManifest.BackupImage;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -48,10 +47,4 @@ public interface PitrBackupMetadata {
 
   /** Returns Root directory where the backup is stored */
   String getRootDir();
-
-  /** Returns backup type */
-  BackupType getType();
-
-  /** Returns incrCommittedWalTs */
-  long getIncrCommittedWalTs();
 }

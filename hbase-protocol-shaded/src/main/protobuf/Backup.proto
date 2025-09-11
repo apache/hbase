@@ -65,7 +65,6 @@ message BackupImage {
   optional uint64 complete_ts = 6;
   repeated BackupImage ancestors = 7;
   repeated TableServerTimestamp tst_map = 8;
-  optional uint64 incr_committed_wal_ts = 9;
 
 }
 
