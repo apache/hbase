@@ -210,7 +210,7 @@ public class TestRowCacheCanCacheRow {
     Assert.assertTrue(RowCacheService.canCacheRow(get, region));
 
     // expect false
-    func.apply(get);
+    Get unused = func.apply(get);
     Assert.assertFalse(RowCacheService.canCacheRow(get, region));
   }
 }
