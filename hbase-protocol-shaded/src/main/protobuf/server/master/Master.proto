@@ -1293,8 +1293,8 @@ service MasterService {
   rpc RefreshMeta(RefreshMetaRequest)
     returns(RefreshMetaResponse);
 
-  rpc RefreshHfiles(RefreshHfilesRequest)
-    returns(RefreshHfilesResponse);
+  rpc RefreshHFiles(RefreshHFilesRequest)
+    returns(RefreshHFilesResponse);
 }
 
 // HBCK Service definitions.

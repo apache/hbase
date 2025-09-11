@@ -261,12 +261,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.OfflineReg
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.OfflineRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RecommissionRegionServerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RecommissionRegionServerResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RefreshMetaRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RefreshMetaResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RestoreSnapshotRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RestoreSnapshotResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RefreshHFilesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RefreshHFilesResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RefreshMetaRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RefreshMetaResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RestoreSnapshotRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RestoreSnapshotResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCatalogScanRequest;
@@ -4582,7 +4580,6 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         RefreshMetaResponse::getProcId))
       .call();
   }
-
 
   @Override
   public CompletableFuture<Long> refreshHFiles(final TableName tableName) {

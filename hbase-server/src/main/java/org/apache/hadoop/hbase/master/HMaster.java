@@ -170,9 +170,8 @@ import org.apache.hadoop.hbase.master.procedure.ModifyTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
 import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
 import org.apache.hadoop.hbase.master.procedure.RSProcedureDispatcher;
-import org.apache.hadoop.hbase.master.procedure.RefreshMetaProcedure;
-import org.apache.hadoop.hbase.master.procedure.ReloadQuotasProcedure;
 import org.apache.hadoop.hbase.master.procedure.RefreshHFilesTableProcedure;
+import org.apache.hadoop.hbase.master.procedure.RefreshMetaProcedure;
 import org.apache.hadoop.hbase.master.procedure.ReloadQuotasProcedure;
 import org.apache.hadoop.hbase.master.procedure.ReopenTableRegionsProcedure;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
@@ -4578,7 +4577,6 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
       });
   }
 
-  public Long refreshHfiles(final TableName tableName, final long nonceGroup, final long nonce) throws IOException {
   public Long refreshHfiles(final TableName tableName, final long nonceGroup, final long nonce)
     throws IOException {
     checkInitialized();
