@@ -1890,6 +1890,11 @@ public interface AsyncAdmin {
    */
   CompletableFuture<List<String>> getCachedFilesList(ServerName serverName);
 
+  /**
+   * Perform hbase:meta table refresh
+   */
+  CompletableFuture<Long> refreshMeta();
+
   @InterfaceAudience.Private
   CompletableFuture<Void> restoreBackupSystemTable(String snapshotName);
 }

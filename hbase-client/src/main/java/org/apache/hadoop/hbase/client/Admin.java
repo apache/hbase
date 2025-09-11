@@ -2703,6 +2703,11 @@ public interface Admin extends Abortable, Closeable {
    */
   List<String> getCachedFilesList(ServerName serverName) throws IOException;
 
+  /**
+   * Perform hbase:meta table refresh
+   */
+  Long refreshMeta() throws IOException;
+
   @InterfaceAudience.Private
   void restoreBackupSystemTable(String snapshotName) throws IOException;
 }
