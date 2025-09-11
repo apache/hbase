@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MatcherPredicate;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -326,16 +327,14 @@ public class TestPrefetch {
     // Wait for 20 seconds, no thread should start prefetch
     Thread.sleep(20000);
     assertFalse("Prefetch threads should not be running at this point", reader.prefetchStarted());
-    while (!reader.prefetchStarted()) {
-      assertTrue("Prefetch delay has not been expired yet",
-        getElapsedTime(startTime) < PrefetchExecutor.getPrefetchDelay());
-    }
-    if (reader.prefetchStarted()) {
-      // Added some delay as we have started the timer a bit late.
-      Thread.sleep(500);
-      assertTrue("Prefetch should start post configured delay",
-        getElapsedTime(startTime) > PrefetchExecutor.getPrefetchDelay());
-    }
+    long timeout = 10000;
+    Waiter.waitFor(conf, 10000, () -> (reader.prefetchStarted() || reader.prefetchComplete()));
+
+    assertTrue(reader.prefetchStarted() || reader.prefetchComplete());
+
+    assertTrue("Prefetch should start post configured delay",
+      getElapsedTime(startTime) > PrefetchExecutor.getPrefetchDelay());
+
     conf.setInt(PREFETCH_DELAY, 1000);
     conf.setFloat(PREFETCH_DELAY_VARIATION, PREFETCH_DELAY_VARIATION_DEFAULT_VALUE);
     prefetchExecutorNotifier.onConfigurationChange(conf);
