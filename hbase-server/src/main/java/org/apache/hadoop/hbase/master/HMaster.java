@@ -84,6 +84,7 @@ import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.NamespaceNotFoundException;
 import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.PleaseRestartMasterException;
 import org.apache.hadoop.hbase.RegionMetrics;
@@ -169,6 +170,7 @@ import org.apache.hadoop.hbase.master.procedure.ModifyTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
 import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
 import org.apache.hadoop.hbase.master.procedure.RSProcedureDispatcher;
+import org.apache.hadoop.hbase.master.procedure.RefreshHFilesTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.RefreshMetaProcedure;
 import org.apache.hadoop.hbase.master.procedure.ReloadQuotasProcedure;
 import org.apache.hadoop.hbase.master.procedure.ReopenTableRegionsProcedure;
@@ -4571,6 +4573,78 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
         @Override
         protected String getDescription() {
           return "RefreshMetaProcedure";
+        }
+      });
+  }
+
+  public Long refreshHfiles(final TableName tableName, final long nonceGroup, final long nonce)
+    throws IOException {
+    checkInitialized();
+
+    if (!tableDescriptors.exists(tableName)) {
+      LOG.info("RefreshHfilesProcedure failed because table {} does not exist",
+        tableName.getNameAsString());
+      throw new TableNotFoundException(tableName);
+    }
+
+    return MasterProcedureUtil
+      .submitProcedure(new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
+        @Override
+        protected void run() throws IOException {
+          LOG.info("Submitting RefreshHfilesTableProcedure for table {}",
+            tableName.getNameAsString());
+          submitProcedure(
+            new RefreshHFilesTableProcedure(procedureExecutor.getEnvironment(), tableName));
+        }
+
+        @Override
+        protected String getDescription() {
+          return "RefreshHfilesProcedure for a table";
+        }
+      });
+  }
+
+  public Long refreshHfiles(final String namespace, final long nonceGroup, final long nonce)
+    throws IOException {
+    checkInitialized();
+
+    try {
+      this.clusterSchemaService.getNamespace(namespace);
+    } catch (IOException e) {
+      LOG.info("RefreshHfilesProcedure failed because namespace {} does not exist", namespace);
+      throw new NamespaceNotFoundException(namespace);
+    }
+
+    return MasterProcedureUtil
+      .submitProcedure(new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
+        @Override
+        protected void run() throws IOException {
+          LOG.info("Submitting RefreshHfilesProcedure for namespace {}", namespace);
+          submitProcedure(
+            new RefreshHFilesTableProcedure(procedureExecutor.getEnvironment(), namespace));
+        }
+
+        @Override
+        protected String getDescription() {
+          return "RefreshHfilesProcedure for namespace";
+        }
+      });
+  }
+
+  public Long refreshHfiles(final long nonceGroup, final long nonce) throws IOException {
+    checkInitialized();
+
+    return MasterProcedureUtil
+      .submitProcedure(new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
+        @Override
+        protected void run() throws IOException {
+          LOG.info("Submitting RefreshHfilesProcedure for all tables");
+          submitProcedure(new RefreshHFilesTableProcedure(procedureExecutor.getEnvironment()));
+        }
+
+        @Override
+        protected String getDescription() {
+          return "RefreshHfilesProcedure for all tables";
         }
       });
   }
