@@ -706,4 +706,14 @@ public class FSTableDescriptors implements TableDescriptors {
     }
     return writeTableDescriptor(fs, htd, tableDir, opt.map(Pair::getFirst).orElse(null)) != null;
   }
+
+  /**
+   * Invalidates the table descriptor cache.
+   */
+  @Override
+  public void invalidateTableDescriptorCache() {
+    LOG.info("Invalidating table descriptor cache.");
+    this.fsvisited = false;
+    this.cache.clear();
+  }
 }

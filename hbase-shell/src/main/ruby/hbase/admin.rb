@@ -1917,6 +1917,12 @@ module Hbase
     def list_tables_by_state(isEnabled)
       @admin.listTableNamesByState(isEnabled).map(&:getNameAsString)
     end
+
+    #----------------------------------------------------------------------------------------------
+    # Refresh hbase:meta table by syncing with the backing storage
+    def refresh_meta()
+      @admin.refreshMeta()
+    end
   end
   # rubocop:enable Metrics/ClassLength
 end

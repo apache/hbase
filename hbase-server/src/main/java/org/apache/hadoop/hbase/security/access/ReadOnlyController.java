@@ -109,6 +109,9 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
   @Override
   public void preDelete(ObserverContext<? extends RegionCoprocessorEnvironment> c, Delete delete,
     WALEdit edit) throws IOException {
+    if (c.getEnvironment().getRegionInfo().getTable().isSystemTable()) {
+      return;
+    }
     internalReadOnlyGuard();
   }
 
@@ -166,7 +169,9 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
   public boolean preCheckAndDelete(ObserverContext<? extends RegionCoprocessorEnvironment> c,
     byte[] row, byte[] family, byte[] qualifier, CompareOperator op, ByteArrayComparable comparator,
     Delete delete, boolean result) throws IOException {
-    internalReadOnlyGuard();
+    if (!c.getEnvironment().getRegionInfo().getTable().isSystemTable()) {
+      internalReadOnlyGuard();
+    }
     return RegionObserver.super.preCheckAndDelete(c, row, family, qualifier, op, comparator, delete,
       result);
   }
@@ -174,7 +179,9 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
   @Override
   public boolean preCheckAndDelete(ObserverContext<? extends RegionCoprocessorEnvironment> c,
     byte[] row, Filter filter, Delete delete, boolean result) throws IOException {
-    internalReadOnlyGuard();
+    if (!c.getEnvironment().getRegionInfo().getTable().isSystemTable()) {
+      internalReadOnlyGuard();
+    }
     return RegionObserver.super.preCheckAndDelete(c, row, filter, delete, result);
   }
 
@@ -183,7 +190,9 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
     ObserverContext<? extends RegionCoprocessorEnvironment> c, byte[] row, byte[] family,
     byte[] qualifier, CompareOperator op, ByteArrayComparable comparator, Delete delete,
     boolean result) throws IOException {
-    internalReadOnlyGuard();
+    if (!c.getEnvironment().getRegionInfo().getTable().isSystemTable()) {
+      internalReadOnlyGuard();
+    }
     return RegionObserver.super.preCheckAndDeleteAfterRowLock(c, row, family, qualifier, op,
       comparator, delete, result);
   }
@@ -192,7 +201,9 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
   public boolean preCheckAndDeleteAfterRowLock(
     ObserverContext<? extends RegionCoprocessorEnvironment> c, byte[] row, Filter filter,
     Delete delete, boolean result) throws IOException {
-    internalReadOnlyGuard();
+    if (!c.getEnvironment().getRegionInfo().getTable().isSystemTable()) {
+      internalReadOnlyGuard();
+    }
     return RegionObserver.super.preCheckAndDeleteAfterRowLock(c, row, filter, delete, result);
   }
 
