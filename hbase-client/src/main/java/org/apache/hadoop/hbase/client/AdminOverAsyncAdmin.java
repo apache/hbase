@@ -1154,6 +1154,11 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
+  public Long refreshMeta() throws IOException {
+    return get(admin.refreshMeta());
+  }
+
+  @Override
   public void restoreBackupSystemTable(String snapshotName) throws IOException {
     get(admin.restoreBackupSystemTable(snapshotName));
   }
