@@ -513,9 +513,8 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   /**
-   * short-circuit call for
-   * {@link RawAsyncHBaseAdmin#procedureCall(Consumer, Object, MasterRpcCall, Converter, Converter, ProcedureBiConsumer)}
-   * by skip setting priority for request
+   * short-circuit call for procedureCall(Consumer, Object, MasterRpcCall, Converter, Converter,
+   * ProcedureBiConsumer) by skip setting priority for request
    */
   private <PREQ, PRESP, PRES> CompletableFuture<PRES> procedureCall(PREQ preq,
     MasterRpcCall<PRESP, PREQ> rpcCall, Converter<Long, PRESP> respConverter,
@@ -525,9 +524,8 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   /**
-   * short-circuit call for
-   * {@link RawAsyncHBaseAdmin#procedureCall(TableName, Object, MasterRpcCall, Converter, Converter, ProcedureBiConsumer)}
-   * by ignoring procedure result
+   * short-circuit call for procedureCall(TableName, Object, MasterRpcCall, Converter, Converter,
+   * ProcedureBiConsumer) by ignoring procedure result
    */
   private <PREQ, PRESP> CompletableFuture<Void> procedureCall(TableName tableName, PREQ preq,
     MasterRpcCall<PRESP, PREQ> rpcCall, Converter<Long, PRESP> respConverter,
@@ -536,9 +534,8 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   /**
-   * short-circuit call for
-   * {@link RawAsyncHBaseAdmin#procedureCall(Consumer, Object, MasterRpcCall, Converter, Converter, ProcedureBiConsumer)}
-   * by skip setting priority for request
+   * short-circuit call for procedureCall(Consumer, Object, MasterRpcCall, Converter, Converter,
+   * ProcedureBiConsumer) by skip setting priority for request
    */
   private <PREQ, PRESP, PRES> CompletableFuture<PRES> procedureCall(TableName tableName, PREQ preq,
     MasterRpcCall<PRESP, PREQ> rpcCall, Converter<Long, PRESP> respConverter,

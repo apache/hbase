@@ -99,7 +99,13 @@ public class LogRollProcedure
     return getClass().getSimpleName();
   }
 
-  private record NewServerWALRoller(MasterProcedureEnv env) implements ServerListener {
+  private static final class NewServerWALRoller implements ServerListener {
+
+    private final MasterProcedureEnv env;
+
+    public NewServerWALRoller(MasterProcedureEnv env) {
+      this.env = env;
+    }
 
     @Override
     public void serverAdded(ServerName server) {

@@ -21,8 +21,8 @@ module Shell
     class WalRollAll < Command
       def help
         <<-EOF
-Request all region servers to roll wal writer. Note that this method is synchronous, 
-which means it will block until all RegionServers have completed the log roll, 
+Request all region servers to roll wal writer. Note that this method is synchronous,
+which means it will block until all RegionServers have completed the log roll,
 or a RegionServer fails due to an exception that retry will not work. Here is how
 you would run the command in the hbase shell:
   hbase> wal_roll_all
