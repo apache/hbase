@@ -223,6 +223,7 @@ public class TestManagedKeyDataCache {
       verify(testProvider).unwrapKey(any(String.class), any());
     }
 
+    @Test
     public void testWithInvalidProvider() throws Exception {
       ManagedKeyData globalKey1 = testProvider.getManagedKey(CUST_ID, KEY_SPACE_GLOBAL);
       doThrow(new IOException("Test exception")).when(testProvider).unwrapKey(any(String.class),
