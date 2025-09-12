@@ -65,7 +65,6 @@ public class TestQuotaUserOverride {
       CUSTOM_OVERRIDE_KEY);
     TEST_UTIL.startMiniCluster(NUM_SERVERS);
     TEST_UTIL.waitTableAvailable(QuotaTableUtil.QUOTA_TABLE_NAME);
-    QuotaCache.TEST_FORCE_REFRESH = true;
     TEST_UTIL.createTable(TABLE_NAME, FAMILY);
   }
 
