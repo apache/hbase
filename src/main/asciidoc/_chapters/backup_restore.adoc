@@ -95,7 +95,7 @@ This strategy stores the backups on the same cluster as where the backup was tak
 as it does not provide any additional safety on top of what the software itself already provides.
 
 .Intra-Cluster Backup
-image::backup-intra-cluster.png[]
+image::../images/backup-intra-cluster.png[]
 
 [[br.dedicated.cluster.backup]]
 === Backup using a dedicated cluster
@@ -107,7 +107,7 @@ You should consider backing up to a different physical location, such as a diffe
 Typically, a backup-dedicated HDFS cluster uses a more economical hardware profile to save money.
 
 .Dedicated HDFS Cluster Backup
-image::backup-dedicated-cluster.png[]
+image::../images/backup-dedicated-cluster.png[]
 
 [[br.cloud.or.vendor.backup]]
 === Backup to the Cloud or a storage vendor appliance
@@ -117,7 +117,7 @@ to third-party vendors and that are located off-site. The vendor can be a public
 a Hadoop-compatible file system, such as S3 and other HDFS-compatible destinations.
 
 .Backup to Cloud or Vendor Storage Solutions
-image::backup-cloud-appliance.png[]
+image::../images/backup-cloud-appliance.png[]
 
 NOTE: The HBase backup utility does not support backup to multiple destinations. A workaround is to manually create copies
 of the backup files from HDFS or S3.
@@ -733,7 +733,7 @@ two tables need to be backed up and be recoverable as a group.
 The admin team also wants to ensure daily backups occur automatically.
 
 .Tables Composing The Backup Set
-image::backup-app-components.png[]
+image::../images/backup-app-components.png[]
 
 The following is an outline of the steps and examples of commands that are used to backup the data for the _green_ application and
 to recover the data later. All commands are run when logged in as HBase superuser.
