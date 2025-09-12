@@ -84,7 +84,6 @@ public class TestBlockBytesScannedQuota {
     TEST_UTIL.waitTableAvailable(QuotaTableUtil.QUOTA_TABLE_NAME);
     TEST_UTIL.createTable(TABLE_NAME, FAMILY);
     TEST_UTIL.waitTableAvailable(TABLE_NAME);
-    QuotaCache.TEST_FORCE_REFRESH = true;
   }
 
   @AfterClass
