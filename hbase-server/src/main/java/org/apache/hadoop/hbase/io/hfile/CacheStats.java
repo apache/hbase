@@ -91,6 +91,7 @@ public class CacheStats {
   private final LongAdder generalBloomMetaMissCount = new LongAdder();
   private final LongAdder deleteFamilyBloomMissCount = new LongAdder();
   private final LongAdder trailerMissCount = new LongAdder();
+  private final LongAdder rowMissCount = new LongAdder();
 
   private final LongAdder dataHitCount = new LongAdder();
   private final LongAdder leafIndexHitCount = new LongAdder();
@@ -102,6 +103,7 @@ public class CacheStats {
   private final LongAdder generalBloomMetaHitCount = new LongAdder();
   private final LongAdder deleteFamilyBloomHitCount = new LongAdder();
   private final LongAdder trailerHitCount = new LongAdder();
+  private final LongAdder rowHitCount = new LongAdder();
 
   // Executor for periodic cache stats rolling
   private ScheduledExecutorService metricsRollerScheduler;
@@ -219,6 +221,9 @@ public class CacheStats {
       case TRAILER:
         trailerMissCount.increment();
         break;
+      case ROW_CELLS:
+        rowMissCount.increment();
+        break;
       default:
         // If there's a new type that's fine
         // Ignore it for now. This is metrics don't exception.
@@ -265,6 +270,9 @@ public class CacheStats {
         break;
       case TRAILER:
         trailerHitCount.increment();
+        break;
+      case ROW_CELLS:
+        rowHitCount.increment();
         break;
       default:
         // If there's a new type that's fine
@@ -374,6 +382,14 @@ public class CacheStats {
 
   public long getTrailerHitCount() {
     return trailerHitCount.sum();
+  }
+
+  public long getRowHitCount() {
+    return rowHitCount.sum();
+  }
+
+  public long getRowMissCount() {
+    return rowMissCount.sum();
   }
 
   public long getRequestCount() {
