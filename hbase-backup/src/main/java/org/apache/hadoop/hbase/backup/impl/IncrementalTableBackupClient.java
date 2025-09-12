@@ -349,6 +349,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
         LOG.debug("Setting incremental copy HFiles job name to : " + jobname);
       }
       conf.set(JOB_NAME_CONF_KEY, jobname);
+      conf.setBoolean(HFileOutputFormat2.DISK_BASED_SORTING_ENABLED_KEY, true);
 
       BackupCopyJob copyService = BackupRestoreFactory.getBackupCopyJob(conf);
       int res = copyService.copy(backupInfo, backupManager, conf, BackupType.INCREMENTAL, strArr);
@@ -361,6 +362,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
         + " finished.");
     } finally {
       deleteBulkLoadDirectory();
+      conf.unset(HFileOutputFormat2.DISK_BASED_SORTING_ENABLED_KEY);
     }
   }
 
@@ -414,6 +416,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
     conf.set(WALPlayer.INPUT_FILES_SEPARATOR_KEY, ";");
     conf.setBoolean(HFileOutputFormat2.TABLE_NAME_WITH_NAMESPACE_INCLUSIVE_KEY, true);
     conf.setBoolean(WALPlayer.MULTI_TABLES_SUPPORT, true);
+    conf.setBoolean(HFileOutputFormat2.DISK_BASED_SORTING_ENABLED_KEY, true);
     conf.set(JOB_NAME_CONF_KEY, jobname);
     String[] playerArgs = { dirs, StringUtils.join(tableList, ",") };
 
@@ -423,6 +426,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
       if (result != 0) {
         throw new IOException("WAL Player failed");
       }
+      conf.unset(HFileOutputFormat2.DISK_BASED_SORTING_ENABLED_KEY);
       conf.unset(WALPlayer.INPUT_FILES_SEPARATOR_KEY);
       conf.unset(JOB_NAME_CONF_KEY);
     } catch (IOException e) {

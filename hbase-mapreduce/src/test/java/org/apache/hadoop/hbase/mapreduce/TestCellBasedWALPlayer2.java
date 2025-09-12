@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.util.MapReduceExtendedCell;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.apache.hadoop.util.ToolRunner;
@@ -172,7 +173,7 @@ public class TestCellBasedWALPlayer2 {
     WALKey key = mock(WALKey.class);
     when(key.getTableName()).thenReturn(TableName.valueOf("table"));
     @SuppressWarnings("unchecked")
-    Mapper<WALKey, WALEdit, ImmutableBytesWritable, Cell>.Context context = mock(Context.class);
+    Mapper<WALKey, WALEdit, WritableComparable<?>, Cell>.Context context = mock(Context.class);
     when(context.getConfiguration()).thenReturn(configuration);
 
     WALEdit value = mock(WALEdit.class);

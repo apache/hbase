@@ -200,6 +200,10 @@ public class Import extends Configured implements Tool {
       this.kv = kv;
     }
 
+    public Cell getCell() {
+      return kv;
+    }
+
     @Override
     public void write(DataOutput out) throws IOException {
       int keyLen = PrivateCellUtil.estimatedSerializedSizeOfKey(kv);
