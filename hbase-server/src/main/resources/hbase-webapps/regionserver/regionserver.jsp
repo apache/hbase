@@ -126,11 +126,11 @@
 
     <%-- TODO: Migrate rest of RSStatusTmpl.jamon  --%>
 
-  </div>
+  </div> <!--/.row -->
 </div> <!-- /.container-fluid content -->
 
-<%-- TODO: We also need /static/js/jquery.tablesorter.min.js and the init JS code here!  --%>
-
-<jsp:include page="footer.jsp"/>
-
-
+  <jsp:include page="scripts.jsp" />
+  <script src="/static/js/jquery.tablesorter.min.js" type="text/javascript"></script>
+  <script src ="/static/js/regionServerStatusInit.js" type="text/javascript"></script>
+</body>
+</html>
