@@ -32,6 +32,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
+import org.apache.zookeeper.data.Stat;
 
 /**
  * ZK based replication peer storage.
@@ -182,6 +183,16 @@ public class ZKReplicationPeerStorage extends ZKReplicationStorageBase
     } catch (DeserializationException e) {
       throw new ReplicationException(
         "Failed to parse replication peer config for peer with id=" + peerId, e);
+    }
+  }
+
+  @Override
+  public long getPeerCreateTime(String peerId) {
+    Stat createTimeIfNodeExists = ZKUtil.getCreateTimeIfNodeExists(zookeeper, getPeerNode(peerId));
+    if (createTimeIfNodeExists == null) {
+      return NO_CREATE_TIME;
+    } else {
+      return createTimeIfNodeExists.getCtime();
     }
   }
 
