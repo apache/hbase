@@ -17,51 +17,40 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.jruby.embed.PathType;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.ClassRule;
-import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Category({ ClientTests.class, MediumTests.class })
 public class TestShellNoCluster extends AbstractTestShell {
-  private static final Logger LOG = LoggerFactory.getLogger(TestShellNoCluster.class);
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestShellNoCluster.class);
 
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
-    // no cluster
-    List<String> loadPaths = new ArrayList<>(2);
-    loadPaths.add("src/test/ruby");
-    jruby.setLoadPaths(loadPaths);
-    jruby.put("$TEST_CLUSTER", TEST_UTIL);
-    System.setProperty("jruby.jit.logging.verbose", "true");
-    System.setProperty("jruby.jit.logging", "true");
-    System.setProperty("jruby.native.verbose", "true");
-  }
-
-  @AfterClass
-  public static void tearDownAfterClass() throws Exception {
-    // no cluster
-  }
-
-  // Keep the same name so we override the with-a-cluster test
   @Override
-  @Test
-  public void testRunShellTests() throws IOException {
-    LOG.info("Start ruby tests without cluster");
-    jruby.runScriptlet(PathType.CLASSPATH, "no_cluster_tests_runner.rb");
+  @Before
+  public void setUp() throws Exception {
+    RubyShellTest.setUpConfig(this);
+
+    // no cluster
+
+    RubyShellTest.setUpJRubyRuntime(this);
+
+    RubyShellTest.doTestSetup(this);
+  }
+
+  @Override
+  @After
+  public void tearDown() throws Exception {
+    // no cluster
+  }
+
+  @Override
+  public String getSuitePattern() {
+    return "**/*_test_no_cluster.rb";
   }
 }

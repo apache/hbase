@@ -279,6 +279,19 @@ public class CacheConfig implements PropagatingConfigurationObserver {
       || (prefetchOnOpen && (category != BlockCategory.META && category != BlockCategory.UNKNOWN));
   }
 
+  public boolean shouldCacheBlockOnRead(BlockCategory category, HFileInfo hFileInfo,
+    Configuration conf) {
+    Optional<Boolean> cacheFileBlock = Optional.of(true);
+    // For DATA blocks only, if BuckeCache is in use, we don't need to cache block again
+    if (getBlockCache().isPresent() && category.equals(BlockCategory.DATA)) {
+      Optional<Boolean> result = getBlockCache().get().shouldCacheFile(hFileInfo, conf);
+      if (result.isPresent()) {
+        cacheFileBlock = result;
+      }
+    }
+    return shouldCacheBlockOnRead(category) && cacheFileBlock.get();
+  }
+
   /** Returns true if blocks in this file should be flagged as in-memory */
   public boolean isInMemory() {
     return this.inMemory;

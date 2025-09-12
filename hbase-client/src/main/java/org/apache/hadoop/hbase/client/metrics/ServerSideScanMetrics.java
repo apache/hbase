@@ -56,6 +56,8 @@ public class ServerSideScanMetrics {
     currentRegionScanMetricsData.createCounter(BYTES_READ_FROM_BLOCK_CACHE_METRIC_NAME);
     currentRegionScanMetricsData.createCounter(BYTES_READ_FROM_MEMSTORE_METRIC_NAME);
     currentRegionScanMetricsData.createCounter(BLOCK_READ_OPS_COUNT_METRIC_NAME);
+    currentRegionScanMetricsData.createCounter(RPC_SCAN_PROCESSING_TIME_METRIC_NAME);
+    currentRegionScanMetricsData.createCounter(RPC_SCAN_QUEUE_WAIT_TIME_METRIC_NAME);
   }
 
   /**
@@ -77,6 +79,8 @@ public class ServerSideScanMetrics {
     "BYTES_READ_FROM_BLOCK_CACHE";
   public static final String BYTES_READ_FROM_MEMSTORE_METRIC_NAME = "BYTES_READ_FROM_MEMSTORE";
   public static final String BLOCK_READ_OPS_COUNT_METRIC_NAME = "BLOCK_READ_OPS_COUNT";
+  public static final String RPC_SCAN_PROCESSING_TIME_METRIC_NAME = "RPC_SCAN_PROCESSING_TIME";
+  public static final String RPC_SCAN_QUEUE_WAIT_TIME_METRIC_NAME = "RPC_SCAN_QUEUE_WAIT_TIME";
 
   /**
    * number of rows filtered during scan RPC
@@ -104,6 +108,12 @@ public class ServerSideScanMetrics {
     createCounter(BYTES_READ_FROM_MEMSTORE_METRIC_NAME);
 
   public final AtomicLong blockReadOpsCount = createCounter(BLOCK_READ_OPS_COUNT_METRIC_NAME);
+
+  public final AtomicLong rpcScanProcessingTime =
+    createCounter(RPC_SCAN_PROCESSING_TIME_METRIC_NAME);
+
+  public final AtomicLong rpcScanQueueWaitTime =
+    createCounter(RPC_SCAN_QUEUE_WAIT_TIME_METRIC_NAME);
 
   /**
    * Sets counter with counterName to passed in value, does nothing if counter does not exist. If
