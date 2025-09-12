@@ -863,6 +863,21 @@ public class MultiTenantHFileWriter implements HFile.Writer {
       currentSectionWriter.appendMetaBlock(metaBlockName, content);
     }
   }
+
+  @Override
+  public void appendTrackedTimestampsToMetadata() throws IOException {
+    if (currentSectionWriter != null) {
+      currentSectionWriter.appendTrackedTimestampsToMetadata();
+    }
+  }
+
+  @Override
+  public void appendCustomCellTimestampsToMetadata(
+      org.apache.hadoop.hbase.regionserver.TimeRangeTracker timeRangeTracker) throws IOException {
+    if (currentSectionWriter != null) {
+      currentSectionWriter.appendCustomCellTimestampsToMetadata(timeRangeTracker);
+    }
+  }
   
   @Override
   public void addInlineBlockWriter(InlineBlockWriter ibw) {
