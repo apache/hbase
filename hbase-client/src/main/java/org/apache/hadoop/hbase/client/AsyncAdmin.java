@@ -1862,4 +1862,7 @@ public interface AsyncAdmin {
    * Get the list of cached files
    */
   CompletableFuture<List<String>> getCachedFilesList(ServerName serverName);
+
+  @InterfaceAudience.Private
+  CompletableFuture<Void> restoreBackupSystemTable(String snapshotName);
 }
