@@ -77,7 +77,6 @@ public class TestClusterScopeQuotaThrottle {
     TEST_UTIL.getConfiguration().setBoolean("hbase.master.enabletable.roundrobin", true);
     TEST_UTIL.startMiniCluster(2);
     TEST_UTIL.waitTableAvailable(QuotaTableUtil.QUOTA_TABLE_NAME);
-    QuotaCache.TEST_FORCE_REFRESH = true;
 
     tables = new Table[TABLE_NAMES.length];
     for (int i = 0; i < TABLE_NAMES.length; ++i) {

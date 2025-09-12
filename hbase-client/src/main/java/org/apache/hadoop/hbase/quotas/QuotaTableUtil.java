@@ -206,37 +206,6 @@ public class QuotaTableUtil {
     return quotasFromData(result.getValue(QUOTA_FAMILY_INFO, qualifier));
   }
 
-  public static Get makeGetForTableQuotas(final TableName table) {
-    Get get = new Get(getTableRowKey(table));
-    get.addFamily(QUOTA_FAMILY_INFO);
-    return get;
-  }
-
-  public static Get makeGetForNamespaceQuotas(final String namespace) {
-    Get get = new Get(getNamespaceRowKey(namespace));
-    get.addFamily(QUOTA_FAMILY_INFO);
-    return get;
-  }
-
-  public static Get makeGetForRegionServerQuotas(final String regionServer) {
-    Get get = new Get(getRegionServerRowKey(regionServer));
-    get.addFamily(QUOTA_FAMILY_INFO);
-    return get;
-  }
-
-  public static Get makeGetForUserQuotas(final String user, final Iterable<TableName> tables,
-    final Iterable<String> namespaces) {
-    Get get = new Get(getUserRowKey(user));
-    get.addColumn(QUOTA_FAMILY_INFO, QUOTA_QUALIFIER_SETTINGS);
-    for (final TableName table : tables) {
-      get.addColumn(QUOTA_FAMILY_INFO, getSettingsQualifierForUserTable(table));
-    }
-    for (final String ns : namespaces) {
-      get.addColumn(QUOTA_FAMILY_INFO, getSettingsQualifierForUserNamespace(ns));
-    }
-    return get;
-  }
-
   public static Scan makeScan(final QuotaFilter filter) {
     Scan scan = new Scan();
     scan.addFamily(QUOTA_FAMILY_INFO);

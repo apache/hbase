@@ -22,7 +22,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
@@ -42,24 +41,18 @@ public class UserQuotaState extends QuotaState {
   private Map<TableName, QuotaLimiter> tableLimiters = null;
   private boolean bypassGlobals = false;
 
-  public UserQuotaState() {
-    super();
-  }
-
-  public UserQuotaState(final long updateTs) {
-    super(updateTs);
-  }
-
   @Override
   public synchronized String toString() {
     StringBuilder builder = new StringBuilder();
-    builder.append("UserQuotaState(ts=" + getLastUpdate());
-    if (bypassGlobals) builder.append(" bypass-globals");
+    builder.append("UserQuotaState(");
+    if (bypassGlobals) {
+      builder.append("bypass-globals");
+    }
 
     if (isBypass()) {
       builder.append(" bypass");
     } else {
-      if (getGlobalLimiterWithoutUpdatingLastQuery() != NoopQuotaLimiter.get()) {
+      if (getGlobalLimiter() != NoopQuotaLimiter.get()) {
         builder.append(" global-limiter");
       }
 
@@ -86,7 +79,7 @@ public class UserQuotaState extends QuotaState {
   /** Returns true if there is no quota information associated to this object */
   @Override
   public synchronized boolean isBypass() {
-    return !bypassGlobals && getGlobalLimiterWithoutUpdatingLastQuery() == NoopQuotaLimiter.get()
+    return !bypassGlobals && getGlobalLimiter() == NoopQuotaLimiter.get()
       && (tableLimiters == null || tableLimiters.isEmpty())
       && (namespaceLimiters == null || namespaceLimiters.isEmpty());
   }
@@ -191,7 +184,6 @@ public class UserQuotaState extends QuotaState {
    * @return the quota limiter for the specified table
    */
   public synchronized QuotaLimiter getTableLimiter(final TableName table) {
-    lastQuery = EnvironmentEdgeManager.currentTime();
     if (tableLimiters != null) {
       QuotaLimiter limiter = tableLimiters.get(table);
       if (limiter != null) return limiter;
@@ -200,6 +192,6 @@ public class UserQuotaState extends QuotaState {
       QuotaLimiter limiter = namespaceLimiters.get(table.getNamespaceAsString());
       if (limiter != null) return limiter;
     }
-    return getGlobalLimiterWithoutUpdatingLastQuery();
+    return getGlobalLimiter();
   }
 }

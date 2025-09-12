@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
-import static org.apache.hadoop.hbase.quotas.ThrottleQuotaTestUtil.waitMinuteQuota;
 import static org.junit.Assert.assertEquals;
 
 import java.util.concurrent.TimeUnit;
@@ -29,8 +28,8 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -45,48 +44,21 @@ public class TestQuotaCache {
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final int REFRESH_TIME_MS = 1000;
 
-  @AfterClass
-  public static void tearDown() throws Exception {
+  @After
+  public void tearDown() throws Exception {
     ThrottleQuotaTestUtil.clearQuotaCache(TEST_UTIL);
     EnvironmentEdgeManager.reset();
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
+  @Before
+  public void setUp() throws Exception {
     TEST_UTIL.getConfiguration().setBoolean(QuotaUtil.QUOTA_CONF_KEY, true);
     TEST_UTIL.getConfiguration().setInt(QuotaCache.REFRESH_CONF_KEY, REFRESH_TIME_MS);
     TEST_UTIL.getConfiguration().setInt(QuotaUtil.QUOTA_DEFAULT_USER_MACHINE_READ_NUM, 1000);
 
     TEST_UTIL.startMiniCluster(1);
     TEST_UTIL.waitTableAvailable(QuotaTableUtil.QUOTA_TABLE_NAME);
-  }
-
-  @Test
-  public void testDefaultUserRefreshFrequency() throws Exception {
-    QuotaCache.TEST_BLOCK_REFRESH = true;
-
-    QuotaCache quotaCache =
-      ThrottleQuotaTestUtil.getQuotaCaches(TEST_UTIL).stream().findAny().get();
-    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
-
-    UserQuotaState userQuotaState = quotaCache.getUserQuotaState(ugi);
-
-    QuotaCache.TEST_BLOCK_REFRESH = false;
-    // new user should have refreshed immediately
-    TEST_UTIL.waitFor(5_000, () -> userQuotaState.getLastUpdate() != 0);
-    long lastUpdate = userQuotaState.getLastUpdate();
-
-    // refresh should not apply to recently refreshed quota
-    quotaCache.triggerCacheRefresh();
-    Thread.sleep(250);
-    long newLastUpdate = userQuotaState.getLastUpdate();
-    assertEquals(lastUpdate, newLastUpdate);
-
-    quotaCache.triggerCacheRefresh();
-    waitMinuteQuota();
-    // should refresh after time has passed
-    TEST_UTIL.waitFor(5_000, () -> lastUpdate != userQuotaState.getLastUpdate());
   }
 
   @Test
