@@ -51,4 +51,6 @@ message FileTrailerProto {
   optional string comparator_class_name = 11;
   optional uint32 compression_codec = 12;
   optional bytes encryption_key = 13;
+  optional bool multiTenant = 14;
+  optional int32 tenantPrefixLength = 15;
 }
