@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.chaos.factories.MonkeyConstants;
 import org.apache.hadoop.hbase.chaos.factories.MonkeyFactory;
 import org.apache.hadoop.hbase.chaos.monkies.ChaosMonkey;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.junit.After;
 import org.junit.Before;
 import org.slf4j.Logger;
@@ -95,7 +96,7 @@ public abstract class IntegrationTestBase extends AbstractHBaseTool {
             .load(this.getClass().getClassLoader().getResourceAsStream(chaosMonkeyPropsFile));
         } catch (IOException e) {
           LOG.warn("Failed load of monkey properties {} from CLASSPATH", chaosMonkeyPropsFile, e);
-          System.exit(EXIT_FAILURE);
+          ExitHandler.getInstance().exit(EXIT_FAILURE);
         }
       }
     }

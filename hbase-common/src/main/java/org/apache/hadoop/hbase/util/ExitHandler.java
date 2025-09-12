@@ -17,23 +17,33 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Tool that prints out a configuration. Pass the configuration key on the command-line.
+ * A utility class to wrap system exit calls. We use this to allow for testing and to provide a
+ * consistent way to handle system exit across the codebase. NOTE: We should avoid calling
+ * System.exit directly in the codebase. Instead, we should use this class to handle system exit
+ * calls.
  */
 @InterfaceAudience.Private
-public class HBaseConfTool {
-  public static void main(String args[]) {
-    if (args.length < 1) {
-      System.err.println("Usage: HBaseConfTool <CONFIGURATION_KEY>");
-      ExitHandler.getInstance().exit(1);
-      return;
-    }
+public class ExitHandler {
+  private static ExitHandler instance = new ExitHandler();
 
-    Configuration conf = HBaseConfiguration.create();
-    System.out.println(conf.get(args[0]));
+  public static ExitHandler getInstance() {
+    return instance;
+  }
+
+  public static void setInstance(ExitHandler handler) {
+    instance = handler;
+  }
+
+  /**
+   * This method is called when the system needs to exit. By default, it calls System.exit.
+   * Subclasses can override this method to provide custom exit behavior.
+   * @param status the exit status
+   */
+  @SuppressWarnings("checkstyle:RegexpSinglelineJava")
+  public void exit(int status) {
+    System.exit(status);
   }
 }
