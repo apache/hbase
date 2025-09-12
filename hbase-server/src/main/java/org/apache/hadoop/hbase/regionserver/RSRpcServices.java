@@ -3966,7 +3966,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
       LOG.warn("Failed to instantiating remote procedure {}, pid={}", request.getProcClass(),
         request.getProcId(), e);
       server.remoteProcedureComplete(request.getProcId(), request.getInitiatingMasterActiveTime(),
-        e);
+        e, null);
       return;
     }
     callable.init(request.getProcData().toByteArray(), server);

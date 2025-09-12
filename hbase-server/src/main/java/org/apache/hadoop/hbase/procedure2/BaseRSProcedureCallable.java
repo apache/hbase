@@ -28,12 +28,11 @@ public abstract class BaseRSProcedureCallable implements RSProcedureCallable {
   private Exception initError;
 
   @Override
-  public final Void call() throws Exception {
+  public final byte[] call() throws Exception {
     if (initError != null) {
       throw initError;
     }
-    doCall();
-    return null;
+    return doCall();
   }
 
   @Override
@@ -46,7 +45,7 @@ public abstract class BaseRSProcedureCallable implements RSProcedureCallable {
     }
   }
 
-  protected abstract void doCall() throws Exception;
+  protected abstract byte[] doCall() throws Exception;
 
   protected abstract void initParameter(byte[] parameter) throws Exception;
 }
