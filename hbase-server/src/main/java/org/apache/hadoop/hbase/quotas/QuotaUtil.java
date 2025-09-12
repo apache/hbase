@@ -38,12 +38,13 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
@@ -330,59 +331,56 @@ public class QuotaUtil extends QuotaTableUtil {
   }
 
   public static Map<String, UserQuotaState> fetchUserQuotas(final Connection connection,
-    final List<Get> gets, Map<TableName, Double> tableMachineQuotaFactors, double factor)
-    throws IOException {
-    long nowTs = EnvironmentEdgeManager.currentTime();
-    Result[] results = doGet(connection, gets);
+    Map<TableName, Double> tableMachineQuotaFactors, double factor) throws IOException {
+    Map<String, UserQuotaState> userQuotas = new HashMap<>();
+    try (Table table = connection.getTable(QUOTA_TABLE_NAME)) {
+      Scan scan = new Scan();
+      scan.addFamily(QUOTA_FAMILY_INFO);
+      scan.setStartStopRowForPrefixScan(QUOTA_USER_ROW_KEY_PREFIX);
+      try (ResultScanner resultScanner = table.getScanner(scan)) {
+        for (Result result : resultScanner) {
+          byte[] key = result.getRow();
+          assert isUserRowKey(key);
+          String user = getUserFromRowKey(key);
 
-    Map<String, UserQuotaState> userQuotas = new HashMap<>(results.length);
-    for (int i = 0; i < results.length; ++i) {
-      byte[] key = gets.get(i).getRow();
-      assert isUserRowKey(key);
-      String user = getUserFromRowKey(key);
+          final UserQuotaState quotaInfo = new UserQuotaState();
+          userQuotas.put(user, quotaInfo);
 
-      if (results[i].isEmpty()) {
-        userQuotas.put(user, buildDefaultUserQuotaState(connection.getConfiguration(), nowTs));
-        continue;
-      }
+          try {
+            parseUserResult(user, result, new UserQuotasVisitor() {
+              @Override
+              public void visitUserQuotas(String userName, String namespace, Quotas quotas) {
+                quotas = updateClusterQuotaToMachineQuota(quotas, factor);
+                quotaInfo.setQuotas(namespace, quotas);
+              }
 
-      final UserQuotaState quotaInfo = new UserQuotaState(nowTs);
-      userQuotas.put(user, quotaInfo);
+              @Override
+              public void visitUserQuotas(String userName, TableName table, Quotas quotas) {
+                quotas = updateClusterQuotaToMachineQuota(quotas,
+                  tableMachineQuotaFactors.containsKey(table)
+                    ? tableMachineQuotaFactors.get(table)
+                    : 1);
+                quotaInfo.setQuotas(table, quotas);
+              }
 
-      assert Bytes.equals(key, results[i].getRow());
-
-      try {
-        parseUserResult(user, results[i], new UserQuotasVisitor() {
-          @Override
-          public void visitUserQuotas(String userName, String namespace, Quotas quotas) {
-            quotas = updateClusterQuotaToMachineQuota(quotas, factor);
-            quotaInfo.setQuotas(namespace, quotas);
+              @Override
+              public void visitUserQuotas(String userName, Quotas quotas) {
+                quotas = updateClusterQuotaToMachineQuota(quotas, factor);
+                quotaInfo.setQuotas(quotas);
+              }
+            });
+          } catch (IOException e) {
+            LOG.error("Unable to parse user '" + user + "' quotas", e);
+            userQuotas.remove(user);
           }
-
-          @Override
-          public void visitUserQuotas(String userName, TableName table, Quotas quotas) {
-            quotas = updateClusterQuotaToMachineQuota(quotas,
-              tableMachineQuotaFactors.containsKey(table)
-                ? tableMachineQuotaFactors.get(table)
-                : 1);
-            quotaInfo.setQuotas(table, quotas);
-          }
-
-          @Override
-          public void visitUserQuotas(String userName, Quotas quotas) {
-            quotas = updateClusterQuotaToMachineQuota(quotas, factor);
-            quotaInfo.setQuotas(quotas);
-          }
-        });
-      } catch (IOException e) {
-        LOG.error("Unable to parse user '" + user + "' quotas", e);
-        userQuotas.remove(user);
+        }
       }
     }
+
     return userQuotas;
   }
 
-  protected static UserQuotaState buildDefaultUserQuotaState(Configuration conf, long nowTs) {
+  protected static UserQuotaState buildDefaultUserQuotaState(Configuration conf) {
     QuotaProtos.Throttle.Builder throttleBuilder = QuotaProtos.Throttle.newBuilder();
 
     buildDefaultTimedQuota(conf, QUOTA_DEFAULT_USER_MACHINE_READ_NUM)
@@ -406,7 +404,7 @@ public class QuotaUtil extends QuotaTableUtil {
     buildDefaultTimedQuota(conf, QUOTA_DEFAULT_USER_MACHINE_REQUEST_HANDLER_USAGE_MS)
       .ifPresent(throttleBuilder::setReqHandlerUsageMs);
 
-    UserQuotaState state = new UserQuotaState(nowTs);
+    UserQuotaState state = new UserQuotaState();
     QuotaProtos.Quotas defaultQuotas =
       QuotaProtos.Quotas.newBuilder().setThrottle(throttleBuilder.build()).build();
     state.setQuotas(defaultQuotas);
@@ -423,8 +421,11 @@ public class QuotaUtil extends QuotaTableUtil {
   }
 
   public static Map<TableName, QuotaState> fetchTableQuotas(final Connection connection,
-    final List<Get> gets, Map<TableName, Double> tableMachineFactors) throws IOException {
-    return fetchGlobalQuotas("table", connection, gets, new KeyFromRow<TableName>() {
+    Map<TableName, Double> tableMachineFactors) throws IOException {
+    Scan scan = new Scan();
+    scan.addFamily(QUOTA_FAMILY_INFO);
+    scan.setStartStopRowForPrefixScan(QUOTA_TABLE_ROW_KEY_PREFIX);
+    return fetchGlobalQuotas("table", scan, connection, new KeyFromRow<TableName>() {
       @Override
       public TableName getKeyFromRow(final byte[] row) {
         assert isTableRowKey(row);
@@ -439,8 +440,11 @@ public class QuotaUtil extends QuotaTableUtil {
   }
 
   public static Map<String, QuotaState> fetchNamespaceQuotas(final Connection connection,
-    final List<Get> gets, double factor) throws IOException {
-    return fetchGlobalQuotas("namespace", connection, gets, new KeyFromRow<String>() {
+    double factor) throws IOException {
+    Scan scan = new Scan();
+    scan.addFamily(QUOTA_FAMILY_INFO);
+    scan.setStartStopRowForPrefixScan(QUOTA_NAMESPACE_ROW_KEY_PREFIX);
+    return fetchGlobalQuotas("namespace", scan, connection, new KeyFromRow<String>() {
       @Override
       public String getKeyFromRow(final byte[] row) {
         assert isNamespaceRowKey(row);
@@ -454,9 +458,12 @@ public class QuotaUtil extends QuotaTableUtil {
     });
   }
 
-  public static Map<String, QuotaState> fetchRegionServerQuotas(final Connection connection,
-    final List<Get> gets) throws IOException {
-    return fetchGlobalQuotas("regionServer", connection, gets, new KeyFromRow<String>() {
+  public static Map<String, QuotaState> fetchRegionServerQuotas(final Connection connection)
+    throws IOException {
+    Scan scan = new Scan();
+    scan.addFamily(QUOTA_FAMILY_INFO);
+    scan.setStartStopRowForPrefixScan(QUOTA_REGION_SERVER_ROW_KEY_PREFIX);
+    return fetchGlobalQuotas("regionServer", scan, connection, new KeyFromRow<String>() {
       @Override
       public String getKeyFromRow(final byte[] row) {
         assert isRegionServerRowKey(row);
@@ -470,32 +477,34 @@ public class QuotaUtil extends QuotaTableUtil {
     });
   }
 
-  public static <K> Map<K, QuotaState> fetchGlobalQuotas(final String type,
-    final Connection connection, final List<Get> gets, final KeyFromRow<K> kfr) throws IOException {
-    long nowTs = EnvironmentEdgeManager.currentTime();
-    Result[] results = doGet(connection, gets);
+  public static <K> Map<K, QuotaState> fetchGlobalQuotas(final String type, final Scan scan,
+    final Connection connection, final KeyFromRow<K> kfr) throws IOException {
 
-    Map<K, QuotaState> globalQuotas = new HashMap<>(results.length);
-    for (int i = 0; i < results.length; ++i) {
-      byte[] row = gets.get(i).getRow();
-      K key = kfr.getKeyFromRow(row);
+    Map<K, QuotaState> globalQuotas = new HashMap<>();
+    try (Table table = connection.getTable(QUOTA_TABLE_NAME)) {
+      try (ResultScanner resultScanner = table.getScanner(scan)) {
+        for (Result result : resultScanner) {
 
-      QuotaState quotaInfo = new QuotaState(nowTs);
-      globalQuotas.put(key, quotaInfo);
+          byte[] row = result.getRow();
+          K key = kfr.getKeyFromRow(row);
 
-      if (results[i].isEmpty()) continue;
-      assert Bytes.equals(row, results[i].getRow());
+          QuotaState quotaInfo = new QuotaState();
+          globalQuotas.put(key, quotaInfo);
 
-      byte[] data = results[i].getValue(QUOTA_FAMILY_INFO, QUOTA_QUALIFIER_SETTINGS);
-      if (data == null) continue;
+          byte[] data = result.getValue(QUOTA_FAMILY_INFO, QUOTA_QUALIFIER_SETTINGS);
+          if (data == null) {
+            continue;
+          }
 
-      try {
-        Quotas quotas = quotasFromData(data);
-        quotas = updateClusterQuotaToMachineQuota(quotas, kfr.getFactor(key));
-        quotaInfo.setQuotas(quotas);
-      } catch (IOException e) {
-        LOG.error("Unable to parse " + type + " '" + key + "' quotas", e);
-        globalQuotas.remove(key);
+          try {
+            Quotas quotas = quotasFromData(data);
+            quotas = updateClusterQuotaToMachineQuota(quotas, kfr.getFactor(key));
+            quotaInfo.setQuotas(quotas);
+          } catch (IOException e) {
+            LOG.error("Unable to parse {} '{}' quotas", type, key, e);
+            globalQuotas.remove(key);
+          }
+        }
       }
     }
     return globalQuotas;

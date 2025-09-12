@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.After;
-import org.junit.BeforeClass;
+import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -59,8 +59,8 @@ public class TestDefaultQuota {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
+  @Before
+  public void setUp() throws Exception {
     // quotas enabled, using block bytes scanned
     TEST_UTIL.getConfiguration().setBoolean(QuotaUtil.QUOTA_CONF_KEY, true);
     TEST_UTIL.getConfiguration().setInt(QuotaCache.REFRESH_CONF_KEY, REFRESH_TIME);
@@ -73,7 +73,6 @@ public class TestDefaultQuota {
     TEST_UTIL.waitTableAvailable(QuotaTableUtil.QUOTA_TABLE_NAME);
     TEST_UTIL.createTable(TABLE_NAME, FAMILY);
     TEST_UTIL.waitTableAvailable(TABLE_NAME);
-    QuotaCache.TEST_FORCE_REFRESH = true;
 
     try (Admin admin = TEST_UTIL.getAdmin()) {
       ThrottleQuotaTestUtil.doPuts(1_000, FAMILY, QUALIFIER,
