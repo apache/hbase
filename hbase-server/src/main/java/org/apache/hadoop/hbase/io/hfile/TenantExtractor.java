@@ -21,8 +21,8 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Strategy interface for extracting tenant information from cells
- * following SOLID's Interface Segregation Principle.
+ * Strategy interface for extracting tenant information from cells following SOLID's Interface
+ * Segregation Principle.
  */
 @InterfaceAudience.Private
 public interface TenantExtractor {
@@ -32,7 +32,7 @@ public interface TenantExtractor {
    * @return The tenant ID as a byte array
    */
   byte[] extractTenantId(Cell cell);
-  
+
   /**
    * Extract tenant section ID from a cell for use in section index blocks
    * @param cell The cell to extract tenant section information from
@@ -45,4 +45,4 @@ public interface TenantExtractor {
    * @return The length of the tenant prefix in bytes
    */
   int getPrefixLength();
-} 
+}

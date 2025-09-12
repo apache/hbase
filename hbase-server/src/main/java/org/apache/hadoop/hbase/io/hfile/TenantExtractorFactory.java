@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import java.util.Map;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -27,25 +26,24 @@ import org.slf4j.LoggerFactory;
 /**
  * Factory for creating TenantExtractor instances based on configuration.
  * <p>
- * Tenant configuration is obtained from cluster configuration and table properties,
- * not from HFileContext.
+ * Tenant configuration is obtained from cluster configuration and table properties, not from
+ * HFileContext.
  * <p>
- * For HFile v4, tenant configuration is stored in the file trailer, allowing it to be
- * accessed before the file info blocks are loaded. This resolves timing issues in the
- * reader initialization process.
+ * For HFile v4, tenant configuration is stored in the file trailer, allowing it to be accessed
+ * before the file info blocks are loaded. This resolves timing issues in the reader initialization
+ * process.
  */
 @InterfaceAudience.Private
 public class TenantExtractorFactory {
   /** Logger for this class */
   private static final Logger LOG = LoggerFactory.getLogger(TenantExtractorFactory.class);
-  
+
   /** Default tenant prefix length when not specified in configuration */
   private static final int DEFAULT_PREFIX_LENGTH = 4;
 
   /**
-   * Create a TenantExtractor from HFile's reader context.
-   * This method is called during HFile reading to determine how to extract tenant information.
-   * 
+   * Create a TenantExtractor from HFile's reader context. This method is called during HFile
+   * reading to determine how to extract tenant information.
    * @param reader The HFile reader that contains file info
    * @return Appropriate TenantExtractor implementation
    */
@@ -62,65 +60,68 @@ public class TenantExtractorFactory {
         return new MultiTenantHFileWriter.SingleTenantExtractor();
       }
     }
-    
+
     // For non-v4 files, always use SingleTenantExtractor
     LOG.info("Non-v4 HFile format (v{}), using SingleTenantExtractor", trailer.getMajorVersion());
     return new MultiTenantHFileWriter.SingleTenantExtractor();
   }
 
   /**
-   * Create a tenant extractor based on configuration.
-   * This applies configuration with proper precedence:
-   * 1. Table level settings have highest precedence
-   * 2. Cluster level settings are used as fallback
-   * 3. Default values are used if neither is specified
-   * 
-   * @param conf HBase configuration for cluster defaults
+   * Create a tenant extractor based on configuration. This applies configuration with proper
+   * precedence: 1. Table level settings have highest precedence 2. Cluster level settings are used
+   * as fallback 3. Default values are used if neither is specified
+   * @param conf            HBase configuration for cluster defaults
    * @param tableProperties Table properties for table-specific settings
    * @return A configured TenantExtractor
    */
-  public static TenantExtractor createTenantExtractor(
-      Configuration conf, Map<String, String> tableProperties) {
-    
+  public static TenantExtractor createTenantExtractor(Configuration conf,
+    Map<String, String> tableProperties) {
+
     // Check if multi-tenant functionality is enabled for this table
     boolean multiTenantEnabled = false; // Default to disabled - only enabled when explicitly set
-    if (tableProperties != null && tableProperties.containsKey(MultiTenantHFileWriter.TABLE_MULTI_TENANT_ENABLED)) {
-      multiTenantEnabled = Boolean.parseBoolean(tableProperties.get(MultiTenantHFileWriter.TABLE_MULTI_TENANT_ENABLED));
+    if (
+      tableProperties != null
+        && tableProperties.containsKey(MultiTenantHFileWriter.TABLE_MULTI_TENANT_ENABLED)
+    ) {
+      multiTenantEnabled = Boolean
+        .parseBoolean(tableProperties.get(MultiTenantHFileWriter.TABLE_MULTI_TENANT_ENABLED));
     }
-    
+
     // If multi-tenant is disabled, return SingleTenantExtractor
     if (!multiTenantEnabled) {
       LOG.info("Multi-tenant functionality disabled for this table, using SingleTenantExtractor");
       return new MultiTenantHFileWriter.SingleTenantExtractor();
     }
-    
+
     // Multi-tenant enabled - configure DefaultTenantExtractor
-    
+
     // First try table level settings (highest precedence)
-    String tablePrefixLengthStr = tableProperties != null ? 
-        tableProperties.get(MultiTenantHFileWriter.TABLE_TENANT_PREFIX_LENGTH) : null;
-    
+    String tablePrefixLengthStr = tableProperties != null
+      ? tableProperties.get(MultiTenantHFileWriter.TABLE_TENANT_PREFIX_LENGTH)
+      : null;
+
     // If not found at table level, try cluster level settings
-    int clusterPrefixLength = conf.getInt(
-        MultiTenantHFileWriter.TENANT_PREFIX_LENGTH, DEFAULT_PREFIX_LENGTH);
-    
+    int clusterPrefixLength =
+      conf.getInt(MultiTenantHFileWriter.TENANT_PREFIX_LENGTH, DEFAULT_PREFIX_LENGTH);
+
     // Use table settings if available, otherwise use cluster settings
     int prefixLength;
     if (tablePrefixLengthStr != null) {
       try {
         prefixLength = Integer.parseInt(tablePrefixLengthStr);
       } catch (NumberFormatException nfe) {
-        LOG.warn("Invalid table-level tenant prefix length '{}', using cluster default {}", tablePrefixLengthStr, clusterPrefixLength);
+        LOG.warn("Invalid table-level tenant prefix length '{}', using cluster default {}",
+          tablePrefixLengthStr, clusterPrefixLength);
         prefixLength = clusterPrefixLength;
       }
     } else {
       prefixLength = clusterPrefixLength;
     }
-    
-    LOG.info("Tenant configuration initialized: prefixLength={}, from table properties: {}", 
-        prefixLength, (tablePrefixLengthStr != null));
-    
+
+    LOG.info("Tenant configuration initialized: prefixLength={}, from table properties: {}",
+      prefixLength, (tablePrefixLengthStr != null));
+
     // Create and return a DefaultTenantExtractor with the configured parameters
     return new DefaultTenantExtractor(prefixLength);
   }
-} 
+}

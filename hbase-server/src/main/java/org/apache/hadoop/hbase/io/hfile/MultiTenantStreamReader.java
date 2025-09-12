@@ -25,8 +25,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * HFile reader for multi-tenant HFiles in STREAM (sequential access) mode.
- * This implementation creates HFileStreamReader instances for each tenant section.
+ * HFile reader for multi-tenant HFiles in STREAM (sequential access) mode. This implementation
+ * creates HFileStreamReader instances for each tenant section.
  */
 @InterfaceAudience.Private
 public class MultiTenantStreamReader extends AbstractMultiTenantReader {
@@ -34,15 +34,14 @@ public class MultiTenantStreamReader extends AbstractMultiTenantReader {
 
   /**
    * Constructor for multi-tenant stream reader.
-   *
-   * @param context Reader context info
-   * @param fileInfo HFile info
+   * @param context   Reader context info
+   * @param fileInfo  HFile info
    * @param cacheConf Cache configuration values
-   * @param conf Configuration
+   * @param conf      Configuration
    * @throws IOException If an error occurs during initialization
    */
-  public MultiTenantStreamReader(ReaderContext context, HFileInfo fileInfo,
-      CacheConfig cacheConf, Configuration conf) throws IOException {
+  public MultiTenantStreamReader(ReaderContext context, HFileInfo fileInfo, CacheConfig cacheConf,
+    Configuration conf) throws IOException {
     super(context, fileInfo, cacheConf, conf);
     // Tenant index structure is loaded and logged by the parent class
   }
@@ -50,36 +49,34 @@ public class MultiTenantStreamReader extends AbstractMultiTenantReader {
   /**
    * Create a section reader for a specific tenant.
    * <p>
-   * Creates a StreamSectionReader that handles sequential access to a specific
-   * tenant section within the multi-tenant HFile.
-   * 
+   * Creates a StreamSectionReader that handles sequential access to a specific tenant section
+   * within the multi-tenant HFile.
    * @param tenantSectionId The tenant section ID
-   * @param metadata The section metadata containing offset and size
+   * @param metadata        The section metadata containing offset and size
    * @return A section reader for the tenant
    * @throws IOException If an error occurs creating the reader
    */
   @Override
   protected SectionReader createSectionReader(byte[] tenantSectionId, SectionMetadata metadata)
-      throws IOException {
+    throws IOException {
     LOG.debug("Creating section reader for tenant section: {}, offset: {}, size: {}",
-        Bytes.toStringBinary(tenantSectionId), metadata.getOffset(), metadata.getSize());
+      Bytes.toStringBinary(tenantSectionId), metadata.getOffset(), metadata.getSize());
     return new StreamSectionReader(tenantSectionId, metadata);
   }
 
   /**
    * Section reader implementation for stream (sequential access) mode.
    * <p>
-   * This implementation creates HFileStreamReader instances for each tenant section,
-   * providing efficient sequential access to data within specific tenant boundaries.
-   * Stream readers are optimized for sequential scans and compaction operations.
+   * This implementation creates HFileStreamReader instances for each tenant section, providing
+   * efficient sequential access to data within specific tenant boundaries. Stream readers are
+   * optimized for sequential scans and compaction operations.
    */
   protected class StreamSectionReader extends SectionReader {
-    
+
     /**
      * Constructor for StreamSectionReader.
-     *
      * @param tenantSectionId The tenant section ID
-     * @param metadata The section metadata
+     * @param metadata        The section metadata
      */
     public StreamSectionReader(byte[] tenantSectionId, SectionMetadata metadata) {
       super(tenantSectionId, metadata);
@@ -89,26 +86,26 @@ public class MultiTenantStreamReader extends AbstractMultiTenantReader {
     public synchronized HFileReaderImpl getReader() throws IOException {
       if (!initialized) {
         // Create section context with section-specific settings using parent method
-        ReaderContext sectionContext = buildSectionContext(
-            metadata, ReaderContext.ReaderType.STREAM);
+        ReaderContext sectionContext =
+          buildSectionContext(metadata, ReaderContext.ReaderType.STREAM);
 
         try {
           // Create a section-specific HFileInfo
           HFileInfo sectionFileInfo = new HFileInfo(sectionContext, getConf());
-          
+
           // Create stream reader for this section with the section-specific fileInfo
           reader = new HFileStreamReader(sectionContext, sectionFileInfo, cacheConf, getConf());
-          
+
           // Initialize section indices using the standard HFileInfo method
           // This method was designed for HFile v3 format, which each section follows
           LOG.debug("Initializing section indices for tenant at offset {}", metadata.getOffset());
           sectionFileInfo.initMetaAndIndex(reader);
-          LOG.debug("Successfully initialized indices for section at offset {}", 
-                    metadata.getOffset());
-          
+          LOG.debug("Successfully initialized indices for section at offset {}",
+            metadata.getOffset());
+
           initialized = true;
           LOG.debug("Initialized HFileStreamReader for tenant section ID: {}",
-              org.apache.hadoop.hbase.util.Bytes.toStringBinary(tenantSectionId));
+            org.apache.hadoop.hbase.util.Bytes.toStringBinary(tenantSectionId));
         } catch (IOException e) {
           LOG.error("Failed to initialize section reader", e);
           throw e;
@@ -118,8 +115,8 @@ public class MultiTenantStreamReader extends AbstractMultiTenantReader {
     }
 
     @Override
-    public HFileScanner getScanner(Configuration conf, boolean cacheBlocks, 
-        boolean pread, boolean isCompaction) throws IOException {
+    public HFileScanner getScanner(Configuration conf, boolean cacheBlocks, boolean pread,
+      boolean isCompaction) throws IOException {
       return getReader().getScanner(conf, cacheBlocks, pread, isCompaction);
     }
 
@@ -137,4 +134,4 @@ public class MultiTenantStreamReader extends AbstractMultiTenantReader {
   }
 
   // No close overrides needed; inherited from AbstractMultiTenantReader
-} 
+}

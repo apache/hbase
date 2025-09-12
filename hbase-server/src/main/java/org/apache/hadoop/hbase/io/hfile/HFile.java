@@ -506,19 +506,19 @@ public final class HFile {
     try {
       FixedFileTrailer trailer = fileInfo.getTrailer();
       int majorVersion = trailer.getMajorVersion();
-      
+
       // Handle HFile V4 (multi-tenant) separately for both stream and pread modes
       if (majorVersion == MIN_FORMAT_VERSION_WITH_MULTI_TENANT) {
         LOG.debug("Opening MultiTenant HFile v4");
         return MultiTenantReaderFactory.create(context, fileInfo, cacheConf, conf);
       }
-      
+
       // For non-multi-tenant files, continue with existing approach
       if (context.getReaderType() == ReaderType.STREAM) {
         // stream reader will share trailer with pread reader, see HFileStreamReader#copyFields
         return new HFileStreamReader(context, fileInfo, cacheConf, conf);
       }
-      
+
       switch (majorVersion) {
         case 2:
           LOG.debug("Opening HFile v2 with v3 reader");

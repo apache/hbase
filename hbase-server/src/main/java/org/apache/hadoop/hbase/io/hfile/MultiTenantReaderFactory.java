@@ -24,8 +24,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Factory for creating appropriate multi-tenant HFile readers based on the reader type.
- * This handles both stream and pread access modes for multi-tenant HFiles.
+ * Factory for creating appropriate multi-tenant HFile readers based on the reader type. This
+ * handles both stream and pread access modes for multi-tenant HFiles.
  */
 @InterfaceAudience.Private
 public class MultiTenantReaderFactory {
@@ -33,17 +33,16 @@ public class MultiTenantReaderFactory {
 
   /**
    * Create the appropriate multi-tenant reader based on the reader type.
-   * 
-   * @param context Reader context info
-   * @param fileInfo HFile info
+   * @param context   Reader context info
+   * @param fileInfo  HFile info
    * @param cacheConf Cache configuration values
-   * @param conf Configuration
+   * @param conf      Configuration
    * @return An appropriate multi-tenant HFile reader
    * @throws IOException If an error occurs creating the reader
    */
   public static HFile.Reader create(ReaderContext context, HFileInfo fileInfo,
-      CacheConfig cacheConf, Configuration conf) throws IOException {
-    
+    CacheConfig cacheConf, Configuration conf) throws IOException {
+
     if (context.getReaderType() == ReaderContext.ReaderType.STREAM) {
       LOG.debug("Creating MultiTenantStreamReader for {}", context.getFilePath());
       return new MultiTenantStreamReader(context, fileInfo, cacheConf, conf);
@@ -52,4 +51,4 @@ public class MultiTenantReaderFactory {
       return new MultiTenantPreadReader(context, fileInfo, cacheConf, conf);
     }
   }
-} 
+}

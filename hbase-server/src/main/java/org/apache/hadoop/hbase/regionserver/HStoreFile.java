@@ -399,7 +399,10 @@ public class HStoreFile implements StoreFile {
       reader = fileInfo.createReader(context, cacheConf);
       // Only initialize meta and index for non-multi-tenant files (v3 and below)
       // Multi-tenant files (v4) skip this initialization just like in HFile.createReader()
-      if (fileInfo.getHFileInfo().getTrailer().getMajorVersion() != HFile.MIN_FORMAT_VERSION_WITH_MULTI_TENANT) {
+      if (
+        fileInfo.getHFileInfo().getTrailer().getMajorVersion()
+            != HFile.MIN_FORMAT_VERSION_WITH_MULTI_TENANT
+      ) {
         fileInfo.getHFileInfo().initMetaAndIndex(reader.getHFileReader());
       }
     }

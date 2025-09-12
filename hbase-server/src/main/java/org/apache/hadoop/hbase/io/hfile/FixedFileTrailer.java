@@ -134,7 +134,7 @@ public class FixedFileTrailer {
    * Flag indicating if this file is a multi-tenant HFile
    */
   private boolean isMultiTenant = false;
-  
+
   /**
    * The tenant prefix length for multi-tenant HFiles
    */

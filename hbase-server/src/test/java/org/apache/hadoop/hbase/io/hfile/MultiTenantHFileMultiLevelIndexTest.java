@@ -48,17 +48,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Validates that multi-tenant HFile v4 builds and reads a multi-level section index.
- * This test forces a multi-level index by setting small chunk sizes and writing many tenants.
+ * Validates that multi-tenant HFile v4 builds and reads a multi-level section index. This test
+ * forces a multi-level index by setting small chunk sizes and writing many tenants.
  */
 @Category(MediumTests.class)
 public class MultiTenantHFileMultiLevelIndexTest {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(MultiTenantHFileMultiLevelIndexTest.class);
+    HBaseClassTestRule.forClass(MultiTenantHFileMultiLevelIndexTest.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(MultiTenantHFileMultiLevelIndexTest.class);
+  private static final Logger LOG =
+    LoggerFactory.getLogger(MultiTenantHFileMultiLevelIndexTest.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
@@ -68,7 +69,7 @@ public class MultiTenantHFileMultiLevelIndexTest {
 
   private static final int TENANT_PREFIX_LENGTH = 3;
   // Force small chunking so we create multiple leaf blocks and an intermediate level.
-  private static final int FORCED_MAX_CHUNK_SIZE = 3;  // entries per index block
+  private static final int FORCED_MAX_CHUNK_SIZE = 3; // entries per index block
   private static final int FORCED_MIN_INDEX_ENTRIES = 4; // root fanout threshold
 
   // Create enough tenants to exceed FORCED_MAX_CHUNK_SIZE and FORCED_MIN_INDEX_ENTRIES
@@ -86,7 +87,8 @@ public class MultiTenantHFileMultiLevelIndexTest {
     TEST_UTIL.startMiniCluster(1);
     try (Admin admin = TEST_UTIL.getAdmin()) {
       TableDescriptorBuilder tdb = TableDescriptorBuilder.newBuilder(TABLE_NAME);
-      tdb.setValue(MultiTenantHFileWriter.TABLE_TENANT_PREFIX_LENGTH, String.valueOf(TENANT_PREFIX_LENGTH));
+      tdb.setValue(MultiTenantHFileWriter.TABLE_TENANT_PREFIX_LENGTH,
+        String.valueOf(TENANT_PREFIX_LENGTH));
       tdb.setValue(MultiTenantHFileWriter.TABLE_MULTI_TENANT_ENABLED, "true");
       tdb.setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).build());
       admin.createTable(tdb.build());
@@ -113,10 +115,9 @@ public class MultiTenantHFileMultiLevelIndexTest {
     java.util.Set<String> uniqueSectionIds = new java.util.HashSet<>();
     for (Path p : hfiles) {
       try (HFile.Reader r = HFile.createReader(TEST_UTIL.getTestFileSystem(), p,
-          new CacheConfig(TEST_UTIL.getConfiguration()), true, TEST_UTIL.getConfiguration())) {
-        assertEquals("HFile should be version 4",
-            HFile.MIN_FORMAT_VERSION_WITH_MULTI_TENANT,
-            r.getTrailer().getMajorVersion());
+        new CacheConfig(TEST_UTIL.getConfiguration()), true, TEST_UTIL.getConfiguration())) {
+        assertEquals("HFile should be version 4", HFile.MIN_FORMAT_VERSION_WITH_MULTI_TENANT,
+          r.getTrailer().getMajorVersion());
         assertTrue("Reader should be multi-tenant", r instanceof AbstractMultiTenantReader);
 
         // Validate multi-level index per trailer
@@ -130,8 +131,8 @@ public class MultiTenantHFileMultiLevelIndexTest {
         }
 
         // Scan all data via the multi-tenant reader to ensure traversal works across levels
-        HFileScanner scanner = ((AbstractMultiTenantReader) r)
-            .getScanner(TEST_UTIL.getConfiguration(), false, false);
+        HFileScanner scanner =
+          ((AbstractMultiTenantReader) r).getScanner(TEST_UTIL.getConfiguration(), false, false);
         int rowsInThisFile = 0;
         if (scanner.seekTo()) {
           do {
@@ -143,16 +144,16 @@ public class MultiTenantHFileMultiLevelIndexTest {
       }
     }
 
-    assertEquals("Unique tenant sections across all files should equal tenants",
-        NUM_TENANTS, uniqueSectionIds.size());
+    assertEquals("Unique tenant sections across all files should equal tenants", NUM_TENANTS,
+      uniqueSectionIds.size());
 
-    assertEquals("Total cells should match expected write count",
-        NUM_TENANTS * ROWS_PER_TENANT, totalRows);
+    assertEquals("Total cells should match expected write count", NUM_TENANTS * ROWS_PER_TENANT,
+      totalRows);
   }
 
   private static void writeManyTenants() throws IOException {
     try (Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
-         Table table = conn.getTable(TABLE_NAME)) {
+      Table table = conn.getTable(TABLE_NAME)) {
       List<Put> puts = new ArrayList<>();
       for (int t = 0; t < NUM_TENANTS; t++) {
         String tenant = String.format("T%02d", t); // e.g., T00, T01 ... T19
@@ -185,7 +186,9 @@ public class MultiTenantHFileMultiLevelIndexTest {
       Path familyDir = new Path(regionDir.getPath(), Bytes.toString(FAMILY));
       if (!fs.exists(familyDir)) continue;
       for (FileStatus hfile : fs.listStatus(familyDir)) {
-        if (!hfile.getPath().getName().startsWith(".") && !hfile.getPath().getName().endsWith(".tmp")) {
+        if (
+          !hfile.getPath().getName().startsWith(".") && !hfile.getPath().getName().endsWith(".tmp")
+        ) {
           hfiles.add(hfile.getPath());
         }
       }
@@ -193,5 +196,3 @@ public class MultiTenantHFileMultiLevelIndexTest {
     return hfiles;
   }
 }
-
-

@@ -313,24 +313,23 @@ public class StoreFileWriter implements CellSink, ShipperListener {
   }
 
   /**
-   * Thread compaction context into the writer so downstream formats (e.g., v4 sections) can
-   * reflect MAJOR_COMPACTION_KEY/HISTORICAL/COMPACTION_EVENT_KEY consistently.
-   * Should be called immediately after writer creation and before any cells are appended.
+   * Thread compaction context into the writer so downstream formats (e.g., v4 sections) can reflect
+   * MAJOR_COMPACTION_KEY/HISTORICAL/COMPACTION_EVENT_KEY consistently. Should be called immediately
+   * after writer creation and before any cells are appended.
    * <p>
    * Effects:
    * <ul>
    * <li>Writes {@link HStoreFile#MAJOR_COMPACTION_KEY} to indicate major/minor compaction.</li>
-   * <li>Writes {@link HStoreFile#COMPACTION_EVENT_KEY} built from the compaction input set.
-   *     See {@link #buildCompactionEventTrackerBytes(java.util.function.Supplier, java.util.Collection)}
-   *     for inclusion semantics.</li>
+   * <li>Writes {@link HStoreFile#COMPACTION_EVENT_KEY} built from the compaction input set. See
+   * {@link #buildCompactionEventTrackerBytes(java.util.function.Supplier, java.util.Collection)}
+   * for inclusion semantics.</li>
    * <li>Writes {@link HStoreFile#HISTORICAL_KEY}: {@code false} for the live writer and
-   *     {@code true} for the historical writer (when dual-writing is enabled).</li>
+   * {@code true} for the historical writer (when dual-writing is enabled).</li>
    * </ul>
    * For HFile v4 (multi-tenant) writers, these file info entries are propagated to each newly
    * created tenant section so that every section reflects the real compaction context.
-   *
    * @param majorCompaction {@code true} if this compaction is major, otherwise {@code false}
-   * @param storeFiles the set of input store files being compacted into this writer
+   * @param storeFiles      the set of input store files being compacted into this writer
    * @throws IOException if writing file info fails
    */
   public void appendCompactionContext(final boolean majorCompaction,
@@ -359,9 +358,8 @@ public class StoreFileWriter implements CellSink, ShipperListener {
    * add E to F's compacted files first, then add E's compacted files (A, B, C, D) to it. There is
    * no need to add D's compacted file again, as D's compacted files have already been included in
    * E's compacted files. See HBASE-20724 for more details.
-   *
    * @param compactedFilesSupplier supplier returning store files compacted but not yet archived
-   * @param storeFiles the compacted store files to generate this new file
+   * @param storeFiles             the compacted store files to generate this new file
    * @return bytes of CompactionEventTracker
    */
   private static byte[] buildCompactionEventTrackerBytes(
@@ -683,8 +681,6 @@ public class StoreFileWriter implements CellSink, ShipperListener {
         StoreFileWriter.buildCompactionEventTrackerBytes(this.compactedFilesSupplier, storeFiles));
       appendTrackedTimestampsToMetadata();
     }
-
-    
 
     /**
      * Writes meta data. Call before {@link #close()} since its written as meta data to this file.

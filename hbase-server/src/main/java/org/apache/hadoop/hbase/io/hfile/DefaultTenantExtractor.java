@@ -22,37 +22,35 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Default implementation of TenantExtractor that extracts tenant information
- * based on configurable prefix length at the beginning of row keys.
+ * Default implementation of TenantExtractor that extracts tenant information based on configurable
+ * prefix length at the beginning of row keys.
  */
 @InterfaceAudience.Private
 public class DefaultTenantExtractor implements TenantExtractor {
   /** The length of the tenant prefix to extract */
   private final int prefixLength;
-  
+
   /**
    * Constructor for DefaultTenantExtractor.
-   *
    * @param prefixLength the length of the tenant prefix to extract from row keys
    */
   public DefaultTenantExtractor(int prefixLength) {
     this.prefixLength = prefixLength;
   }
-  
+
   @Override
   public byte[] extractTenantId(Cell cell) {
     return extractPrefix(cell);
   }
-  
+
   @Override
   public byte[] extractTenantSectionId(Cell cell) {
     // Tenant section ID is same as tenant ID
     return extractPrefix(cell);
   }
-  
+
   /**
    * Extract tenant prefix from a cell.
-   * 
    * @param cell The cell to extract tenant information from
    * @return The tenant prefix as a byte array
    */
@@ -60,27 +58,26 @@ public class DefaultTenantExtractor implements TenantExtractor {
     if (prefixLength <= 0) {
       return HConstants.EMPTY_BYTE_ARRAY;
     }
-    
+
     // Get row length and ensure it's sufficient
     int rowLength = cell.getRowLength();
     if (rowLength < prefixLength) {
-      throw new IllegalArgumentException("Row key too short for configured prefix length. " +
-          "Row key length: " + rowLength + ", required: " + prefixLength);
+      throw new IllegalArgumentException("Row key too short for configured prefix length. "
+        + "Row key length: " + rowLength + ", required: " + prefixLength);
     }
-    
+
     // Create and populate result array - always from start of row
     byte[] prefix = new byte[prefixLength];
     System.arraycopy(cell.getRowArray(), cell.getRowOffset(), prefix, 0, prefixLength);
     return prefix;
   }
-  
+
   /**
    * Get the tenant prefix length.
-   * 
    * @return The configured tenant prefix length
    */
   @Override
   public int getPrefixLength() {
     return prefixLength;
   }
-} 
+}
