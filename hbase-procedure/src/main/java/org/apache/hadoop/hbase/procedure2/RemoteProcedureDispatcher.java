@@ -262,7 +262,7 @@ public abstract class RemoteProcedureDispatcher<TEnv, TRemote extends Comparable
      * Called when RS tells the remote procedure is succeeded through the
      * {@code reportProcedureDone} method.
      */
-    void remoteOperationCompleted(TEnv env);
+    void remoteOperationCompleted(TEnv env, byte[] remoteResultData);
 
     /**
      * Called when RS tells the remote procedure is failed through the {@code reportProcedureDone}

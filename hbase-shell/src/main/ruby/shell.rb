@@ -471,6 +471,7 @@ Shell.load_command_group(
     unassign
     zk_dump
     wal_roll
+    wal_roll_all
     hbck_chore_run
     catalogjanitor_run
     catalogjanitor_switch

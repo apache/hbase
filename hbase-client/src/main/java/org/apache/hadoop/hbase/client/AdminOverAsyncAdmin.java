@@ -636,6 +636,11 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
+  public Map<ServerName, Long> rollAllWALWriters() throws IOException {
+    return get(admin.rollAllWALWriters());
+  }
+
+  @Override
   public CompactionState getCompactionState(TableName tableName) throws IOException {
     return get(admin.getCompactionState(tableName));
   }

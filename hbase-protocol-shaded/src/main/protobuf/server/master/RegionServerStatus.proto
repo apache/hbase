@@ -160,6 +160,7 @@ message RemoteProcedureResult {
   optional ForeignExceptionMessage error = 3;
   // Master active time as fencing token
   optional int64 initiating_master_active_time = 4;
+  optional bytes proc_result_data = 5;
 }
 message ReportProcedureDoneRequest {
   repeated RemoteProcedureResult result = 1;

@@ -24,7 +24,7 @@ import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
 @Category({ ClientTests.class, MediumTests.class })
-public class TestTableShell extends BaseTestShell {
+public class TestTableShell extends AbstractTestShell {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestTableShell.class);
