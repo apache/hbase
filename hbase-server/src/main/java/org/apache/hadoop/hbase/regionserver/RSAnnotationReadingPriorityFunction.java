@@ -46,13 +46,17 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader
  * Priority function specifically for the region server.
  */
 @InterfaceAudience.Private
-class RSAnnotationReadingPriorityFunction extends AnnotationReadingPriorityFunction<RSRpcServices> {
+public class RSAnnotationReadingPriorityFunction
+  extends AnnotationReadingPriorityFunction<RSRpcServices> {
 
   private static final Logger LOG =
     LoggerFactory.getLogger(RSAnnotationReadingPriorityFunction.class);
 
   /** Used to control the scan delay, currently sqrt(numNextCall * weight) */
   public static final String SCAN_VTIME_WEIGHT_CONF_KEY = "hbase.ipc.server.scan.vtime.weight";
+
+  // QOS for internal meta read requests
+  public static final int INTERNAL_READ_QOS = 250;
 
   @SuppressWarnings("unchecked")
   private final Class<? extends Message>[] knownArgumentClasses =
