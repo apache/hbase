@@ -32,7 +32,7 @@
          import="org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure"
          import="org.apache.hadoop.hbase.util.GsonUtil"
          import="org.apache.hbase.thirdparty.com.google.gson.Gson"
-%>
+         import="org.apache.hadoop.hbase.util.MasterStatusConstants" %>
 <%
     HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
     List<RegionStateNode> rit = master.getAssignmentManager().getRegionsInTransition();
@@ -44,11 +44,11 @@
                 .collect(Collectors.toList());
     }
 
-    String format = request.getParameter("format");
+    String format = request.getParameter(MasterStatusConstants.FORMAT);
     if(format == null || format.isEmpty()){
         format = "html";
     }
-    String filter = request.getParameter("filter");
+    String filter = request.getParameter(MasterStatusConstants.FILTER);
     Collections.sort(rit, new Comparator<RegionStateNode>() {
         @Override
         public int compare(RegionStateNode o1, RegionStateNode o2) {
