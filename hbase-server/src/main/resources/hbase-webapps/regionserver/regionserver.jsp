@@ -117,6 +117,12 @@
       <jsp:include page="taskMonitor.jsp"/>
     </section>
 
+    <section>
+      <h2>Regions</h2>
+      <% request.setAttribute("onlineRegions", onlineRegions); %>
+      <jsp:include page="regionList.jsp"/>
+    </section>
+
 
     <%-- TODO: Migrate rest of RSStatusTmpl.jamon  --%>
 
