@@ -145,8 +145,9 @@ public class TestHFileLinkCleaner {
     // Create link to hfile
     familyLinkPath = getFamilyDirPath(rootDir, tableLinkName, hriLink.getEncodedName(), familyName);
     fs.mkdirs(familyLinkPath);
-    hfileLinkName =
-      sft.createHFileLink(hri.getTable(), hri.getEncodedName(), hfileName, createBackReference);
+    sft.createHFileLink(hri.getTable(), hri.getEncodedName(), hfileName, createBackReference);
+    hfileLinkName = hfileName;
+
     linkBackRefDir = HFileLink.getBackReferencesDir(archiveStoreDir, hfileName);
     assertTrue(fs.exists(linkBackRefDir));
     backRefs = fs.listStatus(linkBackRefDir);
