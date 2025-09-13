@@ -52,13 +52,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
@@ -70,6 +68,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyState;
 import org.apache.hadoop.hbase.io.crypto.MockManagedKeyProvider;
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -89,11 +88,9 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 @RunWith(Suite.class)
-@Suite.SuiteClasses({
-  TestKeymetaTableAccessor.TestAdd.class,
+@Suite.SuiteClasses({ TestKeymetaTableAccessor.TestAdd.class,
   TestKeymetaTableAccessor.TestAddWithNullableFields.class,
-  TestKeymetaTableAccessor.TestGet.class,
-})
+  TestKeymetaTableAccessor.TestGet.class, })
 @Category({ MasterTests.class, SmallTests.class })
 public class TestKeymetaTableAccessor {
   protected static final String ALIAS = "custId1";
@@ -102,7 +99,7 @@ public class TestKeymetaTableAccessor {
   protected static String KEY_METADATA = "metadata1";
 
   @Mock
-  protected Server server;
+  protected MasterServices server;
   @Mock
   protected Connection connection;
   @Mock
@@ -130,6 +127,7 @@ public class TestKeymetaTableAccessor {
     when(connection.getTable(KeymetaTableAccessor.KEY_META_TABLE_NAME)).thenReturn(table);
     when(server.getSystemKeyCache()).thenReturn(systemKeyCache);
     when(server.getConfiguration()).thenReturn(conf);
+    when(server.getKeyManagementService()).thenReturn(server);
 
     accessor = new KeymetaTableAccessor(server);
     managedKeyProvider = new MockManagedKeyProvider();
@@ -149,23 +147,20 @@ public class TestKeymetaTableAccessor {
   @Category({ MasterTests.class, SmallTests.class })
   public static class TestAdd extends TestKeymetaTableAccessor {
     @ClassRule
-    public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestAdd.class);
+    public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestAdd.class);
 
     @Parameter(0)
     public ManagedKeyState keyState;
 
     @Parameterized.Parameters(name = "{index},keyState={0}")
     public static Collection<Object[]> data() {
-      return Arrays.asList(
-        new Object[][] { { ACTIVE }, { FAILED }, { INACTIVE }, { DISABLED }, });
+      return Arrays.asList(new Object[][] { { ACTIVE }, { FAILED }, { INACTIVE }, { DISABLED }, });
     }
 
     @Test
     public void testAddKey() throws Exception {
       managedKeyProvider.setMockedKeyState(ALIAS, keyState);
-      ManagedKeyData keyData =
-        managedKeyProvider.getManagedKey(CUST_ID, KEY_SPACE_GLOBAL);
+      ManagedKeyData keyData = managedKeyProvider.getManagedKey(CUST_ID, KEY_SPACE_GLOBAL);
 
       accessor.addKey(keyData);
 
@@ -176,8 +171,7 @@ public class TestKeymetaTableAccessor {
       if (keyState == ACTIVE) {
         assertPut(keyData, puts.get(0), constructRowKeyForCustNamespace(keyData));
         assertPut(keyData, puts.get(1), constructRowKeyForMetadata(keyData));
-      }
-      else {
+      } else {
         assertPut(keyData, puts.get(0), constructRowKeyForMetadata(keyData));
       }
     }
@@ -204,8 +198,8 @@ public class TestKeymetaTableAccessor {
       Put put = puts.get(0);
 
       // Verify the row key uses state value for metadata hash
-      byte[] expectedRowKey = constructRowKeyForMetadata(CUST_ID, KEY_SPACE_GLOBAL,
-        new byte[] { FAILED.getVal() });
+      byte[] expectedRowKey =
+        constructRowKeyForMetadata(CUST_ID, KEY_SPACE_GLOBAL, new byte[] { FAILED.getVal() });
       assertEquals(0, Bytes.compareTo(expectedRowKey, put.getRow()));
 
       Map<Bytes, Bytes> valueMap = getValueMap(put);
@@ -225,8 +219,7 @@ public class TestKeymetaTableAccessor {
   @Category({ MasterTests.class, SmallTests.class })
   public static class TestGet extends TestKeymetaTableAccessor {
     @ClassRule
-    public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestGet.class);
+    public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestGet.class);
 
     @Mock
     private Result result1;
@@ -275,8 +268,8 @@ public class TestKeymetaTableAccessor {
       ex = assertThrows(IOException.class,
         () -> accessor.getKey(CUST_ID, KEY_SPACE_GLOBAL, KEY_METADATA));
       assertEquals("ACTIVE key must have a wrapped key", ex.getMessage());
-      ex = assertThrows(IOException.class, () ->
-        accessor.getKey(CUST_ID, KEY_SPACE_GLOBAL, KEY_METADATA));
+      ex = assertThrows(IOException.class,
+        () -> accessor.getKey(CUST_ID, KEY_SPACE_GLOBAL, KEY_METADATA));
       assertEquals("INACTIVE key must have a wrapped key", ex.getMessage());
     }
 
@@ -303,8 +296,8 @@ public class TestKeymetaTableAccessor {
       assertEquals(0, Bytes.compareTo(CUST_ID, result.getKeyCustodian()));
       assertEquals(KEY_NAMESPACE, result.getKeyNamespace());
       assertEquals(keyData.getKeyMetadata(), result.getKeyMetadata());
-      assertEquals(0, Bytes.compareTo(keyData.getTheKey().getEncoded(),
-        result.getTheKey().getEncoded()));
+      assertEquals(0,
+        Bytes.compareTo(keyData.getTheKey().getEncoded(), result.getTheKey().getEncoded()));
       assertEquals(ACTIVE, result.getKeyState());
 
       // When DEK checksum doesn't match, we expect a null value.
@@ -384,8 +377,8 @@ public class TestKeymetaTableAccessor {
 
     private ManagedKeyData setupActiveKey(byte[] custId, Result result) throws Exception {
       ManagedKeyData keyData = managedKeyProvider.getManagedKey(custId, KEY_NAMESPACE);
-      byte[] dekWrappedBySTK = EncryptionUtil.wrapKey(conf, null,
-        keyData.getTheKey(), latestSystemKey.getTheKey());
+      byte[] dekWrappedBySTK =
+        EncryptionUtil.wrapKey(conf, null, keyData.getTheKey(), latestSystemKey.getTheKey());
       when(result.getValue(eq(KEY_META_INFO_FAMILY), eq(DEK_WRAPPED_BY_STK_QUAL_BYTES)))
         .thenReturn(dekWrappedBySTK);
       when(result.getValue(eq(KEY_META_INFO_FAMILY), eq(DEK_CHECKSUM_QUAL_BYTES)))
@@ -410,8 +403,7 @@ public class TestKeymetaTableAccessor {
       assertNotNull(valueMap.get(new Bytes(DEK_WRAPPED_BY_STK_QUAL_BYTES)));
       assertEquals(new Bytes(Bytes.toBytes(latestSystemKey.getKeyChecksum())),
         valueMap.get(new Bytes(STK_CHECKSUM_QUAL_BYTES)));
-    }
-    else {
+    } else {
       assertNull(valueMap.get(new Bytes(DEK_CHECKSUM_QUAL_BYTES)));
       assertNull(valueMap.get(new Bytes(DEK_WRAPPED_BY_STK_QUAL_BYTES)));
       assertNull(valueMap.get(new Bytes(STK_CHECKSUM_QUAL_BYTES)));

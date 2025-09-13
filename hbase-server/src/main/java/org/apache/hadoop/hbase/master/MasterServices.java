@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
+import org.apache.hadoop.hbase.keymeta.KeyManagementService;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.hbck.HbckChore;
 import org.apache.hadoop.hbase.master.janitor.CatalogJanitor;
@@ -67,7 +68,7 @@ import org.apache.hbase.thirdparty.com.google.protobuf.Service;
  * adding API. Changes cause ripples through the code base.
  */
 @InterfaceAudience.Private
-public interface MasterServices extends Server {
+public interface MasterServices extends Server, KeyManagementService {
   /** Returns the underlying snapshot manager */
   SnapshotManager getSnapshotManager();
 

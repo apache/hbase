@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.keymeta;
 
 import java.security.Key;
-
 import org.apache.hadoop.hbase.io.crypto.KeyProvider;
 
 public class DummyKeyProvider implements KeyProvider {

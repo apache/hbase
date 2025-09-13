@@ -180,7 +180,7 @@ public class KeyStoreKeyProvider implements KeyProvider {
     } catch (UnrecoverableKeyException e) {
       try {
         return store.getKey(alias, getAliasPassword(alias));
-      } catch (UnrecoverableKeyException|NoSuchAlgorithmException|KeyStoreException e2) {
+      } catch (UnrecoverableKeyException | NoSuchAlgorithmException | KeyStoreException e2) {
         // Ignore.
       }
       throw new RuntimeException(e);

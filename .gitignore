@@ -25,6 +25,7 @@ linklint/
 **/*.log
 tmp
 **/.flattened-pom.xml
+.sw*
 .*.sw*
 ID
 filenametags

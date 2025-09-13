@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.region.MasterRegion;
 import org.apache.hadoop.hbase.procedure2.store.LeaseRecovery;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore.ProcedureLoader;
@@ -36,8 +37,8 @@ final class RegionProcedureStoreTestHelper {
   private RegionProcedureStoreTestHelper() {
   }
 
-  static Server mockServer(Configuration conf) {
-    Server server = mock(Server.class);
+  static MasterServices mockServer(Configuration conf) {
+    MasterServices server = mock(MasterServices.class);
     when(server.getConfiguration()).thenReturn(conf);
     when(server.getServerName())
       .thenReturn(ServerName.valueOf("localhost", 12345, EnvironmentEdgeManager.currentTime()));

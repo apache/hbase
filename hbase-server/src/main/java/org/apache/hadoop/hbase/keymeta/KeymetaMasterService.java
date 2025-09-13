@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.keymeta;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
@@ -33,14 +32,12 @@ public class KeymetaMasterService extends KeyManagementBase {
 
   private final MasterServices master;
 
-  private static final TableDescriptorBuilder TABLE_DESCRIPTOR_BUILDER = TableDescriptorBuilder
-    .newBuilder(KeymetaTableAccessor.KEY_META_TABLE_NAME).setRegionReplication(1)
-    .setPriority(HConstants.SYSTEMTABLE_QOS)
-    .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(
-        KeymetaTableAccessor.KEY_META_INFO_FAMILY)
-      .setScope(HConstants.REPLICATION_SCOPE_LOCAL).setMaxVersions(1)
-      .setInMemory(true)
-      .build());
+  private static final TableDescriptorBuilder TABLE_DESCRIPTOR_BUILDER =
+    TableDescriptorBuilder.newBuilder(KeymetaTableAccessor.KEY_META_TABLE_NAME)
+      .setRegionReplication(1).setPriority(HConstants.SYSTEMTABLE_QOS)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder
+        .newBuilder(KeymetaTableAccessor.KEY_META_INFO_FAMILY)
+        .setScope(HConstants.REPLICATION_SCOPE_LOCAL).setMaxVersions(1).setInMemory(true).build());
 
   public KeymetaMasterService(MasterServices masterServices) {
     super(masterServices);

@@ -19,15 +19,12 @@ package org.apache.hadoop.hbase.keymeta;
 
 import java.io.IOException;
 import java.security.KeyException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.KeyProvider;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
-import org.apache.hadoop.hbase.io.crypto.ManagedKeyState;
 import org.apache.hadoop.hbase.security.SecurityUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -40,26 +37,23 @@ import org.slf4j.LoggerFactory;
 public abstract class KeyManagementBase {
   protected static final Logger LOG = LoggerFactory.getLogger(KeyManagementBase.class);
 
-  private Server server;
+  private KeyManagementService keyManagementService;
   private final Configuration configuration;
 
   private Boolean isDynamicLookupEnabled;
   private Boolean isKeyManagementEnabled;
-  private Integer perCustNamespaceActiveKeyCount;
 
   /**
    * Construct with a server instance. Configuration is derived from the server.
-   *
    * @param server the server instance
    */
-  public KeyManagementBase(Server server) {
-    this(server.getConfiguration());
-    this.server = server;
+  public KeyManagementBase(KeyManagementService keyManagementService) {
+    this(keyManagementService.getConfiguration());
+    this.keyManagementService = keyManagementService;
   }
 
   /**
    * Construct with a custom configuration and no server.
-   *
    * @param configuration the configuration instance
    */
   public KeyManagementBase(Configuration configuration) {
@@ -69,8 +63,8 @@ public abstract class KeyManagementBase {
     this.configuration = configuration;
   }
 
-  protected Server getServer() {
-    return server;
+  protected KeyManagementService getKeyManagementService() {
+    return keyManagementService;
   }
 
   protected Configuration getConfiguration() {
@@ -81,13 +75,13 @@ public abstract class KeyManagementBase {
    * A utility method for getting the managed key provider.
    * @return the key provider
    * @throws RuntimeException if no provider is configured or if the configured provider is not an
-   *   instance of ManagedKeyProvider
+   *                          instance of ManagedKeyProvider
    */
   protected ManagedKeyProvider getKeyProvider() {
     KeyProvider provider = Encryption.getKeyProvider(getConfiguration());
     if (!(provider instanceof ManagedKeyProvider)) {
       throw new RuntimeException("KeyProvider: " + provider.getClass().getName()
-          + " expected to be of type ManagedKeyProvider");
+        + " expected to be of type ManagedKeyProvider");
     }
     return (ManagedKeyProvider) provider;
   }
@@ -123,38 +117,38 @@ public abstract class KeyManagementBase {
   }
 
   /**
-   * Utility function to retrieves a managed key from the key provider.  If an existing key is
+   * Utility function to retrieves a managed key from the key provider. If an existing key is
    * provided and the retrieved key is the same as the existing key, it will be ignored.
-   *
-   * @param encKeyCust the encoded key custodian
-   * @param key_cust the key custodian
-   * @param keyNamespace the key namespace
-   * @param accessor the accessor to use to persist the key. If null, the key will not be persisted.
+   * @param encKeyCust        the encoded key custodian
+   * @param key_cust          the key custodian
+   * @param keyNamespace      the key namespace
+   * @param accessor          the accessor to use to persist the key. If null, the key will not be
+   *                          persisted.
    * @param existingActiveKey the existing key, typically the active key already retrieved from the
-   *   key provider, can be null.
+   *                          key provider, can be null.
    * @return the retrieved key, or null if no key could be retrieved
-   * @throws IOException if an error occurs
+   * @throws IOException  if an error occurs
    * @throws KeyException if an error occurs
    */
   protected ManagedKeyData retrieveActiveKey(String encKeyCust, byte[] key_cust,
-      String keyNamespace, KeymetaTableAccessor accessor, ManagedKeyData existingActiveKey)
-      throws IOException, KeyException {
+    String keyNamespace, KeymetaTableAccessor accessor, ManagedKeyData existingActiveKey)
+    throws IOException, KeyException {
     ManagedKeyProvider provider = getKeyProvider();
     ManagedKeyData pbeKey = provider.getManagedKey(key_cust, keyNamespace);
     if (pbeKey == null) {
       throw new IOException("Invalid null managed key received from key provider");
     }
-    /* Will be useful when refresh API is implemented.
-    if (existingActiveKey != null && existingActiveKey.equals(pbeKey)) {
-      LOG.info("retrieveManagedKey: no change in key for (custodian: {}, namespace: {}",
-        encKeyCust, keyNamespace);
-      return null;
-    }
-    // TODO: If existingActiveKey is not null, we should update the key state to INACTIVE.
+    /*
+     * Will be useful when refresh API is implemented. if (existingActiveKey != null &&
+     * existingActiveKey.equals(pbeKey)) {
+     * LOG.info("retrieveManagedKey: no change in key for (custodian: {}, namespace: {}",
+     * encKeyCust, keyNamespace); return null; } // TODO: If existingActiveKey is not null, we
+     * should update the key state to INACTIVE.
      */
-    LOG.info("retrieveManagedKey: got managed key with status: {} and metadata: {} for "
-        + "(custodian: {}, namespace: {})", pbeKey.getKeyState(), pbeKey.getKeyMetadata(),
-      encKeyCust, keyNamespace);
+    LOG.info(
+      "retrieveManagedKey: got managed key with status: {} and metadata: {} for "
+        + "(custodian: {}, namespace: {})",
+      pbeKey.getKeyState(), pbeKey.getKeyMetadata(), encKeyCust, pbeKey.getKeyNamespace());
     if (accessor != null) {
       accessor.addKey(pbeKey);
     }
