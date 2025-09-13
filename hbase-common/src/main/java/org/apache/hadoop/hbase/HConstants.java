@@ -1311,8 +1311,10 @@ public final class HConstants {
   /** Configuration key for enabling WAL encryption, a boolean */
   public static final String ENABLE_WAL_ENCRYPTION = "hbase.regionserver.wal.encryption";
 
-  /** Property used by ManagedKeyStoreKeyProvider class to set the alias that identifies
-   *  the current system key. */
+  /**
+   * Property used by ManagedKeyStoreKeyProvider class to set the alias that identifies the current
+   * system key.
+   */
   public static final String CRYPTO_MANAGED_KEY_STORE_SYSTEM_KEY_NAME_CONF_KEY =
     "hbase.crypto.managed_key_store.system.key.name";
   public static final String CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX =
@@ -1323,8 +1325,10 @@ public final class HConstants {
     "hbase.crypto.managed_keys.enabled";
   public static final boolean CRYPTO_MANAGED_KEYS_DEFAULT_ENABLED = false;
 
-  /** Enables or disables key lookup during data path as an alternative to static injection of keys
-   *  using control path. */
+  /**
+   * Enables or disables key lookup during data path as an alternative to static injection of keys
+   * using control path.
+   */
   public static final String CRYPTO_MANAGED_KEYS_DYNAMIC_LOOKUP_ENABLED_CONF_KEY =
     "hbase.crypto.managed_keys.dynamic_lookup.enabled";
   public static final boolean CRYPTO_MANAGED_KEYS_DYNAMIC_LOOKUP_DEFAULT_ENABLED = true;

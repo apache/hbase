@@ -308,7 +308,8 @@ public final class MasterRegion {
     Path tableDir = CommonFSUtils.getTableDir(rootDir, tn);
     // persist table descriptor
     FSTableDescriptors.createTableDescriptorForTableDirectory(fs, tableDir, td, true);
-    HRegion.createHRegion(conf, regionInfo, fs, tableDir, td, server.getKeyManagementService()).close();
+    HRegion.createHRegion(conf, regionInfo, fs, tableDir, td, server.getKeyManagementService())
+      .close();
     Path initializedFlag = new Path(tableDir, INITIALIZED_FLAG);
     if (!fs.mkdirs(initializedFlag)) {
       throw new IOException("Can not touch initialized flag: " + initializedFlag);
@@ -317,9 +318,10 @@ public final class MasterRegion {
     if (!fs.delete(initializingFlag, true)) {
       LOG.warn("failed to clean up initializing flag: " + initializingFlag);
     }
-    WAL wal = createWAL(walFactory, walRoller, server.getServerName().toString(), walFs, walRootDir, regionInfo);
+    WAL wal = createWAL(walFactory, walRoller, server.getServerName().toString(), walFs, walRootDir,
+      regionInfo);
     return HRegion.openHRegionFromTableDir(conf, fs, tableDir, regionInfo, td, wal, null, null,
-       server.getKeyManagementService());
+      server.getKeyManagementService());
   }
 
   private static RegionInfo loadRegionInfo(FileSystem fs, Path tableDir) throws IOException {
@@ -480,8 +482,8 @@ public final class MasterRegion {
       if (!fs.mkdirs(initializedFlag)) {
         throw new IOException("Can not touch initialized flag");
       }
-      region = bootstrap(conf, td, fs, rootDir, walFs, walRootDir, walFactory, walRoller,
-        server, true);
+      region =
+        bootstrap(conf, td, fs, rootDir, walFs, walRootDir, walFactory, walRoller, server, true);
     } else {
       if (!fs.exists(initializedFlag)) {
         if (!fs.exists(initializingFlag)) {
@@ -519,8 +521,8 @@ public final class MasterRegion {
         TableDescriptor oldTd = FSTableDescriptors.getTableDescriptorFromFs(fs, tableDir);
         RegionInfo regionInfo = loadRegionInfo(fs, tableDir);
         tryMigrate(conf, fs, tableDir, regionInfo, oldTd, td);
-        region = open(conf, td, regionInfo, fs, rootDir, walFs, walRootDir, walFactory, walRoller,
-          server);
+        region =
+          open(conf, td, regionInfo, fs, rootDir, walFs, walRootDir, walFactory, walRoller, server);
       }
     }
 

@@ -34,11 +34,9 @@ import java.security.Key;
 import java.security.KeyException;
 import java.util.Arrays;
 import java.util.Collection;
-
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -61,23 +59,22 @@ import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.BlockJUnit4ClassRunner;
 import org.junit.runners.Parameterized;
-import org.junit.runners.Suite;
 import org.junit.runners.Parameterized.Parameter;
+import org.junit.runners.Suite;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
 @RunWith(Suite.class)
-@Suite.SuiteClasses({
-  TestSecurityUtil.TestBasic.class,
+@Suite.SuiteClasses({ TestSecurityUtil.TestBasic.class,
   TestSecurityUtil.TestCreateEncryptionContext_ForWrites.class,
   TestSecurityUtil.TestCreateEncryptionContextForFile_ForReads.class,
-  TestSecurityUtil.TestCreateEncryptionContextForFile_WithoutKeyManagement_UnwrapKeyException.class,
-})
+  TestSecurityUtil.TestCreateEncryptionContextForFile_WithoutKeyManagement_UnwrapKeyException.class, })
 @Category({ SecurityTests.class, SmallTests.class })
 public class TestSecurityUtil {
 
   @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestSecurityUtil.class);
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(TestSecurityUtil.class);
 
   protected Configuration conf;
   protected HBaseTestingUtil testUtil;
@@ -174,8 +171,8 @@ public class TestSecurityUtil {
     public void testWithNoEncryptionOnFamily() throws IOException {
       when(mockFamily.getEncryptionType()).thenReturn(null);
 
-      Encryption.Context result = SecurityUtil.createEncryptionContext(
-          conf, mockFamily, mockManagedKeyDataCache, mockSystemKeyCache, "test-namespace");
+      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, mockFamily,
+        mockManagedKeyDataCache, mockSystemKeyCache, "test-namespace");
 
       assertEquals(Encryption.Context.NONE, result);
     }
@@ -188,7 +185,7 @@ public class TestSecurityUtil {
 
         IllegalStateException exception = assertThrows(IllegalStateException.class, () -> {
           SecurityUtil.createEncryptionContext(conf, mockFamily, mockManagedKeyDataCache,
-              mockSystemKeyCache, "test-namespace");
+            mockSystemKeyCache, "test-namespace");
         });
 
         assertTrue(exception.getMessage().contains("encryption feature is disabled"));
@@ -201,9 +198,8 @@ public class TestSecurityUtil {
       conf.setBoolean(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, true);
       conf.setBoolean(HConstants.CRYPTO_MANAGED_KEYS_LOCAL_KEY_GEN_PER_FILE_ENABLED_CONF_KEY, true);
 
-      when(mockManagedKeyDataCache.getActiveEntry(
-          eq(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES), eq("test-namespace")))
-          .thenReturn(mockManagedKeyData);
+      when(mockManagedKeyDataCache.getActiveEntry(eq(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES),
+        eq("test-namespace"))).thenReturn(mockManagedKeyData);
 
       try (MockedStatic<Encryption> mockedEncryption = Mockito.mockStatic(Encryption.class)) {
         mockedEncryption.when(() -> Encryption.isEncryptionEnabled(conf)).thenReturn(true);
@@ -213,8 +209,8 @@ public class TestSecurityUtil {
         Encryption.Context mockContext = mock(Encryption.Context.class);
         mockedEncryption.when(() -> Encryption.newContext(conf)).thenReturn(mockContext);
 
-        Encryption.Context result = SecurityUtil.createEncryptionContext(
-            conf, mockFamily, mockManagedKeyDataCache, mockSystemKeyCache, "test-namespace");
+        Encryption.Context result = SecurityUtil.createEncryptionContext(conf, mockFamily,
+          mockManagedKeyDataCache, mockSystemKeyCache, "test-namespace");
 
         verifyContext(result);
       }
@@ -225,19 +221,17 @@ public class TestSecurityUtil {
       // Enable key management
       conf.setBoolean(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, true);
 
-      when(mockManagedKeyDataCache.getActiveEntry(
-          eq(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES), eq("test-namespace")))
-          .thenReturn(null);
-      when(mockManagedKeyDataCache.getActiveEntry(
-          eq(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES), eq(ManagedKeyData.KEY_SPACE_GLOBAL)))
-          .thenReturn(null);
+      when(mockManagedKeyDataCache.getActiveEntry(eq(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES),
+        eq("test-namespace"))).thenReturn(null);
+      when(mockManagedKeyDataCache.getActiveEntry(eq(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES),
+        eq(ManagedKeyData.KEY_SPACE_GLOBAL))).thenReturn(null);
 
       try (MockedStatic<Encryption> mockedEncryption = Mockito.mockStatic(Encryption.class)) {
         mockedEncryption.when(() -> Encryption.isEncryptionEnabled(conf)).thenReturn(true);
 
         IOException exception = assertThrows(IOException.class, () -> {
           SecurityUtil.createEncryptionContext(conf, mockFamily, mockManagedKeyDataCache,
-              mockSystemKeyCache, "test-namespace");
+            mockSystemKeyCache, "test-namespace");
         });
 
         assertTrue(exception.getMessage().contains("No active key found"));
@@ -245,8 +239,7 @@ public class TestSecurityUtil {
     }
 
     @Test
-    public void testWithKeyManagement_LocalKeyGen_WithUnknownKeyCipher()
-      throws IOException {
+    public void testWithKeyManagement_LocalKeyGen_WithUnknownKeyCipher() throws IOException {
       when(mockFamily.getEncryptionType()).thenReturn("UNKNOWN_CIPHER");
       mockKey = mock(Key.class);
       when(mockKey.getAlgorithm()).thenReturn("UNKNOWN_CIPHER");
@@ -256,16 +249,15 @@ public class TestSecurityUtil {
       conf.setBoolean(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, true);
       conf.setBoolean(HConstants.CRYPTO_MANAGED_KEYS_LOCAL_KEY_GEN_PER_FILE_ENABLED_CONF_KEY, true);
 
-      when(mockManagedKeyDataCache.getActiveEntry(
-          eq(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES), eq("test-namespace")))
-          .thenReturn(mockManagedKeyData);
+      when(mockManagedKeyDataCache.getActiveEntry(eq(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES),
+        eq("test-namespace"))).thenReturn(mockManagedKeyData);
 
       try (MockedStatic<Encryption> mockedEncryption = Mockito.mockStatic(Encryption.class)) {
         mockedEncryption.when(() -> Encryption.isEncryptionEnabled(conf)).thenReturn(true);
 
         IllegalStateException exception = assertThrows(IllegalStateException.class, () -> {
           SecurityUtil.createEncryptionContext(conf, mockFamily, mockManagedKeyDataCache,
-              mockSystemKeyCache, "test-namespace");
+            mockSystemKeyCache, "test-namespace");
         });
 
         assertTrue(exception.getMessage().contains("Cipher 'UNKNOWN_CIPHER' is not available"));
@@ -273,8 +265,7 @@ public class TestSecurityUtil {
     }
 
     @Test
-    public void testWithKeyManagement_LocalKeyGen_WithKeyAlgorithmMismatch()
-      throws IOException {
+    public void testWithKeyManagement_LocalKeyGen_WithKeyAlgorithmMismatch() throws IOException {
       mockKey = mock(Key.class);
       when(mockKey.getAlgorithm()).thenReturn("DES");
       when(mockManagedKeyData.getTheKey()).thenReturn(mockKey);
@@ -283,16 +274,15 @@ public class TestSecurityUtil {
       conf.setBoolean(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, true);
       conf.setBoolean(HConstants.CRYPTO_MANAGED_KEYS_LOCAL_KEY_GEN_PER_FILE_ENABLED_CONF_KEY, true);
 
-      when(mockManagedKeyDataCache.getActiveEntry(
-          eq(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES), eq("test-namespace")))
-          .thenReturn(mockManagedKeyData);
+      when(mockManagedKeyDataCache.getActiveEntry(eq(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES),
+        eq("test-namespace"))).thenReturn(mockManagedKeyData);
 
       try (MockedStatic<Encryption> mockedEncryption = Mockito.mockStatic(Encryption.class)) {
         mockedEncryption.when(() -> Encryption.isEncryptionEnabled(conf)).thenReturn(true);
 
         IllegalStateException exception = assertThrows(IllegalStateException.class, () -> {
           SecurityUtil.createEncryptionContext(conf, mockFamily, mockManagedKeyDataCache,
-              mockSystemKeyCache, "test-namespace");
+            mockSystemKeyCache, "test-namespace");
         });
 
         assertTrue(exception.getMessage().equals("Encryption for family 'test-family' configured "
@@ -304,11 +294,11 @@ public class TestSecurityUtil {
     public void testWithKeyManagement_UseSystemKeyWithNSSpecificActiveKey() throws IOException {
       // Enable key management, but disable local key generation
       conf.setBoolean(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, true);
-      conf.setBoolean(HConstants.CRYPTO_MANAGED_KEYS_LOCAL_KEY_GEN_PER_FILE_ENABLED_CONF_KEY, false);
+      conf.setBoolean(HConstants.CRYPTO_MANAGED_KEYS_LOCAL_KEY_GEN_PER_FILE_ENABLED_CONF_KEY,
+        false);
 
-      when(mockManagedKeyDataCache.getActiveEntry(
-          eq(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES), eq("test-namespace")))
-          .thenReturn(mockManagedKeyData);
+      when(mockManagedKeyDataCache.getActiveEntry(eq(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES),
+        eq("test-namespace"))).thenReturn(mockManagedKeyData);
       when(mockSystemKeyCache.getLatestSystemKey()).thenReturn(mockManagedKeyData);
 
       try (MockedStatic<Encryption> mockedEncryption = Mockito.mockStatic(Encryption.class)) {
@@ -319,8 +309,8 @@ public class TestSecurityUtil {
         Encryption.Context mockContext = mock(Encryption.Context.class);
         mockedEncryption.when(() -> Encryption.newContext(conf)).thenReturn(mockContext);
 
-        Encryption.Context result = SecurityUtil.createEncryptionContext(
-            conf, mockFamily, mockManagedKeyDataCache, mockSystemKeyCache, "test-namespace");
+        Encryption.Context result = SecurityUtil.createEncryptionContext(conf, mockFamily,
+          mockManagedKeyDataCache, mockSystemKeyCache, "test-namespace");
 
         verifyContext(result);
       }
@@ -330,14 +320,13 @@ public class TestSecurityUtil {
     public void testWithKeyManagement_UseSystemKeyWithoutNSSpecificActiveKey() throws IOException {
       // Enable key management, but disable local key generation
       conf.setBoolean(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, true);
-      conf.setBoolean(HConstants.CRYPTO_MANAGED_KEYS_LOCAL_KEY_GEN_PER_FILE_ENABLED_CONF_KEY, false);
+      conf.setBoolean(HConstants.CRYPTO_MANAGED_KEYS_LOCAL_KEY_GEN_PER_FILE_ENABLED_CONF_KEY,
+        false);
 
-      when(mockManagedKeyDataCache.getActiveEntry(
-          eq(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES), eq("test-namespace")))
-          .thenReturn(null);
-      when(mockManagedKeyDataCache.getActiveEntry(
-          eq(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES), eq(ManagedKeyData.KEY_SPACE_GLOBAL)))
-          .thenReturn(mockManagedKeyData);
+      when(mockManagedKeyDataCache.getActiveEntry(eq(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES),
+        eq("test-namespace"))).thenReturn(null);
+      when(mockManagedKeyDataCache.getActiveEntry(eq(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES),
+        eq(ManagedKeyData.KEY_SPACE_GLOBAL))).thenReturn(mockManagedKeyData);
       when(mockSystemKeyCache.getLatestSystemKey()).thenReturn(mockManagedKeyData);
 
       try (MockedStatic<Encryption> mockedEncryption = Mockito.mockStatic(Encryption.class)) {
@@ -348,8 +337,8 @@ public class TestSecurityUtil {
         Encryption.Context mockContext = mock(Encryption.Context.class);
         mockedEncryption.when(() -> Encryption.newContext(conf)).thenReturn(mockContext);
 
-        Encryption.Context result = SecurityUtil.createEncryptionContext(
-            conf, mockFamily, mockManagedKeyDataCache, mockSystemKeyCache, "test-namespace");
+        Encryption.Context result = SecurityUtil.createEncryptionContext(conf, mockFamily,
+          mockManagedKeyDataCache, mockSystemKeyCache, "test-namespace");
 
         verifyContext(result);
       }
@@ -363,7 +352,8 @@ public class TestSecurityUtil {
       conf.setBoolean(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, false);
 
       try (MockedStatic<Encryption> mockedEncryption = Mockito.mockStatic(Encryption.class);
-           MockedStatic<EncryptionUtil> mockedEncryptionUtil = Mockito.mockStatic(EncryptionUtil.class)) {
+        MockedStatic<EncryptionUtil> mockedEncryptionUtil =
+          Mockito.mockStatic(EncryptionUtil.class)) {
         mockedEncryption.when(() -> Encryption.isEncryptionEnabled(conf)).thenReturn(true);
         mockedEncryption.when(() -> Encryption.getCipher(conf, "AES")).thenReturn(mockCipher);
 
@@ -371,10 +361,10 @@ public class TestSecurityUtil {
         Encryption.Context mockContext = mock(Encryption.Context.class);
         mockedEncryption.when(() -> Encryption.newContext(conf)).thenReturn(mockContext);
         mockedEncryptionUtil.when(() -> EncryptionUtil.unwrapKey(eq(conf), any(byte[].class)))
-            .thenReturn(mockKey);
+          .thenReturn(mockKey);
 
-        Encryption.Context result = SecurityUtil.createEncryptionContext(
-            conf, mockFamily, mockManagedKeyDataCache, mockSystemKeyCache, "test-namespace");
+        Encryption.Context result = SecurityUtil.createEncryptionContext(conf, mockFamily,
+          mockManagedKeyDataCache, mockSystemKeyCache, "test-namespace");
 
         verifyContext(result, false);
       }
@@ -393,15 +383,16 @@ public class TestSecurityUtil {
       when(differentCipher.getName()).thenReturn("DES");
 
       try (MockedStatic<Encryption> mockedEncryption = Mockito.mockStatic(Encryption.class);
-           MockedStatic<EncryptionUtil> mockedEncryptionUtil = Mockito.mockStatic(EncryptionUtil.class)) {
+        MockedStatic<EncryptionUtil> mockedEncryptionUtil =
+          Mockito.mockStatic(EncryptionUtil.class)) {
         mockedEncryption.when(() -> Encryption.isEncryptionEnabled(conf)).thenReturn(true);
         mockedEncryption.when(() -> Encryption.getCipher(conf, "DES")).thenReturn(differentCipher);
         mockedEncryptionUtil.when(() -> EncryptionUtil.unwrapKey(eq(conf), any(byte[].class)))
-            .thenReturn(differentKey);
+          .thenReturn(differentKey);
 
         IllegalStateException exception = assertThrows(IllegalStateException.class, () -> {
           SecurityUtil.createEncryptionContext(conf, mockFamily, mockManagedKeyDataCache,
-              mockSystemKeyCache, "test-namespace");
+            mockSystemKeyCache, "test-namespace");
         });
 
         assertTrue(exception.getMessage().equals("Encryption for family 'test-family' configured "
@@ -424,8 +415,8 @@ public class TestSecurityUtil {
         Encryption.Context mockContext = mock(Encryption.Context.class);
         mockedEncryption.when(() -> Encryption.newContext(conf)).thenReturn(mockContext);
 
-        Encryption.Context result = SecurityUtil.createEncryptionContext(
-            conf, mockFamily, mockManagedKeyDataCache, mockSystemKeyCache, "test-namespace");
+        Encryption.Context result = SecurityUtil.createEncryptionContext(conf, mockFamily,
+          mockManagedKeyDataCache, mockSystemKeyCache, "test-namespace");
 
         verifyContext(result, false);
       }
@@ -441,7 +432,7 @@ public class TestSecurityUtil {
 
         IllegalStateException exception = assertThrows(IllegalStateException.class, () -> {
           SecurityUtil.createEncryptionContext(conf, mockFamily, mockManagedKeyDataCache,
-              mockSystemKeyCache, "test-namespace");
+            mockSystemKeyCache, "test-namespace");
         });
 
         assertTrue(exception.getMessage().contains("Cipher 'UNKNOWN_CIPHER' is not available"));
@@ -455,8 +446,8 @@ public class TestSecurityUtil {
       when(mockTrailer.getEncryptionKey()).thenReturn(null);
       when(mockTrailer.getKeyNamespace()).thenReturn("test-namespace");
 
-      Encryption.Context result = SecurityUtil.createEncryptionContext(
-          conf, testPath, mockTrailer, mockManagedKeyDataCache, mockSystemKeyCache);
+      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer,
+        mockManagedKeyDataCache, mockSystemKeyCache);
 
       assertNull(result);
     }
@@ -483,22 +474,22 @@ public class TestSecurityUtil {
       when(mockTrailer.getKEKMetadata()).thenReturn(kekMetadata);
       when(mockTrailer.getKEKChecksum()).thenReturn(12345L);
 
-      when(mockManagedKeyDataCache.getEntry(
-          eq(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES), eq("test-namespace"),
-          eq(kekMetadata), eq(keyBytes)))
-          .thenReturn(mockManagedKeyData);
+      when(mockManagedKeyDataCache.getEntry(eq(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES),
+        eq("test-namespace"), eq(kekMetadata), eq(keyBytes))).thenReturn(mockManagedKeyData);
 
       try (MockedStatic<Encryption> mockedEncryption = Mockito.mockStatic(Encryption.class);
-           MockedStatic<EncryptionUtil> mockedEncryptionUtil = Mockito.mockStatic(EncryptionUtil.class)) {
+        MockedStatic<EncryptionUtil> mockedEncryptionUtil =
+          Mockito.mockStatic(EncryptionUtil.class)) {
         // Create a proper encryption context
         Encryption.Context mockContext = mock(Encryption.Context.class);
         mockedEncryption.when(() -> Encryption.newContext(conf)).thenReturn(mockContext);
         mockedEncryption.when(() -> Encryption.getCipher(conf, "AES")).thenReturn(mockCipher);
-        mockedEncryptionUtil.when(() -> EncryptionUtil.unwrapKey(eq(conf), eq(null), eq(keyBytes), eq(mockKey)))
-            .thenReturn(mockKey);
+        mockedEncryptionUtil
+          .when(() -> EncryptionUtil.unwrapKey(eq(conf), eq(null), eq(keyBytes), eq(mockKey)))
+          .thenReturn(mockKey);
 
-        Encryption.Context result = SecurityUtil.createEncryptionContext(
-            conf, testPath, mockTrailer, mockManagedKeyDataCache, mockSystemKeyCache);
+        Encryption.Context result = SecurityUtil.createEncryptionContext(conf, testPath,
+          mockTrailer, mockManagedKeyDataCache, mockSystemKeyCache);
 
         verifyContext(result);
       }
@@ -513,17 +504,17 @@ public class TestSecurityUtil {
       when(mockTrailer.getKEKMetadata()).thenReturn(kekMetadata);
       when(mockTrailer.getKeyNamespace()).thenReturn("test-namespace");
 
-      when(mockManagedKeyDataCache.getEntry(
-          eq(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES), eq("test-namespace"),
-          eq(kekMetadata), eq(keyBytes)))
-          .thenThrow(new IOException("Key not found"));
+      when(mockManagedKeyDataCache.getEntry(eq(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES),
+        eq("test-namespace"), eq(kekMetadata), eq(keyBytes)))
+        .thenThrow(new IOException("Key not found"));
 
       try (MockedStatic<Encryption> mockedEncryption = Mockito.mockStatic(Encryption.class)) {
-        mockedEncryption.when(() -> Encryption.newContext(conf)).thenReturn(Encryption.Context.NONE);
+        mockedEncryption.when(() -> Encryption.newContext(conf))
+          .thenReturn(Encryption.Context.NONE);
 
         IOException exception = assertThrows(IOException.class, () -> {
-          SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer,
-              mockManagedKeyDataCache, mockSystemKeyCache);
+          SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer, mockManagedKeyDataCache,
+            mockSystemKeyCache);
         });
 
         assertTrue(exception.getMessage().contains("Failed to get key data"));
@@ -546,16 +537,18 @@ public class TestSecurityUtil {
       when(mockSystemKeyCache.getSystemKeyByChecksum(kekChecksum)).thenReturn(mockManagedKeyData);
 
       try (MockedStatic<Encryption> mockedEncryption = Mockito.mockStatic(Encryption.class);
-           MockedStatic<EncryptionUtil> mockedEncryptionUtil = Mockito.mockStatic(EncryptionUtil.class)) {
+        MockedStatic<EncryptionUtil> mockedEncryptionUtil =
+          Mockito.mockStatic(EncryptionUtil.class)) {
         // Create a proper encryption context
         Encryption.Context mockContext = mock(Encryption.Context.class);
         mockedEncryption.when(() -> Encryption.newContext(conf)).thenReturn(mockContext);
         mockedEncryption.when(() -> Encryption.getCipher(conf, "AES")).thenReturn(mockCipher);
-        mockedEncryptionUtil.when(() -> EncryptionUtil.unwrapKey(eq(conf), eq(null), eq(keyBytes), eq(mockKey)))
-            .thenReturn(mockKey);
+        mockedEncryptionUtil
+          .when(() -> EncryptionUtil.unwrapKey(eq(conf), eq(null), eq(keyBytes), eq(mockKey)))
+          .thenReturn(mockKey);
 
-        Encryption.Context result = SecurityUtil.createEncryptionContext(
-            conf, testPath, mockTrailer, mockManagedKeyDataCache, mockSystemKeyCache);
+        Encryption.Context result = SecurityUtil.createEncryptionContext(conf, testPath,
+          mockTrailer, mockManagedKeyDataCache, mockSystemKeyCache);
 
         verifyContext(result);
       }
@@ -577,11 +570,12 @@ public class TestSecurityUtil {
       when(mockSystemKeyCache.getSystemKeyByChecksum(kekChecksum)).thenReturn(null);
 
       try (MockedStatic<Encryption> mockedEncryption = Mockito.mockStatic(Encryption.class)) {
-        mockedEncryption.when(() -> Encryption.newContext(conf)).thenReturn(Encryption.Context.NONE);
+        mockedEncryption.when(() -> Encryption.newContext(conf))
+          .thenReturn(Encryption.Context.NONE);
 
         IOException exception = assertThrows(IOException.class, () -> {
-          SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer,
-              mockManagedKeyDataCache, mockSystemKeyCache);
+          SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer, mockManagedKeyDataCache,
+            mockSystemKeyCache);
         });
 
         assertTrue(exception.getMessage().contains("Failed to get system key"));
@@ -600,15 +594,17 @@ public class TestSecurityUtil {
       conf.setBoolean(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, false);
 
       try (MockedStatic<Encryption> mockedEncryption = Mockito.mockStatic(Encryption.class);
-           MockedStatic<EncryptionUtil> mockedEncryptionUtil = Mockito.mockStatic(EncryptionUtil.class)) {
+        MockedStatic<EncryptionUtil> mockedEncryptionUtil =
+          Mockito.mockStatic(EncryptionUtil.class)) {
         // Create a proper encryption context
         Encryption.Context mockContext = mock(Encryption.Context.class);
         mockedEncryption.when(() -> Encryption.newContext(conf)).thenReturn(mockContext);
         mockedEncryption.when(() -> Encryption.getCipher(conf, "AES")).thenReturn(mockCipher);
-        mockedEncryptionUtil.when(() -> EncryptionUtil.unwrapKey(eq(conf), eq(keyBytes))).thenReturn(mockKey);
+        mockedEncryptionUtil.when(() -> EncryptionUtil.unwrapKey(eq(conf), eq(keyBytes)))
+          .thenReturn(mockKey);
 
-        Encryption.Context result = SecurityUtil.createEncryptionContext(
-            conf, testPath, mockTrailer, mockManagedKeyDataCache, mockSystemKeyCache);
+        Encryption.Context result = SecurityUtil.createEncryptionContext(conf, testPath,
+          mockTrailer, mockManagedKeyDataCache, mockSystemKeyCache);
 
         verifyContext(result, false);
       }
@@ -626,16 +622,17 @@ public class TestSecurityUtil {
       conf.setBoolean(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, false);
 
       try (MockedStatic<Encryption> mockedEncryption = Mockito.mockStatic(Encryption.class);
-           MockedStatic<EncryptionUtil> mockedEncryptionUtil = Mockito.mockStatic(EncryptionUtil.class)) {
+        MockedStatic<EncryptionUtil> mockedEncryptionUtil =
+          Mockito.mockStatic(EncryptionUtil.class)) {
         // Create a proper encryption context
         Encryption.Context mockContext = mock(Encryption.Context.class);
         mockedEncryption.when(() -> Encryption.newContext(conf)).thenReturn(mockContext);
         mockedEncryptionUtil.when(() -> EncryptionUtil.unwrapKey(eq(conf), eq(keyBytes)))
-            .thenThrow(new IOException("Invalid key"));
+          .thenThrow(new IOException("Invalid key"));
 
         IOException exception = assertThrows(IOException.class, () -> {
-          SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer,
-              mockManagedKeyDataCache, mockSystemKeyCache);
+          SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer, mockManagedKeyDataCache,
+            mockSystemKeyCache);
         });
 
         assertTrue(exception.getMessage().contains("Invalid key"));
@@ -643,7 +640,8 @@ public class TestSecurityUtil {
     }
 
     @Test
-    public void testCreateEncryptionContextForFile_WithoutKeyManagement_UnavailableCipher() throws IOException {
+    public void testCreateEncryptionContextForFile_WithoutKeyManagement_UnavailableCipher()
+      throws IOException {
       byte[] keyBytes = "test-encrypted-key".getBytes();
 
       when(mockTrailer.getEncryptionKey()).thenReturn(keyBytes);
@@ -657,16 +655,18 @@ public class TestSecurityUtil {
       Key differentKey = new SecretKeySpec("test-key-16-bytes".getBytes(), "DES");
 
       try (MockedStatic<Encryption> mockedEncryption = Mockito.mockStatic(Encryption.class);
-           MockedStatic<EncryptionUtil> mockedEncryptionUtil = Mockito.mockStatic(EncryptionUtil.class)) {
+        MockedStatic<EncryptionUtil> mockedEncryptionUtil =
+          Mockito.mockStatic(EncryptionUtil.class)) {
         // Create a proper encryption context
         Encryption.Context mockContext = mock(Encryption.Context.class);
         mockedEncryption.when(() -> Encryption.newContext(conf)).thenReturn(mockContext);
         mockedEncryption.when(() -> Encryption.getCipher(conf, "DES")).thenReturn(null);
-        mockedEncryptionUtil.when(() -> EncryptionUtil.unwrapKey(eq(conf), eq(keyBytes))).thenReturn(differentKey);
+        mockedEncryptionUtil.when(() -> EncryptionUtil.unwrapKey(eq(conf), eq(keyBytes)))
+          .thenReturn(differentKey);
 
         IOException exception = assertThrows(IOException.class, () -> {
-          SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer,
-              mockManagedKeyDataCache, mockSystemKeyCache);
+          SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer, mockManagedKeyDataCache,
+            mockSystemKeyCache);
         });
 
         assertTrue(exception.getMessage().contains("not available"));
@@ -674,7 +674,8 @@ public class TestSecurityUtil {
     }
 
     @Test
-    public void testCreateEncryptionContextForFile_WithKeyManagement_NullKeyManagementCache() throws IOException {
+    public void testCreateEncryptionContextForFile_WithKeyManagement_NullKeyManagementCache()
+      throws IOException {
       byte[] keyBytes = "test-encrypted-key".getBytes();
       String kekMetadata = "test-kek-metadata";
 
@@ -691,8 +692,8 @@ public class TestSecurityUtil {
         mockedEncryption.when(() -> Encryption.newContext(conf)).thenReturn(mockContext);
 
         IOException exception = assertThrows(IOException.class, () -> {
-          SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer,
-              null, mockSystemKeyCache);
+          SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer, null,
+            mockSystemKeyCache);
         });
 
         assertTrue(exception.getMessage().contains("ManagedKeyDataCache is null"));
@@ -700,7 +701,8 @@ public class TestSecurityUtil {
     }
 
     @Test
-    public void testCreateEncryptionContextForFile_WithKeyManagement_NullSystemKeyCache() throws IOException {
+    public void testCreateEncryptionContextForFile_WithKeyManagement_NullSystemKeyCache()
+      throws IOException {
       byte[] keyBytes = "test-encrypted-key".getBytes();
 
       when(mockTrailer.getEncryptionKey()).thenReturn(keyBytes);
@@ -716,8 +718,8 @@ public class TestSecurityUtil {
         mockedEncryption.when(() -> Encryption.newContext(conf)).thenReturn(mockContext);
 
         IOException exception = assertThrows(IOException.class, () -> {
-          SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer,
-              mockManagedKeyDataCache, null);
+          SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer, mockManagedKeyDataCache,
+            null);
         });
 
         assertTrue(exception.getMessage().contains("SystemKeyCache is null"));
@@ -727,18 +729,18 @@ public class TestSecurityUtil {
 
   @RunWith(Parameterized.class)
   @Category({ SecurityTests.class, SmallTests.class })
-  public static class TestCreateEncryptionContextForFile_WithoutKeyManagement_UnwrapKeyException extends TestSecurityUtil {
+  public static class TestCreateEncryptionContextForFile_WithoutKeyManagement_UnwrapKeyException
+    extends TestSecurityUtil {
     @ClassRule
-    public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCreateEncryptionContextForFile_WithoutKeyManagement_UnwrapKeyException.class);
+    public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule
+      .forClass(TestCreateEncryptionContextForFile_WithoutKeyManagement_UnwrapKeyException.class);
 
     @Parameter(0)
     public boolean isKeyException;
 
     @Parameterized.Parameters(name = "{index},isKeyException={0}")
     public static Collection<Object[]> data() {
-      return Arrays.asList(
-        new Object[][] { { true }, { false }, });
+      return Arrays.asList(new Object[][] { { true }, { false }, });
     }
 
     @Test
@@ -746,75 +748,84 @@ public class TestSecurityUtil {
     }
 
     @Test
-    public void testWithDEK()
-        throws IOException, KeyException {
-        byte[] keyBytes = "test-encrypted-key".getBytes();
-        String kekMetadata = "test-kek-metadata";
-        long kekChecksum = 12345L;
+    public void testWithDEK() throws IOException, KeyException {
+      byte[] keyBytes = "test-encrypted-key".getBytes();
+      String kekMetadata = "test-kek-metadata";
+      long kekChecksum = 12345L;
 
-        when(mockTrailer.getEncryptionKey()).thenReturn(keyBytes);
-        when(mockTrailer.getKEKMetadata()).thenReturn(kekMetadata);
-        when(mockTrailer.getKEKChecksum()).thenReturn(kekChecksum);
-        when(mockTrailer.getKeyNamespace()).thenReturn("test-namespace");
+      when(mockTrailer.getEncryptionKey()).thenReturn(keyBytes);
+      when(mockTrailer.getKEKMetadata()).thenReturn(kekMetadata);
+      when(mockTrailer.getKEKChecksum()).thenReturn(kekChecksum);
+      when(mockTrailer.getKeyNamespace()).thenReturn("test-namespace");
 
-        when(mockManagedKeyDataCache.getEntry(
-            eq(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES), eq("test-namespace"),
-            eq(kekMetadata), eq(keyBytes)))
-            .thenReturn(mockManagedKeyData);
+      when(mockManagedKeyDataCache.getEntry(eq(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES),
+        eq("test-namespace"), eq(kekMetadata), eq(keyBytes))).thenReturn(mockManagedKeyData);
 
-        try (MockedStatic<Encryption> mockedEncryption = Mockito.mockStatic(Encryption.class);
-            MockedStatic<EncryptionUtil> mockedEncryptionUtil = Mockito.mockStatic(EncryptionUtil.class)) {
+      try (MockedStatic<Encryption> mockedEncryption = Mockito.mockStatic(Encryption.class);
+        MockedStatic<EncryptionUtil> mockedEncryptionUtil =
+          Mockito.mockStatic(EncryptionUtil.class)) {
         // Create a proper encryption context
         Encryption.Context mockContext = mock(Encryption.Context.class);
         mockedEncryption.when(() -> Encryption.newContext(conf)).thenReturn(mockContext);
         mockedEncryption.when(() -> Encryption.getCipher(conf, "AES")).thenReturn(mockCipher);
-        mockedEncryptionUtil.when(() -> EncryptionUtil.unwrapKey(eq(conf), eq(null), eq(keyBytes), eq(mockKey)))
-            .thenThrow(isKeyException ? new KeyException("Invalid key format") : new IOException("Invalid key format"));
+        mockedEncryptionUtil
+          .when(() -> EncryptionUtil.unwrapKey(eq(conf), eq(null), eq(keyBytes), eq(mockKey)))
+          .thenThrow(isKeyException
+            ? new KeyException("Invalid key format")
+            : new IOException("Invalid key format"));
 
         IOException exception = assertThrows(IOException.class, () -> {
-            SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer,
-                mockManagedKeyDataCache, mockSystemKeyCache);
+          SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer, mockManagedKeyDataCache,
+            mockSystemKeyCache);
         });
 
-        assertTrue(exception.getMessage().contains("Failed to unwrap key with KEK checksum: " + kekChecksum + ", metadata: " + kekMetadata));
-        assertTrue((isKeyException ? KeyException.class : IOException.class).isAssignableFrom(exception.getCause().getClass()));
+        assertTrue(exception.getMessage().contains(
+          "Failed to unwrap key with KEK checksum: " + kekChecksum + ", metadata: " + kekMetadata));
+        assertTrue((isKeyException ? KeyException.class : IOException.class)
+          .isAssignableFrom(exception.getCause().getClass()));
         assertTrue(exception.getCause().getMessage().contains("Invalid key format"));
-        }
+      }
     }
 
     @Test
     public void testWithSystemKey() throws IOException {
-        byte[] keyBytes = "test-encrypted-key".getBytes();
-        long kekChecksum = 12345L;
+      byte[] keyBytes = "test-encrypted-key".getBytes();
+      long kekChecksum = 12345L;
 
-        when(mockTrailer.getEncryptionKey()).thenReturn(keyBytes);
-        when(mockTrailer.getKEKMetadata()).thenReturn(null);
-        when(mockTrailer.getKEKChecksum()).thenReturn(kekChecksum);
-        when(mockTrailer.getKeyNamespace()).thenReturn("test-namespace");
+      when(mockTrailer.getEncryptionKey()).thenReturn(keyBytes);
+      when(mockTrailer.getKEKMetadata()).thenReturn(null);
+      when(mockTrailer.getKEKChecksum()).thenReturn(kekChecksum);
+      when(mockTrailer.getKeyNamespace()).thenReturn("test-namespace");
 
-        // Enable key management
-        conf.setBoolean(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, true);
+      // Enable key management
+      conf.setBoolean(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, true);
 
-        when(mockSystemKeyCache.getSystemKeyByChecksum(kekChecksum)).thenReturn(mockManagedKeyData);
+      when(mockSystemKeyCache.getSystemKeyByChecksum(kekChecksum)).thenReturn(mockManagedKeyData);
 
-        try (MockedStatic<Encryption> mockedEncryption = Mockito.mockStatic(Encryption.class);
-            MockedStatic<EncryptionUtil> mockedEncryptionUtil = Mockito.mockStatic(EncryptionUtil.class)) {
+      try (MockedStatic<Encryption> mockedEncryption = Mockito.mockStatic(Encryption.class);
+        MockedStatic<EncryptionUtil> mockedEncryptionUtil =
+          Mockito.mockStatic(EncryptionUtil.class)) {
         // Create a proper encryption context
         Encryption.Context mockContext = mock(Encryption.Context.class);
         mockedEncryption.when(() -> Encryption.newContext(conf)).thenReturn(mockContext);
         mockedEncryption.when(() -> Encryption.getCipher(conf, "AES")).thenReturn(mockCipher);
-        mockedEncryptionUtil.when(() -> EncryptionUtil.unwrapKey(eq(conf), eq(null), eq(keyBytes), eq(mockKey)))
-            .thenThrow(isKeyException ? new KeyException("Invalid system key format") : new IOException("Invalid system key format"));
+        mockedEncryptionUtil
+          .when(() -> EncryptionUtil.unwrapKey(eq(conf), eq(null), eq(keyBytes), eq(mockKey)))
+          .thenThrow(isKeyException
+            ? new KeyException("Invalid system key format")
+            : new IOException("Invalid system key format"));
 
         IOException exception = assertThrows(IOException.class, () -> {
-            SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer,
-                mockManagedKeyDataCache, mockSystemKeyCache);
+          SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer, mockManagedKeyDataCache,
+            mockSystemKeyCache);
         });
 
-        assertTrue(exception.getMessage().contains("Failed to unwrap key with KEK checksum: " + kekChecksum + ", metadata: null"));
-        assertTrue((isKeyException ? KeyException.class : IOException.class).isAssignableFrom(exception.getCause().getClass()));
+        assertTrue(exception.getMessage()
+          .contains("Failed to unwrap key with KEK checksum: " + kekChecksum + ", metadata: null"));
+        assertTrue((isKeyException ? KeyException.class : IOException.class)
+          .isAssignableFrom(exception.getCause().getClass()));
         assertTrue(exception.getCause().getMessage().contains("Invalid system key format"));
-        }
+      }
     }
   }
 

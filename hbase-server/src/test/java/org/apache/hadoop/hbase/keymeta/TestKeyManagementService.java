@@ -17,16 +17,14 @@
  */
 package org.apache.hadoop.hbase.keymeta;
 
-
 import static org.apache.hadoop.hbase.HConstants.SYSTEM_KEY_FILE_PREFIX;
-import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -34,13 +32,13 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.util.CommonFSUtils;
-import org.apache.hadoop.hbase.io.crypto.MockManagedKeyProvider;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.KeymetaTestUtils;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
+import org.apache.hadoop.hbase.io.crypto.MockManagedKeyProvider;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -72,15 +70,15 @@ public class TestKeyManagementService {
     // SystemKeyCache needs at least one valid key to be created, so setting up a mock FS that
     // returns a mock file that returns a known mocked key metadata.
     MockManagedKeyProvider provider = (MockManagedKeyProvider) Encryption.getKeyProvider(conf);
-    ManagedKeyData keyData = provider.getManagedKey("system".getBytes(),
-      ManagedKeyData.KEY_SPACE_GLOBAL);
+    ManagedKeyData keyData =
+      provider.getManagedKey("system".getBytes(), ManagedKeyData.KEY_SPACE_GLOBAL);
     String fileName = SYSTEM_KEY_FILE_PREFIX + "1";
     Path systemKeyDir = CommonFSUtils.getSystemKeyDir(conf);
     FileStatus mockFileStatus = KeymetaTestUtils.createMockFile(fileName);
     FSDataInputStream mockStream = mock(FSDataInputStream.class);
     when(mockStream.readUTF()).thenReturn(keyData.getKeyMetadata());
     when(mockFileSystem.open(eq(mockFileStatus.getPath()))).thenReturn(mockStream);
-    when(mockFileSystem.globStatus(eq(new Path(systemKeyDir, SYSTEM_KEY_FILE_PREFIX+"*"))))
+    when(mockFileSystem.globStatus(eq(new Path(systemKeyDir, SYSTEM_KEY_FILE_PREFIX + "*"))))
       .thenReturn(new FileStatus[] { mockFileStatus });
 
     KeyManagementService service = KeyManagementService.createDefault(conf, mockFileSystem);

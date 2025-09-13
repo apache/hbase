@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.master.region;
 
-import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.yetus.audience.InterfaceAudience;

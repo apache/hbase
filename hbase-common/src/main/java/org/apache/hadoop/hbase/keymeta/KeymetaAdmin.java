@@ -20,24 +20,21 @@ package org.apache.hadoop.hbase.keymeta;
 import java.io.IOException;
 import java.security.KeyException;
 import java.util.List;
-
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * KeymetaAdmin is an interface for administrative functions related to managed keys.
- * It handles the following methods:
+ * KeymetaAdmin is an interface for administrative functions related to managed keys. It handles the
+ * following methods:
  */
 @InterfaceAudience.Public
 public interface KeymetaAdmin {
   /**
    * Enables key management for the specified custodian and namespace.
-   *
    * @param keyCust      The key custodian in base64 encoded format.
    * @param keyNamespace The namespace for the key management.
-   *
    * @return The list of {@link ManagedKeyData} objects each identifying the key and its current
-   *   status.
+   *         status.
    * @throws IOException if an error occurs while enabling key management.
    */
   List<ManagedKeyData> enableKeyManagement(String keyCust, String keyNamespace)
@@ -45,11 +42,10 @@ public interface KeymetaAdmin {
 
   /**
    * Get the status of all the keys for the specified custodian.
-   *
    * @param keyCust      The key custodian in base64 encoded format.
    * @param keyNamespace The namespace for the key management.
    * @return The list of {@link ManagedKeyData} objects each identifying the key and its current
-   *   status.
+   *         status.
    * @throws IOException if an error occurs while enabling key management.
    */
   List<ManagedKeyData> getManagedKeys(String keyCust, String keyNamespace)

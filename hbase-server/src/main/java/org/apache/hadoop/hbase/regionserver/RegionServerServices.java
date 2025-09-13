@@ -55,8 +55,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
  * judicious adding API. Changes cause ripples through the code base.
  */
 @InterfaceAudience.Private
-public interface RegionServerServices extends Server, MutableOnlineRegions, FavoredNodesForRegion,
-  KeyManagementService {
+public interface RegionServerServices
+  extends Server, MutableOnlineRegions, FavoredNodesForRegion, KeyManagementService {
 
   /** Returns the WAL for a particular region. Pass null for getting the default (common) WAL */
   WAL getWAL(RegionInfo regionInfo) throws IOException;

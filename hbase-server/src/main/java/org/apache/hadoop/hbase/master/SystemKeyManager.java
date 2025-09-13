@@ -22,7 +22,6 @@ import static org.apache.hadoop.hbase.HConstants.SYSTEM_KEY_FILE_PREFIX;
 import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
-
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
@@ -46,28 +45,25 @@ public class SystemKeyManager extends SystemKeyAccessor {
   }
 
   public void ensureSystemKeyInitialized() throws IOException {
-    if (! isKeyManagementEnabled()) {
+    if (!isKeyManagementEnabled()) {
       return;
     }
     List<Path> clusterKeys = getAllSystemKeyFiles();
     if (clusterKeys.isEmpty()) {
       LOG.info("Initializing System Key for the first time");
       // Double check for cluster key as another HMaster might have succeeded.
-      if (rotateSystemKey(null, clusterKeys) == null &&
-          getAllSystemKeyFiles().isEmpty()) {
+      if (rotateSystemKey(null, clusterKeys) == null && getAllSystemKeyFiles().isEmpty()) {
         throw new RuntimeException("Failed to generate or save System Key");
       }
-    }
-    else if (rotateSystemKeyIfChanged() != null) {
+    } else if (rotateSystemKeyIfChanged() != null) {
       LOG.info("System key has been rotated");
-    }
-    else {
+    } else {
       LOG.info("System key is already initialized and unchanged");
     }
   }
 
   public ManagedKeyData rotateSystemKeyIfChanged() throws IOException {
-    if (! isKeyManagementEnabled()) {
+    if (!isKeyManagementEnabled()) {
       return null;
     }
     Pair<Path, List<Path>> latestFileResult = getLatestSystemKeyFile();
@@ -77,40 +73,42 @@ public class SystemKeyManager extends SystemKeyAccessor {
   }
 
   private ManagedKeyData rotateSystemKey(String currentKeyMetadata, List<Path> allSystemKeyFiles)
-      throws IOException {
+    throws IOException {
     ManagedKeyProvider provider = getKeyProvider();
-    ManagedKeyData clusterKey = provider.getSystemKey(
-      master.getMasterFileSystem().getClusterId().toString().getBytes());
+    ManagedKeyData clusterKey =
+      provider.getSystemKey(master.getMasterFileSystem().getClusterId().toString().getBytes());
     if (clusterKey == null) {
-      throw new IOException("Failed to get system key for cluster id: " +
-        master.getMasterFileSystem().getClusterId().toString());
+      throw new IOException("Failed to get system key for cluster id: "
+        + master.getMasterFileSystem().getClusterId().toString());
     }
     if (clusterKey.getKeyState() != ManagedKeyState.ACTIVE) {
-      throw new IOException("System key is expected to be ACTIVE but it is: " +
-        clusterKey.getKeyState() + " for metadata: " + clusterKey.getKeyMetadata());
+      throw new IOException("System key is expected to be ACTIVE but it is: "
+        + clusterKey.getKeyState() + " for metadata: " + clusterKey.getKeyMetadata());
     }
     if (clusterKey.getKeyMetadata() == null) {
       throw new IOException("System key is expected to have metadata but it is null");
     }
-    if (! clusterKey.getKeyMetadata().equals(currentKeyMetadata) &&
-        saveLatestSystemKey(clusterKey.getKeyMetadata(), allSystemKeyFiles)) {
+    if (
+      !clusterKey.getKeyMetadata().equals(currentKeyMetadata)
+        && saveLatestSystemKey(clusterKey.getKeyMetadata(), allSystemKeyFiles)
+    ) {
       return clusterKey;
     }
     return null;
   }
 
   private boolean saveLatestSystemKey(String keyMetadata, List<Path> allSystemKeyFiles)
-      throws IOException {
-    int nextSystemKeySeq = (allSystemKeyFiles.isEmpty() ? -1
+    throws IOException {
+    int nextSystemKeySeq = (allSystemKeyFiles.isEmpty()
+      ? -1
       : SystemKeyAccessor.extractKeySequence(allSystemKeyFiles.get(0))) + 1;
     LOG.info("Trying to save a new cluster key at seq: {}", nextSystemKeySeq);
     MasterFileSystem masterFS = master.getMasterFileSystem();
-    Path nextSystemKeyPath = new Path(systemKeyDir,
-      SYSTEM_KEY_FILE_PREFIX + nextSystemKeySeq);
-    Path tempSystemKeyFile  = new Path(masterFS.getTempDir(),
-      nextSystemKeyPath.getName() + UUID.randomUUID());
-    try (FSDataOutputStream fsDataOutputStream = masterFS.getFileSystem()
-      .create(tempSystemKeyFile)) {
+    Path nextSystemKeyPath = new Path(systemKeyDir, SYSTEM_KEY_FILE_PREFIX + nextSystemKeySeq);
+    Path tempSystemKeyFile =
+      new Path(masterFS.getTempDir(), nextSystemKeyPath.getName() + UUID.randomUUID());
+    try (
+      FSDataOutputStream fsDataOutputStream = masterFS.getFileSystem().create(tempSystemKeyFile)) {
       fsDataOutputStream.writeUTF(keyMetadata);
       boolean succeeded = masterFS.getFileSystem().rename(tempSystemKeyFile, nextSystemKeyPath);
       if (succeeded) {
@@ -119,8 +117,7 @@ public class SystemKeyManager extends SystemKeyAccessor {
         LOG.error("System key save failed for seq: {}", nextSystemKeySeq);
       }
       return succeeded;
-    }
-    finally {
+    } finally {
       masterFS.getFileSystem().delete(tempSystemKeyFile, false);
     }
   }

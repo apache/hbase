@@ -37,13 +37,12 @@ public class KeyNamespaceUtil {
   /**
    * Construct a key namespace from a table descriptor and column family descriptor.
    * @param tableDescriptor The table descriptor
-   * @param family The column family descriptor
+   * @param family          The column family descriptor
    * @return The constructed key namespace
    */
   public static String constructKeyNamespace(TableDescriptor tableDescriptor,
-      ColumnFamilyDescriptor family) {
-    return tableDescriptor.getTableName().getNameAsString() + "/"
-        + family.getNameAsString();
+    ColumnFamilyDescriptor family) {
+    return tableDescriptor.getTableName().getNameAsString() + "/" + family.getNameAsString();
   }
 
   /**
@@ -53,7 +52,7 @@ public class KeyNamespaceUtil {
    */
   public static String constructKeyNamespace(StoreContext storeContext) {
     return storeContext.getTableName().getNameAsString() + "/"
-        + storeContext.getFamily().getNameAsString();
+      + storeContext.getFamily().getNameAsString();
   }
 
   /**
@@ -62,8 +61,8 @@ public class KeyNamespaceUtil {
    * @return The constructed key namespace
    */
   public static String constructKeyNamespace(StoreFileInfo fileInfo) {
-    return constructKeyNamespace(fileInfo.isLink() ? fileInfo.getLink().getOriginPath() :
-      fileInfo.getPath());
+    return constructKeyNamespace(
+      fileInfo.isLink() ? fileInfo.getLink().getOriginPath() : fileInfo.getPath());
   }
 
   /**
@@ -79,7 +78,7 @@ public class KeyNamespaceUtil {
   /**
    * Construct a key namespace from a table name and family name.
    * @param tableName The table name
-   * @param family The family name
+   * @param family    The family name
    * @return The constructed key namespace
    */
   public static String constructKeyNamespace(String tableName, String family) {

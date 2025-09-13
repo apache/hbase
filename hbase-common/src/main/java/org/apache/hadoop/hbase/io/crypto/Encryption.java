@@ -474,8 +474,8 @@ public final class Encryption {
    * @param cipher the encryption algorithm
    * @param iv     the initialization vector, can be null
    */
-  public static void encryptWithGivenKey(Key key, OutputStream out, InputStream in,
-      Cipher cipher, byte[] iv) throws IOException {
+  public static void encryptWithGivenKey(Key key, OutputStream out, InputStream in, Cipher cipher,
+    byte[] iv) throws IOException {
     Encryptor e = cipher.getEncryptor();
     e.setKey(key);
     e.setIv(iv); // can be null
@@ -506,8 +506,8 @@ public final class Encryption {
       String alternateAlgorithm = conf.get(HConstants.CRYPTO_ALTERNATE_KEY_ALGORITHM_CONF_KEY);
       if (alternateAlgorithm != null) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Unable to decrypt data with current cipher algorithm '" + conf.get(
-            HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES)
+          LOG.debug("Unable to decrypt data with current cipher algorithm '"
+            + conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES)
             + "'. Trying with the alternate cipher algorithm '" + alternateAlgorithm
             + "' configured.");
         }
@@ -516,15 +516,14 @@ public final class Encryption {
           throw new RuntimeException("Cipher '" + alternateAlgorithm + "' not available");
         }
         decryptWithGivenKey(key, out, in, outLen, alterCipher, iv);
-      }
-      else {
+      } else {
         throw e;
       }
     }
   }
 
   public static void decryptWithGivenKey(Key key, OutputStream out, InputStream in, int outLen,
-      Cipher cipher, byte[] iv) throws IOException {
+    Cipher cipher, byte[] iv) throws IOException {
     Decryptor d = cipher.getDecryptor();
     d.setKey(key);
     d.setIv(iv); // can be null

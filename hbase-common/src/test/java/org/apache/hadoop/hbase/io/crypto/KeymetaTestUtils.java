@@ -30,7 +30,6 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.function.Function;
 import javax.crypto.spec.SecretKeySpec;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
@@ -45,20 +44,17 @@ public class KeymetaTestUtils {
   public static final String PASSWORD = "password";
 
   public static void addEntry(Configuration conf, int keyLen, KeyStore store, String alias,
-    String custodian, boolean withPasswordOnAlias,
-    Map<Bytes, Bytes> cust2key, Map<Bytes, String> cust2alias, Properties passwordFileProps)
-    throws Exception {
+    String custodian, boolean withPasswordOnAlias, Map<Bytes, Bytes> cust2key,
+    Map<Bytes, String> cust2alias, Properties passwordFileProps) throws Exception {
     Preconditions.checkArgument(keyLen == 256 || keyLen == 128, "Key length must be 256 or 128");
-    byte[] key = MessageDigest.getInstance(keyLen == 256 ? "SHA-256" : "MD5").digest(
-      Bytes.toBytes(alias));
+    byte[] key =
+      MessageDigest.getInstance(keyLen == 256 ? "SHA-256" : "MD5").digest(Bytes.toBytes(alias));
     cust2alias.put(new Bytes(custodian.getBytes()), alias);
     cust2key.put(new Bytes(custodian.getBytes()), new Bytes(key));
     store.setEntry(alias, new KeyStore.SecretKeyEntry(new SecretKeySpec(key, "AES")),
-      new KeyStore.PasswordProtection(
-        withPasswordOnAlias ? PASSWORD.toCharArray() : new char[0]));
+      new KeyStore.PasswordProtection(withPasswordOnAlias ? PASSWORD.toCharArray() : new char[0]));
     String encCust = Base64.getEncoder().encodeToString(custodian.getBytes());
-    String confKey = HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + encCust + "."
-        + "alias";
+    String confKey = HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + encCust + "." + "alias";
     conf.set(confKey, alias);
     if (passwordFileProps != null) {
       passwordFileProps.setProperty(alias, PASSWORD);
@@ -99,8 +95,7 @@ public class KeymetaTestUtils {
     if (withPasswordFile) {
       providerParams = "jceks://" + storeFile.toURI().getPath() + "?passwordFile="
         + URLEncoder.encode(passwordFile.getAbsolutePath(), "UTF-8");
-    }
-    else {
+    } else {
       providerParams = "jceks://" + storeFile.toURI().getPath() + "?password=" + PASSWORD;
     }
     return providerParams;

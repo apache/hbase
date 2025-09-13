@@ -37,7 +37,6 @@ import java.security.KeyException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -51,7 +50,6 @@ import org.apache.hadoop.hbase.io.crypto.ManagedKeyState;
 import org.apache.hadoop.hbase.io.crypto.MockManagedKeyProvider;
 import org.apache.hadoop.hbase.keymeta.KeymetaAdminImpl;
 import org.apache.hadoop.hbase.keymeta.KeymetaTableAccessor;
-import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -71,8 +69,7 @@ import org.junit.runners.Suite;
 @RunWith(Suite.class)
 @Suite.SuiteClasses({ TestKeymetaAdminImpl.TestWhenDisabled.class,
   TestKeymetaAdminImpl.TestAdminImpl.class,
-  TestKeymetaAdminImpl.TestForKeyProviderNullReturn.class,
-})
+  TestKeymetaAdminImpl.TestForKeyProviderNullReturn.class, })
 @Category({ MasterTests.class, SmallTests.class })
 public class TestKeymetaAdminImpl {
 
@@ -123,12 +120,10 @@ public class TestKeymetaAdminImpl {
 
     @Test
     public void testDisabled() throws Exception {
+      assertThrows(IOException.class, () -> keymetaAdmin
+        .enableKeyManagement(ManagedKeyData.KEY_GLOBAL_CUSTODIAN, KEY_SPACE_GLOBAL));
       assertThrows(IOException.class,
-        () -> keymetaAdmin.enableKeyManagement(ManagedKeyData.KEY_GLOBAL_CUSTODIAN,
-          KEY_SPACE_GLOBAL));
-      assertThrows(IOException.class,
-        () -> keymetaAdmin.getManagedKeys(ManagedKeyData.KEY_GLOBAL_CUSTODIAN,
-          KEY_SPACE_GLOBAL));
+        () -> keymetaAdmin.getManagedKeys(ManagedKeyData.KEY_GLOBAL_CUSTODIAN, KEY_SPACE_GLOBAL));
     }
   }
 
@@ -148,14 +143,9 @@ public class TestKeymetaAdminImpl {
 
     @Parameters(name = "{index},keySpace={1},keyState={2}")
     public static Collection<Object[]> data() {
-      return Arrays.asList(
-        new Object[][] {
-          { KEY_SPACE_GLOBAL, ACTIVE, false },
-          { "ns1", ACTIVE, false },
-          { KEY_SPACE_GLOBAL, FAILED, true },
-          { KEY_SPACE_GLOBAL, INACTIVE, false },
-          { KEY_SPACE_GLOBAL, DISABLED, true },
-        });
+      return Arrays.asList(new Object[][] { { KEY_SPACE_GLOBAL, ACTIVE, false },
+        { "ns1", ACTIVE, false }, { KEY_SPACE_GLOBAL, FAILED, true },
+        { KEY_SPACE_GLOBAL, INACTIVE, false }, { KEY_SPACE_GLOBAL, DISABLED, true }, });
     }
 
     @Test
@@ -163,11 +153,10 @@ public class TestKeymetaAdminImpl {
       MockManagedKeyProvider managedKeyProvider =
         (MockManagedKeyProvider) Encryption.getKeyProvider(conf);
       managedKeyProvider.setMockedKeyState(CUST, keyState);
-      when(keymetaAccessor.getActiveKey(CUST.getBytes(), keySpace)).thenReturn(
-        managedKeyProvider.getManagedKey(CUST.getBytes(), keySpace));
+      when(keymetaAccessor.getActiveKey(CUST.getBytes(), keySpace))
+        .thenReturn(managedKeyProvider.getManagedKey(CUST.getBytes(), keySpace));
 
-      List<ManagedKeyData> managedKeys =
-        keymetaAdmin.enableKeyManagement(ENCODED_CUST, keySpace);
+      List<ManagedKeyData> managedKeys = keymetaAdmin.enableKeyManagement(ENCODED_CUST, keySpace);
       assertNotNull(managedKeys);
       assertEquals(1, managedKeys.size());
       assertEquals(keyState, managedKeys.get(0).getKeyState());
@@ -216,11 +205,7 @@ public class TestKeymetaAdminImpl {
 
     @Parameters(name = "{index},keySpace={0}")
     public static Collection<Object[]> data() {
-      return Arrays.asList(
-        new Object[][] {
-          { KEY_SPACE_GLOBAL },
-          { "ns1" },
-        });
+      return Arrays.asList(new Object[][] { { KEY_SPACE_GLOBAL }, { "ns1" }, });
     }
 
     @Test
@@ -260,13 +245,12 @@ public class TestKeymetaAdminImpl {
   }
 
   protected boolean assertKeyData(ManagedKeyData keyData, ManagedKeyState expKeyState,
-      Key expectedKey) {
+    Key expectedKey) {
     assertNotNull(keyData);
     assertEquals(expKeyState, keyData.getKeyState());
     if (expectedKey == null) {
       assertNull(keyData.getTheKey());
-    }
-    else {
+    } else {
       byte[] keyBytes = keyData.getTheKey().getEncoded();
       byte[] expectedKeyBytes = expectedKey.getEncoded();
       assertEquals(expectedKeyBytes.length, keyBytes.length);

@@ -36,15 +36,15 @@ import org.junit.experimental.categories.Category;
 @Category({ MasterTests.class, SmallTests.class })
 public class TestKeyManagementBase {
   @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(
-      TestKeyManagementBase.class);
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(TestKeyManagementBase.class);
 
   @Test
   public void testGetKeyProviderWithInvalidProvider() throws Exception {
     // Setup configuration with a non-ManagedKeyProvider
     Configuration conf = new Configuration();
     conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY,
-        "org.apache.hadoop.hbase.keymeta.DummyKeyProvider");
+      "org.apache.hadoop.hbase.keymeta.DummyKeyProvider");
 
     MasterServices mockServer = mock(MasterServices.class);
     when(mockServer.getConfiguration()).thenReturn(conf);

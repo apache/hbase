@@ -36,7 +36,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.stream.IntStream;
 import javax.crypto.spec.SecretKeySpec;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -46,10 +45,10 @@ import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.io.crypto.KeymetaTestUtils;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyState;
-import org.apache.hadoop.hbase.io.crypto.KeymetaTestUtils;
 import org.apache.hadoop.hbase.keymeta.SystemKeyAccessor;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -72,13 +71,12 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 @RunWith(Suite.class)
-@Suite.SuiteClasses({
-  TestSystemKeyAccessorAndManager.TestAccessorWhenDisabled.class,
+@Suite.SuiteClasses({ TestSystemKeyAccessorAndManager.TestAccessorWhenDisabled.class,
   TestSystemKeyAccessorAndManager.TestManagerWhenDisabled.class,
   TestSystemKeyAccessorAndManager.TestAccessor.class,
   TestSystemKeyAccessorAndManager.TestForInvalidFilenames.class,
   TestSystemKeyAccessorAndManager.TestManagerForErrors.class,
-  TestSystemKeyAccessorAndManager.TestAccessorMisc.class  // ADD THIS
+  TestSystemKeyAccessorAndManager.TestAccessorMisc.class // ADD THIS
 })
 @Category({ MasterTests.class, SmallTests.class })
 public class TestSystemKeyAccessorAndManager {
@@ -111,15 +109,18 @@ public class TestSystemKeyAccessorAndManager {
   @RunWith(BlockJUnit4ClassRunner.class)
   @Category({ MasterTests.class, SmallTests.class })
   public static class TestAccessorWhenDisabled extends TestSystemKeyAccessorAndManager {
-    @ClassRule public static final HBaseClassTestRule CLASS_RULE =
+    @ClassRule
+    public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestAccessorWhenDisabled.class);
 
-    @Override public void setUp() throws Exception {
+    @Override
+    public void setUp() throws Exception {
       super.setUp();
       conf.set(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, "false");
     }
 
-    @Test public void test() throws Exception {
+    @Test
+    public void test() throws Exception {
       assertThrows(IOException.class, () -> systemKeyManager.getAllSystemKeyFiles());
       assertThrows(IOException.class, () -> systemKeyManager.getLatestSystemKeyFile().getFirst());
     }
@@ -128,15 +129,18 @@ public class TestSystemKeyAccessorAndManager {
   @RunWith(BlockJUnit4ClassRunner.class)
   @Category({ MasterTests.class, SmallTests.class })
   public static class TestManagerWhenDisabled extends TestSystemKeyAccessorAndManager {
-    @ClassRule public static final HBaseClassTestRule CLASS_RULE =
+    @ClassRule
+    public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestManagerWhenDisabled.class);
 
-    @Override public void setUp() throws Exception {
+    @Override
+    public void setUp() throws Exception {
       super.setUp();
       conf.set(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, "false");
     }
 
-    @Test public void test() throws Exception {
+    @Test
+    public void test() throws Exception {
       systemKeyManager.ensureSystemKeyInitialized();
       assertNull(systemKeyManager.rotateSystemKeyIfChanged());
     }
@@ -153,8 +157,8 @@ public class TestSystemKeyAccessorAndManager {
     public void testGetLatestWithNone() throws Exception {
       when(mockFileSystem.globStatus(any())).thenReturn(new FileStatus[0]);
 
-      RuntimeException ex = assertThrows(RuntimeException.class,
-        () -> systemKeyManager.getLatestSystemKeyFile());
+      RuntimeException ex =
+        assertThrows(RuntimeException.class, () -> systemKeyManager.getLatestSystemKeyFile());
       assertEquals("No cluster key initialized yet", ex.getMessage());
     }
 
@@ -164,7 +168,7 @@ public class TestSystemKeyAccessorAndManager {
       FileStatus mockFileStatus = KeymetaTestUtils.createMockFile(fileName);
 
       Path systemKeyDir = CommonFSUtils.getSystemKeyDir(conf);
-      when(mockFileSystem.globStatus(eq(new Path(systemKeyDir, SYSTEM_KEY_FILE_PREFIX+"*"))))
+      when(mockFileSystem.globStatus(eq(new Path(systemKeyDir, SYSTEM_KEY_FILE_PREFIX + "*"))))
         .thenReturn(new FileStatus[] { mockFileStatus });
 
       List<Path> files = systemKeyManager.getAllSystemKeyFiles();
@@ -174,8 +178,8 @@ public class TestSystemKeyAccessorAndManager {
       Pair<Path, List<Path>> latestSystemKeyFileResult = systemKeyManager.getLatestSystemKeyFile();
       assertEquals(fileName, latestSystemKeyFileResult.getFirst().getName());
 
-      assertEquals(1, SystemKeyAccessor.extractSystemKeySeqNum(
-        latestSystemKeyFileResult.getFirst()));
+      assertEquals(1,
+        SystemKeyAccessor.extractSystemKeySeqNum(latestSystemKeyFileResult.getFirst()));
     }
 
     @Test
@@ -185,7 +189,7 @@ public class TestSystemKeyAccessorAndManager {
         .toArray(FileStatus[]::new);
 
       Path systemKeyDir = CommonFSUtils.getSystemKeyDir(conf);
-      when(mockFileSystem.globStatus(eq(new Path(systemKeyDir, SYSTEM_KEY_FILE_PREFIX+"*"))))
+      when(mockFileSystem.globStatus(eq(new Path(systemKeyDir, SYSTEM_KEY_FILE_PREFIX + "*"))))
         .thenReturn(mockFileStatuses);
 
       List<Path> files = systemKeyManager.getAllSystemKeyFiles();
@@ -198,8 +202,8 @@ public class TestSystemKeyAccessorAndManager {
 
     @Test
     public void testExtractKeySequenceForInvalidFilename() throws Exception {
-      assertEquals(-1, SystemKeyAccessor.extractKeySequence(
-        KeymetaTestUtils.createMockFile("abcd").getPath()));
+      assertEquals(-1,
+        SystemKeyAccessor.extractKeySequence(KeymetaTestUtils.createMockFile("abcd").getPath()));
     }
   }
 
@@ -217,11 +221,10 @@ public class TestSystemKeyAccessorAndManager {
 
     @Parameters(name = "{index},fileName={0}")
     public static Collection<Object[]> data() {
-      return Arrays.asList(new Object[][] {
-        { "abcd", "Couldn't parse key file name: abcd" },
-        {SYSTEM_KEY_FILE_PREFIX+"abcd", "Couldn't parse key file name: "+
-           SYSTEM_KEY_FILE_PREFIX+"abcd"},
-        // Add more test cases here
+      return Arrays.asList(new Object[][] { { "abcd", "Couldn't parse key file name: abcd" },
+        { SYSTEM_KEY_FILE_PREFIX + "abcd",
+          "Couldn't parse key file name: " + SYSTEM_KEY_FILE_PREFIX + "abcd" },
+          // Add more test cases here
       });
     }
 
@@ -289,8 +292,9 @@ public class TestSystemKeyAccessorAndManager {
       when(mockKeyProvide.getSystemKey(any())).thenReturn(keyData);
 
       IOException ex = assertThrows(IOException.class, manager::ensureSystemKeyInitialized);
-      assertEquals("System key is expected to be ACTIVE but it is: INACTIVE for metadata: "
-        + metadata, ex.getMessage());
+      assertEquals(
+        "System key is expected to be ACTIVE but it is: INACTIVE for metadata: " + metadata,
+        ex.getMessage());
     }
 
     @Test
@@ -317,8 +321,8 @@ public class TestSystemKeyAccessorAndManager {
       when(mockFileSystem.create(any())).thenReturn(mockStream);
       when(mockFileSystem.rename(any(), any())).thenReturn(false);
 
-      RuntimeException ex = assertThrows(RuntimeException.class,
-          manager::ensureSystemKeyInitialized);
+      RuntimeException ex =
+        assertThrows(RuntimeException.class, manager::ensureSystemKeyInitialized);
       assertEquals("Failed to generate or save System Key", ex.getMessage());
     }
 
@@ -337,10 +341,8 @@ public class TestSystemKeyAccessorAndManager {
       when(mockFileSystem.rename(any(), any())).thenReturn(false);
       String fileName = SYSTEM_KEY_FILE_PREFIX + "1";
       FileStatus mockFileStatus = KeymetaTestUtils.createMockFile(fileName);
-      when(mockFileSystem.globStatus(any())).thenReturn(
-          new FileStatus[0],
-          new FileStatus[] { mockFileStatus }
-      );
+      when(mockFileSystem.globStatus(any())).thenReturn(new FileStatus[0],
+        new FileStatus[] { mockFileStatus });
 
       manager.ensureSystemKeyInitialized();
     }
@@ -360,8 +362,7 @@ public class TestSystemKeyAccessorAndManager {
 
       // Create test key data
       Key testKey = new SecretKeySpec("test-key-bytes".getBytes(), "AES");
-      ManagedKeyData testKeyData = new ManagedKeyData(
-        "custodian".getBytes(), "namespace", testKey,
+      ManagedKeyData testKeyData = new ManagedKeyData("custodian".getBytes(), "namespace", testKey,
         ManagedKeyState.ACTIVE, testMetadata, 1000L);
 
       // Mock key provider
@@ -424,8 +425,6 @@ public class TestSystemKeyAccessorAndManager {
       assertEquals(123, SystemKeyAccessor.extractSystemKeySeqNum(testPath123));
       assertEquals(Integer.MAX_VALUE, SystemKeyAccessor.extractSystemKeySeqNum(testPathMax));
     }
-
-
 
     @Test(expected = IOException.class)
     public void testGetAllSystemKeyFilesIOException() throws Exception {
@@ -510,10 +509,10 @@ public class TestSystemKeyAccessorAndManager {
     private final ManagedKeyProvider keyProvider;
 
     public MockSystemKeyManager(MasterServices master, ManagedKeyProvider keyProvider)
-        throws IOException {
+      throws IOException {
       super(master);
       this.keyProvider = keyProvider;
-      //systemKeyDir = mock(Path.class);
+      // systemKeyDir = mock(Path.class);
     }
 
     @Override

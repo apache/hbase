@@ -55,7 +55,6 @@ import org.apache.hadoop.hbase.io.encoding.IndexBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock.BlockWritable;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
-import org.apache.hadoop.hbase.security.SecurityUtil;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
@@ -892,17 +891,16 @@ public class HFileWriterImpl implements HFile.Writer {
         kekChecksum = kekData.getKeyChecksum();
         wrapperKey = kekData.getTheKey();
         encKey = cryptoContext.getKey();
-      }
-      else {
-        wrapperSubject = cryptoContext.getConf().get(
-          HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, User.getCurrent().getShortName());
+      } else {
+        wrapperSubject = cryptoContext.getConf().get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY,
+          User.getCurrent().getShortName());
         encKey = cryptoContext.getKey();
       }
       // Wrap the context's key and write it as the encryption metadata, the wrapper includes
       // all information needed for decryption
       if (encKey != null) {
-        byte[] wrappedKey = EncryptionUtil.wrapKey(cryptoContext.getConf(), wrapperSubject, encKey,
-          wrapperKey);
+        byte[] wrappedKey =
+          EncryptionUtil.wrapKey(cryptoContext.getConf(), wrapperSubject, encKey, wrapperKey);
         trailer.setEncryptionKey(wrappedKey);
       }
       trailer.setKeyNamespace(keyNamespace);

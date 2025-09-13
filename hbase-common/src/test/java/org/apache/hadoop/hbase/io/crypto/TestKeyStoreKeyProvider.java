@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.io.crypto;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
 import static org.apache.hadoop.hbase.io.crypto.KeymetaTestUtils.ALIAS;
 import static org.apache.hadoop.hbase.io.crypto.KeymetaTestUtils.PASSWORD;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 import java.security.Key;
 import java.security.KeyStore;
@@ -62,12 +62,9 @@ public class TestKeyStoreKeyProvider {
 
   @Parameterized.Parameters(name = "withPasswordOnAlias={0} withPasswordFile={1}")
   public static Collection<Object[]> parameters() {
-    return Arrays.asList(new Object[][] {
-      { Boolean.TRUE, Boolean.TRUE },
-      { Boolean.TRUE, Boolean.FALSE },
-      { Boolean.FALSE, Boolean.TRUE },
-      { Boolean.FALSE, Boolean.FALSE },
-    });
+    return Arrays
+      .asList(new Object[][] { { Boolean.TRUE, Boolean.TRUE }, { Boolean.TRUE, Boolean.FALSE },
+        { Boolean.FALSE, Boolean.TRUE }, { Boolean.FALSE, Boolean.FALSE }, });
   }
 
   @Before
@@ -78,8 +75,8 @@ public class TestKeyStoreKeyProvider {
         Properties p = new Properties();
         try {
           store.setEntry(ALIAS, new KeyStore.SecretKeyEntry(new SecretKeySpec(KEY, "AES")),
-            new KeyStore.PasswordProtection(withPasswordOnAlias ? PASSWORD.toCharArray()
-            : new char[0]));
+            new KeyStore.PasswordProtection(
+              withPasswordOnAlias ? PASSWORD.toCharArray() : new char[0]));
           addCustomEntries(store, p);
         } catch (Exception e) {
           throw new RuntimeException(e);

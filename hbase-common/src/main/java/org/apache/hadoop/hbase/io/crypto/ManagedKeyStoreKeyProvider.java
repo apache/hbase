@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.security.Key;
 import java.util.HashMap;
 import java.util.Map;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.GsonUtil;
@@ -34,7 +33,8 @@ public class ManagedKeyStoreKeyProvider extends KeyStoreKeyProvider implements M
   public static final String KEY_METADATA_CUST = "KeyCustodian";
 
   private static final java.lang.reflect.Type KEY_METADATA_TYPE =
-    new TypeToken<HashMap<String, String>>(){}.getType();
+    new TypeToken<HashMap<String, String>>() {
+    }.getType();
 
   private Configuration conf;
 
@@ -46,8 +46,8 @@ public class ManagedKeyStoreKeyProvider extends KeyStoreKeyProvider implements M
   @Override
   public ManagedKeyData getSystemKey(byte[] clusterId) {
     checkConfig();
-    String systemKeyAlias = conf.get(HConstants.CRYPTO_MANAGED_KEY_STORE_SYSTEM_KEY_NAME_CONF_KEY,
-      null);
+    String systemKeyAlias =
+      conf.get(HConstants.CRYPTO_MANAGED_KEY_STORE_SYSTEM_KEY_NAME_CONF_KEY, null);
     if (systemKeyAlias == null) {
       throw new RuntimeException("No alias configured for system key");
     }
@@ -56,29 +56,29 @@ public class ManagedKeyStoreKeyProvider extends KeyStoreKeyProvider implements M
       throw new RuntimeException("Unable to find system key with alias: " + systemKeyAlias);
     }
     // Encode clusterId too for consistency with that of key custodian.
-    String keyMetadata = generateKeyMetadata(systemKeyAlias,
-      ManagedKeyProvider.encodeToStr(clusterId));
+    String keyMetadata =
+      generateKeyMetadata(systemKeyAlias, ManagedKeyProvider.encodeToStr(clusterId));
     return new ManagedKeyData(clusterId, ManagedKeyData.KEY_SPACE_GLOBAL, key,
-        ManagedKeyState.ACTIVE, keyMetadata);
+      ManagedKeyState.ACTIVE, keyMetadata);
   }
 
   @Override
   public ManagedKeyData getManagedKey(byte[] key_cust, String key_namespace) throws IOException {
     checkConfig();
     String encodedCust = ManagedKeyProvider.encodeToStr(key_cust);
-    String aliasConfKey = HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + encodedCust + "." +
-      "alias";
+    String aliasConfKey =
+      HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + encodedCust + "." + "alias";
     String keyMetadata = generateKeyMetadata(conf.get(aliasConfKey, null), encodedCust);
     return unwrapKey(keyMetadata, null);
   }
 
   @Override
   public ManagedKeyData unwrapKey(String keyMetadataStr, byte[] wrappedKey) throws IOException {
-    Map<String, String> keyMetadata = GsonUtil.getDefaultInstance().fromJson(keyMetadataStr,
-      KEY_METADATA_TYPE);
+    Map<String, String> keyMetadata =
+      GsonUtil.getDefaultInstance().fromJson(keyMetadataStr, KEY_METADATA_TYPE);
     String encodedCust = keyMetadata.get(KEY_METADATA_CUST);
-    String activeStatusConfKey = HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + encodedCust +
-      ".active";
+    String activeStatusConfKey =
+      HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + encodedCust + ".active";
     boolean isActive = conf.getBoolean(activeStatusConfKey, true);
     byte[] key_cust = ManagedKeyProvider.decodeToBytes(encodedCust);
     String alias = keyMetadata.get(KEY_METADATA_ALIAS);

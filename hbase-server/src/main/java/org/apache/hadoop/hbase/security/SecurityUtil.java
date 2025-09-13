@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.security;
 import java.io.IOException;
 import java.security.Key;
 import java.security.KeyException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
@@ -28,11 +27,9 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
-import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.io.hfile.FixedFileTrailer;
 import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
 import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
-
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
@@ -63,11 +60,11 @@ public class SecurityUtil {
 
   /**
    * Helper to create an encyption context with current encryption key, suitable for writes.
-   * @param conf   The current configuration.
-   * @param family The current column descriptor.
+   * @param conf                The current configuration.
+   * @param family              The current column descriptor.
    * @param managedKeyDataCache The managed key data cache.
-   * @param systemKeyCache The system key cache.
-   * @param keyNamespace The key namespace.
+   * @param systemKeyCache      The system key cache.
+   * @param keyNamespace        The key namespace.
    * @return The created encryption context.
    * @throws IOException           if an encryption key for the column cannot be unwrapped
    * @throws IllegalStateException in case of encryption related configuration errors
@@ -86,26 +83,26 @@ public class SecurityUtil {
       Key key = null;
       ManagedKeyData kekKeyData = null;
       if (isKeyManagementEnabled(conf)) {
-        kekKeyData = managedKeyDataCache.getActiveEntry(
-          ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES, keyNamespace);
+        kekKeyData = managedKeyDataCache.getActiveEntry(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES,
+          keyNamespace);
         // If no active key found in the specific namespace, try the global namespace
         if (kekKeyData == null) {
-          kekKeyData = managedKeyDataCache.getActiveEntry(
-            ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES, ManagedKeyData.KEY_SPACE_GLOBAL);
-            keyNamespace = ManagedKeyData.KEY_SPACE_GLOBAL;
+          kekKeyData = managedKeyDataCache.getActiveEntry(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES,
+            ManagedKeyData.KEY_SPACE_GLOBAL);
+          keyNamespace = ManagedKeyData.KEY_SPACE_GLOBAL;
         }
         if (kekKeyData == null) {
-          throw new IOException("No active key found for custodian: "
-            + ManagedKeyData.KEY_GLOBAL_CUSTODIAN + " in namespaces: " + keyNamespace + " and "
-            + ManagedKeyData.KEY_SPACE_GLOBAL);
+          throw new IOException(
+            "No active key found for custodian: " + ManagedKeyData.KEY_GLOBAL_CUSTODIAN
+              + " in namespaces: " + keyNamespace + " and " + ManagedKeyData.KEY_SPACE_GLOBAL);
         }
-        if (conf.getBoolean(
-                HConstants.CRYPTO_MANAGED_KEYS_LOCAL_KEY_GEN_PER_FILE_ENABLED_CONF_KEY,
-                HConstants.CRYPTO_MANAGED_KEYS_LOCAL_KEY_GEN_PER_FILE_DEFAULT_ENABLED)) {
-          cipher = getCipherIfValid(conf, cipherName, kekKeyData.getTheKey(),
-            family.getNameAsString());
-        }
-        else {
+        if (
+          conf.getBoolean(HConstants.CRYPTO_MANAGED_KEYS_LOCAL_KEY_GEN_PER_FILE_ENABLED_CONF_KEY,
+            HConstants.CRYPTO_MANAGED_KEYS_LOCAL_KEY_GEN_PER_FILE_DEFAULT_ENABLED)
+        ) {
+          cipher =
+            getCipherIfValid(conf, cipherName, kekKeyData.getTheKey(), family.getNameAsString());
+        } else {
           key = kekKeyData.getTheKey();
           kekKeyData = systemKeyCache.getLatestSystemKey();
         }
@@ -114,8 +111,7 @@ public class SecurityUtil {
         if (keyBytes != null) {
           // Family provides specific key material
           key = EncryptionUtil.unwrapKey(conf, keyBytes);
-        }
-        else {
+        } else {
           cipher = getCipherIfValid(conf, cipherName, null, null);
         }
       }
@@ -139,17 +135,17 @@ public class SecurityUtil {
 
   /**
    * Create an encryption context from encryption key found in a file trailer, suitable for read.
-   * @param conf The current configuration.
-   * @param path The path of the file.
-   * @param trailer The file trailer.
+   * @param conf                The current configuration.
+   * @param path                The path of the file.
+   * @param trailer             The file trailer.
    * @param managedKeyDataCache The managed key data cache.
-   * @param systemKeyCache The system key cache.
+   * @param systemKeyCache      The system key cache.
    * @return The created encryption context or null if no key material is available.
    * @throws IOException if an encryption key for the file cannot be unwrapped
    */
   public static Encryption.Context createEncryptionContext(Configuration conf, Path path,
-    FixedFileTrailer trailer, ManagedKeyDataCache managedKeyDataCache, SystemKeyCache systemKeyCache)
-    throws IOException {
+    FixedFileTrailer trailer, ManagedKeyDataCache managedKeyDataCache,
+    SystemKeyCache systemKeyCache) throws IOException {
     ManagedKeyData kekKeyData = null;
     byte[] keyBytes = trailer.getEncryptionKey();
     Encryption.Context cryptoContext = Encryption.Context.NONE;
@@ -172,8 +168,8 @@ public class SecurityUtil {
         }
         // When getEntry returns null we treat it the same as exception case.
         if (kekKeyData == null) {
-          throw new IOException("Failed to get key data for KEK metadata: " +
-            trailer.getKEKMetadata(), cause);
+          throw new IOException(
+            "Failed to get key data for KEK metadata: " + trailer.getKEKMetadata(), cause);
         }
         kek = kekKeyData.getTheKey();
       } else {
@@ -181,11 +177,11 @@ public class SecurityUtil {
           if (systemKeyCache == null) {
             throw new IOException("Key management is enabled, but SystemKeyCache is null");
           }
-          ManagedKeyData systemKeyData = systemKeyCache.getSystemKeyByChecksum(
-            trailer.getKEKChecksum());
+          ManagedKeyData systemKeyData =
+            systemKeyCache.getSystemKeyByChecksum(trailer.getKEKChecksum());
           if (systemKeyData == null) {
-            throw new IOException("Failed to get system key by checksum: " +
-              trailer.getKEKChecksum());
+            throw new IOException(
+              "Failed to get system key by checksum: " + trailer.getKEKChecksum());
           }
           kek = systemKeyData.getTheKey();
           kekKeyData = systemKeyData;
@@ -196,8 +192,8 @@ public class SecurityUtil {
         try {
           key = EncryptionUtil.unwrapKey(conf, null, keyBytes, kek);
         } catch (KeyException | IOException e) {
-          throw new IOException("Failed to unwrap key with KEK checksum: " +
-            trailer.getKEKChecksum() + ", metadata: " + trailer.getKEKMetadata(), e);
+          throw new IOException("Failed to unwrap key with KEK checksum: "
+            + trailer.getKEKChecksum() + ", metadata: " + trailer.getKEKMetadata(), e);
         }
       } else {
         key = EncryptionUtil.unwrapKey(conf, keyBytes);
@@ -217,9 +213,9 @@ public class SecurityUtil {
 
   /**
    * Get the cipher if the cipher name is valid, otherwise throw an exception.
-   * @param conf the configuration
+   * @param conf       the configuration
    * @param cipherName the cipher name to check
-   * @param key the key to check
+   * @param key        the key to check
    * @param familyName the family name
    * @return the cipher if the cipher name is valid
    * @throws IllegalStateException if the cipher name is not valid
@@ -232,8 +228,8 @@ public class SecurityUtil {
     // what the wrapped key is telling us
     if (key != null && !key.getAlgorithm().equalsIgnoreCase(cipherName)) {
       throw new IllegalStateException(
-          "Encryption for family '" + familyName + "' configured with type '"
-              + cipherName + "' but key specifies algorithm '" + key.getAlgorithm() + "'");
+        "Encryption for family '" + familyName + "' configured with type '" + cipherName
+          + "' but key specifies algorithm '" + key.getAlgorithm() + "'");
     }
     // Use the algorithm the key wants
     Cipher cipher = Encryption.getCipher(conf, cipherName);

@@ -17,15 +17,11 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import static org.apache.hadoop.hbase.io.crypto.ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES;
-
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.SequenceInputStream;
-import java.security.Key;
-import java.security.KeyException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -42,13 +38,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.io.crypto.Cipher;
-import org.apache.hadoop.hbase.io.crypto.Encryption;
-import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
-import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
-import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
 import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
-import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.security.SecurityUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -416,16 +406,15 @@ public class HFileInfo implements SortedMap<byte[], byte[]> {
     initialized = true;
   }
 
-  private HFileContext createHFileContext(ReaderContext readerContext, Path path, FixedFileTrailer
-    trailer, Configuration conf) throws IOException {
-    return new HFileContextBuilder().withHBaseCheckSum(true)
-      .withHFileName(path.getName()).withCompression(trailer.getCompressionCodec())
+  private HFileContext createHFileContext(ReaderContext readerContext, Path path,
+    FixedFileTrailer trailer, Configuration conf) throws IOException {
+    return new HFileContextBuilder().withHBaseCheckSum(true).withHFileName(path.getName())
+      .withCompression(trailer.getCompressionCodec())
       .withDecompressionContext(
         trailer.getCompressionCodec().getHFileDecompressionContextForConfiguration(conf))
       .withCellComparator(FixedFileTrailer.createComparator(trailer.getComparatorClassName()))
-      .withEncryptionContext(
-        SecurityUtil.createEncryptionContext(conf, path, trailer,
-          readerContext.getManagedKeyDataCache(), readerContext.getSystemKeyCache()))
+      .withEncryptionContext(SecurityUtil.createEncryptionContext(conf, path, trailer,
+        readerContext.getManagedKeyDataCache(), readerContext.getSystemKeyCache()))
       .build();
   }
 

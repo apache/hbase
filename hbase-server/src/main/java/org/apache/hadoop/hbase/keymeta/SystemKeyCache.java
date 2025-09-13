@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -41,11 +40,12 @@ public class SystemKeyCache {
   /**
    * Create a SystemKeyCache from the specified configuration and file system.
    * @param configuration the configuration to use
-   * @param fs the file system to use
+   * @param fs            the file system to use
    * @return the cache or {@code null} if no keys are found.
    * @throws IOException if there is an error loading the system keys
    */
-  public static SystemKeyCache createCache(Configuration configuration, FileSystem fs) throws IOException {
+  public static SystemKeyCache createCache(Configuration configuration, FileSystem fs)
+    throws IOException {
     SystemKeyAccessor accessor = new SystemKeyAccessor(configuration, fs);
     return createCache(accessor);
   }
@@ -64,7 +64,7 @@ public class SystemKeyCache {
     }
     ManagedKeyData latestSystemKey = null;
     Map<Long, ManagedKeyData> systemKeys = new TreeMap<>();
-    for (Path keyPath: allSystemKeyFiles) {
+    for (Path keyPath : allSystemKeyFiles) {
       LOG.info("Loading system key from: {}", keyPath);
       ManagedKeyData keyData = accessor.loadSystemKey(keyPath);
       if (latestSystemKey == null) {

@@ -28,9 +28,7 @@ import static org.junit.Assert.assertTrue;
 import java.security.Key;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
-
 import javax.crypto.KeyGenerator;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -88,8 +86,8 @@ public class TestManagedKeyData {
 
   @Test
   public void testConstructorWithFailedStateAndNullMetadata() {
-    ManagedKeyData keyData = new ManagedKeyData(keyCust, keyNamespace, null,
-        ManagedKeyState.FAILED, null);
+    ManagedKeyData keyData =
+      new ManagedKeyData(keyCust, keyNamespace, null, ManagedKeyState.FAILED, null);
     assertNotNull(keyData);
     assertEquals(ManagedKeyState.FAILED, keyData.getKeyState());
     assertNull(keyData.getKeyMetadata());
@@ -99,8 +97,8 @@ public class TestManagedKeyData {
   @Test
   public void testConstructorWithRefreshTimestamp() {
     long refreshTimestamp = System.currentTimeMillis();
-    ManagedKeyData keyDataWithTimestamp = new ManagedKeyData(keyCust, keyNamespace, theKey,
-        keyState, keyMetadata, refreshTimestamp);
+    ManagedKeyData keyDataWithTimestamp =
+      new ManagedKeyData(keyCust, keyNamespace, theKey, keyState, keyMetadata, refreshTimestamp);
     assertEquals(refreshTimestamp, keyDataWithTimestamp.getRefreshTimestamp());
   }
 
@@ -156,10 +154,15 @@ public class TestManagedKeyData {
   @Test
   public void testGetKeyMetadataHashEncodedWithNullHash() {
     // Create ManagedKeyData with FAILED state and null metadata
-    ManagedKeyData keyData = new ManagedKeyData(
-      "custodian".getBytes(), "namespace", null, ManagedKeyState.FAILED,
-      null  // null metadata should result in null hash
-    );
+    ManagedKeyData keyData =
+      new ManagedKeyData("custodian".getBytes(), "namespace", null, ManagedKeyState.FAILED, null // null
+                                                                                                 // metadata
+                                                                                                 // should
+                                                                                                 // result
+                                                                                                 // in
+                                                                                                 // null
+                                                                                                 // hash
+      );
 
     String encoded = keyData.getKeyMetadataHashEncoded();
     assertNull(encoded);

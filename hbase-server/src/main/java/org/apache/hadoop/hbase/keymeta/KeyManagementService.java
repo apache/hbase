@@ -1,4 +1,3 @@
-
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,7 +18,6 @@
 package org.apache.hadoop.hbase.keymeta;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -66,23 +64,15 @@ public interface KeyManagementService {
     return new DefaultKeyManagementService(configuration, fs);
   }
 
-  /**
-   * @return the cache for cluster keys.
-   */
+  /** Returns the cache for cluster keys. */
   public SystemKeyCache getSystemKeyCache();
 
-  /**
-   * @return the cache for managed keys.
-   */
+  /** Returns the cache for managed keys. */
   public ManagedKeyDataCache getManagedKeyDataCache();
 
-  /**
-   * @return the admin for keymeta.
-   */
+  /** Returns the admin for keymeta. */
   public KeymetaAdmin getKeymetaAdmin();
 
-  /**
-   * @return the configuration.
-   */
+  /** Returns the configuration. */
   public Configuration getConfiguration();
 }

@@ -109,9 +109,9 @@ public class TestKeyNamespaceUtil {
   @Test
   public void testConstructKeyNamespace_NullChecks() {
     // Test null inputs for both table name and family
-    assertThrows(NullPointerException.class, () -> KeyNamespaceUtil.constructKeyNamespace(null,
-      "family"));
-    assertThrows(NullPointerException.class, () -> KeyNamespaceUtil.constructKeyNamespace("test",
-      null));
+    assertThrows(NullPointerException.class,
+      () -> KeyNamespaceUtil.constructKeyNamespace(null, "family"));
+    assertThrows(NullPointerException.class,
+      () -> KeyNamespaceUtil.constructKeyNamespace("test", null));
   }
 }

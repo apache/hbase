@@ -299,18 +299,21 @@ public final class CommonFSUtils {
    * @throws IOException e
    */
   public static Path getOriginalRootDir(final Configuration c) throws IOException {
-    return getRootDir(c, c.get(HConstants.HBASE_ORIGINAL_DIR) == null ? HConstants.HBASE_DIR
-      : HConstants.HBASE_ORIGINAL_DIR);
+    return getRootDir(c,
+      c.get(HConstants.HBASE_ORIGINAL_DIR) == null
+        ? HConstants.HBASE_DIR
+        : HConstants.HBASE_ORIGINAL_DIR);
   }
 
   /**
    * Get the path for the root data directory
-   * @param c configuration
+   * @param c           configuration
    * @param rootDirProp the property name for the root directory
    * @return {@link Path} to hbase root directory from configuration as a qualified Path.
    * @throws IOException e
    */
-  public static Path getRootDir(final Configuration c, final String rootDirProp) throws IOException {
+  public static Path getRootDir(final Configuration c, final String rootDirProp)
+    throws IOException {
     Path p = new Path(c.get(rootDirProp));
     FileSystem fs = p.getFileSystem(c);
     return p.makeQualified(fs.getUri(), fs.getWorkingDirectory());

@@ -22,7 +22,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -73,26 +72,25 @@ public class TestKeymetaAdminShell extends ManagedKeyTestBase implements RubyShe
     String providerParams = KeymetaTestUtils.setupTestKeyStore(TEST_UTIL, true, true, store -> {
       Properties p = new Properties();
       try {
-        KeymetaTestUtils.addEntry(conf, 128, store, CUST1_ALIAS, CUST1,
-          true, cust2key, cust2alias, p);
-        KeymetaTestUtils.addEntry(conf, 128, store, GLOB_CUST_ALIAS,
-          "*", true, cust2key, cust2alias, p);
-        KeymetaTestUtils.addEntry(conf, 128, store, SYSTEM_KEY_ALIAS,
-          clusterId, true, cust2key, cust2alias, p);
+        KeymetaTestUtils.addEntry(conf, 128, store, CUST1_ALIAS, CUST1, true, cust2key, cust2alias,
+          p);
+        KeymetaTestUtils.addEntry(conf, 128, store, GLOB_CUST_ALIAS, "*", true, cust2key,
+          cust2alias, p);
+        KeymetaTestUtils.addEntry(conf, 128, store, SYSTEM_KEY_ALIAS, clusterId, true, cust2key,
+          cust2alias, p);
       } catch (Exception e) {
         throw new RuntimeException(e);
       }
       return p;
     });
-    //byte[] systemKey = cust2key.get(new Bytes(clusterId.getBytes())).get();
-    conf.set(HConstants.CRYPTO_MANAGED_KEY_STORE_SYSTEM_KEY_NAME_CONF_KEY,
-      SYSTEM_KEY_ALIAS);
+    // byte[] systemKey = cust2key.get(new Bytes(clusterId.getBytes())).get();
+    conf.set(HConstants.CRYPTO_MANAGED_KEY_STORE_SYSTEM_KEY_NAME_CONF_KEY, SYSTEM_KEY_ALIAS);
     conf.set(HConstants.CRYPTO_KEYPROVIDER_PARAMETERS_KEY, providerParams);
     RubyShellTest.setUpConfig(this);
     super.setUp();
     RubyShellTest.setUpJRubyRuntime(this);
     RubyShellTest.doTestSetup(this);
-    addCustodianRubyEnvVars( jruby, "CUST1", CUST1);
+    addCustodianRubyEnvVars(jruby, "CUST1", CUST1);
   }
 
   @Override
@@ -122,8 +120,8 @@ public class TestKeymetaAdminShell extends ManagedKeyTestBase implements RubyShe
 
   public static void addCustodianRubyEnvVars(ScriptingContainer jruby, String custId,
     String custodian) {
-    jruby.put("$"+custId, custodian);
-    jruby.put("$"+custId+"_ALIAS", custodian+"-alias");
-    jruby.put("$"+custId+"_ENCODED", Base64.getEncoder().encodeToString(custodian.getBytes()));
+    jruby.put("$" + custId, custodian);
+    jruby.put("$" + custId + "_ALIAS", custodian + "-alias");
+    jruby.put("$" + custId + "_ENCODED", Base64.getEncoder().encodeToString(custodian.getBytes()));
   }
 }

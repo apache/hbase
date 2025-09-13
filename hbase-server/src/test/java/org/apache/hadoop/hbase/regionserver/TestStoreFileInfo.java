@@ -122,8 +122,8 @@ public class TestStoreFileInfo {
     storeFileTrackerForTest.createReference(r, p);
     StoreFileInfo sfi = storeFileTrackerForTest.getStoreFileInfo(p, true);
     try {
-      ReaderContext context = sfi.createReaderContext(false, 1000, ReaderType.PREAD, null, null,
-          null);
+      ReaderContext context =
+        sfi.createReaderContext(false, 1000, ReaderType.PREAD, null, null, null);
       sfi.createReader(context, null);
       throw new IllegalStateException();
     } catch (FileNotFoundException fnfe) {
