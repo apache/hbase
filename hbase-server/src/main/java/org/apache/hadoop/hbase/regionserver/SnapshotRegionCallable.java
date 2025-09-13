@@ -41,7 +41,7 @@ public class SnapshotRegionCallable extends BaseRSProcedureCallable {
   private ForeignExceptionDispatcher monitor;
 
   @Override
-  protected void doCall() throws Exception {
+  protected byte[] doCall() throws Exception {
     HRegion region = rs.getRegion(regionInfo.getEncodedName());
     if (region == null) {
       throw new NotServingRegionException(
@@ -78,6 +78,7 @@ public class SnapshotRegionCallable extends BaseRSProcedureCallable {
       LOG.debug("Closing snapshot operation on {}", region);
       region.closeRegionOperation(Region.Operation.SNAPSHOT);
     }
+    return null;
   }
 
   @Override

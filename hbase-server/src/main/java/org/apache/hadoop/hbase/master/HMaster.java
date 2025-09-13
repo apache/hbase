@@ -161,6 +161,7 @@ import org.apache.hadoop.hbase.master.procedure.DisableTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.EnableTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.FlushTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.InitMetaProcedure;
+import org.apache.hadoop.hbase.master.procedure.LogRollProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureScheduler;
@@ -4211,11 +4212,11 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     return (RemoteProcedure<MasterProcedureEnv, ?>) procedure;
   }
 
-  public void remoteProcedureCompleted(long procId) {
+  public void remoteProcedureCompleted(long procId, byte[] remoteResultData) {
     LOG.debug("Remote procedure done, pid={}", procId);
     RemoteProcedure<MasterProcedureEnv, ?> procedure = getRemoteProcedure(procId);
     if (procedure != null) {
-      procedure.remoteOperationCompleted(procedureExecutor.getEnvironment());
+      procedure.remoteOperationCompleted(procedureExecutor.getEnvironment(), remoteResultData);
     }
   }
 
@@ -4549,7 +4550,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
         @Override
         protected void run() throws IOException {
           getMaster().getMasterCoprocessorHost().preTableFlush(tableName);
-          LOG.info(getClientIdAuditPrefix() + " flush " + tableName);
+          LOG.info("{} flush {}", getClientIdAuditPrefix(), tableName);
           submitProcedure(
             new FlushTableProcedure(procedureExecutor.getEnvironment(), tableName, columnFamilies));
           getMaster().getMasterCoprocessorHost().postTableFlush(tableName);
@@ -4558,6 +4559,23 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
         @Override
         protected String getDescription() {
           return "FlushTableProcedure";
+        }
+      });
+  }
+
+  @Override
+  public long rollAllWALWriters(long nonceGroup, long nonce) throws IOException {
+    return MasterProcedureUtil
+      .submitProcedure(new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
+        @Override
+        protected void run() {
+          LOG.info("{} roll all wal writers", getClientIdAuditPrefix());
+          submitProcedure(new LogRollProcedure());
+        }
+
+        @Override
+        protected String getDescription() {
+          return "RollAllWALWriters";
         }
       });
   }

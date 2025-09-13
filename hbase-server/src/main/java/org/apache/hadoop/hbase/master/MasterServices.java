@@ -516,4 +516,10 @@ public interface MasterServices extends Server, KeyManagementService {
    * @return procedure Id
    */
   long truncateRegion(RegionInfo regionInfo, long nonceGroup, long nonce) throws IOException;
+
+  /**
+   * Roll WAL writer for all RegionServers
+   * @return procedure id
+   */
+  long rollAllWALWriters(long nonceGroup, long nonce) throws IOException;
 }

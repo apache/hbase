@@ -289,3 +289,7 @@ message RotateFileData {
   required int64 timestamp = 1;
   required bytes data = 2;
 }
+
+message LastHighestWalFilenum {
+  map<string, uint64> file_num = 1;
+}

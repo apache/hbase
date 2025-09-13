@@ -585,6 +585,10 @@ public class MockNoopMasterServices implements MasterServices {
     return 0;
   }
 
+  public long rollAllWALWriters(long nonceGroup, long nonce) throws IOException {
+    return 0;
+  }
+
   @Override
   public KeyManagementService getKeyManagementService() {
     return this;

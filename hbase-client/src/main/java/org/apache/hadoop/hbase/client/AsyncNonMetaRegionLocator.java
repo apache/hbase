@@ -25,6 +25,7 @@ import static org.apache.hadoop.hbase.HConstants.ZEROES;
 import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
 import static org.apache.hadoop.hbase.client.AsyncRegionLocatorHelper.createRegionLocations;
 import static org.apache.hadoop.hbase.client.AsyncRegionLocatorHelper.isGood;
+import static org.apache.hadoop.hbase.client.ConnectionConfiguration.HBASE_CLIENT_META_CACHE_INVALIDATE_INTERVAL;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.createClosestRowAfter;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.isEmptyStopRow;
 import static org.apache.hadoop.hbase.client.RegionInfo.createRegionName;
@@ -267,8 +268,8 @@ class AsyncNonMetaRegionLocator {
     // Suggest set it to 24h or a higher value, because disable/delete table usually not very
     // frequently.
     this.retryTimer = retryTimer;
-    long metaCacheInvalidateInterval = conn.getConfiguration()
-      .getLong("hbase.client.connection.metacache.invalidate-interval.ms", 0L);
+    long metaCacheInvalidateInterval =
+      conn.getConfiguration().getLong(HBASE_CLIENT_META_CACHE_INVALIDATE_INTERVAL, 0L);
     if (metaCacheInvalidateInterval > 0) {
       TimerTask invalidateMetaCacheTask = getInvalidateMetaCacheTask(metaCacheInvalidateInterval);
       this.retryTimer.newTimeout(invalidateMetaCacheTask, metaCacheInvalidateInterval,

@@ -3316,7 +3316,8 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
   // return whether we have more results in region.
   private void scan(HBaseRpcController controller, ScanRequest request, RegionScannerHolder rsh,
     long maxQuotaResultSize, int maxResults, int limitOfRows, List<Result> results,
-    ScanResponse.Builder builder, RpcCall rpcCall) throws IOException {
+    ScanResponse.Builder builder, RpcCall rpcCall, ServerSideScanMetrics scanMetrics)
+    throws IOException {
     HRegion region = rsh.r;
     RegionScanner scanner = rsh.s;
     long maxResultSize;
@@ -3369,8 +3370,6 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
         final LimitScope timeScope =
           allowHeartbeatMessages ? LimitScope.BETWEEN_CELLS : LimitScope.BETWEEN_ROWS;
 
-        boolean trackMetrics = request.hasTrackScanMetrics() && request.getTrackScanMetrics();
-
         // Configure with limits for this RPC. Set keep progress true since size progress
         // towards size limit should be kept between calls to nextRaw
         ScannerContext.Builder contextBuilder = ScannerContext.newBuilder(true);
@@ -3392,7 +3391,8 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
         contextBuilder.setSizeLimit(sizeScope, maxCellSize, maxCellSize, maxBlockSize);
         contextBuilder.setBatchLimit(scanner.getBatch());
         contextBuilder.setTimeLimit(timeScope, timeLimit);
-        contextBuilder.setTrackMetrics(trackMetrics);
+        contextBuilder.setTrackMetrics(scanMetrics != null);
+        contextBuilder.setScanMetrics(scanMetrics);
         ScannerContext scannerContext = contextBuilder.build();
         boolean limitReached = false;
         long blockBytesScannedBefore = 0;
@@ -3514,27 +3514,15 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
         builder.setMoreResultsInRegion(moreRows);
         // Check to see if the client requested that we track metrics server side. If the
         // client requested metrics, retrieve the metrics from the scanner context.
-        if (trackMetrics) {
+        if (scanMetrics != null) {
           // rather than increment yet another counter in StoreScanner, just set the value here
           // from block size progress before writing into the response
-          scannerContext.getMetrics().setCounter(
-            ServerSideScanMetrics.BLOCK_BYTES_SCANNED_KEY_METRIC_NAME,
+          scanMetrics.setCounter(ServerSideScanMetrics.BLOCK_BYTES_SCANNED_KEY_METRIC_NAME,
             scannerContext.getBlockSizeProgress());
           if (rpcCall != null) {
-            scannerContext.getMetrics().setCounter(ServerSideScanMetrics.FS_READ_TIME_METRIC_NAME,
+            scanMetrics.setCounter(ServerSideScanMetrics.FS_READ_TIME_METRIC_NAME,
               rpcCall.getFsReadTime());
           }
-          Map<String, Long> metrics = scannerContext.getMetrics().getMetricsMap();
-          ScanMetrics.Builder metricBuilder = ScanMetrics.newBuilder();
-          NameInt64Pair.Builder pairBuilder = NameInt64Pair.newBuilder();
-
-          for (Entry<String, Long> entry : metrics.entrySet()) {
-            pairBuilder.setName(entry.getKey());
-            pairBuilder.setValue(entry.getValue());
-            metricBuilder.addMetrics(pairBuilder.build());
-          }
-
-          builder.setScanMetrics(metricBuilder.build());
         }
       }
     } finally {
@@ -3671,6 +3659,8 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
     boolean scannerClosed = false;
     try {
       List<Result> results = new ArrayList<>(Math.min(rows, 512));
+      boolean trackMetrics = request.hasTrackScanMetrics() && request.getTrackScanMetrics();
+      ServerSideScanMetrics scanMetrics = trackMetrics ? new ServerSideScanMetrics() : null;
       if (rows > 0) {
         boolean done = false;
         // Call coprocessor. Get region info from scanner.
@@ -3690,7 +3680,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
         }
         if (!done) {
           scan((HBaseRpcController) controller, request, rsh, maxQuotaResultSize, rows, limitOfRows,
-            results, builder, rpcCall);
+            results, builder, rpcCall, scanMetrics);
         } else {
           builder.setMoreResultsInRegion(!results.isEmpty());
         }
@@ -3740,6 +3730,28 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
       // There's no point returning to a timed out client. Throwing ensures scanner is closed
       if (rpcCall != null && EnvironmentEdgeManager.currentTime() > rpcCall.getDeadline()) {
         throw new TimeoutIOException("Client deadline exceeded, cannot return results");
+      }
+
+      if (scanMetrics != null) {
+        if (rpcCall != null) {
+          long rpcScanTime = EnvironmentEdgeManager.currentTime() - rpcCall.getStartTime();
+          long rpcQueueWaitTime = rpcCall.getStartTime() - rpcCall.getReceiveTime();
+          scanMetrics.addToCounter(ServerSideScanMetrics.RPC_SCAN_PROCESSING_TIME_METRIC_NAME,
+            rpcScanTime);
+          scanMetrics.addToCounter(ServerSideScanMetrics.RPC_SCAN_QUEUE_WAIT_TIME_METRIC_NAME,
+            rpcQueueWaitTime);
+        }
+        Map<String, Long> metrics = scanMetrics.getMetricsMap();
+        ScanMetrics.Builder metricBuilder = ScanMetrics.newBuilder();
+        NameInt64Pair.Builder pairBuilder = NameInt64Pair.newBuilder();
+
+        for (Entry<String, Long> entry : metrics.entrySet()) {
+          pairBuilder.setName(entry.getKey());
+          pairBuilder.setValue(entry.getValue());
+          metricBuilder.addMetrics(pairBuilder.build());
+        }
+
+        builder.setScanMetrics(metricBuilder.build());
       }
 
       return builder.build();
@@ -3954,7 +3966,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
       LOG.warn("Failed to instantiating remote procedure {}, pid={}", request.getProcClass(),
         request.getProcId(), e);
       server.remoteProcedureComplete(request.getProcId(), request.getInitiatingMasterActiveTime(),
-        e);
+        e, null);
       return;
     }
     callable.init(request.getProcData().toByteArray(), server);
