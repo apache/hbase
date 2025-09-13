@@ -449,7 +449,7 @@ public class TestSecurityUtil {
       Encryption.Context result = SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer,
         mockManagedKeyDataCache, mockSystemKeyCache);
 
-      assertNull(result);
+      assertEquals(Encryption.Context.NONE, result);
     }
   }
 
