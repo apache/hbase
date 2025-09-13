@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 #
 #
 # Licensed to the Apache Software Foundation (ASF) under one
@@ -23,8 +25,8 @@ require 'hbase_constants'
 require 'hbase/hbase'
 require 'hbase/table'
 
-
 module Hbase
+  # Test class for keymeta admin functionality
   class KeymetaAdminTest < Test::Unit::TestCase
     include TestHelpers
 
@@ -33,23 +35,25 @@ module Hbase
     end
 
     define_test 'Test enable key management' do
-      custAndNamespace = $CUST1_ENCODED + ':*'
-      # Repeat the enable twice in a loop and ensure multiple enables succeed and return the same output.
-      (0..1).each do |i|
-        output = capture_stdout { @shell.command('enable_key_management', custAndNamespace) }
+      cust_and_namespace = "#{$CUST1_ENCODED}:*"
+      # Repeat the enable twice in a loop and ensure multiple enables succeed and return the
+      # same output.
+      2.times do |i|
+        output = capture_stdout { @shell.command('enable_key_management', cust_and_namespace) }
         puts "enable_key_management #{i} output: #{output}"
-        assert(output.include?($CUST1_ENCODED +' * ACTIVE'))
+        assert(output.include?("#{$CUST1_ENCODED} * ACTIVE"))
       end
-      output = capture_stdout { @shell.command('show_key_status', custAndNamespace) }
+      output = capture_stdout { @shell.command('show_key_status', cust_and_namespace) }
       puts "show_key_status output: #{output}"
-      assert(output.include?($CUST1_ENCODED +' * ACTIVE'))
+      assert(output.include?("#{$CUST1_ENCODED} * ACTIVE"))
 
-      # The ManagedKeyStoreKeyProvider doesn't support specific namespaces, so it will return the global key.
-      custAndNamespace = $CUST1_ENCODED + ':' + 'test_table/f'
-      output = capture_stdout { @shell.command('enable_key_management', custAndNamespace) }
+      # The ManagedKeyStoreKeyProvider doesn't support specific namespaces, so it will return the
+      # global key.
+      cust_and_namespace = "#{$CUST1_ENCODED}:test_table/f"
+      output = capture_stdout { @shell.command('enable_key_management', cust_and_namespace) }
       puts "enable_key_management output: #{output}"
-      assert(output.include?($CUST1_ENCODED +' * ACTIVE'))
-      output = capture_stdout { @shell.command('show_key_status', custAndNamespace) }
+      assert(output.include?("#{$CUST1_ENCODED} * ACTIVE"))
+      output = capture_stdout { @shell.command('show_key_status', cust_and_namespace) }
       puts "show_key_status output: #{output}"
       assert(output.include?('0 row(s)'))
     end
