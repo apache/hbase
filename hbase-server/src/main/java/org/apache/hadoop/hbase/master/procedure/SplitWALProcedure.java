@@ -90,7 +90,7 @@ public class SplitWALProcedure
           skipPersistence();
           throw new ProcedureSuspendedException();
         }
-        splitWALManager.releaseSplitWALWorker(worker, env.getProcedureScheduler());
+        splitWALManager.releaseSplitWALWorker(worker);
         if (!finished) {
           LOG.warn("Failed to split wal {} by server {}, retry...", walPath, worker);
           setNextState(MasterProcedureProtos.SplitWALState.ACQUIRE_SPLIT_WAL_WORKER);

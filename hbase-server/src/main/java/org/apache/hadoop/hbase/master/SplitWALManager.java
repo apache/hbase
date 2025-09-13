@@ -26,7 +26,6 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -35,7 +34,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.master.procedure.MasterProcedureScheduler;
 import org.apache.hadoop.hbase.master.procedure.SplitWALProcedure;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
@@ -153,25 +151,19 @@ public class SplitWALManager {
    */
   public ServerName acquireSplitWALWorker(Procedure<?> procedure)
     throws ProcedureSuspendedException {
-    Optional<ServerName> worker = splitWorkerAssigner.acquire();
-    if (worker.isPresent()) {
-      LOG.debug("Acquired split WAL worker={}", worker.get());
-      return worker.get();
-    }
-    splitWorkerAssigner.suspend(procedure);
-    throw new ProcedureSuspendedException();
+    ServerName worker = splitWorkerAssigner.acquire(procedure);
+    LOG.debug("Acquired split WAL worker={}", worker);
+    return worker;
   }
 
   /**
    * After the worker finished the split WAL task, it will release the worker, and wake up all the
    * suspend procedures in the ProcedureEvent
-   * @param worker    worker which is about to release
-   * @param scheduler scheduler which is to wake up the procedure event
+   * @param worker worker which is about to release
    */
-  public void releaseSplitWALWorker(ServerName worker, MasterProcedureScheduler scheduler) {
+  public void releaseSplitWALWorker(ServerName worker) {
     LOG.debug("Release split WAL worker={}", worker);
     splitWorkerAssigner.release(worker);
-    splitWorkerAssigner.wake(scheduler);
   }
 
   /**

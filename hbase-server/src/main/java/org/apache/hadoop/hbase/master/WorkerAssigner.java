@@ -23,9 +23,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.master.procedure.MasterProcedureScheduler;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
+import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -51,36 +51,37 @@ public class WorkerAssigner implements ServerListener {
     }
   }
 
-  public synchronized Optional<ServerName> acquire() {
+  public synchronized ServerName acquire(Procedure<?> proc) throws ProcedureSuspendedException {
     List<ServerName> serverList = master.getServerManager().getOnlineServersList();
     Collections.shuffle(serverList);
     Optional<ServerName> worker = serverList.stream()
       .filter(
         serverName -> !currentWorkers.containsKey(serverName) || currentWorkers.get(serverName) > 0)
       .findAny();
-    worker.ifPresent(name -> currentWorkers.compute(name, (serverName,
-      availableWorker) -> availableWorker == null ? maxTasks - 1 : availableWorker - 1));
-    return worker;
+    if (worker.isPresent()) {
+      ServerName sn = worker.get();
+      currentWorkers.compute(sn, (serverName,
+        availableWorker) -> availableWorker == null ? maxTasks - 1 : availableWorker - 1);
+      return sn;
+    } else {
+      event.suspend();
+      event.suspendIfNotReady(proc);
+      throw new ProcedureSuspendedException();
+    }
   }
 
   public synchronized void release(ServerName serverName) {
     currentWorkers.compute(serverName, (k, v) -> v == null ? null : v + 1);
-  }
-
-  public void suspend(Procedure<?> proc) {
-    event.suspend();
-    event.suspendIfNotReady(proc);
-  }
-
-  public void wake(MasterProcedureScheduler scheduler) {
     if (!event.isReady()) {
-      event.wake(scheduler);
+      event.wake(master.getMasterProcedureExecutor().getEnvironment().getProcedureScheduler());
     }
   }
 
   @Override
-  public void serverAdded(ServerName worker) {
-    this.wake(master.getMasterProcedureExecutor().getEnvironment().getProcedureScheduler());
+  public synchronized void serverAdded(ServerName worker) {
+    if (!event.isReady()) {
+      event.wake(master.getMasterProcedureExecutor().getEnvironment().getProcedureScheduler());
+    }
   }
 
   public synchronized void addUsedWorker(ServerName worker) {
