@@ -40,6 +40,11 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 public class KeymetaTestUtils {
+
+  private KeymetaTestUtils() {
+    // Utility class
+  }
+
   public static final String ALIAS = "test";
   public static final String PASSWORD = "password";
 
