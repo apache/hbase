@@ -152,9 +152,10 @@ public class SecurityUtil {
     throws IOException {
     ManagedKeyData kekKeyData = null;
     byte[] keyBytes = trailer.getEncryptionKey();
+    Encryption.Context cryptoContext = Encryption.Context.NONE;
     // Check for any key material available
     if (keyBytes != null) {
-      Encryption.Context cryptoContext = Encryption.newContext(conf);
+      cryptoContext = Encryption.newContext(conf);
       Key kek = null;
       // When the KEK medata is available, we will try to unwrap the encrypted key using the KEK,
       // otherwise we will use the system keys starting from the latest to the oldest.
@@ -210,9 +211,8 @@ public class SecurityUtil {
       cryptoContext.setCipher(cipher);
       cryptoContext.setKey(key);
       cryptoContext.setKEKData(kekKeyData);
-      return cryptoContext;
     }
-    return null;
+    return cryptoContext;
   }
 
   /**

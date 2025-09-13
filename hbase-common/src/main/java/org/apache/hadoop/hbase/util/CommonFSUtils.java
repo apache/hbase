@@ -318,7 +318,7 @@ public final class CommonFSUtils {
 
   public static void setRootDir(final Configuration c, final Path root) {
     // Keep track of the original root dir.
-    if (c.get(HConstants.HBASE_ORIGINAL_DIR) == null) {
+    if (c.get(HConstants.HBASE_ORIGINAL_DIR) == null && c.get(HConstants.HBASE_DIR) != null) {
       c.set(HConstants.HBASE_ORIGINAL_DIR, c.get(HConstants.HBASE_DIR));
     }
     c.set(HConstants.HBASE_DIR, root.toString());
