@@ -20,17 +20,12 @@
 <%@ page contentType="text/html;charset=UTF-8"
          import="java.util.*"
          import="org.apache.hadoop.hbase.ServerName"
-         import="org.apache.hadoop.hbase.master.HMaster"
-         import="org.apache.hadoop.conf.Configuration"
          import="org.apache.hadoop.hbase.util.*"
          import="org.apache.hadoop.hbase.regionserver.HRegionServer"
          import="org.apache.hadoop.hbase.client.RegionInfo"
          import="org.apache.hadoop.hbase.ServerName"
-         import="org.apache.hadoop.hbase.HBaseConfiguration"
-         import="org.apache.hadoop.hbase.io.hfile.CacheConfig"
          import="org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil"
          import="org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ServerInfo"
-         import="org.apache.hadoop.hbase.util.JvmVersion"
          import="org.apache.hadoop.hbase.zookeeper.MasterAddressTracker" %><%
   HRegionServer regionServer =
     (HRegionServer) getServletContext().getAttribute(HRegionServer.REGIONSERVER);
@@ -128,7 +123,12 @@
       <jsp:include page="replicationStatus.jsp"/>
     </section>
 
-    <%-- TODO: Migrate rest of RSStatusTmpl.jamon  --%>
+    <section>
+      <h2>Software Attributes</h2>
+      <% request.setAttribute("masterServerName", masterServerName); %>
+      <% request.setAttribute("infoPort", infoPort); %>
+      <jsp:include page="softwareAttributes.jsp"/>
+    </section>
 
   </div> <!--/.row -->
 </div> <!-- /.container-fluid content -->
