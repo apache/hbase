@@ -18,43 +18,20 @@
 package org.apache.hadoop.hbase.regionserver.http;
 
 import java.io.IOException;
-import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.tmpl.regionserver.RSStatusTmpl;
 import org.apache.yetus.audience.InterfaceAudience;
 
+/**
+ * Only kept for redirecting to regionserver.jsp.
+ */
 @InterfaceAudience.Private
 public class RSStatusServlet extends HttpServlet {
   private static final long serialVersionUID = 1L;
 
   @Override
-  protected void doGet(HttpServletRequest req, HttpServletResponse resp)
-    throws ServletException, IOException {
-    HRegionServer hrs =
-      (HRegionServer) getServletContext().getAttribute(HRegionServer.REGIONSERVER);
-    assert hrs != null : "No RS in context!";
-
-    String format = req.getParameter("format");
-    if ("json".equals(format)) {
-      resp.setContentType("application/json");
-    } else {
-      resp.setContentType("text/html");
-    }
-
-    if (!hrs.isOnline()) {
-      resp.getWriter().write("The RegionServer is initializing!");
-      resp.getWriter().close();
-      return;
-    }
-
-    RSStatusTmpl tmpl = new RSStatusTmpl();
-    if (format != null) tmpl.setFormat(format);
-    if (req.getParameter("filter") != null) tmpl.setFilter(req.getParameter("filter"));
-    if (req.getParameter("bcn") != null) tmpl.setBcn(req.getParameter("bcn"));
-    if (req.getParameter("bcv") != null) tmpl.setBcv(req.getParameter("bcv"));
-    tmpl.render(resp.getWriter(), hrs);
+  public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
+    response.sendRedirect(request.getContextPath() + "/regionserver.jsp");
   }
 }

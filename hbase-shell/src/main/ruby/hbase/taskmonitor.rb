@@ -82,12 +82,12 @@ module Hbase
 
       begin
         schema = "http://"
-        url = schema + host.hostname + ':' + infoport + '/rs-status?format=json&filter=' + filter
+        url = schema + host.hostname + ':' + infoport + '/regionserver.jsp?format=json&filter=' + filter
         json = URL.new(url).openStream
       rescue SocketException => e
         # Let's try with https when SocketException occur
         schema = "https://"
-        url = schema + host.hostname + ':' + infoport + '/rs-status?format=json&filter=' + filter
+        url = schema + host.hostname + ':' + infoport + '/regionserver.jsp?format=json&filter=' + filter
         json = URL.new(url).openStream
       end
 
