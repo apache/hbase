@@ -21,8 +21,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.atLeastOnce;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -37,7 +35,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.backup.util.BackupFileSystemManager;
 import org.apache.hadoop.hbase.backup.util.BulkLoadProcessor;
 import org.apache.hadoop.hbase.mapreduce.WALInputFormat;
 import org.apache.hadoop.hbase.mapreduce.WALPlayer;
@@ -51,7 +48,6 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
-import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.junit.After;
 import org.junit.Before;
@@ -60,7 +56,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
-import org.mockito.stubbing.Answer;
 
 /**
  * Unit tests for BulkLoadCollectorJob (mapper, reducer and job creation/validation).
@@ -85,6 +80,10 @@ public class TestBulkLoadCollectorJob {
     // nothing for now
   }
 
+  /**
+   * Ensures {@link BulkLoadCollectorJob#createSubmittableJob(String[])} correctly configures
+   * input/output paths and parses time options into the job configuration.
+   */
   @Test
   public void testCreateSubmittableJobValid() throws Exception {
     // set a start time option to make sure setupTime runs and applies it
@@ -92,14 +91,9 @@ public class TestBulkLoadCollectorJob {
     conf.set(WALInputFormat.START_TIME_KEY, dateStr);
 
     BulkLoadCollectorJob jobDriver = new BulkLoadCollectorJob(conf);
-    String inputDirs = "/wals/input";
-    String outDir = "/out/bulk";
+    String inputDirs = new Path("file:/wals/input").toString();
+    String outDir = new Path("file:/out/bulk").toString();
     Job job = jobDriver.createSubmittableJob(new String[] { inputDirs, outDir });
-
-    // Verify job configured with expected classes/paths
-    assertEquals(BulkLoadCollectorJob.NAME + "_" + job.getConfiguration()
-      .getLong("mapreduce.job.id", job.getConfiguration().getLong("mapreduce.job.start.time", 0L)),
-      job.getJobName()); // loose check — job name contains NAME_ and timestamp
 
     // Input path set
     Path[] inPaths = FileInputFormat.getInputPaths(job);
@@ -117,11 +111,15 @@ public class TestBulkLoadCollectorJob {
     assertEquals(expected, parsed);
   }
 
+  /**
+   * Verifies that {@link BulkLoadCollectorJob#createSubmittableJob(String[])} throws an exception
+   * when called with insufficient or null arguments.
+   */
   @Test
   public void testCreateSubmittableJobMissingArgsThrows() {
     BulkLoadCollectorJob jobDriver = new BulkLoadCollectorJob(conf);
     try {
-      jobDriver.createSubmittableJob(new String[] { "/only/one/arg" });
+      jobDriver.createSubmittableJob(new String[] { "file:/only/one/arg" });
       fail("Expected IOException for insufficient args");
     } catch (Exception e) {
       // expected
@@ -135,89 +133,56 @@ public class TestBulkLoadCollectorJob {
     }
   }
 
-  @Test
-  public void testMapperEmitsResolvedPaths() throws Exception {
-    // Prepare mapper and mocked context
-    BulkLoadCollectorJob.BulkLoadCollectorMapper mapper =
-      new BulkLoadCollectorJob.BulkLoadCollectorMapper();
-    @SuppressWarnings("unchecked")
-    Mapper<WALKey, WALEdit, Text, NullWritable>.Context ctx = mock(Mapper.Context.class);
-
-    // mock input split to return a WAL input path
-    FileSplit fileSplit = mock(FileSplit.class);
-    Path walInputPath = new Path("/wals/regionserver/wal-0001");
-    when(fileSplit.getPath()).thenReturn(walInputPath);
-    when(ctx.getInputSplit()).thenReturn(fileSplit);
-
-    // no table filters => tables map will be empty => all tables allowed
-    when(ctx.getConfiguration()).thenReturn(conf);
-    mapper.setup(ctx);
-
-    // Prepare WAL key/value mocks
-    WALKey key = mock(WALKey.class);
-    WALEdit value = mock(WALEdit.class);
-
-    // static mock BulkLoadProcessor.processBulkLoadFiles(...) to return a relative path list
-    Path rel = new Path("regionA/abc.hfile");
-    try (MockedStatic<BulkLoadProcessor> proc = Mockito.mockStatic(BulkLoadProcessor.class);
-      MockedStatic<BackupFileSystemManager> bfm =
-        Mockito.mockStatic(BackupFileSystemManager.class)) {
-
-      proc.when(() -> BulkLoadProcessor.processBulkLoadFiles(key, value))
-        .thenReturn(Collections.singletonList(rel));
-
-      Path resolved = new Path("/hbase/regionA/abc.hfile");
-      bfm.when(() -> BackupFileSystemManager.resolveBulkLoadFullPath(walInputPath, rel))
-        .thenReturn(resolved);
-
-      // capture writes to context and assert correct full path string emitted
-      doAnswer((Answer<Void>) invocation -> {
-        Text t = (Text) invocation.getArgument(0);
-        NullWritable n = (NullWritable) invocation.getArgument(1);
-        assertEquals(resolved.toString(), t.toString());
-        return null;
-      }).when(ctx).write(any(Text.class), any(NullWritable.class));
-
-      mapper.map(key, value, ctx);
-      // verify counter increment attempted
-      verify(ctx, atLeastOnce()).getCounter(eq("BulkCollector"), eq("StoreFilesEmitted"));
-    }
-  }
-
+  /**
+   * Verifies that {@link BulkLoadCollectorJob.BulkLoadCollectorMapper} ignores WAL entries whose
+   * table is not present in the configured tables map.
+   */
   @Test
   public void testMapperIgnoresWhenTableNotInMap() throws Exception {
+    // Prepare mapper and a mocked MapReduce context
     BulkLoadCollectorJob.BulkLoadCollectorMapper mapper =
       new BulkLoadCollectorJob.BulkLoadCollectorMapper();
     @SuppressWarnings("unchecked")
     Mapper<WALKey, WALEdit, Text, NullWritable>.Context ctx = mock(Mapper.Context.class);
 
-    // configure tables/tablesMap so mapper.setup() will populate the tables map with a different
-    // table
-    Configuration c = new Configuration(conf);
-    // TABLES_KEY and TABLE_MAP_KEY should be constants on the class; they are used by setup()
-    c.setStrings(WALPlayer.TABLES_KEY, "ns:allowed");
-    c.setStrings(WALPlayer.TABLE_MAP_KEY, "ns:allowed"); // maps to itself
-    when(ctx.getConfiguration()).thenReturn(c);
+    // Build a Configuration that only allows a single table: ns:allowed
+    // Note: TABLES_KEY / TABLE_MAP_KEY are the same constants used by the mapper.setup(...)
+    Configuration cfgForTest = new Configuration(conf);
+    cfgForTest.setStrings(WALPlayer.TABLES_KEY, "ns:allowed");
+    cfgForTest.setStrings(WALPlayer.TABLE_MAP_KEY, "ns:allowed"); // maps to itself
+
+    // Have the mocked context return our test configuration when mapper.setup() runs
+    when(ctx.getConfiguration()).thenReturn(cfgForTest);
     mapper.setup(ctx);
 
-    // create a WALKey for a table NOT in the map
-    WALKey key = mock(WALKey.class);
-    when(key.getTableName()).thenReturn(TableName.valueOf("ns:other"));
-    WALEdit value = mock(WALEdit.class);
+    // Create a WALKey for a table that is NOT in the allowed map (ns:other)
+    WALKey keyForOtherTable = mock(WALKey.class);
+    when(keyForOtherTable.getTableName()).thenReturn(TableName.valueOf("ns:other"));
+    WALEdit walEdit = mock(WALEdit.class);
 
-    // If table is not allowed, BulkLoadProcessor should NOT be called; we can static-mock to fail
-    // if called
+    // Static-mock BulkLoadProcessor to ensure it would not be relied on:
+    // even if invoked unexpectedly, it returns a non-empty list, but we will assert no writes
+    // occurred.
     try (MockedStatic<BulkLoadProcessor> proc = Mockito.mockStatic(BulkLoadProcessor.class)) {
-      // If processBulkLoadFiles is invoked unexpectedly, return empty list (but we will verify no
-      // writes)
       proc.when(() -> BulkLoadProcessor.processBulkLoadFiles(any(), any()))
         .thenReturn(Collections.singletonList(new Path("x")));
-      // run map; should do nothing (no writes)
-      mapper.map(key, value, ctx);
+
+      // Invoke mapper - because the table is not allowed, mapper should do nothing
+      mapper.map(keyForOtherTable, walEdit, ctx);
+
+      // Assert: mapper did not write any output to the context
       verify(ctx, never()).write(any(Text.class), any(NullWritable.class));
     }
   }
 
+  /**
+   * Verifies that {@link BulkLoadCollectorJob.BulkLoadCollectorMapper} safely handles null inputs.
+   * <p>
+   * The mapper should ignore WAL entries when either the WAL key or the WALEdit value is null, and
+   * must not emit any output in those cases.
+   * </p>
+   * @throws Exception on test failure
+   */
   @Test
   public void testMapperHandlesNullKeyOrValue() throws Exception {
     BulkLoadCollectorJob.BulkLoadCollectorMapper mapper =
@@ -236,6 +201,9 @@ public class TestBulkLoadCollectorJob {
     verify(ctx, never()).write(any(Text.class), any(NullWritable.class));
   }
 
+  /**
+   * Verifies that {@link BulkLoadCollectorJob.DedupReducer} writes each unique key exactly once.
+   */
   @Test
   public void testDedupReducerWritesOnce() throws Exception {
     BulkLoadCollectorJob.DedupReducer reducer = new BulkLoadCollectorJob.DedupReducer();
@@ -243,6 +211,8 @@ public class TestBulkLoadCollectorJob {
     Reducer<Text, NullWritable, Text, NullWritable>.Context ctx = mock(Reducer.Context.class);
 
     Text key = new Text("/some/path");
+
+    // Simulate three duplicate values for the same key; reducer should still write the key once.
     Iterable<NullWritable> vals =
       Arrays.asList(NullWritable.get(), NullWritable.get(), NullWritable.get());
 

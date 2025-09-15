@@ -396,19 +396,18 @@ public abstract class AbstractPitrRestoreHandler {
 
     // Create unique temporary output dir under restoreRootDir, e.g.
     // <restoreRootDir>/_wal_collect_<table_name><ts>
-    final String unique =
-      String.format("_wal_collect_%s%d", sourceTable, EnvironmentEdgeManager.currentTime());
+    final String unique = String.format("_wal_collect_%s%d", sourceTable.getQualifierAsString(),
+      EnvironmentEdgeManager.currentTime());
     final Path bulkFilesOut = new Path(restoreRootDir, unique);
 
     FileSystem fs = bulkFilesOut.getFileSystem(conn.getConfiguration());
     try {
-      // If bulkFilesOut exists for some reason, delete it (shouldn't), then create
+      // If bulkFilesOut exists for some reason, delete it.
       if (fs.exists(bulkFilesOut)) {
         LOG.info("Temporary bulkload file collect output directory {} already exists - deleting.",
           bulkFilesOut);
         fs.delete(bulkFilesOut, true);
       }
-      fs.mkdirs(bulkFilesOut);
 
       String walDirsCsv = String.join(",", validDirs);
       String[] args = new String[] { walDirsCsv, bulkFilesOut.toString(),

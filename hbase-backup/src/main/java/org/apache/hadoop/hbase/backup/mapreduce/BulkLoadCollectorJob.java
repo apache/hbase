@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.util.BackupFileSystemManager;
 import org.apache.hadoop.hbase.backup.util.BulkLoadProcessor;
 import org.apache.hadoop.hbase.mapreduce.WALInputFormat;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.io.NullWritable;
@@ -44,10 +45,23 @@ import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.yetus.audience.InterfaceAudience;
 
+/**
+ * MapReduce job that scans WAL backups and extracts referenced bulk-load store-file paths.
+ * <p>
+ * This job is intended to be used when you want a list of HFiles / store-files referenced by WAL
+ * bulk-load descriptors. It emits a de-duplicated list of full paths (one per line) by default
+ * using the {@link DedupReducer}.
+ * </p>
+ * <p>
+ * Usage (CLI):
+ * {@code BulkLoadCollector <WAL inputdir> <bulk-files-output-dir> [<tables> [<tableMappings>]]}
+ * </p>
+ */
 @InterfaceAudience.Private
 public class BulkLoadCollectorJob extends Configured implements Tool {
   public static final String NAME = "BulkLoadCollector";
@@ -60,6 +74,14 @@ public class BulkLoadCollectorJob extends Configured implements Tool {
     super(c);
   }
 
+  /**
+   * Mapper that extracts relative bulk-load paths from a WAL entry (via {@code BulkLoadProcessor}),
+   * resolves them to full paths (via
+   * {@code BackupFileSystemManager#resolveBulkLoadFullPath(Path, Path)}), and emits each full path
+   * as the map key (Text). Uses the same table-filtering semantics as other WAL mappers: if no
+   * tables are configured, all tables are processed; otherwise only the configured table set is
+   * processed. Map output: (Text fullPathString, NullWritable)
+   */
   public static class BulkLoadCollectorMapper extends Mapper<WALKey, WALEdit, Text, NullWritable> {
     private final Map<TableName, TableName> tables = new TreeMap<>();
     private final Text out = new Text();
@@ -73,12 +95,15 @@ public class BulkLoadCollectorJob extends Configured implements Tool {
         return;
       }
 
-      // delegate extraction to BulkLoadProcessor helper for a single WAL entry
+      // Extract relative store-file paths referenced by this WALEdit.
+      // Delegates parsing to BulkLoadProcessor so parsing logic is centralized.
       List<Path> relativePaths = BulkLoadProcessor.processBulkLoadFiles(key, value);
       if (relativePaths.isEmpty()) return;
 
+      // Determine WAL input path for this split (used to compute date/prefix for full path)
       Path walInputPath = ((FileSplit) context.getInputSplit()).getPath();
 
+      // Build full path for each relative path and emit it.
       for (Path rel : relativePaths) {
         Path full = BackupFileSystemManager.resolveBulkLoadFullPath(walInputPath, rel);
         out.set(full.toString());
@@ -110,15 +135,25 @@ public class BulkLoadCollectorJob extends Configured implements Tool {
     }
   }
 
+  /**
+   * Reducer that deduplicates full-path keys emitted by the mappers. It writes each unique key
+   * exactly once. Reduce input: (Text fullPathString, Iterable<NullWritable>) Reduce output: (Text
+   * fullPathString, NullWritable)
+   */
   public static class DedupReducer extends Reducer<Text, NullWritable, Text, NullWritable> {
     @Override
     protected void reduce(Text key, Iterable<NullWritable> values, Context ctx)
       throws IOException, InterruptedException {
-      // write the path once
+      // Write the unique path once.
       ctx.write(key, NullWritable.get());
     }
   }
 
+  /**
+   * Create and configure a Job instance for bulk-file collection.
+   * @param args CLI args expected to be: inputDirs bulkFilesOut [tables] [tableMap]
+   * @throws IOException on misconfiguration
+   */
   public Job createSubmittableJob(String[] args) throws IOException {
     Configuration conf = getConf();
 
@@ -154,6 +189,13 @@ public class BulkLoadCollectorJob extends Configured implements Tool {
     return BulkLoadCollectorJob.createSubmittableJob(conf, inputDirs, bulkFilesOut);
   }
 
+  /**
+   * Low-level job wiring. Creates the Job instance and sets input, mapper, reducer and output.
+   * @param conf         configuration used for the job
+   * @param inputDirs    WAL input directories (comma-separated)
+   * @param bulkFilesOut output directory to write discovered full-paths
+   * @throws IOException on invalid args
+   */
   private static Job createSubmittableJob(Configuration conf, String inputDirs, String bulkFilesOut)
     throws IOException {
     if (bulkFilesOut == null || bulkFilesOut.isEmpty()) {
@@ -163,34 +205,39 @@ public class BulkLoadCollectorJob extends Configured implements Tool {
       throw new IOException("inputDirs (WAL input dir) must be provided.");
     }
 
-    Job job = Job.getInstance(conf, NAME + "_" + System.currentTimeMillis());
+    Job job = Job.getInstance(conf, NAME + "_" + EnvironmentEdgeManager.currentTime());
     job.setJarByClass(BulkLoadCollectorJob.class);
 
-    // Input
+    // Input: use same WALInputFormat used by WALPlayer so we parse WALs consistently
     job.setInputFormatClass(WALInputFormat.class);
     FileInputFormat.setInputDirRecursive(job, true);
     FileInputFormat.setInputPaths(job, inputDirs);
 
-    // Mapper/Reducer (inner classes)
+    // Mapper: extract and emit full bulk-load file paths (Text, NullWritable)
     job.setMapperClass(BulkLoadCollectorMapper.class);
     job.setMapOutputKeyClass(Text.class);
     job.setMapOutputValueClass(NullWritable.class);
 
+    // Reducer: deduplicate the full-path keys
     job.setReducerClass(DedupReducer.class);
-    // default to a single reducer (single deduped file); callers can override conf
-    // "mapreduce.job.reduces"
+    // default to a single reducer (single deduped file); callers can set mapreduce.job.reduces
     int reducers = conf.getInt("mapreduce.job.reduces", Integer.parseInt(DEFAULT_REDUCERS));
     job.setNumReduceTasks(reducers);
 
-    job.setOutputFormatClass(org.apache.hadoop.mapreduce.lib.output.TextOutputFormat.class);
+    // Output: write plain text lines (one path per line)
+    job.setOutputFormatClass(TextOutputFormat.class);
     FileOutputFormat.setOutputPath(job, new Path(bulkFilesOut));
 
     return job;
   }
 
   /**
-   * Parse time option (supports yyyy-MM-dd'T'HH:mm:ss.SS or milliseconds). Copied behavior from
-   * WALPlayer.setupTime.
+   * Parse a time option. Supports the user-friendly ISO-like format
+   * {@code yyyy-MM-dd'T'HH:mm:ss.SS} or milliseconds since epoch. If the option is not present,
+   * this method is a no-op.
+   * @param conf   configuration containing option
+   * @param option key to read (e.g. WALInputFormat.START_TIME_KEY)
+   * @throws IOException on parse failure
    */
   private void setupTime(Configuration conf, String option) throws IOException {
     String val = conf.get(option);
@@ -203,7 +250,7 @@ public class BulkLoadCollectorJob extends Configured implements Tool {
       ms = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SS").parse(val).getTime();
     } catch (ParseException pe) {
       try {
-        // fallback to milliseconds
+        // then see if a number (milliseconds) was specified
         ms = Long.parseLong(val);
       } catch (NumberFormatException nfe) {
         throw new IOException(
@@ -214,6 +261,11 @@ public class BulkLoadCollectorJob extends Configured implements Tool {
     conf.setLong(option, ms);
   }
 
+  /**
+   * CLI entry point.
+   * @param args job arguments (see {@link #usage(String)})
+   * @throws Exception on job failure
+   */
   public static void main(String[] args) throws Exception {
     int ret = ToolRunner.run(new BulkLoadCollectorJob(HBaseConfiguration.create()), args);
     System.exit(ret);
@@ -231,9 +283,16 @@ public class BulkLoadCollectorJob extends Configured implements Tool {
   }
 
   /**
-   * Print usage/help for the BulkLoadCollectorJob CLI/driver. args layout: args[0] = input
-   * directory (required) args[1] = output directory (required) args[2] = tables (comma-separated)
-   * (optional) args[3] = tableMappings (comma-separated) (optional; must match tables length)
+   * Print usage/help for the BulkLoadCollectorJob CLI/driver.
+   * <p>
+   *
+   * <pre>
+   * args layout:
+   *   args[0] = input directory (required)
+   *   args[1] = output directory (required)
+   *   args[2] = tables (comma-separated) (optional)
+   *   args[3] = tableMappings (comma-separated) (optional; must match tables length)
+   * </pre>
    */
   private void usage(final String errorMsg) {
     if (errorMsg != null && !errorMsg.isEmpty()) {
