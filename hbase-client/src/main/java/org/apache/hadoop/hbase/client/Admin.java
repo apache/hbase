@@ -2656,4 +2656,27 @@ public interface Admin extends Abortable, Closeable {
    * Perform hbase:meta table refresh
    */
   Long refreshMeta() throws IOException;
+
+  /**
+   * Refresh HFiles for the table
+   * @param tableName table to refresh HFiles for
+   * @return ID of the procedure started for refreshing HFiles
+   * @throws IOException if a remote or network exception occurs
+   */
+  Long refreshHFiles(final TableName tableName) throws IOException;
+
+  /**
+   * Refresh HFiles for all the tables under given namespace
+   * @param namespace Namespace for which we should call refresh HFiles for all tables under it
+   * @return ID of the procedure started for refreshing HFiles
+   * @throws IOException if a remote or network exception occurs
+   */
+  Long refreshHFiles(final String namespace) throws IOException;
+
+  /**
+   * Refresh HFiles for all the tables
+   * @return ID of the procedure started for refreshing HFiles
+   * @throws IOException if a remote or network exception occurs
+   */
+  Long refreshHFiles() throws IOException;
 }

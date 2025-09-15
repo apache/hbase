@@ -261,6 +261,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.OfflineReg
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.OfflineRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RecommissionRegionServerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RecommissionRegionServerResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RefreshHFilesRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RefreshHFilesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RefreshMetaRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RefreshMetaResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RestoreSnapshotRequest;
@@ -4560,6 +4562,14 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       .serverName(serverName).call();
   }
 
+  private CompletableFuture<Long> internalRefershHFiles(RefreshHFilesRequest request) {
+    return this.<Long> newMasterCaller()
+      .action((controller, stub) -> this.<RefreshHFilesRequest, RefreshHFilesResponse, Long> call(
+        controller, stub, request, MasterService.Interface::refreshHFiles,
+        RefreshHFilesResponse::getProcId))
+      .call();
+  }
+
   @Override
   public CompletableFuture<Long> refreshMeta() {
     RefreshMetaRequest.Builder request = RefreshMetaRequest.newBuilder();
@@ -4571,4 +4581,43 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       .call();
   }
 
+  @Override
+  public CompletableFuture<Long> refreshHFiles(final TableName tableName) {
+    if (tableName.isSystemTable()) {
+      LOG.warn("Refreshing HFiles for system table {} is not allowed", tableName.getNameAsString());
+      throw new IllegalArgumentException(
+        "Not allowed to refresh HFiles for system table '" + tableName.getNameAsString() + "'");
+    }
+    // Request builder
+    RefreshHFilesRequest.Builder request = RefreshHFilesRequest.newBuilder();
+    request.setTableName(ProtobufUtil.toProtoTableName(tableName));
+    request.setNonceGroup(ng.getNonceGroup()).setNonce(ng.newNonce());
+    return internalRefershHFiles(request.build());
+  }
+
+  @Override
+  public CompletableFuture<Long> refreshHFiles(final String namespace) {
+    if (
+      namespace.equals(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR)
+        || namespace.equals(NamespaceDescriptor.BACKUP_NAMESPACE_NAME_STR)
+    ) {
+      LOG.warn("Refreshing HFiles for reserve namespace {} is not allowed", namespace);
+      throw new IllegalArgumentException(
+        "Not allowed to refresh HFiles for reserve namespace '" + namespace + "'");
+    }
+    // Request builder
+    RefreshHFilesRequest.Builder request = RefreshHFilesRequest.newBuilder();
+    request.setNamespace(namespace);
+    request.setNonceGroup(ng.getNonceGroup()).setNonce(ng.newNonce());
+    return internalRefershHFiles(request.build());
+  }
+
+  @Override
+  public CompletableFuture<Long> refreshHFiles() {
+    // Request builder
+    RefreshHFilesRequest.Builder request = RefreshHFilesRequest.newBuilder();
+    // Set nonce
+    request.setNonceGroup(ng.getNonceGroup()).setNonce(ng.newNonce());
+    return internalRefershHFiles(request.build());
+  }
 }

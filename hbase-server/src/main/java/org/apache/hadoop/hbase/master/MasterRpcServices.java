@@ -3673,4 +3673,24 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
       throw new ServiceException(ioe);
     }
   }
+
+  @Override
+  public MasterProtos.RefreshHFilesResponse refreshHFiles(RpcController controller,
+    MasterProtos.RefreshHFilesRequest request) throws ServiceException {
+    try {
+      Long procId;
+      if (request.hasTableName()) {
+        procId = server.refreshHfiles(ProtobufUtil.toTableName(request.getTableName()),
+          request.getNonceGroup(), request.getNonce());
+      } else if (request.hasNamespace()) {
+        procId =
+          server.refreshHfiles(request.getNamespace(), request.getNonceGroup(), request.getNonce());
+      } else {
+        procId = server.refreshHfiles(request.getNonceGroup(), request.getNonce());
+      }
+      return MasterProtos.RefreshHFilesResponse.newBuilder().setProcId(procId).build();
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
+    }
+  }
 }

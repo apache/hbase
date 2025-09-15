@@ -851,3 +851,22 @@ enum RefreshMetaState {
 
 message RefreshMetaStateData {
 }
+
+enum RefreshHFilesTableProcedureState {
+  REFRESH_HFILES_PREPARE = 1;
+  REFRESH_HFILES_REFRESH_REGION = 2;
+  REFRESH_HFILES_FINISH = 3;
+}
+
+message RefreshHFilesTableProcedureStateData {
+  optional TableName table_name = 1;
+  optional string namespace_name = 2;
+}
+
+message RefreshHFilesRegionProcedureStateData {
+  required RegionInfo region = 1;
+}
+
+message RefreshHFilesRegionParameter {
+  required RegionInfo region = 1;
+}
