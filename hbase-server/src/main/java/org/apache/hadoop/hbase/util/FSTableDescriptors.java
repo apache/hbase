@@ -270,7 +270,8 @@ public class FSTableDescriptors implements TableDescriptors {
       LOG.info("Fetching table descriptors from the filesystem.");
       final long startTime = EnvironmentEdgeManager.currentTime();
       AtomicBoolean allvisited = new AtomicBoolean(usecache);
-      List<Path> tableDirs = FSUtils.getTableDirs(fs, rootdir);
+      List<Path> tableDirs =
+        FSUtils.getTableDirs(fs, rootdir).stream().filter(FSUtils::isLocalMetaTable).toList();
       if (!tableDescriptorParallelLoadEnable) {
         for (Path dir : tableDirs) {
           internalGet(dir, tds, allvisited);

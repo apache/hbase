@@ -1047,6 +1047,25 @@ public final class FSUtils {
   }
 
   /**
+   * A filter to exclude meta tables belonging to foreign clusters. This is essential in a
+   * read-replica setup where multiple clusters share the same fs.
+   * @param tablePath The Path to the table directory.
+   * @return {@code true} if the path is a regular table or the cluster's own meta table.
+   *         {@code false} if it is a meta table belonging to a different cluster.
+   */
+  public static boolean isLocalMetaTable(Path tablePath) {
+    if (tablePath == null) {
+      return false;
+    }
+    String dirName = tablePath.getName();
+    if (dirName.startsWith(TableName.META_TABLE_NAME.getQualifierAsString())) {
+      return TableName.valueOf(TableName.META_TABLE_NAME.getNamespaceAsString(), dirName)
+        .equals(TableName.META_TABLE_NAME);
+    }
+    return true;
+  }
+
+  /**
    * Filter for all dirs that don't start with '.'
    */
   public static class RegionDirFilter extends AbstractFileStatusFilter {
