@@ -123,6 +123,10 @@
       <jsp:include page="regionList.jsp"/>
     </section>
 
+    <section>
+      <h2>Replication Status</h2>
+      <jsp:include page="replicationStatus.jsp"/>
+    </section>
 
     <%-- TODO: Migrate rest of RSStatusTmpl.jamon  --%>
 
