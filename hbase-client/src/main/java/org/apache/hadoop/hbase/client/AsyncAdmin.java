@@ -1895,6 +1895,21 @@ public interface AsyncAdmin {
    */
   CompletableFuture<Long> refreshMeta();
 
+  /**
+   * Refresh HFiles for the table
+   */
+  CompletableFuture<Long> refreshHFiles(final TableName tableName);
+
+  /**
+   * Refresh HFiles for all the tables under given namespace
+   */
+  CompletableFuture<Long> refreshHFiles(final String namespace);
+
+  /**
+   * Refresh HFiles for all the tables
+   */
+  CompletableFuture<Long> refreshHFiles();
+
   @InterfaceAudience.Private
   CompletableFuture<Void> restoreBackupSystemTable(String snapshotName);
 }
