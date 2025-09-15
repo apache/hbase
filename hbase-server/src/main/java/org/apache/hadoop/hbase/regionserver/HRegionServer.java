@@ -1976,6 +1976,10 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     final int logRollThreads = conf.getInt("hbase.regionserver.executor.log.roll.threads", 1);
     executorService.startExecutorService(executorService.new ExecutorConfig()
       .setExecutorType(ExecutorType.RS_LOG_ROLL).setCorePoolSize(logRollThreads));
+    final int rsRefreshHFilesThreads =
+      conf.getInt("hbase.regionserver.executor.refresh.hfiles.threads", 3);
+    executorService.startExecutorService(executorService.new ExecutorConfig()
+      .setExecutorType(ExecutorType.RS_REFRESH_HFILES).setCorePoolSize(rsRefreshHFilesThreads));
 
     Threads.setDaemonThreadRunning(this.walRoller, getName() + ".logRoller",
       uncaughtExceptionHandler);
