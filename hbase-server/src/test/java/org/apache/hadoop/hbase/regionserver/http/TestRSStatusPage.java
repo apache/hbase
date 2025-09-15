@@ -17,47 +17,39 @@
  */
 package org.apache.hadoop.hbase.regionserver.http;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.List;
-import java.util.Optional;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
-import org.apache.hadoop.hbase.io.ByteBuffAllocator;
-import org.apache.hadoop.hbase.ipc.MetricsHBaseServer;
-import org.apache.hadoop.hbase.ipc.MetricsHBaseServerWrapperStub;
-import org.apache.hadoop.hbase.ipc.RpcServerInterface;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.MetricsRegionServer;
-import org.apache.hadoop.hbase.regionserver.MetricsRegionServerWrapperStub;
-import org.apache.hadoop.hbase.regionserver.RSRpcServices;
+import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
-import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.junit.Before;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-import org.mockito.Mockito;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
-import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
-
-import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetServerInfoResponse;
 
 /**
  * Tests for the region server status page and its template.
@@ -69,76 +61,118 @@ public class TestRSStatusPage {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestRSStatusPage.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestRSStatusPage.class);
-
   private static LocalHBaseCluster CLUSTER;
+
+  private final static HBaseTestingUtil UTIL = new HBaseTestingUtil();
+  public static final String TEST_TABLE_NAME_1 = "TEST_TABLE_1";
+  public static final String TEST_TABLE_NAME_2 = "TEST_TABLE_2";
 
   @Rule
   public TestName name = new TestName();
 
-  private HRegionServer rs;
-  private RSRpcServices rpcServices;
-  private RpcServerInterface rpcServer;
+  @BeforeClass
+  public static void beforeClass() throws Exception {
+    Configuration conf = UTIL.getConfiguration();
+    UTIL.startMiniZKCluster();
 
-  static final int FAKE_IPC_PORT = 1585;
-  static final int FAKE_WEB_PORT = 1586;
+    UTIL.startMiniDFSCluster(1);
+    Path rootdir = UTIL.getDataTestDirOnTestFS("TestRSStatusPage");
+    CommonFSUtils.setRootDir(conf, rootdir);
 
-  private final ServerName fakeServerName = ServerName.valueOf("localhost", FAKE_IPC_PORT, 11111);
-  private final GetServerInfoResponse fakeResponse =
-    ResponseConverter.buildGetServerInfoResponse(fakeServerName, FAKE_WEB_PORT);
+    // The info servers do not run in tests by default.
+    // Set them to ephemeral ports so they will start
+    // setup configuration
+    conf.setInt(HConstants.MASTER_INFO_PORT, 0);
+    conf.setInt(HConstants.REGIONSERVER_INFO_PORT, 0);
 
-  private final ServerName fakeMasterAddress = ServerName.valueOf("localhost", 60010, 1212121212);
+    CLUSTER = new LocalHBaseCluster(conf, 1);
+    CLUSTER.startup();
+    CLUSTER.getActiveMaster().waitForMetaOnline();
+  }
 
-  @Before
-  public void setupBasicMocks() throws IOException, ServiceException {
-    rs = Mockito.mock(HRegionServer.class);
-    rpcServices = Mockito.mock(RSRpcServices.class);
-    rpcServer = Mockito.mock(RpcServerInterface.class);
-    Mockito.doReturn(HBaseConfiguration.create()).when(rs).getConfiguration();
-    Mockito.doReturn(rpcServices).when(rs).getRSRpcServices();
-    Mockito.doReturn(rpcServer).when(rs).getRpcServer();
-    Mockito.doReturn(fakeResponse).when(rpcServices).getServerInfo(Mockito.any(), Mockito.any());
-    // Fake ZKW
-    ZKWatcher zkw = Mockito.mock(ZKWatcher.class);
-    Mockito.doReturn("fakequorum").when(zkw).getQuorum();
-    Mockito.doReturn(zkw).when(rs).getZooKeeper();
-
-    // Fake BlockCache
-    LOG.warn("The " + HConstants.HFILE_BLOCK_CACHE_SIZE_KEY + " is set to 0");
-    Mockito.doReturn(Optional.empty()).when(rs).getBlockCache();
-
-    // Fake MasterAddressTracker
-    MasterAddressTracker mat = Mockito.mock(MasterAddressTracker.class);
-    Mockito.doReturn(fakeMasterAddress).when(mat).getMasterAddress();
-    Mockito.doReturn(mat).when(rs).getMasterAddressTracker();
-
-    MetricsRegionServer rms = Mockito.mock(MetricsRegionServer.class);
-    Mockito.doReturn(new MetricsRegionServerWrapperStub()).when(rms).getRegionServerWrapper();
-    Mockito.doReturn(rms).when(rs).getMetrics();
-
-    MetricsHBaseServer ms = Mockito.mock(MetricsHBaseServer.class);
-    Mockito.doReturn(new MetricsHBaseServerWrapperStub()).when(ms).getHBaseServerWrapper();
-    Mockito.doReturn(ms).when(rpcServer).getMetrics();
-    Mockito.doReturn(ByteBuffAllocator.HEAP).when(rpcServer).getByteBuffAllocator();
+  /**
+   * Helper method to shut down the cluster (if running)
+   */
+  @AfterClass
+  public static void shutDownMiniCluster() throws Exception {
+    if (CLUSTER != null) {
+      CLUSTER.shutdown();
+      CLUSTER.join();
+    }
+    UTIL.shutdownMiniCluster();
   }
 
   @Test
-  public void testBasic() throws IOException, ServiceException {
-    // TODO: Rewrite this!
-    // new RSStatusTmpl().render(new StringWriter(), rs);
+  public void testStatusPage() throws Exception {
+    HMaster master = CLUSTER.getActiveMaster();
+
+    int masterPort = master.getActiveMasterManager().getActiveMasterInfoPort();
+    ServerName activeMaster =
+      master.getActiveMaster().orElseThrow(() -> new IllegalStateException("No active master"));
+    String masterHostname = activeMaster.getHostname();
+
+    createTestTables(master);
+
+    ServerManager serverManager = master.getServerManager();
+    List<ServerName> onlineServersList = serverManager.getOnlineServersList();
+
+    assertEquals(1, onlineServersList.size());
+
+    ServerName firstServerName = onlineServersList.get(0);
+    int infoPort = master.getRegionServerInfoPort(firstServerName);
+    String hostname = firstServerName.getHostname();
+    int port = firstServerName.getPort();
+
+    String page = getRegionServerStatusPageContent(hostname, infoPort);
+
+    assertTrue(page.contains("<title>HBase Region Server: " + masterHostname + "</title>"));
+
+    String expectedPageHeader = "<h1>RegionServer <small>" + hostname + "," + port + ","
+      + firstServerName.getStartCode() + "</small></h1>";
+    assertTrue(page.contains(expectedPageHeader));
+    assertTrue(page.contains("<h2>Server Metrics</h2>"));
+    assertTrue(page.contains("<th>Requests Per Second</th>"));
+    assertTrue(page.contains("<h2>Block Cache</h2>"));
+    assertTrue(page.contains("<h2>Regions</h2>"));
+    assertTrue(page.contains("<h2>Replication Status</h2>"));
+    assertTrue(page.contains("<h2>Software Attributes</h2>"));
+
+    // Should have a link to master
+    String expectedMasterLink = "<a href=\"//" + masterHostname + ":" + masterPort
+      + "/master.jsp\">" + masterHostname + ":" + masterPort + "</a>";
+    assertTrue(page.contains(expectedMasterLink));
   }
 
-  @Test
-  public void testWithRegions() throws IOException, ServiceException {
-    TableDescriptor htd =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName())).build();
-    List<RegionInfo> regions = Lists.newArrayList(
-      RegionInfoBuilder.newBuilder(htd.getTableName()).setStartKey(Bytes.toBytes("a"))
-        .setEndKey(Bytes.toBytes("d")).build(),
-      RegionInfoBuilder.newBuilder(htd.getTableName()).setStartKey(Bytes.toBytes("d"))
-        .setEndKey(Bytes.toBytes("z")).build());
-    Mockito.doReturn(ResponseConverter.buildGetOnlineRegionResponse(regions)).when(rpcServices)
-      .getOnlineRegion(Mockito.any(), Mockito.any());
-    // new RSStatusTmpl().render(new StringWriter(), rs);
+  private static void createTestTables(HMaster master) throws IOException {
+    ColumnFamilyDescriptor cf = ColumnFamilyDescriptorBuilder.of("CF");
+    TableDescriptor tableDescriptor1 = TableDescriptorBuilder
+      .newBuilder(TableName.valueOf(TEST_TABLE_NAME_1)).setColumnFamily(cf).build();
+    master.createTable(tableDescriptor1, null, 0, 0);
+    TableDescriptor tableDescriptor2 = TableDescriptorBuilder
+      .newBuilder(TableName.valueOf(TEST_TABLE_NAME_2)).setColumnFamily(cf).build();
+    master.createTable(tableDescriptor2, null, 0, 0);
+    master.flushMasterStore();
+  }
+
+  private static String getRegionServerStatusPageContent(String hostname, int infoPort)
+    throws IOException {
+    URL url = new URL("http://" + hostname + ":" + infoPort + "/regionserver.jsp");
+    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    conn.connect();
+
+    assertEquals(200, conn.getResponseCode());
+    assertEquals("text/html", conn.getContentType());
+
+    return getResponseBody(conn);
+  }
+
+  private static String getResponseBody(HttpURLConnection conn) throws IOException {
+    StringBuilder sb = new StringBuilder();
+    BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+    String output;
+    while ((output = br.readLine()) != null) {
+      sb.append(output);
+    }
+    return sb.toString();
   }
 }
