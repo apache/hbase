@@ -27,7 +27,7 @@
          import="org.apache.hadoop.hbase.rsgroup.RSGroupInfo"
          import="org.apache.hadoop.hbase.rsgroup.RSGroupUtil"
          import="org.apache.hadoop.util.StringUtils"
-         import="org.apache.hadoop.hbase.util.MasterStatusConstants" %>
+         import="org.apache.hadoop.hbase.master.http.MasterStatusConstants" %>
 
 <%
   HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);

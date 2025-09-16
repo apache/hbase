@@ -45,7 +45,6 @@ import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
-import org.apache.hadoop.hbase.util.MasterStatusUtil;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;

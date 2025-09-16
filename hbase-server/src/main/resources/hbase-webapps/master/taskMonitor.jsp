@@ -18,7 +18,7 @@
  */
 --%>
 <%@ page contentType="text/html;charset=UTF-8"
-         import="org.apache.hadoop.hbase.util.MasterStatusConstants" %>
+         import="org.apache.hadoop.hbase.master.http.MasterStatusConstants" %>
 
 <%
   String filter = (String) request.getAttribute(MasterStatusConstants.FILTER);

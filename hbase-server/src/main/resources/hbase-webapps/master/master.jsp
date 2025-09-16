@@ -22,7 +22,9 @@
          import="org.apache.hadoop.hbase.ServerName"
          import="org.apache.hadoop.hbase.master.HMaster"
          import="org.apache.hadoop.conf.Configuration"
-         import="org.apache.hadoop.hbase.util.*" %>
+         import="org.apache.hadoop.hbase.util.*"
+         import="org.apache.hadoop.hbase.master.http.MasterStatusConstants"
+         import="org.apache.hadoop.hbase.master.http.MasterStatusUtil" %>
 
 <%
   String filter = request.getParameter(MasterStatusConstants.FILTER);

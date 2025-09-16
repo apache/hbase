@@ -32,7 +32,7 @@
          import="org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure"
          import="org.apache.hadoop.hbase.util.GsonUtil"
          import="org.apache.hbase.thirdparty.com.google.gson.Gson"
-         import="org.apache.hadoop.hbase.util.MasterStatusConstants" %>
+         import="org.apache.hadoop.hbase.master.http.MasterStatusConstants" %>
 <%
     HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
     List<RegionStateNode> rit = master.getAssignmentManager().getRegionsInTransition();

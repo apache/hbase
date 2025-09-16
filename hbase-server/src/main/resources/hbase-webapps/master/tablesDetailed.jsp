@@ -23,7 +23,7 @@
          import="java.util.List"
          import="org.apache.hadoop.hbase.client.TableDescriptor"
          import="org.apache.hadoop.hbase.master.HMaster"
-         import="org.apache.hadoop.hbase.util.MasterStatusUtil" %>
+         import="org.apache.hadoop.hbase.master.http.MasterStatusUtil" %>
 <%
   HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
   pageContext.setAttribute("pageTitle", "HBase Master: " + master.getServerName());

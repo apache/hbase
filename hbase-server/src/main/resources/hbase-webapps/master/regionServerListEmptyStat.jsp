@@ -20,8 +20,8 @@
 <%@ page contentType="text/html;charset=UTF-8"
          import="org.apache.hadoop.hbase.ServerName"
          import="org.apache.hadoop.hbase.master.HMaster"
-         import="org.apache.hadoop.hbase.util.MasterStatusConstants"
-         import="org.apache.hadoop.hbase.util.MasterStatusUtil" %>
+         import="org.apache.hadoop.hbase.master.http.MasterStatusConstants"
+         import="org.apache.hadoop.hbase.master.http.MasterStatusUtil" %>
 
 <%
   ServerName serverName = (ServerName) request.getAttribute(MasterStatusConstants.SERVER_NAME);

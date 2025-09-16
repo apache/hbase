@@ -28,7 +28,7 @@
          import="org.apache.hadoop.hbase.security.visibility.VisibilityConstants"
          import="org.apache.hadoop.hbase.tool.CanaryTool"
          import="org.apache.hadoop.hbase.client.*"
-         import="org.apache.hadoop.hbase.util.MasterStatusConstants" %>
+         import="org.apache.hadoop.hbase.master.http.MasterStatusConstants" %>
 
 <%
   HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);

@@ -22,8 +22,8 @@
          import="org.apache.hadoop.hbase.master.HMaster"
          import="org.apache.hadoop.hbase.ServerMetrics"
          import="org.apache.hadoop.hbase.RegionMetrics"
-         import="org.apache.hadoop.hbase.util.MasterStatusConstants"
-         import="org.apache.hadoop.hbase.util.MasterStatusUtil" %>
+         import="org.apache.hadoop.hbase.master.http.MasterStatusConstants"
+         import="org.apache.hadoop.hbase.master.http.MasterStatusUtil" %>
 
 <%
   ServerName[] serverNames = (ServerName[]) request.getAttribute(MasterStatusConstants.SERVER_NAMES);

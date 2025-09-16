@@ -24,8 +24,8 @@
          import="org.apache.hadoop.hbase.master.HMaster"
          import="org.apache.hadoop.hbase.master.RegionState"
          import="org.apache.hadoop.hbase.client.*"
-         import="org.apache.hadoop.hbase.util.MasterStatusUtil"
-         import="org.apache.hadoop.hbase.util.MasterStatusConstants" %>
+         import="org.apache.hadoop.hbase.master.http.MasterStatusUtil"
+         import="org.apache.hadoop.hbase.master.http.MasterStatusConstants" %>
 
 <%
   HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);

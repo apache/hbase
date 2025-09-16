@@ -23,7 +23,7 @@
          import="org.apache.hadoop.hbase.net.Address"
          import="org.apache.hadoop.hbase.rsgroup.RSGroupInfo"
          import="org.apache.hadoop.hbase.RegionMetrics"
-         import="org.apache.hadoop.hbase.util.MasterStatusConstants" %>
+         import="org.apache.hadoop.hbase.master.http.MasterStatusConstants" %>
 
 <%
   RSGroupInfo [] rsGroupInfos = (RSGroupInfo[]) request.getAttribute(MasterStatusConstants.RS_GROUP_INFOS);

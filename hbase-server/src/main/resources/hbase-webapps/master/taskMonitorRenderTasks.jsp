@@ -21,7 +21,7 @@
          import="java.util.*"
          import="org.apache.hadoop.hbase.monitoring.*"
          import="org.apache.hadoop.util.StringUtils"
-         import="org.apache.hadoop.hbase.util.MasterStatusConstants" %>
+         import="org.apache.hadoop.hbase.master.http.MasterStatusConstants" %>
 
 <%!
   public static String stateCss(MonitoredTask.State state) {

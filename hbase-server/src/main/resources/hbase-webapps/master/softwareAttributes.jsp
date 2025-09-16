@@ -23,7 +23,7 @@
          import="org.apache.hadoop.hbase.util.JvmVersion"
          import="org.apache.hadoop.hbase.util.CommonFSUtils"
          import="org.apache.hadoop.util.StringUtils"
-         import="org.apache.hadoop.hbase.util.MasterStatusConstants" %>
+         import="org.apache.hadoop.hbase.master.http.MasterStatusConstants" %>
 
 <%!
   public static String formatZKString(HMaster master) {

@@ -24,8 +24,8 @@
          import="org.apache.hadoop.hbase.util.Pair"
          import="java.util.*"
          import="org.apache.hadoop.hbase.procedure2.util.StringUtils"
-         import="org.apache.hadoop.hbase.util.MasterStatusConstants"
-         import="org.apache.hadoop.hbase.util.MasterStatusUtil" %>
+         import="org.apache.hadoop.hbase.master.http.MasterStatusConstants"
+         import="org.apache.hadoop.hbase.master.http.MasterStatusUtil" %>
 
 <%
   ServerName[] serverNames = (ServerName[]) request.getAttribute(MasterStatusConstants.SERVER_NAMES);
