@@ -848,7 +848,7 @@ public final class MetaTableAccessor {
   private static void updateTableState(Connection connection, TableState state) throws IOException {
     Put put = makePutFromTableState(state, EnvironmentEdgeManager.currentTime());
     putToMetaTable(connection, put);
-    LOG.info("Updated {} in hbase:meta", state);
+    LOG.info("Updated {} in {}", state, TableName.META_TABLE_NAME);
   }
 
   /**

@@ -116,7 +116,7 @@ public class RefreshMetaProcedure extends AbstractStateMachineTableProcedure<Ref
   }
 
   private Flow executeInit(MasterProcedureEnv env) throws IOException {
-    LOG.trace("Getting current regions from hbase:meta table");
+    LOG.trace("Getting current regions from {} table", TableName.META_TABLE_NAME);
     try {
       currentRegions = getCurrentRegions(env.getMasterServices().getConnection());
       LOG.info("Found {} current regions in meta table", currentRegions.size());

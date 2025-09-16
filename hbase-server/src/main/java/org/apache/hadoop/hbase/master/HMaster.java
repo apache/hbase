@@ -1187,8 +1187,9 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
         int existingReplicasCount =
           assignmentManager.getRegionStates().getRegionsOfTable(TableName.META_TABLE_NAME).size();
         if (existingReplicasCount > metaDesc.getRegionReplication()) {
-          LOG.info("Update replica count of hbase:meta from {}(in TableDescriptor)"
-            + " to {}(existing ZNodes)", metaDesc.getRegionReplication(), existingReplicasCount);
+          LOG.info(
+            "Update replica count of {} from {}(in TableDescriptor)" + " to {}(existing ZNodes)",
+            TableName.META_TABLE_NAME, metaDesc.getRegionReplication(), existingReplicasCount);
           metaDesc = TableDescriptorBuilder.newBuilder(metaDesc)
             .setRegionReplication(existingReplicasCount).build();
           tableDescriptors.update(metaDesc);
@@ -1197,8 +1198,9 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
         if (metaDesc.getRegionReplication() != replicasNumInConf) {
           LOG.info(
             "The {} config is {} while the replica count in TableDescriptor is {}"
-              + " for hbase:meta, altering...",
-            HConstants.META_REPLICAS_NUM, replicasNumInConf, metaDesc.getRegionReplication());
+              + " for {}, altering...",
+            HConstants.META_REPLICAS_NUM, replicasNumInConf, metaDesc.getRegionReplication(),
+            TableName.META_TABLE_NAME);
           procedureExecutor.submitProcedure(new ModifyTableProcedure(
             procedureExecutor.getEnvironment(), TableDescriptorBuilder.newBuilder(metaDesc)
               .setRegionReplication(replicasNumInConf).build(),
