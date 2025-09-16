@@ -1360,6 +1360,11 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
+  public void restoreBackupSystemTable(String snapshotName) throws IOException {
+    throw new NotImplementedException("restoreBackupSystemTable not supported in ThriftAdmin");
+  }
+
+  @Override
   public boolean replicationPeerModificationSwitch(boolean on, boolean drainProcedures)
     throws IOException {
     throw new NotImplementedException(
