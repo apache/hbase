@@ -1141,4 +1141,9 @@ class AdminOverAsyncAdmin implements Admin {
   public List<String> getCachedFilesList(ServerName serverName) throws IOException {
     return get(admin.getCachedFilesList(serverName));
   }
+
+  @Override
+  public void restoreBackupSystemTable(String snapshotName) throws IOException {
+    get(admin.restoreBackupSystemTable(snapshotName));
+  }
 }
