@@ -199,11 +199,7 @@ public class SecurityUtil {
         key = EncryptionUtil.unwrapKey(conf, keyBytes);
       }
       // Use the algorithm the key wants
-      Cipher cipher = Encryption.getCipher(conf, key.getAlgorithm());
-      if (cipher == null) {
-        throw new IOException(
-          "Cipher '" + key.getAlgorithm() + "' is not available" + ", path=" + path);
-      }
+      Cipher cipher = getCipherIfValid(conf, key.getAlgorithm(), key, null);
       cryptoContext.setCipher(cipher);
       cryptoContext.setKey(key);
       cryptoContext.setKEKData(kekKeyData);
