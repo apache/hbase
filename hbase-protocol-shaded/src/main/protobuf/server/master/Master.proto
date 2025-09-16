@@ -1280,9 +1280,6 @@ service MasterService {
   rpc FlushTable(FlushTableRequest)
     returns(FlushTableResponse);
 
-  rpc RestoreBackupSystemTable(RestoreBackupSystemTableRequest)
-    returns(RestoreBackupSystemTableResponse);
-
   rpc rollAllWALWriters(RollAllWALWritersRequest)
     returns(RollAllWALWritersResponse);
 }
@@ -1371,13 +1368,6 @@ message ScheduleSCPsForUnknownServersResponse {
 message FixMetaRequest {}
 
 message FixMetaResponse {}
-
-message RestoreBackupSystemTableRequest {
-  required string snapshot_name = 1;
-}
-message RestoreBackupSystemTableResponse {
-  optional uint64 proc_id = 1;
-}
 
 service HbckService {
   /** Update state of the table in meta only*/

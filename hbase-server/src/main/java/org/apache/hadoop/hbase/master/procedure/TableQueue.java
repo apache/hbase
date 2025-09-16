@@ -54,7 +54,6 @@ class TableQueue extends Queue<TableName> {
       case DISABLE:
       case SNAPSHOT:
       case ENABLE:
-      case RESTORE_BACKUP_SYSTEM_TABLE:
         return true;
       case EDIT:
         // we allow concurrent edit on the ns family in meta table

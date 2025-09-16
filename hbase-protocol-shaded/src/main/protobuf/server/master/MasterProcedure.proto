@@ -840,13 +840,6 @@ message ReloadQuotasProcedureStateData {
   optional ForeignExceptionMessage error = 2;
 }
 
-enum RestoreBackupSystemTableState {
-  RESTORE_BACKUP_SYSTEM_TABLE_PREPARE = 1;
-  RESTORE_BACKUP_SYSTEM_TABLE_DISABLE = 2;
-  RESTORE_BACKUP_SYSTEM_TABLE_RESTORE = 3;
-  RESTORE_BACKUP_SYSTEM_TABLE_ENABLE = 4;
-}
-
 enum LogRollProcedureState {
   LOG_ROLL_ROLL_LOG_ON_RS = 1;
   LOG_ROLL_COLLECT_RS_HIGHEST_WAL_FILENUM = 2;
