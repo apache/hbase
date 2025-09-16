@@ -2083,6 +2083,14 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
       }
 
       @Override
+      public MasterProtos.RestoreBackupSystemTableResponse restoreBackupSystemTable(
+        RpcController rpcController,
+        MasterProtos.RestoreBackupSystemTableRequest restoreBackupSystemTableRequest)
+        throws ServiceException {
+        return stub.restoreBackupSystemTable(rpcController, restoreBackupSystemTableRequest);
+      }
+
+      @Override
       public ReplicationPeerModificationSwitchResponse replicationPeerModificationSwitch(
         RpcController controller, ReplicationPeerModificationSwitchRequest request)
         throws ServiceException {

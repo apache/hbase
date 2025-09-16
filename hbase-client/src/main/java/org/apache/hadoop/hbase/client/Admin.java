@@ -3356,4 +3356,15 @@ public interface Admin extends Abortable, Closeable {
    * Get the list of cached files
    */
   List<String> getCachedFilesList(ServerName serverName) throws IOException;
+
+  @InterfaceAudience.Private
+  default void restoreBackupSystemTable(String snapshotName) throws IOException {
+    SnapshotDescription snapshot =
+      listSnapshots().stream().filter(s -> s.getName().equals(snapshotName)).findFirst()
+        .orElseThrow(() -> new IOException("Snapshot " + snapshotName + " not found"));
+    TableName tn = snapshot.getTableName();
+    disableTable(tn);
+    restoreSnapshot(snapshotName);
+    enableTable(tn);
+  }
 }
