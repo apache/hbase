@@ -59,8 +59,8 @@ pipeline {
     ASF_NIGHTLIES_BASE_ORI = "${ASF_NIGHTLIES}/hbase/${JOB_NAME}/${BUILD_NUMBER}"
     ASF_NIGHTLIES_BASE = "${ASF_NIGHTLIES_BASE_ORI.replaceAll(' ', '%20')}"
     // These are dependent on the branch
-    HADOOP3_VERSIONS = "3.3.5,3.3.6,3.4.0,3.4.1"
-    HADOOP3_DEFAULT_VERSION = "3.4.1"
+    HADOOP3_VERSIONS = "3.3.5,3.3.6,3.4.0,3.4.2"
+    HADOOP3_DEFAULT_VERSION = "3.4.2"
   }
   parameters {
     booleanParam(name: 'USE_YETUS_PRERELEASE', defaultValue: false, description: '''Check to use the current HEAD of apache/yetus rather than our configured release.
