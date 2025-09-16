@@ -584,6 +584,8 @@
                 <jspcompiler outputdir="${generated.sources}/java" package="org.apache.hadoop.hbase.generated.master" uriroot="${project.build.directory}/jsp/master" webxml="${build.webapps}/master/WEB-INF/web.xml"/>
                 <mkdir dir="${build.webapps}/regionserver/WEB-INF"/>
                 <jspcompiler outputdir="${generated.sources}/java" package="org.apache.hadoop.hbase.generated.regionserver" uriroot="${project.build.directory}/jsp/regionserver" webxml="${build.webapps}/regionserver/WEB-INF/web.xml"/>
+                <mkdir dir="${build.webapps}/canary/WEB-INF"/>
+                <jspcompiler outputdir="${generated.sources}/java" package="org.apache.hadoop.hbase.generated.canary" uriroot="${project.build.directory}/jsp/canary" webxml="${build.webapps}/canary/WEB-INF/web.xml"/>
               </target>
             </configuration>
           </execution>
