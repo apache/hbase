@@ -24,6 +24,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.StoreContext;
@@ -118,7 +119,15 @@ public final class StoreFileTrackerFactory {
 
   public static StoreFileTracker create(Configuration conf, boolean isPrimaryReplica,
     StoreContext ctx) {
-    Class<? extends StoreFileTracker> tracker = getTrackerClass(conf);
+    Class<? extends StoreFileTracker> tracker;
+    if (
+      ctx != null && ctx.getRegionInfo().getEncodedName()
+        .equals(MobUtils.getMobRegionInfo(ctx.getTableName()).getEncodedName())
+    ) {
+      tracker = Trackers.DEFAULT.clazz;
+    } else {
+      tracker = getTrackerClass(conf);
+    }
     LOG.debug("instantiating StoreFileTracker impl {}", tracker.getName());
     return ReflectionUtils.newInstance(tracker, conf, isPrimaryReplica, ctx);
   }
@@ -186,7 +195,7 @@ public final class StoreFileTrackerFactory {
     // descriptors with the SFT impl specific configs. By the time this happens, the table has no
     // regions nor stores yet, so it can't create a proper StoreContext.
     if (StringUtils.isEmpty(descriptor.getValue(TRACKER_IMPL))) {
-      StoreFileTracker tracker = StoreFileTrackerFactory.create(conf, true, null);
+      StoreFileTracker tracker = create(conf, true, null);
       TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(descriptor);
       return tracker.updateWithTrackerConfigs(builder).build();
     }
