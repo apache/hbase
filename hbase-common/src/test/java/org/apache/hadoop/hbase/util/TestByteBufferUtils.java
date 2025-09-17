@@ -84,15 +84,7 @@ public class TestByteBufferUtils {
   private static void setUnsafe(String fieldName, boolean value) throws Exception {
     Field field = ByteBufferUtils.class.getDeclaredField(fieldName);
     field.setAccessible(true);
-    Field modifiersField = ReflectionUtils.getModifiersField();
-    modifiersField.setAccessible(true);
-    int oldModifiers = field.getModifiers();
-    modifiersField.setInt(field, oldModifiers & ~Modifier.FINAL);
-    try {
-      field.set(null, value);
-    } finally {
-      modifiersField.setInt(field, oldModifiers);
-    }
+    field.set(null, value);
   }
 
   static void disableUnsafe() throws Exception {
