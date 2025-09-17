@@ -47,6 +47,8 @@ public final class ByteBufferUtils {
   public final static int NEXT_BIT_SHIFT = 7;
   public final static int NEXT_BIT_MASK = 1 << 7;
   static boolean UNSAFE_AVAIL = HBasePlatformDependent.isUnsafeAvailable();
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "MS_SHOULD_BE_FINAL",
+      justification = "Need non-final for testing")
   public static boolean UNSAFE_UNALIGNED = HBasePlatformDependent.unaligned();
 
   private ByteBufferUtils() {
