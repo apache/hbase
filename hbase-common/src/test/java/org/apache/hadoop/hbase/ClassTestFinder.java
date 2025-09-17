@@ -19,9 +19,11 @@ package org.apache.hadoop.hbase;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Pattern;
-import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
 import org.junit.runners.Suite;
 
 /**
@@ -44,6 +46,16 @@ public class ClassTestFinder extends ClassFinder {
       return category.value();
     }
     return new Class<?>[0];
+  }
+
+  public static String[] getTagAnnotations(Class<?> c) {
+    // TODO handle optional Tags annotation
+    Tag[] tags = c.getAnnotationsByType(Tag.class);
+    List<String> values = new ArrayList<>();
+    for (Tag tag : tags) {
+      values.add(tag.value());
+    }
+    return values.toArray(new String[values.size()]);
   }
 
   /** Filters both test classes and anything in the hadoop-compat modules */
@@ -92,7 +104,10 @@ public class ClassTestFinder extends ClassFinder {
       }
 
       for (Method met : c.getMethods()) {
-        if (met.getAnnotation(Test.class) != null) {
+        if (
+          met.getAnnotation(org.junit.Test.class) != null
+            || met.getAnnotation(org.junit.jupiter.api.Test.class) != null
+        ) {
           return true;
         }
       }

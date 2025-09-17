@@ -79,7 +79,7 @@ public class LdapServerTestBase extends HttpServerFunctionalTest {
 
   private static final String AUTH_TYPE = "Basic ";
 
-  public static LdapServer getLdapServer() {
+  protected static LdapServer getLdapServer() {
     return classLdapServer;
   }
 
