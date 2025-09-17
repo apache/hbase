@@ -46,8 +46,8 @@ public final class ByteBufferUtils {
   public final static int VALUE_MASK = 0x7f;
   public final static int NEXT_BIT_SHIFT = 7;
   public final static int NEXT_BIT_MASK = 1 << 7;
-  final static boolean UNSAFE_AVAIL = HBasePlatformDependent.isUnsafeAvailable();
-  public final static boolean UNSAFE_UNALIGNED = HBasePlatformDependent.unaligned();
+  static boolean UNSAFE_AVAIL = HBasePlatformDependent.isUnsafeAvailable();
+  public static boolean UNSAFE_UNALIGNED = HBasePlatformDependent.unaligned();
 
   private ByteBufferUtils() {
   }

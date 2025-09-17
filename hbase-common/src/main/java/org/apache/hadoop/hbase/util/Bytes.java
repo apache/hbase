@@ -124,7 +124,7 @@ public class Bytes implements Comparable<Bytes> {
   // SizeOf which uses java.lang.instrument says 24 bytes. (3 longs?)
   public static final int ESTIMATED_HEAP_TAX = 16;
 
-  static final boolean UNSAFE_UNALIGNED = HBasePlatformDependent.unaligned();
+  static boolean UNSAFE_UNALIGNED = HBasePlatformDependent.unaligned();
 
   /**
    * Returns length of the byte array, returning 0 if the array is null. Useful for calculating
