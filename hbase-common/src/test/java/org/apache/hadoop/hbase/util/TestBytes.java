@@ -57,16 +57,7 @@ public class TestBytes {
   private static void setUnsafe(boolean value) throws Exception {
     Field field = Bytes.class.getDeclaredField("UNSAFE_UNALIGNED");
     field.setAccessible(true);
-
-    Field modifiersField = ReflectionUtils.getModifiersField();
-    modifiersField.setAccessible(true);
-    int oldModifiers = field.getModifiers();
-    modifiersField.setInt(field, oldModifiers & ~Modifier.FINAL);
-    try {
-      field.set(null, value);
-    } finally {
-      modifiersField.setInt(field, oldModifiers);
-    }
+    field.set(null, value);
     assertEquals(Bytes.UNSAFE_UNALIGNED, value);
   }
 
