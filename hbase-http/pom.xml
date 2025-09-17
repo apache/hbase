@@ -488,7 +488,7 @@
             </exclusion>
             <exclusion>
               <groupId>org.bouncycastle</groupId>
-               <artifactId>bcpkix-jdk15on</artifactId>
+              <artifactId>bcpkix-jdk15on</artifactId>
             </exclusion>
           </exclusions>
         </dependency>
