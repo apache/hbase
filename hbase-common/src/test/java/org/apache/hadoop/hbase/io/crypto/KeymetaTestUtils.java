@@ -20,8 +20,10 @@ package org.apache.hadoop.hbase.io.crypto;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.net.URLEncoder;
 import java.security.KeyStore;
 import java.security.MessageDigest;
@@ -33,6 +35,8 @@ import javax.crypto.spec.SecretKeySpec;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PositionedReadable;
+import org.apache.hadoop.fs.Seekable;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -40,6 +44,67 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 public class KeymetaTestUtils {
+
+  /**
+   * A ByteArrayInputStream that implements Seekable and PositionedReadable
+   * to work with FSDataInputStream.
+   */
+  public static class SeekableByteArrayInputStream extends ByteArrayInputStream
+      implements Seekable, PositionedReadable {
+
+    public SeekableByteArrayInputStream(byte[] buf) {
+      super(buf);
+    }
+
+    @Override
+    public void seek(long pos) throws IOException {
+      if (pos < this.mark || pos > buf.length) {
+        throw new IOException("Seek position out of bounds: " + pos);
+      }
+      this.pos = (int) pos;
+      this.mark = (int) pos;
+    }
+
+    @Override
+    public long getPos() throws IOException {
+      return pos;
+    }
+
+    @Override
+    public boolean seekToNewSource(long targetPos) throws IOException {
+      return false; // No alternate sources
+    }
+
+    @Override
+    public int read(long position, byte[] buffer, int offset, int length) throws IOException {
+      if (position < 0 || position >= buf.length) {
+        return -1;
+      }
+      int currentPos = pos;
+      seek(position);
+      int bytesRead = read(buffer, offset, length);
+      pos = currentPos; // Restore original position
+      return bytesRead;
+    }
+
+    @Override
+    public void readFully(long position, byte[] buffer, int offset, int length) throws IOException {
+      int totalBytesRead = 0;
+      while (totalBytesRead < length) {
+        int bytesRead = read(position + totalBytesRead, buffer, offset + totalBytesRead,
+                           length - totalBytesRead);
+        if (bytesRead == -1) {
+          throw new IOException("Reached end of stream before reading fully");
+        }
+        totalBytesRead += bytesRead;
+      }
+    }
+
+    @Override
+    public void readFully(long position, byte[] buffer) throws IOException {
+      readFully(position, buffer, 0, buffer.length);
+    }
+  }
 
   private KeymetaTestUtils() {
     // Utility class

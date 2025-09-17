@@ -23,7 +23,10 @@ import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.apache.hadoop.hbase.io.crypto.KeymetaTestUtils.SeekableByteArrayInputStream;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -75,9 +78,17 @@ public class TestKeyManagementService {
     String fileName = SYSTEM_KEY_FILE_PREFIX + "1";
     Path systemKeyDir = CommonFSUtils.getSystemKeyDir(conf);
     FileStatus mockFileStatus = KeymetaTestUtils.createMockFile(fileName);
-    FSDataInputStream mockStream = mock(FSDataInputStream.class);
-    when(mockStream.readUTF()).thenReturn(keyData.getKeyMetadata());
-    when(mockFileSystem.open(eq(mockFileStatus.getPath()))).thenReturn(mockStream);
+
+    // Create a real FSDataInputStream that contains the key metadata in UTF format
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    DataOutputStream dos = new DataOutputStream(baos);
+    dos.writeUTF(keyData.getKeyMetadata());
+    dos.close();
+
+    SeekableByteArrayInputStream seekableStream = new SeekableByteArrayInputStream(baos.toByteArray());
+    FSDataInputStream realStream = new FSDataInputStream(seekableStream);
+
+    when(mockFileSystem.open(eq(mockFileStatus.getPath()))).thenReturn(realStream);
     when(mockFileSystem.globStatus(eq(new Path(systemKeyDir, SYSTEM_KEY_FILE_PREFIX + "*"))))
       .thenReturn(new FileStatus[] { mockFileStatus });
 

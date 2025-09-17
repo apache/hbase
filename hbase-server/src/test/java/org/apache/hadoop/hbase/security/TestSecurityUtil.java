@@ -165,10 +165,6 @@ public class TestSecurityUtil {
 
   protected byte[] createTestWrappedKey() throws Exception {
     // Create a test key and wrap it using real encryption utils
-    KeyProvider keyProvider = Encryption.getKeyProvider(conf);
-    kekKey = keyProvider.getKey(HBASE_KEY);
-    Key key = keyProvider.getKey(TEST_DEK_16_BYTE);
-    return EncryptionUtil.wrapKey(conf, null, key, kekKey);
   }
 
   // ==== Mock Setup Helpers ====
@@ -266,7 +262,10 @@ public class TestSecurityUtil {
     setUpEncryptionConfig();
 
     // Create test wrapped key
-    testWrappedKey = createTestWrappedKey();
+    KeyProvider keyProvider = Encryption.getKeyProvider(conf);
+    kekKey = keyProvider.getKey(HBASE_KEY);
+    Key key = keyProvider.getKey(TEST_DEK_16_BYTE);
+    testWrappedKey = EncryptionUtil.wrapKey(conf, null, key, kekKey);
   }
 
   @RunWith(BlockJUnit4ClassRunner.class)

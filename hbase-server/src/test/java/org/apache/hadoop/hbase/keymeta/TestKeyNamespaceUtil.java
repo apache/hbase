@@ -26,9 +26,13 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.crypto.KeymetaTestUtils;
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.StoreContext;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -56,11 +60,18 @@ public class TestKeyNamespaceUtil {
   @Test
   public void testConstructKeyNamespace_FromStoreContext() {
     // Test store context path construction
-    StoreContext storeContext = mock(StoreContext.class);
-    ColumnFamilyDescriptor familyDescriptor = mock(ColumnFamilyDescriptor.class);
-    when(storeContext.getTableName()).thenReturn(TableName.valueOf("test"));
-    when(storeContext.getFamily()).thenReturn(familyDescriptor);
-    when(familyDescriptor.getNameAsString()).thenReturn("family");
+    TableName tableName = TableName.valueOf("test");
+    RegionInfo regionInfo = RegionInfoBuilder.newBuilder(tableName).build();
+    HRegionFileSystem regionFileSystem = mock(HRegionFileSystem.class);
+    when(regionFileSystem.getRegionInfo()).thenReturn(regionInfo);
+
+    ColumnFamilyDescriptor familyDescriptor = ColumnFamilyDescriptorBuilder.of("family");
+
+    StoreContext storeContext = StoreContext.getBuilder()
+        .withRegionFileSystem(regionFileSystem)
+        .withColumnFamilyDescriptor(familyDescriptor)
+        .build();
+
     String keyNamespace = KeyNamespaceUtil.constructKeyNamespace(storeContext);
     assertEquals("test/family", keyNamespace);
   }
