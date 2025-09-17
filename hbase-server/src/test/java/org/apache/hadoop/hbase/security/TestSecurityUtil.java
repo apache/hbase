@@ -163,10 +163,6 @@ public class TestSecurityUtil {
     configBuilder().withNullCipherProvider().apply(conf);
   }
 
-  protected byte[] createTestWrappedKey() throws Exception {
-    // Create a test key and wrap it using real encryption utils
-  }
-
   // ==== Mock Setup Helpers ====
 
   protected void setupManagedKeyDataCache(String namespace, ManagedKeyData keyData) {
