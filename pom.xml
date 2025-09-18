@@ -1013,8 +1013,8 @@
     <!-- Still need this to ignore some errors when building javadoc-->
     <doclint>none</doclint>
     <!-- Required for testing LDAP integration -->
-    <apacheds.version>2.0.0.AM26</apacheds.version>
-    <ldap-api.version>2.0.0</ldap-api.version>
+    <apacheds.version>2.0.0.AM27</apacheds.version>
+    <ldap-api.version>2.1.7</ldap-api.version>
     <!-- Web UI dependencies -->
     <bootstrap.version>5.3.3</bootstrap.version>
     <jquery.version>3.7.1</jquery.version>
