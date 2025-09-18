@@ -23,11 +23,10 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
-
-import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -144,10 +143,10 @@ public class TestMetaTableForReplica {
       currentMetaName);
 
     // The current meta table name has the configured suffix.
-    assertEquals("META_TABLE_NAME should have the configured suffix",
-      expectedMetaTableName, currentMetaName);
+    assertEquals("META_TABLE_NAME should have the configured suffix", expectedMetaTableName,
+      currentMetaName);
 
-    //restore default value of META_TABLE_NAME
+    // restore default value of META_TABLE_NAME
     setDefaultMetaTableName();
   }
 
@@ -160,7 +159,7 @@ public class TestMetaTableForReplica {
   /**
    * A helper method to modify a static final field using reflection. This is necessary for testing
    * code that reads a configuration only once during class loading.
-   * @param field The field to modify.
+   * @param field    The field to modify.
    * @param newValue The new value to set.
    * @throws Exception if reflection fails.
    */
