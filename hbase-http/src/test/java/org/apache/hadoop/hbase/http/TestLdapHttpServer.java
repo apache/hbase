@@ -17,27 +17,26 @@
  */
 package org.apache.hadoop.hbase.http;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
+import java.util.concurrent.TimeUnit;
 import org.apache.directory.server.annotations.CreateLdapServer;
 import org.apache.directory.server.annotations.CreateTransport;
 import org.apache.directory.server.core.annotations.ApplyLdifs;
 import org.apache.directory.server.core.annotations.ContextEntry;
 import org.apache.directory.server.core.annotations.CreateDS;
 import org.apache.directory.server.core.annotations.CreatePartition;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.testclassification.MiscTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * Test class for LDAP authentication on the HttpServer.
  */
-@Category({ MiscTests.class, SmallTests.class })
+@Tag("org.apache.hadoop.hbase.testclassification.MiscTests")
+@Tag("org.apache.hadoop.hbase.testclassification.SmallTests")
 @CreateLdapServer(
     transports = { @CreateTransport(protocol = "LDAP", address = LdapConstants.LDAP_SERVER_ADDR), })
 @CreateDS(name = "TestLdapHttpServer", allowAnonAccess = true,
@@ -46,11 +45,8 @@ import org.junit.experimental.categories.Category;
           + "dc: example\n" + "objectClass: top\n" + "objectClass: domain\n\n")) })
 @ApplyLdifs({ "dn: uid=bjones," + LdapConstants.LDAP_BASE_DN, "cn: Bob Jones", "sn: Jones",
   "objectClass: inetOrgPerson", "uid: bjones", "userPassword: p@ssw0rd" })
+@Timeout(value = 1, unit = TimeUnit.MINUTES)
 public class TestLdapHttpServer extends LdapServerTestBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestLdapHttpServer.class);
 
   private static final String BJONES_CREDENTIALS = "bjones:p@ssw0rd";
   private static final String WRONG_CREDENTIALS = "bjones:password";
