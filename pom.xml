@@ -3092,7 +3092,7 @@
           @{jacocoArgLine}</argLine>
       </properties>
     </profile>
-        <profile>
+    <profile>
       <id>build-with-jdk18</id>
       <activation>
         <jdk>[18,)</jdk>
