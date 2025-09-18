@@ -28,6 +28,8 @@ import org.apache.directory.server.core.annotations.ApplyLdifs;
 import org.apache.directory.server.core.annotations.ContextEntry;
 import org.apache.directory.server.core.annotations.CreateDS;
 import org.apache.directory.server.core.annotations.CreatePartition;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -35,8 +37,8 @@ import org.junit.jupiter.api.Timeout;
 /**
  * Test class for LDAP authentication on the HttpServer.
  */
-@Tag("org.apache.hadoop.hbase.testclassification.MiscTests")
-@Tag("org.apache.hadoop.hbase.testclassification.SmallTests")
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 @CreateLdapServer(
     transports = { @CreateTransport(protocol = "LDAP", address = LdapConstants.LDAP_SERVER_ADDR), })
 @CreateDS(name = "TestLdapHttpServer", allowAnonAccess = true,
