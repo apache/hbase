@@ -31,6 +31,8 @@ import org.apache.directory.server.core.annotations.CreatePartition;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hbase.http.resource.JerseyResource;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -41,8 +43,8 @@ import org.slf4j.LoggerFactory;
 /**
  * Test class for admin ACLs with LDAP authentication on the HttpServer.
  */
-@Tag("org.apache.hadoop.hbase.testclassification.MiscTests")
-@Tag("org.apache.hadoop.hbase.testclassification.SmallTests")
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 @CreateLdapServer(
     transports = { @CreateTransport(protocol = "LDAP", address = LdapConstants.LDAP_SERVER_ADDR), })
 @CreateDS(name = "TestLdapAdminACL", allowAnonAccess = true,
