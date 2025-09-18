@@ -17,10 +17,11 @@
  */
 package org.apache.hadoop.hbase.http;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
+import java.util.concurrent.TimeUnit;
 import org.apache.directory.server.annotations.CreateLdapServer;
 import org.apache.directory.server.annotations.CreateTransport;
 import org.apache.directory.server.core.annotations.ApplyLdifs;
@@ -29,21 +30,19 @@ import org.apache.directory.server.core.annotations.CreateDS;
 import org.apache.directory.server.core.annotations.CreatePartition;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.http.resource.JerseyResource;
-import org.apache.hadoop.hbase.testclassification.MiscTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Test class for admin ACLs with LDAP authentication on the HttpServer.
  */
-@Category({ MiscTests.class, SmallTests.class })
+@Tag("org.apache.hadoop.hbase.testclassification.MiscTests")
+@Tag("org.apache.hadoop.hbase.testclassification.SmallTests")
 @CreateLdapServer(
     transports = { @CreateTransport(protocol = "LDAP", address = LdapConstants.LDAP_SERVER_ADDR), })
 @CreateDS(name = "TestLdapAdminACL", allowAnonAccess = true,
@@ -55,18 +54,16 @@ import org.slf4j.LoggerFactory;
 
   "dn: uid=jdoe," + LdapConstants.LDAP_BASE_DN, "cn: John Doe", "sn: Doe",
   "objectClass: inetOrgPerson", "uid: jdoe", "userPassword: secure123" })
+@Timeout(value = 1, unit = TimeUnit.MINUTES)
 public class TestLdapAdminACL extends LdapServerTestBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestLdapAdminACL.class);
   private static final Logger LOG = LoggerFactory.getLogger(TestLdapAdminACL.class);
 
   private static final String ADMIN_CREDENTIALS = "bjones:p@ssw0rd";
   private static final String NON_ADMIN_CREDENTIALS = "jdoe:secure123";
   private static final String WRONG_CREDENTIALS = "bjones:password";
 
-  @BeforeClass
+  @BeforeAll
   public static void setupServer() throws Exception {
     Configuration conf = new Configuration();
     setLdapConfigurationWithACLs(conf);
