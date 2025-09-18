@@ -22,16 +22,17 @@
          import="org.apache.hadoop.hbase.io.hfile.BlockCache"
          import="org.apache.hadoop.conf.Configuration"
          import="org.apache.hadoop.hbase.io.hfile.BlockCacheUtil"
-         import="org.apache.hadoop.hbase.io.hfile.CachedBlock" %><%
+         import="org.apache.hadoop.hbase.io.hfile.CachedBlock"
+         import="org.apache.hadoop.hbase.regionserver.http.RSStatusConstants" %><%
   // This template is used to give views on an individual block cache as JSON.
 
   Configuration conf = (Configuration) request.getAttribute("conf");
-  String bcn = (String) request.getAttribute("bcn");
-  String bcv = (String) request.getAttribute("bcv");
+  String bcn = (String) request.getAttribute(RSStatusConstants.BLOCK_CACHE_NAME);
+  String bcv = (String) request.getAttribute(RSStatusConstants.BLOCK_CACHE_V);
   BlockCache bc = (BlockCache) request.getAttribute("blockCache");
 
   BlockCache [] bcs = bc == null ? null : bc.getBlockCaches();
-  if (bcn.equals("L1")) {
+  if (bcn.equals(RSStatusConstants.BLOCK_CACHE_NAME_L1)) {
     bc = bcs == null || bcs.length == 0? bc: bcs[0];
   } else {
     if (bcs == null || bcs.length < 2) {
@@ -45,7 +46,7 @@
     return;
   }
   BlockCacheUtil.CachedBlocksByFile cbsbf = BlockCacheUtil.getLoadedCachedBlocksByFile(conf, bc);
-  if (bcv.equals("file")) {
+  if (bcv.equals(RSStatusConstants.BLOCK_CACHE_V_FILE)) {
     boolean firstEntry = true; %>
     [<% for (Map.Entry<String, NavigableSet<CachedBlock>> e: cbsbf.getCachedBlockStatsByFile().entrySet()) { %>
     <% if (!firstEntry) { %>,<% } %><%= BlockCacheUtil.toJSON(e.getKey(), e.getValue()) %>

@@ -38,11 +38,11 @@
   import="org.apache.hadoop.hbase.rsgroup.RSGroupUtil"
   import="org.apache.hadoop.hbase.util.Bytes"
   import="org.apache.hadoop.hbase.util.VersionInfo"
-  import="org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix"%>
-<%@ page import="org.apache.hadoop.hbase.ServerMetrics" %>
-<%@ page import="org.apache.hadoop.hbase.Size" %>
-<%@ page import="org.apache.hadoop.hbase.RegionMetrics" %>
-<%@ page import="static org.apache.hadoop.hbase.util.MasterStatusUtil.serverNameLink" %>
+  import="org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix"
+  import="org.apache.hadoop.hbase.ServerMetrics"
+  import="org.apache.hadoop.hbase.Size"
+  import="org.apache.hadoop.hbase.RegionMetrics"
+  import="static org.apache.hadoop.hbase.master.http.MasterStatusUtil.serverNameLink" %>
 <%
   String rsGroupName = request.getParameter("name");
   pageContext.setAttribute("pageTitle", "RSGroup: " + rsGroupName);

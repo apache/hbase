@@ -26,15 +26,17 @@
          import="org.apache.hadoop.hbase.ServerName"
          import="org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil"
          import="org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ServerInfo"
-         import="org.apache.hadoop.hbase.zookeeper.MasterAddressTracker" %><%
+         import="org.apache.hadoop.hbase.zookeeper.MasterAddressTracker"
+         import="org.apache.hadoop.hbase.regionserver.http.RSStatusConstants" %>
+<%
   HRegionServer regionServer =
     (HRegionServer) getServletContext().getAttribute(HRegionServer.REGIONSERVER);
 
-  String format = request.getParameter("format");
+  String format = request.getParameter(RSStatusConstants.FORMAT);
   if (format == null) {
-    format = "html";
+    format = RSStatusConstants.FORMAT_HTML;
   }
-  if ("json".equals(format)) {
+  if (RSStatusConstants.FORMAT_JSON.equals(format)) {
     response.setContentType("application/json");
   } else {
     response.setContentType("text/html");
@@ -46,28 +48,28 @@
     return;
   }
 
-  String filter = request.getParameter("filter");
+  String filter = request.getParameter(RSStatusConstants.FILTER);
   if (filter == null) {
-    filter = "general";
+    filter = RSStatusConstants.FILTER_GENERAL;
   }
-  String bcn = request.getParameter("bcn");
-  String bcv = request.getParameter("bcv");
+  String bcn = request.getParameter(RSStatusConstants.BLOCK_CACHE_NAME);
+  String bcv = request.getParameter(RSStatusConstants.BLOCK_CACHE_V);
   if (bcv == null) {
     bcv = "";
   }
   // If json AND bcn is NOT an empty string presume it a block cache view request.
-  if (format.equals("json") && bcn != null && bcn.length() > 0) {
+  if (format.equals(RSStatusConstants.FORMAT_JSON) && bcn != null && bcn.length() > 0) {
     request.setAttribute("conf", regionServer.getConfiguration());
-    request.setAttribute("bcn", bcn);
-    request.setAttribute("bcv", bcv);
+    request.setAttribute(RSStatusConstants.BLOCK_CACHE_NAME, bcn);
+    request.setAttribute(RSStatusConstants.BLOCK_CACHE_V, bcv);
     request.setAttribute("blockCache", regionServer.getBlockCache().orElse(null));
 %><jsp:include page="blockCacheView.jsp"/>
 <%
     return;
   }
-  else if (format.equals("json")) {
-    request.setAttribute(MasterStatusConstants.FILTER, filter);
-    request.setAttribute(MasterStatusConstants.FORMAT, "json"); %>
+  else if (format.equals(RSStatusConstants.FORMAT_JSON)) {
+    request.setAttribute(RSStatusConstants.FILTER, filter);
+    request.setAttribute(RSStatusConstants.FORMAT, RSStatusConstants.FORMAT_JSON); %>
   <jsp:include page="taskMonitor.jsp"/>
 <%
     return;
@@ -108,7 +110,7 @@
     </section>
 
     <section>
-      <% request.setAttribute("parent", "/regionserver.jsp"); %>
+      <% request.setAttribute(RSStatusConstants.PARENT, "/regionserver.jsp"); %>
       <jsp:include page="taskMonitor.jsp"/>
     </section>
 
