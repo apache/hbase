@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.tool;
 
 import static org.apache.hadoop.hbase.regionserver.TestRegionServerNoMaster.closeRegion;
+import static org.apache.hadoop.hbase.tool.CanaryTool.HBASE_CANARY_INFO_PORT;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
@@ -35,11 +36,19 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.LongAdder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -54,6 +63,8 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.JvmVersion;
+import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.After;
 import org.junit.Before;
@@ -436,5 +447,138 @@ public class TestCanaryTool {
     String baseZnode = testingUtility.getConfiguration().get(HConstants.ZOOKEEPER_ZNODE_PARENT,
       HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT);
     verify(sink, atLeastOnce()).publishReadTiming(eq(baseZnode), eq(hostPort), anyLong());
+  }
+
+  @Test
+  public void testWebUI() throws Exception {
+    CanaryTool.RegionStdOutSink sink = mock(CanaryTool.RegionStdOutSink.class);
+
+    Configuration configuration = HBaseConfiguration.create(testingUtility.getConfiguration());
+    int infoPort = 16666;
+    configuration.setInt(HBASE_CANARY_INFO_PORT, infoPort);
+
+    ExecutorService executorService = startCanaryToolInBackground(sink, configuration);
+
+    String page = getCanaryStatusPageContent(infoPort);
+
+    assertTrue("Page should contain page title.", page.contains("<title>Canary</title>"));
+
+    assertTrue("Page should contain Failed Servers header.",
+      page.contains("<h2>Failed Servers</h2>"));
+    assertTrue("Page should have zero Failed Servers.",
+      page.contains("<td>Total Failed Servers: 0</td>"));
+
+    assertTrue("Page should contain Failed Tables header.",
+      page.contains("<h2>Failed Tables</h2>"));
+    assertTrue("Page should have zero Failed Tables.",
+      page.contains("<td>Total Failed Tables: 0</td>"));
+
+    assertTrue("Page should contain Software Attributes header.",
+      page.contains("<h2>Software Attributes</h2>"));
+    assertTrue("Page should contain JVM version.",
+      page.contains("<td>" + JvmVersion.getVersion() + "</td>"));
+    assertTrue("Page should contain HBase version.", page
+      .contains("<td>" + VersionInfo.getVersion() + ", r" + VersionInfo.getRevision() + "</td>"));
+
+    // Stop Canary tool daemon
+    executorService.shutdown();
+  }
+
+  @Test
+  public void testWebUIWithFailures() throws Exception {
+    CanaryTool.RegionStdOutSink sink = mock(CanaryTool.RegionStdOutSink.class);
+
+    // Simulate a failed server
+    ServerName sn1 = ServerName.parseServerName("asf903.gq1.ygridcore.net,52690,1517835491385");
+    ConcurrentMap<ServerName, LongAdder> servers = new ConcurrentHashMap<>();
+    servers.put(sn1, new LongAdder());
+    when(sink.getPerServerFailuresCount()).thenReturn(servers);
+
+    // Simulate failed tables
+    ConcurrentMap<String, LongAdder> tables = new ConcurrentHashMap<>();
+    tables.put("awesome-table", new LongAdder());
+    tables.put("awesome-table-two", new LongAdder());
+    when(sink.getPerTableFailuresCount()).thenReturn(tables);
+
+    Configuration configuration = HBaseConfiguration.create(testingUtility.getConfiguration());
+    int infoPort = 16667;
+    configuration.setInt(HBASE_CANARY_INFO_PORT, infoPort);
+
+    ExecutorService executorService = startCanaryToolInBackground(sink, configuration);
+
+    String page = getCanaryStatusPageContent(infoPort);
+
+    assertTrue("Page should contain page title.", page.contains("<title>Canary</title>"));
+
+    assertTrue("Page should contain Failed Servers header.",
+      page.contains("<h2>Failed Servers</h2>"));
+    assertTrue("Page should contain the failed server link.", page.contains(
+      "<a href=\"//asf903.gq1.ygridcore.net:52691/\">asf903.gq1.ygridcore.net,52690,1517835491385</a>"));
+    assertTrue("Page should summarize 1 failed server.",
+      page.contains("<td>Total Failed Servers: 1</td>"));
+
+    assertTrue("Page should contain Failed Tables header.",
+      page.contains("<h2>Failed Tables</h2>"));
+    assertTrue("Page should contain awesome-table as failed table link.",
+      page.contains("<td>awesome-table</td>"));
+    assertTrue("Page should contain awesome-table-two as failed table link.",
+      page.contains("<td>awesome-table-two</td>"));
+    assertTrue("Page should summarize 2 failed tables.",
+      page.contains("<td>Total Failed Tables: 2</td>"));
+
+    // Stop Canary tool daemon
+    executorService.shutdown();
+  }
+
+  private static ExecutorService startCanaryToolInBackground(CanaryTool.RegionStdOutSink sink,
+    Configuration configuration) {
+    ExecutorService canaryExecutor = new ScheduledThreadPoolExecutor(1);
+    CanaryTool canary = new CanaryTool(canaryExecutor, sink);
+    String[] args = { "-daemon", "-interval", "5", "-f", "false" };
+
+    // Run the Canary CLI tool in another thread otherwise it would block the unit test thread
+    // and we could not examine the web UI page.
+    ExecutorService executorService = new ScheduledThreadPoolExecutor(1);
+    executorService.submit(() -> ToolRunner.run(configuration, canary, args));
+    return executorService;
+  }
+
+  private String getCanaryStatusPageContent(int infoPort) throws IOException, InterruptedException {
+    URL url = new URL("http://localhost:" + infoPort + "/canary.jsp");
+    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+
+    boolean success = false;
+    for (int i = 1; i <= 5; i++) {
+      try {
+        conn.connect();
+        if (
+          conn.getResponseCode() == 200 && "text/html;charset=utf-8".equals(conn.getContentType())
+        ) {
+          success = true;
+          break;
+        }
+      } catch (IOException e) {
+        // ignore connection error as we retry.
+      }
+
+      // Wait a bit for the Canary web UI to come up
+      TimeUnit.MILLISECONDS.sleep(100);
+    }
+
+    if (success) {
+      return getResponseBody(conn);
+    } else {
+      throw new IllegalStateException("Could not get Canary status page.");
+    }
+  }
+
+  private static String getResponseBody(HttpURLConnection conn) throws IOException {
+    StringBuilder sb = new StringBuilder();
+    BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+    String output;
+    while ((output = br.readLine()) != null) {
+      sb.append(output);
+    }
+    return sb.toString();
   }
 }

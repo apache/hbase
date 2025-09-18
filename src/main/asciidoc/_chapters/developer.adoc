@@ -214,7 +214,7 @@ To import the project, click  and select the HBase root directory. `m2eclipse`  
 If you install +m2eclipse+ and import HBase in your workspace, do the following to fix your eclipse Build Path.
 
 . Remove _target_ folder
-. Add _target/generated-jamon_ and _target/generated-sources/java_ folders.
+. Add _target/generated-sources/java_ folder.
 . Remove from your Build Path the exclusions on the _src/main/resources_ and _src/test/resources_ to avoid error message in the console, such as the following:
 +
 ----
