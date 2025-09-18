@@ -996,6 +996,13 @@
       --add-opens java.base/sun.security.x509=ALL-UNNAMED
       --add-opens java.base/sun.security.util=ALL-UNNAMED
       --add-opens java.base/java.net=ALL-UNNAMED</hbase-surefire.jdk17.flags>
+    <!-- Java 18+ disables the Security Manager by default. Hadoop 3.4.2 and earlier doesn't work
+    without Security Manager.
+    When Hadoop 3.5.0 is released and HBase adds support for it, this can be removed, or moved
+    to a Hadoop version dependent profile.
+    This is NOT added to the startup scripts, as this is a major change, and the user better be
+    aware of this requirement and add this in hbase-env.sh and/or in their application -->
+    <hbase-surefire.jdk18.flags>-Djava.security.manager=allow</hbase-surefire.jdk18.flags>
     <!-- Surefire argLine defaults to Linux, cygwin argLine is used in the os.windows profile -->
     <argLine>${hbase-surefire.argLine} @{jacocoArgLine}</argLine>
     <extra.enforcer.version>1.5.1</extra.enforcer.version>
@@ -3254,6 +3261,18 @@
           </plugins>
         </pluginManagement>
       </build>
+    </profile>
+    <profile>
+      <id>build-with-jdk18</id>
+      <activation>
+        <jdk>[18,)</jdk>
+      </activation>
+      <properties>
+        <argLine>${hbase-surefire.jdk17.flags}
+          ${hbase-surefire.jdk18.flags}
+          ${hbase-surefire.argLine}
+          @{jacocoArgLine}</argLine>
+      </properties>
     </profile>
     <!-- profile activated by the Jenkins patch testing job -->
     <profile>
