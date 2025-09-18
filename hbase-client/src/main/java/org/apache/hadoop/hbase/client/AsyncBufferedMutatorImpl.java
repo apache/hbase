@@ -27,8 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import java.util.concurrent.locks.ReentrantLock;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -46,6 +45,8 @@ class AsyncBufferedMutatorImpl implements AsyncBufferedMutator {
 
   private static final Logger LOG = LoggerFactory.getLogger(AsyncBufferedMutatorImpl.class);
 
+  private final int INITIAL_CAPACITY = 100;
+
   private final HashedWheelTimer periodicalFlushTimer;
 
   private final AsyncTable<?> table;
@@ -58,15 +59,30 @@ class AsyncBufferedMutatorImpl implements AsyncBufferedMutator {
 
   private final int maxMutations;
 
-  private List<Mutation> mutations = new ArrayList<>();
+  private final ReentrantLock lock = new ReentrantLock();
 
-  private List<CompletableFuture<Void>> futures = new ArrayList<>();
+  private List<Mutation> mutations = new ArrayList<>(INITIAL_CAPACITY);
+
+  private List<CompletableFuture<Void>> futures = new ArrayList<>(INITIAL_CAPACITY);
 
   private long bufferedSize;
 
-  private boolean closed;
+  private volatile boolean closed;
 
   Timeout periodicFlushTask;
+
+  enum FlushType {
+    /** Flush triggered by buffer size exceeding threshold */
+    SIZE,
+    /** Flush triggered by max mutations */
+    MAX_MUTATIONS,
+    /** Flush triggered by periodic timer */
+    PERIODIC,
+    /** Flush triggered by explicit flush() call */
+    MANUAL,
+    /** Flush triggered during close() */
+    CLOSE
+  }
 
   AsyncBufferedMutatorImpl(HashedWheelTimer periodicalFlushTimer, AsyncTable<?> table,
     long writeBufferSize, long periodicFlushTimeoutNs, int maxKeyValueSize, int maxMutations) {
@@ -90,19 +106,41 @@ class AsyncBufferedMutatorImpl implements AsyncBufferedMutator {
 
   // will be overridden in test
   protected void internalFlush() {
-    if (periodicFlushTask != null) {
-      periodicFlushTask.cancel();
-      periodicFlushTask = null;
+    internalFlush(FlushType.MANUAL);
+  }
+
+  protected void internalFlush(FlushType trigger) {
+    List<Mutation> toSend;
+    List<CompletableFuture<Void>> toComplete;
+    // Ensure that the mutations and futures are not modified while we are processing them.
+    lock.lock();
+    try {
+      // Double-check that the condition is still met to avoid unnecessary flushes due to races
+      // between size-triggered, max mutations-triggered, manual, and periodic flushes.
+      if (trigger == FlushType.SIZE && bufferedSize < writeBufferSize) {
+        return;
+      } else if (trigger == FlushType.MAX_MUTATIONS && this.mutations.size() < maxMutations) {
+        return;
+      }
+      // Cancel the flush task if it is pending.
+      if (periodicFlushTask != null) {
+        periodicFlushTask.cancel();
+        periodicFlushTask = null;
+      }
+      toSend = this.mutations;
+      if (toSend.isEmpty()) {
+        return;
+      }
+      toComplete = this.futures;
+      assert toSend.size() == toComplete.size();
+      this.mutations = new ArrayList<>(INITIAL_CAPACITY);
+      this.futures = new ArrayList<>(INITIAL_CAPACITY);
+      bufferedSize = 0L;
+    } finally {
+      lock.unlock();
     }
-    List<Mutation> toSend = this.mutations;
-    if (toSend.isEmpty()) {
-      return;
-    }
-    List<CompletableFuture<Void>> toComplete = this.futures;
-    assert toSend.size() == toComplete.size();
-    this.mutations = new ArrayList<>();
-    this.futures = new ArrayList<>();
-    bufferedSize = 0L;
+    // Send the mutations and link the futures we returned to our client to the futures we get back
+    // from AsyncTable#batch.
     Iterator<CompletableFuture<Void>> toCompleteIter = toComplete.iterator();
     for (CompletableFuture<?> future : table.batch(toSend)) {
       CompletableFuture<Void> toCompleteFuture = toCompleteIter.next();
@@ -118,9 +156,15 @@ class AsyncBufferedMutatorImpl implements AsyncBufferedMutator {
 
   @Override
   public List<CompletableFuture<Void>> mutate(List<? extends Mutation> mutations) {
-    List<CompletableFuture<Void>> futures =
-      Stream.<CompletableFuture<Void>> generate(CompletableFuture::new).limit(mutations.size())
-        .collect(Collectors.toList());
+    List<CompletableFuture<Void>> futures = new ArrayList<>(mutations.size());
+    for (int i = 0, n = mutations.size(); i < n; i++) {
+      futures.add(new CompletableFuture<>());
+    }
+    if (closed) {
+      IOException ioe = new IOException("Already closed");
+      futures.forEach(f -> f.completeExceptionally(ioe));
+      return futures;
+    }
     long heapSize = 0;
     for (Mutation mutation : mutations) {
       heapSize += mutation.heapSize();
@@ -128,14 +172,13 @@ class AsyncBufferedMutatorImpl implements AsyncBufferedMutator {
         validatePut((Put) mutation, maxKeyValueSize);
       }
     }
-    synchronized (this) {
-      if (closed) {
-        IOException ioe = new IOException("Already closed");
-        futures.forEach(f -> f.completeExceptionally(ioe));
-        return futures;
-      }
+    boolean needFlush = false;
+    FlushType flushType = FlushType.SIZE;
+    lock.lock();
+    try {
       if (this.mutations.isEmpty() && periodicFlushTimeoutNs > 0) {
         periodicFlushTask = periodicalFlushTimer.newTimeout(timeout -> {
+          boolean shouldFlush = false;
           synchronized (AsyncBufferedMutatorImpl.this) {
             // confirm that we are still valid, if there is already an internalFlush call before us,
             // then we should not execute anymore. And in internalFlush we will set periodicFlush
@@ -143,34 +186,64 @@ class AsyncBufferedMutatorImpl implements AsyncBufferedMutator {
             // are equal.
             if (timeout == periodicFlushTask) {
               periodicFlushTask = null;
-              internalFlush();
+              shouldFlush = true;
             }
           }
+          if (shouldFlush) {
+            internalFlush(FlushType.PERIODIC);
+          }
         }, periodicFlushTimeoutNs, TimeUnit.NANOSECONDS);
+      }
+      // Preallocate to avoid potentially multiple resizes during addAll if we can.
+      if (this.mutations instanceof ArrayList && this.futures instanceof ArrayList) {
+        ((ArrayList<Mutation>) this.mutations).ensureCapacity(this.mutations.size()
+          + mutations.size());
+        ((ArrayList<CompletableFuture<Void>>) this.futures).ensureCapacity(this.futures.size()
+          + futures.size());
       }
       this.mutations.addAll(mutations);
       this.futures.addAll(futures);
       bufferedSize += heapSize;
       if (bufferedSize >= writeBufferSize) {
         LOG.trace("Flushing because write buffer size {} reached", writeBufferSize);
-        internalFlush();
-      } else if (maxMutations > 0 && this.mutations.size() >= maxMutations) {
+        needFlush = true;
+        flushType = FlushType.SIZE;
+      } else if (this.mutations.size() >= maxMutations) {
         LOG.trace("Flushing because max mutations {} reached", maxMutations);
-        internalFlush();
+        needFlush = true;
+        flushType = FlushType.MAX_MUTATIONS;
       }
+    } finally {
+      lock.unlock();
+    }
+    if (needFlush) {
+      internalFlush(flushType);
     }
     return futures;
   }
 
   @Override
-  public synchronized void flush() {
+  public void flush() {
     internalFlush();
   }
 
   @Override
-  public synchronized void close() {
-    internalFlush();
-    closed = true;
+  public void close() {
+    boolean needFlush = false;
+    if (!closed) {
+      lock.lock();
+      try {
+        if (!closed) {
+          closed = true;
+          needFlush = true;
+        }
+      } finally {
+        lock.unlock();
+      }
+    }
+    if (needFlush) {
+      internalFlush(FlushType.CLOSE);
+    }
   }
 
   @Override
