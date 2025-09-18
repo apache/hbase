@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
+import org.apache.hadoop.hbase.keymeta.KeyManagementService;
 import org.apache.hadoop.hbase.keymeta.KeymetaAdmin;
 import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
 import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
@@ -559,15 +560,18 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
     return null;
   }
 
-  @Override public SystemKeyCache getSystemKeyCache() {
+  @Override
+  public SystemKeyCache getSystemKeyCache() {
     return null;
   }
 
-  @Override public ManagedKeyDataCache getManagedKeyDataCache() {
+  @Override
+  public ManagedKeyDataCache getManagedKeyDataCache() {
     return null;
   }
 
-  @Override public KeymetaAdmin getKeymetaAdmin() {
+  @Override
+  public KeymetaAdmin getKeymetaAdmin() {
     return null;
   }
 
@@ -770,6 +774,11 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
   @Override
   public ReplicateWALEntryResponse replicateToReplica(RpcController controller,
     ReplicateWALEntryRequest request) throws ServiceException {
+    return null;
+  }
+
+  @Override
+  public KeyManagementService getKeyManagementService() {
     return null;
   }
 }

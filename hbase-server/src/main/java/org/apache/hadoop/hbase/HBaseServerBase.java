@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.http.InfoServer;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
+import org.apache.hadoop.hbase.keymeta.KeyManagementService;
 import org.apache.hadoop.hbase.keymeta.KeymetaAdmin;
 import org.apache.hadoop.hbase.keymeta.KeymetaAdminImpl;
 import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
@@ -92,7 +93,7 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends Thread
-  implements Server, ConfigurationObserver, ConnectionRegistryEndpoint {
+  implements Server, ConfigurationObserver, ConnectionRegistryEndpoint, KeyManagementService {
 
   private static final Logger LOG = LoggerFactory.getLogger(HBaseServerBase.class);
 
@@ -659,6 +660,11 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
     conf.reloadConfiguration();
     configurationManager.notifyAllObservers(conf);
     postUpdateConfiguration();
+  }
+
+  @Override
+  public KeyManagementService getKeyManagementService() {
+    return this;
   }
 
   private void preUpdateConfiguration() throws IOException {

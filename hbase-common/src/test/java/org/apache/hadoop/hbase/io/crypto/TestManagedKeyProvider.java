@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.io.crypto;
 
+import static org.apache.hadoop.hbase.io.crypto.ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES;
 import static org.apache.hadoop.hbase.io.crypto.ManagedKeyStoreKeyProvider.KEY_METADATA_ALIAS;
 import static org.apache.hadoop.hbase.io.crypto.ManagedKeyStoreKeyProvider.KEY_METADATA_CUST;
 import static org.junit.Assert.assertEquals;
@@ -26,15 +27,12 @@ import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 import java.security.KeyStore;
-import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
-import javax.crypto.spec.SecretKeySpec;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -43,7 +41,6 @@ import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.GsonUtil;
-
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -68,10 +65,10 @@ public class TestManagedKeyProvider {
     private static final String SYSTEM_KEY_ALIAS = "system-alias";
 
     private Configuration conf = HBaseConfiguration.create();
-    private int nPrefixes = 2;
+    private int nCustodians = 2;
     private ManagedKeyProvider managedKeyProvider;
-    private Map<Bytes, Bytes> prefix2key = new HashMap<>();
-    private Map<Bytes, String> prefix2alias = new HashMap<>();
+    private Map<Bytes, Bytes> cust2key = new HashMap<>();
+    private Map<Bytes, String> cust2alias = new HashMap<>();
     private String clusterId;
     private byte[] systemKey;
 
@@ -88,95 +85,81 @@ public class TestManagedKeyProvider {
 
     protected void addCustomEntries(KeyStore store, Properties passwdProps) throws Exception {
       super.addCustomEntries(store, passwdProps);
-      for (int i = 0; i < nPrefixes; ++i) {
-        String prefix = "prefix+ " + i;
-        String alias = prefix + "-alias";
-        byte[] key = MessageDigest.getInstance("SHA-256").digest(Bytes.toBytes(alias));
-        prefix2alias.put(new Bytes(prefix.getBytes()), alias);
-        prefix2key.put(new Bytes(prefix.getBytes()), new Bytes(key));
-        store.setEntry(alias, new KeyStore.SecretKeyEntry(new SecretKeySpec(key, "AES")),
-          new KeyStore.PasswordProtection(
-            withPasswordOnAlias ? PASSWORD.toCharArray() : new char[0]));
-
-        String encPrefix = Base64.getEncoder().encodeToString(prefix.getBytes());
-        String confKey = HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + encPrefix + "."
-          + "alias";
-        conf.set(confKey, alias);
-
-        passwdProps.setProperty(alias, PASSWORD);
-
-        clusterId = UUID.randomUUID().toString();
-        systemKey = MessageDigest.getInstance("SHA-256").digest(
-          Bytes.toBytes(SYSTEM_KEY_ALIAS));
-        store.setEntry(SYSTEM_KEY_ALIAS, new KeyStore.SecretKeyEntry(
-            new SecretKeySpec(systemKey, "AES")),
-          new KeyStore.PasswordProtection(withPasswordOnAlias ? PASSWORD.toCharArray() :
-            new char[0]));
-
-        conf.set(HConstants.CRYPTO_MANAGED_KEY_STORE_SYSTEM_KEY_NAME_CONF_KEY, SYSTEM_KEY_ALIAS);
-
-        passwdProps.setProperty(SYSTEM_KEY_ALIAS, PASSWORD);
+      for (int i = 0; i < nCustodians; ++i) {
+        String custodian = "custodian+ " + i;
+        String alias = custodian + "-alias";
+        KeymetaTestUtils.addEntry(conf, 256, store, alias, custodian, withPasswordOnAlias, cust2key,
+          cust2alias, passwdProps);
       }
-    }
 
-    private void addEntry(String alias, String prefix) {
-      String encPrefix = Base64.getEncoder().encodeToString(prefix.getBytes());
-      String confKey = HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + encPrefix + "."
-          + "alias";
-      conf.set(confKey, alias);
+      clusterId = UUID.randomUUID().toString();
+      KeymetaTestUtils.addEntry(conf, 256, store, SYSTEM_KEY_ALIAS, clusterId, withPasswordOnAlias,
+        cust2key, cust2alias, passwdProps);
+      systemKey = cust2key.get(new Bytes(clusterId.getBytes())).get();
+      conf.set(HConstants.CRYPTO_MANAGED_KEY_STORE_SYSTEM_KEY_NAME_CONF_KEY, SYSTEM_KEY_ALIAS);
+
+      KeymetaTestUtils.addEntry(conf, 256, store, "global-cust-alias", "*", withPasswordOnAlias,
+        cust2key, cust2alias, passwdProps);
     }
 
     @Test
     public void testMissingConfig() throws Exception {
       managedKeyProvider.initConfig(null);
-      RuntimeException ex = assertThrows(RuntimeException.class,
-        () -> managedKeyProvider.getSystemKey(null));
+      RuntimeException ex =
+        assertThrows(RuntimeException.class, () -> managedKeyProvider.getSystemKey(null));
       assertEquals("initConfig is not called or config is null", ex.getMessage());
     }
 
     @Test
     public void testGetManagedKey() throws Exception {
-      for (Bytes prefix : prefix2key.keySet()) {
-        ManagedKeyData keyData = managedKeyProvider.getManagedKey(prefix.get(),
-          ManagedKeyData.KEY_SPACE_GLOBAL);
-        assertKeyData(keyData, ManagedKeyState.ACTIVE, prefix2key.get(prefix).get(), prefix.get(),
-          prefix2alias.get(prefix));
+      for (Bytes cust : cust2key.keySet()) {
+        ManagedKeyData keyData =
+          managedKeyProvider.getManagedKey(cust.get(), ManagedKeyData.KEY_SPACE_GLOBAL);
+        assertKeyData(keyData, ManagedKeyState.ACTIVE, cust2key.get(cust).get(), cust.get(),
+          cust2alias.get(cust));
       }
     }
 
     @Test
-    public void testGetInactiveKey() throws Exception {
-      Bytes firstPrefix = prefix2key.keySet().iterator().next();
-      String encPrefix = Base64.getEncoder().encodeToString(firstPrefix.get());
-      conf.set(HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + encPrefix + ".active",
-        "false");
-      ManagedKeyData keyData = managedKeyProvider.getManagedKey(firstPrefix.get(),
+    public void testGetGlobalCustodianKey() throws Exception {
+      byte[] globalCustodianKey = cust2key.get(new Bytes(KEY_GLOBAL_CUSTODIAN_BYTES)).get();
+      ManagedKeyData keyData = managedKeyProvider.getManagedKey(KEY_GLOBAL_CUSTODIAN_BYTES,
         ManagedKeyData.KEY_SPACE_GLOBAL);
+      assertKeyData(keyData, ManagedKeyState.ACTIVE, globalCustodianKey, KEY_GLOBAL_CUSTODIAN_BYTES,
+        "global-cust-alias");
+    }
+
+    @Test
+    public void testGetInactiveKey() throws Exception {
+      Bytes firstCust = cust2key.keySet().iterator().next();
+      String encCust = Base64.getEncoder().encodeToString(firstCust.get());
+      conf.set(HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + encCust + ".active", "false");
+      ManagedKeyData keyData =
+        managedKeyProvider.getManagedKey(firstCust.get(), ManagedKeyData.KEY_SPACE_GLOBAL);
       assertNotNull(keyData);
-      assertKeyData(keyData, ManagedKeyState.INACTIVE, prefix2key.get(firstPrefix).get(),
-        firstPrefix.get(), prefix2alias.get(firstPrefix));
+      assertKeyData(keyData, ManagedKeyState.INACTIVE, cust2key.get(firstCust).get(),
+        firstCust.get(), cust2alias.get(firstCust));
     }
 
     @Test
     public void testGetInvalidKey() throws Exception {
-      byte[] invalidPrefixBytes = "invalid".getBytes();
-      ManagedKeyData keyData = managedKeyProvider.getManagedKey(invalidPrefixBytes,
-        ManagedKeyData.KEY_SPACE_GLOBAL);
+      byte[] invalidCustBytes = "invalid".getBytes();
+      ManagedKeyData keyData =
+        managedKeyProvider.getManagedKey(invalidCustBytes, ManagedKeyData.KEY_SPACE_GLOBAL);
       assertNotNull(keyData);
-      assertKeyData(keyData, ManagedKeyState.FAILED, null, invalidPrefixBytes, null);
+      assertKeyData(keyData, ManagedKeyState.FAILED, null, invalidCustBytes, null);
     }
 
     @Test
     public void testGetDisabledKey() throws Exception {
-      byte[] invalidPrefix = new byte[] { 1, 2, 3 };
-      String invalidPrefixEnc = ManagedKeyProvider.encodeToStr(invalidPrefix);
-      conf.set(HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + invalidPrefixEnc + ".active",
+      byte[] invalidCust = new byte[] { 1, 2, 3 };
+      String invalidCustEnc = ManagedKeyProvider.encodeToStr(invalidCust);
+      conf.set(HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + invalidCustEnc + ".active",
         "false");
-      ManagedKeyData keyData = managedKeyProvider.getManagedKey(invalidPrefix,
-        ManagedKeyData.KEY_SPACE_GLOBAL);
+      ManagedKeyData keyData =
+        managedKeyProvider.getManagedKey(invalidCust, ManagedKeyData.KEY_SPACE_GLOBAL);
       assertNotNull(keyData);
-      assertKeyData(keyData, ManagedKeyState.DISABLED, null,
-        invalidPrefix, null);
+      assertKeyData(keyData, ManagedKeyState.DISABLED, null, invalidCust, null);
     }
 
     @Test
@@ -185,60 +168,57 @@ public class TestManagedKeyProvider {
       assertKeyData(clusterKeyData, ManagedKeyState.ACTIVE, systemKey, clusterId.getBytes(),
         SYSTEM_KEY_ALIAS);
       conf.unset(HConstants.CRYPTO_MANAGED_KEY_STORE_SYSTEM_KEY_NAME_CONF_KEY);
-      RuntimeException ex = assertThrows(RuntimeException.class,
-        () -> managedKeyProvider.getSystemKey(null));
+      RuntimeException ex =
+        assertThrows(RuntimeException.class, () -> managedKeyProvider.getSystemKey(null));
       assertEquals("No alias configured for system key", ex.getMessage());
       conf.set(HConstants.CRYPTO_MANAGED_KEY_STORE_SYSTEM_KEY_NAME_CONF_KEY, "non_existing_alias");
-      ex = assertThrows(RuntimeException.class,
-        () -> managedKeyProvider.getSystemKey(null));
+      ex = assertThrows(RuntimeException.class, () -> managedKeyProvider.getSystemKey(null));
       assertTrue(ex.getMessage().startsWith("Unable to find system key with alias:"));
     }
 
     @Test
     public void testUnwrapInvalidKey() throws Exception {
       String invalidAlias = "invalidAlias";
-      byte[] invalidPrefix = new byte[] { 1, 2, 3 };
-      String invalidPrefixEnc = ManagedKeyProvider.encodeToStr(invalidPrefix);
-      String invalidMetadata = ManagedKeyStoreKeyProvider.generateKeyMetadata(invalidAlias,
-        invalidPrefixEnc);
+      byte[] invalidCust = new byte[] { 1, 2, 3 };
+      String invalidCustEnc = ManagedKeyProvider.encodeToStr(invalidCust);
+      String invalidMetadata =
+        ManagedKeyStoreKeyProvider.generateKeyMetadata(invalidAlias, invalidCustEnc);
       ManagedKeyData keyData = managedKeyProvider.unwrapKey(invalidMetadata, null);
       assertNotNull(keyData);
-      assertKeyData(keyData, ManagedKeyState.FAILED, null, invalidPrefix,
-        invalidAlias);
+      assertKeyData(keyData, ManagedKeyState.FAILED, null, invalidCust, invalidAlias);
     }
 
     @Test
     public void testUnwrapDisabledKey() throws Exception {
       String invalidAlias = "invalidAlias";
-      byte[] invalidPrefix = new byte[] { 1, 2, 3 };
-      String invalidPrefixEnc = ManagedKeyProvider.encodeToStr(invalidPrefix);
-      conf.set(HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + invalidPrefixEnc + ".active",
+      byte[] invalidCust = new byte[] { 1, 2, 3 };
+      String invalidCustEnc = ManagedKeyProvider.encodeToStr(invalidCust);
+      conf.set(HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + invalidCustEnc + ".active",
         "false");
-      String invalidMetadata = ManagedKeyStoreKeyProvider.generateKeyMetadata(invalidAlias,
-        invalidPrefixEnc);
+      String invalidMetadata =
+        ManagedKeyStoreKeyProvider.generateKeyMetadata(invalidAlias, invalidCustEnc);
       ManagedKeyData keyData = managedKeyProvider.unwrapKey(invalidMetadata, null);
       assertNotNull(keyData);
-      assertKeyData(keyData, ManagedKeyState.DISABLED, null, invalidPrefix, invalidAlias);
+      assertKeyData(keyData, ManagedKeyState.DISABLED, null, invalidCust, invalidAlias);
     }
 
     private void assertKeyData(ManagedKeyData keyData, ManagedKeyState expKeyState, byte[] key,
-      byte[] prefixBytes, String alias) throws Exception {
+      byte[] custBytes, String alias) throws Exception {
       assertNotNull(keyData);
       assertEquals(expKeyState, keyData.getKeyState());
       if (key == null) {
         assertNull(keyData.getTheKey());
-      }
-      else {
+      } else {
         byte[] keyBytes = keyData.getTheKey().getEncoded();
         assertEquals(key.length, keyBytes.length);
         assertEquals(new Bytes(key), keyBytes);
       }
-      Map keyMetadata = GsonUtil.getDefaultInstance().fromJson(keyData.getKeyMetadata(),
-        HashMap.class);
+      Map keyMetadata =
+        GsonUtil.getDefaultInstance().fromJson(keyData.getKeyMetadata(), HashMap.class);
       assertNotNull(keyMetadata);
-      assertEquals(new Bytes(prefixBytes), keyData.getKeyCustodian());
+      assertEquals(new Bytes(custBytes), keyData.getKeyCustodian());
       assertEquals(alias, keyMetadata.get(KEY_METADATA_ALIAS));
-      assertEquals(Base64.getEncoder().encodeToString(prefixBytes),
+      assertEquals(Base64.getEncoder().encodeToString(custBytes),
         keyMetadata.get(KEY_METADATA_CUST));
       assertEquals(keyData, managedKeyProvider.unwrapKey(keyData.getKeyMetadata(), null));
     }
@@ -251,7 +231,8 @@ public class TestManagedKeyProvider {
     public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestManagedKeyProviderDefault.class);
 
-    @Test public void testEncodeToStr() {
+    @Test
+    public void testEncodeToStr() {
       byte[] input = { 72, 101, 108, 108, 111 }; // "Hello" in ASCII
       String expected = "SGVsbG8=";
       String actual = ManagedKeyProvider.encodeToStr(input);
@@ -259,7 +240,8 @@ public class TestManagedKeyProvider {
       assertEquals("Encoded string should match expected Base64 representation", expected, actual);
     }
 
-    @Test public void testDecodeToBytes() throws Exception {
+    @Test
+    public void testDecodeToBytes() throws Exception {
       String input = "SGVsbG8="; // "Hello" in Base64
       byte[] expected = { 72, 101, 108, 108, 111 };
       byte[] actual = ManagedKeyProvider.decodeToBytes(input);
@@ -268,7 +250,8 @@ public class TestManagedKeyProvider {
         Arrays.equals(expected, actual));
     }
 
-    @Test public void testEncodeToStrAndDecodeToBytes() throws Exception {
+    @Test
+    public void testEncodeToStrAndDecodeToBytes() throws Exception {
       byte[] originalBytes = { 1, 2, 3, 4, 5 };
       String encoded = ManagedKeyProvider.encodeToStr(originalBytes);
       byte[] decoded = ManagedKeyProvider.decodeToBytes(encoded);
@@ -277,13 +260,14 @@ public class TestManagedKeyProvider {
         Arrays.equals(originalBytes, decoded));
     }
 
-    @Test(expected = Exception.class) public void testDecodeToBytes_InvalidInput()
-      throws Exception {
+    @Test(expected = Exception.class)
+    public void testDecodeToBytes_InvalidInput() throws Exception {
       String invalidInput = "This is not a valid Base64 string!";
       ManagedKeyProvider.decodeToBytes(invalidInput);
     }
 
-    @Test public void testRoundTrip_LargeInput() throws Exception {
+    @Test
+    public void testRoundTrip_LargeInput() throws Exception {
       byte[] largeInput = new byte[1000];
       for (int i = 0; i < largeInput.length; i++) {
         largeInput[i] = (byte) (i % 256);

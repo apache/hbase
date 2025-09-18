@@ -33,8 +33,7 @@ public enum ManagedKeyState {
   /** Represents the retrieval failure status of a managed key. */
   FAILED((byte) 3),
   /** Represents the disabled status of a managed key. */
-  DISABLED((byte) 4),
-  ;
+  DISABLED((byte) 4),;
 
   private static Map<Byte, ManagedKeyState> lookupByVal;
 
@@ -60,7 +59,7 @@ public enum ManagedKeyState {
   public static ManagedKeyState forValue(byte val) {
     if (lookupByVal == null) {
       Map<Byte, ManagedKeyState> tbl = new HashMap<>();
-      for (ManagedKeyState e: ManagedKeyState.values()) {
+      for (ManagedKeyState e : ManagedKeyState.values()) {
         tbl.put(e.getVal(), e);
       }
       lookupByVal = tbl;
@@ -70,7 +69,6 @@ public enum ManagedKeyState {
 
   /**
    * This is used to determine if a key is usable for encryption/decryption.
-   *
    * @param state The key state to check
    * @return true if the key state is ACTIVE or INACTIVE, false otherwise
    */
