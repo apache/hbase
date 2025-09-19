@@ -115,6 +115,8 @@
                     <exclude>META-INF/*.SF</exclude>
                     <exclude>META-INF/*.DSA</exclude>
                     <exclude>META-INF/*.RSA</exclude>
+                    <!-- HubSpot Edit: hbase-thirdparty:hbase-shaded-miscellaneous version 4.1.11 accidentally includes an unshaded copy of jspecify, which is a problem for hubspot deployables -->
+                    <exclude>org/jspecify/**</exclude>
                   </excludes>
                 </filter>
               </filters>
