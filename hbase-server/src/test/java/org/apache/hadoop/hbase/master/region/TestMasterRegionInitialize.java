@@ -24,8 +24,11 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -113,5 +116,20 @@ public class TestMasterRegionInitialize extends MasterRegionTestBase {
 
     // but the data should have been cleaned up
     assertTrue(region.get(new Get(row)).isEmpty());
+  }
+
+  @Test
+  public void testMasterRegionDirSuffix() {
+    String currentMasterRegionDirName = MasterRegionFactory.getMasterRegionDirName();
+    assertEquals("Default master region directory should be MasterData", "MasterData",
+      currentMasterRegionDirName);
+
+    Configuration confWithSuffix = HBaseConfiguration.create();
+    String suffix = "replica1";
+    confWithSuffix.set(HConstants.HBASE_META_TABLE_SUFFIX, suffix);
+    String dirNameWithSuffix = MasterRegionFactory.initMasterRegionDirName(confWithSuffix);
+    String expectedDirName = "MasterData_" + suffix;
+    assertEquals("Directory name should have suffix when configured", expectedDirName,
+      dirNameWithSuffix);
   }
 }
