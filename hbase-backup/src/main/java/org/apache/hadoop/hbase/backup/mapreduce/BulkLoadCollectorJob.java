@@ -108,8 +108,8 @@ public class BulkLoadCollectorJob extends Configured implements Tool {
 
       // table filtering
       if (!(tables.isEmpty() || tables.containsKey(tname))) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("map: skipping table={} because it is not in configured table list", tname);
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("map: skipping table={} because it is not in configured table list", tname);
         }
         return;
       }
@@ -134,8 +134,8 @@ public class BulkLoadCollectorJob extends Configured implements Tool {
           cce);
       }
 
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("map: walInputPath={} table={} relativePathsCount={}", walInputPath, tname,
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("map: walInputPath={} table={} relativePathsCount={}", walInputPath, tname,
           relativePaths.size());
       }
 
