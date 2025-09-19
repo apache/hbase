@@ -17,10 +17,16 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -28,7 +34,12 @@ import org.apache.hadoop.hbase.ServerMetricsBuilder;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.YouAreDeadException;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.RegionStatesCount;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -191,5 +202,27 @@ public class TestMasterMetrics {
   public void testDefaultMasterProcMetrics() throws Exception {
     MetricsMasterProcSource masterSource = master.getMasterMetrics().getMetricsProcSource();
     metricsHelper.assertGauge("numMasterWALs", master.getNumWALFiles(), masterSource);
+  }
+
+  @Test
+  public void testClusterMetricsMetaTableSkipping() throws Exception {
+    TableName replicaMetaTable = TableName.valueOf("hbase", "meta_replica");
+    TableDescriptor replicaMetaDescriptor = TableDescriptorBuilder.newBuilder(replicaMetaTable)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("info")).build();
+    master.getTableDescriptors().update(replicaMetaDescriptor, true);
+    try {
+      ClusterMetrics metrics = master.getClusterMetricsWithoutCoprocessor(
+        EnumSet.of(ClusterMetrics.Option.TABLE_TO_REGIONS_COUNT));
+      Map<TableName, RegionStatesCount> tableRegionStatesCount =
+        metrics.getTableRegionStatesCount();
+
+      assertFalse("Foreign meta table should not be present",
+        tableRegionStatesCount.containsKey(replicaMetaTable));
+      assertTrue("Local meta should be present",
+        tableRegionStatesCount.containsKey(TableName.META_TABLE_NAME));
+
+    } finally {
+      master.getTableDescriptors().remove(replicaMetaTable);
+    }
   }
 }
