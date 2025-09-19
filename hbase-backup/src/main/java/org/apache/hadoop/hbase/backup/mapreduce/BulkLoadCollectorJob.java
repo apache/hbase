@@ -33,7 +33,9 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.util.BackupFileSystemManager;
 import org.apache.hadoop.hbase.backup.util.BulkLoadProcessor;
+import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.mapreduce.WALInputFormat;
+import org.apache.hadoop.hbase.regionserver.wal.WALCellCodec;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
@@ -43,12 +45,13 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
-import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * MapReduce job that scans WAL backups and extracts referenced bulk-load store-file paths.
@@ -64,6 +67,8 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class BulkLoadCollectorJob extends Configured implements Tool {
+  private static final Logger LOG = LoggerFactory.getLogger(BulkLoadCollectorJob.class);
+
   public static final String NAME = "BulkLoadCollector";
   public static final String DEFAULT_REDUCERS = "1";
 
@@ -89,9 +94,23 @@ public class BulkLoadCollectorJob extends Configured implements Tool {
     @Override
     protected void map(WALKey key, WALEdit value, Context context)
       throws IOException, InterruptedException {
-      if (key == null || value == null) return;
+      if (key == null) {
+        if (LOG.isTraceEnabled()) LOG.trace("map: received null WALKey, skipping");
+        return;
+      }
+      if (value == null) {
+        if (LOG.isTraceEnabled())
+          LOG.trace("map: received null WALEdit for table={}, skipping", safeTable(key));
+        return;
+      }
 
-      if (!(tables.isEmpty() || tables.containsKey(key.getTableName()))) {
+      TableName tname = key.getTableName();
+
+      // table filtering
+      if (!(tables.isEmpty() || tables.containsKey(tname))) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("map: skipping table={} because it is not in configured table list", tname);
+        }
         return;
       }
 
@@ -101,7 +120,24 @@ public class BulkLoadCollectorJob extends Configured implements Tool {
       if (relativePaths.isEmpty()) return;
 
       // Determine WAL input path for this split (used to compute date/prefix for full path)
-      Path walInputPath = ((FileSplit) context.getInputSplit()).getPath();
+      Path walInputPath;
+      try {
+        walInputPath =
+          new Path(((WALInputFormat.WALSplit) context.getInputSplit()).getLogFileName());
+      } catch (ClassCastException cce) {
+        String splitClass =
+          (context.getInputSplit() == null) ? "null" : context.getInputSplit().getClass().getName();
+        LOG.warn(
+          "map: unexpected InputSplit type (not WALSplit) - cannot determine WAL input path; context.getInputSplit() class={}",
+          splitClass, cce);
+        throw new IOException("Unexpected InputSplit type: expected WALSplit but got " + splitClass,
+          cce);
+      }
+
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("map: walInputPath={} table={} relativePathsCount={}", walInputPath, tname,
+          relativePaths.size());
+      }
 
       // Build full path for each relative path and emit it.
       for (Path rel : relativePaths) {
@@ -130,7 +166,20 @@ public class BulkLoadCollectorJob extends Configured implements Tool {
 
       int i = 0;
       for (String table : tablesToUse) {
-        tables.put(TableName.valueOf(table), TableName.valueOf(tableMap[i++]));
+        TableName from = TableName.valueOf(table);
+        TableName to = TableName.valueOf(tableMap[i++]);
+        tables.put(from, to);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("setup: configuring mapping {} -> {}", from, to);
+        }
+      }
+    }
+
+    private String safeTable(WALKey key) {
+      try {
+        return key == null ? "<null>" : key.getTableName().toString();
+      } catch (Exception e) {
+        return "<error>";
       }
     }
   }
@@ -181,6 +230,9 @@ public class BulkLoadCollectorJob extends Configured implements Tool {
       tableMap = tables;
     }
 
+    LOG.info("createSubmittableJob: inputDirs='{}' bulkFilesOut='{}' tables={} tableMap={}",
+      inputDirs, bulkFilesOut, String.join(",", tables), String.join(",", tableMap));
+
     conf.setStrings(TABLES_KEY, tables);
     conf.setStrings(TABLE_MAP_KEY, tableMap);
     conf.set(FileInputFormat.INPUT_DIR, inputDirs);
@@ -228,6 +280,15 @@ public class BulkLoadCollectorJob extends Configured implements Tool {
     job.setOutputFormatClass(TextOutputFormat.class);
     FileOutputFormat.setOutputPath(job, new Path(bulkFilesOut));
 
+    LOG.info("createSubmittableJob: created job name='{}' reducers={}", job.getJobName(), reducers);
+
+    String codecCls = WALCellCodec.getWALCellCodecClass(conf).getName();
+    try {
+      TableMapReduceUtil.addDependencyJarsForClasses(job.getConfiguration(),
+        Class.forName(codecCls));
+    } catch (Exception e) {
+      throw new IOException("Cannot determine wal codec class " + codecCls, e);
+    }
     return job;
   }
 
