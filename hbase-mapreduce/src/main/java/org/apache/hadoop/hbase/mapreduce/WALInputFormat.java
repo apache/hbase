@@ -66,7 +66,7 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
   /**
    * {@link InputSplit} for {@link WAL} files. Each split represent exactly one log file.
    */
-  static class WALSplit extends InputSplit implements Writable {
+  public static class WALSplit extends InputSplit implements Writable {
     private String logFileName;
     private long fileSize;
     private long startTime;

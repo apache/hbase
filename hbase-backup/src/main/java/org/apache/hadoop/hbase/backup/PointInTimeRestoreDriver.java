@@ -27,6 +27,7 @@ import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_TO_DA
 
 import java.net.URI;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
@@ -101,9 +102,15 @@ public class PointInTimeRestoreDriver extends AbstractRestoreDriver {
         return -5;
       }
 
-      PointInTimeRestoreRequest pointInTimeRestoreRequest = new PointInTimeRestoreRequest.Builder()
-        .withBackupRootDir(backupRootDir).withCheck(check).withFromTables(fromTables)
-        .withToTables(toTables).withOverwrite(isOverwrite).withToDateTime(endTime).build();
+      // TODO: Currently hardcoding keepOriginalSplits=false and restoreRootDir via tmp dir.
+      // These should come from user input (same issue exists in normal restore).
+      // Expose them as configurable options in future.
+      PointInTimeRestoreRequest pointInTimeRestoreRequest =
+        new PointInTimeRestoreRequest.Builder().withBackupRootDir(backupRootDir).withCheck(check)
+          .withFromTables(fromTables).withToTables(toTables).withOverwrite(isOverwrite)
+          .withToDateTime(endTime).withKeepOriginalSplits(false).withRestoreRootDir(
+            BackupUtils.getTmpRestoreOutputDir(FileSystem.get(conf), conf).toString())
+          .build();
 
       client.pointInTimeRestore(pointInTimeRestoreRequest);
     } catch (Exception e) {

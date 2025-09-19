@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.AfterClass;
@@ -36,6 +37,21 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+/**
+ * Integration-style tests for Point-in-Time Restore (PITR).
+ * <p>
+ * These tests exercise the full backup / continuous backup / restore flow: - create backups at
+ * multiple historical points in time (via {@code BackupDriver}) - exercise WAL-based
+ * replication/continuous backup - validate Point-in-Time Restore behavior (successful restores,
+ * failure cases)
+ * </p>
+ * <p>
+ * NOTE: Some tests also create HFiles and perform HBase bulk-loads (HFile -> table) so the restore
+ * flow is validated when bulk-loaded storefiles are present in WALs. This ensures the
+ * BulkLoadCollector/BulkFilesCollector logic (discovering bulk-loaded store files referenced from
+ * WAL bulk-load descriptors) is exercised by the test suite.
+ * </p>
+ */
 @Category(LargeTests.class)
 public class TestPointInTimeRestore extends TestBackupBase {
   @ClassRule
@@ -67,8 +83,8 @@ public class TestPointInTimeRestore extends TestBackupBase {
     // Simulate a backup taken 20 days ago
     EnvironmentEdgeManager
       .injectEdge(() -> System.currentTimeMillis() - 20 * ONE_DAY_IN_MILLISECONDS);
-    PITRTestUtil.loadRandomData(TEST_UTIL, table1, famName, 1000); // Insert initial data into
-                                                                   // table1
+    // Insert initial data into table1
+    PITRTestUtil.loadRandomData(TEST_UTIL, table1, famName, 1000);
 
     // Perform a full backup for table1 with continuous backup enabled
     String[] args =
@@ -80,6 +96,12 @@ public class TestPointInTimeRestore extends TestBackupBase {
     EnvironmentEdgeManager
       .injectEdge(() -> System.currentTimeMillis() - 15 * ONE_DAY_IN_MILLISECONDS);
     PITRTestUtil.loadRandomData(TEST_UTIL, table1, famName, 1000); // Add more data to table1
+
+    Path dir = TEST_UTIL.getDataTestDirOnTestFS("testBulkLoadByFamily");
+    PITRTestUtil.generateHFiles(dir, TEST_UTIL.getConfiguration(), Bytes.toString(famName));
+    PITRTestUtil.bulkLoadHFiles(table1, dir, TEST_UTIL.getConnection(),
+      TEST_UTIL.getConfiguration());
+
     PITRTestUtil.loadRandomData(TEST_UTIL, table2, famName, 500); // Insert data into table2
 
     PITRTestUtil.waitForReplication(); // Ensure replication is complete

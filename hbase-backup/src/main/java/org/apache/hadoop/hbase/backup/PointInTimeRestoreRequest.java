@@ -27,23 +27,31 @@ import org.apache.yetus.audience.InterfaceAudience;
 public final class PointInTimeRestoreRequest {
 
   private final String backupRootDir;
+  private final String restoreRootDir;
   private final boolean check;
   private final TableName[] fromTables;
   private final TableName[] toTables;
   private final boolean overwrite;
   private final long toDateTime;
+  private final boolean isKeepOriginalSplits;
 
   private PointInTimeRestoreRequest(Builder builder) {
     this.backupRootDir = builder.backupRootDir;
+    this.restoreRootDir = builder.restoreRootDir;
     this.check = builder.check;
     this.fromTables = builder.fromTables;
     this.toTables = builder.toTables;
     this.overwrite = builder.overwrite;
     this.toDateTime = builder.toDateTime;
+    this.isKeepOriginalSplits = builder.isKeepOriginalSplits;
   }
 
   public String getBackupRootDir() {
     return backupRootDir;
+  }
+
+  public String getRestoreRootDir() {
+    return restoreRootDir;
   }
 
   public boolean isCheck() {
@@ -66,16 +74,27 @@ public final class PointInTimeRestoreRequest {
     return toDateTime;
   }
 
+  public boolean isKeepOriginalSplits() {
+    return isKeepOriginalSplits;
+  }
+
   public static class Builder {
     private String backupRootDir;
+    private String restoreRootDir;
     private boolean check = false;
     private TableName[] fromTables;
     private TableName[] toTables;
     private boolean overwrite = false;
     private long toDateTime;
+    private boolean isKeepOriginalSplits;
 
     public Builder withBackupRootDir(String backupRootDir) {
       this.backupRootDir = backupRootDir;
+      return this;
+    }
+
+    public Builder withRestoreRootDir(String restoreRootDir) {
+      this.restoreRootDir = restoreRootDir;
       return this;
     }
 
@@ -101,6 +120,11 @@ public final class PointInTimeRestoreRequest {
 
     public Builder withToDateTime(long dateTime) {
       this.toDateTime = dateTime;
+      return this;
+    }
+
+    public Builder withKeepOriginalSplits(boolean isKeepOriginalSplits) {
+      this.isKeepOriginalSplits = isKeepOriginalSplits;
       return this;
     }
 
