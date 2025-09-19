@@ -314,6 +314,22 @@ public abstract class AbstractPitrRestoreHandler {
       request.isKeepOriginalSplits(), request.getRestoreRootDir());
   }
 
+  /**
+   * Re-applies/re-bulkloads store files discovered from WALs into the target table.
+   * <p>
+   * <b>Note:</b> this method re-uses the same {@link RestoreJob} MapReduce job that we originally
+   * implemented for performing full and incremental backup restores. The MR job (obtained via
+   * {@link BackupRestoreFactory#getRestoreJob(Configuration)}) is used here to perform an HFile
+   * bulk-load of the discovered store files into {@code targetTable}.
+   * @param sourceTable        source table name (used for locating bulk files and logging)
+   * @param targetTable        destination table to bulk-load the HFiles into
+   * @param startTime          start of WAL range (ms)
+   * @param endTime            end of WAL range (ms)
+   * @param keepOriginalSplits pass-through flag to control whether original region splits are
+   *                           preserved
+   * @param restoreRootDir     local/DFS path under which temporary and output dirs are created
+   * @throws IOException on IO or job failure
+   */
   private void reBulkloadFiles(TableName sourceTable, TableName targetTable, long startTime,
     long endTime, boolean keepOriginalSplits, String restoreRootDir) throws IOException {
 
@@ -338,6 +354,9 @@ public abstract class AbstractPitrRestoreHandler {
     Path[] pathsArray = bulkloadFiles.toArray(new Path[0]);
 
     try {
+      // Use the existing RestoreJob MR job (the same MapReduce job used for full/incremental
+      // restores)
+      // to perform the HFile bulk-load of the discovered store files into `targetTable`.
       restoreService.run(pathsArray, new TableName[] { sourceTable }, new Path(restoreRootDir),
         new TableName[] { targetTable }, false);
       LOG.info("Re-bulkload completed for {}", targetTable);
