@@ -22,7 +22,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -33,7 +32,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.Version;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -47,7 +45,6 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RSGroupTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
-import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -269,7 +266,7 @@ public class TestRSGroupsKillRS extends TestRSGroupsBase {
     int majorVersion = VersionInfo.getMajorVersion(originVersion);
     assertTrue(majorVersion >= 1);
     String lowerVersion = String.valueOf(majorVersion - 1) + originVersion.split("\\.")[1];
-    setFinalStatic(Version.class.getField("version"), lowerVersion);
+    setStatic(VersionInfo.class.getField("version"), lowerVersion);
     TEST_UTIL.getMiniHBaseCluster().startRegionServer(address.getHostName(), address.getPort());
     assertEquals(NUM_SLAVES_BASE,
       TEST_UTIL.getMiniHBaseCluster().getLiveRegionServerThreads().size());
@@ -281,11 +278,8 @@ public class TestRSGroupsKillRS extends TestRSGroupsBase {
       .filter(p -> (p instanceof ServerCrashProcedure)).findAny().isPresent());
   }
 
-  private static void setFinalStatic(Field field, Object newValue) throws Exception {
+  private static void setStatic(Field field, Object newValue) throws Exception {
     field.setAccessible(true);
-    Field modifiersField = ReflectionUtils.getModifiersField();
-    modifiersField.setAccessible(true);
-    modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
     field.set(null, newValue);
   }
 }
