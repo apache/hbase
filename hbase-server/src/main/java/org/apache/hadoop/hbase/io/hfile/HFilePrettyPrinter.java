@@ -746,54 +746,51 @@ public class HFilePrettyPrinter extends Configured implements Tool {
    * @param mtReader the multi-tenant reader to get section information from
    */
   private void printSectionTrailers(AbstractMultiTenantReader mtReader) {
-    try {
-      byte[][] tenantSectionIds = mtReader.getAllTenantSectionIds();
+    byte[][] tenantSectionIds = mtReader.getAllTenantSectionIds();
 
-      if (tenantSectionIds != null && tenantSectionIds.length > 0) {
-        out.println("Section-level Trailers:");
+    if (tenantSectionIds == null || tenantSectionIds.length == 0) {
+      out.println("Section-level Trailers: No sections found");
+      return;
+    }
 
-        for (int i = 0; i < tenantSectionIds.length; i++) {
-          byte[] sectionId = tenantSectionIds[i];
-          out.println(
-            FOUR_SPACES + "--- Section " + i + ": " + Bytes.toStringBinary(sectionId) + " ---");
+    out.println("Section-level Trailers:");
 
-          try {
-            AbstractMultiTenantReader.SectionReader sectionReader =
-              mtReader.getSectionReader(sectionId);
-            if (sectionReader != null) {
-              HFileReaderImpl sectionHFileReader = sectionReader.getReader();
-              if (sectionHFileReader != null) {
-                FixedFileTrailer sectionTrailer = sectionHFileReader.getTrailer();
-                if (sectionTrailer != null) {
-                  out.println(FOUR_SPACES + FOUR_SPACES + "Section Trailer:");
-                  String trailerStr = sectionTrailer.toString();
-                  String[] lines = trailerStr.split("\n");
-                  for (String line : lines) {
-                    out.println(FOUR_SPACES + FOUR_SPACES + FOUR_SPACES + line);
-                  }
-                } else {
-                  out.println(FOUR_SPACES + FOUR_SPACES + "Section trailer not available");
-                }
-              } else {
-                out.println(FOUR_SPACES + FOUR_SPACES + "Section reader not initialized");
+    for (int i = 0; i < tenantSectionIds.length; i++) {
+      byte[] sectionId = tenantSectionIds[i];
+      out.println(
+        FOUR_SPACES + "--- Section " + i + ": " + Bytes.toStringBinary(sectionId) + " ---");
+
+      try {
+        AbstractMultiTenantReader.SectionReader sectionReader =
+          mtReader.getSectionReader(sectionId);
+        if (sectionReader != null) {
+          HFileReaderImpl sectionHFileReader = sectionReader.getReader();
+          if (sectionHFileReader != null) {
+            FixedFileTrailer sectionTrailer = sectionHFileReader.getTrailer();
+            if (sectionTrailer != null) {
+              out.println(FOUR_SPACES + FOUR_SPACES + "Section Trailer:");
+              String trailerStr = sectionTrailer.toString();
+              String[] lines = trailerStr.split("\n");
+              for (String line : lines) {
+                out.println(FOUR_SPACES + FOUR_SPACES + FOUR_SPACES + line);
               }
             } else {
-              out.println(FOUR_SPACES + FOUR_SPACES + "Could not create section reader");
+              out.println(FOUR_SPACES + FOUR_SPACES + "Section trailer not available");
             }
-          } catch (Exception sectionException) {
-            out.println(FOUR_SPACES + FOUR_SPACES + "Error accessing section trailer: "
-              + sectionException.getMessage());
+          } else {
+            out.println(FOUR_SPACES + FOUR_SPACES + "Section reader not initialized");
           }
-
-          if (i < tenantSectionIds.length - 1) {
-            out.println(); // Add spacing between sections
-          }
+        } else {
+          out.println(FOUR_SPACES + FOUR_SPACES + "Could not create section reader");
         }
-      } else {
-        out.println("Section-level Trailers: No sections found");
+      } catch (IllegalArgumentException | IOException sectionException) {
+        out.println(FOUR_SPACES + FOUR_SPACES + "Error accessing section trailer: "
+          + sectionException.getMessage());
       }
-    } catch (Exception e) {
-      out.println("Error reading section trailers: " + e.getMessage());
+
+      if (i < tenantSectionIds.length - 1) {
+        out.println(); // Add spacing between sections
+      }
     }
   }
 
@@ -803,85 +800,81 @@ public class HFilePrettyPrinter extends Configured implements Tool {
    * @param mtReader the multi-tenant reader to get section information from
    */
   private void printSectionFileInfo(AbstractMultiTenantReader mtReader) {
-    try {
-      byte[][] tenantSectionIds = mtReader.getAllTenantSectionIds();
+    byte[][] tenantSectionIds = mtReader.getAllTenantSectionIds();
 
-      if (tenantSectionIds != null && tenantSectionIds.length > 0) {
-        out.println("Section-level FileInfo:");
+    if (tenantSectionIds == null || tenantSectionIds.length == 0) {
+      out.println("Section-level FileInfo: No sections found");
+      return;
+    }
 
-        for (int i = 0; i < tenantSectionIds.length; i++) {
-          byte[] sectionId = tenantSectionIds[i];
-          out.println(
-            FOUR_SPACES + "--- Section " + i + ": " + Bytes.toStringBinary(sectionId) + " ---");
+    out.println("Section-level FileInfo:");
 
-          try {
-            AbstractMultiTenantReader.SectionReader sectionReader =
-              mtReader.getSectionReader(sectionId);
-            if (sectionReader != null) {
-              HFileReaderImpl sectionHFileReader = sectionReader.getReader();
-              if (sectionHFileReader != null) {
-                Map<byte[], byte[]> sectionFileInfo = sectionHFileReader.getHFileInfo();
-                if (sectionFileInfo != null && !sectionFileInfo.isEmpty()) {
-                  out.println(FOUR_SPACES + FOUR_SPACES + "Section FileInfo:");
-                  for (Map.Entry<byte[], byte[]> e : sectionFileInfo.entrySet()) {
-                    out.print(
-                      FOUR_SPACES + FOUR_SPACES + FOUR_SPACES + Bytes.toString(e.getKey()) + " = ");
-                    if (
-                      Bytes.equals(e.getKey(), HStoreFile.MAX_SEQ_ID_KEY)
-                        || Bytes.equals(e.getKey(), HStoreFile.DELETE_FAMILY_COUNT)
-                        || Bytes.equals(e.getKey(), HStoreFile.EARLIEST_PUT_TS)
-                        || Bytes.equals(e.getKey(), HFileWriterImpl.MAX_MEMSTORE_TS_KEY)
-                        || Bytes.equals(e.getKey(), HFileInfo.CREATE_TIME_TS)
-                        || Bytes.equals(e.getKey(), HStoreFile.BULKLOAD_TIME_KEY)
-                    ) {
-                      out.println(Bytes.toLong(e.getValue()));
-                    } else if (Bytes.equals(e.getKey(), HStoreFile.TIMERANGE_KEY)) {
-                      TimeRangeTracker timeRangeTracker = TimeRangeTracker.parseFrom(e.getValue());
-                      out.println(timeRangeTracker.getMin() + "...." + timeRangeTracker.getMax());
-                    } else if (
-                      Bytes.equals(e.getKey(), HFileInfo.AVG_KEY_LEN)
-                        || Bytes.equals(e.getKey(), HFileInfo.AVG_VALUE_LEN)
-                        || Bytes.equals(e.getKey(), HFileWriterImpl.KEY_VALUE_VERSION)
-                        || Bytes.equals(e.getKey(), HFileInfo.MAX_TAGS_LEN)
-                    ) {
-                      out.println(Bytes.toInt(e.getValue()));
-                    } else if (
-                      Bytes.equals(e.getKey(), HStoreFile.MAJOR_COMPACTION_KEY)
-                        || Bytes.equals(e.getKey(), HFileInfo.TAGS_COMPRESSED)
-                        || Bytes.equals(e.getKey(), HStoreFile.EXCLUDE_FROM_MINOR_COMPACTION_KEY)
-                        || Bytes.equals(e.getKey(), HStoreFile.HISTORICAL_KEY)
-                    ) {
-                      out.println(Bytes.toBoolean(e.getValue()));
-                    } else if (Bytes.equals(e.getKey(), HFileInfo.LASTKEY)) {
-                      out.println(new KeyValue.KeyOnlyKeyValue(e.getValue()).toString());
-                    } else {
-                      out.println(Bytes.toStringBinary(e.getValue()));
-                    }
-                  }
+    for (int i = 0; i < tenantSectionIds.length; i++) {
+      byte[] sectionId = tenantSectionIds[i];
+      out.println(
+        FOUR_SPACES + "--- Section " + i + ": " + Bytes.toStringBinary(sectionId) + " ---");
+
+      try {
+        AbstractMultiTenantReader.SectionReader sectionReader =
+          mtReader.getSectionReader(sectionId);
+        if (sectionReader != null) {
+          HFileReaderImpl sectionHFileReader = sectionReader.getReader();
+          if (sectionHFileReader != null) {
+            Map<byte[], byte[]> sectionFileInfo = sectionHFileReader.getHFileInfo();
+            if (sectionFileInfo != null && !sectionFileInfo.isEmpty()) {
+              out.println(FOUR_SPACES + FOUR_SPACES + "Section FileInfo:");
+              for (Map.Entry<byte[], byte[]> e : sectionFileInfo.entrySet()) {
+                out.print(
+                  FOUR_SPACES + FOUR_SPACES + FOUR_SPACES + Bytes.toString(e.getKey()) + " = ");
+                if (
+                  Bytes.equals(e.getKey(), HStoreFile.MAX_SEQ_ID_KEY)
+                    || Bytes.equals(e.getKey(), HStoreFile.DELETE_FAMILY_COUNT)
+                    || Bytes.equals(e.getKey(), HStoreFile.EARLIEST_PUT_TS)
+                    || Bytes.equals(e.getKey(), HFileWriterImpl.MAX_MEMSTORE_TS_KEY)
+                    || Bytes.equals(e.getKey(), HFileInfo.CREATE_TIME_TS)
+                    || Bytes.equals(e.getKey(), HStoreFile.BULKLOAD_TIME_KEY)
+                ) {
+                  out.println(Bytes.toLong(e.getValue()));
+                } else if (Bytes.equals(e.getKey(), HStoreFile.TIMERANGE_KEY)) {
+                  TimeRangeTracker timeRangeTracker = TimeRangeTracker.parseFrom(e.getValue());
+                  out.println(timeRangeTracker.getMin() + "...." + timeRangeTracker.getMax());
+                } else if (
+                  Bytes.equals(e.getKey(), HFileInfo.AVG_KEY_LEN)
+                    || Bytes.equals(e.getKey(), HFileInfo.AVG_VALUE_LEN)
+                    || Bytes.equals(e.getKey(), HFileWriterImpl.KEY_VALUE_VERSION)
+                    || Bytes.equals(e.getKey(), HFileInfo.MAX_TAGS_LEN)
+                ) {
+                  out.println(Bytes.toInt(e.getValue()));
+                } else if (
+                  Bytes.equals(e.getKey(), HStoreFile.MAJOR_COMPACTION_KEY)
+                    || Bytes.equals(e.getKey(), HFileInfo.TAGS_COMPRESSED)
+                    || Bytes.equals(e.getKey(), HStoreFile.EXCLUDE_FROM_MINOR_COMPACTION_KEY)
+                    || Bytes.equals(e.getKey(), HStoreFile.HISTORICAL_KEY)
+                ) {
+                  out.println(Bytes.toBoolean(e.getValue()));
+                } else if (Bytes.equals(e.getKey(), HFileInfo.LASTKEY)) {
+                  out.println(new KeyValue.KeyOnlyKeyValue(e.getValue()).toString());
                 } else {
-                  out
-                    .println(FOUR_SPACES + FOUR_SPACES + "Section FileInfo not available or empty");
+                  out.println(Bytes.toStringBinary(e.getValue()));
                 }
-              } else {
-                out.println(FOUR_SPACES + FOUR_SPACES + "Section reader not initialized");
               }
             } else {
-              out.println(FOUR_SPACES + FOUR_SPACES + "Could not create section reader");
+              out.println(FOUR_SPACES + FOUR_SPACES + "Section FileInfo not available or empty");
             }
-          } catch (Exception sectionException) {
-            out.println(FOUR_SPACES + FOUR_SPACES + "Error accessing section FileInfo: "
-              + sectionException.getMessage());
+          } else {
+            out.println(FOUR_SPACES + FOUR_SPACES + "Section reader not initialized");
           }
-
-          if (i < tenantSectionIds.length - 1) {
-            out.println(); // Add spacing between sections
-          }
+        } else {
+          out.println(FOUR_SPACES + FOUR_SPACES + "Could not create section reader");
         }
-      } else {
-        out.println("Section-level FileInfo: No sections found");
+      } catch (IllegalArgumentException | IOException sectionException) {
+        out.println(FOUR_SPACES + FOUR_SPACES + "Error accessing section FileInfo: "
+          + sectionException.getMessage());
       }
-    } catch (Exception e) {
-      out.println("Error reading section FileInfo: " + e.getMessage());
+
+      if (i < tenantSectionIds.length - 1) {
+        out.println(); // Add spacing between sections
+      }
     }
   }
 
@@ -890,78 +883,73 @@ public class HFilePrettyPrinter extends Configured implements Tool {
    * @param mtReader the multi-tenant reader to get section information from
    */
   private void printSectionBloomFilters(AbstractMultiTenantReader mtReader) {
-    try {
-      byte[][] tenantSectionIds = mtReader.getAllTenantSectionIds();
+    byte[][] tenantSectionIds = mtReader.getAllTenantSectionIds();
 
-      if (tenantSectionIds != null && tenantSectionIds.length > 0) {
-        out.println("Section-level Bloom filters:");
+    if (tenantSectionIds == null || tenantSectionIds.length == 0) {
+      out.println("Section-level Bloom filters: No sections found");
+      return;
+    }
 
-        for (int i = 0; i < tenantSectionIds.length; i++) {
-          byte[] sectionId = tenantSectionIds[i];
-          out.println(
-            FOUR_SPACES + "--- Section " + i + ": " + Bytes.toStringBinary(sectionId) + " ---");
+    out.println("Section-level Bloom filters:");
 
-          try {
-            AbstractMultiTenantReader.SectionReader sectionReader =
-              mtReader.getSectionReader(sectionId);
-            if (sectionReader != null) {
-              HFileReaderImpl sectionHFileReader = sectionReader.getReader();
-              if (sectionHFileReader != null) {
+    for (int i = 0; i < tenantSectionIds.length; i++) {
+      byte[] sectionId = tenantSectionIds[i];
+      out.println(
+        FOUR_SPACES + "--- Section " + i + ": " + Bytes.toStringBinary(sectionId) + " ---");
 
-                // Print general bloom filter for this section
-                DataInput bloomMeta = sectionHFileReader.getGeneralBloomFilterMetadata();
-                BloomFilter bloomFilter = null;
-                if (bloomMeta != null) {
-                  bloomFilter = BloomFilterFactory.createFromMeta(bloomMeta, sectionHFileReader);
-                }
+      try {
+        AbstractMultiTenantReader.SectionReader sectionReader =
+          mtReader.getSectionReader(sectionId);
+        if (sectionReader != null) {
+          HFileReaderImpl sectionHFileReader = sectionReader.getReader();
+          if (sectionHFileReader != null) {
 
-                out.println(FOUR_SPACES + FOUR_SPACES + FOUR_SPACES + "General Bloom filter:");
-                if (bloomFilter != null) {
-                  String bloomDetails =
-                    bloomFilter.toString().replaceAll(BloomFilterUtil.STATS_RECORD_SEP,
-                      "\n" + FOUR_SPACES + FOUR_SPACES + FOUR_SPACES);
-                  out.println(FOUR_SPACES + FOUR_SPACES + FOUR_SPACES + bloomDetails);
-                } else {
-                  out.println(FOUR_SPACES + FOUR_SPACES + FOUR_SPACES + "Not present");
-                }
-
-                // Print delete bloom filter for this section
-                bloomMeta = sectionHFileReader.getDeleteBloomFilterMetadata();
-                bloomFilter = null;
-                if (bloomMeta != null) {
-                  bloomFilter = BloomFilterFactory.createFromMeta(bloomMeta, sectionHFileReader);
-                }
-
-                out.println(FOUR_SPACES + FOUR_SPACES + "Delete Family Bloom filter:");
-                if (bloomFilter != null) {
-                  String bloomDetails =
-                    bloomFilter.toString().replaceAll(BloomFilterUtil.STATS_RECORD_SEP,
-                      "\n" + FOUR_SPACES + FOUR_SPACES + FOUR_SPACES);
-                  out.println(FOUR_SPACES + FOUR_SPACES + FOUR_SPACES + bloomDetails);
-                } else {
-                  out.println(FOUR_SPACES + FOUR_SPACES + FOUR_SPACES + "Not present");
-                }
-
-              } else {
-                out.println(FOUR_SPACES + FOUR_SPACES + "Section reader not initialized");
-              }
-            } else {
-              out.println(FOUR_SPACES + FOUR_SPACES + "Could not create section reader");
+            // Print general bloom filter for this section
+            DataInput bloomMeta = sectionHFileReader.getGeneralBloomFilterMetadata();
+            BloomFilter bloomFilter = null;
+            if (bloomMeta != null) {
+              bloomFilter = BloomFilterFactory.createFromMeta(bloomMeta, sectionHFileReader);
             }
-          } catch (Exception sectionException) {
-            out.println(FOUR_SPACES + FOUR_SPACES + "Error accessing section bloom filters: "
-              + sectionException.getMessage());
-          }
 
-          if (i < tenantSectionIds.length - 1) {
-            out.println(); // Add spacing between sections
+            out.println(FOUR_SPACES + FOUR_SPACES + FOUR_SPACES + "General Bloom filter:");
+            if (bloomFilter != null) {
+              String bloomDetails = bloomFilter.toString().replaceAll(
+                BloomFilterUtil.STATS_RECORD_SEP, "\n" + FOUR_SPACES + FOUR_SPACES + FOUR_SPACES);
+              out.println(FOUR_SPACES + FOUR_SPACES + FOUR_SPACES + bloomDetails);
+            } else {
+              out.println(FOUR_SPACES + FOUR_SPACES + FOUR_SPACES + "Not present");
+            }
+
+            // Print delete bloom filter for this section
+            bloomMeta = sectionHFileReader.getDeleteBloomFilterMetadata();
+            bloomFilter = null;
+            if (bloomMeta != null) {
+              bloomFilter = BloomFilterFactory.createFromMeta(bloomMeta, sectionHFileReader);
+            }
+
+            out.println(FOUR_SPACES + FOUR_SPACES + "Delete Family Bloom filter:");
+            if (bloomFilter != null) {
+              String bloomDetails = bloomFilter.toString().replaceAll(
+                BloomFilterUtil.STATS_RECORD_SEP, "\n" + FOUR_SPACES + FOUR_SPACES + FOUR_SPACES);
+              out.println(FOUR_SPACES + FOUR_SPACES + FOUR_SPACES + bloomDetails);
+            } else {
+              out.println(FOUR_SPACES + FOUR_SPACES + FOUR_SPACES + "Not present");
+            }
+
+          } else {
+            out.println(FOUR_SPACES + FOUR_SPACES + "Section reader not initialized");
           }
+        } else {
+          out.println(FOUR_SPACES + FOUR_SPACES + "Could not create section reader");
         }
-      } else {
-        out.println("Section-level Bloom filters: No sections found");
+      } catch (IllegalArgumentException | IOException sectionException) {
+        out.println(FOUR_SPACES + FOUR_SPACES + "Error accessing section bloom filters: "
+          + sectionException.getMessage());
       }
-    } catch (Exception e) {
-      out.println("Error reading section bloom filters: " + e.getMessage());
+
+      if (i < tenantSectionIds.length - 1) {
+        out.println(); // Add spacing between sections
+      }
     }
   }
 
