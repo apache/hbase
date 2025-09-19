@@ -25,37 +25,29 @@ import static org.apache.hadoop.hbase.backup.util.BackupFileSystemManager.WALS_D
 import static org.apache.hadoop.hbase.backup.util.BackupUtils.DATE_FORMAT;
 import static org.apache.hadoop.hbase.mapreduce.WALPlayer.IGNORE_EMPTY_FILES;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupRestoreFactory;
 import org.apache.hadoop.hbase.backup.PointInTimeRestoreRequest;
 import org.apache.hadoop.hbase.backup.RestoreJob;
 import org.apache.hadoop.hbase.backup.RestoreRequest;
-import org.apache.hadoop.hbase.backup.mapreduce.BulkLoadCollectorJob;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
+import org.apache.hadoop.hbase.backup.util.BulkFilesCollector;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.mapreduce.WALInputFormat;
 import org.apache.hadoop.hbase.mapreduce.WALPlayer;
@@ -394,96 +386,10 @@ public abstract class AbstractPitrRestoreHandler {
       return Collections.emptyList();
     }
 
-    // Create unique temporary output dir under restoreRootDir, e.g.
-    // <restoreRootDir>/_wal_collect_<table_name><ts>
-    final String unique = String.format("_wal_collect_%s%d", sourceTable.getQualifierAsString(),
-      EnvironmentEdgeManager.currentTime());
-    final Path bulkFilesOut = new Path(restoreRootDir, unique);
+    String walDirsCsv = String.join(",", validDirs);
 
-    FileSystem fs = bulkFilesOut.getFileSystem(conn.getConfiguration());
-    try {
-      // If bulkFilesOut exists for some reason, delete it.
-      if (fs.exists(bulkFilesOut)) {
-        LOG.info("Temporary bulkload file collect output directory {} already exists - deleting.",
-          bulkFilesOut);
-        fs.delete(bulkFilesOut, true);
-      }
-
-      String walDirsCsv = String.join(",", validDirs);
-      String[] args = new String[] { walDirsCsv, bulkFilesOut.toString(),
-        sourceTable.getNameAsString(), targetTable.getNameAsString() };
-
-      // Initialize and run BulkLoadCollectorJob
-      Tool bulkLoadCollectorJob = initializeBulkCollectorJob(startTime, endTime);
-      try {
-        LOG.info("Executing BulkLoadCollectorJob with args: {}", Arrays.toString(args));
-        int exitCode = bulkLoadCollectorJob.run(args);
-        if (exitCode != 0) {
-          throw new IOException("BulkLoadCollectorJob collect failed with exit code: " + exitCode);
-        }
-        LOG.info("BulkLoadCollectorJob collect completed successfully for {}", sourceTable);
-      } catch (Exception e) {
-        LOG.error("Error during BulkLoadCollectorJob for {}: {}", sourceTable, e.getMessage(), e);
-        throw new IOException("Exception during BulkLoadCollectorJob collect", e);
-      }
-
-      // Read and return deduplicated list of Paths from bulkFilesOut
-      List<Path> results = readBulkFilesListFromOutput(fs, bulkFilesOut);
-      LOG.info("Collected {} unique bulk-load files into list.", results.size());
-      return results;
-    } finally {
-      // cleanup temporary output directory
-      try {
-        if (fs.exists(bulkFilesOut)) {
-          boolean deleted = fs.delete(bulkFilesOut, true);
-          if (!deleted) {
-            LOG.warn("Failed to delete temporary bulkload file collect output dir: {}",
-              bulkFilesOut);
-          } else {
-            LOG.debug("Deleted temporary bulkload file collect output dir: {}", bulkFilesOut);
-          }
-        }
-      } catch (IOException ioe) {
-        LOG.warn("Exception while deleting temporary bulkload file collect output dir {}: {}",
-          bulkFilesOut, ioe.getMessage(), ioe);
-      }
-    }
-  }
-
-  private List<Path> readBulkFilesListFromOutput(FileSystem fs, Path bulkFilesOut)
-    throws IOException {
-    if (!fs.exists(bulkFilesOut)) {
-      LOG.warn("Bulk files output directory {} does not exist.", bulkFilesOut);
-      return Collections.emptyList();
-    }
-
-    RemoteIterator<LocatedFileStatus> it = fs.listFiles(bulkFilesOut, true);
-    Set<String> dedupe = new LinkedHashSet<>(); // preserve insertion order
-    while (it.hasNext()) {
-      LocatedFileStatus status = it.next();
-      Path p = status.getPath();
-      String name = p.getName();
-      // skip hidden/system files like _SUCCESS or _logs
-      if (name.startsWith("_") || name.startsWith(".")) {
-        continue;
-      }
-      try (FSDataInputStream in = fs.open(p);
-        BufferedReader br = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8))) {
-        String line;
-        while ((line = br.readLine()) != null) {
-          line = line.trim();
-          if (line.isEmpty()) continue;
-          dedupe.add(line);
-        }
-      }
-    }
-
-    List<Path> result = new ArrayList<>(dedupe.size());
-    for (String s : dedupe) {
-      result.add(new Path(s));
-    }
-    LOG.info("Collected {} unique bulk-load store files.", result.size());
-    return result;
+    return BulkFilesCollector.collectFromWalDirs(HBaseConfiguration.create(conn.getConfiguration()),
+      walDirsCsv, restoreRootDir, sourceTable, targetTable, startTime, endTime);
   }
 
   /**
@@ -513,7 +419,7 @@ public abstract class AbstractPitrRestoreHandler {
           validDirs.add(dayDir.getPath().toString());
         }
       } catch (ParseException e) {
-        LOG.warn("Skipping invalid directory name: " + dirName, e);
+        LOG.warn("Skipping invalid directory name: {}", dirName, e);
       }
     }
     return validDirs;
@@ -553,17 +459,6 @@ public abstract class AbstractPitrRestoreHandler {
     Tool walPlayer = new WALPlayer();
     walPlayer.setConf(conf);
     return walPlayer;
-  }
-
-  private Tool initializeBulkCollectorJob(long startTime, long endTime) {
-    Configuration conf = HBaseConfiguration.create(conn.getConfiguration());
-    conf.setLong(WALInputFormat.START_TIME_KEY, startTime);
-    conf.setLong(WALInputFormat.END_TIME_KEY, endTime);
-    conf.setBoolean(WALPlayer.IGNORE_EMPTY_FILES, true);
-
-    Tool bulkloadCollector = new BulkLoadCollectorJob();
-    bulkloadCollector.setConf(conf);
-    return bulkloadCollector;
   }
 
   protected abstract List<PitrBackupMetadata> getBackupMetadata(PointInTimeRestoreRequest request)
