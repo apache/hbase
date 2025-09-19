@@ -266,7 +266,8 @@ public class TestRSGroupsKillRS extends TestRSGroupsBase {
     Address address = servers.iterator().next();
     int majorVersion = VersionInfo.getMajorVersion(originVersion);
     assertTrue(majorVersion >= 1);
-    String lowerVersion = String.valueOf(majorVersion - 1) + originVersion.substring(originVersion.indexOf("."));
+    String lowerVersion =
+      String.valueOf(majorVersion - 1) + originVersion.substring(originVersion.indexOf("."));
     try {
       setVersionInfoVersion(lowerVersion);
       TEST_UTIL.getMiniHBaseCluster().startRegionServer(address.getHostName(), address.getPort());
@@ -276,8 +277,8 @@ public class TestRSGroupsKillRS extends TestRSGroupsBase {
         MASTER.getRegionServerVersion(getServerName(servers.iterator().next()))) > 0);
       LOG.debug("wait for META assigned...");
       // SCP finished, which means all regions assigned too.
-      TEST_UTIL.waitFor(60000, () -> !TEST_UTIL.getHBaseCluster().getMaster().getProcedures().stream()
-        .filter(p -> (p instanceof ServerCrashProcedure)).findAny().isPresent());
+      TEST_UTIL.waitFor(60000, () -> !TEST_UTIL.getHBaseCluster().getMaster().getProcedures()
+        .stream().filter(p -> (p instanceof ServerCrashProcedure)).findAny().isPresent());
     } finally {
       setVersionInfoVersion(Version.version);
     }
