@@ -31,20 +31,28 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Future;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.TableStateManager;
 import org.apache.hadoop.hbase.master.hbck.HbckChore;
 import org.apache.hadoop.hbase.master.hbck.HbckReport;
+import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.Before;
@@ -246,5 +254,40 @@ public class TestHbckChore extends TestAssignmentManagerBase {
     HbckChore hbckChoreWithChangedConf = new HbckChore(master);
     hbckChoreWithChangedConf.choreForTesting();
     assertNull(hbckChoreWithChangedConf.getLastReport());
+  }
+
+  @Test
+  public void testChoreSkipsForeignMetaTables() throws Exception {
+    FileSystem fs = master.getMasterFileSystem().getFileSystem();
+    Path rootDir = master.getMasterFileSystem().getRootDir();
+    String[] metaTables = { "meta_replica1", "meta" };
+    Path hbaseNamespaceDir = new Path(rootDir, HConstants.BASE_NAMESPACE_DIR + "/hbase");
+    fs.mkdirs(hbaseNamespaceDir);
+
+    for (String metaTable : metaTables) {
+      TableName tableName = TableName.valueOf("hbase", metaTable);
+      Path metaTableDir = new Path(hbaseNamespaceDir, metaTable);
+      fs.mkdirs(metaTableDir);
+      fs.mkdirs(new Path(metaTableDir, FSTableDescriptors.TABLEINFO_DIR));
+      fs.mkdirs(new Path(metaTableDir, "abcdef0123456789"));
+
+      TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(HConstants.CATALOG_FAMILY)
+          .setMaxVersions(HConstants.DEFAULT_HBASE_META_VERSIONS).setInMemory(true)
+          .setBlocksize(HConstants.DEFAULT_HBASE_META_BLOCK_SIZE)
+          .setBloomFilterType(BloomType.ROWCOL).build())
+        .build();
+
+      Path tableDir = CommonFSUtils.getTableDir(rootDir, tableName);
+      FSTableDescriptors.createTableDescriptorForTableDirectory(fs, tableDir, tableDescriptor,
+        false);
+    }
+
+    assertTrue("HbckChore should run successfully", hbckChore.runChore());
+    HbckReport report = hbckChore.getLastReport();
+    assertNotNull("HbckReport should not be null", report);
+    boolean hasForeignMetaOrphan = report.getOrphanRegionsOnFS().values().stream()
+      .anyMatch(path -> path.toString().contains("meta_replica1"));
+    assertFalse("HbckChore should not report foreign meta tables as orphans", hasForeignMetaOrphan);
   }
 }
