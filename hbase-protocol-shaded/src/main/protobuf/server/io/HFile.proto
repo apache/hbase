@@ -53,4 +53,5 @@ message FileTrailerProto {
   optional bytes encryption_key = 13;
   optional bool multiTenant = 14;
   optional int32 tenantPrefixLength = 15;
+  optional uint64 section_index_offset = 16;
 }

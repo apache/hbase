@@ -88,7 +88,6 @@ public class MultiTenantHFileWriter implements HFile.Writer {
   public static final String FILEINFO_TENANT_INDEX_MAX_CHUNK = "TENANT_INDEX_MAX_CHUNK";
   public static final String FILEINFO_TENANT_ID = "TENANT_ID";
   public static final String FILEINFO_TENANT_SECTION_ID = "TENANT_SECTION_ID";
-
   /** Empty prefix for default tenant */
   private static final byte[] DEFAULT_TENANT_PREFIX = new byte[0];
 
@@ -148,6 +147,10 @@ public class MultiTenantHFileWriter implements HFile.Writer {
   /** Total uncompressed bytes */
   private long totalUncompressedBytes = 0;
 
+  /** Absolute offset where each section's load-on-open data begins (max across sections) */
+  private long maxSectionDataEndOffset = 0;
+  /** Absolute offset where the global section index root block starts */
+  private long sectionIndexRootOffset = -1;
   /** HFile v4 trailer */
   private FixedFileTrailer trailer;
   /** File info for metadata */
@@ -480,6 +483,11 @@ public class MultiTenantHFileWriter implements HFile.Writer {
       currentSectionWriter.close();
       outputStream.hsync(); // Ensure section data (incl. trailer) is synced to disk
 
+      long sectionDataEnd = currentSectionWriter.getSectionDataEndOffset();
+      if (sectionDataEnd >= 0) {
+        maxSectionDataEndOffset = Math.max(maxSectionDataEndOffset, sectionDataEnd);
+      }
+
       // Get current position to calculate section size
       long sectionEndOffset = outputStream.getPos();
       long sectionSize = sectionEndOffset - sectionStartOffset;
@@ -680,7 +688,14 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     // This is the core of HFile v4 - maps tenant prefixes to section locations
     LOG.info("Writing section index with {} sections", sectionCount);
     long rootIndexOffset = sectionIndexWriter.writeIndexBlocks(outputStream);
-    trailer.setLoadOnOpenOffset(rootIndexOffset);
+    sectionIndexRootOffset = rootIndexOffset;
+    trailer.setSectionIndexOffset(sectionIndexRootOffset);
+    long loadOnOpenOffset = maxSectionDataEndOffset > 0 ? maxSectionDataEndOffset : rootIndexOffset;
+    if (loadOnOpenOffset > rootIndexOffset) {
+      // Clamp to ensure we never point past the actual section index start.
+      loadOnOpenOffset = rootIndexOffset;
+    }
+    trailer.setLoadOnOpenOffset(loadOnOpenOffset);
 
     // 2. Write File Info Block (minimal v4-specific metadata)
     LOG.info("Writing v4 file info");
@@ -963,6 +978,8 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     private final long sectionStartOffset;
     /** Whether this section writer has been closed */
     private boolean closed = false;
+    /** Absolute offset where this section's load-on-open data begins */
+    private long sectionLoadOnOpenOffset = -1L;
 
     /**
      * Creates a section writer for a specific tenant section.
@@ -979,7 +996,9 @@ public class MultiTenantHFileWriter implements HFile.Writer {
       HFileContext fileContext, byte[] tenantSectionId, byte[] tenantId, long sectionStartOffset)
       throws IOException {
       // Create a section-aware output stream that handles position translation
-      super(conf, cacheConf, null, new SectionOutputStream(outputStream, sectionStartOffset),
+      super(conf, cacheConf, null,
+        new SectionOutputStream(outputStream, sectionStartOffset, MultiTenantHFileWriter.this.path
+          .getName()),
         fileContext);
 
       this.tenantSectionId = tenantSectionId;
@@ -1012,16 +1031,19 @@ public class MultiTenantHFileWriter implements HFile.Writer {
       private final FSDataOutputStream delegate;
       /** The base offset of this section in the parent file */
       private final long baseOffset;
+      /** Logical file name used when the writer builds cache keys */
+      private final String displayName;
 
       /**
        * Creates a section-aware output stream.
        * @param delegate   The parent file's output stream
        * @param baseOffset The starting offset of this section
        */
-      public SectionOutputStream(FSDataOutputStream delegate, long baseOffset) {
+      public SectionOutputStream(FSDataOutputStream delegate, long baseOffset, String displayName) {
         super(delegate.getWrappedStream(), null);
         this.delegate = delegate;
         this.baseOffset = baseOffset;
+        this.displayName = displayName;
       }
 
       @Override
@@ -1048,6 +1070,11 @@ public class MultiTenantHFileWriter implements HFile.Writer {
       public void close() throws IOException {
         // Don't close the delegate - it's shared across sections
         flush();
+      }
+
+      @Override
+      public String toString() {
+        return displayName;
       }
     }
 
@@ -1142,6 +1169,10 @@ public class MultiTenantHFileWriter implements HFile.Writer {
       return sectionStartOffset;
     }
 
+    public long getSectionDataEndOffset() {
+      return sectionLoadOnOpenOffset;
+    }
+
     @Override
     public Path getPath() {
       // Return the parent file path
@@ -1182,6 +1213,12 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     @Override
     protected int getMajorVersion() {
       return 3; // Each section uses version 3 format
+    }
+
+    @Override
+    protected void finishClose(FixedFileTrailer trailer) throws IOException {
+      sectionLoadOnOpenOffset = sectionStartOffset + trailer.getLoadOnOpenDataOffset();
+      super.finishClose(trailer);
     }
 
     public long getTotalUncompressedBytes() {

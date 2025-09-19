@@ -144,12 +144,13 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
     FSDataInputStream fsdis = fsWrapper.getStream(fsWrapper.shouldUseHBaseChecksum());
     long originalPosition = fsdis.getPos();
 
+    long sectionIndexOffset = getSectionIndexOffset();
     try {
-      LOG.debug("Seeking to load-on-open section at offset {}", trailer.getLoadOnOpenDataOffset());
+      LOG.debug("Seeking to load-on-open section at offset {}", sectionIndexOffset);
 
-      // In HFile v4, the tenant index is stored at the load-on-open offset
-      HFileBlock rootIndexBlock = getUncachedBlockReader()
-        .readBlockData(trailer.getLoadOnOpenDataOffset(), -1, true, false, false);
+      // In HFile v4, the tenant index is stored at the recorded section index offset
+      HFileBlock rootIndexBlock =
+        getUncachedBlockReader().readBlockData(sectionIndexOffset, -1, true, false, false);
 
       // Validate this is a root index block
       if (rootIndexBlock.getBlockType() != BlockType.ROOT_INDEX) {
@@ -176,6 +177,11 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
       // Restore original position
       fsdis.seek(originalPosition);
     }
+  }
+
+  private long getSectionIndexOffset() {
+    long offset = trailer.getSectionIndexOffset();
+    return offset >= 0 ? offset : trailer.getLoadOnOpenDataOffset();
   }
 
   /**

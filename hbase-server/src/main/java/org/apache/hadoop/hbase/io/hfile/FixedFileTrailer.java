@@ -140,6 +140,9 @@ public class FixedFileTrailer {
    */
   private int tenantPrefixLength = 0;
 
+  /** Offset of the multi-tenant section index root block */
+  private long sectionIndexOffset = -1L;
+
   /**
    * The {@link HFile} format major version.
    */
@@ -225,6 +228,9 @@ public class FixedFileTrailer {
     if (isMultiTenant) {
       builder.setMultiTenant(isMultiTenant);
       builder.setTenantPrefixLength(tenantPrefixLength);
+      if (sectionIndexOffset >= 0) {
+        builder.setSectionIndexOffset(sectionIndexOffset);
+      }
     }
     return builder.build();
   }
@@ -334,6 +340,9 @@ public class FixedFileTrailer {
     if (trailerProto.hasTenantPrefixLength()) {
       tenantPrefixLength = trailerProto.getTenantPrefixLength();
     }
+    if (trailerProto.hasSectionIndexOffset()) {
+      sectionIndexOffset = trailerProto.getSectionIndexOffset();
+    }
   }
 
   /**
@@ -387,6 +396,7 @@ public class FixedFileTrailer {
       append(sb, "isMultiTenant=" + isMultiTenant);
       if (isMultiTenant) {
         append(sb, "tenantPrefixLength=" + tenantPrefixLength);
+        append(sb, "sectionIndexOffset=" + sectionIndexOffset);
       }
     }
     append(sb, "majorVersion=" + majorVersion);
@@ -478,6 +488,14 @@ public class FixedFileTrailer {
 
   public void setLoadOnOpenOffset(long loadOnOpenDataOffset) {
     this.loadOnOpenDataOffset = loadOnOpenDataOffset;
+  }
+
+  public long getSectionIndexOffset() {
+    return sectionIndexOffset;
+  }
+
+  public void setSectionIndexOffset(long sectionIndexOffset) {
+    this.sectionIndexOffset = sectionIndexOffset;
   }
 
   public int getDataIndexCount() {
