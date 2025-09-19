@@ -996,10 +996,8 @@ public class MultiTenantHFileWriter implements HFile.Writer {
       HFileContext fileContext, byte[] tenantSectionId, byte[] tenantId, long sectionStartOffset)
       throws IOException {
       // Create a section-aware output stream that handles position translation
-      super(conf, cacheConf, null,
-        new SectionOutputStream(outputStream, sectionStartOffset, MultiTenantHFileWriter.this.path
-          .getName()),
-        fileContext);
+      super(conf, cacheConf, null, new SectionOutputStream(outputStream, sectionStartOffset,
+        MultiTenantHFileWriter.this.path.getName()), fileContext);
 
       this.tenantSectionId = tenantSectionId;
       this.sectionStartOffset = sectionStartOffset;
