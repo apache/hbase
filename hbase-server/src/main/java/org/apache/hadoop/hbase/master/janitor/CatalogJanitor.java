@@ -105,7 +105,7 @@ public class CatalogJanitor extends ScheduledChore {
         scan();
       }
     } catch (IOException e) {
-      LOG.warn("Failed initial janitorial scan of hbase:meta table", e);
+      LOG.warn("Failed initial janitorial scan of {} table", TableName.META_TABLE_NAME, e);
       return false;
     }
     return true;
@@ -145,7 +145,7 @@ public class CatalogJanitor extends ScheduledChore {
           + this.services.getServerManager().isClusterShutdown());
       }
     } catch (IOException e) {
-      LOG.warn("Failed janitorial scan of hbase:meta table", e);
+      LOG.warn("Failed janitorial scan of {} table", TableName.META_TABLE_NAME, e);
     }
   }
 

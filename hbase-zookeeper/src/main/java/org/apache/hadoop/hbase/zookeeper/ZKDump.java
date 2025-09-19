@@ -32,6 +32,7 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
@@ -74,7 +75,7 @@ public final class ZKDump {
           sb.append("\n ").append(child);
         }
       }
-      sb.append("\nRegion server holding hbase:meta:");
+      sb.append("\nRegion server holding ").append(TableName.META_TABLE_NAME).append(":");
       sb.append("\n ").append(MetaTableLocator.getMetaRegionLocation(zkWatcher));
       int numMetaReplicas = zkWatcher.getMetaReplicaNodes().size();
       for (int i = 1; i < numMetaReplicas; i++) {
