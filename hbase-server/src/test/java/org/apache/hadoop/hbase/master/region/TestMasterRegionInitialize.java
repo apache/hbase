@@ -24,8 +24,12 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -113,5 +117,26 @@ public class TestMasterRegionInitialize extends MasterRegionTestBase {
 
     // but the data should have been cleaned up
     assertTrue(region.get(new Get(row)).isEmpty());
+  }
+
+  @Test
+  public void testMasterRegionDirSuffix() throws Exception {
+    HBaseTestingUtil testUtil = new HBaseTestingUtil();
+    Configuration conf = testUtil.getConfiguration();
+    conf.set(HConstants.HBASE_META_TABLE_SUFFIX, "replica1");
+
+    try {
+      testUtil.startMiniCluster(1);
+      FileSystem fs = CommonFSUtils.getRootDirFileSystem(conf);
+      Path rootDir = CommonFSUtils.getRootDir(conf);
+
+      assertTrue("Master region directory should use the suffix",
+        fs.exists(new Path(rootDir, "MasterData_replica1")));
+      assertFalse("Default master region directory should not exist when suffix is used",
+        fs.exists(new Path(rootDir, "MasterData")));
+
+    } finally {
+      testUtil.shutdownMiniCluster();
+    }
   }
 }
