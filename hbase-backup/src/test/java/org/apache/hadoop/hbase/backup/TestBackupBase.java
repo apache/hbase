@@ -315,6 +315,8 @@ public class TestBackupBase {
     // Set MultiWAL (with 2 default WAL files per RS)
     conf1.set(WALFactory.WAL_PROVIDER, provider);
     TEST_UTIL.startMiniCluster();
+    conf1 = TEST_UTIL.getConfiguration();
+    TEST_UTIL.startMiniMapReduceCluster();
 
     if (useSecondCluster) {
       conf2 = HBaseConfiguration.create(conf1);
@@ -327,9 +329,7 @@ public class TestBackupBase {
       CommonFSUtils.setWALRootDir(TEST_UTIL2.getConfiguration(), p);
       TEST_UTIL2.startMiniCluster();
     }
-    conf1 = TEST_UTIL.getConfiguration();
 
-    TEST_UTIL.startMiniMapReduceCluster();
     BACKUP_ROOT_DIR =
       new Path(new Path(TEST_UTIL.getConfiguration().get("fs.defaultFS")), BACKUP_ROOT_DIR)
         .toString();
