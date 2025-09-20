@@ -40,7 +40,7 @@ public class TestJUnit5TagConstants {
   @Test
   public void testVerify() throws Exception {
     ClassFinder finder = new ClassFinder(getClass().getClassLoader());
-    for (Class<?> annoClazz : finder.findClasses(ClientTests.class.getPackageName(), false)) {
+    for (Class<?> annoClazz : finder.findClasses(ClientTests.class.getPackage().getName(), false)) {
       Field field = annoClazz.getField("TAG");
       assertEquals(annoClazz.getName(), field.get(null));
     }
