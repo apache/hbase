@@ -84,6 +84,7 @@ import org.apache.hadoop.hbase.master.locking.LockProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil.NonceProcedureRunnable;
+import org.apache.hadoop.hbase.master.procedure.RestoreBackupSystemTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.master.replication.AbstractPeerProcedure;
 import org.apache.hadoop.hbase.mob.MobUtils;
@@ -3166,6 +3167,24 @@ public class MasterRpcServices extends RSRpcServices
       return FlushTableResponse.newBuilder().setProcId(procId).build();
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
+    }
+  }
+
+  @Override
+  public MasterProtos.RestoreBackupSystemTableResponse restoreBackupSystemTable(
+    RpcController rpcController,
+    MasterProtos.RestoreBackupSystemTableRequest restoreBackupSystemTableRequest)
+    throws ServiceException {
+    try {
+      String snapshotName = restoreBackupSystemTableRequest.getSnapshotName();
+      SnapshotDescription snapshot = master.snapshotManager.getCompletedSnapshots().stream()
+        .filter(s -> s.getName().equals(snapshotName)).findFirst().orElseThrow(
+          () -> new ServiceException(String.format("Snapshot %s not found", snapshotName)));
+      long pid = master.getMasterProcedureExecutor()
+        .submitProcedure(new RestoreBackupSystemTableProcedure(snapshot));
+      return MasterProtos.RestoreBackupSystemTableResponse.newBuilder().setProcId(pid).build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
     }
   }
 }
