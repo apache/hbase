@@ -935,14 +935,14 @@
     <!--
       When updating checkstyle.version, please make the same change in `.idea/checkstyle-idea.xml`
     -->
-    <checkstyle.version>11.0.1</checkstyle.version>
+    <checkstyle.version>8.29</checkstyle.version>
     <exec.maven.version>3.1.0</exec.maven.version>
     <error-prone.version>2.41.0</error-prone.version>
     <jamon.plugin.version>2.4.2</jamon.plugin.version>
     <lifecycle.mapping.version>1.0.0</lifecycle.mapping.version>
     <maven.antrun.version>1.8</maven.antrun.version>
     <maven.bundle.version>3.3.0</maven.bundle.version>
-    <maven.checkstyle.version>3.6.0</maven.checkstyle.version>
+    <maven.checkstyle.version>3.1.0</maven.checkstyle.version>
     <maven.eclipse.version>2.10</maven.eclipse.version>
     <maven.gpg.version>3.0.1</maven.gpg.version>
     <maven.javadoc.version>3.4.0</maven.javadoc.version>
