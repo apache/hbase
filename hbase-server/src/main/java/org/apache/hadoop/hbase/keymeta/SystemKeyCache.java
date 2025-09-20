@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -50,7 +49,7 @@ public class SystemKeyCache {
     }
     ManagedKeyData latestSystemKey = null;
     Map<Long, ManagedKeyData> systemKeys = new TreeMap<>();
-    for (Path keyPath: allSystemKeyFiles) {
+    for (Path keyPath : allSystemKeyFiles) {
       LOG.info("Loading system key from: {}", keyPath);
       ManagedKeyData keyData = accessor.loadSystemKey(keyPath);
       if (latestSystemKey == null) {

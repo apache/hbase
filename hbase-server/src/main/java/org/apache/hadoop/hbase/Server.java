@@ -86,19 +86,13 @@ public interface Server extends Abortable, Stoppable {
   /** Returns The {@link ChoreService} instance for this server */
   ChoreService getChoreService();
 
-  /**
-   * @return the cache for cluster keys.
-   */
+  /** Returns the cache for cluster keys. */
   public SystemKeyCache getSystemKeyCache();
 
-  /**
-   * @return the cache for managed keys.
-   */
+  /** Returns the cache for managed keys. */
   public ManagedKeyDataCache getManagedKeyDataCache();
 
-  /**
-   * @return the admin for keymeta.
-   */
+  /** Returns the admin for keymeta. */
   public KeymetaAdmin getKeymetaAdmin();
 
   /** Returns Return the FileSystem object used (can return null!). */

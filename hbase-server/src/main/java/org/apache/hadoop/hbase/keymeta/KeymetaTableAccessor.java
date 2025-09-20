@@ -21,11 +21,9 @@ import java.io.IOException;
 import java.security.Key;
 import java.security.KeyException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -66,14 +64,14 @@ public class KeymetaTableAccessor extends KeyManagementBase {
 
   public static final String DEK_WRAPPED_BY_STK_QUAL_NAME = "w";
   public static final byte[] DEK_WRAPPED_BY_STK_QUAL_BYTES =
-      Bytes.toBytes(DEK_WRAPPED_BY_STK_QUAL_NAME);
+    Bytes.toBytes(DEK_WRAPPED_BY_STK_QUAL_NAME);
 
   public static final String STK_CHECKSUM_QUAL_NAME = "s";
   public static final byte[] STK_CHECKSUM_QUAL_BYTES = Bytes.toBytes(STK_CHECKSUM_QUAL_NAME);
 
   public static final String REFRESHED_TIMESTAMP_QUAL_NAME = "t";
   public static final byte[] REFRESHED_TIMESTAMP_QUAL_BYTES =
-      Bytes.toBytes(REFRESHED_TIMESTAMP_QUAL_NAME);
+    Bytes.toBytes(REFRESHED_TIMESTAMP_QUAL_NAME);
 
   public static final String KEY_STATE_QUAL_NAME = "k";
   public static final byte[] KEY_STATE_QUAL_BYTES = Bytes.toBytes(KEY_STATE_QUAL_NAME);
@@ -91,11 +89,10 @@ public class KeymetaTableAccessor extends KeyManagementBase {
     assertKeyManagementEnabled();
     List<Put> puts = new ArrayList<>(2);
     if (keyData.getKeyState() == ManagedKeyState.ACTIVE) {
-      puts.add(addMutationColumns(new Put(constructRowKeyForCustNamespace(keyData)),
-          keyData));
+      puts.add(addMutationColumns(new Put(constructRowKeyForCustNamespace(keyData)), keyData));
     }
-    final Put putForMetadata = addMutationColumns(new Put(constructRowKeyForMetadata(keyData)),
-      keyData);
+    final Put putForMetadata =
+      addMutationColumns(new Put(constructRowKeyForMetadata(keyData)), keyData);
     puts.add(putForMetadata);
     Connection connection = getServer().getConnection();
     try (Table table = connection.getTable(KEY_META_TABLE_NAME)) {
@@ -105,11 +102,10 @@ public class KeymetaTableAccessor extends KeyManagementBase {
 
   /**
    * Get all the keys for the specified key_cust and key_namespace.
-   *
    * @param key_cust     The key custodian.
    * @param keyNamespace The namespace
    * @return a list of key data, one for each key, can be empty when none were found.
-   * @throws IOException when there is an underlying IOException.
+   * @throws IOException  when there is an underlying IOException.
    * @throws KeyException when there is an underlying KeyException.
    */
   @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
@@ -117,8 +113,8 @@ public class KeymetaTableAccessor extends KeyManagementBase {
     throws IOException, KeyException {
     assertKeyManagementEnabled();
     Connection connection = getServer().getConnection();
-    byte[] prefixForScan = Bytes.add(Bytes.toBytes(key_cust.length), key_cust,
-      Bytes.toBytes(keyNamespace));
+    byte[] prefixForScan =
+      Bytes.add(Bytes.toBytes(key_cust.length), key_cust, Bytes.toBytes(keyNamespace));
     PrefixFilter prefixFilter = new PrefixFilter(prefixForScan);
     Scan scan = new Scan();
     scan.setFilter(prefixFilter);
@@ -139,11 +135,10 @@ public class KeymetaTableAccessor extends KeyManagementBase {
 
   /**
    * Get the active key for the specified key_cust and key_namespace.
-   *
-   * @param key_cust The prefix
+   * @param key_cust     The prefix
    * @param keyNamespace The namespace
    * @return the active key data, or null if no active key found
-   * @throws IOException when there is an underlying IOException.
+   * @throws IOException  when there is an underlying IOException.
    * @throws KeyException when there is an underlying KeyException.
    */
   public ManagedKeyData getActiveKey(byte[] key_cust, String keyNamespace)
@@ -162,12 +157,11 @@ public class KeymetaTableAccessor extends KeyManagementBase {
 
   /**
    * Get the specific key identified by key_cust, keyNamespace and keyState.
-   *
-   * @param key_cust    The prefix.
+   * @param key_cust     The prefix.
    * @param keyNamespace The namespace.
-   * @param keyState    The state of the key.
+   * @param keyState     The state of the key.
    * @return the key or {@code null}
-   * @throws IOException when there is an underlying IOException.
+   * @throws IOException  when there is an underlying IOException.
    * @throws KeyException when there is an underlying KeyException.
    */
   public ManagedKeyData getKey(byte[] key_cust, String keyNamespace, ManagedKeyState keyState)
@@ -177,32 +171,30 @@ public class KeymetaTableAccessor extends KeyManagementBase {
 
   /**
    * Get the specific key identified by key_cust, keyNamespace and keyMetadata.
-   *
-   * @param key_cust    The prefix.
+   * @param key_cust     The prefix.
    * @param keyNamespace The namespace.
    * @param keyMetadata  The metadata.
    * @return the key or {@code null}
-   * @throws IOException when there is an underlying IOException.
+   * @throws IOException  when there is an underlying IOException.
    * @throws KeyException when there is an underlying KeyException.
    */
   public ManagedKeyData getKey(byte[] key_cust, String keyNamespace, String keyMetadata)
     throws IOException, KeyException {
     return getKeyInternal(key_cust, keyNamespace,
-        ManagedKeyData.constructMetadataHash(keyMetadata));
+      ManagedKeyData.constructMetadataHash(keyMetadata));
   }
 
   /**
    * Internal helper method to get a key using the provided metadata hash.
-   *
    * @param key_cust        The prefix.
    * @param keyNamespace    The namespace.
    * @param keyMetadataHash The metadata hash or state value.
    * @return the key or {@code null}
-   * @throws IOException when there is an underlying IOException.
+   * @throws IOException  when there is an underlying IOException.
    * @throws KeyException when there is an underlying KeyException.
    */
   private ManagedKeyData getKeyInternal(byte[] key_cust, String keyNamespace,
-      byte[] keyMetadataHash) throws IOException, KeyException {
+    byte[] keyMetadataHash) throws IOException, KeyException {
     assertKeyManagementEnabled();
     Connection connection = getServer().getConnection();
     try (Table table = connection.getTable(KEY_META_TABLE_NAME)) {
@@ -220,20 +212,18 @@ public class KeymetaTableAccessor extends KeyManagementBase {
     if (keyData.getTheKey() != null) {
       byte[] dekWrappedBySTK = EncryptionUtil.wrapKey(getServer().getConfiguration(), null,
         keyData.getTheKey(), latestSystemKey.getTheKey());
-      put.addColumn(KEY_META_INFO_FAMILY, DEK_CHECKSUM_QUAL_BYTES,
+      put
+        .addColumn(KEY_META_INFO_FAMILY, DEK_CHECKSUM_QUAL_BYTES,
           Bytes.toBytes(keyData.getKeyChecksum()))
-         .addColumn(KEY_META_INFO_FAMILY, DEK_WRAPPED_BY_STK_QUAL_BYTES, dekWrappedBySTK)
-         .addColumn(KEY_META_INFO_FAMILY, STK_CHECKSUM_QUAL_BYTES,
-           Bytes.toBytes(latestSystemKey.getKeyChecksum()))
-         ;
+        .addColumn(KEY_META_INFO_FAMILY, DEK_WRAPPED_BY_STK_QUAL_BYTES, dekWrappedBySTK)
+        .addColumn(KEY_META_INFO_FAMILY, STK_CHECKSUM_QUAL_BYTES,
+          Bytes.toBytes(latestSystemKey.getKeyChecksum()));
     }
-    Put result = put.setDurability(Durability.SKIP_WAL)
-      .setPriority(HConstants.SYSTEMTABLE_QOS)
+    Put result = put.setDurability(Durability.SKIP_WAL).setPriority(HConstants.SYSTEMTABLE_QOS)
       .addColumn(KEY_META_INFO_FAMILY, REFRESHED_TIMESTAMP_QUAL_BYTES,
         Bytes.toBytes(keyData.getRefreshTimestamp()))
       .addColumn(KEY_META_INFO_FAMILY, KEY_STATE_QUAL_BYTES,
-        new byte[] { keyData.getKeyState().getVal() })
-      ;
+        new byte[] { keyData.getKeyState().getVal() });
 
     // Only add metadata column if metadata is not null
     String metadata = keyData.getKeyMetadata();
@@ -259,7 +249,7 @@ public class KeymetaTableAccessor extends KeyManagementBase {
 
   @InterfaceAudience.Private
   public static byte[] constructRowKeyForMetadata(byte[] key_cust, String keyNamespace,
-      byte[] keyMetadataHash) {
+    byte[] keyMetadataHash) {
     return Bytes.add(constructRowKeyForCustNamespace(key_cust, keyNamespace), keyMetadataHash);
   }
 
@@ -276,17 +266,19 @@ public class KeymetaTableAccessor extends KeyManagementBase {
 
   @InterfaceAudience.Private
   public static ManagedKeyData parseFromResult(Server server, byte[] key_cust, String keyNamespace,
-      Result result) throws IOException, KeyException {
+    Result result) throws IOException, KeyException {
     if (result == null || result.isEmpty()) {
       return null;
     }
-    ManagedKeyState keyState = ManagedKeyState.forValue(
-      result.getValue(KEY_META_INFO_FAMILY, KEY_STATE_QUAL_BYTES)[0]);
-    String dekMetadata = Bytes.toString(result.getValue(KEY_META_INFO_FAMILY,
-      DEK_METADATA_QUAL_BYTES));
+    ManagedKeyState keyState =
+      ManagedKeyState.forValue(result.getValue(KEY_META_INFO_FAMILY, KEY_STATE_QUAL_BYTES)[0]);
+    String dekMetadata =
+      Bytes.toString(result.getValue(KEY_META_INFO_FAMILY, DEK_METADATA_QUAL_BYTES));
     byte[] dekWrappedByStk = result.getValue(KEY_META_INFO_FAMILY, DEK_WRAPPED_BY_STK_QUAL_BYTES);
-    if ((keyState == ManagedKeyState.ACTIVE || keyState == ManagedKeyState.INACTIVE)
-        && dekWrappedByStk == null) {
+    if (
+      (keyState == ManagedKeyState.ACTIVE || keyState == ManagedKeyState.INACTIVE)
+        && dekWrappedByStk == null
+    ) {
       throw new IOException(keyState + " key must have a wrapped key");
     }
     Key dek = null;
@@ -302,14 +294,13 @@ public class KeymetaTableAccessor extends KeyManagementBase {
       dek = EncryptionUtil.unwrapKey(server.getConfiguration(), null, dekWrappedByStk,
         clusterKey.getTheKey());
     }
-    long refreshedTimestamp = Bytes.toLong(result.getValue(KEY_META_INFO_FAMILY,
-      REFRESHED_TIMESTAMP_QUAL_BYTES));
-    ManagedKeyData
-      dekKeyData = new ManagedKeyData(key_cust, keyNamespace, dek, keyState, dekMetadata,
-      refreshedTimestamp);
+    long refreshedTimestamp =
+      Bytes.toLong(result.getValue(KEY_META_INFO_FAMILY, REFRESHED_TIMESTAMP_QUAL_BYTES));
+    ManagedKeyData dekKeyData =
+      new ManagedKeyData(key_cust, keyNamespace, dek, keyState, dekMetadata, refreshedTimestamp);
     if (dek != null) {
-      long dekChecksum = Bytes.toLong(result.getValue(KEY_META_INFO_FAMILY,
-        DEK_CHECKSUM_QUAL_BYTES));
+      long dekChecksum =
+        Bytes.toLong(result.getValue(KEY_META_INFO_FAMILY, DEK_CHECKSUM_QUAL_BYTES));
       if (dekKeyData.getKeyChecksum() != dekChecksum) {
         LOG.error("Dropping key, current key checksum: {} didn't match the expected checksum: {}"
           + " for key with metadata: {}", dekKeyData.getKeyChecksum(), dekChecksum, dekMetadata);

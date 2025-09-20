@@ -94,7 +94,7 @@ public final class EncryptionUtil {
    * @return the encrypted key bytes
    */
   public static byte[] wrapKey(Configuration conf, String subject, Key key, Key kek)
-      throws IOException {
+    throws IOException {
     // Wrap the key with the configured encryption algorithm.
     String algorithm = conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
     Cipher cipher = Encryption.getCipher(conf, algorithm);
@@ -117,8 +117,7 @@ public final class EncryptionUtil {
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     if (kek != null) {
       Encryption.encryptWithGivenKey(kek, out, new ByteArrayInputStream(keyBytes), cipher, iv);
-    }
-    else {
+    } else {
       Encryption.encryptWithSubjectKey(out, new ByteArrayInputStream(keyBytes), subject, conf,
         cipher, iv);
     }
@@ -149,7 +148,7 @@ public final class EncryptionUtil {
    * @param conf    configuration
    * @param subject subject key alias
    * @param value   the encrypted key bytes
-   * @param kek   the key encryption key
+   * @param kek     the key encryption key
    * @return the raw key bytes
    */
   public static Key unwrapKey(Configuration conf, String subject, byte[] value, Key kek)
@@ -165,8 +164,8 @@ public final class EncryptionUtil {
   }
 
   private static Key getUnwrapKey(Configuration conf, String subject,
-      EncryptionProtos.WrappedKey wrappedKey, Cipher cipher, Key kek)
-      throws IOException, KeyException {
+    EncryptionProtos.WrappedKey wrappedKey, Cipher cipher, Key kek)
+    throws IOException, KeyException {
     String configuredHashAlgorithm = Encryption.getConfiguredHashAlgorithm(conf);
     String wrappedHashAlgorithm = wrappedKey.getHashAlgorithm().trim();
     if (!configuredHashAlgorithm.equalsIgnoreCase(wrappedHashAlgorithm)) {
@@ -181,9 +180,8 @@ public final class EncryptionUtil {
     byte[] iv = wrappedKey.hasIv() ? wrappedKey.getIv().toByteArray() : null;
     if (kek != null) {
       Encryption.decryptWithGivenKey(kek, out, wrappedKey.getData().newInput(),
-          wrappedKey.getLength(), cipher, iv);
-    }
-    else {
+        wrappedKey.getLength(), cipher, iv);
+    } else {
       Encryption.decryptWithSubjectKey(out, wrappedKey.getData().newInput(), wrappedKey.getLength(),
         subject, conf, cipher, iv);
     }

@@ -24,7 +24,6 @@ import java.util.Arrays;
 import java.util.Base64;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
-
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -35,21 +34,17 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
  * This class represents an encryption key data which includes the key itself, its state, metadata
  * and a prefix. The metadata encodes enough information on the key such that it can be used to
  * retrieve the exact same key again in the future. If the key state is
- * {@link ManagedKeyState#FAILED} expect the key to be {@code null}.
- *
- * The key data is represented by the following fields:
+ * {@link ManagedKeyState#FAILED} expect the key to be {@code null}. The key data is represented by
+ * the following fields:
  * <ul>
  * <li>key_cust: The prefix for which this key belongs to</li>
  * <li>theKey: The key capturing the bytes and encoding</li>
  * <li>keyState: The state of the key (see {@link ManagedKeyState})</li>
  * <li>keyMetadata: Metadata that identifies the key</li>
  * </ul>
- *
- * The class provides methods to retrieve, as well as to compute a checksum
- * for the key data. The checksum is used to ensure the integrity of the key data.
- *
- * The class also provides a method to generate an MD5 hash of the key metadata, which can be used
- * for validation and identification.
+ * The class provides methods to retrieve, as well as to compute a checksum for the key data. The
+ * checksum is used to ensure the integrity of the key data. The class also provides a method to
+ * generate an MD5 hash of the key metadata, which can be used for validation and identification.
  */
 @InterfaceAudience.Public
 public class ManagedKeyData {
@@ -76,34 +71,32 @@ public class ManagedKeyData {
 
   /**
    * Constructs a new instance with the given parameters.
-   *
-   * @param key_cust     The key custodian.
-   * @param theKey       The actual key, can be {@code null}.
+   * @param key_cust    The key custodian.
+   * @param theKey      The actual key, can be {@code null}.
    * @param keyState    The state of the key.
-   * @param keyMetadata  The metadata associated with the key.
+   * @param keyMetadata The metadata associated with the key.
    * @throws NullPointerException if any of key_cust, keyState or keyMetadata is null.
    */
   public ManagedKeyData(byte[] key_cust, String key_namespace, Key theKey, ManagedKeyState keyState,
-                        String keyMetadata) {
+    String keyMetadata) {
     this(key_cust, key_namespace, theKey, keyState, keyMetadata,
-        EnvironmentEdgeManager.currentTime());
+      EnvironmentEdgeManager.currentTime());
   }
 
   /**
    * Constructs a new instance with the given parameters including refresh timestamp.
-   *
-   * @param key_cust     The key custodian.
-   * @param theKey       The actual key, can be {@code null}.
-   * @param keyState    The state of the key.
-   * @param keyMetadata  The metadata associated with the key.
+   * @param key_cust         The key custodian.
+   * @param theKey           The actual key, can be {@code null}.
+   * @param keyState         The state of the key.
+   * @param keyMetadata      The metadata associated with the key.
    * @param refreshTimestamp The refresh timestamp for the key.
    * @throws NullPointerException if any of key_cust, keyState or keyMetadata is null.
    */
   public ManagedKeyData(byte[] key_cust, String key_namespace, Key theKey, ManagedKeyState keyState,
-                        String keyMetadata, long refreshTimestamp) {
+    String keyMetadata, long refreshTimestamp) {
     Preconditions.checkNotNull(key_cust, "key_cust should not be null");
     Preconditions.checkNotNull(key_namespace, "key_namespace should not be null");
-    Preconditions.checkNotNull(keyState,  "keyState should not be null");
+    Preconditions.checkNotNull(keyState, "keyState should not be null");
     // Only check for null metadata if state is not FAILED
     if (keyState != ManagedKeyState.FAILED) {
       Preconditions.checkNotNull(keyMetadata, "keyMetadata should not be null");
@@ -120,12 +113,11 @@ public class ManagedKeyData {
   @InterfaceAudience.Private
   public ManagedKeyData cloneWithoutKey() {
     return new ManagedKeyData(keyCustodian, keyNamespace, null, keyState, keyMetadata,
-        refreshTimestamp);
+      refreshTimestamp);
   }
 
   /**
    * Returns the custodian associated with the key.
-   *
    * @return The key custodian as a byte array.
    */
   public byte[] getKeyCustodian() {
@@ -140,10 +132,8 @@ public class ManagedKeyData {
     return Base64.getEncoder().encodeToString(keyCustodian);
   }
 
-
   /**
    * Returns the namespace associated with the key.
-   *
    * @return The namespace as a {@code String}.
    */
   public String getKeyNamespace() {
@@ -152,7 +142,6 @@ public class ManagedKeyData {
 
   /**
    * Returns the actual key.
-   *
    * @return The key as a {@code Key} object.
    */
   public Key getTheKey() {
@@ -161,7 +150,6 @@ public class ManagedKeyData {
 
   /**
    * Returns the state of the key.
-   *
    * @return The key state as a {@code ManagedKeyState} enum value.
    */
   public ManagedKeyState getKeyState() {
@@ -170,7 +158,6 @@ public class ManagedKeyData {
 
   /**
    * Returns the metadata associated with the key.
-   *
    * @return The key metadata as a {@code String}.
    */
   public String getKeyMetadata() {
@@ -179,7 +166,6 @@ public class ManagedKeyData {
 
   /**
    * Returns the refresh timestamp of the key.
-   *
    * @return The refresh timestamp as a long value.
    */
   public long getRefreshTimestamp() {
@@ -188,20 +174,14 @@ public class ManagedKeyData {
 
   @Override
   public String toString() {
-    return "ManagedKeyData{" +
-        "keyCustodian=" + Arrays.toString(keyCustodian) +
-        ", keyNamespace='" + keyNamespace + '\'' +
-        ", keyState=" + keyState +
-        ", keyMetadata='" + keyMetadata + '\'' +
-        ", refreshTimestamp=" + refreshTimestamp +
-        ", keyChecksum=" + getKeyChecksum() +
-        '}';
+    return "ManagedKeyData{" + "keyCustodian=" + Arrays.toString(keyCustodian) + ", keyNamespace='"
+      + keyNamespace + '\'' + ", keyState=" + keyState + ", keyMetadata='" + keyMetadata + '\''
+      + ", refreshTimestamp=" + refreshTimestamp + ", keyChecksum=" + getKeyChecksum() + '}';
   }
 
   /**
    * Computes the checksum of the key. If the checksum has already been computed, this method
    * returns the previously computed value. The checksum is computed using the CRC32C algorithm.
-   *
    * @return The checksum of the key as a long value, {@code 0} if no key is available.
    */
   public long getKeyChecksum() {
@@ -223,7 +203,6 @@ public class ManagedKeyData {
   /**
    * Computes the hash of the key metadata. If the hash has already been computed, this method
    * returns the previously computed value. The hash is computed using the MD5 algorithm.
-   *
    * @return The hash of the key metadata as a byte array.
    */
   public byte[] getKeyMetadataHash() {
@@ -267,23 +246,14 @@ public class ManagedKeyData {
 
     ManagedKeyData that = (ManagedKeyData) o;
 
-    return new EqualsBuilder()
-      .append(keyCustodian, that.keyCustodian)
-      .append(keyNamespace, that.keyNamespace)
-      .append(theKey, that.theKey)
-      .append(keyState, that.keyState)
-      .append(keyMetadata, that.keyMetadata)
-      .isEquals();
+    return new EqualsBuilder().append(keyCustodian, that.keyCustodian)
+      .append(keyNamespace, that.keyNamespace).append(theKey, that.theKey)
+      .append(keyState, that.keyState).append(keyMetadata, that.keyMetadata).isEquals();
   }
 
   @Override
   public int hashCode() {
-    return new HashCodeBuilder(17, 37)
-      .append(keyCustodian)
-      .append(keyNamespace)
-      .append(theKey)
-      .append(keyState)
-      .append(keyMetadata)
-      .toHashCode();
+    return new HashCodeBuilder(17, 37).append(keyCustodian).append(keyNamespace).append(theKey)
+      .append(keyState).append(keyMetadata).toHashCode();
   }
 }

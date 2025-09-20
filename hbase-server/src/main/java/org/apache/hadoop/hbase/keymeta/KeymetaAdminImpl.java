@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.security.KeyException;
 import java.util.Collections;
 import java.util.List;
-
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
@@ -48,9 +47,10 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
     // Check if (cust, namespace) pair is already enabled and has an active key.
     ManagedKeyData activeKey = getActiveKey(key_cust, keyNamespace);
     if (activeKey != null) {
-      LOG.info("enableManagedKeys: specified (custodian: {}, namespace: {}) already has "
-          + "an active managed key with metadata: {}", keyCust, keyNamespace,
-          activeKey.getKeyMetadata());
+      LOG.info(
+        "enableManagedKeys: specified (custodian: {}, namespace: {}) already has "
+          + "an active managed key with metadata: {}",
+        keyCust, keyNamespace, activeKey.getKeyMetadata());
       return Collections.singletonList(activeKey);
     }
 
@@ -63,8 +63,7 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
   public List<ManagedKeyData> getManagedKeys(String keyCust, String keyNamespace)
     throws IOException, KeyException {
     assertKeyManagementEnabled();
-    LOG.info("Getting key statuses for custodian: {} under namespace: {}", keyCust,
-      keyNamespace);
+    LOG.info("Getting key statuses for custodian: {} under namespace: {}", keyCust, keyNamespace);
     byte[] key_cust = ManagedKeyProvider.decodeToBytes(keyCust);
     return getAllKeys(key_cust, keyNamespace);
   }

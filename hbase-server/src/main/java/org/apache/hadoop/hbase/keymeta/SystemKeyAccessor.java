@@ -25,7 +25,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -50,10 +49,10 @@ public class SystemKeyAccessor extends KeyManagementBase {
    * Return both the latest system key file and all system key files.
    * @return a pair of the latest system key file and all system key files
    * @throws IOException if there is an error getting the latest system key file or no cluster key
-   *    is initialized yet.
+   *                     is initialized yet.
    */
-  public Pair<Path,List<Path>> getLatestSystemKeyFile() throws IOException {
-    if (! isKeyManagementEnabled()) {
+  public Pair<Path, List<Path>> getLatestSystemKeyFile() throws IOException {
+    if (!isKeyManagementEnabled()) {
       return new Pair<>(null, null);
     }
     List<Path> allClusterKeyFiles = getAllSystemKeyFiles();
@@ -66,11 +65,10 @@ public class SystemKeyAccessor extends KeyManagementBase {
   }
 
   /**
-   * Return all available cluster key files and return them in the order of latest to oldest.
-   * If no cluster key files are available, then return an empty list. If key management is not
-   * enabled, then return null.
-   *
-   * @return  a list of all available cluster key files
+   * Return all available cluster key files and return them in the order of latest to oldest. If no
+   * cluster key files are available, then return an empty list. If key management is not enabled,
+   * then return null.
+   * @return a list of all available cluster key files
    * @throws IOException if there is an error getting the cluster key files
    */
   public List<Path> getAllSystemKeyFiles() throws IOException {
@@ -79,8 +77,7 @@ public class SystemKeyAccessor extends KeyManagementBase {
     }
     FileSystem fs = getServer().getFileSystem();
     Map<Integer, Path> clusterKeys = new TreeMap<>(Comparator.reverseOrder());
-    for (FileStatus st : fs.globStatus(new Path(systemKeyDir,
-      SYSTEM_KEY_FILE_PREFIX + "*"))) {
+    for (FileStatus st : fs.globStatus(new Path(systemKeyDir, SYSTEM_KEY_FILE_PREFIX + "*"))) {
       Path keyPath = st.getPath();
       int seqNum = extractSystemKeySeqNum(keyPath);
       clusterKeys.put(seqNum, keyPath);
@@ -103,8 +100,7 @@ public class SystemKeyAccessor extends KeyManagementBase {
     if (keyPath.getName().startsWith(SYSTEM_KEY_FILE_PREFIX)) {
       try {
         return Integer.parseInt(keyPath.getName().substring(SYSTEM_KEY_FILE_PREFIX.length()));
-      }
-      catch (NumberFormatException e) {
+      } catch (NumberFormatException e) {
         LOG.error("Invalid file name for a cluster key: {}", keyPath, e);
       }
     }
@@ -122,7 +118,7 @@ public class SystemKeyAccessor extends KeyManagementBase {
     int keySeq = -1;
     if (clusterKeyFile.getName().startsWith(SYSTEM_KEY_FILE_PREFIX)) {
       String seqStr = clusterKeyFile.getName().substring(SYSTEM_KEY_FILE_PREFIX.length());
-      if (! seqStr.isEmpty()) {
+      if (!seqStr.isEmpty()) {
         try {
           keySeq = Integer.parseInt(seqStr);
         } catch (NumberFormatException e) {

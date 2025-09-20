@@ -559,15 +559,18 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
     return null;
   }
 
-  @Override public SystemKeyCache getSystemKeyCache() {
+  @Override
+  public SystemKeyCache getSystemKeyCache() {
     return null;
   }
 
-  @Override public ManagedKeyDataCache getManagedKeyDataCache() {
+  @Override
+  public ManagedKeyDataCache getManagedKeyDataCache() {
     return null;
   }
 
-  @Override public KeymetaAdmin getKeymetaAdmin() {
+  @Override
+  public KeymetaAdmin getKeymetaAdmin() {
     return null;
   }
 

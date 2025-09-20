@@ -1688,7 +1688,6 @@ public class Bytes implements Comparable<Bytes> {
 
   /**
    * Concatenate byte arrays.
-   *
    * @param a first third
    * @param b second third
    * @param c third third
@@ -1700,7 +1699,6 @@ public class Bytes implements Comparable<Bytes> {
 
   /**
    * Concatenate byte arrays.
-   *
    * @param a first fourth
    * @param b second fourth
    * @param c third fourth

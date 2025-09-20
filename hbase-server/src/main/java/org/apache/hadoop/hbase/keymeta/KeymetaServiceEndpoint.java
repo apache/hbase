@@ -22,7 +22,6 @@ import java.security.KeyException;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
-
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.CoreCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.HasMasterServices;
@@ -46,13 +45,13 @@ import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 
 /**
  * This class implements a coprocessor service endpoint for the key management metadata operations.
- * It handles the following methods:
- *
- * This endpoint is designed to work in conjunction with the {@link KeymetaAdmin}
- * interface, which provides the actual implementation of the key metadata operations.
+ * It handles the following methods: This endpoint is designed to work in conjunction with the
+ * {@link KeymetaAdmin} interface, which provides the actual implementation of the key metadata
+ * operations.
  * </p>
  */
-@CoreCoprocessor @InterfaceAudience.Private
+@CoreCoprocessor
+@InterfaceAudience.Private
 public class KeymetaServiceEndpoint implements MasterCoprocessor {
   private static final Logger LOG = LoggerFactory.getLogger(KeymetaServiceEndpoint.class);
 
@@ -63,7 +62,6 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
   /**
    * Starts the coprocessor by initializing the reference to the
    * {@link org.apache.hadoop.hbase.master.MasterServices} * instance.
-   *
    * @param env The coprocessor environment.
    * @throws IOException If an error occurs during initialization.
    */
@@ -80,7 +78,6 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
    * Returns an iterable of the available coprocessor services, which includes the
    * {@link ManagedKeysService} implemented by
    * {@link KeymetaServiceEndpoint.KeymetaAdminServiceImpl}.
-   *
    * @return An iterable of the available coprocessor services.
    */
   @Override
@@ -89,8 +86,8 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
   }
 
   /**
-   * The implementation of the {@link ManagedKeysProtos.ManagedKeysService}
-   * interface, which provides the actual method implementations for enabling key management.
+   * The implementation of the {@link ManagedKeysProtos.ManagedKeysService} interface, which
+   * provides the actual method implementations for enabling key management.
    */
   @InterfaceAudience.Private
   public class KeymetaAdminServiceImpl extends ManagedKeysService {
@@ -98,16 +95,15 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
     /**
      * Enables key management for a given tenant and namespace, as specified in the provided
      * request.
-     *
      * @param controller The RPC controller.
      * @param request    The request containing the tenant and table specifications.
      * @param done       The callback to be invoked with the response.
      */
     @Override
     public void enableKeyManagement(RpcController controller, ManagedKeysRequest request,
-        RpcCallback<GetManagedKeysResponse> done) {
+      RpcCallback<GetManagedKeysResponse> done) {
       ManagedKeysResponse.Builder builder = getResponseBuilder(controller, request);
-      if (builder.getKeyCust() != null && ! builder.getKeyCust().isEmpty()) {
+      if (builder.getKeyCust() != null && !builder.getKeyCust().isEmpty()) {
         try {
           List<ManagedKeyData> managedKeyStates = master.getKeymetaAdmin()
             .enableKeyManagement(request.getKeyCust(), request.getKeyNamespace());
@@ -122,9 +118,9 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
 
     @Override
     public void getManagedKeys(RpcController controller, ManagedKeysRequest request,
-        RpcCallback<GetManagedKeysResponse> done) {
+      RpcCallback<GetManagedKeysResponse> done) {
       ManagedKeysResponse.Builder builder = getResponseBuilder(controller, request);
-      if (builder.getKeyCust() != null && ! builder.getKeyCust().isEmpty()) {
+      if (builder.getKeyCust() != null && !builder.getKeyCust().isEmpty()) {
         try {
           List<ManagedKeyData> managedKeyStates = master.getKeymetaAdmin()
             .getManagedKeys(request.getKeyCust(), request.getKeyNamespace());
@@ -141,8 +137,8 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
   @InterfaceAudience.Private
   public static ManagedKeysResponse.Builder getResponseBuilder(RpcController controller,
     ManagedKeysRequest request) {
-    ManagedKeysResponse.Builder builder = ManagedKeysResponse.newBuilder()
-      .setKeyNamespace(request.getKeyNamespace());
+    ManagedKeysResponse.Builder builder =
+      ManagedKeysResponse.newBuilder().setKeyNamespace(request.getKeyNamespace());
     byte[] key_cust = convertToKeyCustBytes(controller, request, builder);
     if (key_cust != null) {
       builder.setKeyCustBytes(ByteString.copyFrom(key_cust));
@@ -155,12 +151,10 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
   public static GetManagedKeysResponse generateKeyStateResponse(
     List<ManagedKeyData> managedKeyStates, ManagedKeysResponse.Builder builder) {
     GetManagedKeysResponse.Builder responseBuilder = GetManagedKeysResponse.newBuilder();
-    for (ManagedKeyData keyData: managedKeyStates) {
-      builder.setKeyState(ManagedKeysProtos.ManagedKeyState.valueOf(
-          keyData.getKeyState().getVal()))
+    for (ManagedKeyData keyData : managedKeyStates) {
+      builder.setKeyState(ManagedKeysProtos.ManagedKeyState.valueOf(keyData.getKeyState().getVal()))
         .setKeyMetadata(keyData.getKeyMetadata())
-        .setRefreshTimestamp(keyData.getRefreshTimestamp())
-      ;
+        .setRefreshTimestamp(keyData.getRefreshTimestamp());
       responseBuilder.addState(builder.build());
     }
     return responseBuilder.build();

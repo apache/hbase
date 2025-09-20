@@ -17,32 +17,27 @@
  */
 package org.apache.hadoop.hbase.io.crypto;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
 import java.util.Base64;
-import edu.umd.cs.findbugs.annotations.NonNull;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Interface for key providers of managed keys. Defines methods for generating and managing
- * managed keys, as well as handling key storage and retrieval.
- *
- * The interface extends the basic {@link KeyProvider} interface with additional
- * methods for working with managed keys.
+ * Interface for key providers of managed keys. Defines methods for generating and managing managed
+ * keys, as well as handling key storage and retrieval. The interface extends the basic
+ * {@link KeyProvider} interface with additional methods for working with managed keys.
  */
 @InterfaceAudience.Public
 public interface ManagedKeyProvider extends KeyProvider {
   /**
    * Initialize the provider with the given configuration.
-   *
    * @param conf Hadoop configuration
    */
   void initConfig(Configuration conf);
 
   /**
    * Retrieve the system key using the given system identifier.
-   *
    * @param systemId system identifier
    * @return ManagedKeyData for the system key and is guaranteed to be not {@code null}
    * @throws IOException if an error occurs while retrieving the key
@@ -51,8 +46,7 @@ public interface ManagedKeyProvider extends KeyProvider {
 
   /**
    * Retrieve a managed key for the specified prefix.
-   *
-   * @param key_cust     The key custodian.
+   * @param key_cust      The key custodian.
    * @param key_namespace Key namespace
    * @return ManagedKeyData for the system key and is expected to be not {@code null}
    * @throws IOException if an error occurs while retrieving the key
@@ -64,14 +58,14 @@ public interface ManagedKeyProvider extends KeyProvider {
    * same key provider via the {@link #getSystemKey(byte[])} or
    * {@link #getManagedKey(byte[], String)} methods. If key couldn't be retrieved using metadata and
    * the wrappedKey is provided, the implementation may try to decrypt it as a fallback operation.
-   *
    * @param keyMetaData Key metadata, must not be {@code null}.
-   * @param wrappedKey The DEK key material encrypted with the corresponding KEK, if available.
+   * @param wrappedKey  The DEK key material encrypted with the corresponding KEK, if available.
    * @return ManagedKeyData for the key represented by the metadata and is expected to be not
    *         {@code null}
    * @throws IOException if an error occurs while generating the key
    */
-  @NonNull ManagedKeyData unwrapKey(String keyMetaData, byte[] wrappedKey) throws IOException;
+  @NonNull
+  ManagedKeyData unwrapKey(String keyMetaData, byte[] wrappedKey) throws IOException;
 
   /**
    * Decode the given key custodian which is encoded as Base64 string.
@@ -83,10 +77,9 @@ public interface ManagedKeyProvider extends KeyProvider {
     byte[] key_cust;
     try {
       key_cust = Base64.getDecoder().decode(encodedKeyCust);
-    }
-    catch (IllegalArgumentException e) {
-      throw new IOException("Failed to decode specified key custodian as Base64 string: "
-          + encodedKeyCust, e);
+    } catch (IllegalArgumentException e) {
+      throw new IOException(
+        "Failed to decode specified key custodian as Base64 string: " + encodedKeyCust, e);
     }
     return key_cust;
   }

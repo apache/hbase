@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.security.KeyException;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyState;
@@ -42,13 +41,13 @@ public class KeymetaAdminClient implements KeymetaAdmin {
   private ManagedKeysProtos.ManagedKeysService.BlockingInterface stub;
 
   public KeymetaAdminClient(Connection conn) throws IOException {
-    this.stub = ManagedKeysProtos.ManagedKeysService.newBlockingStub(
-        conn.getAdmin().coprocessorService());
+    this.stub =
+      ManagedKeysProtos.ManagedKeysService.newBlockingStub(conn.getAdmin().coprocessorService());
   }
 
   @Override
   public List<ManagedKeyData> enableKeyManagement(String keyCust, String keyNamespace)
-      throws IOException {
+    throws IOException {
     try {
       ManagedKeysProtos.GetManagedKeysResponse response = stub.enableKeyManagement(null,
         ManagedKeysRequest.newBuilder().setKeyCust(keyCust).setKeyNamespace(keyNamespace).build());
@@ -70,16 +69,14 @@ public class KeymetaAdminClient implements KeymetaAdmin {
     }
   }
 
-  private static List<ManagedKeyData> generateKeyDataList(
-      ManagedKeysProtos.GetManagedKeysResponse stateResponse) {
+  private static List<ManagedKeyData>
+    generateKeyDataList(ManagedKeysProtos.GetManagedKeysResponse stateResponse) {
     List<ManagedKeyData> keyStates = new ArrayList<>();
-    for (ManagedKeysResponse state: stateResponse.getStateList()) {
-      keyStates.add(new ManagedKeyData(
-        state.getKeyCustBytes().toByteArray(),
-        state.getKeyNamespace(), null,
-        ManagedKeyState.forValue((byte) state.getKeyState().getNumber()),
-        state.getKeyMetadata(),
-        state.getRefreshTimestamp()));
+    for (ManagedKeysResponse state : stateResponse.getStateList()) {
+      keyStates
+        .add(new ManagedKeyData(state.getKeyCustBytes().toByteArray(), state.getKeyNamespace(),
+          null, ManagedKeyState.forValue((byte) state.getKeyState().getNumber()),
+          state.getKeyMetadata(), state.getRefreshTimestamp()));
     }
     return keyStates;
   }

@@ -67,12 +67,9 @@ public class TestKeyStoreKeyProvider {
 
   @Parameterized.Parameters(name = "withPasswordOnAlias={0} withPasswordFile={1}")
   public static Collection<Object[]> parameters() {
-    return Arrays.asList(new Object[][] {
-      { Boolean.TRUE, Boolean.TRUE },
-      { Boolean.TRUE, Boolean.FALSE },
-      { Boolean.FALSE, Boolean.TRUE },
-      { Boolean.FALSE, Boolean.FALSE },
-    });
+    return Arrays
+      .asList(new Object[][] { { Boolean.TRUE, Boolean.TRUE }, { Boolean.TRUE, Boolean.FALSE },
+        { Boolean.FALSE, Boolean.TRUE }, { Boolean.FALSE, Boolean.FALSE }, });
   }
 
   @Before
@@ -109,8 +106,7 @@ public class TestKeyStoreKeyProvider {
     if (withPasswordFile) {
       provider.init("jceks://" + storeFile.toURI().getPath() + "?passwordFile="
         + URLEncoder.encode(passwordFile.getAbsolutePath(), "UTF-8"));
-    }
-    else {
+    } else {
       provider.init("jceks://" + storeFile.toURI().getPath() + "?password=" + PASSWORD);
     }
   }

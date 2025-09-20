@@ -24,7 +24,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.security.Key;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.KeyProvider;
@@ -104,8 +103,7 @@ public class TestSystemKeyManager extends ManagedKeyTestBase {
     assertNotNull(systemKeyCache);
     ManagedKeyData clusterKey = systemKeyCache.getLatestSystemKey();
     assertEquals(pbeKeyProvider.getSystemKey(master.getClusterId().getBytes()), clusterKey);
-    assertEquals(clusterKey,
-      systemKeyCache.getSystemKeyByChecksum(clusterKey.getKeyChecksum()));
+    assertEquals(clusterKey, systemKeyCache.getSystemKeyByChecksum(clusterKey.getKeyChecksum()));
     return clusterKey;
   }
 
@@ -113,7 +111,6 @@ public class TestSystemKeyManager extends ManagedKeyTestBase {
     TEST_UTIL.shutdownMiniHBaseCluster();
     Thread.sleep(2000);
     TEST_UTIL.restartHBaseCluster(1);
-    TEST_UTIL.waitFor(60000,
-      () -> TEST_UTIL.getMiniHBaseCluster().getMaster().isInitialized());
+    TEST_UTIL.waitFor(60000, () -> TEST_UTIL.getMiniHBaseCluster().getMaster().isInitialized());
   }
 }
