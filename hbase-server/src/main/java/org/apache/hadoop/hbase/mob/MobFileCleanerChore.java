@@ -20,15 +20,16 @@ package org.apache.hadoop.hbase.mob;
 import static org.apache.hadoop.hbase.mob.MobConstants.DEFAULT_MOB_FILE_CLEANER_CHORE_TIME_OUT;
 import static org.apache.hadoop.hbase.mob.MobConstants.MOB_FILE_CLEANER_CHORE_TIME_OUT;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import org.apache.hadoop.conf.Configuration;
@@ -37,12 +38,12 @@ import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.MoreExecutors;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
@@ -50,14 +51,15 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
  * (files which have no active references to) mob files.
  */
 @InterfaceAudience.Private
-public class MobFileCleanerChore extends ScheduledChore {
+public class MobFileCleanerChore extends ScheduledChore implements ConfigurationObserver {
 
   private static final Logger LOG = LoggerFactory.getLogger(MobFileCleanerChore.class);
 
   private final HMaster master;
   private final ExpiredMobFileCleaner cleaner;
-  private final ExecutorService threadPool;
+  private final ThreadPoolExecutor executor;
   private final int cleanerFutureTimeout;
+  private int threadCount;
 
   public MobFileCleanerChore(HMaster master) {
     super(master.getServerName() + "-MobFileCleanerChore", master,
@@ -69,16 +71,18 @@ public class MobFileCleanerChore extends ScheduledChore {
     this.master = master;
     cleaner = new ExpiredMobFileCleaner();
     cleaner.setConf(master.getConfiguration());
-    int threadCount = master.getConfiguration().getInt(MobConstants.MOB_CLEANER_THREAD_COUNT,
+    threadCount = master.getConfiguration().getInt(MobConstants.MOB_CLEANER_THREAD_COUNT,
       MobConstants.DEFAULT_MOB_CLEANER_THREAD_COUNT);
+    if (threadCount <= 1) {
+      threadCount = 1;
+    }
 
     ThreadFactory threadFactory =
       new ThreadFactoryBuilder().setDaemon(true).setNameFormat("mobfile-cleaner-pool-%d").build();
-    if (threadCount == 1) {
-      threadPool = MoreExecutors.newDirectExecutorService();
-    } else {
-      threadPool = Executors.newFixedThreadPool(threadCount, threadFactory);
-    }
+
+    executor = new ThreadPoolExecutor(threadCount, threadCount, 60, TimeUnit.SECONDS,
+      new LinkedBlockingQueue<Runnable>(), threadFactory);
+
     checkObsoleteConfigurations();
     cleanerFutureTimeout = master.getConfiguration().getInt(MOB_FILE_CLEANER_CHORE_TIME_OUT,
       DEFAULT_MOB_FILE_CLEANER_CHORE_TIME_OUT);
@@ -114,7 +118,7 @@ public class MobFileCleanerChore extends ScheduledChore {
     }
     List<Future> futureList = new ArrayList<>(map.size());
     for (TableDescriptor htd : map.values()) {
-      Future<?> future = threadPool.submit(() -> handleOneTable(htd));
+      Future<?> future = executor.submit(() -> handleOneTable(htd));
       futureList.add(future);
     }
 
@@ -123,6 +127,8 @@ public class MobFileCleanerChore extends ScheduledChore {
         future.get(cleanerFutureTimeout, TimeUnit.SECONDS);
       } catch (InterruptedException | ExecutionException | TimeoutException e) {
         LOG.warn("Exception during the execution of MobFileCleanerChore", e);
+        // Restore the interrupted status
+        Thread.currentThread().interrupt();
       }
     }
   }
@@ -151,4 +157,36 @@ public class MobFileCleanerChore extends ScheduledChore {
     }
   }
 
+  @Override
+  public void onConfigurationChange(Configuration conf) {
+    int newThreadCount = conf.getInt(MobConstants.MOB_CLEANER_THREAD_COUNT,
+      MobConstants.DEFAULT_MOB_CLEANER_THREAD_COUNT);
+    if (newThreadCount < 1) {
+      return; // invalid value , skip the config change
+    }
+
+    if (newThreadCount != threadCount) {
+      resizeThreadPool(newThreadCount, newThreadCount);
+      threadCount = newThreadCount;
+    }
+  }
+
+  private void resizeThreadPool(int newCoreSize, int newMaxSize) {
+    int currentCoreSize = executor.getCorePoolSize();
+    if (newCoreSize > currentCoreSize) {
+      // Increasing the pool size: Set max first, then core
+      executor.setMaximumPoolSize(newMaxSize);
+      executor.setCorePoolSize(newCoreSize);
+    } else {
+      // Decreasing the pool size: Set core first, then max
+      executor.setCorePoolSize(newCoreSize);
+      executor.setMaximumPoolSize(newMaxSize);
+    }
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  public ThreadPoolExecutor getExecutor() {
+    return executor;
+  }
 }

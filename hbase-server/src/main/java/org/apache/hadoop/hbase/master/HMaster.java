@@ -4570,7 +4570,10 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
       });
   }
 
-    public MobFileCleanerChore getMobFileCleanerChore() {
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  public MobFileCleanerChore getMobFileCleanerChore() {
     return mobFileCleanerChore;
   }
+
 }

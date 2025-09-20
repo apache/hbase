@@ -21,8 +21,7 @@ import static org.apache.hadoop.hbase.mob.MobConstants.MOB_CLEANER_BATCH_SIZE_UP
 import static org.apache.hadoop.hbase.mob.MobConstants.MOB_CLEANER_THREAD_COUNT;
 import static org.junit.Assert.assertEquals;
 
-import java.util.Arrays;
-import java.util.List;
+import java.io.IOException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -35,19 +34,19 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.After;
-import org.junit.Before;
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 
-@RunWith(Parameterized.class)
-@Category(MediumTests.class)
+@Category({ MediumTests.class, MasterTests.class })
 public class TestExpiredMobFileCleanerChore {
 
   @ClassRule
@@ -65,35 +64,46 @@ public class TestExpiredMobFileCleanerChore {
   private static BufferedMutator table;
   private static Admin admin;
   private static BufferedMutator table2;
-  @Parameterized.Parameter()
-  public int mobCleanerThreadCount;
+  private static MobFileCleanerChore mobFileCleanerChore;
 
-  @Parameterized.Parameters
-  public static List<Integer> params() {
-    return Arrays.asList(1, 2);
-  }
-
-  @Before
-  public void setUp() throws Exception {
+  @BeforeClass
+  public static void setUp() throws Exception {
     TEST_UTIL.getConfiguration().setInt("hfile.format.version", 3);
     TEST_UTIL.getConfiguration().setInt(MOB_CLEANER_BATCH_SIZE_UPPER_BOUND, 2);
-    TEST_UTIL.getConfiguration().setInt(MOB_CLEANER_THREAD_COUNT, mobCleanerThreadCount);
     TEST_UTIL.startMiniCluster(1);
+    mobFileCleanerChore = TEST_UTIL.getMiniHBaseCluster().getMaster().getMobFileCleanerChore();
   }
 
   @After
-  public void tearDown() throws Exception {
+  public void cleanUp() throws IOException {
     admin.disableTable(tableName);
     admin.deleteTable(tableName);
     admin.disableTable(tableName2);
     admin.deleteTable(tableName2);
     admin.close();
+  }
+
+  @AfterClass
+  public static void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
     TEST_UTIL.getTestFileSystem().delete(TEST_UTIL.getDataTestDir(), true);
   }
 
   @Test
-  public void testCleaner() throws Exception {
+  public void testCleanerSingleThread() throws Exception {
+    TEST_UTIL.getConfiguration().setInt(MOB_CLEANER_THREAD_COUNT, 1);
+    mobFileCleanerChore.onConfigurationChange(TEST_UTIL.getConfiguration());
+    int corePoolSize = mobFileCleanerChore.getExecutor().getCorePoolSize();
+    Assert.assertEquals(1, corePoolSize);
+    testCleanerInternal();
+  }
+
+  @Test
+  public void testCleanerMultiThread() throws Exception {
+    TEST_UTIL.getConfiguration().setInt(MOB_CLEANER_THREAD_COUNT, 2);
+    mobFileCleanerChore.onConfigurationChange(TEST_UTIL.getConfiguration());
+    int corePoolSize = mobFileCleanerChore.getExecutor().getCorePoolSize();
+    Assert.assertEquals(2, corePoolSize);
     testCleanerInternal();
   }
 
@@ -219,8 +229,6 @@ public class TestExpiredMobFileCleanerChore {
     modifyColumnExpiryDays(2); // ttl = 2, make the first row expired
 
     // run the cleaner chore
-    MobFileCleanerChore mobFileCleanerChore =
-      TEST_UTIL.getMiniHBaseCluster().getMaster().getMobFileCleanerChore();
     mobFileCleanerChore.chore();
 
     FileStatus[] filesAfterClean = TEST_UTIL.getTestFileSystem().listStatus(mobDirPath);
