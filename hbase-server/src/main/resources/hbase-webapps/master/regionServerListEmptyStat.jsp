@@ -1,4 +1,5 @@
-/*
+<%--
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,23 +16,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master.http;
+--%>
+<%@ page contentType="text/html;charset=UTF-8"
+         import="org.apache.hadoop.hbase.ServerName"
+         import="org.apache.hadoop.hbase.master.HMaster"
+         import="org.apache.hadoop.hbase.master.http.MasterStatusConstants"
+         import="org.apache.hadoop.hbase.master.http.MasterStatusUtil" %>
 
-import java.io.IOException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import org.apache.yetus.audience.InterfaceAudience;
-
-/**
- * Only kept for redirecting to master.jsp.
- */
-@InterfaceAudience.Private
-public class MasterStatusServlet extends HttpServlet {
-  private static final long serialVersionUID = 1L;
-
-  @Override
-  public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
-    response.sendRedirect(request.getContextPath() + "/master.jsp");
-  }
-}
+<%
+  ServerName serverName = (ServerName) request.getAttribute(MasterStatusConstants.SERVER_NAME);
+  HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
+%>
+<tr>
+<td><%= MasterStatusUtil.serverNameLink(master, serverName) %></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
