@@ -613,6 +613,11 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   }
 
   @Override
+  public long getRowMissCount() {
+    return 1;
+  }
+
+  @Override
   public long getDataHitCount() {
     return 0;
   }
@@ -660,6 +665,11 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   @Override
   public long getTrailerHitCount() {
     return 0;
+  }
+
+  @Override
+  public long getRowHitCount() {
+    return 2;
   }
 
   @Override

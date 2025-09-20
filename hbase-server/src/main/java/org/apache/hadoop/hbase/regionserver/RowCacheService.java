@@ -1,0 +1,361 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.hadoop.hbase.regionserver;
+
+import static org.apache.hadoop.hbase.HConstants.ROW_CACHE_ACTIVATE_MIN_HFILES_DEFAULT;
+import static org.apache.hadoop.hbase.HConstants.ROW_CACHE_ACTIVATE_MIN_HFILES_KEY;
+
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.CheckAndMutate;
+import org.apache.hadoop.hbase.client.CheckAndMutateResult;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.Consistency;
+import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.Mutation;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.io.hfile.RowCacheKey;
+import org.apache.hadoop.hbase.ipc.RpcCallContext;
+import org.apache.hadoop.hbase.quotas.ActivePolicyEnforcement;
+import org.apache.hadoop.hbase.quotas.OperationQuota;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.BulkLoadHFileResponse;
+
+/**
+ * It is responsible for populating the row cache and retrieving rows from it.
+ */
+class RowCacheService {
+  /**
+   * A barrier that prevents the row cache from being populated during table operations, such as
+   * bulk loads. It is implemented as a counter to address issues that arise when the same table is
+   * updated concurrently.
+   */
+  private final Map<TableName, AtomicInteger> tableLevelBarrierMap = new ConcurrentHashMap<>();
+  /**
+   * A barrier that prevents the row cache from being populated during row mutations. It is
+   * implemented as a counter to address issues that arise when the same row is mutated
+   * concurrently.
+   */
+  private final Map<RowCacheKey, AtomicInteger> rowLevelBarrierMap = new ConcurrentHashMap<>();
+  private int activateMinHFiles;
+
+  @FunctionalInterface
+  interface RowOperation<R> {
+    R execute() throws IOException;
+  }
+
+  RowCacheService(Configuration conf) {
+    updateConf(conf);
+  }
+
+  synchronized void updateConf(Configuration conf) {
+    this.activateMinHFiles =
+      conf.getInt(ROW_CACHE_ACTIVATE_MIN_HFILES_KEY, ROW_CACHE_ACTIVATE_MIN_HFILES_DEFAULT);
+  }
+
+  RegionScannerImpl getScanner(HRegion region, Get get, Scan scan, List<Cell> results)
+    throws IOException {
+    if (!canCacheRow(get, region)) {
+      return getScannerInternal(region, scan, results);
+    }
+
+    RowCacheKey key = new RowCacheKey(region, get.getRow());
+
+    // Try get from row cache
+    if (tryGetFromCache(region, key, get, results)) {
+      // Cache is hit, and then no scanner is created
+      return null;
+    }
+
+    RegionScannerImpl scanner = getScannerInternal(region, scan, results);
+
+    // The row cache is ineffective when the number of store files is small. If the number
+    // of store files falls below the minimum threshold, rows will not be cached
+    if (hasSufficientHFiles(region)) {
+      populateCache(region, results, key);
+    }
+
+    return scanner;
+  }
+
+  private RegionScannerImpl getScannerInternal(HRegion region, Scan scan, List<Cell> results)
+    throws IOException {
+    RegionScannerImpl scanner = region.getScanner(scan);
+    scanner.next(results);
+    return scanner;
+  }
+
+  private boolean tryGetFromCache(HRegion region, RowCacheKey key, Get get, List<Cell> results) {
+    RowCells row =
+      (RowCells) region.getBlockCache().getBlock(key, get.getCacheBlocks(), false, true);
+
+    if (row == null) {
+      return false;
+    }
+
+    results.addAll(row.getCells());
+    region.addReadRequestsCount(1);
+    if (region.getMetrics() != null) {
+      region.getMetrics().updateReadRequestCount();
+    }
+    return true;
+  }
+
+  private boolean hasSufficientHFiles(HRegion region) {
+    return region.getStores().stream()
+      .anyMatch(store -> store.getStorefilesCount() >= activateMinHFiles);
+  }
+
+  private void populateCache(HRegion region, List<Cell> results, RowCacheKey key) {
+    // The row cache is populated only when no table level barriers remain
+    tableLevelBarrierMap.computeIfAbsent(region.getRegionInfo().getTable(), t -> {
+      // The row cache is populated only when no row level barriers remain
+      rowLevelBarrierMap.computeIfAbsent(key, k -> {
+        try {
+          region.getBlockCache().cacheBlock(key, new RowCells(results), false);
+        } catch (CloneNotSupportedException ignored) {
+          // Not able to cache row cells, ignore
+        }
+        return null;
+      });
+      return null;
+    });
+  }
+
+  BulkLoadHFileResponse bulkLoadHFile(RSRpcServices rsRpcServices, BulkLoadHFileRequest request)
+    throws ServiceException {
+    HRegion region;
+    try {
+      region = rsRpcServices.getRegion(request.getRegion());
+    } catch (IOException ie) {
+      throw new ServiceException(ie);
+    }
+
+    if (!region.getTableDescriptor().isRowCacheEnabled()) {
+      return bulkLoad(rsRpcServices, request);
+    }
+
+    // Since bulkload modifies the store files, the row cache should be disabled until the bulkload
+    // is finished.
+    createTableLevelBarrier(region.getRegionInfo().getTable());
+    try {
+      // We do not invalidate the entire row cache directly, as it contains a large number of
+      // entries and takes a long time. Instead, we increment rowCacheSeqNum, which is used when
+      // constructing a RowCacheKey, thereby making the existing row cache entries stale.
+      increaseRowCacheSeqNum(region);
+      return bulkLoad(rsRpcServices, request);
+    } finally {
+      // The row cache for the table has been enabled again
+      removeTableLevelBarrier(region.getRegionInfo().getTable());
+    }
+  }
+
+  BulkLoadHFileResponse bulkLoad(RSRpcServices rsRpcServices, BulkLoadHFileRequest request)
+    throws ServiceException {
+    return rsRpcServices.bulkLoadHFileInternal(request);
+  }
+
+  void increaseRowCacheSeqNum(HRegion region) {
+    region.increaseRowCacheSeqNum();
+  }
+
+  void removeTableLevelBarrier(TableName tableName) {
+    tableLevelBarrierMap.computeIfPresent(tableName, (k, counter) -> {
+      int remaining = counter.decrementAndGet();
+      return (remaining <= 0) ? null : counter;
+    });
+  }
+
+  void createTableLevelBarrier(TableName tableName) {
+    tableLevelBarrierMap.computeIfAbsent(tableName, k -> new AtomicInteger(0)).incrementAndGet();
+  }
+
+  // @formatter:off
+  /**
+   * Row cache is only enabled when the following conditions are met:
+   *  - Row cache is enabled at the table level.
+   *  - Cache blocks is enabled in the get request.
+   *  - A Get object cannot be distinguished from others except by its row key.
+   *    So we check equality for the following:
+   *    - filter
+   *    - retrieving cells
+   *    - TTL
+   *    - attributes
+   *    - CheckExistenceOnly
+   *    - ColumnFamilyTimeRange
+   *    - Consistency
+   *    - MaxResultsPerColumnFamily
+   *    - ReplicaId
+   *    - RowOffsetPerColumnFamily
+   * @param get the Get request
+   * @param region the Region
+   * @return true if the row can be cached, false otherwise
+   */
+  // @formatter:on
+  static boolean canCacheRow(Get get, Region region) {
+    return region.getTableDescriptor().isRowCacheEnabled() && get.getCacheBlocks()
+      && get.getFilter() == null && isRetrieveAllCells(get, region) && isDefaultTtl(region)
+      && get.getAttributesMap().isEmpty() && !get.isCheckExistenceOnly()
+      && get.getColumnFamilyTimeRange().isEmpty() && get.getConsistency() == Consistency.STRONG
+      && get.getMaxResultsPerColumnFamily() == -1 && get.getReplicaId() == -1
+      && get.getRowOffsetPerColumnFamily() == 0 && get.getTimeRange().isAllTime();
+  }
+
+  private static boolean isRetrieveAllCells(Get get, Region region) {
+    if (region.getTableDescriptor().getColumnFamilyCount() != get.numFamilies()) {
+      return false;
+    }
+
+    boolean hasQualifier = get.getFamilyMap().values().stream().anyMatch(Objects::nonNull);
+    return !hasQualifier;
+  }
+
+  private static boolean isDefaultTtl(Region region) {
+    return Arrays.stream(region.getTableDescriptor().getColumnFamilies())
+      .allMatch(cfd -> cfd.getTimeToLive() == ColumnFamilyDescriptorBuilder.DEFAULT_TTL);
+  }
+
+  private <R> R mutateWithRowCacheBarrier(HRegion region, List<Mutation> mutations,
+    RowOperation<R> operation) throws IOException {
+    if (!region.getTableDescriptor().isRowCacheEnabled()) {
+      return operation.execute();
+    }
+
+    Set<RowCacheKey> rowCacheKeys = new HashSet<>(mutations.size());
+    try {
+      // Evict the entire row cache
+      mutations.forEach(mutation -> rowCacheKeys.add(new RowCacheKey(region, mutation.getRow())));
+      rowCacheKeys.forEach(key -> {
+        // Creates a barrier that prevents the row cache from being populated for this row
+        // during mutation. Reads for the row can instead be served from HFiles or the block cache.
+        createRowLevelBarrier(key);
+
+        // After creating the barrier, evict the existing row cache for this row,
+        // as it becomes invalid after the mutation
+        evictRowCache(region, key);
+      });
+
+      return execute(operation);
+    } finally {
+      // Remove the barrier after mutation to allow the row cache to be populated again
+      rowCacheKeys.forEach(this::removeRowLevelBarrier);
+    }
+  }
+
+  private <R> R mutateWithRowCacheBarrier(HRegion region, byte[] row, RowOperation<R> operation)
+    throws IOException {
+    if (!region.getTableDescriptor().isRowCacheEnabled()) {
+      return operation.execute();
+    }
+
+    RowCacheKey key = new RowCacheKey(region, row);
+    try {
+      // Creates a barrier that prevents the row cache from being populated for this row
+      // during mutation. Reads for the row can instead be served from HFiles or the block cache.
+      createRowLevelBarrier(key);
+
+      // After creating the barrier, evict the existing row cache for this row,
+      // as it becomes invalid after the mutation
+      evictRowCache(region, key);
+
+      return execute(operation);
+    } finally {
+      // Remove the barrier after mutation to allow the row cache to be populated again
+      removeRowLevelBarrier(key);
+    }
+  }
+
+  <R> R execute(RowOperation<R> operation) throws IOException {
+    return operation.execute();
+  }
+
+  void evictRowCache(HRegion region, RowCacheKey key) {
+    region.getBlockCache().evictBlock(key);
+  }
+
+  /**
+   * Remove the barrier after mutation to allow the row cache to be populated again
+   * @param key the cache key of the row
+   */
+  void removeRowLevelBarrier(RowCacheKey key) {
+    rowLevelBarrierMap.computeIfPresent(key, (k, counter) -> {
+      int remaining = counter.decrementAndGet();
+      return (remaining <= 0) ? null : counter;
+    });
+  }
+
+  /**
+   * Creates a barrier to prevent the row cache from being populated for this row during mutation
+   * @param key the cache key of the row
+   */
+  void createRowLevelBarrier(RowCacheKey key) {
+    rowLevelBarrierMap.computeIfAbsent(key, k -> new AtomicInteger(0)).incrementAndGet();
+  }
+
+  Result mutate(RSRpcServices rsRpcServices, HRegion region, ClientProtos.MutationProto mutation,
+    OperationQuota quota, CellScanner cellScanner, long nonceGroup,
+    ActivePolicyEnforcement spaceQuotaEnforcement, RpcCallContext context) throws IOException {
+    return mutateWithRowCacheBarrier(region, mutation.getRow().toByteArray(),
+      () -> rsRpcServices.mutateInternal(mutation, region, quota, cellScanner, nonceGroup,
+        spaceQuotaEnforcement, context));
+  }
+
+  CheckAndMutateResult checkAndMutate(HRegion region, CheckAndMutate checkAndMutate,
+    long nonceGroup, long nonce) throws IOException {
+    return mutateWithRowCacheBarrier(region, checkAndMutate.getRow(),
+      () -> region.checkAndMutate(checkAndMutate, nonceGroup, nonce));
+  }
+
+  CheckAndMutateResult checkAndMutate(HRegion region, List<Mutation> mutations,
+    CheckAndMutate checkAndMutate, long nonceGroup, long nonce) throws IOException {
+    return mutateWithRowCacheBarrier(region, mutations,
+      () -> region.checkAndMutate(checkAndMutate, nonceGroup, nonce));
+  }
+
+  OperationStatus[] batchMutate(HRegion region, Mutation[] mArray, boolean atomic, long nonceGroup,
+    long nonce) throws IOException {
+    return mutateWithRowCacheBarrier(region, Arrays.asList(mArray),
+      () -> region.batchMutate(mArray, atomic, nonceGroup, nonce));
+  }
+
+  // For testing only
+  AtomicInteger getRowLevelBarrier(RowCacheKey key) {
+    return rowLevelBarrierMap.get(key);
+  }
+
+  // For testing only
+  AtomicInteger getTableLevelBarrier(TableName tableName) {
+    return tableLevelBarrierMap.get(tableName);
+  }
+}
