@@ -174,6 +174,8 @@ public class AssignmentManager {
 
   public static final int DEFAULT_FORCE_REGION_RETAINMENT_RETRIES = 600;
 
+  private static final int MAX_RETRY_LIMIT = 5;
+
   private final ProcedureEvent<?> metaAssignEvent = new ProcedureEvent<>("meta assign");
   private final ProcedureEvent<?> metaLoadEvent = new ProcedureEvent<>("meta load");
 
@@ -185,6 +187,8 @@ public class AssignmentManager {
   private final AtomicBoolean running = new AtomicBoolean(false);
   private final RegionStates regionStates = new RegionStates();
   private final RegionStateStore regionStateStore;
+
+  private final Map<RegionInfo, Integer> retryCountMap = new HashMap<>();
 
   /**
    * When the operator uses this configuration option, any version between the current cluster
@@ -2483,7 +2487,21 @@ public class AssignmentManager {
         acceptPlan(regions, balancer.retainAssignment(retainMap, servers));
       } catch (HBaseIOException e) {
         LOG.warn("unable to retain assignment", e);
-        addToPendingAssignment(regions, retainMap.keySet());
+
+        for(RegionInfo hri : retainMap.keySet()) {
+          int retryCount = retryCountMap.getOrDefault(hri,0) + 1;
+          retryCountMap.put(hri, retryCount);
+
+          if(retryCount > MAX_RETRY_LIMIT) {
+            // Drop the region assignment and log an error
+            LOG.error("Dropping region " + hri + " after exceeding retry limit " + MAX_RETRY_LIMIT);
+            retryCountMap.remove(hri);
+          }
+          else {
+            // Add back to pending assignment for retry
+            addToPendingAssignment(regions, Collections.singleton(hri));
+          }
+        }
       }
     }
 
@@ -2527,6 +2545,8 @@ public class AssignmentManager {
           }
         } else {
           events[evcount++] = regionNode.getProcedureEvent();
+          // Remove successfully assigned regions from retryCountMap
+          retryCountMap.remove(hri);
         }
       }
     }
