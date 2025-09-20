@@ -21,7 +21,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
-import java.util.concurrent.TimeUnit;
 import org.apache.directory.server.annotations.CreateLdapServer;
 import org.apache.directory.server.annotations.CreateTransport;
 import org.apache.directory.server.core.annotations.ApplyLdifs;
@@ -36,7 +35,6 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,7 +54,6 @@ import org.slf4j.LoggerFactory;
 
   "dn: uid=jdoe," + LdapConstants.LDAP_BASE_DN, "cn: John Doe", "sn: Doe",
   "objectClass: inetOrgPerson", "uid: jdoe", "userPassword: secure123" })
-@Timeout(value = 1, unit = TimeUnit.MINUTES)
 public class TestLdapAdminACL extends LdapServerTestBase {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestLdapAdminACL.class);
