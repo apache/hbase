@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.backup;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -52,6 +53,8 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Test cases for backup system table API
@@ -476,6 +479,49 @@ public class TestBackupSystemTable {
       assertTrue(list.get(1).equals(setName2));
 
       cleanBackupTable();
+    }
+  }
+
+  @Test
+  public void testDisallowFurtherIncrementals() throws Exception {
+    try (BackupSystemTable table = new BackupSystemTable(conn)) {
+      TableName toInvalidate = TableName.valueOf("t1");
+      List<TableName> t1 = Lists.newArrayList(toInvalidate, TableName.valueOf("t2"));
+      List<TableName> t2 = Lists.newArrayList(toInvalidate, TableName.valueOf("t3"));
+      List<TableName> t3 = Lists.newArrayList(TableName.valueOf("t2"), TableName.valueOf("t3"));
+
+      BackupInfo backup = createBackupInfo();
+      backup.setState(BackupState.COMPLETE);
+
+      backup.setTables(t1);
+      backup.setBackupId("backup1");
+      backup.setBackupRootDir("backup1");
+      backup.setStartTs(0L);
+      table.updateBackupInfo(backup);
+
+      backup.setTables(t2);
+      backup.setBackupId("backup2");
+      backup.setBackupRootDir("backup2");
+      backup.setStartTs(1L);
+      table.updateBackupInfo(backup);
+
+      backup.setTables(t3);
+      backup.setBackupId("backup3");
+      backup.setBackupRootDir("backup2");
+      backup.setStartTs(2L);
+      table.updateBackupInfo(backup);
+
+      table.disallowFurtherIncrementals(toInvalidate);
+      BackupInfo result = table.readBackupInfo("backup1");
+      assertTrue(result.isDisallowFurtherIncrementals());
+
+      table.disallowFurtherIncrementals(toInvalidate);
+      result = table.readBackupInfo("backup2");
+      assertTrue(result.isDisallowFurtherIncrementals());
+
+      table.disallowFurtherIncrementals(toInvalidate);
+      result = table.readBackupInfo("backup3");
+      assertFalse(result.isDisallowFurtherIncrementals());
     }
   }
 
