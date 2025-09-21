@@ -27,6 +27,149 @@
 :icons: font
 :experimental:
 
+[[production-readiness]]
+== Production Readiness & Ops Runbooks
+
+This section helps you (1) verify an HBase cluster before go-live and (2) respond quickly to common
+operational incidents. It is intentionally practical and links back to deeper reference material
+throughout the docs.
+
+=== Quick Production Readiness Checklist
+
+[cols="20,40,40", options="header"]
+|===
+| Area | What to verify | Recommended baseline
+
+| Versions
+| HBase, Hadoop/HDFS, ZooKeeper, and JDK are supported as a set for your target branch.
+| Use a current, supported HBase branch on an LTS JDK. Confirm Hadoop/HDFS and ZooKeeper match the
+  compatibility guidance for that branch.
+
+| Master/RegionServer HA
+| At least two Masters; multiple RegionServers per host failure domain.
+| Masters: 2+ with automatic failover; RegionServers spread across failure domains (racks/AZs).
+
+| ZooKeeper
+| Quorum size and placement.
+| 3–5 ZooKeeper nodes, odd number, on separate hosts from Masters/RegionServers.
+
+| HDFS Durability
+| Replication factor and free space.
+| RF=3 (or higher as needed); > 20–30% free HDFS space before launch.
+
+| WAL & Data Safety
+| WAL sync and filesystem health.
+| WAL enabled and healthy; no NameNode safemode; HDFS clearly out of safemode before starting HBase.
+
+| Memory & Cache
+| BlockCache and memstore sizing won’t starve the OS page cache.
+| Start with BlockCache ≈ 30–40% of heap; leave OS cache for HFiles; adjust from production telemetry.
+
+| Compaction & Flush
+| Flush/compaction keep up under expected write load.
+| Verify compaction throughput in staging under production-like load. Set alerts on compaction backlog.
+
+| Region Layout
+| Region count per table and hotspot risk.
+| Pre-split large/critical tables. Avoid single-region hotspots on primary keys.
+
+| Security
+| Authentication, transport encryption, authorization.
+| Kerberos for RPC; TLS for in-flight encryption; table/namespace ACLs reviewed; restrict shell/admin access.
+
+| Observability
+| Metrics, logs, tracing are exported and retained.
+| Metrics2/JMX exported to your monitoring stack; GC logs enabled; log retention ≥ 7–14 days.
+
+| Backup/Restore
+| Snapshots and restore drills.
+| Snapshot schedule defined; periodic restore test in a non-prod environment.
+
+| SLOs & Alerts
+| SLOs defined and alerts mapped to symptoms.
+| Page-worthy alerts only (availability, latencies, error spikes, compaction backlog, RegionServers down).
+|===
+
+==== Copy-paste Pre-Launch Checks
+
+. **Quorum & HA**
++
+- [ ] ZooKeeper quorum healthy (odd count; majority reachable).
+- [ ] 2+ Masters configured and reachable.
+- [ ] RegionServers distributed across racks/AZs.
+
+. **Storage & Durability**
++
+- [ ] HDFS RF=3 and >20–30% free.
+- [ ] NameNode out of safemode; datanodes balanced.
+
+. **Capacity & Performance**
++
+- [ ] BlockCache/memstore sizing set; heap not near max GC pressure at load.
+- [ ] Compaction backlog stable in load tests.
+
+. **Security**
++
+- [ ] Kerberos tickets/Keytabs validated end-to-end.
+- [ ] TLS certs deployed; client/RS/Master configs updated.
+- [ ] ACLs for admin/service accounts reviewed.
+
+. **Backups**
++
+- [ ] Snapshot policy defined and tested restore works.
+
+. **Observability**
++
+- [ ] Metrics exported; dashboards show RS/Master health, RPCs, compactions, GC, WAL, file/tables stats.
+- [ ] Logs retained ≥ 7–14 days with search access.
+
+=== Common Ops Runbooks (first response)
+
+==== Hot Region / Key Hotspot
+*Symptoms:* One RegionServer shows high CPU/RPC; skewed request counts.  
+*First steps:*
+- Identify the table and region (UI/metrics).
+- If applicable, **split** the hot region or add **salting**/**hashing** to row keys in future writes.
+- Verify client-side batching and scan limits (prevent over-wide scans).
+
+==== Compaction Backlog / Read Latency Spikes
+*Symptoms:* Increasing store files, long reads, rising tail latency.  
+*First steps:*
+- Confirm compaction threads and I/O bandwidth are sufficient.
+- Temporarily raise compaction throughput (careful with I/O contention).
+- Verify HDFS free space; clear unrelated I/O pressure.
+
+==== Disk Nearly Full (HDFS or host)
+*Symptoms:* Alerts on capacity; failed flush/compaction; NameNode warnings.  
+*First steps:*
+- Halt major compactions; resolve large accidental files.
+- Increase capacity or free space; ensure deletion is propagating.
+- Resume compactions gradually; watch backlog.
+
+==== Long GC Pauses on RegionServers
+*Symptoms:* RS unresponsive, timeouts, GC logs show long pauses.  
+*First steps:*
+- Check heap sizing vs. BlockCache/memstore settings.
+- Reduce BlockCache fraction as a quick relief; tune heap/GC based on logs.
+- Ensure off-heap/native configurations aren’t starved.
+
+==== RegionServer Down / Flapping
+*Symptoms:* RS repeatedly exits or fails health checks.  
+*First steps:*
+- Review RS logs for OOM, ZK issues, HDFS timeouts.
+- Check network/DNS stability and clock skew.
+- If isolated to one host, drain and investigate hardware.
+
+=== Change Management & Drills
+
+- **Rolling restart** procedure rehearsed (documented exact steps).
+- **Backup/restore drill** performed in the last quarter.
+- **Chaos/kill test** in staging to validate recovery paths.
+
+NOTE: This checklist is a starting point. Always adapt thresholds, alerts, and procedures to your workload
+and SLOs, and keep the runbooks close to how your team actually operates.
+
+
 This chapter will cover operational tools and practices required of a running Apache HBase cluster.
 The subject of operations is related to the topics of <<trouble>>, <<performance>>, and <<configuration>> but is a distinct topic in itself.
 
