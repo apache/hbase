@@ -73,9 +73,21 @@ $ cd hbase-{Version}/
   edit the _conf/hbase-env.sh_ file and uncomment the line starting with _#export JAVA_HOME=_, and then set it to your Java installation path.
 +
 .Example extract from _hbase-env.sh_ where _JAVA_HOME_ is set
-  # Set environment variables here.
-  # The java implementation to use.
-  export JAVA_HOME=/usr/jdk64/jdk1.8.0_112
+# Set environment variables here.
+# The Java implementation to use.
+# Use an LTS JDK supported by your HBase branch (see <<java,Java>>).
+# Example (Debian/Ubuntu with JDK 17):
+#   export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+export JAVA_HOME=/usr/lib/jvm/java-17
+
+[NOTE]
+====
+This procedure assumes that you have configured Hadoop and HDFS on your local system and/or a remote
+system, and that they are running and available. It also assumes you are using Hadoop 3.
+The guide on
+link:https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-common/SingleCluster.html[Setting up a Single Node Cluster]
+in the Hadoop documentation is a good starting point.
+====
 +
 . The _bin/start-hbase.sh_ script is provided as a convenient way to start HBase.
   Issue the command, and if all goes well, a message is logged to standard output showing that HBase started successfully.
@@ -292,7 +304,7 @@ In this example, HDFS is running on the localhost at port 8020.
 
 <property>
   <name>hbase.rootdir</name>
-  <value>hdfs://localhost:9000/hbase</value>
+  <value>hdfs://localhost:8020/hbase</value>
 </property>
 ----
 +
