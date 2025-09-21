@@ -1376,6 +1376,42 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
 
   /**
    * Create a table.
+   * @param htd           table descriptor
+   * @param families      array of column families
+   * @param splitKeys     array of split keys
+   * @param type          Bloom type
+   * @param blockSize     block size
+   * @param storagePolicy storage policy
+   * @param c             Configuration to use
+   * @return A Table instance for the created table.
+   * @throws IOException if getAdmin or createTable fails
+   */
+
+  public Table createTable(TableDescriptor htd, byte[][] families, byte[][] splitKeys,
+    BloomType type, int blockSize, String storagePolicy, Configuration c) throws IOException {
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(htd);
+    for (byte[] family : families) {
+      ColumnFamilyDescriptorBuilder cfdb = ColumnFamilyDescriptorBuilder.newBuilder(family)
+        .setBloomFilterType(type).setBlocksize(blockSize).setStoragePolicy(storagePolicy);
+      if (isNewVersionBehaviorEnabled()) {
+        cfdb.setNewVersionBehavior(true);
+      }
+      builder.setColumnFamily(cfdb.build());
+    }
+    TableDescriptor td = builder.build();
+    if (splitKeys != null) {
+      getAdmin().createTable(td, splitKeys);
+    } else {
+      getAdmin().createTable(td);
+    }
+    // HBaseAdmin only waits for regions to appear in hbase:meta
+    // we should wait until they are assigned
+    waitUntilAllRegionsAssigned(td.getTableName());
+    return getConnection().getTable(td.getTableName());
+  }
+
+  /**
+   * Create a table.
    * @param htd       table descriptor
    * @param splitRows array of split keys
    * @return A Table instance for the created table.

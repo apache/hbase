@@ -22,6 +22,7 @@ import static org.apache.hadoop.hbase.util.LocatedBlockHelper.getLocatedBlockLoc
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -933,5 +934,50 @@ public class TestBulkLoadHFiles {
     assertThrows(IOException.class, () -> tool.run(args));
     util.getHBaseCluster().getRegions(tableName)
       .forEach(r -> assertEquals(1, r.getStore(FAMILY).getStorefiles().size()));
+  }
+
+  private String getStoragePolicyOfTmpDirWhenSplitHFile(Table table, String family) throws Exception {
+    TableName tableName = table.getName();
+    util.loadTable(table, Bytes.toBytes(family));
+
+    FileSystem fs = util.getTestFileSystem();
+    Path sfPath = new Path(fs.getWorkingDirectory(), new Path(family, "file"));
+    HFileTestUtil.createHFile(util.getConfiguration(), fs, sfPath, Bytes.toBytes(family), QUALIFIER,
+      Bytes.toBytes("aaa"), Bytes.toBytes("zzz"), 1000);
+
+    util.getAdmin().split(tableName);
+    util.waitFor(10000, 1000, () -> util.getAdmin().getRegions(tableName).size() > 1);
+
+    Path tmp = new Path(fs.getWorkingDirectory(), new Path(family, ".tmp"));
+    Configuration config = new Configuration(util.getConfiguration());
+    BulkLoadHFilesTool tool = new BulkLoadHFilesTool(config);
+    String[] args = new String[] { fs.getWorkingDirectory().toString(), tableName.toString() };
+    tool.run(args);
+    return fs.exists(tmp) ? fs.getStoragePolicy(tmp).getName() : null;
+  }
+
+  @Test
+  public void testSplitHFileInSSDCluster() throws Exception {
+    TableName table = TableName.valueOf(tn.getMethodName());
+    String family = "cf";
+    String storage = getStoragePolicyOfTmpDirWhenSplitHFile(
+                       util.createTable(table, Bytes.toBytes(family)), family);
+    assertNotEquals("ALL_SSD", storage);
+    assertEquals("HOT", storage);
+
+    TableName tableSetSSDPolicy = TableName.valueOf(tn.getMethodName() + "_SSD");
+    String familySsd = "cf_ssd";
+    TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableSetSSDPolicy)
+                                                .setRegionReplication(1)
+                                                .build();
+    assertEquals("ALL_SSD", getStoragePolicyOfTmpDirWhenSplitHFile(
+                              util.createTable(htd,
+                                               new byte[][]{Bytes.toBytes(familySsd)},
+                                               null,
+                                               BloomType.NONE,
+                                               HConstants.DEFAULT_BLOCKSIZE,
+                                               "ALL_SSD",
+                                               null),
+                              familySsd));
   }
 }
