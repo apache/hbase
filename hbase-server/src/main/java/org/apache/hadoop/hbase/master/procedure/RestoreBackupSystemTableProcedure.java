@@ -100,9 +100,11 @@ public class RestoreBackupSystemTableProcedure
   protected void rollbackState(MasterProcedureEnv env, RestoreBackupSystemTableState state)
     throws IOException, InterruptedException {
     switch (state) {
-      case RESTORE_BACKUP_SYSTEM_TABLE_DISABLE, RESTORE_BACKUP_SYSTEM_TABLE_PREPARE:
+      case RESTORE_BACKUP_SYSTEM_TABLE_DISABLE:
+      case RESTORE_BACKUP_SYSTEM_TABLE_PREPARE:
         return;
-      case RESTORE_BACKUP_SYSTEM_TABLE_RESTORE, RESTORE_BACKUP_SYSTEM_TABLE_ENABLE:
+      case RESTORE_BACKUP_SYSTEM_TABLE_RESTORE:
+      case RESTORE_BACKUP_SYSTEM_TABLE_ENABLE:
         if (enableOnRollback) {
           addChildProcedure(createEnableTableProcedure(env));
         }
