@@ -20,21 +20,17 @@ package org.apache.hadoop.hbase;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.lang.reflect.Field;
-import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 
 /**
  * Verify that the values are all correct.
  */
 @Tag(MiscTests.TAG)
 @Tag(SmallTests.TAG)
-// TODO: this is the timeout for each method, not the whole class
-@Timeout(value = 1, unit = TimeUnit.MINUTES)
 public class TestJUnit5TagConstants {
 
   @Test
