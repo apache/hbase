@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.CheckAndMutate;
@@ -41,8 +42,6 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
-import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
-import org.apache.hadoop.hbase.io.hfile.RowCacheKey;
 import org.apache.hadoop.hbase.ipc.RpcCallContext;
 import org.apache.hadoop.hbase.quotas.ActivePolicyEnforcement;
 import org.apache.hadoop.hbase.quotas.OperationQuota;
@@ -80,8 +79,6 @@ public class TestRowCacheService {
     Mockito.when(hStore.getStorefilesCount()).thenReturn(2);
     stores.add(hStore);
 
-    BlockCache blockCache = new LruBlockCache(1024, 64 * 1024);
-
     ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder.newBuilder("CF1".getBytes()).build();
     TableDescriptor td = Mockito.mock(TableDescriptor.class);
     Mockito.when(td.isRowCacheEnabled()).thenReturn(true);
@@ -93,29 +90,31 @@ public class TestRowCacheService {
 
     RegionScannerImpl regionScanner = Mockito.mock(RegionScannerImpl.class);
 
+    Configuration conf = HBaseConfiguration.create();
+    conf.setFloat(HConstants.ROW_CACHE_SIZE_KEY, 0.01f);
     HRegion region = Mockito.mock(HRegion.class);
     Mockito.when(region.getRegionInfo()).thenReturn(regionInfo);
-    Mockito.when(region.getBlockCache()).thenReturn(blockCache);
     Mockito.when(region.getTableDescriptor()).thenReturn(td);
     Mockito.when(region.getStores()).thenReturn(stores);
     Mockito.when(region.getScanner(scan)).thenReturn(regionScanner);
+    Mockito.when(region.getReadOnlyConfiguration()).thenReturn(conf);
 
     RowCacheKey key = new RowCacheKey(region, rowKey);
     List<Cell> results = new ArrayList<>();
     results.add(KeyValueTestUtil.create("row", "CF", "q1", 1, "v1"));
 
     // Initialize RowCacheService
-    Configuration conf = HBaseConfiguration.create();
     RowCacheService rowCacheService = new RowCacheService(conf);
+    RowCache rowCache = rowCacheService.getRowCache();
 
     // Verify that row cache populated before creating a row level barrier
     rowCacheService.getScanner(region, get, scan, results);
-    assertNotNull(blockCache.getBlock(key, true, false, true));
+    assertNotNull(rowCache.getBlock(key, true));
     assertNull(rowCacheService.getRowLevelBarrier(key));
 
     // Evict the row cache
-    region.getBlockCache().evictBlock(key);
-    assertNull(blockCache.getBlock(key, true, false, true));
+    rowCache.evictBlock(key);
+    assertNull(rowCache.getBlock(key, true));
 
     // Create a row level barrier for the row key
     rowCacheService.createRowLevelBarrier(key);
@@ -123,7 +122,7 @@ public class TestRowCacheService {
 
     // Verify that no row cache populated after creating a row level barrier
     rowCacheService.getScanner(region, get, scan, results);
-    assertNull(blockCache.getBlock(key, true, false, true));
+    assertNull(rowCache.getBlock(key, true));
 
     // Remove the row level barrier
     rowCacheService.removeRowLevelBarrier(key);
@@ -131,12 +130,12 @@ public class TestRowCacheService {
 
     // Verify that row cache populated before creating a table level barrier
     rowCacheService.getScanner(region, get, scan, results);
-    assertNotNull(blockCache.getBlock(key, true, false, true));
+    assertNotNull(rowCache.getBlock(key, true));
     assertNull(rowCacheService.getTableLevelBarrier(tableName));
 
     // Evict the row cache
-    region.getBlockCache().evictBlock(key);
-    assertNull(blockCache.getBlock(key, true, false, true));
+    rowCache.evictBlock(key);
+    assertNull(rowCache.getBlock(key, true));
 
     // Create a table level barrier for the row key
     rowCacheService.createTableLevelBarrier(tableName);
@@ -144,7 +143,7 @@ public class TestRowCacheService {
 
     // Verify that no row cache populated after creating a table level barrier
     rowCacheService.getScanner(region, get, scan, results);
-    assertNull(blockCache.getBlock(key, true, false, true));
+    assertNull(rowCache.getBlock(key, true));
 
     // Remove the table level barrier
     rowCacheService.removeTableLevelBarrier(tableName);
@@ -204,7 +203,7 @@ public class TestRowCacheService {
       activePolicyEnforcement, rpcCallContext);
     // Verify the sequence of method calls
     inOrder.verify(rowCacheService, Mockito.times(1)).createRowLevelBarrier(Mockito.any());
-    inOrder.verify(rowCacheService, Mockito.times(1)).evictRowCache(Mockito.any(), Mockito.any());
+    inOrder.verify(rowCacheService, Mockito.times(1)).evictRowCache(Mockito.any());
     inOrder.verify(rowCacheService, Mockito.times(1)).execute(Mockito.any());
     inOrder.verify(rowCacheService, Mockito.times(1)).removeRowLevelBarrier(Mockito.any());
 
@@ -215,7 +214,7 @@ public class TestRowCacheService {
     rowCacheService.checkAndMutate(region, checkAndMutate, 0, 0);
     // Verify the sequence of method calls
     inOrder.verify(rowCacheService, Mockito.times(1)).createRowLevelBarrier(Mockito.any());
-    inOrder.verify(rowCacheService, Mockito.times(1)).evictRowCache(Mockito.any(), Mockito.any());
+    inOrder.verify(rowCacheService, Mockito.times(1)).evictRowCache(Mockito.any());
     inOrder.verify(rowCacheService, Mockito.times(1)).execute(Mockito.any());
     inOrder.verify(rowCacheService, Mockito.times(1)).removeRowLevelBarrier(Mockito.any());
 
@@ -227,7 +226,7 @@ public class TestRowCacheService {
     rowCacheService.checkAndMutate(region, mutations, checkAndMutate, 0, 0);
     // Verify the sequence of method calls
     inOrder.verify(rowCacheService, Mockito.times(1)).createRowLevelBarrier(Mockito.any());
-    inOrder.verify(rowCacheService, Mockito.times(1)).evictRowCache(Mockito.any(), Mockito.any());
+    inOrder.verify(rowCacheService, Mockito.times(1)).evictRowCache(Mockito.any());
     inOrder.verify(rowCacheService, Mockito.times(1)).execute(Mockito.any());
     inOrder.verify(rowCacheService, Mockito.times(1)).removeRowLevelBarrier(Mockito.any());
 
@@ -239,7 +238,7 @@ public class TestRowCacheService {
     rowCacheService.batchMutate(region, mutationArray, true, 0, 0);
     // Verify the sequence of method calls
     inOrder.verify(rowCacheService, Mockito.times(1)).createRowLevelBarrier(Mockito.any());
-    inOrder.verify(rowCacheService, Mockito.times(1)).evictRowCache(Mockito.any(), Mockito.any());
+    inOrder.verify(rowCacheService, Mockito.times(1)).evictRowCache(Mockito.any());
     inOrder.verify(rowCacheService, Mockito.times(1)).execute(Mockito.any());
     inOrder.verify(rowCacheService, Mockito.times(1)).removeRowLevelBarrier(Mockito.any());
 
@@ -259,5 +258,60 @@ public class TestRowCacheService {
     inOrder.verify(rowCacheService, Mockito.times(1)).increaseRowCacheSeqNum(Mockito.any());
     inOrder.verify(rowCacheService, Mockito.times(1)).bulkLoad(Mockito.any(), Mockito.any());
     inOrder.verify(rowCacheService, Mockito.times(1)).removeTableLevelBarrier(Mockito.any());
+  }
+
+  @Test
+  public void testCaching() throws IOException {
+    // Mocking dependencies to create RowCacheService instance
+    RegionInfo regionInfo = Mockito.mock(RegionInfo.class);
+    Mockito.when(regionInfo.getEncodedName()).thenReturn("region1");
+    TableName tableName = TableName.valueOf("table1");
+    Mockito.when(regionInfo.getTable()).thenReturn(tableName);
+
+    List<HStore> stores = new ArrayList<>();
+    HStore hStore = Mockito.mock(HStore.class);
+    Mockito.when(hStore.getStorefilesCount()).thenReturn(2);
+    stores.add(hStore);
+
+    ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder.newBuilder("CF1".getBytes()).build();
+    TableDescriptor td = Mockito.mock(TableDescriptor.class);
+    Mockito.when(td.isRowCacheEnabled()).thenReturn(true);
+    Mockito.when(td.getColumnFamilies()).thenReturn(new ColumnFamilyDescriptor[] { cfd });
+
+    byte[] rowKey = "row".getBytes();
+    RegionScannerImpl regionScanner = Mockito.mock(RegionScannerImpl.class);
+
+    Get get = new Get(rowKey);
+    Scan scan = new Scan(get);
+
+    Configuration conf = HBaseConfiguration.create();
+    conf.setFloat(HConstants.ROW_CACHE_SIZE_KEY, 0.01f);
+    HRegion region = Mockito.mock(HRegion.class);
+    Mockito.when(region.getRegionInfo()).thenReturn(regionInfo);
+    Mockito.when(region.getTableDescriptor()).thenReturn(td);
+    Mockito.when(region.getStores()).thenReturn(stores);
+    Mockito.when(region.getScanner(scan)).thenReturn(regionScanner);
+    Mockito.when(region.getReadOnlyConfiguration()).thenReturn(conf);
+
+    RowCacheKey key = new RowCacheKey(region, rowKey);
+    List<Cell> results = new ArrayList<>();
+    results.add(KeyValueTestUtil.create("row", "CF", "q1", 1, "v1"));
+
+    // Initialize RowCacheService
+    RowCacheService rowCacheService = new RowCacheService(conf);
+    RowCache rowCache = rowCacheService.getRowCache();
+
+    // Verify that row cache populated with caching=false
+    // This should be called first not to populate the row cache
+    get.setCacheBlocks(false);
+    rowCacheService.getScanner(region, get, scan, results);
+    assertNull(rowCache.getBlock(key, true));
+    assertNull(rowCache.getBlock(key, false));
+
+    // Verify that row cache populated with caching=true
+    get.setCacheBlocks(true);
+    rowCacheService.getScanner(region, get, scan, results);
+    assertNotNull(rowCache.getBlock(key, true));
+    assertNull(rowCache.getBlock(key, false));
   }
 }

@@ -615,8 +615,6 @@ public interface MetricsRegionServerWrapper {
 
   long getTrailerMissCount();
 
-  long getRowMissCount();
-
   long getDataHitCount();
 
   long getLeafIndexHitCount();
@@ -637,7 +635,15 @@ public interface MetricsRegionServerWrapper {
 
   long getTrailerHitCount();
 
-  long getRowHitCount();
+  long getRowCacheHitCount();
+
+  long getRowCacheMissCount();
+
+  long getRowCacheSize();
+
+  long getRowCacheCount();
+
+  long getRowCacheEvictedRowCount();
 
   long getTotalRowActionRequestCount();
 

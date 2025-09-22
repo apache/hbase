@@ -386,7 +386,6 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String BLOCK_CACHE_GENERAL_BLOOM_META_MISS_COUNT = "blockCacheGeneralBloomMetaMissCount";
   String BLOCK_CACHE_DELETE_FAMILY_BLOOM_MISS_COUNT = "blockCacheDeleteFamilyBloomMissCount";
   String BLOCK_CACHE_TRAILER_MISS_COUNT = "blockCacheTrailerMissCount";
-  String BLOCK_CACHE_ROW_MISS_COUNT = "blockCacheRowMissCount";
   String BLOCK_CACHE_DATA_HIT_COUNT = "blockCacheDataHitCount";
   String BLOCK_CACHE_ENCODED_DATA_HIT_COUNT = "blockCacheEncodedDataHitCount";
   String BLOCK_CACHE_LEAF_INDEX_HIT_COUNT = "blockCacheLeafIndexHitCount";
@@ -398,7 +397,6 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String BLOCK_CACHE_GENERAL_BLOOM_META_HIT_COUNT = "blockCacheGeneralBloomMetaHitCount";
   String BLOCK_CACHE_DELETE_FAMILY_BLOOM_HIT_COUNT = "blockCacheDeleteFamilyBloomHitCount";
   String BLOCK_CACHE_TRAILER_HIT_COUNT = "blockCacheTrailerHitCount";
-  String BLOCK_CACHE_ROW_HIT_COUNT = "blockCacheRowHitCount";
   String L1_CACHE_FREE_SIZE = "l1CacheFreeSize";
   String L1_CACHE_FREE_SIZE_DESC = "Amount of free bytes in the L1 cache";
   String L1_CACHE_SIZE = "l1CacheSize";
@@ -432,6 +430,13 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String L2_CACHE_HIT_RATIO_DESC = "L2 cache hit ratio.";
   String L2_CACHE_MISS_RATIO = "l2CacheMissRatio";
   String L2_CACHE_MISS_RATIO_DESC = "L2 cache miss ratio.";
+
+  String ROW_CACHE_HIT_COUNT = "rowCacheHitCount";
+  String ROW_CACHE_MISS_COUNT = "rowCacheMissCount";
+  String ROW_CACHE_EVICTED_ROW_COUNT = "rowCacheEvictedRowCount";
+  String ROW_CACHE_SIZE = "rowCacheSize";
+  String ROW_CACHE_COUNT = "rowCacheCount";
+
   String RS_START_TIME_NAME = "regionServerStartTime";
   String ZOOKEEPER_QUORUM_NAME = "zookeeperQuorum";
   String SERVER_NAME_NAME = "serverName";

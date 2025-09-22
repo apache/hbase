@@ -17,7 +17,10 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.apache.hadoop.hbase.HConstants.HFILE_BLOCK_CACHE_SIZE_KEY;
 import static org.apache.hadoop.hbase.HConstants.ROW_CACHE_ACTIVATE_MIN_HFILES_KEY;
+import static org.apache.hadoop.hbase.HConstants.ROW_CACHE_SIZE_KEY;
+import static org.apache.hadoop.hbase.regionserver.MetricsRegionServerSource.ROW_CACHE_HIT_COUNT;
 import static org.junit.Assert.assertArrayEquals;
 
 import java.io.IOException;
@@ -79,6 +82,11 @@ public class TestRowCacheConfigurationObserver {
   @BeforeClass
   public static void beforeClass() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
+
+    // Enable row cache but reduce the block cache size to fit in 80% of the heap
+    conf.setFloat(ROW_CACHE_SIZE_KEY, 0.01f);
+    conf.setFloat(HFILE_BLOCK_CACHE_SIZE_KEY, 0.38f);
+
     // Set a value different from the default
     conf.setInt(ROW_CACHE_ACTIVATE_MIN_HFILES_KEY, 0);
     SingleProcessHBaseCluster cluster = TEST_UTIL.startMiniCluster();
@@ -154,8 +162,8 @@ public class TestRowCacheConfigurationObserver {
     // Initialize metrics
     recomputeMetrics();
     setCounterBase("Get_num_ops", metricsHelper.getCounter("Get_num_ops", serverSource));
-    setCounterBase("blockCacheRowHitCount",
-      metricsHelper.getCounter("blockCacheRowHitCount", serverSource));
+    setCounterBase(ROW_CACHE_HIT_COUNT,
+      metricsHelper.getCounter(ROW_CACHE_HIT_COUNT, serverSource));
 
     Put put = new Put(rowKey);
     put.addColumn(CF1, Q1, "11".getBytes());
@@ -167,7 +175,7 @@ public class TestRowCacheConfigurationObserver {
     assertArrayEquals(rowKey, result.getRow());
     assertArrayEquals("11".getBytes(), result.getValue(CF1, Q1));
     assertCounterDiff("Get_num_ops", 1);
-    assertCounterDiff("blockCacheRowHitCount", 0);
+    assertCounterDiff(ROW_CACHE_HIT_COUNT, 0);
 
     // Flush, 1 store file exists
     TEST_UTIL.getAdmin().flush(tableName);
@@ -178,7 +186,7 @@ public class TestRowCacheConfigurationObserver {
     assertArrayEquals(rowKey, result.getRow());
     assertArrayEquals("11".getBytes(), result.getValue(CF1, Q1));
     assertCounterDiff("Get_num_ops", 1);
-    assertCounterDiff("blockCacheRowHitCount", 0);
+    assertCounterDiff(ROW_CACHE_HIT_COUNT, 0);
 
     // Flush, 2(ROW_CACHE_ACTIVATE_MIN_HFILES_DEFAULT) store files exist
     table.put(put);
@@ -191,7 +199,7 @@ public class TestRowCacheConfigurationObserver {
     assertArrayEquals(rowKey, result.getRow());
     assertArrayEquals("11".getBytes(), result.getValue(CF1, Q1));
     assertCounterDiff("Get_num_ops", 1);
-    assertCounterDiff("blockCacheRowHitCount", 0);
+    assertCounterDiff(ROW_CACHE_HIT_COUNT, 0);
 
     // Get again, this time the row cache is hit
     result = table.get(get);
@@ -199,6 +207,6 @@ public class TestRowCacheConfigurationObserver {
     assertArrayEquals(rowKey, result.getRow());
     assertArrayEquals("11".getBytes(), result.getValue(CF1, Q1));
     assertCounterDiff("Get_num_ops", 1);
-    assertCounterDiff("blockCacheRowHitCount", 1);
+    assertCounterDiff(ROW_CACHE_HIT_COUNT, 1);
   }
 }

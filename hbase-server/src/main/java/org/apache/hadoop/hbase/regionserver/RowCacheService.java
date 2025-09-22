@@ -17,9 +17,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.apache.hadoop.hbase.HConstants.ROW_CACHE_ACTIVATE_MIN_HFILES_DEFAULT;
-import static org.apache.hadoop.hbase.HConstants.ROW_CACHE_ACTIVATE_MIN_HFILES_KEY;
-
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -32,6 +29,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.CheckAndMutate;
 import org.apache.hadoop.hbase.client.CheckAndMutateResult;
@@ -41,7 +39,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.io.hfile.RowCacheKey;
+import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.ipc.RpcCallContext;
 import org.apache.hadoop.hbase.quotas.ActivePolicyEnforcement;
 import org.apache.hadoop.hbase.quotas.OperationQuota;
@@ -55,7 +53,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.BulkLoadHF
 /**
  * It is responsible for populating the row cache and retrieving rows from it.
  */
-class RowCacheService {
+@org.apache.yetus.audience.InterfaceAudience.Private
+public class RowCacheService {
   /**
    * A barrier that prevents the row cache from being populated during table operations, such as
    * bulk loads. It is implemented as a counter to address issues that arise when the same table is
@@ -68,6 +67,10 @@ class RowCacheService {
    * concurrently.
    */
   private final Map<RowCacheKey, AtomicInteger> rowLevelBarrierMap = new ConcurrentHashMap<>();
+
+  private final boolean enabledByConf;
+  private final RowCache rowCache;
+
   private int activateMinHFiles;
 
   @FunctionalInterface
@@ -77,11 +80,15 @@ class RowCacheService {
 
   RowCacheService(Configuration conf) {
     updateConf(conf);
+
+    enabledByConf =
+      conf.getFloat(HConstants.ROW_CACHE_SIZE_KEY, HConstants.ROW_CACHE_SIZE_DEFAULT) > 0;
+    rowCache = new RowCache(MemorySizeUtil.getRowCacheSize(conf));
   }
 
   synchronized void updateConf(Configuration conf) {
-    this.activateMinHFiles =
-      conf.getInt(ROW_CACHE_ACTIVATE_MIN_HFILES_KEY, ROW_CACHE_ACTIVATE_MIN_HFILES_DEFAULT);
+    this.activateMinHFiles = conf.getInt(HConstants.ROW_CACHE_ACTIVATE_MIN_HFILES_KEY,
+      HConstants.ROW_CACHE_ACTIVATE_MIN_HFILES_DEFAULT);
   }
 
   RegionScannerImpl getScanner(HRegion region, Get get, Scan scan, List<Cell> results)
@@ -117,8 +124,7 @@ class RowCacheService {
   }
 
   private boolean tryGetFromCache(HRegion region, RowCacheKey key, Get get, List<Cell> results) {
-    RowCells row =
-      (RowCells) region.getBlockCache().getBlock(key, get.getCacheBlocks(), false, true);
+    RowCells row = rowCache.getBlock(key, get.getCacheBlocks());
 
     if (row == null) {
       return false;
@@ -143,7 +149,7 @@ class RowCacheService {
       // The row cache is populated only when no row level barriers remain
       rowLevelBarrierMap.computeIfAbsent(key, k -> {
         try {
-          region.getBlockCache().cacheBlock(key, new RowCells(results), false);
+          rowCache.cacheBlock(key, new RowCells(results));
         } catch (CloneNotSupportedException ignored) {
           // Not able to cache row cells, ignore
         }
@@ -223,8 +229,8 @@ class RowCacheService {
    * @return true if the row can be cached, false otherwise
    */
   // @formatter:on
-  static boolean canCacheRow(Get get, Region region) {
-    return region.getTableDescriptor().isRowCacheEnabled() && get.getCacheBlocks()
+  boolean canCacheRow(Get get, Region region) {
+    return enabledByConf && region.getTableDescriptor().isRowCacheEnabled() && get.getCacheBlocks()
       && get.getFilter() == null && isRetrieveAllCells(get, region) && isDefaultTtl(region)
       && get.getAttributesMap().isEmpty() && !get.isCheckExistenceOnly()
       && get.getColumnFamilyTimeRange().isEmpty() && get.getConsistency() == Consistency.STRONG
@@ -263,7 +269,7 @@ class RowCacheService {
 
         // After creating the barrier, evict the existing row cache for this row,
         // as it becomes invalid after the mutation
-        evictRowCache(region, key);
+        evictRowCache(key);
       });
 
       return execute(operation);
@@ -287,7 +293,7 @@ class RowCacheService {
 
       // After creating the barrier, evict the existing row cache for this row,
       // as it becomes invalid after the mutation
-      evictRowCache(region, key);
+      evictRowCache(key);
 
       return execute(operation);
     } finally {
@@ -300,8 +306,8 @@ class RowCacheService {
     return operation.execute();
   }
 
-  void evictRowCache(HRegion region, RowCacheKey key) {
-    region.getBlockCache().evictBlock(key);
+  void evictRowCache(RowCacheKey key) {
+    rowCache.evictBlock(key);
   }
 
   /**
@@ -357,5 +363,10 @@ class RowCacheService {
   // For testing only
   AtomicInteger getTableLevelBarrier(TableName tableName) {
     return tableLevelBarrierMap.get(tableName);
+  }
+
+  // For testing only
+  public RowCache getRowCache() {
+    return rowCache;
   }
 }

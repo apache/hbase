@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.hbase.tool;
 
+import static org.apache.hadoop.hbase.HConstants.HFILE_BLOCK_CACHE_SIZE_KEY;
 import static org.apache.hadoop.hbase.HConstants.ROW_CACHE_ACTIVATE_MIN_HFILES_KEY;
+import static org.apache.hadoop.hbase.HConstants.ROW_CACHE_SIZE_KEY;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
@@ -36,8 +38,9 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
-import org.apache.hadoop.hbase.io.hfile.RowCacheKey;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.RowCache;
+import org.apache.hadoop.hbase.regionserver.RowCacheKey;
 import org.apache.hadoop.hbase.regionserver.TestHRegionServerBulkLoad;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -104,8 +107,14 @@ public class TestBulkLoadHFilesRowCache {
 
   @BeforeClass
   public static void setupCluster() throws Exception {
+    Configuration conf = TEST_UTIL.getConfiguration();
+
+    // Enable row cache but reduce the block cache size to fit in 80% of the heap
+    conf.setFloat(ROW_CACHE_SIZE_KEY, 0.01f);
+    conf.setFloat(HFILE_BLOCK_CACHE_SIZE_KEY, 0.38f);
+
     // To test simply, regardless of the number of HFiles
-    TEST_UTIL.getConfiguration().setInt(ROW_CACHE_ACTIVATE_MIN_HFILES_KEY, 0);
+    conf.setInt(ROW_CACHE_ACTIVATE_MIN_HFILES_KEY, 0);
     TEST_UTIL.startMiniCluster(1);
     admin = TEST_UTIL.getAdmin();
   }
@@ -134,6 +143,9 @@ public class TestBulkLoadHFilesRowCache {
 
   @Test
   public void testRowCache() throws Exception {
+    RowCache rowCache = TEST_UTIL.getHBaseCluster().getRegionServer(0).getRSRpcServices()
+      .getRowCacheService().getRowCache();
+
     // Put a row to populate a row cache
     Put put = new Put("row".getBytes());
     put.addColumn(family(0).getBytes(), "q1".getBytes(), "value".getBytes());
@@ -143,7 +155,7 @@ public class TestBulkLoadHFilesRowCache {
     Get get = new Get("row".getBytes());
     table.get(get);
     RowCacheKey keyPrev = new RowCacheKey(region, get.getRow());
-    assertNotNull(region.getBlockCache().getBlock(keyPrev, true, false, true));
+    assertNotNull(rowCache.getBlock(keyPrev, true));
 
     // bulkload
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
@@ -153,8 +165,8 @@ public class TestBulkLoadHFilesRowCache {
 
     // Ensure the row cache is removed after bulkload
     RowCacheKey keyCur = new RowCacheKey(region, get.getRow());
-    assertNull(region.getBlockCache().getBlock(keyCur, true, false, true));
+    assertNull(rowCache.getBlock(keyCur, true));
     // Ensure the row cache for keyPrev still exists, but it is not used any more.
-    assertNotNull(region.getBlockCache().getBlock(keyPrev, true, false, true));
+    assertNotNull(rowCache.getBlock(keyPrev, true));
   }
 }

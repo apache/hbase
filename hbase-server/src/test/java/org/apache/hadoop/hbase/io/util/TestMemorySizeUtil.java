@@ -52,6 +52,13 @@ public class TestMemorySizeUtil {
     assertEquals(HConstants.HBASE_CLUSTER_MINIMUM_MEMORY_THRESHOLD, 0.2f, 0.0f);
     MemorySizeUtil.validateRegionServerHeapMemoryAllocation(conf);
 
+    // when memstore size + block cache size + row cache size + default free heap min size == 1.0
+    conf.setFloat(MemorySizeUtil.MEMSTORE_SIZE_KEY, 0.4f);
+    conf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0.39f);
+    conf.setFloat(HConstants.ROW_CACHE_SIZE_KEY, 0.01f);
+    assertEquals(HConstants.HBASE_CLUSTER_MINIMUM_MEMORY_THRESHOLD, 0.2f, 0.0f);
+    MemorySizeUtil.validateRegionServerHeapMemoryAllocation(conf);
+
     // when memstore size + block cache size + default free heap min size > 1.0
     conf.setFloat(MemorySizeUtil.MEMSTORE_SIZE_KEY, 0.5f);
     assertThrows(RuntimeException.class,
@@ -60,6 +67,7 @@ public class TestMemorySizeUtil {
     // when free heap min size is set to 0, it should not throw an exception
     conf.setFloat(MemorySizeUtil.MEMSTORE_SIZE_KEY, 0.5f);
     conf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0.5f);
+    conf.setFloat(HConstants.ROW_CACHE_SIZE_KEY, 0.0f);
     conf.setLong(MemorySizeUtil.HBASE_REGION_SERVER_FREE_HEAP_MIN_MEMORY_SIZE_KEY, 0L);
     MemorySizeUtil.validateRegionServerHeapMemoryAllocation(conf);
 
@@ -85,5 +93,15 @@ public class TestMemorySizeUtil {
     conf.set(MemorySizeUtil.HBASE_REGION_SERVER_FREE_HEAP_MIN_MEMORY_SIZE_KEY, "0");
     minFreeHeapFraction = MemorySizeUtil.getRegionServerMinFreeHeapFraction(conf);
     assertEquals(0.0f, minFreeHeapFraction, 0.0f);
+  }
+
+  @Test
+  public void testGetRowCacheSize() {
+    float rowCacheSizeRatio = 0.01f;
+    conf.setFloat(HConstants.ROW_CACHE_SIZE_KEY, rowCacheSizeRatio);
+    long rowCacheSizeBytes = MemorySizeUtil.getRowCacheSize(conf);
+
+    long maxMemory = MemorySizeUtil.safeGetHeapMemoryUsage().getMax();
+    assertEquals((long) (maxMemory * rowCacheSizeRatio), rowCacheSizeBytes);
   }
 }

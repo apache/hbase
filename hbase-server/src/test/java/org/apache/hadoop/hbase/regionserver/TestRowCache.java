@@ -17,7 +17,12 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.apache.hadoop.hbase.HConstants.HFILE_BLOCK_CACHE_SIZE_KEY;
 import static org.apache.hadoop.hbase.HConstants.ROW_CACHE_ACTIVATE_MIN_HFILES_KEY;
+import static org.apache.hadoop.hbase.HConstants.ROW_CACHE_SIZE_KEY;
+import static org.apache.hadoop.hbase.regionserver.MetricsRegionServerSource.ROW_CACHE_EVICTED_ROW_COUNT;
+import static org.apache.hadoop.hbase.regionserver.MetricsRegionServerSource.ROW_CACHE_HIT_COUNT;
+import static org.apache.hadoop.hbase.regionserver.MetricsRegionServerSource.ROW_CACHE_MISS_COUNT;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -53,7 +58,6 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-import org.apache.hadoop.hbase.io.hfile.RowCacheKey;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -85,6 +89,7 @@ public class TestRowCache {
   private static MetricsRegionServerSource serverSource;
 
   private static Admin admin;
+  private static RowCache rowCache;
 
   private TableName tableName;
   private Table table;
@@ -96,6 +101,11 @@ public class TestRowCache {
   @BeforeClass
   public static void beforeClass() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
+
+    // Enable row cache but reduce the block cache size to fit in 80% of the heap
+    conf.setFloat(ROW_CACHE_SIZE_KEY, 0.01f);
+    conf.setFloat(HFILE_BLOCK_CACHE_SIZE_KEY, 0.38f);
+
     // To test simply, regardless of the number of HFiles
     conf.setInt(ROW_CACHE_ACTIVATE_MIN_HFILES_KEY, 0);
     SingleProcessHBaseCluster cluster = TEST_UTIL.startMiniCluster();
@@ -105,6 +115,9 @@ public class TestRowCache {
     metricsHelper = CompatibilityFactory.getInstance(MetricsAssertHelper.class);
     metricsRegionServer = cluster.getRegionServer(0).getMetrics();
     serverSource = metricsRegionServer.getMetricsSource();
+
+    rowCache = TEST_UTIL.getHBaseCluster().getRegionServer(0).getRSRpcServices()
+      .getRowCacheService().getRowCache();
   }
 
   @AfterClass
@@ -175,8 +188,12 @@ public class TestRowCache {
     // Initialize metrics
     recomputeMetrics();
     setCounterBase("Get_num_ops", metricsHelper.getCounter("Get_num_ops", serverSource));
-    setCounterBase("blockCacheRowHitCount",
-      metricsHelper.getCounter("blockCacheRowHitCount", serverSource));
+    setCounterBase(ROW_CACHE_HIT_COUNT,
+      metricsHelper.getCounter(ROW_CACHE_HIT_COUNT, serverSource));
+    setCounterBase(ROW_CACHE_MISS_COUNT,
+      metricsHelper.getCounter(ROW_CACHE_MISS_COUNT, serverSource));
+    setCounterBase(ROW_CACHE_EVICTED_ROW_COUNT,
+      metricsHelper.getCounter(ROW_CACHE_EVICTED_ROW_COUNT, serverSource));
 
     // First get to populate the row cache
     result = table.get(get);
@@ -188,7 +205,8 @@ public class TestRowCache {
     assertArrayEquals("22".getBytes(), result.getValue(CF2, Q2));
     assertCounterDiff("Get_num_ops", 1);
     // Ensure the get operation from HFile without row cache
-    assertCounterDiff("blockCacheRowHitCount", 0);
+    assertCounterDiff(ROW_CACHE_HIT_COUNT, 0);
+    assertCounterDiff(ROW_CACHE_MISS_COUNT, 1);
 
     // Get from the row cache
     result = table.get(get);
@@ -200,12 +218,16 @@ public class TestRowCache {
     assertArrayEquals("22".getBytes(), result.getValue(CF2, Q2));
     assertCounterDiff("Get_num_ops", 1);
     // Ensure the get operation from the row cache
-    assertCounterDiff("blockCacheRowHitCount", 1);
+    assertCounterDiff(ROW_CACHE_HIT_COUNT, 1);
+    assertCounterDiff(ROW_CACHE_MISS_COUNT, 0);
 
     // Row cache is invalidated by the put operation
-    assertNotNull(region.getBlockCache().getBlock(rowCacheKey, false, false, false));
+    assertNotNull(rowCache.getBlock(rowCacheKey, true));
     table.put(put);
-    assertNull(region.getBlockCache().getBlock(rowCacheKey, false, false, false));
+    recomputeMetrics();
+    assertCounterDiff(ROW_CACHE_HIT_COUNT, 1);
+    assertCounterDiff(ROW_CACHE_MISS_COUNT, 0);
+    assertCounterDiff(ROW_CACHE_EVICTED_ROW_COUNT, 1);
 
     // Get is executed without the row cache; however, the cache is re-populated as a result
     result = table.get(get);
@@ -213,7 +235,9 @@ public class TestRowCache {
     assertArrayEquals(rowKey, result.getRow());
     assertCounterDiff("Get_num_ops", 1);
     // Ensure the get operation not from the row cache
-    assertCounterDiff("blockCacheRowHitCount", 0);
+    assertCounterDiff(ROW_CACHE_HIT_COUNT, 0);
+    assertCounterDiff(ROW_CACHE_MISS_COUNT, 1);
+    assertCounterDiff(ROW_CACHE_EVICTED_ROW_COUNT, 0);
 
     // Get again with the row cache
     result = table.get(get);
@@ -221,34 +245,36 @@ public class TestRowCache {
     assertArrayEquals(rowKey, result.getRow());
     assertCounterDiff("Get_num_ops", 1);
     // Ensure the get operation from the row cache
-    assertCounterDiff("blockCacheRowHitCount", 1);
+    assertCounterDiff(ROW_CACHE_HIT_COUNT, 1);
+    assertCounterDiff(ROW_CACHE_MISS_COUNT, 0);
+    assertCounterDiff(ROW_CACHE_EVICTED_ROW_COUNT, 0);
 
     // Row cache is invalidated by the increment operation
-    assertNotNull(region.getBlockCache().getBlock(rowCacheKey, false, false, false));
+    assertNotNull(rowCache.getBlock(rowCacheKey, true));
     table.incrementColumnValue(rowKey, CF1, Q1, 1);
-    assertNull(region.getBlockCache().getBlock(rowCacheKey, false, false, false));
+    assertNull(rowCache.getBlock(rowCacheKey, true));
 
     // Get is executed without the row cache; however, the cache is re-populated as a result
     table.get(get);
-    assertNotNull(region.getBlockCache().getBlock(rowCacheKey, false, false, false));
+    assertNotNull(rowCache.getBlock(rowCacheKey, true));
 
     // Row cache is invalidated by the append operation
-    assertNotNull(region.getBlockCache().getBlock(rowCacheKey, false, false, false));
+    assertNotNull(rowCache.getBlock(rowCacheKey, true));
     Append append = new Append(rowKey);
     append.addColumn(CF1, Q1, Bytes.toBytes(0L));
     table.append(append);
-    assertNull(region.getBlockCache().getBlock(rowCacheKey, false, false, false));
+    assertNull(rowCache.getBlock(rowCacheKey, true));
 
     // Get is executed without the row cache; however, the cache is re-populated as a result
     table.get(get);
-    assertNotNull(region.getBlockCache().getBlock(rowCacheKey, false, false, false));
+    assertNotNull(rowCache.getBlock(rowCacheKey, true));
 
     // Row cache is invalidated by the delete operation
-    assertNotNull(region.getBlockCache().getBlock(rowCacheKey, false, false, false));
+    assertNotNull(rowCache.getBlock(rowCacheKey, true));
     Delete delete = new Delete(rowKey);
     delete.addColumn(CF1, Q1);
     table.delete(delete);
-    assertNull(region.getBlockCache().getBlock(rowCacheKey, false, false, false));
+    assertNull(rowCache.getBlock(rowCacheKey, true));
   }
 
   @Test(expected = DoNotRetryIOException.class)
@@ -281,7 +307,7 @@ public class TestRowCache {
 
     // Validate that the row cache is populated
     result = table.get(get);
-    assertNotNull(region.getBlockCache().getBlock(rowCacheKey, false, false, false));
+    assertNotNull(rowCache.getBlock(rowCacheKey, true));
     assertArrayEquals("11".getBytes(), result.getValue(CF1, Q1));
     assertArrayEquals("12".getBytes(), result.getValue(CF1, Q2));
 
@@ -291,11 +317,11 @@ public class TestRowCache {
     cam = CheckAndMutate.newBuilder(rowKey).ifEquals(CF1, Q2, "00".getBytes()).build(put2);
     camResult = table.checkAndMutate(cam);
     assertFalse(camResult.isSuccess());
-    assertNull(region.getBlockCache().getBlock(rowCacheKey, false, false, false));
+    assertNull(rowCache.getBlock(rowCacheKey, true));
 
     // Validate that the row cache is populated
     result = table.get(get);
-    assertNotNull(region.getBlockCache().getBlock(rowCacheKey, false, false, false));
+    assertNotNull(rowCache.getBlock(rowCacheKey, true));
     assertArrayEquals("11".getBytes(), result.getValue(CF1, Q1));
     assertArrayEquals("12".getBytes(), result.getValue(CF1, Q2));
 
@@ -303,7 +329,7 @@ public class TestRowCache {
     cam = CheckAndMutate.newBuilder(rowKey).ifEquals(CF1, Q2, "12".getBytes()).build(put2);
     camResult = table.checkAndMutate(cam);
     assertTrue(camResult.isSuccess());
-    assertNull(region.getBlockCache().getBlock(rowCacheKey, false, false, false));
+    assertNull(rowCache.getBlock(rowCacheKey, true));
   }
 
   @Test
@@ -333,11 +359,11 @@ public class TestRowCache {
 
     // Validate that the row caches are populated
     result1 = table.get(get1);
-    assertNotNull(region.getBlockCache().getBlock(rowCacheKey1, false, false, false));
+    assertNotNull(rowCache.getBlock(rowCacheKey1, true));
     assertArrayEquals("111".getBytes(), result1.getValue(CF1, Q1));
     assertArrayEquals("112".getBytes(), result1.getValue(CF1, Q2));
     result2 = table.get(get2);
-    assertNotNull(region.getBlockCache().getBlock(rowCacheKey2, false, false, false));
+    assertNotNull(rowCache.getBlock(rowCacheKey2, true));
     assertArrayEquals("211".getBytes(), result2.getValue(CF1, Q1));
     assertArrayEquals("212".getBytes(), result2.getValue(CF1, Q2));
 
@@ -348,8 +374,8 @@ public class TestRowCache {
     camResults = table.checkAndMutate(cams);
     assertTrue(camResults.get(0).isSuccess());
     assertTrue(camResults.get(1).isSuccess());
-    assertNull(region.getBlockCache().getBlock(rowCacheKey1, false, false, false));
-    assertNull(region.getBlockCache().getBlock(rowCacheKey2, false, false, false));
+    assertNull(rowCache.getBlock(rowCacheKey1, true));
+    assertNull(rowCache.getBlock(rowCacheKey2, true));
   }
 
   @Test
@@ -377,11 +403,11 @@ public class TestRowCache {
 
     // Validate that the row caches are populated
     result1 = table.get(get1);
-    assertNotNull(region.getBlockCache().getBlock(rowCacheKey1, false, false, false));
+    assertNotNull(rowCache.getBlock(rowCacheKey1, true));
     assertArrayEquals("111".getBytes(), result1.getValue(CF1, Q1));
     assertArrayEquals("112".getBytes(), result1.getValue(CF1, Q2));
     result2 = table.get(get2);
-    assertNotNull(region.getBlockCache().getBlock(rowCacheKey1, false, false, false));
+    assertNotNull(rowCache.getBlock(rowCacheKey1, true));
     assertArrayEquals("211".getBytes(), result2.getValue(CF1, Q1));
     assertArrayEquals("212".getBytes(), result2.getValue(CF1, Q2));
 
@@ -396,16 +422,16 @@ public class TestRowCache {
     CheckAndMutate cam =
       CheckAndMutate.newBuilder(rowKey1).ifEquals(CF1, Q1, "111".getBytes()).build(rms);
     table.checkAndMutate(cam);
-    assertNull(region.getBlockCache().getBlock(rowCacheKey1, false, false, false));
-    assertNotNull(region.getBlockCache().getBlock(rowCacheKey2, false, false, false));
+    assertNull(rowCache.getBlock(rowCacheKey1, true));
+    assertNotNull(rowCache.getBlock(rowCacheKey2, true));
 
     // Validate that the row caches are populated
     result1 = table.get(get1);
-    assertNotNull(region.getBlockCache().getBlock(rowCacheKey1, false, false, false));
+    assertNotNull(rowCache.getBlock(rowCacheKey1, true));
     assertArrayEquals("111111".getBytes(), result1.getValue(CF1, Q1));
     assertArrayEquals("112112".getBytes(), result1.getValue(CF1, Q2));
     result2 = table.get(get2);
-    assertNotNull(region.getBlockCache().getBlock(rowCacheKey1, false, false, false));
+    assertNotNull(rowCache.getBlock(rowCacheKey1, true));
     assertArrayEquals("211".getBytes(), result2.getValue(CF1, Q1));
     assertArrayEquals("212".getBytes(), result2.getValue(CF1, Q2));
   }
@@ -452,13 +478,13 @@ public class TestRowCache {
     results = new Object[batchOperations.size()];
     table.batch(batchOperations, results);
     assertEquals(3, results.length);
-    assertNotNull(region.getBlockCache().getBlock(rowCacheKey1, false, false, false));
+    assertNotNull(rowCache.getBlock(rowCacheKey1, true));
     assertArrayEquals("111".getBytes(), ((Result) results[0]).getValue(CF1, Q1));
     assertArrayEquals("112".getBytes(), ((Result) results[0]).getValue(CF1, Q2));
-    assertNotNull(region.getBlockCache().getBlock(rowCacheKey2, false, false, false));
+    assertNotNull(rowCache.getBlock(rowCacheKey2, true));
     assertArrayEquals("211".getBytes(), ((Result) results[1]).getValue(CF1, Q1));
     assertArrayEquals("212".getBytes(), ((Result) results[1]).getValue(CF1, Q2));
-    assertNotNull(region.getBlockCache().getBlock(rowCacheKey3, false, false, false));
+    assertNotNull(rowCache.getBlock(rowCacheKey3, true));
     assertArrayEquals("311".getBytes(), ((Result) results[2]).getValue(CF1, Q1));
     assertArrayEquals("312".getBytes(), ((Result) results[2]).getValue(CF1, Q2));
 
@@ -474,8 +500,8 @@ public class TestRowCache {
     results = new Object[batchOperations.size()];
     table.batch(batchOperations, results);
     assertEquals(2, results.length);
-    assertNull(region.getBlockCache().getBlock(rowCacheKey1, false, false, false));
-    assertNull(region.getBlockCache().getBlock(rowCacheKey2, false, false, false));
-    assertNotNull(region.getBlockCache().getBlock(rowCacheKey3, false, false, false));
+    assertNull(rowCache.getBlock(rowCacheKey1, true));
+    assertNull(rowCache.getBlock(rowCacheKey2, true));
+    assertNotNull(rowCache.getBlock(rowCacheKey3, true));
   }
 }

@@ -4077,4 +4077,9 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
     Pair<String, RegionScannerHolder> pair = newRegionScanner(request, region, builder);
     return new RegionScannerContext(pair.getFirst(), pair.getSecond(), quota);
   }
+
+  // For testing only
+  public RowCacheService getRowCacheService() {
+    return rowCacheService;
+  }
 }

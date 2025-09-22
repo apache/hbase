@@ -613,11 +613,6 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   }
 
   @Override
-  public long getRowMissCount() {
-    return 1;
-  }
-
-  @Override
   public long getDataHitCount() {
     return 0;
   }
@@ -668,7 +663,27 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   }
 
   @Override
-  public long getRowHitCount() {
+  public long getRowCacheHitCount() {
+    return 2;
+  }
+
+  @Override
+  public long getRowCacheMissCount() {
+    return 1;
+  }
+
+  @Override
+  public long getRowCacheEvictedRowCount() {
+    return 0;
+  }
+
+  @Override
+  public long getRowCacheSize() {
+    return 1;
+  }
+
+  @Override
+  public long getRowCacheCount() {
     return 2;
   }
 

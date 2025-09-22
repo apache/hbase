@@ -21,6 +21,7 @@ Template for rendering Block Cache tabs in RegionServer Status page.
 CacheConfig cacheConfig;
 Configuration config;
 BlockCache bc;
+RowCache rowCache;
 </%args>
 <%java>
   String bcUrl = bc == null ? null : "http://hbase.apache.org/devapidocs/" + bc.getClass().getName().replaceAll("\\.", "/") + ".html";
@@ -42,6 +43,7 @@ org.apache.hadoop.hbase.io.hfile.bucket.BucketCacheStats;
 org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 org.apache.hadoop.hbase.io.hfile.bucket.BucketAllocator;
 org.apache.hadoop.hbase.io.hfile.bucket.BucketAllocator.Bucket;
+org.apache.hadoop.hbase.regionserver.RowCache;
 org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
 </%import>
 <div class="tabbable">
@@ -51,6 +53,7 @@ org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
         <li class="nav-item"><a class="nav-link" href="#tab_bc_stats" data-bs-toggle="tab" role="tab">Stats</a></li>
         <li class="nav-item"><a class="nav-link" href="#tab_bc_l1" data-bs-toggle="tab" role="tab">L1</a></li>
         <li class="nav-item"><a class="nav-link" href="#tab_bc_l2" data-bs-toggle="tab" role="tab">L2</a></li>
+        <li class="nav-item"><a class="nav-link" href="#tab_row_cache" data-bs-toggle="tab" role="tab">Row Cache</a></li>
     </ul>
     <div class="tab-content">
         <div class="tab-pane active" id="tab_bc_baseInfo" role="tabpanel">
@@ -67,6 +70,9 @@ org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
         </div>
         <div class="tab-pane" id="tab_bc_l2" role="tabpanel">
             <& bc_l; bc = bcs == null? null: bcs.length <= 1? null: bcs[1]; name = "L2"; evictions = evictions; &>
+        </div>
+        <div class="tab-pane" id="tab_row_cache" role="tabpanel">
+            <& row_cache_stats; rowCache = rowCache &>
         </div>
     </div>
 </div>
@@ -562,3 +568,55 @@ Increase that value to get a complete picture.
 </p>
 </%def>
 
+<%def row_cache_stats>
+<%args>
+    RowCache rowCache;
+</%args>
+<%if rowCache == null %>
+<p>RowCache is null</p>
+<%else>
+<table class="table table-striped">
+    <tr>
+        <th>Attribute</th>
+        <th>Value</th>
+        <th>Description</th>
+    </tr>
+    <tr>
+        <td>Size</td>
+        <td><% TraditionalBinaryPrefix.long2String(rowCache.getSize(), "B", 1) %></td>
+        <td>Current size of row cache in use</td>
+    </tr>
+    <tr>
+        <td>Free</td>
+        <td><% TraditionalBinaryPrefix.long2String(rowCache.getMaxSize() - rowCache.getSize(), "B", 1) %></td>
+        <td>The total free memory currently available to store more cache entries</td>
+    </tr>
+    <tr>
+        <td>Count</td>
+        <td><% String.format("%,d", rowCache.getCount()) %></td>
+        <td>The number of rows in row cache</td>
+    </tr>
+    <tr>
+        <td>Evicted Rows</td>
+        <td><% String.format("%,d", rowCache.getEvictedRowCount()) %></td>
+        <td>The total number of rows evicted</td>
+    </tr>
+    <tr>
+        <td>Hits</td>
+        <td><% String.format("%,d", rowCache.getHitCount()) %></td>
+        <td>The number requests that were cache hits</td>
+    </tr>
+    <tr>
+        <td>Misses</td>
+        <td><% String.format("%,d", rowCache.getMissCount()) %></td>
+        <td>The number requests that were cache misses</td>
+    </tr>
+    <tr>
+        <td>All Time Hit Ratio</td>
+        <td><% String.format("%,.2f", rowCache.getHitCount() * 100.0 / (rowCache.getMissCount() + rowCache.getHitCount())) %><% "%" %></td>
+        <td>Hit Count divided by total requests count</td>
+    </tr>
+</table>
+<p>RowCache is a separate cache distinct from BlockCache. Since there is no more appropriate place to display RowCache information, it is shown here alongside BlockCache.</p>
+</%if>
+</%def>

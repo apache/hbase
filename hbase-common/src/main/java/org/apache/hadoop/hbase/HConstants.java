@@ -1018,6 +1018,20 @@ public final class HConstants {
   public static final float HFILE_BLOCK_CACHE_SIZE_DEFAULT = 0.4f;
 
   /**
+   * Configuration key for the size of the row cache
+   */
+  public static final String ROW_CACHE_SIZE_KEY = "row.cache.size";
+  public static final float ROW_CACHE_SIZE_DEFAULT = 0.0f;
+
+  /**
+   * Configuration key for the minimum number of HFiles required to activate the Row Cache. If the
+   * number of HFiles is less than this value, the Row Cache does not operate even if it is enabled
+   * at the table level.
+   */
+  public static final String ROW_CACHE_ACTIVATE_MIN_HFILES_KEY = "row.cache.activate.min.hfiles";
+  public static final int ROW_CACHE_ACTIVATE_MIN_HFILES_DEFAULT = 2;
+
+  /**
    * Configuration key for the memory size of the block cache
    */
   public static final String HFILE_BLOCK_CACHE_MEMORY_SIZE_KEY = "hfile.block.cache.memory.size";
@@ -1032,14 +1046,6 @@ public final class HConstants {
   public static final long HFILE_ONHEAP_BLOCK_CACHE_FIXED_SIZE_DEFAULT = 0L;
   public static final long HBASE_CLIENT_SCANNER_ONHEAP_BLOCK_CACHE_FIXED_SIZE_DEFAULT =
     32 * 1024 * 1024L;
-
-  /**
-   * Configuration key for the minimum number of HFiles required to activate the Row Cache. If the
-   * number of HFiles is less than this value, the Row Cache does not operate even if it is enabled
-   * at the table level.
-   */
-  public static final String ROW_CACHE_ACTIVATE_MIN_HFILES_KEY = "row.cache.activate.min.hfiles";
-  public static final int ROW_CACHE_ACTIVATE_MIN_HFILES_DEFAULT = 2;
 
   /**
    * Configuration key for setting pread must read both necessaryLen and extraLen, default is

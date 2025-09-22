@@ -17,17 +17,15 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.ExtendedCell;
-import org.apache.hadoop.hbase.io.hfile.BlockType;
-import org.apache.hadoop.hbase.io.hfile.Cacheable;
-import org.apache.hadoop.hbase.io.hfile.CacheableDeserializer;
+import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.util.ClassSize;
 
-class RowCells implements Cacheable {
+@org.apache.yetus.audience.InterfaceAudience.Private
+public class RowCells implements HeapSize {
   public static final long FIXED_OVERHEAD = ClassSize.estimateBase(RowCells.class, false);
 
   private final List<Cell> cells = new ArrayList<>();
@@ -44,28 +42,6 @@ class RowCells implements Cacheable {
         throw new CloneNotSupportedException("Deep clone failed");
       }
     }
-  }
-
-  @Override
-  public int getSerializedLength() {
-    // Cannot be serialized. Cached on heap only and cannot be moved off heap.
-    return 0;
-  }
-
-  @Override
-  public void serialize(ByteBuffer destination, boolean includeNextBlockMetadata) {
-    // Cannot be serialized. Cached on heap only and cannot be moved off heap.
-  }
-
-  @Override
-  public CacheableDeserializer<Cacheable> getDeserializer() {
-    // Cannot be serialized. Cached on heap only and cannot be moved off heap.
-    return null;
-  }
-
-  @Override
-  public BlockType getBlockType() {
-    return BlockType.ROW_CELLS;
   }
 
   @Override

@@ -15,54 +15,49 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.io.hfile;
+package org.apache.hadoop.hbase.regionserver;
 
 import java.util.Arrays;
 import java.util.Objects;
-import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
-import org.apache.yetus.audience.InterfaceAudience;
 
-/**
- * Cache Key for use with implementations of {@link BlockCache}
- */
-@InterfaceAudience.Private
-public class RowCacheKey extends BlockCacheKey {
-  private static final long serialVersionUID = -686874540957524887L;
+@org.apache.yetus.audience.InterfaceAudience.Private
+public class RowCacheKey implements HeapSize {
   public static final long FIXED_OVERHEAD = ClassSize.estimateBase(RowCacheKey.class, false);
 
+  private final String encodedRegionName;
   private final byte[] rowKey;
+
   // Row cache keys should not be evicted on close, since the cache may contain many entries and
   // eviction would be slow. Instead, the region’s rowCacheSeqNum is used to generate new keys that
   // ignore the existing cache when the region is reopened or bulk-loaded.
   private final long rowCacheSeqNum;
 
   public RowCacheKey(HRegion region, byte[] rowKey) {
-    super(region.getRegionInfo().getEncodedName(), 0, region.getRegionInfo().getReplicaId() == 0,
-      BlockType.ROW_CELLS);
-
+    this.encodedRegionName = region.getRegionInfo().getEncodedName();
     this.rowKey = Objects.requireNonNull(rowKey, "rowKey cannot be null");
     this.rowCacheSeqNum = region.getRowCacheSeqNum();
   }
 
   @Override
   public boolean equals(Object o) {
-    if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
-    if (!super.equals(o)) return false;
     RowCacheKey that = (RowCacheKey) o;
-    return rowCacheSeqNum == that.rowCacheSeqNum && Arrays.equals(rowKey, that.rowKey);
+    return rowCacheSeqNum == that.rowCacheSeqNum
+      && Objects.equals(encodedRegionName, that.encodedRegionName)
+      && Objects.deepEquals(rowKey, that.rowKey);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(super.hashCode(), Arrays.hashCode(rowKey), Long.hashCode(rowCacheSeqNum));
+    return Objects.hash(encodedRegionName, Arrays.hashCode(rowKey), rowCacheSeqNum);
   }
 
   @Override
   public String toString() {
-    return super.toString() + '_' + Bytes.toStringBinary(this.rowKey) + '_' + rowCacheSeqNum;
+    return encodedRegionName + '_' + Bytes.toStringBinary(rowKey) + '_' + rowCacheSeqNum;
   }
 
   @Override

@@ -124,10 +124,8 @@ public class TestMetricsRegionServer {
     HELPER.assertGauge("blockCacheDataBlockCount", 300, serverSource);
     HELPER.assertGauge("blockCacheSize", 415, serverSource);
     HELPER.assertCounter("blockCacheHitCount", 416, serverSource);
-    HELPER.assertCounter("blockCacheRowHitCount", 2, serverSource);
     HELPER.assertCounter("blockCacheHitCachingCount", 16, serverSource);
     HELPER.assertCounter("blockCacheMissCount", 417, serverSource);
-    HELPER.assertCounter("blockCacheRowMissCount", 1, serverSource);
     HELPER.assertCounter("blockCacheMissCachingCount", 17, serverSource);
     HELPER.assertCounter("blockCacheEvictionCount", 418, serverSource);
     HELPER.assertGauge("blockCacheCountHitPercent", 98, serverSource);
@@ -150,6 +148,11 @@ public class TestMetricsRegionServer {
     HELPER.assertGauge("l2CacheHitRatio", 90, serverSource);
     HELPER.assertGauge("l2CacheMissRatio", 10, serverSource);
     HELPER.assertCounter("updatesBlockedTime", 419, serverSource);
+    HELPER.assertCounter("rowCacheHitCount", 2, serverSource);
+    HELPER.assertCounter("rowCacheMissCount", 1, serverSource);
+    HELPER.assertCounter("rowCacheEvictedRowCount", 0, serverSource);
+    HELPER.assertGauge("rowCacheSize", 1, serverSource);
+    HELPER.assertGauge("rowCacheCount", 2, serverSource);
   }
 
   @Test

@@ -436,7 +436,6 @@ public class MetricsRegionServerSourceImpl extends BaseSourceImpl
         .addCounter(Interns.info(BLOCK_CACHE_DELETE_FAMILY_BLOOM_MISS_COUNT, ""),
           rsWrap.getDeleteFamilyBloomMissCount())
         .addCounter(Interns.info(BLOCK_CACHE_TRAILER_MISS_COUNT, ""), rsWrap.getTrailerMissCount())
-        .addCounter(Interns.info(BLOCK_CACHE_ROW_MISS_COUNT, ""), rsWrap.getRowMissCount())
         .addCounter(Interns.info(BLOCK_CACHE_DATA_HIT_COUNT, ""), rsWrap.getDataHitCount())
         .addCounter(Interns.info(BLOCK_CACHE_LEAF_INDEX_HIT_COUNT, ""),
           rsWrap.getLeafIndexHitCount())
@@ -453,7 +452,12 @@ public class MetricsRegionServerSourceImpl extends BaseSourceImpl
         .addCounter(Interns.info(BLOCK_CACHE_DELETE_FAMILY_BLOOM_HIT_COUNT, ""),
           rsWrap.getDeleteFamilyBloomHitCount())
         .addCounter(Interns.info(BLOCK_CACHE_TRAILER_HIT_COUNT, ""), rsWrap.getTrailerHitCount())
-        .addCounter(Interns.info(BLOCK_CACHE_ROW_HIT_COUNT, ""), rsWrap.getRowHitCount())
+        .addCounter(Interns.info(ROW_CACHE_HIT_COUNT, ""), rsWrap.getRowCacheHitCount())
+        .addCounter(Interns.info(ROW_CACHE_MISS_COUNT, ""), rsWrap.getRowCacheMissCount())
+        .addCounter(Interns.info(ROW_CACHE_EVICTED_ROW_COUNT, ""),
+          rsWrap.getRowCacheEvictedRowCount())
+        .addGauge(Interns.info(ROW_CACHE_SIZE, ""), rsWrap.getRowCacheSize())
+        .addGauge(Interns.info(ROW_CACHE_COUNT, ""), rsWrap.getRowCacheCount())
         .addCounter(Interns.info(UPDATES_BLOCKED_TIME, UPDATES_BLOCKED_DESC),
           rsWrap.getUpdatesBlockedTime())
         .addCounter(Interns.info(FLUSHED_CELLS, FLUSHED_CELLS_DESC), rsWrap.getFlushedCellsCount())
