@@ -1308,12 +1308,11 @@ to put on your new HBase test case.
 
 .Categorizing Tests
 Small Tests (((SmallTests)))::
-  _Small_ test cases are executed in a shared JVM and each test suite/test class should
+  _Small_ test cases are executed in separate JVM and each test suite/test class should
    run in 15 seconds or less; i.e. a link:https://en.wikipedia.org/wiki/JUnit[junit test fixture], a java object made
    up of test methods, should finish in under 15 seconds, no matter how many or how few test methods
    it has. These test cases should not use a minicluster as a minicluster starts many services,
-   most unrelated to what is being tested. Multiple start/stops may leak resources or just overwhelm
-   the single JVM context.
+   most unrelated to what is being tested.
 
 Medium Tests (((MediumTests)))::
   _Medium_ test cases are executed in separate JVM and individual test suites or test classes or in
