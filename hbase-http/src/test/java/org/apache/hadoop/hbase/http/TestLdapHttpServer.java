@@ -21,7 +21,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
-import java.util.concurrent.TimeUnit;
 import org.apache.directory.server.annotations.CreateLdapServer;
 import org.apache.directory.server.annotations.CreateTransport;
 import org.apache.directory.server.core.annotations.ApplyLdifs;
@@ -32,7 +31,6 @@ import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 
 /**
  * Test class for LDAP authentication on the HttpServer.
@@ -47,7 +45,6 @@ import org.junit.jupiter.api.Timeout;
           + "dc: example\n" + "objectClass: top\n" + "objectClass: domain\n\n")) })
 @ApplyLdifs({ "dn: uid=bjones," + LdapConstants.LDAP_BASE_DN, "cn: Bob Jones", "sn: Jones",
   "objectClass: inetOrgPerson", "uid: bjones", "userPassword: p@ssw0rd" })
-@Timeout(value = 1, unit = TimeUnit.MINUTES)
 public class TestLdapHttpServer extends LdapServerTestBase {
 
   private static final String BJONES_CREDENTIALS = "bjones:p@ssw0rd";
