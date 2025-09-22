@@ -66,15 +66,15 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
  * SecurityManager has been removed since Java 21.
  */
 @InterfaceAudience.Private
-public class HBaseJupitorExtension
+public class HBaseJupiterExtension
   implements InvocationInterceptor, BeforeAllCallback, AfterAllCallback {
 
-  private static final Logger LOG = LoggerFactory.getLogger(HBaseJupitorExtension.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HBaseJupiterExtension.class);
 
   private static final SecurityManager securityManager = new TestSecurityManager();
 
   private static final ExtensionContext.Namespace NAMESPACE =
-    ExtensionContext.Namespace.create(HBaseJupitorExtension.class);
+    ExtensionContext.Namespace.create(HBaseJupiterExtension.class);
 
   private static final Map<String, Duration> TAG_TO_TIMEOUT =
     ImmutableMap.of(SmallTests.TAG, Duration.ofMinutes(3), MediumTests.TAG, Duration.ofMinutes(6),
@@ -83,10 +83,6 @@ public class HBaseJupitorExtension
   private static final String EXECUTOR = "executor";
 
   private static final String DEADLINE = "deadline";
-
-  public HBaseJupitorExtension() {
-    super();
-  }
 
   private Duration pickTimeout(ExtensionContext ctx) {
     Set<String> timeoutTags = TAG_TO_TIMEOUT.keySet();
