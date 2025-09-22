@@ -2293,8 +2293,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   /**
    * Starts a <code>MiniMRCluster</code> with a default number of <code>TaskTracker</code>'s.
    * MiniMRCluster caches hadoop.log.dir when first started. It is not possible to start multiple
-   * MiniMRCluster instances with different log dirs. MiniMRCluster is only to be used from when the
-   * test is run from a separate VM (i.e not in SmallTests)
+   * MiniMRCluster instances with different log dirs.
    * @throws IOException When starting the cluster fails.
    */
   public MiniMRCluster startMiniMapReduceCluster() throws IOException {
@@ -2308,8 +2307,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   /**
    * Starts a <code>MiniMRCluster</code>. Call {@link #setFileSystemURI(String)} to use a different
    * filesystem. MiniMRCluster caches hadoop.log.dir when first started. It is not possible to start
-   * multiple MiniMRCluster instances with different log dirs. MiniMRCluster is only to be used from
-   * when the test is run from a separate VM (i.e not in SmallTests)
+   * multiple MiniMRCluster instances with different log dirs.
    * @param servers The number of <code>TaskTracker</code>'s to start.
    * @throws IOException When starting the cluster fails.
    */
