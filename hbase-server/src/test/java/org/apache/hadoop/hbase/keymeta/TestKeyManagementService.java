@@ -18,12 +18,12 @@
 package org.apache.hadoop.hbase.keymeta;
 
 import static org.apache.hadoop.hbase.HConstants.SYSTEM_KEY_FILE_PREFIX;
+import static org.apache.hadoop.hbase.io.crypto.KeymetaTestUtils.SeekableByteArrayInputStream;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.apache.hadoop.hbase.io.crypto.KeymetaTestUtils.SeekableByteArrayInputStream;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
@@ -85,7 +85,8 @@ public class TestKeyManagementService {
     dos.writeUTF(keyData.getKeyMetadata());
     dos.close();
 
-    SeekableByteArrayInputStream seekableStream = new SeekableByteArrayInputStream(baos.toByteArray());
+    SeekableByteArrayInputStream seekableStream =
+      new SeekableByteArrayInputStream(baos.toByteArray());
     FSDataInputStream realStream = new FSDataInputStream(seekableStream);
 
     when(mockFileSystem.open(eq(mockFileStatus.getPath()))).thenReturn(realStream);

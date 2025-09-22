@@ -67,10 +67,8 @@ public class TestKeyNamespaceUtil {
 
     ColumnFamilyDescriptor familyDescriptor = ColumnFamilyDescriptorBuilder.of("family");
 
-    StoreContext storeContext = StoreContext.getBuilder()
-        .withRegionFileSystem(regionFileSystem)
-        .withColumnFamilyDescriptor(familyDescriptor)
-        .build();
+    StoreContext storeContext = StoreContext.getBuilder().withRegionFileSystem(regionFileSystem)
+      .withColumnFamilyDescriptor(familyDescriptor).build();
 
     String keyNamespace = KeyNamespaceUtil.constructKeyNamespace(storeContext);
     assertEquals("test/family", keyNamespace);

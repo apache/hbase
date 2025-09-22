@@ -117,7 +117,7 @@ public class TestManagedKeyProvider {
           managedKeyProvider.getManagedKey(cust.get(), ManagedKeyData.KEY_SPACE_GLOBAL);
         assertKeyData(keyData, ManagedKeyState.ACTIVE, cust2key.get(cust).get(), cust.get(),
           cust2alias.get(cust));
-    }
+      }
     }
 
     @Test

@@ -42,10 +42,10 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.CipherProvider;
-import org.apache.hadoop.hbase.io.crypto.KeyProvider;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
-import org.apache.hadoop.hbase.io.crypto.MockAesKeyProvider;
+import org.apache.hadoop.hbase.io.crypto.KeyProvider;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
+import org.apache.hadoop.hbase.io.crypto.MockAesKeyProvider;
 import org.apache.hadoop.hbase.io.hfile.FixedFileTrailer;
 import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
 import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
@@ -60,7 +60,6 @@ import org.junit.runners.BlockJUnit4ClassRunner;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Suite;
-
 
 @RunWith(Suite.class)
 @Suite.SuiteClasses({ TestSecurityUtil.TestBasic.class,
@@ -137,7 +136,8 @@ public class TestSecurityUtil {
 
       if (keyManagementEnabled) {
         conf.setBoolean(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, true);
-        conf.setBoolean(HConstants.CRYPTO_MANAGED_KEYS_LOCAL_KEY_GEN_PER_FILE_ENABLED_CONF_KEY, localKeyGenEnabled);
+        conf.setBoolean(HConstants.CRYPTO_MANAGED_KEYS_LOCAL_KEY_GEN_PER_FILE_ENABLED_CONF_KEY,
+          localKeyGenEnabled);
       } else {
         conf.setBoolean(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, false);
       }
@@ -156,7 +156,8 @@ public class TestSecurityUtil {
     // Enable key caching
     conf.set(HConstants.CRYPTO_KEYPROVIDER_PARAMETERS_KEY, "true");
     // Use DefaultCipherProvider for real AES encryption functionality
-    conf.set(HConstants.CRYPTO_CIPHERPROVIDER_CONF_KEY, "org.apache.hadoop.hbase.io.crypto.DefaultCipherProvider");
+    conf.set(HConstants.CRYPTO_CIPHERPROVIDER_CONF_KEY,
+      "org.apache.hadoop.hbase.io.crypto.DefaultCipherProvider");
   }
 
   protected void setUpEncryptionConfigWithNullCipher() {
@@ -170,14 +171,16 @@ public class TestSecurityUtil {
       eq(namespace))).thenReturn(keyData);
   }
 
-  protected void setupManagedKeyDataCache(String namespace, String globalSpace, ManagedKeyData keyData) {
+  protected void setupManagedKeyDataCache(String namespace, String globalSpace,
+    ManagedKeyData keyData) {
     when(mockManagedKeyDataCache.getActiveEntry(eq(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES),
       eq(namespace))).thenReturn(null);
     when(mockManagedKeyDataCache.getActiveEntry(eq(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES),
       eq(globalSpace))).thenReturn(keyData);
   }
 
-  protected void setupTrailerMocks(byte[] keyBytes, String metadata, Long checksum, String namespace) {
+  protected void setupTrailerMocks(byte[] keyBytes, String metadata, Long checksum,
+    String namespace) {
     when(mockTrailer.getEncryptionKey()).thenReturn(keyBytes);
     when(mockTrailer.getKEKMetadata()).thenReturn(metadata);
     if (checksum != null) {
@@ -194,43 +197,43 @@ public class TestSecurityUtil {
     when(mockSystemKeyCache.getLatestSystemKey()).thenReturn(latestKey);
   }
 
-  protected void setupManagedKeyDataCacheEntry(String namespace, String metadata,
-      byte[] keyBytes, ManagedKeyData keyData) throws IOException, KeyException {
+  protected void setupManagedKeyDataCacheEntry(String namespace, String metadata, byte[] keyBytes,
+    ManagedKeyData keyData) throws IOException, KeyException {
     when(mockManagedKeyDataCache.getEntry(eq(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES),
       eq(namespace), eq(metadata), eq(keyBytes))).thenReturn(keyData);
   }
 
   // ==== Exception Testing Helpers ====
 
-  protected <T extends Exception> void assertExceptionContains(
-      Class<T> expectedType, String expectedMessage, Runnable testCode) {
+  protected <T extends Exception> void assertExceptionContains(Class<T> expectedType,
+    String expectedMessage, Runnable testCode) {
     T exception = assertThrows(expectedType, () -> testCode.run());
     assertTrue("Exception message should contain: " + expectedMessage,
-        exception.getMessage().contains(expectedMessage));
+      exception.getMessage().contains(expectedMessage));
   }
 
   protected void assertEncryptionContextThrowsForWrites(Class<? extends Exception> expectedType,
-      String expectedMessage) {
+    String expectedMessage) {
     Exception exception = assertThrows(Exception.class, () -> {
       SecurityUtil.createEncryptionContext(conf, mockFamily, mockManagedKeyDataCache,
         mockSystemKeyCache, TEST_NAMESPACE);
     });
-    assertTrue("Expected exception type: " + expectedType.getName() + ", but got: " + exception.getClass().getName(),
-        expectedType.isInstance(exception));
+    assertTrue("Expected exception type: " + expectedType.getName() + ", but got: "
+      + exception.getClass().getName(), expectedType.isInstance(exception));
     assertTrue("Exception message should contain: " + expectedMessage,
-        exception.getMessage().contains(expectedMessage));
+      exception.getMessage().contains(expectedMessage));
   }
 
   protected void assertEncryptionContextThrowsForReads(Class<? extends Exception> expectedType,
-      String expectedMessage) {
+    String expectedMessage) {
     Exception exception = assertThrows(Exception.class, () -> {
-      SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer,
-        mockManagedKeyDataCache, mockSystemKeyCache);
+      SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer, mockManagedKeyDataCache,
+        mockSystemKeyCache);
     });
-    assertTrue("Expected exception type: " + expectedType.getName() + ", but got: " + exception.getClass().getName(),
-        expectedType.isInstance(exception));
+    assertTrue("Expected exception type: " + expectedType.getName() + ", but got: "
+      + exception.getClass().getName(), expectedType.isInstance(exception));
     assertTrue("Exception message should contain: " + expectedMessage,
-        exception.getMessage().contains(expectedMessage));
+      exception.getMessage().contains(expectedMessage));
   }
 
   @Before
@@ -333,7 +336,8 @@ public class TestSecurityUtil {
     @Test
     public void testWithEncryptionDisabled() throws IOException {
       configBuilder().withEncryptionEnabled(false).apply(conf);
-      assertEncryptionContextThrowsForWrites(IllegalStateException.class, "encryption feature is disabled");
+      assertEncryptionContextThrowsForWrites(IllegalStateException.class,
+        "encryption feature is disabled");
     }
 
     @Test
@@ -341,10 +345,10 @@ public class TestSecurityUtil {
       configBuilder().withKeyManagement(true, true).apply(conf);
       setupManagedKeyDataCache(TEST_NAMESPACE, mockManagedKeyData);
 
-        Encryption.Context result = SecurityUtil.createEncryptionContext(conf, mockFamily,
+      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, mockFamily,
         mockManagedKeyDataCache, mockSystemKeyCache, TEST_NAMESPACE);
 
-        verifyContext(result);
+      verifyContext(result);
     }
 
     @Test
@@ -363,7 +367,8 @@ public class TestSecurityUtil {
 
       configBuilder().withKeyManagement(true, true).apply(conf);
       setupManagedKeyDataCache(TEST_NAMESPACE, mockManagedKeyData);
-      assertEncryptionContextThrowsForWrites(RuntimeException.class, "Cipher 'UNKNOWN_CIPHER' is not");
+      assertEncryptionContextThrowsForWrites(RuntimeException.class,
+        "Cipher 'UNKNOWN_CIPHER' is not");
     }
 
     @Test
@@ -384,10 +389,10 @@ public class TestSecurityUtil {
       setupManagedKeyDataCache(TEST_NAMESPACE, mockManagedKeyData);
       setupSystemKeyCache(mockManagedKeyData);
 
-        Encryption.Context result = SecurityUtil.createEncryptionContext(conf, mockFamily,
+      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, mockFamily,
         mockManagedKeyDataCache, mockSystemKeyCache, TEST_NAMESPACE);
 
-        verifyContext(result);
+      verifyContext(result);
     }
 
     @Test
@@ -397,10 +402,10 @@ public class TestSecurityUtil {
       setupSystemKeyCache(mockManagedKeyData);
       when(mockManagedKeyData.getTheKey()).thenReturn(kekKey);
 
-        Encryption.Context result = SecurityUtil.createEncryptionContext(conf, mockFamily,
+      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, mockFamily,
         mockManagedKeyDataCache, mockSystemKeyCache, TEST_NAMESPACE);
 
-        verifyContext(result);
+      verifyContext(result);
     }
 
     @Test
@@ -408,10 +413,10 @@ public class TestSecurityUtil {
       when(mockFamily.getEncryptionKey()).thenReturn(testWrappedKey);
       configBuilder().withKeyManagement(false, false).apply(conf);
 
-        Encryption.Context result = SecurityUtil.createEncryptionContext(conf, mockFamily,
+      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, mockFamily,
         mockManagedKeyDataCache, mockSystemKeyCache, TEST_NAMESPACE);
 
-        verifyContext(result, false);
+      verifyContext(result, false);
     }
 
     @Test
@@ -431,17 +436,18 @@ public class TestSecurityUtil {
       when(mockFamily.getEncryptionKey()).thenReturn(null);
       configBuilder().withKeyManagement(false, false).apply(conf);
 
-        Encryption.Context result = SecurityUtil.createEncryptionContext(conf, mockFamily,
+      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, mockFamily,
         mockManagedKeyDataCache, mockSystemKeyCache, TEST_NAMESPACE);
 
-        verifyContext(result, false);
+      verifyContext(result, false);
     }
 
     @Test
     public void testWithUnavailableCipher() throws IOException {
       when(mockFamily.getEncryptionType()).thenReturn(UNKNOWN_CIPHER);
       setUpEncryptionConfigWithNullCipher();
-      assertEncryptionContextThrowsForWrites(IllegalStateException.class, "Cipher 'UNKNOWN_CIPHER' is not available");
+      assertEncryptionContextThrowsForWrites(IllegalStateException.class,
+        "Cipher 'UNKNOWN_CIPHER' is not available");
     }
 
     // Tests for the second createEncryptionContext method (for reading files)
@@ -468,16 +474,15 @@ public class TestSecurityUtil {
 
     @Test
     public void testWithKEKMetadata() throws Exception {
-      setupTrailerMocks(testWrappedKey, TEST_KEK_METADATA,
-TEST_KEK_CHECKSUM, TEST_NAMESPACE);
-      setupManagedKeyDataCacheEntry(TEST_NAMESPACE, TEST_KEK_METADATA,
-        testWrappedKey, mockManagedKeyData);
+      setupTrailerMocks(testWrappedKey, TEST_KEK_METADATA, TEST_KEK_CHECKSUM, TEST_NAMESPACE);
+      setupManagedKeyDataCacheEntry(TEST_NAMESPACE, TEST_KEK_METADATA, testWrappedKey,
+        mockManagedKeyData);
       when(mockManagedKeyData.getTheKey()).thenReturn(kekKey);
 
-        Encryption.Context result = SecurityUtil.createEncryptionContext(conf, testPath,
-          mockTrailer, mockManagedKeyDataCache, mockSystemKeyCache);
+      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer,
+        mockManagedKeyDataCache, mockSystemKeyCache);
 
-        verifyContext(result);
+      verifyContext(result);
     }
 
     @Test
@@ -493,12 +498,12 @@ TEST_KEK_CHECKSUM, TEST_NAMESPACE);
         eq("test-namespace"), eq(kekMetadata), eq(keyBytes)))
         .thenThrow(new IOException("Key not found"));
 
-        IOException exception = assertThrows(IOException.class, () -> {
-          SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer, mockManagedKeyDataCache,
-            mockSystemKeyCache);
-        });
+      IOException exception = assertThrows(IOException.class, () -> {
+        SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer, mockManagedKeyDataCache,
+          mockSystemKeyCache);
+      });
 
-        assertTrue(exception.getMessage().contains("Failed to get key data"));
+      assertTrue(exception.getMessage().contains("Failed to get key data"));
     }
 
     @Test
@@ -508,10 +513,10 @@ TEST_KEK_CHECKSUM, TEST_NAMESPACE);
       setupSystemKeyCache(TEST_KEK_CHECKSUM, mockManagedKeyData);
       when(mockManagedKeyData.getTheKey()).thenReturn(kekKey);
 
-        Encryption.Context result = SecurityUtil.createEncryptionContext(conf, testPath,
-          mockTrailer, mockManagedKeyDataCache, mockSystemKeyCache);
+      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer,
+        mockManagedKeyDataCache, mockSystemKeyCache);
 
-        verifyContext(result);
+      verifyContext(result);
     }
 
     @Test
@@ -529,12 +534,12 @@ TEST_KEK_CHECKSUM, TEST_NAMESPACE);
 
       when(mockSystemKeyCache.getSystemKeyByChecksum(kekChecksum)).thenReturn(null);
 
-        IOException exception = assertThrows(IOException.class, () -> {
-          SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer, mockManagedKeyDataCache,
-            mockSystemKeyCache);
-        });
+      IOException exception = assertThrows(IOException.class, () -> {
+        SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer, mockManagedKeyDataCache,
+          mockSystemKeyCache);
+      });
 
-        assertTrue(exception.getMessage().contains("Failed to get system key"));
+      assertTrue(exception.getMessage().contains("Failed to get system key"));
     }
 
     @Test
@@ -545,10 +550,10 @@ TEST_KEK_CHECKSUM, TEST_NAMESPACE);
       configBuilder().withKeyManagement(false, false).apply(conf);
       // TODO: Get the key provider to return kek when getKeys() is called.
 
-        Encryption.Context result = SecurityUtil.createEncryptionContext(conf, testPath,
-          mockTrailer, mockManagedKeyDataCache, mockSystemKeyCache);
+      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer,
+        mockManagedKeyDataCache, mockSystemKeyCache);
 
-        verifyContext(result, false);
+      verifyContext(result, false);
     }
 
     @Test
@@ -560,11 +565,12 @@ TEST_KEK_CHECKSUM, TEST_NAMESPACE);
       configBuilder().withKeyManagement(false, false).apply(conf);
 
       Exception exception = assertThrows(Exception.class, () -> {
-          SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer, mockManagedKeyDataCache,
-            mockSystemKeyCache);
-        });
+        SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer, mockManagedKeyDataCache,
+          mockSystemKeyCache);
+      });
 
-      // The exception should indicate that unwrapping failed - could be IOException or RuntimeException
+      // The exception should indicate that unwrapping failed - could be IOException or
+      // RuntimeException
       assertNotNull(exception);
     }
 
@@ -584,9 +590,9 @@ TEST_KEK_CHECKSUM, TEST_NAMESPACE);
       setUpEncryptionConfigWithNullCipher();
 
       RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-          SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer, mockManagedKeyDataCache,
-            mockSystemKeyCache);
-        });
+        SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer, mockManagedKeyDataCache,
+          mockSystemKeyCache);
+      });
 
       assertTrue(exception.getMessage().contains("Cipher 'AES' not available"));
     }
@@ -604,12 +610,11 @@ TEST_KEK_CHECKSUM, TEST_NAMESPACE);
       // Enable key management
       conf.setBoolean(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, true);
 
-        IOException exception = assertThrows(IOException.class, () -> {
-          SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer, null,
-            mockSystemKeyCache);
-        });
+      IOException exception = assertThrows(IOException.class, () -> {
+        SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer, null, mockSystemKeyCache);
+      });
 
-        assertTrue(exception.getMessage().contains("ManagedKeyDataCache is null"));
+      assertTrue(exception.getMessage().contains("ManagedKeyDataCache is null"));
     }
 
     @Test
@@ -624,12 +629,12 @@ TEST_KEK_CHECKSUM, TEST_NAMESPACE);
       // Enable key management
       conf.setBoolean(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, true);
 
-        IOException exception = assertThrows(IOException.class, () -> {
-          SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer, mockManagedKeyDataCache,
-            null);
-        });
+      IOException exception = assertThrows(IOException.class, () -> {
+        SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer, mockManagedKeyDataCache,
+          null);
+      });
 
-        assertTrue(exception.getMessage().contains("SystemKeyCache is null"));
+      assertTrue(exception.getMessage().contains("SystemKeyCache is null"));
     }
   }
 
@@ -659,18 +664,17 @@ TEST_KEK_CHECKSUM, TEST_NAMESPACE);
       // with either KeyException or IOException. We'll create invalid wrapped data.
       byte[] invalidKeyBytes = INVALID_WRAPPED_KEY_DATA.getBytes();
 
-      setupTrailerMocks(invalidKeyBytes, TEST_KEK_METADATA,
-TEST_KEK_CHECKSUM, TEST_NAMESPACE);
-      setupManagedKeyDataCacheEntry(TEST_NAMESPACE, TEST_KEK_METADATA,
-        invalidKeyBytes, mockManagedKeyData);
+      setupTrailerMocks(invalidKeyBytes, TEST_KEK_METADATA, TEST_KEK_CHECKSUM, TEST_NAMESPACE);
+      setupManagedKeyDataCacheEntry(TEST_NAMESPACE, TEST_KEK_METADATA, invalidKeyBytes,
+        mockManagedKeyData);
 
-        IOException exception = assertThrows(IOException.class, () -> {
-          SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer, mockManagedKeyDataCache,
-            mockSystemKeyCache);
-        });
+      IOException exception = assertThrows(IOException.class, () -> {
+        SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer, mockManagedKeyDataCache,
+          mockSystemKeyCache);
+      });
 
-        assertTrue(exception.getMessage().contains(
-        "Failed to unwrap key with KEK checksum: " + TEST_KEK_CHECKSUM + ", metadata: " + TEST_KEK_METADATA));
+      assertTrue(exception.getMessage().contains("Failed to unwrap key with KEK checksum: "
+        + TEST_KEK_CHECKSUM + ", metadata: " + TEST_KEK_METADATA));
       // The root cause should be some kind of parsing/unwrapping exception
       assertNotNull(exception.getCause());
     }
@@ -684,13 +688,13 @@ TEST_KEK_CHECKSUM, TEST_NAMESPACE);
       configBuilder().withKeyManagement(true, false).apply(conf);
       setupSystemKeyCache(TEST_KEK_CHECKSUM, mockManagedKeyData);
 
-        IOException exception = assertThrows(IOException.class, () -> {
-          SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer, mockManagedKeyDataCache,
-            mockSystemKeyCache);
-        });
+      IOException exception = assertThrows(IOException.class, () -> {
+        SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer, mockManagedKeyDataCache,
+          mockSystemKeyCache);
+      });
 
-        assertTrue(exception.getMessage()
-        .contains("Failed to unwrap key with KEK checksum: " + TEST_KEK_CHECKSUM + ", metadata: null"));
+      assertTrue(exception.getMessage().contains(
+        "Failed to unwrap key with KEK checksum: " + TEST_KEK_CHECKSUM + ", metadata: null"));
       // The root cause should be some kind of parsing/unwrapping exception
       assertNotNull(exception.getCause());
     }
@@ -705,9 +709,11 @@ TEST_KEK_CHECKSUM, TEST_NAMESPACE);
     assertNotNull("Context should have a cipher", context.getCipher());
     assertNotNull("Context should have a key", context.getKey());
     if (withKeyManagement) {
-      assertNotNull("Context should have KEK data when key management is enabled", context.getKEKData());
+      assertNotNull("Context should have KEK data when key management is enabled",
+        context.getKEKData());
     } else {
-      assertNull("Context should not have KEK data when key management is disabled", context.getKEKData());
+      assertNull("Context should not have KEK data when key management is disabled",
+        context.getKEKData());
     }
   }
 

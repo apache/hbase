@@ -131,8 +131,7 @@ public class KeymetaTableAccessor extends KeyManagementBase {
       Set<ManagedKeyData> allKeys = new LinkedHashSet<>();
       for (Result result : scanner) {
         ManagedKeyData keyData =
-          parseFromResult(getKeyManagementService(), key_cust, keyNamespace,
-            result);
+          parseFromResult(getKeyManagementService(), key_cust, keyNamespace, result);
         if (keyData != null) {
           allKeys.add(keyData);
         }

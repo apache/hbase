@@ -308,8 +308,8 @@ public final class MasterRegion {
     Path tableDir = CommonFSUtils.getTableDir(rootDir, tn);
     // persist table descriptor
     FSTableDescriptors.createTableDescriptorForTableDirectory(fs, tableDir, td, true);
-    HRegion.createHRegion(conf, regionInfo, fs, tableDir, td,
-      server.getKeyManagementService()).close();
+    HRegion.createHRegion(conf, regionInfo, fs, tableDir, td, server.getKeyManagementService())
+      .close();
     Path initializedFlag = new Path(tableDir, INITIALIZED_FLAG);
     if (!fs.mkdirs(initializedFlag)) {
       throw new IOException("Can not touch initialized flag: " + initializedFlag);
@@ -318,9 +318,8 @@ public final class MasterRegion {
     if (!fs.delete(initializingFlag, true)) {
       LOG.warn("failed to clean up initializing flag: " + initializingFlag);
     }
-    WAL wal =
-      createWAL(walFactory, walRoller, server.getServerName().toString(), walFs, walRootDir,
-        regionInfo);
+    WAL wal = createWAL(walFactory, walRoller, server.getServerName().toString(), walFs, walRootDir,
+      regionInfo);
     return HRegion.openHRegionFromTableDir(conf, fs, tableDir, regionInfo, td, wal, null, null,
       server.getKeyManagementService());
   }

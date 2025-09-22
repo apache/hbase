@@ -46,11 +46,11 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 public class KeymetaTestUtils {
 
   /**
-   * A ByteArrayInputStream that implements Seekable and PositionedReadable
-   * to work with FSDataInputStream.
+   * A ByteArrayInputStream that implements Seekable and PositionedReadable to work with
+   * FSDataInputStream.
    */
   public static class SeekableByteArrayInputStream extends ByteArrayInputStream
-      implements Seekable, PositionedReadable {
+    implements Seekable, PositionedReadable {
 
     public SeekableByteArrayInputStream(byte[] buf) {
       super(buf);
@@ -91,8 +91,8 @@ public class KeymetaTestUtils {
     public void readFully(long position, byte[] buffer, int offset, int length) throws IOException {
       int totalBytesRead = 0;
       while (totalBytesRead < length) {
-        int bytesRead = read(position + totalBytesRead, buffer, offset + totalBytesRead,
-                           length - totalBytesRead);
+        int bytesRead =
+          read(position + totalBytesRead, buffer, offset + totalBytesRead, length - totalBytesRead);
         if (bytesRead == -1) {
           throw new IOException("Reached end of stream before reading fully");
         }

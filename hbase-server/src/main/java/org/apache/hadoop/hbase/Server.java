@@ -106,5 +106,6 @@ public interface Server extends Abortable, Stoppable {
     return false;
   }
 
+  /** Returns the KeyManagementService instance for this server. */
   KeyManagementService getKeyManagementService();
 }

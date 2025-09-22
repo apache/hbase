@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.io.crypto;
 import java.security.Key;
 import java.util.HashMap;
 import java.util.Map;
-
 import javax.crypto.spec.SecretKeySpec;
 import org.apache.yetus.audience.InterfaceAudience;
 
