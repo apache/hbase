@@ -249,9 +249,24 @@ public class IncrementalTableBackupClient extends TableBackupClient {
       }
     }
 
-    if (newlyArchived.size() > 0) {
+    if (!newlyArchived.isEmpty()) {
+      String rootDir = CommonFSUtils.getRootDir(conf).toString();
+
       activeFiles.removeAll(newlyArchived);
-      archiveFiles.addAll(newlyArchived);
+      for (String file : newlyArchived) {
+        String archivedFile = file.substring(rootDir.length() + 1);
+        Path archivedFilePath = new Path(HFileArchiveUtil.getArchivePath(conf), archivedFile);
+        archivedFile = archivedFilePath.toString();
+
+        if (!fs.exists(archivedFilePath)) {
+          throw new IOException(
+            String.format("File %s not longer exists, and no archived file %s exists for it", file,
+              archivedFile));
+        }
+
+        LOG.debug("Archived file {} has been updated", archivedFile);
+        archiveFiles.add(archivedFile);
+      }
     }
 
     LOG.debug(newlyArchived.size() + " files have been archived.");

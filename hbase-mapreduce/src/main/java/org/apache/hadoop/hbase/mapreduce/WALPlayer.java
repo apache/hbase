@@ -65,7 +65,6 @@ import org.apache.hadoop.util.ToolRunner;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
 
