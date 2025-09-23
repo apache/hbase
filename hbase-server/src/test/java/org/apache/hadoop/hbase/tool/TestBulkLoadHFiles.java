@@ -936,7 +936,8 @@ public class TestBulkLoadHFiles {
       .forEach(r -> assertEquals(1, r.getStore(FAMILY).getStorefiles().size()));
   }
 
-  private String getStoragePolicyOfTmpDirWhenSplitHFile(Table table, String family) throws Exception {
+  private String getStoragePolicyOfTmpDirWhenSplitHFile(Table table, String family)
+    throws Exception {
     TableName tableName = table.getName();
     util.loadTable(table, Bytes.toBytes(family));
 
@@ -961,23 +962,18 @@ public class TestBulkLoadHFiles {
     TableName table = TableName.valueOf(tn.getMethodName());
     String family = "cf";
     String storage = getStoragePolicyOfTmpDirWhenSplitHFile(
-                       util.createTable(table, Bytes.toBytes(family)), family);
+      util.createTable(table, Bytes.toBytes(family)), family);
     assertNotEquals("ALL_SSD", storage);
     assertEquals("HOT", storage);
 
     TableName tableSetSSDPolicy = TableName.valueOf(tn.getMethodName() + "_SSD");
     String familySsd = "cf_ssd";
-    TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableSetSSDPolicy)
-                                                .setRegionReplication(1)
-                                                .build();
-    assertEquals("ALL_SSD", getStoragePolicyOfTmpDirWhenSplitHFile(
-                              util.createTable(htd,
-                                               new byte[][]{Bytes.toBytes(familySsd)},
-                                               null,
-                                               BloomType.NONE,
-                                               HConstants.DEFAULT_BLOCKSIZE,
-                                               "ALL_SSD",
-                                               null),
-                              familySsd));
+    TableDescriptor htd =
+      TableDescriptorBuilder.newBuilder(tableSetSSDPolicy).setRegionReplication(1).build();
+    assertEquals("ALL_SSD",
+      getStoragePolicyOfTmpDirWhenSplitHFile(
+        util.createTable(htd, new byte[][] { Bytes.toBytes(familySsd) }, null, BloomType.NONE,
+          HConstants.DEFAULT_BLOCKSIZE, "ALL_SSD", null),
+        familySsd));
   }
 }
