@@ -200,6 +200,9 @@ public class IncrementalTableBackupClient extends TableBackupClient {
         int numActiveFiles = activeFiles.size();
         updateFileLists(activeFiles, archiveFiles);
         if (activeFiles.size() < numActiveFiles) {
+          // We've archived some files, delete bulkloads directory
+          // and re-try
+          deleteBulkLoadDirectory();
           continue;
         }
 
