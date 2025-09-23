@@ -132,7 +132,7 @@ public class CacheConfig implements PropagatingConfigurationObserver {
   private volatile boolean cacheDataOnRead;
 
   /** Whether blocks should be flagged as in-memory when being cached */
-  private final boolean inMemory;
+  private boolean inMemory;
 
   /** Whether data blocks should be cached when new files are written */
   private volatile boolean cacheDataOnWrite;
@@ -147,29 +147,29 @@ public class CacheConfig implements PropagatingConfigurationObserver {
   private volatile boolean evictOnClose;
 
   /** Whether data blocks should be stored in compressed and/or encrypted form in the cache */
-  private final boolean cacheDataCompressed;
+  private boolean cacheDataCompressed;
 
   /** Whether data blocks should be prefetched into the cache */
-  private final boolean prefetchOnOpen;
+  private boolean prefetchOnOpen;
 
   /**
    * Whether data blocks should be cached when compacted file is written
    */
-  private final boolean cacheCompactedDataOnWrite;
+  private boolean cacheCompactedDataOnWrite;
 
   /**
    * Determine threshold beyond which we do not cache blocks on compaction
    */
   private long cacheCompactedDataOnWriteThreshold;
 
-  private final boolean dropBehindCompaction;
+  private boolean dropBehindCompaction;
 
   // Local reference to the block cache
   private final BlockCache blockCache;
 
   private final ByteBuffAllocator byteBuffAllocator;
 
-  private final double heapUsageThreshold;
+  private double heapUsageThreshold;
 
   /**
    * Create a cache configuration using the specified configuration object and defaults for family
@@ -191,32 +191,37 @@ public class CacheConfig implements PropagatingConfigurationObserver {
    */
   public CacheConfig(Configuration conf, ColumnFamilyDescriptor family, BlockCache blockCache,
     ByteBuffAllocator byteBuffAllocator) {
-    this.cacheDataOnRead = conf.getBoolean(CACHE_DATA_ON_READ_KEY, DEFAULT_CACHE_DATA_ON_READ)
-      && (family == null ? true : family.isBlockCacheEnabled());
-    this.inMemory = family == null ? DEFAULT_IN_MEMORY : family.isInMemory();
-    this.cacheDataCompressed =
-      conf.getBoolean(CACHE_DATA_BLOCKS_COMPRESSED_KEY, DEFAULT_CACHE_DATA_COMPRESSED);
-    this.dropBehindCompaction =
-      conf.getBoolean(DROP_BEHIND_CACHE_COMPACTION_KEY, DROP_BEHIND_CACHE_COMPACTION_DEFAULT);
-    // For the following flags we enable them regardless of per-schema settings
-    // if they are enabled in the global configuration.
-    this.cacheDataOnWrite = conf.getBoolean(CACHE_BLOCKS_ON_WRITE_KEY, DEFAULT_CACHE_DATA_ON_WRITE)
-      || (family == null ? false : family.isCacheDataOnWrite());
-    this.cacheIndexesOnWrite =
-      conf.getBoolean(CACHE_INDEX_BLOCKS_ON_WRITE_KEY, DEFAULT_CACHE_INDEXES_ON_WRITE)
-        || (family == null ? false : family.isCacheIndexesOnWrite());
-    this.cacheBloomsOnWrite =
-      conf.getBoolean(CACHE_BLOOM_BLOCKS_ON_WRITE_KEY, DEFAULT_CACHE_BLOOMS_ON_WRITE)
-        || (family == null ? false : family.isCacheBloomsOnWrite());
-    this.evictOnClose = conf.getBoolean(EVICT_BLOCKS_ON_CLOSE_KEY, DEFAULT_EVICT_ON_CLOSE)
-      || (family == null ? false : family.isEvictBlocksOnClose());
-    this.prefetchOnOpen = conf.getBoolean(PREFETCH_BLOCKS_ON_OPEN_KEY, DEFAULT_PREFETCH_ON_OPEN)
-      || (family == null ? false : family.isPrefetchBlocksOnOpen());
-    this.cacheCompactedDataOnWrite =
-      conf.getBoolean(CACHE_COMPACTED_BLOCKS_ON_WRITE_KEY, DEFAULT_CACHE_COMPACTED_BLOCKS_ON_WRITE);
-    this.cacheCompactedDataOnWriteThreshold = getCacheCompactedBlocksOnWriteThreshold(conf);
-    this.heapUsageThreshold =
-      conf.getDouble(PREFETCH_HEAP_USAGE_THRESHOLD, DEFAULT_PREFETCH_HEAP_USAGE_THRESHOLD);
+    if (family==null || family.isBlockCacheEnabled()) {
+      this.cacheDataOnRead = conf.getBoolean(CACHE_DATA_ON_READ_KEY, DEFAULT_CACHE_DATA_ON_READ);
+      this.inMemory = family == null ? DEFAULT_IN_MEMORY : family.isInMemory();
+      this.cacheDataCompressed = conf.getBoolean(CACHE_DATA_BLOCKS_COMPRESSED_KEY, DEFAULT_CACHE_DATA_COMPRESSED);
+      this.dropBehindCompaction = conf.getBoolean(DROP_BEHIND_CACHE_COMPACTION_KEY, DROP_BEHIND_CACHE_COMPACTION_DEFAULT);
+      // For the following flags we enable them regardless of per-schema settings
+      // if they are enabled in the global configuration.
+      this.cacheDataOnWrite =
+        conf.getBoolean(CACHE_BLOCKS_ON_WRITE_KEY, DEFAULT_CACHE_DATA_ON_WRITE) || (family == null ?
+          false :
+          family.isCacheDataOnWrite());
+      this.cacheIndexesOnWrite =
+        conf.getBoolean(CACHE_INDEX_BLOCKS_ON_WRITE_KEY, DEFAULT_CACHE_INDEXES_ON_WRITE) || (
+          family == null ? false : family.isCacheIndexesOnWrite());
+      this.cacheBloomsOnWrite =
+        conf.getBoolean(CACHE_BLOOM_BLOCKS_ON_WRITE_KEY, DEFAULT_CACHE_BLOOMS_ON_WRITE) || (
+          family == null ? false : family.isCacheBloomsOnWrite());
+      this.evictOnClose = conf.getBoolean(EVICT_BLOCKS_ON_CLOSE_KEY, DEFAULT_EVICT_ON_CLOSE) || (
+        family == null ?
+          false :
+          family.isEvictBlocksOnClose());
+      this.prefetchOnOpen =
+        conf.getBoolean(PREFETCH_BLOCKS_ON_OPEN_KEY, DEFAULT_PREFETCH_ON_OPEN) || (family == null ?
+          false :
+          family.isPrefetchBlocksOnOpen());
+      this.cacheCompactedDataOnWrite =
+        conf.getBoolean(CACHE_COMPACTED_BLOCKS_ON_WRITE_KEY, DEFAULT_CACHE_COMPACTED_BLOCKS_ON_WRITE);
+      this.cacheCompactedDataOnWriteThreshold = getCacheCompactedBlocksOnWriteThreshold(conf);
+      this.heapUsageThreshold =
+        conf.getDouble(PREFETCH_HEAP_USAGE_THRESHOLD, DEFAULT_PREFETCH_HEAP_USAGE_THRESHOLD);
+    }
     this.blockCache = blockCache;
     this.byteBuffAllocator = byteBuffAllocator;
   }
