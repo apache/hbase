@@ -132,7 +132,7 @@ public class TestManagedKeyDataCache {
     Encryption.clearKeyProviderCache();
 
     conf.set(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, "true");
-    conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, providerClass.getName());
+    conf.set(HConstants.CRYPTO_MANAGED_KEYPROVIDER_CONF_KEY, providerClass.getName());
 
     // Configure the server mock to return the configuration
     when(server.getConfiguration()).thenReturn(conf);

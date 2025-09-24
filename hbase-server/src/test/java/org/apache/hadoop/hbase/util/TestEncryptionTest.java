@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.util;
 
 import static org.junit.Assert.fail;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.security.Key;
@@ -30,7 +31,9 @@ import org.apache.hadoop.hbase.io.crypto.CipherProvider;
 import org.apache.hadoop.hbase.io.crypto.DefaultCipherProvider;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.KeyProvider;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyStoreKeyProvider;
 import org.apache.hadoop.hbase.io.crypto.MockAesKeyProvider;
+import org.apache.hadoop.hbase.io.crypto.MockManagedKeyProvider;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.ClassRule;
@@ -130,6 +133,68 @@ public class TestEncryptionTest {
     EncryptionTest.testEncryption(conf, algorithm, null);
   }
 
+  // Utility methods for configuration setup
+  private Configuration createManagedKeyProviderConfig() {
+    Configuration conf = HBaseConfiguration.create();
+    conf.setBoolean(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, true);
+    conf.set(HConstants.CRYPTO_MANAGED_KEYPROVIDER_CONF_KEY, MockManagedKeyProvider.class.getName());
+    return conf;
+  }
+
+  @Test
+  public void testManagedKeyProvider() throws Exception {
+    Configuration conf = createManagedKeyProviderConfig();
+    EncryptionTest.testKeyProvider(conf);
+    assertTrue("Managed provider should be cached", EncryptionTest.keyProviderResults.containsKey(
+      conf.get(HConstants.CRYPTO_MANAGED_KEYPROVIDER_CONF_KEY)));
+  }
+
+  @Test(expected = IOException.class)
+  public void testBadManagedKeyProvider() throws Exception {
+    Configuration conf = HBaseConfiguration.create();
+    conf.setBoolean(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, true);
+    conf.set(HConstants.CRYPTO_MANAGED_KEYPROVIDER_CONF_KEY, FailingManagedKeyProvider.class.getName());
+    EncryptionTest.testKeyProvider(conf);
+    fail("Instantiation of bad managed key provider should have failed check");
+  }
+
+  @Test
+  public void testEncryptionWithManagedKeyProvider() throws Exception {
+    Configuration conf = createManagedKeyProviderConfig();
+    String algorithm = conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
+    EncryptionTest.testEncryption(conf, algorithm, null);
+    assertTrue("Managed provider should be cached", EncryptionTest.keyProviderResults.containsKey(
+      conf.get(HConstants.CRYPTO_MANAGED_KEYPROVIDER_CONF_KEY)));
+  }
+
+  @Test(expected = IOException.class)
+  public void testUnknownCipherWithManagedKeyProvider() throws Exception {
+    Configuration conf = createManagedKeyProviderConfig();
+    EncryptionTest.testEncryption(conf, "foobar", null);
+    fail("Test for bogus cipher should have failed with managed key provider");
+  }
+
+  @Test(expected = IOException.class)
+  public void testManagedKeyProviderWhenCryptoIsExplicitlyDisabled() throws Exception {
+    Configuration conf = createManagedKeyProviderConfig();
+    String algorithm = conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
+    conf.setBoolean(Encryption.CRYPTO_ENABLED_CONF_KEY, false);
+    EncryptionTest.testEncryption(conf, algorithm, null);
+    assertTrue("Managed provider should be cached", EncryptionTest.keyProviderResults.containsKey(
+      conf.get(HConstants.CRYPTO_MANAGED_KEYPROVIDER_CONF_KEY)));
+  }
+
+  @Test(expected = IOException.class)
+  public void testManagedKeyProviderWithKeyManagementDisabled() throws Exception {
+    Configuration conf = HBaseConfiguration.create();
+    conf.setBoolean(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, false);
+    // This should cause issues since we're trying to use managed provider without enabling key management
+    conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, ManagedKeyStoreKeyProvider.class.getName());
+
+    EncryptionTest.testKeyProvider(conf);
+    fail("Should have failed when using managed provider with key management disabled");
+  }
+
   public static class FailingKeyProvider implements KeyProvider {
 
     @Override
@@ -180,5 +245,13 @@ public class TestEncryptionTest {
       return null;
     }
 
+  }
+
+  // Helper class for testing failing managed key provider
+  public static class FailingManagedKeyProvider extends MockManagedKeyProvider {
+    @Override
+    public void initConfig(Configuration conf, String params) {
+      throw new RuntimeException("BAD MANAGED PROVIDER!");
+    }
   }
 }

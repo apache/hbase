@@ -28,7 +28,9 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.crypto.DefaultCipherProvider;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.KeyStoreKeyProvider;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyStoreKeyProvider;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
+import org.apache.hadoop.hbase.security.SecurityUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,12 +50,23 @@ public class EncryptionTest {
    * Check that the configured key provider can be loaded and initialized, or throw an exception.
    */
   public static void testKeyProvider(final Configuration conf) throws IOException {
-    String providerClassName =
-      conf.get(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyStoreKeyProvider.class.getName());
+    boolean isKeyManagementEnabled = SecurityUtil.isKeyManagementEnabled(conf);
+    String providerClassName;
+    if (isKeyManagementEnabled) {
+      providerClassName = conf.get(HConstants.CRYPTO_MANAGED_KEYPROVIDER_CONF_KEY,
+        ManagedKeyStoreKeyProvider.class.getName());
+    } else {
+      providerClassName = conf.get(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY,
+        KeyStoreKeyProvider.class.getName());
+    }
     Boolean result = keyProviderResults.get(providerClassName);
     if (result == null) {
       try {
-        Encryption.getKeyProvider(conf);
+        if (isKeyManagementEnabled) {
+          Encryption.getManagedKeyProvider(conf);
+        } else {
+          Encryption.getKeyProvider(conf);
+        }
         keyProviderResults.put(providerClassName, true);
       } catch (Exception e) { // most likely a RuntimeException
         keyProviderResults.put(providerClassName, false);

@@ -26,6 +26,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
+import org.apache.hadoop.hbase.io.crypto.MockManagedKeyProvider;
 import org.apache.hadoop.hbase.io.crypto.aes.AES;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -53,6 +55,19 @@ public class TestKeyProvider {
     assertEquals("Test provider did not create a key for AES", "AES", key.getAlgorithm());
     assertEquals("Test provider did not create a key of adequate length", AES.KEY_LENGTH,
       key.getEncoded().length);
+  }
+
+  @Test
+  public void testManagedKeyProvider() {
+    Configuration conf = HBaseConfiguration.create();
+    conf.set(HConstants.CRYPTO_MANAGED_KEYPROVIDER_CONF_KEY, MockManagedKeyProvider.class.getName());
+    ManagedKeyProvider provider = Encryption.getManagedKeyProvider(conf);
+    assertNotNull("Null returned for managed provider", provider);
+    assertTrue("Provider is not the expected type", provider instanceof MockManagedKeyProvider);
+
+    // Test that it's cached
+    ManagedKeyProvider provider2 = Encryption.getManagedKeyProvider(conf);
+    assertTrue("Provider should be cached and same instance", provider == provider2);
   }
 
 }

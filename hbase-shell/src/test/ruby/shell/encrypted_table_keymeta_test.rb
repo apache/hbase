@@ -104,14 +104,15 @@ module Hbase
       # Confirm that the offline reading will fail with no config related to encryption
       Encryption.clearKeyProviderCache
       conf = Configuration.new($TEST_CLUSTER.getConfiguration)
-      conf.set(HConstants::CRYPTO_KEYPROVIDER_CONF_KEY, MockManagedKeyProvider.java_class.getName)
+      conf.set(HConstants::CRYPTO_MANAGED_KEYPROVIDER_CONF_KEY,
+               MockManagedKeyProvider.java_class.getName)
       # This is expected to fail with CorruptHFileException.
-      assert_raises(CorruptHFileException) do |e|
+      e = assert_raises(CorruptHFileException) do
         reader = HFile.createReader(fs, store_file_info.getPath, CacheConfig::DISABLED, true, conf)
-        assert_true(e.message.include?(
-                      "Problem reading HFile Trailer from file #{store_file_info.getPath}"
-                    ))
       end
+      assert_true(e.message.include?(
+                    "Problem reading HFile Trailer from file #{store_file_info.getPath}"
+                  ))
       Encryption.clearKeyProviderCache
 
       ## Enable back the table to be able to query.

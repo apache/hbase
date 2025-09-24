@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.io.crypto;
 
+import static org.apache.hadoop.hbase.io.crypto.KeymetaTestUtils.PASSWORD;
 import static org.apache.hadoop.hbase.io.crypto.ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES;
 import static org.apache.hadoop.hbase.io.crypto.ManagedKeyStoreKeyProvider.KEY_METADATA_ALIAS;
 import static org.apache.hadoop.hbase.io.crypto.ManagedKeyStoreKeyProvider.KEY_METADATA_CUST;
@@ -26,15 +27,20 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
+import java.security.Key;
 import java.security.KeyStore;
+import java.security.MessageDigest;
+import java.util.Collection;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
+import javax.crypto.spec.SecretKeySpec;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -57,13 +63,32 @@ import org.junit.runners.Suite;
 public class TestManagedKeyProvider {
   @RunWith(Parameterized.class)
   @Category({ MiscTests.class, SmallTests.class })
-  public static class TestManagedKeyStoreKeyProvider extends TestKeyStoreKeyProvider {
+  public static class TestManagedKeyStoreKeyProvider {
     @ClassRule
     public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestManagedKeyStoreKeyProvider.class);
 
     private static final String SYSTEM_KEY_ALIAS = "system-alias";
 
+    static final HBaseCommonTestingUtil TEST_UTIL = new HBaseCommonTestingUtil();
+    static byte[] KEY;
+
+    @Parameterized.Parameter(0)
+    public boolean withPasswordOnAlias;
+    @Parameterized.Parameter(1)
+    public boolean withPasswordFile;
+
+    @Parameterized.Parameters(name = "withPasswordOnAlias={0} withPasswordFile={1}")
+    public static Collection<Object[]> parameters() {
+      return Arrays.asList(new Object[][] {
+        { Boolean.TRUE, Boolean.TRUE },
+        { Boolean.TRUE, Boolean.FALSE },
+        { Boolean.FALSE, Boolean.TRUE },
+        { Boolean.FALSE, Boolean.FALSE },
+      });
+    }
+
+    // TestManagedKeyStoreKeyProvider specific fields
     private Configuration conf = HBaseConfiguration.create();
     private int nCustodians = 2;
     private ManagedKeyProvider managedKeyProvider;
@@ -74,9 +99,10 @@ public class TestManagedKeyProvider {
 
     @Before
     public void setUp() throws Exception {
-      super.setUp();
-      managedKeyProvider = (ManagedKeyProvider) provider;
-      managedKeyProvider.initConfig(conf);
+      String providerParams = KeymetaTestUtils.setupTestKeyStore(TEST_UTIL, withPasswordOnAlias,
+        withPasswordFile, store -> { return new Properties(); });
+      managedKeyProvider = (ManagedKeyProvider) createProvider();
+      managedKeyProvider.initConfig(conf, providerParams);
     }
 
     protected KeyProvider createProvider() {
@@ -84,7 +110,7 @@ public class TestManagedKeyProvider {
     }
 
     protected void addCustomEntries(KeyStore store, Properties passwdProps) throws Exception {
-      super.addCustomEntries(store, passwdProps);
+      // TestManagedKeyStoreKeyProvider specific entries
       for (int i = 0; i < nCustodians; ++i) {
         String custodian = "custodian+ " + i;
         String alias = custodian + "-alias";
@@ -104,7 +130,7 @@ public class TestManagedKeyProvider {
 
     @Test
     public void testMissingConfig() throws Exception {
-      managedKeyProvider.initConfig(null);
+      managedKeyProvider.initConfig(null, null);
       RuntimeException ex =
         assertThrows(RuntimeException.class, () -> managedKeyProvider.getSystemKey(null));
       assertEquals("initConfig is not called or config is null", ex.getMessage());

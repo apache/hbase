@@ -25,16 +25,16 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Interface for key providers of managed keys. Defines methods for generating and managing managed
- * keys, as well as handling key storage and retrieval. The interface extends the basic
- * {@link KeyProvider} interface with additional methods for working with managed keys.
+ * keys, as well as handling key storage and retrieval.
  */
 @InterfaceAudience.Public
-public interface ManagedKeyProvider extends KeyProvider {
+public interface ManagedKeyProvider {
   /**
    * Initialize the provider with the given configuration.
    * @param conf Hadoop configuration
+   * @param providerParameters
    */
-  void initConfig(Configuration conf);
+  void initConfig(Configuration conf, String providerParameters);
 
   /**
    * Retrieve the system key using the given system identifier.

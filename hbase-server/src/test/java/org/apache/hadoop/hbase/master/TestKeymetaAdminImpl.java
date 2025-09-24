@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.keymeta.KeymetaTableAccessor;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -97,12 +98,18 @@ public class TestKeymetaAdminImpl {
     fs = testRootDir.getFileSystem(conf);
 
     conf.set(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, "true");
-    conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, MockManagedKeyProvider.class.getName());
+    conf.set(HConstants.CRYPTO_MANAGED_KEYPROVIDER_CONF_KEY, MockManagedKeyProvider.class.getName());
 
     when(mockServer.getKeyManagementService()).thenReturn(mockServer);
     when(mockServer.getFileSystem()).thenReturn(mockFileSystem);
     when(mockServer.getConfiguration()).thenReturn(conf);
     keymetaAdmin = new KeymetaAdminImplForTest(mockServer, keymetaAccessor);
+  }
+
+  @After
+  public void tearDown() throws Exception {
+    // Clear the provider cache to avoid test interference
+    Encryption.clearKeyProviderCache();
   }
 
   @RunWith(BlockJUnit4ClassRunner.class)
@@ -141,7 +148,7 @@ public class TestKeymetaAdminImpl {
     @Parameter(2)
     public boolean isNullKey;
 
-    @Parameters(name = "{index},keySpace={1},keyState={2}")
+    @Parameters(name = "{index},keySpace={0},keyState={1}")
     public static Collection<Object[]> data() {
       return Arrays.asList(new Object[][] { { KEY_SPACE_GLOBAL, ACTIVE, false },
         { "ns1", ACTIVE, false }, { KEY_SPACE_GLOBAL, FAILED, true },
@@ -151,7 +158,7 @@ public class TestKeymetaAdminImpl {
     @Test
     public void testEnableAndGet() throws Exception {
       MockManagedKeyProvider managedKeyProvider =
-        (MockManagedKeyProvider) Encryption.getKeyProvider(conf);
+        (MockManagedKeyProvider) Encryption.getManagedKeyProvider(conf);
       managedKeyProvider.setMockedKeyState(CUST, keyState);
       when(keymetaAccessor.getActiveKey(CUST.getBytes(), keySpace))
         .thenReturn(managedKeyProvider.getManagedKey(CUST.getBytes(), keySpace));
@@ -211,7 +218,7 @@ public class TestKeymetaAdminImpl {
     @Test
     public void test() throws Exception {
       MockManagedKeyProvider managedKeyProvider =
-        (MockManagedKeyProvider) Encryption.getKeyProvider(conf);
+        (MockManagedKeyProvider) Encryption.getManagedKeyProvider(conf);
       String cust = "invalidcust1";
       String encodedCust = ManagedKeyProvider.encodeToStr(cust.getBytes());
       managedKeyProvider.setMockedKey(cust, null, keySpace);

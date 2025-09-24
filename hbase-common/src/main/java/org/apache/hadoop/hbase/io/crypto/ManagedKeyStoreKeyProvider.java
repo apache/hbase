@@ -39,8 +39,9 @@ public class ManagedKeyStoreKeyProvider extends KeyStoreKeyProvider implements M
   private Configuration conf;
 
   @Override
-  public void initConfig(Configuration conf) {
+  public void initConfig(Configuration conf, String providerParameters) {
     this.conf = conf;
+    super.init(providerParameters);
   }
 
   @Override

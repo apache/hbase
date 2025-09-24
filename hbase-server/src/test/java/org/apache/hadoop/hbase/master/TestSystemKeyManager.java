@@ -51,7 +51,7 @@ public class TestSystemKeyManager extends ManagedKeyTestBase {
   @Test
   public void testSystemKeyInitializationAndRotation() throws Exception {
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
-    KeyProvider keyProvider = Encryption.getKeyProvider(master.getConfiguration());
+    ManagedKeyProvider keyProvider = Encryption.getManagedKeyProvider(master.getConfiguration());
     assertNotNull(keyProvider);
     assertTrue(keyProvider instanceof ManagedKeyProvider);
     assertTrue(keyProvider instanceof MockManagedKeyProvider);
@@ -85,7 +85,7 @@ public class TestSystemKeyManager extends ManagedKeyTestBase {
   @Test
   public void testWithInvalidSystemKey() throws Exception {
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
-    KeyProvider keyProvider = Encryption.getKeyProvider(master.getConfiguration());
+    ManagedKeyProvider keyProvider = Encryption.getManagedKeyProvider(master.getConfiguration());
     MockManagedKeyProvider pbeKeyProvider = (MockManagedKeyProvider) keyProvider;
 
     // Test startup failure when the cluster key is INACTIVE
