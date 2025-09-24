@@ -1179,25 +1179,23 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
         LOG.warn("Failed retrieving block from cache with key {}. "
           + "\n Evicting this block from cache and will read it from file system. "
           + "\n Exception details: ", cacheKey, e);
-        if(LOG.isDebugEnabled()){
+        if (LOG.isDebugEnabled()) {
           LOG.debug("Further tracing details for failed block cache retrieval:"
-            + "\n Complete File path - {},"
-            + "\n Expected Block Type - {}, Actual Block Type - {},"
-            + "\n Cache compressed - {}"
-            + "\n Header size (after deserialized from cache) - {}"
-            + "\n Size with header - {}"
-            + "\n Uncompressed size without header - {} "
-            + "\n Total byte buffer size - {}"
-            + "\n Encoding code - {}",
-            this.path,
+            + "\n Complete File path - {}," + "\n Expected Block Type - {}, Actual Block Type - {},"
+            + "\n Cache compressed - {}" + "\n Header size (after deserialized from cache) - {}"
+            + "\n Size with header - {}" + "\n Uncompressed size without header - {} "
+            + "\n Total byte buffer size - {}" + "\n Encoding code - {}", this.path,
             expectedBlockType, (cachedBlock != null ? cachedBlock.getBlockType() : "N/A"),
-            (expectedBlockType != null ?
-              cacheConf.shouldCacheCompressed(expectedBlockType.getCategory()) : "N/A"),
+            (expectedBlockType != null
+              ? cacheConf.shouldCacheCompressed(expectedBlockType.getCategory())
+              : "N/A"),
             (cachedBlock != null ? cachedBlock.headerSize() : "N/A"),
             (cachedBlock != null ? cachedBlock.getOnDiskSizeWithHeader() : "N/A"),
             (cachedBlock != null ? cachedBlock.getUncompressedSizeWithoutHeader() : "N/A"),
             (cachedBlock != null ? cachedBlock.getBufferReadOnly().limit() : "N/A"),
-            (cachedBlock != null ? cachedBlock.getBufferReadOnly().getShort(cachedBlock.headerSize()) : "N/A"));
+            (cachedBlock != null
+              ? cachedBlock.getBufferReadOnly().getShort(cachedBlock.headerSize())
+              : "N/A"));
         }
         return null;
       } finally {
