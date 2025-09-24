@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -84,6 +85,7 @@ import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.OutputFormat;
@@ -194,6 +196,11 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
   public static final String EXTENDED_CELL_SERIALIZATION_ENABLED_KEY =
     "hbase.mapreduce.hfileoutputformat.extendedcell.enabled";
   static final boolean EXTENDED_CELL_SERIALIZATION_ENABLED_DEFULT = false;
+
+  @InterfaceAudience.Private
+  public static final String DISK_BASED_SORTING_ENABLED_KEY =
+    "hbase.mapreduce.hfileoutputformat.disk.based.sorting.enabled";
+  private static final boolean DISK_BASED_SORTING_ENABLED_DEFAULT = false;
 
   public static final String REMOTE_CLUSTER_CONF_PREFIX = "hbase.hfileoutputformat.remote.cluster.";
   public static final String REMOTE_CLUSTER_ZOOKEEPER_QUORUM_CONF_KEY =
@@ -580,12 +587,19 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
 
     // Write the actual file
     FileSystem fs = partitionsPath.getFileSystem(conf);
-    SequenceFile.Writer writer = SequenceFile.createWriter(fs, conf, partitionsPath,
-      ImmutableBytesWritable.class, NullWritable.class);
+    boolean diskBasedSortingEnabled = diskBasedSortingEnabled(conf);
+    Class<? extends Writable> keyClass =
+      diskBasedSortingEnabled ? KeyOnlyCellComparable.class : ImmutableBytesWritable.class;
+    SequenceFile.Writer writer =
+      SequenceFile.createWriter(fs, conf, partitionsPath, keyClass, NullWritable.class);
 
     try {
       for (ImmutableBytesWritable startKey : sorted) {
-        writer.append(startKey, NullWritable.get());
+        Writable writable = diskBasedSortingEnabled
+          ? new KeyOnlyCellComparable(KeyValueUtil.createFirstOnRow(startKey.get()))
+          : startKey;
+
+        writer.append(writable, NullWritable.get());
       }
     } finally {
       writer.close();
@@ -632,6 +646,10 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
     configureIncrementalLoad(job, singleTableInfo, HFileOutputFormat2.class);
   }
 
+  public static boolean diskBasedSortingEnabled(Configuration conf) {
+    return conf.getBoolean(DISK_BASED_SORTING_ENABLED_KEY, DISK_BASED_SORTING_ENABLED_DEFAULT);
+  }
+
   static void configureIncrementalLoad(Job job, List<TableInfo> multiTableInfo,
     Class<? extends OutputFormat<?, ?>> cls) throws IOException {
     Configuration conf = job.getConfiguration();
@@ -653,7 +671,13 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
     // Based on the configured map output class, set the correct reducer to properly
     // sort the incoming values.
     // TODO it would be nice to pick one or the other of these formats.
-    if (
+    boolean diskBasedSorting = diskBasedSortingEnabled(conf);
+
+    if (diskBasedSorting) {
+      job.setMapOutputKeyClass(KeyOnlyCellComparable.class);
+      job.setSortComparatorClass(KeyOnlyCellComparable.KeyOnlyCellComparator.class);
+      job.setReducerClass(PreSortedCellsReducer.class);
+    } else if (
       KeyValue.class.equals(job.getMapOutputValueClass())
         || MapReduceExtendedCell.class.equals(job.getMapOutputValueClass())
     ) {
