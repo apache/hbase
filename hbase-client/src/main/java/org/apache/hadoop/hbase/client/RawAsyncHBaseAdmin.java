@@ -2795,6 +2795,19 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     }
   }
 
+  private static class RestoreBackupSystemTableProcedureBiConsumer extends ProcedureBiConsumer {
+
+    @Override
+    void onFinished() {
+      LOG.info("RestoreBackupSystemTableProcedure completed");
+    }
+
+    @Override
+    void onError(Throwable error) {
+      LOG.info("RestoreBackupSystemTableProcedure failed with {}", error.getMessage());
+    }
+  }
+
   private static class CreateTableProcedureBiConsumer extends TableProcedureBiConsumer {
 
     CreateTableProcedureBiConsumer(TableName tableName) {
@@ -4636,5 +4649,17 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
           (s, c, req, done) -> s.getCachedFilesList(c, req, done),
           resp -> resp.getCachedFilesList()))
       .serverName(serverName).call();
+  }
+
+  @Override
+  public CompletableFuture<Void> restoreBackupSystemTable(String snapshotName) {
+    MasterProtos.RestoreBackupSystemTableRequest request =
+      MasterProtos.RestoreBackupSystemTableRequest.newBuilder().setSnapshotName(snapshotName)
+        .build();
+    return this.<MasterProtos.RestoreBackupSystemTableRequest,
+      MasterProtos.RestoreBackupSystemTableResponse> procedureCall(request,
+        MasterService.Interface::restoreBackupSystemTable,
+        MasterProtos.RestoreBackupSystemTableResponse::getProcId,
+        new RestoreBackupSystemTableProcedureBiConsumer());
   }
 }

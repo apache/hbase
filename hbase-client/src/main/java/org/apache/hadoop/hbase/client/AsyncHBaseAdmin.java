@@ -1010,4 +1010,9 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   public CompletableFuture<List<String>> getCachedFilesList(ServerName serverName) {
     return wrap(rawAdmin.getCachedFilesList(serverName));
   }
+
+  @Override
+  public CompletableFuture<Void> restoreBackupSystemTable(String snapshotName) {
+    return wrap(rawAdmin.restoreBackupSystemTable(snapshotName));
+  }
 }

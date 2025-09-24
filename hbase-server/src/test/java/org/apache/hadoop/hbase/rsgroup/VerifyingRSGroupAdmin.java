@@ -985,6 +985,11 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   }
 
   @Override
+  public void restoreBackupSystemTable(String snapshotName) throws IOException {
+    admin.restoreBackupSystemTable(snapshotName);
+  }
+
+  @Override
   public boolean replicationPeerModificationSwitch(boolean on, boolean drainProcedures)
     throws IOException {
     return admin.replicationPeerModificationSwitch(on, drainProcedures);

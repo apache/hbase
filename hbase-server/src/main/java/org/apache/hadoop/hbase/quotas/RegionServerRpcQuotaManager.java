@@ -91,7 +91,9 @@ public class RegionServerRpcQuotaManager implements RpcQuotaManager, Configurati
   }
 
   public void reload() {
-    quotaCache.forceSynchronousCacheRefresh();
+    if (isQuotaEnabled()) {
+      quotaCache.forceSynchronousCacheRefresh();
+    }
   }
 
   @Override
