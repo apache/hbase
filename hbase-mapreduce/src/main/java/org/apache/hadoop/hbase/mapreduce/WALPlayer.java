@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
@@ -53,6 +54,7 @@ import org.apache.hadoop.hbase.util.MapReduceExtendedCell;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALEditInternalHelper;
 import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
@@ -96,9 +98,10 @@ public class WALPlayer extends Configured implements Tool {
    * A mapper that just writes out KeyValues. This one can be used together with
    * {@link CellSortReducer}
    */
-  static class WALKeyValueMapper extends Mapper<WALKey, WALEdit, ImmutableBytesWritable, Cell> {
+  static class WALKeyValueMapper extends Mapper<WALKey, WALEdit, WritableComparable<?>, Cell> {
     private Set<String> tableSet = new HashSet<String>();
     private boolean multiTableSupport = false;
+    private boolean diskBasedSortingEnabled = false;
 
     @Override
     public void map(WALKey key, WALEdit value, Context context) throws IOException {
@@ -120,8 +123,8 @@ public class WALPlayer extends Configured implements Tool {
             byte[] outKey = multiTableSupport
               ? Bytes.add(table.getName(), Bytes.toBytes(tableSeparator), CellUtil.cloneRow(cell))
               : CellUtil.cloneRow(cell);
-            context.write(new ImmutableBytesWritable(outKey),
-              new MapReduceExtendedCell(PrivateCellUtil.ensureExtendedCell(cell)));
+            ExtendedCell extendedCell = PrivateCellUtil.ensureExtendedCell(cell);
+            context.write(wrapKey(outKey, extendedCell), new MapReduceExtendedCell(extendedCell));
           }
         }
       } catch (InterruptedException e) {
@@ -135,7 +138,22 @@ public class WALPlayer extends Configured implements Tool {
       Configuration conf = context.getConfiguration();
       String[] tables = conf.getStrings(TABLES_KEY);
       this.multiTableSupport = conf.getBoolean(MULTI_TABLES_SUPPORT, false);
+      this.diskBasedSortingEnabled = HFileOutputFormat2.diskBasedSortingEnabled(conf);
       Collections.addAll(tableSet, tables);
+    }
+
+    private WritableComparable<?> wrapKey(byte[] key, ExtendedCell cell) {
+      if (this.diskBasedSortingEnabled) {
+        // Important to build a new cell with the updated key to maintain multi-table support
+        KeyValue kv = new KeyValue(key, 0, key.length, cell.getFamilyArray(),
+          cell.getFamilyOffset(), cell.getFamilyLength(), cell.getQualifierArray(),
+          cell.getQualifierOffset(), cell.getQualifierLength(), cell.getTimestamp(),
+          KeyValue.Type.codeToType(PrivateCellUtil.getTypeByte(cell)), null, 0, 0);
+        kv.setSequenceId(cell.getSequenceId());
+        return new KeyOnlyCellComparable(kv);
+      } else {
+        return new ImmutableBytesWritable(key);
+      }
     }
   }
 
@@ -313,7 +331,13 @@ public class WALPlayer extends Configured implements Tool {
     job.setJarByClass(WALPlayer.class);
 
     job.setInputFormatClass(WALInputFormat.class);
-    job.setMapOutputKeyClass(ImmutableBytesWritable.class);
+    boolean diskBasedSortingEnabled = HFileOutputFormat2.diskBasedSortingEnabled(conf);
+    if (diskBasedSortingEnabled) {
+      job.setMapOutputKeyClass(KeyOnlyCellComparable.class);
+      job.setSortComparatorClass(KeyOnlyCellComparable.KeyOnlyCellComparator.class);
+    } else {
+      job.setMapOutputKeyClass(ImmutableBytesWritable.class);
+    }
 
     String hfileOutPath = conf.get(BULK_OUTPUT_CONF_KEY);
     if (hfileOutPath != null) {
@@ -328,7 +352,11 @@ public class WALPlayer extends Configured implements Tool {
       List<TableName> tableNames = getTableNameList(tables);
 
       job.setMapperClass(WALKeyValueMapper.class);
-      job.setReducerClass(CellSortReducer.class);
+      if (diskBasedSortingEnabled) {
+        job.setReducerClass(PreSortedCellsReducer.class);
+      } else {
+        job.setReducerClass(CellSortReducer.class);
+      }
       Path outputDir = new Path(hfileOutPath);
       FileOutputFormat.setOutputPath(job, outputDir);
       job.setMapOutputValueClass(MapReduceExtendedCell.class);
