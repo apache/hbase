@@ -190,7 +190,7 @@ public class TestCacheConfig {
 
   @Test
   public void testDisableCacheDataBlock() throws IOException {
-    //First tests the default configs behaviour and block cache enabled
+    // First tests the default configs behaviour and block cache enabled
     Configuration conf = HBaseConfiguration.create();
     CacheConfig cacheConfig = new CacheConfig(conf);
     assertTrue(cacheConfig.shouldCacheBlockOnRead(BlockCategory.DATA));
@@ -205,7 +205,7 @@ public class TestCacheConfig {
     assertFalse(cacheConfig.shouldCacheBloomsOnWrite());
     assertFalse(cacheConfig.shouldCacheIndexesOnWrite());
 
-    //Tests block cache enabled and related cache on write flags enabled
+    // Tests block cache enabled and related cache on write flags enabled
     conf.setBoolean(CacheConfig.CACHE_BLOCKS_ON_WRITE_KEY, true);
     conf.setBoolean(CacheConfig.CACHE_DATA_BLOCKS_COMPRESSED_KEY, true);
     conf.setBoolean(CacheConfig.CACHE_BLOOM_BLOCKS_ON_WRITE_KEY, true);
@@ -225,7 +225,7 @@ public class TestCacheConfig {
     assertTrue(cacheConfig.shouldCacheIndexesOnWrite());
     assertTrue(cacheConfig.shouldCacheCompactedBlocksOnWrite());
 
-    //Tests block cache enabled but related cache on read/write properties disabled
+    // Tests block cache enabled but related cache on read/write properties disabled
     conf.setBoolean(CacheConfig.CACHE_DATA_ON_READ_KEY, false);
     conf.setBoolean(CacheConfig.CACHE_BLOCKS_ON_WRITE_KEY, false);
     conf.setBoolean(CacheConfig.CACHE_COMPACTED_BLOCKS_ON_WRITE_KEY, false);
@@ -243,7 +243,7 @@ public class TestCacheConfig {
     assertTrue(cacheConfig.shouldCacheBloomsOnWrite());
     assertTrue(cacheConfig.shouldCacheIndexesOnWrite());
 
-    //Finally tests block cache disabled in the column family but all cache on read/write
+    // Finally tests block cache disabled in the column family but all cache on read/write
     // properties enabled in the config.
     conf.setBoolean(CacheConfig.CACHE_BLOCKS_ON_WRITE_KEY, true);
     conf.setBoolean(CacheConfig.CACHE_DATA_BLOCKS_COMPRESSED_KEY, true);
