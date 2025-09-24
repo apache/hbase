@@ -150,8 +150,8 @@ public class BulkLoadCollectorJob extends Configured implements Tool {
 
     @Override
     protected void setup(Context context) throws IOException {
-      String[] tableMap = context.getConfiguration().getStrings(TABLES_KEY);
-      String[] tablesToUse = context.getConfiguration().getStrings(TABLE_MAP_KEY);
+      String[] tableMap = context.getConfiguration().getStrings(TABLE_MAP_KEY);
+      String[] tablesToUse = context.getConfiguration().getStrings(TABLES_KEY);
       if (tableMap == null) {
         tableMap = tablesToUse;
       }
