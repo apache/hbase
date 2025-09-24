@@ -343,6 +343,7 @@ public final class HConstants {
 
   /** Parameter name for HBase instance root directory */
   public static final String HBASE_DIR = "hbase.rootdir";
+  public static final String HBASE_ORIGINAL_DIR = "hbase.originalRootdir";
 
   /** Parameter name for HBase client IPC pool type */
   public static final String HBASE_CLIENT_IPC_POOL_TYPE = "hbase.client.ipc.pool.type";
@@ -1341,6 +1342,11 @@ public final class HConstants {
   public static final String CRYPTO_MANAGED_KEYS_L1_ACTIVE_CACHE_MAX_NS_ENTRIES_CONF_KEY =
     "hbase.crypto.managed_keys.l1_active_cache.max_ns_entries";
   public static final int CRYPTO_MANAGED_KEYS_L1_ACTIVE_CACHE_MAX_NS_ENTRIES_DEFAULT = 100;
+
+  /** Enables or disables local key generation per file. */
+  public static final String CRYPTO_MANAGED_KEYS_LOCAL_KEY_GEN_PER_FILE_ENABLED_CONF_KEY =
+    "hbase.crypto.managed_keys.local_key_gen_per_file.enabled";
+  public static final boolean CRYPTO_MANAGED_KEYS_LOCAL_KEY_GEN_PER_FILE_DEFAULT_ENABLED = false;
 
   /** Configuration key for setting RPC codec class name */
   public static final String RPC_CODEC_CONF_KEY = "hbase.client.rpc.codec";

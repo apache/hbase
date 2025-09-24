@@ -55,10 +55,16 @@ public class ManagedKeyData {
   public static final String KEY_SPACE_GLOBAL = "*";
 
   /**
+   * Special value to be used for custodian to indicate that it is global, meaning it is not
+   * associated with a specific custodian.
+   */
+  public static final byte[] KEY_GLOBAL_CUSTODIAN_BYTES = KEY_SPACE_GLOBAL.getBytes();
+
+  /**
    * Encoded form of global custodian.
    */
   public static final String KEY_GLOBAL_CUSTODIAN =
-    ManagedKeyProvider.encodeToStr(KEY_SPACE_GLOBAL.getBytes());
+    ManagedKeyProvider.encodeToStr(KEY_GLOBAL_CUSTODIAN_BYTES);
 
   private final byte[] keyCustodian;
   private final String keyNamespace;

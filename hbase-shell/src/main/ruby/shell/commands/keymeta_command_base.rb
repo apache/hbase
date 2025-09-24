@@ -34,7 +34,7 @@ module Shell
         [
           status.getKeyCustodianEncoded,
           status.getKeyNamespace,
-          status.getKeyStatus.toString,
+          status.getKeyState.toString,
           status.getKeyMetadata,
           status.getKeyMetadataHashEncoded,
           status.getRefreshTimestamp

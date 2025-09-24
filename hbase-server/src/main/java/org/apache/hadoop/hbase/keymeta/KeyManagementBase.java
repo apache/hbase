@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.security.KeyException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.KeyProvider;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
@@ -38,20 +37,19 @@ import org.slf4j.LoggerFactory;
 public abstract class KeyManagementBase {
   protected static final Logger LOG = LoggerFactory.getLogger(KeyManagementBase.class);
 
-  private Server server;
+  private KeyManagementService keyManagementService;
   private final Configuration configuration;
 
   private Boolean isDynamicLookupEnabled;
   private Boolean isKeyManagementEnabled;
-  private Integer perCustNamespaceActiveKeyCount;
 
   /**
    * Construct with a server instance. Configuration is derived from the server.
    * @param server the server instance
    */
-  public KeyManagementBase(Server server) {
-    this(server.getConfiguration());
-    this.server = server;
+  public KeyManagementBase(KeyManagementService keyManagementService) {
+    this(keyManagementService.getConfiguration());
+    this.keyManagementService = keyManagementService;
   }
 
   /**
@@ -65,8 +63,8 @@ public abstract class KeyManagementBase {
     this.configuration = configuration;
   }
 
-  protected Server getServer() {
-    return server;
+  protected KeyManagementService getKeyManagementService() {
+    return keyManagementService;
   }
 
   protected Configuration getConfiguration() {
@@ -150,7 +148,7 @@ public abstract class KeyManagementBase {
     LOG.info(
       "retrieveManagedKey: got managed key with status: {} and metadata: {} for "
         + "(custodian: {}, namespace: {})",
-      pbeKey.getKeyState(), pbeKey.getKeyMetadata(), encKeyCust, keyNamespace);
+      pbeKey.getKeyState(), pbeKey.getKeyMetadata(), encKeyCust, pbeKey.getKeyNamespace());
     if (accessor != null) {
       accessor.addKey(pbeKey);
     }

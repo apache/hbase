@@ -30,9 +30,13 @@ import org.apache.hadoop.hbase.io.crypto.ManagedKeyState;
 import org.apache.hadoop.hbase.keymeta.SystemKeyAccessor;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class SystemKeyManager extends SystemKeyAccessor {
+  private static final Logger LOG = LoggerFactory.getLogger(SystemKeyManager.class);
+
   private final MasterServices master;
 
   public SystemKeyManager(MasterServices master) throws IOException {
@@ -63,7 +67,7 @@ public class SystemKeyManager extends SystemKeyAccessor {
       return null;
     }
     Pair<Path, List<Path>> latestFileResult = getLatestSystemKeyFile();
-    Path latestFile = getLatestSystemKeyFile().getFirst();
+    Path latestFile = latestFileResult.getFirst();
     String latestKeyMetadata = loadKeyMetadata(latestFile);
     return rotateSystemKey(latestKeyMetadata, latestFileResult.getSecond());
   }

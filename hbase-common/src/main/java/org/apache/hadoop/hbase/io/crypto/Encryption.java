@@ -117,12 +117,6 @@ public final class Encryption {
       return this;
     }
 
-    @Override
-    public Context setKey(Key key) {
-      super.setKey(key);
-      return this;
-    }
-
     public Context setKey(byte[] key) {
       super.setKey(new SecretKeySpec(key, getCipher().getName()));
       return this;

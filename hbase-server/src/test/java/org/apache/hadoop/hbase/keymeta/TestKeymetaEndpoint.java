@@ -148,9 +148,7 @@ public class TestKeymetaEndpoint {
   public void testGetResponseBuilder() {
     // Arrange
     String keyCust = Base64.getEncoder().encodeToString("testKey".getBytes());
-    String keyNamespace = "testNamespace";
-    ManagedKeysRequest request =
-      requestBuilder.setKeyCust(keyCust).setKeyNamespace(keyNamespace).build();
+    ManagedKeysRequest request = requestBuilder.setKeyCust(keyCust).build();
 
     // Act
     ManagedKeysResponse.Builder result =
@@ -158,7 +156,6 @@ public class TestKeymetaEndpoint {
 
     // Assert
     assertNotNull(result);
-    assertEquals(keyNamespace, result.getKeyNamespace());
     assertArrayEquals("testKey".getBytes(), result.getKeyCustBytes().toByteArray());
     verify(controller, never()).setFailed(anyString());
   }
@@ -167,9 +164,7 @@ public class TestKeymetaEndpoint {
   public void testGetResponseBuilderWithInvalidBase64() {
     // Arrange
     String keyCust = "invalidBase64!";
-    String keyNamespace = "testNamespace";
-    ManagedKeysRequest request =
-      requestBuilder.setKeyCust(keyCust).setKeyNamespace(keyNamespace).build();
+    ManagedKeysRequest request = requestBuilder.setKeyCust(keyCust).build();
 
     // Act
     ManagedKeysResponse.Builder result =
@@ -177,7 +172,6 @@ public class TestKeymetaEndpoint {
 
     // Assert
     assertNotNull(result);
-    assertEquals(keyNamespace, result.getKeyNamespace());
     assertEquals(KEY_FAILED, result.getKeyState());
     verify(controller).setFailed(contains("Failed to decode specified prefix as Base64 string"));
   }

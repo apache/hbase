@@ -47,7 +47,8 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 /**
- * Tests for SystemKeyCache class
+ * Tests for SystemKeyCache class. NOTE: The createCache() method is tested in
+ * TestKeyManagementService.
  */
 @Category({ MasterTests.class, SmallTests.class })
 public class TestSystemKeyCache {

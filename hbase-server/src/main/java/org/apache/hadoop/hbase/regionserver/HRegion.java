@@ -90,6 +90,7 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
@@ -146,6 +147,9 @@ import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.RpcCall;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.ServerCall;
+import org.apache.hadoop.hbase.keymeta.KeyManagementService;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
+import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
 import org.apache.hadoop.hbase.mob.MobFileCache;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
@@ -166,6 +170,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALSyncTimeoutIOException;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationObserver;
+import org.apache.hadoop.hbase.security.SecurityUtil;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
@@ -382,6 +387,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   private final Configuration baseConf;
   private final int rowLockWaitDuration;
   static final int DEFAULT_ROWLOCK_WAIT_DURATION = 30000;
+  private final ManagedKeyDataCache managedKeyDataCache;
+  private final SystemKeyCache systemKeyCache;
 
   private Path regionWalDir;
   private FileSystem walFS;
@@ -769,8 +776,36 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public HRegion(final Path tableDir, final WAL wal, final FileSystem fs,
     final Configuration confParam, final RegionInfo regionInfo, final TableDescriptor htd,
     final RegionServerServices rsServices) {
+    this(tableDir, wal, fs, confParam, regionInfo, htd, rsServices, null);
+  }
+
+  /**
+   * HRegion constructor. This constructor should only be used for testing and extensions. Instances
+   * of HRegion should be instantiated with the {@link HRegion#createHRegion} or
+   * {@link HRegion#openHRegion} method.
+   * @param tableDir             qualified path of directory where region should be located, usually
+   *                             the table directory.
+   * @param wal                  The WAL is the outbound log for any updates to the HRegion The wal
+   *                             file is a logfile from the previous execution that's
+   *                             custom-computed for this HRegion. The HRegionServer computes and
+   *                             sorts the appropriate wal info for this HRegion. If there is a
+   *                             previous wal file (implying that the HRegion has been written-to
+   *                             before), then read it from the supplied path.
+   * @param fs                   is the filesystem.
+   * @param confParam            is global configuration settings.
+   * @param regionInfo           - RegionInfo that describes the region is new), then read them from
+   *                             the supplied path.
+   * @param htd                  the table descriptor
+   * @param rsServices           reference to {@link RegionServerServices} or null
+   * @param keyManagementService reference to {@link KeyManagementService} or null
+   * @deprecated Use other constructors.
+   */
+  @Deprecated
+  public HRegion(final Path tableDir, final WAL wal, final FileSystem fs,
+    final Configuration confParam, final RegionInfo regionInfo, final TableDescriptor htd,
+    final RegionServerServices rsServices, final KeyManagementService keyManagementService) {
     this(new HRegionFileSystem(confParam, fs, tableDir, regionInfo), wal, confParam, htd,
-      rsServices);
+      rsServices, keyManagementService);
   }
 
   /**
@@ -789,6 +824,28 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    */
   public HRegion(final HRegionFileSystem fs, final WAL wal, final Configuration confParam,
     final TableDescriptor htd, final RegionServerServices rsServices) {
+    this(fs, wal, confParam, htd, rsServices, null);
+  }
+
+  /**
+   * HRegion constructor. This constructor should only be used for testing and extensions. Instances
+   * of HRegion should be instantiated with the {@link HRegion#createHRegion} or
+   * {@link HRegion#openHRegion} method.
+   * @param fs                   is the filesystem.
+   * @param wal                  The WAL is the outbound log for any updates to the HRegion The wal
+   *                             file is a logfile from the previous execution that's
+   *                             custom-computed for this HRegion. The HRegionServer computes and
+   *                             sorts the appropriate wal info for this HRegion. If there is a
+   *                             previous wal file (implying that the HRegion has been written-to
+   *                             before), then read it from the supplied path.
+   * @param confParam            is global configuration settings.
+   * @param htd                  the table descriptor
+   * @param rsServices           reference to {@link RegionServerServices} or null
+   * @param keyManagementService reference to {@link KeyManagementService} or null
+   */
+  public HRegion(final HRegionFileSystem fs, final WAL wal, final Configuration confParam,
+    final TableDescriptor htd, final RegionServerServices rsServices,
+    KeyManagementService keyManagementService) {
     if (htd == null) {
       throw new IllegalArgumentException("Need table descriptor");
     }
@@ -929,6 +986,17 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     minBlockSizeBytes = Arrays.stream(this.htableDescriptor.getColumnFamilies())
       .mapToInt(ColumnFamilyDescriptor::getBlocksize).min().orElse(HConstants.DEFAULT_BLOCKSIZE);
+
+    if (SecurityUtil.isKeyManagementEnabled(conf)) {
+      if (keyManagementService == null) {
+        keyManagementService = KeyManagementService.createDefault(conf, fs.getFileSystem());
+      }
+      this.managedKeyDataCache = keyManagementService.getManagedKeyDataCache();
+      this.systemKeyCache = keyManagementService.getSystemKeyCache();
+    } else {
+      this.managedKeyDataCache = null;
+      this.systemKeyCache = null;
+    }
   }
 
   private void setHTableSpecificConf() {
@@ -2120,6 +2188,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   public BlockCache getBlockCache() {
     return this.blockCache;
+  }
+
+  public ManagedKeyDataCache getManagedKeyDataCache() {
+    return this.managedKeyDataCache;
+  }
+
+  public SystemKeyCache getSystemKeyCache() {
+    return this.systemKeyCache;
   }
 
   /**
@@ -7579,37 +7655,60 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   // Utility methods
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
+  public static HRegion newHRegion(Path tableDir, WAL wal, FileSystem fs, Configuration conf,
+    RegionInfo regionInfo, final TableDescriptor htd, RegionServerServices rsServices) {
+    return newHRegion(tableDir, wal, fs, conf, regionInfo, htd, rsServices, null);
+  }
+
   /**
    * A utility method to create new instances of HRegion based on the {@link HConstants#REGION_IMPL}
    * configuration property.
-   * @param tableDir   qualified path of directory where region should be located, usually the table
-   *                   directory.
-   * @param wal        The WAL is the outbound log for any updates to the HRegion The wal file is a
-   *                   logfile from the previous execution that's custom-computed for this HRegion.
-   *                   The HRegionServer computes and sorts the appropriate wal info for this
-   *                   HRegion. If there is a previous file (implying that the HRegion has been
-   *                   written-to before), then read it from the supplied path.
-   * @param fs         is the filesystem.
-   * @param conf       is global configuration settings.
-   * @param regionInfo - RegionInfo that describes the region is new), then read them from the
-   *                   supplied path.
-   * @param htd        the table descriptor
+   * @param tableDir             qualified path of directory where region should be located, usually
+   *                             the table directory.
+   * @param wal                  The WAL is the outbound log for any updates to the HRegion The wal
+   *                             file is a logfile from the previous execution that's
+   *                             custom-computed for this HRegion. The HRegionServer computes and
+   *                             sorts the appropriate wal info for this HRegion. If there is a
+   *                             previous file (implying that the HRegion has been written-to
+   *                             before), then read it from the supplied path.
+   * @param fs                   is the filesystem.
+   * @param conf                 is global configuration settings.
+   * @param regionInfo           - RegionInfo that describes the region is new), then read them from
+   *                             the supplied path.
+   * @param htd                  the table descriptor
+   * @param keyManagementService reference to {@link KeyManagementService} or null
    * @return the new instance
    */
   public static HRegion newHRegion(Path tableDir, WAL wal, FileSystem fs, Configuration conf,
-    RegionInfo regionInfo, final TableDescriptor htd, RegionServerServices rsServices) {
+    RegionInfo regionInfo, final TableDescriptor htd, RegionServerServices rsServices,
+    final KeyManagementService keyManagementService) {
+    List<Class<?>> ctorArgTypes =
+      Arrays.asList(Path.class, WAL.class, FileSystem.class, Configuration.class, RegionInfo.class,
+        TableDescriptor.class, RegionServerServices.class, KeyManagementService.class);
+    List<Object> ctorArgs =
+      Arrays.asList(tableDir, wal, fs, conf, regionInfo, htd, rsServices, keyManagementService);
+
+    try {
+      return createInstance(conf, ctorArgTypes, ctorArgs);
+    } catch (Throwable e) {
+      // Try the old signature for the sake of test code.
+      return createInstance(conf, ctorArgTypes.subList(0, ctorArgTypes.size() - 1),
+        ctorArgs.subList(0, ctorArgs.size() - 1));
+    }
+  }
+
+  private static HRegion createInstance(Configuration conf, List<Class<?>> ctorArgTypes,
+    List<Object> ctorArgs) {
     try {
       @SuppressWarnings("unchecked")
       Class<? extends HRegion> regionClass =
         (Class<? extends HRegion>) conf.getClass(HConstants.REGION_IMPL, HRegion.class);
 
       Constructor<? extends HRegion> c =
-        regionClass.getConstructor(Path.class, WAL.class, FileSystem.class, Configuration.class,
-          RegionInfo.class, TableDescriptor.class, RegionServerServices.class);
-
-      return c.newInstance(tableDir, wal, fs, conf, regionInfo, htd, rsServices);
+        regionClass.getConstructor(ctorArgTypes.toArray(new Class<?>[ctorArgTypes.size()]));
+      return c.newInstance(ctorArgs.toArray(new Object[ctorArgs.size()]));
     } catch (Throwable e) {
-      // todo: what should I throw here?
       throw new IllegalStateException("Could not instantiate a region instance.", e);
     }
   }
@@ -7622,6 +7721,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @param initialize - true to initialize the region
    * @return new HRegion
    */
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
   public static HRegion createHRegion(final RegionInfo info, final Path rootDir,
     final Configuration conf, final TableDescriptor hTableDescriptor, final WAL wal,
     final boolean initialize) throws IOException {
@@ -7637,16 +7737,35 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @param rsRpcServices An interface we can request flushes against.
    * @return new HRegion
    */
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
   public static HRegion createHRegion(final RegionInfo info, final Path rootDir,
     final Configuration conf, final TableDescriptor hTableDescriptor, final WAL wal,
     final boolean initialize, RegionServerServices rsRpcServices) throws IOException {
+    return createHRegion(info, rootDir, conf, hTableDescriptor, wal, initialize, rsRpcServices,
+      null);
+  }
+
+  /**
+   * Convenience method creating new HRegions. Used by createTable.
+   * @param info                 Info for region to create.
+   * @param rootDir              Root directory for HBase instance
+   * @param wal                  shared WAL
+   * @param initialize           - true to initialize the region
+   * @param rsRpcServices        An interface we can request flushes against.
+   * @param keyManagementService reference to {@link KeyManagementService} or null
+   * @return new HRegion
+   */
+  public static HRegion createHRegion(final RegionInfo info, final Path rootDir,
+    final Configuration conf, final TableDescriptor hTableDescriptor, final WAL wal,
+    final boolean initialize, RegionServerServices rsRpcServices,
+    final KeyManagementService keyManagementService) throws IOException {
     LOG.info("creating " + info + ", tableDescriptor="
       + (hTableDescriptor == null ? "null" : hTableDescriptor) + ", regionDir=" + rootDir);
     createRegionDir(conf, info, rootDir);
     FileSystem fs = rootDir.getFileSystem(conf);
     Path tableDir = CommonFSUtils.getTableDir(rootDir, info.getTable());
-    HRegion region =
-      HRegion.newHRegion(tableDir, wal, fs, conf, info, hTableDescriptor, rsRpcServices);
+    HRegion region = HRegion.newHRegion(tableDir, wal, fs, conf, info, hTableDescriptor,
+      rsRpcServices, keyManagementService);
     if (initialize) {
       region.initialize(null);
     }
@@ -7657,11 +7776,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * Create a region under the given table directory.
    */
   public static HRegion createHRegion(Configuration conf, RegionInfo regionInfo, FileSystem fs,
-    Path tableDir, TableDescriptor tableDesc) throws IOException {
+    Path tableDir, TableDescriptor tableDesc, KeyManagementService keyManagementService)
+    throws IOException {
     LOG.info("Creating {}, tableDescriptor={}, under table dir {}", regionInfo, tableDesc,
       tableDir);
     HRegionFileSystem.createRegionOnFileSystem(conf, fs, tableDir, regionInfo);
-    HRegion region = HRegion.newHRegion(tableDir, null, fs, conf, regionInfo, tableDesc, null);
+    HRegion region = HRegion.newHRegion(tableDir, null, fs, conf, regionInfo, tableDesc, null,
+      keyManagementService);
     return region;
   }
 
@@ -7680,7 +7801,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public static HRegion createHRegion(final RegionInfo info, final Path rootDir,
     final Configuration conf, final TableDescriptor hTableDescriptor, final WAL wal)
     throws IOException {
-    return createHRegion(info, rootDir, conf, hTableDescriptor, wal, true);
+    return createHRegion(info, rootDir, conf, hTableDescriptor, wal, null);
+  }
+
+  public static HRegion createHRegion(final RegionInfo info, final Path rootDir,
+    final Configuration conf, final TableDescriptor hTableDescriptor, final WAL wal,
+    final KeyManagementService keyManagementService) throws IOException {
+    return createHRegion(info, rootDir, conf, hTableDescriptor, wal, true, null,
+      keyManagementService);
   }
 
   /**
@@ -7691,6 +7819,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    *             properly kept up. HRegionStore does this every time it opens a new region.
    * @return new HRegion
    */
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
   public static HRegion openHRegion(final RegionInfo info, final TableDescriptor htd, final WAL wal,
     final Configuration conf) throws IOException {
     return openHRegion(info, htd, wal, conf, null, null);
@@ -7712,7 +7841,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public static HRegion openHRegion(final RegionInfo info, final TableDescriptor htd, final WAL wal,
     final Configuration conf, final RegionServerServices rsServices,
     final CancelableProgressable reporter) throws IOException {
-    return openHRegion(CommonFSUtils.getRootDir(conf), info, htd, wal, conf, rsServices, reporter);
+    return openHRegion(CommonFSUtils.getRootDir(conf), info, htd, wal, conf, rsServices, reporter,
+      rsServices);
   }
 
   /**
@@ -7726,9 +7856,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @param conf    The Configuration object to use.
    * @return new HRegion
    */
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
   public static HRegion openHRegion(Path rootDir, final RegionInfo info, final TableDescriptor htd,
     final WAL wal, final Configuration conf) throws IOException {
-    return openHRegion(rootDir, info, htd, wal, conf, null, null);
+    return openHRegion(rootDir, info, htd, wal, conf, null, null, null);
   }
 
   /**
@@ -7745,10 +7876,33 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @param reporter   An interface we can report progress against.
    * @return new HRegion
    */
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
   public static HRegion openHRegion(final Path rootDir, final RegionInfo info,
     final TableDescriptor htd, final WAL wal, final Configuration conf,
     final RegionServerServices rsServices, final CancelableProgressable reporter)
     throws IOException {
+    return openHRegion(rootDir, info, htd, wal, conf, rsServices, reporter, null);
+  }
+
+  /**
+   * Open a Region.
+   * @param rootDir              Root directory for HBase instance
+   * @param info                 Info for region to be opened.
+   * @param htd                  the table descriptor
+   * @param wal                  WAL for region to use. This method will call
+   *                             WAL#setSequenceNumber(long) passing the result of the call to
+   *                             HRegion#getMinSequenceId() to ensure the wal id is properly kept
+   *                             up. HRegionStore does this every time it opens a new region.
+   * @param conf                 The Configuration object to use.
+   * @param rsServices           An interface we can request flushes against.
+   * @param reporter             An interface we can report progress against.
+   * @param keyManagementService reference to {@link KeyManagementService} or null
+   * @return new HRegion
+   */
+  public static HRegion openHRegion(final Path rootDir, final RegionInfo info,
+    final TableDescriptor htd, final WAL wal, final Configuration conf,
+    final RegionServerServices rsServices, final CancelableProgressable reporter,
+    final KeyManagementService keyManagementService) throws IOException {
     FileSystem fs = null;
     if (rsServices != null) {
       fs = rsServices.getFileSystem();
@@ -7756,7 +7910,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     if (fs == null) {
       fs = rootDir.getFileSystem(conf);
     }
-    return openHRegion(conf, fs, rootDir, info, htd, wal, rsServices, reporter);
+    return openHRegion(conf, fs, rootDir, info, htd, wal, rsServices, reporter,
+      keyManagementService);
   }
 
   /**
@@ -7771,57 +7926,70 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    *                properly kept up. HRegionStore does this every time it opens a new region.
    * @return new HRegion
    */
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
   public static HRegion openHRegion(final Configuration conf, final FileSystem fs,
     final Path rootDir, final RegionInfo info, final TableDescriptor htd, final WAL wal)
     throws IOException {
-    return openHRegion(conf, fs, rootDir, info, htd, wal, null, null);
+    return openHRegion(conf, fs, rootDir, info, htd, wal, null, null, null);
   }
 
-  /**
-   * Open a Region.
-   * @param conf       The Configuration object to use.
-   * @param fs         Filesystem to use
-   * @param rootDir    Root directory for HBase instance
-   * @param info       Info for region to be opened.
-   * @param htd        the table descriptor
-   * @param wal        WAL for region to use. This method will call WAL#setSequenceNumber(long)
-   *                   passing the result of the call to HRegion#getMinSequenceId() to ensure the
-   *                   wal id is properly kept up. HRegionStore does this every time it opens a new
-   *                   region.
-   * @param rsServices An interface we can request flushes against.
-   * @param reporter   An interface we can report progress against.
-   * @return new HRegion
-   */
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
   public static HRegion openHRegion(final Configuration conf, final FileSystem fs,
     final Path rootDir, final RegionInfo info, final TableDescriptor htd, final WAL wal,
     final RegionServerServices rsServices, final CancelableProgressable reporter)
     throws IOException {
-    Path tableDir = CommonFSUtils.getTableDir(rootDir, info.getTable());
-    return openHRegionFromTableDir(conf, fs, tableDir, info, htd, wal, rsServices, reporter);
+    return openHRegion(conf, fs, rootDir, info, htd, wal, rsServices, reporter, null);
   }
 
   /**
    * Open a Region.
-   * @param conf       The Configuration object to use.
-   * @param fs         Filesystem to use
-   * @param info       Info for region to be opened.
-   * @param htd        the table descriptor
-   * @param wal        WAL for region to use. This method will call WAL#setSequenceNumber(long)
-   *                   passing the result of the call to HRegion#getMinSequenceId() to ensure the
-   *                   wal id is properly kept up. HRegionStore does this every time it opens a new
-   *                   region.
-   * @param rsServices An interface we can request flushes against.
-   * @param reporter   An interface we can report progress against.
+   * @param conf                 The Configuration object to use.
+   * @param fs                   Filesystem to use
+   * @param rootDir              Root directory for HBase instance
+   * @param info                 Info for region to be opened.
+   * @param htd                  the table descriptor
+   * @param wal                  WAL for region to use. This method will call
+   *                             WAL#setSequenceNumber(long) passing the result of the call to
+   *                             HRegion#getMinSequenceId() to ensure the wal id is properly kept
+   *                             up. HRegionStore does this every time it opens a new region.
+   * @param rsServices           An interface we can request flushes against.
+   * @param reporter             An interface we can report progress against.
+   * @param keyManagementService reference to {@link KeyManagementService} or null
+   * @return new HRegion
+   */
+  public static HRegion openHRegion(final Configuration conf, final FileSystem fs,
+    final Path rootDir, final RegionInfo info, final TableDescriptor htd, final WAL wal,
+    final RegionServerServices rsServices, final CancelableProgressable reporter,
+    final KeyManagementService keyManagementService) throws IOException {
+    Path tableDir = CommonFSUtils.getTableDir(rootDir, info.getTable());
+    return openHRegionFromTableDir(conf, fs, tableDir, info, htd, wal, rsServices, reporter,
+      keyManagementService);
+  }
+
+  /**
+   * Open a Region.
+   * @param conf                 The Configuration object to use.
+   * @param fs                   Filesystem to use
+   * @param info                 Info for region to be opened.
+   * @param htd                  the table descriptor
+   * @param wal                  WAL for region to use. This method will call
+   *                             WAL#setSequenceNumber(long) passing the result of the call to
+   *                             HRegion#getMinSequenceId() to ensure the wal id is properly kept
+   *                             up. HRegionStore does this every time it opens a new region.
+   * @param rsServices           An interface we can request flushes against.
+   * @param reporter             An interface we can report progress against.
+   * @param keyManagementService reference to {@link KeyManagementService} or null
    * @return new HRegion
    * @throws NullPointerException if {@code info} is {@code null}
    */
   public static HRegion openHRegionFromTableDir(final Configuration conf, final FileSystem fs,
     final Path tableDir, final RegionInfo info, final TableDescriptor htd, final WAL wal,
-    final RegionServerServices rsServices, final CancelableProgressable reporter)
-    throws IOException {
+    final RegionServerServices rsServices, final CancelableProgressable reporter,
+    final KeyManagementService keyManagementService) throws IOException {
     Objects.requireNonNull(info, "RegionInfo cannot be null");
     LOG.debug("Opening region: {}", info);
-    HRegion r = HRegion.newHRegion(tableDir, wal, fs, conf, info, htd, rsServices);
+    HRegion r =
+      HRegion.newHRegion(tableDir, wal, fs, conf, info, htd, rsServices, keyManagementService);
     return r.openHRegion(reporter);
   }
 
@@ -7835,17 +8003,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @param reporter An interface we can report progress against.
    * @return new HRegion
    */
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
   public static HRegion openHRegion(final HRegion other, final CancelableProgressable reporter)
     throws IOException {
     HRegionFileSystem regionFs = other.getRegionFileSystem();
     HRegion r = newHRegion(regionFs.getTableDir(), other.getWAL(), regionFs.getFileSystem(),
-      other.baseConf, other.getRegionInfo(), other.getTableDescriptor(), null);
+      other.baseConf, other.getRegionInfo(), other.getTableDescriptor(), null, null);
     return r.openHRegion(reporter);
-  }
-
-  public static Region openHRegion(final Region other, final CancelableProgressable reporter)
-    throws IOException {
-    return openHRegion((HRegion) other, reporter);
   }
 
   /**
@@ -7913,7 +8077,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     if (info.getReplicaId() <= 0) {
       info = RegionReplicaUtil.getRegionInfoForReplica(info, 1);
     }
-    HRegion r = HRegion.newHRegion(tableDir, null, fs, conf, info, htd, null);
+    HRegion r = HRegion.newHRegion(tableDir, null, fs, conf, info, htd, null, null);
     r.writestate.setReadOnly(true);
     return r.openHRegion(null);
   }
@@ -7933,7 +8097,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     if (fs == null) {
       fs = rootDir.getFileSystem(conf);
     }
-    HRegion r = HRegion.newHRegion(tableDir, wal, fs, conf, info, htd, null);
+    HRegion r = HRegion.newHRegion(tableDir, wal, fs, conf, info, htd, null, null);
     r.initializeWarmup(reporter);
     r.close();
     return r;

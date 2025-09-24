@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
+import org.apache.hadoop.hbase.keymeta.KeyManagementService;
 import org.apache.hadoop.hbase.keymeta.KeymetaAdmin;
 import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
 import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
@@ -587,8 +588,12 @@ public class MockNoopMasterServices implements MasterServices {
     return 0;
   }
 
-  @Override
   public long rollAllWALWriters(long nonceGroup, long nonce) throws IOException {
     return 0;
+  }
+
+  @Override
+  public KeyManagementService getKeyManagementService() {
+    return this;
   }
 }

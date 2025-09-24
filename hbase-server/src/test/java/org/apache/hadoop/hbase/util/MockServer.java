@@ -26,9 +26,7 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.keymeta.KeymetaAdmin;
-import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
-import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
+import org.apache.hadoop.hbase.keymeta.KeyManagementService;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.slf4j.Logger;
@@ -104,21 +102,6 @@ public class MockServer implements Server {
   }
 
   @Override
-  public SystemKeyCache getSystemKeyCache() {
-    return null;
-  }
-
-  @Override
-  public ManagedKeyDataCache getManagedKeyDataCache() {
-    return null;
-  }
-
-  @Override
-  public KeymetaAdmin getKeymetaAdmin() {
-    return null;
-  }
-
-  @Override
   public FileSystem getFileSystem() {
     throw new UnsupportedOperationException();
   }
@@ -136,5 +119,10 @@ public class MockServer implements Server {
   @Override
   public AsyncClusterConnection getAsyncClusterConnection() {
     throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public KeyManagementService getKeyManagementService() {
+    return null;
   }
 }

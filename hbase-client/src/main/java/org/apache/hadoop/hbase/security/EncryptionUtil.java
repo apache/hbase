@@ -27,7 +27,6 @@ import javax.crypto.spec.SecretKeySpec;
 import org.apache.commons.crypto.cipher.CryptoCipherFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.aes.CryptoAES;
@@ -217,57 +216,6 @@ public final class EncryptionUtil {
       throw new RuntimeException("Cipher '" + algorithm + "' not available");
     }
     return getUnwrapKey(conf, subject, wrappedKey, cipher, null);
-  }
-
-  /**
-   * Helper to create an encyption context.
-   * @param conf   The current configuration.
-   * @param family The current column descriptor.
-   * @return The created encryption context.
-   * @throws IOException           if an encryption key for the column cannot be unwrapped
-   * @throws IllegalStateException in case of encryption related configuration errors
-   */
-  public static Encryption.Context createEncryptionContext(Configuration conf,
-    ColumnFamilyDescriptor family) throws IOException {
-    Encryption.Context cryptoContext = Encryption.Context.NONE;
-    String cipherName = family.getEncryptionType();
-    if (cipherName != null) {
-      if (!Encryption.isEncryptionEnabled(conf)) {
-        throw new IllegalStateException("Encryption for family '" + family.getNameAsString()
-          + "' configured with type '" + cipherName + "' but the encryption feature is disabled");
-      }
-      Cipher cipher;
-      Key key;
-      byte[] keyBytes = family.getEncryptionKey();
-      if (keyBytes != null) {
-        // Family provides specific key material
-        key = unwrapKey(conf, keyBytes);
-        // Use the algorithm the key wants
-        cipher = Encryption.getCipher(conf, key.getAlgorithm());
-        if (cipher == null) {
-          throw new IllegalStateException("Cipher '" + key.getAlgorithm() + "' is not available");
-        }
-        // Fail if misconfigured
-        // We use the encryption type specified in the column schema as a sanity check on
-        // what the wrapped key is telling us
-        if (!cipher.getName().equalsIgnoreCase(cipherName)) {
-          throw new IllegalStateException(
-            "Encryption for family '" + family.getNameAsString() + "' configured with type '"
-              + cipherName + "' but key specifies algorithm '" + cipher.getName() + "'");
-        }
-      } else {
-        // Family does not provide key material, create a random key
-        cipher = Encryption.getCipher(conf, cipherName);
-        if (cipher == null) {
-          throw new IllegalStateException("Cipher '" + cipherName + "' is not available");
-        }
-        key = cipher.getRandomKey();
-      }
-      cryptoContext = Encryption.newContext(conf);
-      cryptoContext.setCipher(cipher);
-      cryptoContext.setKey(key);
-    }
-    return cryptoContext;
   }
 
   /**

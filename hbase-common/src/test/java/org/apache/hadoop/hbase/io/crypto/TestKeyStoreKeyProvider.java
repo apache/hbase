@@ -17,12 +17,11 @@
  */
 package org.apache.hadoop.hbase.io.crypto;
 
+import static org.apache.hadoop.hbase.io.crypto.KeymetaTestUtils.ALIAS;
+import static org.apache.hadoop.hbase.io.crypto.KeymetaTestUtils.PASSWORD;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.net.URLEncoder;
 import java.security.Key;
 import java.security.KeyStore;
 import java.security.MessageDigest;
@@ -51,12 +50,8 @@ public class TestKeyStoreKeyProvider {
     HBaseClassTestRule.forClass(TestKeyStoreKeyProvider.class);
 
   static final HBaseCommonTestingUtil TEST_UTIL = new HBaseCommonTestingUtil();
-  static final String ALIAS = "test";
-  static final String PASSWORD = "password";
 
   static byte[] KEY;
-  static File storeFile;
-  static File passwordFile;
 
   protected KeyProvider provider;
 
@@ -75,40 +70,21 @@ public class TestKeyStoreKeyProvider {
   @Before
   public void setUp() throws Exception {
     KEY = MessageDigest.getInstance("SHA-256").digest(Bytes.toBytes(ALIAS));
-    // Create a JKECS store containing a test secret key
-    KeyStore store = KeyStore.getInstance("JCEKS");
-    store.load(null, PASSWORD.toCharArray());
-    store.setEntry(ALIAS, new KeyStore.SecretKeyEntry(new SecretKeySpec(KEY, "AES")),
-      new KeyStore.PasswordProtection(withPasswordOnAlias ? PASSWORD.toCharArray() : new char[0]));
-    Properties p = new Properties();
-    addCustomEntries(store, p);
-    // Create the test directory
-    String dataDir = TEST_UTIL.getDataTestDir().toString();
-    new File(dataDir).mkdirs();
-    // Write the keystore file
-    storeFile = new File(dataDir, "keystore.jks");
-    FileOutputStream os = new FileOutputStream(storeFile);
-    try {
-      store.store(os, PASSWORD.toCharArray());
-    } finally {
-      os.close();
-    }
-    // Write the password file
-    passwordFile = new File(dataDir, "keystore.pw");
-    os = new FileOutputStream(passwordFile);
-    try {
-      p.store(os, "");
-    } finally {
-      os.close();
-    }
-
+    String providerParams = KeymetaTestUtils.setupTestKeyStore(TEST_UTIL, withPasswordOnAlias,
+      withPasswordFile, store -> {
+        Properties p = new Properties();
+        try {
+          store.setEntry(ALIAS, new KeyStore.SecretKeyEntry(new SecretKeySpec(KEY, "AES")),
+            new KeyStore.PasswordProtection(
+              withPasswordOnAlias ? PASSWORD.toCharArray() : new char[0]));
+          addCustomEntries(store, p);
+        } catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+        return p;
+      });
     provider = createProvider();
-    if (withPasswordFile) {
-      provider.init("jceks://" + storeFile.toURI().getPath() + "?passwordFile="
-        + URLEncoder.encode(passwordFile.getAbsolutePath(), "UTF-8"));
-    } else {
-      provider.init("jceks://" + storeFile.toURI().getPath() + "?password=" + PASSWORD);
-    }
+    provider.init(providerParams);
   }
 
   protected KeyProvider createProvider() {

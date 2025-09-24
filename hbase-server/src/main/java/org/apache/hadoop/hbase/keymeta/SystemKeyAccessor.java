@@ -25,6 +25,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -35,14 +36,24 @@ import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class SystemKeyAccessor extends KeyManagementBase {
+  private static final Logger LOG = LoggerFactory.getLogger(SystemKeyAccessor.class);
+
+  private final FileSystem fs;
   protected final Path systemKeyDir;
 
   public SystemKeyAccessor(Server server) throws IOException {
-    super(server);
-    this.systemKeyDir = CommonFSUtils.getSystemKeyDir(server.getConfiguration());
+    this(server.getConfiguration(), server.getFileSystem());
+  }
+
+  public SystemKeyAccessor(Configuration configuration, FileSystem fs) throws IOException {
+    super(configuration);
+    this.systemKeyDir = CommonFSUtils.getSystemKeyDir(configuration);
+    this.fs = fs;
   }
 
   /**
@@ -52,9 +63,7 @@ public class SystemKeyAccessor extends KeyManagementBase {
    *                     is initialized yet.
    */
   public Pair<Path, List<Path>> getLatestSystemKeyFile() throws IOException {
-    if (!isKeyManagementEnabled()) {
-      return new Pair<>(null, null);
-    }
+    assertKeyManagementEnabled();
     List<Path> allClusterKeyFiles = getAllSystemKeyFiles();
     if (allClusterKeyFiles.isEmpty()) {
       throw new RuntimeException("No cluster key initialized yet");
@@ -72,17 +81,15 @@ public class SystemKeyAccessor extends KeyManagementBase {
    * @throws IOException if there is an error getting the cluster key files
    */
   public List<Path> getAllSystemKeyFiles() throws IOException {
-    if (!isKeyManagementEnabled()) {
-      return null;
-    }
-    FileSystem fs = getServer().getFileSystem();
+    assertKeyManagementEnabled();
+    LOG.info("Getting all system key files from: {} matching prefix: {}", systemKeyDir,
+      SYSTEM_KEY_FILE_PREFIX + "*");
     Map<Integer, Path> clusterKeys = new TreeMap<>(Comparator.reverseOrder());
     for (FileStatus st : fs.globStatus(new Path(systemKeyDir, SYSTEM_KEY_FILE_PREFIX + "*"))) {
       Path keyPath = st.getPath();
       int seqNum = extractSystemKeySeqNum(keyPath);
       clusterKeys.put(seqNum, keyPath);
     }
-
     return new ArrayList<>(clusterKeys.values());
   }
 
@@ -130,7 +137,7 @@ public class SystemKeyAccessor extends KeyManagementBase {
   }
 
   protected String loadKeyMetadata(Path keyPath) throws IOException {
-    try (FSDataInputStream fin = getServer().getFileSystem().open(keyPath)) {
+    try (FSDataInputStream fin = fs.open(keyPath)) {
       return fin.readUTF();
     }
   }

@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.keymeta;
 
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
 import org.apache.hadoop.hbase.io.crypto.MockManagedKeyProvider;
 import org.junit.After;
 import org.junit.Before;
@@ -29,7 +30,7 @@ public class ManagedKeyTestBase {
   @Before
   public void setUp() throws Exception {
     TEST_UTIL.getConfiguration().set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY,
-      MockManagedKeyProvider.class.getName());
+      getKeyProviderClass().getName());
     TEST_UTIL.getConfiguration().set(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, "true");
     TEST_UTIL.getConfiguration().set("hbase.coprocessor.master.classes",
       KeymetaServiceEndpoint.class.getName());
@@ -43,5 +44,9 @@ public class ManagedKeyTestBase {
   @After
   public void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
+  }
+
+  protected Class<? extends ManagedKeyProvider> getKeyProviderClass() {
+    return MockManagedKeyProvider.class;
   }
 }

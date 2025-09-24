@@ -425,7 +425,7 @@ public class TestManagedKeyDataCache {
     @Test
     public void testGenericCacheWithKeymetaAccessorException() throws Exception {
       when(mockL2.getKey(CUST_ID, KEY_SPACE_GLOBAL, "test-metadata"))
-          .thenThrow(new IOException("Test exception"));
+        .thenThrow(new IOException("Test exception"));
       assertNull(cache.getEntry(CUST_ID, KEY_SPACE_GLOBAL, "test-metadata", null));
       verify(mockL2).getKey(any(), any(String.class), any(String.class));
       clearInvocations(mockL2);
@@ -436,7 +436,7 @@ public class TestManagedKeyDataCache {
     @Test
     public void testGetActiveEntryWithKeymetaAccessorException() throws Exception {
       when(mockL2.getActiveKey(CUST_ID, KEY_SPACE_GLOBAL))
-          .thenThrow(new IOException("Test exception"));
+        .thenThrow(new IOException("Test exception"));
       assertNull(cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL));
       verify(mockL2).getActiveKey(any(), any(String.class));
       clearInvocations(mockL2);

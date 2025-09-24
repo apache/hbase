@@ -43,7 +43,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
@@ -73,10 +72,11 @@ import org.junit.runners.Suite;
   TestKeymetaAdminImpl.TestForKeyProviderNullReturn.class, })
 @Category({ MasterTests.class, SmallTests.class })
 public class TestKeymetaAdminImpl {
-  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private static final String CUST = "cust1";
   private static final String ENCODED_CUST = ManagedKeyProvider.encodeToStr(CUST.getBytes());
+
+  private final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   @Rule
   public TestName name = new TestName();
@@ -86,7 +86,7 @@ public class TestKeymetaAdminImpl {
   protected FileSystem fs;
 
   protected FileSystem mockFileSystem = mock(FileSystem.class);
-  protected Server mockServer = mock(Server.class);
+  protected MasterServices mockServer = mock(MasterServices.class);
   protected KeymetaAdminImplForTest keymetaAdmin;
   KeymetaTableAccessor keymetaAccessor = mock(KeymetaTableAccessor.class);
 
@@ -99,6 +99,7 @@ public class TestKeymetaAdminImpl {
     conf.set(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, "true");
     conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, MockManagedKeyProvider.class.getName());
 
+    when(mockServer.getKeyManagementService()).thenReturn(mockServer);
     when(mockServer.getFileSystem()).thenReturn(mockFileSystem);
     when(mockServer.getConfiguration()).thenReturn(conf);
     keymetaAdmin = new KeymetaAdminImplForTest(mockServer, keymetaAccessor);
@@ -221,7 +222,7 @@ public class TestKeymetaAdminImpl {
   }
 
   private class KeymetaAdminImplForTest extends KeymetaAdminImpl {
-    public KeymetaAdminImplForTest(Server mockServer, KeymetaTableAccessor mockAccessor) {
+    public KeymetaAdminImplForTest(MasterServices mockServer, KeymetaTableAccessor mockAccessor) {
       super(mockServer);
     }
 
