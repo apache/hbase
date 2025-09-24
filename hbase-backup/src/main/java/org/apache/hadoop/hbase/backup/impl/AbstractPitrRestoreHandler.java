@@ -346,7 +346,7 @@ public abstract class AbstractPitrRestoreHandler {
       collectBulkFiles(sourceTable, targetTable, startTime, endTime, new Path(restoreRootDir));
 
     if (bulkloadFiles.isEmpty()) {
-      LOG.info("No bulk-load files found for {} in range {}-{}. Skipping bulkload restore.",
+      LOG.info("No bulk-load files found for {} in time range {}-{}. Skipping bulkload restore.",
         sourceTable, startTime, endTime);
       return;
     }
@@ -361,8 +361,10 @@ public abstract class AbstractPitrRestoreHandler {
         new TableName[] { targetTable }, false);
       LOG.info("Re-bulkload completed for {}", targetTable);
     } catch (Exception e) {
-      LOG.error("Re-bulkload failed for {}: {}", targetTable, e.getMessage(), e);
-      throw new IOException("Re-bulkload failed for " + targetTable + ": " + e.getMessage(), e);
+      String errorMessage =
+        String.format("Re-bulkload failed for %s: %s", targetTable, e.getMessage());
+      LOG.error(errorMessage, e);
+      throw new IOException(errorMessage, e);
     }
   }
 

@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.backup.mapreduce;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -27,6 +26,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Collections;
@@ -112,25 +112,21 @@ public class TestBulkLoadCollectorJob {
   }
 
   /**
-   * Verifies that {@link BulkLoadCollectorJob#createSubmittableJob(String[])} throws an exception
+   * Verifies that {@link BulkLoadCollectorJob#createSubmittableJob(String[])} throws an IOException
    * when called with insufficient or null arguments.
    */
-  @Test
-  public void testCreateSubmittableJobMissingArgsThrows() {
+  @Test(expected = IOException.class)
+  public void testCreateSubmittableJob_throwsForInsufficientArgs() throws Exception {
     BulkLoadCollectorJob jobDriver = new BulkLoadCollectorJob(conf);
-    try {
-      jobDriver.createSubmittableJob(new String[] { "file:/only/one/arg" });
-      fail("Expected IOException for insufficient args");
-    } catch (Exception e) {
-      // expected
-    }
+    // this call must throw IOException for the test to pass
+    jobDriver.createSubmittableJob(new String[] { "file:/only/one/arg" });
+  }
 
-    try {
-      jobDriver.createSubmittableJob(null);
-      fail("Expected IOException for null args");
-    } catch (Exception e) {
-      // expected
-    }
+  @Test(expected = IOException.class)
+  public void testCreateSubmittableJob_throwsForNullArgs() throws Exception {
+    BulkLoadCollectorJob jobDriver = new BulkLoadCollectorJob(conf);
+    // this call must throw IOException for the test to pass
+    jobDriver.createSubmittableJob(null);
   }
 
   /**
