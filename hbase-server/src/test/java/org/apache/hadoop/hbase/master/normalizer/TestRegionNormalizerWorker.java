@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master.normalizer;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.comparesEqualTo;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.nullValue;
@@ -48,6 +49,7 @@ import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.regionserver.compactions.OffPeakHours;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.hamcrest.Description;
@@ -232,6 +234,40 @@ public class TestRegionNormalizerWorker {
       worker::getSplitPlanCount, comparesEqualTo(1L));
     assertThatEventually("worker should process merge plan", worker::getMergePlanCount,
       comparesEqualTo(1L));
+  }
+
+  @Test
+  public void testNormalizerWorkInOffpeak() throws Exception {
+    final TableName tn = tableName.getTableName();
+    final TableDescriptor tnDescriptor =
+      TableDescriptorBuilder.newBuilder(tn).setNormalizationEnabled(true).build();
+    when(masterServices.getTableDescriptors().get(tn)).thenReturn(tnDescriptor);
+    when(masterServices.mergeRegions(any(), anyBoolean(), anyLong(), anyLong())).thenReturn(1L);
+    when(regionNormalizer.computePlansForTable(tnDescriptor)).thenReturn(singletonList(
+      new MergeNormalizationPlan.Builder().addTarget(RegionInfoBuilder.newBuilder(tn).build(), 10)
+        .addTarget(RegionInfoBuilder.newBuilder(tn).build(), 20).build()));
+
+    Configuration configuration = testingUtility.getConfiguration();
+    configuration.set("hbase.offpeak.start.hour", "16");
+    configuration.set("hbase.offpeak.end.hour", "17");
+
+    RegionNormalizerWorker worker =
+      new RegionNormalizerWorker(configuration, masterServices, regionNormalizer, queue);
+    long beforeMergePlanCount = worker.getMergePlanCount();
+    workerPool.submit(worker);
+    queue.put(tn);
+
+    Thread.sleep(5000);
+
+    OffPeakHours offPeakHours = OffPeakHours.getInstance(configuration);
+    if (offPeakHours.isOffPeakHour()) {
+      assertThatEventually("executing work should see plan count increase",
+        worker::getMergePlanCount, greaterThan(beforeMergePlanCount));
+    } else {
+      assertThatEventually("executing work should see plan count unchanged",
+        worker::getMergePlanCount, equalTo(beforeMergePlanCount));
+    }
+    workerPool.shutdownNow();
   }
 
   /**
