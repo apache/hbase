@@ -28,9 +28,17 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
+import org.apache.hadoop.hbase.tool.BulkLoadHFilesTool;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.HFileTestUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -102,6 +110,34 @@ public final class PITRTestUtil {
   public static int getRowCount(HBaseTestingUtil testUtil, TableName tableName) throws IOException {
     try (Table table = testUtil.getConnection().getTable(tableName)) {
       return HBaseTestingUtil.countRows(table);
+    }
+  }
+
+  public static void generateHFiles(Path outputDir, Configuration conf, String cfName)
+    throws IOException {
+    String hFileName = "MyHFile";
+    int numRows = 1000;
+
+    FileSystem fs = FileSystem.get(conf);
+    outputDir = outputDir.makeQualified(fs.getUri(), fs.getWorkingDirectory());
+
+    byte[] from = Bytes.toBytes(cfName + "begin");
+    byte[] to = Bytes.toBytes(cfName + "end");
+
+    Path familyDir = new Path(outputDir, cfName);
+    HFileTestUtil.createHFile(conf, fs, new Path(familyDir, hFileName), Bytes.toBytes(cfName),
+      Bytes.toBytes("qualifier"), from, to, numRows);
+  }
+
+  public static void bulkLoadHFiles(TableName tableName, Path inputDir, Connection conn,
+    Configuration conf) throws IOException {
+    conf.setBoolean(BulkLoadHFilesTool.BULK_LOAD_HFILES_BY_FAMILY, true);
+
+    try (Table table = conn.getTable(tableName)) {
+      BulkLoadHFiles loader = new BulkLoadHFilesTool(conf);
+      loader.bulkLoad(table.getName(), inputDir);
+    } finally {
+      conf.setBoolean(BulkLoadHFilesTool.BULK_LOAD_HFILES_BY_FAMILY, false);
     }
   }
 }

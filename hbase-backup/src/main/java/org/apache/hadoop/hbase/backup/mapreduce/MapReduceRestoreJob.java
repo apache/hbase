@@ -61,11 +61,10 @@ public class MapReduceRestoreJob implements RestoreJob {
     String dirs = StringUtils.join(dirPaths, ",");
 
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Restore " + (fullBackupRestore ? "full" : "incremental")
-        + " backup from directory " + dirs + " from hbase tables "
-        + StringUtils.join(tableNames, BackupRestoreConstants.TABLENAME_DELIMITER_IN_COMMAND)
-        + " to tables "
-        + StringUtils.join(newTableNames, BackupRestoreConstants.TABLENAME_DELIMITER_IN_COMMAND));
+      LOG.debug("Restore {} from directory {} from hbase tables {} to tables {}",
+        fullBackupRestore ? "full backup" : "incremental backup / bulkload files (as part of PITR)",
+        dirs, StringUtils.join(tableNames, BackupRestoreConstants.TABLENAME_DELIMITER_IN_COMMAND),
+        StringUtils.join(newTableNames, BackupRestoreConstants.TABLENAME_DELIMITER_IN_COMMAND));
     }
 
     for (int i = 0; i < tableNames.length; i++) {
