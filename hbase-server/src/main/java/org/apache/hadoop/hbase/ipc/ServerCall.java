@@ -603,13 +603,4 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
   public synchronized BufferChain getResponse() {
     return response;
   }
-
-  @Override
-  public void updateFsReadTime(long latencyMillis) {
-  }
-
-  @Override
-  public long getFsReadTime() {
-    return 0;
-  }
 }
