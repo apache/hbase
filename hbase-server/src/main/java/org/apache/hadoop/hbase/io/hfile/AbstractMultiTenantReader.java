@@ -1718,6 +1718,7 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
         try (DataInputStream dis = new DataInputStream(blockToRead.getByteStream())) {
           fileInfo.read(dis);
         }
+        applyFileInfoMetadataToContext();
       } finally {
         if (blockToRead != null) {
           blockToRead.release();
@@ -1741,6 +1742,29 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
         LOG.warn("Failed to restore stream position", e);
       }
     }
+  }
+
+  private void applyFileInfoMetadataToContext() {
+    HFileContext fileContext = getFileContext();
+
+    byte[] creationTimeBytes = fileInfo.get(HFileInfo.CREATE_TIME_TS);
+    if (creationTimeBytes != null) {
+      fileContext.setFileCreateTime(Bytes.toLong(creationTimeBytes));
+    }
+
+    byte[] maxTagsLenBytes = fileInfo.get(HFileInfo.MAX_TAGS_LEN);
+    boolean includesTags = maxTagsLenBytes != null;
+    fileContext.setIncludesTags(includesTags);
+    if (includesTags) {
+      byte[] tagsCompressedBytes = fileInfo.get(HFileInfo.TAGS_COMPRESSED);
+      boolean tagsCompressed = tagsCompressedBytes != null && Bytes.toBoolean(tagsCompressedBytes);
+      fileContext.setCompressTags(tagsCompressed);
+    }
+
+    byte[] keyValueVersionBytes = fileInfo.get(HFileWriterImpl.KEY_VALUE_VERSION);
+    boolean includesMvcc = keyValueVersionBytes != null
+      && Bytes.toInt(keyValueVersionBytes) == HFileWriterImpl.KEY_VALUE_VER_WITH_MEMSTORE;
+    fileContext.setIncludesMvcc(includesMvcc);
   }
 
   /**
