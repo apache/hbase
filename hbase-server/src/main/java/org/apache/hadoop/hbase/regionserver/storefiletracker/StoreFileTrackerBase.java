@@ -130,7 +130,7 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
       .withIncludesTags(includesTag).withCompression(compression)
       .withCompressTags(family.isCompressTags()).withChecksumType(StoreUtils.getChecksumType(conf))
       .withBytesPerCheckSum(StoreUtils.getBytesPerChecksum(conf))
-      .withBlockSize(family.getBlocksize()).withHBaseCheckSum(true)
+      .withBlockSize(StoreUtils.getBlockSize(conf, family.getBlocksize())).withHBaseCheckSum(true)
       .withDataBlockEncoding(family.getDataBlockEncoding()).withEncryptionContext(encryptionContext)
       .withCreateTime(EnvironmentEdgeManager.currentTime()).withColumnFamily(family.getName())
       .withTableName(ctx.getTableName().getName()).withCellComparator(ctx.getComparator())
