@@ -352,10 +352,35 @@ public class TestSecurityUtil {
     }
 
     @Test
-    public void testWithKeyManagement_NoActiveKey() throws IOException {
+    public void testWithKeyManagement_NoActiveKey_NoSystemKeyCache() throws IOException {
+      // Test backwards compatibility: when no active key found and system cache is null, should throw
       configBuilder().withKeyManagement(true, false).apply(conf);
       setupManagedKeyDataCache(TEST_NAMESPACE, ManagedKeyData.KEY_SPACE_GLOBAL, null);
-      assertEncryptionContextThrowsForWrites(IOException.class, "No active key found");
+      when(mockFamily.getEncryptionKey()).thenReturn(null);
+
+      // With null system key cache, should still throw IOException
+      Exception exception = assertThrows(IOException.class, () -> {
+        SecurityUtil.createEncryptionContext(conf, mockFamily, mockManagedKeyDataCache,
+          null, TEST_NAMESPACE);
+      });
+      assertTrue("Should reference system key cache",
+        exception.getMessage().contains("SystemKeyCache"));
+    }
+
+    @Test
+    public void testWithKeyManagement_NoActiveKey_WithSystemKeyCache() throws IOException {
+      // Test backwards compatibility: when no active key found but system cache available, should work
+      configBuilder().withKeyManagement(true, false).apply(conf);
+      setupManagedKeyDataCache(TEST_NAMESPACE, ManagedKeyData.KEY_SPACE_GLOBAL, null);
+      setupSystemKeyCache(mockManagedKeyData);
+      when(mockFamily.getEncryptionKey()).thenReturn(null);
+
+      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, mockFamily,
+        mockManagedKeyDataCache, mockSystemKeyCache, TEST_NAMESPACE);
+
+      verifyContext(result);
+      // Should use system key as KEK and generate random DEK
+      assertEquals(mockManagedKeyData, result.getKEKData());
     }
 
     @Test
@@ -450,6 +475,89 @@ public class TestSecurityUtil {
         "Cipher 'UNKNOWN_CIPHER' is not available");
     }
 
+    // ---- New backwards compatibility test scenarios ----
+
+    @Test
+    public void testBackwardsCompatibility_Scenario1_FamilyKeyWithKeyManagement() throws IOException {
+      // Scenario 1: Family has encryption key -> use as DEK, latest STK as KEK
+      when(mockFamily.getEncryptionKey()).thenReturn(testWrappedKey);
+      configBuilder().withKeyManagement(true, false).apply(conf);
+      setupSystemKeyCache(mockManagedKeyData);
+      when(mockManagedKeyData.getTheKey()).thenReturn(kekKey);
+
+      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, mockFamily,
+        mockManagedKeyDataCache, mockSystemKeyCache, TEST_NAMESPACE);
+
+      verifyContext(result);
+      // Verify that system key is used as KEK
+      assertEquals(mockManagedKeyData, result.getKEKData());
+    }
+
+    @Test
+    public void testBackwardsCompatibility_Scenario2a_ActiveKeyAsDeK() throws IOException {
+      // Scenario 2a: Active key exists, local key gen disabled -> use active key as DEK, latest STK as KEK
+      configBuilder().withKeyManagement(true, false).apply(conf);
+      setupManagedKeyDataCache(TEST_NAMESPACE, mockManagedKeyData);
+      ManagedKeyData mockSystemKey = mock(ManagedKeyData.class);
+      when(mockSystemKey.getTheKey()).thenReturn(kekKey);
+      setupSystemKeyCache(mockSystemKey);
+      when(mockFamily.getEncryptionKey()).thenReturn(null);
+
+      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, mockFamily,
+        mockManagedKeyDataCache, mockSystemKeyCache, TEST_NAMESPACE);
+
+      verifyContext(result);
+      // Verify that active key is used as DEK and system key as KEK
+      assertEquals(testKey, result.getKey()); // Active key should be the DEK
+      assertEquals(mockSystemKey, result.getKEKData()); // System key should be the KEK
+    }
+
+    @Test
+    public void testBackwardsCompatibility_Scenario2b_ActiveKeyAsKekWithLocalKeyGen() throws IOException {
+      // Scenario 2b: Active key exists, local key gen enabled -> use active key as KEK, generate random DEK
+      configBuilder().withKeyManagement(true, true).apply(conf);
+      setupManagedKeyDataCache(TEST_NAMESPACE, mockManagedKeyData);
+      when(mockFamily.getEncryptionKey()).thenReturn(null);
+
+      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, mockFamily,
+        mockManagedKeyDataCache, mockSystemKeyCache, TEST_NAMESPACE);
+
+      verifyContext(result);
+      // Verify that active key is used as KEK and a generated key as DEK
+      assertNotNull("DEK should be generated", result.getKey());
+      assertEquals(mockManagedKeyData, result.getKEKData()); // Active key should be the KEK
+    }
+
+    @Test
+    public void testBackwardsCompatibility_Scenario3_NoActiveKeyGenerateLocalKey() throws IOException {
+      // Scenario 3: No active key -> generate random DEK, latest STK as KEK
+      configBuilder().withKeyManagement(true, false).apply(conf);
+      setupManagedKeyDataCache(TEST_NAMESPACE, ManagedKeyData.KEY_SPACE_GLOBAL, null); // No active key
+      setupSystemKeyCache(mockManagedKeyData);
+      when(mockFamily.getEncryptionKey()).thenReturn(null);
+
+      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, mockFamily,
+        mockManagedKeyDataCache, mockSystemKeyCache, TEST_NAMESPACE);
+
+      verifyContext(result);
+      // Verify that a random key is generated as DEK and system key as KEK
+      assertNotNull("DEK should be generated", result.getKey());
+      assertEquals(mockManagedKeyData, result.getKEKData()); // System key should be the KEK
+    }
+
+    @Test
+    public void testBackwardsCompatibility_Scenario1_FamilyKeyWithoutKeyManagement() throws IOException {
+      // Scenario 1 variation: Family has encryption key but key management disabled -> use as DEK, no KEK
+      when(mockFamily.getEncryptionKey()).thenReturn(testWrappedKey);
+      configBuilder().withKeyManagement(false, false).apply(conf);
+      setupSystemKeyCache(mockManagedKeyData);
+
+      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, mockFamily,
+        mockManagedKeyDataCache, mockSystemKeyCache, TEST_NAMESPACE);
+
+      verifyContext(result, false); // No key management, so no KEK data
+    }
+
     // Tests for the second createEncryptionContext method (for reading files)
 
     @Test
@@ -520,6 +628,41 @@ public class TestSecurityUtil {
     }
 
     @Test
+    public void testBackwardsCompatibility_STKLookupByChecksum() throws IOException {
+      // Test that STK lookup is tried first when no KEK metadata is available
+      setupTrailerMocks(testWrappedKey, null, TEST_KEK_CHECKSUM, TEST_NAMESPACE);
+      configBuilder().withKeyManagement(true, false).apply(conf);
+
+      // Setup system key cache to return a key for the checksum
+      ManagedKeyData stkKeyData = mock(ManagedKeyData.class);
+      when(stkKeyData.getTheKey()).thenReturn(kekKey);
+      when(mockSystemKeyCache.getSystemKeyByChecksum(TEST_KEK_CHECKSUM)).thenReturn(stkKeyData);
+
+      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer,
+        mockManagedKeyDataCache, mockSystemKeyCache);
+
+      verifyContext(result);
+      assertEquals(stkKeyData, result.getKEKData());
+    }
+
+    @Test
+    public void testBackwardsCompatibility_STKLookupFallBackToLatest() throws IOException {
+      // Test that when STK lookup by checksum fails, it falls back to latest system key
+      setupTrailerMocks(testWrappedKey, null, null, TEST_NAMESPACE);
+      configBuilder().withKeyManagement(true, false).apply(conf);
+
+      ManagedKeyData latestSystemKey = mock(ManagedKeyData.class);
+      when(latestSystemKey.getTheKey()).thenReturn(kekKey);
+      when(mockSystemKeyCache.getLatestSystemKey()).thenReturn(latestSystemKey);
+
+      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer,
+        mockManagedKeyDataCache, mockSystemKeyCache);
+
+      verifyContext(result);
+      assertEquals(latestSystemKey, result.getKEKData());
+    }
+
+    @Test
     public void testWithKeyManagement_SystemKeyNotFound() throws IOException {
       byte[] keyBytes = "test-encrypted-key".getBytes();
       long kekChecksum = 12345L;
@@ -548,12 +691,24 @@ public class TestSecurityUtil {
       when(mockTrailer.getKEKMetadata()).thenReturn(null);
       when(mockTrailer.getKeyNamespace()).thenReturn(TEST_NAMESPACE);
       configBuilder().withKeyManagement(false, false).apply(conf);
-      // TODO: Get the key provider to return kek when getKeys() is called.
 
       Encryption.Context result = SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer,
         mockManagedKeyDataCache, mockSystemKeyCache);
 
       verifyContext(result, false);
+    }
+
+    @Test
+    public void testKeyManagementBackwardsCompatibility() throws Exception {
+      when(mockTrailer.getEncryptionKey()).thenReturn(testWrappedKey);
+      when(mockSystemKeyCache.getLatestSystemKey()).thenReturn(mockManagedKeyData);
+      when(mockManagedKeyData.getTheKey()).thenReturn(kekKey);
+      configBuilder().withKeyManagement(true, false).apply(conf);
+
+      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer,
+        mockManagedKeyDataCache, mockSystemKeyCache);
+
+      verifyContext(result, true);
     }
 
     @Test

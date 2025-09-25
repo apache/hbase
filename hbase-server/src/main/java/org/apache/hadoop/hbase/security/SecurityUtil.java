@@ -73,51 +73,79 @@ public class SecurityUtil {
     ColumnFamilyDescriptor family, ManagedKeyDataCache managedKeyDataCache,
     SystemKeyCache systemKeyCache, String keyNamespace) throws IOException {
     Encryption.Context cryptoContext = Encryption.Context.NONE;
+    boolean isKeyManagementEnabled = isKeyManagementEnabled(conf);
     String cipherName = family.getEncryptionType();
     if (cipherName != null) {
       if (!Encryption.isEncryptionEnabled(conf)) {
         throw new IllegalStateException("Encryption for family '" + family.getNameAsString()
           + "' configured with type '" + cipherName + "' but the encryption feature is disabled");
       }
+      if (isKeyManagementEnabled && systemKeyCache == null) {
+        throw new IOException("Key management is enabled, but SystemKeyCache is null");
+      }
       Cipher cipher = null;
       Key key = null;
-      ManagedKeyData kekKeyData = null;
-      if (isKeyManagementEnabled(conf)) {
-        kekKeyData = managedKeyDataCache.getActiveEntry(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES,
-          keyNamespace);
-        // If no active key found in the specific namespace, try the global namespace
-        if (kekKeyData == null) {
-          kekKeyData = managedKeyDataCache.getActiveEntry(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES,
-            ManagedKeyData.KEY_SPACE_GLOBAL);
-          keyNamespace = ManagedKeyData.KEY_SPACE_GLOBAL;
-        }
-        if (kekKeyData == null) {
-          throw new IOException(
-            "No active key found for custodian: " + ManagedKeyData.KEY_GLOBAL_CUSTODIAN
-              + " in namespaces: " + keyNamespace + " and " + ManagedKeyData.KEY_SPACE_GLOBAL);
-        }
-        if (
-          conf.getBoolean(HConstants.CRYPTO_MANAGED_KEYS_LOCAL_KEY_GEN_PER_FILE_ENABLED_CONF_KEY,
-            HConstants.CRYPTO_MANAGED_KEYS_LOCAL_KEY_GEN_PER_FILE_DEFAULT_ENABLED)
-        ) {
-          cipher =
-            getCipherIfValid(conf, cipherName, kekKeyData.getTheKey(), family.getNameAsString());
-        } else {
-          key = kekKeyData.getTheKey();
-          kekKeyData = systemKeyCache.getLatestSystemKey();
+      ManagedKeyData kekKeyData = isKeyManagementEnabled ? systemKeyCache.getLatestSystemKey() :
+        null;
+
+      // Scenario 1: If family has a key, unwrap it and use that as DEK.
+      byte[] familyKeyBytes = family.getEncryptionKey();
+      if (familyKeyBytes != null) {
+        // Family provides specific key material
+        try {
+          if (isKeyManagementEnabled) {
+            // Scenario 1a: If key management is enabled, use STK for both unwrapping and KEK.
+            key = EncryptionUtil.unwrapKey(conf, null, familyKeyBytes, kekKeyData.getTheKey());
+          } else {
+            // Scenario 1b: If key management is disabled, unwrap the key using master key directly.
+            key = EncryptionUtil.unwrapKey(conf, familyKeyBytes);
+            kekKeyData = null;
+          }
+        } catch (KeyException e) {
+          throw new IOException(e);
         }
       } else {
-        byte[] keyBytes = family.getEncryptionKey();
-        if (keyBytes != null) {
-          // Family provides specific key material
-          key = EncryptionUtil.unwrapKey(conf, keyBytes);
+        if (isKeyManagementEnabled(conf)) {
+          boolean localKeyGenEnabled = conf.getBoolean(
+              HConstants.CRYPTO_MANAGED_KEYS_LOCAL_KEY_GEN_PER_FILE_ENABLED_CONF_KEY,
+              HConstants.CRYPTO_MANAGED_KEYS_LOCAL_KEY_GEN_PER_FILE_DEFAULT_ENABLED);
+          // Try to get active entry from specific namespace
+          ManagedKeyData activeKeyData = managedKeyDataCache.getActiveEntry(
+              ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES, keyNamespace);
+          // If no active key found in the specific namespace, try the global namespace
+          if (activeKeyData == null) {
+            activeKeyData = managedKeyDataCache.getActiveEntry(
+                ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES, ManagedKeyData.KEY_SPACE_GLOBAL);
+            keyNamespace = ManagedKeyData.KEY_SPACE_GLOBAL;
+          }
+
+          if (activeKeyData != null) {
+            // Scenario 2: There is an active key
+
+            if (!localKeyGenEnabled) {
+              // Scenario 2a: Use active key as DEK and latest STK as KEK
+              key = activeKeyData.getTheKey();
+            } else {
+              // Scenario 2b: Use active key as KEK and generate local key as DEK
+              kekKeyData = activeKeyData;
+              // TODO: Use the active key as a seed to generate the local key instead of
+              // random generation
+              cipher = getCipherIfValid(conf, cipherName, activeKeyData.getTheKey(), family.getNameAsString());
+            }
+          }
+          if (activeKeyData == null) {
+            // Scenario 3: Generate a random key and use latest STK as KEK
+            cipher = getCipherIfValid(conf, cipherName, null, null);
+          }
         } else {
+          // Key management disabled, generate random key and use master key as KEK
           cipher = getCipherIfValid(conf, cipherName, null, null);
         }
       }
+
       if (key != null || cipher != null) {
         if (key == null) {
-          // Family does not provide key material, create a random key
+          // Generate a random key when cipher is available
           key = cipher.getRandomKey();
         }
         if (cipher == null) {
@@ -153,8 +181,12 @@ public class SecurityUtil {
     if (keyBytes != null) {
       cryptoContext = Encryption.newContext(conf);
       Key kek = null;
-      // When the KEK medata is available, we will try to unwrap the encrypted key using the KEK,
-      // otherwise we will use the system keys starting from the latest to the oldest.
+
+      // When the KEK metadata is available, we will try to unwrap using managed key data cache
+      boolean isKeyManagementEnabled = SecurityUtil.isKeyManagementEnabled(conf);
+      if (isKeyManagementEnabled && systemKeyCache == null) {
+        throw new IOException("Key management is enabled, but SystemKeyCache is null");
+      }
       if (trailer.getKEKMetadata() != null) {
         if (managedKeyDataCache == null) {
           throw new IOException("Key management is enabled, but ManagedKeyDataCache is null");
@@ -172,21 +204,23 @@ public class SecurityUtil {
             "Failed to get key data for KEK metadata: " + trailer.getKEKMetadata(), cause);
         }
         kek = kekKeyData.getTheKey();
-      } else {
-        if (SecurityUtil.isKeyManagementEnabled(conf)) {
-          if (systemKeyCache == null) {
-            throw new IOException("Key management is enabled, but SystemKeyCache is null");
-          }
-          ManagedKeyData systemKeyData =
-            systemKeyCache.getSystemKeyByChecksum(trailer.getKEKChecksum());
-          if (systemKeyData == null) {
-            throw new IOException(
+      } else if (trailer.getKEKChecksum() != 0L) {
+        // No KEK metadata, so KEK could be either STK or managed key
+        // Try STK lookup first as it's cheaper
+        ManagedKeyData systemKeyData = systemKeyCache.getSystemKeyByChecksum(trailer.getKEKChecksum());
+        if (systemKeyData == null) {
+          throw new IOException(
               "Failed to get system key by checksum: " + trailer.getKEKChecksum());
-          }
-          kek = systemKeyData.getTheKey();
-          kekKeyData = systemKeyData;
         }
+        kek = systemKeyData.getTheKey();
+        kekKeyData = systemKeyData;
+      } else if (isKeyManagementEnabled) {
+        // STK lookup failed, fall back to latest system key for backwards compatibility
+        ManagedKeyData systemKeyData = systemKeyCache.getLatestSystemKey();
+        kek = systemKeyData.getTheKey();
+        kekKeyData = systemKeyData;
       }
+
       Key key;
       if (kek != null) {
         try {
