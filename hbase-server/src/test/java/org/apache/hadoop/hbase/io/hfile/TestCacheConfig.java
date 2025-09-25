@@ -188,12 +188,14 @@ public class TestCacheConfig {
 
   @Test
   public void testDisableCacheDataBlock() throws IOException {
+    // First tests the default configs behaviour and block cache enabled
     Configuration conf = HBaseConfiguration.create();
     CacheConfig cacheConfig = new CacheConfig(conf);
     assertTrue(cacheConfig.shouldCacheBlockOnRead(BlockCategory.DATA));
     assertFalse(cacheConfig.shouldCacheCompressed(BlockCategory.DATA));
     assertFalse(cacheConfig.shouldCacheDataCompressed());
     assertFalse(cacheConfig.shouldCacheDataOnWrite());
+    assertFalse(cacheConfig.shouldCacheCompactedBlocksOnWrite());
     assertTrue(cacheConfig.shouldCacheDataOnRead());
     assertTrue(cacheConfig.shouldCacheBlockOnRead(BlockCategory.INDEX));
     assertTrue(cacheConfig.shouldCacheBlockOnRead(BlockCategory.META));
@@ -201,10 +203,12 @@ public class TestCacheConfig {
     assertFalse(cacheConfig.shouldCacheBloomsOnWrite());
     assertFalse(cacheConfig.shouldCacheIndexesOnWrite());
 
+    // Tests block cache enabled and related cache on write flags enabled
     conf.setBoolean(CacheConfig.CACHE_BLOCKS_ON_WRITE_KEY, true);
     conf.setBoolean(CacheConfig.CACHE_DATA_BLOCKS_COMPRESSED_KEY, true);
     conf.setBoolean(CacheConfig.CACHE_BLOOM_BLOCKS_ON_WRITE_KEY, true);
     conf.setBoolean(CacheConfig.CACHE_INDEX_BLOCKS_ON_WRITE_KEY, true);
+    conf.setBoolean(CacheConfig.CACHE_COMPACTED_BLOCKS_ON_WRITE_KEY, true);
 
     cacheConfig = new CacheConfig(conf);
     assertTrue(cacheConfig.shouldCacheBlockOnRead(BlockCategory.DATA));
@@ -217,9 +221,12 @@ public class TestCacheConfig {
     assertTrue(cacheConfig.shouldCacheBlockOnRead(BlockCategory.BLOOM));
     assertTrue(cacheConfig.shouldCacheBloomsOnWrite());
     assertTrue(cacheConfig.shouldCacheIndexesOnWrite());
+    assertTrue(cacheConfig.shouldCacheCompactedBlocksOnWrite());
 
+    // Tests block cache enabled but related cache on read/write properties disabled
     conf.setBoolean(CacheConfig.CACHE_DATA_ON_READ_KEY, false);
     conf.setBoolean(CacheConfig.CACHE_BLOCKS_ON_WRITE_KEY, false);
+    conf.setBoolean(CacheConfig.CACHE_COMPACTED_BLOCKS_ON_WRITE_KEY, false);
 
     cacheConfig = new CacheConfig(conf);
     assertFalse(cacheConfig.shouldCacheBlockOnRead(BlockCategory.DATA));
@@ -227,14 +234,20 @@ public class TestCacheConfig {
     assertFalse(cacheConfig.shouldCacheDataCompressed());
     assertFalse(cacheConfig.shouldCacheDataOnWrite());
     assertFalse(cacheConfig.shouldCacheDataOnRead());
+    assertFalse(cacheConfig.shouldCacheCompactedBlocksOnWrite());
     assertTrue(cacheConfig.shouldCacheBlockOnRead(BlockCategory.INDEX));
     assertFalse(cacheConfig.shouldCacheBlockOnRead(BlockCategory.META));
     assertTrue(cacheConfig.shouldCacheBlockOnRead(BlockCategory.BLOOM));
     assertTrue(cacheConfig.shouldCacheBloomsOnWrite());
     assertTrue(cacheConfig.shouldCacheIndexesOnWrite());
 
-    conf.setBoolean(CacheConfig.CACHE_DATA_ON_READ_KEY, true);
-    conf.setBoolean(CacheConfig.CACHE_BLOCKS_ON_WRITE_KEY, false);
+    // Finally tests block cache disabled in the column family but all cache on read/write
+    // properties enabled in the config.
+    conf.setBoolean(CacheConfig.CACHE_BLOCKS_ON_WRITE_KEY, true);
+    conf.setBoolean(CacheConfig.CACHE_DATA_BLOCKS_COMPRESSED_KEY, true);
+    conf.setBoolean(CacheConfig.CACHE_BLOOM_BLOCKS_ON_WRITE_KEY, true);
+    conf.setBoolean(CacheConfig.CACHE_INDEX_BLOCKS_ON_WRITE_KEY, true);
+    conf.setBoolean(CacheConfig.CACHE_COMPACTED_BLOCKS_ON_WRITE_KEY, true);
 
     HColumnDescriptor family = new HColumnDescriptor("testDisableCacheDataBlock");
     family.setBlockCacheEnabled(false);
@@ -248,8 +261,8 @@ public class TestCacheConfig {
     assertTrue(cacheConfig.shouldCacheBlockOnRead(BlockCategory.INDEX));
     assertFalse(cacheConfig.shouldCacheBlockOnRead(BlockCategory.META));
     assertTrue(cacheConfig.shouldCacheBlockOnRead(BlockCategory.BLOOM));
-    assertTrue(cacheConfig.shouldCacheBloomsOnWrite());
-    assertTrue(cacheConfig.shouldCacheIndexesOnWrite());
+    assertFalse(cacheConfig.shouldCacheBloomsOnWrite());
+    assertFalse(cacheConfig.shouldCacheIndexesOnWrite());
   }
 
   @Test
