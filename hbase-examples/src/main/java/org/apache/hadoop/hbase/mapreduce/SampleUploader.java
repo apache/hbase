@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
@@ -153,6 +154,6 @@ public class SampleUploader extends Configured implements Tool {
 
   public static void main(String[] args) throws Exception {
     int status = ToolRunner.run(HBaseConfiguration.create(), new SampleUploader(), args);
-    System.exit(status);
+    ExitHandler.getInstance().exit(status);
   }
 }
