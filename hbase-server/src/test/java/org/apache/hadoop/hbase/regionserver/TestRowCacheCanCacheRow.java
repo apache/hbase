@@ -252,8 +252,10 @@ public class TestRowCacheCanCacheRow {
     get.addFamily(CF1);
     Assert.assertTrue(rowCacheService.canCacheRow(get, region));
 
+    // noinspection unused
+    var unused = func.apply(get);
+
     // expect false
-    Get unused = func.apply(get);
     Assert.assertFalse(rowCacheService.canCacheRow(get, region));
   }
 }

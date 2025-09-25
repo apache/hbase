@@ -68,7 +68,7 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
   private BlockCache l1Cache = null;
   private BlockCache l2Cache = null;
   private MobFileCache mobFileCache;
-  private RowCache rowCache;
+  private final RowCache rowCache;
   private CacheStats cacheStats;
   private CacheStats l1Stats = null;
   private CacheStats l2Stats = null;

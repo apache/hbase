@@ -364,7 +364,6 @@ public class RowCacheService {
     return regionLevelBarrierMap.get(region);
   }
 
-  // For testing only
   public RowCache getRowCache() {
     return rowCache;
   }

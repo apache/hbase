@@ -93,6 +93,7 @@ public class TestRowCache {
 
   private TableName tableName;
   private Table table;
+  HRegion region;
   private final Map<String, Long> counterBase = new HashMap<>();
 
   @Rule
@@ -138,6 +139,8 @@ public class TestRowCache {
       .setColumnFamily(cf1).setColumnFamily(cf2).build();
     admin.createTable(td);
     table = admin.getConnection().getTable(tableName);
+    region = TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegions().stream()
+      .filter(r -> r.getRegionInfo().getTable().equals(tableName)).findFirst().orElseThrow();
   }
 
   @After
@@ -168,13 +171,11 @@ public class TestRowCache {
   }
 
   @Test
-  public void testGetWithRowCache() throws IOException, InterruptedException {
+  public void testGetWithRowCache() throws IOException {
     byte[] rowKey = "row".getBytes();
     Get get = new Get(rowKey);
     Result result;
 
-    HRegion region = TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegions().stream()
-      .filter(r -> r.getRegionInfo().getTable().equals(tableName)).findFirst().orElseThrow();
     RowCacheKey rowCacheKey = new RowCacheKey(region, rowKey);
 
     // Put a row
@@ -288,15 +289,13 @@ public class TestRowCache {
   }
 
   @Test
-  public void testCheckAndMutate() throws IOException, InterruptedException {
+  public void testCheckAndMutate() throws IOException {
     byte[] rowKey = "row".getBytes();
     Get get = new Get(rowKey);
     Result result;
     CheckAndMutate cam;
     CheckAndMutateResult camResult;
 
-    HRegion region = TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegions().stream()
-      .filter(r -> r.getRegionInfo().getTable().equals(tableName)).findFirst().orElseThrow();
     RowCacheKey rowCacheKey = new RowCacheKey(region, rowKey);
 
     // Put a row
@@ -333,7 +332,7 @@ public class TestRowCache {
   }
 
   @Test
-  public void testCheckAndMutates() throws IOException, InterruptedException {
+  public void testCheckAndMutates() throws IOException {
     byte[] rowKey1 = "row1".getBytes();
     byte[] rowKey2 = "row2".getBytes();
     Get get1 = new Get(rowKey1);
@@ -342,8 +341,6 @@ public class TestRowCache {
     List<CheckAndMutate> cams;
     List<CheckAndMutateResult> camResults;
 
-    HRegion region = TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegions().stream()
-      .filter(r -> r.getRegionInfo().getTable().equals(tableName)).findFirst().orElseThrow();
     RowCacheKey rowCacheKey1 = new RowCacheKey(region, rowKey1);
     RowCacheKey rowCacheKey2 = new RowCacheKey(region, rowKey2);
 
@@ -379,15 +376,13 @@ public class TestRowCache {
   }
 
   @Test
-  public void testRowMutations() throws IOException, InterruptedException {
+  public void testRowMutations() throws IOException {
     byte[] rowKey1 = "row1".getBytes();
     byte[] rowKey2 = "row2".getBytes();
     Get get1 = new Get(rowKey1);
     Get get2 = new Get(rowKey2);
     Result result1, result2;
 
-    HRegion region = TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegions().stream()
-      .filter(r -> r.getRegionInfo().getTable().equals(tableName)).findFirst().orElseThrow();
     RowCacheKey rowCacheKey1 = new RowCacheKey(region, rowKey1);
     RowCacheKey rowCacheKey2 = new RowCacheKey(region, rowKey2);
 
@@ -447,8 +442,6 @@ public class TestRowCache {
     List<Row> batchOperations;
     Object[] results;
 
-    HRegion region = TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegions().stream()
-      .filter(r -> r.getRegionInfo().getTable().equals(tableName)).findFirst().orElseThrow();
     RowCacheKey rowCacheKey1 = new RowCacheKey(region, rowKey1);
     RowCacheKey rowCacheKey2 = new RowCacheKey(region, rowKey2);
     RowCacheKey rowCacheKey3 = new RowCacheKey(region, rowKey3);
