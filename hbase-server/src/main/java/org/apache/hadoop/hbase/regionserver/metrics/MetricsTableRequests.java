@@ -364,4 +364,9 @@ public class MetricsTableRequests {
   public MetricRegistryInfo getMetricRegistryInfo() {
     return registryInfo;
   }
+
+  // Visible for testing
+  public MetricRegistry getMetricRegistry() {
+    return registry;
+  }
 }
