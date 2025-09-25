@@ -65,8 +65,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
-
 /**
  * A tool to replay WAL files as a M/R job. The WAL can be replayed for a set of tables or all
  * tables, and a time range can be provided (in milliseconds). The WAL is filtered to the passed set

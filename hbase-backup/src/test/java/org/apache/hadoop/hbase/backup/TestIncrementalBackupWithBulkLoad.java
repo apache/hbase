@@ -20,9 +20,10 @@ package org.apache.hadoop.hbase.backup;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-
+import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.fs.FileSystem;
@@ -31,6 +32,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.backup.impl.BulkLoad;
+import org.apache.hadoop.hbase.backup.impl.IncrementalTableBackupClient;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
@@ -38,6 +40,8 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.HFileTestUtil;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -145,6 +149,70 @@ public class TestIncrementalBackupWithBulkLoad extends TestBackupBase {
     Get get = new Get(data);
     Result result = table.get(get);
     return result.containsColumn(famName, qualName);
+  }
+
+  @Test
+  public void testUpdateFileListsRaceCondition() throws Exception {
+    // Test the race condition where files are archived during incremental backup
+    FileSystem fs = TEST_UTIL.getTestFileSystem();
+    Path testDir = TEST_UTIL.getDataTestDirOnTestFS(TEST_NAME + "_race_test");
+    fs.mkdirs(testDir);
+
+    Path file1 = new Path(testDir, "hfile1");
+    Path file2 = new Path(testDir, "hfile2");
+    fs.create(file1).close();
+    fs.create(file2).close();
+
+    List<String> activeFiles = new ArrayList<>();
+    activeFiles.add(file1.toString());
+    activeFiles.add(file2.toString());
+    List<String> archiveFiles = new ArrayList<>();
+
+    // Simulate the race condition: archive one of the files while backup is running
+    String rootDir = CommonFSUtils.getRootDir(TEST_UTIL.getConfiguration()).toString();
+    Path archiveDir = new Path(HFileArchiveUtil.getArchivePath(TEST_UTIL.getConfiguration()),
+        file1.toString().substring(rootDir.length() + 1));
+    fs.mkdirs(archiveDir.getParent());
+    assertTrue("File should be moved to archive", fs.rename(file1, archiveDir));
+
+    IncrementalTableBackupClient client = new IncrementalTableBackupClient(TEST_UTIL.getConnection(),
+        "test_backup_id", createBackupRequest(BackupType.INCREMENTAL, List.of(table1), BACKUP_ROOT_DIR));
+
+    client.updateFileLists(activeFiles, archiveFiles);
+
+    assertEquals("Only one file should remain in active files", 1, activeFiles.size());
+    assertEquals("File2 should still be in active files", file2.toString(), activeFiles.get(0));
+    assertEquals("One file should be added to archive files", 1, archiveFiles.size());
+    assertEquals("Archived file should have correct path", archiveDir.toString(), archiveFiles.get(0));
+  }
+
+  @Test
+  public void testUpdateFileListsMissingArchivedFile() throws Exception {
+    // Test that IOException is thrown when file doesn't exist in archive location
+    FileSystem fs = TEST_UTIL.getTestFileSystem();
+    Path testDir = TEST_UTIL.getDataTestDirOnTestFS(TEST_NAME + "_missing_test");
+    fs.mkdirs(testDir);
+
+    Path file1 = new Path(testDir, "missing_file");
+    fs.create(file1).close();
+
+    List<String> activeFiles = new ArrayList<>();
+    activeFiles.add(file1.toString());
+    List<String> archiveFiles = new ArrayList<>();
+
+    // Delete the file but don't create it in archive location
+    fs.delete(file1, false);
+
+    IncrementalTableBackupClient client = new IncrementalTableBackupClient(TEST_UTIL.getConnection(),
+        "test_backup_id", createBackupRequest(BackupType.INCREMENTAL, List.of(table1), BACKUP_ROOT_DIR));
+
+    // This should throw IOException since file doesn't exist in archive
+    try {
+      client.updateFileLists(activeFiles, archiveFiles);
+      fail("Expected IOException to be thrown");
+    } catch (IOException e) {
+      // Expected
+    }
   }
 
   private void performBulkLoad(String keyPrefix) throws IOException {
