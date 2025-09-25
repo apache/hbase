@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -111,9 +112,13 @@ public class MultiTenantHFileWriter implements HFile.Writer {
   private final CacheConfig cacheConf;
   /** HFile context */
   private final HFileContext fileContext;
+  /** Name used for logging/caching when path is not available */
+  private final String streamName;
 
   /** Main file writer components - Output stream */
   private final FSDataOutputStream outputStream;
+  /** Whether this writer owns the underlying output stream */
+  private final boolean closeOutputStream;
   /** Block writer for HFile blocks */
   private HFileBlock.Writer blockWriter;
   /** Section index writer for tenant indexing */
@@ -210,10 +215,9 @@ public class MultiTenantHFileWriter implements HFile.Writer {
    * @param bloomType       Type of bloom filter to use
    * @throws IOException If an error occurs during initialization
    */
-  public MultiTenantHFileWriter(FileSystem fs, Path path, Configuration conf, CacheConfig cacheConf,
-    TenantExtractor tenantExtractor, HFileContext fileContext, BloomType bloomType)
-    throws IOException {
-    // Follow HFileWriterImpl pattern: accept path and create outputStream
+  public MultiTenantHFileWriter(Path path, Configuration conf, CacheConfig cacheConf,
+    TenantExtractor tenantExtractor, HFileContext fileContext, BloomType bloomType,
+    FSDataOutputStream outputStream, boolean closeOutputStream) throws IOException {
     this.path = path;
     this.conf = conf;
     this.cacheConf = cacheConf;
@@ -229,9 +233,9 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     // Bloom filter type is passed from table properties, respecting column family configuration
     this.bloomFilterType = bloomType;
 
-    // Create output stream directly to the provided path - no temporary file management here
-    // The caller (StoreFileWriter or integration test framework) handles temporary files
-    this.outputStream = HFileWriterImpl.createOutputStream(conf, fs, path, null);
+    this.outputStream = Objects.requireNonNull(outputStream, "outputStream");
+    this.closeOutputStream = closeOutputStream;
+    this.streamName = path != null ? path.toString() : this.outputStream.toString();
 
     // Initialize bulk load timestamp for comprehensive file info
     this.bulkloadTime = EnvironmentEdgeManager.currentTime();
@@ -260,8 +264,17 @@ public class MultiTenantHFileWriter implements HFile.Writer {
    * @throws IOException if writer creation fails
    */
   public static MultiTenantHFileWriter create(FileSystem fs, Path path, Configuration conf,
-    CacheConfig cacheConf, Map<String, String> tableProperties, HFileContext fileContext)
-    throws IOException {
+    CacheConfig cacheConf, Map<String, String> tableProperties, HFileContext fileContext,
+    FSDataOutputStream outputStream, boolean closeOutputStream) throws IOException {
+
+    FSDataOutputStream writerStream = outputStream;
+    boolean shouldCloseStream = closeOutputStream;
+    if (writerStream == null) {
+      Objects.requireNonNull(path, "path must be provided when outputStream is null");
+      Objects.requireNonNull(fs, "filesystem must be provided when outputStream is null");
+      writerStream = HFileWriterImpl.createOutputStream(conf, fs, path, null);
+      shouldCloseStream = true;
+    }
 
     // Create tenant extractor using factory - it will decide whether to use
     // DefaultTenantExtractor or SingleTenantExtractor based on table properties
@@ -279,12 +292,13 @@ public class MultiTenantHFileWriter implements HFile.Writer {
       }
     }
 
-    LOG.info("Creating MultiTenantHFileWriter with tenant extractor: {}, bloom type: {}",
-      tenantExtractor.getClass().getSimpleName(), bloomType);
+    LOG.info("Creating MultiTenantHFileWriter with tenant extractor: {}, bloom type: {} and target {}",
+      tenantExtractor.getClass().getSimpleName(), bloomType,
+      path != null ? path : writerStream);
 
     // HFile version 4 inherently implies multi-tenant
-    return new MultiTenantHFileWriter(fs, path, conf, cacheConf, tenantExtractor, fileContext,
-      bloomType);
+    return new MultiTenantHFileWriter(path, conf, cacheConf, tenantExtractor, fileContext,
+      bloomType, writerStream, shouldCloseStream);
   }
 
   /**
@@ -301,7 +315,10 @@ public class MultiTenantHFileWriter implements HFile.Writer {
 
     // Initialize the section index using SectionIndexManager
     boolean cacheIndexesOnWrite = cacheConf.shouldCacheIndexesOnWrite();
-    String nameForCaching = cacheIndexesOnWrite ? path.getName() : null;
+    String nameForCaching = null;
+    if (cacheIndexesOnWrite) {
+      nameForCaching = path != null ? path.getName() : streamName;
+    }
 
     sectionIndexWriter = new SectionIndexManager.Writer(blockWriter,
       cacheIndexesOnWrite ? cacheConf : null, nameForCaching);
@@ -315,8 +332,9 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     sectionIndexWriter.setMaxChunkSize(maxChunkSize);
     sectionIndexWriter.setMinIndexNumEntries(minIndexNumEntries);
 
-    LOG.info("Initialized MultiTenantHFileWriter with multi-level section indexing for path: {} "
-      + "(maxChunkSize={}, minIndexNumEntries={})", path, maxChunkSize, minIndexNumEntries);
+    LOG.info("Initialized MultiTenantHFileWriter with multi-level section indexing for {} "
+      + "(maxChunkSize={}, minIndexNumEntries={})", streamName, maxChunkSize,
+      minIndexNumEntries);
   }
 
   @Override
@@ -481,7 +499,11 @@ public class MultiTenantHFileWriter implements HFile.Writer {
 
       // Finish writing the current section
       currentSectionWriter.close();
-      outputStream.hsync(); // Ensure section data (incl. trailer) is synced to disk
+      try {
+        outputStream.hsync(); // Ensure section data (incl. trailer) is synced to disk
+      } catch (UnsupportedOperationException uoe) {
+        outputStream.flush();
+      }
 
       long sectionDataEnd = currentSectionWriter.getSectionDataEndOffset();
       if (sectionDataEnd >= 0) {
@@ -708,8 +730,8 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     finishClose(trailer);
 
     LOG.info(
-      "MultiTenantHFileWriter closed: path={}, sections={}, entries={}, totalUncompressedBytes={}",
-      path, sectionCount, entryCount, totalUncompressedBytes);
+      "MultiTenantHFileWriter closed: target={}, sections={}, entries={}, totalUncompressedBytes={}",
+      streamName, sectionCount, entryCount, totalUncompressedBytes);
 
     blockWriter.release();
   }
@@ -761,10 +783,20 @@ public class MultiTenantHFileWriter implements HFile.Writer {
 
     // Close the output stream - no file renaming needed since caller handles temporary files
     try {
-      outputStream.close();
-      LOG.info("Successfully closed MultiTenantHFileWriter: {}", path);
+      if (closeOutputStream) {
+        outputStream.close();
+        LOG.info("Successfully closed MultiTenantHFileWriter: {}", streamName);
+      } else {
+        try {
+          outputStream.hflush();
+        } catch (UnsupportedOperationException uoe) {
+          outputStream.flush();
+        }
+        LOG.debug("Flushed MultiTenantHFileWriter output stream (caller retains ownership): {}",
+          streamName);
+      }
     } catch (IOException e) {
-      LOG.error("Error closing MultiTenantHFileWriter for path: {}", path, e);
+      LOG.error("Error finalizing MultiTenantHFileWriter for {}", streamName, e);
       throw e;
     }
   }
@@ -996,8 +1028,11 @@ public class MultiTenantHFileWriter implements HFile.Writer {
       HFileContext fileContext, byte[] tenantSectionId, byte[] tenantId, long sectionStartOffset)
       throws IOException {
       // Create a section-aware output stream that handles position translation
-      super(conf, cacheConf, null, new SectionOutputStream(outputStream, sectionStartOffset,
-        MultiTenantHFileWriter.this.path.getName()), fileContext);
+        super(conf, cacheConf, null,
+          new SectionOutputStream(outputStream, sectionStartOffset,
+            MultiTenantHFileWriter.this.path != null ? MultiTenantHFileWriter.this.path.getName()
+              : MultiTenantHFileWriter.this.streamName),
+          fileContext);
 
       this.tenantSectionId = tenantSectionId;
       this.sectionStartOffset = sectionStartOffset;
@@ -1332,8 +1367,9 @@ public class MultiTenantHFileWriter implements HFile.Writer {
       // which creates HFile v4 with a single default section (clean and consistent)
       // For user tables with multi-tenant properties, this will use DefaultTenantExtractor
       // which creates HFile v4 with multiple tenant sections based on row key prefixes
+      boolean ownsStream = path != null;
       return MultiTenantHFileWriter.create(fs, path, conf, cacheConf, tableProperties,
-        writerFileContext);
+        writerFileContext, ostream, ownsStream);
     }
 
     /**

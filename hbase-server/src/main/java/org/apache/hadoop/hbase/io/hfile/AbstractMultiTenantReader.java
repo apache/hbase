@@ -21,7 +21,6 @@ import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -597,73 +596,135 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
         }
       }
 
-      // Extract tenant section ID
-      byte[] tenantSectionId = tenantExtractor.extractTenantSectionId(key);
+      // Extract tenant section ID for the target key
+      byte[] targetSectionId = tenantExtractor.extractTenantSectionId(key);
 
-      // Get the scanner for this tenant section
-      SectionReader sectionReader = getSectionReader(tenantSectionId);
+      // Find insertion point for the target section in the sorted sectionIds list
+      int n = sectionIds.size();
+      int insertionIndex = n; // default: after last
+      boolean exactSectionMatch = false;
+      for (int i = 0; i < n; i++) {
+        byte[] sid = sectionIds.get(i).get();
+        int cmp = Bytes.compareTo(sid, targetSectionId);
+        if (cmp == 0) {
+          insertionIndex = i;
+          exactSectionMatch = true;
+          break;
+        }
+        if (cmp > 0) {
+          insertionIndex = i;
+          break;
+        }
+      }
+
+      // If there is no exact section for this tenant prefix
+      if (!exactSectionMatch) {
+        if (insertionIndex == 0) {
+          // Key sorts before first section => before first key of entire file
+          seeked = false;
+          return -1;
+        }
+        // Position to last cell of previous section and return 1 (not found, positioned before)
+        int prevIndex = insertionIndex - 1;
+        byte[] prevSectionId = sectionIds.get(prevIndex).get();
+        SectionReader prevReader = getSectionReader(prevSectionId);
+        if (prevReader == null) {
+          seeked = false;
+          return -1;
+        }
+        switchToSectionReader(prevReader, prevSectionId);
+        java.util.Optional<ExtendedCell> lastKeyOpt = prevReader.getReader().getLastKey();
+        if (lastKeyOpt.isPresent()) {
+          currentScanner.seekTo(lastKeyOpt.get());
+          seeked = true;
+          return 1;
+        } else {
+          // Previous section is empty; keep scanning backwards to find a non-empty section
+          for (int i = prevIndex - 1; i >= 0; i--) {
+            byte[] psid = sectionIds.get(i).get();
+            SectionReader pr = getSectionReader(psid);
+            if (pr != null) {
+              switchToSectionReader(pr, psid);
+              java.util.Optional<ExtendedCell> lk = pr.getReader().getLastKey();
+              if (lk.isPresent()) {
+                currentScanner.seekTo(lk.get());
+                seeked = true;
+                return 1;
+              }
+            }
+          }
+          // No non-empty previous sections; treat as before-start
+          seeked = false;
+          return -1;
+        }
+      }
+
+      // Exact section exists. Seek within that section first.
+      byte[] matchedSectionId = sectionIds.get(insertionIndex).get();
+      SectionReader sectionReader = getSectionReader(matchedSectionId);
       if (sectionReader == null) {
+        // If we cannot open the matched section, fall back to behavior based on position
+        if (insertionIndex == 0) {
+          seeked = false;
+          return -1;
+        }
+        // Else position to last key of previous section
+        byte[] prevSectionId = sectionIds.get(insertionIndex - 1).get();
+        SectionReader prevReader = getSectionReader(prevSectionId);
+        if (prevReader != null) {
+          switchToSectionReader(prevReader, prevSectionId);
+          java.util.Optional<ExtendedCell> lastKeyOpt = prevReader.getReader().getLastKey();
+          if (lastKeyOpt.isPresent()) {
+            currentScanner.seekTo(lastKeyOpt.get());
+            seeked = true;
+            return 1;
+          }
+        }
         seeked = false;
         return -1;
       }
 
-      // Use the section scanner
-      switchToSectionReader(sectionReader, tenantSectionId);
+      switchToSectionReader(sectionReader, matchedSectionId);
       int result = currentScanner.seekTo(key);
-
-      if (result != -1) {
-        seeked = true;
-        // Keep the original result from the section scanner (0 for exact match, 1 for positioned
-        // after)
-      } else {
-        // If seekTo returned -1 (key is before first key in section),
-        // we need to check if this key actually belongs to this tenant section
-        // by seeking to the first key and comparing tenant prefixes
-        if (currentScanner.seekTo()) {
-          ExtendedCell firstCell = currentScanner.getCell();
-          if (firstCell != null) {
-            // Extract tenant section ID from both the search key and the first cell
-            byte[] searchTenantId = tenantExtractor.extractTenantSectionId(key);
-            byte[] firstCellTenantId = tenantExtractor.extractTenantSectionId(firstCell);
-
-            if (Bytes.equals(searchTenantId, firstCellTenantId)) {
-              // The search key belongs to the same tenant as the first cell in this section
-              // Now we need to compare the actual keys to determine the correct result
-              seeked = true;
-              int comparison =
-                currentSectionReader.getReader().getComparator().compareRows(firstCell, key);
-
-              if (comparison == 0) {
-                result = 0; // Exact row match
-              } else if (comparison > 0) {
-                // Check if this is a scan operation with a prefix search
-                // If the search key is a prefix of the first cell's row, treat it as a match
-                byte[] firstCellRow = Arrays.copyOfRange(firstCell.getRowArray(),
-                  firstCell.getRowOffset(), firstCell.getRowOffset() + firstCell.getRowLength());
-                byte[] searchKeyRow = Arrays.copyOfRange(key.getRowArray(), key.getRowOffset(),
-                  key.getRowOffset() + key.getRowLength());
-
-                if (Bytes.startsWith(firstCellRow, searchKeyRow)) {
-                  result = 0; // Treat as exact match for prefix scans
-                } else {
-                  result = 1; // Found key is after the search key
-                }
-              } else {
-                // This shouldn't happen since we're at the first key in the section
-                result = 1; // Default to "after"
-              }
-            } else {
-              // The search key belongs to a different tenant, return -1
-              seeked = false;
-            }
-          } else {
-            seeked = false;
-          }
-        } else {
+      if (result == -1) {
+        // Key sorts before first key in this section. If this is the first section overall,
+        // then the key is before the first key in the entire file.
+        if (insertionIndex == 0) {
           seeked = false;
+          return -1;
         }
+        // Otherwise, position to the last key of the previous section and return 1
+        byte[] prevSectionId = sectionIds.get(insertionIndex - 1).get();
+        SectionReader prevReader = getSectionReader(prevSectionId);
+        if (prevReader == null) {
+          seeked = false;
+          return -1;
+        }
+        switchToSectionReader(prevReader, prevSectionId);
+        java.util.Optional<ExtendedCell> lastKeyOpt = prevReader.getReader().getLastKey();
+        if (lastKeyOpt.isPresent()) {
+          currentScanner.seekTo(lastKeyOpt.get());
+          seeked = true;
+          return 1;
+        }
+        // If previous section empty, scan back for a non-empty one
+        for (int i = insertionIndex - 2; i >= 0; i--) {
+          byte[] psid = sectionIds.get(i).get();
+          SectionReader pr = getSectionReader(psid);
+          if (pr != null) {
+            switchToSectionReader(pr, psid);
+            java.util.Optional<ExtendedCell> lk = pr.getReader().getLastKey();
+            if (lk.isPresent()) {
+              currentScanner.seekTo(lk.get());
+              seeked = true;
+              return 1;
+            }
+          }
+        }
+        seeked = false;
+        return -1;
       }
-
+      seeked = true;
       return result;
     }
 
@@ -1467,6 +1528,45 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
     }
 
     return info;
+  }
+
+  /**
+   * Backward-compatibility shim for v3 expectations.
+   * <p>
+   * Some existing code paths and unit tests (e.g. TestSeekTo) expect that a reader exposes a
+   * non-null data block index at the file level. For HFile v4 multi-tenant containers there is no
+   * global data index. When the container holds exactly one tenant section (the common case when
+   * multi-tenant writing is disabled), we can safely delegate to that section's v3 reader and
+   * expose its data block index to preserve v3 semantics.
+   */
+  @Override
+  public HFileBlockIndex.CellBasedKeyBlockIndexReader getDataBlockIndexReader() {
+    // If already initialized by a previous call, return it
+    HFileBlockIndex.CellBasedKeyBlockIndexReader existing = super.getDataBlockIndexReader();
+    if (existing != null) {
+      return existing;
+    }
+
+    // Only provide a delegating index reader for single-section files
+    if (sectionLocations.size() == 1) {
+      try {
+        // Resolve the sole section reader
+        byte[] sectionId = sectionIds.get(0).get();
+        SectionReader sectionReader = getSectionReader(sectionId);
+        if (sectionReader != null) {
+          HFileReaderImpl inner = sectionReader.getReader();
+          HFileBlockIndex.CellBasedKeyBlockIndexReader delegate = inner.getDataBlockIndexReader();
+          // Cache on this reader so subsequent calls are fast and callers see a stable instance
+          setDataBlockIndexReader(delegate);
+          return delegate;
+        }
+      } catch (IOException e) {
+        LOG.warn("Failed to obtain section data block index reader for v3 compatibility", e);
+      }
+    }
+
+    // Multi-section containers intentionally do not expose a global data index
+    return null;
   }
 
   /**
