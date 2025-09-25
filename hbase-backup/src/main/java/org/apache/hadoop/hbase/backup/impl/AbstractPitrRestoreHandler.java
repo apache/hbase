@@ -20,8 +20,8 @@ package org.apache.hadoop.hbase.backup.impl;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONF_CONTINUOUS_BACKUP_PITR_WINDOW_DAYS;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONF_CONTINUOUS_BACKUP_WAL_DIR;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.DEFAULT_CONTINUOUS_BACKUP_PITR_WINDOW_DAYS;
-import static org.apache.hadoop.hbase.backup.replication.BackupFileSystemManager.WALS_DIR;
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.ONE_DAY_IN_MILLISECONDS;
+import static org.apache.hadoop.hbase.backup.util.BackupFileSystemManager.WALS_DIR;
 import static org.apache.hadoop.hbase.backup.util.BackupUtils.DATE_FORMAT;
 import static org.apache.hadoop.hbase.mapreduce.WALPlayer.IGNORE_EMPTY_FILES;
 
@@ -30,6 +30,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -41,9 +42,12 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.backup.BackupRestoreFactory;
 import org.apache.hadoop.hbase.backup.PointInTimeRestoreRequest;
+import org.apache.hadoop.hbase.backup.RestoreJob;
 import org.apache.hadoop.hbase.backup.RestoreRequest;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
+import org.apache.hadoop.hbase.backup.util.BulkFilesCollector;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.mapreduce.WALInputFormat;
 import org.apache.hadoop.hbase.mapreduce.WALPlayer;
@@ -305,6 +309,63 @@ public abstract class AbstractPitrRestoreHandler {
 
     backupAdmin.restore(restoreRequest);
     replayWal(sourceTable, targetTable, backupMetadata.getStartTs(), endTime);
+
+    reBulkloadFiles(sourceTable, targetTable, backupMetadata.getStartTs(), endTime,
+      request.isKeepOriginalSplits(), request.getRestoreRootDir());
+  }
+
+  /**
+   * Re-applies/re-bulkloads store files discovered from WALs into the target table.
+   * <p>
+   * <b>Note:</b> this method re-uses the same {@link RestoreJob} MapReduce job that we originally
+   * implemented for performing full and incremental backup restores. The MR job (obtained via
+   * {@link BackupRestoreFactory#getRestoreJob(Configuration)}) is used here to perform an HFile
+   * bulk-load of the discovered store files into {@code targetTable}.
+   * @param sourceTable        source table name (used for locating bulk files and logging)
+   * @param targetTable        destination table to bulk-load the HFiles into
+   * @param startTime          start of WAL range (ms)
+   * @param endTime            end of WAL range (ms)
+   * @param keepOriginalSplits pass-through flag to control whether original region splits are
+   *                           preserved
+   * @param restoreRootDir     local/DFS path under which temporary and output dirs are created
+   * @throws IOException on IO or job failure
+   */
+  private void reBulkloadFiles(TableName sourceTable, TableName targetTable, long startTime,
+    long endTime, boolean keepOriginalSplits, String restoreRootDir) throws IOException {
+
+    Configuration conf = HBaseConfiguration.create(conn.getConfiguration());
+    conf.setBoolean(RestoreJob.KEEP_ORIGINAL_SPLITS_KEY, keepOriginalSplits);
+
+    String walBackupDir = conn.getConfiguration().get(CONF_CONTINUOUS_BACKUP_WAL_DIR);
+    Path walDirPath = new Path(walBackupDir);
+    conf.set(RestoreJob.BACKUP_ROOT_PATH_KEY, walDirPath.toString());
+
+    RestoreJob restoreService = BackupRestoreFactory.getRestoreJob(conf);
+
+    List<Path> bulkloadFiles =
+      collectBulkFiles(sourceTable, targetTable, startTime, endTime, new Path(restoreRootDir));
+
+    if (bulkloadFiles.isEmpty()) {
+      LOG.info("No bulk-load files found for {} in time range {}-{}. Skipping bulkload restore.",
+        sourceTable, startTime, endTime);
+      return;
+    }
+
+    Path[] pathsArray = bulkloadFiles.toArray(new Path[0]);
+
+    try {
+      // Use the existing RestoreJob MR job (the same MapReduce job used for full/incremental
+      // restores)
+      // to perform the HFile bulk-load of the discovered store files into `targetTable`.
+      restoreService.run(pathsArray, new TableName[] { sourceTable }, new Path(restoreRootDir),
+        new TableName[] { targetTable }, false);
+      LOG.info("Re-bulkload completed for {}", targetTable);
+    } catch (Exception e) {
+      String errorMessage =
+        String.format("Re-bulkload failed for %s: %s", targetTable, e.getMessage());
+      LOG.error(errorMessage, e);
+      throw new IOException(errorMessage, e);
+    }
   }
 
   /**
@@ -327,6 +388,29 @@ public abstract class AbstractPitrRestoreHandler {
     }
 
     executeWalReplay(validDirs, sourceTable, targetTable, startTime, endTime);
+  }
+
+  private List<Path> collectBulkFiles(TableName sourceTable, TableName targetTable, long startTime,
+    long endTime, Path restoreRootDir) throws IOException {
+
+    String walBackupDir = conn.getConfiguration().get(CONF_CONTINUOUS_BACKUP_WAL_DIR);
+    Path walDirPath = new Path(walBackupDir);
+    LOG.info(
+      "Starting WAL bulk-file collection for source: {}, target: {}, time range: {} - {}, WAL backup dir: {}, restore root: {}",
+      sourceTable, targetTable, startTime, endTime, walDirPath, restoreRootDir);
+
+    List<String> validDirs =
+      getValidWalDirs(conn.getConfiguration(), walDirPath, startTime, endTime);
+    if (validDirs.isEmpty()) {
+      LOG.warn("No valid WAL directories found for range {} - {}. Skipping bulk-file collection.",
+        startTime, endTime);
+      return Collections.emptyList();
+    }
+
+    String walDirsCsv = String.join(",", validDirs);
+
+    return BulkFilesCollector.collectFromWalDirs(HBaseConfiguration.create(conn.getConfiguration()),
+      walDirsCsv, restoreRootDir, sourceTable, targetTable, startTime, endTime);
   }
 
   /**
@@ -356,7 +440,7 @@ public abstract class AbstractPitrRestoreHandler {
           validDirs.add(dayDir.getPath().toString());
         }
       } catch (ParseException e) {
-        LOG.warn("Skipping invalid directory name: " + dirName, e);
+        LOG.warn("Skipping invalid directory name: {}", dirName, e);
       }
     }
     return validDirs;
