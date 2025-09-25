@@ -131,7 +131,7 @@ public class TestBulkLoadCollectorJobIntegration {
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     if (fs != null && hbaseDir != null) fs.delete(hbaseDir, true);
-    TEST_UTIL.shutdownMiniCluster();
+    TEST_UTIL.shutdownMiniDFSCluster();
   }
 
   /**
