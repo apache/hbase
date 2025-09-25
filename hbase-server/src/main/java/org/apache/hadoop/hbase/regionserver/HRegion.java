@@ -3246,6 +3246,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     long nonceGroup, long nonce) throws IOException {
     return TraceUtil.trace(() -> {
       startRegionOperation(Operation.SCAN);
+      RegionScannerImpl regionScanner = null;
       try {
         // Verify families are all valid
         if (!scan.hasFamilies()) {
@@ -3258,9 +3259,20 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             checkFamily(family);
           }
         }
-        return instantiateRegionScanner(scan, additionalScanners, nonceGroup, nonce);
+
+        regionScanner = instantiateRegionScanner(scan, additionalScanners, nonceGroup, nonce);
+        return regionScanner;
       } finally {
-        closeRegionOperation(Operation.SCAN);
+        // close region operation can throw an exception, in that case the scanner never gets
+        // closed.
+        try {
+          closeRegionOperation(Operation.SCAN);
+        } catch (Throwable t) {
+          if (null != regionScanner) {
+            regionScanner.close();
+          }
+          throw t;
+        }
       }
     }, () -> createRegionSpan("Region.getScanner"));
   }
