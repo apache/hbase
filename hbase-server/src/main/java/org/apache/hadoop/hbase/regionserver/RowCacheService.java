@@ -70,28 +70,19 @@ public class RowCacheService {
   private final boolean enabledByConf;
   private final RowCache rowCache;
 
-  private int activateMinHFiles;
-
   @FunctionalInterface
   interface RowOperation<R> {
     R execute() throws IOException;
   }
 
   RowCacheService(Configuration conf) {
-    updateConf(conf);
-
     enabledByConf =
       conf.getFloat(HConstants.ROW_CACHE_SIZE_KEY, HConstants.ROW_CACHE_SIZE_DEFAULT) > 0;
     rowCache = new RowCache(MemorySizeUtil.getRowCacheSize(conf));
   }
 
-  synchronized void updateConf(Configuration conf) {
-    this.activateMinHFiles = conf.getInt(HConstants.ROW_CACHE_ACTIVATE_MIN_HFILES_KEY,
-      HConstants.ROW_CACHE_ACTIVATE_MIN_HFILES_DEFAULT);
-  }
-
-  RegionScannerImpl getScanner(HRegion region, Get get, Scan scan, List<Cell> results)
-    throws IOException {
+  RegionScannerImpl getScanner(HRegion region, Get get, Scan scan, List<Cell> results,
+    RpcCallContext context) throws IOException {
     if (!canCacheRow(get, region)) {
       return getScannerInternal(region, scan, results);
     }
@@ -106,9 +97,9 @@ public class RowCacheService {
 
     RegionScannerImpl scanner = getScannerInternal(region, scan, results);
 
-    // The row cache is ineffective when the number of store files is small. If the number
-    // of store files falls below the minimum threshold, rows will not be cached
-    if (hasSufficientHFiles(region)) {
+    // When results came from memstore only, do not populate the row cache
+    boolean readFromMemStoreOnly = context.getBlockBytesScanned() < 1;
+    if (!readFromMemStoreOnly) {
       populateCache(region, results, key);
     }
 
@@ -135,11 +126,6 @@ public class RowCacheService {
       region.getMetrics().updateReadRequestCount();
     }
     return true;
-  }
-
-  private boolean hasSufficientHFiles(HRegion region) {
-    return region.getStores().stream()
-      .anyMatch(store -> store.getStorefilesCount() >= activateMinHFiles);
   }
 
   private void populateCache(HRegion region, List<Cell> results, RowCacheKey key) {

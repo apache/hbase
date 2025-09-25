@@ -1024,14 +1024,6 @@ public final class HConstants {
   public static final float ROW_CACHE_SIZE_DEFAULT = 0.0f;
 
   /**
-   * Configuration key for the minimum number of HFiles required to activate the Row Cache. If the
-   * number of HFiles is less than this value, the Row Cache does not operate even if it is enabled
-   * at the table level.
-   */
-  public static final String ROW_CACHE_ACTIVATE_MIN_HFILES_KEY = "row.cache.activate.min.hfiles";
-  public static final int ROW_CACHE_ACTIVATE_MIN_HFILES_DEFAULT = 2;
-
-  /**
    * Configuration key for the memory size of the block cache
    */
   public static final String HFILE_BLOCK_CACHE_MEMORY_SIZE_KEY = "hfile.block.cache.memory.size";

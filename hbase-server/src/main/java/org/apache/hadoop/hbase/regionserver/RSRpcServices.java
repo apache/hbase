@@ -2583,7 +2583,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
     RegionScannerImpl scanner = null;
     long blockBytesScannedBefore = context.getBlockBytesScanned();
     try {
-      scanner = rowCacheService.getScanner(region, get, scan, results);
+      scanner = rowCacheService.getScanner(region, get, scan, results, context);
     } finally {
       if (scanner != null) {
         if (closeCallBack == null) {
@@ -4042,7 +4042,6 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
   public void onConfigurationChange(Configuration conf) {
     super.onConfigurationChange(conf);
     setReloadableGuardrails(conf);
-    rowCacheService.updateConf(conf);
   }
 
   @Override

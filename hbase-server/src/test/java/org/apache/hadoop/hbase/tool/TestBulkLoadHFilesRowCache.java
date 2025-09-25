@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.tool;
 
 import static org.apache.hadoop.hbase.HConstants.HFILE_BLOCK_CACHE_SIZE_KEY;
-import static org.apache.hadoop.hbase.HConstants.ROW_CACHE_ACTIVATE_MIN_HFILES_KEY;
 import static org.apache.hadoop.hbase.HConstants.ROW_CACHE_SIZE_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
@@ -117,8 +116,6 @@ public class TestBulkLoadHFilesRowCache {
     conf.setFloat(ROW_CACHE_SIZE_KEY, 0.01f);
     conf.setFloat(HFILE_BLOCK_CACHE_SIZE_KEY, 0.38f);
 
-    // To test simply, regardless of the number of HFiles
-    conf.setInt(ROW_CACHE_ACTIVATE_MIN_HFILES_KEY, 0);
     TEST_UTIL.startMiniCluster(1);
     admin = TEST_UTIL.getAdmin();
   }
@@ -167,6 +164,7 @@ public class TestBulkLoadHFilesRowCache {
     Put put1 = new Put(rowKeyRegion1);
     put1.addColumn(family(0).getBytes(), "q1".getBytes(), "value".getBytes());
     table.put(put1);
+    admin.flush(tableName);
 
     // Ensure each region has a row cache
     Get get0 = new Get(rowKeyRegion0);

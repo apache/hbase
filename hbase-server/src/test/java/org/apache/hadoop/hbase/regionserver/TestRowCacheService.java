@@ -99,6 +99,9 @@ public class TestRowCacheService {
     Mockito.when(region.getScanner(scan)).thenReturn(regionScanner);
     Mockito.when(region.getReadOnlyConfiguration()).thenReturn(conf);
 
+    RpcCallContext context = Mockito.mock(RpcCallContext.class);
+    Mockito.when(context.getBlockBytesScanned()).thenReturn(1L);
+
     RowCacheKey key = new RowCacheKey(region, rowKey);
     List<Cell> results = new ArrayList<>();
     results.add(KeyValueTestUtil.create("row", "CF", "q1", 1, "v1"));
@@ -108,7 +111,7 @@ public class TestRowCacheService {
     RowCache rowCache = rowCacheService.getRowCache();
 
     // Verify that row cache populated before creating a row level barrier
-    rowCacheService.getScanner(region, get, scan, results);
+    rowCacheService.getScanner(region, get, scan, results, context);
     assertNotNull(rowCache.getBlock(key, true));
     assertNull(rowCacheService.getRowLevelBarrier(key));
 
@@ -121,7 +124,7 @@ public class TestRowCacheService {
     assertEquals(1, rowCacheService.getRowLevelBarrier(key).get());
 
     // Verify that no row cache populated after creating a row level barrier
-    rowCacheService.getScanner(region, get, scan, results);
+    rowCacheService.getScanner(region, get, scan, results, context);
     assertNull(rowCache.getBlock(key, true));
 
     // Remove the row level barrier
@@ -129,7 +132,7 @@ public class TestRowCacheService {
     assertNull(rowCacheService.getRowLevelBarrier(key));
 
     // Verify that row cache populated before creating a table level barrier
-    rowCacheService.getScanner(region, get, scan, results);
+    rowCacheService.getScanner(region, get, scan, results, context);
     assertNotNull(rowCache.getBlock(key, true));
     assertNull(rowCacheService.getRegionLevelBarrier(region));
 
@@ -142,7 +145,7 @@ public class TestRowCacheService {
     assertEquals(1, rowCacheService.getRegionLevelBarrier(region).get());
 
     // Verify that no row cache populated after creating a table level barrier
-    rowCacheService.getScanner(region, get, scan, results);
+    rowCacheService.getScanner(region, get, scan, results, context);
     assertNull(rowCache.getBlock(key, true));
 
     // Remove the table level barrier
@@ -278,6 +281,9 @@ public class TestRowCacheService {
     Mockito.when(td.isRowCacheEnabled()).thenReturn(true);
     Mockito.when(td.getColumnFamilies()).thenReturn(new ColumnFamilyDescriptor[] { cfd });
 
+    RpcCallContext context = Mockito.mock(RpcCallContext.class);
+    Mockito.when(context.getBlockBytesScanned()).thenReturn(1L);
+
     byte[] rowKey = "row".getBytes();
     RegionScannerImpl regionScanner = Mockito.mock(RegionScannerImpl.class);
 
@@ -304,13 +310,13 @@ public class TestRowCacheService {
     // Verify that row cache populated with caching=false
     // This should be called first not to populate the row cache
     get.setCacheBlocks(false);
-    rowCacheService.getScanner(region, get, scan, results);
+    rowCacheService.getScanner(region, get, scan, results, context);
     assertNull(rowCache.getBlock(key, true));
     assertNull(rowCache.getBlock(key, false));
 
     // Verify that row cache populated with caching=true
     get.setCacheBlocks(true);
-    rowCacheService.getScanner(region, get, scan, results);
+    rowCacheService.getScanner(region, get, scan, results, context);
     assertNotNull(rowCache.getBlock(key, true));
     assertNull(rowCache.getBlock(key, false));
   }

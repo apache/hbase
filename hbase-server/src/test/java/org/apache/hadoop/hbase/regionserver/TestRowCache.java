@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.HConstants.HFILE_BLOCK_CACHE_SIZE_KEY;
-import static org.apache.hadoop.hbase.HConstants.ROW_CACHE_ACTIVATE_MIN_HFILES_KEY;
 import static org.apache.hadoop.hbase.HConstants.ROW_CACHE_SIZE_KEY;
 import static org.apache.hadoop.hbase.regionserver.MetricsRegionServerSource.ROW_CACHE_EVICTED_ROW_COUNT;
 import static org.apache.hadoop.hbase.regionserver.MetricsRegionServerSource.ROW_CACHE_HIT_COUNT;
@@ -107,8 +106,6 @@ public class TestRowCache {
     conf.setFloat(ROW_CACHE_SIZE_KEY, 0.01f);
     conf.setFloat(HFILE_BLOCK_CACHE_SIZE_KEY, 0.38f);
 
-    // To test simply, regardless of the number of HFiles
-    conf.setInt(ROW_CACHE_ACTIVATE_MIN_HFILES_KEY, 0);
     SingleProcessHBaseCluster cluster = TEST_UTIL.startMiniCluster();
     cluster.waitForActiveAndReadyMaster();
     admin = TEST_UTIL.getAdmin();
@@ -185,6 +182,7 @@ public class TestRowCache {
     put.addColumn(CF2, Q1, "21".getBytes());
     put.addColumn(CF2, Q2, "22".getBytes());
     table.put(put);
+    admin.flush(tableName);
 
     // Initialize metrics
     recomputeMetrics();
@@ -303,6 +301,7 @@ public class TestRowCache {
     put1.addColumn(CF1, Q1, "11".getBytes());
     put1.addColumn(CF1, Q2, "12".getBytes());
     table.put(put1);
+    admin.flush(tableName);
 
     // Validate that the row cache is populated
     result = table.get(get);
@@ -353,6 +352,7 @@ public class TestRowCache {
     put2.addColumn(CF1, Q1, "211".getBytes());
     put2.addColumn(CF1, Q2, "212".getBytes());
     table.put(put2);
+    admin.flush(tableName);
 
     // Validate that the row caches are populated
     result1 = table.get(get1);
@@ -395,6 +395,7 @@ public class TestRowCache {
     put2.addColumn(CF1, Q1, "211".getBytes());
     put2.addColumn(CF1, Q2, "212".getBytes());
     table.put(put2);
+    admin.flush(tableName);
 
     // Validate that the row caches are populated
     result1 = table.get(get1);
@@ -462,6 +463,7 @@ public class TestRowCache {
     batchOperations.add(put3);
     results = new Result[batchOperations.size()];
     table.batch(batchOperations, results);
+    admin.flush(tableName);
 
     // Validate that the row caches are populated
     batchOperations = new ArrayList<>();
@@ -496,5 +498,44 @@ public class TestRowCache {
     assertNull(rowCache.getBlock(rowCacheKey1, true));
     assertNull(rowCache.getBlock(rowCacheKey2, true));
     assertNotNull(rowCache.getBlock(rowCacheKey3, true));
+  }
+
+  @Test
+  public void testGetFromMemstoreOnly() throws IOException, InterruptedException {
+    byte[] rowKey = "row".getBytes();
+    RowCacheKey rowCacheKey = new RowCacheKey(region, rowKey);
+
+    // Put a row into memstore only, not flushed to HFile yet
+    Put put = new Put(rowKey);
+    put.addColumn(CF1, Q1, Bytes.toBytes(0L));
+    table.put(put);
+
+    // Get from memstore only
+    Get get = new Get(rowKey);
+    table.get(get);
+
+    // Validate that the row cache is not populated
+    assertNull(rowCache.getBlock(rowCacheKey, true));
+
+    // Flush memstore to HFile, then get again
+    admin.flush(tableName);
+    get = new Get(rowKey);
+    table.get(get);
+
+    // Validate that the row cache is populated now
+    assertNotNull(rowCache.getBlock(rowCacheKey, true));
+
+    // Put another qualifier. And now the cells are in both memstore and HFile.
+    put = new Put(rowKey);
+    put.addColumn(CF1, Q2, Bytes.toBytes(0L));
+    table.put(put);
+
+    // Validate that the row cache is invalidated
+    assertNull(rowCache.getBlock(rowCacheKey, true));
+
+    // Get from memstore and HFile
+    get = new Get(rowKey);
+    table.get(get);
+    assertNotNull(rowCache.getBlock(rowCacheKey, true));
   }
 }
