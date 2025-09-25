@@ -114,11 +114,14 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
     // Initialize section index reader
     this.sectionIndexReader = new SectionIndexManager.Reader();
 
+    // Load tenant index metadata before accessing the section index so we know how to interpret it
+    loadTenantIndexMetadata();
+
     // Initialize section index using dataBlockIndexReader from parent
     initializeSectionIndex();
 
-    // Load tenant index structure information
-    loadTenantIndexStructureInfo();
+    // Log tenant index structure information once sections are available
+    logTenantIndexStructureInfo();
 
     // Create tenant extractor with consistent configuration
     this.tenantExtractor = TenantExtractorFactory.createFromReader(this);
@@ -147,6 +150,12 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
     try {
       LOG.debug("Seeking to load-on-open section at offset {}", sectionIndexOffset);
 
+      // Fall back to trailer-provided level count when metadata has not been loaded yet
+      int trailerLevels = trailer.getNumDataIndexLevels();
+      if (trailerLevels >= 1 && trailerLevels > tenantIndexLevels) {
+        tenantIndexLevels = trailerLevels;
+      }
+
       // In HFile v4, the tenant index is stored at the recorded section index offset
       HFileBlock rootIndexBlock =
         getUncachedBlockReader().readBlockData(sectionIndexOffset, -1, true, false, false);
@@ -157,18 +166,32 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
           + rootIndexBlock.getBlockType() + " at offset " + trailer.getLoadOnOpenDataOffset());
       }
 
-      // Load the section index from the root block (support multi-level traversal)
-      int levels = trailer.getNumDataIndexLevels();
-      if (levels <= 1) {
-        sectionIndexReader.loadSectionIndex(rootIndexBlock);
-      } else {
-        sectionIndexReader.loadSectionIndex(rootIndexBlock, levels, getUncachedBlockReader());
+      HFileBlock blockToRead = null;
+      try {
+        blockToRead = rootIndexBlock.unpack(getFileContext(), getUncachedBlockReader());
+
+        // Load the section index from the root block (support multi-level traversal)
+        if (tenantIndexLevels <= 1) {
+          sectionIndexReader.loadSectionIndex(blockToRead);
+        } else {
+          sectionIndexReader.loadSectionIndex(blockToRead, tenantIndexLevels,
+            getUncachedBlockReader());
+        }
+
+        // Copy section info to our internal data structures
+        initSectionLocations();
+
+        LOG.debug("Initialized tenant section index with {} entries", getSectionCount());
+      } finally {
+        if (blockToRead != null) {
+          blockToRead.release();
+          if (blockToRead != rootIndexBlock) {
+            rootIndexBlock.release();
+          }
+        } else {
+          rootIndexBlock.release();
+        }
       }
-
-      // Copy section info to our internal data structures
-      initSectionLocations();
-
-      LOG.debug("Initialized tenant section index with {} entries", getSectionCount());
     } catch (IOException e) {
       LOG.error("Failed to load tenant section index", e);
       throw e;
@@ -189,24 +212,7 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
    * Extracts tenant index levels and chunk size configuration from the HFile metadata to optimize
    * section lookup performance.
    */
-  private void loadTenantIndexStructureInfo() {
-    // Get tenant index level information
-    byte[] tenantIndexLevelsBytes =
-      fileInfo.get(Bytes.toBytes(MultiTenantHFileWriter.FILEINFO_TENANT_INDEX_LEVELS));
-    if (tenantIndexLevelsBytes != null) {
-      tenantIndexLevels = Bytes.toInt(tenantIndexLevelsBytes);
-    }
-
-    // Get chunk size for multi-level indices
-    if (tenantIndexLevels > 1) {
-      byte[] chunkSizeBytes =
-        fileInfo.get(Bytes.toBytes(MultiTenantHFileWriter.FILEINFO_TENANT_INDEX_MAX_CHUNK));
-      if (chunkSizeBytes != null) {
-        tenantIndexMaxChunkSize = Bytes.toInt(chunkSizeBytes);
-      }
-    }
-
-    // Log tenant index structure information
+  private void logTenantIndexStructureInfo() {
     int numSections = getSectionCount();
     if (tenantIndexLevels > 1) {
       LOG.info("Multi-tenant HFile loaded with {} sections using {}-level tenant index "
@@ -218,6 +224,33 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
 
     LOG.debug("Tenant index details: levels={}, chunkSize={}, sections={}", tenantIndexLevels,
       tenantIndexMaxChunkSize, numSections);
+  }
+
+  private void loadTenantIndexMetadata() {
+    byte[] tenantIndexLevelsBytes =
+      fileInfo.get(Bytes.toBytes(MultiTenantHFileWriter.FILEINFO_TENANT_INDEX_LEVELS));
+    if (tenantIndexLevelsBytes != null) {
+      int parsedLevels = Bytes.toInt(tenantIndexLevelsBytes);
+      if (parsedLevels >= 1) {
+        tenantIndexLevels = parsedLevels;
+      } else {
+        LOG.warn("Ignoring invalid tenant index level count {} in file info for {}", parsedLevels,
+          context.getFilePath());
+        tenantIndexLevels = 1;
+      }
+    }
+
+    byte[] chunkSizeBytes =
+      fileInfo.get(Bytes.toBytes(MultiTenantHFileWriter.FILEINFO_TENANT_INDEX_MAX_CHUNK));
+    if (chunkSizeBytes != null) {
+      int parsedChunkSize = Bytes.toInt(chunkSizeBytes);
+      if (parsedChunkSize > 0) {
+        tenantIndexMaxChunkSize = parsedChunkSize;
+      } else {
+        LOG.warn("Ignoring invalid tenant index chunk size {} in file info for {}", parsedChunkSize,
+          context.getFilePath());
+      }
+    }
   }
 
   /**
@@ -1671,6 +1704,7 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
       // Read the FileInfo block
       HFileBlock fileInfoBlock =
         getUncachedBlockReader().readBlockData(fileInfoOffset, -1, true, false, false);
+      HFileBlock blockToRead = null;
 
       // Validate this is a FileInfo block
       if (fileInfoBlock.getBlockType() != BlockType.FILE_INFO) {
@@ -1679,8 +1713,20 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
       }
 
       // Parse the FileInfo data using the HFileInfo.read() method
-      try (DataInputStream dis = new DataInputStream(fileInfoBlock.getByteStream())) {
-        fileInfo.read(dis);
+      try {
+        blockToRead = fileInfoBlock.unpack(getFileContext(), getUncachedBlockReader());
+        try (DataInputStream dis = new DataInputStream(blockToRead.getByteStream())) {
+          fileInfo.read(dis);
+        }
+      } finally {
+        if (blockToRead != null) {
+          blockToRead.release();
+          if (blockToRead != fileInfoBlock) {
+            fileInfoBlock.release();
+          }
+        } else {
+          fileInfoBlock.release();
+        }
       }
 
       LOG.debug("Successfully loaded FileInfo with {} entries", fileInfo.size());

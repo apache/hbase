@@ -668,22 +668,24 @@ public class SectionIndexManager {
     private void readChildIndexSubtree(long blockOffset, int blockSize, int levelsRemaining,
       HFileBlock.FSReader fsReader) throws IOException {
       HFileBlock child = fsReader.readBlockData(blockOffset, blockSize, true, true, true);
+      HFileBlock blockToRead = null;
       try {
+        blockToRead = child.unpack(child.getHFileContext(), fsReader);
         if (levelsRemaining == 1) {
           // Leaf level: contains actual section entries
-          if (child.getBlockType() != BlockType.LEAF_INDEX) {
-            LOG.warn("Expected LEAF_INDEX at leaf level but found {}", child.getBlockType());
+          if (blockToRead.getBlockType() != BlockType.LEAF_INDEX) {
+            LOG.warn("Expected LEAF_INDEX at leaf level but found {}", blockToRead.getBlockType());
           }
-          readLeafBlock(child);
+          readLeafBlock(blockToRead);
           return;
         }
 
         // Intermediate level: each entry points to a child block
-        if (child.getBlockType() != BlockType.INTERMEDIATE_INDEX) {
+        if (blockToRead.getBlockType() != BlockType.INTERMEDIATE_INDEX) {
           LOG.warn("Expected INTERMEDIATE_INDEX at level {} but found {}", levelsRemaining,
-            child.getBlockType());
+            blockToRead.getBlockType());
         }
-        DataInputStream in = child.getByteStream();
+        DataInputStream in = blockToRead.getByteStream();
         int entryCount = in.readInt();
         if (entryCount < 0) {
           throw new IOException(
@@ -699,6 +701,13 @@ public class SectionIndexManager {
         }
       } finally {
         // Release as these are non-root, transient blocks
+        if (blockToRead != null && blockToRead != child) {
+          try {
+            blockToRead.release();
+          } catch (Throwable t) {
+            // ignore
+          }
+        }
         try {
           child.release();
         } catch (Throwable t) {
