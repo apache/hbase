@@ -26,6 +26,9 @@ under the License.
   </properties>
 
   <body>
+    <p align="center">
+      <img src="images/hbase_logo_with_orca_large.png" alt="Apache HBase logo" class="img-fluid"/>
+    </p>
     <section name="Welcome to Apache HBase®">
       <p><a href="https://www.apache.org/">Apache</a> HBase<sup>®</sup> is the <a href="https://hadoop.apache.org/">Hadoop</a> database, a distributed, scalable, big data store.</p>
       <p>Use Apache HBase<sup>®</sup> when you need random, realtime read/write access to your Big Data.
@@ -70,6 +73,9 @@ under the License.
         <dt>Security and Vulnerability information</dt>
         <dd><p>See the <a href="book.html#security">Security</a> chapter in the <a href="book.html#faq">Apache HBase<sup>®</sup> Reference Guide</a>, and the general <a href="https://apache.org/security/">Apache Security information</a>!</p></dd>
       </dl>
+    </section>
+    <section name="Source code">
+      <p>You can contribute on <a class="externalLink" href="https://github.com/apache/hbase">GitHub</a>. See the <a href="scm.html">Source Repository page</a> for more details.</p>
     </section>
 
     <section name="News">

@@ -21,74 +21,49 @@
 
 <project xmlns="http://maven.apache.org/DECORATION/1.0.0"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://maven.apache.org/DECORATION/1.0.0 http://maven.apache.org/xsd/decoration-1.0.0.xsd">
-  <skin>
-    <!-- We tried to get some changes to the fluido-skin committed upstream
-         but with little success. This is a custom artifact that contains
-         some commits over the official maven-fluido-skin 1.4 release. The
-         actual code is available at:
-         https://github.com/joshelser/maven-fluido-skin/tree/1.4-HBase-patched.
-         The hope is that we can get these fixes included upstream and
-         remove the need for this custom fork. This is published to
-         my end-user's GAV for ease of releasing this to maven central
-         until the upstream update happens and is released.
-         See HBASE-14785 and HBASE-21005 for more info. -->
-    <groupId>org.apache.maven.skins</groupId>
-    <artifactId>maven-fluido-skin</artifactId>
-    <version>1.12.0</version>
-  </skin>
-  <custom>
-    <fluidoSkin>
-      <topBarEnabled>true</topBarEnabled>
-      <sideBarEnabled>false</sideBarEnabled>
-      <googleSearch>
-        <!-- The ID of the Google custom search engine to use.
-             This one searches hbase.apache.org, issues.apache.org/browse/HBASE-*,
-             and user and dev mailing list archives. -->
-        <customSearch>000385458301414556862:sq1bb0xugjg</customSearch>
-      </googleSearch>
-      <sourceLineNumbersEnabled>false</sourceLineNumbersEnabled>
-      <skipGenerationDate>true</skipGenerationDate>
-      <breadcrumbDivider>»</breadcrumbDivider>
-      <gitHub>
-        <projectId>apache/hbase</projectId>
-        <ribbonOrientation>right</ribbonOrientation>
-        <ribbonColor>red</ribbonColor>
-      </gitHub>
-    </fluidoSkin>
-  </custom>
-  <bannerLeft>
-    <name />
-    <src />
-    <href />
-    <!--
-    <name/>
-    <height>0</height>
-    <width>0</width>
--->
-  </bannerLeft>
-  <bannerRight>
-    <name>Apache HBase</name>
-    <src>images/hbase_logo_with_orca_large.png</src>
-    <href>http://hbase.apache.org/</href>
-  </bannerRight>
+    xsi:schemaLocation="http://maven.apache.org/DECORATION/1.0.0 http://maven.apache.org/xsd/decoration-1.0.0.xsd"
+    name="Apache HBase">
   <publishDate position="none"/>
   <version position="none"/>
+
+  <skin>
+    <groupId>io.github.devacfr.maven.skins</groupId>
+    <artifactId>reflow-maven-skin</artifactId>
+    <version>${reflow-maven-skin.version}</version>
+  </skin>
+
+  <custom>
+    <reflowSkin>
+      <protocolRelativeURLs>true</protocolRelativeURLs>
+      <smoothScroll>true</smoothScroll>
+      <bottomNav>
+        <column>Apache HBase Project</column>
+        <column>Project Information</column>
+        <column>Documentation and API</column>
+        <column>ASF</column>
+      </bottomNav>
+      <theme>bootswatch-litera</theme>
+      <highlightJs>true</highlightJs>
+      <brand>
+        <name><![CDATA[<div class="xtoplogo"></div>]]></name>
+        <href>index.html</href>
+      </brand>
+      <navbar theme="light" background="light"></navbar>
+      <skinAttribution>false</skinAttribution>
+      <breadcrumbs>true</breadcrumbs>
+      <!-- Switch to local resources: Do NOT use CDN. -->
+      <localResources>true</localResources>
+      <absoluteResourceURL></absoluteResourceURL>
+    </reflowSkin>
+  </custom>
   <body>
     <head>
-      <![CDATA[<meta name="viewport" content="width=device-width, initial-scale=1.0"></meta>
-      <link rel="stylesheet" href="css/bootstrap-responsive.min.css"/>
-      <link rel="stylesheet" href="css/github.min.css"/>
-      <link rel="stylesheet" href="css/site.css"/>
-      <script src="js/highlight.min.js"></script>]]>
     </head>
     <menu name="Apache HBase Project">
       <item name="Overview" href="index.html"/>
       <item name="License" href="https://www.apache.org/licenses/"/>
       <item name="Downloads" href="downloads.html"/>
-      <item name="Release Notes" href="https://issues.apache.org/jira/browse/HBASE?report=com.atlassian.jira.plugin.system.project:changelog-panel#selectedTab=com.atlassian.jira.plugin.system.project%3Achangelog-panel" />
       <item name="Code Of Conduct" href="coc.html"/>
-      <item name="Blog" href="http://blogs.apache.org/hbase/"/>
       <item name="Mailing Lists" href="mailing-lists.html"/>
       <item name="Team" href="team.html"/>
       <item name="HBase Sponsors" href="sponsors.html"/>
@@ -123,13 +98,13 @@
       <item name="Bulk Loads" href="book.html#arch.bulk.load" target="_blank" />
       <item name="Metrics" href="metrics.html" target="_blank" />
       <item name="Cluster replication" href="book.html#replication" target="_blank" />
-      <item name="1.4 Documentation">
+      <item name="1.4 Documentation" href="documentation-1.4.html">
         <item name="Ref Guide" href="1.4/book.html" target="_blank" />
         <item name="Reference Guide (PDF)" href="1.4/book.pdf" target="_blank" />
         <item name="User API" href="1.4/apidocs/index.html" target="_blank" />
         <item name="Developer API" href="1.4/devapidocs/index.html" target="_blank" />
       </item>
-      <item name="2.3 Documentation">
+      <item name="2.3 Documentation" href="documentation-2.3.html">
         <item name="Ref Guide" href="2.3/book.html" target="_blank" />
         <item name="Reference Guide (PDF)" href="2.3/apache_hbase_reference_guide.pdf" target="_blank" />
         <item name="User API" href="2.3/apidocs/index.html" target="_blank" />
@@ -137,7 +112,7 @@
         <item name="Developer API" href="2.3/devapidocs/index.html" target="_blank" />
         <item name="Developer API (Test)" href="2.3/testdevapidocs/index.html" target="_blank" />
       </item>
-      <item name="2.4 Documentation">
+      <item name="2.4 Documentation" href="documentation-2.4.html">
         <item name="Ref Guide" href="2.4/book.html" target="_blank" />
         <item name="Reference Guide (PDF)" href="2.4/apache_hbase_reference_guide.pdf" target="_blank" />
         <item name="User API" href="2.4/apidocs/index.html" target="_blank" />
@@ -145,13 +120,13 @@
         <item name="Developer API" href="2.4/devapidocs/index.html" target="_blank" />
         <item name="Developer API (Test)" href="2.4/testdevapidocs/index.html" target="_blank" />
       </item>
-      <item name="2.5 Documentation">
+      <item name="2.5 Documentation" href="documentation-2.5.html">
         <item name="User API" href="2.5/apidocs/index.html" target="_blank" />
         <item name="User API (Test)" href="2.5/testapidocs/index.html" target="_blank" />
         <item name="Developer API" href="2.5/devapidocs/index.html" target="_blank" />
         <item name="Developer API (Test)" href="2.5/testdevapidocs/index.html" target="_blank" />
       </item>
-      <item name="2.6 Documentation">
+      <item name="2.6 Documentation" href="documentation-2.6.html">
         <item name="User API" href="2.6/apidocs/index.html" target="_blank" />
         <item name="User API (Test)" href="2.6/testapidocs/index.html" target="_blank" />
         <item name="Developer API" href="2.6/devapidocs/index.html" target="_blank" />
@@ -166,12 +141,12 @@
     </menu>
     <footer>
       <![CDATA[
-      <div style="float: left">
-        Copyright ©2007–${current.year} <a href="https://www.apache.org">The Apache Software Foundation</a>. All rights reserved.<br>
-        Apache HBase, HBase, Apache, the Apache HBase logo and the ASF logo are either registered trademarks or trademarks of the Apache Software Foundation.
-        All other marks mentioned may be trademarks or registered trademarks of their respective owners.
+      <div>
+        <p>Copyright ©2007–${current.year} <a href="https://www.apache.org">The Apache Software Foundation</a>. All rights reserved.</p>
+        <p class="mt-3">Apache HBase, HBase, Apache, the Apache HBase logo and the ASF logo are either registered trademarks or trademarks of the Apache Software Foundation.
+        All other marks mentioned may be trademarks or registered trademarks of their respective owners.</p>
       </div>
-      <div style="float: right">
+      <div class="mt-3" style="float: right">
         Last Published: ${current.date}
       </div>
       ]]>

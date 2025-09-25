@@ -17,26 +17,24 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 -->
-
-<!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN"
-          "http://forrest.apache.org/dtd/document-v20.dtd">
-
 <document xmlns="http://maven.apache.org/XDOC/2.0"
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
   <properties>
-    <title>
-Running Apache HBase (TM) in pseudo-distributed mode
-    </title>
+    <title>Apache HBase 2.3 Documentation</title>
     <link rel="shortcut icon" href="/images/favicon.ico" />
   </properties>
 
   <body>
-      <p>This page has been retired.  The contents have been moved to the
-      <a href="http://hbase.apache.org/book.html#distributed">Distributed Operation: Pseudo- and Fully-distributed modes</a> section
- in the Reference Guide.
- </p>
-
- </body>
-
+    <section name="2.3 Documentation">
+      <ul>
+        <li><a href="2.3/book.html" target="_blank">Ref Guide</a></li>
+        <li><a href="2.3/apache_hbase_reference_guide.pdf" target="_blank">Reference Guide (PDF)</a></li>
+        <li><a href="2.3/apidocs/index.html" target="_blank">User API</a></li>
+        <li><a href="2.3/testapidocs/index.html" target="_blank">User API (Test)</a></li>
+        <li><a href="2.3/devapidocs/index.html" target="_blank">Developer API</a></li>
+        <li><a href="2.3/testdevapidocs/index.html" target="_blank">Developer API (Test)</a></li>
+      </ul>
+    </section>
+  </body>
 </document>
