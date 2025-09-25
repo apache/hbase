@@ -292,9 +292,9 @@ public class MultiTenantHFileWriter implements HFile.Writer {
       }
     }
 
-    LOG.info("Creating MultiTenantHFileWriter with tenant extractor: {}, bloom type: {} and target {}",
-      tenantExtractor.getClass().getSimpleName(), bloomType,
-      path != null ? path : writerStream);
+    LOG.info(
+      "Creating MultiTenantHFileWriter with tenant extractor: {}, bloom type: {} and target {}",
+      tenantExtractor.getClass().getSimpleName(), bloomType, path != null ? path : writerStream);
 
     // HFile version 4 inherently implies multi-tenant
     return new MultiTenantHFileWriter(path, conf, cacheConf, tenantExtractor, fileContext,
@@ -333,8 +333,7 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     sectionIndexWriter.setMinIndexNumEntries(minIndexNumEntries);
 
     LOG.info("Initialized MultiTenantHFileWriter with multi-level section indexing for {} "
-      + "(maxChunkSize={}, minIndexNumEntries={})", streamName, maxChunkSize,
-      minIndexNumEntries);
+      + "(maxChunkSize={}, minIndexNumEntries={})", streamName, maxChunkSize, minIndexNumEntries);
   }
 
   @Override
@@ -1028,11 +1027,12 @@ public class MultiTenantHFileWriter implements HFile.Writer {
       HFileContext fileContext, byte[] tenantSectionId, byte[] tenantId, long sectionStartOffset)
       throws IOException {
       // Create a section-aware output stream that handles position translation
-        super(conf, cacheConf, null,
-          new SectionOutputStream(outputStream, sectionStartOffset,
-            MultiTenantHFileWriter.this.path != null ? MultiTenantHFileWriter.this.path.getName()
-              : MultiTenantHFileWriter.this.streamName),
-          fileContext);
+      super(conf, cacheConf, null,
+        new SectionOutputStream(outputStream, sectionStartOffset,
+          MultiTenantHFileWriter.this.path != null
+            ? MultiTenantHFileWriter.this.path.getName()
+            : MultiTenantHFileWriter.this.streamName),
+        fileContext);
 
       this.tenantSectionId = tenantSectionId;
       this.sectionStartOffset = sectionStartOffset;
