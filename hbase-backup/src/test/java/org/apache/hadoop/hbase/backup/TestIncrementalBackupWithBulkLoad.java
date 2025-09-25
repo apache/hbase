@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -171,19 +172,21 @@ public class TestIncrementalBackupWithBulkLoad extends TestBackupBase {
     // Simulate the race condition: archive one of the files while backup is running
     String rootDir = CommonFSUtils.getRootDir(TEST_UTIL.getConfiguration()).toString();
     Path archiveDir = new Path(HFileArchiveUtil.getArchivePath(TEST_UTIL.getConfiguration()),
-        file1.toString().substring(rootDir.length() + 1));
+      file1.toString().substring(rootDir.length() + 1));
     fs.mkdirs(archiveDir.getParent());
     assertTrue("File should be moved to archive", fs.rename(file1, archiveDir));
 
-    IncrementalTableBackupClient client = new IncrementalTableBackupClient(TEST_UTIL.getConnection(),
-        "test_backup_id", createBackupRequest(BackupType.INCREMENTAL, List.of(table1), BACKUP_ROOT_DIR));
+    IncrementalTableBackupClient client =
+      new IncrementalTableBackupClient(TEST_UTIL.getConnection(), "test_backup_id",
+        createBackupRequest(BackupType.INCREMENTAL, List.of(table1), BACKUP_ROOT_DIR));
 
     client.updateFileLists(activeFiles, archiveFiles);
 
     assertEquals("Only one file should remain in active files", 1, activeFiles.size());
     assertEquals("File2 should still be in active files", file2.toString(), activeFiles.get(0));
     assertEquals("One file should be added to archive files", 1, archiveFiles.size());
-    assertEquals("Archived file should have correct path", archiveDir.toString(), archiveFiles.get(0));
+    assertEquals("Archived file should have correct path", archiveDir.toString(),
+      archiveFiles.get(0));
   }
 
   @Test
@@ -203,8 +206,9 @@ public class TestIncrementalBackupWithBulkLoad extends TestBackupBase {
     // Delete the file but don't create it in archive location
     fs.delete(file1, false);
 
-    IncrementalTableBackupClient client = new IncrementalTableBackupClient(TEST_UTIL.getConnection(),
-        "test_backup_id", createBackupRequest(BackupType.INCREMENTAL, List.of(table1), BACKUP_ROOT_DIR));
+    IncrementalTableBackupClient client =
+      new IncrementalTableBackupClient(TEST_UTIL.getConnection(), "test_backup_id",
+        createBackupRequest(BackupType.INCREMENTAL, List.of(table1), BACKUP_ROOT_DIR));
 
     // This should throw IOException since file doesn't exist in archive
     try {
