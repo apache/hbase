@@ -30,7 +30,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.CheckAndMutate;
 import org.apache.hadoop.hbase.client.CheckAndMutateResult;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -56,11 +55,11 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.BulkLoadHF
 @org.apache.yetus.audience.InterfaceAudience.Private
 public class RowCacheService {
   /**
-   * A barrier that prevents the row cache from being populated during table operations, such as
-   * bulk loads. It is implemented as a counter to address issues that arise when the same table is
+   * A barrier that prevents the row cache from being populated during region operations, such as
+   * bulk loads. It is implemented as a counter to address issues that arise when the same region is
    * updated concurrently.
    */
-  private final Map<TableName, AtomicInteger> tableLevelBarrierMap = new ConcurrentHashMap<>();
+  private final Map<HRegion, AtomicInteger> regionLevelBarrierMap = new ConcurrentHashMap<>();
   /**
    * A barrier that prevents the row cache from being populated during row mutations. It is
    * implemented as a counter to address issues that arise when the same row is mutated
@@ -144,8 +143,8 @@ public class RowCacheService {
   }
 
   private void populateCache(HRegion region, List<Cell> results, RowCacheKey key) {
-    // The row cache is populated only when no table level barriers remain
-    tableLevelBarrierMap.computeIfAbsent(region.getRegionInfo().getTable(), t -> {
+    // The row cache is populated only when no region level barriers remain
+    regionLevelBarrierMap.computeIfAbsent(region, t -> {
       // The row cache is populated only when no row level barriers remain
       rowLevelBarrierMap.computeIfAbsent(key, k -> {
         try {
@@ -174,7 +173,7 @@ public class RowCacheService {
 
     // Since bulkload modifies the store files, the row cache should be disabled until the bulkload
     // is finished.
-    createTableLevelBarrier(region.getRegionInfo().getTable());
+    createRegionLevelBarrier(region);
     try {
       // We do not invalidate the entire row cache directly, as it contains a large number of
       // entries and takes a long time. Instead, we increment rowCacheSeqNum, which is used when
@@ -182,8 +181,8 @@ public class RowCacheService {
       increaseRowCacheSeqNum(region);
       return bulkLoad(rsRpcServices, request);
     } finally {
-      // The row cache for the table has been enabled again
-      removeTableLevelBarrier(region.getRegionInfo().getTable());
+      // The row cache for the region has been enabled again
+      removeTableLevelBarrier(region);
     }
   }
 
@@ -196,15 +195,15 @@ public class RowCacheService {
     region.increaseRowCacheSeqNum();
   }
 
-  void removeTableLevelBarrier(TableName tableName) {
-    tableLevelBarrierMap.computeIfPresent(tableName, (k, counter) -> {
+  void removeTableLevelBarrier(HRegion region) {
+    regionLevelBarrierMap.computeIfPresent(region, (k, counter) -> {
       int remaining = counter.decrementAndGet();
       return (remaining <= 0) ? null : counter;
     });
   }
 
-  void createTableLevelBarrier(TableName tableName) {
-    tableLevelBarrierMap.computeIfAbsent(tableName, k -> new AtomicInteger(0)).incrementAndGet();
+  void createRegionLevelBarrier(HRegion region) {
+    regionLevelBarrierMap.computeIfAbsent(region, k -> new AtomicInteger(0)).incrementAndGet();
   }
 
   // @formatter:off
@@ -361,8 +360,8 @@ public class RowCacheService {
   }
 
   // For testing only
-  AtomicInteger getTableLevelBarrier(TableName tableName) {
-    return tableLevelBarrierMap.get(tableName);
+  AtomicInteger getRegionLevelBarrier(HRegion region) {
+    return regionLevelBarrierMap.get(region);
   }
 
   // For testing only

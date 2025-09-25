@@ -131,23 +131,23 @@ public class TestRowCacheService {
     // Verify that row cache populated before creating a table level barrier
     rowCacheService.getScanner(region, get, scan, results);
     assertNotNull(rowCache.getBlock(key, true));
-    assertNull(rowCacheService.getTableLevelBarrier(tableName));
+    assertNull(rowCacheService.getRegionLevelBarrier(region));
 
     // Evict the row cache
     rowCache.evictBlock(key);
     assertNull(rowCache.getBlock(key, true));
 
     // Create a table level barrier for the row key
-    rowCacheService.createTableLevelBarrier(tableName);
-    assertEquals(1, rowCacheService.getTableLevelBarrier(tableName).get());
+    rowCacheService.createRegionLevelBarrier(region);
+    assertEquals(1, rowCacheService.getRegionLevelBarrier(region).get());
 
     // Verify that no row cache populated after creating a table level barrier
     rowCacheService.getScanner(region, get, scan, results);
     assertNull(rowCache.getBlock(key, true));
 
     // Remove the table level barrier
-    rowCacheService.removeTableLevelBarrier(tableName);
-    assertNull(rowCacheService.getTableLevelBarrier(tableName));
+    rowCacheService.removeTableLevelBarrier(region);
+    assertNull(rowCacheService.getRegionLevelBarrier(region));
   }
 
   @Test
@@ -254,7 +254,7 @@ public class TestRowCacheService {
     inOrder = Mockito.inOrder(rowCacheService);
     rowCacheService.bulkLoadHFile(rsRpcServices, bulkLoadRequest);
     // Verify the sequence of method calls
-    inOrder.verify(rowCacheService, Mockito.times(1)).createTableLevelBarrier(Mockito.any());
+    inOrder.verify(rowCacheService, Mockito.times(1)).createRegionLevelBarrier(Mockito.any());
     inOrder.verify(rowCacheService, Mockito.times(1)).increaseRowCacheSeqNum(Mockito.any());
     inOrder.verify(rowCacheService, Mockito.times(1)).bulkLoad(Mockito.any(), Mockito.any());
     inOrder.verify(rowCacheService, Mockito.times(1)).removeTableLevelBarrier(Mockito.any());
