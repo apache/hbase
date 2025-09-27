@@ -47,6 +47,7 @@
         <ul class="navbar-nav">
           <li class="nav-item"><a class="nav-link" href="/rs-status">Home</a></li>
           <li class="nav-item"><a class="nav-link" href="/processRS.jsp">Process Metrics</a></li>
+          <li class="nav-item"><a class="nav-link" href="/requests.jsp">Requests</a></li>
           <li class="nav-item"><a class="nav-link" href="/logs/">Local Logs</a></li>
           <li class="nav-item"><a class="nav-link" href="/rsOperationDetails.jsp">Operation Details</a></li>
           <li class="nav-item"><a class="nav-link" href="/logLevel">Log Level</a></li>
