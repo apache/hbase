@@ -619,6 +619,20 @@ Delete all backup images older than 30 days:
 $ hbase backup delete -k 30
 ----
 
+[CAUTION]
+====
+* Deleting a backup may affect all following incremental backups (in the same backup root) up to 
+  the next full backup. For example, if you take a full backup every 2 weeks and 
+  daily incremental backups, running `hbase backup delete -k 7` when the full backup is older than 
+  7 days will effectively remove the data for all subsequent incremental backups.
+  The backup IDs may still be listed, but their data will be gone.
+
+* If the most recent backup is an incremental backup and you delete it, 
+  you should run a **full backup** next.
+  Running another incremental backup immediately after may result in missing data in the 
+  backup image. (See link:https://issues.apache.org/jira/browse/HBASE-28084[HBASE-28084])
+====
+
 // hbase backup repair
 
 [[br.repair.backup]]
