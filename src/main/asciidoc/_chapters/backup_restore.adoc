@@ -804,18 +804,28 @@ providing a comparable level of security. This is a manual step which users *mus
 [[br.technical.details]]
 == Technical Details of Incremental Backup and Restore
 
-HBase incremental backups enable more efficient capture of HBase table images than previous attempts at serial backup and restore solutions, such as those that only used HBase Export and Import APIs.
-Incremental backups use Write Ahead Logs (WALs) to capture the data changes since the previous backup was created. A WAL roll (create new WALs) is executed across all RegionServers to track the WALs that need to be in the backup.
+HBase incremental backups enable more efficient capture of HBase table images than previous attempts 
+at serial backup and restore solutions, such as those that only used HBase Export and Import APIs.
+Incremental backups use Write Ahead Logs (WALs) to capture the data changes since the 
+previous backup was created. A WAL roll (create new WALs) is executed across all RegionServers 
+to track the WALs that need to be in the backup.
 In addition to WALs, incremental backups also track bulk-loaded HFiles for tables under backup.
 
 Incremental backup gathers all WAL files generated since the last backup from the source cluster,
-converts them to HFiles in a `.tmp` directory under the `BACKUP_ROOT`, and then moves these HFiles to their final location under the backup root directory to form the backup image.
-It also reads bulk load records from the backup system table, forms the paths for the corresponding bulk-loaded HFiles, and copies those files to the backup destination.
-This ensures bulk-loaded files are preserved and not deleted by cleaner chores before the backup completes.
-A process similar to the DistCp (distributed copy) tool is used to move the backup files to the target file systems.
+converts them to HFiles in a `.tmp` directory under the `BACKUP_ROOT`, and then moves these 
+HFiles to their final location under the backup root directory to form the backup image.
+It also reads bulk load records from the backup system table, forms the paths for the corresponding 
+bulk-loaded HFiles, and copies those files to the backup destination.
+Bulk-loaded files are preserved (not deleted by cleaner chores) until they've been included in a 
+backup (for each backup root).
+A process similar to the DistCp (distributed copy) tool is used to move the backup files to the 
+target file system.
 
-When a table restore operation starts, a two-step process is initiated. First, the full backup is restored from the full backup image.
-Second, all HFiles from incremental backups between the last full backup and the incremental backup being restored (including bulk-loaded HFiles) are bulk loaded into the table using the HBase Bulk Load utility.
+When a table restore operation starts, a two-step process is initiated. 
+First, the full backup is restored from the full backup image.
+Second, all HFiles from incremental backups between the last full backup and the incremental backup 
+being restored (including bulk-loaded HFiles) are bulk loaded into the table using the 
+HBase Bulk Load utility.
 
 You can only restore on a live HBase cluster because the data must be redistributed to complete the restore operation successfully.
 
@@ -877,7 +887,6 @@ Like we did for full backups, we have to understand the incremental backup proce
 * Identify new write-ahead logs since the last full or incremental backup: negligible. Apriori knowledge from the backup system table(s).
 * Read, filter, and write "minimized" HFiles equivalent to the WALs: dominated by the speed of writing data. Relative to write speed of HDFS.
 * Read bulk load records from the backup system table, form the paths for bulk-loaded HFiles, and copy them to the backup destination.
-These entries in the backup system table are not cleaned until the backup is marked complete to ensure the cleaner chore does not delete the files.
 * DistCp the HFiles to the destination: <<br.export.snapshot.cost,see above>>.
 
 For the second step, the dominating cost of this operation would be the re-writing the data (under the assumption that a majority of the
