@@ -117,6 +117,7 @@ import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
 import org.apache.hadoop.hbase.namequeues.RpcLogDetails;
 import org.apache.hadoop.hbase.namequeues.request.NamedQueueGetRequest;
 import org.apache.hadoop.hbase.namequeues.response.NamedQueueGetResponse;
+import org.apache.hadoop.hbase.monitoring.ThreadLocalServerSideScanMetrics;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.procedure2.RSProcedureCallable;
 import org.apache.hadoop.hbase.quotas.ActivePolicyEnforcement;
@@ -3570,10 +3571,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.Blockin
           // from block size progress before writing into the response
           scanMetrics.setCounter(ServerSideScanMetrics.BLOCK_BYTES_SCANNED_KEY_METRIC_NAME,
             scannerContext.getBlockSizeProgress());
-          if (rpcCall != null) {
-            scanMetrics.setCounter(ServerSideScanMetrics.FS_READ_TIME_METRIC_NAME,
-              rpcCall.getFsReadTime());
-          }
         }
       }
     } finally {
@@ -3638,6 +3635,11 @@ public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.Blockin
         }
       }
       throw new ServiceException(e);
+    }
+    boolean trackMetrics = request.hasTrackScanMetrics() && request.getTrackScanMetrics();
+    ThreadLocalServerSideScanMetrics.setScanMetricsEnabled(trackMetrics);
+    if (trackMetrics) {
+      ThreadLocalServerSideScanMetrics.reset();
     }
     requestCount.increment();
     rpcScanRequestCount.increment();
@@ -3709,7 +3711,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.Blockin
     boolean scannerClosed = false;
     try {
       List<Result> results = new ArrayList<>(Math.min(rows, 512));
-      boolean trackMetrics = request.hasTrackScanMetrics() && request.getTrackScanMetrics();
       ServerSideScanMetrics scanMetrics = trackMetrics ? new ServerSideScanMetrics() : null;
       if (rows > 0) {
         boolean done = false;
@@ -3791,6 +3792,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.Blockin
           scanMetrics.addToCounter(ServerSideScanMetrics.RPC_SCAN_QUEUE_WAIT_TIME_METRIC_NAME,
             rpcQueueWaitTime);
         }
+        ThreadLocalServerSideScanMetrics.populateServerSideScanMetrics(scanMetrics);
         Map<String, Long> metrics = scanMetrics.getMetricsMap();
         ScanMetrics.Builder metricBuilder = ScanMetrics.newBuilder();
         NameInt64Pair.Builder pairBuilder = NameInt64Pair.newBuilder();
