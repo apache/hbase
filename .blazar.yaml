@@ -1,5 +1,5 @@
 buildpack:
-  name: Blazar-Buildpack-Java-single-module
+  name: Blazar-Buildpack-Java-oss-fork
 
 env:
   MAVEN_PHASE: "package assembly:single deploy"
