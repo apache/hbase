@@ -26,9 +26,9 @@ import java.lang.management.MonitorInfo;
 import java.lang.management.ThreadInfo;
 import java.lang.management.ThreadMXBean;
 import java.nio.charset.StandardCharsets;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import java.util.Map;
 import org.junit.runner.notification.Failure;
@@ -67,13 +67,13 @@ public class TimedOutTestsListener extends RunListener {
     output.flush();
   }
 
-  @SuppressWarnings("JavaUtilDate")
   public static String buildThreadDiagnosticString() {
     StringWriter sw = new StringWriter();
     PrintWriter output = new PrintWriter(sw);
 
-    DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss,SSS");
-    output.println(String.format("Timestamp: %s", dateFormat.format(new Date())));
+    DateTimeFormatter formatter =
+      DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss,SSS Z").withZone(ZoneId.systemDefault());
+    output.println(String.format("Timestamp: %s", formatter.format(Instant.now())));
     output.println();
     output.println(buildThreadDump());
 
@@ -87,7 +87,7 @@ public class TimedOutTestsListener extends RunListener {
     return sw.toString();
   }
 
-  static String buildThreadDump() {
+  private static String buildThreadDump() {
     StringBuilder dump = new StringBuilder();
     Map<Thread, StackTraceElement[]> stackTraces = Thread.getAllStackTraces();
     for (Map.Entry<Thread, StackTraceElement[]> e : stackTraces.entrySet()) {
@@ -109,7 +109,7 @@ public class TimedOutTestsListener extends RunListener {
     return dump.toString();
   }
 
-  static String buildDeadlockInfo() {
+  private static String buildDeadlockInfo() {
     ThreadMXBean threadBean = ManagementFactory.getThreadMXBean();
     long[] threadIds = threadBean.findMonitorDeadlockedThreads();
     if (threadIds != null && threadIds.length > 0) {

@@ -162,10 +162,15 @@ public class HBaseJupiterExtension
     } catch (ExecutionException e) {
       throw ExceptionUtils.throwAsUncheckedException(e.getCause());
     } catch (TimeoutException e) {
-
+      LOG.info(TimedOutTestsListener.buildThreadDiagnosticString());
       throw new JUnitException(
         "Test " + ctx.getDisplayName() + " timed out, deadline is " + deadline, e);
     }
+  }
+
+  private void printThreadDump() {
+    LOG.info("====> TEST TIMED OUT. PRINTING THREAD DUMP. <====");
+    LOG.info(TimedOutTestsListener.buildThreadDiagnosticString());
   }
 
   @Override
