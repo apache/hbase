@@ -1,6 +1,5 @@
 buildpack:
-  name: Blazar-Buildpack-Java
-  branch: rm-test-hbase
+  name: Blazar-Buildpack-Java-oss-fork
 
 env:
   # Below variables are generated in prepare_environment.sh.
@@ -23,3 +22,7 @@ depends:
   - hbase
 provides:
   - hubspot-client-bundles
+  - hbase-backup-restore-bundle
+  - hbase-client-bundle
+  - hbase-mapreduce-bundle
+  - hbase-server-it-bundle

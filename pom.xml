@@ -1536,6 +1536,15 @@
         <groupId>org.apache.hbase.thirdparty</groupId>
         <artifactId>hbase-shaded-miscellaneous</artifactId>
         <version>${hbase-thirdparty.version}</version>
+        <!-- HubSpot: This conflicts with other jspecify uses in the company.
+             This exclusion is already backed into newer versions of hbase-thirdparty,
+             so we can remove it here when hbase-thirdparty is upgraded. -->
+        <exclusions>
+          <exclusion>
+            <groupId>org.jspecify</groupId>
+            <artifactId>jspecify</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.apache.hbase.thirdparty</groupId>
