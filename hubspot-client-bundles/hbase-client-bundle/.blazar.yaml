@@ -20,6 +20,7 @@ before:
       - $WORKSPACE/build-scripts/prepare_environment.sh
 
 depends:
-  - hbase
-provides:
   - hubspot-client-bundles
+provides:
+  - hbase-client-bundle
+

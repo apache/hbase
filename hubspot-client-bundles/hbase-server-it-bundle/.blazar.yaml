@@ -1,18 +1,18 @@
 buildpack:
   name: Blazar-Buildpack-Java
   branch: rm-test-hbase
-
 env:
   # Below variables are generated in prepare_environment.sh.
   # The build environment requires environment variables to be explicitly defined before they may
   # be modified by the `write-build-env-var` utilty script to persist changes to an environment variable
   # throughout a build
-  REPO_NAME: ""
+  YUM_REPO_UPLOAD_OVERRIDE_CENTOS_8: ""
   SET_VERSION: ""
   HBASE_VERSION: ""
   PKG_RELEASE: ""
   FULL_BUILD_VERSION: ""
   MAVEN_BUILD_ARGS: ""
+  REPO_NAME: ""
 
 before:
   - description: "Prepare build environment"
@@ -22,4 +22,5 @@ before:
 depends:
   - hbase
 provides:
-  - hubspot-client-bundles
+  - hbase-server-it-bundle
+
