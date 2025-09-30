@@ -153,14 +153,14 @@ public class FSTableDescriptors implements TableDescriptors {
     }
     TableDescriptorBuilder builder = createMetaTableDescriptorBuilder(conf);
     TableDescriptor td = StoreFileTrackerFactory.updateWithTrackerConfigs(conf, builder.build());
-    LOG.info("Creating new hbase:meta table descriptor {}", td);
+    LOG.info("Creating new {} table descriptor {}", TableName.META_TABLE_NAME, td);
     TableName tableName = td.getTableName();
     Path tableDir = CommonFSUtils.getTableDir(rootdir, tableName);
     Path p = writeTableDescriptor(fs, td, tableDir, null);
     if (p == null) {
-      throw new IOException("Failed update hbase:meta table descriptor");
+      throw new IOException("Failed update " + TableName.META_TABLE_NAME + " table descriptor");
     }
-    LOG.info("Updated hbase:meta table descriptor to {}", p);
+    LOG.info("Updated {} table descriptor to {}", TableName.META_TABLE_NAME, p);
     return td;
   }
 
