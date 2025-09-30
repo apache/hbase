@@ -229,7 +229,7 @@ public class QuotaCache implements Stoppable {
    * username
    * @param ugi The request's UserGroupInformation
    */
-  private String getQuotaUserName(final UserGroupInformation ugi) {
+  String getQuotaUserName(final UserGroupInformation ugi) {
     if (userOverrideRequestAttributeKey == null) {
       return ugi.getShortUserName();
     }
