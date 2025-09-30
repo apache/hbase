@@ -223,6 +223,7 @@ public abstract class TakeSnapshotHandler extends EventHandler
       // complete the snapshot, atomically moving from tmp to .snapshot dir.
       SnapshotDescriptionUtils.completeSnapshot(this.snapshotDir, this.workingDir, this.rootFs,
         this.workingDirFs, this.conf);
+      snapshotManager.incrementSnapshotStateVersion();
       finished = true;
       msg = "Snapshot " + snapshot.getName() + " of table " + snapshotTable + " completed";
       status.markComplete(msg);
