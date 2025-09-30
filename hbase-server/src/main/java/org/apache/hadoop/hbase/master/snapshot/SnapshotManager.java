@@ -33,6 +33,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.hadoop.conf.Configuration;
@@ -190,6 +191,8 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
    */
   private ReentrantReadWriteLock takingSnapshotLock = new ReentrantReadWriteLock(true);
 
+  private final AtomicLong snapshotStateVersion = new AtomicLong(0);
+
   public SnapshotManager() {
   }
 
@@ -343,6 +346,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
       cpHost.postDeleteSnapshot(snapshotPOJO);
     }
 
+    incrementSnapshotStateVersion();
   }
 
   /**
@@ -712,6 +716,14 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     if (cpHost != null) {
       cpHost.postSnapshot(snapshotPOJO, desc);
     }
+  }
+
+  public long getSnapshotStateVersion() {
+    return snapshotStateVersion.get();
+  }
+
+  void incrementSnapshotStateVersion() {
+    snapshotStateVersion.incrementAndGet();
   }
 
   /**

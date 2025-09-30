@@ -97,8 +97,7 @@ public class SnapshotFileCache implements Stoppable {
    */
   private ImmutableMap<String, SnapshotDirectoryInfo> snapshots = ImmutableMap.of();
   private final Timer refreshTimer;
-
-  private static final int LOCK_TIMEOUT_MS = 30000;
+  private volatile long lastKnownSnapshotStateVersion = -1;
 
   /**
    * Create a snapshot file cache for all snapshots under the specified [root]/.snapshot on the
@@ -186,54 +185,91 @@ public class SnapshotFileCache implements Stoppable {
     final SnapshotManager snapshotManager) throws IOException {
     List<FileStatus> unReferencedFiles = Lists.newArrayList();
     List<String> snapshotsInProgress = null;
-    boolean refreshed = false;
     Lock lock = null;
     if (snapshotManager != null) {
       lock = snapshotManager.getTakingSnapshotLock().writeLock();
     }
-    try {
-      if (lock == null || lock.tryLock(LOCK_TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
-        try {
-          if (snapshotManager != null && snapshotManager.isTakingAnySnapshot()) {
-            LOG.warn("Not checking unreferenced files since snapshot is running, it will "
-              + "skip to clean the HFiles this time");
-            return unReferencedFiles;
-          }
-          ImmutableSet<String> currentCache = cache;
-          for (FileStatus file : files) {
-            String fileName = file.getPath().getName();
-            if (!refreshed && !currentCache.contains(fileName)) {
-              synchronized (this) {
-                refreshCache();
-                currentCache = cache;
-                refreshed = true;
-              }
+
+    if (snapshotManager != null && snapshotManager.isTakingAnySnapshot()) {
+      LOG.warn("Not checking unreferenced files since snapshot is running, it will "
+        + "skip to clean the HFiles this time");
+      return unReferencedFiles;
+    }
+
+    if (snapshotManager == null) {
+      for (FileStatus file : files) {
+        String fileName = file.getPath().getName();
+        if (!cache.contains(fileName)) {
+          synchronized (this) {
+            if (!cache.contains(fileName)) {
+              refreshCache();
             }
-            if (currentCache.contains(fileName)) {
-              continue;
-            }
-            if (snapshotsInProgress == null) {
-              snapshotsInProgress = getSnapshotsInProgress();
-            }
-            if (snapshotsInProgress.contains(fileName)) {
-              continue;
-            }
-            unReferencedFiles.add(file);
-          }
-        } finally {
-          if (lock != null) {
-            lock.unlock();
           }
         }
-      } else {
-        LOG.warn("Failed to acquire write lock on taking snapshot after waiting {}ms",
-          LOCK_TIMEOUT_MS);
+        if (cache.contains(fileName)) {
+          continue;
+        }
+        if (snapshotsInProgress == null) {
+          snapshotsInProgress = getSnapshotsInProgress();
+        }
+        if (snapshotsInProgress.contains(fileName)) {
+          continue;
+        }
+        unReferencedFiles.add(file);
       }
-    } catch (InterruptedException e) {
-      LOG.warn("Interrupted while acquiring write lock on taking snapshot");
-      Thread.currentThread().interrupt(); // restore the interrupt flag
+      return unReferencedFiles;
     }
-    return unReferencedFiles;
+
+    long currentStateVersion = snapshotManager.getSnapshotStateVersion();
+    if (this.lastKnownSnapshotStateVersion < currentStateVersion) {
+      lock.lock();
+      try {
+        currentStateVersion = snapshotManager.getSnapshotStateVersion();
+        if (this.lastKnownSnapshotStateVersion < currentStateVersion) {
+          refreshCache();
+          LOG.debug(
+            "Snapshot state version changed from " + this.lastKnownSnapshotStateVersion + " to "
+              + currentStateVersion + ", will refresh cache");
+          this.lastKnownSnapshotStateVersion = currentStateVersion;
+        }
+      } finally {
+        lock.unlock();
+      }
+    }
+
+    for (FileStatus file : files) {
+      String fileName = file.getPath().getName();
+      if (cache.contains(fileName)) {
+        continue;
+      }
+      if (snapshotsInProgress == null) {
+        snapshotsInProgress = getSnapshotsInProgress();
+      }
+      if (snapshotsInProgress.contains(fileName)) {
+        continue;
+      }
+      unReferencedFiles.add(file);
+    }
+
+    lock.lock();
+    try {
+      if (snapshotManager.isTakingAnySnapshot()) {
+        LOG.warn("Not checking unreferenced files since snapshot is running, it will " +
+          "skip to clean the HFiles this time");
+        return Lists.newArrayList();
+      }
+      currentStateVersion = snapshotManager.getSnapshotStateVersion();
+      if (this.lastKnownSnapshotStateVersion < currentStateVersion) {
+        LOG.warn("Snapshot state version changed from " +
+          this.lastKnownSnapshotStateVersion + " to " +
+          currentStateVersion + ", will skip to clean the HFiles this time");
+        return Lists.newArrayList();
+      }
+
+      return unReferencedFiles;
+    } finally {
+      lock.unlock();
+    }
   }
 
   private void refreshCache() throws IOException {
