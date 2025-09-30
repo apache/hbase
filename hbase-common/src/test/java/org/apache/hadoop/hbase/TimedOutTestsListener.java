@@ -40,7 +40,10 @@ import org.junit.runner.notification.RunListener;
  */
 public class TimedOutTestsListener extends RunListener {
 
-  static final String TEST_TIMED_OUT_PREFIX = "test timed out after";
+  private static final String TEST_TIMED_OUT_PREFIX = "test timed out after";
+
+  private static final DateTimeFormatter TIMESTAMP_FORMATTER =
+    DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss,SSS Z").withZone(ZoneId.systemDefault());
 
   private static String INDENT = "    ";
 
@@ -71,9 +74,7 @@ public class TimedOutTestsListener extends RunListener {
     StringWriter sw = new StringWriter();
     PrintWriter output = new PrintWriter(sw);
 
-    DateTimeFormatter formatter =
-      DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss,SSS Z").withZone(ZoneId.systemDefault());
-    output.println(String.format("Timestamp: %s", formatter.format(Instant.now())));
+    output.println(String.format("Timestamp: %s", TIMESTAMP_FORMATTER.format(Instant.now())));
     output.println();
     output.println(buildThreadDump());
 
