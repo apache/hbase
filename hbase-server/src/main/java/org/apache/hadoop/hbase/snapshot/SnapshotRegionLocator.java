@@ -75,6 +75,10 @@ public final class SnapshotRegionLocator implements RegionLocator {
       HBaseProtos.RegionInfo ri = region.getRegionInfo();
       byte[] key = ri.getStartKey().toByteArray();
 
+      if (ri.getSplit()) {
+        continue;
+      }
+
       SnapshotHRegionLocation location = toLocation(ri, tableName);
       rawLocations.add(location);
       HRegionReplicas hrr = replicas.get(key);
