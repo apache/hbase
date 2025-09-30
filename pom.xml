@@ -1214,6 +1214,12 @@
         <version>${project.version}</version>
         <type>test-jar</type>
         <scope>test</scope>
+        <exclusions>
+          <exclusion>
+            <groupId>org.apache.calcite</groupId>
+            <artifactId>calcite-core</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.apache.hbase</groupId>
