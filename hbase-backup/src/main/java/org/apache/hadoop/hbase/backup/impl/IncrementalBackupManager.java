@@ -177,7 +177,7 @@ public class IncrementalBackupManager extends BackupManager {
         LOG.debug("currentLogFile: " + log.getPath().toString());
         if (AbstractFSWALProvider.isMetaFile(log.getPath())) {
           if (LOG.isDebugEnabled()) {
-            LOG.debug("Skip hbase:meta log file: " + log.getPath().getName());
+            LOG.debug("Skip {} log file: {}", TableName.META_TABLE_NAME, log.getPath().getName());
           }
           continue;
         }
