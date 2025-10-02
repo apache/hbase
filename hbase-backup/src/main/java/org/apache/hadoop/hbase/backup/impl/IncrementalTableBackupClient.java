@@ -265,9 +265,8 @@ public class IncrementalTableBackupClient extends TableBackupClient {
         archivedFile = archivedFilePath.toString();
 
         if (!fs.exists(archivedFilePath)) {
-          throw new IOException(
-            String.format("File %s not longer exists, and no archived file %s exists for it", file,
-              archivedFile));
+          throw new IOException(String.format(
+            "File %s no longer exists, and no archived file %s exists for it", file, archivedFile));
         }
 
         LOG.debug("Archived file {} has been updated", archivedFile);
