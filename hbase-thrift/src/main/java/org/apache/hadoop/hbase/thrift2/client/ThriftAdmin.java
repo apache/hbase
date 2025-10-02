@@ -826,7 +826,11 @@ public class ThriftAdmin implements Admin {
   @Override
   public void rollWALWriter(ServerName serverName) {
     throw new NotImplementedException("rollWALWriter not supported in ThriftAdmin");
+  }
 
+  @Override
+  public Map<ServerName, Long> rollAllWALWriters() {
+    throw new NotImplementedException("rollAllWALWriters not supported in ThriftAdmin");
   }
 
   @Override
@@ -1353,6 +1357,11 @@ public class ThriftAdmin implements Admin {
   @Override
   public List<String> getCachedFilesList(ServerName serverName) throws IOException {
     throw new NotImplementedException("getCachedFilesList not supported in ThriftAdmin");
+  }
+
+  @Override
+  public void restoreBackupSystemTable(String snapshotName) throws IOException {
+    throw new NotImplementedException("restoreBackupSystemTable not supported in ThriftAdmin");
   }
 
   @Override

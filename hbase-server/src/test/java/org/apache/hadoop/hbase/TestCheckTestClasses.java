@@ -45,11 +45,15 @@ public class TestCheckTestClasses {
     List<Class<?>> badClasses = new java.util.ArrayList<>();
     ClassTestFinder classFinder = new ClassTestFinder();
     for (Class<?> c : classFinder.findClasses(false)) {
-      if (ClassTestFinder.getCategoryAnnotations(c).length == 0) {
+      if (
+        ClassTestFinder.getCategoryAnnotations(c).length == 0
+          && ClassTestFinder.getTagAnnotations(c).length == 0
+      ) {
         badClasses.add(c);
       }
     }
-    assertTrue("There are " + badClasses.size() + " test classes without category: " + badClasses,
+    assertTrue(
+      "There are " + badClasses.size() + " test classes without category and tag: " + badClasses,
       badClasses.isEmpty());
   }
 }

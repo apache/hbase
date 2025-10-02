@@ -855,7 +855,7 @@
     <maven.min.version>3.5.0</maven.min.version>
     <java.min.version>${compileSource}</java.min.version>
     <!-- Dependencies -->
-    <hadoop-three.version>3.4.1</hadoop-three.version>
+    <hadoop-three.version>3.4.2</hadoop-three.version>
     <!-- These must be defined here for downstream build tools that don't look at profiles.
     -->
     <hadoop.version>${hadoop-three.version}</hadoop.version>
@@ -1052,6 +1052,13 @@
       --add-opens java.base/sun.security.x509=ALL-UNNAMED
       --add-opens java.base/sun.security.util=ALL-UNNAMED
       --add-opens java.base/java.net=ALL-UNNAMED</hbase-surefire.jdk17.flags>
+    <!-- Java 18+ disables the Security Manager by default. Hadoop 3.4.2 and earlier doesn't work
+    without Security Manager.
+    When Hadoop 3.5.0 is released and HBase adds support for it, this can be removed, or moved
+    to a Hadoop version dependent profile.
+    This is NOT added to the startup scripts, as this is a major change, and the user better be
+    aware of this requirement and add this in hbase-env.sh and/or in their application -->
+    <hbase-surefire.jdk18.flags>-Djava.security.manager=allow</hbase-surefire.jdk18.flags>
     <!-- Surefire argLine defaults to Linux, cygwin argLine is used in the os.windows profile -->
     <argLine>${hbase-surefire.argLine} @{jacocoArgLine}</argLine>
     <extra.enforcer.version>1.5.1</extra.enforcer.version>
@@ -1069,8 +1076,8 @@
     <!-- Still need this to ignore some errors when building javadoc-->
     <doclint>none</doclint>
     <!-- Required for testing LDAP integration -->
-    <apacheds.version>2.0.0.AM26</apacheds.version>
-    <ldap-api.version>2.0.0</ldap-api.version>
+    <apacheds.version>2.0.0.AM27</apacheds.version>
+    <ldap-api.version>2.1.7</ldap-api.version>
     <webjars-dir>${project.build.directory}/META-INF/resources/webjars</webjars-dir>
     <!-- Web UI dependencies -->
     <bootstrap.version>5.3.3</bootstrap.version>
@@ -1960,6 +1967,7 @@
                 <name>listener</name>
                 <value>org.apache.hadoop.hbase.TimedOutTestsListener,org.apache.hadoop.hbase.HBaseClassTestRuleChecker,org.apache.hadoop.hbase.ResourceCheckerJUnitListener</value>
               </property>
+              <configurationParameters>junit.jupiter.extensions.autodetection.enabled=true</configurationParameters>
             </properties>
           </configuration>
           <executions>
@@ -3571,6 +3579,18 @@
           </plugins>
         </pluginManagement>
       </build>
+    </profile>
+    <profile>
+      <id>build-with-jdk18</id>
+      <activation>
+        <jdk>[18,)</jdk>
+      </activation>
+      <properties>
+        <argLine>${hbase-surefire.jdk17.flags}
+          ${hbase-surefire.jdk18.flags}
+          ${hbase-surefire.argLine}
+          @{jacocoArgLine}</argLine>
+      </properties>
     </profile>
     <!-- profile activated by the Jenkins patch testing job -->
     <profile>

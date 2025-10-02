@@ -799,6 +799,15 @@ message ModifyColumnStoreFileTrackerResponse {
 message FlushMasterStoreRequest {}
 message FlushMasterStoreResponse {}
 
+message RollAllWALWritersRequest {
+  optional uint64 nonce_group = 1 [default = 0];
+  optional uint64 nonce = 2 [default = 0];
+}
+
+message RollAllWALWritersResponse {
+  optional uint64 proc_id = 1;
+}
+
 service MasterService {
   /** Used by the client to get the number of regions that have received the updated schema */
   rpc GetSchemaAlterStatus(GetSchemaAlterStatusRequest)
@@ -1270,6 +1279,12 @@ service MasterService {
 
   rpc FlushTable(FlushTableRequest)
     returns(FlushTableResponse);
+
+  rpc RestoreBackupSystemTable(RestoreBackupSystemTableRequest)
+    returns(RestoreBackupSystemTableResponse);
+
+  rpc rollAllWALWriters(RollAllWALWritersRequest)
+    returns(RollAllWALWritersResponse);
 }
 
 // HBCK Service definitions.
@@ -1356,6 +1371,13 @@ message ScheduleSCPsForUnknownServersResponse {
 message FixMetaRequest {}
 
 message FixMetaResponse {}
+
+message RestoreBackupSystemTableRequest {
+  required string snapshot_name = 1;
+}
+message RestoreBackupSystemTableResponse {
+  optional uint64 proc_id = 1;
+}
 
 service HbckService {
   /** Update state of the table in meta only*/

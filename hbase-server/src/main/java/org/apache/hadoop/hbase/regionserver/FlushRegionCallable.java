@@ -43,7 +43,7 @@ public class FlushRegionCallable extends BaseRSProcedureCallable {
   private List<byte[]> columnFamilies;
 
   @Override
-  protected void doCall() throws Exception {
+  protected byte[] doCall() throws Exception {
     HRegion region = rs.getRegion(regionInfo.getEncodedName());
     if (region == null) {
       throw new NotServingRegionException("region=" + regionInfo.getRegionNameAsString());
@@ -64,6 +64,7 @@ public class FlushRegionCallable extends BaseRSProcedureCallable {
       LOG.debug("Closing region operation on {}", region);
       region.closeRegionOperation();
     }
+    return null;
   }
 
   @Override
