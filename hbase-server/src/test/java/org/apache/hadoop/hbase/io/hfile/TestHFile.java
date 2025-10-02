@@ -156,6 +156,17 @@ public class TestHFile {
     Assert.assertEquals(alloc.getFreeBufferCount(), bufCount);
   }
 
+  private BlockCacheKey cacheKeyFor(HFile.Reader reader, HFileBlock block) {
+    String hfileName = block.getHFileContext().getHFileName();
+    if (hfileName == null) {
+      hfileName = reader.getName();
+      if (reader instanceof AbstractMultiTenantReader && !hfileName.endsWith("#")) {
+        hfileName = hfileName + "#";
+      }
+    }
+    return new BlockCacheKey(hfileName, block.getOffset());
+  }
+
   @Test
   public void testReaderWithoutBlockCache() throws Exception {
     int bufCount = 32;
@@ -184,8 +195,8 @@ public class TestHFile {
     HFile.Reader reader = HFile.createReader(fs, storeFilePath, cacheConfig, true, conf);
     long offset = 0;
     while (offset < reader.getTrailer().getLoadOnOpenDataOffset()) {
-      BlockCacheKey key = new BlockCacheKey(storeFilePath.getName(), offset);
       HFileBlock block = reader.readBlock(offset, -1, true, true, false, true, null, null);
+      BlockCacheKey key = cacheKeyFor(reader, block);
       offset += block.getOnDiskSizeWithHeader();
       // Ensure the block is an heap one.
       Cacheable cachedBlock = lru.getBlock(key, false, false, true);
@@ -220,7 +231,7 @@ public class TestHFile {
 
     // Read the first block in HFile from the block cache.
     final int offset = 0;
-    BlockCacheKey cacheKey = new BlockCacheKey(storeFilePath.getName(), offset);
+    BlockCacheKey cacheKey = new BlockCacheKey(reader.getName(), offset);
     HFileBlock block = (HFileBlock) lru.getBlock(cacheKey, false, false, true);
     Assert.assertNull(block);
 
@@ -235,14 +246,27 @@ public class TestHFile {
     // Read the first block from the HFile.
     block = reader.readBlock(offset, -1, true, true, false, true, BlockType.DATA, null);
     Assert.assertNotNull(block);
+    cacheKey = cacheKeyFor(reader, block);
     int bytesReadFromFs = block.getOnDiskSizeWithHeader();
     if (block.getNextBlockOnDiskSize() > 0) {
       bytesReadFromFs += block.headerSize();
     }
     block.release();
     // Assert that disk I/O happened to read the first block.
+    long bytesReadFromFsMetric = ThreadLocalServerSideScanMetrics.getBytesReadFromFsAndReset();
+    long effectiveBytesReadFromFs = bytesReadFromFsMetric;
+    if (isScanMetricsEnabled) {
+      if (bytesReadFromFsMetric < bytesReadFromFs) {
+        Assert.assertEquals(bytesReadFromFs, bytesReadFromFsMetric);
+      } else if (bytesReadFromFsMetric > bytesReadFromFs) {
+        long initializationBytes = bytesReadFromFsMetric - bytesReadFromFs;
+        Assert.assertEquals(HFile.MIN_FORMAT_VERSION_WITH_MULTI_TENANT,
+          reader.getTrailer().getMajorVersion());
+        effectiveBytesReadFromFs -= initializationBytes;
+      }
+    }
     Assert.assertEquals(isScanMetricsEnabled ? bytesReadFromFs : 0,
-      ThreadLocalServerSideScanMetrics.getBytesReadFromFsAndReset());
+      isScanMetricsEnabled ? effectiveBytesReadFromFs : bytesReadFromFsMetric);
     Assert.assertEquals(0, ThreadLocalServerSideScanMetrics.getBytesReadFromBlockCacheAndReset());
 
     // Read the first block again and assert that it has been cached in the block cache.
@@ -313,8 +337,8 @@ public class TestHFile {
     HFile.Reader reader = HFile.createReader(fs, storeFilePath, cacheConfig, true, conf);
     long offset = 0;
     while (offset < reader.getTrailer().getLoadOnOpenDataOffset()) {
-      BlockCacheKey key = new BlockCacheKey(storeFilePath.getName(), offset);
       HFileBlock block = reader.readBlock(offset, -1, true, true, false, true, null, null);
+      BlockCacheKey key = cacheKeyFor(reader, block);
       offset += block.getOnDiskSizeWithHeader();
       // Read the cached block.
       Cacheable cachedBlock = combined.getBlock(key, false, false, true);
@@ -1050,8 +1074,8 @@ public class TestHFile {
       Path f = new Path(ROOT_DIR, testName.getMethodName() + "_" + encoding);
       HFileContext context =
         new HFileContextBuilder().withIncludesTags(false).withDataBlockEncoding(encoding).build();
-      HFileWriterImpl writer = (HFileWriterImpl) HFile.getWriterFactory(conf, cacheConf)
-        .withPath(fs, f).withFileContext(context).create();
+      Writer writer =
+        HFile.getWriterFactory(conf, cacheConf).withPath(fs, f).withFileContext(context).create();
 
       KeyValue kv = new KeyValue(Bytes.toBytes("testkey1"), Bytes.toBytes("family"),
         Bytes.toBytes("qual"), Bytes.toBytes("testvalue"));
@@ -1114,8 +1138,8 @@ public class TestHFile {
     long offset = 0;
     Cacheable cachedBlock = null;
     while (offset < reader.getTrailer().getLoadOnOpenDataOffset()) {
-      BlockCacheKey key = new BlockCacheKey(storeFilePath.getName(), offset);
       HFileBlock block = reader.readBlock(offset, -1, true, true, false, true, null, null);
+      BlockCacheKey key = cacheKeyFor(reader, block);
       offset += block.getOnDiskSizeWithHeader();
       // Read the cached block.
       cachedBlock = combined.getBlock(key, false, false, true);
