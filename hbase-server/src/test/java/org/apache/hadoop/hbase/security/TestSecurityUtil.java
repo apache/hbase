@@ -457,17 +457,6 @@ public class TestSecurityUtil {
     }
 
     @Test
-    public void testWithoutKeyManagement_WithRandomKeyGeneration() throws IOException {
-      when(mockFamily.getEncryptionKey()).thenReturn(null);
-      configBuilder().withKeyManagement(false, false).apply(conf);
-
-      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, mockFamily,
-        mockManagedKeyDataCache, mockSystemKeyCache, TEST_NAMESPACE);
-
-      verifyContext(result, false);
-    }
-
-    @Test
     public void testWithUnavailableCipher() throws IOException {
       when(mockFamily.getEncryptionType()).thenReturn(UNKNOWN_CIPHER);
       setUpEncryptionConfigWithNullCipher();
@@ -529,7 +518,18 @@ public class TestSecurityUtil {
     }
 
     @Test
-    public void testBackwardsCompatibility_Scenario3_NoActiveKeyGenerateLocalKey() throws IOException {
+    public void testWithoutKeyManagement_Scenario3a_WithRandomKeyGeneration() throws IOException {
+      when(mockFamily.getEncryptionKey()).thenReturn(null);
+      configBuilder().withKeyManagement(false, false).apply(conf);
+
+      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, mockFamily,
+        mockManagedKeyDataCache, mockSystemKeyCache, TEST_NAMESPACE);
+
+      verifyContext(result, false);
+    }
+
+    @Test
+    public void testBackwardsCompatibility_Scenario3b_NoActiveKeyGenerateLocalKey() throws IOException {
       // Scenario 3: No active key -> generate random DEK, latest STK as KEK
       configBuilder().withKeyManagement(true, false).apply(conf);
       setupManagedKeyDataCache(TEST_NAMESPACE, ManagedKeyData.KEY_SPACE_GLOBAL, null); // No active key
@@ -556,6 +556,31 @@ public class TestSecurityUtil {
         mockManagedKeyDataCache, mockSystemKeyCache, TEST_NAMESPACE);
 
       verifyContext(result, false); // No key management, so no KEK data
+    }
+
+    @Test
+    public void testWithKeyManagement_FamilyKey_UnwrapKeyException() throws Exception {
+      // Test for KeyException->IOException wrapping when family has key bytes with key management enabled
+      // This covers the exception block at lines 103-105 in SecurityUtil.java
+
+      // Create a properly wrapped key first, then corrupt it to cause unwrapping failure
+      Key wrongKek = new SecretKeySpec("bad-kek-16-bytes".getBytes(), AES_CIPHER); // Exactly 16 bytes
+      byte[] validWrappedKey = EncryptionUtil.wrapKey(conf, null, testKey, wrongKek);
+
+      when(mockFamily.getEncryptionKey()).thenReturn(validWrappedKey);
+      configBuilder().withKeyManagement(true, false).apply(conf);
+      setupSystemKeyCache(mockManagedKeyData);
+      when(mockManagedKeyData.getTheKey()).thenReturn(kekKey); // Different KEK for unwrapping
+
+      IOException exception = assertThrows(IOException.class, () -> {
+        SecurityUtil.createEncryptionContext(conf, mockFamily, mockManagedKeyDataCache,
+          mockSystemKeyCache, TEST_NAMESPACE);
+      });
+
+      // The IOException should wrap a KeyException from the unwrapping process
+      assertNotNull("Exception should have a cause", exception.getCause());
+      assertTrue("Exception cause should be a KeyException",
+        exception.getCause() instanceof KeyException);
     }
 
     // Tests for the second createEncryptionContext method (for reading files)

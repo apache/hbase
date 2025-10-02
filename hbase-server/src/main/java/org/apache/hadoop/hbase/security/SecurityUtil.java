@@ -91,21 +91,19 @@ public class SecurityUtil {
       // Scenario 1: If family has a key, unwrap it and use that as DEK.
       byte[] familyKeyBytes = family.getEncryptionKey();
       if (familyKeyBytes != null) {
-        // Family provides specific key material
         try {
           if (isKeyManagementEnabled) {
             // Scenario 1a: If key management is enabled, use STK for both unwrapping and KEK.
             key = EncryptionUtil.unwrapKey(conf, null, familyKeyBytes, kekKeyData.getTheKey());
           } else {
-            // Scenario 1b: If key management is disabled, unwrap the key using master key directly.
+            // Scenario 1b: If key management is disabled, unwrap the key using master key.
             key = EncryptionUtil.unwrapKey(conf, familyKeyBytes);
-            kekKeyData = null;
           }
         } catch (KeyException e) {
           throw new IOException(e);
         }
       } else {
-        if (isKeyManagementEnabled(conf)) {
+        if (isKeyManagementEnabled) {
           boolean localKeyGenEnabled = conf.getBoolean(
               HConstants.CRYPTO_MANAGED_KEYS_LOCAL_KEY_GEN_PER_FILE_ENABLED_CONF_KEY,
               HConstants.CRYPTO_MANAGED_KEYS_LOCAL_KEY_GEN_PER_FILE_DEFAULT_ENABLED);
@@ -119,9 +117,8 @@ public class SecurityUtil {
             keyNamespace = ManagedKeyData.KEY_SPACE_GLOBAL;
           }
 
+          // Scenario 2: There is an active key
           if (activeKeyData != null) {
-            // Scenario 2: There is an active key
-
             if (!localKeyGenEnabled) {
               // Scenario 2a: Use active key as DEK and latest STK as KEK
               key = activeKeyData.getTheKey();
@@ -133,30 +130,25 @@ public class SecurityUtil {
               cipher = getCipherIfValid(conf, cipherName, activeKeyData.getTheKey(), family.getNameAsString());
             }
           }
-          if (activeKeyData == null) {
-            // Scenario 3: Generate a random key and use latest STK as KEK
-            cipher = getCipherIfValid(conf, cipherName, null, null);
-          }
-        } else {
-          // Key management disabled, generate random key and use master key as KEK
-          cipher = getCipherIfValid(conf, cipherName, null, null);
+        }
+        else {
+          // Scenario 3: Do nothing, let a random key be generated as DEK and if key management is enabled,
+          // let STK be used as KEK.
         }
       }
 
-      if (key != null || cipher != null) {
-        if (key == null) {
-          // Generate a random key when cipher is available
-          key = cipher.getRandomKey();
-        }
-        if (cipher == null) {
-          cipher = getCipherIfValid(conf, cipherName, key, family.getNameAsString());
-        }
-        cryptoContext = Encryption.newContext(conf);
-        cryptoContext.setCipher(cipher);
-        cryptoContext.setKey(key);
-        cryptoContext.setKeyNamespace(keyNamespace);
-        cryptoContext.setKEKData(kekKeyData);
+      if (cipher == null) {
+        cipher = getCipherIfValid(conf, cipherName, key,
+          key == null ? null : family.getNameAsString());
       }
+      if (key == null) {
+        key = cipher.getRandomKey();
+      }
+      cryptoContext = Encryption.newContext(conf);
+      cryptoContext.setCipher(cipher);
+      cryptoContext.setKey(key);
+      cryptoContext.setKeyNamespace(keyNamespace);
+      cryptoContext.setKEKData(kekKeyData);
     }
     return cryptoContext;
   }
