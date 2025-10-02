@@ -567,6 +567,7 @@ public class StoreFileWriter implements CellSink, ShipperListener {
   private static class SingleStoreFileWriter {
     private final BloomFilterWriter generalBloomFilterWriter;
     private final BloomFilterWriter deleteFamilyBloomFilterWriter;
+    private final boolean multiTenantWriter;
     private final BloomType bloomType;
     private byte[] bloomParam = null;
     private long deleteFamilyCnt = 0;
@@ -600,54 +601,67 @@ public class StoreFileWriter implements CellSink, ShipperListener {
         HFile.getWriterFactory(conf, cacheConf).withPath(fs, path).withFavoredNodes(favoredNodes)
           .withFileContext(fileContext).withShouldDropCacheBehind(shouldDropCacheBehind).create();
 
-      generalBloomFilterWriter = BloomFilterFactory.createGeneralBloomAtWrite(conf, cacheConf,
-        bloomType, (int) Math.min(maxKeys, Integer.MAX_VALUE), writer);
+      this.multiTenantWriter = writer instanceof org.apache.hadoop.hbase.io.hfile.MultiTenantHFileWriter;
 
-      if (generalBloomFilterWriter != null) {
+      if (multiTenantWriter) {
+        // Multi-tenant writer manages per-section bloom filters internally.
+        this.generalBloomFilterWriter = null;
+        this.deleteFamilyBloomFilterWriter = null;
         this.bloomType = bloomType;
-        this.bloomParam = BloomFilterUtil.getBloomFilterParam(bloomType, conf);
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("Bloom filter type for " + path + ": " + this.bloomType + ", param: "
-            + (bloomType == BloomType.ROWPREFIX_FIXED_LENGTH
-              ? Bytes.toInt(bloomParam)
-              : Bytes.toStringBinary(bloomParam))
-            + ", " + generalBloomFilterWriter.getClass().getSimpleName());
-        }
-        // init bloom context
-        switch (bloomType) {
-          case ROW:
-            bloomContext =
-              new RowBloomContext(generalBloomFilterWriter, fileContext.getCellComparator());
-            break;
-          case ROWCOL:
-            bloomContext =
-              new RowColBloomContext(generalBloomFilterWriter, fileContext.getCellComparator());
-            break;
-          case ROWPREFIX_FIXED_LENGTH:
-            bloomContext = new RowPrefixFixedLengthBloomContext(generalBloomFilterWriter,
-              fileContext.getCellComparator(), Bytes.toInt(bloomParam));
-            break;
-          default:
-            throw new IOException(
-              "Invalid Bloom filter type: " + bloomType + " (ROW or ROWCOL or ROWPREFIX expected)");
-        }
+        this.bloomParam = null;
       } else {
-        // Not using Bloom filters.
-        this.bloomType = BloomType.NONE;
-      }
+        generalBloomFilterWriter = BloomFilterFactory.createGeneralBloomAtWrite(conf, cacheConf,
+          bloomType, (int) Math.min(maxKeys, Integer.MAX_VALUE), writer);
 
-      // initialize delete family Bloom filter when there is NO RowCol Bloom filter
-      if (this.bloomType != BloomType.ROWCOL) {
-        this.deleteFamilyBloomFilterWriter = BloomFilterFactory.createDeleteBloomAtWrite(conf,
-          cacheConf, (int) Math.min(maxKeys, Integer.MAX_VALUE), writer);
-        deleteFamilyBloomContext =
-          new RowBloomContext(deleteFamilyBloomFilterWriter, fileContext.getCellComparator());
-      } else {
-        deleteFamilyBloomFilterWriter = null;
-      }
-      if (deleteFamilyBloomFilterWriter != null && LOG.isTraceEnabled()) {
-        LOG.trace("Delete Family Bloom filter type for " + path + ": "
-          + deleteFamilyBloomFilterWriter.getClass().getSimpleName());
+        if (generalBloomFilterWriter != null) {
+          this.bloomType = bloomType;
+          this.bloomParam = BloomFilterUtil.getBloomFilterParam(bloomType, conf);
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("Bloom filter type for " + path + ": " + this.bloomType + ", param: "
+              + (bloomType == BloomType.ROWPREFIX_FIXED_LENGTH
+                ? Bytes.toInt(bloomParam)
+                : Bytes.toStringBinary(bloomParam))
+              + ", " + generalBloomFilterWriter.getClass().getSimpleName());
+          }
+          // init bloom context
+          switch (bloomType) {
+            case ROW:
+              bloomContext =
+                new RowBloomContext(generalBloomFilterWriter, fileContext.getCellComparator());
+              break;
+            case ROWCOL:
+              bloomContext = new RowColBloomContext(generalBloomFilterWriter,
+                fileContext.getCellComparator());
+              break;
+            case ROWPREFIX_FIXED_LENGTH:
+              bloomContext = new RowPrefixFixedLengthBloomContext(generalBloomFilterWriter,
+                fileContext.getCellComparator(), Bytes.toInt(bloomParam));
+              break;
+            default:
+              throw new IOException("Invalid Bloom filter type: " + bloomType
+                + " (ROW or ROWCOL or ROWPREFIX expected)");
+          }
+        } else {
+          // Not using Bloom filters.
+          this.bloomType = BloomType.NONE;
+          this.bloomParam = null;
+        }
+
+        // initialize delete family Bloom filter when there is NO RowCol Bloom filter
+        if (this.bloomType != BloomType.ROWCOL) {
+          this.deleteFamilyBloomFilterWriter = BloomFilterFactory.createDeleteBloomAtWrite(conf,
+            cacheConf, (int) Math.min(maxKeys, Integer.MAX_VALUE), writer);
+          if (deleteFamilyBloomFilterWriter != null) {
+            deleteFamilyBloomContext =
+              new RowBloomContext(deleteFamilyBloomFilterWriter, fileContext.getCellComparator());
+          }
+        } else {
+          this.deleteFamilyBloomFilterWriter = null;
+        }
+        if (deleteFamilyBloomFilterWriter != null && LOG.isTraceEnabled()) {
+          LOG.trace("Delete Family Bloom filter type for " + path + ": "
+            + deleteFamilyBloomFilterWriter.getClass().getSimpleName());
+        }
       }
     }
 
@@ -800,6 +814,10 @@ public class StoreFileWriter implements CellSink, ShipperListener {
     }
 
     private boolean closeDeleteFamilyBloomFilter() throws IOException {
+      if (multiTenantWriter) {
+        // Multi-tenant writer already attached delete-family blooms per section.
+        return false;
+      }
       boolean hasDeleteFamilyBloom = closeBloomFilter(deleteFamilyBloomFilterWriter);
 
       // add the delete family Bloom filter writer

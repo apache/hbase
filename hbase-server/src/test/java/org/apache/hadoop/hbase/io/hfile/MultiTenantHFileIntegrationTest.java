@@ -24,7 +24,9 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -38,6 +40,7 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -88,6 +91,7 @@ public class MultiTenantHFileIntegrationTest {
   private static final String[] TENANTS =
     { "T01", "T02", "T03", "T04", "T05", "T06", "T07", "T08", "T09", "T10" };
   private static final int[] ROWS_PER_TENANT = { 5, 8, 12, 3, 15, 7, 20, 6, 10, 14 };
+  private static final Map<String, Integer> TENANT_DELETE_FAMILY_COUNTS = new HashMap<>();
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -224,10 +228,13 @@ public class MultiTenantHFileIntegrationTest {
       Table table = connection.getTable(TABLE_NAME)) {
 
       List<Put> batchPuts = new ArrayList<>();
+      List<Delete> batchDeletes = new ArrayList<>();
+      TENANT_DELETE_FAMILY_COUNTS.clear();
 
       LOG.info("Generating test data for {} tenants:", TENANTS.length);
       for (int tenantIndex = 0; tenantIndex < TENANTS.length; tenantIndex++) {
         String tenantId = TENANTS[tenantIndex];
+        TENANT_DELETE_FAMILY_COUNTS.put(tenantId, 0);
         int rowsForThisTenant = ROWS_PER_TENANT[tenantIndex];
         LOG.info("  - Tenant {}: {} rows", tenantId, rowsForThisTenant);
 
@@ -238,11 +245,22 @@ public class MultiTenantHFileIntegrationTest {
           String cellValue = String.format("value_tenant-%s_row-%03d", tenantId, rowIndex);
           putOperation.addColumn(FAMILY, QUALIFIER, Bytes.toBytes(cellValue));
           batchPuts.add(putOperation);
+
+          if (rowIndex == 0 || rowIndex == rowsForThisTenant - 1) {
+            Delete delete = new Delete(Bytes.toBytes(rowKey));
+            delete.addFamily(FAMILY, 0L);
+            batchDeletes.add(delete);
+            TENANT_DELETE_FAMILY_COUNTS.merge(tenantId, 1, Integer::sum);
+          }
         }
       }
 
       LOG.info("Writing {} total rows to table in batch operation", batchPuts.size());
       table.put(batchPuts);
+      if (!batchDeletes.isEmpty()) {
+        LOG.info("Writing {} delete family markers with timestamp 0", batchDeletes.size());
+        table.delete(batchDeletes);
+      }
       LOG.info("Successfully wrote all test data to table {}", TABLE_NAME);
     }
   }
@@ -665,6 +683,16 @@ public class MultiTenantHFileIntegrationTest {
               HFileReaderImpl sectionHFileReader =
                 (HFileReaderImpl) getReaderMethod.invoke(sectionReader);
 
+              HFileInfo sectionInfo = sectionHFileReader.getHFileInfo();
+              byte[] deleteCountBytes =
+                sectionInfo.get(org.apache.hadoop.hbase.regionserver.HStoreFile.DELETE_FAMILY_COUNT);
+              if (deleteCountBytes != null) {
+                long deleteCount = Bytes.toLong(deleteCountBytes);
+                int expectedCount = TENANT_DELETE_FAMILY_COUNTS.getOrDefault(tenantId, 0);
+                assertEquals("Delete family count mismatch for tenant " + tenantId, expectedCount,
+                  deleteCount);
+              }
+
               HFileScanner sectionScanner = sectionHFileReader.getScanner(conf, false, false);
 
               boolean hasData = sectionScanner.seekTo();
@@ -673,16 +701,18 @@ public class MultiTenantHFileIntegrationTest {
                 do {
                   Cell cell = sectionScanner.getCell();
                   if (cell != null) {
-                    sectionCellCount++;
-                    totalCellsInThisFile++;
-
-                    // Verify tenant prefix matches section ID
+                    // Verify tenant prefix matches section ID for every entry
                     byte[] rowKeyBytes = CellUtil.cloneRow(cell);
                     byte[] rowTenantPrefix = new byte[TENANT_PREFIX_LENGTH];
                     System.arraycopy(rowKeyBytes, 0, rowTenantPrefix, 0, TENANT_PREFIX_LENGTH);
 
                     assertTrue("Row tenant prefix should match section ID",
                       Bytes.equals(tenantSectionId, rowTenantPrefix));
+
+                    if (cell.getType() == Cell.Type.Put) {
+                      sectionCellCount++;
+                      totalCellsInThisFile++;
+                    }
                   }
                 } while (sectionScanner.next());
 
@@ -731,6 +761,10 @@ public class MultiTenantHFileIntegrationTest {
       LOG.warn("    - HFile info is null - cannot verify metadata");
       return;
     }
+
+    FixedFileTrailer trailer = reader.getTrailer();
+    assertEquals("Load-on-open offset should match section index offset for v4 container",
+      trailer.getSectionIndexOffset(), trailer.getLoadOnOpenDataOffset());
 
     // Verify section count metadata
     byte[] sectionCountBytes =
