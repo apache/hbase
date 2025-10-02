@@ -479,9 +479,28 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
         responseSize += call.getResponseCellSize();
       }
 
-      metrics.dequeuedCall(qTime);
-      metrics.processedCall(processingTime);
-      metrics.totalCall(totalTime);
+      switch (call.getCallType()) {
+        case READ:
+          metrics.dequeuedReadCall(qTime);
+          metrics.processReadCall(processingTime);
+          metrics.totalReadCall(totalTime);
+          break;
+        case WRITE:
+          metrics.dequeuedWriteCall(qTime);
+          metrics.processWriteCall(processingTime);
+          metrics.totalWriteCall(totalTime);
+          break;
+        case SCAN:
+          metrics.dequeuedScanCall(qTime);
+          metrics.processScanCall(processingTime);
+          metrics.totalScanCall(totalTime);
+          break;
+        default:
+          metrics.dequeuedCall(qTime);
+          metrics.processedCall(processingTime);
+          metrics.totalCall(totalTime);
+          break;
+      }
       metrics.receivedRequest(requestSize);
       metrics.sentResponse(responseSize);
       // log any RPC responses that are slower than the configured warn
