@@ -98,8 +98,7 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
   private static final String SECTION_READER_CACHE_EXPIRE_MS =
     "hbase.multi.tenant.reader.section.cache.expire.ms";
   /** Default idle eviction (1 minute) */
-  private static final long DEFAULT_SECTION_READER_CACHE_EXPIRE_MS =
-    TimeUnit.MINUTES.toMillis(1);
+  private static final long DEFAULT_SECTION_READER_CACHE_EXPIRE_MS = TimeUnit.MINUTES.toMillis(1);
 
   /** Private map to store section metadata */
   private final Map<ImmutableBytesWritable, SectionMetadata> sectionLocations =
@@ -247,12 +246,12 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
       tenantIndexMaxChunkSize, numSections);
   }
 
-  private Cache<ImmutableBytesWritable, SectionReaderHolder> createSectionReaderCache(
-    Configuration conf) {
-    int maxSize = Math.max(1, conf.getInt(SECTION_READER_CACHE_MAX_SIZE,
-      DEFAULT_SECTION_READER_CACHE_MAX_SIZE));
-    long expireMs = conf.getLong(SECTION_READER_CACHE_EXPIRE_MS,
-      DEFAULT_SECTION_READER_CACHE_EXPIRE_MS);
+  private Cache<ImmutableBytesWritable, SectionReaderHolder>
+    createSectionReaderCache(Configuration conf) {
+    int maxSize = Math.max(1,
+      conf.getInt(SECTION_READER_CACHE_MAX_SIZE, DEFAULT_SECTION_READER_CACHE_MAX_SIZE));
+    long expireMs =
+      conf.getLong(SECTION_READER_CACHE_EXPIRE_MS, DEFAULT_SECTION_READER_CACHE_EXPIRE_MS);
 
     CacheBuilder<Object, Object> builder = CacheBuilder.newBuilder().maximumSize(maxSize);
     if (expireMs > 0) {
@@ -471,7 +470,8 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
         throw (IOException) cause;
       }
       throw new IOException(
-        "Failed to create section reader for tenant " + Bytes.toStringBinary(tenantSectionId), cause);
+        "Failed to create section reader for tenant " + Bytes.toStringBinary(tenantSectionId),
+        cause);
     }
   }
 
@@ -632,17 +632,17 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
         try {
           sectionReader.close(evictOnClose);
         } catch (IOException e) {
-          LOG.warn("Failed to close section reader {}", Bytes.toStringBinary(sectionReader.tenantSectionId),
-            e);
+          LOG.warn("Failed to close section reader {}",
+            Bytes.toStringBinary(sectionReader.tenantSectionId), e);
         }
       }
     }
 
     @Override
     public String toString() {
-      return "SectionReaderHolder{" + "tenant=" + Bytes.toStringBinary(sectionReader.tenantSectionId)
-        + ", refCount=" + refCount.get() + ", evicted=" + evicted.get() + ", closed="
-        + closed.get() + '}';
+      return "SectionReaderHolder{" + "tenant="
+        + Bytes.toStringBinary(sectionReader.tenantSectionId) + ", refCount=" + refCount.get()
+        + ", evicted=" + evicted.get() + ", closed=" + closed.get() + '}';
     }
   }
 
@@ -763,8 +763,7 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
         currentSectionReader = newLease.getSectionReader();
         currentTenantSectionId = sectionId;
         try {
-          currentScanner =
-            currentSectionReader.getScanner(conf, cacheBlocks, pread, isCompaction);
+          currentScanner = currentSectionReader.getScanner(conf, cacheBlocks, pread, isCompaction);
         } catch (IOException | RuntimeException e) {
           currentSectionLease.close();
           currentSectionLease = null;
@@ -891,7 +890,8 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
             return 1;
           }
         } catch (IOException e) {
-          LOG.warn("Failed to retrieve last key from section {}", Bytes.toStringBinary(prevSectionId), e);
+          LOG.warn("Failed to retrieve last key from section {}",
+            Bytes.toStringBinary(prevSectionId), e);
         }
       }
       seeked = false;

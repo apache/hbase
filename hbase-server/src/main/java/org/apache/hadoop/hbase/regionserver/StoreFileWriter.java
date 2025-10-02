@@ -601,7 +601,8 @@ public class StoreFileWriter implements CellSink, ShipperListener {
         HFile.getWriterFactory(conf, cacheConf).withPath(fs, path).withFavoredNodes(favoredNodes)
           .withFileContext(fileContext).withShouldDropCacheBehind(shouldDropCacheBehind).create();
 
-      this.multiTenantWriter = writer instanceof org.apache.hadoop.hbase.io.hfile.MultiTenantHFileWriter;
+      this.multiTenantWriter =
+        writer instanceof org.apache.hadoop.hbase.io.hfile.MultiTenantHFileWriter;
 
       if (multiTenantWriter) {
         // Multi-tenant writer manages per-section bloom filters internally.
@@ -630,8 +631,8 @@ public class StoreFileWriter implements CellSink, ShipperListener {
                 new RowBloomContext(generalBloomFilterWriter, fileContext.getCellComparator());
               break;
             case ROWCOL:
-              bloomContext = new RowColBloomContext(generalBloomFilterWriter,
-                fileContext.getCellComparator());
+              bloomContext =
+                new RowColBloomContext(generalBloomFilterWriter, fileContext.getCellComparator());
               break;
             case ROWPREFIX_FIXED_LENGTH:
               bloomContext = new RowPrefixFixedLengthBloomContext(generalBloomFilterWriter,

@@ -760,8 +760,8 @@ public class HFilePrettyPrinter extends Configured implements Tool {
       out.println(
         FOUR_SPACES + "--- Section " + i + ": " + Bytes.toStringBinary(sectionId) + " ---");
 
-      try (AbstractMultiTenantReader.SectionReaderLease lease =
-        mtReader.getSectionReader(sectionId)) {
+      try (
+        AbstractMultiTenantReader.SectionReaderLease lease = mtReader.getSectionReader(sectionId)) {
         if (lease != null) {
           HFileReaderImpl sectionHFileReader = lease.getReader();
           if (sectionHFileReader != null) {
@@ -813,8 +813,8 @@ public class HFilePrettyPrinter extends Configured implements Tool {
       out.println(
         FOUR_SPACES + "--- Section " + i + ": " + Bytes.toStringBinary(sectionId) + " ---");
 
-      try (AbstractMultiTenantReader.SectionReaderLease lease =
-        mtReader.getSectionReader(sectionId)) {
+      try (
+        AbstractMultiTenantReader.SectionReaderLease lease = mtReader.getSectionReader(sectionId)) {
         if (lease != null) {
           HFileReaderImpl sectionHFileReader = lease.getReader();
           if (sectionHFileReader != null) {
@@ -895,8 +895,8 @@ public class HFilePrettyPrinter extends Configured implements Tool {
       out.println(
         FOUR_SPACES + "--- Section " + i + ": " + Bytes.toStringBinary(sectionId) + " ---");
 
-      try (AbstractMultiTenantReader.SectionReaderLease lease =
-        mtReader.getSectionReader(sectionId)) {
+      try (
+        AbstractMultiTenantReader.SectionReaderLease lease = mtReader.getSectionReader(sectionId)) {
         if (lease != null) {
           HFileReaderImpl sectionHFileReader = lease.getReader();
           if (sectionHFileReader != null) {

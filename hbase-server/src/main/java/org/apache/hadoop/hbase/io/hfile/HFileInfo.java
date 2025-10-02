@@ -373,14 +373,16 @@ public class HFileInfo implements SortedMap<byte[], byte[]> {
     try {
       HFileBlock.FSReader blockReader = reader.getUncachedBlockReader();
       long loadOnOpenOffset = trailer.getLoadOnOpenDataOffset();
-      if (trailer.getMajorVersion() == HFile.MIN_FORMAT_VERSION_WITH_MULTI_TENANT
-        && trailer.getSectionIndexOffset() >= 0) {
+      if (
+        trailer.getMajorVersion() == HFile.MIN_FORMAT_VERSION_WITH_MULTI_TENANT
+          && trailer.getSectionIndexOffset() >= 0
+      ) {
         loadOnOpenOffset = trailer.getSectionIndexOffset();
       }
 
       // Initialize an block iterator, and parse load-on-open blocks in the following.
-      blockIter = blockReader.blockRange(loadOnOpenOffset,
-        context.getFileSize() - trailer.getTrailerSize());
+      blockIter =
+        blockReader.blockRange(loadOnOpenOffset, context.getFileSize() - trailer.getTrailerSize());
       // Data index. We also read statistics about the block index written after
       // the root level.
       HFileBlock dataBlockRootIndex = blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX);
