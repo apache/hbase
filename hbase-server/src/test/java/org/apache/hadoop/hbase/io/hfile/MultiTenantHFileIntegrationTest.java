@@ -762,10 +762,6 @@ public class MultiTenantHFileIntegrationTest {
       return;
     }
 
-    FixedFileTrailer trailer = reader.getTrailer();
-    assertEquals("Load-on-open offset should match section index offset for v4 container",
-      trailer.getSectionIndexOffset(), trailer.getLoadOnOpenDataOffset());
-
     // Verify section count metadata
     byte[] sectionCountBytes =
       fileInfo.get(Bytes.toBytes(MultiTenantHFileWriter.FILEINFO_SECTION_COUNT));

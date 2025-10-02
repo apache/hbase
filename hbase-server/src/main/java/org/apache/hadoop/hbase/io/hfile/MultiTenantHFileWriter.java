@@ -152,6 +152,8 @@ public class MultiTenantHFileWriter implements HFile.Writer {
   /** Total uncompressed bytes */
   private long totalUncompressedBytes = 0;
 
+  /** Absolute offset where each section's load-on-open data begins (max across sections) */
+  private long maxSectionDataEndOffset = 0;
   /** Absolute offset where the global section index root block starts */
   private long sectionIndexRootOffset = -1;
   /** HFile v4 trailer */
@@ -502,6 +504,11 @@ public class MultiTenantHFileWriter implements HFile.Writer {
         outputStream.flush();
       }
 
+      long sectionDataEnd = currentSectionWriter.getSectionDataEndOffset();
+      if (sectionDataEnd >= 0) {
+        maxSectionDataEndOffset = Math.max(maxSectionDataEndOffset, sectionDataEnd);
+      }
+
       // Get current position to calculate section size
       long sectionEndOffset = outputStream.getPos();
       long sectionSize = sectionEndOffset - sectionStartOffset;
@@ -704,7 +711,12 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     long rootIndexOffset = sectionIndexWriter.writeIndexBlocks(outputStream);
     sectionIndexRootOffset = rootIndexOffset;
     trailer.setSectionIndexOffset(sectionIndexRootOffset);
-    trailer.setLoadOnOpenOffset(sectionIndexRootOffset);
+    long loadOnOpenOffset = maxSectionDataEndOffset > 0 ? maxSectionDataEndOffset : rootIndexOffset;
+    if (loadOnOpenOffset > rootIndexOffset) {
+      // Clamp to ensure we never point past the actual section index start.
+      loadOnOpenOffset = rootIndexOffset;
+    }
+    trailer.setLoadOnOpenOffset(loadOnOpenOffset);
 
     // 2. Write File Info Block (minimal v4-specific metadata)
     LOG.info("Writing v4 file info");
