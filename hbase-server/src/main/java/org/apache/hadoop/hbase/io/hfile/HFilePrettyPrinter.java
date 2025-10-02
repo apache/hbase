@@ -760,11 +760,10 @@ public class HFilePrettyPrinter extends Configured implements Tool {
       out.println(
         FOUR_SPACES + "--- Section " + i + ": " + Bytes.toStringBinary(sectionId) + " ---");
 
-      try {
-        AbstractMultiTenantReader.SectionReader sectionReader =
-          mtReader.getSectionReader(sectionId);
-        if (sectionReader != null) {
-          HFileReaderImpl sectionHFileReader = sectionReader.getReader();
+      try (AbstractMultiTenantReader.SectionReaderLease lease =
+        mtReader.getSectionReader(sectionId)) {
+        if (lease != null) {
+          HFileReaderImpl sectionHFileReader = lease.getReader();
           if (sectionHFileReader != null) {
             FixedFileTrailer sectionTrailer = sectionHFileReader.getTrailer();
             if (sectionTrailer != null) {
@@ -814,11 +813,10 @@ public class HFilePrettyPrinter extends Configured implements Tool {
       out.println(
         FOUR_SPACES + "--- Section " + i + ": " + Bytes.toStringBinary(sectionId) + " ---");
 
-      try {
-        AbstractMultiTenantReader.SectionReader sectionReader =
-          mtReader.getSectionReader(sectionId);
-        if (sectionReader != null) {
-          HFileReaderImpl sectionHFileReader = sectionReader.getReader();
+      try (AbstractMultiTenantReader.SectionReaderLease lease =
+        mtReader.getSectionReader(sectionId)) {
+        if (lease != null) {
+          HFileReaderImpl sectionHFileReader = lease.getReader();
           if (sectionHFileReader != null) {
             Map<byte[], byte[]> sectionFileInfo = sectionHFileReader.getHFileInfo();
             if (sectionFileInfo != null && !sectionFileInfo.isEmpty()) {
@@ -897,11 +895,10 @@ public class HFilePrettyPrinter extends Configured implements Tool {
       out.println(
         FOUR_SPACES + "--- Section " + i + ": " + Bytes.toStringBinary(sectionId) + " ---");
 
-      try {
-        AbstractMultiTenantReader.SectionReader sectionReader =
-          mtReader.getSectionReader(sectionId);
-        if (sectionReader != null) {
-          HFileReaderImpl sectionHFileReader = sectionReader.getReader();
+      try (AbstractMultiTenantReader.SectionReaderLease lease =
+        mtReader.getSectionReader(sectionId)) {
+        if (lease != null) {
+          HFileReaderImpl sectionHFileReader = lease.getReader();
           if (sectionHFileReader != null) {
 
             // Print general bloom filter for this section
@@ -1053,11 +1050,10 @@ public class HFilePrettyPrinter extends Configured implements Tool {
               }
 
               // Get the actual block index from the section reader
-              try {
-                AbstractMultiTenantReader.SectionReader sectionReader =
-                  mtReader.getSectionReader(sectionId);
-                if (sectionReader != null) {
-                  HFileReaderImpl sectionHFileReader = sectionReader.getReader();
+              try (AbstractMultiTenantReader.SectionReaderLease lease =
+                mtReader.getSectionReader(sectionId)) {
+                if (lease != null) {
+                  HFileReaderImpl sectionHFileReader = lease.getReader();
                   if (sectionHFileReader != null) {
                     HFileBlockIndex.CellBasedKeyBlockIndexReader indexReader =
                       sectionHFileReader.getDataBlockIndexReader();
@@ -1143,11 +1139,10 @@ public class HFilePrettyPrinter extends Configured implements Tool {
               }
 
               // Get the actual block headers from the section reader
-              try {
-                AbstractMultiTenantReader.SectionReader sectionReader =
-                  mtReader.getSectionReader(sectionId);
-                if (sectionReader != null) {
-                  HFileReaderImpl sectionHFileReader = sectionReader.getReader();
+              try (AbstractMultiTenantReader.SectionReaderLease lease =
+                mtReader.getSectionReader(sectionId)) {
+                if (lease != null) {
+                  HFileReaderImpl sectionHFileReader = lease.getReader();
                   if (sectionHFileReader != null) {
                     out.println(FOUR_SPACES + FOUR_SPACES + "Block headers:");
                     // Create a section-specific path for block header reading

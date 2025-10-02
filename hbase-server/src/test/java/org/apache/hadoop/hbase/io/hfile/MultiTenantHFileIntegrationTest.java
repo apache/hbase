@@ -675,50 +675,50 @@ public class MultiTenantHFileIntegrationTest {
             java.lang.reflect.Method getSectionReaderMethod =
               AbstractMultiTenantReader.class.getDeclaredMethod("getSectionReader", byte[].class);
             getSectionReaderMethod.setAccessible(true);
-            Object sectionReader = getSectionReaderMethod.invoke(mtReader, tenantSectionId);
+            Object sectionReaderLeaseObj = getSectionReaderMethod.invoke(mtReader, tenantSectionId);
 
-            if (sectionReader != null) {
-              java.lang.reflect.Method getReaderMethod =
-                sectionReader.getClass().getMethod("getReader");
-              HFileReaderImpl sectionHFileReader =
-                (HFileReaderImpl) getReaderMethod.invoke(sectionReader);
+            if (sectionReaderLeaseObj != null) {
+              try (AbstractMultiTenantReader.SectionReaderLease lease =
+                (AbstractMultiTenantReader.SectionReaderLease) sectionReaderLeaseObj) {
+                HFileReaderImpl sectionHFileReader = lease.getReader();
 
-              HFileInfo sectionInfo = sectionHFileReader.getHFileInfo();
-              byte[] deleteCountBytes =
-                sectionInfo.get(org.apache.hadoop.hbase.regionserver.HStoreFile.DELETE_FAMILY_COUNT);
-              if (deleteCountBytes != null) {
-                long deleteCount = Bytes.toLong(deleteCountBytes);
-                int expectedCount = TENANT_DELETE_FAMILY_COUNTS.getOrDefault(tenantId, 0);
-                assertEquals("Delete family count mismatch for tenant " + tenantId, expectedCount,
-                  deleteCount);
-              }
+                HFileInfo sectionInfo = sectionHFileReader.getHFileInfo();
+                byte[] deleteCountBytes = sectionInfo
+                  .get(org.apache.hadoop.hbase.regionserver.HStoreFile.DELETE_FAMILY_COUNT);
+                if (deleteCountBytes != null) {
+                  long deleteCount = Bytes.toLong(deleteCountBytes);
+                  int expectedCount = TENANT_DELETE_FAMILY_COUNTS.getOrDefault(tenantId, 0);
+                  assertEquals("Delete family count mismatch for tenant " + tenantId, expectedCount,
+                    deleteCount);
+                }
 
-              HFileScanner sectionScanner = sectionHFileReader.getScanner(conf, false, false);
+                HFileScanner sectionScanner = sectionHFileReader.getScanner(conf, false, false);
 
-              boolean hasData = sectionScanner.seekTo();
-              if (hasData) {
-                int sectionCellCount = 0;
-                do {
-                  Cell cell = sectionScanner.getCell();
-                  if (cell != null) {
-                    // Verify tenant prefix matches section ID for every entry
-                    byte[] rowKeyBytes = CellUtil.cloneRow(cell);
-                    byte[] rowTenantPrefix = new byte[TENANT_PREFIX_LENGTH];
-                    System.arraycopy(rowKeyBytes, 0, rowTenantPrefix, 0, TENANT_PREFIX_LENGTH);
+                boolean hasData = sectionScanner.seekTo();
+                if (hasData) {
+                  int sectionCellCount = 0;
+                  do {
+                    Cell cell = sectionScanner.getCell();
+                    if (cell != null) {
+                      // Verify tenant prefix matches section ID for every entry
+                      byte[] rowKeyBytes = CellUtil.cloneRow(cell);
+                      byte[] rowTenantPrefix = new byte[TENANT_PREFIX_LENGTH];
+                      System.arraycopy(rowKeyBytes, 0, rowTenantPrefix, 0, TENANT_PREFIX_LENGTH);
 
-                    assertTrue("Row tenant prefix should match section ID",
-                      Bytes.equals(tenantSectionId, rowTenantPrefix));
+                      assertTrue("Row tenant prefix should match section ID",
+                        Bytes.equals(tenantSectionId, rowTenantPrefix));
 
-                    if (cell.getType() == Cell.Type.Put) {
-                      sectionCellCount++;
-                      totalCellsInThisFile++;
+                      if (cell.getType() == Cell.Type.Put) {
+                        sectionCellCount++;
+                        totalCellsInThisFile++;
+                      }
                     }
-                  }
-                } while (sectionScanner.next());
+                  } while (sectionScanner.next());
 
-                assertTrue("Should have found data in tenant section", sectionCellCount > 0);
-                sectionsWithData++;
-                LOG.info("    Section {}: {} cells", tenantId, sectionCellCount);
+                  assertTrue("Should have found data in tenant section", sectionCellCount > 0);
+                  sectionsWithData++;
+                  LOG.info("    Section {}: {} cells", tenantId, sectionCellCount);
+                }
               }
             }
           } catch (Exception e) {
