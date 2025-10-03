@@ -23,6 +23,7 @@ import static org.apache.hadoop.hbase.io.hfile.HFileWriterImpl.KEY_VALUE_VER_WIT
 
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -877,8 +878,20 @@ public class MultiTenantHFileWriter implements HFile.Writer {
 
   @Override
   public void appendMetaBlock(String metaBlockName, Writable content) {
-    if (currentSectionWriter != null) {
+    try {
+      if (currentSectionWriter == null) {
+        if (sectionCount == 0) {
+          LOG.debug("No section available when appending meta block {}; creating default section",
+            metaBlockName);
+          createNewSection(DEFAULT_TENANT_PREFIX, DEFAULT_TENANT_PREFIX);
+        } else {
+          throw new IllegalStateException(
+            "Active section expected when appending meta block " + metaBlockName);
+        }
+      }
       currentSectionWriter.appendMetaBlock(metaBlockName, content);
+    } catch (IOException e) {
+      throw new UncheckedIOException("Failed to append meta block " + metaBlockName, e);
     }
   }
 

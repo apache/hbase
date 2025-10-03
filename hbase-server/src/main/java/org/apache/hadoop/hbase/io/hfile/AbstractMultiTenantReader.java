@@ -30,6 +30,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.hbase.ExtendedCell;
@@ -100,6 +101,12 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
   /** Default maximum cache entries */
   private static final int DEFAULT_META_BLOCK_CACHE_MAX_SIZE = 256;
 
+  /** Configuration key controlling data block index lookup caching */
+  private static final String DATA_BLOCK_INDEX_CACHE_ENABLED =
+    "hbase.multi.tenant.reader.data.index.cache.enabled";
+  /** Default flag enabling data block index cache */
+  private static final boolean DEFAULT_DATA_BLOCK_INDEX_CACHE_ENABLED = true;
+
   /** Configuration key for the maximum number of cached section readers */
   private static final String SECTION_READER_CACHE_MAX_SIZE =
     "hbase.multi.tenant.reader.section.cache.max";
@@ -130,6 +137,10 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
   private final boolean metaBlockCacheEnabled;
   /** Cache for meta block name to section mapping */
   private final Cache<String, ImmutableBytesWritable> metaBlockSectionCache;
+  /** Whether we cache data block index section hints */
+  private final boolean dataBlockIndexCacheEnabled;
+  /** Cached section hint for data block index lookup */
+  private final AtomicReference<byte[]> dataBlockIndexSectionHint;
 
   /**
    * Constructor for multi-tenant reader.
@@ -173,6 +184,10 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
     } else {
       this.metaBlockSectionCache = null;
     }
+
+    this.dataBlockIndexCacheEnabled =
+      conf.getBoolean(DATA_BLOCK_INDEX_CACHE_ENABLED, DEFAULT_DATA_BLOCK_INDEX_CACHE_ENABLED);
+    this.dataBlockIndexSectionHint = new AtomicReference<>();
 
     LOG.info("Initialized multi-tenant reader for {}", context.getFilePath());
   }
@@ -1369,6 +1384,29 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
     return null;
   }
 
+  private HFileBlockIndex.CellBasedKeyBlockIndexReader
+    loadDataBlockIndexFromSection(byte[] sectionId) {
+    try (SectionReaderLease lease = getSectionReader(sectionId)) {
+      if (lease == null) {
+        return null;
+      }
+      HFileReaderImpl reader = lease.getReader();
+      HFileBlockIndex.CellBasedKeyBlockIndexReader delegate = reader.getDataBlockIndexReader();
+      if (delegate != null) {
+        setDataBlockIndexReader(delegate);
+        return delegate;
+      }
+    } catch (IOException e) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Failed to load data block index from section {}",
+          Bytes.toStringBinary(sectionId), e);
+      } else {
+        LOG.warn("Failed to load data block index from section", e);
+      }
+    }
+    return null;
+  }
+
   private HFileBlock loadMetaBlockFromSection(byte[] sectionId, String metaBlockName,
     boolean cacheBlock) throws IOException {
     try (SectionReaderLease lease = getSectionReader(sectionId)) {
@@ -1781,33 +1819,39 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
    */
   @Override
   public HFileBlockIndex.CellBasedKeyBlockIndexReader getDataBlockIndexReader() {
-    // If already initialized by a previous call, return it
     HFileBlockIndex.CellBasedKeyBlockIndexReader existing = super.getDataBlockIndexReader();
     if (existing != null) {
       return existing;
     }
 
-    // Only provide a delegating index reader for single-section files
-    if (sectionLocations.size() == 1) {
-      try {
-        // Resolve the sole section reader
-        byte[] sectionId = sectionIds.get(0).get();
-        try (SectionReaderLease lease = getSectionReader(sectionId)) {
-          if (lease == null) {
-            return null;
-          }
-          HFileReaderImpl inner = lease.getReader();
-          HFileBlockIndex.CellBasedKeyBlockIndexReader delegate = inner.getDataBlockIndexReader();
-          // Cache on this reader so subsequent calls are fast and callers see a stable instance
-          setDataBlockIndexReader(delegate);
-          return delegate;
+    byte[] hint = dataBlockIndexSectionHint.get();
+    if (hint != null) {
+      HFileBlockIndex.CellBasedKeyBlockIndexReader delegate = loadDataBlockIndexFromSection(hint);
+      if (delegate != null) {
+        return delegate;
+      }
+      dataBlockIndexSectionHint.compareAndSet(hint, null);
+    }
+
+    if (sectionIds == null || sectionIds.isEmpty()) {
+      return null;
+    }
+
+    for (ImmutableBytesWritable sectionId : sectionIds) {
+      byte[] candidateSectionId = copySectionId(sectionId);
+      if (hint != null && Bytes.equals(candidateSectionId, hint)) {
+        continue;
+      }
+      HFileBlockIndex.CellBasedKeyBlockIndexReader delegate =
+        loadDataBlockIndexFromSection(candidateSectionId);
+      if (delegate != null) {
+        if (dataBlockIndexCacheEnabled) {
+          dataBlockIndexSectionHint.compareAndSet(null, candidateSectionId);
         }
-      } catch (IOException e) {
-        LOG.warn("Failed to obtain section data block index reader for v3 compatibility", e);
+        return delegate;
       }
     }
 
-    // Multi-section containers intentionally do not expose a global data index
     return null;
   }
 
