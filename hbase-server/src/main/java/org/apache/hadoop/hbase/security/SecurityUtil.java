@@ -174,14 +174,29 @@ public class SecurityUtil {
       cryptoContext = Encryption.newContext(conf);
       Key kek = null;
 
-      // When the KEK metadata is available, we will try to unwrap using managed key data cache
+      // When there is key material, determine the appropriate KEK
       boolean isKeyManagementEnabled = SecurityUtil.isKeyManagementEnabled(conf);
-      if (isKeyManagementEnabled && systemKeyCache == null) {
-        throw new IOException("Key management is enabled, but SystemKeyCache is null");
+      if (((trailer.getKEKChecksum() != 0L) || isKeyManagementEnabled) && systemKeyCache == null) {
+        throw new IOException("SystemKeyCache can't be null when using key management feature");
       }
-      if (trailer.getKEKMetadata() != null) {
+      if ((trailer.getKEKChecksum() != 0L && !isKeyManagementEnabled)) {
+        throw new IOException(
+          "Seeing newer trailer with KEK checksum, but key management is disabled");
+      }
+
+      // Try STK lookup first if checksum is available and system key cache is not null.
+      if (trailer.getKEKChecksum() != 0L) {
+        ManagedKeyData systemKeyData = systemKeyCache.getSystemKeyByChecksum(trailer.getKEKChecksum());
+        if (systemKeyData != null) {
+          kek = systemKeyData.getTheKey();
+          kekKeyData = systemKeyData;
+        }
+      }
+
+      // If STK lookup failed or no checksum available, try managed key lookup using metadata
+      if (kek == null && trailer.getKEKMetadata() != null) {
         if (managedKeyDataCache == null) {
-          throw new IOException("Key management is enabled, but ManagedKeyDataCache is null");
+          throw new IOException("KEK metadata is available, but ManagedKeyDataCache is null");
         }
         Throwable cause = null;
         try {
@@ -196,19 +211,12 @@ public class SecurityUtil {
             "Failed to get key data for KEK metadata: " + trailer.getKEKMetadata(), cause);
         }
         kek = kekKeyData.getTheKey();
-      } else if (trailer.getKEKChecksum() != 0L) {
-        // No KEK metadata, so KEK could be either STK or managed key
-        // Try STK lookup first as it's cheaper
-        ManagedKeyData systemKeyData = systemKeyCache.getSystemKeyByChecksum(trailer.getKEKChecksum());
-        if (systemKeyData == null) {
-          throw new IOException(
-              "Failed to get system key by checksum: " + trailer.getKEKChecksum());
-        }
-        kek = systemKeyData.getTheKey();
-        kekKeyData = systemKeyData;
-      } else if (isKeyManagementEnabled) {
-        // STK lookup failed, fall back to latest system key for backwards compatibility
+      } else if (kek == null && isKeyManagementEnabled) {
+        // No checksum or metadata available, fall back to latest system key for backwards compatibility
         ManagedKeyData systemKeyData = systemKeyCache.getLatestSystemKey();
+        if (systemKeyData == null) {
+          throw new IOException("Failed to get latest system key");
+        }
         kek = systemKeyData.getTheKey();
         kekKeyData = systemKeyData;
       }
@@ -228,6 +236,7 @@ public class SecurityUtil {
       Cipher cipher = getCipherIfValid(conf, key.getAlgorithm(), key, null);
       cryptoContext.setCipher(cipher);
       cryptoContext.setKey(key);
+      cryptoContext.setKeyNamespace(trailer.getKeyNamespace());
       cryptoContext.setKEKData(kekKeyData);
     }
     return cryptoContext;
