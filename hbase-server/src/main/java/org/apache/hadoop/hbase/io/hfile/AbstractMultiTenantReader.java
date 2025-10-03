@@ -165,11 +165,10 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
     // Initialize cache for section readers
     this.sectionReaderCache = createSectionReaderCache(conf);
 
-    this.metaBlockCacheEnabled = conf.getBoolean(META_BLOCK_CACHE_ENABLED,
-      DEFAULT_META_BLOCK_CACHE_ENABLED);
+    this.metaBlockCacheEnabled =
+      conf.getBoolean(META_BLOCK_CACHE_ENABLED, DEFAULT_META_BLOCK_CACHE_ENABLED);
     if (metaBlockCacheEnabled) {
-      int maxEntries =
-        conf.getInt(META_BLOCK_CACHE_MAX_SIZE, DEFAULT_META_BLOCK_CACHE_MAX_SIZE);
+      int maxEntries = conf.getInt(META_BLOCK_CACHE_MAX_SIZE, DEFAULT_META_BLOCK_CACHE_MAX_SIZE);
       this.metaBlockSectionCache = CacheBuilder.newBuilder().maximumSize(maxEntries).build();
     } else {
       this.metaBlockSectionCache = null;
@@ -1327,8 +1326,8 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
       if (cachedSectionId != null && Bytes.equals(candidateSectionId, cachedSectionId)) {
         continue;
       }
-      HFileBlock sectionBlock = loadMetaBlockFromSection(candidateSectionId, metaBlockName,
-        cacheBlock);
+      HFileBlock sectionBlock =
+        loadMetaBlockFromSection(candidateSectionId, metaBlockName, cacheBlock);
       if (sectionBlock != null) {
         if (metaBlockCacheEnabled && metaBlockSectionCache != null) {
           metaBlockSectionCache.put(metaBlockName, new ImmutableBytesWritable(candidateSectionId));
