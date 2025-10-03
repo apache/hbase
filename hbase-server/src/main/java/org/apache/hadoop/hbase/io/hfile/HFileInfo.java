@@ -373,32 +373,45 @@ public class HFileInfo implements SortedMap<byte[], byte[]> {
     try {
       HFileBlock.FSReader blockReader = reader.getUncachedBlockReader();
       long loadOnOpenOffset = trailer.getLoadOnOpenDataOffset();
-      if (
+      boolean isMultiTenantFile =
         trailer.getMajorVersion() == HFile.MIN_FORMAT_VERSION_WITH_MULTI_TENANT
-          && trailer.getSectionIndexOffset() >= 0
-      ) {
+          && trailer.getSectionIndexOffset() >= 0;
+      if (isMultiTenantFile) {
         loadOnOpenOffset = trailer.getSectionIndexOffset();
       }
 
       // Initialize an block iterator, and parse load-on-open blocks in the following.
       blockIter =
         blockReader.blockRange(loadOnOpenOffset, context.getFileSize() - trailer.getTrailerSize());
-      // Data index. We also read statistics about the block index written after
-      // the root level.
-      HFileBlock dataBlockRootIndex = blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX);
-      HFileBlock metaBlockIndex = blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX);
-      loadMetaInfo(blockIter, hfileContext);
+      if (isMultiTenantFile) {
+        HFileBlock sectionIndexRoot = blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX);
+        try {
+          loadMetaInfo(blockIter, hfileContext);
+        } finally {
+          sectionIndexRoot.release();
+        }
+        this.dataIndexReader = null;
+        this.metaIndexReader = null;
+        reader.setDataBlockIndexReader(null);
+        reader.setMetaBlockIndexReader(null);
+      } else {
+        // Data index. We also read statistics about the block index written after
+        // the root level.
+        HFileBlock dataBlockRootIndex = blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX);
+        HFileBlock metaBlockIndex = blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX);
+        loadMetaInfo(blockIter, hfileContext);
 
-      HFileIndexBlockEncoder indexBlockEncoder =
-        HFileIndexBlockEncoderImpl.createFromFileInfo(this);
-      this.dataIndexReader = new HFileBlockIndex.CellBasedKeyBlockIndexReaderV2(
-        trailer.createComparator(), trailer.getNumDataIndexLevels(), indexBlockEncoder);
-      dataIndexReader.readMultiLevelIndexRoot(dataBlockRootIndex, trailer.getDataIndexCount());
-      reader.setDataBlockIndexReader(dataIndexReader);
-      // Meta index.
-      this.metaIndexReader = new HFileBlockIndex.ByteArrayKeyBlockIndexReader(1);
-      metaIndexReader.readRootIndex(metaBlockIndex, trailer.getMetaIndexCount());
-      reader.setMetaBlockIndexReader(metaIndexReader);
+        HFileIndexBlockEncoder indexBlockEncoder =
+          HFileIndexBlockEncoderImpl.createFromFileInfo(this);
+        this.dataIndexReader = new HFileBlockIndex.CellBasedKeyBlockIndexReaderV2(
+          trailer.createComparator(), trailer.getNumDataIndexLevels(), indexBlockEncoder);
+        dataIndexReader.readMultiLevelIndexRoot(dataBlockRootIndex, trailer.getDataIndexCount());
+        reader.setDataBlockIndexReader(dataIndexReader);
+        // Meta index.
+        this.metaIndexReader = new HFileBlockIndex.ByteArrayKeyBlockIndexReader(1);
+        metaIndexReader.readRootIndex(metaBlockIndex, trailer.getMetaIndexCount());
+        reader.setMetaBlockIndexReader(metaIndexReader);
+      }
 
       reader.setDataBlockEncoder(HFileDataBlockEncoderImpl.createFromFileInfo(this));
       // Load-On-Open info

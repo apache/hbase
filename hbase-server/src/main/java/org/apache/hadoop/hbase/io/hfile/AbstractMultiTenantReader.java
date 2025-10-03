@@ -89,6 +89,17 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
   /** Default prefetch enabled flag */
   private static final boolean DEFAULT_SECTION_PREFETCH_ENABLED = true;
 
+  /** Configuration key controlling meta block lookup caching */
+  private static final String META_BLOCK_CACHE_ENABLED =
+    "hbase.multi.tenant.reader.meta.cache.enabled";
+  /** Default flag enabling meta block cache */
+  private static final boolean DEFAULT_META_BLOCK_CACHE_ENABLED = true;
+  /** Configuration key controlling cache size */
+  private static final String META_BLOCK_CACHE_MAX_SIZE =
+    "hbase.multi.tenant.reader.meta.cache.max";
+  /** Default maximum cache entries */
+  private static final int DEFAULT_META_BLOCK_CACHE_MAX_SIZE = 256;
+
   /** Configuration key for the maximum number of cached section readers */
   private static final String SECTION_READER_CACHE_MAX_SIZE =
     "hbase.multi.tenant.reader.section.cache.max";
@@ -115,6 +126,10 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
   private final boolean prefetchEnabled;
   /** Cache of section readers keyed by tenant section ID */
   private final Cache<ImmutableBytesWritable, SectionReaderHolder> sectionReaderCache;
+  /** Whether we cache meta block to section mappings */
+  private final boolean metaBlockCacheEnabled;
+  /** Cache for meta block name to section mapping */
+  private final Cache<String, ImmutableBytesWritable> metaBlockSectionCache;
 
   /**
    * Constructor for multi-tenant reader.
@@ -149,6 +164,16 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
 
     // Initialize cache for section readers
     this.sectionReaderCache = createSectionReaderCache(conf);
+
+    this.metaBlockCacheEnabled = conf.getBoolean(META_BLOCK_CACHE_ENABLED,
+      DEFAULT_META_BLOCK_CACHE_ENABLED);
+    if (metaBlockCacheEnabled) {
+      int maxEntries =
+        conf.getInt(META_BLOCK_CACHE_MAX_SIZE, DEFAULT_META_BLOCK_CACHE_MAX_SIZE);
+      this.metaBlockSectionCache = CacheBuilder.newBuilder().maximumSize(maxEntries).build();
+    } else {
+      this.metaBlockSectionCache = null;
+    }
 
     LOG.info("Initialized multi-tenant reader for {}", context.getFilePath());
   }
@@ -1275,10 +1300,43 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
    */
   @Override
   public HFileBlock getMetaBlock(String metaBlockName, boolean cacheBlock) throws IOException {
-    // HFile v4 multi-tenant files don't have file-level meta blocks
-    // Meta blocks exist within individual sections
-    LOG.debug("Meta blocks not supported at file level for HFile v4 multi-tenant files: {}",
-      metaBlockName);
+    byte[] cachedSectionId = null;
+    if (metaBlockCacheEnabled && metaBlockSectionCache != null) {
+      ImmutableBytesWritable cached = metaBlockSectionCache.getIfPresent(metaBlockName);
+      if (cached != null) {
+        cachedSectionId = copySectionId(cached);
+      }
+    }
+
+    if (cachedSectionId != null) {
+      HFileBlock cachedBlock = loadMetaBlockFromSection(cachedSectionId, metaBlockName, cacheBlock);
+      if (cachedBlock != null) {
+        return cachedBlock;
+      }
+      if (metaBlockCacheEnabled && metaBlockSectionCache != null) {
+        metaBlockSectionCache.invalidate(metaBlockName);
+      }
+    }
+
+    if (sectionIds == null || sectionIds.isEmpty()) {
+      return null;
+    }
+
+    for (ImmutableBytesWritable sectionId : sectionIds) {
+      byte[] candidateSectionId = copySectionId(sectionId);
+      if (cachedSectionId != null && Bytes.equals(candidateSectionId, cachedSectionId)) {
+        continue;
+      }
+      HFileBlock sectionBlock = loadMetaBlockFromSection(candidateSectionId, metaBlockName,
+        cacheBlock);
+      if (sectionBlock != null) {
+        if (metaBlockCacheEnabled && metaBlockSectionCache != null) {
+          metaBlockSectionCache.put(metaBlockName, new ImmutableBytesWritable(candidateSectionId));
+        }
+        return sectionBlock;
+      }
+    }
+
     return null;
   }
 
@@ -1310,6 +1368,21 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
     LOG.debug(
       "Delete bloom filter metadata not supported at file level for HFile v4 multi-tenant files");
     return null;
+  }
+
+  private HFileBlock loadMetaBlockFromSection(byte[] sectionId, String metaBlockName,
+    boolean cacheBlock) throws IOException {
+    try (SectionReaderLease lease = getSectionReader(sectionId)) {
+      if (lease == null) {
+        return null;
+      }
+      HFileReaderImpl reader = lease.getReader();
+      return reader.getMetaBlock(metaBlockName, cacheBlock);
+    }
+  }
+
+  private byte[] copySectionId(ImmutableBytesWritable sectionId) {
+    return Bytes.copy(sectionId.get(), sectionId.getOffset(), sectionId.getLength());
   }
 
   /**
