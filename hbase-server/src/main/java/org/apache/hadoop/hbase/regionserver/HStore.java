@@ -81,7 +81,6 @@ import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.InvalidHFileException;
-import org.apache.hadoop.hbase.keymeta.KeyNamespaceUtil;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.quotas.RegionSizeStore;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
@@ -337,9 +336,9 @@ public class HStore
 
   private StoreContext initializeStoreContext(ColumnFamilyDescriptor family) throws IOException {
     return new StoreContext.Builder().withBlockSize(family.getBlocksize())
-      .withEncryptionContext(SecurityUtil.createEncryptionContext(conf, family,
-        region.getManagedKeyDataCache(), region.getSystemKeyCache(),
-        KeyNamespaceUtil.constructKeyNamespace(region.getTableDescriptor(), family)))
+      .withEncryptionContext(SecurityUtil.createEncryptionContext(conf,
+        region.getTableDescriptor(), family, region.getManagedKeyDataCache(),
+        region.getSystemKeyCache()))
       .withBloomType(family.getBloomFilterType()).withCacheConfig(createCacheConf(family))
       .withCellComparator(region.getTableDescriptor().isMetaTable() || conf
         .getBoolean(HRegion.USE_META_CELL_COMPARATOR, HRegion.DEFAULT_USE_META_CELL_COMPARATOR)

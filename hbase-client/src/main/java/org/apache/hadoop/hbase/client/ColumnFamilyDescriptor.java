@@ -114,6 +114,9 @@ public interface ColumnFamilyDescriptor {
   /** Returns Return the raw crypto key attribute for the family, or null if not set */
   byte[] getEncryptionKey();
 
+  /** Returns the encryption key namespace for this family */
+  String getEncryptionKeyNamespace();
+
   /** Returns Return the encryption algorithm in use by this family */
   String getEncryptionType();
 

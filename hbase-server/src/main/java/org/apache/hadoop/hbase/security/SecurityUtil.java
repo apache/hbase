@@ -24,12 +24,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.hfile.FixedFileTrailer;
 import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
 import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
+import org.apache.hadoop.hbase.keymeta.KeyNamespaceUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
@@ -61,20 +63,21 @@ public class SecurityUtil {
   /**
    * Helper to create an encyption context with current encryption key, suitable for writes.
    * @param conf                The current configuration.
+   * @param tableDescriptor     The table descriptor.
    * @param family              The current column descriptor.
    * @param managedKeyDataCache The managed key data cache.
    * @param systemKeyCache      The system key cache.
-   * @param keyNamespace        The key namespace.
    * @return The created encryption context.
    * @throws IOException           if an encryption key for the column cannot be unwrapped
    * @throws IllegalStateException in case of encryption related configuration errors
    */
   public static Encryption.Context createEncryptionContext(Configuration conf,
-    ColumnFamilyDescriptor family, ManagedKeyDataCache managedKeyDataCache,
-    SystemKeyCache systemKeyCache, String keyNamespace) throws IOException {
+    TableDescriptor tableDescriptor, ColumnFamilyDescriptor family,
+    ManagedKeyDataCache managedKeyDataCache, SystemKeyCache systemKeyCache) throws IOException {
     Encryption.Context cryptoContext = Encryption.Context.NONE;
     boolean isKeyManagementEnabled = isKeyManagementEnabled(conf);
     String cipherName = family.getEncryptionType();
+    String keyNamespace = null; // Will be set by fallback logic
     if (cipherName != null) {
       if (!Encryption.isEncryptionEnabled(conf)) {
         throw new IllegalStateException("Encryption for family '" + family.getNameAsString()
@@ -107,14 +110,24 @@ public class SecurityUtil {
           boolean localKeyGenEnabled = conf.getBoolean(
               HConstants.CRYPTO_MANAGED_KEYS_LOCAL_KEY_GEN_PER_FILE_ENABLED_CONF_KEY,
               HConstants.CRYPTO_MANAGED_KEYS_LOCAL_KEY_GEN_PER_FILE_DEFAULT_ENABLED);
-          // Try to get active entry from specific namespace
-          ManagedKeyData activeKeyData = managedKeyDataCache.getActiveEntry(
-              ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES, keyNamespace);
-          // If no active key found in the specific namespace, try the global namespace
-          if (activeKeyData == null) {
-            activeKeyData = managedKeyDataCache.getActiveEntry(
-                ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES, ManagedKeyData.KEY_SPACE_GLOBAL);
-            keyNamespace = ManagedKeyData.KEY_SPACE_GLOBAL;
+          // Implement 4-step fallback logic for key namespace resolution
+          String[] candidateNamespaces = {
+            family.getEncryptionKeyNamespace(), // 1. CF KEY_NAMESPACE attribute
+            KeyNamespaceUtil.constructKeyNamespace(tableDescriptor, family), // 2. Constructed namespace
+            tableDescriptor.getTableName().getNameAsString(), // 3. Table name
+            ManagedKeyData.KEY_SPACE_GLOBAL // 4. Global namespace
+          };
+
+          ManagedKeyData activeKeyData = null;
+          for (String candidate : candidateNamespaces) {
+            if (candidate != null) {
+              activeKeyData = managedKeyDataCache.getActiveEntry(
+                  ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES, candidate);
+              if (activeKeyData != null) {
+                keyNamespace = candidate;
+                break;
+              }
+            }
           }
 
           // Scenario 2: There is an active key
@@ -130,8 +143,7 @@ public class SecurityUtil {
               cipher = getCipherIfValid(conf, cipherName, activeKeyData.getTheKey(), family.getNameAsString());
             }
           }
-        }
-        else {
+        } else {
           // Scenario 3: Do nothing, let a random key be generated as DEK and if key management is enabled,
           // let STK be used as KEK.
         }
