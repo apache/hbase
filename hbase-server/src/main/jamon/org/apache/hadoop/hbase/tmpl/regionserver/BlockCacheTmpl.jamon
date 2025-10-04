@@ -50,9 +50,9 @@ org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
     <ul class="nav nav-pills" role="tablist">
         <li class="nav-item"><a class="nav-link active" href="#tab_bc_baseInfo" data-bs-toggle="tab" role="tab">Base Info</a></li>
         <li class="nav-item"><a class="nav-link" href="#tab_bc_config" data-bs-toggle="tab" role="tab">Config</a></li>
-        <li class="nav-item"><a class="nav-link" href="#tab_bc_stats" data-bs-toggle="tab" role="tab">Stats</a></li>
-        <li class="nav-item"><a class="nav-link" href="#tab_bc_l1" data-bs-toggle="tab" role="tab">L1</a></li>
-        <li class="nav-item"><a class="nav-link" href="#tab_bc_l2" data-bs-toggle="tab" role="tab">L2</a></li>
+        <li class="nav-item"><a class="nav-link" href="#tab_bc_stats" data-bs-toggle="tab" role="tab">Block Cache Stats</a></li>
+        <li class="nav-item"><a class="nav-link" href="#tab_bc_l1" data-bs-toggle="tab" role="tab">Block Cache L1</a></li>
+        <li class="nav-item"><a class="nav-link" href="#tab_bc_l2" data-bs-toggle="tab" role="tab">Block Cache L2</a></li>
         <li class="nav-item"><a class="nav-link" href="#tab_row_cache" data-bs-toggle="tab" role="tab">Row Cache</a></li>
     </ul>
     <div class="tab-content">
@@ -573,7 +573,7 @@ Increase that value to get a complete picture.
     RowCache rowCache;
 </%args>
 <%if rowCache == null %>
-<p>RowCache is null</p>
+<p>RowCache is disabled</p>
 <%else>
 <table class="table table-striped">
     <tr>
@@ -617,6 +617,6 @@ Increase that value to get a complete picture.
         <td>Hit Count divided by total requests count</td>
     </tr>
 </table>
-<p>RowCache is a separate cache distinct from BlockCache. Since there is no more appropriate place to display RowCache information, it is shown here alongside BlockCache.</p>
+<p>RowCache is a separate cache distinct from BlockCache.</p>
 </%if>
 </%def>

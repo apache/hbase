@@ -152,7 +152,7 @@ org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
     </section>
 
     <section>
-    <h2>Block Cache</h2>
+    <h2>Cache</h2>
     <& BlockCacheTmpl; cacheConfig = new CacheConfig(regionServer.getConfiguration()); config = regionServer.getConfiguration(); bc = regionServer.getBlockCache().orElse(null); rowCache = rowCache &>
     </section>
 
