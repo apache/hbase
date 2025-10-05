@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -85,7 +86,9 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
 
   @Override
   public final List<StoreFileInfo> load() throws IOException {
-    return doLoadStoreFiles(!isPrimaryReplica);
+    return doLoadStoreFiles(
+      !isPrimaryReplica || conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
+        HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT));
   }
 
   @Override
@@ -98,7 +101,10 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
   @Override
   public final void replace(Collection<StoreFileInfo> compactedFiles,
     Collection<StoreFileInfo> newFiles) throws IOException {
-    if (isPrimaryReplica) {
+    if (
+      isPrimaryReplica && !conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
+        HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT)
+    ) {
       doAddCompactionResults(compactedFiles, newFiles);
     }
   }
