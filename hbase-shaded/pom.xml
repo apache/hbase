@@ -442,6 +442,10 @@
                     <pattern>kotlin.</pattern>
                     <shadedPattern>${shaded.prefix}.kotlin.</shadedPattern>
                   </relocation>
+                  <relocation>
+                    <pattern>org.apache.calcite</pattern>
+                    <shadedPattern>${shaded.prefix}.org.apache.calcite</shadedPattern>
+                  </relocation>
                 </relocations>
                 <transformers>
                   <!-- Need to filter out some extraneous license files.
