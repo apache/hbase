@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileInfo;
+import org.apache.hadoop.hbase.io.hfile.MultiTenantBloomSupport;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext.ReaderType;
@@ -87,6 +88,12 @@ public class StoreFileReader {
    */
   private final StoreFileInfo storeFileInfo;
   private final ReaderContext context;
+
+  private void incrementBloomEligible() {
+    if (bloomFilterMetrics != null) {
+      bloomFilterMetrics.incrementEligible();
+    }
+  }
 
   private StoreFileReader(HFile.Reader reader, StoreFileInfo storeFileInfo, ReaderContext context,
     Configuration conf) {
@@ -249,13 +256,22 @@ public class StoreFileReader {
         return passesGeneralRowPrefixBloomFilter(scan);
       default:
         if (scan.isGetScan()) {
-          bloomFilterMetrics.incrementEligible();
+          incrementBloomEligible();
         }
         return true;
     }
   }
 
   public boolean passesDeleteFamilyBloomFilter(byte[] row, int rowOffset, int rowLen) {
+    if (reader instanceof MultiTenantBloomSupport) {
+      try {
+        return ((MultiTenantBloomSupport) reader)
+          .passesDeleteFamilyBloomFilter(row, rowOffset, rowLen);
+      } catch (IOException e) {
+        LOG.warn("Failed multi-tenant delete-family bloom check, proceeding without", e);
+        return true;
+      }
+    }
     // Cache Bloom filter as a local variable in case it is set to null by
     // another thread on an IO error.
     BloomFilter bloomFilter = this.deleteFamilyBloomFilter;
@@ -286,11 +302,21 @@ public class StoreFileReader {
    * A method for checking Bloom filters. Called directly from StoreFileScanner in case of a
    * multi-column query.
    * @return True if passes
-   */
+  */
   private boolean passesGeneralRowBloomFilter(byte[] row, int rowOffset, int rowLen) {
+    if (reader instanceof MultiTenantBloomSupport) {
+      incrementBloomEligible();
+      try {
+        return ((MultiTenantBloomSupport) reader)
+          .passesGeneralRowBloomFilter(row, rowOffset, rowLen);
+      } catch (IOException e) {
+        LOG.warn("Failed multi-tenant row bloom check, proceeding without", e);
+        return true;
+      }
+    }
     BloomFilter bloomFilter = this.generalBloomFilter;
     if (bloomFilter == null) {
-      bloomFilterMetrics.incrementEligible();
+      incrementBloomEligible();
       return true;
     }
 
@@ -309,9 +335,18 @@ public class StoreFileReader {
    * @return True if passes
    */
   public boolean passesGeneralRowColBloomFilter(ExtendedCell cell) {
+    if (reader instanceof MultiTenantBloomSupport) {
+      incrementBloomEligible();
+      try {
+        return ((MultiTenantBloomSupport) reader).passesGeneralRowColBloomFilter(cell);
+      } catch (IOException e) {
+        LOG.warn("Failed multi-tenant row/col bloom check, proceeding without", e);
+        return true;
+      }
+    }
     BloomFilter bloomFilter = this.generalBloomFilter;
     if (bloomFilter == null) {
-      bloomFilterMetrics.incrementEligible();
+      incrementBloomEligible();
       return true;
     }
     // Used in ROW_COL bloom
@@ -333,7 +368,7 @@ public class StoreFileReader {
   private boolean passesGeneralRowPrefixBloomFilter(Scan scan) {
     BloomFilter bloomFilter = this.generalBloomFilter;
     if (bloomFilter == null) {
-      bloomFilterMetrics.incrementEligible();
+      incrementBloomEligible();
       return true;
     }
 
@@ -463,18 +498,41 @@ public class StoreFileReader {
       bloomFilterType = BloomType.valueOf(Bytes.toString(b));
     }
 
+    if (bloomFilterType == BloomType.NONE && reader instanceof MultiTenantBloomSupport) {
+      bloomFilterType = ((MultiTenantBloomSupport) reader).getGeneralBloomFilterType();
+    }
+
     byte[] p = fi.get(BLOOM_FILTER_PARAM_KEY);
-    if (bloomFilterType == BloomType.ROWPREFIX_FIXED_LENGTH) {
+    if (p != null) {
       prefixLength = Bytes.toInt(p);
+    } else if (reader instanceof MultiTenantBloomSupport) {
+      try {
+        prefixLength = ((MultiTenantBloomSupport) reader).getGeneralBloomPrefixLength();
+      } catch (IOException e) {
+        LOG.debug("Failed to obtain prefix length from multi-tenant reader", e);
+      }
     }
 
     lastBloomKey = fi.get(LAST_BLOOM_KEY);
-    if (bloomFilterType == BloomType.ROWCOL) {
+    if (lastBloomKey == null && reader instanceof MultiTenantBloomSupport) {
+      try {
+        lastBloomKey = ((MultiTenantBloomSupport) reader).getLastBloomKey();
+      } catch (IOException e) {
+        LOG.debug("Failed to obtain last bloom key from multi-tenant reader", e);
+      }
+    }
+    if (bloomFilterType == BloomType.ROWCOL && lastBloomKey != null) {
       lastBloomKeyOnlyKV = new KeyValue.KeyOnlyKeyValue(lastBloomKey, 0, lastBloomKey.length);
     }
     byte[] cnt = fi.get(DELETE_FAMILY_COUNT);
     if (cnt != null) {
       deleteFamilyCnt = Bytes.toLong(cnt);
+    } else if (reader instanceof MultiTenantBloomSupport) {
+      try {
+        deleteFamilyCnt = ((MultiTenantBloomSupport) reader).getDeleteFamilyBloomCount();
+      } catch (IOException e) {
+        LOG.debug("Failed to obtain delete family bloom count from multi-tenant reader", e);
+      }
     }
 
     return fi;
@@ -506,6 +564,13 @@ public class StoreFileReader {
                 + reader.getName());
             }
           }
+        } else if (reader instanceof MultiTenantBloomSupport) {
+          try {
+            generalBloomFilter =
+              ((MultiTenantBloomSupport) reader).getGeneralBloomFilterInstance();
+          } catch (IOException e) {
+            LOG.debug("Failed to obtain general bloom filter from multi-tenant reader", e);
+          }
         }
       } else if (blockType == BlockType.DELETE_FAMILY_BLOOM_META) {
         if (this.deleteFamilyBloomFilter != null) return; // Bloom has been loaded
@@ -518,6 +583,13 @@ public class StoreFileReader {
           LOG.info(
             "Loaded Delete Family Bloom (" + deleteFamilyBloomFilter.getClass().getSimpleName()
               + ") metadata for " + reader.getName());
+        } else if (reader instanceof MultiTenantBloomSupport) {
+          try {
+            deleteFamilyBloomFilter =
+              ((MultiTenantBloomSupport) reader).getDeleteFamilyBloomFilterInstance();
+          } catch (IOException e) {
+            LOG.debug("Failed to obtain delete family bloom filter from multi-tenant reader", e);
+          }
         }
       } else {
         throw new RuntimeException(
@@ -665,4 +737,4 @@ public class StoreFileReader {
   public ReaderContext getReaderContext() {
     return this.context;
   }
-}
+  }

@@ -34,6 +34,10 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.hbase.ExtendedCell;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
@@ -43,7 +47,12 @@ import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.MultiTenantFSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.hadoop.hbase.regionserver.BloomType;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.BloomFilter;
+import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,7 +81,8 @@ import org.apache.hbase.thirdparty.com.google.common.cache.RemovalNotification;
  * </ul>
  */
 @InterfaceAudience.Private
-public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
+public abstract class AbstractMultiTenantReader extends HFileReaderImpl
+  implements MultiTenantBloomSupport {
   private static final Logger LOG = LoggerFactory.getLogger(AbstractMultiTenantReader.class);
 
   /** Static storage for table properties to avoid repeated loading */
@@ -133,6 +143,9 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
   private final boolean prefetchEnabled;
   /** Cache of section readers keyed by tenant section ID */
   private final Cache<ImmutableBytesWritable, SectionReaderHolder> sectionReaderCache;
+  /** Cached Bloom filter state per section */
+  private final Cache<ImmutableBytesWritable, SectionBloomState> sectionBloomCache;
+  private final AtomicReference<BloomType> generalBloomTypeCache = new AtomicReference<>();
   /** Whether we cache meta block to section mappings */
   private final boolean metaBlockCacheEnabled;
   /** Cache for meta block name to section mapping */
@@ -175,6 +188,7 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
 
     // Initialize cache for section readers
     this.sectionReaderCache = createSectionReaderCache(conf);
+    this.sectionBloomCache = createSectionBloomCache(conf);
 
     this.metaBlockCacheEnabled =
       conf.getBoolean(META_BLOCK_CACHE_ENABLED, DEFAULT_META_BLOCK_CACHE_ENABLED);
@@ -310,6 +324,16 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
     return cache;
   }
 
+  private Cache<ImmutableBytesWritable, SectionBloomState> createSectionBloomCache(
+    Configuration conf) {
+    int maxSize = Math.max(1,
+      conf.getInt(SECTION_READER_CACHE_MAX_SIZE, DEFAULT_SECTION_READER_CACHE_MAX_SIZE));
+    Cache<ImmutableBytesWritable, SectionBloomState> cache =
+      CacheBuilder.newBuilder().maximumSize(maxSize).build();
+    LOG.debug("Initialized section bloom cache with maxSize={}", maxSize);
+    return cache;
+  }
+
   private void loadTenantIndexMetadata() {
     byte[] tenantIndexLevelsBytes =
       fileInfo.get(Bytes.toBytes(MultiTenantHFileWriter.FILEINFO_TENANT_INDEX_LEVELS));
@@ -386,6 +410,218 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
    */
   public int getTotalSectionCount() {
     return sectionLocations.size();
+  }
+
+  @Override
+  public boolean passesGeneralRowBloomFilter(byte[] row, int rowOffset, int rowLen)
+    throws IOException {
+    byte[] sectionId = extractTenantSectionId(row, rowOffset, rowLen);
+    if (sectionId == null) {
+      return true;
+    }
+    ImmutableBytesWritable cacheKey = new ImmutableBytesWritable(sectionId);
+    try (SectionReaderLease lease = getSectionReader(sectionId)) {
+      if (lease == null) {
+        return true;
+      }
+      SectionBloomState bloomState = getOrLoadSectionBloomState(cacheKey, lease);
+      if (bloomState == null || !bloomState.hasGeneralBloom()) {
+        return true;
+      }
+      return bloomState.passesGeneralRowBloom(row, rowOffset, rowLen, lease.getReader());
+    }
+  }
+
+  @Override
+  public boolean passesGeneralRowColBloomFilter(ExtendedCell cell) throws IOException {
+    byte[] sectionId = tenantExtractor.extractTenantSectionId(cell);
+    if (sectionId == null) {
+      return true;
+    }
+    ImmutableBytesWritable cacheKey = new ImmutableBytesWritable(sectionId);
+    try (SectionReaderLease lease = getSectionReader(sectionId)) {
+      if (lease == null) {
+        return true;
+      }
+      SectionBloomState bloomState = getOrLoadSectionBloomState(cacheKey, lease);
+      if (bloomState == null || !bloomState.hasGeneralBloom()) {
+        return true;
+      }
+      return bloomState.passesGeneralRowColBloom(cell, lease.getReader());
+    }
+  }
+
+  @Override
+  public boolean passesDeleteFamilyBloomFilter(byte[] row, int rowOffset, int rowLen)
+    throws IOException {
+    byte[] sectionId = extractTenantSectionId(row, rowOffset, rowLen);
+    if (sectionId == null) {
+      return true;
+    }
+    ImmutableBytesWritable cacheKey = new ImmutableBytesWritable(sectionId);
+    try (SectionReaderLease lease = getSectionReader(sectionId)) {
+      if (lease == null) {
+        return true;
+      }
+      SectionBloomState bloomState = getOrLoadSectionBloomState(cacheKey, lease);
+      if (bloomState == null || !bloomState.hasDeleteFamilyBloom()) {
+        return true;
+      }
+      return bloomState.passesDeleteFamilyBloom(row, rowOffset, rowLen);
+    }
+  }
+
+  private byte[] extractTenantSectionId(byte[] row, int rowOffset, int rowLen) {
+    if (row == null) {
+      return null;
+    }
+    int prefixLength = tenantExtractor.getPrefixLength();
+    if (prefixLength > 0 && rowLen < prefixLength) {
+      return null;
+    }
+    ExtendedCell lookupCell = PrivateCellUtil.createFirstOnRow(row, rowOffset, (short) rowLen);
+    return tenantExtractor.extractTenantSectionId(lookupCell);
+  }
+
+  private SectionBloomState getOrLoadSectionBloomState(ImmutableBytesWritable cacheKey,
+    SectionReaderLease lease) throws IOException {
+    try {
+      return sectionBloomCache.get(cacheKey, () -> loadSectionBloomState(cacheKey, lease));
+    } catch (ExecutionException e) {
+      Throwable cause = e.getCause();
+      if (cause instanceof IOException) {
+        throw (IOException) cause;
+      }
+      throw new IOException("Failed to load bloom state for section "
+        + Bytes.toStringBinary(cacheKey.get(), cacheKey.getOffset(), cacheKey.getLength()), cause);
+    }
+  }
+
+  private SectionBloomState loadSectionBloomState(ImmutableBytesWritable sectionKey,
+    SectionReaderLease lease) throws IOException {
+    HFileReaderImpl reader = lease.getReader();
+    Map<byte[], byte[]> fileInfoMap = reader.getHFileInfo();
+
+    BloomType bloomType = BloomType.NONE;
+    byte[] bloomTypeBytes = fileInfoMap.get(HStoreFile.BLOOM_FILTER_TYPE_KEY);
+    if (bloomTypeBytes != null) {
+      bloomType = BloomType.valueOf(Bytes.toString(bloomTypeBytes));
+    }
+
+    BloomFilter generalBloom = null;
+    DataInput generalMeta = reader.getGeneralBloomFilterMetadata();
+    if (generalMeta != null) {
+      generalBloom = BloomFilterFactory.createFromMeta(generalMeta, reader, null);
+    }
+
+    BloomFilter deleteBloom = null;
+    DataInput deleteMeta = reader.getDeleteBloomFilterMetadata();
+    if (deleteMeta != null) {
+      deleteBloom = BloomFilterFactory.createFromMeta(deleteMeta, reader, null);
+    }
+
+    byte[] lastBloomKey = fileInfoMap.get(HStoreFile.LAST_BLOOM_KEY);
+    KeyValue.KeyOnlyKeyValue lastBloomKeyKV = null;
+    if (lastBloomKey != null && bloomType == BloomType.ROWCOL) {
+      lastBloomKeyKV = new KeyValue.KeyOnlyKeyValue(lastBloomKey, 0, lastBloomKey.length);
+    }
+
+    int prefixLength = 0;
+    byte[] bloomParam = fileInfoMap.get(HStoreFile.BLOOM_FILTER_PARAM_KEY);
+    if (bloomParam != null) {
+      prefixLength = Bytes.toInt(bloomParam);
+    }
+
+    long deleteFamilyCnt = 0L;
+    byte[] deleteFamilyCntBytes = fileInfoMap.get(HStoreFile.DELETE_FAMILY_COUNT);
+    if (deleteFamilyCntBytes != null) {
+      deleteFamilyCnt = Bytes.toLong(deleteFamilyCntBytes);
+    }
+
+    long entries = reader.getTrailer().getEntryCount();
+
+    return new SectionBloomState(sectionKey.copyBytes(), bloomType, generalBloom, deleteBloom,
+      lastBloomKey, lastBloomKeyKV, prefixLength, deleteFamilyCnt, entries,
+      reader.getComparator());
+  }
+
+  private SectionBloomState findSectionBloomState(boolean needGeneral, boolean needDelete)
+    throws IOException {
+    if (sectionIds == null || sectionIds.isEmpty()) {
+      return null;
+    }
+    for (ImmutableBytesWritable sectionId : sectionIds) {
+      byte[] key = sectionId.copyBytes();
+      try (SectionReaderLease lease = getSectionReader(key)) {
+        if (lease == null) {
+          continue;
+        }
+        SectionBloomState state = getOrLoadSectionBloomState(sectionId, lease);
+        if (state == null) {
+          continue;
+        }
+        if (needGeneral && !state.hasGeneralBloom()) {
+          continue;
+        }
+        if (needDelete && !state.hasDeleteFamilyBloom()) {
+          continue;
+        }
+        return state;
+      }
+    }
+    return null;
+  }
+
+  @Override
+  public BloomType getGeneralBloomFilterType() {
+    BloomType cached = generalBloomTypeCache.get();
+    if (cached != null) {
+      return cached;
+    }
+
+    BloomType computed = BloomType.NONE;
+    try {
+      SectionBloomState state = findSectionBloomState(true, false);
+      if (state != null && state.hasGeneralBloom()) {
+        computed = state.getBloomType();
+      }
+    } catch (IOException e) {
+      LOG.debug("Failed to inspect bloom type", e);
+    }
+
+    generalBloomTypeCache.compareAndSet(null, computed);
+    BloomType result = generalBloomTypeCache.get();
+    return result != null ? result : computed;
+  }
+
+  @Override
+  public int getGeneralBloomPrefixLength() throws IOException {
+    SectionBloomState state = findSectionBloomState(true, false);
+    return state != null ? state.getPrefixLength() : 0;
+  }
+
+  @Override
+  public byte[] getLastBloomKey() throws IOException {
+    SectionBloomState state = findSectionBloomState(true, false);
+    return state != null ? state.getLastBloomKey() : null;
+  }
+
+  @Override
+  public long getDeleteFamilyBloomCount() throws IOException {
+    SectionBloomState state = findSectionBloomState(false, true);
+    return state != null ? state.getDeleteFamilyCnt() : 0L;
+  }
+
+  @Override
+  public BloomFilter getGeneralBloomFilterInstance() throws IOException {
+    SectionBloomState state = findSectionBloomState(true, false);
+    return state != null ? state.getGeneralBloom() : null;
+  }
+
+  @Override
+  public BloomFilter getDeleteFamilyBloomFilterInstance() throws IOException {
+    SectionBloomState state = findSectionBloomState(false, true);
+    return state != null ? state.getDeleteBloom() : null;
   }
 
   /**
@@ -613,6 +849,166 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
      * @throws IOException If an error occurs closing the reader
      */
     public abstract void close(boolean evictOnClose) throws IOException;
+  }
+
+  private static final class SectionBloomState {
+    private final byte[] sectionId;
+    private final BloomType bloomType;
+    private final BloomFilter generalBloom;
+    private final BloomFilter deleteBloom;
+    private final byte[] lastBloomKey;
+    private final KeyValue.KeyOnlyKeyValue lastBloomKeyOnlyKV;
+    private final int prefixLength;
+    private final long deleteFamilyCnt;
+    private final long entryCount;
+    private final CellComparator comparator;
+
+    SectionBloomState(byte[] sectionId, BloomType bloomType, BloomFilter generalBloom,
+      BloomFilter deleteBloom, byte[] lastBloomKey, KeyValue.KeyOnlyKeyValue lastBloomKeyOnlyKV,
+      int prefixLength, long deleteFamilyCnt, long entryCount, CellComparator comparator) {
+      this.sectionId = sectionId;
+      this.bloomType = bloomType == null ? BloomType.NONE : bloomType;
+      this.generalBloom = generalBloom;
+      this.deleteBloom = deleteBloom;
+      this.lastBloomKey = lastBloomKey;
+      this.lastBloomKeyOnlyKV = lastBloomKeyOnlyKV;
+      this.prefixLength = prefixLength;
+      this.deleteFamilyCnt = deleteFamilyCnt;
+      this.entryCount = entryCount;
+      this.comparator = comparator;
+    }
+
+    boolean hasGeneralBloom() {
+      return generalBloom != null && bloomType != BloomType.NONE;
+    }
+
+    BloomType getBloomType() {
+      return bloomType;
+    }
+
+    boolean hasDeleteFamilyBloom() {
+      return deleteBloom != null;
+    }
+
+    boolean passesGeneralRowBloom(byte[] row, int rowOffset, int rowLen, HFileReaderImpl reader)
+      throws IOException {
+      if (!hasGeneralBloom()) {
+        return true;
+      }
+      if (entryCount == 0) {
+        return false;
+      }
+      if (bloomType == BloomType.ROWCOL) {
+        // Without column information we cannot make a definitive call.
+        return true;
+      }
+      int keyOffset = rowOffset;
+      int keyLen = rowLen;
+      if (bloomType == BloomType.ROWPREFIX_FIXED_LENGTH) {
+        if (prefixLength <= 0 || rowLen < prefixLength) {
+          return true;
+        }
+        keyLen = prefixLength;
+      }
+      return checkGeneralBloomFilter(row, keyOffset, keyLen, null, reader);
+    }
+
+    boolean passesGeneralRowColBloom(ExtendedCell cell, HFileReaderImpl reader) throws IOException {
+      if (!hasGeneralBloom()) {
+        return true;
+      }
+      if (entryCount == 0) {
+        return false;
+      }
+      if (bloomType != BloomType.ROWCOL) {
+        // When the Bloom filter is not a ROWCOL type, fall back to row-based filtering.
+        ExtendedCell rowCell = PrivateCellUtil.createFirstOnRow(cell);
+        byte[] rowKey = rowCell.getRowArray();
+        return checkGeneralBloomFilter(rowKey, rowCell.getRowOffset(), rowCell.getRowLength(),
+          null, reader);
+      }
+      ExtendedCell kvKey = PrivateCellUtil.createFirstOnRowCol(cell);
+      return checkGeneralBloomFilter(null, 0, 0, kvKey, reader);
+    }
+
+    boolean passesDeleteFamilyBloom(byte[] row, int rowOffset, int rowLen) {
+      if (deleteFamilyCnt == 0) {
+        return false;
+      }
+      if (deleteBloom == null) {
+        return true;
+      }
+      return deleteBloom.contains(row, rowOffset, rowLen, null);
+    }
+
+    int getPrefixLength() {
+      return prefixLength;
+    }
+
+    byte[] getLastBloomKey() {
+      return lastBloomKey != null ? lastBloomKey.clone() : null;
+    }
+
+    long getDeleteFamilyCnt() {
+      return deleteFamilyCnt;
+    }
+
+    BloomFilter getGeneralBloom() {
+      return generalBloom;
+    }
+
+    BloomFilter getDeleteBloom() {
+      return deleteBloom;
+    }
+
+    private boolean checkGeneralBloomFilter(byte[] key, int keyOffset, int keyLen, Cell kvKey,
+      HFileReaderImpl reader) throws IOException {
+      ByteBuff bloomData = null;
+      HFileBlock bloomBlock = null;
+      try {
+        if (!generalBloom.supportsAutoLoading()) {
+          bloomBlock = reader.getMetaBlock(HFile.BLOOM_FILTER_DATA_KEY, true);
+          if (bloomBlock == null) {
+            return true;
+          }
+          bloomData = bloomBlock.getBufferWithoutHeader();
+        }
+
+        boolean keyIsAfterLast = false;
+        if (lastBloomKey != null) {
+          if (bloomType == BloomType.ROWCOL && kvKey != null && comparator != null) {
+            keyIsAfterLast = comparator.compare(kvKey, lastBloomKeyOnlyKV) > 0;
+          } else if (key != null) {
+            keyIsAfterLast = Bytes.compareTo(key, keyOffset, keyLen, lastBloomKey, 0,
+              lastBloomKey.length) > 0;
+          }
+        }
+
+        if (bloomType == BloomType.ROWCOL && kvKey != null) {
+          ExtendedCell rowBloomKey = PrivateCellUtil.createFirstOnRow(kvKey);
+          if (keyIsAfterLast && comparator != null
+            && comparator.compare(rowBloomKey, lastBloomKeyOnlyKV) > 0) {
+            return false;
+          }
+          return generalBloom.contains(kvKey, bloomData, BloomType.ROWCOL)
+            || generalBloom.contains(rowBloomKey, bloomData, BloomType.ROWCOL);
+        } else {
+          if (keyIsAfterLast) {
+            return false;
+          }
+          return generalBloom.contains(key, keyOffset, keyLen, bloomData);
+        }
+      } finally {
+        if (bloomBlock != null) {
+          bloomBlock.release();
+        }
+      }
+    }
+
+    @Override
+    public String toString() {
+      return "SectionBloomState{" + Bytes.toStringBinary(sectionId) + ", type=" + bloomType + '}';
+    }
   }
 
   /**
@@ -939,7 +1335,9 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl {
 
     @Override
     public int reseekTo(ExtendedCell key) throws IOException {
-      assertSeeked();
+      if (!isSeeked()) {
+        return seekTo(key);
+      }
 
       // Extract tenant section ID
       byte[] tenantSectionId = tenantExtractor.extractTenantSectionId(key);
