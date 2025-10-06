@@ -54,6 +54,9 @@
       <!-- Switch to local resources: Do NOT use CDN. -->
       <localResources>true</localResources>
       <absoluteResourceURL></absoluteResourceURL>
+      <endContent>
+        <script src="$resourcePath/js/searchform.js"></script>
+      </endContent>
     </reflowSkin>
   </custom>
   <body>
