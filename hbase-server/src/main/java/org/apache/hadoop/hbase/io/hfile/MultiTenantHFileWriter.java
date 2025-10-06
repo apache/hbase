@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -266,7 +267,8 @@ public class MultiTenantHFileWriter implements HFile.Writer {
    */
   public static MultiTenantHFileWriter create(FileSystem fs, Path path, Configuration conf,
     CacheConfig cacheConf, Map<String, String> tableProperties, HFileContext fileContext,
-    FSDataOutputStream outputStream, boolean closeOutputStream) throws IOException {
+    BloomType columnFamilyBloomType, FSDataOutputStream outputStream, boolean closeOutputStream)
+    throws IOException {
 
     FSDataOutputStream writerStream = outputStream;
     boolean shouldCloseStream = closeOutputStream;
@@ -282,20 +284,24 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     TenantExtractor tenantExtractor =
       TenantExtractorFactory.createTenantExtractor(conf, tableProperties);
 
-    // Extract bloom filter type from table properties if available
-    BloomType bloomType = BloomType.ROW; // Default
-    if (tableProperties != null && tableProperties.containsKey("BLOOMFILTER")) {
-      try {
-        bloomType = BloomType.valueOf(tableProperties.get("BLOOMFILTER").toUpperCase());
-      } catch (IllegalArgumentException e) {
-        LOG.warn("Invalid bloom filter type in table properties: {}, using default ROW",
-          tableProperties.get("BLOOMFILTER"));
+    // Determine bloom configuration with column family setting taking precedence.
+    BloomType bloomType = columnFamilyBloomType;
+    if (bloomType == null) {
+      bloomType = BloomType.ROW;
+      if (tableProperties != null && tableProperties.containsKey("BLOOMFILTER")) {
+        try {
+          bloomType = BloomType.valueOf(tableProperties.get("BLOOMFILTER").toUpperCase());
+        } catch (IllegalArgumentException e) {
+          LOG.warn("Invalid bloom filter type in table properties: {}, using default ROW",
+            tableProperties.get("BLOOMFILTER"));
+        }
       }
     }
 
-    LOG.info(
-      "Creating MultiTenantHFileWriter with tenant extractor: {}, bloom type: {} and target {}",
-      tenantExtractor.getClass().getSimpleName(), bloomType, path != null ? path : writerStream);
+    LOG.info("Creating MultiTenantHFileWriter with tenant extractor: {}, bloom type: {} (cf override: {}) and target {}",
+      tenantExtractor.getClass().getSimpleName(), bloomType,
+      columnFamilyBloomType != null ? columnFamilyBloomType : "<table-level>",
+      path != null ? path : writerStream);
 
     // HFile version 4 inherently implies multi-tenant
     return new MultiTenantHFileWriter(path, conf, cacheConf, tenantExtractor, fileContext,
@@ -1358,6 +1364,7 @@ public class MultiTenantHFileWriter implements HFile.Writer {
 
       // Extract table properties for tenant configuration from table descriptor
       Map<String, String> tableProperties = new java.util.HashMap<>();
+      BloomType columnFamilyBloomType = null;
 
       // Get the table descriptor if available
       TableDescriptor tableDesc = getTableDescriptor(writerFileContext);
@@ -1367,6 +1374,7 @@ public class MultiTenantHFileWriter implements HFile.Writer {
           String key = Bytes.toString(entry.getKey().get());
           tableProperties.put(key, Bytes.toString(entry.getValue().get()));
         }
+        columnFamilyBloomType = resolveColumnFamilyBloomType(tableDesc, writerFileContext);
         LOG.debug(
           "Creating MultiTenantHFileWriter with table properties from descriptor for table: {}",
           tableDesc.getTableName());
@@ -1382,7 +1390,7 @@ public class MultiTenantHFileWriter implements HFile.Writer {
       // which creates HFile v4 with multiple tenant sections based on row key prefixes
       boolean ownsStream = path != null;
       return MultiTenantHFileWriter.create(fs, path, conf, cacheConf, tableProperties,
-        writerFileContext, ostream, ownsStream);
+        writerFileContext, columnFamilyBloomType, ostream, ownsStream);
     }
 
     /**
@@ -1411,6 +1419,26 @@ public class MultiTenantHFileWriter implements HFile.Writer {
         LOG.warn("Error getting table descriptor", e);
         return null;
       }
+    }
+
+    private BloomType resolveColumnFamilyBloomType(TableDescriptor tableDesc,
+      HFileContext fileContext) {
+      if (fileContext == null) {
+        return null;
+      }
+
+      byte[] family = fileContext.getColumnFamily();
+      if (family == null) {
+        return null;
+      }
+
+      ColumnFamilyDescriptor familyDescriptor = tableDesc.getColumnFamily(family);
+      if (familyDescriptor == null) {
+        LOG.debug("Column family {} not found in table descriptor {}, using table-level bloom type",
+          Bytes.toStringBinary(family), tableDesc.getTableName());
+        return null;
+      }
+      return familyDescriptor.getBloomFilterType();
     }
   }
 }
