@@ -113,6 +113,7 @@ import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterRpcServices;
+import org.apache.hadoop.hbase.monitoring.ThreadLocalServerSideScanMetrics;
 import org.apache.hadoop.hbase.namequeues.NamedQueuePayload;
 import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
 import org.apache.hadoop.hbase.namequeues.RpcLogDetails;
@@ -3549,6 +3550,11 @@ public class RSRpcServices
       }
       throw new ServiceException(e);
     }
+    boolean trackMetrics = request.hasTrackScanMetrics() && request.getTrackScanMetrics();
+    ThreadLocalServerSideScanMetrics.setScanMetricsEnabled(trackMetrics);
+    if (trackMetrics) {
+      ThreadLocalServerSideScanMetrics.reset();
+    }
     requestCount.increment();
     rpcScanRequestCount.increment();
     RegionScannerHolder rsh;
@@ -3636,7 +3642,6 @@ public class RSRpcServices
     boolean scannerClosed = false;
     try {
       List<Result> results = new ArrayList<>(Math.min(rows, 512));
-      boolean trackMetrics = request.hasTrackScanMetrics() && request.getTrackScanMetrics();
       ServerSideScanMetrics scanMetrics = trackMetrics ? new ServerSideScanMetrics() : null;
       if (rows > 0) {
         boolean done = false;
@@ -3715,6 +3720,7 @@ public class RSRpcServices
           scanMetrics.addToCounter(ServerSideScanMetrics.RPC_SCAN_QUEUE_WAIT_TIME_METRIC_NAME,
             rpcQueueWaitTime);
         }
+        ThreadLocalServerSideScanMetrics.populateServerSideScanMetrics(scanMetrics);
         Map<String, Long> metrics = scanMetrics.getMetricsMap();
         ScanMetrics.Builder metricBuilder = ScanMetrics.newBuilder();
         NameInt64Pair.Builder pairBuilder = NameInt64Pair.newBuilder();

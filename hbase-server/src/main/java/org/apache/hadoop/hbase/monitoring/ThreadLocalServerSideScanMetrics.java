@@ -18,10 +18,12 @@
 package org.apache.hadoop.hbase.monitoring;
 
 import java.util.concurrent.atomic.AtomicLong;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.ScannerContext;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * Thread-local storage for server-side scan metrics that captures performance data separately for
@@ -61,7 +63,8 @@ import org.apache.yetus.audience.InterfaceAudience;
  * @see RegionScanner
  * @see org.apache.hadoop.hbase.regionserver.handler.ParallelSeekHandler
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.PHOENIX)
+@InterfaceStability.Evolving
 public final class ThreadLocalServerSideScanMetrics {
   private ThreadLocalServerSideScanMetrics() {
   }
