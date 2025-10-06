@@ -58,6 +58,9 @@
   </custom>
   <body>
     <head>
+      <![CDATA[
+        <link rel="shortcut icon" href="/images/favicon.ico" />
+        ]]>
     </head>
     <menu name="Apache HBase Project">
       <item name="Overview" href="index.html"/>
