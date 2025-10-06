@@ -31,6 +31,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 public class ManagedKeyStoreKeyProvider extends KeyStoreKeyProvider implements ManagedKeyProvider {
   public static final String KEY_METADATA_ALIAS = "KeyAlias";
   public static final String KEY_METADATA_CUST = "KeyCustodian";
+  public static final String KEY_METADATA_NAMESPACE = "KeyNamespace";
 
   private static final java.lang.reflect.Type KEY_METADATA_TYPE =
     new TypeToken<HashMap<String, String>>() {
@@ -41,7 +42,9 @@ public class ManagedKeyStoreKeyProvider extends KeyStoreKeyProvider implements M
   @Override
   public void initConfig(Configuration conf, String providerParameters) {
     this.conf = conf;
-    super.init(providerParameters);
+    if (providerParameters != null) {
+      super.init(providerParameters);
+    }
   }
 
   @Override
@@ -58,7 +61,8 @@ public class ManagedKeyStoreKeyProvider extends KeyStoreKeyProvider implements M
     }
     // Encode clusterId too for consistency with that of key custodian.
     String keyMetadata =
-      generateKeyMetadata(systemKeyAlias, ManagedKeyProvider.encodeToStr(clusterId));
+      generateKeyMetadata(systemKeyAlias, ManagedKeyProvider.encodeToStr(clusterId),
+        ManagedKeyData.KEY_SPACE_GLOBAL);
     return new ManagedKeyData(clusterId, ManagedKeyData.KEY_SPACE_GLOBAL, key,
       ManagedKeyState.ACTIVE, keyMetadata);
   }
@@ -67,9 +71,34 @@ public class ManagedKeyStoreKeyProvider extends KeyStoreKeyProvider implements M
   public ManagedKeyData getManagedKey(byte[] key_cust, String key_namespace) throws IOException {
     checkConfig();
     String encodedCust = ManagedKeyProvider.encodeToStr(key_cust);
-    String aliasConfKey =
-      HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + encodedCust + "." + "alias";
-    String keyMetadata = generateKeyMetadata(conf.get(aliasConfKey, null), encodedCust);
+
+    // Handle null key_namespace by defaulting to global namespace
+    if (key_namespace == null) {
+      key_namespace = ManagedKeyData.KEY_SPACE_GLOBAL;
+    }
+
+    // Get alias configuration first (needed for metadata generation)
+    String aliasConfKey = buildAliasConfKey(encodedCust);
+    String alias = conf.get(aliasConfKey, null);
+
+    // Check if the requested namespace matches the configured namespace
+    String namespaceConfKey = buildNamespaceConfKey(encodedCust);
+    String configuredNamespace = conf.get(namespaceConfKey);
+
+    // If no namespace is configured, default to global namespace
+    if (configuredNamespace == null) {
+      configuredNamespace = ManagedKeyData.KEY_SPACE_GLOBAL;
+    }
+
+    // Generate metadata with actual alias (used for both success and failure cases)
+    String keyMetadata = generateKeyMetadata(alias, encodedCust, key_namespace);
+
+    // Namespace must match - if not, treat as key not found
+    if (!configuredNamespace.equals(key_namespace)) {
+      return new ManagedKeyData(key_cust, key_namespace, null, ManagedKeyState.FAILED, keyMetadata);
+    }
+
+    // Namespaces match, proceed to get the key
     return unwrapKey(keyMetadata, null);
   }
 
@@ -78,17 +107,21 @@ public class ManagedKeyStoreKeyProvider extends KeyStoreKeyProvider implements M
     Map<String, String> keyMetadata =
       GsonUtil.getDefaultInstance().fromJson(keyMetadataStr, KEY_METADATA_TYPE);
     String encodedCust = keyMetadata.get(KEY_METADATA_CUST);
-    String activeStatusConfKey =
-      HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + encodedCust + ".active";
+    String namespace = keyMetadata.get(KEY_METADATA_NAMESPACE);
+    if (namespace == null) {
+      // For backwards compatibility, default to global namespace
+      namespace = ManagedKeyData.KEY_SPACE_GLOBAL;
+    }
+    String activeStatusConfKey = buildActiveStatusConfKey(encodedCust);
     boolean isActive = conf.getBoolean(activeStatusConfKey, true);
     byte[] key_cust = ManagedKeyProvider.decodeToBytes(encodedCust);
     String alias = keyMetadata.get(KEY_METADATA_ALIAS);
     Key key = alias != null ? getKey(alias) : null;
     if (key != null) {
-      return new ManagedKeyData(key_cust, ManagedKeyData.KEY_SPACE_GLOBAL, key,
+      return new ManagedKeyData(key_cust, namespace, key,
         isActive ? ManagedKeyState.ACTIVE : ManagedKeyState.INACTIVE, keyMetadataStr);
     }
-    return new ManagedKeyData(key_cust, ManagedKeyData.KEY_SPACE_GLOBAL, null,
+    return new ManagedKeyData(key_cust, namespace, null,
       isActive ? ManagedKeyState.FAILED : ManagedKeyState.DISABLED, keyMetadataStr);
   }
 
@@ -99,9 +132,26 @@ public class ManagedKeyStoreKeyProvider extends KeyStoreKeyProvider implements M
   }
 
   public static String generateKeyMetadata(String aliasName, String encodedCust) {
-    Map<String, String> metadata = new HashMap<>(2);
+    return generateKeyMetadata(aliasName, encodedCust, ManagedKeyData.KEY_SPACE_GLOBAL);
+  }
+
+  public static String generateKeyMetadata(String aliasName, String encodedCust, String namespace) {
+    Map<String, String> metadata = new HashMap<>(3);
     metadata.put(KEY_METADATA_ALIAS, aliasName);
     metadata.put(KEY_METADATA_CUST, encodedCust);
+    metadata.put(KEY_METADATA_NAMESPACE, namespace);
     return GsonUtil.getDefaultInstance().toJson(metadata, HashMap.class);
+  }
+
+  private String buildAliasConfKey(String encodedCust) {
+    return HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + encodedCust + "." + "alias";
+  }
+
+  private String buildActiveStatusConfKey(String encodedCust) {
+    return HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + encodedCust + ".active";
+  }
+
+  private String buildNamespaceConfKey(String encodedCust) {
+    return HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + encodedCust + ".namespace";
   }
 }
