@@ -50,18 +50,19 @@ public class TestKeymetaAdminShell extends ManagedKeyTestBase implements RubyShe
   @Before
   public void setUp() throws Exception {
     final Configuration conf = TEST_UTIL.getConfiguration();
-    //conf.set("zookeeper.session.timeout", "6000000");
-    //conf.set("hbase.rpc.timeout", "6000000");
-    //conf.set("hbase.rpc.read.timeout", "6000000");
-    //conf.set("hbase.rpc.write.timeout", "6000000");
-    //conf.set("hbase.client.operation.timeout", "6000000");
-    //conf.set("hbase.client.scanner.timeout.period", "6000000");
-    //conf.set("hbase.ipc.client.socket.timeout.connect", "6000000");
-    //conf.set("hbase.ipc.client.socket.timeout.read", "6000000");
-    //conf.set("hbase.ipc.client.socket.timeout.write", "6000000");
-    //conf.set("hbase.master.start.timeout.localHBaseCluster", "6000000");
-    //conf.set("hbase.master.init.timeout.localHBaseCluster", "6000000");
-    //conf.set("hbase.client.sync.wait.timeout.msec", "6000000");
+    // Enable to be able to debug without timing out.
+    // conf.set("zookeeper.session.timeout", "6000000");
+    // conf.set("hbase.rpc.timeout", "6000000");
+    // conf.set("hbase.rpc.read.timeout", "6000000");
+    // conf.set("hbase.rpc.write.timeout", "6000000");
+    // conf.set("hbase.client.operation.timeout", "6000000");
+    // conf.set("hbase.client.scanner.timeout.period", "6000000");
+    // conf.set("hbase.ipc.client.socket.timeout.connect", "6000000");
+    // conf.set("hbase.ipc.client.socket.timeout.read", "6000000");
+    // conf.set("hbase.ipc.client.socket.timeout.write", "6000000");
+    // conf.set("hbase.master.start.timeout.localHBaseCluster", "6000000");
+    // conf.set("hbase.master.init.timeout.localHBaseCluster", "6000000");
+    // conf.set("hbase.client.sync.wait.timeout.msec", "6000000");
     Map<Bytes, Bytes> cust2key = new HashMap<>();
     Map<Bytes, String> cust2alias = new HashMap<>();
     String clusterId = UUID.randomUUID().toString();

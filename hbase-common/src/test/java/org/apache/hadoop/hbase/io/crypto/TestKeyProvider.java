@@ -26,8 +26,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
-import org.apache.hadoop.hbase.io.crypto.MockManagedKeyProvider;
 import org.apache.hadoop.hbase.io.crypto.aes.AES;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -60,7 +58,8 @@ public class TestKeyProvider {
   @Test
   public void testManagedKeyProvider() {
     Configuration conf = HBaseConfiguration.create();
-    conf.set(HConstants.CRYPTO_MANAGED_KEYPROVIDER_CONF_KEY, MockManagedKeyProvider.class.getName());
+    conf.set(HConstants.CRYPTO_MANAGED_KEYPROVIDER_CONF_KEY,
+      MockManagedKeyProvider.class.getName());
     ManagedKeyProvider provider = Encryption.getManagedKeyProvider(conf);
     assertNotNull("Null returned for managed provider", provider);
     assertTrue("Provider is not the expected type", provider instanceof MockManagedKeyProvider);

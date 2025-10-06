@@ -1289,7 +1289,8 @@ public final class HConstants {
     "hbase.crypto.keyprovider.parameters";
 
   /** Configuration key for the managed crypto key provider, a class name */
-  public static final String CRYPTO_MANAGED_KEYPROVIDER_CONF_KEY = "hbase.crypto.managed.keyprovider";
+  public static final String CRYPTO_MANAGED_KEYPROVIDER_CONF_KEY =
+    "hbase.crypto.managed.keyprovider";
 
   /** Configuration key for the managed crypto key provider parameters */
   public static final String CRYPTO_MANAGED_KEYPROVIDER_PARAMETERS_KEY =

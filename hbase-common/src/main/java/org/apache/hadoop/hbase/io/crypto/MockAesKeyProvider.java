@@ -50,8 +50,8 @@ public class MockAesKeyProvider implements KeyProvider {
       if (keys.containsKey(aliases[i])) {
         result[i] = keys.get(aliases[i]);
       } else {
-        result[i] = new SecretKeySpec(Encryption.hash128(aliases[i] + "-" +
-          String.valueOf(System.currentTimeMillis())), "AES");
+        result[i] = new SecretKeySpec(
+          Encryption.hash128(aliases[i] + "-" + String.valueOf(System.currentTimeMillis())), "AES");
         if (cacheKeys) {
           keys.put(aliases[i], result[i]);
         }

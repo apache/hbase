@@ -169,7 +169,8 @@ public class ColumnFamilyDescriptorBuilder {
   private static final Bytes ENCRYPTION_KEY_BYTES = new Bytes(Bytes.toBytes(ENCRYPTION_KEY));
   @InterfaceAudience.Private
   public static final String ENCRYPTION_KEY_NAMESPACE = "ENCRYPTION_KEY_NAMESPACE";
-  private static final Bytes ENCRYPTION_KEY_NAMESPACE_BYTES = new Bytes(Bytes.toBytes(ENCRYPTION_KEY_NAMESPACE));
+  private static final Bytes ENCRYPTION_KEY_NAMESPACE_BYTES =
+    new Bytes(Bytes.toBytes(ENCRYPTION_KEY_NAMESPACE));
 
   private static final boolean DEFAULT_MOB = false;
   @InterfaceAudience.Private

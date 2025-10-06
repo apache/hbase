@@ -29,9 +29,9 @@ import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.hfile.FixedFileTrailer;
+import org.apache.hadoop.hbase.keymeta.KeyNamespaceUtil;
 import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
 import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
-import org.apache.hadoop.hbase.keymeta.KeyNamespaceUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
@@ -88,8 +88,8 @@ public class SecurityUtil {
       }
       Cipher cipher = null;
       Key key = null;
-      ManagedKeyData kekKeyData = isKeyManagementEnabled ? systemKeyCache.getLatestSystemKey() :
-        null;
+      ManagedKeyData kekKeyData =
+        isKeyManagementEnabled ? systemKeyCache.getLatestSystemKey() : null;
 
       // Scenario 1: If family has a key, unwrap it and use that as DEK.
       byte[] familyKeyBytes = family.getEncryptionKey();
@@ -107,22 +107,25 @@ public class SecurityUtil {
         }
       } else {
         if (isKeyManagementEnabled) {
-          boolean localKeyGenEnabled = conf.getBoolean(
-              HConstants.CRYPTO_MANAGED_KEYS_LOCAL_KEY_GEN_PER_FILE_ENABLED_CONF_KEY,
+          boolean localKeyGenEnabled =
+            conf.getBoolean(HConstants.CRYPTO_MANAGED_KEYS_LOCAL_KEY_GEN_PER_FILE_ENABLED_CONF_KEY,
               HConstants.CRYPTO_MANAGED_KEYS_LOCAL_KEY_GEN_PER_FILE_DEFAULT_ENABLED);
-          // Implement 4-step fallback logic for key namespace resolution
-          String[] candidateNamespaces = {
-            family.getEncryptionKeyNamespace(), // 1. CF KEY_NAMESPACE attribute
-            KeyNamespaceUtil.constructKeyNamespace(tableDescriptor, family), // 2. Constructed namespace
-            tableDescriptor.getTableName().getNameAsString(), // 3. Table name
-            ManagedKeyData.KEY_SPACE_GLOBAL // 4. Global namespace
+          // Implement 4-step fallback logic for key namespace resolution in the order of
+          // 1. CF KEY_NAMESPACE attribute
+          // 2. Constructed namespace
+          // 3. Table name
+          // 4. Global namespace
+          String[] candidateNamespaces = { family.getEncryptionKeyNamespace(),
+            KeyNamespaceUtil.constructKeyNamespace(tableDescriptor, family),
+            tableDescriptor.getTableName().getNameAsString(),
+            ManagedKeyData.KEY_SPACE_GLOBAL
           };
 
           ManagedKeyData activeKeyData = null;
           for (String candidate : candidateNamespaces) {
             if (candidate != null) {
-              activeKeyData = managedKeyDataCache.getActiveEntry(
-                  ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES, candidate);
+              activeKeyData = managedKeyDataCache
+                .getActiveEntry(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES, candidate);
               if (activeKeyData != null) {
                 keyNamespace = candidate;
                 break;
@@ -140,18 +143,20 @@ public class SecurityUtil {
               kekKeyData = activeKeyData;
               // TODO: Use the active key as a seed to generate the local key instead of
               // random generation
-              cipher = getCipherIfValid(conf, cipherName, activeKeyData.getTheKey(), family.getNameAsString());
+              cipher = getCipherIfValid(conf, cipherName, activeKeyData.getTheKey(),
+                family.getNameAsString());
             }
           }
         } else {
-          // Scenario 3: Do nothing, let a random key be generated as DEK and if key management is enabled,
+          // Scenario 3: Do nothing, let a random key be generated as DEK and if key management is
+          // enabled,
           // let STK be used as KEK.
         }
       }
 
       if (cipher == null) {
-        cipher = getCipherIfValid(conf, cipherName, key,
-          key == null ? null : family.getNameAsString());
+        cipher =
+          getCipherIfValid(conf, cipherName, key, key == null ? null : family.getNameAsString());
       }
       if (key == null) {
         key = cipher.getRandomKey();
@@ -198,7 +203,8 @@ public class SecurityUtil {
 
       // Try STK lookup first if checksum is available and system key cache is not null.
       if (trailer.getKEKChecksum() != 0L) {
-        ManagedKeyData systemKeyData = systemKeyCache.getSystemKeyByChecksum(trailer.getKEKChecksum());
+        ManagedKeyData systemKeyData =
+          systemKeyCache.getSystemKeyByChecksum(trailer.getKEKChecksum());
         if (systemKeyData != null) {
           kek = systemKeyData.getTheKey();
           kekKeyData = systemKeyData;
@@ -224,7 +230,8 @@ public class SecurityUtil {
         }
         kek = kekKeyData.getTheKey();
       } else if (kek == null && isKeyManagementEnabled) {
-        // No checksum or metadata available, fall back to latest system key for backwards compatibility
+        // No checksum or metadata available, fall back to latest system key for backwards
+        // compatibility
         ManagedKeyData systemKeyData = systemKeyCache.getLatestSystemKey();
         if (systemKeyData == null) {
           throw new IOException("Failed to get latest system key");

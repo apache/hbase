@@ -27,9 +27,9 @@ import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 import java.security.KeyStore;
-import java.util.Collection;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -76,12 +76,9 @@ public class TestManagedKeyProvider {
 
     @Parameterized.Parameters(name = "withPasswordOnAlias={0} withPasswordFile={1}")
     public static Collection<Object[]> parameters() {
-      return Arrays.asList(new Object[][] {
-        { Boolean.TRUE, Boolean.TRUE },
-        { Boolean.TRUE, Boolean.FALSE },
-        { Boolean.FALSE, Boolean.TRUE },
-        { Boolean.FALSE, Boolean.FALSE },
-      });
+      return Arrays
+        .asList(new Object[][] { { Boolean.TRUE, Boolean.TRUE }, { Boolean.TRUE, Boolean.FALSE },
+          { Boolean.FALSE, Boolean.TRUE }, { Boolean.FALSE, Boolean.FALSE }, });
     }
 
     // TestManagedKeyStoreKeyProvider specific fields
@@ -253,8 +250,8 @@ public class TestManagedKeyProvider {
       for (Bytes cust : namespaceCust2key.keySet()) {
         String namespace = (index == 0) ? customNamespace1 : customNamespace2;
         ManagedKeyData keyData = managedKeyProvider.getManagedKey(cust.get(), namespace);
-        assertKeyDataWithNamespace(keyData, ManagedKeyState.ACTIVE, namespaceCust2key.get(cust).get(),
-          cust.get(), namespaceCust2alias.get(cust), namespace);
+        assertKeyDataWithNamespace(keyData, ManagedKeyState.ACTIVE,
+          namespaceCust2key.get(cust).get(), cust.get(), namespaceCust2alias.get(cust), namespace);
         index++;
       }
     }
@@ -269,8 +266,9 @@ public class TestManagedKeyProvider {
 
       ManagedKeyData keyData = managedKeyProvider.getManagedKey(firstCust.get(), customNamespace);
       assertNotNull(keyData);
-      assertKeyDataWithNamespace(keyData, ManagedKeyState.INACTIVE, namespaceCust2key.get(firstCust).get(),
-        firstCust.get(), namespaceCust2alias.get(firstCust), customNamespace);
+      assertKeyDataWithNamespace(keyData, ManagedKeyState.INACTIVE,
+        namespaceCust2key.get(firstCust).get(), firstCust.get(), namespaceCust2alias.get(firstCust),
+        customNamespace);
     }
 
     @Test
@@ -279,17 +277,19 @@ public class TestManagedKeyProvider {
       String customNamespace = "invalid/namespace";
       ManagedKeyData keyData = managedKeyProvider.getManagedKey(invalidCustBytes, customNamespace);
       assertNotNull(keyData);
-      assertKeyDataWithNamespace(keyData, ManagedKeyState.FAILED, null, invalidCustBytes, null, customNamespace);
+      assertKeyDataWithNamespace(keyData, ManagedKeyState.FAILED, null, invalidCustBytes, null,
+        customNamespace);
     }
 
     @Test
     public void testNamespaceMismatchReturnsFailedKey() throws Exception {
       // Use existing namespace key but request with different namespace
       Bytes firstCust = namespaceCust2key.keySet().iterator().next();
-      String requestedNamespace = "table2/cf2";  // Different namespace from what's configured!
+      String requestedNamespace = "table2/cf2"; // Different namespace from what's configured!
 
       // Request key with different namespace - should fail
-      ManagedKeyData keyData = managedKeyProvider.getManagedKey(firstCust.get(), requestedNamespace);
+      ManagedKeyData keyData =
+        managedKeyProvider.getManagedKey(firstCust.get(), requestedNamespace);
 
       assertNotNull(keyData);
       assertEquals(ManagedKeyState.FAILED, keyData.getKeyState());
@@ -304,7 +304,8 @@ public class TestManagedKeyProvider {
       Bytes firstCust = namespaceCust2key.keySet().iterator().next();
       String configuredNamespace = "table1/cf1"; // This matches our test setup
 
-      ManagedKeyData keyData = managedKeyProvider.getManagedKey(firstCust.get(), configuredNamespace);
+      ManagedKeyData keyData =
+        managedKeyProvider.getManagedKey(firstCust.get(), configuredNamespace);
 
       assertNotNull(keyData);
       assertEquals(ManagedKeyState.ACTIVE, keyData.getKeyState());
@@ -333,7 +334,8 @@ public class TestManagedKeyProvider {
       Bytes namespaceCust = namespaceCust2key.keySet().iterator().next();
 
       // Try to access it as global - should fail
-      ManagedKeyData keyData = managedKeyProvider.getManagedKey(namespaceCust.get(), ManagedKeyData.KEY_SPACE_GLOBAL);
+      ManagedKeyData keyData =
+        managedKeyProvider.getManagedKey(namespaceCust.get(), ManagedKeyData.KEY_SPACE_GLOBAL);
 
       assertNotNull(keyData);
       assertEquals(ManagedKeyState.FAILED, keyData.getKeyState());
@@ -349,12 +351,14 @@ public class TestManagedKeyProvider {
       String differentNamespace = "table2";
 
       // Verify we can access with configured namespace
-      ManagedKeyData keyData1 = managedKeyProvider.getManagedKey(namespaceCust.get(), configuredNamespace);
+      ManagedKeyData keyData1 =
+        managedKeyProvider.getManagedKey(namespaceCust.get(), configuredNamespace);
       assertEquals(ManagedKeyState.ACTIVE, keyData1.getKeyState());
       assertEquals(configuredNamespace, keyData1.getKeyNamespace());
 
       // But accessing with different namespace should fail (even though it's the same custodian)
-      ManagedKeyData keyData2 = managedKeyProvider.getManagedKey(namespaceCust.get(), differentNamespace);
+      ManagedKeyData keyData2 =
+        managedKeyProvider.getManagedKey(namespaceCust.get(), differentNamespace);
       assertEquals(ManagedKeyState.FAILED, keyData2.getKeyState());
       assertEquals(differentNamespace, keyData2.getKeyNamespace());
     }
@@ -390,7 +394,8 @@ public class TestManagedKeyProvider {
       // Verify the failed key metadata contains the actual alias
       String expectedAlias = namespaceCust2alias.get(firstCust);
       String expectedEncodedCust = Base64.getEncoder().encodeToString(firstCust.get());
-      assertMetadataMatches(keyData.getKeyMetadata(), expectedAlias, expectedEncodedCust, wrongNamespace);
+      assertMetadataMatches(keyData.getKeyMetadata(), expectedAlias, expectedEncodedCust,
+        wrongNamespace);
     }
 
     @Test
@@ -402,22 +407,27 @@ public class TestManagedKeyProvider {
       String oldMetadata = ManagedKeyStoreKeyProvider.generateKeyMetadata(alias, encodedCust);
 
       // Test the new method with explicit global namespace
-      String newMetadata = ManagedKeyStoreKeyProvider.generateKeyMetadata(alias, encodedCust, ManagedKeyData.KEY_SPACE_GLOBAL);
+      String newMetadata = ManagedKeyStoreKeyProvider.generateKeyMetadata(alias, encodedCust,
+        ManagedKeyData.KEY_SPACE_GLOBAL);
 
-      assertEquals("Old and new metadata generation should produce same result for global namespace",
+      assertEquals(
+        "Old and new metadata generation should produce same result for global namespace",
         oldMetadata, newMetadata);
 
       // Verify both contain the namespace field
       Map<String, Object> oldMap = parseKeyMetadata(oldMetadata);
       Map<String, Object> newMap = parseKeyMetadata(newMetadata);
 
-      assertEquals(ManagedKeyData.KEY_SPACE_GLOBAL, oldMap.get(ManagedKeyStoreKeyProvider.KEY_METADATA_NAMESPACE));
-      assertEquals(ManagedKeyData.KEY_SPACE_GLOBAL, newMap.get(ManagedKeyStoreKeyProvider.KEY_METADATA_NAMESPACE));
+      assertEquals(ManagedKeyData.KEY_SPACE_GLOBAL,
+        oldMap.get(ManagedKeyStoreKeyProvider.KEY_METADATA_NAMESPACE));
+      assertEquals(ManagedKeyData.KEY_SPACE_GLOBAL,
+        newMap.get(ManagedKeyStoreKeyProvider.KEY_METADATA_NAMESPACE));
     }
 
     private void assertKeyData(ManagedKeyData keyData, ManagedKeyState expKeyState, byte[] key,
       byte[] custBytes, String alias) throws Exception {
-      assertKeyDataWithNamespace(keyData, expKeyState, key, custBytes, alias, ManagedKeyData.KEY_SPACE_GLOBAL);
+      assertKeyDataWithNamespace(keyData, expKeyState, key, custBytes, alias,
+        ManagedKeyData.KEY_SPACE_GLOBAL);
     }
 
     /**
@@ -432,7 +442,7 @@ public class TestManagedKeyProvider {
      * Helper method to assert metadata contents
      */
     private void assertMetadataContains(Map<String, Object> metadata, String expectedAlias,
-        String expectedEncodedCust, String expectedNamespace) {
+      String expectedEncodedCust, String expectedNamespace) {
       assertNotNull("Metadata should not be null", metadata);
       assertEquals("Metadata should contain expected alias", expectedAlias,
         metadata.get(KEY_METADATA_ALIAS));
@@ -446,13 +456,13 @@ public class TestManagedKeyProvider {
      * Helper method to parse and assert metadata contents in one call
      */
     private void assertMetadataMatches(String keyMetadataStr, String expectedAlias,
-        String expectedEncodedCust, String expectedNamespace) {
+      String expectedEncodedCust, String expectedNamespace) {
       Map<String, Object> metadata = parseKeyMetadata(keyMetadataStr);
       assertMetadataContains(metadata, expectedAlias, expectedEncodedCust, expectedNamespace);
     }
 
-    private void assertKeyDataWithNamespace(ManagedKeyData keyData, ManagedKeyState expKeyState, byte[] key,
-      byte[] custBytes, String alias, String expectedNamespace) throws Exception {
+    private void assertKeyDataWithNamespace(ManagedKeyData keyData, ManagedKeyState expKeyState,
+      byte[] key, byte[] custBytes, String alias, String expectedNamespace) throws Exception {
       assertNotNull(keyData);
       assertEquals(expKeyState, keyData.getKeyState());
       assertEquals(expectedNamespace, keyData.getKeyNamespace());

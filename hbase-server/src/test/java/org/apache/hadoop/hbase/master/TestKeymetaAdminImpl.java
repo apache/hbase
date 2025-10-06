@@ -98,7 +98,8 @@ public class TestKeymetaAdminImpl {
     fs = testRootDir.getFileSystem(conf);
 
     conf.set(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, "true");
-    conf.set(HConstants.CRYPTO_MANAGED_KEYPROVIDER_CONF_KEY, MockManagedKeyProvider.class.getName());
+    conf.set(HConstants.CRYPTO_MANAGED_KEYPROVIDER_CONF_KEY,
+      MockManagedKeyProvider.class.getName());
 
     when(mockServer.getKeyManagementService()).thenReturn(mockServer);
     when(mockServer.getFileSystem()).thenReturn(mockFileSystem);

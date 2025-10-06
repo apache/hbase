@@ -121,7 +121,8 @@ public class TestKeymetaTableAccessor {
     closeableMocks = MockitoAnnotations.openMocks(this);
 
     conf.set(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, "true");
-    conf.set(HConstants.CRYPTO_MANAGED_KEYPROVIDER_CONF_KEY, MockManagedKeyProvider.class.getName());
+    conf.set(HConstants.CRYPTO_MANAGED_KEYPROVIDER_CONF_KEY,
+      MockManagedKeyProvider.class.getName());
 
     when(server.getConnection()).thenReturn(connection);
     when(connection.getTable(KeymetaTableAccessor.KEY_META_TABLE_NAME)).thenReturn(table);

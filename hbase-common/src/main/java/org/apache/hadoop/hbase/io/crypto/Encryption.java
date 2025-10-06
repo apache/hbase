@@ -30,7 +30,6 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiFunction;
-
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
@@ -560,8 +559,8 @@ public final class Encryption {
 
   static final Map<Pair<String, String>, Object> keyProviderCache = new ConcurrentHashMap<>();
 
-  private static Object createProvider(final Configuration conf, String classNameKey, String
-    parametersKey, Class<?> defaultProviderClass, ClassLoader classLoaderForClass,
+  private static Object createProvider(final Configuration conf, String classNameKey,
+    String parametersKey, Class<?> defaultProviderClass, ClassLoader classLoaderForClass,
     BiFunction<Object, String, Void> initFunction) {
     String providerClassName = conf.get(classNameKey, defaultProviderClass.getName());
     String providerParameters = conf.get(parametersKey, "");
@@ -569,8 +568,8 @@ public final class Encryption {
     Object provider = keyProviderCache.get(providerCacheKey);
     if (provider == null) {
       try {
-        provider = ReflectionUtils.newInstance(classLoaderForClass.loadClass(providerClassName),
-          conf);
+        provider =
+          ReflectionUtils.newInstance(classLoaderForClass.loadClass(providerClassName), conf);
         initFunction.apply(provider, providerParameters);
       } catch (Exception e) {
         throw new RuntimeException(e);
@@ -590,7 +589,11 @@ public final class Encryption {
       });
   }
 
-  public static ManagedKeyProvider getManagedKeyProvider(final Configuration conf) { // TODO refactor with that of getKeyProvider method.
+  public static ManagedKeyProvider getManagedKeyProvider(final Configuration conf) { // TODO
+                                                                                     // refactor
+                                                                                     // with that of
+                                                                                     // getKeyProvider
+                                                                                     // method.
     return (ManagedKeyProvider) createProvider(conf, HConstants.CRYPTO_MANAGED_KEYPROVIDER_CONF_KEY,
       HConstants.CRYPTO_MANAGED_KEYPROVIDER_PARAMETERS_KEY, ManagedKeyProvider.class,
       getClassLoaderForClass(ManagedKeyProvider.class), (provider, providerParameters) -> {

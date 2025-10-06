@@ -49,9 +49,9 @@ import org.apache.hadoop.hbase.io.crypto.KeyProvider;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.MockAesKeyProvider;
 import org.apache.hadoop.hbase.io.hfile.FixedFileTrailer;
+import org.apache.hadoop.hbase.keymeta.KeyNamespaceUtil;
 import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
 import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
-import org.apache.hadoop.hbase.keymeta.KeyNamespaceUtil;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Before;
@@ -261,7 +261,8 @@ public class TestSecurityUtil {
     // Configure mocks
     when(mockFamily.getEncryptionType()).thenReturn(AES_CIPHER);
     when(mockFamily.getNameAsString()).thenReturn(TEST_FAMILY);
-    when(mockFamily.getEncryptionKeyNamespace()).thenReturn(null); // Default to null for fallback logic
+    when(mockFamily.getEncryptionKeyNamespace()).thenReturn(null); // Default to null for fallback
+                                                                   // logic
     when(mockTableDescriptor.getTableName()).thenReturn(TableName.valueOf("test:table"));
     when(mockManagedKeyData.getTheKey()).thenReturn(testKey);
 
@@ -369,7 +370,8 @@ public class TestSecurityUtil {
 
     @Test
     public void testWithKeyManagement_NoActiveKey_NoSystemKeyCache() throws IOException {
-      // Test backwards compatibility: when no active key found and system cache is null, should throw
+      // Test backwards compatibility: when no active key found and system cache is null, should
+      // throw
       configBuilder().withKeyManagement(false).apply(conf);
       setupManagedKeyDataCache(testTableNamespace, ManagedKeyData.KEY_SPACE_GLOBAL, null);
       when(mockFamily.getEncryptionKey()).thenReturn(null);
@@ -385,7 +387,8 @@ public class TestSecurityUtil {
 
     @Test
     public void testWithKeyManagement_NoActiveKey_WithSystemKeyCache() throws IOException {
-      // Test backwards compatibility: when no active key found but system cache available, should work
+      // Test backwards compatibility: when no active key found but system cache available, should
+      // work
       configBuilder().withKeyManagement(false).apply(conf);
       setupManagedKeyDataCache(testTableNamespace, ManagedKeyData.KEY_SPACE_GLOBAL, null);
       setupSystemKeyCache(mockManagedKeyData);
@@ -439,7 +442,8 @@ public class TestSecurityUtil {
     @Test
     public void testWithKeyManagement_UseSystemKeyWithoutNSSpecificActiveKey() throws IOException {
       configBuilder().withKeyManagement(false).apply(conf);
-      setupManagedKeyDataCache(testTableNamespace, ManagedKeyData.KEY_SPACE_GLOBAL, mockManagedKeyData);
+      setupManagedKeyDataCache(testTableNamespace, ManagedKeyData.KEY_SPACE_GLOBAL,
+        mockManagedKeyData);
       setupSystemKeyCache(mockManagedKeyData);
       when(mockManagedKeyData.getTheKey()).thenReturn(kekKey);
 
@@ -482,7 +486,8 @@ public class TestSecurityUtil {
     // ---- New backwards compatibility test scenarios ----
 
     @Test
-    public void testBackwardsCompatibility_Scenario1_FamilyKeyWithKeyManagement() throws IOException {
+    public void testBackwardsCompatibility_Scenario1_FamilyKeyWithKeyManagement()
+      throws IOException {
       // Scenario 1: Family has encryption key -> use as DEK, latest STK as KEK
       when(mockFamily.getEncryptionKey()).thenReturn(testWrappedKey);
       configBuilder().withKeyManagement(false).apply(conf);
@@ -499,7 +504,8 @@ public class TestSecurityUtil {
 
     @Test
     public void testBackwardsCompatibility_Scenario2a_ActiveKeyAsDeK() throws IOException {
-      // Scenario 2a: Active key exists, local key gen disabled -> use active key as DEK, latest STK as KEK
+      // Scenario 2a: Active key exists, local key gen disabled -> use active key as DEK, latest STK
+      // as KEK
       configBuilder().withKeyManagement(false).apply(conf);
       setupManagedKeyDataCache(testTableNamespace, mockManagedKeyData);
       ManagedKeyData mockSystemKey = mock(ManagedKeyData.class);
@@ -517,8 +523,10 @@ public class TestSecurityUtil {
     }
 
     @Test
-    public void testBackwardsCompatibility_Scenario2b_ActiveKeyAsKekWithLocalKeyGen() throws IOException {
-      // Scenario 2b: Active key exists, local key gen enabled -> use active key as KEK, generate random DEK
+    public void testBackwardsCompatibility_Scenario2b_ActiveKeyAsKekWithLocalKeyGen()
+      throws IOException {
+      // Scenario 2b: Active key exists, local key gen enabled -> use active key as KEK, generate
+      // random DEK
       configBuilder().withKeyManagement(true).apply(conf);
       setupManagedKeyDataCache(testTableNamespace, mockManagedKeyData);
       when(mockFamily.getEncryptionKey()).thenReturn(null);
@@ -666,10 +674,12 @@ public class TestSecurityUtil {
     }
 
     @Test
-    public void testBackwardsCompatibility_Scenario3b_NoActiveKeyGenerateLocalKey() throws IOException {
+    public void testBackwardsCompatibility_Scenario3b_NoActiveKeyGenerateLocalKey()
+      throws IOException {
       // Scenario 3: No active key -> generate random DEK, latest STK as KEK
       configBuilder().withKeyManagement(false).apply(conf);
-      setupManagedKeyDataCache(TEST_NAMESPACE, ManagedKeyData.KEY_SPACE_GLOBAL, null); // No active key
+      setupManagedKeyDataCache(TEST_NAMESPACE, ManagedKeyData.KEY_SPACE_GLOBAL, null); // No active
+                                                                                       // key
       setupSystemKeyCache(mockManagedKeyData);
       when(mockFamily.getEncryptionKey()).thenReturn(null);
 
@@ -683,8 +693,10 @@ public class TestSecurityUtil {
     }
 
     @Test
-    public void testBackwardsCompatibility_Scenario1_FamilyKeyWithoutKeyManagement() throws IOException {
-      // Scenario 1 variation: Family has encryption key but key management disabled -> use as DEK, no KEK
+    public void testBackwardsCompatibility_Scenario1_FamilyKeyWithoutKeyManagement()
+      throws IOException {
+      // Scenario 1 variation: Family has encryption key but key management disabled -> use as DEK,
+      // no KEK
       byte[] wrappedKey = createRandomWrappedKey(conf);
       when(mockFamily.getEncryptionKey()).thenReturn(wrappedKey);
 
@@ -696,11 +708,13 @@ public class TestSecurityUtil {
 
     @Test
     public void testWithKeyManagement_FamilyKey_UnwrapKeyException() throws Exception {
-      // Test for KeyException->IOException wrapping when family has key bytes with key management enabled
+      // Test for KeyException->IOException wrapping when family has key bytes with key management
+      // enabled
       // This covers the exception block at lines 103-105 in SecurityUtil.java
 
       // Create a properly wrapped key first, then corrupt it to cause unwrapping failure
-      Key wrongKek = new SecretKeySpec("bad-kek-16-bytes".getBytes(), AES_CIPHER); // Exactly 16 bytes
+      Key wrongKek = new SecretKeySpec("bad-kek-16-bytes".getBytes(), AES_CIPHER); // Exactly 16
+                                                                                   // bytes
       byte[] validWrappedKey = EncryptionUtil.wrapKey(conf, null, testKey, wrongKek);
 
       when(mockFamily.getEncryptionKey()).thenReturn(validWrappedKey);
@@ -756,7 +770,8 @@ public class TestSecurityUtil {
       // Also set up managed key cache (but it shouldn't be used since STK succeeds)
       setupManagedKeyDataCacheEntry(testTableNamespace, TEST_KEK_METADATA, testWrappedKey,
         mockManagedKeyData);
-      when(mockManagedKeyData.getTheKey()).thenThrow(new RuntimeException("This should not be called"));
+      when(mockManagedKeyData.getTheKey())
+        .thenThrow(new RuntimeException("This should not be called"));
 
       Encryption.Context result = SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer,
         mockManagedKeyDataCache, mockSystemKeyCache);
@@ -789,7 +804,8 @@ public class TestSecurityUtil {
     }
 
     @Test
-    public void testWithKeyManagement_KEKMetadataAndChecksumFailure() throws IOException, KeyException {
+    public void testWithKeyManagement_KEKMetadataAndChecksumFailure()
+      throws IOException, KeyException {
       // Test scenario where both STK lookup and managed key lookup fail
       byte[] keyBytes = "test-encrypted-key".getBytes();
       String kekMetadata = "test-kek-metadata";
@@ -813,8 +829,8 @@ public class TestSecurityUtil {
           mockSystemKeyCache);
       });
 
-      assertTrue(exception.getMessage().contains("Failed to get key data for KEK metadata: " +
-        kekMetadata));
+      assertTrue(
+        exception.getMessage().contains("Failed to get key data for KEK metadata: " + kekMetadata));
       assertTrue(exception.getCause().getMessage().contains("Key not found"));
     }
 
@@ -834,7 +850,8 @@ public class TestSecurityUtil {
     }
 
     @Test
-    public void testBackwardsCompatibility_WithKeyManagement_LatestSystemKeyNotFound() throws IOException {
+    public void testBackwardsCompatibility_WithKeyManagement_LatestSystemKeyNotFound()
+      throws IOException {
       // Test when both STK lookup by checksum fails and latest system key is null
       byte[] keyBytes = "test-encrypted-key".getBytes();
 
@@ -971,8 +988,8 @@ public class TestSecurityUtil {
           null);
       });
 
-      assertTrue(exception.getMessage().contains(
-        "SystemKeyCache can't be null when using key management feature"));
+      assertTrue(exception.getMessage()
+        .contains("SystemKeyCache can't be null when using key management feature"));
     }
   }
 

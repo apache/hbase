@@ -60,9 +60,8 @@ public class ManagedKeyStoreKeyProvider extends KeyStoreKeyProvider implements M
       throw new RuntimeException("Unable to find system key with alias: " + systemKeyAlias);
     }
     // Encode clusterId too for consistency with that of key custodian.
-    String keyMetadata =
-      generateKeyMetadata(systemKeyAlias, ManagedKeyProvider.encodeToStr(clusterId),
-        ManagedKeyData.KEY_SPACE_GLOBAL);
+    String keyMetadata = generateKeyMetadata(systemKeyAlias,
+      ManagedKeyProvider.encodeToStr(clusterId), ManagedKeyData.KEY_SPACE_GLOBAL);
     return new ManagedKeyData(clusterId, ManagedKeyData.KEY_SPACE_GLOBAL, key,
       ManagedKeyState.ACTIVE, keyMetadata);
   }

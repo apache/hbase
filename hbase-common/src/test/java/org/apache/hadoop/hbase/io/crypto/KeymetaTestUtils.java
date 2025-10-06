@@ -122,7 +122,8 @@ public class KeymetaTestUtils {
 
   public static void addEntry(Configuration conf, int keyLen, KeyStore store, String alias,
     String custodian, boolean withPasswordOnAlias, Map<Bytes, Bytes> cust2key,
-    Map<Bytes, String> cust2alias, Properties passwordFileProps, String namespace) throws Exception {
+    Map<Bytes, String> cust2alias, Properties passwordFileProps, String namespace)
+    throws Exception {
     Preconditions.checkArgument(keyLen == 256 || keyLen == 128, "Key length must be 256 or 128");
     byte[] key =
       MessageDigest.getInstance(keyLen == 256 ? "SHA-256" : "MD5").digest(Bytes.toBytes(alias));
@@ -133,12 +134,14 @@ public class KeymetaTestUtils {
     String encCust = Base64.getEncoder().encodeToString(custodian.getBytes());
 
     // Always use the same alias configuration key format
-    String aliasConfKey = HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + encCust + "." + "alias";
+    String aliasConfKey =
+      HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + encCust + "." + "alias";
     conf.set(aliasConfKey, alias);
 
     // Set separate namespace property if not global
     if (!ManagedKeyData.KEY_SPACE_GLOBAL.equals(namespace)) {
-      String namespaceConfKey = HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + encCust + ".namespace";
+      String namespaceConfKey =
+        HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + encCust + ".namespace";
       conf.set(namespaceConfKey, namespace);
     }
 

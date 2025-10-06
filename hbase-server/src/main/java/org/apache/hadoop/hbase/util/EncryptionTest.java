@@ -56,8 +56,8 @@ public class EncryptionTest {
       providerClassName = conf.get(HConstants.CRYPTO_MANAGED_KEYPROVIDER_CONF_KEY,
         ManagedKeyStoreKeyProvider.class.getName());
     } else {
-      providerClassName = conf.get(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY,
-        KeyStoreKeyProvider.class.getName());
+      providerClassName =
+        conf.get(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyStoreKeyProvider.class.getName());
     }
     Boolean result = keyProviderResults.get(providerClassName);
     if (result == null) {

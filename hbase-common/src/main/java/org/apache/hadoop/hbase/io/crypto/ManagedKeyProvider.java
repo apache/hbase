@@ -32,7 +32,7 @@ public interface ManagedKeyProvider {
   /**
    * Initialize the provider with the given configuration.
    * @param conf Hadoop configuration
-   * @param providerParameters
+   * @param providerParameters provider parameters
    */
   void initConfig(Configuration conf, String providerParameters);
 

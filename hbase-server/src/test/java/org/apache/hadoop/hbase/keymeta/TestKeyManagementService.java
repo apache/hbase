@@ -66,7 +66,8 @@ public class TestKeyManagementService {
     // Clear provider cache to avoid interference from other tests
     Encryption.clearKeyProviderCache();
     conf.set(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, "true");
-    conf.set(HConstants.CRYPTO_MANAGED_KEYPROVIDER_CONF_KEY, MockManagedKeyProvider.class.getName());
+    conf.set(HConstants.CRYPTO_MANAGED_KEYPROVIDER_CONF_KEY,
+      MockManagedKeyProvider.class.getName());
     conf.set(HConstants.HBASE_ORIGINAL_DIR, "/tmp/hbase");
   }
 
@@ -74,7 +75,8 @@ public class TestKeyManagementService {
   public void testDefaultKeyManagementServiceCreation() throws IOException {
     // SystemKeyCache needs at least one valid key to be created, so setting up a mock FS that
     // returns a mock file that returns a known mocked key metadata.
-    MockManagedKeyProvider provider = (MockManagedKeyProvider) Encryption.getManagedKeyProvider(conf);
+    MockManagedKeyProvider provider =
+      (MockManagedKeyProvider) Encryption.getManagedKeyProvider(conf);
     ManagedKeyData keyData =
       provider.getManagedKey("system".getBytes(), ManagedKeyData.KEY_SPACE_GLOBAL);
     String fileName = SYSTEM_KEY_FILE_PREFIX + "1";

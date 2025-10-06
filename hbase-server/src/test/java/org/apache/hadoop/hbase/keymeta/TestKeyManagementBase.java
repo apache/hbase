@@ -56,16 +56,17 @@ public class TestKeyManagementBase {
     RuntimeException exception = assertThrows(RuntimeException.class, () -> {
       keyMgmt.getKeyProvider();
     });
-    // The error message will be about ClassCastException since DummyKeyProvider doesn't implement ManagedKeyProvider
-    assertTrue(exception.getMessage().contains("ClassCastException") ||
-               exception.getCause() instanceof ClassCastException);
+    // The error message will be about ClassCastException since DummyKeyProvider doesn't implement
+    // ManagedKeyProvider
+    assertTrue(exception.getMessage().contains("ClassCastException")
+      || exception.getCause() instanceof ClassCastException);
 
     exception = assertThrows(RuntimeException.class, () -> {
       KeyManagementBase keyMgmt2 = new TestKeyManagement(conf);
       keyMgmt2.getKeyProvider();
     });
-    assertTrue(exception.getMessage().contains("ClassCastException") ||
-               exception.getCause() instanceof ClassCastException);
+    assertTrue(exception.getMessage().contains("ClassCastException")
+      || exception.getCause() instanceof ClassCastException);
 
     assertThrows(IllegalArgumentException.class, () -> {
       Configuration configuration = null;
