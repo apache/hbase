@@ -73,9 +73,6 @@ under the License.
         <dd><p>See the <a href="book.html#security">Security</a> chapter in the <a href="book.html#faq">Apache HBase<sup>®</sup> Reference Guide</a>, and the general <a href="https://apache.org/security/">Apache Security information</a>!</p></dd>
       </dl>
     </section>
-    <section name="Source code">
-      <p>You can contribute on <a class="externalLink" href="https://github.com/apache/hbase">GitHub</a>. See the <a href="scm.html">Source Repository page</a> for more details.</p>
-    </section>
 
     <section name="News">
       <p>July 20th, 2019 <a href="https://easychair.org/cfp/hbaseconasia-2019">HBaseCon, Asia 2019</a> Beijing, China</p>
