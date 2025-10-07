@@ -59,17 +59,19 @@ class AsyncBufferedMutatorImpl implements AsyncBufferedMutator {
 
   private final int maxMutations;
 
-  private final ReentrantLock lock = new ReentrantLock();
+  private ArrayList<Mutation> mutations = new ArrayList<>(INITIAL_CAPACITY);
 
-  private List<Mutation> mutations = new ArrayList<>(INITIAL_CAPACITY);
-
-  private List<CompletableFuture<Void>> futures = new ArrayList<>(INITIAL_CAPACITY);
+  private ArrayList<CompletableFuture<Void>> futures = new ArrayList<>(INITIAL_CAPACITY);
 
   private long bufferedSize;
 
   private volatile boolean closed;
 
+  // Accessed by tests
   Timeout periodicFlushTask;
+
+  // Accessed by tests
+  final ReentrantLock lock = new ReentrantLock();
 
   enum FlushType {
     /** Flush triggered by buffer size exceeding threshold */
@@ -110,8 +112,8 @@ class AsyncBufferedMutatorImpl implements AsyncBufferedMutator {
   }
 
   protected void internalFlush(FlushType trigger) {
-    List<Mutation> toSend;
-    List<CompletableFuture<Void>> toComplete;
+    ArrayList<Mutation> toSend;
+    ArrayList<CompletableFuture<Void>> toComplete;
     // Ensure that the mutations and futures are not modified while we are processing them.
     lock.lock();
     try {
@@ -179,7 +181,8 @@ class AsyncBufferedMutatorImpl implements AsyncBufferedMutator {
       if (this.mutations.isEmpty() && periodicFlushTimeoutNs > 0) {
         periodicFlushTask = periodicalFlushTimer.newTimeout(timeout -> {
           boolean shouldFlush = false;
-          synchronized (AsyncBufferedMutatorImpl.this) {
+          lock.lock();
+          try {
             // confirm that we are still valid, if there is already an internalFlush call before us,
             // then we should not execute anymore. And in internalFlush we will set periodicFlush
             // to null, and since we may schedule a new one, so here we check whether the references
@@ -188,19 +191,17 @@ class AsyncBufferedMutatorImpl implements AsyncBufferedMutator {
               periodicFlushTask = null;
               shouldFlush = true;
             }
+          } finally {
+            lock.unlock();
           }
           if (shouldFlush) {
             internalFlush(FlushType.PERIODIC);
           }
         }, periodicFlushTimeoutNs, TimeUnit.NANOSECONDS);
       }
-      // Preallocate to avoid potentially multiple resizes during addAll if we can.
-      if (this.mutations instanceof ArrayList && this.futures instanceof ArrayList) {
-        ((ArrayList<Mutation>) this.mutations).ensureCapacity(this.mutations.size()
-          + mutations.size());
-        ((ArrayList<CompletableFuture<Void>>) this.futures).ensureCapacity(this.futures.size()
-          + futures.size());
-      }
+      // Preallocate to avoid potentially multiple resizes during addAll
+      this.mutations.ensureCapacity(this.mutations.size() + mutations.size());
+      this.futures.ensureCapacity(this.futures.size() + futures.size());
       this.mutations.addAll(mutations);
       this.futures.addAll(futures);
       bufferedSize += heapSize;
