@@ -589,11 +589,7 @@ public final class Encryption {
       });
   }
 
-  public static ManagedKeyProvider getManagedKeyProvider(final Configuration conf) { // TODO
-                                                                                     // refactor
-                                                                                     // with that of
-                                                                                     // getKeyProvider
-                                                                                     // method.
+  public static ManagedKeyProvider getManagedKeyProvider(final Configuration conf) {
     return (ManagedKeyProvider) createProvider(conf, HConstants.CRYPTO_MANAGED_KEYPROVIDER_CONF_KEY,
       HConstants.CRYPTO_MANAGED_KEYPROVIDER_PARAMETERS_KEY, ManagedKeyProvider.class,
       getClassLoaderForClass(ManagedKeyProvider.class), (provider, providerParameters) -> {

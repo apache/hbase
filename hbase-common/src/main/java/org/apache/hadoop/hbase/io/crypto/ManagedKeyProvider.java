@@ -31,7 +31,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 public interface ManagedKeyProvider {
   /**
    * Initialize the provider with the given configuration.
-   * @param conf Hadoop configuration
+   * @param conf               Hadoop configuration
    * @param providerParameters provider parameters
    */
   void initConfig(Configuration conf, String providerParameters);

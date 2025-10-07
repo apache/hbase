@@ -50,8 +50,11 @@ public class MockAesKeyProvider implements KeyProvider {
       if (keys.containsKey(aliases[i])) {
         result[i] = keys.get(aliases[i]);
       } else {
+        // When not caching keys, we want to make the key generation deterministic.
         result[i] = new SecretKeySpec(
-          Encryption.hash128(aliases[i] + "-" + String.valueOf(System.currentTimeMillis())), "AES");
+          Encryption.hash128(
+            cacheKeys ? aliases[i] + "-" + String.valueOf(System.currentTimeMillis()) : aliases[i]),
+          "AES");
         if (cacheKeys) {
           keys.put(aliases[i], result[i]);
         }
