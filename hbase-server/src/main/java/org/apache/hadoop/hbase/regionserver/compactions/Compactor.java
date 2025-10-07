@@ -365,6 +365,11 @@ public abstract class Compactor<T extends CellSink> {
       }
       writer = sinkFactory.createWriter(scanner, fd, dropCache, request.isMajor(),
         request.getWriterCreationTracker());
+      // Thread compaction context to writer so downstream formats (e.g., v4 sections) inherit
+      if (writer instanceof org.apache.hadoop.hbase.regionserver.StoreFileWriter) {
+        ((org.apache.hadoop.hbase.regionserver.StoreFileWriter) writer)
+          .appendCompactionContext(request.isAllFiles(), request.getFiles());
+      }
       finished = performCompaction(fd, scanner, writer, smallestReadPoint, cleanSeqId,
         throughputController, request, progress);
       if (!finished) {
