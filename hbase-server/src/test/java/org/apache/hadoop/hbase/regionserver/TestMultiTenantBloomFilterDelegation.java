@@ -40,11 +40,14 @@ import org.apache.hadoop.hbase.io.hfile.MultiTenantBloomSupport;
 import org.apache.hadoop.hbase.io.hfile.MultiTenantHFileWriter;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext;
 import org.apache.hadoop.hbase.io.hfile.ReaderContextBuilder;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
+@Category(SmallTests.class)
 public class TestMultiTenantBloomFilterDelegation {
 
   @Test
@@ -98,14 +101,14 @@ public class TestMultiTenantBloomFilterDelegation {
     assertTrue(hfileReader instanceof MultiTenantBloomSupport);
     MultiTenantBloomSupport bloomSupport = (MultiTenantBloomSupport) hfileReader;
 
-    boolean expectedPresent = bloomSupport.passesGeneralRowBloomFilter(presentRow, 0,
-      presentRow.length);
+    boolean expectedPresent =
+      bloomSupport.passesGeneralRowBloomFilter(presentRow, 0, presentRow.length);
     assertTrue(expectedPresent);
     Scan present = new Scan(new Get(presentRow));
     assertEquals(expectedPresent, reader.passesBloomFilter(present, null));
 
-    boolean expectedAbsent = bloomSupport.passesGeneralRowBloomFilter(absentRow, 0,
-      absentRow.length);
+    boolean expectedAbsent =
+      bloomSupport.passesGeneralRowBloomFilter(absentRow, 0, absentRow.length);
     Scan absent = new Scan(new Get(absentRow));
     assertEquals(expectedAbsent, reader.passesBloomFilter(absent, null));
 

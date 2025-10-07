@@ -45,8 +45,8 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileInfo;
-import org.apache.hadoop.hbase.io.hfile.MultiTenantBloomSupport;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
+import org.apache.hadoop.hbase.io.hfile.MultiTenantBloomSupport;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext.ReaderType;
 import org.apache.hadoop.hbase.nio.ByteBuff;
@@ -265,8 +265,8 @@ public class StoreFileReader {
   public boolean passesDeleteFamilyBloomFilter(byte[] row, int rowOffset, int rowLen) {
     if (reader instanceof MultiTenantBloomSupport) {
       try {
-        return ((MultiTenantBloomSupport) reader)
-          .passesDeleteFamilyBloomFilter(row, rowOffset, rowLen);
+        return ((MultiTenantBloomSupport) reader).passesDeleteFamilyBloomFilter(row, rowOffset,
+          rowLen);
       } catch (IOException e) {
         LOG.warn("Failed multi-tenant delete-family bloom check, proceeding without", e);
         return true;
@@ -302,13 +302,13 @@ public class StoreFileReader {
    * A method for checking Bloom filters. Called directly from StoreFileScanner in case of a
    * multi-column query.
    * @return True if passes
-  */
+   */
   private boolean passesGeneralRowBloomFilter(byte[] row, int rowOffset, int rowLen) {
     if (reader instanceof MultiTenantBloomSupport) {
       incrementBloomEligible();
       try {
-        return ((MultiTenantBloomSupport) reader)
-          .passesGeneralRowBloomFilter(row, rowOffset, rowLen);
+        return ((MultiTenantBloomSupport) reader).passesGeneralRowBloomFilter(row, rowOffset,
+          rowLen);
       } catch (IOException e) {
         LOG.warn("Failed multi-tenant row bloom check, proceeding without", e);
         return true;
@@ -566,8 +566,7 @@ public class StoreFileReader {
           }
         } else if (reader instanceof MultiTenantBloomSupport) {
           try {
-            generalBloomFilter =
-              ((MultiTenantBloomSupport) reader).getGeneralBloomFilterInstance();
+            generalBloomFilter = ((MultiTenantBloomSupport) reader).getGeneralBloomFilterInstance();
           } catch (IOException e) {
             LOG.debug("Failed to obtain general bloom filter from multi-tenant reader", e);
           }
@@ -737,4 +736,4 @@ public class StoreFileReader {
   public ReaderContext getReaderContext() {
     return this.context;
   }
-  }
+}

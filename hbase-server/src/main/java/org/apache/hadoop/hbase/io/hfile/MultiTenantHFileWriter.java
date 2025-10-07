@@ -268,8 +268,7 @@ public class MultiTenantHFileWriter implements HFile.Writer {
   public static MultiTenantHFileWriter create(FileSystem fs, Path path, Configuration conf,
     CacheConfig cacheConf, Map<String, String> tableProperties, HFileContext fileContext,
     BloomType columnFamilyBloomType, BloomType defaultBloomType, FSDataOutputStream outputStream,
-    boolean closeOutputStream)
-    throws IOException {
+    boolean closeOutputStream) throws IOException {
 
     FSDataOutputStream writerStream = outputStream;
     boolean shouldCloseStream = closeOutputStream;
@@ -285,7 +284,8 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     TenantExtractor tenantExtractor =
       TenantExtractorFactory.createTenantExtractor(conf, tableProperties);
 
-    // Determine bloom configuration with precedence: column family > table property > builder > default ROW
+    // Determine bloom configuration with precedence: column family > table property > builder >
+    // default ROW
     BloomType bloomType = columnFamilyBloomType;
     if (tableProperties != null && tableProperties.containsKey("BLOOMFILTER")) {
       try {
@@ -302,7 +302,8 @@ public class MultiTenantHFileWriter implements HFile.Writer {
       bloomType = BloomType.ROW;
     }
 
-    LOG.info("Creating MultiTenantHFileWriter with tenant extractor: {}, bloom type: {} (cf override: {}, default: {}) and target {}",
+    LOG.info(
+      "Creating MultiTenantHFileWriter with tenant extractor: {}, bloom type: {} (cf override: {}, default: {}) and target {}",
       tenantExtractor.getClass().getSimpleName(), bloomType,
       columnFamilyBloomType != null ? columnFamilyBloomType : "<not-set>",
       defaultBloomType != null ? defaultBloomType : "<none>", path != null ? path : writerStream);

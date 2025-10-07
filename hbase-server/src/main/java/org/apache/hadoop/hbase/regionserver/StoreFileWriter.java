@@ -598,7 +598,9 @@ public class StoreFileWriter implements CellSink, ShipperListener {
       this.compactedFilesSupplier = compactedFilesSupplier;
       // TODO : Change all writers to be specifically created for compaction context
       HFile.WriterFactory writerFactory = HFile.getWriterFactory(conf, cacheConf);
-      if (writerFactory instanceof org.apache.hadoop.hbase.io.hfile.MultiTenantHFileWriter.WriterFactory) {
+      if (
+        writerFactory instanceof org.apache.hadoop.hbase.io.hfile.MultiTenantHFileWriter.WriterFactory
+      ) {
         ((org.apache.hadoop.hbase.io.hfile.MultiTenantHFileWriter.WriterFactory) writerFactory)
           .withPreferredBloomType(bloomType);
       }

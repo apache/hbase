@@ -33,9 +33,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -50,9 +50,9 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.BloomFilter;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -324,8 +324,8 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
     return cache;
   }
 
-  private Cache<ImmutableBytesWritable, SectionBloomState> createSectionBloomCache(
-    Configuration conf) {
+  private Cache<ImmutableBytesWritable, SectionBloomState>
+    createSectionBloomCache(Configuration conf) {
     int maxSize = Math.max(1,
       conf.getInt(SECTION_READER_CACHE_MAX_SIZE, DEFAULT_SECTION_READER_CACHE_MAX_SIZE));
     Cache<ImmutableBytesWritable, SectionBloomState> cache =
@@ -492,8 +492,10 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
       if (cause instanceof IOException) {
         throw (IOException) cause;
       }
-      throw new IOException("Failed to load bloom state for section "
-        + Bytes.toStringBinary(cacheKey.get(), cacheKey.getOffset(), cacheKey.getLength()), cause);
+      throw new IOException(
+        "Failed to load bloom state for section "
+          + Bytes.toStringBinary(cacheKey.get(), cacheKey.getOffset(), cacheKey.getLength()),
+        cause);
     }
   }
 
@@ -541,8 +543,7 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
     long entries = reader.getTrailer().getEntryCount();
 
     return new SectionBloomState(sectionKey.copyBytes(), bloomType, generalBloom, deleteBloom,
-      lastBloomKey, lastBloomKeyKV, prefixLength, deleteFamilyCnt, entries,
-      reader.getComparator());
+      lastBloomKey, lastBloomKeyKV, prefixLength, deleteFamilyCnt, entries, reader.getComparator());
   }
 
   private SectionBloomState findSectionBloomState(boolean needGeneral, boolean needDelete)
@@ -924,8 +925,8 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
         // When the Bloom filter is not a ROWCOL type, fall back to row-based filtering.
         ExtendedCell rowCell = PrivateCellUtil.createFirstOnRow(cell);
         byte[] rowKey = rowCell.getRowArray();
-        return checkGeneralBloomFilter(rowKey, rowCell.getRowOffset(), rowCell.getRowLength(),
-          null, reader);
+        return checkGeneralBloomFilter(rowKey, rowCell.getRowOffset(), rowCell.getRowLength(), null,
+          reader);
       }
       ExtendedCell kvKey = PrivateCellUtil.createFirstOnRowCol(cell);
       return checkGeneralBloomFilter(null, 0, 0, kvKey, reader);
@@ -979,15 +980,17 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
           if (bloomType == BloomType.ROWCOL && kvKey != null && comparator != null) {
             keyIsAfterLast = comparator.compare(kvKey, lastBloomKeyOnlyKV) > 0;
           } else if (key != null) {
-            keyIsAfterLast = Bytes.compareTo(key, keyOffset, keyLen, lastBloomKey, 0,
-              lastBloomKey.length) > 0;
+            keyIsAfterLast =
+              Bytes.compareTo(key, keyOffset, keyLen, lastBloomKey, 0, lastBloomKey.length) > 0;
           }
         }
 
         if (bloomType == BloomType.ROWCOL && kvKey != null) {
           ExtendedCell rowBloomKey = PrivateCellUtil.createFirstOnRow(kvKey);
-          if (keyIsAfterLast && comparator != null
-            && comparator.compare(rowBloomKey, lastBloomKeyOnlyKV) > 0) {
+          if (
+            keyIsAfterLast && comparator != null
+              && comparator.compare(rowBloomKey, lastBloomKeyOnlyKV) > 0
+          ) {
             return false;
           }
           return generalBloom.contains(kvKey, bloomData, BloomType.ROWCOL)
