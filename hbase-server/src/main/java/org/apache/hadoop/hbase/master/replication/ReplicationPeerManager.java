@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.master.replication;
 import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
 import java.net.URI;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
@@ -101,6 +103,8 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 public class ReplicationPeerManager implements ConfigurationObserver {
 
   private static final Logger LOG = LoggerFactory.getLogger(ReplicationPeerManager.class);
+
+  private static final DateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
   private volatile ReplicationPeerStorage peerStorage;
 
@@ -294,8 +298,10 @@ public class ReplicationPeerManager implements ConfigurationObserver {
       ? SyncReplicationState.DOWNGRADE_ACTIVE
       : SyncReplicationState.NONE;
     peerStorage.addPeer(peerId, copiedPeerConfig, enabled, syncReplicationState);
+    long peerCreateTime = peerStorage.getPeerCreateTime(peerId);
+    String peerCreateTimeStr = peerCreateTime == -1 ? "" : DATE_FORMAT.format(peerCreateTime);
     peers.put(peerId,
-      new ReplicationPeerDescription(peerId, enabled, copiedPeerConfig, syncReplicationState));
+      new ReplicationPeerDescription(peerId, enabled, copiedPeerConfig, syncReplicationState, peerCreateTimeStr));
   }
 
   public void removePeer(String peerId) throws ReplicationException {
@@ -315,7 +321,7 @@ public class ReplicationPeerManager implements ConfigurationObserver {
     }
     peerStorage.setPeerState(peerId, enabled);
     peers.put(peerId, new ReplicationPeerDescription(peerId, enabled, desc.getPeerConfig(),
-      desc.getSyncReplicationState()));
+      desc.getSyncReplicationState(), desc.getCreateTime()));
   }
 
   public boolean getPeerState(String peerId) throws ReplicationException {
@@ -348,7 +354,7 @@ public class ReplicationPeerManager implements ConfigurationObserver {
     ReplicationPeerConfig newPeerConfig = newPeerConfigBuilder.build();
     peerStorage.updatePeerConfig(peerId, newPeerConfig);
     peers.put(peerId, new ReplicationPeerDescription(peerId, desc.isEnabled(), newPeerConfig,
-      desc.getSyncReplicationState()));
+      desc.getSyncReplicationState(), desc.getCreateTime()));
   }
 
   public List<ReplicationPeerDescription> listPeers(Pattern pattern) {
@@ -383,7 +389,7 @@ public class ReplicationPeerManager implements ConfigurationObserver {
     if (desc.getSyncReplicationState() != newState) {
       // Only recreate the desc if this is not a retry
       peers.put(peerId,
-        new ReplicationPeerDescription(peerId, desc.isEnabled(), desc.getPeerConfig(), newState));
+        new ReplicationPeerDescription(peerId, desc.isEnabled(), desc.getPeerConfig(), newState, desc.getCreateTime()));
     }
   }
 
@@ -706,7 +712,10 @@ public class ReplicationPeerManager implements ConfigurationObserver {
       peerStorage.updatePeerConfig(peerId, peerConfig);
       boolean enabled = peerStorage.isPeerEnabled(peerId);
       SyncReplicationState state = peerStorage.getPeerSyncReplicationState(peerId);
-      peers.put(peerId, new ReplicationPeerDescription(peerId, enabled, peerConfig, state));
+      long peerCreateTime = peerStorage.getPeerCreateTime(peerId);
+      String peerCreateTimeStr = peerCreateTime == -1 ? "" : DATE_FORMAT.format(peerCreateTime);
+      peers.put(peerId,
+        new ReplicationPeerDescription(peerId, enabled, peerConfig, state, peerCreateTimeStr));
     }
     return new ReplicationPeerManager(fs, zk, peerStorage, queueStorage, peers, conf, clusterId,
       pair.getSecond());
