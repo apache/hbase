@@ -797,6 +797,13 @@ public class ShortCircuitMasterConnection implements MasterKeepAliveConnection {
   }
 
   @Override
+  public MasterProtos.RestoreBackupSystemTableResponse restoreBackupSystemTable(
+    RpcController controller, MasterProtos.RestoreBackupSystemTableRequest request)
+    throws ServiceException {
+    return stub.restoreBackupSystemTable(controller, request);
+  }
+
+  @Override
   public ReplicationPeerModificationSwitchResponse replicationPeerModificationSwitch(
     RpcController controller, ReplicationPeerModificationSwitchRequest request)
     throws ServiceException {

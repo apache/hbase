@@ -2095,6 +2095,22 @@ public class HBaseAdmin implements Admin {
       this.connection.getAdmin(serverName));
   }
 
+  @Override
+  public void restoreBackupSystemTable(String snapshotName) throws IOException {
+    long pid =
+      executeCallable(new MasterCallable<Long>(getConnection(), getRpcControllerFactory()) {
+        @Override
+        protected Long rpcCall() throws Exception {
+          return master.restoreBackupSystemTable(getRpcController(),
+            MasterProtos.RestoreBackupSystemTableRequest.newBuilder().setSnapshotName(snapshotName)
+              .build())
+            .getProcId();
+        }
+      });
+    ProcedureFuture<Void> future = new ProcedureFuture<>(this, pid);
+    get(future, getProcedureTimeout, TimeUnit.MILLISECONDS);
+  }
+
   private MasterCallable<MasterProtos.TruncateRegionResponse>
     getTruncateRegionCallable(TableName tableName, RegionInfo hri) {
     return new MasterCallable<MasterProtos.TruncateRegionResponse>(getConnection(),
