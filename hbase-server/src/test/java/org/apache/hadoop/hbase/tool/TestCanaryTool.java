@@ -269,7 +269,7 @@ public class TestCanaryTool {
         assertNotNull("verify getColumnFamily()", res.getColumnFamily());
         assertNotNull("verify getColumnFamilyNameAsString()", res.getColumnFamilyNameAsString());
 
-        if (regionName.contains(CanaryTool.DEFAULT_WRITE_TABLE_NAME.getNameAsString())) {
+        if (regionName.contains(CanaryTool.DEFAULT_WRITE_TABLE_NAME_WITH_NAMESPACE_PREFIX)) {
           assertTrue("write to region " + regionName + " succeeded", res.isWriteSuccess());
           assertTrue("write took some time", res.getWriteLatency() > -1);
         } else {
