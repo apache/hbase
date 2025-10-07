@@ -43,7 +43,7 @@ public class TestKeyManagementBase {
   public void testGetKeyProviderWithInvalidProvider() throws Exception {
     // Setup configuration with a non-ManagedKeyProvider
     Configuration conf = new Configuration();
-    conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY,
+    conf.set(HConstants.CRYPTO_MANAGED_KEYPROVIDER_CONF_KEY,
       "org.apache.hadoop.hbase.keymeta.DummyKeyProvider");
 
     MasterServices mockServer = mock(MasterServices.class);
@@ -52,16 +52,21 @@ public class TestKeyManagementBase {
     final KeyManagementBase keyMgmt = new TestKeyManagement(mockServer);
     assertEquals(mockServer, keyMgmt.getKeyManagementService());
 
-    // Should throw RuntimeException when provider is not ManagedKeyProvider
+    // Should throw RuntimeException when provider cannot be cast to ManagedKeyProvider
     RuntimeException exception = assertThrows(RuntimeException.class, () -> {
       keyMgmt.getKeyProvider();
     });
-    assertTrue(exception.getMessage().contains("expected to be of type ManagedKeyProvider"));
+    // The error message will be about ClassCastException since DummyKeyProvider doesn't implement
+    // ManagedKeyProvider
+    assertTrue(exception.getMessage().contains("ClassCastException")
+      || exception.getCause() instanceof ClassCastException);
+
     exception = assertThrows(RuntimeException.class, () -> {
       KeyManagementBase keyMgmt2 = new TestKeyManagement(conf);
       keyMgmt2.getKeyProvider();
     });
-    assertTrue(exception.getMessage().contains("expected to be of type ManagedKeyProvider"));
+    assertTrue(exception.getMessage().contains("ClassCastException")
+      || exception.getCause() instanceof ClassCastException);
 
     assertThrows(IllegalArgumentException.class, () -> {
       Configuration configuration = null;

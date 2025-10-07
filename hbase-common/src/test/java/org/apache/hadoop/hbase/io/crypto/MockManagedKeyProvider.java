@@ -45,8 +45,8 @@ public class MockManagedKeyProvider extends MockAesKeyProvider implements Manage
   private String systemKeyAlias = "default_system_key_alias";
 
   @Override
-  public void initConfig(Configuration conf) {
-    // NO-OP
+  public void initConfig(Configuration conf, String providerParameters) {
+    super.init(providerParameters);
   }
 
   @Override

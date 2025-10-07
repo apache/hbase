@@ -26,7 +26,6 @@ import java.io.IOException;
 import java.security.Key;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
-import org.apache.hadoop.hbase.io.crypto.KeyProvider;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyState;
@@ -51,7 +50,7 @@ public class TestSystemKeyManager extends ManagedKeyTestBase {
   @Test
   public void testSystemKeyInitializationAndRotation() throws Exception {
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
-    KeyProvider keyProvider = Encryption.getKeyProvider(master.getConfiguration());
+    ManagedKeyProvider keyProvider = Encryption.getManagedKeyProvider(master.getConfiguration());
     assertNotNull(keyProvider);
     assertTrue(keyProvider instanceof ManagedKeyProvider);
     assertTrue(keyProvider instanceof MockManagedKeyProvider);
@@ -85,7 +84,7 @@ public class TestSystemKeyManager extends ManagedKeyTestBase {
   @Test
   public void testWithInvalidSystemKey() throws Exception {
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
-    KeyProvider keyProvider = Encryption.getKeyProvider(master.getConfiguration());
+    ManagedKeyProvider keyProvider = Encryption.getManagedKeyProvider(master.getConfiguration());
     MockManagedKeyProvider pbeKeyProvider = (MockManagedKeyProvider) keyProvider;
 
     // Test startup failure when the cluster key is INACTIVE

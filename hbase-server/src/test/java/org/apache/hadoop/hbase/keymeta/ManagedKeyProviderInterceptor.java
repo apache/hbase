@@ -35,8 +35,8 @@ public class ManagedKeyProviderInterceptor extends MockManagedKeyProvider {
   }
 
   @Override
-  public void initConfig(Configuration conf) {
-    spy.initConfig(conf);
+  public void initConfig(Configuration conf, String providerParameters) {
+    spy.initConfig(conf, providerParameters);
   }
 
   @Override
