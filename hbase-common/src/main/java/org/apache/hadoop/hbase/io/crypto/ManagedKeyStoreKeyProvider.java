@@ -76,24 +76,15 @@ public class ManagedKeyStoreKeyProvider extends KeyStoreKeyProvider implements M
       key_namespace = ManagedKeyData.KEY_SPACE_GLOBAL;
     }
 
-    // Get alias configuration first (needed for metadata generation)
-    String aliasConfKey = buildAliasConfKey(encodedCust);
+    // Get alias configuration for the specific custodian+namespace combination
+    String aliasConfKey = buildAliasConfKey(encodedCust, key_namespace);
     String alias = conf.get(aliasConfKey, null);
-
-    // Check if the requested namespace matches the configured namespace
-    String namespaceConfKey = buildNamespaceConfKey(encodedCust);
-    String configuredNamespace = conf.get(namespaceConfKey);
-
-    // If no namespace is configured, default to global namespace
-    if (configuredNamespace == null) {
-      configuredNamespace = ManagedKeyData.KEY_SPACE_GLOBAL;
-    }
 
     // Generate metadata with actual alias (used for both success and failure cases)
     String keyMetadata = generateKeyMetadata(alias, encodedCust, key_namespace);
 
-    // Namespace must match - if not, treat as key not found
-    if (!configuredNamespace.equals(key_namespace)) {
+    // If no alias is configured for this custodian+namespace combination, treat as key not found
+    if (alias == null) {
       return new ManagedKeyData(key_cust, key_namespace, null, ManagedKeyState.FAILED, keyMetadata);
     }
 
@@ -111,7 +102,7 @@ public class ManagedKeyStoreKeyProvider extends KeyStoreKeyProvider implements M
       // For backwards compatibility, default to global namespace
       namespace = ManagedKeyData.KEY_SPACE_GLOBAL;
     }
-    String activeStatusConfKey = buildActiveStatusConfKey(encodedCust);
+    String activeStatusConfKey = buildActiveStatusConfKey(encodedCust, namespace);
     boolean isActive = conf.getBoolean(activeStatusConfKey, true);
     byte[] key_cust = ManagedKeyProvider.decodeToBytes(encodedCust);
     String alias = keyMetadata.get(KEY_METADATA_ALIAS);
@@ -142,15 +133,13 @@ public class ManagedKeyStoreKeyProvider extends KeyStoreKeyProvider implements M
     return GsonUtil.getDefaultInstance().toJson(metadata, HashMap.class);
   }
 
-  private String buildAliasConfKey(String encodedCust) {
-    return HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + encodedCust + "." + "alias";
+  private String buildAliasConfKey(String encodedCust, String namespace) {
+    return HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + encodedCust + "." + namespace
+      + ".alias";
   }
 
-  private String buildActiveStatusConfKey(String encodedCust) {
-    return HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + encodedCust + ".active";
-  }
-
-  private String buildNamespaceConfKey(String encodedCust) {
-    return HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + encodedCust + ".namespace";
+  private String buildActiveStatusConfKey(String encodedCust, String namespace) {
+    return HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + encodedCust + "." + namespace
+      + ".active";
   }
 }

@@ -173,7 +173,8 @@ public class TestManagedKeyProvider {
     public void testGetInactiveKey() throws Exception {
       Bytes firstCust = cust2key.keySet().iterator().next();
       String encCust = Base64.getEncoder().encodeToString(firstCust.get());
-      conf.set(HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + encCust + ".active", "false");
+      conf.set(HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + encCust + ".*.active",
+        "false");
       ManagedKeyData keyData =
         managedKeyProvider.getManagedKey(firstCust.get(), ManagedKeyData.KEY_SPACE_GLOBAL);
       assertNotNull(keyData);
@@ -194,12 +195,15 @@ public class TestManagedKeyProvider {
     public void testGetDisabledKey() throws Exception {
       byte[] invalidCust = new byte[] { 1, 2, 3 };
       String invalidCustEnc = ManagedKeyProvider.encodeToStr(invalidCust);
-      conf.set(HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + invalidCustEnc + ".active",
+      // For disabled keys, we need to configure both alias and active status
+      conf.set(HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + invalidCustEnc + ".*.alias",
+        "disabled-alias");
+      conf.set(HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + invalidCustEnc + ".*.active",
         "false");
       ManagedKeyData keyData =
         managedKeyProvider.getManagedKey(invalidCust, ManagedKeyData.KEY_SPACE_GLOBAL);
       assertNotNull(keyData);
-      assertKeyData(keyData, ManagedKeyState.DISABLED, null, invalidCust, null);
+      assertKeyData(keyData, ManagedKeyState.DISABLED, null, invalidCust, "disabled-alias");
     }
 
     @Test
@@ -233,10 +237,10 @@ public class TestManagedKeyProvider {
       String invalidAlias = "invalidAlias";
       byte[] invalidCust = new byte[] { 1, 2, 3 };
       String invalidCustEnc = ManagedKeyProvider.encodeToStr(invalidCust);
-      conf.set(HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + invalidCustEnc + ".active",
+      conf.set(HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + invalidCustEnc + ".*.active",
         "false");
-      String invalidMetadata =
-        ManagedKeyStoreKeyProvider.generateKeyMetadata(invalidAlias, invalidCustEnc);
+      String invalidMetadata = ManagedKeyStoreKeyProvider.generateKeyMetadata(invalidAlias,
+        invalidCustEnc, ManagedKeyData.KEY_SPACE_GLOBAL);
       ManagedKeyData keyData = managedKeyProvider.unwrapKey(invalidMetadata, null);
       assertNotNull(keyData);
       assertKeyData(keyData, ManagedKeyState.DISABLED, null, invalidCust, invalidAlias);
@@ -261,8 +265,9 @@ public class TestManagedKeyProvider {
       Bytes firstCust = namespaceCust2key.keySet().iterator().next();
       String customNamespace = "table1/cf1";
       String encCust = Base64.getEncoder().encodeToString(firstCust.get());
-      // Set active status to false using the consistent format (no namespace in the key)
-      conf.set(HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + encCust + ".active", "false");
+      // Set active status to false using the new namespace-aware format
+      conf.set(HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + encCust + "." + customNamespace
+        + ".active", "false");
 
       ManagedKeyData keyData = managedKeyProvider.getManagedKey(firstCust.get(), customNamespace);
       assertNotNull(keyData);
@@ -391,11 +396,10 @@ public class TestManagedKeyProvider {
       assertNull(keyData.getTheKey());
       assertEquals(wrongNamespace, keyData.getKeyNamespace());
 
-      // Verify the failed key metadata contains the actual alias
-      String expectedAlias = namespaceCust2alias.get(firstCust);
+      // Verify the failed key metadata - should have null alias since wrong namespace is requested
+      // This is the correct security behavior - don't leak alias information across namespaces
       String expectedEncodedCust = Base64.getEncoder().encodeToString(firstCust.get());
-      assertMetadataMatches(keyData.getKeyMetadata(), expectedAlias, expectedEncodedCust,
-        wrongNamespace);
+      assertMetadataMatches(keyData.getKeyMetadata(), null, expectedEncodedCust, wrongNamespace);
     }
 
     @Test

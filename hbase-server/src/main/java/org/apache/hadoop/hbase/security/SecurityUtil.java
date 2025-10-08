@@ -117,9 +117,7 @@ public class SecurityUtil {
           // 4. Global namespace
           String[] candidateNamespaces = { family.getEncryptionKeyNamespace(),
             KeyNamespaceUtil.constructKeyNamespace(tableDescriptor, family),
-            tableDescriptor.getTableName().getNameAsString(),
-            ManagedKeyData.KEY_SPACE_GLOBAL
-          };
+            tableDescriptor.getTableName().getNameAsString(), ManagedKeyData.KEY_SPACE_GLOBAL };
 
           ManagedKeyData activeKeyData = null;
           for (String candidate : candidateNamespaces) {

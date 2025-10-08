@@ -133,17 +133,16 @@ public class KeymetaTestUtils {
       new KeyStore.PasswordProtection(withPasswordOnAlias ? PASSWORD.toCharArray() : new char[0]));
     String encCust = Base64.getEncoder().encodeToString(custodian.getBytes());
 
-    // Always use the same alias configuration key format
+    // Use new format: PREFIX.{encodedCust}.{namespace}.alias
+    // For global namespace use "*", for custom namespace use actual namespace name
+    String namespaceKey = ManagedKeyData.KEY_SPACE_GLOBAL.equals(namespace) ? "*" : namespace;
     String aliasConfKey =
-      HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + encCust + "." + "alias";
-    conf.set(aliasConfKey, alias);
+      HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + encCust + "." + namespaceKey + ".alias";
+    String activeStatusConfKey = HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + encCust + "."
+      + namespaceKey + ".active";
 
-    // Set separate namespace property if not global
-    if (!ManagedKeyData.KEY_SPACE_GLOBAL.equals(namespace)) {
-      String namespaceConfKey =
-        HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + encCust + ".namespace";
-      conf.set(namespaceConfKey, namespace);
-    }
+    conf.set(aliasConfKey, alias);
+    conf.setBoolean(activeStatusConfKey, true);
 
     if (passwordFileProps != null) {
       passwordFileProps.setProperty(alias, PASSWORD);

@@ -63,22 +63,29 @@ public class TestKeymetaAdminShell extends ManagedKeyTestBase implements RubyShe
     // conf.set("hbase.master.start.timeout.localHBaseCluster", "6000000");
     // conf.set("hbase.master.init.timeout.localHBaseCluster", "6000000");
     // conf.set("hbase.client.sync.wait.timeout.msec", "6000000");
-    Map<Bytes, Bytes> cust2key = new HashMap<>();
-    Map<Bytes, String> cust2alias = new HashMap<>();
+    Map<Bytes, Bytes> cust_to_key = new HashMap<>();
+    Map<Bytes, String> cust_to_alias = new HashMap<>();
     String clusterId = UUID.randomUUID().toString();
     String SYSTEM_KEY_ALIAS = "system-key-alias";
     String CUST1 = "cust1";
     String CUST1_ALIAS = "cust1-alias";
+    String CF_NAMESPACE = "test_table/f";
     String GLOB_CUST_ALIAS = "glob-cust-alias";
+    String CUSTOM_NAMESPACE = "test_namespace";
+    String CUSTOM_NAMESPACE_ALIAS = "custom-namespace-alias";
     String providerParams = KeymetaTestUtils.setupTestKeyStore(TEST_UTIL, true, true, store -> {
       Properties p = new Properties();
       try {
-        KeymetaTestUtils.addEntry(conf, 128, store, CUST1_ALIAS, CUST1, true, cust2key, cust2alias,
-          p);
-        KeymetaTestUtils.addEntry(conf, 128, store, GLOB_CUST_ALIAS, "*", true, cust2key,
-          cust2alias, p);
-        KeymetaTestUtils.addEntry(conf, 128, store, SYSTEM_KEY_ALIAS, clusterId, true, cust2key,
-          cust2alias, p);
+        KeymetaTestUtils.addEntry(conf, 128, store, CUST1_ALIAS, CUST1, true, cust_to_key,
+          cust_to_alias, p);
+        KeymetaTestUtils.addEntry(conf, 128, store, CUST1_ALIAS, CUST1, true, cust_to_key,
+          cust_to_alias, p, CF_NAMESPACE);
+        KeymetaTestUtils.addEntry(conf, 128, store, GLOB_CUST_ALIAS, "*", true, cust_to_key,
+          cust_to_alias, p);
+        KeymetaTestUtils.addEntry(conf, 128, store, SYSTEM_KEY_ALIAS, clusterId, true, cust_to_key,
+          cust_to_alias, p);
+        KeymetaTestUtils.addEntry(conf, 128, store, CUSTOM_NAMESPACE_ALIAS, CUST1, true,
+          cust_to_key, cust_to_alias, p, CUSTOM_NAMESPACE);
       } catch (Exception e) {
         throw new RuntimeException(e);
       }
@@ -91,6 +98,7 @@ public class TestKeymetaAdminShell extends ManagedKeyTestBase implements RubyShe
     super.setUp();
     RubyShellTest.setUpJRubyRuntime(this);
     RubyShellTest.doTestSetup(this);
+    addCustodianRubyEnvVars(jruby, "GLOB_CUST", "*");
     addCustodianRubyEnvVars(jruby, "CUST1", CUST1);
   }
 
