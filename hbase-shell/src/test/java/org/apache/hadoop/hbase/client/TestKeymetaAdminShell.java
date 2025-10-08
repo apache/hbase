@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -73,19 +72,23 @@ public class TestKeymetaAdminShell extends ManagedKeyTestBase implements RubyShe
     String GLOB_CUST_ALIAS = "glob-cust-alias";
     String CUSTOM_NAMESPACE = "test_namespace";
     String CUSTOM_NAMESPACE_ALIAS = "custom-namespace-alias";
+    String CUSTOM_GLOBAL_NAMESPACE = "test_global_namespace";
+    String CUSTOM_GLOBAL_NAMESPACE_ALIAS = "custom-global-namespace-alias";
     String providerParams = KeymetaTestUtils.setupTestKeyStore(TEST_UTIL, true, true, store -> {
       Properties p = new Properties();
       try {
-        KeymetaTestUtils.addEntry(conf, 128, store, CUST1_ALIAS, CUST1, true, cust_to_key,
-          cust_to_alias, p);
-        KeymetaTestUtils.addEntry(conf, 128, store, CUST1_ALIAS, CUST1, true, cust_to_key,
-          cust_to_alias, p, CF_NAMESPACE);
+        KeymetaTestUtils.addEntry(conf, 128, store, CUST1_ALIAS, CUST1, true, cust_to_key, cust_to_alias,
+          p);
+        KeymetaTestUtils.addEntry(conf, 128, store, CUST1_ALIAS, CUST1, true, cust_to_key, cust_to_alias,
+          p, CF_NAMESPACE);
         KeymetaTestUtils.addEntry(conf, 128, store, GLOB_CUST_ALIAS, "*", true, cust_to_key,
           cust_to_alias, p);
         KeymetaTestUtils.addEntry(conf, 128, store, SYSTEM_KEY_ALIAS, clusterId, true, cust_to_key,
           cust_to_alias, p);
         KeymetaTestUtils.addEntry(conf, 128, store, CUSTOM_NAMESPACE_ALIAS, CUST1, true,
           cust_to_key, cust_to_alias, p, CUSTOM_NAMESPACE);
+        KeymetaTestUtils.addEntry(conf, 128, store, CUSTOM_GLOBAL_NAMESPACE_ALIAS, "*", true,
+          cust_to_key, cust_to_alias, p, CUSTOM_GLOBAL_NAMESPACE);
       } catch (Exception e) {
         throw new RuntimeException(e);
       }
@@ -131,6 +134,6 @@ public class TestKeymetaAdminShell extends ManagedKeyTestBase implements RubyShe
     String custodian) {
     jruby.put("$" + custId, custodian);
     jruby.put("$" + custId + "_ALIAS", custodian + "-alias");
-    jruby.put("$" + custId + "_ENCODED", Base64.getEncoder().encodeToString(custodian.getBytes()));
+    jruby.put("$" + custId + "_ENCODED", ManagedKeyProvider.encodeToStr(custodian.getBytes()));
   }
 }

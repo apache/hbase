@@ -200,7 +200,7 @@ public class SecurityUtil {
       }
 
       // Try STK lookup first if checksum is available and system key cache is not null.
-      if (trailer.getKEKChecksum() != 0L) {
+      if (trailer.getKEKChecksum() != 0L && trailer.getKeyNamespace() == null) {
         ManagedKeyData systemKeyData =
           systemKeyCache.getSystemKeyByChecksum(trailer.getKEKChecksum());
         if (systemKeyData != null) {

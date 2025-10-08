@@ -548,6 +548,8 @@ public class TestSecurityUtil {
         mockFamily, mockManagedKeyDataCache, mockSystemKeyCache);
 
       verifyContext(result, false);
+      // Here system key with a local key gen, so no namespace is set.
+      assertNull(result.getKeyNamespace());
     }
 
     @Test
@@ -759,7 +761,7 @@ public class TestSecurityUtil {
     public void testWithKEKMetadata_STKLookupFirstThenManagedKey() throws Exception {
       // Test new logic: STK lookup happens first, then metadata lookup if STK fails
       // Set up scenario where both checksum and metadata are available
-      setupTrailerMocks(testWrappedKey, TEST_KEK_METADATA, TEST_KEK_CHECKSUM, testTableNamespace);
+      setupTrailerMocks(testWrappedKey, TEST_KEK_METADATA, TEST_KEK_CHECKSUM, null);
       configBuilder().withKeyManagement(false).apply(conf);
 
       // STK lookup should succeed and be used (first priority)
@@ -837,7 +839,7 @@ public class TestSecurityUtil {
     @Test
     public void testWithKeyManagement_UseSystemKey() throws IOException {
       // Test STK lookup by checksum (first priority in new logic)
-      setupTrailerMocks(testWrappedKey, null, TEST_KEK_CHECKSUM, TEST_NAMESPACE);
+      setupTrailerMocks(testWrappedKey, null, TEST_KEK_CHECKSUM, null);
       configBuilder().withKeyManagement(false).apply(conf);
       setupSystemKeyCache(TEST_KEK_CHECKSUM, mockManagedKeyData);
       when(mockManagedKeyData.getTheKey()).thenReturn(kekKey);
@@ -1034,7 +1036,7 @@ public class TestSecurityUtil {
       // Use invalid key bytes to trigger unwrapping failure
       byte[] invalidKeyBytes = INVALID_SYSTEM_KEY_DATA.getBytes();
 
-      setupTrailerMocks(invalidKeyBytes, null, TEST_KEK_CHECKSUM, TEST_NAMESPACE);
+      setupTrailerMocks(invalidKeyBytes, null, TEST_KEK_CHECKSUM, null);
       configBuilder().withKeyManagement(false).apply(conf);
       setupSystemKeyCache(TEST_KEK_CHECKSUM, mockManagedKeyData);
 

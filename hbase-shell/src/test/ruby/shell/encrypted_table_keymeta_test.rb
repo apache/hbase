@@ -31,6 +31,7 @@ java_import org.apache.hadoop.hbase.CellUtil
 java_import org.apache.hadoop.hbase.HConstants
 java_import org.apache.hadoop.hbase.client.Get
 java_import org.apache.hadoop.hbase.io.crypto.Encryption
+java_import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider
 java_import org.apache.hadoop.hbase.io.crypto.MockManagedKeyProvider
 java_import org.apache.hadoop.hbase.io.hfile.CorruptHFileException
 java_import org.apache.hadoop.hbase.io.hfile.FixedFileTrailer
@@ -45,14 +46,29 @@ module Hbase
 
     def setup
       setup_hbase
-      @test_table = 'enctest'
+      @test_table = 'enctest'+Time.now.to_i.to_s
       @connection = $TEST_CLUSTER.connection
     end
 
     define_test 'Test table put/get with encryption' do
-      cust_and_namespace = "#{$CUST1_ENCODED}:*"
-      @shell.command(:enable_key_management, cust_and_namespace)
-      @shell.command(:create, @test_table, { 'NAME' => 'f', 'ENCRYPTION' => 'AES' })
+      # Custodian is currently not supported, so this will end up falling back to local key
+      # generation.
+      test_table_put_get_with_encryption($CUST1_ENCODED, '*',
+        { 'NAME' => 'f', 'ENCRYPTION' => 'AES' }, true)
+    end
+
+    define_test 'Test table with custom namespace attribute in Column Family' do
+      custom_namespace = "test_global_namespace"
+      test_table_put_get_with_encryption($GLOB_CUST_ENCODED, custom_namespace,
+        { 'NAME' => 'f', 'ENCRYPTION' => 'AES', 'ENCRYPTION_KEY_NAMESPACE' => custom_namespace },
+        false)
+    end
+
+    def test_table_put_get_with_encryption(cust, namespace, table_attrs, fallback_scenario)
+      cust_and_namespace = "#{cust}:#{namespace}"
+      output = capture_stdout { @shell.command('enable_key_management', cust_and_namespace) }
+      assert(output.include?("#{cust} #{namespace} ACTIVE"))
+      @shell.command(:create, @test_table, table_attrs)
       test_table = table(@test_table)
       test_table.put('1', 'f:a', '2')
       puts "Added a row, now flushing table #{@test_table}"
@@ -72,6 +88,20 @@ module Hbase
       assert_not_nil(hfile_info)
       live_trailer = hfile_info.getTrailer
       assert_trailer(live_trailer)
+      assert_equal(namespace, live_trailer.getKeyNamespace())
+
+      # When active key is supposed to be used, we can valiate the key bytes in the context against
+      # the actual key from provider.
+      if !fallback_scenario
+        encryption_context = hfile_info.getHFileContext().getEncryptionContext()
+        assert_not_nil(encryption_context)
+        assert_not_nil(encryption_context.getKeyBytes())
+        key_provider = Encryption.getManagedKeyProvider($TEST_CLUSTER.getConfiguration)
+        key_data = key_provider.getManagedKey(ManagedKeyProvider.decodeToBytes(cust), namespace)
+        assert_not_nil(key_data)
+        assert_equal(namespace, key_data.getKeyNamespace())
+        assert_equal(key_data.getTheKey().getEncoded(), encryption_context.getKeyBytes())
+      end
 
       ## Disable table to ensure that the stores are not cached.
       command(:disable, @test_table)
