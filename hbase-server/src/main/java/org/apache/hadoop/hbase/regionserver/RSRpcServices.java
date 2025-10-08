@@ -2114,6 +2114,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
         ServerRegionReplicaUtil.isDefaultReplica(region.getRegionInfo())
           ? region.getCoprocessorHost()
           : null; // do not invoke coprocessors if this is a secondary region replica
+      List<Pair<WALKey, WALEdit>> walEntries = new ArrayList<>();
 
       // Skip adding the edits to WAL if this is a secondary region replica
       boolean isPrimary = RegionReplicaUtil.isDefaultReplica(region.getRegionInfo());
@@ -2135,6 +2136,18 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
         Pair<WALKey, WALEdit> walEntry = (coprocessorHost == null) ? null : new Pair<>();
         List<MutationReplay> edits =
           WALSplitUtil.getMutationsFromWALEntry(entry, cells, walEntry, durability);
+        if (coprocessorHost != null) {
+          // Start coprocessor replay here. The coprocessor is for each WALEdit instead of a
+          // KeyValue.
+          if (
+            coprocessorHost.preWALRestore(region.getRegionInfo(), walEntry.getFirst(),
+              walEntry.getSecond())
+          ) {
+            // if bypass this log entry, ignore it ...
+            continue;
+          }
+          walEntries.add(walEntry);
+        }
         if (edits != null && !edits.isEmpty()) {
           // HBASE-17924
           // sort to improve lock efficiency
@@ -2156,6 +2169,13 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
       WAL wal = region.getWAL();
       if (wal != null) {
         wal.sync();
+      }
+
+      if (coprocessorHost != null) {
+        for (Pair<WALKey, WALEdit> entry : walEntries) {
+          coprocessorHost.postWALRestore(region.getRegionInfo(), entry.getFirst(),
+            entry.getSecond());
+        }
       }
       return ReplicateWALEntryResponse.newBuilder().build();
     } catch (IOException ie) {
