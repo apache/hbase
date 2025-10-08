@@ -21,6 +21,9 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
@@ -31,7 +34,9 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
@@ -46,7 +51,7 @@ import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestRpcServiceProto
 import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestRpcServiceProtos.TestProtobufRpcProto.Interface;
 
 @InterfaceAudience.Private
-public class TestProtobufRpcServiceImpl implements BlockingInterface {
+public class TestProtobufRpcServiceImpl implements BlockingInterface, Interface {
 
   public static final BlockingService SERVICE =
     TestProtobufRpcProto.newReflectiveBlockingService(new TestProtobufRpcServiceImpl());
@@ -118,5 +123,64 @@ public class TestProtobufRpcServiceImpl implements BlockingInterface {
     throws ServiceException {
     return AddrResponseProto.newBuilder()
       .setAddr(RpcServer.getRemoteAddress().get().getHostAddress()).build();
+  }
+
+  @Override
+  public void ping(RpcController controller, EmptyRequestProto request,
+    RpcCallback<EmptyResponseProto> done) {
+    done.run(EmptyResponseProto.getDefaultInstance());
+  }
+
+  @Override
+  public void echo(RpcController controller, EchoRequestProto request,
+    RpcCallback<EchoResponseProto> done) {
+    if (controller instanceof HBaseRpcController) {
+      HBaseRpcController pcrc = (HBaseRpcController) controller;
+      // If cells, scan them to check we are able to iterate what we were given and since this is an
+      // echo, just put them back on the controller creating a new block. Tests our block building.
+      CellScanner cellScanner = pcrc.cellScanner();
+      List<Cell> list = null;
+      if (cellScanner != null) {
+        list = new ArrayList<>();
+        try {
+          while (cellScanner.advance()) {
+            list.add(cellScanner.current());
+          }
+        } catch (IOException e) {
+          pcrc.setFailed(e);
+          return;
+        }
+      }
+      cellScanner = CellUtil.createCellScanner(list);
+      pcrc.setCellScanner(cellScanner);
+    }
+    done.run(EchoResponseProto.newBuilder().setMessage(request.getMessage()).build());
+  }
+
+  @Override
+  public void error(RpcController controller, EmptyRequestProto request,
+    RpcCallback<EmptyResponseProto> done) {
+    if (controller instanceof HBaseRpcController) {
+      ((HBaseRpcController) controller).setFailed(new DoNotRetryIOException("server error!"));
+    } else {
+      controller.setFailed("server error!");
+    }
+  }
+
+  private final ScheduledExecutorService executor =
+    Executors.newScheduledThreadPool(1, new ThreadFactoryBuilder().setDaemon(true).build());
+
+  @Override
+  public void pause(RpcController controller, PauseRequestProto request,
+    RpcCallback<EmptyResponseProto> done) {
+    executor.schedule(() -> done.run(EmptyResponseProto.getDefaultInstance()), request.getMs(),
+      TimeUnit.MILLISECONDS);
+  }
+
+  @Override
+  public void addr(RpcController controller, EmptyRequestProto request,
+    RpcCallback<AddrResponseProto> done) {
+    done.run(AddrResponseProto.newBuilder()
+      .setAddr(RpcServer.getRemoteAddress().get().getHostAddress()).build());
   }
 }

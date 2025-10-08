@@ -17,12 +17,27 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.mockito.Mockito.mockStatic;
+
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.unsafe.HBasePlatformDependent;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
+import org.mockito.MockedStatic;
 
 @Tag(MiscTests.TAG)
 @Tag(SmallTests.TAG)
-public class TestBytes extends BytesTestBase {
+public class TestByteBufferUtilsWoUnsafe extends ByteBufferUtilsTestBase {
 
+  @BeforeAll
+  public static void disableUnsafe() {
+    try (MockedStatic<HBasePlatformDependent> mocked = mockStatic(HBasePlatformDependent.class)) {
+      mocked.when(HBasePlatformDependent::isUnsafeAvailable).thenReturn(false);
+      mocked.when(HBasePlatformDependent::unaligned).thenReturn(false);
+      assertFalse(ByteBufferUtils.UNSAFE_AVAIL);
+      assertFalse(ByteBufferUtils.UNSAFE_UNALIGNED);
+    }
+  }
 }

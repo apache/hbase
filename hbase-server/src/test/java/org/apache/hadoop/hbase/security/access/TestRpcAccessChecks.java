@@ -22,8 +22,9 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Mockito.mock;
 
+import com.google.protobuf.RpcCallback;
+import com.google.protobuf.RpcController;
 import com.google.protobuf.Service;
 import com.google.protobuf.ServiceException;
 import java.io.IOException;
@@ -52,6 +53,12 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessor;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos;
+import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.AddrResponseProto;
+import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto;
+import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto;
+import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto;
+import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto;
+import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.PauseRequestProto;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestRpcServiceProtos;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.User;
@@ -111,7 +118,41 @@ public class TestRpcAccessChecks {
 
     @Override
     public Iterable<Service> getServices() {
-      return Collections.singleton(mock(TestRpcServiceProtos.TestProtobufRpcProto.class));
+      return Collections.singleton(
+        TestRpcServiceProtos.TestProtobufRpcProto.newReflectiveService(new DummyService()));
+    }
+  }
+
+  private static final class DummyService
+    implements TestRpcServiceProtos.TestProtobufRpcProto.Interface {
+
+    @Override
+    public void ping(RpcController controller, EmptyRequestProto request,
+      RpcCallback<EmptyResponseProto> done) {
+
+    }
+
+    @Override
+    public void echo(RpcController controller, EchoRequestProto request,
+      RpcCallback<EchoResponseProto> done) {
+
+    }
+
+    @Override
+    public void error(RpcController controller, EmptyRequestProto request,
+      RpcCallback<EmptyResponseProto> done) {
+
+    }
+
+    @Override
+    public void pause(RpcController controller, PauseRequestProto request,
+      RpcCallback<EmptyResponseProto> done) {
+
+    }
+
+    @Override
+    public void addr(RpcController controller, EmptyRequestProto request,
+      RpcCallback<AddrResponseProto> done) {
     }
   }
 
