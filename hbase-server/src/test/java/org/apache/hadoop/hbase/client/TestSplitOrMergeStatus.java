@@ -194,7 +194,7 @@ public class TestSplitOrMergeStatus {
     AssignmentTestingUtil.killRs(TEST_UTIL, serverName);
     Threads.sleepWithoutInterrupt(5000);
     boolean hasRegionsInTransition = TEST_UTIL.getMiniHBaseCluster().getMaster()
-      .getAssignmentManager().getRegionStates().hasRegionsInTransition();
+      .getAssignmentManager().hasRegionsInTransition();
     assertEquals(false, hasRegionsInTransition);
   }
 

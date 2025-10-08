@@ -116,7 +116,7 @@ public class TestHRegionFileSystem {
       cfdA.setValue(HStore.BLOCK_STORAGE_POLICY_KEY, "ONE_SSD");
       admin.modifyColumnFamily(TABLE_NAME, cfdA.build());
       while (
-        TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().getRegionStates()
+        TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager()
           .hasRegionsInTransition()
       ) {
         Thread.sleep(200);
@@ -127,7 +127,7 @@ public class TestHRegionFileSystem {
       cfdB.setStoragePolicy("ALL_SSD");
       admin.modifyColumnFamily(TABLE_NAME, cfdB.build());
       while (
-        TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().getRegionStates()
+        TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager()
           .hasRegionsInTransition()
       ) {
         Thread.sleep(200);

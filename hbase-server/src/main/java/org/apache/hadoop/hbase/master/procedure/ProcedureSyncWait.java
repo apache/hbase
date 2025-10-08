@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.master.RegionState;
+import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.procedure2.Procedure;
@@ -246,13 +247,13 @@ public final class ProcedureSyncWait {
 
   protected static void waitRegionInTransition(final MasterProcedureEnv env,
     final List<RegionInfo> regions) throws IOException {
-    final RegionStates states = env.getAssignmentManager().getRegionStates();
+    final AssignmentManager assignmentManager = env.getAssignmentManager();
     for (final RegionInfo region : regions) {
       ProcedureSyncWait.waitFor(env, "regions " + region.getRegionNameAsString() + " in transition",
         new ProcedureSyncWait.Predicate<Boolean>() {
           @Override
           public Boolean evaluate() throws IOException {
-            return !states.isRegionInTransition(region);
+            return !assignmentManager.isRegionInTransition(region);
           }
         });
     }

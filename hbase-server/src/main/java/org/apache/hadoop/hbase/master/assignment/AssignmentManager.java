@@ -22,11 +22,14 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -232,12 +235,15 @@ public class AssignmentManager {
 
   private final int forceRegionRetainmentRetries;
 
+  private final RegionInTransitionTracker regionInTransitionTracker;
+
   public AssignmentManager(MasterServices master, MasterRegion masterRegion) {
     this(master, masterRegion, new RegionStateStore(master, masterRegion));
   }
 
   AssignmentManager(MasterServices master, MasterRegion masterRegion, RegionStateStore stateStore) {
     this.master = master;
+    regionInTransitionTracker = new RegionInTransitionTracker(master.getTableStateManager());
     this.regionStateStore = stateStore;
     this.metrics = new MetricsAssignmentManager();
     this.masterRegion = masterRegion;
@@ -411,6 +417,7 @@ public class AssignmentManager {
 
     // Stop the RegionStateStore
     regionStates.clear();
+    regionInTransitionTracker.clear();
 
     // Update meta events (for testing)
     if (hasProcExecutor) {
@@ -1093,7 +1100,7 @@ public class AssignmentManager {
       regionNode.lock();
       try {
         if (shouldSubmit.apply(regionNode)) {
-          if (regionNode.isInTransition()) {
+          if (regionNode.isOngoingTRSP()) {
             logRIT.accept(regionNode);
             inTransitionCount++;
             continue;
@@ -1704,7 +1711,7 @@ public class AssignmentManager {
     protected void update(final AssignmentManager am) {
       final RegionStates regionStates = am.getRegionStates();
       this.statTimestamp = EnvironmentEdgeManager.currentTime();
-      update(regionStates.getRegionsStateInTransition(), statTimestamp);
+      update(am.getRegionsStateInTransition(), statTimestamp);
       update(regionStates.getRegionFailedOpen(), statTimestamp);
 
       if (LOG.isDebugEnabled() && ritsOverThreshold != null && !ritsOverThreshold.isEmpty()) {
@@ -1794,6 +1801,7 @@ public class AssignmentManager {
    */
   // Public so can be run by the Master as part of the startup. Needs hbase:meta to be online.
   // Needs to be done after the table state manager has been started.
+  //TODO umesh we can update the rit map here
   public void processOfflineRegions() {
     TransitRegionStateProcedure[] procs =
       regionStates.getRegionStateNodes().stream().filter(rsn -> rsn.isInState(State.OFFLINE))
@@ -1873,6 +1881,7 @@ public class AssignmentManager {
       if (regionNode.getProcedure() != null) {
         regionNode.getProcedure().stateLoaded(AssignmentManager.this, regionNode);
       }
+      regionInTransitionTracker.handleRegionStateNodeOperation(regionNode);
     }
   };
 
@@ -2046,16 +2055,58 @@ public class AssignmentManager {
     return new Pair<Integer, Integer>(ritCount, states.size());
   }
 
+  // This comparator sorts the RegionStates by time stamp then Region name.
+  // Comparing by timestamp alone can lead us to discard different RegionStates that happen
+  // to share a timestamp.
+  private static class RegionStateStampComparator implements Comparator<RegionState> {
+    @Override
+    public int compare(final RegionState l, final RegionState r) {
+      int stampCmp = Long.compare(l.getStamp(), r.getStamp());
+      return stampCmp != 0 ? stampCmp : RegionInfo.COMPARATOR.compare(l.getRegion(), r.getRegion());
+    }
+  }
+
+  public final static RegionStateStampComparator REGION_STATE_STAMP_COMPARATOR =
+    new RegionStateStampComparator();
+
   // ============================================================================================
   // TODO: Region State In Transition
   // ============================================================================================
   public boolean hasRegionsInTransition() {
-    return regionStates.hasRegionsInTransition();
+    return regionInTransitionTracker.hasRegionsInTransition();
   }
 
   public List<RegionStateNode> getRegionsInTransition() {
-    return regionStates.getRegionsInTransition();
+    return new ArrayList<RegionStateNode>(regionInTransitionTracker.getRegionsInTransition().values());
   }
+
+  public boolean isRegionInTransition(final RegionInfo regionInfo) {
+    return regionInTransitionTracker.isRegionInTransition(regionInfo);
+  }
+
+  /**
+   * Get the number of regions in transition.
+   */
+  public int getRegionsInTransitionCount() {
+    return regionInTransitionTracker.getRegionsInTransition().size();
+  }
+
+  public List<RegionState> getRegionsStateInTransition() {
+    final List<RegionState> rit = new ArrayList<RegionState>(getRegionsInTransitionCount());
+    for (RegionStateNode node : getRegionsInTransition()) {
+      rit.add(node.toRegionState());
+    }
+    return rit;
+  }
+
+  public SortedSet<RegionState> getRegionsInTransitionOrderedByTimestamp() {
+    final SortedSet<RegionState> rit = new TreeSet<RegionState>(REGION_STATE_STAMP_COMPARATOR);
+    for (RegionStateNode node : getRegionsInTransition()) {
+      rit.add(node.toRegionState());
+    }
+    return rit;
+  }
+
 
   public List<RegionInfo> getAssignedRegions() {
     return regionStates.getAssignedRegions();
@@ -2122,6 +2173,8 @@ public class AssignmentManager {
       if (e != null) {
         // revert
         regionNode.setState(state);
+      }else{
+        regionInTransitionTracker.handleRegionStateNodeOperation(regionNode);
       }
     });
     return future;
@@ -2170,6 +2223,7 @@ public class AssignmentManager {
         if (regionLocation != null) {
           regionStates.removeRegionFromServer(regionLocation, regionNode);
         }
+        regionInTransitionTracker.handleRegionStateNodeOperation(regionNode);
       } else {
         // revert
         regionNode.setState(state);
@@ -2230,6 +2284,7 @@ public class AssignmentManager {
         // on table that contains state.
         setMetaAssigned(regionInfo, true);
       }
+      regionInTransitionTracker.handleRegionStateNodeOperation(regionNode);
     });
   }
 
@@ -2247,6 +2302,7 @@ public class AssignmentManager {
           regionNode.setLastHost(regionLocation);
           regionStates.removeRegionFromServer(regionLocation, regionNode);
         }
+        regionInTransitionTracker.handleRegionStateNodeOperation(regionNode);
       } else {
         // revert
         regionNode.setState(state);
@@ -2307,6 +2363,7 @@ public class AssignmentManager {
     for (RegionInfo ri : mergeParents) {
       regionStates.deleteRegion(ri);
     }
+    //TODO need to handle delete and new region
     TableDescriptor td = master.getTableDescriptors().get(child.getTable());
     regionStateStore.mergeRegions(child, mergeParents, serverName, td);
     if (shouldAssignFavoredNodes(child)) {
