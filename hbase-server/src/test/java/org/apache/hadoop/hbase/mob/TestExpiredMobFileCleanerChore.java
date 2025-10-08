@@ -164,8 +164,7 @@ public class TestExpiredMobFileCleanerChore {
    * 3 day old hfile is removed but the 1 day one is still present after the expiry based cleaner is
    * run.
    */
-
-  public static void testCleanerInternal() throws Exception {
+  private static void testCleanerInternal() throws Exception {
     init();
 
     Path mobDirPath = MobUtils.getMobFamilyPath(TEST_UTIL.getConfiguration(), tableName, family);

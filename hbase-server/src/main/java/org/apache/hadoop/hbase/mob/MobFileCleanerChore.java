@@ -116,21 +116,35 @@ public class MobFileCleanerChore extends ScheduledChore implements Configuration
       LOG.error("MobFileCleanerChore failed", e);
       return;
     }
-    List<Future> futureList = new ArrayList<>(map.size());
+    List<Future<?>> futureList = new ArrayList<>(map.size());
     for (TableDescriptor htd : map.values()) {
       Future<?> future = executor.submit(() -> handleOneTable(htd));
       futureList.add(future);
     }
 
-    for (Future future : futureList) {
+    for (Future<?> future : futureList) {
       try {
         future.get(cleanerFutureTimeout, TimeUnit.SECONDS);
-      } catch (InterruptedException | ExecutionException | TimeoutException e) {
-        LOG.warn("Exception during the execution of MobFileCleanerChore", e);
-        // Restore the interrupted status
+      } catch (InterruptedException e) {
+        LOG.warn("MobFileCleanerChore interrupted while waiting for futures", e);
         Thread.currentThread().interrupt();
+        cancelAllFutures(futureList);
+        break;
+      } catch (ExecutionException e) {
+        LOG.error("Exception during execution of MobFileCleanerChore task", e);
+      } catch (TimeoutException e) {
+        LOG.error("MobFileCleanerChore timed out waiting for a task to complete", e);
       }
     }
+  }
+
+  private void cancelAllFutures(List<Future<?>> futureList) {
+    for (Future<?> f : futureList) {
+      if (!f.isDone()) {
+        f.cancel(true); // interrupt running tasks
+      }
+    }
+    LOG.info("Cancelled all pending mob file cleaner tasks");
   }
 
   private void handleOneTable(TableDescriptor htd) {
