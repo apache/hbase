@@ -24,7 +24,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * Utility used by both Master and Region Server web UI JSP pages.
  */
 @InterfaceAudience.Private
-public class ZKUtil {
+public final class ZKUtil {
 
   private ZKUtil() {
     // Do not instantiate.

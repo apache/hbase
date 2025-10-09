@@ -23,7 +23,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * Constants used by the web UI JSP pages.
  */
 @InterfaceAudience.Private
-public class RSStatusConstants {
+public final class RSStatusConstants {
   public static final String FILTER = "filter";
   public static final String FILTER_GENERAL = "general";
   public static final String FORMAT = "format";
