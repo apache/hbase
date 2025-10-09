@@ -768,8 +768,9 @@ public class TestRegionObserverInterface {
         tableName, new Boolean[] { false, false, true, true, true, true, false });
 
       verifyMethodResult(SimpleRegionObserver.class,
-        new String[] { "getCtPreReplayWALs", "getCtPostReplayWALs", "getCtPrePut", "getCtPostPut" },
-        tableName, new Integer[] { 0, 0, 2, 2 });
+        new String[] { "getCtPreReplayWALs", "getCtPostReplayWALs", "getCtPreWALRestore",
+          "getCtPostWALRestore", "getCtPrePut", "getCtPostPut" },
+        tableName, new Integer[] { 0, 0, 0, 0, 2, 2 });
 
       cluster.killRegionServer(rs1.getRegionServer().getServerName());
       Threads.sleep(1000); // Let the kill soak in.
@@ -777,12 +778,48 @@ public class TestRegionObserverInterface {
       LOG.info("All regions assigned");
 
       verifyMethodResult(SimpleRegionObserver.class,
-        new String[] { "getCtPreReplayWALs", "getCtPostReplayWALs", "getCtPrePut", "getCtPostPut" },
-        tableName, new Integer[] { 1, 1, 0, 0 });
+        new String[] { "getCtPreReplayWALs", "getCtPostReplayWALs", "getCtPreWALRestore",
+          "getCtPostWALRestore", "getCtPrePut", "getCtPostPut" },
+        tableName, new Integer[] { 1, 1, 2, 2, 0, 0 });
     } finally {
       util.deleteTable(tableName);
       table.close();
     }
+  }
+
+  @Test
+  public void testPreWALRestoreSkip() throws Exception {
+    LOG.info(TestRegionObserverInterface.class.getName() + "." + name.getMethodName());
+    TableName tableName = TableName.valueOf(SimpleRegionObserver.TABLE_SKIPPED);
+    Table table = util.createTable(tableName, new byte[][] { A, B, C });
+
+    try (RegionLocator locator = util.getConnection().getRegionLocator(tableName)) {
+      JVMClusterUtil.RegionServerThread rs1 = cluster.startRegionServer();
+      ServerName sn2 = rs1.getRegionServer().getServerName();
+      String regEN = locator.getAllRegionLocations().get(0).getRegion().getEncodedName();
+
+      util.getAdmin().move(Bytes.toBytes(regEN), sn2);
+      while (!sn2.equals(locator.getAllRegionLocations().get(0).getServerName())) {
+        Thread.sleep(100);
+      }
+
+      Put put = new Put(ROW);
+      put.addColumn(A, A, A);
+      put.addColumn(B, B, B);
+      put.addColumn(C, C, C);
+      table.put(put);
+
+      cluster.killRegionServer(rs1.getRegionServer().getServerName());
+      Threads.sleep(20000); // just to be sure that the kill has fully started.
+      util.waitUntilAllRegionsAssigned(tableName);
+    }
+
+    verifyMethodResult(SimpleRegionObserver.class,
+      new String[] { "getCtPreWALRestore", "getCtPostWALRestore", }, tableName,
+      new Integer[] { 0, 0 });
+
+    util.deleteTable(tableName);
+    table.close();
   }
 
   // called from testPreWALAppendIsWrittenToWAL
