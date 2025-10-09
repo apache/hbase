@@ -1440,10 +1440,7 @@ public class RegionCoprocessorHost
   /**
    * Supports Coprocessor 'bypass'.
    * @return true if default behavior should be bypassed, false otherwise
-   * @deprecated Since hbase-2.0.0. No replacement. To be removed in hbase-3.0.0 and replaced with
-   *             something that doesn't expose IntefaceAudience.Private classes.
    */
-  @Deprecated
   public boolean preWALRestore(final RegionInfo info, final WALKey logKey, final WALEdit logEdit)
     throws IOException {
     return execOperation(
@@ -1455,11 +1452,6 @@ public class RegionCoprocessorHost
       });
   }
 
-  /**
-   * @deprecated Since hbase-2.0.0. No replacement. To be removed in hbase-3.0.0 and replaced with
-   *             something that doesn't expose IntefaceAudience.Private classes.
-   */
-  @Deprecated
   public void postWALRestore(final RegionInfo info, final WALKey logKey, final WALEdit logEdit)
     throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new RegionObserverOperationWithoutResult() {
