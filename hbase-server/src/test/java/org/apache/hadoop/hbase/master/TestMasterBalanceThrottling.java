@@ -126,8 +126,8 @@ public class TestMasterBalanceThrottling {
       @Override
       public void run() {
         while (!stop.get()) {
-          maxCount.set(Math.max(maxCount.get(),
-            master.getAssignmentManager().getRegionsInTransitionCount()));
+          maxCount.set(
+            Math.max(maxCount.get(), master.getAssignmentManager().getRegionsInTransitionCount()));
           try {
             Thread.sleep(10);
           } catch (InterruptedException e) {

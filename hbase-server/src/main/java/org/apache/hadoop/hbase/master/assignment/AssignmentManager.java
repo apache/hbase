@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master.assignment;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -337,6 +338,8 @@ public class AssignmentManager {
             regionNode.setLastHost(lastHost);
             regionNode.setRegionLocation(regionLocation);
             regionNode.setOpenSeqNum(openSeqNum);
+            regionInTransitionTracker.handleRegionStateNodeOperation(regionNode);
+
             if (regionNode.getProcedure() != null) {
               regionNode.getProcedure().stateLoaded(this, regionNode);
             }
@@ -1801,7 +1804,7 @@ public class AssignmentManager {
    */
   // Public so can be run by the Master as part of the startup. Needs hbase:meta to be online.
   // Needs to be done after the table state manager has been started.
-  //TODO umesh we can update the rit map here
+  // TODO umesh we can update the rit map here
   public void processOfflineRegions() {
     TransitRegionStateProcedure[] procs =
       regionStates.getRegionStateNodes().stream().filter(rsn -> rsn.isInState(State.OFFLINE))
@@ -2077,7 +2080,8 @@ public class AssignmentManager {
   }
 
   public List<RegionStateNode> getRegionsInTransition() {
-    return new ArrayList<RegionStateNode>(regionInTransitionTracker.getRegionsInTransition().values());
+    return new ArrayList<RegionStateNode>(
+      regionInTransitionTracker.getRegionsInTransition().values());
   }
 
   public boolean isRegionInTransition(final RegionInfo regionInfo) {
@@ -2106,7 +2110,6 @@ public class AssignmentManager {
     }
     return rit;
   }
-
 
   public List<RegionInfo> getAssignedRegions() {
     return regionStates.getAssignedRegions();
@@ -2173,7 +2176,7 @@ public class AssignmentManager {
       if (e != null) {
         // revert
         regionNode.setState(state);
-      }else{
+      } else {
         regionInTransitionTracker.handleRegionStateNodeOperation(regionNode);
       }
     });
@@ -2340,6 +2343,9 @@ public class AssignmentManager {
     // it is a split parent. And usually only one of them can match, as after restart, the region
     // state will be changed from SPLIT to CLOSED.
     regionStateStore.splitRegion(parent, daughterA, daughterB, serverName, td);
+    regionInTransitionTracker.handleRegionStateNodeOperation(node);
+    regionInTransitionTracker.handleRegionStateNodeOperation(nodeA);
+    regionInTransitionTracker.handleRegionStateNodeOperation(nodeB);
     if (shouldAssignFavoredNodes(parent)) {
       List<ServerName> onlineServers = this.master.getServerManager().getOnlineServersList();
       getFavoredNodePromoter().generateFavoredNodesForDaughter(onlineServers, parent, daughterA,
@@ -2363,9 +2369,12 @@ public class AssignmentManager {
     for (RegionInfo ri : mergeParents) {
       regionStates.deleteRegion(ri);
     }
-    //TODO need to handle delete and new region
+    // TODO need to handle delete and new region
     TableDescriptor td = master.getTableDescriptors().get(child.getTable());
     regionStateStore.mergeRegions(child, mergeParents, serverName, td);
+    regionInTransitionTracker.handleRegionStateNodeOperation(node);
+    Arrays.stream(mergeParents).forEach(regionInfo -> regionInTransitionTracker
+      .handleRegionStateNodeOperation(regionStates.getRegionStateNode(regionInfo)));
     if (shouldAssignFavoredNodes(child)) {
       getFavoredNodePromoter().generateFavoredNodesForMergedRegion(child, mergeParents);
     }

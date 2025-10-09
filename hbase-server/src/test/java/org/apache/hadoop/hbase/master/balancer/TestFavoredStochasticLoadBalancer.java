@@ -381,7 +381,6 @@ public class TestFavoredStochasticLoadBalancer extends BalancerTestBase {
     // Lets kill all the RS that are favored nodes for this region.
     stopServersAndWaitUntilProcessed(currentFN);
 
-
     final AssignmentManager am = master.getAssignmentManager();
     final RegionStates regionStates = am.getRegionStates();
     TEST_UTIL.waitFor(10000, new Waiter.Predicate<Exception>() {

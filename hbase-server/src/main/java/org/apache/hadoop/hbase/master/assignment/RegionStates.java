@@ -94,8 +94,7 @@ public class RegionStates {
   }
 
   public boolean isRegionInRegionStates(final RegionInfo hri) {
-    return (regionsMap.containsKey(hri.getRegionName())
-      || regionOffline.containsKey(hri));
+    return (regionsMap.containsKey(hri.getRegionName()) || regionOffline.containsKey(hri));
   }
 
   // ==========================================================================
@@ -590,7 +589,6 @@ public class RegionStates {
     return tableStateManager.isTableState(tableName, TableState.State.DISABLED,
       TableState.State.DISABLING);
   }
-
 
   // ==========================================================================
   // Region offline helpers

@@ -3433,8 +3433,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
     return new ExplainingPredicate<IOException>() {
       @Override
       public String explainFailure() throws IOException {
-        final AssignmentManager am =
-          getMiniHBaseCluster().getMaster().getAssignmentManager();
+        final AssignmentManager am = getMiniHBaseCluster().getMaster().getAssignmentManager();
         return "found in transition: " + am.getRegionsInTransition().toString();
       }
 

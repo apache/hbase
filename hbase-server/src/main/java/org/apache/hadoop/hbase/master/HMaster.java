@@ -2019,8 +2019,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     // Throttling by max number regions in transition
     while (
       !interrupted && maxRegionsInTransition > 0
-        && this.assignmentManager.getRegionsInTransitionCount()
-            >= maxRegionsInTransition
+        && this.assignmentManager.getRegionsInTransitionCount() >= maxRegionsInTransition
         && EnvironmentEdgeManager.currentTime() <= cutoffTime
     ) {
       try {
@@ -3080,8 +3079,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
         }
         case REGIONS_IN_TRANSITION: {
           if (assignmentManager != null) {
-            builder.setRegionsInTransition(
-              assignmentManager.getRegionsStateInTransition());
+            builder.setRegionsInTransition(assignmentManager.getRegionsStateInTransition());
           }
           break;
         }
