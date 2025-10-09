@@ -161,7 +161,7 @@ public class TestRSStatusPage {
     conn.connect();
 
     assertEquals(200, conn.getResponseCode());
-    assertEquals("text/html", conn.getContentType());
+    assertEquals("text/html;charset=utf-8", conn.getContentType());
 
     return getResponseBody(conn);
   }
