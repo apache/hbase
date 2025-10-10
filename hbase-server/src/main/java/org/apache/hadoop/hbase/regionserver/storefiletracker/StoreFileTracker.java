@@ -24,6 +24,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.regionserver.CreateStoreFileWriterParams;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
@@ -102,6 +103,8 @@ public interface StoreFileTracker {
 
   Reference createReference(Reference reference, Path path) throws IOException;
 
+  Reference createAndCommitReference(Reference reference, Path path) throws IOException;
+
   /**
    * Reads the reference file from the given path.
    * @param path the {@link Path} to the reference file in the file system.
@@ -131,7 +134,20 @@ public interface StoreFileTracker {
    * @return the file link name.
    * @throws IOException on file or parent directory creation failure.
    */
-  String createHFileLink(final TableName linkedTable, final String linkedRegion,
+  HFileLink createHFileLink(final TableName linkedTable, final String linkedRegion,
+    final String hfileName, final boolean createBackRef) throws IOException;
+
+  /**
+   * Create a new HFileLink and add to SFT
+   * <p>
+   * It also adds a back-reference to the hfile back-reference directory to simplify the
+   * reference-count and the cleaning process.
+   * @param hfileLinkName - HFileLink name (it contains hfile-region-table)
+   * @param createBackRef - Whether back reference should be created. Defaults to true.
+   * @return the file link name.
+   * @throws IOException on file or parent directory creation failure.
+   */
+  HFileLink createAndCommitHFileLink(final TableName linkedTable, final String linkedRegion,
     final String hfileName, final boolean createBackRef) throws IOException;
 
   /**
@@ -144,7 +160,7 @@ public interface StoreFileTracker {
    * @return the file link name.
    * @throws IOException on file or parent directory creation failure.
    */
-  String createFromHFileLink(final String hfileName, final boolean createBackRef)
+  HFileLink createFromHFileLink(final String hfileName, final boolean createBackRef)
     throws IOException;
 
   /**
