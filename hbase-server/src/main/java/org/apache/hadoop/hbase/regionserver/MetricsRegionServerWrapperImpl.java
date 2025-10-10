@@ -68,6 +68,7 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
   private BlockCache l1Cache = null;
   private BlockCache l2Cache = null;
   private MobFileCache mobFileCache;
+  private final RowCache rowCache;
   private CacheStats cacheStats;
   private CacheStats l1Stats = null;
   private CacheStats l2Stats = null;
@@ -99,6 +100,8 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
     this.regionServer = regionServer;
     initBlockCache();
     initMobFileCache();
+    RSRpcServices rsRpcServices = this.regionServer.getRSRpcServices();
+    this.rowCache = rsRpcServices == null ? null : rsRpcServices.getRowCacheService().getRowCache();
     this.excludeDatanodeManager = this.regionServer.getWalFactory().getExcludeDatanodeManager();
 
     this.period = regionServer.getConfiguration().getLong(HConstants.REGIONSERVER_METRICS_PERIOD,
@@ -1192,6 +1195,31 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
   @Override
   public long getTrailerHitCount() {
     return this.cacheStats != null ? this.cacheStats.getTrailerHitCount() : 0L;
+  }
+
+  @Override
+  public long getRowCacheHitCount() {
+    return this.rowCache != null ? this.rowCache.getHitCount() : 0L;
+  }
+
+  @Override
+  public long getRowCacheMissCount() {
+    return this.rowCache != null ? this.rowCache.getMissCount() : 0L;
+  }
+
+  @Override
+  public long getRowCacheSize() {
+    return this.rowCache != null ? this.rowCache.getSize() : 0L;
+  }
+
+  @Override
+  public long getRowCacheCount() {
+    return this.rowCache != null ? this.rowCache.getCount() : 0L;
+  }
+
+  @Override
+  public long getRowCacheEvictedRowCount() {
+    return this.rowCache != null ? this.rowCache.getEvictedRowCount() : 0L;
   }
 
   @Override
