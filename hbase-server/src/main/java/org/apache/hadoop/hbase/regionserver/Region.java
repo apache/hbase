@@ -206,12 +206,19 @@ public interface Region extends ConfigurationObserver {
     SPLIT_REGION,
     MERGE_REGION,
     BATCH_MUTATE,
+    BATCH_PUT,
+    BATCH_DELETE,
+    BATCH_APPEND,
+    BATCH_INCREMENT,
+    BATCH_GET,
     REPLAY_BATCH_MUTATE,
     COMPACT_REGION,
     REPLAY_EVENT,
     SNAPSHOT,
     COMPACT_SWITCH,
-    CHECK_AND_MUTATE
+    CHECK_AND_MUTATE,
+    CHECK_AND_PUT,
+    CHECK_AND_DELETE
   }
 
   /**

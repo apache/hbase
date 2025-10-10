@@ -706,6 +706,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
       server.getMetrics().updateAppend(region, EnvironmentEdgeManager.currentTime() - before,
         blockBytesScanned);
     }
+    addSize(context, r);
     return r == null ? Result.EMPTY_RESULT : r;
   }
 
@@ -730,6 +731,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
       metricsRegionServer.updateIncrement(region, EnvironmentEdgeManager.currentTime() - before,
         blockBytesScanned);
     }
+    addSize(context, r);
     return r == null ? Result.EMPTY_RESULT : r;
   }
 
@@ -824,6 +826,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
               metricsRegionServer.updateGet(region, EnvironmentEdgeManager.currentTime() - before,
                 blockBytesScanned);
             }
+            addSize(context, r);
           }
         } else if (action.hasServiceCall()) {
           hasResultOrException = true;

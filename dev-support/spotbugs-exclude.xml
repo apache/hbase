@@ -43,6 +43,16 @@
   </Match>
 
   <Match>
+    <Bug pattern="URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD"/>
+    <Or>
+      <Class name="org.apache.hadoop.hbase.regionserver.RequestStatsCollector$1QueryResult"/>
+      <Class name="org.apache.hadoop.hbase.regionserver.RequestStatsCollector$1SqlResponse"/>
+      <Class name="org.apache.hadoop.hbase.regionserver.RequestStatsCollector$1Stat"/>
+      <Class name="org.apache.hadoop.hbase.regionserver.RequestStatsCollector$Info"/>
+    </Or>
+  </Match>
+
+  <Match>
     <Class name="org.apache.hadoop.hbase.regionserver.StoreFile$Writer"/>
     <Bug pattern="NP_NULL_PARAM_DEREF"/>
   </Match>
