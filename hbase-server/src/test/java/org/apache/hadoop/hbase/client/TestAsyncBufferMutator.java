@@ -284,8 +284,9 @@ public class TestAsyncBufferMutator {
       Timeout task = mutator.periodicFlushTask;
       // we should have scheduled a periodic flush task
       assertNotNull(task);
-      synchronized (mutator) {
-        // synchronized on mutator to prevent periodic flush to be executed
+      // get the lock toprevent periodic flush to be executed
+      mutator.lock.lock();
+      try {
         Thread.sleep(500);
         // the timeout should be issued
         assertTrue(task.isExpired());
@@ -294,6 +295,8 @@ public class TestAsyncBufferMutator {
         assertFalse(future.isDone());
         // manually flush, then release the lock
         mutator.flush();
+      } finally {
+        mutator.lock.unlock();
       }
       // this is a bit deep into the implementation in netty but anyway let's add a check here to
       // confirm that an issued timeout can not be canceled by netty framework.
