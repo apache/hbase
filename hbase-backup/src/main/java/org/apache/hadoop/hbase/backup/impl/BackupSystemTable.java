@@ -900,6 +900,18 @@ public final class BackupSystemTable implements Closeable {
    */
   public void addIncrementalBackupTableSet(Set<TableName> tables, String backupRoot)
     throws IOException {
+    addIncrementalBackupTableSet(tables, backupRoot, -1);
+  }
+
+  /**
+   * Add tables to global incremental backup set
+   * @param tables     set of tables
+   * @param backupRoot root directory path to backup
+   * @param ts         timestamp
+   * @throws IOException exception
+   */
+  public void addIncrementalBackupTableSet(Set<TableName> tables, String backupRoot, long ts)
+    throws IOException {
     if (LOG.isTraceEnabled()) {
       LOG.trace("Add incremental backup table set to backup system table. ROOT=" + backupRoot
         + " tables [" + StringUtils.join(tables, " ") + "]");
@@ -908,7 +920,7 @@ public final class BackupSystemTable implements Closeable {
       tables.forEach(table -> LOG.debug(Objects.toString(table)));
     }
     try (Table table = connection.getTable(tableName)) {
-      Put put = createPutForIncrBackupTableSet(tables, backupRoot);
+      Put put = createPutForIncrBackupTableSet(tables, backupRoot, ts);
       table.put(put);
     }
   }
@@ -1243,11 +1255,18 @@ public final class BackupSystemTable implements Closeable {
 
   /**
    * Creates Put to store incremental backup table set
-   * @param tables tables
+   * @param tables     tables
+   * @param backupRoot root directory path to backup
+   * @param ts         timestamp
    * @return put operation
    */
-  private Put createPutForIncrBackupTableSet(Set<TableName> tables, String backupRoot) {
-    Put put = new Put(rowkey(INCR_BACKUP_SET, backupRoot));
+  private Put createPutForIncrBackupTableSet(Set<TableName> tables, String backupRoot, long ts) {
+    Put put;
+    if (ts < 0) {
+      put = new Put(rowkey(INCR_BACKUP_SET, backupRoot));
+    } else {
+      put = new Put(rowkey(INCR_BACKUP_SET, backupRoot), ts);
+    }
     for (TableName table : tables) {
       put.addColumn(BackupSystemTable.META_FAMILY, Bytes.toBytes(table.getNameAsString()),
         EMPTY_VALUE);
