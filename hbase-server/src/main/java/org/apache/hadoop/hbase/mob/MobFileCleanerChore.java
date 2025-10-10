@@ -73,7 +73,7 @@ public class MobFileCleanerChore extends ScheduledChore implements Configuration
     cleaner.setConf(master.getConfiguration());
     threadCount = master.getConfiguration().getInt(MobConstants.MOB_CLEANER_THREAD_COUNT,
       MobConstants.DEFAULT_MOB_CLEANER_THREAD_COUNT);
-    if (threadCount <= 1) {
+    if (threadCount < 1) {
       threadCount = 1;
     }
 
@@ -139,12 +139,14 @@ public class MobFileCleanerChore extends ScheduledChore implements Configuration
   }
 
   private void cancelAllFutures(List<Future<?>> futureList) {
+    long pendingTaskCounter = 0;
     for (Future<?> f : futureList) {
       if (!f.isDone()) {
         f.cancel(true); // interrupt running tasks
+        pendingTaskCounter++;
       }
     }
-    LOG.info("Cancelled all pending mob file cleaner tasks");
+    LOG.info("Cancelled {} pending mob file cleaner tasks", pendingTaskCounter);
   }
 
   private void handleOneTable(TableDescriptor htd) {
