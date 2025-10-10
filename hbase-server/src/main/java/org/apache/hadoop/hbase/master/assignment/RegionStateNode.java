@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.master.assignment;
 
 import java.util.Arrays;
-import java.util.concurrent.ConcurrentMap;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -78,7 +77,6 @@ public class RegionStateNode implements Comparable<RegionStateNode> {
   private final RegionStateNodeLock lock;
   private final RegionInfo regionInfo;
   private final ProcedureEvent<?> event;
-  private final ConcurrentMap<RegionInfo, RegionStateNode> ritMap;
 
   // volatile only for getLastUpdate and test usage, the upper layer should sync on the
   // RegionStateNode before accessing usually.
@@ -102,10 +100,9 @@ public class RegionStateNode implements Comparable<RegionStateNode> {
 
   private volatile long openSeqNum = HConstants.NO_SEQNUM;
 
-  RegionStateNode(RegionInfo regionInfo, ConcurrentMap<RegionInfo, RegionStateNode> ritMap) {
+  RegionStateNode(RegionInfo regionInfo) {
     this.regionInfo = regionInfo;
     this.event = new AssignmentProcedureEvent(regionInfo);
-    this.ritMap = ritMap;
     this.lock = new RegionStateNodeLock(regionInfo);
   }
 
@@ -161,7 +158,7 @@ public class RegionStateNode implements Comparable<RegionStateNode> {
     return isInState(State.FAILED_OPEN) && getProcedure() != null;
   }
 
-  public boolean isInTransition() {
+  public boolean isOngoingTRSP() {
     return getProcedure() != null;
   }
 
@@ -207,14 +204,12 @@ public class RegionStateNode implements Comparable<RegionStateNode> {
   public TransitRegionStateProcedure setProcedure(TransitRegionStateProcedure proc) {
     assert this.procedure == null;
     this.procedure = proc;
-    ritMap.put(regionInfo, this);
     return proc;
   }
 
   public void unsetProcedure(TransitRegionStateProcedure proc) {
     assert this.procedure == proc;
     this.procedure = null;
-    ritMap.remove(regionInfo, this);
   }
 
   public TransitRegionStateProcedure getProcedure() {

@@ -58,7 +58,6 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterRpcServices;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
-import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
@@ -165,15 +164,14 @@ public class TestRegionMergeTransactionOnCluster {
         : mergedRegions.getSecond();
       SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
       AssignmentManager am = cluster.getMaster().getAssignmentManager();
-      RegionStates regionStates = am.getRegionStates();
 
       // We should not be able to assign it again
       am.assign(hri);
-      assertFalse("Merged region can't be assigned", regionStates.isRegionInTransition(hri));
+      assertFalse("Merged region can't be assigned", am.isRegionInTransition(hri));
 
       // We should not be able to unassign it either
       am.unassign(hri);
-      assertFalse("Merged region can't be unassigned", regionStates.isRegionInTransition(hri));
+      assertFalse("Merged region can't be unassigned", am.isRegionInTransition(hri));
 
       table.close();
     } finally {
@@ -569,11 +567,11 @@ public class TestRegionMergeTransactionOnCluster {
         enabled.get() && req.getTransition(0).getTransitionCode() == TransitionCode.READY_TO_MERGE
           && !resp.hasErrorMessage()
       ) {
-        RegionStates regionStates = myMaster.getAssignmentManager().getRegionStates();
-        for (RegionState regionState : regionStates.getRegionsStateInTransition()) {
+        AssignmentManager am = myMaster.getAssignmentManager();
+        for (RegionState regionState : am.getRegionsStateInTransition()) {
           // Find the merging_new region and remove it
           if (regionState.isMergingNew()) {
-            regionStates.deleteRegion(regionState.getRegion());
+            am.getRegionStates().deleteRegion(regionState.getRegion());
           }
         }
       }
