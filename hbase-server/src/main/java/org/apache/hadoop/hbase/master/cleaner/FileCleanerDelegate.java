@@ -33,6 +33,10 @@ public interface FileCleanerDelegate extends Configurable, Stoppable {
 
   /**
    * Determines which of the given files are safe to delete
+   * <p>
+   * This method can be called concurrently by multiple threads. Implementations must be thread
+   * safe.
+   * </p>
    * @param files files to check for deletion
    * @return files that are ok to delete according to this cleaner
    */
