@@ -895,7 +895,7 @@
     <jaxb-api.version>2.3.1</jaxb-api.version>
     <servlet.api.version>4.0.1</servlet.api.version>
     <wx.rs.api.version>2.1.1</wx.rs.api.version>
-    <tomcat.jasper.version>9.0.108</tomcat.jasper.version>
+    <tomcat.jasper.version>9.0.110</tomcat.jasper.version>
     <jruby.version>9.4.12.1</jruby.version>
     <junit.jupiter.version>5.13.4</junit.jupiter.version>
     <junit.vintage.version>5.13.4</junit.vintage.version>
