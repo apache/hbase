@@ -44,6 +44,10 @@ public abstract class BaseFileCleanerDelegate extends BaseConfigurable
 
   /**
    * Should the master delete the file or keep it?
+   * <p>
+   * This method can be called concurrently by multiple threads. Implementations must be thread
+   * safe.
+   * </p>
    * @param fStat file status of the file to check
    * @return <tt>true</tt> if the file is deletable, <tt>false</tt> if not
    */
