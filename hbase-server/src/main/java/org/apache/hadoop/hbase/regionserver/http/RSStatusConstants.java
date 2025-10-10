@@ -17,21 +17,25 @@
  */
 package org.apache.hadoop.hbase.regionserver.http;
 
-import java.io.IOException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Only kept for redirecting to regionserver.jsp.
+ * Constants used by the web UI JSP pages.
  */
 @InterfaceAudience.Private
-public class RSStatusServlet extends HttpServlet {
-  private static final long serialVersionUID = 1L;
+public final class RSStatusConstants {
+  public static final String FILTER = "filter";
+  public static final String FILTER_GENERAL = "general";
+  public static final String FORMAT = "format";
+  public static final String FORMAT_JSON = "json";
+  public static final String FORMAT_HTML = "html";
+  public static final String PARENT = "parent";
+  public static final String BLOCK_CACHE_NAME = "bcn";
+  public static final String BLOCK_CACHE_NAME_L1 = "L1";
+  public static final String BLOCK_CACHE_V = "bcv";
+  public static final String BLOCK_CACHE_V_FILE = "file";
 
-  @Override
-  public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
-    response.sendRedirect(request.getContextPath() + "/regionserver.jsp");
+  private RSStatusConstants() {
+    // Do not instantiate.
   }
 }

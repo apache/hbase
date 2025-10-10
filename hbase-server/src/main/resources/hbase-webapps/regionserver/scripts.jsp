@@ -17,6 +17,12 @@
 * limitations under the License.
 */
 --%>
-   <jsp:include page="scripts.jsp"/>
-  </body>
-</html>
+    <script src="/static/js/jquery.min.js" type="text/javascript"></script>
+    <script src="/static/js/bootstrap.bundle.min.js" type="text/javascript"></script>
+    <script src="/static/js/tab.js" type="text/javascript"></script>
+    <script type="text/javascript">
+      $(document).ready(function() {
+        $('nav.navbar li.active').removeClass('active');
+        $('a[href="' + location.pathname + '"]').addClass('active');
+      });
+    </script>

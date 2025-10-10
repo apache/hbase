@@ -1,4 +1,5 @@
-/*
+<%--
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,23 +16,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.regionserver.http;
+--%>
+<%@ page contentType="text/html;charset=UTF-8"
+         import="org.apache.hadoop.hbase.io.hfile.BlockCache" %>
 
-import java.io.IOException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import org.apache.yetus.audience.InterfaceAudience;
+<%
+  BlockCache bc = (BlockCache) request.getAttribute("bc");
 
-/**
- * Only kept for redirecting to regionserver.jsp.
- */
-@InterfaceAudience.Private
-public class RSStatusServlet extends HttpServlet {
-  private static final long serialVersionUID = 1L;
+  String bcUrl = bc == null ? null : "http://hbase.apache.org/devapidocs/" + bc.getClass().getName().replaceAll("\\.", "/") + ".html";
+  String bcName = bc == null ? null : bc.getClass().getSimpleName();
+%>
 
-  @Override
-  public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
-    response.sendRedirect(request.getContextPath() + "/regionserver.jsp");
-  }
-}
+<table class="table table-striped">
+  <tr>
+    <th>Attribute</th>
+    <th>Value</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>Implementation</td>
+    <td><a href="<%= bcUrl %>"><%= bcName %></a></td>
+    <td>Block cache implementing class</td>
+  </tr>
+</table>
+<p>See <a href="http://hbase.apache.org/book.html#block.cache">block cache</a> in the HBase Reference Guide for help.</p>
