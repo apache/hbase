@@ -103,8 +103,8 @@ public class LogCleaner extends CleanerChore<BaseLogCleanerDelegate>
     if (newSize <= 0) {
       LOG.warn(
         "The configuration {} has been set to an invalid value {}, "
-          + "the default value {} will be used, no need to update.",
-        OLD_WALS_CLEANER_THREAD_SIZE, newSize, DEFAULT_OLD_WALS_CLEANER_THREAD_SIZE);
+          + "the previous value {} will be used, no need to update.",
+        OLD_WALS_CLEANER_THREAD_SIZE, newSize, oldWALsCleaner.size());
       return;
     }
     if (newSize == oldWALsCleaner.size()) {
