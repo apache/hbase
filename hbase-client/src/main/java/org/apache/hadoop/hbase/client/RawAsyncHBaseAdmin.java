@@ -1316,19 +1316,52 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
     switch (compactType) {
       case MOB:
-        addListener(connection.registry.getActiveMaster(), (serverName, err) -> {
+        addListener(getDescriptor(tableName), (tableDesc, err) -> {
           if (err != null) {
             future.completeExceptionally(err);
             return;
           }
-          RegionInfo regionInfo = RegionInfo.createMobRegionInfo(tableName);
-          addListener(compact(serverName, regionInfo, major, columnFamily), (ret, err2) -> {
-            if (err2 != null) {
-              future.completeExceptionally(err2);
-            } else {
-              future.complete(ret);
-            }
-          });
+          List<ColumnFamilyDescriptor> mobColumnFamilies =
+            Arrays.stream(tableDesc.getColumnFamilies())
+              .filter(ColumnFamilyDescriptor::isMobEnabled).toList();
+          if (mobColumnFamilies.isEmpty()) {
+            // It's not a mob table, nothing to do.
+            future.complete(null);
+            return;
+          }
+          if (columnFamily == null) {
+            CompletableFuture<?>[] completableFutures = mobColumnFamilies.stream()
+              .map(cfd -> compact(tableName, cfd.getName(), major, CompactType.NORMAL))
+              .toArray(CompletableFuture<?>[]::new);
+            addListener(CompletableFuture.allOf(completableFutures), (ret1, err1) -> {
+              if (err1 != null) {
+                future.completeExceptionally(err1);
+              } else {
+                future.complete(ret1);
+              }
+            });
+            return;
+          }
+          ColumnFamilyDescriptor cfd = tableDesc.getColumnFamily(columnFamily);
+          if (cfd == null) {
+            future.completeExceptionally(
+              new NoSuchColumnFamilyException("Column family " + Bytes.toString(columnFamily)
+                + " does not exist in table " + tableName.getNameAsString()));
+            return;
+          }
+          if (cfd.isMobEnabled()) {
+            addListener(compact(tableName, cfd.getName(), major, CompactType.NORMAL),
+              (ret2, err2) -> {
+                if (err2 != null) {
+                  future.completeExceptionally(err2);
+                } else {
+                  future.complete(ret2);
+                }
+              });
+          } else {
+            // The specified column family is not a mob column family, nothing to do.
+            future.complete(null);
+          }
         });
         break;
       case NORMAL:
@@ -1339,6 +1372,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
           }
           if (locations == null || locations.isEmpty()) {
             future.completeExceptionally(new TableNotFoundException(tableName));
+            return;
           }
           CompletableFuture<?>[] compactFutures =
             locations.stream().filter(l -> l.getRegion() != null)
