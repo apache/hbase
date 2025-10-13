@@ -24,7 +24,7 @@
          import="org.apache.hadoop.hbase.util.CommonFSUtils"
          import="org.apache.hadoop.util.StringUtils"
          import="org.apache.hadoop.hbase.master.http.MasterStatusConstants"
-         import="org.apache.hadoop.hbase.util.ZKUtil" %>
+         import="org.apache.hadoop.hbase.util.ZKStringFormatter" %>
 
 <%
   HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
@@ -85,7 +85,7 @@
   </tr>
   <tr>
     <td>ZooKeeper Quorum</td>
-      <td> <%= ZKUtil.formatZKString(master.getZooKeeper()) %> </td>
+      <td> <%= ZKStringFormatter.formatZKString(master.getZooKeeper()) %> </td>
     <td>Addresses of all registered ZK servers. For more, see <a href="/zk.jsp">zk dump</a>.</td>
   </tr>
   <tr>
@@ -95,7 +95,7 @@
   </tr>
   <tr>
     <td>Cluster Key</td>
-    <td> <%= ZKUtil.formatZKString(master.getZooKeeper()) %>:<%= master.getZooKeeper().getZNodePaths().baseZNode %></td>
+    <td> <%= ZKStringFormatter.formatZKString(master.getZooKeeper()) %>:<%= master.getZooKeeper().getZNodePaths().baseZNode %></td>
     <td>Key to add this cluster as a peer for replication. Use 'help "add_peer"' in the shell for details.</td>
   </tr>
   <tr>

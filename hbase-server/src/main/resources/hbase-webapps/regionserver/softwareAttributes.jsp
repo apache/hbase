@@ -22,7 +22,7 @@
          import="org.apache.hadoop.hbase.util.JvmVersion"
          import="org.apache.hadoop.hbase.regionserver.HRegionServer"
          import="org.apache.hadoop.hbase.ServerName"
-         import="org.apache.hadoop.hbase.util.ZKUtil"%>
+         import="org.apache.hadoop.hbase.util.ZKStringFormatter"%>
 
 <%
   HRegionServer regionServer =
@@ -84,7 +84,7 @@
   </tr>
   <tr>
     <td>ZooKeeper Quorum</td>
-    <td><%= ZKUtil.formatZKString(regionServer.getZooKeeper()) %></td>
+    <td><%= ZKStringFormatter.formatZKString(regionServer.getZooKeeper()) %></td>
     <td>Addresses of all registered ZK servers</td>
   </tr>
   <tr>

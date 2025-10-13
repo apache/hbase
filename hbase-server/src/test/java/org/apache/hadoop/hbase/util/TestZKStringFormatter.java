@@ -31,10 +31,11 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({ MiscTests.class, SmallTests.class })
-public class TestZKUtil {
+public class TestZKStringFormatter {
 
   @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestZKUtil.class);
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(TestZKStringFormatter.class);
 
   private ZKWatcher zkWatcher;
 
@@ -46,28 +47,28 @@ public class TestZKUtil {
   @Test
   public void testFormatZKStringNullQuorum() {
     when(zkWatcher.getQuorum()).thenReturn(null);
-    String result = ZKUtil.formatZKString(zkWatcher);
+    String result = ZKStringFormatter.formatZKString(zkWatcher);
     assertEquals("", result);
   }
 
   @Test
   public void testFormatZKStringEmptyQuorum() {
     when(zkWatcher.getQuorum()).thenReturn("");
-    String result = ZKUtil.formatZKString(zkWatcher);
+    String result = ZKStringFormatter.formatZKString(zkWatcher);
     assertEquals("", result);
   }
 
   @Test
   public void testFormatZKStringOneServer() {
     when(zkWatcher.getQuorum()).thenReturn("127.0.0.1:21818");
-    String result = ZKUtil.formatZKString(zkWatcher);
+    String result = ZKStringFormatter.formatZKString(zkWatcher);
     assertEquals("127.0.0.1:21818", result);
   }
 
   @Test
   public void testFormatZKStringMultipleServers() {
     when(zkWatcher.getQuorum()).thenReturn("127.0.0.1:21818,127.0.0.1:21819,127.0.0.1:21820");
-    String result = ZKUtil.formatZKString(zkWatcher);
+    String result = ZKStringFormatter.formatZKString(zkWatcher);
     assertEquals("127.0.0.1:21818<br/>127.0.0.1:21819<br/>127.0.0.1:21820", result);
   }
 }
