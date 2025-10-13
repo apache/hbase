@@ -28,6 +28,7 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -161,6 +162,8 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     org.apache.hadoop.hbase.regionserver.TimeRangeTracker.INITIAL_MAX_TIMESTAMP;
   /** Whether we have seen any custom time range metadata */
   private boolean globalCustomTimeRangePresent = false;
+  /** Supplier that exposes compaction-specific custom tiering time range tracking */
+  private Supplier<org.apache.hadoop.hbase.regionserver.TimeRangeTracker> customTieringSupplier;
   /** Earliest put timestamp across the file */
   private long globalEarliestPutTs = org.apache.hadoop.hbase.HConstants.LATEST_TIMESTAMP;
   /** Bulk load timestamp for file info */
@@ -185,7 +188,8 @@ public class MultiTenantHFileWriter implements HFile.Writer {
       HStoreFile.MAJOR_COMPACTION_KEY, HStoreFile.EXCLUDE_FROM_MINOR_COMPACTION_KEY,
       HStoreFile.COMPACTION_EVENT_KEY, HStoreFile.MAX_SEQ_ID_KEY,
       HFileDataBlockEncoder.DATA_BLOCK_ENCODING, HFileIndexBlockEncoder.INDEX_BLOCK_ENCODING,
-      HFile.Writer.MAX_MEMSTORE_TS_KEY, HFileWriterImpl.KEY_VALUE_VERSION };
+      HFile.Writer.MAX_MEMSTORE_TS_KEY, HFileWriterImpl.KEY_VALUE_VERSION,
+      org.apache.hadoop.hbase.regionserver.CustomTieringMultiFileWriter.CUSTOM_TIERING_TIME_RANGE };
 
   /** Whether write verification is enabled */
   private boolean enableWriteVerification;
@@ -643,6 +647,9 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     // Create a new virtual section writer
     currentSectionWriter = new SectionWriter(conf, cacheConf, outputStream, fileContext,
       tenantSectionId, tenantId, sectionStartOffset);
+    if (customTieringSupplier != null) {
+      currentSectionWriter.setTimeRangeTrackerForTiering(customTieringSupplier);
+    }
 
     // Initialize per-section trackers
     this.currentSectionTimeRangeTracker = org.apache.hadoop.hbase.regionserver.TimeRangeTracker
@@ -1062,6 +1069,18 @@ public class MultiTenantHFileWriter implements HFile.Writer {
   @Override
   public Path getPath() {
     return path;
+  }
+
+  /**
+   * Registers a supplier that exposes the custom tiering time range tracker so SectionWriter
+   * instances can share it with the core {@link HFileWriterImpl} logic (e.g., block caching).
+   */
+  public void setCustomTieringTimeRangeSupplier(
+    Supplier<org.apache.hadoop.hbase.regionserver.TimeRangeTracker> supplier) {
+    this.customTieringSupplier = supplier;
+    if (currentSectionWriter != null) {
+      currentSectionWriter.setTimeRangeTrackerForTiering(supplier);
+    }
   }
 
   @Override

@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileWriterImpl;
+import org.apache.hadoop.hbase.io.hfile.MultiTenantHFileWriter;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
 import org.apache.hadoop.hbase.util.BloomContext;
@@ -261,6 +262,20 @@ public class StoreFileWriter implements CellSink, ShipperListener {
     liveFileWriter.appendCustomCellTimestampsToMetadata(timeRangeTracker);
     if (historicalFileWriter != null) {
       historicalFileWriter.appendCustomCellTimestampsToMetadata(timeRangeTracker);
+    }
+  }
+
+  /**
+   * Registers a supplier that exposes the custom tiering {@link TimeRangeTracker}. Concrete
+   * {@link HFile.Writer} implementations can use it to tune caching decisions or emit metadata.
+   */
+  public void setCustomTieringTimeRangeSupplier(Supplier<TimeRangeTracker> supplier) {
+    if (supplier == null) {
+      return;
+    }
+    liveFileWriter.setCustomTieringTimeRangeSupplier(supplier);
+    if (historicalFileWriter != null) {
+      historicalFileWriter.setCustomTieringTimeRangeSupplier(supplier);
     }
   }
 
@@ -857,6 +872,14 @@ public class StoreFileWriter implements CellSink, ShipperListener {
 
     private void appendFileInfo(byte[] key, byte[] value) throws IOException {
       writer.appendFileInfo(key, value);
+    }
+
+    private void setCustomTieringTimeRangeSupplier(Supplier<TimeRangeTracker> supplier) {
+      if (writer instanceof HFileWriterImpl) {
+        ((HFileWriterImpl) writer).setTimeRangeTrackerForTiering(supplier);
+      } else if (writer instanceof MultiTenantHFileWriter) {
+        ((MultiTenantHFileWriter) writer).setCustomTieringTimeRangeSupplier(supplier);
+      }
     }
 
     /**
