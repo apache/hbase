@@ -149,10 +149,26 @@ public class MultiTenantHFileWriter implements HFile.Writer {
   private long maxMemstoreTS = 0;
   /** Maximum tags length encountered */
   private int maxTagsLength = 0;
+  /** Aggregated time range across all sections */
+  private final org.apache.hadoop.hbase.regionserver.TimeRangeTracker globalTimeRangeTracker =
+    org.apache.hadoop.hbase.regionserver.TimeRangeTracker
+      .create(org.apache.hadoop.hbase.regionserver.TimeRangeTracker.Type.NON_SYNC);
+  /** Aggregated custom tiering min timestamp */
+  private long globalCustomMinTimestamp =
+    org.apache.hadoop.hbase.regionserver.TimeRangeTracker.INITIAL_MIN_TIMESTAMP;
+  /** Aggregated custom tiering max timestamp */
+  private long globalCustomMaxTimestamp =
+    org.apache.hadoop.hbase.regionserver.TimeRangeTracker.INITIAL_MAX_TIMESTAMP;
+  /** Whether we have seen any custom time range metadata */
+  private boolean globalCustomTimeRangePresent = false;
+  /** Earliest put timestamp across the file */
+  private long globalEarliestPutTs = org.apache.hadoop.hbase.HConstants.LATEST_TIMESTAMP;
   /** Bulk load timestamp for file info */
   private long bulkloadTime = 0;
   /** Total uncompressed bytes */
   private long totalUncompressedBytes = 0;
+  /** Global maximum sequence id across sections */
+  private long globalMaxSeqId = Long.MIN_VALUE;
 
   /** Absolute offset where each section's load-on-open data begins (max across sections) */
   private long maxSectionDataEndOffset = 0;
@@ -164,6 +180,13 @@ public class MultiTenantHFileWriter implements HFile.Writer {
   private HFileInfo fileInfo = new HFileInfo();
   /** Defaults to apply to each new section's FileInfo (e.g., compaction context) */
   private final HFileInfo sectionDefaultFileInfo = new HFileInfo();
+  private static final byte[][] GLOBAL_FILE_INFO_KEYS = new byte[][] {
+    HStoreFile.BULKLOAD_TIME_KEY, HStoreFile.BULKLOAD_TASK_KEY,
+    HStoreFile.MAJOR_COMPACTION_KEY, HStoreFile.EXCLUDE_FROM_MINOR_COMPACTION_KEY,
+    HStoreFile.COMPACTION_EVENT_KEY, HStoreFile.MAX_SEQ_ID_KEY,
+    HFileDataBlockEncoder.DATA_BLOCK_ENCODING, HFileIndexBlockEncoder.INDEX_BLOCK_ENCODING,
+    HFile.Writer.MAX_MEMSTORE_TS_KEY, HFileWriterImpl.KEY_VALUE_VERSION
+  };
 
   /** Whether write verification is enabled */
   private boolean enableWriteVerification;
@@ -397,8 +420,11 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     if (currentSectionTimeRangeTracker != null) {
       currentSectionTimeRangeTracker.includeTimestamp(cell);
     }
+    globalTimeRangeTracker.includeTimestamp(cell);
     if (cell.getType() == Cell.Type.Put) {
-      currentSectionEarliestPutTs = Math.min(currentSectionEarliestPutTs, cell.getTimestamp());
+      long ts = cell.getTimestamp();
+      currentSectionEarliestPutTs = Math.min(currentSectionEarliestPutTs, ts);
+      globalEarliestPutTs = Math.min(globalEarliestPutTs, ts);
     }
     // 4) Max seq id
     if (cell.getSequenceId() > currentSectionMaxSeqId) {
@@ -547,6 +573,8 @@ public class MultiTenantHFileWriter implements HFile.Writer {
 
       // Add to total uncompressed bytes
       totalUncompressedBytes += currentSectionWriter.getTotalUncompressedBytes();
+
+      globalMaxSeqId = Math.max(globalMaxSeqId, currentSectionMaxSeqId);
 
       LOG.info("Section closed: start={}, size={}, entries={}", sectionStartOffset, sectionSize,
         currentSectionWriter.getEntryCount());
@@ -873,10 +901,42 @@ public class MultiTenantHFileWriter implements HFile.Writer {
       SectionIndexManager.DEFAULT_MAX_CHUNK_SIZE);
     fileInfo.append(Bytes.toBytes(FILEINFO_TENANT_INDEX_MAX_CHUNK), Bytes.toBytes(maxChunkSize),
       false);
+
+    // Standard compatibility metadata expected by existing tooling
+    if (globalTimeRangeTracker.getMax()
+      != org.apache.hadoop.hbase.regionserver.TimeRangeTracker.INITIAL_MAX_TIMESTAMP) {
+      fileInfo.append(org.apache.hadoop.hbase.regionserver.HStoreFile.TIMERANGE_KEY,
+        org.apache.hadoop.hbase.regionserver.TimeRangeTracker
+          .toByteArray(globalTimeRangeTracker),
+        false);
+    }
+    if (globalEarliestPutTs != org.apache.hadoop.hbase.HConstants.LATEST_TIMESTAMP) {
+      fileInfo.append(org.apache.hadoop.hbase.regionserver.HStoreFile.EARLIEST_PUT_TS,
+        Bytes.toBytes(globalEarliestPutTs), false);
+    }
+    if (globalCustomTimeRangePresent) {
+      org.apache.hadoop.hbase.regionserver.TimeRangeTracker customTracker =
+        org.apache.hadoop.hbase.regionserver.TimeRangeTracker
+          .create(org.apache.hadoop.hbase.regionserver.TimeRangeTracker.Type.NON_SYNC,
+            globalCustomMinTimestamp, globalCustomMaxTimestamp);
+      fileInfo.append(org.apache.hadoop.hbase.regionserver.CustomTieringMultiFileWriter
+        .CUSTOM_TIERING_TIME_RANGE,
+        org.apache.hadoop.hbase.regionserver.TimeRangeTracker.toByteArray(customTracker), false);
+    }
+
+    if (globalMaxSeqId != Long.MIN_VALUE) {
+      fileInfo.put(HStoreFile.MAX_SEQ_ID_KEY, Bytes.toBytes(globalMaxSeqId));
+    }
+    if (fileContext.isIncludesMvcc()) {
+      fileInfo.put(HFile.Writer.MAX_MEMSTORE_TS_KEY, Bytes.toBytes(maxMemstoreTS));
+    }
   }
 
   @Override
   public void appendFileInfo(byte[] key, byte[] value) throws IOException {
+    if (shouldStoreInGlobalFileInfo(key) && fileInfo.get(key) == null) {
+      fileInfo.append(key, value, true);
+    }
     // Propagate only known-safe defaults across sections
     if (isPropagatedDefaultKey(key)) {
       sectionDefaultFileInfo.append(key, value, true);
@@ -885,6 +945,15 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     if (currentSectionWriter != null) {
       currentSectionWriter.appendFileInfo(key, value);
     }
+  }
+
+  private boolean shouldStoreInGlobalFileInfo(byte[] key) {
+    for (byte[] allowed : GLOBAL_FILE_INFO_KEYS) {
+      if (Bytes.equals(allowed, key)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   @Override
@@ -916,6 +985,18 @@ public class MultiTenantHFileWriter implements HFile.Writer {
   @Override
   public void appendCustomCellTimestampsToMetadata(
     org.apache.hadoop.hbase.regionserver.TimeRangeTracker timeRangeTracker) throws IOException {
+    if (timeRangeTracker != null) {
+      long max = timeRangeTracker.getMax();
+      if (max != org.apache.hadoop.hbase.regionserver.TimeRangeTracker.INITIAL_MAX_TIMESTAMP) {
+        long min = timeRangeTracker.getMin();
+        long effectiveMin =
+          min != org.apache.hadoop.hbase.regionserver.TimeRangeTracker.INITIAL_MIN_TIMESTAMP ? min
+            : max;
+        globalCustomMinTimestamp = Math.min(globalCustomMinTimestamp, effectiveMin);
+        globalCustomMaxTimestamp = Math.max(globalCustomMaxTimestamp, max);
+        globalCustomTimeRangePresent = true;
+      }
+    }
     if (currentSectionWriter != null) {
       currentSectionWriter.appendCustomCellTimestampsToMetadata(timeRangeTracker);
     }
