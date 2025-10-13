@@ -34,6 +34,8 @@ import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
 import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Security related generic utility methods.
@@ -41,6 +43,7 @@ import org.apache.yetus.audience.InterfaceStability;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class SecurityUtil {
+  private static final Logger LOG = LoggerFactory.getLogger(SecurityUtil.class);
   /**
    * Get the user name from a principal
    */
@@ -78,6 +81,8 @@ public class SecurityUtil {
     boolean isKeyManagementEnabled = isKeyManagementEnabled(conf);
     String cipherName = family.getEncryptionType();
     String keyNamespace = null; // Will be set by fallback logic
+    LOG.debug("Creating encryption context for table: {} and column family: {}",
+        tableDescriptor.getTableName().getNameAsString(), family.getNameAsString());
     if (cipherName != null) {
       if (!Encryption.isEncryptionEnabled(conf)) {
         throw new IllegalStateException("Encryption for family '" + family.getNameAsString()
@@ -102,6 +107,10 @@ public class SecurityUtil {
             // Scenario 1b: If key management is disabled, unwrap the key using master key.
             key = EncryptionUtil.unwrapKey(conf, familyKeyBytes);
           }
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Scenario 1: Use family key for namespace {} cipher: {} " +
+              "key management enabled: {}", keyNamespace, cipherName, isKeyManagementEnabled);
+          }
         } catch (KeyException e) {
           throw new IOException(e);
         }
@@ -122,6 +131,9 @@ public class SecurityUtil {
           ManagedKeyData activeKeyData = null;
           for (String candidate : candidateNamespaces) {
             if (candidate != null) {
+              // Log information on the table and column family we are looking for the active key in
+              LOG.debug("Looking for active key for table: {} and column family: {}",
+                tableDescriptor.getTableName().getNameAsString(), family.getNameAsString());
               activeKeyData = managedKeyDataCache
                 .getActiveEntry(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES, candidate);
               if (activeKeyData != null) {
@@ -144,11 +156,28 @@ public class SecurityUtil {
               cipher = getCipherIfValid(conf, cipherName, activeKeyData.getTheKey(),
                 family.getNameAsString());
             }
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Scenario 2: Use active key for namespace {} cipher: {} " +
+                "localKeyGenEnabled: {} for table: {} and column family: {}", keyNamespace,
+                cipherName, localKeyGenEnabled, tableDescriptor.getTableName().getNameAsString(),
+                family.getNameAsString(), activeKeyData.getKeyNamespace());
+            }
+          }
+          else {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Scenario 3a: No active key found for table: {} and column family: {}",
+                tableDescriptor.getTableName().getNameAsString(), family.getNameAsString());
+            }
+            // Scenario 3a: Do nothing, let a random key be generated as DEK and if key management
+            // is enabled, let STK be used as KEK.
           }
         } else {
-          // Scenario 3: Do nothing, let a random key be generated as DEK and if key management is
-          // enabled,
-          // let STK be used as KEK.
+          // Scenario 3b: Do nothing, let a random key be generated as DEK, let STK be used as KEK.
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Scenario 3b: Key management is disabled and no ENCRYPTION_KEY attribute " +
+                "set for table: {} and column family: {}",
+                tableDescriptor.getTableName().getNameAsString(), family.getNameAsString());
+            }
         }
       }
 
@@ -184,13 +213,14 @@ public class SecurityUtil {
     ManagedKeyData kekKeyData = null;
     byte[] keyBytes = trailer.getEncryptionKey();
     Encryption.Context cryptoContext = Encryption.Context.NONE;
+    LOG.debug("Creating encryption context for path: {}", path);
     // Check for any key material available
     if (keyBytes != null) {
       cryptoContext = Encryption.newContext(conf);
       Key kek = null;
 
       // When there is key material, determine the appropriate KEK
-      boolean isKeyManagementEnabled = SecurityUtil.isKeyManagementEnabled(conf);
+      boolean isKeyManagementEnabled = isKeyManagementEnabled(conf);
       if (((trailer.getKEKChecksum() != 0L) || isKeyManagementEnabled) && systemKeyCache == null) {
         throw new IOException("SystemKeyCache can't be null when using key management feature");
       }

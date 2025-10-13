@@ -541,7 +541,26 @@ public class TestSecurityUtil {
     }
 
     @Test
-    public void testWithoutKeyManagement_Scenario3a_WithRandomKeyGeneration() throws IOException {
+    public void testBackwardsCompatibility_Scenario3a_NoActiveKeyGenerateLocalKey()
+      throws IOException {
+      // Scenario 3: No active key -> generate random DEK, latest STK as KEK
+      configBuilder().withKeyManagement(false).apply(conf);
+      setupManagedKeyDataCache(TEST_NAMESPACE, ManagedKeyData.KEY_SPACE_GLOBAL, null); // No active
+                                                                                       // key
+      setupSystemKeyCache(mockManagedKeyData);
+      when(mockFamily.getEncryptionKey()).thenReturn(null);
+
+      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, mockTableDescriptor,
+        mockFamily, mockManagedKeyDataCache, mockSystemKeyCache);
+
+      verifyContext(result);
+      // Verify that a random key is generated as DEK and system key as KEK
+      assertNotNull("DEK should be generated", result.getKey());
+      assertEquals(mockManagedKeyData, result.getKEKData()); // System key should be the KEK
+    }
+
+    @Test
+    public void testWithoutKeyManagement_Scenario3b_WithRandomKeyGeneration() throws IOException {
       when(mockFamily.getEncryptionKey()).thenReturn(null);
 
       Encryption.Context result = SecurityUtil.createEncryptionContext(conf, mockTableDescriptor,
@@ -673,25 +692,6 @@ public class TestSecurityUtil {
       verifyContext(result);
       // Verify that constructed namespace was used (Rule 2), not table name (Rule 3)
       assertEquals(testTableNamespace, result.getKeyNamespace());
-    }
-
-    @Test
-    public void testBackwardsCompatibility_Scenario3b_NoActiveKeyGenerateLocalKey()
-      throws IOException {
-      // Scenario 3: No active key -> generate random DEK, latest STK as KEK
-      configBuilder().withKeyManagement(false).apply(conf);
-      setupManagedKeyDataCache(TEST_NAMESPACE, ManagedKeyData.KEY_SPACE_GLOBAL, null); // No active
-                                                                                       // key
-      setupSystemKeyCache(mockManagedKeyData);
-      when(mockFamily.getEncryptionKey()).thenReturn(null);
-
-      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, mockTableDescriptor,
-        mockFamily, mockManagedKeyDataCache, mockSystemKeyCache);
-
-      verifyContext(result);
-      // Verify that a random key is generated as DEK and system key as KEK
-      assertNotNull("DEK should be generated", result.getKey());
-      assertEquals(mockManagedKeyData, result.getKEKData()); // System key should be the KEK
     }
 
     @Test

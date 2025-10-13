@@ -39,6 +39,13 @@ module Hbase
       test_key_management($CUST1_ENCODED, 'test_table/f')
       test_key_management($CUST1_ENCODED, 'test_namespace')
       test_key_management($GLOB_CUST_ENCODED, '*')
+
+      puts "Testing that cluster can be restarted when key management is enabled"
+      $TEST.restartMiniCluster()
+      puts "Cluster restarted, testing key management again"
+      setup_hbase
+      test_key_management($GLOB_CUST_ENCODED, '*')
+      puts "Key management test complete"
     end
 
     def test_key_management(cust, namespace)
