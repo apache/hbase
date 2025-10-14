@@ -960,6 +960,17 @@
     <spotless.version>2.44.4</spotless.version>
     <maven-site.version>3.12.0</maven-site.version>
     <reflow-maven-skin.version>2.3.3</reflow-maven-skin.version>
+    <maven-download-plugin.version>1.2.1</maven-download-plugin.version>
+    <!-- Website static CSS, JS dependencies -->
+    <site.bootswatch.version>4.4.0</site.bootswatch.version>
+    <site.popperjs.version>1.16.0</site.popperjs.version>
+    <site.jquery.version>3.4.1</site.jquery.version>
+    <site.bootstrap.version>4.4.1</site.bootstrap.version>
+    <site.anchorjs.version>3.2.2</site.anchorjs.version>
+    <site.fontawesome.version>5.12.0</site.fontawesome.version>
+    <!-- RefGuide static CSS, JS dependencies -->
+    <refguide.fontawesome.version>4.7.0</refguide.fontawesome.version>
+    <refguide.mathjax.version>2.7.0</refguide.mathjax.version>
     <!-- compression -->
     <aircompressor.version>0.27</aircompressor.version>
     <brotli4j.version>1.11.0</brotli4j.version>
@@ -2795,7 +2806,7 @@
                 <artifactItem>
                   <groupId>org.webjars</groupId>
                   <artifactId>font-awesome</artifactId>
-                  <version>4.7.0</version>
+                  <version>${refguide.fontawesome.version}</version>
                   <type>jar</type>
                   <overWrite>true</overWrite>
                   <includes>**/css/font-awesome.css,
@@ -2808,7 +2819,7 @@
                 <artifactItem>
                   <groupId>org.webjars</groupId>
                   <artifactId>MathJax</artifactId>
-                  <version>2.7.0</version>
+                  <version>${refguide.mathjax.version}</version>
                   <type>jar</type>
                   <overWrite>true</overWrite>
                   <includes>**/MathJax.js,
@@ -2846,22 +2857,56 @@
             <configuration>
               <artifactItems>
                 <artifactItem>
-                  <groupId>io.github.devacfr.maven.skins</groupId>
-                  <artifactId>reflow-default-webdeps</artifactId>
-                  <version>${reflow-maven-skin.version}</version>
-                  <type>jar</type>
-                  <overWrite>false</overWrite>
-                  <includes>**/css/bootstrap.min.css,
-                    **/css/themes/litera/bootstrap.min.css,
-                    **/css/fontawesome/*,
-                    **/css/fontawesome/webfonts/*,
-                    **/js/*.js,
-                    **/js/languages/*,
-                    **/js/styles/github.min.css,
-                    **/js/styles/default.min.css</includes>
+                  <groupId>org.webjars</groupId>
+                  <artifactId>bootstrap</artifactId>
+                  <version>${site.bootstrap.version}</version>
+                  <includes>**/js/bootstrap.min.js</includes>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.webjars</groupId>
+                  <artifactId>popper.js</artifactId>
+                  <version>${site.popperjs.version}</version>
+                  <includes>**/umd/popper.min.js</includes>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.webjars</groupId>
+                  <artifactId>jquery</artifactId>
+                  <version>${site.jquery.version}</version>
+                  <includes>**/jquery.min.js</includes>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.webjars</groupId>
+                  <artifactId>anchorjs</artifactId>
+                  <version>${site.anchorjs.version}</version>
+                  <includes>**/anchor.min.js</includes>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.webjars</groupId>
+                  <artifactId>font-awesome</artifactId>
+                  <version>${site.fontawesome.version}</version>
+                  <includes>**/css/all.min.css,**/webfonts/*</includes>
                 </artifactItem>
               </artifactItems>
-              <outputDirectory>${project.build.directory}/site</outputDirectory>
+              <outputDirectory>${project.build.directory}</outputDirectory>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>com.googlecode.maven-download-plugin</groupId>
+        <artifactId>download-maven-plugin</artifactId>
+        <version>${maven-download-plugin.version}</version>
+        <executions>
+          <execution>
+            <id>download-litera-bootstrap-theme</id>
+            <goals>
+              <goal>wget</goal>
+            </goals>
+            <phase>pre-site</phase>
+            <configuration>
+              <url>https://stackpath.bootstrapcdn.com/bootswatch/${site.bootswatch.version}/litera/bootstrap.min.css</url>
+              <outputDirectory>${project.build.directory}/site/css/themes/litera</outputDirectory>
+              <outputFileName>bootstrap.min.css</outputFileName>
             </configuration>
           </execution>
         </executions>
@@ -3012,6 +3057,60 @@
               </resources>
             </configuration>
           </execution>
+          <execution>
+            <id>copy-website-resources</id>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <phase>pre-site</phase>
+            <configuration>
+              <outputDirectory>${project.build.outputDirectory}</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>${project.build.directory}/META-INF/resources/webjars/bootstrap/${site.bootstrap.version}/js</directory>
+                  <targetPath>${project.build.directory}/site/js</targetPath>
+                  <includes>
+                    <include>bootstrap.min.js</include>
+                  </includes>
+                </resource>
+                <resource>
+                  <directory>${project.build.directory}/META-INF/resources/webjars/popper.js/${site.popperjs.version}/umd</directory>
+                  <targetPath>${project.build.directory}/site/js</targetPath>
+                  <includes>
+                    <include>popper.min.js</include>
+                  </includes>
+                </resource>
+                <resource>
+                  <directory>${project.build.directory}/META-INF/resources/webjars/jquery/${site.jquery.version}</directory>
+                  <targetPath>${project.build.directory}/site/js</targetPath>
+                  <includes>
+                    <include>jquery.min.js</include>
+                  </includes>
+                </resource>
+                <resource>
+                  <directory>${project.build.directory}/META-INF/resources/webjars/anchorjs/${site.anchorjs.version}</directory>
+                  <targetPath>${project.build.directory}/site/js</targetPath>
+                  <includes>
+                    <include>anchor.min.js</include>
+                  </includes>
+                </resource>
+                <resource>
+                  <directory>${project.build.directory}/META-INF/resources/webjars/font-awesome/${site.fontawesome.version}/css</directory>
+                  <targetPath>${project.build.directory}/site/css/fontawesome</targetPath>
+                  <includes>
+                    <include>all.min.css</include>
+                  </includes>
+                </resource>
+                <resource>
+                  <directory>${project.build.directory}/META-INF/resources/webjars/font-awesome/${site.fontawesome.version}</directory>
+                  <targetPath>${project.build.directory}/site/css</targetPath>
+                  <includes>
+                    <include>webfonts/*</include>
+                  </includes>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
         </executions>
       </plugin>
       <plugin>
@@ -3043,17 +3142,17 @@
             <configuration>
               <target>
                 <copy flatten="true" todir="${project.build.directory}/site/css">
-                  <fileset dir="${webjars-dir}/font-awesome/4.7.0/css">
+                  <fileset dir="${webjars-dir}/font-awesome/${refguide.fontawesome.version}/css">
                     <include name="font-awesome.css"/>
                   </fileset>
                 </copy>
                 <copy flatten="true" todir="${project.build.directory}/site/js">
-                  <fileset dir="${webjars-dir}/MathJax/2.7.0">
+                  <fileset dir="${webjars-dir}/MathJax/${refguide.mathjax.version}">
                     <include name="MathJax.js"/>
                   </fileset>
                 </copy>
                 <copy flatten="false" todir="${project.build.directory}/site/js">
-                  <fileset dir="${webjars-dir}/MathJax/2.7.0">
+                  <fileset dir="${webjars-dir}/MathJax/${refguide.mathjax.version}">
                     <include name="config/TeX-MML-AM_HTMLorMML.js"/>
                     <include name="jax/output/HTML-CSS/jax.js"/>
                     <include name="jax/output/HTML-CSS/imageFonts.js"/>
@@ -3066,7 +3165,7 @@
                   </fileset>
                 </copy>
                 <copy flatten="true" todir="${project.build.directory}/site/fonts">
-                  <fileset dir="${webjars-dir}/font-awesome/4.7.0/fonts">
+                  <fileset dir="${webjars-dir}/font-awesome/${refguide.fontawesome.version}/fonts">
                     <include name="fontawesome-webfont.*"/>
                   </fileset>
                 </copy>
