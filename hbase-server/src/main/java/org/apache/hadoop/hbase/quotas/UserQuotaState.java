@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
@@ -89,8 +90,8 @@ public class UserQuotaState extends QuotaState {
   }
 
   @Override
-  public synchronized void setQuotas(final Quotas quotas) {
-    super.setQuotas(quotas);
+  public synchronized void setQuotas(Configuration conf, final Quotas quotas) {
+    super.setQuotas(conf, quotas);
     bypassGlobals = quotas.getBypassGlobals();
   }
 
@@ -98,30 +99,30 @@ public class UserQuotaState extends QuotaState {
    * Add the quota information of the specified table. (This operation is part of the QuotaState
    * setup)
    */
-  public synchronized void setQuotas(final TableName table, Quotas quotas) {
-    tableLimiters = setLimiter(tableLimiters, table, quotas);
+  public synchronized void setQuotas(Configuration conf, final TableName table, Quotas quotas) {
+    tableLimiters = setLimiter(conf, tableLimiters, table, quotas);
   }
 
   /**
    * Add the quota information of the specified namespace. (This operation is part of the QuotaState
    * setup)
    */
-  public void setQuotas(final String namespace, Quotas quotas) {
-    namespaceLimiters = setLimiter(namespaceLimiters, namespace, quotas);
+  public void setQuotas(Configuration conf, final String namespace, Quotas quotas) {
+    namespaceLimiters = setLimiter(conf, namespaceLimiters, namespace, quotas);
   }
 
   public boolean hasTableLimiters() {
     return tableLimiters != null && !tableLimiters.isEmpty();
   }
 
-  private <K> Map<K, QuotaLimiter> setLimiter(Map<K, QuotaLimiter> limiters, final K key,
-    final Quotas quotas) {
+  private <K> Map<K, QuotaLimiter> setLimiter(Configuration conf, Map<K, QuotaLimiter> limiters,
+    final K key, final Quotas quotas) {
     if (limiters == null) {
       limiters = new HashMap<>();
     }
 
     QuotaLimiter limiter =
-      quotas.hasThrottle() ? QuotaLimiterFactory.fromThrottle(quotas.getThrottle()) : null;
+      quotas.hasThrottle() ? QuotaLimiterFactory.fromThrottle(conf, quotas.getThrottle()) : null;
     if (limiter != null && !limiter.isBypass()) {
       limiters.put(key, limiter);
     } else {
