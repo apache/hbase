@@ -66,10 +66,18 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
   private final RetryingCallerInterceptorContext context;
   private final RetryingTimeTracker tracker;
   private final MetricsConnection metrics;
+  private final OperationInterceptorFactory operationInterceptorFactory;
 
   public RpcRetryingCallerImpl(long pause, long pauseForServerOverloaded, int retries,
     RetryingCallerInterceptor interceptor, int startLogErrorsCnt, int rpcTimeout,
     MetricsConnection metricsConnection) {
+    this(pause, pauseForServerOverloaded, retries, interceptor, startLogErrorsCnt, rpcTimeout,
+      metricsConnection, OperationInterceptorFactory.NO_OP);
+  }
+
+  public RpcRetryingCallerImpl(long pause, long pauseForServerOverloaded, int retries,
+    RetryingCallerInterceptor interceptor, int startLogErrorsCnt, int rpcTimeout,
+    MetricsConnection metricsConnection, OperationInterceptorFactory operationInterceptorFactory) {
     this.pause = pause;
     this.pauseForServerOverloaded = pauseForServerOverloaded;
     this.maxAttempts = retries2Attempts(retries);
@@ -79,6 +87,7 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
     this.tracker = new RetryingTimeTracker();
     this.rpcTimeout = rpcTimeout;
     this.metrics = metricsConnection;
+    this.operationInterceptorFactory = operationInterceptorFactory;
   }
 
   @Override
@@ -95,16 +104,25 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
     List<RetriesExhaustedException.ThrowableWithExtraContext> exceptions = new ArrayList<>();
     tracker.start();
     context.clear();
+
+    OperationInterceptor operationInterceptor = operationInterceptorFactory.createInterceptor();
+
     for (int tries = 0;; tries++) {
       long expectedSleep;
+
       try {
         // bad cache entries are cleared in the call to RetryingCallable#throwable() in catch block
         callable.prepare(tries != 0);
         interceptor.intercept(context.prepare(callable, tries));
-        return callable.call(getTimeout(callTimeout));
+        operationInterceptor.beforeAttempt(callable);
+        T result = callable.call(getTimeout(callTimeout));
+        operationInterceptor.afterAttemptSuccess(callable, result);
+        operationInterceptor.afterOperation();
+        return result;
       } catch (PreemptiveFastFailException e) {
         throw e;
       } catch (Throwable t) {
+        operationInterceptor.afterAttemptFailure(callable, t);
         ExceptionUtil.rethrowIfInterrupt(t);
         Throwable cause = t.getCause();
         if (cause instanceof DoNotRetryIOException) {
@@ -139,6 +157,7 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
             EnvironmentEdgeManager.currentTime(), toString());
         exceptions.add(qt);
         if (tries >= maxAttempts - 1) {
+          operationInterceptor.afterOperation();
           throw new RetriesExhaustedException(tries, exceptions);
         }
 
@@ -201,10 +220,19 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
   public T callWithoutRetries(RetryingCallable<T> callable, int callTimeout)
     throws IOException, RuntimeException {
     // The code of this method should be shared with withRetries.
+    long startTime = EnvironmentEdgeManager.currentTime();
+    OperationInterceptor operationInterceptor = operationInterceptorFactory.createInterceptor();
+
     try {
       callable.prepare(false);
-      return callable.call(callTimeout);
+      operationInterceptor.beforeAttempt(callable);
+      T result = callable.call(callTimeout);
+      operationInterceptor.afterAttemptSuccess(callable, result);
+      operationInterceptor.afterOperation();
+      return result;
     } catch (Throwable t) {
+      operationInterceptor.afterAttemptFailure(callable, t);
+      operationInterceptor.afterOperation();
       Throwable t2 = translateException(t);
       ExceptionUtil.rethrowIfInterrupt(t2);
       // It would be nice to clear the location cache here.

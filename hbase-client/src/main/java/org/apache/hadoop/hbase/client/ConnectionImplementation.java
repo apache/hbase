@@ -257,6 +257,8 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
 
   private final RetryingCallerInterceptor interceptor;
 
+  private final OperationInterceptorFactory operationInterceptorFactory;
+
   /**
    * Cluster registry of basic info such as clusterid and meta region location.
    */
@@ -337,6 +339,7 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
 
     this.stats = ServerStatisticTracker.create(conf);
     this.interceptor = new RetryingCallerInterceptorFactory(conf).build();
+    this.operationInterceptorFactory = createOperationInterceptorFactory(conf);
 
     this.backoffPolicy = ClientBackoffPolicyFactory.create(conf);
 
@@ -370,7 +373,7 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
         connectionAttributes);
       this.rpcControllerFactory = RpcControllerFactory.instantiate(conf);
       this.rpcCallerFactory = RpcRetryingCallerFactory.instantiate(conf, connectionConfig,
-        interceptor, this.stats, this.metrics);
+        interceptor, this.stats, this.metrics, operationInterceptorFactory);
       this.asyncProcess = new AsyncProcess(this, conf, rpcCallerFactory, rpcControllerFactory);
 
       // Do we publish the status?
@@ -2341,7 +2344,7 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
   @Override
   public RpcRetryingCallerFactory getNewRpcRetryingCallerFactory(Configuration conf) {
     return RpcRetryingCallerFactory.instantiate(conf, connectionConfig, this.interceptor,
-      this.getStatisticsTracker(), metrics);
+      this.stats, metrics, createOperationInterceptorFactory(conf));
   }
 
   @Override
@@ -2418,5 +2421,19 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
       LOG.error("Error fetching cluster ID: ", e);
     }
     return null;
+  }
+
+  private static OperationInterceptorFactory createOperationInterceptorFactory(Configuration conf) {
+    String clazz = conf.get(OperationInterceptorFactory.HBASE_CLIENT_OPERATION_INTERCEPTOR_IMPL);
+    if (clazz == null || clazz.isEmpty()) {
+      return OperationInterceptorFactory.NO_OP;
+    }
+    try {
+      Class<? extends OperationInterceptorFactory> factoryClass =
+        conf.getClassByName(clazz).asSubclass(OperationInterceptorFactory.class);
+      return ReflectionUtils.newInstance(factoryClass, conf);
+    } catch (ClassNotFoundException e) {
+      throw new RuntimeException("Failed to load OperationInterceptorFactory class: " + clazz, e);
+    }
   }
 }
