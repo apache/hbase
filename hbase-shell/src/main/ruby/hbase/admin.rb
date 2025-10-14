@@ -1604,6 +1604,7 @@ module Hbase
       tdb.setRegionMemStoreReplication(JBoolean.valueOf(arg.delete(TableDescriptorBuilder::REGION_MEMSTORE_REPLICATION))) if arg.include?(TableDescriptorBuilder::REGION_MEMSTORE_REPLICATION)
       tdb.setRegionSplitPolicyClassName(arg.delete(TableDescriptorBuilder::SPLIT_POLICY)) if arg.include?(TableDescriptorBuilder::SPLIT_POLICY)
       tdb.setRegionReplication(JInteger.valueOf(arg.delete(TableDescriptorBuilder::REGION_REPLICATION))) if arg.include?(TableDescriptorBuilder::REGION_REPLICATION)
+      tdb.setRowCacheEnabled(JBoolean.valueOf(arg.delete(TableDescriptorBuilder::ROW_CACHE_ENABLED))) if arg.include?(TableDescriptorBuilder::ROW_CACHE_ENABLED)
       set_user_metadata(tdb, arg.delete(METADATA)) if arg[METADATA]
       set_descriptor_config(tdb, arg.delete(CONFIGURATION)) if arg[CONFIGURATION]
     end
