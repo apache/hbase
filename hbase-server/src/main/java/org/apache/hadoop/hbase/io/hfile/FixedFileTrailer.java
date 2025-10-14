@@ -566,13 +566,16 @@ public class FixedFileTrailer {
     // maintaining compatibility while upgrading and downgrading between different 2.x versions. So
     // here on 3.x, we still need to check these two class names although the actual classes have
     // already been purged.
+    // We also check for the HBase 1.x legacy comparators to allow loading HBase 1.x HFiles
     if (
-      comparatorClassName.equals("org.apache.hadoop.hbase.KeyValue$KVComparator")
+      comparatorClassName.equals("org.apache.hadoop.hbase.KeyValue$KeyComparator")
+        || comparatorClassName.equals("org.apache.hadoop.hbase.KeyValue$KVComparator")
         || comparatorClassName.equals("org.apache.hadoop.hbase.CellComparator")
     ) {
       comparatorKlass = InnerStoreCellComparator.class;
     } else if (
-      comparatorClassName.equals("org.apache.hadoop.hbase.KeyValue$MetaComparator")
+      comparatorClassName.equals("org.apache.hadoop.hbase.KeyValue$MetaKeyComparator")
+        || comparatorClassName.equals("org.apache.hadoop.hbase.KeyValue$MetaComparator")
         || comparatorClassName.equals("org.apache.hadoop.hbase.CellComparator$MetaCellComparator")
         || comparatorClassName
           .equals("org.apache.hadoop.hbase.CellComparatorImpl$MetaCellComparator")
