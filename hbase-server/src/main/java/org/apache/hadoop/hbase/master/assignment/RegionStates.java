@@ -53,6 +53,8 @@ public class RegionStates {
 
   private final Object regionsMapLock = new Object();
 
+  private final AtomicInteger trspCounter = new AtomicInteger(0);
+
   // TODO: Replace the ConcurrentSkipListMaps
   /**
    * A Map from {@link RegionInfo#getRegionName()} to {@link RegionStateNode}
@@ -103,7 +105,7 @@ public class RegionStates {
   RegionStateNode createRegionStateNode(RegionInfo regionInfo) {
     synchronized (regionsMapLock) {
       RegionStateNode node = regionsMap.computeIfAbsent(regionInfo.getRegionName(),
-        key -> new RegionStateNode(regionInfo));
+        key -> new RegionStateNode(regionInfo,trspCounter));
 
       if (encodedRegionsMap.get(regionInfo.getEncodedName()) != node) {
         encodedRegionsMap.put(regionInfo.getEncodedName(), node);
@@ -597,6 +599,10 @@ public class RegionStates {
   public void addToOfflineRegions(final RegionStateNode regionNode) {
     LOG.info("Added to offline, CURRENTLY NEVER CLEARED!!! " + regionNode);
     regionOffline.put(regionNode.getRegionInfo(), regionNode);
+  }
+
+  public int getOngoingTRSPCount() {
+    return trspCounter.get();
   }
 
   // ==========================================================================

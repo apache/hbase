@@ -2080,14 +2080,16 @@ public class AssignmentManager {
   }
 
   public List<RegionStateNode> getRegionsInTransition() {
-    return new ArrayList<RegionStateNode>(
-      regionInTransitionTracker.getRegionsInTransition().values());
+    return regionInTransitionTracker.getRegionsInTransition();
   }
 
   public boolean isRegionInTransition(final RegionInfo regionInfo) {
     return regionInTransitionTracker.isRegionInTransition(regionInfo);
   }
 
+  public int getOngoingTRSPCount() {
+    return regionStates.getOngoingTRSPCount();
+  }
   /**
    * Get the number of regions in transition.
    */
@@ -2096,11 +2098,7 @@ public class AssignmentManager {
   }
 
   public List<RegionState> getRegionsStateInTransition() {
-    final List<RegionState> rit = new ArrayList<RegionState>(getRegionsInTransitionCount());
-    for (RegionStateNode node : getRegionsInTransition()) {
-      rit.add(node.toRegionState());
-    }
-    return rit;
+    return getRegionsInTransition().stream().map(RegionStateNode::toRegionState).toList();
   }
 
   public SortedSet<RegionState> getRegionsInTransitionOrderedByTimestamp() {
@@ -2365,16 +2363,14 @@ public class AssignmentManager {
   public void markRegionAsMerged(final RegionInfo child, final ServerName serverName,
     RegionInfo[] mergeParents) throws IOException {
     final RegionStateNode node = regionStates.getOrCreateRegionStateNode(child);
-    node.setState(State.MERGED);
     for (RegionInfo ri : mergeParents) {
       regionStates.deleteRegion(ri);
+      regionInTransitionTracker.handleRegionDelete(ri);
     }
     // TODO need to handle delete and new region
     TableDescriptor td = master.getTableDescriptors().get(child.getTable());
     regionStateStore.mergeRegions(child, mergeParents, serverName, td);
     regionInTransitionTracker.handleRegionStateNodeOperation(node);
-    Arrays.stream(mergeParents).forEach(regionInfo -> regionInTransitionTracker
-      .handleRegionStateNodeOperation(regionStates.getRegionStateNode(regionInfo)));
     if (shouldAssignFavoredNodes(child)) {
       getFavoredNodePromoter().generateFavoredNodesForMergedRegion(child, mergeParents);
     }

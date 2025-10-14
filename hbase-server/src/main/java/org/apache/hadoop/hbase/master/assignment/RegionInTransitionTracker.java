@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.master.assignment;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentSkipListMap;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -51,7 +52,11 @@ public class RegionInTransitionTracker {
 
   public void handleRegionStateNodeOperation(RegionStateNode regionStateNode) {
     RegionState.State currentState = regionStateNode.getState();
-    // if reiong is merged or split it should not be in RIT list
+    //only consider default replica for availability
+    if(regionStateNode.getRegionInfo().getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID){
+      return;
+    }
+    // if region is merged or split it should not be in RIT list
     if (
       currentState == RegionState.State.SPLIT || currentState == RegionState.State.MERGED
         || regionStateNode.getRegionInfo().isSplit()
@@ -64,8 +69,8 @@ public class RegionInTransitionTracker {
     }
   }
 
-  public void handleRegionDelete(RegionStateNode regionStateNode) {
-    removeRegionInTransition(regionStateNode.getRegionInfo());
+  public void handleRegionDelete(RegionInfo regionInfo) {
+    removeRegionInTransition(regionInfo);
   }
 
   private List<RegionState.State> getExceptedRegionStates(RegionStateNode regionStateNode) {
@@ -99,8 +104,8 @@ public class RegionInTransitionTracker {
     return !regionInTransition.isEmpty();
   }
 
-  public ConcurrentSkipListMap<RegionInfo, RegionStateNode> getRegionsInTransition() {
-    return regionInTransition;
+  public List<RegionStateNode> getRegionsInTransition() {
+    return new ArrayList<>(regionInTransition.values());
   }
 
 }
