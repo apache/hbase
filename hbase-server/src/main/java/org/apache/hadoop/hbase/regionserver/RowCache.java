@@ -43,8 +43,7 @@ public class RowCache {
 
   private final Cache<@NonNull RowCacheKey, RowCells> cache;
 
-  private final LongAdder hitCount = new LongAdder();
-  private final LongAdder missCount = new LongAdder();
+  // Cache.stats() does not provide eviction count for entries, so we maintain our own counter.
   private final LongAdder evictedRowCount = new LongAdder();
 
   RowCache(long maxSizeBytes) {
@@ -57,6 +56,7 @@ public class RowCache {
       Caffeine.newBuilder().maximumWeight(maxSizeBytes).removalListener(new EvictionListener())
         .weigher((RowCacheKey key,
           RowCells value) -> (int) Math.min(key.heapSize() + value.heapSize(), Integer.MAX_VALUE))
+        .recordStats()
         .build();
   }
 
@@ -66,17 +66,10 @@ public class RowCache {
 
   public RowCells getBlock(RowCacheKey key, boolean caching) {
     if (!caching) {
-      missCount.increment();
       return null;
     }
 
-    RowCells value = cache.getIfPresent(key);
-    if (value == null) {
-      missCount.increment();
-    } else {
-      hitCount.increment();
-    }
-    return value;
+    return cache.getIfPresent(key);
   }
 
   void evictBlock(RowCacheKey key) {
@@ -84,11 +77,11 @@ public class RowCache {
   }
 
   public long getHitCount() {
-    return hitCount.sum();
+    return cache.stats().hitCount();
   }
 
   public long getMissCount() {
-    return missCount.sum();
+    return cache.stats().missCount();
   }
 
   public long getEvictedRowCount() {
