@@ -112,12 +112,12 @@ public class TestRowCacheService {
 
     // Verify that row cache populated before creating a row level barrier
     rowCacheService.getScanner(region, get, scan, results, context);
-    assertNotNull(rowCache.getBlock(key, true));
+    assertNotNull(rowCache.getRow(key, true));
     assertNull(rowCacheService.getRowLevelBarrier(key));
 
     // Evict the row cache
-    rowCache.evictBlock(key);
-    assertNull(rowCache.getBlock(key, true));
+    rowCache.evictRow(key);
+    assertNull(rowCache.getRow(key, true));
 
     // Create a row level barrier for the row key
     rowCacheService.createRowLevelBarrier(key);
@@ -125,7 +125,7 @@ public class TestRowCacheService {
 
     // Verify that no row cache populated after creating a row level barrier
     rowCacheService.getScanner(region, get, scan, results, context);
-    assertNull(rowCache.getBlock(key, true));
+    assertNull(rowCache.getRow(key, true));
 
     // Remove the row level barrier
     rowCacheService.removeRowLevelBarrier(key);
@@ -133,12 +133,12 @@ public class TestRowCacheService {
 
     // Verify that row cache populated before creating a table level barrier
     rowCacheService.getScanner(region, get, scan, results, context);
-    assertNotNull(rowCache.getBlock(key, true));
+    assertNotNull(rowCache.getRow(key, true));
     assertNull(rowCacheService.getRegionLevelBarrier(region));
 
     // Evict the row cache
-    rowCache.evictBlock(key);
-    assertNull(rowCache.getBlock(key, true));
+    rowCache.evictRow(key);
+    assertNull(rowCache.getRow(key, true));
 
     // Create a table level barrier for the row key
     rowCacheService.createRegionLevelBarrier(region);
@@ -146,7 +146,7 @@ public class TestRowCacheService {
 
     // Verify that no row cache populated after creating a table level barrier
     rowCacheService.getScanner(region, get, scan, results, context);
-    assertNull(rowCache.getBlock(key, true));
+    assertNull(rowCache.getRow(key, true));
 
     // Remove the table level barrier
     rowCacheService.removeTableLevelBarrier(region);
@@ -206,7 +206,7 @@ public class TestRowCacheService {
       activePolicyEnforcement, rpcCallContext);
     // Verify the sequence of method calls
     inOrder.verify(rowCacheService, Mockito.times(1)).createRowLevelBarrier(Mockito.any());
-    inOrder.verify(rowCacheService, Mockito.times(1)).evictRowCache(Mockito.any());
+    inOrder.verify(rowCacheService, Mockito.times(1)).evictRow(Mockito.any());
     inOrder.verify(rowCacheService, Mockito.times(1)).execute(Mockito.any());
     inOrder.verify(rowCacheService, Mockito.times(1)).removeRowLevelBarrier(Mockito.any());
 
@@ -217,7 +217,7 @@ public class TestRowCacheService {
     rowCacheService.checkAndMutate(region, checkAndMutate, 0, 0);
     // Verify the sequence of method calls
     inOrder.verify(rowCacheService, Mockito.times(1)).createRowLevelBarrier(Mockito.any());
-    inOrder.verify(rowCacheService, Mockito.times(1)).evictRowCache(Mockito.any());
+    inOrder.verify(rowCacheService, Mockito.times(1)).evictRow(Mockito.any());
     inOrder.verify(rowCacheService, Mockito.times(1)).execute(Mockito.any());
     inOrder.verify(rowCacheService, Mockito.times(1)).removeRowLevelBarrier(Mockito.any());
 
@@ -229,7 +229,7 @@ public class TestRowCacheService {
     rowCacheService.checkAndMutate(region, mutations, checkAndMutate, 0, 0);
     // Verify the sequence of method calls
     inOrder.verify(rowCacheService, Mockito.times(1)).createRowLevelBarrier(Mockito.any());
-    inOrder.verify(rowCacheService, Mockito.times(1)).evictRowCache(Mockito.any());
+    inOrder.verify(rowCacheService, Mockito.times(1)).evictRow(Mockito.any());
     inOrder.verify(rowCacheService, Mockito.times(1)).execute(Mockito.any());
     inOrder.verify(rowCacheService, Mockito.times(1)).removeRowLevelBarrier(Mockito.any());
 
@@ -241,7 +241,7 @@ public class TestRowCacheService {
     rowCacheService.batchMutate(region, mutationArray, true, 0, 0);
     // Verify the sequence of method calls
     inOrder.verify(rowCacheService, Mockito.times(1)).createRowLevelBarrier(Mockito.any());
-    inOrder.verify(rowCacheService, Mockito.times(1)).evictRowCache(Mockito.any());
+    inOrder.verify(rowCacheService, Mockito.times(1)).evictRow(Mockito.any());
     inOrder.verify(rowCacheService, Mockito.times(1)).execute(Mockito.any());
     inOrder.verify(rowCacheService, Mockito.times(1)).removeRowLevelBarrier(Mockito.any());
 
@@ -311,13 +311,13 @@ public class TestRowCacheService {
     // This should be called first not to populate the row cache
     get.setCacheBlocks(false);
     rowCacheService.getScanner(region, get, scan, results, context);
-    assertNull(rowCache.getBlock(key, true));
-    assertNull(rowCache.getBlock(key, false));
+    assertNull(rowCache.getRow(key, true));
+    assertNull(rowCache.getRow(key, false));
 
     // Verify that row cache populated with caching=true
     get.setCacheBlocks(true);
     rowCacheService.getScanner(region, get, scan, results, context);
-    assertNotNull(rowCache.getBlock(key, true));
-    assertNull(rowCache.getBlock(key, false));
+    assertNotNull(rowCache.getRow(key, true));
+    assertNull(rowCache.getRow(key, false));
   }
 }

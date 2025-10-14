@@ -114,7 +114,7 @@ public class RowCacheService {
   }
 
   private boolean tryGetFromCache(HRegion region, RowCacheKey key, Get get, List<Cell> results) {
-    RowCells row = rowCache.getBlock(key, get.getCacheBlocks());
+    RowCells row = rowCache.getRow(key, get.getCacheBlocks());
 
     if (row == null) {
       return false;
@@ -134,7 +134,7 @@ public class RowCacheService {
       // The row cache is populated only when no row level barriers remain
       rowLevelBarrierMap.computeIfAbsent(key, k -> {
         try {
-          rowCache.cacheBlock(key, new RowCells(results));
+          rowCache.cacheRow(key, new RowCells(results));
         } catch (CloneNotSupportedException ignored) {
           // Not able to cache row cells, ignore
         }
@@ -254,7 +254,7 @@ public class RowCacheService {
 
         // After creating the barrier, evict the existing row cache for this row,
         // as it becomes invalid after the mutation
-        evictRowCache(key);
+        evictRow(key);
       });
 
       return execute(operation);
@@ -278,7 +278,7 @@ public class RowCacheService {
 
       // After creating the barrier, evict the existing row cache for this row,
       // as it becomes invalid after the mutation
-      evictRowCache(key);
+      evictRow(key);
 
       return execute(operation);
     } finally {
@@ -291,8 +291,8 @@ public class RowCacheService {
     return operation.execute();
   }
 
-  void evictRowCache(RowCacheKey key) {
-    rowCache.evictBlock(key);
+  void evictRow(RowCacheKey key) {
+    rowCache.evictRow(key);
   }
 
   /**

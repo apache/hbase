@@ -171,12 +171,12 @@ public class TestBulkLoadHFilesRowCache {
     Result result0 = table.get(get0);
     assertNotNull(result0);
     RowCacheKey keyPrev0 = new RowCacheKey(regions[0], get0.getRow());
-    assertNotNull(rowCache.getBlock(keyPrev0, true));
+    assertNotNull(rowCache.getRow(keyPrev0, true));
     Get get1 = new Get(rowKeyRegion1);
     Result result1 = table.get(get1);
     assertNotNull(result1);
     RowCacheKey keyPrev1 = new RowCacheKey(regions[1], get1.getRow());
-    assertNotNull(rowCache.getBlock(keyPrev1, true));
+    assertNotNull(rowCache.getRow(keyPrev1, true));
 
     // Do bulkload to region0 only
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
@@ -187,13 +187,13 @@ public class TestBulkLoadHFilesRowCache {
     // Ensure the row cache is removed after bulkload for region0
     RowCacheKey keyCur0 = new RowCacheKey(regions[0], get0.getRow());
     assertNotEquals(keyPrev0, keyCur0);
-    assertNull(rowCache.getBlock(keyCur0, true));
+    assertNull(rowCache.getRow(keyCur0, true));
     // Ensure the row cache for keyPrev0 still exists, but it is not used anymore.
-    assertNotNull(rowCache.getBlock(keyPrev0, true));
+    assertNotNull(rowCache.getRow(keyPrev0, true));
 
     // Ensure the row cache for region1 is not affected
     RowCacheKey keyCur1 = new RowCacheKey(regions[1], get1.getRow());
     assertEquals(keyPrev1, keyCur1);
-    assertNotNull(rowCache.getBlock(keyCur1, true));
+    assertNotNull(rowCache.getRow(keyCur1, true));
   }
 }

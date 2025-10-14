@@ -221,7 +221,7 @@ public class TestRowCache {
     assertCounterDiff(ROW_CACHE_MISS_COUNT, 0);
 
     // Row cache is invalidated by the put operation
-    assertNotNull(rowCache.getBlock(rowCacheKey, true));
+    assertNotNull(rowCache.getRow(rowCacheKey, true));
     table.put(put);
     recomputeMetrics();
     assertCounterDiff(ROW_CACHE_HIT_COUNT, 1);
@@ -249,31 +249,31 @@ public class TestRowCache {
     assertCounterDiff(ROW_CACHE_EVICTED_ROW_COUNT, 0);
 
     // Row cache is invalidated by the increment operation
-    assertNotNull(rowCache.getBlock(rowCacheKey, true));
+    assertNotNull(rowCache.getRow(rowCacheKey, true));
     table.incrementColumnValue(rowKey, CF1, Q1, 1);
-    assertNull(rowCache.getBlock(rowCacheKey, true));
+    assertNull(rowCache.getRow(rowCacheKey, true));
 
     // Get is executed without the row cache; however, the cache is re-populated as a result
     table.get(get);
-    assertNotNull(rowCache.getBlock(rowCacheKey, true));
+    assertNotNull(rowCache.getRow(rowCacheKey, true));
 
     // Row cache is invalidated by the append operation
-    assertNotNull(rowCache.getBlock(rowCacheKey, true));
+    assertNotNull(rowCache.getRow(rowCacheKey, true));
     Append append = new Append(rowKey);
     append.addColumn(CF1, Q1, Bytes.toBytes(0L));
     table.append(append);
-    assertNull(rowCache.getBlock(rowCacheKey, true));
+    assertNull(rowCache.getRow(rowCacheKey, true));
 
     // Get is executed without the row cache; however, the cache is re-populated as a result
     table.get(get);
-    assertNotNull(rowCache.getBlock(rowCacheKey, true));
+    assertNotNull(rowCache.getRow(rowCacheKey, true));
 
     // Row cache is invalidated by the delete operation
-    assertNotNull(rowCache.getBlock(rowCacheKey, true));
+    assertNotNull(rowCache.getRow(rowCacheKey, true));
     Delete delete = new Delete(rowKey);
     delete.addColumn(CF1, Q1);
     table.delete(delete);
-    assertNull(rowCache.getBlock(rowCacheKey, true));
+    assertNull(rowCache.getRow(rowCacheKey, true));
   }
 
   @Test(expected = DoNotRetryIOException.class)
@@ -305,7 +305,7 @@ public class TestRowCache {
 
     // Validate that the row cache is populated
     result = table.get(get);
-    assertNotNull(rowCache.getBlock(rowCacheKey, true));
+    assertNotNull(rowCache.getRow(rowCacheKey, true));
     assertArrayEquals("11".getBytes(), result.getValue(CF1, Q1));
     assertArrayEquals("12".getBytes(), result.getValue(CF1, Q2));
 
@@ -315,11 +315,11 @@ public class TestRowCache {
     cam = CheckAndMutate.newBuilder(rowKey).ifEquals(CF1, Q2, "00".getBytes()).build(put2);
     camResult = table.checkAndMutate(cam);
     assertFalse(camResult.isSuccess());
-    assertNull(rowCache.getBlock(rowCacheKey, true));
+    assertNull(rowCache.getRow(rowCacheKey, true));
 
     // Validate that the row cache is populated
     result = table.get(get);
-    assertNotNull(rowCache.getBlock(rowCacheKey, true));
+    assertNotNull(rowCache.getRow(rowCacheKey, true));
     assertArrayEquals("11".getBytes(), result.getValue(CF1, Q1));
     assertArrayEquals("12".getBytes(), result.getValue(CF1, Q2));
 
@@ -327,7 +327,7 @@ public class TestRowCache {
     cam = CheckAndMutate.newBuilder(rowKey).ifEquals(CF1, Q2, "12".getBytes()).build(put2);
     camResult = table.checkAndMutate(cam);
     assertTrue(camResult.isSuccess());
-    assertNull(rowCache.getBlock(rowCacheKey, true));
+    assertNull(rowCache.getRow(rowCacheKey, true));
   }
 
   @Test
@@ -356,11 +356,11 @@ public class TestRowCache {
 
     // Validate that the row caches are populated
     result1 = table.get(get1);
-    assertNotNull(rowCache.getBlock(rowCacheKey1, true));
+    assertNotNull(rowCache.getRow(rowCacheKey1, true));
     assertArrayEquals("111".getBytes(), result1.getValue(CF1, Q1));
     assertArrayEquals("112".getBytes(), result1.getValue(CF1, Q2));
     result2 = table.get(get2);
-    assertNotNull(rowCache.getBlock(rowCacheKey2, true));
+    assertNotNull(rowCache.getRow(rowCacheKey2, true));
     assertArrayEquals("211".getBytes(), result2.getValue(CF1, Q1));
     assertArrayEquals("212".getBytes(), result2.getValue(CF1, Q2));
 
@@ -371,8 +371,8 @@ public class TestRowCache {
     camResults = table.checkAndMutate(cams);
     assertTrue(camResults.get(0).isSuccess());
     assertTrue(camResults.get(1).isSuccess());
-    assertNull(rowCache.getBlock(rowCacheKey1, true));
-    assertNull(rowCache.getBlock(rowCacheKey2, true));
+    assertNull(rowCache.getRow(rowCacheKey1, true));
+    assertNull(rowCache.getRow(rowCacheKey2, true));
   }
 
   @Test
@@ -399,11 +399,11 @@ public class TestRowCache {
 
     // Validate that the row caches are populated
     result1 = table.get(get1);
-    assertNotNull(rowCache.getBlock(rowCacheKey1, true));
+    assertNotNull(rowCache.getRow(rowCacheKey1, true));
     assertArrayEquals("111".getBytes(), result1.getValue(CF1, Q1));
     assertArrayEquals("112".getBytes(), result1.getValue(CF1, Q2));
     result2 = table.get(get2);
-    assertNotNull(rowCache.getBlock(rowCacheKey1, true));
+    assertNotNull(rowCache.getRow(rowCacheKey1, true));
     assertArrayEquals("211".getBytes(), result2.getValue(CF1, Q1));
     assertArrayEquals("212".getBytes(), result2.getValue(CF1, Q2));
 
@@ -418,16 +418,16 @@ public class TestRowCache {
     CheckAndMutate cam =
       CheckAndMutate.newBuilder(rowKey1).ifEquals(CF1, Q1, "111".getBytes()).build(rms);
     table.checkAndMutate(cam);
-    assertNull(rowCache.getBlock(rowCacheKey1, true));
-    assertNotNull(rowCache.getBlock(rowCacheKey2, true));
+    assertNull(rowCache.getRow(rowCacheKey1, true));
+    assertNotNull(rowCache.getRow(rowCacheKey2, true));
 
     // Validate that the row caches are populated
     result1 = table.get(get1);
-    assertNotNull(rowCache.getBlock(rowCacheKey1, true));
+    assertNotNull(rowCache.getRow(rowCacheKey1, true));
     assertArrayEquals("111111".getBytes(), result1.getValue(CF1, Q1));
     assertArrayEquals("112112".getBytes(), result1.getValue(CF1, Q2));
     result2 = table.get(get2);
-    assertNotNull(rowCache.getBlock(rowCacheKey1, true));
+    assertNotNull(rowCache.getRow(rowCacheKey1, true));
     assertArrayEquals("211".getBytes(), result2.getValue(CF1, Q1));
     assertArrayEquals("212".getBytes(), result2.getValue(CF1, Q2));
   }
@@ -473,13 +473,13 @@ public class TestRowCache {
     results = new Object[batchOperations.size()];
     table.batch(batchOperations, results);
     assertEquals(3, results.length);
-    assertNotNull(rowCache.getBlock(rowCacheKey1, true));
+    assertNotNull(rowCache.getRow(rowCacheKey1, true));
     assertArrayEquals("111".getBytes(), ((Result) results[0]).getValue(CF1, Q1));
     assertArrayEquals("112".getBytes(), ((Result) results[0]).getValue(CF1, Q2));
-    assertNotNull(rowCache.getBlock(rowCacheKey2, true));
+    assertNotNull(rowCache.getRow(rowCacheKey2, true));
     assertArrayEquals("211".getBytes(), ((Result) results[1]).getValue(CF1, Q1));
     assertArrayEquals("212".getBytes(), ((Result) results[1]).getValue(CF1, Q2));
-    assertNotNull(rowCache.getBlock(rowCacheKey3, true));
+    assertNotNull(rowCache.getRow(rowCacheKey3, true));
     assertArrayEquals("311".getBytes(), ((Result) results[2]).getValue(CF1, Q1));
     assertArrayEquals("312".getBytes(), ((Result) results[2]).getValue(CF1, Q2));
 
@@ -495,9 +495,9 @@ public class TestRowCache {
     results = new Object[batchOperations.size()];
     table.batch(batchOperations, results);
     assertEquals(2, results.length);
-    assertNull(rowCache.getBlock(rowCacheKey1, true));
-    assertNull(rowCache.getBlock(rowCacheKey2, true));
-    assertNotNull(rowCache.getBlock(rowCacheKey3, true));
+    assertNull(rowCache.getRow(rowCacheKey1, true));
+    assertNull(rowCache.getRow(rowCacheKey2, true));
+    assertNotNull(rowCache.getRow(rowCacheKey3, true));
   }
 
   @Test
@@ -515,7 +515,7 @@ public class TestRowCache {
     table.get(get);
 
     // Validate that the row cache is not populated
-    assertNull(rowCache.getBlock(rowCacheKey, true));
+    assertNull(rowCache.getRow(rowCacheKey, true));
 
     // Flush memstore to HFile, then get again
     admin.flush(tableName);
@@ -523,7 +523,7 @@ public class TestRowCache {
     table.get(get);
 
     // Validate that the row cache is populated now
-    assertNotNull(rowCache.getBlock(rowCacheKey, true));
+    assertNotNull(rowCache.getRow(rowCacheKey, true));
 
     // Put another qualifier. And now the cells are in both memstore and HFile.
     put = new Put(rowKey);
@@ -531,11 +531,11 @@ public class TestRowCache {
     table.put(put);
 
     // Validate that the row cache is invalidated
-    assertNull(rowCache.getBlock(rowCacheKey, true));
+    assertNull(rowCache.getRow(rowCacheKey, true));
 
     // Get from memstore and HFile
     get = new Get(rowKey);
     table.get(get);
-    assertNotNull(rowCache.getBlock(rowCacheKey, true));
+    assertNotNull(rowCache.getRow(rowCacheKey, true));
   }
 }

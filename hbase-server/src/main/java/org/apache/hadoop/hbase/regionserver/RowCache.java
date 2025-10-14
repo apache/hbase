@@ -60,11 +60,11 @@ public class RowCache {
         .build();
   }
 
-  void cacheBlock(RowCacheKey key, RowCells value) {
+  void cacheRow(RowCacheKey key, RowCells value) {
     cache.put(key, value);
   }
 
-  public RowCells getBlock(RowCacheKey key, boolean caching) {
+  public RowCells getRow(RowCacheKey key, boolean caching) {
     if (!caching) {
       return null;
     }
@@ -72,7 +72,7 @@ public class RowCache {
     return cache.getIfPresent(key);
   }
 
-  void evictBlock(RowCacheKey key) {
+  void evictRow(RowCacheKey key) {
     cache.asMap().remove(key);
   }
 
