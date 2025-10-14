@@ -21,13 +21,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.util.List;
-import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -48,9 +44,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-import org.mockito.Mockito;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -413,37 +406,7 @@ public class TestHBaseTestingUtil {
   }
 
   @Test
-  public void testResolvePortConflict() throws Exception {
-    // raises port conflict between 1st call and 2nd call of randomPort() by mocking Random object
-    Random random = mock(Random.class);
-    when(random.nextInt(anyInt())).thenAnswer(new Answer<Integer>() {
-      int[] numbers = { 1, 1, 2 };
-      int count = 0;
-
-      @Override
-      public Integer answer(InvocationOnMock invocation) {
-        int ret = numbers[count];
-        count++;
-        return ret;
-      }
-    });
-
-    HBaseTestingUtil.PortAllocator.AvailablePortChecker portChecker =
-      mock(HBaseTestingUtil.PortAllocator.AvailablePortChecker.class);
-    when(portChecker.available(anyInt())).thenReturn(true);
-
-    HBaseTestingUtil.PortAllocator portAllocator =
-      new HBaseTestingUtil.PortAllocator(random, portChecker);
-
-    int port1 = portAllocator.randomFreePort();
-    int port2 = portAllocator.randomFreePort();
-    assertNotEquals(port1, port2);
-    Mockito.verify(random, Mockito.times(3)).nextInt(anyInt());
-  }
-
-  @Test
   public void testOverridingOfDefaultPorts() throws Exception {
-
     // confirm that default port properties being overridden to random
     Configuration defaultConfig = HBaseConfiguration.create();
     defaultConfig.setInt(HConstants.MASTER_INFO_PORT, HConstants.DEFAULT_MASTER_INFOPORT);

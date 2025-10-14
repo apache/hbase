@@ -40,10 +40,10 @@ import org.apache.hadoop.hbase.io.MetricsIO;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext.ReaderType;
-import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.keymeta.KeyManagementService;
 import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
 import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
+import org.apache.hadoop.hbase.monitoring.ThreadLocalServerSideScanMetrics;
 import org.apache.hadoop.hbase.regionserver.CellSink;
 import org.apache.hadoop.hbase.regionserver.ShipperListener;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
@@ -194,7 +194,7 @@ public final class HFile {
   }
 
   public static final void updateReadLatency(long latencyMillis, boolean pread, boolean tooSlow) {
-    RpcServer.getCurrentCall().ifPresent(call -> call.updateFsReadTime(latencyMillis));
+    ThreadLocalServerSideScanMetrics.addFsReadTime(latencyMillis);
     if (pread) {
       MetricsIO.getInstance().updateFsPreadTime(latencyMillis);
     } else {

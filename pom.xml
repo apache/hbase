@@ -895,7 +895,7 @@
     <jaxb-api.version>2.3.1</jaxb-api.version>
     <servlet.api.version>4.0.1</servlet.api.version>
     <wx.rs.api.version>2.1.1</wx.rs.api.version>
-    <tomcat.jasper.version>9.0.108</tomcat.jasper.version>
+    <tomcat.jasper.version>9.0.110</tomcat.jasper.version>
     <jruby.version>9.4.12.1</jruby.version>
     <junit.jupiter.version>5.13.4</junit.jupiter.version>
     <junit.vintage.version>5.13.4</junit.vintage.version>
@@ -959,6 +959,7 @@
     <xml.maven.version>1.0.1</xml.maven.version>
     <spotless.version>2.44.4</spotless.version>
     <maven-site.version>3.12.0</maven-site.version>
+    <reflow-maven-skin.version>2.3.3</reflow-maven-skin.version>
     <!-- compression -->
     <aircompressor.version>0.27</aircompressor.version>
     <brotli4j.version>1.11.0</brotli4j.version>
@@ -2783,30 +2784,14 @@
         <artifactId>maven-dependency-plugin</artifactId>
         <executions>
           <execution>
-            <id>unpack-website-resources</id>
+            <!-- Required for the RefGuide (book.html) to use local resources (e.g. not from CDN). -->
+            <id>unpack-RefGuide-resources</id>
             <goals>
               <goal>unpack</goal>
             </goals>
             <phase>pre-site</phase>
             <configuration>
               <artifactItems>
-                <artifactItem>
-                  <groupId>org.webjars</groupId>
-                  <artifactId>bootstrap</artifactId>
-                  <version>2.3.2</version>
-                  <type>jar</type>
-                  <overWrite>true</overWrite>
-                  <includes>**/css/bootstrap-responsive.min.css</includes>
-                </artifactItem>
-                <artifactItem>
-                  <groupId>org.webjars</groupId>
-                  <artifactId>highlightjs</artifactId>
-                  <version>8.7</version>
-                  <type>jar</type>
-                  <overWrite>true</overWrite>
-                  <includes>**/styles/github.min.css,
-                    **/highlight.min.js,</includes>
-                </artifactItem>
                 <artifactItem>
                   <groupId>org.webjars</groupId>
                   <artifactId>font-awesome</artifactId>
@@ -2851,6 +2836,34 @@
               <outputDirectory>${project.build.directory}</outputDirectory>
             </configuration>
           </execution>
+          <execution>
+            <!-- Required for the site to use local resources (e.g. not from CDN). -->
+            <id>unpack-site-resources</id>
+            <goals>
+              <goal>unpack</goal>
+            </goals>
+            <phase>pre-site</phase>
+            <configuration>
+              <artifactItems>
+                <artifactItem>
+                  <groupId>io.github.devacfr.maven.skins</groupId>
+                  <artifactId>reflow-default-webdeps</artifactId>
+                  <version>${reflow-maven-skin.version}</version>
+                  <type>jar</type>
+                  <overWrite>false</overWrite>
+                  <includes>**/css/bootstrap.min.css,
+                    **/css/themes/litera/bootstrap.min.css,
+                    **/css/fontawesome/*,
+                    **/css/fontawesome/webfonts/*,
+                    **/js/*.js,
+                    **/js/languages/*,
+                    **/js/styles/github.min.css,
+                    **/js/styles/default.min.css</includes>
+                </artifactItem>
+              </artifactItems>
+              <outputDirectory>${project.build.directory}/site</outputDirectory>
+            </configuration>
+          </execution>
         </executions>
       </plugin>
       <!-- Special configuration for spotbugs just in the parent so
@@ -2880,11 +2893,15 @@
         <version>${maven-site.version}</version>
         <configuration>
           <siteDirectory>${basedir}/src/site</siteDirectory>
-          <customBundle>${basedir}/src/site/custom/project-info-report.properties</customBundle>
           <inputEncoding>UTF-8</inputEncoding>
           <outputEncoding>UTF-8</outputEncoding>
         </configuration>
         <dependencies>
+          <dependency>
+            <groupId>io.github.devacfr.maven.skins</groupId>
+            <artifactId>reflow-velocity-tools</artifactId>
+            <version>${reflow-maven-skin.version}</version>
+          </dependency>
           <dependency>
             <!-- add support for ssh/scp -->
             <groupId>org.apache.maven.wagon</groupId>
@@ -3017,8 +3034,8 @@
             </configuration>
           </execution>
           <execution>
-            <!-- Copy static CSS and JS files for the website. -->
-            <id>copy-css-js-to-site</id>
+            <!-- Copy static CSS and JS files for the RefGuide (book.html). -->
+            <id>copy-css-js-for-RefGuide</id>
             <goals>
               <goal>run</goal>
             </goals>
@@ -3026,20 +3043,11 @@
             <configuration>
               <target>
                 <copy flatten="true" todir="${project.build.directory}/site/css">
-                  <fileset dir="${webjars-dir}/bootstrap/2.3.2/css">
-                    <include name="bootstrap-responsive.min.css"/>
-                  </fileset>
-                  <fileset dir="${webjars-dir}/highlightjs/8.7/styles">
-                    <include name="github.min.css"/>
-                  </fileset>
                   <fileset dir="${webjars-dir}/font-awesome/4.7.0/css">
                     <include name="font-awesome.css"/>
                   </fileset>
                 </copy>
                 <copy flatten="true" todir="${project.build.directory}/site/js">
-                  <fileset dir="${webjars-dir}/highlightjs/8.7/">
-                    <include name="highlight.min.js"/>
-                  </fileset>
                   <fileset dir="${webjars-dir}/MathJax/2.7.0">
                     <include name="MathJax.js"/>
                   </fileset>

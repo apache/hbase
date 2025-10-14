@@ -1427,6 +1427,31 @@ public class RegionCoprocessorHost
   }
 
   /**
+   * Supports Coprocessor 'bypass'.
+   * @return true if default behavior should be bypassed, false otherwise
+   */
+  public boolean preWALRestore(final RegionInfo info, final WALKey logKey, final WALEdit logEdit)
+    throws IOException {
+    return execOperation(
+      coprocEnvironments.isEmpty() ? null : new RegionObserverOperationWithoutResult(true) {
+        @Override
+        public void call(RegionObserver observer) throws IOException {
+          observer.preWALRestore(this, info, logKey, logEdit);
+        }
+      });
+  }
+
+  public void postWALRestore(final RegionInfo info, final WALKey logKey, final WALEdit logEdit)
+    throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new RegionObserverOperationWithoutResult() {
+      @Override
+      public void call(RegionObserver observer) throws IOException {
+        observer.postWALRestore(this, info, logKey, logEdit);
+      }
+    });
+  }
+
+  /**
    * @param familyPaths pairs of { CF, file path } submitted for bulk load
    */
   public void preBulkLoadHFile(final List<Pair<byte[], String>> familyPaths) throws IOException {
