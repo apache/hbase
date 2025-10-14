@@ -52,10 +52,13 @@ public class BackupHFileCleaner extends BaseHFileCleanerDelegate implements Abor
   private boolean stopped = false;
   private boolean aborted = false;
   private Connection connection;
-  // timestamp of most recent read from backup system table
-  private long prevReadFromBackupTbl = 0;
-  // timestamp of 2nd most recent read from backup system table
-  private long secondPrevReadFromBackupTbl = 0;
+  // timestamp of most recent completed cleaning run
+  private volatile long previousCleaningCompletionTimestamp = 0;
+
+  @Override
+  public void postClean() {
+    previousCleaningCompletionTimestamp = EnvironmentEdgeManager.currentTime();
+  }
 
   @Override
   public Iterable<FileStatus> getDeletableFiles(Iterable<FileStatus> files) {
@@ -79,12 +82,12 @@ public class BackupHFileCleaner extends BaseHFileCleanerDelegate implements Abor
       return Collections.emptyList();
     }
 
-    secondPrevReadFromBackupTbl = prevReadFromBackupTbl;
-    prevReadFromBackupTbl = EnvironmentEdgeManager.currentTime();
+    // Pin the threshold, we don't want the result to change depending on evaluation time.
+    final long recentFileThreshold = previousCleaningCompletionTimestamp;
 
     return Iterables.filter(files, file -> {
       // If the file is recent, be conservative and wait for one more scan of the bulk loads
-      if (file.getModificationTime() > secondPrevReadFromBackupTbl) {
+      if (file.getModificationTime() > recentFileThreshold) {
         LOG.debug("Preventing deletion due to timestamp: {}", file.getPath().toString());
         return false;
       }
