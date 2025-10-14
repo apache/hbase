@@ -90,7 +90,7 @@ final class AssignmentManagerUtil {
 
   static TransitRegionStateProcedure[] createUnassignProceduresForSplitOrMerge(
     MasterProcedureEnv env, Stream<RegionInfo> regions, int regionReplication) throws IOException {
-    //TODO code to get all the replica
+    // TODO code to get all the replica
     List<RegionStateNode> regionNodes = regions
       .flatMap(hri -> IntStream.range(0, regionReplication)
         .mapToObj(i -> RegionReplicaUtil.getRegionInfoForReplica(hri, i)))
@@ -282,7 +282,7 @@ final class AssignmentManagerUtil {
   static void removeNonDefaultReplicas(MasterProcedureEnv env, Stream<RegionInfo> regions,
     int regionReplication) {
     // Remove from in-memory states
-    //TODO should we not confirm here that replica region are closed or not ?
+    // TODO should we not confirm here that replica region are closed or not ?
     regions.flatMap(hri -> IntStream.range(1, regionReplication)
       .mapToObj(i -> RegionReplicaUtil.getRegionInfoForReplica(hri, i))).forEach(hri -> {
         env.getAssignmentManager().getRegionStates().deleteRegion(hri);

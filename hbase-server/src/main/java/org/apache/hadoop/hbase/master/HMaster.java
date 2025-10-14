@@ -2007,7 +2007,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     // But if there are zero regions in transition, it can skip sleep to speed up.
     while (
       !interrupted && EnvironmentEdgeManager.currentTime() < nextBalanceStartTime
-        && this.assignmentManager.getOngoingTRSPCount()>0
+        && this.assignmentManager.getOngoingTRSPCount() > 0
     ) {
       try {
         Thread.sleep(100);
@@ -2098,7 +2098,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
     synchronized (this.balancer) {
       // Only allow one balance run at at time.
-      if (this.assignmentManager.getOngoingTRSPCount() >0) {
+      if (this.assignmentManager.getOngoingTRSPCount() > 0) {
         List<RegionStateNode> regionsInTransition = assignmentManager.getRegionsInTransition();
         // if hbase:meta region is in transition, result of assignment cannot be recorded
         // ignore the force flag in that case
@@ -2113,8 +2113,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
         if (!request.isIgnoreRegionsInTransition() || metaInTransition) {
           LOG.info("Not running balancer (ignoreRIT=false" + ", metaRIT=" + metaInTransition
-            + ") because " + assignmentManager.getOngoingTRSPCount() + " region(s) in transition: " + toPrint
-            + (truncated ? "(truncated list)" : ""));
+            + ") because " + assignmentManager.getOngoingTRSPCount() + " region(s) in transition: "
+            + toPrint + (truncated ? "(truncated list)" : ""));
           return responseBuilder.build();
         }
       }

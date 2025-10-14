@@ -52,8 +52,8 @@ public class RegionInTransitionTracker {
 
   public void handleRegionStateNodeOperation(RegionStateNode regionStateNode) {
     RegionState.State currentState = regionStateNode.getState();
-    //only consider default replica for availability
-    if(regionStateNode.getRegionInfo().getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID){
+    // only consider default replica for availability
+    if (regionStateNode.getRegionInfo().getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID) {
       return;
     }
     // if region is merged or split it should not be in RIT list

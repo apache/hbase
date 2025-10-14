@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.master.assignment;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -2090,6 +2089,7 @@ public class AssignmentManager {
   public int getOngoingTRSPCount() {
     return regionStates.getOngoingTRSPCount();
   }
+
   /**
    * Get the number of regions in transition.
    */

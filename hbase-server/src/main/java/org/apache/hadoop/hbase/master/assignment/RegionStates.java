@@ -105,7 +105,7 @@ public class RegionStates {
   RegionStateNode createRegionStateNode(RegionInfo regionInfo) {
     synchronized (regionsMapLock) {
       RegionStateNode node = regionsMap.computeIfAbsent(regionInfo.getRegionName(),
-        key -> new RegionStateNode(regionInfo,trspCounter));
+        key -> new RegionStateNode(regionInfo, trspCounter));
 
       if (encodedRegionsMap.get(regionInfo.getEncodedName()) != node) {
         encodedRegionsMap.put(regionInfo.getEncodedName(), node);
