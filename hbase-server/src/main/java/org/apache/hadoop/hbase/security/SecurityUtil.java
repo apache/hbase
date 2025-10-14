@@ -44,6 +44,7 @@ import org.slf4j.LoggerFactory;
 @InterfaceStability.Evolving
 public class SecurityUtil {
   private static final Logger LOG = LoggerFactory.getLogger(SecurityUtil.class);
+
   /**
    * Get the user name from a principal
    */
@@ -82,7 +83,7 @@ public class SecurityUtil {
     String cipherName = family.getEncryptionType();
     String keyNamespace = null; // Will be set by fallback logic
     LOG.debug("Creating encryption context for table: {} and column family: {}",
-        tableDescriptor.getTableName().getNameAsString(), family.getNameAsString());
+      tableDescriptor.getTableName().getNameAsString(), family.getNameAsString());
     if (cipherName != null) {
       if (!Encryption.isEncryptionEnabled(conf)) {
         throw new IllegalStateException("Encryption for family '" + family.getNameAsString()
@@ -108,8 +109,8 @@ public class SecurityUtil {
             key = EncryptionUtil.unwrapKey(conf, familyKeyBytes);
           }
           if (LOG.isDebugEnabled()) {
-            LOG.debug("Scenario 1: Use family key for namespace {} cipher: {} " +
-              "key management enabled: {}", keyNamespace, cipherName, isKeyManagementEnabled);
+            LOG.debug("Scenario 1: Use family key for namespace {} cipher: {} "
+              + "key management enabled: {}", keyNamespace, cipherName, isKeyManagementEnabled);
           }
         } catch (KeyException e) {
           throw new IOException(e);
@@ -157,13 +158,14 @@ public class SecurityUtil {
                 family.getNameAsString());
             }
             if (LOG.isDebugEnabled()) {
-              LOG.debug("Scenario 2: Use active key for namespace {} cipher: {} " +
-                "localKeyGenEnabled: {} for table: {} and column family: {}", keyNamespace,
-                cipherName, localKeyGenEnabled, tableDescriptor.getTableName().getNameAsString(),
-                family.getNameAsString(), activeKeyData.getKeyNamespace());
+              LOG.debug(
+                "Scenario 2: Use active key for namespace {} cipher: {} "
+                  + "localKeyGenEnabled: {} for table: {} and column family: {}",
+                keyNamespace, cipherName, localKeyGenEnabled,
+                tableDescriptor.getTableName().getNameAsString(), family.getNameAsString(),
+                activeKeyData.getKeyNamespace());
             }
-          }
-          else {
+          } else {
             if (LOG.isDebugEnabled()) {
               LOG.debug("Scenario 3a: No active key found for table: {} and column family: {}",
                 tableDescriptor.getTableName().getNameAsString(), family.getNameAsString());
@@ -173,11 +175,12 @@ public class SecurityUtil {
           }
         } else {
           // Scenario 3b: Do nothing, let a random key be generated as DEK, let STK be used as KEK.
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("Scenario 3b: Key management is disabled and no ENCRYPTION_KEY attribute " +
-                "set for table: {} and column family: {}",
-                tableDescriptor.getTableName().getNameAsString(), family.getNameAsString());
-            }
+          if (LOG.isDebugEnabled()) {
+            LOG.debug(
+              "Scenario 3b: Key management is disabled and no ENCRYPTION_KEY attribute "
+                + "set for table: {} and column family: {}",
+              tableDescriptor.getTableName().getNameAsString(), family.getNameAsString());
+          }
         }
       }
 
@@ -213,7 +216,9 @@ public class SecurityUtil {
     ManagedKeyData kekKeyData = null;
     byte[] keyBytes = trailer.getEncryptionKey();
     Encryption.Context cryptoContext = Encryption.Context.NONE;
-    LOG.debug("Creating encryption context for path: {}", path);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Creating encryption context for path: {}", path);
+    }
     // Check for any key material available
     if (keyBytes != null) {
       cryptoContext = Encryption.newContext(conf);

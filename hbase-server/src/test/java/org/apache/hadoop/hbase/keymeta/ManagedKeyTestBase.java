@@ -37,10 +37,10 @@ public class ManagedKeyTestBase {
   public void setUp() throws Exception {
     if (isWithKeyManagement()) {
       TEST_UTIL.getConfiguration().set(HConstants.CRYPTO_MANAGED_KEYPROVIDER_CONF_KEY,
-          getKeyProviderClass().getName());
+        getKeyProviderClass().getName());
       TEST_UTIL.getConfiguration().set(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, "true");
       TEST_UTIL.getConfiguration().set("hbase.coprocessor.master.classes",
-          KeymetaServiceEndpoint.class.getName());
+        KeymetaServiceEndpoint.class.getName());
     }
 
     // Start the minicluster if needed
@@ -81,10 +81,12 @@ public class ManagedKeyTestBase {
   }
 
   private void waitForMasterInitialization(TableName tableNameToWaitFor) throws Exception {
-    LOG.info("\n\nManagedKeyTestBase.waitForMasterInitialization: Waiting for master initialization\n");
+    LOG.info(
+      "\n\nManagedKeyTestBase.waitForMasterInitialization: Waiting for master initialization\n");
     TEST_UTIL.waitFor(60000, () -> TEST_UTIL.getMiniHBaseCluster().getMaster().isInitialized());
 
-    LOG.info("\n\nManagedKeyTestBase.waitForMasterInitialization: Waiting for regions to be assigned\n");
+    LOG.info(
+      "\n\nManagedKeyTestBase.waitForMasterInitialization: Waiting for regions to be assigned\n");
     TEST_UTIL.waitUntilAllRegionsAssigned(tableNameToWaitFor);
     LOG.info("\n\nManagedKeyTestBase.waitForMasterInitialization: Regions assigned\n");
   }
@@ -115,8 +117,8 @@ public class ManagedKeyTestBase {
   }
 
   /**
-   * Useful hook to enable setting a breakpoint while debugging ruby tests, just log a
-   * message and you can even have a conditional breakpoint.
+   * Useful hook to enable setting a breakpoint while debugging ruby tests, just log a message and
+   * you can even have a conditional breakpoint.
    */
   protected void logMessage(String msg) {
     LOG.info(msg);

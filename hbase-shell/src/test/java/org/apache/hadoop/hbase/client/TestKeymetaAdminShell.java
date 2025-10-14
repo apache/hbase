@@ -79,14 +79,14 @@ public class TestKeymetaAdminShell extends ManagedKeyTestBase implements RubyShe
       String providerParams = KeymetaTestUtils.setupTestKeyStore(TEST_UTIL, true, true, store -> {
         Properties p = new Properties();
         try {
-          KeymetaTestUtils.addEntry(conf, 128, store, CUST1_ALIAS, CUST1, true, cust_to_key, cust_to_alias,
-            p);
-          KeymetaTestUtils.addEntry(conf, 128, store, CUST1_ALIAS, CUST1, true, cust_to_key, cust_to_alias,
-            p, CF_NAMESPACE);
+          KeymetaTestUtils.addEntry(conf, 128, store, CUST1_ALIAS, CUST1, true, cust_to_key,
+            cust_to_alias, p);
+          KeymetaTestUtils.addEntry(conf, 128, store, CUST1_ALIAS, CUST1, true, cust_to_key,
+            cust_to_alias, p, CF_NAMESPACE);
           KeymetaTestUtils.addEntry(conf, 128, store, GLOB_CUST_ALIAS, "*", true, cust_to_key,
             cust_to_alias, p);
-          KeymetaTestUtils.addEntry(conf, 128, store, SYSTEM_KEY_ALIAS, clusterId, true, cust_to_key,
-            cust_to_alias, p);
+          KeymetaTestUtils.addEntry(conf, 128, store, SYSTEM_KEY_ALIAS, clusterId, true,
+            cust_to_key, cust_to_alias, p);
           KeymetaTestUtils.addEntry(conf, 128, store, CUSTOM_NAMESPACE_ALIAS, CUST1, true,
             cust_to_key, cust_to_alias, p, CUSTOM_NAMESPACE);
           KeymetaTestUtils.addEntry(conf, 128, store, CUSTOM_GLOBAL_NAMESPACE_ALIAS, "*", true,
