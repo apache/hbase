@@ -40,6 +40,9 @@ if java.lang.System.get_property('shell.test.exclude')
 end
 
 files = Dir[ File.dirname(__FILE__) + "/" + test_suite_pattern ]
+if files.empty?
+  raise "No tests found for #{test_suite_pattern}"
+end
 files.each do |file|
   filename = File.basename(file)
   if includes != nil && !includes.include?(filename)

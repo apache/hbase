@@ -68,7 +68,7 @@ public class TestManagedKeymeta extends ManagedKeyTestBase {
   private void doTestEnable(KeymetaAdmin adminClient) throws IOException, KeyException {
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
     MockManagedKeyProvider managedKeyProvider =
-      (MockManagedKeyProvider) Encryption.getKeyProvider(master.getConfiguration());
+      (MockManagedKeyProvider) Encryption.getManagedKeyProvider(master.getConfiguration());
     String cust = "cust1";
     String encodedCust = ManagedKeyProvider.encodeToStr(cust.getBytes());
     List<ManagedKeyData> managedKeyStates =

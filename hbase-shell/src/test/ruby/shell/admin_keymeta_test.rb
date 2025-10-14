@@ -35,27 +35,32 @@ module Hbase
     end
 
     define_test 'Test enable key management' do
-      cust_and_namespace = "#{$CUST1_ENCODED}:*"
+      test_key_management($CUST1_ENCODED, '*')
+      test_key_management($CUST1_ENCODED, 'test_table/f')
+      test_key_management($CUST1_ENCODED, 'test_namespace')
+      test_key_management($GLOB_CUST_ENCODED, '*')
+
+      puts "Testing that cluster can be restarted when key management is enabled"
+      $TEST.restartMiniCluster()
+      puts "Cluster restarted, testing key management again"
+      setup_hbase
+      test_key_management($GLOB_CUST_ENCODED, '*')
+      puts "Key management test complete"
+    end
+
+    def test_key_management(cust, namespace)
       # Repeat the enable twice in a loop and ensure multiple enables succeed and return the
       # same output.
       2.times do |i|
+        cust_and_namespace = "#{cust}:#{namespace}"
         output = capture_stdout { @shell.command('enable_key_management', cust_and_namespace) }
-        puts "enable_key_management #{i} output: #{output}"
-        assert(output.include?("#{$CUST1_ENCODED} * ACTIVE"))
+        puts "enable_key_management output: #{output}"
+        assert(output.include?("#{cust} #{namespace} ACTIVE"))
+        output = capture_stdout { @shell.command('show_key_status', cust_and_namespace) }
+        puts "show_key_status output: #{output}"
+        assert(output.include?("#{cust} #{namespace} ACTIVE"))
+        assert(output.include?('1 row(s)'))
       end
-      output = capture_stdout { @shell.command('show_key_status', cust_and_namespace) }
-      puts "show_key_status output: #{output}"
-      assert(output.include?("#{$CUST1_ENCODED} * ACTIVE"))
-
-      # The ManagedKeyStoreKeyProvider doesn't support specific namespaces, so it will return the
-      # global key.
-      cust_and_namespace = "#{$CUST1_ENCODED}:test_table/f"
-      output = capture_stdout { @shell.command('enable_key_management', cust_and_namespace) }
-      puts "enable_key_management output: #{output}"
-      assert(output.include?("#{$CUST1_ENCODED} * ACTIVE"))
-      output = capture_stdout { @shell.command('show_key_status', cust_and_namespace) }
-      puts "show_key_status output: #{output}"
-      assert(output.include?('0 row(s)'))
     end
   end
 end

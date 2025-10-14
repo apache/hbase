@@ -29,6 +29,7 @@ import java.security.spec.InvalidKeySpecException;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BiFunction;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
@@ -556,32 +557,45 @@ public final class Encryption {
     }
   }
 
-  static final Map<Pair<String, String>, KeyProvider> keyProviderCache = new ConcurrentHashMap<>();
+  static final Map<Pair<String, String>, Object> keyProviderCache = new ConcurrentHashMap<>();
 
-  public static KeyProvider getKeyProvider(Configuration conf) {
-    String providerClassName =
-      conf.get(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyStoreKeyProvider.class.getName());
-    String providerParameters = conf.get(HConstants.CRYPTO_KEYPROVIDER_PARAMETERS_KEY, "");
-    try {
-      Pair<String, String> providerCacheKey = new Pair<>(providerClassName, providerParameters);
-      KeyProvider provider = keyProviderCache.get(providerCacheKey);
-      if (provider != null) {
-        return provider;
-      }
-      provider = (KeyProvider) ReflectionUtils
-        .newInstance(getClassLoaderForClass(KeyProvider.class).loadClass(providerClassName), conf);
-      provider.init(providerParameters);
-      if (provider instanceof ManagedKeyProvider) {
-        ((ManagedKeyProvider) provider).initConfig(conf);
-      }
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Installed " + providerClassName + " into key provider cache");
+  private static Object createProvider(final Configuration conf, String classNameKey,
+    String parametersKey, Class<?> defaultProviderClass, ClassLoader classLoaderForClass,
+    BiFunction<Object, String, Void> initFunction) {
+    String providerClassName = conf.get(classNameKey, defaultProviderClass.getName());
+    String providerParameters = conf.get(parametersKey, "");
+    Pair<String, String> providerCacheKey = new Pair<>(providerClassName, providerParameters);
+    Object provider = keyProviderCache.get(providerCacheKey);
+    if (provider == null) {
+      try {
+        provider =
+          ReflectionUtils.newInstance(classLoaderForClass.loadClass(providerClassName), conf);
+        initFunction.apply(provider, providerParameters);
+      } catch (Exception e) {
+        throw new RuntimeException(e);
       }
       keyProviderCache.put(providerCacheKey, provider);
-      return provider;
-    } catch (Exception e) {
-      throw new RuntimeException(e);
+      LOG.debug("Installed " + providerClassName + " into key provider cache");
     }
+    return provider;
+  }
+
+  public static KeyProvider getKeyProvider(final Configuration conf) {
+    return (KeyProvider) createProvider(conf, HConstants.CRYPTO_KEYPROVIDER_CONF_KEY,
+      HConstants.CRYPTO_KEYPROVIDER_PARAMETERS_KEY, KeyStoreKeyProvider.class,
+      getClassLoaderForClass(KeyProvider.class), (provider, providerParameters) -> {
+        ((KeyProvider) provider).init(providerParameters);
+        return null;
+      });
+  }
+
+  public static ManagedKeyProvider getManagedKeyProvider(final Configuration conf) {
+    return (ManagedKeyProvider) createProvider(conf, HConstants.CRYPTO_MANAGED_KEYPROVIDER_CONF_KEY,
+      HConstants.CRYPTO_MANAGED_KEYPROVIDER_PARAMETERS_KEY, ManagedKeyProvider.class,
+      getClassLoaderForClass(ManagedKeyProvider.class), (provider, providerParameters) -> {
+        ((ManagedKeyProvider) provider).initConfig(conf, providerParameters);
+        return null;
+      });
   }
 
   @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)

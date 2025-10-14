@@ -39,7 +39,9 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.CipherProvider;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
@@ -47,6 +49,7 @@ import org.apache.hadoop.hbase.io.crypto.KeyProvider;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.MockAesKeyProvider;
 import org.apache.hadoop.hbase.io.hfile.FixedFileTrailer;
+import org.apache.hadoop.hbase.keymeta.KeyNamespaceUtil;
 import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
 import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
@@ -92,6 +95,7 @@ public class TestSecurityUtil {
   protected HBaseTestingUtil testUtil;
   protected Path testPath;
   protected ColumnFamilyDescriptor mockFamily;
+  protected TableDescriptor mockTableDescriptor;
   protected ManagedKeyDataCache mockManagedKeyDataCache;
   protected SystemKeyCache mockSystemKeyCache;
   protected FixedFileTrailer mockTrailer;
@@ -99,6 +103,7 @@ public class TestSecurityUtil {
   protected Key testKey;
   protected byte[] testWrappedKey;
   protected Key kekKey;
+  protected String testTableNamespace;
 
   /**
    * Configuration builder for setting up different encryption test scenarios.
@@ -116,8 +121,8 @@ public class TestSecurityUtil {
       return this;
     }
 
-    public TestConfigBuilder withKeyManagement(boolean enabled, boolean localKeyGen) {
-      this.keyManagementEnabled = enabled;
+    public TestConfigBuilder withKeyManagement(boolean localKeyGen) {
+      this.keyManagementEnabled = true;
       this.localKeyGenEnabled = localKeyGen;
       return this;
     }
@@ -152,7 +157,7 @@ public class TestSecurityUtil {
     // Set up real encryption configuration using default AES cipher
     conf.setBoolean(Encryption.CRYPTO_ENABLED_CONF_KEY, true);
     conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, MockAesKeyProvider.class.getName());
-    conf.set(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, "hbase");
+    conf.set(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, HBASE_KEY);
     // Enable key caching
     conf.set(HConstants.CRYPTO_KEYPROVIDER_PARAMETERS_KEY, "true");
     // Use DefaultCipherProvider for real AES encryption functionality
@@ -215,8 +220,8 @@ public class TestSecurityUtil {
   protected void assertEncryptionContextThrowsForWrites(Class<? extends Exception> expectedType,
     String expectedMessage) {
     Exception exception = assertThrows(Exception.class, () -> {
-      SecurityUtil.createEncryptionContext(conf, mockFamily, mockManagedKeyDataCache,
-        mockSystemKeyCache, TEST_NAMESPACE);
+      SecurityUtil.createEncryptionContext(conf, mockTableDescriptor, mockFamily,
+        mockManagedKeyDataCache, mockSystemKeyCache);
     });
     assertTrue("Expected exception type: " + expectedType.getName() + ", but got: "
       + exception.getClass().getName(), expectedType.isInstance(exception));
@@ -244,6 +249,7 @@ public class TestSecurityUtil {
 
     // Setup mocks (only for objects that don't have encryption logic)
     mockFamily = mock(ColumnFamilyDescriptor.class);
+    mockTableDescriptor = mock(TableDescriptor.class);
     mockManagedKeyDataCache = mock(ManagedKeyDataCache.class);
     mockSystemKeyCache = mock(SystemKeyCache.class);
     mockTrailer = mock(FixedFileTrailer.class);
@@ -255,7 +261,12 @@ public class TestSecurityUtil {
     // Configure mocks
     when(mockFamily.getEncryptionType()).thenReturn(AES_CIPHER);
     when(mockFamily.getNameAsString()).thenReturn(TEST_FAMILY);
+    when(mockFamily.getEncryptionKeyNamespace()).thenReturn(null); // Default to null for fallback
+                                                                   // logic
+    when(mockTableDescriptor.getTableName()).thenReturn(TableName.valueOf("test:table"));
     when(mockManagedKeyData.getTheKey()).thenReturn(testKey);
+
+    testTableNamespace = KeyNamespaceUtil.constructKeyNamespace(mockTableDescriptor, mockFamily);
 
     // Set up default encryption config
     setUpEncryptionConfig();
@@ -265,6 +276,12 @@ public class TestSecurityUtil {
     kekKey = keyProvider.getKey(HBASE_KEY);
     Key key = keyProvider.getKey(TEST_DEK_16_BYTE);
     testWrappedKey = EncryptionUtil.wrapKey(conf, null, key, kekKey);
+  }
+
+  private static byte[] createRandomWrappedKey(Configuration conf) throws IOException {
+    Cipher cipher = Encryption.getCipher(conf, "AES");
+    Key key = cipher.getRandomKey();
+    return EncryptionUtil.wrapKey(conf, HBASE_KEY, key);
   }
 
   @RunWith(BlockJUnit4ClassRunner.class)
@@ -327,8 +344,8 @@ public class TestSecurityUtil {
     public void testWithNoEncryptionOnFamily() throws IOException {
       when(mockFamily.getEncryptionType()).thenReturn(null);
 
-      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, mockFamily,
-        mockManagedKeyDataCache, mockSystemKeyCache, "test-namespace");
+      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, mockTableDescriptor,
+        mockFamily, mockManagedKeyDataCache, mockSystemKeyCache);
 
       assertEquals(Encryption.Context.NONE, result);
     }
@@ -342,20 +359,47 @@ public class TestSecurityUtil {
 
     @Test
     public void testWithKeyManagement_LocalKeyGen() throws IOException {
-      configBuilder().withKeyManagement(true, true).apply(conf);
-      setupManagedKeyDataCache(TEST_NAMESPACE, mockManagedKeyData);
+      configBuilder().withKeyManagement(true).apply(conf);
+      setupManagedKeyDataCache(testTableNamespace, mockManagedKeyData);
 
-      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, mockFamily,
-        mockManagedKeyDataCache, mockSystemKeyCache, TEST_NAMESPACE);
+      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, mockTableDescriptor,
+        mockFamily, mockManagedKeyDataCache, mockSystemKeyCache);
 
       verifyContext(result);
     }
 
     @Test
-    public void testWithKeyManagement_NoActiveKey() throws IOException {
-      configBuilder().withKeyManagement(true, false).apply(conf);
-      setupManagedKeyDataCache(TEST_NAMESPACE, ManagedKeyData.KEY_SPACE_GLOBAL, null);
-      assertEncryptionContextThrowsForWrites(IOException.class, "No active key found");
+    public void testWithKeyManagement_NoActiveKey_NoSystemKeyCache() throws IOException {
+      // Test backwards compatibility: when no active key found and system cache is null, should
+      // throw
+      configBuilder().withKeyManagement(false).apply(conf);
+      setupManagedKeyDataCache(testTableNamespace, ManagedKeyData.KEY_SPACE_GLOBAL, null);
+      when(mockFamily.getEncryptionKey()).thenReturn(null);
+
+      // With null system key cache, should still throw IOException
+      Exception exception = assertThrows(IOException.class, () -> {
+        SecurityUtil.createEncryptionContext(conf, mockTableDescriptor, mockFamily,
+          mockManagedKeyDataCache, null);
+      });
+      assertTrue("Should reference system key cache",
+        exception.getMessage().contains("SystemKeyCache"));
+    }
+
+    @Test
+    public void testWithKeyManagement_NoActiveKey_WithSystemKeyCache() throws IOException {
+      // Test backwards compatibility: when no active key found but system cache available, should
+      // work
+      configBuilder().withKeyManagement(false).apply(conf);
+      setupManagedKeyDataCache(testTableNamespace, ManagedKeyData.KEY_SPACE_GLOBAL, null);
+      setupSystemKeyCache(mockManagedKeyData);
+      when(mockFamily.getEncryptionKey()).thenReturn(null);
+
+      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, mockTableDescriptor,
+        mockFamily, mockManagedKeyDataCache, mockSystemKeyCache);
+
+      verifyContext(result);
+      // Should use system key as KEK and generate random DEK
+      assertEquals(mockManagedKeyData, result.getKEKData());
     }
 
     @Test
@@ -365,8 +409,8 @@ public class TestSecurityUtil {
       when(unknownKey.getAlgorithm()).thenReturn(UNKNOWN_CIPHER);
       when(mockManagedKeyData.getTheKey()).thenReturn(unknownKey);
 
-      configBuilder().withKeyManagement(true, true).apply(conf);
-      setupManagedKeyDataCache(TEST_NAMESPACE, mockManagedKeyData);
+      configBuilder().withKeyManagement(true).apply(conf);
+      setupManagedKeyDataCache(testTableNamespace, mockManagedKeyData);
       assertEncryptionContextThrowsForWrites(RuntimeException.class,
         "Cipher 'UNKNOWN_CIPHER' is not");
     }
@@ -377,44 +421,45 @@ public class TestSecurityUtil {
       when(desKey.getAlgorithm()).thenReturn(DES_CIPHER);
       when(mockManagedKeyData.getTheKey()).thenReturn(desKey);
 
-      configBuilder().withKeyManagement(true, true).apply(conf);
-      setupManagedKeyDataCache(TEST_NAMESPACE, mockManagedKeyData);
+      configBuilder().withKeyManagement(true).apply(conf);
+      setupManagedKeyDataCache(testTableNamespace, mockManagedKeyData);
       assertEncryptionContextThrowsForWrites(IllegalStateException.class,
         "Encryption for family 'test-family' configured with type 'AES' but key specifies algorithm 'DES'");
     }
 
     @Test
     public void testWithKeyManagement_UseSystemKeyWithNSSpecificActiveKey() throws IOException {
-      configBuilder().withKeyManagement(true, false).apply(conf);
-      setupManagedKeyDataCache(TEST_NAMESPACE, mockManagedKeyData);
+      configBuilder().withKeyManagement(false).apply(conf);
+      setupManagedKeyDataCache(testTableNamespace, mockManagedKeyData);
       setupSystemKeyCache(mockManagedKeyData);
 
-      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, mockFamily,
-        mockManagedKeyDataCache, mockSystemKeyCache, TEST_NAMESPACE);
+      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, mockTableDescriptor,
+        mockFamily, mockManagedKeyDataCache, mockSystemKeyCache);
 
       verifyContext(result);
     }
 
     @Test
     public void testWithKeyManagement_UseSystemKeyWithoutNSSpecificActiveKey() throws IOException {
-      configBuilder().withKeyManagement(true, false).apply(conf);
-      setupManagedKeyDataCache(TEST_NAMESPACE, ManagedKeyData.KEY_SPACE_GLOBAL, mockManagedKeyData);
+      configBuilder().withKeyManagement(false).apply(conf);
+      setupManagedKeyDataCache(testTableNamespace, ManagedKeyData.KEY_SPACE_GLOBAL,
+        mockManagedKeyData);
       setupSystemKeyCache(mockManagedKeyData);
       when(mockManagedKeyData.getTheKey()).thenReturn(kekKey);
 
-      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, mockFamily,
-        mockManagedKeyDataCache, mockSystemKeyCache, TEST_NAMESPACE);
+      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, mockTableDescriptor,
+        mockFamily, mockManagedKeyDataCache, mockSystemKeyCache);
 
       verifyContext(result);
     }
 
     @Test
     public void testWithoutKeyManagement_WithFamilyProvidedKey() throws Exception {
-      when(mockFamily.getEncryptionKey()).thenReturn(testWrappedKey);
-      configBuilder().withKeyManagement(false, false).apply(conf);
+      byte[] wrappedKey = createRandomWrappedKey(conf);
+      when(mockFamily.getEncryptionKey()).thenReturn(wrappedKey);
 
-      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, mockFamily,
-        mockManagedKeyDataCache, mockSystemKeyCache, TEST_NAMESPACE);
+      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, mockTableDescriptor,
+        mockFamily, mockManagedKeyDataCache, mockSystemKeyCache);
 
       verifyContext(result, false);
     }
@@ -426,20 +471,8 @@ public class TestSecurityUtil {
       byte[] wrappedDESKey = EncryptionUtil.wrapKey(conf, HBASE_KEY, differentKey);
       when(mockFamily.getEncryptionKey()).thenReturn(wrappedDESKey);
 
-      configBuilder().withKeyManagement(false, false).apply(conf);
       assertEncryptionContextThrowsForWrites(IllegalStateException.class,
         "Encryption for family 'test-family' configured with type 'AES' but key specifies algorithm 'DES'");
-    }
-
-    @Test
-    public void testWithoutKeyManagement_WithRandomKeyGeneration() throws IOException {
-      when(mockFamily.getEncryptionKey()).thenReturn(null);
-      configBuilder().withKeyManagement(false, false).apply(conf);
-
-      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, mockFamily,
-        mockManagedKeyDataCache, mockSystemKeyCache, TEST_NAMESPACE);
-
-      verifyContext(result, false);
     }
 
     @Test
@@ -448,6 +481,258 @@ public class TestSecurityUtil {
       setUpEncryptionConfigWithNullCipher();
       assertEncryptionContextThrowsForWrites(IllegalStateException.class,
         "Cipher 'UNKNOWN_CIPHER' is not available");
+    }
+
+    // ---- New backwards compatibility test scenarios ----
+
+    @Test
+    public void testBackwardsCompatibility_Scenario1_FamilyKeyWithKeyManagement()
+      throws IOException {
+      // Scenario 1: Family has encryption key -> use as DEK, latest STK as KEK
+      when(mockFamily.getEncryptionKey()).thenReturn(testWrappedKey);
+      configBuilder().withKeyManagement(false).apply(conf);
+      setupSystemKeyCache(mockManagedKeyData);
+      when(mockManagedKeyData.getTheKey()).thenReturn(kekKey);
+
+      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, mockTableDescriptor,
+        mockFamily, mockManagedKeyDataCache, mockSystemKeyCache);
+
+      verifyContext(result);
+      // Verify that system key is used as KEK
+      assertEquals(mockManagedKeyData, result.getKEKData());
+    }
+
+    @Test
+    public void testBackwardsCompatibility_Scenario2a_ActiveKeyAsDeK() throws IOException {
+      // Scenario 2a: Active key exists, local key gen disabled -> use active key as DEK, latest STK
+      // as KEK
+      configBuilder().withKeyManagement(false).apply(conf);
+      setupManagedKeyDataCache(testTableNamespace, mockManagedKeyData);
+      ManagedKeyData mockSystemKey = mock(ManagedKeyData.class);
+      when(mockSystemKey.getTheKey()).thenReturn(kekKey);
+      setupSystemKeyCache(mockSystemKey);
+      when(mockFamily.getEncryptionKey()).thenReturn(null);
+
+      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, mockTableDescriptor,
+        mockFamily, mockManagedKeyDataCache, mockSystemKeyCache);
+
+      verifyContext(result);
+      // Verify that active key is used as DEK and system key as KEK
+      assertEquals(testKey, result.getKey()); // Active key should be the DEK
+      assertEquals(mockSystemKey, result.getKEKData()); // System key should be the KEK
+    }
+
+    @Test
+    public void testBackwardsCompatibility_Scenario2b_ActiveKeyAsKekWithLocalKeyGen()
+      throws IOException {
+      // Scenario 2b: Active key exists, local key gen enabled -> use active key as KEK, generate
+      // random DEK
+      configBuilder().withKeyManagement(true).apply(conf);
+      setupManagedKeyDataCache(testTableNamespace, mockManagedKeyData);
+      when(mockFamily.getEncryptionKey()).thenReturn(null);
+
+      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, mockTableDescriptor,
+        mockFamily, mockManagedKeyDataCache, mockSystemKeyCache);
+
+      verifyContext(result);
+      // Verify that active key is used as KEK and a generated key as DEK
+      assertNotNull("DEK should be generated", result.getKey());
+      assertEquals(mockManagedKeyData, result.getKEKData()); // Active key should be the KEK
+    }
+
+    @Test
+    public void testBackwardsCompatibility_Scenario3a_NoActiveKeyGenerateLocalKey()
+      throws IOException {
+      // Scenario 3: No active key -> generate random DEK, latest STK as KEK
+      configBuilder().withKeyManagement(false).apply(conf);
+      setupManagedKeyDataCache(TEST_NAMESPACE, ManagedKeyData.KEY_SPACE_GLOBAL, null); // No active
+                                                                                       // key
+      setupSystemKeyCache(mockManagedKeyData);
+      when(mockFamily.getEncryptionKey()).thenReturn(null);
+
+      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, mockTableDescriptor,
+        mockFamily, mockManagedKeyDataCache, mockSystemKeyCache);
+
+      verifyContext(result);
+      // Verify that a random key is generated as DEK and system key as KEK
+      assertNotNull("DEK should be generated", result.getKey());
+      assertEquals(mockManagedKeyData, result.getKEKData()); // System key should be the KEK
+    }
+
+    @Test
+    public void testWithoutKeyManagement_Scenario3b_WithRandomKeyGeneration() throws IOException {
+      when(mockFamily.getEncryptionKey()).thenReturn(null);
+
+      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, mockTableDescriptor,
+        mockFamily, mockManagedKeyDataCache, mockSystemKeyCache);
+
+      verifyContext(result, false);
+      // Here system key with a local key gen, so no namespace is set.
+      assertNull(result.getKeyNamespace());
+    }
+
+    @Test
+    public void testFallbackRule1_CFKeyNamespaceAttribute() throws IOException {
+      // Test Rule 1: Column family has KEY_NAMESPACE attribute
+      String cfKeyNamespace = "cf-specific-namespace";
+      when(mockFamily.getEncryptionKeyNamespace()).thenReturn(cfKeyNamespace);
+      when(mockFamily.getEncryptionKey()).thenReturn(null);
+      configBuilder().withKeyManagement(false).apply(conf);
+
+      // Mock managed key data cache to return active key only for CF namespace
+      setupManagedKeyDataCache(cfKeyNamespace, mockManagedKeyData);
+      setupSystemKeyCache(mockManagedKeyData);
+      when(mockManagedKeyData.getTheKey()).thenReturn(testKey);
+
+      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, mockTableDescriptor,
+        mockFamily, mockManagedKeyDataCache, mockSystemKeyCache);
+
+      verifyContext(result);
+      // Verify that CF-specific namespace was used
+      assertEquals(cfKeyNamespace, result.getKeyNamespace());
+    }
+
+    @Test
+    public void testFallbackRule2_ConstructedNamespace() throws IOException {
+      when(mockFamily.getEncryptionKeyNamespace()).thenReturn(null); // No CF namespace
+      when(mockFamily.getEncryptionKey()).thenReturn(null);
+      setupManagedKeyDataCache(testTableNamespace, mockManagedKeyData);
+      configBuilder().withKeyManagement(false).apply(conf);
+      setupSystemKeyCache(mockManagedKeyData);
+
+      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, mockTableDescriptor,
+        mockFamily, mockManagedKeyDataCache, mockSystemKeyCache);
+
+      verifyContext(result);
+      // Verify that constructed namespace was used
+      assertEquals(testTableNamespace, result.getKeyNamespace());
+    }
+
+    @Test
+    public void testFallbackRule3_TableNameAsNamespace() throws IOException {
+      // Test Rule 3: Use table name as namespace when CF namespace and constructed namespace fail
+      when(mockFamily.getEncryptionKeyNamespace()).thenReturn(null); // No CF namespace
+      when(mockFamily.getEncryptionKey()).thenReturn(null);
+      configBuilder().withKeyManagement(false).apply(conf);
+
+      String tableName = "test:table";
+      when(mockTableDescriptor.getTableName()).thenReturn(TableName.valueOf(tableName));
+
+      // Mock cache to fail for CF and constructed namespace, succeed for table name
+      when(mockManagedKeyDataCache.getActiveEntry(eq(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES),
+        eq(testTableNamespace))).thenReturn(null); // Constructed namespace fails
+      when(mockManagedKeyDataCache.getActiveEntry(eq(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES),
+        eq(tableName))).thenReturn(mockManagedKeyData); // Table name succeeds
+
+      setupSystemKeyCache(mockManagedKeyData);
+      when(mockManagedKeyData.getTheKey()).thenReturn(testKey);
+
+      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, mockTableDescriptor,
+        mockFamily, mockManagedKeyDataCache, mockSystemKeyCache);
+
+      verifyContext(result);
+      // Verify that table name was used as namespace
+      assertEquals(tableName, result.getKeyNamespace());
+    }
+
+    @Test
+    public void testFallbackRule4_GlobalNamespace() throws IOException {
+      // Test Rule 4: Fall back to global namespace when all other rules fail
+      when(mockFamily.getEncryptionKeyNamespace()).thenReturn(null); // No CF namespace
+      when(mockFamily.getEncryptionKey()).thenReturn(null);
+      configBuilder().withKeyManagement(false).apply(conf);
+
+      String tableName = "test:table";
+      when(mockTableDescriptor.getTableName()).thenReturn(TableName.valueOf(tableName));
+
+      // Mock cache to fail for all specific namespaces, succeed only for global
+      when(mockManagedKeyDataCache.getActiveEntry(eq(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES),
+        eq(testTableNamespace))).thenReturn(null); // Constructed namespace fails
+      when(mockManagedKeyDataCache.getActiveEntry(eq(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES),
+        eq(tableName))).thenReturn(null); // Table name fails
+      when(mockManagedKeyDataCache.getActiveEntry(eq(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES),
+        eq(ManagedKeyData.KEY_SPACE_GLOBAL))).thenReturn(mockManagedKeyData); // Global succeeds
+
+      setupSystemKeyCache(mockManagedKeyData);
+      when(mockManagedKeyData.getTheKey()).thenReturn(testKey);
+
+      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, mockTableDescriptor,
+        mockFamily, mockManagedKeyDataCache, mockSystemKeyCache);
+
+      verifyContext(result);
+      // Verify that global namespace was used
+      assertEquals(ManagedKeyData.KEY_SPACE_GLOBAL, result.getKeyNamespace());
+    }
+
+    @Test
+    public void testFallbackRuleOrder() throws IOException {
+      // Test that the rules are tried in the correct order
+      String cfKeyNamespace = "cf-namespace";
+      String tableName = "test:table";
+
+      when(mockFamily.getEncryptionKeyNamespace()).thenReturn(cfKeyNamespace);
+      when(mockFamily.getEncryptionKey()).thenReturn(null);
+      when(mockTableDescriptor.getTableName()).thenReturn(TableName.valueOf(tableName));
+      configBuilder().withKeyManagement(false).apply(conf);
+
+      // Set up mocks so that CF namespace fails but table name would succeed
+      when(mockManagedKeyDataCache.getActiveEntry(eq(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES),
+        eq(cfKeyNamespace))).thenReturn(null); // CF namespace fails
+      when(mockManagedKeyDataCache.getActiveEntry(eq(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES),
+        eq(testTableNamespace))).thenReturn(mockManagedKeyData); // Constructed namespace succeeds
+      when(mockManagedKeyDataCache.getActiveEntry(eq(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES),
+        eq(tableName))).thenReturn(mockManagedKeyData); // Table name would also succeed
+
+      setupSystemKeyCache(mockManagedKeyData);
+      when(mockManagedKeyData.getTheKey()).thenReturn(testKey);
+
+      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, mockTableDescriptor,
+        mockFamily, mockManagedKeyDataCache, mockSystemKeyCache);
+
+      verifyContext(result);
+      // Verify that constructed namespace was used (Rule 2), not table name (Rule 3)
+      assertEquals(testTableNamespace, result.getKeyNamespace());
+    }
+
+    @Test
+    public void testBackwardsCompatibility_Scenario1_FamilyKeyWithoutKeyManagement()
+      throws IOException {
+      // Scenario 1 variation: Family has encryption key but key management disabled -> use as DEK,
+      // no KEK
+      byte[] wrappedKey = createRandomWrappedKey(conf);
+      when(mockFamily.getEncryptionKey()).thenReturn(wrappedKey);
+
+      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, mockTableDescriptor,
+        mockFamily, mockManagedKeyDataCache, mockSystemKeyCache);
+
+      verifyContext(result, false); // No key management, so no KEK data
+    }
+
+    @Test
+    public void testWithKeyManagement_FamilyKey_UnwrapKeyException() throws Exception {
+      // Test for KeyException->IOException wrapping when family has key bytes with key management
+      // enabled
+      // This covers the exception block at lines 103-105 in SecurityUtil.java
+
+      // Create a properly wrapped key first, then corrupt it to cause unwrapping failure
+      Key wrongKek = new SecretKeySpec("bad-kek-16-bytes".getBytes(), AES_CIPHER); // Exactly 16
+                                                                                   // bytes
+      byte[] validWrappedKey = EncryptionUtil.wrapKey(conf, null, testKey, wrongKek);
+
+      when(mockFamily.getEncryptionKey()).thenReturn(validWrappedKey);
+      configBuilder().withKeyManagement(false).apply(conf);
+      setupSystemKeyCache(mockManagedKeyData);
+      when(mockManagedKeyData.getTheKey()).thenReturn(kekKey); // Different KEK for unwrapping
+
+      IOException exception = assertThrows(IOException.class, () -> {
+        SecurityUtil.createEncryptionContext(conf, mockTableDescriptor, mockFamily,
+          mockManagedKeyDataCache, mockSystemKeyCache);
+      });
+
+      // The IOException should wrap a KeyException from the unwrapping process
+      assertNotNull("Exception should have a cause", exception.getCause());
+      assertTrue("Exception cause should be a KeyException",
+        exception.getCause() instanceof KeyException);
     }
 
     // Tests for the second createEncryptionContext method (for reading files)
@@ -473,9 +758,42 @@ public class TestSecurityUtil {
       HBaseClassTestRule.forClass(TestCreateEncryptionContext_ForReads.class);
 
     @Test
-    public void testWithKEKMetadata() throws Exception {
-      setupTrailerMocks(testWrappedKey, TEST_KEK_METADATA, TEST_KEK_CHECKSUM, TEST_NAMESPACE);
-      setupManagedKeyDataCacheEntry(TEST_NAMESPACE, TEST_KEK_METADATA, testWrappedKey,
+    public void testWithKEKMetadata_STKLookupFirstThenManagedKey() throws Exception {
+      // Test new logic: STK lookup happens first, then metadata lookup if STK fails
+      // Set up scenario where both checksum and metadata are available
+      setupTrailerMocks(testWrappedKey, TEST_KEK_METADATA, TEST_KEK_CHECKSUM, null);
+      configBuilder().withKeyManagement(false).apply(conf);
+
+      // STK lookup should succeed and be used (first priority)
+      ManagedKeyData stkKeyData = mock(ManagedKeyData.class);
+      when(stkKeyData.getTheKey()).thenReturn(kekKey);
+      setupSystemKeyCache(TEST_KEK_CHECKSUM, stkKeyData);
+
+      // Also set up managed key cache (but it shouldn't be used since STK succeeds)
+      setupManagedKeyDataCacheEntry(testTableNamespace, TEST_KEK_METADATA, testWrappedKey,
+        mockManagedKeyData);
+      when(mockManagedKeyData.getTheKey())
+        .thenThrow(new RuntimeException("This should not be called"));
+
+      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer,
+        mockManagedKeyDataCache, mockSystemKeyCache);
+
+      verifyContext(result);
+      // Should use STK data, not managed key data
+      assertEquals(stkKeyData, result.getKEKData());
+    }
+
+    @Test
+    public void testWithKEKMetadata_STKFailsThenManagedKeySucceeds() throws Exception {
+      // Test fallback: STK lookup fails, metadata lookup succeeds
+      setupTrailerMocks(testWrappedKey, TEST_KEK_METADATA, TEST_KEK_CHECKSUM, testTableNamespace);
+      configBuilder().withKeyManagement(false).apply(conf);
+
+      // STK lookup should fail (returns null)
+      when(mockSystemKeyCache.getSystemKeyByChecksum(TEST_KEK_CHECKSUM)).thenReturn(null);
+
+      // Managed key lookup should succeed
+      setupManagedKeyDataCacheEntry(testTableNamespace, TEST_KEK_METADATA, testWrappedKey,
         mockManagedKeyData);
       when(mockManagedKeyData.getTheKey()).thenReturn(kekKey);
 
@@ -483,17 +801,27 @@ public class TestSecurityUtil {
         mockManagedKeyDataCache, mockSystemKeyCache);
 
       verifyContext(result);
+      // Should use managed key data since STK failed
+      assertEquals(mockManagedKeyData, result.getKEKData());
     }
 
     @Test
-    public void testWithKeyManagement_KEKMetadataFailure() throws IOException, KeyException {
+    public void testWithKeyManagement_KEKMetadataAndChecksumFailure()
+      throws IOException, KeyException {
+      // Test scenario where both STK lookup and managed key lookup fail
       byte[] keyBytes = "test-encrypted-key".getBytes();
       String kekMetadata = "test-kek-metadata";
+      configBuilder().withKeyManagement(false).apply(conf);
 
       when(mockTrailer.getEncryptionKey()).thenReturn(keyBytes);
       when(mockTrailer.getKEKMetadata()).thenReturn(kekMetadata);
+      when(mockTrailer.getKEKChecksum()).thenReturn(TEST_KEK_CHECKSUM);
       when(mockTrailer.getKeyNamespace()).thenReturn("test-namespace");
 
+      // STK lookup should fail
+      when(mockSystemKeyCache.getSystemKeyByChecksum(TEST_KEK_CHECKSUM)).thenReturn(null);
+
+      // Managed key lookup should also fail
       when(mockManagedKeyDataCache.getEntry(eq(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES),
         eq("test-namespace"), eq(kekMetadata), eq(keyBytes)))
         .thenThrow(new IOException("Key not found"));
@@ -503,13 +831,16 @@ public class TestSecurityUtil {
           mockSystemKeyCache);
       });
 
-      assertTrue(exception.getMessage().contains("Failed to get key data"));
+      assertTrue(
+        exception.getMessage().contains("Failed to get key data for KEK metadata: " + kekMetadata));
+      assertTrue(exception.getCause().getMessage().contains("Key not found"));
     }
 
     @Test
     public void testWithKeyManagement_UseSystemKey() throws IOException {
-      setupTrailerMocks(testWrappedKey, null, TEST_KEK_CHECKSUM, TEST_NAMESPACE);
-      configBuilder().withKeyManagement(true, false).apply(conf);
+      // Test STK lookup by checksum (first priority in new logic)
+      setupTrailerMocks(testWrappedKey, null, TEST_KEK_CHECKSUM, null);
+      configBuilder().withKeyManagement(false).apply(conf);
       setupSystemKeyCache(TEST_KEK_CHECKSUM, mockManagedKeyData);
       when(mockManagedKeyData.getTheKey()).thenReturn(kekKey);
 
@@ -517,38 +848,53 @@ public class TestSecurityUtil {
         mockManagedKeyDataCache, mockSystemKeyCache);
 
       verifyContext(result);
+      assertEquals(mockManagedKeyData, result.getKEKData());
     }
 
     @Test
-    public void testWithKeyManagement_SystemKeyNotFound() throws IOException {
+    public void testBackwardsCompatibility_WithKeyManagement_LatestSystemKeyNotFound()
+      throws IOException {
+      // Test when both STK lookup by checksum fails and latest system key is null
       byte[] keyBytes = "test-encrypted-key".getBytes();
-      long kekChecksum = 12345L;
 
       when(mockTrailer.getEncryptionKey()).thenReturn(keyBytes);
-      when(mockTrailer.getKEKMetadata()).thenReturn(null);
-      when(mockTrailer.getKEKChecksum()).thenReturn(kekChecksum);
-      when(mockTrailer.getKeyNamespace()).thenReturn("test-namespace");
 
       // Enable key management
       conf.setBoolean(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, true);
 
-      when(mockSystemKeyCache.getSystemKeyByChecksum(kekChecksum)).thenReturn(null);
+      // Both checksum lookup and latest system key lookup should fail
+      when(mockSystemKeyCache.getLatestSystemKey()).thenReturn(null);
 
       IOException exception = assertThrows(IOException.class, () -> {
         SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer, mockManagedKeyDataCache,
           mockSystemKeyCache);
       });
 
-      assertTrue(exception.getMessage().contains("Failed to get system key"));
+      assertTrue(exception.getMessage().contains("Failed to get latest system key"));
+    }
+
+    @Test
+    public void testBackwardsCompatibility_FallbackToLatestSystemKey() throws IOException {
+      // Test fallback to latest system key when both checksum and metadata are unavailable
+      setupTrailerMocks(testWrappedKey, null, 0L, TEST_NAMESPACE); // No checksum, no metadata
+      configBuilder().withKeyManagement(false).apply(conf);
+
+      ManagedKeyData latestSystemKey = mock(ManagedKeyData.class);
+      when(latestSystemKey.getTheKey()).thenReturn(kekKey);
+      when(mockSystemKeyCache.getLatestSystemKey()).thenReturn(latestSystemKey);
+
+      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer,
+        mockManagedKeyDataCache, mockSystemKeyCache);
+
+      verifyContext(result);
+      assertEquals(latestSystemKey, result.getKEKData());
     }
 
     @Test
     public void testWithoutKeyManagemntEnabled() throws IOException {
-      when(mockTrailer.getEncryptionKey()).thenReturn(testWrappedKey);
+      byte[] wrappedKey = createRandomWrappedKey(conf);
+      when(mockTrailer.getEncryptionKey()).thenReturn(wrappedKey);
       when(mockTrailer.getKEKMetadata()).thenReturn(null);
-      when(mockTrailer.getKeyNamespace()).thenReturn(TEST_NAMESPACE);
-      configBuilder().withKeyManagement(false, false).apply(conf);
-      // TODO: Get the key provider to return kek when getKeys() is called.
 
       Encryption.Context result = SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer,
         mockManagedKeyDataCache, mockSystemKeyCache);
@@ -557,12 +903,23 @@ public class TestSecurityUtil {
     }
 
     @Test
+    public void testKeyManagementBackwardsCompatibility() throws Exception {
+      when(mockTrailer.getEncryptionKey()).thenReturn(testWrappedKey);
+      when(mockSystemKeyCache.getLatestSystemKey()).thenReturn(mockManagedKeyData);
+      when(mockManagedKeyData.getTheKey()).thenReturn(kekKey);
+      configBuilder().withKeyManagement(false).apply(conf);
+
+      Encryption.Context result = SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer,
+        mockManagedKeyDataCache, mockSystemKeyCache);
+
+      verifyContext(result, true);
+    }
+
+    @Test
     public void testWithoutKeyManagement_UnwrapFailure() throws IOException {
       byte[] invalidKeyBytes = INVALID_KEY_DATA.getBytes();
       when(mockTrailer.getEncryptionKey()).thenReturn(invalidKeyBytes);
       when(mockTrailer.getKEKMetadata()).thenReturn(null);
-      when(mockTrailer.getKeyNamespace()).thenReturn(TEST_NAMESPACE);
-      configBuilder().withKeyManagement(false, false).apply(conf);
 
       Exception exception = assertThrows(Exception.class, () -> {
         SecurityUtil.createEncryptionContext(conf, testPath, mockTrailer, mockManagedKeyDataCache,
@@ -579,11 +936,10 @@ public class TestSecurityUtil {
       throws Exception {
       // Create a DES key and wrap it first with working configuration
       Key desKey = new SecretKeySpec("test-key-16-byte".getBytes(), "DES");
-      byte[] wrappedDESKey = EncryptionUtil.wrapKey(conf, "hbase", desKey);
+      byte[] wrappedDESKey = EncryptionUtil.wrapKey(conf, HBASE_KEY, desKey);
 
       when(mockTrailer.getEncryptionKey()).thenReturn(wrappedDESKey);
       when(mockTrailer.getKEKMetadata()).thenReturn(null);
-      when(mockTrailer.getKeyNamespace()).thenReturn("test-namespace");
 
       // Disable key management and use null cipher provider
       conf.setBoolean(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, false);
@@ -634,7 +990,8 @@ public class TestSecurityUtil {
           null);
       });
 
-      assertTrue(exception.getMessage().contains("SystemKeyCache is null"));
+      assertTrue(exception.getMessage()
+        .contains("SystemKeyCache can't be null when using key management feature"));
     }
   }
 
@@ -655,17 +1012,13 @@ public class TestSecurityUtil {
     }
 
     @Test
-    public void test() throws IOException {
-    }
-
-    @Test
     public void testWithDEK() throws IOException, KeyException {
-      // This test is challenging because we need to create a scenario where unwrapping fails
-      // with either KeyException or IOException. We'll create invalid wrapped data.
-      byte[] invalidKeyBytes = INVALID_WRAPPED_KEY_DATA.getBytes();
+      byte[] wrappedKey = createRandomWrappedKey(conf);
+      MockAesKeyProvider keyProvider = (MockAesKeyProvider) Encryption.getKeyProvider(conf);
+      keyProvider.clearKeys(); // Let a new key be instantiated and cause a unwrap failure.
 
-      setupTrailerMocks(invalidKeyBytes, TEST_KEK_METADATA, TEST_KEK_CHECKSUM, TEST_NAMESPACE);
-      setupManagedKeyDataCacheEntry(TEST_NAMESPACE, TEST_KEK_METADATA, invalidKeyBytes,
+      setupTrailerMocks(wrappedKey, null, 0L, null);
+      setupManagedKeyDataCacheEntry(TEST_NAMESPACE, TEST_KEK_METADATA, wrappedKey,
         mockManagedKeyData);
 
       IOException exception = assertThrows(IOException.class, () -> {
@@ -673,8 +1026,7 @@ public class TestSecurityUtil {
           mockSystemKeyCache);
       });
 
-      assertTrue(exception.getMessage().contains("Failed to unwrap key with KEK checksum: "
-        + TEST_KEK_CHECKSUM + ", metadata: " + TEST_KEK_METADATA));
+      assertTrue(exception.getMessage().contains("Key was not successfully unwrapped"));
       // The root cause should be some kind of parsing/unwrapping exception
       assertNotNull(exception.getCause());
     }
@@ -684,8 +1036,8 @@ public class TestSecurityUtil {
       // Use invalid key bytes to trigger unwrapping failure
       byte[] invalidKeyBytes = INVALID_SYSTEM_KEY_DATA.getBytes();
 
-      setupTrailerMocks(invalidKeyBytes, null, TEST_KEK_CHECKSUM, TEST_NAMESPACE);
-      configBuilder().withKeyManagement(true, false).apply(conf);
+      setupTrailerMocks(invalidKeyBytes, null, TEST_KEK_CHECKSUM, null);
+      configBuilder().withKeyManagement(false).apply(conf);
       setupSystemKeyCache(TEST_KEK_CHECKSUM, mockManagedKeyData);
 
       IOException exception = assertThrows(IOException.class, () -> {

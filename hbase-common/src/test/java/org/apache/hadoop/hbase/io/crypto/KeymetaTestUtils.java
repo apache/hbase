@@ -116,6 +116,14 @@ public class KeymetaTestUtils {
   public static void addEntry(Configuration conf, int keyLen, KeyStore store, String alias,
     String custodian, boolean withPasswordOnAlias, Map<Bytes, Bytes> cust2key,
     Map<Bytes, String> cust2alias, Properties passwordFileProps) throws Exception {
+    addEntry(conf, keyLen, store, alias, custodian, withPasswordOnAlias, cust2key, cust2alias,
+      passwordFileProps, ManagedKeyData.KEY_SPACE_GLOBAL);
+  }
+
+  public static void addEntry(Configuration conf, int keyLen, KeyStore store, String alias,
+    String custodian, boolean withPasswordOnAlias, Map<Bytes, Bytes> cust2key,
+    Map<Bytes, String> cust2alias, Properties passwordFileProps, String namespace)
+    throws Exception {
     Preconditions.checkArgument(keyLen == 256 || keyLen == 128, "Key length must be 256 or 128");
     byte[] key =
       MessageDigest.getInstance(keyLen == 256 ? "SHA-256" : "MD5").digest(Bytes.toBytes(alias));
@@ -124,8 +132,18 @@ public class KeymetaTestUtils {
     store.setEntry(alias, new KeyStore.SecretKeyEntry(new SecretKeySpec(key, "AES")),
       new KeyStore.PasswordProtection(withPasswordOnAlias ? PASSWORD.toCharArray() : new char[0]));
     String encCust = Base64.getEncoder().encodeToString(custodian.getBytes());
-    String confKey = HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + encCust + "." + "alias";
-    conf.set(confKey, alias);
+
+    // Use new format: PREFIX.{encodedCust}.{namespace}.alias
+    // For global namespace use "*", for custom namespace use actual namespace name
+    String namespaceKey = ManagedKeyData.KEY_SPACE_GLOBAL.equals(namespace) ? "*" : namespace;
+    String aliasConfKey =
+      HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + encCust + "." + namespaceKey + ".alias";
+    String activeStatusConfKey = HConstants.CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX + encCust + "."
+      + namespaceKey + ".active";
+
+    conf.set(aliasConfKey, alias);
+    conf.setBoolean(activeStatusConfKey, true);
+
     if (passwordFileProps != null) {
       passwordFileProps.setProperty(alias, PASSWORD);
     }

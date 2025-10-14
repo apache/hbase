@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -50,47 +49,64 @@ public class TestKeymetaAdminShell extends ManagedKeyTestBase implements RubyShe
   @Before
   public void setUp() throws Exception {
     final Configuration conf = TEST_UTIL.getConfiguration();
-    conf.set("zookeeper.session.timeout", "6000000");
-    conf.set("hbase.rpc.timeout", "6000000");
-    conf.set("hbase.rpc.read.timeout", "6000000");
-    conf.set("hbase.rpc.write.timeout", "6000000");
-    conf.set("hbase.client.operation.timeout", "6000000");
-    conf.set("hbase.client.scanner.timeout.period", "6000000");
-    conf.set("hbase.ipc.client.socket.timeout.connect", "6000000");
-    conf.set("hbase.ipc.client.socket.timeout.read", "6000000");
-    conf.set("hbase.ipc.client.socket.timeout.write", "6000000");
-    conf.set("hbase.master.start.timeout.localHBaseCluster", "6000000");
-    conf.set("hbase.master.init.timeout.localHBaseCluster", "6000000");
-    conf.set("hbase.client.sync.wait.timeout.msec", "6000000");
-    Map<Bytes, Bytes> cust2key = new HashMap<>();
-    Map<Bytes, String> cust2alias = new HashMap<>();
+    // Enable to be able to debug without timing out.
+    // conf.set("zookeeper.session.timeout", "6000000");
+    // conf.set("hbase.rpc.timeout", "6000000");
+    // conf.set("hbase.rpc.read.timeout", "6000000");
+    // conf.set("hbase.rpc.write.timeout", "6000000");
+    // conf.set("hbase.client.operation.timeout", "6000000");
+    // conf.set("hbase.client.scanner.timeout.period", "6000000");
+    // conf.set("hbase.ipc.client.socket.timeout.connect", "6000000");
+    // conf.set("hbase.ipc.client.socket.timeout.read", "6000000");
+    // conf.set("hbase.ipc.client.socket.timeout.write", "6000000");
+    // conf.set("hbase.master.start.timeout.localHBaseCluster", "6000000");
+    // conf.set("hbase.master.init.timeout.localHBaseCluster", "6000000");
+    // conf.set("hbase.client.sync.wait.timeout.msec", "6000000");
+    // conf.set("hbase.client.retries.number", "1000");
+    Map<Bytes, Bytes> cust_to_key = new HashMap<>();
+    Map<Bytes, String> cust_to_alias = new HashMap<>();
     String clusterId = UUID.randomUUID().toString();
     String SYSTEM_KEY_ALIAS = "system-key-alias";
     String CUST1 = "cust1";
     String CUST1_ALIAS = "cust1-alias";
+    String CF_NAMESPACE = "test_table/f";
     String GLOB_CUST_ALIAS = "glob-cust-alias";
-    String providerParams = KeymetaTestUtils.setupTestKeyStore(TEST_UTIL, true, true, store -> {
-      Properties p = new Properties();
-      try {
-        KeymetaTestUtils.addEntry(conf, 128, store, CUST1_ALIAS, CUST1, true, cust2key, cust2alias,
-          p);
-        KeymetaTestUtils.addEntry(conf, 128, store, GLOB_CUST_ALIAS, "*", true, cust2key,
-          cust2alias, p);
-        KeymetaTestUtils.addEntry(conf, 128, store, SYSTEM_KEY_ALIAS, clusterId, true, cust2key,
-          cust2alias, p);
-      } catch (Exception e) {
-        throw new RuntimeException(e);
-      }
-      return p;
-    });
-    // byte[] systemKey = cust2key.get(new Bytes(clusterId.getBytes())).get();
-    conf.set(HConstants.CRYPTO_MANAGED_KEY_STORE_SYSTEM_KEY_NAME_CONF_KEY, SYSTEM_KEY_ALIAS);
-    conf.set(HConstants.CRYPTO_KEYPROVIDER_PARAMETERS_KEY, providerParams);
+    String CUSTOM_NAMESPACE = "test_namespace";
+    String CUSTOM_NAMESPACE_ALIAS = "custom-namespace-alias";
+    String CUSTOM_GLOBAL_NAMESPACE = "test_global_namespace";
+    String CUSTOM_GLOBAL_NAMESPACE_ALIAS = "custom-global-namespace-alias";
+    if (isWithKeyManagement()) {
+      String providerParams = KeymetaTestUtils.setupTestKeyStore(TEST_UTIL, true, true, store -> {
+        Properties p = new Properties();
+        try {
+          KeymetaTestUtils.addEntry(conf, 128, store, CUST1_ALIAS, CUST1, true, cust_to_key,
+            cust_to_alias, p);
+          KeymetaTestUtils.addEntry(conf, 128, store, CUST1_ALIAS, CUST1, true, cust_to_key,
+            cust_to_alias, p, CF_NAMESPACE);
+          KeymetaTestUtils.addEntry(conf, 128, store, GLOB_CUST_ALIAS, "*", true, cust_to_key,
+            cust_to_alias, p);
+          KeymetaTestUtils.addEntry(conf, 128, store, SYSTEM_KEY_ALIAS, clusterId, true,
+            cust_to_key, cust_to_alias, p);
+          KeymetaTestUtils.addEntry(conf, 128, store, CUSTOM_NAMESPACE_ALIAS, CUST1, true,
+            cust_to_key, cust_to_alias, p, CUSTOM_NAMESPACE);
+          KeymetaTestUtils.addEntry(conf, 128, store, CUSTOM_GLOBAL_NAMESPACE_ALIAS, "*", true,
+            cust_to_key, cust_to_alias, p, CUSTOM_GLOBAL_NAMESPACE);
+        } catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+        return p;
+      });
+      // byte[] systemKey = cust2key.get(new Bytes(clusterId.getBytes())).get();
+      conf.set(HConstants.CRYPTO_MANAGED_KEY_STORE_SYSTEM_KEY_NAME_CONF_KEY, SYSTEM_KEY_ALIAS);
+      conf.set(HConstants.CRYPTO_MANAGED_KEYPROVIDER_PARAMETERS_KEY, providerParams);
+    }
     RubyShellTest.setUpConfig(this);
     super.setUp();
     RubyShellTest.setUpJRubyRuntime(this);
     RubyShellTest.doTestSetup(this);
+    addCustodianRubyEnvVars(jruby, "GLOB_CUST", "*");
     addCustodianRubyEnvVars(jruby, "CUST1", CUST1);
+    jruby.put("$TEST", this);
   }
 
   @Override
@@ -122,6 +138,6 @@ public class TestKeymetaAdminShell extends ManagedKeyTestBase implements RubyShe
     String custodian) {
     jruby.put("$" + custId, custodian);
     jruby.put("$" + custId + "_ALIAS", custodian + "-alias");
-    jruby.put("$" + custId + "_ENCODED", Base64.getEncoder().encodeToString(custodian.getBytes()));
+    jruby.put("$" + custId + "_ENCODED", ManagedKeyProvider.encodeToStr(custodian.getBytes()));
   }
 }
