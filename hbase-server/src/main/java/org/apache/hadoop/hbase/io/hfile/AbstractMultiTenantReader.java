@@ -464,7 +464,13 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
         return true;
       }
       SectionBloomState bloomState = getOrLoadSectionBloomState(cacheKey, lease);
-      if (bloomState == null || !bloomState.hasDeleteFamilyBloom()) {
+      if (bloomState == null) {
+        return true;
+      }
+      if (bloomState.getDeleteFamilyCnt() == 0) {
+        return false;
+      }
+      if (!bloomState.hasDeleteFamilyBloom()) {
         return true;
       }
       return bloomState.passesDeleteFamilyBloom(row, rowOffset, rowLen);
@@ -1240,6 +1246,12 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
     }
 
     private boolean switchToSection(byte[] sectionId) throws IOException {
+      if (
+        currentTenantSectionId != null && currentScanner != null && currentSectionLease != null
+          && Bytes.equals(currentTenantSectionId, sectionId)
+      ) {
+        return true;
+      }
       SectionReaderLease lease = getSectionReader(sectionId);
       if (lease == null) {
         return false;
