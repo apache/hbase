@@ -23,6 +23,7 @@ import static org.apache.hadoop.hbase.io.crypto.ManagedKeyState.DISABLED;
 import static org.apache.hadoop.hbase.io.crypto.ManagedKeyState.FAILED;
 import static org.apache.hadoop.hbase.io.crypto.ManagedKeyState.INACTIVE;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
@@ -30,6 +31,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -287,17 +289,13 @@ public class TestKeymetaAdminImpl {
 
     /**
      * Test rotateSTK when a new key is detected.
-     * Note: This test validates the basic flow but cannot fully test the success path
-     * because SystemKeyManager requires actual file system setup with system keys.
-     * The real success scenario would be:
+     * Now that we can mock SystemKeyManager via master.getSystemKeyManager(),
+     * we can properly test the success scenario:
      * 1. SystemKeyManager.rotateSystemKeyIfChanged() returns non-null (new key detected)
      * 2. Master gets list of online region servers
      * 3. Master makes parallel RPC calls to all region servers
      * 4. All region servers successfully rebuild their system key cache
      * 5. Method returns true
-     *
-     * For comprehensive testing of the success path, an integration test with actual
-     * file system and key setup would be needed.
      */
     @Test
     public void testRotateSTKWithNewKey() throws Exception {
@@ -306,6 +304,8 @@ public class TestKeymetaAdminImpl {
         mock(org.apache.hadoop.hbase.master.MasterServices.class);
       org.apache.hadoop.hbase.master.ServerManager mockServerManager =
         mock(org.apache.hadoop.hbase.master.ServerManager.class);
+      org.apache.hadoop.hbase.master.SystemKeyManager mockSystemKeyManager =
+        mock(org.apache.hadoop.hbase.master.SystemKeyManager.class);
       AsyncClusterConnection mockConnection = mock(AsyncClusterConnection.class);
       AsyncRegionServerAdmin mockRsAdmin1 = mock(AsyncRegionServerAdmin.class);
       AsyncRegionServerAdmin mockRsAdmin2 = mock(AsyncRegionServerAdmin.class);
@@ -314,6 +314,11 @@ public class TestKeymetaAdminImpl {
       when(mockMaster.getKeyManagementService()).thenReturn(mockMaster);
       when(mockMaster.getFileSystem()).thenReturn(mockFileSystem);
       when(mockMaster.getConfiguration()).thenReturn(conf);
+
+      // Mock SystemKeyManager to return a new key (non-null)
+      ManagedKeyData mockNewKey = mock(ManagedKeyData.class);
+      when(mockMaster.getSystemKeyManager()).thenReturn(mockSystemKeyManager);
+      when(mockSystemKeyManager.rotateSystemKeyIfChanged()).thenReturn(mockNewKey);
 
       ServerName rs1 = ServerName.valueOf("rs1", 16020, System.currentTimeMillis());
       ServerName rs2 = ServerName.valueOf("rs2", 16020, System.currentTimeMillis());
@@ -332,57 +337,64 @@ public class TestKeymetaAdminImpl {
       when(mockRsAdmin2.managedKeysRotateSTK(any(AdminProtos.ManagedKeysRotateSTKRequest.class)))
         .thenReturn(java.util.concurrent.CompletableFuture.completedFuture(rsResponse));
 
-      org.apache.hadoop.hbase.master.MasterFileSystem mockMasterFS =
-        mock(org.apache.hadoop.hbase.master.MasterFileSystem.class);
-      when(mockMaster.getMasterFileSystem()).thenReturn(mockMasterFS);
-      org.apache.hadoop.hbase.ClusterId clusterId = new org.apache.hadoop.hbase.ClusterId();
-      when(mockMasterFS.getClusterId()).thenReturn(clusterId);
-
       KeymetaAdminImplForTest admin = new KeymetaAdminImplForTest(mockMaster, keymetaAccessor);
 
-      // Since we can't easily mock the SystemKeyManager to return a new key without
-      // setting up the entire file system and key infrastructure, we expect this to
-      // throw an exception when trying to access system keys from the file system.
-      // This validates that the method can be invoked and the mocking setup is correct.
-      assertThrows("Expected exception due to missing file system setup for keys",
-        Exception.class, () -> admin.rotateSTK());
+      // Call rotateSTK - should return true since new key was detected
+      boolean result = admin.rotateSTK();
+
+      // Verify the result
+      assertTrue("rotateSTK should return true when new key is detected", result);
+
+      // Verify that rotateSystemKeyIfChanged was called
+      verify(mockSystemKeyManager).rotateSystemKeyIfChanged();
+
+      // Verify that both region servers received the rotation request
+      verify(mockRsAdmin1).managedKeysRotateSTK(any(AdminProtos.ManagedKeysRotateSTKRequest.class));
+      verify(mockRsAdmin2).managedKeysRotateSTK(any(AdminProtos.ManagedKeysRotateSTKRequest.class));
     }
 
     /**
      * Test rotateSTK when no key change is detected.
-     * Note: This test cannot fully validate the no-change scenario because
-     * SystemKeyManager requires actual file system setup.
-     * The expected behavior when no key change is detected:
+     * Now that we can mock SystemKeyManager, we can properly test the no-change scenario:
      * 1. SystemKeyManager.rotateSystemKeyIfChanged() returns null
      * 2. Method returns false immediately without calling any region servers
      * 3. No RPC calls are made to region servers
-     *
-     * For full testing of this scenario, an integration test would be needed.
      */
     @Test
     public void testRotateSTKNoChange() throws Exception {
       // Setup mocks for MasterServices
       org.apache.hadoop.hbase.master.MasterServices mockMaster =
         mock(org.apache.hadoop.hbase.master.MasterServices.class);
+      org.apache.hadoop.hbase.master.SystemKeyManager mockSystemKeyManager =
+        mock(org.apache.hadoop.hbase.master.SystemKeyManager.class);
+      org.apache.hadoop.hbase.master.ServerManager mockServerManager =
+        mock(org.apache.hadoop.hbase.master.ServerManager.class);
 
       // Mock KeyManagementService - required by KeyManagementBase constructor
       when(mockMaster.getKeyManagementService()).thenReturn(mockMaster);
       when(mockMaster.getFileSystem()).thenReturn(mockFileSystem);
       when(mockMaster.getConfiguration()).thenReturn(conf);
 
-      org.apache.hadoop.hbase.master.MasterFileSystem mockMasterFS =
-        mock(org.apache.hadoop.hbase.master.MasterFileSystem.class);
-      when(mockMaster.getMasterFileSystem()).thenReturn(mockMasterFS);
-      org.apache.hadoop.hbase.ClusterId clusterId = new org.apache.hadoop.hbase.ClusterId();
-      when(mockMasterFS.getClusterId()).thenReturn(clusterId);
+      // Mock SystemKeyManager to return null (no key change)
+      when(mockMaster.getSystemKeyManager()).thenReturn(mockSystemKeyManager);
+      when(mockSystemKeyManager.rotateSystemKeyIfChanged()).thenReturn(null);
+
+      // Setup ServerManager (should not be called in this scenario)
+      when(mockMaster.getServerManager()).thenReturn(mockServerManager);
 
       KeymetaAdminImplForTest admin = new KeymetaAdminImplForTest(mockMaster, keymetaAccessor);
 
-      // Since we can't mock SystemKeyManager without file system setup,
-      // this will throw an exception. In a real scenario with proper setup,
-      // if no key change is detected, the method would return false.
-      assertThrows("Expected exception due to missing file system setup",
-        Exception.class, () -> admin.rotateSTK());
+      // Call rotateSTK - should return false since no key change was detected
+      boolean result = admin.rotateSTK();
+
+      // Verify the result
+      assertFalse("rotateSTK should return false when no key change is detected", result);
+
+      // Verify that rotateSystemKeyIfChanged was called
+      verify(mockSystemKeyManager).rotateSystemKeyIfChanged();
+
+      // Verify that getOnlineServersList was never called (short-circuit behavior)
+      verify(mockServerManager, never()).getOnlineServersList();
     }
 
     @Test

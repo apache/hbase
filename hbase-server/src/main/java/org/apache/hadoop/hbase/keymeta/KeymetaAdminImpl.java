@@ -29,7 +29,6 @@ import org.apache.hadoop.hbase.client.AsyncRegionServerAdmin;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
 import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.master.SystemKeyManager;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -85,8 +84,7 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
     MasterServices master = (MasterServices) getServer();
 
     LOG.info("Checking for System Key rotation");
-    SystemKeyManager systemKeyManager = new SystemKeyManager(master);
-    ManagedKeyData newKey = systemKeyManager.rotateSystemKeyIfChanged();
+    ManagedKeyData newKey = master.getSystemKeyManager().rotateSystemKeyIfChanged();
 
     if (newKey == null) {
       LOG.info("No change in System Key detected");

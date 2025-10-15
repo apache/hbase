@@ -1640,6 +1640,10 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     return this.walManager;
   }
 
+  public SystemKeyManager getSystemKeyManager() {
+    return this.systemKeyManager;
+  }
+
   @Override
   public SplitWALManager getSplitWALManager() {
     return splitWALManager;

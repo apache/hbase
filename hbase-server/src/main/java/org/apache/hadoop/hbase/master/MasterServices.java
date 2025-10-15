@@ -87,6 +87,9 @@ public interface MasterServices extends Server, KeyManagementService {
   /** Returns Master's WALs {@link MasterWalManager} utility class. */
   MasterWalManager getMasterWalManager();
 
+  /** Returns Master's {@link SystemKeyManager} instance. */
+  SystemKeyManager getSystemKeyManager();
+
   /** Returns Master's {@link ServerManager} instance. */
   ServerManager getServerManager();
 
