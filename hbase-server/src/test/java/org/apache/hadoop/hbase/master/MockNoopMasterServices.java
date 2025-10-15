@@ -156,6 +156,11 @@ public class MockNoopMasterServices implements MasterServices {
   }
 
   @Override
+  public SystemKeyManager getSystemKeyManager() {
+    return null;
+  }
+
+  @Override
   public MasterCoprocessorHost getMasterCoprocessorHost() {
     return null;
   }

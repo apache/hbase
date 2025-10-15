@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.keymeta;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
@@ -45,6 +46,9 @@ import org.junit.experimental.categories.Category;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
+/**
+ * Tests the admin API via both RPC and local calls.
+ */
 @Category({ MasterTests.class, MediumTests.class })
 public class TestManagedKeymeta extends ManagedKeyTestBase {
 
@@ -140,6 +144,55 @@ public class TestManagedKeymeta extends ManagedKeyTestBase {
 
     IOException exception = assertThrows(IOException.class, () -> {
       client.getManagedKeys("cust", "namespace");
+    });
+
+    assertTrue(exception.getMessage().contains("Network error"));
+  }
+
+  @Test
+  public void testRotateSTKLocal() throws Exception {
+    HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
+    KeymetaAdmin keymetaAdmin = master.getKeymetaAdmin();
+    doTestRotateSTK(keymetaAdmin);
+  }
+
+  @Test
+  public void testRotateSTKOverRPC() throws Exception {
+    KeymetaAdmin adminClient = new KeymetaAdminClient(TEST_UTIL.getConnection());
+    doTestRotateSTK(adminClient);
+  }
+
+  private void doTestRotateSTK(KeymetaAdmin adminClient) throws IOException {
+    // Call rotateSTK - since no actual system key change has occurred,
+    // this should return false (no rotation performed)
+    boolean result = adminClient.rotateSTK();
+
+    // Verify the method executes successfully
+    // In a real deployment, this would return true if a new system key was detected
+    // and successfully propagated to all region servers
+    assertFalse("rotateSTK should return false when no key change is detected", result);
+
+    // Call it again to ensure idempotency
+    boolean result2 = adminClient.rotateSTK();
+    assertFalse("rotateSTK should consistently return false when no key change", result2);
+  }
+
+  @Test
+  public void testRotateSTKWithServiceException() throws Exception {
+    ManagedKeysProtos.ManagedKeysService.BlockingInterface mockStub =
+      mock(ManagedKeysProtos.ManagedKeysService.BlockingInterface.class);
+
+    ServiceException networkError = new ServiceException("Network error");
+    networkError.initCause(new IOException("Network error"));
+    when(mockStub.rotateSTK(any(), any())).thenThrow(networkError);
+
+    KeymetaAdminClient client = new KeymetaAdminClient(TEST_UTIL.getConnection());
+    Field stubField = KeymetaAdminClient.class.getDeclaredField("stub");
+    stubField.setAccessible(true);
+    stubField.set(client, mockStub);
+
+    IOException exception = assertThrows(IOException.class, () -> {
+      client.rotateSTK();
     });
 
     assertTrue(exception.getMessage().contains("Network error"));

@@ -92,7 +92,7 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
       return false;
     }
 
-    LOG.info("New System Key detected, propagating to region servers");
+    LOG.info("System Key rotation detected, refreshing caches on all region servers");
     // Get all online region servers
     List<ServerName> regionServers =
       new ArrayList<>(master.getServerManager().getOnlineServersList());
