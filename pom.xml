@@ -894,7 +894,7 @@
     <maven.warbucks.version>1.1.0</maven.warbucks.version>
     <maven.project.info.report.version>3.1.2</maven.project.info.report.version>
     <maven-owasp-plugin.version>12.1.0</maven-owasp-plugin.version>
-    <os.maven.version>1.5.0.Final</os.maven.version>
+    <os.maven.version>1.7.1</os.maven.version>
     <findbugs-annotations.version>1.3.9-1</findbugs-annotations.version>
     <spotbugs.version>4.7.3</spotbugs.version>
     <spotbugs.maven.version>4.7.2.1</spotbugs.maven.version>
