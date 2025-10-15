@@ -397,6 +397,94 @@ public class TestKeymetaAdminImpl {
       verify(mockServerManager, never()).getOnlineServersList();
     }
 
+    /**
+     * Test rotateSTK when multiple region servers fail.
+     * Verifies that all failed server names are included in the exception message.
+     */
+    @Test
+    public void testRotateSTKWithMultipleFailedServers() throws Exception {
+      // Setup mocks for MasterServices
+      org.apache.hadoop.hbase.master.MasterServices mockMaster =
+        mock(org.apache.hadoop.hbase.master.MasterServices.class);
+      org.apache.hadoop.hbase.master.ServerManager mockServerManager =
+        mock(org.apache.hadoop.hbase.master.ServerManager.class);
+      org.apache.hadoop.hbase.master.SystemKeyManager mockSystemKeyManager =
+        mock(org.apache.hadoop.hbase.master.SystemKeyManager.class);
+      AsyncClusterConnection mockConnection = mock(AsyncClusterConnection.class);
+      AsyncRegionServerAdmin mockRsAdmin1 = mock(AsyncRegionServerAdmin.class);
+      AsyncRegionServerAdmin mockRsAdmin2 = mock(AsyncRegionServerAdmin.class);
+      AsyncRegionServerAdmin mockRsAdmin3 = mock(AsyncRegionServerAdmin.class);
+
+      // Mock KeyManagementService - required by KeyManagementBase constructor
+      when(mockMaster.getKeyManagementService()).thenReturn(mockMaster);
+      when(mockMaster.getFileSystem()).thenReturn(mockFileSystem);
+      when(mockMaster.getConfiguration()).thenReturn(conf);
+
+      // Mock SystemKeyManager to return a new key (non-null)
+      ManagedKeyData mockNewKey = mock(ManagedKeyData.class);
+      when(mockMaster.getSystemKeyManager()).thenReturn(mockSystemKeyManager);
+      when(mockSystemKeyManager.rotateSystemKeyIfChanged()).thenReturn(mockNewKey);
+
+      ServerName rs1 = ServerName.valueOf("rs1.example.com", 16020, System.currentTimeMillis());
+      ServerName rs2 = ServerName.valueOf("rs2.example.com", 16020, System.currentTimeMillis());
+      ServerName rs3 = ServerName.valueOf("rs3.example.com", 16020, System.currentTimeMillis());
+      java.util.List<ServerName> regionServers = Arrays.asList(rs1, rs2, rs3);
+
+      when(mockMaster.getServerManager()).thenReturn(mockServerManager);
+      when(mockServerManager.getOnlineServersList()).thenReturn(regionServers);
+      when(mockMaster.getAsyncClusterConnection()).thenReturn(mockConnection);
+      when(mockConnection.getRegionServerAdmin(rs1)).thenReturn(mockRsAdmin1);
+      when(mockConnection.getRegionServerAdmin(rs2)).thenReturn(mockRsAdmin2);
+      when(mockConnection.getRegionServerAdmin(rs3)).thenReturn(mockRsAdmin3);
+
+      AdminProtos.ManagedKeysRotateSTKResponse successResponse =
+        AdminProtos.ManagedKeysRotateSTKResponse.newBuilder().setRotated(true).build();
+
+      // RS1 succeeds
+      when(mockRsAdmin1.managedKeysRotateSTK(any(AdminProtos.ManagedKeysRotateSTKRequest.class)))
+        .thenReturn(java.util.concurrent.CompletableFuture.completedFuture(successResponse));
+
+      // RS2 fails with IOException
+      java.util.concurrent.CompletableFuture<AdminProtos.ManagedKeysRotateSTKResponse> failedFuture2 =
+        new java.util.concurrent.CompletableFuture<>();
+      failedFuture2.completeExceptionally(new IOException("Connection timeout to rs2"));
+      when(mockRsAdmin2.managedKeysRotateSTK(any(AdminProtos.ManagedKeysRotateSTKRequest.class)))
+        .thenReturn(failedFuture2);
+
+      // RS3 fails with ServiceException
+      java.util.concurrent.CompletableFuture<AdminProtos.ManagedKeysRotateSTKResponse> failedFuture3 =
+        new java.util.concurrent.CompletableFuture<>();
+      failedFuture3.completeExceptionally(
+        new org.apache.hbase.thirdparty.com.google.protobuf.ServiceException("Server error on rs3"));
+      when(mockRsAdmin3.managedKeysRotateSTK(any(AdminProtos.ManagedKeysRotateSTKRequest.class)))
+        .thenReturn(failedFuture3);
+
+      KeymetaAdminImplForTest admin = new KeymetaAdminImplForTest(mockMaster, keymetaAccessor);
+
+      // Call rotateSTK and expect IOException
+      IOException ex = assertThrows(IOException.class, () -> admin.rotateSTK());
+
+      // Verify the exception message contains both failed server names
+      String exceptionMessage = ex.getMessage();
+      assertTrue("Exception message should contain 'Failed to propagate STK rotation'",
+        exceptionMessage.contains("Failed to propagate STK rotation to region servers"));
+      assertTrue("Exception message should contain rs2 server name: " + exceptionMessage,
+        exceptionMessage.contains("rs2.example.com"));
+      assertTrue("Exception message should contain rs3 server name: " + exceptionMessage,
+        exceptionMessage.contains("rs3.example.com"));
+      // rs1 succeeded, so it should NOT be in the exception message
+      assertFalse("Exception message should NOT contain rs1 server name: " + exceptionMessage,
+        exceptionMessage.contains("rs1.example.com"));
+
+      // Verify that rotateSystemKeyIfChanged was called
+      verify(mockSystemKeyManager).rotateSystemKeyIfChanged();
+
+      // Verify that all region servers received the rotation request
+      verify(mockRsAdmin1).managedKeysRotateSTK(any(AdminProtos.ManagedKeysRotateSTKRequest.class));
+      verify(mockRsAdmin2).managedKeysRotateSTK(any(AdminProtos.ManagedKeysRotateSTKRequest.class));
+      verify(mockRsAdmin3).managedKeysRotateSTK(any(AdminProtos.ManagedKeysRotateSTKRequest.class));
+    }
+
     @Test
     public void testRotateSTKNotOnMaster() throws Exception {
       // Create a non-master server mock
