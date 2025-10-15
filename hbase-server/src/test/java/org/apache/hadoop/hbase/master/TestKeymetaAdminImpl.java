@@ -75,6 +75,7 @@ import org.junit.runners.Parameterized.Parameters;
 import org.junit.runners.Suite;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.EmptyMsg;
 
 @RunWith(Suite.class)
 @Suite.SuiteClasses({ TestKeymetaAdminImpl.TestWhenDisabled.class,
@@ -326,11 +327,10 @@ public class TestKeymetaAdminImpl {
       when(mockConnection.getRegionServerAdmin(rs1)).thenReturn(mockRsAdmin1);
       when(mockConnection.getRegionServerAdmin(rs2)).thenReturn(mockRsAdmin2);
 
-      AdminProtos.ManagedKeysRotateSTKResponse rsResponse =
-        AdminProtos.ManagedKeysRotateSTKResponse.newBuilder().setRotated(true).build();
-      when(mockRsAdmin1.managedKeysRotateSTK(any(AdminProtos.ManagedKeysRotateSTKRequest.class)))
+      EmptyMsg rsResponse = EmptyMsg.getDefaultInstance();
+      when(mockRsAdmin1.refreshSystemKeyCache(any(AdminProtos.RefreshSystemKeyCacheRequest.class)))
         .thenReturn(java.util.concurrent.CompletableFuture.completedFuture(rsResponse));
-      when(mockRsAdmin2.managedKeysRotateSTK(any(AdminProtos.ManagedKeysRotateSTKRequest.class)))
+      when(mockRsAdmin2.refreshSystemKeyCache(any(AdminProtos.RefreshSystemKeyCacheRequest.class)))
         .thenReturn(java.util.concurrent.CompletableFuture.completedFuture(rsResponse));
 
       KeymetaAdminImplForTest admin = new KeymetaAdminImplForTest(mockMaster, keymetaAccessor);
@@ -345,8 +345,10 @@ public class TestKeymetaAdminImpl {
       verify(mockSystemKeyManager).rotateSystemKeyIfChanged();
 
       // Verify that both region servers received the rotation request
-      verify(mockRsAdmin1).managedKeysRotateSTK(any(AdminProtos.ManagedKeysRotateSTKRequest.class));
-      verify(mockRsAdmin2).managedKeysRotateSTK(any(AdminProtos.ManagedKeysRotateSTKRequest.class));
+      verify(mockRsAdmin1)
+        .refreshSystemKeyCache(any(AdminProtos.RefreshSystemKeyCacheRequest.class));
+      verify(mockRsAdmin2)
+        .refreshSystemKeyCache(any(AdminProtos.RefreshSystemKeyCacheRequest.class));
     }
 
     /**
@@ -432,29 +434,26 @@ public class TestKeymetaAdminImpl {
       when(mockConnection.getRegionServerAdmin(rs2)).thenReturn(mockRsAdmin2);
       when(mockConnection.getRegionServerAdmin(rs3)).thenReturn(mockRsAdmin3);
 
-      AdminProtos.ManagedKeysRotateSTKResponse successResponse =
-        AdminProtos.ManagedKeysRotateSTKResponse.newBuilder().setRotated(true).build();
+      EmptyMsg successResponse = EmptyMsg.getDefaultInstance();
 
       // RS1 succeeds
-      when(mockRsAdmin1.managedKeysRotateSTK(any(AdminProtos.ManagedKeysRotateSTKRequest.class)))
+      when(mockRsAdmin1.refreshSystemKeyCache(any(AdminProtos.RefreshSystemKeyCacheRequest.class)))
         .thenReturn(java.util.concurrent.CompletableFuture.completedFuture(successResponse));
 
       // RS2 fails with IOException
-      java.util.concurrent.CompletableFuture<
-        AdminProtos.ManagedKeysRotateSTKResponse> failedFuture2 =
-          new java.util.concurrent.CompletableFuture<>();
+      java.util.concurrent.CompletableFuture<EmptyMsg> failedFuture2 =
+        new java.util.concurrent.CompletableFuture<>();
       failedFuture2.completeExceptionally(new IOException("Connection timeout to rs2"));
-      when(mockRsAdmin2.managedKeysRotateSTK(any(AdminProtos.ManagedKeysRotateSTKRequest.class)))
+      when(mockRsAdmin2.refreshSystemKeyCache(any(AdminProtos.RefreshSystemKeyCacheRequest.class)))
         .thenReturn(failedFuture2);
 
       // RS3 fails with ServiceException
-      java.util.concurrent.CompletableFuture<
-        AdminProtos.ManagedKeysRotateSTKResponse> failedFuture3 =
-          new java.util.concurrent.CompletableFuture<>();
+      java.util.concurrent.CompletableFuture<EmptyMsg> failedFuture3 =
+        new java.util.concurrent.CompletableFuture<>();
       failedFuture3
         .completeExceptionally(new org.apache.hbase.thirdparty.com.google.protobuf.ServiceException(
           "Server error on rs3"));
-      when(mockRsAdmin3.managedKeysRotateSTK(any(AdminProtos.ManagedKeysRotateSTKRequest.class)))
+      when(mockRsAdmin3.refreshSystemKeyCache(any(AdminProtos.RefreshSystemKeyCacheRequest.class)))
         .thenReturn(failedFuture3);
 
       KeymetaAdminImplForTest admin = new KeymetaAdminImplForTest(mockMaster, keymetaAccessor);
@@ -464,8 +463,8 @@ public class TestKeymetaAdminImpl {
 
       // Verify the exception message contains both failed server names
       String exceptionMessage = ex.getMessage();
-      assertTrue("Exception message should contain 'Failed to propagate STK rotation'",
-        exceptionMessage.contains("Failed to propagate STK rotation to region servers"));
+      assertTrue("Exception message should contain 'Failed to initiate System Key cache refresh'",
+        exceptionMessage.contains("Failed to initiate System Key cache refresh on region servers"));
       assertTrue("Exception message should contain rs2 server name: " + exceptionMessage,
         exceptionMessage.contains("rs2.example.com"));
       assertTrue("Exception message should contain rs3 server name: " + exceptionMessage,
@@ -478,9 +477,12 @@ public class TestKeymetaAdminImpl {
       verify(mockSystemKeyManager).rotateSystemKeyIfChanged();
 
       // Verify that all region servers received the rotation request
-      verify(mockRsAdmin1).managedKeysRotateSTK(any(AdminProtos.ManagedKeysRotateSTKRequest.class));
-      verify(mockRsAdmin2).managedKeysRotateSTK(any(AdminProtos.ManagedKeysRotateSTKRequest.class));
-      verify(mockRsAdmin3).managedKeysRotateSTK(any(AdminProtos.ManagedKeysRotateSTKRequest.class));
+      verify(mockRsAdmin1)
+        .refreshSystemKeyCache(any(AdminProtos.RefreshSystemKeyCacheRequest.class));
+      verify(mockRsAdmin2)
+        .refreshSystemKeyCache(any(AdminProtos.RefreshSystemKeyCacheRequest.class));
+      verify(mockRsAdmin3)
+        .refreshSystemKeyCache(any(AdminProtos.RefreshSystemKeyCacheRequest.class));
     }
 
     @Test

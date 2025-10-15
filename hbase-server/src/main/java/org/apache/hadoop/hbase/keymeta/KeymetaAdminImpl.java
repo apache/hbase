@@ -35,6 +35,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.EmptyMsg;
 
 @InterfaceAudience.Private
 public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdmin {
@@ -98,15 +99,15 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
       new ArrayList<>(master.getServerManager().getOnlineServersList());
 
     // Create all futures in parallel
-    List<CompletableFuture<AdminProtos.ManagedKeysRotateSTKResponse>> futures = new ArrayList<>();
-    AdminProtos.ManagedKeysRotateSTKRequest request =
-      AdminProtos.ManagedKeysRotateSTKRequest.newBuilder().build();
+    List<CompletableFuture<EmptyMsg>> futures = new ArrayList<>();
+    AdminProtos.RefreshSystemKeyCacheRequest request =
+      AdminProtos.RefreshSystemKeyCacheRequest.newBuilder().build();
 
     for (ServerName serverName : regionServers) {
-      LOG.info("Initiating managedKeysRotateSTK on region server: {}", serverName);
+      LOG.info("Initiating refreshSystemKeyCache on region server: {}", serverName);
       AsyncRegionServerAdmin admin =
         master.getAsyncClusterConnection().getRegionServerAdmin(serverName);
-      futures.add(admin.managedKeysRotateSTK(request));
+      futures.add(admin.refreshSystemKeyCache(request));
     }
 
     // Wait for all futures and collect failures
@@ -115,16 +116,16 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
       ServerName serverName = regionServers.get(i);
       try {
         FutureUtils.get(futures.get(i));
-        LOG.info("managedKeysRotateSTK succeeded on region server: {}", serverName);
+        LOG.info("refreshSystemKeyCache succeeded on region server: {}", serverName);
       } catch (Exception e) {
-        LOG.warn("managedKeysRotateSTK failed on region server: {}", serverName, e);
+        LOG.warn("refreshSystemKeyCache failed on region server: {}", serverName, e);
         failedServers.add(serverName);
       }
     }
 
     if (!failedServers.isEmpty()) {
-      throw new IOException("Failed to initiate System Key cache refresh on region servers: " +
-        failedServers);
+      throw new IOException(
+        "Failed to initiate System Key cache refresh on region servers: " + failedServers);
     }
 
     LOG.info("System Key rotation and cache refreshcompleted successfully");

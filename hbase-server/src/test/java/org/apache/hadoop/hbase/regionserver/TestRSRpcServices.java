@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.doThrow;
@@ -49,6 +50,7 @@ import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.EmptyMsg;
 
 /**
  * Test parts of {@link RSRpcServices}
@@ -86,11 +88,11 @@ public class TestRSRpcServices {
   }
 
   /**
-   * Test the managedKeysRotateSTK RPC method that is used to rebuild the system key cache on region
-   * servers when a system key rotation has occurred.
+   * Test the refreshSystemKeyCache RPC method that is used to rebuild the system key cache on
+   * region servers when a system key rotation has occurred.
    */
   @Test
-  public void testManagedKeysRotateSTK() throws Exception {
+  public void testRefreshSystemKeyCache() throws Exception {
     // Create mocks
     HRegionServer mockServer = mock(HRegionServer.class);
     Configuration conf = HBaseConfiguration.create();
@@ -107,28 +109,27 @@ public class TestRSRpcServices {
     RSRpcServices rpcServices = new RSRpcServices(mockServer);
 
     // Create request
-    AdminProtos.ManagedKeysRotateSTKRequest request =
-      AdminProtos.ManagedKeysRotateSTKRequest.newBuilder().build();
+    AdminProtos.RefreshSystemKeyCacheRequest request =
+      AdminProtos.RefreshSystemKeyCacheRequest.newBuilder().build();
     RpcController controller = mock(RpcController.class);
 
     // Call the RPC method
-    AdminProtos.ManagedKeysRotateSTKResponse response =
-      rpcServices.managedKeysRotateSTK(controller, request);
+    EmptyMsg response = rpcServices.refreshSystemKeyCache(controller, request);
 
-    // Verify the response
-    assertTrue("Response should indicate rotation was successful", response.getRotated());
+    // Verify the response is not null
+    assertNotNull("Response should not be null", response);
 
     // Verify that rebuildSystemKeyCache was called on the server
     verify(mockServer).rebuildSystemKeyCache();
 
-    LOG.info("managedKeysRotateSTK test completed successfully");
+    LOG.info("refreshSystemKeyCache test completed successfully");
   }
 
   /**
-   * Test that managedKeysRotateSTK throws ServiceException when server is not online
+   * Test that refreshSystemKeyCache throws ServiceException when server is not online
    */
   @Test
-  public void testManagedKeysRotateSTKWhenServerStopped() throws Exception {
+  public void testRefreshSystemKeyCacheWhenServerStopped() throws Exception {
     // Create mocks
     HRegionServer mockServer = mock(HRegionServer.class);
     Configuration conf = HBaseConfiguration.create();
@@ -145,13 +146,13 @@ public class TestRSRpcServices {
     RSRpcServices rpcServices = new RSRpcServices(mockServer);
 
     // Create request
-    AdminProtos.ManagedKeysRotateSTKRequest request =
-      AdminProtos.ManagedKeysRotateSTKRequest.newBuilder().build();
+    AdminProtos.RefreshSystemKeyCacheRequest request =
+      AdminProtos.RefreshSystemKeyCacheRequest.newBuilder().build();
     RpcController controller = mock(RpcController.class);
 
     // Call the RPC method and expect ServiceException
     try {
-      rpcServices.managedKeysRotateSTK(controller, request);
+      rpcServices.refreshSystemKeyCache(controller, request);
       fail("Expected ServiceException when server is stopped");
     } catch (ServiceException e) {
       // Expected
@@ -162,10 +163,10 @@ public class TestRSRpcServices {
   }
 
   /**
-   * Test that managedKeysRotateSTK throws ServiceException when rebuildSystemKeyCache fails
+   * Test that refreshSystemKeyCache throws ServiceException when rebuildSystemKeyCache fails
    */
   @Test
-  public void testManagedKeysRotateSTKWhenRebuildFails() throws Exception {
+  public void testRefreshSystemKeyCacheWhenRebuildFails() throws Exception {
     // Create mocks
     HRegionServer mockServer = mock(HRegionServer.class);
     Configuration conf = HBaseConfiguration.create();
@@ -186,13 +187,13 @@ public class TestRSRpcServices {
     RSRpcServices rpcServices = new RSRpcServices(mockServer);
 
     // Create request
-    AdminProtos.ManagedKeysRotateSTKRequest request =
-      AdminProtos.ManagedKeysRotateSTKRequest.newBuilder().build();
+    AdminProtos.RefreshSystemKeyCacheRequest request =
+      AdminProtos.RefreshSystemKeyCacheRequest.newBuilder().build();
     RpcController controller = mock(RpcController.class);
 
     // Call the RPC method and expect ServiceException
     try {
-      rpcServices.managedKeysRotateSTK(controller, request);
+      rpcServices.refreshSystemKeyCache(controller, request);
       fail("Expected ServiceException when rebuildSystemKeyCache fails");
     } catch (ServiceException e) {
       // Expected

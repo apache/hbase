@@ -186,12 +186,11 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetServerIn
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetServerInfoResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetStoreFileRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetStoreFileResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ManagedKeysRotateSTKRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ManagedKeysRotateSTKResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.OpenRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.OpenRegionRequest.RegionOpenInfo;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.OpenRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.OpenRegionResponse.RegionOpeningState;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RefreshSystemKeyCacheRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RemoteProcedureRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryResponse;
@@ -236,6 +235,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanReques
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionLoad;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.EmptyMsg;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameBytesPair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameInt64Pair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier;
@@ -4061,22 +4061,22 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
   }
 
   /**
-   * Rebuilds the system key cache on the region server. This is called by the master when a system
-   * key rotation has occurred.
+   * Refreshes the system key cache on the region server by rebuilding it with the latest keys. This
+   * is called by the master when a system key rotation has occurred.
    * @param controller the RPC controller
    * @param request    the request
-   * @return response indicating success
+   * @return empty response
    */
   @Override
   @QosPriority(priority = HConstants.ADMIN_QOS)
-  public ManagedKeysRotateSTKResponse managedKeysRotateSTK(final RpcController controller,
-    final ManagedKeysRotateSTKRequest request) throws ServiceException {
+  public EmptyMsg refreshSystemKeyCache(final RpcController controller,
+    final RefreshSystemKeyCacheRequest request) throws ServiceException {
     try {
       checkOpen();
       requestCount.increment();
-      LOG.info("Received ManagedKeysRotateSTK request, rebuilding system key cache");
+      LOG.info("Received RefreshSystemKeyCache request, rebuilding system key cache");
       server.rebuildSystemKeyCache();
-      return ManagedKeysRotateSTKResponse.newBuilder().setRotated(true).build();
+      return EmptyMsg.getDefaultInstance();
     } catch (IOException ie) {
       LOG.error("Failed to rebuild system key cache", ie);
       throw new ServiceException(ie);

@@ -712,8 +712,8 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
   }
 
   @Override
-  public AdminProtos.ManagedKeysRotateSTKResponse managedKeysRotateSTK(RpcController controller,
-    AdminProtos.ManagedKeysRotateSTKRequest request) throws ServiceException {
+  public HBaseProtos.EmptyMsg refreshSystemKeyCache(RpcController controller,
+    AdminProtos.RefreshSystemKeyCacheRequest request) throws ServiceException {
     return null;
   }
 

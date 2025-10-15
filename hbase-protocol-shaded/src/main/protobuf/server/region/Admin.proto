@@ -342,11 +342,7 @@ message ClearSlowLogResponses {
   required bool is_cleaned = 1;
 }
 
-message ManagedKeysRotateSTKRequest {
-}
-
-message ManagedKeysRotateSTKResponse {
-  required bool rotated = 1;
+message RefreshSystemKeyCacheRequest {
 }
 
 service AdminService {
@@ -428,6 +424,6 @@ service AdminService {
   rpc GetCachedFilesList(GetCachedFilesListRequest)
     returns(GetCachedFilesListResponse);
 
-  rpc ManagedKeysRotateSTK(ManagedKeysRotateSTKRequest)
-    returns(ManagedKeysRotateSTKResponse);
+  rpc RefreshSystemKeyCache(RefreshSystemKeyCacheRequest)
+    returns(EmptyMsg);
 }
