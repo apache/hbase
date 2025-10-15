@@ -8708,7 +8708,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   /**
-   * This is used to invalidate the entire row cache after bulk loading.
+   * This is used to invalidate the row cache of the bulk-loaded region.
    */
   public void increaseRowCacheSeqNum() {
     this.rowCacheSeqNum.incrementAndGet();
