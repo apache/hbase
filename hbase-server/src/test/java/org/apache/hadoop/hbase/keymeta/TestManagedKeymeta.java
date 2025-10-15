@@ -166,15 +166,13 @@ public class TestManagedKeymeta extends ManagedKeyTestBase {
     // Call rotateSTK - since no actual system key change has occurred,
     // this should return false (no rotation performed)
     boolean result = adminClient.rotateSTK();
-
-    // Verify the method executes successfully
-    // In a real deployment, this would return true if a new system key was detected
-    // and successfully propagated to all region servers
     assertFalse("rotateSTK should return false when no key change is detected", result);
 
-    // Call it again to ensure idempotency
-    boolean result2 = adminClient.rotateSTK();
-    assertFalse("rotateSTK should consistently return false when no key change", result2);
+    MockManagedKeyProvider managedKeyProvider =
+      (MockManagedKeyProvider) Encryption.getManagedKeyProvider(TEST_UTIL.getConfiguration());
+    managedKeyProvider.setMultikeyGenMode(true);
+    result = adminClient.rotateSTK();
+    assertTrue("rotateSTK should return true when a new key is detected", result);
   }
 
   @Test

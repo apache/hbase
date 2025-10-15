@@ -84,15 +84,15 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
     }
     MasterServices master = (MasterServices) getServer();
 
-    LOG.info("Checking for System Key rotation");
+    LOG.info("Checking if System Key is rotated");
     ManagedKeyData newKey = master.getSystemKeyManager().rotateSystemKeyIfChanged();
 
     if (newKey == null) {
-      LOG.info("No change in System Key detected");
+      LOG.info("No change in System Key is detected");
       return false;
     }
 
-    LOG.info("System Key rotation detected, refreshing caches on all region servers");
+    LOG.info("System Key is rotated, initiating cache refresh on all region servers");
     // Get all online region servers
     List<ServerName> regionServers =
       new ArrayList<>(master.getServerManager().getOnlineServersList());
@@ -115,18 +115,19 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
       ServerName serverName = regionServers.get(i);
       try {
         FutureUtils.get(futures.get(i));
-        LOG.info("Successfully called managedKeysRotateSTK on region server: {}", serverName);
+        LOG.info("managedKeysRotateSTK succeeded on region server: {}", serverName);
       } catch (Exception e) {
-        LOG.error("Failed to call managedKeysRotateSTK on region server: {}", serverName, e);
+        LOG.warn("managedKeysRotateSTK failed on region server: {}", serverName, e);
         failedServers.add(serverName);
       }
     }
 
     if (!failedServers.isEmpty()) {
-      throw new IOException("Failed to propagate STK rotation to region servers: " + failedServers);
+      throw new IOException("Failed to initiate System Key cache refresh on region servers: " +
+        failedServers);
     }
 
-    LOG.info("System Key rotation completed successfully on all region servers");
+    LOG.info("System Key rotation and cache refreshcompleted successfully");
     return true;
   }
 }
