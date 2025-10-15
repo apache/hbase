@@ -19,11 +19,18 @@ package org.apache.hadoop.hbase.keymeta;
 
 import java.io.IOException;
 import java.security.KeyException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.client.AsyncRegionServerAdmin;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
+import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.master.SystemKeyManager;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -72,17 +79,14 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
   @Override
   public boolean rotateSTK() throws IOException {
     assertKeyManagementEnabled();
-    if (!(getServer() instanceof org.apache.hadoop.hbase.master.MasterServices)) {
+    if (!(getServer() instanceof MasterServices)) {
       throw new IOException("rotateSTK can only be called on master");
     }
-    org.apache.hadoop.hbase.master.MasterServices master =
-      (org.apache.hadoop.hbase.master.MasterServices) getServer();
+    MasterServices master = (MasterServices) getServer();
 
     LOG.info("Checking for System Key rotation");
-    org.apache.hadoop.hbase.master.SystemKeyManager systemKeyManager =
-      new org.apache.hadoop.hbase.master.SystemKeyManager(master);
-    org.apache.hadoop.hbase.io.crypto.ManagedKeyData newKey =
-      systemKeyManager.rotateSystemKeyIfChanged();
+    SystemKeyManager systemKeyManager = new SystemKeyManager(master);
+    ManagedKeyData newKey = systemKeyManager.rotateSystemKeyIfChanged();
 
     if (newKey == null) {
       LOG.info("No change in System Key detected");
@@ -91,28 +95,37 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
 
     LOG.info("New System Key detected, propagating to region servers");
     // Get all online region servers
-    java.util.List<org.apache.hadoop.hbase.ServerName> regionServers =
-      new java.util.ArrayList<>(master.getServerManager().getOnlineServersList());
+    List<ServerName> regionServers = new ArrayList<>(master.getServerManager().getOnlineServersList());
 
-    // Call each region server to rebuild its system key cache
-    for (org.apache.hadoop.hbase.ServerName serverName : regionServers) {
+    // Create all futures in parallel
+    List<CompletableFuture<AdminProtos.RotateSTKResponse>> futures = new ArrayList<>();
+    AdminProtos.RotateSTKRequest request = AdminProtos.RotateSTKRequest.newBuilder().build();
+
+    for (ServerName serverName : regionServers) {
+      LOG.info("Initiating rotateSTK on region server: {}", serverName);
+      AsyncRegionServerAdmin admin = master.getAsyncClusterConnection().getRegionServerAdmin(serverName);
+      futures.add(admin.rotateSTK(request));
+    }
+
+    // Wait for all futures and collect failures
+    List<ServerName> failedServers = new ArrayList<>();
+    for (int i = 0; i < regionServers.size(); i++) {
+      ServerName serverName = regionServers.get(i);
       try {
-        LOG.info("Calling rotateSTK on region server: {}", serverName);
-        org.apache.hadoop.hbase.client.AsyncRegionServerAdmin admin =
-          master.getAsyncClusterConnection().getRegionServerAdmin(serverName);
-        org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RotateSTKRequest request =
-          org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RotateSTKRequest
-            .newBuilder().build();
-        FutureUtils.get(admin.rotateSTK(request));
+        FutureUtils.get(futures.get(i));
         LOG.info("Successfully called rotateSTK on region server: {}", serverName);
       } catch (Exception e) {
         LOG.error("Failed to call rotateSTK on region server: {}", serverName, e);
-        throw new IOException("Failed to propagate STK rotation to region server: " + serverName,
-          e);
+        failedServers.add(serverName);
       }
     }
 
-    LOG.info("System Key rotation completed successfully");
+    if (!failedServers.isEmpty()) {
+      throw new IOException("Failed to propagate STK rotation to region servers: " + failedServers);
+    }
+
+    LOG.info("System Key rotation completed successfully on all region servers");
     return true;
   }
 }
+

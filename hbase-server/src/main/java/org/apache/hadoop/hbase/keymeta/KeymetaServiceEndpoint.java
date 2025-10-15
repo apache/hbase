@@ -31,8 +31,8 @@ import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.GetManagedKeysResponse;
-import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.KeymetaAdminRotateSTKRequest;
-import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.KeymetaAdminRotateSTKResponse;
+import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.KeymetaRotateSTKRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.KeymetaRotateSTKResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.ManagedKeysRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.ManagedKeysResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.ManagedKeysService;
@@ -143,11 +143,11 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
      * @param done       The callback to be invoked with the response.
      */
     @Override
-    public void keymetaAdminRotateSTK(RpcController controller, KeymetaAdminRotateSTKRequest request,
-      RpcCallback<KeymetaAdminRotateSTKResponse> done) {
+    public void rotateSTK(RpcController controller, KeymetaRotateSTKRequest request,
+      RpcCallback<KeymetaRotateSTKResponse> done) {
       try {
         boolean rotated = master.getKeymetaAdmin().rotateSTK();
-        done.run(KeymetaAdminRotateSTKResponse.newBuilder().setRotated(rotated).build());
+        done.run(KeymetaRotateSTKResponse.newBuilder().setRotated(rotated).build());
       } catch (IOException e) {
         CoprocessorRpcUtils.setControllerException(controller, e);
       }
