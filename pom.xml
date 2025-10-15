@@ -2863,6 +2863,12 @@
                   <includes>**/js/bootstrap.min.js</includes>
                 </artifactItem>
                 <artifactItem>
+                  <groupId>org.webjars.npm</groupId>
+                  <artifactId>bootswatch</artifactId>
+                  <version>${site.bootswatch.version}</version>
+                  <includes>**/litera/bootstrap.min.css</includes>
+                </artifactItem>
+                <artifactItem>
                   <groupId>org.webjars</groupId>
                   <artifactId>popper.js</artifactId>
                   <version>${site.popperjs.version}</version>
@@ -2888,25 +2894,6 @@
                 </artifactItem>
               </artifactItems>
               <outputDirectory>${project.build.directory}</outputDirectory>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>com.googlecode.maven-download-plugin</groupId>
-        <artifactId>download-maven-plugin</artifactId>
-        <version>${maven-download-plugin.version}</version>
-        <executions>
-          <execution>
-            <id>download-litera-bootstrap-theme</id>
-            <goals>
-              <goal>wget</goal>
-            </goals>
-            <phase>pre-site</phase>
-            <configuration>
-              <url>https://stackpath.bootstrapcdn.com/bootswatch/${site.bootswatch.version}/litera/bootstrap.min.css</url>
-              <outputDirectory>${project.build.directory}/site/css/themes/litera</outputDirectory>
-              <outputFileName>bootstrap.min.css</outputFileName>
             </configuration>
           </execution>
         </executions>
@@ -3071,6 +3058,13 @@
                   <targetPath>${project.build.directory}/site/js</targetPath>
                   <includes>
                     <include>bootstrap.min.js</include>
+                  </includes>
+                </resource>
+                <resource>
+                  <directory>${project.build.directory}/META-INF/resources/webjars/bootswatch/${site.bootswatch.version}/dist/litera</directory>
+                  <targetPath>${project.build.directory}/site/css/themes/litera</targetPath>
+                  <includes>
+                    <include>bootstrap.min.css</include>
                   </includes>
                 </resource>
                 <resource>
