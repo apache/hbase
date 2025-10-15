@@ -96,8 +96,9 @@ public class BackupObserver implements RegionCoprocessor, RegionObserver {
     try (Connection connection = ConnectionFactory.createConnection(cfg);
       BackupSystemTable tbl = new BackupSystemTable(connection)) {
       Set<TableName> fullyBackedUpTables = tbl.getTablesIncludedInBackups();
+      Map<TableName, Long> continuousBackupTableSet = tbl.getContinuousBackupTableSet();
 
-      if (fullyBackedUpTables.contains(tableName)) {
+      if (fullyBackedUpTables.contains(tableName) && !continuousBackupTableSet.containsKey(tableName)) {
         tbl.registerBulkLoad(tableName, region.getEncodedNameAsBytes(), cfToHFilePaths);
       } else {
         if (LOG.isTraceEnabled()) {
