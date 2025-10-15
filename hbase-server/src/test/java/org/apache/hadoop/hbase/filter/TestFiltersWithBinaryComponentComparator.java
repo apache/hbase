@@ -21,7 +21,6 @@ import static org.hamcrest.Matchers.isA;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import org.apache.hbase.thirdparty.com.google.common.base.Throwables;;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -51,6 +50,8 @@ import org.junit.rules.ExpectedException;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 
 @Category(MediumTests.class)
 public class TestFiltersWithBinaryComponentComparator {
@@ -153,7 +154,8 @@ public class TestFiltersWithBinaryComponentComparator {
     ht.close();
   }
 
-  @Rule public ExpectedException thrown = ExpectedException.none();
+  @Rule
+  public ExpectedException thrown = ExpectedException.none();
 
   @Test
   public void testThrowsExceptionOnOffsetOutOfBounds() {
@@ -162,7 +164,8 @@ public class TestFiltersWithBinaryComponentComparator {
     byte[] componentValue = new byte[] { (byte) 'A' };
     int offsetValue = 10;
     byte[] valueTooShortForOffset = new byte[offsetValue];
-    BinaryComponentComparator comparator = new BinaryComponentComparator(componentValue, offsetValue);
+    BinaryComponentComparator comparator =
+      new BinaryComponentComparator(componentValue, offsetValue);
     comparator.compareTo(valueTooShortForOffset);
   }
 
@@ -172,13 +175,14 @@ public class TestFiltersWithBinaryComponentComparator {
    */
   @Test
   public void testOutOfBoundsExceptionIsNotRetryable() throws IOException {
-    Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), family, Integer.MAX_VALUE);
+    Table table =
+      TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), family, Integer.MAX_VALUE);
 
     // ColumnValueFilter with BinaryComponentComparator with offset 10
     int offsetValue = 10;
     BinaryComponentComparator comparator = new BinaryComponentComparator(new byte[1], offsetValue);
-    ColumnValueFilter columnValueFilter = new ColumnValueFilter(
-      family, qf, CompareOperator.EQUAL, comparator);
+    ColumnValueFilter columnValueFilter =
+      new ColumnValueFilter(family, qf, CompareOperator.EQUAL, comparator);
     Scan scan = new Scan().setFilter(columnValueFilter);
 
     // Insert a row with column value length >= comparator offset
@@ -190,12 +194,12 @@ public class TestFiltersWithBinaryComponentComparator {
 
     // Scan should throw DoNotRetryIOException due to incompatible value length
     try (ResultScanner scanner = table.getScanner(scan)) {
-      scanner.iterator().forEachRemaining(result -> {});
+      scanner.iterator().forEachRemaining(result -> {
+      });
       fail("Scan completed successfully but should have failed");
-    }
-    catch (Exception e) {
-      boolean expectedExceptionFound = Throwables.getCausalChain(e).stream()
-        .anyMatch(DoNotRetryIOException.class::isInstance);
+    } catch (Exception e) {
+      boolean expectedExceptionFound =
+        Throwables.getCausalChain(e).stream().anyMatch(DoNotRetryIOException.class::isInstance);
       if (!expectedExceptionFound) {
         fail("Expected DoNotRetryIOException as the cause, but got: " + e.getCause());
       }
