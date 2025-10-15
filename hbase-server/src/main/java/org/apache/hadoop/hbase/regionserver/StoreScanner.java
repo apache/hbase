@@ -22,21 +22,31 @@ import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableSet;
+<<<<<<< HEAD
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.IntConsumer;
+=======
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.ReentrantLock;
+>>>>>>> rvv-optimization
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+<<<<<<< HEAD
 import org.apache.hadoop.hbase.ExtendedCell;
+=======
+>>>>>>> rvv-optimization
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
+<<<<<<< HEAD
 import org.apache.hadoop.hbase.PrivateConstants;
 import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Scan;
@@ -45,6 +55,12 @@ import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.ipc.RpcCall;
 import org.apache.hadoop.hbase.ipc.RpcServer;
+=======
+import org.apache.hadoop.hbase.client.IsolationLevel;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.executor.ExecutorService;
+import org.apache.hadoop.hbase.filter.Filter;
+>>>>>>> rvv-optimization
 import org.apache.hadoop.hbase.regionserver.ScannerContext.LimitScope;
 import org.apache.hadoop.hbase.regionserver.ScannerContext.NextState;
 import org.apache.hadoop.hbase.regionserver.handler.ParallelSeekHandler;
@@ -113,7 +129,11 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
    * seeking to next row/column. TODO: estimate them?
    */
   private long kvsScanned = 0;
+<<<<<<< HEAD
   private ExtendedCell prevCell = null;
+=======
+  private Cell prevCell = null;
+>>>>>>> rvv-optimization
 
   private final long preadMaxBytes;
   private long bytesRead;
@@ -132,7 +152,11 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
    * timeout checks.
    */
   public static final String HBASE_CELLS_SCANNED_PER_HEARTBEAT_CHECK =
+<<<<<<< HEAD
     ConfigKey.LONG("hbase.cells.scanned.per.heartbeat.check");
+=======
+    "hbase.cells.scanned.per.heartbeat.check";
+>>>>>>> rvv-optimization
 
   /**
    * Default value of {@link #HBASE_CELLS_SCANNED_PER_HEARTBEAT_CHECK}.
@@ -145,8 +169,12 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
    * block size for this store. If configured with a value <0, for all scans with ReadType DEFAULT,
    * we will open scanner with stream mode itself.
    */
+<<<<<<< HEAD
   public static final String STORESCANNER_PREAD_MAX_BYTES =
     ConfigKey.LONG("hbase.storescanner.pread.max.bytes");
+=======
+  public static final String STORESCANNER_PREAD_MAX_BYTES = "hbase.storescanner.pread.max.bytes";
+>>>>>>> rvv-optimization
 
   private final Scan.ReadType readType;
 
@@ -364,6 +392,20 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
   // Used to instantiate a scanner for user scan in test
   StoreScanner(Scan scan, ScanInfo scanInfo, NavigableSet<byte[]> columns,
+<<<<<<< HEAD
+=======
+    List<? extends KeyValueScanner> scanners) throws IOException {
+    // 0 is passed as readpoint because the test bypasses Store
+    this(null, scan, scanInfo, columns != null ? columns.size() : 0, 0L, scan.getCacheBlocks(),
+      ScanType.USER_SCAN);
+    this.matcher =
+      UserScanQueryMatcher.create(scan, scanInfo, columns, oldestUnexpiredTS, now, null);
+    seekAllScanner(scanInfo, scanners);
+  }
+
+  // Used to instantiate a scanner for user scan in test
+  StoreScanner(Scan scan, ScanInfo scanInfo, NavigableSet<byte[]> columns,
+>>>>>>> rvv-optimization
     List<? extends KeyValueScanner> scanners, ScanType scanType) throws IOException {
     // 0 is passed as readpoint because the test bypasses Store
     this(null, scan, scanInfo, columns != null ? columns.size() : 0, 0L, scan.getCacheBlocks(),
@@ -373,11 +415,16 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
         UserScanQueryMatcher.create(scan, scanInfo, columns, oldestUnexpiredTS, now, null);
     } else {
       this.matcher = CompactionScanQueryMatcher.create(scanInfo, scanType, Long.MAX_VALUE,
+<<<<<<< HEAD
         PrivateConstants.OLDEST_TIMESTAMP, oldestUnexpiredTS, now, null, null, null);
+=======
+        HConstants.OLDEST_TIMESTAMP, oldestUnexpiredTS, now, null, null, null);
+>>>>>>> rvv-optimization
     }
     seekAllScanner(scanInfo, scanners);
   }
 
+<<<<<<< HEAD
   // Used to instantiate a scanner for user scan in test
   StoreScanner(Scan scan, ScanInfo scanInfo, NavigableSet<byte[]> columns,
     List<? extends KeyValueScanner> scanners) throws IOException {
@@ -389,6 +436,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     seekAllScanner(scanInfo, scanners);
   }
 
+=======
+>>>>>>> rvv-optimization
   // Used to instantiate a scanner for compaction in test
   StoreScanner(ScanInfo scanInfo, int maxVersions, ScanType scanType,
     List<? extends KeyValueScanner> scanners) throws IOException {
@@ -396,7 +445,11 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     this(null, maxVersions > 0 ? new Scan().readVersions(maxVersions) : SCAN_FOR_COMPACTION,
       scanInfo, 0, 0L, false, scanType);
     this.matcher = CompactionScanQueryMatcher.create(scanInfo, scanType, Long.MAX_VALUE,
+<<<<<<< HEAD
       PrivateConstants.OLDEST_TIMESTAMP, oldestUnexpiredTS, now, null, null, null);
+=======
+      HConstants.OLDEST_TIMESTAMP, oldestUnexpiredTS, now, null, null, null);
+>>>>>>> rvv-optimization
     seekAllScanner(scanInfo, scanners);
   }
 
@@ -409,7 +462,11 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
    * @param isLazy         true if using lazy seek
    * @param isParallelSeek true if using parallel seek
    */
+<<<<<<< HEAD
   protected void seekScanners(List<? extends KeyValueScanner> scanners, ExtendedCell seekKey,
+=======
+  protected void seekScanners(List<? extends KeyValueScanner> scanners, Cell seekKey,
+>>>>>>> rvv-optimization
     boolean isLazy, boolean isParallelSeek) throws IOException {
     // Seek all scanners to the start of the Row (or if the exact matching row
     // key does not exist, then to the start of the next matching Row).
@@ -492,7 +549,11 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   }
 
   @Override
+<<<<<<< HEAD
   public ExtendedCell peek() {
+=======
+  public Cell peek() {
+>>>>>>> rvv-optimization
     return heap != null ? heap.peek() : null;
   }
 
@@ -544,7 +605,11 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   }
 
   @Override
+<<<<<<< HEAD
   public boolean seek(ExtendedCell key) throws IOException {
+=======
+  public boolean seek(Cell key) throws IOException {
+>>>>>>> rvv-optimization
     if (checkFlushed()) {
       reopenAfterFlush();
     }
@@ -556,8 +621,12 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
    * @return true if there are more rows, false if scanner is done
    */
   @Override
+<<<<<<< HEAD
   public boolean next(List<? super ExtendedCell> outResult, ScannerContext scannerContext)
     throws IOException {
+=======
+  public boolean next(List<Cell> outResult, ScannerContext scannerContext) throws IOException {
+>>>>>>> rvv-optimization
     if (scannerContext == null) {
       throw new IllegalArgumentException("Scanner context cannot be null");
     }
@@ -573,7 +642,11 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
     }
 
+<<<<<<< HEAD
     ExtendedCell cell = this.heap.peek();
+=======
+    Cell cell = this.heap.peek();
+>>>>>>> rvv-optimization
     if (cell == null) {
       close(false);// Do all cleanup except heap.close()
       return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
@@ -591,6 +664,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     }
 
     // Clear progress away unless invoker has indicated it should be kept.
+<<<<<<< HEAD
     if (!scannerContext.getKeepProgress() && !scannerContext.getSkippingRow()) {
       scannerContext.clearProgress();
     }
@@ -608,6 +682,14 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     int count = 0;
     long totalBytesRead = 0;
     // track the cells for metrics only if it is a user read request.
+=======
+    if (!scannerContext.getKeepProgress()) {
+      scannerContext.clearProgress();
+    }
+
+    int count = 0;
+    long totalBytesRead = 0;
+>>>>>>> rvv-optimization
     boolean onlyFromMemstore = matcher.isUserScan();
     try {
       LOOP: do {
@@ -644,9 +726,12 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
           // here, we still need to scan all the qualifiers before returning...
           scannerContext.returnImmediately();
         }
+<<<<<<< HEAD
 
         heap.recordBlockSize(recordBlockSize);
 
+=======
+>>>>>>> rvv-optimization
         prevCell = cell;
         scannerContext.setLastPeekedCell(cell);
         topChanged = false;
@@ -657,6 +742,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
           case INCLUDE_AND_SEEK_NEXT_COL:
             Filter f = matcher.getFilter();
             if (f != null) {
+<<<<<<< HEAD
               Cell transformedCell = f.transformCell(cell);
               // fast path, most filters just return the same cell instance
               if (transformedCell != cell) {
@@ -668,6 +754,9 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
                     + f.getClass().getName());
                 }
               }
+=======
+              cell = f.transformCell(cell);
+>>>>>>> rvv-optimization
             }
             this.countPerRow++;
 
@@ -775,7 +864,11 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
             break;
 
           case SEEK_NEXT_USING_HINT:
+<<<<<<< HEAD
             ExtendedCell nextKV = matcher.getNextKeyHint(cell);
+=======
+            Cell nextKV = matcher.getNextKeyHint(cell);
+>>>>>>> rvv-optimization
             if (nextKV != null) {
               int difference = comparator.compare(nextKV, cell);
               if (
@@ -795,6 +888,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
           default:
             throw new RuntimeException("UNEXPECTED");
         }
+<<<<<<< HEAD
 
         // One last chance to break due to size limit. The INCLUDE* cases above already check
         // limit and continue. For the various filtered cases, we need to check because block
@@ -802,6 +896,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
         if (scannerContext.checkSizeLimit(LimitScope.BETWEEN_CELLS)) {
           return scannerContext.setScannerState(NextState.MORE_VALUES).hasMoreValues();
         }
+=======
+>>>>>>> rvv-optimization
       } while ((cell = this.heap.peek()) != null);
 
       if (count > 0) {
@@ -848,7 +944,11 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     return null;
   }
 
+<<<<<<< HEAD
   private void seekOrSkipToNextRow(ExtendedCell cell) throws IOException {
+=======
+  private void seekOrSkipToNextRow(Cell cell) throws IOException {
+>>>>>>> rvv-optimization
     // If it is a Get Scan, then we know that we are done with this row; there are no more
     // rows beyond the current one: don't try to optimize.
     if (!get) {
@@ -859,7 +959,11 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     seekToNextRow(cell);
   }
 
+<<<<<<< HEAD
   private void seekOrSkipToNextColumn(ExtendedCell cell) throws IOException {
+=======
+  private void seekOrSkipToNextColumn(Cell cell) throws IOException {
+>>>>>>> rvv-optimization
     if (!trySkipToNextColumn(cell)) {
       seekAsDirection(matcher.getKeyForNextColumn(cell));
     }
@@ -916,6 +1020,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
    * @param cell current cell
    * @return true means skip to next row, false means not
    */
+<<<<<<< HEAD
   protected boolean trySkipToNextRow(ExtendedCell cell) throws IOException {
     ExtendedCell nextCell = null;
     // used to guard against a changed next indexed key by doing a identity comparison
@@ -923,6 +1028,15 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     ExtendedCell previousIndexedKey = null;
     do {
       ExtendedCell nextIndexedKey = getNextIndexedKey();
+=======
+  protected boolean trySkipToNextRow(Cell cell) throws IOException {
+    Cell nextCell = null;
+    // used to guard against a changed next indexed key by doing a identity comparison
+    // when the identity changes we need to compare the bytes again
+    Cell previousIndexedKey = null;
+    do {
+      Cell nextIndexedKey = getNextIndexedKey();
+>>>>>>> rvv-optimization
       if (
         nextIndexedKey != null && nextIndexedKey != KeyValueScanner.NO_NEXT_INDEXED_KEY
           && (nextIndexedKey == previousIndexedKey
@@ -939,6 +1053,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   }
 
   /**
+<<<<<<< HEAD
    * See {@link #trySkipToNextRow(ExtendedCell)}
    * @param cell current cell
    * @return true means skip to next column, false means not
@@ -950,6 +1065,19 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     ExtendedCell previousIndexedKey = null;
     do {
       ExtendedCell nextIndexedKey = getNextIndexedKey();
+=======
+   * See {@link org.apache.hadoop.hbase.regionserver.StoreScanner#trySkipToNextRow(Cell)}
+   * @param cell current cell
+   * @return true means skip to next column, false means not
+   */
+  protected boolean trySkipToNextColumn(Cell cell) throws IOException {
+    Cell nextCell = null;
+    // used to guard against a changed next indexed key by doing a identity comparison
+    // when the identity changes we need to compare the bytes again
+    Cell previousIndexedKey = null;
+    do {
+      Cell nextIndexedKey = getNextIndexedKey();
+>>>>>>> rvv-optimization
       if (
         nextIndexedKey != null && nextIndexedKey != KeyValueScanner.NO_NEXT_INDEXED_KEY
           && (nextIndexedKey == previousIndexedKey
@@ -965,9 +1093,13 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     // We need this check because it may happen that the new scanner that we get
     // during heap.next() is requiring reseek due of fake KV previously generated for
     // ROWCOL bloom filter optimization. See HBASE-19863 for more details
+<<<<<<< HEAD
     if (
       useRowColBloom && nextCell != null && cell.getTimestamp() == PrivateConstants.OLDEST_TIMESTAMP
     ) {
+=======
+    if (useRowColBloom && nextCell != null && cell.getTimestamp() == HConstants.OLDEST_TIMESTAMP) {
+>>>>>>> rvv-optimization
       return false;
     }
     return true;
@@ -1048,7 +1180,11 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   /** Returns if top of heap has changed (and KeyValueHeap has to try the next KV) */
   protected final boolean reopenAfterFlush() throws IOException {
     // here we can make sure that we have a Store instance so no null check on store.
+<<<<<<< HEAD
     ExtendedCell lastTop = heap.peek();
+=======
+    Cell lastTop = heap.peek();
+>>>>>>> rvv-optimization
     // When we have the scan object, should we not pass it to getScanners() to get a limited set of
     // scanners? We did so in the constructor and we could have done it now by storing the scan
     // object from the constructor
@@ -1093,11 +1229,19 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     return topChanged;
   }
 
+<<<<<<< HEAD
   private void resetQueryMatcher(ExtendedCell lastTopKey) {
     // Reset the state of the Query Matcher and set to top row.
     // Only reset and call setRow if the row changes; avoids confusing the
     // query matcher if scanning intra-row.
     ExtendedCell cell = heap.peek();
+=======
+  private void resetQueryMatcher(Cell lastTopKey) {
+    // Reset the state of the Query Matcher and set to top row.
+    // Only reset and call setRow if the row changes; avoids confusing the
+    // query matcher if scanning intra-row.
+    Cell cell = heap.peek();
+>>>>>>> rvv-optimization
     if (cell == null) {
       cell = lastTopKey;
     }
@@ -1118,7 +1262,11 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       : "Key " + prevKV + " followed by a smaller key " + kv + " in cf " + store;
   }
 
+<<<<<<< HEAD
   protected boolean seekToNextRow(ExtendedCell c) throws IOException {
+=======
+  protected boolean seekToNextRow(Cell c) throws IOException {
+>>>>>>> rvv-optimization
     return reseek(PrivateCellUtil.createLastOnRow(c));
   }
 
@@ -1126,12 +1274,20 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
    * Do a reseek in a normal StoreScanner(scan forward)
    * @return true if scanner has values left, false if end of scanner
    */
+<<<<<<< HEAD
   protected boolean seekAsDirection(ExtendedCell kv) throws IOException {
+=======
+  protected boolean seekAsDirection(Cell kv) throws IOException {
+>>>>>>> rvv-optimization
     return reseek(kv);
   }
 
   @Override
+<<<<<<< HEAD
   public boolean reseek(ExtendedCell kv) throws IOException {
+=======
+  public boolean reseek(Cell kv) throws IOException {
+>>>>>>> rvv-optimization
     if (checkFlushed()) {
       reopenAfterFlush();
     }
@@ -1151,7 +1307,11 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     LOG.debug("Switch to stream read (scanned={} bytes) of {}", bytesRead,
       this.store.getColumnFamilyName());
     scanUsePread = false;
+<<<<<<< HEAD
     ExtendedCell lastTop = heap.peek();
+=======
+    Cell lastTop = heap.peek();
+>>>>>>> rvv-optimization
     List<KeyValueScanner> memstoreScanners = new ArrayList<>();
     List<KeyValueScanner> scannersToClose = new ArrayList<>();
     for (KeyValueScanner kvs : currentScanners) {
@@ -1220,7 +1380,11 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
    * @param scanners the list {@link KeyValueScanner}s to be read from
    * @param kv       the KeyValue on which the operation is being requested
    */
+<<<<<<< HEAD
   private void parallelSeek(final List<? extends KeyValueScanner> scanners, final ExtendedCell kv)
+=======
+  private void parallelSeek(final List<? extends KeyValueScanner> scanners, final Cell kv)
+>>>>>>> rvv-optimization
     throws IOException {
     if (scanners.isEmpty()) return;
     int storeFileScannerCount = scanners.size();
@@ -1273,7 +1437,11 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   }
 
   @Override
+<<<<<<< HEAD
   public ExtendedCell getNextIndexedKey() {
+=======
+  public Cell getNextIndexedKey() {
+>>>>>>> rvv-optimization
     return this.heap.getNextIndexedKey();
   }
 

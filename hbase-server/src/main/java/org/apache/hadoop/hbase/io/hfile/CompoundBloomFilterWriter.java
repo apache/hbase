@@ -20,17 +20,28 @@ package org.apache.hadoop.hbase.io.hfile;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+<<<<<<< HEAD
 import java.util.ArrayDeque;
 import java.util.Objects;
+=======
+import java.util.LinkedList;
+>>>>>>> rvv-optimization
 import java.util.Queue;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
+<<<<<<< HEAD
 import org.apache.hadoop.hbase.ExtendedCell;
+=======
+>>>>>>> rvv-optimization
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.util.BloomFilterChunk;
+<<<<<<< HEAD
+=======
+import  org.apache.hadoop.hbase.util.BloomFilterRvvNative;
+>>>>>>> rvv-optimization
 import org.apache.hadoop.hbase.util.BloomFilterUtil;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -61,7 +72,11 @@ public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
   /** The size of individual Bloom filter chunks to create */
   private int chunkByteSize;
   /** The prev Cell that was processed */
+<<<<<<< HEAD
   private ExtendedCell prevCell;
+=======
+  private Cell prevCell;
+>>>>>>> rvv-optimization
 
   /** A Bloom filter chunk enqueued for writing */
   private static class ReadyChunk {
@@ -70,7 +85,11 @@ public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
     BloomFilterChunk chunk;
   }
 
+<<<<<<< HEAD
   private Queue<ReadyChunk> readyChunks = new ArrayDeque<>();
+=======
+  private Queue<ReadyChunk> readyChunks = new LinkedList<>();
+>>>>>>> rvv-optimization
 
   /** The first key in the current Bloom filter chunk. */
   private byte[] firstKeyInChunk = null;
@@ -82,6 +101,11 @@ public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
   private boolean cacheOnWrite;
 
   private BloomType bloomType;
+<<<<<<< HEAD
+=======
+  /** RVV 本地调用对象，用于 Bloom 位批量操作 */
+  private final BloomFilterRvvNative rvvNative = new BloomFilterRvvNative();
+>>>>>>> rvv-optimization
 
   /**
    * each chunk's size in bytes. The real chunk size might be different as required by the fold
@@ -115,6 +139,12 @@ public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
       return;
     }
 
+<<<<<<< HEAD
+=======
+    // 新增：flush剩余缓存位，防止数据丢失
+    chunk.flushHashLocBuffer();
+
+>>>>>>> rvv-optimization
     if (firstKeyInChunk == null) {
       throw new NullPointerException(
         "Trying to enqueue a chunk, " + "but first key is null: closing=" + closing + ", keyCount="
@@ -147,6 +177,7 @@ public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
   }
 
   @Override
+<<<<<<< HEAD
   public void append(ExtendedCell cell) throws IOException {
     Objects.requireNonNull(cell);
 
@@ -172,6 +203,33 @@ public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
     ++totalKeyCount;
   }
 
+=======
+  public void append(Cell cell) throws IOException {
+      if (cell == null) throw new NullPointerException();
+
+      enqueueReadyChunk(false);
+
+      if (chunk == null) {
+          if (firstKeyInChunk != null) {
+              throw new IllegalStateException(
+                  "First key in chunk already set: " + Bytes.toStringBinary(firstKeyInChunk));
+          }
+          if (bloomType == BloomType.ROWCOL) {
+              firstKeyInChunk = PrivateCellUtil
+                .getCellKeySerializedAsKeyValueKey(PrivateCellUtil.createFirstOnRowCol(cell));
+          } else {
+              firstKeyInChunk = CellUtil.copyRow(cell);
+          }
+          allocateNewChunk();
+      }
+
+      chunk.add(cell); // 这里原本是逐位添加 Bloom 位
+      this.prevCell = cell;
+      ++totalKeyCount;
+  }
+
+
+>>>>>>> rvv-optimization
   @Override
   public void beforeShipped() throws IOException {
     if (this.prevCell != null) {

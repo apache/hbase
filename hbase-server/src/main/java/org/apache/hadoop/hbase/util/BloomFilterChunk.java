@@ -24,9 +24,17 @@ import java.nio.ByteBuffer;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.yetus.audience.InterfaceAudience;
+<<<<<<< HEAD
 
 /**
  * The basic building block for the {@link org.apache.hadoop.hbase.io.hfile.CompoundBloomFilter}
+=======
+import org.apache.hadoop.hbase.util.BloomFilterRvvNative;
+
+/**
+ * The basic building block for the
+ * {@link org.apache.hadoop.hbase.io.hfile.CompoundBloomFilter}
+>>>>>>> rvv-optimization
  */
 @InterfaceAudience.Private
 public class BloomFilterChunk implements BloomFilterBase {
@@ -48,8 +56,54 @@ public class BloomFilterChunk implements BloomFilterBase {
   /** The type of bloom */
   protected BloomType bloomType;
 
+<<<<<<< HEAD
   /**
    * Loads bloom filter meta data from file input.
+=======
+  private int offset;
+
+  // JNI native方法声明：批量设置位
+  private static final BloomFilterRvvNative rvvNative = new BloomFilterRvvNative();
+  private static final int BATCH_SIZE = getOptimalBatchSize();
+  private long[] hashLocBuffer = new long[BATCH_SIZE];
+  private int bufferPos = 0;
+
+  /**
+   * 根据系统特性动态计算最优批量大小
+   * @return 最优批量大小
+   */
+  private static int getOptimalBatchSize() {
+    // 根据CPU核心数和可用内存动态调整批量大小
+    int processors = Runtime.getRuntime().availableProcessors();
+    long maxMemory = Runtime.getRuntime().maxMemory();
+    
+    // 基础批量大小
+    int baseBatchSize = 256;
+    
+    // 根据CPU核心数调整
+    int cpuAdjustedSize = Math.min(baseBatchSize, processors * 32);
+    
+    // 根据可用内存调整（避免内存不足）
+    long memoryMB = maxMemory / (1024 * 1024);
+    int memoryAdjustedSize = memoryMB > 1024 ? cpuAdjustedSize : cpuAdjustedSize / 2;
+    
+    return Math.max(64, Math.min(512, memoryAdjustedSize));
+  }
+
+  // 加载本地库
+  static {
+    // 确保本地库已加载；通常由调用方/测试用例先行加载
+    try {
+      System.loadLibrary("bloomfilter_rvv");
+    } catch (Throwable ignore) {
+      // 如果外部已加载，这里失败也不影响；真正调用时如未加载会抛错，方便定位
+    }
+  }
+
+  /**
+   * Loads bloom filter meta data from file input.
+   * 
+>>>>>>> rvv-optimization
    * @param meta stored bloom meta data
    * @throws IllegalArgumentException meta data is invalid
    */
@@ -68,10 +122,21 @@ public class BloomFilterChunk implements BloomFilterBase {
   }
 
   /**
+<<<<<<< HEAD
    * Computes the error rate for this Bloom filter, taking into account the actual number of hash
    * functions and keys inserted. The return value of this function changes as a Bloom filter is
    * being populated. Used for reporting the actual error rate of compound Bloom filters when
    * writing them out.
+=======
+   * Computes the error rate for this Bloom filter, taking into account the actual
+   * number of hash
+   * functions and keys inserted. The return value of this function changes as a
+   * Bloom filter is
+   * being populated. Used for reporting the actual error rate of compound Bloom
+   * filters when
+   * writing them out.
+   * 
+>>>>>>> rvv-optimization
    * @return error rate for this particular Bloom filter
    */
   public double actualErrorRate() {
@@ -87,16 +152,33 @@ public class BloomFilterChunk implements BloomFilterBase {
   /**
    * Determines &amp; initializes bloom filter meta data from user config. Call
    * {@link #allocBloom()} to allocate bloom filter data.
+<<<<<<< HEAD
    * @param maxKeys    Maximum expected number of keys that will be stored in this bloom
    * @param errorRate  Desired false positive error rate. Lower rate = more storage required
    * @param hashType   Type of hash function to use
    * @param foldFactor When finished adding entries, you may be able to 'fold' this bloom to save
    *                   space. Tradeoff potentially excess bytes in bloom for ability to fold if
+=======
+   * 
+   * @param maxKeys    Maximum expected number of keys that will be stored in this
+   *                   bloom
+   * @param errorRate  Desired false positive error rate. Lower rate = more
+   *                   storage required
+   * @param hashType   Type of hash function to use
+   * @param foldFactor When finished adding entries, you may be able to 'fold'
+   *                   this bloom to save
+   *                   space. Tradeoff potentially excess bytes in bloom for
+   *                   ability to fold if
+>>>>>>> rvv-optimization
    *                   keyCount is exponentially greater than maxKeys.
    */
   // Used only in testcases
   public BloomFilterChunk(int maxKeys, double errorRate, int hashType, int foldFactor)
+<<<<<<< HEAD
     throws IllegalArgumentException {
+=======
+      throws IllegalArgumentException {
+>>>>>>> rvv-optimization
     this(hashType, BloomType.ROW);
 
     long bitSize = BloomFilterUtil.computeBitSize(maxKeys, errorRate);
@@ -110,8 +192,15 @@ public class BloomFilterChunk implements BloomFilterBase {
   }
 
   /**
+<<<<<<< HEAD
    * Creates another similar Bloom filter. Does not copy the actual bits, and sets the new filter's
    * key count to zero.
+=======
+   * Creates another similar Bloom filter. Does not copy the actual bits, and sets
+   * the new filter's
+   * key count to zero.
+   * 
+>>>>>>> rvv-optimization
    * @return a Bloom filter with the same configuration as this
    */
   public BloomFilterChunk createAnother() {
@@ -171,6 +260,7 @@ public class BloomFilterChunk implements BloomFilterBase {
      * For faster hashing, use combinatorial generation
      * http://www.eecs.harvard.edu/~kirsch/pubs/bbbf/esa06.pdf
      */
+<<<<<<< HEAD
     int hash1;
     int hash2;
     HashKey<Cell> hashKey;
@@ -183,10 +273,23 @@ public class BloomFilterChunk implements BloomFilterBase {
       hash1 = this.hash.hash(hashKey, 0);
       hash2 = this.hash.hash(hashKey, hash1);
     }
+=======
+    int hash1, hash2;
+    HashKey<Cell> hashKey;
+    if (this.bloomType == BloomType.ROWCOL) {
+      hashKey = new RowColBloomHashKey(cell);
+    } else {
+      hashKey = new RowBloomHashKey(cell);
+    }
+    hash1 = this.hash.hash(hashKey, 0);
+    hash2 = this.hash.hash(hashKey, hash1);
+
+>>>>>>> rvv-optimization
     setHashLoc(hash1, hash2);
   }
 
   private void setHashLoc(int hash1, int hash2) {
+<<<<<<< HEAD
     for (int i = 0; i < this.hashCount; i++) {
       long hashLoc = Math.abs((hash1 + i * hash2) % (this.byteSize * 8));
       set(hashLoc);
@@ -195,11 +298,60 @@ public class BloomFilterChunk implements BloomFilterBase {
     ++this.keyCount;
   }
 
+=======
+    final long bitSize = this.byteSize * 8L;
+    // 使用 Kirsch–Mitzenmacher 组合哈希：hash1 + i*hash2
+    for (int i = 0; i < this.hashCount; i++) {
+      long combined = (hash1 & 0xffffffffL) + (i * (hash2 & 0xffffffffL));
+      long hashLoc = combined % bitSize;
+      if (hashLoc < 0)
+        hashLoc += bitSize; // 防止负数
+      // 缓存位置，批量刷写
+      hashLocBuffer[bufferPos++] = hashLoc;
+      if (bufferPos == BATCH_SIZE) {
+        flushHashLocBuffer();
+      }
+    }
+    ++this.keyCount;
+  }
+
+  // private void setHashLoc(int hash1, int hash2) {
+  // for (int i = 0; i < this.hashCount; i++) {
+  // long hashLoc = Math.abs((hash1 + i * hash2) % (this.byteSize * 8));
+  // set(hashLoc);
+  // }
+  // ++this.keyCount;
+  // }
+
+  /** 将缓存的 hash 位置批量写入 bitmap（供 writer/写盘前调用） */
+  public void flushHashLocBuffer() {
+    if (bufferPos <= 0)
+      return;
+    if (bloom == null || !bloom.hasArray()) {
+      throw new IllegalStateException("Bloom bit array is not a heap array");
+    }
+    if (BloomFilterRvvNative.isEnabled()) {
+      byte[] array = bloom.array();
+      int offset = bloom.arrayOffset();
+      rvvNative.nativeSetBitsBatch(array, offset, hashLocBuffer, bufferPos);
+    } else {
+      for (int i = 0; i < bufferPos; i++) {
+        set(hashLocBuffer[i]);
+      }
+    }
+    bufferPos = 0;
+  }
+
+>>>>>>> rvv-optimization
   // ---------------------------------------------------------------------------
   /** Private helpers */
 
   /**
    * Set the bit at the specified index to 1.
+<<<<<<< HEAD
+=======
+   * 
+>>>>>>> rvv-optimization
    * @param pos index of bit
    */
   void set(long pos) {
@@ -210,20 +362,60 @@ public class BloomFilterChunk implements BloomFilterBase {
     bloom.put(bytePos, curByte);
   }
 
+<<<<<<< HEAD
   /**
    * Check if bit at specified index is 1.
+=======
+  public void setBitsBatch(long[] positions) {
+    if (positions == null || positions.length == 0)
+      return;
+    if (bloom == null || !bloom.hasArray()) {
+      throw new IllegalStateException("Bloom bit array not initialized");
+    }
+    if (BloomFilterRvvNative.isEnabled()) {
+      rvvNative.nativeSetBitsBatch(bloom.array(), bloom.arrayOffset(), positions, positions.length);
+    } else {
+      for (long p : positions)
+        set(p);
+    }
+  }
+
+  /**
+   * Check if bit at specified index is 1.
+   * 
+>>>>>>> rvv-optimization
    * @param pos index of bit
    * @return true if bit at specified index is 1, false if 0.
    */
   static boolean get(int pos, ByteBuffer bloomBuf, int bloomOffset) {
     int bytePos = pos >> 3; // pos / 8
     int bitPos = pos & 0x7; // pos % 8
+<<<<<<< HEAD
     // TODO access this via Util API which can do Unsafe access if possible(?)
+=======
+>>>>>>> rvv-optimization
     byte curByte = bloomBuf.get(bloomOffset + bytePos);
     curByte &= BloomFilterUtil.bitvals[bitPos];
     return (curByte != 0);
   }
 
+<<<<<<< HEAD
+=======
+  // 新增批量查询
+  public void getBatch(long[] positions, boolean[] results) {
+    if (positions == null || results == null || positions.length != results.length) {
+      throw new IllegalArgumentException("positions/results length mismatch");
+    }
+    if (BloomFilterRvvNative.isEnabled()) {
+      rvvNative.nativeCheckBitsBatch(bloom.array(), bloom.arrayOffset(), positions, positions.length, results);
+    } else {
+      for (int i = 0; i < positions.length; i++) {
+        results[i] = get((int) (positions[i] & 0x7FFFFFFF), bloom, bloom.arrayOffset());
+      }
+    }
+  }
+
+>>>>>>> rvv-optimization
   @Override
   public long getKeyCount() {
     return keyCount;
@@ -244,20 +436,33 @@ public class BloomFilterChunk implements BloomFilterBase {
   }
 
   public void compactBloom() {
+<<<<<<< HEAD
     // see if the actual size is exponentially smaller than expected.
+=======
+    // 先把缓存的位全部写入
+    flushHashLocBuffer();
+
+    // 下面保持原有折叠逻辑不变
+>>>>>>> rvv-optimization
     if (this.keyCount > 0 && this.bloom.hasArray()) {
       int pieces = 1;
       int newByteSize = (int) this.byteSize;
       int newMaxKeys = this.maxKeys;
 
+<<<<<<< HEAD
       // while exponentially smaller & folding is lossless
+=======
+>>>>>>> rvv-optimization
       while ((newByteSize & 1) == 0 && newMaxKeys > (this.keyCount << 1)) {
         pieces <<= 1;
         newByteSize >>= 1;
         newMaxKeys >>= 1;
       }
 
+<<<<<<< HEAD
       // if we should fold these into pieces
+=======
+>>>>>>> rvv-optimization
       if (pieces > 1) {
         byte[] array = this.bloom.array();
         int start = this.bloom.arrayOffset();
@@ -268,7 +473,10 @@ public class BloomFilterChunk implements BloomFilterBase {
             array[pos] |= array[off++];
           }
         }
+<<<<<<< HEAD
         // folding done, only use a subset of this array
+=======
+>>>>>>> rvv-optimization
         this.bloom.rewind();
         this.bloom.limit(newByteSize);
         this.bloom = this.bloom.slice();
@@ -278,8 +486,49 @@ public class BloomFilterChunk implements BloomFilterBase {
     }
   }
 
+<<<<<<< HEAD
   /**
    * Writes just the bloom filter to the output array
+=======
+  // public void compactBloom() {
+  // // see if the actual size is exponentially smaller than expected.
+  // if (this.keyCount > 0 && this.bloom.hasArray()) {
+  // int pieces = 1;
+  // int newByteSize = (int) this.byteSize;
+  // int newMaxKeys = this.maxKeys;
+
+  // // while exponentially smaller & folding is lossless
+  // while ((newByteSize & 1) == 0 && newMaxKeys > (this.keyCount << 1)) {
+  // pieces <<= 1;
+  // newByteSize >>= 1;
+  // newMaxKeys >>= 1;
+  // }
+
+  // // if we should fold these into pieces
+  // if (pieces > 1) {
+  // byte[] array = this.bloom.array();
+  // int start = this.bloom.arrayOffset();
+  // int end = start + newByteSize;
+  // int off = end;
+  // for (int p = 1; p < pieces; ++p) {
+  // for (int pos = start; pos < end; ++pos) {
+  // array[pos] |= array[off++];
+  // }
+  // }
+  // // folding done, only use a subset of this array
+  // this.bloom.rewind();
+  // this.bloom.limit(newByteSize);
+  // this.bloom = this.bloom.slice();
+  // this.byteSize = newByteSize;
+  // this.maxKeys = newMaxKeys;
+  // }
+  // }
+  // }
+
+  /**
+   * Writes just the bloom filter to the output array
+   * 
+>>>>>>> rvv-optimization
    * @param out OutputStream to place bloom
    * @throws IOException Error writing bloom array
    */
