@@ -48,9 +48,18 @@ message GetManagedKeysResponse {
   repeated ManagedKeysResponse state = 1;
 }
 
+message KeymetaAdminRotateSTKRequest {
+}
+
+message KeymetaAdminRotateSTKResponse {
+  required bool rotated = 1;
+}
+
 service ManagedKeysService {
   rpc EnableKeyManagement(ManagedKeysRequest)
     returns (GetManagedKeysResponse);
   rpc GetManagedKeys(ManagedKeysRequest)
     returns (GetManagedKeysResponse);
+  rpc KeymetaAdminRotateSTK(KeymetaAdminRotateSTKRequest)
+    returns (KeymetaAdminRotateSTKResponse);
 }

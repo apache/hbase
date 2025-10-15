@@ -31,6 +31,8 @@ import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.GetManagedKeysResponse;
+import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.KeymetaAdminRotateSTKRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.KeymetaAdminRotateSTKResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.ManagedKeysRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.ManagedKeysResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.ManagedKeysService;
@@ -130,6 +132,24 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
         } catch (KeyException e) {
           CoprocessorRpcUtils.setControllerException(controller, new IOException(e));
         }
+      }
+    }
+
+    /**
+     * Rotates the system key (STK) by checking for a new key and propagating it to all
+     * region servers.
+     * @param controller The RPC controller.
+     * @param request    The request (empty).
+     * @param done       The callback to be invoked with the response.
+     */
+    @Override
+    public void keymetaAdminRotateSTK(RpcController controller, KeymetaAdminRotateSTKRequest request,
+      RpcCallback<KeymetaAdminRotateSTKResponse> done) {
+      try {
+        boolean rotated = master.getKeymetaAdmin().rotateSTK();
+        done.run(KeymetaAdminRotateSTKResponse.newBuilder().setRotated(rotated).build());
+      } catch (IOException e) {
+        CoprocessorRpcUtils.setControllerException(controller, e);
       }
     }
   }

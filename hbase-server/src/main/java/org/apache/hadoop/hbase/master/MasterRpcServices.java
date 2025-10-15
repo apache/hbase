@@ -171,6 +171,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRe
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RotateSTKRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RotateSTKResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionLoadRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionLoadResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetServerInfoRequest;
@@ -3618,6 +3620,12 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
   @Override
   public GetCachedFilesListResponse getCachedFilesList(RpcController controller,
     GetCachedFilesListRequest request) throws ServiceException {
+    throw new ServiceException(new DoNotRetryIOException("Unsupported method on master"));
+  }
+
+  @Override
+  public RotateSTKResponse rotateSTK(RpcController controller, RotateSTKRequest request)
+    throws ServiceException {
     throw new ServiceException(new DoNotRetryIOException("Unsupported method on master"));
   }
 

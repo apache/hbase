@@ -168,6 +168,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegion
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RotateSTKRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RotateSTKResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactionSwitchRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactionSwitchResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ExecuteProceduresRequest;
@@ -4056,6 +4058,29 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
       fullyCachedFiles.addAll(fcf.keySet());
     });
     return responseBuilder.addAllCachedFiles(fullyCachedFiles).build();
+  }
+
+  /**
+   * Rebuilds the system key cache on the region server. This is called by the master
+   * when a system key rotation has occurred.
+   * @param controller the RPC controller
+   * @param request    the request
+   * @return response indicating success
+   */
+  @Override
+  @QosPriority(priority = HConstants.ADMIN_QOS)
+  public RotateSTKResponse rotateSTK(final RpcController controller,
+    final RotateSTKRequest request) throws ServiceException {
+    try {
+      checkOpen();
+      requestCount.increment();
+      LOG.info("Received RotateSTK request, rebuilding system key cache");
+      server.rebuildSystemKeyCache();
+      return RotateSTKResponse.newBuilder().setRotated(true).build();
+    } catch (IOException ie) {
+      LOG.error("Failed to rebuild system key cache", ie);
+      throw new ServiceException(ie);
+    }
   }
 
   RegionScannerContext checkQuotaAndGetRegionScannerContext(ScanRequest request,
