@@ -438,8 +438,8 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
   }
 
   /**
-   * Rebuilds the system key cache. This method can be called to refresh the system key cache
-   * when the system key has been rotated.
+   * Rebuilds the system key cache. This method can be called to refresh the system key cache when
+   * the system key has been rotated.
    * @throws IOException if there is an error rebuilding the cache
    */
   public void rebuildSystemKeyCache() throws IOException {

@@ -36,17 +36,19 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.ipc.RpcCall;
 import org.apache.hadoop.hbase.ipc.RpcServer;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
-import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 
 /**
  * Test parts of {@link RSRpcServices}
@@ -84,8 +86,8 @@ public class TestRSRpcServices {
   }
 
   /**
-   * Test the managedKeysRotateSTK RPC method that is used to rebuild the system key cache
-   * on region servers when a system key rotation has occurred.
+   * Test the managedKeysRotateSTK RPC method that is used to rebuild the system key cache on region
+   * servers when a system key rotation has occurred.
    */
   @Test
   public void testManagedKeysRotateSTK() throws Exception {

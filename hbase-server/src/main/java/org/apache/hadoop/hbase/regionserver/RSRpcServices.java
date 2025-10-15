@@ -186,6 +186,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetServerIn
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetServerInfoResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetStoreFileRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetStoreFileResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ManagedKeysRotateSTKRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ManagedKeysRotateSTKResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.OpenRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.OpenRegionRequest.RegionOpenInfo;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.OpenRegionResponse;
@@ -195,8 +197,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWA
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RollWALWriterRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RollWALWriterResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ManagedKeysRotateSTKRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ManagedKeysRotateSTKResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavoredNodesRequest;
@@ -4061,8 +4061,8 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
   }
 
   /**
-   * Rebuilds the system key cache on the region server. This is called by the master
-   * when a system key rotation has occurred.
+   * Rebuilds the system key cache on the region server. This is called by the master when a system
+   * key rotation has occurred.
    * @param controller the RPC controller
    * @param request    the request
    * @return response indicating success

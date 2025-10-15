@@ -23,17 +23,18 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.AsyncRegionServerAdmin;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
 import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 
 @InterfaceAudience.Private
 public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdmin {
@@ -93,15 +94,18 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
 
     LOG.info("New System Key detected, propagating to region servers");
     // Get all online region servers
-    List<ServerName> regionServers = new ArrayList<>(master.getServerManager().getOnlineServersList());
+    List<ServerName> regionServers =
+      new ArrayList<>(master.getServerManager().getOnlineServersList());
 
     // Create all futures in parallel
     List<CompletableFuture<AdminProtos.ManagedKeysRotateSTKResponse>> futures = new ArrayList<>();
-    AdminProtos.ManagedKeysRotateSTKRequest request = AdminProtos.ManagedKeysRotateSTKRequest.newBuilder().build();
+    AdminProtos.ManagedKeysRotateSTKRequest request =
+      AdminProtos.ManagedKeysRotateSTKRequest.newBuilder().build();
 
     for (ServerName serverName : regionServers) {
       LOG.info("Initiating managedKeysRotateSTK on region server: {}", serverName);
-      AsyncRegionServerAdmin admin = master.getAsyncClusterConnection().getRegionServerAdmin(serverName);
+      AsyncRegionServerAdmin admin =
+        master.getAsyncClusterConnection().getRegionServerAdmin(serverName);
       futures.add(admin.managedKeysRotateSTK(request));
     }
 
@@ -126,4 +130,3 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
     return true;
   }
 }
-

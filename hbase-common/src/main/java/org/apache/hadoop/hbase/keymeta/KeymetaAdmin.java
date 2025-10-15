@@ -52,8 +52,8 @@ public interface KeymetaAdmin {
     throws IOException, KeyException;
 
   /**
-   * Triggers rotation of the System Key (STK) by checking for a new key and propagating it
-   * to all region servers.
+   * Triggers rotation of the System Key (STK) by checking for a new key and propagating it to all
+   * region servers.
    * @return true if a new STK was found and rotated, false if no change was detected
    * @throws IOException if an error occurs while rotating the STK
    */

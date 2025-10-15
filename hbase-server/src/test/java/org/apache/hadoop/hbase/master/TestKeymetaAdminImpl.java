@@ -78,8 +78,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 
 @RunWith(Suite.class)
 @Suite.SuiteClasses({ TestKeymetaAdminImpl.TestWhenDisabled.class,
-  TestKeymetaAdminImpl.TestAdminImpl.class,
-  TestKeymetaAdminImpl.TestForKeyProviderNullReturn.class,
+  TestKeymetaAdminImpl.TestAdminImpl.class, TestKeymetaAdminImpl.TestForKeyProviderNullReturn.class,
   TestKeymetaAdminImpl.TestRotateSTK.class })
 @Category({ MasterTests.class, SmallTests.class })
 public class TestKeymetaAdminImpl {
@@ -288,14 +287,11 @@ public class TestKeymetaAdminImpl {
       HBaseClassTestRule.forClass(TestRotateSTK.class);
 
     /**
-     * Test rotateSTK when a new key is detected.
-     * Now that we can mock SystemKeyManager via master.getSystemKeyManager(),
-     * we can properly test the success scenario:
-     * 1. SystemKeyManager.rotateSystemKeyIfChanged() returns non-null (new key detected)
-     * 2. Master gets list of online region servers
-     * 3. Master makes parallel RPC calls to all region servers
-     * 4. All region servers successfully rebuild their system key cache
-     * 5. Method returns true
+     * Test rotateSTK when a new key is detected. Now that we can mock SystemKeyManager via
+     * master.getSystemKeyManager(), we can properly test the success scenario: 1.
+     * SystemKeyManager.rotateSystemKeyIfChanged() returns non-null (new key detected) 2. Master
+     * gets list of online region servers 3. Master makes parallel RPC calls to all region servers
+     * 4. All region servers successfully rebuild their system key cache 5. Method returns true
      */
     @Test
     public void testRotateSTKWithNewKey() throws Exception {
@@ -354,11 +350,10 @@ public class TestKeymetaAdminImpl {
     }
 
     /**
-     * Test rotateSTK when no key change is detected.
-     * Now that we can mock SystemKeyManager, we can properly test the no-change scenario:
-     * 1. SystemKeyManager.rotateSystemKeyIfChanged() returns null
-     * 2. Method returns false immediately without calling any region servers
-     * 3. No RPC calls are made to region servers
+     * Test rotateSTK when no key change is detected. Now that we can mock SystemKeyManager, we can
+     * properly test the no-change scenario: 1. SystemKeyManager.rotateSystemKeyIfChanged() returns
+     * null 2. Method returns false immediately without calling any region servers 3. No RPC calls
+     * are made to region servers
      */
     @Test
     public void testRotateSTKNoChange() throws Exception {
@@ -398,8 +393,8 @@ public class TestKeymetaAdminImpl {
     }
 
     /**
-     * Test rotateSTK when multiple region servers fail.
-     * Verifies that all failed server names are included in the exception message.
+     * Test rotateSTK when multiple region servers fail. Verifies that all failed server names are
+     * included in the exception message.
      */
     @Test
     public void testRotateSTKWithMultipleFailedServers() throws Exception {
@@ -445,17 +440,20 @@ public class TestKeymetaAdminImpl {
         .thenReturn(java.util.concurrent.CompletableFuture.completedFuture(successResponse));
 
       // RS2 fails with IOException
-      java.util.concurrent.CompletableFuture<AdminProtos.ManagedKeysRotateSTKResponse> failedFuture2 =
-        new java.util.concurrent.CompletableFuture<>();
+      java.util.concurrent.CompletableFuture<
+        AdminProtos.ManagedKeysRotateSTKResponse> failedFuture2 =
+          new java.util.concurrent.CompletableFuture<>();
       failedFuture2.completeExceptionally(new IOException("Connection timeout to rs2"));
       when(mockRsAdmin2.managedKeysRotateSTK(any(AdminProtos.ManagedKeysRotateSTKRequest.class)))
         .thenReturn(failedFuture2);
 
       // RS3 fails with ServiceException
-      java.util.concurrent.CompletableFuture<AdminProtos.ManagedKeysRotateSTKResponse> failedFuture3 =
-        new java.util.concurrent.CompletableFuture<>();
-      failedFuture3.completeExceptionally(
-        new org.apache.hbase.thirdparty.com.google.protobuf.ServiceException("Server error on rs3"));
+      java.util.concurrent.CompletableFuture<
+        AdminProtos.ManagedKeysRotateSTKResponse> failedFuture3 =
+          new java.util.concurrent.CompletableFuture<>();
+      failedFuture3
+        .completeExceptionally(new org.apache.hbase.thirdparty.com.google.protobuf.ServiceException(
+          "Server error on rs3"));
       when(mockRsAdmin3.managedKeysRotateSTK(any(AdminProtos.ManagedKeysRotateSTKRequest.class)))
         .thenReturn(failedFuture3);
 
@@ -520,8 +518,8 @@ public class TestKeymetaAdminImpl {
       KeymetaAdminImpl admin = new KeymetaAdminImpl(mockMaster);
 
       IOException ex = assertThrows(IOException.class, () -> admin.rotateSTK());
-      assertTrue("Exception message should contain 'not enabled', but was: " +
-        ex.getMessage(), ex.getMessage().contains("not enabled"));
+      assertTrue("Exception message should contain 'not enabled', but was: " + ex.getMessage(),
+        ex.getMessage().contains("not enabled"));
     }
   }
 }

@@ -136,8 +136,8 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
     }
 
     /**
-     * Rotates the system key (STK) by checking for a new key and propagating it to all
-     * region servers.
+     * Rotates the system key (STK) by checking for a new key and propagating it to all region
+     * servers.
      * @param controller The RPC controller.
      * @param request    The request (empty).
      * @param done       The callback to be invoked with the response.
