@@ -742,7 +742,7 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
       SectionReaderHolder holder = sectionReaderCache.get(cacheKey, () -> {
         byte[] sectionIdCopy = Bytes.copy(tenantSectionId);
         SectionReader sectionReader = createSectionReader(sectionIdCopy, sectionMetadata);
-        return new SectionReaderHolder(cacheKey, sectionReader);
+        return new SectionReaderHolder(sectionReader);
       });
       holder.retain();
       return new SectionReaderLease(cacheKey, holder);
@@ -1023,15 +1023,13 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
   /**
    * Cache entry wrapper managing lifecycle and reference counting for section readers.
    */
-  private final class SectionReaderHolder {
-    private final ImmutableBytesWritable cacheKey;
+  private static final class SectionReaderHolder {
     private final SectionReader sectionReader;
     private final AtomicInteger refCount = new AtomicInteger(0);
     private final AtomicBoolean evicted = new AtomicBoolean(false);
     private final AtomicBoolean closed = new AtomicBoolean(false);
 
-    SectionReaderHolder(ImmutableBytesWritable cacheKey, SectionReader sectionReader) {
-      this.cacheKey = cacheKey;
+    SectionReaderHolder(SectionReader sectionReader) {
       this.sectionReader = sectionReader;
     }
 
@@ -1093,7 +1091,7 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
   /**
    * Lease handle giving callers access to a cached section reader while ensuring proper release.
    */
-  protected final class SectionReaderLease implements AutoCloseable {
+  protected static final class SectionReaderLease implements AutoCloseable {
     private final ImmutableBytesWritable cacheKey;
     private final SectionReaderHolder holder;
     private final SectionReader sectionReader;
