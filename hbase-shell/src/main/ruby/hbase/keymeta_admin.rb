@@ -46,6 +46,10 @@ module Hbase
       @admin.getManagedKeys(cust, namespace)
     end
 
+    def rotate_stk
+      @admin.rotateSTK
+    end
+
     def extract_cust_info(key_info)
       cust_info = key_info.split(':')
       raise(ArgumentError, 'Invalid cust:namespace format') unless [1, 2].include?(cust_info.length)

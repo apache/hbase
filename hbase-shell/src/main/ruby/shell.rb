@@ -629,6 +629,7 @@ Shell.load_command_group(
   commands: %w[
     enable_key_management
     show_key_status
+    rotate_stk
   ]
 )
 
