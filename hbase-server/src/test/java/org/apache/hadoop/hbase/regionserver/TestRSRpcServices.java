@@ -19,10 +19,13 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Optional;
@@ -37,6 +40,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -116,5 +120,85 @@ public class TestRSRpcServices {
     verify(mockServer).rebuildSystemKeyCache();
 
     LOG.info("managedKeysRotateSTK test completed successfully");
+  }
+
+  /**
+   * Test that managedKeysRotateSTK throws ServiceException when server is not online
+   */
+  @Test
+  public void testManagedKeysRotateSTKWhenServerStopped() throws Exception {
+    // Create mocks
+    HRegionServer mockServer = mock(HRegionServer.class);
+    Configuration conf = HBaseConfiguration.create();
+    FileSystem mockFs = mock(FileSystem.class);
+
+    when(mockServer.getConfiguration()).thenReturn(conf);
+    when(mockServer.isOnline()).thenReturn(true);
+    when(mockServer.isAborted()).thenReturn(false);
+    when(mockServer.isStopped()).thenReturn(true); // Server is stopped
+    when(mockServer.isDataFileSystemOk()).thenReturn(true);
+    when(mockServer.getFileSystem()).thenReturn(mockFs);
+
+    // Create RSRpcServices
+    RSRpcServices rpcServices = new RSRpcServices(mockServer);
+
+    // Create request
+    AdminProtos.ManagedKeysRotateSTKRequest request =
+      AdminProtos.ManagedKeysRotateSTKRequest.newBuilder().build();
+    RpcController controller = mock(RpcController.class);
+
+    // Call the RPC method and expect ServiceException
+    try {
+      rpcServices.managedKeysRotateSTK(controller, request);
+      fail("Expected ServiceException when server is stopped");
+    } catch (ServiceException e) {
+      // Expected
+      assertTrue("Exception should mention server stopping",
+        e.getCause().getMessage().contains("stopping"));
+      LOG.info("Correctly threw ServiceException when server is stopped");
+    }
+  }
+
+  /**
+   * Test that managedKeysRotateSTK throws ServiceException when rebuildSystemKeyCache fails
+   */
+  @Test
+  public void testManagedKeysRotateSTKWhenRebuildFails() throws Exception {
+    // Create mocks
+    HRegionServer mockServer = mock(HRegionServer.class);
+    Configuration conf = HBaseConfiguration.create();
+    FileSystem mockFs = mock(FileSystem.class);
+
+    when(mockServer.getConfiguration()).thenReturn(conf);
+    when(mockServer.isOnline()).thenReturn(true);
+    when(mockServer.isAborted()).thenReturn(false);
+    when(mockServer.isStopped()).thenReturn(false);
+    when(mockServer.isDataFileSystemOk()).thenReturn(true);
+    when(mockServer.getFileSystem()).thenReturn(mockFs);
+
+    // Make rebuildSystemKeyCache throw IOException
+    IOException testException = new IOException("Test failure rebuilding cache");
+    doThrow(testException).when(mockServer).rebuildSystemKeyCache();
+
+    // Create RSRpcServices
+    RSRpcServices rpcServices = new RSRpcServices(mockServer);
+
+    // Create request
+    AdminProtos.ManagedKeysRotateSTKRequest request =
+      AdminProtos.ManagedKeysRotateSTKRequest.newBuilder().build();
+    RpcController controller = mock(RpcController.class);
+
+    // Call the RPC method and expect ServiceException
+    try {
+      rpcServices.managedKeysRotateSTK(controller, request);
+      fail("Expected ServiceException when rebuildSystemKeyCache fails");
+    } catch (ServiceException e) {
+      // Expected
+      assertEquals("Test failure rebuilding cache", e.getCause().getMessage());
+      LOG.info("Correctly threw ServiceException when rebuildSystemKeyCache fails");
+    }
+
+    // Verify that rebuildSystemKeyCache was called
+    verify(mockServer).rebuildSystemKeyCache();
   }
 }

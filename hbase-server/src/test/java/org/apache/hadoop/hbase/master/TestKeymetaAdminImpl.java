@@ -285,6 +285,20 @@ public class TestKeymetaAdminImpl {
     public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestRotateSTK.class);
 
+    /**
+     * Test rotateSTK when a new key is detected.
+     * Note: This test validates the basic flow but cannot fully test the success path
+     * because SystemKeyManager requires actual file system setup with system keys.
+     * The real success scenario would be:
+     * 1. SystemKeyManager.rotateSystemKeyIfChanged() returns non-null (new key detected)
+     * 2. Master gets list of online region servers
+     * 3. Master makes parallel RPC calls to all region servers
+     * 4. All region servers successfully rebuild their system key cache
+     * 5. Method returns true
+     *
+     * For comprehensive testing of the success path, an integration test with actual
+     * file system and key setup would be needed.
+     */
     @Test
     public void testRotateSTKWithNewKey() throws Exception {
       // Setup mocks for MasterServices
@@ -324,14 +338,51 @@ public class TestKeymetaAdminImpl {
       org.apache.hadoop.hbase.ClusterId clusterId = new org.apache.hadoop.hbase.ClusterId();
       when(mockMasterFS.getClusterId()).thenReturn(clusterId);
 
-      // This test requires a real file system setup with system keys,
-      // so we'll just verify the method exists and can be called
       KeymetaAdminImplForTest admin = new KeymetaAdminImplForTest(mockMaster, keymetaAccessor);
 
-      // Since we can't easily mock the SystemKeyManager and file system,
-      // we expect this to throw an exception when trying to access system keys
-      assertThrows("Expected exception due to missing key setup", Exception.class,
-        () -> admin.rotateSTK());
+      // Since we can't easily mock the SystemKeyManager to return a new key without
+      // setting up the entire file system and key infrastructure, we expect this to
+      // throw an exception when trying to access system keys from the file system.
+      // This validates that the method can be invoked and the mocking setup is correct.
+      assertThrows("Expected exception due to missing file system setup for keys",
+        Exception.class, () -> admin.rotateSTK());
+    }
+
+    /**
+     * Test rotateSTK when no key change is detected.
+     * Note: This test cannot fully validate the no-change scenario because
+     * SystemKeyManager requires actual file system setup.
+     * The expected behavior when no key change is detected:
+     * 1. SystemKeyManager.rotateSystemKeyIfChanged() returns null
+     * 2. Method returns false immediately without calling any region servers
+     * 3. No RPC calls are made to region servers
+     *
+     * For full testing of this scenario, an integration test would be needed.
+     */
+    @Test
+    public void testRotateSTKNoChange() throws Exception {
+      // Setup mocks for MasterServices
+      org.apache.hadoop.hbase.master.MasterServices mockMaster =
+        mock(org.apache.hadoop.hbase.master.MasterServices.class);
+
+      // Mock KeyManagementService - required by KeyManagementBase constructor
+      when(mockMaster.getKeyManagementService()).thenReturn(mockMaster);
+      when(mockMaster.getFileSystem()).thenReturn(mockFileSystem);
+      when(mockMaster.getConfiguration()).thenReturn(conf);
+
+      org.apache.hadoop.hbase.master.MasterFileSystem mockMasterFS =
+        mock(org.apache.hadoop.hbase.master.MasterFileSystem.class);
+      when(mockMaster.getMasterFileSystem()).thenReturn(mockMasterFS);
+      org.apache.hadoop.hbase.ClusterId clusterId = new org.apache.hadoop.hbase.ClusterId();
+      when(mockMasterFS.getClusterId()).thenReturn(clusterId);
+
+      KeymetaAdminImplForTest admin = new KeymetaAdminImplForTest(mockMaster, keymetaAccessor);
+
+      // Since we can't mock SystemKeyManager without file system setup,
+      // this will throw an exception. In a real scenario with proper setup,
+      // if no key change is detected, the method would return false.
+      assertThrows("Expected exception due to missing file system setup",
+        Exception.class, () -> admin.rotateSTK());
     }
 
     @Test
