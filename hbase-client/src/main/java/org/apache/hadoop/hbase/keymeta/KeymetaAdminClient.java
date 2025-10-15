@@ -72,8 +72,8 @@ public class KeymetaAdminClient implements KeymetaAdmin {
   @Override
   public boolean rotateSTK() throws IOException {
     try {
-      ManagedKeysProtos.KeymetaRotateSTKResponse response = stub.rotateSTK(null,
-        ManagedKeysProtos.KeymetaRotateSTKRequest.newBuilder().build());
+      ManagedKeysProtos.RotateSTKResponse response = stub.rotateSTK(null,
+        ManagedKeysProtos.RotateSTKRequest.newBuilder().build());
       return response.getRotated();
     } catch (ServiceException e) {
       throw ProtobufUtil.handleRemoteException(e);

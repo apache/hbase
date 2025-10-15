@@ -98,13 +98,13 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
     List<ServerName> regionServers = new ArrayList<>(master.getServerManager().getOnlineServersList());
 
     // Create all futures in parallel
-    List<CompletableFuture<AdminProtos.RotateSTKResponse>> futures = new ArrayList<>();
-    AdminProtos.RotateSTKRequest request = AdminProtos.RotateSTKRequest.newBuilder().build();
+    List<CompletableFuture<AdminProtos.ManagedKeysRotateSTKResponse>> futures = new ArrayList<>();
+    AdminProtos.ManagedKeysRotateSTKRequest request = AdminProtos.ManagedKeysRotateSTKRequest.newBuilder().build();
 
     for (ServerName serverName : regionServers) {
-      LOG.info("Initiating rotateSTK on region server: {}", serverName);
+      LOG.info("Initiating managedKeysRotateSTK on region server: {}", serverName);
       AsyncRegionServerAdmin admin = master.getAsyncClusterConnection().getRegionServerAdmin(serverName);
-      futures.add(admin.rotateSTK(request));
+      futures.add(admin.managedKeysRotateSTK(request));
     }
 
     // Wait for all futures and collect failures
@@ -113,9 +113,9 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
       ServerName serverName = regionServers.get(i);
       try {
         FutureUtils.get(futures.get(i));
-        LOG.info("Successfully called rotateSTK on region server: {}", serverName);
+        LOG.info("Successfully called managedKeysRotateSTK on region server: {}", serverName);
       } catch (Exception e) {
-        LOG.error("Failed to call rotateSTK on region server: {}", serverName, e);
+        LOG.error("Failed to call managedKeysRotateSTK on region server: {}", serverName, e);
         failedServers.add(serverName);
       }
     }

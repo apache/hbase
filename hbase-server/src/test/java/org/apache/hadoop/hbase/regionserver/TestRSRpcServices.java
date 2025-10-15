@@ -18,16 +18,25 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Optional;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.ipc.RpcCall;
 import org.apache.hadoop.hbase.ipc.RpcServer;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -68,5 +77,38 @@ public class TestRSRpcServices {
     RSRpcServices.RegionScannerHolder rsh = new RSRpcServices.RegionScannerHolder(null, region,
       null, null, false, false, clientIpAndPort, userNameTest);
     LOG.info("rsh: {}", rsh);
+  }
+
+  /**
+   * Test the managedKeysRotateSTK RPC method that is used to rebuild the system key cache
+   * on region servers when a system key rotation has occurred.
+   */
+  @Test
+  public void testManagedKeysRotateSTK() throws Exception {
+    // Create mocks
+    HRegionServer mockServer = mock(HRegionServer.class);
+    Configuration conf = HBaseConfiguration.create();
+    when(mockServer.getConfiguration()).thenReturn(conf);
+    when(mockServer.isOnline()).thenReturn(true);
+
+    // Create RSRpcServices
+    RSRpcServices rpcServices = new RSRpcServices(mockServer);
+
+    // Create request
+    AdminProtos.ManagedKeysRotateSTKRequest request =
+      AdminProtos.ManagedKeysRotateSTKRequest.newBuilder().build();
+    RpcController controller = mock(RpcController.class);
+
+    // Call the RPC method
+    AdminProtos.ManagedKeysRotateSTKResponse response =
+      rpcServices.managedKeysRotateSTK(controller, request);
+
+    // Verify the response
+    assertTrue("Response should indicate rotation was successful", response.getRotated());
+
+    // Verify that rebuildSystemKeyCache was called on the server
+    verify(mockServer).rebuildSystemKeyCache();
+
+    LOG.info("managedKeysRotateSTK test completed successfully");
   }
 }

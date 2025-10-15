@@ -58,8 +58,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWA
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RollWALWriterRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RollWALWriterResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RotateSTKRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RotateSTKResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ManagedKeysRotateSTKRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ManagedKeysRotateSTKResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationRequest;
@@ -220,7 +220,7 @@ public class AsyncRegionServerAdmin {
     return call((stub, controller, done) -> stub.executeProcedures(controller, request, done));
   }
 
-  public CompletableFuture<RotateSTKResponse> rotateSTK(RotateSTKRequest request) {
-    return call((stub, controller, done) -> stub.rotateSTK(controller, request, done));
+  public CompletableFuture<ManagedKeysRotateSTKResponse> managedKeysRotateSTK(ManagedKeysRotateSTKRequest request) {
+    return call((stub, controller, done) -> stub.managedKeysRotateSTK(controller, request, done));
   }
 }

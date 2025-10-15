@@ -311,11 +311,11 @@ public class TestKeymetaAdminImpl {
       when(mockConnection.getRegionServerAdmin(rs1)).thenReturn(mockRsAdmin1);
       when(mockConnection.getRegionServerAdmin(rs2)).thenReturn(mockRsAdmin2);
 
-      AdminProtos.RotateSTKResponse rsResponse =
-        AdminProtos.RotateSTKResponse.newBuilder().setRotated(true).build();
-      when(mockRsAdmin1.rotateSTK(any(AdminProtos.RotateSTKRequest.class)))
+      AdminProtos.ManagedKeysRotateSTKResponse rsResponse =
+        AdminProtos.ManagedKeysRotateSTKResponse.newBuilder().setRotated(true).build();
+      when(mockRsAdmin1.managedKeysRotateSTK(any(AdminProtos.ManagedKeysRotateSTKRequest.class)))
         .thenReturn(java.util.concurrent.CompletableFuture.completedFuture(rsResponse));
-      when(mockRsAdmin2.rotateSTK(any(AdminProtos.RotateSTKRequest.class)))
+      when(mockRsAdmin2.managedKeysRotateSTK(any(AdminProtos.ManagedKeysRotateSTKRequest.class)))
         .thenReturn(java.util.concurrent.CompletableFuture.completedFuture(rsResponse));
 
       when(mockMaster.getConfiguration()).thenReturn(conf);

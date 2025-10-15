@@ -197,6 +197,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWA
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RollWALWriterRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RollWALWriterResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ManagedKeysRotateSTKRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ManagedKeysRotateSTKResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavoredNodesRequest;
@@ -4069,14 +4071,14 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
    */
   @Override
   @QosPriority(priority = HConstants.ADMIN_QOS)
-  public RotateSTKResponse rotateSTK(final RpcController controller,
-    final RotateSTKRequest request) throws ServiceException {
+  public ManagedKeysRotateSTKResponse managedKeysRotateSTK(final RpcController controller,
+    final ManagedKeysRotateSTKRequest request) throws ServiceException {
     try {
       checkOpen();
       requestCount.increment();
-      LOG.info("Received RotateSTK request, rebuilding system key cache");
+      LOG.info("Received ManagedKeysRotateSTK request, rebuilding system key cache");
       server.rebuildSystemKeyCache();
-      return RotateSTKResponse.newBuilder().setRotated(true).build();
+      return ManagedKeysRotateSTKResponse.newBuilder().setRotated(true).build();
     } catch (IOException ie) {
       LOG.error("Failed to rebuild system key cache", ie);
       throw new ServiceException(ie);
