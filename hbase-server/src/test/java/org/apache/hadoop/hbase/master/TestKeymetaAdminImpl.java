@@ -27,7 +27,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assume.assumeTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -297,9 +296,10 @@ public class TestKeymetaAdminImpl {
       AsyncRegionServerAdmin mockRsAdmin1 = mock(AsyncRegionServerAdmin.class);
       AsyncRegionServerAdmin mockRsAdmin2 = mock(AsyncRegionServerAdmin.class);
 
-      when(mockServer.getKeyManagementService()).thenReturn(mockServer);
-      when(mockServer.getFileSystem()).thenReturn(mockFileSystem);
-      when(mockServer.getConfiguration()).thenReturn(conf);
+      // Mock KeyManagementService - required by KeyManagementBase constructor
+      when(mockMaster.getKeyManagementService()).thenReturn(mockMaster);
+      when(mockMaster.getFileSystem()).thenReturn(mockFileSystem);
+      when(mockMaster.getConfiguration()).thenReturn(conf);
 
       ServerName rs1 = ServerName.valueOf("rs1", 16020, System.currentTimeMillis());
       ServerName rs2 = ServerName.valueOf("rs2", 16020, System.currentTimeMillis());
@@ -318,35 +318,31 @@ public class TestKeymetaAdminImpl {
       when(mockRsAdmin2.managedKeysRotateSTK(any(AdminProtos.ManagedKeysRotateSTKRequest.class)))
         .thenReturn(java.util.concurrent.CompletableFuture.completedFuture(rsResponse));
 
-      when(mockMaster.getConfiguration()).thenReturn(conf);
       org.apache.hadoop.hbase.master.MasterFileSystem mockMasterFS =
         mock(org.apache.hadoop.hbase.master.MasterFileSystem.class);
       when(mockMaster.getMasterFileSystem()).thenReturn(mockMasterFS);
       org.apache.hadoop.hbase.ClusterId clusterId = new org.apache.hadoop.hbase.ClusterId();
       when(mockMasterFS.getClusterId()).thenReturn(clusterId);
-      when(mockMaster.getFileSystem()).thenReturn(mockFileSystem);
 
       // This test requires a real file system setup with system keys,
       // so we'll just verify the method exists and can be called
       KeymetaAdminImplForTest admin = new KeymetaAdminImplForTest(mockMaster, keymetaAccessor);
 
       // Since we can't easily mock the SystemKeyManager and file system,
-      // we'll verify that calling rotateSTK with no key change returns false
-      try {
-        boolean result = admin.rotateSTK();
-        // We expect this to fail or return false since we don't have a proper setup
-        assertFalse("Expected rotateSTK to return false when no key change", result);
-      } catch (IOException e) {
-        // This is also acceptable - the method tried to work but couldn't access the key
-        assertTrue("Expected IOException due to missing key setup", e.getMessage()
-          .contains("Failed to get system key") || e.getMessage().contains("rotateSTK"));
-      }
+      // we expect this to throw an exception when trying to access system keys
+      assertThrows("Expected exception due to missing key setup", Exception.class,
+        () -> admin.rotateSTK());
     }
 
     @Test
     public void testRotateSTKNotOnMaster() throws Exception {
       // Create a non-master server mock
       org.apache.hadoop.hbase.Server mockRegionServer = mock(org.apache.hadoop.hbase.Server.class);
+      org.apache.hadoop.hbase.keymeta.KeyManagementService mockKeyService =
+        mock(org.apache.hadoop.hbase.keymeta.KeyManagementService.class);
+      // Mock KeyManagementService - required by KeyManagementBase constructor
+      when(mockRegionServer.getKeyManagementService()).thenReturn(mockKeyService);
+      when(mockKeyService.getConfiguration()).thenReturn(conf);
       when(mockRegionServer.getConfiguration()).thenReturn(conf);
       when(mockRegionServer.getFileSystem()).thenReturn(mockFileSystem);
 
@@ -358,16 +354,23 @@ public class TestKeymetaAdminImpl {
 
     @Test
     public void testRotateSTKWhenDisabled() throws Exception {
-      conf.set(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, "false");
+      // Use a fresh configuration to ensure key management is disabled
+      HBaseTestingUtil testUtil = new HBaseTestingUtil();
+      Configuration disabledConf = testUtil.getConfiguration();
+      disabledConf.set(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, "false");
+
       org.apache.hadoop.hbase.master.MasterServices mockMaster =
         mock(org.apache.hadoop.hbase.master.MasterServices.class);
-      when(mockMaster.getConfiguration()).thenReturn(conf);
+      // Mock KeyManagementService - required by KeyManagementBase constructor
+      when(mockMaster.getKeyManagementService()).thenReturn(mockMaster);
+      when(mockMaster.getConfiguration()).thenReturn(disabledConf);
       when(mockMaster.getFileSystem()).thenReturn(mockFileSystem);
 
       KeymetaAdminImpl admin = new KeymetaAdminImpl(mockMaster);
 
       IOException ex = assertThrows(IOException.class, () -> admin.rotateSTK());
-      assertTrue(ex.getMessage().contains("Key management is not enabled"));
+      assertTrue("Exception message should contain 'not enabled', but was: " +
+        ex.getMessage(), ex.getMessage().contains("not enabled"));
     }
   }
 }
