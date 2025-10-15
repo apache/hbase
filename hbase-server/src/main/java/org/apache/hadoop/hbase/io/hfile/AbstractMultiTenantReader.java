@@ -311,15 +311,15 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
       builder.expireAfterAccess(expireMs, TimeUnit.MILLISECONDS);
     }
 
-    builder.removalListener(
-      (RemovalNotification<ImmutableBytesWritable, SectionReaderHolder> notification) -> {
-        SectionReaderHolder holder = notification.getValue();
-        if (holder != null) {
-          holder.markEvicted(true);
-        }
-      });
-
-    Cache<ImmutableBytesWritable, SectionReaderHolder> cache = builder.build();
+    Cache<ImmutableBytesWritable, SectionReaderHolder> cache = builder
+      .removalListener(
+        (RemovalNotification<ImmutableBytesWritable, SectionReaderHolder> notification) -> {
+          SectionReaderHolder holder = notification.getValue();
+          if (holder != null) {
+            holder.markEvicted(true);
+          }
+        })
+      .build();
     LOG.debug("Initialized section reader cache with maxSize={}, expireMs={}", maxSize, expireMs);
     return cache;
   }
