@@ -56,8 +56,7 @@ public class RowCache {
       Caffeine.newBuilder().maximumWeight(maxSizeBytes).removalListener(new EvictionListener())
         .weigher((RowCacheKey key,
           RowCells value) -> (int) Math.min(key.heapSize() + value.heapSize(), Integer.MAX_VALUE))
-        .recordStats()
-        .build();
+        .recordStats().build();
   }
 
   void cacheRow(RowCacheKey key, RowCells value) {
