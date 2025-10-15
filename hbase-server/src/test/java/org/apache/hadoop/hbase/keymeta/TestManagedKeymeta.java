@@ -170,6 +170,8 @@ public class TestManagedKeymeta extends ManagedKeyTestBase {
 
     MockManagedKeyProvider managedKeyProvider =
       (MockManagedKeyProvider) Encryption.getManagedKeyProvider(TEST_UTIL.getConfiguration());
+    // Once we enable multikeyGenMode on MockManagedKeyProvider, every call should return a new key
+    // which should trigger a rotation.
     managedKeyProvider.setMultikeyGenMode(true);
     result = adminClient.rotateSTK();
     assertTrue("rotateSTK should return true when a new key is detected", result);
