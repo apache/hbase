@@ -23,6 +23,7 @@ import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.coprocessor.CoreCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.HasMasterServices;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
@@ -106,15 +107,16 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
       RpcCallback<GetManagedKeysResponse> done) {
       ManagedKeysResponse.Builder builder = getResponseBuilder(controller, request);
       if (builder.getKeyCust() != null && !builder.getKeyCust().isEmpty()) {
+        GetManagedKeysResponse keyStateResponse;
         try {
           List<ManagedKeyData> managedKeyStates = master.getKeymetaAdmin()
             .enableKeyManagement(request.getKeyCust(), request.getKeyNamespace());
-          done.run(generateKeyStateResponse(managedKeyStates, builder));
-        } catch (IOException e) {
-          CoprocessorRpcUtils.setControllerException(controller, e);
-        } catch (KeyException e) {
-          CoprocessorRpcUtils.setControllerException(controller, new IOException(e));
+          keyStateResponse = generateKeyStateResponse(managedKeyStates, builder);
+        } catch (IOException | KeyException e) {
+          CoprocessorRpcUtils.setControllerException(controller, new DoNotRetryIOException(e));
+          keyStateResponse = GetManagedKeysResponse.getDefaultInstance();
         }
+        done.run(keyStateResponse);
       }
     }
 
@@ -123,15 +125,16 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
       RpcCallback<GetManagedKeysResponse> done) {
       ManagedKeysResponse.Builder builder = getResponseBuilder(controller, request);
       if (builder.getKeyCust() != null && !builder.getKeyCust().isEmpty()) {
+        GetManagedKeysResponse keyStateResponse;
         try {
           List<ManagedKeyData> managedKeyStates = master.getKeymetaAdmin()
             .getManagedKeys(request.getKeyCust(), request.getKeyNamespace());
-          done.run(generateKeyStateResponse(managedKeyStates, builder));
-        } catch (IOException e) {
-          CoprocessorRpcUtils.setControllerException(controller, e);
-        } catch (KeyException e) {
-          CoprocessorRpcUtils.setControllerException(controller, new IOException(e));
+          keyStateResponse = generateKeyStateResponse(managedKeyStates, builder);
+        } catch (IOException | KeyException e) {
+          CoprocessorRpcUtils.setControllerException(controller, new DoNotRetryIOException(e));
+          keyStateResponse = GetManagedKeysResponse.getDefaultInstance();
         }
+        done.run(keyStateResponse);
       }
     }
 
@@ -145,12 +148,14 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
     @Override
     public void rotateSTK(RpcController controller, RotateSTKRequest request,
       RpcCallback<RotateSTKResponse> done) {
+      boolean rotated;
       try {
-        boolean rotated = master.getKeymetaAdmin().rotateSTK();
-        done.run(RotateSTKResponse.newBuilder().setRotated(rotated).build());
+        rotated = master.getKeymetaAdmin().rotateSTK();
       } catch (IOException e) {
-        CoprocessorRpcUtils.setControllerException(controller, e);
+        CoprocessorRpcUtils.setControllerException(controller, new DoNotRetryIOException(e));
+        rotated = false;
       }
+      done.run(RotateSTKResponse.newBuilder().setRotated(rotated).build());
     }
   }
 
