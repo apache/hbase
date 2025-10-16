@@ -182,8 +182,8 @@ public class TestManagedKeymeta extends ManagedKeyTestBase {
     assertTrue("rotateSTK should return true when a new key is detected", result);
 
     ManagedKeyData newSystemKey = master.getSystemKeyCache().getLatestSystemKey();
-    assertNotEquals("newSystemKey should be different from currentSystemKey",
-      currentSystemKey, newSystemKey);
+    assertNotEquals("newSystemKey should be different from currentSystemKey", currentSystemKey,
+      newSystemKey);
 
     HRegionServer regionServer = TEST_UTIL.getHBaseCluster().getRegionServer(0);
     assertEquals("regionServer should have the same new system key", newSystemKey,
