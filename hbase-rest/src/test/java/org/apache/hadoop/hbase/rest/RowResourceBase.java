@@ -237,7 +237,7 @@ public class RowResourceBase {
     assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_PROTOBUF, response.getHeader("content-type"));
     CellSetModel cellSet = new CellSetModel();
-    cellSet.getObjectFromMessage(response.getBody());
+    cellSet.getObjectFromMessage(response.getStream());
     RowModel rowModel = cellSet.getRows().get(0);
     CellModel cell = rowModel.getCells().get(0);
     assertEquals(Bytes.toString(cell.getColumn()), column);
@@ -250,7 +250,7 @@ public class RowResourceBase {
     assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_PROTOBUF, response.getHeader("content-type"));
     CellSetModel cellSet = new CellSetModel();
-    cellSet.getObjectFromMessage(response.getBody());
+    cellSet.getObjectFromMessage(response.getStream());
     RowModel rowModel = cellSet.getRows().get(0);
     CellModel cell = rowModel.getCells().get(0);
     assertEquals(Bytes.toString(cell.getColumn()), column);
