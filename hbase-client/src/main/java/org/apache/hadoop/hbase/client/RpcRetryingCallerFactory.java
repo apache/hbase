@@ -21,12 +21,16 @@ import com.google.errorprone.annotations.RestrictedApi;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Factory to create an {@link RpcRetryingCaller}
  */
 @InterfaceAudience.Private
 public class RpcRetryingCallerFactory {
+
+  private static final Logger LOG = LoggerFactory.getLogger(RpcRetryingCallerFactory.class);
 
   /** Configuration key for a custom {@link RpcRetryingCaller} */
   public static final String CUSTOM_CALLER_CONF_KEY = "hbase.rpc.callerfactory.class";
@@ -38,12 +42,12 @@ public class RpcRetryingCallerFactory {
 
   public RpcRetryingCallerFactory(Configuration conf, ConnectionConfiguration connectionConf) {
     this(conf, connectionConf, RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR, null,
-      OperationInterceptorFactory.NO_OP);
+      createOperationInterceptorFactory(conf));
   }
 
   public RpcRetryingCallerFactory(Configuration conf, ConnectionConfiguration connectionConf,
     RetryingCallerInterceptor interceptor, MetricsConnection metrics) {
-    this(conf, connectionConf, interceptor, metrics, OperationInterceptorFactory.NO_OP);
+    this(conf, connectionConf, interceptor, metrics, createOperationInterceptorFactory(conf));
   }
 
   public RpcRetryingCallerFactory(Configuration conf, ConnectionConfiguration connectionConf,
@@ -90,21 +94,23 @@ public class RpcRetryingCallerFactory {
   public static RpcRetryingCallerFactory instantiate(Configuration configuration,
     ConnectionConfiguration connectionConf, MetricsConnection metrics) {
     return instantiate(configuration, connectionConf,
-      RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR, null, metrics);
+      RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR, null, metrics,
+      createOperationInterceptorFactory(configuration));
   }
 
   public static RpcRetryingCallerFactory instantiate(Configuration configuration,
     ConnectionConfiguration connectionConf, ServerStatisticTracker stats,
     MetricsConnection metrics) {
     return instantiate(configuration, connectionConf,
-      RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR, stats, metrics);
+      RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR, stats, metrics,
+      createOperationInterceptorFactory(configuration));
   }
 
   public static RpcRetryingCallerFactory instantiate(Configuration configuration,
     ConnectionConfiguration connectionConf, RetryingCallerInterceptor interceptor,
     ServerStatisticTracker stats, MetricsConnection metrics) {
     return instantiate(configuration, connectionConf, interceptor, stats, metrics,
-      OperationInterceptorFactory.NO_OP);
+      createOperationInterceptorFactory(configuration));
   }
 
   public static RpcRetryingCallerFactory instantiate(Configuration configuration,
@@ -124,5 +130,21 @@ public class RpcRetryingCallerFactory {
         new Object[] { configuration, connectionConf });
     }
     return factory;
+  }
+
+  private static OperationInterceptorFactory createOperationInterceptorFactory(Configuration conf) {
+    String clazz = conf.get(OperationInterceptorFactory.HBASE_CLIENT_OPERATION_INTERCEPTOR_IMPL);
+    if (clazz == null || clazz.isEmpty()) {
+      return OperationInterceptorFactory.NO_OP;
+    }
+    try {
+      Class<? extends OperationInterceptorFactory> factoryClass =
+        conf.getClassByName(clazz).asSubclass(OperationInterceptorFactory.class);
+      return ReflectionUtils.newInstance(factoryClass, conf);
+    } catch (ClassNotFoundException e) {
+      LOG.warn("Failed to load OperationInterceptorFactory class: {}, using NO_OP instead", clazz,
+        e);
+      return OperationInterceptorFactory.NO_OP;
+    }
   }
 }
