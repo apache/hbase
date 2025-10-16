@@ -24,7 +24,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * Utility used by the web UI JSP pages.
  */
 @InterfaceAudience.Private
-public class CanaryStatusUtil {
+public final class CanaryStatusUtil {
 
   private CanaryStatusUtil() {
     // Do not instantiate.
