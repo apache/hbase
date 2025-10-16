@@ -547,8 +547,8 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
 
     @Override
     public ExtendedCell deepClone() {
-      // This is not used in actual flow. Throwing UnsupportedOperationException
-      throw new UnsupportedOperationException();
+      // To garbage collect the objects referenced by this cell, we need to deep clone it
+      return ExtendedCell.super.deepClone();
     }
   }
 
