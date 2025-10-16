@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.backup.impl;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONF_CONTINUOUS_BACKUP_WAL_DIR;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.JOB_NAME_CONF_KEY;
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.ONE_DAY_IN_MILLISECONDS;
-import static org.apache.hadoop.hbase.backup.util.BackupFileSystemManager.BULKLOAD_FILES_DIR;
 import static org.apache.hadoop.hbase.backup.util.BackupFileSystemManager.WALS_DIR;
 import static org.apache.hadoop.hbase.backup.util.BackupUtils.DATE_FORMAT;
 
@@ -45,7 +44,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupCopyJob;
 import org.apache.hadoop.hbase.backup.BackupInfo;
@@ -54,7 +52,6 @@ import org.apache.hadoop.hbase.backup.BackupRequest;
 import org.apache.hadoop.hbase.backup.BackupRestoreFactory;
 import org.apache.hadoop.hbase.backup.BackupType;
 import org.apache.hadoop.hbase.backup.HBackupFileSystem;
-import org.apache.hadoop.hbase.backup.mapreduce.BulkLoadCollectorJob;
 import org.apache.hadoop.hbase.backup.mapreduce.MapReduceBackupCopyJob;
 import org.apache.hadoop.hbase.backup.mapreduce.MapReduceHFileSplitterJob;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
@@ -87,7 +84,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 /**
  * Incremental backup implementation. See the {@link #execute() execute} method.
  */
-@InterfaceAudience.Private public class IncrementalTableBackupClient extends TableBackupClient {
+@InterfaceAudience.Private
+public class IncrementalTableBackupClient extends TableBackupClient {
   private static final Logger LOG = LoggerFactory.getLogger(IncrementalTableBackupClient.class);
 
   protected IncrementalTableBackupClient() {
@@ -113,7 +111,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 
   /**
    * Check if a given path is belongs to active WAL directory
-   *
    * @param p path
    * @return true, if yes
    */
@@ -139,12 +136,11 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
    * bulk loaded hfiles. Copies the bulk loaded hfiles to backup destination. This method does NOT
    * clean up the entries in the bulk load system table. Those entries should not be cleaned until
    * the backup is marked as complete.
-   *
    * @param tablesToBackup list of tables to be backed up
    */
   protected List<BulkLoad> handleBulkLoad(List<TableName> tablesToBackup,
-    Map<TableName, List<String>> tablesToWALFileList,
-    Map<TableName, Long> tablesToPrevBackupTs) throws IOException {
+    Map<TableName, List<String>> tablesToWALFileList, Map<TableName, Long> tablesToPrevBackupTs)
+    throws IOException {
     Map<TableName, MergeSplitBulkloadInfo> toBulkload = new HashMap<>();
     List<BulkLoad> bulkLoads = new ArrayList<>();
 
@@ -177,9 +173,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 
         String srcTableQualifier = srcTable.getQualifierAsString();
         String srcTableNs = srcTable.getNamespaceAsString();
-        Path tgtFam = new Path(tgtRoot,
-          srcTableNs + Path.SEPARATOR + srcTableQualifier + Path.SEPARATOR + regionName
-            + Path.SEPARATOR + fam);
+        Path tgtFam = new Path(tgtRoot, srcTableNs + Path.SEPARATOR + srcTableQualifier
+          + Path.SEPARATOR + regionName + Path.SEPARATOR + fam);
         if (!tgtFs.mkdirs(tgtFam)) {
           throw new IOException("couldn't create " + tgtFam);
         }
@@ -200,31 +195,32 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
           bulkloadInfo.addArchiveFiles(archive.toString());
         }
       }
+
+      for (MergeSplitBulkloadInfo bulkloadInfo : toBulkload.values()) {
+        mergeSplitAndCopyBulkloadedHFiles(bulkloadInfo.getActiveFiles(),
+          bulkloadInfo.getArchiveFiles(), bulkloadInfo.getSrcTable(), tgtFs);
+      }
     } else {
       // Continuous incremental backup: run BulkLoadCollectorJob over backed-up WALs
       Path collectorOutput = new Path(getBulkOutputDir(), "bulkload-collector-output");
       for (TableName table : tablesToBackup) {
         String walDirsCsv = String.join(",", tablesToWALFileList.get(table));
 
-        List<Path> bulkloadPaths = BulkFilesCollector.collectFromWalDirs(conf, walDirsCsv,
-          collectorOutput, table, table, tablesToPrevBackupTs.get(table),
-          backupInfo.getIncrCommittedWalTs());
+        List<Path> bulkloadPaths =
+          BulkFilesCollector.collectFromWalDirs(conf, walDirsCsv, collectorOutput, table, table,
+            tablesToPrevBackupTs.get(table), backupInfo.getIncrCommittedWalTs());
 
-        List<String> bulkLoadFiles = bulkloadPaths.stream()
-          .map(Path::toString)
-          .collect(Collectors.toList());
+        List<String> bulkLoadFiles =
+          bulkloadPaths.stream().map(Path::toString).collect(Collectors.toList());
 
-        mergeSplitAndCopyBulkloadedHFiles(bulkLoadFiles, table, tgtFs);
+        if (!bulkLoadFiles.isEmpty()) {
+          mergeSplitAndCopyBulkloadedHFiles(bulkLoadFiles, table, tgtFs);
+        }
       }
       if (fs.exists(collectorOutput)) {
         fs.delete(collectorOutput, true);
       }
 
-    }
-
-    for (MergeSplitBulkloadInfo bulkloadInfo : toBulkload.values()) {
-      mergeSplitAndCopyBulkloadedHFiles(bulkloadInfo.getActiveFiles(),
-        bulkloadInfo.getArchiveFiles(), bulkloadInfo.getSrcTable(), tgtFs);
     }
 
     return bulkLoads;
@@ -311,7 +307,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
    *                                       the column families for the last full backup. In which
    *                                       case, a full backup should be taken
    */
-  @Override public void execute() throws IOException, ColumnFamilyMismatchException {
+  @Override
+  public void execute() throws IOException, ColumnFamilyMismatchException {
     // tablesToWALFileList and tablesToPrevBackupTs are needed for "continuous" Incremental backup
     Map<TableName, List<String>> tablesToWALFileList = new HashMap<>();
     Map<TableName, Long> tablesToPrevBackupTs = new HashMap<>();
@@ -380,9 +377,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
         backupManager.writeBackupStartCode(newStartCode);
       }
 
-      List<BulkLoad> bulkLoads = handleBulkLoad(backupInfo.getTableNames(),
-        tablesToWALFileList,
-        tablesToPrevBackupTs);
+      List<BulkLoad> bulkLoads =
+        handleBulkLoad(backupInfo.getTableNames(), tablesToWALFileList, tablesToPrevBackupTs);
 
       // backup complete
       completeBackup(conn, backupInfo, BackupType.INCREMENTAL, conf);
@@ -665,9 +661,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 
         ColumnFamilyDescriptor[] currentCfs = admin.getDescriptor(tn).getColumnFamilies();
         String snapshotName = fullBackupInfo.getSnapshotName(tn);
-        Path root =
-          HBackupFileSystem.getTableBackupPath(tn, new Path(fullBackupInfo.getBackupRootDir()),
-            fullBackupInfo.getBackupId());
+        Path root = HBackupFileSystem.getTableBackupPath(tn,
+          new Path(fullBackupInfo.getBackupRootDir()), fullBackupInfo.getBackupId());
         Path manifestDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, root);
 
         FileSystem fs;
@@ -681,8 +676,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
           SnapshotDescriptionUtils.readSnapshotInfo(fs, manifestDir);
         SnapshotManifest manifest =
           SnapshotManifest.open(conf, fs, manifestDir, snapshotDescription);
-        if (SnapshotDescriptionUtils.isExpiredSnapshot(snapshotDescription.getTtl(),
-          snapshotDescription.getCreationTime(), EnvironmentEdgeManager.currentTime())) {
+        if (
+          SnapshotDescriptionUtils.isExpiredSnapshot(snapshotDescription.getTtl(),
+            snapshotDescription.getCreationTime(), EnvironmentEdgeManager.currentTime())
+        ) {
           throw new SnapshotTTLExpiredException(
             ProtobufUtil.createSnapshotDesc(snapshotDescription));
         }

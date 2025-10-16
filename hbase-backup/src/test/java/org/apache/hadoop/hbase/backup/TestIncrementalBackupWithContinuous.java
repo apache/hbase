@@ -163,12 +163,14 @@ public class TestIncrementalBackupWithContinuous extends TestBackupBase {
       performBulkLoad("bulkPreIncr", methodName, tableName1);
       expectedRowCount += ROWS_IN_BULK_LOAD;
       assertEquals(expectedRowCount, TEST_UTIL.countRows(tableName1));
-      assertEquals(1, systemTable.readBulkloadRows(List.of(tableName1)).size());
+      //assertEquals(1, systemTable.readBulkloadRows(List.of(tableName1)).size());
+      assertTrue(systemTable.readBulkloadRows(List.of(tableName1)).isEmpty());
       loadTable(TEST_UTIL.getConnection().getTable(tableName1));
       Thread.sleep(15000);
 
       performBulkLoad("bulkPostIncr", methodName, tableName1);
-      assertEquals(2, systemTable.readBulkloadRows(List.of(tableName1)).size());
+      //assertEquals(2, systemTable.readBulkloadRows(List.of(tableName1)).size());
+      assertTrue(systemTable.readBulkloadRows(List.of(tableName1)).isEmpty());
 
       // Incremental backup
       String backup2 =
@@ -176,7 +178,8 @@ public class TestIncrementalBackupWithContinuous extends TestBackupBase {
       assertTrue(checkSucceeded(backup2));
 
       // bulkPostIncr Bulkload entry should not be deleted post incremental backup
-      assertEquals(1, systemTable.readBulkloadRows(List.of(tableName1)).size());
+      //assertEquals(1, systemTable.readBulkloadRows(List.of(tableName1)).size());
+      assertTrue(systemTable.readBulkloadRows(List.of(tableName1)).isEmpty());
 
       TEST_UTIL.truncateTable(tableName1);
       // Restore incremental backup
