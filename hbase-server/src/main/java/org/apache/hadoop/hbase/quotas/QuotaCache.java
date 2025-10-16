@@ -130,20 +130,23 @@ public class QuotaCache implements Stoppable {
   }
 
   private Map<String, UserQuotaState> fetchUserQuotaStateEntries() throws IOException {
-    return QuotaUtil.fetchUserQuotas(rsServices.getConnection(), tableMachineQuotaFactors,
-      machineQuotaFactor);
+    return QuotaUtil.fetchUserQuotas(rsServices.getConfiguration(), rsServices.getConnection(),
+      tableMachineQuotaFactors, machineQuotaFactor);
   }
 
   private Map<String, QuotaState> fetchRegionServerQuotaStateEntries() throws IOException {
-    return QuotaUtil.fetchRegionServerQuotas(rsServices.getConnection());
+    return QuotaUtil.fetchRegionServerQuotas(rsServices.getConfiguration(),
+      rsServices.getConnection());
   }
 
   private Map<TableName, QuotaState> fetchTableQuotaStateEntries() throws IOException {
-    return QuotaUtil.fetchTableQuotas(rsServices.getConnection(), tableMachineQuotaFactors);
+    return QuotaUtil.fetchTableQuotas(rsServices.getConfiguration(), rsServices.getConnection(),
+      tableMachineQuotaFactors);
   }
 
   private Map<String, QuotaState> fetchNamespaceQuotaStateEntries() throws IOException {
-    return QuotaUtil.fetchNamespaceQuotas(rsServices.getConnection(), machineQuotaFactor);
+    return QuotaUtil.fetchNamespaceQuotas(rsServices.getConfiguration(), rsServices.getConnection(),
+      machineQuotaFactor);
   }
 
   /**
