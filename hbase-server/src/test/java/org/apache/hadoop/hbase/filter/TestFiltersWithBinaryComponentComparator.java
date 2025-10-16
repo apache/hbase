@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.hbase.filter;
 
+import static org.hamcrest.Matchers.isA;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -27,6 +29,7 @@ import org.apache.commons.codec.binary.Hex;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -43,9 +46,12 @@ import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.ExpectedException;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 
 @Category(MediumTests.class)
 public class TestFiltersWithBinaryComponentComparator {
@@ -146,6 +152,58 @@ public class TestFiltersWithBinaryComponentComparator {
       assertTrue(Bytes.toString(value).charAt(1) == 'y');
     }
     ht.close();
+  }
+
+  @Rule
+  public ExpectedException thrown = ExpectedException.none();
+
+  @Test
+  public void testThrowsExceptionOnOffsetOutOfBounds() {
+    thrown.expect(isA(BinaryComponentComparator.OffsetOutOfBoundsException.class));
+
+    byte[] componentValue = new byte[] { (byte) 'A' };
+    int offsetValue = 10;
+    byte[] valueTooShortForOffset = new byte[offsetValue];
+    BinaryComponentComparator comparator =
+      new BinaryComponentComparator(componentValue, offsetValue);
+    comparator.compareTo(valueTooShortForOffset);
+  }
+
+  /**
+   * Minicluster test to ensure that server wraps OffsetOutOfBoundsException in a
+   * DoNotRetryIOException to prevent client retries
+   */
+  @Test
+  public void testOutOfBoundsExceptionIsNotRetryable() throws IOException {
+    Table table =
+      TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), family, Integer.MAX_VALUE);
+
+    // ColumnValueFilter with BinaryComponentComparator with offset 10
+    int offsetValue = 10;
+    BinaryComponentComparator comparator = new BinaryComponentComparator(new byte[1], offsetValue);
+    ColumnValueFilter columnValueFilter =
+      new ColumnValueFilter(family, qf, CompareOperator.EQUAL, comparator);
+    Scan scan = new Scan().setFilter(columnValueFilter);
+
+    // Insert a row with column value length >= comparator offset
+    byte[] shortIncompatibleValue = new byte[offsetValue];
+    Arrays.fill(shortIncompatibleValue, (byte) 'A');
+    Put put2 = new Put(Bytes.toBytes("row1"));
+    put2.addColumn(family, qf, shortIncompatibleValue);
+    table.put(put2);
+
+    // Scan should throw DoNotRetryIOException due to incompatible value length
+    try (ResultScanner scanner = table.getScanner(scan)) {
+      scanner.iterator().forEachRemaining(result -> {
+      });
+      fail("Scan completed successfully but should have failed");
+    } catch (Exception e) {
+      boolean expectedExceptionFound =
+        Throwables.getCausalChain(e).stream().anyMatch(DoNotRetryIOException.class::isInstance);
+      if (!expectedExceptionFound) {
+        fail("Expected DoNotRetryIOException as the cause, but got: " + e.getCause());
+      }
+    }
   }
 
   /**
