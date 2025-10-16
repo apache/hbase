@@ -18,12 +18,15 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import static org.apache.hadoop.hbase.HConstants.REPLICATION_SCOPE_GLOBAL;
+import static org.apache.hadoop.hbase.wal.WALKey.EMPTY_UUIDS;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
+import java.util.UUID;
 import java.util.function.Function;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -75,8 +78,8 @@ public class WALUtil {
   public static WALKeyImpl writeCompactionMarker(WAL wal,
     NavigableMap<byte[], Integer> replicationScope, RegionInfo hri, final CompactionDescriptor c,
     MultiVersionConcurrencyControl mvcc) throws IOException {
-    WALKeyImpl walKey =
-      writeMarker(wal, replicationScope, hri, WALEdit.createCompaction(hri, c), mvcc, null);
+    WALKeyImpl walKey = writeMarker(wal, replicationScope, hri, EMPTY_UUIDS,
+      WALEdit.createCompaction(hri, c), mvcc, null);
     if (LOG.isTraceEnabled()) {
       LOG.trace("Appended compaction marker " + TextFormat.shortDebugString(c));
     }
@@ -91,7 +94,7 @@ public class WALUtil {
   public static WALKeyImpl writeFlushMarker(WAL wal, NavigableMap<byte[], Integer> replicationScope,
     RegionInfo hri, final FlushDescriptor f, boolean sync, MultiVersionConcurrencyControl mvcc)
     throws IOException {
-    WALKeyImpl walKey = doFullMarkerAppendTransaction(wal, replicationScope, hri,
+    WALKeyImpl walKey = doFullMarkerAppendTransaction(wal, replicationScope, hri, EMPTY_UUIDS,
       WALEdit.createFlushWALEdit(hri, f), mvcc, null, sync);
     if (LOG.isTraceEnabled()) {
       LOG.trace("Appended flush marker " + TextFormat.shortDebugString(f));
@@ -106,8 +109,8 @@ public class WALUtil {
   public static WALKeyImpl writeRegionEventMarker(WAL wal,
     NavigableMap<byte[], Integer> replicationScope, RegionInfo hri, RegionEventDescriptor r,
     MultiVersionConcurrencyControl mvcc) throws IOException {
-    WALKeyImpl walKey =
-      writeMarker(wal, replicationScope, hri, WALEdit.createRegionEventWALEdit(hri, r), mvcc, null);
+    WALKeyImpl walKey = writeMarker(wal, replicationScope, hri, EMPTY_UUIDS,
+      WALEdit.createRegionEventWALEdit(hri, r), mvcc, null);
     if (LOG.isTraceEnabled()) {
       LOG.trace("Appended region event marker " + TextFormat.shortDebugString(r));
     }
@@ -127,10 +130,10 @@ public class WALUtil {
    */
   public static WALKeyImpl writeBulkLoadMarkerAndSync(final WAL wal,
     final NavigableMap<byte[], Integer> replicationScope, final RegionInfo hri,
-    final WALProtos.BulkLoadDescriptor desc, final MultiVersionConcurrencyControl mvcc)
-    throws IOException {
-    WALKeyImpl walKey =
-      writeMarker(wal, replicationScope, hri, WALEdit.createBulkLoadEvent(hri, desc), mvcc, null);
+    List<UUID> clusterIds, final WALProtos.BulkLoadDescriptor desc,
+    final MultiVersionConcurrencyControl mvcc) throws IOException {
+    WALKeyImpl walKey = writeMarker(wal, replicationScope, hri, clusterIds,
+      WALEdit.createBulkLoadEvent(hri, desc), mvcc, null);
     if (LOG.isTraceEnabled()) {
       LOG.trace("Appended Bulk Load marker " + TextFormat.shortDebugString(desc));
     }
@@ -138,12 +141,12 @@ public class WALUtil {
   }
 
   private static WALKeyImpl writeMarker(final WAL wal,
-    NavigableMap<byte[], Integer> replicationScope, RegionInfo hri, WALEdit edit,
-    MultiVersionConcurrencyControl mvcc, Map<String, byte[]> extendedAttributes)
+    NavigableMap<byte[], Integer> replicationScope, RegionInfo hri, List<UUID> clusterIds,
+    WALEdit edit, MultiVersionConcurrencyControl mvcc, Map<String, byte[]> extendedAttributes)
     throws IOException {
     // If sync == true in below, then timeout is not used; safe to pass UNSPECIFIED_TIMEOUT
-    return doFullMarkerAppendTransaction(wal, replicationScope, hri, edit, mvcc, extendedAttributes,
-      true);
+    return doFullMarkerAppendTransaction(wal, replicationScope, hri, clusterIds, edit, mvcc,
+      extendedAttributes, true);
   }
 
   /**
@@ -155,12 +158,12 @@ public class WALUtil {
    * @return WALKeyImpl that was added to the WAL.
    */
   private static WALKeyImpl doFullMarkerAppendTransaction(WAL wal,
-    NavigableMap<byte[], Integer> replicationScope, RegionInfo hri, final WALEdit edit,
-    MultiVersionConcurrencyControl mvcc, Map<String, byte[]> extendedAttributes, boolean sync)
-    throws IOException {
+    NavigableMap<byte[], Integer> replicationScope, RegionInfo hri, final List<UUID> clusterIds,
+    final WALEdit edit, MultiVersionConcurrencyControl mvcc, Map<String, byte[]> extendedAttributes,
+    boolean sync) throws IOException {
     // TODO: Pass in current time to use?
     WALKeyImpl walKey = new WALKeyImpl(hri.getEncodedNameAsBytes(), hri.getTable(),
-      EnvironmentEdgeManager.currentTime(), mvcc, replicationScope, extendedAttributes);
+      EnvironmentEdgeManager.currentTime(), clusterIds, mvcc, replicationScope, extendedAttributes);
     long trx = MultiVersionConcurrencyControl.NONE;
     try {
       trx = wal.appendMarker(hri, walKey, edit);
@@ -232,7 +235,7 @@ public class WALUtil {
     RegionInfo regionInfo, byte[] rowKey, long timestamp) throws IOException {
     NavigableMap<byte[], Integer> replicationScope = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     replicationScope.put(WALEdit.METAFAMILY, REPLICATION_SCOPE_GLOBAL);
-    writeMarker(wal, replicationScope, regionInfo,
+    writeMarker(wal, replicationScope, regionInfo, EMPTY_UUIDS,
       WALEdit.createReplicationMarkerEdit(rowKey, timestamp), mvcc, null);
   }
 }

@@ -152,9 +152,9 @@ public class WALKeyImpl implements WALKey {
   }
 
   public WALKeyImpl(final byte[] encodedRegionName, final TableName tablename, final long now,
-    MultiVersionConcurrencyControl mvcc, final NavigableMap<byte[], Integer> replicationScope,
-    Map<String, byte[]> extendedAttributes) {
-    init(encodedRegionName, tablename, NO_SEQUENCE_ID, now, EMPTY_UUIDS, HConstants.NO_NONCE,
+    List<UUID> clusterIds, MultiVersionConcurrencyControl mvcc,
+    final NavigableMap<byte[], Integer> replicationScope, Map<String, byte[]> extendedAttributes) {
+    init(encodedRegionName, tablename, NO_SEQUENCE_ID, now, clusterIds, HConstants.NO_NONCE,
       HConstants.NO_NONCE, mvcc, replicationScope, extendedAttributes);
   }
 
