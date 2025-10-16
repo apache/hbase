@@ -36,11 +36,11 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -49,6 +49,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.LongAdder;
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -459,7 +460,15 @@ public class TestCanaryTool {
 
     ExecutorService executorService = startCanaryToolInBackground(sink, configuration);
 
-    String page = getCanaryStatusPageContent(infoPort);
+    // Test that old canary status page URl redirects to JSP
+    URL oldPageUrl = new URL("http://localhost:" + infoPort + "/canary-status");
+    String oldPageContent = getPageContent(oldPageUrl);
+    assertTrue("expected=canary.jsp, content=" + oldPageContent,
+      oldPageContent.contains("canary.jsp"));
+
+    // Test web UI page content
+    URL url = new URL("http://localhost:" + infoPort + "/canary.jsp");
+    String page = getPageContent(url);
 
     assertTrue("Page should contain page title.", page.contains("<title>Canary</title>"));
 
@@ -506,7 +515,8 @@ public class TestCanaryTool {
 
     ExecutorService executorService = startCanaryToolInBackground(sink, configuration);
 
-    String page = getCanaryStatusPageContent(infoPort);
+    URL url = new URL("http://localhost:" + infoPort + "/canary.jsp");
+    String page = getPageContent(url);
 
     assertTrue("Page should contain page title.", page.contains("<title>Canary</title>"));
 
@@ -543,8 +553,7 @@ public class TestCanaryTool {
     return executorService;
   }
 
-  private String getCanaryStatusPageContent(int infoPort) throws IOException, InterruptedException {
-    URL url = new URL("http://localhost:" + infoPort + "/canary.jsp");
+  private String getPageContent(URL url) throws IOException, InterruptedException {
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 
     boolean success = false;
@@ -566,19 +575,11 @@ public class TestCanaryTool {
     }
 
     if (success) {
-      return getResponseBody(conn);
+      try (InputStream in = conn.getInputStream()) {
+        return IOUtils.toString(in, StandardCharsets.UTF_8);
+      }
     } else {
       throw new IllegalStateException("Could not get Canary status page.");
     }
-  }
-
-  private static String getResponseBody(HttpURLConnection conn) throws IOException {
-    StringBuilder sb = new StringBuilder();
-    BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-    String output;
-    while ((output = br.readLine()) != null) {
-      sb.append(output);
-    }
-    return sb.toString();
   }
 }
