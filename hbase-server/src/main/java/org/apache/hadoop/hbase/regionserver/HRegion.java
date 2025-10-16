@@ -7077,9 +7077,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           WALProtos.BulkLoadDescriptor loadDescriptor =
             ProtobufUtil.toBulkLoadDescriptor(this.getRegionInfo().getTable(),
               UnsafeByteOperations.unsafeWrap(this.getRegionInfo().getEncodedNameAsBytes()),
-              storeFiles, storeFilesSizes, seqId, clusterIds, replicate);
+              storeFiles, storeFilesSizes, seqId, replicate);
           WALUtil.writeBulkLoadMarkerAndSync(this.wal, this.getReplicationScope(), getRegionInfo(),
-            loadDescriptor, mvcc);
+            clusterIds.stream().map(UUID::fromString).collect(Collectors.toList()), loadDescriptor,
+            mvcc);
         } catch (IOException ioe) {
           if (this.rsServices != null) {
             // Have to abort region server because some hfiles has been loaded but we can't write
