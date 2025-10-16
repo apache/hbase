@@ -17,96 +17,72 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.Caffeine;
-import com.github.benmanes.caffeine.cache.Policy;
-import com.github.benmanes.caffeine.cache.RemovalCause;
-import com.github.benmanes.caffeine.cache.RemovalListener;
-import java.util.Optional;
-import java.util.OptionalLong;
-import java.util.concurrent.atomic.LongAdder;
-import org.checkerframework.checker.nullness.qual.NonNull;
-
 /**
- * A cache that stores rows retrieved by Get operations, using Caffeine as the underlying cache
- * implementation.
+ * Interface for caching rows retrieved by Get operations.
  */
 @org.apache.yetus.audience.InterfaceAudience.Private
-public class RowCache {
-  private final class EvictionListener
-    implements RemovalListener<@NonNull RowCacheKey, @NonNull RowCells> {
-    @Override
-    public void onRemoval(RowCacheKey key, RowCells value, @NonNull RemovalCause cause) {
-      evictedRowCount.increment();
-    }
-  }
+public interface RowCache {
+  /**
+   * Cache the specified row.
+   * @param key   the key of the row to cache
+   * @param value the cells of the row to cache
+   */
+  void cacheRow(RowCacheKey key, RowCells value);
 
-  private final Cache<@NonNull RowCacheKey, RowCells> cache;
-
-  // Cache.stats() does not provide eviction count for entries, so we maintain our own counter.
-  private final LongAdder evictedRowCount = new LongAdder();
-
-  RowCache(long maxSizeBytes) {
-    if (maxSizeBytes <= 0) {
-      cache = Caffeine.newBuilder().maximumSize(0).build();
-      return;
-    }
-
-    cache =
-      Caffeine.newBuilder().maximumWeight(maxSizeBytes).removalListener(new EvictionListener())
-        .weigher((RowCacheKey key,
-          RowCells value) -> (int) Math.min(key.heapSize() + value.heapSize(), Integer.MAX_VALUE))
-        .recordStats().build();
-  }
-
-  void cacheRow(RowCacheKey key, RowCells value) {
-    cache.put(key, value);
-  }
-
-  public RowCells getRow(RowCacheKey key, boolean caching) {
-    if (!caching) {
-      return null;
-    }
-
-    return cache.getIfPresent(key);
-  }
-
-  void evictRow(RowCacheKey key) {
-    cache.asMap().remove(key);
-  }
+  /**
+   * Evict the specified row.
+   * @param key the key of the row to evict
+   */
+  void evictRow(RowCacheKey key);
 
   /**
    * Evict all rows belonging to the specified region. This is heavy operation as it iterates the
    * entire RowCache key set.
    * @param region the region whose rows should be evicted
    */
-  void evictRowsByRegion(HRegion region) {
-    cache.asMap().keySet().removeIf(key -> key.isSameRegion(region));
-  }
+  void evictRowsByRegion(HRegion region);
 
-  public long getHitCount() {
-    return cache.stats().hitCount();
-  }
+  /**
+   * Get the number of rows in the cache.
+   * @return the number of rows in the cache
+   */
+  long getCount();
 
-  public long getMissCount() {
-    return cache.stats().missCount();
-  }
+  /**
+   * Get the number of rows evicted from the cache.
+   * @return the number of rows evicted from the cache
+   */
+  long getEvictedRowCount();
 
-  public long getEvictedRowCount() {
-    return evictedRowCount.sum();
-  }
+  /**
+   * Get the hit count.
+   * @return the hit count
+   */
+  long getHitCount();
 
-  public long getSize() {
-    Optional<OptionalLong> result = cache.policy().eviction().map(Policy.Eviction::weightedSize);
-    return result.orElse(OptionalLong.of(-1L)).orElse(-1L);
-  }
+  /**
+   * Get the maximum size of the cache in bytes.
+   * @return the maximum size of the cache in bytes
+   */
+  long getMaxSize();
 
-  public long getMaxSize() {
-    Optional<Long> result = cache.policy().eviction().map(Policy.Eviction::getMaximum);
-    return result.orElse(-1L);
-  }
+  /**
+   * Get the miss count.
+   * @return the miss count
+   */
+  long getMissCount();
 
-  public long getCount() {
-    return cache.estimatedSize();
-  }
+  /**
+   * Get the specified row from the cache.
+   * @param key     the key of the row to get
+   * @param caching whether caching is enabled for this request
+   * @return the cells of the row, or null if not found or caching is disabled
+   */
+  RowCells getRow(RowCacheKey key, boolean caching);
+
+  /**
+   * Get the current size of the cache in bytes.
+   * @return the current size of the cache in bytes
+   */
+  long getSize();
 }

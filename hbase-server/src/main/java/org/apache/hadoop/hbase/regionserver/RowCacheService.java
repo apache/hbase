@@ -78,7 +78,8 @@ public class RowCacheService {
   RowCacheService(Configuration conf) {
     enabledByConf =
       conf.getFloat(HConstants.ROW_CACHE_SIZE_KEY, HConstants.ROW_CACHE_SIZE_DEFAULT) > 0;
-    rowCache = new RowCache(MemorySizeUtil.getRowCacheSize(conf));
+    // Currently we only support TinyLfu implementation
+    rowCache = new TinyLfuRowCache(MemorySizeUtil.getRowCacheSize(conf));
   }
 
   RegionScannerImpl getScanner(HRegion region, Get get, Scan scan, List<Cell> results,
