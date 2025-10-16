@@ -104,7 +104,7 @@ public class TestRowCache {
 
     // Enable row cache but reduce the block cache size to fit in 80% of the heap
     conf.setFloat(ROW_CACHE_SIZE_KEY, 0.01f);
-    conf.setFloat(HFILE_BLOCK_CACHE_SIZE_KEY, 0.38f);
+    conf.setFloat(HFILE_BLOCK_CACHE_SIZE_KEY, 0.39f);
 
     SingleProcessHBaseCluster cluster = TEST_UTIL.startMiniCluster();
     cluster.waitForActiveAndReadyMaster();

@@ -114,7 +114,7 @@ public class TestBulkLoadHFilesRowCache {
 
     // Enable row cache but reduce the block cache size to fit in 80% of the heap
     conf.setFloat(ROW_CACHE_SIZE_KEY, 0.01f);
-    conf.setFloat(HFILE_BLOCK_CACHE_SIZE_KEY, 0.38f);
+    conf.setFloat(HFILE_BLOCK_CACHE_SIZE_KEY, 0.39f);
 
     TEST_UTIL.startMiniCluster(1);
     admin = TEST_UTIL.getAdmin();
