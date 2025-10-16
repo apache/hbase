@@ -442,6 +442,10 @@
                     <pattern>kotlin.</pattern>
                     <shadedPattern>${shaded.prefix}.kotlin.</shadedPattern>
                   </relocation>
+                  <relocation>
+                    <pattern>org.apache.calcite</pattern>
+                    <shadedPattern>${shaded.prefix}.org.apache.calcite</shadedPattern>
+                  </relocation>
                 </relocations>
                 <transformers>
                   <!-- Need to filter out some extraneous license files.
@@ -539,6 +543,12 @@
                       <exclude>krb5_udp-template.conf</exclude>
                       <exclude>ccache.txt</exclude>
                       <exclude>keytab.txt</exclude>
+                    </excludes>
+                  </filter>
+                  <filter>
+                    <artifact>org.codehaus.janino:*</artifact>
+                    <excludes>
+                      <exclude>META-INF/DUMMY.*</exclude>
                     </excludes>
                   </filter>
                 </filters>

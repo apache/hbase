@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.monitoring.ThreadLocalServerSideScanMetrics;
 import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
 import org.apache.hadoop.hbase.namequeues.RpcLogDetails;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
+import org.apache.hadoop.hbase.regionserver.RequestStatsCollector;
 import org.apache.hadoop.hbase.security.HBasePolicyProvider;
 import org.apache.hadoop.hbase.security.SaslUtil;
 import org.apache.hadoop.hbase.security.SaslUtil.QualityOfProtection;
@@ -235,6 +236,12 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
    * Use to add online slowlog responses
    */
   private NamedQueueRecorder namedQueueRecorder;
+
+  private final RequestStatsCollector requestStatsCollector = new RequestStatsCollector();
+
+  public RequestStatsCollector getRequestStatsCollector() {
+    return requestStatsCollector;
+  }
 
   @FunctionalInterface
   protected interface CallCleanup {
@@ -502,6 +509,10 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
           this.namedQueueRecorder.addRecord(new RpcLogDetails(call, param, status.getClient(),
             responseSize, responseBlockSize, fsReadTime, className, tooSlow, tooLarge));
         }
+      }
+      if (requestStatsCollector.isStarted()) {
+        requestStatsCollector.process(param, status.getClient(), requestSize, totalTime,
+          responseSize);
       }
       return new Pair<>(result, controller.cellScanner());
     } catch (Throwable e) {
