@@ -119,6 +119,7 @@ import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
 import org.apache.hadoop.hbase.http.HttpServer;
 import org.apache.hadoop.hbase.http.InfoServer;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
@@ -1640,8 +1641,15 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     return this.walManager;
   }
 
-  public SystemKeyManager getSystemKeyManager() {
-    return this.systemKeyManager;
+  @Override
+  public boolean rotateSystemKeyIfChanged() throws IOException {
+    ManagedKeyData newKey = this.systemKeyManager.rotateSystemKeyIfChanged();
+    if (newKey != null) {
+      this.systemKeyCache = null;
+      buildSystemKeyCache();
+      return true;
+    }
+    return false;
   }
 
   @Override

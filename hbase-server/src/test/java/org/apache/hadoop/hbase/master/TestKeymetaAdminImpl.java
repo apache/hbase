@@ -41,12 +41,15 @@ import java.security.KeyException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.AsyncRegionServerAdmin;
@@ -55,6 +58,7 @@ import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyState;
 import org.apache.hadoop.hbase.io.crypto.MockManagedKeyProvider;
+import org.apache.hadoop.hbase.keymeta.KeyManagementService;
 import org.apache.hadoop.hbase.keymeta.KeymetaAdminImpl;
 import org.apache.hadoop.hbase.keymeta.KeymetaTableAccessor;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -76,6 +80,7 @@ import org.junit.runners.Suite;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.EmptyMsg;
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
 @RunWith(Suite.class)
 @Suite.SuiteClasses({ TestKeymetaAdminImpl.TestWhenDisabled.class,
@@ -297,12 +302,9 @@ public class TestKeymetaAdminImpl {
     @Test
     public void testRotateSTKWithNewKey() throws Exception {
       // Setup mocks for MasterServices
-      org.apache.hadoop.hbase.master.MasterServices mockMaster =
-        mock(org.apache.hadoop.hbase.master.MasterServices.class);
-      org.apache.hadoop.hbase.master.ServerManager mockServerManager =
-        mock(org.apache.hadoop.hbase.master.ServerManager.class);
-      org.apache.hadoop.hbase.master.SystemKeyManager mockSystemKeyManager =
-        mock(org.apache.hadoop.hbase.master.SystemKeyManager.class);
+      MasterServices mockMaster = mock(MasterServices.class);
+      ServerManager mockServerManager = mock(ServerManager.class);
+      SystemKeyManager mockSystemKeyManager = mock(SystemKeyManager.class);
       AsyncClusterConnection mockConnection = mock(AsyncClusterConnection.class);
       AsyncRegionServerAdmin mockRsAdmin1 = mock(AsyncRegionServerAdmin.class);
       AsyncRegionServerAdmin mockRsAdmin2 = mock(AsyncRegionServerAdmin.class);
@@ -313,13 +315,11 @@ public class TestKeymetaAdminImpl {
       when(mockMaster.getConfiguration()).thenReturn(conf);
 
       // Mock SystemKeyManager to return a new key (non-null)
-      ManagedKeyData mockNewKey = mock(ManagedKeyData.class);
-      when(mockMaster.getSystemKeyManager()).thenReturn(mockSystemKeyManager);
-      when(mockSystemKeyManager.rotateSystemKeyIfChanged()).thenReturn(mockNewKey);
+      when(mockMaster.rotateSystemKeyIfChanged()).thenReturn(true);
 
       ServerName rs1 = ServerName.valueOf("rs1", 16020, System.currentTimeMillis());
       ServerName rs2 = ServerName.valueOf("rs2", 16020, System.currentTimeMillis());
-      java.util.List<ServerName> regionServers = Arrays.asList(rs1, rs2);
+      List<ServerName> regionServers = Arrays.asList(rs1, rs2);
 
       when(mockMaster.getServerManager()).thenReturn(mockServerManager);
       when(mockServerManager.getOnlineServersList()).thenReturn(regionServers);
@@ -329,9 +329,9 @@ public class TestKeymetaAdminImpl {
 
       EmptyMsg rsResponse = EmptyMsg.getDefaultInstance();
       when(mockRsAdmin1.refreshSystemKeyCache(any(AdminProtos.RefreshSystemKeyCacheRequest.class)))
-        .thenReturn(java.util.concurrent.CompletableFuture.completedFuture(rsResponse));
+        .thenReturn(CompletableFuture.completedFuture(rsResponse));
       when(mockRsAdmin2.refreshSystemKeyCache(any(AdminProtos.RefreshSystemKeyCacheRequest.class)))
-        .thenReturn(java.util.concurrent.CompletableFuture.completedFuture(rsResponse));
+        .thenReturn(CompletableFuture.completedFuture(rsResponse));
 
       KeymetaAdminImplForTest admin = new KeymetaAdminImplForTest(mockMaster, keymetaAccessor);
 
@@ -342,7 +342,7 @@ public class TestKeymetaAdminImpl {
       assertTrue("rotateSTK should return true when new key is detected", result);
 
       // Verify that rotateSystemKeyIfChanged was called
-      verify(mockSystemKeyManager).rotateSystemKeyIfChanged();
+      verify(mockMaster).rotateSystemKeyIfChanged();
 
       // Verify that both region servers received the rotation request
       verify(mockRsAdmin1)
@@ -360,12 +360,9 @@ public class TestKeymetaAdminImpl {
     @Test
     public void testRotateSTKNoChange() throws Exception {
       // Setup mocks for MasterServices
-      org.apache.hadoop.hbase.master.MasterServices mockMaster =
-        mock(org.apache.hadoop.hbase.master.MasterServices.class);
-      org.apache.hadoop.hbase.master.SystemKeyManager mockSystemKeyManager =
-        mock(org.apache.hadoop.hbase.master.SystemKeyManager.class);
-      org.apache.hadoop.hbase.master.ServerManager mockServerManager =
-        mock(org.apache.hadoop.hbase.master.ServerManager.class);
+      MasterServices mockMaster = mock(MasterServices.class);
+      SystemKeyManager mockSystemKeyManager = mock(SystemKeyManager.class);
+      ServerManager mockServerManager = mock(ServerManager.class);
 
       // Mock KeyManagementService - required by KeyManagementBase constructor
       when(mockMaster.getKeyManagementService()).thenReturn(mockMaster);
@@ -373,8 +370,7 @@ public class TestKeymetaAdminImpl {
       when(mockMaster.getConfiguration()).thenReturn(conf);
 
       // Mock SystemKeyManager to return null (no key change)
-      when(mockMaster.getSystemKeyManager()).thenReturn(mockSystemKeyManager);
-      when(mockSystemKeyManager.rotateSystemKeyIfChanged()).thenReturn(null);
+      when(mockMaster.rotateSystemKeyIfChanged()).thenReturn(false);
 
       // Setup ServerManager (should not be called in this scenario)
       when(mockMaster.getServerManager()).thenReturn(mockServerManager);
@@ -388,7 +384,7 @@ public class TestKeymetaAdminImpl {
       assertFalse("rotateSTK should return false when no key change is detected", result);
 
       // Verify that rotateSystemKeyIfChanged was called
-      verify(mockSystemKeyManager).rotateSystemKeyIfChanged();
+      verify(mockMaster).rotateSystemKeyIfChanged();
 
       // Verify that getOnlineServersList was never called (short-circuit behavior)
       verify(mockServerManager, never()).getOnlineServersList();
@@ -401,12 +397,9 @@ public class TestKeymetaAdminImpl {
     @Test
     public void testRotateSTKWithMultipleFailedServers() throws Exception {
       // Setup mocks for MasterServices
-      org.apache.hadoop.hbase.master.MasterServices mockMaster =
-        mock(org.apache.hadoop.hbase.master.MasterServices.class);
-      org.apache.hadoop.hbase.master.ServerManager mockServerManager =
-        mock(org.apache.hadoop.hbase.master.ServerManager.class);
-      org.apache.hadoop.hbase.master.SystemKeyManager mockSystemKeyManager =
-        mock(org.apache.hadoop.hbase.master.SystemKeyManager.class);
+      MasterServices mockMaster = mock(MasterServices.class);
+      ServerManager mockServerManager = mock(ServerManager.class);
+      SystemKeyManager mockSystemKeyManager = mock(SystemKeyManager.class);
       AsyncClusterConnection mockConnection = mock(AsyncClusterConnection.class);
       AsyncRegionServerAdmin mockRsAdmin1 = mock(AsyncRegionServerAdmin.class);
       AsyncRegionServerAdmin mockRsAdmin2 = mock(AsyncRegionServerAdmin.class);
@@ -418,14 +411,12 @@ public class TestKeymetaAdminImpl {
       when(mockMaster.getConfiguration()).thenReturn(conf);
 
       // Mock SystemKeyManager to return a new key (non-null)
-      ManagedKeyData mockNewKey = mock(ManagedKeyData.class);
-      when(mockMaster.getSystemKeyManager()).thenReturn(mockSystemKeyManager);
-      when(mockSystemKeyManager.rotateSystemKeyIfChanged()).thenReturn(mockNewKey);
+      when(mockMaster.rotateSystemKeyIfChanged()).thenReturn(true);
 
       ServerName rs1 = ServerName.valueOf("rs1.example.com", 16020, System.currentTimeMillis());
       ServerName rs2 = ServerName.valueOf("rs2.example.com", 16020, System.currentTimeMillis());
       ServerName rs3 = ServerName.valueOf("rs3.example.com", 16020, System.currentTimeMillis());
-      java.util.List<ServerName> regionServers = Arrays.asList(rs1, rs2, rs3);
+      List<ServerName> regionServers = Arrays.asList(rs1, rs2, rs3);
 
       when(mockMaster.getServerManager()).thenReturn(mockServerManager);
       when(mockServerManager.getOnlineServersList()).thenReturn(regionServers);
@@ -438,21 +429,17 @@ public class TestKeymetaAdminImpl {
 
       // RS1 succeeds
       when(mockRsAdmin1.refreshSystemKeyCache(any(AdminProtos.RefreshSystemKeyCacheRequest.class)))
-        .thenReturn(java.util.concurrent.CompletableFuture.completedFuture(successResponse));
+        .thenReturn(CompletableFuture.completedFuture(successResponse));
 
       // RS2 fails with IOException
-      java.util.concurrent.CompletableFuture<EmptyMsg> failedFuture2 =
-        new java.util.concurrent.CompletableFuture<>();
+      CompletableFuture<EmptyMsg> failedFuture2 = new CompletableFuture<>();
       failedFuture2.completeExceptionally(new IOException("Connection timeout to rs2"));
       when(mockRsAdmin2.refreshSystemKeyCache(any(AdminProtos.RefreshSystemKeyCacheRequest.class)))
         .thenReturn(failedFuture2);
 
       // RS3 fails with ServiceException
-      java.util.concurrent.CompletableFuture<EmptyMsg> failedFuture3 =
-        new java.util.concurrent.CompletableFuture<>();
-      failedFuture3
-        .completeExceptionally(new org.apache.hbase.thirdparty.com.google.protobuf.ServiceException(
-          "Server error on rs3"));
+      CompletableFuture<EmptyMsg> failedFuture3 = new CompletableFuture<>();
+      failedFuture3.completeExceptionally(new ServiceException( "Server error on rs3"));
       when(mockRsAdmin3.refreshSystemKeyCache(any(AdminProtos.RefreshSystemKeyCacheRequest.class)))
         .thenReturn(failedFuture3);
 
@@ -474,7 +461,7 @@ public class TestKeymetaAdminImpl {
         exceptionMessage.contains("rs1.example.com"));
 
       // Verify that rotateSystemKeyIfChanged was called
-      verify(mockSystemKeyManager).rotateSystemKeyIfChanged();
+      verify(mockMaster).rotateSystemKeyIfChanged();
 
       // Verify that all region servers received the rotation request
       verify(mockRsAdmin1)
@@ -488,9 +475,8 @@ public class TestKeymetaAdminImpl {
     @Test
     public void testRotateSTKNotOnMaster() throws Exception {
       // Create a non-master server mock
-      org.apache.hadoop.hbase.Server mockRegionServer = mock(org.apache.hadoop.hbase.Server.class);
-      org.apache.hadoop.hbase.keymeta.KeyManagementService mockKeyService =
-        mock(org.apache.hadoop.hbase.keymeta.KeyManagementService.class);
+      Server mockRegionServer = mock(Server.class);
+      KeyManagementService mockKeyService = mock(KeyManagementService.class);
       // Mock KeyManagementService - required by KeyManagementBase constructor
       when(mockRegionServer.getKeyManagementService()).thenReturn(mockKeyService);
       when(mockKeyService.getConfiguration()).thenReturn(conf);
@@ -510,8 +496,7 @@ public class TestKeymetaAdminImpl {
       Configuration disabledConf = testUtil.getConfiguration();
       disabledConf.set(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, "false");
 
-      org.apache.hadoop.hbase.master.MasterServices mockMaster =
-        mock(org.apache.hadoop.hbase.master.MasterServices.class);
+      MasterServices mockMaster = mock(MasterServices.class);
       // Mock KeyManagementService - required by KeyManagementBase constructor
       when(mockMaster.getKeyManagementService()).thenReturn(mockMaster);
       when(mockMaster.getConfiguration()).thenReturn(disabledConf);

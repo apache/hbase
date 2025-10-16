@@ -156,8 +156,8 @@ public class MockNoopMasterServices implements MasterServices {
   }
 
   @Override
-  public SystemKeyManager getSystemKeyManager() {
-    return null;
+  public boolean rotateSystemKeyIfChanged() {
+    return false;
   }
 
   @Override

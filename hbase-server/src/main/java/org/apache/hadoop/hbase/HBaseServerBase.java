@@ -194,7 +194,7 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
 
   protected final NettyEventLoopGroupConfig eventLoopGroupConfig;
 
-  private SystemKeyCache systemKeyCache;
+  protected SystemKeyCache systemKeyCache;
   protected KeymetaAdminImpl keymetaAdmin;
   protected ManagedKeyDataCache managedKeyDataCache;
 

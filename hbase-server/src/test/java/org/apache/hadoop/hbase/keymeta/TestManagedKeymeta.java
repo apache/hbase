@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.keymeta;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
@@ -38,6 +39,7 @@ import org.apache.hadoop.hbase.io.crypto.ManagedKeyState;
 import org.apache.hadoop.hbase.io.crypto.MockManagedKeyProvider;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.ClassRule;
@@ -168,6 +170,9 @@ public class TestManagedKeymeta extends ManagedKeyTestBase {
     boolean result = adminClient.rotateSTK();
     assertFalse("rotateSTK should return false when no key change is detected", result);
 
+    HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
+    ManagedKeyData currentSystemKey = master.getSystemKeyCache().getLatestSystemKey();
+
     MockManagedKeyProvider managedKeyProvider =
       (MockManagedKeyProvider) Encryption.getManagedKeyProvider(TEST_UTIL.getConfiguration());
     // Once we enable multikeyGenMode on MockManagedKeyProvider, every call should return a new key
@@ -175,6 +180,15 @@ public class TestManagedKeymeta extends ManagedKeyTestBase {
     managedKeyProvider.setMultikeyGenMode(true);
     result = adminClient.rotateSTK();
     assertTrue("rotateSTK should return true when a new key is detected", result);
+
+    ManagedKeyData newSystemKey = master.getSystemKeyCache().getLatestSystemKey();
+    assertNotEquals("newSystemKey should be different from currentSystemKey",
+      currentSystemKey, newSystemKey);
+
+    HRegionServer regionServer = TEST_UTIL.getHBaseCluster().getRegionServer(0);
+    assertEquals("regionServer should have the same new system key", newSystemKey,
+      regionServer.getSystemKeyCache().getLatestSystemKey());
+
   }
 
   @Test

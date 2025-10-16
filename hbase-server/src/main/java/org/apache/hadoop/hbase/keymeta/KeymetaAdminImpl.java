@@ -86,9 +86,9 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
     MasterServices master = (MasterServices) getServer();
 
     LOG.info("Checking if System Key is rotated");
-    ManagedKeyData newKey = master.getSystemKeyManager().rotateSystemKeyIfChanged();
+    boolean rotated = master.rotateSystemKeyIfChanged();
 
-    if (newKey == null) {
+    if (!rotated) {
       LOG.info("No change in System Key is detected");
       return false;
     }
