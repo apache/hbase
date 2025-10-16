@@ -22,6 +22,7 @@ import static org.apache.hadoop.hbase.regionserver.HStoreFile.MAJOR_COMPACTION_K
 import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.REGION_NAMES_KEY;
 import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.ROW_LOCK_READ_LOCK_KEY;
 import static org.apache.hadoop.hbase.util.ConcurrentMapUtils.computeIfAbsent;
+import static org.apache.hadoop.hbase.wal.WALKey.EMPTY_UUIDS;
 
 import com.google.errorprone.annotations.RestrictedApi;
 import edu.umd.cs.findbugs.annotations.Nullable;
@@ -3056,7 +3057,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     assert !flushOpSeqIdMVCCEntry.getCompletionAction().isPresent();
     WALEdit flushMarkerWALEdit = WALEdit.createFlushWALEdit(getRegionInfo(), desc);
     WALKeyImpl walKey =
-      WALUtil.createWALKey(getRegionInfo(), mvcc, this.getReplicationScope(), null);
+      WALUtil.createWALKey(getRegionInfo(), EMPTY_UUIDS, mvcc, this.getReplicationScope(), null);
     walKey.setWriteEntry(flushOpSeqIdMVCCEntry);
     /**
      * Here the {@link ServerCall} is null for {@link RegionReplicationSink#add} because the
@@ -7557,8 +7558,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           WALProtos.BulkLoadDescriptor loadDescriptor =
             ProtobufUtil.toBulkLoadDescriptor(this.getRegionInfo().getTable(),
               UnsafeByteOperations.unsafeWrap(this.getRegionInfo().getEncodedNameAsBytes()),
-              storeFiles, storeFilesSizes, seqId, clusterIds, replicate);
+              storeFiles, storeFilesSizes, seqId, replicate);
           WALUtil.writeBulkLoadMarkerAndSync(this.wal, this.getReplicationScope(), getRegionInfo(),
+            clusterIds == null
+              ? WALKey.EMPTY_UUIDS
+              : clusterIds.stream().map(UUID::fromString).collect(Collectors.toList()),
             loadDescriptor, mvcc, regionReplicationSink.orElse(null));
         } catch (IOException ioe) {
           if (this.rsServices != null) {
