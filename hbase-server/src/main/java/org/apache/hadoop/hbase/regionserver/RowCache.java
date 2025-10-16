@@ -75,6 +75,15 @@ public class RowCache {
     cache.asMap().remove(key);
   }
 
+  /**
+   * Evict all rows belonging to the specified region. This is heavy operation as it iterates the
+   * entire RowCache key set.
+   * @param region the region whose rows should be evicted
+   */
+  void evictRowsByRegion(HRegion region) {
+    cache.asMap().keySet().removeIf(key -> key.isSameRegion(region));
+  }
+
   public long getHitCount() {
     return cache.stats().hitCount();
   }

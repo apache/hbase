@@ -30,9 +30,9 @@ public class RowCacheKey implements HeapSize {
   private final String encodedRegionName;
   private final byte[] rowKey;
 
-  // Row cache keys should not be evicted on close, since the cache may contain many entries and
-  // eviction would be slow. Instead, the region’s rowCacheSeqNum is used to generate new keys that
-  // ignore the existing cache when the region is reopened or bulk-loaded.
+  // When a region is reopened or bulk-loaded, its rowCacheSeqNum is used to generate new keys that
+  // bypass the existing cache. This mechanism is effective when ROW_CACHE_EVICT_ON_CLOSE is set to
+  // false.
   private final long rowCacheSeqNum;
 
   public RowCacheKey(HRegion region, byte[] rowKey) {
@@ -63,5 +63,9 @@ public class RowCacheKey implements HeapSize {
   @Override
   public long heapSize() {
     return FIXED_OVERHEAD + ClassSize.align(rowKey.length);
+  }
+
+  boolean isSameRegion(HRegion region) {
+    return this.encodedRegionName.equals(region.getRegionInfo().getEncodedName());
   }
 }

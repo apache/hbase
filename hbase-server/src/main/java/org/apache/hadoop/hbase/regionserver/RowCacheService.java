@@ -353,4 +353,8 @@ public class RowCacheService {
   public RowCache getRowCache() {
     return rowCache;
   }
+
+  void evictRowsByRegion(HRegion region) {
+    rowCache.evictRowsByRegion(region);
+  }
 }

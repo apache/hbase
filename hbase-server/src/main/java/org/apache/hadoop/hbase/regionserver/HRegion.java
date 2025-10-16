@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.HConstants.REPLICATION_SCOPE_LOCAL;
+import static org.apache.hadoop.hbase.HConstants.ROW_CACHE_EVICT_ON_CLOSE_DEFAULT;
+import static org.apache.hadoop.hbase.HConstants.ROW_CACHE_EVICT_ON_CLOSE_KEY;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.MAJOR_COMPACTION_KEY;
 import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.REGION_NAMES_KEY;
 import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.ROW_LOCK_READ_LOCK_KEY;
@@ -1946,6 +1948,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         }
       }
 
+      evictRowCache();
+
       status.setStatus("Writing region close event to WAL");
       // Always write close marker to wal even for read only table. This is not a big problem as we
       // do not write any data into the region; it is just a meta edit in the WAL file.
@@ -1984,6 +1988,22 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     } finally {
       lock.writeLock().unlock();
     }
+  }
+
+  private void evictRowCache() {
+    boolean evictOnClose = getReadOnlyConfiguration().getBoolean(ROW_CACHE_EVICT_ON_CLOSE_KEY,
+      ROW_CACHE_EVICT_ON_CLOSE_DEFAULT);
+
+    if (!evictOnClose) {
+      return;
+    }
+
+    if (!(rsServices instanceof HRegionServer regionServer)) {
+      return;
+    }
+
+    RowCacheService rowCacheService = regionServer.getRSRpcServices().getRowCacheService();
+    rowCacheService.evictRowsByRegion(this);
   }
 
   /** Wait for all current flushes and compactions of the region to complete */
