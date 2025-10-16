@@ -35,7 +35,6 @@
   <custom>
     <reflowSkin>
       <protocolRelativeURLs>true</protocolRelativeURLs>
-      <smoothScroll>true</smoothScroll>
       <bottomNav>
         <column>Apache HBase Project</column>
         <column>Project Information</column>
@@ -43,7 +42,9 @@
         <column>ASF</column>
       </bottomNav>
       <theme>bootswatch-litera</theme>
-      <highlightJs>true</highlightJs>
+      <highlightJs>false</highlightJs>
+      <imgLightbox>false</imgLightbox>
+      <smoothScroll>false</smoothScroll>
       <brand>
         <name><![CDATA[<div class="xtoplogo"></div>]]></name>
         <href>index.html</href>
