@@ -62,6 +62,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
+import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.regionserver.StoreUtils;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
@@ -316,7 +317,10 @@ public final class MobUtils {
           fileName = hfileLink.getOriginPath().getName();
         }
 
-        Date fileDate = parseDate(MobFileName.getDateFromName(fileName));
+        String dateString = StoreFileInfo.isMobRefFile(file.getPath())
+          ? MobFileName.getDateFromMobRefFileName(fileName)
+          : MobFileName.getDateFromName(fileName);
+        Date fileDate = parseDate(dateString);
 
         if (LOG.isDebugEnabled()) {
           LOG.debug("Checking file {}", fileName);
