@@ -72,6 +72,7 @@ public abstract class RpcExecutor {
   public static final String CALL_QUEUE_TYPE_CODEL_CONF_VALUE = "codel";
   public static final String CALL_QUEUE_TYPE_DEADLINE_CONF_VALUE = "deadline";
   public static final String CALL_QUEUE_TYPE_FIFO_CONF_VALUE = "fifo";
+  public static final String CALL_QUEUE_TYPE_READ_STEAL_CONF_VALUE = "readSteal";
   public static final String CALL_QUEUE_TYPE_PLUGGABLE_CONF_VALUE = "pluggable";
   public static final String CALL_QUEUE_TYPE_CONF_KEY = "hbase.ipc.server.callqueue.type";
   public static final String CALL_QUEUE_TYPE_CONF_DEFAULT = CALL_QUEUE_TYPE_FIFO_CONF_VALUE;
@@ -101,7 +102,7 @@ public abstract class RpcExecutor {
   private final LongAdder numLifoModeSwitches = new LongAdder();
 
   protected final int numCallQueues;
-  protected final List<BlockingQueue<CallRunner>> queues;
+  protected List<BlockingQueue<CallRunner>> queues;
   private final Class<? extends BlockingQueue> queueClass;
   private final Object[] queueInitArgs;
 
@@ -117,6 +118,8 @@ public abstract class RpcExecutor {
   private final Configuration conf;
   private final Abortable abortable;
 
+  protected int maxQueueLength;
+
   public RpcExecutor(final String name, final int handlerCount, final int maxQueueLength,
     final PriorityFunction priority, final Configuration conf, final Abortable abortable) {
     this(name, handlerCount, conf.get(CALL_QUEUE_TYPE_CONF_KEY, CALL_QUEUE_TYPE_CONF_DEFAULT),
@@ -129,6 +132,7 @@ public abstract class RpcExecutor {
     this.name = Strings.nullToEmpty(name);
     this.conf = conf;
     this.abortable = abortable;
+    this.maxQueueLength = maxQueueLength;
 
     float callQueuesHandlersFactor = getCallQueueHandlerFactor(conf);
     if (
