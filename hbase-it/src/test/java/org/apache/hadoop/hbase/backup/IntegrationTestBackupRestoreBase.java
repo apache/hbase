@@ -15,9 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase;
+package org.apache.hadoop.hbase.backup;
 
 import static org.apache.hadoop.hbase.IntegrationTestingUtility.createPreSplitLoadTestTable;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONF_CONTINUOUS_BACKUP_WAL_DIR;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -28,13 +29,10 @@ import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.backup.BackupAdmin;
-import org.apache.hadoop.hbase.backup.BackupInfo;
-import org.apache.hadoop.hbase.backup.BackupInfo.BackupState;
-import org.apache.hadoop.hbase.backup.BackupRequest;
-import org.apache.hadoop.hbase.backup.BackupRestoreConstants;
-import org.apache.hadoop.hbase.backup.BackupType;
-import org.apache.hadoop.hbase.backup.RestoreRequest;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.IntegrationTestBase;
+import org.apache.hadoop.hbase.IntegrationTestingUtility;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupAdminImpl;
 import org.apache.hadoop.hbase.backup.impl.BackupManager;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
@@ -42,39 +40,25 @@ import org.apache.hadoop.hbase.chaos.actions.RestartRandomRsExceptMetaAction;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
 import org.apache.hadoop.hbase.chaos.policies.PeriodicRandomActionPolicy;
 import org.apache.hadoop.hbase.chaos.policies.Policy;
-import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
-import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.util.ToolRunner;
 import org.junit.After;
 import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.Uninterruptibles;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
-/**
- * An integration test to detect regressions in HBASE-7912. Create a table with many regions, load
- * data, perform series backup/load operations, then restore and verify data
- * @see <a href="https://issues.apache.org/jira/browse/HBASE-7912">HBASE-7912</a>
- * @see <a href="https://issues.apache.org/jira/browse/HBASE-14123">HBASE-14123</a>
- */
-@Category(IntegrationTests.class)
-public class IntegrationTestBackupRestore extends IntegrationTestBase {
-  private static final String CLASS_NAME = IntegrationTestBackupRestore.class.getSimpleName();
-  protected static final Logger LOG = LoggerFactory.getLogger(IntegrationTestBackupRestore.class);
+public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBase {
+  protected static final Logger LOG =
+    LoggerFactory.getLogger(IntegrationTestBackupRestoreBase.class);
   protected static final String NUMBER_OF_TABLES_KEY = "num_tables";
   protected static final String COLUMN_NAME = "f";
   protected static final String REGION_COUNT_KEY = "regions_per_rs";
@@ -100,7 +84,7 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
   protected long sleepTime;
   protected static Object lock = new Object();
 
-  private static String BACKUP_ROOT_DIR = "backupIT";
+  protected String backupRootDir = "backupRootDir";
 
   /*
    * This class is used to run the backup and restore thread(s). Throwing an exception in this
@@ -110,10 +94,12 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
    */
   protected class BackupAndRestoreThread implements Runnable {
     private final TableName table;
+    private final boolean isContinuousBackupEnabled;
     private Throwable throwable;
 
-    public BackupAndRestoreThread(TableName table) {
+    public BackupAndRestoreThread(TableName table, boolean isContinuousBackupEnabled) {
       this.table = table;
+      this.isContinuousBackupEnabled = isContinuousBackupEnabled;
       this.throwable = null;
     }
 
@@ -124,7 +110,7 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
     @Override
     public void run() {
       try {
-        runTestSingle(this.table);
+        runTestSingle(this.table, isContinuousBackupEnabled);
       } catch (Throwable t) {
         LOG.error(
           "An error occurred in thread {} when performing a backup and restore with table {}: ",
@@ -132,23 +118,6 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
         this.throwable = t;
       }
     }
-  }
-
-  @Override
-  @Before
-  public void setUp() throws Exception {
-    util = new IntegrationTestingUtility();
-    Configuration conf = util.getConfiguration();
-    regionsCountPerServer = conf.getInt(REGION_COUNT_KEY, DEFAULT_REGION_COUNT);
-    regionServerCount = conf.getInt(REGIONSERVER_COUNT_KEY, DEFAULT_REGIONSERVER_COUNT);
-    rowsInIteration = conf.getInt(ROWS_PER_ITERATION_KEY, DEFAULT_ROWS_IN_ITERATION);
-    numIterations = conf.getInt(NUM_ITERATIONS_KEY, DEFAULT_NUM_ITERATIONS);
-    numTables = conf.getInt(NUMBER_OF_TABLES_KEY, DEFAULT_NUMBER_OF_TABLES);
-    sleepTime = conf.getLong(SLEEP_TIME_KEY, SLEEP_TIME_DEFAULT);
-    enableBackup(conf);
-    LOG.info("Initializing cluster with {} region servers.", regionServerCount);
-    util.initializeCluster(regionServerCount);
-    LOG.info("Cluster initialized and ready");
   }
 
   @After
@@ -178,42 +147,48 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
     }
   }
 
-  private void createTables() throws Exception {
+  protected void createTables(String tableBaseName) throws Exception {
     tableNames = new TableName[numTables];
     for (int i = 0; i < numTables; i++) {
-      tableNames[i] = TableName.valueOf(CLASS_NAME + ".table." + i);
+      tableNames[i] = TableName.valueOf(tableBaseName + ".table." + i);
     }
     for (TableName table : tableNames) {
       createTable(table);
     }
   }
 
-  private void enableBackup(Configuration conf) {
+  protected void enableBackup(Configuration conf) {
     // Enable backup
     conf.setBoolean(BackupRestoreConstants.BACKUP_ENABLE_KEY, true);
     BackupManager.decorateMasterConfiguration(conf);
     BackupManager.decorateRegionServerConfiguration(conf);
   }
 
+  protected void createAndSetBackupWalDir(IntegrationTestingUtility util, Configuration conf)
+    throws IOException {
+    Path root = util.getDataTestDirOnTestFS();
+    Path backupWalDir = new Path(root, "backupWALDir");
+    FileSystem fs = FileSystem.get(conf);
+    fs.mkdirs(backupWalDir);
+    conf.set(CONF_CONTINUOUS_BACKUP_WAL_DIR, backupWalDir.toString());
+    LOG.info(
+      "The continuous backup WAL directory has been created and set in the configuration to: {}",
+      backupWalDir);
+  }
+
   private void cleanUpBackupDir() throws IOException {
     FileSystem fs = FileSystem.get(util.getConfiguration());
-    fs.delete(new Path(BACKUP_ROOT_DIR), true);
+    fs.delete(new Path(backupRootDir), true);
   }
 
-  @Test
-  public void testBackupRestore() throws Exception {
-    BACKUP_ROOT_DIR = util.getDataTestDirOnTestFS() + Path.SEPARATOR + BACKUP_ROOT_DIR;
-    createTables();
-    runTestMulti();
-  }
-
-  private void runTestMulti() throws Exception {
+  protected void runTestMulti(boolean isContinuousBackupEnabled) {
     LOG.info("IT backup & restore started");
     Thread[] workers = new Thread[numTables];
     BackupAndRestoreThread[] backupAndRestoreThreads = new BackupAndRestoreThread[numTables];
     for (int i = 0; i < numTables; i++) {
       final TableName table = tableNames[i];
-      BackupAndRestoreThread backupAndRestoreThread = new BackupAndRestoreThread(table);
+      BackupAndRestoreThread backupAndRestoreThread =
+        new BackupAndRestoreThread(table, isContinuousBackupEnabled);
       backupAndRestoreThreads[i] = backupAndRestoreThread;
       workers[i] = new Thread(backupAndRestoreThread);
       workers[i].start();
@@ -279,75 +254,91 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
     client.mergeBackups(backupIds);
   }
 
-  private void runTestSingle(TableName table) throws IOException {
-
+  private void runTestSingle(TableName table, boolean isContinuousBackupEnabled)
+    throws IOException {
+    String continuousBackupStatus = isContinuousBackupEnabled ? "enabled" : "disabled";
     List<String> backupIds = new ArrayList<String>();
 
-    try (Connection conn = util.getConnection(); Admin admin = conn.getAdmin();
-      BackupAdmin client = new BackupAdminImpl(conn);) {
-
-      // #0- insert some data to table 'table'
+    try (Connection conn = util.getConnection(); BackupAdmin client = new BackupAdminImpl(conn)) {
       loadData(table, rowsInIteration);
 
       // #1 - create full backup for table first
-      LOG.info("create full backup image for {}", table);
+      LOG.info("Creating full backup image for {} with continuous backup {}", table,
+        continuousBackupStatus);
       List<TableName> tables = Lists.newArrayList(table);
       BackupRequest.Builder builder = new BackupRequest.Builder();
       BackupRequest request = builder.withBackupType(BackupType.FULL).withTableList(tables)
-        .withTargetRootDir(BACKUP_ROOT_DIR).build();
+        .withTargetRootDir(backupRootDir).withContinuousBackupEnabled(isContinuousBackupEnabled)
+        .build();
 
-      String backupIdFull = backup(request, client);
-      assertTrue(checkSucceeded(backupIdFull));
+      String fullBackupId = backup(request, client);
+      assertTrue(checkSucceeded(fullBackupId));
 
-      backupIds.add(backupIdFull);
+      backupIds.add(fullBackupId);
       // Now continue with incremental backups
       int count = 1;
-      while (count++ < numIterations) {
-
-        // Load data
+      String incrementalBackupId;
+      while (count++ <= numIterations) {
+        LOG.info("{} - Starting iteration {} of {}", Thread.currentThread().getName(), count - 1,
+          numIterations);
         loadData(table, rowsInIteration);
+
         // Do incremental backup
+        LOG.info("Creating incremental backup number {} with continuous backup {} for {}",
+          count - 1, continuousBackupStatus, table);
         builder = new BackupRequest.Builder();
         request = builder.withBackupType(BackupType.INCREMENTAL).withTableList(tables)
-          .withTargetRootDir(BACKUP_ROOT_DIR).build();
-        String backupId = backup(request, client);
-        assertTrue(checkSucceeded(backupId));
-        backupIds.add(backupId);
+          .withTargetRootDir(backupRootDir).withContinuousBackupEnabled(isContinuousBackupEnabled)
+          .build();
+        incrementalBackupId = backup(request, client);
+        assertTrue(checkSucceeded(incrementalBackupId));
+        backupIds.add(incrementalBackupId);
 
         // Restore incremental backup for table, with overwrite for previous backup
+        if ((count - 2) > 0) {
+          LOG.info("Restoring {} using second most recent incremental backup", table);
+        } else {
+          LOG.info("Restoring {} using original full backup", table);
+        }
         String previousBackupId = backupIds.get(backupIds.size() - 2);
-        restoreVerifyTable(conn, client, table, previousBackupId, rowsInIteration * (count - 1));
+        restoreTableAndVerifyRowCount(conn, client, table, previousBackupId,
+          (long) rowsInIteration * (count - 1));
+
         // Restore incremental backup for table, with overwrite for last backup
-        restoreVerifyTable(conn, client, table, backupId, rowsInIteration * count);
+        LOG.info("Restoring {} using most recent incremental backup", table);
+        restoreTableAndVerifyRowCount(conn, client, table, incrementalBackupId,
+          (long) rowsInIteration * count);
+        LOG.info("{} - Finished iteration {} of {}", Thread.currentThread().getName(), count - 1,
+          numIterations);
       }
       // Now merge all incremental and restore
-      String[] incBackupIds = allIncremental(backupIds);
-      merge(incBackupIds, client);
+      String[] incrementalBackupIds = getAllIncrementalBackupIds(backupIds);
+      merge(incrementalBackupIds, client);
       // Restore last one
-      String backupId = incBackupIds[incBackupIds.length - 1];
+      incrementalBackupId = incrementalBackupIds[incrementalBackupIds.length - 1];
       // restore incremental backup for table, with overwrite
-      TableName[] tablesRestoreIncMultiple = new TableName[] { table };
-      restore(createRestoreRequest(BACKUP_ROOT_DIR, backupId, false, tablesRestoreIncMultiple, null,
-        true), client);
+      TableName[] tablesToRestoreFrom = new TableName[] { table };
+      restore(createRestoreRequest(backupRootDir, incrementalBackupId, false, tablesToRestoreFrom,
+        null, true), client);
       Table hTable = conn.getTable(table);
-      Assert.assertEquals(util.countRows(hTable), rowsInIteration * numIterations);
+      Assert.assertEquals(rowsInIteration * (numIterations + 1),
+        HBaseTestingUtil.countRows(hTable));
       hTable.close();
-      LOG.info("{} loop {} finished.", Thread.currentThread().getName(), (count - 1));
     }
   }
 
-  private void restoreVerifyTable(Connection conn, BackupAdmin client, TableName table,
+  private void restoreTableAndVerifyRowCount(Connection conn, BackupAdmin client, TableName table,
     String backupId, long expectedRows) throws IOException {
     TableName[] tablesRestoreIncMultiple = new TableName[] { table };
     restore(
-      createRestoreRequest(BACKUP_ROOT_DIR, backupId, false, tablesRestoreIncMultiple, null, true),
+      createRestoreRequest(backupRootDir, backupId, false, tablesRestoreIncMultiple, null, true),
       client);
     Table hTable = conn.getTable(table);
-    Assert.assertEquals(expectedRows, util.countRows(hTable));
+    Assert.assertEquals(expectedRows, HBaseTestingUtil.countRows(hTable));
     hTable.close();
   }
 
-  private String[] allIncremental(List<String> backupIds) {
+  private String[] getAllIncrementalBackupIds(List<String> backupIds) {
     int size = backupIds.size();
     backupIds = backupIds.subList(1, size);
     String[] arr = new String[size - 1];
@@ -361,7 +352,7 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
     if (status == null) {
       return false;
     }
-    return status.getState() == BackupState.COMPLETE;
+    return status.getState() == BackupInfo.BackupState.COMPLETE;
   }
 
   private BackupInfo getBackupInfo(String backupId) throws IOException {
@@ -396,19 +387,6 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
     LOG.debug("Done initializing/checking cluster");
   }
 
-  /** Returns status of CLI execution */
-  @Override
-  public int runTestFromCommandLine() throws Exception {
-    // Check if backup is enabled
-    if (!BackupManager.isBackupEnabled(getConf())) {
-      System.err.println(BackupRestoreConstants.ENABLE_BACKUP);
-      return -1;
-    }
-    System.out.println(BackupRestoreConstants.VERIFY_BACKUP);
-    testBackupRestore();
-    return 0;
-  }
-
   @Override
   public TableName getTablename() {
     // That is only valid when Monkey is CALM (no monkey)
@@ -423,8 +401,6 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
 
   @Override
   protected void addOptions() {
-    addOptWithArg(REGIONSERVER_COUNT_KEY,
-      "Total number of region servers. Default: '" + DEFAULT_REGIONSERVER_COUNT + "'");
     addOptWithArg(REGION_COUNT_KEY, "Total number of regions. Default: " + DEFAULT_REGION_COUNT);
     addOptWithArg(ROWS_PER_ITERATION_KEY,
       "Total number of data rows to be loaded during one iteration." + " Default: "
@@ -452,17 +428,6 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
       cmd.getOptionValue(NUMBER_OF_TABLES_KEY, Integer.toString(DEFAULT_NUMBER_OF_TABLES)));
     sleepTime =
       Long.parseLong(cmd.getOptionValue(SLEEP_TIME_KEY, Long.toString(SLEEP_TIME_DEFAULT)));
-
-    LOG.info(MoreObjects.toStringHelper("Parsed Options")
-      .add(REGION_COUNT_KEY, regionsCountPerServer).add(REGIONSERVER_COUNT_KEY, regionServerCount)
-      .add(ROWS_PER_ITERATION_KEY, rowsInIteration).add(NUM_ITERATIONS_KEY, numIterations)
-      .add(NUMBER_OF_TABLES_KEY, numTables).add(SLEEP_TIME_KEY, sleepTime).toString());
   }
 
-  public static void main(String[] args) throws Exception {
-    Configuration conf = HBaseConfiguration.create();
-    IntegrationTestingUtility.setUseDistributedCluster(conf);
-    int status = ToolRunner.run(conf, new IntegrationTestBackupRestore(), args);
-    System.exit(status);
-  }
 }
