@@ -64,7 +64,7 @@ public class TestWALProcedurePrettyPrinter extends RegionProcedureStoreTestBase 
     }
     store.cleanup();
     Path walParentDir = new Path(htu.getDataTestDir(),
-      MasterRegionFactory.MASTER_STORE_DIR + "/" + HConstants.HREGION_LOGDIR_NAME);
+      MasterRegionFactory.getMasterRegionDirName() + "/" + HConstants.HREGION_LOGDIR_NAME);
     FileSystem fs = walParentDir.getFileSystem(htu.getConfiguration());
     Path walDir = fs.listStatus(walParentDir)[0].getPath();
     Path walFile = fs.listStatus(walDir)[0].getPath();

@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master.region;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableName;
@@ -33,6 +34,8 @@ import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFac
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Strings;
 
 /**
  * The factory class for creating a {@link MasterRegion}.
@@ -54,7 +57,24 @@ public final class MasterRegionFactory {
 
   public static final String USE_HSYNC_KEY = "hbase.master.store.region.wal.hsync";
 
-  public static final String MASTER_STORE_DIR = "MasterData";
+  // Default master data dir
+  private static final String MASTER_REGION_DIR_NAME_DEFAULT = "MasterData";
+
+  private static final String MASTER_REGION_DIR_NAME;
+  static {
+    Configuration conf = HBaseConfiguration.create();
+    MASTER_REGION_DIR_NAME = initMasterRegionDirName(conf);
+  }
+
+  public static String initMasterRegionDirName(Configuration conf) {
+    String suffix = conf.get(HConstants.HBASE_META_TABLE_SUFFIX,
+      HConstants.HBASE_META_TABLE_SUFFIX_DEFAULT_VALUE);
+    if (Strings.isNullOrEmpty(suffix)) {
+      return MASTER_REGION_DIR_NAME_DEFAULT;
+    } else {
+      return MASTER_REGION_DIR_NAME_DEFAULT + "_" + suffix;
+    }
+  }
 
   private static final String FLUSH_SIZE_KEY = "hbase.master.store.region.flush.size";
 
@@ -116,7 +136,7 @@ public final class MasterRegionFactory {
   public static MasterRegion create(Server server) throws IOException {
     Configuration conf = server.getConfiguration();
     MasterRegionParams params = new MasterRegionParams().server(server)
-      .regionDirName(MASTER_STORE_DIR).tableDescriptor(withTrackerConfigs(conf));
+      .regionDirName(getMasterRegionDirName()).tableDescriptor(withTrackerConfigs(conf));
     long flushSize = conf.getLong(FLUSH_SIZE_KEY, DEFAULT_FLUSH_SIZE);
     long flushPerChanges = conf.getLong(FLUSH_PER_CHANGES_KEY, DEFAULT_FLUSH_PER_CHANGES);
     long flushIntervalMs = conf.getLong(FLUSH_INTERVAL_MS_KEY, DEFAULT_FLUSH_INTERVAL_MS);
@@ -133,5 +153,9 @@ public final class MasterRegionFactory {
     params.rollPeriodMs(rollPeriodMs).archivedWalSuffix(ARCHIVED_WAL_SUFFIX)
       .archivedHFileSuffix(ARCHIVED_HFILE_SUFFIX);
     return MasterRegion.create(params);
+  }
+
+  public static String getMasterRegionDirName() {
+    return MASTER_REGION_DIR_NAME;
   }
 }

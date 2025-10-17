@@ -102,7 +102,7 @@ public class TestHFileProcedurePrettyPrinter extends RegionProcedureStoreTestBas
     store.cleanup();
     store.region.flush(true);
     Path tableDir = CommonFSUtils.getTableDir(
-      new Path(htu.getDataTestDir(), MasterRegionFactory.MASTER_STORE_DIR),
+      new Path(htu.getDataTestDir(), MasterRegionFactory.getMasterRegionDirName()),
       MasterRegionFactory.TABLE_NAME);
     FileSystem fs = tableDir.getFileSystem(htu.getConfiguration());
     Path regionDir =
