@@ -1403,9 +1403,7 @@ public final class BackupSystemTable implements Closeable {
     try (Admin admin = conn.getAdmin()) {
       String snapshotName = BackupSystemTable.getSnapshotName(conf);
       if (snapshotExists(admin, snapshotName)) {
-        admin.disableTable(BackupSystemTable.getTableName(conf));
-        admin.restoreSnapshot(snapshotName);
-        admin.enableTable(BackupSystemTable.getTableName(conf));
+        admin.restoreBackupSystemTable(snapshotName);
         LOG.debug("Done restoring backup system table");
       } else {
         // Snapshot does not exists, i.e completeBackup failed after
