@@ -28,7 +28,10 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.io.hfile.BlockWithScanInfo;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.io.hfile.HFileBlock;
+import org.apache.hadoop.hbase.io.hfile.HFileBlockIndex;
 import org.apache.hadoop.hbase.io.hfile.HFileInfo;
 import org.apache.hadoop.hbase.io.hfile.HFileReaderImpl;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
@@ -356,31 +359,59 @@ public class HalfStoreFileReader extends StoreFileReader {
   public void close(boolean evictOnClose) throws IOException {
     if (closed.compareAndSet(false, true)) {
       if (evictOnClose) {
-        final HFileReaderImpl.HFileScannerImpl s =
-          (HFileReaderImpl.HFileScannerImpl) super.getScanner(false, true, false);
+        long splitBlockOffset = findSplitBlockOffset();
         final String reference = this.reader.getHFileInfo().getHFileContext().getHFileName();
         final String referred = StoreFileInfo.getReferredToRegionAndFile(reference).getSecond();
-        s.seekTo(splitCell);
-        if (s.getCurBlock() != null) {
-          long offset = s.getCurBlock().getOffset();
+        if (splitBlockOffset >= 0) {
           LOG.trace("Seeking to split cell in reader: {} for file: {} top: {}, split offset: {}",
-            this, reference, top, offset);
+            this, reference, top, splitBlockOffset);
           ((HFileReaderImpl) reader).getCacheConf().getBlockCache().ifPresent(cache -> {
             int numEvictedReferred = top
-              ? cache.evictBlocksRangeByHfileName(referred, offset, Long.MAX_VALUE)
-              : cache.evictBlocksRangeByHfileName(referred, 0, offset);
+              ? cache.evictBlocksRangeByHfileName(referred, splitBlockOffset, Long.MAX_VALUE)
+              : cache.evictBlocksRangeByHfileName(referred, 0, splitBlockOffset);
             int numEvictedReference = cache.evictBlocksByHfileName(reference);
             LOG.trace(
               "Closing reference: {}; referred file: {}; was top? {}; evicted for referred: {};"
                 + "evicted for reference: {}",
               reference, referred, top, numEvictedReferred, numEvictedReference);
           });
+        } else {
+          LOG.debug("Unable to determine split block offset for reference {} (top? {})", reference,
+            top);
         }
-        s.close();
         reader.close(false);
       } else {
         reader.close(evictOnClose);
       }
     }
+  }
+
+  private long findSplitBlockOffset() throws IOException {
+    HFileBlockIndex.BlockIndexReader indexReader = reader.getDataBlockIndexReader();
+    if (indexReader != null) {
+      BlockWithScanInfo blockWithScanInfo = indexReader.loadDataBlockWithScanInfo(splitCell, null,
+        false, true, false, reader.getEffectiveEncodingInCache(false), reader);
+      if (blockWithScanInfo != null) {
+        HFileBlock block = blockWithScanInfo.getHFileBlock();
+        if (block != null) {
+          try {
+            return block.getOffset();
+          } finally {
+            block.release();
+          }
+        }
+      }
+    }
+
+    try (HFileScanner scanner = super.getScanner(false, true, false)) {
+      if (scanner instanceof HFileReaderImpl.HFileScannerImpl) {
+        HFileReaderImpl.HFileScannerImpl delegate = (HFileReaderImpl.HFileScannerImpl) scanner;
+        delegate.seekTo(splitCell);
+        if (delegate.getCurBlock() != null) {
+          return delegate.getCurBlock().getOffset();
+        }
+      }
+    }
+    return -1L;
   }
 }

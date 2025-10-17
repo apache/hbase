@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.io.hfile.AbstractMultiTenantReader;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
@@ -59,6 +60,7 @@ import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CacheTestUtils;
+import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
@@ -591,7 +593,7 @@ public class TestCustomCellDataTieringManager {
     this.blockCache = initializeTestEnvironment();
     // hStoreFiles[3] is a cold file. the blocks should not get loaded after a readBlock call.
     HStoreFile hStoreFile = hStoreFiles.get(3);
-    BlockCacheKey cacheKey = new BlockCacheKey(hStoreFile.getPath(), 0, true, BlockType.DATA);
+    BlockCacheKey cacheKey = createBlockCacheKey(hStoreFile, 0, BlockType.DATA);
     testCacheOnRead(hStoreFile, cacheKey, -1, false);
   }
 
@@ -600,8 +602,7 @@ public class TestCustomCellDataTieringManager {
     this.blockCache = initializeTestEnvironment();
     // hStoreFiles[0] is a hot file. the blocks should get loaded after a readBlock call.
     HStoreFile hStoreFile = hStoreFiles.get(0);
-    BlockCacheKey cacheKey =
-      new BlockCacheKey(hStoreFiles.get(0).getPath(), 0, true, BlockType.DATA);
+    BlockCacheKey cacheKey = createBlockCacheKey(hStoreFile, 0, BlockType.DATA);
     testCacheOnRead(hStoreFile, cacheKey, -1, true);
   }
 
@@ -691,6 +692,40 @@ public class TestCustomCellDataTieringManager {
   private void testDataTieringMethodWithKeyNoException(DataTieringMethodCallerWithKey caller,
     BlockCacheKey key, boolean expectedResult) {
     testDataTieringMethodWithKey(caller, key, expectedResult, null);
+  }
+
+  private BlockCacheKey createBlockCacheKey(HStoreFile hStoreFile, long blockOffset,
+    BlockType blockType) {
+    StoreFileReader storeFileReader = hStoreFile.getReader();
+    HFile.Reader hFileReader = storeFileReader.getHFileReader();
+    if (
+      storeFileReader.getHFileVersion() == HFile.MIN_FORMAT_VERSION_WITH_MULTI_TENANT
+        && hFileReader instanceof AbstractMultiTenantReader
+    ) {
+      AbstractMultiTenantReader multiTenantReader = (AbstractMultiTenantReader) hFileReader;
+      byte[][] tenantSectionIds = multiTenantReader.getAllTenantSectionIds();
+      if (tenantSectionIds != null) {
+        for (byte[] sectionId : tenantSectionIds) {
+          Map<String, Object> sectionInfo = multiTenantReader.getSectionInfo(sectionId);
+          if (sectionInfo == null || !Boolean.TRUE.equals(sectionInfo.get("exists"))) {
+            continue;
+          }
+          Object offsetObj = sectionInfo.get("offset");
+          Object sizeObj = sectionInfo.get("size");
+          if (!(offsetObj instanceof Number) || !(sizeObj instanceof Number)) {
+            continue;
+          }
+          long sectionStart = ((Number) offsetObj).longValue();
+          long sectionEnd = sectionStart + ((Number) sizeObj).longValue();
+          if (blockOffset >= sectionStart && blockOffset < sectionEnd) {
+            String sectionSuffix = Bytes.toStringBinary(sectionId);
+            Path sectionPath = new Path(hStoreFile.getPath().toString() + "#" + sectionSuffix);
+            return new BlockCacheKey(sectionPath, blockOffset, true, blockType);
+          }
+        }
+      }
+    }
+    return new BlockCacheKey(hStoreFile.getPath(), blockOffset, true, blockType);
   }
 
   private static BlockCache initializeTestEnvironment() throws IOException {
