@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.regionserver.RegionReplicaReplicationEndpoint;
@@ -123,12 +124,12 @@ public class ServerRegionReplicaUtil extends RegionReplicaUtil {
    * archive after compaction
    */
   public static StoreFileInfo getStoreFileInfo(Configuration conf, FileSystem fs,
-    RegionInfo regionInfo, RegionInfo regionInfoForFs, String familyName, Path path)
-    throws IOException {
+    RegionInfo regionInfo, RegionInfo regionInfoForFs, String familyName, Path path,
+    StoreFileTracker tracker) throws IOException {
 
     // if this is a primary region, just return the StoreFileInfo constructed from path
     if (RegionInfo.COMPARATOR.compare(regionInfo, regionInfoForFs) == 0) {
-      return new StoreFileInfo(conf, fs, path, true);
+      return tracker.getStoreFileInfo(path, true);
     }
 
     // else create a store file link. The link file does not exists on filesystem though.
@@ -137,7 +138,7 @@ public class ServerRegionReplicaUtil extends RegionReplicaUtil {
         regionInfoForFs.getEncodedName(), familyName, path.getName());
       return new StoreFileInfo(conf, fs, link.getFileStatus(fs), link);
     } else if (StoreFileInfo.isReference(path)) {
-      Reference reference = Reference.read(fs, path);
+      Reference reference = tracker.readReference(path);
       Path referencePath = StoreFileInfo.getReferredToFile(path);
       if (HFileLink.isHFileLink(referencePath)) {
         // HFileLink Reference

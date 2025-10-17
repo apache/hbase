@@ -644,7 +644,7 @@ public class MergeTableRegionsProcedure
           // to read the hfiles.
           storeFileInfo.setConf(storeConfiguration);
           Path refFile = mergeRegionFs.mergeStoreFile(regionFs.getRegionInfo(), family,
-            new HStoreFile(storeFileInfo, hcd.getBloomFilterType(), CacheConfig.DISABLED));
+            new HStoreFile(storeFileInfo, hcd.getBloomFilterType(), CacheConfig.DISABLED), tracker);
           mergedFiles.add(refFile);
         }
       }

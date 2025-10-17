@@ -33,6 +33,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.regionserver.StoreContext;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.util.IdLock;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -198,9 +201,11 @@ public class MobFileCache {
    * @param cacheConf The current MobCacheConfig
    * @return A opened mob file.
    */
-  public MobFile openFile(FileSystem fs, Path path, CacheConfig cacheConf) throws IOException {
+  public MobFile openFile(FileSystem fs, Path path, CacheConfig cacheConf,
+    StoreContext storeContext) throws IOException {
+    StoreFileTracker sft = StoreFileTrackerFactory.create(conf, false, storeContext);
     if (!isCacheEnabled) {
-      MobFile mobFile = MobFile.create(fs, path, conf, cacheConf);
+      MobFile mobFile = MobFile.create(fs, path, conf, cacheConf, sft);
       mobFile.open();
       return mobFile;
     } else {
@@ -214,7 +219,7 @@ public class MobFileCache {
             if (map.size() > mobFileMaxCacheSize) {
               evict();
             }
-            cached = CachedMobFile.create(fs, path, conf, cacheConf);
+            cached = CachedMobFile.create(fs, path, conf, cacheConf, sft);
             cached.open();
             map.put(fileName, cached);
             miss.increment();

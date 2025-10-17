@@ -582,7 +582,8 @@ public class DataBlockEncodingTool {
     Path path = new Path(hfilePath);
     CacheConfig cacheConf = new CacheConfig(conf);
     FileSystem fs = FileSystem.get(conf);
-    HStoreFile hsf = new HStoreFile(fs, path, conf, cacheConf, BloomType.NONE, true);
+    StoreFileInfo storeFileInfo = StoreFileInfo.createStoreFileInfoForHFile(conf, fs, path, true);
+    HStoreFile hsf = new HStoreFile(storeFileInfo, BloomType.NONE, cacheConf);
     hsf.initReader();
     StoreFileReader reader = hsf.getReader();
     reader.loadFileInfo();

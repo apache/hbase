@@ -19,13 +19,22 @@ package org.apache.hadoop.hbase.regionserver.storefiletracker;
 
 import static org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory.TRACKER_IMPL;
 
+import java.io.BufferedInputStream;
+import java.io.DataInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Collection;
 import java.util.List;
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.io.HFileLink;
+import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -37,10 +46,13 @@ import org.apache.hadoop.hbase.regionserver.StoreContext;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.regionserver.StoreUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
  * Base class for all store file tracker.
@@ -189,6 +201,122 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
         .withMaxVersions(ctx.getMaxVersions()).withNewVersionBehavior(ctx.getNewVersionBehavior())
         .withCellComparator(ctx.getComparator()).withIsCompaction(params.isCompaction());
     return builder.build();
+  }
+
+  @Override
+  public Reference createReference(Reference reference, Path path) throws IOException {
+    FSDataOutputStream out = ctx.getRegionFileSystem().getFileSystem().create(path, false);
+    try {
+      out.write(reference.toByteArray());
+    } finally {
+      out.close();
+    }
+    return reference;
+  }
+
+  /**
+   * Returns true if the specified family has reference files
+   * @param familyName Column Family Name
+   * @return true if family contains reference files
+   */
+  public boolean hasReferences() throws IOException {
+    Path storeDir = ctx.getRegionFileSystem().getStoreDir(ctx.getFamily().getNameAsString());
+    FileStatus[] files =
+      CommonFSUtils.listStatus(ctx.getRegionFileSystem().getFileSystem(), storeDir);
+    if (files != null) {
+      for (FileStatus stat : files) {
+        if (stat.isDirectory()) {
+          continue;
+        }
+        if (StoreFileInfo.isReference(stat.getPath())) {
+          LOG.trace("Reference {}", stat.getPath());
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  @Override
+  public Reference readReference(final Path p) throws IOException {
+    InputStream in = ctx.getRegionFileSystem().getFileSystem().open(p);
+    try {
+      // I need to be able to move back in the stream if this is not a pb serialization so I can
+      // do the Writable decoding instead.
+      in = in.markSupported() ? in : new BufferedInputStream(in);
+      int pblen = ProtobufUtil.lengthOfPBMagic();
+      in.mark(pblen);
+      byte[] pbuf = new byte[pblen];
+      IOUtils.readFully(in, pbuf, 0, pblen);
+      // WATCHOUT! Return in middle of function!!!
+      if (ProtobufUtil.isPBMagicPrefix(pbuf)) {
+        return Reference.convert(
+          org.apache.hadoop.hbase.shaded.protobuf.generated.FSProtos.Reference.parseFrom(in));
+      }
+      // Else presume Writables. Need to reset the stream since it didn't start w/ pb.
+      // We won't bother rewriting thie Reference as a pb since Reference is transitory.
+      in.reset();
+      Reference r = new Reference();
+      DataInputStream dis = new DataInputStream(in);
+      // Set in = dis so it gets the close below in the finally on our way out.
+      in = dis;
+      r.readFields(dis);
+      return r;
+    } finally {
+      in.close();
+    }
+  }
+
+  @Override
+  public StoreFileInfo getStoreFileInfo(Path initialPath, boolean primaryReplica)
+    throws IOException {
+    return getStoreFileInfo(null, initialPath, primaryReplica);
+  }
+
+  @Override
+  public StoreFileInfo getStoreFileInfo(FileStatus fileStatus, Path initialPath,
+    boolean primaryReplica) throws IOException {
+    FileSystem fs = this.ctx.getRegionFileSystem().getFileSystem();
+    assert fs != null;
+    assert initialPath != null;
+    assert conf != null;
+    Reference reference = null;
+    HFileLink link = null;
+    long createdTimestamp = 0;
+    long size = 0;
+    Path p = initialPath;
+    if (HFileLink.isHFileLink(p)) {
+      // HFileLink
+      reference = null;
+      link = HFileLink.buildFromHFileLinkPattern(conf, p);
+      LOG.trace("{} is a link", p);
+    } else if (StoreFileInfo.isReference(p)) {
+      reference = readReference(p);
+      Path referencePath = StoreFileInfo.getReferredToFile(p);
+      if (HFileLink.isHFileLink(referencePath)) {
+        // HFileLink Reference
+        link = HFileLink.buildFromHFileLinkPattern(conf, referencePath);
+      } else {
+        // Reference
+        link = null;
+      }
+      LOG.trace("{} is a {} reference to {}", p, reference.getFileRegion(), referencePath);
+    } else
+      if (StoreFileInfo.isHFile(p) || StoreFileInfo.isMobFile(p) || StoreFileInfo.isMobRefFile(p)) {
+        // HFile
+        if (fileStatus != null) {
+          createdTimestamp = fileStatus.getModificationTime();
+          size = fileStatus.getLen();
+        } else {
+          FileStatus fStatus = fs.getFileStatus(initialPath);
+          createdTimestamp = fStatus.getModificationTime();
+          size = fStatus.getLen();
+        }
+      } else {
+        throw new IOException("path=" + p + " doesn't look like a valid StoreFile");
+      }
+    return new StoreFileInfo(conf, fs, createdTimestamp, initialPath, size, reference, link,
+      isPrimaryReplica);
   }
 
   /**

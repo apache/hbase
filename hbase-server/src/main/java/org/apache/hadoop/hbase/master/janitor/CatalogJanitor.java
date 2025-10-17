@@ -34,6 +34,8 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
@@ -49,6 +51,8 @@ import org.apache.hadoop.hbase.master.assignment.GCRegionProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Pair;
@@ -421,7 +425,16 @@ public class CatalogJanitor extends ScheduledChore {
     try {
       HRegionFileSystem regionFs = HRegionFileSystem
         .openRegionFromFileSystem(services.getConfiguration(), fs, tabledir, region, true);
-      boolean references = regionFs.hasReferences(tableDescriptor);
+      ColumnFamilyDescriptor[] families = tableDescriptor.getColumnFamilies();
+      boolean references = false;
+      for (ColumnFamilyDescriptor cfd : families) {
+        StoreFileTracker sft = StoreFileTrackerFactory.create(services.getConfiguration(),
+          tableDescriptor, ColumnFamilyDescriptorBuilder.of(cfd.getNameAsString()), regionFs);
+        references = references || sft.hasReferences();
+        if (references) {
+          break;
+        }
+      }
       return new Pair<>(Boolean.TRUE, references);
     } catch (IOException e) {
       LOG.error("Error trying to determine if region {} has references, assuming it does",

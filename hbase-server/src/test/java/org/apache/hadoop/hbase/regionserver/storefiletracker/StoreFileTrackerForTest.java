@@ -27,6 +27,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.regionserver.StoreContext;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.slf4j.Logger;
@@ -69,4 +70,10 @@ public class StoreFileTrackerForTest extends DefaultStoreFileTracker {
   public static void clear() {
     trackedFiles.clear();
   }
+
+  @Override
+  public Reference readReference(Path p) throws IOException {
+    return super.readReference(p);
+  }
+
 }

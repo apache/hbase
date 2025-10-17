@@ -62,6 +62,8 @@ import org.apache.hadoop.hbase.io.hfile.CacheTestUtils;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -816,7 +818,11 @@ public class TestDataTieringManager {
 
     writeStoreFileRandomData(storeFileWriter, Bytes.toBytes(columnFamily), timestamp);
 
-    return new HStoreFile(fs, storeFileWriter.getPath(), conf, cacheConf, BloomType.NONE, true);
+    StoreContext storeContext = StoreContext.getBuilder().withRegionFileSystem(regionFs).build();
+
+    StoreFileTracker sft = StoreFileTrackerFactory.create(conf, true, storeContext);
+    return new HStoreFile(fs, storeFileWriter.getPath(), conf, cacheConf, BloomType.NONE, true,
+      sft);
   }
 
   /**

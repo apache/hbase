@@ -91,6 +91,8 @@ import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -951,11 +953,14 @@ public class TestSplitTransactionOnCluster {
       Collection<HStoreFile> storefiles = store.getStorefiles();
       assertEquals(1, storefiles.size());
       assertFalse(region.hasReferences());
-      Path referencePath = region.getRegionFileSystem().splitStoreFile(region.getRegionInfo(), "f",
-        storefiles.iterator().next(), Bytes.toBytes("row1"), false, region.getSplitPolicy());
+      HRegionFileSystem hfs = region.getRegionFileSystem();
+      StoreFileTracker sft = StoreFileTrackerFactory.create(TESTING_UTIL.getConfiguration(), true,
+        store.getStoreContext());
+      Path referencePath = hfs.splitStoreFile(region.getRegionInfo(), "f",
+        storefiles.iterator().next(), Bytes.toBytes("row1"), false, region.getSplitPolicy(), sft);
       assertNull(referencePath);
-      referencePath = region.getRegionFileSystem().splitStoreFile(region.getRegionInfo(), "i_f",
-        storefiles.iterator().next(), Bytes.toBytes("row1"), false, region.getSplitPolicy());
+      referencePath = hfs.splitStoreFile(region.getRegionInfo(), "i_f",
+        storefiles.iterator().next(), Bytes.toBytes("row1"), false, region.getSplitPolicy(), sft);
       assertNotNull(referencePath);
     } finally {
       TESTING_UTIL.deleteTable(tableName);

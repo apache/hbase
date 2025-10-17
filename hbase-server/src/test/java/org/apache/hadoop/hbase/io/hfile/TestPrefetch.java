@@ -69,9 +69,12 @@ import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.PrefetchExecutorNotifier;
+import org.apache.hadoop.hbase.regionserver.StoreContext;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.regionserver.TestHStoreFile;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.trace.TraceUtil;
@@ -383,11 +386,14 @@ public class TestPrefetch {
     Path storeFile = fileWithSplitPoint.getFirst();
     HRegionFileSystem regionFS =
       HRegionFileSystem.createRegionOnFileSystem(conf, fs, tableDir, region);
-    HStoreFile file = new HStoreFile(fs, storeFile, conf, cacheConf, BloomType.NONE, true);
+    StoreFileTracker sft = StoreFileTrackerFactory.create(conf, true,
+      StoreContext.getBuilder().withFamilyStoreDirectoryPath(new Path(regionDir, "cf"))
+        .withRegionFileSystem(regionFS).build());
+    HStoreFile file = new HStoreFile(fs, storeFile, conf, cacheConf, BloomType.NONE, true, sft);
     Path ref = regionFS.splitStoreFile(region, "cf", file, fileWithSplitPoint.getSecond(), false,
-      new ConstantSizeRegionSplitPolicy());
+      new ConstantSizeRegionSplitPolicy(), sft);
     conf.setBoolean(HBASE_REGION_SERVER_ENABLE_COMPACTION, compactionEnabled);
-    HStoreFile refHsf = new HStoreFile(this.fs, ref, conf, cacheConf, BloomType.NONE, true);
+    HStoreFile refHsf = new HStoreFile(this.fs, ref, conf, cacheConf, BloomType.NONE, true, sft);
     refHsf.initReader();
     HFile.Reader reader = refHsf.getReader().getHFileReader();
     while (!reader.prefetchComplete()) {
@@ -424,13 +430,21 @@ public class TestPrefetch {
       Bytes.toBytes("testPrefetchWhenHFileLink"));
 
     Path storeFilePath = regionFs.commitStoreFile("cf", writer.getPath());
-    Path dstPath = new Path(regionFs.getTableDir(), new Path("test-region", "cf"));
+    final RegionInfo dstHri =
+      RegionInfoBuilder.newBuilder(TableName.valueOf("testPrefetchWhenHFileLink")).build();
+    HRegionFileSystem dstRegionFs = HRegionFileSystem.createRegionOnFileSystem(testConf, fs,
+      CommonFSUtils.getTableDir(testDir, dstHri.getTable()), dstHri);
+    Path dstPath = new Path(regionFs.getTableDir(), new Path(dstHri.getRegionNameAsString(), "cf"));
     HFileLink.create(testConf, this.fs, dstPath, hri, storeFilePath.getName());
     Path linkFilePath =
       new Path(dstPath, HFileLink.createHFileLinkName(hri, storeFilePath.getName()));
 
+    StoreFileTracker sft = StoreFileTrackerFactory.create(testConf, false,
+      StoreContext.getBuilder()
+        .withFamilyStoreDirectoryPath(new Path(dstRegionFs.getRegionDir(), "cf"))
+        .withRegionFileSystem(dstRegionFs).build());
     // Try to open store file from link
-    StoreFileInfo storeFileInfo = new StoreFileInfo(testConf, this.fs, linkFilePath, true);
+    StoreFileInfo storeFileInfo = sft.getStoreFileInfo(linkFilePath, true);
     HStoreFile hsf = new HStoreFile(storeFileInfo, BloomType.NONE, cacheConf);
     assertTrue(storeFileInfo.isLink());
 

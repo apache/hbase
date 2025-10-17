@@ -331,7 +331,7 @@ public class TestBytesReadFromFs {
     readLoadOnOpenDataSection(path, true);
 
     CacheConfig cacheConf = new CacheConfig(conf);
-    StoreFileInfo storeFileInfo = new StoreFileInfo(conf, fs, path, true);
+    StoreFileInfo storeFileInfo = StoreFileInfo.createStoreFileInfoForHFile(conf, fs, path, true);
     HStoreFile sf = new HStoreFile(storeFileInfo, bt, cacheConf);
 
     // Read HFile trailer and load-on-open data section
