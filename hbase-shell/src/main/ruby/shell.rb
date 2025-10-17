@@ -151,7 +151,7 @@ module Shell
     end
 
     def hbase_keymeta_admin
-      @keymeta_admin ||= hbase.keymeta_admin
+      @hbase_keymeta_admin ||= hbase.keymeta_admin
     end
 
     ##
@@ -629,6 +629,7 @@ Shell.load_command_group(
   commands: %w[
     enable_key_management
     show_key_status
+    rotate_stk
   ]
 )
 

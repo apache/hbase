@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase.keymeta;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
@@ -29,6 +31,8 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.security.KeyException;
 import java.util.List;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
@@ -37,6 +41,7 @@ import org.apache.hadoop.hbase.io.crypto.ManagedKeyState;
 import org.apache.hadoop.hbase.io.crypto.MockManagedKeyProvider;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.ClassRule;
@@ -45,6 +50,9 @@ import org.junit.experimental.categories.Category;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
+/**
+ * Tests the admin API via both RPC and local calls.
+ */
 @Category({ MasterTests.class, MediumTests.class })
 public class TestManagedKeymeta extends ManagedKeyTestBase {
 
@@ -102,13 +110,136 @@ public class TestManagedKeymeta extends ManagedKeyTestBase {
   }
 
   @Test
-  public void testEnableKeyManagementWithServiceException() throws Exception {
+  public void testEnableKeyManagementWithExceptionOnGetManagedKey() throws Exception {
+    MockManagedKeyProvider managedKeyProvider =
+      (MockManagedKeyProvider) Encryption.getManagedKeyProvider(TEST_UTIL.getConfiguration());
+    managedKeyProvider.setShouldThrowExceptionOnGetManagedKey(true);
+    KeymetaAdmin adminClient = new KeymetaAdminClient(TEST_UTIL.getConnection());
+    IOException exception =
+      assertThrows(IOException.class, () -> adminClient.enableKeyManagement("cust", "namespace"));
+    assertTrue(exception.getMessage().contains("Test exception on getManagedKey"));
+  }
+
+  @Test
+  public void testEnableKeyManagementWithClientSideServiceException() throws Exception {
+    doTestWithClientSideServiceException((mockStub, networkError) -> {
+      try {
+        when(mockStub.enableKeyManagement(any(), any())).thenThrow(networkError);
+      } catch (ServiceException e) {
+        // We are just setting up the mock, so no exception is expected here.
+        throw new RuntimeException("Unexpected ServiceException", e);
+      }
+      return null;
+    }, (client) -> {
+      try {
+        client.enableKeyManagement("cust", "namespace");
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+      return null;
+    });
+  }
+
+  @Test
+  public void testGetManagedKeysWithClientSideServiceException() throws Exception {
+    // Similar test for getManagedKeys method
+    doTestWithClientSideServiceException((mockStub, networkError) -> {
+      try {
+        when(mockStub.getManagedKeys(any(), any())).thenThrow(networkError);
+      } catch (ServiceException e) {
+        // We are just setting up the mock, so no exception is expected here.
+        throw new RuntimeException("Unexpected ServiceException", e);
+      }
+      return null;
+    }, (client) -> {
+      try {
+        client.getManagedKeys("cust", "namespace");
+      } catch (IOException | KeyException e) {
+        throw new RuntimeException(e);
+      }
+      return null;
+    });
+  }
+
+  @Test
+  public void testRotateSTKLocal() throws Exception {
+    HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
+    KeymetaAdmin keymetaAdmin = master.getKeymetaAdmin();
+    doTestRotateSTK(keymetaAdmin);
+  }
+
+  @Test
+  public void testRotateSTKOverRPC() throws Exception {
+    KeymetaAdmin adminClient = new KeymetaAdminClient(TEST_UTIL.getConnection());
+    doTestRotateSTK(adminClient);
+  }
+
+  private void doTestRotateSTK(KeymetaAdmin adminClient) throws IOException {
+    // Call rotateSTK - since no actual system key change has occurred,
+    // this should return false (no rotation performed)
+    boolean result = adminClient.rotateSTK();
+    assertFalse("rotateSTK should return false when no key change is detected", result);
+
+    HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
+    ManagedKeyData currentSystemKey = master.getSystemKeyCache().getLatestSystemKey();
+
+    MockManagedKeyProvider managedKeyProvider =
+      (MockManagedKeyProvider) Encryption.getManagedKeyProvider(TEST_UTIL.getConfiguration());
+    // Once we enable multikeyGenMode on MockManagedKeyProvider, every call should return a new key
+    // which should trigger a rotation.
+    managedKeyProvider.setMultikeyGenMode(true);
+    result = adminClient.rotateSTK();
+    assertTrue("rotateSTK should return true when a new key is detected", result);
+
+    ManagedKeyData newSystemKey = master.getSystemKeyCache().getLatestSystemKey();
+    assertNotEquals("newSystemKey should be different from currentSystemKey", currentSystemKey,
+      newSystemKey);
+
+    HRegionServer regionServer = TEST_UTIL.getHBaseCluster().getRegionServer(0);
+    assertEquals("regionServer should have the same new system key", newSystemKey,
+      regionServer.getSystemKeyCache().getLatestSystemKey());
+
+  }
+
+  @Test
+  public void testRotateSTKWithExceptionOnGetSystemKey() throws Exception {
+    MockManagedKeyProvider managedKeyProvider =
+      (MockManagedKeyProvider) Encryption.getManagedKeyProvider(TEST_UTIL.getConfiguration());
+    managedKeyProvider.setShouldThrowExceptionOnGetSystemKey(true);
+    KeymetaAdmin adminClient = new KeymetaAdminClient(TEST_UTIL.getConnection());
+    IOException exception = assertThrows(IOException.class, () -> adminClient.rotateSTK());
+    assertTrue(exception.getMessage().contains("Test exception on getSystemKey"));
+  }
+
+  @Test
+  public void testRotateSTKWithClientSideServiceException() throws Exception {
+    doTestWithClientSideServiceException((mockStub, networkError) -> {
+      try {
+        when(mockStub.rotateSTK(any(), any())).thenThrow(networkError);
+      } catch (ServiceException e) {
+        // We are just setting up the mock, so no exception is expected here.
+        throw new RuntimeException("Unexpected ServiceException", e);
+      }
+      return null;
+    }, (client) -> {
+      try {
+        client.rotateSTK();
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+      return null;
+    });
+  }
+
+  private void
+    doTestWithClientSideServiceException(BiFunction<
+      ManagedKeysProtos.ManagedKeysService.BlockingInterface, ServiceException, Void> setupFunction,
+      Function<KeymetaAdminClient, Void> testFunction) throws Exception {
     ManagedKeysProtos.ManagedKeysService.BlockingInterface mockStub =
       mock(ManagedKeysProtos.ManagedKeysService.BlockingInterface.class);
 
     ServiceException networkError = new ServiceException("Network error");
     networkError.initCause(new IOException("Network error"));
-    when(mockStub.enableKeyManagement(any(), any())).thenThrow(networkError);
 
     KeymetaAdminClient client = new KeymetaAdminClient(TEST_UTIL.getConnection());
     // Use reflection to set the stub
@@ -116,30 +247,14 @@ public class TestManagedKeymeta extends ManagedKeyTestBase {
     stubField.setAccessible(true);
     stubField.set(client, mockStub);
 
-    IOException exception = assertThrows(IOException.class, () -> {
-      client.enableKeyManagement("cust", "namespace");
-    });
-
-    assertTrue(exception.getMessage().contains("Network error"));
-  }
-
-  @Test
-  public void testGetManagedKeysWithServiceException() throws Exception {
-    // Similar test for getManagedKeys method
-    ManagedKeysProtos.ManagedKeysService.BlockingInterface mockStub =
-      mock(ManagedKeysProtos.ManagedKeysService.BlockingInterface.class);
-
-    ServiceException networkError = new ServiceException("Network error");
-    networkError.initCause(new IOException("Network error"));
-    when(mockStub.getManagedKeys(any(), any())).thenThrow(networkError);
-
-    KeymetaAdminClient client = new KeymetaAdminClient(TEST_UTIL.getConnection());
-    Field stubField = KeymetaAdminClient.class.getDeclaredField("stub");
-    stubField.setAccessible(true);
-    stubField.set(client, mockStub);
+    setupFunction.apply(mockStub, networkError);
 
     IOException exception = assertThrows(IOException.class, () -> {
-      client.getManagedKeys("cust", "namespace");
+      try {
+        testFunction.apply(client);
+      } catch (RuntimeException e) {
+        throw e.getCause();
+      }
     });
 
     assertTrue(exception.getMessage().contains("Network error"));

@@ -156,6 +156,11 @@ public class MockNoopMasterServices implements MasterServices {
   }
 
   @Override
+  public boolean rotateSystemKeyIfChanged() {
+    return false;
+  }
+
+  @Override
   public MasterCoprocessorHost getMasterCoprocessorHost() {
     return null;
   }

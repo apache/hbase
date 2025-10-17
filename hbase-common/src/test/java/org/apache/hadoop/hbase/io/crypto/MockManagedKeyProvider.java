@@ -44,6 +44,9 @@ public class MockManagedKeyProvider extends MockAesKeyProvider implements Manage
   private Map<String, ManagedKeyState> keyState = new HashMap<>();
   private String systemKeyAlias = "default_system_key_alias";
 
+  private boolean shouldThrowExceptionOnGetSystemKey = false;
+  private boolean shouldThrowExceptionOnGetManagedKey = false;
+
   @Override
   public void initConfig(Configuration conf, String providerParameters) {
     super.init(providerParameters);
@@ -51,11 +54,17 @@ public class MockManagedKeyProvider extends MockAesKeyProvider implements Manage
 
   @Override
   public ManagedKeyData getSystemKey(byte[] systemId) throws IOException {
+    if (shouldThrowExceptionOnGetSystemKey) {
+      throw new IOException("Test exception on getSystemKey");
+    }
     return getKey(systemId, systemKeyAlias, ManagedKeyData.KEY_SPACE_GLOBAL);
   }
 
   @Override
   public ManagedKeyData getManagedKey(byte[] key_cust, String key_namespace) throws IOException {
+    if (shouldThrowExceptionOnGetManagedKey) {
+      throw new IOException("Test exception on getManagedKey");
+    }
     String alias = Bytes.toString(key_cust);
     return getKey(key_cust, alias, key_namespace);
   }
@@ -116,6 +125,14 @@ public class MockManagedKeyProvider extends MockAesKeyProvider implements Manage
 
   public String getSystemKeyAlias() {
     return this.systemKeyAlias;
+  }
+
+  public void setShouldThrowExceptionOnGetSystemKey(boolean shouldThrowExceptionOnGetSystemKey) {
+    this.shouldThrowExceptionOnGetSystemKey = shouldThrowExceptionOnGetSystemKey;
+  }
+
+  public void setShouldThrowExceptionOnGetManagedKey(boolean shouldThrowExceptionOnGetManagedKey) {
+    this.shouldThrowExceptionOnGetManagedKey = shouldThrowExceptionOnGetManagedKey;
   }
 
   /**

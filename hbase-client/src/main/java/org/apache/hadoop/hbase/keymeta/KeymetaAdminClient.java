@@ -69,6 +69,17 @@ public class KeymetaAdminClient implements KeymetaAdmin {
     }
   }
 
+  @Override
+  public boolean rotateSTK() throws IOException {
+    try {
+      ManagedKeysProtos.RotateSTKResponse response =
+        stub.rotateSTK(null, ManagedKeysProtos.RotateSTKRequest.newBuilder().build());
+      return response.getRotated();
+    } catch (ServiceException e) {
+      throw ProtobufUtil.handleRemoteException(e);
+    }
+  }
+
   private static List<ManagedKeyData>
     generateKeyDataList(ManagedKeysProtos.GetManagedKeysResponse stateResponse) {
     List<ManagedKeyData> keyStates = new ArrayList<>();

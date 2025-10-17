@@ -712,6 +712,12 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
   }
 
   @Override
+  public HBaseProtos.EmptyMsg refreshSystemKeyCache(RpcController controller,
+    AdminProtos.RefreshSystemKeyCacheRequest request) throws ServiceException {
+    return null;
+  }
+
+  @Override
   public Connection createConnection(Configuration conf) throws IOException {
     return null;
   }

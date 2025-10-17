@@ -23,6 +23,7 @@ import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.coprocessor.CoreCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.HasMasterServices;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
@@ -34,6 +35,8 @@ import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.GetManagedKe
 import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.ManagedKeysRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.ManagedKeysResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.ManagedKeysService;
+import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.RotateSTKRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.RotateSTKResponse;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -104,15 +107,16 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
       RpcCallback<GetManagedKeysResponse> done) {
       ManagedKeysResponse.Builder builder = getResponseBuilder(controller, request);
       if (builder.getKeyCust() != null && !builder.getKeyCust().isEmpty()) {
+        GetManagedKeysResponse keyStateResponse;
         try {
           List<ManagedKeyData> managedKeyStates = master.getKeymetaAdmin()
             .enableKeyManagement(request.getKeyCust(), request.getKeyNamespace());
-          done.run(generateKeyStateResponse(managedKeyStates, builder));
-        } catch (IOException e) {
-          CoprocessorRpcUtils.setControllerException(controller, e);
-        } catch (KeyException e) {
-          CoprocessorRpcUtils.setControllerException(controller, new IOException(e));
+          keyStateResponse = generateKeyStateResponse(managedKeyStates, builder);
+        } catch (IOException | KeyException e) {
+          CoprocessorRpcUtils.setControllerException(controller, new DoNotRetryIOException(e));
+          keyStateResponse = GetManagedKeysResponse.getDefaultInstance();
         }
+        done.run(keyStateResponse);
       }
     }
 
@@ -121,16 +125,37 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
       RpcCallback<GetManagedKeysResponse> done) {
       ManagedKeysResponse.Builder builder = getResponseBuilder(controller, request);
       if (builder.getKeyCust() != null && !builder.getKeyCust().isEmpty()) {
+        GetManagedKeysResponse keyStateResponse;
         try {
           List<ManagedKeyData> managedKeyStates = master.getKeymetaAdmin()
             .getManagedKeys(request.getKeyCust(), request.getKeyNamespace());
-          done.run(generateKeyStateResponse(managedKeyStates, builder));
-        } catch (IOException e) {
-          CoprocessorRpcUtils.setControllerException(controller, e);
-        } catch (KeyException e) {
-          CoprocessorRpcUtils.setControllerException(controller, new IOException(e));
+          keyStateResponse = generateKeyStateResponse(managedKeyStates, builder);
+        } catch (IOException | KeyException e) {
+          CoprocessorRpcUtils.setControllerException(controller, new DoNotRetryIOException(e));
+          keyStateResponse = GetManagedKeysResponse.getDefaultInstance();
         }
+        done.run(keyStateResponse);
       }
+    }
+
+    /**
+     * Rotates the system key (STK) by checking for a new key and propagating it to all region
+     * servers.
+     * @param controller The RPC controller.
+     * @param request    The request (empty).
+     * @param done       The callback to be invoked with the response.
+     */
+    @Override
+    public void rotateSTK(RpcController controller, RotateSTKRequest request,
+      RpcCallback<RotateSTKResponse> done) {
+      boolean rotated;
+      try {
+        rotated = master.getKeymetaAdmin().rotateSTK();
+      } catch (IOException e) {
+        CoprocessorRpcUtils.setControllerException(controller, new DoNotRetryIOException(e));
+        rotated = false;
+      }
+      done.run(RotateSTKResponse.newBuilder().setRotated(rotated).build());
     }
   }
 

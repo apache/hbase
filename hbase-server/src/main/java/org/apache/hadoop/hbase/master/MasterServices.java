@@ -87,6 +87,9 @@ public interface MasterServices extends Server, KeyManagementService {
   /** Returns Master's WALs {@link MasterWalManager} utility class. */
   MasterWalManager getMasterWalManager();
 
+  /** Rotates the system key if changed, returns true if a new key was detected and rotated */
+  boolean rotateSystemKeyIfChanged() throws IOException;
+
   /** Returns Master's {@link ServerManager} instance. */
   ServerManager getServerManager();
 

@@ -46,7 +46,7 @@ module Hbase
 
     def setup
       setup_hbase
-      @test_table = 'enctest'+Time.now.to_i.to_s
+      @test_table = "enctest#{Time.now.to_i}"
       @connection = $TEST_CLUSTER.connection
     end
 
@@ -54,14 +54,17 @@ module Hbase
       # Custodian is currently not supported, so this will end up falling back to local key
       # generation.
       test_table_put_get_with_encryption($CUST1_ENCODED, '*',
-        { 'NAME' => 'f', 'ENCRYPTION' => 'AES' }, true)
+                                         { 'NAME' => 'f', 'ENCRYPTION' => 'AES' },
+                                         true)
     end
 
     define_test 'Test table with custom namespace attribute in Column Family' do
-      custom_namespace = "test_global_namespace"
-      test_table_put_get_with_encryption($GLOB_CUST_ENCODED, custom_namespace,
+      custom_namespace = 'test_global_namespace'
+      test_table_put_get_with_encryption(
+        $GLOB_CUST_ENCODED, custom_namespace,
         { 'NAME' => 'f', 'ENCRYPTION' => 'AES', 'ENCRYPTION_KEY_NAMESPACE' => custom_namespace },
-        false)
+        false
+      )
     end
 
     def test_table_put_get_with_encryption(cust, namespace, table_attrs, fallback_scenario)
@@ -88,19 +91,19 @@ module Hbase
       assert_not_nil(hfile_info)
       live_trailer = hfile_info.getTrailer
       assert_trailer(live_trailer)
-      assert_equal(namespace, live_trailer.getKeyNamespace())
+      assert_equal(namespace, live_trailer.getKeyNamespace)
 
       # When active key is supposed to be used, we can valiate the key bytes in the context against
       # the actual key from provider.
-      if !fallback_scenario
-        encryption_context = hfile_info.getHFileContext().getEncryptionContext()
+      unless fallback_scenario
+        encryption_context = hfile_info.getHFileContext.getEncryptionContext
         assert_not_nil(encryption_context)
-        assert_not_nil(encryption_context.getKeyBytes())
+        assert_not_nil(encryption_context.getKeyBytes)
         key_provider = Encryption.getManagedKeyProvider($TEST_CLUSTER.getConfiguration)
         key_data = key_provider.getManagedKey(ManagedKeyProvider.decodeToBytes(cust), namespace)
         assert_not_nil(key_data)
-        assert_equal(namespace, key_data.getKeyNamespace())
-        assert_equal(key_data.getTheKey().getEncoded(), encryption_context.getKeyBytes())
+        assert_equal(namespace, key_data.getKeyNamespace)
+        assert_equal(key_data.getTheKey.getEncoded, encryption_context.getKeyBytes)
       end
 
       ## Disable table to ensure that the stores are not cached.

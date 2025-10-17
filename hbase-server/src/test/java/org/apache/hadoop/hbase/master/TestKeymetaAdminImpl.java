@@ -23,11 +23,15 @@ import static org.apache.hadoop.hbase.io.crypto.ManagedKeyState.DISABLED;
 import static org.apache.hadoop.hbase.io.crypto.ManagedKeyState.FAILED;
 import static org.apache.hadoop.hbase.io.crypto.ManagedKeyState.INACTIVE;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -37,17 +41,23 @@ import java.security.KeyException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.AsyncClusterConnection;
+import org.apache.hadoop.hbase.client.AsyncRegionServerAdmin;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyState;
 import org.apache.hadoop.hbase.io.crypto.MockManagedKeyProvider;
+import org.apache.hadoop.hbase.keymeta.KeyManagementService;
 import org.apache.hadoop.hbase.keymeta.KeymetaAdminImpl;
 import org.apache.hadoop.hbase.keymeta.KeymetaTableAccessor;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -67,17 +77,22 @@ import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 import org.junit.runners.Suite;
 
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.EmptyMsg;
+
 @RunWith(Suite.class)
 @Suite.SuiteClasses({ TestKeymetaAdminImpl.TestWhenDisabled.class,
-  TestKeymetaAdminImpl.TestAdminImpl.class,
-  TestKeymetaAdminImpl.TestForKeyProviderNullReturn.class, })
+  TestKeymetaAdminImpl.TestAdminImpl.class, TestKeymetaAdminImpl.TestForKeyProviderNullReturn.class,
+  TestKeymetaAdminImpl.TestRotateSTK.class })
 @Category({ MasterTests.class, SmallTests.class })
 public class TestKeymetaAdminImpl {
 
   private static final String CUST = "cust1";
   private static final String ENCODED_CUST = ManagedKeyProvider.encodeToStr(CUST.getBytes());
 
-  private final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
+  protected final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   @Rule
   public TestName name = new TestName();
@@ -265,5 +280,209 @@ public class TestKeymetaAdminImpl {
       assertEquals(new Bytes(expectedKeyBytes), keyBytes);
     }
     return true;
+  }
+
+  /**
+   * Test class for rotateSTK API
+   */
+  @RunWith(BlockJUnit4ClassRunner.class)
+  @Category({ MasterTests.class, SmallTests.class })
+  public static class TestRotateSTK extends TestKeymetaAdminImpl {
+    @ClassRule
+    public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestRotateSTK.class);
+
+    private ServerManager mockServerManager = mock(ServerManager.class);
+    private AsyncClusterConnection mockConnection = mock(AsyncClusterConnection.class);
+
+    @Override
+    public void setUp() throws Exception {
+      super.setUp();
+      when(mockServer.getServerManager()).thenReturn(mockServerManager);
+      when(mockServer.getAsyncClusterConnection()).thenReturn(mockConnection);
+    }
+
+    /**
+     * Test rotateSTK when a new key is detected. Now that we can mock SystemKeyManager via
+     * master.getSystemKeyManager(), we can properly test the success scenario: 1.
+     * SystemKeyManager.rotateSystemKeyIfChanged() returns non-null (new key detected) 2. Master
+     * gets list of online region servers 3. Master makes parallel RPC calls to all region servers
+     * 4. All region servers successfully rebuild their system key cache 5. Method returns true
+     */
+    @Test
+    public void testRotateSTKWithNewKey() throws Exception {
+      // Setup mocks for MasterServices
+      AsyncRegionServerAdmin mockRsAdmin1 = mock(AsyncRegionServerAdmin.class);
+      AsyncRegionServerAdmin mockRsAdmin2 = mock(AsyncRegionServerAdmin.class);
+
+      // Mock SystemKeyManager to return a new key (non-null)
+      when(mockServer.rotateSystemKeyIfChanged()).thenReturn(true);
+
+      ServerName rs1 = ServerName.valueOf("rs1", 16020, System.currentTimeMillis());
+      ServerName rs2 = ServerName.valueOf("rs2", 16020, System.currentTimeMillis());
+      List<ServerName> regionServers = Arrays.asList(rs1, rs2);
+
+      when(mockServerManager.getOnlineServersList()).thenReturn(regionServers);
+      when(mockConnection.getRegionServerAdmin(rs1)).thenReturn(mockRsAdmin1);
+      when(mockConnection.getRegionServerAdmin(rs2)).thenReturn(mockRsAdmin2);
+
+      EmptyMsg rsResponse = EmptyMsg.getDefaultInstance();
+      when(mockRsAdmin1.refreshSystemKeyCache(any(AdminProtos.RefreshSystemKeyCacheRequest.class)))
+        .thenReturn(CompletableFuture.completedFuture(rsResponse));
+      when(mockRsAdmin2.refreshSystemKeyCache(any(AdminProtos.RefreshSystemKeyCacheRequest.class)))
+        .thenReturn(CompletableFuture.completedFuture(rsResponse));
+
+      KeymetaAdminImplForTest admin = new KeymetaAdminImplForTest(mockServer, keymetaAccessor);
+
+      // Call rotateSTK - should return true since new key was detected
+      boolean result = admin.rotateSTK();
+
+      // Verify the result
+      assertTrue("rotateSTK should return true when new key is detected", result);
+
+      // Verify that rotateSystemKeyIfChanged was called
+      verify(mockServer).rotateSystemKeyIfChanged();
+
+      // Verify that both region servers received the rotation request
+      verify(mockRsAdmin1)
+        .refreshSystemKeyCache(any(AdminProtos.RefreshSystemKeyCacheRequest.class));
+      verify(mockRsAdmin2)
+        .refreshSystemKeyCache(any(AdminProtos.RefreshSystemKeyCacheRequest.class));
+    }
+
+    /**
+     * Test rotateSTK when no key change is detected. Now that we can mock SystemKeyManager, we can
+     * properly test the no-change scenario: 1. SystemKeyManager.rotateSystemKeyIfChanged() returns
+     * null 2. Method returns false immediately without calling any region servers 3. No RPC calls
+     * are made to region servers
+     */
+    @Test
+    public void testRotateSTKNoChange() throws Exception {
+      // Mock SystemKeyManager to return null (no key change)
+      when(mockServer.rotateSystemKeyIfChanged()).thenReturn(false);
+
+      KeymetaAdminImplForTest admin = new KeymetaAdminImplForTest(mockServer, keymetaAccessor);
+
+      // Call rotateSTK - should return false since no key change was detected
+      boolean result = admin.rotateSTK();
+
+      // Verify the result
+      assertFalse("rotateSTK should return false when no key change is detected", result);
+
+      // Verify that rotateSystemKeyIfChanged was called
+      verify(mockServer).rotateSystemKeyIfChanged();
+
+      // Verify that getOnlineServersList was never called (short-circuit behavior)
+      verify(mockServerManager, never()).getOnlineServersList();
+    }
+
+    @Test
+    public void testRotateSTKOnIOException() throws Exception {
+      when(mockServer.rotateSystemKeyIfChanged()).thenThrow(new IOException("test"));
+
+      KeymetaAdminImpl admin = new KeymetaAdminImpl(mockServer);
+      IOException ex = assertThrows(IOException.class, () -> admin.rotateSTK());
+      assertTrue("Exception message should contain 'test', but was: " + ex.getMessage(),
+        ex.getMessage().equals("test"));
+    }
+
+    /**
+     * Test rotateSTK when multiple region servers fail. Verifies that all failed server names are
+     * included in the exception message.
+     */
+    @Test
+    public void testRotateSTKWithMultipleFailedServers() throws Exception {
+      // Setup mocks for MasterServices
+      AsyncRegionServerAdmin mockRsAdmin1 = mock(AsyncRegionServerAdmin.class);
+      AsyncRegionServerAdmin mockRsAdmin2 = mock(AsyncRegionServerAdmin.class);
+      AsyncRegionServerAdmin mockRsAdmin3 = mock(AsyncRegionServerAdmin.class);
+
+      // Mock SystemKeyManager to return a new key (non-null)
+      when(mockServer.rotateSystemKeyIfChanged()).thenReturn(true);
+
+      ServerName rs1 = ServerName.valueOf("rs1.example.com", 16020, System.currentTimeMillis());
+      ServerName rs2 = ServerName.valueOf("rs2.example.com", 16020, System.currentTimeMillis());
+      ServerName rs3 = ServerName.valueOf("rs3.example.com", 16020, System.currentTimeMillis());
+      List<ServerName> regionServers = Arrays.asList(rs1, rs2, rs3);
+
+      when(mockServerManager.getOnlineServersList()).thenReturn(regionServers);
+      when(mockConnection.getRegionServerAdmin(rs1)).thenReturn(mockRsAdmin1);
+      when(mockConnection.getRegionServerAdmin(rs2)).thenReturn(mockRsAdmin2);
+      when(mockConnection.getRegionServerAdmin(rs3)).thenReturn(mockRsAdmin3);
+
+      EmptyMsg successResponse = EmptyMsg.getDefaultInstance();
+
+      // RS1 succeeds
+      when(mockRsAdmin1.refreshSystemKeyCache(any(AdminProtos.RefreshSystemKeyCacheRequest.class)))
+        .thenReturn(CompletableFuture.completedFuture(successResponse));
+
+      // RS2 fails with IOException
+      CompletableFuture<EmptyMsg> failedFuture2 = new CompletableFuture<>();
+      failedFuture2.completeExceptionally(new IOException("Connection timeout to rs2"));
+      when(mockRsAdmin2.refreshSystemKeyCache(any(AdminProtos.RefreshSystemKeyCacheRequest.class)))
+        .thenReturn(failedFuture2);
+
+      // RS3 fails with ServiceException
+      CompletableFuture<EmptyMsg> failedFuture3 = new CompletableFuture<>();
+      failedFuture3.completeExceptionally(new ServiceException("Server error on rs3"));
+      when(mockRsAdmin3.refreshSystemKeyCache(any(AdminProtos.RefreshSystemKeyCacheRequest.class)))
+        .thenReturn(failedFuture3);
+
+      KeymetaAdminImplForTest admin = new KeymetaAdminImplForTest(mockServer, keymetaAccessor);
+
+      // Call rotateSTK and expect IOException
+      IOException ex = assertThrows(IOException.class, () -> admin.rotateSTK());
+
+      // Verify the exception message contains both failed server names
+      String exceptionMessage = ex.getMessage();
+      assertTrue("Exception message should contain 'Failed to initiate System Key cache refresh'",
+        exceptionMessage.contains("Failed to initiate System Key cache refresh on region servers"));
+      assertTrue("Exception message should contain rs2 server name: " + exceptionMessage,
+        exceptionMessage.contains("rs2.example.com"));
+      assertTrue("Exception message should contain rs3 server name: " + exceptionMessage,
+        exceptionMessage.contains("rs3.example.com"));
+      // rs1 succeeded, so it should NOT be in the exception message
+      assertFalse("Exception message should NOT contain rs1 server name: " + exceptionMessage,
+        exceptionMessage.contains("rs1.example.com"));
+
+      // Verify that rotateSystemKeyIfChanged was called
+      verify(mockServer).rotateSystemKeyIfChanged();
+
+      // Verify that all region servers received the rotation request
+      verify(mockRsAdmin1)
+        .refreshSystemKeyCache(any(AdminProtos.RefreshSystemKeyCacheRequest.class));
+      verify(mockRsAdmin2)
+        .refreshSystemKeyCache(any(AdminProtos.RefreshSystemKeyCacheRequest.class));
+      verify(mockRsAdmin3)
+        .refreshSystemKeyCache(any(AdminProtos.RefreshSystemKeyCacheRequest.class));
+    }
+
+    @Test
+    public void testRotateSTKNotOnMaster() throws Exception {
+      // Create a non-master server mock
+      Server mockRegionServer = mock(Server.class);
+      KeyManagementService mockKeyService = mock(KeyManagementService.class);
+      // Mock KeyManagementService - required by KeyManagementBase constructor
+      when(mockRegionServer.getKeyManagementService()).thenReturn(mockKeyService);
+      when(mockKeyService.getConfiguration()).thenReturn(conf);
+      when(mockRegionServer.getConfiguration()).thenReturn(conf);
+      when(mockRegionServer.getFileSystem()).thenReturn(mockFileSystem);
+
+      KeymetaAdminImpl admin = new KeymetaAdminImpl(mockRegionServer);
+
+      IOException ex = assertThrows(IOException.class, () -> admin.rotateSTK());
+      assertTrue(ex.getMessage().contains("rotateSTK can only be called on master"));
+    }
+
+    @Test
+    public void testRotateSTKWhenDisabled() throws Exception {
+      TEST_UTIL.getConfiguration().set(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, "false");
+
+      KeymetaAdminImpl admin = new KeymetaAdminImpl(mockServer);
+
+      IOException ex = assertThrows(IOException.class, () -> admin.rotateSTK());
+      assertTrue("Exception message should contain 'not enabled', but was: " + ex.getMessage(),
+        ex.getMessage().contains("not enabled"));
+    }
   }
 }

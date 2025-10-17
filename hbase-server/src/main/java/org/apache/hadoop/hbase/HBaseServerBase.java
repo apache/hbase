@@ -194,7 +194,7 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
 
   protected final NettyEventLoopGroupConfig eventLoopGroupConfig;
 
-  private SystemKeyCache systemKeyCache;
+  protected SystemKeyCache systemKeyCache;
   protected KeymetaAdminImpl keymetaAdmin;
   protected ManagedKeyDataCache managedKeyDataCache;
 
@@ -433,6 +433,17 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
 
   protected void buildSystemKeyCache() throws IOException {
     if (systemKeyCache == null && SecurityUtil.isKeyManagementEnabled(conf)) {
+      systemKeyCache = SystemKeyCache.createCache(new SystemKeyAccessor(this));
+    }
+  }
+
+  /**
+   * Rebuilds the system key cache. This method can be called to refresh the system key cache when
+   * the system key has been rotated.
+   * @throws IOException if there is an error rebuilding the cache
+   */
+  public void rebuildSystemKeyCache() throws IOException {
+    if (SecurityUtil.isKeyManagementEnabled(conf)) {
       systemKeyCache = SystemKeyCache.createCache(new SystemKeyAccessor(this));
     }
   }
