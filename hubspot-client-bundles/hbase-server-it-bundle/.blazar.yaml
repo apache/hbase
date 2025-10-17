@@ -1,7 +1,8 @@
 buildpack:
   name: Blazar-Buildpack-Java
-  branch: rm-test-hbase
+
 env:
+  PRE_RUN_BEFORE_STEPS: false
   # Below variables are generated in prepare_environment.sh.
   # The build environment requires environment variables to be explicitly defined before they may
   # be modified by the `write-build-env-var` utilty script to persist changes to an environment variable
