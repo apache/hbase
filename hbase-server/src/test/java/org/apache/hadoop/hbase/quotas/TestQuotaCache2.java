@@ -23,7 +23,9 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.HashMap;
 import java.util.Map;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.ClassRule;
@@ -43,6 +45,8 @@ public class TestQuotaCache2 {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestQuotaCache2.class);
 
+  private static final Configuration conf = HBaseConfiguration.create();
+
   @Test
   public void testPreserveLimiterAvailability() throws Exception {
     // establish old cache with a limiter for 100 read bytes per second
@@ -53,7 +57,7 @@ public class TestQuotaCache2 {
       .setReadSize(QuotaProtos.TimedQuota.newBuilder().setTimeUnit(HBaseProtos.TimeUnit.SECONDS)
         .setSoftLimit(100).setScope(QuotaProtos.QuotaScope.MACHINE).build())
       .build();
-    QuotaLimiter limiter1 = TimeBasedLimiter.fromThrottle(throttle1);
+    QuotaLimiter limiter1 = TimeBasedLimiter.fromThrottle(conf, throttle1);
     oldState.setGlobalLimiter(limiter1);
 
     // consume one byte from the limiter, so 99 will be left
@@ -67,7 +71,7 @@ public class TestQuotaCache2 {
       .setReadSize(QuotaProtos.TimedQuota.newBuilder().setTimeUnit(HBaseProtos.TimeUnit.SECONDS)
         .setSoftLimit(100).setScope(QuotaProtos.QuotaScope.MACHINE).build())
       .build();
-    QuotaLimiter limiter2 = TimeBasedLimiter.fromThrottle(throttle2);
+    QuotaLimiter limiter2 = TimeBasedLimiter.fromThrottle(conf, throttle2);
     newState.setGlobalLimiter(limiter2);
 
     // update new cache from old cache
@@ -89,7 +93,7 @@ public class TestQuotaCache2 {
       .setReadSize(QuotaProtos.TimedQuota.newBuilder().setTimeUnit(HBaseProtos.TimeUnit.SECONDS)
         .setSoftLimit(100).setScope(QuotaProtos.QuotaScope.MACHINE).build())
       .build();
-    QuotaLimiter limiter1 = TimeBasedLimiter.fromThrottle(throttle1);
+    QuotaLimiter limiter1 = TimeBasedLimiter.fromThrottle(conf, throttle1);
     oldState.setGlobalLimiter(limiter1);
 
     // establish new cache, also with a limiter for 100 read bytes per second
@@ -100,7 +104,7 @@ public class TestQuotaCache2 {
       .setReadSize(QuotaProtos.TimedQuota.newBuilder().setTimeUnit(HBaseProtos.TimeUnit.SECONDS)
         .setSoftLimit(50).setScope(QuotaProtos.QuotaScope.MACHINE).build())
       .build();
-    QuotaLimiter limiter2 = TimeBasedLimiter.fromThrottle(throttle2);
+    QuotaLimiter limiter2 = TimeBasedLimiter.fromThrottle(conf, throttle2);
     newState.setGlobalLimiter(limiter2);
 
     // update new cache from old cache
