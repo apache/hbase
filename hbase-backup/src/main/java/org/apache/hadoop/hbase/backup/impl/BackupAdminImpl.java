@@ -186,7 +186,10 @@ public class BackupAdminImpl implements BackupAdmin {
 
       table.deleteIncrementalBackupTableSet(backupRoot);
       if (!incrTableSet.isEmpty()) {
-        table.addIncrementalBackupTableSet(incrTableSet, backupRoot);
+        // added 1ms to prevent LostUpdate problem in case when deleteIncrementalBackupTableSet()
+        // executed very fast
+        long ts = EnvironmentEdgeManager.currentTime() + 1;
+        table.addIncrementalBackupTableSet(incrTableSet, backupRoot, ts);
       }
     }
   }
