@@ -329,7 +329,8 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     }
 
     LOG.info(
-      "Creating MultiTenantHFileWriter with tenant extractor: {}, bloom type: {} (cf override: {}, default: {}) and target {}",
+      "Creating MultiTenantHFileWriter with tenant extractor: {}, bloom type: {} "
+        + "(cf override: {}, default: {}) and target {}",
       tenantExtractor.getClass().getSimpleName(), bloomType,
       columnFamilyBloomType != null ? columnFamilyBloomType : "<not-set>",
       defaultBloomType != null ? defaultBloomType : "<none>", path != null ? path : writerStream);
@@ -695,12 +696,12 @@ public class MultiTenantHFileWriter implements HFile.Writer {
               currentBloomFilterWriter, fileContext.getCellComparator());
             break;
           case ROWPREFIX_FIXED_LENGTH:
+            currentGeneralBloomParam = org.apache.hadoop.hbase.util.BloomFilterUtil
+              .getBloomFilterParam(bloomFilterType, conf);
             currentGeneralBloomContext =
               new org.apache.hadoop.hbase.util.RowPrefixFixedLengthBloomContext(
                 currentBloomFilterWriter, fileContext.getCellComparator(),
-                org.apache.hadoop.hbase.util.Bytes
-                  .toInt((currentGeneralBloomParam = org.apache.hadoop.hbase.util.BloomFilterUtil
-                    .getBloomFilterParam(bloomFilterType, conf))));
+                org.apache.hadoop.hbase.util.Bytes.toInt(currentGeneralBloomParam));
             break;
           default:
             // Unsupported bloom type here should not happen as StoreFileWriter guards it
@@ -775,7 +776,8 @@ public class MultiTenantHFileWriter implements HFile.Writer {
     finishClose(trailer);
 
     LOG.info(
-      "MultiTenantHFileWriter closed: target={}, sections={}, entries={}, totalUncompressedBytes={}",
+      "MultiTenantHFileWriter closed: target={}, sections={}, entries={}, "
+        + "totalUncompressedBytes={}",
       streamName, sectionCount, entryCount, totalUncompressedBytes);
 
     blockWriter.release();
@@ -1491,8 +1493,8 @@ public class MultiTenantHFileWriter implements HFile.Writer {
           "Creating MultiTenantHFileWriter with table properties from descriptor for table: {}",
           tableDesc.getTableName());
       } else {
-        LOG.debug(
-          "Creating MultiTenantHFileWriter with default properties (no table descriptor available)");
+        LOG.debug("Creating MultiTenantHFileWriter with default properties "
+          + "(no table descriptor available)");
       }
 
       // Create the writer using the factory method

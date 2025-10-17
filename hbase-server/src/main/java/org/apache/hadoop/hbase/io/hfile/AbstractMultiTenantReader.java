@@ -1614,16 +1614,11 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
     }
 
     // Build the reader context with proper file size calculation
-    ReaderContext sectionContext = ReaderContextBuilder.newBuilder(context)
-      .withInputStreamWrapper(sectionWrapper).withFilePath(context.getFilePath())
-      .withReaderType(readerType).withFileSystem(context.getFileSystem()).withFileSize(sectionSize) // Use
-                                                                                                    // section
-                                                                                                    // size;
-                                                                                                    // wrapper
-                                                                                                    // handles
-                                                                                                    // offset
-                                                                                                    // translation
-      .build();
+    // Use section size; wrapper handles offset translation
+    ReaderContext sectionContext =
+      ReaderContextBuilder.newBuilder(context).withInputStreamWrapper(sectionWrapper)
+        .withFilePath(context.getFilePath()).withReaderType(readerType)
+        .withFileSystem(context.getFileSystem()).withFileSize(sectionSize).build();
 
     LOG.debug("Created section reader context for offset {}, size {}", metadata.getOffset(),
       sectionSize);
@@ -1918,13 +1913,9 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
       SectionMetadata metadata = entry.getValue();
       totalFileSize += metadata.getSize();
 
+      // cumulative size up to this point
       tenantSections
-        .add(new TenantSectionInfo(entry.getKey().get(), metadata.getSize(), totalFileSize // cumulative
-                                                                                           // size
-                                                                                           // up to
-                                                                                           // this
-                                                                                           // point
-        ));
+        .add(new TenantSectionInfo(entry.getKey().get(), metadata.getSize(), totalFileSize));
     }
 
     if (totalFileSize == 0) {

@@ -588,7 +588,9 @@ public class MultiTenantHFileSplittingTest {
             String expectedKey = String.format("%srow%05d", tenants[i], r);
             if (!seenRowsPerTenant[i].contains(expectedKey)) {
               missing.add(expectedKey);
-              if (missing.size() >= 5) break; // Show first 5 missing rows
+              if (missing.size() >= 5) {
+                break; // Show first 5 missing rows
+              }
             }
           }
           LOG.error("Sample missing rows for tenant {}: {}", tenants[i], missing);

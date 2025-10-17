@@ -31,6 +31,10 @@ import org.slf4j.LoggerFactory;
 public class MultiTenantReaderFactory {
   private static final Logger LOG = LoggerFactory.getLogger(MultiTenantReaderFactory.class);
 
+  private MultiTenantReaderFactory() {
+    // Utility class, no instantiation
+  }
+
   /**
    * Create the appropriate multi-tenant reader based on the reader type.
    * @param context   Reader context info

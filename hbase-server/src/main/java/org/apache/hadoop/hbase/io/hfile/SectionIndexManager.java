@@ -36,6 +36,10 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 public class SectionIndexManager {
 
+  private SectionIndexManager() {
+    // Utility class, no instantiation
+  }
+
   /**
    * Default maximum number of entries in a single index block
    */

@@ -180,11 +180,17 @@ public class MultiTenantHFileMultiLevelIndexTest {
     FileSystem fs = TEST_UTIL.getTestFileSystem();
     Path rootDir = TEST_UTIL.getDataTestDirOnTestFS();
     Path tableDir = new Path(rootDir, "data/default/" + TABLE_NAME.getNameAsString());
-    if (!fs.exists(tableDir)) return hfiles;
+    if (!fs.exists(tableDir)) {
+      return hfiles;
+    }
     for (FileStatus regionDir : fs.listStatus(tableDir)) {
-      if (!regionDir.isDirectory() || regionDir.getPath().getName().startsWith(".")) continue;
+      if (!regionDir.isDirectory() || regionDir.getPath().getName().startsWith(".")) {
+        continue;
+      }
       Path familyDir = new Path(regionDir.getPath(), Bytes.toString(FAMILY));
-      if (!fs.exists(familyDir)) continue;
+      if (!fs.exists(familyDir)) {
+        continue;
+      }
       for (FileStatus hfile : fs.listStatus(familyDir)) {
         if (
           !hfile.getPath().getName().startsWith(".") && !hfile.getPath().getName().endsWith(".tmp")

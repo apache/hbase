@@ -38,6 +38,10 @@ public class TenantExtractorFactory {
   /** Logger for this class */
   private static final Logger LOG = LoggerFactory.getLogger(TenantExtractorFactory.class);
 
+  private TenantExtractorFactory() {
+    // Utility class, no instantiation
+  }
+
   /** Default tenant prefix length when not specified in configuration */
   private static final int DEFAULT_PREFIX_LENGTH = 4;
 

@@ -1222,7 +1222,9 @@ public class HFilePrettyPrinter extends Configured implements Tool {
             FOUR_SPACES + "Error reading block at offset " + offset + ": " + e.getMessage());
           // For non-v4 files, try to continue with next logical offset
           offset += 64; // Skip ahead and try again
-          if (offset > max) break;
+          if (offset > max) {
+            break;
+          }
         }
       }
 
@@ -1295,7 +1297,9 @@ public class HFilePrettyPrinter extends Configured implements Tool {
           out.println(indent + "Error reading block at offset " + offset + ": " + e.getMessage());
           // Try to continue with next logical offset
           offset += 64; // Skip ahead and try again
-          if (offset > lastDataBlockOffset) break;
+          if (offset > lastDataBlockOffset) {
+            break;
+          }
         }
       }
 
