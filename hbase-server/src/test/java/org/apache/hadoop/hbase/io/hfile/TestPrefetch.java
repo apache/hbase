@@ -424,8 +424,17 @@ public class TestPrefetch {
       Bytes.toBytes("testPrefetchWhenHFileLink"));
 
     Path storeFilePath = regionFs.commitStoreFile("cf", writer.getPath());
-    Path dstPath = new Path(regionFs.getTableDir(), new Path("test-region", "cf"));
-    HFileLink.create(testConf, this.fs, dstPath, hri, storeFilePath.getName());
+    final RegionInfo dstHri =
+      RegionInfoBuilder.newBuilder(TableName.valueOf("testPrefetchWhenHFileLink")).build();
+    HRegionFileSystem dstRegionFs = HRegionFileSystem.createRegionOnFileSystem(testConf, fs,
+      CommonFSUtils.getTableDir(testDir, dstHri.getTable()), dstHri);
+    Path dstPath = new Path(regionFs.getTableDir(), new Path(dstHri.getRegionNameAsString(), "cf"));
+    StoreFileTracker sft = StoreFileTrackerFactory.create(testConf, false,
+      StoreContext.getBuilder()
+        .withFamilyStoreDirectoryPath(new Path(dstRegionFs.getRegionDir(), "cf"))
+        .withColumnFamilyDescriptor(ColumnFamilyDescriptorBuilder.of("cf"))
+        .withRegionFileSystem(dstRegionFs).build());
+    sft.createHFileLink(hri.getTable(), hri.getEncodedName(), storeFilePath.getName(), true);
     Path linkFilePath =
       new Path(dstPath, HFileLink.createHFileLinkName(hri, storeFilePath.getName()));
 

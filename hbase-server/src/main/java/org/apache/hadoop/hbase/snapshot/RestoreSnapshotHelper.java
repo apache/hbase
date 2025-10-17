@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -659,6 +660,21 @@ public class RestoreSnapshotHelper {
     for (SnapshotRegionManifest.FamilyFiles familyFiles : manifest.getFamilyFilesList()) {
       Path familyDir = new Path(regionDir, familyFiles.getFamilyName().toStringUtf8());
       List<StoreFileInfo> clonedFiles = new ArrayList<>();
+      Path regionPath = new Path(tableDir, newRegionInfo.getEncodedName());
+      HRegionFileSystem regionFS = (fs.exists(regionPath))
+        ? HRegionFileSystem.openRegionFromFileSystem(conf, fs, tableDir, newRegionInfo, false)
+        : HRegionFileSystem.createRegionOnFileSystem(conf, fs, tableDir, newRegionInfo);
+
+      Configuration sftConf = StoreUtils.createStoreConfiguration(conf, tableDesc,
+        tableDesc.getColumnFamily(familyFiles.getFamilyName().toByteArray()));
+      StoreFileTracker tracker =
+        StoreFileTrackerFactory
+          .create(sftConf, true,
+            StoreContext.getBuilder().withFamilyStoreDirectoryPath(familyDir)
+              .withRegionFileSystem(regionFS)
+              .withColumnFamilyDescriptor(
+                ColumnFamilyDescriptorBuilder.of(familyFiles.getFamilyName().toByteArray()))
+              .build());
       for (SnapshotRegionManifest.StoreFile storeFile : familyFiles.getStoreFilesList()) {
         LOG.info("Adding HFileLink " + storeFile.getName() + " from cloned region " + "in snapshot "
           + snapshotName + " to table=" + tableName);
@@ -724,11 +740,12 @@ public class RestoreSnapshotHelper {
     throws IOException {
     String hfileName = storeFile.getName();
     if (HFileLink.isHFileLink(hfileName)) {
-      return HFileLink.createFromHFileLink(conf, fs, familyDir, hfileName, createBackRef);
+      return tracker.createFromHFileLink(hfileName, createBackRef);
     } else if (StoreFileInfo.isReference(hfileName)) {
       return restoreReferenceFile(familyDir, regionInfo, storeFile);
     } else {
-      return HFileLink.create(conf, fs, familyDir, regionInfo, hfileName, createBackRef);
+      return tracker.createHFileLink(regionInfo.getTable(), regionInfo.getEncodedName(), hfileName,
+        createBackRef);
     }
   }
 
