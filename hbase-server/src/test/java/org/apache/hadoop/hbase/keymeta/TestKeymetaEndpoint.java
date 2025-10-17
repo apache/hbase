@@ -276,7 +276,7 @@ public class TestKeymetaEndpoint {
     // Assert
     verify(controller).setFailed(contains("IOException"));
     verify(keymetaAdmin).enableKeyManagement(any(), any());
-    verify(done, never()).run(any());
+    verify(done).run(GetManagedKeysResponse.getDefaultInstance());
   }
 
   @Test
@@ -300,7 +300,7 @@ public class TestKeymetaEndpoint {
     // Assert
     verify(controller).setFailed(contains(exType.getSimpleName()));
     verify(keymetaAdmin).getManagedKeys(any(), any());
-    verify(done, never()).run(any());
+    verify(done).run(GetManagedKeysResponse.getDefaultInstance());
   }
 
   @Test
