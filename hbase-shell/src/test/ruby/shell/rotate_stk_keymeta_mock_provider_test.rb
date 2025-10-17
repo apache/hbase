@@ -48,11 +48,11 @@ module Hbase
       key_provider = Encryption.getManagedKeyProvider($TEST_CLUSTER.getConfiguration)
       # Once we enable multikeyGenMode on MockManagedKeyProvider, every call should return a new key
       # which should trigger a rotation.
-      key_provider.setMultikeyGenMode(true);
+      key_provider.setMultikeyGenMode(true)
       output = capture_stdout { @shell.command(:rotate_stk) }
       puts "rotate_stk output: #{output}"
-      assert(output.include?('System Key rotation was performed successfully and cache was refreshed ' +
-             ' on all region servers'),
+      assert(output.include?('System Key rotation was performed successfully and cache was ' \
+                             'refreshed on all region servers'),
              "Expected output to contain rotation status message, but got: #{output}")
     end
   end

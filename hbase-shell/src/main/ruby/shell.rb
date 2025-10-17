@@ -151,7 +151,7 @@ module Shell
     end
 
     def hbase_keymeta_admin
-      @keymeta_admin ||= hbase.keymeta_admin
+      @hbase_keymeta_admin ||= hbase.keymeta_admin
     end
 
     ##

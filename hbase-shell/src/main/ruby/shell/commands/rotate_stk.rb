@@ -39,8 +39,8 @@ Example:
       def command
         result = keymeta_admin.rotate_stk
         if result
-          formatter.row(['System Key rotation was performed successfully and cache was refreshed ' +
-            ' on all region servers'])
+          formatter.row(['System Key rotation was performed successfully and cache was refreshed ' \
+            'on all region servers'])
         else
           formatter.row(['No System Key change was detected'])
         end
