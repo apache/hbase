@@ -311,15 +311,13 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
       builder.expireAfterAccess(expireMs, TimeUnit.MILLISECONDS);
     }
 
-    Cache<ImmutableBytesWritable, SectionReaderHolder> cache = builder
-      .removalListener(
-        (RemovalNotification<ImmutableBytesWritable, SectionReaderHolder> notification) -> {
-          SectionReaderHolder holder = notification.getValue();
-          if (holder != null) {
-            holder.markEvicted(true);
-          }
-        })
-      .build();
+    Cache<ImmutableBytesWritable, SectionReaderHolder> cache = builder.removalListener(
+      (RemovalNotification<ImmutableBytesWritable, SectionReaderHolder> notification) -> {
+        SectionReaderHolder holder = notification.getValue();
+        if (holder != null) {
+          holder.markEvicted(true);
+        }
+      }).build();
     LOG.debug("Initialized section reader cache with maxSize={}, expireMs={}", maxSize, expireMs);
     return cache;
   }
@@ -420,10 +418,11 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
       return true;
     }
     ImmutableBytesWritable cacheKey = new ImmutableBytesWritable(sectionId);
-    try (SectionReaderLease lease = getSectionReader(sectionId)) {
-      if (lease == null) {
-        return true;
-      }
+    SectionReaderLease lease = getSectionReader(sectionId);
+    if (lease == null) {
+      return true;
+    }
+    try (lease) {
       SectionBloomState bloomState = getOrLoadSectionBloomState(cacheKey, lease);
       if (bloomState == null || !bloomState.hasGeneralBloom()) {
         return true;
@@ -439,10 +438,11 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
       return true;
     }
     ImmutableBytesWritable cacheKey = new ImmutableBytesWritable(sectionId);
-    try (SectionReaderLease lease = getSectionReader(sectionId)) {
-      if (lease == null) {
-        return true;
-      }
+    SectionReaderLease lease = getSectionReader(sectionId);
+    if (lease == null) {
+      return true;
+    }
+    try (lease) {
       SectionBloomState bloomState = getOrLoadSectionBloomState(cacheKey, lease);
       if (bloomState == null || !bloomState.hasGeneralBloom()) {
         return true;
@@ -459,10 +459,11 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
       return true;
     }
     ImmutableBytesWritable cacheKey = new ImmutableBytesWritable(sectionId);
-    try (SectionReaderLease lease = getSectionReader(sectionId)) {
-      if (lease == null) {
-        return true;
-      }
+    SectionReaderLease lease = getSectionReader(sectionId);
+    if (lease == null) {
+      return true;
+    }
+    try (lease) {
       SectionBloomState bloomState = getOrLoadSectionBloomState(cacheKey, lease);
       if (bloomState == null) {
         return true;
@@ -559,10 +560,11 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
     }
     for (ImmutableBytesWritable sectionId : sectionIds) {
       byte[] key = sectionId.copyBytes();
-      try (SectionReaderLease lease = getSectionReader(key)) {
-        if (lease == null) {
-          continue;
-        }
+      SectionReaderLease lease = getSectionReader(key);
+      if (lease == null) {
+        continue;
+      }
+      try (lease) {
         SectionBloomState state = getOrLoadSectionBloomState(sectionId, lease);
         if (state == null) {
           continue;
@@ -1655,10 +1657,11 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
       // Get the first section and try to read its first key
       for (ImmutableBytesWritable sectionKey : sectionLocations.keySet()) {
         byte[] sectionId = sectionKey.get();
-        try (SectionReaderLease lease = getSectionReader(sectionId)) {
-          if (lease == null) {
-            continue;
-          }
+        SectionReaderLease lease = getSectionReader(sectionId);
+        if (lease == null) {
+          continue;
+        }
+        try (lease) {
           HFileReaderImpl reader = lease.getReader();
           Optional<ExtendedCell> firstKey = reader.getFirstKey();
           if (firstKey.isPresent()) {
@@ -1692,10 +1695,11 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
       List<ImmutableBytesWritable> sectionKeys = new ArrayList<>(sectionLocations.keySet());
       for (int i = sectionKeys.size() - 1; i >= 0; i--) {
         byte[] sectionId = sectionKeys.get(i).get();
-        try (SectionReaderLease lease = getSectionReader(sectionId)) {
-          if (lease == null) {
-            continue;
-          }
+        SectionReaderLease lease = getSectionReader(sectionId);
+        if (lease == null) {
+          continue;
+        }
+        try (lease) {
           HFileReaderImpl reader = lease.getReader();
           Optional<ExtendedCell> lastKey = reader.getLastKey();
           if (lastKey.isPresent()) {
@@ -1797,10 +1801,17 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
 
   private HFileBlockIndex.CellBasedKeyBlockIndexReader
     loadDataBlockIndexFromSection(byte[] sectionId) {
-    try (SectionReaderLease lease = getSectionReader(sectionId)) {
-      if (lease == null) {
-        return null;
-      }
+    SectionReaderLease lease;
+    try {
+      lease = getSectionReader(sectionId);
+    } catch (IOException e) {
+      LOG.debug("Failed to get section reader for section {}", Bytes.toStringBinary(sectionId), e);
+      return null;
+    }
+    if (lease == null) {
+      return null;
+    }
+    try (lease) {
       HFileReaderImpl reader = lease.getReader();
       HFileBlockIndex.CellBasedKeyBlockIndexReader delegate = reader.getDataBlockIndexReader();
       if (delegate != null) {
@@ -1820,10 +1831,11 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
 
   private HFileBlock loadMetaBlockFromSection(byte[] sectionId, String metaBlockName,
     boolean cacheBlock) throws IOException {
-    try (SectionReaderLease lease = getSectionReader(sectionId)) {
-      if (lease == null) {
-        return null;
-      }
+    SectionReaderLease lease = getSectionReader(sectionId);
+    if (lease == null) {
+      return null;
+    }
+    try (lease) {
       HFileReaderImpl reader = lease.getReader();
       return reader.getMetaBlock(metaBlockName, cacheBlock);
     }
