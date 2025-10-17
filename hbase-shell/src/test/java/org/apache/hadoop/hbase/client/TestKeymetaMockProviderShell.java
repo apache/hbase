@@ -38,9 +38,10 @@ public class TestKeymetaMockProviderShell extends ManagedKeyTestBase implements 
   private final ScriptingContainer jruby = new ScriptingContainer();
 
   @Before
+  @Override
   public void setUp() throws Exception {
-    final Configuration conf = TEST_UTIL.getConfiguration();
     // Enable to be able to debug without timing out.
+    // final Configuration conf = TEST_UTIL.getConfiguration();
     // conf.set("zookeeper.session.timeout", "6000000");
     // conf.set("hbase.rpc.timeout", "6000000");
     // conf.set("hbase.rpc.read.timeout", "6000000");
