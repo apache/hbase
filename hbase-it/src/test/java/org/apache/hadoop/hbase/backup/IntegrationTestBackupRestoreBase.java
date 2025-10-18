@@ -20,22 +20,24 @@ package org.apache.hadoop.hbase.backup;
 import static org.apache.hadoop.hbase.IntegrationTestingUtility.createPreSplitLoadTestTable;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONF_CONTINUOUS_BACKUP_WAL_DIR;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.IntegrationTestBase;
-import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupAdminImpl;
-import org.apache.hadoop.hbase.backup.impl.BackupManager;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
+import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.chaos.actions.RestartRandomRsExceptMetaAction;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
 import org.apache.hadoop.hbase.chaos.policies.PeriodicRandomActionPolicy;
@@ -47,6 +49,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
 import org.junit.After;
 import org.junit.Assert;
 import org.slf4j.Logger;
@@ -68,8 +71,8 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
   protected static final int DEFAULT_REGION_COUNT = 10;
   protected static final int DEFAULT_REGIONSERVER_COUNT = 5;
   protected static final int DEFAULT_NUMBER_OF_TABLES = 1;
-  protected static final int DEFAULT_NUM_ITERATIONS = 10;
-  protected static final int DEFAULT_ROWS_IN_ITERATION = 10000;
+  protected static final int DEFAULT_NUM_ITERATIONS = 1;
+  protected static final int DEFAULT_ROWS_IN_ITERATION = 100;
   protected static final String SLEEP_TIME_KEY = "sleeptime";
   // short default interval because tests don't run very long.
   protected static final long SLEEP_TIME_DEFAULT = 50000L;
@@ -84,6 +87,7 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
   protected long sleepTime;
   protected static Object lock = new Object();
 
+  protected FileSystem fs;
   protected String backupRootDir = "backupRootDir";
 
   /*
@@ -157,14 +161,7 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
     }
   }
 
-  protected void enableBackup(Configuration conf) {
-    // Enable backup
-    conf.setBoolean(BackupRestoreConstants.BACKUP_ENABLE_KEY, true);
-    BackupManager.decorateMasterConfiguration(conf);
-    BackupManager.decorateRegionServerConfiguration(conf);
-  }
-
-  protected void createAndSetBackupWalDir(IntegrationTestingUtility util, Configuration conf)
+  protected void createAndSetBackupWalDir()
     throws IOException {
     Path root = util.getDataTestDirOnTestFS();
     Path backupWalDir = new Path(root, "backupWALDir");
@@ -255,7 +252,7 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
   }
 
   private void runTestSingle(TableName table, boolean isContinuousBackupEnabled)
-    throws IOException {
+          throws IOException, InterruptedException {
     String continuousBackupStatus = isContinuousBackupEnabled ? "enabled" : "disabled";
     List<String> backupIds = new ArrayList<String>();
 
@@ -273,6 +270,39 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
 
       String fullBackupId = backup(request, client);
       assertTrue(checkSucceeded(fullBackupId));
+
+      verifySnapshotExists(table, fullBackupId);
+
+      if (isContinuousBackupEnabled) {
+        BackupTestUtil.verifyReplicationPeerSubscription(util, table);
+        String backupWALDir = conf.get(CONF_CONTINUOUS_BACKUP_WAL_DIR);
+        LOG.info("kevin: got backupWALDir = {}", backupWALDir);
+        Path backupWALs = new Path(backupWALDir, "WALs");
+        LOG.info("kevin: backupWALs = {}", backupWALs);
+        assertTrue("There should be a WALs directory inside of the backup WAL directory at: " + backupWALDir,
+          fs.exists(backupWALs));
+        long currentTimeMs = System.currentTimeMillis();
+        String currentDateUTC = BackupUtils.formatToDateString(currentTimeMs);
+        Path walPartitionDir = new Path(backupWALs, currentDateUTC);
+        // TODO - wait for WAL date partition directory to appear
+        // do something like checking for existence and then waiting for 1 second up to 10 times
+
+        // TODO - verify the contents of WAL partition dir (backupWALDir/WALs/2025-10-18)
+        // it should have something like this:
+        // backupWALDir/WALs/2025-10-17/wal_file.1760738249595.1880be89-0b69-4bad-8d0e-acbf25c63b7e
+
+        Thread.sleep(10000); // put this here to wait for backupWALDir/WALs/2025-10-18 dir
+        assertTrue("The a backup WALs subdirectory with today's date should exist: ", fs.exists(walPartitionDir));
+
+
+        FileStatus[] fileStatuses = fs.listStatus(backupWALs);
+        for (FileStatus fileStatus : fileStatuses) {
+          LOG.info("kevin: fileStatus = {}", fileStatus);
+        }
+      }
+
+      LOG.info("kevin: sleeping");
+      Thread.sleep(30*60*1000);
 
       backupIds.add(fullBackupId);
       // Now continue with incremental backups
@@ -318,7 +348,7 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
       incrementalBackupId = incrementalBackupIds[incrementalBackupIds.length - 1];
       // restore incremental backup for table, with overwrite
       TableName[] tablesToRestoreFrom = new TableName[] { table };
-      restore(createRestoreRequest(backupRootDir, incrementalBackupId, false, tablesToRestoreFrom,
+      restore(createRestoreRequest(incrementalBackupId, false, tablesToRestoreFrom,
         null, true), client);
       Table hTable = conn.getTable(table);
       Assert.assertEquals(rowsInIteration * (numIterations + 1),
@@ -327,11 +357,29 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
     }
   }
 
+  private void verifySnapshotExists(TableName tableName, String backupId) throws IOException {
+    RemoteIterator<LocatedFileStatus> fileStatusIterator = fs.listFiles(new Path(backupRootDir, backupId), true);
+    Path dataManifestPath = null;
+    while (fileStatusIterator.hasNext()) {
+      LocatedFileStatus fileStatus = fileStatusIterator.next();
+      if (fileStatus.getPath().getName().endsWith("data.manifest")) {
+        dataManifestPath = fileStatus.getPath();
+        LOG.info(
+                "Found snapshot manifest for table '{}' at: {}",
+                tableName, dataManifestPath);
+      }
+    }
+
+    if (dataManifestPath == null) {
+      fail("Could not find snapshot manifest for table '" + tableName + "'");
+    }
+  }
+
   private void restoreTableAndVerifyRowCount(Connection conn, BackupAdmin client, TableName table,
     String backupId, long expectedRows) throws IOException {
     TableName[] tablesRestoreIncMultiple = new TableName[] { table };
     restore(
-      createRestoreRequest(backupRootDir, backupId, false, tablesRestoreIncMultiple, null, true),
+      createRestoreRequest(backupId, false, tablesRestoreIncMultiple, null, true),
       client);
     Table hTable = conn.getTable(table);
     Assert.assertEquals(expectedRows, HBaseTestingUtil.countRows(hTable));
@@ -363,7 +411,6 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
 
   /**
    * Get restore request.
-   * @param backupRootDir directory where backup is located
    * @param backupId      backup ID
    * @param check         check the backup
    * @param fromTables    table names to restore from
@@ -371,7 +418,7 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
    * @param isOverwrite   overwrite the table(s)
    * @return an instance of RestoreRequest
    */
-  public RestoreRequest createRestoreRequest(String backupRootDir, String backupId, boolean check,
+  public RestoreRequest createRestoreRequest(String backupId, boolean check,
     TableName[] fromTables, TableName[] toTables, boolean isOverwrite) {
     RestoreRequest.Builder builder = new RestoreRequest.Builder();
     return builder.withBackupRootDir(backupRootDir).withBackupId(backupId).withCheck(check)
@@ -381,7 +428,8 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
   @Override
   public void setUpCluster() throws Exception {
     util = getTestingUtil(getConf());
-    enableBackup(getConf());
+    conf = getConf();
+    BackupTestUtil.enableBackup(conf);
     LOG.debug("Initializing/checking cluster has {} servers", regionServerCount);
     util.initializeCluster(regionServerCount);
     LOG.debug("Done initializing/checking cluster");

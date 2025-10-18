@@ -25,6 +25,7 @@ import static org.apache.hadoop.hbase.mapreduce.WALPlayer.IGNORE_MISSING_FILES;
 import static org.apache.hadoop.hbase.replication.regionserver.ReplicationMarkerChore.REPLICATION_MARKER_ENABLED_KEY;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
@@ -57,7 +58,7 @@ public class IntegrationTestContinuousBackupRestore extends IntegrationTestBacku
   @Before
   public void setUp() throws Exception {
     util = new IntegrationTestingUtility();
-    Configuration conf = util.getConfiguration();
+    conf = util.getConfiguration();
     regionsCountPerServer = conf.getInt(REGION_COUNT_KEY, DEFAULT_REGION_COUNT);
     // We are using only 1 region server because we cannot wait for all region servers to catch up
     // with replication. Therefore, we cannot be sure about how many rows will be restored after an
@@ -67,11 +68,10 @@ public class IntegrationTestContinuousBackupRestore extends IntegrationTestBacku
     numIterations = conf.getInt(NUM_ITERATIONS_KEY, DEFAULT_NUM_ITERATIONS);
     numTables = conf.getInt(NUMBER_OF_TABLES_KEY, DEFAULT_NUMBER_OF_TABLES);
     sleepTime = conf.getLong(SLEEP_TIME_KEY, SLEEP_TIME_DEFAULT);
-    enableBackup(conf);
+    BackupTestUtil.enableBackup(conf);
     conf.set(CONF_BACKUP_MAX_WAL_SIZE, "10240");
     conf.set(CONF_STAGED_WAL_FLUSH_INITIAL_DELAY, "10");
     conf.set(CONF_STAGED_WAL_FLUSH_INTERVAL, "10");
-    createAndSetBackupWalDir(util, conf);
     conf.setBoolean(REPLICATION_MARKER_ENABLED_KEY, true);
     conf.setBoolean(IGNORE_EMPTY_FILES, true);
     conf.setBoolean(IGNORE_MISSING_FILES, true);
@@ -82,6 +82,8 @@ public class IntegrationTestContinuousBackupRestore extends IntegrationTestBacku
 
     backupRootDir = util.getDataTestDirOnTestFS() + Path.SEPARATOR + backupRootDir;
     LOG.info("The backup root directory is: {}", backupRootDir);
+    createAndSetBackupWalDir();
+    fs = FileSystem.get(conf);
   }
 
   @Test

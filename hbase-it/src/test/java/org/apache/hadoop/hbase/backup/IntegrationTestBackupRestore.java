@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.backup;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
@@ -48,19 +49,21 @@ public class IntegrationTestBackupRestore extends IntegrationTestBackupRestoreBa
   @Before
   public void setUp() throws Exception {
     util = new IntegrationTestingUtility();
-    Configuration conf = util.getConfiguration();
+    conf = util.getConfiguration();
     regionsCountPerServer = conf.getInt(REGION_COUNT_KEY, DEFAULT_REGION_COUNT);
     regionServerCount = conf.getInt(REGIONSERVER_COUNT_KEY, DEFAULT_REGIONSERVER_COUNT);
     rowsInIteration = conf.getInt(ROWS_PER_ITERATION_KEY, DEFAULT_ROWS_IN_ITERATION);
     numIterations = conf.getInt(NUM_ITERATIONS_KEY, DEFAULT_NUM_ITERATIONS);
     numTables = conf.getInt(NUMBER_OF_TABLES_KEY, DEFAULT_NUMBER_OF_TABLES);
     sleepTime = conf.getLong(SLEEP_TIME_KEY, SLEEP_TIME_DEFAULT);
-    enableBackup(conf);
+    BackupTestUtil.enableBackup(conf);
     LOG.info("Initializing cluster with {} region servers.", regionServerCount);
     util.initializeCluster(regionServerCount);
     LOG.info("Cluster initialized and ready");
 
     backupRootDir = util.getDataTestDirOnTestFS() + Path.SEPARATOR + backupRootDir;
+    LOG.info("The backup root directory is: {}", backupRootDir);
+    fs = FileSystem.get(conf);
   }
 
   @Test
