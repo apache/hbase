@@ -27,8 +27,10 @@ import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferExce
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ComparatorProtos;
 
 /**
- * A comparator which compares against a specified byte array, but only compares specific portion of
- * the byte array. For the rest it is similar to {@link BinaryComparator}.
+ * A binary comparator which lexicographically compares against the specified byte array similar to
+ * {@link BinaryComparator} but starts the comparison from the specified offset. Will throw a
+ * runtime exception if a comparison is attempted with a byte array that is too short for the
+ * specified offest. See HBASE-22969 for examples on how to use this comparator
  */
 @InterfaceAudience.Public
 @SuppressWarnings("ComparableType")
@@ -36,22 +38,48 @@ public class BinaryComponentComparator extends ByteArrayComparable {
   private int offset; // offset of component from beginning.
 
   /**
-   * Constructor
-   * @param value  value of the component
-   * @param offset offset of the component from begining
+   * Exception thrown when the offset provided to BinaryComponentComparator at construction time
+   * exceeds the bounds of an input byte array provided to `compareTo`
+   */
+  public static class OffsetOutOfBoundsException extends ArrayIndexOutOfBoundsException {
+    public OffsetOutOfBoundsException(String message) {
+      super(message);
+    }
+  }
+
+  /**
+   * @param value  the byte array to compare against
+   * @param offset the starting position (0-based) from which to start comparisons Must be less than
+   *               the length of input arrays being passed for comparison, otherwise an
+   *               {@link OffsetOutOfBoundsException} will be thrown on comparison.
    */
   public BinaryComponentComparator(byte[] value, int offset) {
     super(value);
     this.offset = offset;
   }
 
+  /**
+   * @throws OffsetOutOfBoundsException if input byte array is too small for the offset provided to
+   *                                    comparator when it was constructed
+   */
   @Override
   public int compareTo(byte[] value) {
     return compareTo(value, 0, value.length);
   }
 
+  /**
+   * @throws OffsetOutOfBoundsException if input byte array is too small for the offset provided to
+   *                                    comparator when it was constructed
+   */
   @Override
   public int compareTo(byte[] value, int offset, int length) {
+    if (offset + this.offset >= value.length) {
+      String message = String.format(
+        "A byte array was encountered with a length %d that is too"
+          + " short/incompatible with the offset value %d provided to BinaryComponentComparator",
+        value.length, offset + this.offset);
+      throw new OffsetOutOfBoundsException(message);
+    }
     return Bytes.compareTo(this.value, 0, this.value.length, value, offset + this.offset,
       this.value.length);
   }
