@@ -23,6 +23,7 @@ import java.util.Objects;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -147,7 +148,7 @@ public class SingleColumnValueFilter extends FilterBase {
   }
 
   @Override
-  public ReturnCode filterCell(final Cell c) {
+  public ReturnCode filterCell(final Cell c) throws IOException {
     // System.out.println("REMOVE KEY=" + keyValue.toString() + ", value=" +
     // Bytes.toString(keyValue.getValue()));
     if (this.matchedColumn) {
@@ -168,9 +169,13 @@ public class SingleColumnValueFilter extends FilterBase {
     return ReturnCode.INCLUDE;
   }
 
-  private boolean filterColumnValue(final Cell cell) {
-    int compareResult = PrivateCellUtil.compareValue(cell, this.comparator);
-    return CompareFilter.compare(this.op, compareResult);
+  private boolean filterColumnValue(final Cell cell) throws IOException {
+    try {
+      int compareResult = PrivateCellUtil.compareValue(cell, this.comparator);
+      return CompareFilter.compare(this.op, compareResult);
+    } catch (RuntimeException e) {
+      throw CompareFilter.wrapInHBaseIOException(e, this.comparator);
+    }
   }
 
   @Override

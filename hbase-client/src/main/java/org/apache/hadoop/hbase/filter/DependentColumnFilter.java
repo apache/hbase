@@ -26,6 +26,7 @@ import java.util.Set;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -117,7 +118,7 @@ public class DependentColumnFilter extends CompareFilter {
   }
 
   @Override
-  public ReturnCode filterCell(final Cell c) {
+  public ReturnCode filterCell(final Cell c) throws IOException {
     // Check if the column and qualifier match
     if (!CellUtil.matchingColumn(c, this.columnFamily, this.columnQualifier)) {
       // include non-matches for the time being, they'll be discarded afterwards

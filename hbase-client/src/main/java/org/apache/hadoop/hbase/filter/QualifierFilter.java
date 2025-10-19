@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CompareOperator;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -53,7 +54,7 @@ public class QualifierFilter extends CompareFilter {
   }
 
   @Override
-  public ReturnCode filterCell(final Cell c) {
+  public ReturnCode filterCell(final Cell c) throws IOException {
     if (compareQualifier(getCompareOperator(), this.comparator, c)) {
       return ReturnCode.SKIP;
     }
