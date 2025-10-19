@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import java.util.Objects;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CompareOperator;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -86,7 +85,8 @@ public abstract class CompareFilter extends FilterBase {
    * RuntimeException when applying a comparator indicates a code bug or misconfigured
    * filter/comparator, we wrap it in `HBaseIOException` to provide a clear exception message/stack
    * trace and prevent propagating a runtime exception up the call stack (which would lead to
-   * unexpected throwable at RpcServer layer and a complicated unclear remote exception on the client)
+   * unexpected throwable at RpcServer layer and a complicated unclear remote exception on the
+   * client)
    */
   public static HBaseIOException wrapInHBaseIOException(RuntimeException e,
     ByteArrayComparable comparator) {

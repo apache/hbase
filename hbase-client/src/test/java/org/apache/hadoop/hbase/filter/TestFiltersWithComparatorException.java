@@ -25,7 +25,6 @@ import java.util.Collections;
 import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CompareOperator;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -36,6 +35,11 @@ import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
 public class TestFiltersWithComparatorException {
+
+  /**
+   * Tests that filters which take a ByteArrayComparable comparator handle runtime exceptions in the
+   * comparator layer, see HBASE-29672
+   */
 
   byte[] cf = Bytes.toBytes("cf");
   byte[] row = Bytes.toBytes("row1");
@@ -122,8 +126,8 @@ public class TestFiltersWithComparatorException {
         filterFunction.run(filter);
       } catch (HBaseIOException e) {
         ioExceptionThrown = true;
+      } catch (IOException ignored) {
       }
-      catch (IOException ignored) {}
       if (invocationsBefore != badComparator.compareToInvokations) {
         Assert.assertTrue("IOException should have been thrown", ioExceptionThrown);
       }
