@@ -69,6 +69,7 @@ public class TestRowCacheCanCacheRow {
     Configuration conf = HBaseConfiguration.create();
     conf.setFloat(HConstants.ROW_CACHE_SIZE_KEY, 0.01f);
     Mockito.when(region.getReadOnlyConfiguration()).thenReturn(conf);
+    Mockito.when(region.isRowCacheEnabled()).thenReturn(td.getRowCacheEnabled());
 
     RowCacheService rowCacheService = new RowCacheService(conf);
     Assert.assertTrue(rowCacheService.canCacheRow(get, region));
@@ -76,7 +77,7 @@ public class TestRowCacheCanCacheRow {
     // Disable row cache, expect false
     td = TableDescriptorBuilder.newBuilder(TABLE_NAME).setColumnFamily(cfd)
       .setRowCacheEnabled(false).build();
-    Mockito.when(region.getTableDescriptor()).thenReturn(td);
+    Mockito.when(region.isRowCacheEnabled()).thenReturn(td.getRowCacheEnabled());
     Assert.assertFalse(rowCacheService.canCacheRow(get, region));
   }
 
@@ -109,6 +110,7 @@ public class TestRowCacheCanCacheRow {
     TableDescriptor td = TableDescriptorBuilder.newBuilder(TABLE_NAME).setRowCacheEnabled(true)
       .setColumnFamily(cfd1).setColumnFamily(cfd2).build();
     Mockito.when(region.getTableDescriptor()).thenReturn(td);
+    Mockito.when(region.isRowCacheEnabled()).thenReturn(td.getRowCacheEnabled());
     Configuration conf = HBaseConfiguration.create();
     conf.setFloat(HConstants.ROW_CACHE_SIZE_KEY, 0.01f);
     Mockito.when(region.getReadOnlyConfiguration()).thenReturn(conf);
@@ -149,6 +151,7 @@ public class TestRowCacheCanCacheRow {
     td = TableDescriptorBuilder.newBuilder(TABLE_NAME).setRowCacheEnabled(true)
       .setColumnFamily(cfd1).setColumnFamily(cfd2).build();
     Mockito.when(region.getTableDescriptor()).thenReturn(td);
+    Mockito.when(region.isRowCacheEnabled()).thenReturn(td.getRowCacheEnabled());
     Assert.assertFalse(rowCacheService.canCacheRow(get, region));
 
     // Ttl is not set, expect true
@@ -156,6 +159,7 @@ public class TestRowCacheCanCacheRow {
     td = TableDescriptorBuilder.newBuilder(TABLE_NAME).setRowCacheEnabled(true)
       .setColumnFamily(cfd1).setColumnFamily(cfd2).build();
     Mockito.when(region.getTableDescriptor()).thenReturn(td);
+    Mockito.when(region.isRowCacheEnabled()).thenReturn(td.getRowCacheEnabled());
     Assert.assertTrue(rowCacheService.canCacheRow(get, region));
   }
 
@@ -242,6 +246,7 @@ public class TestRowCacheCanCacheRow {
     TableDescriptor td = TableDescriptorBuilder.newBuilder(TABLE_NAME).setRowCacheEnabled(true)
       .setColumnFamily(cfd).build();
     Mockito.when(region.getTableDescriptor()).thenReturn(td);
+    Mockito.when(region.isRowCacheEnabled()).thenReturn(td.getRowCacheEnabled());
 
     Configuration conf = HBaseConfiguration.create();
     conf.setFloat(HConstants.ROW_CACHE_SIZE_KEY, 0.01f);

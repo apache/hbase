@@ -154,7 +154,7 @@ public class RowCacheService {
       throw new ServiceException(ie);
     }
 
-    if (!region.getTableDescriptor().isRowCacheEnabled()) {
+    if (!region.isRowCacheEnabled()) {
       return bulkLoad(rsRpcServices, request);
     }
 
@@ -216,7 +216,7 @@ public class RowCacheService {
    */
   // @formatter:on
   boolean canCacheRow(Get get, Region region) {
-    return enabledByConf && region.getTableDescriptor().isRowCacheEnabled() && get.getCacheBlocks()
+    return enabledByConf && region.isRowCacheEnabled() && get.getCacheBlocks()
       && get.getFilter() == null && isRetrieveAllCells(get, region) && isDefaultTtl(region)
       && get.getAttributesMap().isEmpty() && !get.isCheckExistenceOnly()
       && get.getColumnFamilyTimeRange().isEmpty() && get.getConsistency() == Consistency.STRONG
@@ -240,7 +240,7 @@ public class RowCacheService {
 
   private <R> R mutateWithRowCacheBarrier(HRegion region, List<Mutation> mutations,
     RowOperation<R> operation) throws IOException {
-    if (!region.getTableDescriptor().isRowCacheEnabled()) {
+    if (!region.isRowCacheEnabled()) {
       return operation.execute();
     }
 
@@ -267,7 +267,7 @@ public class RowCacheService {
 
   private <R> R mutateWithRowCacheBarrier(HRegion region, byte[] row, RowOperation<R> operation)
     throws IOException {
-    if (!region.getTableDescriptor().isRowCacheEnabled()) {
+    if (!region.isRowCacheEnabled()) {
       return operation.execute();
     }
 

@@ -442,6 +442,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   private final AtomicLong rowCacheSeqNum = new AtomicLong(HConstants.NO_SEQNUM);
 
   /**
+   * The setting for whether to enable row cache for this region.
+   */
+  private final boolean isRowCacheEnabled;
+
+  /**
    * The default setting for whether to enable on-demand CF loading for scan requests to this
    * region. Requests can override it.
    */
@@ -937,6 +942,16 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     minBlockSizeBytes = Arrays.stream(this.htableDescriptor.getColumnFamilies())
       .mapToInt(ColumnFamilyDescriptor::getBlocksize).min().orElse(HConstants.DEFAULT_BLOCKSIZE);
+
+    this.isRowCacheEnabled = determineRowCacheEnabled();
+  }
+
+  boolean determineRowCacheEnabled() {
+    Boolean fromDescriptor = htableDescriptor.getRowCacheEnabled();
+    // The setting from TableDescriptor has higher priority than the global configuration
+    return fromDescriptor != null
+      ? fromDescriptor
+      : conf.getBoolean(HConstants.ROW_CACHE_ENABLED_KEY, HConstants.ROW_CACHE_ENABLED_DEFAULT);
   }
 
   private void setHTableSpecificConf() {
@@ -8725,6 +8740,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   public long getRowCacheSeqNum() {
     return this.rowCacheSeqNum.get();
+  }
+
+  @Override
+  public boolean isRowCacheEnabled() {
+    return isRowCacheEnabled;
   }
 
   /**

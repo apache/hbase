@@ -3043,7 +3043,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
     Put put = ProtobufUtil.toPut(mutation, cellScanner);
     // Put with TTL is not allowed on tables with row cache enabled, because cached rows cannot
     // track TTL expiration
-    if (region.getTableDescriptor().isRowCacheEnabled()) {
+    if (region.isRowCacheEnabled()) {
       if (put.getTTL() != Long.MAX_VALUE) {
         throw new DoNotRetryIOException(
           "Tables with row cache enabled do not allow setting TTL on Puts");

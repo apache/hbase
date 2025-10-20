@@ -577,4 +577,10 @@ public interface Region extends ConfigurationObserver {
    * estimating quota consumption.
    */
   int getMinBlockSizeBytes();
+
+  /**
+   * Returns whether the row cache is enabled for this region.
+   * @return true if the row cache is enabled for this region
+   */
+  boolean isRowCacheEnabled();
 }

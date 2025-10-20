@@ -81,7 +81,6 @@ public class TestRowCacheService {
 
     ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder.newBuilder("CF1".getBytes()).build();
     TableDescriptor td = Mockito.mock(TableDescriptor.class);
-    Mockito.when(td.isRowCacheEnabled()).thenReturn(true);
     Mockito.when(td.getColumnFamilies()).thenReturn(new ColumnFamilyDescriptor[] { cfd });
 
     byte[] rowKey = "row".getBytes();
@@ -98,6 +97,7 @@ public class TestRowCacheService {
     Mockito.when(region.getStores()).thenReturn(stores);
     Mockito.when(region.getScanner(scan)).thenReturn(regionScanner);
     Mockito.when(region.getReadOnlyConfiguration()).thenReturn(conf);
+    Mockito.when(region.isRowCacheEnabled()).thenReturn(true);
 
     RpcCallContext context = Mockito.mock(RpcCallContext.class);
     Mockito.when(context.getBlockBytesScanned()).thenReturn(1L);
@@ -157,7 +157,6 @@ public class TestRowCacheService {
   public void testMutate() throws IOException, ServiceException {
     // Mocking RowCacheService and its dependencies
     TableDescriptor tableDescriptor = Mockito.mock(TableDescriptor.class);
-    Mockito.when(tableDescriptor.isRowCacheEnabled()).thenReturn(true);
 
     RegionInfo regionInfo = Mockito.mock(RegionInfo.class);
     Mockito.when(regionInfo.getEncodedName()).thenReturn("region1");
@@ -166,6 +165,7 @@ public class TestRowCacheService {
     Mockito.when(region.getTableDescriptor()).thenReturn(tableDescriptor);
     Mockito.when(region.getRegionInfo()).thenReturn(regionInfo);
     Mockito.when(region.getBlockCache()).thenReturn(Mockito.mock(BlockCache.class));
+    Mockito.when(region.isRowCacheEnabled()).thenReturn(true);
 
     RSRpcServices rsRpcServices = Mockito.mock(RSRpcServices.class);
     Mockito.when(rsRpcServices.getRegion(Mockito.any())).thenReturn(region);
@@ -278,7 +278,6 @@ public class TestRowCacheService {
 
     ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder.newBuilder("CF1".getBytes()).build();
     TableDescriptor td = Mockito.mock(TableDescriptor.class);
-    Mockito.when(td.isRowCacheEnabled()).thenReturn(true);
     Mockito.when(td.getColumnFamilies()).thenReturn(new ColumnFamilyDescriptor[] { cfd });
 
     RpcCallContext context = Mockito.mock(RpcCallContext.class);
@@ -298,6 +297,7 @@ public class TestRowCacheService {
     Mockito.when(region.getStores()).thenReturn(stores);
     Mockito.when(region.getScanner(scan)).thenReturn(regionScanner);
     Mockito.when(region.getReadOnlyConfiguration()).thenReturn(conf);
+    Mockito.when(region.isRowCacheEnabled()).thenReturn(true);
 
     RowCacheKey key = new RowCacheKey(region, rowKey);
     List<Cell> results = new ArrayList<>();

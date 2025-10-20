@@ -318,9 +318,10 @@ public interface TableDescriptor {
   }
 
   /**
-   * Checks whether row caching is enabled for this table. Note that row caching applies only at the
+   * Checks whether row caching is enabled for this table. Note that row caching is applied at the
    * entire row level, not at the column family level.
-   * @return {@code true} if row cache is enabled, otherwise {@code false}
+   * @return {@code true} if row caching is enabled, {@code false} if disabled, or {@code null} if
+   *         not explicitly set
    */
-  boolean isRowCacheEnabled();
+  Boolean getRowCacheEnabled();
 }
