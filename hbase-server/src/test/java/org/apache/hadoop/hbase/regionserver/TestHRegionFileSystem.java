@@ -25,7 +25,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.net.URI;
-import java.util.Collection;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -39,11 +38,14 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.fs.HFileSystem;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -359,20 +361,25 @@ public class TestHRegionFileSystem {
     ;
     RegionInfo hri = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName())).build();
     HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(conf, fs, rootDir, hri);
-
+    StoreContext storeContext = StoreContext.getBuilder()
+      .withColumnFamilyDescriptor(ColumnFamilyDescriptorBuilder.of(familyName))
+      .withFamilyStoreDirectoryPath(
+        new Path(regionFs.getTableDir(), new Path(hri.getRegionNameAsString(), familyName)))
+      .withRegionFileSystem(regionFs).build();
+    StoreFileTracker sft = StoreFileTrackerFactory.create(conf, false, storeContext);
     // New region, no store files
-    Collection<StoreFileInfo> storeFiles = regionFs.getStoreFiles(familyName);
+    List<StoreFileInfo> storeFiles = sft.load();
     assertEquals(0, storeFiles != null ? storeFiles.size() : 0);
 
     // Create a new file in temp (no files in the family)
     Path buildPath = regionFs.createTempName();
     fs.createNewFile(buildPath);
-    storeFiles = regionFs.getStoreFiles(familyName);
+    storeFiles = sft.load();
     assertEquals(0, storeFiles != null ? storeFiles.size() : 0);
 
     // commit the file
     Path dstPath = regionFs.commitStoreFile(familyName, buildPath);
-    storeFiles = regionFs.getStoreFiles(familyName);
+    storeFiles = sft.load();
     assertEquals(0, storeFiles != null ? storeFiles.size() : 0);
     assertFalse(fs.exists(buildPath));
 

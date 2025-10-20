@@ -254,7 +254,7 @@ public class DataTieringManager {
   private HStoreFile getHStoreFile(Path hFilePath) throws DataTieringException {
     HStore hStore = getHStore(hFilePath);
     for (HStoreFile file : hStore.getStorefiles()) {
-      if (file.getPath().equals(hFilePath)) {
+      if (file.getPath().toUri().getPath().toString().equals(hFilePath.toString())) {
         return file;
       }
     }

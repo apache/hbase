@@ -28,8 +28,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -100,14 +103,15 @@ class MajorCompactionRequest {
   boolean shouldCFBeCompacted(HRegionFileSystem fileSystem, String family, long ts)
     throws IOException {
     // do we have any store files?
-    Collection<StoreFileInfo> storeFiles = fileSystem.getStoreFiles(family);
+    StoreFileTracker sft = getStoreFileTracker(family, fileSystem);
+    List<StoreFileInfo> storeFiles = sft.load();
     if (storeFiles == null) {
       LOG.info("Excluding store: " + family + " for compaction for region:  "
         + fileSystem.getRegionInfo().getEncodedName(), " has no store files");
       return false;
     }
     // check for reference files
-    if (fileSystem.hasReferences(family) && familyHasReferenceFile(fileSystem, family, ts)) {
+    if (sft.hasReferences() && familyHasReferenceFile(fileSystem, family, ts)) {
       LOG.info("Including store: " + family + " with: " + storeFiles.size()
         + " files for compaction for region: " + fileSystem.getRegionInfo().getEncodedName());
       return true;
@@ -119,6 +123,13 @@ class MajorCompactionRequest {
         + fileSystem.getRegionInfo().getEncodedName() + " already compacted");
     }
     return includeStore;
+  }
+
+  public StoreFileTracker getStoreFileTracker(String family, HRegionFileSystem fileSystem)
+    throws IOException {
+    TableDescriptor htd = connection.getTable(getRegion().getTable()).getDescriptor();
+    return StoreFileTrackerFactory.create(connection.getConfiguration(), htd,
+      htd.getColumnFamily(family.getBytes()), fileSystem, false);
   }
 
   protected boolean shouldIncludeStore(HRegionFileSystem fileSystem, String family,

@@ -59,9 +59,12 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.regionserver.BloomType;
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.regionserver.StoreUtils;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -266,7 +269,7 @@ public final class MobUtils {
    * @param cacheConfig      The cacheConfig that disables the block cache.
    * @param current          The current time.
    */
-  public static void cleanExpiredMobFiles(FileSystem fs, Configuration conf, TableName tableName,
+  public static void cleanExpiredMobFiles(FileSystem fs, Configuration conf, TableDescriptor htd,
     ColumnFamilyDescriptor columnDescriptor, CacheConfig cacheConfig, long current)
     throws IOException {
     long timeToLive = columnDescriptor.getTimeToLive();
@@ -287,7 +290,11 @@ public final class MobUtils {
     LOG.info("MOB HFiles older than " + expireDate.toGMTString() + " will be deleted!");
 
     FileStatus[] stats = null;
+    TableName tableName = htd.getTableName();
     Path mobTableDir = CommonFSUtils.getTableDir(getMobHome(conf), tableName);
+    HRegionFileSystem regionFS =
+      HRegionFileSystem.create(conf, fs, mobTableDir, getMobRegionInfo(tableName));
+    StoreFileTracker sft = StoreFileTrackerFactory.create(conf, htd, columnDescriptor, regionFS);
     Path path = getMobFamilyPath(conf, tableName, columnDescriptor.getNameAsString());
     try {
       stats = fs.listStatus(path);
@@ -318,7 +325,7 @@ public final class MobUtils {
             LOG.debug("{} is an expired file", fileName);
           }
           filesToClean
-            .add(new HStoreFile(fs, file.getPath(), conf, cacheConfig, BloomType.NONE, true));
+            .add(new HStoreFile(fs, file.getPath(), conf, cacheConfig, BloomType.NONE, true, sft));
           if (
             filesToClean.size() >= conf.getInt(MOB_CLEANER_BATCH_SIZE_UPPER_BOUND,
               DEFAULT_MOB_CLEANER_BATCH_SIZE_UPPER_BOUND)
@@ -385,6 +392,10 @@ public final class MobUtils {
    */
   public static Path getMobTableDir(Path rootDir, TableName tableName) {
     return CommonFSUtils.getTableDir(getMobHome(rootDir), tableName);
+  }
+
+  public static Path getMobTableDir(Configuration conf, TableName tableName) {
+    return getMobTableDir(new Path(conf.get(HConstants.HBASE_DIR)), tableName);
   }
 
   /**

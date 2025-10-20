@@ -256,51 +256,6 @@ public class HRegionFileSystem {
   }
 
   /**
-   * Returns the store files available for the family. This methods performs the filtering based on
-   * the valid store files.
-   * @param familyName Column Family Name
-   * @return a set of {@link StoreFileInfo} for the specified family.
-   */
-  public List<StoreFileInfo> getStoreFiles(final String familyName) throws IOException {
-    return getStoreFiles(familyName, true);
-  }
-
-  /**
-   * Returns the store files available for the family. This methods performs the filtering based on
-   * the valid store files.
-   * @param familyName Column Family Name
-   * @return a set of {@link StoreFileInfo} for the specified family.
-   */
-  public List<StoreFileInfo> getStoreFiles(final String familyName, final boolean validate)
-    throws IOException {
-    Path familyDir = getStoreDir(familyName);
-    FileStatus[] files = CommonFSUtils.listStatus(this.fs, familyDir);
-    if (files == null) {
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("No StoreFiles for: " + familyDir);
-      }
-      return null;
-    }
-
-    ArrayList<StoreFileInfo> storeFiles = new ArrayList<>(files.length);
-    for (FileStatus status : files) {
-      if (validate && !StoreFileInfo.isValid(status)) {
-        // recovered.hfiles directory is expected inside CF path when hbase.wal.split.to.hfile to
-        // true, refer HBASE-23740
-        if (!HConstants.RECOVERED_HFILES_DIR.equals(status.getPath().getName())) {
-          LOG.warn("Invalid StoreFile: {}", status.getPath());
-        }
-        continue;
-      }
-      StoreFileInfo info = ServerRegionReplicaUtil.getStoreFileInfo(conf, fs, regionInfo,
-        regionInfoForFs, familyName, status.getPath());
-      storeFiles.add(info);
-
-    }
-    return storeFiles;
-  }
-
-  /**
    * Returns the store files' LocatedFileStatus which available for the family. This methods
    * performs the filtering based on the valid store files.
    * @param familyName Column Family Name
@@ -350,11 +305,11 @@ public class HRegionFileSystem {
    * @param fileName   File Name
    * @return The {@link StoreFileInfo} for the specified family/file
    */
-  StoreFileInfo getStoreFileInfo(final String familyName, final String fileName)
-    throws IOException {
+  StoreFileInfo getStoreFileInfo(final String familyName, final String fileName,
+    final StoreFileTracker tracker) throws IOException {
     Path familyDir = getStoreDir(familyName);
     return ServerRegionReplicaUtil.getStoreFileInfo(conf, fs, regionInfo, regionInfoForFs,
-      familyName, new Path(familyDir, fileName));
+      familyName, new Path(familyDir, fileName), tracker);
   }
 
   /**
@@ -374,20 +329,6 @@ public class HRegionFileSystem {
           LOG.trace("Reference {}", stat.getPath());
           return true;
         }
-      }
-    }
-    return false;
-  }
-
-  /**
-   * Check whether region has Reference file
-   * @param htd table desciptor of the region
-   * @return true if region has reference file
-   */
-  public boolean hasReferences(final TableDescriptor htd) throws IOException {
-    for (ColumnFamilyDescriptor family : htd.getColumnFamilies()) {
-      if (hasReferences(family.getNameAsString())) {
-        return true;
       }
     }
     return false;
@@ -628,7 +569,7 @@ public class HRegionFileSystem {
         tblDesc.getColumnFamily(Bytes.toBytes(familyName)), regionFs));
       fileInfoMap.computeIfAbsent(familyName, l -> new ArrayList<>());
       List<StoreFileInfo> infos = fileInfoMap.get(familyName);
-      infos.add(new StoreFileInfo(conf, fs, file, true));
+      infos.add(trackerMap.get(familyName).getStoreFileInfo(file, true));
     }
     for (Map.Entry<String, StoreFileTracker> entry : trackerMap.entrySet()) {
       entry.getValue().add(fileInfoMap.get(entry.getKey()));
@@ -672,7 +613,7 @@ public class HRegionFileSystem {
    * @return Path to created reference.
    */
   public Path splitStoreFile(RegionInfo hri, String familyName, HStoreFile f, byte[] splitRow,
-    boolean top, RegionSplitPolicy splitPolicy) throws IOException {
+    boolean top, RegionSplitPolicy splitPolicy, StoreFileTracker tracker) throws IOException {
     Path splitDir = new Path(getSplitsDir(hri), familyName);
     // Add the referred-to regions name as a dot separated suffix.
     // See REF_NAME_REGEX regex above. The referred-to regions name is
@@ -758,7 +699,8 @@ public class HRegionFileSystem {
     // A reference to the bottom half of the hsf store file.
     Reference r =
       top ? Reference.createTopReference(splitRow) : Reference.createBottomReference(splitRow);
-    return r.write(fs, p);
+    tracker.createReference(r, p);
+    return p;
   }
 
   // ===========================================================================
@@ -799,8 +741,8 @@ public class HRegionFileSystem {
    * @return Path to created reference.
    * @throws IOException if the merge write fails.
    */
-  public Path mergeStoreFile(RegionInfo mergingRegion, String familyName, HStoreFile f)
-    throws IOException {
+  public Path mergeStoreFile(RegionInfo mergingRegion, String familyName, HStoreFile f,
+    StoreFileTracker tracker) throws IOException {
     Path referenceDir = new Path(getMergesDir(regionInfoForFs), familyName);
     // A whole reference to the store file.
     Reference r = Reference.createTopReference(mergingRegion.getStartKey());
@@ -812,7 +754,8 @@ public class HRegionFileSystem {
     // Write reference with same file id only with the other region name as
     // suffix and into the new region location (under same family).
     Path p = new Path(referenceDir, f.getPath().getName() + "." + mergingRegionName);
-    return r.write(fs, p);
+    tracker.createReference(r, p);
+    return p;
   }
 
   /**
@@ -1221,5 +1164,10 @@ public class HRegionFileSystem {
       LOG.debug(msg + ", sleeping " + baseSleepBeforeRetries + " times " + sleepMultiplier);
     }
     Thread.sleep((long) baseSleepBeforeRetries * sleepMultiplier);
+  }
+
+  public static HRegionFileSystem create(final Configuration conf, final FileSystem fs,
+    final Path tableDir, final RegionInfo regionInfo) throws IOException {
+    return new HRegionFileSystem(conf, fs, tableDir, regionInfo);
   }
 }
