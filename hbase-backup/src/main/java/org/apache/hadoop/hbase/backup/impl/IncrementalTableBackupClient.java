@@ -213,16 +213,13 @@ public class IncrementalTableBackupClient extends TableBackupClient {
         List<String> bulkLoadFiles =
           bulkloadPaths.stream().map(Path::toString).collect(Collectors.toList());
 
-        if (!bulkLoadFiles.isEmpty()) {
+        if (bulkLoadFiles.isEmpty()) {
+          LOG.info("No bulk-load files found for table {}", table);
+        } else {
           mergeSplitAndCopyBulkloadedHFiles(bulkLoadFiles, table, tgtFs);
         }
       }
-      if (fs.exists(collectorOutput)) {
-        fs.delete(collectorOutput, true);
-      }
-
     }
-
     return bulkLoads;
   }
 
