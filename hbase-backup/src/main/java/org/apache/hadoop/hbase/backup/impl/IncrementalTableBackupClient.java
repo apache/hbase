@@ -87,6 +87,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 @InterfaceAudience.Private
 public class IncrementalTableBackupClient extends TableBackupClient {
   private static final Logger LOG = LoggerFactory.getLogger(IncrementalTableBackupClient.class);
+  private static final String BULKLOAD_COLLECTOR_OUTPUT = "bulkload-collector-output";
 
   protected IncrementalTableBackupClient() {
   }
@@ -202,7 +203,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
       }
     } else {
       // Continuous incremental backup: run BulkLoadCollectorJob over backed-up WALs
-      Path collectorOutput = new Path(getBulkOutputDir(), "bulkload-collector-output");
+      Path collectorOutput = new Path(getBulkOutputDir(), BULKLOAD_COLLECTOR_OUTPUT);
       for (TableName table : tablesToBackup) {
         String walDirsCsv = String.join(",", tablesToWALFileList.get(table));
 
