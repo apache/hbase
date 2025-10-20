@@ -85,7 +85,7 @@ public class HFileProcedurePrettyPrinter extends AbstractHBaseTool {
 
   private void addAllHFiles() throws IOException {
     Path masterProcDir =
-      new Path(CommonFSUtils.getRootDir(conf), MasterRegionFactory.MASTER_STORE_DIR);
+      new Path(CommonFSUtils.getRootDir(conf), MasterRegionFactory.getMasterRegionDirName());
     Path tableDir = CommonFSUtils.getTableDir(masterProcDir, MasterRegionFactory.TABLE_NAME);
     FileSystem fs = tableDir.getFileSystem(conf);
     Path regionDir =
