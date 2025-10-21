@@ -4664,27 +4664,18 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         new RestoreBackupSystemTableProcedureBiConsumer());
   }
 
-  public CompletableFuture<Void> refreshSystemKeyCacheOnAllServers() {
+  @Override
+  public CompletableFuture<Void> refreshSystemKeyCacheOnAllServers(Set<ServerName> regionServers) {
     CompletableFuture<Void> future = new CompletableFuture<>();
-    addListener(getClusterMetrics(EnumSet.of(Option.SERVERS_NAME, Option.LIVE_SERVERS)),
-      (status, err) -> {
-        if (err != null) {
-          future.completeExceptionally(err);
-        } else {
-          List<ServerName> servers = status.getLiveServerMetrics().keySet().stream()
-            .sorted(ServerName::compareTo).collect(Collectors.toList());
-          List<CompletableFuture<Void>> futures = new ArrayList<>(servers.size());
-          servers.forEach(server -> futures.add(refreshSystemKeyCache(server)));
-          addListener(CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0])),
-            (result, err2) -> {
-              if (err2 != null) {
-                future.completeExceptionally(err2);
-              } else {
-                future.complete(result);
-              }
-            });
-        }
-      });
+    List<CompletableFuture<Void>> futures = regionServers.stream()
+      .map(this::refreshSystemKeyCache)
+      .collect(Collectors.toList());
+    addListener(CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0])), (result, err) -> {
+      if (err != null) {
+        future.completeExceptionally(err);
+      } else {
+        future.complete(result);
+      }});
     return future;
   }
 

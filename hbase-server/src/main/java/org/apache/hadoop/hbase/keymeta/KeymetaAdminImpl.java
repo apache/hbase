@@ -21,7 +21,10 @@ import java.io.IOException;
 import java.security.KeyException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.AsyncAdmin;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
@@ -87,9 +90,11 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
       return false;
     }
 
+    Set<ServerName> regionServers = master.getServerManager().getOnlineServers().keySet();
+
     LOG.info("System Key is rotated, initiating cache refresh on all region servers");
     try {
-      FutureUtils.get(getAsyncAdmin(master).refreshSystemKeyCacheOnAllServers());
+      FutureUtils.get(getAsyncAdmin(master).refreshSystemKeyCacheOnAllServers(regionServers));
     } catch (Exception e) {
       throw new IOException(
         "Failed to initiate System Key cache refresh on one or more region servers", e);
