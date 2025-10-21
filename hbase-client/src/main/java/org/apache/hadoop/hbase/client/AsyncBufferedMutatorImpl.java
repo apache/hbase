@@ -215,9 +215,6 @@ class AsyncBufferedMutatorImpl implements AsyncBufferedMutator {
           }
         }, periodicFlushTimeoutNs, TimeUnit.NANOSECONDS);
       }
-      // Preallocate to avoid potentially multiple resizes during addAll
-      this.mutations.ensureCapacity(this.mutations.size() + mutations.size());
-      this.futures.ensureCapacity(this.futures.size() + futures.size());
       this.mutations.addAll(mutations);
       this.futures.addAll(futures);
       bufferedSize += heapSize;
