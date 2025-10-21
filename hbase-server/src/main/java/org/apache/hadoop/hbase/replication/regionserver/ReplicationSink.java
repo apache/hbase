@@ -245,8 +245,11 @@ public class ReplicationSink {
               }
               // Map of table name Vs list of pair of family and list of
               // hfile paths from its namespace
+
+              List<String> clusterIds = entry.getKey().getClusterIdsList().stream()
+                .map(k -> toUUID(k).toString()).collect(Collectors.toList());
               Map<String, List<Pair<byte[], List<String>>>> bulkLoadHFileMap =
-                bulkLoadsPerClusters.computeIfAbsent(bld.getClusterIdsList(), k -> new HashMap<>());
+                bulkLoadsPerClusters.computeIfAbsent(clusterIds, k -> new HashMap<>());
               buildBulkLoadHFileMap(bulkLoadHFileMap, table, bld);
             }
           } else if (CellUtil.matchingQualifier(cell, WALEdit.REPLICATION_MARKER)) {
