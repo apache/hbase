@@ -175,15 +175,6 @@ public class TestRowCache {
 
     RowCacheKey rowCacheKey = new RowCacheKey(region, rowKey);
 
-    // Put a row
-    Put put = new Put(rowKey);
-    put.addColumn(CF1, Q1, Bytes.toBytes(0L));
-    put.addColumn(CF1, Q2, "12".getBytes());
-    put.addColumn(CF2, Q1, "21".getBytes());
-    put.addColumn(CF2, Q2, "22".getBytes());
-    table.put(put);
-    admin.flush(tableName);
-
     // Initialize metrics
     recomputeMetrics();
     setCounterBase("Get_num_ops", metricsHelper.getCounter("Get_num_ops", serverSource));
@@ -193,6 +184,19 @@ public class TestRowCache {
       metricsHelper.getCounter(ROW_CACHE_MISS_COUNT, serverSource));
     setCounterBase(ROW_CACHE_EVICTED_ROW_COUNT,
       metricsHelper.getCounter(ROW_CACHE_EVICTED_ROW_COUNT, serverSource));
+
+    // Put a row
+    Put put = new Put(rowKey);
+    put.addColumn(CF1, Q1, Bytes.toBytes(0L));
+    put.addColumn(CF1, Q2, "12".getBytes());
+    put.addColumn(CF2, Q1, "21".getBytes());
+    put.addColumn(CF2, Q2, "22".getBytes());
+    table.put(put);
+    admin.flush(tableName);
+    recomputeMetrics();
+    assertCounterDiff(ROW_CACHE_HIT_COUNT, 0);
+    assertCounterDiff(ROW_CACHE_MISS_COUNT, 0);
+    assertCounterDiff(ROW_CACHE_EVICTED_ROW_COUNT, 0);
 
     // First get to populate the row cache
     result = table.get(get);
@@ -206,6 +210,7 @@ public class TestRowCache {
     // Ensure the get operation from HFile without row cache
     assertCounterDiff(ROW_CACHE_HIT_COUNT, 0);
     assertCounterDiff(ROW_CACHE_MISS_COUNT, 1);
+    assertCounterDiff(ROW_CACHE_EVICTED_ROW_COUNT, 0);
 
     // Get from the row cache
     result = table.get(get);
@@ -219,6 +224,7 @@ public class TestRowCache {
     // Ensure the get operation from the row cache
     assertCounterDiff(ROW_CACHE_HIT_COUNT, 1);
     assertCounterDiff(ROW_CACHE_MISS_COUNT, 0);
+    assertCounterDiff(ROW_CACHE_EVICTED_ROW_COUNT, 0);
 
     // Row cache is invalidated by the put operation
     assertNotNull(rowCache.getRow(rowCacheKey, true));
