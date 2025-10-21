@@ -45,7 +45,17 @@ class AsyncBufferedMutatorImpl implements AsyncBufferedMutator {
 
   private static final Logger LOG = LoggerFactory.getLogger(AsyncBufferedMutatorImpl.class);
 
-  private final int INITIAL_CAPACITY = 100;
+  private static final int INITIAL_CAPACITY = 100;
+
+  protected static class Batch {
+    final ArrayList<Mutation> toSend;
+    final ArrayList<CompletableFuture<Void>> toComplete;
+
+    Batch(ArrayList<Mutation> toSend, ArrayList<CompletableFuture<Void>> toComplete) {
+      this.toSend = toSend;
+      this.toComplete = toComplete;
+    }
+  }
 
   private final HashedWheelTimer periodicalFlushTimer;
 
@@ -73,19 +83,6 @@ class AsyncBufferedMutatorImpl implements AsyncBufferedMutator {
   // Accessed by tests
   final ReentrantLock lock = new ReentrantLock();
 
-  enum FlushType {
-    /** Flush triggered by buffer size exceeding threshold */
-    SIZE,
-    /** Flush triggered by max mutations */
-    MAX_MUTATIONS,
-    /** Flush triggered by periodic timer */
-    PERIODIC,
-    /** Flush triggered by explicit flush() call */
-    MANUAL,
-    /** Flush triggered during close() */
-    CLOSE
-  }
-
   AsyncBufferedMutatorImpl(HashedWheelTimer periodicalFlushTimer, AsyncTable<?> table,
     long writeBufferSize, long periodicFlushTimeoutNs, int maxKeyValueSize, int maxMutations) {
     this.periodicalFlushTimer = periodicalFlushTimer;
@@ -108,22 +105,30 @@ class AsyncBufferedMutatorImpl implements AsyncBufferedMutator {
 
   // will be overridden in test
   protected void internalFlush() {
-    internalFlush(FlushType.MANUAL);
+    Batch batch = drainBatch(); // Drains under lock
+    if (batch == null) {
+      return;
+    }
+    sendBatch(batch); // Sends outside of lock
   }
 
-  protected void internalFlush(FlushType trigger) {
+  /**
+   * Atomically drains the current buffered mutations and futures under {@link #lock} and prepares
+   * this mutator to accept a new batch.
+   * <p>
+   * Acquires {@link #lock} and cancels any pending {@link #periodicFlushTask} to avoid a redundant
+   * flush for the data we are about to send. Swaps the shared {@link #mutations} and
+   * {@link #futures} lists into a returned {@link Batch}, replaces them with fresh lists, and
+   * resets {@link #bufferedSize} to zero.
+   * <p>
+   * If there is nothing buffered, returns {@code null} so callers can skip sending work.
+   * @return a {@link Batch} containing drained mutations and futures, or {@code null} if empty
+   */
+  private Batch drainBatch() {
     ArrayList<Mutation> toSend;
     ArrayList<CompletableFuture<Void>> toComplete;
-    // Ensure that the mutations and futures are not modified while we are processing them.
     lock.lock();
     try {
-      // Double-check that the condition is still met to avoid unnecessary flushes due to races
-      // between size-triggered, max mutations-triggered, manual, and periodic flushes.
-      if (trigger == FlushType.SIZE && bufferedSize < writeBufferSize) {
-        return;
-      } else if (trigger == FlushType.MAX_MUTATIONS && this.mutations.size() < maxMutations) {
-        return;
-      }
       // Cancel the flush task if it is pending.
       if (periodicFlushTask != null) {
         periodicFlushTask.cancel();
@@ -131,7 +136,7 @@ class AsyncBufferedMutatorImpl implements AsyncBufferedMutator {
       }
       toSend = this.mutations;
       if (toSend.isEmpty()) {
-        return;
+        return null;
       }
       toComplete = this.futures;
       assert toSend.size() == toComplete.size();
@@ -141,10 +146,22 @@ class AsyncBufferedMutatorImpl implements AsyncBufferedMutator {
     } finally {
       lock.unlock();
     }
-    // Send the mutations and link the futures we returned to our client to the futures we get back
-    // from AsyncTable#batch.
-    Iterator<CompletableFuture<Void>> toCompleteIter = toComplete.iterator();
-    for (CompletableFuture<?> future : table.batch(toSend)) {
+    return new Batch(toSend, toComplete);
+  }
+
+  /**
+   * Sends a previously drained {@link Batch} and wires the user-visible completion futures to the
+   * underlying results returned by {@link AsyncTable#batch(List)}.
+   * <p>
+   * Preserves the one-to-one, in-order mapping between mutations and their corresponding futures.
+   * @param batch the drained batch to send; may be {@code null}
+   */
+  private void sendBatch(Batch batch) {
+    if (batch == null) {
+      return;
+    }
+    Iterator<CompletableFuture<Void>> toCompleteIter = batch.toComplete.iterator();
+    for (CompletableFuture<?> future : table.batch(batch.toSend)) {
       CompletableFuture<Void> toCompleteFuture = toCompleteIter.next();
       addListener(future, (r, e) -> {
         if (e != null) {
@@ -174,8 +191,7 @@ class AsyncBufferedMutatorImpl implements AsyncBufferedMutator {
         validatePut((Put) mutation, maxKeyValueSize);
       }
     }
-    boolean needFlush = false;
-    FlushType flushType = FlushType.SIZE;
+    Batch batch = null;
     lock.lock();
     try {
       if (this.mutations.isEmpty() && periodicFlushTimeoutNs > 0) {
@@ -195,7 +211,7 @@ class AsyncBufferedMutatorImpl implements AsyncBufferedMutator {
             lock.unlock();
           }
           if (shouldFlush) {
-            internalFlush(FlushType.PERIODIC);
+            internalFlush();
           }
         }, periodicFlushTimeoutNs, TimeUnit.NANOSECONDS);
       }
@@ -207,18 +223,18 @@ class AsyncBufferedMutatorImpl implements AsyncBufferedMutator {
       bufferedSize += heapSize;
       if (bufferedSize >= writeBufferSize) {
         LOG.trace("Flushing because write buffer size {} reached", writeBufferSize);
-        needFlush = true;
-        flushType = FlushType.SIZE;
+        // drain now and send after releasing the lock
+        batch = drainBatch();
       } else if (this.mutations.size() >= maxMutations) {
         LOG.trace("Flushing because max mutations {} reached", maxMutations);
-        needFlush = true;
-        flushType = FlushType.MAX_MUTATIONS;
+        batch = drainBatch();
       }
     } finally {
       lock.unlock();
     }
-    if (needFlush) {
-      internalFlush(flushType);
+    // Send outside of lock
+    if (batch != null) {
+      sendBatch(batch);
     }
     return futures;
   }
@@ -230,20 +246,21 @@ class AsyncBufferedMutatorImpl implements AsyncBufferedMutator {
 
   @Override
   public void close() {
-    boolean needFlush = false;
+    Batch batch = null;
     if (!closed) {
       lock.lock();
       try {
         if (!closed) {
           closed = true;
-          needFlush = true;
+          batch = drainBatch(); // Drains under lock
         }
       } finally {
         lock.unlock();
       }
     }
-    if (needFlush) {
-      internalFlush(FlushType.CLOSE);
+    // Send the final batch
+    if (batch != null) {
+      sendBatch(batch); // Sends outside of lock
     }
   }
 
