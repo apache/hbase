@@ -20,28 +20,16 @@ package org.apache.hadoop.hbase.io.hfile;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-<<<<<<< HEAD
-import java.util.ArrayDeque;
-import java.util.Objects;
-=======
 import java.util.LinkedList;
->>>>>>> rvv-optimization
 import java.util.Queue;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
-<<<<<<< HEAD
 import org.apache.hadoop.hbase.ExtendedCell;
-=======
->>>>>>> rvv-optimization
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.util.BloomFilterChunk;
-<<<<<<< HEAD
-=======
-import  org.apache.hadoop.hbase.util.BloomFilterRvvNative;
->>>>>>> rvv-optimization
+import org.apache.hadoop.hbase.util.BloomFilterRvvNative;
 import org.apache.hadoop.hbase.util.BloomFilterUtil;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -51,12 +39,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Adds methods required for writing a compound Bloom filter to the data section of an
- * {@link org.apache.hadoop.hbase.io.hfile.HFile} to the {@link CompoundBloomFilter} class.
+ * Adds methods required for writing a compound Bloom filter to the data section
+ * of an
+ * {@link org.apache.hadoop.hbase.io.hfile.HFile} to the
+ * {@link CompoundBloomFilter} class.
  */
 @InterfaceAudience.Private
 public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
-  implements BloomFilterWriter, InlineBlockWriter {
+    implements BloomFilterWriter, InlineBlockWriter {
 
   private static final Logger LOG = LoggerFactory.getLogger(CompoundBloomFilterWriter.class);
 
@@ -72,11 +62,7 @@ public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
   /** The size of individual Bloom filter chunks to create */
   private int chunkByteSize;
   /** The prev Cell that was processed */
-<<<<<<< HEAD
   private ExtendedCell prevCell;
-=======
-  private Cell prevCell;
->>>>>>> rvv-optimization
 
   /** A Bloom filter chunk enqueued for writing */
   private static class ReadyChunk {
@@ -85,35 +71,29 @@ public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
     BloomFilterChunk chunk;
   }
 
-<<<<<<< HEAD
-  private Queue<ReadyChunk> readyChunks = new ArrayDeque<>();
-=======
   private Queue<ReadyChunk> readyChunks = new LinkedList<>();
->>>>>>> rvv-optimization
 
   /** The first key in the current Bloom filter chunk. */
   private byte[] firstKeyInChunk = null;
 
-  private HFileBlockIndex.BlockIndexWriter bloomBlockIndexWriter =
-    new HFileBlockIndex.BlockIndexWriter();
+  private HFileBlockIndex.BlockIndexWriter bloomBlockIndexWriter = new HFileBlockIndex.BlockIndexWriter();
 
   /** Whether to cache-on-write compound Bloom filter chunks */
   private boolean cacheOnWrite;
 
   private BloomType bloomType;
-<<<<<<< HEAD
-=======
   /** RVV 本地调用对象，用于 Bloom 位批量操作 */
   private final BloomFilterRvvNative rvvNative = new BloomFilterRvvNative();
->>>>>>> rvv-optimization
 
   /**
-   * each chunk's size in bytes. The real chunk size might be different as required by the fold
-   * factor. target false positive rate hash function type to use maximum degree of folding allowed
+   * each chunk's size in bytes. The real chunk size might be different as
+   * required by the fold
+   * factor. target false positive rate hash function type to use maximum degree
+   * of folding allowed
    * the bloom type
    */
   public CompoundBloomFilterWriter(int chunkByteSizeHint, float errorRate, int hashType,
-    int maxFold, boolean cacheOnWrite, CellComparator comparator, BloomType bloomType) {
+      int maxFold, boolean cacheOnWrite, CellComparator comparator, BloomType bloomType) {
     chunkByteSize = BloomFilterUtil.computeFoldableByteSize(chunkByteSizeHint * 8L, maxFold);
 
     this.errorRate = errorRate;
@@ -132,23 +112,22 @@ public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
 
   /**
    * Enqueue the current chunk if it is ready to be written out.
-   * @param closing true if we are closing the file, so we do not expect new keys to show up
+   * 
+   * @param closing true if we are closing the file, so we do not expect new keys
+   *                to show up
    */
   private void enqueueReadyChunk(boolean closing) {
     if (chunk == null || (chunk.getKeyCount() < chunk.getMaxKeys() && !closing)) {
       return;
     }
 
-<<<<<<< HEAD
-=======
     // 新增：flush剩余缓存位，防止数据丢失
     chunk.flushHashLocBuffer();
 
->>>>>>> rvv-optimization
     if (firstKeyInChunk == null) {
       throw new NullPointerException(
-        "Trying to enqueue a chunk, " + "but first key is null: closing=" + closing + ", keyCount="
-          + chunk.getKeyCount() + ", maxKeys=" + chunk.getMaxKeys());
+          "Trying to enqueue a chunk, " + "but first key is null: closing=" + closing + ", keyCount="
+              + chunk.getKeyCount() + ", maxKeys=" + chunk.getMaxKeys());
     }
 
     ReadyChunk readyChunk = new ReadyChunk();
@@ -164,8 +143,8 @@ public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
 
     if (LOG.isTraceEnabled() && prevByteSize != chunk.getByteSize()) {
       LOG.trace("Compacted Bloom chunk #" + readyChunk.chunkId + " from [" + prevMaxKeys
-        + " max keys, " + prevByteSize + " bytes] to [" + chunk.getMaxKeys() + " max keys, "
-        + chunk.getByteSize() + " bytes]");
+          + " max keys, " + prevByteSize + " bytes] to [" + chunk.getMaxKeys() + " max keys, "
+          + chunk.getByteSize() + " bytes]");
     }
 
     totalMaxKeys += chunk.getMaxKeys();
@@ -177,59 +156,31 @@ public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
   }
 
   @Override
-<<<<<<< HEAD
   public void append(ExtendedCell cell) throws IOException {
-    Objects.requireNonNull(cell);
+    if (cell == null)
+      throw new NullPointerException();
 
     enqueueReadyChunk(false);
 
     if (chunk == null) {
       if (firstKeyInChunk != null) {
         throw new IllegalStateException(
-          "First key in chunk already set: " + Bytes.toStringBinary(firstKeyInChunk));
+            "First key in chunk already set: " + Bytes.toStringBinary(firstKeyInChunk));
       }
-      // This will be done only once per chunk
       if (bloomType == BloomType.ROWCOL) {
         firstKeyInChunk = PrivateCellUtil
-          .getCellKeySerializedAsKeyValueKey(PrivateCellUtil.createFirstOnRowCol(cell));
+            .getCellKeySerializedAsKeyValueKey(PrivateCellUtil.createFirstOnRowCol(cell));
       } else {
         firstKeyInChunk = CellUtil.copyRow(cell);
       }
       allocateNewChunk();
     }
 
-    chunk.add(cell);
+    chunk.add(cell); // 这里原本是逐位添加 Bloom 位
     this.prevCell = cell;
     ++totalKeyCount;
   }
 
-=======
-  public void append(Cell cell) throws IOException {
-      if (cell == null) throw new NullPointerException();
-
-      enqueueReadyChunk(false);
-
-      if (chunk == null) {
-          if (firstKeyInChunk != null) {
-              throw new IllegalStateException(
-                  "First key in chunk already set: " + Bytes.toStringBinary(firstKeyInChunk));
-          }
-          if (bloomType == BloomType.ROWCOL) {
-              firstKeyInChunk = PrivateCellUtil
-                .getCellKeySerializedAsKeyValueKey(PrivateCellUtil.createFirstOnRowCol(cell));
-          } else {
-              firstKeyInChunk = CellUtil.copyRow(cell);
-          }
-          allocateNewChunk();
-      }
-
-      chunk.add(cell); // 这里原本是逐位添加 Bloom 位
-      this.prevCell = cell;
-      ++totalKeyCount;
-  }
-
-
->>>>>>> rvv-optimization
   @Override
   public void beforeShipped() throws IOException {
     if (this.prevCell != null) {
@@ -238,7 +189,7 @@ public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
   }
 
   @Override
-  public Cell getPrevCell() {
+  public ExtendedCell getPrevCell() {
     return this.prevCell;
   }
 
@@ -291,8 +242,10 @@ public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
     }
 
     /**
-     * This is modeled after {@link CompoundBloomFilterWriter.MetaWriter} for simplicity, although
-     * the two metadata formats do not have to be consistent. This does have to be consistent with
+     * This is modeled after {@link CompoundBloomFilterWriter.MetaWriter} for
+     * simplicity, although
+     * the two metadata formats do not have to be consistent. This does have to be
+     * consistent with
      * how
      * {@link CompoundBloomFilter#CompoundBloomFilter(DataInput, org.apache.hadoop.hbase.io.hfile.HFile.Reader, BloomFilterMetrics)}
      * reads fields.

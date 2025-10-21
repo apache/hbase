@@ -39,13 +39,6 @@ public class Lz4Compressor implements CanReinit, Compressor {
   protected boolean finish, finished;
   protected long bytesRead, bytesWritten;
 
-<<<<<<< HEAD
-  Lz4Compressor(int bufferSize) {
-    compressor = LZ4Factory.fastestInstance().fastCompressor();
-    this.bufferSize = bufferSize;
-    this.inBuf = ByteBuffer.allocate(bufferSize);
-    this.outBuf = ByteBuffer.allocate(bufferSize);
-=======
   private final boolean useNative = Lz4Native.available();
 
   Lz4Compressor(int bufferSize) {
@@ -53,7 +46,6 @@ public class Lz4Compressor implements CanReinit, Compressor {
     this.bufferSize = bufferSize;
     this.inBuf = ByteBuffer.allocateDirect(bufferSize);
     this.outBuf = ByteBuffer.allocateDirect(bufferSize);
->>>>>>> rvv-optimization
     this.outBuf.position(bufferSize);
   }
 
@@ -71,34 +63,6 @@ public class Lz4Compressor implements CanReinit, Compressor {
       if (inBuf.position() > 0) {
         inBuf.flip();
         int uncompressed = inBuf.remaining();
-<<<<<<< HEAD
-        int needed = maxCompressedLength(uncompressed);
-        // Can we decompress directly into the provided array?
-        ByteBuffer writeBuffer;
-        boolean direct = false;
-        if (len <= needed) {
-          writeBuffer = ByteBuffer.wrap(b, off, len);
-          direct = true;
-        } else {
-          // If we don't have enough capacity in our currently allocated output buffer,
-          // allocate a new one which does.
-          if (outBuf.capacity() < needed) {
-            needed = CompressionUtil.roundInt2(needed);
-            outBuf = ByteBuffer.allocate(needed);
-          } else {
-            outBuf.clear();
-          }
-          writeBuffer = outBuf;
-        }
-        final int oldPos = writeBuffer.position();
-        compressor.compress(inBuf, writeBuffer);
-        final int written = writeBuffer.position() - oldPos;
-        bytesWritten += written;
-        inBuf.clear();
-        finished = true;
-        if (!direct) {
-          outBuf.flip();
-=======
 
         if (useNative && inBuf.isDirect() && outBuf.isDirect()) {
           // 如果你现在用的是 heap ByteBuffer，改成 direct 分配（见 reset/reinit 部分）
@@ -117,14 +81,10 @@ public class Lz4Compressor implements CanReinit, Compressor {
           inBuf.clear();
           finished = true;
           outBuf.limit(outBuf.position() + written);
->>>>>>> rvv-optimization
           int n = Math.min(written, len);
           outBuf.get(b, off, n);
           return n;
         } else {
-<<<<<<< HEAD
-          return written;
-=======
           // 走原 lz4-java 路径
           int needed = maxCompressedLength(uncompressed);
           ByteBuffer writeBuffer;
@@ -155,7 +115,6 @@ public class Lz4Compressor implements CanReinit, Compressor {
           } else {
             return written;
           }
->>>>>>> rvv-optimization
         }
       } else {
         finished = true;
@@ -200,13 +159,8 @@ public class Lz4Compressor implements CanReinit, Compressor {
       int newBufferSize = Lz4Codec.getBufferSize(conf);
       if (bufferSize != newBufferSize) {
         bufferSize = newBufferSize;
-<<<<<<< HEAD
-        this.inBuf = ByteBuffer.allocate(bufferSize);
-        this.outBuf = ByteBuffer.allocate(bufferSize);
-=======
         this.inBuf = ByteBuffer.allocateDirect(bufferSize);
         this.outBuf = ByteBuffer.allocateDirect(bufferSize);
->>>>>>> rvv-optimization
       }
     }
     reset();
@@ -231,20 +185,12 @@ public class Lz4Compressor implements CanReinit, Compressor {
   @Override
   public void setInput(byte[] b, int off, int len) {
     if (inBuf.remaining() < len) {
-<<<<<<< HEAD
-      // Get a new buffer that can accomodate the accumulated input plus the additional
-      // input that would cause a buffer overflow without reallocation.
-      // This condition should be fortunately rare, because it is expensive.
-      int needed = CompressionUtil.roundInt2(inBuf.capacity() + len);
-      ByteBuffer newBuf = ByteBuffer.allocate(needed);
-=======
       // Get a new buffer that can accomodate the accumulated input plus the
       // additional
       // input that would cause a buffer overflow without reallocation.
       // This condition should be fortunately rare, because it is expensive.
       int needed = CompressionUtil.roundInt2(inBuf.capacity() + len);
-      ByteBuffer newBuf = ByteBuffer.allocateDirect(needed);
->>>>>>> rvv-optimization
+      ByteBuffer newBuf = ByteBuffer.allocate(needed);
       inBuf.flip();
       newBuf.put(inBuf);
       inBuf = newBuf;
