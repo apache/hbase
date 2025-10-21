@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.backup;
 
 import static org.apache.hadoop.hbase.IntegrationTestingUtility.createPreSplitLoadTestTable;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONF_CONTINUOUS_BACKUP_WAL_DIR;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -26,6 +27,7 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Scanner;
 import java.util.Set;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -49,7 +51,6 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
 import org.junit.After;
 import org.junit.Assert;
 import org.slf4j.Logger;
@@ -251,9 +252,13 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
     client.mergeBackups(backupIds);
   }
 
+  private void delete(String[] backupIds, BackupAdmin client) throws IOException {
+    client.deleteBackups(backupIds);
+  }
+
   private void runTestSingle(TableName table, boolean isContinuousBackupEnabled)
           throws IOException, InterruptedException {
-    String continuousBackupStatus = isContinuousBackupEnabled ? "enabled" : "disabled";
+    String enabledOrDisabled = isContinuousBackupEnabled ? "enabled" : "disabled";
     List<String> backupIds = new ArrayList<String>();
 
     try (Connection conn = util.getConnection(); BackupAdmin client = new BackupAdminImpl(conn)) {
@@ -261,7 +266,7 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
 
       // #1 - create full backup for table first
       LOG.info("Creating full backup image for {} with continuous backup {}", table,
-        continuousBackupStatus);
+        enabledOrDisabled);
       List<TableName> tables = Lists.newArrayList(table);
       BackupRequest.Builder builder = new BackupRequest.Builder();
       BackupRequest request = builder.withBackupType(BackupType.FULL).withTableList(tables)
@@ -270,77 +275,60 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
 
       String fullBackupId = backup(request, client);
       assertTrue(checkSucceeded(fullBackupId));
+      LOG.info("Created full backup with ID: {}", fullBackupId);
 
       verifySnapshotExists(table, fullBackupId);
 
+      // Run verifications specific to continuous backup
       if (isContinuousBackupEnabled) {
         BackupTestUtil.verifyReplicationPeerSubscription(util, table);
-        String backupWALDir = conf.get(CONF_CONTINUOUS_BACKUP_WAL_DIR);
-        LOG.info("kevin: got backupWALDir = {}", backupWALDir);
-        Path backupWALs = new Path(backupWALDir, "WALs");
-        LOG.info("kevin: backupWALs = {}", backupWALs);
-        assertTrue("There should be a WALs directory inside of the backup WAL directory at: " + backupWALDir,
-          fs.exists(backupWALs));
-        long currentTimeMs = System.currentTimeMillis();
-        String currentDateUTC = BackupUtils.formatToDateString(currentTimeMs);
-        Path walPartitionDir = new Path(backupWALs, currentDateUTC);
-        // TODO - wait for WAL date partition directory to appear
-        // do something like checking for existence and then waiting for 1 second up to 10 times
-
-        // TODO - verify the contents of WAL partition dir (backupWALDir/WALs/2025-10-18)
-        // it should have something like this:
-        // backupWALDir/WALs/2025-10-17/wal_file.1760738249595.1880be89-0b69-4bad-8d0e-acbf25c63b7e
-
-        Thread.sleep(10000); // put this here to wait for backupWALDir/WALs/2025-10-18 dir
-        assertTrue("The a backup WALs subdirectory with today's date should exist: ", fs.exists(walPartitionDir));
-
-
-        FileStatus[] fileStatuses = fs.listStatus(backupWALs);
-        for (FileStatus fileStatus : fileStatuses) {
-          LOG.info("kevin: fileStatus = {}", fileStatus);
-        }
+        Path backupWALs = verifyWALsDirectoryExists();
+        Path walPartitionDir = verifyWALPartitionDirExists(backupWALs);
+        verifyBackupWALFiles(walPartitionDir);
       }
 
-      LOG.info("kevin: sleeping");
-      Thread.sleep(30*60*1000);
-
       backupIds.add(fullBackupId);
+
       // Now continue with incremental backups
-      int count = 1;
       String incrementalBackupId;
-      while (count++ <= numIterations) {
-        LOG.info("{} - Starting iteration {} of {}", Thread.currentThread().getName(), count - 1,
+      for (int count = 1; count <= numIterations; count++) {
+        LOG.info("{} - Starting incremental backup iteration {} of {}", Thread.currentThread().getName(), count,
           numIterations);
         loadData(table, rowsInIteration);
 
         // Do incremental backup
         LOG.info("Creating incremental backup number {} with continuous backup {} for {}",
-          count - 1, continuousBackupStatus, table);
+          count, enabledOrDisabled, table);
         builder = new BackupRequest.Builder();
         request = builder.withBackupType(BackupType.INCREMENTAL).withTableList(tables)
           .withTargetRootDir(backupRootDir).withContinuousBackupEnabled(isContinuousBackupEnabled)
           .build();
         incrementalBackupId = backup(request, client);
         assertTrue(checkSucceeded(incrementalBackupId));
+        LOG.info("Created incremental backup with ID: {}", incrementalBackupId);
         backupIds.add(incrementalBackupId);
 
         // Restore incremental backup for table, with overwrite for previous backup
-        if ((count - 2) > 0) {
-          LOG.info("Restoring {} using second most recent incremental backup", table);
-        } else {
-          LOG.info("Restoring {} using original full backup", table);
-        }
         String previousBackupId = backupIds.get(backupIds.size() - 2);
+        if (previousBackupId.equals(fullBackupId)) {
+          LOG.info("Restoring {} using original full backup with ID: {}", table, previousBackupId);
+        } else {
+          LOG.info("Restoring {} using second most recent incremental backup with ID: {}",
+            table, previousBackupId);
+        }
         restoreTableAndVerifyRowCount(conn, client, table, previousBackupId,
-          (long) rowsInIteration * (count - 1));
+          (long) rowsInIteration * count);
 
         // Restore incremental backup for table, with overwrite for last backup
-        LOG.info("Restoring {} using most recent incremental backup", table);
+        LOG.info("Restoring {} using most recent incremental backup with ID: {}",
+          table, incrementalBackupId);
         restoreTableAndVerifyRowCount(conn, client, table, incrementalBackupId,
-          (long) rowsInIteration * count);
-        LOG.info("{} - Finished iteration {} of {}", Thread.currentThread().getName(), count - 1,
+          (long) rowsInIteration * (count + 1));
+        LOG.info("{} - Finished incremental backup iteration {} of {}",
+          Thread.currentThread().getName(), count,
           numIterations);
       }
+
       // Now merge all incremental and restore
       String[] incrementalBackupIds = getAllIncrementalBackupIds(backupIds);
       merge(incrementalBackupIds, client);
@@ -354,7 +342,35 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
       Assert.assertEquals(rowsInIteration * (numIterations + 1),
         HBaseTestingUtil.countRows(hTable));
       hTable.close();
+
+      LOG.info("kevin: backupRootDir before delete");
+      FileStatus[] fileStatuses = fs.listStatus(new Path(backupRootDir));
+      for (FileStatus fileStatus : fileStatuses) {
+        LOG.info("kevin: before delete fileStatus = {}", fileStatus);
+      }
+
+      // Delete the full backup
+      delete(new String[] {fullBackupId}, client);
+
+      // TODO
+      // 1. why are both the full backup and the incremental backup being deleted?
+      // 2. look at the file structure inside of the incremental backup directory and see
+      //    how it differs from the full backup's structure
+      // 3. 
+
+      LOG.info("kevin: backupRootDir after delete");
+      fileStatuses = fs.listStatus(new Path(backupRootDir));
+      for (FileStatus fileStatus : fileStatuses) {
+        LOG.info("kevin: after delete fileStatus = {}", fileStatus);
+      }
     }
+  }
+
+  private void runInputScanner() {
+    Scanner scanner = new Scanner(System.in);
+    System.out.println("kevin: Waiting for the user to input a line");
+    String line = scanner.nextLine();
+    System.out.printf("kevin: Got a line: '%s'. Continuing%n", line);
   }
 
   private void verifySnapshotExists(TableName tableName, String backupId) throws IOException {
@@ -372,6 +388,59 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
 
     if (dataManifestPath == null) {
       fail("Could not find snapshot manifest for table '" + tableName + "'");
+    }
+  }
+
+  private Path verifyWALsDirectoryExists() throws IOException {
+    String backupWALDir = conf.get(CONF_CONTINUOUS_BACKUP_WAL_DIR);
+    Path backupWALs = new Path(backupWALDir, "WALs");
+    assertTrue("There should be a WALs directory inside of the backup WAL directory at: "
+      + backupWALDir, fs.exists(backupWALs));
+    return backupWALs;
+  }
+
+  /**
+   * Waits for a WAL partition directory to exist inside the backup WAL directory. The directory
+   * should be something like: .../backupWALDir/WALs/2025-10-17. The directory's existence is
+   * either eventually asserted, or an assertion error is thrown if it does not exist past the wait
+   * deadline. This verification is to be used for full backups with continuous backup enabled.
+   * @param backupWALs The directory that should contain the partition directory.
+   *                   i.e. .../backupWALDir/WALs
+   * @return The Path to the WAL partition directory
+   */
+  private Path verifyWALPartitionDirExists(Path backupWALs) throws IOException,
+    InterruptedException {
+    long currentTimeMs = System.currentTimeMillis();
+    String currentDateUTC = BackupUtils.formatToDateString(currentTimeMs);
+    Path walPartitionDir = new Path(backupWALs, currentDateUTC);
+    int waitTimeSec = 30;
+    while (true) {
+      try {
+        assertTrue("A backup WALs subdirectory with today's date should exist: "
+          + walPartitionDir, fs.exists(walPartitionDir));
+        break;
+      } catch (AssertionError e) {
+        if ((System.currentTimeMillis() - currentTimeMs) >= waitTimeSec*1000) {
+          throw new AssertionError(e);
+        }
+        LOG.info("Waiting up to {} seconds for WAL partition directory to exist: {}",
+          waitTimeSec, walPartitionDir);
+        Thread.sleep(1000);
+      }
+    }
+    return walPartitionDir;
+  }
+
+  private void verifyBackupWALFiles(Path walPartitionDir) throws IOException {
+    FileStatus[] fileStatuses = fs.listStatus(walPartitionDir);
+    for (FileStatus fileStatus : fileStatuses) {
+      String walFileName = fileStatus.getPath().getName();
+      String[] splitName = walFileName.split("\\.");
+      assertEquals("The WAL partition directory should only have files that start with 'wal_file'",
+        "wal_file", splitName[0]);
+      assertEquals("The timestamp in the WAL file's name should match the date for the WAL partition directory",
+        walPartitionDir.getName(), BackupUtils.formatToDateString(
+        Long.parseLong(splitName[1])));
     }
   }
 
