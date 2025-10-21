@@ -21,4 +21,5 @@ package org.apache.hadoop.hbase.testclassification;
  * Tag the tests related to rs group feature.
  */
 public interface RSGroupTests {
+  public static final String TAG = "org.apache.hadoop.hbase.testclassification.RSGroupTests";
 }

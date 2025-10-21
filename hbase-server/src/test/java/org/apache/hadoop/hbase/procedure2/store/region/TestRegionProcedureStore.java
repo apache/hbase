@@ -326,16 +326,6 @@ public class TestRegionProcedureStore extends RegionProcedureStoreTestBase {
       @Override
       public void incrementResponseExceptionSize(long exceptionSize) {
       }
-
-      @Override
-      public void updateFsReadTime(long latencyMillis) {
-
-      }
-
-      @Override
-      public long getFsReadTime() {
-        return 0;
-      }
     };
   }
 }

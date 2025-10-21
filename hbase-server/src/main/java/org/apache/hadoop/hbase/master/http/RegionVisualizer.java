@@ -58,7 +58,7 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
 /**
  * Support class for the "Region Visualizer" rendered out of
- * {@code src/main/jamon/org/apache/hadoop/hbase/tmpl/master/RegionVisualizerTmpl.jamon}
+ * {@code src/main/resources/hbase-webapps/master/regionVisualizer.jsp}
  */
 @InterfaceAudience.Private
 public class RegionVisualizer extends AbstractHBaseTool {

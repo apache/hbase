@@ -855,7 +855,7 @@
     <maven.min.version>3.5.0</maven.min.version>
     <java.min.version>${compileSource}</java.min.version>
     <!-- Dependencies -->
-    <hadoop-three.version>3.4.1</hadoop-three.version>
+    <hadoop-three.version>3.4.2</hadoop-three.version>
     <!-- These must be defined here for downstream build tools that don't look at profiles.
     -->
     <hadoop.version>${hadoop-three.version}</hadoop.version>
@@ -895,7 +895,7 @@
     <jaxb-api.version>2.3.1</jaxb-api.version>
     <servlet.api.version>4.0.1</servlet.api.version>
     <wx.rs.api.version>2.1.1</wx.rs.api.version>
-    <tomcat.jasper.version>9.0.108</tomcat.jasper.version>
+    <tomcat.jasper.version>9.0.110</tomcat.jasper.version>
     <jruby.version>9.4.12.1</jruby.version>
     <junit.jupiter.version>5.13.4</junit.jupiter.version>
     <junit.vintage.version>5.13.4</junit.vintage.version>
@@ -935,14 +935,14 @@
     <!--
       When updating checkstyle.version, please make the same change in `.idea/checkstyle-idea.xml`
     -->
-    <checkstyle.version>8.29</checkstyle.version>
+    <checkstyle.version>11.0.1</checkstyle.version>
     <exec.maven.version>3.1.0</exec.maven.version>
     <error-prone.version>2.41.0</error-prone.version>
     <jamon.plugin.version>2.4.2</jamon.plugin.version>
     <lifecycle.mapping.version>1.0.0</lifecycle.mapping.version>
     <maven.antrun.version>1.8</maven.antrun.version>
     <maven.bundle.version>3.3.0</maven.bundle.version>
-    <maven.checkstyle.version>3.1.0</maven.checkstyle.version>
+    <maven.checkstyle.version>3.6.0</maven.checkstyle.version>
     <maven.eclipse.version>2.10</maven.eclipse.version>
     <maven.gpg.version>3.0.1</maven.gpg.version>
     <maven.javadoc.version>3.4.0</maven.javadoc.version>
@@ -950,7 +950,7 @@
     <maven.warbucks.version>1.1.0</maven.warbucks.version>
     <maven.project.info.report.version>3.1.2</maven.project.info.report.version>
     <maven-owasp-plugin.version>12.1.0</maven-owasp-plugin.version>
-    <os.maven.version>1.5.0.Final</os.maven.version>
+    <os.maven.version>1.7.1</os.maven.version>
     <findbugs-annotations.version>1.3.9-1</findbugs-annotations.version>
     <spotbugs.version>4.7.3</spotbugs.version>
     <spotbugs.maven.version>4.7.2.1</spotbugs.maven.version>
@@ -959,6 +959,18 @@
     <xml.maven.version>1.0.1</xml.maven.version>
     <spotless.version>2.44.4</spotless.version>
     <maven-site.version>3.12.0</maven-site.version>
+    <reflow-maven-skin.version>2.3.3</reflow-maven-skin.version>
+    <maven-download-plugin.version>1.2.1</maven-download-plugin.version>
+    <!-- Website static CSS, JS dependencies -->
+    <site.bootswatch.version>4.4.0</site.bootswatch.version>
+    <site.popperjs.version>1.16.0</site.popperjs.version>
+    <site.jquery.version>3.4.1</site.jquery.version>
+    <site.bootstrap.version>4.4.1</site.bootstrap.version>
+    <site.anchorjs.version>3.2.2</site.anchorjs.version>
+    <site.fontawesome.version>5.12.0</site.fontawesome.version>
+    <!-- RefGuide static CSS, JS dependencies -->
+    <refguide.fontawesome.version>4.7.0</refguide.fontawesome.version>
+    <refguide.mathjax.version>2.7.0</refguide.mathjax.version>
     <!-- compression -->
     <aircompressor.version>0.27</aircompressor.version>
     <brotli4j.version>1.11.0</brotli4j.version>
@@ -1052,6 +1064,13 @@
       --add-opens java.base/sun.security.x509=ALL-UNNAMED
       --add-opens java.base/sun.security.util=ALL-UNNAMED
       --add-opens java.base/java.net=ALL-UNNAMED</hbase-surefire.jdk17.flags>
+    <!-- Java 18+ disables the Security Manager by default. Hadoop 3.4.2 and earlier doesn't work
+    without Security Manager.
+    When Hadoop 3.5.0 is released and HBase adds support for it, this can be removed, or moved
+    to a Hadoop version dependent profile.
+    This is NOT added to the startup scripts, as this is a major change, and the user better be
+    aware of this requirement and add this in hbase-env.sh and/or in their application -->
+    <hbase-surefire.jdk18.flags>-Djava.security.manager=allow</hbase-surefire.jdk18.flags>
     <!-- Surefire argLine defaults to Linux, cygwin argLine is used in the os.windows profile -->
     <argLine>${hbase-surefire.argLine} @{jacocoArgLine}</argLine>
     <extra.enforcer.version>1.5.1</extra.enforcer.version>
@@ -1069,8 +1088,8 @@
     <!-- Still need this to ignore some errors when building javadoc-->
     <doclint>none</doclint>
     <!-- Required for testing LDAP integration -->
-    <apacheds.version>2.0.0.AM26</apacheds.version>
-    <ldap-api.version>2.0.0</ldap-api.version>
+    <apacheds.version>2.0.0.AM27</apacheds.version>
+    <ldap-api.version>2.1.7</ldap-api.version>
     <webjars-dir>${project.build.directory}/META-INF/resources/webjars</webjars-dir>
     <!-- Web UI dependencies -->
     <bootstrap.version>5.3.3</bootstrap.version>
@@ -1960,6 +1979,7 @@
                 <name>listener</name>
                 <value>org.apache.hadoop.hbase.TimedOutTestsListener,org.apache.hadoop.hbase.HBaseClassTestRuleChecker,org.apache.hadoop.hbase.ResourceCheckerJUnitListener</value>
               </property>
+              <configurationParameters>junit.jupiter.extensions.autodetection.enabled=true</configurationParameters>
             </properties>
           </configuration>
           <executions>
@@ -2775,7 +2795,8 @@
         <artifactId>maven-dependency-plugin</artifactId>
         <executions>
           <execution>
-            <id>unpack-website-resources</id>
+            <!-- Required for the RefGuide (book.html) to use local resources (e.g. not from CDN). -->
+            <id>unpack-RefGuide-resources</id>
             <goals>
               <goal>unpack</goal>
             </goals>
@@ -2784,25 +2805,8 @@
               <artifactItems>
                 <artifactItem>
                   <groupId>org.webjars</groupId>
-                  <artifactId>bootstrap</artifactId>
-                  <version>2.3.2</version>
-                  <type>jar</type>
-                  <overWrite>true</overWrite>
-                  <includes>**/css/bootstrap-responsive.min.css</includes>
-                </artifactItem>
-                <artifactItem>
-                  <groupId>org.webjars</groupId>
-                  <artifactId>highlightjs</artifactId>
-                  <version>8.7</version>
-                  <type>jar</type>
-                  <overWrite>true</overWrite>
-                  <includes>**/styles/github.min.css,
-                    **/highlight.min.js,</includes>
-                </artifactItem>
-                <artifactItem>
-                  <groupId>org.webjars</groupId>
                   <artifactId>font-awesome</artifactId>
-                  <version>4.7.0</version>
+                  <version>${refguide.fontawesome.version}</version>
                   <type>jar</type>
                   <overWrite>true</overWrite>
                   <includes>**/css/font-awesome.css,
@@ -2815,7 +2819,7 @@
                 <artifactItem>
                   <groupId>org.webjars</groupId>
                   <artifactId>MathJax</artifactId>
-                  <version>2.7.0</version>
+                  <version>${refguide.mathjax.version}</version>
                   <type>jar</type>
                   <overWrite>true</overWrite>
                   <includes>**/MathJax.js,
@@ -2838,6 +2842,55 @@
                     **/fonts/HTML-CSS/TeX/otf/MathJax_Size1-Regular.otf,
                     **/fonts/HTML-CSS/TeX/otf/MathJax_Size3-Regular.otf,
                     **/fonts/HTML-CSS/TeX/otf/MathJax_SansSerif-Italic.otf,</includes>
+                </artifactItem>
+              </artifactItems>
+              <outputDirectory>${project.build.directory}</outputDirectory>
+            </configuration>
+          </execution>
+          <execution>
+            <!-- Required for the site to use local resources (e.g. not from CDN). -->
+            <id>unpack-site-resources</id>
+            <goals>
+              <goal>unpack</goal>
+            </goals>
+            <phase>pre-site</phase>
+            <configuration>
+              <artifactItems>
+                <artifactItem>
+                  <groupId>org.webjars</groupId>
+                  <artifactId>bootstrap</artifactId>
+                  <version>${site.bootstrap.version}</version>
+                  <includes>**/js/bootstrap.min.js</includes>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.webjars.npm</groupId>
+                  <artifactId>bootswatch</artifactId>
+                  <version>${site.bootswatch.version}</version>
+                  <includes>**/litera/bootstrap.min.css</includes>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.webjars</groupId>
+                  <artifactId>popper.js</artifactId>
+                  <version>${site.popperjs.version}</version>
+                  <includes>**/umd/popper.min.js</includes>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.webjars</groupId>
+                  <artifactId>jquery</artifactId>
+                  <version>${site.jquery.version}</version>
+                  <includes>**/jquery.min.js</includes>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.webjars</groupId>
+                  <artifactId>anchorjs</artifactId>
+                  <version>${site.anchorjs.version}</version>
+                  <includes>**/anchor.min.js</includes>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.webjars</groupId>
+                  <artifactId>font-awesome</artifactId>
+                  <version>${site.fontawesome.version}</version>
+                  <includes>**/css/all.min.css,**/webfonts/*</includes>
                 </artifactItem>
               </artifactItems>
               <outputDirectory>${project.build.directory}</outputDirectory>
@@ -2872,11 +2925,15 @@
         <version>${maven-site.version}</version>
         <configuration>
           <siteDirectory>${basedir}/src/site</siteDirectory>
-          <customBundle>${basedir}/src/site/custom/project-info-report.properties</customBundle>
           <inputEncoding>UTF-8</inputEncoding>
           <outputEncoding>UTF-8</outputEncoding>
         </configuration>
         <dependencies>
+          <dependency>
+            <groupId>io.github.devacfr.maven.skins</groupId>
+            <artifactId>reflow-velocity-tools</artifactId>
+            <version>${reflow-maven-skin.version}</version>
+          </dependency>
           <dependency>
             <!-- add support for ssh/scp -->
             <groupId>org.apache.maven.wagon</groupId>
@@ -2987,6 +3044,67 @@
               </resources>
             </configuration>
           </execution>
+          <execution>
+            <id>copy-website-resources</id>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <phase>pre-site</phase>
+            <configuration>
+              <outputDirectory>${project.build.outputDirectory}</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>${project.build.directory}/META-INF/resources/webjars/bootstrap/${site.bootstrap.version}/js</directory>
+                  <targetPath>${project.build.directory}/site/js</targetPath>
+                  <includes>
+                    <include>bootstrap.min.js</include>
+                  </includes>
+                </resource>
+                <resource>
+                  <directory>${project.build.directory}/META-INF/resources/webjars/bootswatch/${site.bootswatch.version}/dist/litera</directory>
+                  <targetPath>${project.build.directory}/site/css/themes/litera</targetPath>
+                  <includes>
+                    <include>bootstrap.min.css</include>
+                  </includes>
+                </resource>
+                <resource>
+                  <directory>${project.build.directory}/META-INF/resources/webjars/popper.js/${site.popperjs.version}/umd</directory>
+                  <targetPath>${project.build.directory}/site/js</targetPath>
+                  <includes>
+                    <include>popper.min.js</include>
+                  </includes>
+                </resource>
+                <resource>
+                  <directory>${project.build.directory}/META-INF/resources/webjars/jquery/${site.jquery.version}</directory>
+                  <targetPath>${project.build.directory}/site/js</targetPath>
+                  <includes>
+                    <include>jquery.min.js</include>
+                  </includes>
+                </resource>
+                <resource>
+                  <directory>${project.build.directory}/META-INF/resources/webjars/anchorjs/${site.anchorjs.version}</directory>
+                  <targetPath>${project.build.directory}/site/js</targetPath>
+                  <includes>
+                    <include>anchor.min.js</include>
+                  </includes>
+                </resource>
+                <resource>
+                  <directory>${project.build.directory}/META-INF/resources/webjars/font-awesome/${site.fontawesome.version}/css</directory>
+                  <targetPath>${project.build.directory}/site/css/fontawesome</targetPath>
+                  <includes>
+                    <include>all.min.css</include>
+                  </includes>
+                </resource>
+                <resource>
+                  <directory>${project.build.directory}/META-INF/resources/webjars/font-awesome/${site.fontawesome.version}</directory>
+                  <targetPath>${project.build.directory}/site/css</targetPath>
+                  <includes>
+                    <include>webfonts/*</include>
+                  </includes>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
         </executions>
       </plugin>
       <plugin>
@@ -3009,8 +3127,8 @@
             </configuration>
           </execution>
           <execution>
-            <!-- Copy static CSS and JS files for the website. -->
-            <id>copy-css-js-to-site</id>
+            <!-- Copy static CSS and JS files for the RefGuide (book.html). -->
+            <id>copy-css-js-for-RefGuide</id>
             <goals>
               <goal>run</goal>
             </goals>
@@ -3018,26 +3136,17 @@
             <configuration>
               <target>
                 <copy flatten="true" todir="${project.build.directory}/site/css">
-                  <fileset dir="${webjars-dir}/bootstrap/2.3.2/css">
-                    <include name="bootstrap-responsive.min.css"/>
-                  </fileset>
-                  <fileset dir="${webjars-dir}/highlightjs/8.7/styles">
-                    <include name="github.min.css"/>
-                  </fileset>
-                  <fileset dir="${webjars-dir}/font-awesome/4.7.0/css">
+                  <fileset dir="${webjars-dir}/font-awesome/${refguide.fontawesome.version}/css">
                     <include name="font-awesome.css"/>
                   </fileset>
                 </copy>
                 <copy flatten="true" todir="${project.build.directory}/site/js">
-                  <fileset dir="${webjars-dir}/highlightjs/8.7/">
-                    <include name="highlight.min.js"/>
-                  </fileset>
-                  <fileset dir="${webjars-dir}/MathJax/2.7.0">
+                  <fileset dir="${webjars-dir}/MathJax/${refguide.mathjax.version}">
                     <include name="MathJax.js"/>
                   </fileset>
                 </copy>
                 <copy flatten="false" todir="${project.build.directory}/site/js">
-                  <fileset dir="${webjars-dir}/MathJax/2.7.0">
+                  <fileset dir="${webjars-dir}/MathJax/${refguide.mathjax.version}">
                     <include name="config/TeX-MML-AM_HTMLorMML.js"/>
                     <include name="jax/output/HTML-CSS/jax.js"/>
                     <include name="jax/output/HTML-CSS/imageFonts.js"/>
@@ -3050,7 +3159,7 @@
                   </fileset>
                 </copy>
                 <copy flatten="true" todir="${project.build.directory}/site/fonts">
-                  <fileset dir="${webjars-dir}/font-awesome/4.7.0/fonts">
+                  <fileset dir="${webjars-dir}/font-awesome/${refguide.fontawesome.version}/fonts">
                     <include name="fontawesome-webfont.*"/>
                   </fileset>
                 </copy>
@@ -3571,6 +3680,18 @@
           </plugins>
         </pluginManagement>
       </build>
+    </profile>
+    <profile>
+      <id>build-with-jdk18</id>
+      <activation>
+        <jdk>[18,)</jdk>
+      </activation>
+      <properties>
+        <argLine>${hbase-surefire.jdk17.flags}
+          ${hbase-surefire.jdk18.flags}
+          ${hbase-surefire.argLine}
+          @{jacocoArgLine}</argLine>
+      </properties>
     </profile>
     <!-- profile activated by the Jenkins patch testing job -->
     <profile>

@@ -1413,6 +1413,22 @@ public interface RegionObserver {
   }
 
   /**
+   * Called before a {@link WALEdit} replayed for this region.
+   * @param ctx the environment provided by the region server
+   */
+  default void preWALRestore(ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
+    RegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
+  }
+
+  /**
+   * Called after a {@link WALEdit} replayed for this region.
+   * @param ctx the environment provided by the region server
+   */
+  default void postWALRestore(ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
+    RegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
+  }
+
+  /**
    * Called before bulkLoadHFile. Users can create a StoreFile instance to access the contents of a
    * HFile.
    * @param ctx         the environment provided by the region server
