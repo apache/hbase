@@ -342,9 +342,6 @@ message ClearSlowLogResponses {
   required bool is_cleaned = 1;
 }
 
-message RefreshSystemKeyCacheRequest {
-}
-
 service AdminService {
   rpc GetRegionInfo(GetRegionInfoRequest)
     returns(GetRegionInfoResponse);
@@ -424,6 +421,6 @@ service AdminService {
   rpc GetCachedFilesList(GetCachedFilesListRequest)
     returns(GetCachedFilesListResponse);
 
-  rpc RefreshSystemKeyCache(RefreshSystemKeyCacheRequest)
+  rpc RefreshSystemKeyCache(EmptyMsg)
     returns(EmptyMsg);
 }

@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.keymeta.ManagedKeyTestBase;
@@ -82,4 +81,3 @@ public class TestKeymetaMockProviderShell extends ManagedKeyTestBase implements 
     RubyShellTest.testRunShellTests(this);
   }
 }
-

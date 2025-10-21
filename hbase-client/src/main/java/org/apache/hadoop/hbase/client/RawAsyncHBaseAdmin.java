@@ -143,7 +143,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionIn
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionLoadRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionLoadResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RefreshSystemKeyCacheRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RollWALWriterRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RollWALWriterResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerRequest;
@@ -4690,10 +4689,9 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   private CompletableFuture<Void> refreshSystemKeyCache(ServerName serverName) {
-    RefreshSystemKeyCacheRequest request = RefreshSystemKeyCacheRequest.newBuilder().build();
     return this.<Void> newAdminCaller()
-      .action((controller, stub) -> this.<RefreshSystemKeyCacheRequest, EmptyMsg, Void> adminCall(
-        controller, stub, request,
+      .action((controller, stub) -> this.<EmptyMsg, EmptyMsg, Void> adminCall(controller, stub,
+        EmptyMsg.getDefaultInstance(),
         (s, c, req, done) -> s.refreshSystemKeyCache(controller, req, done), resp -> null))
       .serverName(serverName).call();
   }

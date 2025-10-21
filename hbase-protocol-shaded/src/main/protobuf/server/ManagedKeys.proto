@@ -24,6 +24,8 @@ option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;
 
+import "HBase.proto";
+
 message ManagedKeysRequest {
   required string key_cust = 1;
   required string key_namespace = 2;
@@ -48,9 +50,6 @@ message GetManagedKeysResponse {
   repeated ManagedKeysResponse state = 1;
 }
 
-message RotateSTKRequest {
-}
-
 message RotateSTKResponse {
   required bool rotated = 1;
 }
@@ -60,6 +59,6 @@ service ManagedKeysService {
     returns (GetManagedKeysResponse);
   rpc GetManagedKeys(ManagedKeysRequest)
     returns (GetManagedKeysResponse);
-  rpc RotateSTK(RotateSTKRequest)
+  rpc RotateSTK(EmptyMsg)
     returns (RotateSTKResponse);
 }

@@ -190,7 +190,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.OpenRegionR
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.OpenRegionRequest.RegionOpenInfo;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.OpenRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.OpenRegionResponse.RegionOpeningState;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RefreshSystemKeyCacheRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RemoteProcedureRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryResponse;
@@ -4069,8 +4068,8 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
    */
   @Override
   @QosPriority(priority = HConstants.ADMIN_QOS)
-  public EmptyMsg refreshSystemKeyCache(final RpcController controller,
-    final RefreshSystemKeyCacheRequest request) throws ServiceException {
+  public EmptyMsg refreshSystemKeyCache(final RpcController controller, final EmptyMsg request)
+    throws ServiceException {
     try {
       checkOpen();
       requestCount.increment();

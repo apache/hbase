@@ -54,7 +54,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetStoreFil
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetStoreFileResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.OpenRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.OpenRegionResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RefreshSystemKeyCacheRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RollWALWriterRequest;
@@ -220,7 +219,7 @@ public class AsyncRegionServerAdmin {
     return call((stub, controller, done) -> stub.executeProcedures(controller, request, done));
   }
 
-  public CompletableFuture<EmptyMsg> refreshSystemKeyCache(RefreshSystemKeyCacheRequest request) {
+  public CompletableFuture<EmptyMsg> refreshSystemKeyCache(EmptyMsg request) {
     return call((stub, controller, done) -> stub.refreshSystemKeyCache(controller, request, done));
   }
 }

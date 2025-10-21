@@ -49,7 +49,6 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.EmptyMsg;
 
 /**
@@ -109,8 +108,7 @@ public class TestRSRpcServices {
     RSRpcServices rpcServices = new RSRpcServices(mockServer);
 
     // Create request
-    AdminProtos.RefreshSystemKeyCacheRequest request =
-      AdminProtos.RefreshSystemKeyCacheRequest.newBuilder().build();
+    EmptyMsg request = EmptyMsg.getDefaultInstance();
     RpcController controller = mock(RpcController.class);
 
     // Call the RPC method
@@ -146,8 +144,7 @@ public class TestRSRpcServices {
     RSRpcServices rpcServices = new RSRpcServices(mockServer);
 
     // Create request
-    AdminProtos.RefreshSystemKeyCacheRequest request =
-      AdminProtos.RefreshSystemKeyCacheRequest.newBuilder().build();
+    EmptyMsg request = EmptyMsg.getDefaultInstance();
     RpcController controller = mock(RpcController.class);
 
     // Call the RPC method and expect ServiceException
@@ -187,8 +184,7 @@ public class TestRSRpcServices {
     RSRpcServices rpcServices = new RSRpcServices(mockServer);
 
     // Create request
-    AdminProtos.RefreshSystemKeyCacheRequest request =
-      AdminProtos.RefreshSystemKeyCacheRequest.newBuilder().build();
+    EmptyMsg request = EmptyMsg.getDefaultInstance();
     RpcController controller = mock(RpcController.class);
 
     // Call the RPC method and expect ServiceException

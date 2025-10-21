@@ -35,7 +35,6 @@ import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.GetManagedKe
 import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.ManagedKeysRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.ManagedKeysResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.ManagedKeysService;
-import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.RotateSTKRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.RotateSTKResponse;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -45,6 +44,8 @@ import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.Service;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.EmptyMsg;
 
 /**
  * This class implements a coprocessor service endpoint for the key management metadata operations.
@@ -146,7 +147,7 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
      * @param done       The callback to be invoked with the response.
      */
     @Override
-    public void rotateSTK(RpcController controller, RotateSTKRequest request,
+    public void rotateSTK(RpcController controller, EmptyMsg request,
       RpcCallback<RotateSTKResponse> done) {
       boolean rotated;
       try {

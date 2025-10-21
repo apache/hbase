@@ -34,6 +34,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.EmptyMsg;
 
 @InterfaceAudience.Public
 public class KeymetaAdminClient implements KeymetaAdmin {
@@ -73,7 +74,7 @@ public class KeymetaAdminClient implements KeymetaAdmin {
   public boolean rotateSTK() throws IOException {
     try {
       ManagedKeysProtos.RotateSTKResponse response =
-        stub.rotateSTK(null, ManagedKeysProtos.RotateSTKRequest.newBuilder().build());
+        stub.rotateSTK(null, EmptyMsg.getDefaultInstance());
       return response.getRotated();
     } catch (ServiceException e) {
       throw ProtobufUtil.handleRemoteException(e);
