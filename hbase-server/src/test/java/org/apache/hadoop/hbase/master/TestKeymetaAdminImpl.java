@@ -29,7 +29,6 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -49,9 +48,8 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.AsyncAdmin;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
-import org.apache.hadoop.hbase.client.AsyncRegionServerAdmin;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
@@ -76,11 +74,6 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 import org.junit.runners.Suite;
-
-import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
-
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.EmptyMsg;
 
 @RunWith(Suite.class)
 @Suite.SuiteClasses({ TestKeymetaAdminImpl.TestWhenDisabled.class,
@@ -293,13 +286,17 @@ public class TestKeymetaAdminImpl {
       HBaseClassTestRule.forClass(TestRotateSTK.class);
 
     private ServerManager mockServerManager = mock(ServerManager.class);
-    private AsyncClusterConnection mockConnection = mock(AsyncClusterConnection.class);
+    private AsyncClusterConnection mockConnection;
+    private AsyncAdmin mockAsyncAdmin;
 
     @Override
     public void setUp() throws Exception {
       super.setUp();
+      mockConnection = mock(AsyncClusterConnection.class);
+      mockAsyncAdmin = mock(AsyncAdmin.class);
       when(mockServer.getServerManager()).thenReturn(mockServerManager);
       when(mockServer.getAsyncClusterConnection()).thenReturn(mockConnection);
+      when(mockConnection.getAdmin()).thenReturn(mockAsyncAdmin);
     }
 
     /**
@@ -312,25 +309,11 @@ public class TestKeymetaAdminImpl {
     @Test
     public void testRotateSTKWithNewKey() throws Exception {
       // Setup mocks for MasterServices
-      AsyncRegionServerAdmin mockRsAdmin1 = mock(AsyncRegionServerAdmin.class);
-      AsyncRegionServerAdmin mockRsAdmin2 = mock(AsyncRegionServerAdmin.class);
-
       // Mock SystemKeyManager to return a new key (non-null)
       when(mockServer.rotateSystemKeyIfChanged()).thenReturn(true);
 
-      ServerName rs1 = ServerName.valueOf("rs1", 16020, System.currentTimeMillis());
-      ServerName rs2 = ServerName.valueOf("rs2", 16020, System.currentTimeMillis());
-      List<ServerName> regionServers = Arrays.asList(rs1, rs2);
-
-      when(mockServerManager.getOnlineServersList()).thenReturn(regionServers);
-      when(mockConnection.getRegionServerAdmin(rs1)).thenReturn(mockRsAdmin1);
-      when(mockConnection.getRegionServerAdmin(rs2)).thenReturn(mockRsAdmin2);
-
-      EmptyMsg rsResponse = EmptyMsg.getDefaultInstance();
-      when(mockRsAdmin1.refreshSystemKeyCache(any(AdminProtos.RefreshSystemKeyCacheRequest.class)))
-        .thenReturn(CompletableFuture.completedFuture(rsResponse));
-      when(mockRsAdmin2.refreshSystemKeyCache(any(AdminProtos.RefreshSystemKeyCacheRequest.class)))
-        .thenReturn(CompletableFuture.completedFuture(rsResponse));
+      when(mockAsyncAdmin.refreshSystemKeyCacheOnAllServers())
+        .thenReturn(CompletableFuture.completedFuture(null));
 
       KeymetaAdminImplForTest admin = new KeymetaAdminImplForTest(mockServer, keymetaAccessor);
 
@@ -342,12 +325,7 @@ public class TestKeymetaAdminImpl {
 
       // Verify that rotateSystemKeyIfChanged was called
       verify(mockServer).rotateSystemKeyIfChanged();
-
-      // Verify that both region servers received the rotation request
-      verify(mockRsAdmin1)
-        .refreshSystemKeyCache(any(AdminProtos.RefreshSystemKeyCacheRequest.class));
-      verify(mockRsAdmin2)
-        .refreshSystemKeyCache(any(AdminProtos.RefreshSystemKeyCacheRequest.class));
+      verify(mockAsyncAdmin).refreshSystemKeyCacheOnAllServers();
     }
 
     /**
@@ -387,74 +365,29 @@ public class TestKeymetaAdminImpl {
     }
 
     /**
-     * Test rotateSTK when multiple region servers fail. Verifies that all failed server names are
-     * included in the exception message.
+     * Test rotateSTK when region server refresh fails.
      */
     @Test
-    public void testRotateSTKWithMultipleFailedServers() throws Exception {
+    public void testRotateSTKWithFailedServerRefresh() throws Exception {
       // Setup mocks for MasterServices
-      AsyncRegionServerAdmin mockRsAdmin1 = mock(AsyncRegionServerAdmin.class);
-      AsyncRegionServerAdmin mockRsAdmin2 = mock(AsyncRegionServerAdmin.class);
-      AsyncRegionServerAdmin mockRsAdmin3 = mock(AsyncRegionServerAdmin.class);
-
       // Mock SystemKeyManager to return a new key (non-null)
       when(mockServer.rotateSystemKeyIfChanged()).thenReturn(true);
 
-      ServerName rs1 = ServerName.valueOf("rs1.example.com", 16020, System.currentTimeMillis());
-      ServerName rs2 = ServerName.valueOf("rs2.example.com", 16020, System.currentTimeMillis());
-      ServerName rs3 = ServerName.valueOf("rs3.example.com", 16020, System.currentTimeMillis());
-      List<ServerName> regionServers = Arrays.asList(rs1, rs2, rs3);
-
-      when(mockServerManager.getOnlineServersList()).thenReturn(regionServers);
-      when(mockConnection.getRegionServerAdmin(rs1)).thenReturn(mockRsAdmin1);
-      when(mockConnection.getRegionServerAdmin(rs2)).thenReturn(mockRsAdmin2);
-      when(mockConnection.getRegionServerAdmin(rs3)).thenReturn(mockRsAdmin3);
-
-      EmptyMsg successResponse = EmptyMsg.getDefaultInstance();
-
-      // RS1 succeeds
-      when(mockRsAdmin1.refreshSystemKeyCache(any(AdminProtos.RefreshSystemKeyCacheRequest.class)))
-        .thenReturn(CompletableFuture.completedFuture(successResponse));
-
-      // RS2 fails with IOException
-      CompletableFuture<EmptyMsg> failedFuture2 = new CompletableFuture<>();
-      failedFuture2.completeExceptionally(new IOException("Connection timeout to rs2"));
-      when(mockRsAdmin2.refreshSystemKeyCache(any(AdminProtos.RefreshSystemKeyCacheRequest.class)))
-        .thenReturn(failedFuture2);
-
-      // RS3 fails with ServiceException
-      CompletableFuture<EmptyMsg> failedFuture3 = new CompletableFuture<>();
-      failedFuture3.completeExceptionally(new ServiceException("Server error on rs3"));
-      when(mockRsAdmin3.refreshSystemKeyCache(any(AdminProtos.RefreshSystemKeyCacheRequest.class)))
-        .thenReturn(failedFuture3);
+      CompletableFuture<Void> failedFuture = new CompletableFuture<>();
+      failedFuture.completeExceptionally(new IOException("refresh failed"));
+      when(mockAsyncAdmin.refreshSystemKeyCacheOnAllServers()).thenReturn(failedFuture);
 
       KeymetaAdminImplForTest admin = new KeymetaAdminImplForTest(mockServer, keymetaAccessor);
 
       // Call rotateSTK and expect IOException
       IOException ex = assertThrows(IOException.class, () -> admin.rotateSTK());
 
-      // Verify the exception message contains both failed server names
-      String exceptionMessage = ex.getMessage();
-      assertTrue("Exception message should contain 'Failed to initiate System Key cache refresh'",
-        exceptionMessage.contains("Failed to initiate System Key cache refresh on region servers"));
-      assertTrue("Exception message should contain rs2 server name: " + exceptionMessage,
-        exceptionMessage.contains("rs2.example.com"));
-      assertTrue("Exception message should contain rs3 server name: " + exceptionMessage,
-        exceptionMessage.contains("rs3.example.com"));
-      // rs1 succeeded, so it should NOT be in the exception message
-      assertFalse("Exception message should NOT contain rs1 server name: " + exceptionMessage,
-        exceptionMessage.contains("rs1.example.com"));
+      assertTrue(ex.getMessage()
+        .contains("Failed to initiate System Key cache refresh on one or more region servers"));
 
       // Verify that rotateSystemKeyIfChanged was called
       verify(mockServer).rotateSystemKeyIfChanged();
-
-      // Verify that all region servers received the rotation request
-      verify(mockRsAdmin1)
-        .refreshSystemKeyCache(any(AdminProtos.RefreshSystemKeyCacheRequest.class));
-      verify(mockRsAdmin2)
-        .refreshSystemKeyCache(any(AdminProtos.RefreshSystemKeyCacheRequest.class));
-      verify(mockRsAdmin3)
-        .refreshSystemKeyCache(any(AdminProtos.RefreshSystemKeyCacheRequest.class));
+      verify(mockAsyncAdmin).refreshSystemKeyCacheOnAllServers();
     }
 
     @Test
@@ -468,7 +401,12 @@ public class TestKeymetaAdminImpl {
       when(mockRegionServer.getConfiguration()).thenReturn(conf);
       when(mockRegionServer.getFileSystem()).thenReturn(mockFileSystem);
 
-      KeymetaAdminImpl admin = new KeymetaAdminImpl(mockRegionServer);
+      KeymetaAdminImpl admin = new KeymetaAdminImpl(mockRegionServer) {
+        @Override
+        protected AsyncAdmin getAsyncAdmin(MasterServices master) {
+          throw new RuntimeException("Shouldn't be called since we are not on master");
+        }
+      };
 
       IOException ex = assertThrows(IOException.class, () -> admin.rotateSTK());
       assertTrue(ex.getMessage().contains("rotateSTK can only be called on master"));
@@ -478,7 +416,12 @@ public class TestKeymetaAdminImpl {
     public void testRotateSTKWhenDisabled() throws Exception {
       TEST_UTIL.getConfiguration().set(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, "false");
 
-      KeymetaAdminImpl admin = new KeymetaAdminImpl(mockServer);
+      KeymetaAdminImpl admin = new KeymetaAdminImpl(mockServer) {
+        @Override
+        protected AsyncAdmin getAsyncAdmin(MasterServices master) {
+          throw new RuntimeException("Shouldn't be called since we are disabled");
+        }
+      };
 
       IOException ex = assertThrows(IOException.class, () -> admin.rotateSTK());
       assertTrue("Exception message should contain 'not enabled', but was: " + ex.getMessage(),

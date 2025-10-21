@@ -1874,4 +1874,6 @@ public interface AsyncAdmin {
 
   @InterfaceAudience.Private
   CompletableFuture<Void> restoreBackupSystemTable(String snapshotName);
+
+  CompletableFuture<Void> refreshSystemKeyCacheOnAllServers();
 }

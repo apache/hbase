@@ -687,6 +687,11 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
+  public CompletableFuture<Void> refreshSystemKeyCacheOnAllServers() {
+    return wrap(rawAdmin.refreshSystemKeyCacheOnAllServers());
+  }
+
+  @Override
   public CompletableFuture<Void> rollWALWriter(ServerName serverName) {
     return wrap(rawAdmin.rollWALWriter(serverName));
   }

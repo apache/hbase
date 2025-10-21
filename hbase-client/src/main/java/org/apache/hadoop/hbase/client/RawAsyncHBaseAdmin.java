@@ -143,6 +143,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionIn
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionLoadRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionLoadResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RefreshSystemKeyCacheRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RollWALWriterRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RollWALWriterResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerRequest;
@@ -150,6 +151,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerR
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.EmptyMsg;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.LastHighestWalFilenum;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription;
@@ -4661,5 +4663,38 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         MasterService.Interface::restoreBackupSystemTable,
         MasterProtos.RestoreBackupSystemTableResponse::getProcId,
         new RestoreBackupSystemTableProcedureBiConsumer());
+  }
+
+  public CompletableFuture<Void> refreshSystemKeyCacheOnAllServers() {
+    CompletableFuture<Void> future = new CompletableFuture<>();
+    addListener(getClusterMetrics(EnumSet.of(Option.SERVERS_NAME, Option.LIVE_SERVERS)),
+      (status, err) -> {
+        if (err != null) {
+          future.completeExceptionally(err);
+        } else {
+          List<ServerName> servers = status.getLiveServerMetrics().keySet().stream()
+            .sorted(ServerName::compareTo).collect(Collectors.toList());
+          List<CompletableFuture<Void>> futures = new ArrayList<>(servers.size());
+          servers.forEach(server -> futures.add(refreshSystemKeyCache(server)));
+          addListener(CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0])),
+            (result, err2) -> {
+              if (err2 != null) {
+                future.completeExceptionally(err2);
+              } else {
+                future.complete(result);
+              }
+            });
+        }
+      });
+    return future;
+  }
+
+  private CompletableFuture<Void> refreshSystemKeyCache(ServerName serverName) {
+    RefreshSystemKeyCacheRequest request = RefreshSystemKeyCacheRequest.newBuilder().build();
+    return this.<Void> newAdminCaller()
+      .action((controller, stub) -> this.<RefreshSystemKeyCacheRequest, EmptyMsg, Void> adminCall(
+        controller, stub, request,
+        (s, c, req, done) -> s.refreshSystemKeyCache(controller, req, done), resp -> null))
+      .serverName(serverName).call();
   }
 }

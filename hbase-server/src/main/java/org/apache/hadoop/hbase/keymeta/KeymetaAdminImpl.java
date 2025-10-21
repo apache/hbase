@@ -19,13 +19,10 @@ package org.apache.hadoop.hbase.keymeta;
 
 import java.io.IOException;
 import java.security.KeyException;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.client.AsyncRegionServerAdmin;
+import org.apache.hadoop.hbase.client.AsyncAdmin;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
 import org.apache.hadoop.hbase.master.MasterServices;
@@ -33,9 +30,6 @@ import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.EmptyMsg;
 
 @InterfaceAudience.Private
 public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdmin {
@@ -94,41 +88,18 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
     }
 
     LOG.info("System Key is rotated, initiating cache refresh on all region servers");
-    // Get all online region servers
-    List<ServerName> regionServers =
-      new ArrayList<>(master.getServerManager().getOnlineServersList());
-
-    // Create all futures in parallel
-    List<CompletableFuture<EmptyMsg>> futures = new ArrayList<>();
-    AdminProtos.RefreshSystemKeyCacheRequest request =
-      AdminProtos.RefreshSystemKeyCacheRequest.newBuilder().build();
-
-    for (ServerName serverName : regionServers) {
-      LOG.info("Initiating refreshSystemKeyCache on region server: {}", serverName);
-      AsyncRegionServerAdmin admin =
-        master.getAsyncClusterConnection().getRegionServerAdmin(serverName);
-      futures.add(admin.refreshSystemKeyCache(request));
-    }
-
-    // Wait for all futures and collect failures
-    List<ServerName> failedServers = new ArrayList<>();
-    for (int i = 0; i < regionServers.size(); i++) {
-      ServerName serverName = regionServers.get(i);
-      try {
-        FutureUtils.get(futures.get(i));
-        LOG.info("refreshSystemKeyCache succeeded on region server: {}", serverName);
-      } catch (Exception e) {
-        LOG.warn("refreshSystemKeyCache failed on region server: {}", serverName, e);
-        failedServers.add(serverName);
-      }
-    }
-
-    if (!failedServers.isEmpty()) {
+    try {
+      FutureUtils.get(getAsyncAdmin(master).refreshSystemKeyCacheOnAllServers());
+    } catch (Exception e) {
       throw new IOException(
-        "Failed to initiate System Key cache refresh on region servers: " + failedServers);
+        "Failed to initiate System Key cache refresh on one or more region servers", e);
     }
 
-    LOG.info("System Key rotation and cache refreshcompleted successfully");
+    LOG.info("System Key rotation and cache refresh completed successfully");
     return true;
+  }
+
+  protected AsyncAdmin getAsyncAdmin(MasterServices master) {
+    return master.getAsyncClusterConnection().getAdmin();
   }
 }
