@@ -18,12 +18,15 @@
 package org.apache.hadoop.hbase.backup.util;
 
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONTINUOUS_BACKUP_REPLICATION_PEER;
+import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.ONE_DAY_IN_MILLISECONDS;
+import static org.apache.hadoop.hbase.backup.util.BackupFileSystemManager.WALS_DIR;
 import static org.apache.hadoop.hbase.replication.regionserver.ReplicationMarkerChore.REPLICATION_MARKER_ENABLED_DEFAULT;
 import static org.apache.hadoop.hbase.replication.regionserver.ReplicationMarkerChore.REPLICATION_MARKER_ENABLED_KEY;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URLDecoder;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -944,5 +947,38 @@ public final class BackupUtils {
     SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
     dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
     return dateFormat.format(new Date(dayInMillis));
+  }
+
+  /**
+   * Fetches valid WAL directories based on the given time range.
+   */
+  public static List<String> getValidWalDirs(Configuration conf, Path walBackupDir, long startTime,
+    long endTime) throws IOException {
+    FileSystem backupFs = FileSystem.get(walBackupDir.toUri(), conf);
+    FileStatus[] dayDirs = backupFs.listStatus(new Path(walBackupDir, WALS_DIR));
+
+    List<String> validDirs = new ArrayList<>();
+    SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
+
+    for (FileStatus dayDir : dayDirs) {
+      if (!dayDir.isDirectory()) {
+        continue; // Skip files, only process directories
+      }
+
+      String dirName = dayDir.getPath().getName();
+      try {
+        Date dirDate = dateFormat.parse(dirName);
+        long dirStartTime = dirDate.getTime(); // Start of that day (00:00:00)
+        long dirEndTime = dirStartTime + ONE_DAY_IN_MILLISECONDS - 1; // End time of day (23:59:59)
+
+        // Check if this day's WAL files overlap with the required time range
+        if (dirEndTime >= startTime && dirStartTime <= endTime) {
+          validDirs.add(dayDir.getPath().toString());
+        }
+      } catch (ParseException e) {
+        LOG.warn("Skipping invalid directory name: {}", dirName, e);
+      }
+    }
+    return validDirs;
   }
 }

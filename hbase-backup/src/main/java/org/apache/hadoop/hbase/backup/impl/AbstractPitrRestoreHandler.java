@@ -380,7 +380,7 @@ public abstract class AbstractPitrRestoreHandler {
       sourceTable, targetTable, startTime, endTime, walDirPath);
 
     List<String> validDirs =
-      getValidWalDirs(conn.getConfiguration(), walDirPath, startTime, endTime);
+      BackupUtils.getValidWalDirs(conn.getConfiguration(), walDirPath, startTime, endTime);
     if (validDirs.isEmpty()) {
       LOG.warn("No valid WAL directories found for range {} - {}. Skipping WAL replay.", startTime,
         endTime);
@@ -400,7 +400,7 @@ public abstract class AbstractPitrRestoreHandler {
       sourceTable, targetTable, startTime, endTime, walDirPath, restoreRootDir);
 
     List<String> validDirs =
-      getValidWalDirs(conn.getConfiguration(), walDirPath, startTime, endTime);
+      BackupUtils.getValidWalDirs(conn.getConfiguration(), walDirPath, startTime, endTime);
     if (validDirs.isEmpty()) {
       LOG.warn("No valid WAL directories found for range {} - {}. Skipping bulk-file collection.",
         startTime, endTime);
@@ -411,39 +411,6 @@ public abstract class AbstractPitrRestoreHandler {
 
     return BulkFilesCollector.collectFromWalDirs(HBaseConfiguration.create(conn.getConfiguration()),
       walDirsCsv, restoreRootDir, sourceTable, targetTable, startTime, endTime);
-  }
-
-  /**
-   * Fetches valid WAL directories based on the given time range.
-   */
-  private List<String> getValidWalDirs(Configuration conf, Path walBackupDir, long startTime,
-    long endTime) throws IOException {
-    FileSystem backupFs = FileSystem.get(walBackupDir.toUri(), conf);
-    FileStatus[] dayDirs = backupFs.listStatus(new Path(walBackupDir, WALS_DIR));
-
-    List<String> validDirs = new ArrayList<>();
-    SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
-
-    for (FileStatus dayDir : dayDirs) {
-      if (!dayDir.isDirectory()) {
-        continue; // Skip files, only process directories
-      }
-
-      String dirName = dayDir.getPath().getName();
-      try {
-        Date dirDate = dateFormat.parse(dirName);
-        long dirStartTime = dirDate.getTime(); // Start of that day (00:00:00)
-        long dirEndTime = dirStartTime + ONE_DAY_IN_MILLISECONDS - 1; // End time of day (23:59:59)
-
-        // Check if this day's WAL files overlap with the required time range
-        if (dirEndTime >= startTime && dirStartTime <= endTime) {
-          validDirs.add(dayDir.getPath().toString());
-        }
-      } catch (ParseException e) {
-        LOG.warn("Skipping invalid directory name: {}", dirName, e);
-      }
-    }
-    return validDirs;
   }
 
   /**
