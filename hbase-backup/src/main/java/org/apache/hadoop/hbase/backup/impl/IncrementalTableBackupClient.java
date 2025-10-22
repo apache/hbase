@@ -19,27 +19,19 @@ package org.apache.hadoop.hbase.backup.impl;
 
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONF_CONTINUOUS_BACKUP_WAL_DIR;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.JOB_NAME_CONF_KEY;
-import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.ONE_DAY_IN_MILLISECONDS;
-import static org.apache.hadoop.hbase.backup.util.BackupFileSystemManager.WALS_DIR;
-import static org.apache.hadoop.hbase.backup.util.BackupUtils.DATE_FORMAT;
 
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TimeZone;
 import java.util.stream.Collectors;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
@@ -204,7 +196,8 @@ public class IncrementalTableBackupClient extends TableBackupClient {
       // Continuous incremental backup: run BulkLoadCollectorJob over backed-up WALs
       Path collectorOutput = new Path(getBulkOutputDir(), BULKLOAD_COLLECTOR_OUTPUT);
       for (TableName table : tablesToBackup) {
-        String walDirsCsv = String.join(",", tablesToWALFileList.getOrDefault(table, new ArrayList<String>()));
+        String walDirsCsv =
+          String.join(",", tablesToWALFileList.getOrDefault(table, new ArrayList<String>()));
 
         List<Path> bulkloadPaths =
           BulkFilesCollector.collectFromWalDirs(conf, walDirsCsv, collectorOutput, table, table,
@@ -462,7 +455,8 @@ public class IncrementalTableBackupClient extends TableBackupClient {
             } else {
               previousBackupTs = backup.getIncrCommittedWalTs();
             }
-            walBackupFileList = BackupUtils.getValidWalDirs(conf, walBackupPath, previousBackupTs, currentBackupTs);
+            walBackupFileList =
+              BackupUtils.getValidWalDirs(conf, walBackupPath, previousBackupTs, currentBackupTs);
             tablesToWALFileList.put(table, walBackupFileList);
             tablesToPrevBackupTs.put(table, previousBackupTs);
             walToHFiles(walBackupFileList, Arrays.asList(table.getNameAsString()),
