@@ -16,6 +16,54 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 -->
+# HBASE  2.6.4 Release Notes
+
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
+
+
+---
+
+* [HBASE-29663](https://issues.apache.org/jira/browse/HBASE-29663) | *Major* | **TimeBasedLimiters should support dynamic configuration refresh**
+
+You can now refresh TimeBasedRateLimiter configurations dynamically with a call to the HBase shell's update\_all\_configs
+
+
+---
+
+* [HBASE-29573](https://issues.apache.org/jira/browse/HBASE-29573) | *Minor* | **Fully load QuotaCache instead of reading individual rows on demand**
+
+Each RegionServer now always caches the full contents of the hbase:quota table. If you have a very large quota table, this could cause excessive memory usage.
+
+
+---
+
+* [HBASE-28463](https://issues.apache.org/jira/browse/HBASE-28463) | *Major* | **Time Based Priority for BucketCache**
+
+This introduces time based priority for blocks in the BucketCache. It's disabled by default. Allows for defining an age threshold at individual column family configuration, whereby blocks older than this configured threshold would be targeted first for eviction. Blocks from column families that don't define the age threshold wouldn't be evaluated by the time based priority, and would only be evicted following the pre-existing LRU eviction logic.
+
+To enable it, first set the hbase.regionserver.datatiering.enable property to true in the RegionServer configuration. Then, for each table column family where time based priority behaviour is desired, add the following properties  to the related column families configurations:
+- hbase.hstore.datatiering.type -\> TIME\_RANGE or CUSTOM
+- hbase.hstore.datatiering.hot.age.millis -\> A milliseconds age value (defaults to  7 Days or 604800000 milliseconds)
+- hbase.hstore.engine.class -\> org.apache.hadoop.hbase.regionserver.DateTieredStoreEngine or org.apache.hadoop.hbase.regionserver.CustomTieredStoreEngine
+
+The TIME\_RANGE value for hbase.hstore.datatiering.type will rely on cells timestamps for calculating the block age to be compared against the hbase.hstore.datatiering.hot.age.millis threshold age to decide on the block priority. This option requires that org.apache.hadoop.hbase.regionserver.DateTieredStoreEngine be defined as the hbase.hstore.engine.class. This is to enable date tiered compaction, so that data can be placed at separate files, according to the cells timestamps and the age threshold.
+
+The CUSTOM value for hbase.hstore.datatiering.type allows for defining custom logic to identify the age of cells that should be compared against the threshold age defined in the hbase.hstore.datatiering.hot.age.millis property. This option requires that org.apache.hadoop.hbase.regionserver.CustomTieredStoreEngine be defined as the hbase.hstore.engine.class. This is to enable the custom tiered compaction, so that data can be placed at separate files, according to the custom logic for defining the cell age to be compared against the age threshold. The custom logic for defining cell age should be provided as implementations of the CustomTieredCompactor.TieringValueProvider interface, and should be specified as the value of the hbase.hstore.custom-tiering-value.provider.class.
+
+Additionally, a built-in implementation of CustomTieredCompactor.TieringValueProvider is provided and set by default when the CUSTOM value for hbase.hstore.datatiering.type is in use. This assumes a custom column qualifier value to contain a long timestamp to be used as the cell age to be compared against the configured age threshold. This column qualifier should be configured as the TIERING\_CELL\_QUALIFIER property in the given column family configuration.
+
+Note that major compaction needs to be completed on the related tables once the feature is configured properly at the related column families configurations.
+
+
+---
+
+* [HBASE-15625](https://issues.apache.org/jira/browse/HBASE-15625) | *Minor* | **Make minimum values configurable and smaller**
+
+Introduced a new configuration  \`hbase.regionserver.free.heap.min.memory.size\`.
+This configuration allows users to specify the minimum required amount of free heap memory using a human-readable format (e.g., 512m, 4g). By default, it remains consistent with the previous behavior, reserving 20% of the total heap size as free memory. This new option helps modern deployments with large heap sizes fine-tune memory usage more aggressively for MemStore and block cache configurations.
+
+
+
 # HBASE  2.6.3 Release Notes
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
