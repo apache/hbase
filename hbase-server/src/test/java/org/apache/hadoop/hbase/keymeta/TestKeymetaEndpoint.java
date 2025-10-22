@@ -26,6 +26,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -46,6 +47,7 @@ import org.apache.hadoop.hbase.coprocessor.HasMasterServices;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.keymeta.KeymetaServiceEndpoint.KeymetaAdminServiceImpl;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.GetManagedKeysResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.ManagedKeysRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.ManagedKeysResponse;
@@ -80,9 +82,9 @@ public class TestKeymetaEndpoint {
   @Mock
   private MasterServices master;
   @Mock
-  private RpcCallback done;
+  private RpcCallback<ManagedKeysResponse> enableKeyManagementDone;
   @Mock
-  private KeymetaAdmin keymetaAdmin;
+  private RpcCallback<GetManagedKeysResponse> getManagedKeysDone;
 
   KeymetaServiceEndpoint keymetaServiceEndpoint;
   private ManagedKeysResponse.Builder responseBuilder;
@@ -90,6 +92,9 @@ public class TestKeymetaEndpoint {
   private KeymetaAdminServiceImpl keyMetaAdminService;
   private ManagedKeyData keyData1;
   private ManagedKeyData keyData2;
+
+  @Mock
+  private KeymetaAdmin keymetaAdmin;
 
   @Before
   public void setUp() throws Exception {
@@ -152,7 +157,7 @@ public class TestKeymetaEndpoint {
 
     // Act
     ManagedKeysResponse.Builder result =
-      KeymetaServiceEndpoint.getResponseBuilder(controller, request);
+      KeymetaServiceEndpoint.createManagedKeysResponseBuilder(controller, request);
 
     // Assert
     assertNotNull(result);
@@ -168,7 +173,7 @@ public class TestKeymetaEndpoint {
 
     // Act
     ManagedKeysResponse.Builder result =
-      KeymetaServiceEndpoint.getResponseBuilder(controller, request);
+      KeymetaServiceEndpoint.createManagedKeysResponseBuilder(controller, request);
 
     // Assert
     assertNotNull(result);
@@ -221,20 +226,21 @@ public class TestKeymetaEndpoint {
   @Test
   public void testGenerateKeyStatResponse_Success() throws Exception {
     doTestServiceCallForSuccess((controller, request, done) -> keyMetaAdminService
-      .enableKeyManagement(controller, request, done));
+      .enableKeyManagement(controller, request, done), enableKeyManagementDone);
   }
 
   @Test
   public void testGetManagedKeys_Success() throws Exception {
     doTestServiceCallForSuccess(
-      (controller, request, done) -> keyMetaAdminService.getManagedKeys(controller, request, done));
+      (controller, request, done) -> keyMetaAdminService.getManagedKeys(controller, request, done),
+      getManagedKeysDone);
   }
 
-  private void doTestServiceCallForSuccess(ServiceCall svc) throws Exception {
+  private <T> void doTestServiceCallForSuccess(ServiceCall<T> svc, RpcCallback<T> done)
+    throws Exception {
     // Arrange
     ManagedKeysRequest request = requestBuilder.setKeyCust(KEY_CUST).build();
-    List<ManagedKeyData> managedKeyStates = Arrays.asList(keyData1);
-    when(keymetaAdmin.enableKeyManagement(any(), any())).thenReturn(managedKeyStates);
+    when(keymetaAdmin.enableKeyManagement(any(), any())).thenReturn(keyData1);
 
     // Act
     svc.call(controller, request, done);
@@ -244,9 +250,9 @@ public class TestKeymetaEndpoint {
     verify(controller, never()).setFailed(anyString());
   }
 
-  private interface ServiceCall {
-    void call(RpcController controller, ManagedKeysRequest request,
-      RpcCallback<GetManagedKeysResponse> done) throws Exception;
+  private interface ServiceCall<T> {
+    void call(RpcController controller, ManagedKeysRequest request, RpcCallback<T> done)
+      throws Exception;
   }
 
   @Test
@@ -256,12 +262,12 @@ public class TestKeymetaEndpoint {
     ManagedKeysRequest request = requestBuilder.setKeyCust(invalidBase64).build();
 
     // Act
-    keyMetaAdminService.enableKeyManagement(controller, request, done);
+    keyMetaAdminService.enableKeyManagement(controller, request, enableKeyManagementDone);
 
     // Assert
     verify(controller).setFailed(contains("IOException"));
     verify(keymetaAdmin, never()).enableKeyManagement(any(), any());
-    verify(done, never()).run(any());
+    verify(enableKeyManagementDone, never()).run(any());
   }
 
   @Test
@@ -271,12 +277,13 @@ public class TestKeymetaEndpoint {
     ManagedKeysRequest request = requestBuilder.setKeyCust(KEY_CUST).build();
 
     // Act
-    keyMetaAdminService.enableKeyManagement(controller, request, done);
+    keyMetaAdminService.enableKeyManagement(controller, request, enableKeyManagementDone);
 
     // Assert
     verify(controller).setFailed(contains("IOException"));
     verify(keymetaAdmin).enableKeyManagement(any(), any());
-    verify(done).run(GetManagedKeysResponse.getDefaultInstance());
+    verify(enableKeyManagementDone).run(
+      argThat(response -> response.getKeyState() == ManagedKeysProtos.ManagedKeyState.KEY_FAILED));
   }
 
   @Test
@@ -295,12 +302,12 @@ public class TestKeymetaEndpoint {
     ManagedKeysRequest request = requestBuilder.setKeyCust(KEY_CUST).build();
 
     // Act
-    keyMetaAdminService.getManagedKeys(controller, request, done);
+    keyMetaAdminService.getManagedKeys(controller, request, getManagedKeysDone);
 
     // Assert
     verify(controller).setFailed(contains(exType.getSimpleName()));
     verify(keymetaAdmin).getManagedKeys(any(), any());
-    verify(done).run(GetManagedKeysResponse.getDefaultInstance());
+    verify(getManagedKeysDone).run(GetManagedKeysResponse.getDefaultInstance());
   }
 
   @Test
@@ -310,11 +317,11 @@ public class TestKeymetaEndpoint {
     ManagedKeysRequest request = requestBuilder.setKeyCust(invalidBase64).build();
 
     // Act
-    keyMetaAdminService.getManagedKeys(controller, request, done);
+    keyMetaAdminService.getManagedKeys(controller, request, getManagedKeysDone);
 
     // Assert
     verify(controller).setFailed(contains("IOException"));
     verify(keymetaAdmin, never()).getManagedKeys(any(), any());
-    verify(done, never()).run(any());
+    verify(getManagedKeysDone, never()).run(any());
   }
 }

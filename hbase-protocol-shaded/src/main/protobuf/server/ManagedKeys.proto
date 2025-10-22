@@ -56,7 +56,7 @@ message RotateSTKResponse {
 
 service ManagedKeysService {
   rpc EnableKeyManagement(ManagedKeysRequest)
-    returns (GetManagedKeysResponse);
+    returns (ManagedKeysResponse);
   rpc GetManagedKeys(ManagedKeysRequest)
     returns (GetManagedKeysResponse);
   rpc RotateSTK(EmptyMsg)

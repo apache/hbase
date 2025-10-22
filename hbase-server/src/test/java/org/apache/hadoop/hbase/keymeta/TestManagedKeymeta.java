@@ -79,34 +79,32 @@ public class TestManagedKeymeta extends ManagedKeyTestBase {
       (MockManagedKeyProvider) Encryption.getManagedKeyProvider(master.getConfiguration());
     String cust = "cust1";
     String encodedCust = ManagedKeyProvider.encodeToStr(cust.getBytes());
-    List<ManagedKeyData> managedKeyStates =
+    ManagedKeyData managedKey =
       adminClient.enableKeyManagement(encodedCust, ManagedKeyData.KEY_SPACE_GLOBAL);
-    assertKeyDataListSingleKey(managedKeyStates, ManagedKeyState.ACTIVE);
+    assertKeyDataSingleKey(managedKey, ManagedKeyState.ACTIVE);
 
     List<ManagedKeyData> managedKeys =
       adminClient.getManagedKeys(encodedCust, ManagedKeyData.KEY_SPACE_GLOBAL);
-    assertEquals(1, managedKeys.size());
     assertEquals(managedKeyProvider.getLastGeneratedKeyData(cust, ManagedKeyData.KEY_SPACE_GLOBAL)
       .cloneWithoutKey(), managedKeys.get(0).cloneWithoutKey());
 
     String nonExistentCust = "nonExistentCust";
     managedKeyProvider.setMockedKeyState(nonExistentCust, ManagedKeyState.FAILED);
-    List<ManagedKeyData> keyDataList1 = adminClient.enableKeyManagement(
+    ManagedKeyData managedKey1 = adminClient.enableKeyManagement(
       ManagedKeyProvider.encodeToStr(nonExistentCust.getBytes()), ManagedKeyData.KEY_SPACE_GLOBAL);
-    assertKeyDataListSingleKey(keyDataList1, ManagedKeyState.FAILED);
+    assertKeyDataSingleKey(managedKey1, ManagedKeyState.FAILED);
 
     String disabledCust = "disabledCust";
     managedKeyProvider.setMockedKeyState(disabledCust, ManagedKeyState.DISABLED);
-    List<ManagedKeyData> keyDataList2 = adminClient.enableKeyManagement(
+    ManagedKeyData managedKey2 = adminClient.enableKeyManagement(
       ManagedKeyProvider.encodeToStr(disabledCust.getBytes()), ManagedKeyData.KEY_SPACE_GLOBAL);
-    assertKeyDataListSingleKey(keyDataList2, ManagedKeyState.DISABLED);
+    assertKeyDataSingleKey(managedKey2, ManagedKeyState.DISABLED);
   }
 
-  private static void assertKeyDataListSingleKey(List<ManagedKeyData> managedKeyStates,
+  private static void assertKeyDataSingleKey(ManagedKeyData managedKeyState,
     ManagedKeyState keyState) {
-    assertNotNull(managedKeyStates);
-    assertEquals(1, managedKeyStates.size());
-    assertEquals(keyState, managedKeyStates.get(0).getKeyState());
+    assertNotNull(managedKeyState);
+    assertEquals(keyState, managedKeyState.getKeyState());
   }
 
   @Test

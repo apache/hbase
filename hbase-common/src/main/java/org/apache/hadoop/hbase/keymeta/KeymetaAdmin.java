@@ -37,7 +37,7 @@ public interface KeymetaAdmin {
    *         status.
    * @throws IOException if an error occurs while enabling key management.
    */
-  List<ManagedKeyData> enableKeyManagement(String keyCust, String keyNamespace)
+  ManagedKeyData enableKeyManagement(String keyCust, String keyNamespace)
     throws IOException, KeyException;
 
   /**

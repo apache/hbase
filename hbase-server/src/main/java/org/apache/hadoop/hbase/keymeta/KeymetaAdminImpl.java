@@ -19,10 +19,8 @@ package org.apache.hadoop.hbase.keymeta;
 
 import java.io.IOException;
 import java.security.KeyException;
-import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.AsyncAdmin;
@@ -43,7 +41,7 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
   }
 
   @Override
-  public List<ManagedKeyData> enableKeyManagement(String keyCust, String keyNamespace)
+  public ManagedKeyData enableKeyManagement(String keyCust, String keyNamespace)
     throws IOException, KeyException {
     assertKeyManagementEnabled();
     LOG.info("Trying to enable key management on custodian: {} under namespace: {}", keyCust,
@@ -57,12 +55,12 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
         "enableManagedKeys: specified (custodian: {}, namespace: {}) already has "
           + "an active managed key with metadata: {}",
         keyCust, keyNamespace, activeKey.getKeyMetadata());
-      return Collections.singletonList(activeKey);
+      return activeKey;
     }
 
     // Retrieve a single key from provider
     ManagedKeyData retrievedKey = retrieveActiveKey(keyCust, key_cust, keyNamespace, this, null);
-    return Collections.singletonList(retrievedKey);
+    return retrievedKey;
   }
 
   @Override

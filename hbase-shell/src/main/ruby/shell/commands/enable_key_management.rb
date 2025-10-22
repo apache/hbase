@@ -37,7 +37,7 @@ Example:
       end
 
       def command(key_info)
-        statuses = keymeta_admin.enable_key_management(key_info)
+        statuses = [keymeta_admin.enable_key_management(key_info)]
         print_key_statuses(statuses)
       end
     end

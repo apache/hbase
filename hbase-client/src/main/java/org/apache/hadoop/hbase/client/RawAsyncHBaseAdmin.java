@@ -4667,15 +4667,16 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   @Override
   public CompletableFuture<Void> refreshSystemKeyCacheOnAllServers(Set<ServerName> regionServers) {
     CompletableFuture<Void> future = new CompletableFuture<>();
-    List<CompletableFuture<Void>> futures = regionServers.stream()
-      .map(this::refreshSystemKeyCache)
-      .collect(Collectors.toList());
-    addListener(CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0])), (result, err) -> {
-      if (err != null) {
-        future.completeExceptionally(err);
-      } else {
-        future.complete(result);
-      }});
+    List<CompletableFuture<Void>> futures =
+      regionServers.stream().map(this::refreshSystemKeyCache).collect(Collectors.toList());
+    addListener(CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0])),
+      (result, err) -> {
+        if (err != null) {
+          future.completeExceptionally(err);
+        } else {
+          future.complete(result);
+        }
+      });
     return future;
   }
 

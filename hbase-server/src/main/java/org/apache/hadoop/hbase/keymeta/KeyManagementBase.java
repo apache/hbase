@@ -134,9 +134,9 @@ public abstract class KeyManagementBase {
     /*
      * Will be useful when refresh API is implemented. if (existingActiveKey != null &&
      * existingActiveKey.equals(pbeKey)) {
-     * LOG.info("retrieveActiveKey: no change in key for (custodian: {}, namespace: {}",
-     * encKeyCust, keyNamespace); return null; } // TODO: If existingActiveKey is not null, we
-     * should update the key state to INACTIVE.
+     * LOG.info("retrieveActiveKey: no change in key for (custodian: {}, namespace: {}", encKeyCust,
+     * keyNamespace); return null; } // TODO: If existingActiveKey is not null, we should update the
+     * key state to INACTIVE.
      */
     LOG.info(
       "retrieveActiveKey: got active key with status: {} and metadata: {} for "

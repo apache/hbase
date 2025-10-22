@@ -173,10 +173,9 @@ public class TestKeymetaAdminImpl {
       when(keymetaAccessor.getActiveKey(CUST.getBytes(), keySpace))
         .thenReturn(managedKeyProvider.getManagedKey(CUST.getBytes(), keySpace));
 
-      List<ManagedKeyData> managedKeys = keymetaAdmin.enableKeyManagement(ENCODED_CUST, keySpace);
-      assertNotNull(managedKeys);
-      assertEquals(1, managedKeys.size());
-      assertEquals(keyState, managedKeys.get(0).getKeyState());
+      ManagedKeyData managedKey = keymetaAdmin.enableKeyManagement(ENCODED_CUST, keySpace);
+      assertNotNull(managedKey);
+      assertEquals(keyState, managedKey.getKeyState());
       verify(keymetaAccessor).getActiveKey(CUST.getBytes(), keySpace);
 
       keymetaAdmin.getManagedKeys(ENCODED_CUST, keySpace);
@@ -186,27 +185,23 @@ public class TestKeymetaAdminImpl {
     @Test
     public void testEnableKeyManagement() throws Exception {
       assumeTrue(keyState == ACTIVE);
-      List<ManagedKeyData> keys = keymetaAdmin.enableKeyManagement(ENCODED_CUST, "namespace1");
-      assertEquals(1, keys.size());
-      assertEquals(ManagedKeyState.ACTIVE, keys.get(0).getKeyState());
-      assertEquals(ENCODED_CUST, keys.get(0).getKeyCustodianEncoded());
-      assertEquals("namespace1", keys.get(0).getKeyNamespace());
+      ManagedKeyData managedKey = keymetaAdmin.enableKeyManagement(ENCODED_CUST, "namespace1");
+      assertEquals(ManagedKeyState.ACTIVE, managedKey.getKeyState());
+      assertEquals(ENCODED_CUST, managedKey.getKeyCustodianEncoded());
+      assertEquals("namespace1", managedKey.getKeyNamespace());
 
       // Second call should return the same keys since our mock key provider returns the same key
-      List<ManagedKeyData> keys2 = keymetaAdmin.enableKeyManagement(ENCODED_CUST, "namespace1");
-      assertEquals(1, keys2.size());
-      assertEquals(keys.get(0), keys2.get(0));
+      ManagedKeyData managedKey2 = keymetaAdmin.enableKeyManagement(ENCODED_CUST, "namespace1");
+      assertEquals(managedKey, managedKey2);
     }
 
     @Test
     public void testEnableKeyManagementWithMultipleNamespaces() throws Exception {
-      List<ManagedKeyData> keys = keymetaAdmin.enableKeyManagement(ENCODED_CUST, "namespace1");
-      assertEquals(1, keys.size());
-      assertEquals("namespace1", keys.get(0).getKeyNamespace());
+      ManagedKeyData managedKey = keymetaAdmin.enableKeyManagement(ENCODED_CUST, "namespace1");
+      assertEquals("namespace1", managedKey.getKeyNamespace());
 
-      List<ManagedKeyData> keys2 = keymetaAdmin.enableKeyManagement(ENCODED_CUST, "namespace2");
-      assertEquals(1, keys2.size());
-      assertEquals("namespace2", keys2.get(0).getKeyNamespace());
+      ManagedKeyData managedKey2 = keymetaAdmin.enableKeyManagement(ENCODED_CUST, "namespace2");
+      assertEquals("namespace2", managedKey2.getKeyNamespace());
     }
   }
 

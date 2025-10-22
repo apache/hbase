@@ -47,12 +47,12 @@ public class KeymetaAdminClient implements KeymetaAdmin {
   }
 
   @Override
-  public List<ManagedKeyData> enableKeyManagement(String keyCust, String keyNamespace)
+  public ManagedKeyData enableKeyManagement(String keyCust, String keyNamespace)
     throws IOException {
     try {
-      ManagedKeysProtos.GetManagedKeysResponse response = stub.enableKeyManagement(null,
+      ManagedKeysProtos.ManagedKeysResponse response = stub.enableKeyManagement(null,
         ManagedKeysRequest.newBuilder().setKeyCust(keyCust).setKeyNamespace(keyNamespace).build());
-      return generateKeyDataList(response);
+      return generateKeyData(response);
     } catch (ServiceException e) {
       throw ProtobufUtil.handleRemoteException(e);
     }
@@ -85,11 +85,14 @@ public class KeymetaAdminClient implements KeymetaAdmin {
     generateKeyDataList(ManagedKeysProtos.GetManagedKeysResponse stateResponse) {
     List<ManagedKeyData> keyStates = new ArrayList<>();
     for (ManagedKeysResponse state : stateResponse.getStateList()) {
-      keyStates
-        .add(new ManagedKeyData(state.getKeyCustBytes().toByteArray(), state.getKeyNamespace(),
-          null, ManagedKeyState.forValue((byte) state.getKeyState().getNumber()),
-          state.getKeyMetadata(), state.getRefreshTimestamp()));
+      keyStates.add(generateKeyData(state));
     }
     return keyStates;
+  }
+
+  private static ManagedKeyData generateKeyData(ManagedKeysProtos.ManagedKeysResponse response) {
+    return new ManagedKeyData(response.getKeyCustBytes().toByteArray(), response.getKeyNamespace(),
+      null, ManagedKeyState.forValue((byte) response.getKeyState().getNumber()),
+      response.getKeyMetadata(), response.getRefreshTimestamp());
   }
 }
