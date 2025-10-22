@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.quotas;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -70,10 +69,10 @@ public class QuotaCache implements Stoppable {
   private final Object initializerLock = new Object();
   private volatile boolean initialized = false;
 
-  private volatile Map<String, QuotaState> namespaceQuotaCache = new HashMap<>();
-  private volatile Map<TableName, QuotaState> tableQuotaCache = new HashMap<>();
-  private volatile Map<String, UserQuotaState> userQuotaCache = new HashMap<>();
-  private volatile Map<String, QuotaState> regionServerQuotaCache = new HashMap<>();
+  private volatile Map<String, QuotaState> namespaceQuotaCache = new ConcurrentHashMap<>();
+  private volatile Map<TableName, QuotaState> tableQuotaCache = new ConcurrentHashMap<>();
+  private volatile Map<String, UserQuotaState> userQuotaCache = new ConcurrentHashMap<>();
+  private volatile Map<String, QuotaState> regionServerQuotaCache = new ConcurrentHashMap<>();
 
   private volatile boolean exceedThrottleQuotaEnabled = false;
   // factors used to divide cluster scope quota into machine scope quota
@@ -310,44 +309,48 @@ public class QuotaCache implements Stoppable {
 
     @Override
     protected void chore() {
-      updateQuotaFactors();
+      synchronized (this) {
+        LOG.info("Reloading quota cache from hbase:quota table");
+        updateQuotaFactors();
 
-      try {
-        Map<String, UserQuotaState> newUserQuotaCache = new HashMap<>(fetchUserQuotaStateEntries());
-        updateNewCacheFromOld(userQuotaCache, newUserQuotaCache);
-        userQuotaCache = newUserQuotaCache;
-      } catch (IOException e) {
-        LOG.error("Error while fetching user quotas", e);
+        try {
+          Map<String, UserQuotaState> newUserQuotaCache =
+            new ConcurrentHashMap<>(fetchUserQuotaStateEntries());
+          updateNewCacheFromOld(userQuotaCache, newUserQuotaCache);
+          userQuotaCache = newUserQuotaCache;
+        } catch (IOException e) {
+          LOG.error("Error while fetching user quotas", e);
+        }
+
+        try {
+          Map<String, QuotaState> newRegionServerQuotaCache =
+            new ConcurrentHashMap<>(fetchRegionServerQuotaStateEntries());
+          updateNewCacheFromOld(regionServerQuotaCache, newRegionServerQuotaCache);
+          regionServerQuotaCache = newRegionServerQuotaCache;
+        } catch (IOException e) {
+          LOG.error("Error while fetching region server quotas", e);
+        }
+
+        try {
+          Map<TableName, QuotaState> newTableQuotaCache =
+            new ConcurrentHashMap<>(fetchTableQuotaStateEntries());
+          updateNewCacheFromOld(tableQuotaCache, newTableQuotaCache);
+          tableQuotaCache = newTableQuotaCache;
+        } catch (IOException e) {
+          LOG.error("Error while refreshing table quotas", e);
+        }
+
+        try {
+          Map<String, QuotaState> newNamespaceQuotaCache =
+            new ConcurrentHashMap<>(fetchNamespaceQuotaStateEntries());
+          updateNewCacheFromOld(namespaceQuotaCache, newNamespaceQuotaCache);
+          namespaceQuotaCache = newNamespaceQuotaCache;
+        } catch (IOException e) {
+          LOG.error("Error while refreshing namespace quotas", e);
+        }
+
+        fetchExceedThrottleQuota();
       }
-
-      try {
-        Map<String, QuotaState> newRegionServerQuotaCache =
-          new HashMap<>(fetchRegionServerQuotaStateEntries());
-        updateNewCacheFromOld(regionServerQuotaCache, newRegionServerQuotaCache);
-        regionServerQuotaCache = newRegionServerQuotaCache;
-      } catch (IOException e) {
-        LOG.error("Error while fetching region server quotas", e);
-      }
-
-      try {
-        Map<TableName, QuotaState> newTableQuotaCache =
-          new HashMap<>(fetchTableQuotaStateEntries());
-        updateNewCacheFromOld(tableQuotaCache, newTableQuotaCache);
-        tableQuotaCache = newTableQuotaCache;
-      } catch (IOException e) {
-        LOG.error("Error while refreshing table quotas", e);
-      }
-
-      try {
-        Map<String, QuotaState> newNamespaceQuotaCache =
-          new HashMap<>(fetchNamespaceQuotaStateEntries());
-        updateNewCacheFromOld(namespaceQuotaCache, newNamespaceQuotaCache);
-        namespaceQuotaCache = newNamespaceQuotaCache;
-      } catch (IOException e) {
-        LOG.error("Error while refreshing namespace quotas", e);
-      }
-
-      fetchExceedThrottleQuota();
     }
 
     private void fetchExceedThrottleQuota() {
