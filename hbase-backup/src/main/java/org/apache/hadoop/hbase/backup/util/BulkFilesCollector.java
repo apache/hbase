@@ -70,9 +70,6 @@ public final class BulkFilesCollector {
     Path restoreRootDir, TableName sourceTable, TableName targetTable, long startTime, long endTime)
     throws IOException {
 
-    LOG.info("Called collectFromWalDirs for source table {}, target table {}, startTime {}, endTime"
-      + " {}, restoreRootDir {}", sourceTable, targetTable, startTime, endTime, restoreRootDir);
-
     // prepare job Tool
     Configuration jobConf = new Configuration(conf);
     if (startTime > 0) jobConf.setLong(WALInputFormat.START_TIME_KEY, startTime);
