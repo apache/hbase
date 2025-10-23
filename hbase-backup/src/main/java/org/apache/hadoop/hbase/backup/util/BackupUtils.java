@@ -78,12 +78,12 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
-import org.apache.hbase.thirdparty.com.google.common.base.Strings;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
+import org.apache.hbase.thirdparty.com.google.common.base.Strings;
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterators;
 
@@ -956,8 +956,8 @@ public final class BackupUtils {
    * Fetches bulkload filepaths based on the given time range from backup WAL directory.
    */
   public static List<Path> collectBulkFiles(Connection conn, TableName sourceTable,
-    TableName targetTable, long startTime, long endTime, Path restoreRootDir,
-    List<String> walDirs) throws IOException {
+    TableName targetTable, long startTime, long endTime, Path restoreRootDir, List<String> walDirs)
+    throws IOException {
 
     if (walDirs.isEmpty()) {
       String walBackupDir = conn.getConfiguration().get(CONF_CONTINUOUS_BACKUP_WAL_DIR);
@@ -966,7 +966,8 @@ public final class BackupUtils {
           "WAL backup directory is not configured " + CONF_CONTINUOUS_BACKUP_WAL_DIR);
       }
       Path walDirPath = new Path(walBackupDir);
-      walDirs = BackupUtils.getValidWalDirs(conn.getConfiguration(), walDirPath, startTime, endTime);
+      walDirs =
+        BackupUtils.getValidWalDirs(conn.getConfiguration(), walDirPath, startTime, endTime);
     }
 
     if (walDirs.isEmpty()) {
@@ -977,8 +978,8 @@ public final class BackupUtils {
 
     LOG.info(
       "Starting WAL bulk-file collection for source: {}, target: {}, time range: {} - {}, WAL "
-        + "backup dir: {}, restore root: {}", sourceTable, targetTable, startTime, endTime,
-      walDirs, restoreRootDir);
+        + "backup dir: {}, restore root: {}",
+      sourceTable, targetTable, startTime, endTime, walDirs, restoreRootDir);
     String walDirsCsv = String.join(",", walDirs);
 
     return BulkFilesCollector.collectFromWalDirs(HBaseConfiguration.create(conn.getConfiguration()),

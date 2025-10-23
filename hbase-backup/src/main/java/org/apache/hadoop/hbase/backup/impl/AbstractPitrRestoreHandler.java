@@ -25,7 +25,6 @@ import static org.apache.hadoop.hbase.mapreduce.WALPlayer.IGNORE_EMPTY_FILES;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -39,7 +38,6 @@ import org.apache.hadoop.hbase.backup.PointInTimeRestoreRequest;
 import org.apache.hadoop.hbase.backup.RestoreJob;
 import org.apache.hadoop.hbase.backup.RestoreRequest;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
-import org.apache.hadoop.hbase.backup.util.BulkFilesCollector;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.mapreduce.WALInputFormat;
 import org.apache.hadoop.hbase.mapreduce.WALPlayer;
@@ -334,9 +332,8 @@ public abstract class AbstractPitrRestoreHandler {
 
     RestoreJob restoreService = BackupRestoreFactory.getRestoreJob(conf);
 
-    List<Path> bulkloadFiles =
-      BackupUtils.collectBulkFiles(conn, sourceTable, targetTable, startTime, endTime,
-        new Path(restoreRootDir), new ArrayList<String>());
+    List<Path> bulkloadFiles = BackupUtils.collectBulkFiles(conn, sourceTable, targetTable,
+      startTime, endTime, new Path(restoreRootDir), new ArrayList<String>());
 
     if (bulkloadFiles.isEmpty()) {
       LOG.info("No bulk-load files found for {} in time range {}-{}. Skipping bulkload restore.",

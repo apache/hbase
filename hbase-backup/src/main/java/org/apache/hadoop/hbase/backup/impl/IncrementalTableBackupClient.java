@@ -47,7 +47,6 @@ import org.apache.hadoop.hbase.backup.HBackupFileSystem;
 import org.apache.hadoop.hbase.backup.mapreduce.MapReduceBackupCopyJob;
 import org.apache.hadoop.hbase.backup.mapreduce.MapReduceHFileSplitterJob;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
-import org.apache.hadoop.hbase.backup.util.BulkFilesCollector;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Connection;
@@ -200,8 +199,8 @@ public class IncrementalTableBackupClient extends TableBackupClient {
         long endTs = backupInfo.getIncrCommittedWalTs();
         List<String> walDirs = tablesToWALFileList.getOrDefault(table, new ArrayList<String>());
 
-        List<Path> bulkloadPaths =
-          BackupUtils.collectBulkFiles(conn, table, table, startTs, endTs, collectorOutput, walDirs);
+        List<Path> bulkloadPaths = BackupUtils.collectBulkFiles(conn, table, table, startTs, endTs,
+          collectorOutput, walDirs);
 
         List<String> bulkLoadFiles =
           bulkloadPaths.stream().map(Path::toString).collect(Collectors.toList());
