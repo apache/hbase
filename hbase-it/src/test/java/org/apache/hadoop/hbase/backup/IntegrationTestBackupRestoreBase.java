@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.backup;
 import static org.apache.hadoop.hbase.IntegrationTestingUtility.createPreSplitLoadTestTable;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONF_CONTINUOUS_BACKUP_WAL_DIR;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -259,7 +260,7 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
   private void runTestSingle(TableName table, boolean isContinuousBackupEnabled)
           throws IOException, InterruptedException {
     String enabledOrDisabled = isContinuousBackupEnabled ? "enabled" : "disabled";
-    List<String> backupIds = new ArrayList<String>();
+    List<String> backupIds = new ArrayList<>();
 
     try (Connection conn = util.getConnection(); BackupAdmin client = new BackupAdminImpl(conn)) {
       loadData(table, rowsInIteration);
@@ -325,8 +326,7 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
         restoreTableAndVerifyRowCount(conn, client, table, incrementalBackupId,
           (long) rowsInIteration * (count + 1));
         LOG.info("{} - Finished incremental backup iteration {} of {}",
-          Thread.currentThread().getName(), count,
-          numIterations);
+          Thread.currentThread().getName(), count, numIterations);
       }
 
       // Now merge all incremental and restore
@@ -343,26 +343,43 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
         HBaseTestingUtil.countRows(hTable));
       hTable.close();
 
-      LOG.info("kevin: backupRootDir before delete");
-      FileStatus[] fileStatuses = fs.listStatus(new Path(backupRootDir));
-      for (FileStatus fileStatus : fileStatuses) {
-        LOG.info("kevin: before delete fileStatus = {}", fileStatus);
-      }
-
+      deleteMostRecentIncrementalBackup(backupIds, client);
+      // The full backup and all previous incremental backups should still exist
+      verifyAllBackupTypesExist(fullBackupId, getAllIncrementalBackupIds(backupIds));
       // Delete the full backup
       delete(new String[] {fullBackupId}, client);
-
-      // TODO
-      // 1. why are both the full backup and the incremental backup being deleted?
-      // 2. look at the file structure inside of the incremental backup directory and see
-      //    how it differs from the full backup's structure
-      // 3. 
-
-      LOG.info("kevin: backupRootDir after delete");
-      fileStatuses = fs.listStatus(new Path(backupRootDir));
-      for (FileStatus fileStatus : fileStatuses) {
-        LOG.info("kevin: after delete fileStatus = {}", fileStatus);
+      // The full backup and all incremental backups should now be deleted
+      for (String backupId : backupIds) {
+        assertFalse("The backup " + backupId + " should no longer exist",
+          fs.exists(new Path(backupRootDir, backupId)));
       }
+    }
+  }
+
+  private void deleteMostRecentIncrementalBackup(List<String> backupIds, BackupAdmin client)
+    throws IOException {
+    String incrementalBackupId = backupIds.get(backupIds.size() - 1);
+    assertTrue("Final incremental backup " + incrementalBackupId
+        + " should still exist inside of " + backupRootDir,
+      fs.exists(new Path(backupRootDir, incrementalBackupId)));
+
+    delete(new String[] {incrementalBackupId}, client);
+    backupIds.remove(backupIds.size() - 1);
+
+    assertFalse("Final incremental backup " + incrementalBackupId
+        + " should no longer exist inside of " + backupRootDir,
+      fs.exists(new Path(backupRootDir, incrementalBackupId)));
+  }
+
+  private void verifyAllBackupTypesExist(String fullBackupId, String[] incrementalBackups)
+    throws IOException {
+    // The full backup should still exist
+    assertTrue("Full backup " + fullBackupId + " should still exist inside of " + backupRootDir,
+      fs.exists(new Path(backupRootDir, fullBackupId)));
+    // All other incremental backups should still exist
+    for (String backupId : incrementalBackups) {
+      assertTrue("Incremental backup " + backupId + " should still exist inside of " + backupRootDir,
+        fs.exists(new Path(backupRootDir, backupId)));
     }
   }
 
@@ -418,8 +435,10 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
       try {
         assertTrue("A backup WALs subdirectory with today's date should exist: "
           + walPartitionDir, fs.exists(walPartitionDir));
+        // The directory exists - stop waiting
         break;
       } catch (AssertionError e) {
+        // Reach here when the directory currently does not exist
         if ((System.currentTimeMillis() - currentTimeMs) >= waitTimeSec*1000) {
           throw new AssertionError(e);
         }
