@@ -458,14 +458,20 @@ public final class ReplicationPeerConfigUtil {
   }
 
   /**
-   * Helper method to add/removev base peer configs from Configuration to ReplicationPeerConfig This
-   * merges the user supplied peer configuration
-   * {@link org.apache.hadoop.hbase.replication.ReplicationPeerConfig} with peer configs provided as
-   * property hbase.replication.peer.base.configs in hbase configuration. Expected format for this
-   * hbase configuration is "k1=v1;k2=v2,v2_1;k3=""". If value is empty, it will remove the existing
-   * key-value from peer config.
+   * Helper method to add/remove base peer configs from Configuration to ReplicationPeerConfig.
+   *
+   * Precedence rules:
+   * - If a key exists in both the provided ReplicationPeerConfig and base configs, the value in the
+   *   provided ReplicationPeerConfig is preserved (user-provided wins).
+   * - If a key exists only in base configs (non-empty), it is added to the ReplicationPeerConfig.
+   * - If a key exists in base configs with an empty value (e.g. k1=""), the key is removed from
+   *   the ReplicationPeerConfig.
+   *
+   * The base configs come from the property hbase.replication.peer.base.config in the HBase
+   * configuration. Expected format: "k1=v1;k2=v2,v2_1;k3=\"\"".
+   *
    * @param conf Configuration
-   * @return ReplicationPeerConfig containing updated configs.
+   * @return ReplicationPeerConfig containing updated configs per the precedence rules above.
    */
   public static ReplicationPeerConfig updateReplicationBasePeerConfigs(Configuration conf,
     ReplicationPeerConfig receivedPeerConfig) {
@@ -485,8 +491,8 @@ public final class ReplicationPeerConfigUtil {
         // is required so that it doesn't remove any other config unknowingly.
         if (Strings.isNullOrEmpty(configValue)) {
           copiedPeerConfigBuilder.removeConfiguration(configName);
-        } else if (!receivedPeerConfigMap.getOrDefault(configName, "").equals(configValue)) {
-          // update the configuration if exact config and value doesn't exists
+        } else if (!receivedPeerConfigMap.containsKey(configName)) {
+          // Only add base config if the key is absent in the provided config
           copiedPeerConfigBuilder.putConfiguration(configName, configValue);
         }
       }

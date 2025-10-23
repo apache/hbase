@@ -284,19 +284,41 @@ public class TestReplicationPeerConfig {
     assertEquals(customPeerConfigSecondValue,
       updatedReplicationPeerConfig.getConfiguration().get(customPeerConfigSecondKey));
 
-    // validates base configs get updated values even if config already present
+    // With new precedence, base updates must NOT override existing keys in peer config
     conf.unset(ReplicationPeerConfigUtil.HBASE_REPLICATION_PEER_BASE_CONFIG);
     conf.set(ReplicationPeerConfigUtil.HBASE_REPLICATION_PEER_BASE_CONFIG,
       customPeerConfigKey.concat("=").concat(customPeerConfigUpdatedValue).concat(";")
-        .concat(customPeerConfigSecondKey).concat("=").concat(customPeerConfigSecondUpdatedValue));
+        .concat(customPeerConfigSecondKey).concat("=")
+        .concat(customPeerConfigSecondUpdatedValue));
 
     ReplicationPeerConfig replicationPeerConfigAfterValueUpdate = ReplicationPeerConfigUtil
       .updateReplicationBasePeerConfigs(conf, updatedReplicationPeerConfig);
 
-    assertEquals(customPeerConfigUpdatedValue,
+    // Expect original values to be preserved since keys already exist in the peer config
+    assertEquals(customPeerConfigValue,
       replicationPeerConfigAfterValueUpdate.getConfiguration().get(customPeerConfigKey));
-    assertEquals(customPeerConfigSecondUpdatedValue,
+    assertEquals(customPeerConfigSecondValue,
       replicationPeerConfigAfterValueUpdate.getConfiguration().get(customPeerConfigSecondKey));
+  }
+
+  @Test
+  public void testBaseDoesNotOverrideExistingUserConfig() {
+    String key = "hbase.xxx.override_test";
+    String userValue = "user";
+    String baseValue = "base";
+
+    ReplicationPeerConfig existing = getConfig(1);
+    ReplicationPeerConfig withUser = ReplicationPeerConfig.newBuilder(existing)
+      .putConfiguration(key, userValue).build();
+
+    Configuration conf = new Configuration(CONF);
+    conf.set(ReplicationPeerConfigUtil.HBASE_REPLICATION_PEER_BASE_CONFIG,
+      key.concat("=").concat(baseValue));
+
+    ReplicationPeerConfig merged =
+      ReplicationPeerConfigUtil.updateReplicationBasePeerConfigs(conf, withUser);
+
+    assertEquals(userValue, merged.getConfiguration().get(key));
   }
 
   @Test

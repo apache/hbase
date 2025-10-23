@@ -440,8 +440,8 @@ public class TestMasterReplication {
   }
 
   /**
-   * Tests that base replication peer configs are applied on peer creation and the configs are
-   * overriden if updated as part of updateReplicationPeerConfig()
+   * Tests that base replication peer configs are applied on peer creation and that user-provided
+   * values are preserved on restart when base contains conflicting entries.
    */
   @Test
   public void testBasePeerConfigsForReplicationPeer() throws Exception {
@@ -496,8 +496,8 @@ public class TestMasterReplication {
       utilities[0].restartHBaseCluster(1);
       admin = utilities[0].getAdmin();
 
-      // Configurations should be updated after restart again
-      Assert.assertEquals(firstCustomPeerConfigValue,
+      // With new precedence, key 1 should retain user override on peer 1; key 2 should be added.
+      Assert.assertEquals(firstCustomPeerConfigUpdatedValue,
         admin.getReplicationPeerConfig("1").getConfiguration().get(firstCustomPeerConfigKey));
       Assert.assertEquals(firstCustomPeerConfigValue,
         admin.getReplicationPeerConfig("2").getConfiguration().get(firstCustomPeerConfigKey));
