@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.backup.util;
 
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONF_CONTINUOUS_BACKUP_WAL_DIR;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONTINUOUS_BACKUP_REPLICATION_PEER;
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.ONE_DAY_IN_MILLISECONDS;
 import static org.apache.hadoop.hbase.backup.util.BackupFileSystemManager.WALS_DIR;
@@ -49,6 +50,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
@@ -76,6 +78,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
+import org.apache.hbase.thirdparty.com.google.common.base.Strings;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -947,6 +950,39 @@ public final class BackupUtils {
     SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
     dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
     return dateFormat.format(new Date(dayInMillis));
+  }
+
+  /**
+   * Fetches bulkload filepaths based on the given time range from backup WAL directory.
+   */
+  public static List<Path> collectBulkFiles(Connection conn, TableName sourceTable,
+    TableName targetTable, long startTime, long endTime, Path restoreRootDir,
+    List<String> walDirs) throws IOException {
+
+    if (walDirs.isEmpty()) {
+      String walBackupDir = conn.getConfiguration().get(CONF_CONTINUOUS_BACKUP_WAL_DIR);
+      if (Strings.isNullOrEmpty(walBackupDir)) {
+        throw new IOException(
+          "WAL backup directory is not configured " + CONF_CONTINUOUS_BACKUP_WAL_DIR);
+      }
+      Path walDirPath = new Path(walBackupDir);
+      walDirs = BackupUtils.getValidWalDirs(conn.getConfiguration(), walDirPath, startTime, endTime);
+    }
+
+    if (walDirs.isEmpty()) {
+      LOG.warn("No valid WAL directories found for range {} - {}. Skipping bulk-file collection.",
+        startTime, endTime);
+      return Collections.emptyList();
+    }
+
+    LOG.info(
+      "Starting WAL bulk-file collection for source: {}, target: {}, time range: {} - {}, WAL "
+        + "backup dir: {}, restore root: {}", sourceTable, targetTable, startTime, endTime,
+      walDirs, restoreRootDir);
+    String walDirsCsv = String.join(",", walDirs);
+
+    return BulkFilesCollector.collectFromWalDirs(HBaseConfiguration.create(conn.getConfiguration()),
+      walDirsCsv, restoreRootDir, sourceTable, targetTable, startTime, endTime);
   }
 
   /**

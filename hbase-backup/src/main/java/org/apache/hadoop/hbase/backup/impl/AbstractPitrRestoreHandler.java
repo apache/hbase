@@ -23,6 +23,7 @@ import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.DEFAULT_CONT
 import static org.apache.hadoop.hbase.mapreduce.WALPlayer.IGNORE_EMPTY_FILES;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -334,7 +335,8 @@ public abstract class AbstractPitrRestoreHandler {
     RestoreJob restoreService = BackupRestoreFactory.getRestoreJob(conf);
 
     List<Path> bulkloadFiles =
-      collectBulkFiles(sourceTable, targetTable, startTime, endTime, new Path(restoreRootDir));
+      BackupUtils.collectBulkFiles(conn, sourceTable, targetTable, startTime, endTime,
+        new Path(restoreRootDir), new ArrayList<String>());
 
     if (bulkloadFiles.isEmpty()) {
       LOG.info("No bulk-load files found for {} in time range {}-{}. Skipping bulkload restore.",
@@ -379,29 +381,6 @@ public abstract class AbstractPitrRestoreHandler {
     }
 
     executeWalReplay(validDirs, sourceTable, targetTable, startTime, endTime);
-  }
-
-  private List<Path> collectBulkFiles(TableName sourceTable, TableName targetTable, long startTime,
-    long endTime, Path restoreRootDir) throws IOException {
-
-    String walBackupDir = conn.getConfiguration().get(CONF_CONTINUOUS_BACKUP_WAL_DIR);
-    Path walDirPath = new Path(walBackupDir);
-    LOG.info(
-      "Starting WAL bulk-file collection for source: {}, target: {}, time range: {} - {}, WAL backup dir: {}, restore root: {}",
-      sourceTable, targetTable, startTime, endTime, walDirPath, restoreRootDir);
-
-    List<String> validDirs =
-      BackupUtils.getValidWalDirs(conn.getConfiguration(), walDirPath, startTime, endTime);
-    if (validDirs.isEmpty()) {
-      LOG.warn("No valid WAL directories found for range {} - {}. Skipping bulk-file collection.",
-        startTime, endTime);
-      return Collections.emptyList();
-    }
-
-    String walDirsCsv = String.join(",", validDirs);
-
-    return BulkFilesCollector.collectFromWalDirs(HBaseConfiguration.create(conn.getConfiguration()),
-      walDirsCsv, restoreRootDir, sourceTable, targetTable, startTime, endTime);
   }
 
   /**

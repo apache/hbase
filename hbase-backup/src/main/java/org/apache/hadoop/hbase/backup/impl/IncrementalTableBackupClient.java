@@ -196,12 +196,12 @@ public class IncrementalTableBackupClient extends TableBackupClient {
       // Continuous incremental backup: run BulkLoadCollectorJob over backed-up WALs
       Path collectorOutput = new Path(getBulkOutputDir(), BULKLOAD_COLLECTOR_OUTPUT);
       for (TableName table : tablesToBackup) {
-        String walDirsCsv =
-          String.join(",", tablesToWALFileList.getOrDefault(table, new ArrayList<String>()));
+        long startTs = tablesToPrevBackupTs.getOrDefault(table, 0L);
+        long endTs = backupInfo.getIncrCommittedWalTs();
+        List<String> walDirs = tablesToWALFileList.getOrDefault(table, new ArrayList<String>());
 
         List<Path> bulkloadPaths =
-          BulkFilesCollector.collectFromWalDirs(conf, walDirsCsv, collectorOutput, table, table,
-            tablesToPrevBackupTs.getOrDefault(table, 0L), backupInfo.getIncrCommittedWalTs());
+          BackupUtils.collectBulkFiles(conn, table, table, startTs, endTs, collectorOutput, walDirs);
 
         List<String> bulkLoadFiles =
           bulkloadPaths.stream().map(Path::toString).collect(Collectors.toList());
