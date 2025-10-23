@@ -24,6 +24,7 @@ import java.util.Collections;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TestRefreshHFilesBase;
 import org.apache.hadoop.hbase.master.procedure.TestRefreshHFilesProcedureWithReadOnlyConf;
+import org.apache.hadoop.hbase.regionserver.CreateStoreFileWriterParams;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.After;
@@ -86,5 +87,60 @@ public class TestStoreFileTrackerBaseReadOnlyMode extends TestRefreshHFilesBase 
     tracker = new DummyStoreFileTrackerForReadOnlyMode(conf, true);
     tracker.replace(Collections.emptyList(), Collections.emptyList());
     assertTrue("Compaction should run when not readonly", tracker.wasCompactionExecuted());
+  }
+
+  @Test
+  public void testAddSkippedWhenGlobalReadOnlyEnabled() throws Exception {
+    try {
+      setReadOnlyMode(true);
+      tracker = new DummyStoreFileTrackerForReadOnlyMode(conf, true);
+      tracker.add(Collections.emptyList());
+      assertFalse("Add should not be executed in readonly mode", tracker.wasAddExecuted());
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    } finally {
+      setReadOnlyMode(false);
+    }
+  }
+
+  @Test
+  public void testAddExecutedWhenWritable() throws Exception {
+    tracker = new DummyStoreFileTrackerForReadOnlyMode(conf, true);
+    tracker.add(Collections.emptyList());
+    assertTrue("Add should run when not readonly", tracker.wasAddExecuted());
+  }
+
+  @Test
+  public void testSetSkippedWhenGlobalReadOnlyEnabled() throws Exception {
+    try {
+      setReadOnlyMode(true);
+      tracker = new DummyStoreFileTrackerForReadOnlyMode(conf, true);
+      tracker.set(Collections.emptyList());
+      assertFalse("Set should not be executed in readonly mode", tracker.wasSetExecuted());
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    } finally {
+      setReadOnlyMode(false);
+    }
+  }
+
+  @Test
+  public void testSetExecutedWhenWritable() throws Exception {
+    tracker = new DummyStoreFileTrackerForReadOnlyMode(conf, true);
+    tracker.set(Collections.emptyList());
+    assertTrue("Set should run when not readonly", tracker.wasSetExecuted());
+  }
+
+  @Test(expected = IllegalStateException.class)
+  public void testCreateWriterThrowExceptionWhenGlobalReadOnlyEnabled() throws Exception {
+    try {
+      setReadOnlyMode(true);
+      tracker = new DummyStoreFileTrackerForReadOnlyMode(conf, true);
+      CreateStoreFileWriterParams params = CreateStoreFileWriterParams.create().maxKeyCount(4)
+        .isCompaction(false).includeMVCCReadpoint(true).includesTag(false).shouldDropBehind(false);
+      tracker.createWriter(params);
+    } finally {
+      setReadOnlyMode(false);
+    }
   }
 }

@@ -86,14 +86,12 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
 
   @Override
   public final List<StoreFileInfo> load() throws IOException {
-    return doLoadStoreFiles(
-      !isPrimaryReplica || conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
-        HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT));
+    return doLoadStoreFiles(!isPrimaryReplica || isReadOnlyEnabled());
   }
 
   @Override
   public final void add(Collection<StoreFileInfo> newFiles) throws IOException {
-    if (isPrimaryReplica) {
+    if (isPrimaryReplica && !isReadOnlyEnabled()) {
       doAddNewStoreFiles(newFiles);
     }
   }
@@ -101,17 +99,14 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
   @Override
   public final void replace(Collection<StoreFileInfo> compactedFiles,
     Collection<StoreFileInfo> newFiles) throws IOException {
-    if (
-      isPrimaryReplica && !conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
-        HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT)
-    ) {
+    if (isPrimaryReplica && !isReadOnlyEnabled()) {
       doAddCompactionResults(compactedFiles, newFiles);
     }
   }
 
   @Override
   public final void set(List<StoreFileInfo> files) throws IOException {
-    if (isPrimaryReplica) {
+    if (isPrimaryReplica && !isReadOnlyEnabled()) {
       doSetStoreFiles(files);
     }
   }
@@ -146,8 +141,9 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
 
   @Override
   public final StoreFileWriter createWriter(CreateStoreFileWriterParams params) throws IOException {
-    if (!isPrimaryReplica) {
-      throw new IllegalStateException("Should not call create writer on secondary replicas");
+    if (!isPrimaryReplica || isReadOnlyEnabled()) {
+      throw new IllegalStateException(
+        "Should not call create writer on secondary replicas or in read only mode");
     }
     // creating new cache config for each new writer
     final CacheConfig cacheConf = ctx.getCacheConf();
@@ -389,6 +385,11 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
     HFileArchiver.archiveStoreFiles(this.conf, ctx.getRegionFileSystem().getFileSystem(),
       ctx.getRegionInfo(), ctx.getRegionFileSystem().getTableDir(), ctx.getFamily().getName(),
       storeFiles);
+  }
+
+  private boolean isReadOnlyEnabled() {
+    return conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
+      HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
   }
 
   /**

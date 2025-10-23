@@ -27,6 +27,8 @@ import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 public class DummyStoreFileTrackerForReadOnlyMode extends StoreFileTrackerBase {
   private boolean readOnlyUsed = false;
   private boolean compactionExecuted = false;
+  private boolean addExecuted = false;
+  private boolean setExecuted = false;
 
   public DummyStoreFileTrackerForReadOnlyMode(Configuration conf, boolean isPrimaryReplica) {
     super(conf, isPrimaryReplica, null);
@@ -40,7 +42,7 @@ public class DummyStoreFileTrackerForReadOnlyMode extends StoreFileTrackerBase {
 
   @Override
   protected void doSetStoreFiles(Collection<StoreFileInfo> files) throws IOException {
-
+    setExecuted = true;
   }
 
   @Override
@@ -51,7 +53,7 @@ public class DummyStoreFileTrackerForReadOnlyMode extends StoreFileTrackerBase {
 
   @Override
   protected void doAddNewStoreFiles(Collection<StoreFileInfo> newFiles) throws IOException {
-
+    addExecuted = true;
   }
 
   boolean wasReadOnlyLoad() {
@@ -60,6 +62,14 @@ public class DummyStoreFileTrackerForReadOnlyMode extends StoreFileTrackerBase {
 
   boolean wasCompactionExecuted() {
     return compactionExecuted;
+  }
+
+  boolean wasAddExecuted() {
+    return addExecuted;
+  }
+
+  boolean wasSetExecuted() {
+    return setExecuted;
   }
 
   @Override
