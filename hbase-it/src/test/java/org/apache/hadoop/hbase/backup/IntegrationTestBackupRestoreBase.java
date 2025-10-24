@@ -194,7 +194,7 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
 
   /**
    * This is the main driver method used by tests that extend this abstract base class. This method
-   * kicks off one backup and restore thread per table.
+   * starts one backup and restore thread per table.
    * @param isContinuousBackupEnabled Boolean flag used to specify if the backups should have
    *                                  continuous backup enabled.
    */
