@@ -61,6 +61,14 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.Uninterruptibles;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
+/**
+ * An abstract base class that is used to run backup, restore, and delete integration tests. This class
+ * performs both full backups and incremental backups. Both continuous backup and non-continuous
+ * backup test cases are supported. The number of incremental backups performed depends on the number
+ * of iterations defined by the user. The class performs the backup/restore in a separate thread, where
+ * one thread is created per table. The number of tables is user-defined, along with other various
+ * configurations.
+ */
 public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBase {
   protected static final Logger LOG =
     LoggerFactory.getLogger(IntegrationTestBackupRestoreBase.class);
@@ -73,8 +81,8 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
   protected static final int DEFAULT_REGION_COUNT = 10;
   protected static final int DEFAULT_REGIONSERVER_COUNT = 5;
   protected static final int DEFAULT_NUMBER_OF_TABLES = 1;
-  protected static final int DEFAULT_NUM_ITERATIONS = 1;
-  protected static final int DEFAULT_ROWS_IN_ITERATION = 100;
+  protected static final int DEFAULT_NUM_ITERATIONS = 10;
+  protected static final int DEFAULT_ROWS_IN_ITERATION = 10000;
   protected static final String SLEEP_TIME_KEY = "sleeptime";
   // short default interval because tests don't run very long.
   protected static final long SLEEP_TIME_DEFAULT = 50000L;
@@ -95,8 +103,8 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
   /*
    * This class is used to run the backup and restore thread(s). Throwing an exception in this
    * thread will not cause the test to fail, so the purpose of this class is to both kick off the
-   * backup and restore and record any exceptions that occur so they can be thrown in the main
-   * thread.
+   * backup and restore, as well as record any exceptions that occur so they can be thrown in the
+   * main thread.
    */
   protected class BackupAndRestoreThread implements Runnable {
     private final TableName table;
@@ -116,6 +124,8 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
     @Override
     public void run() {
       try {
+        LOG.info("Running backup and restore test for {} in thread {}", this.table,
+          Thread.currentThread());
         runTestSingle(this.table, isContinuousBackupEnabled);
       } catch (Throwable t) {
         LOG.error(
@@ -181,7 +191,6 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
   }
 
   protected void runTestMulti(boolean isContinuousBackupEnabled) {
-    LOG.info("IT backup & restore started");
     Thread[] workers = new Thread[numTables];
     BackupAndRestoreThread[] backupAndRestoreThreads = new BackupAndRestoreThread[numTables];
     for (int i = 0; i < numTables; i++) {
@@ -265,7 +274,7 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
     try (Connection conn = util.getConnection(); BackupAdmin client = new BackupAdminImpl(conn)) {
       loadData(table, rowsInIteration);
 
-      // #1 - create full backup for table first
+      // First create a full backup for the table
       LOG.info("Creating full backup image for {} with continuous backup {}", table,
         enabledOrDisabled);
       List<TableName> tables = Lists.newArrayList(table);
@@ -280,7 +289,7 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
 
       verifySnapshotExists(table, fullBackupId);
 
-      // Run verifications specific to continuous backup
+      // Run full backup verifications specific to continuous backup
       if (isContinuousBackupEnabled) {
         BackupTestUtil.verifyReplicationPeerSubscription(util, table);
         Path backupWALs = verifyWALsDirectoryExists();
@@ -293,8 +302,8 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
       // Now continue with incremental backups
       String incrementalBackupId;
       for (int count = 1; count <= numIterations; count++) {
-        LOG.info("{} - Starting incremental backup iteration {} of {}", Thread.currentThread().getName(), count,
-          numIterations);
+        LOG.info("{} - Starting incremental backup iteration {} of {} for {}", Thread.currentThread().getName(), count,
+          numIterations, table);
         loadData(table, rowsInIteration);
 
         // Do incremental backup
@@ -309,7 +318,8 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
         LOG.info("Created incremental backup with ID: {}", incrementalBackupId);
         backupIds.add(incrementalBackupId);
 
-        // Restore incremental backup for table, with overwrite for previous backup
+        // Restore table using backup taken "two backups ago"
+        // On the first iteration, this backup will be the full backup
         String previousBackupId = backupIds.get(backupIds.size() - 2);
         if (previousBackupId.equals(fullBackupId)) {
           LOG.info("Restoring {} using original full backup with ID: {}", table, previousBackupId);
@@ -320,13 +330,13 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
         restoreTableAndVerifyRowCount(conn, client, table, previousBackupId,
           (long) rowsInIteration * count);
 
-        // Restore incremental backup for table, with overwrite for last backup
+        // Restore table using the most recently created incremental backup
         LOG.info("Restoring {} using most recent incremental backup with ID: {}",
           table, incrementalBackupId);
         restoreTableAndVerifyRowCount(conn, client, table, incrementalBackupId,
           (long) rowsInIteration * (count + 1));
-        LOG.info("{} - Finished incremental backup iteration {} of {}",
-          Thread.currentThread().getName(), count, numIterations);
+        LOG.info("{} - Finished incremental backup iteration {} of {} for {}",
+          Thread.currentThread().getName(), count, numIterations, table);
       }
 
       // Now merge all incremental and restore
@@ -347,6 +357,8 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
       // The full backup and all previous incremental backups should still exist
       verifyAllBackupTypesExist(fullBackupId, getAllIncrementalBackupIds(backupIds));
       // Delete the full backup
+      LOG.info("Deleting full backup: {}. This will also delete any remaining incremental backups",
+        fullBackupId);
       delete(new String[] {fullBackupId}, client);
       // The full backup and all incremental backups should now be deleted
       for (String backupId : backupIds) {
@@ -359,6 +371,7 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
   private void deleteMostRecentIncrementalBackup(List<String> backupIds, BackupAdmin client)
     throws IOException {
     String incrementalBackupId = backupIds.get(backupIds.size() - 1);
+    LOG.info("Deleting the most recently created incremental backup: {}", incrementalBackupId);
     assertTrue("Final incremental backup " + incrementalBackupId
         + " should still exist inside of " + backupRootDir,
       fs.exists(new Path(backupRootDir, incrementalBackupId)));
@@ -373,10 +386,10 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
 
   private void verifyAllBackupTypesExist(String fullBackupId, String[] incrementalBackups)
     throws IOException {
-    // The full backup should still exist
+    // The full backup should exist
     assertTrue("Full backup " + fullBackupId + " should still exist inside of " + backupRootDir,
       fs.exists(new Path(backupRootDir, fullBackupId)));
-    // All other incremental backups should still exist
+    // All incremental backups should exist
     for (String backupId : incrementalBackups) {
       assertTrue("Incremental backup " + backupId + " should still exist inside of " + backupRootDir,
         fs.exists(new Path(backupRootDir, backupId)));

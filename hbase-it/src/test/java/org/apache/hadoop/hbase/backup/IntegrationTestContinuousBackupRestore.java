@@ -42,10 +42,10 @@ import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
 /**
- * An integration test to detect regressions in HBASE-7912. Create a table with many regions, load
- * data, perform series backup/load operations, then restore and verify data
- * @see <a href="https://issues.apache.org/jira/browse/HBASE-7912">HBASE-7912</a>
- * @see <a href="https://issues.apache.org/jira/browse/HBASE-14123">HBASE-14123</a>
+ * An integration test to detect regressions in HBASE-28957. Create a table with many regions, load
+ * data, perform series backup/load operations with continuous backup enabled, then restore and
+ * verify data.
+ * @see <a href="https://issues.apache.org/jira/browse/HBASE-28957">HBASE-28957</a>
  */
 @Category(IntegrationTests.class)
 public class IntegrationTestContinuousBackupRestore extends IntegrationTestBackupRestoreBase {

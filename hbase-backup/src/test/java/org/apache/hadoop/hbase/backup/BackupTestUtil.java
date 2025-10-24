@@ -53,7 +53,6 @@ public class BackupTestUtil {
   }
 
   public static void enableBackup(Configuration conf) {
-    // Enable backup
     conf.setBoolean(BackupRestoreConstants.BACKUP_ENABLE_KEY, true);
     BackupManager.decorateMasterConfiguration(conf);
     BackupManager.decorateRegionServerConfiguration(conf);
