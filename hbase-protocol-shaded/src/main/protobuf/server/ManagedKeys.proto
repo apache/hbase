@@ -27,7 +27,7 @@ option optimize_for = SPEED;
 import "HBase.proto";
 
 message ManagedKeysRequest {
-  required string key_cust = 1;
+  required bytes key_cust = 1;
   required string key_namespace = 2;
 }
 
@@ -39,7 +39,7 @@ enum ManagedKeyState {
 }
 
 message ManagedKeysResponse {
-  required string key_cust = 1;
+  required bytes key_cust = 1;
   required string key_namespace = 2;
   required ManagedKeyState key_state = 3;
   optional string key_metadata = 4;

@@ -506,12 +506,11 @@ public final class Encryption {
       // is configured
       String alternateAlgorithm = conf.get(HConstants.CRYPTO_ALTERNATE_KEY_ALGORITHM_CONF_KEY);
       if (alternateAlgorithm != null) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Unable to decrypt data with current cipher algorithm '"
-            + conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES)
-            + "'. Trying with the alternate cipher algorithm '" + alternateAlgorithm
-            + "' configured.");
-        }
+        LOG.debug(
+          "Unable to decrypt data with current cipher algorithm '{}'. "
+            + "Trying with the alternate cipher algorithm '{}' configured.",
+          conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES),
+          alternateAlgorithm);
         Cipher alterCipher = Encryption.getCipher(conf, alternateAlgorithm);
         if (alterCipher == null) {
           throw new RuntimeException("Cipher '" + alternateAlgorithm + "' not available");
@@ -575,7 +574,7 @@ public final class Encryption {
         throw new RuntimeException(e);
       }
       keyProviderCache.put(providerCacheKey, provider);
-      LOG.debug("Installed " + providerClassName + " into key provider cache");
+      LOG.debug("Installed {} into key provider cache", providerClassName);
     }
     return provider;
   }

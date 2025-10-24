@@ -62,5 +62,16 @@ module Hbase
         assert(output.include?('1 row(s)'))
       end
     end
+
+    define_test 'Decode failure raises friendly error' do
+      assert_raises(ArgumentError) do
+        @shell.command('enable_key_management', '!!!:namespace')
+      end
+
+      error = assert_raises(ArgumentError) do
+        @shell.command('show_key_status', '!!!:namespace')
+      end
+      assert_match(/Failed to decode key custodian/, error.message)
+    end
   end
 end

@@ -20,6 +20,7 @@
 
 require 'java'
 java_import org.apache.hadoop.hbase.io.crypto.ManagedKeyData
+java_import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider
 java_import org.apache.hadoop.hbase.keymeta.KeymetaAdminClient
 
 module Hbase
@@ -54,7 +55,17 @@ module Hbase
       cust_info = key_info.split(':')
       raise(ArgumentError, 'Invalid cust:namespace format') unless [1, 2].include?(cust_info.length)
 
-      [cust_info[0], cust_info.length > 1 ? cust_info[1] : ManagedKeyData::KEY_SPACE_GLOBAL]
+      custodian = cust_info[0]
+      namespace = cust_info.length > 1 ? cust_info[1] : ManagedKeyData::KEY_SPACE_GLOBAL
+
+      begin
+        cust_bytes = ManagedKeyProvider.decodeToBytes(custodian)
+      rescue Java::JavaIo::IOException => e
+        message = e.cause&.message || e.message
+        raise(ArgumentError, "Failed to decode key custodian '#{custodian}': #{message}")
+      end
+
+      [cust_bytes, namespace]
     end
   end
 end

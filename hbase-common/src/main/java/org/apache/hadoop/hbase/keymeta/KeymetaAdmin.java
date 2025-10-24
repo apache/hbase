@@ -31,24 +31,24 @@ import org.apache.yetus.audience.InterfaceAudience;
 public interface KeymetaAdmin {
   /**
    * Enables key management for the specified custodian and namespace.
-   * @param keyCust      The key custodian in base64 encoded format.
+   * @param keyCust      The key custodian identifier.
    * @param keyNamespace The namespace for the key management.
    * @return The list of {@link ManagedKeyData} objects each identifying the key and its current
    *         status.
    * @throws IOException if an error occurs while enabling key management.
    */
-  ManagedKeyData enableKeyManagement(String keyCust, String keyNamespace)
+  ManagedKeyData enableKeyManagement(byte[] keyCust, String keyNamespace)
     throws IOException, KeyException;
 
   /**
    * Get the status of all the keys for the specified custodian.
-   * @param keyCust      The key custodian in base64 encoded format.
+   * @param keyCust      The key custodian identifier.
    * @param keyNamespace The namespace for the key management.
    * @return The list of {@link ManagedKeyData} objects each identifying the key and its current
    *         status.
    * @throws IOException if an error occurs while enabling key management.
    */
-  List<ManagedKeyData> getManagedKeys(String keyCust, String keyNamespace)
+  List<ManagedKeyData> getManagedKeys(byte[] keyCust, String keyNamespace)
     throws IOException, KeyException;
 
   /**

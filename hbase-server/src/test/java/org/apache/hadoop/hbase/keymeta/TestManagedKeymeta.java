@@ -36,7 +36,6 @@ import java.util.function.Function;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
-import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyState;
 import org.apache.hadoop.hbase.io.crypto.MockManagedKeyProvider;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -78,26 +77,28 @@ public class TestManagedKeymeta extends ManagedKeyTestBase {
     MockManagedKeyProvider managedKeyProvider =
       (MockManagedKeyProvider) Encryption.getManagedKeyProvider(master.getConfiguration());
     String cust = "cust1";
-    String encodedCust = ManagedKeyProvider.encodeToStr(cust.getBytes());
+    byte[] custBytes = cust.getBytes();
     ManagedKeyData managedKey =
-      adminClient.enableKeyManagement(encodedCust, ManagedKeyData.KEY_SPACE_GLOBAL);
+      adminClient.enableKeyManagement(custBytes, ManagedKeyData.KEY_SPACE_GLOBAL);
     assertKeyDataSingleKey(managedKey, ManagedKeyState.ACTIVE);
 
     List<ManagedKeyData> managedKeys =
-      adminClient.getManagedKeys(encodedCust, ManagedKeyData.KEY_SPACE_GLOBAL);
+      adminClient.getManagedKeys(custBytes, ManagedKeyData.KEY_SPACE_GLOBAL);
     assertEquals(managedKeyProvider.getLastGeneratedKeyData(cust, ManagedKeyData.KEY_SPACE_GLOBAL)
       .cloneWithoutKey(), managedKeys.get(0).cloneWithoutKey());
 
     String nonExistentCust = "nonExistentCust";
+    byte[] nonExistentBytes = nonExistentCust.getBytes();
     managedKeyProvider.setMockedKeyState(nonExistentCust, ManagedKeyState.FAILED);
-    ManagedKeyData managedKey1 = adminClient.enableKeyManagement(
-      ManagedKeyProvider.encodeToStr(nonExistentCust.getBytes()), ManagedKeyData.KEY_SPACE_GLOBAL);
+    ManagedKeyData managedKey1 =
+      adminClient.enableKeyManagement(nonExistentBytes, ManagedKeyData.KEY_SPACE_GLOBAL);
     assertKeyDataSingleKey(managedKey1, ManagedKeyState.FAILED);
 
     String disabledCust = "disabledCust";
+    byte[] disabledBytes = disabledCust.getBytes();
     managedKeyProvider.setMockedKeyState(disabledCust, ManagedKeyState.DISABLED);
-    ManagedKeyData managedKey2 = adminClient.enableKeyManagement(
-      ManagedKeyProvider.encodeToStr(disabledCust.getBytes()), ManagedKeyData.KEY_SPACE_GLOBAL);
+    ManagedKeyData managedKey2 =
+      adminClient.enableKeyManagement(disabledBytes, ManagedKeyData.KEY_SPACE_GLOBAL);
     assertKeyDataSingleKey(managedKey2, ManagedKeyState.DISABLED);
   }
 
@@ -113,9 +114,9 @@ public class TestManagedKeymeta extends ManagedKeyTestBase {
       (MockManagedKeyProvider) Encryption.getManagedKeyProvider(TEST_UTIL.getConfiguration());
     managedKeyProvider.setShouldThrowExceptionOnGetManagedKey(true);
     KeymetaAdmin adminClient = new KeymetaAdminClient(TEST_UTIL.getConnection());
-    IOException exception =
-      assertThrows(IOException.class, () -> adminClient.enableKeyManagement("cust", "namespace"));
-    assertTrue(exception.getMessage().contains("Test exception on getManagedKey"));
+    IOException exception = assertThrows(IOException.class,
+      () -> adminClient.enableKeyManagement(new byte[0], "namespace"));
+    assertTrue(exception.getMessage().contains("key_cust must not be empty"));
   }
 
   @Test
@@ -130,7 +131,7 @@ public class TestManagedKeymeta extends ManagedKeyTestBase {
       return null;
     }, (client) -> {
       try {
-        client.enableKeyManagement("cust", "namespace");
+        client.enableKeyManagement(new byte[0], "namespace");
       } catch (IOException e) {
         throw new RuntimeException(e);
       }
@@ -151,7 +152,7 @@ public class TestManagedKeymeta extends ManagedKeyTestBase {
       return null;
     }, (client) -> {
       try {
-        client.getManagedKeys("cust", "namespace");
+        client.getManagedKeys(new byte[0], "namespace");
       } catch (IOException | KeyException e) {
         throw new RuntimeException(e);
       }

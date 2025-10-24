@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.ManagedKeysR
 import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.ManagedKeysResponse;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -44,11 +45,12 @@ public class KeymetaAdminClient implements KeymetaAdmin {
   }
 
   @Override
-  public ManagedKeyData enableKeyManagement(String keyCust, String keyNamespace)
+  public ManagedKeyData enableKeyManagement(byte[] keyCust, String keyNamespace)
     throws IOException {
     try {
-      ManagedKeysProtos.ManagedKeysResponse response = stub.enableKeyManagement(null,
-        ManagedKeysRequest.newBuilder().setKeyCust(keyCust).setKeyNamespace(keyNamespace).build());
+      ManagedKeysProtos.ManagedKeysResponse response =
+        stub.enableKeyManagement(null, ManagedKeysRequest.newBuilder()
+          .setKeyCust(ByteString.copyFrom(keyCust)).setKeyNamespace(keyNamespace).build());
       return generateKeyData(response);
     } catch (ServiceException e) {
       throw ProtobufUtil.handleRemoteException(e);
@@ -56,11 +58,12 @@ public class KeymetaAdminClient implements KeymetaAdmin {
   }
 
   @Override
-  public List<ManagedKeyData> getManagedKeys(String keyCust, String keyNamespace)
+  public List<ManagedKeyData> getManagedKeys(byte[] keyCust, String keyNamespace)
     throws IOException, KeyException {
     try {
-      ManagedKeysProtos.GetManagedKeysResponse statusResponse = stub.getManagedKeys(null,
-        ManagedKeysRequest.newBuilder().setKeyCust(keyCust).setKeyNamespace(keyNamespace).build());
+      ManagedKeysProtos.GetManagedKeysResponse statusResponse =
+        stub.getManagedKeys(null, ManagedKeysRequest.newBuilder()
+          .setKeyCust(ByteString.copyFrom(keyCust)).setKeyNamespace(keyNamespace).build());
       return generateKeyDataList(statusResponse);
     } catch (ServiceException e) {
       throw ProtobufUtil.handleRemoteException(e);
@@ -88,8 +91,8 @@ public class KeymetaAdminClient implements KeymetaAdmin {
   }
 
   private static ManagedKeyData generateKeyData(ManagedKeysProtos.ManagedKeysResponse response) {
-    return new ManagedKeyData(response.getKeyCustBytes().toByteArray(), response.getKeyNamespace(),
-      null, ManagedKeyState.forValue((byte) response.getKeyState().getNumber()),
+    return new ManagedKeyData(response.getKeyCust().toByteArray(), response.getKeyNamespace(), null,
+      ManagedKeyState.forValue((byte) response.getKeyState().getNumber()),
       response.getKeyMetadata(), response.getRefreshTimestamp());
   }
 }

@@ -41,35 +41,37 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
   }
 
   @Override
-  public ManagedKeyData enableKeyManagement(String keyCust, String keyNamespace)
+  public ManagedKeyData enableKeyManagement(byte[] keyCust, String keyNamespace)
     throws IOException, KeyException {
     assertKeyManagementEnabled();
-    LOG.info("Trying to enable key management on custodian: {} under namespace: {}", keyCust,
+    String encodedCust = ManagedKeyProvider.encodeToStr(keyCust);
+    LOG.info("Trying to enable key management on custodian: {} under namespace: {}", encodedCust,
       keyNamespace);
-    byte[] key_cust = ManagedKeyProvider.decodeToBytes(keyCust);
 
     // Check if (cust, namespace) pair is already enabled and has an active key.
-    ManagedKeyData activeKey = getActiveKey(key_cust, keyNamespace);
+    ManagedKeyData activeKey = getActiveKey(keyCust, keyNamespace);
     if (activeKey != null) {
       LOG.info(
         "enableManagedKeys: specified (custodian: {}, namespace: {}) already has "
           + "an active managed key with metadata: {}",
-        keyCust, keyNamespace, activeKey.getKeyMetadata());
+        encodedCust, keyNamespace, activeKey.getKeyMetadata());
       return activeKey;
     }
 
     // Retrieve a single key from provider
-    ManagedKeyData retrievedKey = retrieveActiveKey(keyCust, key_cust, keyNamespace, this, null);
+    ManagedKeyData retrievedKey = retrieveActiveKey(encodedCust, keyCust, keyNamespace, this, null);
     return retrievedKey;
   }
 
   @Override
-  public List<ManagedKeyData> getManagedKeys(String keyCust, String keyNamespace)
+  public List<ManagedKeyData> getManagedKeys(byte[] keyCust, String keyNamespace)
     throws IOException, KeyException {
     assertKeyManagementEnabled();
-    LOG.info("Getting key statuses for custodian: {} under namespace: {}", keyCust, keyNamespace);
-    byte[] key_cust = ManagedKeyProvider.decodeToBytes(keyCust);
-    return getAllKeys(key_cust, keyNamespace);
+    if (LOG.isInfoEnabled()) {
+      LOG.info("Getting key statuses for custodian: {} under namespace: {}",
+        ManagedKeyProvider.encodeToStr(keyCust), keyNamespace);
+    }
+    return getAllKeys(keyCust, keyNamespace);
   }
 
   @Override

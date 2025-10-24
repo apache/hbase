@@ -84,7 +84,7 @@ import org.junit.runners.Suite;
 public class TestKeymetaAdminImpl {
 
   private static final String CUST = "cust1";
-  private static final String ENCODED_CUST = ManagedKeyProvider.encodeToStr(CUST.getBytes());
+  private static final byte[] CUST_BYTES = CUST.getBytes();
 
   protected final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
@@ -138,9 +138,9 @@ public class TestKeymetaAdminImpl {
     @Test
     public void testDisabled() throws Exception {
       assertThrows(IOException.class, () -> keymetaAdmin
-        .enableKeyManagement(ManagedKeyData.KEY_GLOBAL_CUSTODIAN, KEY_SPACE_GLOBAL));
-      assertThrows(IOException.class,
-        () -> keymetaAdmin.getManagedKeys(ManagedKeyData.KEY_GLOBAL_CUSTODIAN, KEY_SPACE_GLOBAL));
+        .enableKeyManagement(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES, KEY_SPACE_GLOBAL));
+      assertThrows(IOException.class, () -> keymetaAdmin
+        .getManagedKeys(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES, KEY_SPACE_GLOBAL));
     }
   }
 
@@ -173,34 +173,34 @@ public class TestKeymetaAdminImpl {
       when(keymetaAccessor.getActiveKey(CUST.getBytes(), keySpace))
         .thenReturn(managedKeyProvider.getManagedKey(CUST.getBytes(), keySpace));
 
-      ManagedKeyData managedKey = keymetaAdmin.enableKeyManagement(ENCODED_CUST, keySpace);
+      ManagedKeyData managedKey = keymetaAdmin.enableKeyManagement(CUST_BYTES, keySpace);
       assertNotNull(managedKey);
       assertEquals(keyState, managedKey.getKeyState());
       verify(keymetaAccessor).getActiveKey(CUST.getBytes(), keySpace);
 
-      keymetaAdmin.getManagedKeys(ENCODED_CUST, keySpace);
+      keymetaAdmin.getManagedKeys(CUST_BYTES, keySpace);
       verify(keymetaAccessor).getAllKeys(CUST.getBytes(), keySpace);
     }
 
     @Test
     public void testEnableKeyManagement() throws Exception {
       assumeTrue(keyState == ACTIVE);
-      ManagedKeyData managedKey = keymetaAdmin.enableKeyManagement(ENCODED_CUST, "namespace1");
+      ManagedKeyData managedKey = keymetaAdmin.enableKeyManagement(CUST_BYTES, "namespace1");
       assertEquals(ManagedKeyState.ACTIVE, managedKey.getKeyState());
-      assertEquals(ENCODED_CUST, managedKey.getKeyCustodianEncoded());
+      assertEquals(ManagedKeyProvider.encodeToStr(CUST_BYTES), managedKey.getKeyCustodianEncoded());
       assertEquals("namespace1", managedKey.getKeyNamespace());
 
       // Second call should return the same keys since our mock key provider returns the same key
-      ManagedKeyData managedKey2 = keymetaAdmin.enableKeyManagement(ENCODED_CUST, "namespace1");
+      ManagedKeyData managedKey2 = keymetaAdmin.enableKeyManagement(CUST_BYTES, "namespace1");
       assertEquals(managedKey, managedKey2);
     }
 
     @Test
     public void testEnableKeyManagementWithMultipleNamespaces() throws Exception {
-      ManagedKeyData managedKey = keymetaAdmin.enableKeyManagement(ENCODED_CUST, "namespace1");
+      ManagedKeyData managedKey = keymetaAdmin.enableKeyManagement(CUST_BYTES, "namespace1");
       assertEquals("namespace1", managedKey.getKeyNamespace());
 
-      ManagedKeyData managedKey2 = keymetaAdmin.enableKeyManagement(ENCODED_CUST, "namespace2");
+      ManagedKeyData managedKey2 = keymetaAdmin.enableKeyManagement(CUST_BYTES, "namespace2");
       assertEquals("namespace2", managedKey2.getKeyNamespace());
     }
   }
@@ -225,10 +225,10 @@ public class TestKeymetaAdminImpl {
       MockManagedKeyProvider managedKeyProvider =
         (MockManagedKeyProvider) Encryption.getManagedKeyProvider(conf);
       String cust = "invalidcust1";
-      String encodedCust = ManagedKeyProvider.encodeToStr(cust.getBytes());
+      byte[] custBytes = cust.getBytes();
       managedKeyProvider.setMockedKey(cust, null, keySpace);
       IOException ex = assertThrows(IOException.class,
-        () -> keymetaAdmin.enableKeyManagement(encodedCust, keySpace));
+        () -> keymetaAdmin.enableKeyManagement(custBytes, keySpace));
       assertEquals("Invalid null managed key received from key provider", ex.getMessage());
     }
   }
