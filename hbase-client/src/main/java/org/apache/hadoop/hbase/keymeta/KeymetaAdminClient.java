@@ -38,7 +38,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.EmptyMsg;
 
 @InterfaceAudience.Public
 public class KeymetaAdminClient implements KeymetaAdmin {
-  private static final Logger LOG = LoggerFactory.getLogger(KeymetaAdminClient.class);
   private ManagedKeysProtos.ManagedKeysService.BlockingInterface stub;
 
   public KeymetaAdminClient(Connection conn) throws IOException {
