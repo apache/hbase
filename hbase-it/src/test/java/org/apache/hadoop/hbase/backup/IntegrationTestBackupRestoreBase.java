@@ -192,6 +192,12 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
     fs.delete(new Path(backupRootDir), true);
   }
 
+  /**
+   * This is the main driver method used by tests that extend this abstract base class. This method
+   * kicks off one backup and restore thread per table.
+   * @param isContinuousBackupEnabled Boolean flag used to specify if the backups should have
+   *                                  continuous backup enabled.
+   */
   protected void runTestMulti(boolean isContinuousBackupEnabled) {
     Thread[] workers = new Thread[numTables];
     BackupAndRestoreThread[] backupAndRestoreThreads = new BackupAndRestoreThread[numTables];
@@ -225,6 +231,14 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
     LOG.info("IT backup & restore finished");
   }
 
+  /**
+   * This method is what performs the actual backup, restore, merge, and delete operations. This
+   * method is run in a separate thread. It first performs a full backup. After, it iteratively
+   * performs a series of incremental backups and restores. Later, it deletes the backups.
+   * @param table                     The table the backups are performed on
+   * @param isContinuousBackupEnabled Boolean flag used to indicate if the backups should have
+   *                                  continuous backup enabled.
+   */
   private void runTestSingle(TableName table, boolean isContinuousBackupEnabled)
     throws IOException, InterruptedException {
     String enabledOrDisabled = isContinuousBackupEnabled ? "enabled" : "disabled";
