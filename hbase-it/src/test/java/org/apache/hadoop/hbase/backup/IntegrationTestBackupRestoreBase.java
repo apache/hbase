@@ -28,7 +28,6 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Scanner;
 import java.util.Set;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -173,6 +172,10 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
     }
   }
 
+  /**
+   * Creates a directory specified by backupWALDir and sets this directory to
+   * CONF_CONTINUOUS_BACKUP_WAL_DIR in the configuration.
+   */
   protected void createAndSetBackupWalDir()
     throws IOException {
     Path root = util.getDataTestDirOnTestFS();
@@ -223,51 +226,8 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
     LOG.info("IT backup & restore finished");
   }
 
-  private void createTable(TableName tableName) throws Exception {
-    long startTime, endTime;
-
-    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
-
-    TableDescriptor desc = builder.build();
-    ColumnFamilyDescriptorBuilder cbuilder =
-      ColumnFamilyDescriptorBuilder.newBuilder(COLUMN_NAME.getBytes(Charset.defaultCharset()));
-    ColumnFamilyDescriptor[] columns = new ColumnFamilyDescriptor[] { cbuilder.build() };
-    LOG.info("Creating table {} with {} splits.", tableName,
-      regionsCountPerServer * regionServerCount);
-    startTime = EnvironmentEdgeManager.currentTime();
-    createPreSplitLoadTestTable(util.getConfiguration(), desc, columns, regionsCountPerServer);
-    util.waitTableAvailable(tableName);
-    endTime = EnvironmentEdgeManager.currentTime();
-    LOG.info("Pre-split table created successfully in {}ms.", (endTime - startTime));
-  }
-
-  private void loadData(TableName table, int numRows) throws IOException {
-    Connection conn = util.getConnection();
-    // #0- insert some data to a table
-    Table t1 = conn.getTable(table);
-    util.loadRandomRows(t1, new byte[] { 'f' }, 100, numRows);
-    // flush table
-    conn.getAdmin().flush(TableName.valueOf(table.getName()));
-  }
-
-  private String backup(BackupRequest request, BackupAdmin client) throws IOException {
-    return client.backupTables(request);
-  }
-
-  private void restore(RestoreRequest request, BackupAdmin client) throws IOException {
-    client.restore(request);
-  }
-
-  private void merge(String[] backupIds, BackupAdmin client) throws IOException {
-    client.mergeBackups(backupIds);
-  }
-
-  private void delete(String[] backupIds, BackupAdmin client) throws IOException {
-    client.deleteBackups(backupIds);
-  }
-
   private void runTestSingle(TableName table, boolean isContinuousBackupEnabled)
-          throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
     String enabledOrDisabled = isContinuousBackupEnabled ? "enabled" : "disabled";
     List<String> backupIds = new ArrayList<>();
 
@@ -368,41 +328,55 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
     }
   }
 
-  private void deleteMostRecentIncrementalBackup(List<String> backupIds, BackupAdmin client)
-    throws IOException {
-    String incrementalBackupId = backupIds.get(backupIds.size() - 1);
-    LOG.info("Deleting the most recently created incremental backup: {}", incrementalBackupId);
-    assertTrue("Final incremental backup " + incrementalBackupId
-        + " should still exist inside of " + backupRootDir,
-      fs.exists(new Path(backupRootDir, incrementalBackupId)));
+  private void createTable(TableName tableName) throws Exception {
+    long startTime, endTime;
 
-    delete(new String[] {incrementalBackupId}, client);
-    backupIds.remove(backupIds.size() - 1);
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
 
-    assertFalse("Final incremental backup " + incrementalBackupId
-        + " should no longer exist inside of " + backupRootDir,
-      fs.exists(new Path(backupRootDir, incrementalBackupId)));
+    TableDescriptor desc = builder.build();
+    ColumnFamilyDescriptorBuilder cbuilder =
+      ColumnFamilyDescriptorBuilder.newBuilder(COLUMN_NAME.getBytes(Charset.defaultCharset()));
+    ColumnFamilyDescriptor[] columns = new ColumnFamilyDescriptor[] { cbuilder.build() };
+    LOG.info("Creating table {} with {} splits.", tableName,
+      regionsCountPerServer * regionServerCount);
+    startTime = EnvironmentEdgeManager.currentTime();
+    createPreSplitLoadTestTable(util.getConfiguration(), desc, columns, regionsCountPerServer);
+    util.waitTableAvailable(tableName);
+    endTime = EnvironmentEdgeManager.currentTime();
+    LOG.info("Pre-split table created successfully in {}ms.", (endTime - startTime));
   }
 
-  private void verifyAllBackupTypesExist(String fullBackupId, String[] incrementalBackups)
-    throws IOException {
-    // The full backup should exist
-    assertTrue("Full backup " + fullBackupId + " should still exist inside of " + backupRootDir,
-      fs.exists(new Path(backupRootDir, fullBackupId)));
-    // All incremental backups should exist
-    for (String backupId : incrementalBackups) {
-      assertTrue("Incremental backup " + backupId + " should still exist inside of " + backupRootDir,
-        fs.exists(new Path(backupRootDir, backupId)));
-    }
+  private void loadData(TableName table, int numRows) throws IOException {
+    Connection conn = util.getConnection();
+    // #0- insert some data to a table
+    Table t1 = conn.getTable(table);
+    util.loadRandomRows(t1, new byte[] { 'f' }, 100, numRows);
+    // flush table
+    conn.getAdmin().flush(TableName.valueOf(table.getName()));
   }
 
-  private void runInputScanner() {
-    Scanner scanner = new Scanner(System.in);
-    System.out.println("kevin: Waiting for the user to input a line");
-    String line = scanner.nextLine();
-    System.out.printf("kevin: Got a line: '%s'. Continuing%n", line);
+  private String backup(BackupRequest request, BackupAdmin client) throws IOException {
+    return client.backupTables(request);
   }
 
+  private void restore(RestoreRequest request, BackupAdmin client) throws IOException {
+    client.restore(request);
+  }
+
+  private void merge(String[] backupIds, BackupAdmin client) throws IOException {
+    client.mergeBackups(backupIds);
+  }
+
+  private void delete(String[] backupIds, BackupAdmin client) throws IOException {
+    client.deleteBackups(backupIds);
+  }
+
+  /**
+   * Verifies a snapshot's "data.manifest" file exists after a full backup has been performed for a
+   * table. The "data.manifest" file's path will look like the following:
+   *   .../backupRootDir/backup_1760572298945/default/<table-name>/.hbase-snapshot/
+   *   snapshot_1760572306407_default_<table-name>/data.manifest
+   */
   private void verifySnapshotExists(TableName tableName, String backupId) throws IOException {
     RemoteIterator<LocatedFileStatus> fileStatusIterator = fs.listFiles(new Path(backupRootDir, backupId), true);
     Path dataManifestPath = null;
@@ -417,10 +391,11 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
     }
 
     if (dataManifestPath == null) {
-      fail("Could not find snapshot manifest for table '" + tableName + "'");
+      fail("Could not find snapshot data manifest for table '" + tableName + "'");
     }
   }
 
+  /** Verifies the .../backupWALDir/WALs directory exists and returns its Path */
   private Path verifyWALsDirectoryExists() throws IOException {
     String backupWALDir = conf.get(CONF_CONTINUOUS_BACKUP_WAL_DIR);
     Path backupWALs = new Path(backupWALDir, "WALs");
@@ -463,6 +438,13 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
     return walPartitionDir;
   }
 
+  /**
+   * Verifies the WAL partition directory contains a backup WAL file
+   * The WAL file's path will look something like the following:
+   *   .../backupWALDir/WALs/2025-10-17/wal_file.1760738249595.1880be89-0b69-4bad-8d0e-acbf25c63b7e
+   * @param walPartitionDir The date directory for a backip WAL
+   *                        i.e. .../backupWALDir/WALs/2025-10-17
+   */
   private void verifyBackupWALFiles(Path walPartitionDir) throws IOException {
     FileStatus[] fileStatuses = fs.listStatus(walPartitionDir);
     for (FileStatus fileStatus : fileStatuses) {
@@ -476,6 +458,9 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
     }
   }
 
+  /**
+   * Restores a table using the provided backup ID and ensure the table has the correct row count after
+   */
   private void restoreTableAndVerifyRowCount(Connection conn, BackupAdmin client, TableName table,
     String backupId, long expectedRows) throws IOException {
     TableName[] tablesRestoreIncMultiple = new TableName[] { table };
@@ -487,6 +472,10 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
     hTable.close();
   }
 
+  /**
+   * Uses the list of all backup IDs to return a sublist of incremental backup IDs. This method
+   * assumes the first backup in the list is a full backup, followed by incremental backups.
+   */
   private String[] getAllIncrementalBackupIds(List<String> backupIds) {
     int size = backupIds.size();
     backupIds = backupIds.subList(1, size);
@@ -524,6 +513,41 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
     RestoreRequest.Builder builder = new RestoreRequest.Builder();
     return builder.withBackupRootDir(backupRootDir).withBackupId(backupId).withCheck(check)
       .withFromTables(fromTables).withToTables(toTables).withOvewrite(isOverwrite).build();
+  }
+
+  /**
+   * Performs the delete command for the most recently taken incremental backup, and also removes
+   * this backup from the list of backup IDs.
+   */
+  private void deleteMostRecentIncrementalBackup(List<String> backupIds, BackupAdmin client)
+    throws IOException {
+    String incrementalBackupId = backupIds.get(backupIds.size() - 1);
+    LOG.info("Deleting the most recently created incremental backup: {}", incrementalBackupId);
+    assertTrue("Final incremental backup " + incrementalBackupId
+        + " should still exist inside of " + backupRootDir,
+      fs.exists(new Path(backupRootDir, incrementalBackupId)));
+
+    delete(new String[] {incrementalBackupId}, client);
+    backupIds.remove(backupIds.size() - 1);
+
+    assertFalse("Final incremental backup " + incrementalBackupId
+        + " should no longer exist inside of " + backupRootDir,
+      fs.exists(new Path(backupRootDir, incrementalBackupId)));
+  }
+
+  /**
+   * Verifies all backups in the list of backup IDs actually exist on the filesystem.
+   */
+  private void verifyAllBackupTypesExist(String fullBackupId, String[] incrementalBackups)
+    throws IOException {
+    // The full backup should exist
+    assertTrue("Full backup " + fullBackupId + " should still exist inside of " + backupRootDir,
+      fs.exists(new Path(backupRootDir, fullBackupId)));
+    // All incremental backups should exist
+    for (String backupId : incrementalBackups) {
+      assertTrue("Incremental backup " + backupId + " should still exist inside of " + backupRootDir,
+        fs.exists(new Path(backupRootDir, backupId)));
+    }
   }
 
   @Override
