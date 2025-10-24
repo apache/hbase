@@ -58,7 +58,8 @@ public class BackupTestUtil {
     BackupManager.decorateRegionServerConfiguration(conf);
   }
 
-  public static void verifyReplicationPeerSubscription(HBaseTestingUtil util, TableName tableName) throws IOException {
+  public static void verifyReplicationPeerSubscription(HBaseTestingUtil util, TableName tableName)
+    throws IOException {
     try (Admin admin = util.getAdmin()) {
       ReplicationPeerDescription peerDesc = admin.listReplicationPeers().stream()
         .filter(peer -> peer.getPeerId().equals(CONTINUOUS_BACKUP_REPLICATION_PEER)).findFirst()

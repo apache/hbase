@@ -61,12 +61,12 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.Uninterrupt
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
 /**
- * An abstract base class that is used to run backup, restore, and delete integration tests. This class
- * performs both full backups and incremental backups. Both continuous backup and non-continuous
- * backup test cases are supported. The number of incremental backups performed depends on the number
- * of iterations defined by the user. The class performs the backup/restore in a separate thread, where
- * one thread is created per table. The number of tables is user-defined, along with other various
- * configurations.
+ * An abstract base class that is used to run backup, restore, and delete integration tests. This
+ * class performs both full backups and incremental backups. Both continuous backup and
+ * non-continuous backup test cases are supported. The number of incremental backups performed
+ * depends on the number of iterations defined by the user. The class performs the backup/restore in
+ * a separate thread, where one thread is created per table. The number of tables is user-defined,
+ * along with other various configurations.
  */
 public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBase {
   protected static final Logger LOG =
@@ -176,8 +176,7 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
    * Creates a directory specified by backupWALDir and sets this directory to
    * CONF_CONTINUOUS_BACKUP_WAL_DIR in the configuration.
    */
-  protected void createAndSetBackupWalDir()
-    throws IOException {
+  protected void createAndSetBackupWalDir() throws IOException {
     Path root = util.getDataTestDirOnTestFS();
     Path backupWalDir = new Path(root, "backupWALDir");
     FileSystem fs = FileSystem.get(conf);
@@ -262,13 +261,13 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
       // Now continue with incremental backups
       String incrementalBackupId;
       for (int count = 1; count <= numIterations; count++) {
-        LOG.info("{} - Starting incremental backup iteration {} of {} for {}", Thread.currentThread().getName(), count,
-          numIterations, table);
+        LOG.info("{} - Starting incremental backup iteration {} of {} for {}",
+          Thread.currentThread().getName(), count, numIterations, table);
         loadData(table, rowsInIteration);
 
         // Do incremental backup
-        LOG.info("Creating incremental backup number {} with continuous backup {} for {}",
-          count, enabledOrDisabled, table);
+        LOG.info("Creating incremental backup number {} with continuous backup {} for {}", count,
+          enabledOrDisabled, table);
         builder = new BackupRequest.Builder();
         request = builder.withBackupType(BackupType.INCREMENTAL).withTableList(tables)
           .withTargetRootDir(backupRootDir).withContinuousBackupEnabled(isContinuousBackupEnabled)
@@ -284,15 +283,15 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
         if (previousBackupId.equals(fullBackupId)) {
           LOG.info("Restoring {} using original full backup with ID: {}", table, previousBackupId);
         } else {
-          LOG.info("Restoring {} using second most recent incremental backup with ID: {}",
-            table, previousBackupId);
+          LOG.info("Restoring {} using second most recent incremental backup with ID: {}", table,
+            previousBackupId);
         }
         restoreTableAndVerifyRowCount(conn, client, table, previousBackupId,
           (long) rowsInIteration * count);
 
         // Restore table using the most recently created incremental backup
-        LOG.info("Restoring {} using most recent incremental backup with ID: {}",
-          table, incrementalBackupId);
+        LOG.info("Restoring {} using most recent incremental backup with ID: {}", table,
+          incrementalBackupId);
         restoreTableAndVerifyRowCount(conn, client, table, incrementalBackupId,
           (long) rowsInIteration * (count + 1));
         LOG.info("{} - Finished incremental backup iteration {} of {} for {}",
@@ -306,8 +305,8 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
       incrementalBackupId = incrementalBackupIds[incrementalBackupIds.length - 1];
       // restore incremental backup for table, with overwrite
       TableName[] tablesToRestoreFrom = new TableName[] { table };
-      restore(createRestoreRequest(incrementalBackupId, false, tablesToRestoreFrom,
-        null, true), client);
+      restore(createRestoreRequest(incrementalBackupId, false, tablesToRestoreFrom, null, true),
+        client);
       Table hTable = conn.getTable(table);
       Assert.assertEquals(rowsInIteration * (numIterations + 1),
         HBaseTestingUtil.countRows(hTable));
@@ -319,7 +318,7 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
       // Delete the full backup
       LOG.info("Deleting full backup: {}. This will also delete any remaining incremental backups",
         fullBackupId);
-      delete(new String[] {fullBackupId}, client);
+      delete(new String[] { fullBackupId }, client);
       // The full backup and all incremental backups should now be deleted
       for (String backupId : backupIds) {
         assertFalse("The backup " + backupId + " should no longer exist",
@@ -374,19 +373,18 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
   /**
    * Verifies a snapshot's "data.manifest" file exists after a full backup has been performed for a
    * table. The "data.manifest" file's path will look like the following:
-   *   .../backupRootDir/backup_1760572298945/default/<table-name>/.hbase-snapshot/
-   *   snapshot_1760572306407_default_<table-name>/data.manifest
+   * .../backupRootDir/backup_1760572298945/default/<table-name>/.hbase-snapshot/
+   * snapshot_1760572306407_default_<table-name>/data.manifest
    */
   private void verifySnapshotExists(TableName tableName, String backupId) throws IOException {
-    RemoteIterator<LocatedFileStatus> fileStatusIterator = fs.listFiles(new Path(backupRootDir, backupId), true);
+    RemoteIterator<LocatedFileStatus> fileStatusIterator =
+      fs.listFiles(new Path(backupRootDir, backupId), true);
     Path dataManifestPath = null;
     while (fileStatusIterator.hasNext()) {
       LocatedFileStatus fileStatus = fileStatusIterator.next();
       if (fileStatus.getPath().getName().endsWith("data.manifest")) {
         dataManifestPath = fileStatus.getPath();
-        LOG.info(
-                "Found snapshot manifest for table '{}' at: {}",
-                tableName, dataManifestPath);
+        LOG.info("Found snapshot manifest for table '{}' at: {}", tableName, dataManifestPath);
       }
     }
 
@@ -399,39 +397,40 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
   private Path verifyWALsDirectoryExists() throws IOException {
     String backupWALDir = conf.get(CONF_CONTINUOUS_BACKUP_WAL_DIR);
     Path backupWALs = new Path(backupWALDir, "WALs");
-    assertTrue("There should be a WALs directory inside of the backup WAL directory at: "
-      + backupWALDir, fs.exists(backupWALs));
+    assertTrue(
+      "There should be a WALs directory inside of the backup WAL directory at: " + backupWALDir,
+      fs.exists(backupWALs));
     return backupWALs;
   }
 
   /**
    * Waits for a WAL partition directory to exist inside the backup WAL directory. The directory
-   * should be something like: .../backupWALDir/WALs/2025-10-17. The directory's existence is
-   * either eventually asserted, or an assertion error is thrown if it does not exist past the wait
+   * should be something like: .../backupWALDir/WALs/2025-10-17. The directory's existence is either
+   * eventually asserted, or an assertion error is thrown if it does not exist past the wait
    * deadline. This verification is to be used for full backups with continuous backup enabled.
-   * @param backupWALs The directory that should contain the partition directory.
-   *                   i.e. .../backupWALDir/WALs
+   * @param backupWALs The directory that should contain the partition directory. i.e.
+   *                   .../backupWALDir/WALs
    * @return The Path to the WAL partition directory
    */
-  private Path verifyWALPartitionDirExists(Path backupWALs) throws IOException,
-    InterruptedException {
+  private Path verifyWALPartitionDirExists(Path backupWALs)
+    throws IOException, InterruptedException {
     long currentTimeMs = System.currentTimeMillis();
     String currentDateUTC = BackupUtils.formatToDateString(currentTimeMs);
     Path walPartitionDir = new Path(backupWALs, currentDateUTC);
     int waitTimeSec = 30;
     while (true) {
       try {
-        assertTrue("A backup WALs subdirectory with today's date should exist: "
-          + walPartitionDir, fs.exists(walPartitionDir));
+        assertTrue("A backup WALs subdirectory with today's date should exist: " + walPartitionDir,
+          fs.exists(walPartitionDir));
         // The directory exists - stop waiting
         break;
       } catch (AssertionError e) {
         // Reach here when the directory currently does not exist
-        if ((System.currentTimeMillis() - currentTimeMs) >= waitTimeSec*1000) {
+        if ((System.currentTimeMillis() - currentTimeMs) >= waitTimeSec * 1000) {
           throw new AssertionError(e);
         }
-        LOG.info("Waiting up to {} seconds for WAL partition directory to exist: {}",
-          waitTimeSec, walPartitionDir);
+        LOG.info("Waiting up to {} seconds for WAL partition directory to exist: {}", waitTimeSec,
+          walPartitionDir);
         Thread.sleep(1000);
       }
     }
@@ -439,11 +438,11 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
   }
 
   /**
-   * Verifies the WAL partition directory contains a backup WAL file
-   * The WAL file's path will look something like the following:
-   *   .../backupWALDir/WALs/2025-10-17/wal_file.1760738249595.1880be89-0b69-4bad-8d0e-acbf25c63b7e
-   * @param walPartitionDir The date directory for a backip WAL
-   *                        i.e. .../backupWALDir/WALs/2025-10-17
+   * Verifies the WAL partition directory contains a backup WAL file The WAL file's path will look
+   * something like the following:
+   * .../backupWALDir/WALs/2025-10-17/wal_file.1760738249595.1880be89-0b69-4bad-8d0e-acbf25c63b7e
+   * @param walPartitionDir The date directory for a backip WAL i.e.
+   *                        .../backupWALDir/WALs/2025-10-17
    */
   private void verifyBackupWALFiles(Path walPartitionDir) throws IOException {
     FileStatus[] fileStatuses = fs.listStatus(walPartitionDir);
@@ -452,21 +451,20 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
       String[] splitName = walFileName.split("\\.");
       assertEquals("The WAL partition directory should only have files that start with 'wal_file'",
         "wal_file", splitName[0]);
-      assertEquals("The timestamp in the WAL file's name should match the date for the WAL partition directory",
-        walPartitionDir.getName(), BackupUtils.formatToDateString(
-        Long.parseLong(splitName[1])));
+      assertEquals(
+        "The timestamp in the WAL file's name should match the date for the WAL partition directory",
+        walPartitionDir.getName(), BackupUtils.formatToDateString(Long.parseLong(splitName[1])));
     }
   }
 
   /**
-   * Restores a table using the provided backup ID and ensure the table has the correct row count after
+   * Restores a table using the provided backup ID and ensure the table has the correct row count
+   * after
    */
   private void restoreTableAndVerifyRowCount(Connection conn, BackupAdmin client, TableName table,
     String backupId, long expectedRows) throws IOException {
     TableName[] tablesRestoreIncMultiple = new TableName[] { table };
-    restore(
-      createRestoreRequest(backupId, false, tablesRestoreIncMultiple, null, true),
-      client);
+    restore(createRestoreRequest(backupId, false, tablesRestoreIncMultiple, null, true), client);
     Table hTable = conn.getTable(table);
     Assert.assertEquals(expectedRows, HBaseTestingUtil.countRows(hTable));
     hTable.close();
@@ -501,15 +499,15 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
 
   /**
    * Get restore request.
-   * @param backupId      backup ID
-   * @param check         check the backup
-   * @param fromTables    table names to restore from
-   * @param toTables      new table names to restore to
-   * @param isOverwrite   overwrite the table(s)
+   * @param backupId    backup ID
+   * @param check       check the backup
+   * @param fromTables  table names to restore from
+   * @param toTables    new table names to restore to
+   * @param isOverwrite overwrite the table(s)
    * @return an instance of RestoreRequest
    */
-  public RestoreRequest createRestoreRequest(String backupId, boolean check,
-    TableName[] fromTables, TableName[] toTables, boolean isOverwrite) {
+  public RestoreRequest createRestoreRequest(String backupId, boolean check, TableName[] fromTables,
+    TableName[] toTables, boolean isOverwrite) {
     RestoreRequest.Builder builder = new RestoreRequest.Builder();
     return builder.withBackupRootDir(backupRootDir).withBackupId(backupId).withCheck(check)
       .withFromTables(fromTables).withToTables(toTables).withOvewrite(isOverwrite).build();
@@ -523,15 +521,14 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
     throws IOException {
     String incrementalBackupId = backupIds.get(backupIds.size() - 1);
     LOG.info("Deleting the most recently created incremental backup: {}", incrementalBackupId);
-    assertTrue("Final incremental backup " + incrementalBackupId
-        + " should still exist inside of " + backupRootDir,
-      fs.exists(new Path(backupRootDir, incrementalBackupId)));
+    assertTrue("Final incremental backup " + incrementalBackupId + " should still exist inside of "
+      + backupRootDir, fs.exists(new Path(backupRootDir, incrementalBackupId)));
 
-    delete(new String[] {incrementalBackupId}, client);
+    delete(new String[] { incrementalBackupId }, client);
     backupIds.remove(backupIds.size() - 1);
 
     assertFalse("Final incremental backup " + incrementalBackupId
-        + " should no longer exist inside of " + backupRootDir,
+      + " should no longer exist inside of " + backupRootDir,
       fs.exists(new Path(backupRootDir, incrementalBackupId)));
   }
 
@@ -545,7 +542,8 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
       fs.exists(new Path(backupRootDir, fullBackupId)));
     // All incremental backups should exist
     for (String backupId : incrementalBackups) {
-      assertTrue("Incremental backup " + backupId + " should still exist inside of " + backupRootDir,
+      assertTrue(
+        "Incremental backup " + backupId + " should still exist inside of " + backupRootDir,
         fs.exists(new Path(backupRootDir, backupId)));
     }
   }
