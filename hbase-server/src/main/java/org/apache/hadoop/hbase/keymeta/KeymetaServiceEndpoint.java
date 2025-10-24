@@ -31,8 +31,8 @@ import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.GetManagedKeysResponse;
-import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.ManagedKeysRequest;
-import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.ManagedKeysResponse;
+import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.ManagedKeyRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.ManagedKeyResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.ManagedKeysService;
 import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.RotateSTKResponse;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -102,12 +102,12 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
      * @param done       The callback to be invoked with the response.
      */
     @Override
-    public void enableKeyManagement(RpcController controller, ManagedKeysRequest request,
-      RpcCallback<ManagedKeysResponse> done) {
-      ManagedKeysResponse response = null;
-      ManagedKeysResponse.Builder builder = ManagedKeysResponse.newBuilder();
+    public void enableKeyManagement(RpcController controller, ManagedKeyRequest request,
+      RpcCallback<ManagedKeyResponse> done) {
+      ManagedKeyResponse response = null;
+      ManagedKeyResponse.Builder builder = ManagedKeyResponse.newBuilder();
       try {
-        initManagedKeysResponseBuilder(controller, request, builder);
+        initManagedKeyResponseBuilder(controller, request, builder);
         ManagedKeyData managedKeyState = master.getKeymetaAdmin()
           .enableKeyManagement(request.getKeyCust().toByteArray(), request.getKeyNamespace());
         response = generateKeyStateResponse(managedKeyState, builder);
@@ -122,12 +122,12 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
     }
 
     @Override
-    public void getManagedKeys(RpcController controller, ManagedKeysRequest request,
+    public void getManagedKeys(RpcController controller, ManagedKeyRequest request,
       RpcCallback<GetManagedKeysResponse> done) {
       GetManagedKeysResponse keyStateResponse = null;
-      ManagedKeysResponse.Builder builder = ManagedKeysResponse.newBuilder();
+      ManagedKeyResponse.Builder builder = ManagedKeyResponse.newBuilder();
       try {
-        initManagedKeysResponseBuilder(controller, request, builder);
+        initManagedKeyResponseBuilder(controller, request, builder);
         List<ManagedKeyData> managedKeyStates = master.getKeymetaAdmin()
           .getManagedKeys(request.getKeyCust().toByteArray(), request.getKeyNamespace());
         keyStateResponse = generateKeyStateResponse(managedKeyStates, builder);
@@ -162,8 +162,8 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
   }
 
   @InterfaceAudience.Private
-  public static ManagedKeysResponse.Builder initManagedKeysResponseBuilder(RpcController controller,
-    ManagedKeysRequest request, ManagedKeysResponse.Builder builder) throws IOException {
+  public static ManagedKeyResponse.Builder initManagedKeyResponseBuilder(RpcController controller,
+    ManagedKeyRequest request, ManagedKeyResponse.Builder builder) throws IOException {
     builder.setKeyCust(request.getKeyCust());
     builder.setKeyNamespace(request.getKeyNamespace());
     if (request.getKeyCust().isEmpty()) {
@@ -175,7 +175,7 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
   // Assumes that all ManagedKeyData objects belong to the same custodian and namespace.
   @InterfaceAudience.Private
   public static GetManagedKeysResponse generateKeyStateResponse(
-    List<ManagedKeyData> managedKeyStates, ManagedKeysResponse.Builder builder) {
+    List<ManagedKeyData> managedKeyStates, ManagedKeyResponse.Builder builder) {
     GetManagedKeysResponse.Builder responseBuilder = GetManagedKeysResponse.newBuilder();
     for (ManagedKeyData keyData : managedKeyStates) {
       responseBuilder.addState(generateKeyStateResponse(keyData, builder));
@@ -183,8 +183,8 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
     return responseBuilder.build();
   }
 
-  private static ManagedKeysResponse generateKeyStateResponse(ManagedKeyData keyData,
-    ManagedKeysResponse.Builder builder) {
+  private static ManagedKeyResponse generateKeyStateResponse(ManagedKeyData keyData,
+    ManagedKeyResponse.Builder builder) {
     builder.setKeyState(ManagedKeysProtos.ManagedKeyState.forNumber(keyData.getKeyState().getVal()))
       .setKeyMetadata(keyData.getKeyMetadata()).setRefreshTimestamp(keyData.getRefreshTimestamp())
       .setKeyNamespace(keyData.getKeyNamespace());

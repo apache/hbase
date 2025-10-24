@@ -46,8 +46,8 @@ import org.apache.hadoop.hbase.keymeta.KeymetaServiceEndpoint.KeymetaAdminServic
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.GetManagedKeysResponse;
-import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.ManagedKeysRequest;
-import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.ManagedKeysResponse;
+import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.ManagedKeyRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.ManagedKeyResponse;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -79,13 +79,13 @@ public class TestKeymetaEndpoint {
   @Mock
   private MasterServices master;
   @Mock
-  private RpcCallback<ManagedKeysResponse> enableKeyManagementDone;
+  private RpcCallback<ManagedKeyResponse> enableKeyManagementDone;
   @Mock
   private RpcCallback<GetManagedKeysResponse> getManagedKeysDone;
 
   KeymetaServiceEndpoint keymetaServiceEndpoint;
-  private ManagedKeysResponse.Builder responseBuilder;
-  private ManagedKeysRequest.Builder requestBuilder;
+  private ManagedKeyResponse.Builder responseBuilder;
+  private ManagedKeyRequest.Builder requestBuilder;
   private KeymetaAdminServiceImpl keyMetaAdminService;
   private ManagedKeyData keyData1;
   private ManagedKeyData keyData2;
@@ -104,9 +104,9 @@ public class TestKeymetaEndpoint {
     keyMetaAdminService =
       (KeymetaAdminServiceImpl) keymetaServiceEndpoint.getServices().iterator().next();
     responseBuilder =
-      ManagedKeysResponse.newBuilder().setKeyState(ManagedKeysProtos.ManagedKeyState.KEY_ACTIVE);
+      ManagedKeyResponse.newBuilder().setKeyState(ManagedKeysProtos.ManagedKeyState.KEY_ACTIVE);
     requestBuilder =
-      ManagedKeysRequest.newBuilder().setKeyNamespace(ManagedKeyData.KEY_SPACE_GLOBAL);
+      ManagedKeyRequest.newBuilder().setKeyNamespace(ManagedKeyData.KEY_SPACE_GLOBAL);
     keyData1 = new ManagedKeyData(KEY_CUST.getBytes(), KEY_NAMESPACE,
       new SecretKeySpec("key1".getBytes(), "AES"), ACTIVE, KEY_METADATA1);
     keyData2 = new ManagedKeyData(KEY_CUST.getBytes(), KEY_NAMESPACE,
@@ -117,10 +117,10 @@ public class TestKeymetaEndpoint {
   @Test
   public void testCreateResponseBuilderValid() throws IOException {
     byte[] cust = "testKey".getBytes();
-    ManagedKeysRequest request = requestBuilder.setKeyCust(ByteString.copyFrom(cust)).build();
+    ManagedKeyRequest request = requestBuilder.setKeyCust(ByteString.copyFrom(cust)).build();
 
-    ManagedKeysResponse.Builder result = ManagedKeysResponse.newBuilder();
-    KeymetaServiceEndpoint.initManagedKeysResponseBuilder(controller, request, result);
+    ManagedKeyResponse.Builder result = ManagedKeyResponse.newBuilder();
+    KeymetaServiceEndpoint.initManagedKeyResponseBuilder(controller, request, result);
 
     assertNotNull(result);
     assertArrayEquals(cust, result.getKeyCust().toByteArray());
@@ -129,10 +129,10 @@ public class TestKeymetaEndpoint {
 
   @Test
   public void testCreateResponseBuilderEmptyCust() throws IOException {
-    ManagedKeysRequest request = requestBuilder.setKeyCust(ByteString.EMPTY).build();
+    ManagedKeyRequest request = requestBuilder.setKeyCust(ByteString.EMPTY).build();
 
     IOException exception = assertThrows(IOException.class, () -> KeymetaServiceEndpoint
-      .initManagedKeysResponseBuilder(controller, request, ManagedKeysResponse.newBuilder()));
+      .initManagedKeyResponseBuilder(controller, request, ManagedKeyResponse.newBuilder()));
 
     assertEquals("key_cust must not be empty", exception.getMessage());
   }
@@ -140,7 +140,7 @@ public class TestKeymetaEndpoint {
   @Test
   public void testGenerateKeyStateResponse() throws Exception {
     // Arrange
-    ManagedKeysResponse response =
+    ManagedKeyResponse response =
       responseBuilder.setKeyCust(ByteString.copyFrom(keyData1.getKeyCustodian()))
         .setKeyNamespace(keyData1.getKeyNamespace()).build();
     List<ManagedKeyData> managedKeyStates = Arrays.asList(keyData1, keyData2);
@@ -164,7 +164,7 @@ public class TestKeymetaEndpoint {
   @Test
   public void testGenerateKeyStateResponse_Empty() throws Exception {
     // Arrange
-    ManagedKeysResponse response =
+    ManagedKeyResponse response =
       responseBuilder.setKeyCust(ByteString.copyFrom(keyData1.getKeyCustodian()))
         .setKeyNamespace(keyData1.getKeyNamespace()).build();
     List<ManagedKeyData> managedKeyStates = new ArrayList<>();
@@ -196,7 +196,7 @@ public class TestKeymetaEndpoint {
   private <T> void doTestServiceCallForSuccess(ServiceCall<T> svc, RpcCallback<T> done)
     throws Exception {
     // Arrange
-    ManagedKeysRequest request =
+    ManagedKeyRequest request =
       requestBuilder.setKeyCust(ByteString.copyFrom(KEY_CUST.getBytes())).build();
     when(keymetaAdmin.enableKeyManagement(any(), any())).thenReturn(keyData1);
 
@@ -209,14 +209,14 @@ public class TestKeymetaEndpoint {
   }
 
   private interface ServiceCall<T> {
-    void call(RpcController controller, ManagedKeysRequest request, RpcCallback<T> done)
+    void call(RpcController controller, ManagedKeyRequest request, RpcCallback<T> done)
       throws Exception;
   }
 
   @Test
   public void testGenerateKeyStateResponse_InvalidCust() throws Exception {
     // Arrange
-    ManagedKeysRequest request = requestBuilder.setKeyCust(ByteString.EMPTY).build();
+    ManagedKeyRequest request = requestBuilder.setKeyCust(ByteString.EMPTY).build();
 
     // Act
     keyMetaAdminService.enableKeyManagement(controller, request, enableKeyManagementDone);
@@ -232,7 +232,7 @@ public class TestKeymetaEndpoint {
   public void testGenerateKeyStateResponse_IOException() throws Exception {
     // Arrange
     when(keymetaAdmin.enableKeyManagement(any(), any())).thenThrow(IOException.class);
-    ManagedKeysRequest request =
+    ManagedKeyRequest request =
       requestBuilder.setKeyCust(ByteString.copyFrom(KEY_CUST.getBytes())).build();
 
     // Act
@@ -258,7 +258,7 @@ public class TestKeymetaEndpoint {
   private void doTestGetManagedKeysError(Class<? extends Exception> exType) throws Exception {
     // Arrange
     when(keymetaAdmin.getManagedKeys(any(), any())).thenThrow(exType);
-    ManagedKeysRequest request =
+    ManagedKeyRequest request =
       requestBuilder.setKeyCust(ByteString.copyFrom(KEY_CUST.getBytes())).build();
 
     // Act
@@ -273,7 +273,7 @@ public class TestKeymetaEndpoint {
   @Test
   public void testGetManagedKeys_InvalidCust() throws Exception {
     // Arrange
-    ManagedKeysRequest request = requestBuilder.setKeyCust(ByteString.EMPTY).build();
+    ManagedKeyRequest request = requestBuilder.setKeyCust(ByteString.EMPTY).build();
 
     keyMetaAdminService.getManagedKeys(controller, request, getManagedKeysDone);
 

@@ -26,7 +26,7 @@ option optimize_for = SPEED;
 
 import "HBase.proto";
 
-message ManagedKeysRequest {
+message ManagedKeyRequest {
   required bytes key_cust = 1;
   required string key_namespace = 2;
 }
@@ -38,7 +38,7 @@ enum ManagedKeyState {
   KEY_DISABLED = 4;
 }
 
-message ManagedKeysResponse {
+message ManagedKeyResponse {
   required bytes key_cust = 1;
   required string key_namespace = 2;
   required ManagedKeyState key_state = 3;
@@ -47,7 +47,7 @@ message ManagedKeysResponse {
 }
 
 message GetManagedKeysResponse {
-  repeated ManagedKeysResponse state = 1;
+  repeated ManagedKeyResponse state = 1;
 }
 
 message RotateSTKResponse {
@@ -55,9 +55,9 @@ message RotateSTKResponse {
 }
 
 service ManagedKeysService {
-  rpc EnableKeyManagement(ManagedKeysRequest)
-    returns (ManagedKeysResponse);
-  rpc GetManagedKeys(ManagedKeysRequest)
+  rpc EnableKeyManagement(ManagedKeyRequest)
+    returns (ManagedKeyResponse);
+  rpc GetManagedKeys(ManagedKeyRequest)
     returns (GetManagedKeysResponse);
   rpc RotateSTK(EmptyMsg)
     returns (RotateSTKResponse);
