@@ -256,8 +256,7 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
         .withTargetRootDir(backupRootDir).withContinuousBackupEnabled(isContinuousBackupEnabled)
         .build();
 
-      String fullBackupId = backup(request, client);
-      assertTrue(checkSucceeded(fullBackupId));
+      String fullBackupId = backup(request, client, backupIds);
       LOG.info("Created full backup with ID: {}", fullBackupId);
 
       verifySnapshotExists(table, fullBackupId);
@@ -269,8 +268,6 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
         Path walPartitionDir = verifyWALPartitionDirExists(backupWALs);
         verifyBackupWALFiles(walPartitionDir);
       }
-
-      backupIds.add(fullBackupId);
 
       // Now continue with incremental backups
       String incrementalBackupId;
@@ -286,10 +283,8 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
         request = builder.withBackupType(BackupType.INCREMENTAL).withTableList(tables)
           .withTargetRootDir(backupRootDir).withContinuousBackupEnabled(isContinuousBackupEnabled)
           .build();
-        incrementalBackupId = backup(request, client);
-        assertTrue(checkSucceeded(incrementalBackupId));
+        incrementalBackupId = backup(request, client, backupIds);
         LOG.info("Created incremental backup with ID: {}", incrementalBackupId);
-        backupIds.add(incrementalBackupId);
 
         // Restore table using backup taken "two backups ago"
         // On the first iteration, this backup will be the full backup
@@ -315,7 +310,9 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
       // Now merge all incremental and restore
       String[] incrementalBackupIds = getAllIncrementalBackupIds(backupIds);
       merge(incrementalBackupIds, client);
-      // Restore last one
+      verifyExistingBackupsAfterMerge(backupIds);
+      removeNonexistentBackups(backupIds);
+      // Restore the last incremental backup
       incrementalBackupId = incrementalBackupIds[incrementalBackupIds.length - 1];
       // restore incremental backup for table, with overwrite
       TableName[] tablesToRestoreFrom = new TableName[] { table };
@@ -326,18 +323,18 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
         HBaseTestingUtil.countRows(hTable));
       hTable.close();
 
+      // Create another incremental backup to show it can be deleted on its own
+      backup(request, client, backupIds);
       deleteMostRecentIncrementalBackup(backupIds, client);
-      // The full backup and all previous incremental backups should still exist
-      verifyAllBackupTypesExist(fullBackupId, getAllIncrementalBackupIds(backupIds));
-      // Delete the full backup
+      // The full backup and the second most recent incremental backup should still exist
+      assertEquals(2, backupIds.size());
+      verifyAllBackupsExist(backupIds);
+      // Delete the full backup, which should also automatically delete any incremental backups that
+      // depend on it
       LOG.info("Deleting full backup: {}. This will also delete any remaining incremental backups",
         fullBackupId);
       delete(new String[] { fullBackupId }, client);
-      // The full backup and all incremental backups should now be deleted
-      for (String backupId : backupIds) {
-        assertFalse("The backup " + backupId + " should no longer exist",
-          fs.exists(new Path(backupRootDir, backupId)));
-      }
+      verifyNoBackupsExist(backupIds);
     }
   }
 
@@ -368,8 +365,12 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
     conn.getAdmin().flush(TableName.valueOf(table.getName()));
   }
 
-  private String backup(BackupRequest request, BackupAdmin client) throws IOException {
-    return client.backupTables(request);
+  private String backup(BackupRequest request, BackupAdmin client, List<String> backupIds) throws IOException {
+    String backupId = client.backupTables(request);
+    assertTrue(checkSucceeded(backupId));
+    verifyBackupExists(backupId);
+    backupIds.add(backupId);
+    return backupId;
   }
 
   private void restore(RestoreRequest request, BackupAdmin client) throws IOException {
@@ -527,6 +528,32 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
       .withFromTables(fromTables).withToTables(toTables).withOvewrite(isOverwrite).build();
   }
 
+  private void verifyExistingBackupsAfterMerge(List<String> backupIds)
+    throws IOException {
+    String fullBackupId = backupIds.get(0);
+    String mostRecentIncrementalBackup = backupIds.get(backupIds.size() - 1);
+    for (String backupId : backupIds) {
+      if (backupId.equals(fullBackupId) || backupId.equals(mostRecentIncrementalBackup)) {
+        verifyBackupExists(backupId);
+      } else {
+        verifyBackupDoesNotExist(backupId);
+      }
+    }
+  }
+
+  private void removeNonexistentBackups(List<String> backupIds) throws IOException {
+    List<String> backupsToRemove = new ArrayList<>();
+    for (String backupId : backupIds) {
+      if (!fs.exists(new Path(backupRootDir, backupId))) {
+        backupsToRemove.add(backupId);
+      }
+    }
+    for (String backupId : backupsToRemove) {
+      LOG.info("Removing {} from list of backup IDs since it no longer exists", backupId);
+      backupIds.remove(backupId);
+    }
+  }
+
   /**
    * Performs the delete command for the most recently taken incremental backup, and also removes
    * this backup from the list of backup IDs.
@@ -535,31 +562,40 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
     throws IOException {
     String incrementalBackupId = backupIds.get(backupIds.size() - 1);
     LOG.info("Deleting the most recently created incremental backup: {}", incrementalBackupId);
-    assertTrue("Final incremental backup " + incrementalBackupId + " should still exist inside of "
-      + backupRootDir, fs.exists(new Path(backupRootDir, incrementalBackupId)));
-
+    verifyBackupExists(incrementalBackupId);
     delete(new String[] { incrementalBackupId }, client);
     backupIds.remove(backupIds.size() - 1);
-
-    assertFalse("Final incremental backup " + incrementalBackupId
-      + " should no longer exist inside of " + backupRootDir,
-      fs.exists(new Path(backupRootDir, incrementalBackupId)));
+    verifyBackupDoesNotExist(incrementalBackupId);
   }
 
   /**
    * Verifies all backups in the list of backup IDs actually exist on the filesystem.
    */
-  private void verifyAllBackupTypesExist(String fullBackupId, String[] incrementalBackups)
+  private void verifyAllBackupsExist(List<String> backupIds)
     throws IOException {
-    // The full backup should exist
-    assertTrue("Full backup " + fullBackupId + " should still exist inside of " + backupRootDir,
-      fs.exists(new Path(backupRootDir, fullBackupId)));
-    // All incremental backups should exist
-    for (String backupId : incrementalBackups) {
-      assertTrue(
-        "Incremental backup " + backupId + " should still exist inside of " + backupRootDir,
-        fs.exists(new Path(backupRootDir, backupId)));
+    for (String backupId : backupIds) {
+      verifyBackupExists(backupId);
     }
+  }
+
+  /**
+   * Verifies zero backups in the list of backup IDs exist on the filesystem.
+   */
+  private void verifyNoBackupsExist(List<String> backupIds)
+    throws IOException {
+    for (String backupId : backupIds) {
+      verifyBackupDoesNotExist(backupId);
+    }
+  }
+
+  private void verifyBackupExists(String backupId) throws IOException {
+    assertTrue("Backup " + backupId + " should exist inside of " + backupRootDir,
+      fs.exists(new Path(backupRootDir, backupId)));
+  }
+
+  private void verifyBackupDoesNotExist(String backupId) throws IOException {
+    assertFalse("Backup " + backupId + " should not exist inside of " + backupRootDir,
+      fs.exists(new Path(backupRootDir, backupId)));
   }
 
   @Override
