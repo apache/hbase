@@ -107,7 +107,7 @@ public class BackupObserver implements RegionCoprocessor, RegionObserver {
       } else {
         if (LOG.isTraceEnabled()) {
           LOG.trace("Table {} has either not gone through full backup or is "
-            + "part of continuousBackupTableSet - skipping.", tableName);
+            + "part of continuousBackupTableSet - skipping", tableName);
         }
       }
     }
