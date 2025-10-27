@@ -29,12 +29,13 @@ import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos;
-import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.GetManagedKeysResponse;
-import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.ManagedKeyRequest;
-import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.ManagedKeyResponse;
-import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.ManagedKeysService;
-import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.RotateSTKResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ManagedKeysProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ManagedKeysProtos.ManagedKeysService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ManagedKeysProtos.RotateSTKResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.GetManagedKeysResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyState;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -113,7 +114,7 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
         response = generateKeyStateResponse(managedKeyState, builder);
       } catch (IOException | KeyException e) {
         CoprocessorRpcUtils.setControllerException(controller, new DoNotRetryIOException(e));
-        builder.setKeyState(ManagedKeysProtos.ManagedKeyState.KEY_FAILED);
+        builder.setKeyState(ManagedKeyState.KEY_FAILED);
       }
       if (response == null) {
         response = builder.build();
@@ -185,7 +186,7 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
 
   private static ManagedKeyResponse generateKeyStateResponse(ManagedKeyData keyData,
     ManagedKeyResponse.Builder builder) {
-    builder.setKeyState(ManagedKeysProtos.ManagedKeyState.forNumber(keyData.getKeyState().getVal()))
+    builder.setKeyState(ManagedKeyState.forNumber(keyData.getKeyState().getVal()))
       .setKeyMetadata(keyData.getKeyMetadata()).setRefreshTimestamp(keyData.getRefreshTimestamp())
       .setKeyNamespace(keyData.getKeyNamespace());
     return builder.build();
