@@ -299,6 +299,11 @@ message ManagedKeyRequest {
   required string key_namespace = 2;
 }
 
+message ManagedKeyEntryRequest {
+  required ManagedKeyRequest key_cust_ns = 1;
+  required bytes key_metadata_hash = 2;
+}
+
 enum ManagedKeyState {
   KEY_ACTIVE = 1;
   KEY_INACTIVE = 2;

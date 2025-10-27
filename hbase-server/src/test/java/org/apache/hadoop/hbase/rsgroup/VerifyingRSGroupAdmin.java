@@ -1004,4 +1004,17 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   public void refreshSystemKeyCacheOnServers(Set<ServerName> regionServers) throws IOException {
     admin.refreshSystemKeyCacheOnServers(regionServers);
   }
+
+  @Override
+  public void ejectManagedKeyDataCacheEntryOnAllServers(Set<ServerName> regionServers,
+    byte[] keyCustodian, String keyNamespace, byte[] keyMetadataHash) throws IOException {
+    admin.ejectManagedKeyDataCacheEntryOnAllServers(regionServers, keyCustodian, keyNamespace,
+      keyMetadataHash);
+  }
+
+  @Override
+  public void clearManagedKeyDataCacheOnAllServers(Set<ServerName> regionServers)
+    throws IOException {
+    admin.clearManagedKeyDataCacheOnAllServers(regionServers);
+  }
 }

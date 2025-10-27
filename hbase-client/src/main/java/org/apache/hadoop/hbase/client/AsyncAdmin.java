@@ -1880,4 +1880,21 @@ public interface AsyncAdmin {
    * @param regionServers the list of region servers to refresh the system key cache on
    */
   CompletableFuture<Void> refreshSystemKeyCacheOnServers(Set<ServerName> regionServers);
+
+  /**
+   * Eject a specific managed key entry from the managed key data cache on all specified region
+   * servers.
+   * @param regionServers   the list of region servers to eject the managed key entry from
+   * @param keyCustodian    the key custodian
+   * @param keyNamespace    the key namespace
+   * @param keyMetadataHash the hash of the key metadata
+   */
+  CompletableFuture<Void> ejectManagedKeyDataCacheEntryOnAllServers(Set<ServerName> regionServers,
+    byte[] keyCustodian, String keyNamespace, byte[] keyMetadataHash);
+
+  /**
+   * Clear all entries in the managed key data cache on all specified region servers.
+   * @param regionServers the list of region servers to clear the managed key data cache on
+   */
+  CompletableFuture<Void> clearManagedKeyDataCacheOnAllServers(Set<ServerName> regionServers);
 }

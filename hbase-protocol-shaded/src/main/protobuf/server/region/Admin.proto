@@ -423,4 +423,10 @@ service AdminService {
 
   rpc RefreshSystemKeyCache(EmptyMsg)
     returns(EmptyMsg);
+
+  rpc EjectManagedKeyDataCacheEntry(ManagedKeyEntryRequest)
+    returns(EmptyMsg);
+
+  rpc ClearManagedKeyDataCache(EmptyMsg)
+    returns(EmptyMsg);
 }

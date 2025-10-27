@@ -423,5 +423,90 @@ public class TestKeymetaAdminImpl {
       assertTrue("Exception message should contain 'not enabled', but was: " + ex.getMessage(),
         ex.getMessage().contains("not enabled"));
     }
+
+    /**
+     * Test ejectManagedKeyDataCacheEntryOnAllServers API - verify it calls the AsyncAdmin method
+     * with correct parameters
+     */
+    @Test
+    public void testEjectManagedKeyDataCacheEntry() throws Exception {
+      byte[] keyCustodian = Bytes.toBytes("testCustodian");
+      String keyNamespace = "testNamespace";
+      byte[] keyMetadataHash = Bytes.toBytes("testHash");
+
+      when(mockAsyncAdmin.ejectManagedKeyDataCacheEntryOnAllServers(any(), any(), any(), any()))
+        .thenReturn(CompletableFuture.completedFuture(null));
+
+      KeymetaAdminImplForTest admin = new KeymetaAdminImplForTest(mockServer, keymetaAccessor);
+
+      // Call the method
+      admin.ejectManagedKeyDataCacheEntryOnAllServers(
+        mockServerManager.getOnlineServers().keySet(), keyCustodian, keyNamespace, keyMetadataHash);
+
+      // Verify the AsyncAdmin method was called
+      verify(mockAsyncAdmin).ejectManagedKeyDataCacheEntryOnAllServers(any(), any(), any(), any());
+    }
+
+    /**
+     * Test ejectManagedKeyDataCacheEntryOnAllServers when it fails
+     */
+    @Test
+    public void testEjectManagedKeyDataCacheEntryWithFailure() throws Exception {
+      byte[] keyCustodian = Bytes.toBytes("testCustodian");
+      String keyNamespace = "testNamespace";
+      byte[] keyMetadataHash = Bytes.toBytes("testHash");
+
+      CompletableFuture<Void> failedFuture = new CompletableFuture<>();
+      failedFuture.completeExceptionally(new IOException("eject failed"));
+      when(mockAsyncAdmin.ejectManagedKeyDataCacheEntryOnAllServers(any(), any(), any(), any()))
+        .thenReturn(failedFuture);
+
+      KeymetaAdminImplForTest admin = new KeymetaAdminImplForTest(mockServer, keymetaAccessor);
+
+      // Call the method and expect IOException
+      IOException ex = assertThrows(IOException.class,
+        () -> admin.ejectManagedKeyDataCacheEntryOnAllServers(
+          mockServerManager.getOnlineServers().keySet(), keyCustodian, keyNamespace,
+          keyMetadataHash));
+
+      assertTrue(ex.getMessage().contains("eject failed"));
+      verify(mockAsyncAdmin).ejectManagedKeyDataCacheEntryOnAllServers(any(), any(), any(), any());
+    }
+
+    /**
+     * Test clearManagedKeyDataCacheOnAllServers API - verify it calls the AsyncAdmin method
+     */
+    @Test
+    public void testClearManagedKeyDataCache() throws Exception {
+      when(mockAsyncAdmin.clearManagedKeyDataCacheOnAllServers(any()))
+        .thenReturn(CompletableFuture.completedFuture(null));
+
+      KeymetaAdminImplForTest admin = new KeymetaAdminImplForTest(mockServer, keymetaAccessor);
+
+      // Call the method
+      admin.clearManagedKeyDataCacheOnAllServers(mockServerManager.getOnlineServers().keySet());
+
+      // Verify the AsyncAdmin method was called
+      verify(mockAsyncAdmin).clearManagedKeyDataCacheOnAllServers(any());
+    }
+
+    /**
+     * Test clearManagedKeyDataCacheOnAllServers when it fails
+     */
+    @Test
+    public void testClearManagedKeyDataCacheWithFailure() throws Exception {
+      CompletableFuture<Void> failedFuture = new CompletableFuture<>();
+      failedFuture.completeExceptionally(new IOException("clear failed"));
+      when(mockAsyncAdmin.clearManagedKeyDataCacheOnAllServers(any())).thenReturn(failedFuture);
+
+      KeymetaAdminImplForTest admin = new KeymetaAdminImplForTest(mockServer, keymetaAccessor);
+
+      // Call the method and expect IOException
+      IOException ex = assertThrows(IOException.class,
+        () -> admin.clearManagedKeyDataCacheOnAllServers(mockServerManager.getOnlineServers().keySet()));
+
+      assertTrue(ex.getMessage().contains("clear failed"));
+      verify(mockAsyncAdmin).clearManagedKeyDataCacheOnAllServers(any());
+    }
   }
 }

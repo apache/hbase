@@ -235,6 +235,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRespon
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionLoad;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.EmptyMsg;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyEntryRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameBytesPair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameInt64Pair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier;
@@ -4078,6 +4079,55 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
       return EmptyMsg.getDefaultInstance();
     } catch (IOException ie) {
       LOG.error("Failed to rebuild system key cache", ie);
+      throw new ServiceException(ie);
+    }
+  }
+
+  /**
+   * Ejects a specific managed key entry from the managed key data cache on the region server.
+   * @param controller the RPC controller
+   * @param request    the request containing key custodian, namespace, and metadata hash
+   * @return empty response
+   */
+  @Override
+  @QosPriority(priority = HConstants.ADMIN_QOS)
+  public EmptyMsg ejectManagedKeyDataCacheEntry(final RpcController controller,
+    final ManagedKeyEntryRequest request) throws ServiceException {
+    try {
+      checkOpen();
+      requestCount.increment();
+      byte[] keyCustodian = request.getKeyCustNs().getKeyCust().toByteArray();
+      String keyNamespace = request.getKeyCustNs().getKeyNamespace();
+      byte[] keyMetadataHash = request.getKeyMetadataHash().toByteArray();
+      LOG.info("Received EjectManagedKeyDataCacheEntry request for key custodian: {}, namespace: {}",
+        Bytes.toStringBinary(keyCustodian), keyNamespace);
+      server.getKeyManagementService().getManagedKeyDataCache()
+        .ejectKeyFromActiveKeysCache(keyCustodian, keyNamespace, keyMetadataHash);
+      return EmptyMsg.getDefaultInstance();
+    } catch (IOException ie) {
+      LOG.error("Failed to eject managed key data cache entry", ie);
+      throw new ServiceException(ie);
+    }
+  }
+
+  /**
+   * Clears all entries in the managed key data cache on the region server.
+   * @param controller the RPC controller
+   * @param request    the request (empty)
+   * @return empty response
+   */
+  @Override
+  @QosPriority(priority = HConstants.ADMIN_QOS)
+  public EmptyMsg clearManagedKeyDataCache(final RpcController controller, final EmptyMsg request)
+    throws ServiceException {
+    try {
+      checkOpen();
+      requestCount.increment();
+      LOG.info("Received ClearManagedKeyDataCache request, clearing managed key data cache");
+      server.getKeyManagementService().getManagedKeyDataCache().clearCache();
+      return EmptyMsg.getDefaultInstance();
+    } catch (IOException ie) {
+      LOG.error("Failed to clear managed key data cache", ie);
       throw new ServiceException(ie);
     }
   }

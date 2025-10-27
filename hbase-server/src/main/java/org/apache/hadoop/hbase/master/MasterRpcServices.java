@@ -194,6 +194,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionStoreSequenceIds;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.EmptyMsg;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyEntryRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier;
@@ -3624,6 +3625,18 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
 
   @Override
   public EmptyMsg refreshSystemKeyCache(RpcController controller, EmptyMsg request)
+    throws ServiceException {
+    throw new ServiceException(new DoNotRetryIOException("Unsupported method on master"));
+  }
+
+  @Override
+  public EmptyMsg ejectManagedKeyDataCacheEntry(RpcController controller,
+    ManagedKeyEntryRequest request) throws ServiceException {
+    throw new ServiceException(new DoNotRetryIOException("Unsupported method on master"));
+  }
+
+  @Override
+  public EmptyMsg clearManagedKeyDataCache(RpcController controller, EmptyMsg request)
     throws ServiceException {
     throw new ServiceException(new DoNotRetryIOException("Unsupported method on master"));
   }

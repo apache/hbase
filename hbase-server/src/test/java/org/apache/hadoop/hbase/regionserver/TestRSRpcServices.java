@@ -46,10 +46,16 @@ import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.hbase.keymeta.KeyManagementService;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.EmptyMsg;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyEntryRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyRequest;
 
 /**
  * Test parts of {@link RSRpcServices}
@@ -199,5 +205,181 @@ public class TestRSRpcServices {
 
     // Verify that rebuildSystemKeyCache was called
     verify(mockServer).rebuildSystemKeyCache();
+  }
+
+  /**
+   * Test the ejectManagedKeyDataCacheEntry RPC method that is used to eject a specific managed key
+   * entry from the cache on region servers.
+   */
+  @Test
+  public void testEjectManagedKeyDataCacheEntry() throws Exception {
+    // Create mocks
+    HRegionServer mockServer = mock(HRegionServer.class);
+    Configuration conf = HBaseConfiguration.create();
+    FileSystem mockFs = mock(FileSystem.class);
+    KeyManagementService mockKeyService = mock(KeyManagementService.class);
+    ManagedKeyDataCache mockCache = mock(ManagedKeyDataCache.class);
+
+    when(mockServer.getConfiguration()).thenReturn(conf);
+    when(mockServer.isOnline()).thenReturn(true);
+    when(mockServer.isAborted()).thenReturn(false);
+    when(mockServer.isStopped()).thenReturn(false);
+    when(mockServer.isDataFileSystemOk()).thenReturn(true);
+    when(mockServer.getFileSystem()).thenReturn(mockFs);
+    when(mockServer.getKeyManagementService()).thenReturn(mockKeyService);
+    when(mockKeyService.getManagedKeyDataCache()).thenReturn(mockCache);
+
+    // Create RSRpcServices
+    RSRpcServices rpcServices = new RSRpcServices(mockServer);
+
+    // Create request
+    byte[] keyCustodian = Bytes.toBytes("testCustodian");
+    String keyNamespace = "testNamespace";
+    byte[] keyMetadataHash = Bytes.toBytes("testHash");
+
+    ManagedKeyEntryRequest request = ManagedKeyEntryRequest.newBuilder()
+      .setKeyCustNs(ManagedKeyRequest.newBuilder().setKeyCust(ByteString.copyFrom(keyCustodian))
+        .setKeyNamespace(keyNamespace).build())
+      .setKeyMetadataHash(ByteString.copyFrom(keyMetadataHash)).build();
+
+    RpcController controller = mock(RpcController.class);
+
+    // Call the RPC method
+    EmptyMsg response = rpcServices.ejectManagedKeyDataCacheEntry(controller, request);
+
+    // Verify the response is not null
+    assertNotNull("Response should not be null", response);
+
+    // Verify that ejectKeyFromActiveKeysCache was called on the cache
+    verify(mockCache).ejectKeyFromActiveKeysCache(keyCustodian, keyNamespace, keyMetadataHash);
+
+    LOG.info("ejectManagedKeyDataCacheEntry test completed successfully");
+  }
+
+  /**
+   * Test that ejectManagedKeyDataCacheEntry throws ServiceException when it fails
+   */
+  @Test
+  public void testEjectManagedKeyDataCacheEntryWhenFails() throws Exception {
+    // Create mocks
+    HRegionServer mockServer = mock(HRegionServer.class);
+    Configuration conf = HBaseConfiguration.create();
+    FileSystem mockFs = mock(FileSystem.class);
+    KeyManagementService mockKeyService = mock(KeyManagementService.class);
+    ManagedKeyDataCache mockCache = mock(ManagedKeyDataCache.class);
+
+    when(mockServer.getConfiguration()).thenReturn(conf);
+    when(mockServer.isOnline()).thenReturn(true);
+    when(mockServer.isAborted()).thenReturn(false);
+    when(mockServer.isStopped()).thenReturn(false);
+    when(mockServer.isDataFileSystemOk()).thenReturn(true);
+    when(mockServer.getFileSystem()).thenReturn(mockFs);
+    when(mockServer.getKeyManagementService()).thenReturn(mockKeyService);
+
+    // Make getKeyManagementService throw IOException
+    IOException testException = new IOException("Test failure getting key service");
+    when(mockServer.getKeyManagementService()).thenThrow(testException);
+
+    // Create RSRpcServices
+    RSRpcServices rpcServices = new RSRpcServices(mockServer);
+
+    // Create request
+    byte[] keyCustodian = Bytes.toBytes("testCustodian");
+    String keyNamespace = "testNamespace";
+    byte[] keyMetadataHash = Bytes.toBytes("testHash");
+
+    ManagedKeyEntryRequest request = ManagedKeyEntryRequest.newBuilder()
+      .setKeyCustNs(ManagedKeyRequest.newBuilder().setKeyCust(ByteString.copyFrom(keyCustodian))
+        .setKeyNamespace(keyNamespace).build())
+      .setKeyMetadataHash(ByteString.copyFrom(keyMetadataHash)).build();
+
+    RpcController controller = mock(RpcController.class);
+
+    // Call the RPC method and expect ServiceException
+    try {
+      rpcServices.ejectManagedKeyDataCacheEntry(controller, request);
+      fail("Expected ServiceException when eject fails");
+    } catch (ServiceException e) {
+      // Expected
+      assertEquals("Test failure getting key service", e.getCause().getMessage());
+      LOG.info("Correctly threw ServiceException when ejectManagedKeyDataCacheEntry fails");
+    }
+  }
+
+  /**
+   * Test the clearManagedKeyDataCache RPC method that is used to clear all cached entries in the
+   * ManagedKeyDataCache.
+   */
+  @Test
+  public void testClearManagedKeyDataCache() throws Exception {
+    // Create mocks
+    HRegionServer mockServer = mock(HRegionServer.class);
+    Configuration conf = HBaseConfiguration.create();
+    FileSystem mockFs = mock(FileSystem.class);
+    KeyManagementService mockKeyService = mock(KeyManagementService.class);
+    ManagedKeyDataCache mockCache = mock(ManagedKeyDataCache.class);
+
+    when(mockServer.getConfiguration()).thenReturn(conf);
+    when(mockServer.isOnline()).thenReturn(true);
+    when(mockServer.isAborted()).thenReturn(false);
+    when(mockServer.isStopped()).thenReturn(false);
+    when(mockServer.isDataFileSystemOk()).thenReturn(true);
+    when(mockServer.getFileSystem()).thenReturn(mockFs);
+    when(mockServer.getKeyManagementService()).thenReturn(mockKeyService);
+    when(mockKeyService.getManagedKeyDataCache()).thenReturn(mockCache);
+
+    // Create RSRpcServices
+    RSRpcServices rpcServices = new RSRpcServices(mockServer);
+
+    // Create request
+    EmptyMsg request = EmptyMsg.getDefaultInstance();
+    RpcController controller = mock(RpcController.class);
+
+    // Call the RPC method
+    EmptyMsg response = rpcServices.clearManagedKeyDataCache(controller, request);
+
+    // Verify the response is not null
+    assertNotNull("Response should not be null", response);
+
+    // Verify that clearCache was called on the cache
+    verify(mockCache).clearCache();
+
+    LOG.info("clearManagedKeyDataCache test completed successfully");
+  }
+
+  /**
+   * Test that clearManagedKeyDataCache throws ServiceException when server is stopped
+   */
+  @Test
+  public void testClearManagedKeyDataCacheWhenServerStopped() throws Exception {
+    // Create mocks
+    HRegionServer mockServer = mock(HRegionServer.class);
+    Configuration conf = HBaseConfiguration.create();
+    FileSystem mockFs = mock(FileSystem.class);
+
+    when(mockServer.getConfiguration()).thenReturn(conf);
+    when(mockServer.isOnline()).thenReturn(true);
+    when(mockServer.isAborted()).thenReturn(false);
+    when(mockServer.isStopped()).thenReturn(true); // Server is stopped
+    when(mockServer.isDataFileSystemOk()).thenReturn(true);
+    when(mockServer.getFileSystem()).thenReturn(mockFs);
+
+    // Create RSRpcServices
+    RSRpcServices rpcServices = new RSRpcServices(mockServer);
+
+    // Create request
+    EmptyMsg request = EmptyMsg.getDefaultInstance();
+    RpcController controller = mock(RpcController.class);
+
+    // Call the RPC method and expect ServiceException
+    try {
+      rpcServices.clearManagedKeyDataCache(controller, request);
+      fail("Expected ServiceException when server is stopped");
+    } catch (ServiceException e) {
+      // Expected
+      assertTrue("Exception should mention server stopping",
+        e.getCause().getMessage().contains("stopping"));
+      LOG.info("Correctly threw ServiceException when server is stopped");
+    }
   }
 }
