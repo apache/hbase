@@ -4695,9 +4695,14 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     Set<ServerName> regionServers, byte[] keyCustodian, String keyNamespace,
     byte[] keyMetadataHash) {
     CompletableFuture<Void> future = new CompletableFuture<>();
+    // Create the request once instead of repeatedly for each server
+    ManagedKeyEntryRequest request = ManagedKeyEntryRequest.newBuilder()
+      .setKeyCustNs(ManagedKeyRequest.newBuilder()
+        .setKeyCust(HBaseProtos.ByteString.copyFrom(keyCustodian)).setKeyNamespace(keyNamespace)
+        .build())
+      .setKeyMetadataHash(HBaseProtos.ByteString.copyFrom(keyMetadataHash)).build();
     List<CompletableFuture<Void>> futures = regionServers.stream()
-      .map(serverName -> ejectManagedKeyDataCacheEntry(serverName, keyCustodian, keyNamespace,
-        keyMetadataHash))
+      .map(serverName -> ejectManagedKeyDataCacheEntry(serverName, request))
       .collect(Collectors.toList());
     addListener(CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0])),
       (result, err) -> {
@@ -4711,14 +4716,10 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   private CompletableFuture<Void> ejectManagedKeyDataCacheEntry(ServerName serverName,
-    byte[] keyCustodian, String keyNamespace, byte[] keyMetadataHash) {
-    return this.<Void> newAdminCaller().action((controller, stub) -> this
-      .<ManagedKeyEntryRequest, EmptyMsg, Void> adminCall(controller, stub,
-        ManagedKeyEntryRequest.newBuilder()
-          .setKeyCustNs(ManagedKeyRequest.newBuilder()
-            .setKeyCust(HBaseProtos.ByteString.copyFrom(keyCustodian))
-            .setKeyNamespace(keyNamespace).build())
-          .setKeyMetadataHash(HBaseProtos.ByteString.copyFrom(keyMetadataHash)).build(),
+    ManagedKeyEntryRequest request) {
+    return this.<Void> newAdminCaller()
+      .action((controller, stub) -> this.<ManagedKeyEntryRequest, HBaseProtos.BooleanMsg, Void> adminCall(
+        controller, stub, request,
         (s, c, req, done) -> s.ejectManagedKeyDataCacheEntry(controller, req, done), resp -> null))
       .serverName(serverName).call();
   }

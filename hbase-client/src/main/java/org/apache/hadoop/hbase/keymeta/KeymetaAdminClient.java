@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.security.KeyException;
 import java.util.ArrayList;
 import java.util.List;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyState;
@@ -80,6 +81,19 @@ public class KeymetaAdminClient implements KeymetaAdmin {
     } catch (ServiceException e) {
       throw ProtobufUtil.handleRemoteException(e);
     }
+  }
+
+  @Override
+  public void ejectManagedKeyDataCacheEntryOnAllServers(byte[] keyCustodian, String keyNamespace,
+    byte[] keyMetadataHash) throws IOException {
+    throw new NotImplementedException(
+      "ejectManagedKeyDataCacheEntryOnAllServers not supported in KeymetaAdminClient");
+  }
+
+  @Override
+  public void clearManagedKeyDataCacheOnAllServers() throws IOException {
+    throw new NotImplementedException(
+      "clearManagedKeyDataCacheOnAllServers not supported in KeymetaAdminClient");
   }
 
   private static List<ManagedKeyData>

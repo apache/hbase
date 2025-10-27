@@ -234,6 +234,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanReques
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionLoad;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BooleanMsg;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.EmptyMsg;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyEntryRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameBytesPair;
@@ -4087,11 +4088,11 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
    * Ejects a specific managed key entry from the managed key data cache on the region server.
    * @param controller the RPC controller
    * @param request    the request containing key custodian, namespace, and metadata hash
-   * @return empty response
+   * @return BooleanMsg indicating whether the key was ejected
    */
   @Override
   @QosPriority(priority = HConstants.ADMIN_QOS)
-  public EmptyMsg ejectManagedKeyDataCacheEntry(final RpcController controller,
+  public BooleanMsg ejectManagedKeyDataCacheEntry(final RpcController controller,
     final ManagedKeyEntryRequest request) throws ServiceException {
     try {
       checkOpen();
@@ -4099,11 +4100,17 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
       byte[] keyCustodian = request.getKeyCustNs().getKeyCust().toByteArray();
       String keyNamespace = request.getKeyCustNs().getKeyNamespace();
       byte[] keyMetadataHash = request.getKeyMetadataHash().toByteArray();
-      LOG.info("Received EjectManagedKeyDataCacheEntry request for key custodian: {}, namespace: {}",
-        Bytes.toStringBinary(keyCustodian), keyNamespace);
-      server.getKeyManagementService().getManagedKeyDataCache()
+      if (LOG.isInfoEnabled()) {
+        String keyCustodianEncoded = java.util.Base64.getEncoder().encodeToString(keyCustodian);
+        String keyMetadataHashEncoded = java.util.Base64.getEncoder().encodeToString(keyMetadataHash);
+        LOG.info(
+            "Received EjectManagedKeyDataCacheEntry request for key custodian: {}, namespace: {}, "
+                + "metadata hash: {}",
+            keyCustodianEncoded, keyNamespace, keyMetadataHashEncoded);
+      }
+      boolean ejected = server.getKeyManagementService().getManagedKeyDataCache()
         .ejectKeyFromActiveKeysCache(keyCustodian, keyNamespace, keyMetadataHash);
-      return EmptyMsg.getDefaultInstance();
+      return BooleanMsg.newBuilder().setBoolMsg(ejected).build();
     } catch (IOException ie) {
       LOG.error("Failed to eject managed key data cache entry", ie);
       throw new ServiceException(ie);

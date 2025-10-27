@@ -212,6 +212,10 @@ message BigDecimalMsg {
   required bytes bigdecimal_msg = 1;
 }
 
+message BooleanMsg {
+  required bool bool_msg = 1;
+}
+
 message UUID {
   required uint64 least_sig_bits = 1;
   required uint64 most_sig_bits = 2;

@@ -53,6 +53,7 @@ import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BooleanMsg;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.EmptyMsg;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyEntryRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyRequest;
@@ -228,6 +229,8 @@ public class TestRSRpcServices {
     when(mockServer.getFileSystem()).thenReturn(mockFs);
     when(mockServer.getKeyManagementService()).thenReturn(mockKeyService);
     when(mockKeyService.getManagedKeyDataCache()).thenReturn(mockCache);
+    // Mock the ejectKeyFromActiveKeysCache to return true
+    when(mockCache.ejectKeyFromActiveKeysCache(any(), any(), any())).thenReturn(true);
 
     // Create RSRpcServices
     RSRpcServices rpcServices = new RSRpcServices(mockServer);
@@ -245,10 +248,11 @@ public class TestRSRpcServices {
     RpcController controller = mock(RpcController.class);
 
     // Call the RPC method
-    EmptyMsg response = rpcServices.ejectManagedKeyDataCacheEntry(controller, request);
+    BooleanMsg response = rpcServices.ejectManagedKeyDataCacheEntry(controller, request);
 
-    // Verify the response is not null
+    // Verify the response is not null and contains the expected boolean value
     assertNotNull("Response should not be null", response);
+    assertTrue("Response should indicate key was ejected", response.getBoolMsg());
 
     // Verify that ejectKeyFromActiveKeysCache was called on the cache
     verify(mockCache).ejectKeyFromActiveKeysCache(keyCustodian, keyNamespace, keyMetadataHash);

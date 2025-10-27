@@ -105,23 +105,17 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
     return true;
   }
 
-  /**
-   * Eject a specific managed key entry from the managed key data cache on all specified region
-   * servers.
-   * @param regionServers   the set of region servers to eject the managed key entry from
-   * @param keyCustodian    the key custodian
-   * @param keyNamespace    the key namespace
-   * @param keyMetadataHash the hash of the key metadata
-   * @throws IOException if the operation fails
-   */
-  public void ejectManagedKeyDataCacheEntryOnAllServers(Set<ServerName> regionServers,
-    byte[] keyCustodian, String keyNamespace, byte[] keyMetadataHash) throws IOException {
+  @Override
+  public void ejectManagedKeyDataCacheEntryOnAllServers(byte[] keyCustodian, String keyNamespace,
+    byte[] keyMetadataHash) throws IOException {
     assertKeyManagementEnabled();
     if (!(getServer() instanceof MasterServices)) {
       throw new IOException(
         "ejectManagedKeyDataCacheEntryOnAllServers can only be called on master");
     }
     MasterServices master = (MasterServices) getServer();
+
+    Set<ServerName> regionServers = master.getServerManager().getOnlineServers().keySet();
 
     LOG.info("Ejecting managed key data cache entry on all region servers");
     try {
@@ -134,18 +128,15 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
     LOG.info("Successfully ejected managed key data cache entry on all region servers");
   }
 
-  /**
-   * Clear all entries in the managed key data cache on all specified region servers.
-   * @param regionServers the set of region servers to clear the managed key data cache on
-   * @throws IOException if the operation fails
-   */
-  public void clearManagedKeyDataCacheOnAllServers(Set<ServerName> regionServers)
-    throws IOException {
+  @Override
+  public void clearManagedKeyDataCacheOnAllServers() throws IOException {
     assertKeyManagementEnabled();
     if (!(getServer() instanceof MasterServices)) {
       throw new IOException("clearManagedKeyDataCacheOnAllServers can only be called on master");
     }
     MasterServices master = (MasterServices) getServer();
+
+    Set<ServerName> regionServers = master.getServerManager().getOnlineServers().keySet();
 
     LOG.info("Clearing managed key data cache on all region servers");
     try {

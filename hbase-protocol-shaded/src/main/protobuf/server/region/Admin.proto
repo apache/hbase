@@ -425,7 +425,7 @@ service AdminService {
     returns(EmptyMsg);
 
   rpc EjectManagedKeyDataCacheEntry(ManagedKeyEntryRequest)
-    returns(EmptyMsg);
+    returns(BooleanMsg);
 
   rpc ClearManagedKeyDataCache(EmptyMsg)
     returns(EmptyMsg);
