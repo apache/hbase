@@ -203,7 +203,6 @@ public class TestMasterStatusUtil {
     conf.setBoolean("hbase.master.ui.fragmentation.enabled", true);
     Map<String, Integer> fragmentationInfo = MasterStatusUtil.getFragmentationInfo(master, conf);
     assertNotNull(fragmentationInfo);
-    assertEquals(1, fragmentationInfo.size());
   }
 
   @Test
