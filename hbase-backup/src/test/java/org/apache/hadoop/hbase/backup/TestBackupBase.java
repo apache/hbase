@@ -173,7 +173,7 @@ public class TestBackupBase {
         // copy out the table and region info files for each table
         BackupUtils.copyTableRegionInfo(conn, backupInfo, conf);
         // convert WAL to HFiles and copy them to .tmp under BACKUP_ROOT
-        convertWALsToHFiles();
+        convertWALsToHFiles(new HashMap<>(), new HashMap<>());
         incrementalCopyHFiles(new String[] { getBulkOutputDir().toString() },
           backupInfo.getBackupRootDir());
         failStageIf(Stage.stage_2);
@@ -198,7 +198,7 @@ public class TestBackupBase {
           BackupUtils.getMinValue(BackupUtils.getRSLogTimestampMins(newTableSetTimestampMap));
         backupManager.writeBackupStartCode(newStartCode);
 
-        handleBulkLoad(backupInfo.getTableNames());
+        handleBulkLoad(backupInfo.getTableNames(), new HashMap<>(), new HashMap<>());
         failStageIf(Stage.stage_4);
 
         // backup complete
