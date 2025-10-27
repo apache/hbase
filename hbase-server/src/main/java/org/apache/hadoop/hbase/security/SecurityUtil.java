@@ -82,8 +82,10 @@ public class SecurityUtil {
     boolean isKeyManagementEnabled = isKeyManagementEnabled(conf);
     String cipherName = family.getEncryptionType();
     String keyNamespace = null; // Will be set by fallback logic
-    LOG.debug("Creating encryption context for table: {} and column family: {}",
-      tableDescriptor.getTableName().getNameAsString(), family.getNameAsString());
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Creating encryption context for table: {} and column family: {}",
+        tableDescriptor.getTableName().getNameAsString(), family.getNameAsString());
+    }
     if (cipherName != null) {
       if (!Encryption.isEncryptionEnabled(conf)) {
         throw new IllegalStateException("Encryption for family '" + family.getNameAsString()
@@ -108,10 +110,8 @@ public class SecurityUtil {
             // Scenario 1b: If key management is disabled, unwrap the key using master key.
             key = EncryptionUtil.unwrapKey(conf, familyKeyBytes);
           }
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Scenario 1: Use family key for namespace {} cipher: {} "
-              + "key management enabled: {}", keyNamespace, cipherName, isKeyManagementEnabled);
-          }
+          LOG.debug("Scenario 1: Use family key for namespace {} cipher: {} "
+            + "key management enabled: {}", keyNamespace, cipherName, isKeyManagementEnabled);
         } catch (KeyException e) {
           throw new IOException(e);
         }
@@ -133,8 +133,10 @@ public class SecurityUtil {
           for (String candidate : candidateNamespaces) {
             if (candidate != null) {
               // Log information on the table and column family we are looking for the active key in
-              LOG.debug("Looking for active key for table: {} and column family: {}",
-                tableDescriptor.getTableName().getNameAsString(), family.getNameAsString());
+              if (LOG.isDebugEnabled()) {
+                LOG.debug("Looking for active key for table: {} and column family: {}",
+                  tableDescriptor.getTableName().getNameAsString(), family.getNameAsString());
+              }
               activeKeyData = managedKeyDataCache
                 .getActiveEntry(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES, candidate);
               if (activeKeyData != null) {
@@ -216,9 +218,7 @@ public class SecurityUtil {
     ManagedKeyData kekKeyData = null;
     byte[] keyBytes = trailer.getEncryptionKey();
     Encryption.Context cryptoContext = Encryption.Context.NONE;
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Creating encryption context for path: {}", path);
-    }
+    LOG.debug("Creating encryption context for path: {}", path);
     // Check for any key material available
     if (keyBytes != null) {
       cryptoContext = Encryption.newContext(conf);

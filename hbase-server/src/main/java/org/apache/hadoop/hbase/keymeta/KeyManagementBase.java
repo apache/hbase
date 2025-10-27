@@ -134,12 +134,12 @@ public abstract class KeyManagementBase {
     /*
      * Will be useful when refresh API is implemented. if (existingActiveKey != null &&
      * existingActiveKey.equals(pbeKey)) {
-     * LOG.info("retrieveManagedKey: no change in key for (custodian: {}, namespace: {}",
-     * encKeyCust, keyNamespace); return null; } // TODO: If existingActiveKey is not null, we
-     * should update the key state to INACTIVE.
+     * LOG.info("retrieveActiveKey: no change in key for (custodian: {}, namespace: {}", encKeyCust,
+     * keyNamespace); return null; } // TODO: If existingActiveKey is not null, we should update the
+     * key state to INACTIVE.
      */
     LOG.info(
-      "retrieveManagedKey: got managed key with status: {} and metadata: {} for "
+      "retrieveActiveKey: got active key with status: {} and metadata: {} for "
         + "(custodian: {}, namespace: {})",
       pbeKey.getKeyState(), pbeKey.getKeyMetadata(), encKeyCust, pbeKey.getKeyNamespace());
     if (accessor != null) {

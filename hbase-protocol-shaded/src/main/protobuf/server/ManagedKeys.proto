@@ -24,8 +24,10 @@ option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;
 
-message ManagedKeysRequest {
-  required string key_cust = 1;
+import "HBase.proto";
+
+message ManagedKeyRequest {
+  required bytes key_cust = 1;
   required string key_namespace = 2;
 }
 
@@ -36,8 +38,8 @@ enum ManagedKeyState {
   KEY_DISABLED = 4;
 }
 
-message ManagedKeysResponse {
-  required string key_cust = 1;
+message ManagedKeyResponse {
+  required bytes key_cust = 1;
   required string key_namespace = 2;
   required ManagedKeyState key_state = 3;
   optional string key_metadata = 4;
@@ -45,12 +47,18 @@ message ManagedKeysResponse {
 }
 
 message GetManagedKeysResponse {
-  repeated ManagedKeysResponse state = 1;
+  repeated ManagedKeyResponse state = 1;
+}
+
+message RotateSTKResponse {
+  required bool rotated = 1;
 }
 
 service ManagedKeysService {
-  rpc EnableKeyManagement(ManagedKeysRequest)
+  rpc EnableKeyManagement(ManagedKeyRequest)
+    returns (ManagedKeyResponse);
+  rpc GetManagedKeys(ManagedKeyRequest)
     returns (GetManagedKeysResponse);
-  rpc GetManagedKeys(ManagedKeysRequest)
-    returns (GetManagedKeysResponse);
+  rpc RotateSTK(EmptyMsg)
+    returns (RotateSTKResponse);
 }

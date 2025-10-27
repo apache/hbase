@@ -234,6 +234,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanReques
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionLoad;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.EmptyMsg;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameBytesPair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameInt64Pair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier;
@@ -4056,6 +4057,29 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
       fullyCachedFiles.addAll(fcf.keySet());
     });
     return responseBuilder.addAllCachedFiles(fullyCachedFiles).build();
+  }
+
+  /**
+   * Refreshes the system key cache on the region server by rebuilding it with the latest keys. This
+   * is called by the master when a system key rotation has occurred.
+   * @param controller the RPC controller
+   * @param request    the request
+   * @return empty response
+   */
+  @Override
+  @QosPriority(priority = HConstants.ADMIN_QOS)
+  public EmptyMsg refreshSystemKeyCache(final RpcController controller, final EmptyMsg request)
+    throws ServiceException {
+    try {
+      checkOpen();
+      requestCount.increment();
+      LOG.info("Received RefreshSystemKeyCache request, rebuilding system key cache");
+      server.rebuildSystemKeyCache();
+      return EmptyMsg.getDefaultInstance();
+    } catch (IOException ie) {
+      LOG.error("Failed to rebuild system key cache", ie);
+      throw new ServiceException(ie);
+    }
   }
 
   RegionScannerContext checkQuotaAndGetRegionScannerContext(ScanRequest request,

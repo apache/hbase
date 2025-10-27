@@ -19,10 +19,10 @@ package org.apache.hadoop.hbase.keymeta;
 
 import java.io.IOException;
 import java.security.KeyException;
-import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.coprocessor.CoreCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.HasMasterServices;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
@@ -31,17 +31,19 @@ import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.GetManagedKeysResponse;
-import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.ManagedKeysRequest;
-import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.ManagedKeysResponse;
+import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.ManagedKeyRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.ManagedKeyResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.ManagedKeysService;
+import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.RotateSTKResponse;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.Service;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.EmptyMsg;
 
 /**
  * This class implements a coprocessor service endpoint for the key management metadata operations.
@@ -100,47 +102,72 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
      * @param done       The callback to be invoked with the response.
      */
     @Override
-    public void enableKeyManagement(RpcController controller, ManagedKeysRequest request,
-      RpcCallback<GetManagedKeysResponse> done) {
-      ManagedKeysResponse.Builder builder = getResponseBuilder(controller, request);
-      if (builder.getKeyCust() != null && !builder.getKeyCust().isEmpty()) {
-        try {
-          List<ManagedKeyData> managedKeyStates = master.getKeymetaAdmin()
-            .enableKeyManagement(request.getKeyCust(), request.getKeyNamespace());
-          done.run(generateKeyStateResponse(managedKeyStates, builder));
-        } catch (IOException e) {
-          CoprocessorRpcUtils.setControllerException(controller, e);
-        } catch (KeyException e) {
-          CoprocessorRpcUtils.setControllerException(controller, new IOException(e));
-        }
+    public void enableKeyManagement(RpcController controller, ManagedKeyRequest request,
+      RpcCallback<ManagedKeyResponse> done) {
+      ManagedKeyResponse response = null;
+      ManagedKeyResponse.Builder builder = ManagedKeyResponse.newBuilder();
+      try {
+        initManagedKeyResponseBuilder(controller, request, builder);
+        ManagedKeyData managedKeyState = master.getKeymetaAdmin()
+          .enableKeyManagement(request.getKeyCust().toByteArray(), request.getKeyNamespace());
+        response = generateKeyStateResponse(managedKeyState, builder);
+      } catch (IOException | KeyException e) {
+        CoprocessorRpcUtils.setControllerException(controller, new DoNotRetryIOException(e));
+        builder.setKeyState(ManagedKeysProtos.ManagedKeyState.KEY_FAILED);
       }
+      if (response == null) {
+        response = builder.build();
+      }
+      done.run(response);
     }
 
     @Override
-    public void getManagedKeys(RpcController controller, ManagedKeysRequest request,
+    public void getManagedKeys(RpcController controller, ManagedKeyRequest request,
       RpcCallback<GetManagedKeysResponse> done) {
-      ManagedKeysResponse.Builder builder = getResponseBuilder(controller, request);
-      if (builder.getKeyCust() != null && !builder.getKeyCust().isEmpty()) {
-        try {
-          List<ManagedKeyData> managedKeyStates = master.getKeymetaAdmin()
-            .getManagedKeys(request.getKeyCust(), request.getKeyNamespace());
-          done.run(generateKeyStateResponse(managedKeyStates, builder));
-        } catch (IOException e) {
-          CoprocessorRpcUtils.setControllerException(controller, e);
-        } catch (KeyException e) {
-          CoprocessorRpcUtils.setControllerException(controller, new IOException(e));
-        }
+      GetManagedKeysResponse keyStateResponse = null;
+      ManagedKeyResponse.Builder builder = ManagedKeyResponse.newBuilder();
+      try {
+        initManagedKeyResponseBuilder(controller, request, builder);
+        List<ManagedKeyData> managedKeyStates = master.getKeymetaAdmin()
+          .getManagedKeys(request.getKeyCust().toByteArray(), request.getKeyNamespace());
+        keyStateResponse = generateKeyStateResponse(managedKeyStates, builder);
+      } catch (IOException | KeyException e) {
+        CoprocessorRpcUtils.setControllerException(controller, new DoNotRetryIOException(e));
       }
+      if (keyStateResponse == null) {
+        keyStateResponse = GetManagedKeysResponse.getDefaultInstance();
+      }
+      done.run(keyStateResponse);
+    }
+
+    /**
+     * Rotates the system key (STK) by checking for a new key and propagating it to all region
+     * servers.
+     * @param controller The RPC controller.
+     * @param request    The request (empty).
+     * @param done       The callback to be invoked with the response.
+     */
+    @Override
+    public void rotateSTK(RpcController controller, EmptyMsg request,
+      RpcCallback<RotateSTKResponse> done) {
+      boolean rotated;
+      try {
+        rotated = master.getKeymetaAdmin().rotateSTK();
+      } catch (IOException e) {
+        CoprocessorRpcUtils.setControllerException(controller, new DoNotRetryIOException(e));
+        rotated = false;
+      }
+      done.run(RotateSTKResponse.newBuilder().setRotated(rotated).build());
     }
   }
 
   @InterfaceAudience.Private
-  public static ManagedKeysResponse.Builder getResponseBuilder(RpcController controller,
-    ManagedKeysRequest request) {
-    ManagedKeysResponse.Builder builder = ManagedKeysResponse.newBuilder();
-    byte[] key_cust = convertToKeyCustBytes(controller, request, builder);
-    if (key_cust != null) {
-      builder.setKeyCustBytes(ByteString.copyFrom(key_cust));
+  public static ManagedKeyResponse.Builder initManagedKeyResponseBuilder(RpcController controller,
+    ManagedKeyRequest request, ManagedKeyResponse.Builder builder) throws IOException {
+    builder.setKeyCust(request.getKeyCust());
+    builder.setKeyNamespace(request.getKeyNamespace());
+    if (request.getKeyCust().isEmpty()) {
+      throw new IOException("key_cust must not be empty");
     }
     return builder;
   }
@@ -148,29 +175,19 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
   // Assumes that all ManagedKeyData objects belong to the same custodian and namespace.
   @InterfaceAudience.Private
   public static GetManagedKeysResponse generateKeyStateResponse(
-    List<ManagedKeyData> managedKeyStates, ManagedKeysResponse.Builder builder) {
+    List<ManagedKeyData> managedKeyStates, ManagedKeyResponse.Builder builder) {
     GetManagedKeysResponse.Builder responseBuilder = GetManagedKeysResponse.newBuilder();
     for (ManagedKeyData keyData : managedKeyStates) {
-      builder
-        .setKeyState(ManagedKeysProtos.ManagedKeyState.forNumber(keyData.getKeyState().getVal()))
-        .setKeyMetadata(keyData.getKeyMetadata()).setRefreshTimestamp(keyData.getRefreshTimestamp())
-        .setKeyNamespace(keyData.getKeyNamespace());
-      responseBuilder.addState(builder.build());
+      responseBuilder.addState(generateKeyStateResponse(keyData, builder));
     }
     return responseBuilder.build();
   }
 
-  @InterfaceAudience.Private
-  public static byte[] convertToKeyCustBytes(RpcController controller, ManagedKeysRequest request,
-    ManagedKeysResponse.Builder builder) {
-    byte[] key_cust = null;
-    try {
-      key_cust = Base64.getDecoder().decode(request.getKeyCust());
-    } catch (IllegalArgumentException e) {
-      builder.setKeyState(ManagedKeysProtos.ManagedKeyState.KEY_FAILED);
-      CoprocessorRpcUtils.setControllerException(controller, new IOException(
-        "Failed to decode specified prefix as Base64 string: " + request.getKeyCust(), e));
-    }
-    return key_cust;
+  private static ManagedKeyResponse generateKeyStateResponse(ManagedKeyData keyData,
+    ManagedKeyResponse.Builder builder) {
+    builder.setKeyState(ManagedKeysProtos.ManagedKeyState.forNumber(keyData.getKeyState().getVal()))
+      .setKeyMetadata(keyData.getKeyMetadata()).setRefreshTimestamp(keyData.getRefreshTimestamp())
+      .setKeyNamespace(keyData.getKeyNamespace());
+    return builder.build();
   }
 }

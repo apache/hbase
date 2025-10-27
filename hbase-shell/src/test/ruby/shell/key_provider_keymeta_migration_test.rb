@@ -98,7 +98,7 @@ module Hbase
           expected_namespace: { 'f' => 'shared-global-key' }
         },
         @table_cf_keys => {
-          cfs: ['cf1', 'cf2'],
+          cfs: %w[cf1 cf2],
           expected_namespace: {
             'cf1' => "#{@table_cf_keys}/cf1",
             'cf2' => "#{@table_cf_keys}/cf2"
@@ -106,22 +106,21 @@ module Hbase
         }
       }
 
-
       # Setup initial KeyStoreKeyProvider
       setup_old_key_provider
-      puts "  >> Starting Cluster"
-      $TEST.startMiniCluster()
-      puts "  >> Cluster started"
+      puts '  >> Starting Cluster'
+      $TEST.startMiniCluster
+      puts '  >> Cluster started'
 
       setup_hbase
     end
 
     define_test 'Test complete key provider migration' do
-      puts "\n=== Starting Key Provider Migration Test ==="
+      puts '\n=== Starting Key Provider Migration Test ==='
 
       # Step 1-3: Setup old provider and create tables
       create_test_tables
-      puts "\n--- Validating initial table operations ---"
+      puts '\n--- Validating initial table operations ---'
       validate_pre_migration_operations(false)
 
       # Step 4: Setup new provider and restart
@@ -134,13 +133,13 @@ module Hbase
       # Step 6: Cleanup and final validation
       cleanup_old_provider_and_validate
 
-      puts "\n=== Migration Test Completed Successfully ==="
+      puts '\n=== Migration Test Completed Successfully ==='
     end
 
     private
 
     def setup_old_key_provider
-      puts "\n--- Setting up old KeyStoreKeyProvider ---"
+      puts '\n--- Setting up old KeyStoreKeyProvider ---'
 
       # Use proper test directory (similar to KeymetaTestUtils.setupTestKeyStore)
       test_data_dir = $TEST_CLUSTER.getDataTestDir("old_keystore_#{@test_timestamp}").toString
@@ -150,22 +149,23 @@ module Hbase
 
       # Create keystore with only the master key
       # ENCRYPTION_KEY attributes generate their own keys and don't use keystore entries
-      create_keystore(@old_keystore_file, {
-        @master_key_alias => generate_key(@master_key_alias)
-      })
+      create_keystore(@old_keystore_file, { @master_key_alias => generate_key(@master_key_alias) })
 
       # Configure old KeyStoreKeyProvider
-      provider_uri = "jceks://#{File.expand_path(@old_keystore_file)}?password=#{@keystore_password}"
+      provider_uri = "jceks://#{File.expand_path(@old_keystore_file)}?" \
+        "password=#{@keystore_password}"
       $TEST_CLUSTER.getConfiguration.set(HConstants::CRYPTO_KEYPROVIDER_CONF_KEY,
-                                        KeyStoreKeyProvider.java_class.name)
-      $TEST_CLUSTER.getConfiguration.set(HConstants::CRYPTO_KEYPROVIDER_PARAMETERS_KEY, provider_uri)
-      $TEST_CLUSTER.getConfiguration.set(HConstants::CRYPTO_MASTERKEY_NAME_CONF_KEY, @master_key_alias)
+                                         KeyStoreKeyProvider.java_class.name)
+      $TEST_CLUSTER.getConfiguration.set(HConstants::CRYPTO_KEYPROVIDER_PARAMETERS_KEY,
+                                         provider_uri)
+      $TEST_CLUSTER.getConfiguration.set(HConstants::CRYPTO_MASTERKEY_NAME_CONF_KEY,
+                                         @master_key_alias)
 
       puts "  >> Old KeyStoreKeyProvider configured with keystore: #{@old_keystore_file}"
     end
 
     def create_test_tables
-      puts "\n--- Creating test tables ---"
+      puts '\n--- Creating test tables ---'
 
       # 1. Table without encryption
       command(:create, @table_no_encryption, { 'NAME' => 'f' })
@@ -177,17 +177,17 @@ module Hbase
 
       # 3. Table with table-level key
       command(:create, @table_table_key, { 'NAME' => 'f', 'ENCRYPTION' => 'AES',
-                                          'ENCRYPTION_KEY' => @table_key_alias })
+                                           'ENCRYPTION_KEY' => @table_key_alias })
       puts "  >> Created table #{@table_table_key} with table-level key"
 
       # 4. First table with shared key
       command(:create, @table_shared_key1, { 'NAME' => 'f', 'ENCRYPTION' => 'AES',
-                                            'ENCRYPTION_KEY' => @shared_key_alias })
+                                             'ENCRYPTION_KEY' => @shared_key_alias })
       puts "  >> Created table #{@table_shared_key1} with shared key"
 
       # 5. Second table with shared key
       command(:create, @table_shared_key2, { 'NAME' => 'f', 'ENCRYPTION' => 'AES',
-                                            'ENCRYPTION_KEY' => @shared_key_alias })
+                                             'ENCRYPTION_KEY' => @shared_key_alias })
       puts "  >> Created table #{@table_shared_key2} with shared key"
 
       # 6. Table with column family specific keys
@@ -199,10 +199,10 @@ module Hbase
 
     def validate_pre_migration_operations(is_key_management_enabled)
       @tables_metadata.each do |table_name, metadata|
-        puts "  >> test_table_operations on table: #{table_name} with CFs: #{metadata[:cfs].join(', ')}"
-        if metadata[:no_encryption]
-          next
-        end
+        puts "  >> test_table_operations on table: #{table_name} with CFs: " \
+          "#{metadata[:cfs].join(', ')}"
+        next if metadata[:no_encryption]
+
         test_table_operations(table_name, metadata[:cfs])
         check_hfile_trailers_pre_migration(table_name, metadata[:cfs], is_key_management_enabled)
       end
@@ -230,14 +230,14 @@ module Hbase
         get_result = test_table.table.get(Get.new(Bytes.toBytes('row1')))
         assert_false(get_result.isEmpty)
         assert_equal('value1',
-                    Bytes.toString(get_result.getValue(Bytes.toBytes(cf), Bytes.toBytes('col1'))))
+                     Bytes.toString(get_result.getValue(Bytes.toBytes(cf), Bytes.toBytes('col1'))))
       end
 
       puts "    >> Operations validated for #{table_name}"
     end
 
     def setup_new_key_provider
-      puts "\n--- Setting up new ManagedKeyStoreKeyProvider ---"
+      puts '\n--- Setting up new ManagedKeyStoreKeyProvider ---'
 
       # Use proper test directory (similar to KeymetaTestUtils.setupTestKeyStore)
       test_data_dir = $TEST_CLUSTER.getDataTestDir("new_keystore_#{@test_timestamp}").toString
@@ -252,69 +252,85 @@ module Hbase
       create_keystore(@new_keystore_file, migrated_keys)
 
       # Configure ManagedKeyStoreKeyProvider
-      provider_uri = "jceks://#{File.expand_path(@new_keystore_file)}?password=#{@keystore_password}"
+      provider_uri = "jceks://#{File.expand_path(@new_keystore_file)}?" \
+        "password=#{@keystore_password}"
       $TEST_CLUSTER.getConfiguration.set(HConstants::CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, 'true')
       $TEST_CLUSTER.getConfiguration.set(HConstants::CRYPTO_MANAGED_KEYPROVIDER_CONF_KEY,
-                                        ManagedKeyStoreKeyProvider.java_class.name)
-      $TEST_CLUSTER.getConfiguration.set(HConstants::CRYPTO_MANAGED_KEYPROVIDER_PARAMETERS_KEY, provider_uri)
-      $TEST_CLUSTER.getConfiguration.set(HConstants::CRYPTO_MANAGED_KEY_STORE_SYSTEM_KEY_NAME_CONF_KEY,
-                                        'system_key')
+                                         ManagedKeyStoreKeyProvider.java_class.name)
+      $TEST_CLUSTER.getConfiguration.set(HConstants::CRYPTO_MANAGED_KEYPROVIDER_PARAMETERS_KEY,
+                                         provider_uri)
+      $TEST_CLUSTER.getConfiguration.set(
+        HConstants::CRYPTO_MANAGED_KEY_STORE_SYSTEM_KEY_NAME_CONF_KEY,
+        'system_key'
+      )
 
       # Setup key configurations for ManagedKeyStoreKeyProvider
       # Shared key configuration
       $TEST_CLUSTER.getConfiguration.set(
         "hbase.crypto.managed_key_store.cust.#{$GLOB_CUST_ENCODED}.shared-global-key.alias",
-        'shared_global_key')
+        'shared_global_key'
+      )
       $TEST_CLUSTER.getConfiguration.setBoolean(
-        "hbase.crypto.managed_key_store.cust.#{$GLOB_CUST_ENCODED}.shared-global-key.active", true)
+        "hbase.crypto.managed_key_store.cust.#{$GLOB_CUST_ENCODED}.shared-global-key.active",
+        true
+      )
 
       # Table-level key configuration - let system determine namespace automatically
       $TEST_CLUSTER.getConfiguration.set(
         "hbase.crypto.managed_key_store.cust.#{$GLOB_CUST_ENCODED}.#{@table_table_key}.alias",
-        "#{@table_table_key}_key")
+        "#{@table_table_key}_key"
+      )
       $TEST_CLUSTER.getConfiguration.setBoolean(
-        "hbase.crypto.managed_key_store.cust.#{$GLOB_CUST_ENCODED}.#{@table_table_key}.active", true)
+        "hbase.crypto.managed_key_store.cust.#{$GLOB_CUST_ENCODED}.#{@table_table_key}.active",
+        true
+      )
 
       # CF-level key configurations - let system determine namespace automatically
       $TEST_CLUSTER.getConfiguration.set(
         "hbase.crypto.managed_key_store.cust.#{$GLOB_CUST_ENCODED}.#{@table_cf_keys}/cf1.alias",
-        "#{@table_cf_keys}_cf1_key")
+        "#{@table_cf_keys}_cf1_key"
+      )
       $TEST_CLUSTER.getConfiguration.setBoolean(
-        "hbase.crypto.managed_key_store.cust.#{$GLOB_CUST_ENCODED}.#{@table_cf_keys}/cf1.active", true)
+        "hbase.crypto.managed_key_store.cust.#{$GLOB_CUST_ENCODED}.#{@table_cf_keys}/cf1.active",
+        true
+      )
 
       $TEST_CLUSTER.getConfiguration.set(
         "hbase.crypto.managed_key_store.cust.#{$GLOB_CUST_ENCODED}.#{@table_cf_keys}/cf2.alias",
-        "#{@table_cf_keys}_cf2_key")
+        "#{@table_cf_keys}_cf2_key"
+      )
       $TEST_CLUSTER.getConfiguration.setBoolean(
-        "hbase.crypto.managed_key_store.cust.#{$GLOB_CUST_ENCODED}.#{@table_cf_keys}/cf2.active", true)
+        "hbase.crypto.managed_key_store.cust.#{$GLOB_CUST_ENCODED}.#{@table_cf_keys}/cf2.active",
+        true
+      )
 
       # Enable KeyMeta coprocessor
       $TEST_CLUSTER.getConfiguration.set('hbase.coprocessor.master.classes',
-                                        KeymetaServiceEndpoint.java_class.name)
+                                         KeymetaServiceEndpoint.java_class.name)
 
-      puts "  >> New ManagedKeyStoreKeyProvider configured"
+      puts '  >> New ManagedKeyStoreKeyProvider configured'
     end
 
     def restart_cluster_and_validate
-      puts "\n--- Restarting cluster with managed key store key provider ---"
+      puts '\n--- Restarting cluster with managed key store key provider ---'
 
       $TEST.restartMiniCluster(KeymetaTableAccessor::KEY_META_TABLE_NAME)
-      puts "  >> Cluster restarted with ManagedKeyStoreKeyProvider"
+      puts '  >> Cluster restarted with ManagedKeyStoreKeyProvider'
       setup_hbase
 
       # Validate key management service is functional
       output = capture_stdout { command(:show_key_status, "#{$GLOB_CUST_ENCODED}:*") }
       assert(output.include?('0 row(s)'), "Expected 0 rows from show_key_status, got: #{output}")
-      #assert(output.include?(' FAILED '), "Expected FAILED status for show_key_status, got: #{output}")
-      puts "  >> Key management service is functional"
+      puts '  >> Key management service is functional'
 
       # Test operations still work and check HFile trailers
-      puts "\n--- Validating operations after restart ---"
+      puts '\n--- Validating operations after restart ---'
       validate_pre_migration_operations(true)
     end
 
     def check_hfile_trailers_pre_migration(table_name, column_families, is_key_management_enabled)
-      puts "    >> Checking HFile trailers for #{table_name} with CFs: #{column_families.join(', ')}"
+      puts "    >> Checking HFile trailers for #{table_name} with CFs: " \
+        "#{column_families.join(', ')}"
 
       column_families.each do |cf_name|
         validate_hfile_trailer(table_name, cf_name, false, is_key_management_enabled, false)
@@ -322,7 +338,7 @@ module Hbase
     end
 
     def migrate_tables_step_by_step
-      puts "\n--- Performing step-by-step table migration ---"
+      puts '\n--- Performing step-by-step table migration ---'
 
       # Migrate shared key tables first
       migrate_shared_key_tables
@@ -335,74 +351,80 @@ module Hbase
     end
 
     def migrate_shared_key_tables
-      puts "\n--- Migrating shared key tables ---"
+      puts '\n--- Migrating shared key tables ---'
 
       # Enable key management for shared global key
       cust_and_namespace = "#{$GLOB_CUST_ENCODED}:shared-global-key"
       output = capture_stdout { command(:enable_key_management, cust_and_namespace) }
       assert(output.include?("#{$GLOB_CUST_ENCODED} shared-global-key ACTIVE"),
-            "Expected ACTIVE status for shared key, got: #{output}")
-      puts "  >> Enabled key management for shared global key"
+             "Expected ACTIVE status for shared key, got: #{output}")
+      puts '  >> Enabled key management for shared global key'
 
       # Migrate first shared key table
-      migrate_table_to_managed_key(@table_shared_key1, 'f', 'shared-global-key', true)
+      migrate_table_to_managed_key(@table_shared_key1, 'f', 'shared-global-key',
+                                   use_namespace_attribute: true)
 
       # Migrate second shared key table
-      migrate_table_to_managed_key(@table_shared_key2, 'f', 'shared-global-key', true)
+      migrate_table_to_managed_key(@table_shared_key2, 'f', 'shared-global-key',
+                                   use_namespace_attribute: true)
     end
 
     def migrate_table_level_key
-      puts "\n--- Migrating table-level key ---"
+      puts '\n--- Migrating table-level key ---'
 
       # Enable key management for table namespace
       cust_and_namespace = "#{$GLOB_CUST_ENCODED}:#{@table_table_key}"
       output = capture_stdout { command(:enable_key_management, cust_and_namespace) }
       assert(output.include?("#{$GLOB_CUST_ENCODED} #{@table_table_key} ACTIVE"),
-            "Expected ACTIVE status for table key, got: #{output}")
-      puts "  >> Enabled key management for table-level key"
+             "Expected ACTIVE status for table key, got: #{output}")
+      puts '  >> Enabled key management for table-level key'
 
       # Migrate the table - no namespace attribute, let system auto-determine
-      migrate_table_to_managed_key(@table_table_key, 'f', @table_table_key, false)
+      migrate_table_to_managed_key(@table_table_key, 'f', @table_table_key)
     end
 
     def migrate_cf_level_keys
-      puts "\n--- Migrating CF-level keys ---"
+      puts '\n--- Migrating CF-level keys ---'
 
       # Enable key management for CF1
       cf1_namespace = "#{@table_cf_keys}/cf1"
       cust_and_namespace = "#{$GLOB_CUST_ENCODED}:#{cf1_namespace}"
       output = capture_stdout { command(:enable_key_management, cust_and_namespace) }
       assert(output.include?("#{$GLOB_CUST_ENCODED} #{cf1_namespace} ACTIVE"),
-            "Expected ACTIVE status for CF1 key, got: #{output}")
-      puts "  >> Enabled key management for CF1"
+             "Expected ACTIVE status for CF1 key, got: #{output}")
+      puts '  >> Enabled key management for CF1'
 
       # Enable key management for CF2
       cf2_namespace = "#{@table_cf_keys}/cf2"
       cust_and_namespace = "#{$GLOB_CUST_ENCODED}:#{cf2_namespace}"
       output = capture_stdout { command(:enable_key_management, cust_and_namespace) }
       assert(output.include?("#{$GLOB_CUST_ENCODED} #{cf2_namespace} ACTIVE"),
-            "Expected ACTIVE status for CF2 key, got: #{output}")
-      puts "  >> Enabled key management for CF2"
+             "Expected ACTIVE status for CF2 key, got: #{output}")
+      puts '  >> Enabled key management for CF2'
 
       # Migrate CF1
-      migrate_table_to_managed_key(@table_cf_keys, 'cf1', cf1_namespace, false)
+      migrate_table_to_managed_key(@table_cf_keys, 'cf1', cf1_namespace)
 
       # Migrate CF2
-      migrate_table_to_managed_key(@table_cf_keys, 'cf2', cf2_namespace, false)
+      migrate_table_to_managed_key(@table_cf_keys, 'cf2', cf2_namespace)
     end
 
-    def migrate_table_to_managed_key(table_name, cf_name, namespace, use_namespace_attribute = false)
+    def migrate_table_to_managed_key(table_name, cf_name, namespace,
+                                     use_namespace_attribute: false)
       puts "    >> Migrating table #{table_name}, CF #{cf_name} to namespace #{namespace}"
 
-      # Use atomic alter operation to remove ENCRYPTION_KEY and optionally add ENCRYPTION_KEY_NAMESPACE
+      # Use atomic alter operation to remove ENCRYPTION_KEY and optionally add
+      # ENCRYPTION_KEY_NAMESPACE
       if use_namespace_attribute
         # For shared key tables: remove ENCRYPTION_KEY and add ENCRYPTION_KEY_NAMESPACE atomically
         command(:alter, table_name,
-                { 'NAME' => cf_name, 'CONFIGURATION' => {'ENCRYPTION_KEY' => '', 'ENCRYPTION_KEY_NAMESPACE' => namespace }})
+                { 'NAME' => cf_name,
+                  'CONFIGURATION' => { 'ENCRYPTION_KEY' => '',
+                                       'ENCRYPTION_KEY_NAMESPACE' => namespace } })
       else
         # For table/CF level keys: just remove ENCRYPTION_KEY, let system auto-determine namespace
         command(:alter, table_name,
-                { 'NAME' => cf_name, 'CONFIGURATION' => {'ENCRYPTION_KEY' => '' }})
+                { 'NAME' => cf_name, 'CONFIGURATION' => { 'ENCRYPTION_KEY' => '' } })
       end
 
       puts "      >> Altered #{table_name} CF #{cf_name} to use namespace #{namespace}"
@@ -415,7 +437,7 @@ module Hbase
       sleep(5)
 
       # Scan all existing data to verify accessibility
-      scan_and_validate_table(table_name, [cf_name])
+      scan_and_validate_table(table_name)
 
       # Add new data
       test_table = table(table_name)
@@ -428,8 +450,7 @@ module Hbase
       puts "      >> Migration completed for #{table_name} CF #{cf_name}"
     end
 
-
-    def scan_and_validate_table(table_name, column_families)
+    def scan_and_validate_table(table_name)
       puts "      >> Scanning and validating existing data in #{table_name}"
 
       test_table = table(table_name)
@@ -443,7 +464,7 @@ module Hbase
       end
       scanner.close
 
-      assert(row_count > 0, "Expected to find existing data in #{table_name}")
+      assert(row_count.positive?, "Expected to find existing data in #{table_name}")
       puts "        >> Found #{row_count} rows, all accessible"
     end
 
@@ -459,17 +480,22 @@ module Hbase
       regions.each do |region|
         region.getStores.each do |store|
           next unless store.getColumnFamilyName == cf_name
-          puts "      >> store file count for CF: #{cf_name} in table: #{table_name} is #{store.getStorefiles.size}"
+
+          puts "      >> store file count for CF: #{cf_name} in table: #{table_name} is " \
+            "#{store.getStorefiles.size}"
           if is_compacted
             assert_equal(1, store.getStorefiles.size)
           else
-            assert_true(store.getStorefiles.size > 0)
+            assert_true(!store.getStorefiles.empty?)
           end
           store.getStorefiles.each do |storefile|
-            puts "      >> Checking HFile trailer for storefile: #{storefile.getPath.getName} with sequence id: #{storefile.getMaxSequenceId} against max sequence id of store: #{store.getMaxSequenceId.getAsLong}"
+            puts "      >> Checking HFile trailer for storefile: #{storefile.getPath.getName} " \
+              "with sequence id: #{storefile.getMaxSequenceId} against max sequence id of " \
+              "store: #{store.getMaxSequenceId.getAsLong}"
             # The flush would have created new HFiles, but the old would still be there
             # so we need to make sure to check the latest store only.
             next unless storefile.getMaxSequenceId == store.getMaxSequenceId.getAsLong
+
             store_file_info = storefile.getFileInfo
             next unless store_file_info
 
@@ -493,16 +519,15 @@ module Hbase
               puts "        >> Trailer validation passed - namespace: #{trailer.getKeyNamespace}"
             else
               assert_nil(trailer.getKeyNamespace)
-              puts "        >> Trailer validation passed - using legacy key format"
+              puts '        >> Trailer validation passed - using legacy key format'
             end
           end
         end
       end
     end
 
-
     def cleanup_old_provider_and_validate
-      puts "\n--- Cleaning up old key provider and final validation ---"
+      puts '\n--- Cleaning up old key provider and final validation ---'
 
       # Remove old KeyProvider configurations
       $TEST_CLUSTER.getConfiguration.unset(HConstants::CRYPTO_KEYPROVIDER_CONF_KEY)
@@ -511,11 +536,11 @@ module Hbase
 
       # Remove old keystore
       FileUtils.rm_rf(@old_keystore_file) if File.directory?(@old_keystore_file)
-      puts "  >> Removed old keystore and configuration"
+      puts '  >> Removed old keystore and configuration'
 
       # Restart cluster
       $TEST.restartMiniCluster(KeymetaTableAccessor::KEY_META_TABLE_NAME)
-      puts "  >> Cluster restarted without old key provider"
+      puts '  >> Cluster restarted without old key provider'
       setup_hbase
 
       # Validate all data is still accessible
@@ -526,32 +551,31 @@ module Hbase
     end
 
     def validate_all_tables_final
-      puts "\n--- Final validation - scanning all tables ---"
+      puts '\n--- Final validation - scanning all tables ---'
 
       @tables_metadata.each do |table_name, metadata|
-        if metadata[:no_encryption]
-          next
-        end
+        next if metadata[:no_encryption]
+
         puts "  >> Final validation for table: #{table_name} with CFs: #{metadata[:cfs].join(', ')}"
-        scan_and_validate_table(table_name, metadata[:cfs])
+        scan_and_validate_table(table_name)
         puts "    >> #{table_name} - all data accessible"
       end
     end
 
     def perform_major_compaction_and_validate
-      puts "\n--- Performing major compaction and final validation ---"
+      puts '\n--- Performing major compaction and final validation ---'
 
       $TEST_CLUSTER.compact(true)
 
       @tables_metadata.each do |table_name, metadata|
-        if metadata[:no_encryption]
-          next
-        end
-        puts "  >> Validating post-compaction HFiles for table: #{table_name} with CFs: #{metadata[:cfs].join(', ')}"
+        next if metadata[:no_encryption]
+
+        puts "  >> Validating post-compaction HFiles for table: #{table_name} with " \
+          "CFs: #{metadata[:cfs].join(', ')}"
         metadata[:cfs].each do |cf_name|
           # When using random key from system key, there is no namespace
-          #next if metadata[:expected_namespace][cf_name] == '*'
-          validate_hfile_trailer(table_name, cf_name, true, true, true, metadata[:expected_namespace][cf_name])
+          validate_hfile_trailer(table_name, cf_name, true, true, true,
+                                 metadata[:expected_namespace][cf_name])
         end
       end
     end
@@ -559,7 +583,7 @@ module Hbase
     # Utility methods
 
     def extract_and_unwrap_keys_from_tables
-      puts "    >> Extracting and unwrapping keys from encrypted tables"
+      puts '    >> Extracting and unwrapping keys from encrypted tables'
 
       keys = {}
 
@@ -601,9 +625,9 @@ module Hbase
 
       # Use EncryptionUtil.unwrapKey with master key alias as subject
       unwrapped_key = EncryptionUtil.unwrapKey($TEST_CLUSTER.getConfiguration,
-                                              @master_key_alias, wrapped_key_bytes)
+                                               @master_key_alias, wrapped_key_bytes)
 
-      return unwrapped_key.getEncoded
+      unwrapped_key.getEncoded
     end
 
     def generate_key(alias_name)
@@ -618,7 +642,7 @@ module Hbase
       key_entries.each do |alias_name, key_bytes|
         secret_key = SecretKeySpec.new(key_bytes, 'AES')
         store.setEntry(alias_name, KeyStore::SecretKeyEntry.new(secret_key),
-                      KeyStore::PasswordProtection.new(password_chars))
+                       KeyStore::PasswordProtection.new(password_chars))
       end
 
       fos = FileOutputStream.new(keystore_path)
@@ -629,10 +653,9 @@ module Hbase
       end
     end
 
-
     def teardown
       # Cleanup temporary test directories (keystore files will be cleaned up with the directories)
-      test_base_dir = $TEST_CLUSTER.getDataTestDir().toString
+      test_base_dir = $TEST_CLUSTER.getDataTestDir.toString
       Dir.glob(File.join(test_base_dir, "*keystore_#{@test_timestamp}*")).each do |dir|
         FileUtils.rm_rf(dir) if File.directory?(dir)
       end

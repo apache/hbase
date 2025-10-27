@@ -25,19 +25,18 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyState;
 import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos;
-import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.ManagedKeysRequest;
-import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.ManagedKeysResponse;
+import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.ManagedKeyRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ManagedKeysProtos.ManagedKeyResponse;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.EmptyMsg;
 
 @InterfaceAudience.Public
 public class KeymetaAdminClient implements KeymetaAdmin {
-  private static final Logger LOG = LoggerFactory.getLogger(KeymetaAdminClient.class);
   private ManagedKeysProtos.ManagedKeysService.BlockingInterface stub;
 
   public KeymetaAdminClient(Connection conn) throws IOException {
@@ -46,24 +45,37 @@ public class KeymetaAdminClient implements KeymetaAdmin {
   }
 
   @Override
-  public List<ManagedKeyData> enableKeyManagement(String keyCust, String keyNamespace)
+  public ManagedKeyData enableKeyManagement(byte[] keyCust, String keyNamespace)
     throws IOException {
     try {
-      ManagedKeysProtos.GetManagedKeysResponse response = stub.enableKeyManagement(null,
-        ManagedKeysRequest.newBuilder().setKeyCust(keyCust).setKeyNamespace(keyNamespace).build());
-      return generateKeyDataList(response);
+      ManagedKeysProtos.ManagedKeyResponse response =
+        stub.enableKeyManagement(null, ManagedKeyRequest.newBuilder()
+          .setKeyCust(ByteString.copyFrom(keyCust)).setKeyNamespace(keyNamespace).build());
+      return generateKeyData(response);
     } catch (ServiceException e) {
       throw ProtobufUtil.handleRemoteException(e);
     }
   }
 
   @Override
-  public List<ManagedKeyData> getManagedKeys(String keyCust, String keyNamespace)
+  public List<ManagedKeyData> getManagedKeys(byte[] keyCust, String keyNamespace)
     throws IOException, KeyException {
     try {
-      ManagedKeysProtos.GetManagedKeysResponse statusResponse = stub.getManagedKeys(null,
-        ManagedKeysRequest.newBuilder().setKeyCust(keyCust).setKeyNamespace(keyNamespace).build());
+      ManagedKeysProtos.GetManagedKeysResponse statusResponse =
+        stub.getManagedKeys(null, ManagedKeyRequest.newBuilder()
+          .setKeyCust(ByteString.copyFrom(keyCust)).setKeyNamespace(keyNamespace).build());
       return generateKeyDataList(statusResponse);
+    } catch (ServiceException e) {
+      throw ProtobufUtil.handleRemoteException(e);
+    }
+  }
+
+  @Override
+  public boolean rotateSTK() throws IOException {
+    try {
+      ManagedKeysProtos.RotateSTKResponse response =
+        stub.rotateSTK(null, EmptyMsg.getDefaultInstance());
+      return response.getRotated();
     } catch (ServiceException e) {
       throw ProtobufUtil.handleRemoteException(e);
     }
@@ -72,12 +84,15 @@ public class KeymetaAdminClient implements KeymetaAdmin {
   private static List<ManagedKeyData>
     generateKeyDataList(ManagedKeysProtos.GetManagedKeysResponse stateResponse) {
     List<ManagedKeyData> keyStates = new ArrayList<>();
-    for (ManagedKeysResponse state : stateResponse.getStateList()) {
-      keyStates
-        .add(new ManagedKeyData(state.getKeyCustBytes().toByteArray(), state.getKeyNamespace(),
-          null, ManagedKeyState.forValue((byte) state.getKeyState().getNumber()),
-          state.getKeyMetadata(), state.getRefreshTimestamp()));
+    for (ManagedKeyResponse state : stateResponse.getStateList()) {
+      keyStates.add(generateKeyData(state));
     }
     return keyStates;
+  }
+
+  private static ManagedKeyData generateKeyData(ManagedKeysProtos.ManagedKeyResponse response) {
+    return new ManagedKeyData(response.getKeyCust().toByteArray(), response.getKeyNamespace(), null,
+      ManagedKeyState.forValue((byte) response.getKeyState().getNumber()),
+      response.getKeyMetadata(), response.getRefreshTimestamp());
   }
 }

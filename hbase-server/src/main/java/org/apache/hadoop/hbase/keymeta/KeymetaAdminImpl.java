@@ -19,11 +19,15 @@ package org.apache.hadoop.hbase.keymeta;
 
 import java.io.IOException;
 import java.security.KeyException;
-import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.AsyncAdmin;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
+import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,34 +41,70 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
   }
 
   @Override
-  public List<ManagedKeyData> enableKeyManagement(String keyCust, String keyNamespace)
+  public ManagedKeyData enableKeyManagement(byte[] keyCust, String keyNamespace)
     throws IOException, KeyException {
     assertKeyManagementEnabled();
-    LOG.info("Trying to enable key management on custodian: {} under namespace: {}", keyCust,
+    String encodedCust = ManagedKeyProvider.encodeToStr(keyCust);
+    LOG.info("Trying to enable key management on custodian: {} under namespace: {}", encodedCust,
       keyNamespace);
-    byte[] key_cust = ManagedKeyProvider.decodeToBytes(keyCust);
 
     // Check if (cust, namespace) pair is already enabled and has an active key.
-    ManagedKeyData activeKey = getActiveKey(key_cust, keyNamespace);
+    ManagedKeyData activeKey = getActiveKey(keyCust, keyNamespace);
     if (activeKey != null) {
       LOG.info(
         "enableManagedKeys: specified (custodian: {}, namespace: {}) already has "
           + "an active managed key with metadata: {}",
-        keyCust, keyNamespace, activeKey.getKeyMetadata());
-      return Collections.singletonList(activeKey);
+        encodedCust, keyNamespace, activeKey.getKeyMetadata());
+      return activeKey;
     }
 
     // Retrieve a single key from provider
-    ManagedKeyData retrievedKey = retrieveActiveKey(keyCust, key_cust, keyNamespace, this, null);
-    return Collections.singletonList(retrievedKey);
+    ManagedKeyData retrievedKey = retrieveActiveKey(encodedCust, keyCust, keyNamespace, this, null);
+    return retrievedKey;
   }
 
   @Override
-  public List<ManagedKeyData> getManagedKeys(String keyCust, String keyNamespace)
+  public List<ManagedKeyData> getManagedKeys(byte[] keyCust, String keyNamespace)
     throws IOException, KeyException {
     assertKeyManagementEnabled();
-    LOG.info("Getting key statuses for custodian: {} under namespace: {}", keyCust, keyNamespace);
-    byte[] key_cust = ManagedKeyProvider.decodeToBytes(keyCust);
-    return getAllKeys(key_cust, keyNamespace);
+    if (LOG.isInfoEnabled()) {
+      LOG.info("Getting key statuses for custodian: {} under namespace: {}",
+        ManagedKeyProvider.encodeToStr(keyCust), keyNamespace);
+    }
+    return getAllKeys(keyCust, keyNamespace);
+  }
+
+  @Override
+  public boolean rotateSTK() throws IOException {
+    assertKeyManagementEnabled();
+    if (!(getServer() instanceof MasterServices)) {
+      throw new IOException("rotateSTK can only be called on master");
+    }
+    MasterServices master = (MasterServices) getServer();
+
+    LOG.info("Checking if System Key is rotated");
+    boolean rotated = master.rotateSystemKeyIfChanged();
+
+    if (!rotated) {
+      LOG.info("No change in System Key is detected");
+      return false;
+    }
+
+    Set<ServerName> regionServers = master.getServerManager().getOnlineServers().keySet();
+
+    LOG.info("System Key is rotated, initiating cache refresh on all region servers");
+    try {
+      FutureUtils.get(getAsyncAdmin(master).refreshSystemKeyCacheOnAllServers(regionServers));
+    } catch (Exception e) {
+      throw new IOException(
+        "Failed to initiate System Key cache refresh on one or more region servers", e);
+    }
+
+    LOG.info("System Key rotation and cache refresh completed successfully");
+    return true;
+  }
+
+  protected AsyncAdmin getAsyncAdmin(MasterServices master) {
+    return master.getAsyncClusterConnection().getAdmin();
   }
 }

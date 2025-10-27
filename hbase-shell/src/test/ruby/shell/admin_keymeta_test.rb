@@ -40,18 +40,18 @@ module Hbase
       test_key_management($CUST1_ENCODED, 'test_namespace')
       test_key_management($GLOB_CUST_ENCODED, '*')
 
-      puts "Testing that cluster can be restarted when key management is enabled"
-      $TEST.restartMiniCluster()
-      puts "Cluster restarted, testing key management again"
+      puts 'Testing that cluster can be restarted when key management is enabled'
+      $TEST.restartMiniCluster
+      puts 'Cluster restarted, testing key management again'
       setup_hbase
       test_key_management($GLOB_CUST_ENCODED, '*')
-      puts "Key management test complete"
+      puts 'Key management test complete'
     end
 
     def test_key_management(cust, namespace)
       # Repeat the enable twice in a loop and ensure multiple enables succeed and return the
       # same output.
-      2.times do |i|
+      2.times do
         cust_and_namespace = "#{cust}:#{namespace}"
         output = capture_stdout { @shell.command('enable_key_management', cust_and_namespace) }
         puts "enable_key_management output: #{output}"
@@ -61,6 +61,17 @@ module Hbase
         assert(output.include?("#{cust} #{namespace} ACTIVE"))
         assert(output.include?('1 row(s)'))
       end
+    end
+
+    define_test 'Decode failure raises friendly error' do
+      assert_raises(ArgumentError) do
+        @shell.command('enable_key_management', '!!!:namespace')
+      end
+
+      error = assert_raises(ArgumentError) do
+        @shell.command('show_key_status', '!!!:namespace')
+      end
+      assert_match(/Failed to decode key custodian/, error.message)
     end
   end
 end

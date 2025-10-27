@@ -23,11 +23,15 @@ import static org.apache.hadoop.hbase.io.crypto.ManagedKeyState.DISABLED;
 import static org.apache.hadoop.hbase.io.crypto.ManagedKeyState.FAILED;
 import static org.apache.hadoop.hbase.io.crypto.ManagedKeyState.INACTIVE;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -37,17 +41,22 @@ import java.security.KeyException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.client.AsyncAdmin;
+import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyState;
 import org.apache.hadoop.hbase.io.crypto.MockManagedKeyProvider;
+import org.apache.hadoop.hbase.keymeta.KeyManagementService;
 import org.apache.hadoop.hbase.keymeta.KeymetaAdminImpl;
 import org.apache.hadoop.hbase.keymeta.KeymetaTableAccessor;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -69,15 +78,15 @@ import org.junit.runners.Suite;
 
 @RunWith(Suite.class)
 @Suite.SuiteClasses({ TestKeymetaAdminImpl.TestWhenDisabled.class,
-  TestKeymetaAdminImpl.TestAdminImpl.class,
-  TestKeymetaAdminImpl.TestForKeyProviderNullReturn.class, })
+  TestKeymetaAdminImpl.TestAdminImpl.class, TestKeymetaAdminImpl.TestForKeyProviderNullReturn.class,
+  TestKeymetaAdminImpl.TestRotateSTK.class })
 @Category({ MasterTests.class, SmallTests.class })
 public class TestKeymetaAdminImpl {
 
   private static final String CUST = "cust1";
-  private static final String ENCODED_CUST = ManagedKeyProvider.encodeToStr(CUST.getBytes());
+  private static final byte[] CUST_BYTES = CUST.getBytes();
 
-  private final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
+  protected final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   @Rule
   public TestName name = new TestName();
@@ -129,9 +138,9 @@ public class TestKeymetaAdminImpl {
     @Test
     public void testDisabled() throws Exception {
       assertThrows(IOException.class, () -> keymetaAdmin
-        .enableKeyManagement(ManagedKeyData.KEY_GLOBAL_CUSTODIAN, KEY_SPACE_GLOBAL));
-      assertThrows(IOException.class,
-        () -> keymetaAdmin.getManagedKeys(ManagedKeyData.KEY_GLOBAL_CUSTODIAN, KEY_SPACE_GLOBAL));
+        .enableKeyManagement(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES, KEY_SPACE_GLOBAL));
+      assertThrows(IOException.class, () -> keymetaAdmin
+        .getManagedKeys(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES, KEY_SPACE_GLOBAL));
     }
   }
 
@@ -164,40 +173,35 @@ public class TestKeymetaAdminImpl {
       when(keymetaAccessor.getActiveKey(CUST.getBytes(), keySpace))
         .thenReturn(managedKeyProvider.getManagedKey(CUST.getBytes(), keySpace));
 
-      List<ManagedKeyData> managedKeys = keymetaAdmin.enableKeyManagement(ENCODED_CUST, keySpace);
-      assertNotNull(managedKeys);
-      assertEquals(1, managedKeys.size());
-      assertEquals(keyState, managedKeys.get(0).getKeyState());
+      ManagedKeyData managedKey = keymetaAdmin.enableKeyManagement(CUST_BYTES, keySpace);
+      assertNotNull(managedKey);
+      assertEquals(keyState, managedKey.getKeyState());
       verify(keymetaAccessor).getActiveKey(CUST.getBytes(), keySpace);
 
-      keymetaAdmin.getManagedKeys(ENCODED_CUST, keySpace);
+      keymetaAdmin.getManagedKeys(CUST_BYTES, keySpace);
       verify(keymetaAccessor).getAllKeys(CUST.getBytes(), keySpace);
     }
 
     @Test
     public void testEnableKeyManagement() throws Exception {
       assumeTrue(keyState == ACTIVE);
-      List<ManagedKeyData> keys = keymetaAdmin.enableKeyManagement(ENCODED_CUST, "namespace1");
-      assertEquals(1, keys.size());
-      assertEquals(ManagedKeyState.ACTIVE, keys.get(0).getKeyState());
-      assertEquals(ENCODED_CUST, keys.get(0).getKeyCustodianEncoded());
-      assertEquals("namespace1", keys.get(0).getKeyNamespace());
+      ManagedKeyData managedKey = keymetaAdmin.enableKeyManagement(CUST_BYTES, "namespace1");
+      assertEquals(ManagedKeyState.ACTIVE, managedKey.getKeyState());
+      assertEquals(ManagedKeyProvider.encodeToStr(CUST_BYTES), managedKey.getKeyCustodianEncoded());
+      assertEquals("namespace1", managedKey.getKeyNamespace());
 
       // Second call should return the same keys since our mock key provider returns the same key
-      List<ManagedKeyData> keys2 = keymetaAdmin.enableKeyManagement(ENCODED_CUST, "namespace1");
-      assertEquals(1, keys2.size());
-      assertEquals(keys.get(0), keys2.get(0));
+      ManagedKeyData managedKey2 = keymetaAdmin.enableKeyManagement(CUST_BYTES, "namespace1");
+      assertEquals(managedKey, managedKey2);
     }
 
     @Test
     public void testEnableKeyManagementWithMultipleNamespaces() throws Exception {
-      List<ManagedKeyData> keys = keymetaAdmin.enableKeyManagement(ENCODED_CUST, "namespace1");
-      assertEquals(1, keys.size());
-      assertEquals("namespace1", keys.get(0).getKeyNamespace());
+      ManagedKeyData managedKey = keymetaAdmin.enableKeyManagement(CUST_BYTES, "namespace1");
+      assertEquals("namespace1", managedKey.getKeyNamespace());
 
-      List<ManagedKeyData> keys2 = keymetaAdmin.enableKeyManagement(ENCODED_CUST, "namespace2");
-      assertEquals(1, keys2.size());
-      assertEquals("namespace2", keys2.get(0).getKeyNamespace());
+      ManagedKeyData managedKey2 = keymetaAdmin.enableKeyManagement(CUST_BYTES, "namespace2");
+      assertEquals("namespace2", managedKey2.getKeyNamespace());
     }
   }
 
@@ -221,10 +225,10 @@ public class TestKeymetaAdminImpl {
       MockManagedKeyProvider managedKeyProvider =
         (MockManagedKeyProvider) Encryption.getManagedKeyProvider(conf);
       String cust = "invalidcust1";
-      String encodedCust = ManagedKeyProvider.encodeToStr(cust.getBytes());
+      byte[] custBytes = cust.getBytes();
       managedKeyProvider.setMockedKey(cust, null, keySpace);
       IOException ex = assertThrows(IOException.class,
-        () -> keymetaAdmin.enableKeyManagement(encodedCust, keySpace));
+        () -> keymetaAdmin.enableKeyManagement(custBytes, keySpace));
       assertEquals("Invalid null managed key received from key provider", ex.getMessage());
     }
   }
@@ -265,5 +269,159 @@ public class TestKeymetaAdminImpl {
       assertEquals(new Bytes(expectedKeyBytes), keyBytes);
     }
     return true;
+  }
+
+  /**
+   * Test class for rotateSTK API
+   */
+  @RunWith(BlockJUnit4ClassRunner.class)
+  @Category({ MasterTests.class, SmallTests.class })
+  public static class TestRotateSTK extends TestKeymetaAdminImpl {
+    @ClassRule
+    public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestRotateSTK.class);
+
+    private ServerManager mockServerManager = mock(ServerManager.class);
+    private AsyncClusterConnection mockConnection;
+    private AsyncAdmin mockAsyncAdmin;
+
+    @Override
+    public void setUp() throws Exception {
+      super.setUp();
+      mockConnection = mock(AsyncClusterConnection.class);
+      mockAsyncAdmin = mock(AsyncAdmin.class);
+      when(mockServer.getServerManager()).thenReturn(mockServerManager);
+      when(mockServer.getAsyncClusterConnection()).thenReturn(mockConnection);
+      when(mockConnection.getAdmin()).thenReturn(mockAsyncAdmin);
+    }
+
+    /**
+     * Test rotateSTK when a new key is detected. Now that we can mock SystemKeyManager via
+     * master.getSystemKeyManager(), we can properly test the success scenario: 1.
+     * SystemKeyManager.rotateSystemKeyIfChanged() returns non-null (new key detected) 2. Master
+     * gets list of online region servers 3. Master makes parallel RPC calls to all region servers
+     * 4. All region servers successfully rebuild their system key cache 5. Method returns true
+     */
+    @Test
+    public void testRotateSTKWithNewKey() throws Exception {
+      // Setup mocks for MasterServices
+      // Mock SystemKeyManager to return a new key (non-null)
+      when(mockServer.rotateSystemKeyIfChanged()).thenReturn(true);
+
+      when(mockAsyncAdmin.refreshSystemKeyCacheOnAllServers(any()))
+        .thenReturn(CompletableFuture.completedFuture(null));
+
+      KeymetaAdminImplForTest admin = new KeymetaAdminImplForTest(mockServer, keymetaAccessor);
+
+      // Call rotateSTK - should return true since new key was detected
+      boolean result = admin.rotateSTK();
+
+      // Verify the result
+      assertTrue("rotateSTK should return true when new key is detected", result);
+
+      // Verify that rotateSystemKeyIfChanged was called
+      verify(mockServer).rotateSystemKeyIfChanged();
+      verify(mockAsyncAdmin).refreshSystemKeyCacheOnAllServers(any());
+    }
+
+    /**
+     * Test rotateSTK when no key change is detected. Now that we can mock SystemKeyManager, we can
+     * properly test the no-change scenario: 1. SystemKeyManager.rotateSystemKeyIfChanged() returns
+     * null 2. Method returns false immediately without calling any region servers 3. No RPC calls
+     * are made to region servers
+     */
+    @Test
+    public void testRotateSTKNoChange() throws Exception {
+      // Mock SystemKeyManager to return null (no key change)
+      when(mockServer.rotateSystemKeyIfChanged()).thenReturn(false);
+
+      KeymetaAdminImplForTest admin = new KeymetaAdminImplForTest(mockServer, keymetaAccessor);
+
+      // Call rotateSTK - should return false since no key change was detected
+      boolean result = admin.rotateSTK();
+
+      // Verify the result
+      assertFalse("rotateSTK should return false when no key change is detected", result);
+
+      // Verify that rotateSystemKeyIfChanged was called
+      verify(mockServer).rotateSystemKeyIfChanged();
+
+      // Verify that getOnlineServersList was never called (short-circuit behavior)
+      verify(mockServerManager, never()).getOnlineServersList();
+    }
+
+    @Test
+    public void testRotateSTKOnIOException() throws Exception {
+      when(mockServer.rotateSystemKeyIfChanged()).thenThrow(new IOException("test"));
+
+      KeymetaAdminImpl admin = new KeymetaAdminImpl(mockServer);
+      IOException ex = assertThrows(IOException.class, () -> admin.rotateSTK());
+      assertTrue("Exception message should contain 'test', but was: " + ex.getMessage(),
+        ex.getMessage().equals("test"));
+    }
+
+    /**
+     * Test rotateSTK when region server refresh fails.
+     */
+    @Test
+    public void testRotateSTKWithFailedServerRefresh() throws Exception {
+      // Setup mocks for MasterServices
+      // Mock SystemKeyManager to return a new key (non-null)
+      when(mockServer.rotateSystemKeyIfChanged()).thenReturn(true);
+
+      CompletableFuture<Void> failedFuture = new CompletableFuture<>();
+      failedFuture.completeExceptionally(new IOException("refresh failed"));
+      when(mockAsyncAdmin.refreshSystemKeyCacheOnAllServers(any())).thenReturn(failedFuture);
+
+      KeymetaAdminImplForTest admin = new KeymetaAdminImplForTest(mockServer, keymetaAccessor);
+
+      // Call rotateSTK and expect IOException
+      IOException ex = assertThrows(IOException.class, () -> admin.rotateSTK());
+
+      assertTrue(ex.getMessage()
+        .contains("Failed to initiate System Key cache refresh on one or more region servers"));
+
+      // Verify that rotateSystemKeyIfChanged was called
+      verify(mockServer).rotateSystemKeyIfChanged();
+      verify(mockAsyncAdmin).refreshSystemKeyCacheOnAllServers(any());
+    }
+
+    @Test
+    public void testRotateSTKNotOnMaster() throws Exception {
+      // Create a non-master server mock
+      Server mockRegionServer = mock(Server.class);
+      KeyManagementService mockKeyService = mock(KeyManagementService.class);
+      // Mock KeyManagementService - required by KeyManagementBase constructor
+      when(mockRegionServer.getKeyManagementService()).thenReturn(mockKeyService);
+      when(mockKeyService.getConfiguration()).thenReturn(conf);
+      when(mockRegionServer.getConfiguration()).thenReturn(conf);
+      when(mockRegionServer.getFileSystem()).thenReturn(mockFileSystem);
+
+      KeymetaAdminImpl admin = new KeymetaAdminImpl(mockRegionServer) {
+        @Override
+        protected AsyncAdmin getAsyncAdmin(MasterServices master) {
+          throw new RuntimeException("Shouldn't be called since we are not on master");
+        }
+      };
+
+      IOException ex = assertThrows(IOException.class, () -> admin.rotateSTK());
+      assertTrue(ex.getMessage().contains("rotateSTK can only be called on master"));
+    }
+
+    @Test
+    public void testRotateSTKWhenDisabled() throws Exception {
+      TEST_UTIL.getConfiguration().set(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, "false");
+
+      KeymetaAdminImpl admin = new KeymetaAdminImpl(mockServer) {
+        @Override
+        protected AsyncAdmin getAsyncAdmin(MasterServices master) {
+          throw new RuntimeException("Shouldn't be called since we are disabled");
+        }
+      };
+
+      IOException ex = assertThrows(IOException.class, () -> admin.rotateSTK());
+      assertTrue("Exception message should contain 'not enabled', but was: " + ex.getMessage(),
+        ex.getMessage().contains("not enabled"));
+    }
   }
 }

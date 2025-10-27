@@ -22,24 +22,31 @@ require 'shell/commands/keymeta_command_base'
 
 module Shell
   module Commands
-    # EnableKeyManagement is a class that provides a Ruby interface to enable key management via
-    # HBase Key Management API.
-    class EnableKeyManagement < KeymetaCommandBase
+    # RotateStk is a class that provides a Ruby interface to rotate the System Key (STK)
+    # via HBase Key Management API.
+    class RotateStk < KeymetaCommandBase
       def help
         <<-EOF
-Enable key management for a given cust:namespace (cust in Base64 format).
-If no namespace is specified, the global namespace (*) is used.
+Rotate the System Key (STK) if a new key is detected.
+This command checks for a new system key and propagates it to all region servers.
+Returns true if a new key was detected and rotated, false otherwise.
 
 Example:
-  hbase> enable_key_management 'cust:namespace'
-  hbase> enable_key_management 'cust'
+  hbase> rotate_stk
         EOF
       end
 
-      def command(key_info)
-        statuses = [keymeta_admin.enable_key_management(key_info)]
-        print_key_statuses(statuses)
+      def command
+        result = keymeta_admin.rotate_stk
+        if result
+          formatter.row(['System Key rotation was performed successfully and cache was refreshed ' \
+            'on all region servers'])
+        else
+          formatter.row(['No System Key change was detected'])
+        end
+        result
       end
     end
   end
 end
+

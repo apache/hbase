@@ -66,6 +66,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavor
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavoredNodesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WarmupRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WarmupRegionResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.EmptyMsg;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsResponse;
 
@@ -216,5 +217,9 @@ public class AsyncRegionServerAdmin {
   public CompletableFuture<ExecuteProceduresResponse>
     executeProcedures(ExecuteProceduresRequest request) {
     return call((stub, controller, done) -> stub.executeProcedures(controller, request, done));
+  }
+
+  public CompletableFuture<EmptyMsg> refreshSystemKeyCache(EmptyMsg request) {
+    return call((stub, controller, done) -> stub.refreshSystemKeyCache(controller, request, done));
   }
 }
