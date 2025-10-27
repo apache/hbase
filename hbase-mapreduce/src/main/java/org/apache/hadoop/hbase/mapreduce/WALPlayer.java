@@ -27,13 +27,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
@@ -48,8 +52,10 @@ import org.apache.hadoop.hbase.mapreduce.HFileOutputFormat2.TableInfo;
 import org.apache.hadoop.hbase.regionserver.wal.WALCellCodec;
 import org.apache.hadoop.hbase.snapshot.SnapshotRegionLocator;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.MapReduceExtendedCell;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALEditInternalHelper;
 import org.apache.hadoop.hbase.wal.WALKey;
@@ -62,6 +68,8 @@ import org.apache.hadoop.util.ToolRunner;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 
 /**
  * A tool to replay WAL files as a M/R job. The WAL can be replayed for a set of tables or all
@@ -80,6 +88,7 @@ public class WALPlayer extends Configured implements Tool {
   public final static String INPUT_FILES_SEPARATOR_KEY = "wal.input.separator";
   public final static String IGNORE_MISSING_FILES = "wal.input.ignore.missing.files";
   public final static String MULTI_TABLES_SUPPORT = "wal.multi.tables.support";
+  public final static String BULKLOAD_BACKUP_LOCATION = "wal.bulk.backup.location";
 
   /**
    * Configuration flag that controls how the WALPlayer handles empty input WAL files.
@@ -175,7 +184,7 @@ public class WALPlayer extends Configured implements Tool {
    * A mapper that writes out {@link Mutation} to be directly applied to a running HBase instance.
    */
   protected static class WALMapper
-    extends Mapper<WALKey, WALEdit, ImmutableBytesWritable, Mutation> {
+    extends Mapper<WALKey, WALEdit, ImmutableBytesWritable, Pair<Mutation, List<String>>> {
     private Map<TableName, TableName> tables = new TreeMap<>();
 
     @Override
@@ -191,6 +200,54 @@ public class WALPlayer extends Configured implements Tool {
           ExtendedCell lastCell = null;
           for (ExtendedCell cell : WALEditInternalHelper.getExtendedCells(value)) {
             context.getCounter(Counter.CELLS_READ).increment(1);
+
+            if (CellUtil.matchingQualifier(cell, WALEdit.BULK_LOAD)) {
+              String namespace = key.getTableName().getNamespaceAsString();
+              String tableName = key.getTableName().getQualifierAsString();
+              LOG.info("Processing bulk load for namespace: {}, table: {}", namespace, tableName);
+
+              List<String> bulkloadFiles = handleBulkLoadCell(cell);
+              LOG.info("Found {} bulk load files for table: {}", bulkloadFiles.size(), tableName);
+
+              // Prefix each file path with namespace and table name to construct the full paths
+              List<String> bulkloadFilesWithFullPath = bulkloadFiles.stream()
+                .map(filePath -> new Path(namespace, new Path(tableName, filePath)).toString())
+                .collect(Collectors.toList());
+              LOG.info("Bulk load files with full paths: {}", bulkloadFilesWithFullPath.size());
+
+              // Retrieve configuration and set up file systems for backup and staging locations
+              Configuration conf = context.getConfiguration();
+              Path backupLocation = new Path(conf.get(BULKLOAD_BACKUP_LOCATION));
+              FileSystem rootFs = CommonFSUtils.getRootDirFileSystem(conf); // HDFS filesystem
+              Path hbaseStagingDir =
+                new Path(CommonFSUtils.getRootDir(conf), HConstants.BULKLOAD_STAGING_DIR_NAME);
+              FileSystem backupFs = FileSystem.get(backupLocation.toUri(), conf);
+
+              List<String> stagingPaths = new ArrayList<>();
+
+              try {
+                for (String file : bulkloadFilesWithFullPath) {
+                  // Full file path from S3
+                  Path fullBackupFilePath = new Path(backupLocation, file);
+                  // Staging path on HDFS
+                  Path stagingPath = new Path(hbaseStagingDir, file);
+
+                  LOG.info("Copying file from backup location (S3): {} to HDFS staging: {}",
+                    fullBackupFilePath, stagingPath);
+                  // Copy the file from S3 to HDFS
+                  FileUtil.copy(backupFs, fullBackupFilePath, rootFs, stagingPath, false, conf);
+
+                  stagingPaths.add(stagingPath.toString());
+                }
+              } catch (IOException e) {
+                LOG.error("Error copying files for bulk load: {}", e.getMessage(), e);
+                throw new IOException("Failed to copy files for bulk load.", e);
+              }
+
+              Pair<Mutation, List<String>> p = new Pair<>(null, stagingPaths);
+              context.write(tableOut, p);
+            }
+
             // Filtering WAL meta marker entries.
             if (WALEdit.isMetaEditFamily(cell)) {
               continue;
@@ -207,11 +264,13 @@ public class WALPlayer extends Configured implements Tool {
               ) {
                 // row or type changed, write out aggregate KVs.
                 if (put != null) {
-                  context.write(tableOut, put);
+                  Pair<Mutation, List<String>> p = new Pair<>(put, null);
+                  context.write(tableOut, p);
                   context.getCounter(Counter.PUTS).increment(1);
                 }
                 if (del != null) {
-                  context.write(tableOut, del);
+                  Pair<Mutation, List<String>> p = new Pair<>(del, null);
+                  context.write(tableOut, p);
                   context.getCounter(Counter.DELETES).increment(1);
                 }
                 if (CellUtil.isDelete(cell)) {
@@ -231,12 +290,14 @@ public class WALPlayer extends Configured implements Tool {
           }
           // write residual KVs
           if (put != null) {
-            context.write(tableOut, put);
+            Pair<Mutation, List<String>> p = new Pair<>(put, null);
+            context.write(tableOut, p);
             context.getCounter(Counter.PUTS).increment(1);
           }
           if (del != null) {
+            Pair<Mutation, List<String>> p = new Pair<>(del, null);
+            context.write(tableOut, p);
             context.getCounter(Counter.DELETES).increment(1);
-            context.write(tableOut, del);
           }
         }
       } catch (InterruptedException e) {
@@ -249,10 +310,57 @@ public class WALPlayer extends Configured implements Tool {
       return true;
     }
 
+    private List<String> handleBulkLoadCell(Cell cell) throws IOException {
+      List<String> resultFiles = new ArrayList<>();
+      LOG.info("Bulk load detected in cell. Processing...");
+
+      WALProtos.BulkLoadDescriptor bld = WALEdit.getBulkLoadDescriptor(cell);
+
+      if (bld == null) {
+        LOG.info("BulkLoadDescriptor is null for cell: {}", cell);
+        return resultFiles;
+      }
+      if (!bld.getReplicate()) {
+        LOG.info("Replication is disabled for bulk load cell: {}", cell);
+      }
+
+      String regionName = bld.getEncodedRegionName().toStringUtf8();
+
+      LOG.info("Encoded region name: {}", regionName);
+
+      List<WALProtos.StoreDescriptor> storesList = bld.getStoresList();
+      if (storesList == null) {
+        LOG.info("Store descriptor list is null for region: {}", regionName);
+        return resultFiles;
+      }
+
+      for (WALProtos.StoreDescriptor storeDescriptor : storesList) {
+        String columnFamilyName = storeDescriptor.getFamilyName().toStringUtf8();
+        LOG.info("Processing column family: {}", columnFamilyName);
+
+        List<String> storeFileList = storeDescriptor.getStoreFileList();
+        if (storeFileList == null) {
+          LOG.info("Store file list is null for column family: {}", columnFamilyName);
+          continue;
+        }
+
+        for (String storeFile : storeFileList) {
+          String hFilePath = getHFilePath(regionName, columnFamilyName, storeFile);
+          LOG.info("Adding HFile path to bulk load file paths: {}", hFilePath);
+          resultFiles.add(hFilePath);
+        }
+      }
+      return resultFiles;
+    }
+
+    private String getHFilePath(String regionName, String columnFamilyName, String storeFileName) {
+      return new Path(regionName, new Path(columnFamilyName, storeFileName)).toString();
+    }
+
     @Override
-    protected void
-      cleanup(Mapper<WALKey, WALEdit, ImmutableBytesWritable, Mutation>.Context context)
-        throws IOException, InterruptedException {
+    protected void cleanup(
+      Mapper<WALKey, WALEdit, ImmutableBytesWritable, Pair<Mutation, List<String>>>.Context context)
+      throws IOException, InterruptedException {
       super.cleanup(context);
     }
 
@@ -312,6 +420,8 @@ public class WALPlayer extends Configured implements Tool {
     setupTime(conf, WALInputFormat.START_TIME_KEY);
     setupTime(conf, WALInputFormat.END_TIME_KEY);
     String inputDirs = args[0];
+    String walDir = new Path(inputDirs, "WALs").toString();
+    String bulkLoadFilesDir = new Path(inputDirs, "bulk-load-files").toString();
     String[] tables = args.length == 1 ? new String[] {} : args[1].split(",");
     String[] tableMap;
     if (args.length > 2) {
@@ -325,7 +435,8 @@ public class WALPlayer extends Configured implements Tool {
     }
     conf.setStrings(TABLES_KEY, tables);
     conf.setStrings(TABLE_MAP_KEY, tableMap);
-    conf.set(FileInputFormat.INPUT_DIR, inputDirs);
+    conf.set(FileInputFormat.INPUT_DIR, walDir);
+    conf.set(BULKLOAD_BACKUP_LOCATION, bulkLoadFilesDir);
     Job job = Job.getInstance(conf,
       conf.get(JOB_NAME_CONF_KEY, NAME + "_" + EnvironmentEdgeManager.currentTime()));
     job.setJarByClass(WALPlayer.class);
