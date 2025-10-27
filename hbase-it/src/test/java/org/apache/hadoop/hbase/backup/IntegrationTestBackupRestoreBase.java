@@ -310,7 +310,7 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
       // Now merge all incremental and restore
       String[] incrementalBackupIds = getAllIncrementalBackupIds(backupIds);
       merge(incrementalBackupIds, client);
-      verifyExistingBackupsAfterMerge(backupIds);
+      verifyBackupExistenceAfterMerge(backupIds);
       removeNonexistentBackups(backupIds);
       // Restore the last incremental backup
       incrementalBackupId = incrementalBackupIds[incrementalBackupIds.length - 1];
@@ -365,7 +365,8 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
     conn.getAdmin().flush(TableName.valueOf(table.getName()));
   }
 
-  private String backup(BackupRequest request, BackupAdmin client, List<String> backupIds) throws IOException {
+  private String backup(BackupRequest request, BackupAdmin client, List<String> backupIds)
+    throws IOException {
     String backupId = client.backupTables(request);
     assertTrue(checkSucceeded(backupId));
     verifyBackupExists(backupId);
@@ -528,8 +529,12 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
       .withFromTables(fromTables).withToTables(toTables).withOvewrite(isOverwrite).build();
   }
 
-  private void verifyExistingBackupsAfterMerge(List<String> backupIds)
-    throws IOException {
+  /**
+   * Iterates through the list of backups and verifies the full backup and latest incremental backup
+   * still exist, while also verifying all other backups no longer exist. This method is meant to be
+   * run after all incremental backups have been merged.
+   */
+  private void verifyBackupExistenceAfterMerge(List<String> backupIds) throws IOException {
     String fullBackupId = backupIds.get(0);
     String mostRecentIncrementalBackup = backupIds.get(backupIds.size() - 1);
     for (String backupId : backupIds) {
@@ -571,8 +576,7 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
   /**
    * Verifies all backups in the list of backup IDs actually exist on the filesystem.
    */
-  private void verifyAllBackupsExist(List<String> backupIds)
-    throws IOException {
+  private void verifyAllBackupsExist(List<String> backupIds) throws IOException {
     for (String backupId : backupIds) {
       verifyBackupExists(backupId);
     }
@@ -581,8 +585,7 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
   /**
    * Verifies zero backups in the list of backup IDs exist on the filesystem.
    */
-  private void verifyNoBackupsExist(List<String> backupIds)
-    throws IOException {
+  private void verifyNoBackupsExist(List<String> backupIds) throws IOException {
     for (String backupId : backupIds) {
       verifyBackupDoesNotExist(backupId);
     }
