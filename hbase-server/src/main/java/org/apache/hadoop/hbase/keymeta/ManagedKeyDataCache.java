@@ -22,6 +22,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import java.io.IOException;
 import java.security.KeyException;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
@@ -104,7 +105,7 @@ public class ManagedKeyDataCache extends KeyManagementBase {
   /**
    * Retrieves an entry from the cache, loading it from L2 if KeymetaTableAccessor is available.
    * When L2 is not available, it will try to load from provider, unless dynamic lookup is disabled.
-   * @param key_cust     the key custodian
+   * @param keyCust      the key custodian
    * @param keyNamespace the key namespace
    * @param keyMetadata  the key metadata of the entry to be retrieved
    * @param wrappedKey   The DEK key material encrypted with the corresponding KEK, if available.
@@ -112,16 +113,16 @@ public class ManagedKeyDataCache extends KeyManagementBase {
    * @throws IOException  if an error occurs while loading from KeymetaTableAccessor
    * @throws KeyException if an error occurs while loading from KeymetaTableAccessor
    */
-  public ManagedKeyData getEntry(byte[] key_cust, String keyNamespace, String keyMetadata,
+  public ManagedKeyData getEntry(byte[] keyCust, String keyNamespace, String keyMetadata,
     byte[] wrappedKey) throws IOException, KeyException {
     ManagedKeyData entry = cacheByMetadata.get(keyMetadata, metadata -> {
       // First check if it's in the active keys cache
-      ManagedKeyData keyData = getFromActiveKeysCache(key_cust, keyNamespace, keyMetadata);
+      ManagedKeyData keyData = getFromActiveKeysCache(keyCust, keyNamespace, keyMetadata);
 
       // Try to load from L2
       if (keyData == null && keymetaAccessor != null) {
         try {
-          keyData = keymetaAccessor.getKey(key_cust, keyNamespace, metadata);
+          keyData = keymetaAccessor.getKey(keyCust, keyNamespace, metadata);
         } catch (IOException | KeyException | RuntimeException e) {
           LOG.warn("Failed to load key from KeymetaTableAccessor for metadata: {}", metadata, e);
         }
@@ -134,7 +135,7 @@ public class ManagedKeyDataCache extends KeyManagementBase {
           keyData = provider.unwrapKey(metadata, wrappedKey);
           LOG.info("Got key data with status: {} and metadata: {} for prefix: {}",
             keyData.getKeyState(), keyData.getKeyMetadata(),
-            ManagedKeyProvider.encodeToStr(key_cust));
+            ManagedKeyProvider.encodeToStr(keyCust));
           // Add to KeymetaTableAccessor for future L2 lookups
           if (keymetaAccessor != null) {
             try {
@@ -150,18 +151,17 @@ public class ManagedKeyDataCache extends KeyManagementBase {
 
       if (keyData == null) {
         keyData =
-          new ManagedKeyData(key_cust, keyNamespace, null, ManagedKeyState.FAILED, keyMetadata);
+          new ManagedKeyData(keyCust, keyNamespace, null, ManagedKeyState.FAILED, keyMetadata);
       }
 
       // Also update activeKeysCache if relevant and is missing.
       if (keyData.getKeyState() == ManagedKeyState.ACTIVE) {
-        activeKeysCache.asMap().putIfAbsent(new ActiveKeysCacheKey(key_cust, keyNamespace),
-          keyData);
+        activeKeysCache.asMap().putIfAbsent(new ActiveKeysCacheKey(keyCust, keyNamespace), keyData);
       }
 
       if (!ManagedKeyState.isUsable(keyData.getKeyState())) {
         LOG.info("Failed to get usable key data with metadata: {} for prefix: {}", metadata,
-          ManagedKeyProvider.encodeToStr(key_cust));
+          ManagedKeyProvider.encodeToStr(keyCust));
       }
       return keyData;
     });
@@ -174,19 +174,48 @@ public class ManagedKeyDataCache extends KeyManagementBase {
 
   /**
    * Retrieves an existing key from the active keys cache.
-   * @param key_cust     the key custodian
+   * @param keyCust      the key custodian
    * @param keyNamespace the key namespace
    * @param keyMetadata  the key metadata
    * @return the ManagedKeyData if found, null otherwise
    */
-  private ManagedKeyData getFromActiveKeysCache(byte[] key_cust, String keyNamespace,
+  private ManagedKeyData getFromActiveKeysCache(byte[] keyCust, String keyNamespace,
     String keyMetadata) {
-    ActiveKeysCacheKey cacheKey = new ActiveKeysCacheKey(key_cust, keyNamespace);
+    ActiveKeysCacheKey cacheKey = new ActiveKeysCacheKey(keyCust, keyNamespace);
     ManagedKeyData keyData = activeKeysCache.getIfPresent(cacheKey);
     if (keyData != null && keyData.getKeyMetadata().equals(keyMetadata)) {
       return keyData;
     }
     return null;
+  }
+
+  /**
+   * Eject the key identified by the given custodian, namespace and metadata hash from the active
+   * keys cache.
+   * @param keyCust         the key custodian
+   * @param keyNamespace    the key namespace
+   * @param keyMetadataHash the hash of the key metadata
+   */
+  public boolean ejectKeyFromActiveKeysCache(byte[] keyCust, String keyNamespace,
+    byte[] keyMetadataHash) {
+    ActiveKeysCacheKey cacheKey = new ActiveKeysCacheKey(keyCust, keyNamespace);
+    AtomicBoolean ejected = new AtomicBoolean(false);
+    activeKeysCache.asMap().computeIfPresent(cacheKey, (key, value) -> {
+      if (Bytes.equals(value.getKeyMetadataHash(), keyMetadataHash)) {
+        ejected.set(true);
+        return null;
+      }
+      return value;
+    });
+    return ejected.get();
+  }
+
+  /**
+   * Clear all the cached entries.
+   */
+  public void clearCache() {
+    cacheByMetadata.invalidateAll();
+    activeKeysCache.invalidateAll();
   }
 
   /**
@@ -205,13 +234,13 @@ public class ManagedKeyDataCache extends KeyManagementBase {
   /**
    * Retrieves the active entry from the cache based on its key custodian and key namespace. This
    * method also loads active keys from provider if not found in cache.
-   * @param key_cust     The key custodian.
+   * @param keyCust      The key custodian.
    * @param keyNamespace the key namespace to search for
    * @return the ManagedKeyData entry with the given custodian and ACTIVE status, or null if not
    *         found
    */
-  public ManagedKeyData getActiveEntry(byte[] key_cust, String keyNamespace) {
-    ActiveKeysCacheKey cacheKey = new ActiveKeysCacheKey(key_cust, keyNamespace);
+  public ManagedKeyData getActiveEntry(byte[] keyCust, String keyNamespace) {
+    ActiveKeysCacheKey cacheKey = new ActiveKeysCacheKey(keyCust, keyNamespace);
 
     ManagedKeyData keyData = activeKeysCache.get(cacheKey, key -> {
       ManagedKeyData retrievedKey = null;
@@ -219,10 +248,10 @@ public class ManagedKeyDataCache extends KeyManagementBase {
       // Try to load from KeymetaTableAccessor if not found in cache
       if (keymetaAccessor != null) {
         try {
-          retrievedKey = keymetaAccessor.getActiveKey(key_cust, keyNamespace);
+          retrievedKey = keymetaAccessor.getActiveKey(keyCust, keyNamespace);
         } catch (IOException | KeyException | RuntimeException e) {
           LOG.warn("Failed to load active key from KeymetaTableAccessor for custodian: {} "
-            + "namespace: {}", ManagedKeyProvider.encodeToStr(key_cust), keyNamespace, e);
+            + "namespace: {}", ManagedKeyProvider.encodeToStr(keyCust), keyNamespace, e);
         }
       }
 
@@ -230,18 +259,18 @@ public class ManagedKeyDataCache extends KeyManagementBase {
       // standalone tools.
       if (retrievedKey == null && isDynamicLookupEnabled()) {
         try {
-          String keyCust = ManagedKeyProvider.encodeToStr(key_cust);
-          retrievedKey = KeyManagementUtils.retrieveActiveKey(keymetaAccessor, keyCust, key_cust,
+          String keyCustEnc = ManagedKeyProvider.encodeToStr(keyCust);
+          retrievedKey = KeyManagementUtils.retrieveActiveKey(keymetaAccessor, keyCustEnc, keyCust,
             keyNamespace, null);
         } catch (IOException | KeyException | RuntimeException e) {
           LOG.warn("Failed to load active key from provider for custodian: {} namespace: {}",
-            ManagedKeyProvider.encodeToStr(key_cust), keyNamespace, e);
+            ManagedKeyProvider.encodeToStr(keyCust), keyNamespace, e);
         }
       }
 
       if (retrievedKey == null) {
         retrievedKey =
-          new ManagedKeyData(key_cust, keyNamespace, null, ManagedKeyState.FAILED, null);
+          new ManagedKeyData(keyCust, keyNamespace, null, ManagedKeyState.FAILED, null);
       }
 
       return retrievedKey;

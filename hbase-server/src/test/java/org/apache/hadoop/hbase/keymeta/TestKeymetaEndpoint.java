@@ -44,11 +44,6 @@ import org.apache.hadoop.hbase.coprocessor.HasMasterServices;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.keymeta.KeymetaServiceEndpoint.KeymetaAdminServiceImpl;
 import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ManagedKeysProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.GetManagedKeysResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyState;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -62,6 +57,11 @@ import org.mockito.MockitoAnnotations;
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.GetManagedKeysResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyState;
 
 @Category({ MasterTests.class, SmallTests.class })
 public class TestKeymetaEndpoint {
@@ -104,8 +104,7 @@ public class TestKeymetaEndpoint {
     keymetaServiceEndpoint.start(env);
     keyMetaAdminService =
       (KeymetaAdminServiceImpl) keymetaServiceEndpoint.getServices().iterator().next();
-    responseBuilder =
-      ManagedKeyResponse.newBuilder().setKeyState(ManagedKeyState.KEY_ACTIVE);
+    responseBuilder = ManagedKeyResponse.newBuilder().setKeyState(ManagedKeyState.KEY_ACTIVE);
     requestBuilder =
       ManagedKeyRequest.newBuilder().setKeyNamespace(ManagedKeyData.KEY_SPACE_GLOBAL);
     keyData1 = new ManagedKeyData(KEY_CUST.getBytes(), KEY_NAMESPACE,
@@ -154,8 +153,7 @@ public class TestKeymetaEndpoint {
     assertNotNull(response);
     assertNotNull(result.getStateList());
     assertEquals(2, result.getStateList().size());
-    assertEquals(ManagedKeyState.KEY_ACTIVE,
-      result.getStateList().get(0).getKeyState());
+    assertEquals(ManagedKeyState.KEY_ACTIVE, result.getStateList().get(0).getKeyState());
     assertEquals(0, Bytes.compareTo(keyData1.getKeyCustodian(),
       result.getStateList().get(0).getKeyCust().toByteArray()));
     assertEquals(keyData1.getKeyNamespace(), result.getStateList().get(0).getKeyNamespace());
@@ -225,8 +223,8 @@ public class TestKeymetaEndpoint {
     // Assert
     verify(controller).setFailed(contains("key_cust must not be empty"));
     verify(keymetaAdmin, never()).enableKeyManagement(any(), any());
-    verify(enableKeyManagementDone).run(
-      argThat(response -> response.getKeyState() == ManagedKeyState.KEY_FAILED));
+    verify(enableKeyManagementDone)
+      .run(argThat(response -> response.getKeyState() == ManagedKeyState.KEY_FAILED));
   }
 
   @Test
@@ -242,8 +240,8 @@ public class TestKeymetaEndpoint {
     // Assert
     verify(controller).setFailed(contains("IOException"));
     verify(keymetaAdmin).enableKeyManagement(any(), any());
-    verify(enableKeyManagementDone).run(
-      argThat(response -> response.getKeyState() == ManagedKeyState.KEY_FAILED));
+    verify(enableKeyManagementDone)
+      .run(argThat(response -> response.getKeyState() == ManagedKeyState.KEY_FAILED));
   }
 
   @Test

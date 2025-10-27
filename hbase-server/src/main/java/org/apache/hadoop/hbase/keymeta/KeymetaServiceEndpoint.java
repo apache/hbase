@@ -29,13 +29,6 @@ import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ManagedKeysProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ManagedKeysProtos.ManagedKeysService;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ManagedKeysProtos.RotateSTKResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.GetManagedKeysResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyState;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,6 +38,13 @@ import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.EmptyMsg;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.GetManagedKeysResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyState;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ManagedKeysProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ManagedKeysProtos.ManagedKeysService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ManagedKeysProtos.RotateSTKResponse;
 
 /**
  * This class implements a coprocessor service endpoint for the key management metadata operations.
