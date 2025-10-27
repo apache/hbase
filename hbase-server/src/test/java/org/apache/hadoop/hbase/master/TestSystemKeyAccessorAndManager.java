@@ -378,7 +378,7 @@ public class TestSystemKeyAccessorAndManager {
         }
 
         @Override
-        protected ManagedKeyProvider getKeyProvider() {
+        public ManagedKeyProvider getKeyProvider() {
           return realProvider;
         }
       };
@@ -407,7 +407,7 @@ public class TestSystemKeyAccessorAndManager {
         }
 
         @Override
-        protected ManagedKeyProvider getKeyProvider() {
+        public ManagedKeyProvider getKeyProvider() {
           return realProvider;
         }
       };
@@ -444,7 +444,7 @@ public class TestSystemKeyAccessorAndManager {
         }
 
         @Override
-        protected ManagedKeyProvider getKeyProvider() {
+        public ManagedKeyProvider getKeyProvider() {
           return mock(ManagedKeyProvider.class);
         }
       };
@@ -465,7 +465,7 @@ public class TestSystemKeyAccessorAndManager {
         }
 
         @Override
-        protected ManagedKeyProvider getKeyProvider() {
+        public ManagedKeyProvider getKeyProvider() {
           throw new RuntimeException("Key provider not available");
         }
       };
@@ -516,7 +516,7 @@ public class TestSystemKeyAccessorAndManager {
     }
 
     @Override
-    protected ManagedKeyProvider getKeyProvider() {
+    public ManagedKeyProvider getKeyProvider() {
       return keyProvider;
     }
   }

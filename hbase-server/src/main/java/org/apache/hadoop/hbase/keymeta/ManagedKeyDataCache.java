@@ -231,7 +231,8 @@ public class ManagedKeyDataCache extends KeyManagementBase {
       if (retrievedKey == null && isDynamicLookupEnabled()) {
         try {
           String keyCust = ManagedKeyProvider.encodeToStr(key_cust);
-          retrievedKey = retrieveActiveKey(keyCust, key_cust, keyNamespace, keymetaAccessor, null);
+          retrievedKey = KeyManagementUtils.retrieveActiveKey(keymetaAccessor, keyCust, key_cust,
+            keyNamespace, null);
         } catch (IOException | KeyException | RuntimeException e) {
           LOG.warn("Failed to load active key from provider for custodian: {} namespace: {}",
             ManagedKeyProvider.encodeToStr(key_cust), keyNamespace, e);

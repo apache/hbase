@@ -18,11 +18,9 @@
 package org.apache.hadoop.hbase.keymeta;
 
 import java.io.IOException;
-import java.security.KeyException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
-import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
 import org.apache.hadoop.hbase.security.SecurityUtil;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -75,7 +73,7 @@ public abstract class KeyManagementBase {
    * @return the managed key provider
    * @throws RuntimeException if no provider is configured
    */
-  protected ManagedKeyProvider getKeyProvider() {
+  public ManagedKeyProvider getKeyProvider() {
     return Encryption.getManagedKeyProvider(getConfiguration());
   }
 
@@ -107,44 +105,5 @@ public abstract class KeyManagementBase {
       isKeyManagementEnabled = SecurityUtil.isKeyManagementEnabled(getConfiguration());
     }
     return isKeyManagementEnabled;
-  }
-
-  /**
-   * Utility function to retrieves a managed key from the key provider. If an existing key is
-   * provided and the retrieved key is the same as the existing key, it will be ignored.
-   * @param encKeyCust        the encoded key custodian
-   * @param key_cust          the key custodian
-   * @param keyNamespace      the key namespace
-   * @param accessor          the accessor to use to persist the key. If null, the key will not be
-   *                          persisted.
-   * @param existingActiveKey the existing key, typically the active key already retrieved from the
-   *                          key provider, can be null.
-   * @return the retrieved key, or null if no key could be retrieved
-   * @throws IOException  if an error occurs
-   * @throws KeyException if an error occurs
-   */
-  protected ManagedKeyData retrieveActiveKey(String encKeyCust, byte[] key_cust,
-    String keyNamespace, KeymetaTableAccessor accessor, ManagedKeyData existingActiveKey)
-    throws IOException, KeyException {
-    ManagedKeyProvider provider = getKeyProvider();
-    ManagedKeyData pbeKey = provider.getManagedKey(key_cust, keyNamespace);
-    if (pbeKey == null) {
-      throw new IOException("Invalid null managed key received from key provider");
-    }
-    /*
-     * Will be useful when refresh API is implemented. if (existingActiveKey != null &&
-     * existingActiveKey.equals(pbeKey)) {
-     * LOG.info("retrieveActiveKey: no change in key for (custodian: {}, namespace: {}", encKeyCust,
-     * keyNamespace); return null; } // TODO: If existingActiveKey is not null, we should update the
-     * key state to INACTIVE.
-     */
-    LOG.info(
-      "retrieveActiveKey: got active key with status: {} and metadata: {} for "
-        + "(custodian: {}, namespace: {})",
-      pbeKey.getKeyState(), pbeKey.getKeyMetadata(), encKeyCust, pbeKey.getKeyNamespace());
-    if (accessor != null) {
-      accessor.addKey(pbeKey);
-    }
-    return pbeKey;
   }
 }
