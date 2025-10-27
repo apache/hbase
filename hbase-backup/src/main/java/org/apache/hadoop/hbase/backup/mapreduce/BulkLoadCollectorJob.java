@@ -75,7 +75,7 @@ public class BulkLoadCollectorJob extends Configured implements Tool {
   public BulkLoadCollectorJob() {
   }
 
-  protected BulkLoadCollectorJob(final Configuration c) {
+  public BulkLoadCollectorJob(final Configuration c) {
     super(c);
   }
 
