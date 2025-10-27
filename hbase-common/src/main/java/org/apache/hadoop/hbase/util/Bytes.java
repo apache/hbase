@@ -25,9 +25,12 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.ArrayList;
@@ -40,7 +43,6 @@ import java.util.List;
 import java.util.Random;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.unsafe.HBasePlatformDependent;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.WritableUtils;
@@ -124,7 +126,18 @@ public class Bytes implements Comparable<Bytes> {
   // SizeOf which uses java.lang.instrument says 24 bytes. (3 longs?)
   public static final int ESTIMATED_HEAP_TAX = 16;
 
-  static final boolean UNSAFE_UNALIGNED = HBasePlatformDependent.unaligned();
+  /*
+   * The VarHandles below must be used directly, not via non-static aliases. Non-static usage of a
+   * VarHandle is much slower than static usage. Native byte order access is used when we are
+   * getting longs for equality comparison and don't care about numeric value. Endian-specific is
+   * used when the numeric value matters.
+   */
+  private static final VarHandle BYTE_ARRAY_SHORT_VIEW_BIG_ENDIAN_VAR_HANDLE =
+    MethodHandles.byteArrayViewVarHandle(short[].class, ByteOrder.BIG_ENDIAN);
+  private static final VarHandle BYTE_ARRAY_INT_VIEW_BIG_ENDIAN_VAR_HANDLE =
+    MethodHandles.byteArrayViewVarHandle(int[].class, ByteOrder.BIG_ENDIAN);
+  private static final VarHandle BYTE_ARRAY_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE =
+    MethodHandles.byteArrayViewVarHandle(long[].class, ByteOrder.BIG_ENDIAN);
 
   /**
    * Returns length of the byte array, returning 0 if the array is null. Useful for calculating
@@ -718,7 +731,7 @@ public class Bytes implements Comparable<Bytes> {
     if (length != SIZEOF_LONG || offset + length > bytes.length) {
       throw explainWrongLengthOrOffset(bytes, offset, length, SIZEOF_LONG);
     }
-    return ConverterHolder.BEST_CONVERTER.toLong(bytes, offset, length);
+    return (long) BYTE_ARRAY_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(bytes, offset);
   }
 
   private static IllegalArgumentException explainWrongLengthOrOffset(final byte[] bytes,
@@ -747,7 +760,8 @@ public class Bytes implements Comparable<Bytes> {
       throw new IllegalArgumentException("Not enough room to put a long at" + " offset " + offset
         + " in a " + bytes.length + " byte array");
     }
-    return ConverterHolder.BEST_CONVERTER.putLong(bytes, offset, val);
+    BYTE_ARRAY_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.set(bytes, offset, val);
+    return offset + Long.BYTES;
   }
 
   /**
@@ -867,7 +881,7 @@ public class Bytes implements Comparable<Bytes> {
     if (length != SIZEOF_INT || offset + length > bytes.length) {
       throw explainWrongLengthOrOffset(bytes, offset, length, SIZEOF_INT);
     }
-    return ConverterHolder.BEST_CONVERTER.toInt(bytes, offset, length);
+    return (int) BYTE_ARRAY_INT_VIEW_BIG_ENDIAN_VAR_HANDLE.get(bytes, offset);
   }
 
   /**
@@ -906,7 +920,8 @@ public class Bytes implements Comparable<Bytes> {
       throw new IllegalArgumentException("Not enough room to put an int at" + " offset " + offset
         + " in a " + bytes.length + " byte array");
     }
-    return ConverterHolder.BEST_CONVERTER.putInt(bytes, offset, val);
+    BYTE_ARRAY_INT_VIEW_BIG_ENDIAN_VAR_HANDLE.set(bytes, offset, val);
+    return offset + Integer.BYTES;
   }
 
   /**
@@ -954,7 +969,7 @@ public class Bytes implements Comparable<Bytes> {
     if (length != SIZEOF_SHORT || offset + length > bytes.length) {
       throw explainWrongLengthOrOffset(bytes, offset, length, SIZEOF_SHORT);
     }
-    return ConverterHolder.BEST_CONVERTER.toShort(bytes, offset, length);
+    return (short) BYTE_ARRAY_SHORT_VIEW_BIG_ENDIAN_VAR_HANDLE.get(bytes, offset);
   }
 
   /**
@@ -982,7 +997,8 @@ public class Bytes implements Comparable<Bytes> {
       throw new IllegalArgumentException("Not enough room to put a short at" + " offset " + offset
         + " in a " + bytes.length + " byte array");
     }
-    return ConverterHolder.BEST_CONVERTER.putShort(bytes, offset, val);
+    BYTE_ARRAY_SHORT_VIEW_BIG_ENDIAN_VAR_HANDLE.set(bytes, offset, val);
+    return offset + Short.BYTES;
   }
 
   /**
@@ -1164,236 +1180,27 @@ public class Bytes implements Comparable<Bytes> {
     int compareTo(T buffer1, int offset1, int length1, T buffer2, int offset2, int length2);
   }
 
-  static abstract class Converter {
-    abstract long toLong(byte[] bytes, int offset, int length);
-
-    abstract int putLong(byte[] bytes, int offset, long val);
-
-    abstract int toInt(byte[] bytes, int offset, final int length);
-
-    abstract int putInt(byte[] bytes, int offset, int val);
-
-    abstract short toShort(byte[] bytes, int offset, final int length);
-
-    abstract int putShort(byte[] bytes, int offset, short val);
-
-  }
-
   static abstract class CommonPrefixer {
     abstract int findCommonPrefix(byte[] left, int leftOffset, int leftLength, byte[] right,
       int rightOffset, int rightLength);
   }
 
-  static Comparer<byte[]> lexicographicalComparerJavaImpl() {
-    return LexicographicalComparerHolder.PureJavaComparer.INSTANCE;
-  }
-
-  static class ConverterHolder {
-    static final String UNSAFE_CONVERTER_NAME =
-      ConverterHolder.class.getName() + "$UnsafeConverter";
-
-    static final Converter BEST_CONVERTER = getBestConverter();
-
-    /**
-     * Returns the Unsafe-using Converter, or falls back to the pure-Java implementation if unable
-     * to do so.
-     */
-    static Converter getBestConverter() {
-      try {
-        Class<?> theClass = Class.forName(UNSAFE_CONVERTER_NAME);
-
-        // yes, UnsafeComparer does implement Comparer<byte[]>
-        @SuppressWarnings("unchecked")
-        Converter converter = (Converter) theClass.getConstructor().newInstance();
-        return converter;
-      } catch (Throwable t) { // ensure we really catch *everything*
-        return PureJavaConverter.INSTANCE;
-      }
-    }
-
-    protected static final class PureJavaConverter extends Converter {
-      static final PureJavaConverter INSTANCE = new PureJavaConverter();
-
-      private PureJavaConverter() {
-      }
-
-      @Override
-      long toLong(byte[] bytes, int offset, int length) {
-        long l = 0;
-        for (int i = offset; i < offset + length; i++) {
-          l <<= 8;
-          l ^= bytes[i] & 0xFF;
-        }
-        return l;
-      }
-
-      @Override
-      int putLong(byte[] bytes, int offset, long val) {
-        for (int i = offset + 7; i > offset; i--) {
-          bytes[i] = (byte) val;
-          val >>>= 8;
-        }
-        bytes[offset] = (byte) val;
-        return offset + SIZEOF_LONG;
-      }
-
-      @Override
-      int toInt(byte[] bytes, int offset, int length) {
-        int n = 0;
-        for (int i = offset; i < (offset + length); i++) {
-          n <<= 8;
-          n ^= bytes[i] & 0xFF;
-        }
-        return n;
-      }
-
-      @Override
-      int putInt(byte[] bytes, int offset, int val) {
-        for (int i = offset + 3; i > offset; i--) {
-          bytes[i] = (byte) val;
-          val >>>= 8;
-        }
-        bytes[offset] = (byte) val;
-        return offset + SIZEOF_INT;
-      }
-
-      @Override
-      short toShort(byte[] bytes, int offset, int length) {
-        short n = 0;
-        n = (short) ((n ^ bytes[offset]) & 0xFF);
-        n = (short) (n << 8);
-        n ^= (short) (bytes[offset + 1] & 0xFF);
-        return n;
-      }
-
-      @Override
-      int putShort(byte[] bytes, int offset, short val) {
-        bytes[offset + 1] = (byte) val;
-        val >>= 8;
-        bytes[offset] = (byte) val;
-        return offset + SIZEOF_SHORT;
-      }
-    }
-
-    protected static final class UnsafeConverter extends Converter {
-
-      public UnsafeConverter() {
-      }
-
-      static {
-        if (!UNSAFE_UNALIGNED) {
-          // It doesn't matter what we throw;
-          // it's swallowed in getBestComparer().
-          throw new Error();
-        }
-
-        // sanity check - this should never fail
-        if (HBasePlatformDependent.arrayIndexScale(byte[].class) != 1) {
-          throw new AssertionError();
-        }
-      }
-
-      @Override
-      long toLong(byte[] bytes, int offset, int length) {
-        return UnsafeAccess.toLong(bytes, offset);
-      }
-
-      @Override
-      int putLong(byte[] bytes, int offset, long val) {
-        return UnsafeAccess.putLong(bytes, offset, val);
-      }
-
-      @Override
-      int toInt(byte[] bytes, int offset, int length) {
-        return UnsafeAccess.toInt(bytes, offset);
-      }
-
-      @Override
-      int putInt(byte[] bytes, int offset, int val) {
-        return UnsafeAccess.putInt(bytes, offset, val);
-      }
-
-      @Override
-      short toShort(byte[] bytes, int offset, int length) {
-        return UnsafeAccess.toShort(bytes, offset);
-      }
-
-      @Override
-      int putShort(byte[] bytes, int offset, short val) {
-        return UnsafeAccess.putShort(bytes, offset, val);
-      }
-    }
-  }
-
   /**
-   * Provides a lexicographical comparer implementation; either a Java implementation or a faster
-   * implementation based on {@code Unsafe}.
-   * <p>
-   * Uses reflection to gracefully fall back to the Java implementation if {@code Unsafe} isn't
-   * available.
+   * <a href=
+   * "https://github.com/google/guava/blob/v21.0/guava/src/com/google/common/primitives/UnsignedBytes.java#L362">Adapted
+   * from Guava</a>
    */
   static class LexicographicalComparerHolder {
-    static final String UNSAFE_COMPARER_NAME =
-      LexicographicalComparerHolder.class.getName() + "$UnsafeComparer";
-
     static final Comparer<byte[]> BEST_COMPARER = getBestComparer();
 
-    /**
-     * Returns the Unsafe-using Comparer, or falls back to the pure-Java implementation if unable to
-     * do so.
-     */
     static Comparer<byte[]> getBestComparer() {
-      try {
-        Class<?> theClass = Class.forName(UNSAFE_COMPARER_NAME);
-
-        // yes, UnsafeComparer does implement Comparer<byte[]>
-        @SuppressWarnings("unchecked")
-        Comparer<byte[]> comparer = (Comparer<byte[]>) theClass.getEnumConstants()[0];
-        return comparer;
-      } catch (Throwable t) { // ensure we really catch *everything*
-        return lexicographicalComparerJavaImpl();
-      }
+      return VarHandleComparer.INSTANCE;
     }
 
-    enum PureJavaComparer implements Comparer<byte[]> {
+    enum VarHandleComparer implements Comparer<byte[]> {
       INSTANCE;
 
-      @Override
-      public int compareTo(byte[] buffer1, int offset1, int length1, byte[] buffer2, int offset2,
-        int length2) {
-        // Short circuit equal case
-        if (buffer1 == buffer2 && offset1 == offset2 && length1 == length2) {
-          return 0;
-        }
-        // Bring WritableComparator code local
-        int end1 = offset1 + length1;
-        int end2 = offset2 + length2;
-        for (int i = offset1, j = offset2; i < end1 && j < end2; i++, j++) {
-          int a = (buffer1[i] & 0xff);
-          int b = (buffer2[j] & 0xff);
-          if (a != b) {
-            return a - b;
-          }
-        }
-        return length1 - length2;
-      }
-    }
-
-    enum UnsafeComparer implements Comparer<byte[]> {
-      INSTANCE;
-
-      static {
-        if (!UNSAFE_UNALIGNED) {
-          // It doesn't matter what we throw;
-          // it's swallowed in getBestComparer().
-          throw new Error();
-        }
-
-        // sanity check - this should never fail
-        if (HBasePlatformDependent.arrayIndexScale(byte[].class) != 1) {
-          throw new AssertionError();
-        }
-      }
+      private static final int STRIDE = Long.BYTES;
 
       /**
        * Lexicographically compare two arrays.
@@ -1410,38 +1217,24 @@ public class Bytes implements Comparable<Bytes> {
         int length2) {
 
         // Short circuit equal case
-        if (buffer1 == buffer2 && offset1 == offset2 && length1 == length2) {
+        if ((buffer1 == buffer2) && (offset1 == offset2) && (length1 == length2)) {
           return 0;
         }
-        final int stride = 8;
         final int minLength = Math.min(length1, length2);
-        int strideLimit = minLength & ~(stride - 1);
-        final long offset1Adj = offset1 + UnsafeAccess.BYTE_ARRAY_BASE_OFFSET;
-        final long offset2Adj = offset2 + UnsafeAccess.BYTE_ARRAY_BASE_OFFSET;
+        int strideLimit = minLength & ~(STRIDE - 1);
         int i;
 
         /*
          * Compare 8 bytes at a time. Benchmarking on x86 shows a stride of 8 bytes is no slower
          * than 4 bytes even on 32-bit. On the other hand, it is substantially faster on 64-bit.
          */
-        for (i = 0; i < strideLimit; i += stride) {
-          long lw = HBasePlatformDependent.getLong(buffer1, offset1Adj + i);
-          long rw = HBasePlatformDependent.getLong(buffer2, offset2Adj + i);
+        for (i = 0; i < strideLimit; i += STRIDE) {
+          // big-endian fetches are faster than little-endian because the bytes don't need to get
+          // reversed
+          long lw = (long) BYTE_ARRAY_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(buffer1, offset1 + i);
+          long rw = (long) BYTE_ARRAY_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(buffer2, offset2 + i);
           if (lw != rw) {
-            if (!UnsafeAccess.LITTLE_ENDIAN) {
-              return ((lw + Long.MIN_VALUE) < (rw + Long.MIN_VALUE)) ? -1 : 1;
-            }
-
-            /*
-             * We want to compare only the first index where left[index] != right[index]. This
-             * corresponds to the least significant nonzero byte in lw ^ rw, since lw and rw are
-             * little-endian. Long.numberOfTrailingZeros(diff) tells us the least significant
-             * nonzero bit, and zeroing out the first three bits of L.nTZ gives us the shift to get
-             * that least significant nonzero byte. This comparison logic is based on UnsignedBytes
-             * comparator from guava v21
-             */
-            int n = Long.numberOfTrailingZeros(lw ^ rw) & ~0x7;
-            return ((int) ((lw >>> n) & 0xFF)) - ((int) ((rw >>> n) & 0xFF));
+            return ((lw + Long.MIN_VALUE) < (rw + Long.MIN_VALUE)) ? -1 : 1;
           }
         }
 
@@ -1459,79 +1252,31 @@ public class Bytes implements Comparable<Bytes> {
   }
 
   static class CommonPrefixerHolder {
-    static final String UNSAFE_COMMON_PREFIXER_NAME =
-      CommonPrefixerHolder.class.getName() + "$UnsafeCommonPrefixer";
-
     static final CommonPrefixer BEST_COMMON_PREFIXER = getBestCommonPrefixer();
 
     static CommonPrefixer getBestCommonPrefixer() {
-      try {
-        Class<? extends CommonPrefixer> theClass =
-          Class.forName(UNSAFE_COMMON_PREFIXER_NAME).asSubclass(CommonPrefixer.class);
-
-        return theClass.getConstructor().newInstance();
-      } catch (Throwable t) { // ensure we really catch *everything*
-        return CommonPrefixerHolder.PureJavaCommonPrefixer.INSTANCE;
-      }
+      return VarHandleCommonPrefixer.INSTANCE;
     }
 
-    static final class PureJavaCommonPrefixer extends CommonPrefixer {
-      static final PureJavaCommonPrefixer INSTANCE = new PureJavaCommonPrefixer();
+    static final class VarHandleCommonPrefixer extends CommonPrefixer {
+      static final VarHandleCommonPrefixer INSTANCE = new VarHandleCommonPrefixer();
 
-      private PureJavaCommonPrefixer() {
-      }
+      private static final int STRIDE = Long.BYTES;
 
       @Override
       public int findCommonPrefix(byte[] left, int leftOffset, int leftLength, byte[] right,
         int rightOffset, int rightLength) {
-        int length = Math.min(leftLength, rightLength);
-        int result = 0;
-
-        while (result < length && left[leftOffset + result] == right[rightOffset + result]) {
-          result++;
-        }
-        return result;
-      }
-    }
-
-    static final class UnsafeCommonPrefixer extends CommonPrefixer {
-
-      static {
-        if (!UNSAFE_UNALIGNED) {
-          throw new Error();
-        }
-
-        // sanity check - this should never fail
-        if (HBasePlatformDependent.arrayIndexScale(byte[].class) != 1) {
-          throw new AssertionError();
-        }
-      }
-
-      public UnsafeCommonPrefixer() {
-      }
-
-      @Override
-      public int findCommonPrefix(byte[] left, int leftOffset, int leftLength, byte[] right,
-        int rightOffset, int rightLength) {
-        final int stride = 8;
         final int minLength = Math.min(leftLength, rightLength);
-        int strideLimit = minLength & ~(stride - 1);
-        final long leftOffsetAdj = leftOffset + UnsafeAccess.BYTE_ARRAY_BASE_OFFSET;
-        final long rightOffsetAdj = rightOffset + UnsafeAccess.BYTE_ARRAY_BASE_OFFSET;
-        int result = 0;
+        int strideLimit = minLength & ~(STRIDE - 1);
         int i;
 
-        for (i = 0; i < strideLimit; i += stride) {
-          long lw = HBasePlatformDependent.getLong(left, leftOffsetAdj + i);
-          long rw = HBasePlatformDependent.getLong(right, rightOffsetAdj + i);
+        for (i = 0; i < strideLimit; i += STRIDE) {
+          // big-endian fetches are faster than little-endian because the bytes don't need to get
+          // reversed
+          long lw = (long) BYTE_ARRAY_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(left, leftOffset + i);
+          long rw = (long) BYTE_ARRAY_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(right, rightOffset + i);
           if (lw != rw) {
-            if (!UnsafeAccess.LITTLE_ENDIAN) {
-              return result + (Long.numberOfLeadingZeros(lw ^ rw) / Bytes.SIZEOF_LONG);
-            } else {
-              return result + (Long.numberOfTrailingZeros(lw ^ rw) / Bytes.SIZEOF_LONG);
-            }
-          } else {
-            result += Bytes.SIZEOF_LONG;
+            return i + (Long.numberOfLeadingZeros(lw ^ rw) / Bytes.SIZEOF_LONG);
           }
         }
 
@@ -1540,13 +1285,11 @@ public class Bytes implements Comparable<Bytes> {
           int il = (left[leftOffset + i]);
           int ir = (right[rightOffset + i]);
           if (il != ir) {
-            return result;
-          } else {
-            result++;
+            return i;
           }
         }
 
-        return result;
+        return i;
       }
     }
   }

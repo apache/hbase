@@ -37,7 +37,6 @@ public class TestByteBufferUtilsWoUnsafe extends ByteBufferUtilsTestBase {
       mocked.when(HBasePlatformDependent::isUnsafeAvailable).thenReturn(false);
       mocked.when(HBasePlatformDependent::unaligned).thenReturn(false);
       assertFalse(ByteBufferUtils.UNSAFE_AVAIL);
-      assertFalse(ByteBufferUtils.UNSAFE_UNALIGNED);
     }
   }
 }

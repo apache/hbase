@@ -24,9 +24,12 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.Arrays;
 import org.apache.hadoop.hbase.io.ByteBufferWriter;
 import org.apache.hadoop.hbase.io.util.StreamUtils;
@@ -47,7 +50,19 @@ public final class ByteBufferUtils {
   public final static int NEXT_BIT_SHIFT = 7;
   public final static int NEXT_BIT_MASK = 1 << 7;
   final static boolean UNSAFE_AVAIL = HBasePlatformDependent.isUnsafeAvailable();
-  public final static boolean UNSAFE_UNALIGNED = HBasePlatformDependent.unaligned();
+
+  /*
+   * The VarHandles below must be used directly, not via non-static aliases. Non-static usage of a
+   * VarHandle is much slower than static usage.
+   */
+  private static final VarHandle BYTE_BUFFER_SHORT_VIEW_BIG_ENDIAN_VAR_HANDLE =
+    MethodHandles.byteBufferViewVarHandle(short[].class, ByteOrder.BIG_ENDIAN);
+  private static final VarHandle BYTE_BUFFER_INT_VIEW_BIG_ENDIAN_VAR_HANDLE =
+    MethodHandles.byteBufferViewVarHandle(int[].class, ByteOrder.BIG_ENDIAN);
+  private static final VarHandle BYTE_BUFFER_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE =
+    MethodHandles.byteBufferViewVarHandle(long[].class, ByteOrder.BIG_ENDIAN);
+  private static final VarHandle BYTE_ARRAY_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE =
+    MethodHandles.byteArrayViewVarHandle(long[].class, ByteOrder.BIG_ENDIAN);
 
   private ByteBufferUtils() {
   }
@@ -58,28 +73,6 @@ public final class ByteBufferUtils {
     abstract int compareTo(ByteBuffer buf1, int o1, int l1, ByteBuffer buf2, int o2, int l2);
   }
 
-  static abstract class Converter {
-    abstract short toShort(ByteBuffer buffer, int offset);
-
-    abstract int toInt(ByteBuffer buffer);
-
-    abstract int toInt(ByteBuffer buffer, int offset);
-
-    abstract long toLong(ByteBuffer buffer, int offset);
-
-    abstract void putInt(ByteBuffer buffer, int val);
-
-    abstract int putInt(ByteBuffer buffer, int index, int val);
-
-    abstract void putShort(ByteBuffer buffer, short val);
-
-    abstract int putShort(ByteBuffer buffer, int index, short val);
-
-    abstract void putLong(ByteBuffer buffer, long val);
-
-    abstract int putLong(ByteBuffer buffer, int index, long val);
-  }
-
   static abstract class CommonPrefixer {
     abstract int findCommonPrefix(ByteBuffer left, int leftOffset, int leftLength, byte[] right,
       int rightOffset, int rightLength);
@@ -88,37 +81,45 @@ public final class ByteBufferUtils {
       int rightOffset, int rightLength);
   }
 
+  /**
+   * <a href=
+   * "https://github.com/google/guava/blob/v21.0/guava/src/com/google/common/primitives/UnsignedBytes.java#L362">Adapted
+   * from Guava</a>
+   */
   static class ComparerHolder {
-    static final String UNSAFE_COMPARER_NAME = ComparerHolder.class.getName() + "$UnsafeComparer";
-
     static final Comparer BEST_COMPARER = getBestComparer();
 
     static Comparer getBestComparer() {
-      try {
-        Class<? extends Comparer> theClass =
-          Class.forName(UNSAFE_COMPARER_NAME).asSubclass(Comparer.class);
-
-        return theClass.getConstructor().newInstance();
-      } catch (Throwable t) { // ensure we really catch *everything*
-        return PureJavaComparer.INSTANCE;
-      }
+      return VarHandleComparer.INSTANCE;
     }
 
-    static final class PureJavaComparer extends Comparer {
-      static final PureJavaComparer INSTANCE = new PureJavaComparer();
+    static final class VarHandleComparer extends Comparer {
 
-      private PureJavaComparer() {
-      }
+      static final VarHandleComparer INSTANCE = new VarHandleComparer();
+      private static final int STRIDE = Long.BYTES;
 
       @Override
-      public int compareTo(byte[] buf1, int o1, int l1, ByteBuffer buf2, int o2, int l2) {
-        int end1 = o1 + l1;
-        int end2 = o2 + l2;
-        for (int i = o1, j = o2; i < end1 && j < end2; i++, j++) {
-          int a = buf1[i] & 0xFF;
-          int b = buf2.get(j) & 0xFF;
-          if (a != b) {
-            return a - b;
+      int compareTo(byte[] buf1, int o1, int l1, ByteBuffer buf2, int o2, int l2) {
+        final int minLength = Math.min(l1, l2);
+        int strideLimit = minLength & ~(STRIDE - 1);
+        int i;
+
+        for (i = 0; i < strideLimit; i += STRIDE) {
+          // big-endian fetches are faster than little-endian because the bytes don't need to get
+          // reversed
+          long lw = (long) BYTE_ARRAY_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(buf1, o1 + i);
+          long rw = (long) BYTE_BUFFER_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(buf2, o2 + i);
+          if (lw != rw) {
+            return ((lw + Long.MIN_VALUE) < (rw + Long.MIN_VALUE)) ? -1 : 1;
+          }
+        }
+
+        // The epilogue to cover the last (minLength % stride) elements.
+        for (; i < minLength; i++) {
+          int il = buf1[o1 + i] & 0xFF;
+          int ir = buf2.get(o2 + i) & 0xFF;
+          if (il != ir) {
+            return il - ir;
           }
         }
         return l1 - l2;
@@ -126,311 +127,104 @@ public final class ByteBufferUtils {
 
       @Override
       public int compareTo(ByteBuffer buf1, int o1, int l1, ByteBuffer buf2, int o2, int l2) {
-        int end1 = o1 + l1;
-        int end2 = o2 + l2;
-        for (int i = o1, j = o2; i < end1 && j < end2; i++, j++) {
-          int a = buf1.get(i) & 0xFF;
-          int b = buf2.get(j) & 0xFF;
-          if (a != b) {
-            return a - b;
+        final int minLength = Math.min(l1, l2);
+        int strideLimit = minLength & ~(STRIDE - 1);
+        int i;
+
+        for (i = 0; i < strideLimit; i += STRIDE) {
+          // big-endian fetches are faster than little-endian because the bytes don't need to get
+          // reversed
+          long lw = (long) BYTE_BUFFER_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(buf1, o1 + i);
+          long rw = (long) BYTE_BUFFER_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(buf2, o2 + i);
+          if (lw != rw) {
+            return ((lw + Long.MIN_VALUE) < (rw + Long.MIN_VALUE)) ? -1 : 1;
+          }
+        }
+
+        // The epilogue to cover the last (minLength % stride) elements.
+        for (; i < minLength; i++) {
+          int il = buf1.get(o1 + i) & 0xFF;
+          int ir = buf2.get(o2 + i) & 0xFF;
+          if (il != ir) {
+            return il - ir;
           }
         }
         return l1 - l2;
-      }
-    }
-
-    static final class UnsafeComparer extends Comparer {
-
-      public UnsafeComparer() {
-      }
-
-      static {
-        if (!UNSAFE_UNALIGNED) {
-          throw new Error();
-        }
-      }
-
-      @Override
-      public int compareTo(byte[] buf1, int o1, int l1, ByteBuffer buf2, int o2, int l2) {
-        long offset2Adj;
-        Object refObj2 = null;
-        if (buf2.isDirect()) {
-          offset2Adj = o2 + UnsafeAccess.directBufferAddress(buf2);
-        } else {
-          offset2Adj = o2 + buf2.arrayOffset() + UnsafeAccess.BYTE_ARRAY_BASE_OFFSET;
-          refObj2 = buf2.array();
-        }
-        return compareToUnsafe(buf1, o1 + UnsafeAccess.BYTE_ARRAY_BASE_OFFSET, l1, refObj2,
-          offset2Adj, l2);
-      }
-
-      @Override
-      public int compareTo(ByteBuffer buf1, int o1, int l1, ByteBuffer buf2, int o2, int l2) {
-        long offset1Adj, offset2Adj;
-        Object refObj1 = null, refObj2 = null;
-        if (buf1.isDirect()) {
-          offset1Adj = o1 + UnsafeAccess.directBufferAddress(buf1);
-        } else {
-          offset1Adj = o1 + buf1.arrayOffset() + UnsafeAccess.BYTE_ARRAY_BASE_OFFSET;
-          refObj1 = buf1.array();
-        }
-        if (buf2.isDirect()) {
-          offset2Adj = o2 + UnsafeAccess.directBufferAddress(buf2);
-        } else {
-          offset2Adj = o2 + buf2.arrayOffset() + UnsafeAccess.BYTE_ARRAY_BASE_OFFSET;
-          refObj2 = buf2.array();
-        }
-        return compareToUnsafe(refObj1, offset1Adj, l1, refObj2, offset2Adj, l2);
-      }
-    }
-  }
-
-  static class ConverterHolder {
-    static final String UNSAFE_CONVERTER_NAME =
-      ConverterHolder.class.getName() + "$UnsafeConverter";
-    static final Converter BEST_CONVERTER = getBestConverter();
-
-    static Converter getBestConverter() {
-      try {
-        Class<? extends Converter> theClass =
-          Class.forName(UNSAFE_CONVERTER_NAME).asSubclass(Converter.class);
-
-        // yes, UnsafeComparer does implement Comparer<byte[]>
-        return theClass.getConstructor().newInstance();
-      } catch (Throwable t) { // ensure we really catch *everything*
-        return PureJavaConverter.INSTANCE;
-      }
-    }
-
-    static final class PureJavaConverter extends Converter {
-      static final PureJavaConverter INSTANCE = new PureJavaConverter();
-
-      private PureJavaConverter() {
-      }
-
-      @Override
-      short toShort(ByteBuffer buffer, int offset) {
-        return buffer.getShort(offset);
-      }
-
-      @Override
-      int toInt(ByteBuffer buffer) {
-        return buffer.getInt();
-      }
-
-      @Override
-      int toInt(ByteBuffer buffer, int offset) {
-        return buffer.getInt(offset);
-      }
-
-      @Override
-      long toLong(ByteBuffer buffer, int offset) {
-        return buffer.getLong(offset);
-      }
-
-      @Override
-      void putInt(ByteBuffer buffer, int val) {
-        buffer.putInt(val);
-      }
-
-      @Override
-      int putInt(ByteBuffer buffer, int index, int val) {
-        buffer.putInt(index, val);
-        return index + Bytes.SIZEOF_INT;
-      }
-
-      @Override
-      void putShort(ByteBuffer buffer, short val) {
-        buffer.putShort(val);
-      }
-
-      @Override
-      int putShort(ByteBuffer buffer, int index, short val) {
-        buffer.putShort(index, val);
-        return index + Bytes.SIZEOF_SHORT;
-      }
-
-      @Override
-      void putLong(ByteBuffer buffer, long val) {
-        buffer.putLong(val);
-      }
-
-      @Override
-      int putLong(ByteBuffer buffer, int index, long val) {
-        buffer.putLong(index, val);
-        return index + Bytes.SIZEOF_LONG;
-      }
-    }
-
-    static final class UnsafeConverter extends Converter {
-
-      public UnsafeConverter() {
-      }
-
-      static {
-        if (!UNSAFE_UNALIGNED) {
-          throw new Error();
-        }
-      }
-
-      @Override
-      short toShort(ByteBuffer buffer, int offset) {
-        return UnsafeAccess.toShort(buffer, offset);
-      }
-
-      @Override
-      int toInt(ByteBuffer buffer) {
-        int i = UnsafeAccess.toInt(buffer, buffer.position());
-        buffer.position(buffer.position() + Bytes.SIZEOF_INT);
-        return i;
-      }
-
-      @Override
-      int toInt(ByteBuffer buffer, int offset) {
-        return UnsafeAccess.toInt(buffer, offset);
-      }
-
-      @Override
-      long toLong(ByteBuffer buffer, int offset) {
-        return UnsafeAccess.toLong(buffer, offset);
-      }
-
-      @Override
-      void putInt(ByteBuffer buffer, int val) {
-        int newPos = UnsafeAccess.putInt(buffer, buffer.position(), val);
-        buffer.position(newPos);
-      }
-
-      @Override
-      int putInt(ByteBuffer buffer, int index, int val) {
-        return UnsafeAccess.putInt(buffer, index, val);
-      }
-
-      @Override
-      void putShort(ByteBuffer buffer, short val) {
-        int newPos = UnsafeAccess.putShort(buffer, buffer.position(), val);
-        buffer.position(newPos);
-      }
-
-      @Override
-      int putShort(ByteBuffer buffer, int index, short val) {
-        return UnsafeAccess.putShort(buffer, index, val);
-      }
-
-      @Override
-      void putLong(ByteBuffer buffer, long val) {
-        int newPos = UnsafeAccess.putLong(buffer, buffer.position(), val);
-        buffer.position(newPos);
-      }
-
-      @Override
-      int putLong(ByteBuffer buffer, int index, long val) {
-        return UnsafeAccess.putLong(buffer, index, val);
       }
     }
   }
 
   static class CommonPrefixerHolder {
-    static final String UNSAFE_COMMON_PREFIXER_NAME =
-      CommonPrefixerHolder.class.getName() + "$UnsafeCommonPrefixer";
-
     static final CommonPrefixer BEST_COMMON_PREFIXER = getBestCommonPrefixer();
 
     static CommonPrefixer getBestCommonPrefixer() {
-      try {
-        Class<? extends CommonPrefixer> theClass =
-          Class.forName(UNSAFE_COMMON_PREFIXER_NAME).asSubclass(CommonPrefixer.class);
-
-        return theClass.getConstructor().newInstance();
-      } catch (Throwable t) { // ensure we really catch *everything*
-        return PureJavaCommonPrefixer.INSTANCE;
-      }
+      return VarHandleCommonPrefixer.INSTANCE;
     }
 
-    static final class PureJavaCommonPrefixer extends CommonPrefixer {
-      static final PureJavaCommonPrefixer INSTANCE = new PureJavaCommonPrefixer();
+    static final class VarHandleCommonPrefixer extends CommonPrefixer {
 
-      private PureJavaCommonPrefixer() {
-      }
+      static final VarHandleCommonPrefixer INSTANCE = new VarHandleCommonPrefixer();
+
+      private static final int STRIDE = Long.BYTES;
 
       @Override
       public int findCommonPrefix(ByteBuffer left, int leftOffset, int leftLength, byte[] right,
         int rightOffset, int rightLength) {
-        int length = Math.min(leftLength, rightLength);
-        int result = 0;
+        final int minLength = Math.min(leftLength, rightLength);
+        int strideLimit = minLength & ~(STRIDE - 1);
+        int i;
 
-        while (
-          result < length
-            && ByteBufferUtils.toByte(left, leftOffset + result) == right[rightOffset + result]
-        ) {
-          result++;
+        for (i = 0; i < strideLimit; i += STRIDE) {
+          // big-endian fetches are faster than little-endian because the bytes don't need to get
+          // reversed
+          long lw = (long) BYTE_BUFFER_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(left, leftOffset + i);
+          long rw = (long) BYTE_ARRAY_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(right, rightOffset + i);
+
+          if (lw != rw) {
+            return i + (Long.numberOfLeadingZeros(lw ^ rw) / Bytes.SIZEOF_LONG);
+          }
         }
 
-        return result;
-      }
-
-      @Override
-      int findCommonPrefix(ByteBuffer left, int leftOffset, int leftLength, ByteBuffer right,
-        int rightOffset, int rightLength) {
-        int length = Math.min(leftLength, rightLength);
-        int result = 0;
-
-        while (
-          result < length && ByteBufferUtils.toByte(left, leftOffset + result)
-              == ByteBufferUtils.toByte(right, rightOffset + result)
-        ) {
-          result++;
+        // The epilogue to cover the last (minLength % stride) elements.
+        for (; i < minLength; i++) {
+          byte il = left.get(leftOffset + i);
+          byte ir = right[rightOffset + i];
+          if (il != ir) {
+            return i;
+          }
         }
 
-        return result;
-      }
-    }
-
-    static final class UnsafeCommonPrefixer extends CommonPrefixer {
-
-      static {
-        if (!UNSAFE_UNALIGNED) {
-          throw new Error();
-        }
-      }
-
-      public UnsafeCommonPrefixer() {
-      }
-
-      @Override
-      public int findCommonPrefix(ByteBuffer left, int leftOffset, int leftLength, byte[] right,
-        int rightOffset, int rightLength) {
-        long offset1Adj;
-        Object refObj1 = null;
-        if (left.isDirect()) {
-          offset1Adj = leftOffset + UnsafeAccess.directBufferAddress(left);
-        } else {
-          offset1Adj = leftOffset + left.arrayOffset() + UnsafeAccess.BYTE_ARRAY_BASE_OFFSET;
-          refObj1 = left.array();
-        }
-        return findCommonPrefixUnsafe(refObj1, offset1Adj, leftLength, right,
-          rightOffset + UnsafeAccess.BYTE_ARRAY_BASE_OFFSET, rightLength);
+        return i;
       }
 
       @Override
       public int findCommonPrefix(ByteBuffer left, int leftOffset, int leftLength, ByteBuffer right,
         int rightOffset, int rightLength) {
-        long offset1Adj, offset2Adj;
-        Object refObj1 = null, refObj2 = null;
-        if (left.isDirect()) {
-          offset1Adj = leftOffset + UnsafeAccess.directBufferAddress(left);
-        } else {
-          offset1Adj = leftOffset + left.arrayOffset() + UnsafeAccess.BYTE_ARRAY_BASE_OFFSET;
-          refObj1 = left.array();
+        final int minLength = Math.min(leftLength, rightLength);
+        int strideLimit = minLength & ~(STRIDE - 1);
+        int i;
+
+        for (i = 0; i < strideLimit; i += STRIDE) {
+          // big-endian fetches are faster than little-endian because the bytes don't need to get
+          // reversed
+          long lw = (long) BYTE_BUFFER_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(left, leftOffset + i);
+          long rw = (long) BYTE_BUFFER_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(right, rightOffset + i);
+
+          if (lw != rw) {
+            return i + (Long.numberOfLeadingZeros(lw ^ rw) / Bytes.SIZEOF_LONG);
+          }
         }
-        if (right.isDirect()) {
-          offset2Adj = rightOffset + UnsafeAccess.directBufferAddress(right);
-        } else {
-          offset2Adj = rightOffset + right.arrayOffset() + UnsafeAccess.BYTE_ARRAY_BASE_OFFSET;
-          refObj2 = right.array();
+
+        // The epilogue to cover the last (minLength % stride) elements.
+        for (; i < minLength; i++) {
+          byte il = left.get(leftOffset + i);
+          byte ir = right.get(rightOffset + i);
+          if (il != ir) {
+            return i;
+          }
         }
-        return findCommonPrefixUnsafe(refObj1, offset1Adj, leftLength, refObj2, offset2Adj,
-          rightLength);
+
+        return i;
       }
     }
   }
@@ -580,11 +374,9 @@ public final class ByteBufferUtils {
   }
 
   public static byte toByte(ByteBuffer buffer, int offset) {
-    if (UNSAFE_AVAIL) {
-      return UnsafeAccess.toByte(buffer, offset);
-    } else {
-      return buffer.get(offset);
-    }
+    // For some reason there is no way to get one byte from a ByteBuffer via a VarHandle, so
+    // for now just do things the slow way.
+    return buffer.get(offset);
   }
 
   /**
@@ -1055,85 +847,6 @@ public final class ByteBufferUtils {
     return compareTo(buf2, o2, l2, buf1, o1, l1) * -1;
   }
 
-  static int compareToUnsafe(Object obj1, long o1, int l1, Object obj2, long o2, int l2) {
-    final int stride = 8;
-    final int minLength = Math.min(l1, l2);
-    int strideLimit = minLength & ~(stride - 1);
-    int i;
-
-    /*
-     * Compare 8 bytes at a time. Benchmarking shows comparing 8 bytes at a time is no slower than
-     * comparing 4 bytes at a time even on 32-bit. On the other hand, it is substantially faster on
-     * 64-bit.
-     */
-    for (i = 0; i < strideLimit; i += stride) {
-      long lw = HBasePlatformDependent.getLong(obj1, o1 + (long) i);
-      long rw = HBasePlatformDependent.getLong(obj2, o2 + (long) i);
-      if (lw != rw) {
-        if (!UnsafeAccess.LITTLE_ENDIAN) {
-          return ((lw + Long.MIN_VALUE) < (rw + Long.MIN_VALUE)) ? -1 : 1;
-        }
-
-        /*
-         * We want to compare only the first index where left[index] != right[index]. This
-         * corresponds to the least significant nonzero byte in lw ^ rw, since lw and rw are
-         * little-endian. Long.numberOfTrailingZeros(diff) tells us the least significant nonzero
-         * bit, and zeroing out the first three bits of L.nTZ gives us the shift to get that least
-         * significant nonzero byte. This comparison logic is based on UnsignedBytes from guava v21
-         */
-        int n = Long.numberOfTrailingZeros(lw ^ rw) & ~0x7;
-        return ((int) ((lw >>> n) & 0xFF)) - ((int) ((rw >>> n) & 0xFF));
-      }
-    }
-
-    // The epilogue to cover the last (minLength % stride) elements.
-    for (; i < minLength; i++) {
-      int il = (HBasePlatformDependent.getByte(obj1, o1 + i) & 0xFF);
-      int ir = (HBasePlatformDependent.getByte(obj2, o2 + i) & 0xFF);
-      if (il != ir) {
-        return il - ir;
-      }
-    }
-    return l1 - l2;
-  }
-
-  static int findCommonPrefixUnsafe(Object left, long leftOffset, int leftLength, Object right,
-    long rightOffset, int rightLength) {
-    final int stride = 8;
-    final int minLength = Math.min(leftLength, rightLength);
-    int strideLimit = minLength & ~(stride - 1);
-    int result = 0;
-    int i;
-
-    for (i = 0; i < strideLimit; i += stride) {
-      long lw = HBasePlatformDependent.getLong(left, leftOffset + (long) i);
-      long rw = HBasePlatformDependent.getLong(right, rightOffset + (long) i);
-
-      if (lw != rw) {
-        if (!UnsafeAccess.LITTLE_ENDIAN) {
-          return result + (Long.numberOfLeadingZeros(lw ^ rw) / Bytes.SIZEOF_LONG);
-        } else {
-          return result + (Long.numberOfTrailingZeros(lw ^ rw) / Bytes.SIZEOF_LONG);
-        }
-      } else {
-        result += Bytes.SIZEOF_LONG;
-      }
-    }
-
-    // The epilogue to cover the last (minLength % stride) elements.
-    for (; i < minLength; i++) {
-      byte il = HBasePlatformDependent.getByte(left, leftOffset + i);
-      byte ir = HBasePlatformDependent.getByte(right, rightOffset + i);
-      if (il != ir) {
-        return result;
-      } else {
-        result++;
-      }
-    }
-
-    return result;
-  }
-
   /**
    * Reads a short value at the given buffer's offset.
    * @param buffer input byte buffer to read
@@ -1141,14 +854,16 @@ public final class ByteBufferUtils {
    * @return short value at offset
    */
   public static short toShort(ByteBuffer buffer, int offset) {
-    return ConverterHolder.BEST_CONVERTER.toShort(buffer, offset);
+    return (short) BYTE_BUFFER_SHORT_VIEW_BIG_ENDIAN_VAR_HANDLE.get(buffer, offset);
   }
 
   /**
    * Reads an int value at the given buffer's current position. Also advances the buffer's position
    */
   public static int toInt(ByteBuffer buffer) {
-    return ConverterHolder.BEST_CONVERTER.toInt(buffer);
+    int i = (int) BYTE_BUFFER_INT_VIEW_BIG_ENDIAN_VAR_HANDLE.get(buffer, buffer.position());
+    buffer.position(buffer.position() + Integer.BYTES);
+    return i;
   }
 
   /**
@@ -1158,7 +873,7 @@ public final class ByteBufferUtils {
    * @return int value at offset
    */
   public static int toInt(ByteBuffer buffer, int offset) {
-    return ConverterHolder.BEST_CONVERTER.toInt(buffer, offset);
+    return (int) BYTE_BUFFER_INT_VIEW_BIG_ENDIAN_VAR_HANDLE.get(buffer, offset);
   }
 
   /**
@@ -1188,7 +903,7 @@ public final class ByteBufferUtils {
    * @return long value at offset
    */
   public static long toLong(ByteBuffer buffer, int offset) {
-    return ConverterHolder.BEST_CONVERTER.toLong(buffer, offset);
+    return (long) BYTE_BUFFER_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(buffer, offset);
   }
 
   /**
@@ -1198,11 +913,13 @@ public final class ByteBufferUtils {
    * @param val    int to write out
    */
   public static void putInt(ByteBuffer buffer, int val) {
-    ConverterHolder.BEST_CONVERTER.putInt(buffer, val);
+    BYTE_BUFFER_INT_VIEW_BIG_ENDIAN_VAR_HANDLE.set(buffer, buffer.position(), val);
+    buffer.position(buffer.position() + Integer.BYTES);
   }
 
   public static int putInt(ByteBuffer buffer, int index, int val) {
-    return ConverterHolder.BEST_CONVERTER.putInt(buffer, index, val);
+    BYTE_BUFFER_INT_VIEW_BIG_ENDIAN_VAR_HANDLE.set(buffer, buffer.position(), val);
+    return index + Integer.BYTES;
   }
 
   /**
@@ -1239,11 +956,13 @@ public final class ByteBufferUtils {
    * @param val    short to write out
    */
   public static void putShort(ByteBuffer buffer, short val) {
-    ConverterHolder.BEST_CONVERTER.putShort(buffer, val);
+    BYTE_BUFFER_SHORT_VIEW_BIG_ENDIAN_VAR_HANDLE.set(buffer, buffer.position(), val);
+    buffer.position(buffer.position() + Short.BYTES);
   }
 
   public static int putShort(ByteBuffer buffer, int index, short val) {
-    return ConverterHolder.BEST_CONVERTER.putShort(buffer, index, val);
+    BYTE_BUFFER_SHORT_VIEW_BIG_ENDIAN_VAR_HANDLE.set(buffer, buffer.position(), val);
+    return index + Short.BYTES;
   }
 
   public static int putAsShort(ByteBuffer buf, int index, int val) {
@@ -1260,11 +979,13 @@ public final class ByteBufferUtils {
    * @param val    long to write out
    */
   public static void putLong(ByteBuffer buffer, long val) {
-    ConverterHolder.BEST_CONVERTER.putLong(buffer, val);
+    BYTE_BUFFER_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.set(buffer, buffer.position(), val);
+    buffer.position(buffer.position() + Long.BYTES);
   }
 
   public static int putLong(ByteBuffer buffer, int index, long val) {
-    return ConverterHolder.BEST_CONVERTER.putLong(buffer, index, val);
+    BYTE_BUFFER_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.set(buffer, buffer.position(), val);
+    return index + Long.BYTES;
   }
 
   /**

@@ -38,7 +38,6 @@ public class TestFromClientSide3WoUnsafe extends FromClientSide3TestBase {
       mocked.when(HBasePlatformDependent::isUnsafeAvailable).thenReturn(false);
       mocked.when(HBasePlatformDependent::unaligned).thenReturn(false);
       assertFalse(ByteBufferUtils.UNSAFE_AVAIL);
-      assertFalse(ByteBufferUtils.UNSAFE_UNALIGNED);
     }
     startCluster();
   }
