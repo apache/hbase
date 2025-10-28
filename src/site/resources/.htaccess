@@ -1,8 +1,0 @@
-
-# Redirect replication URL to the right section of the book
-# Rule added 2015-1-12 -- can be removed in 6 months
-Redirect permanent /replication.html /book.html#_cluster_replication
-
-# Redirect old page-per-chapter book sections to new single file.
-RedirectMatch permanent ^/book/(.*)\.html$ /book.html#$1
-RedirectMatch permanent ^/book/$ /book.html
