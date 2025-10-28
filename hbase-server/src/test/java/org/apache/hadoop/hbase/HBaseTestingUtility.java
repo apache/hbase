@@ -22,7 +22,6 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import edu.umd.cs.findbugs.annotations.Nullable;
-import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -89,7 +88,6 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableState;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
@@ -122,12 +120,7 @@ import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.security.HBaseKerberosUtils;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.security.access.AccessController;
-import org.apache.hadoop.hbase.security.access.PermissionStorage;
-import org.apache.hadoop.hbase.security.access.SecureTestUtil;
-import org.apache.hadoop.hbase.security.token.TokenProvider;
 import org.apache.hadoop.hbase.security.visibility.VisibilityLabelsCache;
-import org.apache.hadoop.hbase.security.visibility.VisibilityTestUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -156,7 +149,6 @@ import org.apache.hadoop.hdfs.server.namenode.EditLogFileOutputStream;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.minikdc.MiniKdc;
-import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.ZooKeeper;
@@ -397,42 +389,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     r.close();
     if (r.getWAL() == null) return;
     r.getWAL().close();
-  }
-
-  /**
-   * Start mini secure cluster with given kdc and principals.
-   * @param kdc              Mini kdc server
-   * @param servicePrincipal Service principal without realm.
-   * @param spnegoPrincipal  Spnego principal without realm.
-   * @return Handler to shutdown the cluster
-   */
-  public Closeable startSecureMiniCluster(MiniKdc kdc, String servicePrincipal,
-    String spnegoPrincipal) throws Exception {
-    Configuration conf = getConfiguration();
-
-    SecureTestUtil.enableSecurity(conf);
-    VisibilityTestUtil.enableVisiblityLabels(conf);
-    SecureTestUtil.verifyConfiguration(conf);
-
-    // Reset the static default realm forcibly for hadoop-2.0.
-    // It has no impact but not required for hadoop-3.0.
-    KerberosName.resetDefaultRealm();
-
-    conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
-      AccessController.class.getName() + ',' + TokenProvider.class.getName());
-
-    HBaseKerberosUtils.setSecuredConfiguration(conf, servicePrincipal + '@' + kdc.getRealm(),
-      spnegoPrincipal + '@' + kdc.getRealm());
-
-    startMiniCluster();
-    try {
-      waitUntilAllRegionsAssigned(PermissionStorage.ACL_TABLE_NAME);
-    } catch (Exception e) {
-      shutdownMiniCluster();
-      throw e;
-    }
-
-    return this::shutdownMiniCluster;
   }
 
   /**
