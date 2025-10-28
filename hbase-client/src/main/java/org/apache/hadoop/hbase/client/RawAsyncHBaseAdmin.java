@@ -150,6 +150,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerR
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BooleanMsg;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.EmptyMsg;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.LastHighestWalFilenum;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyEntryRequest;
@@ -4698,9 +4699,9 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     // Create the request once instead of repeatedly for each server
     ManagedKeyEntryRequest request = ManagedKeyEntryRequest.newBuilder()
       .setKeyCustNs(ManagedKeyRequest.newBuilder()
-        .setKeyCust(HBaseProtos.ByteString.copyFrom(keyCustodian)).setKeyNamespace(keyNamespace)
+        .setKeyCust(ByteString.copyFrom(keyCustodian)).setKeyNamespace(keyNamespace)
         .build())
-      .setKeyMetadataHash(HBaseProtos.ByteString.copyFrom(keyMetadataHash)).build();
+      .setKeyMetadataHash(ByteString.copyFrom(keyMetadataHash)).build();
     List<CompletableFuture<Void>> futures = regionServers.stream()
       .map(serverName -> ejectManagedKeyDataCacheEntry(serverName, request))
       .collect(Collectors.toList());

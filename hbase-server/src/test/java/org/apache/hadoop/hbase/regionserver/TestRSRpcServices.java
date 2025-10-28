@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -261,28 +262,21 @@ public class TestRSRpcServices {
   }
 
   /**
-   * Test that ejectManagedKeyDataCacheEntry throws ServiceException when it fails
+   * Test that ejectManagedKeyDataCacheEntry throws ServiceException when server is stopped
    */
   @Test
-  public void testEjectManagedKeyDataCacheEntryWhenFails() throws Exception {
+  public void testEjectManagedKeyDataCacheEntryWhenServerStopped() throws Exception {
     // Create mocks
     HRegionServer mockServer = mock(HRegionServer.class);
     Configuration conf = HBaseConfiguration.create();
     FileSystem mockFs = mock(FileSystem.class);
-    KeyManagementService mockKeyService = mock(KeyManagementService.class);
-    ManagedKeyDataCache mockCache = mock(ManagedKeyDataCache.class);
 
     when(mockServer.getConfiguration()).thenReturn(conf);
     when(mockServer.isOnline()).thenReturn(true);
     when(mockServer.isAborted()).thenReturn(false);
-    when(mockServer.isStopped()).thenReturn(false);
+    when(mockServer.isStopped()).thenReturn(true); // Server is stopped
     when(mockServer.isDataFileSystemOk()).thenReturn(true);
     when(mockServer.getFileSystem()).thenReturn(mockFs);
-    when(mockServer.getKeyManagementService()).thenReturn(mockKeyService);
-
-    // Make getKeyManagementService throw IOException
-    IOException testException = new IOException("Test failure getting key service");
-    when(mockServer.getKeyManagementService()).thenThrow(testException);
 
     // Create RSRpcServices
     RSRpcServices rpcServices = new RSRpcServices(mockServer);
@@ -302,11 +296,12 @@ public class TestRSRpcServices {
     // Call the RPC method and expect ServiceException
     try {
       rpcServices.ejectManagedKeyDataCacheEntry(controller, request);
-      fail("Expected ServiceException when eject fails");
+      fail("Expected ServiceException when server is stopped");
     } catch (ServiceException e) {
       // Expected
-      assertEquals("Test failure getting key service", e.getCause().getMessage());
-      LOG.info("Correctly threw ServiceException when ejectManagedKeyDataCacheEntry fails");
+      assertTrue("Exception should mention server stopping",
+        e.getCause().getMessage().contains("stopping"));
+      LOG.info("Correctly threw ServiceException when server is stopped");
     }
   }
 

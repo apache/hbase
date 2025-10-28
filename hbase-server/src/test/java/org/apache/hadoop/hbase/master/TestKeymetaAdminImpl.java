@@ -79,7 +79,7 @@ import org.junit.runners.Suite;
 @RunWith(Suite.class)
 @Suite.SuiteClasses({ TestKeymetaAdminImpl.TestWhenDisabled.class,
   TestKeymetaAdminImpl.TestAdminImpl.class, TestKeymetaAdminImpl.TestForKeyProviderNullReturn.class,
-  TestKeymetaAdminImpl.TestRotateSTK.class })
+  TestKeymetaAdminImpl.TestMiscAPIs.class })
 @Category({ MasterTests.class, SmallTests.class })
 public class TestKeymetaAdminImpl {
 
@@ -276,10 +276,10 @@ public class TestKeymetaAdminImpl {
    */
   @RunWith(BlockJUnit4ClassRunner.class)
   @Category({ MasterTests.class, SmallTests.class })
-  public static class TestRotateSTK extends TestKeymetaAdminImpl {
+  public static class TestMiscAPIs extends TestKeymetaAdminImpl {
     @ClassRule
     public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRotateSTK.class);
+      HBaseClassTestRule.forClass(TestMiscAPIs.class);
 
     private ServerManager mockServerManager = mock(ServerManager.class);
     private AsyncClusterConnection mockConnection;
