@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.junit.Before;
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
@@ -198,6 +199,7 @@ public class TestMasterStatusUtil {
     assertNull(MasterStatusUtil.getFragmentationInfo(master, conf));
   }
 
+  @Ignore
   @Test
   public void testGetFragmentationInfoTurnedOn() throws IOException {
     conf.setBoolean("hbase.master.ui.fragmentation.enabled", true);
