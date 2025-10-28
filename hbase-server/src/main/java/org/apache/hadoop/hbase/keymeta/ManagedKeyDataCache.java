@@ -282,12 +282,4 @@ public class ManagedKeyDataCache extends KeyManagementBase {
     }
     return null;
   }
-
-  /**
-   * Invalidates all entries in the cache.
-   */
-  public void invalidateAll() {
-    cacheByMetadata.invalidateAll();
-    activeKeysCache.invalidateAll();
-  }
 }

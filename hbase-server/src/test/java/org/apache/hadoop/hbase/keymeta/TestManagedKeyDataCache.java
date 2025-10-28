@@ -294,7 +294,7 @@ public class TestManagedKeyDataCache {
       assertNotNull(cache.getActiveEntry(CUST_ID, "namespace1"));
       assertEquals(2, cache.getActiveCacheEntryCount());
 
-      cache.invalidateAll();
+      cache.clearCache();
       assertEquals(0, cache.getActiveCacheEntryCount());
       assertNotNull(cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL));
       assertEquals(1, cache.getActiveCacheEntryCount());
@@ -322,7 +322,7 @@ public class TestManagedKeyDataCache {
       // ACTIVE keys are automatically added to activeKeysCache when loaded
       // via getEntry, so getActiveEntry will find them there and won't call the provider
       verify(testProvider, never()).getManagedKey(any(), any(String.class));
-      cache.invalidateAll();
+      cache.clearCache();
       assertEquals(0, cache.getActiveCacheEntryCount());
     }
 
@@ -447,7 +447,7 @@ public class TestManagedKeyDataCache {
     @Test
     public void testActiveKeysCacheUsesKeymetaAccessorWhenGenericCacheEmpty() throws Exception {
       // Ensure generic cache is empty
-      cache.invalidateAll();
+      cache.clearCache();
 
       // Mock the keymetaAccessor to return a key
       ManagedKeyData key = testProvider.getManagedKey(CUST_ID, KEY_SPACE_GLOBAL);
