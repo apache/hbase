@@ -107,11 +107,10 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
 
   @Override
   public void ejectManagedKeyDataCacheEntry(byte[] keyCustodian, String keyNamespace,
-    byte[] keyMetadataHash) throws IOException {
+    String keyMetadata) throws IOException {
     assertKeyManagementEnabled();
     if (!(getServer() instanceof MasterServices)) {
-      throw new IOException(
-        "ejectManagedKeyDataCacheEntry can only be called on master");
+      throw new IOException("ejectManagedKeyDataCacheEntry can only be called on master");
     }
     MasterServices master = (MasterServices) getServer();
 
@@ -120,7 +119,7 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
     LOG.info("Ejecting managed key data cache entry on all region servers");
     try {
       FutureUtils.get(getAsyncAdmin(master).ejectManagedKeyDataCacheEntryOnAllServers(regionServers,
-        keyCustodian, keyNamespace, keyMetadataHash));
+        keyCustodian, keyNamespace, keyMetadata));
     } catch (Exception e) {
       throw new IOException(e);
     }

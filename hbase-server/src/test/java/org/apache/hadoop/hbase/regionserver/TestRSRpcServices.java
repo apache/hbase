@@ -230,8 +230,8 @@ public class TestRSRpcServices {
     when(mockServer.getFileSystem()).thenReturn(mockFs);
     when(mockServer.getKeyManagementService()).thenReturn(mockKeyService);
     when(mockKeyService.getManagedKeyDataCache()).thenReturn(mockCache);
-    // Mock the ejectKeyFromActiveKeysCache to return true
-    when(mockCache.ejectKeyFromActiveKeysCache(any(), any(), any())).thenReturn(true);
+    // Mock the ejectKey to return true
+    when(mockCache.ejectKey(any(), any(), any())).thenReturn(true);
 
     // Create RSRpcServices
     RSRpcServices rpcServices = new RSRpcServices(mockServer);
@@ -239,12 +239,12 @@ public class TestRSRpcServices {
     // Create request
     byte[] keyCustodian = Bytes.toBytes("testCustodian");
     String keyNamespace = "testNamespace";
-    byte[] keyMetadataHash = Bytes.toBytes("testHash");
+    String keyMetadata = "testMetadata";
 
     ManagedKeyEntryRequest request = ManagedKeyEntryRequest.newBuilder()
       .setKeyCustNs(ManagedKeyRequest.newBuilder().setKeyCust(ByteString.copyFrom(keyCustodian))
         .setKeyNamespace(keyNamespace).build())
-      .setKeyMetadataHash(ByteString.copyFrom(keyMetadataHash)).build();
+      .setKeyMetadata(keyMetadata).build();
 
     RpcController controller = mock(RpcController.class);
 
@@ -255,8 +255,8 @@ public class TestRSRpcServices {
     assertNotNull("Response should not be null", response);
     assertTrue("Response should indicate key was ejected", response.getBoolMsg());
 
-    // Verify that ejectKeyFromActiveKeysCache was called on the cache
-    verify(mockCache).ejectKeyFromActiveKeysCache(keyCustodian, keyNamespace, keyMetadataHash);
+    // Verify that ejectKey was called on the cache
+    verify(mockCache).ejectKey(keyCustodian, keyNamespace, keyMetadata);
 
     LOG.info("ejectManagedKeyDataCacheEntry test completed successfully");
   }
@@ -284,12 +284,12 @@ public class TestRSRpcServices {
     // Create request
     byte[] keyCustodian = Bytes.toBytes("testCustodian");
     String keyNamespace = "testNamespace";
-    byte[] keyMetadataHash = Bytes.toBytes("testHash");
+    String keyMetadata = "testMetadata";
 
     ManagedKeyEntryRequest request = ManagedKeyEntryRequest.newBuilder()
       .setKeyCustNs(ManagedKeyRequest.newBuilder().setKeyCust(ByteString.copyFrom(keyCustodian))
         .setKeyNamespace(keyNamespace).build())
-      .setKeyMetadataHash(ByteString.copyFrom(keyMetadataHash)).build();
+      .setKeyMetadata(keyMetadata).build();
 
     RpcController controller = mock(RpcController.class);
 

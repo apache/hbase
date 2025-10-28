@@ -190,24 +190,34 @@ public class ManagedKeyDataCache extends KeyManagementBase {
   }
 
   /**
-   * Eject the key identified by the given custodian, namespace and metadata hash from the active
-   * keys cache.
-   * @param keyCust         the key custodian
-   * @param keyNamespace    the key namespace
-   * @param keyMetadataHash the hash of the key metadata
+   * Eject the key identified by the given custodian, namespace and metadata from both the active
+   * keys cache and the generic cache.
+   * @param keyCust      the key custodian
+   * @param keyNamespace the key namespace
+   * @param keyMetadata  the key metadata
+   * @return true if the key was ejected from either cache, false otherwise
    */
-  public boolean ejectKeyFromActiveKeysCache(byte[] keyCust, String keyNamespace,
-    byte[] keyMetadataHash) {
+  public boolean ejectKey(byte[] keyCust, String keyNamespace, String keyMetadata) {
     ActiveKeysCacheKey cacheKey = new ActiveKeysCacheKey(keyCust, keyNamespace);
-    AtomicBoolean ejected = new AtomicBoolean(false);
+    AtomicBoolean ejectedFromActiveCache = new AtomicBoolean(false);
+    AtomicBoolean ejectedFromGenericCache = new AtomicBoolean(false);
+
+    // Try to eject from active keys cache by matching metadata
     activeKeysCache.asMap().computeIfPresent(cacheKey, (key, value) -> {
-      if (Bytes.equals(value.getKeyMetadataHash(), keyMetadataHash)) {
-        ejected.set(true);
+      if (value.getKeyMetadata().equals(keyMetadata)) {
+        ejectedFromActiveCache.set(true);
         return null;
       }
       return value;
     });
-    return ejected.get();
+
+    // Also remove from generic cache by metadata
+    ManagedKeyData removed = cacheByMetadata.asMap().remove(keyMetadata);
+    if (removed != null) {
+      ejectedFromGenericCache.set(true);
+    }
+
+    return ejectedFromActiveCache.get() || ejectedFromGenericCache.get();
   }
 
   /**

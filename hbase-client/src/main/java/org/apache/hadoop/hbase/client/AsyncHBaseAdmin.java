@@ -693,10 +693,9 @@ class AsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<Void> ejectManagedKeyDataCacheEntryOnAllServers(
-    Set<ServerName> regionServers, byte[] keyCustodian, String keyNamespace,
-    byte[] keyMetadataHash) {
+    Set<ServerName> regionServers, byte[] keyCustodian, String keyNamespace, String keyMetadata) {
     return wrap(rawAdmin.ejectManagedKeyDataCacheEntryOnAllServers(regionServers, keyCustodian,
-      keyNamespace, keyMetadataHash));
+      keyNamespace, keyMetadata));
   }
 
   @Override

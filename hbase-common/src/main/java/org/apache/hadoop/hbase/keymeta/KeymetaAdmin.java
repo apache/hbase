@@ -61,13 +61,13 @@ public interface KeymetaAdmin {
 
   /**
    * Eject a specific managed key entry from the managed key data cache on all region servers.
-   * @param keyCustodian    the key custodian
-   * @param keyNamespace    the key namespace
-   * @param keyMetadataHash the hash of the key metadata
+   * @param keyCustodian the key custodian
+   * @param keyNamespace the key namespace
+   * @param keyMetadata  the key metadata
    * @throws IOException if an error occurs while ejecting the key
    */
-  void ejectManagedKeyDataCacheEntry(byte[] keyCustodian, String keyNamespace,
-    byte[] keyMetadataHash) throws IOException;
+  void ejectManagedKeyDataCacheEntry(byte[] keyCustodian, String keyNamespace, String keyMetadata)
+    throws IOException;
 
   /**
    * Clear all entries in the managed key data cache on all region servers.

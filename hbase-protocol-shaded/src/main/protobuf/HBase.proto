@@ -305,7 +305,7 @@ message ManagedKeyRequest {
 
 message ManagedKeyEntryRequest {
   required ManagedKeyRequest key_cust_ns = 1;
-  required bytes key_metadata_hash = 2;
+  required string key_metadata = 2;
 }
 
 enum ManagedKeyState {

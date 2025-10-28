@@ -26,6 +26,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -90,6 +91,7 @@ import org.apache.hadoop.hbase.exceptions.ScannerResetException;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.PriorityFunction;
@@ -4099,18 +4101,20 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
       requestCount.increment();
       byte[] keyCustodian = request.getKeyCustNs().getKeyCust().toByteArray();
       String keyNamespace = request.getKeyCustNs().getKeyNamespace();
-      byte[] keyMetadataHash = request.getKeyMetadataHash().toByteArray();
+      String keyMetadata = request.getKeyMetadata();
       if (LOG.isInfoEnabled()) {
-        String keyCustodianEncoded = java.util.Base64.getEncoder().encodeToString(keyCustodian);
+        String keyCustodianEncoded = Base64.getEncoder().encodeToString(keyCustodian);
+        byte[] keyMetadataHashBytes = ManagedKeyData.constructMetadataHash(keyMetadata);
         String keyMetadataHashEncoded =
-          java.util.Base64.getEncoder().encodeToString(keyMetadataHash);
+          Base64.getEncoder().encodeToString(keyMetadataHashBytes);
         LOG.info(
           "Received EjectManagedKeyDataCacheEntry request for key custodian: {}, namespace: {}, "
             + "metadata hash: {}",
           keyCustodianEncoded, keyNamespace, keyMetadataHashEncoded);
       }
-      boolean ejected = server.getKeyManagementService().getManagedKeyDataCache()
-        .ejectKeyFromActiveKeysCache(keyCustodian, keyNamespace, keyMetadataHash);
+      boolean ejected =
+        server.getKeyManagementService().getManagedKeyDataCache().ejectKey(keyCustodian,
+          keyNamespace, keyMetadata);
       return BooleanMsg.newBuilder().setBoolMsg(ejected).build();
     } catch (IOException ie) {
       LOG.error("Failed to eject managed key data cache entry", ie);

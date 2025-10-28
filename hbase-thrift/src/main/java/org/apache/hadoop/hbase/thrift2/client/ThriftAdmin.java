@@ -1385,7 +1385,7 @@ public class ThriftAdmin implements Admin {
 
   @Override
   public void ejectManagedKeyDataCacheEntryOnAllServers(Set<ServerName> regionServers,
-    byte[] keyCustodian, String keyNamespace, byte[] keyMetadataHash) throws IOException {
+    byte[] keyCustodian, String keyNamespace, String keyMetadata) throws IOException {
     throw new NotImplementedException(
       "ejectManagedKeyDataCacheEntryOnAllServers not supported in ThriftAdmin");
   }

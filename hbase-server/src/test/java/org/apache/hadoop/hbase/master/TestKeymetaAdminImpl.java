@@ -451,11 +451,11 @@ public class TestKeymetaAdminImpl {
     public void testEjectManagedKeyDataCacheEntryNotOnMaster() throws Exception {
       byte[] keyCustodian = Bytes.toBytes("testCustodian");
       String keyNamespace = "testNamespace";
-      byte[] keyMetadataHash = Bytes.toBytes("testHash");
+      String keyMetadata = "testMetadata";
 
       assertNotOnMasterThrowsException(admin -> {
         try {
-          admin.ejectManagedKeyDataCacheEntry(keyCustodian, keyNamespace, keyMetadataHash);
+          admin.ejectManagedKeyDataCacheEntry(keyCustodian, keyNamespace, keyMetadata);
         } catch (IOException e) {
           throw new RuntimeException(e);
         }
@@ -488,11 +488,11 @@ public class TestKeymetaAdminImpl {
     public void testEjectManagedKeyDataCacheEntryWhenDisabled() throws Exception {
       byte[] keyCustodian = Bytes.toBytes("testCustodian");
       String keyNamespace = "testNamespace";
-      byte[] keyMetadataHash = Bytes.toBytes("testHash");
+      String keyMetadata = "testMetadata";
 
       assertDisabledThrowsException(admin -> {
         try {
-          admin.ejectManagedKeyDataCacheEntry(keyCustodian, keyNamespace, keyMetadataHash);
+          admin.ejectManagedKeyDataCacheEntry(keyCustodian, keyNamespace, keyMetadata);
         } catch (IOException e) {
           throw new RuntimeException(e);
         }
@@ -518,7 +518,7 @@ public class TestKeymetaAdminImpl {
     public void testEjectManagedKeyDataCacheEntry() throws Exception {
       byte[] keyCustodian = Bytes.toBytes("testCustodian");
       String keyNamespace = "testNamespace";
-      byte[] keyMetadataHash = Bytes.toBytes("testHash");
+      String keyMetadata = "testMetadata";
 
       when(mockAsyncAdmin.ejectManagedKeyDataCacheEntryOnAllServers(any(), any(), any(), any()))
         .thenReturn(CompletableFuture.completedFuture(null));
@@ -526,7 +526,7 @@ public class TestKeymetaAdminImpl {
       KeymetaAdminImplForTest admin = new KeymetaAdminImplForTest(mockServer, keymetaAccessor);
 
       // Call the method
-      admin.ejectManagedKeyDataCacheEntry(keyCustodian, keyNamespace, keyMetadataHash);
+      admin.ejectManagedKeyDataCacheEntry(keyCustodian, keyNamespace, keyMetadata);
 
       // Verify the AsyncAdmin method was called
       verify(mockAsyncAdmin).ejectManagedKeyDataCacheEntryOnAllServers(any(), any(), any(), any());
@@ -539,7 +539,7 @@ public class TestKeymetaAdminImpl {
     public void testEjectManagedKeyDataCacheEntryWithFailure() throws Exception {
       byte[] keyCustodian = Bytes.toBytes("testCustodian");
       String keyNamespace = "testNamespace";
-      byte[] keyMetadataHash = Bytes.toBytes("testHash");
+      String keyMetadata = "testMetadata";
 
       CompletableFuture<Void> failedFuture = new CompletableFuture<>();
       failedFuture.completeExceptionally(new IOException("eject failed"));
@@ -549,8 +549,8 @@ public class TestKeymetaAdminImpl {
       KeymetaAdminImplForTest admin = new KeymetaAdminImplForTest(mockServer, keymetaAccessor);
 
       // Call the method and expect IOException
-      IOException ex = assertThrows(IOException.class, () -> admin
-        .ejectManagedKeyDataCacheEntry(keyCustodian, keyNamespace, keyMetadataHash));
+      IOException ex = assertThrows(IOException.class,
+        () -> admin.ejectManagedKeyDataCacheEntry(keyCustodian, keyNamespace, keyMetadata));
 
       assertTrue(ex.getMessage().contains("eject failed"));
       verify(mockAsyncAdmin).ejectManagedKeyDataCacheEntryOnAllServers(any(), any(), any(), any());

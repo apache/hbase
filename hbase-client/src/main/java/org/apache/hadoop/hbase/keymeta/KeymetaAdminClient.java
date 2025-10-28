@@ -84,7 +84,7 @@ public class KeymetaAdminClient implements KeymetaAdmin {
 
   @Override
   public void ejectManagedKeyDataCacheEntry(byte[] keyCustodian, String keyNamespace,
-    byte[] keyMetadataHash) throws IOException {
+    String keyMetadata) throws IOException {
     throw new NotImplementedException(
       "ejectManagedKeyDataCacheEntry not supported in KeymetaAdminClient");
   }
