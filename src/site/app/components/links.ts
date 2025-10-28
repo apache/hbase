@@ -137,13 +137,7 @@ export const asfLinks: LinkType[] = [
   }
 ];
 
-type DocumentationOptions =
-  | "ref"
-  | "refPdf"
-  | "userApi"
-  | "userApiTest"
-  | "devApi"
-  | "devApiTest";
+type DocumentationOptions = "ref" | "refPdf" | "userApi" | "userApiTest" | "devApi" | "devApiTest";
 
 const documentationOptionLabels: Record<DocumentationOptions, string> = {
   ref: "Reference Guide",
@@ -180,12 +174,10 @@ const docsItems: Record<string, DocumentationOptions[]> = {
   "2.6": ["userApi", "userApiTest", "devApi", "devApiTest"]
 };
 
-export const docsLinks: NestedLinkType[] = Object.keys(docsItems).map(
-  (version) => ({
-    label: `${version} Documentation`,
-    links: docsItems[version].map((option) => ({
-      label: documentationOptionLabels[option],
-      to: getDocsURL(version, option)
-    }))
-  })
-);
+export const docsLinks: NestedLinkType[] = Object.keys(docsItems).map((version) => ({
+  label: `${version} Documentation`,
+  links: docsItems[version].map((option) => ({
+    label: documentationOptionLabels[option],
+    to: getDocsURL(version, option)
+  }))
+}));

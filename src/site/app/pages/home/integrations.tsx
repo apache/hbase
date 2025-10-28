@@ -14,14 +14,9 @@ export function IntegrationsSection() {
     }
   ];
   return (
-    <section
-      id="integrations"
-      className="container mx-auto px-4 py-12 md:py-16"
-    >
+    <section id="integrations" className="container mx-auto px-4 py-12 md:py-16">
       <div className="mb-8 text-center">
-        <h2 className="text-3xl font-semibold tracking-tight">
-          Built to Integrate
-        </h2>
+        <h2 className="text-3xl font-semibold tracking-tight">Built to Integrate</h2>
         <p className="text-muted-foreground mt-2">
           Designed to fit naturally within your Hadoop-based data platform.
         </p>
@@ -32,12 +27,8 @@ export function IntegrationsSection() {
             key={item.title}
             className="border-border/60 bg-card rounded-xl border p-5 shadow-sm"
           >
-            <h3 className="text-foreground mb-2 text-lg font-semibold">
-              {item.title}
-            </h3>
-            <p className="text-muted-foreground text-sm leading-6">
-              {item.desc}
-            </p>
+            <h3 className="text-foreground mb-2 text-lg font-semibold">{item.title}</h3>
+            <p className="text-muted-foreground text-sm leading-6">{item.desc}</p>
           </div>
         ))}
       </div>

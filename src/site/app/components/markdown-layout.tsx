@@ -22,10 +22,7 @@ export function MarkdownLayout({
 }: MarkdownLayoutProps) {
   const rehypePlugins: any[] = [rehypeRaw];
   if (autoLinkHeadings) {
-    rehypePlugins.push(rehypeSlug, [
-      rehypeAutolinkHeadings,
-      { behavior: "wrap" }
-    ]);
+    rehypePlugins.push(rehypeSlug, [rehypeAutolinkHeadings, { behavior: "wrap" }]);
   }
   if (highlight) {
     // ignoreMissing avoids errors if someone writes `language-xyz` you don't ship
@@ -54,20 +51,14 @@ export function MarkdownLayout({
                 {children}
               </h3>
             ),
-            p: ({ children }) => (
-              <p className="mb-4 text-base leading-7">{children}</p>
-            ),
+            p: ({ children }) => <p className="mb-4 text-base leading-7">{children}</p>,
             a: ({ href, children }) => {
               const isExternal =
-                href?.startsWith("http") &&
-                !href?.startsWith("https://hbase.apache.org/");
+                href?.startsWith("http") && !href?.startsWith("https://hbase.apache.org/");
 
               // Check if the link contains only an image (no external icon needed)
               const hasOnlyImage = Array.isArray(children)
-                ? children.every(
-                    (child) =>
-                      child?.type === "img" || typeof child === "object"
-                  )
+                ? children.every((child) => child?.type === "img" || typeof child === "object")
                 : typeof children === "object";
 
               return isExternal ? (
@@ -90,20 +81,13 @@ export function MarkdownLayout({
                   )}
                 </a>
               ) : (
-                <Link
-                  to={href ?? "#"}
-                  className="text-primary underline-offset-4 hover:underline"
-                >
+                <Link to={href ?? "#"} className="text-primary underline-offset-4 hover:underline">
                   {children}
                 </Link>
               );
             },
-            ol: ({ children }) => (
-              <ol className="mb-4 ml-6 list-decimal space-y-2">{children}</ol>
-            ),
-            ul: ({ children }) => (
-              <ul className="mb-4 ml-6 list-disc space-y-2">{children}</ul>
-            ),
+            ol: ({ children }) => <ol className="mb-4 ml-6 list-decimal space-y-2">{children}</ol>,
+            ul: ({ children }) => <ul className="mb-4 ml-6 list-disc space-y-2">{children}</ul>,
             li: ({ children }) => <li className="leading-7">{children}</li>,
             // Keep code/pre lean so highlight.js classes (`hljs ...`) can style properly
             code: ({ children, className }) => {
@@ -116,17 +100,11 @@ export function MarkdownLayout({
                 );
               }
               return (
-                <code
-                  className={`${className} block rounded font-mono text-sm`}
-                >
-                  {children}
-                </code>
+                <code className={`${className} block rounded font-mono text-sm`}>{children}</code>
               );
             },
             pre: ({ children }) => (
-              <pre className="bg-muted mb-4 overflow-x-auto rounded-lg p-4">
-                {children}
-              </pre>
+              <pre className="bg-muted mb-4 overflow-x-auto rounded-lg p-4">{children}</pre>
             ),
             blockquote: ({ children }) => (
               <blockquote className="border-border my-6 border-l-4 pl-6 italic">
@@ -143,26 +121,18 @@ export function MarkdownLayout({
             ),
             table: ({ children }) => (
               <div className="border-border my-8 w-full overflow-x-auto rounded-lg border">
-                <table className="w-full border-collapse text-sm">
-                  {children}
-                </table>
+                <table className="w-full border-collapse text-sm">{children}</table>
               </div>
             ),
-            thead: ({ children }) => (
-              <thead className="bg-muted">{children}</thead>
-            ),
+            thead: ({ children }) => <thead className="bg-muted">{children}</thead>,
             tbody: ({ children }) => <tbody>{children}</tbody>,
             tr: ({ children }) => (
               <tr className="border-border hover:bg-muted/50 border-b transition-colors">
                 {children}
               </tr>
             ),
-            th: ({ children }) => (
-              <th className="px-4 py-3 text-left font-semibold">{children}</th>
-            ),
-            td: ({ children }) => (
-              <td className="px-4 py-3 align-top">{children}</td>
-            ),
+            th: ({ children }) => <th className="px-4 py-3 text-left font-semibold">{children}</th>,
+            td: ({ children }) => <td className="px-4 py-3 align-top">{children}</td>,
             ...customComponents
           }}
         >

@@ -16,21 +16,21 @@ export function PoweredByHBasePage() {
         </h1>
 
         <p className="text-muted-foreground mb-8 text-center text-base leading-7">
-          This page lists some institutions and projects which are using HBase.
-          To have your organization added, file a documentation JIRA or email{" "}
+          This page lists some institutions and projects which are using HBase. To have your
+          organization added, file a documentation JIRA or email{" "}
           <a
             href="mailto:dev@hbase.apache.org"
             className="text-primary underline-offset-4 hover:underline"
           >
             hbase-dev
           </a>{" "}
-          with the relevant information. If you notice out-of-date information,
-          use the same avenues to report it.
+          with the relevant information. If you notice out-of-date information, use the same avenues
+          to report it.
         </p>
 
         <p className="mb-12 text-center text-sm font-semibold">
-          These items are user-submitted and the HBase team assumes no
-          responsibility for their accuracy.
+          These items are user-submitted and the HBase team assumes no responsibility for their
+          accuracy.
         </p>
 
         <div className="space-y-4">

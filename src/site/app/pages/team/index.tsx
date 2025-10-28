@@ -13,9 +13,7 @@ export function TeamPage() {
             className="my-0 h-10 w-10 rounded-full"
           />
         ),
-        td: ({ children }) => (
-          <td className="px-4 py-3 align-middle">{children}</td>
-        )
+        td: ({ children }) => <td className="px-4 py-3 align-middle">{children}</td>
       }}
     >
       {content}

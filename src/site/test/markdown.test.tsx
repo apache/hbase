@@ -18,15 +18,9 @@ describe("MarkdownLayout", () => {
 
     renderWithProviders(<MarkdownLayout>{markdown}</MarkdownLayout>);
 
-    expect(
-      screen.getByRole("heading", { level: 1, name: "Heading 1" })
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { level: 2, name: "Heading 2" })
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { level: 3, name: "Heading 3" })
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Heading 1" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: "Heading 2" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 3, name: "Heading 3" })).toBeInTheDocument();
   });
 
   it("renders paragraphs", () => {
@@ -39,8 +33,7 @@ describe("MarkdownLayout", () => {
   });
 
   it("renders links correctly", () => {
-    const markdown =
-      "[Internal Link](/test) and [External Link](https://example.com)";
+    const markdown = "[Internal Link](/test) and [External Link](https://example.com)";
 
     renderWithProviders(<MarkdownLayout>{markdown}</MarkdownLayout>);
 
@@ -83,8 +76,7 @@ describe("MarkdownLayout", () => {
   });
 
   it("renders code blocks", () => {
-    const markdown =
-      '```javascript\nconst greeting = "Hello";\nconsole.log(greeting);\n```';
+    const markdown = '```javascript\nconst greeting = "Hello";\nconsole.log(greeting);\n```';
 
     renderWithProviders(<MarkdownLayout>{markdown}</MarkdownLayout>);
 

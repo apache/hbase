@@ -22,9 +22,7 @@ export function FeaturesSection() {
   return (
     <section id="features" className="container mx-auto px-4 py-12 md:py-16">
       <div className="mb-8 text-center">
-        <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">
-          Why HBase
-        </h2>
+        <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">Why HBase</h2>
         <p className="text-muted-foreground mt-2">
           Linearly scalable, consistent, and proven for large-scale workloads.
         </p>
