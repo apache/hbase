@@ -196,7 +196,7 @@ class AsyncBufferedMutatorImpl implements AsyncBufferedMutator {
     try {
       if (this.mutations.isEmpty() && periodicFlushTimeoutNs > 0) {
         periodicFlushTask = periodicalFlushTimer.newTimeout(timeout -> {
-          boolean shouldFlush = false;
+          Batch flushBatch = null;
           lock.lock();
           try {
             // confirm that we are still valid, if there is already an internalFlush call before us,
@@ -205,13 +205,13 @@ class AsyncBufferedMutatorImpl implements AsyncBufferedMutator {
             // are equal.
             if (timeout == periodicFlushTask) {
               periodicFlushTask = null;
-              shouldFlush = true;
+              flushBatch = drainBatch(); // Drains under lock
             }
           } finally {
             lock.unlock();
           }
-          if (shouldFlush) {
-            internalFlush();
+          if (flushBatch != null) {
+            sendBatch(flushBatch); // Sends outside of lock
           }
         }, periodicFlushTimeoutNs, TimeUnit.NANOSECONDS);
       }
