@@ -27,9 +27,7 @@ export function OtherResourcesPage() {
       {/* Books Section */}
       {data.books && data.books.length > 0 && (
         <div className="mb-16">
-          <h2 className="mb-6 text-3xl font-semibold tracking-tight md:text-4xl">
-            Books
-          </h2>
+          <h2 className="mb-6 text-3xl font-semibold tracking-tight md:text-4xl">Books</h2>
           <div className="space-y-4">
             {data.books.map((book, index) => (
               <div
@@ -51,32 +49,22 @@ export function OtherResourcesPage() {
                       <ExternalLink className="size-4 opacity-0 transition-opacity group-hover:opacity-100" />
                     </a>
                     {book.subtitle && (
-                      <p className="text-muted-foreground italic">
-                        {book.subtitle}
-                      </p>
+                      <p className="text-muted-foreground italic">{book.subtitle}</p>
                     )}
                   </div>
                 </div>
                 <div className="text-muted-foreground grid grid-cols-1 gap-3 px-5 py-4 text-sm sm:grid-cols-2">
                   <div>
-                    <span className="text-foreground font-medium">Author:</span>{" "}
-                    {book.author}
+                    <span className="text-foreground font-medium">Author:</span> {book.author}
                   </div>
                   <div>
-                    <span className="text-foreground font-medium">
-                      Publisher:
-                    </span>{" "}
-                    {book.publisher}
+                    <span className="text-foreground font-medium">Publisher:</span> {book.publisher}
                   </div>
                   <div>
-                    <span className="text-foreground font-medium">
-                      Released:
-                    </span>{" "}
-                    {book.released}
+                    <span className="text-foreground font-medium">Released:</span> {book.released}
                   </div>
                   <div>
-                    <span className="text-foreground font-medium">Pages:</span>{" "}
-                    {book.pages}
+                    <span className="text-foreground font-medium">Pages:</span> {book.pages}
                   </div>
                 </div>
               </div>

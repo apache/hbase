@@ -20,15 +20,10 @@ export function GettingStartedSection() {
     }
   ];
   return (
-    <section
-      id="getting-started"
-      className="border-border/60 bg-muted/30 border-y"
-    >
+    <section id="getting-started" className="border-border/60 bg-muted/30 border-y">
       <div className="container mx-auto px-4 py-12 md:py-16">
         <div className="mb-8 text-center">
-          <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">
-            Getting Started
-          </h2>
+          <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">Getting Started</h2>
           <p className="text-muted-foreground mt-2">
             From download to production in a few simple steps.
           </p>
@@ -39,12 +34,8 @@ export function GettingStartedSection() {
               key={s.title}
               className="border-border/60 bg-card flex flex-col rounded-xl border p-5 shadow-sm"
             >
-              <h3 className="text-foreground text-lg font-semibold">
-                {s.title}
-              </h3>
-              <p className="text-muted-foreground mt-1 text-sm leading-6">
-                {s.desc}
-              </p>
+              <h3 className="text-foreground text-lg font-semibold">{s.title}</h3>
+              <p className="text-muted-foreground mt-1 text-sm leading-6">{s.desc}</p>
               <div className="mt-auto">
                 <Button asChild size="sm" variant="link" className="p-0">
                   <Link to={s.to}>Learn more →</Link>

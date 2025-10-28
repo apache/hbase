@@ -6,8 +6,7 @@ export function meta({}: Route.MetaArgs) {
     { title: "Code of Conduct - Apache HBase" },
     {
       name: "description",
-      content:
-        "Code of Conduct and Diversity Statement for the Apache HBase project community."
+      content: "Code of Conduct and Diversity Statement for the Apache HBase project community."
     }
   ];
 }

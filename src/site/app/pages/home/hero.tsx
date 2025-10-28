@@ -25,8 +25,7 @@ export function Hero() {
             The Hadoop Database
           </h1>
           <p className="text-muted-foreground mt-4 max-w-2xl text-lg text-pretty md:text-xl">
-            A distributed, scalable, big data store for random, realtime
-            read/write access.
+            A distributed, scalable, big data store for random, realtime read/write access.
           </p>
 
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
@@ -34,9 +33,7 @@ export function Hero() {
               <Link to="/downloads">Download HBase</Link>
             </Button>
             <Button asChild size="lg" variant="outline">
-              <Link to="https://hbase.apache.org/book.html">
-                Read Documentation
-              </Link>
+              <Link to="https://hbase.apache.org/book.html">Read Documentation</Link>
             </Button>
           </div>
         </div>

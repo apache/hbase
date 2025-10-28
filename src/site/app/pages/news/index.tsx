@@ -18,9 +18,7 @@ export function NewsPage() {
 
       {/* Apache Event Banner */}
       <div className="not-prose mb-12 text-center">
-        <p className="text-muted-foreground mb-2 font-semibold">
-          The next Apache Event 👇
-        </p>
+        <p className="text-muted-foreground mb-2 font-semibold">The next Apache Event 👇</p>
         <a
           href="https://www.apache.org/events/current-event.html"
           target="_blank"
@@ -72,9 +70,7 @@ export function NewsPage() {
                   )}
                 </div>
                 {event.location && (
-                  <div className="text-muted-foreground text-sm">
-                    {event.location}
-                  </div>
+                  <div className="text-muted-foreground text-sm">{event.location}</div>
                 )}
               </div>
             </div>
