@@ -14,6 +14,7 @@ The official website for Apache HBase, built with modern web technologies to pro
   - [Getting Started](#getting-started)
   - [Development Workflow](#development-workflow)
   - [Building for Production](#building-for-production)
+  - [Maven Integration](#maven-integration)
   - [Deployment](#deployment)
   - [Troubleshooting](#troubleshooting)
 
@@ -38,9 +39,9 @@ Edit these files with any text editor, then run `npm run build` to regenerate th
 
 Before you begin, ensure you have the following installed:
 
-- **Node.js version 22** - JavaScript runtime (like the JVM for Java)
+- **Node.js version 20.19+ or 22.12+** - JavaScript runtime (like the JVM for Java)
   - Download from [nodejs.org](https://nodejs.org/)
-  - Verify installation: `node --version` (should show v22.x.x)
+  - Verify installation: `node --version` (should show v20.19+ or v22.12+)
   
 - **NPM** - Node Package Manager (like Maven for Java)
   - Comes bundled with Node.js
@@ -326,6 +327,174 @@ build/
 ```
 
 The `build/client/` directory contains everything needed to deploy the website to any static file host.
+
+### Maven Integration
+
+The website is integrated with the Apache HBase Maven build system using the `frontend-maven-plugin`. This allows the website to be built as part of the main HBase build or separately using Maven commands.
+
+#### What Gets Executed
+
+When you run the Maven build, it automatically:
+
+1. **Installs Node.js v22.20.0 and npm 10.5.0** (if not already available)
+   - Installed to `target/` directory
+   - Does not affect your system Node/npm installation
+
+2. **Runs `npm install`** to install all dependencies
+   - Reads from `package.json`
+   - Installs to `node_modules/`
+
+3. **Runs `npm run ci`** which executes:
+   - `npm run lint` - ESLint code quality checks
+   - `npm run typecheck` - TypeScript type checking
+   - `npm run test:run` - Vitest unit tests
+   - `npm run build` - Production build
+
+4. **Build Output**: Generated files are in `build/` directory
+
+#### Maven Commands
+
+**Build Website with Full HBase Build:**
+```bash
+# From HBase root directory
+mvn clean install
+```
+
+The website will be built automatically as part of the full build.
+
+**Build Website Only:**
+```bash
+# Option 1: From HBase root directory
+mvn clean install -pl src/site
+
+# Option 2: From src/site directory
+cd src/site
+mvn clean install
+```
+
+**Skip Website Build:**
+
+If you want to build HBase but skip the website:
+
+```bash
+# From HBase root directory
+mvn clean install -DskipSite
+```
+
+**Validate Configuration Only:**
+
+To verify the Maven configuration without building:
+
+```bash
+cd src/site
+mvn validate
+```
+
+#### Maven Lifecycle Phases
+
+The frontend-maven-plugin binds to these Maven phases:
+
+- **generate-resources**: Installs Node.js/npm and runs `npm install`
+- **compile**: Runs `npm run ci` (lint, typecheck, test, build)
+
+#### Build Artifacts
+
+After a successful Maven build, you'll find:
+
+```
+src/site/
+├── build/                    # Production build output
+│   ├── client/               # Static website files
+│   └── server/               # Server-side code (if applicable)
+├── node_modules/             # npm dependencies (gitignored)
+├── target/                   # Maven build directory (gitignored)
+│   └── node/                 # Installed Node.js/npm (gitignored)
+└── ...
+```
+
+#### Integration with CI/CD
+
+The Maven configuration ensures consistent builds across different environments:
+
+- **Local Development**: Developers can build with `mvn clean install`
+- **CI/CD Pipelines**: Automated builds work out-of-the-box with Maven
+- **No Manual Steps**: No need to manually run `npm install` or `npm run ci`
+
+#### Maven Troubleshooting
+
+**Build Fails During npm install:**
+
+```bash
+# Clean and rebuild
+cd src/site
+mvn clean install
+```
+
+**Build Fails During npm run ci:**
+
+This usually indicates:
+- ESLint errors (code quality issues)
+- TypeScript type errors
+- Failing unit tests
+- Build configuration issues
+
+To diagnose, run the commands directly:
+```bash
+cd src/site
+npm install
+npm run lint      # Check linting
+npm run typecheck # Check types
+npm run test:run  # Check tests
+npm run build     # Check build
+```
+
+Fix any errors and try the Maven build again.
+
+**Clean Everything:**
+
+To completely reset the build environment:
+
+```bash
+cd src/site
+rm -rf node_modules/ build/ target/ .react-router/
+mvn clean install
+```
+
+#### Configuration Files
+
+- **pom.xml**: Maven configuration using frontend-maven-plugin
+- **package.json**: npm scripts and dependencies
+- **.gitignore**: Excludes `target/`, `node/`, `node_modules/`, `build/`
+
+#### Benefits
+
+✅ **Consistent Builds**: Same build process everywhere (local, CI, production)  
+✅ **No Manual Steps**: Maven handles everything automatically  
+✅ **Isolated Node.js**: Doesn't interfere with system Node installation  
+✅ **Skip Option**: Can skip website build with `-DskipSite`  
+✅ **Standalone**: Can build website separately with `-pl src/site`  
+✅ **Quality Checks**: Runs linting, type checking, and tests before building  
+
+#### For HBase Developers
+
+If you're working on HBase but not the website:
+
+```bash
+# Skip website build to save time
+mvn clean install -DskipSite
+```
+
+If you're working on the website:
+
+```bash
+# Use npm for faster development iteration
+cd src/site
+npm install
+npm run dev      # Start dev server with hot reload
+
+# Or use Maven for full CI pipeline
+mvn clean install
+```
 
 ### Deployment
 

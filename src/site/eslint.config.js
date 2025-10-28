@@ -54,7 +54,7 @@ export default defineConfig([
       "react/prop-types": "off",
       "react/no-unescaped-entities": "off",
 
-      "prettier/prettier": "warn",
+      "prettier/prettier": "error",
     },
   },
 ]);
