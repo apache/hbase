@@ -59,8 +59,8 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
     }
 
     // Retrieve a single key from provider
-    ManagedKeyData retrievedKey =
-      KeyManagementUtils.retrieveActiveKey(this, encodedCust, keyCust, keyNamespace, null);
+    ManagedKeyData retrievedKey = KeyManagementUtils.retrieveActiveKey(getKeyProvider(), this,
+      encodedCust, keyCust, keyNamespace, null);
     return retrievedKey;
   }
 

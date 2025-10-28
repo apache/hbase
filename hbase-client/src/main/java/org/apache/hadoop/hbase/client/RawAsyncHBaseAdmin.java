@@ -150,7 +150,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerR
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BooleanMsg;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.EmptyMsg;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.LastHighestWalFilenum;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyEntryRequest;
@@ -4698,13 +4697,12 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     CompletableFuture<Void> future = new CompletableFuture<>();
     // Create the request once instead of repeatedly for each server
     ManagedKeyEntryRequest request = ManagedKeyEntryRequest.newBuilder()
-      .setKeyCustNs(ManagedKeyRequest.newBuilder()
-        .setKeyCust(ByteString.copyFrom(keyCustodian)).setKeyNamespace(keyNamespace)
-        .build())
+      .setKeyCustNs(ManagedKeyRequest.newBuilder().setKeyCust(ByteString.copyFrom(keyCustodian))
+        .setKeyNamespace(keyNamespace).build())
       .setKeyMetadataHash(ByteString.copyFrom(keyMetadataHash)).build();
-    List<CompletableFuture<Void>> futures = regionServers.stream()
-      .map(serverName -> ejectManagedKeyDataCacheEntry(serverName, request))
-      .collect(Collectors.toList());
+    List<CompletableFuture<Void>> futures =
+      regionServers.stream().map(serverName -> ejectManagedKeyDataCacheEntry(serverName, request))
+        .collect(Collectors.toList());
     addListener(CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0])),
       (result, err) -> {
         if (err != null) {
@@ -4719,15 +4717,16 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   private CompletableFuture<Void> ejectManagedKeyDataCacheEntry(ServerName serverName,
     ManagedKeyEntryRequest request) {
     return this.<Void> newAdminCaller()
-      .action((controller, stub) -> this.<ManagedKeyEntryRequest, HBaseProtos.BooleanMsg, Void> adminCall(
-        controller, stub, request,
-        (s, c, req, done) -> s.ejectManagedKeyDataCacheEntry(controller, req, done), resp -> null))
+      .action((controller, stub) -> this.<ManagedKeyEntryRequest, HBaseProtos.BooleanMsg,
+        Void> adminCall(controller, stub, request,
+          (s, c, req, done) -> s.ejectManagedKeyDataCacheEntry(controller, req, done),
+          resp -> null))
       .serverName(serverName).call();
   }
 
   @Override
-  public CompletableFuture<Void> clearManagedKeyDataCacheOnAllServers(
-    Set<ServerName> regionServers) {
+  public CompletableFuture<Void>
+    clearManagedKeyDataCacheOnAllServers(Set<ServerName> regionServers) {
     CompletableFuture<Void> future = new CompletableFuture<>();
     List<CompletableFuture<Void>> futures =
       regionServers.stream().map(this::clearManagedKeyDataCache).collect(Collectors.toList());

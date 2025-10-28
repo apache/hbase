@@ -499,7 +499,8 @@ public class TestKeymetaAdminImpl {
       KeymetaAdminImplForTest admin = new KeymetaAdminImplForTest(mockServer, keymetaAccessor);
 
       // Call the method and expect IOException
-      IOException ex = assertThrows(IOException.class, () -> admin.clearManagedKeyDataCacheOnAllServers());
+      IOException ex =
+        assertThrows(IOException.class, () -> admin.clearManagedKeyDataCacheOnAllServers());
 
       assertTrue(ex.getMessage().contains("clear failed"));
       verify(mockAsyncAdmin).clearManagedKeyDataCacheOnAllServers(any());

@@ -25,10 +25,6 @@ import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyState;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ManagedKeysProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.GetManagedKeysResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyResponse;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
@@ -36,6 +32,10 @@ import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.EmptyMsg;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.GetManagedKeysResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ManagedKeysProtos;
 
 @InterfaceAudience.Public
 public class KeymetaAdminClient implements KeymetaAdmin {
@@ -50,9 +50,8 @@ public class KeymetaAdminClient implements KeymetaAdmin {
   public ManagedKeyData enableKeyManagement(byte[] keyCust, String keyNamespace)
     throws IOException {
     try {
-      ManagedKeyResponse response =
-        stub.enableKeyManagement(null, ManagedKeyRequest.newBuilder()
-          .setKeyCust(ByteString.copyFrom(keyCust)).setKeyNamespace(keyNamespace).build());
+      ManagedKeyResponse response = stub.enableKeyManagement(null, ManagedKeyRequest.newBuilder()
+        .setKeyCust(ByteString.copyFrom(keyCust)).setKeyNamespace(keyNamespace).build());
       return generateKeyData(response);
     } catch (ServiceException e) {
       throw ProtobufUtil.handleRemoteException(e);
@@ -96,8 +95,7 @@ public class KeymetaAdminClient implements KeymetaAdmin {
       "clearManagedKeyDataCacheOnAllServers not supported in KeymetaAdminClient");
   }
 
-  private static List<ManagedKeyData>
-    generateKeyDataList(GetManagedKeysResponse stateResponse) {
+  private static List<ManagedKeyData> generateKeyDataList(GetManagedKeysResponse stateResponse) {
     List<ManagedKeyData> keyStates = new ArrayList<>();
     for (ManagedKeyResponse state : stateResponse.getStateList()) {
       keyStates.add(generateKeyData(state));

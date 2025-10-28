@@ -4102,11 +4102,12 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
       byte[] keyMetadataHash = request.getKeyMetadataHash().toByteArray();
       if (LOG.isInfoEnabled()) {
         String keyCustodianEncoded = java.util.Base64.getEncoder().encodeToString(keyCustodian);
-        String keyMetadataHashEncoded = java.util.Base64.getEncoder().encodeToString(keyMetadataHash);
+        String keyMetadataHashEncoded =
+          java.util.Base64.getEncoder().encodeToString(keyMetadataHash);
         LOG.info(
-            "Received EjectManagedKeyDataCacheEntry request for key custodian: {}, namespace: {}, "
-                + "metadata hash: {}",
-            keyCustodianEncoded, keyNamespace, keyMetadataHashEncoded);
+          "Received EjectManagedKeyDataCacheEntry request for key custodian: {}, namespace: {}, "
+            + "metadata hash: {}",
+          keyCustodianEncoded, keyNamespace, keyMetadataHashEncoded);
       }
       boolean ejected = server.getKeyManagementService().getManagedKeyDataCache()
         .ejectKeyFromActiveKeysCache(keyCustodian, keyNamespace, keyMetadataHash);

@@ -32,21 +32,21 @@ public class KeyManagementUtils {
   /**
    * Utility function to retrieves a managed key from the key provider. If an existing key is
    * provided and the retrieved key is the same as the existing key, it will be ignored.
+   * @param provider          the managed key provider
+   * @param accessor          the accessor to use to persist the key. If null, the key will not be
+   *                          persisted.
    * @param encKeyCust        the encoded key custodian
    * @param key_cust          the key custodian
    * @param keyNamespace      the key namespace
-   * @param accessor          the accessor to use to persist the key. If null, the key will not be
-   *                          persisted.
    * @param existingActiveKey the existing key, typically the active key already retrieved from the
    *                          key provider, can be null.
    * @return the retrieved key, or null if no key could be retrieved
    * @throws IOException  if an error occurs
    * @throws KeyException if an error occurs
    */
-  public static ManagedKeyData retrieveActiveKey(KeymetaTableAccessor accessor, String encKeyCust,
-    byte[] key_cust, String keyNamespace, ManagedKeyData existingActiveKey)
-    throws IOException, KeyException {
-    ManagedKeyProvider provider = accessor.getKeyProvider();
+  public static ManagedKeyData retrieveActiveKey(ManagedKeyProvider provider,
+    KeymetaTableAccessor accessor, String encKeyCust, byte[] key_cust, String keyNamespace,
+    ManagedKeyData existingActiveKey) throws IOException, KeyException {
     ManagedKeyData pbeKey = provider.getManagedKey(key_cust, keyNamespace);
     if (pbeKey == null) {
       throw new IOException("Invalid null managed key received from key provider");

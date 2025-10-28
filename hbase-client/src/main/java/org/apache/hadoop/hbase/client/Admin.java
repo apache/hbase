@@ -2679,8 +2679,8 @@ public interface Admin extends Abortable, Closeable {
    * @param keyNamespace    the key namespace
    * @param keyMetadataHash the hash of the key metadata
    */
-  void ejectManagedKeyDataCacheEntryOnAllServers(Set<ServerName> regionServers,
-    byte[] keyCustodian, String keyNamespace, byte[] keyMetadataHash) throws IOException;
+  void ejectManagedKeyDataCacheEntryOnAllServers(Set<ServerName> regionServers, byte[] keyCustodian,
+    String keyNamespace, byte[] keyMetadataHash) throws IOException;
 
   /**
    * Clear all entries in the managed key data cache on all specified region servers without having
