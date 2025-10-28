@@ -296,6 +296,56 @@ public class TestKeymetaAdminImpl {
     }
 
     /**
+     * Helper method to test that a method throws IOException when not called on master.
+     * @param adminAction the action to test, taking a KeymetaAdminImpl instance
+     * @param expectedMessageFragment the expected fragment in the error message
+     */
+    private void assertNotOnMasterThrowsException(
+      java.util.function.Consumer<KeymetaAdminImpl> adminAction, String expectedMessageFragment) {
+      // Create a non-master server mock
+      Server mockRegionServer = mock(Server.class);
+      KeyManagementService mockKeyService = mock(KeyManagementService.class);
+      when(mockRegionServer.getKeyManagementService()).thenReturn(mockKeyService);
+      when(mockKeyService.getConfiguration()).thenReturn(conf);
+      when(mockRegionServer.getConfiguration()).thenReturn(conf);
+      when(mockRegionServer.getFileSystem()).thenReturn(mockFileSystem);
+
+      KeymetaAdminImpl admin = new KeymetaAdminImpl(mockRegionServer) {
+        @Override
+        protected AsyncAdmin getAsyncAdmin(MasterServices master) {
+          throw new RuntimeException("Shouldn't be called since we are not on master");
+        }
+      };
+
+      RuntimeException runtimeEx = assertThrows(RuntimeException.class, () -> adminAction.accept(admin));
+      assertTrue(runtimeEx.getCause() instanceof IOException);
+      IOException ex = (IOException) runtimeEx.getCause();
+      assertTrue(ex.getMessage().contains(expectedMessageFragment));
+    }
+
+    /**
+     * Helper method to test that a method throws IOException when key management is disabled.
+     * @param adminAction the action to test, taking a KeymetaAdminImpl instance
+     */
+    private void assertDisabledThrowsException(
+      java.util.function.Consumer<KeymetaAdminImpl> adminAction) {
+      TEST_UTIL.getConfiguration().set(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, "false");
+
+      KeymetaAdminImpl admin = new KeymetaAdminImpl(mockServer) {
+        @Override
+        protected AsyncAdmin getAsyncAdmin(MasterServices master) {
+          throw new RuntimeException("Shouldn't be called since we are disabled");
+        }
+      };
+
+      RuntimeException runtimeEx = assertThrows(RuntimeException.class, () -> adminAction.accept(admin));
+      assertTrue(runtimeEx.getCause() instanceof IOException);
+      IOException ex = (IOException) runtimeEx.getCause();
+      assertTrue("Exception message should contain 'not enabled', but was: " + ex.getMessage(),
+        ex.getMessage().contains("not enabled"));
+    }
+
+    /**
      * Test rotateSTK when a new key is detected. Now that we can mock SystemKeyManager via
      * master.getSystemKeyManager(), we can properly test the success scenario: 1.
      * SystemKeyManager.rotateSystemKeyIfChanged() returns non-null (new key detected) 2. Master
@@ -388,127 +438,76 @@ public class TestKeymetaAdminImpl {
 
     @Test
     public void testRotateSTKNotOnMaster() throws Exception {
-      // Create a non-master server mock
-      Server mockRegionServer = mock(Server.class);
-      KeyManagementService mockKeyService = mock(KeyManagementService.class);
-      // Mock KeyManagementService - required by KeyManagementBase constructor
-      when(mockRegionServer.getKeyManagementService()).thenReturn(mockKeyService);
-      when(mockKeyService.getConfiguration()).thenReturn(conf);
-      when(mockRegionServer.getConfiguration()).thenReturn(conf);
-      when(mockRegionServer.getFileSystem()).thenReturn(mockFileSystem);
-
-      KeymetaAdminImpl admin = new KeymetaAdminImpl(mockRegionServer) {
-        @Override
-        protected AsyncAdmin getAsyncAdmin(MasterServices master) {
-          throw new RuntimeException("Shouldn't be called since we are not on master");
+      assertNotOnMasterThrowsException(admin -> {
+        try {
+          admin.rotateSTK();
+        } catch (IOException e) {
+          throw new RuntimeException(e);
         }
-      };
-
-      IOException ex = assertThrows(IOException.class, () -> admin.rotateSTK());
-      assertTrue(ex.getMessage().contains("rotateSTK can only be called on master"));
+      }, "rotateSTK can only be called on master");
     }
 
     @Test
     public void testEjectManagedKeyDataCacheEntryNotOnMaster() throws Exception {
-      // Create a non-master server mock
-      Server mockRegionServer = mock(Server.class);
-      KeyManagementService mockKeyService = mock(KeyManagementService.class);
-      // Mock KeyManagementService - required by KeyManagementBase constructor
-      when(mockRegionServer.getKeyManagementService()).thenReturn(mockKeyService);
-      when(mockKeyService.getConfiguration()).thenReturn(conf);
-      when(mockRegionServer.getConfiguration()).thenReturn(conf);
-      when(mockRegionServer.getFileSystem()).thenReturn(mockFileSystem);
-
-      KeymetaAdminImpl admin = new KeymetaAdminImpl(mockRegionServer) {
-        @Override
-        protected AsyncAdmin getAsyncAdmin(MasterServices master) {
-          throw new RuntimeException("Shouldn't be called since we are not on master");
-        }
-      };
-
       byte[] keyCustodian = Bytes.toBytes("testCustodian");
       String keyNamespace = "testNamespace";
       byte[] keyMetadataHash = Bytes.toBytes("testHash");
 
-      IOException ex = assertThrows(IOException.class,
-        () -> admin.ejectManagedKeyDataCacheEntry(keyCustodian, keyNamespace, keyMetadataHash));
-      assertTrue(
-        ex.getMessage().contains("ejectManagedKeyDataCacheEntry can only be called on master"));
+      assertNotOnMasterThrowsException(admin -> {
+        try {
+          admin.ejectManagedKeyDataCacheEntry(keyCustodian, keyNamespace, keyMetadataHash);
+        } catch (IOException e) {
+          throw new RuntimeException(e);
+        }
+      }, "ejectManagedKeyDataCacheEntry can only be called on master");
     }
 
     @Test
     public void testClearManagedKeyDataCacheNotOnMaster() throws Exception {
-      // Create a non-master server mock
-      Server mockRegionServer = mock(Server.class);
-      KeyManagementService mockKeyService = mock(KeyManagementService.class);
-      // Mock KeyManagementService - required by KeyManagementBase constructor
-      when(mockRegionServer.getKeyManagementService()).thenReturn(mockKeyService);
-      when(mockKeyService.getConfiguration()).thenReturn(conf);
-      when(mockRegionServer.getConfiguration()).thenReturn(conf);
-      when(mockRegionServer.getFileSystem()).thenReturn(mockFileSystem);
-
-      KeymetaAdminImpl admin = new KeymetaAdminImpl(mockRegionServer) {
-        @Override
-        protected AsyncAdmin getAsyncAdmin(MasterServices master) {
-          throw new RuntimeException("Shouldn't be called since we are not on master");
+      assertNotOnMasterThrowsException(admin -> {
+        try {
+          admin.clearManagedKeyDataCache();
+        } catch (IOException e) {
+          throw new RuntimeException(e);
         }
-      };
-
-      IOException ex = assertThrows(IOException.class, () -> admin.clearManagedKeyDataCache());
-      assertTrue(ex.getMessage().contains("clearManagedKeyDataCache can only be called on master"));
+      }, "clearManagedKeyDataCache can only be called on master");
     }
 
     @Test
     public void testRotateSTKWhenDisabled() throws Exception {
-      TEST_UTIL.getConfiguration().set(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, "false");
-
-      KeymetaAdminImpl admin = new KeymetaAdminImpl(mockServer) {
-        @Override
-        protected AsyncAdmin getAsyncAdmin(MasterServices master) {
-          throw new RuntimeException("Shouldn't be called since we are disabled");
+      assertDisabledThrowsException(admin -> {
+        try {
+          admin.rotateSTK();
+        } catch (IOException e) {
+          throw new RuntimeException(e);
         }
-      };
-
-      IOException ex = assertThrows(IOException.class, () -> admin.rotateSTK());
-      assertTrue("Exception message should contain 'not enabled', but was: " + ex.getMessage(),
-        ex.getMessage().contains("not enabled"));
+      });
     }
 
     @Test
     public void testEjectManagedKeyDataCacheEntryWhenDisabled() throws Exception {
-      TEST_UTIL.getConfiguration().set(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, "false");
-
-      KeymetaAdminImpl admin = new KeymetaAdminImpl(mockServer) {
-        @Override
-        protected AsyncAdmin getAsyncAdmin(MasterServices master) {
-          throw new RuntimeException("Shouldn't be called since we are disabled");
-        }
-      };
-
       byte[] keyCustodian = Bytes.toBytes("testCustodian");
       String keyNamespace = "testNamespace";
       byte[] keyMetadataHash = Bytes.toBytes("testHash");
 
-      IOException ex = assertThrows(IOException.class,
-        () -> admin.ejectManagedKeyDataCacheEntry(keyCustodian, keyNamespace, keyMetadataHash));
-      assertTrue("Exception message should contain 'not enabled', but was: " + ex.getMessage(),
-        ex.getMessage().contains("not enabled"));
+      assertDisabledThrowsException(admin -> {
+        try {
+          admin.ejectManagedKeyDataCacheEntry(keyCustodian, keyNamespace, keyMetadataHash);
+        } catch (IOException e) {
+          throw new RuntimeException(e);
+        }
+      });
     }
 
     @Test
     public void testClearManagedKeyDataCacheWhenDisabled() throws Exception {
-      TEST_UTIL.getConfiguration().set(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, "false");
-
-      KeymetaAdminImpl admin = new KeymetaAdminImpl(mockServer) {
-        @Override
-        protected AsyncAdmin getAsyncAdmin(MasterServices master) {
-          throw new RuntimeException("Shouldn't be called since we are disabled");
+      assertDisabledThrowsException(admin -> {
+        try {
+          admin.clearManagedKeyDataCache();
+        } catch (IOException e) {
+          throw new RuntimeException(e);
         }
-      };
-
-      IOException ex = assertThrows(IOException.class, () -> admin.clearManagedKeyDataCache());
-      assertTrue("Exception message should contain 'not enabled', but was: " + ex.getMessage(),
-        ex.getMessage().contains("not enabled"));
+      });
     }
 
     /**
