@@ -205,4 +205,15 @@ public class RpcThrottlingException extends HBaseIOException {
     }
     return -1;
   }
+
+  /**
+   * There is little value in an RpcThrottlingException having a stack trace, since its cause is
+   * well understood without one. When a RegionServer is under heavy load and needs to serve many
+   * RpcThrottlingExceptions, skipping fillInStackTrace() will save CPU time and allocations, both
+   * here and later when the exception must be serialized over the wire.
+   */
+  @Override
+  public synchronized Throwable fillInStackTrace() {
+    return this;
+  }
 }
