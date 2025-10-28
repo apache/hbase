@@ -371,6 +371,124 @@ public class TestManagedKeyDataCache {
       verify(testProvider, times(3)).getManagedKey(any(), any(String.class));
       assertEquals(3, cache.getActiveCacheEntryCount());
     }
+
+    @Test
+    public void testEjectKeyFromActiveKeysCache_Success() throws Exception {
+      // Load a key into the active keys cache
+      ManagedKeyData key = cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL);
+      assertNotNull(key);
+      assertEquals(1, cache.getActiveCacheEntryCount());
+
+      // Eject the key with matching metadata hash
+      boolean ejected =
+        cache.ejectKeyFromActiveKeysCache(CUST_ID, KEY_SPACE_GLOBAL, key.getKeyMetadataHash());
+      assertTrue("Key should be ejected when hash matches", ejected);
+      assertEquals(0, cache.getActiveCacheEntryCount());
+
+      // Verify the key was removed by checking it's no longer in the cache
+      // Note: We don't call getActiveEntry() again because it would reload from provider
+      clearInvocations(testProvider);
+
+      // Try to eject again - should return false since it's already gone
+      boolean ejectedAgain =
+        cache.ejectKeyFromActiveKeysCache(CUST_ID, KEY_SPACE_GLOBAL, key.getKeyMetadataHash());
+      assertFalse("Should return false when key is already ejected", ejectedAgain);
+      assertEquals(0, cache.getActiveCacheEntryCount());
+    }
+
+    @Test
+    public void testEjectKeyFromActiveKeysCache_HashMismatch() throws Exception {
+      // Load a key into the active keys cache
+      ManagedKeyData key = cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL);
+      assertNotNull(key);
+      assertEquals(1, cache.getActiveCacheEntryCount());
+
+      // Try to eject with wrong metadata hash
+      byte[] wrongHash = "wrong-hash".getBytes();
+      boolean ejected = cache.ejectKeyFromActiveKeysCache(CUST_ID, KEY_SPACE_GLOBAL, wrongHash);
+      assertFalse("Key should not be ejected when hash doesn't match", ejected);
+      assertEquals(1, cache.getActiveCacheEntryCount());
+
+      // Verify the key is still in the cache
+      assertEquals(key, cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL));
+    }
+
+    @Test
+    public void testEjectKeyFromActiveKeysCache_KeyNotPresent() throws Exception {
+      // Try to eject a key that doesn't exist in the cache
+      byte[] nonExistentHash = "non-existent-hash".getBytes();
+      boolean ejected =
+        cache.ejectKeyFromActiveKeysCache(CUST_ID, "non-existent-namespace", nonExistentHash);
+      assertFalse("Should return false when key is not present", ejected);
+      assertEquals(0, cache.getActiveCacheEntryCount());
+    }
+
+    @Test
+    public void testEjectKeyFromActiveKeysCache_MultipleKeys() throws Exception {
+      // Load multiple keys into the cache
+      ManagedKeyData key1 = cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL);
+      ManagedKeyData key2 = cache.getActiveEntry(CUST_ID, "namespace1");
+      ManagedKeyData key3 = cache.getActiveEntry(CUST_ID, "namespace2");
+      assertNotNull(key1);
+      assertNotNull(key2);
+      assertNotNull(key3);
+      assertEquals(3, cache.getActiveCacheEntryCount());
+
+      // Eject only the middle key
+      boolean ejected =
+        cache.ejectKeyFromActiveKeysCache(CUST_ID, "namespace1", key2.getKeyMetadataHash());
+      assertTrue("Key should be ejected", ejected);
+      assertEquals(2, cache.getActiveCacheEntryCount());
+
+      // Verify only key2 was ejected - key1 and key3 should still be there
+      clearInvocations(testProvider);
+      assertEquals(key1, cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL));
+      assertEquals(key3, cache.getActiveEntry(CUST_ID, "namespace2"));
+      // These getActiveEntry() calls should not trigger provider calls since keys are still cached
+      verify(testProvider, never()).getManagedKey(any(), any(String.class));
+
+      // Try to eject key2 again - should return false since it's already gone
+      boolean ejectedAgain =
+        cache.ejectKeyFromActiveKeysCache(CUST_ID, "namespace1", key2.getKeyMetadataHash());
+      assertFalse("Should return false when key is already ejected", ejectedAgain);
+      assertEquals(2, cache.getActiveCacheEntryCount());
+    }
+
+    @Test
+    public void testEjectKeyFromActiveKeysCache_DifferentCustodian() throws Exception {
+      // Load a key for one custodian
+      ManagedKeyData key = cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL);
+      assertNotNull(key);
+      assertEquals(1, cache.getActiveCacheEntryCount());
+
+      // Try to eject with a different custodian
+      byte[] differentCustodian = "different-cust".getBytes();
+      boolean ejected = cache.ejectKeyFromActiveKeysCache(differentCustodian, KEY_SPACE_GLOBAL,
+        key.getKeyMetadataHash());
+      assertFalse("Should not eject key for different custodian", ejected);
+      assertEquals(1, cache.getActiveCacheEntryCount());
+
+      // Verify the original key is still in the cache
+      assertEquals(key, cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL));
+    }
+
+    @Test
+    public void testEjectKeyFromActiveKeysCache_AfterClearCache() throws Exception {
+      // Load a key into the cache
+      ManagedKeyData key = cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL);
+      assertNotNull(key);
+      assertEquals(1, cache.getActiveCacheEntryCount());
+
+      // Clear the entire cache
+      cache.clearCache();
+      assertEquals(0, cache.getActiveCacheEntryCount());
+
+      // Try to eject the key after cache is cleared
+      boolean ejected =
+        cache.ejectKeyFromActiveKeysCache(CUST_ID, KEY_SPACE_GLOBAL, key.getKeyMetadataHash());
+      assertFalse("Should return false when cache is empty", ejected);
+      assertEquals(0, cache.getActiveCacheEntryCount());
+    }
   }
 
   @RunWith(BlockJUnit4ClassRunner.class)
