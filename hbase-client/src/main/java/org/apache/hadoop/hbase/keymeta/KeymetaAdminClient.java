@@ -83,16 +83,16 @@ public class KeymetaAdminClient implements KeymetaAdmin {
   }
 
   @Override
-  public void ejectManagedKeyDataCacheEntryOnAllServers(byte[] keyCustodian, String keyNamespace,
+  public void ejectManagedKeyDataCacheEntry(byte[] keyCustodian, String keyNamespace,
     byte[] keyMetadataHash) throws IOException {
     throw new NotImplementedException(
-      "ejectManagedKeyDataCacheEntryOnAllServers not supported in KeymetaAdminClient");
+      "ejectManagedKeyDataCacheEntry not supported in KeymetaAdminClient");
   }
 
   @Override
-  public void clearManagedKeyDataCacheOnAllServers() throws IOException {
+  public void clearManagedKeyDataCache() throws IOException {
     throw new NotImplementedException(
-      "clearManagedKeyDataCacheOnAllServers not supported in KeymetaAdminClient");
+      "clearManagedKeyDataCache not supported in KeymetaAdminClient");
   }
 
   private static List<ManagedKeyData> generateKeyDataList(GetManagedKeysResponse stateResponse) {

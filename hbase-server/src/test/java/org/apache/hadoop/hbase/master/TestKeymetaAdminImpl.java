@@ -425,7 +425,7 @@ public class TestKeymetaAdminImpl {
     }
 
     /**
-     * Test ejectManagedKeyDataCacheEntryOnAllServers API - verify it calls the AsyncAdmin method
+     * Test ejectManagedKeyDataCacheEntry API - verify it calls the AsyncAdmin method
      * with correct parameters
      */
     @Test
@@ -440,14 +440,14 @@ public class TestKeymetaAdminImpl {
       KeymetaAdminImplForTest admin = new KeymetaAdminImplForTest(mockServer, keymetaAccessor);
 
       // Call the method
-      admin.ejectManagedKeyDataCacheEntryOnAllServers(keyCustodian, keyNamespace, keyMetadataHash);
+      admin.ejectManagedKeyDataCacheEntry(keyCustodian, keyNamespace, keyMetadataHash);
 
       // Verify the AsyncAdmin method was called
       verify(mockAsyncAdmin).ejectManagedKeyDataCacheEntryOnAllServers(any(), any(), any(), any());
     }
 
     /**
-     * Test ejectManagedKeyDataCacheEntryOnAllServers when it fails
+     * Test ejectManagedKeyDataCacheEntry when it fails
      */
     @Test
     public void testEjectManagedKeyDataCacheEntryWithFailure() throws Exception {
@@ -464,14 +464,14 @@ public class TestKeymetaAdminImpl {
 
       // Call the method and expect IOException
       IOException ex = assertThrows(IOException.class, () -> admin
-        .ejectManagedKeyDataCacheEntryOnAllServers(keyCustodian, keyNamespace, keyMetadataHash));
+        .ejectManagedKeyDataCacheEntry(keyCustodian, keyNamespace, keyMetadataHash));
 
       assertTrue(ex.getMessage().contains("eject failed"));
       verify(mockAsyncAdmin).ejectManagedKeyDataCacheEntryOnAllServers(any(), any(), any(), any());
     }
 
     /**
-     * Test clearManagedKeyDataCacheOnAllServers API - verify it calls the AsyncAdmin method
+     * Test clearManagedKeyDataCache API - verify it calls the AsyncAdmin method
      */
     @Test
     public void testClearManagedKeyDataCache() throws Exception {
@@ -481,14 +481,14 @@ public class TestKeymetaAdminImpl {
       KeymetaAdminImplForTest admin = new KeymetaAdminImplForTest(mockServer, keymetaAccessor);
 
       // Call the method
-      admin.clearManagedKeyDataCacheOnAllServers();
+      admin.clearManagedKeyDataCache();
 
       // Verify the AsyncAdmin method was called
       verify(mockAsyncAdmin).clearManagedKeyDataCacheOnAllServers(any());
     }
 
     /**
-     * Test clearManagedKeyDataCacheOnAllServers when it fails
+     * Test clearManagedKeyDataCache when it fails
      */
     @Test
     public void testClearManagedKeyDataCacheWithFailure() throws Exception {
@@ -500,7 +500,7 @@ public class TestKeymetaAdminImpl {
 
       // Call the method and expect IOException
       IOException ex =
-        assertThrows(IOException.class, () -> admin.clearManagedKeyDataCacheOnAllServers());
+        assertThrows(IOException.class, () -> admin.clearManagedKeyDataCache());
 
       assertTrue(ex.getMessage().contains("clear failed"));
       verify(mockAsyncAdmin).clearManagedKeyDataCacheOnAllServers(any());

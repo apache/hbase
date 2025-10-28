@@ -66,12 +66,12 @@ public interface KeymetaAdmin {
    * @param keyMetadataHash the hash of the key metadata
    * @throws IOException if an error occurs while ejecting the key
    */
-  void ejectManagedKeyDataCacheEntryOnAllServers(byte[] keyCustodian, String keyNamespace,
+  void ejectManagedKeyDataCacheEntry(byte[] keyCustodian, String keyNamespace,
     byte[] keyMetadataHash) throws IOException;
 
   /**
    * Clear all entries in the managed key data cache on all region servers.
    * @throws IOException if an error occurs while clearing the cache
    */
-  void clearManagedKeyDataCacheOnAllServers() throws IOException;
+  void clearManagedKeyDataCache() throws IOException;
 }

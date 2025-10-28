@@ -106,12 +106,12 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
   }
 
   @Override
-  public void ejectManagedKeyDataCacheEntryOnAllServers(byte[] keyCustodian, String keyNamespace,
+  public void ejectManagedKeyDataCacheEntry(byte[] keyCustodian, String keyNamespace,
     byte[] keyMetadataHash) throws IOException {
     assertKeyManagementEnabled();
     if (!(getServer() instanceof MasterServices)) {
       throw new IOException(
-        "ejectManagedKeyDataCacheEntryOnAllServers can only be called on master");
+        "ejectManagedKeyDataCacheEntry can only be called on master");
     }
     MasterServices master = (MasterServices) getServer();
 
@@ -129,10 +129,10 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
   }
 
   @Override
-  public void clearManagedKeyDataCacheOnAllServers() throws IOException {
+  public void clearManagedKeyDataCache() throws IOException {
     assertKeyManagementEnabled();
     if (!(getServer() instanceof MasterServices)) {
-      throw new IOException("clearManagedKeyDataCacheOnAllServers can only be called on master");
+      throw new IOException("clearManagedKeyDataCache can only be called on master");
     }
     MasterServices master = (MasterServices) getServer();
 
