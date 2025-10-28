@@ -75,6 +75,11 @@ public final class BackupRequest {
       return this;
     }
 
+    public Builder withUsePreviousLogRoll(boolean usePreviousLogRoll) {
+      request.setUsePreviousLogRoll(usePreviousLogRoll);
+      return this;
+    }
+
     public BackupRequest build() {
       return request;
     }
@@ -89,6 +94,7 @@ public final class BackupRequest {
   private boolean noChecksumVerify = false;
   private String backupSetName;
   private String yarnPoolName;
+  private boolean usePreviousLogRoll = false;
 
   private BackupRequest() {
   }
@@ -162,5 +168,13 @@ public final class BackupRequest {
 
   public void setYarnPoolName(String yarnPoolName) {
     this.yarnPoolName = yarnPoolName;
+  }
+
+  private void setUsePreviousLogRoll(boolean usePreviousLogRoll) {
+    this.usePreviousLogRoll = usePreviousLogRoll;
+  }
+
+  public boolean getUsePreviousLogRoll() {
+    return this.usePreviousLogRoll;
   }
 }

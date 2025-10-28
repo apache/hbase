@@ -83,13 +83,17 @@ public class IncrementalBackupManager extends BackupManager {
         + "In order to create an incremental backup, at least one full backup is needed.");
     }
 
-    LOG.info("Execute roll log procedure for incremental backup ...");
-    HashMap<String, String> props = new HashMap<>();
-    props.put("backupRoot", backupInfo.getBackupRootDir());
+    if (backupInfo.getUsePreviousLogRoll()) {
+      LOG.info("Using previous WAL roll for backup, skipping WAL roll procedure");
+    } else {
+      LOG.info("Execute roll log procedure for incremental backup ...");
+      HashMap<String, String> props = new HashMap<>();
+      props.put("backupRoot", backupInfo.getBackupRootDir());
 
-    try (Admin admin = conn.getAdmin()) {
-      admin.execProcedure(LogRollMasterProcedureManager.ROLLLOG_PROCEDURE_SIGNATURE,
-        LogRollMasterProcedureManager.ROLLLOG_PROCEDURE_NAME, props);
+      try (Admin admin = conn.getAdmin()) {
+        admin.execProcedure(LogRollMasterProcedureManager.ROLLLOG_PROCEDURE_SIGNATURE,
+          LogRollMasterProcedureManager.ROLLLOG_PROCEDURE_NAME, props);
+      }
     }
     newTimestamps = readRegionServerLastLogRollResult();
 

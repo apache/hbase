@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.BackupProtos;
 
@@ -170,6 +169,8 @@ public class BackupInfo implements Comparable<BackupInfo> {
    */
   private boolean noChecksumVerify;
 
+  private boolean usePreviousLogRoll = false;
+
   public BackupInfo() {
     backupTableInfoMap = new HashMap<>();
   }
@@ -209,6 +210,14 @@ public class BackupInfo implements Comparable<BackupInfo> {
 
   public boolean getNoChecksumVerify() {
     return noChecksumVerify;
+  }
+
+  public void setUsePreviousLogRoll(boolean usePreviousLogRoll) {
+    this.usePreviousLogRoll = usePreviousLogRoll;
+  }
+
+  public boolean getUsePreviousLogRoll() {
+    return usePreviousLogRoll;
   }
 
   public void setBackupTableInfoMap(Map<TableName, BackupTableInfo> backupTableInfoMap) {
