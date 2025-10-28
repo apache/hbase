@@ -1,5 +1,5 @@
 buildpack:
-  name: Blazar-Buildpack-Java
+  name: Blazar-Buildpack-Java-oss-fork
 
 env:
   PRE_RUN_BEFORE_STEPS: false
