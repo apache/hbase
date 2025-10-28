@@ -409,6 +409,56 @@ public class TestKeymetaAdminImpl {
     }
 
     @Test
+    public void testEjectManagedKeyDataCacheEntryNotOnMaster() throws Exception {
+      // Create a non-master server mock
+      Server mockRegionServer = mock(Server.class);
+      KeyManagementService mockKeyService = mock(KeyManagementService.class);
+      // Mock KeyManagementService - required by KeyManagementBase constructor
+      when(mockRegionServer.getKeyManagementService()).thenReturn(mockKeyService);
+      when(mockKeyService.getConfiguration()).thenReturn(conf);
+      when(mockRegionServer.getConfiguration()).thenReturn(conf);
+      when(mockRegionServer.getFileSystem()).thenReturn(mockFileSystem);
+
+      KeymetaAdminImpl admin = new KeymetaAdminImpl(mockRegionServer) {
+        @Override
+        protected AsyncAdmin getAsyncAdmin(MasterServices master) {
+          throw new RuntimeException("Shouldn't be called since we are not on master");
+        }
+      };
+
+      byte[] keyCustodian = Bytes.toBytes("testCustodian");
+      String keyNamespace = "testNamespace";
+      byte[] keyMetadataHash = Bytes.toBytes("testHash");
+
+      IOException ex = assertThrows(IOException.class,
+        () -> admin.ejectManagedKeyDataCacheEntry(keyCustodian, keyNamespace, keyMetadataHash));
+      assertTrue(
+        ex.getMessage().contains("ejectManagedKeyDataCacheEntry can only be called on master"));
+    }
+
+    @Test
+    public void testClearManagedKeyDataCacheNotOnMaster() throws Exception {
+      // Create a non-master server mock
+      Server mockRegionServer = mock(Server.class);
+      KeyManagementService mockKeyService = mock(KeyManagementService.class);
+      // Mock KeyManagementService - required by KeyManagementBase constructor
+      when(mockRegionServer.getKeyManagementService()).thenReturn(mockKeyService);
+      when(mockKeyService.getConfiguration()).thenReturn(conf);
+      when(mockRegionServer.getConfiguration()).thenReturn(conf);
+      when(mockRegionServer.getFileSystem()).thenReturn(mockFileSystem);
+
+      KeymetaAdminImpl admin = new KeymetaAdminImpl(mockRegionServer) {
+        @Override
+        protected AsyncAdmin getAsyncAdmin(MasterServices master) {
+          throw new RuntimeException("Shouldn't be called since we are not on master");
+        }
+      };
+
+      IOException ex = assertThrows(IOException.class, () -> admin.clearManagedKeyDataCache());
+      assertTrue(ex.getMessage().contains("clearManagedKeyDataCache can only be called on master"));
+    }
+
+    @Test
     public void testRotateSTKWhenDisabled() throws Exception {
       TEST_UTIL.getConfiguration().set(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, "false");
 
@@ -420,6 +470,43 @@ public class TestKeymetaAdminImpl {
       };
 
       IOException ex = assertThrows(IOException.class, () -> admin.rotateSTK());
+      assertTrue("Exception message should contain 'not enabled', but was: " + ex.getMessage(),
+        ex.getMessage().contains("not enabled"));
+    }
+
+    @Test
+    public void testEjectManagedKeyDataCacheEntryWhenDisabled() throws Exception {
+      TEST_UTIL.getConfiguration().set(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, "false");
+
+      KeymetaAdminImpl admin = new KeymetaAdminImpl(mockServer) {
+        @Override
+        protected AsyncAdmin getAsyncAdmin(MasterServices master) {
+          throw new RuntimeException("Shouldn't be called since we are disabled");
+        }
+      };
+
+      byte[] keyCustodian = Bytes.toBytes("testCustodian");
+      String keyNamespace = "testNamespace";
+      byte[] keyMetadataHash = Bytes.toBytes("testHash");
+
+      IOException ex = assertThrows(IOException.class,
+        () -> admin.ejectManagedKeyDataCacheEntry(keyCustodian, keyNamespace, keyMetadataHash));
+      assertTrue("Exception message should contain 'not enabled', but was: " + ex.getMessage(),
+        ex.getMessage().contains("not enabled"));
+    }
+
+    @Test
+    public void testClearManagedKeyDataCacheWhenDisabled() throws Exception {
+      TEST_UTIL.getConfiguration().set(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, "false");
+
+      KeymetaAdminImpl admin = new KeymetaAdminImpl(mockServer) {
+        @Override
+        protected AsyncAdmin getAsyncAdmin(MasterServices master) {
+          throw new RuntimeException("Shouldn't be called since we are disabled");
+        }
+      };
+
+      IOException ex = assertThrows(IOException.class, () -> admin.clearManagedKeyDataCache());
       assertTrue("Exception message should contain 'not enabled', but was: " + ex.getMessage(),
         ex.getMessage().contains("not enabled"));
     }
