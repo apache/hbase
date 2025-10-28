@@ -21,6 +21,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import java.io.IOException;
 import java.security.KeyException;
+import java.util.Arrays;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
@@ -199,25 +200,28 @@ public class ManagedKeyDataCache extends KeyManagementBase {
    */
   public boolean ejectKey(byte[] keyCust, String keyNamespace, String keyMetadata) {
     ActiveKeysCacheKey cacheKey = new ActiveKeysCacheKey(keyCust, keyNamespace);
-    AtomicBoolean ejectedFromActiveCache = new AtomicBoolean(false);
-    AtomicBoolean ejectedFromGenericCache = new AtomicBoolean(false);
+    AtomicBoolean ejected = new AtomicBoolean(false);
 
     // Try to eject from active keys cache by matching metadata
     activeKeysCache.asMap().computeIfPresent(cacheKey, (key, value) -> {
       if (value.getKeyMetadata().equals(keyMetadata)) {
-        ejectedFromActiveCache.set(true);
+        ejected.set(true);
         return null;
       }
       return value;
     });
 
-    // Also remove from generic cache by metadata
-    ManagedKeyData removed = cacheByMetadata.asMap().remove(keyMetadata);
-    if (removed != null) {
-      ejectedFromGenericCache.set(true);
-    }
+    // Also remove from generic cache by metadata, but only if it matches custodian/namespace
+    cacheByMetadata.asMap().computeIfPresent(keyMetadata, (metadata, value) -> {
+      if (Arrays.equals(value.getKeyCustodian(), keyCust)
+        && value.getKeyNamespace().equals(keyNamespace)) {
+        ejected.set(true);
+        return null;
+      }
+      return value;
+    });
 
-    return ejectedFromActiveCache.get() || ejectedFromGenericCache.get();
+    return ejected.get();
   }
 
   /**
