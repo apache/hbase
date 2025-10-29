@@ -90,7 +90,8 @@ import org.mockito.MockitoAnnotations;
 @RunWith(Suite.class)
 @Suite.SuiteClasses({ TestKeymetaTableAccessor.TestAdd.class,
   TestKeymetaTableAccessor.TestAddWithNullableFields.class,
-  TestKeymetaTableAccessor.TestGet.class, })
+  TestKeymetaTableAccessor.TestGet.class, TestKeymetaTableAccessor.TestDisableKey.class,
+  TestKeymetaTableAccessor.TestUpdateActiveState.class })
 @Category({ MasterTests.class, SmallTests.class })
 public class TestKeymetaTableAccessor {
   protected static final String ALIAS = "custId1";
@@ -400,5 +401,163 @@ public class TestKeymetaTableAccessor {
         new Bytes(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()));
     }
     return valueMap;
+  }
+
+  /**
+   * Tests for disableKey() method.
+   */
+  @RunWith(BlockJUnit4ClassRunner.class)
+  @Category({ MasterTests.class, SmallTests.class })
+  public static class TestDisableKey {
+    @ClassRule
+    public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestDisableKey.class);
+
+    @Mock
+    private MasterServices masterServices;
+    @Mock
+    private Connection connection;
+    @Mock
+    private Table table;
+    @Mock
+    private KeyManagementService keyManagementService;
+
+    private KeymetaTableAccessor accessor;
+
+    @Before
+    public void setUp() throws IOException {
+      MockitoAnnotations.openMocks(this);
+      when(masterServices.getConnection()).thenReturn(connection);
+      when(connection.getTable(KeymetaTableAccessor.KEY_META_TABLE_NAME)).thenReturn(table);
+      when(masterServices.getKeyManagementService()).thenReturn(keyManagementService);
+      when(keyManagementService.isKeyManagementEnabled()).thenReturn(true);
+      accessor = new KeymetaTableAccessor(masterServices);
+    }
+
+    @After
+    public void tearDown() throws IOException {
+      if (table != null) {
+        table.close();
+      }
+    }
+
+    @Test
+    public void testDisableKey() throws Exception {
+      String keyMetadata = "testMetadata";
+      ArgumentCaptor<List> mutationsCaptor = ArgumentCaptor.forClass(List.class);
+      ArgumentCaptor<Object[]> resultsCaptor = ArgumentCaptor.forClass(Object[].class);
+
+      accessor.disableKey(CUST_ID, KEY_NAMESPACE, keyMetadata);
+
+      verify(table).batch(mutationsCaptor.capture(), resultsCaptor.capture());
+      List mutations = mutationsCaptor.getValue();
+      assertEquals(3, mutations.size());
+    }
+
+    @Test
+    public void testDisableKeyWhenKeyManagementDisabled() {
+      when(keyManagementService.isKeyManagementEnabled()).thenReturn(false);
+      assertThrows(IOException.class, () -> accessor.disableKey(CUST_ID, KEY_NAMESPACE, "metadata"));
+    }
+  }
+
+  /**
+   * Tests for updateActiveState() method.
+   */
+  @RunWith(BlockJUnit4ClassRunner.class)
+  @Category({ MasterTests.class, SmallTests.class })
+  public static class TestUpdateActiveState {
+    @ClassRule
+    public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestUpdateActiveState.class);
+
+    @Mock
+    private MasterServices masterServices;
+    @Mock
+    private Connection connection;
+    @Mock
+    private Table table;
+    @Mock
+    private KeyManagementService keyManagementService;
+    @Mock
+    private SystemKeyCache systemKeyCache;
+
+    private KeymetaTableAccessor accessor;
+
+    @Before
+    public void setUp() throws IOException {
+      MockitoAnnotations.openMocks(this);
+      when(masterServices.getConnection()).thenReturn(connection);
+      when(connection.getTable(KeymetaTableAccessor.KEY_META_TABLE_NAME)).thenReturn(table);
+      when(masterServices.getKeyManagementService()).thenReturn(keyManagementService);
+      when(keyManagementService.isKeyManagementEnabled()).thenReturn(true);
+      when(keyManagementService.getSystemKeyCache()).thenReturn(systemKeyCache);
+      accessor = new KeymetaTableAccessor(masterServices);
+    }
+
+    @After
+    public void tearDown() throws IOException {
+      if (table != null) {
+        table.close();
+      }
+    }
+
+    @Test
+    public void testUpdateActiveStateFromInactiveToActive() throws Exception {
+      ManagedKeyData keyData = MockManagedKeyProvider.getMockManagedKeyData(CUST_ID, KEY_NAMESPACE,
+        INACTIVE, "metadata", 123L);
+      ManagedKeyData systemKey = MockManagedKeyProvider.getMockSystemKeyData();
+      when(systemKeyCache.getLatestSystemKey()).thenReturn(systemKey);
+
+      ArgumentCaptor<List> mutationsCaptor = ArgumentCaptor.forClass(List.class);
+      ArgumentCaptor<Object[]> resultsCaptor = ArgumentCaptor.forClass(Object[].class);
+
+      accessor.updateActiveState(keyData, ACTIVE);
+
+      verify(table).batch(mutationsCaptor.capture(), resultsCaptor.capture());
+      List mutations = mutationsCaptor.getValue();
+      assertEquals(2, mutations.size());
+    }
+
+    @Test
+    public void testUpdateActiveStateFromActiveToInactive() throws Exception {
+      ManagedKeyData keyData = MockManagedKeyProvider.getMockManagedKeyData(CUST_ID, KEY_NAMESPACE,
+        ACTIVE, "metadata", 123L);
+
+      ArgumentCaptor<List> mutationsCaptor = ArgumentCaptor.forClass(List.class);
+      ArgumentCaptor<Object[]> resultsCaptor = ArgumentCaptor.forClass(Object[].class);
+
+      accessor.updateActiveState(keyData, INACTIVE);
+
+      verify(table).batch(mutationsCaptor.capture(), resultsCaptor.capture());
+      List mutations = mutationsCaptor.getValue();
+      assertEquals(2, mutations.size());
+    }
+
+    @Test
+    public void testUpdateActiveStateNoOp() throws Exception {
+      ManagedKeyData keyData = MockManagedKeyProvider.getMockManagedKeyData(CUST_ID, KEY_NAMESPACE,
+        ACTIVE, "metadata", 123L);
+
+      accessor.updateActiveState(keyData, ACTIVE);
+
+      verify(table, org.mockito.Mockito.never()).batch(any(), any());
+    }
+
+    @Test
+    public void testUpdateActiveStateInvalidCurrentState() {
+      ManagedKeyData keyData = MockManagedKeyProvider.getMockManagedKeyData(CUST_ID, KEY_NAMESPACE,
+        DISABLED, "metadata", 123L);
+
+      assertThrows(IOException.class, () -> accessor.updateActiveState(keyData, ACTIVE));
+    }
+
+    @Test
+    public void testUpdateActiveStateInvalidNewState() {
+      ManagedKeyData keyData = MockManagedKeyProvider.getMockManagedKeyData(CUST_ID, KEY_NAMESPACE,
+        ACTIVE, "metadata", 123L);
+
+      assertThrows(IOException.class, () -> accessor.updateActiveState(keyData, DISABLED));
+    }
   }
 }

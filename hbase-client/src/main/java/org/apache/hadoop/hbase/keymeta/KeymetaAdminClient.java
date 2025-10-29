@@ -95,6 +95,58 @@ public class KeymetaAdminClient implements KeymetaAdmin {
       "clearManagedKeyDataCache not supported in KeymetaAdminClient");
   }
 
+  @Override
+  public List<ManagedKeyData> disableKeyManagement(byte[] keyCust, String keyNamespace)
+    throws IOException, KeyException {
+    try {
+      GetManagedKeysResponse response =
+        stub.disableKeyManagement(null, ManagedKeyRequest.newBuilder()
+          .setKeyCust(ByteString.copyFrom(keyCust)).setKeyNamespace(keyNamespace).build());
+      return generateKeyDataList(response);
+    } catch (ServiceException e) {
+      throw ProtobufUtil.handleRemoteException(e);
+    }
+  }
+
+  @Override
+  public ManagedKeyData disableManagedKey(byte[] keyCust, String keyNamespace, String keyMetadata)
+    throws IOException, KeyException {
+    try {
+      ManagedKeyResponse response = stub.disableManagedKey(null,
+        org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyEntryRequest
+          .newBuilder()
+          .setKeyCustNs(ManagedKeyRequest.newBuilder().setKeyCust(ByteString.copyFrom(keyCust))
+            .setKeyNamespace(keyNamespace).build())
+          .setKeyMetadata(keyMetadata).build());
+      return generateKeyData(response);
+    } catch (ServiceException e) {
+      throw ProtobufUtil.handleRemoteException(e);
+    }
+  }
+
+  @Override
+  public ManagedKeyData rotateManagedKey(byte[] keyCust, String keyNamespace)
+    throws IOException, KeyException {
+    try {
+      ManagedKeyResponse response = stub.rotateManagedKey(null, ManagedKeyRequest.newBuilder()
+        .setKeyCust(ByteString.copyFrom(keyCust)).setKeyNamespace(keyNamespace).build());
+      return generateKeyData(response);
+    } catch (ServiceException e) {
+      throw ProtobufUtil.handleRemoteException(e);
+    }
+  }
+
+  @Override
+  public void refreshManagedKeys(byte[] keyCust, String keyNamespace)
+    throws IOException, KeyException {
+    try {
+      stub.refreshManagedKeys(null, ManagedKeyRequest.newBuilder()
+        .setKeyCust(ByteString.copyFrom(keyCust)).setKeyNamespace(keyNamespace).build());
+    } catch (ServiceException e) {
+      throw ProtobufUtil.handleRemoteException(e);
+    }
+  }
+
   private static List<ManagedKeyData> generateKeyDataList(GetManagedKeysResponse stateResponse) {
     List<ManagedKeyData> keyStates = new ArrayList<>();
     for (ManagedKeyResponse state : stateResponse.getStateList()) {

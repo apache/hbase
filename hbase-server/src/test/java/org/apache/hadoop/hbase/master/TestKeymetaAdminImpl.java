@@ -32,14 +32,17 @@ import static org.junit.Assume.assumeTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.security.Key;
 import java.security.KeyException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.conf.Configuration;
@@ -59,6 +62,7 @@ import org.apache.hadoop.hbase.io.crypto.MockManagedKeyProvider;
 import org.apache.hadoop.hbase.keymeta.KeyManagementService;
 import org.apache.hadoop.hbase.keymeta.KeymetaAdminImpl;
 import org.apache.hadoop.hbase.keymeta.KeymetaTableAccessor;
+import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -75,11 +79,13 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 import org.junit.runners.Suite;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 
 @RunWith(Suite.class)
 @Suite.SuiteClasses({ TestKeymetaAdminImpl.TestWhenDisabled.class,
   TestKeymetaAdminImpl.TestAdminImpl.class, TestKeymetaAdminImpl.TestForKeyProviderNullReturn.class,
-  TestKeymetaAdminImpl.TestMiscAPIs.class })
+  TestKeymetaAdminImpl.TestMiscAPIs.class, TestKeymetaAdminImpl.TestNewKeyManagementAdminMethods.class })
 @Category({ MasterTests.class, SmallTests.class })
 public class TestKeymetaAdminImpl {
 
@@ -590,6 +596,170 @@ public class TestKeymetaAdminImpl {
 
       assertTrue(ex.getMessage().contains("clear failed"));
       verify(mockAsyncAdmin).clearManagedKeyDataCacheOnAllServers(any());
+    }
+  }
+
+  /**
+   * Tests for new key management admin methods.
+   */
+  @RunWith(BlockJUnit4ClassRunner.class)
+  @Category({ MasterTests.class, SmallTests.class })
+  public static class TestNewKeyManagementAdminMethods {
+    @ClassRule
+    public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestNewKeyManagementAdminMethods.class);
+
+    @Mock
+    private MasterServices mockMasterServices;
+    @Mock
+    private AsyncAdmin mockAsyncAdmin;
+    @Mock
+    private AsyncConnection mockAsyncConnection;
+    @Mock
+    private ServerManager mockServerManager;
+    @Mock
+    private KeymetaTableAccessor mockAccessor;
+    @Mock
+    private ManagedKeyProvider mockProvider;
+
+    @Before
+    public void setUp() throws Exception {
+      MockitoAnnotations.openMocks(this);
+      when(mockMasterServices.getAsyncClusterConnection()).thenReturn(mockAsyncConnection);
+      when(mockAsyncConnection.getAdmin()).thenReturn(mockAsyncAdmin);
+      when(mockMasterServices.getServerManager()).thenReturn(mockServerManager);
+      when(mockServerManager.getOnlineServers()).thenReturn(new HashMap<>());
+    }
+
+    @Test
+    public void testDisableKeyManagement() throws Exception {
+      KeymetaAdminImplForTest admin = new KeymetaAdminImplForTest(mockMasterServices, mockAccessor);
+
+      List<ManagedKeyData> keys = new ArrayList<>();
+      ManagedKeyData key1 = MockManagedKeyProvider.getMockManagedKeyData(CUST_ID, KEY_NAMESPACE,
+        ManagedKeyState.ACTIVE, "metadata1", 123L);
+      keys.add(key1);
+
+      when(mockAccessor.getAllKeys(any(), any())).thenReturn(keys);
+      CompletableFuture<Void> successFuture = CompletableFuture.completedFuture(null);
+      when(mockAsyncAdmin.ejectManagedKeyDataCacheEntryOnAllServers(any(), any(), any(), any()))
+        .thenReturn(successFuture);
+
+      List<ManagedKeyData> result = admin.disableKeyManagement(CUST_ID, KEY_NAMESPACE);
+
+      assertNotNull(result);
+      verify(mockAccessor, times(2)).getAllKeys(CUST_ID, KEY_NAMESPACE);
+      verify(mockAccessor).disableKey(CUST_ID, KEY_NAMESPACE, "metadata1");
+    }
+
+    @Test
+    public void testDisableManagedKey() throws Exception {
+      KeymetaAdminImplForTest admin = new KeymetaAdminImplForTest(mockMasterServices, mockAccessor);
+
+      ManagedKeyData disabledKey = MockManagedKeyProvider.getMockManagedKeyData(CUST_ID,
+        KEY_NAMESPACE, ManagedKeyState.DISABLED, "metadata1", 123L);
+      when(mockAccessor.getKey(any(), any(), any())).thenReturn(disabledKey);
+
+      CompletableFuture<Void> successFuture = CompletableFuture.completedFuture(null);
+      when(mockAsyncAdmin.ejectManagedKeyDataCacheEntryOnAllServers(any(), any(), any(), any()))
+        .thenReturn(successFuture);
+
+      ManagedKeyData result = admin.disableManagedKey(CUST_ID, KEY_NAMESPACE, "metadata1");
+
+      assertNotNull(result);
+      assertEquals(ManagedKeyState.DISABLED, result.getKeyState());
+      verify(mockAccessor).disableKey(CUST_ID, KEY_NAMESPACE, "metadata1");
+    }
+
+    @Test
+    public void testRotateManagedKey() throws Exception {
+      KeymetaAdminImplForTest admin = new KeymetaAdminImplForTest(mockMasterServices, mockAccessor);
+
+      ManagedKeyData currentKey = MockManagedKeyProvider.getMockManagedKeyData(CUST_ID,
+        KEY_NAMESPACE, ManagedKeyState.ACTIVE, "metadata1", 123L);
+      ManagedKeyData newKey = MockManagedKeyProvider.getMockManagedKeyData(CUST_ID, KEY_NAMESPACE,
+        ManagedKeyState.ACTIVE, "metadata2", 124L);
+
+      when(mockAccessor.getActiveKey(any(), any())).thenReturn(currentKey);
+      when(mockAccessor.getKeyProvider()).thenReturn(mockProvider);
+      when(mockProvider.getManagedKey(any(), any())).thenReturn(newKey);
+
+      ManagedKeyData result = admin.rotateManagedKey(CUST_ID, KEY_NAMESPACE);
+
+      assertNotNull(result);
+    }
+
+    @Test
+    public void testRefreshManagedKeys() throws Exception {
+      KeymetaAdminImplForTest admin = new KeymetaAdminImplForTest(mockMasterServices, mockAccessor);
+
+      List<ManagedKeyData> keys = new ArrayList<>();
+      ManagedKeyData key1 = MockManagedKeyProvider.getMockManagedKeyData(CUST_ID, KEY_NAMESPACE,
+        ManagedKeyState.ACTIVE, "metadata1", 123L);
+      keys.add(key1);
+
+      when(mockAccessor.getAllKeys(any(), any())).thenReturn(keys);
+      when(mockAccessor.getKeyProvider()).thenReturn(mockProvider);
+      when(mockProvider.unwrapKey(any(), any())).thenReturn(key1);
+
+      admin.refreshManagedKeys(CUST_ID, KEY_NAMESPACE);
+
+      verify(mockAccessor).getAllKeys(CUST_ID, KEY_NAMESPACE);
+    }
+
+    private class KeymetaAdminImplForTest extends KeymetaAdminImpl {
+      private final KeymetaTableAccessor accessor;
+
+      public KeymetaAdminImplForTest(MasterServices server, KeymetaTableAccessor accessor)
+        throws IOException {
+        super(server);
+        this.accessor = accessor;
+      }
+
+      @Override
+      protected AsyncAdmin getAsyncAdmin(MasterServices master) {
+        return mockAsyncAdmin;
+      }
+
+      @Override
+      public List<ManagedKeyData> getAllKeys(byte[] keyCust, String keyNamespace)
+        throws IOException, KeyException {
+        return accessor.getAllKeys(keyCust, keyNamespace);
+      }
+
+      @Override
+      public ManagedKeyData getKey(byte[] keyCust, String keyNamespace, String keyMetadata)
+        throws IOException, KeyException {
+        return accessor.getKey(keyCust, keyNamespace, keyMetadata);
+      }
+
+      @Override
+      public void disableKey(byte[] keyCust, String keyNamespace, String keyMetadata)
+        throws IOException {
+        accessor.disableKey(keyCust, keyNamespace, keyMetadata);
+      }
+
+      @Override
+      public ManagedKeyData getActiveKey(byte[] keyCust, String keyNamespace)
+        throws IOException, KeyException {
+        return accessor.getActiveKey(keyCust, keyNamespace);
+      }
+
+      @Override
+      public ManagedKeyProvider getKeyProvider() {
+        return accessor.getKeyProvider();
+      }
+
+      @Override
+      public void addKey(ManagedKeyData keyData) throws IOException {
+        accessor.addKey(keyData);
+      }
+
+      @Override
+      public void updateActiveState(ManagedKeyData keyData, ManagedKeyState newState)
+        throws IOException {
+        accessor.updateActiveState(keyData, newState);
+      }
     }
   }
 }

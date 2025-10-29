@@ -31,11 +31,13 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
@@ -44,6 +46,7 @@ import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyState;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -195,6 +198,109 @@ public class KeymetaTableAccessor extends KeyManagementBase {
       Result result = table.get(new Get(rowKey));
       return parseFromResult(getKeyManagementService(), keyCust, keyNamespace, result);
     }
+  }
+
+  /**
+   * Disables a key by removing the wrapped key and updating its state to DISABLED.
+   * @param key_cust     The key custodian.
+   * @param keyNamespace The namespace.
+   * @param keyMetadata  The key metadata.
+   * @throws IOException when there is an underlying IOException.
+   */
+  public void disableKey(byte[] key_cust, String keyNamespace, String keyMetadata)
+    throws IOException {
+    assertKeyManagementEnabled();
+    byte[] keyMetadataHash = ManagedKeyData.constructMetadataHash(keyMetadata);
+    byte[] rowKeyForCustNamespace = constructRowKeyForCustNamespace(key_cust, keyNamespace);
+    byte[] rowKeyForMetadata = constructRowKeyForMetadata(key_cust, keyNamespace, keyMetadataHash);
+
+    List<Row> mutations = new ArrayList<>(3);
+    // Delete the CustNamespace row
+    mutations.add(new Delete(rowKeyForCustNamespace).setDurability(Durability.SKIP_WAL)
+      .setPriority(HConstants.SYSTEMTABLE_QOS));
+
+    // Update state to DISABLED and timestamp on Metadata row
+    Put putForState = new Put(rowKeyForMetadata).setDurability(Durability.SKIP_WAL)
+      .setPriority(HConstants.SYSTEMTABLE_QOS)
+      .addColumn(KEY_META_INFO_FAMILY, KEY_STATE_QUAL_BYTES,
+        new byte[] { ManagedKeyState.DISABLED.getVal() })
+      .addColumn(KEY_META_INFO_FAMILY, REFRESHED_TIMESTAMP_QUAL_BYTES,
+        Bytes.toBytes(EnvironmentEdgeManager.currentTime()));
+    mutations.add(putForState);
+
+    // Delete wrapped key columns from Metadata row
+    Delete deleteWrappedKey = new Delete(rowKeyForMetadata).setDurability(Durability.SKIP_WAL)
+      .setPriority(HConstants.SYSTEMTABLE_QOS).addColumns(KEY_META_INFO_FAMILY, DEK_CHECKSUM_QUAL_BYTES)
+      .addColumns(KEY_META_INFO_FAMILY, DEK_WRAPPED_BY_STK_QUAL_BYTES)
+      .addColumns(KEY_META_INFO_FAMILY, STK_CHECKSUM_QUAL_BYTES);
+    mutations.add(deleteWrappedKey);
+
+    Connection connection = getServer().getConnection();
+    try (Table table = connection.getTable(KEY_META_TABLE_NAME)) {
+      table.batch(mutations, new Object[mutations.size()]);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new IOException("Interrupted while disabling key", e);
+    }
+  }
+
+  /**
+   * Updates the state of a key between ACTIVE and INACTIVE.
+   * @param keyData  The key data.
+   * @param newState The new state (must be ACTIVE or INACTIVE).
+   * @throws IOException when there is an underlying IOException.
+   */
+  public void updateActiveState(ManagedKeyData keyData, ManagedKeyState newState)
+    throws IOException {
+    assertKeyManagementEnabled();
+    ManagedKeyState currentState = keyData.getKeyState();
+
+    // Validate states
+    if (currentState != ManagedKeyState.ACTIVE && currentState != ManagedKeyState.INACTIVE) {
+      throw new IOException("Can only update state between ACTIVE and INACTIVE, current state: "
+        + currentState);
+    }
+    if (newState != ManagedKeyState.ACTIVE && newState != ManagedKeyState.INACTIVE) {
+      throw new IOException("New state must be ACTIVE or INACTIVE, got: " + newState);
+    }
+
+    // No-op if states are the same
+    if (currentState == newState) {
+      return;
+    }
+
+    List<Row> mutations = new ArrayList<>(2);
+    byte[] rowKeyForCustNamespace = constructRowKeyForCustNamespace(keyData);
+    byte[] rowKeyForMetadata = constructRowKeyForMetadata(keyData);
+
+    if (currentState == ManagedKeyState.INACTIVE && newState == ManagedKeyState.ACTIVE) {
+      // INACTIVE -> ACTIVE: Add CustNamespace row and update Metadata row
+      mutations.add(addMutationColumns(new Put(rowKeyForCustNamespace), keyData));
+      mutations.add(addMutationColumnsForState(new Put(rowKeyForMetadata), newState));
+    } else {
+      // ACTIVE -> INACTIVE: Delete CustNamespace row and update Metadata row
+      mutations.add(new Delete(rowKeyForCustNamespace).setDurability(Durability.SKIP_WAL)
+        .setPriority(HConstants.SYSTEMTABLE_QOS));
+      mutations.add(addMutationColumnsForState(new Put(rowKeyForMetadata), newState));
+    }
+
+    Connection connection = getServer().getConnection();
+    try (Table table = connection.getTable(KEY_META_TABLE_NAME)) {
+      table.batch(mutations, new Object[mutations.size()]);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new IOException("Interrupted while updating active state", e);
+    }
+  }
+
+  /**
+   * Add only state and timestamp columns to the given Put.
+   */
+  private Put addMutationColumnsForState(Put put, ManagedKeyState newState) {
+    return put.setDurability(Durability.SKIP_WAL).setPriority(HConstants.SYSTEMTABLE_QOS)
+      .addColumn(KEY_META_INFO_FAMILY, KEY_STATE_QUAL_BYTES, new byte[] { newState.getVal() })
+      .addColumn(KEY_META_INFO_FAMILY, REFRESHED_TIMESTAMP_QUAL_BYTES,
+        Bytes.toBytes(EnvironmentEdgeManager.currentTime()));
   }
 
   /**

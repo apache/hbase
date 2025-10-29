@@ -67,4 +67,107 @@ public class KeyManagementUtils {
     }
     return pbeKey;
   }
+
+  /**
+   * Refreshes the specified key from the configured managed key provider to confirm it is still
+   * valid.
+   * @param accessor the accessor to use to persist changes
+   * @param keyData  the key data to refresh
+   * @return the refreshed key data, or the original if unchanged
+   * @throws IOException  if an error occurs
+   * @throws KeyException if an error occurs
+   */
+  public static ManagedKeyData refreshKey(KeymetaTableAccessor accessor, ManagedKeyData keyData)
+    throws IOException, KeyException {
+    ManagedKeyProvider provider = accessor.getKeyProvider();
+
+    if (keyData.getKeyMetadata() != null) {
+      // Refresh key using unwrapKey
+      ManagedKeyData newKeyData = provider.unwrapKey(keyData.getKeyMetadata(), null);
+
+      // Validate metadata hasn't changed
+      if (!keyData.getKeyMetadata().equals(newKeyData.getKeyMetadata())) {
+        throw new IOException("Key metadata changed during refresh: expected "
+          + keyData.getKeyMetadata() + ", got " + newKeyData.getKeyMetadata());
+      }
+
+      // Check if state changed
+      if (keyData.getKeyState() == newKeyData.getKeyState()) {
+        // No change, return original
+        return keyData;
+      }
+
+      // Ignore if new state is FAILED
+      if (newKeyData.getKeyState() == ManagedKeyState.FAILED) {
+        return keyData;
+      }
+
+      // Handle state change
+      if (newKeyData.getKeyState() == ManagedKeyState.DISABLED) {
+        accessor.disableKey(keyData.getKeyCustodian(), keyData.getKeyNamespace(),
+          keyData.getKeyMetadata());
+      } else {
+        // State change between ACTIVE and INACTIVE
+        accessor.updateActiveState(keyData, newKeyData.getKeyState());
+      }
+
+      return newKeyData;
+    } else {
+      // No metadata, get new key from provider
+      ManagedKeyData newKeyData =
+        provider.getManagedKey(keyData.getKeyCustodian(), keyData.getKeyNamespace());
+
+      // Check if state changed
+      if (keyData.getKeyState() != newKeyData.getKeyState()) {
+        accessor.addKey(newKeyData);
+        return newKeyData;
+      }
+
+      return keyData;
+    }
+  }
+
+  /**
+   * Rotates the ACTIVE key for the specified (custodian, namespace) combination.
+   * @param provider     the managed key provider
+   * @param accessor     the accessor to use to persist changes
+   * @param keyCust      the key custodian
+   * @param keyNamespace the key namespace
+   * @return the new active key, or null if no rotation happened
+   * @throws IOException  if an error occurs
+   * @throws KeyException if an error occurs
+   */
+  public static ManagedKeyData rotateActiveKey(ManagedKeyProvider provider,
+    KeymetaTableAccessor accessor, byte[] keyCust, String keyNamespace)
+    throws IOException, KeyException {
+    // Get current active key
+    ManagedKeyData currentActiveKey = accessor.getActiveKey(keyCust, keyNamespace);
+    if (currentActiveKey == null) {
+      throw new IOException("No active key found for (custodian: "
+        + ManagedKeyProvider.encodeToStr(keyCust) + ", namespace: " + keyNamespace + ")");
+    }
+
+    // Retrieve new key from provider (with null accessor to skip persistence)
+    String encodedCust = ManagedKeyProvider.encodeToStr(keyCust);
+    ManagedKeyData newKey =
+      retrieveActiveKey(provider, null, encodedCust, keyCust, keyNamespace, null);
+
+    // Check if key changed by comparing metadata hash
+    if (
+      java.util.Arrays.equals(currentActiveKey.getKeyMetadataHash(), newKey.getKeyMetadataHash())
+    ) {
+      // No rotation happened
+      return null;
+    }
+
+    // Mark current active key as inactive if new key is active
+    if (newKey.getKeyState() == ManagedKeyState.ACTIVE) {
+      accessor.updateActiveState(currentActiveKey, ManagedKeyState.INACTIVE);
+    }
+
+    // Persist the new key
+    accessor.addKey(newKey);
+
+    return newKey;
+  }
 }

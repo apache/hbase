@@ -160,6 +160,104 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
       }
       done.run(RotateSTKResponse.newBuilder().setRotated(rotated).build());
     }
+
+    /**
+     * Disables all managed keys for a given custodian and namespace.
+     * @param controller The RPC controller.
+     * @param request    The request containing the custodian and namespace specifications.
+     * @param done       The callback to be invoked with the response.
+     */
+    @Override
+    public void disableKeyManagement(RpcController controller, ManagedKeyRequest request,
+      RpcCallback<GetManagedKeysResponse> done) {
+      GetManagedKeysResponse keyStateResponse = null;
+      ManagedKeyResponse.Builder builder = ManagedKeyResponse.newBuilder();
+      try {
+        initManagedKeyResponseBuilder(controller, request, builder);
+        List<ManagedKeyData> managedKeyStates = master.getKeymetaAdmin()
+          .disableKeyManagement(request.getKeyCust().toByteArray(), request.getKeyNamespace());
+        keyStateResponse = generateKeyStateResponse(managedKeyStates, builder);
+      } catch (IOException | KeyException e) {
+        CoprocessorRpcUtils.setControllerException(controller, new DoNotRetryIOException(e));
+      }
+      if (keyStateResponse == null) {
+        keyStateResponse = GetManagedKeysResponse.getDefaultInstance();
+      }
+      done.run(keyStateResponse);
+    }
+
+    /**
+     * Disables a specific managed key for a given custodian, namespace, and metadata.
+     * @param controller The RPC controller.
+     * @param request    The request containing the custodian, namespace, and metadata
+     *                   specifications.
+     * @param done       The callback to be invoked with the response.
+     */
+    @Override
+    public void disableManagedKey(RpcController controller,
+      org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyEntryRequest request,
+      RpcCallback<ManagedKeyResponse> done) {
+      ManagedKeyResponse response = null;
+      ManagedKeyResponse.Builder builder = ManagedKeyResponse.newBuilder();
+      try {
+        initManagedKeyResponseBuilder(controller, request.getKeyCustNs(), builder);
+        ManagedKeyData managedKeyState =
+          master.getKeymetaAdmin().disableManagedKey(request.getKeyCustNs().getKeyCust().toByteArray(),
+            request.getKeyCustNs().getKeyNamespace(), request.getKeyMetadata());
+        response = generateKeyStateResponse(managedKeyState, builder);
+      } catch (IOException | KeyException e) {
+        CoprocessorRpcUtils.setControllerException(controller, new DoNotRetryIOException(e));
+        builder.setKeyState(ManagedKeyState.KEY_FAILED);
+      }
+      if (response == null) {
+        response = builder.build();
+      }
+      done.run(response);
+    }
+
+    /**
+     * Rotates the managed key for a given custodian and namespace.
+     * @param controller The RPC controller.
+     * @param request    The request containing the custodian and namespace specifications.
+     * @param done       The callback to be invoked with the response.
+     */
+    @Override
+    public void rotateManagedKey(RpcController controller, ManagedKeyRequest request,
+      RpcCallback<ManagedKeyResponse> done) {
+      ManagedKeyResponse response = null;
+      ManagedKeyResponse.Builder builder = ManagedKeyResponse.newBuilder();
+      try {
+        initManagedKeyResponseBuilder(controller, request, builder);
+        ManagedKeyData managedKeyState = master.getKeymetaAdmin()
+          .rotateManagedKey(request.getKeyCust().toByteArray(), request.getKeyNamespace());
+        response = generateKeyStateResponse(managedKeyState, builder);
+      } catch (IOException | KeyException e) {
+        CoprocessorRpcUtils.setControllerException(controller, new DoNotRetryIOException(e));
+        builder.setKeyState(ManagedKeyState.KEY_FAILED);
+      }
+      if (response == null) {
+        response = builder.build();
+      }
+      done.run(response);
+    }
+
+    /**
+     * Refreshes all managed keys for a given custodian and namespace.
+     * @param controller The RPC controller.
+     * @param request    The request containing the custodian and namespace specifications.
+     * @param done       The callback to be invoked with the response.
+     */
+    @Override
+    public void refreshManagedKeys(RpcController controller, ManagedKeyRequest request,
+      RpcCallback<EmptyMsg> done) {
+      try {
+        master.getKeymetaAdmin().refreshManagedKeys(request.getKeyCust().toByteArray(),
+          request.getKeyNamespace());
+      } catch (IOException | KeyException e) {
+        CoprocessorRpcUtils.setControllerException(controller, new DoNotRetryIOException(e));
+      }
+      done.run(EmptyMsg.getDefaultInstance());
+    }
   }
 
   @InterfaceAudience.Private
