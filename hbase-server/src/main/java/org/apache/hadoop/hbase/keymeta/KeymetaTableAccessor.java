@@ -117,19 +117,19 @@ public class KeymetaTableAccessor extends KeyManagementBase {
   }
 
   /**
-   * Get all the keys for the specified key_cust and key_namespace.
-   * @param key_cust     The key custodian.
+   * Get all the keys for the specified keyCust and key_namespace.
+   * @param keyCust     The key custodian.
    * @param keyNamespace The namespace
    * @return a list of key data, one for each key, can be empty when none were found.
    * @throws IOException  when there is an underlying IOException.
    * @throws KeyException when there is an underlying KeyException.
    */
   @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
-  public List<ManagedKeyData> getAllKeys(byte[] key_cust, String keyNamespace)
+  public List<ManagedKeyData> getAllKeys(byte[] keyCust, String keyNamespace)
     throws IOException, KeyException {
     assertKeyManagementEnabled();
     Connection connection = getServer().getConnection();
-    byte[] prefixForScan = constructRowKeyForCustNamespace(key_cust, keyNamespace);
+    byte[] prefixForScan = constructRowKeyForCustNamespace(keyCust, keyNamespace);
     PrefixFilter prefixFilter = new PrefixFilter(prefixForScan);
     Scan scan = new Scan();
     scan.setFilter(prefixFilter);
@@ -140,7 +140,7 @@ public class KeymetaTableAccessor extends KeyManagementBase {
       Set<ManagedKeyData> allKeys = new LinkedHashSet<>();
       for (Result result : scanner) {
         ManagedKeyData keyData =
-          parseFromResult(getKeyManagementService(), key_cust, keyNamespace, result);
+          parseFromResult(getKeyManagementService(), keyCust, keyNamespace, result);
         if (keyData != null) {
           allKeys.add(keyData);
         }
@@ -150,72 +150,72 @@ public class KeymetaTableAccessor extends KeyManagementBase {
   }
 
   /**
-   * Get the active key for the specified key_cust and key_namespace.
-   * @param key_cust     The prefix
+   * Get the active key for the specified keyCust and key_namespace.
+   * @param keyCust     The prefix
    * @param keyNamespace The namespace
    * @return the active key data, or null if no active key found
    * @throws IOException  when there is an underlying IOException.
    * @throws KeyException when there is an underlying KeyException.
    */
-  public ManagedKeyData getActiveKey(byte[] key_cust, String keyNamespace)
+  public ManagedKeyData getActiveKey(byte[] keyCust, String keyNamespace)
     throws IOException, KeyException {
     assertKeyManagementEnabled();
     Connection connection = getServer().getConnection();
-    byte[] rowkeyForGet = constructRowKeyForCustNamespace(key_cust, keyNamespace);
+    byte[] rowkeyForGet = constructRowKeyForCustNamespace(keyCust, keyNamespace);
     Get get = new Get(rowkeyForGet);
 
     try (Table table = connection.getTable(KEY_META_TABLE_NAME)) {
       Result result = table.get(get);
-      return parseFromResult(getKeyManagementService(), key_cust, keyNamespace, result);
+      return parseFromResult(getKeyManagementService(), keyCust, keyNamespace, result);
     }
   }
 
   /**
-   * Get the specific key identified by key_cust, keyNamespace and keyState.
-   * @param key_cust     The prefix.
+   * Get the specific key identified by keyCust, keyNamespace and keyState.
+   * @param keyCust     The prefix.
    * @param keyNamespace The namespace.
    * @param keyState     The state of the key.
    * @return the key or {@code null}
    * @throws IOException  when there is an underlying IOException.
    * @throws KeyException when there is an underlying KeyException.
    */
-  public ManagedKeyData getKey(byte[] key_cust, String keyNamespace, ManagedKeyState keyState)
+  public ManagedKeyData getKey(byte[] keyCust, String keyNamespace, ManagedKeyState keyState)
     throws IOException, KeyException {
-    return getKeyInternal(key_cust, keyNamespace, new byte[] { keyState.getVal() });
+    return getKeyInternal(keyCust, keyNamespace, new byte[] { keyState.getVal() });
   }
 
   /**
-   * Get the specific key identified by key_cust, keyNamespace and keyMetadata.
-   * @param key_cust     The prefix.
+   * Get the specific key identified by keyCust, keyNamespace and keyMetadata.
+   * @param keyCust     The prefix.
    * @param keyNamespace The namespace.
    * @param keyMetadata  The metadata.
    * @return the key or {@code null}
    * @throws IOException  when there is an underlying IOException.
    * @throws KeyException when there is an underlying KeyException.
    */
-  public ManagedKeyData getKey(byte[] key_cust, String keyNamespace, String keyMetadata)
+  public ManagedKeyData getKey(byte[] keyCust, String keyNamespace, String keyMetadata)
     throws IOException, KeyException {
-    return getKeyInternal(key_cust, keyNamespace,
+    return getKeyInternal(keyCust, keyNamespace,
       ManagedKeyData.constructMetadataHash(keyMetadata));
   }
 
   /**
    * Internal helper method to get a key using the provided metadata hash.
-   * @param key_cust        The prefix.
+   * @param keyCust        The prefix.
    * @param keyNamespace    The namespace.
    * @param keyMetadataHash The metadata hash or state value.
    * @return the key or {@code null}
    * @throws IOException  when there is an underlying IOException.
    * @throws KeyException when there is an underlying KeyException.
    */
-  private ManagedKeyData getKeyInternal(byte[] key_cust, String keyNamespace,
+  private ManagedKeyData getKeyInternal(byte[] keyCust, String keyNamespace,
     byte[] keyMetadataHash) throws IOException, KeyException {
     assertKeyManagementEnabled();
     Connection connection = getServer().getConnection();
     try (Table table = connection.getTable(KEY_META_TABLE_NAME)) {
-      byte[] rowKey = constructRowKeyForMetadata(key_cust, keyNamespace, keyMetadataHash);
+      byte[] rowKey = constructRowKeyForMetadata(keyCust, keyNamespace, keyMetadataHash);
       Result result = table.get(new Get(rowKey));
-      return parseFromResult(getKeyManagementService(), key_cust, keyNamespace, result);
+      return parseFromResult(getKeyManagementService(), keyCust, keyNamespace, result);
     }
   }
 
@@ -264,9 +264,9 @@ public class KeymetaTableAccessor extends KeyManagementBase {
   }
 
   @InterfaceAudience.Private
-  public static byte[] constructRowKeyForMetadata(byte[] key_cust, String keyNamespace,
+  public static byte[] constructRowKeyForMetadata(byte[] keyCust, String keyNamespace,
     byte[] keyMetadataHash) {
-    return Bytes.add(constructRowKeyForCustNamespace(key_cust, keyNamespace), keyMetadataHash);
+    return Bytes.add(constructRowKeyForCustNamespace(keyCust, keyNamespace), keyMetadataHash);
   }
 
   @InterfaceAudience.Private
@@ -275,14 +275,14 @@ public class KeymetaTableAccessor extends KeyManagementBase {
   }
 
   @InterfaceAudience.Private
-  public static byte[] constructRowKeyForCustNamespace(byte[] key_cust, String keyNamespace) {
-    int custLength = key_cust.length;
-    return Bytes.add(Bytes.toBytes(custLength), key_cust, Bytes.toBytes(keyNamespace));
+  public static byte[] constructRowKeyForCustNamespace(byte[] keyCust, String keyNamespace) {
+    int custLength = keyCust.length;
+    return Bytes.add(Bytes.toBytes(custLength), keyCust, Bytes.toBytes(keyNamespace));
   }
 
   @InterfaceAudience.Private
   public static ManagedKeyData parseFromResult(KeyManagementService keyManagementService,
-    byte[] key_cust, String keyNamespace, Result result) throws IOException, KeyException {
+    byte[] keyCust, String keyNamespace, Result result) throws IOException, KeyException {
     if (result == null || result.isEmpty()) {
       return null;
     }
@@ -314,7 +314,7 @@ public class KeymetaTableAccessor extends KeyManagementBase {
     long refreshedTimestamp =
       Bytes.toLong(result.getValue(KEY_META_INFO_FAMILY, REFRESHED_TIMESTAMP_QUAL_BYTES));
     ManagedKeyData dekKeyData =
-      new ManagedKeyData(key_cust, keyNamespace, dek, keyState, dekMetadata, refreshedTimestamp);
+      new ManagedKeyData(keyCust, keyNamespace, dek, keyState, dekMetadata, refreshedTimestamp);
     if (dek != null) {
       long dekChecksum =
         Bytes.toLong(result.getValue(KEY_META_INFO_FAMILY, DEK_CHECKSUM_QUAL_BYTES));
