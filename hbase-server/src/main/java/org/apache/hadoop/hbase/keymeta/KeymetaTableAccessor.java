@@ -159,29 +159,7 @@ public class KeymetaTableAccessor extends KeyManagementBase {
    */
   public ManagedKeyData getActiveKey(byte[] keyCust, String keyNamespace)
     throws IOException, KeyException {
-    assertKeyManagementEnabled();
-    Connection connection = getServer().getConnection();
-    byte[] rowkeyForGet = constructRowKeyForCustNamespace(keyCust, keyNamespace);
-    Get get = new Get(rowkeyForGet);
-
-    try (Table table = connection.getTable(KEY_META_TABLE_NAME)) {
-      Result result = table.get(get);
-      return parseFromResult(getKeyManagementService(), keyCust, keyNamespace, result);
-    }
-  }
-
-  /**
-   * Get the specific key identified by keyCust, keyNamespace and keyState.
-   * @param keyCust     The prefix.
-   * @param keyNamespace The namespace.
-   * @param keyState     The state of the key.
-   * @return the key or {@code null}
-   * @throws IOException  when there is an underlying IOException.
-   * @throws KeyException when there is an underlying KeyException.
-   */
-  public ManagedKeyData getKey(byte[] keyCust, String keyNamespace, ManagedKeyState keyState)
-    throws IOException, KeyException {
-    return getKeyInternal(keyCust, keyNamespace, new byte[] { keyState.getVal() });
+    return getKeyInternal(keyCust, keyNamespace, new byte[] { ManagedKeyState.ACTIVE.getVal() });
   }
 
   /**

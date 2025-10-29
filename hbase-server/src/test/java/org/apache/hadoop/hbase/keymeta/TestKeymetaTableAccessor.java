@@ -307,32 +307,6 @@ public class TestKeymetaTableAccessor {
     }
 
     @Test
-    public void testGetKeyWithFailedState() throws Exception {
-      // Test with FAILED state and null metadata
-      Result failedResult = mock(Result.class);
-      when(failedResult.getValue(eq(KEY_META_INFO_FAMILY), eq(KEY_STATE_QUAL_BYTES)))
-        .thenReturn(new byte[] { FAILED.getVal() });
-      when(failedResult.getValue(eq(KEY_META_INFO_FAMILY), eq(REFRESHED_TIMESTAMP_QUAL_BYTES)))
-        .thenReturn(Bytes.toBytes(0L));
-      when(failedResult.getValue(eq(KEY_META_INFO_FAMILY), eq(STK_CHECKSUM_QUAL_BYTES)))
-        .thenReturn(Bytes.toBytes(0L));
-      // Explicitly return null for metadata to simulate FAILED state with null metadata
-      when(failedResult.getValue(eq(KEY_META_INFO_FAMILY), eq(DEK_METADATA_QUAL_BYTES)))
-        .thenReturn(null);
-
-      when(table.get(any(Get.class))).thenReturn(failedResult);
-      ManagedKeyData result = accessor.getKey(CUST_ID, KEY_NAMESPACE, FAILED);
-
-      verify(table).get(any(Get.class));
-      assertNotNull(result);
-      assertEquals(0, Bytes.compareTo(CUST_ID, result.getKeyCustodian()));
-      assertEquals(KEY_NAMESPACE, result.getKeyNamespace());
-      assertNull(result.getKeyMetadata());
-      assertNull(result.getTheKey());
-      assertEquals(FAILED, result.getKeyState());
-    }
-
-    @Test
     public void testGetKeyWithoutWrappedKey() throws Exception {
       when(table.get(any(Get.class))).thenReturn(result2);
 
