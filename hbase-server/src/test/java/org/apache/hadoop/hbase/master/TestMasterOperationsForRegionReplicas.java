@@ -132,7 +132,7 @@ public class TestMasterOperationsForRegionReplicas {
           .setColumnFamily(ColumnFamilyDescriptorBuilder.of("family")).build();
       ADMIN.createTable(desc, Bytes.toBytes("A"), Bytes.toBytes("Z"), numRegions);
       TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
-      TEST_UTIL.waitUntilNoRegionsInTransition();
+      TEST_UTIL.waitUntilNoRegionTransitScheduled();
 
       validateNumberOfRowsInMeta(tableName, numRegions, ADMIN.getConnection());
       List<RegionInfo> hris = MetaTableAccessor.getTableRegions(ADMIN.getConnection(), tableName);
@@ -154,7 +154,7 @@ public class TestMasterOperationsForRegionReplicas {
           .setColumnFamily(ColumnFamilyDescriptorBuilder.of("family")).build();
       ADMIN.createTable(desc, Bytes.toBytes("A"), Bytes.toBytes("Z"), numRegions);
       TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
-      TEST_UTIL.waitUntilNoRegionsInTransition();
+      TEST_UTIL.waitUntilNoRegionTransitScheduled();
       validateNumberOfRowsInMeta(tableName, numRegions, ADMIN.getConnection());
 
       List<RegionInfo> hris = MetaTableAccessor.getTableRegions(ADMIN.getConnection(), tableName);
@@ -187,7 +187,7 @@ public class TestMasterOperationsForRegionReplicas {
       TEST_UTIL.getHBaseClusterInterface().startMaster(master.getHostname(), master.getPort());
       TEST_UTIL.getHBaseClusterInterface().waitForActiveAndReadyMaster();
       TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
-      TEST_UTIL.waitUntilNoRegionsInTransition();
+      TEST_UTIL.waitUntilNoRegionTransitScheduled();
       assertRegionStateNotNull(hris, numRegions, numReplica);
       validateFromSnapshotFromMeta(TEST_UTIL, tableName, numRegions, numReplica,
         ADMIN.getConnection());
@@ -207,7 +207,7 @@ public class TestMasterOperationsForRegionReplicas {
         StartTestingClusterOption.builder().numRegionServers(numSlaves).rsPorts(rsports).build();
       TEST_UTIL.startMiniHBaseCluster(option);
       TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
-      TEST_UTIL.waitUntilNoRegionsInTransition();
+      TEST_UTIL.waitUntilNoRegionTransitScheduled();
       resetConnections();
       validateFromSnapshotFromMeta(TEST_UTIL, tableName, numRegions, numReplica,
         ADMIN.getConnection());
@@ -217,7 +217,7 @@ public class TestMasterOperationsForRegionReplicas {
       TEST_UTIL.shutdownMiniHBaseCluster();
       TEST_UTIL.startMiniHBaseCluster();
       TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
-      TEST_UTIL.waitUntilNoRegionsInTransition();
+      TEST_UTIL.waitUntilNoRegionTransitScheduled();
       resetConnections();
       validateSingleRegionServerAssignment(ADMIN.getConnection(), numRegions, numReplica);
       for (int i = 1; i < numSlaves; i++) { // restore the cluster
@@ -234,7 +234,7 @@ public class TestMasterOperationsForRegionReplicas {
       LOG.info(ADMIN.getDescriptor(tableName).toString());
       assertTrue(ADMIN.isTableEnabled(tableName));
       TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
-      TEST_UTIL.waitUntilNoRegionsInTransition();
+      TEST_UTIL.waitUntilNoRegionTransitScheduled();
       List<RegionInfo> regions = TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager()
         .getRegionStates().getRegionsOfTable(tableName);
       assertTrue("regions.size=" + regions.size() + ", numRegions=" + numRegions + ", numReplica="
@@ -247,7 +247,7 @@ public class TestMasterOperationsForRegionReplicas {
       ADMIN.enableTable(tableName);
       assertTrue(ADMIN.isTableEnabled(tableName));
       TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
-      TEST_UTIL.waitUntilNoRegionsInTransition();
+      TEST_UTIL.waitUntilNoRegionTransitScheduled();
       regions = TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().getRegionStates()
         .getRegionsOfTable(tableName);
       assertEquals(numRegions * numReplica, regions.size());
@@ -298,7 +298,7 @@ public class TestMasterOperationsForRegionReplicas {
           .setColumnFamily(ColumnFamilyDescriptorBuilder.of("family")).build();
       ADMIN.createTable(desc, Bytes.toBytes("A"), Bytes.toBytes("Z"), numRegions);
       TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
-      TEST_UTIL.waitUntilNoRegionsInTransition();
+      TEST_UTIL.waitUntilNoRegionTransitScheduled();
       Set<byte[]> tableRows = new HashSet<>();
       List<RegionInfo> hris = MetaTableAccessor.getTableRegions(ADMIN.getConnection(), tableName);
       for (RegionInfo hri : hris) {
@@ -324,7 +324,7 @@ public class TestMasterOperationsForRegionReplicas {
       ADMIN.enableTable(tableName);
       assertTrue(ADMIN.isTableEnabled(tableName));
       TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
-      TEST_UTIL.waitUntilNoRegionsInTransition();
+      TEST_UTIL.waitUntilNoRegionTransitScheduled();
       List<RegionInfo> regions = TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager()
         .getRegionStates().getRegionsOfTable(tableName);
       assertEquals(numRegions * numReplica, regions.size());
