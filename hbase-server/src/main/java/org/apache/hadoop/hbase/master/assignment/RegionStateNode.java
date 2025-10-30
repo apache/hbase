@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master.assignment;
 
 import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -68,6 +69,7 @@ import org.slf4j.LoggerFactory;
 public class RegionStateNode implements Comparable<RegionStateNode> {
 
   private static final Logger LOG = LoggerFactory.getLogger(RegionStateNode.class);
+  private final AtomicInteger trspCounter;
 
   private static final class AssignmentProcedureEvent extends ProcedureEvent<RegionInfo> {
     public AssignmentProcedureEvent(final RegionInfo regionInfo) {
@@ -78,7 +80,6 @@ public class RegionStateNode implements Comparable<RegionStateNode> {
   final Lock lock = new ReentrantLock();
   private final RegionInfo regionInfo;
   private final ProcedureEvent<?> event;
-  private final ConcurrentMap<RegionInfo, RegionStateNode> ritMap;
 
   // volatile only for getLastUpdate and test usage, the upper layer should sync on the
   // RegionStateNode before accessing usually.
@@ -102,10 +103,10 @@ public class RegionStateNode implements Comparable<RegionStateNode> {
 
   private volatile long openSeqNum = HConstants.NO_SEQNUM;
 
-  RegionStateNode(RegionInfo regionInfo, ConcurrentMap<RegionInfo, RegionStateNode> ritMap) {
+  RegionStateNode(RegionInfo regionInfo, AtomicInteger trspCounter) {
     this.regionInfo = regionInfo;
     this.event = new AssignmentProcedureEvent(regionInfo);
-    this.ritMap = ritMap;
+    this.trspCounter = trspCounter;
   }
 
   /**
@@ -160,7 +161,7 @@ public class RegionStateNode implements Comparable<RegionStateNode> {
     return isInState(State.FAILED_OPEN) && getProcedure() != null;
   }
 
-  public boolean isInTransition() {
+  public boolean isTransitionScheduled() {
     return getProcedure() != null;
   }
 
@@ -206,14 +207,14 @@ public class RegionStateNode implements Comparable<RegionStateNode> {
   public TransitRegionStateProcedure setProcedure(TransitRegionStateProcedure proc) {
     assert this.procedure == null;
     this.procedure = proc;
-    ritMap.put(regionInfo, this);
+    trspCounter.incrementAndGet();
     return proc;
   }
 
   public void unsetProcedure(TransitRegionStateProcedure proc) {
     assert this.procedure == proc;
+    trspCounter.decrementAndGet();
     this.procedure = null;
-    ritMap.remove(regionInfo, this);
   }
 
   public TransitRegionStateProcedure getProcedure() {

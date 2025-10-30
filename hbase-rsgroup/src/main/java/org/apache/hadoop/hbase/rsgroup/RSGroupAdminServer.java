@@ -26,6 +26,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedSet;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
@@ -533,7 +534,7 @@ public class RSGroupAdminServer implements RSGroupAdmin {
       if (groupRIT.size() > 0 && !request.isIgnoreRegionsInTransition()) {
         LOG.debug("Not running balancer because {} region(s) in transition: {}", groupRIT.size(),
           StringUtils.abbreviate(
-            master.getAssignmentManager().getRegionStates().getRegionsInTransition().toString(),
+            master.getAssignmentManager().getRegionsInTransition().toString(),
             256));
         return responseBuilder.build();
       }
@@ -654,19 +655,17 @@ public class RSGroupAdminServer implements RSGroupAdmin {
 
   private Map<String, RegionState> rsGroupGetRegionsInTransition(String groupName)
     throws IOException {
+    SortedSet<TableName> tablesInGroup = getRSGroupInfo(groupName).getTables();
     Map<String, RegionState> rit = Maps.newTreeMap();
-    AssignmentManager am = master.getAssignmentManager();
-    for (TableName tableName : getRSGroupInfo(groupName).getTables()) {
-      for (RegionInfo regionInfo : am.getRegionStates().getRegionsOfTable(tableName)) {
-        RegionState state = am.getRegionStates().getRegionTransitionState(regionInfo);
-        if (state != null) {
-          rit.put(regionInfo.getEncodedName(), state);
-        }
+    for (RegionStateNode regionNode : master.getAssignmentManager()
+      .getRegionsInTransition()) {
+      TableName tn = regionNode.getTable();
+      if (tablesInGroup.contains(tn)) {
+        rit.put(regionNode.getRegionInfo().getEncodedName(), regionNode.toRegionState());
       }
     }
     return rit;
   }
-
   /**
    * This is an EXPENSIVE clone. Cloning though is the safest thing to do. Can't let out original
    * since it can change and at least the load balancer wants to iterate this exported list. Load

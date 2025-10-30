@@ -280,7 +280,7 @@ public abstract class TestAssignmentManagerBase {
     TransitRegionStateProcedure proc;
     regionNode.lock();
     try {
-      assertFalse(regionNode.isInTransition());
+      assertFalse(regionNode.isTransitionScheduled());
       proc = TransitRegionStateProcedure
         .unassign(master.getMasterProcedureExecutor().getEnvironment(), hri);
       regionNode.setProcedure(proc);

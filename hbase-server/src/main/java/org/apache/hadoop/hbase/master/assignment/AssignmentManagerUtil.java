@@ -164,7 +164,7 @@ final class AssignmentManagerUtil {
           regionNode.lock();
           try {
             if (ignoreIfInTransition) {
-              if (regionNode.isInTransition()) {
+              if (regionNode.isTransitionScheduled()) {
                 return null;
               }
             } else {
@@ -172,7 +172,7 @@ final class AssignmentManagerUtil {
               // created, or has been successfully closed so should not be on any servers, so SCP
               // will
               // not process it either.
-              assert !regionNode.isInTransition();
+              assert !regionNode.isTransitionScheduled();
             }
             regionNode.setProcedure(proc);
           } finally {
@@ -194,7 +194,7 @@ final class AssignmentManagerUtil {
         // apply ignoreRITs to replica regions as well.
         if (
           !ignoreIfInTransition || !env.getAssignmentManager().getRegionStates()
-            .getOrCreateRegionStateNode(ri).isInTransition()
+            .getOrCreateRegionStateNode(ri).isTransitionScheduled()
         ) {
           replicaRegionInfos.add(ri);
         }
@@ -242,7 +242,7 @@ final class AssignmentManagerUtil {
       for (RegionInfo region : regionsAndReplicas) {
         if (
           env.getAssignmentManager().getRegionStates().getOrCreateRegionStateNode(region)
-            .isInTransition()
+            .isTransitionScheduled()
         ) {
           return null;
         }
