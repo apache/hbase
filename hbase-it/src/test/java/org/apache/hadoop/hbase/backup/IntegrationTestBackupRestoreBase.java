@@ -85,6 +85,7 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
   protected static final String SLEEP_TIME_KEY = "sleeptime";
   // short default interval because tests don't run very long.
   protected static final long SLEEP_TIME_DEFAULT = 50000L;
+  protected static String DEFAULT_BACKUP_ROOT_DIR = "backupIT";
 
   protected static int rowsInIteration;
   protected static int regionsCountPerServer;
@@ -97,7 +98,7 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
   protected static Object lock = new Object();
 
   protected FileSystem fs;
-  protected String backupRootDir = "backupRootDir";
+  protected String backupRootDir;
 
   /*
    * This class is used to run the backup and restore thread(s). Throwing an exception in this
@@ -316,8 +317,8 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
       incrementalBackupId = incrementalBackupIds[incrementalBackupIds.length - 1];
       // restore incremental backup for table, with overwrite
       TableName[] tablesToRestoreFrom = new TableName[] { table };
-      restore(createRestoreRequest(incrementalBackupId, false, tablesToRestoreFrom, null, true),
-        client);
+      restore(createRestoreRequest(backupRootDir, incrementalBackupId, false, tablesToRestoreFrom,
+        null, true), client);
       Table hTable = conn.getTable(table);
       Assert.assertEquals(rowsInIteration * (numIterations + 1),
         HBaseTestingUtil.countRows(hTable));
@@ -454,10 +455,10 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
   }
 
   /**
-   * Verifies the WAL partition directory contains a backup WAL file The WAL file's path will look
+   * Verifies the WAL partition directory contains a backup WAL file. The WAL file's path will look
    * something like the following:
    * .../backupWALDir/WALs/2025-10-17/wal_file.1760738249595.1880be89-0b69-4bad-8d0e-acbf25c63b7e
-   * @param walPartitionDir The date directory for a backip WAL i.e.
+   * @param walPartitionDir The date directory for a backup WAL i.e.
    *                        .../backupWALDir/WALs/2025-10-17
    */
   private void verifyBackupWALFiles(Path walPartitionDir) throws IOException {
@@ -480,7 +481,9 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
   private void restoreTableAndVerifyRowCount(Connection conn, BackupAdmin client, TableName table,
     String backupId, long expectedRows) throws IOException {
     TableName[] tablesRestoreIncMultiple = new TableName[] { table };
-    restore(createRestoreRequest(backupId, false, tablesRestoreIncMultiple, null, true), client);
+    restore(
+      createRestoreRequest(backupRootDir, backupId, false, tablesRestoreIncMultiple, null, true),
+      client);
     Table hTable = conn.getTable(table);
     Assert.assertEquals(expectedRows, HBaseTestingUtil.countRows(hTable));
     hTable.close();
@@ -522,8 +525,8 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
    * @param isOverwrite overwrite the table(s)
    * @return an instance of RestoreRequest
    */
-  public RestoreRequest createRestoreRequest(String backupId, boolean check, TableName[] fromTables,
-    TableName[] toTables, boolean isOverwrite) {
+  public RestoreRequest createRestoreRequest(String backupRootDir, String backupId, boolean check,
+    TableName[] fromTables, TableName[] toTables, boolean isOverwrite) {
     RestoreRequest.Builder builder = new RestoreRequest.Builder();
     return builder.withBackupRootDir(backupRootDir).withBackupId(backupId).withCheck(check)
       .withFromTables(fromTables).withToTables(toTables).withOvewrite(isOverwrite).build();

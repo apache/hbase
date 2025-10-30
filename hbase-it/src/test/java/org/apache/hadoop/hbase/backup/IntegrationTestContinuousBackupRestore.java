@@ -80,7 +80,7 @@ public class IntegrationTestContinuousBackupRestore extends IntegrationTestBacku
     util.initializeCluster(regionServerCount);
     LOG.info("Cluster initialized and ready");
 
-    backupRootDir = util.getDataTestDirOnTestFS() + Path.SEPARATOR + backupRootDir;
+    backupRootDir = util.getDataTestDirOnTestFS() + Path.SEPARATOR + DEFAULT_BACKUP_ROOT_DIR;
     LOG.info("The backup root directory is: {}", backupRootDir);
     createAndSetBackupWalDir();
     fs = FileSystem.get(conf);

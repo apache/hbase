@@ -61,7 +61,7 @@ public class IntegrationTestBackupRestore extends IntegrationTestBackupRestoreBa
     util.initializeCluster(regionServerCount);
     LOG.info("Cluster initialized and ready");
 
-    backupRootDir = util.getDataTestDirOnTestFS() + Path.SEPARATOR + backupRootDir;
+    backupRootDir = util.getDataTestDirOnTestFS() + Path.SEPARATOR + DEFAULT_BACKUP_ROOT_DIR;
     LOG.info("The backup root directory is: {}", backupRootDir);
     fs = FileSystem.get(conf);
   }
