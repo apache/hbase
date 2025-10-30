@@ -36,7 +36,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.hbase.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.ProxyUsers;
-import org.apache.hadoop.util.HttpExceptionUtils;
+import org.apache.hadoop.hbase.util.HttpExceptionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;

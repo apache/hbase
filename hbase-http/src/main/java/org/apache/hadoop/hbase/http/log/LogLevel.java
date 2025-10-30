@@ -41,7 +41,7 @@ import org.apache.hadoop.hbase.logging.Log4jUtils;
 import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authentication.client.KerberosAuthenticator;
 import org.apache.hadoop.security.ssl.SSLFactory;
-import org.apache.hadoop.util.ServletUtil;
+import org.apache.hadoop.hbase.util.ServletUtil;
 import org.apache.hadoop.util.Tool;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
