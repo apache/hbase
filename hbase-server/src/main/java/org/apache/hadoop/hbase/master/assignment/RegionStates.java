@@ -20,13 +20,10 @@ package org.apache.hadoop.hbase.master.assignment;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.SortedSet;
-import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -54,21 +51,9 @@ import org.slf4j.LoggerFactory;
 public class RegionStates {
   private static final Logger LOG = LoggerFactory.getLogger(RegionStates.class);
 
-  // This comparator sorts the RegionStates by time stamp then Region name.
-  // Comparing by timestamp alone can lead us to discard different RegionStates that happen
-  // to share a timestamp.
-  private static class RegionStateStampComparator implements Comparator<RegionState> {
-    @Override
-    public int compare(final RegionState l, final RegionState r) {
-      int stampCmp = Long.compare(l.getStamp(), r.getStamp());
-      return stampCmp != 0 ? stampCmp : RegionInfo.COMPARATOR.compare(l.getRegion(), r.getRegion());
-    }
-  }
-
-  public final static RegionStateStampComparator REGION_STATE_STAMP_COMPARATOR =
-    new RegionStateStampComparator();
-
   private final Object regionsMapLock = new Object();
+
+  private final AtomicInteger trspCounter = new AtomicInteger(0);
 
   // TODO: Replace the ConcurrentSkipListMaps
   /**
@@ -83,9 +68,6 @@ public class RegionStates {
    */
   private final ConcurrentSkipListMap<String, RegionStateNode> encodedRegionsMap =
     new ConcurrentSkipListMap<>();
-
-  private final ConcurrentSkipListMap<RegionInfo, RegionStateNode> regionInTransition =
-    new ConcurrentSkipListMap<>(RegionInfo.COMPARATOR);
 
   /**
    * Regions marked as offline on a read of hbase:meta. Unused or at least, once offlined, regions
@@ -109,14 +91,12 @@ public class RegionStates {
   public void clear() {
     regionsMap.clear();
     encodedRegionsMap.clear();
-    regionInTransition.clear();
     regionOffline.clear();
     serverMap.clear();
   }
 
   public boolean isRegionInRegionStates(final RegionInfo hri) {
-    return (regionsMap.containsKey(hri.getRegionName()) || regionInTransition.containsKey(hri)
-      || regionOffline.containsKey(hri));
+    return (regionsMap.containsKey(hri.getRegionName()) || regionOffline.containsKey(hri));
   }
 
   // ==========================================================================
@@ -125,7 +105,7 @@ public class RegionStates {
   RegionStateNode createRegionStateNode(RegionInfo regionInfo) {
     synchronized (regionsMapLock) {
       RegionStateNode node = regionsMap.computeIfAbsent(regionInfo.getRegionName(),
-        key -> new RegionStateNode(regionInfo, regionInTransition));
+        key -> new RegionStateNode(regionInfo, trspCounter));
 
       if (encodedRegionsMap.get(regionInfo.getEncodedName()) != node) {
         encodedRegionsMap.put(regionInfo.getEncodedName(), node);
@@ -156,12 +136,6 @@ public class RegionStates {
     synchronized (regionsMapLock) {
       regionsMap.remove(regionInfo.getRegionName());
       encodedRegionsMap.remove(regionInfo.getEncodedName());
-    }
-    // See HBASE-20860
-    // After master restarts, merged regions' RIT state may not be cleaned,
-    // making sure they are cleaned here
-    if (regionInTransition.containsKey(regionInfo)) {
-      regionInTransition.remove(regionInfo);
     }
     // Remove from the offline regions map too if there.
     if (this.regionOffline.containsKey(regionInfo)) {
@@ -459,7 +433,7 @@ public class RegionStates {
   public List<RegionInfo> getAssignedRegions() {
     final List<RegionInfo> result = new ArrayList<RegionInfo>();
     for (RegionStateNode node : regionsMap.values()) {
-      if (!node.isInTransition()) {
+      if (!node.isTransitionScheduled()) {
         result.add(node.getRegionInfo());
       }
     }
@@ -619,65 +593,16 @@ public class RegionStates {
   }
 
   // ==========================================================================
-  // Region in transition helpers
-  // ==========================================================================
-  public boolean hasRegionsInTransition() {
-    return !regionInTransition.isEmpty();
-  }
-
-  public boolean isRegionInTransition(final RegionInfo regionInfo) {
-    final RegionStateNode node = regionInTransition.get(regionInfo);
-    return node != null ? node.isInTransition() : false;
-  }
-
-  public RegionState getRegionTransitionState(RegionInfo hri) {
-    RegionStateNode node = regionInTransition.get(hri);
-    if (node == null) {
-      return null;
-    }
-
-    node.lock();
-    try {
-      return node.isInTransition() ? node.toRegionState() : null;
-    } finally {
-      node.unlock();
-    }
-  }
-
-  public List<RegionStateNode> getRegionsInTransition() {
-    return new ArrayList<RegionStateNode>(regionInTransition.values());
-  }
-
-  /**
-   * Get the number of regions in transition.
-   */
-  public int getRegionsInTransitionCount() {
-    return regionInTransition.size();
-  }
-
-  public List<RegionState> getRegionsStateInTransition() {
-    final List<RegionState> rit = new ArrayList<RegionState>(regionInTransition.size());
-    for (RegionStateNode node : regionInTransition.values()) {
-      rit.add(node.toRegionState());
-    }
-    return rit;
-  }
-
-  public SortedSet<RegionState> getRegionsInTransitionOrderedByTimestamp() {
-    final SortedSet<RegionState> rit = new TreeSet<RegionState>(REGION_STATE_STAMP_COMPARATOR);
-    for (RegionStateNode node : regionInTransition.values()) {
-      rit.add(node.toRegionState());
-    }
-    return rit;
-  }
-
-  // ==========================================================================
   // Region offline helpers
   // ==========================================================================
   // TODO: Populated when we read meta but regions never make it out of here.
   public void addToOfflineRegions(final RegionStateNode regionNode) {
     LOG.info("Added to offline, CURRENTLY NEVER CLEARED!!! " + regionNode);
     regionOffline.put(regionNode.getRegionInfo(), regionNode);
+  }
+
+  public int getRegionTransitScheduledCount() {
+    return trspCounter.get();
   }
 
   // ==========================================================================

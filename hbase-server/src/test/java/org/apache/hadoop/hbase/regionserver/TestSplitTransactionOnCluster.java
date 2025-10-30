@@ -909,7 +909,7 @@ public class TestSplitTransactionOnCluster {
       } catch (DoNotRetryIOException e) {
         // Expected
       }
-      assertFalse("Split region can't be assigned", regionStates.isRegionInTransition(hri));
+      assertFalse("Split region can't be assigned", am.isRegionInTransition(hri));
       assertTrue(regionStates.isRegionInState(hri, State.SPLIT));
 
       // We should not be able to unassign it either
@@ -919,7 +919,7 @@ public class TestSplitTransactionOnCluster {
       } catch (DoNotRetryIOException e) {
         // Expected
       }
-      assertFalse("Split region can't be unassigned", regionStates.isRegionInTransition(hri));
+      assertFalse("Split region can't be unassigned", am.isRegionInTransition(hri));
       assertTrue(regionStates.isRegionInState(hri, State.SPLIT));
     } finally {
       admin.balancerSwitch(true, false);
@@ -1145,8 +1145,8 @@ public class TestSplitTransactionOnCluster {
           && req.getTransition(0).getTransitionCode().equals(TransitionCode.READY_TO_SPLIT)
           && !resp.hasErrorMessage()
       ) {
-        RegionStates regionStates = myMaster.getAssignmentManager().getRegionStates();
-        for (RegionStateNode regionState : regionStates.getRegionsInTransition()) {
+        AssignmentManager am = myMaster.getAssignmentManager();
+        for (RegionStateNode regionState : am.getRegionsInTransition()) {
           /*
            * TODO!!!! // Find the merging_new region and remove it if (regionState.isSplittingNew())
            * { regionStates.deleteRegion(regionState.getRegion()); }

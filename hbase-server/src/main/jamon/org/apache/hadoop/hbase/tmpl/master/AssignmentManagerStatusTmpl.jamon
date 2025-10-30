@@ -40,8 +40,7 @@ int limit = 100;
 </%args>
 
 <%java>
-SortedSet<RegionState> rit = assignmentManager.getRegionStates()
-    .getRegionsInTransitionOrderedByTimestamp();
+SortedSet<RegionState> rit = assignmentManager.getRegionsStateInTransition();
 </%java>
 
 <%if !rit.isEmpty() %>
