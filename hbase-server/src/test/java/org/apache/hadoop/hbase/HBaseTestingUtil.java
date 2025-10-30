@@ -3468,9 +3468,13 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
       @Override
       public boolean evaluate() throws IOException {
         HMaster master = getMiniHBaseCluster().getMaster();
-        if (master == null) return false;
+        if (master == null) {
+          return false;
+        }
         AssignmentManager am = master.getAssignmentManager();
-        if (am == null) return false;
+        if (am == null) {
+          return false;
+        }
         return am.getRegionTransitScheduledCount() == 0;
       }
     };
