@@ -119,6 +119,6 @@ public class TestMasterDryRunBalancer {
 
   private void waitForRegionsToSettle(HMaster master) {
     Waiter.waitFor(TEST_UTIL.getConfiguration(), 60_000,
-      () -> master.getAssignmentManager().getRegionStates().getRegionsInTransitionCount() <= 0);
+      () -> master.getAssignmentManager().getRegionsInTransitionCount() <= 0);
   }
 }
