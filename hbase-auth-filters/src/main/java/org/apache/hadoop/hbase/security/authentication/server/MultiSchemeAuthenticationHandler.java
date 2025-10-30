@@ -14,6 +14,7 @@
 package org.apache.hadoop.hbase.security.authentication.server;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -155,13 +156,13 @@ public class MultiSchemeAuthenticationHandler implements
           Thread.currentThread().getContextClassLoader()
               .loadClass(authHandlerClassName);
       AuthenticationHandler authHandler =
-          (AuthenticationHandler) klass.newInstance();
+          (AuthenticationHandler) klass.getDeclaredConstructor().newInstance();
       authHandler.init(config);
       logger.info("Successfully initialized Authentication handler of type "
           + authHandlerClassName);
       return authHandler;
     } catch (ClassNotFoundException | InstantiationException
-        | IllegalAccessException ex) {
+        | IllegalAccessException | NoSuchMethodException | InvocationTargetException ex) {
       logger.error("Failed to initialize authentication handler "
           + authHandlerClassName, ex);
       throw new ServletException(ex);

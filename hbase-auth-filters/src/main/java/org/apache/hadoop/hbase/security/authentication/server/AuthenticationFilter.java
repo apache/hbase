@@ -33,6 +33,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
 
+import java.lang.reflect.InvocationTargetException;
 import java.io.IOException;
 import java.security.Principal;
 import java.text.SimpleDateFormat;
@@ -197,10 +198,10 @@ public class AuthenticationFilter implements Filter {
       throws ServletException {
     try {
       Class<?> klass = Thread.currentThread().getContextClassLoader().loadClass(authHandlerClassName);
-      authHandler = (AuthenticationHandler) klass.newInstance();
+      authHandler = (AuthenticationHandler) klass.getDeclaredConstructor().newInstance();
       authHandler.init(config);
     } catch (ClassNotFoundException | InstantiationException |
-        IllegalAccessException ex) {
+        IllegalAccessException | NoSuchMethodException | InvocationTargetException ex) {
       throw new ServletException(ex);
     }
   }
@@ -260,7 +261,7 @@ public class AuthenticationFilter implements Filter {
       provider.init(config, ctx, validity);
     } else {
       provider = (SignerSecretProvider) Thread.currentThread().
-          getContextClassLoader().loadClass(name).newInstance();
+          getContextClassLoader().loadClass(name).getDeclaredConstructor().newInstance();
       provider.init(config, ctx, validity);
     }
     return provider;
