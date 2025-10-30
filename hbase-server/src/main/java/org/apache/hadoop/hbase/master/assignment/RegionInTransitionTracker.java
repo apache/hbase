@@ -54,6 +54,10 @@ public class RegionInTransitionTracker {
   }
 
   public void regionCrashed(RegionStateNode regionStateNode) {
+    if (regionStateNode.getRegionInfo().getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID) {
+      return;
+    }
+
     if (addRegionInTransition(regionStateNode)) {
       LOG.debug("{} added to RIT list because hosting region server is crashed ",
         regionStateNode.getRegionInfo().getEncodedName());

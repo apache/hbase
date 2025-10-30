@@ -1961,7 +1961,7 @@ public class AssignmentManager {
   // This comparator sorts the RegionStates by time stamp then Region name.
   // Comparing by timestamp alone can lead us to discard different RegionStates that happen
   // to share a timestamp.
-  private static class RegionStateStampComparator implements Comparator<RegionState> {
+  private final static class RegionStateStampComparator implements Comparator<RegionState> {
     @Override
     public int compare(final RegionState l, final RegionState r) {
       int stampCmp = Long.compare(l.getStamp(), r.getStamp());
@@ -2202,8 +2202,9 @@ public class AssignmentManager {
     ServerName crashedServerName) {
     for (RegionInfo regionInfo : regionsOnCrashedServer) {
       RegionStateNode node = regionStates.getOrCreateRegionStateNode(regionInfo);
-      if (node.getRegionLocation() == crashedServerName)
+      if (node.getRegionLocation() == crashedServerName) {
         regionInTransitionTracker.regionCrashed(node);
+      }
     }
   }
 
