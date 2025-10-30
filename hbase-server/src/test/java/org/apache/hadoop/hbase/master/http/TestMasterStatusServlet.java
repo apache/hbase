@@ -97,7 +97,7 @@ public class TestMasterStatusServlet {
     regionsInTransition
       .add(new RegionState(FAKE_HRI, RegionState.State.CLOSING, 12345L, FAKE_HOST));
     Mockito.doReturn(rs).when(am).getRegionStates();
-    Mockito.doReturn(regionsInTransition).when(rs).getRegionsInTransition();
+    Mockito.doReturn(regionsInTransition).when(am).getRegionsInTransition();
     Mockito.doReturn(am).when(master).getAssignmentManager();
     Mockito.doReturn(serverManager).when(master).getServerManager();
 

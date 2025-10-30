@@ -973,6 +973,13 @@ public class HMaster extends HRegionServer implements MasterServices {
     Map<Class<?>, List<Procedure<MasterProcedureEnv>>> procsByType = procedureExecutor
       .getActiveProceduresNoCopy().stream().collect(Collectors.groupingBy(p -> p.getClass()));
 
+    // This manager will be started AFTER hbase:meta is confirmed on line.
+    // hbase.mirror.table.state.to.zookeeper is so hbase1 clients can connect. They read table
+    // state from zookeeper while hbase2 reads it from hbase:meta. Disable if no hbase1 clients.
+    this.tableStateManager =
+      this.conf.getBoolean(MirroringTableStateManager.MIRROR_TABLE_STATE_TO_ZK_KEY, true)
+        ? new MirroringTableStateManager(this)
+        : new TableStateManager(this);
     // Create Assignment Manager
     this.assignmentManager = createAssignmentManager(this, masterRegion);
     this.assignmentManager.start();
@@ -995,13 +1002,6 @@ public class HMaster extends HRegionServer implements MasterServices {
         .map(p -> (ServerCrashProcedure) p).map(p -> p.getServerName()).collect(Collectors.toSet()),
       Sets.union(rsListStorage.getAll(), walManager.getLiveServersFromWALDir()),
       walManager.getSplittingServersFromWALDir());
-    // This manager will be started AFTER hbase:meta is confirmed on line.
-    // hbase.mirror.table.state.to.zookeeper is so hbase1 clients can connect. They read table
-    // state from zookeeper while hbase2 reads it from hbase:meta. Disable if no hbase1 clients.
-    this.tableStateManager =
-      this.conf.getBoolean(MirroringTableStateManager.MIRROR_TABLE_STATE_TO_ZK_KEY, true)
-        ? new MirroringTableStateManager(this)
-        : new TableStateManager(this);
 
     startupTaskGroup.addTask("Initializing ZK system trackers");
     initializeZKBasedSystemTrackers();
@@ -1910,7 +1910,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     // But if there are zero regions in transition, it can skip sleep to speed up.
     while (
       !interrupted && EnvironmentEdgeManager.currentTime() < nextBalanceStartTime
-        && this.assignmentManager.getRegionStates().hasRegionsInTransition()
+        && this.assignmentManager.getRegionTransitScheduledCount() > 0
     ) {
       try {
         Thread.sleep(100);
@@ -1922,8 +1922,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     // Throttling by max number regions in transition
     while (
       !interrupted && maxRegionsInTransition > 0
-        && this.assignmentManager.getRegionStates().getRegionsInTransitionCount()
-            >= maxRegionsInTransition
+        && this.assignmentManager.getRegionTransitScheduledCount() >= maxRegionsInTransition
         && EnvironmentEdgeManager.currentTime() <= cutoffTime
     ) {
       try {
@@ -2004,7 +2003,7 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     synchronized (this.balancer) {
       // Only allow one balance run at at time.
-      if (this.assignmentManager.hasRegionsInTransition()) {
+      if (this.assignmentManager.getRegionTransitScheduledCount() > 0) {
         List<RegionStateNode> regionsInTransition = assignmentManager.getRegionsInTransition();
         // if hbase:meta region is in transition, result of assignment cannot be recorded
         // ignore the force flag in that case
@@ -2019,8 +2018,8 @@ public class HMaster extends HRegionServer implements MasterServices {
 
         if (!request.isIgnoreRegionsInTransition() || metaInTransition) {
           LOG.info("Not running balancer (ignoreRIT=false" + ", metaRIT=" + metaInTransition
-            + ") because " + regionsInTransition.size() + " region(s) in transition: " + toPrint
-            + (truncated ? "(truncated list)" : ""));
+            + ") because " + assignmentManager.getRegionTransitScheduledCount()
+            + " region(s) in transition: " + toPrint + (truncated ? "(truncated list)" : ""));
           return responseBuilder.build();
         }
       }
@@ -2152,7 +2151,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     if (skipRegionManagementAction("region normalizer")) {
       return false;
     }
-    if (assignmentManager.hasRegionsInTransition()) {
+    if (assignmentManager.getRegionTransitScheduledCount() > 0) {
       return false;
     }
 
@@ -2929,7 +2928,7 @@ public class HMaster extends HRegionServer implements MasterServices {
         case REGIONS_IN_TRANSITION: {
           if (assignmentManager != null) {
             builder.setRegionsInTransition(
-              assignmentManager.getRegionStates().getRegionsStateInTransition());
+              new ArrayList<>(assignmentManager.getRegionsStateInTransition()));
           }
           break;
         }
