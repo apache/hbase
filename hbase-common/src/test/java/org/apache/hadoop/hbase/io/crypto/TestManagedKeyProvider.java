@@ -300,7 +300,7 @@ public class TestManagedKeyProvider {
       assertEquals(ManagedKeyState.FAILED, keyData.getKeyState());
       assertNull(keyData.getTheKey());
       assertEquals(requestedNamespace, keyData.getKeyNamespace());
-      assertEquals(firstCust, keyData.getKeyCustodian());
+      assertTrue(Bytes.equals(firstCust.get(), keyData.getKeyCustodian()));
     }
 
     @Test
@@ -475,14 +475,14 @@ public class TestManagedKeyProvider {
       } else {
         byte[] keyBytes = keyData.getTheKey().getEncoded();
         assertEquals(key.length, keyBytes.length);
-        assertEquals(new Bytes(key), keyBytes);
+        assertTrue(Bytes.equals(key, keyBytes));
       }
 
       // Use helper method instead of duplicated parsing logic
       String encodedCust = Base64.getEncoder().encodeToString(custBytes);
       assertMetadataMatches(keyData.getKeyMetadata(), alias, encodedCust, expectedNamespace);
 
-      assertEquals(new Bytes(custBytes), keyData.getKeyCustodian());
+      assertTrue(Bytes.equals(custBytes, keyData.getKeyCustodian()));
       assertEquals(keyData, managedKeyProvider.unwrapKey(keyData.getKeyMetadata(), null));
     }
   }

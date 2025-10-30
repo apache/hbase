@@ -32,7 +32,10 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class KeyNamespaceUtil {
+public final class KeyNamespaceUtil {
+  private KeyNamespaceUtil() {
+    throw new UnsupportedOperationException("Cannot instantiate utility class");
+  }
 
   /**
    * Construct a key namespace from a table descriptor and column family descriptor.
