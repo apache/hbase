@@ -1247,7 +1247,10 @@ public final class BackupSystemTable implements Closeable {
    * @return put operation
    */
   private Put createPutForIncrBackupTableSet(Set<TableName> tables, String backupRoot) {
-    Put put = new Put(rowkey(INCR_BACKUP_SET, backupRoot));
+    // added 1ms to prevent LostUpdate problem in case when deleteIncrementalBackupTableSet()
+    // executed very fast
+    long ts = EnvironmentEdgeManager.currentTime() + 1;
+    Put put = new Put(rowkey(INCR_BACKUP_SET, backupRoot), ts);
     for (TableName table : tables) {
       put.addColumn(BackupSystemTable.META_FAMILY, Bytes.toBytes(table.getNameAsString()),
         EMPTY_VALUE);
