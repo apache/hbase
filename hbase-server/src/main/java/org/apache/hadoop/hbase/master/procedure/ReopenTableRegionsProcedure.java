@@ -184,7 +184,7 @@ public class ReopenTableRegionsProcedure
     // If the region node is null, then at least in the next round we can remove this region to make
     // progress. And the second condition is a normal one, if there are no TRSP with it then we can
     // schedule one to make progress.
-    return regionNode == null || !regionNode.isInTransition();
+    return regionNode == null || !regionNode.isTransitionScheduled();
   }
 
   @Override
