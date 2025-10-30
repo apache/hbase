@@ -424,7 +424,8 @@ public class TestSecurityUtil {
       configBuilder().withKeyManagement(true).apply(conf);
       setupManagedKeyDataCache(testTableNamespace, mockManagedKeyData);
       assertEncryptionContextThrowsForWrites(IllegalStateException.class,
-        "Encryption for family 'test-family' configured with type 'AES' but key specifies algorithm 'DES'");
+        "Encryption for family 'test-family' configured with type 'AES' but key specifies "
+          + "algorithm 'DES'");
     }
 
     @Test
@@ -472,7 +473,8 @@ public class TestSecurityUtil {
       when(mockFamily.getEncryptionKey()).thenReturn(wrappedDESKey);
 
       assertEncryptionContextThrowsForWrites(IllegalStateException.class,
-        "Encryption for family 'test-family' configured with type 'AES' but key specifies algorithm 'DES'");
+        "Encryption for family 'test-family' configured with type 'AES' but key specifies "
+          + "algorithm 'DES'");
     }
 
     @Test

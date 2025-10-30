@@ -43,7 +43,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
-public class KeymetaTestUtils {
+public final class KeymetaTestUtils {
 
   /**
    * A ByteArrayInputStream that implements Seekable and PositionedReadable to work with

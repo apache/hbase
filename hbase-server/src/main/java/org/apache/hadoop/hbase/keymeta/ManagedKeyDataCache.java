@@ -62,8 +62,12 @@ public class ManagedKeyDataCache extends KeyManagementBase {
 
     @Override
     public boolean equals(Object obj) {
-      if (this == obj) return true;
-      if (obj == null || getClass() != obj.getClass()) return false;
+      if (this == obj) {
+        return true;
+      }
+      if (obj == null || getClass() != obj.getClass()) {
+        return false;
+      }
       ActiveKeysCacheKey cacheKey = (ActiveKeysCacheKey) obj;
       return Bytes.equals(custodian, cacheKey.custodian)
         && Objects.equals(namespace, cacheKey.namespace);
@@ -161,7 +165,8 @@ public class ManagedKeyDataCache extends KeyManagementBase {
       }
       return keyData;
     });
-    if (ManagedKeyState.isUsable(entry.getKeyState())) {
+    // This should never be null, but adding a check just to satisfy spotbugs.
+    if (entry != null && ManagedKeyState.isUsable(entry.getKeyState())) {
       return entry;
     }
     return null;
@@ -241,7 +246,8 @@ public class ManagedKeyDataCache extends KeyManagementBase {
       return retrievedKey;
     });
 
-    if (keyData.getKeyState() == ManagedKeyState.ACTIVE) {
+    // This should never be null, but adding a check just to satisfy spotbugs.
+    if (keyData!= null && keyData.getKeyState() == ManagedKeyState.ACTIVE) {
       return keyData;
     }
     return null;
