@@ -28,14 +28,17 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.IntegrationTestBase;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupAdminImpl;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
@@ -47,6 +50,9 @@ import org.apache.hadoop.hbase.chaos.policies.Policy;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
@@ -236,22 +242,23 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
    * This method is what performs the actual backup, restore, merge, and delete operations. This
    * method is run in a separate thread. It first performs a full backup. After, it iteratively
    * performs a series of incremental backups and restores. Later, it deletes the backups.
-   * @param table                     The table the backups are performed on
+   * @param tableName                 The table the backups are performed on
    * @param isContinuousBackupEnabled Boolean flag used to indicate if the backups should have
    *                                  continuous backup enabled.
    */
-  private void runTestSingle(TableName table, boolean isContinuousBackupEnabled)
+  private void runTestSingle(TableName tableName, boolean isContinuousBackupEnabled)
     throws IOException, InterruptedException {
     String enabledOrDisabled = isContinuousBackupEnabled ? "enabled" : "disabled";
     List<String> backupIds = new ArrayList<>();
 
-    try (Connection conn = util.getConnection(); BackupAdmin client = new BackupAdminImpl(conn)) {
-      loadData(table, rowsInIteration);
+    try (Connection conn = util.getConnection(); BackupAdmin client = new BackupAdminImpl(conn);
+      Table tableConn = conn.getTable(tableName)) {
+      loadData(tableName, rowsInIteration);
 
       // First create a full backup for the table
-      LOG.info("Creating full backup image for {} with continuous backup {}", table,
+      LOG.info("Creating full backup image for {} with continuous backup {}", tableName,
         enabledOrDisabled);
-      List<TableName> tables = Lists.newArrayList(table);
+      List<TableName> tables = Lists.newArrayList(tableName);
       BackupRequest.Builder builder = new BackupRequest.Builder();
       BackupRequest request = builder.withBackupType(BackupType.FULL).withTableList(tables)
         .withTargetRootDir(backupRootDir).withContinuousBackupEnabled(isContinuousBackupEnabled)
@@ -260,11 +267,11 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
       String fullBackupId = backup(request, client, backupIds);
       LOG.info("Created full backup with ID: {}", fullBackupId);
 
-      verifySnapshotExists(table, fullBackupId);
+      verifySnapshotExists(tableName, fullBackupId);
 
       // Run full backup verifications specific to continuous backup
       if (isContinuousBackupEnabled) {
-        BackupTestUtil.verifyReplicationPeerSubscription(util, table);
+        BackupTestUtil.verifyReplicationPeerSubscription(util, tableName);
         Path backupWALs = verifyWALsDirectoryExists();
         Path walPartitionDir = verifyWALPartitionDirExists(backupWALs);
         verifyBackupWALFiles(walPartitionDir);
@@ -274,12 +281,16 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
       String incrementalBackupId;
       for (int count = 1; count <= numIterations; count++) {
         LOG.info("{} - Starting incremental backup iteration {} of {} for {}",
-          Thread.currentThread().getName(), count, numIterations, table);
-        loadData(table, rowsInIteration);
+          Thread.currentThread().getName(), count, numIterations, tableName);
+        loadData(tableName, rowsInIteration);
+        if (isContinuousBackupEnabled) {
+          long latestPutTimestamp = getLatestPutTimestamp(tableConn);
+          waitForCheckpointTimestampUpdate(conn, latestPutTimestamp, tableName);
+        }
 
         // Do incremental backup
         LOG.info("Creating incremental backup number {} with continuous backup {} for {}", count,
-          enabledOrDisabled, table);
+          enabledOrDisabled, tableName);
         builder = new BackupRequest.Builder();
         request = builder.withBackupType(BackupType.INCREMENTAL).withTableList(tables)
           .withTargetRootDir(backupRootDir).withContinuousBackupEnabled(isContinuousBackupEnabled)
@@ -291,21 +302,22 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
         // On the first iteration, this backup will be the full backup
         String previousBackupId = backupIds.get(backupIds.size() - 2);
         if (previousBackupId.equals(fullBackupId)) {
-          LOG.info("Restoring {} using original full backup with ID: {}", table, previousBackupId);
-        } else {
-          LOG.info("Restoring {} using second most recent incremental backup with ID: {}", table,
+          LOG.info("Restoring {} using original full backup with ID: {}", tableName,
             previousBackupId);
+        } else {
+          LOG.info("Restoring {} using second most recent incremental backup with ID: {}",
+            tableName, previousBackupId);
         }
-        restoreTableAndVerifyRowCount(conn, client, table, previousBackupId,
+        restoreTableAndVerifyRowCount(conn, client, tableName, previousBackupId,
           (long) rowsInIteration * count);
 
         // Restore table using the most recently created incremental backup
-        LOG.info("Restoring {} using most recent incremental backup with ID: {}", table,
+        LOG.info("Restoring {} using most recent incremental backup with ID: {}", tableName,
           incrementalBackupId);
-        restoreTableAndVerifyRowCount(conn, client, table, incrementalBackupId,
+        restoreTableAndVerifyRowCount(conn, client, tableName, incrementalBackupId,
           (long) rowsInIteration * (count + 1));
         LOG.info("{} - Finished incremental backup iteration {} of {} for {}",
-          Thread.currentThread().getName(), count, numIterations, table);
+          Thread.currentThread().getName(), count, numIterations, tableName);
       }
 
       // Now merge all incremental and restore
@@ -316,10 +328,10 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
       // Restore the last incremental backup
       incrementalBackupId = incrementalBackupIds[incrementalBackupIds.length - 1];
       // restore incremental backup for table, with overwrite
-      TableName[] tablesToRestoreFrom = new TableName[] { table };
+      TableName[] tablesToRestoreFrom = new TableName[] { tableName };
       restore(createRestoreRequest(backupRootDir, incrementalBackupId, false, tablesToRestoreFrom,
         null, true), client);
-      Table hTable = conn.getTable(table);
+      Table hTable = conn.getTable(tableName);
       Assert.assertEquals(rowsInIteration * (numIterations + 1),
         HBaseTestingUtil.countRows(hTable));
       hTable.close();
@@ -472,6 +484,82 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
         "The timestamp in the WAL file's name should match the date for the WAL partition directory",
         walPartitionDir.getName(), BackupUtils.formatToDateString(Long.parseLong(splitName[1])));
     }
+  }
+
+  /**
+   * Checks if all timestamps in a map with ServerName and timestamp key-values pairs are past the
+   * provided timestamp threshold.
+   * @param timestamps Map with ServerName and timestamp key-value pairs
+   * @param threshold  Timestamp to check all timestamp values in the map against
+   * @return True if all timestamps values in the map have met or are path the timestamp threshold;
+   *         False otherwise
+   */
+  private boolean areAllTimestampsPastThreshold(Map<ServerName, Long> timestamps, long threshold,
+    TableName tableName) {
+    boolean haveAllTimestampsReachedThreshold = true;
+    LOG.info(
+      "Checking if each region server in the replication check point has caught up to the latest Put on {}",
+      tableName.getNameAsString());
+    for (Map.Entry<ServerName, Long> entry : timestamps.entrySet()) {
+      LOG.info("host={}, checkpoint timestamp={}, latest put timestamp={}, caught up={}",
+        entry.getKey(), entry.getValue(), threshold, entry.getValue() >= threshold);
+      if (entry.getValue() < threshold) {
+        // Not returning right away so all hosts and timestamps are logged
+        haveAllTimestampsReachedThreshold = false;
+      }
+    }
+    return haveAllTimestampsReachedThreshold;
+  }
+
+  /**
+   * Waits for the replication checkpoint timestamp of each region server to meet or pass the
+   * timestamp of the latest Put operation on the backed-up table.
+   * @param conn               Minicluster connection
+   * @param latestPutTimestamp Timestamp of the latest Put operation on the backed-up table
+   */
+  private void waitForCheckpointTimestampUpdate(Connection conn, long latestPutTimestamp,
+    TableName tableName) throws IOException, InterruptedException {
+    BackupSystemTable backupSystemTable = new BackupSystemTable(conn);
+    Map<ServerName, Long> checkpointTimestamps = backupSystemTable.getBackupCheckpointTimestamps();
+    int i = 0;
+    int sleepTimeSec = 10;
+    int waitThresholdMs = 15 * 60 * 1000;
+    long waitStartTime = System.currentTimeMillis();
+    while (!areAllTimestampsPastThreshold(checkpointTimestamps, latestPutTimestamp, tableName)) {
+      if ((System.currentTimeMillis() - waitStartTime) >= waitThresholdMs) {
+        throw new RuntimeException("Timed out waiting for the replication checkpoint timestamp of "
+          + "each region server to catch up with timestamp of the latest Put on "
+          + tableName.getNameAsString());
+      }
+      LOG.info(
+        "Waiting {} seconds for the replication checkpoint timestamp for each region server "
+          + "to catch up with the timestamp of the latest Put on {}",
+        sleepTimeSec, tableName.getNameAsString());
+      Thread.sleep(sleepTimeSec * 1000);
+      checkpointTimestamps = backupSystemTable.getBackupCheckpointTimestamps();
+      i++;
+    }
+    LOG.info("Done waiting. Total wait time: {} seconds", i * sleepTimeSec);
+  }
+
+  /**
+   * Scans the backed-up table and returns the timestamp (ms) of the latest Put operation on the
+   * table.
+   * @param table The backed-up table to scan
+   * @return Timestamp of the most recent Put on the backed-up table
+   */
+  private long getLatestPutTimestamp(Table table) throws IOException {
+    Scan scan = new Scan();
+    ResultScanner resultScanner = table.getScanner(scan);
+    long timestamp = 0;
+    for (Result result : resultScanner) {
+      for (Cell cell : result.rawCells()) {
+        if (cell.getTimestamp() > timestamp) {
+          timestamp = cell.getTimestamp();
+        }
+      }
+    }
+    return timestamp;
   }
 
   /**
