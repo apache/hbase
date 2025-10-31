@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.IntegrationTestBase;
+import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupAdminImpl;
@@ -57,6 +58,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
 import org.junit.After;
 import org.junit.Assert;
 import org.slf4j.Logger;
@@ -140,6 +142,17 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
         this.throwable = t;
       }
     }
+  }
+
+  protected void initializeConfFromCommandLine() {
+    util = new IntegrationTestingUtility();
+    conf = util.getConfiguration();
+    regionsCountPerServer = conf.getInt(REGION_COUNT_KEY, DEFAULT_REGION_COUNT);
+    regionServerCount = conf.getInt(REGIONSERVER_COUNT_KEY, DEFAULT_REGIONSERVER_COUNT);
+    rowsInIteration = conf.getInt(ROWS_PER_ITERATION_KEY, DEFAULT_ROWS_IN_ITERATION);
+    numIterations = conf.getInt(NUM_ITERATIONS_KEY, DEFAULT_NUM_ITERATIONS);
+    numTables = conf.getInt(NUMBER_OF_TABLES_KEY, DEFAULT_NUMBER_OF_TABLES);
+    sleepTime = conf.getLong(SLEEP_TIME_KEY, SLEEP_TIME_DEFAULT);
   }
 
   @After
@@ -285,7 +298,7 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
         loadData(tableName, rowsInIteration);
         if (isContinuousBackupEnabled) {
           long latestPutTimestamp = getLatestPutTimestamp(tableConn);
-          waitForCheckpointTimestampUpdate(conn, latestPutTimestamp, tableName);
+          waitForCheckpointTimestampsToUpdate(conn, latestPutTimestamp, tableName);
         }
 
         // Do incremental backup
@@ -517,7 +530,7 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
    * @param conn               Minicluster connection
    * @param latestPutTimestamp Timestamp of the latest Put operation on the backed-up table
    */
-  private void waitForCheckpointTimestampUpdate(Connection conn, long latestPutTimestamp,
+  private void waitForCheckpointTimestampsToUpdate(Connection conn, long latestPutTimestamp,
     TableName tableName) throws IOException, InterruptedException {
     BackupSystemTable backupSystemTable = new BackupSystemTable(conn);
     Map<ServerName, Long> checkpointTimestamps = backupSystemTable.getBackupCheckpointTimestamps();
@@ -716,6 +729,8 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
 
   @Override
   protected void addOptions() {
+    addOptWithArg(REGIONSERVER_COUNT_KEY,
+      "Total number of region servers. Default: '" + DEFAULT_REGIONSERVER_COUNT + "'");
     addOptWithArg(REGION_COUNT_KEY, "Total number of regions. Default: " + DEFAULT_REGION_COUNT);
     addOptWithArg(ROWS_PER_ITERATION_KEY,
       "Total number of data rows to be loaded during one iteration." + " Default: "
@@ -743,6 +758,11 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
       cmd.getOptionValue(NUMBER_OF_TABLES_KEY, Integer.toString(DEFAULT_NUMBER_OF_TABLES)));
     sleepTime =
       Long.parseLong(cmd.getOptionValue(SLEEP_TIME_KEY, Long.toString(SLEEP_TIME_DEFAULT)));
+
+    LOG.info(MoreObjects.toStringHelper("Parsed Options")
+      .add(REGION_COUNT_KEY, regionsCountPerServer).add(REGIONSERVER_COUNT_KEY, regionServerCount)
+      .add(ROWS_PER_ITERATION_KEY, rowsInIteration).add(NUM_ITERATIONS_KEY, numIterations)
+      .add(NUMBER_OF_TABLES_KEY, numTables).add(SLEEP_TIME_KEY, sleepTime).toString());
   }
 
 }

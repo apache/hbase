@@ -31,9 +31,6 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
-import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
-
 /**
  * An integration test to detect regressions in HBASE-7912. Create a table with many regions, load
  * data, perform series backup/load operations, then restore and verify data
@@ -48,14 +45,7 @@ public class IntegrationTestBackupRestore extends IntegrationTestBackupRestoreBa
   @Override
   @Before
   public void setUp() throws Exception {
-    util = new IntegrationTestingUtility();
-    conf = util.getConfiguration();
-    regionsCountPerServer = conf.getInt(REGION_COUNT_KEY, DEFAULT_REGION_COUNT);
-    regionServerCount = conf.getInt(REGIONSERVER_COUNT_KEY, DEFAULT_REGIONSERVER_COUNT);
-    rowsInIteration = conf.getInt(ROWS_PER_ITERATION_KEY, DEFAULT_ROWS_IN_ITERATION);
-    numIterations = conf.getInt(NUM_ITERATIONS_KEY, DEFAULT_NUM_ITERATIONS);
-    numTables = conf.getInt(NUMBER_OF_TABLES_KEY, DEFAULT_NUMBER_OF_TABLES);
-    sleepTime = conf.getLong(SLEEP_TIME_KEY, SLEEP_TIME_DEFAULT);
+    initializeConfFromCommandLine();
     BackupTestUtil.enableBackup(conf);
     LOG.info("Initializing cluster with {} region servers.", regionServerCount);
     util.initializeCluster(regionServerCount);
@@ -84,25 +74,6 @@ public class IntegrationTestBackupRestore extends IntegrationTestBackupRestoreBa
     System.out.println(BackupRestoreConstants.VERIFY_BACKUP);
     testBackupRestore();
     return 0;
-  }
-
-  @Override
-  protected void addOptions() {
-    super.addOptions();
-    addOptWithArg(REGIONSERVER_COUNT_KEY,
-      "Total number of region servers. Default: '" + DEFAULT_REGIONSERVER_COUNT + "'");
-  }
-
-  @Override
-  protected void processOptions(CommandLine cmd) {
-    super.processOptions(cmd);
-    regionServerCount = Integer.parseInt(
-      cmd.getOptionValue(REGIONSERVER_COUNT_KEY, Integer.toString(DEFAULT_REGIONSERVER_COUNT)));
-
-    LOG.info(MoreObjects.toStringHelper("Parsed Options")
-      .add(REGION_COUNT_KEY, regionsCountPerServer).add(REGIONSERVER_COUNT_KEY, regionServerCount)
-      .add(ROWS_PER_ITERATION_KEY, rowsInIteration).add(NUM_ITERATIONS_KEY, numIterations)
-      .add(NUMBER_OF_TABLES_KEY, numTables).add(SLEEP_TIME_KEY, sleepTime).toString());
   }
 
   public static void main(String[] args) throws Exception {
