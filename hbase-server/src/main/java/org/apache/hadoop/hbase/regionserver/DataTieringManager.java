@@ -47,6 +47,9 @@ public class DataTieringManager {
     "hbase.regionserver.datatiering.enable";
   public static final boolean DEFAULT_GLOBAL_DATA_TIERING_ENABLED = false; // disabled by default
   public static final String DATATIERING_KEY = "hbase.hstore.datatiering.type";
+  public static final String HSTORE_DATATIERING_GRACE_PERIOD_MILLIS_KEY =
+    "hbase.hstore.datatiering.grace.period.millis";
+  public static final long DEFAULT_DATATIERING_GRACE_PERIOD = 0;
   public static final String DATATIERING_HOT_DATA_AGE_KEY =
     "hbase.hstore.datatiering.hot.age.millis";
   public static final DataTieringType DEFAULT_DATATIERING = DataTieringType.NONE;
@@ -139,6 +142,9 @@ public class DataTieringManager {
    * @return {@code true} if the data is hot, {@code false} otherwise
    */
   public boolean isHotData(long maxTimestamp, Configuration conf) {
+    if (isWithinGracePeriod(maxTimestamp, conf)) {
+      return true;
+    }
     DataTieringType dataTieringType = getDataTieringType(conf);
 
     if (
@@ -170,8 +176,11 @@ public class DataTieringManager {
         throw new DataTieringException(
           "Store file corresponding to " + hFilePath + " doesn't exist");
       }
-      return hotDataValidator(dataTieringType.getInstance().getTimestamp(getHStoreFile(hFilePath)),
-        getDataTieringHotDataAge(configuration));
+      long maxTimestamp = dataTieringType.getInstance().getTimestamp(hStoreFile);
+      if (isWithinGracePeriod(maxTimestamp, configuration)) {
+        return true;
+      }
+      return hotDataValidator(maxTimestamp, getDataTieringHotDataAge(configuration));
     }
     // DataTieringType.NONE or other types are considered hot by default
     return true;
@@ -189,11 +198,19 @@ public class DataTieringManager {
   public boolean isHotData(HFileInfo hFileInfo, Configuration configuration) {
     DataTieringType dataTieringType = getDataTieringType(configuration);
     if (hFileInfo != null && !dataTieringType.equals(DataTieringType.NONE)) {
-      return hotDataValidator(dataTieringType.getInstance().getTimestamp(hFileInfo),
-        getDataTieringHotDataAge(configuration));
+      long maxTimestamp = dataTieringType.getInstance().getTimestamp(hFileInfo);
+      if (isWithinGracePeriod(maxTimestamp, configuration)) {
+        return true;
+      }
+      return hotDataValidator(maxTimestamp, getDataTieringHotDataAge(configuration));
     }
     // DataTieringType.NONE or other types are considered hot by default
     return true;
+  }
+
+  private boolean isWithinGracePeriod(long maxTimestamp, Configuration conf) {
+    long gracePeriod = getDataTieringGracePeriod(conf);
+    return gracePeriod > 0 && (getCurrentTimestamp() - maxTimestamp) < gracePeriod;
   }
 
   private boolean hotDataValidator(long maxTimestamp, long hotDataAge) {
@@ -273,6 +290,11 @@ public class DataTieringManager {
   private long getDataTieringHotDataAge(Configuration conf) {
     return Long.parseLong(
       conf.get(DATATIERING_HOT_DATA_AGE_KEY, String.valueOf(DEFAULT_DATATIERING_HOT_DATA_AGE)));
+  }
+
+  private long getDataTieringGracePeriod(Configuration conf) {
+    return Long.parseLong(conf.get(HSTORE_DATATIERING_GRACE_PERIOD_MILLIS_KEY,
+      String.valueOf(DEFAULT_DATATIERING_GRACE_PERIOD)));
   }
 
   /*
