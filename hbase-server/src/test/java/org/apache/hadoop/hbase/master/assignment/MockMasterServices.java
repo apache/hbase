@@ -117,12 +117,12 @@ public class MockMasterServices extends MockNoopMasterServices {
         ? null
         : new SplitWALManager(this);
     this.masterRegion = MasterRegionFactory.create(this);
+    this.tableStateManager = mock(TableStateManager.class);
     // Mock an AM.
     this.assignmentManager =
       new AssignmentManager(this, masterRegion, new MockRegionStateStore(this, masterRegion));
     this.balancer = LoadBalancerFactory.getLoadBalancer(conf);
     this.serverManager = new ServerManager(this, new DummyRegionServerList());
-    this.tableStateManager = mock(TableStateManager.class);
     when(this.tableStateManager.getTableState(any())).thenReturn(new TableState(
       TableName.valueOf("AnyTableNameSetInMockMasterServcies"), TableState.State.ENABLED));
 

@@ -208,6 +208,8 @@ public class ServerCrashProcedure extends
             if (LOG.isTraceEnabled()) {
               this.regionsOnCrashedServer.stream().forEach(ri -> LOG.trace(ri.getShortNameToLog()));
             }
+            env.getAssignmentManager().markRegionsAsCrashed(regionsOnCrashedServer,
+              this.serverName);
           }
           if (!this.shouldSplitWal) {
             setNextState(ServerCrashState.SERVER_CRASH_ASSIGN);

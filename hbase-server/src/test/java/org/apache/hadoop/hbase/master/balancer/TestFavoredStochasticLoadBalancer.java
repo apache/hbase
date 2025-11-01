@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.favored.FavoredNodesPlan;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.ServerManager;
+import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -380,7 +381,8 @@ public class TestFavoredStochasticLoadBalancer extends BalancerTestBase {
     // Lets kill all the RS that are favored nodes for this region.
     stopServersAndWaitUntilProcessed(currentFN);
 
-    final RegionStates regionStates = master.getAssignmentManager().getRegionStates();
+    final AssignmentManager am = master.getAssignmentManager();
+    final RegionStates regionStates = am.getRegionStates();
     TEST_UTIL.waitFor(10000, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
@@ -401,7 +403,7 @@ public class TestFavoredStochasticLoadBalancer extends BalancerTestBase {
     FavoredNodeAssignmentHelper helper = new FavoredNodeAssignmentHelper(serversForNewFN, conf);
     helper.initialize();
 
-    for (RegionStateNode regionState : regionStates.getRegionsInTransition()) {
+    for (RegionStateNode regionState : am.getRegionsInTransition()) {
       RegionInfo regionInfo = regionState.getRegionInfo();
       List<ServerName> newFavoredNodes = helper.generateFavoredNodes(regionInfo);
       assertNotNull(newFavoredNodes);
@@ -442,7 +444,8 @@ public class TestFavoredStochasticLoadBalancer extends BalancerTestBase {
     // Lets kill all the RS that are favored nodes for this region.
     stopServersAndWaitUntilProcessed(currentFN);
 
-    final RegionStates regionStatesBeforeMaster = master.getAssignmentManager().getRegionStates();
+    final AssignmentManager am = master.getAssignmentManager();
+    final RegionStates regionStatesBeforeMaster = am.getRegionStates();
     TEST_UTIL.waitFor(10000, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
@@ -454,7 +457,7 @@ public class TestFavoredStochasticLoadBalancer extends BalancerTestBase {
       regionStatesBeforeMaster.getRegionState(region).isFailedOpen());
 
     List<RegionInfo> rit = Lists.newArrayList();
-    for (RegionStateNode regionState : regionStatesBeforeMaster.getRegionsInTransition()) {
+    for (RegionStateNode regionState : am.getRegionsInTransition()) {
       RegionInfo regionInfo = regionState.getRegionInfo();
       LOG.debug("Region in transition after stopping FN's: " + regionInfo);
       rit.add(regionInfo);
