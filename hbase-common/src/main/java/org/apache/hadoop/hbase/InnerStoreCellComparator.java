@@ -22,9 +22,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
 /**
- * Compare two HBase cells inner store, skip compare family for better performance. Important!!! we
- * should not make fake cell with fake family which length greater than zero inner store, otherwise
- * this optimization cannot be used.
+ * Compare two HBase cells inner store, skip compare family for better performance. Important!!!
+ * We should not make fake cell with fake family which length greater than zero inner store,
+ * otherwise this optimization cannot be used.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -33,32 +33,9 @@ public class InnerStoreCellComparator extends CellComparatorImpl {
   private static final long serialVersionUID = 8186411895799094989L;
 
   public static final InnerStoreCellComparator INNER_STORE_COMPARATOR =
-    new InnerStoreCellComparator();
+      new InnerStoreCellComparator();
 
-  @Override
-  protected int compareFamilies(Cell left, int leftFamilyLength, Cell right,
-    int rightFamilyLength) {
-    return leftFamilyLength - rightFamilyLength;
-  }
-
-  @Override
-  protected int compareFamilies(KeyValue left, int leftFamilyPosition, int leftFamilyLength,
-    KeyValue right, int rightFamilyPosition, int rightFamilyLength) {
-    return leftFamilyLength - rightFamilyLength;
-  }
-
-  @Override
-  protected int compareFamilies(ByteBufferKeyValue left, int leftFamilyPosition,
-    int leftFamilyLength, ByteBufferKeyValue right, int rightFamilyPosition,
-    int rightFamilyLength) {
-    return leftFamilyLength - rightFamilyLength;
-  }
-
-  @Override
-  protected int compareFamilies(KeyValue left, int leftFamilyPosition, int leftFamilyLength,
-    ByteBufferKeyValue right, int rightFamilyPosition, int rightFamilyLength) {
-    return leftFamilyLength - rightFamilyLength;
-  }
+  // 不再重写 compareFamilies，由父类 CellComparatorImpl 处理 RVV 优化逻辑
 
   /**
    * Utility method that makes a guess at comparator to use based off passed tableName. Use in
@@ -76,7 +53,7 @@ public class InnerStoreCellComparator extends CellComparatorImpl {
    */
   public static CellComparator getInnerStoreCellComparator(byte[] tableName) {
     return Bytes.equals(tableName, TableName.META_TABLE_NAME.toBytes())
-      ? MetaCellComparator.META_COMPARATOR
-      : InnerStoreCellComparator.INNER_STORE_COMPARATOR;
+        ? MetaCellComparator.META_COMPARATOR
+        : InnerStoreCellComparator.INNER_STORE_COMPARATOR;
   }
 }
