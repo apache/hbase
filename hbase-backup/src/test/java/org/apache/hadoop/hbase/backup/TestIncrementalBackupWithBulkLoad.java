@@ -62,7 +62,7 @@ public class TestIncrementalBackupWithBulkLoad extends TestBackupBase {
 
   // implement all test cases in 1 test since incremental backup/restore has dependencies
   @Test
-  public void TestIncBackupDeleteTable() throws Exception {
+  public void testIncBackupWithBulkLoads() throws Exception {
     try (BackupSystemTable systemTable = new BackupSystemTable(TEST_UTIL.getConnection())) {
       // The test starts with some data, and no bulk loaded rows.
       int expectedRowCount = NB_ROWS_IN_BATCH;
@@ -99,13 +99,19 @@ public class TestIncrementalBackupWithBulkLoad extends TestBackupBase {
       assertEquals(expectedRowCount, TEST_UTIL.countRows(table1));
       assertEquals(0, systemTable.readBulkloadRows(List.of(table1)).size());
 
-      // Creating an incremental backup clears the bulk loads
+      // Create bulk loads that will end up in the incremental backup.
       performBulkLoad("bulk4");
       performBulkLoad("bulk5");
       performBulkLoad("bulk6");
       expectedRowCount += 3 * ROWS_IN_BULK_LOAD;
       assertEquals(expectedRowCount, TEST_UTIL.countRows(table1));
-      assertEquals(3, systemTable.readBulkloadRows(List.of(table1)).size());
+      List<BulkLoad> bulkLoadsForIncrBackup = systemTable.readBulkloadRows(List.of(table1));
+      assertEquals(3, bulkLoadsForIncrBackup.size());
+
+      // Manually move one bulk loaded file to simulate archival
+      simulateArchival(bulkLoadsForIncrBackup.get(0));
+
+      // Creating an incremental backup clears the bulk loads
       String backup3 = backupTables(BackupType.INCREMENTAL, List.of(table1), BACKUP_ROOT_DIR);
       assertTrue(checkSucceeded(backup3));
       assertEquals(expectedRowCount, TEST_UTIL.countRows(table1));
@@ -255,5 +261,18 @@ public class TestIncrementalBackupWithBulkLoad extends TestBackupBase {
     Map<BulkLoadHFiles.LoadQueueItem, ByteBuffer> result =
       BulkLoadHFiles.create(TEST_UTIL.getConfiguration()).bulkLoad(table1, baseDirectory);
     assertFalse(result.isEmpty());
+  }
+
+  private void simulateArchival(BulkLoad bulkLoad) throws IOException {
+    FileSystem fs = TEST_UTIL.getTestFileSystem();
+    Path rootDir = CommonFSUtils.getRootDir(TEST_UTIL.getConfiguration());
+    Path archiveRoot = HFileArchiveUtil.getArchivePath(TEST_UTIL.getConfiguration());
+
+    Path srcPath = new Path(bulkLoad.getHfilePath());
+    String relativePath = rootDir.toUri().relativize(srcPath.toUri()).getPath();
+    Path tgtPath = new Path(archiveRoot, relativePath);
+
+    fs.mkdirs(tgtPath.getParent());
+    assertTrue("Renaming HFile to simulate archival failed", fs.rename(srcPath, tgtPath));
   }
 }
