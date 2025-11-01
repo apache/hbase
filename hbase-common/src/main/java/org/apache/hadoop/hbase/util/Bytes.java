@@ -1694,10 +1694,23 @@ public class Bytes implements Comparable<Bytes> {
    * @return New array made from a, b and c
    */
   public static byte[] add(final byte[] a, final byte[] b, final byte[] c) {
-    byte[] result = new byte[a.length + b.length + c.length];
+    return add(a, b, c, EMPTY_BYTE_ARRAY);
+  }
+
+  /**
+   * Concatenate byte arrays.
+   * @param a first fourth
+   * @param b second fourth
+   * @param c third fourth
+   * @param d fourth fourth
+   * @return New array made from a, b, c, and d
+   */
+  public static byte[] add(final byte[] a, final byte[] b, final byte[] c, final byte[] d) {
+    byte[] result = new byte[a.length + b.length + c.length + d.length];
     System.arraycopy(a, 0, result, 0, a.length);
     System.arraycopy(b, 0, result, a.length, b.length);
     System.arraycopy(c, 0, result, a.length + b.length, c.length);
+    System.arraycopy(d, 0, result, a.length + b.length + c.length, d.length);
     return result;
   }
 

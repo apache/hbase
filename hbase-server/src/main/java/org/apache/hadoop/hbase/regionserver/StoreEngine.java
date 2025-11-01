@@ -41,6 +41,9 @@ import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.conf.ConfigKey;
 import org.apache.hadoop.hbase.io.hfile.BloomFilterMetrics;
+import org.apache.hadoop.hbase.keymeta.KeyNamespaceUtil;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
+import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionPolicy;
@@ -115,6 +118,10 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
   private StoreFileTracker storeFileTracker;
 
   private final ReadWriteLock storeLock = new ReentrantReadWriteLock();
+
+  private ManagedKeyDataCache managedKeyDataCache;
+
+  private SystemKeyCache systemKeyCache;
 
   /**
    * The name of the configuration parameter that specifies the class of a store engine that is used
@@ -208,6 +215,8 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
     this.coprocessorHost = store.getHRegion().getCoprocessorHost();
     this.openStoreFileThreadPoolCreator = store.getHRegion()::getStoreFileOpenAndCloseThreadPool;
     this.storeFileTracker = createStoreFileTracker(conf, store);
+    this.managedKeyDataCache = store.getHRegion().getManagedKeyDataCache();
+    this.systemKeyCache = store.getHRegion().getSystemKeyCache();
     assert compactor != null && compactionPolicy != null && storeFileManager != null
       && storeFlusher != null;
   }
@@ -228,7 +237,8 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
   public HStoreFile createStoreFileAndReader(StoreFileInfo info) throws IOException {
     info.setRegionCoprocessorHost(coprocessorHost);
     HStoreFile storeFile = new HStoreFile(info, ctx.getFamily().getBloomFilterType(),
-      ctx.getCacheConf(), bloomFilterMetrics);
+      ctx.getCacheConf(), bloomFilterMetrics, KeyNamespaceUtil.constructKeyNamespace(ctx),
+      systemKeyCache, managedKeyDataCache);
     storeFile.initReader();
     return storeFile;
   }

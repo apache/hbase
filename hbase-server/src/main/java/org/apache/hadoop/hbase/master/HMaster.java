@@ -119,9 +119,11 @@ import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
 import org.apache.hadoop.hbase.http.HttpServer;
 import org.apache.hadoop.hbase.http.InfoServer;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
+import org.apache.hadoop.hbase.keymeta.KeymetaMasterService;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.master.MasterRpcServices.BalanceSwitchMode;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
@@ -357,6 +359,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   // file system manager for the master FS operations
   private MasterFileSystem fileSystemManager;
   private MasterWalManager walManager;
+  private SystemKeyManager systemKeyManager;
+  private KeymetaMasterService keymetaMasterService;
 
   // manager to manage procedure-based WAL splitting, can be null if current
   // is zk-based WAL splitting. SplitWALManager will replace SplitLogManager
@@ -994,6 +998,10 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     ZKClusterId.setClusterId(this.zooKeeper, fileSystemManager.getClusterId());
     this.clusterId = clusterId.toString();
 
+    systemKeyManager = new SystemKeyManager(this);
+    systemKeyManager.ensureSystemKeyInitialized();
+    buildSystemKeyCache();
+
     // Precaution. Put in place the old hbck1 lock file to fence out old hbase1s running their
     // hbck1s against an hbase2 cluster; it could do damage. To skip this behavior, set
     // hbase.write.hbck1.lock.file to false.
@@ -1032,6 +1040,9 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     createProcedureExecutor();
     Map<Class<?>, List<Procedure<MasterProcedureEnv>>> procsByType = procedureExecutor
       .getActiveProceduresNoCopy().stream().collect(Collectors.groupingBy(p -> p.getClass()));
+
+    keymetaMasterService = new KeymetaMasterService(this);
+    keymetaMasterService.init();
 
     // Create Assignment Manager
     this.assignmentManager = createAssignmentManager(this, masterRegion);
@@ -1628,6 +1639,17 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   @Override
   public MasterWalManager getMasterWalManager() {
     return this.walManager;
+  }
+
+  @Override
+  public boolean rotateSystemKeyIfChanged() throws IOException {
+    ManagedKeyData newKey = this.systemKeyManager.rotateSystemKeyIfChanged();
+    if (newKey != null) {
+      this.systemKeyCache = null;
+      buildSystemKeyCache();
+      return true;
+    }
+    return false;
   }
 
   @Override

@@ -33,6 +33,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.keymeta.KeyManagementService;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskGroup;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -326,6 +327,11 @@ public class TestActiveMasterManager {
 
     public ActiveMasterManager getActiveMasterManager() {
       return activeMasterManager;
+    }
+
+    @Override
+    public KeyManagementService getKeyManagementService() {
+      return null;
     }
   }
 }

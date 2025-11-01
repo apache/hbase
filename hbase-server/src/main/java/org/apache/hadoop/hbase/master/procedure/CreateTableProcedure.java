@@ -360,8 +360,7 @@ public class CreateTableProcedure extends AbstractStateMachineTableProcedure<Cre
         throws IOException {
         RegionInfo[] regions =
           newRegions != null ? newRegions.toArray(new RegionInfo[newRegions.size()]) : null;
-        return ModifyRegionUtils.createRegions(env.getMasterConfiguration(), tableRootDir,
-          tableDescriptor, regions, null);
+        return ModifyRegionUtils.createRegions(env, tableRootDir, tableDescriptor, regions, null);
       }
     });
   }

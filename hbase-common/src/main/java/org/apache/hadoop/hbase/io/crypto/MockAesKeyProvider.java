@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase.io.crypto;
 
 import java.security.Key;
+import java.util.HashMap;
+import java.util.Map;
 import javax.crypto.spec.SecretKeySpec;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -27,8 +29,13 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class MockAesKeyProvider implements KeyProvider {
 
+  private Map<String, Key> keys = new HashMap<>();
+
+  private boolean cacheKeys = false;
+
   @Override
   public void init(String parameters) {
+    cacheKeys = Boolean.parseBoolean(parameters);
   }
 
   @Override
@@ -40,8 +47,23 @@ public class MockAesKeyProvider implements KeyProvider {
   public Key[] getKeys(String[] aliases) {
     Key[] result = new Key[aliases.length];
     for (int i = 0; i < aliases.length; i++) {
-      result[i] = new SecretKeySpec(Encryption.hash128(aliases[i]), "AES");
+      if (keys.containsKey(aliases[i])) {
+        result[i] = keys.get(aliases[i]);
+      } else {
+        // When not caching keys, we want to make the key generation deterministic.
+        result[i] = new SecretKeySpec(
+          Encryption.hash128(
+            cacheKeys ? aliases[i] + "-" + String.valueOf(System.currentTimeMillis()) : aliases[i]),
+          "AES");
+        if (cacheKeys) {
+          keys.put(aliases[i], result[i]);
+        }
+      }
     }
     return result;
+  }
+
+  public void clearKeys() {
+    keys.clear();
   }
 }

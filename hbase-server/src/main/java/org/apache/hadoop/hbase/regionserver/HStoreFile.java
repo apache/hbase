@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.apache.hadoop.hbase.io.crypto.ManagedKeyData.KEY_SPACE_GLOBAL;
+
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
@@ -43,7 +45,11 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext.ReaderType;
+import org.apache.hadoop.hbase.keymeta.KeyNamespaceUtil;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
+import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.security.SecurityUtil;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -213,9 +219,16 @@ public class HStoreFile implements StoreFile {
    */
   private final BloomType cfBloomType;
 
+  private String keyNamespace;
+
+  private SystemKeyCache systemKeyCache;
+
+  private final ManagedKeyDataCache managedKeyDataCache;
+
   /**
    * Constructor, loads a reader and it's indices, etc. May allocate a substantial amount of ram
-   * depending on the underlying files (10-20MB?).
+   * depending on the underlying files (10-20MB?). Since this is used only in read path, key
+   * namespace is not needed.
    * @param fs             The current file system to use.
    * @param p              The path of the file.
    * @param conf           The current configuration.
@@ -229,7 +242,9 @@ public class HStoreFile implements StoreFile {
    */
   public HStoreFile(FileSystem fs, Path p, Configuration conf, CacheConfig cacheConf,
     BloomType cfBloomType, boolean primaryReplica, StoreFileTracker sft) throws IOException {
-    this(sft.getStoreFileInfo(p, primaryReplica), cfBloomType, cacheConf);
+    this(sft.getStoreFileInfo(p, primaryReplica), cfBloomType, cacheConf, null, null,
+      SecurityUtil.isKeyManagementEnabled(conf) ? SystemKeyCache.createCache(conf, fs) : null,
+      SecurityUtil.isKeyManagementEnabled(conf) ? new ManagedKeyDataCache(conf, null) : null);
   }
 
   /**
@@ -243,8 +258,15 @@ public class HStoreFile implements StoreFile {
    *                    ignored.
    * @param cacheConf   The cache configuration and block cache reference.
    */
-  public HStoreFile(StoreFileInfo fileInfo, BloomType cfBloomType, CacheConfig cacheConf) {
-    this(fileInfo, cfBloomType, cacheConf, null);
+  public HStoreFile(StoreFileInfo fileInfo, BloomType cfBloomType, CacheConfig cacheConf)
+    throws IOException {
+    this(fileInfo, cfBloomType, cacheConf, null, KeyNamespaceUtil.constructKeyNamespace(fileInfo),
+      SecurityUtil.isKeyManagementEnabled(fileInfo.getConf())
+        ? SystemKeyCache.createCache(fileInfo.getConf(), fileInfo.getFileSystem())
+        : null,
+      SecurityUtil.isKeyManagementEnabled(fileInfo.getConf())
+        ? new ManagedKeyDataCache(fileInfo.getConf(), null)
+        : null);
   }
 
   /**
@@ -260,10 +282,14 @@ public class HStoreFile implements StoreFile {
    * @param metrics     Tracks bloom filter requests and results. May be null.
    */
   public HStoreFile(StoreFileInfo fileInfo, BloomType cfBloomType, CacheConfig cacheConf,
-    BloomFilterMetrics metrics) {
+    BloomFilterMetrics metrics, String keyNamespace, SystemKeyCache systemKeyCache,
+    ManagedKeyDataCache managedKeyDataCache) {
     this.fileInfo = fileInfo;
     this.cacheConf = cacheConf;
     this.metrics = metrics;
+    this.keyNamespace = keyNamespace != null ? keyNamespace : KEY_SPACE_GLOBAL;
+    this.systemKeyCache = systemKeyCache;
+    this.managedKeyDataCache = managedKeyDataCache;
     if (BloomFilterFactory.isGeneralBloomEnabled(fileInfo.getConf())) {
       this.cfBloomType = cfBloomType;
     } else {
@@ -392,7 +418,8 @@ public class HStoreFile implements StoreFile {
   private void open() throws IOException {
     fileInfo.initHDFSBlocksDistribution();
     long readahead = fileInfo.isNoReadahead() ? 0L : -1L;
-    ReaderContext context = fileInfo.createReaderContext(false, readahead, ReaderType.PREAD);
+    ReaderContext context = fileInfo.createReaderContext(false, readahead, ReaderType.PREAD,
+      keyNamespace, systemKeyCache, managedKeyDataCache);
     fileInfo.initHFileInfo(context);
     StoreFileReader reader = fileInfo.preStoreFileReaderOpen(context, cacheConf);
     if (reader == null) {
@@ -540,7 +567,8 @@ public class HStoreFile implements StoreFile {
   private StoreFileReader createStreamReader(boolean canUseDropBehind) throws IOException {
     initReader();
     final boolean doDropBehind = canUseDropBehind && cacheConf.shouldDropBehindCompaction();
-    ReaderContext context = fileInfo.createReaderContext(doDropBehind, -1, ReaderType.STREAM);
+    ReaderContext context = fileInfo.createReaderContext(doDropBehind, -1, ReaderType.STREAM,
+      keyNamespace, systemKeyCache, managedKeyDataCache);
     StoreFileReader reader = fileInfo.preStoreFileReaderOpen(context, cacheConf);
     if (reader == null) {
       reader = fileInfo.createReader(context, cacheConf);

@@ -150,6 +150,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerR
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.EmptyMsg;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.LastHighestWalFilenum;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription;
@@ -4661,5 +4662,29 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         MasterService.Interface::restoreBackupSystemTable,
         MasterProtos.RestoreBackupSystemTableResponse::getProcId,
         new RestoreBackupSystemTableProcedureBiConsumer());
+  }
+
+  @Override
+  public CompletableFuture<Void> refreshSystemKeyCacheOnAllServers(Set<ServerName> regionServers) {
+    CompletableFuture<Void> future = new CompletableFuture<>();
+    List<CompletableFuture<Void>> futures =
+      regionServers.stream().map(this::refreshSystemKeyCache).collect(Collectors.toList());
+    addListener(CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0])),
+      (result, err) -> {
+        if (err != null) {
+          future.completeExceptionally(err);
+        } else {
+          future.complete(result);
+        }
+      });
+    return future;
+  }
+
+  private CompletableFuture<Void> refreshSystemKeyCache(ServerName serverName) {
+    return this.<Void> newAdminCaller()
+      .action((controller, stub) -> this.<EmptyMsg, EmptyMsg, Void> adminCall(controller, stub,
+        EmptyMsg.getDefaultInstance(),
+        (s, c, req, done) -> s.refreshSystemKeyCache(controller, req, done), resp -> null))
+      .serverName(serverName).call();
   }
 }
