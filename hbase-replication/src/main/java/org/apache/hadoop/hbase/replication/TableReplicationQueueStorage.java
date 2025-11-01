@@ -214,6 +214,37 @@ public class TableReplicationQueueStorage implements ReplicationQueueStorage {
   }
 
   @Override
+  public List<String> listAllPeerIds() throws ReplicationException {
+    List<String> peerIds = new ArrayList<>();
+    try (Table table = conn.getTable(tableName)) {
+      KeyOnlyFilter keyOnlyFilter = new KeyOnlyFilter();
+      String previousPeerId = null;
+      for (;;) {
+        // first, get the next peerId
+        Scan peerScan =
+          new Scan().addFamily(QUEUE_FAMILY).setOneRowLimit().setFilter(keyOnlyFilter);
+        if (previousPeerId != null) {
+          peerScan.withStartRow(ReplicationQueueId.getScanStartRowForNextPeerId(previousPeerId));
+        }
+        String peerId;
+        try (ResultScanner scanner = table.getScanner(peerScan)) {
+          Result result = scanner.next();
+          if (result == null) {
+            // no more peers, break
+            break;
+          }
+          peerId = ReplicationQueueId.getPeerId(Bytes.toString(result.getRow()));
+        }
+        peerIds.add(peerId);
+        previousPeerId = peerId;
+      }
+    } catch (IOException e) {
+      throw new ReplicationException("failed to listAllPeerIds", e);
+    }
+    return peerIds;
+  }
+
+  @Override
   public List<ReplicationQueueId> listAllQueueIds(String peerId) throws ReplicationException {
     Scan scan = new Scan().setStartStopRowForPrefixScan(ReplicationQueueId.getScanPrefix(peerId))
       .addFamily(QUEUE_FAMILY).setFilter(new KeyOnlyFilter());

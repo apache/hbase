@@ -75,6 +75,15 @@ public interface ReplicationQueueStorage {
     throws ReplicationException;
 
   /**
+   * Get a list of all peer ids.
+   * <p>
+   * This method is designed for HBCK, where we may have some dirty data left in the storage after a
+   * broken procedure run. In normal logic, you should call
+   * {@link ReplicationPeerStorage#listPeerIds()} for getting all the replication peer ids.
+   */
+  List<String> listAllPeerIds() throws ReplicationException;
+
+  /**
    * Get a list of all queues and the offsets.
    */
   List<ReplicationQueueData> listAllQueues() throws ReplicationException;
