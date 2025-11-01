@@ -4428,4 +4428,10 @@ public class HMaster extends HRegionServer implements MasterServices {
         }
       });
   }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  public MobFileCleanerChore getMobFileCleanerChore() {
+    return mobFileCleanerChore;
+  }
 }
