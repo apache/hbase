@@ -67,6 +67,7 @@ import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.BloomFilterUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -196,7 +197,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
         isSeekToRow = true;
       } else {
         err.println("Invalid row is specified.");
-        System.exit(-1);
+        ExitHandler.getInstance().exit(-1);
       }
     }
 
@@ -870,6 +871,6 @@ public class HFilePrettyPrinter extends Configured implements Tool {
     // no need for a block cache
     conf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0);
     int ret = ToolRunner.run(conf, new HFilePrettyPrinter(), args);
-    System.exit(ret);
+    ExitHandler.getInstance().exit(ret);
   }
 }
