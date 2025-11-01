@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.HConstants.REPLICATION_SCOPE_LOCAL;
+import static org.apache.hadoop.hbase.HConstants.ROW_CACHE_EVICT_ON_CLOSE_DEFAULT;
+import static org.apache.hadoop.hbase.HConstants.ROW_CACHE_EVICT_ON_CLOSE_KEY;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.MAJOR_COMPACTION_KEY;
 import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.REGION_NAMES_KEY;
 import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.ROW_LOCK_READ_LOCK_KEY;
@@ -65,6 +67,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -432,6 +435,16 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * The sequence ID that was enLongAddered when this region was opened.
    */
   private long openSeqNum = HConstants.NO_SEQNUM;
+
+  /**
+   * Basically the same as openSeqNum, but it is updated when bulk load is done.
+   */
+  private final AtomicLong rowCacheSeqNum = new AtomicLong(HConstants.NO_SEQNUM);
+
+  /**
+   * The setting for whether to enable row cache for this region.
+   */
+  private final boolean isRowCacheEnabled;
 
   /**
    * The default setting for whether to enable on-demand CF loading for scan requests to this
@@ -929,6 +942,16 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     minBlockSizeBytes = Arrays.stream(this.htableDescriptor.getColumnFamilies())
       .mapToInt(ColumnFamilyDescriptor::getBlocksize).min().orElse(HConstants.DEFAULT_BLOCKSIZE);
+
+    this.isRowCacheEnabled = determineRowCacheEnabled();
+  }
+
+  boolean determineRowCacheEnabled() {
+    Boolean fromDescriptor = htableDescriptor.getRowCacheEnabled();
+    // The setting from TableDescriptor has higher priority than the global configuration
+    return fromDescriptor != null
+      ? fromDescriptor
+      : conf.getBoolean(HConstants.ROW_CACHE_ENABLED_KEY, HConstants.ROW_CACHE_ENABLED_DEFAULT);
   }
 
   private void setHTableSpecificConf() {
@@ -1940,6 +1963,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         }
       }
 
+      evictRowCache();
+
       status.setStatus("Writing region close event to WAL");
       // Always write close marker to wal even for read only table. This is not a big problem as we
       // do not write any data into the region; it is just a meta edit in the WAL file.
@@ -1978,6 +2003,22 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     } finally {
       lock.writeLock().unlock();
     }
+  }
+
+  private void evictRowCache() {
+    boolean evictOnClose = getReadOnlyConfiguration().getBoolean(ROW_CACHE_EVICT_ON_CLOSE_KEY,
+      ROW_CACHE_EVICT_ON_CLOSE_DEFAULT);
+
+    if (!evictOnClose) {
+      return;
+    }
+
+    if (!(rsServices instanceof HRegionServer regionServer)) {
+      return;
+    }
+
+    RowCacheService rowCacheService = regionServer.getRSRpcServices().getRowCacheService();
+    rowCacheService.evictRowsByRegion(this);
   }
 
   /** Wait for all current flushes and compactions of the region to complete */
@@ -7881,6 +7922,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       LOG.debug("checking classloading for " + this.getRegionInfo().getEncodedName());
       TableDescriptorChecker.checkClassLoading(cConfig, htableDescriptor);
       this.openSeqNum = initialize(reporter);
+      this.rowCacheSeqNum.set(this.openSeqNum);
       this.mvcc.advanceTo(openSeqNum);
       // The openSeqNum must be increased every time when a region is assigned, as we rely on it to
       // determine whether a region has been successfully reopened. So here we always write open
@@ -8707,6 +8749,22 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   /** Returns the latest sequence number that was read from storage when this region was opened */
   public long getOpenSeqNum() {
     return this.openSeqNum;
+  }
+
+  public long getRowCacheSeqNum() {
+    return this.rowCacheSeqNum.get();
+  }
+
+  @Override
+  public boolean isRowCacheEnabled() {
+    return isRowCacheEnabled;
+  }
+
+  /**
+   * This is used to invalidate the row cache of the bulk-loaded region.
+   */
+  public void increaseRowCacheSeqNum() {
+    this.rowCacheSeqNum.incrementAndGet();
   }
 
   @Override

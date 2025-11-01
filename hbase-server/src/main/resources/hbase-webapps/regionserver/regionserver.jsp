@@ -105,8 +105,8 @@
     </section>
 
     <section>
-      <h2>Block Cache</h2>
-      <jsp:include page="blockCache.jsp"/>
+      <h2>Cache</h2>
+      <jsp:include page="cache.jsp"/>
     </section>
 
     <section>
