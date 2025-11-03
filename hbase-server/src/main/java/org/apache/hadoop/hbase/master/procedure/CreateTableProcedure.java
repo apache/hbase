@@ -264,6 +264,9 @@ public class CreateTableProcedure extends AbstractStateMachineTableProcedure<Cre
 
   @Override
   protected boolean waitInitialized(MasterProcedureEnv env) {
+    if (isCriticalSystemTable()) {
+      return false;
+    }
     if (getTableName().isSystemTable()) {
       // Creating system table is part of the initialization, so only wait for meta loaded instead
       // of waiting for master fully initialized.

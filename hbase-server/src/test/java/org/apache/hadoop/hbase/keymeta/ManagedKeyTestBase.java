@@ -35,6 +35,8 @@ public class ManagedKeyTestBase {
 
   @Before
   public void setUp() throws Exception {
+    // Uncomment to enable trace logging for the tests that extend this base class.
+    // Log4jUtils.setLogLevel("org.apache.hadoop.hbase", "TRACE");
     if (isWithKeyManagement()) {
       TEST_UTIL.getConfiguration().set(HConstants.CRYPTO_MANAGED_KEYPROVIDER_CONF_KEY,
         getKeyProviderClass().getName());
