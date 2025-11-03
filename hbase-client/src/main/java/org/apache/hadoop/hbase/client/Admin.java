@@ -2669,5 +2669,5 @@ public interface Admin extends Abortable, Closeable {
    * Refresh the system key cache on all specified region servers.
    * @param regionServers the list of region servers to refresh the system key cache on
    */
-  void refreshSystemKeyCacheOnAllServers(Set<ServerName> regionServers) throws IOException;
+  void refreshSystemKeyCacheOnServers(Set<ServerName> regionServers) throws IOException;
 }

@@ -308,7 +308,7 @@ public class TestKeymetaAdminImpl {
       // Mock SystemKeyManager to return a new key (non-null)
       when(mockServer.rotateSystemKeyIfChanged()).thenReturn(true);
 
-      when(mockAsyncAdmin.refreshSystemKeyCacheOnAllServers(any()))
+      when(mockAsyncAdmin.refreshSystemKeyCacheOnServers(any()))
         .thenReturn(CompletableFuture.completedFuture(null));
 
       KeymetaAdminImplForTest admin = new KeymetaAdminImplForTest(mockServer, keymetaAccessor);
@@ -321,7 +321,7 @@ public class TestKeymetaAdminImpl {
 
       // Verify that rotateSystemKeyIfChanged was called
       verify(mockServer).rotateSystemKeyIfChanged();
-      verify(mockAsyncAdmin).refreshSystemKeyCacheOnAllServers(any());
+      verify(mockAsyncAdmin).refreshSystemKeyCacheOnServers(any());
     }
 
     /**
@@ -371,7 +371,7 @@ public class TestKeymetaAdminImpl {
 
       CompletableFuture<Void> failedFuture = new CompletableFuture<>();
       failedFuture.completeExceptionally(new IOException("refresh failed"));
-      when(mockAsyncAdmin.refreshSystemKeyCacheOnAllServers(any())).thenReturn(failedFuture);
+      when(mockAsyncAdmin.refreshSystemKeyCacheOnServers(any())).thenReturn(failedFuture);
 
       KeymetaAdminImplForTest admin = new KeymetaAdminImplForTest(mockServer, keymetaAccessor);
 
@@ -383,7 +383,7 @@ public class TestKeymetaAdminImpl {
 
       // Verify that rotateSystemKeyIfChanged was called
       verify(mockServer).rotateSystemKeyIfChanged();
-      verify(mockAsyncAdmin).refreshSystemKeyCacheOnAllServers(any());
+      verify(mockAsyncAdmin).refreshSystemKeyCacheOnServers(any());
     }
 
     @Test

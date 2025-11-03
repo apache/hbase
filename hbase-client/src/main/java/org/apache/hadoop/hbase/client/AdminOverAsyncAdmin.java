@@ -1148,7 +1148,7 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
-  public void refreshSystemKeyCacheOnAllServers(Set<ServerName> regionServers) throws IOException {
-    get(admin.refreshSystemKeyCacheOnAllServers(regionServers));
+  public void refreshSystemKeyCacheOnServers(Set<ServerName> regionServers) throws IOException {
+    get(admin.refreshSystemKeyCacheOnServers(regionServers));
   }
 }

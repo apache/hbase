@@ -4665,7 +4665,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Void> refreshSystemKeyCacheOnAllServers(Set<ServerName> regionServers) {
+  public CompletableFuture<Void> refreshSystemKeyCacheOnServers(Set<ServerName> regionServers) {
     CompletableFuture<Void> future = new CompletableFuture<>();
     List<CompletableFuture<Void>> futures =
       regionServers.stream().map(this::refreshSystemKeyCache).collect(Collectors.toList());

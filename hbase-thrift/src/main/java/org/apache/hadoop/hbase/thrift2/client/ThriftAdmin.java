@@ -1378,8 +1378,8 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
-  public void refreshSystemKeyCacheOnAllServers(Set<ServerName> regionServers) throws IOException {
+  public void refreshSystemKeyCacheOnServers(Set<ServerName> regionServers) throws IOException {
     throw new NotImplementedException(
-      "refreshSystemKeyCacheOnAllServers not supported in ThriftAdmin");
+      "refreshSystemKeyCacheOnServers not supported in ThriftAdmin");
   }
 }
