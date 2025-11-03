@@ -817,7 +817,8 @@ public abstract class AbstractTestWALReplay {
 
     // Mock the WAL
     MockWAL wal = createMockWAL();
-
+    TEST_UTIL.createRegionDir(hri,
+      TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterFileSystem());
     HRegion region = HRegion.openHRegion(this.conf, this.fs, hbaseRootDir, hri, htd, wal);
     for (HColumnDescriptor hcd : htd.getFamilies()) {
       addRegionEdits(rowName, hcd.getName(), countPerFamily, this.ee, region, "x");

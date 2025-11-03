@@ -125,9 +125,8 @@ public class TestStoreFileRefresherChore {
     ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null,
       MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     HRegion region = new HRegion(fs, wals.getWAL(info), conf, htd, null);
-
+    fs.createRegionOnFileSystem(walConf, fs.getFileSystem(), tableDir, info);
     region.initialize();
-
     return region;
   }
 

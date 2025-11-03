@@ -194,6 +194,7 @@ public class TestCompactionArchiveIOException {
       .rename(eq(new Path(storeDir, ERROR_FILE)), any());
 
     HRegionFileSystem fs = new HRegionFileSystem(conf, errFS, tableDir, info);
+    fs.createRegionOnFileSystem(conf, fs.getFileSystem(), tableDir, info);
     final Configuration walConf = new Configuration(conf);
     CommonFSUtils.setRootDir(walConf, tableDir);
     final WALFactory wals = new WALFactory(walConf, "log_" + info.getEncodedName());
