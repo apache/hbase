@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TestTableSnapshotScanner;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormat.TableSnapshotRegionSplit;
+import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
@@ -581,5 +582,105 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
     Assert.assertTrue(fs.exists(restorePath));
     TableSnapshotInputFormat.cleanRestoreDir(job, snapshotName);
     Assert.assertFalse(fs.exists(restorePath));
+  }
+
+  /**
+   * Test that explicitly restores a snapshot to a temp directory and reads the restored regions via
+   * ClientSideRegionScanner through a MapReduce job.
+   * <p>
+   * This test verifies the full workflow: 1. Create and load a table with data 2. Create a snapshot
+   * and restore the snapshot to a temporary directory 3. Configure a job to read the restored
+   * regions via ClientSideRegionScanner using TableSnapshotInputFormat and verify that it succeeds
+   * 4. Delete restored temporary directory 5. Configure a new job and verify that it fails
+   */
+  @Test
+  public void testReadFromRestoredSnapshotViaMR() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final String snapshotName = tableName + "_snapshot";
+    try {
+      if (UTIL.getAdmin().tableExists(tableName)) {
+        UTIL.deleteTable(tableName);
+      }
+      UTIL.createTable(tableName, FAMILIES, new byte[][] { bbb, yyy });
+
+      Admin admin = UTIL.getAdmin();
+      int regionNum = admin.getRegions(tableName).size();
+      LOG.info("Created table with {} regions", regionNum);
+
+      Table table = UTIL.getConnection().getTable(tableName);
+      UTIL.loadTable(table, FAMILIES);
+      table.close();
+
+      Path rootDir = CommonFSUtils.getRootDir(UTIL.getConfiguration());
+      FileSystem fs = rootDir.getFileSystem(UTIL.getConfiguration());
+      SnapshotTestingUtils.createSnapshotAndValidate(admin, tableName, Arrays.asList(FAMILIES),
+        null, snapshotName, rootDir, fs, true);
+      Path tempRestoreDir = UTIL.getDataTestDirOnTestFS("restore_" + snapshotName);
+      RestoreSnapshotHelper.copySnapshotForScanner(UTIL.getConfiguration(), fs, rootDir,
+        tempRestoreDir, snapshotName);
+      Assert.assertTrue("Restore directory should exist", fs.exists(tempRestoreDir));
+
+      Job job = Job.getInstance(UTIL.getConfiguration());
+      job.setJarByClass(TestTableSnapshotInputFormat.class);
+      TableMapReduceUtil.addDependencyJarsForClasses(job.getConfiguration(),
+        TestTableSnapshotInputFormat.class);
+      Scan scan = new Scan().withStartRow(getStartRow()).withStopRow(getEndRow());
+      Configuration conf = job.getConfiguration();
+      conf.set("hbase.TableSnapshotInputFormat.snapshot.name", snapshotName);
+      conf.set("hbase.TableSnapshotInputFormat.restore.dir", tempRestoreDir.toString());
+      conf.setInt("hbase.mapreduce.splits.per.region", 1);
+      job.setReducerClass(TestTableSnapshotReducer.class);
+      job.setNumReduceTasks(1);
+      job.setOutputFormatClass(NullOutputFormat.class);
+      TableMapReduceUtil.initTableMapperJob(snapshotName, // table name (snapshot name in this case)
+        scan, TestTableSnapshotMapper.class, ImmutableBytesWritable.class, NullWritable.class, job,
+        false, false, TableSnapshotInputFormat.class);
+      TableMapReduceUtil.resetCacheConfig(conf);
+      Assert.assertTrue(job.waitForCompletion(true));
+      Assert.assertTrue(job.isSuccessful());
+
+      // Now verify that job fails when restore directory is deleted
+      Assert.assertTrue(fs.delete(tempRestoreDir, true));
+      Assert.assertFalse("Restore directory should not exist after deletion",
+        fs.exists(tempRestoreDir));
+      Job failureJob = Job.getInstance(UTIL.getConfiguration());
+      failureJob.setJarByClass(TestTableSnapshotInputFormat.class);
+      TableMapReduceUtil.addDependencyJarsForClasses(failureJob.getConfiguration(),
+        TestTableSnapshotInputFormat.class);
+      Configuration failureConf = failureJob.getConfiguration();
+      // Configure job to use the deleted restore directory
+      failureConf.set("hbase.TableSnapshotInputFormat.snapshot.name", snapshotName);
+      failureConf.set("hbase.TableSnapshotInputFormat.restore.dir", tempRestoreDir.toString());
+      failureConf.setInt("hbase.mapreduce.splits.per.region", 1);
+      failureJob.setReducerClass(TestTableSnapshotReducer.class);
+      failureJob.setNumReduceTasks(1);
+      failureJob.setOutputFormatClass(NullOutputFormat.class);
+
+      TableMapReduceUtil.initTableMapperJob(snapshotName, scan, TestTableSnapshotMapper.class,
+        ImmutableBytesWritable.class, NullWritable.class, failureJob, false, false,
+        TableSnapshotInputFormat.class);
+      TableMapReduceUtil.resetCacheConfig(failureConf);
+
+      Assert.assertFalse("Restore directory should not exist before job execution",
+        fs.exists(tempRestoreDir));
+      failureJob.waitForCompletion(true);
+
+      Assert.assertFalse("Job should fail since the restored snapshot directory is deleted",
+        failureJob.isSuccessful());
+
+    } finally {
+      try {
+        if (UTIL.getAdmin().tableExists(tableName)) {
+          UTIL.deleteTable(tableName);
+        }
+      } catch (Exception e) {
+        LOG.warn("Error deleting table", e);
+      }
+      try {
+        UTIL.getAdmin().deleteSnapshot(snapshotName);
+      } catch (Exception e) {
+        LOG.warn("Error deleting snapshot", e);
+      }
+    }
   }
 }
