@@ -787,7 +787,10 @@ public class HRegionFileSystem {
     // First check to get the permissions
     FsPermission perms = CommonFSUtils.getFilePermissions(fs, conf, HConstants.DATA_FILE_UMASK_KEY);
     // Write the RegionInfo file content
-    try (FSDataOutputStream out = FSUtils.create(conf, fs, regionInfoFile, perms, null)) {
+    // HBASE-29662: Fail .regioninfo file creation, if the region directory doesn't exist,
+    // avoiding silent masking of missing region directories during region initialization.
+    // The region directory should already exist when this method is called.
+    try (FSDataOutputStream out = FSUtils.create(conf, fs, regionInfoFile, perms, null, false)) {
       out.write(content);
     }
   }
@@ -869,6 +872,14 @@ public class HRegionFileSystem {
       // Hence delete and create the file if exists.
       if (CommonFSUtils.isExists(fs, tmpPath)) {
         CommonFSUtils.delete(fs, tmpPath, true);
+      }
+
+      // Check parent (region) directory exists first to maintain HBASE-29662 protection
+      if (!fs.exists(getRegionDir())) {
+        throw new IOException("Region directory does not exist: " + getRegionDir());
+      }
+      if (!fs.exists(getTempDir())) {
+        fs.mkdirs(getTempDir());
       }
 
       // Write HRI to a file in case we need to recover hbase:meta

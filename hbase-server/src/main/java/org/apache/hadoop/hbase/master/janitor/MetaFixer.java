@@ -29,6 +29,7 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
@@ -37,9 +38,12 @@ import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
+import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure;
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -102,6 +106,7 @@ public class MetaFixer {
 
     final List<RegionInfo> newRegionInfos = createRegionInfosForHoles(holes);
     final List<RegionInfo> newMetaEntries = createMetaEntries(masterServices, newRegionInfos);
+    createRegionDirectories(masterServices, newMetaEntries);
     final TransitRegionStateProcedure[] assignProcedures =
       masterServices.getAssignmentManager().createRoundRobinAssignProcedures(newMetaEntries);
 
@@ -215,6 +220,27 @@ public class MetaFixer {
     }
 
     return createMetaEntriesSuccesses;
+  }
+
+  private static void createRegionDirectories(final MasterServices masterServices,
+    final List<RegionInfo> regions) {
+    if (regions.isEmpty()) {
+      return;
+    }
+    final MasterFileSystem mfs = masterServices.getMasterFileSystem();
+    final Path rootDir = mfs.getRootDir();
+    for (RegionInfo regionInfo : regions) {
+      if (regionInfo.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID) {
+        try {
+          Path tableDir = CommonFSUtils.getTableDir(rootDir, regionInfo.getTable());
+          HRegionFileSystem.createRegionOnFileSystem(masterServices.getConfiguration(),
+            mfs.getFileSystem(), tableDir, regionInfo);
+        } catch (IOException e) {
+          LOG.warn("Failed to create region directory for {}: {}",
+            regionInfo.getRegionNameAsString(), e.getMessage(), e);
+        }
+      }
+    }
   }
 
   /**
