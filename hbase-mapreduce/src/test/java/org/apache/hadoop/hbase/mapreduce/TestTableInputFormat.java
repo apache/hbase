@@ -151,9 +151,12 @@ public class TestTableInputFormat {
    * Create table data and run tests on specified htable using the o.a.h.hbase.mapreduce API.
    */
   static void runTestMapreduce(Table table) throws IOException, InterruptedException {
+    runTestMapreduce(table, new Scan());
+  }
+
+  static void runTestMapreduce(Table table, Scan s) throws IOException, InterruptedException {
     org.apache.hadoop.hbase.mapreduce.TableRecordReaderImpl trr =
       new org.apache.hadoop.hbase.mapreduce.TableRecordReaderImpl();
-    Scan s = new Scan();
     s.withStartRow(Bytes.toBytes("aaa"));
     s.withStopRow(Bytes.toBytes("zzz"));
     s.addFamily(FAMILY);
@@ -171,6 +174,10 @@ public class TestTableInputFormat {
     checkResult(r, key, Bytes.toBytes("aaa"), Bytes.toBytes("value aaa"));
 
     more = trr.nextKeyValue();
+    if (s.getLimit() == 1) {
+      assertFalse(more);
+      return;
+    }
     assertTrue(more);
     key = trr.getCurrentKey();
     r = trr.getCurrentValue();
@@ -252,6 +259,20 @@ public class TestTableInputFormat {
   public void testTableRecordReaderMapreduce() throws IOException, InterruptedException {
     Table table = createTable(Bytes.toBytes("table1-mr"));
     runTestMapreduce(table);
+  }
+
+  /**
+   * Run test assuming no errors using newer mapreduce api with a Scan object with limit set
+   */
+  @Test
+  public void testTableRecordReaderMapreduceLimit1() throws IOException, InterruptedException {
+    Table table = createTable(Bytes.toBytes("table1-mr-limit-1"));
+    Scan scan = new Scan();
+    scan.setLimit(1);
+
+    // Serialize and deserialize the Scan to mimic actual usage.
+    runTestMapreduce(table,
+      TableMapReduceUtil.convertStringToScan(TableMapReduceUtil.convertScanToString(scan)));
   }
 
   /**

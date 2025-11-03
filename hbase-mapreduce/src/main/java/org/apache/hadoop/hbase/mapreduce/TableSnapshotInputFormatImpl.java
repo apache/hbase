@@ -257,7 +257,10 @@ public class TableSnapshotInputFormatImpl {
     public void initialize(InputSplit split, Configuration conf) throws IOException {
       this.scan = TableMapReduceUtil.convertStringToScan(split.getScan());
       this.split = split;
-      this.rowLimitPerSplit = conf.getInt(SNAPSHOT_INPUTFORMAT_ROW_LIMIT_PER_INPUTSPLIT, 0);
+      int confLimit = conf.getInt(SNAPSHOT_INPUTFORMAT_ROW_LIMIT_PER_INPUTSPLIT, 0);
+      int scanLimit = Math.max(scan.getLimit(), 0);
+      this.rowLimitPerSplit =
+        confLimit == 0 ? scanLimit : scanLimit == 0 ? confLimit : Math.min(confLimit, scanLimit);
       TableDescriptor htd = split.htd;
       RegionInfo hri = this.split.getRegionInfo();
       FileSystem fs = CommonFSUtils.getCurrentFileSystem(conf);

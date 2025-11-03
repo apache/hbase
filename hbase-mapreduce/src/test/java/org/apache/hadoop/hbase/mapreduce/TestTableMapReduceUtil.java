@@ -24,12 +24,15 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.Closeable;
 import java.io.File;
+import java.io.IOException;
 import java.net.URI;
 import java.util.Collection;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.filter.KeyOnlyFilter;
 import org.apache.hadoop.hbase.security.provider.SaslClientAuthenticationProviders;
 import org.apache.hadoop.hbase.security.token.AuthenticationTokenIdentifier;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
@@ -294,5 +297,68 @@ public class TestTableMapReduceUtil {
     } finally {
       kdc.stop();
     }
+  }
+
+  @Test
+  public void testScanSerialization() throws IOException {
+    final byte[] cf = "cf".getBytes();
+    final Scan scan = new Scan();
+    scan.setLimit(1);
+    scan.setBatch(1);
+    scan.setMaxResultSize(1);
+    scan.setAllowPartialResults(true);
+    scan.setLoadColumnFamiliesOnDemand(true);
+    scan.readVersions(1);
+    scan.setColumnFamilyTimeRange(cf, 0, 1);
+    scan.setTimeRange(0, 1);
+    scan.setAttribute("cf", cf);
+    scan.withStartRow("0".getBytes(), false);
+    scan.withStopRow("1".getBytes(), true);
+    scan.setFilter(new KeyOnlyFilter());
+    scan.addColumn(cf, cf);
+    scan.setMaxResultsPerColumnFamily(1);
+    scan.setRowOffsetPerColumnFamily(1);
+    scan.setReversed(true);
+    scan.setConsistency(Consistency.TIMELINE);
+    scan.setCaching(1);
+    scan.setReadType(Scan.ReadType.STREAM);
+    scan.setNeedCursorResult(true);
+    scan.setQueryMetricsEnabled(true);
+
+    final String serialized = TableMapReduceUtil.convertScanToString(scan);
+    final Scan deserialized = TableMapReduceUtil.convertStringToScan(serialized);
+    final String reserialized = TableMapReduceUtil.convertScanToString(deserialized);
+
+    // Verify that serialization is symmetric
+    assertEquals(serialized, reserialized);
+
+    // Verify individual fields to catch potential omissions
+    assertEquals(scan.getLimit(), deserialized.getLimit());
+    assertEquals(scan.getBatch(), deserialized.getBatch());
+    assertEquals(scan.getMaxResultSize(), deserialized.getMaxResultSize());
+    assertEquals(scan.getAllowPartialResults(), deserialized.getAllowPartialResults());
+    assertEquals(scan.getLoadColumnFamiliesOnDemandValue(),
+      deserialized.getLoadColumnFamiliesOnDemandValue());
+    assertEquals(scan.getMaxVersions(), deserialized.getMaxVersions());
+    assertEquals(scan.getColumnFamilyTimeRange().get(cf).toString(),
+      deserialized.getColumnFamilyTimeRange().get(cf).toString());
+    assertEquals(scan.getTimeRange().toString(), deserialized.getTimeRange().toString());
+    assertEquals(Bytes.toString(scan.getAttribute("cf")),
+      Bytes.toString(deserialized.getAttribute("cf")));
+    assertEquals(0, Bytes.compareTo(scan.getStartRow(), deserialized.getStartRow()));
+    assertEquals(scan.includeStartRow(), deserialized.includeStartRow());
+    assertEquals(0, Bytes.compareTo(scan.getStopRow(), deserialized.getStopRow()));
+    assertEquals(scan.includeStopRow(), deserialized.includeStopRow());
+    assertEquals(scan.getFilter().getClass().getName(),
+      deserialized.getFilter().getClass().getName());
+    assertEquals(scan.getFamilyMap().size(), deserialized.getFamilyMap().size());
+    assertEquals(scan.getMaxResultsPerColumnFamily(), deserialized.getMaxResultsPerColumnFamily());
+    assertEquals(scan.getRowOffsetPerColumnFamily(), deserialized.getRowOffsetPerColumnFamily());
+    assertEquals(scan.isReversed(), deserialized.isReversed());
+    assertEquals(scan.getConsistency(), deserialized.getConsistency());
+    assertEquals(scan.getCaching(), deserialized.getCaching());
+    assertEquals(scan.getReadType(), deserialized.getReadType());
+    assertEquals(scan.isNeedCursorResult(), deserialized.isNeedCursorResult());
+    assertEquals(scan.isQueryMetricsEnabled(), deserialized.isQueryMetricsEnabled());
   }
 }

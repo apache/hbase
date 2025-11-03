@@ -304,13 +304,14 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
     }
   }
 
-  @Test
-  public void testScanLimit() throws Exception {
+  private void testScanLimit(int confLimit, Scan scan, int expectedLimit) throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final String snapshotName = tableName + "Snapshot";
     Table table = null;
     try {
-      UTIL.getConfiguration().setInt(SNAPSHOT_INPUTFORMAT_ROW_LIMIT_PER_INPUTSPLIT, 10);
+      if (confLimit > 0) {
+        UTIL.getConfiguration().setInt(SNAPSHOT_INPUTFORMAT_ROW_LIMIT_PER_INPUTSPLIT, confLimit);
+      }
       if (UTIL.getAdmin().tableExists(tableName)) {
         UTIL.deleteTable(tableName);
       }
@@ -332,7 +333,6 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
 
       Job job = new Job(UTIL.getConfiguration());
       Path tmpTableDir = UTIL.getDataTestDirOnTestFS(snapshotName);
-      Scan scan = new Scan();
       TableMapReduceUtil.addDependencyJarsForClasses(job.getConfiguration(),
         TestTableSnapshotInputFormat.class);
 
@@ -340,7 +340,7 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
         RowCounter.RowCounterMapper.class, NullWritable.class, NullWritable.class, job, true,
         tmpTableDir);
       Assert.assertTrue(job.waitForCompletion(true));
-      Assert.assertEquals(10 * regionNum,
+      Assert.assertEquals(expectedLimit * regionNum,
         job.getCounters().findCounter(RowCounter.RowCounterMapper.Counters.ROWS).getValue());
     } finally {
       if (table != null) {
@@ -350,6 +350,26 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
       UTIL.getAdmin().deleteSnapshot(snapshotName);
       UTIL.deleteTable(tableName);
     }
+  }
+
+  @Test
+  public void testScanLimitOnConfig() throws Exception {
+    testScanLimit(10, new Scan(), 10);
+  }
+
+  @Test
+  public void testScanLimitOnScan() throws Exception {
+    testScanLimit(0, new Scan().setLimit(10), 10);
+  }
+
+  @Test
+  public void testScanLimitOnBothButScanWins() throws Exception {
+    testScanLimit(10, new Scan().setLimit(5), 5);
+  }
+
+  @Test
+  public void testScanLimitOnBothButConfigWins() throws Exception {
+    testScanLimit(5, new Scan().setLimit(10), 5);
   }
 
   @Test

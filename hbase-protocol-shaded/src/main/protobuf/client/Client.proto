@@ -281,6 +281,7 @@ message Scan {
   optional ReadType readType = 23 [default = DEFAULT];
   optional bool need_cursor_result = 24 [default = false];
   optional bool query_metrics_enabled = 25 [default = false];
+  optional uint32 limit = 26;
 }
 
 /**
