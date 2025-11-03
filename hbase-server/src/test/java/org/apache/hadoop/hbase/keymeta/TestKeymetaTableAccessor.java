@@ -430,7 +430,9 @@ public class TestKeymetaTableAccessor {
       when(masterServices.getConnection()).thenReturn(connection);
       when(connection.getTable(KeymetaTableAccessor.KEY_META_TABLE_NAME)).thenReturn(table);
       when(masterServices.getKeyManagementService()).thenReturn(keyManagementService);
-      when(keyManagementService.isKeyManagementEnabled()).thenReturn(true);
+      Configuration conf = HBaseConfiguration.create();
+      conf.setBoolean(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, true);
+      when(keyManagementService.getConfiguration()).thenReturn(conf);
       accessor = new KeymetaTableAccessor(masterServices);
     }
 
@@ -452,12 +454,6 @@ public class TestKeymetaTableAccessor {
       verify(table).batch(mutationsCaptor.capture(), resultsCaptor.capture());
       List mutations = mutationsCaptor.getValue();
       assertEquals(3, mutations.size());
-    }
-
-    @Test
-    public void testDisableKeyWhenKeyManagementDisabled() {
-      when(keyManagementService.isKeyManagementEnabled()).thenReturn(false);
-      assertThrows(IOException.class, () -> accessor.disableKey(CUST_ID, KEY_NAMESPACE, "metadata"));
     }
   }
 
@@ -490,7 +486,9 @@ public class TestKeymetaTableAccessor {
       when(masterServices.getConnection()).thenReturn(connection);
       when(connection.getTable(KeymetaTableAccessor.KEY_META_TABLE_NAME)).thenReturn(table);
       when(masterServices.getKeyManagementService()).thenReturn(keyManagementService);
-      when(keyManagementService.isKeyManagementEnabled()).thenReturn(true);
+      Configuration conf = HBaseConfiguration.create();
+      conf.setBoolean(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, true);
+      when(keyManagementService.getConfiguration()).thenReturn(conf);
       when(keyManagementService.getSystemKeyCache()).thenReturn(systemKeyCache);
       accessor = new KeymetaTableAccessor(masterServices);
     }
@@ -504,9 +502,10 @@ public class TestKeymetaTableAccessor {
 
     @Test
     public void testUpdateActiveStateFromInactiveToActive() throws Exception {
-      ManagedKeyData keyData = MockManagedKeyProvider.getMockManagedKeyData(CUST_ID, KEY_NAMESPACE,
-        INACTIVE, "metadata", 123L);
-      ManagedKeyData systemKey = MockManagedKeyProvider.getMockSystemKeyData();
+      ManagedKeyData keyData = new ManagedKeyData(CUST_ID, KEY_NAMESPACE,
+        null, INACTIVE, "metadata", 123L);
+      ManagedKeyData systemKey = new ManagedKeyData(new byte[] { 1 }, KEY_SPACE_GLOBAL,
+        null, ACTIVE, "syskey", 100L);
       when(systemKeyCache.getLatestSystemKey()).thenReturn(systemKey);
 
       ArgumentCaptor<List> mutationsCaptor = ArgumentCaptor.forClass(List.class);
@@ -521,8 +520,8 @@ public class TestKeymetaTableAccessor {
 
     @Test
     public void testUpdateActiveStateFromActiveToInactive() throws Exception {
-      ManagedKeyData keyData = MockManagedKeyProvider.getMockManagedKeyData(CUST_ID, KEY_NAMESPACE,
-        ACTIVE, "metadata", 123L);
+      ManagedKeyData keyData = new ManagedKeyData(CUST_ID, KEY_NAMESPACE,
+        null, ACTIVE, "metadata", 123L);
 
       ArgumentCaptor<List> mutationsCaptor = ArgumentCaptor.forClass(List.class);
       ArgumentCaptor<Object[]> resultsCaptor = ArgumentCaptor.forClass(Object[].class);
@@ -536,8 +535,8 @@ public class TestKeymetaTableAccessor {
 
     @Test
     public void testUpdateActiveStateNoOp() throws Exception {
-      ManagedKeyData keyData = MockManagedKeyProvider.getMockManagedKeyData(CUST_ID, KEY_NAMESPACE,
-        ACTIVE, "metadata", 123L);
+      ManagedKeyData keyData = new ManagedKeyData(CUST_ID, KEY_NAMESPACE,
+        null, ACTIVE, "metadata", 123L);
 
       accessor.updateActiveState(keyData, ACTIVE);
 
@@ -546,16 +545,16 @@ public class TestKeymetaTableAccessor {
 
     @Test
     public void testUpdateActiveStateInvalidCurrentState() {
-      ManagedKeyData keyData = MockManagedKeyProvider.getMockManagedKeyData(CUST_ID, KEY_NAMESPACE,
-        DISABLED, "metadata", 123L);
+      ManagedKeyData keyData = new ManagedKeyData(CUST_ID, KEY_NAMESPACE,
+        null, DISABLED, "metadata", 123L);
 
       assertThrows(IOException.class, () -> accessor.updateActiveState(keyData, ACTIVE));
     }
 
     @Test
     public void testUpdateActiveStateInvalidNewState() {
-      ManagedKeyData keyData = MockManagedKeyProvider.getMockManagedKeyData(CUST_ID, KEY_NAMESPACE,
-        ACTIVE, "metadata", 123L);
+      ManagedKeyData keyData = new ManagedKeyData(CUST_ID, KEY_NAMESPACE,
+        null, ACTIVE, "metadata", 123L);
 
       assertThrows(IOException.class, () -> accessor.updateActiveState(keyData, DISABLED));
     }

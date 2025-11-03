@@ -49,11 +49,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.client.AsyncAdmin;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
+import org.apache.hadoop.hbase.client.AsyncConnection;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
@@ -614,21 +616,29 @@ public class TestKeymetaAdminImpl {
     @Mock
     private AsyncAdmin mockAsyncAdmin;
     @Mock
-    private AsyncConnection mockAsyncConnection;
+    private AsyncClusterConnection mockAsyncClusterConnection;
     @Mock
     private ServerManager mockServerManager;
     @Mock
     private KeymetaTableAccessor mockAccessor;
     @Mock
     private ManagedKeyProvider mockProvider;
+    @Mock
+    private KeyManagementService mockKeyManagementService;
 
     @Before
     public void setUp() throws Exception {
       MockitoAnnotations.openMocks(this);
-      when(mockMasterServices.getAsyncClusterConnection()).thenReturn(mockAsyncConnection);
-      when(mockAsyncConnection.getAdmin()).thenReturn(mockAsyncAdmin);
+      when(mockMasterServices.getAsyncClusterConnection()).thenReturn(mockAsyncClusterConnection);
+      when(mockAsyncClusterConnection.getAdmin()).thenReturn(mockAsyncAdmin);
       when(mockMasterServices.getServerManager()).thenReturn(mockServerManager);
       when(mockServerManager.getOnlineServers()).thenReturn(new HashMap<>());
+
+      // Setup KeyManagementService mock
+      Configuration conf = HBaseConfiguration.create();
+      conf.setBoolean(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, true);
+      when(mockKeyManagementService.getConfiguration()).thenReturn(conf);
+      when(mockMasterServices.getKeyManagementService()).thenReturn(mockKeyManagementService);
     }
 
     @Test
@@ -636,8 +646,8 @@ public class TestKeymetaAdminImpl {
       KeymetaAdminImplForTest admin = new KeymetaAdminImplForTest(mockMasterServices, mockAccessor);
 
       List<ManagedKeyData> keys = new ArrayList<>();
-      ManagedKeyData key1 = MockManagedKeyProvider.getMockManagedKeyData(CUST_ID, KEY_NAMESPACE,
-        ManagedKeyState.ACTIVE, "metadata1", 123L);
+      ManagedKeyData key1 = new ManagedKeyData(CUST_BYTES, KEY_SPACE_GLOBAL,
+        null, ManagedKeyState.ACTIVE, "metadata1", 123L);
       keys.add(key1);
 
       when(mockAccessor.getAllKeys(any(), any())).thenReturn(keys);
@@ -645,46 +655,46 @@ public class TestKeymetaAdminImpl {
       when(mockAsyncAdmin.ejectManagedKeyDataCacheEntryOnAllServers(any(), any(), any(), any()))
         .thenReturn(successFuture);
 
-      List<ManagedKeyData> result = admin.disableKeyManagement(CUST_ID, KEY_NAMESPACE);
+      List<ManagedKeyData> result = admin.disableKeyManagement(CUST_BYTES, KEY_SPACE_GLOBAL);
 
       assertNotNull(result);
-      verify(mockAccessor, times(2)).getAllKeys(CUST_ID, KEY_NAMESPACE);
-      verify(mockAccessor).disableKey(CUST_ID, KEY_NAMESPACE, "metadata1");
+      verify(mockAccessor, times(2)).getAllKeys(CUST_BYTES, KEY_SPACE_GLOBAL);
+      verify(mockAccessor).disableKey(CUST_BYTES, KEY_SPACE_GLOBAL, "metadata1");
     }
 
     @Test
     public void testDisableManagedKey() throws Exception {
       KeymetaAdminImplForTest admin = new KeymetaAdminImplForTest(mockMasterServices, mockAccessor);
 
-      ManagedKeyData disabledKey = MockManagedKeyProvider.getMockManagedKeyData(CUST_ID,
-        KEY_NAMESPACE, ManagedKeyState.DISABLED, "metadata1", 123L);
+      ManagedKeyData disabledKey = new ManagedKeyData(CUST_BYTES,
+        KEY_SPACE_GLOBAL, null, ManagedKeyState.DISABLED, "metadata1", 123L);
       when(mockAccessor.getKey(any(), any(), any())).thenReturn(disabledKey);
 
       CompletableFuture<Void> successFuture = CompletableFuture.completedFuture(null);
       when(mockAsyncAdmin.ejectManagedKeyDataCacheEntryOnAllServers(any(), any(), any(), any()))
         .thenReturn(successFuture);
 
-      ManagedKeyData result = admin.disableManagedKey(CUST_ID, KEY_NAMESPACE, "metadata1");
+      ManagedKeyData result = admin.disableManagedKey(CUST_BYTES, KEY_SPACE_GLOBAL, "metadata1");
 
       assertNotNull(result);
       assertEquals(ManagedKeyState.DISABLED, result.getKeyState());
-      verify(mockAccessor).disableKey(CUST_ID, KEY_NAMESPACE, "metadata1");
+      verify(mockAccessor).disableKey(CUST_BYTES, KEY_SPACE_GLOBAL, "metadata1");
     }
 
     @Test
     public void testRotateManagedKey() throws Exception {
       KeymetaAdminImplForTest admin = new KeymetaAdminImplForTest(mockMasterServices, mockAccessor);
 
-      ManagedKeyData currentKey = MockManagedKeyProvider.getMockManagedKeyData(CUST_ID,
-        KEY_NAMESPACE, ManagedKeyState.ACTIVE, "metadata1", 123L);
-      ManagedKeyData newKey = MockManagedKeyProvider.getMockManagedKeyData(CUST_ID, KEY_NAMESPACE,
-        ManagedKeyState.ACTIVE, "metadata2", 124L);
+      ManagedKeyData currentKey = new ManagedKeyData(CUST_BYTES,
+        KEY_SPACE_GLOBAL, null, ManagedKeyState.ACTIVE, "metadata1", 123L);
+      ManagedKeyData newKey = new ManagedKeyData(CUST_BYTES, KEY_SPACE_GLOBAL,
+        null, ManagedKeyState.ACTIVE, "metadata2", 124L);
 
       when(mockAccessor.getActiveKey(any(), any())).thenReturn(currentKey);
       when(mockAccessor.getKeyProvider()).thenReturn(mockProvider);
       when(mockProvider.getManagedKey(any(), any())).thenReturn(newKey);
 
-      ManagedKeyData result = admin.rotateManagedKey(CUST_ID, KEY_NAMESPACE);
+      ManagedKeyData result = admin.rotateManagedKey(CUST_BYTES, KEY_SPACE_GLOBAL);
 
       assertNotNull(result);
     }
@@ -694,17 +704,17 @@ public class TestKeymetaAdminImpl {
       KeymetaAdminImplForTest admin = new KeymetaAdminImplForTest(mockMasterServices, mockAccessor);
 
       List<ManagedKeyData> keys = new ArrayList<>();
-      ManagedKeyData key1 = MockManagedKeyProvider.getMockManagedKeyData(CUST_ID, KEY_NAMESPACE,
-        ManagedKeyState.ACTIVE, "metadata1", 123L);
+      ManagedKeyData key1 = new ManagedKeyData(CUST_BYTES, KEY_SPACE_GLOBAL,
+        null, ManagedKeyState.ACTIVE, "metadata1", 123L);
       keys.add(key1);
 
       when(mockAccessor.getAllKeys(any(), any())).thenReturn(keys);
       when(mockAccessor.getKeyProvider()).thenReturn(mockProvider);
       when(mockProvider.unwrapKey(any(), any())).thenReturn(key1);
 
-      admin.refreshManagedKeys(CUST_ID, KEY_NAMESPACE);
+      admin.refreshManagedKeys(CUST_BYTES, KEY_SPACE_GLOBAL);
 
-      verify(mockAccessor).getAllKeys(CUST_ID, KEY_NAMESPACE);
+      verify(mockAccessor).getAllKeys(CUST_BYTES, KEY_SPACE_GLOBAL);
     }
 
     private class KeymetaAdminImplForTest extends KeymetaAdminImpl {
