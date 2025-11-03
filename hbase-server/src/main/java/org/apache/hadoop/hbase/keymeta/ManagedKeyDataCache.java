@@ -213,8 +213,10 @@ public class ManagedKeyDataCache extends KeyManagementBase {
 
     // Also remove from generic cache by metadata, but only if it matches custodian/namespace
     cacheByMetadata.asMap().computeIfPresent(keyMetadata, (metadata, value) -> {
-      if (Arrays.equals(value.getKeyCustodian(), keyCust)
-        && value.getKeyNamespace().equals(keyNamespace)) {
+      if (
+        Arrays.equals(value.getKeyCustodian(), keyCust)
+          && value.getKeyNamespace().equals(keyNamespace)
+      ) {
         ejected.set(true);
         return null;
       }

@@ -201,9 +201,9 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
       ManagedKeyResponse.Builder builder = ManagedKeyResponse.newBuilder();
       try {
         initManagedKeyResponseBuilder(controller, request.getKeyCustNs(), builder);
-        ManagedKeyData managedKeyState =
-          master.getKeymetaAdmin().disableManagedKey(request.getKeyCustNs().getKeyCust().toByteArray(),
-            request.getKeyCustNs().getKeyNamespace(), request.getKeyMetadata());
+        ManagedKeyData managedKeyState = master.getKeymetaAdmin().disableManagedKey(
+          request.getKeyCustNs().getKeyCust().toByteArray(),
+          request.getKeyCustNs().getKeyNamespace(), request.getKeyMetadata());
         response = generateKeyStateResponse(managedKeyState, builder);
       } catch (IOException | KeyException e) {
         CoprocessorRpcUtils.setControllerException(controller, new DoNotRetryIOException(e));

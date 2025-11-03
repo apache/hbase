@@ -241,9 +241,9 @@ public class TestRSRpcServices {
     String keyNamespace = "testNamespace";
     String keyMetadata = "testMetadata";
 
-    ManagedKeyEntryRequest request = ManagedKeyEntryRequest.newBuilder()
-      .setKeyCustNs(ManagedKeyRequest.newBuilder().setKeyCust(ByteString.copyFrom(keyCustodian))
-        .setKeyNamespace(keyNamespace).build())
+    ManagedKeyEntryRequest request = ManagedKeyEntryRequest
+      .newBuilder().setKeyCustNs(ManagedKeyRequest.newBuilder()
+        .setKeyCust(ByteString.copyFrom(keyCustodian)).setKeyNamespace(keyNamespace).build())
       .setKeyMetadata(keyMetadata).build();
 
     RpcController controller = mock(RpcController.class);
@@ -286,9 +286,9 @@ public class TestRSRpcServices {
     String keyNamespace = "testNamespace";
     String keyMetadata = "testMetadata";
 
-    ManagedKeyEntryRequest request = ManagedKeyEntryRequest.newBuilder()
-      .setKeyCustNs(ManagedKeyRequest.newBuilder().setKeyCust(ByteString.copyFrom(keyCustodian))
-        .setKeyNamespace(keyNamespace).build())
+    ManagedKeyEntryRequest request = ManagedKeyEntryRequest
+      .newBuilder().setKeyCustNs(ManagedKeyRequest.newBuilder()
+        .setKeyCust(ByteString.copyFrom(keyCustodian)).setKeyNamespace(keyNamespace).build())
       .setKeyMetadata(keyMetadata).build();
 
     RpcController controller = mock(RpcController.class);

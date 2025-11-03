@@ -4105,16 +4105,14 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
       if (LOG.isInfoEnabled()) {
         String keyCustodianEncoded = Base64.getEncoder().encodeToString(keyCustodian);
         byte[] keyMetadataHashBytes = ManagedKeyData.constructMetadataHash(keyMetadata);
-        String keyMetadataHashEncoded =
-          Base64.getEncoder().encodeToString(keyMetadataHashBytes);
+        String keyMetadataHashEncoded = Base64.getEncoder().encodeToString(keyMetadataHashBytes);
         LOG.info(
           "Received EjectManagedKeyDataCacheEntry request for key custodian: {}, namespace: {}, "
             + "metadata hash: {}",
           keyCustodianEncoded, keyNamespace, keyMetadataHashEncoded);
       }
-      boolean ejected =
-        server.getKeyManagementService().getManagedKeyDataCache().ejectKey(keyCustodian,
-          keyNamespace, keyMetadata);
+      boolean ejected = server.getKeyManagementService().getManagedKeyDataCache()
+        .ejectKey(keyCustodian, keyNamespace, keyMetadata);
       return BooleanMsg.newBuilder().setBoolMsg(ejected).build();
     } catch (IOException ie) {
       LOG.error("Failed to eject managed key data cache entry", ie);

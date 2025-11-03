@@ -89,8 +89,8 @@ import org.mockito.MockitoAnnotations;
 
 @RunWith(Suite.class)
 @Suite.SuiteClasses({ TestKeymetaTableAccessor.TestAdd.class,
-  TestKeymetaTableAccessor.TestAddWithNullableFields.class,
-  TestKeymetaTableAccessor.TestGet.class, TestKeymetaTableAccessor.TestDisableKey.class,
+  TestKeymetaTableAccessor.TestAddWithNullableFields.class, TestKeymetaTableAccessor.TestGet.class,
+  TestKeymetaTableAccessor.TestDisableKey.class,
   TestKeymetaTableAccessor.TestUpdateActiveState.class })
 @Category({ MasterTests.class, SmallTests.class })
 public class TestKeymetaTableAccessor {
@@ -502,10 +502,10 @@ public class TestKeymetaTableAccessor {
 
     @Test
     public void testUpdateActiveStateFromInactiveToActive() throws Exception {
-      ManagedKeyData keyData = new ManagedKeyData(CUST_ID, KEY_NAMESPACE,
-        null, INACTIVE, "metadata", 123L);
-      ManagedKeyData systemKey = new ManagedKeyData(new byte[] { 1 }, KEY_SPACE_GLOBAL,
-        null, ACTIVE, "syskey", 100L);
+      ManagedKeyData keyData =
+        new ManagedKeyData(CUST_ID, KEY_NAMESPACE, null, INACTIVE, "metadata", 123L);
+      ManagedKeyData systemKey =
+        new ManagedKeyData(new byte[] { 1 }, KEY_SPACE_GLOBAL, null, ACTIVE, "syskey", 100L);
       when(systemKeyCache.getLatestSystemKey()).thenReturn(systemKey);
 
       ArgumentCaptor<List> mutationsCaptor = ArgumentCaptor.forClass(List.class);
@@ -520,8 +520,8 @@ public class TestKeymetaTableAccessor {
 
     @Test
     public void testUpdateActiveStateFromActiveToInactive() throws Exception {
-      ManagedKeyData keyData = new ManagedKeyData(CUST_ID, KEY_NAMESPACE,
-        null, ACTIVE, "metadata", 123L);
+      ManagedKeyData keyData =
+        new ManagedKeyData(CUST_ID, KEY_NAMESPACE, null, ACTIVE, "metadata", 123L);
 
       ArgumentCaptor<List> mutationsCaptor = ArgumentCaptor.forClass(List.class);
       ArgumentCaptor<Object[]> resultsCaptor = ArgumentCaptor.forClass(Object[].class);
@@ -535,8 +535,8 @@ public class TestKeymetaTableAccessor {
 
     @Test
     public void testUpdateActiveStateNoOp() throws Exception {
-      ManagedKeyData keyData = new ManagedKeyData(CUST_ID, KEY_NAMESPACE,
-        null, ACTIVE, "metadata", 123L);
+      ManagedKeyData keyData =
+        new ManagedKeyData(CUST_ID, KEY_NAMESPACE, null, ACTIVE, "metadata", 123L);
 
       accessor.updateActiveState(keyData, ACTIVE);
 
@@ -545,16 +545,16 @@ public class TestKeymetaTableAccessor {
 
     @Test
     public void testUpdateActiveStateInvalidCurrentState() {
-      ManagedKeyData keyData = new ManagedKeyData(CUST_ID, KEY_NAMESPACE,
-        null, DISABLED, "metadata", 123L);
+      ManagedKeyData keyData =
+        new ManagedKeyData(CUST_ID, KEY_NAMESPACE, null, DISABLED, "metadata", 123L);
 
       assertThrows(IOException.class, () -> accessor.updateActiveState(keyData, ACTIVE));
     }
 
     @Test
     public void testUpdateActiveStateInvalidNewState() {
-      ManagedKeyData keyData = new ManagedKeyData(CUST_ID, KEY_NAMESPACE,
-        null, ACTIVE, "metadata", 123L);
+      ManagedKeyData keyData =
+        new ManagedKeyData(CUST_ID, KEY_NAMESPACE, null, ACTIVE, "metadata", 123L);
 
       assertThrows(IOException.class, () -> accessor.updateActiveState(keyData, DISABLED));
     }

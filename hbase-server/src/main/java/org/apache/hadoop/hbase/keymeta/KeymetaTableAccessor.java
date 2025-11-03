@@ -121,7 +121,7 @@ public class KeymetaTableAccessor extends KeyManagementBase {
 
   /**
    * Get all the keys for the specified keyCust and key_namespace.
-   * @param keyCust     The key custodian.
+   * @param keyCust      The key custodian.
    * @param keyNamespace The namespace
    * @return a list of key data, one for each key, can be empty when none were found.
    * @throws IOException  when there is an underlying IOException.
@@ -154,7 +154,7 @@ public class KeymetaTableAccessor extends KeyManagementBase {
 
   /**
    * Get the active key for the specified keyCust and key_namespace.
-   * @param keyCust     The prefix
+   * @param keyCust      The prefix
    * @param keyNamespace The namespace
    * @return the active key data, or null if no active key found
    * @throws IOException  when there is an underlying IOException.
@@ -167,7 +167,7 @@ public class KeymetaTableAccessor extends KeyManagementBase {
 
   /**
    * Get the specific key identified by keyCust, keyNamespace and keyMetadata.
-   * @param keyCust     The prefix.
+   * @param keyCust      The prefix.
    * @param keyNamespace The namespace.
    * @param keyMetadata  The metadata.
    * @return the key or {@code null}
@@ -176,21 +176,20 @@ public class KeymetaTableAccessor extends KeyManagementBase {
    */
   public ManagedKeyData getKey(byte[] keyCust, String keyNamespace, String keyMetadata)
     throws IOException, KeyException {
-    return getKeyInternal(keyCust, keyNamespace,
-      ManagedKeyData.constructMetadataHash(keyMetadata));
+    return getKeyInternal(keyCust, keyNamespace, ManagedKeyData.constructMetadataHash(keyMetadata));
   }
 
   /**
    * Internal helper method to get a key using the provided metadata hash.
-   * @param keyCust        The prefix.
+   * @param keyCust         The prefix.
    * @param keyNamespace    The namespace.
    * @param keyMetadataHash The metadata hash or state value.
    * @return the key or {@code null}
    * @throws IOException  when there is an underlying IOException.
    * @throws KeyException when there is an underlying KeyException.
    */
-  private ManagedKeyData getKeyInternal(byte[] keyCust, String keyNamespace,
-    byte[] keyMetadataHash) throws IOException, KeyException {
+  private ManagedKeyData getKeyInternal(byte[] keyCust, String keyNamespace, byte[] keyMetadataHash)
+    throws IOException, KeyException {
     assertKeyManagementEnabled();
     Connection connection = getServer().getConnection();
     try (Table table = connection.getTable(KEY_META_TABLE_NAME)) {
@@ -230,7 +229,8 @@ public class KeymetaTableAccessor extends KeyManagementBase {
 
     // Delete wrapped key columns from Metadata row
     Delete deleteWrappedKey = new Delete(rowKeyForMetadata).setDurability(Durability.SKIP_WAL)
-      .setPriority(HConstants.SYSTEMTABLE_QOS).addColumns(KEY_META_INFO_FAMILY, DEK_CHECKSUM_QUAL_BYTES)
+      .setPriority(HConstants.SYSTEMTABLE_QOS)
+      .addColumns(KEY_META_INFO_FAMILY, DEK_CHECKSUM_QUAL_BYTES)
       .addColumns(KEY_META_INFO_FAMILY, DEK_WRAPPED_BY_STK_QUAL_BYTES)
       .addColumns(KEY_META_INFO_FAMILY, STK_CHECKSUM_QUAL_BYTES);
     mutations.add(deleteWrappedKey);
@@ -257,8 +257,8 @@ public class KeymetaTableAccessor extends KeyManagementBase {
 
     // Validate states
     if (currentState != ManagedKeyState.ACTIVE && currentState != ManagedKeyState.INACTIVE) {
-      throw new IOException("Can only update state between ACTIVE and INACTIVE, current state: "
-        + currentState);
+      throw new IOException(
+        "Can only update state between ACTIVE and INACTIVE, current state: " + currentState);
     }
     if (newState != ManagedKeyState.ACTIVE && newState != ManagedKeyState.INACTIVE) {
       throw new IOException("New state must be ACTIVE or INACTIVE, got: " + newState);

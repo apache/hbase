@@ -4695,9 +4695,9 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     Set<ServerName> regionServers, byte[] keyCustodian, String keyNamespace, String keyMetadata) {
     CompletableFuture<Void> future = new CompletableFuture<>();
     // Create the request once instead of repeatedly for each server
-    ManagedKeyEntryRequest request = ManagedKeyEntryRequest.newBuilder()
-      .setKeyCustNs(ManagedKeyRequest.newBuilder().setKeyCust(ByteString.copyFrom(keyCustodian))
-        .setKeyNamespace(keyNamespace).build())
+    ManagedKeyEntryRequest request = ManagedKeyEntryRequest
+      .newBuilder().setKeyCustNs(ManagedKeyRequest.newBuilder()
+        .setKeyCust(ByteString.copyFrom(keyCustodian)).setKeyNamespace(keyNamespace).build())
       .setKeyMetadata(keyMetadata).build();
     List<CompletableFuture<Void>> futures =
       regionServers.stream().map(serverName -> ejectManagedKeyDataCacheEntry(serverName, request))

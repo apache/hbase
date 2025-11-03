@@ -114,9 +114,8 @@ public class KeymetaAdminClient implements KeymetaAdmin {
     try {
       ManagedKeyResponse response = stub.disableManagedKey(null,
         org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyEntryRequest
-          .newBuilder()
-          .setKeyCustNs(ManagedKeyRequest.newBuilder().setKeyCust(ByteString.copyFrom(keyCust))
-            .setKeyNamespace(keyNamespace).build())
+          .newBuilder().setKeyCustNs(ManagedKeyRequest.newBuilder()
+            .setKeyCust(ByteString.copyFrom(keyCust)).setKeyNamespace(keyNamespace).build())
           .setKeyMetadata(keyMetadata).build());
       return generateKeyData(response);
     } catch (ServiceException e) {

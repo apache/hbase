@@ -535,7 +535,8 @@ public class TestManagedKeyDataCache {
 
       // Verify the original key is still in both caches
       assertEquals(key, cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL));
-      assertEquals(metadata, cache.getEntry(CUST_ID, KEY_SPACE_GLOBAL, metadata, null).getKeyMetadata());
+      assertEquals(metadata,
+        cache.getEntry(CUST_ID, KEY_SPACE_GLOBAL, metadata, null).getKeyMetadata());
     }
 
     @Test
