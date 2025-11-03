@@ -29,13 +29,14 @@ import io.opentelemetry.context.Scope;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CoprocessorServiceRequest;
@@ -45,6 +46,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.Coprocesso
  */
 @InterfaceAudience.Private
 class RegionCoprocessorRpcChannelImpl implements RpcChannel {
+
+  private static final Logger LOG = LoggerFactory.getLogger(RegionCoprocessorRpcChannelImpl.class);
 
   private final AsyncConnectionImpl conn;
 
@@ -76,10 +79,8 @@ class RegionCoprocessorRpcChannelImpl implements RpcChannel {
     if (
       region != null && !Bytes.equals(loc.getRegionInfo().getRegionName(), region.getRegionName())
     ) {
-      future.completeExceptionally(new DoNotRetryIOException(
-        "Region name is changed, expected " + region.getRegionNameAsString() + ", actual "
-          + loc.getRegionInfo().getRegionNameAsString()));
-      return future;
+      LOG.warn("Region name is changed, expected {}, actual {}", region.getRegionNameAsString(),
+        loc.getRegionInfo().getRegionNameAsString());
     }
     CoprocessorServiceRequest csr = CoprocessorRpcUtils.getCoprocessorServiceRequest(method,
       request, row, loc.getRegionInfo().getRegionName());
