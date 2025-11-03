@@ -178,9 +178,11 @@ public class TestCompactionArchiveConcurrentClose {
     CommonFSUtils.setRootDir(walConf, tableDir);
     final WALFactory wals = new WALFactory(walConf, "log_" + info.getEncodedName());
     HRegion region = new HRegion(fs, wals.getWAL(info), conf, htd, null);
-
+    Path regionDir = new Path(tableDir, info.getEncodedName());
+    if (!fs.getFileSystem().exists(regionDir)) {
+      fs.getFileSystem().mkdirs(regionDir);
+    }
     region.initialize();
-
     return region;
   }
 

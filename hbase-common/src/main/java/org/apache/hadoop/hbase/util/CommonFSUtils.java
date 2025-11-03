@@ -188,11 +188,39 @@ public final class CommonFSUtils {
    */
   public static FSDataOutputStream create(FileSystem fs, Path path, FsPermission perm,
     boolean overwrite) throws IOException {
+    return create(fs, path, perm, overwrite, true);
+  }
+
+  /**
+   * Create the specified file on the filesystem. By default, this will:
+   * <ol>
+   * <li>apply the umask in the configuration (if it is enabled)</li>
+   * <li>use the fs configured buffer size (or 4096 if not set)</li>
+   * <li>use the default replication</li>
+   * <li>use the default block size</li>
+   * <li>not track progress</li>
+   * </ol>
+   * @param fs                {@link FileSystem} on which to write the file
+   * @param path              {@link Path} to the file to write
+   * @param perm              intial permissions
+   * @param overwrite         Whether or not the created file should be overwritten.
+   * @param isRecursiveCreate recursively create parent directories
+   * @return output stream to the created file
+   * @throws IOException if the file cannot be created
+   */
+  public static FSDataOutputStream create(FileSystem fs, Path path, FsPermission perm,
+    boolean overwrite, boolean isRecursiveCreate) throws IOException {
     if (LOG.isTraceEnabled()) {
-      LOG.trace("Creating file={} with permission={}, overwrite={}", path, perm, overwrite);
+      LOG.trace("Creating file={} with permission={}, overwrite={}, recursive={}", path, perm,
+        overwrite, isRecursiveCreate);
     }
-    return fs.create(path, perm, overwrite, getDefaultBufferSize(fs),
-      getDefaultReplication(fs, path), getDefaultBlockSize(fs, path), null);
+    if (isRecursiveCreate) {
+      return fs.create(path, perm, overwrite, getDefaultBufferSize(fs),
+        getDefaultReplication(fs, path), getDefaultBlockSize(fs, path), null);
+    } else {
+      return fs.createNonRecursive(path, perm, overwrite, getDefaultBufferSize(fs),
+        getDefaultReplication(fs, path), getDefaultBlockSize(fs, path), null);
+    }
   }
 
   /**
