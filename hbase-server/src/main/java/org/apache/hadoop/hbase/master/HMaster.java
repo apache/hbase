@@ -1603,8 +1603,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     }
 
     // Then wait for all regions to come online
-    LOG.info("initKeymetaIfEnabled: Waiting for {} table {} regions to be online", keymetaTableName,
-      ris.size());
+    LOG.info("initKeymetaIfEnabled: Checking/Waiting for {} table {} regions to be online",
+      keymetaTableName, ris.size());
     for (RegionInfo ri : ris) {
       if (!isRegionOnline(ri)) {
         throw new RuntimeException(keymetaTableName + " table region " + ri.getRegionNameAsString()
