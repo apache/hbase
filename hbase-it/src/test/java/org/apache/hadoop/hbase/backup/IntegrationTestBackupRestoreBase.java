@@ -415,8 +415,8 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
   /**
    * Verifies a snapshot's "data.manifest" file exists after a full backup has been performed for a
    * table. The "data.manifest" file's path will look like the following:
-   * .../backupRootDir/backup_1760572298945/default/<table-name>/.hbase-snapshot/
-   * snapshot_1760572306407_default_<table-name>/data.manifest
+   * .../backupRootDir/backup_1760572298945/default/TABLE_NAME/.hbase-snapshot/
+   * snapshot_1760572306407_default_TABLE_NAME/data.manifest
    */
   private void verifySnapshotExists(TableName tableName, String backupId) throws IOException {
     RemoteIterator<LocatedFileStatus> fileStatusIterator =
@@ -494,7 +494,8 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
       assertEquals("The WAL partition directory should only have files that start with 'wal_file'",
         "wal_file", splitName[0]);
       assertEquals(
-        "The timestamp in the WAL file's name should match the date for the WAL partition directory",
+        "The timestamp in the WAL file's name should match the "
+          + "date for the WAL partition directory",
         walPartitionDir.getName(), BackupUtils.formatToDateString(Long.parseLong(splitName[1])));
     }
   }
@@ -510,9 +511,8 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
   private boolean areAllTimestampsPastThreshold(Map<ServerName, Long> timestamps, long threshold,
     TableName tableName) {
     boolean haveAllTimestampsReachedThreshold = true;
-    LOG.info(
-      "Checking if each region server in the replication check point has caught up to the latest Put on {}",
-      tableName.getNameAsString());
+    LOG.info("Checking if each region server in the replication check point "
+      + "has caught up to the latest Put on {}", tableName.getNameAsString());
     for (Map.Entry<ServerName, Long> entry : timestamps.entrySet()) {
       LOG.info("host={}, checkpoint timestamp={}, latest put timestamp={}, caught up={}",
         entry.getKey(), entry.getValue(), threshold, entry.getValue() >= threshold);
