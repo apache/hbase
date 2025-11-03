@@ -170,6 +170,7 @@ public class TestMetaFixer {
     throws IOException {
     RegionInfo overlapRegion = RegionInfoBuilder.newBuilder(a.getTable())
       .setStartKey(a.getStartKey()).setEndKey(b.getEndKey()).build();
+    TEST_UTIL.createRegionDir(overlapRegion, services.getMasterFileSystem());
     MetaTableAccessor.putsToMetaTable(services.getConnection(),
       Collections.singletonList(MetaTableAccessor.makePutFromRegionInfo(overlapRegion,
         EnvironmentEdgeManager.currentTime())));
