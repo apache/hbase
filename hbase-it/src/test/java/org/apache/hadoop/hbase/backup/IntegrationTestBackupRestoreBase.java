@@ -58,12 +58,12 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
 import org.junit.After;
 import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.Uninterruptibles;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
