@@ -18,7 +18,7 @@
 -->
 # HBASE Changelog
 
-## Release 2.6.4 - Unreleased (as of 2025-10-22)
+## Release 2.6.4 - 2025-11-10
 
 
 
@@ -34,6 +34,7 @@
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-29679](https://issues.apache.org/jira/browse/HBASE-29679) | Suppress stack trace in RpcThrottlingException |  Minor | Quotas |
 | [HBASE-29663](https://issues.apache.org/jira/browse/HBASE-29663) | TimeBasedLimiters should support dynamic configuration refresh |  Major | . |
 | [HBASE-29653](https://issues.apache.org/jira/browse/HBASE-29653) | Build fails on riscv64 due to os-maven-plugin not recognizing RISC-V architecture |  Major | build |
 | [HBASE-29650](https://issues.apache.org/jira/browse/HBASE-29650) | Upgrade tomcat-jasper to 9.0.110 |  Major | UI |
@@ -55,7 +56,6 @@
 | [HBASE-29479](https://issues.apache.org/jira/browse/HBASE-29479) | QuotaCache is not correctly populated until runs of QuotaRefresherChore |  Minor | . |
 | [HBASE-29556](https://issues.apache.org/jira/browse/HBASE-29556) | Display HBCK and CatalogJanitor report errors properly on HBCK Report page |  Major | UI |
 | [HBASE-29431](https://issues.apache.org/jira/browse/HBASE-29431) | Update the 'ExcludeDNs' information with the cause in RS UI |  Major | UI |
-| [HBASE-29473](https://issues.apache.org/jira/browse/HBASE-29473) | Obtain target cluster's token for cross clusters job |  Major | . |
 | [HBASE-29528](https://issues.apache.org/jira/browse/HBASE-29528) | Support for cellVisibility in Thrift interface |  Minor | Thrift |
 | [HBASE-29290](https://issues.apache.org/jira/browse/HBASE-29290) | Include port number of Region Server in the Replication Status message |  Minor | shell |
 | [HBASE-29469](https://issues.apache.org/jira/browse/HBASE-29469) | Add RPC throttling metrics to RegionServer for quota monitoring |  Minor | metrics |
@@ -72,6 +72,9 @@
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-29662](https://issues.apache.org/jira/browse/HBASE-29662) | Reading data via TableSnapshotInputFormat should fail instead of reading no data if restore directory got deleted |  Critical | snapshots |
+| [HBASE-29622](https://issues.apache.org/jira/browse/HBASE-29622) | Flaky Test : TestBackupDelete#testBackupDeleteUpdatesIncrementalBackupSet |  Major | backup&restore |
+| [HBASE-29677](https://issues.apache.org/jira/browse/HBASE-29677) | Thread safety in QuotaRefresherChore |  Minor | . |
 | [HBASE-29604](https://issues.apache.org/jira/browse/HBASE-29604) | BackupHFileCleaner uses flawed time based check |  Critical | backup&restore |
 | [HBASE-29629](https://issues.apache.org/jira/browse/HBASE-29629) | Record the quota user name value on metrics for RpcThrottlingExceptions |  Minor | Quotas |
 | [HBASE-29623](https://issues.apache.org/jira/browse/HBASE-29623) | Blocks for CFs with BlockCache disabled may still get cached on write or compaction |  Major | BlockCache |
