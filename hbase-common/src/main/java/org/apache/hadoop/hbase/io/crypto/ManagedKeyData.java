@@ -79,6 +79,7 @@ public class ManagedKeyData {
   /**
    * Constructs a new instance with the given parameters.
    * @param key_cust    The key custodian.
+   * @param key_namespace The key namespace.
    * @param theKey      The actual key, can be {@code null}.
    * @param keyState    The state of the key.
    * @param keyMetadata The metadata associated with the key.
@@ -87,34 +88,24 @@ public class ManagedKeyData {
   public ManagedKeyData(byte[] key_cust, String key_namespace, Key theKey, ManagedKeyState keyState,
     String keyMetadata) {
     this(key_cust, key_namespace, theKey, keyState, keyMetadata,
-      EnvironmentEdgeManager.currentTime());
+      null, EnvironmentEdgeManager.currentTime());
   }
 
   /**
    * Constructs a new instance with the given parameters including refresh timestamp.
    * @param key_cust         The key custodian.
+   * @param key_namespace    The key namespace.
    * @param theKey           The actual key, can be {@code null}.
    * @param keyState         The state of the key.
-   * @param keyMetadata      The metadata associated with the key.
+   * @param keyMetadata
    * @param refreshTimestamp The refresh timestamp for the key.
    * @throws NullPointerException if any of key_cust, keyState or keyMetadata is null.
    */
   public ManagedKeyData(byte[] key_cust, String key_namespace, Key theKey, ManagedKeyState keyState,
     String keyMetadata, long refreshTimestamp) {
-    Preconditions.checkNotNull(key_cust, "key_cust should not be null");
-    Preconditions.checkNotNull(key_namespace, "key_namespace should not be null");
-    Preconditions.checkNotNull(keyState, "keyState should not be null");
-    // Only check for null metadata if state is not FAILED
-    if (keyState != ManagedKeyState.FAILED) {
-      Preconditions.checkNotNull(keyMetadata, "keyMetadata should not be null");
-    }
-
-    this.keyCustodian = key_cust;
-    this.keyNamespace = key_namespace;
-    this.theKey = theKey;
-    this.keyState = keyState;
-    this.keyMetadata = keyMetadata;
-    this.refreshTimestamp = refreshTimestamp;
+    this(key_cust, key_namespace, theKey, keyState,
+      keyMetadata != null ? ManagedKeyData.constructMetadataHash(keyMetadata) : null,
+      refreshTimestamp);
   }
 
   /**
@@ -131,20 +122,23 @@ public class ManagedKeyData {
   @InterfaceAudience.Private
   public ManagedKeyData(byte[] key_cust, String key_namespace, Key theKey, ManagedKeyState keyState,
     byte[] keyMetadataHash, long refreshTimestamp) {
+    this(key_cust, key_namespace, theKey, keyState, null, keyMetadataHash, refreshTimestamp);
+  }
+
+  private ManagedKeyData(byte[] key_cust, String key_namespace, Key theKey, ManagedKeyState keyState,
+    String keyMetadata, byte[] keyMetadataHash, long refreshTimestamp) {
     Preconditions.checkNotNull(key_cust, "key_cust should not be null");
     Preconditions.checkNotNull(key_namespace, "key_namespace should not be null");
     Preconditions.checkNotNull(keyState, "keyState should not be null");
-    // Only check for null hash if state is not FAILED
-    if (keyState != ManagedKeyState.FAILED) {
-      Preconditions.checkNotNull(keyMetadataHash, "keyMetadataHash should not be null");
-    }
+    Preconditions.checkArgument(keyMetadataHash == null || keyMetadata == null, "only one of metadata or metadata hash should have been provided");
+    Preconditions.checkArgument((keyState != ManagedKeyState.FAILED) && (keyMetadataHash != null || keyMetadata != null), "one of metadata or metadata hash should have been provided when state is not FAILED");
 
     this.keyCustodian = key_cust;
     this.keyNamespace = key_namespace;
     this.theKey = theKey;
     this.keyState = keyState;
-    this.keyMetadata = null; // Not available on client side
-    this.keyMetadataHash = keyMetadataHash;
+    this.keyMetadata = keyMetadata;
+    this.keyMetadataHash = keyMetadataHash != null ? keyMetadataHash : constructMetadataHash(keyMetadata);
     this.refreshTimestamp = refreshTimestamp;
   }
 
@@ -244,9 +238,6 @@ public class ManagedKeyData {
    * @return The hash of the key metadata as a byte array.
    */
   public byte[] getKeyMetadataHash() {
-    if (keyMetadataHash == null && keyMetadata != null) {
-      keyMetadataHash = constructMetadataHash(keyMetadata);
-    }
     return keyMetadataHash;
   }
 
