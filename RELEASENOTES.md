@@ -16,6 +16,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 -->
+# HBASE  2.5.13 Release Notes
+
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
+
+
+---
+
+* [HBASE-15625](https://issues.apache.org/jira/browse/HBASE-15625) | *Minor* | **Make minimum values configurable and smaller**
+
+Introduced a new configuration  \`hbase.regionserver.free.heap.min.memory.size\`.
+This configuration allows users to specify the minimum required amount of free heap memory using a human-readable format (e.g., 512m, 4g). By default, it remains consistent with the previous behavior, reserving 20% of the total heap size as free memory. This new option helps modern deployments with large heap sizes fine-tune memory usage more aggressively for MemStore and block cache configurations.
+
+
+
 # HBASE  2.5.12 Release Notes
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
