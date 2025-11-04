@@ -31,7 +31,6 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.ReplicationPeerNotFoundException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -274,7 +273,7 @@ public class ReplicationPeerManager {
       checkClusterKey(peerConfig.getClusterKey());
       // Check if endpoint can replicate to the same cluster
       if (endpoint == null || !endpoint.canReplicateToSameCluster()) {
-        checkSameClusterKey(peerConfig.getClusterKey());
+        checkSameClusterKey(peerConfig);
       }
     }
 
@@ -372,21 +371,22 @@ public class ReplicationPeerManager {
     }
   }
 
-  private void checkSameClusterKey(String clusterKey) throws DoNotRetryIOException {
+  private void checkSameClusterKey(ReplicationPeerConfig peerConfig) throws DoNotRetryIOException {
     String peerClusterId = "";
     try {
-      // Create the peer cluster config for get peer cluster id
-      Configuration peerConf = HBaseConfiguration.createClusterConf(conf, clusterKey);
+      // Create the peer cluster config for getting peer cluster id, honoring per-peer CONFIG
+      Configuration peerConf = ReplicationUtils.getPeerClusterConfiguration(peerConfig, conf);
       try (ZKWatcher zkWatcher = new ZKWatcher(peerConf, this + "check-peer-cluster-id", null)) {
         peerClusterId = ZKClusterId.readClusterIdZNode(zkWatcher);
       }
-    } catch (IOException | KeeperException e) {
-      throw new DoNotRetryIOException("Can't get peerClusterId for clusterKey=" + clusterKey, e);
+    } catch (IOException | KeeperException | ReplicationException e) {
+      throw new DoNotRetryIOException(
+        "Can't get peerClusterId for clusterKey=" + peerConfig.getClusterKey(), e);
     }
     // In rare case, zookeeper setting may be messed up. That leads to the incorrect
     // peerClusterId value, which is the same as the source clusterId
     if (clusterId.equals(peerClusterId)) {
-      throw new DoNotRetryIOException("Invalid cluster key: " + clusterKey
+      throw new DoNotRetryIOException("Invalid cluster key: " + peerConfig.getClusterKey()
         + ", should not replicate to itself for HBaseInterClusterReplicationEndpoint");
     }
   }
