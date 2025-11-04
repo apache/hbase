@@ -1160,8 +1160,7 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
-  public void clearManagedKeyDataCacheOnServers(Set<ServerName> regionServers)
-    throws IOException {
+  public void clearManagedKeyDataCacheOnServers(Set<ServerName> regionServers) throws IOException {
     get(admin.clearManagedKeyDataCacheOnServers(regionServers));
   }
 }

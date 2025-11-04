@@ -72,16 +72,15 @@ public class KeyManagementUtils {
   /**
    * Refreshes the specified key from the configured managed key provider to confirm it is still
    * valid.
+   * @param provider the managed key provider
    * @param accessor the accessor to use to persist changes
    * @param keyData  the key data to refresh
    * @return the refreshed key data, or the original if unchanged
    * @throws IOException  if an error occurs
    * @throws KeyException if an error occurs
    */
-  public static ManagedKeyData refreshKey(KeymetaTableAccessor accessor, ManagedKeyData keyData)
-    throws IOException, KeyException {
-    ManagedKeyProvider provider = accessor.getKeyProvider();
-
+  public static ManagedKeyData refreshKey(ManagedKeyProvider provider,
+    KeymetaTableAccessor accessor, ManagedKeyData keyData) throws IOException, KeyException {
     if (keyData.getKeyMetadata() != null) {
       // Refresh key using unwrapKey
       ManagedKeyData newKeyData = provider.unwrapKey(keyData.getKeyMetadata(), null);

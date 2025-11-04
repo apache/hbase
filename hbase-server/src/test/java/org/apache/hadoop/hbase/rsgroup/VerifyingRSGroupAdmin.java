@@ -1013,8 +1013,7 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   }
 
   @Override
-  public void clearManagedKeyDataCacheOnServers(Set<ServerName> regionServers)
-    throws IOException {
+  public void clearManagedKeyDataCacheOnServers(Set<ServerName> regionServers) throws IOException {
     admin.clearManagedKeyDataCacheOnServers(regionServers);
   }
 }

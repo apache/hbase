@@ -60,7 +60,7 @@ public interface KeymetaAdmin {
   boolean rotateSTK() throws IOException;
 
   /**
-   * Eject a specific managed key entry from the managed key data cache on all region servers.
+   * Eject a specific managed key entry from the managed key data cache on all live region servers.
    * @param keyCustodian the key custodian
    * @param keyNamespace the key namespace
    * @param keyMetadata  the key metadata
@@ -70,7 +70,7 @@ public interface KeymetaAdmin {
     throws IOException;
 
   /**
-   * Clear all entries in the managed key data cache on all region servers.
+   * Clear all entries in the managed key data cache on all live region servers.
    * @throws IOException if an error occurs while clearing the cache
    */
   void clearManagedKeyDataCache() throws IOException;
@@ -88,7 +88,8 @@ public interface KeymetaAdmin {
     throws IOException, KeyException;
 
   /**
-   * Disables the managed key for the specified custodian, namespace, and metadata.
+   * Disables the specific managed key identified by the specified custodian, namespace, and
+   * metadata.
    * @param keyCust      The key custodian identifier.
    * @param keyNamespace The namespace for the key management.
    * @param keyMetadata  The key metadata.
@@ -100,7 +101,7 @@ public interface KeymetaAdmin {
     throws IOException, KeyException;
 
   /**
-   * Attempt a key rotation for the specified custodian and namespace.
+   * Attempt a key rotation for the active key of the specified custodian and namespace.
    * @param keyCust      The key custodian identifier.
    * @param keyNamespace The namespace for the key management.
    * @return A {@link ManagedKeyData} object identifying the key and its current status.

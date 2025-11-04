@@ -1391,8 +1391,7 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
-  public void clearManagedKeyDataCacheOnServers(Set<ServerName> regionServers)
-    throws IOException {
+  public void clearManagedKeyDataCacheOnServers(Set<ServerName> regionServers) throws IOException {
     throw new NotImplementedException(
       "clearManagedKeyDataCacheOnServers not supported in ThriftAdmin");
   }

@@ -699,8 +699,7 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Void>
-    clearManagedKeyDataCacheOnServers(Set<ServerName> regionServers) {
+  public CompletableFuture<Void> clearManagedKeyDataCacheOnServers(Set<ServerName> regionServers) {
     return wrap(rawAdmin.clearManagedKeyDataCacheOnServers(regionServers));
   }
 
