@@ -587,6 +587,8 @@ public abstract class AbstractTestIPC {
         everyItem(allOf(hasStatusWithCode(StatusCode.OK),
           hasTraceId(traceRule.getSpans().iterator().next().getTraceId()),
           hasDuration(greaterThanOrEqualTo(Duration.ofMillis(100L))))));
+    } finally {
+      rpcServer.stop();
     }
   }
 
@@ -614,6 +616,8 @@ public abstract class AbstractTestIPC {
       assertFalse("no spans provided", traceRule.getSpans().isEmpty());
       assertThat(traceRule.getSpans(), everyItem(allOf(hasStatusWithCode(StatusCode.ERROR),
         hasTraceId(traceRule.getSpans().iterator().next().getTraceId()))));
+    } finally {
+      rpcServer.stop();
     }
   }
 
@@ -650,4 +654,5 @@ public abstract class AbstractTestIPC {
       rpcServer.stop();
     }
   }
+
 }
