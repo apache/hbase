@@ -74,6 +74,7 @@ public class ManagedKeyData {
   private final long refreshTimestamp;
   private volatile long keyChecksum = 0;
   private byte[] keyMetadataHash;
+  private String keyMetadataHashEncoded; // Cached base64-encoded hash for performance
 
   /**
    * Constructs a new instance with the given parameters.
@@ -113,6 +114,37 @@ public class ManagedKeyData {
     this.theKey = theKey;
     this.keyState = keyState;
     this.keyMetadata = keyMetadata;
+    this.refreshTimestamp = refreshTimestamp;
+  }
+
+  /**
+   * Client-side constructor using only metadata hash. This constructor is intended for use by
+   * client code where the original metadata string is not available.
+   * @param key_cust         The key custodian.
+   * @param key_namespace    The key namespace.
+   * @param theKey           The actual key, can be {@code null}.
+   * @param keyState         The state of the key.
+   * @param keyMetadataHash  The pre-computed metadata hash.
+   * @param refreshTimestamp The refresh timestamp for the key.
+   * @throws NullPointerException if any of key_cust, keyState or keyMetadataHash is null.
+   */
+  @InterfaceAudience.Private
+  public ManagedKeyData(byte[] key_cust, String key_namespace, Key theKey, ManagedKeyState keyState,
+    byte[] keyMetadataHash, long refreshTimestamp) {
+    Preconditions.checkNotNull(key_cust, "key_cust should not be null");
+    Preconditions.checkNotNull(key_namespace, "key_namespace should not be null");
+    Preconditions.checkNotNull(keyState, "keyState should not be null");
+    // Only check for null hash if state is not FAILED
+    if (keyState != ManagedKeyState.FAILED) {
+      Preconditions.checkNotNull(keyMetadataHash, "keyMetadataHash should not be null");
+    }
+
+    this.keyCustodian = key_cust;
+    this.keyNamespace = key_namespace;
+    this.theKey = theKey;
+    this.keyState = keyState;
+    this.keyMetadata = null; // Not available on client side
+    this.keyMetadataHash = keyMetadataHash;
     this.refreshTimestamp = refreshTimestamp;
   }
 
@@ -220,14 +252,16 @@ public class ManagedKeyData {
 
   /**
    * Return the hash of key metadata in Base64 encoded form.
-   * @return the encoded hash or {@code null} if no meatadata is available.
+   * @return the encoded hash or {@code null} if no metadata is available.
    */
   public String getKeyMetadataHashEncoded() {
-    byte[] hash = getKeyMetadataHash();
-    if (hash != null) {
-      return Base64.getEncoder().encodeToString(hash);
+    if (keyMetadataHashEncoded == null) {
+      byte[] hash = getKeyMetadataHash();
+      if (hash != null) {
+        keyMetadataHashEncoded = Base64.getEncoder().encodeToString(hash);
+      }
     }
-    return null;
+    return keyMetadataHashEncoded;
   }
 
   public static byte[] constructMetadataHash(String metadata) {

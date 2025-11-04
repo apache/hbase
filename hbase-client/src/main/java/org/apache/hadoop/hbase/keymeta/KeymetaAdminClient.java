@@ -112,11 +112,13 @@ public class KeymetaAdminClient implements KeymetaAdmin {
   public ManagedKeyData disableManagedKey(byte[] keyCust, String keyNamespace, String keyMetadata)
     throws IOException, KeyException {
     try {
+      byte[] keyMetadataHash = ManagedKeyData.constructMetadataHash(keyMetadata);
       ManagedKeyResponse response = stub.disableManagedKey(null,
         org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyEntryRequest
-          .newBuilder().setKeyCustNs(ManagedKeyRequest.newBuilder()
-            .setKeyCust(ByteString.copyFrom(keyCust)).setKeyNamespace(keyNamespace).build())
-          .setKeyMetadata(keyMetadata).build());
+          .newBuilder()
+          .setKeyCustNs(ManagedKeyRequest.newBuilder().setKeyCust(ByteString.copyFrom(keyCust))
+            .setKeyNamespace(keyNamespace).build())
+          .setKeyMetadataHash(ByteString.copyFrom(keyMetadataHash)).build());
       return generateKeyData(response);
     } catch (ServiceException e) {
       throw ProtobufUtil.handleRemoteException(e);
@@ -155,8 +157,11 @@ public class KeymetaAdminClient implements KeymetaAdmin {
   }
 
   private static ManagedKeyData generateKeyData(ManagedKeyResponse response) {
+    // Use hash-only constructor for client-side ManagedKeyData
+    byte[] keyMetadataHash =
+      response.hasKeyMetadataHash() ? response.getKeyMetadataHash().toByteArray() : null;
     return new ManagedKeyData(response.getKeyCust().toByteArray(), response.getKeyNamespace(), null,
-      ManagedKeyState.forValue((byte) response.getKeyState().getNumber()),
-      response.getKeyMetadata(), response.getRefreshTimestamp());
+      ManagedKeyState.forValue((byte) response.getKeyState().getNumber()), keyMetadataHash,
+      response.getRefreshTimestamp());
   }
 }

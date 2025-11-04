@@ -201,9 +201,21 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
       ManagedKeyResponse.Builder builder = ManagedKeyResponse.newBuilder();
       try {
         initManagedKeyResponseBuilder(controller, request.getKeyCustNs(), builder);
-        ManagedKeyData managedKeyState = master.getKeymetaAdmin().disableManagedKey(
-          request.getKeyCustNs().getKeyCust().toByteArray(),
-          request.getKeyCustNs().getKeyNamespace(), request.getKeyMetadata());
+        // Convert hash to metadata by looking up the key first
+        byte[] keyMetadataHash = request.getKeyMetadataHash().toByteArray();
+        byte[] keyCust = request.getKeyCustNs().getKeyCust().toByteArray();
+        String keyNamespace = request.getKeyCustNs().getKeyNamespace();
+
+        // Look up the full key data to get the metadata
+        ManagedKeyData existingKey = ((KeymetaTableAccessor) master.getKeymetaAdmin())
+          .getKey(keyCust, keyNamespace, keyMetadataHash);
+        if (existingKey == null || existingKey.getKeyMetadata() == null) {
+          throw new IOException("Key not found for hash: "
+            + java.util.Base64.getEncoder().encodeToString(keyMetadataHash));
+        }
+
+        ManagedKeyData managedKeyState = master.getKeymetaAdmin().disableManagedKey(keyCust,
+          keyNamespace, existingKey.getKeyMetadata());
         response = generateKeyStateResponse(managedKeyState, builder);
       } catch (IOException | KeyException e) {
         CoprocessorRpcUtils.setControllerException(controller, new DoNotRetryIOException(e));
@@ -285,8 +297,16 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
   private static ManagedKeyResponse generateKeyStateResponse(ManagedKeyData keyData,
     ManagedKeyResponse.Builder builder) {
     builder.setKeyState(ManagedKeyState.forNumber(keyData.getKeyState().getVal()))
-      .setKeyMetadata(keyData.getKeyMetadata()).setRefreshTimestamp(keyData.getRefreshTimestamp())
+      .setRefreshTimestamp(keyData.getRefreshTimestamp())
       .setKeyNamespace(keyData.getKeyNamespace());
+
+    // Set metadata hash if available
+    byte[] metadataHash = keyData.getKeyMetadataHash();
+    if (metadataHash != null) {
+      builder.setKeyMetadataHash(
+        org.apache.hbase.thirdparty.com.google.protobuf.ByteString.copyFrom(metadataHash));
+    }
+
     return builder.build();
   }
 }

@@ -162,33 +162,19 @@ public class KeymetaTableAccessor extends KeyManagementBase {
    */
   public ManagedKeyData getActiveKey(byte[] keyCust, String keyNamespace)
     throws IOException, KeyException {
-    return getKeyInternal(keyCust, keyNamespace, new byte[] { ManagedKeyState.ACTIVE.getVal() });
+    return getKey(keyCust, keyNamespace, new byte[] { ManagedKeyState.ACTIVE.getVal() });
   }
 
   /**
-   * Get the specific key identified by keyCust, keyNamespace and keyMetadata.
-   * @param keyCust      The prefix.
-   * @param keyNamespace The namespace.
-   * @param keyMetadata  The metadata.
-   * @return the key or {@code null}
-   * @throws IOException  when there is an underlying IOException.
-   * @throws KeyException when there is an underlying KeyException.
-   */
-  public ManagedKeyData getKey(byte[] keyCust, String keyNamespace, String keyMetadata)
-    throws IOException, KeyException {
-    return getKeyInternal(keyCust, keyNamespace, ManagedKeyData.constructMetadataHash(keyMetadata));
-  }
-
-  /**
-   * Internal helper method to get a key using the provided metadata hash.
+   * Get the specific key identified by keyCust, keyNamespace and keyMetadataHash.
    * @param keyCust         The prefix.
    * @param keyNamespace    The namespace.
-   * @param keyMetadataHash The metadata hash or state value.
+   * @param keyMetadataHash The metadata hash.
    * @return the key or {@code null}
    * @throws IOException  when there is an underlying IOException.
    * @throws KeyException when there is an underlying KeyException.
    */
-  private ManagedKeyData getKeyInternal(byte[] keyCust, String keyNamespace, byte[] keyMetadataHash)
+  public ManagedKeyData getKey(byte[] keyCust, String keyNamespace, byte[] keyMetadataHash)
     throws IOException, KeyException {
     assertKeyManagementEnabled();
     Connection connection = getServer().getConnection();

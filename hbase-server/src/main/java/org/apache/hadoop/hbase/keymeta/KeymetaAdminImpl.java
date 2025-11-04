@@ -191,7 +191,8 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
     ejectManagedKeyDataCacheEntry(keyCust, keyNamespace, keyMetadata);
 
     // Retrieve and return the disabled key
-    ManagedKeyData disabledKey = getKey(keyCust, keyNamespace, keyMetadata);
+    byte[] keyMetadataHash = ManagedKeyData.constructMetadataHash(keyMetadata);
+    ManagedKeyData disabledKey = getKey(keyCust, keyNamespace, keyMetadataHash);
     LOG.info("Successfully disabled managed key with metadata: {} for custodian: {} under "
       + "namespace: {}", keyMetadata, encodedCust, keyNamespace);
     return disabledKey;
@@ -243,7 +244,7 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
         LOG.debug("Refreshing key with metadata: {} for custodian: {} under namespace: {}",
           keyData.getKeyMetadata(), encodedCust, keyNamespace);
         try {
-          KeyManagementUtils.refreshKey(this, keyData);
+          KeyManagementUtils.refreshKey(getKeyProvider(), this, keyData);
         } catch (Exception e) {
           LOG.error("Failed to refresh key with metadata: {} for custodian: {} under namespace: {}",
             keyData.getKeyMetadata(), encodedCust, keyNamespace, e);
