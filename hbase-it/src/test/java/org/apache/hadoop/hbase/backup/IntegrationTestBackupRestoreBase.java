@@ -503,7 +503,7 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
     LOG.info("Checking if each region server in the replication check point "
       + "has caught up to the latest Put on {}", tableName.getNameAsString());
     for (Map.Entry<ServerName, Long> entry : timestamps.entrySet()) {
-      LOG.info("host={}, checkpoint timestamp={}, latest put timestamp={}, caught up={}",
+      LOG.debug("host={}, checkpoint timestamp={}, latest put timestamp={}, caught up={}",
         entry.getKey(), entry.getValue(), threshold, entry.getValue() >= threshold);
       if (entry.getValue() < threshold) {
         // Not returning right away so all hosts and timestamps are logged
