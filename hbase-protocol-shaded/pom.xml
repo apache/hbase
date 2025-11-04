@@ -108,60 +108,10 @@
            of com.google.protobuf so instead its o.a.h.h.com.google.protobuf.
            Plugin is old and in google code archive. Here is usage done by
            anohther: https://github.com/beiliubei/maven-replacer-plugin/wiki/Usage-Guide
-           The mess with the regex in the below is to prevent replacement every time
-           we run mvn install. There is probably a better way of avoiding the
-           double interpolation but this is it for now.
         -->
       <plugin>
         <groupId>com.google.code.maven-replacer-plugin</groupId>
         <artifactId>replacer</artifactId>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-shade-plugin</artifactId>
-        <version>3.4.1</version>
-        <executions>
-          <execution>
-            <goals>
-              <goal>shade</goal>
-            </goals>
-            <phase>package</phase>
-            <configuration>
-              <minimizeJar>true</minimizeJar>
-              <shadeSourcesContent>true</shadeSourcesContent>
-              <!-- Causes an NPE until shade 3.0.1.  See MSHADE-247
-              <createSourcesJar>true</createSourcesJar>
-              -->
-              <relocations>
-                <relocation>
-                  <pattern>com.google.protobuf</pattern>
-                  <shadedPattern>org.apache.hadoop.hbase.shaded.com.google.protobuf</shadedPattern>
-                </relocation>
-              </relocations>
-              <artifactSet>
-                <excludes>
-                  <!-- exclude J2EE modules that come in for JDK11+ or modules that come in for
-                  JDK8+ but need not be included -->
-                  <exclude>javax.annotation:javax.annotation-api</exclude>
-                  <!--Exclude protobuf itself. We get a patched version from hbase-thirdparty.
-                    -->
-                  <exclude>org.apache.hbase.thirdparty:*</exclude>
-                  <exclude>com.google.protobuf:protobuf-java</exclude>
-                  <exclude>com.google.code.findbugs:*</exclude>
-                  <exclude>com.google.j2objc:j2objc-annotations</exclude>
-                  <exclude>org.codehaus.mojo:animal-sniffer-annotations</exclude>
-                  <exclude>junit:junit</exclude>
-                  <exclude>log4j:log4j</exclude>
-                  <exclude>commons-logging:commons-logging</exclude>
-                  <exclude>org.slf4j:slf4j-api</exclude>
-                  <exclude>org.apache.yetus:audience-annotations</exclude>
-                  <exclude>com.github.stephenc.fingbugs:*</exclude>
-                  <exclude>com.github.spotbugs:*</exclude>
-                </excludes>
-              </artifactSet>
-            </configuration>
-          </execution>
-        </executions>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
