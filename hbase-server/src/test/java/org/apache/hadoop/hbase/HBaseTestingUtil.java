@@ -99,6 +99,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.mapreduce.MapreduceTestingShim;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
@@ -109,6 +110,7 @@ import org.apache.hadoop.hbase.mob.MobFileCache;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.ChunkCreator;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
@@ -3721,5 +3723,23 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
       }
       throw e;
     }
+  }
+
+  public void createRegionDir(RegionInfo hri) throws IOException {
+    Path rootDir = getDataTestDir();
+    Path tableDir = CommonFSUtils.getTableDir(rootDir, hri.getTable());
+    Path regionDir = new Path(tableDir, hri.getEncodedName());
+    FileSystem fs = getTestFileSystem();
+    if (!fs.exists(regionDir)) {
+      fs.mkdirs(regionDir);
+    }
+  }
+
+  public void createRegionDir(RegionInfo regionInfo, MasterFileSystem masterFileSystem)
+    throws IOException {
+    Path tableDir =
+      CommonFSUtils.getTableDir(CommonFSUtils.getRootDir(conf), regionInfo.getTable());
+    HRegionFileSystem.createRegionOnFileSystem(conf, masterFileSystem.getFileSystem(), tableDir,
+      regionInfo);
   }
 }

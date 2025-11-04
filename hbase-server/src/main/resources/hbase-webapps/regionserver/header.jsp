@@ -37,7 +37,7 @@
   <body>
   <nav class="navbar navbar-expand-md navbar-light fixed-top bg-light">
     <div class="container-fluid">
-      <a class="navbar-brand" href="/rs-status">
+      <a class="navbar-brand" href="/regionserver.jsp">
         <img src="/static/hbase_logo_small.png" alt="HBase Logo"/>
       </a>
       <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target=".navbar-collapse">
@@ -45,7 +45,7 @@
       </button>
       <div class="collapse navbar-collapse">
         <ul class="navbar-nav">
-          <li class="nav-item"><a class="nav-link" href="/rs-status">Home</a></li>
+          <li class="nav-item"><a class="nav-link" href="/regionserver.jsp">Home</a></li>
           <li class="nav-item"><a class="nav-link" href="/processRS.jsp">Process Metrics</a></li>
           <li class="nav-item"><a class="nav-link" href="/logs/">Local Logs</a></li>
           <li class="nav-item"><a class="nav-link" href="/rsOperationDetails.jsp">Operation Details</a></li>
