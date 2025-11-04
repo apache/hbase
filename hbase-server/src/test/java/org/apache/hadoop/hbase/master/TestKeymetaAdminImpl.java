@@ -529,7 +529,7 @@ public class TestKeymetaAdminImpl {
       String keyNamespace = "testNamespace";
       String keyMetadata = "testMetadata";
 
-      when(mockAsyncAdmin.ejectManagedKeyDataCacheEntryOnAllServers(any(), any(), any(), any()))
+      when(mockAsyncAdmin.ejectManagedKeyDataCacheEntryOnServers(any(), any(), any(), any()))
         .thenReturn(CompletableFuture.completedFuture(null));
 
       KeymetaAdminImplForTest admin = new KeymetaAdminImplForTest(mockServer, keymetaAccessor);
@@ -538,7 +538,7 @@ public class TestKeymetaAdminImpl {
       admin.ejectManagedKeyDataCacheEntry(keyCustodian, keyNamespace, keyMetadata);
 
       // Verify the AsyncAdmin method was called
-      verify(mockAsyncAdmin).ejectManagedKeyDataCacheEntryOnAllServers(any(), any(), any(), any());
+      verify(mockAsyncAdmin).ejectManagedKeyDataCacheEntryOnServers(any(), any(), any(), any());
     }
 
     /**
@@ -552,7 +552,7 @@ public class TestKeymetaAdminImpl {
 
       CompletableFuture<Void> failedFuture = new CompletableFuture<>();
       failedFuture.completeExceptionally(new IOException("eject failed"));
-      when(mockAsyncAdmin.ejectManagedKeyDataCacheEntryOnAllServers(any(), any(), any(), any()))
+      when(mockAsyncAdmin.ejectManagedKeyDataCacheEntryOnServers(any(), any(), any(), any()))
         .thenReturn(failedFuture);
 
       KeymetaAdminImplForTest admin = new KeymetaAdminImplForTest(mockServer, keymetaAccessor);
@@ -562,7 +562,7 @@ public class TestKeymetaAdminImpl {
         () -> admin.ejectManagedKeyDataCacheEntry(keyCustodian, keyNamespace, keyMetadata));
 
       assertTrue(ex.getMessage().contains("eject failed"));
-      verify(mockAsyncAdmin).ejectManagedKeyDataCacheEntryOnAllServers(any(), any(), any(), any());
+      verify(mockAsyncAdmin).ejectManagedKeyDataCacheEntryOnServers(any(), any(), any(), any());
     }
 
     /**
@@ -570,7 +570,7 @@ public class TestKeymetaAdminImpl {
      */
     @Test
     public void testClearManagedKeyDataCache() throws Exception {
-      when(mockAsyncAdmin.clearManagedKeyDataCacheOnAllServers(any()))
+      when(mockAsyncAdmin.clearManagedKeyDataCacheOnServers(any()))
         .thenReturn(CompletableFuture.completedFuture(null));
 
       KeymetaAdminImplForTest admin = new KeymetaAdminImplForTest(mockServer, keymetaAccessor);
@@ -579,7 +579,7 @@ public class TestKeymetaAdminImpl {
       admin.clearManagedKeyDataCache();
 
       // Verify the AsyncAdmin method was called
-      verify(mockAsyncAdmin).clearManagedKeyDataCacheOnAllServers(any());
+      verify(mockAsyncAdmin).clearManagedKeyDataCacheOnServers(any());
     }
 
     /**
@@ -589,7 +589,7 @@ public class TestKeymetaAdminImpl {
     public void testClearManagedKeyDataCacheWithFailure() throws Exception {
       CompletableFuture<Void> failedFuture = new CompletableFuture<>();
       failedFuture.completeExceptionally(new IOException("clear failed"));
-      when(mockAsyncAdmin.clearManagedKeyDataCacheOnAllServers(any())).thenReturn(failedFuture);
+      when(mockAsyncAdmin.clearManagedKeyDataCacheOnServers(any())).thenReturn(failedFuture);
 
       KeymetaAdminImplForTest admin = new KeymetaAdminImplForTest(mockServer, keymetaAccessor);
 
@@ -597,7 +597,7 @@ public class TestKeymetaAdminImpl {
       IOException ex = assertThrows(IOException.class, () -> admin.clearManagedKeyDataCache());
 
       assertTrue(ex.getMessage().contains("clear failed"));
-      verify(mockAsyncAdmin).clearManagedKeyDataCacheOnAllServers(any());
+      verify(mockAsyncAdmin).clearManagedKeyDataCacheOnServers(any());
     }
   }
 
@@ -652,7 +652,7 @@ public class TestKeymetaAdminImpl {
 
       when(mockAccessor.getAllKeys(any(), any())).thenReturn(keys);
       CompletableFuture<Void> successFuture = CompletableFuture.completedFuture(null);
-      when(mockAsyncAdmin.ejectManagedKeyDataCacheEntryOnAllServers(any(), any(), any(), any()))
+      when(mockAsyncAdmin.ejectManagedKeyDataCacheEntryOnServers(any(), any(), any(), any()))
         .thenReturn(successFuture);
 
       List<ManagedKeyData> result = admin.disableKeyManagement(CUST_BYTES, KEY_SPACE_GLOBAL);
@@ -671,7 +671,7 @@ public class TestKeymetaAdminImpl {
       when(mockAccessor.getKey(any(), any(), any())).thenReturn(disabledKey);
 
       CompletableFuture<Void> successFuture = CompletableFuture.completedFuture(null);
-      when(mockAsyncAdmin.ejectManagedKeyDataCacheEntryOnAllServers(any(), any(), any(), any()))
+      when(mockAsyncAdmin.ejectManagedKeyDataCacheEntryOnServers(any(), any(), any(), any()))
         .thenReturn(successFuture);
 
       ManagedKeyData result = admin.disableManagedKey(CUST_BYTES, KEY_SPACE_GLOBAL, "metadata1");

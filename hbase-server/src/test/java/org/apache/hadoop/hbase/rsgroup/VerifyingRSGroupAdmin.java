@@ -1006,15 +1006,15 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   }
 
   @Override
-  public void ejectManagedKeyDataCacheEntryOnAllServers(Set<ServerName> regionServers,
+  public void ejectManagedKeyDataCacheEntryOnServers(Set<ServerName> regionServers,
     byte[] keyCustodian, String keyNamespace, String keyMetadata) throws IOException {
-    admin.ejectManagedKeyDataCacheEntryOnAllServers(regionServers, keyCustodian, keyNamespace,
+    admin.ejectManagedKeyDataCacheEntryOnServers(regionServers, keyCustodian, keyNamespace,
       keyMetadata);
   }
 
   @Override
-  public void clearManagedKeyDataCacheOnAllServers(Set<ServerName> regionServers)
+  public void clearManagedKeyDataCacheOnServers(Set<ServerName> regionServers)
     throws IOException {
-    admin.clearManagedKeyDataCacheOnAllServers(regionServers);
+    admin.clearManagedKeyDataCacheOnServers(regionServers);
   }
 }

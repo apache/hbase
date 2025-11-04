@@ -2679,7 +2679,7 @@ public interface Admin extends Abortable, Closeable {
    * @param keyNamespace  the key namespace
    * @param keyMetadata   the key metadata
    */
-  void ejectManagedKeyDataCacheEntryOnAllServers(Set<ServerName> regionServers, byte[] keyCustodian,
+  void ejectManagedKeyDataCacheEntryOnServers(Set<ServerName> regionServers, byte[] keyCustodian,
     String keyNamespace, String keyMetadata) throws IOException;
 
   /**
@@ -2687,5 +2687,5 @@ public interface Admin extends Abortable, Closeable {
    * to restart the process.
    * @param regionServers the list of region servers to clear the managed key data cache on
    */
-  void clearManagedKeyDataCacheOnAllServers(Set<ServerName> regionServers) throws IOException;
+  void clearManagedKeyDataCacheOnServers(Set<ServerName> regionServers) throws IOException;
 }

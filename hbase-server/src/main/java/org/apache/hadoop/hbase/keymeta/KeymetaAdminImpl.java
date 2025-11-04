@@ -119,7 +119,7 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
 
     LOG.info("Ejecting managed key data cache entry on all region servers");
     try {
-      FutureUtils.get(getAsyncAdmin(master).ejectManagedKeyDataCacheEntryOnAllServers(regionServers,
+      FutureUtils.get(getAsyncAdmin(master).ejectManagedKeyDataCacheEntryOnServers(regionServers,
         keyCustodian, keyNamespace, keyMetadata));
     } catch (Exception e) {
       throw new IOException(e);
@@ -140,7 +140,7 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
 
     LOG.info("Clearing managed key data cache on all region servers");
     try {
-      FutureUtils.get(getAsyncAdmin(master).clearManagedKeyDataCacheOnAllServers(regionServers));
+      FutureUtils.get(getAsyncAdmin(master).clearManagedKeyDataCacheOnServers(regionServers));
     } catch (Exception e) {
       throw new IOException(e);
     }
