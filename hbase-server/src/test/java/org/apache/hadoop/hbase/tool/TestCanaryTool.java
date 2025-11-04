@@ -460,7 +460,7 @@ public class TestCanaryTool {
 
     ExecutorService executorService = startCanaryToolInBackground(sink, configuration);
 
-    // Test that old canary status page URl redirects to JSP
+    // Test that old canary status page URL redirects to JSP
     URL oldPageUrl = new URL("http://localhost:" + infoPort + "/canary-status");
     String oldPageContent = getPageContent(oldPageUrl);
     assertTrue("expected=canary.jsp, content=" + oldPageContent,
