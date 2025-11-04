@@ -110,53 +110,6 @@
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-shade-plugin</artifactId>
-        <version>3.4.1</version>
-        <executions>
-          <execution>
-            <goals>
-              <goal>shade</goal>
-            </goals>
-            <phase>package</phase>
-            <configuration>
-              <minimizeJar>true</minimizeJar>
-              <shadeSourcesContent>true</shadeSourcesContent>
-              <!-- Causes an NPE until shade 3.0.1.  See MSHADE-247
-              <createSourcesJar>true</createSourcesJar>
-              -->
-              <relocations>
-                <relocation>
-                  <pattern>com.google.protobuf</pattern>
-                  <shadedPattern>org.apache.hadoop.hbase.shaded.com.google.protobuf</shadedPattern>
-                </relocation>
-              </relocations>
-              <artifactSet>
-                <excludes>
-                  <!-- exclude J2EE modules that come in for JDK11+ or modules that come in for
-                  JDK8+ but need not be included -->
-                  <exclude>javax.annotation:javax.annotation-api</exclude>
-                  <!--Exclude protobuf itself. We get a patched version from hbase-thirdparty.
-                    -->
-                  <exclude>org.apache.hbase.thirdparty:*</exclude>
-                  <exclude>com.google.protobuf:protobuf-java</exclude>
-                  <exclude>com.google.code.findbugs:*</exclude>
-                  <exclude>com.google.j2objc:j2objc-annotations</exclude>
-                  <exclude>org.codehaus.mojo:animal-sniffer-annotations</exclude>
-                  <exclude>junit:junit</exclude>
-                  <exclude>commons-logging:commons-logging</exclude>
-                  <exclude>org.slf4j:*</exclude>
-                  <exclude>org.apache.logging.log4j:*</exclude>
-                  <exclude>org.apache.yetus:audience-annotations</exclude>
-                  <exclude>com.github.stephenc.fingbugs:*</exclude>
-                  <exclude>com.github.spotbugs:*</exclude>
-                </excludes>
-              </artifactSet>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-checkstyle-plugin</artifactId>
         <configuration>
           <failOnViolation>true</failOnViolation>
