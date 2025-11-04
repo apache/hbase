@@ -22,7 +22,6 @@
          import="org.apache.hadoop.hbase.ServerName"
          import="org.apache.hadoop.hbase.tool.CanaryTool"
          import="java.util.concurrent.atomic.LongAdder"
-         import="org.apache.hadoop.hbase.ServerName"
          import="org.apache.hadoop.hbase.util.JvmVersion"
          import="static org.apache.hadoop.hbase.util.CanaryStatusUtil.serverNameLink" %>
 <%
