@@ -18,13 +18,19 @@
 package org.apache.hadoop.hbase.backup;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONTINUOUS_BACKUP_REPLICATION_PEER;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupAdminImpl;
 import org.apache.hadoop.hbase.backup.impl.BackupManager;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
@@ -46,10 +52,21 @@ public class BackupTestUtil {
     }
   }
 
-  static void enableBackup(Configuration conf) {
-    // Enable backup
+  public static void enableBackup(Configuration conf) {
     conf.setBoolean(BackupRestoreConstants.BACKUP_ENABLE_KEY, true);
     BackupManager.decorateMasterConfiguration(conf);
     BackupManager.decorateRegionServerConfiguration(conf);
+  }
+
+  public static void verifyReplicationPeerSubscription(HBaseTestingUtil util, TableName tableName)
+    throws IOException {
+    try (Admin admin = util.getAdmin()) {
+      ReplicationPeerDescription peerDesc = admin.listReplicationPeers().stream()
+        .filter(peer -> peer.getPeerId().equals(CONTINUOUS_BACKUP_REPLICATION_PEER)).findFirst()
+        .orElseThrow(() -> new AssertionError("Replication peer not found"));
+
+      assertTrue(peerDesc.getPeerConfig().getTableCFsMap().containsKey(tableName),
+        "Table should be subscribed to the replication peer");
+    }
   }
 }
