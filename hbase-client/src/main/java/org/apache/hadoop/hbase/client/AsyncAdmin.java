@@ -1879,5 +1879,5 @@ public interface AsyncAdmin {
    * Refresh the system key cache on all specified region servers.
    * @param regionServers the list of region servers to refresh the system key cache on
    */
-  CompletableFuture<Void> refreshSystemKeyCacheOnAllServers(Set<ServerName> regionServers);
+  CompletableFuture<Void> refreshSystemKeyCacheOnServers(Set<ServerName> regionServers);
 }

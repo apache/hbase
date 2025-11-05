@@ -1001,7 +1001,7 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   }
 
   @Override
-  public void refreshSystemKeyCacheOnAllServers(Set<ServerName> regionServers) throws IOException {
-    admin.refreshSystemKeyCacheOnAllServers(regionServers);
+  public void refreshSystemKeyCacheOnServers(Set<ServerName> regionServers) throws IOException {
+    admin.refreshSystemKeyCacheOnServers(regionServers);
   }
 }

@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
@@ -37,6 +38,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyState;
@@ -75,6 +77,13 @@ public class KeymetaTableAccessor extends KeyManagementBase {
 
   public static final String KEY_STATE_QUAL_NAME = "k";
   public static final byte[] KEY_STATE_QUAL_BYTES = Bytes.toBytes(KEY_STATE_QUAL_NAME);
+
+  public static final TableDescriptorBuilder TABLE_DESCRIPTOR_BUILDER =
+    TableDescriptorBuilder.newBuilder(KEY_META_TABLE_NAME).setRegionReplication(1)
+      .setPriority(HConstants.SYSTEMTABLE_QOS)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder
+        .newBuilder(KeymetaTableAccessor.KEY_META_INFO_FAMILY)
+        .setScope(HConstants.REPLICATION_SCOPE_LOCAL).setMaxVersions(1).setInMemory(true).build());
 
   private Server server;
 

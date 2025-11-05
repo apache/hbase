@@ -123,7 +123,7 @@ import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
-import org.apache.hadoop.hbase.keymeta.KeymetaMasterService;
+import org.apache.hadoop.hbase.keymeta.KeymetaTableAccessor;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.master.MasterRpcServices.BalanceSwitchMode;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
@@ -248,6 +248,7 @@ import org.apache.hadoop.hbase.rsgroup.RSGroupInfoManager;
 import org.apache.hadoop.hbase.rsgroup.RSGroupUtil;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.SecurityConstants;
+import org.apache.hadoop.hbase.security.SecurityUtil;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.trace.TraceUtil;
@@ -360,7 +361,6 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   private MasterFileSystem fileSystemManager;
   private MasterWalManager walManager;
   private SystemKeyManager systemKeyManager;
-  private KeymetaMasterService keymetaMasterService;
 
   // manager to manage procedure-based WAL splitting, can be null if current
   // is zk-based WAL splitting. SplitWALManager will replace SplitLogManager
@@ -1041,9 +1041,6 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     Map<Class<?>, List<Procedure<MasterProcedureEnv>>> procsByType = procedureExecutor
       .getActiveProceduresNoCopy().stream().collect(Collectors.groupingBy(p -> p.getClass()));
 
-    keymetaMasterService = new KeymetaMasterService(this);
-    keymetaMasterService.init();
-
     // Create Assignment Manager
     this.assignmentManager = createAssignmentManager(this, masterRegion);
     this.assignmentManager.start();
@@ -1166,13 +1163,22 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
       return;
     }
 
+    this.assignmentManager.joinCluster();
+
+    // If key management is enabled, wait for keymeta table regions to be assigned and online,
+    // which includes creating the table the very first time.
+    // This is to ensure that the encrypted tables can successfully initialize Encryption.Context as
+    // part of the store opening process when processOfflineRegions is called.
+    // Without this, we can end up with race condition where a user store is opened before the
+    // keymeta table regions are online, which would cause the store opening to fail.
+    initKeymetaIfEnabled();
+
     TableDescriptor metaDescriptor = tableDescriptors.get(TableName.META_TABLE_NAME);
     final ColumnFamilyDescriptor tableFamilyDesc =
       metaDescriptor.getColumnFamily(HConstants.TABLE_FAMILY);
     final ColumnFamilyDescriptor replBarrierFamilyDesc =
       metaDescriptor.getColumnFamily(HConstants.REPLICATION_BARRIER_FAMILY);
 
-    this.assignmentManager.joinCluster();
     // The below depends on hbase:meta being online.
     this.assignmentManager.processOfflineRegions();
     // this must be called after the above processOfflineRegions to prevent race
@@ -1433,6 +1439,10 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
       .setColumnFamily(FSTableDescriptors.getTableFamilyDescForMeta(conf))
       .setColumnFamily(FSTableDescriptors.getReplBarrierFamilyDescForMeta()).build();
     long pid = this.modifyTable(TableName.META_TABLE_NAME, () -> newMetaDesc, 0, 0, false);
+    waitForProcedureToComplete(pid, "Failed to add table and rep_barrier CFs to meta");
+  }
+
+  private void waitForProcedureToComplete(long pid, String errorMessage) throws IOException {
     int tries = 30;
     while (
       !(getMasterProcedureExecutor().isFinished(pid)) && getMasterProcedureExecutor().isRunning()
@@ -1451,8 +1461,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     } else {
       Procedure<?> result = getMasterProcedureExecutor().getResult(pid);
       if (result != null && result.isFailed()) {
-        throw new IOException("Failed to add table and rep_barrier CFs to meta. "
-          + MasterProcedureUtil.unwrapRemoteIOException(result));
+        throw new IOException(
+          errorMessage + ". " + MasterProcedureUtil.unwrapRemoteIOException(result));
       }
     }
   }
@@ -1528,6 +1538,80 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
       }
     }
     return true;
+  }
+
+  /**
+   * Creates the keymeta table and waits for all its regions to be online.
+   */
+  private void initKeymetaIfEnabled() throws IOException {
+    if (!SecurityUtil.isKeyManagementEnabled(conf)) {
+      return;
+    }
+
+    String keymetaTableName =
+      KeymetaTableAccessor.KEY_META_TABLE_NAME.getNameWithNamespaceInclAsString();
+    if (!getTableDescriptors().exists(KeymetaTableAccessor.KEY_META_TABLE_NAME)) {
+      LOG.info("initKeymetaIfEnabled: {} table not found. Creating.", keymetaTableName);
+      long keymetaTableProcId =
+        createSystemTable(KeymetaTableAccessor.TABLE_DESCRIPTOR_BUILDER.build(), true);
+
+      LOG.info("initKeymetaIfEnabled: Waiting for {} table creation procedure {} to complete",
+        keymetaTableName, keymetaTableProcId);
+      waitForProcedureToComplete(keymetaTableProcId,
+        "Failed to create keymeta table and add to meta");
+    }
+
+    List<RegionInfo> ris = this.assignmentManager.getRegionStates()
+      .getRegionsOfTable(KeymetaTableAccessor.KEY_META_TABLE_NAME);
+    if (ris.isEmpty()) {
+      throw new RuntimeException(
+        "initKeymetaIfEnabled: No " + keymetaTableName + " table regions found");
+    }
+
+    // First, create assignment procedures for all keymeta regions
+    List<TransitRegionStateProcedure> procs = new ArrayList<>();
+    for (RegionInfo ri : ris) {
+      RegionStateNode regionNode =
+        assignmentManager.getRegionStates().getOrCreateRegionStateNode(ri);
+      regionNode.lock();
+      try {
+        // Only create if region is in CLOSED or OFFLINE state and no procedure is already attached.
+        // The check for server online is really needed only for the sake of mini cluster as there
+        // are outdated ONLINE entries being returned after a cluster restart that point to the old
+        // RS.
+        if (
+          (regionNode.isInState(RegionState.State.CLOSED, RegionState.State.OFFLINE)
+            || !this.serverManager.isServerOnline(regionNode.getRegionLocation()))
+            && regionNode.getProcedure() == null
+        ) {
+          TransitRegionStateProcedure proc = TransitRegionStateProcedure
+            .assign(getMasterProcedureExecutor().getEnvironment(), ri, null);
+          proc.setCriticalSystemTable(true);
+          regionNode.setProcedure(proc);
+          procs.add(proc);
+        }
+      } finally {
+        regionNode.unlock();
+      }
+    }
+    // Then, trigger assignment for all keymeta regions
+    if (!procs.isEmpty()) {
+      LOG.info("initKeymetaIfEnabled: Submitting {} assignment procedures for {} table regions",
+        procs.size(), keymetaTableName);
+      getMasterProcedureExecutor()
+        .submitProcedures(procs.toArray(new TransitRegionStateProcedure[procs.size()]));
+    }
+
+    // Then wait for all regions to come online
+    LOG.info("initKeymetaIfEnabled: Checking/Waiting for {} table {} regions to be online",
+      keymetaTableName, ris.size());
+    for (RegionInfo ri : ris) {
+      if (!isRegionOnline(ri)) {
+        throw new RuntimeException(keymetaTableName + " table region " + ri.getRegionNameAsString()
+          + " could not be brought online");
+      }
+    }
+    LOG.info("initKeymetaIfEnabled: All {} table regions are online", keymetaTableName);
   }
 
   /**
@@ -2528,6 +2612,11 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
   @Override
   public long createSystemTable(final TableDescriptor tableDescriptor) throws IOException {
+    return createSystemTable(tableDescriptor, false);
+  }
+
+  private long createSystemTable(final TableDescriptor tableDescriptor, final boolean isCritical)
+    throws IOException {
     if (isStopped()) {
       throw new MasterNotRunningException();
     }
@@ -2544,10 +2633,10 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
     // This special create table is called locally to master. Therefore, no RPC means no need
     // to use nonce to detect duplicated RPC call.
-    long procId = this.procedureExecutor.submitProcedure(
-      new CreateTableProcedure(procedureExecutor.getEnvironment(), tableDescriptor, newRegions));
-
-    return procId;
+    CreateTableProcedure proc =
+      new CreateTableProcedure(procedureExecutor.getEnvironment(), tableDescriptor, newRegions);
+    proc.setCriticalSystemTable(isCritical);
+    return this.procedureExecutor.submitProcedure(proc);
   }
 
   private void startActiveMasterManager(int infoPort) throws KeeperException {

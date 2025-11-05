@@ -247,7 +247,7 @@ public class ManagedKeyDataCache extends KeyManagementBase {
     });
 
     // This should never be null, but adding a check just to satisfy spotbugs.
-    if (keyData!= null && keyData.getKeyState() == ManagedKeyState.ACTIVE) {
+    if (keyData != null && keyData.getKeyState() == ManagedKeyState.ACTIVE) {
       return keyData;
     }
     return null;

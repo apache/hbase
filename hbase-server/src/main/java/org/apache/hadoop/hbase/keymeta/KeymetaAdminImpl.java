@@ -94,7 +94,7 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
 
     LOG.info("System Key is rotated, initiating cache refresh on all region servers");
     try {
-      FutureUtils.get(getAsyncAdmin(master).refreshSystemKeyCacheOnAllServers(regionServers));
+      FutureUtils.get(getAsyncAdmin(master).refreshSystemKeyCacheOnServers(regionServers));
     } catch (Exception e) {
       throw new IOException(
         "Failed to initiate System Key cache refresh on one or more region servers", e);

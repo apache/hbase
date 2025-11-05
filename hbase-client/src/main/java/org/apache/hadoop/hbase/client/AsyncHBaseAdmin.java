@@ -687,8 +687,8 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Void> refreshSystemKeyCacheOnAllServers(Set<ServerName> regionServers) {
-    return wrap(rawAdmin.refreshSystemKeyCacheOnAllServers(regionServers));
+  public CompletableFuture<Void> refreshSystemKeyCacheOnServers(Set<ServerName> regionServers) {
+    return wrap(rawAdmin.refreshSystemKeyCacheOnServers(regionServers));
   }
 
   @Override
