@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.backup;
 
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONF_CONTINUOUS_BACKUP_WAL_DIR;
-import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONTINUOUS_BACKUP_REPLICATION_PEER;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_ENABLE_CONTINUOUS_BACKUP;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -36,8 +35,6 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupManifest;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
-import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.After;
@@ -114,7 +111,7 @@ public class TestContinuousBackup extends TestBackupBase {
     }
 
     // Verify replication peer subscription
-    verifyReplicationPeerSubscription(tableName);
+    BackupTestUtil.verifyReplicationPeerSubscription(TEST_UTIL, tableName);
 
     // Verify table is registered in Backup System Table
     verifyTableInBackupSystemTable(tableName);
@@ -157,8 +154,8 @@ public class TestContinuousBackup extends TestBackupBase {
     }
 
     // Verify replication peer subscription for each table
-    verifyReplicationPeerSubscription(tableName1);
-    verifyReplicationPeerSubscription(tableName2);
+    BackupTestUtil.verifyReplicationPeerSubscription(TEST_UTIL, tableName1);
+    BackupTestUtil.verifyReplicationPeerSubscription(TEST_UTIL, tableName2);
 
     // Verify tables are registered in Backup System Table
     verifyTableInBackupSystemTable(tableName1);
@@ -245,17 +242,6 @@ public class TestContinuousBackup extends TestBackupBase {
       // Backup history should remain unchanged
       int after = table.getBackupHistory().size();
       assertEquals("Backup history should remain unchanged on failure", before, after);
-    }
-  }
-
-  private void verifyReplicationPeerSubscription(TableName table) throws IOException {
-    try (Admin admin = TEST_UTIL.getAdmin()) {
-      ReplicationPeerDescription peerDesc = admin.listReplicationPeers().stream()
-        .filter(peer -> peer.getPeerId().equals(CONTINUOUS_BACKUP_REPLICATION_PEER)).findFirst()
-        .orElseThrow(() -> new AssertionError("Replication peer not found"));
-
-      assertTrue("Table should be subscribed to the replication peer",
-        peerDesc.getPeerConfig().getTableCFsMap().containsKey(table));
     }
   }
 
