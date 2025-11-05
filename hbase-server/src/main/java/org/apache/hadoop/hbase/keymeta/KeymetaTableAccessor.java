@@ -187,15 +187,14 @@ public class KeymetaTableAccessor extends KeyManagementBase {
 
   /**
    * Disables a key by removing the wrapped key and updating its state to DISABLED.
-   * @param key_cust     The key custodian.
-   * @param keyNamespace The namespace.
-   * @param keyMetadata  The key metadata.
+   * @param key_cust        The key custodian.
+   * @param keyNamespace    The namespace.
+   * @param keyMetadataHash The key metadata hash.
    * @throws IOException when there is an underlying IOException.
    */
-  public void disableKey(byte[] key_cust, String keyNamespace, String keyMetadata)
+  public void disableKey(byte[] key_cust, String keyNamespace, byte[] keyMetadataHash)
     throws IOException {
     assertKeyManagementEnabled();
-    byte[] keyMetadataHash = ManagedKeyData.constructMetadataHash(keyMetadata);
     byte[] rowKeyForCustNamespace = constructRowKeyForCustNamespace(key_cust, keyNamespace);
     byte[] rowKeyForMetadata = constructRowKeyForMetadata(key_cust, keyNamespace, keyMetadataHash);
 

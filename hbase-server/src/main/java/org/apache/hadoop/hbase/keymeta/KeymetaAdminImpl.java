@@ -19,8 +19,10 @@ package org.apache.hadoop.hbase.keymeta;
 
 import java.io.IOException;
 import java.security.KeyException;
+import java.util.Base64;
 import java.util.List;
 import java.util.Set;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.AsyncAdmin;
@@ -152,7 +154,7 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
   public List<ManagedKeyData> disableKeyManagement(byte[] keyCust, String keyNamespace)
     throws IOException, KeyException {
     assertKeyManagementEnabled();
-    String encodedCust = ManagedKeyProvider.encodeToStr(keyCust);
+    String encodedCust = LOG.isInfoEnabled() ? ManagedKeyProvider.encodeToStr(keyCust) : null;
     LOG.info("Disabling key management for custodian: {} under namespace: {}", encodedCust,
       keyNamespace);
 
@@ -162,9 +164,12 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
     // Disable keys with non-null metadata
     for (ManagedKeyData keyData : allKeys) {
       if (keyData.getKeyMetadataHash() != null) {
-        LOG.info("Disabling key with metadata: {} for custodian: {} under namespace: {}",
-          keyData.getKeyMetadata(), encodedCust, keyNamespace);
-        disableKey(keyCust, keyNamespace, keyData.getKeyMetadata());
+        String encodedHash = LOG.isInfoEnabled()
+          ? java.util.Base64.getEncoder().encodeToString(keyData.getKeyMetadataHash())
+          : null;
+        LOG.info("Disabling key with metadata hash: {} for custodian: {} under namespace: {}",
+          encodedHash, encodedCust, keyNamespace);
+        disableKey(keyCust, keyNamespace, keyData.getKeyMetadataHash());
         ejectManagedKeyDataCacheEntry(keyCust, keyNamespace, keyData.getKeyMetadata());
       }
     }
@@ -177,24 +182,32 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
   }
 
   @Override
-  public ManagedKeyData disableManagedKey(byte[] keyCust, String keyNamespace, String keyMetadata)
-    throws IOException, KeyException {
+  public ManagedKeyData disableManagedKey(byte[] keyCust, String keyNamespace,
+    byte[] keyMetadataHash) throws IOException, KeyException {
     assertKeyManagementEnabled();
-    String encodedCust = ManagedKeyProvider.encodeToStr(keyCust);
-    LOG.info("Disabling managed key with metadata: {} for custodian: {} under namespace: {}",
-      keyMetadata, encodedCust, keyNamespace);
+    String encodedCust = LOG.isInfoEnabled() ? ManagedKeyProvider.encodeToStr(keyCust) : null;
+    String encodedHash =
+      LOG.isInfoEnabled() ? Base64.getEncoder().encodeToString(keyMetadataHash) : null;
+    LOG.info("Disabling managed key with metadata hash: {} for custodian: {} under namespace: {}",
+      encodedHash, encodedCust, keyNamespace);
 
-    // Disable the key
-    disableKey(keyCust, keyNamespace, keyMetadata);
+    // First retrieve the key to verify it exists and get the full metadata for cache ejection
+    ManagedKeyData existingKey = getKey(keyCust, keyNamespace, keyMetadataHash);
+    if (existingKey == null || existingKey.getKeyMetadata() == null) {
+      throw new DoNotRetryIOException(
+        "Key not found with metadata hash: " + Base64.getEncoder().encodeToString(keyMetadataHash));
+    }
 
-    // Eject from cache on all region servers
-    ejectManagedKeyDataCacheEntry(keyCust, keyNamespace, keyMetadata);
+    // Disable the key using the hash
+    disableKey(keyCust, keyNamespace, keyMetadataHash);
+
+    // Eject from cache on all region servers (requires full metadata)
+    ejectManagedKeyDataCacheEntry(keyCust, keyNamespace, existingKey.getKeyMetadata());
 
     // Retrieve and return the disabled key
-    byte[] keyMetadataHash = ManagedKeyData.constructMetadataHash(keyMetadata);
     ManagedKeyData disabledKey = getKey(keyCust, keyNamespace, keyMetadataHash);
-    LOG.info("Successfully disabled managed key with metadata: {} for custodian: {} under "
-      + "namespace: {}", keyMetadata, encodedCust, keyNamespace);
+    LOG.info("Successfully disabled managed key with metadata hash: {} for custodian: {} under "
+      + "namespace: {}", encodedHash, encodedCust, keyNamespace);
     return disabledKey;
   }
 

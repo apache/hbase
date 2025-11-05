@@ -109,10 +109,9 @@ public class KeymetaAdminClient implements KeymetaAdmin {
   }
 
   @Override
-  public ManagedKeyData disableManagedKey(byte[] keyCust, String keyNamespace, String keyMetadata)
-    throws IOException, KeyException {
+  public ManagedKeyData disableManagedKey(byte[] keyCust, String keyNamespace,
+    byte[] keyMetadataHash) throws IOException, KeyException {
     try {
-      byte[] keyMetadataHash = ManagedKeyData.constructMetadataHash(keyMetadata);
       ManagedKeyResponse response = stub.disableManagedKey(null,
         org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyEntryRequest
           .newBuilder()

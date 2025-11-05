@@ -105,7 +105,7 @@ public class KeyManagementUtils {
       // Handle state change
       if (newKeyData.getKeyState() == ManagedKeyState.DISABLED) {
         accessor.disableKey(keyData.getKeyCustodian(), keyData.getKeyNamespace(),
-          keyData.getKeyMetadata());
+          keyData.getKeyMetadataHash());
       } else {
         // State change between ACTIVE and INACTIVE
         accessor.updateActiveState(keyData, newKeyData.getKeyState());

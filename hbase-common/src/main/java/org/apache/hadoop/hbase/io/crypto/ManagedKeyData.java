@@ -78,17 +78,17 @@ public class ManagedKeyData {
 
   /**
    * Constructs a new instance with the given parameters.
-   * @param key_cust    The key custodian.
+   * @param key_cust      The key custodian.
    * @param key_namespace The key namespace.
-   * @param theKey      The actual key, can be {@code null}.
-   * @param keyState    The state of the key.
-   * @param keyMetadata The metadata associated with the key.
+   * @param theKey        The actual key, can be {@code null}.
+   * @param keyState      The state of the key.
+   * @param keyMetadata   The metadata associated with the key.
    * @throws NullPointerException if any of key_cust, keyState or keyMetadata is null.
    */
   public ManagedKeyData(byte[] key_cust, String key_namespace, Key theKey, ManagedKeyState keyState,
     String keyMetadata) {
-    this(key_cust, key_namespace, theKey, keyState, keyMetadata,
-      null, EnvironmentEdgeManager.currentTime());
+    this(key_cust, key_namespace, theKey, keyState, keyMetadata, null,
+      EnvironmentEdgeManager.currentTime());
   }
 
   /**
@@ -97,7 +97,6 @@ public class ManagedKeyData {
    * @param key_namespace    The key namespace.
    * @param theKey           The actual key, can be {@code null}.
    * @param keyState         The state of the key.
-   * @param keyMetadata
    * @param refreshTimestamp The refresh timestamp for the key.
    * @throws NullPointerException if any of key_cust, keyState or keyMetadata is null.
    */
@@ -125,20 +124,24 @@ public class ManagedKeyData {
     this(key_cust, key_namespace, theKey, keyState, null, keyMetadataHash, refreshTimestamp);
   }
 
-  private ManagedKeyData(byte[] key_cust, String key_namespace, Key theKey, ManagedKeyState keyState,
-    String keyMetadata, byte[] keyMetadataHash, long refreshTimestamp) {
+  private ManagedKeyData(byte[] key_cust, String key_namespace, Key theKey,
+    ManagedKeyState keyState, String keyMetadata, byte[] keyMetadataHash, long refreshTimestamp) {
     Preconditions.checkNotNull(key_cust, "key_cust should not be null");
     Preconditions.checkNotNull(key_namespace, "key_namespace should not be null");
     Preconditions.checkNotNull(keyState, "keyState should not be null");
-    Preconditions.checkArgument(keyMetadataHash == null || keyMetadata == null, "only one of metadata or metadata hash should have been provided");
-    Preconditions.checkArgument((keyState != ManagedKeyState.FAILED) && (keyMetadataHash != null || keyMetadata != null), "one of metadata or metadata hash should have been provided when state is not FAILED");
+    Preconditions.checkArgument(keyMetadataHash == null || keyMetadata == null,
+      "only one of metadata or metadata hash should have been provided");
+    Preconditions.checkArgument(
+      (keyState != ManagedKeyState.FAILED) && (keyMetadataHash != null || keyMetadata != null),
+      "one of metadata or metadata hash should have been provided when state is not FAILED");
 
     this.keyCustodian = key_cust;
     this.keyNamespace = key_namespace;
     this.theKey = theKey;
     this.keyState = keyState;
     this.keyMetadata = keyMetadata;
-    this.keyMetadataHash = keyMetadataHash != null ? keyMetadataHash : constructMetadataHash(keyMetadata);
+    this.keyMetadataHash =
+      keyMetadataHash != null ? keyMetadataHash : constructMetadataHash(keyMetadata);
     this.refreshTimestamp = refreshTimestamp;
   }
 

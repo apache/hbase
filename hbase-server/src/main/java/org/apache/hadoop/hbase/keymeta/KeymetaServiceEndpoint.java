@@ -214,8 +214,8 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
             + java.util.Base64.getEncoder().encodeToString(keyMetadataHash));
         }
 
-        ManagedKeyData managedKeyState = master.getKeymetaAdmin().disableManagedKey(keyCust,
-          keyNamespace, existingKey.getKeyMetadata());
+        ManagedKeyData managedKeyState =
+          master.getKeymetaAdmin().disableManagedKey(keyCust, keyNamespace, keyMetadataHash);
         response = generateKeyStateResponse(managedKeyState, builder);
       } catch (IOException | KeyException e) {
         CoprocessorRpcUtils.setControllerException(controller, new DoNotRetryIOException(e));

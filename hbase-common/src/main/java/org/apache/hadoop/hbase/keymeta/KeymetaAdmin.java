@@ -89,15 +89,15 @@ public interface KeymetaAdmin {
 
   /**
    * Disables the specific managed key identified by the specified custodian, namespace, and
-   * metadata.
-   * @param keyCust      The key custodian identifier.
-   * @param keyNamespace The namespace for the key management.
-   * @param keyMetadata  The key metadata.
+   * metadata hash.
+   * @param keyCust         The key custodian identifier.
+   * @param keyNamespace    The namespace for the key management.
+   * @param keyMetadataHash The key metadata hash.
    * @return A {@link ManagedKeyData} object identifying the key and its current status.
    * @throws IOException  if an error occurs while disabling the managed key.
    * @throws KeyException if an error occurs while disabling the managed key.
    */
-  ManagedKeyData disableManagedKey(byte[] keyCust, String keyNamespace, String keyMetadata)
+  ManagedKeyData disableManagedKey(byte[] keyCust, String keyNamespace, byte[] keyMetadataHash)
     throws IOException, KeyException;
 
   /**
