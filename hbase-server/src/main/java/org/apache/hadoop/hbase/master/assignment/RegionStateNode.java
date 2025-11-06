@@ -96,7 +96,7 @@ public class RegionStateNode implements Comparable<RegionStateNode> {
 
   /**
    * Updated whenever a call to {@link #setRegionLocation(ServerName)} or
-   * {@link #setState(RegionState.State, RegionState.State...)}.
+   * {@link #setState(RegionState.State, RegionState.State...)} or {@link #crashed(long)}.
    */
   private volatile long lastUpdate = 0;
 
@@ -187,6 +187,10 @@ public class RegionStateNode implements Comparable<RegionStateNode> {
 
   public void setLastHost(final ServerName serverName) {
     this.lastHost = serverName;
+  }
+
+  public void crashed(long crashTime) {
+    this.lastUpdate = crashTime;
   }
 
   public void setOpenSeqNum(final long seqId) {

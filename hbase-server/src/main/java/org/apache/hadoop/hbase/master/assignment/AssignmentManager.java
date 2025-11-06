@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -1790,7 +1791,16 @@ public class AssignmentManager {
       }
       // add regions to RIT while visiting the meta
       regionInTransitionTracker.handleRegionStateNodeOperation(regionNode);
-      if (master.getServerManager().isServerDead(regionNode.getRegionLocation())) {
+      // If region location of region belongs to a dead server mark the region crashed
+      if (
+        regionNode.getRegionLocation() != null
+          && master.getServerManager().isServerDead(regionNode.getRegionLocation())
+      ) {
+        Date timeOfCrash =
+          master.getServerManager().getDeadServers().getTimeOfDeath(regionNode.getRegionLocation());
+        if (timeOfCrash != null) {
+          regionNode.crashed(timeOfCrash.getTime());
+        }
         regionInTransitionTracker.regionCrashed(regionNode);
       }
     }
@@ -2199,10 +2209,12 @@ public class AssignmentManager {
   // As soon as a server a crashed, region hosting on that are un-available, this method helps to
   // track those un-available regions. This method can only be called from ServerCrashProcedure.
   public void markRegionsAsCrashed(List<RegionInfo> regionsOnCrashedServer,
-    ServerName crashedServerName) {
+    ServerCrashProcedure scp) {
+    ServerName crashedServerName = scp.getServerName();
     for (RegionInfo regionInfo : regionsOnCrashedServer) {
       RegionStateNode node = regionStates.getOrCreateRegionStateNode(regionInfo);
       if (node.getRegionLocation() == crashedServerName) {
+        node.crashed(scp.getSubmittedTime());
         regionInTransitionTracker.regionCrashed(node);
       }
     }

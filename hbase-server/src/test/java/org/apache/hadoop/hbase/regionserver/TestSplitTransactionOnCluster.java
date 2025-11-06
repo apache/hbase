@@ -1147,10 +1147,9 @@ public class TestSplitTransactionOnCluster {
       ) {
         AssignmentManager am = myMaster.getAssignmentManager();
         for (RegionStateNode regionState : am.getRegionsInTransition()) {
-          /*
-           * TODO!!!! // Find the merging_new region and remove it if (regionState.isSplittingNew())
-           * { regionStates.deleteRegion(regionState.getRegion()); }
-           */
+          if (regionState.toRegionState().isSplittingNew()) {
+            am.getRegionStates().deleteRegion(regionState.toRegionState().getRegion());
+          }
         }
       }
       return resp;
