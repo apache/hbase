@@ -24,9 +24,9 @@
     <groupId>org.apache.hbase</groupId>
     <artifactId>hbase</artifactId>
     <version>${revision}</version>
-    <relativePath>../..</relativePath>
+    <relativePath>..</relativePath>
   </parent>
-  <artifactId>hbase-site</artifactId>
+  <artifactId>hbase-website</artifactId>
   <packaging>pom</packaging>
   <name>Apache HBase - Website</name>
   <description>Apache HBase Website built with React and TypeScript</description>

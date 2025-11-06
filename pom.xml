@@ -810,7 +810,7 @@
     <module>hbase-compression</module>
     <module>hbase-extensions</module>
     <module>hbase-dev-generate-classpath</module>
-    <module>src/site</module>
+    <module>hbase-website</module>
   </modules>
   <scm>
     <connection>scm:git:git://gitbox.apache.org/repos/asf/hbase.git</connection>
