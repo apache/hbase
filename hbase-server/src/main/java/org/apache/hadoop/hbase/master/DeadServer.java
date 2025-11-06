@@ -75,6 +75,10 @@ public class DeadServer {
     this.deadServers.putIfAbsent(sn, EnvironmentEdgeManager.currentTime());
   }
 
+  synchronized void putIfAbsent(ServerName sn, Long crashedTime) {
+    this.deadServers.putIfAbsent(sn, crashedTime);
+  }
+
   public synchronized int size() {
     return deadServers.size();
   }

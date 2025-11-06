@@ -263,7 +263,9 @@ public class TestFavoredStochasticLoadBalancer extends BalancerTestBase {
 
     // Balancer should unassign the region
     assertTrue("Balancer did not run", admin.balance());
-    TEST_UTIL.waitUntilNoRegionsInTransition();
+    TEST_UTIL.waitUntilNoRegionTransitScheduled();
+    assertEquals("One region should be unassigned", 1,
+      master.getAssignmentManager().getRegionsInTransitionCount());
 
     admin.assign(region.getEncodedNameAsBytes());
     TEST_UTIL.waitUntilNoRegionsInTransition(60000);
