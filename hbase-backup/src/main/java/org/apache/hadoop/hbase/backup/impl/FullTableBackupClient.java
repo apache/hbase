@@ -32,6 +32,7 @@ import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplica
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
