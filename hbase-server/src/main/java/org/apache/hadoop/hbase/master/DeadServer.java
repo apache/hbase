@@ -115,6 +115,10 @@ public class DeadServer {
     }
   }
 
+  synchronized void putIfAbsent(ServerName sn, Long crashedTime) {
+    this.deadServers.putIfAbsent(sn, crashedTime);
+  }
+
   public synchronized int size() {
     return deadServers.size();
   }

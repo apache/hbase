@@ -1001,7 +1001,8 @@ public class HMaster extends HRegionServer implements MasterServices {
     Map<Class<?>, List<Procedure<MasterProcedureEnv>>> procsByType = procedureExecutor
       .getActiveProceduresNoCopy().stream().collect(Collectors.groupingBy(p -> p.getClass()));
 
-    // This manager will be started AFTER hbase:meta is confirmed on line.
+    // This manager will be started AFTER hbase:meta is confirmed on line and must be initialised
+    // before assignment manager
     // hbase.mirror.table.state.to.zookeeper is so hbase1 clients can connect. They read table
     // state from zookeeper while hbase2 reads it from hbase:meta. Disable if no hbase1 clients.
     this.tableStateManager =
@@ -1027,7 +1028,8 @@ public class HMaster extends HRegionServer implements MasterServices {
     // TODO: Generate the splitting and live Set in one pass instead of two as we currently do.
     this.regionServerTracker.upgrade(
       procsByType.getOrDefault(ServerCrashProcedure.class, Collections.emptyList()).stream()
-        .map(p -> (ServerCrashProcedure) p).map(p -> p.getServerName()).collect(Collectors.toSet()),
+        .map(p -> (ServerCrashProcedure) p).collect(
+          Collectors.toMap(ServerCrashProcedure::getServerName, Procedure::getSubmittedTime)),
       Sets.union(rsListStorage.getAll(), walManager.getLiveServersFromWALDir()),
       walManager.getSplittingServersFromWALDir());
 
