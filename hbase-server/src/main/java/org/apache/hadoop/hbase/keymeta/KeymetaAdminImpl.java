@@ -19,9 +19,7 @@ package org.apache.hadoop.hbase.keymeta;
 
 import java.io.IOException;
 import java.security.KeyException;
-import java.util.Base64;
 import java.util.List;
-import java.util.Set;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
@@ -94,7 +92,7 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
       return false;
     }
 
-    Set<ServerName> regionServers = master.getServerManager().getOnlineServers().keySet();
+    List<ServerName> regionServers = master.getServerManager().getOnlineServersList();
 
     LOG.info("System Key is rotated, initiating cache refresh on all region servers");
     try {
@@ -117,7 +115,7 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
     }
     MasterServices master = (MasterServices) getServer();
 
-    Set<ServerName> regionServers = master.getServerManager().getOnlineServers().keySet();
+    List<ServerName> regionServers = master.getServerManager().getOnlineServersList();
 
     LOG.info("Ejecting managed key data cache entry on all region servers");
     try {
@@ -138,7 +136,7 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
     }
     MasterServices master = (MasterServices) getServer();
 
-    Set<ServerName> regionServers = master.getServerManager().getOnlineServers().keySet();
+    List<ServerName> regionServers = master.getServerManager().getOnlineServersList();
 
     LOG.info("Clearing managed key data cache on all region servers");
     try {
@@ -155,7 +153,7 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
     throws IOException, KeyException {
     assertKeyManagementEnabled();
     String encodedCust = LOG.isInfoEnabled() ? ManagedKeyProvider.encodeToStr(keyCust) : null;
-    LOG.info("Disabling key management for custodian: {} under namespace: {}", encodedCust,
+    LOG.info("disableKeyManagement started for custodian: {} under namespace: {}", encodedCust,
       keyNamespace);
 
     // Get all keys for the specified custodian and namespace
@@ -163,21 +161,20 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
 
     // Disable keys with non-null metadata
     for (ManagedKeyData keyData : allKeys) {
-      if (keyData.getKeyMetadataHash() != null) {
-        String encodedHash = LOG.isInfoEnabled()
-          ? java.util.Base64.getEncoder().encodeToString(keyData.getKeyMetadataHash())
-          : null;
+      if (keyData.getKeyState() != ManagedKeyState.DISABLED) {
+        String encodedHash =
+          LOG.isInfoEnabled() ? ManagedKeyProvider.encodeToStr(keyData.getKeyMetadataHash()) : null;
         LOG.info("Disabling key with metadata hash: {} for custodian: {} under namespace: {}",
           encodedHash, encodedCust, keyNamespace);
-        disableKey(keyCust, keyNamespace, keyData.getKeyMetadataHash());
+        disableKey(keyData);
         ejectManagedKeyDataCacheEntry(keyCust, keyNamespace, keyData.getKeyMetadata());
       }
     }
 
+    LOG.info("disableKeyManagement completed for custodian: {} under namespace: {}", encodedCust,
+      keyNamespace);
     // Retrieve and return updated keys
     List<ManagedKeyData> updatedKeys = getAllKeys(keyCust, keyNamespace);
-    LOG.info("Successfully disabled key management for custodian: {} under namespace: {}",
-      encodedCust, keyNamespace);
     return updatedKeys;
   }
 
@@ -187,7 +184,7 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
     assertKeyManagementEnabled();
     String encodedCust = LOG.isInfoEnabled() ? ManagedKeyProvider.encodeToStr(keyCust) : null;
     String encodedHash =
-      LOG.isInfoEnabled() ? Base64.getEncoder().encodeToString(keyMetadataHash) : null;
+      LOG.isInfoEnabled() ? ManagedKeyProvider.encodeToStr(keyMetadataHash) : null;
     LOG.info("Disabling managed key with metadata hash: {} for custodian: {} under namespace: {}",
       encodedHash, encodedCust, keyNamespace);
 
@@ -195,19 +192,17 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
     ManagedKeyData existingKey = getKey(keyCust, keyNamespace, keyMetadataHash);
     if (existingKey == null || existingKey.getKeyMetadata() == null) {
       throw new DoNotRetryIOException(
-        "Key not found with metadata hash: " + Base64.getEncoder().encodeToString(keyMetadataHash));
+        "Key not found with metadata hash: " + ManagedKeyProvider.encodeToStr(keyMetadataHash));
     }
 
-    // Disable the key using the hash
-    disableKey(keyCust, keyNamespace, keyMetadataHash);
-
+    disableKey(existingKey);
     // Eject from cache on all region servers (requires full metadata)
     ejectManagedKeyDataCacheEntry(keyCust, keyNamespace, existingKey.getKeyMetadata());
 
-    // Retrieve and return the disabled key
-    ManagedKeyData disabledKey = getKey(keyCust, keyNamespace, keyMetadataHash);
     LOG.info("Successfully disabled managed key with metadata hash: {} for custodian: {} under "
       + "namespace: {}", encodedHash, encodedCust, keyNamespace);
+    // Retrieve and return the disabled key
+    ManagedKeyData disabledKey = getKey(keyCust, keyNamespace, keyMetadataHash);
     return disabledKey;
   }
 
@@ -220,18 +215,18 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
       keyNamespace);
 
     // Attempt rotation
-    ManagedKeyData rotatedKey =
-      KeyManagementUtils.rotateActiveKey(getKeyProvider(), this, keyCust, keyNamespace);
+    ManagedKeyData rotatedKey = KeyManagementUtils.rotateActiveKey(getKeyProvider(), this,
+      encodedCust, keyCust, keyNamespace);
 
     // If rotation resulted in a DISABLED key, eject from cache
     if (rotatedKey != null && rotatedKey.getKeyState() == ManagedKeyState.DISABLED) {
       LOG.info("Rotated key is DISABLED, ejecting from cache");
       ejectManagedKeyDataCacheEntry(keyCust, keyNamespace, rotatedKey.getKeyMetadata());
-    }
-
-    if (rotatedKey != null) {
-      LOG.info("Successfully rotated managed key for custodian: {} under namespace: {}, new "
-        + "key metadata: {}", encodedCust, keyNamespace, rotatedKey.getKeyMetadata());
+    } else if (rotatedKey != null) {
+      LOG.info(
+        "Successfully rotated managed key for custodian: {} under namespace: {}, new "
+          + "key metadata hash: {}",
+        encodedCust, keyNamespace, rotatedKey.getKeyMetadataHashEncoded());
     } else {
       LOG.info("No rotation occurred for custodian: {} under namespace: {}", encodedCust,
         keyNamespace);
@@ -245,7 +240,7 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
     throws IOException, KeyException {
     assertKeyManagementEnabled();
     String encodedCust = ManagedKeyProvider.encodeToStr(keyCust);
-    LOG.info("Refreshing managed keys for custodian: {} under namespace: {}", encodedCust,
+    LOG.info("refreshManagedKeys started for custodian: {} under namespace: {}", encodedCust,
       keyNamespace);
 
     // Get all keys for the specified custodian and namespace
@@ -253,21 +248,35 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
 
     // Refresh keys with non-null metadata
     for (ManagedKeyData keyData : allKeys) {
-      if (keyData.getKeyMetadata() != null) {
-        LOG.debug("Refreshing key with metadata: {} for custodian: {} under namespace: {}",
-          keyData.getKeyMetadata(), encodedCust, keyNamespace);
-        try {
+      LOG.debug(
+        "Refreshing key with metadata hash: {} for custodian: {} under namespace: {} with state: {}",
+        keyData.getKeyMetadataHashEncoded(), encodedCust, keyNamespace, keyData.getKeyState());
+      try {
+        ManagedKeyData refreshedKey =
           KeyManagementUtils.refreshKey(getKeyProvider(), this, keyData);
-        } catch (Exception e) {
-          LOG.error("Failed to refresh key with metadata: {} for custodian: {} under namespace: {}",
-            keyData.getKeyMetadata(), encodedCust, keyNamespace, e);
-          // Continue refreshing other keys
+        if (refreshedKey == keyData) {
+          LOG.debug("Key with metadata hash: {} for custodian: {} under namespace: {} is unchanged",
+            keyData.getKeyMetadataHashEncoded(), encodedCust, keyNamespace);
+        } else {
+          if (refreshedKey.getKeyState() == ManagedKeyState.DISABLED) {
+            LOG.info("Refreshed key is DISABLED, ejecting from cache");
+            ejectManagedKeyDataCacheEntry(keyCust, keyNamespace, refreshedKey.getKeyMetadata());
+          } else {
+            LOG.info(
+              "Successfully refreshed key with metadata hash: {} for custodian: {} under namespace: {}",
+              refreshedKey.getKeyMetadataHashEncoded(), encodedCust, keyNamespace);
+          }
         }
+      } catch (IOException | KeyException e) {
+        LOG.error(
+          "Failed to refresh key with metadata hash: {} for custodian: {} under namespace: {}",
+          keyData.getKeyMetadataHashEncoded(), encodedCust, keyNamespace, e);
+        // Continue refreshing other keys
       }
     }
 
-    LOG.info("Successfully refreshed managed keys for custodian: {} under namespace: {}",
-      encodedCust, keyNamespace);
+    LOG.info("refreshManagedKeys completed for custodian: {} under namespace: {}", encodedCust,
+      keyNamespace);
   }
 
   protected AsyncAdmin getAsyncAdmin(MasterServices master) {

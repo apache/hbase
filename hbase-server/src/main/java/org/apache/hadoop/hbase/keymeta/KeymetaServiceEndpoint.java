@@ -33,12 +33,14 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.EmptyMsg;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.GetManagedKeysResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyEntryRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyState;
@@ -194,8 +196,7 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
      * @param done       The callback to be invoked with the response.
      */
     @Override
-    public void disableManagedKey(RpcController controller,
-      org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyEntryRequest request,
+    public void disableManagedKey(RpcController controller, ManagedKeyEntryRequest request,
       RpcCallback<ManagedKeyResponse> done) {
       ManagedKeyResponse response = null;
       ManagedKeyResponse.Builder builder = ManagedKeyResponse.newBuilder();
@@ -205,14 +206,6 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
         byte[] keyMetadataHash = request.getKeyMetadataHash().toByteArray();
         byte[] keyCust = request.getKeyCustNs().getKeyCust().toByteArray();
         String keyNamespace = request.getKeyCustNs().getKeyNamespace();
-
-        // Look up the full key data to get the metadata
-        ManagedKeyData existingKey = ((KeymetaTableAccessor) master.getKeymetaAdmin())
-          .getKey(keyCust, keyNamespace, keyMetadataHash);
-        if (existingKey == null || existingKey.getKeyMetadata() == null) {
-          throw new IOException("Key not found for hash: "
-            + java.util.Base64.getEncoder().encodeToString(keyMetadataHash));
-        }
 
         ManagedKeyData managedKeyState =
           master.getKeymetaAdmin().disableManagedKey(keyCust, keyNamespace, keyMetadataHash);
@@ -303,8 +296,7 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
     // Set metadata hash if available
     byte[] metadataHash = keyData.getKeyMetadataHash();
     if (metadataHash != null) {
-      builder.setKeyMetadataHash(
-        org.apache.hbase.thirdparty.com.google.protobuf.ByteString.copyFrom(metadataHash));
+      builder.setKeyMetadataHash(ByteString.copyFrom(metadataHash));
     }
 
     return builder.build();

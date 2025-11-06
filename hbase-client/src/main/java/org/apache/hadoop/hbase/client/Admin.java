@@ -2669,7 +2669,7 @@ public interface Admin extends Abortable, Closeable {
    * Refresh the system key cache on all specified region servers.
    * @param regionServers the list of region servers to refresh the system key cache on
    */
-  void refreshSystemKeyCacheOnServers(Set<ServerName> regionServers) throws IOException;
+  void refreshSystemKeyCacheOnServers(List<ServerName> regionServers) throws IOException;
 
   /**
    * Eject a specific managed key entry from the managed key data cache on all specified region
@@ -2679,7 +2679,7 @@ public interface Admin extends Abortable, Closeable {
    * @param keyNamespace  the key namespace
    * @param keyMetadata   the key metadata
    */
-  void ejectManagedKeyDataCacheEntryOnServers(Set<ServerName> regionServers, byte[] keyCustodian,
+  void ejectManagedKeyDataCacheEntryOnServers(List<ServerName> regionServers, byte[] keyCustodian,
     String keyNamespace, String keyMetadata) throws IOException;
 
   /**
@@ -2687,5 +2687,5 @@ public interface Admin extends Abortable, Closeable {
    * to restart the process.
    * @param regionServers the list of region servers to clear the managed key data cache on
    */
-  void clearManagedKeyDataCacheOnServers(Set<ServerName> regionServers) throws IOException;
+  void clearManagedKeyDataCacheOnServers(List<ServerName> regionServers) throws IOException;
 }

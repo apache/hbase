@@ -1378,20 +1378,20 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
-  public void refreshSystemKeyCacheOnServers(Set<ServerName> regionServers) throws IOException {
+  public void refreshSystemKeyCacheOnServers(List<ServerName> regionServers) throws IOException {
     throw new NotImplementedException(
       "refreshSystemKeyCacheOnServers not supported in ThriftAdmin");
   }
 
   @Override
-  public void ejectManagedKeyDataCacheEntryOnServers(Set<ServerName> regionServers,
+  public void ejectManagedKeyDataCacheEntryOnServers(List<ServerName> regionServers,
     byte[] keyCustodian, String keyNamespace, String keyMetadata) throws IOException {
     throw new NotImplementedException(
       "ejectManagedKeyDataCacheEntryOnServers not supported in ThriftAdmin");
   }
 
   @Override
-  public void clearManagedKeyDataCacheOnServers(Set<ServerName> regionServers) throws IOException {
+  public void clearManagedKeyDataCacheOnServers(List<ServerName> regionServers) throws IOException {
     throw new NotImplementedException(
       "clearManagedKeyDataCacheOnServers not supported in ThriftAdmin");
   }

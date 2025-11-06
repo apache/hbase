@@ -33,6 +33,7 @@ import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.EmptyMsg;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.GetManagedKeysResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyEntryRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ManagedKeysProtos;
@@ -113,8 +114,7 @@ public class KeymetaAdminClient implements KeymetaAdmin {
     byte[] keyMetadataHash) throws IOException, KeyException {
     try {
       ManagedKeyResponse response = stub.disableManagedKey(null,
-        org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyEntryRequest
-          .newBuilder()
+        ManagedKeyEntryRequest.newBuilder()
           .setKeyCustNs(ManagedKeyRequest.newBuilder().setKeyCust(ByteString.copyFrom(keyCust))
             .setKeyNamespace(keyNamespace).build())
           .setKeyMetadataHash(ByteString.copyFrom(keyMetadataHash)).build());

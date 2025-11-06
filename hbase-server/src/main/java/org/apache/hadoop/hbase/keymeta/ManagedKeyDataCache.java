@@ -21,7 +21,6 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import java.io.IOException;
 import java.security.KeyException;
-import java.util.Arrays;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
@@ -44,7 +43,7 @@ import org.slf4j.LoggerFactory;
 public class ManagedKeyDataCache extends KeyManagementBase {
   private static final Logger LOG = LoggerFactory.getLogger(ManagedKeyDataCache.class);
 
-  private Cache<String, ManagedKeyData> cacheByMetadataHash; // Key is base64-encoded hash
+  private Cache<Bytes, ManagedKeyData> cacheByMetadataHash; // Key is Bytes wrapper around hash
   private Cache<ActiveKeysCacheKey, ManagedKeyData> activeKeysCache;
   private final KeymetaTableAccessor keymetaAccessor;
 
@@ -104,6 +103,22 @@ public class ManagedKeyDataCache extends KeyManagementBase {
   }
 
   /**
+   * Retrieves an entry from the cache, if it already exists, otherwise a null is returned. No
+   * attempt will be made to load from L2 or provider.
+   * @return the corresponding ManagedKeyData entry, or null if not found
+   */
+  public ManagedKeyData getEntry(byte[] keyCust, String keyNamespace, byte[] keyMetadataHash)
+    throws IOException, KeyException {
+    Bytes metadataHashKey = new Bytes(keyMetadataHash);
+    // Return the entry if it exists in the generic cache or active keys cache, otherwise return
+    // null.
+    ManagedKeyData entry = cacheByMetadataHash.get(metadataHashKey, hashKey -> {
+      return getFromActiveKeysCache(keyCust, keyNamespace, keyMetadataHash);
+    });
+    return entry;
+  }
+
+  /**
    * Retrieves an entry from the cache, loading it from L2 if KeymetaTableAccessor is available.
    * When L2 is not available, it will try to load from provider, unless dynamic lookup is disabled.
    * @param keyCust      the key custodian
@@ -118,9 +133,9 @@ public class ManagedKeyDataCache extends KeyManagementBase {
     byte[] wrappedKey) throws IOException, KeyException {
     // Compute hash and use it as cache key
     byte[] metadataHashBytes = ManagedKeyData.constructMetadataHash(keyMetadata);
-    String metadataHashEncoded = java.util.Base64.getEncoder().encodeToString(metadataHashBytes);
+    Bytes metadataHashKey = new Bytes(metadataHashBytes);
 
-    ManagedKeyData entry = cacheByMetadataHash.get(metadataHashEncoded, hashKey -> {
+    ManagedKeyData entry = cacheByMetadataHash.get(metadataHashKey, hashKey -> {
       // First check if it's in the active keys cache
       ManagedKeyData keyData = getFromActiveKeysCache(keyCust, keyNamespace, metadataHashBytes);
 
@@ -176,13 +191,13 @@ public class ManagedKeyDataCache extends KeyManagementBase {
     // Verify custodian/namespace match to guard against hash collisions
     if (entry != null && ManagedKeyState.isUsable(entry.getKeyState())) {
       if (
-        Arrays.equals(entry.getKeyCustodian(), keyCust)
+        Bytes.equals(entry.getKeyCustodian(), keyCust)
           && entry.getKeyNamespace().equals(keyNamespace)
       ) {
         return entry;
       }
       LOG.warn("Hash collision detected for metadata hash: {} - custodian/namespace mismatch",
-        metadataHashEncoded);
+        ManagedKeyProvider.encodeToStr(metadataHashBytes));
     }
     return null;
   }
@@ -198,7 +213,7 @@ public class ManagedKeyDataCache extends KeyManagementBase {
     byte[] keyMetadataHash) {
     ActiveKeysCacheKey cacheKey = new ActiveKeysCacheKey(keyCust, keyNamespace);
     ManagedKeyData keyData = activeKeysCache.getIfPresent(cacheKey);
-    if (keyData != null && Arrays.equals(keyData.getKeyMetadataHash(), keyMetadataHash)) {
+    if (keyData != null && Bytes.equals(keyData.getKeyMetadataHash(), keyMetadataHash)) {
       return keyData;
     }
     return null;
@@ -207,23 +222,22 @@ public class ManagedKeyDataCache extends KeyManagementBase {
   /**
    * Eject the key identified by the given custodian, namespace and metadata from both the active
    * keys cache and the generic cache.
-   * @param keyCust      the key custodian
-   * @param keyNamespace the key namespace
-   * @param keyMetadata  the key metadata
+   * @param keyCust         the key custodian
+   * @param keyNamespace    the key namespace
+   * @param keyMetadataHash the key metadata hash
    * @return true if the key was ejected from either cache, false otherwise
    */
-  public boolean ejectKey(byte[] keyCust, String keyNamespace, String keyMetadata) {
-    byte[] keyMetadataHash = ManagedKeyData.constructMetadataHash(keyMetadata);
-    String keyMetadataHashEncoded = java.util.Base64.getEncoder().encodeToString(keyMetadataHash);
+  public boolean ejectKey(byte[] keyCust, String keyNamespace, byte[] keyMetadataHash) {
+    Bytes keyMetadataHashKey = new Bytes(keyMetadataHash);
     ActiveKeysCacheKey cacheKey = new ActiveKeysCacheKey(keyCust, keyNamespace);
     AtomicBoolean ejected = new AtomicBoolean(false);
 
     // Try to eject from active keys cache by matching hash with collision check
     activeKeysCache.asMap().computeIfPresent(cacheKey, (key, value) -> {
-      if (Arrays.equals(value.getKeyMetadataHash(), keyMetadataHash)) {
+      if (Bytes.equals(value.getKeyMetadataHash(), keyMetadataHash)) {
         // Verify custodian/namespace match to guard against hash collisions
         if (
-          Arrays.equals(value.getKeyCustodian(), keyCust)
+          Bytes.equals(value.getKeyCustodian(), keyCust)
             && value.getKeyNamespace().equals(keyNamespace)
         ) {
           ejected.set(true);
@@ -234,10 +248,10 @@ public class ManagedKeyDataCache extends KeyManagementBase {
     });
 
     // Also remove from generic cache by hash, with collision check
-    cacheByMetadataHash.asMap().computeIfPresent(keyMetadataHashEncoded, (hash, value) -> {
+    cacheByMetadataHash.asMap().computeIfPresent(keyMetadataHashKey, (hash, value) -> {
       if (
-        Arrays.equals(value.getKeyMetadataHash(), keyMetadataHash)
-          && Arrays.equals(value.getKeyCustodian(), keyCust)
+        Bytes.equals(value.getKeyMetadataHash(), keyMetadataHash)
+          && Bytes.equals(value.getKeyCustodian(), keyCust)
           && value.getKeyNamespace().equals(keyNamespace)
       ) {
         ejected.set(true);

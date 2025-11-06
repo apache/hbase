@@ -85,6 +85,7 @@ import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Suite;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
 @RunWith(Suite.class)
@@ -266,12 +267,13 @@ public class TestKeymetaTableAccessor {
       when(result.getValue(eq(KEY_META_INFO_FAMILY), eq(KEY_STATE_QUAL_BYTES)))
         .thenReturn(new byte[] { ACTIVE.getVal() }, new byte[] { INACTIVE.getVal() });
 
+      byte[] keyMetadataHash = ManagedKeyData.constructMetadataHash(KEY_METADATA);
       IOException ex;
       ex = assertThrows(IOException.class,
-        () -> accessor.getKey(CUST_ID, KEY_SPACE_GLOBAL, KEY_METADATA));
+        () -> accessor.getKey(CUST_ID, KEY_SPACE_GLOBAL, keyMetadataHash));
       assertEquals("ACTIVE key must have a wrapped key", ex.getMessage());
       ex = assertThrows(IOException.class,
-        () -> accessor.getKey(CUST_ID, KEY_SPACE_GLOBAL, KEY_METADATA));
+        () -> accessor.getKey(CUST_ID, KEY_SPACE_GLOBAL, keyMetadataHash));
       assertEquals("INACTIVE key must have a wrapped key", ex.getMessage());
     }
 
@@ -282,7 +284,8 @@ public class TestKeymetaTableAccessor {
       when(systemKeyCache.getSystemKeyByChecksum(anyLong())).thenReturn(null);
       when(table.get(any(Get.class))).thenReturn(result1);
 
-      ManagedKeyData result = accessor.getKey(CUST_ID, KEY_NAMESPACE, KEY_METADATA);
+      byte[] keyMetadataHash = ManagedKeyData.constructMetadataHash(KEY_METADATA);
+      ManagedKeyData result = accessor.getKey(CUST_ID, KEY_NAMESPACE, keyMetadataHash);
 
       assertNull(result);
     }
@@ -291,7 +294,8 @@ public class TestKeymetaTableAccessor {
     public void testGetKeyWithWrappedKey() throws Exception {
       ManagedKeyData keyData = setupActiveKey(CUST_ID, result1);
 
-      ManagedKeyData result = accessor.getKey(CUST_ID, KEY_NAMESPACE, KEY_METADATA);
+      byte[] keyMetadataHash = ManagedKeyData.constructMetadataHash(KEY_METADATA);
+      ManagedKeyData result = accessor.getKey(CUST_ID, KEY_NAMESPACE, keyMetadataHash);
 
       verify(table).get(any(Get.class));
       assertNotNull(result);
@@ -303,7 +307,7 @@ public class TestKeymetaTableAccessor {
       assertEquals(ACTIVE, result.getKeyState());
 
       // When DEK checksum doesn't match, we expect a null value.
-      result = accessor.getKey(CUST_ID, KEY_NAMESPACE, KEY_METADATA);
+      result = accessor.getKey(CUST_ID, KEY_NAMESPACE, keyMetadataHash);
       assertNull(result);
     }
 
@@ -311,7 +315,8 @@ public class TestKeymetaTableAccessor {
     public void testGetKeyWithoutWrappedKey() throws Exception {
       when(table.get(any(Get.class))).thenReturn(result2);
 
-      ManagedKeyData result = accessor.getKey(CUST_ID, KEY_NAMESPACE, KEY_METADATA);
+      byte[] keyMetadataHash = ManagedKeyData.constructMetadataHash(KEY_METADATA);
+      ManagedKeyData result = accessor.getKey(CUST_ID, KEY_NAMESPACE, keyMetadataHash);
 
       verify(table).get(any(Get.class));
       assertNotNull(result);
@@ -446,10 +451,11 @@ public class TestKeymetaTableAccessor {
     @Test
     public void testDisableKey() throws Exception {
       String keyMetadata = "testMetadata";
+      byte[] keyMetadataHash = ManagedKeyData.constructMetadataHash(keyMetadata);
       ArgumentCaptor<List> mutationsCaptor = ArgumentCaptor.forClass(List.class);
       ArgumentCaptor<Object[]> resultsCaptor = ArgumentCaptor.forClass(Object[].class);
 
-      accessor.disableKey(CUST_ID, KEY_NAMESPACE, keyMetadata);
+      accessor.disableKey(CUST_ID, KEY_NAMESPACE, keyMetadataHash);
 
       verify(table).batch(mutationsCaptor.capture(), resultsCaptor.capture());
       List mutations = mutationsCaptor.getValue();
@@ -540,7 +546,7 @@ public class TestKeymetaTableAccessor {
 
       accessor.updateActiveState(keyData, ACTIVE);
 
-      verify(table, org.mockito.Mockito.never()).batch(any(), any());
+      verify(table, Mockito.never()).batch(any(), any());
     }
 
     @Test

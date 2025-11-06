@@ -30,6 +30,7 @@ import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -42,9 +43,9 @@ import java.security.KeyException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -307,8 +308,8 @@ public class TestKeymetaAdminImpl {
      * @param adminAction             the action to test, taking a KeymetaAdminImpl instance
      * @param expectedMessageFragment the expected fragment in the error message
      */
-    private void assertNotOnMasterThrowsException(
-      java.util.function.Consumer<KeymetaAdminImpl> adminAction, String expectedMessageFragment) {
+    private void assertNotOnMasterThrowsException(Consumer<KeymetaAdminImpl> adminAction,
+      String expectedMessageFragment) {
       // Create a non-master server mock
       Server mockRegionServer = mock(Server.class);
       KeyManagementService mockKeyService = mock(KeyManagementService.class);
@@ -335,8 +336,7 @@ public class TestKeymetaAdminImpl {
      * Helper method to test that a method throws IOException when key management is disabled.
      * @param adminAction the action to test, taking a KeymetaAdminImpl instance
      */
-    private void
-      assertDisabledThrowsException(java.util.function.Consumer<KeymetaAdminImpl> adminAction) {
+    private void assertDisabledThrowsException(Consumer<KeymetaAdminImpl> adminAction) {
       TEST_UTIL.getConfiguration().set(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, "false");
 
       KeymetaAdminImpl admin = new KeymetaAdminImpl(mockServer) {
@@ -632,7 +632,7 @@ public class TestKeymetaAdminImpl {
       when(mockMasterServices.getAsyncClusterConnection()).thenReturn(mockAsyncClusterConnection);
       when(mockAsyncClusterConnection.getAdmin()).thenReturn(mockAsyncAdmin);
       when(mockMasterServices.getServerManager()).thenReturn(mockServerManager);
-      when(mockServerManager.getOnlineServers()).thenReturn(new HashMap<>());
+      when(mockServerManager.getOnlineServersList()).thenReturn(new ArrayList<>());
 
       // Setup KeyManagementService mock
       Configuration conf = HBaseConfiguration.create();
@@ -659,7 +659,7 @@ public class TestKeymetaAdminImpl {
 
       assertNotNull(result);
       verify(mockAccessor, times(2)).getAllKeys(CUST_BYTES, KEY_SPACE_GLOBAL);
-      verify(mockAccessor).disableKey(CUST_BYTES, KEY_SPACE_GLOBAL, "metadata1");
+      verify(mockAccessor).disableKey(eq(CUST_BYTES), eq(KEY_SPACE_GLOBAL), any(byte[].class));
     }
 
     @Test
@@ -668,17 +668,19 @@ public class TestKeymetaAdminImpl {
 
       ManagedKeyData disabledKey = new ManagedKeyData(CUST_BYTES, KEY_SPACE_GLOBAL, null,
         ManagedKeyState.DISABLED, "metadata1", 123L);
+      byte[] keyMetadataHash = ManagedKeyData.constructMetadataHash("metadata1");
       when(mockAccessor.getKey(any(), any(), any())).thenReturn(disabledKey);
 
       CompletableFuture<Void> successFuture = CompletableFuture.completedFuture(null);
       when(mockAsyncAdmin.ejectManagedKeyDataCacheEntryOnServers(any(), any(), any(), any()))
         .thenReturn(successFuture);
 
-      ManagedKeyData result = admin.disableManagedKey(CUST_BYTES, KEY_SPACE_GLOBAL, "metadata1");
+      ManagedKeyData result =
+        admin.disableManagedKey(CUST_BYTES, KEY_SPACE_GLOBAL, keyMetadataHash);
 
       assertNotNull(result);
       assertEquals(ManagedKeyState.DISABLED, result.getKeyState());
-      verify(mockAccessor).disableKey(CUST_BYTES, KEY_SPACE_GLOBAL, "metadata1");
+      verify(mockAccessor).disableKey(eq(CUST_BYTES), eq(KEY_SPACE_GLOBAL), any(byte[].class));
     }
 
     @Test
@@ -738,15 +740,15 @@ public class TestKeymetaAdminImpl {
       }
 
       @Override
-      public ManagedKeyData getKey(byte[] keyCust, String keyNamespace, String keyMetadata)
+      public ManagedKeyData getKey(byte[] keyCust, String keyNamespace, byte[] keyMetadataHash)
         throws IOException, KeyException {
-        return accessor.getKey(keyCust, keyNamespace, keyMetadata);
+        return accessor.getKey(keyCust, keyNamespace, keyMetadataHash);
       }
 
       @Override
-      public void disableKey(byte[] keyCust, String keyNamespace, String keyMetadata)
+      public void disableKey(byte[] keyCust, String keyNamespace, byte[] keyMetadataHash)
         throws IOException {
-        accessor.disableKey(keyCust, keyNamespace, keyMetadata);
+        accessor.disableKey(keyCust, keyNamespace, keyMetadataHash);
       }
 
       @Override

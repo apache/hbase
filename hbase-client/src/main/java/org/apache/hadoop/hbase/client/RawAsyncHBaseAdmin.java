@@ -4668,7 +4668,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Void> refreshSystemKeyCacheOnServers(Set<ServerName> regionServers) {
+  public CompletableFuture<Void> refreshSystemKeyCacheOnServers(List<ServerName> regionServers) {
     CompletableFuture<Void> future = new CompletableFuture<>();
     List<CompletableFuture<Void>> futures =
       regionServers.stream().map(this::refreshSystemKeyCache).collect(Collectors.toList());
@@ -4693,7 +4693,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<Void> ejectManagedKeyDataCacheEntryOnServers(
-    Set<ServerName> regionServers, byte[] keyCustodian, String keyNamespace, String keyMetadata) {
+    List<ServerName> regionServers, byte[] keyCustodian, String keyNamespace, String keyMetadata) {
     CompletableFuture<Void> future = new CompletableFuture<>();
     // Create the request once instead of repeatedly for each server
     byte[] keyMetadataHash = ManagedKeyData.constructMetadataHash(keyMetadata);
@@ -4726,7 +4726,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Void> clearManagedKeyDataCacheOnServers(Set<ServerName> regionServers) {
+  public CompletableFuture<Void> clearManagedKeyDataCacheOnServers(List<ServerName> regionServers) {
     CompletableFuture<Void> future = new CompletableFuture<>();
     List<CompletableFuture<Void>> futures =
       regionServers.stream().map(this::clearManagedKeyDataCache).collect(Collectors.toList());

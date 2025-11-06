@@ -22,9 +22,12 @@ import java.security.KeyException;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyState;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 @InterfaceAudience.Private
 public class KeyManagementUtils {
@@ -60,9 +63,9 @@ public class KeyManagementUtils {
      * key state to INACTIVE.
      */
     LOG.info(
-      "retrieveActiveKey: got active key with status: {} and metadata: {} for "
-        + "(custodian: {}, namespace: {})",
-      pbeKey.getKeyState(), pbeKey.getKeyMetadata(), encKeyCust, pbeKey.getKeyNamespace());
+      "retrieveActiveKey: got key with state: {} and metadata: {} for custodian: {} namespace: {}",
+      pbeKey.getKeyState(), pbeKey.getKeyMetadataHashEncoded(), encKeyCust,
+      pbeKey.getKeyNamespace());
     if (accessor != null) {
       accessor.addKey(pbeKey);
     }
@@ -81,14 +84,16 @@ public class KeyManagementUtils {
    */
   public static ManagedKeyData refreshKey(ManagedKeyProvider provider,
     KeymetaTableAccessor accessor, ManagedKeyData keyData) throws IOException, KeyException {
+    // NOTE: Even FAILED keys can have metadata that is good enough for refreshing from provider.
     if (keyData.getKeyMetadata() != null) {
       // Refresh key using unwrapKey
       ManagedKeyData newKeyData = provider.unwrapKey(keyData.getKeyMetadata(), null);
 
       // Validate metadata hasn't changed
       if (!keyData.getKeyMetadata().equals(newKeyData.getKeyMetadata())) {
-        throw new IOException("Key metadata changed during refresh: expected "
-          + keyData.getKeyMetadata() + ", got " + newKeyData.getKeyMetadata());
+        throw new KeyException("Key metadata changed during refresh: current metadata hash: "
+          + keyData.getKeyMetadataHashEncoded() + ", got metadata hash: "
+          + newKeyData.getKeyMetadataHashEncoded());
       }
 
       // Check if state changed
@@ -97,28 +102,31 @@ public class KeyManagementUtils {
         return keyData;
       }
 
-      // Ignore if new state is FAILED
+      // Ignore if new state is FAILED, let us just keep the existing key data as is.
       if (newKeyData.getKeyState() == ManagedKeyState.FAILED) {
         return keyData;
       }
 
-      // Handle state change
       if (newKeyData.getKeyState() == ManagedKeyState.DISABLED) {
-        accessor.disableKey(keyData.getKeyCustodian(), keyData.getKeyNamespace(),
-          keyData.getKeyMetadataHash());
+        // Handle DISABLED state change specially.
+        accessor.disableKey(keyData);
       } else {
-        // State change between ACTIVE and INACTIVE
+        // Handle rest of the state changes.
         accessor.updateActiveState(keyData, newKeyData.getKeyState());
       }
 
       return newKeyData;
     } else {
+      Preconditions.checkArgument(keyData.getKeyState() == ManagedKeyState.FAILED,
+        "got key with null metadata when key state is: " + keyData.getKeyState());
+
       // No metadata, get new key from provider
       ManagedKeyData newKeyData =
         provider.getManagedKey(keyData.getKeyCustodian(), keyData.getKeyNamespace());
 
       // Check if state changed
-      if (keyData.getKeyState() != newKeyData.getKeyState()) {
+      if (newKeyData.getKeyState() != ManagedKeyState.FAILED) {
+        accessor.removeFailureMarker(keyData);
         accessor.addKey(newKeyData);
         return newKeyData;
       }
@@ -138,24 +146,21 @@ public class KeyManagementUtils {
    * @throws KeyException if an error occurs
    */
   public static ManagedKeyData rotateActiveKey(ManagedKeyProvider provider,
-    KeymetaTableAccessor accessor, byte[] keyCust, String keyNamespace)
+    KeymetaTableAccessor accessor, String encKeyCust, byte[] keyCust, String keyNamespace)
     throws IOException, KeyException {
     // Get current active key
     ManagedKeyData currentActiveKey = accessor.getActiveKey(keyCust, keyNamespace);
     if (currentActiveKey == null) {
-      throw new IOException("No active key found for (custodian: "
-        + ManagedKeyProvider.encodeToStr(keyCust) + ", namespace: " + keyNamespace + ")");
+      throw new IOException("No active key found, key management not yet enabled for (custodian: "
+        + encKeyCust + ", namespace: " + keyNamespace + ") ?");
     }
 
     // Retrieve new key from provider (with null accessor to skip persistence)
-    String encodedCust = ManagedKeyProvider.encodeToStr(keyCust);
-    ManagedKeyData newKey =
-      retrieveActiveKey(provider, null, encodedCust, keyCust, keyNamespace, null);
+    ManagedKeyData newKey = retrieveActiveKey(provider, null,
+      ManagedKeyProvider.encodeToStr(keyCust), keyCust, keyNamespace, null);
 
     // Check if key changed by comparing metadata hash
-    if (
-      java.util.Arrays.equals(currentActiveKey.getKeyMetadataHash(), newKey.getKeyMetadataHash())
-    ) {
+    if (Bytes.equals(currentActiveKey.getKeyMetadataHash(), newKey.getKeyMetadataHash())) {
       // No rotation happened
       return null;
     }

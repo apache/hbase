@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.ipc.RpcCall;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.keymeta.KeyManagementService;
@@ -240,11 +241,12 @@ public class TestRSRpcServices {
     byte[] keyCustodian = Bytes.toBytes("testCustodian");
     String keyNamespace = "testNamespace";
     String keyMetadata = "testMetadata";
+    byte[] keyMetadataHash = ManagedKeyData.constructMetadataHash(keyMetadata);
 
-    ManagedKeyEntryRequest request = ManagedKeyEntryRequest
-      .newBuilder().setKeyCustNs(ManagedKeyRequest.newBuilder()
-        .setKeyCust(ByteString.copyFrom(keyCustodian)).setKeyNamespace(keyNamespace).build())
-      .setKeyMetadata(keyMetadata).build();
+    ManagedKeyEntryRequest request = ManagedKeyEntryRequest.newBuilder()
+      .setKeyCustNs(ManagedKeyRequest.newBuilder().setKeyCust(ByteString.copyFrom(keyCustodian))
+        .setKeyNamespace(keyNamespace).build())
+      .setKeyMetadataHash(ByteString.copyFrom(keyMetadataHash)).build();
 
     RpcController controller = mock(RpcController.class);
 
@@ -285,11 +287,12 @@ public class TestRSRpcServices {
     byte[] keyCustodian = Bytes.toBytes("testCustodian");
     String keyNamespace = "testNamespace";
     String keyMetadata = "testMetadata";
+    byte[] keyMetadataHash = ManagedKeyData.constructMetadataHash(keyMetadata);
 
-    ManagedKeyEntryRequest request = ManagedKeyEntryRequest
-      .newBuilder().setKeyCustNs(ManagedKeyRequest.newBuilder()
-        .setKeyCust(ByteString.copyFrom(keyCustodian)).setKeyNamespace(keyNamespace).build())
-      .setKeyMetadata(keyMetadata).build();
+    ManagedKeyEntryRequest request = ManagedKeyEntryRequest.newBuilder()
+      .setKeyCustNs(ManagedKeyRequest.newBuilder().setKeyCust(ByteString.copyFrom(keyCustodian))
+        .setKeyNamespace(keyNamespace).build())
+      .setKeyMetadataHash(ByteString.copyFrom(keyMetadataHash)).build();
 
     RpcController controller = mock(RpcController.class);
 

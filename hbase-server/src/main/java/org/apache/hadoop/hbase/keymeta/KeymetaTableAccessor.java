@@ -49,6 +49,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+
 /**
  * Accessor for keymeta table as part of key management.
  */
@@ -187,38 +189,39 @@ public class KeymetaTableAccessor extends KeyManagementBase {
 
   /**
    * Disables a key by removing the wrapped key and updating its state to DISABLED.
-   * @param key_cust        The key custodian.
-   * @param keyNamespace    The namespace.
-   * @param keyMetadataHash The key metadata hash.
+   * @param keyData The key data to disable.
    * @throws IOException when there is an underlying IOException.
    */
-  public void disableKey(byte[] key_cust, String keyNamespace, byte[] keyMetadataHash)
-    throws IOException {
+  public void disableKey(ManagedKeyData keyData) throws IOException {
     assertKeyManagementEnabled();
-    byte[] rowKeyForCustNamespace = constructRowKeyForCustNamespace(key_cust, keyNamespace);
-    byte[] rowKeyForMetadata = constructRowKeyForMetadata(key_cust, keyNamespace, keyMetadataHash);
+    byte[] key_cust = keyData.getKeyCustodian();
+    String keyNamespace = keyData.getKeyNamespace();
+    byte[] keyMetadataHash = keyData.getKeyMetadataHash();
 
-    List<Row> mutations = new ArrayList<>(3);
-    // Delete the CustNamespace row
-    mutations.add(new Delete(rowKeyForCustNamespace).setDurability(Durability.SKIP_WAL)
-      .setPriority(HConstants.SYSTEMTABLE_QOS));
+    List<Row> mutations = new ArrayList<>(3); // Max possible mutations.
+
+    if (keyData.getKeyState() == ManagedKeyState.ACTIVE) {
+      // Delete the CustNamespace row
+      byte[] rowKeyForCustNamespace = constructRowKeyForCustNamespace(key_cust, keyNamespace);
+      mutations.add(new Delete(rowKeyForCustNamespace).setDurability(Durability.SKIP_WAL)
+        .setPriority(HConstants.SYSTEMTABLE_QOS));
+    }
 
     // Update state to DISABLED and timestamp on Metadata row
-    Put putForState = new Put(rowKeyForMetadata).setDurability(Durability.SKIP_WAL)
-      .setPriority(HConstants.SYSTEMTABLE_QOS)
-      .addColumn(KEY_META_INFO_FAMILY, KEY_STATE_QUAL_BYTES,
-        new byte[] { ManagedKeyState.DISABLED.getVal() })
-      .addColumn(KEY_META_INFO_FAMILY, REFRESHED_TIMESTAMP_QUAL_BYTES,
-        Bytes.toBytes(EnvironmentEdgeManager.currentTime()));
+    byte[] rowKeyForMetadata = constructRowKeyForMetadata(key_cust, keyNamespace, keyMetadataHash);
+    Put putForState =
+      addMutationColumnsForState(new Put(rowKeyForMetadata), ManagedKeyState.DISABLED);
     mutations.add(putForState);
 
     // Delete wrapped key columns from Metadata row
-    Delete deleteWrappedKey = new Delete(rowKeyForMetadata).setDurability(Durability.SKIP_WAL)
-      .setPriority(HConstants.SYSTEMTABLE_QOS)
-      .addColumns(KEY_META_INFO_FAMILY, DEK_CHECKSUM_QUAL_BYTES)
-      .addColumns(KEY_META_INFO_FAMILY, DEK_WRAPPED_BY_STK_QUAL_BYTES)
-      .addColumns(KEY_META_INFO_FAMILY, STK_CHECKSUM_QUAL_BYTES);
-    mutations.add(deleteWrappedKey);
+    if (ManagedKeyState.isUsable(keyData.getKeyState())) {
+      Delete deleteWrappedKey = new Delete(rowKeyForMetadata).setDurability(Durability.SKIP_WAL)
+        .setPriority(HConstants.SYSTEMTABLE_QOS)
+        .addColumns(KEY_META_INFO_FAMILY, DEK_CHECKSUM_QUAL_BYTES)
+        .addColumns(KEY_META_INFO_FAMILY, DEK_WRAPPED_BY_STK_QUAL_BYTES)
+        .addColumns(KEY_META_INFO_FAMILY, STK_CHECKSUM_QUAL_BYTES);
+      mutations.add(deleteWrappedKey);
+    }
 
     Connection connection = getServer().getConnection();
     try (Table table = connection.getTable(KEY_META_TABLE_NAME)) {
@@ -230,7 +233,26 @@ public class KeymetaTableAccessor extends KeyManagementBase {
   }
 
   /**
-   * Updates the state of a key between ACTIVE and INACTIVE.
+   * Removes the failure marker identified by the key data.
+   * @param keyData The key data.
+   * @throws IOException when there is an underlying IOException.
+   */
+  public void removeFailureMarker(ManagedKeyData keyData) throws IOException {
+    assertKeyManagementEnabled();
+    Preconditions.checkArgument(
+      keyData.getKeyState() == ManagedKeyState.FAILED && keyData.getKeyMetadata() == null,
+      "keyData must be in FAILED state and have null metadata");
+    Delete delete = new Delete(constructRowKeyForMetadata(keyData))
+      .setDurability(Durability.SKIP_WAL).setPriority(HConstants.SYSTEMTABLE_QOS);
+    Connection connection = getServer().getConnection();
+    try (Table table = connection.getTable(KEY_META_TABLE_NAME)) {
+      table.delete(delete);
+    }
+  }
+
+  /**
+   * Updates the state of a key between ACTIVE and INACTIVE from current state which can be any of
+   * ACTIVE, INACTIVE, DISABLED, or FAILED.
    * @param keyData  The key data.
    * @param newState The new state (must be ACTIVE or INACTIVE).
    * @throws IOException when there is an underlying IOException.
@@ -241,13 +263,10 @@ public class KeymetaTableAccessor extends KeyManagementBase {
     ManagedKeyState currentState = keyData.getKeyState();
 
     // Validate states
-    if (currentState != ManagedKeyState.ACTIVE && currentState != ManagedKeyState.INACTIVE) {
-      throw new IOException(
-        "Can only update state between ACTIVE and INACTIVE, current state: " + currentState);
-    }
-    if (newState != ManagedKeyState.ACTIVE && newState != ManagedKeyState.INACTIVE) {
-      throw new IOException("New state must be ACTIVE or INACTIVE, got: " + newState);
-    }
+    Preconditions.checkArgument(ManagedKeyState.isUsable(newState),
+      "New state must be ACTIVE or INACTIVE, got: " + newState);
+    // Even for FAILED keys, we expect the metadata to be non-null.
+    Preconditions.checkNotNull(keyData.getKeyMetadata(), "Key metadata cannot be null");
 
     // No-op if states are the same
     if (currentState == newState) {
@@ -258,14 +277,22 @@ public class KeymetaTableAccessor extends KeyManagementBase {
     byte[] rowKeyForCustNamespace = constructRowKeyForCustNamespace(keyData);
     byte[] rowKeyForMetadata = constructRowKeyForMetadata(keyData);
 
-    if (currentState == ManagedKeyState.INACTIVE && newState == ManagedKeyState.ACTIVE) {
+    // First take care of the active key specific row.
+    if (newState == ManagedKeyState.ACTIVE) {
       // INACTIVE -> ACTIVE: Add CustNamespace row and update Metadata row
       mutations.add(addMutationColumns(new Put(rowKeyForCustNamespace), keyData));
-      mutations.add(addMutationColumnsForState(new Put(rowKeyForMetadata), newState));
-    } else {
-      // ACTIVE -> INACTIVE: Delete CustNamespace row and update Metadata row
+    } else if (currentState == ManagedKeyState.ACTIVE) {
       mutations.add(new Delete(rowKeyForCustNamespace).setDurability(Durability.SKIP_WAL)
         .setPriority(HConstants.SYSTEMTABLE_QOS));
+    }
+
+    // Now take care of the key specific row (for point gets by metadata).
+    if (!ManagedKeyState.isUsable(currentState)) {
+      // For DISABLED and FAILED keys, we don't expect cached key material, so add all columns
+      // similar to what addKey() does.
+      mutations.add(addMutationColumns(new Put(rowKeyForMetadata), keyData));
+    } else {
+      // We expect cached key material, so only update the state and timestamp columns.
       mutations.add(addMutationColumnsForState(new Put(rowKeyForMetadata), newState));
     }
 
@@ -322,7 +349,8 @@ public class KeymetaTableAccessor extends KeyManagementBase {
   @InterfaceAudience.Private
   public static byte[] constructRowKeyForMetadata(ManagedKeyData keyData) {
     byte[] keyMetadataHash;
-    if (keyData.getKeyState() == ManagedKeyState.FAILED && keyData.getKeyMetadata() == null) {
+    // NOTE: only some FAILED keys may have null metadata.
+    if (keyData.getKeyMetadata() == null) {
       // For FAILED state with null metadata, use state as metadata
       keyMetadataHash = new byte[] { keyData.getKeyState().getVal() };
     } else {

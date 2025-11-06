@@ -21,7 +21,6 @@ import java.security.Key;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
-import java.util.Base64;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -74,7 +73,6 @@ public class ManagedKeyData {
   private final long refreshTimestamp;
   private volatile long keyChecksum = 0;
   private byte[] keyMetadataHash;
-  private String keyMetadataHashEncoded; // Cached base64-encoded hash for performance
 
   /**
    * Constructs a new instance with the given parameters.
@@ -132,7 +130,7 @@ public class ManagedKeyData {
     Preconditions.checkArgument(keyMetadataHash == null || keyMetadata == null,
       "only one of metadata or metadata hash should have been provided");
     Preconditions.checkArgument(
-      (keyState != ManagedKeyState.FAILED) && (keyMetadataHash != null || keyMetadata != null),
+      (keyState == ManagedKeyState.FAILED) || (keyMetadataHash != null || keyMetadata != null),
       "one of metadata or metadata hash should have been provided when state is not FAILED");
 
     this.keyCustodian = key_cust;
@@ -140,8 +138,9 @@ public class ManagedKeyData {
     this.theKey = theKey;
     this.keyState = keyState;
     this.keyMetadata = keyMetadata;
-    this.keyMetadataHash =
-      keyMetadataHash != null ? keyMetadataHash : constructMetadataHash(keyMetadata);
+    this.keyMetadataHash = keyMetadataHash != null
+      ? keyMetadataHash
+      : (keyMetadata != null ? constructMetadataHash(keyMetadata) : null);
     this.refreshTimestamp = refreshTimestamp;
   }
 
@@ -164,7 +163,7 @@ public class ManagedKeyData {
    * @return the encoded key custodian
    */
   public String getKeyCustodianEncoded() {
-    return Base64.getEncoder().encodeToString(keyCustodian);
+    return ManagedKeyProvider.encodeToStr(keyCustodian);
   }
 
   /**
@@ -249,13 +248,11 @@ public class ManagedKeyData {
    * @return the encoded hash or {@code null} if no metadata is available.
    */
   public String getKeyMetadataHashEncoded() {
-    if (keyMetadataHashEncoded == null) {
-      byte[] hash = getKeyMetadataHash();
-      if (hash != null) {
-        keyMetadataHashEncoded = Base64.getEncoder().encodeToString(hash);
-      }
+    byte[] hash = getKeyMetadataHash();
+    if (hash != null) {
+      return ManagedKeyProvider.encodeToStr(hash);
     }
-    return keyMetadataHashEncoded;
+    return null;
   }
 
   public static byte[] constructMetadataHash(String metadata) {

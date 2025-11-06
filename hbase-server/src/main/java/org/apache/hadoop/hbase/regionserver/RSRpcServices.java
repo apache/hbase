@@ -26,7 +26,6 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -91,7 +90,7 @@ import org.apache.hadoop.hbase.exceptions.ScannerResetException;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
-import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.PriorityFunction;
@@ -105,7 +104,6 @@ import org.apache.hadoop.hbase.ipc.RpcServerFactory;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
-import org.apache.hadoop.hbase.keymeta.KeymetaTableAccessor;
 import org.apache.hadoop.hbase.monitoring.ThreadLocalServerSideScanMetrics;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.procedure2.RSProcedureCallable;
@@ -4099,37 +4097,27 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
     final ManagedKeyEntryRequest request) throws ServiceException {
     try {
       checkOpen();
-      requestCount.increment();
-      byte[] keyCustodian = request.getKeyCustNs().getKeyCust().toByteArray();
-      String keyNamespace = request.getKeyCustNs().getKeyNamespace();
-      byte[] keyMetadataHash = request.getKeyMetadataHash().toByteArray();
-
-      if (LOG.isInfoEnabled()) {
-        String keyCustodianEncoded = Base64.getEncoder().encodeToString(keyCustodian);
-        String keyMetadataHashEncoded = Base64.getEncoder().encodeToString(keyMetadataHash);
-        LOG.info(
-          "Received EjectManagedKeyDataCacheEntry request for key custodian: {}, namespace: {}, "
-            + "metadata hash: {}",
-          keyCustodianEncoded, keyNamespace, keyMetadataHashEncoded);
-      }
-
-      // Look up the key to get the metadata for internal ejection
-      KeymetaTableAccessor keymetaAccessor = new KeymetaTableAccessor(server);
-
-      ManagedKeyData keyToEject =
-        keymetaAccessor.getKey(keyCustodian, keyNamespace, keyMetadataHash);
-      if (keyToEject == null || keyToEject.getKeyMetadata() == null) {
-        LOG.warn("Key not found for hash: {}", Base64.getEncoder().encodeToString(keyMetadataHash));
-        return BooleanMsg.newBuilder().setBoolMsg(false).build();
-      }
-
-      boolean ejected = server.getKeyManagementService().getManagedKeyDataCache()
-        .ejectKey(keyCustodian, keyNamespace, keyToEject.getKeyMetadata());
-      return BooleanMsg.newBuilder().setBoolMsg(ejected).build();
-    } catch (IOException | java.security.KeyException e) {
+    } catch (IOException e) {
       LOG.error("Failed to eject managed key data cache entry", e);
       throw new ServiceException(e);
     }
+    requestCount.increment();
+    byte[] keyCustodian = request.getKeyCustNs().getKeyCust().toByteArray();
+    String keyNamespace = request.getKeyCustNs().getKeyNamespace();
+    byte[] keyMetadataHash = request.getKeyMetadataHash().toByteArray();
+
+    if (LOG.isInfoEnabled()) {
+      String keyCustodianEncoded = ManagedKeyProvider.encodeToStr(keyCustodian);
+      String keyMetadataHashEncoded = ManagedKeyProvider.encodeToStr(keyMetadataHash);
+      LOG.info(
+        "Received EjectManagedKeyDataCacheEntry request for key custodian: {}, namespace: {}, "
+          + "metadata hash: {}",
+        keyCustodianEncoded, keyNamespace, keyMetadataHashEncoded);
+    }
+
+    boolean ejected = server.getKeyManagementService().getManagedKeyDataCache()
+      .ejectKey(keyCustodian, keyNamespace, keyMetadataHash);
+    return BooleanMsg.newBuilder().setBoolMsg(ejected).build();
   }
 
   /**
@@ -4144,14 +4132,14 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
     throws ServiceException {
     try {
       checkOpen();
-      requestCount.increment();
-      LOG.info("Received ClearManagedKeyDataCache request, clearing managed key data cache");
-      server.getKeyManagementService().getManagedKeyDataCache().clearCache();
-      return EmptyMsg.getDefaultInstance();
     } catch (IOException ie) {
       LOG.error("Failed to clear managed key data cache", ie);
       throw new ServiceException(ie);
     }
+    requestCount.increment();
+    LOG.info("Received ClearManagedKeyDataCache request, clearing managed key data cache");
+    server.getKeyManagementService().getManagedKeyDataCache().clearCache();
+    return EmptyMsg.getDefaultInstance();
   }
 
   RegionScannerContext checkQuotaAndGetRegionScannerContext(ScanRequest request,
