@@ -1033,7 +1033,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     Map<Class<?>, List<Procedure<MasterProcedureEnv>>> procsByType = procedureExecutor
       .getActiveProceduresNoCopy().stream().collect(Collectors.groupingBy(p -> p.getClass()));
 
-    // This manager must be accessed AFTER hbase:meta is confirmed on line..
+    // This manager must be accessed AFTER hbase:meta is confirmed on line.. and must be initialised
+    // before assignment manager
     this.tableStateManager = new TableStateManager(this);
     // Create Assignment Manager
     this.assignmentManager = createAssignmentManager(this, masterRegion);
@@ -1055,7 +1056,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     // TODO: Generate the splitting and live Set in one pass instead of two as we currently do.
     this.regionServerTracker.upgrade(
       procsByType.getOrDefault(ServerCrashProcedure.class, Collections.emptyList()).stream()
-        .map(p -> (ServerCrashProcedure) p).map(p -> p.getServerName()).collect(Collectors.toSet()),
+        .map(p -> (ServerCrashProcedure) p).collect(
+          Collectors.toMap(ServerCrashProcedure::getServerName, Procedure::getSubmittedTime)),
       Sets.union(rsListStorage.getAll(), walManager.getLiveServersFromWALDir()),
       walManager.getSplittingServersFromWALDir());
 
