@@ -21,13 +21,28 @@
 @import "highlight.js/styles/github.css";
 
 @theme {
-  --font-sans:
-    "Inter", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
-    "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 }
 
 @custom-variant dark (&:is(.dark *));
 @custom-variant js (&:is(.js *));
+
+/* Inter — normal axis */
+@font-face {
+  font-family: "Inter";
+  src: url("/fonts/inter-latin-wght-normal.woff2") format("woff2");
+  font-weight: 100 900; /* adjust if your file isn't variable */
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Inter — italic axis */
+@font-face {
+  font-family: "Inter";
+  src: url("/fonts/inter-latin-wght-italic.woff2") format("woff2");
+  font-weight: 100 900; /* adjust if needed */
+  font-style: italic;
+  font-display: swap;
+}
 
 :root {
   --background: oklch(1 0 0);
@@ -102,8 +117,6 @@
 }
 
 @theme inline {
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -147,8 +160,14 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
+  }
+
+  .font-base {
+    font-family: "Inter", sans-serif;
+    font-synthesis: none;
   }
 }
 

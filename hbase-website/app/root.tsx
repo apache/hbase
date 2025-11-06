@@ -26,23 +26,28 @@ import {
 } from "react-router";
 
 import type { Route } from "./+types/root";
-import "./app.css";
+import appStyles from "./app.css?url";
 import { SiteFooter } from "./components/site-footer";
 import { SiteNavbar } from "./components/site-navbar";
 import { GettingStartedSection } from "./components/getting-started";
 import { ThemeProvider } from "./lib/theme-provider";
 
 export const links: Route.LinksFunction = () => [
-  { rel: "preconnect", href: "https://fonts.googleapis.com" },
   {
-    rel: "preconnect",
-    href: "https://fonts.gstatic.com",
+    rel: "preload",
+    as: "font",
+    href: "/fonts/inter-latin-wght-normal.woff2",
+    type: "font/woff2",
     crossOrigin: "anonymous"
   },
   {
-    rel: "stylesheet",
-    href: "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap"
-  }
+    rel: "prefetch",
+    as: "font",
+    href: "/fonts/inter-latin-wght-italic.woff2",
+    type: "font/woff2",
+    crossOrigin: "anonymous"
+  },
+  { rel: "stylesheet", href: appStyles }
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
@@ -76,7 +81,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <style>{`.theme-toggle-wrapper { display: none !important; }`}</style>
         </noscript>
       </head>
-      <body>
+      <body className="font-base">
         <ThemeProvider defaultTheme="light">
           <SiteNavbar />
 
