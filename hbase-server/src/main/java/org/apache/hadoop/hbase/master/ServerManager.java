@@ -440,7 +440,7 @@ public class ServerManager implements ConfigurationObserver {
    * @param deadServersFromPE     the region servers which already have a SCP associated.
    * @param liveServersFromWALDir the live region servers from wal directory.
    */
-  void findDeadServersAndProcess(Set<ServerName> deadServersFromPE,
+  void findDeadServersAndProcess(Map<ServerName, Long> deadServersFromPE,
     Set<ServerName> liveServersFromWALDir) {
     deadServersFromPE.forEach(deadservers::putIfAbsent);
     liveServersFromWALDir.stream().filter(sn -> !onlineServers.containsKey(sn))
