@@ -26,17 +26,13 @@ option optimize_for = SPEED;
 
 import "HBase.proto";
 
-message RotateSTKResponse {
-  required bool rotated = 1;
-}
-
 service ManagedKeysService {
   rpc EnableKeyManagement(ManagedKeyRequest)
     returns (ManagedKeyResponse);
   rpc GetManagedKeys(ManagedKeyRequest)
     returns (GetManagedKeysResponse);
   rpc RotateSTK(EmptyMsg)
-    returns (RotateSTKResponse);
+    returns (BooleanMsg);
   rpc DisableKeyManagement(ManagedKeyRequest)
     returns (GetManagedKeysResponse);
   rpc DisableManagedKey(ManagedKeyEntryRequest)

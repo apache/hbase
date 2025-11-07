@@ -31,6 +31,7 @@ import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BooleanMsg;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.EmptyMsg;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.GetManagedKeysResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyEntryRequest;
@@ -75,9 +76,9 @@ public class KeymetaAdminClient implements KeymetaAdmin {
   @Override
   public boolean rotateSTK() throws IOException {
     try {
-      ManagedKeysProtos.RotateSTKResponse response =
+      BooleanMsg response =
         stub.rotateSTK(null, EmptyMsg.getDefaultInstance());
-      return response.getRotated();
+      return response.getBoolMsg();
     } catch (ServiceException e) {
       throw ProtobufUtil.handleRemoteException(e);
     }

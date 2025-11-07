@@ -38,6 +38,7 @@ import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BooleanMsg;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.EmptyMsg;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.GetManagedKeysResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyEntryRequest;
@@ -46,7 +47,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyR
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ManagedKeysProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ManagedKeysProtos.ManagedKeysService;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ManagedKeysProtos.RotateSTKResponse;
 
 /**
  * This class implements a coprocessor service endpoint for the key management metadata operations.
@@ -152,7 +152,7 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
      */
     @Override
     public void rotateSTK(RpcController controller, EmptyMsg request,
-      RpcCallback<RotateSTKResponse> done) {
+      RpcCallback<BooleanMsg> done) {
       boolean rotated;
       try {
         rotated = master.getKeymetaAdmin().rotateSTK();
@@ -160,7 +160,7 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
         CoprocessorRpcUtils.setControllerException(controller, new DoNotRetryIOException(e));
         rotated = false;
       }
-      done.run(RotateSTKResponse.newBuilder().setRotated(rotated).build());
+      done.run(BooleanMsg.newBuilder().setBoolMsg(rotated).build());
     }
 
     /**
