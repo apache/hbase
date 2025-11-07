@@ -279,7 +279,7 @@ if defined service_entry (
 @rem        add jruby packaged with HBase to CLASSPATH
 @rem (2) for other commands, do nothing
 
-@rem check if the commmand needs jruby
+@rem check if the command needs jruby
 set jruby-commands=shell org.jruby.Main
 for %%i in ( %jruby-commands% ) do (
   if "%hbase-command%"=="%%i" set jruby-needed=true

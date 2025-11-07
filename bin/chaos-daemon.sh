@@ -35,7 +35,7 @@ command=$1
 shift
 
 check_before_start(){
-    #ckeck if the process is not running
+    #check if the process is not running
     mkdir -p "$HBASE_PID_DIR"
     if [ -f "$CHAOS_PID" ]; then
       if kill -0 "$(cat "$CHAOS_PID")" > /dev/null 2>&1; then
