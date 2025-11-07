@@ -756,6 +756,11 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
     // SerializationFactory runs through serializations in the order they are registered.
     // We want to register ExtendedCellSerialization before CellSerialization because both
     // work for ExtendedCells but only ExtendedCellSerialization handles them properly.
+
+    if (diskBasedSortingEnabled(conf)) {
+      serializations.add(OrderPreservedExtendedCellSerialization.class.getName());
+    }
+
     if (
       conf.getBoolean(EXTENDED_CELL_SERIALIZATION_ENABLED_KEY,
         EXTENDED_CELL_SERIALIZATION_ENABLED_DEFULT)

@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.snapshot.SnapshotRegionLocator;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.MapReduceExtendedCell;
+import org.apache.hadoop.hbase.util.OrderPreservedMapReduceExtendedCell;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.io.WritableComparable;
@@ -174,6 +175,7 @@ public class WALPlayer extends Configured implements Tool {
       try {
         TableName table = key.getTableName();
         if (tableSet.contains(table.getNameAsString())) {
+          int order = 0;
           for (Cell cell : value.getCells()) {
             if (WALEdit.isMetaEditFamily(cell)) {
               continue;
@@ -189,7 +191,8 @@ public class WALPlayer extends Configured implements Tool {
               ? Bytes.add(table.getName(), Bytes.toBytes(tableSeparator), CellUtil.cloneRow(cell))
               : CellUtil.cloneRow(cell);
             ExtendedCell extendedCell = (ExtendedCell) cell;
-            context.write(wrapKey(outKey, extendedCell), new MapReduceExtendedCell(extendedCell));
+            context.write(wrapKey(outKey, extendedCell), wrapCell(extendedCell, order));
+            ++order;
           }
         }
       } catch (InterruptedException e) {
@@ -204,6 +207,13 @@ public class WALPlayer extends Configured implements Tool {
       this.multiTableSupport = conf.getBoolean(MULTI_TABLES_SUPPORT, false);
       this.diskBasedSortingEnabled = HFileOutputFormat2.diskBasedSortingEnabled(conf);
       Collections.addAll(tableSet, tables);
+    }
+
+    private MapReduceExtendedCell wrapCell(ExtendedCell cell, int order) {
+      if (this.diskBasedSortingEnabled) {
+        return new OrderPreservedMapReduceExtendedCell(cell, order);
+      }
+      return new MapReduceExtendedCell(cell);
     }
 
     private WritableComparable<?> wrapKey(byte[] key, ExtendedCell cell) {
@@ -423,12 +433,13 @@ public class WALPlayer extends Configured implements Tool {
       job.setMapperClass(WALCellMapper.class);
       if (diskBasedSortingEnabled) {
         job.setReducerClass(PreSortedCellsReducer.class);
+        job.setMapOutputValueClass(OrderPreservedMapReduceExtendedCell.class);
       } else {
+        job.setMapOutputValueClass(MapReduceExtendedCell.class);
         job.setReducerClass(CellSortReducer.class);
       }
       Path outputDir = new Path(hfileOutPath);
       FileOutputFormat.setOutputPath(job, outputDir);
-      job.setMapOutputValueClass(MapReduceExtendedCell.class);
       try (Connection conn = ConnectionFactory.createConnection(conf);) {
         List<TableInfo> tableInfoList = new ArrayList<>();
         for (TableName tableName : tableNames) {

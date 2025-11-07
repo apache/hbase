@@ -206,13 +206,13 @@ public class BackupManager implements Closeable {
 
   /**
    * Creates a backup info based on input backup request with optional provided timestamps.
-   * @param backupId           backup id
-   * @param type               type
-   * @param tableList          table list
-   * @param targetRootDir      root dir
-   * @param workers            number of parallel workers
-   * @param bandwidth              bandwidth per worker in MB per sec
-   * @param noChecksumVerify       whether to skip checksum verification
+   * @param backupId         backup id
+   * @param type             type
+   * @param tableList        table list
+   * @param targetRootDir    root dir
+   * @param workers          number of parallel workers
+   * @param bandwidth        bandwidth per worker in MB per sec
+   * @param noChecksumVerify whether to skip checksum verification
    * @throws BackupException exception
    */
   public BackupInfo createBackupInfo(String backupId, BackupType type, List<TableName> tableList,

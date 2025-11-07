@@ -330,6 +330,55 @@ public class TestWALPlayer {
     testWALKeyValueMapper("hlog.input.tables");
   }
 
+  @Test
+  public void testInsertionOrderPreserved() throws Exception {
+    final TableName tableName1 = TableName.valueOf(name.getMethodName() + "1");
+    final TableName tableName2 = TableName.valueOf(name.getMethodName() + "2");
+    final byte[] FAMILY = Bytes.toBytes("family");
+    final byte[] COLUMN = Bytes.toBytes("c1");
+    final byte[] ROW = Bytes.toBytes("row");
+    Table t1 = TEST_UTIL.createTable(tableName1, FAMILY);
+    Table t2 = TEST_UTIL.createTable(tableName2, FAMILY);
+
+    // put a row into the first table
+    Put p = new Put(ROW);
+    p.addColumn(FAMILY, COLUMN, Bytes.toBytes("aaa"));
+    p.addColumn(FAMILY, COLUMN, Bytes.toBytes("zzz"));
+    t1.put(p);
+
+    // replay the WAL, map table 1 to table 2
+    WAL log = cluster.getRegionServer(0).getWAL(null);
+    log.rollWriter();
+    String walInputDir = new Path(cluster.getMaster().getMasterFileSystem().getWALRootDir(),
+      HConstants.HREGION_LOGDIR_NAME).toString();
+
+    Configuration configuration = TEST_UTIL.getConfiguration();
+    WALPlayer player = new WALPlayer(configuration);
+
+    configuration.setBoolean(HFileOutputFormat2.DISK_BASED_SORTING_ENABLED_KEY, true);
+
+    try {
+      String optionName = "_test_.name";
+      configuration.set(optionName, "1000");
+      player.setupTime(configuration, optionName);
+      String outPath = "/tmp/" + name.getMethodName();
+      configuration.set(WALPlayer.BULK_OUTPUT_CONF_KEY, outPath);
+      assertEquals(1000, configuration.getLong(optionName, 0));
+      assertEquals(0, ToolRunner.run(configuration, player,
+        new String[] { walInputDir, tableName1.getNameAsString(), tableName2.getNameAsString() }));
+
+      BulkLoadHFiles.create(configuration).bulkLoad(tableName2, new Path(outPath));
+
+      Get g = new Get(ROW);
+      Result r = t2.get(g);
+      Cell cell = r.getColumnLatestCell(FAMILY, COLUMN);
+      String value = Bytes.toString(CellUtil.cloneValue(cell));
+      assertEquals("zzz", value);
+    } finally {
+      configuration.unset(HFileOutputFormat2.DISK_BASED_SORTING_ENABLED_KEY);
+    }
+  }
+
   private void testWALKeyValueMapper(final String tableConfigKey) throws Exception {
     Configuration configuration = new Configuration();
     configuration.set(tableConfigKey, "table");
