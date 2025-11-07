@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0 
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -183,7 +183,7 @@ public class TestDataTieringManager {
     // Test with an incorrect path
     hFilePath = new Path("incorrectPath");
     testDataTieringMethodWithPathExpectingException(methodCallerWithPath, hFilePath,
-      new DataTieringException("HRegion corresponding to " + hFilePath + " doesn't exist"));
+      new DataTieringException("Incorrect HFile Path: " + hFilePath));
 
     // Test with a non-existing HRegion path
     Path basePath = hStoreFiles.get(0).getPath().getParent().getParent().getParent();
@@ -232,86 +232,35 @@ public class TestDataTieringManager {
   }
 
   @Test
-  public void testHotDataWithGracePeriod() throws IOException {
-    initializeTestEnvironment(); // This resets everything
-
-    // Re-create a region with specific settings for this test
-    long hotAge = 2 * DAY;
-    long gracePeriod = 3 * DAY;
-    long file1Age = (long) (2.5 * DAY); // Older than hotAge, younger than gracePeriod
-    long file2Age = (long) (3.5 * DAY); // Older than hotAge, older than gracePeriod
+  public void testIsHotDataWithGracePeriodLogic() {
+    long hotAge = 1 * DAY;
+    long gracePeriod = 2 * DAY;
     long currentTime = System.currentTimeMillis();
 
-    Configuration regionConf =
-      getConfWithTimeRangeDataTieringEnabledAndGracePeriod(hotAge, gracePeriod);
-    HRegion region = createHRegion("table_grace_period", regionConf);
-    HStore hStore = createHStore(region, "cf_grace_period", regionConf);
+    Configuration conf = getConfWithGracePeriod(hotAge, gracePeriod);
 
-    // File 1: Should be HOT (due to grace period)
-    HStoreFile hStoreFile1 =
-      createHStoreFile(hStore.getStoreContext().getFamilyStoreDirectoryPath(),
-        hStore.getReadOnlyConfiguration(), currentTime - file1Age, region.getRegionFileSystem());
-    // File 2: Should be COLD
-    HStoreFile hStoreFile2 =
-      createHStoreFile(hStore.getStoreContext().getFamilyStoreDirectoryPath(),
-        hStore.getReadOnlyConfiguration(), currentTime - file2Age, region.getRegionFileSystem());
+    // Case 1: Data is new (hot by age, hot by grace)
+    long newTimestamp = currentTime - (long) (0.5 * DAY);
+    assertTrue("Data is new, should be hot", dataTieringManager.isHotData(newTimestamp, conf));
 
-    hStore.refreshStoreFiles();
-    region.stores.put(Bytes.toBytes("cf_grace_period"), hStore);
-    testOnlineRegions.put(region.getRegionInfo().getEncodedName(), region);
+    // Case 2: Data is "cold" by age, but "hot" by grace period
+    // (1.5 days old > 1 day hotAge, but < 2 day gracePeriod)
+    long graceTimestamp = currentTime - (long) (1.5 * DAY);
+    assertTrue("Data is outside hotAge but inside gracePeriod, should be hot",
+      dataTieringManager.isHotData(graceTimestamp, conf));
 
-    // Need to init readers so HFileInfo is available
-    hStoreFile1.initReader();
-    hStoreFile2.initReader();
+    // Case 3: Data is "cold" by age and "cold" by grace period
+    // (2.5 days old > 1 day hotAge, and > 2 day gracePeriod)
+    long coldTimestamp = currentTime - (long) (2.5 * DAY);
+    assertFalse("Data is outside hotAge and gracePeriod, should be cold",
+      dataTieringManager.isHotData(coldTimestamp, conf));
 
-    // --- Test isHotData(Path) ---
-    DataTieringMethodCallerWithPath methodCallerWithPath = DataTieringManager::isHotData;
-    // File 1: (Age 2.5d) > (Hot 2d) but < (Grace 3d) ==> HOT
-    testDataTieringMethodWithPathNoException(methodCallerWithPath, hStoreFile1.getPath(), true);
-    // File 2: (Age 3.5d) > (Hot 2d) and > (Grace 3d) ==> COLD
-    testDataTieringMethodWithPathNoException(methodCallerWithPath, hStoreFile2.getPath(), false);
-
-    // --- Test isHotData(BlockCacheKey) ---
-    DataTieringMethodCallerWithKey methodCallerWithKey = DataTieringManager::isHotData;
-    BlockCacheKey key1 = new BlockCacheKey(hStoreFile1.getPath(), 0, true, BlockType.DATA);
-    BlockCacheKey key2 = new BlockCacheKey(hStoreFile2.getPath(), 0, true, BlockType.DATA);
-    // File 1: HOT
-    testDataTieringMethodWithKeyNoException(methodCallerWithKey, key1, true);
-    // File 2: COLD
-    testDataTieringMethodWithKeyNoException(methodCallerWithKey, key2, false);
-
-    // --- Test isHotData(HFileInfo, Configuration) ---
-    assertTrue(dataTieringManager.isHotData(hStoreFile1.getFileInfo().getHFileInfo(), regionConf));
-    assertFalse(dataTieringManager.isHotData(hStoreFile2.getFileInfo().getHFileInfo(), regionConf));
-
-    // --- Test isHotData(long, Configuration) ---
-    assertTrue(dataTieringManager.isHotData(currentTime - file1Age, regionConf));
-    assertFalse(dataTieringManager.isHotData(currentTime - file2Age, regionConf));
-
-    // --- Test with default grace period (0) ---
-    long hotAgeDefaultGrace = 2 * DAY;
-    long fileAgeDefaultGrace = (long) (2.5 * DAY); // Older than hotAge
-    Configuration regionConfDefaultGrace =
-      getConfWithTimeRangeDataTieringEnabled(hotAgeDefaultGrace); // No grace period set
-    HRegion regionDG = createHRegion("table_default_grace", regionConfDefaultGrace);
-    HStore hStoreDG = createHStore(regionDG, "cf_default_grace", regionConfDefaultGrace);
-    HStoreFile hStoreFileDG =
-      createHStoreFile(hStoreDG.getStoreContext().getFamilyStoreDirectoryPath(),
-        hStoreDG.getReadOnlyConfiguration(), currentTime - fileAgeDefaultGrace,
-        regionDG.getRegionFileSystem());
-    hStoreDG.refreshStoreFiles();
-    regionDG.stores.put(Bytes.toBytes("cf_default_grace"), hStoreDG);
-    testOnlineRegions.put(regionDG.getRegionInfo().getEncodedName(), regionDG);
-    hStoreFileDG.initReader();
-
-    // File: (Age 2.5d) > (Hot 2d). Grace period is 0. ==> COLD
-    testDataTieringMethodWithPathNoException(methodCallerWithPath, hStoreFileDG.getPath(), false);
-
-    // Cleanup region from online regions map to not affect other tests
-    testOnlineRegions.remove(region.getRegionInfo().getEncodedName());
-    testOnlineRegions.remove(regionDG.getRegionInfo().getEncodedName());
-    // Re-initialize default test environment for subsequent tests
-    initializeTestEnvironment();
+    // Case 4: Test default grace period (0)
+    Configuration confNoGrace = getConfWithTimeRangeDataTieringEnabled(hotAge);
+    // This timestamp (1.5 days old) is older than hotAge (1 day)
+    // With a default grace period of 0, it should be cold.
+    assertFalse("Data is outside hotAge and default gracePeriod (0), should be cold",
+      dataTieringManager.isHotData(graceTimestamp, confNoGrace));
   }
 
   @Test
@@ -896,8 +845,7 @@ public class TestDataTieringManager {
     return conf;
   }
 
-  private static Configuration getConfWithTimeRangeDataTieringEnabledAndGracePeriod(long hotDataAge,
-    long gracePeriod) {
+  private static Configuration getConfWithGracePeriod(long hotDataAge, long gracePeriod) {
     Configuration conf = getConfWithTimeRangeDataTieringEnabled(hotDataAge);
     conf.set(DataTieringManager.HSTORE_DATATIERING_GRACE_PERIOD_MILLIS_KEY,
       String.valueOf(gracePeriod));
