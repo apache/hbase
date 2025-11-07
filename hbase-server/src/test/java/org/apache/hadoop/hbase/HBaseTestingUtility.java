@@ -4078,7 +4078,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     };
   }
 
-
   /**
    * Returns a {@link Predicate} for checking that table is enabled
    */
