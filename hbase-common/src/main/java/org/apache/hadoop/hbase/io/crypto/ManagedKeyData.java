@@ -23,6 +23,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -100,9 +101,7 @@ public class ManagedKeyData {
    */
   public ManagedKeyData(byte[] key_cust, String key_namespace, Key theKey, ManagedKeyState keyState,
     String keyMetadata, long refreshTimestamp) {
-    this(key_cust, key_namespace, theKey, keyState,
-      keyMetadata != null ? ManagedKeyData.constructMetadataHash(keyMetadata) : null,
-      refreshTimestamp);
+    this(key_cust, key_namespace, theKey, keyState, keyMetadata, null, refreshTimestamp);
   }
 
   /**
@@ -144,9 +143,9 @@ public class ManagedKeyData {
     this.refreshTimestamp = refreshTimestamp;
   }
 
-  @InterfaceAudience.Private
-  public ManagedKeyData cloneWithoutKey() {
-    return new ManagedKeyData(keyCustodian, keyNamespace, null, keyState, keyMetadata,
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
+  public ManagedKeyData cloneWithoutSensitiveData() {
+    return new ManagedKeyData(keyCustodian, keyNamespace, null, keyState, null, keyMetadataHash,
       refreshTimestamp);
   }
 

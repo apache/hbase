@@ -65,8 +65,10 @@ public class SystemKeyCache {
     ManagedKeyData latestSystemKey = null;
     Map<Long, ManagedKeyData> systemKeys = new TreeMap<>();
     for (Path keyPath : allSystemKeyFiles) {
-      LOG.info("Loading system key from: {}", keyPath);
       ManagedKeyData keyData = accessor.loadSystemKey(keyPath);
+      LOG.info("Loaded system key with (custodian: {}, namespace: {}), checksum: {} and metadata hash: {} " +
+        " from file: {}", keyData.getKeyCustodianEncoded(), keyData.getKeyNamespace(),
+        keyData.getKeyChecksum(), keyData.getKeyMetadataHashEncoded(), keyPath);
       if (latestSystemKey == null) {
         latestSystemKey = keyData;
       }

@@ -235,6 +235,8 @@ public class TestKeymetaTableAccessor {
     public void setUp() throws Exception {
       super.setUp();
 
+      when(result1.isEmpty()).thenReturn(false);
+      when(result2.isEmpty()).thenReturn(false);
       when(result1.getValue(eq(KEY_META_INFO_FAMILY), eq(KEY_STATE_QUAL_BYTES)))
         .thenReturn(new byte[] { ACTIVE.getVal() });
       when(result2.getValue(eq(KEY_META_INFO_FAMILY), eq(KEY_STATE_QUAL_BYTES)))
@@ -294,7 +296,7 @@ public class TestKeymetaTableAccessor {
     public void testGetKeyWithWrappedKey() throws Exception {
       ManagedKeyData keyData = setupActiveKey(CUST_ID, result1);
 
-      byte[] keyMetadataHash = ManagedKeyData.constructMetadataHash(KEY_METADATA);
+      byte[] keyMetadataHash = ManagedKeyData.constructMetadataHash(keyData.getKeyMetadata());
       ManagedKeyData result = accessor.getKey(CUST_ID, KEY_NAMESPACE, keyMetadataHash);
 
       verify(table).get(any(Get.class));
@@ -315,7 +317,7 @@ public class TestKeymetaTableAccessor {
     public void testGetKeyWithoutWrappedKey() throws Exception {
       when(table.get(any(Get.class))).thenReturn(result2);
 
-      byte[] keyMetadataHash = ManagedKeyData.constructMetadataHash(KEY_METADATA);
+      byte[] keyMetadataHash = ManagedKeyData.constructMetadataHash(keyMetadata2);
       ManagedKeyData result = accessor.getKey(CUST_ID, KEY_NAMESPACE, keyMetadataHash);
 
       verify(table).get(any(Get.class));
@@ -451,11 +453,12 @@ public class TestKeymetaTableAccessor {
     @Test
     public void testDisableKey() throws Exception {
       String keyMetadata = "testMetadata";
-      byte[] keyMetadataHash = ManagedKeyData.constructMetadataHash(keyMetadata);
+      ManagedKeyData keyData =
+        new ManagedKeyData(CUST_ID, KEY_NAMESPACE, null, ManagedKeyState.ACTIVE, keyMetadata);
       ArgumentCaptor<List> mutationsCaptor = ArgumentCaptor.forClass(List.class);
       ArgumentCaptor<Object[]> resultsCaptor = ArgumentCaptor.forClass(Object[].class);
 
-      accessor.disableKey(CUST_ID, KEY_NAMESPACE, keyMetadataHash);
+      accessor.disableKey(keyData);
 
       verify(table).batch(mutationsCaptor.capture(), resultsCaptor.capture());
       List mutations = mutationsCaptor.getValue();
@@ -550,11 +553,22 @@ public class TestKeymetaTableAccessor {
     }
 
     @Test
-    public void testUpdateActiveStateInvalidCurrentState() {
+    public void testUpdateActiveStateFromDisabledToActive() throws Exception {
       ManagedKeyData keyData =
         new ManagedKeyData(CUST_ID, KEY_NAMESPACE, null, DISABLED, "metadata", 123L);
+      ManagedKeyData systemKey =
+        new ManagedKeyData(new byte[] { 1 }, KEY_SPACE_GLOBAL, null, ACTIVE, "syskey", 100L);
+      when(systemKeyCache.getLatestSystemKey()).thenReturn(systemKey);
 
-      assertThrows(IOException.class, () -> accessor.updateActiveState(keyData, ACTIVE));
+      ArgumentCaptor<List> mutationsCaptor = ArgumentCaptor.forClass(List.class);
+      ArgumentCaptor<Object[]> resultsCaptor = ArgumentCaptor.forClass(Object[].class);
+
+      accessor.updateActiveState(keyData, ACTIVE);
+
+      verify(table).batch(mutationsCaptor.capture(), resultsCaptor.capture());
+      List mutations = mutationsCaptor.getValue();
+      // Should have 2 mutations: add CustNamespace row and add all columns to Metadata row
+      assertEquals(2, mutations.size());
     }
 
     @Test
@@ -562,7 +576,8 @@ public class TestKeymetaTableAccessor {
       ManagedKeyData keyData =
         new ManagedKeyData(CUST_ID, KEY_NAMESPACE, null, ACTIVE, "metadata", 123L);
 
-      assertThrows(IOException.class, () -> accessor.updateActiveState(keyData, DISABLED));
+      assertThrows(IllegalArgumentException.class,
+        () -> accessor.updateActiveState(keyData, DISABLED));
     }
   }
 }

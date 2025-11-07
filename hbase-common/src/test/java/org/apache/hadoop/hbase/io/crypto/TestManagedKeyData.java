@@ -32,6 +32,7 @@ import javax.crypto.KeyGenerator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -80,7 +81,7 @@ public class TestManagedKeyData {
       () -> new ManagedKeyData(keyCust, null, theKey, keyState, keyMetadata));
     assertThrows(NullPointerException.class,
       () -> new ManagedKeyData(keyCust, keyNamespace, theKey, null, keyMetadata));
-    assertThrows(NullPointerException.class,
+    assertThrows(IllegalArgumentException.class,
       () -> new ManagedKeyData(keyCust, keyNamespace, theKey, ManagedKeyState.ACTIVE, null));
   }
 
@@ -104,12 +105,13 @@ public class TestManagedKeyData {
 
   @Test
   public void testCloneWithoutKey() {
-    ManagedKeyData cloned = managedKeyData.cloneWithoutKey();
+    ManagedKeyData cloned = managedKeyData.cloneWithoutSensitiveData();
     assertNull(cloned.getTheKey());
+    assertNull(cloned.getKeyMetadata());
     assertEquals(managedKeyData.getKeyCustodian(), cloned.getKeyCustodian());
     assertEquals(managedKeyData.getKeyNamespace(), cloned.getKeyNamespace());
     assertEquals(managedKeyData.getKeyState(), cloned.getKeyState());
-    assertEquals(managedKeyData.getKeyMetadata(), cloned.getKeyMetadata());
+    assertTrue(Bytes.equals(managedKeyData.getKeyMetadataHash(), cloned.getKeyMetadataHash()));
   }
 
   @Test

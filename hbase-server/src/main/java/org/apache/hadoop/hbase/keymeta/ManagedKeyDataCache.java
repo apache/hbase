@@ -196,8 +196,10 @@ public class ManagedKeyDataCache extends KeyManagementBase {
       ) {
         return entry;
       }
-      LOG.warn("Hash collision detected for metadata hash: {} - custodian/namespace mismatch",
-        ManagedKeyProvider.encodeToStr(metadataHashBytes));
+      LOG.warn("Hash collision detected for metadata hash: {} - custodian/namespace mismatch " +
+        "expected: ({}, {}), actual: ({}, {})", ManagedKeyProvider.encodeToStr(metadataHashBytes),
+        ManagedKeyProvider.encodeToStr(keyCust), keyNamespace,
+        ManagedKeyProvider.encodeToStr(entry.getKeyCustodian()), entry.getKeyNamespace());
     }
     return null;
   }

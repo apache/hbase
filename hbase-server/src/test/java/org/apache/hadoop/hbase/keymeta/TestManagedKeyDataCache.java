@@ -528,8 +528,8 @@ public class TestManagedKeyDataCache {
 
       // Try to eject with a different custodian - should not eject from either cache
       byte[] differentCustodian = "different-cust".getBytes();
-      boolean ejected = cache.ejectKey(differentCustodian, KEY_SPACE_GLOBAL,
-        key.getKeyMetadataHash());
+      boolean ejected =
+        cache.ejectKey(differentCustodian, KEY_SPACE_GLOBAL, key.getKeyMetadataHash());
       assertFalse("Should not eject key for different custodian", ejected);
       assertEquals(1, cache.getActiveCacheEntryCount());
       assertEquals(1, cache.getGenericCacheEntryCount());

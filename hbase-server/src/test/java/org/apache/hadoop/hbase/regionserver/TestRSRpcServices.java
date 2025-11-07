@@ -258,7 +258,7 @@ public class TestRSRpcServices {
     assertTrue("Response should indicate key was ejected", response.getBoolMsg());
 
     // Verify that ejectKey was called on the cache
-    verify(mockCache).ejectKey(keyCustodian, keyNamespace, keyMetadata);
+    verify(mockCache).ejectKey(keyCustodian, keyNamespace, keyMetadataHash);
 
     LOG.info("ejectManagedKeyDataCacheEntry test completed successfully");
   }

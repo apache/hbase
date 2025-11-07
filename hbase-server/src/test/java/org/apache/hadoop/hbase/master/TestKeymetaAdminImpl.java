@@ -30,7 +30,6 @@ import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -659,7 +658,7 @@ public class TestKeymetaAdminImpl {
 
       assertNotNull(result);
       verify(mockAccessor, times(2)).getAllKeys(CUST_BYTES, KEY_SPACE_GLOBAL);
-      verify(mockAccessor).disableKey(eq(CUST_BYTES), eq(KEY_SPACE_GLOBAL), any(byte[].class));
+      verify(mockAccessor).disableKey(any(ManagedKeyData.class));
     }
 
     @Test
@@ -680,7 +679,7 @@ public class TestKeymetaAdminImpl {
 
       assertNotNull(result);
       assertEquals(ManagedKeyState.DISABLED, result.getKeyState());
-      verify(mockAccessor).disableKey(eq(CUST_BYTES), eq(KEY_SPACE_GLOBAL), any(byte[].class));
+      verify(mockAccessor).disableKey(any(ManagedKeyData.class));
     }
 
     @Test
@@ -746,9 +745,8 @@ public class TestKeymetaAdminImpl {
       }
 
       @Override
-      public void disableKey(byte[] keyCust, String keyNamespace, byte[] keyMetadataHash)
-        throws IOException {
-        accessor.disableKey(keyCust, keyNamespace, keyMetadataHash);
+      public void disableKey(ManagedKeyData keyData) throws IOException {
+        accessor.disableKey(keyData);
       }
 
       @Override
