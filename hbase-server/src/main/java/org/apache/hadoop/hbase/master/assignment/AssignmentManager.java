@@ -2208,7 +2208,7 @@ public class AssignmentManager {
           // revert
           regionNode.setState(state);
           regionNode.setRegionLocation(regionLocation);
-        }else{
+        } else {
           regionInTransitionTracker.handleRegionStateNodeOperation(regionNode);
         }
       }
@@ -2255,8 +2255,6 @@ public class AssignmentManager {
     }
   }
 
-  //TODO umesh need to check persistmeta
-
   // should be called under the RegionStateNode lock
   // for SCP
   public void regionClosedAbnormally(RegionStateNode regionNode) throws IOException {
@@ -2273,7 +2271,7 @@ public class AssignmentManager {
         // revert
         regionNode.setState(state);
         regionNode.setRegionLocation(regionLocation);
-      }else {
+      } else {
         regionInTransitionTracker.handleRegionStateNodeOperation(regionNode);
       }
     }

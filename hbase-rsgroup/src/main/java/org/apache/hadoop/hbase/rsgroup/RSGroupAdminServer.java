@@ -48,7 +48,6 @@ import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.TableStateManager;
-import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
 import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
 import org.apache.hadoop.hbase.net.Address;
@@ -533,8 +532,7 @@ public class RSGroupAdminServer implements RSGroupAdmin {
       Map<String, RegionState> groupRIT = rsGroupGetRegionsInTransition(groupName);
       if (groupRIT.size() > 0 && !request.isIgnoreRegionsInTransition()) {
         LOG.debug("Not running balancer because {} region(s) in transition: {}", groupRIT.size(),
-          StringUtils.abbreviate(
-            master.getAssignmentManager().getRegionsInTransition().toString(),
+          StringUtils.abbreviate(master.getAssignmentManager().getRegionsInTransition().toString(),
             256));
         return responseBuilder.build();
       }
@@ -657,8 +655,7 @@ public class RSGroupAdminServer implements RSGroupAdmin {
     throws IOException {
     SortedSet<TableName> tablesInGroup = getRSGroupInfo(groupName).getTables();
     Map<String, RegionState> rit = Maps.newTreeMap();
-    for (RegionStateNode regionNode : master.getAssignmentManager()
-      .getRegionsInTransition()) {
+    for (RegionStateNode regionNode : master.getAssignmentManager().getRegionsInTransition()) {
       TableName tn = regionNode.getTable();
       if (tablesInGroup.contains(tn)) {
         rit.put(regionNode.getRegionInfo().getEncodedName(), regionNode.toRegionState());
@@ -666,6 +663,7 @@ public class RSGroupAdminServer implements RSGroupAdmin {
     }
     return rit;
   }
+
   /**
    * This is an EXPENSIVE clone. Cloning though is the safest thing to do. Can't let out original
    * since it can change and at least the load balancer wants to iterate this exported list. Load
