@@ -20,6 +20,7 @@
 
 module Shell
   module Commands
+    # Prints whether rpc throttle is enabled
     class RpcThrottleEnabled < Command
       def help
         <<-EOF
@@ -32,8 +33,8 @@ EOF
       end
 
       def command
-        state = !!quotas_admin.is_rpc_throttle_enabled
-        formatter.row(["Rpc throttle enabled : #{state}"])
+        state = quotas_admin.rpc_throttle_enabled?
+        formatter.row([state.to_s])
         state
       end
     end

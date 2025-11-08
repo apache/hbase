@@ -247,7 +247,7 @@ module Hbase
     define_test 'switch rpc throttle' do
       result = nil
       output = capture_stdout { result = command(:rpc_throttle_enabled) }
-      assert(output.include?('Rpc throttle enabled : true'))
+      assert(output.include?('true'))
       assert(result == true)
 
       result = nil
@@ -257,7 +257,7 @@ module Hbase
 
       result = nil
       output = capture_stdout { result = command(:rpc_throttle_enabled) }
-      assert(output.include?('Rpc throttle enabled : false'))
+      assert(output.include?('false'))
       assert(result == false)
 
       result = nil
@@ -267,7 +267,7 @@ module Hbase
 
       result = nil
       output = capture_stdout { result = command(:rpc_throttle_enabled) }
-      assert(output.include?('Rpc throttle enabled : true'))
+      assert(output.include?('true'))
       assert(result == true)
     end
 

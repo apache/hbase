@@ -366,8 +366,8 @@ module Hbase
       @admin.switchRpcThrottle(java.lang.Boolean.valueOf(enabled))
     end
 
-    def is_rpc_throttle_enabled()
-      @admin.isRpcThrottleEnabled()
+    def rpc_throttle_enabled?
+      @admin.isRpcThrottleEnabled
     end
 
     def switch_exceed_throttle_quota(enabled)
