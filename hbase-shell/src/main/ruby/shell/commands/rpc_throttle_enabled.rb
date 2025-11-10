@@ -25,7 +25,7 @@ module Shell
       def help
         <<-EOF
 Query the current rpc throttle state.
-Returns true if rpc throttle is enabled, false otherwise.
+Return true if rpc throttle is enabled, false otherwise.
 
 Examples:
   hbase> rpc_throttle_enabled
