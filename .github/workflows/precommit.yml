@@ -1,0 +1,241 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+name: PR Precommit Checks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  SRC_REL: src
+  PATCH_REL: output
+  YETUS_REL: yetus
+  YETUS_VERSION: '0.15.0'
+  GENERAL_CHECK_PLUGINS: 'all,-javadoc,-jira,-shadedjars,-unit'
+  JDK_SPECIFIC_PLUGINS: 'compile,github,htmlout,javac,javadoc,maven,mvninstall,shadedjars,unit'
+  AUTHOR_IGNORE_LIST: 'src/main/asciidoc/_chapters/developer.adoc'
+  BLANKS_EOL_IGNORE_FILE: 'dev-support/blanks-eol-ignore.txt'
+  BLANKS_TABS_IGNORE_FILE: 'dev-support/blanks-tabs-ignore.txt'
+  ARCHIVE_PATTERN_LIST: 'TEST-*.xml,org.apache.h*.txt,*.dumpstream,*.dump'
+  TESTS_FILTER: 'checkstyle,javac,javadoc,pylint,shellcheck,shelldocs,blanks,perlcritic,ruby-lint,rubocop'
+  BUILD_THREAD: 4
+  SUREFIRE_FIRST_PART_FORK_COUNT: '0.5C'
+  SUREFIRE_SECOND_PART_FORK_COUNT: '0.5C'
+  ASF_NIGHTLIES: 'https://nightlies.apache.org'
+
+jobs:
+  precommit-checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 600
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: 'general-check'
+            plugins: 'all,-javadoc,-jira,-shadedjars,-unit'
+            java-home: '/usr/lib/jvm/java-17'
+            hadoop-profile: '3.0'
+            workdir: 'yetus-general-check'
+            skip-errorprone: false
+            report-name: 'PR General Check Report'
+          - name: 'jdk17-hadoop3-check'
+            plugins: 'compile,github,htmlout,javac,javadoc,maven,mvninstall,shadedjars,unit'
+            java-home: '/usr/lib/jvm/java-17'
+            hadoop-profile: '3.0'
+            workdir: 'yetus-jdk17-hadoop3-check'
+            skip-errorprone: true
+            report-name: 'PR JDK17+Hadoop3 Check Report'
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+        with:
+          path: ${{ matrix.workdir }}/src
+          fetch-depth: 0
+
+      - name: Setup environment paths
+        id: setup-env
+        run: |
+          WORKDIR="${GITHUB_WORKSPACE}/${{ matrix.workdir }}"
+          echo "WORKDIR=${WORKDIR}" >> $GITHUB_ENV
+          echo "YETUSDIR=${WORKDIR}/${YETUS_REL}" >> $GITHUB_ENV
+          echo "SOURCEDIR=${WORKDIR}/${SRC_REL}" >> $GITHUB_ENV
+          echo "PATCHDIR=${WORKDIR}/${PATCH_REL}" >> $GITHUB_ENV
+          echo "DOCKERFILE=${WORKDIR}/${SRC_REL}/dev-support/docker/Dockerfile" >> $GITHUB_ENV
+          echo "CACHE_APACHE_ARTIFACT=${WORKDIR}/${SRC_REL}/dev-support/jenkins-scripts/cache-apache-project-artifact.sh" >> $GITHUB_ENV
+          echo "YETUS_DRIVER=${WORKDIR}/${SRC_REL}/dev-support/jenkins_precommit_github_yetus.sh" >> $GITHUB_ENV
+          echo "HIDE_OLD_COMMENTS=${WORKDIR}/${SRC_REL}/dev-support/gh_hide_old_comments.sh" >> $GITHUB_ENV
+          echo "ASF_NIGHTLIES_CHECK_BASE=${ASF_NIGHTLIES}/hbase/${{ github.repository }}/${{ github.run_id }}/${{ matrix.workdir }}/${PATCH_REL}" >> $GITHUB_ENV
+
+          # Set matrix-specific environment variables
+          echo "PLUGINS=${{ matrix.plugins }}" >> $GITHUB_ENV
+          echo "SET_JAVA_HOME=${{ matrix.java-home }}" >> $GITHUB_ENV
+          echo "HADOOP_PROFILE=${{ matrix.hadoop-profile }}" >> $GITHUB_ENV
+          echo "WORKDIR_REL=${{ matrix.workdir }}" >> $GITHUB_ENV
+          echo "SKIP_ERRORPRONE=${{ matrix.skip-errorprone }}" >> $GITHUB_ENV
+          echo "BUILD_URL_ARTIFACTS=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_ENV
+
+          # Create working directories
+          mkdir -p "${WORKDIR}"
+          mkdir -p "${WORKDIR}/${SRC_REL}"
+          mkdir -p "${WORKDIR}/${YETUS_REL}"
+          mkdir -p "${WORKDIR}/${PATCH_REL}"
+
+      - name: Download and extract Apache Yetus
+        working-directory: ${{ env.YETUSDIR }}
+        run: |
+          "${CACHE_APACHE_ARTIFACT}" \
+            --keys 'https://downloads.apache.org/yetus/KEYS' \
+            --verify-tar-gz \
+            ./apache-yetus-${YETUS_VERSION}-bin.tar.gz \
+            yetus/${YETUS_VERSION}/apache-yetus-${YETUS_VERSION}-bin.tar.gz
+          tar --strip-components=1 -xzf apache-yetus-${YETUS_VERSION}-bin.tar.gz
+          rm apache-yetus-${YETUS_VERSION}-bin.tar.gz
+
+      - name: Run Yetus test-patch
+        id: test-patch
+        continue-on-error: true
+        working-directory: ${{ env.WORKDIR }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_USER: ${{ github.actor }}
+        run: |
+          hostname -a
+          pwd
+          ls -la
+          printenv 2>&1 | sort
+          echo "[INFO] Launching Yetus via ${YETUS_DRIVER}"
+          set +e
+          "${YETUS_DRIVER}"
+          EXIT_CODE=$?
+          set -e
+          echo "exit_code=${EXIT_CODE}" >> $GITHUB_OUTPUT
+          if [ ${EXIT_CODE} -ne 0 ]; then
+            echo "Test-patch failed with exit code ${EXIT_CODE}"
+          fi
+          exit 0
+
+      - name: Process site artifacts
+        if: matrix.name == 'general-check'
+        working-directory: ${{ env.WORKDIR }}
+        run: |
+          if [ -d "${PATCHDIR}/branch-site" ]; then
+            echo "Remove ${PATCHDIR}/branch-site for saving space"
+            rm -rf "${PATCHDIR}/branch-site"
+            python3 ${SOURCEDIR}/dev-support/gen_redirect_html.py \
+              "${ASF_NIGHTLIES}/hbase/${{ github.repository }}/${{ github.run_id }}/${{ matrix.workdir }}/${PATCH_REL}/branch-site" \
+              > "${PATCHDIR}/branch-site.html"
+          else
+            echo "No branch-site, skipping"
+          fi
+
+          if [ -d "${PATCHDIR}/patch-site" ]; then
+            echo "Remove ${PATCHDIR}/patch-site for saving space"
+            rm -rf "${PATCHDIR}/patch-site"
+            python3 ${SOURCEDIR}/dev-support/gen_redirect_html.py \
+              "${ASF_NIGHTLIES}/hbase/${{ github.repository }}/${{ github.run_id }}/${{ matrix.workdir }}/${PATCH_REL}/patch-site" \
+              > "${PATCHDIR}/patch-site.html"
+          else
+            echo "No patch-site, skipping"
+          fi
+
+      - name: Process test logs
+        if: matrix.name == 'jdk17-hadoop3-check'
+        working-directory: ${{ env.WORKDIR }}
+        run: |
+          if [ -d "${PATCHDIR}/archiver" ]; then
+            count=$(find "${PATCHDIR}/archiver" -type f | wc -l)
+            if [[ 0 -ne ${count} ]]; then
+              echo "zipping ${count} archived files"
+              zip -q -m -r "${PATCHDIR}/test_logs.zip" "${PATCHDIR}/archiver"
+            else
+              echo "No archived files, skipping compressing."
+            fi
+          else
+            echo "No archiver directory, skipping compressing."
+          fi
+
+          if [ -f "${PATCHDIR}/test_logs.zip" ]; then
+            echo "Creating redirect for test_logs.zip"
+            python3 ${SOURCEDIR}/dev-support/gen_redirect_html.py \
+              "${ASF_NIGHTLIES}/hbase/${{ github.repository }}/${{ github.run_id }}/${{ matrix.workdir }}/${PATCH_REL}" \
+              > "${PATCHDIR}/test_logs.html"
+          else
+            echo "No test_logs.zip, skipping"
+          fi
+
+      - name: Archive artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}-results
+          path: |
+            ${{ matrix.workdir }}/output/*
+            ${{ matrix.workdir }}/output/**/*
+            !${{ matrix.workdir }}/output/precommit
+            !${{ matrix.workdir }}/output/precommit/**/*
+          retention-days: 15
+
+      - name: Upload HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}-html-report
+          path: ${{ matrix.workdir }}/output/report.html
+          retention-days: 15
+
+      - name: Hide old PR comments
+        if: matrix.name == 'general-check'
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          "${HIDE_OLD_COMMENTS}" "${{ github.event.pull_request.number }}" || :
+
+      - name: Set job status
+        if: always()
+        run: |
+          if [ "${{ steps.test-patch.outputs.exit_code }}" != "0" ]; then
+            echo "Test-patch failed, marking job as failed"
+            exit 1
+          fi
+
+      - name: Cleanup
+        if: always()
+        run: |
+          # See YETUS-764
+          if [ -f "${PATCHDIR}/pidfile.txt" ]; then
+            echo "test-patch process appears to still be running: killing"
+            kill $(cat "${PATCHDIR}/pidfile.txt") || true
+            sleep 10
+          fi
+
+          if [ -f "${PATCHDIR}/cidfile.txt" ]; then
+            echo "test-patch container appears to still be running: killing"
+            docker kill $(cat "${PATCHDIR}/cidfile.txt") || true
+          fi
+
+          # See HADOOP-13951
+          if [ -d "${WORKDIR}" ]; then
+            chmod -R u+rxw "${WORKDIR}" || true
+          fi
