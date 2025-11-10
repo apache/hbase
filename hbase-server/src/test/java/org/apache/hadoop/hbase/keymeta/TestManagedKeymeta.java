@@ -259,4 +259,151 @@ public class TestManagedKeymeta extends ManagedKeyTestBase {
 
     assertTrue(exception.getMessage().contains("Network error"));
   }
+
+  @Test
+  public void testDisableKeyManagementLocal() throws Exception {
+    HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
+    KeymetaAdmin keymetaAdmin = master.getKeymetaAdmin();
+    doTestDisableKeyManagement(keymetaAdmin);
+  }
+
+  @Test
+  public void testDisableKeyManagementOverRPC() throws Exception {
+    KeymetaAdmin adminClient = new KeymetaAdminClient(TEST_UTIL.getConnection());
+    doTestDisableKeyManagement(adminClient);
+  }
+
+  private void doTestDisableKeyManagement(KeymetaAdmin adminClient)
+    throws IOException, KeyException {
+    String cust = "cust2";
+    byte[] custBytes = cust.getBytes();
+
+    // First enable key management
+    adminClient.enableKeyManagement(custBytes, ManagedKeyData.KEY_SPACE_GLOBAL);
+
+    // Now disable it
+    List<ManagedKeyData> disabledKeys =
+      adminClient.disableKeyManagement(custBytes, ManagedKeyData.KEY_SPACE_GLOBAL);
+    assertNotNull(disabledKeys);
+    assertEquals(1, disabledKeys.size());
+    assertEquals(ManagedKeyState.DISABLED, disabledKeys.get(0).getKeyState());
+  }
+
+  @Test
+  public void testDisableKeyManagementWithClientSideServiceException() throws Exception {
+    doTestWithClientSideServiceException((mockStub, networkError) -> {
+      try {
+        when(mockStub.disableKeyManagement(any(), any())).thenThrow(networkError);
+      } catch (ServiceException e) {
+        // We are just setting up the mock, so no exception is expected here.
+        throw new RuntimeException("Unexpected ServiceException", e);
+      }
+      return null;
+    }, (client) -> {
+      try {
+        client.disableKeyManagement(new byte[0], "namespace");
+      } catch (IOException | KeyException e) {
+        throw new RuntimeException(e);
+      }
+      return null;
+    });
+  }
+
+  @Test
+  public void testDisableManagedKeyLocal() throws Exception {
+    HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
+    KeymetaAdmin keymetaAdmin = master.getKeymetaAdmin();
+    doTestDisableManagedKey(keymetaAdmin);
+  }
+
+  @Test
+  public void testDisableManagedKeyOverRPC() throws Exception {
+    KeymetaAdmin adminClient = new KeymetaAdminClient(TEST_UTIL.getConnection());
+    doTestDisableManagedKey(adminClient);
+  }
+
+  private void doTestDisableManagedKey(KeymetaAdmin adminClient) throws IOException, KeyException {
+    String cust = "cust3";
+    byte[] custBytes = cust.getBytes();
+
+    // First enable key management to create a key
+    ManagedKeyData managedKey =
+      adminClient.enableKeyManagement(custBytes, ManagedKeyData.KEY_SPACE_GLOBAL);
+    assertNotNull(managedKey);
+    byte[] keyMetadataHash = managedKey.getKeyMetadataHash();
+
+    // Now disable the specific key
+    ManagedKeyData disabledKey = adminClient.disableManagedKey(custBytes,
+      ManagedKeyData.KEY_SPACE_GLOBAL, keyMetadataHash);
+    assertNotNull(disabledKey);
+    assertEquals(ManagedKeyState.DISABLED, disabledKey.getKeyState());
+  }
+
+  @Test
+  public void testDisableManagedKeyWithClientSideServiceException() throws Exception {
+    doTestWithClientSideServiceException((mockStub, networkError) -> {
+      try {
+        when(mockStub.disableManagedKey(any(), any())).thenThrow(networkError);
+      } catch (ServiceException e) {
+        // We are just setting up the mock, so no exception is expected here.
+        throw new RuntimeException("Unexpected ServiceException", e);
+      }
+      return null;
+    }, (client) -> {
+      try {
+        client.disableManagedKey(new byte[0], "namespace", new byte[0]);
+      } catch (IOException | KeyException e) {
+        throw new RuntimeException(e);
+      }
+      return null;
+    });
+  }
+
+  // Note: Integration tests for rotateManagedKey are complex due to keymeta table persistence.
+  // The business logic is already tested in TestKeymetaAdminImpl with mocks.
+  // Here we test that the RPC layer properly handles exceptions.
+
+  @Test
+  public void testRotateManagedKeyWithClientSideServiceException() throws Exception {
+    doTestWithClientSideServiceException((mockStub, networkError) -> {
+      try {
+        when(mockStub.rotateManagedKey(any(), any())).thenThrow(networkError);
+      } catch (ServiceException e) {
+        // We are just setting up the mock, so no exception is expected here.
+        throw new RuntimeException("Unexpected ServiceException", e);
+      }
+      return null;
+    }, (client) -> {
+      try {
+        client.rotateManagedKey(new byte[0], "namespace");
+      } catch (IOException | KeyException e) {
+        throw new RuntimeException(e);
+      }
+      return null;
+    });
+  }
+
+  // Note: Integration tests for refreshManagedKeys are complex due to keymeta table persistence.
+  // The business logic is already tested in TestKeymetaAdminImpl with mocks.
+  // Here we test that the RPC layer properly handles exceptions.
+
+  @Test
+  public void testRefreshManagedKeysWithClientSideServiceException() throws Exception {
+    doTestWithClientSideServiceException((mockStub, networkError) -> {
+      try {
+        when(mockStub.refreshManagedKeys(any(), any())).thenThrow(networkError);
+      } catch (ServiceException e) {
+        // We are just setting up the mock, so no exception is expected here.
+        throw new RuntimeException("Unexpected ServiceException", e);
+      }
+      return null;
+    }, (client) -> {
+      try {
+        client.refreshManagedKeys(new byte[0], "namespace");
+      } catch (IOException | KeyException e) {
+        throw new RuntimeException(e);
+      }
+      return null;
+    });
+  }
 }

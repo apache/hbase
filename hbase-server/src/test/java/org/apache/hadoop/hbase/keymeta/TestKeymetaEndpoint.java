@@ -52,6 +52,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
@@ -83,6 +84,14 @@ public class TestKeymetaEndpoint {
   private RpcCallback<ManagedKeyResponse> enableKeyManagementDone;
   @Mock
   private RpcCallback<GetManagedKeysResponse> getManagedKeysDone;
+  @Mock
+  private RpcCallback<GetManagedKeysResponse> disableKeyManagementDone;
+  @Mock
+  private RpcCallback<ManagedKeyResponse> disableManagedKeyDone;
+  @Mock
+  private RpcCallback<ManagedKeyResponse> rotateManagedKeyDone;
+  @Mock
+  private RpcCallback<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.EmptyMsg> refreshManagedKeysDone;
 
   KeymetaServiceEndpoint keymetaServiceEndpoint;
   private ManagedKeyResponse.Builder responseBuilder;
@@ -280,4 +289,221 @@ public class TestKeymetaEndpoint {
     verify(keymetaAdmin, never()).getManagedKeys(any(), any());
     verify(getManagedKeysDone).run(argThat(response -> response.getStateList().isEmpty()));
   }
+
+  @Test
+  public void testDisableKeyManagement_Success() throws Exception {
+    // Arrange
+    ManagedKeyRequest request =
+      requestBuilder.setKeyCust(ByteString.copyFrom(KEY_CUST.getBytes())).build();
+    List<ManagedKeyData> disabledKeys = Arrays.asList(keyData1, keyData2);
+    when(keymetaAdmin.disableKeyManagement(any(), any())).thenReturn(disabledKeys);
+
+    // Act
+    keyMetaAdminService.disableKeyManagement(controller, request, disableKeyManagementDone);
+
+    // Assert
+    verify(disableKeyManagementDone).run(any());
+    verify(controller, never()).setFailed(anyString());
+  }
+
+  @Test
+  public void testDisableKeyManagement_IOException() throws Exception {
+    doTestDisableKeyManagementError(IOException.class);
+  }
+
+  @Test
+  public void testDisableKeyManagement_KeyException() throws Exception {
+    doTestDisableKeyManagementError(KeyException.class);
+  }
+
+  private void doTestDisableKeyManagementError(Class<? extends Exception> exType)
+    throws Exception {
+    // Arrange
+    when(keymetaAdmin.disableKeyManagement(any(), any())).thenThrow(exType);
+    ManagedKeyRequest request =
+      requestBuilder.setKeyCust(ByteString.copyFrom(KEY_CUST.getBytes())).build();
+
+    // Act
+    keyMetaAdminService.disableKeyManagement(controller, request, disableKeyManagementDone);
+
+    // Assert
+    verify(controller).setFailed(contains(exType.getSimpleName()));
+    verify(keymetaAdmin).disableKeyManagement(any(), any());
+    verify(disableKeyManagementDone).run(GetManagedKeysResponse.getDefaultInstance());
+  }
+
+  @Test
+  public void testDisableKeyManagement_InvalidCust() throws Exception {
+    // Arrange
+    ManagedKeyRequest request = requestBuilder.setKeyCust(ByteString.EMPTY).build();
+
+    keyMetaAdminService.disableKeyManagement(controller, request, disableKeyManagementDone);
+
+    verify(controller).setFailed(contains("key_cust must not be empty"));
+    verify(keymetaAdmin, never()).disableKeyManagement(any(), any());
+    verify(disableKeyManagementDone).run(argThat(response -> response.getStateList().isEmpty()));
+  }
+
+  @Test
+  public void testDisableManagedKey_Success() throws Exception {
+    // Arrange
+    org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyEntryRequest request =
+      org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyEntryRequest
+        .newBuilder()
+        .setKeyCustNs(
+          requestBuilder.setKeyCust(ByteString.copyFrom(KEY_CUST.getBytes())).build())
+        .setKeyMetadataHash(ByteString.copyFrom(keyData1.getKeyMetadataHash())).build();
+    when(keymetaAdmin.disableManagedKey(any(), any(), any())).thenReturn(keyData1);
+
+    // Act
+    keyMetaAdminService.disableManagedKey(controller, request, disableManagedKeyDone);
+
+    // Assert
+    verify(disableManagedKeyDone).run(any());
+    verify(controller, never()).setFailed(anyString());
+  }
+
+  @Test
+  public void testDisableManagedKey_IOException() throws Exception {
+    doTestDisableManagedKeyError(IOException.class);
+  }
+
+  @Test
+  public void testDisableManagedKey_KeyException() throws Exception {
+    doTestDisableManagedKeyError(KeyException.class);
+  }
+
+  private void doTestDisableManagedKeyError(Class<? extends Exception> exType) throws Exception {
+    // Arrange
+    when(keymetaAdmin.disableManagedKey(any(), any(), any())).thenThrow(exType);
+    org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyEntryRequest request =
+      org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyEntryRequest
+        .newBuilder()
+        .setKeyCustNs(
+          requestBuilder.setKeyCust(ByteString.copyFrom(KEY_CUST.getBytes())).build())
+        .setKeyMetadataHash(ByteString.copyFrom(keyData1.getKeyMetadataHash())).build();
+
+    // Act
+    keyMetaAdminService.disableManagedKey(controller, request, disableManagedKeyDone);
+
+    // Assert
+    verify(controller).setFailed(contains(exType.getSimpleName()));
+    verify(keymetaAdmin).disableManagedKey(any(), any(), any());
+    verify(disableManagedKeyDone)
+      .run(argThat(response -> response.getKeyState() == ManagedKeyState.KEY_FAILED));
+  }
+
+  @Test
+  public void testDisableManagedKey_InvalidCust() throws Exception {
+    // Arrange
+    org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyEntryRequest request =
+      org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyEntryRequest
+        .newBuilder().setKeyCustNs(requestBuilder.setKeyCust(ByteString.EMPTY).build())
+        .setKeyMetadataHash(ByteString.copyFrom(keyData1.getKeyMetadataHash())).build();
+
+    keyMetaAdminService.disableManagedKey(controller, request, disableManagedKeyDone);
+
+    verify(controller).setFailed(contains("key_cust must not be empty"));
+    verify(keymetaAdmin, never()).disableManagedKey(any(), any(), any());
+    verify(disableManagedKeyDone)
+      .run(argThat(response -> response.getKeyState() == ManagedKeyState.KEY_FAILED));
+  }
+
+  @Test
+  public void testRotateManagedKey_Success() throws Exception {
+    // Arrange
+    ManagedKeyRequest request =
+      requestBuilder.setKeyCust(ByteString.copyFrom(KEY_CUST.getBytes())).build();
+    when(keymetaAdmin.rotateManagedKey(any(), any())).thenReturn(keyData1);
+
+    // Act
+    keyMetaAdminService.rotateManagedKey(controller, request, rotateManagedKeyDone);
+
+    // Assert
+    verify(rotateManagedKeyDone).run(any());
+    verify(controller, never()).setFailed(anyString());
+  }
+
+  @Test
+  public void testRotateManagedKey_IOException() throws Exception {
+    doTestRotateManagedKeyError(IOException.class);
+  }
+
+  @Test
+  public void testRotateManagedKey_KeyException() throws Exception {
+    doTestRotateManagedKeyError(KeyException.class);
+  }
+
+  private void doTestRotateManagedKeyError(Class<? extends Exception> exType) throws Exception {
+    // Arrange
+    when(keymetaAdmin.rotateManagedKey(any(), any())).thenThrow(exType);
+    ManagedKeyRequest request =
+      requestBuilder.setKeyCust(ByteString.copyFrom(KEY_CUST.getBytes())).build();
+
+    // Act
+    keyMetaAdminService.rotateManagedKey(controller, request, rotateManagedKeyDone);
+
+    // Assert
+    verify(controller).setFailed(contains(exType.getSimpleName()));
+    verify(keymetaAdmin).rotateManagedKey(any(), any());
+    verify(rotateManagedKeyDone)
+      .run(argThat(response -> response.getKeyState() == ManagedKeyState.KEY_FAILED));
+  }
+
+  @Test
+  public void testRotateManagedKey_InvalidCust() throws Exception {
+    // Arrange
+    ManagedKeyRequest request = requestBuilder.setKeyCust(ByteString.EMPTY).build();
+
+    keyMetaAdminService.rotateManagedKey(controller, request, rotateManagedKeyDone);
+
+    verify(controller).setFailed(contains("key_cust must not be empty"));
+    verify(keymetaAdmin, never()).rotateManagedKey(any(), any());
+    verify(rotateManagedKeyDone)
+      .run(argThat(response -> response.getKeyState() == ManagedKeyState.KEY_FAILED));
+  }
+
+  @Test
+  public void testRefreshManagedKeys_Success() throws Exception {
+    // Arrange
+    ManagedKeyRequest request =
+      requestBuilder.setKeyCust(ByteString.copyFrom(KEY_CUST.getBytes())).build();
+
+    // Act
+    keyMetaAdminService.refreshManagedKeys(controller, request, refreshManagedKeysDone);
+
+    // Assert
+    verify(refreshManagedKeysDone).run(any());
+    verify(controller, never()).setFailed(anyString());
+  }
+
+  @Test
+  public void testRefreshManagedKeys_IOException() throws Exception {
+    doTestRefreshManagedKeysError(IOException.class);
+  }
+
+  @Test
+  public void testRefreshManagedKeys_KeyException() throws Exception {
+    doTestRefreshManagedKeysError(KeyException.class);
+  }
+
+  private void doTestRefreshManagedKeysError(Class<? extends Exception> exType) throws Exception {
+    // Arrange
+    Mockito.doThrow(exType).when(keymetaAdmin).refreshManagedKeys(any(), any());
+    ManagedKeyRequest request =
+      requestBuilder.setKeyCust(ByteString.copyFrom(KEY_CUST.getBytes())).build();
+
+    // Act
+    keyMetaAdminService.refreshManagedKeys(controller, request, refreshManagedKeysDone);
+
+    // Assert
+    verify(controller).setFailed(contains(exType.getSimpleName()));
+    verify(keymetaAdmin).refreshManagedKeys(any(), any());
+    verify(refreshManagedKeysDone)
+      .run(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.EmptyMsg
+        .getDefaultInstance());
+  }
+
+  // Note: refreshManagedKeys doesn't perform empty custodian validation at the endpoint level,
+  // as it doesn't call initManagedKeyResponseBuilder. Any validation happens in the admin implementation.
 }

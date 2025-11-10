@@ -563,6 +563,48 @@ public class TestManagedKeyDataCache {
       assertEquals(0, cache.getActiveCacheEntryCount());
       assertEquals(0, cache.getGenericCacheEntryCount());
     }
+
+    @Test
+    public void testGetEntry_HashCollisionDetection() throws Exception {
+      // Create a key and get it into the cache
+      ManagedKeyData key1 = cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL);
+      assertNotNull(key1);
+
+      // Now simulate a hash collision by trying to get an entry with the same hash
+      // but different custodian/namespace
+      byte[] differentCust = "different-cust".getBytes();
+      String differentNamespace = "different-namespace";
+
+      // This should return null due to custodian/namespace mismatch (collision detection)
+      ManagedKeyData result = cache.getEntry(differentCust, differentNamespace,
+        key1.getKeyMetadata(), null);
+
+      // Result should be null because of hash collision detection
+      // The cache finds an entry with the same metadata hash, but custodian/namespace don't match
+      assertNull("Should return null when hash collision is detected", result);
+    }
+
+    @Test
+    public void testEjectKey_HashCollisionProtection() throws Exception {
+      // Create two keys with potential hash collision scenario
+      byte[] cust1 = "cust1".getBytes();
+      byte[] cust2 = "cust2".getBytes();
+      String namespace1 = "namespace1";
+
+      // Load a key for cust1
+      ManagedKeyData key1 = cache.getActiveEntry(cust1, namespace1);
+      assertNotNull(key1);
+      assertEquals(1, cache.getActiveCacheEntryCount());
+
+      // Try to eject using same metadata hash but different custodian
+      // This should not eject the key due to custodian mismatch protection
+      boolean ejected = cache.ejectKey(cust2, namespace1, key1.getKeyMetadataHash());
+      assertFalse("Should not eject key with different custodian even if hash matches", ejected);
+      assertEquals(1, cache.getActiveCacheEntryCount());
+
+      // Verify the original key is still there
+      assertEquals(key1, cache.getActiveEntry(cust1, namespace1));
+    }
   }
 
   @RunWith(BlockJUnit4ClassRunner.class)

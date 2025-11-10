@@ -92,7 +92,8 @@ import org.mockito.MockitoAnnotations;
 @Suite.SuiteClasses({ TestKeymetaTableAccessor.TestAdd.class,
   TestKeymetaTableAccessor.TestAddWithNullableFields.class, TestKeymetaTableAccessor.TestGet.class,
   TestKeymetaTableAccessor.TestDisableKey.class,
-  TestKeymetaTableAccessor.TestUpdateActiveState.class })
+  TestKeymetaTableAccessor.TestUpdateActiveState.class,
+  TestKeymetaTableAccessor.TestRemoveFailureMarker.class })
 @Category({ MasterTests.class, SmallTests.class })
 public class TestKeymetaTableAccessor {
   protected static final String ALIAS = "custId1";
@@ -578,6 +579,89 @@ public class TestKeymetaTableAccessor {
 
       assertThrows(IllegalArgumentException.class,
         () -> accessor.updateActiveState(keyData, DISABLED));
+    }
+  }
+
+  /**
+   * Tests for removeFailureMarker() method.
+   */
+  @RunWith(BlockJUnit4ClassRunner.class)
+  @Category({ MasterTests.class, SmallTests.class })
+  public static class TestRemoveFailureMarker {
+    @ClassRule
+    public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestRemoveFailureMarker.class);
+
+    @Mock
+    private MasterServices masterServices;
+    @Mock
+    private Connection connection;
+    @Mock
+    private Table table;
+    @Mock
+    private KeyManagementService keyManagementService;
+
+    private KeymetaTableAccessor accessor;
+
+    @Before
+    public void setUp() throws IOException {
+      MockitoAnnotations.openMocks(this);
+      when(masterServices.getConnection()).thenReturn(connection);
+      when(connection.getTable(KeymetaTableAccessor.KEY_META_TABLE_NAME)).thenReturn(table);
+      when(masterServices.getKeyManagementService()).thenReturn(keyManagementService);
+      Configuration conf = HBaseConfiguration.create();
+      conf.setBoolean(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, true);
+      when(keyManagementService.getConfiguration()).thenReturn(conf);
+      accessor = new KeymetaTableAccessor(masterServices);
+    }
+
+    @After
+    public void tearDown() throws IOException {
+      if (table != null) {
+        table.close();
+      }
+    }
+
+    @Test
+    public void testRemoveFailureMarker() throws Exception {
+      // Create a FAILED key with null metadata
+      ManagedKeyData keyData =
+        new ManagedKeyData(CUST_ID, KEY_NAMESPACE, null, ManagedKeyState.FAILED, null);
+
+      ArgumentCaptor<org.apache.hadoop.hbase.client.Delete> deleteCaptor =
+        ArgumentCaptor.forClass(org.apache.hadoop.hbase.client.Delete.class);
+
+      accessor.removeFailureMarker(keyData);
+
+      verify(table).delete(deleteCaptor.capture());
+      org.apache.hadoop.hbase.client.Delete delete = deleteCaptor.getValue();
+
+      // Verify the delete operation properties
+      assertEquals(Durability.SKIP_WAL, delete.getDurability());
+      assertEquals(HConstants.SYSTEMTABLE_QOS, delete.getPriority());
+
+      // Verify the row key is correct for a failure marker
+      byte[] expectedRowKey =
+        constructRowKeyForMetadata(CUST_ID, KEY_NAMESPACE, new byte[] { FAILED.getVal() });
+      assertEquals(0, Bytes.compareTo(expectedRowKey, delete.getRow()));
+    }
+
+    @Test
+    public void testRemoveFailureMarkerInvalidState() {
+      // Create a key with ACTIVE state (should fail precondition)
+      ManagedKeyData keyData =
+        new ManagedKeyData(CUST_ID, KEY_NAMESPACE, null, ManagedKeyState.ACTIVE, "metadata");
+
+      assertThrows(IllegalArgumentException.class, () -> accessor.removeFailureMarker(keyData));
+    }
+
+    @Test
+    public void testRemoveFailureMarkerWithNonNullMetadata() {
+      // Create a FAILED key with non-null metadata (should fail precondition)
+      ManagedKeyData keyData =
+        new ManagedKeyData(CUST_ID, KEY_NAMESPACE, null, ManagedKeyState.FAILED, "metadata");
+
+      assertThrows(IllegalArgumentException.class, () -> accessor.removeFailureMarker(keyData));
     }
   }
 }
