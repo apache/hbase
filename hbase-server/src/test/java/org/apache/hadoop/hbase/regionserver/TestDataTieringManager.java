@@ -228,15 +228,15 @@ public class TestDataTieringManager {
     // Test with a filename where corresponding HStoreFile in not present
     hFilePath = new Path(hStoreFiles.get(0).getPath().getParent(), "incorrectFileName");
     testDataTieringMethodWithPathExpectingException(methodCallerWithPath, hFilePath,
-      new DataTieringException("Store file corresponding to " + hFilePath + " doesn't exist"));
+      new DataTieringException("Stoe file corresponding to " + hFilePath + " doesn't exist"));
   }
 
   @Test
   public void testGracePeriodMakesColdFileHot() throws IOException, DataTieringException {
     initializeTestEnvironment();
 
-    long hotAge = 1 * DAY;
-    long gracePeriod = 3 * DAY;
+    long hotAge = 1 * DAY;      
+    long gracePeriod = 3 * DAY;  
 
     long currentTime = System.currentTimeMillis();
     long fileTimestamp = currentTime - (2 * DAY);
@@ -249,11 +249,13 @@ public class TestDataTieringManager {
       hStore.getReadOnlyConfiguration(), fileTimestamp, region.getRegionFileSystem());
     file.initReader();
 
-    hStore.refreshStoreFiles();
+
+    hStore.refreshStoreFiles(); 
     region.stores.put(Bytes.toBytes("cf1"), hStore);
     testOnlineRegions.put(region.getRegionInfo().getEncodedName(), region);
     Path hFilePath = file.getPath();
-    assertTrue("File should be hot due to grace period", dataTieringManager.isHotData(hFilePath));
+    assertTrue("File should be hot due to grace period",
+      dataTieringManager.isHotData(hFilePath));
   }
 
   @Test
@@ -821,7 +823,7 @@ public class TestDataTieringManager {
       .setValue(DataTieringManager.DATATIERING_KEY, conf.get(DataTieringManager.DATATIERING_KEY))
       .setValue(DataTieringManager.DATATIERING_HOT_DATA_AGE_KEY,
         conf.get(DataTieringManager.DATATIERING_HOT_DATA_AGE_KEY))
-      .setValue(DataTieringManager.HSTORE_DATATIERING_GRACE_PERIOD_MILLIS_KEY,
+              .setValue(DataTieringManager.HSTORE_DATATIERING_GRACE_PERIOD_MILLIS_KEY,
         conf.get(DataTieringManager.HSTORE_DATATIERING_GRACE_PERIOD_MILLIS_KEY))
       .build();
     RegionInfo hri = RegionInfoBuilder.newBuilder(tableName).build();
@@ -850,7 +852,7 @@ public class TestDataTieringManager {
         .setValue(DataTieringManager.DATATIERING_KEY, conf.get(DataTieringManager.DATATIERING_KEY))
         .setValue(DataTieringManager.DATATIERING_HOT_DATA_AGE_KEY,
           conf.get(DataTieringManager.DATATIERING_HOT_DATA_AGE_KEY))
-        .setValue(DataTieringManager.HSTORE_DATATIERING_GRACE_PERIOD_MILLIS_KEY,
+          .setValue(DataTieringManager.HSTORE_DATATIERING_GRACE_PERIOD_MILLIS_KEY,
           conf.get(DataTieringManager.HSTORE_DATATIERING_GRACE_PERIOD_MILLIS_KEY))
         .build();
 
