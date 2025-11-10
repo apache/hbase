@@ -228,7 +228,7 @@ public class TestDataTieringManager {
     // Test with a filename where corresponding HStoreFile in not present
     hFilePath = new Path(hStoreFiles.get(0).getPath().getParent(), "incorrectFileName");
     testDataTieringMethodWithPathExpectingException(methodCallerWithPath, hFilePath,
-      new DataTieringException("Stoe file corresponding to " + hFilePath + " doesn't exist"));
+      new DataTieringException("Store file corresponding to " + hFilePath + " doesn't exist"));
   }
 
   @Test
