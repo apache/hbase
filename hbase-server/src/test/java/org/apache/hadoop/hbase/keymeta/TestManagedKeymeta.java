@@ -31,8 +31,6 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.security.KeyException;
 import java.util.List;
-import java.util.function.BiFunction;
-import java.util.function.Function;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
@@ -59,6 +57,23 @@ public class TestManagedKeymeta extends ManagedKeyTestBase {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestManagedKeymeta.class);
+
+  /**
+   * Functional interface for setup operations that can throw ServiceException.
+   */
+  @FunctionalInterface
+  interface SetupFunction {
+    void setup(ManagedKeysProtos.ManagedKeysService.BlockingInterface mockStub,
+      ServiceException networkError) throws ServiceException;
+  }
+
+  /**
+   * Functional interface for test operations that can throw checked exceptions.
+   */
+  @FunctionalInterface
+  interface TestFunction {
+    void test(KeymetaAdminClient client) throws IOException, KeyException;
+  }
 
   @Test
   public void testEnableLocal() throws Exception {
@@ -122,43 +137,17 @@ public class TestManagedKeymeta extends ManagedKeyTestBase {
 
   @Test
   public void testEnableKeyManagementWithClientSideServiceException() throws Exception {
-    doTestWithClientSideServiceException((mockStub, networkError) -> {
-      try {
-        when(mockStub.enableKeyManagement(any(), any())).thenThrow(networkError);
-      } catch (ServiceException e) {
-        // We are just setting up the mock, so no exception is expected here.
-        throw new RuntimeException("Unexpected ServiceException", e);
-      }
-      return null;
-    }, (client) -> {
-      try {
-        client.enableKeyManagement(new byte[0], "namespace");
-      } catch (IOException e) {
-        throw new RuntimeException(e);
-      }
-      return null;
-    });
+    doTestWithClientSideServiceException((mockStub,
+      networkError) -> when(mockStub.enableKeyManagement(any(), any())).thenThrow(networkError),
+      (client) -> client.enableKeyManagement(new byte[0], "namespace"));
   }
 
   @Test
   public void testGetManagedKeysWithClientSideServiceException() throws Exception {
     // Similar test for getManagedKeys method
-    doTestWithClientSideServiceException((mockStub, networkError) -> {
-      try {
-        when(mockStub.getManagedKeys(any(), any())).thenThrow(networkError);
-      } catch (ServiceException e) {
-        // We are just setting up the mock, so no exception is expected here.
-        throw new RuntimeException("Unexpected ServiceException", e);
-      }
-      return null;
-    }, (client) -> {
-      try {
-        client.getManagedKeys(new byte[0], "namespace");
-      } catch (IOException | KeyException e) {
-        throw new RuntimeException(e);
-      }
-      return null;
-    });
+    doTestWithClientSideServiceException((mockStub,
+      networkError) -> when(mockStub.getManagedKeys(any(), any())).thenThrow(networkError),
+      (client) -> client.getManagedKeys(new byte[0], "namespace"));
   }
 
   @Test
@@ -213,28 +202,13 @@ public class TestManagedKeymeta extends ManagedKeyTestBase {
 
   @Test
   public void testRotateSTKWithClientSideServiceException() throws Exception {
-    doTestWithClientSideServiceException((mockStub, networkError) -> {
-      try {
-        when(mockStub.rotateSTK(any(), any())).thenThrow(networkError);
-      } catch (ServiceException e) {
-        // We are just setting up the mock, so no exception is expected here.
-        throw new RuntimeException("Unexpected ServiceException", e);
-      }
-      return null;
-    }, (client) -> {
-      try {
-        client.rotateSTK();
-      } catch (IOException e) {
-        throw new RuntimeException(e);
-      }
-      return null;
-    });
+    doTestWithClientSideServiceException(
+      (mockStub, networkError) -> when(mockStub.rotateSTK(any(), any())).thenThrow(networkError),
+      (client) -> client.rotateSTK());
   }
 
-  private void
-    doTestWithClientSideServiceException(BiFunction<
-      ManagedKeysProtos.ManagedKeysService.BlockingInterface, ServiceException, Void> setupFunction,
-      Function<KeymetaAdminClient, Void> testFunction) throws Exception {
+  private void doTestWithClientSideServiceException(SetupFunction setupFunction,
+    TestFunction testFunction) throws Exception {
     ManagedKeysProtos.ManagedKeysService.BlockingInterface mockStub =
       mock(ManagedKeysProtos.ManagedKeysService.BlockingInterface.class);
 
@@ -247,15 +221,11 @@ public class TestManagedKeymeta extends ManagedKeyTestBase {
     stubField.setAccessible(true);
     stubField.set(client, mockStub);
 
-    setupFunction.apply(mockStub, networkError);
+    // Setup the mock
+    setupFunction.setup(mockStub, networkError);
 
-    IOException exception = assertThrows(IOException.class, () -> {
-      try {
-        testFunction.apply(client);
-      } catch (RuntimeException e) {
-        throw e.getCause();
-      }
-    });
+    // Execute test function and expect IOException
+    IOException exception = assertThrows(IOException.class, () -> testFunction.test(client));
 
     assertTrue(exception.getMessage().contains("Network error"));
   }
@@ -279,7 +249,10 @@ public class TestManagedKeymeta extends ManagedKeyTestBase {
     byte[] custBytes = cust.getBytes();
 
     // First enable key management
-    adminClient.enableKeyManagement(custBytes, ManagedKeyData.KEY_SPACE_GLOBAL);
+    ManagedKeyData managedKey =
+      adminClient.enableKeyManagement(custBytes, ManagedKeyData.KEY_SPACE_GLOBAL);
+    assertNotNull(managedKey);
+    assertKeyDataSingleKey(managedKey, ManagedKeyState.ACTIVE);
 
     // Now disable it
     List<ManagedKeyData> disabledKeys =
@@ -291,22 +264,10 @@ public class TestManagedKeymeta extends ManagedKeyTestBase {
 
   @Test
   public void testDisableKeyManagementWithClientSideServiceException() throws Exception {
-    doTestWithClientSideServiceException((mockStub, networkError) -> {
-      try {
-        when(mockStub.disableKeyManagement(any(), any())).thenThrow(networkError);
-      } catch (ServiceException e) {
-        // We are just setting up the mock, so no exception is expected here.
-        throw new RuntimeException("Unexpected ServiceException", e);
-      }
-      return null;
-    }, (client) -> {
-      try {
-        client.disableKeyManagement(new byte[0], "namespace");
-      } catch (IOException | KeyException e) {
-        throw new RuntimeException(e);
-      }
-      return null;
-    });
+    doTestWithClientSideServiceException(
+      (mockStub, networkError) -> when(mockStub.disableKeyManagement(any(), any()))
+        .thenThrow(networkError),
+      (client) -> client.disableKeyManagement(new byte[0], "namespace"));
   }
 
   @Test
@@ -330,33 +291,22 @@ public class TestManagedKeymeta extends ManagedKeyTestBase {
     ManagedKeyData managedKey =
       adminClient.enableKeyManagement(custBytes, ManagedKeyData.KEY_SPACE_GLOBAL);
     assertNotNull(managedKey);
+    assertKeyDataSingleKey(managedKey, ManagedKeyState.ACTIVE);
     byte[] keyMetadataHash = managedKey.getKeyMetadataHash();
 
     // Now disable the specific key
-    ManagedKeyData disabledKey = adminClient.disableManagedKey(custBytes,
-      ManagedKeyData.KEY_SPACE_GLOBAL, keyMetadataHash);
+    ManagedKeyData disabledKey =
+      adminClient.disableManagedKey(custBytes, ManagedKeyData.KEY_SPACE_GLOBAL, keyMetadataHash);
     assertNotNull(disabledKey);
     assertEquals(ManagedKeyState.DISABLED, disabledKey.getKeyState());
   }
 
   @Test
   public void testDisableManagedKeyWithClientSideServiceException() throws Exception {
-    doTestWithClientSideServiceException((mockStub, networkError) -> {
-      try {
-        when(mockStub.disableManagedKey(any(), any())).thenThrow(networkError);
-      } catch (ServiceException e) {
-        // We are just setting up the mock, so no exception is expected here.
-        throw new RuntimeException("Unexpected ServiceException", e);
-      }
-      return null;
-    }, (client) -> {
-      try {
-        client.disableManagedKey(new byte[0], "namespace", new byte[0]);
-      } catch (IOException | KeyException e) {
-        throw new RuntimeException(e);
-      }
-      return null;
-    });
+    doTestWithClientSideServiceException(
+      (mockStub, networkError) -> when(mockStub.disableManagedKey(any(), any()))
+        .thenThrow(networkError),
+      (client) -> client.disableManagedKey(new byte[0], "namespace", new byte[0]));
   }
 
   // Note: Integration tests for rotateManagedKey are complex due to keymeta table persistence.
@@ -365,22 +315,9 @@ public class TestManagedKeymeta extends ManagedKeyTestBase {
 
   @Test
   public void testRotateManagedKeyWithClientSideServiceException() throws Exception {
-    doTestWithClientSideServiceException((mockStub, networkError) -> {
-      try {
-        when(mockStub.rotateManagedKey(any(), any())).thenThrow(networkError);
-      } catch (ServiceException e) {
-        // We are just setting up the mock, so no exception is expected here.
-        throw new RuntimeException("Unexpected ServiceException", e);
-      }
-      return null;
-    }, (client) -> {
-      try {
-        client.rotateManagedKey(new byte[0], "namespace");
-      } catch (IOException | KeyException e) {
-        throw new RuntimeException(e);
-      }
-      return null;
-    });
+    doTestWithClientSideServiceException((mockStub,
+      networkError) -> when(mockStub.rotateManagedKey(any(), any())).thenThrow(networkError),
+      (client) -> client.rotateManagedKey(new byte[0], "namespace"));
   }
 
   // Note: Integration tests for refreshManagedKeys are complex due to keymeta table persistence.
@@ -389,21 +326,8 @@ public class TestManagedKeymeta extends ManagedKeyTestBase {
 
   @Test
   public void testRefreshManagedKeysWithClientSideServiceException() throws Exception {
-    doTestWithClientSideServiceException((mockStub, networkError) -> {
-      try {
-        when(mockStub.refreshManagedKeys(any(), any())).thenThrow(networkError);
-      } catch (ServiceException e) {
-        // We are just setting up the mock, so no exception is expected here.
-        throw new RuntimeException("Unexpected ServiceException", e);
-      }
-      return null;
-    }, (client) -> {
-      try {
-        client.refreshManagedKeys(new byte[0], "namespace");
-      } catch (IOException | KeyException e) {
-        throw new RuntimeException(e);
-      }
-      return null;
-    });
+    doTestWithClientSideServiceException((mockStub,
+      networkError) -> when(mockStub.refreshManagedKeys(any(), any())).thenThrow(networkError),
+      (client) -> client.refreshManagedKeys(new byte[0], "namespace"));
   }
 }

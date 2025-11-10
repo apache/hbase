@@ -59,7 +59,9 @@ import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.EmptyMsg;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.GetManagedKeysResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyEntryRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyState;
@@ -91,7 +93,7 @@ public class TestKeymetaEndpoint {
   @Mock
   private RpcCallback<ManagedKeyResponse> rotateManagedKeyDone;
   @Mock
-  private RpcCallback<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.EmptyMsg> refreshManagedKeysDone;
+  private RpcCallback<EmptyMsg> refreshManagedKeysDone;
 
   KeymetaServiceEndpoint keymetaServiceEndpoint;
   private ManagedKeyResponse.Builder responseBuilder;
@@ -224,7 +226,8 @@ public class TestKeymetaEndpoint {
   @Test
   public void testGenerateKeyStateResponse_InvalidCust() throws Exception {
     // Arrange
-    ManagedKeyRequest request = requestBuilder.setKeyCust(ByteString.EMPTY).build();
+    ManagedKeyRequest request =
+      requestBuilder.setKeyCust(ByteString.EMPTY).setKeyNamespace(KEY_NAMESPACE).build();
 
     // Act
     keyMetaAdminService.enableKeyManagement(controller, request, enableKeyManagementDone);
@@ -316,8 +319,7 @@ public class TestKeymetaEndpoint {
     doTestDisableKeyManagementError(KeyException.class);
   }
 
-  private void doTestDisableKeyManagementError(Class<? extends Exception> exType)
-    throws Exception {
+  private void doTestDisableKeyManagementError(Class<? extends Exception> exType) throws Exception {
     // Arrange
     when(keymetaAdmin.disableKeyManagement(any(), any())).thenThrow(exType);
     ManagedKeyRequest request =
@@ -345,14 +347,24 @@ public class TestKeymetaEndpoint {
   }
 
   @Test
+  public void testDisableKeyManagement_InvalidNamespace() throws Exception {
+    // Arrange
+    ManagedKeyRequest request = requestBuilder.setKeyCust(ByteString.copyFrom(KEY_CUST.getBytes()))
+      .setKeyNamespace("").build();
+
+    keyMetaAdminService.disableKeyManagement(controller, request, disableKeyManagementDone);
+
+    verify(controller).setFailed(contains("key_namespace must not be empty"));
+    verify(keymetaAdmin, never()).disableKeyManagement(any(), any());
+    verify(disableKeyManagementDone).run(argThat(response -> response.getStateList().isEmpty()));
+  }
+
+  @Test
   public void testDisableManagedKey_Success() throws Exception {
     // Arrange
-    org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyEntryRequest request =
-      org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyEntryRequest
-        .newBuilder()
-        .setKeyCustNs(
-          requestBuilder.setKeyCust(ByteString.copyFrom(KEY_CUST.getBytes())).build())
-        .setKeyMetadataHash(ByteString.copyFrom(keyData1.getKeyMetadataHash())).build();
+    ManagedKeyEntryRequest request = ManagedKeyEntryRequest.newBuilder()
+      .setKeyCustNs(requestBuilder.setKeyCust(ByteString.copyFrom(KEY_CUST.getBytes())).build())
+      .setKeyMetadataHash(ByteString.copyFrom(keyData1.getKeyMetadataHash())).build();
     when(keymetaAdmin.disableManagedKey(any(), any(), any())).thenReturn(keyData1);
 
     // Act
@@ -376,12 +388,9 @@ public class TestKeymetaEndpoint {
   private void doTestDisableManagedKeyError(Class<? extends Exception> exType) throws Exception {
     // Arrange
     when(keymetaAdmin.disableManagedKey(any(), any(), any())).thenThrow(exType);
-    org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyEntryRequest request =
-      org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyEntryRequest
-        .newBuilder()
-        .setKeyCustNs(
-          requestBuilder.setKeyCust(ByteString.copyFrom(KEY_CUST.getBytes())).build())
-        .setKeyMetadataHash(ByteString.copyFrom(keyData1.getKeyMetadataHash())).build();
+    ManagedKeyEntryRequest request = ManagedKeyEntryRequest.newBuilder()
+      .setKeyCustNs(requestBuilder.setKeyCust(ByteString.copyFrom(KEY_CUST.getBytes())).build())
+      .setKeyMetadataHash(ByteString.copyFrom(keyData1.getKeyMetadataHash())).build();
 
     // Act
     keyMetaAdminService.disableManagedKey(controller, request, disableManagedKeyDone);
@@ -396,14 +405,30 @@ public class TestKeymetaEndpoint {
   @Test
   public void testDisableManagedKey_InvalidCust() throws Exception {
     // Arrange
-    org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyEntryRequest request =
-      org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyEntryRequest
-        .newBuilder().setKeyCustNs(requestBuilder.setKeyCust(ByteString.EMPTY).build())
-        .setKeyMetadataHash(ByteString.copyFrom(keyData1.getKeyMetadataHash())).build();
+    ManagedKeyEntryRequest request = ManagedKeyEntryRequest.newBuilder()
+      .setKeyCustNs(
+        requestBuilder.setKeyCust(ByteString.EMPTY).setKeyNamespace(KEY_NAMESPACE).build())
+      .setKeyMetadataHash(ByteString.copyFrom(keyData1.getKeyMetadataHash())).build();
 
     keyMetaAdminService.disableManagedKey(controller, request, disableManagedKeyDone);
 
     verify(controller).setFailed(contains("key_cust must not be empty"));
+    verify(keymetaAdmin, never()).disableManagedKey(any(), any(), any());
+    verify(disableManagedKeyDone)
+      .run(argThat(response -> response.getKeyState() == ManagedKeyState.KEY_FAILED));
+  }
+
+  @Test
+  public void testDisableManagedKey_InvalidNamespace() throws Exception {
+    // Arrange
+    ManagedKeyEntryRequest request = ManagedKeyEntryRequest.newBuilder()
+      .setKeyCustNs(requestBuilder.setKeyCust(ByteString.copyFrom(KEY_CUST.getBytes()))
+        .setKeyNamespace("").build())
+      .setKeyMetadataHash(ByteString.copyFrom(keyData1.getKeyMetadataHash())).build();
+
+    keyMetaAdminService.disableManagedKey(controller, request, disableManagedKeyDone);
+
+    verify(controller).setFailed(contains("key_namespace must not be empty"));
     verify(keymetaAdmin, never()).disableManagedKey(any(), any(), any());
     verify(disableManagedKeyDone)
       .run(argThat(response -> response.getKeyState() == ManagedKeyState.KEY_FAILED));
@@ -453,7 +478,8 @@ public class TestKeymetaEndpoint {
   @Test
   public void testRotateManagedKey_InvalidCust() throws Exception {
     // Arrange
-    ManagedKeyRequest request = requestBuilder.setKeyCust(ByteString.EMPTY).build();
+    ManagedKeyRequest request =
+      requestBuilder.setKeyCust(ByteString.EMPTY).setKeyNamespace(KEY_NAMESPACE).build();
 
     keyMetaAdminService.rotateManagedKey(controller, request, rotateManagedKeyDone);
 
@@ -499,11 +525,32 @@ public class TestKeymetaEndpoint {
     // Assert
     verify(controller).setFailed(contains(exType.getSimpleName()));
     verify(keymetaAdmin).refreshManagedKeys(any(), any());
-    verify(refreshManagedKeysDone)
-      .run(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.EmptyMsg
-        .getDefaultInstance());
+    verify(refreshManagedKeysDone).run(EmptyMsg.getDefaultInstance());
   }
 
-  // Note: refreshManagedKeys doesn't perform empty custodian validation at the endpoint level,
-  // as it doesn't call initManagedKeyResponseBuilder. Any validation happens in the admin implementation.
+  public void testRefreshManagedKeys_InvalidCust() throws Exception {
+    // Arrange
+    ManagedKeyRequest request = requestBuilder.setKeyCust(ByteString.EMPTY).build();
+
+    keyMetaAdminService.refreshManagedKeys(controller, request, refreshManagedKeysDone);
+
+    verify(controller).setFailed(contains("key_cust must not be empty"));
+    verify(keymetaAdmin, never()).refreshManagedKeys(any(), any());
+    verify(refreshManagedKeysDone).run(EmptyMsg.getDefaultInstance());
+  }
+
+  @Test
+  public void testRefreshManagedKeys_InvalidNamespace() throws Exception {
+    // Arrange
+    ManagedKeyRequest request = requestBuilder.setKeyCust(ByteString.copyFrom(KEY_CUST.getBytes()))
+      .setKeyNamespace("").build();
+
+    // Act
+    keyMetaAdminService.refreshManagedKeys(controller, request, refreshManagedKeysDone);
+
+    // Assert
+    verify(controller).setFailed(contains("key_namespace must not be empty"));
+    verify(keymetaAdmin, never()).refreshManagedKeys(any(), any());
+    verify(refreshManagedKeysDone).run(EmptyMsg.getDefaultInstance());
+  }
 }

@@ -134,8 +134,9 @@ public class SecurityUtil {
             if (candidate != null) {
               // Log information on the table and column family we are looking for the active key in
               if (LOG.isDebugEnabled()) {
-                LOG.debug("Looking for active key for table: {} and column family: {} with " +
-                  "(custodian: {}, namespace: {})",
+                LOG.debug(
+                  "Looking for active key for table: {} and column family: {} with "
+                    + "(custodian: {}, namespace: {})",
                   tableDescriptor.getTableName().getNameAsString(), family.getNameAsString(),
                   ManagedKeyData.KEY_GLOBAL_CUSTODIAN, candidate);
               }
@@ -165,9 +166,9 @@ public class SecurityUtil {
               LOG.debug(
                 "Scenario 2: Use active key with (custodian: {}, namespace: {}) for cipher: {} "
                   + "localKeyGenEnabled: {} for table: {} and column family: {}",
-                activeKeyData.getKeyCustodianEncoded(), activeKeyData.getKeyNamespace(),
-                cipherName, localKeyGenEnabled,
-                tableDescriptor.getTableName().getNameAsString(), family.getNameAsString());
+                activeKeyData.getKeyCustodianEncoded(), activeKeyData.getKeyNamespace(), cipherName,
+                localKeyGenEnabled, tableDescriptor.getTableName().getNameAsString(),
+                family.getNameAsString());
             }
           } else {
             if (LOG.isDebugEnabled()) {
@@ -188,8 +189,9 @@ public class SecurityUtil {
         }
       }
       if (LOG.isDebugEnabled() && kekKeyData != null) {
-        LOG.debug("Usigng KEK with (custodian: {}, namespace: {}), checksum: {} and metadata " +
-          "hash: {}", kekKeyData.getKeyCustodianEncoded(), kekKeyData.getKeyNamespace(),
+        LOG.debug(
+          "Usigng KEK with (custodian: {}, namespace: {}), checksum: {} and metadata " + "hash: {}",
+          kekKeyData.getKeyCustodianEncoded(), kekKeyData.getKeyNamespace(),
           kekKeyData.getKeyChecksum(), kekKeyData.getKeyMetadataHashEncoded());
       }
 
@@ -250,10 +252,11 @@ public class SecurityUtil {
           kek = systemKeyData.getTheKey();
           kekKeyData = systemKeyData;
           if (LOG.isDebugEnabled()) {
-            LOG.debug("Found System Key with (custodian: {}, namespace: {}), checksum: {} and " +
-              "metadata hash: {}", systemKeyData.getKeyCustodianEncoded(),
-              systemKeyData.getKeyNamespace(), systemKeyData.getKeyChecksum(),
-              systemKeyData.getKeyMetadataHashEncoded());
+            LOG.debug(
+              "Found System Key with (custodian: {}, namespace: {}), checksum: {} and "
+                + "metadata hash: {}",
+              systemKeyData.getKeyCustodianEncoded(), systemKeyData.getKeyNamespace(),
+              systemKeyData.getKeyChecksum(), systemKeyData.getKeyMetadataHashEncoded());
           }
         }
       }

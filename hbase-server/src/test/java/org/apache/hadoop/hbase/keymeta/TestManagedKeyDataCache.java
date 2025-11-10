@@ -565,7 +565,7 @@ public class TestManagedKeyDataCache {
     }
 
     @Test
-    public void testGetEntry_HashCollisionDetection() throws Exception {
+    public void testGetEntry_HashCollisionOrMismatchDetection() throws Exception {
       // Create a key and get it into the cache
       ManagedKeyData key1 = cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL);
       assertNotNull(key1);
@@ -576,8 +576,8 @@ public class TestManagedKeyDataCache {
       String differentNamespace = "different-namespace";
 
       // This should return null due to custodian/namespace mismatch (collision detection)
-      ManagedKeyData result = cache.getEntry(differentCust, differentNamespace,
-        key1.getKeyMetadata(), null);
+      ManagedKeyData result =
+        cache.getEntry(differentCust, differentNamespace, key1.getKeyMetadata(), null);
 
       // Result should be null because of hash collision detection
       // The cache finds an entry with the same metadata hash, but custodian/namespace don't match
@@ -585,7 +585,7 @@ public class TestManagedKeyDataCache {
     }
 
     @Test
-    public void testEjectKey_HashCollisionProtection() throws Exception {
+    public void testEjectKey_HashCollisionOrMismatchProtection() throws Exception {
       // Create two keys with potential hash collision scenario
       byte[] cust1 = "cust1".getBytes();
       byte[] cust2 = "cust2".getBytes();

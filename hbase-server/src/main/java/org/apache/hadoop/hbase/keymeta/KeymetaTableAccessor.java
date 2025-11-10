@@ -305,14 +305,17 @@ public class KeymetaTableAccessor extends KeyManagementBase {
     }
   }
 
+  private Put addMutationColumnsForState(Put put, ManagedKeyState newState) {
+    return addMutationColumnsForState(put, newState, EnvironmentEdgeManager.currentTime());
+  }
+
   /**
    * Add only state and timestamp columns to the given Put.
    */
-  private Put addMutationColumnsForState(Put put, ManagedKeyState newState) {
+  private Put addMutationColumnsForState(Put put, ManagedKeyState newState, long timestamp) {
     return put.setDurability(Durability.SKIP_WAL).setPriority(HConstants.SYSTEMTABLE_QOS)
       .addColumn(KEY_META_INFO_FAMILY, KEY_STATE_QUAL_BYTES, new byte[] { newState.getVal() })
-      .addColumn(KEY_META_INFO_FAMILY, REFRESHED_TIMESTAMP_QUAL_BYTES,
-        Bytes.toBytes(EnvironmentEdgeManager.currentTime()));
+      .addColumn(KEY_META_INFO_FAMILY, REFRESHED_TIMESTAMP_QUAL_BYTES, Bytes.toBytes(timestamp));
   }
 
   /**
@@ -331,11 +334,8 @@ public class KeymetaTableAccessor extends KeyManagementBase {
         .addColumn(KEY_META_INFO_FAMILY, STK_CHECKSUM_QUAL_BYTES,
           Bytes.toBytes(latestSystemKey.getKeyChecksum()));
     }
-    Put result = put.setDurability(Durability.SKIP_WAL).setPriority(HConstants.SYSTEMTABLE_QOS)
-      .addColumn(KEY_META_INFO_FAMILY, REFRESHED_TIMESTAMP_QUAL_BYTES,
-        Bytes.toBytes(keyData.getRefreshTimestamp()))
-      .addColumn(KEY_META_INFO_FAMILY, KEY_STATE_QUAL_BYTES,
-        new byte[] { keyData.getKeyState().getVal() });
+    Put result =
+      addMutationColumnsForState(put, keyData.getKeyState(), keyData.getRefreshTimestamp());
 
     // Only add metadata column if metadata is not null
     String metadata = keyData.getKeyMetadata();

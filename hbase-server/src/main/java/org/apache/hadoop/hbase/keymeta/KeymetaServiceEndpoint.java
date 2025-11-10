@@ -256,6 +256,8 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
     public void refreshManagedKeys(RpcController controller, ManagedKeyRequest request,
       RpcCallback<EmptyMsg> done) {
       try {
+        // Do this just for validation.
+        initManagedKeyResponseBuilder(controller, request, ManagedKeyResponse.newBuilder());
         master.getKeymetaAdmin().refreshManagedKeys(request.getKeyCust().toByteArray(),
           request.getKeyNamespace());
       } catch (IOException | KeyException e) {
@@ -268,10 +270,14 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
   @InterfaceAudience.Private
   public static ManagedKeyResponse.Builder initManagedKeyResponseBuilder(RpcController controller,
     ManagedKeyRequest request, ManagedKeyResponse.Builder builder) throws IOException {
+    // We need to set this in advance to make sure builder has non-null values set.
     builder.setKeyCust(request.getKeyCust());
     builder.setKeyNamespace(request.getKeyNamespace());
     if (request.getKeyCust().isEmpty()) {
       throw new IOException("key_cust must not be empty");
+    }
+    if (request.getKeyNamespace().isEmpty()) {
+      throw new IOException("key_namespace must not be empty");
     }
     return builder;
   }

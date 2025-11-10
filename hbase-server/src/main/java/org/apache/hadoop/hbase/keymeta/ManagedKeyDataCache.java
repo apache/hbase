@@ -23,6 +23,8 @@ import java.io.IOException;
 import java.security.KeyException;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
@@ -196,10 +198,12 @@ public class ManagedKeyDataCache extends KeyManagementBase {
       ) {
         return entry;
       }
-      LOG.warn("Hash collision detected for metadata hash: {} - custodian/namespace mismatch " +
-        "expected: ({}, {}), actual: ({}, {})", ManagedKeyProvider.encodeToStr(metadataHashBytes),
-        ManagedKeyProvider.encodeToStr(keyCust), keyNamespace,
-        ManagedKeyProvider.encodeToStr(entry.getKeyCustodian()), entry.getKeyNamespace());
+      LOG.warn(
+        "Hash collision or incorrect/mismatched custodian/namespace detected for metadata hash: "
+          + "{} - custodian/namespace mismatch expected: ({}, {}), actual: ({}, {})",
+        ManagedKeyProvider.encodeToStr(metadataHashBytes), ManagedKeyProvider.encodeToStr(keyCust),
+        keyNamespace, ManagedKeyProvider.encodeToStr(entry.getKeyCustodian()),
+        entry.getKeyNamespace());
     }
     return null;
   }
@@ -233,24 +237,12 @@ public class ManagedKeyDataCache extends KeyManagementBase {
     Bytes keyMetadataHashKey = new Bytes(keyMetadataHash);
     ActiveKeysCacheKey cacheKey = new ActiveKeysCacheKey(keyCust, keyNamespace);
     AtomicBoolean ejected = new AtomicBoolean(false);
+    AtomicReference<ManagedKeyData> rejectedValue = new AtomicReference<>(null);
 
-    // Try to eject from active keys cache by matching hash with collision check
-    activeKeysCache.asMap().computeIfPresent(cacheKey, (key, value) -> {
-      if (Bytes.equals(value.getKeyMetadataHash(), keyMetadataHash)) {
-        // Verify custodian/namespace match to guard against hash collisions
-        if (
-          Bytes.equals(value.getKeyCustodian(), keyCust)
-            && value.getKeyNamespace().equals(keyNamespace)
-        ) {
-          ejected.set(true);
-          return null;
-        }
+    Function<ManagedKeyData, ManagedKeyData> conditionalCompute = (value) -> {
+      if (rejectedValue.get() != null) {
+        return value;
       }
-      return value;
-    });
-
-    // Also remove from generic cache by hash, with collision check
-    cacheByMetadataHash.asMap().computeIfPresent(keyMetadataHashKey, (hash, value) -> {
       if (
         Bytes.equals(value.getKeyMetadataHash(), keyMetadataHash)
           && Bytes.equals(value.getKeyCustodian(), keyCust)
@@ -259,8 +251,26 @@ public class ManagedKeyDataCache extends KeyManagementBase {
         ejected.set(true);
         return null;
       }
+      rejectedValue.set(value);
       return value;
-    });
+    };
+
+    // Try to eject from active keys cache by matching hash with collision check
+    activeKeysCache.asMap().computeIfPresent(cacheKey,
+      (key, value) -> conditionalCompute.apply(value));
+
+    // Also remove from generic cache by hash, with collision check
+    cacheByMetadataHash.asMap().computeIfPresent(keyMetadataHashKey,
+      (hash, value) -> conditionalCompute.apply(value));
+
+    if (rejectedValue.get() != null) {
+      LOG.warn(
+        "Hash collision or incorrect/mismatched custodian/namespace detected for metadata "
+          + "hash: {} - custodian/namespace mismatch expected: ({}, {}), actual: ({}, {})",
+        ManagedKeyProvider.encodeToStr(keyMetadataHash), ManagedKeyProvider.encodeToStr(keyCust),
+        keyNamespace, ManagedKeyProvider.encodeToStr(rejectedValue.get().getKeyCustodian()),
+        rejectedValue.get().getKeyNamespace());
+    }
 
     return ejected.get();
   }

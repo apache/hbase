@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.keymeta;
 import java.io.IOException;
 import java.security.KeyException;
 import java.util.List;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.AsyncAdmin;
@@ -191,8 +190,8 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
     // First retrieve the key to verify it exists and get the full metadata for cache ejection
     ManagedKeyData existingKey = getKey(keyCust, keyNamespace, keyMetadataHash);
     if (existingKey == null || existingKey.getKeyMetadata() == null) {
-      throw new DoNotRetryIOException(
-        "Key not found with metadata hash: " + ManagedKeyProvider.encodeToStr(keyMetadataHash));
+      throw new IOException( "Key not found with metadata hash: " +
+        ManagedKeyProvider.encodeToStr(keyMetadataHash));
     }
 
     disableKey(existingKey);

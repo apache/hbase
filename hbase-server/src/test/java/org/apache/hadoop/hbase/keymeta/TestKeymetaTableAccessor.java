@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
@@ -111,6 +112,8 @@ public class TestKeymetaTableAccessor {
   protected ResultScanner scanner;
   @Mock
   protected SystemKeyCache systemKeyCache;
+  @Mock
+  protected KeyManagementService keyManagementService;
 
   protected KeymetaTableAccessor accessor;
   protected Configuration conf = HBaseConfiguration.create();
@@ -131,7 +134,9 @@ public class TestKeymetaTableAccessor {
     when(connection.getTable(KeymetaTableAccessor.KEY_META_TABLE_NAME)).thenReturn(table);
     when(server.getSystemKeyCache()).thenReturn(systemKeyCache);
     when(server.getConfiguration()).thenReturn(conf);
-    when(server.getKeyManagementService()).thenReturn(server);
+    when(server.getKeyManagementService()).thenReturn(keyManagementService);
+    when(keyManagementService.getConfiguration()).thenReturn(conf);
+    when(keyManagementService.getSystemKeyCache()).thenReturn(systemKeyCache);
 
     accessor = new KeymetaTableAccessor(server);
     managedKeyProvider = new MockManagedKeyProvider();
@@ -416,40 +421,10 @@ public class TestKeymetaTableAccessor {
    */
   @RunWith(BlockJUnit4ClassRunner.class)
   @Category({ MasterTests.class, SmallTests.class })
-  public static class TestDisableKey {
+  public static class TestDisableKey extends TestKeymetaTableAccessor {
     @ClassRule
     public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestDisableKey.class);
-
-    @Mock
-    private MasterServices masterServices;
-    @Mock
-    private Connection connection;
-    @Mock
-    private Table table;
-    @Mock
-    private KeyManagementService keyManagementService;
-
-    private KeymetaTableAccessor accessor;
-
-    @Before
-    public void setUp() throws IOException {
-      MockitoAnnotations.openMocks(this);
-      when(masterServices.getConnection()).thenReturn(connection);
-      when(connection.getTable(KeymetaTableAccessor.KEY_META_TABLE_NAME)).thenReturn(table);
-      when(masterServices.getKeyManagementService()).thenReturn(keyManagementService);
-      Configuration conf = HBaseConfiguration.create();
-      conf.setBoolean(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, true);
-      when(keyManagementService.getConfiguration()).thenReturn(conf);
-      accessor = new KeymetaTableAccessor(masterServices);
-    }
-
-    @After
-    public void tearDown() throws IOException {
-      if (table != null) {
-        table.close();
-      }
-    }
 
     @Test
     public void testDisableKey() throws Exception {
@@ -472,43 +447,10 @@ public class TestKeymetaTableAccessor {
    */
   @RunWith(BlockJUnit4ClassRunner.class)
   @Category({ MasterTests.class, SmallTests.class })
-  public static class TestUpdateActiveState {
+  public static class TestUpdateActiveState extends TestKeymetaTableAccessor {
     @ClassRule
     public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestUpdateActiveState.class);
-
-    @Mock
-    private MasterServices masterServices;
-    @Mock
-    private Connection connection;
-    @Mock
-    private Table table;
-    @Mock
-    private KeyManagementService keyManagementService;
-    @Mock
-    private SystemKeyCache systemKeyCache;
-
-    private KeymetaTableAccessor accessor;
-
-    @Before
-    public void setUp() throws IOException {
-      MockitoAnnotations.openMocks(this);
-      when(masterServices.getConnection()).thenReturn(connection);
-      when(connection.getTable(KeymetaTableAccessor.KEY_META_TABLE_NAME)).thenReturn(table);
-      when(masterServices.getKeyManagementService()).thenReturn(keyManagementService);
-      Configuration conf = HBaseConfiguration.create();
-      conf.setBoolean(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, true);
-      when(keyManagementService.getConfiguration()).thenReturn(conf);
-      when(keyManagementService.getSystemKeyCache()).thenReturn(systemKeyCache);
-      accessor = new KeymetaTableAccessor(masterServices);
-    }
-
-    @After
-    public void tearDown() throws IOException {
-      if (table != null) {
-        table.close();
-      }
-    }
 
     @Test
     public void testUpdateActiveStateFromInactiveToActive() throws Exception {
@@ -587,40 +529,10 @@ public class TestKeymetaTableAccessor {
    */
   @RunWith(BlockJUnit4ClassRunner.class)
   @Category({ MasterTests.class, SmallTests.class })
-  public static class TestRemoveFailureMarker {
+  public static class TestRemoveFailureMarker extends TestKeymetaTableAccessor {
     @ClassRule
     public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestRemoveFailureMarker.class);
-
-    @Mock
-    private MasterServices masterServices;
-    @Mock
-    private Connection connection;
-    @Mock
-    private Table table;
-    @Mock
-    private KeyManagementService keyManagementService;
-
-    private KeymetaTableAccessor accessor;
-
-    @Before
-    public void setUp() throws IOException {
-      MockitoAnnotations.openMocks(this);
-      when(masterServices.getConnection()).thenReturn(connection);
-      when(connection.getTable(KeymetaTableAccessor.KEY_META_TABLE_NAME)).thenReturn(table);
-      when(masterServices.getKeyManagementService()).thenReturn(keyManagementService);
-      Configuration conf = HBaseConfiguration.create();
-      conf.setBoolean(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY, true);
-      when(keyManagementService.getConfiguration()).thenReturn(conf);
-      accessor = new KeymetaTableAccessor(masterServices);
-    }
-
-    @After
-    public void tearDown() throws IOException {
-      if (table != null) {
-        table.close();
-      }
-    }
 
     @Test
     public void testRemoveFailureMarker() throws Exception {
@@ -628,13 +540,12 @@ public class TestKeymetaTableAccessor {
       ManagedKeyData keyData =
         new ManagedKeyData(CUST_ID, KEY_NAMESPACE, null, ManagedKeyState.FAILED, null);
 
-      ArgumentCaptor<org.apache.hadoop.hbase.client.Delete> deleteCaptor =
-        ArgumentCaptor.forClass(org.apache.hadoop.hbase.client.Delete.class);
+      ArgumentCaptor<Delete> deleteCaptor = ArgumentCaptor.forClass(Delete.class);
 
       accessor.removeFailureMarker(keyData);
 
       verify(table).delete(deleteCaptor.capture());
-      org.apache.hadoop.hbase.client.Delete delete = deleteCaptor.getValue();
+      Delete delete = deleteCaptor.getValue();
 
       // Verify the delete operation properties
       assertEquals(Durability.SKIP_WAL, delete.getDurability());
