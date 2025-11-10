@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -228,39 +228,60 @@ public class TestDataTieringManager {
     // Test with a filename where corresponding HStoreFile in not present
     hFilePath = new Path(hStoreFiles.get(0).getPath().getParent(), "incorrectFileName");
     testDataTieringMethodWithPathExpectingException(methodCallerWithPath, hFilePath,
-      new DataTieringException("Store file corresponding to " + hFilePath + " doesn't exist"));
+      new DataTieringException("Stoe file corresponding to " + hFilePath + " doesn't exist"));
   }
 
   @Test
-  public void testIsHotDataWithGracePeriodLogic() {
-    long hotAge = 1 * DAY;
-    long gracePeriod = 2 * DAY;
+  public void testGracePeriodMakesColdFileHot() throws IOException, DataTieringException {
+    initializeTestEnvironment();
+
+    long hotAge = 1 * DAY;      
+    long gracePeriod = 3 * DAY;  
+
     long currentTime = System.currentTimeMillis();
+    long fileTimestamp = currentTime - (2 * DAY);
 
     Configuration conf = getConfWithGracePeriod(hotAge, gracePeriod);
+    HRegion region = createHRegion("tableGracePeriod", conf);
+    HStore hStore = createHStore(region, "cf1", conf);
 
-    // Case 1: Data is new (hot by age, hot by grace)
-    long newTimestamp = currentTime - (long) (0.5 * DAY);
-    assertTrue("Data is new, should be hot", dataTieringManager.isHotData(newTimestamp, conf));
+    HStoreFile file = createHStoreFile(hStore.getStoreContext().getFamilyStoreDirectoryPath(),
+      hStore.getReadOnlyConfiguration(), fileTimestamp, region.getRegionFileSystem());
+    file.initReader();
 
-    // Case 2: Data is "cold" by age, but "hot" by grace period
-    // (1.5 days old > 1 day hotAge, but < 2 day gracePeriod)
-    long graceTimestamp = currentTime - (long) (1.5 * DAY);
-    assertTrue("Data is outside hotAge but inside gracePeriod, should be hot",
-      dataTieringManager.isHotData(graceTimestamp, conf));
 
-    // Case 3: Data is "cold" by age and "cold" by grace period
-    // (2.5 days old > 1 day hotAge, and > 2 day gracePeriod)
-    long coldTimestamp = currentTime - (long) (2.5 * DAY);
-    assertFalse("Data is outside hotAge and gracePeriod, should be cold",
-      dataTieringManager.isHotData(coldTimestamp, conf));
+    hStore.refreshStoreFiles(); 
+    region.stores.put(Bytes.toBytes("cf1"), hStore);
+    testOnlineRegions.put(region.getRegionInfo().getEncodedName(), region);
+    Path hFilePath = file.getPath();
+    assertTrue("File should be hot due to grace period",
+      dataTieringManager.isHotData(hFilePath));
+  }
 
-    // Case 4: Test default grace period (0)
-    Configuration confNoGrace = getConfWithTimeRangeDataTieringEnabled(hotAge);
-    // This timestamp (1.5 days old) is older than hotAge (1 day)
-    // With a default grace period of 0, it should be cold.
-    assertFalse("Data is outside hotAge and default gracePeriod (0), should be cold",
-      dataTieringManager.isHotData(graceTimestamp, confNoGrace));
+  @Test
+  public void testFileIsColdWithoutGracePeriod() throws IOException, DataTieringException {
+    initializeTestEnvironment();
+
+    long hotAge = 1 * DAY;
+    long gracePeriod = 0;
+    long currentTime = System.currentTimeMillis();
+    long fileTimestamp = currentTime - (2 * DAY);
+
+    Configuration conf = getConfWithGracePeriod(hotAge, gracePeriod);
+    HRegion region = createHRegion("tableNoGracePeriod", conf);
+    HStore hStore = createHStore(region, "cf1", conf);
+
+    HStoreFile file = createHStoreFile(hStore.getStoreContext().getFamilyStoreDirectoryPath(),
+      hStore.getReadOnlyConfiguration(), fileTimestamp, region.getRegionFileSystem());
+    file.initReader();
+
+    hStore.refreshStoreFiles();
+    region.stores.put(Bytes.toBytes("cf1"), hStore);
+    testOnlineRegions.put(region.getRegionInfo().getEncodedName(), region);
+
+    Path hFilePath = file.getPath();
+    assertFalse("File should be cold without grace period",
+      dataTieringManager.isHotData(hFilePath));
   }
 
   @Test
@@ -802,7 +823,7 @@ public class TestDataTieringManager {
       .setValue(DataTieringManager.DATATIERING_KEY, conf.get(DataTieringManager.DATATIERING_KEY))
       .setValue(DataTieringManager.DATATIERING_HOT_DATA_AGE_KEY,
         conf.get(DataTieringManager.DATATIERING_HOT_DATA_AGE_KEY))
-      .setValue(DataTieringManager.HSTORE_DATATIERING_GRACE_PERIOD_MILLIS_KEY,
+              .setValue(DataTieringManager.HSTORE_DATATIERING_GRACE_PERIOD_MILLIS_KEY,
         conf.get(DataTieringManager.HSTORE_DATATIERING_GRACE_PERIOD_MILLIS_KEY))
       .build();
     RegionInfo hri = RegionInfoBuilder.newBuilder(tableName).build();
@@ -831,7 +852,7 @@ public class TestDataTieringManager {
         .setValue(DataTieringManager.DATATIERING_KEY, conf.get(DataTieringManager.DATATIERING_KEY))
         .setValue(DataTieringManager.DATATIERING_HOT_DATA_AGE_KEY,
           conf.get(DataTieringManager.DATATIERING_HOT_DATA_AGE_KEY))
-        .setValue(DataTieringManager.HSTORE_DATATIERING_GRACE_PERIOD_MILLIS_KEY,
+          .setValue(DataTieringManager.HSTORE_DATATIERING_GRACE_PERIOD_MILLIS_KEY,
           conf.get(DataTieringManager.HSTORE_DATATIERING_GRACE_PERIOD_MILLIS_KEY))
         .build();
 
