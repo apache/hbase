@@ -34,7 +34,7 @@ export function GettingStartedSection() {
     {
       title: "3. Connect a Client",
       desc: "Use the Java API, REST, or Thrift to start building.",
-      to: "https://hbase.apache.org/book.html#config.files"
+      to: "https://hbase.apache.org/book.html#hbase_apis"
     }
   ];
   return (
