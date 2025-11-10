@@ -383,10 +383,10 @@ The website will be built automatically as part of the full build.
 **Build Website Only:**
 ```bash
 # Option 1: From HBase root directory
-mvn clean install -pl src/site
+mvn clean install -pl hbase-website
 
-# Option 2: From src/site directory
-cd src/site
+# Option 2: From hbase-website directory
+cd hbase-website
 mvn clean install
 ```
 
@@ -404,7 +404,7 @@ mvn clean install -DskipSite
 To verify the Maven configuration without building:
 
 ```bash
-cd src/site
+cd hbase-website
 mvn validate
 ```
 
@@ -420,7 +420,7 @@ The frontend-maven-plugin binds to these Maven phases:
 After a successful Maven build, you'll find:
 
 ```
-src/site/
+hbase-website/
 ├── build/                    # Production build output
 │   ├── client/               # Static website files
 │   └── server/               # Server-side code (if applicable)
@@ -444,7 +444,7 @@ The Maven configuration ensures consistent builds across different environments:
 
 ```bash
 # Clean and rebuild
-cd src/site
+cd hbase-website
 mvn clean install
 ```
 
@@ -458,7 +458,7 @@ This usually indicates:
 
 To diagnose, run the commands directly:
 ```bash
-cd src/site
+cd hbase-website
 npm install
 npm run lint      # Check linting
 npm run typecheck # Check types
@@ -473,7 +473,7 @@ Fix any errors and try the Maven build again.
 To completely reset the build environment:
 
 ```bash
-cd src/site
+cd hbase-website
 rm -rf node_modules/ build/ target/ .react-router/
 mvn clean install
 ```
@@ -490,7 +490,7 @@ mvn clean install
 ✅ **No Manual Steps**: Maven handles everything automatically  
 ✅ **Isolated Node.js**: Doesn't interfere with system Node installation  
 ✅ **Skip Option**: Can skip website build with `-DskipSite`  
-✅ **Standalone**: Can build website separately with `-pl src/site`  
+✅ **Standalone**: Can build website separately with `-pl hbase-website`  
 ✅ **Quality Checks**: Runs linting, type checking, and tests before building  
 
 #### For HBase Developers
@@ -506,7 +506,7 @@ If you're working on the website:
 
 ```bash
 # Use npm for faster development iteration
-cd src/site
+cd hbase-website
 npm install
 npm run dev      # Start dev server with hot reload
 
