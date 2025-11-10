@@ -354,21 +354,26 @@ The website is integrated with the Apache HBase Maven build system using the `fr
 
 When you run the Maven build, it automatically:
 
-1. **Installs Node.js v22.20.0 and npm 10.5.0** (if not already available)
+1. **Cleans previous build artifacts** (when using `mvn clean`)
+   - Removes `build/` directory
+   - Removes `node_modules/` directory
+   - Ensures a fresh build environment
+
+2. **Installs Node.js v22.20.0 and npm 11.6.2** (if not already available)
    - Installed to `target/` directory
    - Does not affect your system Node/npm installation
 
-2. **Runs `npm install`** to install all dependencies
+3. **Runs `npm install`** to install all dependencies
    - Reads from `package.json`
    - Installs to `node_modules/`
 
-3. **Runs `npm run ci`** which executes:
+4. **Runs `npm run ci`** which executes:
    - `npm run lint` - ESLint code quality checks
    - `npm run typecheck` - TypeScript type checking
    - `npm run test:run` - Vitest unit tests
    - `npm run build` - Production build
 
-4. **Build Output**: Generated files are in `build/` directory
+5. **Build Output**: Generated files are in `build/` directory
 
 #### Maven Commands
 
@@ -470,8 +475,22 @@ Fix any errors and try the Maven build again.
 
 **Clean Everything:**
 
-To completely reset the build environment:
+To completely reset the build environment, use Maven's clean phase which automatically removes `build/` and `node_modules/`:
 
+```bash
+cd hbase-website
+mvn clean install
+```
+
+This will:
+- Remove `build/` directory
+- Remove `node_modules/` directory  
+- Remove `target/` directory
+- Reinstall Node.js and npm
+- Install all dependencies fresh
+- Run the full build pipeline
+
+For a manual clean (if needed):
 ```bash
 cd hbase-website
 rm -rf node_modules/ build/ target/ .react-router/

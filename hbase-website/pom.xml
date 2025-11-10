@@ -33,11 +33,28 @@
 
   <properties>
     <node.version>v22.20.0</node.version>
-    <npm.version>10.5.0</npm.version>
+    <npm.version>11.6.2</npm.version>
   </properties>
 
   <build>
     <plugins>
+      <!-- Clean build and node_modules directories -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-clean-plugin</artifactId>
+        <configuration>
+          <filesets>
+            <fileset>
+              <directory>${project.basedir}/build</directory>
+              <followSymlinks>false</followSymlinks>
+            </fileset>
+            <fileset>
+              <directory>${project.basedir}/node_modules</directory>
+              <followSymlinks>false</followSymlinks>
+            </fileset>
+          </filesets>
+        </configuration>
+      </plugin>
       <plugin>
         <groupId>com.github.eirslett</groupId>
         <artifactId>frontend-maven-plugin</artifactId>
@@ -120,4 +137,3 @@
     </profile>
   </profiles>
 </project>
-

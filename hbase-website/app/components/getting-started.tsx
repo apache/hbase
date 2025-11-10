@@ -62,15 +62,6 @@ export function GettingStartedSection() {
             </div>
           ))}
         </div>
-        {/* <div className="mt-8 flex justify-center">
-          <Button
-            asChild
-            size="lg"
-            className="bg-primary text-white hover:opacity-90"
-          >
-            <a href="#download">Download HBase</a>
-          </Button>
-        </div> */}
       </div>
     </section>
   );
