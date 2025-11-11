@@ -53,7 +53,7 @@ public class RegionStates {
 
   private final Object regionsMapLock = new Object();
 
-  private final AtomicInteger trspCounter = new AtomicInteger(0);
+  private final AtomicInteger activeTransitProcedureCount = new AtomicInteger(0);
 
   // TODO: Replace the ConcurrentSkipListMaps
   /**
@@ -105,7 +105,7 @@ public class RegionStates {
   RegionStateNode createRegionStateNode(RegionInfo regionInfo) {
     synchronized (regionsMapLock) {
       RegionStateNode node = regionsMap.computeIfAbsent(regionInfo.getRegionName(),
-        key -> new RegionStateNode(regionInfo, trspCounter));
+        key -> new RegionStateNode(regionInfo, activeTransitProcedureCount));
 
       if (encodedRegionsMap.get(regionInfo.getEncodedName()) != node) {
         encodedRegionsMap.put(regionInfo.getEncodedName(), node);
@@ -602,7 +602,7 @@ public class RegionStates {
   }
 
   public int getRegionTransitScheduledCount() {
-    return trspCounter.get();
+    return activeTransitProcedureCount.get();
   }
 
   // ==========================================================================
