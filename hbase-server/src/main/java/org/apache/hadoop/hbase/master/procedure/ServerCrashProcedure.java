@@ -23,6 +23,7 @@ import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_COORDINATED_BY_
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.ServerName;
@@ -161,6 +162,8 @@ public class ServerCrashProcedure extends
           LOG.info("Start " + this);
           // If carrying meta, process it first. Else, get list of regions on crashed server.
           if (this.carryingMeta) {
+            env.getAssignmentManager().markRegionsAsCrashed(
+              Collections.singletonList(RegionInfoBuilder.FIRST_META_REGIONINFO), this);
             setNextState(ServerCrashState.SERVER_CRASH_SPLIT_META_LOGS);
           } else {
             setNextState(ServerCrashState.SERVER_CRASH_GET_REGIONS);

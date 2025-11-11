@@ -2053,7 +2053,8 @@ public class HMaster extends HRegionServer implements MasterServices {
         if (!request.isIgnoreRegionsInTransition() || metaInTransition) {
           LOG.info("Not running balancer (ignoreRIT=false" + ", metaRIT=" + metaInTransition
             + ") because " + assignmentManager.getRegionTransitScheduledCount()
-            + " region(s) in transition: " + toPrint + (truncated ? "(truncated list)" : ""));
+            + " region(s) are scheduled to transit " + toPrint
+            + (truncated ? "(truncated list)" : ""));
           return responseBuilder.build();
         }
       }

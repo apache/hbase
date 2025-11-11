@@ -79,7 +79,7 @@
       <tr>
         <th></th>
           <td><%= deadServerName %></td>
-          <td><%= deadServerUtil.getTimeOfDeath(deadServerName) %></td>
+          <td><%= new Date(deadServerUtil.getTimeOfDeath(deadServerName)) %></td>
           <% if (rsGroupName != null) { %>
           <td><%= rsGroupName %></td>
           <% } %>
