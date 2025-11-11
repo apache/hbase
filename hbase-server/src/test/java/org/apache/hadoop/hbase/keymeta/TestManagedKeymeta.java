@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -92,11 +93,25 @@ public class TestManagedKeymeta extends ManagedKeyTestBase {
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
     MockManagedKeyProvider managedKeyProvider =
       (MockManagedKeyProvider) Encryption.getManagedKeyProvider(master.getConfiguration());
+    managedKeyProvider.setMultikeyGenMode(true);
     String cust = "cust1";
     byte[] custBytes = cust.getBytes();
     ManagedKeyData managedKey =
       adminClient.enableKeyManagement(custBytes, ManagedKeyData.KEY_SPACE_GLOBAL);
     assertKeyDataSingleKey(managedKey, ManagedKeyState.ACTIVE);
+
+    // Enable must have persisted the key, but it won't be read back until we call into the cache.
+    // We have the multi key gen mode enabled, but since the key should be loaded from L2, we
+    // should get the same key even after ejecting it.
+    HRegionServer regionServer = TEST_UTIL.getHBaseCluster().getRegionServer(0);
+    ManagedKeyDataCache managedKeyDataCache = regionServer.getManagedKeyDataCache();
+    ManagedKeyData activeEntry = managedKeyDataCache.getActiveEntry(custBytes, ManagedKeyData.KEY_SPACE_GLOBAL);
+    assertNotNull(activeEntry);
+    assertTrue(Bytes.equals(managedKey.getKeyMetadataHash(), activeEntry.getKeyMetadataHash()));
+    assertTrue(managedKeyDataCache.ejectKey(custBytes, ManagedKeyData.KEY_SPACE_GLOBAL, managedKey.getKeyMetadataHash()));
+    activeEntry = managedKeyDataCache.getActiveEntry(custBytes, ManagedKeyData.KEY_SPACE_GLOBAL);
+    assertNotNull(activeEntry);
+    assertTrue(Bytes.equals(managedKey.getKeyMetadataHash(), activeEntry.getKeyMetadataHash()));
 
     List<ManagedKeyData> managedKeys =
       adminClient.getManagedKeys(custBytes, ManagedKeyData.KEY_SPACE_GLOBAL);

@@ -164,7 +164,7 @@ public class KeymetaTableAccessor extends KeyManagementBase {
    */
   public ManagedKeyData getActiveKey(byte[] keyCust, String keyNamespace)
     throws IOException, KeyException {
-    return getKey(keyCust, keyNamespace, new byte[] { ManagedKeyState.ACTIVE.getVal() });
+    return getKey(keyCust, keyNamespace, null);
   }
 
   /**
@@ -181,7 +181,8 @@ public class KeymetaTableAccessor extends KeyManagementBase {
     assertKeyManagementEnabled();
     Connection connection = getServer().getConnection();
     try (Table table = connection.getTable(KEY_META_TABLE_NAME)) {
-      byte[] rowKey = constructRowKeyForMetadata(keyCust, keyNamespace, keyMetadataHash);
+      byte[] rowKey = keyMetadataHash != null ? constructRowKeyForMetadata(keyCust, keyNamespace,
+        keyMetadataHash) : constructRowKeyForCustNamespace(keyCust, keyNamespace);
       Result result = table.get(new Get(rowKey));
       return parseFromResult(getKeyManagementService(), keyCust, keyNamespace, result);
     }
