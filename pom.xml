@@ -842,7 +842,7 @@
     <servlet.api.version>4.0.1</servlet.api.version>
     <wx.rs.api.version>2.1.1</wx.rs.api.version>
     <tomcat.jasper.version>9.0.110</tomcat.jasper.version>
-    <jruby.version>9.4.12.1</jruby.version>
+    <jruby.version>9.4.14.0</jruby.version>
     <junit.jupiter.version>5.13.4</junit.jupiter.version>
     <junit.vintage.version>5.13.4</junit.vintage.version>
     <hamcrest.version>1.3</hamcrest.version>
@@ -867,8 +867,8 @@
     <jamon-runtime.version>2.4.1</jamon-runtime.version>
     <jettison.version>1.5.4</jettison.version>
     <!--Make sure these joni/jcodings are compatible with the versions used by jruby-->
-    <joni.version>2.2.3</joni.version>
-    <jcodings.version>1.0.61</jcodings.version>
+    <joni.version>2.2.5</joni.version>
+    <jcodings.version>1.0.63</jcodings.version>
     <spy.version>2.12.3</spy.version>
     <bouncycastle.version>1.81</bouncycastle.version>
     <skyscreamer.version>1.5.1</skyscreamer.version>
