@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -348,7 +347,7 @@ public class AssignmentManager {
           return;
         }
       }
-      LOG.info("Attach {} to {} to restore", proc, regionNode);
+      LOG.info("Attach {} to {}", proc, regionNode);
       regionNode.setProcedure(proc);
     });
   }
@@ -1796,10 +1795,10 @@ public class AssignmentManager {
         regionNode.getRegionLocation() != null
           && master.getServerManager().isServerDead(regionNode.getRegionLocation())
       ) {
-        Date timeOfCrash =
+        long timeOfCrash =
           master.getServerManager().getDeadServers().getTimeOfDeath(regionNode.getRegionLocation());
-        if (timeOfCrash != null) {
-          regionNode.crashed(timeOfCrash.getTime());
+        if (timeOfCrash != 0) {
+          regionNode.crashed(timeOfCrash);
         }
         regionInTransitionTracker.regionCrashed(regionNode);
       }
