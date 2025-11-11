@@ -28,6 +28,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Tracks regions that are currently in transition (RIT) - those not yet in their terminal state.
+ */
 @InterfaceAudience.Private
 public class RegionInTransitionTracker {
   private static final Logger LOG = LoggerFactory.getLogger(RegionInTransitionTracker.class);
@@ -50,6 +53,11 @@ public class RegionInTransitionTracker {
     return regionInTransition.containsKey(regionInfo);
   }
 
+  /**
+   * Handles a region whose hosting RegionServer has crashed. When a RegionServer fails, all regions
+   * it was hosting are automatically added to the RIT list since they need to be reassigned to
+   * other servers.
+   */
   public void regionCrashed(RegionStateNode regionStateNode) {
     if (regionStateNode.getRegionInfo().getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID) {
       return;
@@ -61,6 +69,14 @@ public class RegionInTransitionTracker {
     }
   }
 
+  /**
+   * Processes a region state change and updates the RIT tracking accordingly. This is the core
+   * method that determines whether a region should be added to or removed from the RIT list based
+   * on its current state and the table's enabled/disabled status. This method should be called
+   * whenever a region state changes get stored to hbase:meta Note: Only default replicas (replica
+   * ID 0) are tracked. Read replicas are ignored.
+   * @param regionStateNode the region state node with the current state information
+   */
   public void handleRegionStateNodeOperation(RegionStateNode regionStateNode) {
     // only consider default replica for availability
     if (regionStateNode.getRegionInfo().getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID) {
@@ -95,6 +111,13 @@ public class RegionInTransitionTracker {
     }
   }
 
+  /**
+   * Handles the deletion of a region by removing it from RIT tracking. This is called when a region
+   * is permanently removed from the cluster, typically after a successful merge operation where the
+   * parent regions are cleaned up. During table deletion, table should be already disabled and all
+   * the region are already OFFLINE
+   * @param regionInfo the region being deleted
+   */
   public void handleRegionDelete(RegionInfo regionInfo) {
     removeRegionInTransition(regionInfo);
   }
