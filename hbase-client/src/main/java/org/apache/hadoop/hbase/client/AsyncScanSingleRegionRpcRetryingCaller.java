@@ -460,9 +460,9 @@ class AsyncScanSingleRegionRpcRetryingCaller {
     retryTimer.newTimeout(t -> call(), delayNs, TimeUnit.NANOSECONDS);
   }
 
-  private void updateNextStartRowWhenError(Result result) {
+  private void updateNextStartRowWhenError(Result result, boolean isHeartbeatMessage) {
     nextStartRowWhenError = result.getRow();
-    includeNextStartRowWhenError = result.mayHaveMoreCellsInRow();
+    includeNextStartRowWhenError = result.mayHaveMoreCellsInRow() || isHeartbeatMessage;
   }
 
   private void completeWhenNoMoreResultsInRegion() {
@@ -531,7 +531,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
     if (results.length > 0) {
       scanController = new ScanControllerImpl(
         resp.hasCursor() ? Optional.of(ProtobufUtil.toCursor(resp.getCursor())) : Optional.empty());
-      updateNextStartRowWhenError(results[results.length - 1]);
+      updateNextStartRowWhenError(results[results.length - 1], isHeartbeatMessage);
       consumer.onNext(results, scanController);
     } else {
       Optional<Cursor> cursor = Optional.empty();
