@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master;
 
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.util.List;
@@ -95,7 +96,7 @@ public class TestDeadServer {
     assertTrue(ds.isDeadServer(deadServer));
     Set<ServerName> deadServerNames = ds.copyServerNames();
     for (ServerName eachDeadServer : deadServerNames) {
-      Assert.assertNotNull(ds.getTimeOfDeath(eachDeadServer));
+      assertNotEquals(0, ds.getTimeOfDeath(eachDeadServer));
     }
     final ServerName deadServerHostComingAlive = ServerName.valueOf("127.0.0.1", 9090, 223341L);
     assertTrue(ds.cleanPreviousInstance(deadServerHostComingAlive));

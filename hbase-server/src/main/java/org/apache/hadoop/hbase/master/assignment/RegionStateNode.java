@@ -68,7 +68,7 @@ import org.slf4j.LoggerFactory;
 public class RegionStateNode implements Comparable<RegionStateNode> {
 
   private static final Logger LOG = LoggerFactory.getLogger(RegionStateNode.class);
-  private final AtomicInteger trspCounter;
+  private final AtomicInteger activeTransitProcedureCount;
 
   private static final class AssignmentProcedureEvent extends ProcedureEvent<RegionInfo> {
     public AssignmentProcedureEvent(final RegionInfo regionInfo) {
@@ -102,10 +102,10 @@ public class RegionStateNode implements Comparable<RegionStateNode> {
 
   private volatile long openSeqNum = HConstants.NO_SEQNUM;
 
-  RegionStateNode(RegionInfo regionInfo, AtomicInteger trspCounter) {
+  RegionStateNode(RegionInfo regionInfo, AtomicInteger activeTransitProcedureCount) {
     this.regionInfo = regionInfo;
     this.event = new AssignmentProcedureEvent(regionInfo);
-    this.trspCounter = trspCounter;
+    this.activeTransitProcedureCount = activeTransitProcedureCount;
   }
 
   /**
@@ -210,13 +210,13 @@ public class RegionStateNode implements Comparable<RegionStateNode> {
   public TransitRegionStateProcedure setProcedure(TransitRegionStateProcedure proc) {
     assert this.procedure == null;
     this.procedure = proc;
-    trspCounter.incrementAndGet();
+    activeTransitProcedureCount.incrementAndGet();
     return proc;
   }
 
   public void unsetProcedure(TransitRegionStateProcedure proc) {
     assert this.procedure == proc;
-    trspCounter.decrementAndGet();
+    activeTransitProcedureCount.decrementAndGet();
     this.procedure = null;
   }
 
