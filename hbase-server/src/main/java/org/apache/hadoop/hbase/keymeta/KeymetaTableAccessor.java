@@ -181,8 +181,9 @@ public class KeymetaTableAccessor extends KeyManagementBase {
     assertKeyManagementEnabled();
     Connection connection = getServer().getConnection();
     try (Table table = connection.getTable(KEY_META_TABLE_NAME)) {
-      byte[] rowKey = keyMetadataHash != null ? constructRowKeyForMetadata(keyCust, keyNamespace,
-        keyMetadataHash) : constructRowKeyForCustNamespace(keyCust, keyNamespace);
+      byte[] rowKey = keyMetadataHash != null
+        ? constructRowKeyForMetadata(keyCust, keyNamespace, keyMetadataHash)
+        : constructRowKeyForCustNamespace(keyCust, keyNamespace);
       Result result = table.get(new Get(rowKey));
       return parseFromResult(getKeyManagementService(), keyCust, keyNamespace, result);
     }
@@ -252,8 +253,8 @@ public class KeymetaTableAccessor extends KeyManagementBase {
   }
 
   /**
-   * Updates the state of a key between ACTIVE and INACTIVE from current state which can be any of
-   * ACTIVE, INACTIVE, DISABLED, or FAILED.
+   * Updates the state of a key to one of the ACTIVE or INACTIVE states. The current state can be
+   * any state, but if it the same, it becomes a no-op.
    * @param keyData  The key data.
    * @param newState The new state (must be ACTIVE or INACTIVE).
    * @throws IOException when there is an underlying IOException.

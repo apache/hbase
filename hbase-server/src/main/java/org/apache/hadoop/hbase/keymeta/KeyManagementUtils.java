@@ -51,8 +51,8 @@ public class KeyManagementUtils {
   public static ManagedKeyData retrieveActiveKey(ManagedKeyProvider provider,
     KeymetaTableAccessor accessor, String encKeyCust, byte[] key_cust, String keyNamespace,
     ManagedKeyData existingActiveKey) throws IOException, KeyException {
-    ManagedKeyData pbeKey = provider.getManagedKey(key_cust, keyNamespace);
-    if (pbeKey == null) {
+    ManagedKeyData keyData = provider.getManagedKey(key_cust, keyNamespace);
+    if (keyData == null) {
       throw new IOException("Invalid null managed key received from key provider");
     }
     /*
@@ -64,12 +64,12 @@ public class KeyManagementUtils {
      */
     LOG.info(
       "retrieveActiveKey: got key with state: {} and metadata: {} for custodian: {} namespace: {}",
-      pbeKey.getKeyState(), pbeKey.getKeyMetadataHashEncoded(), encKeyCust,
-      pbeKey.getKeyNamespace());
+      keyData.getKeyState(), keyData.getKeyMetadataHashEncoded(), encKeyCust,
+      keyData.getKeyNamespace());
     if (accessor != null) {
-      accessor.addKey(pbeKey);
+      accessor.addKey(keyData);
     }
-    return pbeKey;
+    return keyData;
   }
 
   /**

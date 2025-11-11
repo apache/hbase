@@ -48,7 +48,6 @@ import java.util.function.Consumer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -694,8 +693,8 @@ public class TestKeymetaAdminImpl {
 
       IOException exception = assertThrows(IOException.class,
         () -> admin.disableManagedKey(CUST_BYTES, KEY_SPACE_GLOBAL, keyMetadataHash));
-      assertTrue(exception.getMessage().contains("Key not found with metadata hash: " +
-        ManagedKeyProvider.encodeToStr(keyMetadataHash)));
+      assertTrue(exception.getMessage().contains(
+        "Key not found with metadata hash: " + ManagedKeyProvider.encodeToStr(keyMetadataHash)));
       verify(mockAccessor).getKey(CUST_BYTES, KEY_SPACE_GLOBAL, keyMetadataHash);
     }
 

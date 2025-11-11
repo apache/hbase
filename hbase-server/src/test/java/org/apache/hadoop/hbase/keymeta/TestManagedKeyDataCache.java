@@ -654,6 +654,9 @@ public class TestManagedKeyDataCache {
       when(mockL2.getActiveKey(CUST_ID, KEY_SPACE_GLOBAL)).thenReturn(key);
       assertEquals(key, cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL));
       verify(mockL2).getActiveKey(any(), any(String.class));
+      clearInvocations(mockL2);
+      assertEquals(key, cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL));
+      verify(mockL2, never()).getActiveKey(any(), any(String.class));
     }
 
     @Test

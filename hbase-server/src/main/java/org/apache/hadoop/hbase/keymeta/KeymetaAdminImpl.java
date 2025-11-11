@@ -190,8 +190,8 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
     // First retrieve the key to verify it exists and get the full metadata for cache ejection
     ManagedKeyData existingKey = getKey(keyCust, keyNamespace, keyMetadataHash);
     if (existingKey == null || existingKey.getKeyMetadata() == null) {
-      throw new IOException( "Key not found with metadata hash: " +
-        ManagedKeyProvider.encodeToStr(keyMetadataHash));
+      throw new IOException(
+        "Key not found with metadata hash: " + ManagedKeyProvider.encodeToStr(keyMetadataHash));
     }
 
     disableKey(existingKey);

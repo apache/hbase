@@ -630,6 +630,10 @@ Shell.load_command_group(
     enable_key_management
     show_key_status
     rotate_stk
+    disable_key_management
+    disable_managed_key
+    refresh_managed_keys
+    rotate_managed_key
   ]
 )
 

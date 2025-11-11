@@ -105,10 +105,12 @@ public class TestManagedKeymeta extends ManagedKeyTestBase {
     // should get the same key even after ejecting it.
     HRegionServer regionServer = TEST_UTIL.getHBaseCluster().getRegionServer(0);
     ManagedKeyDataCache managedKeyDataCache = regionServer.getManagedKeyDataCache();
-    ManagedKeyData activeEntry = managedKeyDataCache.getActiveEntry(custBytes, ManagedKeyData.KEY_SPACE_GLOBAL);
+    ManagedKeyData activeEntry =
+      managedKeyDataCache.getActiveEntry(custBytes, ManagedKeyData.KEY_SPACE_GLOBAL);
     assertNotNull(activeEntry);
     assertTrue(Bytes.equals(managedKey.getKeyMetadataHash(), activeEntry.getKeyMetadataHash()));
-    assertTrue(managedKeyDataCache.ejectKey(custBytes, ManagedKeyData.KEY_SPACE_GLOBAL, managedKey.getKeyMetadataHash()));
+    assertTrue(managedKeyDataCache.ejectKey(custBytes, ManagedKeyData.KEY_SPACE_GLOBAL,
+      managedKey.getKeyMetadataHash()));
     activeEntry = managedKeyDataCache.getActiveEntry(custBytes, ManagedKeyData.KEY_SPACE_GLOBAL);
     assertNotNull(activeEntry);
     assertTrue(Bytes.equals(managedKey.getKeyMetadataHash(), activeEntry.getKeyMetadataHash()));

@@ -45,6 +45,10 @@ import org.slf4j.LoggerFactory;
 public class SecurityUtil {
   private static final Logger LOG = LoggerFactory.getLogger(SecurityUtil.class);
 
+  private SecurityUtil() {
+    // Utility class
+  }
+
   /**
    * Get the user name from a principal
    */

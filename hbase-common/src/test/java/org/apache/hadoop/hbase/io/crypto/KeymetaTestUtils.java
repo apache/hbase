@@ -45,6 +45,10 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 public final class KeymetaTestUtils {
 
+  private KeymetaTestUtils() {
+    // Utility class
+  }
+
   /**
    * A ByteArrayInputStream that implements Seekable and PositionedReadable to work with
    * FSDataInputStream.
@@ -104,10 +108,6 @@ public final class KeymetaTestUtils {
     public void readFully(long position, byte[] buffer) throws IOException {
       readFully(position, buffer, 0, buffer.length);
     }
-  }
-
-  private KeymetaTestUtils() {
-    // Utility class
   }
 
   public static final String ALIAS = "test";
