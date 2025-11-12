@@ -31,6 +31,7 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.security.KeyException;
 import java.util.List;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
@@ -326,10 +327,6 @@ public class TestManagedKeymeta extends ManagedKeyTestBase {
       (client) -> client.disableManagedKey(new byte[0], "namespace", new byte[0]));
   }
 
-  // Note: Integration tests for rotateManagedKey are complex due to keymeta table persistence.
-  // The business logic is already tested in TestKeymetaAdminImpl with mocks.
-  // Here we test that the RPC layer properly handles exceptions.
-
   @Test
   public void testRotateManagedKeyWithClientSideServiceException() throws Exception {
     doTestWithClientSideServiceException((mockStub,
@@ -337,14 +334,113 @@ public class TestManagedKeymeta extends ManagedKeyTestBase {
       (client) -> client.rotateManagedKey(new byte[0], "namespace"));
   }
 
-  // Note: Integration tests for refreshManagedKeys are complex due to keymeta table persistence.
-  // The business logic is already tested in TestKeymetaAdminImpl with mocks.
-  // Here we test that the RPC layer properly handles exceptions.
-
   @Test
   public void testRefreshManagedKeysWithClientSideServiceException() throws Exception {
     doTestWithClientSideServiceException((mockStub,
       networkError) -> when(mockStub.refreshManagedKeys(any(), any())).thenThrow(networkError),
       (client) -> client.refreshManagedKeys(new byte[0], "namespace"));
+  }
+
+  @Test
+  public void testRotateManagedKeyLocal() throws Exception {
+    HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
+    KeymetaAdmin keymetaAdmin = master.getKeymetaAdmin();
+    doTestRotateManagedKey(keymetaAdmin);
+  }
+
+  @Test
+  public void testRotateManagedKeyOverRPC() throws Exception {
+    KeymetaAdmin adminClient = new KeymetaAdminClient(TEST_UTIL.getConnection());
+    doTestRotateManagedKey(adminClient);
+  }
+
+  private void doTestRotateManagedKey(KeymetaAdmin adminClient)
+    throws IOException, KeyException {
+    // This test covers the success path (line 133 in KeymetaAdminClient for RPC)
+    HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
+    MockManagedKeyProvider managedKeyProvider =
+      (MockManagedKeyProvider) Encryption.getManagedKeyProvider(master.getConfiguration());
+    managedKeyProvider.setMultikeyGenMode(true);
+
+    String cust = "cust1";
+    byte[] custBytes = cust.getBytes();
+
+    // Enable key management first to have a key to rotate
+    adminClient.enableKeyManagement(custBytes, ManagedKeyData.KEY_SPACE_GLOBAL);
+
+    // Now rotate the key
+    ManagedKeyData rotatedKey =
+      adminClient.rotateManagedKey(custBytes, ManagedKeyData.KEY_SPACE_GLOBAL);
+
+    assertNotNull("Rotated key should not be null", rotatedKey);
+    assertEquals("Rotated key should be ACTIVE", ManagedKeyState.ACTIVE,
+      rotatedKey.getKeyState());
+    assertEquals("Rotated key should have correct custodian", 0,
+      Bytes.compareTo(custBytes, rotatedKey.getKeyCustodian()));
+    assertEquals("Rotated key should have correct namespace", ManagedKeyData.KEY_SPACE_GLOBAL,
+      rotatedKey.getKeyNamespace());
+  }
+
+  @Test
+  public void testRefreshManagedKeysLocal() throws Exception {
+    HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
+    KeymetaAdmin keymetaAdmin = master.getKeymetaAdmin();
+    doTestRefreshManagedKeys(keymetaAdmin);
+  }
+
+  @Test
+  public void testRefreshManagedKeysOverRPC() throws Exception {
+    KeymetaAdmin adminClient = new KeymetaAdminClient(TEST_UTIL.getConnection());
+    doTestRefreshManagedKeys(adminClient);
+  }
+
+  private void doTestRefreshManagedKeys(KeymetaAdmin adminClient)
+    throws IOException, KeyException {
+    // This test covers the success path (line 148 in KeymetaAdminClient for RPC)
+    String cust = "cust1";
+    byte[] custBytes = cust.getBytes();
+
+    // Enable key management first to have keys to refresh
+    adminClient.enableKeyManagement(custBytes, ManagedKeyData.KEY_SPACE_GLOBAL);
+
+    // Should complete without exception - covers the normal return path
+    adminClient.refreshManagedKeys(custBytes, ManagedKeyData.KEY_SPACE_GLOBAL);
+
+    // Verify keys still exist after refresh
+    List<ManagedKeyData> keys = adminClient.getManagedKeys(custBytes, ManagedKeyData.KEY_SPACE_GLOBAL);
+    assertNotNull("Keys should exist after refresh", keys);
+    assertFalse("Should have at least one key after refresh", keys.isEmpty());
+  }
+
+  // ========== NotImplementedException Tests ==========
+
+  @Test
+  public void testEjectManagedKeyDataCacheEntryNotSupported() throws Exception {
+    // This test covers lines 89-90 in KeymetaAdminClient
+    KeymetaAdminClient client = new KeymetaAdminClient(TEST_UTIL.getConnection());
+    String cust = "cust1";
+    byte[] custBytes = cust.getBytes();
+
+    NotImplementedException exception = assertThrows(NotImplementedException.class, () -> client
+      .ejectManagedKeyDataCacheEntry(custBytes, ManagedKeyData.KEY_SPACE_GLOBAL, "metadata"));
+
+    assertTrue("Exception message should indicate method is not supported",
+      exception.getMessage().contains("ejectManagedKeyDataCacheEntry not supported"));
+    assertTrue("Exception message should mention KeymetaAdminClient",
+      exception.getMessage().contains("KeymetaAdminClient"));
+  }
+
+  @Test
+  public void testClearManagedKeyDataCacheNotSupported() throws Exception {
+    // This test covers lines 95-96 in KeymetaAdminClient
+    KeymetaAdminClient client = new KeymetaAdminClient(TEST_UTIL.getConnection());
+
+    NotImplementedException exception =
+      assertThrows(NotImplementedException.class, () -> client.clearManagedKeyDataCache());
+
+    assertTrue("Exception message should indicate method is not supported",
+      exception.getMessage().contains("clearManagedKeyDataCache not supported"));
+    assertTrue("Exception message should mention KeymetaAdminClient",
+      exception.getMessage().contains("KeymetaAdminClient"));
   }
 }
