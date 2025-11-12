@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -29,38 +29,33 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.hbase.ClientMetaTableAccessor;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.FutureUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 
 import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
 
-@Category({ ClientTests.class, MediumTests.class })
+@Tag(MediumTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestCompactFromClient {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCompactFromClient.class);
 
   private org.apache.logging.log4j.core.Appender mockAppender;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     mockAppender = mock(org.apache.logging.log4j.core.Appender.class);
     when(mockAppender.getName()).thenReturn("mockAppender");
     when(mockAppender.isStarted()).thenReturn(true);
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     ((org.apache.logging.log4j.core.Logger) org.apache.logging.log4j.LogManager
       .getLogger(FutureUtils.class)).removeAppender(mockAppender);
