@@ -232,6 +232,57 @@ public class TestDataTieringManager {
   }
 
   @Test
+  public void testGracePeriodMakesColdFileHot() throws IOException, DataTieringException {
+    initializeTestEnvironment();
+
+    long hotAge = 1 * DAY;
+    long gracePeriod = 3 * DAY;
+
+    long currentTime = System.currentTimeMillis();
+    long fileTimestamp = currentTime - (2 * DAY);
+
+    Configuration conf = getConfWithGracePeriod(hotAge, gracePeriod);
+    HRegion region = createHRegion("tableGracePeriod", conf);
+    HStore hStore = createHStore(region, "cf1", conf);
+
+    HStoreFile file = createHStoreFile(hStore.getStoreContext().getFamilyStoreDirectoryPath(),
+      hStore.getReadOnlyConfiguration(), fileTimestamp, region.getRegionFileSystem());
+    file.initReader();
+
+    hStore.refreshStoreFiles();
+    region.stores.put(Bytes.toBytes("cf1"), hStore);
+    testOnlineRegions.put(region.getRegionInfo().getEncodedName(), region);
+    Path hFilePath = file.getPath();
+    assertTrue("File should be hot due to grace period", dataTieringManager.isHotData(hFilePath));
+  }
+
+  @Test
+  public void testFileIsColdWithoutGracePeriod() throws IOException, DataTieringException {
+    initializeTestEnvironment();
+
+    long hotAge = 1 * DAY;
+    long gracePeriod = 0;
+    long currentTime = System.currentTimeMillis();
+    long fileTimestamp = currentTime - (2 * DAY);
+
+    Configuration conf = getConfWithGracePeriod(hotAge, gracePeriod);
+    HRegion region = createHRegion("tableNoGracePeriod", conf);
+    HStore hStore = createHStore(region, "cf1", conf);
+
+    HStoreFile file = createHStoreFile(hStore.getStoreContext().getFamilyStoreDirectoryPath(),
+      hStore.getReadOnlyConfiguration(), fileTimestamp, region.getRegionFileSystem());
+    file.initReader();
+
+    hStore.refreshStoreFiles();
+    region.stores.put(Bytes.toBytes("cf1"), hStore);
+    testOnlineRegions.put(region.getRegionInfo().getEncodedName(), region);
+
+    Path hFilePath = file.getPath();
+    assertFalse("File should be cold without grace period",
+      dataTieringManager.isHotData(hFilePath));
+  }
+
+  @Test
   public void testPrefetchWhenDataTieringEnabled() throws IOException {
     setPrefetchBlocksOnOpen();
     initializeTestEnvironment();
@@ -770,6 +821,8 @@ public class TestDataTieringManager {
       .setValue(DataTieringManager.DATATIERING_KEY, conf.get(DataTieringManager.DATATIERING_KEY))
       .setValue(DataTieringManager.DATATIERING_HOT_DATA_AGE_KEY,
         conf.get(DataTieringManager.DATATIERING_HOT_DATA_AGE_KEY))
+      .setValue(DataTieringManager.HSTORE_DATATIERING_GRACE_PERIOD_MILLIS_KEY,
+        conf.get(DataTieringManager.HSTORE_DATATIERING_GRACE_PERIOD_MILLIS_KEY))
       .build();
     RegionInfo hri = RegionInfoBuilder.newBuilder(tableName).build();
 
@@ -797,6 +850,8 @@ public class TestDataTieringManager {
         .setValue(DataTieringManager.DATATIERING_KEY, conf.get(DataTieringManager.DATATIERING_KEY))
         .setValue(DataTieringManager.DATATIERING_HOT_DATA_AGE_KEY,
           conf.get(DataTieringManager.DATATIERING_HOT_DATA_AGE_KEY))
+        .setValue(DataTieringManager.HSTORE_DATATIERING_GRACE_PERIOD_MILLIS_KEY,
+          conf.get(DataTieringManager.HSTORE_DATATIERING_GRACE_PERIOD_MILLIS_KEY))
         .build();
 
     return new HStore(region, columnFamilyDescriptor, conf, false);
@@ -806,6 +861,13 @@ public class TestDataTieringManager {
     Configuration conf = new Configuration(defaultConf);
     conf.set(DataTieringManager.DATATIERING_KEY, DataTieringType.TIME_RANGE.name());
     conf.set(DataTieringManager.DATATIERING_HOT_DATA_AGE_KEY, String.valueOf(hotDataAge));
+    return conf;
+  }
+
+  private static Configuration getConfWithGracePeriod(long hotDataAge, long gracePeriod) {
+    Configuration conf = getConfWithTimeRangeDataTieringEnabled(hotDataAge);
+    conf.set(DataTieringManager.HSTORE_DATATIERING_GRACE_PERIOD_MILLIS_KEY,
+      String.valueOf(gracePeriod));
     return conf;
   }
 
