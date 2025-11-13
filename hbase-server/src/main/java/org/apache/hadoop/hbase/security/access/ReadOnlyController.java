@@ -53,6 +53,9 @@ import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.regionserver.FlushLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.MiniBatchOperationInProgress;
+import org.apache.hadoop.hbase.regionserver.Store;
+import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -81,6 +84,7 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
 
   @Override
   public void start(CoprocessorEnvironment env) throws IOException {
+
     this.globalReadOnlyEnabled =
       env.getConfiguration().getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
         HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
@@ -128,6 +132,13 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
   @Override
   public void preFlush(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
     FlushLifeCycleTracker tracker) throws IOException {
+    internalReadOnlyGuard();
+  }
+
+  @Override
+  public void preCompactSelection(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    Store store, List<? extends StoreFile> candidates, CompactionLifeCycleTracker tracker)
+    throws IOException {
     internalReadOnlyGuard();
   }
 
