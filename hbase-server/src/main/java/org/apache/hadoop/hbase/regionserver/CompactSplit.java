@@ -36,6 +36,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.IntSupplier;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
@@ -344,6 +345,12 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
       return;
     }
 
+    // Should not allow compaction if cluster is in read-only mode
+    if (isReadOnlyEnabled()) {
+      LOG.info("Ignoring compaction request for " + region + ",because read-only mode is on.");
+      return;
+    }
+
     if (
       this.server.isStopped() || (region.getTableDescriptor() != null
         && !region.getTableDescriptor().isCompactionEnabled())
@@ -442,6 +449,13 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
       LOG.info(String.format("User has disabled compactions"));
       return Optional.empty();
     }
+
+    // Should not allow compaction if cluster is in read-only mode
+    if (isReadOnlyEnabled()) {
+      LOG.info(String.format("Compaction request skipped as read-only mode is on"));
+      return Optional.empty();
+    }
+
     Optional<CompactionContext> compaction = store.requestCompaction(priority, tracker, user);
     if (!compaction.isPresent() && region.getRegionInfo() != null) {
       String reason = "Not compacting " + region.getRegionInfo().getRegionNameAsString()
@@ -854,6 +868,11 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
 
   public boolean isCompactionsEnabled() {
     return compactionsEnabled;
+  }
+
+  private boolean isReadOnlyEnabled() {
+    return conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
+      HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
   }
 
   public void setCompactionsEnabled(boolean compactionsEnabled) {

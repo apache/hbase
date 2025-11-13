@@ -143,7 +143,7 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
   public final StoreFileWriter createWriter(CreateStoreFileWriterParams params) throws IOException {
     if (!isPrimaryReplica || isReadOnlyEnabled()) {
       throw new IllegalStateException(
-        "Should not call create writer on secondary replicas or in read only mode");
+        "Should not call create writer on secondary replicas or in read-only mode");
     }
     // creating new cache config for each new writer
     final CacheConfig cacheConf = ctx.getCacheConf();
