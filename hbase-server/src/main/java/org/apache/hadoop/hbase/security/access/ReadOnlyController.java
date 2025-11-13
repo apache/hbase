@@ -19,7 +19,9 @@ package org.apache.hadoop.hbase.security.access;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -30,7 +32,12 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.BalanceRequest;
+import org.apache.hadoop.hbase.client.CheckAndMutate;
+import org.apache.hadoop.hbase.client.CheckAndMutateResult;
 import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Durability;
+import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -55,14 +62,23 @@ import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.net.Address;
+import org.apache.hadoop.hbase.quotas.GlobalQuotaSettings;
 import org.apache.hadoop.hbase.regionserver.FlushLifeCycleTracker;
+import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.MiniBatchOperationInProgress;
+import org.apache.hadoop.hbase.regionserver.ScanOptions;
+import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
+import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
+import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -107,10 +123,94 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
   public void stop(CoprocessorEnvironment env) {
   }
 
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
+  public void setGlobalReadOnlyEnabled(boolean enabled) {
+    this.globalReadOnlyEnabled = enabled;
+  }
+
   /* ---- RegionObserver Overrides ---- */
   @Override
   public Optional<RegionObserver> getRegionObserver() {
     return Optional.of(this);
+  }
+
+  @Override
+  public void preFlush(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    FlushLifeCycleTracker tracker) throws IOException {
+    internalReadOnlyGuard();
+    RegionObserver.super.preFlush(c, tracker);
+  }
+
+  @Override
+  public void preFlushScannerOpen(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    Store store, ScanOptions options, FlushLifeCycleTracker tracker) throws IOException {
+    internalReadOnlyGuard();
+    RegionObserver.super.preFlushScannerOpen(c, store, options, tracker);
+  }
+
+  @Override
+  public InternalScanner preFlush(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    Store store, InternalScanner scanner, FlushLifeCycleTracker tracker) throws IOException {
+    internalReadOnlyGuard();
+    return RegionObserver.super.preFlush(c, store, scanner, tracker);
+  }
+
+  @Override
+  public void preMemStoreCompaction(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    Store store) throws IOException {
+    internalReadOnlyGuard();
+    RegionObserver.super.preMemStoreCompaction(c, store);
+  }
+
+  @Override
+  public void preMemStoreCompactionCompactScannerOpen(
+    ObserverContext<? extends RegionCoprocessorEnvironment> c, Store store, ScanOptions options)
+    throws IOException {
+    internalReadOnlyGuard();
+    RegionObserver.super.preMemStoreCompactionCompactScannerOpen(c, store, options);
+  }
+
+  @Override
+  public InternalScanner preMemStoreCompactionCompact(
+    ObserverContext<? extends RegionCoprocessorEnvironment> c, Store store, InternalScanner scanner)
+    throws IOException {
+    internalReadOnlyGuard();
+    return RegionObserver.super.preMemStoreCompactionCompact(c, store, scanner);
+  }
+
+  @Override
+  public void preCompactSelection(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    Store store, List<? extends StoreFile> candidates, CompactionLifeCycleTracker tracker)
+    throws IOException {
+    internalReadOnlyGuard();
+    RegionObserver.super.preCompactSelection(c, store, candidates, tracker);
+  }
+
+  @Override
+  public void preCompactScannerOpen(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    Store store, ScanType scanType, ScanOptions options, CompactionLifeCycleTracker tracker,
+    CompactionRequest request) throws IOException {
+    internalReadOnlyGuard();
+    RegionObserver.super.preCompactScannerOpen(c, store, scanType, options, tracker, request);
+  }
+
+  @Override
+  public InternalScanner preCompact(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    Store store, InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
+    CompactionRequest request) throws IOException {
+    internalReadOnlyGuard();
+    return RegionObserver.super.preCompact(c, store, scanner, scanType, tracker, request);
+  }
+
+  @Override
+  public void prePut(ObserverContext<? extends RegionCoprocessorEnvironment> c, Put put,
+    WALEdit edit, Durability durability) throws IOException {
+    TableName tableName = c.getEnvironment().getRegionInfo().getTable();
+    if (tableName.isSystemTable()) {
+      return;
+    }
+    internalReadOnlyGuard();
+    RegionObserver.super.prePut(c, put, edit, durability);
   }
 
   @Override
@@ -121,6 +221,17 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
       return;
     }
     internalReadOnlyGuard();
+    RegionObserver.super.prePut(c, put, edit);
+  }
+
+  @Override
+  public void preDelete(ObserverContext<? extends RegionCoprocessorEnvironment> c, Delete delete,
+    WALEdit edit, Durability durability) throws IOException {
+    if (c.getEnvironment().getRegionInfo().getTable().isSystemTable()) {
+      return;
+    }
+    internalReadOnlyGuard();
+    RegionObserver.super.preDelete(c, delete, edit, durability);
   }
 
   @Override
@@ -130,6 +241,7 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
       return;
     }
     internalReadOnlyGuard();
+    RegionObserver.super.preDelete(c, delete, edit);
   }
 
   @Override
@@ -140,19 +252,7 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
       return;
     }
     internalReadOnlyGuard();
-  }
-
-  @Override
-  public void preFlush(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
-    FlushLifeCycleTracker tracker) throws IOException {
-    internalReadOnlyGuard();
-  }
-
-  @Override
-  public void preCompactSelection(ObserverContext<? extends RegionCoprocessorEnvironment> c,
-    Store store, List<? extends StoreFile> candidates, CompactionLifeCycleTracker tracker)
-    throws IOException {
-    internalReadOnlyGuard();
+    RegionObserver.super.preBatchMutate(c, miniBatchOp);
   }
 
   @Override
@@ -232,6 +332,22 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   @Override
+  public CheckAndMutateResult preCheckAndMutate(
+    ObserverContext<? extends RegionCoprocessorEnvironment> c, CheckAndMutate checkAndMutate,
+    CheckAndMutateResult result) throws IOException {
+    internalReadOnlyGuard();
+    return RegionObserver.super.preCheckAndMutate(c, checkAndMutate, result);
+  }
+
+  @Override
+  public CheckAndMutateResult preCheckAndMutateAfterRowLock(
+    ObserverContext<? extends RegionCoprocessorEnvironment> c, CheckAndMutate checkAndMutate,
+    CheckAndMutateResult result) throws IOException {
+    internalReadOnlyGuard();
+    return RegionObserver.super.preCheckAndMutateAfterRowLock(c, checkAndMutate, result);
+  }
+
+  @Override
   public Result preAppend(ObserverContext<? extends RegionCoprocessorEnvironment> c, Append append)
     throws IOException {
     internalReadOnlyGuard();
@@ -253,10 +369,52 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   @Override
+  public Result preIncrement(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    Increment increment) throws IOException {
+    internalReadOnlyGuard();
+    return RegionObserver.super.preIncrement(c, increment);
+  }
+
+  @Override
+  public Result preIncrement(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    Increment increment, WALEdit edit) throws IOException {
+    internalReadOnlyGuard();
+    return RegionObserver.super.preIncrement(c, increment, edit);
+  }
+
+  @Override
+  public Result preIncrementAfterRowLock(ObserverContext<? extends RegionCoprocessorEnvironment> c,
+    Increment increment) throws IOException {
+    internalReadOnlyGuard();
+    return RegionObserver.super.preIncrementAfterRowLock(c, increment);
+  }
+
+  @Override
+  public void preReplayWALs(ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
+    RegionInfo info, Path edits) throws IOException {
+    internalReadOnlyGuard();
+    RegionObserver.super.preReplayWALs(ctx, info, edits);
+  }
+
+  @Override
   public void preBulkLoadHFile(ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
     List<Pair<byte[], String>> familyPaths) throws IOException {
     internalReadOnlyGuard();
     RegionObserver.super.preBulkLoadHFile(ctx, familyPaths);
+  }
+
+  @Override
+  public void preCommitStoreFile(ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
+    byte[] family, List<Pair<Path, Path>> pairs) throws IOException {
+    internalReadOnlyGuard();
+    RegionObserver.super.preCommitStoreFile(ctx, family, pairs);
+  }
+
+  @Override
+  public void preWALAppend(ObserverContext<? extends RegionCoprocessorEnvironment> ctx, WALKey key,
+    WALEdit edit) throws IOException {
+    internalReadOnlyGuard();
+    RegionObserver.super.preWALAppend(ctx, key, edit);
   }
 
   /* ---- MasterObserver Overrides ---- */
@@ -266,10 +424,24 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   @Override
+  public TableDescriptor preCreateTableRegionsInfos(
+    ObserverContext<MasterCoprocessorEnvironment> ctx, TableDescriptor desc) throws IOException {
+    internalReadOnlyGuard();
+    return MasterObserver.super.preCreateTableRegionsInfos(ctx, desc);
+  }
+
+  @Override
   public void preCreateTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
     TableDescriptor desc, RegionInfo[] regions) throws IOException {
     internalReadOnlyGuard();
     MasterObserver.super.preCreateTable(ctx, desc, regions);
+  }
+
+  @Override
+  public void preCreateTableAction(ObserverContext<MasterCoprocessorEnvironment> ctx,
+    TableDescriptor desc, RegionInfo[] regions) throws IOException {
+    internalReadOnlyGuard();
+    MasterObserver.super.preCreateTableAction(ctx, desc, regions);
   }
 
   @Override
@@ -306,6 +478,96 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
     throws IOException {
     internalReadOnlyGuard();
     return MasterObserver.super.preModifyTable(ctx, tableName, currentDescriptor, newDescriptor);
+  }
+
+  @Override
+  public String preModifyTableStoreFileTracker(ObserverContext<MasterCoprocessorEnvironment> ctx,
+    TableName tableName, String dstSFT) throws IOException {
+    internalReadOnlyGuard();
+    return MasterObserver.super.preModifyTableStoreFileTracker(ctx, tableName, dstSFT);
+  }
+
+  @Override
+  public String preModifyColumnFamilyStoreFileTracker(
+    ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName, byte[] family,
+    String dstSFT) throws IOException {
+    internalReadOnlyGuard();
+    return MasterObserver.super.preModifyColumnFamilyStoreFileTracker(ctx, tableName, family,
+      dstSFT);
+  }
+
+  @Override
+  public void preModifyTableAction(ObserverContext<MasterCoprocessorEnvironment> ctx,
+    TableName tableName, TableDescriptor currentDescriptor, TableDescriptor newDescriptor)
+    throws IOException {
+    internalReadOnlyGuard();
+    MasterObserver.super.preModifyTableAction(ctx, tableName, currentDescriptor, newDescriptor);
+  }
+
+  @Override
+  public void preSplitRegion(ObserverContext<MasterCoprocessorEnvironment> c, TableName tableName,
+    byte[] splitRow) throws IOException {
+    internalReadOnlyGuard();
+    MasterObserver.super.preSplitRegion(c, tableName, splitRow);
+  }
+
+  @Override
+  public void preSplitRegionAction(ObserverContext<MasterCoprocessorEnvironment> c,
+    TableName tableName, byte[] splitRow) throws IOException {
+    internalReadOnlyGuard();
+    MasterObserver.super.preSplitRegionAction(c, tableName, splitRow);
+  }
+
+  @Override
+  public void preSplitRegionBeforeMETAAction(ObserverContext<MasterCoprocessorEnvironment> ctx,
+    byte[] splitKey, List<Mutation> metaEntries) throws IOException {
+    internalReadOnlyGuard();
+    MasterObserver.super.preSplitRegionBeforeMETAAction(ctx, splitKey, metaEntries);
+  }
+
+  @Override
+  public void preSplitRegionAfterMETAAction(ObserverContext<MasterCoprocessorEnvironment> ctx)
+    throws IOException {
+    internalReadOnlyGuard();
+    MasterObserver.super.preSplitRegionAfterMETAAction(ctx);
+  }
+
+  @Override
+  public void preTruncateRegion(ObserverContext<MasterCoprocessorEnvironment> c,
+    RegionInfo regionInfo) {
+    try {
+      internalReadOnlyGuard();
+    } catch (IOException e) {
+      LOG.info("Region truncation of region {} not allowed in read-only mode",
+        regionInfo.getRegionNameAsString());
+    }
+    MasterObserver.super.preTruncateRegion(c, regionInfo);
+  }
+
+  @Override
+  public void preTruncateRegionAction(ObserverContext<MasterCoprocessorEnvironment> c,
+    RegionInfo regionInfo) {
+    try {
+      internalReadOnlyGuard();
+    } catch (IOException e) {
+      LOG.info("Region truncation of region {} not allowed in read-only mode",
+        regionInfo.getRegionNameAsString());
+    }
+    MasterObserver.super.preTruncateRegionAction(c, regionInfo);
+  }
+
+  @Override
+  public void preMergeRegionsAction(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+    final RegionInfo[] regionsToMerge) throws IOException {
+    internalReadOnlyGuard();
+    MasterObserver.super.preMergeRegionsAction(ctx, regionsToMerge);
+  }
+
+  @Override
+  public void preMergeRegionsCommitAction(ObserverContext<MasterCoprocessorEnvironment> ctx,
+    RegionInfo[] regionsToMerge, List<Mutation> metaEntries) throws IOException {
+    internalReadOnlyGuard();
+    MasterObserver.super.preMergeRegionsCommitAction(ctx, regionsToMerge, metaEntries);
   }
 
   @Override
@@ -359,10 +621,179 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   @Override
-  public void preMergeRegionsAction(ObserverContext<MasterCoprocessorEnvironment> ctx,
-    RegionInfo[] regionsToMerge) throws IOException {
+  public void preMasterStoreFlush(ObserverContext<MasterCoprocessorEnvironment> ctx)
+    throws IOException {
     internalReadOnlyGuard();
-    MasterObserver.super.preMergeRegionsAction(ctx, regionsToMerge);
+    MasterObserver.super.preMasterStoreFlush(ctx);
+  }
+
+  @Override
+  public void preSetUserQuota(ObserverContext<MasterCoprocessorEnvironment> ctx, String userName,
+    GlobalQuotaSettings quotas) throws IOException {
+    internalReadOnlyGuard();
+    MasterObserver.super.preSetUserQuota(ctx, userName, quotas);
+  }
+
+  @Override
+  public void preSetUserQuota(ObserverContext<MasterCoprocessorEnvironment> ctx, String userName,
+    TableName tableName, GlobalQuotaSettings quotas) throws IOException {
+    internalReadOnlyGuard();
+    MasterObserver.super.preSetUserQuota(ctx, userName, tableName, quotas);
+  }
+
+  @Override
+  public void preSetUserQuota(ObserverContext<MasterCoprocessorEnvironment> ctx, String userName,
+    String namespace, GlobalQuotaSettings quotas) throws IOException {
+    internalReadOnlyGuard();
+    MasterObserver.super.preSetUserQuota(ctx, userName, namespace, quotas);
+  }
+
+  @Override
+  public void preSetTableQuota(ObserverContext<MasterCoprocessorEnvironment> ctx,
+    TableName tableName, GlobalQuotaSettings quotas) throws IOException {
+    internalReadOnlyGuard();
+    MasterObserver.super.preSetTableQuota(ctx, tableName, quotas);
+  }
+
+  @Override
+  public void preSetNamespaceQuota(ObserverContext<MasterCoprocessorEnvironment> ctx,
+    String namespace, GlobalQuotaSettings quotas) throws IOException {
+    internalReadOnlyGuard();
+    MasterObserver.super.preSetNamespaceQuota(ctx, namespace, quotas);
+  }
+
+  @Override
+  public void preSetRegionServerQuota(ObserverContext<MasterCoprocessorEnvironment> ctx,
+    String regionServer, GlobalQuotaSettings quotas) throws IOException {
+    internalReadOnlyGuard();
+    MasterObserver.super.preSetRegionServerQuota(ctx, regionServer, quotas);
+  }
+
+  @Override
+  public void preMergeRegions(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+    final RegionInfo[] regionsToMerge) throws IOException {
+    internalReadOnlyGuard();
+    MasterObserver.super.preMergeRegions(ctx, regionsToMerge);
+  }
+
+  @Override
+  public void preMoveServersAndTables(ObserverContext<MasterCoprocessorEnvironment> ctx,
+    Set<Address> servers, Set<TableName> tables, String targetGroup) throws IOException {
+    internalReadOnlyGuard();
+    MasterObserver.super.preMoveServersAndTables(ctx, servers, tables, targetGroup);
+  }
+
+  @Override
+  public void preMoveServers(ObserverContext<MasterCoprocessorEnvironment> ctx,
+    Set<Address> servers, String targetGroup) throws IOException {
+    internalReadOnlyGuard();
+    MasterObserver.super.preMoveServers(ctx, servers, targetGroup);
+  }
+
+  @Override
+  public void preMoveTables(ObserverContext<MasterCoprocessorEnvironment> ctx,
+    Set<TableName> tables, String targetGroup) throws IOException {
+    internalReadOnlyGuard();
+    MasterObserver.super.preMoveTables(ctx, tables, targetGroup);
+  }
+
+  @Override
+  public void preAddRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx, String name)
+    throws IOException {
+    internalReadOnlyGuard();
+    MasterObserver.super.preAddRSGroup(ctx, name);
+  }
+
+  @Override
+  public void preRemoveRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx, String name)
+    throws IOException {
+    internalReadOnlyGuard();
+    MasterObserver.super.preRemoveRSGroup(ctx, name);
+  }
+
+  @Override
+  public void preBalanceRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx, String groupName,
+    BalanceRequest request) throws IOException {
+    internalReadOnlyGuard();
+    MasterObserver.super.preBalanceRSGroup(ctx, groupName, request);
+  }
+
+  @Override
+  public void preRemoveServers(ObserverContext<MasterCoprocessorEnvironment> ctx,
+    Set<Address> servers) throws IOException {
+    internalReadOnlyGuard();
+    MasterObserver.super.preRemoveServers(ctx, servers);
+  }
+
+  @Override
+  public void preRenameRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx, String oldName,
+    String newName) throws IOException {
+    internalReadOnlyGuard();
+    MasterObserver.super.preRenameRSGroup(ctx, oldName, newName);
+  }
+
+  @Override
+  public void preUpdateRSGroupConfig(ObserverContext<MasterCoprocessorEnvironment> ctx,
+    String groupName, Map<String, String> configuration) throws IOException {
+    internalReadOnlyGuard();
+    MasterObserver.super.preUpdateRSGroupConfig(ctx, groupName, configuration);
+  }
+
+  @Override
+  public void preAddReplicationPeer(ObserverContext<MasterCoprocessorEnvironment> ctx,
+    String peerId, ReplicationPeerConfig peerConfig) throws IOException {
+    internalReadOnlyGuard();
+    MasterObserver.super.preAddReplicationPeer(ctx, peerId, peerConfig);
+  }
+
+  @Override
+  public void preRemoveReplicationPeer(ObserverContext<MasterCoprocessorEnvironment> ctx,
+    String peerId) throws IOException {
+    internalReadOnlyGuard();
+    MasterObserver.super.preRemoveReplicationPeer(ctx, peerId);
+  }
+
+  @Override
+  public void preEnableReplicationPeer(ObserverContext<MasterCoprocessorEnvironment> ctx,
+    String peerId) throws IOException {
+    internalReadOnlyGuard();
+    MasterObserver.super.preEnableReplicationPeer(ctx, peerId);
+  }
+
+  @Override
+  public void preDisableReplicationPeer(ObserverContext<MasterCoprocessorEnvironment> ctx,
+    String peerId) throws IOException {
+    internalReadOnlyGuard();
+    MasterObserver.super.preDisableReplicationPeer(ctx, peerId);
+  }
+
+  @Override
+  public void preUpdateReplicationPeerConfig(ObserverContext<MasterCoprocessorEnvironment> ctx,
+    String peerId, ReplicationPeerConfig peerConfig) throws IOException {
+    internalReadOnlyGuard();
+    MasterObserver.super.preUpdateReplicationPeerConfig(ctx, peerId, peerConfig);
+  }
+
+  @Override
+  public void preTransitReplicationPeerSyncReplicationState(
+    ObserverContext<MasterCoprocessorEnvironment> ctx, String peerId, SyncReplicationState state)
+    throws IOException {
+    internalReadOnlyGuard();
+    MasterObserver.super.preTransitReplicationPeerSyncReplicationState(ctx, peerId, state);
+  }
+
+  @Override
+  public void preGrant(ObserverContext<MasterCoprocessorEnvironment> ctx,
+    UserPermission userPermission, boolean mergeExistingPermissions) throws IOException {
+    internalReadOnlyGuard();
+    MasterObserver.super.preGrant(ctx, userPermission, mergeExistingPermissions);
+  }
+
+  @Override
+  public void preRevoke(ObserverContext<MasterCoprocessorEnvironment> ctx,
+    UserPermission userPermission) throws IOException {
+    internalReadOnlyGuard();
+    MasterObserver.super.preRevoke(ctx, userPermission);
   }
 
   /* ---- RegionServerObserver Overrides ---- */
@@ -371,13 +802,6 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
     throws IOException {
     internalReadOnlyGuard();
     RegionServerObserver.super.preRollWALWriterRequest(ctx);
-  }
-
-  @Override
-  public void preClearCompactionQueues(ObserverContext<RegionServerCoprocessorEnvironment> ctx)
-    throws IOException {
-    internalReadOnlyGuard();
-    RegionServerObserver.super.preClearCompactionQueues(ctx);
   }
 
   @Override
@@ -395,10 +819,10 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   @Override
-  public void preClearRegionBlockCache(ObserverContext<RegionServerCoprocessorEnvironment> ctx)
+  public void preReplicateLogEntries(ObserverContext<RegionServerCoprocessorEnvironment> ctx)
     throws IOException {
     internalReadOnlyGuard();
-    RegionServerObserver.super.preClearRegionBlockCache(ctx);
+    RegionServerObserver.super.preReplicateLogEntries(ctx);
   }
 
   /* ---- EndpointObserver Overrides ---- */
