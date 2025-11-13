@@ -528,6 +528,7 @@ public class TestKeymetaEndpoint {
     verify(refreshManagedKeysDone).run(EmptyMsg.getDefaultInstance());
   }
 
+  @Test
   public void testRefreshManagedKeys_InvalidCust() throws Exception {
     // Arrange
     ManagedKeyRequest request = requestBuilder.setKeyCust(ByteString.EMPTY).build();
