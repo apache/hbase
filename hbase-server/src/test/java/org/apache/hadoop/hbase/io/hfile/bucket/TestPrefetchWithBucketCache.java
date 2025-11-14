@@ -495,7 +495,7 @@ public class TestPrefetchWithBucketCache {
       Thread.sleep(1000);
     }
     // HFileLink use the path of the target file to create a reader, but the target file is in the
-    // archive, so it wasn't cached previously and should ba cached when we open the link.
+    // archive, so it wasn't cached previously and should be cached when we open the link.
     Waiter.waitFor(testConf, 300, () -> bc.getBackingMap().size() == 12);
     // cached size for the region of target file shouldn't change
     assertEquals(cachedSize, (long) bc.getRegionCachedInfo().get().get(region.getEncodedName()));
