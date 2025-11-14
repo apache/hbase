@@ -263,7 +263,7 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
      * for genuine connectivity errors. Therefore, consider fail-fast after {@value} retries. Value
      * = {@value}
      */
-    private static final int DEFAULT_RS_REMOTE_PROC_RETRY_LIMIT = 5;
+    private static final int DEFAULT_RS_REMOTE_PROC_RETRY_LIMIT = 10;
 
     private final int failFastRetryLimit;
 
