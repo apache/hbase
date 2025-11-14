@@ -417,7 +417,6 @@ public class TestPrefetchWithBucketCache {
       StoreContext.getBuilder().withFamilyStoreDirectoryPath(dstPath)
         .withColumnFamilyDescriptor(ColumnFamilyDescriptorBuilder.of("cf"))
         .withRegionFileSystem(dstRegionFs).build());
-    sft.createHFileLink(hri.getTable(), hri.getEncodedName(), storeFile.getName(), true);
     StoreFileInfo sfi = sft.getStoreFileInfo(linkFilePath, true);
 
     HStoreFile hsf = new HStoreFile(sfi, BloomType.NONE, cacheConf);
@@ -483,7 +482,6 @@ public class TestPrefetchWithBucketCache {
       StoreContext.getBuilder().withFamilyStoreDirectoryPath(dstPath)
         .withColumnFamilyDescriptor(ColumnFamilyDescriptorBuilder.of("cf"))
         .withRegionFileSystem(testRegionFs).build());
-    sft.createHFileLink(hri.getTable(), hri.getEncodedName(), storeFile.getName(), true);
     StoreFileInfo sfi = sft.getStoreFileInfo(linkFilePath, true);
 
     HStoreFile hsf = new HStoreFile(sfi, BloomType.NONE, cacheConf);
