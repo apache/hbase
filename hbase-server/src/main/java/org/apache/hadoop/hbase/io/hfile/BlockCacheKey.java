@@ -32,6 +32,7 @@ public class BlockCacheKey implements HeapSize, java.io.Serializable {
   private final long offset;
   private BlockType blockType;
   private final boolean isPrimaryReplicaBlock;
+
   private Path filePath;
 
   /**
@@ -116,4 +117,9 @@ public class BlockCacheKey implements HeapSize, java.io.Serializable {
   public Path getFilePath() {
     return filePath;
   }
+
+  public void setFilePath(Path filePath) {
+    this.filePath = filePath;
+  }
+
 }

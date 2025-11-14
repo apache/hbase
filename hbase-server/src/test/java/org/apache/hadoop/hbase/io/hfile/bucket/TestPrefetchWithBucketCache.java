@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
+import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
@@ -71,12 +72,14 @@ import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreContext;
+import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -363,7 +366,7 @@ public class TestPrefetchWithBucketCache {
     BucketCache bc = BucketCache.getBucketCacheFromCacheConfig(cacheConf).get();
     MutableLong regionCachedSize = new MutableLong(0);
     // Our file should have 6 DATA blocks. We should wait for all of them to be cached
-    long waitedTime = Waiter.waitFor(conf, 300, () -> {
+    Waiter.waitFor(conf, 300, () -> {
       if (bc.getBackingMap().size() > 0) {
         long currentSize = bc.getRegionCachedInfo().get().get(regionName);
         assertTrue(regionCachedSize.getValue() <= currentSize);
@@ -372,6 +375,132 @@ public class TestPrefetchWithBucketCache {
       }
       return bc.getBackingMap().size() == 6;
     });
+  }
+
+  @Test
+  public void testPrefetchMetricProgressForLinks() throws Exception {
+    conf.setLong(BUCKET_CACHE_SIZE_KEY, 200);
+    blockCache = BlockCacheFactory.createBlockCache(conf);
+    cacheConf = new CacheConfig(conf, blockCache);
+    final RegionInfo hri =
+      RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName())).build();
+    // force temp data in hbase/target/test-data instead of /tmp/hbase-xxxx/
+    Configuration testConf = new Configuration(this.conf);
+    Path testDir = TEST_UTIL.getDataTestDir(name.getMethodName());
+    CommonFSUtils.setRootDir(testConf, testDir);
+    Path tableDir = CommonFSUtils.getTableDir(testDir, hri.getTable());
+    RegionInfo region = RegionInfoBuilder.newBuilder(TableName.valueOf(tableDir.getName())).build();
+    Path regionDir = new Path(tableDir, region.getEncodedName());
+    Path cfDir = new Path(regionDir, "cf");
+    HRegionFileSystem regionFS =
+      HRegionFileSystem.createRegionOnFileSystem(testConf, fs, tableDir, region);
+    Path storeFile = writeStoreFile(100, cfDir);
+    // Prefetches the file blocks
+    LOG.debug("First read should prefetch the blocks.");
+    readStoreFile(storeFile);
+    BucketCache bc = BucketCache.getBucketCacheFromCacheConfig(cacheConf).get();
+    // Our file should have 6 DATA blocks. We should wait for all of them to be cached
+    Waiter.waitFor(testConf, 300, () -> bc.getBackingMap().size() == 6);
+    long cachedSize = bc.getRegionCachedInfo().get().get(region.getEncodedName());
+
+    final RegionInfo dstHri =
+      RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName())).build();
+    HRegionFileSystem dstRegionFs = HRegionFileSystem.createRegionOnFileSystem(testConf, fs,
+      CommonFSUtils.getTableDir(testDir, dstHri.getTable()), dstHri);
+
+    Path dstPath = new Path(regionFS.getTableDir(), new Path(dstHri.getRegionNameAsString(), "cf"));
+
+    Path linkFilePath =
+      new Path(dstPath, HFileLink.createHFileLinkName(region, storeFile.getName()));
+
+    StoreFileTracker sft = StoreFileTrackerFactory.create(testConf, false,
+      StoreContext.getBuilder().withFamilyStoreDirectoryPath(dstPath)
+        .withColumnFamilyDescriptor(ColumnFamilyDescriptorBuilder.of("cf"))
+        .withRegionFileSystem(dstRegionFs).build());
+    sft.createHFileLink(hri.getTable(), hri.getEncodedName(), storeFile.getName(), true);
+    StoreFileInfo sfi = sft.getStoreFileInfo(linkFilePath, true);
+
+    HStoreFile hsf = new HStoreFile(sfi, BloomType.NONE, cacheConf);
+    assertTrue(sfi.isLink());
+    hsf.initReader();
+    HFile.Reader reader = hsf.getReader().getHFileReader();
+    while (!reader.prefetchComplete()) {
+      // Sleep for a bit
+      Thread.sleep(1000);
+    }
+    // HFileLink use the path of the target file to create a reader, so it should resolve to the
+    // already cached blocks and not insert new blocks in the cache.
+    Waiter.waitFor(testConf, 300, () -> bc.getBackingMap().size() == 6);
+
+    assertEquals(cachedSize, (long) bc.getRegionCachedInfo().get().get(region.getEncodedName()));
+  }
+
+  @Test
+  public void testPrefetchMetricProgressForLinksToArchived() throws Exception {
+    conf.setLong(BUCKET_CACHE_SIZE_KEY, 200);
+    blockCache = BlockCacheFactory.createBlockCache(conf);
+    cacheConf = new CacheConfig(conf, blockCache);
+
+    // force temp data in hbase/target/test-data instead of /tmp/hbase-xxxx/
+    Configuration testConf = new Configuration(this.conf);
+    Path testDir = TEST_UTIL.getDataTestDir(name.getMethodName());
+    CommonFSUtils.setRootDir(testConf, testDir);
+
+    final RegionInfo hri =
+      RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName())).build();
+    Path tableDir = CommonFSUtils.getTableDir(testDir, hri.getTable());
+    RegionInfo region = RegionInfoBuilder.newBuilder(TableName.valueOf(tableDir.getName())).build();
+    Path regionDir = new Path(tableDir, region.getEncodedName());
+    Path cfDir = new Path(regionDir, "cf");
+
+    Path storeFile = writeStoreFile(100, cfDir);
+    // Prefetches the file blocks
+    LOG.debug("First read should prefetch the blocks.");
+    readStoreFile(storeFile);
+    BucketCache bc = BucketCache.getBucketCacheFromCacheConfig(cacheConf).get();
+    // Our file should have 6 DATA blocks. We should wait for all of them to be cached
+    Waiter.waitFor(testConf, 300, () -> bc.getBackingMap().size() == 6);
+    long cachedSize = bc.getRegionCachedInfo().get().get(region.getEncodedName());
+
+    // create another file, but in the archive dir, hence it won't be cached
+    Path archiveRoot = new Path(testDir, "archive");
+    Path archiveTableDir = CommonFSUtils.getTableDir(archiveRoot, hri.getTable());
+    Path archiveRegionDir = new Path(archiveTableDir, region.getEncodedName());
+    Path archiveCfDir = new Path(archiveRegionDir, "cf");
+    Path archivedFile = writeStoreFile(100, archiveCfDir);
+
+    final RegionInfo testRegion =
+      RegionInfoBuilder.newBuilder(TableName.valueOf(tableDir.getName())).build();
+    final HRegionFileSystem testRegionFs = HRegionFileSystem.createRegionOnFileSystem(testConf, fs,
+      CommonFSUtils.getTableDir(testDir, testRegion.getTable()), testRegion);
+    // Just create a link to the archived file
+    Path dstPath = new Path(tableDir, new Path(testRegion.getEncodedName(), "cf"));
+
+    Path linkFilePath =
+      new Path(dstPath, HFileLink.createHFileLinkName(region, archivedFile.getName()));
+
+    StoreFileTracker sft = StoreFileTrackerFactory.create(testConf, false,
+      StoreContext.getBuilder().withFamilyStoreDirectoryPath(dstPath)
+        .withColumnFamilyDescriptor(ColumnFamilyDescriptorBuilder.of("cf"))
+        .withRegionFileSystem(testRegionFs).build());
+    sft.createHFileLink(hri.getTable(), hri.getEncodedName(), storeFile.getName(), true);
+    StoreFileInfo sfi = sft.getStoreFileInfo(linkFilePath, true);
+
+    HStoreFile hsf = new HStoreFile(sfi, BloomType.NONE, cacheConf);
+    assertTrue(sfi.isLink());
+    hsf.initReader();
+    HFile.Reader reader = hsf.getReader().getHFileReader();
+    while (!reader.prefetchComplete()) {
+      // Sleep for a bit
+      Thread.sleep(1000);
+    }
+    // HFileLink use the path of the target file to create a reader, but the target file is in the
+    // archive, so it wasn't cached previously and should be cached when we open the link.
+    Waiter.waitFor(testConf, 300, () -> bc.getBackingMap().size() == 12);
+    // cached size for the region of target file shouldn't change
+    assertEquals(cachedSize, (long) bc.getRegionCachedInfo().get().get(region.getEncodedName()));
+    // cached size for the region with link pointing to archive dir shouldn't be updated
+    assertNull(bc.getRegionCachedInfo().get().get(testRegion.getEncodedName()));
   }
 
   private void readStoreFile(Path storeFilePath) throws Exception {
