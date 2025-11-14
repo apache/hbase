@@ -70,26 +70,26 @@ under the License.
     </tr>
     <tr>
       <td style="test-align: left">
-        2.6.3
+        2.6.4
       </td>
       <td style="test-align: left">
-        2025/07/15
+        2025/10/14
       </td>
       <td style="test-align: left">
-        <a href="https://downloads.apache.org/hbase/2.6.3/api_compare_2.6.2_to_2.6.3RC2.html">2.6.2 vs 2.6.3</a>
+        <a href="https://downloads.apache.org/hbase/2.6.4/api_compare_2.6.3_to_2.6.4RC1.html">2.6.2 vs 2.6.4</a>
       </td>
       <td style="test-align: left">
-        <a href="https://downloads.apache.org/hbase/2.6.3/CHANGES.md">Changes</a>
+        <a href="https://downloads.apache.org/hbase/2.6.4/CHANGES.md">Changes</a>
       </td>
       <td style="test-align: left">
-        <a href="https://downloads.apache.org/hbase/2.6.3/RELEASENOTES.md">Release Notes</a>
+        <a href="https://downloads.apache.org/hbase/2.6.4/RELEASENOTES.md">Release Notes</a>
       </td>
       <td style="test-align: left">
-        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.6.3/hbase-2.6.3-src.tar.gz">src</a> (<a href="https://downloads.apache.org/hbase/2.6.3/hbase-2.6.3-src.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.6.3/hbase-2.6.3-src.tar.gz.asc">asc</a>) <br />
-        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.6.3/hbase-2.6.3-bin.tar.gz">bin</a> (<a href="https://downloads.apache.org/hbase/2.6.3/hbase-2.6.3-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.6.3/hbase-2.6.3-bin.tar.gz.asc">asc</a>) <br />
-        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.6.3/hbase-2.6.3-client-bin.tar.gz">client-bin</a> (<a href="https://downloads.apache.org/hbase/2.6.3/hbase-2.6.3-client-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.6.3/hbase-2.6.3-client-bin.tar.gz.asc">asc</a>)
-        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.6.3/hbase-2.6.3-hadoop3-bin.tar.gz">hadoop3-bin</a> (<a href="https://downloads.apache.org/hbase/2.6.3/hbase-2.6.3-hadoop3-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.6.3/hbase-2.6.3-hadoop3-bin.tar.gz.asc">asc</a>) <br />
-        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.6.3/hbase-2.6.3-hadoop3-client-bin.tar.gz">hadoop3-client-bin</a> (<a href="https://downloads.apache.org/hbase/2.6.3/hbase-2.6.3-hadoop3-client-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.6.3/hbase-2.6.3-hadoop3-client-bin.tar.gz.asc">asc</a>)
+        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.6.4/hbase-2.6.4-src.tar.gz">src</a> (<a href="https://downloads.apache.org/hbase/2.6.4/hbase-2.6.4-src.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.6.4/hbase-2.6.4-src.tar.gz.asc">asc</a>) <br />
+        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.6.4/hbase-2.6.4-bin.tar.gz">bin</a> (<a href="https://downloads.apache.org/hbase/2.6.4/hbase-2.6.4-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.6.4/hbase-2.6.4-bin.tar.gz.asc">asc</a>) <br />
+        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.6.4/hbase-2.6.4-client-bin.tar.gz">client-bin</a> (<a href="https://downloads.apache.org/hbase/2.6.4/hbase-2.6.4-client-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.6.4/hbase-2.6.4-client-bin.tar.gz.asc">asc</a>)
+        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.6.4/hbase-2.6.4-hadoop3-bin.tar.gz">hadoop3-bin</a> (<a href="https://downloads.apache.org/hbase/2.6.4/hbase-2.6.4-hadoop3-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.6.4/hbase-2.6.4-hadoop3-bin.tar.gz.asc">asc</a>) <br />
+        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.6.4/hbase-2.6.4-hadoop3-client-bin.tar.gz">hadoop3-client-bin</a> (<a href="https://downloads.apache.org/hbase/2.6.4/hbase-2.6.4-hadoop3-client-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.6.4/hbase-2.6.4-hadoop3-client-bin.tar.gz.asc">asc</a>)
       </td>
       <td />
     </tr>
