@@ -88,6 +88,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.IdReadWriteLock;
 import org.apache.hadoop.hbase.util.IdReadWriteLockStrongRef;
 import org.apache.hadoop.hbase.util.IdReadWriteLockWithObjectPool;
@@ -722,7 +723,7 @@ public class BucketCache implements BlockCache, HeapSize {
         // the cache map state might differ from the actual cache. If we reach this block,
         // we should remove the cache key entry from the backing map
         backingMap.remove(key);
-        fullyCachedFiles.remove(key.getHfileName());
+        fileNotFullyCached(key, bucketEntry);
         LOG.debug("Failed to fetch block for cache key: {}.", key, hioex);
       } catch (IOException ioex) {
         LOG.error("Failed reading block " + key + " from bucket cache", ioex);
@@ -747,7 +748,7 @@ public class BucketCache implements BlockCache, HeapSize {
     if (decrementBlockNumber) {
       this.blockNumber.decrement();
       if (ioEngine.isPersistent()) {
-        fileNotFullyCached(cacheKey.getHfileName());
+        fileNotFullyCached(cacheKey, bucketEntry);
       }
     }
     if (evictedByEvictionProcess) {
@@ -758,23 +759,11 @@ public class BucketCache implements BlockCache, HeapSize {
     }
   }
 
-  private void fileNotFullyCached(String hfileName) {
-    // Update the regionPrefetchedSizeMap before removing the file from prefetchCompleted
-    if (fullyCachedFiles.containsKey(hfileName)) {
-      Pair<String, Long> regionEntry = fullyCachedFiles.get(hfileName);
-      String regionEncodedName = regionEntry.getFirst();
-      long filePrefetchSize = regionEntry.getSecond();
-      LOG.debug("Removing file {} for region {}", hfileName, regionEncodedName);
-      regionCachedSize.computeIfPresent(regionEncodedName, (rn, pf) -> pf - filePrefetchSize);
-      // If all the blocks for a region are evicted from the cache, remove the entry for that region
-      if (
-        regionCachedSize.containsKey(regionEncodedName)
-          && regionCachedSize.get(regionEncodedName) == 0
-      ) {
-        regionCachedSize.remove(regionEncodedName);
-      }
-    }
-    fullyCachedFiles.remove(hfileName);
+  private void fileNotFullyCached(BlockCacheKey key, BucketEntry entry) {
+    // Update the updateRegionCachedSize before removing the file from fullyCachedFiles.
+    // This computation should happen even if the file is not in fullyCachedFiles map.
+    updateRegionCachedSize(key.getFilePath(), (entry.getLength() * -1));
+    fullyCachedFiles.remove(key.getHfileName());
   }
 
   public void fileCacheCompleted(Path filePath, long size) {
@@ -788,9 +777,19 @@ public class BucketCache implements BlockCache, HeapSize {
 
   private void updateRegionCachedSize(Path filePath, long cachedSize) {
     if (filePath != null) {
-      String regionName = filePath.getParent().getParent().getName();
-      regionCachedSize.merge(regionName, cachedSize,
-        (previousSize, newBlockSize) -> previousSize + newBlockSize);
+      if (HFileArchiveUtil.isHFileArchived(filePath)) {
+        LOG.trace("Skipping region cached size update for archived file: {}", filePath);
+      } else {
+        String regionName = filePath.getParent().getParent().getName();
+        regionCachedSize.merge(regionName, cachedSize,
+          (previousSize, newBlockSize) -> previousSize + newBlockSize);
+        LOG.trace("Updating region cached size for region: {}", regionName);
+        // If all the blocks for a region are evicted from the cache,
+        // remove the entry for that region from regionCachedSize map.
+        if (regionCachedSize.get(regionName) <= 0) {
+          regionCachedSize.remove(regionName);
+        }
+      }
     }
   }
 
@@ -1698,7 +1697,7 @@ public class BucketCache implements BlockCache, HeapSize {
           } catch (IOException e1) {
             LOG.debug("Check for key {} failed. Evicting.", keyEntry.getKey());
             evictBlock(keyEntry.getKey());
-            fileNotFullyCached(keyEntry.getKey().getHfileName());
+            fileNotFullyCached(keyEntry.getKey(), keyEntry.getValue());
           }
         }
         backingMapValidated.set(true);
@@ -1928,18 +1927,30 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   @Override
-  public int evictBlocksRangeByHfileName(String hfileName, long initOffset, long endOffset) {
-    fileNotFullyCached(hfileName);
+  public int evictBlocksByHfilePath(Path hfilePath) {
+    return evictBlocksRangeByHfileName(hfilePath.getName(), hfilePath, 0, Long.MAX_VALUE);
+  }
+
+  public int evictBlocksRangeByHfileName(String hfileName, Path filePath, long initOffset,
+    long endOffset) {
     Set<BlockCacheKey> keySet = getAllCacheKeysForFile(hfileName, initOffset, endOffset);
     LOG.debug("found {} blocks for file {}, starting offset: {}, end offset: {}", keySet.size(),
       hfileName, initOffset, endOffset);
     int numEvicted = 0;
     for (BlockCacheKey key : keySet) {
+      if (filePath != null) {
+        key.setFilePath(filePath);
+      }
       if (evictBlock(key)) {
         ++numEvicted;
       }
     }
     return numEvicted;
+  }
+
+  @Override
+  public int evictBlocksRangeByHfileName(String hfileName, long initOffset, long endOffset) {
+    return evictBlocksRangeByHfileName(hfileName, null, initOffset, endOffset);
   }
 
   private Set<BlockCacheKey> getAllCacheKeysForFile(String hfileName, long init, long end) {
