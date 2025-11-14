@@ -185,7 +185,7 @@ public class HFilePreadReader extends HFileReaderImpl {
     // Deallocate data blocks
     cacheConf.getBlockCache().ifPresent(cache -> {
       if (evictOnClose) {
-        int numEvicted = cache.evictBlocksByHfileName(name);
+        int numEvicted = cache.evictBlocksByHfilePath(path);
         if (LOG.isTraceEnabled()) {
           LOG.trace("On close, file= {} evicted= {} block(s)", name, numEvicted);
         }
