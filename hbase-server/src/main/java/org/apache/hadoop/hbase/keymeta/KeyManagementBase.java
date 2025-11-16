@@ -41,8 +41,9 @@ public abstract class KeyManagementBase {
   private Boolean isKeyManagementEnabled;
 
   /**
-   * Construct with a server instance. Configuration is derived from the server.
-   * @param server the server instance
+   * Construct with a key management service instance. Configuration is derived from the key
+   * management service.
+   * @param keyManagementService the key management service instance
    */
   public KeyManagementBase(KeyManagementService keyManagementService) {
     this(keyManagementService.getConfiguration());
