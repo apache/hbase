@@ -200,4 +200,16 @@ public final class HFileArchiveUtil {
     if (p == null) return null;
     return TableName.valueOf(p.getName(), tbl);
   }
+
+  public static boolean isHFileArchived(Path path) {
+    Path currentDir = path;
+    for (int i = 0; i < 6; i++) {
+      currentDir = currentDir.getParent();
+      if (currentDir == null) {
+        return false;
+      }
+    }
+    return HConstants.HFILE_ARCHIVE_DIRECTORY.equals(currentDir.getName());
+  }
+
 }
