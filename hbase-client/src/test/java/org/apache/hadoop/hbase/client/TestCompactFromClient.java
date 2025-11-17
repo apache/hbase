@@ -18,7 +18,9 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -27,10 +29,13 @@ import static org.mockito.Mockito.when;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.hbase.ClientMetaTableAccessor;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.FutureUtils;
@@ -96,13 +101,15 @@ public class TestCompactFromClient {
       RawAsyncHBaseAdmin admin =
         new RawAsyncHBaseAdmin(connection, hashedWheelTimer, asyncAdminBuilderBase);
 
-      admin.compact(tableName, CompactType.NORMAL);
-      Thread.sleep(1000);
+      CompletableFuture<Void> future = admin.compact(tableName, CompactType.NORMAL);
+      // future.get() throws ExecutionException, and the cause is TableNotFoundException
+      ExecutionException ex =
+        assertThrows(ExecutionException.class, () -> future.get(1, TimeUnit.SECONDS));
+      assertInstanceOf(TableNotFoundException.class, ex.getCause(),
+        "Expected TableNotFoundException as the cause of ExecutionException");
 
-      // No error logs
-      assertNull(msg.get());
-      // No Exception be thrown
-      assertNull(throwable.get());
+      assertNull(msg.get(), "No error message should be logged");
+      assertNull(throwable.get(), "No Exception should be logged");
     }
   }
 }
