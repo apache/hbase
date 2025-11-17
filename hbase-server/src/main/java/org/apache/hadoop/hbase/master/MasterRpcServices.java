@@ -92,7 +92,6 @@ import org.apache.hadoop.hbase.namequeues.BalancerRejectionDetails;
 import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
 import org.apache.hadoop.hbase.namequeues.request.NamedQueueGetRequest;
 import org.apache.hadoop.hbase.namequeues.response.NamedQueueGetResponse;
-import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManager;
 import org.apache.hadoop.hbase.procedure2.LockType;
 import org.apache.hadoop.hbase.procedure2.LockedResource;
@@ -2531,8 +2530,8 @@ public class MasterRpcServices extends RSRpcServices
         DeadServer deadServer = master.getServerManager().getDeadServers();
         for (HBaseProtos.ServerName pbServer : request.getServerNameList()) {
           ServerName server = ProtobufUtil.toServerName(pbServer);
-          final boolean deadInProcess = master.getProcedures().stream().anyMatch(
-            p -> (p instanceof ServerCrashProcedure)
+          final boolean deadInProcess =
+            master.getProcedures().stream().anyMatch(p -> (p instanceof ServerCrashProcedure)
               && ((ServerCrashProcedure) p).getServerName().equals(server));
           if (deadInProcess) {
             throw new ServiceException(
