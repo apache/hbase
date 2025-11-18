@@ -1641,12 +1641,13 @@ public class TestAsyncTable {
   }
 
   @Test
-  public void testInvalidPut() {
+  public void testInvalidMutation() {
+    // put
     try {
       getTable.get().put(new Put(Bytes.toBytes(0)));
       fail("Should fail since the put does not contain any cells");
     } catch (IllegalArgumentException e) {
-      assertThat(e.getMessage(), containsString("No columns to insert"));
+      assertThat(e.getMessage(), containsString("No columns to put"));
     }
 
     try {
@@ -1656,16 +1657,41 @@ public class TestAsyncTable {
     } catch (IllegalArgumentException e) {
       assertThat(e.getMessage(), containsString("KeyValue size too large"));
     }
+
+    // increment
+    try {
+      getTable.get().increment(new Increment(Bytes.toBytes(0)));
+      fail("Should fail since the increment does not contain any columns");
+    } catch (IllegalArgumentException e) {
+      assertThat(e.getMessage(), containsString("No columns to increment"));
+    }
+
+    // append
+    try {
+      getTable.get().append(new Append(Bytes.toBytes(0)));
+      fail("Should fail since the append does not contain any columns");
+    } catch (IllegalArgumentException e) {
+      assertThat(e.getMessage(), containsString("No columns to append"));
+    }
+
+    try {
+      getTable.get().append(
+        new Append(Bytes.toBytes(0)).addColumn(FAMILY, QUALIFIER, new byte[MAX_KEY_VALUE_SIZE]));
+      fail("Should fail since the append exceeds the max key value size");
+    } catch (IllegalArgumentException e) {
+      assertThat(e.getMessage(), containsString("KeyValue size too large"));
+    }
   }
 
   @Test
-  public void testInvalidPutInRowMutations() throws IOException {
+  public void testInvalidMutationInRowMutations() throws IOException {
     final byte[] row = Bytes.toBytes(0);
+    // put
     try {
       getTable.get().mutateRow(new RowMutations(row).add(new Put(row)));
       fail("Should fail since the put does not contain any cells");
     } catch (IllegalArgumentException e) {
-      assertThat(e.getMessage(), containsString("No columns to insert"));
+      assertThat(e.getMessage(), containsString("No columns to put"));
     }
 
     try {
@@ -1675,17 +1701,42 @@ public class TestAsyncTable {
     } catch (IllegalArgumentException e) {
       assertThat(e.getMessage(), containsString("KeyValue size too large"));
     }
+
+    // increment
+    try {
+      getTable.get().mutateRow(new RowMutations(row).add(new Increment(row)));
+      fail("Should fail since the increment does not contain any columns");
+    } catch (IllegalArgumentException e) {
+      assertThat(e.getMessage(), containsString("No columns to increment"));
+    }
+
+    // append
+    try {
+      getTable.get().mutateRow(new RowMutations(row).add(new Append(row)));
+      fail("Should fail since the append does not contain any columns");
+    } catch (IllegalArgumentException e) {
+      assertThat(e.getMessage(), containsString("No columns to append"));
+    }
+
+    try {
+      getTable.get().mutateRow(new RowMutations(row)
+        .add(new Append(row).addColumn(FAMILY, QUALIFIER, new byte[MAX_KEY_VALUE_SIZE])));
+      fail("Should fail since the append exceeds the max key value size");
+    } catch (IllegalArgumentException e) {
+      assertThat(e.getMessage(), containsString("KeyValue size too large"));
+    }
   }
 
   @Test
-  public void testInvalidPutInRowMutationsInCheckAndMutate() throws IOException {
+  public void testInvalidMutationInRowMutationsInCheckAndMutate() throws IOException {
     final byte[] row = Bytes.toBytes(0);
+    // put
     try {
       getTable.get().checkAndMutate(CheckAndMutate.newBuilder(row).ifNotExists(FAMILY, QUALIFIER)
         .build(new RowMutations(row).add(new Put(row))));
       fail("Should fail since the put does not contain any cells");
     } catch (IllegalArgumentException e) {
-      assertThat(e.getMessage(), containsString("No columns to insert"));
+      assertThat(e.getMessage(), containsString("No columns to put"));
     }
 
     try {
@@ -1693,6 +1744,33 @@ public class TestAsyncTable {
         CheckAndMutate.newBuilder(row).ifNotExists(FAMILY, QUALIFIER).build(new RowMutations(row)
           .add(new Put(row).addColumn(FAMILY, QUALIFIER, new byte[MAX_KEY_VALUE_SIZE]))));
       fail("Should fail since the put exceeds the max key value size");
+    } catch (IllegalArgumentException e) {
+      assertThat(e.getMessage(), containsString("KeyValue size too large"));
+    }
+
+    // increment
+    try {
+      getTable.get().checkAndMutate(CheckAndMutate.newBuilder(row).ifNotExists(FAMILY, QUALIFIER)
+        .build(new RowMutations(row).add(new Increment(row))));
+      fail("Should fail since the increment does not contain any columns");
+    } catch (IllegalArgumentException e) {
+      assertThat(e.getMessage(), containsString("No columns to increment"));
+    }
+
+    // append
+    try {
+      getTable.get().checkAndMutate(CheckAndMutate.newBuilder(row).ifNotExists(FAMILY, QUALIFIER)
+        .build(new RowMutations(row).add(new Append(row))));
+      fail("Should fail since the append does not contain any columns");
+    } catch (IllegalArgumentException e) {
+      assertThat(e.getMessage(), containsString("No columns to append"));
+    }
+
+    try {
+      getTable.get().checkAndMutate(
+        CheckAndMutate.newBuilder(row).ifNotExists(FAMILY, QUALIFIER).build(new RowMutations(row)
+          .add(new Append(row).addColumn(FAMILY, QUALIFIER, new byte[MAX_KEY_VALUE_SIZE]))));
+      fail("Should fail since the append exceeds the max key value size");
     } catch (IllegalArgumentException e) {
       assertThat(e.getMessage(), containsString("KeyValue size too large"));
     }
