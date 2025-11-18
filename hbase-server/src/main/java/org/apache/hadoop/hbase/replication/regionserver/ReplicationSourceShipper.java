@@ -332,7 +332,6 @@ public class ReplicationSourceShipper extends Thread {
             + "thread to stop. Not cleaning buffer usage. PeerId: {}; Shipper alive: {}; Reader alive: {}",
             this.source.getPeerId(), this.isAlive(), this.entryReader.isAlive());
           return;
-
         } else {
           // Wait both shipper and reader threads to stop
           Thread.sleep(this.sleepForRetries);
