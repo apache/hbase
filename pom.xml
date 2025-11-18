@@ -621,7 +621,6 @@
     <jline.version>2.11</jline.version>
     <slf4j.version>1.7.33</slf4j.version>
     <clover.version>4.0.3</clover.version>
-    <jamon-runtime.version>2.4.1</jamon-runtime.version>
     <jettison.version>1.5.4</jettison.version>
     <!--Make sure these joni/jcodings are compatible with the versions used by jruby-->
     <joni.version>2.2.1</joni.version>
@@ -643,7 +642,6 @@
     <!-- Error Prone 2.31.0 is the latest version which supports running on JDK 11, see
     https://github.com/google/error-prone/releases/tag/v2.31.0 for details -->
     <error-prone.version>2.31.0</error-prone.version>
-    <jamon.plugin.version>2.4.2</jamon.plugin.version>
     <lifecycle.mapping.version>1.0.0</lifecycle.mapping.version>
     <maven.antrun.version>1.8</maven.antrun.version>
     <maven.bundle.version>3.3.0</maven.bundle.version>
@@ -1312,11 +1310,6 @@
         <artifactId>jackson-databind</artifactId>
         <version>${jackson.databind.version}</version>
       </dependency>
-      <dependency>
-        <groupId>org.jamon</groupId>
-        <artifactId>jamon-runtime</artifactId>
-        <version>${jamon-runtime.version}</version>
-      </dependency>
       <!-- REST dependencies -->
       <dependency>
         <groupId>javax.servlet</groupId>
@@ -1781,11 +1774,6 @@
         <plugin>
           <artifactId>maven-antrun-plugin</artifactId>
           <version>${maven.antrun.version}</version>
-        </plugin>
-        <plugin>
-          <groupId>org.jamon</groupId>
-          <artifactId>jamon-maven-plugin</artifactId>
-          <version>${jamon.plugin.version}</version>
         </plugin>
         <!-- Make a jar and put the sources in the jar.
         In the parent pom, so submodules will do the right thing. -->

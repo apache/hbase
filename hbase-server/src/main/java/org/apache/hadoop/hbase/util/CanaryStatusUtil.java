@@ -15,22 +15,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.tool;
+package org.apache.hadoop.hbase.util;
 
-import java.io.IOException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Only kept for redirecting to canary.jsp.
+ * Utility used by the web UI JSP pages.
  */
 @InterfaceAudience.Private
-public class CanaryStatusServlet extends HttpServlet {
+public final class CanaryStatusUtil {
 
-  @Override
-  protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-    resp.sendRedirect(req.getContextPath() + "/canary.jsp");
+  private CanaryStatusUtil() {
+    // Do not instantiate.
+  }
+
+  public static String serverNameLink(ServerName serverName) {
+    int infoPort = serverName.getPort() + 1;
+    String url = "//" + serverName.getHostname() + ":" + infoPort + "/";
+    if (infoPort > 0) {
+      return "<a href=\"" + url + "\">" + serverName.getServerName() + "</a>";
+    } else {
+      return serverName.getServerName();
+    }
   }
 }
