@@ -2530,8 +2530,8 @@ public class MasterRpcServices extends RSRpcServices
         DeadServer deadServer = master.getServerManager().getDeadServers();
         for (HBaseProtos.ServerName pbServer : request.getServerNameList()) {
           ServerName server = ProtobufUtil.toServerName(pbServer);
-          final boolean deadInProcess = master.getProcedures().stream().anyMatch(
-            p -> (p instanceof ServerCrashProcedure)
+          final boolean deadInProcess =
+            master.getProcedures().stream().anyMatch(p -> (p instanceof ServerCrashProcedure)
               && ((ServerCrashProcedure) p).getServerName().equals(server));
           if (deadInProcess) {
             throw new ServiceException(
