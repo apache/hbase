@@ -18,9 +18,13 @@
 package org.apache.hadoop.hbase.security.access;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -51,6 +55,8 @@ import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionServerObserver;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.master.MasterFileSystem;
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.regionserver.FlushLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.MiniBatchOperationInProgress;
 import org.apache.hadoop.hbase.regionserver.Store;
@@ -74,6 +80,8 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
   ConfigurationObserver {
 
   private static final Logger LOG = LoggerFactory.getLogger(ReadOnlyController.class);
+  private MasterServices masterServices;
+
   private volatile boolean globalReadOnlyEnabled;
 
   private void internalReadOnlyGuard() throws IOException {
@@ -84,7 +92,13 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
 
   @Override
   public void start(CoprocessorEnvironment env) throws IOException {
-
+    if (env instanceof MasterCoprocessorEnvironment) {
+      this.masterServices = ((MasterCoprocessorEnvironment) env).getMasterServices();
+      LOG.info("ReadOnlyController obtained MasterServices reference from start().");
+    } else {
+      LOG.warn("ReadOnlyController loaded in a non-Master environment. "
+        + "File system operations for read-only state will not work.");
+    }
     this.globalReadOnlyEnabled =
       env.getConfiguration().getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
         HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
@@ -411,14 +425,63 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
     BulkLoadObserver.super.preCleanupBulkLoad(ctx);
   }
 
+  private void manageActiveClusterIdFile(boolean newValue) {
+    MasterFileSystem mfs = this.masterServices.getMasterFileSystem();
+    FileSystem fs = mfs.getFileSystem();
+    Path rootDir = mfs.getRootDir();
+    Path activeClusterFile = new Path(rootDir, HConstants.ACTIVE_CLUSTER_SUFFIX_FILE_NAME);
+
+    try {
+      if (newValue) {
+        // ENABLING READ-ONLY (false -> true), delete the active cluster file.
+        LOG.debug("Global read-only mode is being ENABLED. Deleting active cluster file: {}",
+          activeClusterFile);
+
+        if (fs.exists(activeClusterFile)) {
+          if (fs.delete(activeClusterFile, false)) {
+            LOG.info("Successfully deleted active cluster file: {}", activeClusterFile);
+          } else {
+            LOG.error(
+              "Failed to delete active cluster file: {}. "
+                + "Read-only flag will be updated, but file system state is inconsistent.",
+              activeClusterFile);
+          }
+        } else {
+          LOG.debug("Active cluster file not present, nothing to delete.");
+        }
+      } else {
+        // DISABLING READ-ONLY (true -> false), create the active cluster file id file
+        try (FSDataOutputStream stream = fs.create(activeClusterFile, true)) {
+          stream.writeUTF(new String(mfs.getSuffixFileDataToWrite(), StandardCharsets.UTF_8));
+          LOG.debug(
+            "Global read-only mode is being DISABLED. Successfully created active "
+              + "cluster file {} with suffix {}",
+            activeClusterFile, mfs.getSuffixFileDataToWrite());
+        }
+      }
+    } catch (IOException e) {
+      // We still update the flag, but log that the operation failed.
+      LOG.error("Failed to perform file operation for read-only switch. "
+        + "Flag will be updated, but file system state may be inconsistent.", e);
+      this.globalReadOnlyEnabled = newValue;
+      LOG.info("Config {} has been dynamically changed to {}. Encountered FS error",
+        HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, this.globalReadOnlyEnabled);
+    }
+  }
+
   /* ---- ConfigurationObserver Overrides ---- */
-  @Override
   public void onConfigurationChange(Configuration conf) {
-    boolean maybeUpdatedConfValue = conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
+    boolean newValue = conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
       HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
-    if (this.globalReadOnlyEnabled != maybeUpdatedConfValue) {
-      this.globalReadOnlyEnabled = maybeUpdatedConfValue;
-      LOG.info("Config {} has been dynamically changed to {}",
+    if (this.globalReadOnlyEnabled != newValue) {
+      if (this.masterServices != null) {
+        manageActiveClusterIdFile(newValue);
+      } else {
+        LOG.debug("MasterServices is not initialized. Cannot perform file operations for "
+          + "read-only mode switch.");
+      }
+      this.globalReadOnlyEnabled = newValue;
+      LOG.debug("Config {} has been dynamically changed to {}. (No FS ops performed 1)",
         HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, this.globalReadOnlyEnabled);
     }
   }

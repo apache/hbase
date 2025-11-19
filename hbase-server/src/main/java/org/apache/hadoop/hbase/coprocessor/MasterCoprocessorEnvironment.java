@@ -23,6 +23,7 @@ import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.metrics.MetricRegistry;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
@@ -88,4 +89,6 @@ public interface MasterCoprocessorEnvironment extends CoprocessorEnvironment<Mas
    * @return A MetricRegistry for the coprocessor class to track and export metrics.
    */
   MetricRegistry getMetricRegistryForMaster();
+
+  MasterServices getMasterServices();
 }
