@@ -317,13 +317,14 @@ public class TestAsyncTableBatch {
   }
 
   @Test
-  public void testInvalidPut() {
+  public void testInvalidMutation() {
+    // put
     AsyncTable<?> table = tableGetter.apply(TABLE_NAME);
     try {
       table.batch(Arrays.asList(new Delete(Bytes.toBytes(0)), new Put(Bytes.toBytes(0))));
       fail("Should fail since the put does not contain any cells");
     } catch (IllegalArgumentException e) {
-      assertThat(e.getMessage(), containsString("No columns to insert"));
+      assertThat(e.getMessage(), containsString("No columns to put"));
     }
 
     try {
@@ -334,18 +335,53 @@ public class TestAsyncTableBatch {
     } catch (IllegalArgumentException e) {
       assertThat(e.getMessage(), containsString("KeyValue size too large"));
     }
+
+    // increment
+    try {
+      table.batch(Arrays.asList(new Delete(Bytes.toBytes(0)), new Increment(Bytes.toBytes(0))));
+      fail("Should fail since the increment does not contain any columns");
+    } catch (IllegalArgumentException e) {
+      assertThat(e.getMessage(), containsString("No columns to increment"));
+    }
+
+    try {
+      table.batch(Arrays.asList(
+        new Increment(Bytes.toBytes(0)).addColumn(FAMILY, new byte[MAX_KEY_VALUE_SIZE], 1),
+        new Delete(Bytes.toBytes(0))));
+      fail("Should fail since the increment exceeds the max key value size");
+    } catch (IllegalArgumentException e) {
+      assertThat(e.getMessage(), containsString("KeyValue size too large"));
+    }
+
+    // append
+    try {
+      table.batch(Arrays.asList(new Delete(Bytes.toBytes(0)), new Append(Bytes.toBytes(0))));
+      fail("Should fail since the append does not contain any columns");
+    } catch (IllegalArgumentException e) {
+      assertThat(e.getMessage(), containsString("No columns to append"));
+    }
+
+    try {
+      table.batch(Arrays.asList(
+        new Append(Bytes.toBytes(0)).addColumn(FAMILY, CQ, new byte[MAX_KEY_VALUE_SIZE]),
+        new Delete(Bytes.toBytes(0))));
+      fail("Should fail since the append exceeds the max key value size");
+    } catch (IllegalArgumentException e) {
+      assertThat(e.getMessage(), containsString("KeyValue size too large"));
+    }
   }
 
   @Test
-  public void testInvalidPutInRowMutations() throws IOException {
+  public void testInvalidMutationInRowMutations() throws IOException {
     final byte[] row = Bytes.toBytes(0);
 
+    // put
     AsyncTable<?> table = tableGetter.apply(TABLE_NAME);
     try {
       table.batch(Arrays.asList(new Delete(row), new RowMutations(row).add(new Put(row))));
       fail("Should fail since the put does not contain any cells");
     } catch (IllegalArgumentException e) {
-      assertThat(e.getMessage(), containsString("No columns to insert"));
+      assertThat(e.getMessage(), containsString("No columns to put"));
     }
 
     try {
@@ -356,19 +392,55 @@ public class TestAsyncTableBatch {
     } catch (IllegalArgumentException e) {
       assertThat(e.getMessage(), containsString("KeyValue size too large"));
     }
+
+    // increment
+    try {
+      table.batch(Arrays.asList(new Delete(row), new RowMutations(row).add(new Increment(row))));
+      fail("Should fail since the increment does not contain any columns");
+    } catch (IllegalArgumentException e) {
+      assertThat(e.getMessage(), containsString("No columns to increment"));
+    }
+
+    try {
+      table
+        .batch(Arrays.asList(
+          new RowMutations(row)
+            .add(new Increment(row).addColumn(FAMILY, new byte[MAX_KEY_VALUE_SIZE], 1)),
+          new Delete(row)));
+      fail("Should fail since the increment exceeds the max key value size");
+    } catch (IllegalArgumentException e) {
+      assertThat(e.getMessage(), containsString("KeyValue size too large"));
+    }
+
+    // append
+    try {
+      table.batch(Arrays.asList(new Delete(row), new RowMutations(row).add(new Append(row))));
+      fail("Should fail since the append does not contain any columns");
+    } catch (IllegalArgumentException e) {
+      assertThat(e.getMessage(), containsString("No columns to append"));
+    }
+
+    try {
+      table.batch(Arrays.asList(new RowMutations(row).add(
+        new Append(row).addColumn(FAMILY, CQ, new byte[MAX_KEY_VALUE_SIZE])), new Delete(row)));
+      fail("Should fail since the append exceeds the max key value size");
+    } catch (IllegalArgumentException e) {
+      assertThat(e.getMessage(), containsString("KeyValue size too large"));
+    }
   }
 
   @Test
-  public void testInvalidPutInRowMutationsInCheckAndMutate() throws IOException {
+  public void testInvalidMutationInRowMutationsInCheckAndMutate() throws IOException {
     final byte[] row = Bytes.toBytes(0);
 
+    // put
     AsyncTable<?> table = tableGetter.apply(TABLE_NAME);
     try {
       table.batch(Arrays.asList(new Delete(row), CheckAndMutate.newBuilder(row)
         .ifNotExists(FAMILY, CQ).build(new RowMutations(row).add(new Put(row)))));
       fail("Should fail since the put does not contain any cells");
     } catch (IllegalArgumentException e) {
-      assertThat(e.getMessage(), containsString("No columns to insert"));
+      assertThat(e.getMessage(), containsString("No columns to put"));
     }
 
     try {
@@ -378,6 +450,46 @@ public class TestAsyncTableBatch {
             .add(new Put(row).addColumn(FAMILY, CQ, new byte[MAX_KEY_VALUE_SIZE]))),
         new Delete(row)));
       fail("Should fail since the put exceeds the max key value size");
+    } catch (IllegalArgumentException e) {
+      assertThat(e.getMessage(), containsString("KeyValue size too large"));
+    }
+
+    // increment
+    try {
+      table.batch(Arrays.asList(new Delete(row), CheckAndMutate.newBuilder(row)
+        .ifNotExists(FAMILY, CQ).build(new RowMutations(row).add(new Increment(row)))));
+      fail("Should fail since the increment does not contain any columns");
+    } catch (IllegalArgumentException e) {
+      assertThat(e.getMessage(), containsString("No columns to increment"));
+    }
+
+    try {
+      table.batch(Arrays.asList(
+        CheckAndMutate.newBuilder(row).ifNotExists(FAMILY, CQ)
+          .build(new RowMutations(row)
+            .add(new Increment(row).addColumn(FAMILY, new byte[MAX_KEY_VALUE_SIZE], 1))),
+        new Delete(row)));
+      fail("Should fail since the increment exceeds the max key value size");
+    } catch (IllegalArgumentException e) {
+      assertThat(e.getMessage(), containsString("KeyValue size too large"));
+    }
+
+    // append
+    try {
+      table.batch(Arrays.asList(new Delete(row), CheckAndMutate.newBuilder(row)
+        .ifNotExists(FAMILY, CQ).build(new RowMutations(row).add(new Append(row)))));
+      fail("Should fail since the append does not contain any columns");
+    } catch (IllegalArgumentException e) {
+      assertThat(e.getMessage(), containsString("No columns to append"));
+    }
+
+    try {
+      table.batch(Arrays.asList(
+        CheckAndMutate.newBuilder(row).ifNotExists(FAMILY, CQ)
+          .build(new RowMutations(row)
+            .add(new Append(row).addColumn(FAMILY, CQ, new byte[MAX_KEY_VALUE_SIZE]))),
+        new Delete(row)));
+      fail("Should fail since the append exceeds the max key value size");
     } catch (IllegalArgumentException e) {
       assertThat(e.getMessage(), containsString("KeyValue size too large"));
     }

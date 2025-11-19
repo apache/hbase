@@ -1666,6 +1666,14 @@ public class TestAsyncTable {
       assertThat(e.getMessage(), containsString("No columns to increment"));
     }
 
+    try {
+      getTable.get().increment(
+        new Increment(Bytes.toBytes(0)).addColumn(FAMILY, new byte[MAX_KEY_VALUE_SIZE], 1));
+      fail("Should fail since the increment exceeds the max key value size");
+    } catch (IllegalArgumentException e) {
+      assertThat(e.getMessage(), containsString("KeyValue size too large"));
+    }
+
     // append
     try {
       getTable.get().append(new Append(Bytes.toBytes(0)));
@@ -1708,6 +1716,14 @@ public class TestAsyncTable {
       fail("Should fail since the increment does not contain any columns");
     } catch (IllegalArgumentException e) {
       assertThat(e.getMessage(), containsString("No columns to increment"));
+    }
+
+    try {
+      getTable.get().mutateRow(new RowMutations(row)
+        .add(new Increment(row).addColumn(FAMILY, new byte[MAX_KEY_VALUE_SIZE], 1)));
+      fail("Should fail since the increment exceeds the max key value size");
+    } catch (IllegalArgumentException e) {
+      assertThat(e.getMessage(), containsString("KeyValue size too large"));
     }
 
     // append
@@ -1755,6 +1771,15 @@ public class TestAsyncTable {
       fail("Should fail since the increment does not contain any columns");
     } catch (IllegalArgumentException e) {
       assertThat(e.getMessage(), containsString("No columns to increment"));
+    }
+
+    try {
+      getTable.get().checkAndMutate(
+        CheckAndMutate.newBuilder(row).ifNotExists(FAMILY, QUALIFIER).build(new RowMutations(row)
+          .add(new Increment(row).addColumn(FAMILY, new byte[MAX_KEY_VALUE_SIZE], 1))));
+      fail("Should fail since the increment exceeds the max key value size");
+    } catch (IllegalArgumentException e) {
+      assertThat(e.getMessage(), containsString("KeyValue size too large"));
     }
 
     // append

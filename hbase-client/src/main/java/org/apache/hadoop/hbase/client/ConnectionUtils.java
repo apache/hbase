@@ -482,16 +482,17 @@ public final class ConnectionUtils {
 
   // Validate individual Mutation
   static void validateMutation(Mutation mutation, int maxKeyValueSize) {
+    // Skip Delete
     if (mutation instanceof Delete) return;
 
-    // 1. Check if empty (excluding Delete)
+    // 1. Check if empty
     if (mutation.isEmpty()) {
       throw new IllegalArgumentException(
         "No columns to " + mutation.getClass().getSimpleName().toLowerCase());
     }
 
-    // 2. Validate size (excluding Increment and Delete)
-    if (maxKeyValueSize > 0 && (mutation instanceof Put) || (mutation instanceof Append)) {
+    // 2. Check if size exceeds maxKeyValueSize
+    if (maxKeyValueSize > 0) {
       for (List<Cell> list : mutation.getFamilyCellMap().values()) {
         for (Cell cell : list) {
           if (cell.getSerializedSize() > maxKeyValueSize) {
