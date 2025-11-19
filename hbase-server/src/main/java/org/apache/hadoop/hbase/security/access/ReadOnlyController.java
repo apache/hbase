@@ -18,11 +18,9 @@
 package org.apache.hadoop.hbase.security.access;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CompareOperator;
@@ -62,6 +60,7 @@ import org.apache.hadoop.hbase.regionserver.MiniBatchOperationInProgress;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -436,28 +435,19 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
         // ENABLING READ-ONLY (false -> true), delete the active cluster file.
         LOG.debug("Global read-only mode is being ENABLED. Deleting active cluster file: {}",
           activeClusterFile);
-
-        if (fs.exists(activeClusterFile)) {
-          if (fs.delete(activeClusterFile, false)) {
-            LOG.info("Successfully deleted active cluster file: {}", activeClusterFile);
-          } else {
-            LOG.error(
-              "Failed to delete active cluster file: {}. "
-                + "Read-only flag will be updated, but file system state is inconsistent.",
-              activeClusterFile);
-          }
-        } else {
-          LOG.debug("Active cluster file not present, nothing to delete.");
+        try {
+          fs.delete(activeClusterFile, false);
+          LOG.info("Successfully deleted active cluster file: {}", activeClusterFile);
+        } catch (IOException e) {
+          LOG.error(
+            "Failed to delete active cluster file: {}. "
+              + "Read-only flag will be updated, but file system state is inconsistent.",
+            activeClusterFile);
         }
       } else {
         // DISABLING READ-ONLY (true -> false), create the active cluster file id file
-        try (FSDataOutputStream stream = fs.create(activeClusterFile, true)) {
-          stream.writeUTF(new String(mfs.getSuffixFileDataToWrite(), StandardCharsets.UTF_8));
-          LOG.debug(
-            "Global read-only mode is being DISABLED. Successfully created active "
-              + "cluster file {} with suffix {}",
-            activeClusterFile, mfs.getSuffixFileDataToWrite());
-        }
+        int wait = mfs.getConfiguration().getInt(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000);
+        FSUtils.setActiveClusterSuffix(fs, rootDir, mfs.getSuffixFileDataToWrite(), wait);
       }
     } catch (IOException e) {
       // We still update the flag, but log that the operation failed.
@@ -471,16 +461,15 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
 
   /* ---- ConfigurationObserver Overrides ---- */
   public void onConfigurationChange(Configuration conf) {
-    boolean newValue = conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
+    boolean maybeUpdatedConfValue = conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
       HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
-    if (this.globalReadOnlyEnabled != newValue) {
+    if (this.globalReadOnlyEnabled != maybeUpdatedConfValue) {
       if (this.masterServices != null) {
-        manageActiveClusterIdFile(newValue);
+        manageActiveClusterIdFile(maybeUpdatedConfValue);
       } else {
-        LOG.debug("MasterServices is not initialized. Cannot perform file operations for "
-          + "read-only mode switch.");
+        LOG.debug("Global R/O flag changed, but not running on master");
       }
-      this.globalReadOnlyEnabled = newValue;
+      this.globalReadOnlyEnabled = maybeUpdatedConfValue;
       LOG.debug("Config {} has been dynamically changed to {}. (No FS ops performed 1)",
         HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, this.globalReadOnlyEnabled);
     }
