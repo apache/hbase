@@ -30,3 +30,6 @@ lerna-debug.log*
 /target/
 /node/
 
+# Generated files
+/app/pages/team/developers.json
+

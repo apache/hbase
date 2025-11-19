@@ -168,7 +168,11 @@ function DocsMenu() {
               <DropdownMenuSubContent>
                 {item.links.map((item) => (
                   <DropdownMenuItem key={item.label} asChild>
-                    <Link to={item.to} aria-label={item.label}>
+                    <Link
+                      to={item.to}
+                      target={item.external ? "_blank" : "_self"}
+                      aria-label={item.label}
+                    >
                       {item.label}
                       {item.external && <ExternalLink className="size-4" />}
                     </Link>
@@ -363,6 +367,7 @@ function MobileDocsSection({ onLinkClick }: { onLinkClick: () => void }) {
                   <Link
                     key={item.label}
                     to={item.to}
+                    target={item.external ? "_blank" : "_self"}
                     className="text-muted-foreground hover:text-foreground flex items-center py-1 text-xs"
                   >
                     {item.label}
@@ -491,6 +496,7 @@ function NoJSDocsMenu() {
                   <Link
                     key={subItem.label}
                     to={subItem.to}
+                    target={subItem.external ? "_blank" : "_self"}
                     aria-label={subItem.label}
                     className="hover:bg-accent hover:text-accent-foreground relative flex cursor-pointer items-center rounded-sm px-2 py-1.5 text-sm outline-none select-none"
                   >
@@ -629,6 +635,7 @@ function NoJSMobileDocsSection() {
                   <Link
                     key={item.label}
                     to={item.to}
+                    target={item.external ? "_blank" : "_self"}
                     className="text-muted-foreground hover:text-foreground flex cursor-pointer items-center py-1 text-xs"
                   >
                     {item.label}

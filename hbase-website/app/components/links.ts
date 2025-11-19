@@ -155,11 +155,19 @@ export const asfLinks: LinkType[] = [
   }
 ];
 
-type DocumentationOptions = "ref" | "refPdf" | "userApi" | "userApiTest" | "devApi" | "devApiTest";
+type DocumentationOptions =
+  | "ref"
+  | "refPdf"
+  | "refPdfOld"
+  | "userApi"
+  | "userApiTest"
+  | "devApi"
+  | "devApiTest";
 
 const documentationOptionLabels: Record<DocumentationOptions, string> = {
   ref: "Reference Guide",
   refPdf: "Reference Guide (PDF)",
+  refPdfOld: "Reference Guide (PDF)",
   userApi: "User API",
   userApiTest: "User API (Test)",
   devApi: "Developer API",
@@ -172,6 +180,8 @@ function getDocsURL(version: string, option: DocumentationOptions): string {
     case "ref":
       return `${baseUrl}${version}/book.html`;
     case "refPdf":
+      return `${baseUrl}${version}/apache_hbase_reference_guide.pdf`;
+    case "refPdfOld":
       return `${baseUrl}${version}/book.pdf`;
     case "userApi":
       return `${baseUrl}${version}/apidocs/index.html`;
@@ -185,7 +195,7 @@ function getDocsURL(version: string, option: DocumentationOptions): string {
 }
 
 const docsItems: Record<string, DocumentationOptions[]> = {
-  "1.4": ["ref", "refPdf", "userApi", "userApiTest"],
+  "1.4": ["ref", "refPdfOld", "devApi"],
   "2.3": ["ref", "refPdf", "userApi", "userApiTest", "devApi", "devApiTest"],
   "2.4": ["ref", "refPdf", "userApi", "userApiTest", "devApi", "devApiTest"],
   "2.5": ["userApi", "userApiTest", "devApi", "devApiTest"],

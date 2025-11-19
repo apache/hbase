@@ -16,22 +16,12 @@
 // limitations under the License.
 //
 
-import { Moon, Sun } from "lucide-react";
-import { Button } from "@/ui/button";
-import { useTheme } from "@/lib/theme-provider";
-
-export function ThemeToggle() {
-  const { theme, setTheme } = useTheme();
-
-  const toggleTheme = () => {
-    setTheme(theme === "light" ? "dark" : "light");
-  };
-
-  return (
-    <Button variant="ghost" size="icon-sm" onClick={toggleTheme}>
-      <Moon className="hidden dark:block" />
-      <Sun className="block dark:hidden" />
-      <span className="sr-only">Toggle theme</span>
-    </Button>
-  );
+interface Developer {
+  id: string;
+  name: string;
+  email: string;
+  timezone: string;
 }
+
+declare const developers: Developer[];
+export default developers;

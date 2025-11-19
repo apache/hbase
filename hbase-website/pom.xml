@@ -70,7 +70,7 @@
             <goals>
               <goal>install-node-and-npm</goal>
             </goals>
-            <phase>generate-resources</phase>
+            <phase>generate-sources</phase>
             <configuration>
               <nodeVersion>${node.version}</nodeVersion>
               <npmVersion>${npm.version}</npmVersion>
@@ -85,6 +85,17 @@
             <phase>generate-resources</phase>
             <configuration>
               <arguments>install</arguments>
+            </configuration>
+          </execution>
+          <!-- Extract developers from parent pom.xml -->
+          <execution>
+            <id>extract-developers</id>
+            <goals>
+              <goal>npm</goal>
+            </goals>
+            <phase>generate-resources</phase>
+            <configuration>
+              <arguments>run extract-developers</arguments>
             </configuration>
           </execution>
           <!-- Run npm run ci -->
@@ -120,6 +131,10 @@
             <executions>
               <execution>
                 <id>install-node-and-npm</id>
+                <phase>none</phase>
+              </execution>
+              <execution>
+                <id>extract-developers</id>
                 <phase>none</phase>
               </execution>
               <execution>

@@ -15,6 +15,7 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
+    "extract-developers": "node scripts/extract-developers.js",
     "ci": "npm run lint && npm run typecheck && npm run test:run && npm run build"
   },
   "dependencies": {
