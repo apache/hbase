@@ -16,6 +16,7 @@
 # React Router
 /.react-router/
 /build/
+.vite
 
 # Logs
 logs
