@@ -183,7 +183,7 @@ public class TestRegionRebalancing {
   /**
    * Wait on crash processing. Balancer won't run if processing a crashed server.
    */
-  private void waitOnCrashProcessing() {
+  private void waitOnCrashProcessing() throws IOException {
     while (UTIL.getHBaseCluster().getMaster().getServerManager().areDeadServersInProgress()) {
       LOG.info("Waiting on processing of crashed server before proceeding...");
       Threads.sleep(1000);

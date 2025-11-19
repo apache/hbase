@@ -145,7 +145,6 @@ public class TestHBCKSCP extends TestSCPBase {
     cluster.killRegionServer(rsServerName);
 
     master.getServerManager().moveFromOnlineToDeadServers(rsServerName);
-    master.getServerManager().getDeadServers().finish(rsServerName);
     master.getServerManager().getDeadServers().removeDeadServer(rsServerName);
     master.getAssignmentManager().getRegionStates().removeServer(rsServerName);
     // Kill the server. Nothing should happen since an 'Unknown Server' as far

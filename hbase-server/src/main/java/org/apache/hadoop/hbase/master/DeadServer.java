@@ -33,8 +33,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
-
 /**
  * Class to hold dead servers list and utility querying dead server list. Servers are added when
  * they expire or when we find them in filesystem on startup. When a server crash procedure is
@@ -57,26 +55,11 @@ public class DeadServer {
   private final Map<ServerName, Long> deadServers = new HashMap<>();
 
   /**
-   * Set of dead servers currently being processed by a SCP. Added to this list at the start of SCP
-   * and removed after it is done processing the crash.
-   */
-  private final Set<ServerName> processingServers = new HashSet<>();
-
-  /**
    * @param serverName server name.
    * @return true if this server is on the dead servers list false otherwise
    */
   public synchronized boolean isDeadServer(final ServerName serverName) {
     return deadServers.containsKey(serverName);
-  }
-
-  /**
-   * Checks if there are currently any dead servers being processed by the master. Returns true if
-   * at least one region server is currently being processed as dead.
-   * @return true if any RS are being processed as dead
-   */
-  synchronized boolean areDeadServersInProgress() {
-    return !processingServers.isEmpty();
   }
 
   public synchronized Set<ServerName> copyServerNames() {
@@ -90,29 +73,6 @@ public class DeadServer {
    */
   synchronized void putIfAbsent(ServerName sn) {
     this.deadServers.putIfAbsent(sn, EnvironmentEdgeManager.currentTime());
-    processing(sn);
-  }
-
-  /**
-   * Add <code>sn<</code> to set of processing deadservers.
-   * @see #finish(ServerName)
-   */
-  public synchronized void processing(ServerName sn) {
-    if (processingServers.add(sn)) {
-      // Only log on add.
-      LOG.debug("Processing {}; numProcessing={}", sn, processingServers.size());
-    }
-  }
-
-  /**
-   * Complete processing for this dead server.
-   * @param sn ServerName for the dead server.
-   * @see #processing(ServerName)
-   */
-  public synchronized void finish(ServerName sn) {
-    if (processingServers.remove(sn)) {
-      LOG.debug("Removed {} from processing; numProcessing={}", sn, processingServers.size());
-    }
   }
 
   public synchronized int size() {
@@ -171,17 +131,12 @@ public class DeadServer {
     // Display unified set of servers from both maps
     Set<ServerName> servers = new HashSet<>();
     servers.addAll(deadServers.keySet());
-    servers.addAll(processingServers);
     StringBuilder sb = new StringBuilder();
     for (ServerName sn : servers) {
       if (sb.length() > 0) {
         sb.append(", ");
       }
       sb.append(sn.toString());
-      // Star entries that are being processed
-      if (processingServers.contains(sn)) {
-        sb.append("*");
-      }
     }
     return sb.toString();
   }
@@ -220,9 +175,6 @@ public class DeadServer {
    * @return true if this server was removed
    */
   public synchronized boolean removeDeadServer(final ServerName deadServerName) {
-    Preconditions.checkState(!processingServers.contains(deadServerName),
-      "Asked to remove server still in processingServers set " + deadServerName + " (numProcessing="
-        + processingServers.size() + ")");
     return this.deadServers.remove(deadServerName) != null;
   }
 }
