@@ -159,20 +159,12 @@ public class TestReadOnlyController {
     hRegionServer.getConfigurationManager().notifyAllObservers(conf);
   }
 
-  private static boolean isActiveClusterIdFileExists() {
+  private static boolean isActiveClusterIdFileExists() throws IOException {
     MasterFileSystem mfs = hMaster.getMasterFileSystem();
     Path rootDir = mfs.getRootDir();
     FileSystem fs = mfs.getFileSystem();
     Path activeClusterFile = new Path(rootDir, HConstants.ACTIVE_CLUSTER_SUFFIX_FILE_NAME);
-    boolean status = false;
-    try {
-      if (fs.exists(activeClusterFile)) {
-        status = true;
-      }
-    } catch (IOException e) {
-      status = false;
-    }
-    return status;
+    return fs.exists(activeClusterFile);
   }
 
   // The test case for successfully creating a table with Read-Only mode disabled happens when

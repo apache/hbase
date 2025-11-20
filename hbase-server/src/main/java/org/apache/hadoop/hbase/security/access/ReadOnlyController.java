@@ -95,7 +95,7 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
       this.masterServices = ((MasterCoprocessorEnvironment) env).getMasterServices();
       LOG.info("ReadOnlyController obtained MasterServices reference from start().");
     } else {
-      LOG.warn("ReadOnlyController loaded in a non-Master environment. "
+      LOG.debug("ReadOnlyController loaded in a non-Master environment. "
         + "File system operations for read-only state will not work.");
     }
     this.globalReadOnlyEnabled =
@@ -453,9 +453,6 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
       // We still update the flag, but log that the operation failed.
       LOG.error("Failed to perform file operation for read-only switch. "
         + "Flag will be updated, but file system state may be inconsistent.", e);
-      this.globalReadOnlyEnabled = newValue;
-      LOG.info("Config {} has been dynamically changed to {}. Encountered FS error",
-        HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, this.globalReadOnlyEnabled);
     }
   }
 
@@ -470,7 +467,7 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
         LOG.debug("Global R/O flag changed, but not running on master");
       }
       this.globalReadOnlyEnabled = maybeUpdatedConfValue;
-      LOG.debug("Config {} has been dynamically changed to {}. (No FS ops performed 1)",
+      LOG.info("Config {} has been dynamically changed to {}.",
         HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, this.globalReadOnlyEnabled);
     }
   }
