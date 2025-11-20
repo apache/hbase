@@ -68,6 +68,8 @@ import org.slf4j.LoggerFactory;
 public class RegionStateNode implements Comparable<RegionStateNode> {
 
   private static final Logger LOG = LoggerFactory.getLogger(RegionStateNode.class);
+  // It stores count of all active TRSP in the master. Had to pass it from regionStates to
+  // maintain the count
   private final AtomicInteger activeTransitProcedureCount;
 
   private static final class AssignmentProcedureEvent extends ProcedureEvent<RegionInfo> {
