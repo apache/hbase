@@ -1057,8 +1057,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
           Collectors.toMap(ServerCrashProcedure::getServerName, Procedure::getSubmittedTime)),
       Sets.union(rsListStorage.getAll(), walManager.getLiveServersFromWALDir()),
       walManager.getSplittingServersFromWALDir());
-    // This manager must be accessed AFTER hbase:meta is confirmed on line.. and must be initialised
-    // before assignment manager
+    // This manager must be accessed AFTER hbase:meta is confirmed on line..
     this.tableStateManager = new TableStateManager(this);
 
     startupTaskGroup.addTask("Initializing ZK system trackers");
