@@ -84,9 +84,9 @@ public class RegionInTransitionTracker {
     }
 
     RegionState.State currentState = regionStateNode.getState();
-    boolean isTableEnabled = isIsTableEnabled(regionStateNode.getTable());
+    boolean tableEnabled = isTableEnabled(regionStateNode.getTable());
     List<RegionState.State> terminalStates =
-      isTableEnabled ? ENABLE_TABLE_REGION_STATE : DISABLE_TABLE_REGION_STATE;
+      tableEnabled ? ENABLE_TABLE_REGION_STATE : DISABLE_TABLE_REGION_STATE;
 
     // if region is merged or split it should not be in RIT list
     if (
@@ -110,7 +110,7 @@ public class RegionInTransitionTracker {
     }
   }
 
-  private boolean isIsTableEnabled(TableName tableName) {
+  private boolean isTableEnabled(TableName tableName) {
     if (tableStateManager != null) {
       return tableStateManager.isTableState(tableName, TableState.State.ENABLED,
         TableState.State.ENABLING);
