@@ -973,14 +973,6 @@ public class HMaster extends HRegionServer implements MasterServices {
     Map<Class<?>, List<Procedure<MasterProcedureEnv>>> procsByType = procedureExecutor
       .getActiveProceduresNoCopy().stream().collect(Collectors.groupingBy(p -> p.getClass()));
 
-    // This manager will be started AFTER hbase:meta is confirmed on line and must be initialised
-    // before assignment manager
-    // hbase.mirror.table.state.to.zookeeper is so hbase1 clients can connect. They read table
-    // state from zookeeper while hbase2 reads it from hbase:meta. Disable if no hbase1 clients.
-    this.tableStateManager =
-      this.conf.getBoolean(MirroringTableStateManager.MIRROR_TABLE_STATE_TO_ZK_KEY, true)
-        ? new MirroringTableStateManager(this)
-        : new TableStateManager(this);
     // Create Assignment Manager
     this.assignmentManager = createAssignmentManager(this, masterRegion);
     this.assignmentManager.start();
@@ -1004,6 +996,13 @@ public class HMaster extends HRegionServer implements MasterServices {
           Collectors.toMap(ServerCrashProcedure::getServerName, Procedure::getSubmittedTime)),
       Sets.union(rsListStorage.getAll(), walManager.getLiveServersFromWALDir()),
       walManager.getSplittingServersFromWALDir());
+    // This manager will be started AFTER hbase:meta is confirmed on line..
+    // hbase.mirror.table.state.to.zookeeper is so hbase1 clients can connect. They read table
+    // state from zookeeper while hbase2 reads it from hbase:meta. Disable if no hbase1 clients.
+    this.tableStateManager =
+      this.conf.getBoolean(MirroringTableStateManager.MIRROR_TABLE_STATE_TO_ZK_KEY, true)
+        ? new MirroringTableStateManager(this)
+        : new TableStateManager(this);
 
     startupTaskGroup.addTask("Initializing ZK system trackers");
     initializeZKBasedSystemTrackers();
@@ -1095,6 +1094,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     final ColumnFamilyDescriptor replBarrierFamilyDesc =
       metaDescriptor.getColumnFamily(HConstants.REPLICATION_BARRIER_FAMILY);
 
+    this.assignmentManager.initializationPostMetaOnline();
     this.assignmentManager.joinCluster();
     // The below depends on hbase:meta being online.
     try {

@@ -205,7 +205,8 @@ public class AssignmentManager {
 
   private Thread assignThread;
 
-  private final RegionInTransitionTracker regionInTransitionTracker;
+  private final RegionInTransitionTracker regionInTransitionTracker =
+    new RegionInTransitionTracker();
 
   public AssignmentManager(MasterServices master, MasterRegion masterRegion) {
     this(master, masterRegion, new RegionStateStore(master, masterRegion));
@@ -213,7 +214,6 @@ public class AssignmentManager {
 
   AssignmentManager(MasterServices master, MasterRegion masterRegion, RegionStateStore stateStore) {
     this.master = master;
-    regionInTransitionTracker = new RegionInTransitionTracker(master.getTableStateManager());
     this.regionStateStore = stateStore;
     this.metrics = new MetricsAssignmentManager();
     this.masterRegion = masterRegion;
@@ -350,6 +350,12 @@ public class AssignmentManager {
       LOG.info("Attach {} to {}", proc, regionNode);
       regionNode.setProcedure(proc);
     });
+  }
+
+  public void initializationPostMetaOnline() {
+    // now that we are sure that meta is online, we can set TableStateManger in
+    // regionInTransitionTracker
+    regionInTransitionTracker.setTableStateManager(master.getTableStateManager());
   }
 
   public void stop() {
