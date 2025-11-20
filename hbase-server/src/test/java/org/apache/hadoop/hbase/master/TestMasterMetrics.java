@@ -279,7 +279,10 @@ public class TestMasterMetrics {
         Map<TableName, RegionStatesCount> tableRegionStatesCount =
           metrics.getTableRegionStatesCount();
 
-        if (tableName.equals(TableName.META_TABLE_NAME) || tableName.getQualifierAsString().startsWith("familiar")) {
+        if (
+          tableName.equals(TableName.META_TABLE_NAME)
+            || tableName.getQualifierAsString().startsWith("familiar")
+        ) {
           assertTrue("Expected this table's state to exist: " + tableName,
             tableRegionStatesCount.containsKey(tableName));
         } else {
