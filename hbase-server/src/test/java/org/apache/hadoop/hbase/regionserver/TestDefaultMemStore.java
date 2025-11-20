@@ -1124,7 +1124,8 @@ public class TestDefaultMemStore {
     while (s.next() != null) {
       ++cnt;
     }
-    LOG.info("Iteration {} took usec: {} for: {}", iteration, (System.nanoTime() - nanos) / 1000, cnt);
+    LOG.info("Iteration {} took usec: {} for: {}", iteration, (System.nanoTime() - nanos) / 1000,
+      cnt);
     return cnt;
   }
 
