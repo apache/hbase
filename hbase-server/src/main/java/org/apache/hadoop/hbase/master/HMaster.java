@@ -3117,13 +3117,11 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
             try {
               Map<TableName, RegionStatesCount> tableRegionStatesCountMap = new HashMap<>();
               Map<String, TableDescriptor> tableDescriptorMap = getTableDescriptors().getAll();
+              List<TableName> tableNames = listTableNames(null, null, true);
               for (TableDescriptor tableDescriptor : tableDescriptorMap.values()) {
                 TableName tableName = tableDescriptor.getTableName();
-                if (
-                  tableName.isSystemTable() && tableName.getQualifierAsString().startsWith("meta")
-                    && !tableName.equals(TableName.META_TABLE_NAME)
-                ) {
-                  LOG.info("Skipping foreign meta table {} in cluster metrics", tableName);
+                if (!tableNames.contains(tableName)) {
+                  LOG.info("Skipping foreign table {} in cluster metrics", tableName);
                   continue;
                 }
                 RegionStatesCount regionStatesCount =
