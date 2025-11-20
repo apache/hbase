@@ -49,4 +49,3 @@ $ git clone https://gitbox.apache.org/repos/asf/hbase.git
 ### Access from Behind a Firewall
 
 Refer to the documentation of the SCM used for more information about access behind a firewall.
-

@@ -60,7 +60,7 @@ Before you begin, ensure you have the following installed:
 - **Node.js version 22** - JavaScript runtime (like the JVM for Java)
   - Download from [nodejs.org](https://nodejs.org/)
   - Verify installation: `node --version` (should show v20.19+ or v22.12+)
-  
+
 - **NPM** - Node Package Manager (like Maven for Java)
   - Comes bundled with Node.js
   - Verify installation: `npm --version`
@@ -84,7 +84,7 @@ The website uses **progressive enhancement** ([learn more](https://reactrouter.c
   - Fast page transitions without full page reloads
   - Smooth animations and interactive features
   - Enhanced user experience
-  
+
 - **Without JavaScript**: Users still get a fully functional website
   - All links and forms work via traditional HTML
   - Content is accessible to everyone
@@ -114,7 +114,7 @@ This approach ensures the website works for all users, regardless of their brows
   - Similar to Java's type system
   - Catches errors at compile-time instead of runtime
   - Provides autocomplete and better IDE support
-  
+
 - **ESLint + Prettier** - Code linting and formatting (like Checkstyle + google-java-format)
   - ESLint analyzes code for potential errors and enforces coding standards
   - Prettier handles automatic code formatting (spacing, indentation, etc.)
@@ -185,17 +185,17 @@ my-react-router-app/
 1. **UI Components (`/ui`)**: Pure, reusable components with no business logic
    - Can be used anywhere in the application
    - Only concerned with appearance and basic interaction
-   
+
 2. **Business Components (`/components`)**: Reusable across pages
    - May contain business logic specific to HBase website
    - Examples: navigation, footer, theme toggle
-   
+
 3. **Pages (`/pages`)**: Complete pages combining ui and components
    - Each page has its own directory
    - Only `index.tsx` is exported
    - Internal components stay within the page directory
    - If a component needs to be reused, move it to `/components`
-   
+
 4. **Routes (`/routes`)**: Define routing and metadata
    - Maps URLs to pages
    - Sets page titles, meta tags, etc.
@@ -494,7 +494,7 @@ mvn clean install
 
 This will:
 - Remove `build/` directory
-- Remove `node_modules/` directory  
+- Remove `node_modules/` directory
 - Remove `target/` directory
 - Reinstall Node.js and npm
 - Install all dependencies fresh
@@ -515,12 +515,12 @@ mvn clean install
 
 #### Benefits
 
-✅ **Consistent Builds**: Same build process everywhere (local, CI, production)  
-✅ **No Manual Steps**: Maven handles everything automatically  
-✅ **Isolated Node.js**: Doesn't interfere with system Node installation  
-✅ **Skip Option**: Can skip website build with `-DskipSite`  
-✅ **Standalone**: Can build website separately with `-pl hbase-website`  
-✅ **Quality Checks**: Runs linting, type checking, and tests before building  
+✅ **Consistent Builds**: Same build process everywhere (local, CI, production)
+✅ **No Manual Steps**: Maven handles everything automatically
+✅ **Isolated Node.js**: Doesn't interfere with system Node installation
+✅ **Skip Option**: Can skip website build with `-DskipSite`
+✅ **Standalone**: Can build website separately with `-pl hbase-website`
+✅ **Quality Checks**: Runs linting, type checking, and tests before building
 
 #### For HBase Developers
 

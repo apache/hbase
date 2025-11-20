@@ -31,4 +31,3 @@ The below companies have been gracious enough to provide their commercial tool o
 ## Sponsoring the Apache Software Foundation
 
 To contribute to the Apache Software Foundation, a good idea in our opinion, see the [ASF Sponsorship](http://www.apache.org/foundation/sponsorship.html) page.
-

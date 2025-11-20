@@ -40,4 +40,3 @@ As a project and a community, we encourage you to participate in the HBase proje
 We value diversity and strive to support participation by people with all different backgrounds. Rich projects grow from groups with different points of view and different backgrounds. We welcome your suggestions about how we can welcome participation by people at all skill levels and with all aspects of the project.
 
 If you can think of something we are doing that we shouldn't, or something that we should do but aren't, please let us know. If you feel comfortable doing so, use the public mailing lists. Otherwise, reach out to a PMC member or send an email to [the private PMC mailing list](mailto:private@hbase.apache.org).
-

@@ -28,4 +28,3 @@ For each list, links are provided to subscribe, unsubscribe, and view archives.
 | Issues List | [Subscribe](mailto:issues-subscribe@hbase.apache.org) | [Unsubscribe](mailto:issues-unsubscribe@hbase.apache.org) | - | [lists.apache.org](https://lists.apache.org/list.html?issues@hbase.apache.org) | - |
 | Builds List | [Subscribe](mailto:builds-subscribe@hbase.apache.org) | [Unsubscribe](mailto:builds-unsubscribe@hbase.apache.org) | - | [lists.apache.org](https://lists.apache.org/list.html?builds@hbase.apache.org) | - |
 | User (ZH) List | [Subscribe](mailto:user-zh-subscribe@hbase.apache.org) | [Unsubscribe](mailto:user-zh-unsubscribe@hbase.apache.org) | [Post](mailto:user-zh@hbase.apache.org) | [lists.apache.org](https://lists.apache.org/list.html?user-zh@hbase.apache.org) | - |
-

@@ -24,19 +24,19 @@ Apache HBase (TM) is not an ACID compliant database. However, it does guarantee 
 
 For the sake of common vocabulary, we define the following terms:
 
-**Atomicity**  
+**Atomicity**
 an operation is atomic if it either completes entirely or not at all
 
-**Consistency**  
+**Consistency**
 all actions cause the table to transition from one valid state directly to another (eg a row will not disappear during an update, etc)
 
-**Isolation**  
+**Isolation**
 an operation is isolated if it appears to complete independently of any other concurrent transaction
 
-**Durability**  
+**Durability**
 any update that reports "successful" to the client will not be lost
 
-**Visibility**  
+**Visibility**
 an update is considered visible if any subsequent read will see the update as having been committed
 
 The terms _must_ and _may_ are used as specified by RFC 2119. In short, the word "must" implies that, if some case exists where the statement is not true, it is a bug. The word "may" implies that, even if the guarantee is provided in a current release, users should not rely on it.
@@ -123,4 +123,3 @@ For more information, see the [client architecture](https://hbase.apache.org/boo
 [2] In the context of Apache HBase, "durably on disk" implies an hflush() call on the transaction log. This does not actually imply an fsync() to magnetic media, but rather just that the data has been written to the OS cache on all replicas of the log. In the case of a full datacenter power loss, it is possible that the edits are not truly durable.
 
 [3] Puts will either wholly succeed or wholly fail, provided that they are actually sent to the RegionServer. If the writebuffer is used, Puts will not be sent until the writebuffer is filled or it is explicitly flushed.
-
