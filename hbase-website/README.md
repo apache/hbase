@@ -57,7 +57,7 @@ Edit these files with any text editor, then run `npm run build` to regenerate th
 
 Before you begin, ensure you have the following installed:
 
-- **Node.js version 20.19+ or 22.12+** - JavaScript runtime (like the JVM for Java)
+- **Node.js version 22** - JavaScript runtime (like the JVM for Java)
   - Download from [nodejs.org](https://nodejs.org/)
   - Verify installation: `node --version` (should show v20.19+ or v22.12+)
   
@@ -212,7 +212,17 @@ npm install
 
 This downloads all required packages from npm (similar to Maven Central).
 
-#### 2. Start Development Server
+#### 2. Generate Developers Data
+
+**Important:** Before starting the development server, generate the `developers.json` file from the root `pom.xml`:
+
+```bash
+npm run extract-developers
+```
+
+This extracts the developer information from the parent `pom.xml` file and creates `app/pages/team/developers.json`, which is required for the Team page to work properly. Re-run this command whenever the developers section in `pom.xml` changes.
+
+#### 3. Start Development Server
 
 ```bash
 npm run dev
