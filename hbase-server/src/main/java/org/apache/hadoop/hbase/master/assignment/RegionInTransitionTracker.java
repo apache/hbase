@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master.assignment;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentSkipListMap;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.RegionState;
@@ -43,11 +44,7 @@ public class RegionInTransitionTracker {
   private final ConcurrentSkipListMap<RegionInfo, RegionStateNode> regionInTransition =
     new ConcurrentSkipListMap<>(RegionInfo.COMPARATOR);
 
-  private final TableStateManager tableStateManager;
-
-  public RegionInTransitionTracker(TableStateManager tableStateManager) {
-    this.tableStateManager = tableStateManager;
-  }
+  private TableStateManager tableStateManager;
 
   public boolean isRegionInTransition(final RegionInfo regionInfo) {
     return regionInTransition.containsKey(regionInfo);
@@ -84,8 +81,7 @@ public class RegionInTransitionTracker {
     }
 
     RegionState.State currentState = regionStateNode.getState();
-    boolean isTableEnabled = tableStateManager.isTableState(regionStateNode.getTable(),
-      TableState.State.ENABLED, TableState.State.ENABLING);
+    boolean isTableEnabled = isIsTableEnabled(regionStateNode.getTable());
     List<RegionState.State> terminalStates =
       isTableEnabled ? ENABLE_TABLE_REGION_STATE : DISABLE_TABLE_REGION_STATE;
 
@@ -108,6 +104,22 @@ public class RegionInTransitionTracker {
         LOG.debug("Removed {} from RIT list as reached to terminal state {}",
           regionStateNode.getRegionInfo().getEncodedName(), currentState);
       }
+    }
+  }
+
+  private boolean isIsTableEnabled(TableName tableName) {
+    if (tableStateManager != null) {
+      return tableStateManager.isTableState(tableName, TableState.State.ENABLED,
+        TableState.State.ENABLING);
+    }
+    // AssignmentManager calls setTableStateManager once hbase:meta is confirmed online, if it is
+    // still null it means confirmation is still pending. One should not access TableStateManger
+    // till the time.
+    if (TableName.isMetaTableName(tableName)) {
+      return true;
+    } else {
+      throw new RuntimeException(
+        "TableStateManger can not be accessed before hbase:meta is confirmed on line");
     }
   }
 
@@ -142,4 +154,7 @@ public class RegionInTransitionTracker {
     return new ArrayList<>(regionInTransition.values());
   }
 
+  public void setTableStateManager(TableStateManager tableStateManager) {
+    this.tableStateManager = tableStateManager;
+  }
 }

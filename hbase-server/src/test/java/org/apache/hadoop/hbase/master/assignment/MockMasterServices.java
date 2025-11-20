@@ -123,6 +123,7 @@ public class MockMasterServices extends MockNoopMasterServices {
       new AssignmentManager(this, masterRegion, new MockRegionStateStore(this, masterRegion));
     this.balancer = LoadBalancerFactory.getLoadBalancer(conf);
     this.serverManager = new ServerManager(this, new DummyRegionServerList());
+    assignmentManager.initializationPostMetaOnline();
     when(this.tableStateManager.getTableState(any())).thenReturn(new TableState(
       TableName.valueOf("AnyTableNameSetInMockMasterServcies"), TableState.State.ENABLED));
 
