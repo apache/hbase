@@ -39,6 +39,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.IntStream;
 import org.apache.hadoop.hbase.CompareOperator;
@@ -1641,163 +1642,112 @@ public class TestAsyncTable {
   }
 
   @Test
-  public void testInvalidMutation() {
-    // put
-    try {
-      getTable.get().put(new Put(Bytes.toBytes(0)));
-      fail("Should fail since the put does not contain any cells");
-    } catch (IllegalArgumentException e) {
-      assertThat(e.getMessage(), containsString("No columns to put"));
-    }
+  public void testInvalidMutation() throws Exception {
+    Consumer<Mutation> executeMutation = mutation -> {
+      if (mutation instanceof Put) {
+        getTable.get().put((Put) mutation);
+      } else if (mutation instanceof Increment) {
+        getTable.get().increment((Increment) mutation);
+      } else if (mutation instanceof Append) {
+        getTable.get().append((Append) mutation);
+      }
+    };
 
-    try {
-      getTable.get()
-        .put(new Put(Bytes.toBytes(0)).addColumn(FAMILY, QUALIFIER, new byte[MAX_KEY_VALUE_SIZE]));
-      fail("Should fail since the put exceeds the max key value size");
-    } catch (IllegalArgumentException e) {
-      assertThat(e.getMessage(), containsString("KeyValue size too large"));
-    }
+    Mutation[] emptyMutations =
+      { new Put(Bytes.toBytes(0)), new Increment(Bytes.toBytes(0)), new Append(Bytes.toBytes(0)) };
 
-    // increment
-    try {
-      getTable.get().increment(new Increment(Bytes.toBytes(0)));
-      fail("Should fail since the increment does not contain any columns");
-    } catch (IllegalArgumentException e) {
-      assertThat(e.getMessage(), containsString("No columns to increment"));
-    }
+    String[] emptyMessages =
+      { "No columns to put", "No columns to increment", "No columns to append" };
 
-    try {
-      getTable.get().increment(
-        new Increment(Bytes.toBytes(0)).addColumn(FAMILY, new byte[MAX_KEY_VALUE_SIZE], 1));
-      fail("Should fail since the increment exceeds the max key value size");
-    } catch (IllegalArgumentException e) {
-      assertThat(e.getMessage(), containsString("KeyValue size too large"));
-    }
+    Mutation[] oversizedMutations =
+      { new Put(Bytes.toBytes(0)).addColumn(FAMILY, QUALIFIER, new byte[MAX_KEY_VALUE_SIZE]),
+        new Increment(Bytes.toBytes(0)).addColumn(FAMILY, new byte[MAX_KEY_VALUE_SIZE], 1),
+        new Append(Bytes.toBytes(0)).addColumn(FAMILY, QUALIFIER, new byte[MAX_KEY_VALUE_SIZE]) };
 
-    // append
-    try {
-      getTable.get().append(new Append(Bytes.toBytes(0)));
-      fail("Should fail since the append does not contain any columns");
-    } catch (IllegalArgumentException e) {
-      assertThat(e.getMessage(), containsString("No columns to append"));
-    }
+    for (int i = 0; i < emptyMutations.length; i++) {
+      // Test empty mutation
+      try {
+        executeMutation.accept(emptyMutations[i]);
+        fail("Should fail since the mutation does not contain any cells");
+      } catch (IllegalArgumentException e) {
+        assertThat(e.getMessage(), containsString(emptyMessages[i]));
+      }
 
-    try {
-      getTable.get().append(
-        new Append(Bytes.toBytes(0)).addColumn(FAMILY, QUALIFIER, new byte[MAX_KEY_VALUE_SIZE]));
-      fail("Should fail since the append exceeds the max key value size");
-    } catch (IllegalArgumentException e) {
-      assertThat(e.getMessage(), containsString("KeyValue size too large"));
+      // Test oversized mutation
+      try {
+        executeMutation.accept(oversizedMutations[i]);
+        fail("Should fail since the mutation exceeds the max key value size");
+      } catch (IllegalArgumentException e) {
+        assertThat(e.getMessage(), containsString("KeyValue size too large"));
+      }
     }
   }
 
   @Test
   public void testInvalidMutationInRowMutations() throws IOException {
     final byte[] row = Bytes.toBytes(0);
-    // put
-    try {
-      getTable.get().mutateRow(new RowMutations(row).add(new Put(row)));
-      fail("Should fail since the put does not contain any cells");
-    } catch (IllegalArgumentException e) {
-      assertThat(e.getMessage(), containsString("No columns to put"));
-    }
 
-    try {
-      getTable.get().mutateRow(new RowMutations(row)
-        .add(new Put(row).addColumn(FAMILY, QUALIFIER, new byte[MAX_KEY_VALUE_SIZE])));
-      fail("Should fail since the put exceeds the max key value size");
-    } catch (IllegalArgumentException e) {
-      assertThat(e.getMessage(), containsString("KeyValue size too large"));
-    }
+    Mutation[] emptyMutations = { new Put(row), new Increment(row), new Append(row) };
 
-    // increment
-    try {
-      getTable.get().mutateRow(new RowMutations(row).add(new Increment(row)));
-      fail("Should fail since the increment does not contain any columns");
-    } catch (IllegalArgumentException e) {
-      assertThat(e.getMessage(), containsString("No columns to increment"));
-    }
+    String[] emptyMessages =
+      { "No columns to put", "No columns to increment", "No columns to append" };
 
-    try {
-      getTable.get().mutateRow(new RowMutations(row)
-        .add(new Increment(row).addColumn(FAMILY, new byte[MAX_KEY_VALUE_SIZE], 1)));
-      fail("Should fail since the increment exceeds the max key value size");
-    } catch (IllegalArgumentException e) {
-      assertThat(e.getMessage(), containsString("KeyValue size too large"));
-    }
+    Mutation[] oversizedMutations =
+      { new Put(row).addColumn(FAMILY, QUALIFIER, new byte[MAX_KEY_VALUE_SIZE]),
+        new Increment(row).addColumn(FAMILY, new byte[MAX_KEY_VALUE_SIZE], 1),
+        new Append(row).addColumn(FAMILY, QUALIFIER, new byte[MAX_KEY_VALUE_SIZE]) };
 
-    // append
-    try {
-      getTable.get().mutateRow(new RowMutations(row).add(new Append(row)));
-      fail("Should fail since the append does not contain any columns");
-    } catch (IllegalArgumentException e) {
-      assertThat(e.getMessage(), containsString("No columns to append"));
-    }
+    for (int i = 0; i < emptyMutations.length; i++) {
+      // Test empty mutation
+      try {
+        getTable.get().mutateRow(new RowMutations(row).add(emptyMutations[i]));
+        fail("Should fail since the mutation does not contain any cells");
+      } catch (IllegalArgumentException e) {
+        assertThat(e.getMessage(), containsString(emptyMessages[i]));
+      }
 
-    try {
-      getTable.get().mutateRow(new RowMutations(row)
-        .add(new Append(row).addColumn(FAMILY, QUALIFIER, new byte[MAX_KEY_VALUE_SIZE])));
-      fail("Should fail since the append exceeds the max key value size");
-    } catch (IllegalArgumentException e) {
-      assertThat(e.getMessage(), containsString("KeyValue size too large"));
+      // Test oversized mutation
+      try {
+        getTable.get().mutateRow(new RowMutations(row).add(oversizedMutations[i]));
+        fail("Should fail since the mutation exceeds the max key value size");
+      } catch (IllegalArgumentException e) {
+        assertThat(e.getMessage(), containsString("KeyValue size too large"));
+      }
     }
   }
 
   @Test
   public void testInvalidMutationInRowMutationsInCheckAndMutate() throws IOException {
     final byte[] row = Bytes.toBytes(0);
-    // put
-    try {
-      getTable.get().checkAndMutate(CheckAndMutate.newBuilder(row).ifNotExists(FAMILY, QUALIFIER)
-        .build(new RowMutations(row).add(new Put(row))));
-      fail("Should fail since the put does not contain any cells");
-    } catch (IllegalArgumentException e) {
-      assertThat(e.getMessage(), containsString("No columns to put"));
-    }
 
-    try {
-      getTable.get().checkAndMutate(
-        CheckAndMutate.newBuilder(row).ifNotExists(FAMILY, QUALIFIER).build(new RowMutations(row)
-          .add(new Put(row).addColumn(FAMILY, QUALIFIER, new byte[MAX_KEY_VALUE_SIZE]))));
-      fail("Should fail since the put exceeds the max key value size");
-    } catch (IllegalArgumentException e) {
-      assertThat(e.getMessage(), containsString("KeyValue size too large"));
-    }
+    Mutation[] emptyMutations = { new Put(row), new Increment(row), new Append(row) };
 
-    // increment
-    try {
-      getTable.get().checkAndMutate(CheckAndMutate.newBuilder(row).ifNotExists(FAMILY, QUALIFIER)
-        .build(new RowMutations(row).add(new Increment(row))));
-      fail("Should fail since the increment does not contain any columns");
-    } catch (IllegalArgumentException e) {
-      assertThat(e.getMessage(), containsString("No columns to increment"));
-    }
+    String[] emptyMessages =
+      { "No columns to put", "No columns to increment", "No columns to append" };
 
-    try {
-      getTable.get().checkAndMutate(
-        CheckAndMutate.newBuilder(row).ifNotExists(FAMILY, QUALIFIER).build(new RowMutations(row)
-          .add(new Increment(row).addColumn(FAMILY, new byte[MAX_KEY_VALUE_SIZE], 1))));
-      fail("Should fail since the increment exceeds the max key value size");
-    } catch (IllegalArgumentException e) {
-      assertThat(e.getMessage(), containsString("KeyValue size too large"));
-    }
+    Mutation[] oversizedMutations =
+      { new Put(row).addColumn(FAMILY, QUALIFIER, new byte[MAX_KEY_VALUE_SIZE]),
+        new Increment(row).addColumn(FAMILY, new byte[MAX_KEY_VALUE_SIZE], 1),
+        new Append(row).addColumn(FAMILY, QUALIFIER, new byte[MAX_KEY_VALUE_SIZE]) };
 
-    // append
-    try {
-      getTable.get().checkAndMutate(CheckAndMutate.newBuilder(row).ifNotExists(FAMILY, QUALIFIER)
-        .build(new RowMutations(row).add(new Append(row))));
-      fail("Should fail since the append does not contain any columns");
-    } catch (IllegalArgumentException e) {
-      assertThat(e.getMessage(), containsString("No columns to append"));
-    }
+    for (int i = 0; i < emptyMutations.length; i++) {
+      // Test empty mutation
+      try {
+        getTable.get().checkAndMutate(CheckAndMutate.newBuilder(row).ifNotExists(FAMILY, QUALIFIER)
+          .build(new RowMutations(row).add(emptyMutations[i])));
+        fail("Should fail since the mutation does not contain any cells");
+      } catch (IllegalArgumentException e) {
+        assertThat(e.getMessage(), containsString(emptyMessages[i]));
+      }
 
-    try {
-      getTable.get().checkAndMutate(
-        CheckAndMutate.newBuilder(row).ifNotExists(FAMILY, QUALIFIER).build(new RowMutations(row)
-          .add(new Append(row).addColumn(FAMILY, QUALIFIER, new byte[MAX_KEY_VALUE_SIZE]))));
-      fail("Should fail since the append exceeds the max key value size");
-    } catch (IllegalArgumentException e) {
-      assertThat(e.getMessage(), containsString("KeyValue size too large"));
+      // Test oversized mutation
+      try {
+        getTable.get().checkAndMutate(CheckAndMutate.newBuilder(row).ifNotExists(FAMILY, QUALIFIER)
+          .build(new RowMutations(row).add(oversizedMutations[i])));
+        fail("Should fail since the mutation exceeds the max key value size");
+      } catch (IllegalArgumentException e) {
+        assertThat(e.getMessage(), containsString("KeyValue size too large"));
+      }
     }
   }
 }
