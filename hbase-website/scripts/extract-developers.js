@@ -21,45 +21,87 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Read the parent pom.xml
-const pomPath = path.join(__dirname, '..', '..', 'pom.xml');
-const pomContent = fs.readFileSync(pomPath, 'utf-8');
-
-// Extract developers using regex
-const developersMatch = pomContent.match(/<developers>([\s\S]*?)<\/developers>/);
-if (!developersMatch) {
-  console.error('No developers section found in pom.xml');
-  process.exit(1);
+/**
+ * Extracts a field value from a developer XML block
+ * @param {string} block - The XML block containing developer information
+ * @param {string} fieldName - The name of the field to extract
+ * @returns {string} The field value or '-' if not present
+ */
+export function extractField(block, fieldName) {
+  const fieldRegex = new RegExp(`<${fieldName}>(.*?)<\/${fieldName}>`, 's');
+  const fieldMatch = block.match(fieldRegex);
+  return fieldMatch ? fieldMatch[1].trim() : '-';
 }
 
-const developersXml = developersMatch[1];
-const developerRegex = /<developer>\s*<id>(.*?)<\/id>\s*<name>(.*?)<\/name>\s*<email>(.*?)<\/email>\s*<timezone>(.*?)<\/timezone>\s*<\/developer>/gs;
+/**
+ * Parses developers from POM XML content
+ * @param {string} pomContent - The content of the pom.xml file
+ * @returns {Array<Object>} Array of developer objects
+ * @throws {Error} If no developers section is found
+ */
+export function parseDevelopers(pomContent) {
+  // Extract developers using regex
+  const developersMatch = pomContent.match(/<developers>([\s\S]*?)<\/developers>/);
+  if (!developersMatch) {
+    throw new Error('No developers section found in pom.xml');
+  }
 
-const developers = [];
-let match;
+  const developersXml = developersMatch[1];
+  // Match each developer block
+  const developerBlockRegex = /<developer>([\s\S]*?)<\/developer>/gs;
 
-while ((match = developerRegex.exec(developersXml)) !== null) {
-  const id = match[1].trim();
-  const name = match[2].trim();
-  const email = match[3].trim();
-  const timezone = match[4].trim();
-  
-  developers.push({
-    id,
-    name,
-    email,
-    timezone
-  });
+  const developers = [];
+  let match;
+
+  while ((match = developerBlockRegex.exec(developersXml)) !== null) {
+    const block = match[1];
+    
+    const id = extractField(block, 'id');
+    const name = extractField(block, 'name');
+    const email = extractField(block, 'email');
+    const timezone = extractField(block, 'timezone');
+    
+    developers.push({
+      id,
+      name,
+      email,
+      timezone
+    });
+  }
+
+  return developers;
 }
 
-console.log(`Extracted ${developers.length} developers from pom.xml`);
+/**
+ * Main function to extract developers and write to JSON file
+ */
+export function main() {
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
 
-// Write to JSON file
-const outputPath = path.join(__dirname, '..', 'app', 'pages', 'team', 'developers.json');
-fs.writeFileSync(outputPath, JSON.stringify(developers, null, 2));
+  // Read the parent pom.xml
+  const pomPath = path.join(__dirname, '..', '..', 'pom.xml');
+  const pomContent = fs.readFileSync(pomPath, 'utf-8');
 
-console.log(`Developers data written to ${outputPath}`);
+  let developers;
+  try {
+    developers = parseDevelopers(pomContent);
+  } catch (error) {
+    console.error(error.message);
+    process.exit(1);
+  }
+
+  console.log(`Extracted ${developers.length} developers from pom.xml`);
+
+  // Write to JSON file
+  const outputPath = path.join(__dirname, '..', 'app', 'pages', 'team', 'developers.json');
+  fs.writeFileSync(outputPath, JSON.stringify(developers, null, 2));
+
+  console.log(`Developers data written to ${outputPath}`);
+}
+
+// Run main if this file is executed directly
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main();
+}
 
