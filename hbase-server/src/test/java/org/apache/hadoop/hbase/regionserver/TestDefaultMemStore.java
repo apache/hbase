@@ -29,7 +29,6 @@ import java.util.List;
 import java.util.NavigableMap;
 import java.util.Objects;
 import java.util.TreeMap;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -94,7 +93,6 @@ public class TestDefaultMemStore {
   protected static final int QUALIFIER_COUNT = ROW_COUNT;
   protected static final byte[] FAMILY = Bytes.toBytes("column");
   protected MultiVersionConcurrencyControl mvcc;
-  protected AtomicLong startSeqNum = new AtomicLong(0);
   protected ChunkCreator chunkCreator;
 
   private String getName() {
@@ -856,7 +854,7 @@ public class TestDefaultMemStore {
   // Helpers
   //////////////////////////////////////////////////////////////////////////////
   private static byte[] makeQualifier(final int i1, final int i2) {
-    return Bytes.toBytes(Integer.toString(i1) + ";" + Integer.toString(i2));
+    return Bytes.toBytes(i1 + ";" + i2);
   }
 
   /**
@@ -1101,15 +1099,13 @@ public class TestDefaultMemStore {
 
   private static void addRows(int count, final MemStore mem) {
     long nanos = System.nanoTime();
-
     for (int i = 0; i < count; i++) {
       if (i % 1000 == 0) {
-
-        System.out.println(i + " Took for 1k usec: " + (System.nanoTime() - nanos) / 1000);
+        LOG.info("{} Took for 1k usec: {}", i, (System.nanoTime() - nanos) / 1000);
         nanos = System.nanoTime();
       }
-      long timestamp = System.currentTimeMillis();
 
+      long timestamp = System.currentTimeMillis();
       for (int ii = 0; ii < QUALIFIER_COUNT; ii++) {
         byte[] row = Bytes.toBytes(i);
         byte[] qf = makeQualifier(i, ii);
@@ -1118,31 +1114,29 @@ public class TestDefaultMemStore {
     }
   }
 
-  static void doScan(MemStore ms, int iteration) throws IOException {
+  private static int doScan(MemStore ms, int iteration) throws IOException {
     long nanos = System.nanoTime();
     KeyValueScanner s = ms.getScanners(0).get(0);
     s.seek(KeyValueUtil.createFirstOnRow(new byte[] {}));
 
-    System.out.println(iteration + " create/seek took: " + (System.nanoTime() - nanos) / 1000);
+    LOG.info("Iteration {} create/seek took: {}", iteration, (System.nanoTime() - nanos) / 1000);
     int cnt = 0;
-    while (s.next() != null)
+    while (s.next() != null) {
       ++cnt;
-
-    System.out
-      .println(iteration + " took usec: " + (System.nanoTime() - nanos) / 1000 + " for: " + cnt);
-
+    }
+    LOG.info("Iteration {} took usec: {} for: {}", iteration, (System.nanoTime() - nanos) / 1000, cnt);
+    return cnt;
   }
 
-  public static void main(String[] args) throws IOException {
-    MemStore ms = new DefaultMemStore();
-
+  @Test
+  public void testScan() throws IOException {
     long n1 = System.nanoTime();
-    addRows(25000, ms);
-    System.out.println("Took for insert: " + (System.nanoTime() - n1) / 1000);
+    addRows(25000, memstore);
+    LOG.info("Took for insert: {}", (System.nanoTime() - n1) / 1000);
 
-    System.out.println("foo");
-
-    for (int i = 0; i < 50; i++)
-      doScan(ms, i);
+    for (int i = 0; i < 50; i++) {
+      int cnt = doScan(memstore, i);
+      assertEquals(memstore.getActive().getCellsCount(), cnt);
+    }
   }
 }
