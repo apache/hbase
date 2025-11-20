@@ -1033,9 +1033,6 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     Map<Class<?>, List<Procedure<MasterProcedureEnv>>> procsByType = procedureExecutor
       .getActiveProceduresNoCopy().stream().collect(Collectors.groupingBy(p -> p.getClass()));
 
-    // This manager must be accessed AFTER hbase:meta is confirmed on line.. and must be initialised
-    // before assignment manager
-    this.tableStateManager = new TableStateManager(this);
     // Create Assignment Manager
     this.assignmentManager = createAssignmentManager(this, masterRegion);
     this.assignmentManager.start();
@@ -1060,6 +1057,9 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
           Collectors.toMap(ServerCrashProcedure::getServerName, Procedure::getSubmittedTime)),
       Sets.union(rsListStorage.getAll(), walManager.getLiveServersFromWALDir()),
       walManager.getSplittingServersFromWALDir());
+    // This manager must be accessed AFTER hbase:meta is confirmed on line.. and must be initialised
+    // before assignment manager
+    this.tableStateManager = new TableStateManager(this);
 
     startupTaskGroup.addTask("Initializing ZK system trackers");
     initializeZKBasedSystemTrackers();
@@ -1163,6 +1163,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     final ColumnFamilyDescriptor replBarrierFamilyDesc =
       metaDescriptor.getColumnFamily(HConstants.REPLICATION_BARRIER_FAMILY);
 
+    this.assignmentManager.initializationPostMetaOnline();
     this.assignmentManager.joinCluster();
     // The below depends on hbase:meta being online.
     this.assignmentManager.processOfflineRegions();
