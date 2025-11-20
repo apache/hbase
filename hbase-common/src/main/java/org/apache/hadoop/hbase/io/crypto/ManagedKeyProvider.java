@@ -45,10 +45,13 @@ public interface ManagedKeyProvider {
   ManagedKeyData getSystemKey(byte[] systemId) throws IOException;
 
   /**
-   * Retrieve a managed key for the specified prefix.
+   * Retrieve a managed key for the specified prefix. The returned key is expected to be in the
+   * ACTIVE state, but it may be in any other state, such as FAILED and DISABLED. A key provider is
+   * typically expected to return a key with no associated metadata, but it is not required, instead
+   * it is permitted to throw IOException which will be treated as a retrieval FAILURE.
    * @param key_cust      The key custodian.
    * @param key_namespace Key namespace
-   * @return ManagedKeyData for the system key and is expected to be not {@code null}
+   * @return ManagedKeyData for the managed key and is expected to be not {@code null}
    * @throws IOException if an error occurs while retrieving the key
    */
   ManagedKeyData getManagedKey(byte[] key_cust, String key_namespace) throws IOException;

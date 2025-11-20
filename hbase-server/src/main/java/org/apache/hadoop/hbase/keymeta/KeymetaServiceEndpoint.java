@@ -295,7 +295,8 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
 
   private static ManagedKeyResponse generateKeyStateResponse(ManagedKeyData keyData,
     ManagedKeyResponse.Builder builder) {
-    builder.setKeyState(ManagedKeyState.forNumber(keyData.getKeyState().getVal()))
+    builder
+      .setKeyState(ManagedKeyState.forNumber(keyData.getKeyState().getExternalState().getVal()))
       .setRefreshTimestamp(keyData.getRefreshTimestamp())
       .setKeyNamespace(keyData.getKeyNamespace());
 

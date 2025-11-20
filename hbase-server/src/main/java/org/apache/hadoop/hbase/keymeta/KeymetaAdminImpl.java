@@ -49,19 +49,21 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
       keyNamespace);
 
     // Check if (cust, namespace) pair is already enabled and has an active key.
-    ManagedKeyData activeKey = getActiveKey(keyCust, keyNamespace);
-    if (activeKey != null) {
+    ManagedKeyData markerKey = getKeyManagementStateMarker(keyCust, keyNamespace);
+    if (markerKey != null && markerKey.getKeyState() == ManagedKeyState.ACTIVE) {
       LOG.info(
         "enableManagedKeys: specified (custodian: {}, namespace: {}) already has "
           + "an active managed key with metadata: {}",
-        encodedCust, keyNamespace, activeKey.getKeyMetadata());
-      return activeKey;
+        encodedCust, keyNamespace, markerKey.getKeyMetadata());
+      // ACTIVE marker contains the full key data, so we can return it directly.
+      return markerKey;
     }
 
-    // Retrieve a single key from provider
-    ManagedKeyData retrievedKey = KeyManagementUtils.retrieveActiveKey(getKeyProvider(), this,
-      encodedCust, keyCust, keyNamespace, null);
-    return retrievedKey;
+    // Retrieve an active key from provider if this is the first time enabling key management or
+    // the previous attempt left it in a non-ACTIVE state. This may or may not succeed. When fails,
+    // it can leave the key management state in FAILED or DISABLED.
+    return KeyManagementUtils.retrieveActiveKey(getKeyProvider(), this, encodedCust, keyCust,
+      keyNamespace, null);
   }
 
   @Override
@@ -155,12 +157,15 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
     LOG.info("disableKeyManagement started for custodian: {} under namespace: {}", encodedCust,
       keyNamespace);
 
+    // Add key management state marker for the specified (keyCust, keyNamespace) combination
+    addKeyManagementStateMarker(keyCust, keyNamespace, ManagedKeyState.DISABLED);
+
     // Get all keys for the specified custodian and namespace
     List<ManagedKeyData> allKeys = getAllKeys(keyCust, keyNamespace);
 
     // Disable keys with non-null metadata
     for (ManagedKeyData keyData : allKeys) {
-      if (keyData.getKeyState() != ManagedKeyState.DISABLED) {
+      if (keyData.getKeyState().getExternalState() != ManagedKeyState.DISABLED) {
         String encodedHash =
           LOG.isInfoEnabled() ? ManagedKeyProvider.encodeToStr(keyData.getKeyMetadataHash()) : null;
         LOG.info("Disabling key with metadata hash: {} for custodian: {} under namespace: {}",
@@ -189,9 +194,13 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
 
     // First retrieve the key to verify it exists and get the full metadata for cache ejection
     ManagedKeyData existingKey = getKey(keyCust, keyNamespace, keyMetadataHash);
-    if (existingKey == null || existingKey.getKeyMetadata() == null) {
-      throw new IOException(
-        "Key not found with metadata hash: " + ManagedKeyProvider.encodeToStr(keyMetadataHash));
+    if (existingKey == null) {
+      throw new IOException("Key not found for (custodian: " + encodedCust + ", namespace: "
+        + keyNamespace + ") with metadata hash: " + encodedHash);
+    }
+    if (existingKey.getKeyState().getExternalState() == ManagedKeyState.DISABLED) {
+      throw new IOException("Key is already disabled for (custodian: " + encodedCust
+        + ", namespace: " + keyNamespace + ") with metadata hash: " + encodedHash);
     }
 
     disableKey(existingKey);
@@ -214,24 +223,8 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
       keyNamespace);
 
     // Attempt rotation
-    ManagedKeyData rotatedKey = KeyManagementUtils.rotateActiveKey(getKeyProvider(), this,
-      encodedCust, keyCust, keyNamespace);
-
-    // If rotation resulted in a DISABLED key, eject from cache
-    if (rotatedKey != null && rotatedKey.getKeyState() == ManagedKeyState.DISABLED) {
-      LOG.info("Rotated key is DISABLED, ejecting from cache");
-      ejectManagedKeyDataCacheEntry(keyCust, keyNamespace, rotatedKey.getKeyMetadata());
-    } else if (rotatedKey != null) {
-      LOG.info(
-        "Successfully rotated managed key for custodian: {} under namespace: {}, new "
-          + "key metadata hash: {}",
-        encodedCust, keyNamespace, rotatedKey.getKeyMetadataHashEncoded());
-    } else {
-      LOG.info("No rotation occurred for custodian: {} under namespace: {}", encodedCust,
-        keyNamespace);
-    }
-
-    return rotatedKey;
+    return KeyManagementUtils.rotateActiveKey(getKeyProvider(), this, encodedCust, keyCust,
+      keyNamespace);
   }
 
   @Override
@@ -242,11 +235,14 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
     LOG.info("refreshManagedKeys started for custodian: {} under namespace: {}", encodedCust,
       keyNamespace);
 
-    // Get all keys for the specified custodian and namespace
+    // First, get all keys for the specified custodian and namespace and refresh those that have a
+    // non-null metadata.
     List<ManagedKeyData> allKeys = getAllKeys(keyCust, keyNamespace);
-
-    // Refresh keys with non-null metadata
+    IOException refreshException = null;
     for (ManagedKeyData keyData : allKeys) {
+      if (keyData.getKeyMetadata() == null) {
+        continue;
+      }
       LOG.debug(
         "Refreshing key with metadata hash: {} for custodian: {} under namespace: {} with state: {}",
         keyData.getKeyMetadataHashEncoded(), encodedCust, keyNamespace, keyData.getKeyState());
@@ -257,7 +253,7 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
           LOG.debug("Key with metadata hash: {} for custodian: {} under namespace: {} is unchanged",
             keyData.getKeyMetadataHashEncoded(), encodedCust, keyNamespace);
         } else {
-          if (refreshedKey.getKeyState() == ManagedKeyState.DISABLED) {
+          if (refreshedKey.getKeyState().getExternalState() == ManagedKeyState.DISABLED) {
             LOG.info("Refreshed key is DISABLED, ejecting from cache");
             ejectManagedKeyDataCacheEntry(keyCust, keyNamespace, refreshedKey.getKeyMetadata());
           } else {
@@ -270,8 +266,22 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
         LOG.error(
           "Failed to refresh key with metadata hash: {} for custodian: {} under namespace: {}",
           keyData.getKeyMetadataHashEncoded(), encodedCust, keyNamespace, e);
+        if (refreshException == null) {
+          refreshException = new IOException("Key refresh failed for (custodian: " + encodedCust
+            + ", namespace: " + keyNamespace + ")", e);
+        }
         // Continue refreshing other keys
       }
+    }
+    if (refreshException != null) {
+      throw refreshException;
+    }
+
+    ManagedKeyData markerKey = getKeyManagementStateMarker(keyCust, keyNamespace);
+    if (markerKey != null && markerKey.getKeyState() == ManagedKeyState.FAILED) {
+      LOG.info("Found FAILED marker for (custodian: " + encodedCust + ", namespace: " + keyNamespace
+        + ") indicating previous attempt to enable, reattempting to enable key management");
+      enableKeyManagement(keyCust, keyNamespace);
     }
 
     LOG.info("refreshManagedKeys completed for custodian: {} under namespace: {}", encodedCust,

@@ -177,13 +177,13 @@ public class TestKeymetaAdminImpl {
       MockManagedKeyProvider managedKeyProvider =
         (MockManagedKeyProvider) Encryption.getManagedKeyProvider(conf);
       managedKeyProvider.setMockedKeyState(CUST, keyState);
-      when(keymetaAccessor.getActiveKey(CUST.getBytes(), keySpace))
+      when(keymetaAccessor.getKeyManagementStateMarker(CUST.getBytes(), keySpace))
         .thenReturn(managedKeyProvider.getManagedKey(CUST.getBytes(), keySpace));
 
       ManagedKeyData managedKey = keymetaAdmin.enableKeyManagement(CUST_BYTES, keySpace);
       assertNotNull(managedKey);
       assertEquals(keyState, managedKey.getKeyState());
-      verify(keymetaAccessor).getActiveKey(CUST.getBytes(), keySpace);
+      verify(keymetaAccessor).getKeyManagementStateMarker(CUST.getBytes(), keySpace);
 
       keymetaAdmin.getManagedKeys(CUST_BYTES, keySpace);
       verify(keymetaAccessor).getAllKeys(CUST.getBytes(), keySpace);
@@ -257,9 +257,9 @@ public class TestKeymetaAdminImpl {
     }
 
     @Override
-    public ManagedKeyData getActiveKey(byte[] key_cust, String keyNamespace)
+    public ManagedKeyData getKeyManagementStateMarker(byte[] key_cust, String keyNamespace)
       throws IOException, KeyException {
-      return keymetaAccessor.getActiveKey(key_cust, keyNamespace);
+      return keymetaAccessor.getKeyManagementStateMarker(key_cust, keyNamespace);
     }
   }
 
@@ -703,12 +703,12 @@ public class TestKeymetaAdminImpl {
       KeymetaAdminImplForTest admin = new KeymetaAdminImplForTest(mockMasterServices, mockAccessor);
 
       // Return null to simulate no active key exists
-      when(mockAccessor.getActiveKey(any(), any())).thenReturn(null);
+      when(mockAccessor.getKeyManagementStateMarker(any(), any())).thenReturn(null);
 
       IOException exception =
         assertThrows(IOException.class, () -> admin.rotateManagedKey(CUST_BYTES, KEY_SPACE_GLOBAL));
       assertTrue(exception.getMessage().contains("No active key found"));
-      verify(mockAccessor).getActiveKey(CUST_BYTES, KEY_SPACE_GLOBAL);
+      verify(mockAccessor).getKeyManagementStateMarker(CUST_BYTES, KEY_SPACE_GLOBAL);
     }
 
     @Test
@@ -720,7 +720,7 @@ public class TestKeymetaAdminImpl {
       ManagedKeyData newKey = new ManagedKeyData(CUST_BYTES, KEY_SPACE_GLOBAL, null,
         ManagedKeyState.ACTIVE, "metadata2", 124L);
 
-      when(mockAccessor.getActiveKey(any(), any())).thenReturn(currentKey);
+      when(mockAccessor.getKeyManagementStateMarker(any(), any())).thenReturn(currentKey);
       when(mockAccessor.getKeyProvider()).thenReturn(mockProvider);
       when(mockProvider.getManagedKey(any(), any())).thenReturn(newKey);
 
@@ -758,7 +758,7 @@ public class TestKeymetaAdminImpl {
       ManagedKeyData newKey = new ManagedKeyData(CUST_BYTES, KEY_SPACE_GLOBAL, null,
         ManagedKeyState.DISABLED, "metadata2", 124L);
 
-      when(mockAccessor.getActiveKey(any(), any())).thenReturn(currentKey);
+      when(mockAccessor.getKeyManagementStateMarker(any(), any())).thenReturn(currentKey);
       when(mockAccessor.getKeyProvider()).thenReturn(mockProvider);
       when(mockProvider.getManagedKey(any(), any())).thenReturn(newKey);
       // Mock the AsyncAdmin for ejectManagedKeyDataCacheEntry
@@ -784,7 +784,7 @@ public class TestKeymetaAdminImpl {
       ManagedKeyData sameKey = new ManagedKeyData(CUST_BYTES, KEY_SPACE_GLOBAL, null,
         ManagedKeyState.ACTIVE, "metadata1", 123L);
 
-      when(mockAccessor.getActiveKey(any(), any())).thenReturn(currentKey);
+      when(mockAccessor.getKeyManagementStateMarker(any(), any())).thenReturn(currentKey);
       when(mockAccessor.getKeyProvider()).thenReturn(mockProvider);
       when(mockProvider.getManagedKey(any(), any())).thenReturn(sameKey);
 
@@ -908,7 +908,7 @@ public class TestKeymetaAdminImpl {
       ManagedKeyData originalKey = new ManagedKeyData(CUST_BYTES, KEY_SPACE_GLOBAL, null,
         ManagedKeyState.ACTIVE, "metadata1", 123L);
       // Refreshed key is in FAILED state (provider issue) - using byte[] metadata hash constructor
-      ManagedKeyData failedKey = new ManagedKeyData(CUST_BYTES, KEY_SPACE_GLOBAL, null,
+      ManagedKeyData failedKey = new ManagedKeyData(CUST_BYTES, KEY_SPACE_GLOBAL,
         ManagedKeyState.FAILED, "metadata1".getBytes(), 124L);
 
       List<ManagedKeyData> keys = Arrays.asList(originalKey);
@@ -929,8 +929,7 @@ public class TestKeymetaAdminImpl {
       KeymetaAdminImplForTest admin = new KeymetaAdminImplForTest(mockMasterServices, mockAccessor);
 
       // FAILED key with null metadata (lines 119-135 in KeyManagementUtils)
-      ManagedKeyData failedKey =
-        new ManagedKeyData(CUST_BYTES, KEY_SPACE_GLOBAL, null, FAILED, (byte[]) null, 123L);
+      ManagedKeyData failedKey = new ManagedKeyData(CUST_BYTES, KEY_SPACE_GLOBAL, FAILED, 123L);
 
       // Provider returns a recovered key
       ManagedKeyData recoveredKey = new ManagedKeyData(CUST_BYTES, KEY_SPACE_GLOBAL, null,
@@ -947,7 +946,8 @@ public class TestKeymetaAdminImpl {
       // Should call getManagedKey for FAILED key with null metadata (line 125)
       verify(mockProvider).getManagedKey(failedKey.getKeyCustodian(), failedKey.getKeyNamespace());
       // Should remove failure marker when recovered (line 129)
-      verify(mockAccessor).removeFailureMarker(failedKey);
+      verify(mockAccessor).removeKeyManagementStateMarker(failedKey.getKeyCustodian(),
+        failedKey.getKeyNamespace());
       // Should add recovered key (line 130)
       verify(mockAccessor).addKey(recoveredKey);
     }
@@ -957,12 +957,11 @@ public class TestKeymetaAdminImpl {
       KeymetaAdminImplForTest admin = new KeymetaAdminImplForTest(mockMasterServices, mockAccessor);
 
       // FAILED key with null metadata
-      ManagedKeyData failedKey =
-        new ManagedKeyData(CUST_BYTES, KEY_SPACE_GLOBAL, null, FAILED, (byte[]) null, 123L);
+      ManagedKeyData failedKey = new ManagedKeyData(CUST_BYTES, KEY_SPACE_GLOBAL, FAILED, 123L);
 
       // Provider returns another FAILED key (recovery didn't work)
-      ManagedKeyData stillFailedKey = new ManagedKeyData(CUST_BYTES, KEY_SPACE_GLOBAL, null,
-        ManagedKeyState.FAILED, (byte[]) null, 124L);
+      ManagedKeyData stillFailedKey =
+        new ManagedKeyData(CUST_BYTES, KEY_SPACE_GLOBAL, ManagedKeyState.FAILED, 124L);
 
       List<ManagedKeyData> keys = Arrays.asList(failedKey);
       when(mockAccessor.getAllKeys(any(), any())).thenReturn(keys);
@@ -976,7 +975,7 @@ public class TestKeymetaAdminImpl {
       verify(mockProvider).getManagedKey(failedKey.getKeyCustodian(), failedKey.getKeyNamespace());
       // Should NOT remove failure marker or add key when still FAILED (line 128 check fails,
       // returns line 134)
-      verify(mockAccessor, never()).removeFailureMarker(any());
+      verify(mockAccessor, never()).removeKeyManagementStateMarker(any(), any());
       verify(mockAccessor, never()).addKey(any());
     }
 
@@ -1012,9 +1011,9 @@ public class TestKeymetaAdminImpl {
       }
 
       @Override
-      public ManagedKeyData getActiveKey(byte[] keyCust, String keyNamespace)
+      public ManagedKeyData getKeyManagementStateMarker(byte[] keyCust, String keyNamespace)
         throws IOException, KeyException {
-        return accessor.getActiveKey(keyCust, keyNamespace);
+        return accessor.getKeyManagementStateMarker(keyCust, keyNamespace);
       }
 
       @Override
@@ -1034,8 +1033,9 @@ public class TestKeymetaAdminImpl {
       }
 
       @Override
-      public void removeFailureMarker(ManagedKeyData keyData) throws IOException {
-        accessor.removeFailureMarker(keyData);
+      public void removeKeyManagementStateMarker(byte[] keyCust, String keyNamespace)
+        throws IOException {
+        accessor.removeKeyManagementStateMarker(keyCust, keyNamespace);
       }
     }
   }

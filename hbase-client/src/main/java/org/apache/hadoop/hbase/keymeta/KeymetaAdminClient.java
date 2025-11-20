@@ -159,7 +159,7 @@ public class KeymetaAdminClient implements KeymetaAdmin {
     // Use hash-only constructor for client-side ManagedKeyData
     byte[] keyMetadataHash =
       response.hasKeyMetadataHash() ? response.getKeyMetadataHash().toByteArray() : null;
-    return new ManagedKeyData(response.getKeyCust().toByteArray(), response.getKeyNamespace(), null,
+    return new ManagedKeyData(response.getKeyCust().toByteArray(), response.getKeyNamespace(),
       ManagedKeyState.forValue((byte) response.getKeyState().getNumber()), keyMetadataHash,
       response.getRefreshTimestamp());
   }

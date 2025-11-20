@@ -145,31 +145,25 @@ public class ManagedKeyDataCache extends KeyManagementBase {
       if (keyData == null && keymetaAccessor != null) {
         try {
           keyData = keymetaAccessor.getKey(keyCust, keyNamespace, metadataHashBytes);
-        } catch (IOException | KeyException | RuntimeException e) {
-          LOG.warn("Failed to load key from KeymetaTableAccessor for metadata hash: {}", hashKey,
-            e);
+        } catch (IOException | KeyException e) {
+          LOG.warn(
+            "Failed to load key from L2 for (custodian: {}, namespace: {}) with metadata hash: {}",
+            ManagedKeyProvider.encodeToStr(keyCust), keyNamespace,
+            ManagedKeyProvider.encodeToStr(metadataHashBytes), e);
         }
       }
 
       // If not found in L2 and dynamic lookup is enabled, try with Key Provider
       if (keyData == null && isDynamicLookupEnabled()) {
+        String encKeyCust = ManagedKeyProvider.encodeToStr(keyCust);
         try {
-          ManagedKeyProvider provider = getKeyProvider();
-          keyData = provider.unwrapKey(keyMetadata, wrappedKey);
-          LOG.info("Got key data with status: {} and metadata: {} for prefix: {}",
-            keyData.getKeyState(), keyData.getKeyMetadata(),
-            ManagedKeyProvider.encodeToStr(keyCust));
-          // Add to KeymetaTableAccessor for future L2 lookups
-          if (keymetaAccessor != null) {
-            try {
-              keymetaAccessor.addKey(keyData);
-            } catch (IOException | RuntimeException e) {
-              LOG.warn("Failed to add key to KeymetaTableAccessor for metadata hash: {}", hashKey,
-                e);
-            }
-          }
-        } catch (IOException | RuntimeException e) {
-          LOG.warn("Failed to load key from provider for metadata hash: {}", hashKey, e);
+          keyData = KeyManagementUtils.retrieveKey(getKeyProvider(), keymetaAccessor, encKeyCust,
+            keyCust, keyNamespace, keyMetadata, wrappedKey);
+        } catch (IOException | KeyException e) {
+          LOG.warn(
+            "Failed to retrieve key from provider for (custodian: {}, namespace: {}) with metadata hash: {}",
+            ManagedKeyProvider.encodeToStr(keyCust), keyNamespace,
+            ManagedKeyProvider.encodeToStr(metadataHashBytes), e);
         }
       }
 
@@ -183,10 +177,6 @@ public class ManagedKeyDataCache extends KeyManagementBase {
         activeKeysCache.asMap().putIfAbsent(new ActiveKeysCacheKey(keyCust, keyNamespace), keyData);
       }
 
-      if (!ManagedKeyState.isUsable(keyData.getKeyState())) {
-        LOG.info("Failed to get usable key data with metadata hash: {} for prefix: {}", hashKey,
-          ManagedKeyProvider.encodeToStr(keyCust));
-      }
       return keyData;
     });
 
@@ -313,7 +303,7 @@ public class ManagedKeyDataCache extends KeyManagementBase {
       // Try to load from KeymetaTableAccessor if not found in cache
       if (keymetaAccessor != null) {
         try {
-          retrievedKey = keymetaAccessor.getActiveKey(keyCust, keyNamespace);
+          retrievedKey = keymetaAccessor.getKeyManagementStateMarker(keyCust, keyNamespace);
         } catch (IOException | KeyException | RuntimeException e) {
           LOG.warn("Failed to load active key from KeymetaTableAccessor for custodian: {} "
             + "namespace: {}", ManagedKeyProvider.encodeToStr(keyCust), keyNamespace, e);
@@ -334,8 +324,7 @@ public class ManagedKeyDataCache extends KeyManagementBase {
       }
 
       if (retrievedKey == null) {
-        retrievedKey =
-          new ManagedKeyData(keyCust, keyNamespace, null, ManagedKeyState.FAILED, null);
+        retrievedKey = new ManagedKeyData(keyCust, keyNamespace, ManagedKeyState.FAILED);
       }
 
       return retrievedKey;

@@ -105,7 +105,7 @@ public class TestManagedKeyData {
 
   @Test
   public void testCloneWithoutKey() {
-    ManagedKeyData cloned = managedKeyData.cloneWithoutSensitiveData();
+    ManagedKeyData cloned = managedKeyData.createClientFacingInstance();
     assertNull(cloned.getTheKey());
     assertNull(cloned.getKeyMetadata());
     assertEquals(managedKeyData.getKeyCustodian(), cloned.getKeyCustodian());

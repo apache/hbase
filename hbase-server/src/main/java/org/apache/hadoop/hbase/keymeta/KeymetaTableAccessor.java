@@ -155,14 +155,14 @@ public class KeymetaTableAccessor extends KeyManagementBase {
   }
 
   /**
-   * Get the active key for the specified keyCust and key_namespace.
+   * Get the key management state marker for the specified keyCust and key_namespace.
    * @param keyCust      The prefix
    * @param keyNamespace The namespace
-   * @return the active key data, or null if no active key found
+   * @return the key management state marker data, or null if no key management state marker found
    * @throws IOException  when there is an underlying IOException.
    * @throws KeyException when there is an underlying KeyException.
    */
-  public ManagedKeyData getActiveKey(byte[] keyCust, String keyNamespace)
+  public ManagedKeyData getKeyManagementStateMarker(byte[] keyCust, String keyNamespace)
     throws IOException, KeyException {
     return getKey(keyCust, keyNamespace, null);
   }
@@ -196,7 +196,7 @@ public class KeymetaTableAccessor extends KeyManagementBase {
    */
   public void disableKey(ManagedKeyData keyData) throws IOException {
     assertKeyManagementEnabled();
-    byte[] key_cust = keyData.getKeyCustodian();
+    byte[] keyCust = keyData.getKeyCustodian();
     String keyNamespace = keyData.getKeyNamespace();
     byte[] keyMetadataHash = keyData.getKeyMetadataHash();
 
@@ -204,47 +204,81 @@ public class KeymetaTableAccessor extends KeyManagementBase {
 
     if (keyData.getKeyState() == ManagedKeyState.ACTIVE) {
       // Delete the CustNamespace row
-      byte[] rowKeyForCustNamespace = constructRowKeyForCustNamespace(key_cust, keyNamespace);
+      byte[] rowKeyForCustNamespace = constructRowKeyForCustNamespace(keyCust, keyNamespace);
       mutations.add(new Delete(rowKeyForCustNamespace).setDurability(Durability.SKIP_WAL)
         .setPriority(HConstants.SYSTEMTABLE_QOS));
     }
 
     // Update state to DISABLED and timestamp on Metadata row
-    byte[] rowKeyForMetadata = constructRowKeyForMetadata(key_cust, keyNamespace, keyMetadataHash);
-    Put putForState =
-      addMutationColumnsForState(new Put(rowKeyForMetadata), ManagedKeyState.DISABLED);
-    mutations.add(putForState);
-
-    // Delete wrapped key columns from Metadata row
-    if (ManagedKeyState.isUsable(keyData.getKeyState())) {
-      Delete deleteWrappedKey = new Delete(rowKeyForMetadata).setDurability(Durability.SKIP_WAL)
-        .setPriority(HConstants.SYSTEMTABLE_QOS)
-        .addColumns(KEY_META_INFO_FAMILY, DEK_CHECKSUM_QUAL_BYTES)
-        .addColumns(KEY_META_INFO_FAMILY, DEK_WRAPPED_BY_STK_QUAL_BYTES)
-        .addColumns(KEY_META_INFO_FAMILY, STK_CHECKSUM_QUAL_BYTES);
-      mutations.add(deleteWrappedKey);
-    }
+    byte[] rowKeyForMetadata = constructRowKeyForMetadata(keyCust, keyNamespace, keyMetadataHash);
+    addDeleteMutationsForKeyDisabled(mutations, rowKeyForMetadata,
+      keyData.getKeyState() == ManagedKeyState.ACTIVE
+        ? ManagedKeyState.ACTIVE_DISABLED
+        : ManagedKeyState.INACTIVE_DISABLED,
+      keyData.getKeyState());
 
     Connection connection = getServer().getConnection();
     try (Table table = connection.getTable(KEY_META_TABLE_NAME)) {
-      table.batch(mutations, new Object[mutations.size()]);
+      table.batch(mutations, null);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       throw new IOException("Interrupted while disabling key", e);
     }
   }
 
+  private void addDeleteMutationsForKeyDisabled(List<Row> mutations, byte[] rowKey,
+    ManagedKeyState targetState, ManagedKeyState currentState) {
+    Put putForState = addMutationColumnsForState(new Put(rowKey), targetState);
+    mutations.add(putForState);
+
+    // Delete wrapped key columns from Metadata row
+    if (currentState == null || ManagedKeyState.isUsable(currentState)) {
+      Delete deleteWrappedKey = new Delete(rowKey).setDurability(Durability.SKIP_WAL)
+        .setPriority(HConstants.SYSTEMTABLE_QOS)
+        .addColumns(KEY_META_INFO_FAMILY, DEK_CHECKSUM_QUAL_BYTES)
+        .addColumns(KEY_META_INFO_FAMILY, DEK_WRAPPED_BY_STK_QUAL_BYTES)
+        .addColumns(KEY_META_INFO_FAMILY, STK_CHECKSUM_QUAL_BYTES);
+      mutations.add(deleteWrappedKey);
+    }
+  }
+
   /**
-   * Removes the failure marker identified by the key data.
-   * @param keyData The key data.
+   * Adds a key management state marker to the specified (keyCust, keyNamespace) combination. It
+   * also adds delete markers for the columns unrelates to marker, in case the state is
+   * transitioning from ACTIVE to DISABLED or FAILED. This method is only used for setting the state
+   * to DISABLED or FAILED. For ACTIVE state, the addKey() method implicitly adds the marker.
+   * @param keyCust      The key custodian.
+   * @param keyNamespace The namespace.
+   * @param state        The key management state to add.
    * @throws IOException when there is an underlying IOException.
    */
-  public void removeFailureMarker(ManagedKeyData keyData) throws IOException {
+  public void addKeyManagementStateMarker(byte[] keyCust, String keyNamespace,
+    ManagedKeyState state) throws IOException {
     assertKeyManagementEnabled();
-    Preconditions.checkArgument(
-      keyData.getKeyState() == ManagedKeyState.FAILED && keyData.getKeyMetadata() == null,
-      "keyData must be in FAILED state and have null metadata");
-    Delete delete = new Delete(constructRowKeyForMetadata(keyData))
+    Preconditions.checkArgument(ManagedKeyState.isKeyManagementState(state),
+      "State must be a key management state, got: " + state);
+    List<Row> mutations = new ArrayList<>(2);
+    byte[] rowKey = constructRowKeyForCustNamespace(keyCust, keyNamespace);
+    addDeleteMutationsForKeyDisabled(mutations, rowKey, state, null);
+    Connection connection = getServer().getConnection();
+    try (Table table = connection.getTable(KEY_META_TABLE_NAME)) {
+      table.batch(mutations, null);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new IOException("Interrupted while adding key management state marker", e);
+    }
+  }
+
+  /**
+   * Removes the key management state marker from the specified (keyCust, keyNamespace) combination.
+   * @param keyCust      The key custodian.
+   * @param keyNamespace The namespace.
+   * @throws IOException when there is an underlying IOException.
+   */
+  public void removeKeyManagementStateMarker(byte[] keyCust, String keyNamespace)
+    throws IOException {
+    assertKeyManagementEnabled();
+    Delete delete = new Delete(constructRowKeyForCustNamespace(keyCust, keyNamespace))
       .setDurability(Durability.SKIP_WAL).setPriority(HConstants.SYSTEMTABLE_QOS);
     Connection connection = getServer().getConnection();
     try (Table table = connection.getTable(KEY_META_TABLE_NAME)) {
@@ -300,7 +334,7 @@ public class KeymetaTableAccessor extends KeyManagementBase {
 
     Connection connection = getServer().getConnection();
     try (Table table = connection.getTable(KEY_META_TABLE_NAME)) {
-      table.batch(mutations, new Object[mutations.size()]);
+      table.batch(mutations, null);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       throw new IOException("Interrupted while updating active state", e);

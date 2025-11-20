@@ -642,21 +642,21 @@ public class TestManagedKeyDataCache {
     @Test
     public void testActiveKeysCacheNonExistentKeyInL2Cache() throws Exception {
       assertNull(cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL));
-      verify(mockL2).getActiveKey(any(), any(String.class));
+      verify(mockL2).getKeyManagementStateMarker(any(), any(String.class));
       clearInvocations(mockL2);
       assertNull(cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL));
-      verify(mockL2, never()).getActiveKey(any(), any(String.class));
+      verify(mockL2, never()).getKeyManagementStateMarker(any(), any(String.class));
     }
 
     @Test
     public void testActiveKeysCacheRetrievalFromL2Cache() throws Exception {
       ManagedKeyData key = testProvider.getManagedKey(CUST_ID, KEY_SPACE_GLOBAL);
-      when(mockL2.getActiveKey(CUST_ID, KEY_SPACE_GLOBAL)).thenReturn(key);
+      when(mockL2.getKeyManagementStateMarker(CUST_ID, KEY_SPACE_GLOBAL)).thenReturn(key);
       assertEquals(key, cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL));
-      verify(mockL2).getActiveKey(any(), any(String.class));
+      verify(mockL2).getKeyManagementStateMarker(any(), any(String.class));
       clearInvocations(mockL2);
       assertEquals(key, cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL));
-      verify(mockL2, never()).getActiveKey(any(), any(String.class));
+      verify(mockL2, never()).getKeyManagementStateMarker(any(), any(String.class));
     }
 
     @Test
@@ -672,13 +672,13 @@ public class TestManagedKeyDataCache {
 
     @Test
     public void testGetActiveEntryWithKeymetaAccessorException() throws Exception {
-      when(mockL2.getActiveKey(CUST_ID, KEY_SPACE_GLOBAL))
+      when(mockL2.getKeyManagementStateMarker(CUST_ID, KEY_SPACE_GLOBAL))
         .thenThrow(new IOException("Test exception"));
       assertNull(cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL));
-      verify(mockL2).getActiveKey(any(), any(String.class));
+      verify(mockL2).getKeyManagementStateMarker(any(), any(String.class));
       clearInvocations(mockL2);
       assertNull(cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL));
-      verify(mockL2, never()).getActiveKey(any(), any(String.class));
+      verify(mockL2, never()).getKeyManagementStateMarker(any(), any(String.class));
     }
 
     @Test
@@ -688,11 +688,11 @@ public class TestManagedKeyDataCache {
 
       // Mock the keymetaAccessor to return a key
       ManagedKeyData key = testProvider.getManagedKey(CUST_ID, KEY_SPACE_GLOBAL);
-      when(mockL2.getActiveKey(CUST_ID, KEY_SPACE_GLOBAL)).thenReturn(key);
+      when(mockL2.getKeyManagementStateMarker(CUST_ID, KEY_SPACE_GLOBAL)).thenReturn(key);
 
       // Get the active entry - it should call keymetaAccessor since generic cache is empty
       assertEquals(key, cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL));
-      verify(mockL2).getActiveKey(any(), any(String.class));
+      verify(mockL2).getKeyManagementStateMarker(any(), any(String.class));
     }
   }
 
@@ -756,7 +756,7 @@ public class TestManagedKeyDataCache {
       ManagedKeyData key = testProvider.getManagedKey(CUST_ID, KEY_SPACE_GLOBAL);
       doReturn(key).when(testProvider).getManagedKey(any(), any(String.class));
       assertEquals(key, cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL));
-      verify(mockL2).getActiveKey(any(), any(String.class));
+      verify(mockL2).getKeyManagementStateMarker(any(), any(String.class));
     }
 
     @Test

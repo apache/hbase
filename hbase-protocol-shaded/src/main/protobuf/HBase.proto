@@ -310,9 +310,9 @@ message ManagedKeyEntryRequest {
 
 enum ManagedKeyState {
   KEY_ACTIVE = 1;
-  KEY_INACTIVE = 2;
-  KEY_FAILED = 3;
-  KEY_DISABLED = 4;
+  KEY_DISABLED = 2;
+  KEY_INACTIVE = 3;
+  KEY_FAILED = 4;
 }
 
 message ManagedKeyResponse {

@@ -357,7 +357,7 @@ public class TestKeymetaTableAccessor {
       when(scanner.iterator()).thenReturn(List.of(result1).iterator());
       when(table.get(any(Get.class))).thenReturn(result1);
 
-      ManagedKeyData activeKey = accessor.getActiveKey(CUST_ID, KEY_NAMESPACE);
+      ManagedKeyData activeKey = accessor.getKeyManagementStateMarker(CUST_ID, KEY_NAMESPACE);
 
       assertNotNull(activeKey);
       assertEquals(keyData, activeKey);
@@ -542,7 +542,7 @@ public class TestKeymetaTableAccessor {
 
       ArgumentCaptor<Delete> deleteCaptor = ArgumentCaptor.forClass(Delete.class);
 
-      accessor.removeFailureMarker(keyData);
+      accessor.removeKeyManagementStateMarker(keyData.getKeyCustodian(), keyData.getKeyNamespace());
 
       verify(table).delete(deleteCaptor.capture());
       Delete delete = deleteCaptor.getValue();
@@ -563,7 +563,8 @@ public class TestKeymetaTableAccessor {
       ManagedKeyData keyData =
         new ManagedKeyData(CUST_ID, KEY_NAMESPACE, null, ManagedKeyState.ACTIVE, "metadata");
 
-      assertThrows(IllegalArgumentException.class, () -> accessor.removeFailureMarker(keyData));
+      assertThrows(IllegalArgumentException.class, () -> accessor
+        .removeKeyManagementStateMarker(keyData.getKeyCustodian(), keyData.getKeyNamespace()));
     }
 
     @Test
@@ -572,7 +573,8 @@ public class TestKeymetaTableAccessor {
       ManagedKeyData keyData =
         new ManagedKeyData(CUST_ID, KEY_NAMESPACE, null, ManagedKeyState.FAILED, "metadata");
 
-      assertThrows(IllegalArgumentException.class, () -> accessor.removeFailureMarker(keyData));
+      assertThrows(IllegalArgumentException.class, () -> accessor
+        .removeKeyManagementStateMarker(keyData.getKeyCustodian(), keyData.getKeyNamespace()));
     }
   }
 }

@@ -119,7 +119,7 @@ public class TestManagedKeymeta extends ManagedKeyTestBase {
     List<ManagedKeyData> managedKeys =
       adminClient.getManagedKeys(custBytes, ManagedKeyData.KEY_SPACE_GLOBAL);
     assertEquals(managedKeyProvider.getLastGeneratedKeyData(cust, ManagedKeyData.KEY_SPACE_GLOBAL)
-      .cloneWithoutSensitiveData(), managedKeys.get(0).cloneWithoutSensitiveData());
+      .createClientFacingInstance(), managedKeys.get(0).createClientFacingInstance());
 
     String nonExistentCust = "nonExistentCust";
     byte[] nonExistentBytes = nonExistentCust.getBytes();
@@ -354,8 +354,7 @@ public class TestManagedKeymeta extends ManagedKeyTestBase {
     doTestRotateManagedKey(adminClient);
   }
 
-  private void doTestRotateManagedKey(KeymetaAdmin adminClient)
-    throws IOException, KeyException {
+  private void doTestRotateManagedKey(KeymetaAdmin adminClient) throws IOException, KeyException {
     // This test covers the success path (line 133 in KeymetaAdminClient for RPC)
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
     MockManagedKeyProvider managedKeyProvider =
@@ -373,8 +372,7 @@ public class TestManagedKeymeta extends ManagedKeyTestBase {
       adminClient.rotateManagedKey(custBytes, ManagedKeyData.KEY_SPACE_GLOBAL);
 
     assertNotNull("Rotated key should not be null", rotatedKey);
-    assertEquals("Rotated key should be ACTIVE", ManagedKeyState.ACTIVE,
-      rotatedKey.getKeyState());
+    assertEquals("Rotated key should be ACTIVE", ManagedKeyState.ACTIVE, rotatedKey.getKeyState());
     assertEquals("Rotated key should have correct custodian", 0,
       Bytes.compareTo(custBytes, rotatedKey.getKeyCustodian()));
     assertEquals("Rotated key should have correct namespace", ManagedKeyData.KEY_SPACE_GLOBAL,
@@ -394,8 +392,7 @@ public class TestManagedKeymeta extends ManagedKeyTestBase {
     doTestRefreshManagedKeys(adminClient);
   }
 
-  private void doTestRefreshManagedKeys(KeymetaAdmin adminClient)
-    throws IOException, KeyException {
+  private void doTestRefreshManagedKeys(KeymetaAdmin adminClient) throws IOException, KeyException {
     // This test covers the success path (line 148 in KeymetaAdminClient for RPC)
     String cust = "cust1";
     byte[] custBytes = cust.getBytes();
@@ -407,7 +404,8 @@ public class TestManagedKeymeta extends ManagedKeyTestBase {
     adminClient.refreshManagedKeys(custBytes, ManagedKeyData.KEY_SPACE_GLOBAL);
 
     // Verify keys still exist after refresh
-    List<ManagedKeyData> keys = adminClient.getManagedKeys(custBytes, ManagedKeyData.KEY_SPACE_GLOBAL);
+    List<ManagedKeyData> keys =
+      adminClient.getManagedKeys(custBytes, ManagedKeyData.KEY_SPACE_GLOBAL);
     assertNotNull("Keys should exist after refresh", keys);
     assertFalse("Should have at least one key after refresh", keys.isEmpty());
   }
