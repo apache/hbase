@@ -195,7 +195,7 @@ function getDocsURL(version: string, option: DocumentationOptions): string {
 }
 
 const docsItems: Record<string, DocumentationOptions[]> = {
-  "1.4": ["ref", "refPdfOld", "devApi"],
+  "1.4": ["ref", "refPdfOld", "userApi", "devApi"],
   "2.3": ["ref", "refPdf", "userApi", "userApiTest", "devApi", "devApiTest"],
   "2.4": ["ref", "refPdf", "userApi", "userApiTest", "devApi", "devApiTest"],
   "2.5": ["userApi", "userApiTest", "devApi", "devApiTest"],
