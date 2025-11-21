@@ -101,16 +101,13 @@ public class TestRSGroupsFallback extends TestRSGroupsBase {
     assertRegionsInGroup(tableName, FALLBACK_GROUP);
 
     // add a new server to default group, regions move to default group
-    JVMClusterUtil.RegionServerThread t =
-      TEST_UTIL.getMiniHBaseCluster().startRegionServerAndWait(60000);
-    Address startRSAddress = t.getRegionServer().getServerName().getAddress();
-    TEST_UTIL.waitFor(3000,
-      () -> rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).containsServer(startRSAddress));
+    TEST_UTIL.getMiniHBaseCluster().startRegionServerAndWait(60000);
     assertTrue(master.balance().isBalancerRan());
     assertRegionsInGroup(tableName, RSGroupInfo.DEFAULT_GROUP);
 
     // add a new server to test group, regions move back
-    t = TEST_UTIL.getMiniHBaseCluster().startRegionServerAndWait(60000);
+    JVMClusterUtil.RegionServerThread t =
+      TEST_UTIL.getMiniHBaseCluster().startRegionServerAndWait(60000);
     rsGroupAdmin.moveServers(
       Collections.singleton(t.getRegionServer().getServerName().getAddress()), groupName);
     assertTrue(master.balance().isBalancerRan());
@@ -119,11 +116,11 @@ public class TestRSGroupsFallback extends TestRSGroupsBase {
     TEST_UTIL.deleteTable(tableName);
   }
 
-  private void assertRegionsInGroup(TableName tableName, String group) throws IOException {
+  private void assertRegionsInGroup(TableName table, String group) throws IOException {
     ProcedureTestingUtility
       .waitAllProcedures(TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor());
     RSGroupInfo groupInfo = rsGroupAdmin.getRSGroupInfo(group);
-    master.getAssignmentManager().getRegionStates().getRegionsOfTable(tableName).forEach(region -> {
+    master.getAssignmentManager().getRegionStates().getRegionsOfTable(table).forEach(region -> {
       Address regionOnServer = master.getAssignmentManager().getRegionStates()
         .getRegionAssignments().get(region).getAddress();
       assertTrue(groupInfo.getServers().contains(regionOnServer));
