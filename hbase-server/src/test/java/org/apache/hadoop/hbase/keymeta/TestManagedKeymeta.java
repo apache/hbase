@@ -277,7 +277,7 @@ public class TestManagedKeymeta extends ManagedKeyTestBase {
       adminClient.disableKeyManagement(custBytes, ManagedKeyData.KEY_SPACE_GLOBAL);
     assertNotNull(disabledKeys);
     assertEquals(1, disabledKeys.size());
-    assertEquals(ManagedKeyState.DISABLED, disabledKeys.get(0).getKeyState());
+    assertEquals(ManagedKeyState.DISABLED, disabledKeys.get(0).getKeyState().getExternalState());
   }
 
   @Test
@@ -316,7 +316,7 @@ public class TestManagedKeymeta extends ManagedKeyTestBase {
     ManagedKeyData disabledKey =
       adminClient.disableManagedKey(custBytes, ManagedKeyData.KEY_SPACE_GLOBAL, keyMetadataHash);
     assertNotNull(disabledKey);
-    assertEquals(ManagedKeyState.DISABLED, disabledKey.getKeyState());
+    assertEquals(ManagedKeyState.DISABLED, disabledKey.getKeyState().getExternalState());
   }
 
   @Test

@@ -22,7 +22,6 @@ import java.security.KeyException;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyState;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,7 +52,8 @@ public class KeyManagementUtils {
     ManagedKeyData existingActiveKey) throws IOException, KeyException {
     Preconditions.checkArgument(
       existingActiveKey == null || existingActiveKey.getKeyState() == ManagedKeyState.ACTIVE,
-      "Expected existing active key to be ACTIVE, but got: " + existingActiveKey.getKeyState());
+      "Expected existing active key to be null or having ACTIVE state"
+        + (existingActiveKey == null ? "" : ", but got: " + existingActiveKey.getKeyState()));
     ManagedKeyData keyData;
     try {
       keyData = provider.getManagedKey(key_cust, keyNamespace);
@@ -70,10 +70,7 @@ public class KeyManagementUtils {
           + keyNamespace + ")");
     }
 
-    if (
-      existingActiveKey != null
-        && Bytes.equals(existingActiveKey.getKeyMetadataHash(), keyData.getKeyMetadataHash())
-    ) {
+    if (existingActiveKey != null && existingActiveKey.equals(keyData)) {
       LOG.info("retrieveActiveKey: no change in active key for (custodian: {}, namespace: {}",
         encKeyCust, keyNamespace);
       return existingActiveKey;
@@ -132,7 +129,12 @@ public class KeyManagementUtils {
         ManagedKeyData.constructMetadataHash(keyMetadata));
     }
     if (accessor != null) {
-      accessor.addKey(keyData);
+      try {
+        accessor.addKey(keyData);
+      } catch (IOException e) {
+        LOG.warn("Failed to add key to L2 for metadata hash: {}, for custodian: {}, namespace: {}",
+          ManagedKeyData.constructMetadataHash(keyMetadata), encKeyCust, keyNamespace, e);
+      }
     }
     return keyData;
   }
@@ -209,17 +211,31 @@ public class KeyManagementUtils {
     // because a failure to rotate shouldn't make the current active key invalid.
     ManagedKeyData newKey = retrieveActiveKey(provider, null,
       ManagedKeyProvider.encodeToStr(keyCust), keyCust, keyNamespace, currentActiveKey);
+    if (newKey == null || newKey.equals(currentActiveKey)) {
+      LOG.warn(
+        "rotateActiveKey: failed to retrieve new active key for (custodian: {}, namespace: {})",
+        encKeyCust, keyNamespace);
+      return null;
+    }
 
     // If rotation succeeds in generating a new active key, persist the new key and mark the current
     // active key as inactive.
-    if (newKey != currentActiveKey && newKey.getKeyState() == ManagedKeyState.ACTIVE) {
-      accessor.addKey(newKey);
-      accessor.updateActiveState(currentActiveKey, ManagedKeyState.INACTIVE);
+    if (newKey.getKeyState() == ManagedKeyState.ACTIVE) {
+      try {
+        accessor.addKey(newKey);
+        accessor.updateActiveState(currentActiveKey, ManagedKeyState.INACTIVE);
+        return newKey;
+      } catch (IOException e) {
+        LOG.warn(
+          "rotateActiveKey: failed to persist new active key to L2 for (custodian: {}, namespace: {})",
+          encKeyCust, keyNamespace, e);
+        return null;
+      }
     } else {
-      throw new IOException("Failed to rotate active key for (custodian: " + encKeyCust
-        + ", namespace: " + keyNamespace + ")");
+      LOG.warn(
+        "rotateActiveKey: ignoring new key with state {} without metadata hash: {} for (custodian: {}, namespace: {})",
+        newKey.getKeyState(), newKey.getKeyMetadataHashEncoded(), encKeyCust, keyNamespace);
+      return null;
     }
-
-    return newKey;
   }
 }

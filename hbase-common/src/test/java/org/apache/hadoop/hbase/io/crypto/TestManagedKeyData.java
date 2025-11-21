@@ -81,17 +81,17 @@ public class TestManagedKeyData {
       () -> new ManagedKeyData(keyCust, null, theKey, keyState, keyMetadata));
     assertThrows(NullPointerException.class,
       () -> new ManagedKeyData(keyCust, keyNamespace, theKey, null, keyMetadata));
-    assertThrows(IllegalArgumentException.class,
+    assertThrows(NullPointerException.class,
       () -> new ManagedKeyData(keyCust, keyNamespace, theKey, ManagedKeyState.ACTIVE, null));
   }
 
   @Test
-  public void testConstructorWithFailedStateAndNullMetadata() {
-    ManagedKeyData keyData =
-      new ManagedKeyData(keyCust, keyNamespace, null, ManagedKeyState.FAILED, null);
+  public void testConstructorWithFailedEncryptionStateAndNullMetadata() {
+    ManagedKeyData keyData = new ManagedKeyData(keyCust, keyNamespace, ManagedKeyState.FAILED);
     assertNotNull(keyData);
     assertEquals(ManagedKeyState.FAILED, keyData.getKeyState());
     assertNull(keyData.getKeyMetadata());
+    assertNull(keyData.getKeyMetadataHash());
     assertNull(keyData.getTheKey());
   }
 
@@ -151,17 +151,6 @@ public class TestManagedKeyData {
     String encodedHash = managedKeyData.getKeyMetadataHashEncoded();
     assertNotNull(encodedHash);
     assertEquals(24, encodedHash.length()); // Base64 encoded MD5 hash is 24 characters long
-  }
-
-  @Test
-  public void testGetKeyMetadataHashEncodedWithNullHash() {
-    // Create ManagedKeyData with FAILED state and null metadata
-    // Passing null for metadata should result in null hash.
-    ManagedKeyData keyData =
-      new ManagedKeyData("custodian".getBytes(), "namespace", null, ManagedKeyState.FAILED, null);
-
-    String encoded = keyData.getKeyMetadataHashEncoded();
-    assertNull(encoded);
   }
 
   @Test

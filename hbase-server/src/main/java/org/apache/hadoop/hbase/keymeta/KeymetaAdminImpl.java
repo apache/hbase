@@ -74,7 +74,7 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
       LOG.info("Getting key statuses for custodian: {} under namespace: {}",
         ManagedKeyProvider.encodeToStr(keyCust), keyNamespace);
     }
-    return getAllKeys(keyCust, keyNamespace);
+    return getAllKeys(keyCust, keyNamespace, false);
   }
 
   @Override
@@ -161,7 +161,7 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
     addKeyManagementStateMarker(keyCust, keyNamespace, ManagedKeyState.DISABLED);
 
     // Get all keys for the specified custodian and namespace
-    List<ManagedKeyData> allKeys = getAllKeys(keyCust, keyNamespace);
+    List<ManagedKeyData> allKeys = getAllKeys(keyCust, keyNamespace, false);
 
     // Disable keys with non-null metadata
     for (ManagedKeyData keyData : allKeys) {
@@ -177,8 +177,8 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
 
     LOG.info("disableKeyManagement completed for custodian: {} under namespace: {}", encodedCust,
       keyNamespace);
-    // Retrieve and return updated keys
-    List<ManagedKeyData> updatedKeys = getAllKeys(keyCust, keyNamespace);
+    // Retrieve and return updated keys, but filter key state markers.
+    List<ManagedKeyData> updatedKeys = getAllKeys(keyCust, keyNamespace, false);
     return updatedKeys;
   }
 
@@ -237,7 +237,7 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
 
     // First, get all keys for the specified custodian and namespace and refresh those that have a
     // non-null metadata.
-    List<ManagedKeyData> allKeys = getAllKeys(keyCust, keyNamespace);
+    List<ManagedKeyData> allKeys = getAllKeys(keyCust, keyNamespace, false);
     IOException refreshException = null;
     for (ManagedKeyData keyData : allKeys) {
       if (keyData.getKeyMetadata() == null) {

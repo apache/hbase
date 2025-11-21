@@ -212,7 +212,7 @@ public class TestManagedKeyDataCache {
     }
 
     @Test
-    public void testGenericCacheForNonExistentKey() throws Exception {
+    public void testGenericCacheForInvalidMetadata() throws Exception {
       assertNull(cache.getEntry(CUST_ID, KEY_SPACE_GLOBAL, "test-metadata", null));
       verify(testProvider).unwrapKey(any(String.class), any());
     }
@@ -222,19 +222,24 @@ public class TestManagedKeyDataCache {
       ManagedKeyData globalKey1 = testProvider.getManagedKey(CUST_ID, KEY_SPACE_GLOBAL);
       doThrow(new IOException("Test exception")).when(testProvider).unwrapKey(any(String.class),
         any());
+      // With no L2 and invalid provider, there will be no entry.
       assertNull(cache.getEntry(CUST_ID, KEY_SPACE_GLOBAL, globalKey1.getKeyMetadata(), null));
       verify(testProvider).unwrapKey(any(String.class), any());
-      // A second call to getEntry should not result in a call to the provider due to -ve entry.
       clearInvocations(testProvider);
-      verify(testProvider, never()).unwrapKey(any(String.class), any());
+
+      // A second call to getEntry should not result in a call to the provider due to -ve entry.
       assertNull(cache.getEntry(CUST_ID, KEY_SPACE_GLOBAL, globalKey1.getKeyMetadata(), null));
+      verify(testProvider, never()).unwrapKey(any(String.class), any());
+
+      //
       doThrow(new IOException("Test exception")).when(testProvider).getManagedKey(any(),
         any(String.class));
       assertNull(cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL));
       verify(testProvider).getManagedKey(any(), any(String.class));
-      // A second call to getRandomEntry should not result in a call to the provider due to -ve
-      // entry.
       clearInvocations(testProvider);
+
+      // A second call to getActiveEntry should not result in a call to the provider due to -ve
+      // entry.
       assertNull(cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL));
       verify(testProvider, never()).getManagedKey(any(), any(String.class));
     }
@@ -727,16 +732,6 @@ public class TestManagedKeyDataCache {
       doThrow(new IOException("Test exception")).when(mockL2).addKey(any(ManagedKeyData.class));
       assertEquals(key, cache.getEntry(CUST_ID, KEY_SPACE_GLOBAL, key.getKeyMetadata(), null));
       verify(mockL2).addKey(any(ManagedKeyData.class));
-    }
-
-    @Test
-    public void testGenericCacheDynamicLookupUnexpectedException() throws Exception {
-      doThrow(new RuntimeException("Test exception")).when(testProvider)
-        .unwrapKey(any(String.class), any());
-      assertNull(cache.getEntry(CUST_ID, KEY_SPACE_GLOBAL, "test-metadata", null));
-      assertNull(cache.getEntry(CUST_ID, KEY_SPACE_GLOBAL, "test-metadata", null));
-      verify(mockL2).getKey(any(), any(String.class), any(byte[].class));
-      verify(mockL2, never()).addKey(any(ManagedKeyData.class));
     }
 
     @Test

@@ -52,8 +52,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
@@ -64,6 +67,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
@@ -93,8 +97,7 @@ import org.mockito.MockitoAnnotations;
 @Suite.SuiteClasses({ TestKeymetaTableAccessor.TestAdd.class,
   TestKeymetaTableAccessor.TestAddWithNullableFields.class, TestKeymetaTableAccessor.TestGet.class,
   TestKeymetaTableAccessor.TestDisableKey.class,
-  TestKeymetaTableAccessor.TestUpdateActiveState.class,
-  TestKeymetaTableAccessor.TestRemoveFailureMarker.class })
+  TestKeymetaTableAccessor.TestUpdateActiveState.class, })
 @Category({ MasterTests.class, SmallTests.class })
 public class TestKeymetaTableAccessor {
   protected static final String ALIAS = "custId1";
@@ -194,21 +197,26 @@ public class TestKeymetaTableAccessor {
       HBaseClassTestRule.forClass(TestAddWithNullableFields.class);
 
     @Test
-    public void testAddKeyWithFailedStateAndNullMetadata() throws Exception {
+    public void testAddKeyManagementStateMarker() throws Exception {
       managedKeyProvider.setMockedKeyState(ALIAS, FAILED);
-      ManagedKeyData keyData = new ManagedKeyData(CUST_ID, KEY_SPACE_GLOBAL, null, FAILED, null);
+      ManagedKeyData keyData = new ManagedKeyData(CUST_ID, KEY_SPACE_GLOBAL, FAILED);
 
-      accessor.addKey(keyData);
+      accessor.addKeyManagementStateMarker(keyData.getKeyCustodian(), keyData.getKeyNamespace(),
+        keyData.getKeyState());
 
-      ArgumentCaptor<List<Put>> putCaptor = ArgumentCaptor.forClass(ArrayList.class);
-      verify(table).put(putCaptor.capture());
-      List<Put> puts = putCaptor.getValue();
-      assertEquals(1, puts.size());
-      Put put = puts.get(0);
+      ArgumentCaptor<List<Row>> batchCaptor = ArgumentCaptor.forClass(ArrayList.class);
+      verify(table).batch(batchCaptor.capture(), any());
+      List<Row> mutations = batchCaptor.getValue();
+      assertEquals(2, mutations.size());
+      Row mutation1 = mutations.get(0);
+      Row mutation2 = mutations.get(1);
+      assertTrue(mutation1 instanceof Put);
+      assertTrue(mutation2 instanceof Delete);
+      Put put = (Put) mutation1;
+      Delete delete = (Delete) mutation2;
 
       // Verify the row key uses state value for metadata hash
-      byte[] expectedRowKey =
-        constructRowKeyForMetadata(CUST_ID, KEY_SPACE_GLOBAL, new byte[] { FAILED.getVal() });
+      byte[] expectedRowKey = constructRowKeyForCustNamespace(CUST_ID, KEY_SPACE_GLOBAL);
       assertEquals(0, Bytes.compareTo(expectedRowKey, put.getRow()));
 
       Map<Bytes, Bytes> valueMap = getValueMap(put);
@@ -218,9 +226,33 @@ public class TestKeymetaTableAccessor {
       assertNull(valueMap.get(new Bytes(DEK_WRAPPED_BY_STK_QUAL_BYTES)));
       assertNull(valueMap.get(new Bytes(STK_CHECKSUM_QUAL_BYTES)));
 
+      assertEquals(Durability.SKIP_WAL, put.getDurability());
+      assertEquals(HConstants.SYSTEMTABLE_QOS, put.getPriority());
+
       // Verify state is set correctly
       assertEquals(new Bytes(new byte[] { FAILED.getVal() }),
         valueMap.get(new Bytes(KEY_STATE_QUAL_BYTES)));
+
+      // Verify the delete operation properties
+      assertEquals(Durability.SKIP_WAL, delete.getDurability());
+      assertEquals(HConstants.SYSTEMTABLE_QOS, delete.getPriority());
+
+      // Verify the row key is correct for a failure marker
+      assertEquals(0, Bytes.compareTo(expectedRowKey, delete.getRow()));
+      // Verify the key checksum, wrapped key, and STK checksum columns are deleted
+      Map<byte[], List<Cell>> familyCellMap = delete.getFamilyCellMap();
+      assertTrue(familyCellMap.containsKey(KEY_META_INFO_FAMILY));
+
+      List<Cell> cells = familyCellMap.get(KEY_META_INFO_FAMILY);
+      assertEquals(3, cells.size());
+
+      // Verify each column is present in the delete
+      Set<byte[]> qualifiers =
+        cells.stream().map(CellUtil::cloneQualifier).collect(Collectors.toSet());
+
+      assertTrue(qualifiers.stream().anyMatch(q -> Bytes.equals(q, DEK_CHECKSUM_QUAL_BYTES)));
+      assertTrue(qualifiers.stream().anyMatch(q -> Bytes.equals(q, DEK_WRAPPED_BY_STK_QUAL_BYTES)));
+      assertTrue(qualifiers.stream().anyMatch(q -> Bytes.equals(q, STK_CHECKSUM_QUAL_BYTES)));
     }
   }
 
@@ -342,7 +374,7 @@ public class TestKeymetaTableAccessor {
       when(scanner.iterator()).thenReturn(List.of(result1, result2).iterator());
       when(table.getScanner(any(Scan.class))).thenReturn(scanner);
 
-      List<ManagedKeyData> allKeys = accessor.getAllKeys(CUST_ID, KEY_NAMESPACE);
+      List<ManagedKeyData> allKeys = accessor.getAllKeys(CUST_ID, KEY_NAMESPACE, true);
 
       assertEquals(2, allKeys.size());
       assertEquals(keyData.getKeyMetadata(), allKeys.get(0).getKeyMetadata());
@@ -521,60 +553,6 @@ public class TestKeymetaTableAccessor {
 
       assertThrows(IllegalArgumentException.class,
         () -> accessor.updateActiveState(keyData, DISABLED));
-    }
-  }
-
-  /**
-   * Tests for removeFailureMarker() method.
-   */
-  @RunWith(BlockJUnit4ClassRunner.class)
-  @Category({ MasterTests.class, SmallTests.class })
-  public static class TestRemoveFailureMarker extends TestKeymetaTableAccessor {
-    @ClassRule
-    public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRemoveFailureMarker.class);
-
-    @Test
-    public void testRemoveFailureMarker() throws Exception {
-      // Create a FAILED key with null metadata
-      ManagedKeyData keyData =
-        new ManagedKeyData(CUST_ID, KEY_NAMESPACE, null, ManagedKeyState.FAILED, null);
-
-      ArgumentCaptor<Delete> deleteCaptor = ArgumentCaptor.forClass(Delete.class);
-
-      accessor.removeKeyManagementStateMarker(keyData.getKeyCustodian(), keyData.getKeyNamespace());
-
-      verify(table).delete(deleteCaptor.capture());
-      Delete delete = deleteCaptor.getValue();
-
-      // Verify the delete operation properties
-      assertEquals(Durability.SKIP_WAL, delete.getDurability());
-      assertEquals(HConstants.SYSTEMTABLE_QOS, delete.getPriority());
-
-      // Verify the row key is correct for a failure marker
-      byte[] expectedRowKey =
-        constructRowKeyForMetadata(CUST_ID, KEY_NAMESPACE, new byte[] { FAILED.getVal() });
-      assertEquals(0, Bytes.compareTo(expectedRowKey, delete.getRow()));
-    }
-
-    @Test
-    public void testRemoveFailureMarkerInvalidState() {
-      // Create a key with ACTIVE state (should fail precondition)
-      ManagedKeyData keyData =
-        new ManagedKeyData(CUST_ID, KEY_NAMESPACE, null, ManagedKeyState.ACTIVE, "metadata");
-
-      assertThrows(IllegalArgumentException.class, () -> accessor
-        .removeKeyManagementStateMarker(keyData.getKeyCustodian(), keyData.getKeyNamespace()));
-    }
-
-    @Test
-    public void testRemoveFailureMarkerWithNonNullMetadata() {
-      // Create a FAILED key with non-null metadata (should fail precondition)
-      ManagedKeyData keyData =
-        new ManagedKeyData(CUST_ID, KEY_NAMESPACE, null, ManagedKeyState.FAILED, "metadata");
-
-      assertThrows(IllegalArgumentException.class, () -> accessor
-        .removeKeyManagementStateMarker(keyData.getKeyCustodian(), keyData.getKeyNamespace()));
     }
   }
 }

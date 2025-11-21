@@ -159,7 +159,7 @@ public class ManagedKeyDataCache extends KeyManagementBase {
         try {
           keyData = KeyManagementUtils.retrieveKey(getKeyProvider(), keymetaAccessor, encKeyCust,
             keyCust, keyNamespace, keyMetadata, wrappedKey);
-        } catch (IOException | KeyException e) {
+        } catch (IOException | KeyException | RuntimeException e) {
           LOG.warn(
             "Failed to retrieve key from provider for (custodian: {}, namespace: {}) with metadata hash: {}",
             ManagedKeyProvider.encodeToStr(keyCust), keyNamespace,

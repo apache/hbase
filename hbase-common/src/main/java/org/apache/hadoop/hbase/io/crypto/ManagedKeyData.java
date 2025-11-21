@@ -104,7 +104,7 @@ public class ManagedKeyData {
     Preconditions.checkNotNull(key_cust, "key_cust should not be null");
     Preconditions.checkNotNull(key_namespace, "key_namespace should not be null");
     Preconditions.checkNotNull(keyState, "keyState should not be null");
-    Preconditions.checkArgument(keyMetadata == null, "metadata should not be null");
+    Preconditions.checkNotNull(keyMetadata, "metadata should not be null");
 
     this.keyCustodian = key_cust;
     this.keyNamespace = key_namespace;
