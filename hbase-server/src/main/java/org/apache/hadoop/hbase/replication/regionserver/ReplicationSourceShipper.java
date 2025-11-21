@@ -329,8 +329,8 @@ public class ReplicationSourceShipper extends Thread {
       try {
         if (EnvironmentEdgeManager.currentTime() >= timeout) {
           LOG.warn("Shipper clearWALEntryBatch method timed out while waiting reader/shipper "
-            + "thread to stop. Not cleaning buffer usage. PeerId: {}; Shipper alive: {}; Reader alive: {}",
-            this.source.getPeerId(), this.isAlive(), this.entryReader.isAlive());
+            + "thread to stop. Not cleaning buffer usage. PeerId: {}; Shipper alive: {}; Reader "
+            + "alive: {}", this.source.getPeerId(), this.isAlive(), this.entryReader.isAlive());
           return;
         } else {
           // Wait both shipper and reader threads to stop
