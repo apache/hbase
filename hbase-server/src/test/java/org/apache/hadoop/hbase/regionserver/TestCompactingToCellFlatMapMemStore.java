@@ -69,21 +69,17 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
   // Helpers
   //////////////////////////////////////////////////////////////////////////////
   public TestCompactingToCellFlatMapMemStore(String type) {
-    if (type == "CHUNK_MAP") {
-      toCellChunkMap = true;
-    } else {
-      toCellChunkMap = false;
-    }
+    toCellChunkMap = "CHUNK_MAP".equals(type);
   }
 
   @Override
   public void tearDown() throws Exception {
     chunkCreator.clearChunksInPool();
+    super.tearDown();
   }
 
   @Override
   public void setUp() throws Exception {
-
     compactingSetUp();
     this.conf = HBaseConfiguration.create();
 

@@ -62,6 +62,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.wal.WALFactory;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
@@ -106,6 +107,13 @@ public class TestDefaultMemStore {
     this.chunkCreator = ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0, 0,
       null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     this.memstore = new DefaultMemStore();
+  }
+
+  @After
+  public void tearDown() throws Exception {
+    LOG.info("start super.tearDown");
+    this.memstore.close();
+    LOG.info("end super.tearDown");
   }
 
   @AfterClass
@@ -853,7 +861,7 @@ public class TestDefaultMemStore {
   //////////////////////////////////////////////////////////////////////////////
   // Helpers
   //////////////////////////////////////////////////////////////////////////////
-  private static byte[] makeQualifier(final int i1, final int i2) {
+  protected static byte[] makeQualifier(final int i1, final int i2) {
     return Bytes.toBytes(i1 + ";" + i2);
   }
 
