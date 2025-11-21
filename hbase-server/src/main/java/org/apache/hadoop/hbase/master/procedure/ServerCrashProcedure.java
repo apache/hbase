@@ -140,7 +140,6 @@ public class ServerCrashProcedure extends
     // This adds server to the DeadServer processing list but not to the DeadServers list.
     // Server gets removed from processing list below on procedure successful finish.
     if (!notifiedDeadServer) {
-      services.getServerManager().getDeadServers().processing(serverName);
       notifiedDeadServer = true;
     }
 
@@ -255,7 +254,6 @@ public class ServerCrashProcedure extends
         case SERVER_CRASH_FINISH:
           LOG.info("removed crashed server {} after splitting done", serverName);
           services.getAssignmentManager().getRegionStates().removeServer(serverName);
-          services.getServerManager().getDeadServers().finish(serverName);
           updateProgress(true);
           return Flow.NO_MORE_STATE;
         default:
