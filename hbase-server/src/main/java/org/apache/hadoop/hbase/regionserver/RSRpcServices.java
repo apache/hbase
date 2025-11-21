@@ -3469,12 +3469,18 @@ public class RSRpcServices
           limitReached = sizeLimitReached || timeLimitReached || resultsLimitReached;
 
           if (limitReached || !moreRows) {
+            // With block size limit, we may exceed size limit without collecting any results.
+            // In this case we want to send heartbeat and/or cursor. We don't want to send heartbeat
+            // or cursor if results were collected, for example for cell size or heap size limits.
+            boolean sizeLimitReachedWithoutResults = sizeLimitReached && results.isEmpty();
             // We only want to mark a ScanResponse as a heartbeat message in the event that
             // there are more values to be read server side. If there aren't more values,
             // marking it as a heartbeat is wasteful because the client will need to issue
             // another ScanRequest only to realize that they already have all the values
-            if (moreRows && timeLimitReached) {
-              // Heartbeat messages occur when the time limit has been reached.
+            if (moreRows && (timeLimitReached || sizeLimitReachedWithoutResults)) {
+              // Heartbeat messages occur when the time limit has been reached, or size limit has
+              // been reached before collecting any results. This can happen for heavily filtered
+              // scans which scan over too many blocks.
               builder.setHeartbeatMessage(true);
               if (rsh.needCursor) {
                 Cell cursorCell = scannerContext.getLastPeekedCell();
