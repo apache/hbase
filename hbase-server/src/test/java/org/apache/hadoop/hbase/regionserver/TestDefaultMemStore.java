@@ -111,9 +111,7 @@ public class TestDefaultMemStore {
 
   @After
   public void tearDown() throws Exception {
-    LOG.info("start super.tearDown");
     this.memstore.close();
-    LOG.info("end super.tearDown");
   }
 
   @AfterClass
