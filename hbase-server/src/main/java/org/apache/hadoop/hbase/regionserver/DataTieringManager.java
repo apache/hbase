@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.io.IOException;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -96,11 +95,14 @@ public class DataTieringManager {
    * @throws DataTieringException if there is an error retrieving the HFile path or configuration
    */
   public boolean isDataTieringEnabled(BlockCacheKey key) throws DataTieringException {
-    Path hFilePath = key.getFilePath();
-    if (hFilePath == null) {
-      throw new DataTieringException("BlockCacheKey Doesn't Contain HFile Path");
+    if (key.getCfName() == null || key.getRegionName() == null) {
+      throw new DataTieringException(
+        "BlockCacheKey doesn't contain " + "Column Family Name or Region Name");
     }
-    return isDataTieringEnabled(hFilePath);
+    Configuration configuration =
+      getHStore(key.getRegionName(), key.getCfName()).getReadOnlyConfiguration();
+    DataTieringType dataTieringType = getDataTieringType(configuration);
+    return !dataTieringType.equals(DataTieringType.NONE);
   }
 
   /**
@@ -125,11 +127,16 @@ public class DataTieringManager {
    * @throws DataTieringException if there is an error retrieving data tiering information
    */
   public boolean isHotData(BlockCacheKey key) throws DataTieringException {
-    Path hFilePath = key.getFilePath();
-    if (hFilePath == null) {
-      throw new DataTieringException("BlockCacheKey Doesn't Contain HFile Path");
+    if (key.getRegionName() == null) {
+      throw new DataTieringException("BlockCacheKey doesn't contain Region Name");
     }
-    return isHotData(hFilePath);
+    if (key.getCfName() == null) {
+      throw new DataTieringException("BlockCacheKey doesn't contain CF Name");
+    }
+    if (key.getHfileName() == null) {
+      throw new DataTieringException("BlockCacheKey doesn't contain File Name");
+    }
+    return isHotData(key.getRegionName(), key.getCfName(), key.getHfileName());
   }
 
   /**
@@ -157,24 +164,14 @@ public class DataTieringManager {
     return true;
   }
 
-  /**
-   * Determines whether the data in the HFile at the given path is considered hot based on the
-   * configured data tiering type and hot data age. If the data tiering type is set to
-   * {@link DataTieringType#TIME_RANGE} and maximum timestamp is not present, it considers
-   * {@code Long.MAX_VALUE} as the maximum timestamp, making the data hot by default.
-   * @param hFilePath the path to the HFile
-   * @return {@code true} if the data is hot, {@code false} otherwise
-   * @throws DataTieringException if there is an error retrieving data tiering information
-   */
-  public boolean isHotData(Path hFilePath) throws DataTieringException {
-    Configuration configuration = getConfiguration(hFilePath);
+  private boolean isHotData(String region, String cf, String fileName) throws DataTieringException {
+    Configuration configuration = getHStore(region, cf).getReadOnlyConfiguration();
     DataTieringType dataTieringType = getDataTieringType(configuration);
-
     if (!dataTieringType.equals(DataTieringType.NONE)) {
-      HStoreFile hStoreFile = getHStoreFile(hFilePath);
+      HStoreFile hStoreFile = getHStoreFile(region, cf, fileName);
       if (hStoreFile == null) {
         throw new DataTieringException(
-          "Store file corresponding to " + hFilePath + " doesn't exist");
+          "Store file corresponding to " + region + "/" + cf + "/" + fileName + " doesn't exist");
       }
       long maxTimestamp = dataTieringType.getInstance().getTimestamp(hStoreFile);
       if (isWithinGracePeriod(maxTimestamp, configuration)) {
@@ -244,34 +241,29 @@ public class DataTieringManager {
     return coldHFiles;
   }
 
-  private HRegion getHRegion(Path hFilePath) throws DataTieringException {
-    String regionId;
-    try {
-      regionId = HRegionFileSystem.getRegionId(hFilePath);
-    } catch (IOException e) {
-      throw new DataTieringException(e.getMessage());
-    }
-    HRegion hRegion = this.onlineRegions.get(regionId);
+  private HRegion getHRegion(String region) throws DataTieringException {
+    HRegion hRegion = this.onlineRegions.get(region);
     if (hRegion == null) {
-      throw new DataTieringException("HRegion corresponding to " + hFilePath + " doesn't exist");
+      throw new DataTieringException("HRegion corresponding to " + region + " doesn't exist");
     }
     return hRegion;
   }
 
-  private HStore getHStore(Path hFilePath) throws DataTieringException {
-    HRegion hRegion = getHRegion(hFilePath);
-    String columnFamily = hFilePath.getParent().getName();
-    HStore hStore = hRegion.getStore(Bytes.toBytes(columnFamily));
+  private HStore getHStore(String region, String cf) throws DataTieringException {
+    HRegion hRegion = getHRegion(region);
+    HStore hStore = hRegion.getStore(Bytes.toBytes(cf));
     if (hStore == null) {
-      throw new DataTieringException("HStore corresponding to " + hFilePath + " doesn't exist");
+      throw new DataTieringException(
+        "HStore corresponding to " + region + "/" + cf + " doesn't exist");
     }
     return hStore;
   }
 
-  private HStoreFile getHStoreFile(Path hFilePath) throws DataTieringException {
-    HStore hStore = getHStore(hFilePath);
+  private HStoreFile getHStoreFile(String region, String cf, String fileName)
+    throws DataTieringException {
+    HStore hStore = getHStore(region, cf);
     for (HStoreFile file : hStore.getStorefiles()) {
-      if (file.getPath().toUri().getPath().toString().equals(hFilePath.toString())) {
+      if (file.getPath().getName().equals(fileName)) {
         return file;
       }
     }
@@ -279,7 +271,8 @@ public class DataTieringManager {
   }
 
   private Configuration getConfiguration(Path hFilePath) throws DataTieringException {
-    HStore hStore = getHStore(hFilePath);
+    HStore hStore =
+      getHStore(hFilePath.getParent().getParent().getName(), hFilePath.getParent().getName());
     return hStore.getReadOnlyConfiguration();
   }
 
