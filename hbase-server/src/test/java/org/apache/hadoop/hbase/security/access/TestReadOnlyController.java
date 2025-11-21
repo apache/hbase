@@ -18,11 +18,15 @@
 package org.apache.hadoop.hbase.security.access;
 
 import static org.apache.hadoop.hbase.HConstants.HBASE_CLIENT_RETRIES_NUMBER;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -36,6 +40,7 @@ import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
@@ -154,6 +159,14 @@ public class TestReadOnlyController {
     hRegionServer.getConfigurationManager().notifyAllObservers(conf);
   }
 
+  private static boolean isActiveClusterIdFileExists() throws IOException {
+    MasterFileSystem mfs = hMaster.getMasterFileSystem();
+    Path rootDir = mfs.getRootDir();
+    FileSystem fs = mfs.getFileSystem();
+    Path activeClusterFile = new Path(rootDir, HConstants.ACTIVE_CLUSTER_SUFFIX_FILE_NAME);
+    return fs.exists(activeClusterFile);
+  }
+
   // The test case for successfully creating a table with Read-Only mode disabled happens when
   // setting up the test class, so we only need a test function for a failed table creation.
   @Test
@@ -220,5 +233,19 @@ public class TestReadOnlyController {
 
     // This should throw the IOException
     testTable.batch(actions, null);
+  }
+
+  @Test
+  public void testActiveClusterIdFileCreationWhenReadOnlyDisabled()
+    throws IOException, InterruptedException {
+    disableReadOnlyMode();
+    assertTrue(isActiveClusterIdFileExists());
+  }
+
+  @Test
+  public void testActiveClusterIdFileDeletionWhenReadOnlyEnabled()
+    throws IOException, InterruptedException {
+    enableReadOnlyMode();
+    assertFalse(isActiveClusterIdFileExists());
   }
 }

@@ -112,6 +112,11 @@ public class MasterCoprocessorHost
     }
 
     @Override
+    public MasterServices getMasterServices() {
+      return services;
+    }
+
+    @Override
     public void shutdown() {
       super.shutdown();
       MetricsCoprocessor.removeRegistry(this.metricRegistry);
