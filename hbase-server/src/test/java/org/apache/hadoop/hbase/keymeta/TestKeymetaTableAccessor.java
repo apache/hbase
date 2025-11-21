@@ -52,17 +52,22 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
@@ -85,12 +90,14 @@ import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Suite;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
 @RunWith(Suite.class)
 @Suite.SuiteClasses({ TestKeymetaTableAccessor.TestAdd.class,
-  TestKeymetaTableAccessor.TestAddWithNullableFields.class,
-  TestKeymetaTableAccessor.TestGet.class, })
+  TestKeymetaTableAccessor.TestAddWithNullableFields.class, TestKeymetaTableAccessor.TestGet.class,
+  TestKeymetaTableAccessor.TestDisableKey.class,
+  TestKeymetaTableAccessor.TestUpdateActiveState.class, })
 @Category({ MasterTests.class, SmallTests.class })
 public class TestKeymetaTableAccessor {
   protected static final String ALIAS = "custId1";
@@ -108,6 +115,8 @@ public class TestKeymetaTableAccessor {
   protected ResultScanner scanner;
   @Mock
   protected SystemKeyCache systemKeyCache;
+  @Mock
+  protected KeyManagementService keyManagementService;
 
   protected KeymetaTableAccessor accessor;
   protected Configuration conf = HBaseConfiguration.create();
@@ -128,7 +137,9 @@ public class TestKeymetaTableAccessor {
     when(connection.getTable(KeymetaTableAccessor.KEY_META_TABLE_NAME)).thenReturn(table);
     when(server.getSystemKeyCache()).thenReturn(systemKeyCache);
     when(server.getConfiguration()).thenReturn(conf);
-    when(server.getKeyManagementService()).thenReturn(server);
+    when(server.getKeyManagementService()).thenReturn(keyManagementService);
+    when(keyManagementService.getConfiguration()).thenReturn(conf);
+    when(keyManagementService.getSystemKeyCache()).thenReturn(systemKeyCache);
 
     accessor = new KeymetaTableAccessor(server);
     managedKeyProvider = new MockManagedKeyProvider();
@@ -186,21 +197,26 @@ public class TestKeymetaTableAccessor {
       HBaseClassTestRule.forClass(TestAddWithNullableFields.class);
 
     @Test
-    public void testAddKeyWithFailedStateAndNullMetadata() throws Exception {
+    public void testAddKeyManagementStateMarker() throws Exception {
       managedKeyProvider.setMockedKeyState(ALIAS, FAILED);
-      ManagedKeyData keyData = new ManagedKeyData(CUST_ID, KEY_SPACE_GLOBAL, null, FAILED, null);
+      ManagedKeyData keyData = new ManagedKeyData(CUST_ID, KEY_SPACE_GLOBAL, FAILED);
 
-      accessor.addKey(keyData);
+      accessor.addKeyManagementStateMarker(keyData.getKeyCustodian(), keyData.getKeyNamespace(),
+        keyData.getKeyState());
 
-      ArgumentCaptor<List<Put>> putCaptor = ArgumentCaptor.forClass(ArrayList.class);
-      verify(table).put(putCaptor.capture());
-      List<Put> puts = putCaptor.getValue();
-      assertEquals(1, puts.size());
-      Put put = puts.get(0);
+      ArgumentCaptor<List<Row>> batchCaptor = ArgumentCaptor.forClass(ArrayList.class);
+      verify(table).batch(batchCaptor.capture(), any());
+      List<Row> mutations = batchCaptor.getValue();
+      assertEquals(2, mutations.size());
+      Row mutation1 = mutations.get(0);
+      Row mutation2 = mutations.get(1);
+      assertTrue(mutation1 instanceof Put);
+      assertTrue(mutation2 instanceof Delete);
+      Put put = (Put) mutation1;
+      Delete delete = (Delete) mutation2;
 
       // Verify the row key uses state value for metadata hash
-      byte[] expectedRowKey =
-        constructRowKeyForMetadata(CUST_ID, KEY_SPACE_GLOBAL, new byte[] { FAILED.getVal() });
+      byte[] expectedRowKey = constructRowKeyForCustNamespace(CUST_ID, KEY_SPACE_GLOBAL);
       assertEquals(0, Bytes.compareTo(expectedRowKey, put.getRow()));
 
       Map<Bytes, Bytes> valueMap = getValueMap(put);
@@ -210,9 +226,33 @@ public class TestKeymetaTableAccessor {
       assertNull(valueMap.get(new Bytes(DEK_WRAPPED_BY_STK_QUAL_BYTES)));
       assertNull(valueMap.get(new Bytes(STK_CHECKSUM_QUAL_BYTES)));
 
+      assertEquals(Durability.SKIP_WAL, put.getDurability());
+      assertEquals(HConstants.SYSTEMTABLE_QOS, put.getPriority());
+
       // Verify state is set correctly
       assertEquals(new Bytes(new byte[] { FAILED.getVal() }),
         valueMap.get(new Bytes(KEY_STATE_QUAL_BYTES)));
+
+      // Verify the delete operation properties
+      assertEquals(Durability.SKIP_WAL, delete.getDurability());
+      assertEquals(HConstants.SYSTEMTABLE_QOS, delete.getPriority());
+
+      // Verify the row key is correct for a failure marker
+      assertEquals(0, Bytes.compareTo(expectedRowKey, delete.getRow()));
+      // Verify the key checksum, wrapped key, and STK checksum columns are deleted
+      Map<byte[], List<Cell>> familyCellMap = delete.getFamilyCellMap();
+      assertTrue(familyCellMap.containsKey(KEY_META_INFO_FAMILY));
+
+      List<Cell> cells = familyCellMap.get(KEY_META_INFO_FAMILY);
+      assertEquals(3, cells.size());
+
+      // Verify each column is present in the delete
+      Set<byte[]> qualifiers =
+        cells.stream().map(CellUtil::cloneQualifier).collect(Collectors.toSet());
+
+      assertTrue(qualifiers.stream().anyMatch(q -> Bytes.equals(q, DEK_CHECKSUM_QUAL_BYTES)));
+      assertTrue(qualifiers.stream().anyMatch(q -> Bytes.equals(q, DEK_WRAPPED_BY_STK_QUAL_BYTES)));
+      assertTrue(qualifiers.stream().anyMatch(q -> Bytes.equals(q, STK_CHECKSUM_QUAL_BYTES)));
     }
   }
 
@@ -233,6 +273,8 @@ public class TestKeymetaTableAccessor {
     public void setUp() throws Exception {
       super.setUp();
 
+      when(result1.isEmpty()).thenReturn(false);
+      when(result2.isEmpty()).thenReturn(false);
       when(result1.getValue(eq(KEY_META_INFO_FAMILY), eq(KEY_STATE_QUAL_BYTES)))
         .thenReturn(new byte[] { ACTIVE.getVal() });
       when(result2.getValue(eq(KEY_META_INFO_FAMILY), eq(KEY_STATE_QUAL_BYTES)))
@@ -265,12 +307,13 @@ public class TestKeymetaTableAccessor {
       when(result.getValue(eq(KEY_META_INFO_FAMILY), eq(KEY_STATE_QUAL_BYTES)))
         .thenReturn(new byte[] { ACTIVE.getVal() }, new byte[] { INACTIVE.getVal() });
 
+      byte[] keyMetadataHash = ManagedKeyData.constructMetadataHash(KEY_METADATA);
       IOException ex;
       ex = assertThrows(IOException.class,
-        () -> accessor.getKey(CUST_ID, KEY_SPACE_GLOBAL, KEY_METADATA));
+        () -> accessor.getKey(CUST_ID, KEY_SPACE_GLOBAL, keyMetadataHash));
       assertEquals("ACTIVE key must have a wrapped key", ex.getMessage());
       ex = assertThrows(IOException.class,
-        () -> accessor.getKey(CUST_ID, KEY_SPACE_GLOBAL, KEY_METADATA));
+        () -> accessor.getKey(CUST_ID, KEY_SPACE_GLOBAL, keyMetadataHash));
       assertEquals("INACTIVE key must have a wrapped key", ex.getMessage());
     }
 
@@ -281,7 +324,8 @@ public class TestKeymetaTableAccessor {
       when(systemKeyCache.getSystemKeyByChecksum(anyLong())).thenReturn(null);
       when(table.get(any(Get.class))).thenReturn(result1);
 
-      ManagedKeyData result = accessor.getKey(CUST_ID, KEY_NAMESPACE, KEY_METADATA);
+      byte[] keyMetadataHash = ManagedKeyData.constructMetadataHash(KEY_METADATA);
+      ManagedKeyData result = accessor.getKey(CUST_ID, KEY_NAMESPACE, keyMetadataHash);
 
       assertNull(result);
     }
@@ -290,7 +334,8 @@ public class TestKeymetaTableAccessor {
     public void testGetKeyWithWrappedKey() throws Exception {
       ManagedKeyData keyData = setupActiveKey(CUST_ID, result1);
 
-      ManagedKeyData result = accessor.getKey(CUST_ID, KEY_NAMESPACE, KEY_METADATA);
+      byte[] keyMetadataHash = ManagedKeyData.constructMetadataHash(keyData.getKeyMetadata());
+      ManagedKeyData result = accessor.getKey(CUST_ID, KEY_NAMESPACE, keyMetadataHash);
 
       verify(table).get(any(Get.class));
       assertNotNull(result);
@@ -302,41 +347,16 @@ public class TestKeymetaTableAccessor {
       assertEquals(ACTIVE, result.getKeyState());
 
       // When DEK checksum doesn't match, we expect a null value.
-      result = accessor.getKey(CUST_ID, KEY_NAMESPACE, KEY_METADATA);
+      result = accessor.getKey(CUST_ID, KEY_NAMESPACE, keyMetadataHash);
       assertNull(result);
-    }
-
-    @Test
-    public void testGetKeyWithFailedState() throws Exception {
-      // Test with FAILED state and null metadata
-      Result failedResult = mock(Result.class);
-      when(failedResult.getValue(eq(KEY_META_INFO_FAMILY), eq(KEY_STATE_QUAL_BYTES)))
-        .thenReturn(new byte[] { FAILED.getVal() });
-      when(failedResult.getValue(eq(KEY_META_INFO_FAMILY), eq(REFRESHED_TIMESTAMP_QUAL_BYTES)))
-        .thenReturn(Bytes.toBytes(0L));
-      when(failedResult.getValue(eq(KEY_META_INFO_FAMILY), eq(STK_CHECKSUM_QUAL_BYTES)))
-        .thenReturn(Bytes.toBytes(0L));
-      // Explicitly return null for metadata to simulate FAILED state with null metadata
-      when(failedResult.getValue(eq(KEY_META_INFO_FAMILY), eq(DEK_METADATA_QUAL_BYTES)))
-        .thenReturn(null);
-
-      when(table.get(any(Get.class))).thenReturn(failedResult);
-      ManagedKeyData result = accessor.getKey(CUST_ID, KEY_NAMESPACE, FAILED);
-
-      verify(table).get(any(Get.class));
-      assertNotNull(result);
-      assertEquals(0, Bytes.compareTo(CUST_ID, result.getKeyCustodian()));
-      assertEquals(KEY_NAMESPACE, result.getKeyNamespace());
-      assertNull(result.getKeyMetadata());
-      assertNull(result.getTheKey());
-      assertEquals(FAILED, result.getKeyState());
     }
 
     @Test
     public void testGetKeyWithoutWrappedKey() throws Exception {
       when(table.get(any(Get.class))).thenReturn(result2);
 
-      ManagedKeyData result = accessor.getKey(CUST_ID, KEY_NAMESPACE, KEY_METADATA);
+      byte[] keyMetadataHash = ManagedKeyData.constructMetadataHash(keyMetadata2);
+      ManagedKeyData result = accessor.getKey(CUST_ID, KEY_NAMESPACE, keyMetadataHash);
 
       verify(table).get(any(Get.class));
       assertNotNull(result);
@@ -354,7 +374,7 @@ public class TestKeymetaTableAccessor {
       when(scanner.iterator()).thenReturn(List.of(result1, result2).iterator());
       when(table.getScanner(any(Scan.class))).thenReturn(scanner);
 
-      List<ManagedKeyData> allKeys = accessor.getAllKeys(CUST_ID, KEY_NAMESPACE);
+      List<ManagedKeyData> allKeys = accessor.getAllKeys(CUST_ID, KEY_NAMESPACE, true);
 
       assertEquals(2, allKeys.size());
       assertEquals(keyData.getKeyMetadata(), allKeys.get(0).getKeyMetadata());
@@ -369,7 +389,7 @@ public class TestKeymetaTableAccessor {
       when(scanner.iterator()).thenReturn(List.of(result1).iterator());
       when(table.get(any(Get.class))).thenReturn(result1);
 
-      ManagedKeyData activeKey = accessor.getActiveKey(CUST_ID, KEY_NAMESPACE);
+      ManagedKeyData activeKey = accessor.getKeyManagementStateMarker(CUST_ID, KEY_NAMESPACE);
 
       assertNotNull(activeKey);
       assertEquals(keyData, activeKey);
@@ -426,5 +446,113 @@ public class TestKeymetaTableAccessor {
         new Bytes(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()));
     }
     return valueMap;
+  }
+
+  /**
+   * Tests for disableKey() method.
+   */
+  @RunWith(BlockJUnit4ClassRunner.class)
+  @Category({ MasterTests.class, SmallTests.class })
+  public static class TestDisableKey extends TestKeymetaTableAccessor {
+    @ClassRule
+    public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestDisableKey.class);
+
+    @Test
+    public void testDisableKey() throws Exception {
+      String keyMetadata = "testMetadata";
+      ManagedKeyData keyData =
+        new ManagedKeyData(CUST_ID, KEY_NAMESPACE, null, ManagedKeyState.ACTIVE, keyMetadata);
+      ArgumentCaptor<List> mutationsCaptor = ArgumentCaptor.forClass(List.class);
+      ArgumentCaptor<Object[]> resultsCaptor = ArgumentCaptor.forClass(Object[].class);
+
+      accessor.disableKey(keyData);
+
+      verify(table).batch(mutationsCaptor.capture(), resultsCaptor.capture());
+      List mutations = mutationsCaptor.getValue();
+      assertEquals(3, mutations.size());
+    }
+  }
+
+  /**
+   * Tests for updateActiveState() method.
+   */
+  @RunWith(BlockJUnit4ClassRunner.class)
+  @Category({ MasterTests.class, SmallTests.class })
+  public static class TestUpdateActiveState extends TestKeymetaTableAccessor {
+    @ClassRule
+    public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestUpdateActiveState.class);
+
+    @Test
+    public void testUpdateActiveStateFromInactiveToActive() throws Exception {
+      ManagedKeyData keyData =
+        new ManagedKeyData(CUST_ID, KEY_NAMESPACE, null, INACTIVE, "metadata", 123L);
+      ManagedKeyData systemKey =
+        new ManagedKeyData(new byte[] { 1 }, KEY_SPACE_GLOBAL, null, ACTIVE, "syskey", 100L);
+      when(systemKeyCache.getLatestSystemKey()).thenReturn(systemKey);
+
+      ArgumentCaptor<List> mutationsCaptor = ArgumentCaptor.forClass(List.class);
+      ArgumentCaptor<Object[]> resultsCaptor = ArgumentCaptor.forClass(Object[].class);
+
+      accessor.updateActiveState(keyData, ACTIVE);
+
+      verify(table).batch(mutationsCaptor.capture(), resultsCaptor.capture());
+      List mutations = mutationsCaptor.getValue();
+      assertEquals(2, mutations.size());
+    }
+
+    @Test
+    public void testUpdateActiveStateFromActiveToInactive() throws Exception {
+      ManagedKeyData keyData =
+        new ManagedKeyData(CUST_ID, KEY_NAMESPACE, null, ACTIVE, "metadata", 123L);
+
+      ArgumentCaptor<List> mutationsCaptor = ArgumentCaptor.forClass(List.class);
+      ArgumentCaptor<Object[]> resultsCaptor = ArgumentCaptor.forClass(Object[].class);
+
+      accessor.updateActiveState(keyData, INACTIVE);
+
+      verify(table).batch(mutationsCaptor.capture(), resultsCaptor.capture());
+      List mutations = mutationsCaptor.getValue();
+      assertEquals(2, mutations.size());
+    }
+
+    @Test
+    public void testUpdateActiveStateNoOp() throws Exception {
+      ManagedKeyData keyData =
+        new ManagedKeyData(CUST_ID, KEY_NAMESPACE, null, ACTIVE, "metadata", 123L);
+
+      accessor.updateActiveState(keyData, ACTIVE);
+
+      verify(table, Mockito.never()).batch(any(), any());
+    }
+
+    @Test
+    public void testUpdateActiveStateFromDisabledToActive() throws Exception {
+      ManagedKeyData keyData =
+        new ManagedKeyData(CUST_ID, KEY_NAMESPACE, null, DISABLED, "metadata", 123L);
+      ManagedKeyData systemKey =
+        new ManagedKeyData(new byte[] { 1 }, KEY_SPACE_GLOBAL, null, ACTIVE, "syskey", 100L);
+      when(systemKeyCache.getLatestSystemKey()).thenReturn(systemKey);
+
+      ArgumentCaptor<List> mutationsCaptor = ArgumentCaptor.forClass(List.class);
+      ArgumentCaptor<Object[]> resultsCaptor = ArgumentCaptor.forClass(Object[].class);
+
+      accessor.updateActiveState(keyData, ACTIVE);
+
+      verify(table).batch(mutationsCaptor.capture(), resultsCaptor.capture());
+      List mutations = mutationsCaptor.getValue();
+      // Should have 2 mutations: add CustNamespace row and add all columns to Metadata row
+      assertEquals(2, mutations.size());
+    }
+
+    @Test
+    public void testUpdateActiveStateInvalidNewState() {
+      ManagedKeyData keyData =
+        new ManagedKeyData(CUST_ID, KEY_NAMESPACE, null, ACTIVE, "metadata", 123L);
+
+      assertThrows(IllegalArgumentException.class,
+        () -> accessor.updateActiveState(keyData, DISABLED));
+    }
   }
 }

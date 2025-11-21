@@ -22,22 +22,22 @@ require 'shell/commands/keymeta_command_base'
 
 module Shell
   module Commands
-    # EnableKeyManagement is a class that provides a Ruby interface to enable key management via
+    # RotateManagedKey is a class that provides a Ruby interface to rotate a managed key via
     # HBase Key Management API.
-    class EnableKeyManagement < KeymetaCommandBase
+    class RotateManagedKey < KeymetaCommandBase
       def help
         <<-EOF
-Enable key management for a given cust:namespace (cust in Base64 encoded).
+Rotate the ACTIVE managed key for a given cust:namespace (cust in Base64 encoded).
 If no namespace is specified, the global namespace (*) is used.
 
 Example:
-  hbase> enable_key_management 'cust:namespace'
-  hbase> enable_key_management 'cust'
+  hbase> rotate_managed_key 'cust:namespace'
+  hbase> rotate_managed_key 'cust'
         EOF
       end
 
       def command(key_info)
-        statuses = [keymeta_admin.enable_key_management(key_info)]
+        statuses = [keymeta_admin.rotate_managed_key(key_info)]
         print_key_statuses(statuses)
       end
     end

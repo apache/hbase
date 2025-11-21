@@ -58,4 +58,65 @@ public interface KeymetaAdmin {
    * @throws IOException if an error occurs while rotating the STK
    */
   boolean rotateSTK() throws IOException;
+
+  /**
+   * Eject a specific managed key entry from the managed key data cache on all live region servers.
+   * @param keyCustodian the key custodian
+   * @param keyNamespace the key namespace
+   * @param keyMetadata  the key metadata
+   * @throws IOException if an error occurs while ejecting the key
+   */
+  void ejectManagedKeyDataCacheEntry(byte[] keyCustodian, String keyNamespace, String keyMetadata)
+    throws IOException;
+
+  /**
+   * Clear all entries in the managed key data cache on all live region servers.
+   * @throws IOException if an error occurs while clearing the cache
+   */
+  void clearManagedKeyDataCache() throws IOException;
+
+  /**
+   * Disables all managed keys for the specified custodian and namespace.
+   * @param keyCust      The key custodian identifier.
+   * @param keyNamespace The namespace for the key management.
+   * @return The list of {@link ManagedKeyData} objects each identifying the key and its current
+   *         status.
+   * @throws IOException  if an error occurs while disabling key management.
+   * @throws KeyException if an error occurs while disabling key management.
+   */
+  List<ManagedKeyData> disableKeyManagement(byte[] keyCust, String keyNamespace)
+    throws IOException, KeyException;
+
+  /**
+   * Disables the specific managed key identified by the specified custodian, namespace, and
+   * metadata hash.
+   * @param keyCust         The key custodian identifier.
+   * @param keyNamespace    The namespace for the key management.
+   * @param keyMetadataHash The key metadata hash.
+   * @return A {@link ManagedKeyData} object identifying the key and its current status.
+   * @throws IOException  if an error occurs while disabling the managed key.
+   * @throws KeyException if an error occurs while disabling the managed key.
+   */
+  ManagedKeyData disableManagedKey(byte[] keyCust, String keyNamespace, byte[] keyMetadataHash)
+    throws IOException, KeyException;
+
+  /**
+   * Attempt a key rotation for the active key of the specified custodian and namespace.
+   * @param keyCust      The key custodian identifier.
+   * @param keyNamespace The namespace for the key management.
+   * @return A {@link ManagedKeyData} object identifying the key and its current status.
+   * @throws IOException  if an error occurs while rotating the managed key.
+   * @throws KeyException if an error occurs while rotating the managed key.
+   */
+  ManagedKeyData rotateManagedKey(byte[] keyCust, String keyNamespace)
+    throws IOException, KeyException;
+
+  /**
+   * Refresh all the keymeta entries for the specified custodian and namespace.
+   * @param keyCust      The key custodian identifier.
+   * @param keyNamespace The namespace for the key management.
+   * @throws IOException  if an error occurs while refreshing managed keys.
+   * @throws KeyException if an error occurs while refreshing managed keys.
+   */
+  void refreshManagedKeys(byte[] keyCust, String keyNamespace) throws IOException, KeyException;
 }

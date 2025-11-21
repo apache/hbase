@@ -85,7 +85,7 @@ public abstract class ModifyRegionUtils {
   /**
    * Create new set of regions on the specified file-system. NOTE: that you should add the regions
    * to hbase:meta after this operation.
-   * @param conf            {@link Configuration}
+   * @param env             {@link MasterProcedureEnv}
    * @param rootDir         Root directory for HBase instance
    * @param tableDescriptor description of the table
    * @param newRegions      {@link RegionInfo} that describes the regions to create

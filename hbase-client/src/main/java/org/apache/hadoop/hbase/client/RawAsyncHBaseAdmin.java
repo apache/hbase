@@ -76,6 +76,7 @@ import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
 import org.apache.hadoop.hbase.client.replication.TableCFs;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.quotas.QuotaFilter;
@@ -152,6 +153,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfi
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.EmptyMsg;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.LastHighestWalFilenum;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyEntryRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
@@ -4665,7 +4668,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Void> refreshSystemKeyCacheOnServers(Set<ServerName> regionServers) {
+  public CompletableFuture<Void> refreshSystemKeyCacheOnServers(List<ServerName> regionServers) {
     CompletableFuture<Void> future = new CompletableFuture<>();
     List<CompletableFuture<Void>> futures =
       regionServers.stream().map(this::refreshSystemKeyCache).collect(Collectors.toList());
@@ -4685,6 +4688,64 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       .action((controller, stub) -> this.<EmptyMsg, EmptyMsg, Void> adminCall(controller, stub,
         EmptyMsg.getDefaultInstance(),
         (s, c, req, done) -> s.refreshSystemKeyCache(controller, req, done), resp -> null))
+      .serverName(serverName).call();
+  }
+
+  @Override
+  public CompletableFuture<Void> ejectManagedKeyDataCacheEntryOnServers(
+    List<ServerName> regionServers, byte[] keyCustodian, String keyNamespace, String keyMetadata) {
+    CompletableFuture<Void> future = new CompletableFuture<>();
+    // Create the request once instead of repeatedly for each server
+    byte[] keyMetadataHash = ManagedKeyData.constructMetadataHash(keyMetadata);
+    ManagedKeyEntryRequest request = ManagedKeyEntryRequest.newBuilder()
+      .setKeyCustNs(ManagedKeyRequest.newBuilder().setKeyCust(ByteString.copyFrom(keyCustodian))
+        .setKeyNamespace(keyNamespace).build())
+      .setKeyMetadataHash(ByteString.copyFrom(keyMetadataHash)).build();
+    List<CompletableFuture<Void>> futures =
+      regionServers.stream().map(serverName -> ejectManagedKeyDataCacheEntry(serverName, request))
+        .collect(Collectors.toList());
+    addListener(CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0])),
+      (result, err) -> {
+        if (err != null) {
+          future.completeExceptionally(err);
+        } else {
+          future.complete(result);
+        }
+      });
+    return future;
+  }
+
+  private CompletableFuture<Void> ejectManagedKeyDataCacheEntry(ServerName serverName,
+    ManagedKeyEntryRequest request) {
+    return this.<Void> newAdminCaller()
+      .action((controller, stub) -> this.<ManagedKeyEntryRequest, HBaseProtos.BooleanMsg,
+        Void> adminCall(controller, stub, request,
+          (s, c, req, done) -> s.ejectManagedKeyDataCacheEntry(controller, req, done),
+          resp -> null))
+      .serverName(serverName).call();
+  }
+
+  @Override
+  public CompletableFuture<Void> clearManagedKeyDataCacheOnServers(List<ServerName> regionServers) {
+    CompletableFuture<Void> future = new CompletableFuture<>();
+    List<CompletableFuture<Void>> futures =
+      regionServers.stream().map(this::clearManagedKeyDataCache).collect(Collectors.toList());
+    addListener(CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0])),
+      (result, err) -> {
+        if (err != null) {
+          future.completeExceptionally(err);
+        } else {
+          future.complete(result);
+        }
+      });
+    return future;
+  }
+
+  private CompletableFuture<Void> clearManagedKeyDataCache(ServerName serverName) {
+    return this.<Void> newAdminCaller()
+      .action((controller, stub) -> this.<EmptyMsg, EmptyMsg, Void> adminCall(controller, stub,
+        EmptyMsg.getDefaultInstance(),
+        (s, c, req, done) -> s.clearManagedKeyDataCache(controller, req, done), resp -> null))
       .serverName(serverName).call();
   }
 }

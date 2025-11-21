@@ -26,14 +26,26 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Public
 public enum ManagedKeyState {
+
+  // Key management states that are also applicable to individual keys.
+
   /** Represents the active status of a managed key. */
   ACTIVE((byte) 1),
-  /** Represents the inactive status of a managed key. */
-  INACTIVE((byte) 2),
   /** Represents the retrieval failure status of a managed key. */
-  FAILED((byte) 3),
+  FAILED((byte) 2),
   /** Represents the disabled status of a managed key. */
-  DISABLED((byte) 4),;
+  DISABLED((byte) 3),
+
+  // Additional states that are applicable only to individual keys.
+
+  /** Represents the inactive status of a managed key. */
+  INACTIVE((byte) 4),
+
+  /** Represents the disable state of an active key. */
+  ACTIVE_DISABLED((byte) 5),
+
+  /** Represents the disable state of an inactive key. */
+  INACTIVE_DISABLED((byte) 6),;
 
   private static Map<Byte, ManagedKeyState> lookupByVal;
 
@@ -49,6 +61,15 @@ public enum ManagedKeyState {
    */
   public byte getVal() {
     return val;
+  }
+
+  /**
+   * Returns the external state of a key.
+   * @param state The key state to convert
+   * @return The external state of the key
+   */
+  public ManagedKeyState getExternalState() {
+    return this == ACTIVE_DISABLED || this == INACTIVE_DISABLED ? DISABLED : this;
   }
 
   /**
@@ -74,5 +95,9 @@ public enum ManagedKeyState {
    */
   public static boolean isUsable(ManagedKeyState state) {
     return state == ACTIVE || state == INACTIVE;
+  }
+
+  public static boolean isKeyManagementState(ManagedKeyState state) {
+    return state.getVal() < 4;
   }
 }

@@ -429,11 +429,10 @@ module Hbase
 
       puts "      >> Altered #{table_name} CF #{cf_name} to use namespace #{namespace}"
 
-      # The new encryption attribute won't be used unless HStore is reinitialized.
-      # To force reinitialization, disable and enable the table.
-      command(:disable, table_name)
-      command(:enable, table_name)
-      # sleep for 5s to ensure region is reopened and store is reinitialized
+      # The CF alter should trigger an online schema change and should cause the stores to be
+      # reopened and the encryption context to be reinitialized, but it is asynchronous and may take
+      # some time, so we sleep for 5s, following the same pattern as in the
+      # TestEncryptionKeyRotation.testCFKeyRotation().
       sleep(5)
 
       # Scan all existing data to verify accessibility

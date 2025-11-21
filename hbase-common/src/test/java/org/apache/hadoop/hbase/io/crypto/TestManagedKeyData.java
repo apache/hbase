@@ -32,6 +32,7 @@ import javax.crypto.KeyGenerator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -85,12 +86,12 @@ public class TestManagedKeyData {
   }
 
   @Test
-  public void testConstructorWithFailedStateAndNullMetadata() {
-    ManagedKeyData keyData =
-      new ManagedKeyData(keyCust, keyNamespace, null, ManagedKeyState.FAILED, null);
+  public void testConstructorWithFailedEncryptionStateAndNullMetadata() {
+    ManagedKeyData keyData = new ManagedKeyData(keyCust, keyNamespace, ManagedKeyState.FAILED);
     assertNotNull(keyData);
     assertEquals(ManagedKeyState.FAILED, keyData.getKeyState());
     assertNull(keyData.getKeyMetadata());
+    assertNull(keyData.getKeyMetadataHash());
     assertNull(keyData.getTheKey());
   }
 
@@ -104,12 +105,13 @@ public class TestManagedKeyData {
 
   @Test
   public void testCloneWithoutKey() {
-    ManagedKeyData cloned = managedKeyData.cloneWithoutKey();
+    ManagedKeyData cloned = managedKeyData.createClientFacingInstance();
     assertNull(cloned.getTheKey());
+    assertNull(cloned.getKeyMetadata());
     assertEquals(managedKeyData.getKeyCustodian(), cloned.getKeyCustodian());
     assertEquals(managedKeyData.getKeyNamespace(), cloned.getKeyNamespace());
     assertEquals(managedKeyData.getKeyState(), cloned.getKeyState());
-    assertEquals(managedKeyData.getKeyMetadata(), cloned.getKeyMetadata());
+    assertTrue(Bytes.equals(managedKeyData.getKeyMetadataHash(), cloned.getKeyMetadataHash()));
   }
 
   @Test
@@ -149,17 +151,6 @@ public class TestManagedKeyData {
     String encodedHash = managedKeyData.getKeyMetadataHashEncoded();
     assertNotNull(encodedHash);
     assertEquals(24, encodedHash.length()); // Base64 encoded MD5 hash is 24 characters long
-  }
-
-  @Test
-  public void testGetKeyMetadataHashEncodedWithNullHash() {
-    // Create ManagedKeyData with FAILED state and null metadata
-    // Passing null for metadata should result in null hash.
-    ManagedKeyData keyData =
-      new ManagedKeyData("custodian".getBytes(), "namespace", null, ManagedKeyState.FAILED, null);
-
-    String encoded = keyData.getKeyMetadataHashEncoded();
-    assertNull(encoded);
   }
 
   @Test

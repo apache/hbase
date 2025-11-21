@@ -1148,7 +1148,19 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
-  public void refreshSystemKeyCacheOnServers(Set<ServerName> regionServers) throws IOException {
+  public void refreshSystemKeyCacheOnServers(List<ServerName> regionServers) throws IOException {
     get(admin.refreshSystemKeyCacheOnServers(regionServers));
+  }
+
+  @Override
+  public void ejectManagedKeyDataCacheEntryOnServers(List<ServerName> regionServers,
+    byte[] keyCustodian, String keyNamespace, String keyMetadata) throws IOException {
+    get(admin.ejectManagedKeyDataCacheEntryOnServers(regionServers, keyCustodian, keyNamespace,
+      keyMetadata));
+  }
+
+  @Override
+  public void clearManagedKeyDataCacheOnServers(List<ServerName> regionServers) throws IOException {
+    get(admin.clearManagedKeyDataCacheOnServers(regionServers));
   }
 }

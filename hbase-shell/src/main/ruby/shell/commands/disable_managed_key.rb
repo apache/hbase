@@ -22,22 +22,22 @@ require 'shell/commands/keymeta_command_base'
 
 module Shell
   module Commands
-    # EnableKeyManagement is a class that provides a Ruby interface to enable key management via
+    # DisableManagedKey is a class that provides a Ruby interface to disable a managed key via
     # HBase Key Management API.
-    class EnableKeyManagement < KeymetaCommandBase
+    class DisableManagedKey < KeymetaCommandBase
       def help
         <<-EOF
-Enable key management for a given cust:namespace (cust in Base64 encoded).
-If no namespace is specified, the global namespace (*) is used.
+Disable a managed key for a given cust:namespace (cust in Base64 encoded) and key metadata hash
+(Base64 encoded). If no namespace is specified, the global namespace (*) is used.
 
 Example:
-  hbase> enable_key_management 'cust:namespace'
-  hbase> enable_key_management 'cust'
+  hbase> disable_managed_key 'cust:namespace key_metadata_hash_base64'
+  hbase> disable_managed_key 'cust key_metadata_hash_base64'
         EOF
       end
 
-      def command(key_info)
-        statuses = [keymeta_admin.enable_key_management(key_info)]
+      def command(key_info, key_metadata_hash_base64)
+        statuses = [keymeta_admin.disable_managed_key(key_info, key_metadata_hash_base64)]
         print_key_statuses(statuses)
       end
     end
