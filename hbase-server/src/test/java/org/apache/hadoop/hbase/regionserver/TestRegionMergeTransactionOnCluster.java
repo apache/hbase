@@ -58,7 +58,6 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterRpcServices;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
-import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -163,15 +162,17 @@ public class TestRegionMergeTransactionOnCluster {
         : mergedRegions.getSecond();
       MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
       AssignmentManager am = cluster.getMaster().getAssignmentManager();
-      RegionStates regionStates = am.getRegionStates();
 
-      // We should not be able to assign it again
+      // We should not be able to assign it again, but we are able to do it here. Assertions are
+      // poor here and missing that assign is possible here. Created HBASE-29692 for resolving this.
       am.assign(hri);
-      assertFalse("Merged region can't be assigned", regionStates.isRegionInTransition(hri));
+      assertFalse("Merged region can't be assigned",
+        am.getRegionStates().getRegionStateNode(hri).isTransitionScheduled());
 
       // We should not be able to unassign it either
       am.unassign(hri);
-      assertFalse("Merged region can't be unassigned", regionStates.isRegionInTransition(hri));
+      assertFalse("Merged region can't be unassigned",
+        am.getRegionStates().getRegionStateNode(hri).isTransitionScheduled());
 
       table.close();
     } finally {
@@ -562,11 +563,11 @@ public class TestRegionMergeTransactionOnCluster {
         enabled.get() && req.getTransition(0).getTransitionCode() == TransitionCode.READY_TO_MERGE
           && !resp.hasErrorMessage()
       ) {
-        RegionStates regionStates = myMaster.getAssignmentManager().getRegionStates();
-        for (RegionState regionState : regionStates.getRegionsStateInTransition()) {
+        AssignmentManager am = myMaster.getAssignmentManager();
+        for (RegionState regionState : am.getRegionsStateInTransition()) {
           // Find the merging_new region and remove it
           if (regionState.isMergingNew()) {
-            regionStates.deleteRegion(regionState.getRegion());
+            am.getRegionStates().deleteRegion(regionState.getRegion());
           }
         }
       }

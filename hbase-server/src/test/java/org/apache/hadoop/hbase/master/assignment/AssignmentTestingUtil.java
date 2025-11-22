@@ -50,7 +50,7 @@ public final class AssignmentTestingUtil {
 
   public static void waitForRegionToBeInTransition(final HBaseTestingUtility util,
     final RegionInfo hri) throws Exception {
-    while (!getMaster(util).getAssignmentManager().getRegionStates().isRegionInTransition(hri)) {
+    while (!getMaster(util).getAssignmentManager().isRegionInTransition(hri)) {
       Threads.sleep(10);
     }
   }
@@ -141,7 +141,7 @@ public final class AssignmentTestingUtil {
     RegionStateNode regionNode = am.getRegionStates().getRegionStateNode(regionInfo);
     // Wait until the region has already been open, or we have a TRSP along with it.
     Waiter.waitFor(am.getConfiguration(), 30000,
-      () -> regionNode.isInState(State.OPEN) || regionNode.isInTransition());
+      () -> regionNode.isInState(State.OPEN) || regionNode.isTransitionScheduled());
     TransitRegionStateProcedure proc = regionNode.getProcedure();
     regionNode.lock();
     try {
