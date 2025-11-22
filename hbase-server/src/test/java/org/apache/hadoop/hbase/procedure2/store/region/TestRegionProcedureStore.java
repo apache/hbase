@@ -326,6 +326,15 @@ public class TestRegionProcedureStore extends RegionProcedureStoreTestBase {
       @Override
       public void incrementResponseExceptionSize(long exceptionSize) {
       }
+
+      @Override
+      public CallQueueType getQueueType() {
+        return CallQueueType.DEFAULT;
+      }
+
+      @Override
+      public void setQueueType(CallQueueType type) {
+      }
     };
   }
 }
