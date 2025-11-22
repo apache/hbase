@@ -4479,6 +4479,13 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
       }
     }
     masterRegion.flush(true);
+
+    try {
+      masterRegion.requestRollAll();
+      masterRegion.waitUntilWalRollFinished();
+    } catch (Exception e) {
+      throw new IOException("Error rolling HMaster WAL", e);
+    }
     if (this.cpHost != null) {
       try {
         cpHost.postMasterStoreFlush();

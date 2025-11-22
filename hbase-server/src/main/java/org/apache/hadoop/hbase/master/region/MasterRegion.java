@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.master.region;
 
 import static org.apache.hadoop.hbase.HConstants.HREGION_LOGDIR_NAME;
 
-import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
@@ -248,14 +247,10 @@ public final class MasterRegion {
     }
   }
 
-  @RestrictedApi(explanation = "Should only be called in tests", link = "",
-      allowedOnPath = ".*/src/test/.*")
   public void requestRollAll() {
     walRoller.requestRollAll();
   }
 
-  @RestrictedApi(explanation = "Should only be called in tests", link = "",
-      allowedOnPath = ".*/src/test/.*")
   public void waitUntilWalRollFinished() throws InterruptedException {
     walRoller.waitUntilWalRollFinished();
   }
