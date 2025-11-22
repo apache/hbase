@@ -1376,4 +1376,10 @@ public class ThriftAdmin implements Admin {
     throw new NotImplementedException(
       "isReplicationPeerModificationEnabled not supported in ThriftAdmin");
   }
+
+  @Override
+  public void refreshSystemKeyCacheOnServers(Set<ServerName> regionServers) throws IOException {
+    throw new NotImplementedException(
+      "refreshSystemKeyCacheOnServers not supported in ThriftAdmin");
+  }
 }

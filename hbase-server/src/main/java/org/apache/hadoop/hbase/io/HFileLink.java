@@ -175,6 +175,15 @@ public class HFileLink extends FileLink {
   }
 
   /**
+   * Get the table name and family name from the origin path.
+   * @return the table name and family name
+   */
+  public Pair<String, String> getTableNameAndFamilyName() {
+    return new Pair<>(this.originPath.getParent().getName(),
+      this.originPath.getParent().getParent().getParent().getName());
+  }
+
+  /**
    * @param path Path to check.
    * @return True if the path is a HFileLink.
    */

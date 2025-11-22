@@ -38,6 +38,10 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
+import org.apache.hadoop.hbase.keymeta.KeyManagementService;
+import org.apache.hadoop.hbase.keymeta.KeymetaAdmin;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
+import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.hbck.HbckChore;
 import org.apache.hadoop.hbase.master.janitor.CatalogJanitor;
@@ -117,6 +121,21 @@ public class MockNoopMasterServices implements MasterServices {
   }
 
   @Override
+  public SystemKeyCache getSystemKeyCache() {
+    return null;
+  }
+
+  @Override
+  public ManagedKeyDataCache getManagedKeyDataCache() {
+    return null;
+  }
+
+  @Override
+  public KeymetaAdmin getKeymetaAdmin() {
+    return null;
+  }
+
+  @Override
   public CatalogJanitor getCatalogJanitor() {
     return null;
   }
@@ -134,6 +153,11 @@ public class MockNoopMasterServices implements MasterServices {
   @Override
   public MasterWalManager getMasterWalManager() {
     return null;
+  }
+
+  @Override
+  public boolean rotateSystemKeyIfChanged() {
+    return false;
   }
 
   @Override
@@ -569,8 +593,12 @@ public class MockNoopMasterServices implements MasterServices {
     return 0;
   }
 
-  @Override
   public long rollAllWALWriters(long nonceGroup, long nonce) throws IOException {
     return 0;
+  }
+
+  @Override
+  public KeyManagementService getKeyManagementService() {
+    return this;
   }
 }

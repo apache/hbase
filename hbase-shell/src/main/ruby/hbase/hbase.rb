@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 #
 #
 # Licensed to the Apache Software Foundation (ASF) under one
@@ -29,6 +31,7 @@ require 'hbase/security'
 require 'hbase/visibility_labels'
 
 module Hbase
+  # Main HBase class for connection and admin operations
   class Hbase
     attr_accessor :configuration
 
@@ -45,18 +48,21 @@ module Hbase
     end
 
     def connection
-      if @connection.nil?
-        @connection = ConnectionFactory.createConnection(configuration)
-      end
+      @connection = ConnectionFactory.createConnection(configuration) if @connection.nil?
       @connection
     end
+
     # Returns ruby's Admin class from admin.rb
     def admin
-      ::Hbase::Admin.new(self.connection)
+      ::Hbase::Admin.new(connection)
     end
 
     def rsgroup_admin
-      ::Hbase::RSGroupAdmin.new(self.connection)
+      ::Hbase::RSGroupAdmin.new(connection)
+    end
+
+    def keymeta_admin
+      ::Hbase::KeymetaAdmin.new(connection)
     end
 
     def taskmonitor
@@ -65,7 +71,7 @@ module Hbase
 
     # Create new one each time
     def table(table, shell)
-      ::Hbase::Table.new(self.connection.getTable(TableName.valueOf(table)), shell)
+      ::Hbase::Table.new(connection.getTable(TableName.valueOf(table)), shell)
     end
 
     def replication_admin
@@ -73,21 +79,19 @@ module Hbase
     end
 
     def security_admin
-      ::Hbase::SecurityAdmin.new(self.connection.getAdmin)
+      ::Hbase::SecurityAdmin.new(connection.getAdmin)
     end
 
     def visibility_labels_admin
-      ::Hbase::VisibilityLabelsAdmin.new(self.connection.getAdmin)
+      ::Hbase::VisibilityLabelsAdmin.new(connection.getAdmin)
     end
 
     def quotas_admin
-      ::Hbase::QuotasAdmin.new(self.connection.getAdmin)
+      ::Hbase::QuotasAdmin.new(connection.getAdmin)
     end
 
     def shutdown
-      if @connection != nil
-        @connection.close
-      end
+      @connection&.close
     end
   end
 end

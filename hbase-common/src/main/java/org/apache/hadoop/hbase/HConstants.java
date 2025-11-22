@@ -343,6 +343,7 @@ public final class HConstants {
 
   /** Parameter name for HBase instance root directory */
   public static final String HBASE_DIR = "hbase.rootdir";
+  public static final String HBASE_ORIGINAL_DIR = "hbase.originalRootdir";
 
   /** Parameter name for HBase client IPC pool type */
   public static final String HBASE_CLIENT_IPC_POOL_TYPE = "hbase.client.ipc.pool.type";
@@ -1194,6 +1195,11 @@ public final class HConstants {
   /** Temporary directory used for table creation and deletion */
   public static final String HBASE_TEMP_DIRECTORY = ".tmp";
   /**
+   * Directory used for storing master keys for the cluster
+   */
+  public static final String SYSTEM_KEYS_DIRECTORY = ".system_keys";
+  public static final String SYSTEM_KEY_FILE_PREFIX = "system_key.";
+  /**
    * The period (in milliseconds) between computing region server point in time metrics
    */
   public static final String REGIONSERVER_METRICS_PERIOD = "hbase.regionserver.metrics.period";
@@ -1282,6 +1288,14 @@ public final class HConstants {
   public static final String CRYPTO_KEYPROVIDER_PARAMETERS_KEY =
     "hbase.crypto.keyprovider.parameters";
 
+  /** Configuration key for the managed crypto key provider, a class name */
+  public static final String CRYPTO_MANAGED_KEYPROVIDER_CONF_KEY =
+    "hbase.crypto.managed.keyprovider";
+
+  /** Configuration key for the managed crypto key provider parameters */
+  public static final String CRYPTO_MANAGED_KEYPROVIDER_PARAMETERS_KEY =
+    "hbase.crypto.managed.keyprovider.parameters";
+
   /** Configuration key for the name of the master key for the cluster, a string */
   public static final String CRYPTO_MASTERKEY_NAME_CONF_KEY = "hbase.crypto.master.key.name";
 
@@ -1304,6 +1318,43 @@ public final class HConstants {
 
   /** Configuration key for enabling WAL encryption, a boolean */
   public static final String ENABLE_WAL_ENCRYPTION = "hbase.regionserver.wal.encryption";
+
+  /**
+   * Property used by ManagedKeyStoreKeyProvider class to set the alias that identifies the current
+   * system key.
+   */
+  public static final String CRYPTO_MANAGED_KEY_STORE_SYSTEM_KEY_NAME_CONF_KEY =
+    "hbase.crypto.managed_key_store.system.key.name";
+  public static final String CRYPTO_MANAGED_KEY_STORE_CONF_KEY_PREFIX =
+    "hbase.crypto.managed_key_store.cust.";
+
+  /** Enables or disables the key management feature. */
+  public static final String CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY =
+    "hbase.crypto.managed_keys.enabled";
+  public static final boolean CRYPTO_MANAGED_KEYS_DEFAULT_ENABLED = false;
+
+  /**
+   * Enables or disables key lookup during data path as an alternative to static injection of keys
+   * using control path.
+   */
+  public static final String CRYPTO_MANAGED_KEYS_DYNAMIC_LOOKUP_ENABLED_CONF_KEY =
+    "hbase.crypto.managed_keys.dynamic_lookup.enabled";
+  public static final boolean CRYPTO_MANAGED_KEYS_DYNAMIC_LOOKUP_DEFAULT_ENABLED = true;
+
+  /** Maximum number of entries in the managed key data cache. */
+  public static final String CRYPTO_MANAGED_KEYS_L1_CACHE_MAX_ENTRIES_CONF_KEY =
+    "hbase.crypto.managed_keys.l1_cache.max_entries";
+  public static final int CRYPTO_MANAGED_KEYS_L1_CACHE_MAX_ENTRIES_DEFAULT = 1000;
+
+  /** Maximum number of entries in the managed key active keys cache. */
+  public static final String CRYPTO_MANAGED_KEYS_L1_ACTIVE_CACHE_MAX_NS_ENTRIES_CONF_KEY =
+    "hbase.crypto.managed_keys.l1_active_cache.max_ns_entries";
+  public static final int CRYPTO_MANAGED_KEYS_L1_ACTIVE_CACHE_MAX_NS_ENTRIES_DEFAULT = 100;
+
+  /** Enables or disables local key generation per file. */
+  public static final String CRYPTO_MANAGED_KEYS_LOCAL_KEY_GEN_PER_FILE_ENABLED_CONF_KEY =
+    "hbase.crypto.managed_keys.local_key_gen_per_file.enabled";
+  public static final boolean CRYPTO_MANAGED_KEYS_LOCAL_KEY_GEN_PER_FILE_DEFAULT_ENABLED = false;
 
   /** Configuration key for setting RPC codec class name */
   public static final String RPC_CODEC_CONF_KEY = "hbase.client.rpc.codec";

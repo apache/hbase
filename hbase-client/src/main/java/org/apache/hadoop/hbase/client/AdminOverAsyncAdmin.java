@@ -1146,4 +1146,9 @@ class AdminOverAsyncAdmin implements Admin {
   public void restoreBackupSystemTable(String snapshotName) throws IOException {
     get(admin.restoreBackupSystemTable(snapshotName));
   }
+
+  @Override
+  public void refreshSystemKeyCacheOnServers(Set<ServerName> regionServers) throws IOException {
+    get(admin.refreshSystemKeyCacheOnServers(regionServers));
+  }
 }

@@ -52,6 +52,12 @@ import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.http.InfoServer;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
+import org.apache.hadoop.hbase.keymeta.KeyManagementService;
+import org.apache.hadoop.hbase.keymeta.KeymetaAdmin;
+import org.apache.hadoop.hbase.keymeta.KeymetaAdminImpl;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
+import org.apache.hadoop.hbase.keymeta.SystemKeyAccessor;
+import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
@@ -60,6 +66,7 @@ import org.apache.hadoop.hbase.regionserver.HeapMemoryManager;
 import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
 import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.ShutdownHook;
+import org.apache.hadoop.hbase.security.SecurityUtil;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
@@ -86,7 +93,7 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends Thread
-  implements Server, ConfigurationObserver, ConnectionRegistryEndpoint {
+  implements Server, ConfigurationObserver, ConnectionRegistryEndpoint, KeyManagementService {
 
   private static final Logger LOG = LoggerFactory.getLogger(HBaseServerBase.class);
 
@@ -187,6 +194,10 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
 
   protected final NettyEventLoopGroupConfig eventLoopGroupConfig;
 
+  protected SystemKeyCache systemKeyCache;
+  protected KeymetaAdminImpl keymetaAdmin;
+  protected ManagedKeyDataCache managedKeyDataCache;
+
   private void setupSignalHandlers() {
     if (!SystemUtils.IS_OS_WINDOWS) {
       HBasePlatformDependent.handle("HUP", (number, name) -> {
@@ -282,6 +293,8 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
       setupSignalHandlers();
 
       initializeFileSystem();
+
+      keymetaAdmin = new KeymetaAdminImpl(this);
 
       int choreServiceInitialSize =
         conf.getInt(CHORE_SERVICE_INITIAL_POOL_SIZE, DEFAULT_CHORE_SERVICE_INITIAL_POOL_SIZE);
@@ -401,6 +414,38 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
   @Override
   public ZKWatcher getZooKeeper() {
     return zooKeeper;
+  }
+
+  @Override
+  public KeymetaAdmin getKeymetaAdmin() {
+    return keymetaAdmin;
+  }
+
+  @Override
+  public ManagedKeyDataCache getManagedKeyDataCache() {
+    return managedKeyDataCache;
+  }
+
+  @Override
+  public SystemKeyCache getSystemKeyCache() {
+    return systemKeyCache;
+  }
+
+  protected void buildSystemKeyCache() throws IOException {
+    if (systemKeyCache == null && SecurityUtil.isKeyManagementEnabled(conf)) {
+      systemKeyCache = SystemKeyCache.createCache(new SystemKeyAccessor(this));
+    }
+  }
+
+  /**
+   * Rebuilds the system key cache. This method can be called to refresh the system key cache when
+   * the system key has been rotated.
+   * @throws IOException if there is an error rebuilding the cache
+   */
+  public void rebuildSystemKeyCache() throws IOException {
+    if (SecurityUtil.isKeyManagementEnabled(conf)) {
+      systemKeyCache = SystemKeyCache.createCache(new SystemKeyAccessor(this));
+    }
   }
 
   protected final void shutdownChore(ScheduledChore chore) {
@@ -626,6 +671,11 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
     conf.reloadConfiguration();
     configurationManager.notifyAllObservers(conf);
     postUpdateConfiguration();
+  }
+
+  @Override
+  public KeyManagementService getKeyManagementService() {
+    return this;
   }
 
   private void preUpdateConfiguration() throws IOException {
