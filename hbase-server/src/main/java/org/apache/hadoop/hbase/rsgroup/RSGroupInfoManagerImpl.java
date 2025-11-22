@@ -1191,8 +1191,8 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       Map<String, RegionState> groupRIT = rsGroupGetRegionsInTransition(groupName);
       if (groupRIT.size() > 0 && !request.isIgnoreRegionsInTransition()) {
         LOG.debug("Not running balancer because {} region(s) in transition: {}", groupRIT.size(),
-          StringUtils.abbreviate(masterServices.getAssignmentManager().getRegionStates()
-            .getRegionsInTransition().toString(), 256));
+          StringUtils.abbreviate(
+            masterServices.getAssignmentManager().getRegionsInTransition().toString(), 256));
         return responseBuilder.build();
       }
 
