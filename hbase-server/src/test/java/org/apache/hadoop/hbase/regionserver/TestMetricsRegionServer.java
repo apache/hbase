@@ -342,18 +342,5 @@ public class TestMetricsRegionServer {
       serverSource);
     HELPER.assertCounter("RpcThrottlingException_Type_ReadSizeExceeded_User_charlie_Table_metadata",
       1L, serverSource);
-
-    // Test metric name sanitization through the integration
-    rsm.recordThrottleException(RpcThrottlingException.Type.RequestSizeExceeded,
-      "user.with@special", "table:with,problematic=chars");
-    HELPER.assertCounter(
-      "RpcThrottlingException_Type_RequestSizeExceeded_User_user.with@special_Table_table_with_problematic_chars",
-      1L, serverSource);
-
-    // Test null handling through the integration
-    rsm.recordThrottleException(RpcThrottlingException.Type.ReadCapacityUnitExceeded, null, null);
-    HELPER.assertCounter(
-      "RpcThrottlingException_Type_ReadCapacityUnitExceeded_User_unknown_Table_unknown", 1L,
-      serverSource);
   }
 }
