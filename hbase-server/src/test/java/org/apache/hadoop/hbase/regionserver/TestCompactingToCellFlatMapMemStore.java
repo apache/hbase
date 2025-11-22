@@ -69,21 +69,17 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
   // Helpers
   //////////////////////////////////////////////////////////////////////////////
   public TestCompactingToCellFlatMapMemStore(String type) {
-    if (type == "CHUNK_MAP") {
-      toCellChunkMap = true;
-    } else {
-      toCellChunkMap = false;
-    }
+    toCellChunkMap = "CHUNK_MAP".equals(type);
   }
 
   @Override
   public void tearDown() throws Exception {
     chunkCreator.clearChunksInPool();
+    super.tearDown();
   }
 
   @Override
   public void setUp() throws Exception {
-
     compactingSetUp();
     this.conf = HBaseConfiguration.create();
 
@@ -922,6 +918,12 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
         assertEquals(size, cell.getSerializedSize());
       }
     }
+  }
+
+  @Override
+  @Test
+  public void testScan() throws IOException {
+    scanMemStore(memstore, 915);
   }
 
   private long addRowsByKeysDataSize(final AbstractMemStore hmc, String[] keys) {
