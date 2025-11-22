@@ -27,7 +27,7 @@ import org.apache.hadoop.hbase.http.FilterContainer;
 import org.apache.hadoop.hbase.http.HttpServer;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
+import org.apache.hadoop.hbase.security.authentication.server.AuthenticationFilter;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
