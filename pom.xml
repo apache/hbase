@@ -875,7 +875,7 @@
     <audience-annotations.version>0.15.0</audience-annotations.version>
     <javadoc.audience-annotations.version>0.15.0</javadoc.audience-annotations.version>
     <avro.version>1.11.4</avro.version>
-    <caffeine.version>2.8.1</caffeine.version>
+    <caffeine.version>3.2.2</caffeine.version>
     <commons-codec.version>1.15</commons-codec.version>
     <commons-validator.version>1.7</commons-validator.version>
     <commons-io.version>2.18.0</commons-io.version>

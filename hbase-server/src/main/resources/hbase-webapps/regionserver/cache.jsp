@@ -21,6 +21,8 @@
          import="org.apache.hadoop.hbase.io.hfile.BlockCache"
          import="org.apache.hadoop.hbase.regionserver.HRegionServer" %>
 <%@ page import="org.apache.hadoop.hbase.io.hfile.CacheConfig" %>
+<%@ page import="org.apache.hadoop.hbase.regionserver.RowCacheService" %>
+<%@ page import="org.apache.hadoop.hbase.regionserver.RowCache" %>
 
 <%-- Template for rendering Block Cache tabs in RegionServer Status page. --%>
 
@@ -35,15 +37,19 @@
   BlockCache[] bcs = bc == null ? null : bc.getBlockCaches();
   BlockCache l1 = bcs == null ? bc : bcs[0];
   BlockCache l2 = bcs == null ? null : bcs.length <= 1 ? null : bcs[1];
+
+  RowCacheService rowCacheService = regionServer.getRSRpcServices().getRowCacheService();
+  RowCache rowCache = rowCacheService == null ? null : rowCacheService.getRowCache();
 %>
 
 <div class="tabbable">
   <ul class="nav nav-pills" role="tablist">
     <li class="nav-item"><a class="nav-link active" href="#tab_bc_baseInfo" data-bs-toggle="tab" role="tab">Base Info</a></li>
     <li class="nav-item"><a class="nav-link" href="#tab_bc_config" data-bs-toggle="tab" role="tab">Config</a></li>
-    <li class="nav-item"><a class="nav-link" href="#tab_bc_stats" data-bs-toggle="tab" role="tab">Stats</a></li>
-    <li class="nav-item"><a class="nav-link" href="#tab_bc_l1" data-bs-toggle="tab" role="tab">L1</a></li>
-    <li class="nav-item"><a class="nav-link" href="#tab_bc_l2" data-bs-toggle="tab" role="tab">L2</a></li>
+    <li class="nav-item"><a class="nav-link" href="#tab_bc_stats" data-bs-toggle="tab" role="tab">Block Cache Stats</a></li>
+    <li class="nav-item"><a class="nav-link" href="#tab_bc_l1" data-bs-toggle="tab" role="tab">Block Cache L1</a></li>
+    <li class="nav-item"><a class="nav-link" href="#tab_bc_l2" data-bs-toggle="tab" role="tab">Block Cache L2</a></li>
+    <li class="nav-item"><a class="nav-link" href="#tab_row_cache" data-bs-toggle="tab" role="tab">Row Cache</a></li>
   </ul>
   <div class="tab-content">
     <div class="tab-pane active" id="tab_bc_baseInfo" role="tabpanel">
@@ -67,6 +73,10 @@
       <% request.setAttribute("bc", l2); %>
       <% request.setAttribute("name", "L2"); %>
       <jsp:include page="blockCacheLevel.jsp"/>
+    </div>
+    <div class="tab-pane" id="tab_row_cache" role="tabpanel">
+      <% request.setAttribute("rowCache", rowCache); %>
+      <jsp:include page="rowCacheStats.jsp"/>
     </div>
   </div>
 </div>
