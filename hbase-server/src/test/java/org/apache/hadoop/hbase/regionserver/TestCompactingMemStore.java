@@ -845,6 +845,12 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
     memstore.clearSnapshot(snapshot.getId());
   }
 
+  @Test
+  @Override
+  public void testScan() throws IOException {
+    scanMemStore(memstore, 6635);
+  }
+
   protected int addRowsByKeys(final AbstractMemStore hmc, String[] keys) {
     byte[] fam = Bytes.toBytes("testfamily");
     byte[] qf = Bytes.toBytes("testqualifier");

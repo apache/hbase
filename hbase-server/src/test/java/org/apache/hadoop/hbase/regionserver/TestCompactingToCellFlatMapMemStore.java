@@ -920,6 +920,12 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
     }
   }
 
+  @Test
+  @Override
+  public void testScan() throws IOException {
+    scanMemStore(memstore, 915);
+  }
+
   private long addRowsByKeysDataSize(final AbstractMemStore hmc, String[] keys) {
     byte[] fam = Bytes.toBytes("testfamily");
     byte[] qf = Bytes.toBytes("testqualifier");

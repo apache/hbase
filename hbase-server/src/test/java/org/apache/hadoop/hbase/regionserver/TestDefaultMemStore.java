@@ -91,6 +91,7 @@ public class TestDefaultMemStore {
   public TestName name = new TestName();
   protected AbstractMemStore memstore;
   protected static final int ROW_COUNT = 10;
+  protected static final int SCAN_ROW_COUNT = 25000;
   protected static final int QUALIFIER_COUNT = ROW_COUNT;
   protected static final byte[] FAMILY = Bytes.toBytes("column");
   protected MultiVersionConcurrencyControl mvcc;
@@ -1135,15 +1136,19 @@ public class TestDefaultMemStore {
     return cnt;
   }
 
-  @Test
-  public void testScan() throws IOException {
+  protected void scanMemStore(MemStore ms, int expectedCount) throws IOException {
     long n1 = System.nanoTime();
-    addRows(25000, memstore);
+    addRows(SCAN_ROW_COUNT, ms);
     LOG.info("Took for insert: {}", (System.nanoTime() - n1) / 1000);
 
     for (int i = 0; i < 50; i++) {
-      int cnt = doScan(memstore, i);
-      assertEquals(memstore.getActive().getCellsCount(), cnt);
+      int cnt = doScan(ms, i);
+      assertEquals(expectedCount, cnt);
     }
+  }
+
+  @Test
+  public void testScan() throws IOException {
+    scanMemStore(memstore, SCAN_ROW_COUNT * QUALIFIER_COUNT);
   }
 }
