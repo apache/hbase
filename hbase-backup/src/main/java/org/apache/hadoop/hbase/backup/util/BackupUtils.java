@@ -17,17 +17,28 @@
  */
 package org.apache.hadoop.hbase.backup.util;
 
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONF_CONTINUOUS_BACKUP_WAL_DIR;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONTINUOUS_BACKUP_REPLICATION_PEER;
+import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.ONE_DAY_IN_MILLISECONDS;
+import static org.apache.hadoop.hbase.backup.util.BackupFileSystemManager.WALS_DIR;
+import static org.apache.hadoop.hbase.replication.regionserver.ReplicationMarkerChore.REPLICATION_MARKER_ENABLED_DEFAULT;
+import static org.apache.hadoop.hbase.replication.regionserver.ReplicationMarkerChore.REPLICATION_MARKER_ENABLED_KEY;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URLDecoder;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.TimeZone;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import org.apache.hadoop.conf.Configuration;
@@ -39,6 +50,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
@@ -56,6 +68,11 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.region.MasterRegionFactory;
+import org.apache.hadoop.hbase.replication.ReplicationException;
+import org.apache.hadoop.hbase.replication.ReplicationGroupOffset;
+import org.apache.hadoop.hbase.replication.ReplicationQueueId;
+import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
+import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -67,6 +84,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
+import org.apache.hbase.thirdparty.com.google.common.base.Strings;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterators;
@@ -79,6 +97,7 @@ public final class BackupUtils {
   private static final Logger LOG = LoggerFactory.getLogger(BackupUtils.class);
   public static final String LOGNAME_SEPARATOR = ".";
   public static final int MILLISEC_IN_HOUR = 3600000;
+  public static final String DATE_FORMAT = "yyyy-MM-dd";
 
   private BackupUtils() {
     throw new AssertionError("Instantiating utility class...");
@@ -820,5 +839,234 @@ public final class BackupUtils {
         }
       }
     }
+  }
+
+  /**
+   * Calculates the replication checkpoint timestamp used for continuous backup.
+   * <p>
+   * A replication checkpoint is the earliest timestamp across all region servers such that every
+   * WAL entry before that point is known to be replicated to the target system. This is essential
+   * for features like Point-in-Time Restore (PITR) and incremental backups, where we want to
+   * confidently restore data to a consistent state without missing updates.
+   * <p>
+   * The checkpoint is calculated using a combination of:
+   * <ul>
+   * <li>The start timestamps of WAL files currently being replicated for each server.</li>
+   * <li>The latest successfully replicated timestamp recorded by the replication marker chore.</li>
+   * </ul>
+   * <p>
+   * We combine these two sources to handle the following challenges:
+   * <ul>
+   * <li><b>Stale WAL start times:</b> If replication traffic is low or WALs are long-lived, the
+   * replication offset may point to the same WAL for a long time, resulting in stale timestamps
+   * that underestimate progress. This could delay PITR unnecessarily.</li>
+   * <li><b>Limitations of marker-only tracking:</b> The replication marker chore stores the last
+   * successfully replicated timestamp per region server in a system table. However, this data may
+   * become stale if the server goes offline or region ownership changes. For example, if a region
+   * initially belonged to rs1 and was later moved to rs4 due to re-balancing, rs1’s marker would
+   * persist even though it no longer holds any regions. Relying solely on these stale markers could
+   * lead to incorrect or outdated checkpoints.</li>
+   * </ul>
+   * <p>
+   * To handle these limitations, the method:
+   * <ol>
+   * <li>Verifies that the continuous backup peer exists to ensure replication is enabled.</li>
+   * <li>Retrieves WAL replication queue information for the peer, collecting WAL start times per
+   * region server. This gives us a lower bound for replication progress.</li>
+   * <li>Reads the marker chore's replicated timestamps from the backup system table.</li>
+   * <li>For servers found in both sources, if the marker timestamp is more recent than the WAL's
+   * start timestamp, we use the marker (since replication has progressed beyond the WAL).</li>
+   * <li>We discard marker entries for region servers that are not present in WAL queues, assuming
+   * those servers are no longer relevant (e.g., decommissioned or reassigned).</li>
+   * <li>The checkpoint is the minimum of all chosen timestamps — i.e., the slowest replicating
+   * region server.</li>
+   * <li>Finally, we persist the updated marker information to include any newly participating
+   * region servers.</li>
+   * </ol>
+   * <p>
+   * Note: If the replication marker chore is disabled, we fall back to using only the WAL start
+   * times. This ensures correctness but may lead to conservative checkpoint estimates during idle
+   * periods.
+   * @param conn the HBase connection
+   * @return the calculated replication checkpoint timestamp
+   * @throws IOException if reading replication queues or updating the backup system table fails
+   */
+  public static long getReplicationCheckpoint(Connection conn) throws IOException {
+    Configuration conf = conn.getConfiguration();
+    long checkpoint = EnvironmentEdgeManager.getDelegate().currentTime();
+
+    // Step 1: Ensure the continuous backup replication peer exists
+    if (!continuousBackupReplicationPeerExists(conn.getAdmin())) {
+      String msg = "Replication peer '" + CONTINUOUS_BACKUP_REPLICATION_PEER
+        + "' not found. Continuous backup not enabled.";
+      LOG.error(msg);
+      throw new IOException(msg);
+    }
+
+    // Step 2: Get all replication queues for the continuous backup peer
+    ReplicationQueueStorage queueStorage =
+      ReplicationStorageFactory.getReplicationQueueStorage(conn, conf);
+
+    List<ReplicationQueueId> queueIds;
+    try {
+      queueIds = queueStorage.listAllQueueIds(CONTINUOUS_BACKUP_REPLICATION_PEER);
+    } catch (ReplicationException e) {
+      String msg = "Failed to retrieve replication queue IDs for peer '"
+        + CONTINUOUS_BACKUP_REPLICATION_PEER + "'";
+      LOG.error(msg, e);
+      throw new IOException(msg, e);
+    }
+
+    if (queueIds.isEmpty()) {
+      String msg = "Replication peer '" + CONTINUOUS_BACKUP_REPLICATION_PEER + "' has no queues. "
+        + "This may indicate that continuous backup replication is not initialized correctly.";
+      LOG.error(msg);
+      throw new IOException(msg);
+    }
+
+    // Step 3: Build a map of ServerName -> WAL start timestamp (lowest seen per server)
+    Map<ServerName, Long> serverToCheckpoint = new HashMap<>();
+    for (ReplicationQueueId queueId : queueIds) {
+      Map<String, ReplicationGroupOffset> offsets;
+      try {
+        offsets = queueStorage.getOffsets(queueId);
+      } catch (ReplicationException e) {
+        String msg = "Failed to fetch WAL offsets for replication queue: " + queueId;
+        LOG.error(msg, e);
+        throw new IOException(msg, e);
+      }
+
+      for (ReplicationGroupOffset offset : offsets.values()) {
+        String walFile = offset.getWal();
+        long ts = AbstractFSWALProvider.getTimestamp(walFile); // WAL creation time
+        ServerName server = queueId.getServerName();
+        // Store the minimum timestamp per server (ts - 1 to avoid edge boundary issues)
+        serverToCheckpoint.merge(server, ts - 1, Math::min);
+      }
+    }
+
+    // Step 4: If replication markers are enabled, overlay fresher timestamps from backup system
+    // table
+    boolean replicationMarkerEnabled =
+      conf.getBoolean(REPLICATION_MARKER_ENABLED_KEY, REPLICATION_MARKER_ENABLED_DEFAULT);
+    if (replicationMarkerEnabled) {
+      try (BackupSystemTable backupSystemTable = new BackupSystemTable(conn)) {
+        Map<ServerName, Long> markerTimestamps = backupSystemTable.getBackupCheckpointTimestamps();
+
+        for (Map.Entry<ServerName, Long> entry : markerTimestamps.entrySet()) {
+          ServerName server = entry.getKey();
+          long markerTs = entry.getValue();
+
+          // If marker timestamp is newer, override
+          if (serverToCheckpoint.containsKey(server)) {
+            long current = serverToCheckpoint.get(server);
+            if (markerTs > current) {
+              serverToCheckpoint.put(server, markerTs);
+            }
+          } else {
+            // This server is no longer active (e.g., RS moved or removed); skip
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Skipping replication marker timestamp for inactive server: {}", server);
+            }
+          }
+        }
+
+        // Step 5: Persist current server timestamps into backup system table
+        for (Map.Entry<ServerName, Long> entry : serverToCheckpoint.entrySet()) {
+          backupSystemTable.updateBackupCheckpointTimestamp(entry.getKey(), entry.getValue());
+        }
+      }
+    } else {
+      LOG.warn(
+        "Replication marker chore is disabled. Using WAL-based timestamps only for checkpoint calculation.");
+    }
+
+    // Step 6: Calculate final checkpoint as minimum timestamp across all active servers
+    for (long ts : serverToCheckpoint.values()) {
+      checkpoint = Math.min(checkpoint, ts);
+    }
+
+    return checkpoint;
+  }
+
+  private static boolean continuousBackupReplicationPeerExists(Admin admin) throws IOException {
+    return admin.listReplicationPeers().stream()
+      .anyMatch(peer -> peer.getPeerId().equals(CONTINUOUS_BACKUP_REPLICATION_PEER));
+  }
+
+  /**
+   * Convert dayInMillis to "yyyy-MM-dd" format
+   */
+  public static String formatToDateString(long dayInMillis) {
+    SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
+    dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+    return dateFormat.format(new Date(dayInMillis));
+  }
+
+  /**
+   * Fetches bulkload filepaths based on the given time range from backup WAL directory.
+   */
+  public static List<Path> collectBulkFiles(Connection conn, TableName sourceTable,
+    TableName targetTable, long startTime, long endTime, Path restoreRootDir, List<String> walDirs)
+    throws IOException {
+
+    if (walDirs.isEmpty()) {
+      String walBackupDir = conn.getConfiguration().get(CONF_CONTINUOUS_BACKUP_WAL_DIR);
+      if (Strings.isNullOrEmpty(walBackupDir)) {
+        throw new IOException(
+          "WAL backup directory is not configured " + CONF_CONTINUOUS_BACKUP_WAL_DIR);
+      }
+      Path walDirPath = new Path(walBackupDir);
+      walDirs =
+        BackupUtils.getValidWalDirs(conn.getConfiguration(), walDirPath, startTime, endTime);
+    }
+
+    if (walDirs.isEmpty()) {
+      LOG.warn("No valid WAL directories found for range {} - {}. Skipping bulk-file collection.",
+        startTime, endTime);
+      return Collections.emptyList();
+    }
+
+    LOG.info(
+      "Starting WAL bulk-file collection for source: {}, target: {}, time range: {} - {}, WAL "
+        + "backup dir: {}, restore root: {}",
+      sourceTable, targetTable, startTime, endTime, walDirs, restoreRootDir);
+    String walDirsCsv = String.join(",", walDirs);
+
+    return BulkFilesCollector.collectFromWalDirs(HBaseConfiguration.create(conn.getConfiguration()),
+      walDirsCsv, restoreRootDir, sourceTable, targetTable, startTime, endTime);
+  }
+
+  /**
+   * Fetches valid WAL directories based on the given time range.
+   */
+  public static List<String> getValidWalDirs(Configuration conf, Path walBackupDir, long startTime,
+    long endTime) throws IOException {
+    FileSystem backupFs = FileSystem.get(walBackupDir.toUri(), conf);
+    FileStatus[] dayDirs = backupFs.listStatus(new Path(walBackupDir, WALS_DIR));
+
+    List<String> validDirs = new ArrayList<>();
+    SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
+
+    for (FileStatus dayDir : dayDirs) {
+      if (!dayDir.isDirectory()) {
+        continue; // Skip files, only process directories
+      }
+
+      String dirName = dayDir.getPath().getName();
+      try {
+        Date dirDate = dateFormat.parse(dirName);
+        long dirStartTime = dirDate.getTime(); // Start of that day (00:00:00)
+        long dirEndTime = dirStartTime + ONE_DAY_IN_MILLISECONDS - 1; // End time of day (23:59:59)
+
+        // Check if this day's WAL files overlap with the required time range
+        if (dirEndTime >= startTime && dirStartTime <= endTime) {
+          validDirs.add(dayDir.getPath().toString());
+        }
+      } catch (ParseException e) {
+        LOG.warn("Skipping invalid directory name: {}", dirName, e);
+      }
+    }
+    return validDirs;
   }
 }

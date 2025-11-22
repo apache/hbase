@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.backup.impl;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -40,6 +41,7 @@ import org.apache.hadoop.hbase.backup.BackupRestoreConstants;
 import org.apache.hadoop.hbase.backup.BackupRestoreFactory;
 import org.apache.hadoop.hbase.backup.BackupType;
 import org.apache.hadoop.hbase.backup.HBackupFileSystem;
+import org.apache.hadoop.hbase.backup.PointInTimeRestoreRequest;
 import org.apache.hadoop.hbase.backup.RestoreRequest;
 import org.apache.hadoop.hbase.backup.util.BackupSet;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
@@ -174,8 +176,11 @@ public class BackupAdminImpl implements BackupAdmin {
    * @param table       backup system table
    * @throws IOException if a table operation fails
    */
-  private void finalizeDelete(List<String> backupRoots, BackupSystemTable table)
-    throws IOException {
+  @RestrictedApi(
+      explanation = "Package-private for test visibility only. Do not use outside tests.",
+      link = "",
+      allowedOnPath = "(.*/src/test/.*|.*/org/apache/hadoop/hbase/backup/impl/BackupAdminImpl.java)")
+  void finalizeDelete(List<String> backupRoots, BackupSystemTable table) throws IOException {
     for (String backupRoot : backupRoots) {
       Set<TableName> incrTableSet = table.getIncrementalBackupTableSet(backupRoot);
       Map<TableName, List<BackupInfo>> tableMap =
@@ -211,7 +216,11 @@ public class BackupAdminImpl implements BackupAdmin {
    * @return total number of deleted backup images
    * @throws IOException if deleting the backup fails
    */
-  private int deleteBackup(String backupId, BackupSystemTable sysTable) throws IOException {
+  @RestrictedApi(
+      explanation = "Package-private for test visibility only. Do not use outside tests.",
+      link = "",
+      allowedOnPath = "(.*/src/test/.*|.*/org/apache/hadoop/hbase/backup/impl/BackupAdminImpl.java)")
+  int deleteBackup(String backupId, BackupSystemTable sysTable) throws IOException {
     BackupInfo backupInfo = sysTable.readBackupInfo(backupId);
 
     int totalDeleted = 0;
@@ -273,7 +282,11 @@ public class BackupAdminImpl implements BackupAdmin {
     return totalDeleted;
   }
 
-  private void removeTableFromBackupImage(BackupInfo info, TableName tn, BackupSystemTable sysTable)
+  @RestrictedApi(
+      explanation = "Package-private for test visibility only. Do not use outside tests.",
+      link = "",
+      allowedOnPath = "(.*/src/test/.*|.*/org/apache/hadoop/hbase/backup/impl/BackupAdminImpl.java)")
+  void removeTableFromBackupImage(BackupInfo info, TableName tn, BackupSystemTable sysTable)
     throws IOException {
     List<TableName> tables = info.getTableNames();
     LOG.debug(
@@ -296,7 +309,11 @@ public class BackupAdminImpl implements BackupAdmin {
     }
   }
 
-  private List<BackupInfo> getAffectedBackupSessions(BackupInfo backupInfo, TableName tn,
+  @RestrictedApi(
+      explanation = "Package-private for test visibility only. Do not use outside tests.",
+      link = "",
+      allowedOnPath = "(.*/src/test/.*|.*/org/apache/hadoop/hbase/backup/impl/BackupAdminImpl.java)")
+  List<BackupInfo> getAffectedBackupSessions(BackupInfo backupInfo, TableName tn,
     BackupSystemTable table) throws IOException {
     LOG.debug("GetAffectedBackupInfos for: " + backupInfo.getBackupId() + " table=" + tn);
     long ts = backupInfo.getStartTs();
@@ -328,7 +345,11 @@ public class BackupAdminImpl implements BackupAdmin {
    * Clean up the data at target directory
    * @throws IOException if cleaning up the backup directory fails
    */
-  private void cleanupBackupDir(BackupInfo backupInfo, TableName table, Configuration conf)
+  @RestrictedApi(
+      explanation = "Package-private for test visibility only. Do not use outside tests.",
+      link = "",
+      allowedOnPath = "(.*/src/test/.*|.*/org/apache/hadoop/hbase/backup/impl/BackupAdminImpl.java)")
+  void cleanupBackupDir(BackupInfo backupInfo, TableName table, Configuration conf)
     throws IOException {
     try {
       // clean up the data at target directory
@@ -338,7 +359,7 @@ public class BackupAdminImpl implements BackupAdmin {
         return;
       }
 
-      FileSystem outputFs = FileSystem.get(new Path(backupInfo.getBackupRootDir()).toUri(), conf);
+      FileSystem outputFs = getFileSystem(new Path(backupInfo.getBackupRootDir()), conf);
 
       Path targetDirPath = new Path(BackupUtils.getTableBackupDir(backupInfo.getBackupRootDir(),
         backupInfo.getBackupId(), table));
@@ -354,7 +375,19 @@ public class BackupAdminImpl implements BackupAdmin {
     }
   }
 
-  private boolean isLastBackupSession(BackupSystemTable table, TableName tn, long startTime)
+  @RestrictedApi(
+      explanation = "Package-private for test visibility only. Do not use outside tests.",
+      link = "",
+      allowedOnPath = "(.*/src/test/.*|.*/org/apache/hadoop/hbase/backup/impl/BackupAdminImpl.java)")
+  FileSystem getFileSystem(Path path, Configuration conf) throws IOException {
+    return FileSystem.get(path.toUri(), conf);
+  }
+
+  @RestrictedApi(
+      explanation = "Package-private for test visibility only. Do not use outside tests.",
+      link = "",
+      allowedOnPath = "(.*/src/test/.*|.*/org/apache/hadoop/hbase/backup/impl/BackupAdminImpl.java)")
+  boolean isLastBackupSession(BackupSystemTable table, TableName tn, long startTime)
     throws IOException {
     List<BackupInfo> history = table.getBackupHistory();
     for (BackupInfo info : history) {
@@ -490,15 +523,8 @@ public class BackupAdminImpl implements BackupAdmin {
   @Override
   public void restore(RestoreRequest request) throws IOException {
     if (request.isCheck()) {
-      // check and load backup image manifest for the tables
-      Path rootPath = new Path(request.getBackupRootDir());
-      String backupId = request.getBackupId();
-      TableName[] sTableArray = request.getFromTables();
-      BackupManifest manifest =
-        HBackupFileSystem.getManifest(conn.getConfiguration(), rootPath, backupId);
-
-      // Check and validate the backup image and its dependencies
-      if (BackupUtils.validate(Arrays.asList(sTableArray), manifest, conn.getConfiguration())) {
+      boolean isValid = validateRequest(request);
+      if (isValid) {
         LOG.info(CHECK_OK);
       } else {
         LOG.error(CHECK_FAILED);
@@ -509,6 +535,42 @@ public class BackupAdminImpl implements BackupAdmin {
     new RestoreTablesClient(conn, request).execute();
   }
 
+  public boolean validateRequest(RestoreRequest request) throws IOException {
+    // check and load backup image manifest for the tables
+    Path rootPath = new Path(request.getBackupRootDir());
+    String backupId = request.getBackupId();
+    TableName[] sTableArray = request.getFromTables();
+    BackupManifest manifest =
+      HBackupFileSystem.getManifest(conn.getConfiguration(), rootPath, backupId);
+
+    // Validate the backup image and its dependencies
+    return BackupUtils.validate(Arrays.asList(sTableArray), manifest, conn.getConfiguration());
+  }
+
+  /**
+   * Initiates Point-In-Time Restore (PITR) for the given request.
+   * <p>
+   * If {@code backupRootDir} is specified in the request, performs PITR using metadata from the
+   * provided custom backup location. Otherwise, defaults to using metadata from the backup system
+   * table.
+   * @param request PointInTimeRestoreRequest containing PITR parameters.
+   * @throws IOException if validation fails or restore cannot be completed.
+   */
+  @Override
+  public void pointInTimeRestore(PointInTimeRestoreRequest request) throws IOException {
+    AbstractPitrRestoreHandler handler;
+
+    // Choose the appropriate handler based on whether a custom backup location is provided
+    if (request.getBackupRootDir() == null) {
+      handler = new DefaultPitrRestoreHandler(conn, request);
+    } else {
+      handler = new CustomBackupLocationPitrRestoreHandler(conn, request);
+    }
+    handler.validateAndRestore();
+
+    LOG.info("Successfully completed Point In Time Restore for all tables.");
+  }
+
   @Override
   public String backupTables(BackupRequest request) throws IOException {
     BackupType type = request.getBackupType();
@@ -517,28 +579,47 @@ public class BackupAdminImpl implements BackupAdmin {
 
     String backupId = BackupRestoreConstants.BACKUPID_PREFIX + EnvironmentEdgeManager.currentTime();
     if (type == BackupType.INCREMENTAL) {
-      Set<TableName> incrTableSet;
-      try (BackupSystemTable table = new BackupSystemTable(conn)) {
-        incrTableSet = table.getIncrementalBackupTableSet(targetRootDir);
-      }
-
-      if (incrTableSet.isEmpty()) {
-        String msg =
-          "Incremental backup table set contains no tables. " + "You need to run full backup first "
+      if (request.isContinuousBackupEnabled()) {
+        Set<TableName> continuousBackupTableSet;
+        try (BackupSystemTable table = new BackupSystemTable(conn)) {
+          continuousBackupTableSet = table.getContinuousBackupTableSet().keySet();
+        }
+        if (continuousBackupTableSet.isEmpty()) {
+          String msg = "Continuous backup table set contains no tables. "
+            + "You need to run Continuous backup first "
             + (tableList != null ? "on " + StringUtils.join(tableList, ",") : "");
-
-        throw new IOException(msg);
-      }
-      if (tableList != null) {
-        tableList.removeAll(incrTableSet);
-        if (!tableList.isEmpty()) {
-          String extraTables = StringUtils.join(tableList, ",");
-          String msg = "Some tables (" + extraTables + ") haven't gone through full backup. "
-            + "Perform full backup on " + extraTables + " first, " + "then retry the command";
           throw new IOException(msg);
         }
+        if (!continuousBackupTableSet.containsAll(tableList)) {
+          String extraTables = StringUtils.join(tableList, ",");
+          String msg = "Some tables (" + extraTables + ") haven't gone through Continuous backup. "
+            + "Perform Continuous backup on " + extraTables + " first, then retry the command";
+          throw new IOException(msg);
+        }
+      } else {
+        Set<TableName> incrTableSet;
+        try (BackupSystemTable table = new BackupSystemTable(conn)) {
+          incrTableSet = table.getIncrementalBackupTableSet(targetRootDir);
+        }
+
+        if (incrTableSet.isEmpty()) {
+          String msg = "Incremental backup table set contains no tables. "
+            + "You need to run full backup first "
+            + (tableList != null ? "on " + StringUtils.join(tableList, ",") : "");
+
+          throw new IOException(msg);
+        }
+        if (tableList != null) {
+          tableList.removeAll(incrTableSet);
+          if (!tableList.isEmpty()) {
+            String extraTables = StringUtils.join(tableList, ",");
+            String msg = "Some tables (" + extraTables + ") haven't gone through full backup. "
+              + "Perform full backup on " + extraTables + " first, then retry the command";
+            throw new IOException(msg);
+          }
+        }
+        tableList = Lists.newArrayList(incrTableSet);
       }
-      tableList = Lists.newArrayList(incrTableSet);
     }
     if (tableList != null && !tableList.isEmpty()) {
       for (TableName table : tableList) {
@@ -565,7 +646,12 @@ public class BackupAdminImpl implements BackupAdmin {
         }
       }
       if (nonExistingTableList != null) {
-        if (type == BackupType.INCREMENTAL) {
+        // Non-continuous incremental backup is controlled by 'incremental backup table set'
+        // and not by user provided backup table list. This is an optimization to avoid copying
+        // the same set of WALs for incremental backups of different tables at different times
+        // HBASE-14038. Since continuous incremental backup and full backup backs-up user provided
+        // table list, we should inform use about non-existence of input table(s)
+        if (type == BackupType.INCREMENTAL && !request.isContinuousBackupEnabled()) {
           // Update incremental backup set
           tableList = excludeNonExistingTables(tableList, nonExistingTableList);
         } else {
@@ -581,7 +667,8 @@ public class BackupAdminImpl implements BackupAdmin {
     request = builder.withBackupType(request.getBackupType()).withTableList(tableList)
       .withTargetRootDir(request.getTargetRootDir()).withBackupSetName(request.getBackupSetName())
       .withTotalTasks(request.getTotalTasks()).withBandwidthPerTasks((int) request.getBandwidth())
-      .withNoChecksumVerify(request.getNoChecksumVerify()).build();
+      .withNoChecksumVerify(request.getNoChecksumVerify())
+      .withContinuousBackupEnabled(request.isContinuousBackupEnabled()).build();
 
     TableBackupClient client;
     try {
@@ -627,8 +714,11 @@ public class BackupAdminImpl implements BackupAdmin {
    * @param table     backup system table
    * @throws IOException if the backup image is not valid for merge
    */
-  private void checkIfValidForMerge(String[] backupIds, BackupSystemTable table)
-    throws IOException {
+  @RestrictedApi(
+      explanation = "Package-private for test visibility only. Do not use outside tests.",
+      link = "",
+      allowedOnPath = "(.*/src/test/.*|.*/org/apache/hadoop/hbase/backup/impl/BackupAdminImpl.java)")
+  void checkIfValidForMerge(String[] backupIds, BackupSystemTable table) throws IOException {
     String backupRoot = null;
 
     final Set<TableName> allTables = new HashSet<>();
