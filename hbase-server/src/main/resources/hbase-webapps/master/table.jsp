@@ -381,6 +381,10 @@
                         double rSize = load.getStoreFileSize().get(Size.Unit.BYTE);
                         if (rSize > 0) {
                           fileSize = StringUtils.byteDesc((long) rSize);
+                          // use the primary replica only for the total store file size calculation
+                          if (j == 0) {
+                            totalStoreFileSizeMB += load.getStoreFileSize().get(Size.Unit.MEGABYTE);
+                          }
                         }
                         double rSizeUncompressed = load.getUncompressedStoreFileSize().get(Size.Unit.BYTE);
                         if (rSizeUncompressed > 0) {
