@@ -322,6 +322,18 @@ public class ScannerContext {
   }
 
   /**
+   * Update the time limit.
+   * If the new limit would be later than the current one or would be in the past then do nothing.
+   * 
+   * @param timeLimit The new time limit in milliseconds.
+   */
+  void setTimeLimit(long newLimit) {
+    if (newLimit < limits.getTime() && newLimit > EnvironmentEdgeManager.currentTime()) {
+      limits.setTime(newLimit);
+    }
+  }
+
+  /**
    * @param scope The scope in which the time limit will be enforced
    */
   void setTimeLimitScope(LimitScope scope) {
