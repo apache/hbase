@@ -845,8 +845,8 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
     memstore.clearSnapshot(snapshot.getId());
   }
 
-  @Test
   @Override
+  @Test
   public void testScan() throws IOException {
     scanMemStore(memstore, 6635);
   }

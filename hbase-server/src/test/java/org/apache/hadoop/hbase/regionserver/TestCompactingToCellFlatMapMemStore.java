@@ -920,8 +920,8 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
     }
   }
 
-  @Test
   @Override
+  @Test
   public void testScan() throws IOException {
     scanMemStore(memstore, 915);
   }
