@@ -511,6 +511,10 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
   public void replaceStoreFiles(Collection<HStoreFile> compactedFiles,
     Collection<HStoreFile> newFiles, IOExceptionRunnable walMarkerWriter, Runnable actionUnderLock)
     throws IOException {
+    // System.out.println(ctx.getRegionInfo().getEncodedName());
+    // System.out.println("Replacing files in SFT for ");
+    // System.out.println("old files - " + compactedFiles);
+    // System.out.println("new files - " + newFiles);
     storeFileTracker.replace(StoreUtils.toStoreFileInfo(compactedFiles),
       StoreUtils.toStoreFileInfo(newFiles));
     walMarkerWriter.run();
