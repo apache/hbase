@@ -182,6 +182,22 @@ public class TestManagedKeyData {
   }
 
   @Test
+  public void testEqualsWithNull() {
+    assertNotEquals(managedKeyData, null);
+  }
+
+  @Test
+  public void testEqualsWithDifferentClass() {
+    assertNotEquals(managedKeyData, "not a ManagedKeyData");
+    assertNotEquals(managedKeyData, new Object());
+  }
+
+  @Test
+  public void testEqualsSameInstance() {
+    assertEquals(managedKeyData, managedKeyData);
+  }
+
+  @Test
   public void testHashCode() {
     ManagedKeyData same = new ManagedKeyData(keyCust, keyNamespace, theKey, keyState, keyMetadata);
     assertEquals(managedKeyData.hashCode(), same.hashCode());
