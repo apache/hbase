@@ -20,8 +20,8 @@ package org.apache.hadoop.hbase.quotas;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-
-import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * With this limiter resources will be refilled only after a fixed interval of time.
@@ -43,6 +43,8 @@ public class FixedIntervalRateLimiter extends RateLimiter {
   public static final String RATE_LIMITER_REFILL_INTERVAL_MS =
     "hbase.quota.rate.limiter.refill.interval.ms";
 
+  private static final Logger LOG = LoggerFactory.getLogger(FixedIntervalRateLimiter.class);
+
   private long nextRefillTime = -1L;
   private final long refillInterval;
 
@@ -52,10 +54,14 @@ public class FixedIntervalRateLimiter extends RateLimiter {
 
   public FixedIntervalRateLimiter(long refillInterval) {
     super();
-    Preconditions.checkArgument(getTimeUnitInMillis() >= refillInterval,
-      String.format("Refill interval %s must be less than or equal to TimeUnit millis %s",
-        refillInterval, getTimeUnitInMillis()));
-    this.refillInterval = refillInterval;
+    long timeUnit = getTimeUnitInMillis();
+    if (refillInterval > timeUnit) {
+      LOG.warn(
+        "Refill interval {} is larger than time unit {}. This is invalid. "
+          + "Instead, we will use the time unit {} as the refill interval",
+        refillInterval, timeUnit, timeUnit);
+    }
+    this.refillInterval = Math.min(timeUnit, refillInterval);
   }
 
   @Override

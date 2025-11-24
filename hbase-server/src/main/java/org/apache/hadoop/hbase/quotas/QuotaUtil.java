@@ -329,8 +329,9 @@ public class QuotaUtil extends QuotaTableUtil {
     doDelete(connection, delete);
   }
 
-  public static Map<String, UserQuotaState> fetchUserQuotas(final Connection connection,
-    Map<TableName, Double> tableMachineQuotaFactors, double factor) throws IOException {
+  public static Map<String, UserQuotaState> fetchUserQuotas(final Configuration conf,
+    final Connection connection, Map<TableName, Double> tableMachineQuotaFactors, double factor)
+    throws IOException {
     Map<String, UserQuotaState> userQuotas = new HashMap<>();
     try (Table table = connection.getTable(QUOTA_TABLE_NAME)) {
       Scan scan = new Scan();
@@ -350,7 +351,7 @@ public class QuotaUtil extends QuotaTableUtil {
               @Override
               public void visitUserQuotas(String userName, String namespace, Quotas quotas) {
                 quotas = updateClusterQuotaToMachineQuota(quotas, factor);
-                quotaInfo.setQuotas(namespace, quotas);
+                quotaInfo.setQuotas(conf, namespace, quotas);
               }
 
               @Override
@@ -359,13 +360,13 @@ public class QuotaUtil extends QuotaTableUtil {
                   tableMachineQuotaFactors.containsKey(table)
                     ? tableMachineQuotaFactors.get(table)
                     : 1);
-                quotaInfo.setQuotas(table, quotas);
+                quotaInfo.setQuotas(conf, table, quotas);
               }
 
               @Override
               public void visitUserQuotas(String userName, Quotas quotas) {
                 quotas = updateClusterQuotaToMachineQuota(quotas, factor);
-                quotaInfo.setQuotas(quotas);
+                quotaInfo.setQuotas(conf, quotas);
               }
             });
           } catch (IOException e) {
@@ -406,7 +407,7 @@ public class QuotaUtil extends QuotaTableUtil {
     UserQuotaState state = new UserQuotaState();
     QuotaProtos.Quotas defaultQuotas =
       QuotaProtos.Quotas.newBuilder().setThrottle(throttleBuilder.build()).build();
-    state.setQuotas(defaultQuotas);
+    state.setQuotas(conf, defaultQuotas);
     return state;
   }
 
@@ -419,12 +420,12 @@ public class QuotaUtil extends QuotaTableUtil {
       java.util.concurrent.TimeUnit.SECONDS, org.apache.hadoop.hbase.quotas.QuotaScope.MACHINE));
   }
 
-  public static Map<TableName, QuotaState> fetchTableQuotas(final Connection connection,
-    Map<TableName, Double> tableMachineFactors) throws IOException {
+  public static Map<TableName, QuotaState> fetchTableQuotas(final Configuration conf,
+    final Connection connection, Map<TableName, Double> tableMachineFactors) throws IOException {
     Scan scan = new Scan();
     scan.addFamily(QUOTA_FAMILY_INFO);
     scan.setStartStopRowForPrefixScan(QUOTA_TABLE_ROW_KEY_PREFIX);
-    return fetchGlobalQuotas("table", scan, connection, new KeyFromRow<TableName>() {
+    return fetchGlobalQuotas(conf, "table", scan, connection, new KeyFromRow<TableName>() {
       @Override
       public TableName getKeyFromRow(final byte[] row) {
         assert isTableRowKey(row);
@@ -438,12 +439,12 @@ public class QuotaUtil extends QuotaTableUtil {
     });
   }
 
-  public static Map<String, QuotaState> fetchNamespaceQuotas(final Connection connection,
-    double factor) throws IOException {
+  public static Map<String, QuotaState> fetchNamespaceQuotas(final Configuration conf,
+    final Connection connection, double factor) throws IOException {
     Scan scan = new Scan();
     scan.addFamily(QUOTA_FAMILY_INFO);
     scan.setStartStopRowForPrefixScan(QUOTA_NAMESPACE_ROW_KEY_PREFIX);
-    return fetchGlobalQuotas("namespace", scan, connection, new KeyFromRow<String>() {
+    return fetchGlobalQuotas(conf, "namespace", scan, connection, new KeyFromRow<String>() {
       @Override
       public String getKeyFromRow(final byte[] row) {
         assert isNamespaceRowKey(row);
@@ -457,12 +458,12 @@ public class QuotaUtil extends QuotaTableUtil {
     });
   }
 
-  public static Map<String, QuotaState> fetchRegionServerQuotas(final Connection connection)
-    throws IOException {
+  public static Map<String, QuotaState> fetchRegionServerQuotas(final Configuration conf,
+    final Connection connection) throws IOException {
     Scan scan = new Scan();
     scan.addFamily(QUOTA_FAMILY_INFO);
     scan.setStartStopRowForPrefixScan(QUOTA_REGION_SERVER_ROW_KEY_PREFIX);
-    return fetchGlobalQuotas("regionServer", scan, connection, new KeyFromRow<String>() {
+    return fetchGlobalQuotas(conf, "regionServer", scan, connection, new KeyFromRow<String>() {
       @Override
       public String getKeyFromRow(final byte[] row) {
         assert isRegionServerRowKey(row);
@@ -476,8 +477,9 @@ public class QuotaUtil extends QuotaTableUtil {
     });
   }
 
-  public static <K> Map<K, QuotaState> fetchGlobalQuotas(final String type, final Scan scan,
-    final Connection connection, final KeyFromRow<K> kfr) throws IOException {
+  public static <K> Map<K, QuotaState> fetchGlobalQuotas(final Configuration conf,
+    final String type, final Scan scan, final Connection connection, final KeyFromRow<K> kfr)
+    throws IOException {
 
     Map<K, QuotaState> globalQuotas = new HashMap<>();
     try (Table table = connection.getTable(QUOTA_TABLE_NAME)) {
@@ -498,7 +500,7 @@ public class QuotaUtil extends QuotaTableUtil {
           try {
             Quotas quotas = quotasFromData(data);
             quotas = updateClusterQuotaToMachineQuota(quotas, kfr.getFactor(key));
-            quotaInfo.setQuotas(quotas);
+            quotaInfo.setQuotas(conf, quotas);
           } catch (IOException e) {
             LOG.error("Unable to parse {} '{}' quotas", type, key, e);
             globalQuotas.remove(key);
