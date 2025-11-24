@@ -549,7 +549,8 @@ public class ServerManager implements ConfigurationObserver {
    * @return true if any RS are being processed as dead, false if not
    */
   public boolean areDeadServersInProgress() throws IOException {
-    return master.getProcedures().stream().anyMatch(p -> p instanceof ServerCrashProcedure);
+    return master.getProcedures().stream()
+      .anyMatch(p -> !p.isFinished() && p instanceof ServerCrashProcedure);
   }
 
   void letRegionServersShutdown() {
