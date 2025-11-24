@@ -1944,14 +1944,17 @@ public class BucketCache implements BlockCache, HeapSize {
     LOG.debug("found {} blocks for file {}, starting offset: {}, end offset: {}", keySet.size(),
       hfileName, initOffset, endOffset);
     int numEvicted = 0;
-    int totalKeys = keySet.size();
     for (BlockCacheKey key : keySet) {
       if (evictBlock(key)) {
         ++numEvicted;
       }
     }
-    if (numEvicted > 0 && numEvicted == totalKeys) {
-      FilePathStringPool.getInstance().remove(hfileName);
+    if (numEvicted > 0) {
+      // We need to make sure whether we are evicting all blocks for this given file
+      int totalFileKeys = getAllCacheKeysForFile(hfileName, 0, Long.MAX_VALUE).size();
+      if (totalFileKeys == numEvicted) {
+        FilePathStringPool.getInstance().remove(hfileName);
+      }
     }
     return numEvicted;
   }

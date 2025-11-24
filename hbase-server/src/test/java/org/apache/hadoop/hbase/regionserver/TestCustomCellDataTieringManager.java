@@ -187,13 +187,14 @@ public class TestCustomCellDataTieringManager {
     Path basePath = hStoreFiles.get(0).getPath().getParent().getParent().getParent();
     hFilePath = new Path(basePath, "incorrectRegion/cf1/filename");
     testDataTieringMethodWithPathExpectingException(methodCallerWithPath, hFilePath,
-      new DataTieringException("HRegion corresponding to " + hFilePath + " doesn't exist"));
+      new DataTieringException("HRegion corresponding to incorrectRegion doesn't exist"));
 
     // Test with a non-existing HStore path
     basePath = hStoreFiles.get(0).getPath().getParent().getParent();
     hFilePath = new Path(basePath, "incorrectCf/filename");
     testDataTieringMethodWithPathExpectingException(methodCallerWithPath, hFilePath,
-      new DataTieringException("HStore corresponding to " + hFilePath + " doesn't exist"));
+      new DataTieringException(
+        "HStore corresponding to " + basePath.getName() + "/incorrectCf doesn't exist"));
   }
 
   @Test

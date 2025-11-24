@@ -271,8 +271,18 @@ public class DataTieringManager {
   }
 
   private Configuration getConfiguration(Path hFilePath) throws DataTieringException {
-    HStore hStore =
-      getHStore(hFilePath.getParent().getParent().getName(), hFilePath.getParent().getName());
+    String regionName = null;
+    String cfName = null;
+    try {
+      regionName = hFilePath.getParent().getParent().getName();
+      cfName = hFilePath.getParent().getName();
+    } catch (Exception e) {
+      throw new DataTieringException("Incorrect HFile Path: " + hFilePath);
+    }
+    if (regionName == null || cfName == null) {
+      throw new DataTieringException("Incorrect HFile Path: " + hFilePath);
+    }
+    HStore hStore = getHStore(regionName, cfName);
     return hStore.getReadOnlyConfiguration();
   }
 
