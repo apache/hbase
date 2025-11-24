@@ -418,7 +418,7 @@ public class WALPlayer extends Configured implements Tool {
     if (hfileOutPath != null) {
       LOG.debug("add incremental job :" + hfileOutPath + " from " + inputDirs);
 
-      if (!multiTableSupport && tables.length != 1) {
+      if (!multiTableSupport && tableMap.length != 1) {
         throw new IOException("Exactly one table must be specified for the bulk export option");
       }
 
@@ -428,7 +428,7 @@ public class WALPlayer extends Configured implements Tool {
         true);
 
       // the bulk HFile case
-      List<TableName> tableNames = getTableNameList(tables);
+      List<TableName> tableNames = getTableNameList(tableMap);
 
       job.setMapperClass(WALCellMapper.class);
       if (diskBasedSortingEnabled) {
