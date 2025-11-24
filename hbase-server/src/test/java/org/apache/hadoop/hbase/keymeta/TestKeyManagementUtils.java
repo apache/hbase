@@ -179,4 +179,3 @@ public class TestKeyManagementUtils {
     assertEquals(ManagedKeyState.INACTIVE, result.getKeyState());
   }
 }
-

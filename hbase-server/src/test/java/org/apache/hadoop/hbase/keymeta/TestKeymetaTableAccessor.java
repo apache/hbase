@@ -47,7 +47,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -70,7 +69,6 @@ import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
@@ -408,7 +406,8 @@ public class TestKeymetaTableAccessor {
     }
   }
 
-  protected void assertPut(ManagedKeyData keyData, Put put, byte[] rowKey, ManagedKeyState targetState) {
+  protected void assertPut(ManagedKeyData keyData, Put put, byte[] rowKey,
+    ManagedKeyState targetState) {
     assertEquals(Durability.SKIP_WAL, put.getDurability());
     assertEquals(HConstants.SYSTEMTABLE_QOS, put.getPriority());
     assertTrue(Bytes.compareTo(rowKey, put.getRow()) == 0);
@@ -434,19 +433,19 @@ public class TestKeymetaTableAccessor {
 
   // Verify the key checksum, wrapped key, and STK checksum columns are deleted
   private static void assertDeleteColumns(Delete delete) {
-      Map<byte[], List<Cell>> familyCellMap = delete.getFamilyCellMap();
-      assertTrue(familyCellMap.containsKey(KEY_META_INFO_FAMILY));
+    Map<byte[], List<Cell>> familyCellMap = delete.getFamilyCellMap();
+    assertTrue(familyCellMap.containsKey(KEY_META_INFO_FAMILY));
 
-      List<Cell> cells = familyCellMap.get(KEY_META_INFO_FAMILY);
-      assertEquals(3, cells.size());
+    List<Cell> cells = familyCellMap.get(KEY_META_INFO_FAMILY);
+    assertEquals(3, cells.size());
 
-      // Verify each column is present in the delete
-      Set<byte[]> qualifiers =
-        cells.stream().map(CellUtil::cloneQualifier).collect(Collectors.toSet());
+    // Verify each column is present in the delete
+    Set<byte[]> qualifiers =
+      cells.stream().map(CellUtil::cloneQualifier).collect(Collectors.toSet());
 
-      assertTrue(qualifiers.stream().anyMatch(q -> Bytes.equals(q, DEK_CHECKSUM_QUAL_BYTES)));
-      assertTrue(qualifiers.stream().anyMatch(q -> Bytes.equals(q, DEK_WRAPPED_BY_STK_QUAL_BYTES)));
-      assertTrue(qualifiers.stream().anyMatch(q -> Bytes.equals(q, STK_CHECKSUM_QUAL_BYTES)));
+    assertTrue(qualifiers.stream().anyMatch(q -> Bytes.equals(q, DEK_CHECKSUM_QUAL_BYTES)));
+    assertTrue(qualifiers.stream().anyMatch(q -> Bytes.equals(q, DEK_WRAPPED_BY_STK_QUAL_BYTES)));
+    assertTrue(qualifiers.stream().anyMatch(q -> Bytes.equals(q, STK_CHECKSUM_QUAL_BYTES)));
   }
 
   private static Map<Bytes, Bytes> getValueMap(Mutation mutation) {
@@ -480,8 +479,8 @@ public class TestKeymetaTableAccessor {
 
     @Parameterized.Parameters(name = "{index},keyState={0}")
     public static Collection<Object[]> data() {
-      return Arrays.asList(new Object[][] { { ACTIVE }, { INACTIVE }, { ACTIVE_DISABLED }, {
-        INACTIVE_DISABLED }, { FAILED }, });
+      return Arrays.asList(new Object[][] { { ACTIVE }, { INACTIVE }, { ACTIVE_DISABLED },
+        { INACTIVE_DISABLED }, { FAILED }, });
     }
 
     @Test
@@ -497,14 +496,19 @@ public class TestKeymetaTableAccessor {
       int putIndex = 0;
       ManagedKeyState targetState = keyState == ACTIVE ? ACTIVE_DISABLED : INACTIVE_DISABLED;
       if (keyState == ACTIVE) {
-        assertTrue(Bytes.compareTo(constructRowKeyForCustNamespace(keyData), mutations.get(0).getRow()) == 0);
+        assertTrue(
+          Bytes.compareTo(constructRowKeyForCustNamespace(keyData), mutations.get(0).getRow())
+              == 0);
         ++putIndex;
       }
-      assertPut(keyData, (Put) mutations.get(putIndex), constructRowKeyForMetadata(keyData), targetState);
+      assertPut(keyData, (Put) mutations.get(putIndex), constructRowKeyForMetadata(keyData),
+        targetState);
       if (keyState == INACTIVE) {
-        assertTrue(Bytes.compareTo(constructRowKeyForMetadata(keyData), mutations.get(putIndex+1).getRow()) == 0);
+        assertTrue(
+          Bytes.compareTo(constructRowKeyForMetadata(keyData), mutations.get(putIndex + 1).getRow())
+              == 0);
         // Verify the key checksum, wrapped key, and STK checksum columns are deleted
-        assertDeleteColumns((Delete) mutations.get(putIndex+1));
+        assertDeleteColumns((Delete) mutations.get(putIndex + 1));
       }
     }
   }

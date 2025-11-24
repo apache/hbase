@@ -161,8 +161,7 @@ public class KeymetaAdminClient implements KeymetaAdmin {
     if (keyMetadataHash == null) {
       return new ManagedKeyData(response.getKeyCust().toByteArray(), response.getKeyNamespace(),
         ManagedKeyState.forValue((byte) response.getKeyState().getNumber()));
-    }
-    else {
+    } else {
       return new ManagedKeyData(response.getKeyCust().toByteArray(), response.getKeyNamespace(),
         ManagedKeyState.forValue((byte) response.getKeyState().getNumber()), keyMetadataHash,
         response.getRefreshTimestamp());

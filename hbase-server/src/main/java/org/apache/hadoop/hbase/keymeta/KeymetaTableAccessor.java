@@ -227,8 +227,8 @@ public class KeymetaTableAccessor extends KeyManagementBase {
     }
   }
 
-  private void addMutationsForKeyDisabled(List<Mutation> mutations, byte[] rowKey,
-    String metadata, ManagedKeyState targetState, ManagedKeyState currentState) {
+  private void addMutationsForKeyDisabled(List<Mutation> mutations, byte[] rowKey, String metadata,
+    ManagedKeyState targetState, ManagedKeyState currentState) {
     Put put = new Put(rowKey);
     if (metadata != null) {
       put.addColumn(KEY_META_INFO_FAMILY, DEK_METADATA_QUAL_BYTES, metadata.getBytes());

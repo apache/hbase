@@ -306,7 +306,8 @@ public class TestKeymetaEndpoint {
 
     // Assert
     verify(controller, never()).setFailed(anyString());
-    verify(disableKeyManagementDone).run(argThat(response -> response.getKeyState() == ManagedKeyState.KEY_INACTIVE));
+    verify(disableKeyManagementDone)
+      .run(argThat(response -> response.getKeyState() == ManagedKeyState.KEY_INACTIVE));
   }
 
   @Test
@@ -331,7 +332,8 @@ public class TestKeymetaEndpoint {
     // Assert
     verify(controller).setFailed(contains(exType.getSimpleName()));
     verify(keymetaAdmin).disableKeyManagement(any(), any());
-    verify(disableKeyManagementDone).run(argThat(response -> response.getKeyState() == ManagedKeyState.KEY_FAILED));
+    verify(disableKeyManagementDone)
+      .run(argThat(response -> response.getKeyState() == ManagedKeyState.KEY_FAILED));
   }
 
   @Test
@@ -343,7 +345,8 @@ public class TestKeymetaEndpoint {
 
     verify(controller).setFailed(contains("key_cust must not be empty"));
     verify(keymetaAdmin, never()).disableKeyManagement(any(), any());
-    verify(disableKeyManagementDone).run(argThat(response -> response.getKeyState() == ManagedKeyState.KEY_FAILED));
+    verify(disableKeyManagementDone)
+      .run(argThat(response -> response.getKeyState() == ManagedKeyState.KEY_FAILED));
   }
 
   @Test
@@ -356,7 +359,8 @@ public class TestKeymetaEndpoint {
 
     verify(controller).setFailed(contains("key_namespace must not be empty"));
     verify(keymetaAdmin, never()).disableKeyManagement(any(), any());
-    verify(disableKeyManagementDone).run(argThat(response -> response.getKeyState() == ManagedKeyState.KEY_FAILED));
+    verify(disableKeyManagementDone)
+      .run(argThat(response -> response.getKeyState() == ManagedKeyState.KEY_FAILED));
   }
 
   @Test

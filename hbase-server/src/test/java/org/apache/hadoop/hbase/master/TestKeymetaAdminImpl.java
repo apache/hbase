@@ -662,10 +662,11 @@ public class TestKeymetaAdminImpl {
 
       ManagedKeyData activeKey = new ManagedKeyData(CUST_BYTES, KEY_SPACE_GLOBAL, null,
         ManagedKeyState.ACTIVE, "metadata1", 123L);
-      ManagedKeyData disabledMarker = new ManagedKeyData(CUST_BYTES, KEY_SPACE_GLOBAL,
-        ManagedKeyState.DISABLED);
+      ManagedKeyData disabledMarker =
+        new ManagedKeyData(CUST_BYTES, KEY_SPACE_GLOBAL, ManagedKeyState.DISABLED);
 
-      when(mockAccessor.getKeyManagementStateMarker(any(), any())).thenReturn(activeKey).thenReturn(disabledMarker);
+      when(mockAccessor.getKeyManagementStateMarker(any(), any())).thenReturn(activeKey)
+        .thenReturn(disabledMarker);
 
       ManagedKeyData result = admin.disableKeyManagement(CUST_BYTES, KEY_SPACE_GLOBAL);
 

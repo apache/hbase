@@ -228,8 +228,9 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
 
     ManagedKeyData markerKey = getKeyManagementStateMarker(keyCust, keyNamespace);
     if (markerKey != null && markerKey.getKeyState() == ManagedKeyState.DISABLED) {
-      LOG.info("refreshManagedKeys skipping since key management is disabled for custodian: {} under namespace: {}", encodedCust,
-        keyNamespace);
+      LOG.info(
+        "refreshManagedKeys skipping since key management is disabled for custodian: {} under namespace: {}",
+        encodedCust, keyNamespace);
       return;
     }
     // First, get all keys for the specified custodian and namespace and refresh those that have a
@@ -247,7 +248,8 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
         ManagedKeyData refreshedKey =
           KeyManagementUtils.refreshKey(getKeyProvider(), this, keyData);
         if (refreshedKey == keyData) {
-          LOG.debug("refreshManagedKeys: Key with metadata hash: {} for custodian: {} under namespace: {} is unchanged",
+          LOG.debug(
+            "refreshManagedKeys: Key with metadata hash: {} for custodian: {} under namespace: {} is unchanged",
             keyData.getKeyMetadataHashEncoded(), encodedCust, keyNamespace);
         } else {
           if (refreshedKey.getKeyState().getExternalState() == ManagedKeyState.DISABLED) {
@@ -275,7 +277,8 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
     }
 
     if (markerKey != null && markerKey.getKeyState() == ManagedKeyState.FAILED) {
-      LOG.info("refreshManagedKeys: Found FAILED marker for (custodian: " + encodedCust + ", namespace: " + keyNamespace
+      LOG.info("refreshManagedKeys: Found FAILED marker for (custodian: " + encodedCust
+        + ", namespace: " + keyNamespace
         + ") indicating previous attempt to enable, reattempting to enable key management");
       enableKeyManagement(keyCust, keyNamespace);
     }
