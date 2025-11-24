@@ -76,15 +76,17 @@ public interface KeymetaAdmin {
   void clearManagedKeyDataCache() throws IOException;
 
   /**
-   * Disables all managed keys for the specified custodian and namespace.
+   * Disables key management for the specified custodian and namespace. This marks any ACTIVE keys
+   * as INACTIVE and adds a DISABLED state marker such that no new ACTIVE key is retrieved, so the
+   * new data written will not be encrypted.
    * @param keyCust      The key custodian identifier.
    * @param keyNamespace The namespace for the key management.
-   * @return The list of {@link ManagedKeyData} objects each identifying the key and its current
-   *         status.
+   * @return The {@link ManagedKeyData} object identifying the previously active key and its current
+   *         state.
    * @throws IOException  if an error occurs while disabling key management.
    * @throws KeyException if an error occurs while disabling key management.
    */
-  List<ManagedKeyData> disableKeyManagement(byte[] keyCust, String keyNamespace)
+  ManagedKeyData disableKeyManagement(byte[] keyCust, String keyNamespace)
     throws IOException, KeyException;
 
   /**

@@ -34,7 +34,7 @@ service ManagedKeysService {
   rpc RotateSTK(EmptyMsg)
     returns (BooleanMsg);
   rpc DisableKeyManagement(ManagedKeyRequest)
-    returns (GetManagedKeysResponse);
+    returns (ManagedKeyResponse);
   rpc DisableManagedKey(ManagedKeyEntryRequest)
     returns (ManagedKeyResponse);
   rpc RotateManagedKey(ManagedKeyRequest)

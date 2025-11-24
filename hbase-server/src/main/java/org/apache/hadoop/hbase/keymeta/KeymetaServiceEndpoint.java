@@ -171,21 +171,22 @@ public class KeymetaServiceEndpoint implements MasterCoprocessor {
      */
     @Override
     public void disableKeyManagement(RpcController controller, ManagedKeyRequest request,
-      RpcCallback<GetManagedKeysResponse> done) {
-      GetManagedKeysResponse keyStateResponse = null;
+      RpcCallback<ManagedKeyResponse> done) {
+      ManagedKeyResponse response = null;
       ManagedKeyResponse.Builder builder = ManagedKeyResponse.newBuilder();
       try {
         initManagedKeyResponseBuilder(controller, request, builder);
-        List<ManagedKeyData> managedKeyStates = master.getKeymetaAdmin()
+        ManagedKeyData managedKeyState = master.getKeymetaAdmin()
           .disableKeyManagement(request.getKeyCust().toByteArray(), request.getKeyNamespace());
-        keyStateResponse = generateKeyStateResponse(managedKeyStates, builder);
+        response = generateKeyStateResponse(managedKeyState, builder);
       } catch (IOException | KeyException e) {
         CoprocessorRpcUtils.setControllerException(controller, new DoNotRetryIOException(e));
+        builder.setKeyState(ManagedKeyState.KEY_FAILED);
       }
-      if (keyStateResponse == null) {
-        keyStateResponse = GetManagedKeysResponse.getDefaultInstance();
+      if (response == null) {
+        response = builder.build();
       }
-      done.run(keyStateResponse);
+      done.run(response);
     }
 
     /**

@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -200,7 +201,7 @@ public class KeymetaTableAccessor extends KeyManagementBase {
     String keyNamespace = keyData.getKeyNamespace();
     byte[] keyMetadataHash = keyData.getKeyMetadataHash();
 
-    List<Row> mutations = new ArrayList<>(3); // Max possible mutations.
+    List<Mutation> mutations = new ArrayList<>(3); // Max possible mutations.
 
     if (keyData.getKeyState() == ManagedKeyState.ACTIVE) {
       // Delete the CustNamespace row
@@ -211,7 +212,7 @@ public class KeymetaTableAccessor extends KeyManagementBase {
 
     // Update state to DISABLED and timestamp on Metadata row
     byte[] rowKeyForMetadata = constructRowKeyForMetadata(keyCust, keyNamespace, keyMetadataHash);
-    addDeleteMutationsForKeyDisabled(mutations, rowKeyForMetadata,
+    addMutationsForKeyDisabled(mutations, rowKeyForMetadata, keyData.getKeyMetadata(),
       keyData.getKeyState() == ManagedKeyState.ACTIVE
         ? ManagedKeyState.ACTIVE_DISABLED
         : ManagedKeyState.INACTIVE_DISABLED,
@@ -226,9 +227,13 @@ public class KeymetaTableAccessor extends KeyManagementBase {
     }
   }
 
-  private void addDeleteMutationsForKeyDisabled(List<Row> mutations, byte[] rowKey,
-    ManagedKeyState targetState, ManagedKeyState currentState) {
-    Put putForState = addMutationColumnsForState(new Put(rowKey), targetState);
+  private void addMutationsForKeyDisabled(List<Mutation> mutations, byte[] rowKey,
+    String metadata, ManagedKeyState targetState, ManagedKeyState currentState) {
+    Put put = new Put(rowKey);
+    if (metadata != null) {
+      put.addColumn(KEY_META_INFO_FAMILY, DEK_METADATA_QUAL_BYTES, metadata.getBytes());
+    }
+    Put putForState = addMutationColumnsForState(put, targetState);
     mutations.add(putForState);
 
     // Delete wrapped key columns from Metadata row
@@ -257,9 +262,9 @@ public class KeymetaTableAccessor extends KeyManagementBase {
     assertKeyManagementEnabled();
     Preconditions.checkArgument(ManagedKeyState.isKeyManagementState(state),
       "State must be a key management state, got: " + state);
-    List<Row> mutations = new ArrayList<>(2);
+    List<Mutation> mutations = new ArrayList<>(2);
     byte[] rowKey = constructRowKeyForCustNamespace(keyCust, keyNamespace);
-    addDeleteMutationsForKeyDisabled(mutations, rowKey, state, null);
+    addMutationsForKeyDisabled(mutations, rowKey, null, state, null);
     Connection connection = getServer().getConnection();
     try (Table table = connection.getTable(KEY_META_TABLE_NAME)) {
       table.batch(mutations, null);
@@ -300,7 +305,8 @@ public class KeymetaTableAccessor extends KeyManagementBase {
     if (newState == ManagedKeyState.ACTIVE) {
       // INACTIVE -> ACTIVE: Add CustNamespace row and update Metadata row
       mutations.add(addMutationColumns(new Put(rowKeyForCustNamespace), keyData));
-    } else if (currentState == ManagedKeyState.ACTIVE) {
+    }
+    if (currentState == ManagedKeyState.ACTIVE) {
       mutations.add(new Delete(rowKeyForCustNamespace).setDurability(Durability.SKIP_WAL)
         .setPriority(HConstants.SYSTEMTABLE_QOS));
     }

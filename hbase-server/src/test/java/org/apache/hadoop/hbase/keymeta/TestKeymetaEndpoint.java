@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.keymeta;
 
 import static org.apache.hadoop.hbase.io.crypto.ManagedKeyState.ACTIVE;
+import static org.apache.hadoop.hbase.io.crypto.ManagedKeyState.DISABLED;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -87,7 +88,7 @@ public class TestKeymetaEndpoint {
   @Mock
   private RpcCallback<GetManagedKeysResponse> getManagedKeysDone;
   @Mock
-  private RpcCallback<GetManagedKeysResponse> disableKeyManagementDone;
+  private RpcCallback<ManagedKeyResponse> disableKeyManagementDone;
   @Mock
   private RpcCallback<ManagedKeyResponse> disableManagedKeyDone;
   @Mock
@@ -298,15 +299,14 @@ public class TestKeymetaEndpoint {
     // Arrange
     ManagedKeyRequest request =
       requestBuilder.setKeyCust(ByteString.copyFrom(KEY_CUST.getBytes())).build();
-    List<ManagedKeyData> disabledKeys = Arrays.asList(keyData1, keyData2);
-    when(keymetaAdmin.disableKeyManagement(any(), any())).thenReturn(disabledKeys);
-
+    ManagedKeyData disabledKey = new ManagedKeyData(KEY_CUST.getBytes(), KEY_NAMESPACE, DISABLED);
+    when(keymetaAdmin.disableKeyManagement(any(), any())).thenReturn(disabledKey);
     // Act
     keyMetaAdminService.disableKeyManagement(controller, request, disableKeyManagementDone);
 
     // Assert
-    verify(disableKeyManagementDone).run(any());
     verify(controller, never()).setFailed(anyString());
+    verify(disableKeyManagementDone).run(argThat(response -> response.getKeyState() == ManagedKeyState.KEY_INACTIVE));
   }
 
   @Test
@@ -331,7 +331,7 @@ public class TestKeymetaEndpoint {
     // Assert
     verify(controller).setFailed(contains(exType.getSimpleName()));
     verify(keymetaAdmin).disableKeyManagement(any(), any());
-    verify(disableKeyManagementDone).run(GetManagedKeysResponse.getDefaultInstance());
+    verify(disableKeyManagementDone).run(argThat(response -> response.getKeyState() == ManagedKeyState.KEY_FAILED));
   }
 
   @Test
@@ -343,7 +343,7 @@ public class TestKeymetaEndpoint {
 
     verify(controller).setFailed(contains("key_cust must not be empty"));
     verify(keymetaAdmin, never()).disableKeyManagement(any(), any());
-    verify(disableKeyManagementDone).run(argThat(response -> response.getStateList().isEmpty()));
+    verify(disableKeyManagementDone).run(argThat(response -> response.getKeyState() == ManagedKeyState.KEY_FAILED));
   }
 
   @Test
@@ -356,7 +356,7 @@ public class TestKeymetaEndpoint {
 
     verify(controller).setFailed(contains("key_namespace must not be empty"));
     verify(keymetaAdmin, never()).disableKeyManagement(any(), any());
-    verify(disableKeyManagementDone).run(argThat(response -> response.getStateList().isEmpty()));
+    verify(disableKeyManagementDone).run(argThat(response -> response.getKeyState() == ManagedKeyState.KEY_FAILED));
   }
 
   @Test

@@ -119,8 +119,8 @@ module Hbase
       end
       puts "disable_managed_key output: #{output}"
       assert(output.include?("#{cust} #{namespace} DISABLED"),
-             "Expected DISABLED key, got: #{output}")
-      # Verify the key is now DISABLED
+             "Expected INACTIVE key, got: #{output}")
+      # Verify the key is now INACTIVE
       output = capture_stdout { @shell.command('show_key_status', cust_and_namespace) }
       puts "show_key_status after disable_managed_key: #{output}"
       assert(output.include?('DISABLED'), "Expected DISABLED state, got: #{output}")
@@ -133,15 +133,33 @@ module Hbase
       puts "disable_key_management output: #{output}"
       assert(output.include?("#{cust} #{namespace} DISABLED"),
              "Expected DISABLED keys, got: #{output}")
-      # Verify all keys are now DISABLED
+      # Verify all keys are now INACTIVE
       output = capture_stdout { @shell.command('show_key_status', cust_and_namespace) }
       puts "show_key_status after disable_key_management: #{output}"
-      # All rows should show DISABLED state
+      # All rows should show INACTIVE state
       lines = output.split("\n")
       key_lines = lines.select { |line| line.include?(cust) && line.include?(namespace) }
       key_lines.each do |line|
-        assert(line.include?('DISABLED'), "Expected all keys to be DISABLED, but found: #{line}")
+        assert(line.include?('INACTIVE'), "Expected all keys to be INACTIVE, but found: #{line}")
       end
+
+      # 7. Refresh shouldn't do anything since the key management is disabled.
+      output = capture_stdout do
+        @shell.command('refresh_managed_keys', cust_and_namespace)
+      end
+      puts "refresh_managed_keys output: #{output}"
+      output = capture_stdout { @shell.command('show_key_status', cust_and_namespace) }
+      puts "show_key_status after refresh_managed_keys: #{output}"
+      assert(!output.include?(' ACTIVE '), "Expected all keys to be INACTIVE, but found: #{output}")
+
+      # 7. Enable key management again
+      @shell.command('enable_key_management', cust_and_namespace)
+
+      # 8. Get the key metadata hash for the enabled key
+      output = capture_stdout { @shell.command('show_key_status', cust_and_namespace) }
+      puts "show_key_status after enable_key_management: #{output}"
+      assert(output.include?('ACTIVE'), "Expected ACTIVE key after enable_key_management, got: #{output}")
+      assert(output.include?('1 row(s)'))
     end
 
     define_test 'Test refresh error handling' do
@@ -168,7 +186,8 @@ module Hbase
       output = capture_stdout { @shell.command('disable_key_management', cust_and_namespace) }
       puts "disable_key_management on non-existent namespace: #{output}"
       # Should show 0 rows since no keys exist
-      assert(output.include?('0 row(s)'))
+      assert(output.include?('1 row(s)'))
+      assert(output.include?(" DISABLED "), "Expected DISABLED key, got: #{output}")
     end
   end
 end

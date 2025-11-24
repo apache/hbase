@@ -31,6 +31,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -659,22 +660,28 @@ public class TestKeymetaAdminImpl {
     public void testDisableKeyManagement() throws Exception {
       KeymetaAdminImplForTest admin = new KeymetaAdminImplForTest(mockMasterServices, mockAccessor);
 
-      List<ManagedKeyData> keys = new ArrayList<>();
-      ManagedKeyData key1 = new ManagedKeyData(CUST_BYTES, KEY_SPACE_GLOBAL, null,
+      ManagedKeyData activeKey = new ManagedKeyData(CUST_BYTES, KEY_SPACE_GLOBAL, null,
         ManagedKeyState.ACTIVE, "metadata1", 123L);
-      keys.add(key1);
+      ManagedKeyData disabledMarker = new ManagedKeyData(CUST_BYTES, KEY_SPACE_GLOBAL,
+        ManagedKeyState.DISABLED);
 
-      when(mockAccessor.getAllKeys(any(), any(), anyBoolean())).thenReturn(keys);
-      CompletableFuture<Void> successFuture = CompletableFuture.completedFuture(null);
-      when(mockAsyncAdmin.ejectManagedKeyDataCacheEntryOnServers(any(), any(), any(), any()))
-        .thenReturn(successFuture);
+      when(mockAccessor.getKeyManagementStateMarker(any(), any())).thenReturn(activeKey).thenReturn(disabledMarker);
 
-      List<ManagedKeyData> result = admin.disableKeyManagement(CUST_BYTES, KEY_SPACE_GLOBAL);
+      ManagedKeyData result = admin.disableKeyManagement(CUST_BYTES, KEY_SPACE_GLOBAL);
 
       assertNotNull(result);
-      assertEquals(1, result.size());
-      verify(mockAccessor, times(2)).getAllKeys(CUST_BYTES, KEY_SPACE_GLOBAL, false);
-      verify(mockAccessor).disableKey(any(ManagedKeyData.class));
+      assertEquals(ManagedKeyState.DISABLED, result.getKeyState());
+      verify(mockAccessor, times(2)).getKeyManagementStateMarker(CUST_BYTES, KEY_SPACE_GLOBAL);
+      verify(mockAccessor).updateActiveState(activeKey, ManagedKeyState.INACTIVE);
+
+      // Repeat the call for idempotency check.
+      clearInvocations(mockAccessor);
+      when(mockAccessor.getKeyManagementStateMarker(any(), any())).thenReturn(disabledMarker);
+      result = admin.disableKeyManagement(CUST_BYTES, KEY_SPACE_GLOBAL);
+      assertNotNull(result);
+      assertEquals(ManagedKeyState.DISABLED, result.getKeyState());
+      verify(mockAccessor, times(2)).getKeyManagementStateMarker(CUST_BYTES, KEY_SPACE_GLOBAL);
+      verify(mockAccessor, never()).updateActiveState(any(), any());
     }
 
     @Test

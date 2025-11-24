@@ -97,13 +97,12 @@ public class KeymetaAdminClient implements KeymetaAdmin {
   }
 
   @Override
-  public List<ManagedKeyData> disableKeyManagement(byte[] keyCust, String keyNamespace)
+  public ManagedKeyData disableKeyManagement(byte[] keyCust, String keyNamespace)
     throws IOException, KeyException {
     try {
-      GetManagedKeysResponse response =
-        stub.disableKeyManagement(null, ManagedKeyRequest.newBuilder()
-          .setKeyCust(ByteString.copyFrom(keyCust)).setKeyNamespace(keyNamespace).build());
-      return generateKeyDataList(response);
+      ManagedKeyResponse response = stub.disableKeyManagement(null, ManagedKeyRequest.newBuilder()
+        .setKeyCust(ByteString.copyFrom(keyCust)).setKeyNamespace(keyNamespace).build());
+      return generateKeyData(response);
     } catch (ServiceException e) {
       throw ProtobufUtil.handleRemoteException(e);
     }
@@ -159,8 +158,14 @@ public class KeymetaAdminClient implements KeymetaAdmin {
     // Use hash-only constructor for client-side ManagedKeyData
     byte[] keyMetadataHash =
       response.hasKeyMetadataHash() ? response.getKeyMetadataHash().toByteArray() : null;
-    return new ManagedKeyData(response.getKeyCust().toByteArray(), response.getKeyNamespace(),
-      ManagedKeyState.forValue((byte) response.getKeyState().getNumber()), keyMetadataHash,
-      response.getRefreshTimestamp());
+    if (keyMetadataHash == null) {
+      return new ManagedKeyData(response.getKeyCust().toByteArray(), response.getKeyNamespace(),
+        ManagedKeyState.forValue((byte) response.getKeyState().getNumber()));
+    }
+    else {
+      return new ManagedKeyData(response.getKeyCust().toByteArray(), response.getKeyNamespace(),
+        ManagedKeyState.forValue((byte) response.getKeyState().getNumber()), keyMetadataHash,
+        response.getRefreshTimestamp());
+    }
   }
 }

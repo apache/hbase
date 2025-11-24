@@ -273,11 +273,10 @@ public class TestManagedKeymeta extends ManagedKeyTestBase {
     assertKeyDataSingleKey(managedKey, ManagedKeyState.ACTIVE);
 
     // Now disable it
-    List<ManagedKeyData> disabledKeys =
+    ManagedKeyData disabledKey =
       adminClient.disableKeyManagement(custBytes, ManagedKeyData.KEY_SPACE_GLOBAL);
-    assertNotNull(disabledKeys);
-    assertEquals(1, disabledKeys.size());
-    assertEquals(ManagedKeyState.DISABLED, disabledKeys.get(0).getKeyState().getExternalState());
+    assertNotNull(disabledKey);
+    assertEquals(ManagedKeyState.DISABLED, disabledKey.getKeyState().getExternalState());
   }
 
   @Test

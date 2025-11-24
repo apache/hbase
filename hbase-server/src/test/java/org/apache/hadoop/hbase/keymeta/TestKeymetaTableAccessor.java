@@ -19,9 +19,11 @@ package org.apache.hadoop.hbase.keymeta;
 
 import static org.apache.hadoop.hbase.io.crypto.ManagedKeyData.KEY_SPACE_GLOBAL;
 import static org.apache.hadoop.hbase.io.crypto.ManagedKeyState.ACTIVE;
+import static org.apache.hadoop.hbase.io.crypto.ManagedKeyState.ACTIVE_DISABLED;
 import static org.apache.hadoop.hbase.io.crypto.ManagedKeyState.DISABLED;
 import static org.apache.hadoop.hbase.io.crypto.ManagedKeyState.FAILED;
 import static org.apache.hadoop.hbase.io.crypto.ManagedKeyState.INACTIVE;
+import static org.apache.hadoop.hbase.io.crypto.ManagedKeyState.INACTIVE_DISABLED;
 import static org.apache.hadoop.hbase.keymeta.KeymetaTableAccessor.DEK_CHECKSUM_QUAL_BYTES;
 import static org.apache.hadoop.hbase.keymeta.KeymetaTableAccessor.DEK_METADATA_QUAL_BYTES;
 import static org.apache.hadoop.hbase.keymeta.KeymetaTableAccessor.DEK_WRAPPED_BY_STK_QUAL_BYTES;
@@ -64,6 +66,7 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -89,6 +92,7 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Suite;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
@@ -169,6 +173,9 @@ public class TestKeymetaTableAccessor {
       return Arrays.asList(new Object[][] { { ACTIVE }, { FAILED }, { INACTIVE }, { DISABLED }, });
     }
 
+    @Captor
+    private ArgumentCaptor<List<Put>> putCaptor;
+
     @Test
     public void testAddKey() throws Exception {
       managedKeyProvider.setMockedKeyState(ALIAS, keyState);
@@ -176,15 +183,14 @@ public class TestKeymetaTableAccessor {
 
       accessor.addKey(keyData);
 
-      ArgumentCaptor<List<Put>> putCaptor = ArgumentCaptor.forClass(ArrayList.class);
       verify(table).put(putCaptor.capture());
       List<Put> puts = putCaptor.getValue();
       assertEquals(keyState == ACTIVE ? 2 : 1, puts.size());
       if (keyState == ACTIVE) {
-        assertPut(keyData, puts.get(0), constructRowKeyForCustNamespace(keyData));
-        assertPut(keyData, puts.get(1), constructRowKeyForMetadata(keyData));
+        assertPut(keyData, puts.get(0), constructRowKeyForCustNamespace(keyData), ACTIVE);
+        assertPut(keyData, puts.get(1), constructRowKeyForMetadata(keyData), ACTIVE);
       } else {
-        assertPut(keyData, puts.get(0), constructRowKeyForMetadata(keyData));
+        assertPut(keyData, puts.get(0), constructRowKeyForMetadata(keyData), keyState);
       }
     }
   }
@@ -196,6 +202,9 @@ public class TestKeymetaTableAccessor {
     public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestAddWithNullableFields.class);
 
+    @Captor
+    private ArgumentCaptor<List<Mutation>> batchCaptor;
+
     @Test
     public void testAddKeyManagementStateMarker() throws Exception {
       managedKeyProvider.setMockedKeyState(ALIAS, FAILED);
@@ -204,12 +213,11 @@ public class TestKeymetaTableAccessor {
       accessor.addKeyManagementStateMarker(keyData.getKeyCustodian(), keyData.getKeyNamespace(),
         keyData.getKeyState());
 
-      ArgumentCaptor<List<Row>> batchCaptor = ArgumentCaptor.forClass(ArrayList.class);
       verify(table).batch(batchCaptor.capture(), any());
-      List<Row> mutations = batchCaptor.getValue();
+      List<Mutation> mutations = batchCaptor.getValue();
       assertEquals(2, mutations.size());
-      Row mutation1 = mutations.get(0);
-      Row mutation2 = mutations.get(1);
+      Mutation mutation1 = mutations.get(0);
+      Mutation mutation2 = mutations.get(1);
       assertTrue(mutation1 instanceof Put);
       assertTrue(mutation2 instanceof Delete);
       Put put = (Put) mutation1;
@@ -240,19 +248,7 @@ public class TestKeymetaTableAccessor {
       // Verify the row key is correct for a failure marker
       assertEquals(0, Bytes.compareTo(expectedRowKey, delete.getRow()));
       // Verify the key checksum, wrapped key, and STK checksum columns are deleted
-      Map<byte[], List<Cell>> familyCellMap = delete.getFamilyCellMap();
-      assertTrue(familyCellMap.containsKey(KEY_META_INFO_FAMILY));
-
-      List<Cell> cells = familyCellMap.get(KEY_META_INFO_FAMILY);
-      assertEquals(3, cells.size());
-
-      // Verify each column is present in the delete
-      Set<byte[]> qualifiers =
-        cells.stream().map(CellUtil::cloneQualifier).collect(Collectors.toSet());
-
-      assertTrue(qualifiers.stream().anyMatch(q -> Bytes.equals(q, DEK_CHECKSUM_QUAL_BYTES)));
-      assertTrue(qualifiers.stream().anyMatch(q -> Bytes.equals(q, DEK_WRAPPED_BY_STK_QUAL_BYTES)));
-      assertTrue(qualifiers.stream().anyMatch(q -> Bytes.equals(q, STK_CHECKSUM_QUAL_BYTES)));
+      assertDeleteColumns(delete);
     }
   }
 
@@ -412,7 +408,7 @@ public class TestKeymetaTableAccessor {
     }
   }
 
-  protected void assertPut(ManagedKeyData keyData, Put put, byte[] rowKey) {
+  protected void assertPut(ManagedKeyData keyData, Put put, byte[] rowKey, ManagedKeyState targetState) {
     assertEquals(Durability.SKIP_WAL, put.getDurability());
     assertEquals(HConstants.SYSTEMTABLE_QOS, put.getPriority());
     assertTrue(Bytes.compareTo(rowKey, put.getRow()) == 0);
@@ -432,12 +428,29 @@ public class TestKeymetaTableAccessor {
     assertEquals(new Bytes(keyData.getKeyMetadata().getBytes()),
       valueMap.get(new Bytes(DEK_METADATA_QUAL_BYTES)));
     assertNotNull(valueMap.get(new Bytes(REFRESHED_TIMESTAMP_QUAL_BYTES)));
-    assertEquals(new Bytes(new byte[] { keyData.getKeyState().getVal() }),
+    assertEquals(new Bytes(new byte[] { targetState.getVal() }),
       valueMap.get(new Bytes(KEY_STATE_QUAL_BYTES)));
   }
 
-  private static Map<Bytes, Bytes> getValueMap(Put put) {
-    NavigableMap<byte[], List<Cell>> familyCellMap = put.getFamilyCellMap();
+  // Verify the key checksum, wrapped key, and STK checksum columns are deleted
+  private static void assertDeleteColumns(Delete delete) {
+      Map<byte[], List<Cell>> familyCellMap = delete.getFamilyCellMap();
+      assertTrue(familyCellMap.containsKey(KEY_META_INFO_FAMILY));
+
+      List<Cell> cells = familyCellMap.get(KEY_META_INFO_FAMILY);
+      assertEquals(3, cells.size());
+
+      // Verify each column is present in the delete
+      Set<byte[]> qualifiers =
+        cells.stream().map(CellUtil::cloneQualifier).collect(Collectors.toSet());
+
+      assertTrue(qualifiers.stream().anyMatch(q -> Bytes.equals(q, DEK_CHECKSUM_QUAL_BYTES)));
+      assertTrue(qualifiers.stream().anyMatch(q -> Bytes.equals(q, DEK_WRAPPED_BY_STK_QUAL_BYTES)));
+      assertTrue(qualifiers.stream().anyMatch(q -> Bytes.equals(q, STK_CHECKSUM_QUAL_BYTES)));
+  }
+
+  private static Map<Bytes, Bytes> getValueMap(Mutation mutation) {
+    NavigableMap<byte[], List<Cell>> familyCellMap = mutation.getFamilyCellMap();
     List<Cell> cells = familyCellMap.get(KEY_META_INFO_FAMILY);
     Map<Bytes, Bytes> valueMap = new HashMap<>();
     for (Cell cell : cells) {
@@ -451,26 +464,48 @@ public class TestKeymetaTableAccessor {
   /**
    * Tests for disableKey() method.
    */
-  @RunWith(BlockJUnit4ClassRunner.class)
+  @RunWith(Parameterized.class)
   @Category({ MasterTests.class, SmallTests.class })
   public static class TestDisableKey extends TestKeymetaTableAccessor {
     @ClassRule
     public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestDisableKey.class);
 
+    // Parameterize the key state
+    @Parameter(0)
+    public ManagedKeyState keyState;
+
+    @Captor
+    private ArgumentCaptor<List<Mutation>> mutationsCaptor;
+
+    @Parameterized.Parameters(name = "{index},keyState={0}")
+    public static Collection<Object[]> data() {
+      return Arrays.asList(new Object[][] { { ACTIVE }, { INACTIVE }, { ACTIVE_DISABLED }, {
+        INACTIVE_DISABLED }, { FAILED }, });
+    }
+
     @Test
     public void testDisableKey() throws Exception {
-      String keyMetadata = "testMetadata";
       ManagedKeyData keyData =
-        new ManagedKeyData(CUST_ID, KEY_NAMESPACE, null, ManagedKeyState.ACTIVE, keyMetadata);
-      ArgumentCaptor<List> mutationsCaptor = ArgumentCaptor.forClass(List.class);
-      ArgumentCaptor<Object[]> resultsCaptor = ArgumentCaptor.forClass(Object[].class);
+        new ManagedKeyData(CUST_ID, KEY_NAMESPACE, null, keyState, "testMetadata");
 
       accessor.disableKey(keyData);
 
-      verify(table).batch(mutationsCaptor.capture(), resultsCaptor.capture());
-      List mutations = mutationsCaptor.getValue();
-      assertEquals(3, mutations.size());
+      verify(table).batch(mutationsCaptor.capture(), any());
+      List<Mutation> mutations = mutationsCaptor.getValue();
+      assertEquals(keyState == ACTIVE ? 3 : keyState == INACTIVE ? 2 : 1, mutations.size());
+      int putIndex = 0;
+      ManagedKeyState targetState = keyState == ACTIVE ? ACTIVE_DISABLED : INACTIVE_DISABLED;
+      if (keyState == ACTIVE) {
+        assertTrue(Bytes.compareTo(constructRowKeyForCustNamespace(keyData), mutations.get(0).getRow()) == 0);
+        ++putIndex;
+      }
+      assertPut(keyData, (Put) mutations.get(putIndex), constructRowKeyForMetadata(keyData), targetState);
+      if (keyState == INACTIVE) {
+        assertTrue(Bytes.compareTo(constructRowKeyForMetadata(keyData), mutations.get(putIndex+1).getRow()) == 0);
+        // Verify the key checksum, wrapped key, and STK checksum columns are deleted
+        assertDeleteColumns((Delete) mutations.get(putIndex+1));
+      }
     }
   }
 
@@ -484,6 +519,9 @@ public class TestKeymetaTableAccessor {
     public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestUpdateActiveState.class);
 
+    @Captor
+    private ArgumentCaptor<List<Mutation>> mutationsCaptor;
+
     @Test
     public void testUpdateActiveStateFromInactiveToActive() throws Exception {
       ManagedKeyData keyData =
@@ -492,13 +530,10 @@ public class TestKeymetaTableAccessor {
         new ManagedKeyData(new byte[] { 1 }, KEY_SPACE_GLOBAL, null, ACTIVE, "syskey", 100L);
       when(systemKeyCache.getLatestSystemKey()).thenReturn(systemKey);
 
-      ArgumentCaptor<List> mutationsCaptor = ArgumentCaptor.forClass(List.class);
-      ArgumentCaptor<Object[]> resultsCaptor = ArgumentCaptor.forClass(Object[].class);
-
       accessor.updateActiveState(keyData, ACTIVE);
 
-      verify(table).batch(mutationsCaptor.capture(), resultsCaptor.capture());
-      List mutations = mutationsCaptor.getValue();
+      verify(table).batch(mutationsCaptor.capture(), any());
+      List<Mutation> mutations = mutationsCaptor.getValue();
       assertEquals(2, mutations.size());
     }
 
@@ -507,13 +542,10 @@ public class TestKeymetaTableAccessor {
       ManagedKeyData keyData =
         new ManagedKeyData(CUST_ID, KEY_NAMESPACE, null, ACTIVE, "metadata", 123L);
 
-      ArgumentCaptor<List> mutationsCaptor = ArgumentCaptor.forClass(List.class);
-      ArgumentCaptor<Object[]> resultsCaptor = ArgumentCaptor.forClass(Object[].class);
-
       accessor.updateActiveState(keyData, INACTIVE);
 
-      verify(table).batch(mutationsCaptor.capture(), resultsCaptor.capture());
-      List mutations = mutationsCaptor.getValue();
+      verify(table).batch(mutationsCaptor.capture(), any());
+      List<Mutation> mutations = mutationsCaptor.getValue();
       assertEquals(2, mutations.size());
     }
 
@@ -535,13 +567,10 @@ public class TestKeymetaTableAccessor {
         new ManagedKeyData(new byte[] { 1 }, KEY_SPACE_GLOBAL, null, ACTIVE, "syskey", 100L);
       when(systemKeyCache.getLatestSystemKey()).thenReturn(systemKey);
 
-      ArgumentCaptor<List> mutationsCaptor = ArgumentCaptor.forClass(List.class);
-      ArgumentCaptor<Object[]> resultsCaptor = ArgumentCaptor.forClass(Object[].class);
-
       accessor.updateActiveState(keyData, ACTIVE);
 
-      verify(table).batch(mutationsCaptor.capture(), resultsCaptor.capture());
-      List mutations = mutationsCaptor.getValue();
+      verify(table).batch(mutationsCaptor.capture(), any());
+      List<Mutation> mutations = mutationsCaptor.getValue();
       // Should have 2 mutations: add CustNamespace row and add all columns to Metadata row
       assertEquals(2, mutations.size());
     }

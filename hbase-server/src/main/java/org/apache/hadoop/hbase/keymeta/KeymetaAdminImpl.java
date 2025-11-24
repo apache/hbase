@@ -150,36 +150,27 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
   }
 
   @Override
-  public List<ManagedKeyData> disableKeyManagement(byte[] keyCust, String keyNamespace)
+  public ManagedKeyData disableKeyManagement(byte[] keyCust, String keyNamespace)
     throws IOException, KeyException {
     assertKeyManagementEnabled();
     String encodedCust = LOG.isInfoEnabled() ? ManagedKeyProvider.encodeToStr(keyCust) : null;
     LOG.info("disableKeyManagement started for custodian: {} under namespace: {}", encodedCust,
       keyNamespace);
 
-    // Add key management state marker for the specified (keyCust, keyNamespace) combination
-    addKeyManagementStateMarker(keyCust, keyNamespace, ManagedKeyState.DISABLED);
-
-    // Get all keys for the specified custodian and namespace
-    List<ManagedKeyData> allKeys = getAllKeys(keyCust, keyNamespace, false);
-
-    // Disable keys with non-null metadata
-    for (ManagedKeyData keyData : allKeys) {
-      if (keyData.getKeyState().getExternalState() != ManagedKeyState.DISABLED) {
-        String encodedHash =
-          LOG.isInfoEnabled() ? ManagedKeyProvider.encodeToStr(keyData.getKeyMetadataHash()) : null;
-        LOG.info("Disabling key with metadata hash: {} for custodian: {} under namespace: {}",
-          encodedHash, encodedCust, keyNamespace);
-        disableKey(keyData);
-        ejectManagedKeyDataCacheEntry(keyCust, keyNamespace, keyData.getKeyMetadata());
-      }
+    ManagedKeyData markerKey = getKeyManagementStateMarker(keyCust, keyNamespace);
+    if (markerKey != null && markerKey.getKeyState() == ManagedKeyState.ACTIVE) {
+      updateActiveState(markerKey, ManagedKeyState.INACTIVE);
+      LOG.info("disableKeyManagement completed for custodian: {} under namespace: {}", encodedCust,
+        keyNamespace);
+      markerKey = getKey(keyCust, keyNamespace, markerKey.getKeyMetadataHash());
     }
 
+    // Add key management state marker for the specified (keyCust, keyNamespace) combination
+    addKeyManagementStateMarker(keyCust, keyNamespace, ManagedKeyState.DISABLED);
     LOG.info("disableKeyManagement completed for custodian: {} under namespace: {}", encodedCust,
       keyNamespace);
-    // Retrieve and return updated keys, but filter key state markers.
-    List<ManagedKeyData> updatedKeys = getAllKeys(keyCust, keyNamespace, false);
-    return updatedKeys;
+
+    return getKeyManagementStateMarker(keyCust, keyNamespace);
   }
 
   @Override
@@ -235,6 +226,12 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
     LOG.info("refreshManagedKeys started for custodian: {} under namespace: {}", encodedCust,
       keyNamespace);
 
+    ManagedKeyData markerKey = getKeyManagementStateMarker(keyCust, keyNamespace);
+    if (markerKey != null && markerKey.getKeyState() == ManagedKeyState.DISABLED) {
+      LOG.info("refreshManagedKeys skipping since key management is disabled for custodian: {} under namespace: {}", encodedCust,
+        keyNamespace);
+      return;
+    }
     // First, get all keys for the specified custodian and namespace and refresh those that have a
     // non-null metadata.
     List<ManagedKeyData> allKeys = getAllKeys(keyCust, keyNamespace, false);
@@ -244,27 +241,27 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
         continue;
       }
       LOG.debug(
-        "Refreshing key with metadata hash: {} for custodian: {} under namespace: {} with state: {}",
+        "refreshManagedKeys: Refreshing key with metadata hash: {} for custodian: {} under namespace: {} with state: {}",
         keyData.getKeyMetadataHashEncoded(), encodedCust, keyNamespace, keyData.getKeyState());
       try {
         ManagedKeyData refreshedKey =
           KeyManagementUtils.refreshKey(getKeyProvider(), this, keyData);
         if (refreshedKey == keyData) {
-          LOG.debug("Key with metadata hash: {} for custodian: {} under namespace: {} is unchanged",
+          LOG.debug("refreshManagedKeys: Key with metadata hash: {} for custodian: {} under namespace: {} is unchanged",
             keyData.getKeyMetadataHashEncoded(), encodedCust, keyNamespace);
         } else {
           if (refreshedKey.getKeyState().getExternalState() == ManagedKeyState.DISABLED) {
-            LOG.info("Refreshed key is DISABLED, ejecting from cache");
+            LOG.info("refreshManagedKeys: Refreshed key is DISABLED, ejecting from cache");
             ejectManagedKeyDataCacheEntry(keyCust, keyNamespace, refreshedKey.getKeyMetadata());
           } else {
             LOG.info(
-              "Successfully refreshed key with metadata hash: {} for custodian: {} under namespace: {}",
+              "refreshManagedKeys: Successfully refreshed key with metadata hash: {} for custodian: {} under namespace: {}",
               refreshedKey.getKeyMetadataHashEncoded(), encodedCust, keyNamespace);
           }
         }
       } catch (IOException | KeyException e) {
         LOG.error(
-          "Failed to refresh key with metadata hash: {} for custodian: {} under namespace: {}",
+          "refreshManagedKeys: Failed to refresh key with metadata hash: {} for custodian: {} under namespace: {}",
           keyData.getKeyMetadataHashEncoded(), encodedCust, keyNamespace, e);
         if (refreshException == null) {
           refreshException = new IOException("Key refresh failed for (custodian: " + encodedCust
@@ -277,14 +274,13 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
       throw refreshException;
     }
 
-    ManagedKeyData markerKey = getKeyManagementStateMarker(keyCust, keyNamespace);
     if (markerKey != null && markerKey.getKeyState() == ManagedKeyState.FAILED) {
-      LOG.info("Found FAILED marker for (custodian: " + encodedCust + ", namespace: " + keyNamespace
+      LOG.info("refreshManagedKeys: Found FAILED marker for (custodian: " + encodedCust + ", namespace: " + keyNamespace
         + ") indicating previous attempt to enable, reattempting to enable key management");
       enableKeyManagement(keyCust, keyNamespace);
     }
 
-    LOG.info("refreshManagedKeys completed for custodian: {} under namespace: {}", encodedCust,
+    LOG.info("refreshManagedKeys: Completed for custodian: {} under namespace: {}", encodedCust,
       keyNamespace);
   }
 
