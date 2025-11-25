@@ -193,11 +193,6 @@ public class TestManagedKeyData {
   }
 
   @Test
-  public void testEqualsSameInstance() {
-    assertEquals(managedKeyData, managedKeyData);
-  }
-
-  @Test
   public void testHashCode() {
     ManagedKeyData same = new ManagedKeyData(keyCust, keyNamespace, theKey, keyState, keyMetadata);
     assertEquals(managedKeyData.hashCode(), same.hashCode());

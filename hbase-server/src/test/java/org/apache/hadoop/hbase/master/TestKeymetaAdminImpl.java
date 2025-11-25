@@ -32,6 +32,7 @@ import static org.junit.Assume.assumeTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -881,14 +882,17 @@ public class TestKeymetaAdminImpl {
         ManagedKeyState.ACTIVE, "metadata1", 123L);
       ManagedKeyData key2 = new ManagedKeyData(CUST_BYTES, KEY_SPACE_GLOBAL, null,
         ManagedKeyState.ACTIVE, "metadata2", 124L);
+      ManagedKeyData refreshedKey1 = new ManagedKeyData(CUST_BYTES, KEY_SPACE_GLOBAL, null,
+        ManagedKeyState.INACTIVE, "metadata1", 123L);
       keys.add(key1);
       keys.add(key2);
 
       when(mockAccessor.getAllKeys(any(), any(), anyBoolean())).thenReturn(keys);
       when(mockAccessor.getKeyProvider()).thenReturn(mockProvider);
       // First key throws IOException, second key should still be refreshed
-      when(mockProvider.unwrapKey(key1.getKeyMetadata(), null))
-        .thenThrow(new IOException("Simulated error"));
+      doThrow(new IOException("Simulated error")).when(mockAccessor)
+        .updateActiveState(any(ManagedKeyData.class), any(ManagedKeyState.class));
+      when(mockProvider.unwrapKey(key1.getKeyMetadata(), null)).thenReturn(refreshedKey1);
       when(mockProvider.unwrapKey(key2.getKeyMetadata(), null)).thenReturn(key2);
 
       // Should not throw exception, should continue refreshing other keys
@@ -899,7 +903,6 @@ public class TestKeymetaAdminImpl {
       assertTrue(exception.getCause().getMessage(),
         exception.getCause().getMessage().contains("Simulated error"));
       verify(mockAccessor).getAllKeys(CUST_BYTES, KEY_SPACE_GLOBAL, false);
-      verify(mockAccessor, never()).updateActiveState(any(), any());
       verify(mockAccessor, never()).disableKey(any());
       verify(mockProvider).unwrapKey(key1.getKeyMetadata(), null);
       verify(mockProvider).unwrapKey(key2.getKeyMetadata(), null);

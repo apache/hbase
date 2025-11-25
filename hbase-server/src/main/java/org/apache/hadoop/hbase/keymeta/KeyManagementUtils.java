@@ -97,7 +97,7 @@ public class KeyManagementUtils {
    * @param accessor     the accessor to use to persist the key. If null, the key will not be
    *                     persisted.
    * @param encKeyCust   the encoded key custodian
-   * @param key_cust     the key custodian
+   * @param keyCust      the key custodian
    * @param keyNamespace the key namespace
    * @param keyMetadata  the key metadata
    * @param wrappedKey   the wrapped key, if available, can be null.
@@ -120,20 +120,22 @@ public class KeyManagementUtils {
       throw new KeyException(
         "Invalid key that is null or having invalid metadata or state received from key provider for (custodian: "
           + encKeyCust + ", namespace: " + keyNamespace + ") and metadata hash: "
-          + ManagedKeyData.constructMetadataHash(keyMetadata));
+          + ManagedKeyProvider.encodeToStr(ManagedKeyData.constructMetadataHash(keyMetadata)));
     }
     if (LOG.isInfoEnabled()) {
       LOG.info(
         "retrieveKey: got key with state: {} and metadata: {} for (custodian: {}, namespace: {}) and metadata hash: {}",
         keyData.getKeyState(), keyData.getKeyMetadata(), encKeyCust, keyNamespace,
-        ManagedKeyData.constructMetadataHash(keyMetadata));
+        ManagedKeyProvider.encodeToStr(ManagedKeyData.constructMetadataHash(keyMetadata)));
     }
     if (accessor != null) {
       try {
         accessor.addKey(keyData);
       } catch (IOException e) {
-        LOG.warn("Failed to add key to L2 for metadata hash: {}, for custodian: {}, namespace: {}",
-          ManagedKeyData.constructMetadataHash(keyMetadata), encKeyCust, keyNamespace, e);
+        LOG.warn(
+          "retrieveKey: Failed to add key to L2 for metadata hash: {}, for custodian: {}, namespace: {}",
+          ManagedKeyProvider.encodeToStr(ManagedKeyData.constructMetadataHash(keyMetadata)),
+          encKeyCust, keyNamespace, e);
       }
     }
     return keyData;
@@ -151,40 +153,72 @@ public class KeyManagementUtils {
    */
   public static ManagedKeyData refreshKey(ManagedKeyProvider provider,
     KeymetaTableAccessor accessor, ManagedKeyData keyData) throws IOException, KeyException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(
+        "refreshKey: entry with keyData state: {}, metadata hash: {} for (custodian: {}, namespace: {})",
+        keyData.getKeyState(), keyData.getKeyMetadataHashEncoded(),
+        ManagedKeyProvider.encodeToStr(keyData.getKeyCustodian()), keyData.getKeyNamespace());
+    }
+
     Preconditions.checkArgument(keyData.getKeyMetadata() != null,
       "Key metadata should be non-null for key to be refreshed");
+
+    ManagedKeyData result;
     // NOTE: Even FAILED keys can have metadata that is good enough for refreshing from provider.
     // Refresh key using unwrapKey
-    ManagedKeyData newKeyData = provider.unwrapKey(keyData.getKeyMetadata(), null);
+    ManagedKeyData newKeyData;
+    try {
+      newKeyData = provider.unwrapKey(keyData.getKeyMetadata(), null);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(
+          "refreshKey: unwrapped key with state: {}, metadata hash: {} for (custodian: {}, namespace: {})",
+          newKeyData.getKeyState(), newKeyData.getKeyMetadataHashEncoded(),
+          ManagedKeyProvider.encodeToStr(newKeyData.getKeyCustodian()),
+          newKeyData.getKeyNamespace());
+      }
+    } catch (IOException e) {
+      LOG.warn("refreshKey: Failed to unwrap key for (custodian: {}, namespace: {})",
+        ManagedKeyProvider.encodeToStr(keyData.getKeyCustodian()), keyData.getKeyNamespace(), e);
+      newKeyData = new ManagedKeyData(keyData.getKeyCustodian(), keyData.getKeyNamespace(), null,
+        ManagedKeyState.FAILED, keyData.getKeyMetadata());
+    }
 
     // Validate metadata hasn't changed
     if (!keyData.getKeyMetadata().equals(newKeyData.getKeyMetadata())) {
       throw new KeyException("Key metadata changed during refresh: current metadata hash: "
         + keyData.getKeyMetadataHashEncoded() + ", got metadata hash: "
-        + newKeyData.getKeyMetadataHashEncoded());
+        + newKeyData.getKeyMetadataHashEncoded() + " for (custodian: "
+        + ManagedKeyProvider.encodeToStr(keyData.getKeyCustodian()) + ", namespace: "
+        + keyData.getKeyNamespace() + ")");
     }
 
     // Check if state changed
     if (keyData.getKeyState() == newKeyData.getKeyState()) {
       // No change, return original
-      return keyData;
-    }
-
-    // Ignore if new state is FAILED, let us just keep the existing key data as is as this is
-    // most likely a transitional issue with KMS.
-    if (newKeyData.getKeyState() == ManagedKeyState.FAILED) {
-      return keyData;
-    }
-
-    if (newKeyData.getKeyState().getExternalState() == ManagedKeyState.DISABLED) {
-      // Handle DISABLED state change specially.
-      accessor.disableKey(keyData);
+      result = keyData;
+    } else if (newKeyData.getKeyState() == ManagedKeyState.FAILED) {
+      // Ignore if new state is FAILED, let us just keep the existing key data as is as this is
+      // most likely a transitional issue with KMS.
+      result = keyData;
     } else {
-      // Rest of the state changes are only ACTIVE and INACTIVE..
-      accessor.updateActiveState(keyData, newKeyData.getKeyState());
+      if (newKeyData.getKeyState().getExternalState() == ManagedKeyState.DISABLED) {
+        // Handle DISABLED state change specially.
+        accessor.disableKey(keyData);
+      } else {
+        // Rest of the state changes are only ACTIVE and INACTIVE..
+        accessor.updateActiveState(keyData, newKeyData.getKeyState());
+      }
+      result = newKeyData;
     }
 
-    return newKeyData;
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(
+        "refreshKey: completed with result state: {}, metadata hash: {} for (custodian: {}, namespace: {})",
+        result.getKeyState(), result.getKeyMetadataHashEncoded(),
+        ManagedKeyProvider.encodeToStr(result.getKeyCustodian()), result.getKeyNamespace());
+    }
+
+    return result;
   }
 
   /**
