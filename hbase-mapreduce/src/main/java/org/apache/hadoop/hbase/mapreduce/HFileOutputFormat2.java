@@ -466,12 +466,12 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
         return wi;
       }
 
-      private void close(final StoreFileWriter w, final WriterInfo wl) throws IOException {
+      private void close(final StoreFileWriter w, final WriterInfo wi) throws IOException {
         if (w != null) {
           w.appendFileInfo(BULKLOAD_TIME_KEY, Bytes.toBytes(EnvironmentEdgeManager.currentTime()));
           w.appendFileInfo(BULKLOAD_TASK_KEY, Bytes.toBytes(context.getTaskAttemptID().toString()));
-          if (conf.getBoolean(SET_MAX_SEQ_ID_KEY, false) && wl.maxSequenceId >= 0) {
-            w.appendFileInfo(MAX_SEQ_ID_KEY, Bytes.toBytes(wl.maxSequenceId));
+          if (conf.getBoolean(SET_MAX_SEQ_ID_KEY, false) && wi.maxSequenceId >= 0) {
+            w.appendFileInfo(MAX_SEQ_ID_KEY, Bytes.toBytes(wi.maxSequenceId));
           }
           w.appendFileInfo(MAJOR_COMPACTION_KEY, Bytes.toBytes(true));
           w.appendFileInfo(EXCLUDE_FROM_MINOR_COMPACTION_KEY, Bytes.toBytes(compactionExclude));
