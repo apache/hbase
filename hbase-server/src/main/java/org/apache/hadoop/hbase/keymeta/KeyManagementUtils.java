@@ -29,8 +29,12 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 @InterfaceAudience.Private
-public class KeyManagementUtils {
+public final class KeyManagementUtils {
   private static final Logger LOG = LoggerFactory.getLogger(KeyManagementUtils.class);
+
+  private KeyManagementUtils() {
+    // Utility class, should not be instantiated
+  }
 
   /**
    * Utility function to retrieves a managed key from the key provider. If an existing key is
