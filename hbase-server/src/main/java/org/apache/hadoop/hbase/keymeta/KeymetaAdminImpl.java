@@ -162,7 +162,6 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
       updateActiveState(markerKey, ManagedKeyState.INACTIVE);
       LOG.info("disableKeyManagement completed for custodian: {} under namespace: {}", encodedCust,
         keyNamespace);
-      markerKey = getKey(keyCust, keyNamespace, markerKey.getKeyMetadataHash());
     }
 
     // Add key management state marker for the specified (keyCust, keyNamespace) combination
@@ -229,7 +228,8 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
     ManagedKeyData markerKey = getKeyManagementStateMarker(keyCust, keyNamespace);
     if (markerKey != null && markerKey.getKeyState() == ManagedKeyState.DISABLED) {
       LOG.info(
-        "refreshManagedKeys skipping since key management is disabled for custodian: {} under namespace: {}",
+        "refreshManagedKeys skipping since key management is disabled for custodian: {} under "
+          + "namespace: {}",
         encodedCust, keyNamespace);
       return;
     }
@@ -242,14 +242,16 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
         continue;
       }
       LOG.debug(
-        "refreshManagedKeys: Refreshing key with metadata hash: {} for custodian: {} under namespace: {} with state: {}",
+        "refreshManagedKeys: Refreshing key with metadata hash: {} for custodian: {} under "
+          + "namespace: {} with state: {}",
         keyData.getKeyMetadataHashEncoded(), encodedCust, keyNamespace, keyData.getKeyState());
       try {
         ManagedKeyData refreshedKey =
           KeyManagementUtils.refreshKey(getKeyProvider(), this, keyData);
         if (refreshedKey == keyData) {
           LOG.debug(
-            "refreshManagedKeys: Key with metadata hash: {} for custodian: {} under namespace: {} is unchanged",
+            "refreshManagedKeys: Key with metadata hash: {} for custodian: {} under "
+              + "namespace: {} is unchanged",
             keyData.getKeyMetadataHashEncoded(), encodedCust, keyNamespace);
         } else {
           if (refreshedKey.getKeyState().getExternalState() == ManagedKeyState.DISABLED) {
@@ -257,13 +259,15 @@ public class KeymetaAdminImpl extends KeymetaTableAccessor implements KeymetaAdm
             ejectManagedKeyDataCacheEntry(keyCust, keyNamespace, refreshedKey.getKeyMetadata());
           } else {
             LOG.info(
-              "refreshManagedKeys: Successfully refreshed key with metadata hash: {} for custodian: {} under namespace: {}",
+              "refreshManagedKeys: Successfully refreshed key with metadata hash: {} for "
+                + "custodian: {} under namespace: {}",
               refreshedKey.getKeyMetadataHashEncoded(), encodedCust, keyNamespace);
           }
         }
       } catch (IOException | KeyException e) {
         LOG.error(
-          "refreshManagedKeys: Failed to refresh key with metadata hash: {} for custodian: {} under namespace: {}",
+          "refreshManagedKeys: Failed to refresh key with metadata hash: {} for custodian: {} "
+            + "under namespace: {}",
           keyData.getKeyMetadataHashEncoded(), encodedCust, keyNamespace, e);
         if (refreshException == null) {
           refreshException = new IOException("Key refresh failed for (custodian: " + encodedCust

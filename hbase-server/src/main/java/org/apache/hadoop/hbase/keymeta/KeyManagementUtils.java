@@ -118,13 +118,15 @@ public class KeyManagementUtils {
         || keyData.getKeyState() == ManagedKeyState.DISABLED
     ) {
       throw new KeyException(
-        "Invalid key that is null or having invalid metadata or state received from key provider for (custodian: "
-          + encKeyCust + ", namespace: " + keyNamespace + ") and metadata hash: "
+        "Invalid key that is null or having invalid metadata or state received from key provider "
+          + "for (custodian: " + encKeyCust + ", namespace: " + keyNamespace
+          + ") and metadata hash: "
           + ManagedKeyProvider.encodeToStr(ManagedKeyData.constructMetadataHash(keyMetadata)));
     }
     if (LOG.isInfoEnabled()) {
       LOG.info(
-        "retrieveKey: got key with state: {} and metadata: {} for (custodian: {}, namespace: {}) and metadata hash: {}",
+        "retrieveKey: got key with state: {} and metadata: {} for (custodian: {}, "
+          + "namespace: {}) and metadata hash: {}",
         keyData.getKeyState(), keyData.getKeyMetadata(), encKeyCust, keyNamespace,
         ManagedKeyProvider.encodeToStr(ManagedKeyData.constructMetadataHash(keyMetadata)));
     }
@@ -133,7 +135,8 @@ public class KeyManagementUtils {
         accessor.addKey(keyData);
       } catch (IOException e) {
         LOG.warn(
-          "retrieveKey: Failed to add key to L2 for metadata hash: {}, for custodian: {}, namespace: {}",
+          "retrieveKey: Failed to add key to L2 for metadata hash: {}, for custodian: {}, "
+            + "namespace: {}",
           ManagedKeyProvider.encodeToStr(ManagedKeyData.constructMetadataHash(keyMetadata)),
           encKeyCust, keyNamespace, e);
       }
@@ -155,7 +158,8 @@ public class KeyManagementUtils {
     KeymetaTableAccessor accessor, ManagedKeyData keyData) throws IOException, KeyException {
     if (LOG.isDebugEnabled()) {
       LOG.debug(
-        "refreshKey: entry with keyData state: {}, metadata hash: {} for (custodian: {}, namespace: {})",
+        "refreshKey: entry with keyData state: {}, metadata hash: {} for (custodian: {}, "
+          + "namespace: {})",
         keyData.getKeyState(), keyData.getKeyMetadataHashEncoded(),
         ManagedKeyProvider.encodeToStr(keyData.getKeyCustodian()), keyData.getKeyNamespace());
     }
@@ -171,7 +175,8 @@ public class KeyManagementUtils {
       newKeyData = provider.unwrapKey(keyData.getKeyMetadata(), null);
       if (LOG.isDebugEnabled()) {
         LOG.debug(
-          "refreshKey: unwrapped key with state: {}, metadata hash: {} for (custodian: {}, namespace: {})",
+          "refreshKey: unwrapped key with state: {}, metadata hash: {} for (custodian: "
+            + "{}, namespace: {})",
           newKeyData.getKeyState(), newKeyData.getKeyMetadataHashEncoded(),
           ManagedKeyProvider.encodeToStr(newKeyData.getKeyCustodian()),
           newKeyData.getKeyNamespace());
@@ -213,7 +218,8 @@ public class KeyManagementUtils {
 
     if (LOG.isDebugEnabled()) {
       LOG.debug(
-        "refreshKey: completed with result state: {}, metadata hash: {} for (custodian: {}, namespace: {})",
+        "refreshKey: completed with result state: {}, metadata hash: {} for (custodian: "
+          + "{}, namespace: {})",
         result.getKeyState(), result.getKeyMetadataHashEncoded(),
         ManagedKeyProvider.encodeToStr(result.getKeyCustodian()), result.getKeyNamespace());
     }
@@ -260,14 +266,14 @@ public class KeyManagementUtils {
         accessor.updateActiveState(currentActiveKey, ManagedKeyState.INACTIVE);
         return newKey;
       } catch (IOException e) {
-        LOG.warn(
-          "rotateActiveKey: failed to persist new active key to L2 for (custodian: {}, namespace: {})",
-          encKeyCust, keyNamespace, e);
+        LOG.warn("rotateActiveKey: failed to persist new active key to L2 for (custodian: {}, "
+          + "namespace: {})", encKeyCust, keyNamespace, e);
         return null;
       }
     } else {
       LOG.warn(
-        "rotateActiveKey: ignoring new key with state {} without metadata hash: {} for (custodian: {}, namespace: {})",
+        "rotateActiveKey: ignoring new key with state {} without metadata hash: {} for "
+          + "(custodian: {}, namespace: {})",
         newKey.getKeyState(), newKey.getKeyMetadataHashEncoded(), encKeyCust, keyNamespace);
       return null;
     }

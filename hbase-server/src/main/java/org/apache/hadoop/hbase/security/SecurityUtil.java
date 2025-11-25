@@ -42,7 +42,7 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class SecurityUtil {
+public final class SecurityUtil {
   private static final Logger LOG = LoggerFactory.getLogger(SecurityUtil.class);
 
   private SecurityUtil() {

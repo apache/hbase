@@ -111,9 +111,7 @@ public class ManagedKeyData {
     this.keyState = keyState;
     this.theKey = theKey;
     this.keyMetadata = keyMetadata;
-    this.keyMetadataHash = keyMetadataHash != null
-      ? keyMetadataHash
-      : (keyMetadata != null ? constructMetadataHash(keyMetadata) : null);
+    this.keyMetadataHash = constructMetadataHash(keyMetadata);
     this.refreshTimestamp = refreshTimestamp;
   }
 
