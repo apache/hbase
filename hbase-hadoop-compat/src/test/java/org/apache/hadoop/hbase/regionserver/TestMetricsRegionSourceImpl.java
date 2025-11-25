@@ -237,5 +237,10 @@ public class TestMetricsRegionSourceImpl {
       map.put("info", 0L);
       return map;
     }
+
+    @Override
+    public String getTableDescriptorHash() {
+      return "testhash";
+    }
   }
 }

@@ -166,4 +166,13 @@ public interface MetricsRegionWrapper {
   /** Returns the number of row reads on memstore and file per store */
   Map<String, Long> getMixedRowReadsCount();
 
+  /**
+   * Returns a SHA-256 hash of the table descriptor that this region was opened with. This hash
+   * uniquely identifies the table configuration (column families, compression, TTL, block size,
+   * etc.) and can be used to determine if a region needs to be reopened to pick up descriptor
+   * changes.
+   * @return hex-encoded SHA-256 hash of the serialized TableDescriptor
+   */
+  String getTableDescriptorHash();
+
 }

@@ -64,9 +64,11 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
   private ScheduledFuture<?> regionMetricsUpdateTask;
 
   private float currentRegionCacheRatio;
+  private final String tableDescriptorHash;
 
   public MetricsRegionWrapperImpl(HRegion region) {
     this.region = region;
+    this.tableDescriptorHash = computeTableDescriptorHash();
     this.executor = CompatibilitySingletonFactory.getInstance(MetricsExecutor.class).getExecutor();
     this.runnable = new HRegionMetricsWrapperRunnable();
     this.regionMetricsUpdateTask =
@@ -354,6 +356,33 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
       if (tempMaxFlushQueueSize > maxFlushQueueSize) {
         maxFlushQueueSize = tempMaxFlushQueueSize;
       }
+    }
+  }
+
+  @Override
+  public String getTableDescriptorHash() {
+    return tableDescriptorHash;
+  }
+
+  private String computeTableDescriptorHash() {
+    try {
+      TableDescriptor tableDesc = this.region.getTableDescriptor();
+      if (tableDesc == null) {
+        return UNKNOWN;
+      }
+
+      org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchema tableSchema =
+        org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil.toTableSchema(tableDesc);
+      byte[] bytes = tableSchema.toByteArray();
+
+      java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
+      byte[] hash = digest.digest(bytes);
+
+      return org.apache.hadoop.hbase.util.Bytes.toHex(hash);
+    } catch (Exception e) {
+      LOG.error("Failed to compute table descriptor hash for region {}",
+        region.getRegionInfo().getEncodedName(), e);
+      return UNKNOWN;
     }
   }
 
