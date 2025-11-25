@@ -271,4 +271,12 @@
     <Bug pattern="ML_SYNC_ON_UPDATED_FIELD"/>
   </Match>
 
+  <Match>
+    <Class name="org.apache.hadoop.hbase.io.hfile.bucket.FilePathStringPool"/>
+    <Or>
+      <Method name="getInstance"/>
+    </Or>
+    <Bug pattern="MS_EXPOSE_REP"/>
+  </Match>
+
 </FindBugsFilter>
