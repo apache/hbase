@@ -35,8 +35,7 @@ public class BlockCacheKey implements HeapSize, java.io.Serializable {
   // New compressed format using integer file ID (when codec is available)
   private final int hfileNameId;
 
-  // Reference to codec for decoding file IDs back to names
-  private final FilePathStringPool stringPool;
+  private transient final FilePathStringPool stringPool;
 
   private final int regionId;
 
