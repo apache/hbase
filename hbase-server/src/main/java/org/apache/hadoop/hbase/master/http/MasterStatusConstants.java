@@ -17,21 +17,24 @@
  */
 package org.apache.hadoop.hbase.master.http;
 
-import java.io.IOException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Only kept for redirecting to master.jsp.
+ * Constants used by the web UI JSP pages.
  */
 @InterfaceAudience.Private
-public class MasterStatusServlet extends HttpServlet {
-  private static final long serialVersionUID = 1L;
+public final class MasterStatusConstants {
 
-  @Override
-  public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
-    response.sendRedirect(request.getContextPath() + "/master.jsp");
+  public static final String FRAGS = "frags";
+  public static final String SERVER_NAMES = "serverNames";
+  public static final String SERVER_NAME = "serverName";
+  public static final String RS_GROUP_INFOS = "rsGroupInfos";
+  public static final String COLLECT_SERVERS = "collectServers";
+  public static final String FILTER = "filter";
+  public static final String FORMAT = "format";
+  public static final String PARENT = "parent";
+
+  private MasterStatusConstants() {
+    // Do not instantiate.
   }
 }
