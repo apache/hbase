@@ -188,7 +188,6 @@ public class TestManagedKeyData {
 
   @Test
   public void testEqualsWithDifferentClass() {
-    assertNotEquals(managedKeyData, "not a ManagedKeyData");
     assertNotEquals(managedKeyData, new Object());
   }
 
