@@ -136,17 +136,25 @@ public class TestMetricsRegionServer {
     HELPER.assertGauge("l1CacheCount", 50, serverSource);
     HELPER.assertCounter("l1CacheEvictionCount", 1000, serverSource);
     HELPER.assertGauge("l1CacheHitCount", 200, serverSource);
+    HELPER.assertGauge("l1CacheHitCachingCount", 200, serverSource);
     HELPER.assertGauge("l1CacheMissCount", 100, serverSource);
+    HELPER.assertGauge("l1CacheMissCachingCount", 100, serverSource);
     HELPER.assertGauge("l1CacheHitRatio", 80, serverSource);
+    HELPER.assertGauge("l1CacheHitCachingRatio", 80, serverSource);
     HELPER.assertGauge("l1CacheMissRatio", 20, serverSource);
+    HELPER.assertGauge("l1CacheMissCachingRatio", 20, serverSource);
     HELPER.assertGauge("l2CacheFreeSize", 200, serverSource);
     HELPER.assertGauge("l2CacheSize", 456, serverSource);
     HELPER.assertGauge("l2CacheCount", 75, serverSource);
     HELPER.assertCounter("l2CacheEvictionCount", 2000, serverSource);
     HELPER.assertGauge("l2CacheHitCount", 800, serverSource);
+    HELPER.assertGauge("l2CacheHitCachingCount", 800, serverSource);
     HELPER.assertGauge("l2CacheMissCount", 200, serverSource);
+    HELPER.assertGauge("l2CacheMissCachingCount", 200, serverSource);
     HELPER.assertGauge("l2CacheHitRatio", 90, serverSource);
+    HELPER.assertGauge("l2CacheHitCachingRatio", 90, serverSource);
     HELPER.assertGauge("l2CacheMissRatio", 10, serverSource);
+    HELPER.assertGauge("l2CacheMissCachingRatio", 10, serverSource);
     HELPER.assertCounter("updatesBlockedTime", 419, serverSource);
   }
 
