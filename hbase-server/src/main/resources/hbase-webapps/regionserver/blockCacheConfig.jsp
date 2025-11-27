@@ -59,6 +59,12 @@ if (cacheConfig == null) { %>
       reader is closed</td>
   </tr>
   <tr>
+    <td>Evict blocks on Split</td>
+    <td><%= cacheConfig.shouldEvictOnSplit() %></td>
+    <td>True if blocks of the parent region are evicted
+      from the cache when splits or merges.</td>
+  </tr>
+  <tr>
     <td>Cache DATA in compressed format</td>
     <td><%= cacheConfig.shouldCacheDataCompressed() %></td>
     <td>True if DATA blocks are cached in their compressed form</td>
