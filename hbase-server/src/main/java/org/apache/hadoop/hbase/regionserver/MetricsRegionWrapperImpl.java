@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.security.MessageDigest;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.OptionalDouble;
@@ -30,11 +31,14 @@ import org.apache.commons.lang3.mutable.MutableLong;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.metrics2.MetricsExecutor;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
 @InterfaceAudience.Private
 public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable {
@@ -371,14 +375,14 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
         return UNKNOWN;
       }
 
-      org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchema tableSchema =
-        org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil.toTableSchema(tableDesc);
+      HBaseProtos.TableSchema tableSchema =
+        ProtobufUtil.toTableSchema(tableDesc);
       byte[] bytes = tableSchema.toByteArray();
 
-      java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
+      MessageDigest digest = MessageDigest.getInstance("SHA-256");
       byte[] hash = digest.digest(bytes);
 
-      return org.apache.hadoop.hbase.util.Bytes.toHex(hash);
+      return Bytes.toHex(hash);
     } catch (Exception e) {
       LOG.error("Failed to compute table descriptor hash for region {}",
         region.getRegionInfo().getEncodedName(), e);
