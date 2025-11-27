@@ -132,7 +132,7 @@ public class TestRSStatusPage {
     assertTrue(page.contains(expectedPageHeader));
     assertTrue(page.contains("<h2>Server Metrics</h2>"));
     assertTrue(page.contains("<th>Requests Per Second</th>"));
-    assertTrue(page.contains("<h2>Block Cache</h2>"));
+    assertTrue(page.contains("<h2>Cache</h2>"));
     assertTrue(page.contains("<h2>Regions</h2>"));
     assertTrue(page.contains("<h2>Replication Status</h2>"));
     assertTrue(page.contains("<h2>Software Attributes</h2>"));

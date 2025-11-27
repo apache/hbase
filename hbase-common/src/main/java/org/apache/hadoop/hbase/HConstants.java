@@ -1018,6 +1018,24 @@ public final class HConstants {
   public static final float HFILE_BLOCK_CACHE_SIZE_DEFAULT = 0.4f;
 
   /**
+   * Configuration key for the size of the row cache
+   */
+  public static final String ROW_CACHE_SIZE_KEY = "row.cache.size";
+  public static final float ROW_CACHE_SIZE_DEFAULT = 0.0f;
+
+  /**
+   * Configuration key for the evict the row cache on close
+   */
+  public static final String ROW_CACHE_EVICT_ON_CLOSE_KEY = "row.cache.evictOnClose";
+  public static final boolean ROW_CACHE_EVICT_ON_CLOSE_DEFAULT = false;
+
+  /**
+   * Configuration key for the row cache enabled
+   */
+  public static final String ROW_CACHE_ENABLED_KEY = "row.cache.enabled";
+  public static final boolean ROW_CACHE_ENABLED_DEFAULT = false;
+
+  /**
    * Configuration key for the memory size of the block cache
    */
   public static final String HFILE_BLOCK_CACHE_MEMORY_SIZE_KEY = "hfile.block.cache.memory.size";

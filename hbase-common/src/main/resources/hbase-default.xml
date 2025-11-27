@@ -1028,6 +1028,12 @@ possible configurations would overwhelm and obscure the important.
       Takes precedence over hfile.block.cache.size if both are specified.</description>
   </property>
   <property>
+    <name>row.cache.size</name>
+    <value>0.0</value>
+    <description>Percentage of maximum heap (-Xmx setting) to allocate to row cache.
+      Default of 0.0; it means the row cache is disabled.</description>
+  </property>
+  <property>
       <name>hfile.block.index.cacheonwrite</name>
       <value>false</value>
       <description>This allows to put non-root multi-level index blocks into the block

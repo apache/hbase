@@ -227,6 +227,15 @@ public class TableDescriptorBuilder {
   private final static Map<String, String> DEFAULT_VALUES = new HashMap<>();
   private final static Set<Bytes> RESERVED_KEYWORDS = new HashSet<>();
 
+  /**
+   * Used by HBase Shell interface to access this metadata attribute which denotes if the row cache
+   * is enabled.
+   */
+  @InterfaceAudience.Private
+  public static final String ROW_CACHE_ENABLED = "ROW_CACHE_ENABLED";
+  private static final Bytes ROW_CACHE_ENABLED_KEY = new Bytes(Bytes.toBytes(ROW_CACHE_ENABLED));
+  private static final boolean DEFAULT_ROW_CACHE_ENABLED = false;
+
   static {
     DEFAULT_VALUES.put(MAX_FILESIZE, String.valueOf(HConstants.DEFAULT_MAX_FILE_SIZE));
     DEFAULT_VALUES.put(READONLY, String.valueOf(DEFAULT_READONLY));
@@ -236,6 +245,7 @@ public class TableDescriptorBuilder {
     DEFAULT_VALUES.put(PRIORITY, String.valueOf(DEFAULT_PRIORITY));
     // Setting ERASURE_CODING_POLICY to NULL so that it is not considered as metadata
     DEFAULT_VALUES.put(ERASURE_CODING_POLICY, String.valueOf(DEFAULT_ERASURE_CODING_POLICY));
+    DEFAULT_VALUES.put(ROW_CACHE_ENABLED, String.valueOf(DEFAULT_ROW_CACHE_ENABLED));
     DEFAULT_VALUES.keySet().stream().map(s -> new Bytes(Bytes.toBytes(s)))
       .forEach(RESERVED_KEYWORDS::add);
     RESERVED_KEYWORDS.add(IS_META_KEY);
@@ -563,6 +573,11 @@ public class TableDescriptorBuilder {
 
   public TableDescriptor build() {
     return new ModifyableTableDescriptor(desc);
+  }
+
+  public TableDescriptorBuilder setRowCacheEnabled(boolean rowCacheEnabled) {
+    desc.setRowCacheEnabled(rowCacheEnabled);
+    return this;
   }
 
   private static final class ModifyableTableDescriptor
@@ -1509,6 +1524,16 @@ public class TableDescriptorBuilder {
       } else {
         return Optional.empty();
       }
+    }
+
+    @Override
+    public Boolean getRowCacheEnabled() {
+      Bytes value = getValue(ROW_CACHE_ENABLED_KEY);
+      return value == null ? null : Boolean.valueOf(Bytes.toString(value.get()));
+    }
+
+    public ModifyableTableDescriptor setRowCacheEnabled(boolean enabled) {
+      return setValue(ROW_CACHE_ENABLED_KEY, Boolean.toString(enabled));
     }
   }
 
