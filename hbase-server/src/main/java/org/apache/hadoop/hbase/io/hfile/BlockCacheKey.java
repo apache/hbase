@@ -156,7 +156,7 @@ public class BlockCacheKey implements HeapSize, java.io.Serializable {
   }
 
   /**
-   * Returns the hfileName portion of this cache key.
+   * Returns the region name portion of this cache key.
    * @return The region name
    */
   public String getRegionName() {
