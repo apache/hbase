@@ -647,7 +647,7 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
         break;
       }
       LOG.info("Moving {} regions from {} to {} servers using {} threads .Ack Mode: {}",
-        regionsToMove.size(), this.hostname, regionServers.size(), this.maxthreads, ack);
+        regionsToMove.size(), server, regionServers.size(), this.maxthreads, ack);
 
       Optional<RegionInfo> metaRegion = getMetaRegionInfoIfToBeMoved(regionsToMove);
       if (metaRegion.isPresent()) {
