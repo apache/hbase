@@ -398,9 +398,6 @@ public class CacheConfig implements PropagatingConfigurationObserver {
    * configuration.
    */
   public boolean shouldReadBlockFromCache(BlockType blockType) {
-    if (!getBlockCache().isPresent()) {
-      return false;
-    }
     if (cacheDataOnRead) {
       return true;
     }
