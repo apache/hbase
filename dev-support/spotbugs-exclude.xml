@@ -271,6 +271,10 @@
     <Bug pattern="ML_SYNC_ON_UPDATED_FIELD"/>
   </Match>
 
+  <!--
+  Given it's a singleton, the instance must be returned. We need the same instance to be shared
+  between all BlockCacheKey objects, as well as the BucketCache instance.
+  -->
   <Match>
     <Class name="org.apache.hadoop.hbase.io.hfile.bucket.FilePathStringPool"/>
     <Or>

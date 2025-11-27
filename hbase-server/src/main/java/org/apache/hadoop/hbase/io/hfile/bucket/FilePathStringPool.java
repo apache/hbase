@@ -49,7 +49,7 @@ public class FilePathStringPool {
   // Bidirectional mappings for string objects re-use
   private final ConcurrentHashMap<String, Integer> stringToId = new ConcurrentHashMap<>();
   private final ConcurrentHashMap<Integer, String> idToString = new ConcurrentHashMap<>();
-  private final AtomicInteger nexId = new AtomicInteger(0);
+  private final AtomicInteger nextId = new AtomicInteger(0);
 
   private static FilePathStringPool instance;
 
@@ -73,18 +73,18 @@ public class FilePathStringPool {
    */
   public int encode(String string) {
     if (string == null) {
-      throw new IllegalArgumentException("hfileName cannot be null");
-    }
-    if (stringToId.size() == Integer.MAX_VALUE) {
-      throw new IllegalStateException(
-        "String pool has reached maximum capacity of " + Integer.MAX_VALUE + " unique strings.");
+      throw new IllegalArgumentException("string cannot be null");
     }
     return stringToId.computeIfAbsent(string, name -> {
-      int id = nexId.getAndIncrement();
+      if (stringToId.size() == Integer.MAX_VALUE) {
+        throw new IllegalStateException(
+          "String pool has reached maximum capacity of " + Integer.MAX_VALUE + " unique strings.");
+      }
+      int id = nextId.getAndIncrement();
       while (idToString.containsKey(id)) {
-        id = nexId.getAndIncrement();
+        id = nextId.getAndIncrement();
         if (id == Integer.MAX_VALUE) {
-          nexId.set(0);
+          nextId.set(0);
           LOG.info("Id values reached Integer.MAX_VALUE, restarting from 0");
         }
       }
@@ -154,7 +154,7 @@ public class FilePathStringPool {
   public void clear() {
     stringToId.clear();
     idToString.clear();
-    nexId.set(0);
+    nextId.set(0);
     LOG.info("Cleared all file name mappings from codec");
   }
 

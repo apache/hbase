@@ -97,7 +97,7 @@ public class DataTieringManager {
   public boolean isDataTieringEnabled(BlockCacheKey key) throws DataTieringException {
     if (key.getCfName() == null || key.getRegionName() == null) {
       throw new DataTieringException(
-        "BlockCacheKey doesn't contain " + "Column Family Name or Region Name");
+        "BlockCacheKey doesn't contain Column Family Name or Region Name");
     }
     Configuration configuration =
       getHStore(key.getRegionName(), key.getCfName()).getReadOnlyConfiguration();

@@ -164,14 +164,6 @@ public class BlockCacheKey implements HeapSize, java.io.Serializable {
   }
 
   /**
-   * Returns the compressed file ID.
-   * @return the integer file ID
-   */
-  public int getRegionId() {
-    return regionId;
-  }
-
-  /**
    * Returns the column family name portion of this cache key.
    * @return The column family name
    */

@@ -599,7 +599,7 @@ public class BucketCache implements BlockCache, HeapSize {
     if (cacheKey.getBlockType() == null && cachedItem.getBlockType() != null) {
       cacheKey.setBlockType(cachedItem.getBlockType());
     }
-    LOG.debug("Caching key={}, item={}, key keap size={}", cacheKey, cachedItem,
+    LOG.debug("Caching key={}, item={}, key heap size={}", cacheKey, cachedItem,
       cacheKey.heapSize());
     // Stuff the entry into the RAM cache so it can get drained to the persistent store
     RAMQueueEntry re = new RAMQueueEntry(cacheKey, cachedItem, accessCount.incrementAndGet(),
@@ -1941,6 +1941,10 @@ public class BucketCache implements BlockCache, HeapSize {
   @Override
   public int evictBlocksRangeByHfileName(String hfileName, long initOffset, long endOffset) {
     Set<BlockCacheKey> keySet = getAllCacheKeysForFile(hfileName, initOffset, endOffset);
+    // We need to make sure whether we are evicting all blocks for this given file. In case of
+    // split references, we might be evicting just half of the blocks
+    int totalFileKeys = (endOffset == Long.MAX_VALUE) ? keySet.size() :
+      getAllCacheKeysForFile(hfileName, 0, Long.MAX_VALUE).size();
     LOG.debug("found {} blocks for file {}, starting offset: {}, end offset: {}", keySet.size(),
       hfileName, initOffset, endOffset);
     int numEvicted = 0;
@@ -1950,8 +1954,6 @@ public class BucketCache implements BlockCache, HeapSize {
       }
     }
     if (numEvicted > 0) {
-      // We need to make sure whether we are evicting all blocks for this given file
-      int totalFileKeys = getAllCacheKeysForFile(hfileName, 0, Long.MAX_VALUE).size();
       if (totalFileKeys == numEvicted) {
         FilePathStringPool.getInstance().remove(hfileName);
       }
