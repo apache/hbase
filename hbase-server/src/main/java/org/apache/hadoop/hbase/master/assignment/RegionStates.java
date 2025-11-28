@@ -95,10 +95,6 @@ public class RegionStates {
     serverMap.clear();
   }
 
-  public boolean isRegionInRegionStates(final RegionInfo hri) {
-    return (regionsMap.containsKey(hri.getRegionName()) || regionOffline.containsKey(hri));
-  }
-
   // ==========================================================================
   // RegionStateNode helpers
   // ==========================================================================

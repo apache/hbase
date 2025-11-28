@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -212,7 +213,12 @@ public class DeadServer {
    * @param deadServerName the dead server name
    * @return the date when the server died
    */
-  public synchronized long getTimeOfDeath(final ServerName deadServerName) {
+  public synchronized Date getTimeOfDeath(final ServerName deadServerName) {
+    Long time = deadServers.get(deadServerName);
+    return time == null ? null : new Date(time);
+  }
+
+  public synchronized long getDeathTimestamp(final ServerName deadServerName) {
     Long time = deadServers.get(deadServerName);
     return time == null ? 0 : time;
   }
