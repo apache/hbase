@@ -679,13 +679,13 @@ public class TestSimpleRpcScheduler {
     String name = testName.getMethodName();
     int handlerCount = 1;
     String callQueueType = RpcExecutor.CALL_QUEUE_TYPE_CODEL_CONF_VALUE;
-    int maxQueueLength = 0;
     PriorityFunction priority = mock(PriorityFunction.class);
     Configuration conf = HBaseConfiguration.create();
+    conf.setInt(RpcScheduler.IPC_SERVER_MAX_CALLQUEUE_LENGTH, 0);
     Abortable abortable = mock(Abortable.class);
     FastPathBalancedQueueRpcExecutor executor =
       Mockito.spy(new FastPathBalancedQueueRpcExecutor(name, handlerCount, callQueueType,
-        maxQueueLength, priority, conf, abortable));
+        RpcScheduler.IPC_SERVER_MAX_CALLQUEUE_LENGTH, priority, conf, abortable));
     CallRunner task = mock(CallRunner.class);
     assertFalse(executor.dispatch(task));
     // make sure we never internally get a handler, which would skip the queue validation
