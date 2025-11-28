@@ -47,6 +47,27 @@ module Hbase
       @admin.getManagedKeys(cust, namespace)
     end
 
+    def disable_key_management(key_info)
+      cust, namespace = extract_cust_info(key_info)
+      @admin.disableKeyManagement(cust, namespace)
+    end
+
+    def disable_managed_key(key_info, key_metadata_hash_base64)
+      cust, namespace = extract_cust_info(key_info)
+      key_metadata_hash_bytes = decode_to_bytes(key_metadata_hash_base64)
+      @admin.disableManagedKey(cust, namespace, key_metadata_hash_bytes)
+    end
+
+    def rotate_managed_key(key_info)
+      cust, namespace = extract_cust_info(key_info)
+      @admin.rotateManagedKey(cust, namespace)
+    end
+
+    def refresh_managed_keys(key_info)
+      cust, namespace = extract_cust_info(key_info)
+      @admin.refreshManagedKeys(cust, namespace)
+    end
+
     def rotate_stk
       @admin.rotateSTK
     end
@@ -57,15 +78,18 @@ module Hbase
 
       custodian = cust_info[0]
       namespace = cust_info.length > 1 ? cust_info[1] : ManagedKeyData::KEY_SPACE_GLOBAL
-
-      begin
-        cust_bytes = ManagedKeyProvider.decodeToBytes(custodian)
-      rescue Java::JavaIo::IOException => e
-        message = e.cause&.message || e.message
-        raise(ArgumentError, "Failed to decode key custodian '#{custodian}': #{message}")
-      end
+      cust_bytes = decode_to_bytes custodian
 
       [cust_bytes, namespace]
+    end
+
+    def decode_to_bytes(base64_string)
+      begin
+        ManagedKeyProvider.decodeToBytes(base64_string)
+      rescue Java::JavaIo::IOException => e
+        message = e.cause&.message || e.message
+        raise(ArgumentError, "Failed to decode Base64 encoded string '#{base64_string}': #{message}")
+      end
     end
   end
 end

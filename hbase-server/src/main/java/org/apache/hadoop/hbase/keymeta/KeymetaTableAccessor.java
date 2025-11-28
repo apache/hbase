@@ -24,18 +24,20 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
@@ -44,7 +46,10 @@ import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyState;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * Accessor for keymeta table as part of key management.
@@ -117,19 +122,19 @@ public class KeymetaTableAccessor extends KeyManagementBase {
   }
 
   /**
-   * Get all the keys for the specified key_cust and key_namespace.
-   * @param key_cust     The key custodian.
-   * @param keyNamespace The namespace
+   * Get all the keys for the specified keyCust and key_namespace.
+   * @param keyCust        The key custodian.
+   * @param keyNamespace   The namespace
+   * @param includeMarkers Whether to include key management state markers in the result.
    * @return a list of key data, one for each key, can be empty when none were found.
    * @throws IOException  when there is an underlying IOException.
    * @throws KeyException when there is an underlying KeyException.
    */
-  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
-  public List<ManagedKeyData> getAllKeys(byte[] key_cust, String keyNamespace)
-    throws IOException, KeyException {
+  public List<ManagedKeyData> getAllKeys(byte[] keyCust, String keyNamespace,
+    boolean includeMarkers) throws IOException, KeyException {
     assertKeyManagementEnabled();
     Connection connection = getServer().getConnection();
-    byte[] prefixForScan = constructRowKeyForCustNamespace(key_cust, keyNamespace);
+    byte[] prefixForScan = constructRowKeyForCustNamespace(keyCust, keyNamespace);
     PrefixFilter prefixFilter = new PrefixFilter(prefixForScan);
     Scan scan = new Scan();
     scan.setFilter(prefixFilter);
@@ -140,8 +145,8 @@ public class KeymetaTableAccessor extends KeyManagementBase {
       Set<ManagedKeyData> allKeys = new LinkedHashSet<>();
       for (Result result : scanner) {
         ManagedKeyData keyData =
-          parseFromResult(getKeyManagementService(), key_cust, keyNamespace, result);
-        if (keyData != null) {
+          parseFromResult(getKeyManagementService(), keyCust, keyNamespace, result);
+        if (keyData != null && (includeMarkers || keyData.getKeyMetadata() != null)) {
           allKeys.add(keyData);
         }
       }
@@ -150,73 +155,192 @@ public class KeymetaTableAccessor extends KeyManagementBase {
   }
 
   /**
-   * Get the active key for the specified key_cust and key_namespace.
-   * @param key_cust     The prefix
+   * Get the key management state marker for the specified keyCust and key_namespace.
+   * @param keyCust      The prefix
    * @param keyNamespace The namespace
-   * @return the active key data, or null if no active key found
+   * @return the key management state marker data, or null if no key management state marker found
    * @throws IOException  when there is an underlying IOException.
    * @throws KeyException when there is an underlying KeyException.
    */
-  public ManagedKeyData getActiveKey(byte[] key_cust, String keyNamespace)
+  public ManagedKeyData getKeyManagementStateMarker(byte[] keyCust, String keyNamespace)
     throws IOException, KeyException {
-    assertKeyManagementEnabled();
-    Connection connection = getServer().getConnection();
-    byte[] rowkeyForGet = constructRowKeyForCustNamespace(key_cust, keyNamespace);
-    Get get = new Get(rowkeyForGet);
-
-    try (Table table = connection.getTable(KEY_META_TABLE_NAME)) {
-      Result result = table.get(get);
-      return parseFromResult(getKeyManagementService(), key_cust, keyNamespace, result);
-    }
+    return getKey(keyCust, keyNamespace, null);
   }
 
   /**
-   * Get the specific key identified by key_cust, keyNamespace and keyState.
-   * @param key_cust     The prefix.
-   * @param keyNamespace The namespace.
-   * @param keyState     The state of the key.
-   * @return the key or {@code null}
-   * @throws IOException  when there is an underlying IOException.
-   * @throws KeyException when there is an underlying KeyException.
-   */
-  public ManagedKeyData getKey(byte[] key_cust, String keyNamespace, ManagedKeyState keyState)
-    throws IOException, KeyException {
-    return getKeyInternal(key_cust, keyNamespace, new byte[] { keyState.getVal() });
-  }
-
-  /**
-   * Get the specific key identified by key_cust, keyNamespace and keyMetadata.
-   * @param key_cust     The prefix.
-   * @param keyNamespace The namespace.
-   * @param keyMetadata  The metadata.
-   * @return the key or {@code null}
-   * @throws IOException  when there is an underlying IOException.
-   * @throws KeyException when there is an underlying KeyException.
-   */
-  public ManagedKeyData getKey(byte[] key_cust, String keyNamespace, String keyMetadata)
-    throws IOException, KeyException {
-    return getKeyInternal(key_cust, keyNamespace,
-      ManagedKeyData.constructMetadataHash(keyMetadata));
-  }
-
-  /**
-   * Internal helper method to get a key using the provided metadata hash.
-   * @param key_cust        The prefix.
+   * Get the specific key identified by keyCust, keyNamespace and keyMetadataHash.
+   * @param keyCust         The prefix.
    * @param keyNamespace    The namespace.
-   * @param keyMetadataHash The metadata hash or state value.
+   * @param keyMetadataHash The metadata hash.
    * @return the key or {@code null}
    * @throws IOException  when there is an underlying IOException.
    * @throws KeyException when there is an underlying KeyException.
    */
-  private ManagedKeyData getKeyInternal(byte[] key_cust, String keyNamespace,
-    byte[] keyMetadataHash) throws IOException, KeyException {
+  public ManagedKeyData getKey(byte[] keyCust, String keyNamespace, byte[] keyMetadataHash)
+    throws IOException, KeyException {
     assertKeyManagementEnabled();
     Connection connection = getServer().getConnection();
     try (Table table = connection.getTable(KEY_META_TABLE_NAME)) {
-      byte[] rowKey = constructRowKeyForMetadata(key_cust, keyNamespace, keyMetadataHash);
+      byte[] rowKey = keyMetadataHash != null
+        ? constructRowKeyForMetadata(keyCust, keyNamespace, keyMetadataHash)
+        : constructRowKeyForCustNamespace(keyCust, keyNamespace);
       Result result = table.get(new Get(rowKey));
-      return parseFromResult(getKeyManagementService(), key_cust, keyNamespace, result);
+      return parseFromResult(getKeyManagementService(), keyCust, keyNamespace, result);
     }
+  }
+
+  /**
+   * Disables a key by removing the wrapped key and updating its state to DISABLED.
+   * @param keyData The key data to disable.
+   * @throws IOException when there is an underlying IOException.
+   */
+  public void disableKey(ManagedKeyData keyData) throws IOException {
+    assertKeyManagementEnabled();
+    Preconditions.checkNotNull(keyData.getKeyMetadata(), "Key metadata cannot be null");
+    byte[] keyCust = keyData.getKeyCustodian();
+    String keyNamespace = keyData.getKeyNamespace();
+    byte[] keyMetadataHash = keyData.getKeyMetadataHash();
+
+    List<Mutation> mutations = new ArrayList<>(3); // Max possible mutations.
+
+    if (keyData.getKeyState() == ManagedKeyState.ACTIVE) {
+      // Delete the CustNamespace row
+      byte[] rowKeyForCustNamespace = constructRowKeyForCustNamespace(keyCust, keyNamespace);
+      mutations.add(new Delete(rowKeyForCustNamespace).setDurability(Durability.SKIP_WAL)
+        .setPriority(HConstants.SYSTEMTABLE_QOS));
+    }
+
+    // Update state to DISABLED and timestamp on Metadata row
+    byte[] rowKeyForMetadata = constructRowKeyForMetadata(keyCust, keyNamespace, keyMetadataHash);
+    addMutationsForKeyDisabled(mutations, rowKeyForMetadata, keyData.getKeyMetadata(),
+      keyData.getKeyState() == ManagedKeyState.ACTIVE
+        ? ManagedKeyState.ACTIVE_DISABLED
+        : ManagedKeyState.INACTIVE_DISABLED,
+      keyData.getKeyState());
+
+    Connection connection = getServer().getConnection();
+    try (Table table = connection.getTable(KEY_META_TABLE_NAME)) {
+      table.batch(mutations, null);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new IOException("Interrupted while disabling key", e);
+    }
+  }
+
+  private void addMutationsForKeyDisabled(List<Mutation> mutations, byte[] rowKey, String metadata,
+    ManagedKeyState targetState, ManagedKeyState currentState) {
+    Put put = new Put(rowKey);
+    if (metadata != null) {
+      put.addColumn(KEY_META_INFO_FAMILY, DEK_METADATA_QUAL_BYTES, metadata.getBytes());
+    }
+    Put putForState = addMutationColumnsForState(put, targetState);
+    mutations.add(putForState);
+
+    // Delete wrapped key columns from Metadata row
+    if (currentState == null || ManagedKeyState.isUsable(currentState)) {
+      Delete deleteWrappedKey = new Delete(rowKey).setDurability(Durability.SKIP_WAL)
+        .setPriority(HConstants.SYSTEMTABLE_QOS)
+        .addColumns(KEY_META_INFO_FAMILY, DEK_CHECKSUM_QUAL_BYTES)
+        .addColumns(KEY_META_INFO_FAMILY, DEK_WRAPPED_BY_STK_QUAL_BYTES)
+        .addColumns(KEY_META_INFO_FAMILY, STK_CHECKSUM_QUAL_BYTES);
+      mutations.add(deleteWrappedKey);
+    }
+  }
+
+  /**
+   * Adds a key management state marker to the specified (keyCust, keyNamespace) combination. It
+   * also adds delete markers for the columns unrelates to marker, in case the state is
+   * transitioning from ACTIVE to DISABLED or FAILED. This method is only used for setting the state
+   * to DISABLED or FAILED. For ACTIVE state, the addKey() method implicitly adds the marker.
+   * @param keyCust      The key custodian.
+   * @param keyNamespace The namespace.
+   * @param state        The key management state to add.
+   * @throws IOException when there is an underlying IOException.
+   */
+  public void addKeyManagementStateMarker(byte[] keyCust, String keyNamespace,
+    ManagedKeyState state) throws IOException {
+    assertKeyManagementEnabled();
+    Preconditions.checkArgument(ManagedKeyState.isKeyManagementState(state),
+      "State must be a key management state, got: " + state);
+    List<Mutation> mutations = new ArrayList<>(2);
+    byte[] rowKey = constructRowKeyForCustNamespace(keyCust, keyNamespace);
+    addMutationsForKeyDisabled(mutations, rowKey, null, state, null);
+    Connection connection = getServer().getConnection();
+    try (Table table = connection.getTable(KEY_META_TABLE_NAME)) {
+      table.batch(mutations, null);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new IOException("Interrupted while adding key management state marker", e);
+    }
+  }
+
+  /**
+   * Updates the state of a key to one of the ACTIVE or INACTIVE states. The current state can be
+   * any state, but if it the same, it becomes a no-op.
+   * @param keyData  The key data.
+   * @param newState The new state (must be ACTIVE or INACTIVE).
+   * @throws IOException when there is an underlying IOException.
+   */
+  public void updateActiveState(ManagedKeyData keyData, ManagedKeyState newState)
+    throws IOException {
+    assertKeyManagementEnabled();
+    ManagedKeyState currentState = keyData.getKeyState();
+
+    // Validate states
+    Preconditions.checkArgument(ManagedKeyState.isUsable(newState),
+      "New state must be ACTIVE or INACTIVE, got: " + newState);
+    // Even for FAILED keys, we expect the metadata to be non-null.
+    Preconditions.checkNotNull(keyData.getKeyMetadata(), "Key metadata cannot be null");
+
+    // No-op if states are the same
+    if (currentState == newState) {
+      return;
+    }
+
+    List<Row> mutations = new ArrayList<>(2);
+    byte[] rowKeyForCustNamespace = constructRowKeyForCustNamespace(keyData);
+    byte[] rowKeyForMetadata = constructRowKeyForMetadata(keyData);
+
+    // First take care of the active key specific row.
+    if (newState == ManagedKeyState.ACTIVE) {
+      // INACTIVE -> ACTIVE: Add CustNamespace row and update Metadata row
+      mutations.add(addMutationColumns(new Put(rowKeyForCustNamespace), keyData));
+    }
+    if (currentState == ManagedKeyState.ACTIVE) {
+      mutations.add(new Delete(rowKeyForCustNamespace).setDurability(Durability.SKIP_WAL)
+        .setPriority(HConstants.SYSTEMTABLE_QOS));
+    }
+
+    // Now take care of the key specific row (for point gets by metadata).
+    if (!ManagedKeyState.isUsable(currentState)) {
+      // For DISABLED and FAILED keys, we don't expect cached key material, so add all columns
+      // similar to what addKey() does.
+      mutations.add(addMutationColumns(new Put(rowKeyForMetadata), keyData));
+    } else {
+      // We expect cached key material, so only update the state and timestamp columns.
+      mutations.add(addMutationColumnsForState(new Put(rowKeyForMetadata), newState));
+    }
+
+    Connection connection = getServer().getConnection();
+    try (Table table = connection.getTable(KEY_META_TABLE_NAME)) {
+      table.batch(mutations, null);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new IOException("Interrupted while updating active state", e);
+    }
+  }
+
+  private Put addMutationColumnsForState(Put put, ManagedKeyState newState) {
+    return addMutationColumnsForState(put, newState, EnvironmentEdgeManager.currentTime());
+  }
+
+  /**
+   * Add only state and timestamp columns to the given Put.
+   */
+  private Put addMutationColumnsForState(Put put, ManagedKeyState newState, long timestamp) {
+    return put.setDurability(Durability.SKIP_WAL).setPriority(HConstants.SYSTEMTABLE_QOS)
+      .addColumn(KEY_META_INFO_FAMILY, KEY_STATE_QUAL_BYTES, new byte[] { newState.getVal() })
+      .addColumn(KEY_META_INFO_FAMILY, REFRESHED_TIMESTAMP_QUAL_BYTES, Bytes.toBytes(timestamp));
   }
 
   /**
@@ -235,11 +359,8 @@ public class KeymetaTableAccessor extends KeyManagementBase {
         .addColumn(KEY_META_INFO_FAMILY, STK_CHECKSUM_QUAL_BYTES,
           Bytes.toBytes(latestSystemKey.getKeyChecksum()));
     }
-    Put result = put.setDurability(Durability.SKIP_WAL).setPriority(HConstants.SYSTEMTABLE_QOS)
-      .addColumn(KEY_META_INFO_FAMILY, REFRESHED_TIMESTAMP_QUAL_BYTES,
-        Bytes.toBytes(keyData.getRefreshTimestamp()))
-      .addColumn(KEY_META_INFO_FAMILY, KEY_STATE_QUAL_BYTES,
-        new byte[] { keyData.getKeyState().getVal() });
+    Put result =
+      addMutationColumnsForState(put, keyData.getKeyState(), keyData.getRefreshTimestamp());
 
     // Only add metadata column if metadata is not null
     String metadata = keyData.getKeyMetadata();
@@ -252,21 +373,15 @@ public class KeymetaTableAccessor extends KeyManagementBase {
 
   @InterfaceAudience.Private
   public static byte[] constructRowKeyForMetadata(ManagedKeyData keyData) {
-    byte[] keyMetadataHash;
-    if (keyData.getKeyState() == ManagedKeyState.FAILED && keyData.getKeyMetadata() == null) {
-      // For FAILED state with null metadata, use state as metadata
-      keyMetadataHash = new byte[] { keyData.getKeyState().getVal() };
-    } else {
-      keyMetadataHash = keyData.getKeyMetadataHash();
-    }
+    Preconditions.checkNotNull(keyData.getKeyMetadata(), "Key metadata cannot be null");
     return constructRowKeyForMetadata(keyData.getKeyCustodian(), keyData.getKeyNamespace(),
-      keyMetadataHash);
+      keyData.getKeyMetadataHash());
   }
 
   @InterfaceAudience.Private
-  public static byte[] constructRowKeyForMetadata(byte[] key_cust, String keyNamespace,
+  public static byte[] constructRowKeyForMetadata(byte[] keyCust, String keyNamespace,
     byte[] keyMetadataHash) {
-    return Bytes.add(constructRowKeyForCustNamespace(key_cust, keyNamespace), keyMetadataHash);
+    return Bytes.add(constructRowKeyForCustNamespace(keyCust, keyNamespace), keyMetadataHash);
   }
 
   @InterfaceAudience.Private
@@ -275,14 +390,14 @@ public class KeymetaTableAccessor extends KeyManagementBase {
   }
 
   @InterfaceAudience.Private
-  public static byte[] constructRowKeyForCustNamespace(byte[] key_cust, String keyNamespace) {
-    int custLength = key_cust.length;
-    return Bytes.add(Bytes.toBytes(custLength), key_cust, Bytes.toBytes(keyNamespace));
+  public static byte[] constructRowKeyForCustNamespace(byte[] keyCust, String keyNamespace) {
+    int custLength = keyCust.length;
+    return Bytes.add(Bytes.toBytes(custLength), keyCust, Bytes.toBytes(keyNamespace));
   }
 
   @InterfaceAudience.Private
   public static ManagedKeyData parseFromResult(KeyManagementService keyManagementService,
-    byte[] key_cust, String keyNamespace, Result result) throws IOException, KeyException {
+    byte[] keyCust, String keyNamespace, Result result) throws IOException, KeyException {
     if (result == null || result.isEmpty()) {
       return null;
     }
@@ -313,16 +428,24 @@ public class KeymetaTableAccessor extends KeyManagementBase {
     }
     long refreshedTimestamp =
       Bytes.toLong(result.getValue(KEY_META_INFO_FAMILY, REFRESHED_TIMESTAMP_QUAL_BYTES));
-    ManagedKeyData dekKeyData =
-      new ManagedKeyData(key_cust, keyNamespace, dek, keyState, dekMetadata, refreshedTimestamp);
-    if (dek != null) {
-      long dekChecksum =
-        Bytes.toLong(result.getValue(KEY_META_INFO_FAMILY, DEK_CHECKSUM_QUAL_BYTES));
-      if (dekKeyData.getKeyChecksum() != dekChecksum) {
-        LOG.error("Dropping key, current key checksum: {} didn't match the expected checksum: {}"
-          + " for key with metadata: {}", dekKeyData.getKeyChecksum(), dekChecksum, dekMetadata);
-        return null;
+    ManagedKeyData dekKeyData;
+    if (dekMetadata != null) {
+      dekKeyData =
+        new ManagedKeyData(keyCust, keyNamespace, dek, keyState, dekMetadata, refreshedTimestamp);
+      if (dek != null) {
+        long dekChecksum =
+          Bytes.toLong(result.getValue(KEY_META_INFO_FAMILY, DEK_CHECKSUM_QUAL_BYTES));
+        if (dekKeyData.getKeyChecksum() != dekChecksum) {
+          LOG.error(
+            "Dropping key, current key checksum: {} didn't match the expected checksum: {}"
+              + " for key with metadata: {}",
+            dekKeyData.getKeyChecksum(), dekChecksum, dekMetadata);
+          dekKeyData = null;
+        }
       }
+    } else {
+      // Key management marker.
+      dekKeyData = new ManagedKeyData(keyCust, keyNamespace, keyState, refreshedTimestamp);
     }
     return dekKeyData;
   }

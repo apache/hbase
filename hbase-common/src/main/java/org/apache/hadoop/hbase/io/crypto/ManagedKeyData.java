@@ -21,9 +21,9 @@ import java.security.Key;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
-import java.util.Base64;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -77,10 +77,11 @@ public class ManagedKeyData {
 
   /**
    * Constructs a new instance with the given parameters.
-   * @param key_cust    The key custodian.
-   * @param theKey      The actual key, can be {@code null}.
-   * @param keyState    The state of the key.
-   * @param keyMetadata The metadata associated with the key.
+   * @param key_cust      The key custodian.
+   * @param key_namespace The key namespace.
+   * @param theKey        The actual key, can be {@code null}.
+   * @param keyState      The state of the key.
+   * @param keyMetadata   The metadata associated with the key.
    * @throws NullPointerException if any of key_cust, keyState or keyMetadata is null.
    */
   public ManagedKeyData(byte[] key_cust, String key_namespace, Key theKey, ManagedKeyState keyState,
@@ -92,9 +93,9 @@ public class ManagedKeyData {
   /**
    * Constructs a new instance with the given parameters including refresh timestamp.
    * @param key_cust         The key custodian.
+   * @param key_namespace    The key namespace.
    * @param theKey           The actual key, can be {@code null}.
    * @param keyState         The state of the key.
-   * @param keyMetadata      The metadata associated with the key.
    * @param refreshTimestamp The refresh timestamp for the key.
    * @throws NullPointerException if any of key_cust, keyState or keyMetadata is null.
    */
@@ -103,23 +104,82 @@ public class ManagedKeyData {
     Preconditions.checkNotNull(key_cust, "key_cust should not be null");
     Preconditions.checkNotNull(key_namespace, "key_namespace should not be null");
     Preconditions.checkNotNull(keyState, "keyState should not be null");
-    // Only check for null metadata if state is not FAILED
-    if (keyState != ManagedKeyState.FAILED) {
-      Preconditions.checkNotNull(keyMetadata, "keyMetadata should not be null");
-    }
+    Preconditions.checkNotNull(keyMetadata, "metadata should not be null");
 
     this.keyCustodian = key_cust;
     this.keyNamespace = key_namespace;
-    this.theKey = theKey;
     this.keyState = keyState;
+    this.theKey = theKey;
     this.keyMetadata = keyMetadata;
+    this.keyMetadataHash = constructMetadataHash(keyMetadata);
     this.refreshTimestamp = refreshTimestamp;
   }
 
-  @InterfaceAudience.Private
-  public ManagedKeyData cloneWithoutKey() {
-    return new ManagedKeyData(keyCustodian, keyNamespace, null, keyState, keyMetadata,
-      refreshTimestamp);
+  /**
+   * Client-side constructor using only metadata hash. This constructor is intended for use by
+   * client code where the original metadata string is not available.
+   * @param key_cust         The key custodian.
+   * @param key_namespace    The key namespace.
+   * @param keyState         The state of the key.
+   * @param keyMetadataHash  The pre-computed metadata hash.
+   * @param refreshTimestamp The refresh timestamp for the key.
+   * @throws NullPointerException if any of key_cust, keyState or keyMetadataHash is null.
+   */
+  public ManagedKeyData(byte[] key_cust, String key_namespace, ManagedKeyState keyState,
+    byte[] keyMetadataHash, long refreshTimestamp) {
+    Preconditions.checkNotNull(key_cust, "key_cust should not be null");
+    Preconditions.checkNotNull(key_namespace, "key_namespace should not be null");
+    Preconditions.checkNotNull(keyState, "keyState should not be null");
+    Preconditions.checkNotNull(keyMetadataHash, "keyMetadataHash should not be null");
+    this.keyCustodian = key_cust;
+    this.keyNamespace = key_namespace;
+    this.keyState = keyState;
+    this.keyMetadataHash = keyMetadataHash;
+    this.refreshTimestamp = refreshTimestamp;
+    this.theKey = null;
+    this.keyMetadata = null;
+  }
+
+  /**
+   * Constructs a new instance for the given key management state with the current timestamp.
+   * @param key_cust      The key custodian.
+   * @param key_namespace The key namespace.
+   * @param keyState      The state of the key.
+   * @throws NullPointerException     if any of key_cust or key_namespace is null.
+   * @throws IllegalArgumentException if keyState is not a key management state.
+   */
+  public ManagedKeyData(byte[] key_cust, String key_namespace, ManagedKeyState keyState) {
+    this(key_cust, key_namespace, keyState, EnvironmentEdgeManager.currentTime());
+  }
+
+  /**
+   * Constructs a new instance for the given key management state.
+   * @param key_cust      The key custodian.
+   * @param key_namespace The key namespace.
+   * @param keyState      The state of the key.
+   * @throws NullPointerException     if any of key_cust or key_namespace is null.
+   * @throws IllegalArgumentException if keyState is not a key management state.
+   */
+  public ManagedKeyData(byte[] key_cust, String key_namespace, ManagedKeyState keyState,
+    long refreshTimestamp) {
+    Preconditions.checkNotNull(key_cust, "key_cust should not be null");
+    Preconditions.checkNotNull(key_namespace, "key_namespace should not be null");
+    Preconditions.checkNotNull(keyState, "keyState should not be null");
+    Preconditions.checkArgument(ManagedKeyState.isKeyManagementState(keyState),
+      "keyState must be a key management state, got: " + keyState);
+    this.keyCustodian = key_cust;
+    this.keyNamespace = key_namespace;
+    this.keyState = keyState;
+    this.refreshTimestamp = refreshTimestamp;
+    this.theKey = null;
+    this.keyMetadata = null;
+    this.keyMetadataHash = null;
+  }
+
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
+  public ManagedKeyData createClientFacingInstance() {
+    return new ManagedKeyData(keyCustodian, keyNamespace, keyState.getExternalState(),
+      keyMetadataHash, refreshTimestamp);
   }
 
   /**
@@ -135,7 +195,7 @@ public class ManagedKeyData {
    * @return the encoded key custodian
    */
   public String getKeyCustodianEncoded() {
-    return Base64.getEncoder().encodeToString(keyCustodian);
+    return ManagedKeyProvider.encodeToStr(keyCustodian);
   }
 
   /**
@@ -212,20 +272,17 @@ public class ManagedKeyData {
    * @return The hash of the key metadata as a byte array.
    */
   public byte[] getKeyMetadataHash() {
-    if (keyMetadataHash == null && keyMetadata != null) {
-      keyMetadataHash = constructMetadataHash(keyMetadata);
-    }
     return keyMetadataHash;
   }
 
   /**
    * Return the hash of key metadata in Base64 encoded form.
-   * @return the encoded hash or {@code null} if no meatadata is available.
+   * @return the encoded hash or {@code null} if no metadata is available.
    */
   public String getKeyMetadataHashEncoded() {
     byte[] hash = getKeyMetadataHash();
     if (hash != null) {
-      return Base64.getEncoder().encodeToString(hash);
+      return ManagedKeyProvider.encodeToStr(hash);
     }
     return null;
   }

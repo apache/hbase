@@ -28,6 +28,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+
 /**
  * A simple implementation of ManagedKeyProvider for testing. It generates a key on demand given a
  * prefix. One can control the state of a key by calling setKeyState and can rotate a key by calling
@@ -72,6 +74,7 @@ public class MockManagedKeyProvider extends MockAesKeyProvider implements Manage
   @Override
   public ManagedKeyData unwrapKey(String keyMetadata, byte[] wrappedKey) throws IOException {
     String[] meta_toks = keyMetadata.split(":");
+    Preconditions.checkArgument(meta_toks.length >= 3, "Invalid key metadata: %s", keyMetadata);
     if (allGeneratedKeys.containsKey(keyMetadata)) {
       ManagedKeyState keyState = this.keyState.get(meta_toks[1]);
       ManagedKeyData managedKeyData =

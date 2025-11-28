@@ -42,8 +42,12 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class SecurityUtil {
+public final class SecurityUtil {
   private static final Logger LOG = LoggerFactory.getLogger(SecurityUtil.class);
+
+  private SecurityUtil() {
+    // Utility class
+  }
 
   /**
    * Get the user name from a principal
@@ -134,8 +138,11 @@ public class SecurityUtil {
             if (candidate != null) {
               // Log information on the table and column family we are looking for the active key in
               if (LOG.isDebugEnabled()) {
-                LOG.debug("Looking for active key for table: {} and column family: {}",
-                  tableDescriptor.getTableName().getNameAsString(), family.getNameAsString());
+                LOG.debug(
+                  "Looking for active key for table: {} and column family: {} with "
+                    + "(custodian: {}, namespace: {})",
+                  tableDescriptor.getTableName().getNameAsString(), family.getNameAsString(),
+                  ManagedKeyData.KEY_GLOBAL_CUSTODIAN, candidate);
               }
               activeKeyData = managedKeyDataCache
                 .getActiveEntry(ManagedKeyData.KEY_GLOBAL_CUSTODIAN_BYTES, candidate);
@@ -161,11 +168,11 @@ public class SecurityUtil {
             }
             if (LOG.isDebugEnabled()) {
               LOG.debug(
-                "Scenario 2: Use active key for namespace {} cipher: {} "
+                "Scenario 2: Use active key with (custodian: {}, namespace: {}) for cipher: {} "
                   + "localKeyGenEnabled: {} for table: {} and column family: {}",
-                keyNamespace, cipherName, localKeyGenEnabled,
-                tableDescriptor.getTableName().getNameAsString(), family.getNameAsString(),
-                activeKeyData.getKeyNamespace());
+                activeKeyData.getKeyCustodianEncoded(), activeKeyData.getKeyNamespace(), cipherName,
+                localKeyGenEnabled, tableDescriptor.getTableName().getNameAsString(),
+                family.getNameAsString());
             }
           } else {
             if (LOG.isDebugEnabled()) {
@@ -184,6 +191,12 @@ public class SecurityUtil {
               tableDescriptor.getTableName().getNameAsString(), family.getNameAsString());
           }
         }
+      }
+      if (LOG.isDebugEnabled() && kekKeyData != null) {
+        LOG.debug(
+          "Usigng KEK with (custodian: {}, namespace: {}), checksum: {} and metadata " + "hash: {}",
+          kekKeyData.getKeyCustodianEncoded(), kekKeyData.getKeyNamespace(),
+          kekKeyData.getKeyChecksum(), kekKeyData.getKeyMetadataHashEncoded());
       }
 
       if (cipher == null) {
@@ -234,13 +247,21 @@ public class SecurityUtil {
           "Seeing newer trailer with KEK checksum, but key management is disabled");
       }
 
-      // Try STK lookup first if checksum is available and system key cache is not null.
-      if (trailer.getKEKChecksum() != 0L && trailer.getKeyNamespace() == null) {
+      // Try STK lookup first if checksum is available.
+      if (trailer.getKEKChecksum() != 0L) {
+        LOG.debug("Looking for System Key with checksum: {}", trailer.getKEKChecksum());
         ManagedKeyData systemKeyData =
           systemKeyCache.getSystemKeyByChecksum(trailer.getKEKChecksum());
         if (systemKeyData != null) {
           kek = systemKeyData.getTheKey();
           kekKeyData = systemKeyData;
+          if (LOG.isDebugEnabled()) {
+            LOG.debug(
+              "Found System Key with (custodian: {}, namespace: {}), checksum: {} and "
+                + "metadata hash: {}",
+              systemKeyData.getKeyCustodianEncoded(), systemKeyData.getKeyNamespace(),
+              systemKeyData.getKeyChecksum(), systemKeyData.getKeyMetadataHashEncoded());
+          }
         }
       }
 

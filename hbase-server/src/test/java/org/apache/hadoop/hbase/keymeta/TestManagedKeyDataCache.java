@@ -27,6 +27,7 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doReturn;
@@ -211,7 +212,7 @@ public class TestManagedKeyDataCache {
     }
 
     @Test
-    public void testGenericCacheForNonExistentKey() throws Exception {
+    public void testGenericCacheForInvalidMetadata() throws Exception {
       assertNull(cache.getEntry(CUST_ID, KEY_SPACE_GLOBAL, "test-metadata", null));
       verify(testProvider).unwrapKey(any(String.class), any());
     }
@@ -221,19 +222,24 @@ public class TestManagedKeyDataCache {
       ManagedKeyData globalKey1 = testProvider.getManagedKey(CUST_ID, KEY_SPACE_GLOBAL);
       doThrow(new IOException("Test exception")).when(testProvider).unwrapKey(any(String.class),
         any());
+      // With no L2 and invalid provider, there will be no entry.
       assertNull(cache.getEntry(CUST_ID, KEY_SPACE_GLOBAL, globalKey1.getKeyMetadata(), null));
       verify(testProvider).unwrapKey(any(String.class), any());
-      // A second call to getEntry should not result in a call to the provider due to -ve entry.
       clearInvocations(testProvider);
-      verify(testProvider, never()).unwrapKey(any(String.class), any());
+
+      // A second call to getEntry should not result in a call to the provider due to -ve entry.
       assertNull(cache.getEntry(CUST_ID, KEY_SPACE_GLOBAL, globalKey1.getKeyMetadata(), null));
+      verify(testProvider, never()).unwrapKey(any(String.class), any());
+
+      //
       doThrow(new IOException("Test exception")).when(testProvider).getManagedKey(any(),
         any(String.class));
       assertNull(cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL));
       verify(testProvider).getManagedKey(any(), any(String.class));
-      // A second call to getRandomEntry should not result in a call to the provider due to -ve
-      // entry.
       clearInvocations(testProvider);
+
+      // A second call to getActiveEntry should not result in a call to the provider due to -ve
+      // entry.
       assertNull(cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL));
       verify(testProvider, never()).getManagedKey(any(), any(String.class));
     }
@@ -294,7 +300,7 @@ public class TestManagedKeyDataCache {
       assertNotNull(cache.getActiveEntry(CUST_ID, "namespace1"));
       assertEquals(2, cache.getActiveCacheEntryCount());
 
-      cache.invalidateAll();
+      cache.clearCache();
       assertEquals(0, cache.getActiveCacheEntryCount());
       assertNotNull(cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL));
       assertEquals(1, cache.getActiveCacheEntryCount());
@@ -322,7 +328,7 @@ public class TestManagedKeyDataCache {
       // ACTIVE keys are automatically added to activeKeysCache when loaded
       // via getEntry, so getActiveEntry will find them there and won't call the provider
       verify(testProvider, never()).getManagedKey(any(), any(String.class));
-      cache.invalidateAll();
+      cache.clearCache();
       assertEquals(0, cache.getActiveCacheEntryCount());
     }
 
@@ -351,10 +357,10 @@ public class TestManagedKeyDataCache {
       String alias2 = "cust2";
       byte[] cust_id2 = alias2.getBytes();
       ManagedKeyData key2 = testProvider.getManagedKey(cust_id2, KEY_SPACE_GLOBAL);
-      assertNotNull(cache.getEntry(CUST_ID, KEY_SPACE_GLOBAL, key2.getKeyMetadata(), null));
+      assertNotNull(cache.getEntry(cust_id2, KEY_SPACE_GLOBAL, key2.getKeyMetadata(), null));
       assertNotNull(cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL));
       // ACTIVE keys are automatically added to activeKeysCache when loaded.
-      assertEquals(1, cache.getActiveCacheEntryCount());
+      assertEquals(2, cache.getActiveCacheEntryCount());
     }
 
     @Test
@@ -370,6 +376,278 @@ public class TestManagedKeyDataCache {
       assertEquals(key3, cache.getActiveEntry(CUST_ID, "namespace2"));
       verify(testProvider, times(3)).getManagedKey(any(), any(String.class));
       assertEquals(3, cache.getActiveCacheEntryCount());
+    }
+
+    @Test
+    public void testEjectKey_ActiveKeysCacheOnly() throws Exception {
+      // Load a key into the active keys cache
+      ManagedKeyData key = cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL);
+      assertNotNull(key);
+      assertEquals(1, cache.getActiveCacheEntryCount());
+
+      // Eject the key - should remove from active keys cache
+      boolean ejected = cache.ejectKey(CUST_ID, KEY_SPACE_GLOBAL, key.getKeyMetadataHash());
+      assertTrue("Key should be ejected when metadata matches", ejected);
+      assertEquals(0, cache.getActiveCacheEntryCount());
+
+      // Try to eject again - should return false since it's already gone from active keys cache
+      boolean ejectedAgain = cache.ejectKey(CUST_ID, KEY_SPACE_GLOBAL, key.getKeyMetadataHash());
+      assertFalse("Should return false when key is already ejected", ejectedAgain);
+      assertEquals(0, cache.getActiveCacheEntryCount());
+    }
+
+    @Test
+    public void testEjectKey_GenericCacheOnly() throws Exception {
+      // Load a key into the generic cache
+      ManagedKeyData key = cache.getEntry(CUST_ID, KEY_SPACE_GLOBAL,
+        testProvider.getManagedKey(CUST_ID, KEY_SPACE_GLOBAL).getKeyMetadata(), null);
+      assertNotNull(key);
+      assertEquals(1, cache.getGenericCacheEntryCount());
+
+      // Eject the key - should remove from generic cache
+      boolean ejected = cache.ejectKey(CUST_ID, KEY_SPACE_GLOBAL, key.getKeyMetadataHash());
+      assertTrue("Key should be ejected when metadata matches", ejected);
+      assertEquals(0, cache.getGenericCacheEntryCount());
+
+      // Try to eject again - should return false since it's already gone from generic cache
+      boolean ejectedAgain = cache.ejectKey(CUST_ID, KEY_SPACE_GLOBAL, key.getKeyMetadataHash());
+      assertFalse("Should return false when key is already ejected", ejectedAgain);
+      assertEquals(0, cache.getGenericCacheEntryCount());
+    }
+
+    @Test
+    public void testEjectKey_Success() throws Exception {
+      // Load a key into the active keys cache
+      ManagedKeyData key = cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL);
+      assertNotNull(key);
+      String metadata = key.getKeyMetadata();
+      assertEquals(1, cache.getActiveCacheEntryCount());
+
+      // Also load into the generic cache
+      ManagedKeyData keyFromGeneric = cache.getEntry(CUST_ID, KEY_SPACE_GLOBAL, metadata, null);
+      assertNotNull(keyFromGeneric);
+      assertEquals(1, cache.getGenericCacheEntryCount());
+
+      // Eject the key with matching metadata - should remove from both caches
+      boolean ejected = cache.ejectKey(CUST_ID, KEY_SPACE_GLOBAL, key.getKeyMetadataHash());
+      assertTrue("Key should be ejected when metadata matches", ejected);
+      assertEquals(0, cache.getActiveCacheEntryCount());
+      assertEquals(0, cache.getGenericCacheEntryCount());
+
+      // Try to eject again - should return false since it's already gone from active keys cache
+      boolean ejectedAgain = cache.ejectKey(CUST_ID, KEY_SPACE_GLOBAL, key.getKeyMetadataHash());
+      assertFalse("Should return false when key is already ejected", ejectedAgain);
+      assertEquals(0, cache.getActiveCacheEntryCount());
+      assertEquals(0, cache.getGenericCacheEntryCount());
+    }
+
+    @Test
+    public void testEjectKey_MetadataMismatch() throws Exception {
+      // Load a key into both caches
+      ManagedKeyData key = cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL);
+      assertNotNull(key);
+      assertEquals(1, cache.getActiveCacheEntryCount());
+
+      // Also load into the generic cache
+      cache.getEntry(CUST_ID, KEY_SPACE_GLOBAL, key.getKeyMetadataHash());
+      assertEquals(1, cache.getGenericCacheEntryCount());
+
+      // Try to eject with wrong metadata - should not eject from either cache
+      String wrongMetadata = "wrong-metadata";
+      boolean ejected = cache.ejectKey(CUST_ID, KEY_SPACE_GLOBAL,
+        ManagedKeyData.constructMetadataHash(wrongMetadata));
+      assertFalse("Key should not be ejected when metadata doesn't match", ejected);
+      assertEquals(1, cache.getActiveCacheEntryCount());
+      assertEquals(1, cache.getGenericCacheEntryCount());
+
+      // Verify the key is still in both caches
+      assertEquals(key, cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL));
+      assertEquals(key.getKeyMetadata(),
+        cache.getEntry(CUST_ID, KEY_SPACE_GLOBAL, key.getKeyMetadataHash()).getKeyMetadata());
+    }
+
+    @Test
+    public void testEjectKey_KeyNotPresent() throws Exception {
+      // Try to eject a key that doesn't exist in the cache
+      String nonExistentMetadata = "non-existent-metadata";
+      boolean ejected = cache.ejectKey(CUST_ID, "non-existent-namespace",
+        ManagedKeyData.constructMetadataHash(nonExistentMetadata));
+      assertFalse("Should return false when key is not present", ejected);
+      assertEquals(0, cache.getActiveCacheEntryCount());
+    }
+
+    @Test
+    public void testEjectKey_MultipleKeys() throws Exception {
+      // Load multiple keys into both caches
+      ManagedKeyData key1 = cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL);
+      ManagedKeyData key2 = cache.getActiveEntry(CUST_ID, "namespace1");
+      ManagedKeyData key3 = cache.getActiveEntry(CUST_ID, "namespace2");
+      assertNotNull(key1);
+      assertNotNull(key2);
+      assertNotNull(key3);
+      assertEquals(3, cache.getActiveCacheEntryCount());
+
+      // Also load all keys into the generic cache
+      cache.getEntry(CUST_ID, KEY_SPACE_GLOBAL, key1.getKeyMetadata(), null);
+      cache.getEntry(CUST_ID, "namespace1", key2.getKeyMetadata(), null);
+      cache.getEntry(CUST_ID, "namespace2", key3.getKeyMetadata(), null);
+      assertEquals(3, cache.getGenericCacheEntryCount());
+
+      // Eject only the middle key from both caches
+      boolean ejected = cache.ejectKey(CUST_ID, "namespace1", key2.getKeyMetadataHash());
+      assertTrue("Key should be ejected from both caches", ejected);
+      assertEquals(2, cache.getActiveCacheEntryCount());
+      assertEquals(2, cache.getGenericCacheEntryCount());
+
+      // Verify only key2 was ejected - key1 and key3 should still be there
+      clearInvocations(testProvider);
+      assertEquals(key1, cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL));
+      assertEquals(key3, cache.getActiveEntry(CUST_ID, "namespace2"));
+      // These getActiveEntry() calls should not trigger provider calls since keys are still cached
+      verify(testProvider, never()).getManagedKey(any(), any(String.class));
+
+      // Verify generic cache still has key1 and key3
+      assertEquals(key1.getKeyMetadata(),
+        cache.getEntry(CUST_ID, KEY_SPACE_GLOBAL, key1.getKeyMetadata(), null).getKeyMetadata());
+      assertEquals(key3.getKeyMetadata(),
+        cache.getEntry(CUST_ID, "namespace2", key3.getKeyMetadata(), null).getKeyMetadata());
+
+      // Try to eject key2 again - should return false since it's already gone from both caches
+      boolean ejectedAgain = cache.ejectKey(CUST_ID, "namespace1", key2.getKeyMetadataHash());
+      assertFalse("Should return false when key is already ejected", ejectedAgain);
+      assertEquals(2, cache.getActiveCacheEntryCount());
+      assertEquals(2, cache.getGenericCacheEntryCount());
+    }
+
+    @Test
+    public void testEjectKey_DifferentCustodian() throws Exception {
+      // Load a key for one custodian into both caches
+      ManagedKeyData key = cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL);
+      assertNotNull(key);
+      String metadata = key.getKeyMetadata();
+      assertEquals(1, cache.getActiveCacheEntryCount());
+
+      // Also load into the generic cache
+      cache.getEntry(CUST_ID, KEY_SPACE_GLOBAL, key.getKeyMetadataHash());
+      assertEquals(1, cache.getGenericCacheEntryCount());
+
+      // Try to eject with a different custodian - should not eject from either cache
+      byte[] differentCustodian = "different-cust".getBytes();
+      boolean ejected =
+        cache.ejectKey(differentCustodian, KEY_SPACE_GLOBAL, key.getKeyMetadataHash());
+      assertFalse("Should not eject key for different custodian", ejected);
+      assertEquals(1, cache.getActiveCacheEntryCount());
+      assertEquals(1, cache.getGenericCacheEntryCount());
+
+      // Verify the original key is still in both caches
+      assertEquals(key, cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL));
+      assertEquals(metadata,
+        cache.getEntry(CUST_ID, KEY_SPACE_GLOBAL, metadata, null).getKeyMetadata());
+    }
+
+    @Test
+    public void testEjectKey_AfterClearCache() throws Exception {
+      // Load a key into both caches
+      ManagedKeyData key = cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL);
+      assertNotNull(key);
+      String metadata = key.getKeyMetadata();
+      assertEquals(1, cache.getActiveCacheEntryCount());
+
+      // Also load into the generic cache
+      cache.getEntry(CUST_ID, KEY_SPACE_GLOBAL, metadata, null);
+      assertEquals(1, cache.getGenericCacheEntryCount());
+
+      // Clear both caches
+      cache.clearCache();
+      assertEquals(0, cache.getActiveCacheEntryCount());
+      assertEquals(0, cache.getGenericCacheEntryCount());
+
+      // Try to eject the key after both caches are cleared
+      boolean ejected = cache.ejectKey(CUST_ID, KEY_SPACE_GLOBAL, key.getKeyMetadataHash());
+      assertFalse("Should return false when both caches are empty", ejected);
+      assertEquals(0, cache.getActiveCacheEntryCount());
+      assertEquals(0, cache.getGenericCacheEntryCount());
+    }
+
+    @Test
+    public void testGetEntry_HashCollisionOrMismatchDetection() throws Exception {
+      // Create a key and get it into the cache
+      ManagedKeyData key1 = cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL);
+      assertNotNull(key1);
+
+      // Now simulate a hash collision by trying to get an entry with the same hash
+      // but different custodian/namespace
+      byte[] differentCust = "different-cust".getBytes();
+      String differentNamespace = "different-namespace";
+
+      // This should return null due to custodian/namespace mismatch (collision detection)
+      ManagedKeyData result =
+        cache.getEntry(differentCust, differentNamespace, key1.getKeyMetadata(), null);
+
+      // Result should be null because of hash collision detection
+      // The cache finds an entry with the same metadata hash, but custodian/namespace don't match
+      assertNull("Should return null when hash collision is detected", result);
+    }
+
+    @Test
+    public void testEjectKey_HashCollisionOrMismatchProtection() throws Exception {
+      // Create two keys with potential hash collision scenario
+      byte[] cust1 = "cust1".getBytes();
+      byte[] cust2 = "cust2".getBytes();
+      String namespace1 = "namespace1";
+
+      // Load a key for cust1
+      ManagedKeyData key1 = cache.getActiveEntry(cust1, namespace1);
+      assertNotNull(key1);
+      assertEquals(1, cache.getActiveCacheEntryCount());
+
+      // Try to eject using same metadata hash but different custodian
+      // This should not eject the key due to custodian mismatch protection
+      boolean ejected = cache.ejectKey(cust2, namespace1, key1.getKeyMetadataHash());
+      assertFalse("Should not eject key with different custodian even if hash matches", ejected);
+      assertEquals(1, cache.getActiveCacheEntryCount());
+
+      // Verify the original key is still there
+      assertEquals(key1, cache.getActiveEntry(cust1, namespace1));
+    }
+
+    @Test
+    public void testEjectKey_HashCollisionInBothCaches() throws Exception {
+      // This test covers the scenario where rejectedValue is set during the first cache check
+      // (activeKeysCache) and then the second cache check (cacheByMetadataHash) takes the
+      // early return path because rejectedValue is already set.
+      byte[] cust1 = "cust1".getBytes();
+      byte[] cust2 = "cust2".getBytes();
+      String namespace1 = "namespace1";
+
+      // Load a key for cust1 - this will put it in BOTH activeKeysCache and cacheByMetadataHash
+      ManagedKeyData key1 = cache.getActiveEntry(cust1, namespace1);
+      assertNotNull(key1);
+
+      // Also access via generic cache to ensure it's in both caches
+      ManagedKeyData key1viaGeneric =
+        cache.getEntry(cust1, namespace1, key1.getKeyMetadata(), null);
+      assertNotNull(key1viaGeneric);
+      assertEquals(key1, key1viaGeneric);
+
+      // Verify both cache counts
+      assertEquals(1, cache.getActiveCacheEntryCount());
+      assertEquals(1, cache.getGenericCacheEntryCount());
+
+      // Try to eject using same metadata hash but different custodian
+      // This will trigger the collision detection in BOTH caches:
+      // 1. First check in activeKeysCache will detect mismatch and set rejectedValue
+      // 2. Second check in cacheByMetadataHash should take early return (line 234)
+      boolean ejected = cache.ejectKey(cust2, namespace1, key1.getKeyMetadataHash());
+      assertFalse("Should not eject key with different custodian even if hash matches", ejected);
+
+      // Verify both caches still have the entry
+      assertEquals(1, cache.getActiveCacheEntryCount());
+      assertEquals(1, cache.getGenericCacheEntryCount());
+
+      // Verify the original key is still accessible
+      assertEquals(key1, cache.getActiveEntry(cust1, namespace1));
+      assertEquals(key1, cache.getEntry(cust1, namespace1, key1.getKeyMetadata(), null));
     }
   }
 
@@ -391,71 +669,74 @@ public class TestManagedKeyDataCache {
     @Test
     public void testGenericCacheNonExistentKeyInL2Cache() throws Exception {
       assertNull(cache.getEntry(CUST_ID, KEY_SPACE_GLOBAL, "test-metadata", null));
-      verify(mockL2).getKey(any(), any(String.class), any(String.class));
+      verify(mockL2).getKey(any(), any(String.class), any(byte[].class));
       clearInvocations(mockL2);
       assertNull(cache.getEntry(CUST_ID, KEY_SPACE_GLOBAL, "test-metadata", null));
-      verify(mockL2, never()).getKey(any(), any(String.class), any(String.class));
+      verify(mockL2, never()).getKey(any(), any(String.class), any(byte[].class));
     }
 
     @Test
     public void testGenericCacheRetrievalFromL2Cache() throws Exception {
       ManagedKeyData key = testProvider.getManagedKey(CUST_ID, KEY_SPACE_GLOBAL);
-      when(mockL2.getKey(CUST_ID, KEY_SPACE_GLOBAL, key.getKeyMetadata())).thenReturn(key);
+      when(mockL2.getKey(CUST_ID, KEY_SPACE_GLOBAL, key.getKeyMetadataHash())).thenReturn(key);
       assertEquals(key, cache.getEntry(CUST_ID, KEY_SPACE_GLOBAL, key.getKeyMetadata(), null));
-      verify(mockL2).getKey(any(), any(String.class), any(String.class));
+      verify(mockL2).getKey(any(), any(String.class), any(byte[].class));
     }
 
     @Test
     public void testActiveKeysCacheNonExistentKeyInL2Cache() throws Exception {
       assertNull(cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL));
-      verify(mockL2).getActiveKey(any(), any(String.class));
+      verify(mockL2).getKeyManagementStateMarker(any(), any(String.class));
       clearInvocations(mockL2);
       assertNull(cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL));
-      verify(mockL2, never()).getActiveKey(any(), any(String.class));
+      verify(mockL2, never()).getKeyManagementStateMarker(any(), any(String.class));
     }
 
     @Test
     public void testActiveKeysCacheRetrievalFromL2Cache() throws Exception {
       ManagedKeyData key = testProvider.getManagedKey(CUST_ID, KEY_SPACE_GLOBAL);
-      when(mockL2.getActiveKey(CUST_ID, KEY_SPACE_GLOBAL)).thenReturn(key);
+      when(mockL2.getKeyManagementStateMarker(CUST_ID, KEY_SPACE_GLOBAL)).thenReturn(key);
       assertEquals(key, cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL));
-      verify(mockL2).getActiveKey(any(), any(String.class));
+      verify(mockL2).getKeyManagementStateMarker(any(), any(String.class));
+      clearInvocations(mockL2);
+      assertEquals(key, cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL));
+      verify(mockL2, never()).getKeyManagementStateMarker(any(), any(String.class));
     }
 
     @Test
     public void testGenericCacheWithKeymetaAccessorException() throws Exception {
-      when(mockL2.getKey(CUST_ID, KEY_SPACE_GLOBAL, "test-metadata"))
+      when(mockL2.getKey(eq(CUST_ID), eq(KEY_SPACE_GLOBAL), any(byte[].class)))
         .thenThrow(new IOException("Test exception"));
       assertNull(cache.getEntry(CUST_ID, KEY_SPACE_GLOBAL, "test-metadata", null));
-      verify(mockL2).getKey(any(), any(String.class), any(String.class));
+      verify(mockL2).getKey(any(), any(String.class), any(byte[].class));
       clearInvocations(mockL2);
       assertNull(cache.getEntry(CUST_ID, KEY_SPACE_GLOBAL, "test-metadata", null));
-      verify(mockL2, never()).getKey(any(), any(String.class), any(String.class));
+      verify(mockL2, never()).getKey(any(), any(String.class), any(byte[].class));
     }
 
     @Test
     public void testGetActiveEntryWithKeymetaAccessorException() throws Exception {
-      when(mockL2.getActiveKey(CUST_ID, KEY_SPACE_GLOBAL))
+      when(mockL2.getKeyManagementStateMarker(CUST_ID, KEY_SPACE_GLOBAL))
         .thenThrow(new IOException("Test exception"));
       assertNull(cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL));
-      verify(mockL2).getActiveKey(any(), any(String.class));
+      verify(mockL2).getKeyManagementStateMarker(any(), any(String.class));
       clearInvocations(mockL2);
       assertNull(cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL));
-      verify(mockL2, never()).getActiveKey(any(), any(String.class));
+      verify(mockL2, never()).getKeyManagementStateMarker(any(), any(String.class));
     }
 
     @Test
     public void testActiveKeysCacheUsesKeymetaAccessorWhenGenericCacheEmpty() throws Exception {
       // Ensure generic cache is empty
-      cache.invalidateAll();
+      cache.clearCache();
 
       // Mock the keymetaAccessor to return a key
       ManagedKeyData key = testProvider.getManagedKey(CUST_ID, KEY_SPACE_GLOBAL);
-      when(mockL2.getActiveKey(CUST_ID, KEY_SPACE_GLOBAL)).thenReturn(key);
+      when(mockL2.getKeyManagementStateMarker(CUST_ID, KEY_SPACE_GLOBAL)).thenReturn(key);
 
       // Get the active entry - it should call keymetaAccessor since generic cache is empty
       assertEquals(key, cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL));
-      verify(mockL2).getActiveKey(any(), any(String.class));
+      verify(mockL2).getKeyManagementStateMarker(any(), any(String.class));
     }
   }
 
@@ -479,7 +760,7 @@ public class TestManagedKeyDataCache {
       ManagedKeyData key = testProvider.getManagedKey(CUST_ID, KEY_SPACE_GLOBAL);
       doReturn(key).when(testProvider).unwrapKey(any(String.class), any());
       assertEquals(key, cache.getEntry(CUST_ID, KEY_SPACE_GLOBAL, key.getKeyMetadata(), null));
-      verify(mockL2).getKey(any(), any(String.class), any(String.class));
+      verify(mockL2).getKey(any(), any(String.class), any(byte[].class));
       verify(mockL2).addKey(any(ManagedKeyData.class));
     }
 
@@ -490,16 +771,6 @@ public class TestManagedKeyDataCache {
       doThrow(new IOException("Test exception")).when(mockL2).addKey(any(ManagedKeyData.class));
       assertEquals(key, cache.getEntry(CUST_ID, KEY_SPACE_GLOBAL, key.getKeyMetadata(), null));
       verify(mockL2).addKey(any(ManagedKeyData.class));
-    }
-
-    @Test
-    public void testGenericCacheDynamicLookupUnexpectedException() throws Exception {
-      doThrow(new RuntimeException("Test exception")).when(testProvider)
-        .unwrapKey(any(String.class), any());
-      assertNull(cache.getEntry(CUST_ID, KEY_SPACE_GLOBAL, "test-metadata", null));
-      assertNull(cache.getEntry(CUST_ID, KEY_SPACE_GLOBAL, "test-metadata", null));
-      verify(mockL2).getKey(any(), any(String.class), any(String.class));
-      verify(mockL2, never()).addKey(any(ManagedKeyData.class));
     }
 
     @Test
@@ -519,7 +790,7 @@ public class TestManagedKeyDataCache {
       ManagedKeyData key = testProvider.getManagedKey(CUST_ID, KEY_SPACE_GLOBAL);
       doReturn(key).when(testProvider).getManagedKey(any(), any(String.class));
       assertEquals(key, cache.getActiveEntry(CUST_ID, KEY_SPACE_GLOBAL));
-      verify(mockL2).getActiveKey(any(), any(String.class));
+      verify(mockL2).getKeyManagementStateMarker(any(), any(String.class));
     }
 
     @Test
