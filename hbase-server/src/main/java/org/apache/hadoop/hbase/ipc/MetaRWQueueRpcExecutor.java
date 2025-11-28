@@ -34,9 +34,10 @@ public class MetaRWQueueRpcExecutor extends RWQueueRpcExecutor {
     "hbase.ipc.server.metacallqueue.scan.ratio";
   public static final float DEFAULT_META_CALL_QUEUE_READ_SHARE = 0.9f;
 
-  public MetaRWQueueRpcExecutor(final String name, final int handlerCount, final int maxQueueLength,
-    final PriorityFunction priority, final Configuration conf, final Abortable abortable) {
-    super(name, handlerCount, maxQueueLength, priority, conf, abortable);
+  public MetaRWQueueRpcExecutor(final String name, final int handlerCount,
+    final String maxQueueLengthConfKey, final PriorityFunction priority, final Configuration conf,
+    final Abortable abortable) {
+    super(name, handlerCount, maxQueueLengthConfKey, priority, conf, abortable);
   }
 
   @Override
