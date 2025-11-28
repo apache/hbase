@@ -1876,8 +1876,8 @@ public class AssignmentManager {
         regionNode.getRegionLocation() != null
           && master.getServerManager().isServerDead(regionNode.getRegionLocation())
       ) {
-        long timeOfCrash =
-          master.getServerManager().getDeadServers().getTimeOfDeath(regionNode.getRegionLocation());
+        long timeOfCrash = master.getServerManager().getDeadServers()
+          .getDeathTimestamp(regionNode.getRegionLocation());
         if (timeOfCrash != 0) {
           regionNode.crashed(timeOfCrash);
         }

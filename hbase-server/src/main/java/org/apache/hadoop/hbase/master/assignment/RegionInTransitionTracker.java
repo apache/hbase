@@ -118,12 +118,8 @@ public class RegionInTransitionTracker {
     // AssignmentManager calls setTableStateManager once hbase:meta is confirmed online, if it is
     // still null it means confirmation is still pending. One should not access TableStateManger
     // till the time.
-    if (TableName.isMetaTableName(tableName)) {
-      return true;
-    } else {
-      throw new RuntimeException(
-        "TableStateManger can not be accessed before hbase:meta is confirmed on line");
-    }
+    assert TableName.isMetaTableName(tableName);
+    return true;
   }
 
   /**
