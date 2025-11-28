@@ -54,7 +54,7 @@ public class TestFiltersWithComparatorException {
   }
 
   // Every filterX method that Filter implements to test
-  List<FilterFunctionThrowable> filterFunctionsToTest = Arrays.asList((Filter filter) -> {
+  final List<FilterFunctionThrowable> filterFunctionsToTest = Arrays.asList((Filter filter) -> {
     filter.filterRowKey(testCell);
   }, (Filter filter) -> {
     filter.filterAllRemaining();
