@@ -84,7 +84,7 @@ public class TestDeadServer {
     assertTrue(ds.isDeadServer(deadServer));
     Set<ServerName> deadServerNames = ds.copyServerNames();
     for (ServerName eachDeadServer : deadServerNames) {
-      assertNotEquals(0, ds.getTimeOfDeath(eachDeadServer));
+      assertNotEquals(0, ds.getDeathTimestamp(eachDeadServer));
     }
     final ServerName deadServerHostComingAlive = ServerName.valueOf("127.0.0.1", 9090, 223341L);
     assertTrue(ds.cleanPreviousInstance(deadServerHostComingAlive));
