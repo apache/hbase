@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.ipc;
 import static org.apache.hadoop.hbase.ipc.RWQueueRpcExecutor.CALL_QUEUE_READ_SHARE_CONF_KEY;
 import static org.apache.hadoop.hbase.ipc.RWQueueRpcExecutor.CALL_QUEUE_SCAN_SHARE_CONF_KEY;
 import static org.apache.hadoop.hbase.ipc.RpcExecutor.CALL_QUEUE_HANDLER_FACTOR_CONF_KEY;
+import static org.apache.hadoop.hbase.ipc.RpcScheduler.IPC_SERVER_MAX_CALLQUEUE_LENGTH;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
@@ -54,6 +55,7 @@ public class TestRWQueueRpcExecutor {
   public void setUp() {
     conf = HBaseConfiguration.create();
     conf.setFloat(CALL_QUEUE_HANDLER_FACTOR_CONF_KEY, 1.0f);
+    conf.setInt(IPC_SERVER_MAX_CALLQUEUE_LENGTH, 100);
     conf.setFloat(CALL_QUEUE_SCAN_SHARE_CONF_KEY, 0.5f);
     conf.setFloat(CALL_QUEUE_READ_SHARE_CONF_KEY, 0.5f);
   }
@@ -61,8 +63,8 @@ public class TestRWQueueRpcExecutor {
   @Test
   public void itProvidesCorrectQueuesToBalancers() throws InterruptedException {
     PriorityFunction qosFunction = mock(PriorityFunction.class);
-    RWQueueRpcExecutor executor =
-      new RWQueueRpcExecutor(testName.getMethodName(), 100, 100, qosFunction, conf, null);
+    RWQueueRpcExecutor executor = new RWQueueRpcExecutor(testName.getMethodName(), 100,
+      IPC_SERVER_MAX_CALLQUEUE_LENGTH, qosFunction, conf, null);
 
     QueueBalancer readBalancer = executor.getReadBalancer();
     QueueBalancer writeBalancer = executor.getWriteBalancer();

@@ -117,14 +117,14 @@ public abstract class RpcExecutor {
   private final Configuration conf;
   private final Abortable abortable;
 
-  public RpcExecutor(final String name, final int handlerCount, final int maxQueueLength,
+  public RpcExecutor(final String name, final int handlerCount, final String maxQueueLengthLConfKey,
     final PriorityFunction priority, final Configuration conf, final Abortable abortable) {
     this(name, handlerCount, conf.get(CALL_QUEUE_TYPE_CONF_KEY, CALL_QUEUE_TYPE_CONF_DEFAULT),
-      maxQueueLength, priority, conf, abortable);
+      maxQueueLengthLConfKey, priority, conf, abortable);
   }
 
   public RpcExecutor(final String name, final int handlerCount, final String callQueueType,
-    final int maxQueueLength, final PriorityFunction priority, final Configuration conf,
+    final String maxQueueLengthConfKey, final PriorityFunction priority, final Configuration conf,
     final Abortable abortable) {
     this.name = Strings.nullToEmpty(name);
     this.conf = conf;
@@ -152,6 +152,10 @@ public abstract class RpcExecutor {
 
     this.handlerCount = Math.max(handlerCount, this.numCallQueues);
     this.handlers = new ArrayList<>(this.handlerCount);
+
+    int handlerCountPerQueue = this.handlerCount / this.numCallQueues;
+    int maxQueueLength = conf.getInt(maxQueueLengthConfKey,
+      handlerCountPerQueue * RpcServer.DEFAULT_MAX_CALLQUEUE_LENGTH_PER_HANDLER);
 
     if (isDeadlineQueueType(callQueueType)) {
       this.name += ".Deadline";
@@ -225,7 +229,9 @@ public abstract class RpcExecutor {
   protected void initializeQueues(final int numQueues) {
     if (queueInitArgs.length > 0) {
       currentQueueLimit = (int) queueInitArgs[0];
-      queueInitArgs[0] = Math.max((int) queueInitArgs[0], DEFAULT_CALL_QUEUE_SIZE_HARD_LIMIT);
+      queueInitArgs[0] = Math.min((int) queueInitArgs[0], DEFAULT_CALL_QUEUE_SIZE_HARD_LIMIT);
+      // queue should neven be initialised with 0 or less length
+      queueInitArgs[0] = Math.max((int) queueInitArgs[0], 1);
     }
     for (int i = 0; i < numQueues; ++i) {
       queues.add(ReflectionUtils.newInstance(queueClass, queueInitArgs));

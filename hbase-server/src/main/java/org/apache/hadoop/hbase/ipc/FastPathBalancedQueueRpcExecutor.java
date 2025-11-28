@@ -42,15 +42,15 @@ public class FastPathBalancedQueueRpcExecutor extends BalancedQueueRpcExecutor {
   private final Deque<FastPathRpcHandler> fastPathHandlerStack = new ConcurrentLinkedDeque<>();
 
   public FastPathBalancedQueueRpcExecutor(final String name, final int handlerCount,
-    final int maxQueueLength, final PriorityFunction priority, final Configuration conf,
+    final String maxQueueLengthConfKey, final PriorityFunction priority, final Configuration conf,
     final Abortable abortable) {
-    super(name, handlerCount, maxQueueLength, priority, conf, abortable);
+    super(name, handlerCount, maxQueueLengthConfKey, priority, conf, abortable);
   }
 
   public FastPathBalancedQueueRpcExecutor(final String name, final int handlerCount,
-    final String callQueueType, final int maxQueueLength, final PriorityFunction priority,
+    final String callQueueType, final String maxQueueLengthConfKey, final PriorityFunction priority,
     final Configuration conf, final Abortable abortable) {
-    super(name, handlerCount, callQueueType, maxQueueLength, priority, conf, abortable);
+    super(name, handlerCount, callQueueType, maxQueueLengthConfKey, priority, conf, abortable);
   }
 
   @Override
