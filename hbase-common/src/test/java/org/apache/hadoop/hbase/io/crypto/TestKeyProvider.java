@@ -55,4 +55,18 @@ public class TestKeyProvider {
       key.getEncoded().length);
   }
 
+  @Test
+  public void testManagedKeyProvider() {
+    Configuration conf = HBaseConfiguration.create();
+    conf.set(HConstants.CRYPTO_MANAGED_KEYPROVIDER_CONF_KEY,
+      MockManagedKeyProvider.class.getName());
+    ManagedKeyProvider provider = Encryption.getManagedKeyProvider(conf);
+    assertNotNull("Null returned for managed provider", provider);
+    assertTrue("Provider is not the expected type", provider instanceof MockManagedKeyProvider);
+
+    // Test that it's cached
+    ManagedKeyProvider provider2 = Encryption.getManagedKeyProvider(conf);
+    assertTrue("Provider should be cached and same instance", provider == provider2);
+  }
+
 }

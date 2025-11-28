@@ -26,7 +26,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.HBaseZKTestingUtil;
-import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -72,7 +71,7 @@ public abstract class MasterStateStoreTestBase {
     CHORE_SERVICE = new ChoreService("TestMasterStateStore");
     HFILE_CLEANER_POOL = DirScanPool.getHFileCleanerScanPool(conf);
     LOG_CLEANER_POOL = DirScanPool.getLogCleanerScanPool(conf);
-    Server server = mock(Server.class);
+    MasterServices server = mock(MasterServices.class);
     when(server.getConfiguration()).thenReturn(conf);
     when(server.getServerName())
       .thenReturn(ServerName.valueOf("localhost", 12345, EnvironmentEdgeManager.currentTime()));

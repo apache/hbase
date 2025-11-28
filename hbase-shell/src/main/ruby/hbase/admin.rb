@@ -1223,6 +1223,10 @@ module Hbase
           cfdb.setEncryptionKey(org.apache.hadoop.hbase.security.EncryptionUtil.wrapKey(@conf, key,
                                                                                           algorithm))
         end
+        if arg.include?(ColumnFamilyDescriptorBuilder::ENCRYPTION_KEY_NAMESPACE)
+          cfdb.setEncryptionKeyNamespace(arg.delete(
+            ColumnFamilyDescriptorBuilder::ENCRYPTION_KEY_NAMESPACE))
+        end
       end
       if arg.include?(ColumnFamilyDescriptorBuilder::COMPRESSION_COMPACT)
         compression = arg.delete(ColumnFamilyDescriptorBuilder::COMPRESSION_COMPACT).upcase.to_sym
