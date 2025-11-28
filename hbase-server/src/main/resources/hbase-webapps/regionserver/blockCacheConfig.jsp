@@ -40,7 +40,7 @@ if (cacheConfig == null) { %>
   <tr>
     <td>Cache DATA on Write</td>
     <td><%= cacheConfig.shouldCacheDataOnWrite() %></td>
-    <td>True if DATA blocks are cached on write.</td>
+    <td>True if DATA blocks are cached on write</td>
   </tr>
   <tr>
     <td>Cache INDEX on Write</td>
@@ -62,7 +62,7 @@ if (cacheConfig == null) { %>
     <td>Evict blocks on Split</td>
     <td><%= cacheConfig.shouldEvictOnSplit() %></td>
     <td>True if blocks of the parent region are evicted
-      from the cache when splits or merges.</td>
+      from the cache when splits or merges</td>
   </tr>
   <tr>
     <td>Cache DATA in compressed format</td>
