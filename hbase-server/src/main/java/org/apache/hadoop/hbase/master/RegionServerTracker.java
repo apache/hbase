@@ -120,7 +120,7 @@ public class RegionServerTracker extends ZKListener {
    * {@link ServerManager#findDeadServersAndProcess(Map, Set)}, we call it here under the lock
    * protection to prevent concurrency issues with server expiration operation.
    * @param deadServersWithDeathTimeFromPE the region servers which already have SCP associated,
-   *                                       have deathTime as the key.
+   *                                       have deathTime as the value.
    * @param liveServersBeforeRestart       the live region servers we recorded before master
    *                                       restarts.
    * @param splittingServersFromWALDir     Servers whose WALs are being actively 'split'.
