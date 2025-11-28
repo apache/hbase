@@ -400,7 +400,7 @@ public class ServerManager implements ConfigurationObserver {
    * Must be called inside the initialization method of {@code RegionServerTracker} to avoid
    * concurrency issue.
    * @param deadServersWithDeathTimeFromPE the region servers which already have an SCP associated,
-   *                                       have time of death as key.
+   *                                       have time of death as value.
    * @param liveServersFromWALDir          the live region servers from wal directory.
    */
   void findDeadServersAndProcess(Map<ServerName, Long> deadServersWithDeathTimeFromPE,
