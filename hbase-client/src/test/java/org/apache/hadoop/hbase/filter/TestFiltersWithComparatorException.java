@@ -73,7 +73,7 @@ public class TestFiltersWithComparatorException {
    */
   static class BadComparator extends ByteArrayComparable {
 
-    public int compareToInvokations = 0;
+    public int compareToInvocations = 0;
 
     public BadComparator() {
       super(new byte[1]);
@@ -86,19 +86,19 @@ public class TestFiltersWithComparatorException {
 
     @Override
     public int compareTo(byte[] value, int offset, int length) {
-      compareToInvokations++;
+      compareToInvocations++;
       throw new RuntimeException("comparator runtime exception");
     }
 
     @Override
     public int compareTo(ByteBuffer value, int offset, int length) {
-      compareToInvokations++;
+      compareToInvocations++;
       throw new RuntimeException("comparator runtime exception");
     }
 
     @Override
     public int compareTo(byte[] value) {
-      compareToInvokations++;
+      compareToInvocations++;
       throw new RuntimeException("comparator runtime exception");
     }
 
@@ -120,7 +120,7 @@ public class TestFiltersWithComparatorException {
    **/
   private void testFilter(Filter filter, BadComparator badComparator) {
     for (FilterFunctionThrowable filterFunction : filterFunctionsToTest) {
-      int invocationsBefore = badComparator.compareToInvokations;
+      int invocationsBefore = badComparator.compareToInvocations;
       boolean ioExceptionThrown = false;
       try {
         filterFunction.run(filter);
@@ -128,11 +128,11 @@ public class TestFiltersWithComparatorException {
         ioExceptionThrown = true;
       } catch (IOException ignored) {
       }
-      if (invocationsBefore != badComparator.compareToInvokations) {
+      if (invocationsBefore != badComparator.compareToInvocations) {
         Assert.assertTrue("IOException should have been thrown", ioExceptionThrown);
       }
     }
-    if (badComparator.compareToInvokations == 0) {
+    if (badComparator.compareToInvocations == 0) {
       Assert
         .fail(String.format(
           "Filter %s never invoked the comparator for any of the functions tested - "
