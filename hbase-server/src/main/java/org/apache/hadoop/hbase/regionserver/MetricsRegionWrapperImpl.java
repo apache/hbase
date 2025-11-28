@@ -37,6 +37,7 @@ import org.apache.hadoop.metrics2.MetricsExecutor;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
@@ -375,8 +376,7 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
         return UNKNOWN;
       }
 
-      HBaseProtos.TableSchema tableSchema =
-        ProtobufUtil.toTableSchema(tableDesc);
+      HBaseProtos.TableSchema tableSchema = ProtobufUtil.toTableSchema(tableDesc);
       byte[] bytes = tableSchema.toByteArray();
 
       MessageDigest digest = MessageDigest.getInstance("SHA-256");
