@@ -27,13 +27,16 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
+@Tag(FilterTests.TAG)
 public class TestFiltersWithComparatorException {
 
   /**
@@ -129,15 +132,14 @@ public class TestFiltersWithComparatorException {
       } catch (IOException ignored) {
       }
       if (invocationsBefore != badComparator.compareToInvocations) {
-        Assert.assertTrue("IOException should have been thrown", ioExceptionThrown);
+        assertTrue(ioExceptionThrown, "IOException should have been thrown");
       }
     }
     if (badComparator.compareToInvocations == 0) {
-      Assert
-        .fail(String.format(
-          "Filter %s never invoked the comparator for any of the functions tested - "
-            + "intended behavior was not tested, this is not expected",
-          filter.getClass().getName()));
+      fail(String.format(
+        "Filter %s never invoked the comparator for any of the functions tested - "
+          + "intended behavior was not tested, this is not expected",
+        filter.getClass().getName()));
     }
   }
 
