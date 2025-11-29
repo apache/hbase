@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.filter;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -32,8 +35,6 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 @Tag(SmallTests.TAG)
 @Tag(FilterTests.TAG)
@@ -136,10 +137,8 @@ public class TestFiltersWithComparatorException {
       }
     }
     if (badComparator.compareToInvocations == 0) {
-      fail(String.format(
-        "Filter %s never invoked the comparator for any of the functions tested - "
-          + "intended behavior was not tested, this is not expected",
-        filter.getClass().getName()));
+      fail(String.format("Filter %s never invoked the comparator for any of the functions tested - "
+        + "intended behavior was not tested, this is not expected", filter.getClass().getName()));
     }
   }
 
