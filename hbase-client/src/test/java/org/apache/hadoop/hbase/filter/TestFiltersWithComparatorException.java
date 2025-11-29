@@ -44,12 +44,12 @@ public class TestFiltersWithComparatorException {
    * comparator layer, see HBASE-29672
    */
 
-  byte[] cf = Bytes.toBytes("cf");
-  byte[] row = Bytes.toBytes("row1");
-  byte[] cq = Bytes.toBytes("q");
-  long ts = 12345L;
-  byte[] value = Bytes.toBytes("value");
-  Cell testCell = new KeyValue(row, cf, cq, ts, value);
+  final byte[] cf = Bytes.toBytes("cf");
+  final byte[] row = Bytes.toBytes("row1");
+  final byte[] cq = Bytes.toBytes("q");
+  final long ts = 12345L;
+  final byte[] value = Bytes.toBytes("value");
+  final Cell testCell = new KeyValue(row, cf, cq, ts, value);
 
   @FunctionalInterface
   interface FilterFunctionThrowable {
@@ -57,7 +57,7 @@ public class TestFiltersWithComparatorException {
   }
 
   // Every filterX method that Filter implements to test
-  List<FilterFunctionThrowable> filterFunctionsToTest = Arrays.asList((Filter filter) -> {
+  final List<FilterFunctionThrowable> filterFunctionsToTest = Arrays.asList((Filter filter) -> {
     filter.filterRowKey(testCell);
   }, (Filter filter) -> {
     filter.filterAllRemaining();
