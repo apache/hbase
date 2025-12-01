@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.master.assignment;
 
 import java.util.Arrays;
-import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import org.apache.hadoop.hbase.HConstants;
@@ -68,6 +68,9 @@ import org.slf4j.LoggerFactory;
 public class RegionStateNode implements Comparable<RegionStateNode> {
 
   private static final Logger LOG = LoggerFactory.getLogger(RegionStateNode.class);
+  // It stores count of all active TRSP in the master. Had to pass it from regionStates to
+  // maintain the count
+  private final AtomicInteger activeTransitProcedureCount;
 
   private static final class AssignmentProcedureEvent extends ProcedureEvent<RegionInfo> {
     public AssignmentProcedureEvent(final RegionInfo regionInfo) {
@@ -78,7 +81,6 @@ public class RegionStateNode implements Comparable<RegionStateNode> {
   final Lock lock = new ReentrantLock();
   private final RegionInfo regionInfo;
   private final ProcedureEvent<?> event;
-  private final ConcurrentMap<RegionInfo, RegionStateNode> ritMap;
 
   // volatile only for getLastUpdate and test usage, the upper layer should sync on the
   // RegionStateNode before accessing usually.
@@ -96,16 +98,16 @@ public class RegionStateNode implements Comparable<RegionStateNode> {
 
   /**
    * Updated whenever a call to {@link #setRegionLocation(ServerName)} or
-   * {@link #setState(RegionState.State, RegionState.State...)}.
+   * {@link #setState(RegionState.State, RegionState.State...)} or {@link #crashed(long)}.
    */
   private volatile long lastUpdate = 0;
 
   private volatile long openSeqNum = HConstants.NO_SEQNUM;
 
-  RegionStateNode(RegionInfo regionInfo, ConcurrentMap<RegionInfo, RegionStateNode> ritMap) {
+  RegionStateNode(RegionInfo regionInfo, AtomicInteger activeTransitProcedureCount) {
     this.regionInfo = regionInfo;
     this.event = new AssignmentProcedureEvent(regionInfo);
-    this.ritMap = ritMap;
+    this.activeTransitProcedureCount = activeTransitProcedureCount;
   }
 
   /**
@@ -160,7 +162,7 @@ public class RegionStateNode implements Comparable<RegionStateNode> {
     return isInState(State.FAILED_OPEN) && getProcedure() != null;
   }
 
-  public boolean isInTransition() {
+  public boolean isTransitionScheduled() {
     return getProcedure() != null;
   }
 
@@ -189,6 +191,10 @@ public class RegionStateNode implements Comparable<RegionStateNode> {
     this.lastHost = serverName;
   }
 
+  public void crashed(long crashTime) {
+    this.lastUpdate = crashTime;
+  }
+
   public void setOpenSeqNum(final long seqId) {
     this.openSeqNum = seqId;
   }
@@ -206,14 +212,14 @@ public class RegionStateNode implements Comparable<RegionStateNode> {
   public TransitRegionStateProcedure setProcedure(TransitRegionStateProcedure proc) {
     assert this.procedure == null;
     this.procedure = proc;
-    ritMap.put(regionInfo, this);
+    activeTransitProcedureCount.incrementAndGet();
     return proc;
   }
 
   public void unsetProcedure(TransitRegionStateProcedure proc) {
     assert this.procedure == proc;
+    activeTransitProcedureCount.decrementAndGet();
     this.procedure = null;
-    ritMap.remove(regionInfo, this);
   }
 
   public TransitRegionStateProcedure getProcedure() {

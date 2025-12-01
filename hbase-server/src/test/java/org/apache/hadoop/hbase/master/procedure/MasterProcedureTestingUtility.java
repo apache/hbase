@@ -107,6 +107,7 @@ public class MasterProcedureTestingUtility {
           am.setupRIT(procExec.getActiveProceduresNoCopy().stream().filter(p -> !p.isSuccess())
             .filter(p -> p instanceof TransitRegionStateProcedure)
             .map(p -> (TransitRegionStateProcedure) p).collect(Collectors.toList()));
+          am.initializationPostMetaOnline();
           return null;
         }
       },

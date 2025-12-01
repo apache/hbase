@@ -115,6 +115,10 @@ public class DeadServer {
     }
   }
 
+  synchronized void putIfAbsent(ServerName sn, long crashedTime) {
+    this.deadServers.putIfAbsent(sn, crashedTime);
+  }
+
   public synchronized int size() {
     return deadServers.size();
   }
@@ -212,6 +216,11 @@ public class DeadServer {
   public synchronized Date getTimeOfDeath(final ServerName deadServerName) {
     Long time = deadServers.get(deadServerName);
     return time == null ? null : new Date(time);
+  }
+
+  public synchronized long getDeathTimestamp(final ServerName deadServerName) {
+    Long time = deadServers.get(deadServerName);
+    return time == null ? 0 : time;
   }
 
   /**
