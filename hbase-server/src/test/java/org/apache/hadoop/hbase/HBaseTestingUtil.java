@@ -3437,9 +3437,8 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
     return new ExplainingPredicate<IOException>() {
       @Override
       public String explainFailure() throws IOException {
-        final RegionStates regionStates =
-          getMiniHBaseCluster().getMaster().getAssignmentManager().getRegionStates();
-        return "found in transition: " + regionStates.getRegionsInTransition().toString();
+        final AssignmentManager am = getMiniHBaseCluster().getMaster().getAssignmentManager();
+        return "found in transition: " + am.getRegionsInTransition().toString();
       }
 
       @Override
@@ -3449,6 +3448,34 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
         AssignmentManager am = master.getAssignmentManager();
         if (am == null) return false;
         return !am.hasRegionsInTransition();
+      }
+    };
+  }
+
+  /**
+   * Returns a {@link Predicate} for checking that there are no procedure to region transition in
+   * master
+   */
+  public ExplainingPredicate<IOException> predicateNoRegionTransitScheduled() {
+    return new ExplainingPredicate<IOException>() {
+      @Override
+      public String explainFailure() throws IOException {
+        final AssignmentManager am = getMiniHBaseCluster().getMaster().getAssignmentManager();
+        return "Number of procedure scheduled for region transit: "
+          + am.getRegionTransitScheduledCount();
+      }
+
+      @Override
+      public boolean evaluate() throws IOException {
+        HMaster master = getMiniHBaseCluster().getMaster();
+        if (master == null) {
+          return false;
+        }
+        AssignmentManager am = master.getAssignmentManager();
+        if (am == null) {
+          return false;
+        }
+        return am.getRegionTransitScheduledCount() == 0;
       }
     };
   }
@@ -3531,10 +3558,25 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   /**
+   * Wait until no regions in transition.
+   * @param timeout How long to wait.
+   */
+  public void waitUntilNoRegionTransitScheduled(final long timeout) throws IOException {
+    waitFor(timeout, predicateNoRegionTransitScheduled());
+  }
+
+  /**
    * Wait until no regions in transition. (time limit 15min)
    */
   public void waitUntilNoRegionsInTransition() throws IOException {
     waitUntilNoRegionsInTransition(15 * 60000);
+  }
+
+  /**
+   * Wait until no TRSP is present
+   */
+  public void waitUntilNoRegionTransitScheduled() throws IOException {
+    waitUntilNoRegionTransitScheduled(15 * 60000);
   }
 
   /**
