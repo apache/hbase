@@ -206,8 +206,8 @@ public class TestSplitOrMergeStatus {
     ProcedureTestingUtility.waitProcedure(procExec, procId2);
     AssignmentTestingUtil.killRs(TEST_UTIL, serverName);
     Threads.sleepWithoutInterrupt(5000);
-    boolean hasRegionsInTransition = TEST_UTIL.getMiniHBaseCluster().getMaster()
-      .getAssignmentManager().getRegionStates().hasRegionsInTransition();
+    boolean hasRegionsInTransition =
+      TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().hasRegionsInTransition();
     assertEquals(false, hasRegionsInTransition);
   }
 

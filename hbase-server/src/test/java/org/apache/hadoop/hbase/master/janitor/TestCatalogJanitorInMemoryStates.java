@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master.janitor;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -116,8 +117,8 @@ public class TestCatalogJanitorInMemoryStates {
     LOG.info("Daughter regions: " + daughters);
     assertNotNull("Should have found daughter regions for " + parent, daughters);
 
-    assertTrue("Parent region should exist in RegionStates",
-      am.getRegionStates().isRegionInRegionStates(parent.getRegion()));
+    assertNotNull("Parent region should exist in RegionStates",
+      am.getRegionStates().getRegionStateNodeFromName(parent.getRegion().getRegionName()));
     assertTrue("Parent region should exist in ServerManager",
       sm.isRegionInServerManagerStates(parent.getRegion()));
 
@@ -140,8 +141,8 @@ public class TestCatalogJanitorInMemoryStates {
       }
     });
 
-    assertFalse("Parent region should have been removed from RegionStates",
-      am.getRegionStates().isRegionInRegionStates(parent.getRegion()));
+    assertNull("Parent region should have been removed from RegionStates",
+      am.getRegionStates().getRegionStateNodeFromName(parent.getRegion().getRegionName()));
     assertFalse("Parent region should have been removed from ServerManager",
       sm.isRegionInServerManagerStates(parent.getRegion()));
 

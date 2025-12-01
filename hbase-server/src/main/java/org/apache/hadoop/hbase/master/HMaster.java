@@ -1020,10 +1020,11 @@ public class HMaster extends HRegionServer implements MasterServices {
     // TODO: Generate the splitting and live Set in one pass instead of two as we currently do.
     this.regionServerTracker.upgrade(
       procsByType.getOrDefault(ServerCrashProcedure.class, Collections.emptyList()).stream()
-        .map(p -> (ServerCrashProcedure) p).map(p -> p.getServerName()).collect(Collectors.toSet()),
+        .map(p -> (ServerCrashProcedure) p).collect(
+          Collectors.toMap(ServerCrashProcedure::getServerName, Procedure::getSubmittedTime)),
       Sets.union(rsListStorage.getAll(), walManager.getLiveServersFromWALDir()),
       walManager.getSplittingServersFromWALDir());
-    // This manager will be started AFTER hbase:meta is confirmed on line.
+    // This manager will be started AFTER hbase:meta is confirmed on line..
     // hbase.mirror.table.state.to.zookeeper is so hbase1 clients can connect. They read table
     // state from zookeeper while hbase2 reads it from hbase:meta. Disable if no hbase1 clients.
     this.tableStateManager =
@@ -1121,6 +1122,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     final ColumnFamilyDescriptor replBarrierFamilyDesc =
       metaDescriptor.getColumnFamily(HConstants.REPLICATION_BARRIER_FAMILY);
 
+    this.assignmentManager.initializationPostMetaOnline();
     this.assignmentManager.joinCluster();
     // The below depends on hbase:meta being online.
     try {
@@ -1944,7 +1946,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     // But if there are zero regions in transition, it can skip sleep to speed up.
     while (
       !interrupted && EnvironmentEdgeManager.currentTime() < nextBalanceStartTime
-        && this.assignmentManager.getRegionStates().hasRegionsInTransition()
+        && this.assignmentManager.getRegionTransitScheduledCount() > 0
     ) {
       try {
         Thread.sleep(100);
@@ -1956,8 +1958,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     // Throttling by max number regions in transition
     while (
       !interrupted && maxRegionsInTransition > 0
-        && this.assignmentManager.getRegionStates().getRegionsInTransitionCount()
-            >= maxRegionsInTransition
+        && this.assignmentManager.getRegionTransitScheduledCount() >= maxRegionsInTransition
         && EnvironmentEdgeManager.currentTime() <= cutoffTime
     ) {
       try {
@@ -2036,7 +2037,7 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     synchronized (this.balancer) {
       // Only allow one balance run at at time.
-      if (this.assignmentManager.hasRegionsInTransition()) {
+      if (this.assignmentManager.getRegionTransitScheduledCount() > 0) {
         List<RegionStateNode> regionsInTransition = assignmentManager.getRegionsInTransition();
         // if hbase:meta region is in transition, result of assignment cannot be recorded
         // ignore the force flag in that case
@@ -2051,7 +2052,8 @@ public class HMaster extends HRegionServer implements MasterServices {
 
         if (!request.isIgnoreRegionsInTransition() || metaInTransition) {
           LOG.info("Not running balancer (ignoreRIT=false" + ", metaRIT=" + metaInTransition
-            + ") because " + regionsInTransition.size() + " region(s) in transition: " + toPrint
+            + ") because " + assignmentManager.getRegionTransitScheduledCount()
+            + " region(s) are scheduled to transit " + toPrint
             + (truncated ? "(truncated list)" : ""));
           return responseBuilder.build();
         }
@@ -2188,7 +2190,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     if (skipRegionManagementAction("region normalizer")) {
       return false;
     }
-    if (assignmentManager.hasRegionsInTransition()) {
+    if (assignmentManager.getRegionTransitScheduledCount() > 0) {
       return false;
     }
 
@@ -3012,7 +3014,7 @@ public class HMaster extends HRegionServer implements MasterServices {
         case REGIONS_IN_TRANSITION: {
           if (assignmentManager != null) {
             builder.setRegionsInTransition(
-              assignmentManager.getRegionStates().getRegionsStateInTransition());
+              new ArrayList<>(assignmentManager.getRegionsStateInTransition()));
           }
           break;
         }

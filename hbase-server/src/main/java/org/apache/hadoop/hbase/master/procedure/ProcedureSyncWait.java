@@ -252,7 +252,7 @@ public final class ProcedureSyncWait {
         new ProcedureSyncWait.Predicate<Boolean>() {
           @Override
           public Boolean evaluate() throws IOException {
-            return !states.isRegionInTransition(region);
+            return !states.getRegionStateNode(region).isTransitionScheduled();
           }
         });
     }
