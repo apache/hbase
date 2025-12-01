@@ -36,8 +36,8 @@ public final class DummyDFSOutputStream extends DFSOutputStream {
   private final AsyncFSOutput delegate;
 
   public DummyDFSOutputStream(AsyncFSOutput output, DFSClient dfsClient, String src,
-    HdfsFileStatus stat, EnumSet<CreateFlag> flag, DataChecksum checksum) {
-    super(dfsClient, src, stat, flag, null, checksum, null, false);
+    HdfsFileStatus stat, EnumSet<CreateFlag> flag, DataChecksum checksum) throws IOException {
+    super(dfsClient, src, stat, flag, null, checksum, null);
     this.delegate = output;
   }
 
