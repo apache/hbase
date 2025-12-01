@@ -81,16 +81,10 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
   protected RegionServicesForStores regionServicesForStores;
   protected HStore store;
 
-  //////////////////////////////////////////////////////////////////////////////
-  // Helpers
-  //////////////////////////////////////////////////////////////////////////////
-  protected static byte[] makeQualifier(final int i1, final int i2) {
-    return Bytes.toBytes(Integer.toString(i1) + ";" + Integer.toString(i2));
-  }
-
   @After
   public void tearDown() throws Exception {
     chunkCreator.clearChunksInPool();
+    super.tearDown();
   }
 
   @Override
@@ -847,6 +841,12 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
     memstore.clearSnapshot(snapshot.getId());
   }
 
+  @Override
+  @Test
+  public void testScan() throws IOException {
+    scanMemStore(memstore, 6635);
+  }
+
   protected int addRowsByKeys(final AbstractMemStore hmc, String[] keys) {
     byte[] fam = Bytes.toBytes("testfamily");
     byte[] qf = Bytes.toBytes("testqualifier");
@@ -925,6 +925,5 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
       throws IllegalArgumentIOException {
       compactor.initiateCompactionStrategy(compactionType, conf, "CF_TEST");
     }
-
   }
 }
