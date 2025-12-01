@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -116,22 +117,26 @@ public class RegionServerTracker extends ZKListener {
    * In this method, we will also construct the region server sets in {@link ServerManager}. If a
    * region server is dead between the crash of the previous master instance and the start of the
    * current master instance, we will schedule a SCP for it. This is done in
-   * {@link ServerManager#findDeadServersAndProcess(Set, Set)}, we call it here under the lock
+   * {@link ServerManager#findDeadServersAndProcess(Map, Set)}, we call it here under the lock
    * protection to prevent concurrency issues with server expiration operation.
-   * @param deadServersFromPE          the region servers which already have SCP associated.
-   * @param liveServersBeforeRestart   the live region servers we recorded before master restarts.
-   * @param splittingServersFromWALDir Servers whose WALs are being actively 'split'.
+   * @param deadServersWithDeathTimeFromPE the region servers which already have SCP associated,
+   *                                       have deathTime as the value.
+   * @param liveServersBeforeRestart       the live region servers we recorded before master
+   *                                       restarts.
+   * @param splittingServersFromWALDir     Servers whose WALs are being actively 'split'.
    */
-  public void upgrade(Set<ServerName> deadServersFromPE, Set<ServerName> liveServersBeforeRestart,
-    Set<ServerName> splittingServersFromWALDir) throws KeeperException, IOException {
+  public void upgrade(Map<ServerName, Long> deadServersWithDeathTimeFromPE,
+    Set<ServerName> liveServersBeforeRestart, Set<ServerName> splittingServersFromWALDir)
+    throws KeeperException, IOException {
     LOG.info(
       "Upgrading RegionServerTracker to active master mode; {} have existing"
         + "ServerCrashProcedures, {} possibly 'live' servers, and {} 'splitting'.",
-      deadServersFromPE.size(), liveServersBeforeRestart.size(), splittingServersFromWALDir.size());
-    // deadServersFromPE is made from a list of outstanding ServerCrashProcedures.
+      deadServersWithDeathTimeFromPE.size(), liveServersBeforeRestart.size(),
+      splittingServersFromWALDir.size());
+    // deadServersWithDeathTimeFromPE is made from a list of outstanding ServerCrashProcedures.
     // splittingServersFromWALDir are being actively split -- the directory in the FS ends in
     // '-SPLITTING'. Each splitting server should have a corresponding SCP. Log if not.
-    splittingServersFromWALDir.stream().filter(s -> !deadServersFromPE.contains(s))
+    splittingServersFromWALDir.stream().filter(s -> !deadServersWithDeathTimeFromPE.containsKey(s))
       .forEach(s -> LOG.error("{} has no matching ServerCrashProcedure", s));
     // create ServerNode for all possible live servers from wal directory
     liveServersBeforeRestart
@@ -148,7 +153,8 @@ public class RegionServerTracker extends ZKListener {
           : ServerMetricsBuilder.of(serverName);
         serverManager.checkAndRecordNewServer(serverName, serverMetrics);
       }
-      serverManager.findDeadServersAndProcess(deadServersFromPE, liveServersBeforeRestart);
+      serverManager.findDeadServersAndProcess(deadServersWithDeathTimeFromPE,
+        liveServersBeforeRestart);
       active = true;
     }
   }
