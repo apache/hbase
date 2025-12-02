@@ -680,7 +680,7 @@ public class TestBucketCache {
 
   @Test
   public void testStringPool() throws Exception {
-    HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
+    HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
     Path testDir = TEST_UTIL.getDataTestDir();
     TEST_UTIL.getTestFileSystem().mkdirs(testDir);
     BucketCache bucketCache =
