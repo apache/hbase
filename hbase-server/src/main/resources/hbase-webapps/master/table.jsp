@@ -124,7 +124,7 @@
     String hostNameEncoded = URLEncoder.encode(hostName, StandardCharsets.UTF_8);
     // This port might be wrong if RS actually ended up using something else.
     int serverInfoPort = master.getRegionServerInfoPort(serverName);
-    String urlRegionServer = "//" + hostNameEncoded + ":" + serverInfoPort + "/rs-status";
+    String urlRegionServer = "//" + hostNameEncoded + ":" + serverInfoPort + "/regionserver.jsp";
 
     return "<td><a href=\"" + urlRegionServer + "\">" + StringEscapeUtils.escapeHtml4(hostName)
       + ":" + serverInfoPort + "</a></td>";
@@ -398,7 +398,7 @@
                 %>
               <tr>
                 <td><%= escapeXml(meta.getRegionNameAsString()) %></td>
-                <td><a href="http://<%= hostAndPort %>/rs-status"><%= StringEscapeUtils.escapeHtml4(hostAndPort) %></a></td>
+                <td><a href="http://<%= hostAndPort %>/regionserver.jsp"><%= StringEscapeUtils.escapeHtml4(hostAndPort) %></a></td>
                 <td><%= readReq%></td>
                 <td><%= writeReq%></td>
                 <td><%= fileSizeUncompressed%></td>
@@ -455,7 +455,7 @@
                  %>
                <tr>
                  <td><%= escapeXml(meta.getRegionNameAsString()) %></td>
-                 <td><a href="http://<%= hostAndPort %>/rs-status"><%= StringEscapeUtils.escapeHtml4(hostAndPort) %></a></td>
+                 <td><a href="http://<%= hostAndPort %>/regionserver.jsp"><%= StringEscapeUtils.escapeHtml4(hostAndPort) %></a></td>
                  <td><%= locality%></td>
                  <td><%= localityForSsd%></td>
                </tr>
@@ -512,7 +512,7 @@
             %>
               <tr>
                 <td><%= escapeXml(meta.getRegionNameAsString()) %></td>
-                <td><a href="http://<%= hostAndPort %>/rs-status"><%= StringEscapeUtils.escapeHtml4(hostAndPort) %></a></td>
+                <td><a href="http://<%= hostAndPort %>/regionserver.jsp"><%= StringEscapeUtils.escapeHtml4(hostAndPort) %></a></td>
                 <td><%= String.format("%,1d", compactingCells)%></td>
                 <td><%= String.format("%,1d", compactedCells)%></td>
                 <td><%= String.format("%,1d", compactingCells - compactedCells)%></td>
@@ -1174,7 +1174,7 @@
     for (Map.Entry<ServerName, Integer> rdEntry : regDistribution.entrySet()) {
       ServerName addr = rdEntry.getKey();
       String url = "//" + URLEncoder.encode(addr.getHostname(), StandardCharsets.UTF_8) + ":"
-        + master.getRegionServerInfoPort(addr) + "/rs-status";
+        + master.getRegionServerInfoPort(addr) + "/regionserver.jsp";
   %>
       <tr>
         <td><a href="<%= url %>"><%= StringEscapeUtils.escapeHtml4(addr.getHostname())

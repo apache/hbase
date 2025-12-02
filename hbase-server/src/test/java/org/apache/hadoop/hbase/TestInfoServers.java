@@ -97,7 +97,8 @@ public class TestInfoServers {
     assertContainsContent(new URL("http://localhost:" + port + "/master-status"), "master.jsp");
     port = UTIL.getHBaseCluster().getRegionServerThreads().get(0).getRegionServer().getInfoServer()
       .getPort();
-    assertContainsContent(new URL("http://localhost:" + port + "/index.html"), "rs-status");
+    assertContainsContent(new URL("http://localhost:" + port + "/index.html"), "regionserver.jsp");
+    assertContainsContent(new URL("http://localhost:" + port + "/rs-status"), "regionserver.jsp");
   }
 
   /**
@@ -111,7 +112,7 @@ public class TestInfoServers {
     assertContainsContent(new URL("http://localhost:" + port + "/master.jsp"), "meta");
     port = UTIL.getHBaseCluster().getRegionServerThreads().get(0).getRegionServer().getInfoServer()
       .getPort();
-    assertContainsContent(new URL("http://localhost:" + port + "/rs-status"), "meta");
+    assertContainsContent(new URL("http://localhost:" + port + "/regionserver.jsp"), "meta");
   }
 
   @Test

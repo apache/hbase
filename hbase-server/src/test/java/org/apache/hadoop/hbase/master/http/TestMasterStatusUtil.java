@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master.http;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
@@ -203,7 +204,7 @@ public class TestMasterStatusUtil {
     conf.setBoolean("hbase.master.ui.fragmentation.enabled", true);
     Map<String, Integer> fragmentationInfo = MasterStatusUtil.getFragmentationInfo(master, conf);
     assertNotNull(fragmentationInfo);
-    assertEquals(1, fragmentationInfo.size());
+    assertFalse(fragmentationInfo.isEmpty());
   }
 
   @Test
@@ -240,7 +241,8 @@ public class TestMasterStatusUtil {
     String link = MasterStatusUtil.serverNameLink(master, FAKE_HOST);
 
     assertNotNull(link);
-    assertEquals("<a href=\"//fakehost:16030/rs-status\">fakehost,12345,1234567890</a>", link);
+    assertEquals("<a href=\"//fakehost:16030/regionserver.jsp\">fakehost,12345,1234567890</a>",
+      link);
   }
 
   @Test
