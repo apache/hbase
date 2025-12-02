@@ -48,6 +48,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -658,6 +659,7 @@ public class TestBucketCache {
     assertEquals(0, cache.getStats().getEvictionCount());
 
     // add back
+    key = new BlockCacheKey("testEvictionCount", 0);
     CacheTestUtils.getBlockAndAssertEquals(cache, key, blockWithNextBlockMetadata, actualBuffer,
       block1Buffer);
     waitUntilFlushedToBucket(cache, key);
@@ -674,6 +676,37 @@ public class TestBucketCache {
     // should finally increment eviction count
     cache.freeSpace("testing");
     assertEquals(1, cache.getStats().getEvictionCount());
+  }
+
+  @Test
+  public void testStringPool() throws Exception {
+    HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
+    Path testDir = TEST_UTIL.getDataTestDir();
+    TEST_UTIL.getTestFileSystem().mkdirs(testDir);
+    BucketCache bucketCache =
+      new BucketCache("file:" + testDir + "/bucket.cache", capacitySize, constructedBlockSize,
+        constructedBlockSizes, writeThreads, writerQLen, testDir + "/bucket.persistence");
+    assertTrue(bucketCache.waitForCacheInitialization(10000));
+    long usedSize = bucketCache.getAllocator().getUsedSize();
+    assertEquals(0, usedSize);
+    Random rand = ThreadLocalRandom.current();
+    Path filePath = new Path(testDir, Long.toString(rand.nextLong()));
+    CacheTestUtils.HFileBlockPair[] blocks =
+      CacheTestUtils.generateBlocksForPath(constructedBlockSize, 1, filePath, false);
+    String name = blocks[0].getBlockName().getHfileName();
+    assertEquals(name, filePath.getName());
+    assertNotNull(blocks[0].getBlockName().getRegionName());
+    bucketCache.cacheBlock(blocks[0].getBlockName(), blocks[0].getBlock());
+    waitUntilFlushedToBucket(bucketCache, blocks[0].getBlockName());
+    assertTrue(FilePathStringPool.getInstance().size() > 0);
+    bucketCache.evictBlock(blocks[0].getBlockName());
+    assertTrue(FilePathStringPool.getInstance().size() > 0);
+    bucketCache.cacheBlock(blocks[0].getBlockName(), blocks[0].getBlock());
+    waitUntilFlushedToBucket(bucketCache, blocks[0].getBlockName());
+    bucketCache.fileCacheCompleted(filePath,
+      bucketCache.backingMap.get(blocks[0].getBlockName()).getLength());
+    bucketCache.evictBlocksByHfileName(name);
+    assertEquals(1, FilePathStringPool.getInstance().size());
   }
 
   @Test
@@ -884,6 +917,7 @@ public class TestBucketCache {
 
       HFileBlockPair[] hfileBlockPairs =
         CacheTestUtils.generateHFileBlocks(constructedBlockSize, 10);
+      String[] names = CacheTestUtils.getHFileNames(hfileBlockPairs);
       // Add blocks
       for (HFileBlockPair hfileBlockPair : hfileBlockPairs) {
         bucketCache.cacheBlock(hfileBlockPair.getBlockName(), hfileBlockPair.getBlock(), false,
@@ -912,10 +946,9 @@ public class TestBucketCache {
         constructedBlockSizes, writeThreads, writerQLen, persistencePath);
       assertTrue(bucketCache.waitForCacheInitialization(10000));
       assertEquals(usedByteSize, bucketCache.getAllocator().getUsedSize());
-
-      for (HFileBlockPair hfileBlockPair : hfileBlockPairs) {
-        BlockCacheKey blockCacheKey = hfileBlockPair.getBlockName();
-        bucketCache.evictBlock(blockCacheKey);
+      BlockCacheKey[] newKeys = CacheTestUtils.regenerateKeys(hfileBlockPairs, names);
+      for (BlockCacheKey key : newKeys) {
+        bucketCache.evictBlock(key);
       }
       assertEquals(0, bucketCache.getAllocator().getUsedSize());
       assertEquals(0, bucketCache.backingMap.size());
@@ -1098,9 +1131,9 @@ public class TestBucketCache {
       constructedBlockSize, new int[] { constructedBlockSize + 1024 }, 1, 1, null, 60 * 1000,
       HBASE_TESTING_UTILITY.getConfiguration(), onlineRegions);
     HFileBlockPair[] validBlockPairs =
-      CacheTestUtils.generateBlocksForPath(constructedBlockSize, 10, validFile);
+      CacheTestUtils.generateBlocksForPath(constructedBlockSize, 10, validFile, false);
     HFileBlockPair[] orphanBlockPairs =
-      CacheTestUtils.generateBlocksForPath(constructedBlockSize, 10, orphanFile);
+      CacheTestUtils.generateBlocksForPath(constructedBlockSize, 10, orphanFile, false);
     for (HFileBlockPair pair : validBlockPairs) {
       bucketCache.cacheBlockWithWait(pair.getBlockName(), pair.getBlock(), false, true);
     }
