@@ -74,6 +74,46 @@ const apacheLicenseRule = {
   }
 };
 
+// Custom rule to prevent importing Link from react-router
+const noReactRouterLinkRule = {
+  meta: {
+    type: "error",
+    docs: {
+      description: "Prevent importing Link from react-router, use custom Link component from @/components/link instead"
+    },
+    messages: {
+      noReactRouterLink: "Do not import Link from 'react-router'. Use the custom Link component from '@/components/link' instead. The custom Link component handles hard reloads for external pages that are not part of this React Router app."
+    }
+  },
+  create(context) {
+    return {
+      ImportDeclaration(node) {
+        // Allow the custom Link component file itself to import from react-router
+        const filename = context.getFilename();
+        if (filename.endsWith('components/link.tsx')) {
+          return;
+        }
+        
+        // Check if importing from 'react-router'
+        if (node.source.value === 'react-router') {
+          // Check if any of the imported specifiers is 'Link'
+          const linkImport = node.specifiers.find(
+            specifier => 
+              (specifier.type === 'ImportSpecifier' && specifier.imported.name === 'Link')
+          );
+          
+          if (linkImport) {
+            context.report({
+              node: linkImport,
+              messageId: "noReactRouterLink"
+            });
+          }
+        }
+      }
+    };
+  }
+};
+
 export default defineConfig([
   globalIgnores([
     "node_modules",
@@ -100,7 +140,8 @@ export default defineConfig([
       import: importPlugin,
       custom: {
         rules: {
-          "apache-license": apacheLicenseRule
+          "apache-license": apacheLicenseRule,
+          "no-react-router-link": noReactRouterLinkRule
         }
       }
     },
@@ -131,6 +172,9 @@ export default defineConfig([
       
       // Enforce Apache License header
       "custom/apache-license": "error",
+      
+      // Prevent importing Link from react-router
+      "custom/no-react-router-link": "error",
     },
   },
 ]);

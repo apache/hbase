@@ -16,7 +16,7 @@
 // limitations under the License.
 //
 
-import { Link } from "react-router";
+import { Link } from "@/components/link";
 import { projectLinks, documentationLinks, asfLinks } from "./links";
 
 function ExternalIcon() {

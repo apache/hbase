@@ -17,7 +17,7 @@
 //
 
 import { Button } from "@/ui/button";
-import { Link } from "react-router";
+import { Link } from "@/components/link";
 
 export function Hero() {
   return (

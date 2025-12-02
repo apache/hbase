@@ -31,7 +31,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/ui/collap
 import { ChevronDown, ChevronRight, ExternalLink } from "lucide-react";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Link } from "react-router";
+import { Link } from "@/components/link";
 import { asfLinks, documentationLinks, projectLinks, docsLinks } from "./links";
 import { ThemeToggle } from "./theme-toggle";
 

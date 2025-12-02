@@ -17,7 +17,7 @@
 //
 
 import Markdown, { type Components } from "react-markdown";
-import { Link } from "react-router";
+import { Link } from "@/components/link";
 import remarkGfm from "remark-gfm";
 import rehypeSlug from "rehype-slug";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";

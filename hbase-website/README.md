@@ -200,6 +200,36 @@ my-react-router-app/
    - Maps URLs to pages
    - Sets page titles, meta tags, etc.
 
+#### Important Conventions
+
+##### Custom Link Component
+
+**Always use the custom Link component from `@/components/link` instead of importing Link directly from `react-router`.**
+
+The HBase website includes pages that are not part of this React Router application (e.g., documentation pages, API docs). The custom Link component automatically determines whether a link should trigger a hard reload or use React Router's client-side navigation:
+
+**Usage:**
+
+```typescript
+// ✅ CORRECT - Use custom Link component
+import { Link } from "@/components/link";
+
+export const MyComponent = () => (
+  <Link to="/team">Team</Link>
+);
+```
+
+```typescript
+// ❌ WRONG - Do not import Link from react-router
+import { Link } from "react-router";
+
+export const MyComponent = () => (
+  <Link to="/team">Team</Link>
+);
+```
+
+The ESLint configuration includes a custom rule (`custom/no-react-router-link`) that will throw an error if you attempt to import `Link` from `react-router`, helping enforce this convention automatically.
+
 ### Getting Started
 
 #### 1. Install Dependencies

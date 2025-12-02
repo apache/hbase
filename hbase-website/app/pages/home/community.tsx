@@ -18,7 +18,7 @@
 
 import { Button } from "@/ui/button";
 import { ArrowUpRight } from "lucide-react";
-import { Link } from "react-router";
+import { Link } from "@/components/link";
 
 export function CommunitySection() {
   return (
