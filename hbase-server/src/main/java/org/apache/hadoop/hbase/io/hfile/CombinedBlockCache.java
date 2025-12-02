@@ -160,11 +160,6 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
   }
 
   @Override
-  public int evictBlocksByHfilePath(Path hfilePath) {
-    return l1Cache.evictBlocksByHfilePath(hfilePath) + l2Cache.evictBlocksByHfilePath(hfilePath);
-  }
-
-  @Override
   public CacheStats getStats() {
     return this.combinedCacheStats;
   }

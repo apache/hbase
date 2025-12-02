@@ -101,14 +101,6 @@ public interface BlockCache extends Iterable<CachedBlock>, ConfigurationObserver
   int evictBlocksByHfileName(String hfileName);
 
   /**
-   * Evicts all blocks for the given HFile by path.
-   * @return the number of blocks evicted
-   */
-  default int evictBlocksByHfilePath(Path hfilePath) {
-    return evictBlocksByHfileName(hfilePath.getName());
-  }
-
-  /**
    * Get the statistics for this block cache.
    */
   CacheStats getStats();
