@@ -374,8 +374,18 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
   }
 
   @Override
+  public long getL1CacheHitCachingCount() {
+    return this.l1Stats != null ? this.l1Stats.getHitCachingCount() : 0L;
+  }
+
+  @Override
   public long getL1CacheMissCount() {
     return this.l1Stats != null ? this.l1Stats.getMissCount() : 0L;
+  }
+
+  @Override
+  public long getL1CacheMissCachingCount() {
+    return this.l1Stats != null ? this.l1Stats.getMissCachingCount() : 0L;
   }
 
   @Override
@@ -384,8 +394,18 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
   }
 
   @Override
+  public double getL1CacheHitCachingRatio() {
+    return this.l1Stats != null ? this.l1Stats.getHitCachingRatio() : 0.0;
+  }
+
+  @Override
   public double getL1CacheMissRatio() {
     return this.l1Stats != null ? this.l1Stats.getMissRatio() : 0.0;
+  }
+
+  @Override
+  public double getL1CacheMissCachingRatio() {
+    return this.l1Stats != null ? this.l1Stats.getMissCachingRatio() : 0.0;
   }
 
   @Override
@@ -394,8 +414,18 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
   }
 
   @Override
+  public long getL2CacheHitCachingCount() {
+    return this.l2Stats != null ? this.l2Stats.getHitCachingCount() : 0L;
+  }
+
+  @Override
   public long getL2CacheMissCount() {
     return this.l2Stats != null ? this.l2Stats.getMissCount() : 0L;
+  }
+
+  @Override
+  public long getL2CacheMissCachingCount() {
+    return this.l2Stats != null ? this.l2Stats.getMissCachingCount() : 0L;
   }
 
   @Override
@@ -404,8 +434,18 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
   }
 
   @Override
+  public double getL2CacheHitCachingRatio() {
+    return this.l2Stats != null ? this.l2Stats.getHitCachingRatio() : 0.0;
+  }
+
+  @Override
   public double getL2CacheMissRatio() {
     return this.l2Stats != null ? this.l2Stats.getMissRatio() : 0.0;
+  }
+
+  @Override
+  public double getL2CacheMissCachingRatio() {
+    return this.l2Stats != null ? this.l2Stats.getMissCachingRatio() : 0.0;
   }
 
   @Override
