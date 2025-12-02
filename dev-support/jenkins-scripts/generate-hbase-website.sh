@@ -238,8 +238,14 @@ for FILE in "${FILES_TO_REMOVE[@]}"; do
 done
 
 # Copy in the newly-built artifacts
+# First copy documentation from Maven site build
+echo "Copying documentation from target/staging"
 # TODO what do we do when the site build wants to remove something? Can't rsync because e.g. release-specific docs.
 cp -pPR "${component_dir}"/target/staging/* .
+
+# Then copy the new website (landing page) from hbase-website/build/client
+echo "Copying new website from hbase-website/build/client"
+cp -pPR "${component_dir}"/hbase-website/build/client/* .
 
 # If the index.html is missing, bail because this is serious
 if [ ! -f index.html ]; then
