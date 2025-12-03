@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
@@ -323,8 +324,8 @@ public interface TableDescriptor {
   }
 
   /**
-   * Computes a SHA-256 hash of the table descriptor's protobuf representation.
-   * This hash can be used to detect changes in the table descriptor configuration.
+   * Computes a SHA-256 hash of the table descriptor's protobuf representation. This hash can be
+   * used to detect changes in the table descriptor configuration.
    * @return A hex string representation of the SHA-256 hash, or "UNKNOWN" if computation fails
    */
   default String getDescriptorHash() {

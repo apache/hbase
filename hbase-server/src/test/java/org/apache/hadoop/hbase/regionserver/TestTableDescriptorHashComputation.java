@@ -40,36 +40,32 @@ public class TestTableDescriptorHashComputation {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestTableDescriptorHashComputation.class);
 
-  private String computeHash(TableDescriptor tableDescriptor) {
-    return tableDescriptor.getDescriptorHash();
-  }
-
   @Test
-  public void testHashLength() throws Exception {
+  public void testHashLength() {
     TableDescriptor td = TableDescriptorBuilder.newBuilder(TableName.valueOf("testTable"))
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of("cf")).build();
 
-    String hash = computeHash(td);
+    String hash = td.getDescriptorHash();
     assertNotNull(hash);
     assertEquals(64, hash.length());
   }
 
   @Test
-  public void testIdenticalDescriptorsProduceSameHash() throws Exception {
+  public void testIdenticalDescriptorsProduceSameHash() {
     TableDescriptor td1 = TableDescriptorBuilder.newBuilder(TableName.valueOf("testTable"))
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of("cf")).build();
 
     TableDescriptor td2 = TableDescriptorBuilder.newBuilder(TableName.valueOf("testTable"))
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of("cf")).build();
 
-    String hash1 = computeHash(td1);
-    String hash2 = computeHash(td2);
+    String hash1 = td1.getDescriptorHash();
+    String hash2 = td2.getDescriptorHash();
 
     assertEquals(hash1, hash2);
   }
 
   @Test
-  public void testDifferentDescriptorsProduceDifferentHashes() throws Exception {
+  public void testDifferentDescriptorsProduceDifferentHashes() {
     TableDescriptor td1 = TableDescriptorBuilder.newBuilder(TableName.valueOf("testTable"))
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of("cf")).build();
 
@@ -78,33 +74,32 @@ public class TestTableDescriptorHashComputation {
         ColumnFamilyDescriptorBuilder.newBuilder("cf".getBytes()).setTimeToLive(86400).build())
       .build();
 
-    String hash1 = computeHash(td1);
-    String hash2 = computeHash(td2);
+    String hash1 = td1.getDescriptorHash();
+    String hash2 = td2.getDescriptorHash();
 
     assertNotEquals(hash1, hash2);
   }
 
   @Test
-  public void testDifferentCompressionProducesDifferentHash() throws Exception {
-    TableDescriptor td1 = TableDescriptorBuilder.newBuilder(TableName.valueOf("testTable"))
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder("cf".getBytes())
-        .setCompressionType(Compression.Algorithm.NONE).build())
+  public void testDifferentCompressionProducesDifferentHash() {
+    TableDescriptor td1 = TableDescriptorBuilder
+      .newBuilder(TableName.valueOf("testTable")).setColumnFamily(ColumnFamilyDescriptorBuilder
+        .newBuilder("cf".getBytes()).setCompressionType(Compression.Algorithm.NONE).build())
       .build();
 
-    TableDescriptor td2 = TableDescriptorBuilder.newBuilder(TableName.valueOf("testTable"))
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder("cf".getBytes())
-        .setCompressionType(Compression.Algorithm.SNAPPY)
-        .build())
+    TableDescriptor td2 = TableDescriptorBuilder
+      .newBuilder(TableName.valueOf("testTable")).setColumnFamily(ColumnFamilyDescriptorBuilder
+        .newBuilder("cf".getBytes()).setCompressionType(Compression.Algorithm.SNAPPY).build())
       .build();
 
-    String hash1 = computeHash(td1);
-    String hash2 = computeHash(td2);
+    String hash1 = td1.getDescriptorHash();
+    String hash2 = td2.getDescriptorHash();
 
     assertNotEquals(hash1, hash2);
   }
 
   @Test
-  public void testMultipleColumnFamilies() throws Exception {
+  public void testMultipleColumnFamilies() {
     TableDescriptor td1 = TableDescriptorBuilder.newBuilder(TableName.valueOf("testTable"))
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of("cf1"))
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of("cf2")).build();
@@ -112,14 +107,14 @@ public class TestTableDescriptorHashComputation {
     TableDescriptor td2 = TableDescriptorBuilder.newBuilder(TableName.valueOf("testTable"))
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of("cf1")).build();
 
-    String hash1 = computeHash(td1);
-    String hash2 = computeHash(td2);
+    String hash1 = td1.getDescriptorHash();
+    String hash2 = td2.getDescriptorHash();
 
     assertNotEquals(hash1, hash2);
   }
 
   @Test
-  public void testHashCaching() throws Exception {
+  public void testHashCaching() {
     TableDescriptor td = TableDescriptorBuilder.newBuilder(TableName.valueOf("testTable"))
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of("cf")).build();
 

@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -77,15 +76,14 @@ public class TestMetricsRegionWrapperTableDescriptorHash {
     HRegion region =
       HBaseTestingUtil.createRegionAndWAL(regionInfo, testDir, conf, tableDescriptor);
 
-    MetricsRegionWrapperImpl wrapper = new MetricsRegionWrapperImpl(region);
-
-    String hash = wrapper.getTableDescriptorHash();
-    assertNotNull(hash);
-    assertNotEquals("unknown", hash);
-    assertEquals(64, hash.length());
-
-    wrapper.close();
-    HBaseTestingUtil.closeRegionAndWAL(region);
+    try (MetricsRegionWrapperImpl wrapper = new MetricsRegionWrapperImpl(region)) {
+      String hash = wrapper.getTableDescriptorHash();
+      assertNotNull(hash);
+      assertNotEquals("unknown", hash);
+      assertEquals(64, hash.length());
+    } finally {
+      HBaseTestingUtil.closeRegionAndWAL(region);
+    }
   }
 
   @Test
@@ -106,19 +104,17 @@ public class TestMetricsRegionWrapperTableDescriptorHash {
     Path testDir2 = testUtil.getDataTestDir("testHashConsistency2");
     HRegion region2 =
       HBaseTestingUtil.createRegionAndWAL(regionInfo2, testDir2, conf, tableDescriptor);
+    try (MetricsRegionWrapperImpl wrapper1 = new MetricsRegionWrapperImpl(region1);
+      MetricsRegionWrapperImpl wrapper2 = new MetricsRegionWrapperImpl(region2)) {
 
-    MetricsRegionWrapperImpl wrapper1 = new MetricsRegionWrapperImpl(region1);
-    MetricsRegionWrapperImpl wrapper2 = new MetricsRegionWrapperImpl(region2);
+      String hash1 = wrapper1.getTableDescriptorHash();
+      String hash2 = wrapper2.getTableDescriptorHash();
 
-    String hash1 = wrapper1.getTableDescriptorHash();
-    String hash2 = wrapper2.getTableDescriptorHash();
-
-    assertEquals(hash1, hash2);
-
-    wrapper1.close();
-    wrapper2.close();
-    HBaseTestingUtil.closeRegionAndWAL(region1);
-    HBaseTestingUtil.closeRegionAndWAL(region2);
+      assertEquals(hash1, hash2);
+    } finally {
+      HBaseTestingUtil.closeRegionAndWAL(region1);
+      HBaseTestingUtil.closeRegionAndWAL(region2);
+    }
   }
 
   @Test
@@ -144,17 +140,15 @@ public class TestMetricsRegionWrapperTableDescriptorHash {
     HRegion region2 =
       HBaseTestingUtil.createRegionAndWAL(regionInfo2, testDir2, conf, tableDescriptor2);
 
-    MetricsRegionWrapperImpl wrapper1 = new MetricsRegionWrapperImpl(region1);
-    MetricsRegionWrapperImpl wrapper2 = new MetricsRegionWrapperImpl(region2);
+    try (MetricsRegionWrapperImpl wrapper1 = new MetricsRegionWrapperImpl(region1);
+      MetricsRegionWrapperImpl wrapper2 = new MetricsRegionWrapperImpl(region2)) {
+      String hash1 = wrapper1.getTableDescriptorHash();
+      String hash2 = wrapper2.getTableDescriptorHash();
 
-    String hash1 = wrapper1.getTableDescriptorHash();
-    String hash2 = wrapper2.getTableDescriptorHash();
-
-    assertNotEquals(hash1, hash2);
-
-    wrapper1.close();
-    wrapper2.close();
-    HBaseTestingUtil.closeRegionAndWAL(region1);
-    HBaseTestingUtil.closeRegionAndWAL(region2);
+      assertNotEquals(hash1, hash2);
+    } finally {
+      HBaseTestingUtil.closeRegionAndWAL(region1);
+      HBaseTestingUtil.closeRegionAndWAL(region2);
+    }
   }
 }
