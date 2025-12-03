@@ -23,11 +23,14 @@ import java.lang.reflect.Method;
 import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
+import org.apache.hadoop.hbase.coprocessor.ClientMetaCoprocessorHost;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
 import org.apache.hadoop.hbase.ipc.PriorityFunction;
@@ -53,6 +56,7 @@ import org.apache.hadoop.hbase.util.DNS;
 import org.apache.hadoop.hbase.util.OOMEChecker;
 import org.apache.hadoop.hbase.util.ReservoirSample;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
@@ -110,6 +114,8 @@ public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
 
   protected final PriorityFunction priority;
 
+  private ClientMetaCoprocessorHost clientMetaCoprocessorHost;
+
   private AccessChecker accessChecker;
 
   private ZKPermissionWatcher zkPermissionWatcher;
@@ -158,6 +164,8 @@ public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
     // Set our address, however we need the final port that was given to rpcServer
     isa = new InetSocketAddress(initialIsa.getHostName(), address.getPort());
     rpcServer.setErrorHandler(this);
+
+    clientMetaCoprocessorHost = new ClientMetaCoprocessorHost(conf);
   }
 
   protected abstract boolean defaultReservoirEnabled();
@@ -197,6 +205,11 @@ public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
     if (accessChecker != null) {
       accessChecker.requirePermission(RpcServer.getRequestUser().orElse(null), request, null, perm);
     }
+  }
+
+  @VisibleForTesting
+  public ClientMetaCoprocessorHost getClientMetaCoprocessorHost() {
+    return clientMetaCoprocessorHost;
   }
 
   public AccessChecker getAccessChecker() {
@@ -261,15 +274,36 @@ public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
   @Override
   public GetClusterIdResponse getClusterId(RpcController controller, GetClusterIdRequest request)
     throws ServiceException {
-    return GetClusterIdResponse.newBuilder().setClusterId(server.getClusterId()).build();
+    try {
+      clientMetaCoprocessorHost.preGetClusterId();
+
+      String clusterId = server.getClusterId();
+      String clusterIdReply = clientMetaCoprocessorHost.postGetClusterId(clusterId);
+
+      return GetClusterIdResponse.newBuilder().setClusterId(clusterIdReply).build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
   }
 
   @Override
   public GetActiveMasterResponse getActiveMaster(RpcController controller,
     GetActiveMasterRequest request) throws ServiceException {
     GetActiveMasterResponse.Builder builder = GetActiveMasterResponse.newBuilder();
-    server.getActiveMaster()
-      .ifPresent(name -> builder.setServerName(ProtobufUtil.toServerName(name)));
+
+    try {
+      clientMetaCoprocessorHost.preGetActiveMaster();
+
+      ServerName serverName = server.getActiveMaster().orElse(null);
+      ServerName serverNameReply = clientMetaCoprocessorHost.postGetActiveMaster(serverName);
+
+      if (serverNameReply != null) {
+        builder.setServerName(ProtobufUtil.toServerName(serverNameReply));
+      }
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+
     return builder.build();
   }
 
@@ -277,12 +311,29 @@ public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
   public GetMastersResponse getMasters(RpcController controller, GetMastersRequest request)
     throws ServiceException {
     GetMastersResponse.Builder builder = GetMastersResponse.newBuilder();
-    server.getActiveMaster()
-      .ifPresent(activeMaster -> builder.addMasterServers(GetMastersResponseEntry.newBuilder()
-        .setServerName(ProtobufUtil.toServerName(activeMaster)).setIsActive(true)));
-    server.getBackupMasters()
-      .forEach(backupMaster -> builder.addMasterServers(GetMastersResponseEntry.newBuilder()
-        .setServerName(ProtobufUtil.toServerName(backupMaster)).setIsActive(false)));
+
+    try {
+      clientMetaCoprocessorHost.preGetMasters();
+
+      Map<ServerName, Boolean> serverNames = new LinkedHashMap<>();
+
+      server.getActiveMaster()
+        .ifPresent(serverName -> serverNames.put(serverName, Boolean.TRUE));
+      server.getBackupMasters()
+        .forEach(serverName -> serverNames.put(serverName, Boolean.FALSE));
+
+      Map<ServerName, Boolean> serverNamesReply =
+        clientMetaCoprocessorHost.postGetMasters(serverNames);
+
+      serverNamesReply.forEach((serverName, active) -> builder.addMasterServers(
+        GetMastersResponseEntry.newBuilder()
+          .setServerName(ProtobufUtil.toServerName(serverName))
+          .setIsActive(active)
+      ));
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+
     return builder.build();
   }
 
@@ -290,22 +341,46 @@ public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
   public GetMetaRegionLocationsResponse getMetaRegionLocations(RpcController controller,
     GetMetaRegionLocationsRequest request) throws ServiceException {
     GetMetaRegionLocationsResponse.Builder builder = GetMetaRegionLocationsResponse.newBuilder();
-    server.getMetaLocations()
-      .forEach(location -> builder.addMetaLocations(ProtobufUtil.toRegionLocation(location)));
+
+    try {
+      clientMetaCoprocessorHost.preGetMetaLocations();
+
+      List<HRegionLocation> metaLocations = server.getMetaLocations();
+      List<HRegionLocation> metaLocationsReply =
+        clientMetaCoprocessorHost.postGetMetaLocations(metaLocations);
+
+      metaLocationsReply
+        .forEach(location -> builder.addMetaLocations(ProtobufUtil.toRegionLocation(location)));
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+
     return builder.build();
   }
 
   @Override
   public final GetBootstrapNodesResponse getBootstrapNodes(RpcController controller,
     GetBootstrapNodesRequest request) throws ServiceException {
-    int maxNodeCount = server.getConfiguration().getInt(CLIENT_BOOTSTRAP_NODE_LIMIT,
-      DEFAULT_CLIENT_BOOTSTRAP_NODE_LIMIT);
-    ReservoirSample<ServerName> sample = new ReservoirSample<>(maxNodeCount);
-    sample.add(server.getBootstrapNodes());
-
     GetBootstrapNodesResponse.Builder builder = GetBootstrapNodesResponse.newBuilder();
-    sample.getSamplingResult().stream().map(ProtobufUtil::toServerName)
-      .forEach(builder::addServerName);
+
+    try {
+      clientMetaCoprocessorHost.preGetBootstrapNodes();
+
+      int maxNodeCount = server.getConfiguration()
+        .getInt(CLIENT_BOOTSTRAP_NODE_LIMIT, DEFAULT_CLIENT_BOOTSTRAP_NODE_LIMIT);
+      ReservoirSample<ServerName> sample = new ReservoirSample<>(maxNodeCount);
+      sample.add(server.getBootstrapNodes());
+
+      List<ServerName> bootstrapNodes = sample.getSamplingResult();
+      List<ServerName> bootstrapNodesReply =
+        clientMetaCoprocessorHost.postGetBootstrapNodes(bootstrapNodes);
+
+      bootstrapNodesReply
+        .forEach(serverName -> builder.addServerName(ProtobufUtil.toServerName(serverName)));
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+
     return builder.build();
   }
 
@@ -316,6 +391,8 @@ public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
     try {
       requirePermission("updateConfiguration", Permission.Action.ADMIN);
       this.server.updateConfiguration();
+
+      clientMetaCoprocessorHost = new ClientMetaCoprocessorHost(getConfiguration());
     } catch (Exception e) {
       throw new ServiceException(e);
     }
