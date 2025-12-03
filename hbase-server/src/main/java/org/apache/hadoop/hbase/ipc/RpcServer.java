@@ -332,7 +332,7 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
     }
     refreshSlowLogConfiguration(newConf);
     if (
-      CoprocessorConfigurationUtil.checkConfigurationChange(getConf(), newConf,
+      CoprocessorConfigurationUtil.checkConfigurationChange(this.cpHost, newConf,
         CoprocessorHost.RPC_COPROCESSOR_CONF_KEY)
     ) {
       LOG.info("Update the RPC coprocessor(s) because the configuration has changed");
