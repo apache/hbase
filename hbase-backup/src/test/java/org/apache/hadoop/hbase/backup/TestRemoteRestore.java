@@ -109,7 +109,7 @@ public class TestRemoteRestore extends TestBackupBase {
     new BackupAdminImpl(ConnectionFactory.createConnection(conf))
       .restore(new RestoreRequest.Builder().withBackupRootDir(BACKUP_REMOTE_ROOT_DIR)
         .withRestoreRootDir(BACKUP_ROOT_DIR).withBackupId(backupId).withCheck(false)
-        .withFromTables(tableset).withToTables(tablemap).withOvewrite(false).build());
+        .withFromTables(tableset).withToTables(tablemap).withOverwrite(false).build());
 
     Path hfileOutputPath = new Path(
       new Path(conf.get(MapReduceHFileSplitterJob.BULK_OUTPUT_CONF_KEY)).toUri().getPath());
