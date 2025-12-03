@@ -613,7 +613,7 @@ public class TestRegionServerMetrics {
 
       assertNotNull("TableDescriptorHash should not be null", hash);
       assertNotEquals("TableDescriptorHash should not be 'UNKNOWN'", "UNKNOWN", hash);
-      assertEquals("Hash should be 64 characters (SHA-256 hex)", 64, hash.length());
+      assertEquals("Hash should be 8 characters (CRC32 hex)", 8, hash.length());
     }
   }
 }

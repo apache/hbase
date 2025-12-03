@@ -47,7 +47,7 @@ public class TestTableDescriptorHashComputation {
 
     String hash = td.getDescriptorHash();
     assertNotNull(hash);
-    assertEquals(64, hash.length());
+    assertEquals(8, hash.length());
   }
 
   @Test

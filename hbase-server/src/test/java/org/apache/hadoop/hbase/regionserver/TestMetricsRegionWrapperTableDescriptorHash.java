@@ -81,7 +81,7 @@ public class TestMetricsRegionWrapperTableDescriptorHash {
       String hash = wrapper.getTableDescriptorHash();
       assertNotNull(hash);
       assertNotEquals("unknown", hash);
-      assertEquals(64, hash.length());
+      assertEquals(8, hash.length());
     } finally {
       HBaseTestingUtil.closeRegionAndWAL(region);
     }

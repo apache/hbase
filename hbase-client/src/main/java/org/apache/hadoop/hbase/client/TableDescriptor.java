@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
@@ -26,6 +25,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
+import java.util.zip.CRC32;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -324,17 +324,17 @@ public interface TableDescriptor {
   }
 
   /**
-   * Computes a SHA-256 hash of the table descriptor's protobuf representation. This hash can be
-   * used to detect changes in the table descriptor configuration.
-   * @return A hex string representation of the SHA-256 hash, or "UNKNOWN" if computation fails
+   * Computes a CRC32 hash of the table descriptor's protobuf representation. This hash can be used
+   * to detect changes in the table descriptor configuration.
+   * @return A hex string representation of the CRC32 hash, or "UNKNOWN" if computation fails
    */
   default String getDescriptorHash() {
     try {
       HBaseProtos.TableSchema tableSchema = ProtobufUtil.toTableSchema(this);
       byte[] bytes = tableSchema.toByteArray();
-      MessageDigest digest = MessageDigest.getInstance("SHA-256");
-      byte[] hash = digest.digest(bytes);
-      return Bytes.toHex(hash);
+      CRC32 crc32 = new CRC32();
+      crc32.update(bytes);
+      return Long.toHexString(crc32.getValue());
     } catch (Exception e) {
       Logger log = LoggerFactory.getLogger(TableDescriptor.class);
       log.error("Failed to compute table descriptor hash for table {}", getTableName(), e);
