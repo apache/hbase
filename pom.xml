@@ -2140,6 +2140,8 @@
               <exclude>**/vote.tmpl</exclude>
               <!-- gzipped list of S3N URIs for hbase-it -->
               <exclude>**/CC-MAIN-2021-10-warc.paths.gz</exclude>
+              <!-- Cannot add ASF licence to JSON files as JSON files cannot have comments in them. -->
+              <exclude>**/*.json</exclude>
             </excludes>
           </configuration>
         </plugin>
