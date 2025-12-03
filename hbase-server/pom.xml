@@ -576,12 +576,26 @@
                     <exclude name="**/*~"/>
                   </fileset>
                 </copy>
+                <!-- Create a "staging" JSP directory where we copy the common JSP files into master and rs directories.
+                     Compilation is done using this "staging" JSP directory. -->
+                <mkdir dir="${project.build.directory}/jsp"/>
+                <copy todir="${project.build.directory}/jsp">
+                  <fileset dir="${src.webapps}">
+                    <include name="**/*.jsp"/>
+                  </fileset>
+                </copy>
+                <copy todir="${project.build.directory}/jsp/master">
+                  <fileset dir="${project.build.directory}/jsp/common"/>
+                </copy>
+                <copy todir="${project.build.directory}/jsp/regionserver">
+                  <fileset dir="${project.build.directory}/jsp/common"/>
+                </copy>
                 <!--The compile.classpath is passed in by maven -->
                 <taskdef classname="org.apache.jasper.JspC" classpathref="maven.compile.classpath" name="jspcompiler"/>
                 <mkdir dir="${build.webapps}/master/WEB-INF"/>
-                <jspcompiler outputdir="${generated.sources}/java" package="org.apache.hadoop.hbase.generated.master" uriroot="${src.webapps}/master" webxml="${build.webapps}/master/WEB-INF/web.xml"/>
+                <jspcompiler outputdir="${generated.sources}/java" package="org.apache.hadoop.hbase.generated.master" uriroot="${project.build.directory}/jsp/master" webxml="${build.webapps}/master/WEB-INF/web.xml"/>
                 <mkdir dir="${build.webapps}/regionserver/WEB-INF"/>
-                <jspcompiler outputdir="${generated.sources}/java" package="org.apache.hadoop.hbase.generated.regionserver" uriroot="${src.webapps}/regionserver" webxml="${build.webapps}/regionserver/WEB-INF/web.xml"/>
+                <jspcompiler outputdir="${generated.sources}/java" package="org.apache.hadoop.hbase.generated.regionserver" uriroot="${project.build.directory}/jsp/regionserver" webxml="${build.webapps}/regionserver/WEB-INF/web.xml"/>
               </target>
             </configuration>
           </execution>

@@ -40,10 +40,11 @@
   import="org.apache.hadoop.hbase.rsgroup.RSGroupInfo"
   import="org.apache.hadoop.hbase.util.Bytes"
   import="org.apache.hadoop.hbase.util.VersionInfo"
-  import="org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix"%>
-<%@ page import="org.apache.hadoop.hbase.ServerMetrics" %>
-<%@ page import="org.apache.hadoop.hbase.Size" %>
-<%@ page import="org.apache.hadoop.hbase.RegionMetrics" %>
+  import="org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix"
+  import="org.apache.hadoop.hbase.ServerMetrics"
+  import="org.apache.hadoop.hbase.Size"
+  import="org.apache.hadoop.hbase.RegionMetrics"
+  import="static org.apache.hadoop.hbase.master.http.MasterStatusUtil.serverNameLink" %>
 <%
   String rsGroupName = request.getParameter("name");
   pageContext.setAttribute("pageTitle", "RSGroup: " + rsGroupName);
@@ -169,11 +170,9 @@
                      totalRequestsPerSecond += sl.getRequestCountPerSecond();
                      lastContact = (System.currentTimeMillis() - sl.getReportTimestamp())/1000;
                    }
-                   long startcode = serverName.getStartCode();
-                   int infoPort = master.getRegionServerInfoPort(serverName);
-                   String url = "//" + serverName.getHostname() + ":" + infoPort + "/rs-status";%>
+                   long startcode = serverName.getStartCode(); %>
                    <tr>
-                     <td><a href="<%= url %>"><%= serverName.getServerName() %></a></td>
+                     <td><%= serverNameLink(master, serverName) %></td>
                      <td><%= new Date(startcode) %></td>
                      <td><%= lastContact %></td>
                      <td><%= version %></td>
@@ -225,8 +224,6 @@
                    double memStoreSizeMB = sl.getRegionMetrics().values()
                            .stream().mapToDouble(rm -> rm.getMemStoreSize().get(Size.Unit.MEGABYTE))
                            .sum();
-                   int infoPort = master.getRegionServerInfoPort(serverName);
-                   String url = "//" + serverName.getHostname() + ":" + infoPort + "/rs-status";
 
                    if (memStoreSizeMB > 0) {
                      memStoreSizeMBStr = TraditionalBinaryPrefix.long2String(
@@ -242,7 +239,7 @@
                    }
             %>
                    <tr>
-                     <td><a href="<%= url %>"><%= serverName.getServerName() %></a></td>
+                     <td><%= serverNameLink(master, serverName) %></td>
                      <td><%= usedHeapSizeMBStr %></td>
                      <td><%= maxHeapSizeMBStr %></td>
                      <td><%= memStoreSizeMBStr %></td>
@@ -270,17 +267,15 @@
                  ServerName serverName = serverMaping.get(server);
                  ServerMetrics sl = onlineServers.get(server);
                  if (sl != null && serverName != null) {
-                   int infoPort = master.getRegionServerInfoPort(serverName);
                    long readRequestCount = 0;
                    long writeRequestCount = 0;
                    for (RegionMetrics rm : sl.getRegionMetrics().values()) {
                      readRequestCount += rm.getReadRequestCount();
                      writeRequestCount += rm.getWriteRequestCount();
                    }
-                   String url = "//" + serverName.getHostname() + ":" + infoPort + "/rs-status";
             %>
                    <tr>
-                     <td><a href="<%= url %>"><%= serverName.getServerName() %></a></td>
+                     <td><%= serverNameLink(master, serverName) %></td>
                      <td><%= sl.getRequestCountPerSecond() %></td>
                      <td><%= readRequestCount %></td>
                      <td><%= writeRequestCount %></td>
@@ -330,8 +325,6 @@
                       totalStaticIndexSizeKB += rm.getStoreFileUncompressedDataIndexSize().get(Size.Unit.KILOBYTE);
                       totalStaticBloomSizeKB += rm.getBloomFilterSize().get(Size.Unit.KILOBYTE);
                     }
-                    int infoPort = master.getRegionServerInfoPort(serverName);
-                    String url = "//" + serverName.getHostname() + ":" + infoPort + "/rs-status";
                     if (storeUncompressedSizeMB > 0) {
                       storeUncompressedSizeMBStr = TraditionalBinaryPrefix.long2String(
                       (long) storeUncompressedSizeMB * TraditionalBinaryPrefix.MEGA.value, "B", 1);
@@ -350,7 +343,7 @@
                     }
             %>
                     <tr>
-                      <td><a href="<%= url %>"><%= serverName.getServerName() %></a></td>
+                      <td><%= serverNameLink(master, serverName) %></td>
                       <td><%= storeCount %></td>
                       <td><%= storeFileCount %></td>
                       <td><%= storeUncompressedSizeMBStr %></td>
@@ -396,11 +389,9 @@
                          percentDone = String.format("%.2f", 100 *
                             ((float) currentCompactedCells / totalCompactingCells)) + "%";
                     }
-                    int infoPort = master.getRegionServerInfoPort(serverName);
-                    String url = "//" + serverName.getHostname() + ":" + infoPort + "/rs-status";
             %>
                     <tr>
-                      <td><a href="<%= url %>"><%= serverName.getServerName() %></a></td>
+                      <td><%= serverNameLink(master, serverName) %></td>
                       <td><%= totalCompactingCells %></td>
                       <td><%= currentCompactedCells %></td>
                       <td><%= totalCompactingCells - currentCompactedCells %></td>
