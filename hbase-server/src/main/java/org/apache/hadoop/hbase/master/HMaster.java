@@ -1054,7 +1054,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     if (!maintenanceMode) {
       startupTaskGroup.addTask("Initializing master coprocessors");
       setQuotasObserver(conf);
-      initializeCoprocessorHost(conf);
+      this.cpHost = new MasterCoprocessorHost(this, conf);
     }
 
     // Checking if meta needs initializing.
@@ -4380,11 +4380,11 @@ public class HMaster extends HRegionServer implements MasterServices {
     setQuotasObserver(newConf);
     // update region server coprocessor if the configuration has changed.
     if (
-      CoprocessorConfigurationUtil.checkConfigurationChange(getConfiguration(), newConf,
+      CoprocessorConfigurationUtil.checkConfigurationChange(this.cpHost, newConf,
         CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY) && !maintenanceMode
     ) {
       LOG.info("Update the master coprocessor(s) because the configuration has changed");
-      initializeCoprocessorHost(newConf);
+      this.cpHost = new MasterCoprocessorHost(this, newConf);
     }
   }
 
@@ -4394,11 +4394,6 @@ public class HMaster extends HRegionServer implements MasterServices {
     if (QuotaUtil.isQuotaEnabled(conf)) {
       updateConfigurationForQuotasObserver(conf);
     }
-  }
-
-  private void initializeCoprocessorHost(Configuration conf) {
-    // initialize master side coprocessors before we start handling requests
-    this.cpHost = new MasterCoprocessorHost(this, conf);
   }
 
   @Override
