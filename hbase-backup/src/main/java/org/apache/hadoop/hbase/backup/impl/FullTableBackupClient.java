@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupCopyJob;
@@ -217,8 +218,20 @@ public class FullTableBackupClient extends TableBackupClient {
     int pause = conf.getInt(BACKUP_ATTEMPTS_PAUSE_MS_KEY, DEFAULT_BACKUP_ATTEMPTS_PAUSE_MS);
     int attempts = 0;
 
+    Pattern regex = Pattern.compile(snapshotName);
+
     while (attempts++ < maxAttempts) {
       try {
+        if (
+          admin.listSnapshots(regex).stream()
+            .anyMatch(snapshot -> snapshot.getName().equals(snapshotName))
+        ) {
+          // If a snapshot takes a long time to run, we may get a TimeoutException from the
+          // admin, in that case re-attempts to take a snapshot will always fail b/c we'll
+          // eventually
+          // attempt to take a snapshot with a name that already exists
+          return;
+        }
         admin.snapshot(snapshotName, tableName);
         return;
       } catch (IOException ee) {
