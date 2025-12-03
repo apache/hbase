@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.security.MessageDigest;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.OptionalDouble;
@@ -31,15 +30,11 @@ import org.apache.commons.lang3.mutable.MutableLong;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.metrics2.MetricsExecutor;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
 @InterfaceAudience.Private
 public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable {
@@ -73,7 +68,7 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
 
   public MetricsRegionWrapperImpl(HRegion region) {
     this.region = region;
-    this.tableDescriptorHash = computeTableDescriptorHash();
+    this.tableDescriptorHash = determineTableDescriptorHash();
     this.executor = CompatibilitySingletonFactory.getInstance(MetricsExecutor.class).getExecutor();
     this.runnable = new HRegionMetricsWrapperRunnable();
     this.regionMetricsUpdateTask =
@@ -369,25 +364,12 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
     return tableDescriptorHash;
   }
 
-  private String computeTableDescriptorHash() {
-    try {
-      TableDescriptor tableDesc = this.region.getTableDescriptor();
-      if (tableDesc == null) {
-        return UNKNOWN;
-      }
-
-      HBaseProtos.TableSchema tableSchema = ProtobufUtil.toTableSchema(tableDesc);
-      byte[] bytes = tableSchema.toByteArray();
-
-      MessageDigest digest = MessageDigest.getInstance("SHA-256");
-      byte[] hash = digest.digest(bytes);
-
-      return Bytes.toHex(hash);
-    } catch (Exception e) {
-      LOG.error("Failed to compute table descriptor hash for region {}",
-        region.getRegionInfo().getEncodedName(), e);
+  private String determineTableDescriptorHash() {
+    TableDescriptor tableDesc = this.region.getTableDescriptor();
+    if (tableDesc == null) {
       return UNKNOWN;
     }
+    return tableDesc.getDescriptorHash();
   }
 
   @Override

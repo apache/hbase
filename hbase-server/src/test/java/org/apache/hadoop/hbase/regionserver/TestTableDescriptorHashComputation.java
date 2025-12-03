@@ -21,21 +21,17 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 
-import java.security.MessageDigest;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchema;
 
 @Category({ RegionServerTests.class, SmallTests.class })
 public class TestTableDescriptorHashComputation {
@@ -44,12 +40,8 @@ public class TestTableDescriptorHashComputation {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestTableDescriptorHashComputation.class);
 
-  private String computeHash(TableDescriptor tableDescriptor) throws Exception {
-    TableSchema tableSchema = ProtobufUtil.toTableSchema(tableDescriptor);
-    byte[] bytes = tableSchema.toByteArray();
-    MessageDigest digest = MessageDigest.getInstance("SHA-256");
-    byte[] hash = digest.digest(bytes);
-    return Bytes.toHex(hash);
+  private String computeHash(TableDescriptor tableDescriptor) {
+    return tableDescriptor.getDescriptorHash();
   }
 
   @Test
@@ -96,12 +88,12 @@ public class TestTableDescriptorHashComputation {
   public void testDifferentCompressionProducesDifferentHash() throws Exception {
     TableDescriptor td1 = TableDescriptorBuilder.newBuilder(TableName.valueOf("testTable"))
       .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder("cf".getBytes())
-        .setCompressionType(org.apache.hadoop.hbase.io.compress.Compression.Algorithm.NONE).build())
+        .setCompressionType(Compression.Algorithm.NONE).build())
       .build();
 
     TableDescriptor td2 = TableDescriptorBuilder.newBuilder(TableName.valueOf("testTable"))
       .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder("cf".getBytes())
-        .setCompressionType(org.apache.hadoop.hbase.io.compress.Compression.Algorithm.SNAPPY)
+        .setCompressionType(Compression.Algorithm.SNAPPY)
         .build())
       .build();
 
@@ -124,5 +116,17 @@ public class TestTableDescriptorHashComputation {
     String hash2 = computeHash(td2);
 
     assertNotEquals(hash1, hash2);
+  }
+
+  @Test
+  public void testHashCaching() throws Exception {
+    TableDescriptor td = TableDescriptorBuilder.newBuilder(TableName.valueOf("testTable"))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("cf")).build();
+
+    String hash1 = td.getDescriptorHash();
+    String hash2 = td.getDescriptorHash();
+
+    assertNotNull(hash1);
+    assertEquals(hash1, hash2);
   }
 }

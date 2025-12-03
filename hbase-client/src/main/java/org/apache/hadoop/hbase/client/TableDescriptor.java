@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
@@ -29,6 +30,10 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
 /**
  * TableDescriptor contains the details about an HBase table such as the descriptors of all the
@@ -315,5 +320,24 @@ public interface TableDescriptor {
       return enabled;
     }
     return !enabled;
+  }
+
+  /**
+   * Computes a SHA-256 hash of the table descriptor's protobuf representation.
+   * This hash can be used to detect changes in the table descriptor configuration.
+   * @return A hex string representation of the SHA-256 hash, or "UNKNOWN" if computation fails
+   */
+  default String getDescriptorHash() {
+    Logger log = LoggerFactory.getLogger(TableDescriptor.class);
+    try {
+      HBaseProtos.TableSchema tableSchema = ProtobufUtil.toTableSchema(this);
+      byte[] bytes = tableSchema.toByteArray();
+      MessageDigest digest = MessageDigest.getInstance("SHA-256");
+      byte[] hash = digest.digest(bytes);
+      return Bytes.toHex(hash);
+    } catch (Exception e) {
+      log.error("Failed to compute table descriptor hash for table {}", getTableName(), e);
+      return "UNKNOWN";
+    }
   }
 }
