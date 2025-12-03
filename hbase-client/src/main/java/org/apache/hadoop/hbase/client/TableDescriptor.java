@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
@@ -329,7 +328,6 @@ public interface TableDescriptor {
    * @return A hex string representation of the SHA-256 hash, or "UNKNOWN" if computation fails
    */
   default String getDescriptorHash() {
-    Logger log = LoggerFactory.getLogger(TableDescriptor.class);
     try {
       HBaseProtos.TableSchema tableSchema = ProtobufUtil.toTableSchema(this);
       byte[] bytes = tableSchema.toByteArray();
@@ -337,6 +335,7 @@ public interface TableDescriptor {
       byte[] hash = digest.digest(bytes);
       return Bytes.toHex(hash);
     } catch (Exception e) {
+      Logger log = LoggerFactory.getLogger(TableDescriptor.class);
       log.error("Failed to compute table descriptor hash for table {}", getTableName(), e);
       return "UNKNOWN";
     }
