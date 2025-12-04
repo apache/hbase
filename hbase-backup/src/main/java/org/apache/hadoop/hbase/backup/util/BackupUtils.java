@@ -665,7 +665,7 @@ public final class BackupUtils {
     boolean isKeepOriginalSplits) {
     RestoreRequest.Builder builder = new RestoreRequest.Builder();
     RestoreRequest request = builder.withBackupRootDir(backupRootDir).withBackupId(backupId)
-      .withCheck(check).withFromTables(fromTables).withToTables(toTables).withOvewrite(isOverwrite)
+      .withCheck(check).withFromTables(fromTables).withToTables(toTables).withOverwrite(isOverwrite)
       .withKeepOriginalSplits(isKeepOriginalSplits).build();
     return request;
   }
