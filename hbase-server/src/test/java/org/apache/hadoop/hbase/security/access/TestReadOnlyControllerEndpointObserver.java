@@ -17,10 +17,12 @@
  */
 package org.apache.hadoop.hbase.security.access;
 
+import static org.apache.hadoop.hbase.HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY;
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
@@ -43,6 +45,7 @@ public class TestReadOnlyControllerEndpointObserver {
     HBaseClassTestRule.forClass(TestReadOnlyControllerEndpointObserver.class);
 
   ReadOnlyController readOnlyController;
+  HBaseConfiguration readOnlyConf;
 
   // Region Server Coprocessor mocking variables
   ObserverContext<? extends RegionCoprocessorEnvironment> ctx;
@@ -53,6 +56,8 @@ public class TestReadOnlyControllerEndpointObserver {
   @Before
   public void setup() throws Exception {
     readOnlyController = new ReadOnlyController();
+    readOnlyConf = new HBaseConfiguration();
+    readOnlyConf.setBoolean(HBASE_GLOBAL_READONLY_ENABLED_KEY, true);
 
     // mocking variables initialization
     ctx = mock(ObserverContext.class);
@@ -60,8 +65,7 @@ public class TestReadOnlyControllerEndpointObserver {
     methodName = "testMethod";
     request = mock(Message.class);
 
-    // Linking the mocks:
-
+    // Linking the mocks
   }
 
   @After
@@ -71,13 +75,12 @@ public class TestReadOnlyControllerEndpointObserver {
 
   @Test(expected = IOException.class)
   public void testPreEndpointInvocationReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preEndpointInvocation(ctx, service, methodName, request);
   }
 
   @Test
   public void testPreEndpointInvocationNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preEndpointInvocation(ctx, service, methodName, request);
   }
 }

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.security.access;
 
+import static org.apache.hadoop.hbase.HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY;
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
@@ -24,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.BalanceRequest;
@@ -56,6 +58,7 @@ public class TestReadOnlyControllerMasterObserver {
     HBaseClassTestRule.forClass(TestReadOnlyControllerMasterObserver.class);
 
   ReadOnlyController readOnlyController;
+  HBaseConfiguration readOnlyConf;
 
   // Master Coprocessor mocking variables
   ObserverContext<MasterCoprocessorEnvironment> c, ctx;
@@ -94,6 +97,8 @@ public class TestReadOnlyControllerMasterObserver {
   @Before
   public void setup() throws Exception {
     readOnlyController = new ReadOnlyController();
+    readOnlyConf = new HBaseConfiguration();
+    readOnlyConf.setBoolean(HBASE_GLOBAL_READONLY_ENABLED_KEY, true);
 
     // mocking variables initialization
     c = mock(ObserverContext.class);
@@ -137,7 +142,6 @@ public class TestReadOnlyControllerMasterObserver {
     mergeExistingPermissions = false;
 
     // Linking the mocks:
-
   }
 
   @After
@@ -147,602 +151,541 @@ public class TestReadOnlyControllerMasterObserver {
 
   @Test(expected = IOException.class)
   public void testPreCreateTableRegionsInfosReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preCreateTableRegionsInfos(ctx, desc);
   }
 
   @Test
   public void testPreCreateTableRegionsInfosNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preCreateTableRegionsInfos(ctx, desc);
   }
 
   @Test(expected = IOException.class)
   public void testPreCreateTableReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preCreateTable(ctx, desc, regions);
   }
 
   @Test
   public void testPreCreateTableNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preCreateTable(ctx, desc, regions);
   }
 
   @Test(expected = IOException.class)
   public void testPreCreateTableActionReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preCreateTableAction(ctx, desc, regions);
   }
 
   @Test
   public void testPreCreateTableActionNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preCreateTableAction(ctx, desc, regions);
   }
 
   @Test(expected = IOException.class)
   public void testPreDeleteTableReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preDeleteTable(ctx, tableName);
   }
 
   @Test
   public void testPreDeleteTableNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preDeleteTable(ctx, tableName);
   }
 
   @Test(expected = IOException.class)
   public void testPreDeleteTableActionReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preDeleteTableAction(ctx, tableName);
   }
 
   @Test
   public void testPreDeleteTableActionNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preDeleteTableAction(ctx, tableName);
   }
 
   @Test(expected = IOException.class)
   public void testPreTruncateTableReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preTruncateTable(ctx, tableName);
   }
 
   @Test
   public void testPreTruncateTableNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preTruncateTable(ctx, tableName);
   }
 
   @Test(expected = IOException.class)
   public void testPreTruncateTableActionReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preTruncateTableAction(ctx, tableName);
   }
 
   @Test
   public void testPreTruncateTableActionNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preTruncateTableAction(ctx, tableName);
   }
 
   @Test(expected = IOException.class)
   public void testPreModifyTableReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preModifyTable(ctx, tableName, currentDescriptor, newDescriptor);
   }
 
   @Test
   public void testPreModifyTableNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preModifyTable(ctx, tableName, currentDescriptor, newDescriptor);
   }
 
   @Test(expected = IOException.class)
   public void testPreModifyTableStoreFileTrackerReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preModifyTableStoreFileTracker(ctx, tableName, dstSFT);
   }
 
   @Test
   public void testPreModifyTableStoreFileTrackerNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preModifyTableStoreFileTracker(ctx, tableName, dstSFT);
   }
 
   @Test(expected = IOException.class)
   public void testPreModifyColumnFamilyStoreFileTrackerReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preModifyColumnFamilyStoreFileTracker(ctx, tableName, family, dstSFT);
   }
 
   @Test
   public void testPreModifyColumnFamilyStoreFileTrackerNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preModifyColumnFamilyStoreFileTracker(ctx, tableName, family, dstSFT);
   }
 
   @Test(expected = IOException.class)
   public void testPreModifyTableActionReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preModifyTableAction(ctx, tableName, currentDescriptor, newDescriptor);
   }
 
   @Test
   public void testPreModifyTableActionNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preModifyTableAction(ctx, tableName, currentDescriptor, newDescriptor);
   }
 
   @Test(expected = IOException.class)
   public void testPreSplitRegionReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preSplitRegion(c, tableName, splitRow);
   }
 
   @Test
   public void testPreSplitRegionNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preSplitRegion(c, tableName, splitRow);
   }
 
   @Test(expected = IOException.class)
   public void testPreSplitRegionActionReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preSplitRegionAction(c, tableName, splitRow);
   }
 
   @Test
   public void testPreSplitRegionActionNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preSplitRegionAction(c, tableName, splitRow);
   }
 
   @Test(expected = IOException.class)
   public void testPreSplitRegionBeforeMETAActionReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preSplitRegionBeforeMETAAction(ctx, splitKey, metaEntries);
   }
 
   @Test
   public void testPreSplitRegionBeforeMETAActionNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preSplitRegionBeforeMETAAction(ctx, splitKey, metaEntries);
   }
 
   @Test(expected = IOException.class)
   public void testPreSplitRegionAfterMETAActionReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preSplitRegionAfterMETAAction(ctx);
   }
 
   @Test
   public void testPreSplitRegionAfterMETAActionNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preSplitRegionAfterMETAAction(ctx);
   }
 
   @Test(expected = IOException.class)
   public void testPreMergeRegionsActionReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preMergeRegionsAction(ctx, regionsToMerge);
   }
 
   @Test
   public void testPreMergeRegionsActionNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preMergeRegionsAction(ctx, regionsToMerge);
   }
 
   @Test(expected = IOException.class)
   public void testPreMergeRegionsCommitActionReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preMergeRegionsCommitAction(ctx, regionsToMerge, metaEntries);
   }
 
   @Test
   public void testPreMergeRegionsCommitActionNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preMergeRegionsCommitAction(ctx, regionsToMerge, metaEntries);
   }
 
   @Test(expected = IOException.class)
   public void testPreSnapshotReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preSnapshot(ctx, snapshot, tableDescriptor);
   }
 
   @Test
   public void testPreSnapshotNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preSnapshot(ctx, snapshot, tableDescriptor);
   }
 
   @Test(expected = IOException.class)
   public void testPreCloneSnapshotReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preCloneSnapshot(ctx, snapshot, tableDescriptor);
   }
 
   @Test
   public void testPreCloneSnapshotNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preCloneSnapshot(ctx, snapshot, tableDescriptor);
   }
 
   @Test(expected = IOException.class)
   public void testPreRestoreSnapshotReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preRestoreSnapshot(ctx, snapshot, tableDescriptor);
   }
 
   @Test
   public void testPreRestoreSnapshotNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preRestoreSnapshot(ctx, snapshot, tableDescriptor);
   }
 
   @Test(expected = IOException.class)
   public void testPreDeleteSnapshotReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preDeleteSnapshot(ctx, snapshot);
   }
 
   @Test
   public void testPreDeleteSnapshotNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preDeleteSnapshot(ctx, snapshot);
   }
 
   @Test(expected = IOException.class)
   public void testPreCreateNamespaceReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preCreateNamespace(ctx, ns);
   }
 
   @Test
   public void testPreCreateNamespaceNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preCreateNamespace(ctx, ns);
   }
 
   @Test(expected = IOException.class)
   public void testPreModifyNamespaceReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preModifyNamespace(ctx, currentNsDescriptor, newNsDescriptor);
   }
 
   @Test
   public void testPreModifyNamespaceNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preModifyNamespace(ctx, currentNsDescriptor, newNsDescriptor);
   }
 
   @Test(expected = IOException.class)
   public void testPreDeleteNamespaceReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preDeleteNamespace(ctx, namespace);
   }
 
   @Test
   public void testPreDeleteNamespaceNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preDeleteNamespace(ctx, namespace);
   }
 
   @Test(expected = IOException.class)
   public void testPreMasterStoreFlushReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preMasterStoreFlush(ctx);
   }
 
   @Test
   public void testPreMasterStoreFlushNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preMasterStoreFlush(ctx);
   }
 
   @Test(expected = IOException.class)
   public void testPreSetUserQuotaReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preSetUserQuota(ctx, userName, quotas);
   }
 
   @Test
   public void testPreSetUserQuotaNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preSetUserQuota(ctx, userName, quotas);
   }
 
   @Test(expected = IOException.class)
   public void testPreSetUserQuotaOnTableReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preSetUserQuota(ctx, userName, tableName, quotas);
   }
 
   @Test
   public void testPreSetUserQuotaOnTableNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preSetUserQuota(ctx, userName, tableName, quotas);
   }
 
   @Test(expected = IOException.class)
   public void testPreSetUserQuotaOnNamespaceReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preSetUserQuota(ctx, userName, namespace, quotas);
   }
 
   @Test
   public void testPreSetUserQuotaOnNamespaceNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preSetUserQuota(ctx, userName, namespace, quotas);
   }
 
   @Test(expected = IOException.class)
   public void testPreSetTableQuotaReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preSetTableQuota(ctx, tableName, quotas);
   }
 
   @Test
   public void testPreSetTableQuotaNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preSetTableQuota(ctx, tableName, quotas);
   }
 
   @Test(expected = IOException.class)
   public void testPreSetNamespaceQuotaReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preSetNamespaceQuota(ctx, namespace, quotas);
   }
 
   @Test
   public void testPreSetNamespaceQuotaNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preSetNamespaceQuota(ctx, namespace, quotas);
   }
 
   @Test(expected = IOException.class)
   public void testPreSetRegionServerQuotaReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preSetRegionServerQuota(ctx, regionServer, quotas);
   }
 
   @Test
   public void testPreSetRegionServerQuotaNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preSetRegionServerQuota(ctx, regionServer, quotas);
   }
 
   @Test(expected = IOException.class)
   public void testPreMergeRegionsReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preMergeRegions(ctx, regionsToMerge);
   }
 
   @Test
   public void testPreMergeRegionsNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preMergeRegions(ctx, regionsToMerge);
   }
 
   @Test(expected = IOException.class)
   public void testPreMoveServersAndTablesReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preMoveServersAndTables(ctx, servers, tables, targetGroup);
   }
 
   @Test
   public void testPreMoveServersAndTablesNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preMoveServersAndTables(ctx, servers, tables, targetGroup);
   }
 
   @Test(expected = IOException.class)
   public void testPreMoveServersReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preMoveServers(ctx, servers, targetGroup);
   }
 
   @Test
   public void testPreMoveServersNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preMoveServers(ctx, servers, targetGroup);
   }
 
   @Test(expected = IOException.class)
   public void testPreMoveTablesReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preMoveTables(ctx, tables, targetGroup);
   }
 
   @Test
   public void testPreMoveTablesNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preMoveTables(ctx, tables, targetGroup);
   }
 
   @Test(expected = IOException.class)
   public void testPreAddRSGroupReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preAddRSGroup(ctx, name);
   }
 
   @Test
   public void testPreAddRSGroupNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preAddRSGroup(ctx, name);
   }
 
   @Test(expected = IOException.class)
   public void testPreRemoveRSGroupReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preRemoveRSGroup(ctx, name);
   }
 
   @Test
   public void testPreRemoveRSGroupNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preRemoveRSGroup(ctx, name);
   }
 
   @Test(expected = IOException.class)
   public void testPreBalanceRSGroupReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preBalanceRSGroup(ctx, groupName, request);
   }
 
   @Test
   public void testPreBalanceRSGroupNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preBalanceRSGroup(ctx, groupName, request);
   }
 
   @Test(expected = IOException.class)
   public void testPreRemoveServersReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preRemoveServers(ctx, servers);
   }
 
   @Test
   public void testPreRemoveServersNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preRemoveServers(ctx, servers);
   }
 
   @Test(expected = IOException.class)
   public void testPreRenameRSGroupReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preRenameRSGroup(ctx, oldName, newName);
   }
 
   @Test
   public void testPreRenameRSGroupNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preRenameRSGroup(ctx, oldName, newName);
   }
 
   @Test(expected = IOException.class)
   public void testPreUpdateRSGroupConfigReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preUpdateRSGroupConfig(ctx, groupName, configuration);
   }
 
   @Test
   public void testPreUpdateRSGroupConfigNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preUpdateRSGroupConfig(ctx, groupName, configuration);
   }
 
   @Test(expected = IOException.class)
   public void testPreAddReplicationPeerReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preAddReplicationPeer(ctx, peerId, peerConfig);
   }
 
   @Test
   public void testPreAddReplicationPeerNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preAddReplicationPeer(ctx, peerId, peerConfig);
   }
 
   @Test(expected = IOException.class)
   public void testPreRemoveReplicationPeerReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preRemoveReplicationPeer(ctx, peerId);
   }
 
   @Test
   public void testPreRemoveReplicationPeerNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preRemoveReplicationPeer(ctx, peerId);
   }
 
   @Test(expected = IOException.class)
   public void testPreEnableReplicationPeerReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preEnableReplicationPeer(ctx, peerId);
   }
 
   @Test
   public void testPreEnableReplicationPeerNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preEnableReplicationPeer(ctx, peerId);
   }
 
   @Test(expected = IOException.class)
   public void testPreDisableReplicationPeerReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preDisableReplicationPeer(ctx, peerId);
   }
 
   @Test
   public void testPreDisableReplicationPeerNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preDisableReplicationPeer(ctx, peerId);
   }
 
   @Test(expected = IOException.class)
   public void testPreUpdateReplicationPeerConfigReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preUpdateReplicationPeerConfig(ctx, peerId, peerConfig);
   }
 
   @Test
   public void testPreUpdateReplicationPeerConfigNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preUpdateReplicationPeerConfig(ctx, peerId, peerConfig);
   }
 
   @Test(expected = IOException.class)
   public void testPreTransitReplicationPeerSyncReplicationStateReadOnlyException()
     throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preTransitReplicationPeerSyncReplicationState(ctx, peerId, state);
   }
 
   @Test
   public void testPreTransitReplicationPeerSyncReplicationStateNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preTransitReplicationPeerSyncReplicationState(ctx, peerId, state);
   }
 
   @Test(expected = IOException.class)
   public void testPreGrantReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preGrant(ctx, userPermission, mergeExistingPermissions);
   }
 
   @Test
   public void testPreGrantNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preGrant(ctx, userPermission, mergeExistingPermissions);
   }
 
   @Test(expected = IOException.class)
   public void testPreRevokeReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preRevoke(ctx, userPermission);
   }
 
   @Test
   public void testPreRevokeNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preRevoke(ctx, userPermission);
   }
-
-  // @Test(expected = IOException.class)
-  // public void testReadOnlyException() throws IOException {
-  // readOnlyController.setGlobalReadOnlyEnabled(true);
-  // readOnlyController.();
-  // }
-  //
-  // @Test
-  // public void testNoException() throws IOException {
-  // readOnlyController.setGlobalReadOnlyEnabled(false);
-  // readOnlyController.();
-  // }
 }

@@ -17,10 +17,12 @@
  */
 package org.apache.hadoop.hbase.security.access;
 
+import static org.apache.hadoop.hbase.HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY;
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
@@ -40,6 +42,7 @@ public class TestReadOnlyControllerBulkLoadObserver {
     HBaseClassTestRule.forClass(TestReadOnlyControllerBulkLoadObserver.class);
 
   ReadOnlyController readOnlyController;
+  HBaseConfiguration readOnlyConf;
 
   // Region Server Coprocessor mocking variables
   ObserverContext<RegionCoprocessorEnvironment> ctx;
@@ -47,6 +50,8 @@ public class TestReadOnlyControllerBulkLoadObserver {
   @Before
   public void setup() throws Exception {
     readOnlyController = new ReadOnlyController();
+    readOnlyConf = new HBaseConfiguration();
+    readOnlyConf.setBoolean(HBASE_GLOBAL_READONLY_ENABLED_KEY, true);
 
     // mocking variables initialization
     ctx = mock(ObserverContext.class);
@@ -59,25 +64,23 @@ public class TestReadOnlyControllerBulkLoadObserver {
 
   @Test(expected = IOException.class)
   public void testPrePrepareBulkLoadReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.prePrepareBulkLoad(ctx);
   }
 
   @Test
   public void testPrePrepareBulkLoadNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.prePrepareBulkLoad(ctx);
   }
 
   @Test(expected = IOException.class)
   public void testPreCleanupBulkLoadReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preCleanupBulkLoad(ctx);
   }
 
   @Test
   public void testPreCleanupBulkLoadNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preCleanupBulkLoad(ctx);
   }
 }

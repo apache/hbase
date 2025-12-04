@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.security.access;
 
+import static org.apache.hadoop.hbase.HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -25,6 +26,7 @@ import java.util.List;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.CheckAndMutate;
@@ -74,6 +76,7 @@ public class TestReadOnlyControllerRegionObserver {
     HBaseClassTestRule.forClass(TestReadOnlyControllerRegionObserver.class);
 
   ReadOnlyController readOnlyController;
+  HBaseConfiguration readOnlyConf;
 
   // Region Coprocessor mocking variables
   ObserverContext<RegionCoprocessorEnvironment> c, ctx;
@@ -113,6 +116,8 @@ public class TestReadOnlyControllerRegionObserver {
   @Before
   public void setup() throws Exception {
     readOnlyController = new ReadOnlyController();
+    readOnlyConf = new HBaseConfiguration();
+    readOnlyConf.setBoolean(HBASE_GLOBAL_READONLY_ENABLED_KEY, true);
 
     // mocking variables initialization
     c = mock(ObserverContext.class);
@@ -163,6 +168,7 @@ public class TestReadOnlyControllerRegionObserver {
     when(c.getEnvironment()).thenReturn(env);
     when(env.getRegionInfo()).thenReturn(regionInfo);
     when(regionInfo.getTable()).thenReturn(tableName);
+    when(key.getTableName()).thenReturn(tableName);
   }
 
   @After
@@ -172,417 +178,383 @@ public class TestReadOnlyControllerRegionObserver {
 
   @Test(expected = IOException.class)
   public void testPreFlushV1ReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preFlush(c, flushLifeCycleTracker);
   }
 
   @Test
   public void testPreFlushV1NoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preFlush(c, flushLifeCycleTracker);
   }
 
   @Test(expected = IOException.class)
   public void testPreFlushV2ReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preFlush(c, store, scanner, flushLifeCycleTracker);
   }
 
   @Test
   public void testPreFlushV2NoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preFlush(c, store, scanner, flushLifeCycleTracker);
   }
 
   @Test(expected = IOException.class)
   public void testPreFlushScannerOpenReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preFlushScannerOpen(c, store, options, flushLifeCycleTracker);
   }
 
   @Test
   public void testPreFlushScannerOpenNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preFlushScannerOpen(c, store, options, flushLifeCycleTracker);
   }
 
   @Test(expected = IOException.class)
   public void testPreMemStoreCompactionReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preMemStoreCompaction(c, store);
   }
 
   @Test
   public void testPreMemStoreCompactionNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preMemStoreCompaction(c, store);
   }
 
   @Test(expected = IOException.class)
   public void testPreMemStoreCompactionCompactScannerOpenReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preMemStoreCompactionCompactScannerOpen(c, store, options);
   }
 
   @Test
   public void testPreMemStoreCompactionCompactScannerOpenNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preMemStoreCompactionCompactScannerOpen(c, store, options);
   }
 
   @Test(expected = IOException.class)
   public void testPreMemStoreCompactionCompactReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preMemStoreCompactionCompact(c, store, scanner);
   }
 
   @Test
   public void testPreMemStoreCompactionCompactNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preMemStoreCompactionCompact(c, store, scanner);
   }
 
   @Test(expected = IOException.class)
   public void testPreCompactSelectionReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preCompactSelection(c, store, candidates, compactionLifeCycleTracker);
   }
 
   @Test
   public void testPreCompactSelectionNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preCompactSelection(c, store, candidates, compactionLifeCycleTracker);
   }
 
   @Test(expected = IOException.class)
   public void testPreCompactScannerOpenReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preCompactScannerOpen(c, store, scanType, options,
       compactionLifeCycleTracker, compactionRequest);
   }
 
   @Test
   public void testPreCompactScannerOpenNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preCompactScannerOpen(c, store, scanType, options,
       compactionLifeCycleTracker, compactionRequest);
   }
 
   @Test(expected = IOException.class)
   public void testPreCompactReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preCompact(c, store, scanner, scanType, compactionLifeCycleTracker,
       compactionRequest);
   }
 
   @Test
   public void testPreCompactNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preCompact(c, store, scanner, scanType, compactionLifeCycleTracker,
       compactionRequest);
   }
 
   @Test(expected = IOException.class)
   public void testPrePutV1ReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.prePut(c, put, edit);
   }
 
   @Test
   public void testPrePutV1NoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.prePut(c, put, edit);
   }
 
   @Test(expected = IOException.class)
   public void testPrePutV2ReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.prePut(c, put, edit, durability);
   }
 
   @Test
   public void testPrePutV2NoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.prePut(c, put, edit, durability);
   }
 
   @Test(expected = IOException.class)
   public void testPreDeleteV1ReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preDelete(c, delete, edit);
   }
 
   @Test
   public void testPreDeleteV1NoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preDelete(c, delete, edit);
   }
 
   @Test(expected = IOException.class)
   public void testPreDeleteV2ReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preDelete(c, delete, edit, durability);
   }
 
   @Test
   public void testPreDeleteV2NoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preDelete(c, delete, edit, durability);
   }
 
   @Test
   public void testPreBatchMutateNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preBatchMutate(c, miniBatchOp);
   }
 
   @Test(expected = IOException.class)
   public void testPreCheckAndPutV1ReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preCheckAndPut(c, row, family, qualifier, op, comparator, put, result);
   }
 
   @Test
   public void testPreCheckAndPutV1NoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preCheckAndPut(c, row, family, qualifier, op, comparator, put, result);
   }
 
   @Test(expected = IOException.class)
   public void testPreCheckAndPutV2ReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preCheckAndPut(c, row, filter, put, result);
   }
 
   @Test
   public void testPreCheckAndPutV2NoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preCheckAndPut(c, row, filter, put, result);
   }
 
   @Test(expected = IOException.class)
   public void testPreCheckAndPutAfterRowLockV1ReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preCheckAndPutAfterRowLock(c, row, family, qualifier, op, comparator, put,
       result);
   }
 
   @Test
   public void testPreCheckAndPutAfterRowLockV1NoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preCheckAndPutAfterRowLock(c, row, family, qualifier, op, comparator, put,
       result);
   }
 
   @Test(expected = IOException.class)
   public void testPreCheckAndPutAfterRowLockV2ReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preCheckAndPutAfterRowLock(c, row, filter, put, result);
   }
 
   @Test
   public void testPreCheckAndPutAfterRowLockV2NoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preCheckAndPutAfterRowLock(c, row, filter, put, result);
   }
 
   @Test(expected = IOException.class)
   public void testPreCheckAndDeleteV1ReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preCheckAndDelete(c, row, family, qualifier, op, comparator, delete, result);
   }
 
   @Test
   public void testPreCheckAndDeleteV1NoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preCheckAndDelete(c, row, family, qualifier, op, comparator, delete, result);
   }
 
   @Test(expected = IOException.class)
   public void testPreCheckAndDeleteV2ReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preCheckAndDelete(c, row, filter, delete, result);
   }
 
   @Test
   public void testPreCheckAndDeleteV2NoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preCheckAndDelete(c, row, filter, delete, result);
   }
 
   @Test(expected = IOException.class)
   public void testPreCheckAndDeleteAfterRowLockV1ReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preCheckAndDeleteAfterRowLock(c, row, family, qualifier, op, comparator,
       delete, result);
   }
 
   @Test
   public void testPreCheckAndDeleteAfterRowLockV1NoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preCheckAndDeleteAfterRowLock(c, row, family, qualifier, op, comparator,
       delete, result);
   }
 
   @Test(expected = IOException.class)
   public void testPreCheckAndDeleteAfterRowLockV2ReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preCheckAndDeleteAfterRowLock(c, row, filter, delete, result);
   }
 
   @Test
   public void testPreCheckAndDeleteAfterRowLockV2NoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preCheckAndDeleteAfterRowLock(c, row, filter, delete, result);
   }
 
   @Test(expected = IOException.class)
   public void testPreBatchMutateReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preBatchMutate(c, miniBatchOp);
   }
 
   @Test(expected = IOException.class)
   public void testPreCheckAndMutateReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preCheckAndMutate(c, checkAndMutate, checkAndMutateResult);
   }
 
   @Test
   public void testPreCheckAndMutateNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preCheckAndMutate(c, checkAndMutate, checkAndMutateResult);
   }
 
   @Test(expected = IOException.class)
   public void testPreCheckAndMutateAfterRowLockReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preCheckAndMutateAfterRowLock(c, checkAndMutate, checkAndMutateResult);
   }
 
   @Test
   public void testPreCheckAndMutateAfterRowLockNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preCheckAndMutateAfterRowLock(c, checkAndMutate, checkAndMutateResult);
   }
 
   @Test(expected = IOException.class)
   public void testPreAppendV1ReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preAppend(c, append);
   }
 
   @Test
   public void testPreAppendV1NoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preAppend(c, append);
   }
 
   @Test(expected = IOException.class)
   public void testPreAppendV2ReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preAppend(c, append, edit);
   }
 
   @Test
   public void testPreAppendV2NoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preAppend(c, append, edit);
   }
 
   @Test(expected = IOException.class)
   public void testPreAppendAfterRowLockReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preAppendAfterRowLock(c, append);
   }
 
   @Test
   public void testPreAppendAfterRowLockNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preAppendAfterRowLock(c, append);
   }
 
   @Test(expected = IOException.class)
   public void testPreIncrementV1ReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preIncrement(c, increment);
   }
 
   @Test
   public void testPreIncrementV1NoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preIncrement(c, increment);
   }
 
   @Test(expected = IOException.class)
   public void testPreIncrementV2ReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preIncrement(c, increment, edit);
   }
 
   @Test
   public void testPreIncrementV2NoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preIncrement(c, increment, edit);
   }
 
   @Test(expected = IOException.class)
   public void testPreIncrementAfterRowLockReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preIncrementAfterRowLock(c, increment);
   }
 
   @Test
   public void testPreIncrementAfterRowLockNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preIncrementAfterRowLock(c, increment);
   }
 
   @Test(expected = IOException.class)
   public void testPreReplayWALsReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preReplayWALs(ctx, info, edits);
   }
 
   @Test
   public void testPreReplayWALsNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preReplayWALs(ctx, info, edits);
   }
 
   @Test(expected = IOException.class)
   public void testPreBulkLoadHFileReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preBulkLoadHFile(ctx, familyPaths);
   }
 
   @Test
   public void testPreBulkLoadHFileNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preBulkLoadHFile(ctx, familyPaths);
   }
 
   @Test(expected = IOException.class)
   public void testPreCommitStoreFileReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preCommitStoreFile(ctx, family, pairs);
   }
 
   @Test
   public void testPreCommitStoreFileNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preCommitStoreFile(ctx, family, pairs);
   }
 
   @Test(expected = IOException.class)
   public void testPreWALAppendReadOnlyException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(true);
+    readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preWALAppend(ctx, key, edit);
   }
 
   @Test
   public void testPreWALAppendNoException() throws IOException {
-    readOnlyController.setGlobalReadOnlyEnabled(false);
     readOnlyController.preWALAppend(ctx, key, edit);
   }
 }

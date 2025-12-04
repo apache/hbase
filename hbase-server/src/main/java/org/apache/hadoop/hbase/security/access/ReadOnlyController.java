@@ -123,11 +123,6 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
   public void stop(CoprocessorEnvironment env) {
   }
 
-  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
-  public void setGlobalReadOnlyEnabled(boolean enabled) {
-    this.globalReadOnlyEnabled = enabled;
-  }
-
   /* ---- RegionObserver Overrides ---- */
   @Override
   public Optional<RegionObserver> getRegionObserver() {
@@ -413,7 +408,9 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
   @Override
   public void preWALAppend(ObserverContext<? extends RegionCoprocessorEnvironment> ctx, WALKey key,
     WALEdit edit) throws IOException {
-    internalReadOnlyGuard();
+    if (!key.getTableName().isSystemTable()) {
+      internalReadOnlyGuard();
+    }
     RegionObserver.super.preWALAppend(ctx, key, edit);
   }
 
