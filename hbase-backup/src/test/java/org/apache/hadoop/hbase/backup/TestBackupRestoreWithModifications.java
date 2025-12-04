@@ -228,7 +228,7 @@ public class TestBackupRestoreWithModifications {
     try (Connection connection = ConnectionFactory.createConnection(cluster.getConf());
       BackupAdmin backupAdmin = new BackupAdminImpl(connection)) {
       RestoreRequest restoreRequest = new RestoreRequest.Builder().withBackupId(backupId)
-        .withBackupRootDir(BACKUP_ROOT_DIR.toString()).withOvewrite(true)
+        .withBackupRootDir(BACKUP_ROOT_DIR.toString()).withOverwrite(true)
         .withFromTables(new TableName[] { sourceTableName })
         .withToTables(new TableName[] { targetTableName }).build();
       backupAdmin.restore(restoreRequest);
