@@ -384,7 +384,7 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
     TableName[] fromTables, TableName[] toTables, boolean isOverwrite) {
     RestoreRequest.Builder builder = new RestoreRequest.Builder();
     return builder.withBackupRootDir(backupRootDir).withBackupId(backupId).withCheck(check)
-      .withFromTables(fromTables).withToTables(toTables).withOvewrite(isOverwrite).build();
+      .withFromTables(fromTables).withToTables(toTables).withOverwrite(isOverwrite).build();
   }
 
   @Override
