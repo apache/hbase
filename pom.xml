@@ -3277,6 +3277,7 @@
                 <exclude>**/target/**</exclude>
                 <exclude>**/dependency-reduced-pom.xml</exclude>
                 <exclude>**/.idea/**</exclude>
+                <exclude>**/node_modules/**</exclude>
               </excludes>
               <!-- define the steps to apply to those files -->
               <trimTrailingWhitespace/>
@@ -3308,6 +3309,7 @@
                 <exclude>src/test/java/org/apache/hadoop/hbase/test/util/warc/WARCOutputFormat.java</exclude>
                 <exclude>src/test/java/org/apache/hadoop/hbase/test/util/warc/WARCRecord.java</exclude>
                 <exclude>src/test/java/org/apache/hadoop/hbase/test/util/warc/WARCWritable.java</exclude>
+                <exclude>**/node_modules/**</exclude>
               </excludes>
               <licenseHeader>
                 <file>${session.executionRootDirectory}/dev-support/license-header</file>
