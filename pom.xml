@@ -2140,6 +2140,8 @@
               <exclude>**/vote.tmpl</exclude>
               <!-- gzipped list of S3N URIs for hbase-it -->
               <exclude>**/CC-MAIN-2021-10-warc.paths.gz</exclude>
+              <!-- Cannot add ASF licence to JSON files as JSON files cannot have comments in them. -->
+              <exclude>**/*.json</exclude>
             </excludes>
           </configuration>
         </plugin>
@@ -3275,6 +3277,7 @@
                 <exclude>**/target/**</exclude>
                 <exclude>**/dependency-reduced-pom.xml</exclude>
                 <exclude>**/.idea/**</exclude>
+                <exclude>**/node_modules/**</exclude>
               </excludes>
               <!-- define the steps to apply to those files -->
               <trimTrailingWhitespace/>
@@ -3306,6 +3309,7 @@
                 <exclude>src/test/java/org/apache/hadoop/hbase/test/util/warc/WARCOutputFormat.java</exclude>
                 <exclude>src/test/java/org/apache/hadoop/hbase/test/util/warc/WARCRecord.java</exclude>
                 <exclude>src/test/java/org/apache/hadoop/hbase/test/util/warc/WARCWritable.java</exclude>
+                <exclude>**/node_modules/**</exclude>
               </excludes>
               <licenseHeader>
                 <file>${session.executionRootDirectory}/dev-support/license-header</file>
