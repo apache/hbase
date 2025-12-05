@@ -840,6 +840,7 @@ public class BucketCache implements BlockCache, HeapSize {
       if (existedInRamCache && evictedByEvictionProcess) {
         cacheStats.evicted(0, cacheKey.isPrimary());
       }
+      LOG.debug("Entry for key {} was not found in backing map", cacheKey);
       return existedInRamCache;
     } else {
       return bucketEntryToUse.withWriteLock(offsetLock, () -> {
@@ -849,6 +850,9 @@ public class BucketCache implements BlockCache, HeapSize {
           blockEvicted(cacheKey, bucketEntryToUse, !existedInRamCache, evictedByEvictionProcess);
           return true;
         }
+        LOG.debug("Failed to remove key {} from map. Maybe entries in the map now differ? "
+          + "Original found entry: {}, what's in the map now: {}", cacheKey,
+          bucketEntryToUse, backingMap.get(cacheKey));
         return false;
       });
     }
