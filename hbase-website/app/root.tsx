@@ -27,9 +27,6 @@ import {
 
 import type { Route } from "./+types/root";
 import appStyles from "./app.css?url";
-import { SiteFooter } from "./components/site-footer";
-import { SiteNavbar } from "./components/site-navbar";
-import { GettingStartedSection } from "./components/getting-started";
 import { ThemeProvider } from "./lib/theme-provider";
 
 export const links: Route.LinksFunction = () => [
@@ -83,14 +80,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </head>
       <body className="font-base">
         <ThemeProvider defaultTheme="light">
-          <SiteNavbar />
-
           {children}
+
           <ScrollRestoration />
           <Scripts />
-
-          <GettingStartedSection />
-          <SiteFooter />
         </ThemeProvider>
       </body>
     </html>

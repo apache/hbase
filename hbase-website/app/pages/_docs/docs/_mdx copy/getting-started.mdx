@@ -1,0 +1,52 @@
+---
+title: "Getting Started"
+description: "Quickstart will get you up and running on a single-node, standalone instance of HBase."
+---
+
+## Quick Start - Standalone HBase
+
+This section describes the setup of a single-node standalone HBase.
+A _standalone_ instance has all HBase daemons -- the Master, RegionServers,
+and ZooKeeper -- running in a single JVM persisting to the local filesystem.
+It is our most basic deploy profile. We will show you how
+to create a table in HBase using the `hbase shell` CLI,
+insert rows into the table, perform put and scan operations against the
+table, enable or disable the table, and start and stop HBase.
+
+Apart from downloading HBase, this procedure should take less than 10 minutes.
+
+### JDK Version Requirements
+
+HBase requires that a JDK be installed.
+See [JAVA](https://java.com/) for information about supported JDK versions.
+
+### Get Started with HBase
+
+#### Procedure: Download, Configure, and Start HBase in Standalone Mode
+
+1. Choose a download site from this list of [Apache Download Mirrors](https://www.apache.org/dyn/closer.lua/hbase/).
+   Click on the suggested top link.
+   This will take you to a mirror of _HBase Releases_.
+   Click on the folder named _stable_ and then download the binary file that ends in _.tar.gz_ to your local filesystem.
+   Do not download the file ending in _src.tar.gz_ for now.
+2. Extract the downloaded file, and change to the newly-created directory.
+   ```bash
+   $ tar xzvf hbase-{Version}-bin.tar.gz
+   $ cd hbase-{Version}/
+   ```
+3. You must set the `JAVA_HOME` environment variable before starting HBase.
+   To make this easier, HBase lets you set it within the _conf/hbase-env.sh_ file. You must locate where Java is
+   installed on your machine, and one way to find this is by using the _whereis java_ command. Once you have the location,
+   edit the _conf/hbase-env.sh_ file and uncomment the line starting with _#export JAVA_HOME=_, and then set it to your Java installation path.
+4. Example extract from _hbase-env.sh_ where _JAVA_HOME_ is set
+   ```bash
+   # Set environment variables here.
+   # The java implementation to use.
+   export JAVA_HOME=/usr/jdk64/jdk1.8.0_112
+   ```
+5. The _bin/start-hbase.sh_ script is provided as a convenient way to start HBase.
+   Issue the command, and if all goes well, a message is logged to standard output showing that HBase started successfully.
+   You can use the `jps` command to verify that you have one running process called `HMaster`.
+   In standalone mode HBase runs all daemons within this single JVM, i.e.
+   the HMaster, a single HRegionServer, and the ZooKeeper daemon.
+   Go to _http://localhost:16010_ to view the HBase Web UI.

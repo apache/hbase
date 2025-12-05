@@ -18,7 +18,12 @@
 
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "highlight.js/styles/github.css";
+@import 'fumadocs-ui/css/shadcn.css';
+@import 'fumadocs-ui/css/preset.css';
+
+@plugin "@tailwindcss/typography" {
+  className: prose-original;
+}
 
 @theme {
 }
@@ -179,33 +184,3 @@
   }
 }
 
-/* Code syntax highlighting for dark mode */
-.dark pre code.hljs {
-  background: oklch(0.2 0 0);
-  color: oklch(0.85 0 0);
-}
-
-.dark .hljs-comment {
-  color: oklch(0.55 0 0);
-}
-
-.dark .hljs-keyword {
-  color: oklch(0.75 0.12 340);
-}
-
-.dark .hljs-string {
-  color: oklch(0.75 0.1 140);
-}
-
-.dark .hljs-number {
-  color: oklch(0.75 0.1 100);
-}
-
-.dark .hljs-title {
-  color: oklch(0.75 0.12 260);
-}
-
-.dark .hljs-name,
-.dark .hljs-attribute {
-  color: oklch(0.7 0.12 200);
-}

@@ -1,0 +1,668 @@
+[
+  {
+    "id": "achouhan",
+    "name": "Abhishek Singh Chouhan",
+    "email": "achouhan@apache.org",
+    "timezone": "+5"
+  },
+  {
+    "id": "acube123",
+    "name": "Amitanand S. Aiyer",
+    "email": "acube123@apache.org",
+    "timezone": "-8"
+  },
+  {
+    "id": "allan163",
+    "name": "Allan Yang",
+    "email": "allan163@apache.org",
+    "timezone": "+8"
+  },
+  {
+    "id": "andor",
+    "name": "Andor Molnar",
+    "email": "andor@apache.org",
+    "timezone": "-5"
+  },
+  {
+    "id": "appy",
+    "name": "Apekshit Sharma",
+    "email": "appy@apache.org",
+    "timezone": "-8"
+  },
+  {
+    "id": "anastasia",
+    "name": "Anastasia Braginsky",
+    "email": "anastasia@apache.org",
+    "timezone": "+2"
+  },
+  {
+    "id": "apurtell",
+    "name": "Andrew Purtell",
+    "email": "apurtell@apache.org",
+    "timezone": "-8"
+  },
+  {
+    "id": "anoopsamjohn",
+    "name": "Anoop Sam John",
+    "email": "anoopsamjohn@apache.org",
+    "timezone": "+5"
+  },
+  {
+    "id": "antonov",
+    "name": "Mikhail Antonov",
+    "email": "antonov@apache.org",
+    "timezone": "-8"
+  },
+  {
+    "id": "ashishsinghi",
+    "name": "Ashish Singhi",
+    "email": "ashishsinghi@apache.org",
+    "timezone": "+5"
+  },
+  {
+    "id": "ashu",
+    "name": "Ashu Pachauri",
+    "email": "ashu@apache.org",
+    "timezone": "+5"
+  },
+  {
+    "id": "bharathv",
+    "name": "Bharath Vissapragada",
+    "email": "bharathv@apache.org",
+    "timezone": "-8"
+  },
+  {
+    "id": "binlijin",
+    "name": "Lijin Bin",
+    "email": "binlijin@apache.org",
+    "timezone": "+8"
+  },
+  {
+    "id": "brfrn169",
+    "name": "Toshihiro Suzuki",
+    "email": "brfrn169@apache.org",
+    "timezone": "+9"
+  },
+  {
+    "id": "busbey",
+    "name": "Sean Busbey",
+    "email": "busbey@apache.org",
+    "timezone": "-6"
+  },
+  {
+    "id": "chenglei",
+    "name": "Cheng Lei",
+    "email": "chenglei@apache.org",
+    "timezone": "+8"
+  },
+  {
+    "id": "chenheng",
+    "name": "Heng Chen",
+    "email": "chenheng@apache.org",
+    "timezone": "+8"
+  },
+  {
+    "id": "chia7712",
+    "name": "Chia-Ping Tsai",
+    "email": "chia7712@apache.org",
+    "timezone": "+8"
+  },
+  {
+    "id": "ddas",
+    "name": "Devaraj Das",
+    "email": "ddas@apache.org",
+    "timezone": "-8"
+  },
+  {
+    "id": "dimaspivak",
+    "name": "Dima Spivak",
+    "email": "dimaspivak@apache.org",
+    "timezone": "-8"
+  },
+  {
+    "id": "dmeil",
+    "name": "Doug Meil",
+    "email": "dmeil@apache.org",
+    "timezone": "-5"
+  },
+  {
+    "id": "eclark",
+    "name": "Elliott Clark",
+    "email": "eclark@apache.org",
+    "timezone": "-8"
+  },
+  {
+    "id": "elserj",
+    "name": "Josh Elser",
+    "email": "elserj@apache.org",
+    "timezone": "-5"
+  },
+  {
+    "id": "enis",
+    "name": "Enis Soztutar",
+    "email": "enis@apache.org",
+    "timezone": "-8"
+  },
+  {
+    "id": "eshcar",
+    "name": "Eshcar Hillel",
+    "email": "eshcar@apache.org",
+    "timezone": "+2"
+  },
+  {
+    "id": "fenghh",
+    "name": "Honghua Feng",
+    "email": "fenghh@apache.org",
+    "timezone": "+8"
+  },
+  {
+    "id": "garyh",
+    "name": "Gary Helmling",
+    "email": "garyh@apache.org",
+    "timezone": "-8"
+  },
+  {
+    "id": "gchanan",
+    "name": "Gregory Chanan",
+    "email": "gchanan@apache.org",
+    "timezone": "-8"
+  },
+  {
+    "id": "gjacoby",
+    "name": "Geoffrey Jacoby",
+    "email": "gjacoby@apache.org",
+    "timezone": "-5"
+  },
+  {
+    "id": "gxcheng",
+    "name": "Guangxu Cheng",
+    "email": "gxcheng@apache.org",
+    "timezone": "+8"
+  },
+  {
+    "id": "haxiaolin",
+    "name": "Xiaolin Ha",
+    "email": "haxiaolin@apache.org",
+    "timezone": "+8"
+  },
+  {
+    "id": "huaxiangsun",
+    "name": "Huaxiang Sun",
+    "email": "huaxiangsun@apache.org",
+    "timezone": "-8"
+  },
+  {
+    "id": "huiruan",
+    "name": "Hui Ruan",
+    "email": "huiruan@apache.org",
+    "timezone": "+8"
+  },
+  {
+    "id": "jdcryans",
+    "name": "Jean-Daniel Cryans",
+    "email": "jdcryans@apache.org",
+    "timezone": "-8"
+  },
+  {
+    "id": "jeffreyz",
+    "name": "Jeffrey Zhong",
+    "email": "jeffreyz@apache.org",
+    "timezone": "-8"
+  },
+  {
+    "id": "jerryjch",
+    "name": "Jing Chen (Jerry) He",
+    "email": "jerryjch@apache.org",
+    "timezone": "-8"
+  },
+  {
+    "id": "jyates",
+    "name": "Jesse Yates",
+    "email": "jyates@apache.org",
+    "timezone": "-8"
+  },
+  {
+    "id": "jgray",
+    "name": "Jonathan Gray",
+    "email": "jgray@fb.com",
+    "timezone": "-8"
+  },
+  {
+    "id": "jingchengdu",
+    "name": "Jingcheng Du",
+    "email": "jingchengdu@apache.org",
+    "timezone": "+8"
+  },
+  {
+    "id": "esteban",
+    "name": "Esteban Gutierrez",
+    "email": "esteban@apache.org",
+    "timezone": "-8"
+  },
+  {
+    "id": "janh",
+    "name": "Jan Hentschel",
+    "email": "janh@apache.org",
+    "timezone": "+1"
+  },
+  {
+    "id": "jmhsieh",
+    "name": "Jonathan Hsieh",
+    "email": "jmhsieh@apache.org",
+    "timezone": "-8"
+  },
+  {
+    "id": "junegunn",
+    "name": "Junegunn Choi",
+    "email": "junegunn@apache.org",
+    "timezone": "+9"
+  },
+  {
+    "id": "jxiang",
+    "name": "Jimmy Xiang",
+    "email": "jxiang@apache.org",
+    "timezone": "-8"
+  },
+  {
+    "id": "kannan",
+    "name": "Kannan Muthukkaruppan",
+    "email": "kannan@fb.com",
+    "timezone": "-8"
+  },
+  {
+    "id": "karthik",
+    "name": "Karthik Ranganathan",
+    "email": "kranganathan@fb.com",
+    "timezone": "-8"
+  },
+  {
+    "id": "larsfrancke",
+    "name": "Lars Francke",
+    "email": "larsfrancke@apache.org",
+    "timezone": "Europe/Berlin"
+  },
+  {
+    "id": "larsgeorge",
+    "name": "Lars George",
+    "email": "larsgeorge@apache.org",
+    "timezone": "+1"
+  },
+  {
+    "id": "larsh",
+    "name": "Lars Hofhansl",
+    "email": "larsh@apache.org",
+    "timezone": "-8"
+  },
+  {
+    "id": "liangxie",
+    "name": "Liang Xie",
+    "email": "liangxie@apache.org",
+    "timezone": "+8"
+  },
+  {
+    "id": "liushaohui",
+    "name": "Shaohui Liu",
+    "email": "liushaohui@apache.org",
+    "timezone": "+8"
+  },
+  {
+    "id": "liyin",
+    "name": "Liyin Tang",
+    "email": "liyin.tang@fb.com",
+    "timezone": "-8"
+  },
+  {
+    "id": "liyu",
+    "name": "Yu Li",
+    "email": "liyu@apache.org",
+    "timezone": "+8"
+  },
+  {
+    "id": "lupeng",
+    "name": "Peng Lu",
+    "email": "lupeng@apache.org",
+    "timezone": "+8"
+  },
+  {
+    "id": "mbautin",
+    "name": "Mikhail Bautin",
+    "email": "mbautin@apache.org",
+    "timezone": "-8"
+  },
+  {
+    "id": "mbertozzi",
+    "name": "Matteo Bertozzi",
+    "email": "mbertozzi@apache.org",
+    "timezone": "0"
+  },
+  {
+    "id": "mdrob",
+    "name": "Mike Drob",
+    "email": "mdrob@apache.org",
+    "timezone": "-5"
+  },
+  {
+    "id": "meszibalu",
+    "name": "Balazs Meszaros",
+    "email": "meszibalu@apache.org",
+    "timezone": "+1"
+  },
+  {
+    "id": "misty",
+    "name": "Misty Stanley-Jones",
+    "email": "misty@apache.org",
+    "timezone": "-8"
+  },
+  {
+    "id": "ndimiduk",
+    "name": "Nick Dimiduk",
+    "email": "ndimiduk@apache.org",
+    "timezone": "-8"
+  },
+  {
+    "id": "nihaljain",
+    "name": "Nihal Jain",
+    "email": "nihaljain@apache.org",
+    "timezone": "+5"
+  },
+  {
+    "id": "niuyulin",
+    "name": "Yulin Niu",
+    "email": "niuyulin@apache.org",
+    "timezone": "+8"
+  },
+  {
+    "id": "nkeywal",
+    "name": "Nicolas Liochon",
+    "email": "nkeywal@apache.org",
+    "timezone": "+1"
+  },
+  {
+    "id": "nspiegelberg",
+    "name": "Nicolas Spiegelberg",
+    "email": "nspiegelberg@fb.com",
+    "timezone": "-8"
+  },
+  {
+    "id": "octo47",
+    "name": "Andrey Stepachev",
+    "email": "octo47@gmail.com",
+    "timezone": "0"
+  },
+  {
+    "id": "openinx",
+    "name": "Zheng Hu",
+    "email": "openinx@apache.org",
+    "timezone": "+8"
+  },
+  {
+    "id": "pankajkumar",
+    "name": "Pankaj Kumar",
+    "email": "pankajkumar@apache.org",
+    "timezone": "+5"
+  },
+  {
+    "id": "psomogyi",
+    "name": "Peter Somogyi",
+    "email": "psomogyi@apache.org",
+    "timezone": "+1"
+  },
+  {
+    "id": "rajeshbabu",
+    "name": "Rajeshbabu Chintaguntla",
+    "email": "rajeshbabu@apache.org",
+    "timezone": "+5"
+  },
+  {
+    "id": "ramkrishna",
+    "name": "Ramkrishna S Vasudevan",
+    "email": "ramkrishna@apache.org",
+    "timezone": "+5"
+  },
+  {
+    "id": "rawson",
+    "name": "Ryan Rawson",
+    "email": "rawson@apache.org",
+    "timezone": "-8"
+  },
+  {
+    "id": "reidchan",
+    "name": "Reid Chan",
+    "email": "reidchan@apache.org",
+    "timezone": "+8"
+  },
+  {
+    "id": "shahrs87",
+    "name": "Rushabh Shah",
+    "email": "shahrs87@apache.org",
+    "timezone": "-8"
+  },
+  {
+    "id": "sakthi",
+    "name": "Sakthi Vel",
+    "email": "sakthi@apache.org",
+    "timezone": "-8"
+  },
+  {
+    "id": "rmattingly",
+    "name": "Ray Mattingly",
+    "email": "rmattingly@apache.org",
+    "timezone": "-5"
+  },
+  {
+    "id": "sershe",
+    "name": "Sergey Shelukhin",
+    "email": "sershe@apache.org",
+    "timezone": "-8"
+  },
+  {
+    "id": "ssrungarapu",
+    "name": "Srikanth Srungarapu",
+    "email": "ssrungarapu@apache.org",
+    "timezone": "-8"
+  },
+  {
+    "id": "stack",
+    "name": "Michael Stack",
+    "email": "stack@apache.org",
+    "timezone": "-8"
+  },
+  {
+    "id": "stoty",
+    "name": "Istvan Toth",
+    "email": "stoty@apache.org",
+    "timezone": "+1"
+  },
+  {
+    "id": "syuanjiang",
+    "name": "Stephen Yuan Jiang",
+    "email": "syuanjiang@apache.org",
+    "timezone": "-8"
+  },
+  {
+    "id": "taklwu",
+    "name": "Tak-Lon (Stephen) Wu",
+    "email": "taklwu@apache.org",
+    "timezone": "-8"
+  },
+  {
+    "id": "tedyu",
+    "name": "Ted Yu",
+    "email": "yuzhihong@gmail.com",
+    "timezone": "-8"
+  },
+  {
+    "id": "tianhang",
+    "name": "Tianhang Tang",
+    "email": "tianhang@apache.org",
+    "timezone": "+8"
+  },
+  {
+    "id": "tianjy",
+    "name": "-",
+    "email": "tianjy@apache.org",
+    "timezone": "+8"
+  },
+  {
+    "id": "todd",
+    "name": "Todd Lipcon",
+    "email": "todd@apache.org",
+    "timezone": "-8"
+  },
+  {
+    "id": "toffer",
+    "name": "Francis Liu",
+    "email": "toffer@apache.org",
+    "timezone": "-8"
+  },
+  {
+    "id": "vikasv",
+    "name": "Vikas Vishwakarma",
+    "email": "vikasv@apache.org",
+    "timezone": "+5"
+  },
+  {
+    "id": "virag",
+    "name": "Virag Kothari",
+    "email": "virag@yahoo-inc.com",
+    "timezone": "-8"
+  },
+  {
+    "id": "vjasani",
+    "name": "Viraj Jasani",
+    "email": "vjasani@apache.org",
+    "timezone": "+5"
+  },
+  {
+    "id": "water",
+    "name": "Xiang Li",
+    "email": "xiangli@apache.org",
+    "timezone": "+8"
+  },
+  {
+    "id": "wchevreuil",
+    "name": "Wellington Chevreuil",
+    "email": "wchevreuil@apache.org",
+    "timezone": "0"
+  },
+  {
+    "id": "weichiu",
+    "name": "Wei-Chiu Chuang",
+    "email": "weichiu@apache.org",
+    "timezone": "-8"
+  },
+  {
+    "id": "xucang",
+    "name": "Xu Cang",
+    "email": "xucang@apache.org",
+    "timezone": "-8"
+  },
+  {
+    "id": "yangzhe1991",
+    "name": "Phil Yang",
+    "email": "yangzhe1991@apache.org",
+    "timezone": "+8"
+  },
+  {
+    "id": "zghao",
+    "name": "Guanghao Zhang",
+    "email": "zghao@apache.org",
+    "timezone": "+8"
+  },
+  {
+    "id": "zhangduo",
+    "name": "Duo Zhang",
+    "email": "zhangduo@apache.org",
+    "timezone": "+8"
+  },
+  {
+    "id": "zhaobaiqiang",
+    "name": "Baiqiang Zhao",
+    "email": "zhaobaiqiang@apache.org",
+    "timezone": "+8"
+  },
+  {
+    "id": "zjushch",
+    "name": "Chunhui Shen",
+    "email": "zjushch@apache.org",
+    "timezone": "+8"
+  },
+  {
+    "id": "churro",
+    "name": "Rahul Gidwani",
+    "email": "churro@apache.org",
+    "timezone": "-8"
+  },
+  {
+    "id": "yiliang",
+    "name": "Yi Liang",
+    "email": "yiliang@apache.org",
+    "timezone": "-8"
+  },
+  {
+    "id": "zyork",
+    "name": "Zach York",
+    "email": "zyork@apache.org",
+    "timezone": "-8"
+  },
+  {
+    "id": "meiyi",
+    "name": "Yi Mei",
+    "email": "meiyi@apache.org",
+    "timezone": "+8"
+  },
+  {
+    "id": "wangzheng",
+    "name": "Zheng (bsglz) Wang",
+    "email": "wangzheng@apache.org",
+    "timezone": "+8"
+  },
+  {
+    "id": "sunxin",
+    "name": "Xin Sun",
+    "email": "sunxin@apache.org",
+    "timezone": "+8"
+  },
+  {
+    "id": "huangzhuoyue",
+    "name": "Zhuoyue Huang",
+    "email": "huangzhuoyue@apache.org",
+    "timezone": "+8"
+  },
+  {
+    "id": "xiaoyt",
+    "name": "Yutong Xiao",
+    "email": "xiaoyt@apache.org",
+    "timezone": "+8"
+  },
+  {
+    "id": "bbeaudreault",
+    "name": "Bryan Beaudreault",
+    "email": "bbeaudreault@apache.org",
+    "timezone": "-5"
+  },
+  {
+    "id": "heliangjun",
+    "name": "Liangjun He",
+    "email": "heliangjun@apache.org",
+    "timezone": "+8"
+  },
+  {
+    "id": "cconnell",
+    "name": "Charles Connell",
+    "email": "cconnell@apache.org",
+    "timezone": "-5"
+  },
+  {
+    "id": "chandrakambham",
+    "name": "Chandra Kambham",
+    "email": "chandra@apache.org",
+    "timezone": "+5"
+  },
+  {
+    "id": "paksyd",
+    "name": "Dávid Paksy",
+    "email": "paksyd@apache.org",
+    "timezone": "+1"
+  }
+]

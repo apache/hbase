@@ -19,7 +19,7 @@
 import { describe, it, expect } from "vitest";
 import { screen } from "@testing-library/react";
 import { renderWithProviders } from "./utils";
-import { HomePage } from "@/pages/home";
+import { HomePage } from "@/pages/_landing/home";
 
 describe("HomePage", () => {
   it("renders the hero section with main heading", () => {

@@ -32,6 +32,7 @@ interface MarkdownLayoutProps {
   components?: Components;
 }
 
+// Deprecated
 export function MarkdownLayout({
   children,
   autoLinkHeadings = false,

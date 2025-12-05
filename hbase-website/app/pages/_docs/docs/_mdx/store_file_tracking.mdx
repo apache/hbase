@@ -1,0 +1,146 @@
+---
+title: "Store File Tracking"
+description: "An abstraction layer to track store files with pluggable implementations for different file systems."
+---
+
+## Overview
+
+This feature introduces an abstraction layer to track store files still used/needed by store
+engines, allowing for plugging different approaches of identifying store
+files required by the given store.
+
+Historically, HBase internals have relied on creating hfiles on temporary directories first, renaming
+those files to the actual store directory at operation commit time. That's a simple and convenient
+way to separate transient from already finalised files that are ready to serve client reads with data.
+This approach works well with strong consistent file systems, but with the popularity of less consistent
+file systems, mainly Object Store which can be used like file systems, dependency on atomic rename operations starts to introduce
+performance penalties. The Amazon S3 Object Store, in particular, has been the most affected deployment,
+due to its lack of atomic renames. The HBase community temporarily bypassed this problem by building a distributed locking layer called HBOSS,
+to guarantee atomicity of operations against S3.
+
+With **Store File Tracking**, decision on where to originally create new hfiles and how to proceed upon
+commit is delegated to the specific Store File Tracking implementation.
+The implementation can be set at the HBase service leve in **hbase-site.xml** or at the
+Table or Column Family via the TableDescriptor configuration.
+
+<Callout>
+When the store file tracking implementation is specified in **hbase_site.xml**, this configuration is also propagated into a tables configuration
+at table creation time. This is to avoid dangerous configuration mismatches between processes, which
+could potentially lead to data loss.
+</Callout>
+
+## Available Implementations
+
+Store File Tracking initial version provides three builtin implementations:
+
+* DEFAULT
+* FILE
+* MIGRATION
+
+### DEFAULT
+
+As per the name, this is the Store File Tracking implementation used by default when no explicit
+configuration has been defined. The DEFAULT tracker implements the standard approach using temporary
+directories and renames. This is how all previous (implicit) implementation that HBase used to track store files.
+
+### FILE
+
+A file tracker implementation that creates new files straight in the store directory, avoiding the
+need for rename operations. It keeps a list of committed hfiles in memory, backed by meta files, in
+each store directory. Whenever a new hfile is committed, the list of _tracked files_ in the given
+store is updated and a new meta file is written with this list contents, discarding the previous
+meta file now containing an out dated list.
+
+### MIGRATION
+
+A special implementation to be used when swapping between Store File Tracking implementations on
+pre-existing tables that already contain data, and therefore, files being tracked under an specific
+logic.
+
+## Usage
+
+For fresh deployments that don't yet contain any user data, **FILE** implementation can be just set as
+value for **hbase.store.file-tracker.impl** property in global **hbase-site.xml** configuration, prior
+to the first hbase start. Omitting this property sets the **DEFAULT** implementation.
+
+For clusters with data that are upgraded to a version of HBase containing the store file tracking
+feature, the Store File Tracking implementation can only be changed with the **MIGRATION**
+implementation, so that the _new tracker_ can safely build its list of tracked files based on the
+list of the _current tracker_.
+
+<Callout>
+MIGRATION tracker should NOT be set at global configuration. To use it, follow below section
+about setting Store File Tacking at Table or Column Family configuration.
+</Callout>
+
+### Configuring for Table or Column Family
+
+Setting Store File Tracking configuration globally may not always be possible or desired, for example,
+in the case of upgraded clusters with pre-existing user data.
+Store File Tracking can be set at Table or Column Family level configuration.
+For example, to specify **FILE** implementation in the table configuration at table creation time,
+the following should be applied:
+
+```bash
+create 'my-table', 'f1', 'f2', {CONFIGURATION => {'hbase.store.file-tracker.impl' => 'FILE'}}
+```
+
+To define **FILE** for an specific Column Family:
+
+```bash
+create 'my-table', {NAME=> '1', CONFIGURATION => {'hbase.store.file-tracker.impl' => 'FILE'}}
+```
+
+### Switching trackers at Table or Column Family
+
+A very common scenario is to set Store File Tracking on pre-existing HBase deployments that have
+been upgraded to a version that supports this feature. To apply the FILE tracker, tables effectively
+need to be migrated from the DEFAULT tracker to the FILE tracker. As explained previously, such
+process requires the usage of the special MIGRATION tracker implementation, which can only be
+specified at table or Column Family level.
+
+For example, to switch _tracker_ from **DEFAULT** to **FILE** in a table configuration:
+
+```bash
+alter 'my-table', CONFIGURATION => {'hbase.store.file-tracker.impl' => 'MIGRATION',
+'hbase.store.file-tracker.migration.src.impl' => 'DEFAULT',
+'hbase.store.file-tracker.migration.dst.impl' => 'FILE'}
+```
+
+To apply similar switch at column family level configuration:
+
+```bash
+alter 'my-table', {NAME => 'f1', CONFIGURATION => {'hbase.store.file-tracker.impl' => 'MIGRATION',
+'hbase.store.file-tracker.migration.src.impl' => 'DEFAULT',
+'hbase.store.file-tracker.migration.dst.impl' => 'FILE'}}
+```
+
+Once all table regions have been onlined again, don't forget to disable MIGRATION, by now setting
+**hbase.store.file-tracker.migration.dst.impl** value as the **hbase.store.file-tracker.impl**. In the above
+example, that would be as follows:
+
+```bash
+alter 'my-table', CONFIGURATION => {'hbase.store.file-tracker.impl' => 'FILE'}
+```
+
+### Specifying trackers during snapshot recovery
+
+It's also possible to specify a given store file tracking implementation when recovering a snapshot
+using the _CLONE_SFT_ option of  _clone_snasphot_ command. This is useful when recovering old
+snapshots, taken prior to a change in the global configuration, or if the snapshot has been
+imported from a different cluster that had a different store file tracking setting.
+Because snapshots preserve table and colum family descriptors, a simple restore would reload
+the original configuration, requiring the additional steps described above to convert the
+table/column family to the desired tracker implementation.
+An example of how to use _clone_snapshot_ to specify the **FILE** tracker implementation
+is shown below:
+
+```bash
+clone_snapshot 'snapshotName', 'namespace:tableName', {CLONE_SFT=>'FILE'}
+```
+
+<Callout>
+The option to specify the tracker during snapshot recovery is only available for the
+_clone_snapshot_ command. The _restore_snapshot_ command does not support this parameter.
+</Callout>
+

@@ -69,7 +69,7 @@ export const projectLinks: LinkType[] = [
 export const documentationLinks: (LinkType | NestedLinkType)[] = [
   {
     label: "Reference Guide",
-    to: "https://hbase.apache.org/book.html"
+    to: "/docs"
   },
   {
     label: "Reference Guide (PDF)",

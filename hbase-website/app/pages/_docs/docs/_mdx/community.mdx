@@ -1,0 +1,102 @@
+---
+title: "Community"
+description: "Documentation for community"
+---
+# Decisions
+
+<div className="formalpara">
+
+<div className="title">
+
+Feature Branches
+
+</div>
+
+Feature Branches are easy to make. You do not have to be a committer to make one. Just request the name of your branch be added to JIRA up on the developer’s mailing list and a committer will add it for you. Thereafter you can file issues against your feature branch in Apache HBase JIRA. Your code you keep elsewhere — it should be public so it can be observed — and you can update dev mailing list on progress. When the feature is ready for commit, 3 +1s from committers will get your feature merged. See [HBase, mail \# dev - Thoughts about large feature dev branches](https://lists.apache.org/thread.html/200513c7e7e4df23c8b9134eeee009d61205c79314e77f222d396006%401346870308%40%3Cdev.hbase.apache.org%3E)
+
+</div>
+
+<div id="hbase.fix.version.in.jira" class="formalpara">
+
+<div className="title">
+
+How to set fix version in JIRA on issue resolve
+
+</div>
+
+Here is how we agreed to set versions in JIRA when we resolve an issue. If master is going to be 3.0.0, branch-2 will be 2.4.0, and branch-1 will be 1.7.0 then:
+
+</div>
+
+- Commit only to master (i.e., backward-incompatible new feature): Mark with 3.0.0
+
+- Commit only to master and branch-2 (i.e., backward-compatible new feature, applicable only to 2.x+): Mark with 3.0.0 and 2.4.0
+
+- Commit to master, branch-2, and branch-1 (i.e., backward-compatible new feature, applicable everywhere): Mark with 3.0.0, 2.4.0, and 1.7.0
+
+- Commit to master, branch-2, and branch-2.3, branch-1, branch-1.4 (i.e., bug fix applicable to all active release lines): Mark with 3.0.0, 2.4.0, 2.3.x, 1.7.0, and 1.4.x
+
+- Commit a fix to the website: no version
+
+<div id="hbase.when.to.close.jira" class="formalpara">
+
+<div className="title">
+
+Policy on when to set a RESOLVED JIRA as CLOSED
+
+</div>
+
+We agreed that for issues that list multiple releases in their *Fix Version/s* field, CLOSE the issue on the release of any of the versions listed; subsequent change to the issue must happen in a new JIRA.
+
+</div>
+
+<div id="no.permanent.state.in.zk" class="formalpara">
+
+<div className="title">
+
+Only transient state in ZooKeeper!
+
+</div>
+
+You should be able to kill the data in zookeeper and hbase should ride over it recreating the zk content as it goes. This is an old adage around these parts. We just made note of it now. We also are currently in violation of this basic tenet — replication at least keeps permanent state in zk — but we are working to undo this breaking of a golden rule.
+
+</div>
+
+# Community Roles
+
+## Release Managers
+
+Each maintained release branch has a release manager, who volunteers to coordinate new features and bug fixes are backported to that release. The release managers are [committers](https://hbase.apache.org/team.html). If you would like your feature or bug fix to be included in a given release, communicate with that release manager. If this list goes out of date or you can’t reach the listed person, reach out to someone else on the list.
+
+| Release | Release Manager | Latest Release | EOL |
+|----|----|----|----|
+| 0.94 | Lars Hofhansl | 0.94.27 | April 2017 |
+| 0.96 | Michael Stack | 0.96.2 | September 2014 |
+| 0.98 | Andrew Purtell | 0.98.24 | April 2017 |
+| 1.0 | Enis Soztutar | 1.0.3 | January 2016 |
+| 1.1 | Nick Dimiduk | 1.1.13 | December 2017 |
+| 1.2 | Sean Busbey | 1.2.12 | June 2019 |
+| 1.3 | Mikhail Antonov | 1.3.6 | August 2020 |
+| 1.4 | Andrew Purtell | 1.4.14 | October 2021 |
+| 1.5 | Andrew Purtell | 1.5.0 | October 2019 |
+| 1.6 | Andrew Purtell | 1.6.0 | February 2020 |
+| 1.7 | Reid Chan | 1.7.2 | August 2022 |
+| 2.0 | Michael Stack | 2.0.6 | September 2019 |
+| 2.1 | Duo Zhang | 2.1.10 | May 2020 |
+| 2.2 | Guanghao Zhang | 2.2.7 | April 2021 |
+| 2.3 | Nick Dimiduk | 2.3.7 | October 2021 |
+| 2.4 | Andrew Purtell | 2.4.18 | June 2024 |
+| 2.5 | Andrew Purtell | Check the [download](https://hbase.apache.org/downloads.html) page | **NOT YET** |
+| 2.6 | Bryan Beaudreault | Check the [download](https://hbase.apache.org/downloads.html) page | **NOT YET** |
+
+Release Managers
+
+# Commit Message format
+
+We agreed to the following Git commit message format:
+
+```
+HBASE-xxxxx \<title\>. (\<contributor\>)
+```
+
+If the person making the commit is the contributor, leave off the '(\<contributor\>)' element.

@@ -16,18 +16,24 @@
 // limitations under the License.
 //
 
-import { type RouteConfig, index, route } from "@react-router/dev/routes";
+import { type RouteConfig, index, layout, route } from "@react-router/dev/routes";
 
 export default [
-  index("routes/home.tsx"),
-  route("code-of-conduct", "routes/code-of-conduct.tsx"),
-  route("downloads", "routes/downloads.tsx"),
-  route("mailing-lists", "routes/mailing-lists.tsx"),
-  route("team", "routes/team.tsx"),
-  route("sponsors", "routes/sponsors.tsx"),
-  route("powered-by-hbase", "routes/powered-by-hbase.tsx"),
-  route("other-resources", "routes/other-resources.tsx"),
-  route("source-repository", "routes/source-repository.tsx"),
-  route("acid-semantics", "routes/acid-semantics.tsx"),
-  route("news", "routes/news.tsx")
+  // Landing
+  layout("./pages/_landing/landing-layout.tsx", [
+    index("routes/_landing/home.tsx"),
+    route("code-of-conduct", "routes/_landing/code-of-conduct.tsx"),
+    route("downloads", "routes/_landing/downloads.tsx"),
+    route("mailing-lists", "routes/_landing/mailing-lists.tsx"),
+    route("team", "routes/_landing/team.tsx"),
+    route("sponsors", "routes/_landing/sponsors.tsx"),
+    route("powered-by-hbase", "routes/_landing/powered-by-hbase.tsx"),
+    route("other-resources", "routes/_landing/other-resources.tsx"),
+    route("source-repository", "routes/_landing/source-repository.tsx"),
+    route("acid-semantics", "routes/_landing/acid-semantics.tsx"),
+    route("news", "routes/_landing/news.tsx")
+  ]),
+  // Docs
+  layout("./pages/_docs/docs-layout.tsx", [route("docs/*", "routes/_docs/docs.tsx")]),
+  route("api/search", "routes/_api/search.ts")
 ] satisfies RouteConfig;

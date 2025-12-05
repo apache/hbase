@@ -1,0 +1,974 @@
+////
+/**
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+////
+
+[[backuprestore]]
+= Backup and Restore
+:doctype: book
+:numbered:
+:toc: left
+:icons: font
+:experimental:
+
+[[br.overview]]
+== Overview
+
+Backup and restore is a standard operation provided by many databases. An effective backup and restore
+strategy helps ensure that users can recover data in case of unexpected failures. The HBase backup and restore
+feature helps ensure that enterprises using HBase as a canonical data repository can recover from catastrophic
+failures. Another important feature is the ability to restore the database to a particular
+point-in-time, commonly referred to as a snapshot.
+
+The HBase backup and restore feature provides the ability to create full backups and incremental backups on
+tables in an HBase cluster. The full backup is the foundation on which incremental backups are applied
+to build iterative snapshots. Incremental backups can be run on a schedule to capture changes over time,
+for example by using a Cron task. Incremental backups are more cost-effective than full backups because they only capture
+the changes since the last backup and they also enable administrators to restore the database to any prior incremental backup. Furthermore, the
+utilities also enable table-level data backup-and-recovery if you do not want to restore the entire dataset
+of the backup.
+
+The backup and restore feature supplements the HBase Replication feature. While HBase replication is ideal for
+creating "hot" copies of the data (where the replicated data is immediately available for query), the backup and
+restore feature is ideal for creating "cold" copies of data (where a manual step must be taken to restore the system).
+Previously, users only had the ability to create full backups via the ExportSnapshot functionality. The incremental
+backup implementation is the novel improvement over the previous "art" provided by ExportSnapshot.
+
+The backup and restore feature uses DistCp to transfer files between clusters .
+link:https://issues.apache.org/jira/browse/HADOOP-15850[HADOOP-15850] fixes a bug where CopyCommitter#concatFileChunks
+unconditionally tried to concatenate the files being DistCp'ed to target cluster (though the files are
+independent) . Without the fix from
+link:https://issues.apache.org/jira/browse/HADOOP-15850[HADOOP-15850] , the transfer would fail.
+So the backup and restore feature need hadoop version as below
+
+* 2.7.x
+* 2.8.x
+* 2.9.2+
+* 2.10.0+
+* 3.0.4+
+* 3.1.2+
+* 3.2.0+
+* 3.3.0+
+
+
+[[br.terminology]]
+== Terminology
+
+The backup and restore feature introduces new terminology which can be used to understand how control flows through the
+system.
+
+* _A backup_: A logical unit of data and metadata which can restore a table to its state at a specific point in time.
+* _Full backup_: a type of backup which wholly encapsulates the contents of the table at a point in time.
+* _Incremental backup_: a type of backup which contains the changes in a table since a full backup.
+* _Backup set_: A user-defined name which references one or more tables over which a backup can be executed.
+* _Backup ID_: A unique names which identifies one backup from the rest, e.g. `backupId_1467823988425`
+
+[[br.planning]]
+== Planning
+
+There are some common strategies which can be used to implement backup and restore in your environment. The following section
+shows how these strategies are implemented and identifies potential tradeoffs with each.
+
+WARNING: This backup and restore tools has not been tested on Transparent Data Encryption (TDE) enabled HDFS clusters.
+This is related to the open issue link:https://issues.apache.org/jira/browse/HBASE-16178[HBASE-16178].
+
+[[br.intracluster.backup]]
+=== Backup within a cluster
+
+This strategy stores the backups on the same cluster as where the backup was taken. This approach is only appropriate for testing
+as it does not provide any additional safety on top of what the software itself already provides.
+
+.Intra-Cluster Backup
+image::backup-intra-cluster.png[]
+
+[[br.dedicated.cluster.backup]]
+=== Backup using a dedicated cluster
+
+This strategy provides greater fault tolerance and provides a path towards disaster recovery. In this setting, you will
+store the backup on a separate HDFS cluster by supplying the backup destination cluster’s HDFS URL to the backup utility.
+You should consider backing up to a different physical location, such as a different data center.
+
+Typically, a backup-dedicated HDFS cluster uses a more economical hardware profile to save money.
+
+.Dedicated HDFS Cluster Backup
+image::backup-dedicated-cluster.png[]
+
+[[br.cloud.or.vendor.backup]]
+=== Backup to the Cloud or a storage vendor appliance
+
+Another approach to safeguarding HBase incremental backups is to store the data on provisioned, secure servers that belong
+to third-party vendors and that are located off-site. The vendor can be a public cloud provider or a storage vendor who uses
+a Hadoop-compatible file system, such as S3 and other HDFS-compatible destinations.
+
+.Backup to Cloud or Vendor Storage Solutions
+image::backup-cloud-appliance.png[]
+
+NOTE: The HBase backup utility does not support backup to multiple destinations. A workaround is to manually create copies
+of the backup files from HDFS or S3.
+
+[[br.initial.setup]]
+== First-time configuration steps
+
+This section contains the necessary configuration changes that must be made in order to use the backup and restore feature.
+As this feature makes significant use of YARN's MapReduce framework to parallelize these I/O heavy operations, configuration
+changes extend outside of just `hbase-site.xml`.
+
+=== Allow the "hbase" system user in YARN
+
+The YARN *container-executor.cfg* configuration file must have the following property setting: _allowed.system.users=hbase_. No spaces
+are allowed in entries of this configuration file.
+
+WARNING: Skipping this step will result in runtime errors when executing the first backup tasks.
+
+*Example of a valid container-executor.cfg file for backup and restore:*
+
+[source]
+----
+yarn.nodemanager.log-dirs=/var/log/hadoop/mapred
+yarn.nodemanager.linux-container-executor.group=yarn
+banned.users=hdfs,yarn,mapred,bin
+allowed.system.users=hbase
+min.user.id=500
+----
+
+=== HBase specific changes
+
+Add the following properties to hbase-site.xml and restart HBase if it is already running.
+
+NOTE: The ",..." is an ellipsis meant to imply that this is a comma-separated list of values, not literal text which should be added to hbase-site.xml.
+
+[source]
+----
+<property>
+  <name>hbase.backup.enable</name>
+  <value>true</value>
+</property>
+<property>
+  <name>hbase.master.logcleaner.plugins</name>
+  <value>org.apache.hadoop.hbase.backup.master.BackupLogCleaner,...</value>
+</property>
+<property>
+  <name>hbase.procedure.master.classes</name>
+  <value>org.apache.hadoop.hbase.backup.master.LogRollMasterProcedureManager,...</value>
+</property>
+<property>
+  <name>hbase.procedure.regionserver.classes</name>
+  <value>org.apache.hadoop.hbase.backup.regionserver.LogRollRegionServerProcedureManager,...</value>
+</property>
+<property>
+  <name>hbase.coprocessor.region.classes</name>
+  <value>org.apache.hadoop.hbase.backup.BackupObserver,...</value>
+</property>
+<property>
+  <name>hbase.coprocessor.master.classes</name>
+  <value>org.apache.hadoop.hbase.backup.BackupMasterObserver,...</value>
+</property>
+<property>
+  <name>hbase.master.hfilecleaner.plugins</name>
+  <value>org.apache.hadoop.hbase.backup.BackupHFileCleaner,...</value>
+</property>
+----
+
+== Backup and Restore commands
+
+This covers the command-line utilities that administrators would run to create, restore, and merge backups. Tools to
+inspect details on specific backup sessions is covered in the next section, <<br.administration,Administration of Backup Images>>.
+
+Run the command `hbase backup help <command>` to access the online help that provides basic information about a command
+and its options. The below information is captured in this help message for each command.
+
+// hbase backup create
+
+[[br.creating.complete.backup]]
+=== Creating a Backup Image
+
+[NOTE]
+====
+For HBase clusters also using Apache Phoenix: include the SQL system catalog tables in the backup. In the event that you
+need to restore the HBase backup, access to the system catalog tables enable you to resume Phoenix interoperability with the
+restored data.
+====
+
+The first step in running the backup and restore utilities is to perform a full backup and to store the data in a separate image
+from the source. At a minimum, you must do this to get a baseline before you can rely on incremental backups.
+
+Run the following command as HBase superuser:
+
+[source]
+----
+hbase backup create <type> <backup_path>
+----
+
+After the command finishes running, the console prints a SUCCESS or FAILURE status message. The SUCCESS message includes a _backup_ ID.
+The backup ID is the Unix time (also known as Epoch time) that the HBase master received the backup request from the client.
+
+[TIP]
+====
+Record the backup ID that appears at the end of a successful backup. In case the source cluster fails and you need to recover the
+dataset with a restore operation, having the backup ID readily available can save time.
+====
+
+[[br.create.positional.cli.arguments]]
+==== Positional Command-Line Arguments
+
+_type_::
+  The type of backup to execute: _full_ or _incremental_. As a reminder, an _incremental_ backup requires a _full_ backup to
+  already exist.
+
+_backup_path_::
+  The _backup_path_ argument specifies the full filesystem URI of where to store the backup image. Valid prefixes are
+  _hdfs:_, _webhdfs:_, _s3a:_ or other compatible Hadoop File System implementations.
+
+[[br.create.named.cli.arguments]]
+==== Named Command-Line Arguments
+
+_-t <table_name[,table_name]>_::
+  A comma-separated list of tables to back up. If no tables are specified, all tables are backed up. No regular-expression or
+  wildcard support is present; all table names must be explicitly listed. See <<br.using.backup.sets,Backup Sets>> for more
+  information about peforming operations on collections of tables. Mutually exclusive with the _-s_ option; one of these
+  named options are required.
+
+_-s <backup_set_name>_::
+  Identify tables to backup based on a backup set. See <<br.using.backup.sets,Using Backup Sets>> for the purpose and usage
+  of backup sets. Mutually exclusive with the _-t_ option.
+
+_-w <number_workers>_::
+  (Optional) Specifies the number of parallel workers to copy data to backup destination. Backups are currently executed by MapReduce jobs
+  so this value corresponds to the number of Mappers that will be spawned by the job.
+
+_-b <bandwidth_per_worker>_::
+  (Optional) Specifies the bandwidth of each worker in MB per second.
+
+_-d_::
+  (Optional) Enables "DEBUG" mode which prints additional logging about the backup creation.
+
+_-i_::
+  (Optional) Ignore checksum verify between source snapshot and exported snapshot. Especially when the source and target file system types
+   are different, we should use -i option to skip checksum-checks.
+
+_-q <name>_::
+  (Optional) Allows specification of the name of a YARN queue which the MapReduce job to create the backup should be executed in. This option
+  is useful to prevent backup tasks from stealing resources away from other MapReduce jobs of high importance.
+
+[[br.usage.examples]]
+==== Example usage
+
+[source]
+----
+$ hbase backup create full hdfs://host5:9000/data/backup -t SALES2,SALES3 -w 3
+----
+
+This command creates a full backup image of two tables, SALES2 and SALES3, in the HDFS instance who NameNode is host5:9000
+in the path _/data/backup_. The _-w_ option specifies that no more than three parallel works complete the operation.
+
+// hbase backup restore
+
+[[br.restoring.backup]]
+=== Restoring a Backup Image
+
+Run the following command as an HBase superuser. You can only restore a backup on a running HBase cluster because the data must be
+redistributed the RegionServers for the operation to complete successfully.
+
+[source]
+----
+hbase restore <backup_path> <backup_id>
+----
+
+[[br.restore.positional.args]]
+==== Positional Command-Line Arguments
+
+_backup_path_::
+  The _backup_path_ argument specifies the full filesystem URI of where to store the backup image. Valid prefixes are
+  _hdfs:_, _webhdfs:_, _s3a:_ or other compatible Hadoop File System implementations.
+
+_backup_id_::
+  The backup ID that uniquely identifies the backup image to be restored.
+
+
+[[br.restore.named.args]]
+==== Named Command-Line Arguments
+
+_-t <table_name[,table_name]>_::
+  A comma-separated list of tables to restore. See <<br.using.backup.sets,Backup Sets>> for more
+  information about peforming operations on collections of tables. Mutually exclusive with the _-s_ option; one of these
+  named options are required.
+
+_-s <backup_set_name>_::
+  Identify tables to backup based on a backup set. See <<br.using.backup.sets,Using Backup Sets>> for the purpose and usage
+  of backup sets. Mutually exclusive with the _-t_ option.
+
+_-q <name>_::
+  (Optional) Allows specification of the name of a YARN queue which the MapReduce job to create the backup should be executed in. This option
+  is useful to prevent backup tasks from stealing resources away from other MapReduce jobs of high importance.
+
+_-c_::
+  (Optional) Perform a dry-run of the restore. The actions are checked, but not executed.
+
+_-m <target_tables>_::
+  (Optional) A comma-separated list of tables to restore into. If this option is not provided, the original table name is used. When
+  this option is provided, there must be an equal number of entries provided in the `-t` option.
+
+_-o_::
+  (Optional) Overwrites the target table for the restore if the table already exists.
+
+
+[[br.restore.usage]]
+==== Example of Usage
+
+[source]
+----
+hbase restore /tmp/backup_incremental backupId_1467823988425 -t mytable1,mytable2
+----
+
+This command restores two tables of an incremental backup image. In this example:
+• `/tmp/backup_incremental` is the path to the directory containing the backup image.
+• `backupId_1467823988425` is the backup ID.
+• `mytable1` and `mytable2` are the names of tables in the backup image to be restored.
+
+[NOTE]
+====
+If the namespace of a table being restored does not exist in the target environment, it will be automatically created during the restore operation.
+link:https://issues.apache.org/jira/browse/HBASE-25707[HBASE-25707]
+====
+
+// hbase backup merge
+
+[[br.merge.backup]]
+=== Merging Incremental Backup Images
+
+This command can be used to merge two or more incremental backup images into a single incremental
+backup image. This can be used to consolidate multiple, small incremental backup images into a single
+larger incremental backup image. This command could be used to merge hourly incremental backups
+into a daily incremental backup image, or daily incremental backups into a weekly incremental backup.
+
+[source]
+----
+$ hbase backup merge <backup_ids>
+----
+
+[[br.merge.backup.positional.cli.arguments]]
+==== Positional Command-Line Arguments
+
+_backup_ids_::
+  A comma-separated list of incremental backup image IDs that are to be combined into a single image.
+
+[[br.merge.backup.named.cli.arguments]]
+==== Named Command-Line Arguments
+
+None.
+
+[[br.merge.backup.example]]
+==== Example usage
+
+[source]
+----
+$ hbase backup merge backupId_1467823988425,backupId_1467827588425
+----
+
+// hbase backup set
+
+[[br.using.backup.sets]]
+=== Using Backup Sets
+
+Backup sets can ease the administration of HBase data backups and restores by reducing the amount of repetitive input
+of table names. You can group tables into a named backup set with the `hbase backup set add` command. You can then use
+the `-set` option to invoke the name of a backup set in the `hbase backup create` or `hbase restore` rather than list
+individually every table in the group. You can have multiple backup sets.
+
+NOTE: Note the differentiation between the `hbase backup set add` command and the _-set_ option. The `hbase backup set add`
+command must be run before using the `-set` option in a different command because backup sets must be named and defined
+before using backup sets as a shortcut.
+
+If you run the `hbase backup set add` command and specify a backup set name that does not yet exist on your system, a new set
+is created. If you run the command with the name of an existing backup set name, then the tables that you specify are added
+to the set.
+
+In this command, the backup set name is case-sensitive.
+
+NOTE: The metadata of backup sets are stored within HBase. If you do not have access to the original HBase cluster with the
+backup set metadata, then you must specify individual table names to restore the data.
+
+To create a backup set, run the following command as the HBase superuser:
+
+[source]
+----
+$ hbase backup set <subcommand> <backup_set_name> <tables>
+----
+
+[[br.set.subcommands]]
+==== Backup Set Subcommands
+
+The following list details subcommands of the hbase backup set command.
+
+NOTE: You must enter one (and no more than one) of the following subcommands after hbase backup set to complete an operation.
+Also, the backup set name is case-sensitive in the command-line utility.
+
+_add_::
+  Adds table[s] to a backup set. Specify a _backup_set_name_ value after this argument to create a backup set.
+
+_remove_::
+  Removes tables from the set. Specify the tables to remove in the tables argument.
+
+_list_::
+  Lists all backup sets.
+
+_describe_::
+  Displays a description of a backup set. The information includes whether the set has full
+  or incremental backups, start and end times of the backups, and a list of the tables in the set. This subcommand must precede
+  a valid value for the _backup_set_name_ value.
+
+_delete_::
+  Deletes a backup set. Enter the value for the _backup_set_name_ option directly after the `hbase backup set delete` command.
+
+[[br.set.positional.cli.arguments]]
+==== Positional Command-Line Arguments
+
+_backup_set_name_::
+  Use to assign or invoke a backup set name. The backup set name must contain only printable characters and cannot have any spaces.
+
+_tables_::
+  List of tables (or a single table) to include in the backup set. Enter the table names as a comma-separated list. If no tables
+  are specified, all tables are included in the set.
+
+TIP: Maintain a log or other record of the case-sensitive backup set names and the corresponding tables in each set on a separate
+or remote cluster, backup strategy. This information can help you in case of failure on the primary cluster.
+
+[[br.set.usage]]
+==== Example of Usage
+
+[source]
+----
+$ hbase backup set add Q1Data TEAM3,TEAM_4
+----
+
+Depending on the environment, this command results in _one_ of the following actions:
+
+* If the `Q1Data` backup set does not exist, a backup set containing tables `TEAM_3` and `TEAM_4` is created.
+* If the `Q1Data` backup set exists already, the tables `TEAM_3` and `TEAM_4` are added to the `Q1Data` backup set.
+
+[[br.administration]]
+== Administration of Backup Images
+
+The `hbase backup` command has several subcommands that help with administering backup images as they accumulate. Most production
+environments require recurring backups, so it is necessary to have utilities to help manage the data of the backup repository.
+Some subcommands enable you to find information that can help identify backups that are relevant in a search for particular data.
+You can also delete backup images.
+
+The following list details each `hbase backup subcommand` that can help administer backups. Run the full command-subcommand line as
+the HBase superuser.
+
+// hbase backup progress
+
+[[br.managing.backup.progress]]
+=== Managing Backup Progress
+
+You can monitor a running backup in another terminal session by running the _hbase backup progress_ command and specifying the backup ID as an argument.
+
+For example, run the following command as hbase superuser to view the progress of a backup
+
+[source]
+----
+$ hbase backup progress <backup_id>
+----
+
+[[br.progress.positional.cli.arguments]]
+==== Positional Command-Line Arguments
+
+_backup_id_::
+  Specifies the backup that you want to monitor by seeing the progress information. The backupId is case-sensitive.
+
+[[br.progress.named.cli.arguments]]
+==== Named Command-Line Arguments
+
+None.
+
+[[br.progress.example]]
+==== Example usage
+
+[source]
+----
+hbase backup progress backupId_1467823988425
+----
+
+// hbase backup history
+
+[[br.managing.backup.history]]
+=== Managing Backup History
+
+This command displays a log of backup sessions. The information for each session includes backup ID, type (full or incremental), the tables
+in the backup, status, and start and end time. Specify the number of backup sessions to display with the optional -n argument.
+
+[source]
+----
+$ hbase backup history <backup_id>
+----
+
+[[br.history.positional.cli.arguments]]
+==== Positional Command-Line Arguments
+
+_backup_id_::
+  Specifies the backup that you want to monitor by seeing the progress information. The backupId is case-sensitive.
+
+[[br.history.named.cli.arguments]]
+==== Named Command-Line Arguments
+
+_-n <num_records>_::
+  (Optional) The maximum number of backup records (Default: 10).
+
+_-p <backup_root_path>_::
+  The full filesystem URI of where backup images are stored.
+
+_-s <backup_set_name>_::
+  The name of the backup set to obtain history for. Mutually exclusive with the _-t_ option.
+
+_-t_ <table_name>::
+  The name of table to obtain history for. Mutually exclusive with the _-s_ option.
+
+[[br.history.backup.example]]
+==== Example usage
+
+[source]
+----
+$ hbase backup history
+$ hbase backup history -n 20
+$ hbase backup history -t WebIndexRecords
+----
+
+// hbase backup describe
+
+[[br.describe.backup]]
+=== Describing a Backup Image
+
+This command can be used to obtain information about a specific backup image.
+
+[source]
+----
+$ hbase backup describe <backup_id>
+----
+
+[[br.describe.backup.positional.cli.arguments]]
+==== Positional Command-Line Arguments
+
+_backup_id_::
+  The ID of the backup image to describe.
+
+[[br.describe.backup.named.cli.arguments]]
+==== Named Command-Line Arguments
+
+None.
+
+[[br.describe.backup.example]]
+==== Example usage
+
+[source]
+----
+$ hbase backup describe backupId_1467823988425
+----
+
+// hbase backup delete
+
+[[br.delete.backup]]
+=== Deleting Backup Images
+
+The `hbase backup delete` command deletes backup images that are no longer needed.
+
+[[br.delete.backup.syntax]]
+==== Syntax
+
+[source]
+----
+$ hbase backup delete -l <backup_id1,backup_id2,...>
+$ hbase backup delete -k <days>
+----
+
+[[br.delete.backup.named.cli.arguments]]
+==== Named Command-Line Arguments
+
+_-l <backup_id1,backup_id2,...>_::
+Comma-separated list of backup IDs to delete.
+
+_-k <days>_::
+Deletes all backup images completed more than the specified number of days ago.
+
+NOTE: These options are **mutually exclusive**. Only one of `-l` or `-k` may be used at a time.
+
+[[br.delete.backup.example]]
+==== Example Usage
+
+Delete specific backup images by ID:
+
+[source]
+----
+$ hbase backup delete -l backupId_1467823988425,backupId_1467824989999
+----
+
+Delete all backup images older than 30 days:
+
+[source]
+----
+$ hbase backup delete -k 30
+----
+
+[CAUTION]
+====
+* Deleting a backup may affect all following incremental backups (in the same backup root) up to 
+  the next full backup. For example, if you take a full backup every 2 weeks and 
+  daily incremental backups, running `hbase backup delete -k 7` when the full backup is older than 
+  7 days will effectively remove the data for all subsequent incremental backups.
+  The backup IDs may still be listed, but their data will be gone.
+
+* If the most recent backup is an incremental backup and you delete it, 
+  you should run a **full backup** next.
+  Running another incremental backup immediately after may result in missing data in the 
+  backup image. (See link:https://issues.apache.org/jira/browse/HBASE-28084[HBASE-28084])
+====
+
+// hbase backup repair
+
+[[br.repair.backup]]
+=== Backup Repair Command
+
+This command attempts to correct any inconsistencies in persisted backup metadata which exists as
+the result of software errors or unhandled failure scenarios. While the backup implementation tries
+to correct all errors on its own, this tool may be necessary in the cases where the system cannot
+automatically recover on its own.
+
+[source]
+----
+$ hbase backup repair
+----
+
+[[br.repair.backup.positional.cli.arguments]]
+==== Positional Command-Line Arguments
+
+None.
+
+[[br.repair.backup.named.cli.arguments]]
+=== Named Command-Line Arguments
+
+None.
+
+[[br.repair.backup.example]]
+==== Example usage
+
+[source]
+----
+$ hbase backup repair
+----
+
+[[br.backup.configuration]]
+== Configuration keys
+
+The backup and restore feature includes both required and optional configuration keys.
+
+=== Required properties
+
+_hbase.backup.enable_: Controls whether or not the feature is enabled (Default: `false`). Set this value to `true`.
+
+_hbase.master.logcleaner.plugins_: A comma-separated list of classes invoked when cleaning logs in the HBase Master. Set
+this value to `org.apache.hadoop.hbase.backup.master.BackupLogCleaner` or append it to the current value.
+
+_hbase.procedure.master.classes_: A comma-separated list of classes invoked with the Procedure framework in the Master. Set
+this value to `org.apache.hadoop.hbase.backup.master.LogRollMasterProcedureManager` or append it to the current value.
+
+_hbase.procedure.regionserver.classes_: A comma-separated list of classes invoked with the Procedure framework in the RegionServer.
+Set this value to `org.apache.hadoop.hbase.backup.regionserver.LogRollRegionServerProcedureManager` or append it to the current value.
+
+_hbase.coprocessor.region.classes_: A comma-separated list of RegionObservers deployed on tables. Set this value to
+`org.apache.hadoop.hbase.backup.BackupObserver` or append it to the current value.
+
+_hbase.coprocessor.master.classes_: A comma-separated list of MasterObservers deployed on tables. Set this value to
+`org.apache.hadoop.hbase.backup.BackupMasterObserver` or append it to the current value.
+
+_hbase.master.hfilecleaner.plugins_: A comma-separated list of HFileCleaners deployed on the Master. Set this value
+to `org.apache.hadoop.hbase.backup.BackupHFileCleaner` or append it to the current value.
+
+=== Optional properties
+
+_hbase.backup.system.ttl_: The time-to-live in seconds of data in the `hbase:backup` tables (default: forever). This property
+is only relevant prior to the creation of the `hbase:backup` table. Use the `alter` command in the HBase shell to modify the TTL
+when this table already exists. See the <<br.filesystem.growth.warning,below section>> for more details on the impact of this
+configuration property.
+
+_hbase.backup.attempts.max_: The number of attempts to perform when taking hbase table snapshots (default: 10).
+
+_hbase.backup.attempts.pause.ms_: The amount of time to wait between failed snapshot attempts in milliseconds (default: 10000).
+
+_hbase.backup.logroll.timeout.millis_: The amount of time (in milliseconds) to wait for RegionServers to execute a WAL rolling
+in the Master's procedure framework (default: 30000).
+
+[[br.best.practices]]
+== Best Practices
+
+=== Formulate a restore strategy and test it.
+
+Before you rely on a backup and restore strategy for your production environment, identify how backups must be performed,
+and more importantly, how restores must be performed. Test the plan to ensure that it is workable.
+At a minimum, store backup data from a production cluster on a different cluster or server. To further safeguard the data,
+use a backup location that is at a different physical location.
+
+If you have a unrecoverable loss of data on your primary production cluster as a result of computer system issues, you may
+be able to restore the data from a different cluster or server at the same site. However, a disaster that destroys the whole
+site renders locally stored backups useless. Consider storing the backup data and necessary resources (both computing capacity
+and operator expertise) to restore the data at a site sufficiently remote from the production site. In the case of a catastrophe
+at the whole primary site (fire, earthquake, etc.), the remote backup site can be very valuable.
+
+=== Secure a full backup image first.
+
+As a baseline, you must complete a full backup of HBase data at least once before you can rely on incremental backups. The full
+backup should be stored outside of the source cluster. To ensure complete dataset recovery, you must run the restore utility
+with the option to restore baseline full backup. The full backup is the foundation of your dataset. Incremental backup data
+is applied on top of the full backup during the restore operation to return you to the point in time when backup was last taken.
+
+=== Define and use backup sets for groups of tables that are logical subsets of the entire dataset.
+
+You can group tables into an object called a backup set. A backup set can save time when you have a particular group of tables
+that you expect to repeatedly back up or restore.
+
+When you create a backup set, you type table names to include in the group. The backup set includes not only groups of related
+tables, but also retains the HBase backup metadata. Afterwards, you can invoke the backup set name to indicate what tables apply
+to the command execution instead of entering all the table names individually.
+
+=== Document the backup and restore strategy, and ideally log information about each backup.
+
+Document the whole process so that the knowledge base can transfer to new administrators after employee turnover. As an extra
+safety precaution, also log the calendar date, time, and other relevant details about the data of each backup. This metadata
+can potentially help locate a particular dataset in case of source cluster failure or primary site disaster. Maintain duplicate
+copies of all documentation: one copy at the production cluster site and another at the backup location or wherever it can be
+accessed by an administrator remotely from the production cluster.
+
+[[br.s3.backup.scenario]]
+== Scenario: Safeguarding Application Datasets on Amazon S3
+
+This scenario describes how a hypothetical retail business uses backups to safeguard application data and then restore the dataset
+after failure.
+
+The HBase administration team uses backup sets to store data from a group of tables that have interrelated information for an
+application called green. In this example, one table contains transaction records and the other contains customer details. The
+two tables need to be backed up and be recoverable as a group.
+
+The admin team also wants to ensure daily backups occur automatically.
+
+.Tables Composing The Backup Set
+image::backup-app-components.png[]
+
+The following is an outline of the steps and examples of commands that are used to backup the data for the _green_ application and
+to recover the data later. All commands are run when logged in as HBase superuser.
+
+* A backup set called _green_set_ is created as an alias for both the transactions table and the customer table. The backup set can
+be used for all operations to avoid typing each table name. The backup set name is case-sensitive and should be formed with only
+printable characters and without spaces.
+
+ $ hbase backup set add green_set transactions
+ $ hbase backup set add green_set customer
+
+* The first backup of green_set data must be a full backup. The following command example shows how credentials are passed to Amazon
+S3 and specifies the file system with the s3a: prefix.
+
+ $ ACCESS_KEY=ABCDEFGHIJKLMNOPQRST
+ $ SECRET_KEY=123456789abcdefghijklmnopqrstuvwxyzABCD
+ $ sudo -u hbase hbase backup create full\
+   s3a://$ACCESS_KEY:SECRET_KEY@prodhbasebackups/backups -s green_set
+
+* Incremental backups should be run according to a schedule that ensures essential data recovery in the event of a catastrophe. At
+this retail company, the HBase admin team decides that automated daily backups secures the data sufficiently. The team decides that
+they can implement this by modifying an existing Cron job that is defined in `/etc/crontab`. Consequently, IT modifies the Cron job
+by adding the following line:
+
+ @daily hbase hbase backup create incremental s3a://$ACCESS_KEY:$SECRET_KEY@prodhbasebackups/backups -s green_set
+
+* A catastrophic IT incident disables the production cluster that the green application uses. An HBase system administrator of the
+backup cluster must restore the _green_set_ dataset to the point in time closest to the recovery objective.
++
+NOTE: If the administrator of the backup HBase cluster has the backup ID with relevant details in accessible records, the following
+search with the `hdfs dfs -ls` command and manually scanning the backup ID list can be bypassed. Consider continuously maintaining
+and protecting a detailed log of backup IDs outside the production cluster in your environment.
++
+The HBase administrator runs the following command on the directory where backups are stored to print the list of successful backup
+IDs on the console:
+
+ `hdfs dfs -ls -t /prodhbasebackups/backups`
+
+* The admin scans the list to see which backup was created at a date and time closest to the recovery objective. To do this, the
+admin converts the calendar timestamp of the recovery point in time to Unix time because backup IDs are uniquely identified with
+Unix time. The backup IDs are listed in reverse chronological order, meaning the most recent successful backup appears first.
++
+The admin notices that the following line in the command output corresponds with the _green_set_ backup that needs to be restored:
+
+ /prodhbasebackups/backups/backup_1467823988425`
+
+* The admin restores green_set invoking the backup ID and the -overwrite option. The -overwrite option truncates all existing data
+in the destination and populates the tables with data from the backup dataset. Without this flag, the backup data is appended to the
+existing data in the destination. In this case, the admin decides to overwrite the data because it is corrupted.
+
+ $ sudo -u hbase hbase restore -s green_set \
+   s3a://$ACCESS_KEY:$SECRET_KEY@prodhbasebackups/backups backup_1467823988425 \ -overwrite
+
+[[br.data.security]]
+== Security of Backup Data
+
+With this feature which makes copying data to remote locations, it's important to take a moment to clearly state the procedural
+concerns that exist around data security. Like the HBase replication feature, backup and restore provides the constructs to automatically
+copy data from within a corporate boundary to some system outside of that boundary. It is imperative when storing sensitive data that with backup and restore, much
+less any feature which extracts data from HBase, the locations to which data is being sent has undergone a security audit to ensure
+that only authenticated users are allowed to access that data.
+
+For example, with the above example of backing up data to S3, it is of the utmost importance that the proper permissions are assigned
+to the S3 bucket to ensure that only a minimum set of authorized users are allowed to access this data. Because the data is no longer
+being accessed via HBase, and its authentication and authorization controls, we must ensure that the filesystem storing that data is
+providing a comparable level of security. This is a manual step which users *must* implement on their own.
+
+[[br.technical.details]]
+== Technical Details of Incremental Backup and Restore
+
+HBase incremental backups enable more efficient capture of HBase table images than previous attempts 
+at serial backup and restore solutions, such as those that only used HBase Export and Import APIs.
+Incremental backups use Write Ahead Logs (WALs) to capture the data changes since the 
+previous backup was created. A WAL roll (create new WALs) is executed across all RegionServers 
+to track the WALs that need to be in the backup.
+In addition to WALs, incremental backups also track bulk-loaded HFiles for tables under backup.
+
+Incremental backup gathers all WAL files generated since the last backup from the source cluster,
+converts them to HFiles in a `.tmp` directory under the `BACKUP_ROOT`, and then moves these 
+HFiles to their final location under the backup root directory to form the backup image.
+It also reads bulk load records from the backup system table, forms the paths for the corresponding 
+bulk-loaded HFiles, and copies those files to the backup destination.
+Bulk-loaded files are preserved (not deleted by cleaner chores) until they've been included in a 
+backup (for each backup root).
+A process similar to the DistCp (distributed copy) tool is used to move the backup files to the 
+target file system.
+
+When a table restore operation starts, a two-step process is initiated. 
+First, the full backup is restored from the full backup image.
+Second, all HFiles from incremental backups between the last full backup and the incremental backup 
+being restored (including bulk-loaded HFiles) are bulk loaded into the table using the 
+HBase Bulk Load utility.
+
+You can only restore on a live HBase cluster because the data must be redistributed to complete the restore operation successfully.
+
+[[br.filesystem.growth.warning]]
+== A Warning on File System Growth
+
+As a reminder, incremental backups are implemented via retaining the write-ahead logs which HBase primarily uses for data durability.
+Thus, to ensure that all data needing to be included in a backup is still available in the system, the HBase backup and restore feature
+retains all write-ahead logs since the last backup until the next incremental backup is executed.
+
+Like HBase Snapshots, this can have an expectedly large impact on the HDFS usage of HBase for high volume tables. Take care in enabling
+and using the backup and restore feature, specifically with a mind to removing backup sessions when they are not actively being used.
+
+The only automated, upper-bound on retained write-ahead logs for backup and restore is based on the TTL of the `hbase:backup` system table which,
+as of the time this document is written, is infinite (backup table entries are never automatically deleted). This requires that administrators
+perform backups on a schedule whose frequency is relative to the amount of available space on HDFS (e.g. less available HDFS space requires
+more aggressive backup merges and deletions). As a reminder, the TTL can be altered on the `hbase:backup` table using the `alter` command
+in the HBase shell. Modifying the configuration property `hbase.backup.system.ttl` in hbase-site.xml after the system table exists has no effect.
+
+[[br.backup.capacity.planning]]
+== Capacity Planning
+
+When designing a distributed system deployment, it is critical that some basic mathmatical rigor is executed to ensure sufficient computational
+capacity is available given the data and software requirements of the system. For this feature, the availability of network capacity is the largest
+bottleneck when estimating the performance of some implementation of backup and restore. The second most costly function is the speed at which
+data can be read/written.
+
+=== Full Backups
+
+To estimate the duration of a full backup, we have to understand the general actions which are invoked:
+
+* Write-ahead log roll on each RegionServer: ones to tens of seconds per RegionServer in parallel. Relative to the load on each RegionServer.
+* Take an HBase snapshot of the table(s): tens of seconds. Relative to the number of regions and files that comprise the table.
+* Export the snapshot to the destination: see below. Relative to the size of the data and the network bandwidth to the destination.
+
+[[br.export.snapshot.cost]]
+To approximate how long the final step will take, we have to make some assumptions on hardware. Be aware that these will *not* be accurate for your
+system -- these are numbers that your or your administrator know for your system. Let's say the speed of reading data from HDFS on a single node is
+capped at 80MB/s (across all Mappers that run on that host), a modern network interface controller (NIC) supports 10Gb/s, the top-of-rack switch can
+handle 40Gb/s, and the WAN between your clusters is 10Gb/s. This means that you can only ship data to your remote at a speed of 1.25GB/s -- meaning
+that 16 nodes (`1.25 * 1024 / 80 = 16`) participating in the ExportSnapshot should be able to fully saturate the link between clusters. With more
+nodes in the cluster, we can still saturate the network but at a lesser impact on any one node which helps ensure local SLAs are made. If the size
+of the snapshot is 10TB, this would full backup would take in the ballpark of 2.5 hours (`10 * 1024 / 1.25 / (60 * 60) = 2.23hrs`)
+
+As a general statement, it is very likely that the WAN bandwidth between your local cluster and the remote storage is the largest
+bottleneck to the speed of a full backup.
+
+When the concern is restricting the computational impact of backups to a "production system", the above formulas can be reused with the optional
+command-line arguments to `hbase backup create`: `-b`, `-w`, `-q`. The `-b` option defines the bandwidth at which each worker (Mapper) would
+write data. The `-w` argument limits the number of workers that would be spawned in the DistCp job. The `-q` allows the user to specify a YARN
+queue which can limit the specific nodes where the workers will be spawned -- this can quarantine the backup workers performing the copy to
+a set of non-critical nodes. Relating the `-b` and `-w` options to our earlier equations: `-b` would be used to restrict each node from reading
+data at the full 80MB/s and `-w` is used to limit the job from spawning 16 worker tasks.
+
+=== Incremental Backup
+
+Like we did for full backups, we have to understand the incremental backup process to approximate its runtime and cost.
+
+* Identify new write-ahead logs since the last full or incremental backup: negligible. Apriori knowledge from the backup system table(s).
+* Read, filter, and write "minimized" HFiles equivalent to the WALs: dominated by the speed of writing data. Relative to write speed of HDFS.
+* Read bulk load records from the backup system table, form the paths for bulk-loaded HFiles, and copy them to the backup destination.
+* DistCp the HFiles to the destination: <<br.export.snapshot.cost,see above>>.
+
+For the second step, the dominating cost of this operation would be the re-writing the data (under the assumption that a majority of the
+data in the WAL is preserved). In this case, we can assume an aggregate write speed of 30MB/s per node. Continuing our 16-node cluster example,
+this would require approximately 15 minutes to perform this step for 50GB of data (50 * 1024 / 60 / 60 = 14.2). The amount of time to start the
+DistCp MapReduce job would likely dominate the actual time taken to copy the data (50 / 1.25 = 40 seconds) and can be ignored.
+
+[[br.limitations]]
+== Limitations of the Backup and Restore Utility
+
+*Serial backup operations*
+
+Backup operations cannot be run concurrently. An operation includes actions like create, delete, restore, and merge. Only one active backup session is supported. link:https://issues.apache.org/jira/browse/HBASE-16391[HBASE-16391]
+will introduce multiple-backup sessions support.
+
+*No means to cancel backups*
+
+Both backup and restore operations cannot be canceled. (link:https://issues.apache.org/jira/browse/HBASE-15997[HBASE-15997], link:https://issues.apache.org/jira/browse/HBASE-15998[HBASE-15998]).
+The workaround to cancel a backup would be to kill the client-side backup command (`control-C`), ensure all relevant MapReduce jobs have exited, and then
+run the `hbase backup repair` command to ensure the system backup metadata is consistent.
+
+*Backups can only be saved to a single location*
+
+Copying backup information to multiple locations is an exercise left to the user. link:https://issues.apache.org/jira/browse/HBASE-15476[HBASE-15476] will
+introduce the ability to specify multiple-backup destinations intrinsically.
+
+*HBase superuser access is required*
+
+Only an HBase superuser (e.g. hbase) is allowed to perform backup/restore, can pose a problem for shared HBase installations. Current mitigations would require
+coordination with system administrators to build and deploy a backup and restore strategy (link:https://issues.apache.org/jira/browse/HBASE-14138[HBASE-14138]).
+
+*Backup restoration is an online operation*
+
+To perform a restore from a backup, it requires that the HBase cluster is online as a caveat of the current implementation (link:https://issues.apache.org/jira/browse/HBASE-16573[HBASE-16573]).
+
+*Some operations may fail and require re-run*
+
+The HBase backup feature is primarily client driven. While there is the standard HBase retry logic built into the HBase Connection, persistent errors in executing operations
+may propagate back to the client (e.g. snapshot failure due to region splits). The backup implementation should be moved from client-side into the ProcedureV2 framework
+in the future which would provide additional robustness around transient/retryable failures. The `hbase backup repair` command is meant to correct states which the system
+cannot automatically detect and recover from.
+
+*Avoidance of declaration of public API*
+
+While the Java API to interact with this feature exists and its implementation is separated from an interface, insufficient rigor has been applied to determine if
+it is exactly what we intend to ship to users. As such, it is marked as for a `Private` audience with the expectation that, as users begin to try the feature, there
+will be modifications that would necessitate breaking compatibility (link:https://issues.apache.org/jira/browse/HBASE-17517[HBASE-17517]).
+
+*Lack of global metrics for backup and restore*
+
+Individual backup and restore operations contain metrics about the amount of work the operation included, but there is no centralized location (e.g. the Master UI)
+which present information for consumption (link:https://issues.apache.org/jira/browse/HBASE-16565[HBASE-16565]).

@@ -1,0 +1,151 @@
+---
+title: "Building and Developing Apache HBase"
+description: "Developer guide for building, testing, and contributing to Apache HBase."
+---
+
+This chapter provides information for developers who want to build, test, or contribute to Apache HBase.
+
+## Getting the Source Code
+
+The HBase source code is managed using Git. The canonical repository is hosted by the Apache Software Foundation.
+
+```bash
+git clone https://gitbox.apache.org/repos/asf/hbase.git
+cd hbase
+```
+
+## Building HBase
+
+HBase uses Apache Maven for its build system.
+
+### Prerequisites
+
+* JDK 8 or later
+* Apache Maven 3.0.5 or later
+* Internet connection for first build (to download dependencies)
+
+### Building from Source
+
+To build HBase from source:
+
+```bash
+mvn clean package -DskipTests
+```
+
+To build and run tests:
+
+```bash
+mvn clean package
+```
+
+To build distribution artifacts:
+
+```bash
+mvn clean package -DskipTests assembly:single
+```
+
+## Running Tests
+
+HBase has an extensive test suite including unit tests and integration tests.
+
+### Running Unit Tests
+
+Run all unit tests:
+
+```bash
+mvn test
+```
+
+Run tests for a specific module:
+
+```bash
+mvn test -pl hbase-server
+```
+
+Run a specific test class:
+
+```bash
+mvn test -Dtest=TestRegionSplitting
+```
+
+### Running Integration Tests
+
+Integration tests are longer-running tests that verify end-to-end functionality:
+
+```bash
+mvn verify -P runAllTests
+```
+
+## IDE Setup
+
+### IntelliJ IDEA
+
+1. Import the project as a Maven project
+2. Set JDK to version 8 or later
+3. Enable annotation processing
+
+### Eclipse
+
+1. Install m2eclipse plugin
+2. Import as Maven project
+3. Configure JDK
+
+## Code Standards
+
+HBase follows standard Java coding conventions. Key points:
+
+* Use 2 spaces for indentation (not tabs)
+* Line length limit of 100 characters
+* Follow Java naming conventions
+* Add appropriate Javadoc comments
+* Include unit tests with code changes
+
+## Contributing
+
+### Workflow
+
+1. File a JIRA issue for your change
+2. Discuss the approach on the JIRA or dev list if it's a significant change
+3. Create a patch or pull request
+4. Respond to code review feedback
+5. Commit once approved
+
+### Submitting Patches
+
+HBase accepts contributions via:
+* Git patches attached to JIRA
+* Pull requests on GitHub (mirrored to JIRA)
+
+### Code Review
+
+All code changes require review before being committed. Reviews happen on JIRA or through GitHub pull requests.
+
+## Debugging
+
+### Enabling Debug Logging
+
+To enable debug logging for a specific class or package, you can:
+* Edit log4j2.properties and restart
+* Use the Web UI to change log levels dynamically
+* Use the HBase shell `set_log_level` command
+
+### Using a Debugger
+
+You can attach a remote debugger to HBase processes by setting JAVA_DEBUG options in hbase-env.sh:
+
+```bash
+export HBASE_MASTER_OPTS="$HBASE_MASTER_OPTS -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=8070"
+export HBASE_REGIONSERVER_OPTS="$HBASE_REGIONSERVER_OPTS -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=8071"
+```
+
+Then connect your IDE's remote debugger to the appropriate port.
+
+## Resources
+
+* [HBase JIRA](https://issues.apache.org/jira/browse/HBASE)
+* [HBase Dev Mailing List](mailto:dev@hbase.apache.org)
+* [HBase Book](https://hbase.apache.org/book.html)
+* [HBase Wiki](https://cwiki.apache.org/confluence/display/HBASE)
+
+For more detailed developer information including advanced topics, contribution guidelines, and release procedures, please refer to the HBase developer documentation and community resources.
+

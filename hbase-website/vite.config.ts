@@ -21,11 +21,13 @@ import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 import { resolve } from "path";
-
+import mdx from "fumadocs-mdx/vite";
+import * as MdxConfig from "./source.config";
 export default defineConfig({
-  plugins: [tailwindcss(), reactRouter(), tsconfigPaths()],
+  plugins: [mdx(MdxConfig), tailwindcss(), reactRouter(), tsconfigPaths()],
   resolve: {
     alias: {
+      "@/.source": resolve(__dirname, ".source"),
       "@": resolve(__dirname, "app")
     }
   }
