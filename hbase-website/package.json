@@ -83,7 +83,7 @@
     "tw-animate-css": "1.3.3",
     "typescript": "^5.9.2",
     "typescript-eslint": "^8.45.0",
-    "vite": "^7.1.7",
+    "vite": "^7.2.6",
     "vite-tsconfig-paths": "^5.1.4",
     "vitest": "^4.0.4"
   }
