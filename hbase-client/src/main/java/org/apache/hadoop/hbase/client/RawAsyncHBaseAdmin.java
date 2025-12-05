@@ -1340,7 +1340,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
           }
           List<ColumnFamilyDescriptor> mobColumnFamilies =
             Arrays.stream(tableDesc.getColumnFamilies())
-              .filter(ColumnFamilyDescriptor::isMobEnabled).toList();
+              .filter(ColumnFamilyDescriptor::isMobEnabled).collect(Collectors.toList());
           if (mobColumnFamilies.isEmpty()) {
             // It's not a mob table, nothing to do.
             future.complete(null);
