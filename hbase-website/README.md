@@ -145,14 +145,14 @@ my-react-router-app/
 │   │   │   ├── hero.tsx          # Hero section (not exported)
 │   │   │   ├── features.tsx      # Features section (not exported)
 │   │   │   └── ...
-│   │   ├── team/                 # Team page
+│   │   ├── downloads/            # Downloads page
 │   │   │   ├── index.tsx         # Main page component (exported)
 │   │   │   └── content.md        # Markdown content
 │   │   └── ...
 │   │
 │   ├── routes/                   # Route definitions and metadata
 │   │   ├── home.tsx              # Home route configuration
-│   │   ├── team.tsx              # Team route configuration
+│   │   ├── download.tsx          # Downloads route configuration
 │   │   └── ...
 │   │
 │   ├── lib/                      # Utility functions and integrations
@@ -164,11 +164,6 @@ my-react-router-app/
 │   └── app.css                   # Global styles
 │
 ├── build/                        # Generated files (DO NOT EDIT)
-│   ├── client/                   # Browser-side assets
-│   │   ├── index.html            # HTML files for each page
-│   │   ├── assets/               # JavaScript, CSS bundles
-│   │   └── images/               # Optimized images
-│   └── server/                   # Server-side code (if using SSR)
 │
 ├── public/                       # Static files (copied as-is to build/)
 │   ├── favicon.ico               # Website icon
@@ -388,13 +383,28 @@ The `build/client/` directory contains everything needed to deploy the website t
 
 ### Maven Integration
 
-The website is integrated with the Apache HBase Maven build system using the `frontend-maven-plugin`. This allows the website to be built as part of the main HBase build or separately using Maven commands.
+The website is integrated with the Apache HBase Maven build system using the `frontend-maven-plugin`. The website is configured to build **only during site generation** (`mvn site`) and will not build during regular Maven lifecycle phases like `mvn clean install`.
 
-#### What Gets Executed
+#### When the Website Builds
 
-When you run the Maven build, it automatically:
+The website build is triggered **only** when you run:
 
-1. **Cleans previous build artifacts** (when using `mvn clean`)
+```bash
+mvn site
+```
+
+The website will **NOT** build during regular commands like:
+- `mvn clean install`
+- `mvn package`
+- `mvn compile`
+
+This keeps regular HBase builds fast while still allowing the website to be generated when needed.
+
+#### What Gets Executed During `mvn site`
+
+When you run `mvn site`, the website module automatically:
+
+1. **Cleans previous build artifacts**
    - Removes `build/` directory
    - Removes `node_modules/` directory
    - Ensures a fresh build environment
@@ -407,81 +417,56 @@ When you run the Maven build, it automatically:
    - Reads from `package.json`
    - Installs to `node_modules/`
 
-4. **Runs `npm run ci`** which executes:
+4. **Extracts developers data** from the parent `pom.xml`
+   - Creates `app/pages/team/developers.json`
+   - Required for the Team page
+
+5. **Runs `npm run ci`** which executes:
    - `npm run lint` - ESLint code quality checks
    - `npm run typecheck` - TypeScript type checking
    - `npm run test:run` - Vitest unit tests
    - `npm run build` - Production build
 
-5. **Build Output**: Generated files are in `build/` directory
+6. **Build Output**: Generated files are in `build/` directory
 
 #### Maven Commands
 
-**Build Website with Full HBase Build:**
+**Build HBase WITHOUT the Website (default):**
 ```bash
 # From HBase root directory
 mvn clean install
 ```
 
-The website will be built automatically as part of the full build.
+**Build the Website:**
+```bash
+# From HBase root or hbase-website directory
+mvn site
+```
+
+This generates the full HBase website including documentation and the React-based website.
 
 **Build Website Only:**
 ```bash
-# Option 1: From HBase root directory
-mvn clean install -pl hbase-website
-
-# Option 2: From hbase-website directory
+# From hbase-website directory
 cd hbase-website
-mvn clean install
-```
-
-**Skip Website Build:**
-
-If you want to build HBase but skip the website:
-
-```bash
-# From HBase root directory
-mvn clean install -DskipSite
-```
-
-**Validate Configuration Only:**
-
-To verify the Maven configuration without building:
-
-```bash
-cd hbase-website
-mvn validate
+mvn site
 ```
 
 #### Maven Lifecycle Phases
 
-The frontend-maven-plugin binds to these Maven phases:
+The frontend-maven-plugin binds to these **site-specific** Maven phases:
 
-- **generate-resources**: Installs Node.js/npm and runs `npm install`
-- **compile**: Runs `npm run ci` (lint, typecheck, test, build)
-
-#### Build Artifacts
-
-After a successful Maven build, you'll find:
-
-```
-hbase-website/
-├── build/                    # Production build output
-│   ├── client/               # Static website files
-│   └── server/               # Server-side code (if applicable)
-├── node_modules/             # npm dependencies (gitignored)
-├── target/                   # Maven build directory (gitignored)
-│   └── node/                 # Installed Node.js/npm (gitignored)
-└── ...
-```
+- **pre-site**: Installs Node.js/npm, runs `npm install`, and extracts developers data
+- **site**: Runs `npm run ci` (lint, typecheck, test, build)
 
 #### Integration with CI/CD
 
 The Maven configuration ensures consistent builds across different environments:
 
-- **Local Development**: Developers can build with `mvn clean install`
+- **Local Development**: Developers can build HBase with `mvn clean install` (website not included)
+- **Website Generation**: Use `mvn site` to generate the full website and documentation
 - **CI/CD Pipelines**: Automated builds work out-of-the-box with Maven
-- **No Manual Steps**: No need to manually run `npm install` or `npm run ci`
+- **No Manual Steps**: No need to manually run `npm install` or `npm run ci` when using `mvn site`
 
 #### Maven Troubleshooting
 
@@ -490,8 +475,16 @@ The Maven configuration ensures consistent builds across different environments:
 ```bash
 # Clean and rebuild
 cd hbase-website
-mvn clean install
+mvn clean site
 ```
+
+This will:
+- Remove `build/` directory
+- Remove `node_modules/` directory
+- Remove `target/` directory
+- Reinstall Node.js and npm
+- Install all dependencies fresh
+- Run the full build pipeline
 
 **Build Fails During npm run ci:**
 
@@ -513,53 +506,15 @@ npm run build     # Check build
 
 Fix any errors and try the Maven build again.
 
-**Clean Everything:**
-
-To completely reset the build environment, use Maven's clean phase which automatically removes `build/` and `node_modules/`:
-
-```bash
-cd hbase-website
-mvn clean install
-```
-
-This will:
-- Remove `build/` directory
-- Remove `node_modules/` directory
-- Remove `target/` directory
-- Reinstall Node.js and npm
-- Install all dependencies fresh
-- Run the full build pipeline
-
-For a manual clean (if needed):
-```bash
-cd hbase-website
-rm -rf node_modules/ build/ target/ .react-router/
-mvn clean install
-```
-
 #### Configuration Files
 
 - **pom.xml**: Maven configuration using frontend-maven-plugin
 - **package.json**: npm scripts and dependencies
 - **.gitignore**: Excludes `target/`, `node/`, `node_modules/`, `build/`
 
-#### Benefits
-
-✅ **Consistent Builds**: Same build process everywhere (local, CI, production)
-✅ **No Manual Steps**: Maven handles everything automatically
-✅ **Isolated Node.js**: Doesn't interfere with system Node installation
-✅ **Skip Option**: Can skip website build with `-DskipSite`
-✅ **Standalone**: Can build website separately with `-pl hbase-website`
-✅ **Quality Checks**: Runs linting, type checking, and tests before building
-
 #### For HBase Developers
 
-If you're working on HBase but not the website:
-
-```bash
-# Skip website build to save time
-mvn clean install -DskipSite
-```
+The website only builds when you explicitly run `mvn site`.
 
 If you're working on the website:
 
@@ -569,33 +524,12 @@ cd hbase-website
 npm install
 npm run dev      # Start dev server with hot reload
 
-# Or use Maven for full CI pipeline
-mvn clean install
+# Or use Maven to build the website
+cd hbase-website
+mvn site
 ```
 
 ### Deployment
-
-#### Docker Deployment (most likely won't use in production)
-
-Build and run using Docker:
-
-```bash
-# Build the Docker image
-docker build -t hbase-website .
-
-# Run the container
-docker run -p 3000:3000 hbase-website
-```
-
-The website will be available at `http://localhost:3000`.
-
-**Deploy to any platform supporting Docker:**
-- AWS ECS
-- Google Cloud Run
-- Azure Container Apps
-- Digital Ocean App Platform
-- Fly.io
-- Railway
 
 #### Static Hosting
 
@@ -604,8 +538,6 @@ Since this site uses Static Site Generation (SSG), you can deploy the `build/cli
 - **Apache HTTP Server**: Copy `build/client/` contents to your web root
 - **Nginx**: Copy `build/client/` contents to your web root
 - **GitHub Pages**: Push `build/client/` to `gh-pages` branch
-- **Netlify/Vercel**: Connect your repository for automatic deployments
-- **AWS S3 + CloudFront**: Upload `build/client/` to S3 bucket
 
 ### Troubleshooting
 
@@ -627,24 +559,6 @@ lsof -ti:5173 | xargs kill -9
 
 # Or change the port in vite.config.ts
 ```
-
-#### Build Fails
-
-1. **Clear generated files:**
-   ```bash
-   rm -rf build/ node_modules/.vite
-   ```
-
-2. **Reinstall dependencies:**
-   ```bash
-   rm -rf node_modules/
-   npm install
-   ```
-
-3. **Try building again:**
-   ```bash
-   npm run build
-   ```
 
 #### Need to Clean Everything
 
