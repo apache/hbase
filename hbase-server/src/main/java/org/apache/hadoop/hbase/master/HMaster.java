@@ -1080,7 +1080,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     if (!maintenanceMode) {
       startupTaskGroup.addTask("Initializing master coprocessors");
       setQuotasObserver(conf);
-      initializeCoprocessorHost(conf);
+      this.cpHost = new MasterCoprocessorHost(this, conf);
     } else {
       // start an in process region server for carrying system regions
       maintenanceRegionServer =
@@ -4417,11 +4417,11 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     setQuotasObserver(newConf);
     // update region server coprocessor if the configuration has changed.
     if (
-      CoprocessorConfigurationUtil.checkConfigurationChange(getConfiguration(), newConf,
+      CoprocessorConfigurationUtil.checkConfigurationChange(this.cpHost, newConf,
         CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY) && !maintenanceMode
     ) {
       LOG.info("Update the master coprocessor(s) because the configuration has changed");
-      initializeCoprocessorHost(newConf);
+      this.cpHost = new MasterCoprocessorHost(this, newConf);
     }
   }
 
@@ -4518,11 +4518,6 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     if (QuotaUtil.isQuotaEnabled(conf)) {
       updateConfigurationForQuotasObserver(conf);
     }
-  }
-
-  private void initializeCoprocessorHost(Configuration conf) {
-    // initialize master side coprocessors before we start handling requests
-    this.cpHost = new MasterCoprocessorHost(this, conf);
   }
 
   @Override
