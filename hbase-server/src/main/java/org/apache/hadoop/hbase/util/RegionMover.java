@@ -871,7 +871,7 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
     if (fileName != null) {
       List<String> servers = readServersFromFile(fileName);
       if (servers.isEmpty()) {
-        LOG.warn("No servers provided in the file: {}." + fileName);
+        LOG.warn("No servers provided in the file: {}.", fileName);
         return;
       }
       Iterator<ServerName> i = regionServers.iterator();
