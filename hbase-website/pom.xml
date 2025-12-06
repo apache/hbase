@@ -70,7 +70,7 @@
             <goals>
               <goal>install-node-and-npm</goal>
             </goals>
-            <phase>generate-sources</phase>
+            <phase>pre-site</phase>
             <configuration>
               <nodeVersion>${node.version}</nodeVersion>
               <npmVersion>${npm.version}</npmVersion>
@@ -82,7 +82,7 @@
             <goals>
               <goal>npm</goal>
             </goals>
-            <phase>generate-resources</phase>
+            <phase>pre-site</phase>
             <configuration>
               <arguments>install</arguments>
             </configuration>
@@ -93,7 +93,7 @@
             <goals>
               <goal>npm</goal>
             </goals>
-            <phase>generate-resources</phase>
+            <phase>pre-site</phase>
             <configuration>
               <arguments>run extract-developers</arguments>
             </configuration>
@@ -104,7 +104,7 @@
             <goals>
               <goal>npm</goal>
             </goals>
-            <phase>compile</phase>
+            <phase>site</phase>
             <configuration>
               <arguments>run ci</arguments>
             </configuration>
