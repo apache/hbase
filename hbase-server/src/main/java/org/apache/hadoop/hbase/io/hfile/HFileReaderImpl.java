@@ -1256,7 +1256,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
       // Check cache for block. If found return.
       long metaBlockOffset = metaBlockIndexReader.getRootBlockOffset(block);
       BlockCacheKey cacheKey =
-        new BlockCacheKey(name, metaBlockOffset, this.isPrimaryReplicaReader(), BlockType.META);
+        new BlockCacheKey(path, metaBlockOffset, this.isPrimaryReplicaReader(), BlockType.META);
 
       cacheBlock &=
         cacheConf.shouldCacheBlockOnRead(BlockType.META.getCategory(), getHFileInfo(), conf);

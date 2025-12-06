@@ -49,6 +49,9 @@ message BlockCacheKey {
   required int64 offset = 2;
   required BlockType block_type = 3;
   required bool primary_replica_block = 4;
+  optional string region_name = 5;
+  optional string family_name = 6;
+  optional bool archived = 7;
 }
 
 enum BlockType {

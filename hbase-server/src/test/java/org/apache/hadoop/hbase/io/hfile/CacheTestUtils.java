@@ -280,7 +280,24 @@ public class CacheTestUtils {
   }
 
   public static HFileBlockPair[] generateHFileBlocks(int blockSize, int numBlocks) {
-    return generateBlocksForPath(blockSize, numBlocks, null);
+    return generateBlocksForPath(blockSize, numBlocks, null, false);
+  }
+
+  public static String[] getHFileNames(HFileBlockPair[] blocks) {
+    String[] names = new String[blocks.length];
+    for (int i = 0; i < blocks.length; i++) {
+      names[i] = blocks[i].blockName.getHfileName();
+    }
+    return names;
+  }
+
+  public static BlockCacheKey[] regenerateKeys(HFileBlockPair[] blocks, String[] names) {
+    BlockCacheKey[] keys = new BlockCacheKey[blocks.length];
+    for (int i = 0; i < blocks.length; i++) {
+      keys[i] = new BlockCacheKey(names[i], blocks[i].blockName.getOffset(), true,
+        blocks[i].blockName.getBlockType());
+    }
+    return keys;
   }
 
   public static HFileBlockPair[] generateBlocksForPath(int blockSize, int numBlocks, Path path,
@@ -312,26 +329,23 @@ public class CacheTestUtils {
         ByteBuffAllocator.HEAP);
       String key = null;
       long offset = 0;
+      returnedBlocks[i] = new HFileBlockPair();
       if (path != null) {
-        key = path.getName();
         offset = i * blockSize;
+        returnedBlocks[i].blockName =
+          new BlockCacheKey(path, offset, true, encoded ? BlockType.ENCODED_DATA : BlockType.DATA);
       } else {
         /* No conflicting keys */
         key = Long.toString(rand.nextLong());
         while (!usedStrings.add(key)) {
           key = Long.toString(rand.nextLong());
         }
+        returnedBlocks[i].blockName =
+          new BlockCacheKey(key, offset, true, encoded ? BlockType.ENCODED_DATA : BlockType.DATA);
       }
-      returnedBlocks[i] = new HFileBlockPair();
-      returnedBlocks[i].blockName =
-        new BlockCacheKey(key, offset, true, encoded ? BlockType.ENCODED_DATA : BlockType.DATA);
       returnedBlocks[i].block = generated;
     }
     return returnedBlocks;
-  }
-
-  public static HFileBlockPair[] generateBlocksForPath(int blockSize, int numBlocks, Path path) {
-    return generateBlocksForPath(blockSize, numBlocks, path, false);
   }
 
   public static class HFileBlockPair {
