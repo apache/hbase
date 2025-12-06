@@ -107,7 +107,8 @@ class AsyncBufferedMutatorImpl implements AsyncBufferedMutator {
    * Atomically drains the current buffered mutations and futures under {@link #lock} and prepares
    * this mutator to accept a new batch.
    * <p>
-   * Acquires {@link #lock} and cancels any pending {@link #periodicFlushTask} to avoid a redundant
+   * The {@link #lock} must be acquired before calling this method.
+   * Cancels any pending {@link #periodicFlushTask} to avoid a redundant
    * flush for the data we are about to send. Swaps the shared {@link #mutations} and
    * {@link #futures} lists into a returned {@link Batch}, replaces them with fresh lists, and
    * resets {@link #bufferedSize} to zero.
