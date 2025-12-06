@@ -147,8 +147,8 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
     // provided as @InterfaceAudience.Private and it is commented that this is just
     // to be used by unit test.
     rackManager = builder.rackManager == null ? new RackManager(conf) : builder.rackManager;
-    this.maxRetries = admin.getConfiguration()
-      .getInt(RegionMover.MOVE_RETRIES_MAX_KEY, RegionMover.DEFAULT_MOVE_RETRIES_MAX);
+    this.maxRetries = admin.getConfiguration().getInt(RegionMover.MOVE_RETRIES_MAX_KEY,
+      RegionMover.DEFAULT_MOVE_RETRIES_MAX);
   }
 
   private RegionMover() {
@@ -404,8 +404,7 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
     // region move is attempted only once. Timeout = regions * wait_per_region * retries
     int retries = (ack) ? maxRetries : 1;
     long timeoutInSeconds = regionsToMove.size()
-      * admin.getConfiguration().getLong(MOVE_WAIT_MAX_KEY, DEFAULT_MOVE_WAIT_MAX)
-      * retries;
+      * admin.getConfiguration().getLong(MOVE_WAIT_MAX_KEY, DEFAULT_MOVE_WAIT_MAX) * retries;
 
     waitMoveTasksToFinish(moveRegionsPool, taskList, timeoutInSeconds);
   }
@@ -696,8 +695,7 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
     // region move is attempted only once. Timeout = regions * wait_per_region * retries
     int retries = (ack || forceMoveRegionByAck) ? maxRetries : 1;
     long timeoutInSeconds = regionsToMove.size()
-      * admin.getConfiguration().getLong(MOVE_WAIT_MAX_KEY, DEFAULT_MOVE_WAIT_MAX)
-      * retries;
+      * admin.getConfiguration().getLong(MOVE_WAIT_MAX_KEY, DEFAULT_MOVE_WAIT_MAX) * retries;
 
     waitMoveTasksToFinish(moveRegionsPool, taskList, timeoutInSeconds);
   }
