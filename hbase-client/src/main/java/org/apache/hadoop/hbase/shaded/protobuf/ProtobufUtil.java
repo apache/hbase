@@ -1099,6 +1099,9 @@ public final class ProtobufUtil {
       scanBuilder.setNeedCursorResult(true);
     }
     scanBuilder.setQueryMetricsEnabled(scan.isQueryMetricsEnabled());
+    if (scan.getLimit() > 0) {
+      scanBuilder.setLimit(scan.getLimit());
+    }
     return scanBuilder.build();
   }
 
@@ -1204,6 +1207,9 @@ public final class ProtobufUtil {
       scan.setNeedCursorResult(true);
     }
     scan.setQueryMetricsEnabled(proto.getQueryMetricsEnabled());
+    if (proto.hasLimit()) {
+      scan.setLimit(proto.getLimit());
+    }
     return scan;
   }
 
