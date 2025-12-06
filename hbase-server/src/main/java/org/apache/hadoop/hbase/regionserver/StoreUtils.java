@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -181,6 +182,13 @@ public final class StoreUtils {
 
   public static List<StoreFileInfo> toStoreFileInfo(Collection<HStoreFile> storefiles) {
     return storefiles.stream().map(HStoreFile::getFileInfo).collect(Collectors.toList());
+  }
+
+  public static List<HStoreFile> toHStoreFile(List<StoreFileInfo> storeFileInfoList,
+    BloomType bloomType, CacheConfig cacheConf) {
+    return storeFileInfoList.stream()
+      .map(storeFileInfo -> new HStoreFile(storeFileInfo, bloomType, cacheConf))
+      .collect(Collectors.toList());
   }
 
   public static long getTotalUncompressedBytes(List<HStoreFile> files) {
