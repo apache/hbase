@@ -8541,7 +8541,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     this.storeHotnessProtector.update(conf);
     // update coprocessorHost if the configuration has changed.
     if (
-      CoprocessorConfigurationUtil.checkConfigurationChange(getReadOnlyConfiguration(), conf,
+      CoprocessorConfigurationUtil.checkConfigurationChange(this.coprocessorHost, conf,
         CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
         CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY)
     ) {
