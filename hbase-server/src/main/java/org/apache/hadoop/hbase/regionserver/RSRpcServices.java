@@ -2338,11 +2338,6 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
     final BulkLoadHFileRequest request) throws ServiceException {
     long start = EnvironmentEdgeManager.currentTime();
     List<String> clusterIds = new ArrayList<>(request.getClusterIdsList());
-    if (clusterIds.contains(this.server.getClusterId())) {
-      return BulkLoadHFileResponse.newBuilder().setLoaded(true).build();
-    } else {
-      clusterIds.add(this.server.getClusterId());
-    }
     try {
       checkOpen();
       requestCount.increment();
