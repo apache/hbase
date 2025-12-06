@@ -15,23 +15,43 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.regionserver.http;
+package org.apache.hadoop.hbase.util;
 
-import java.io.IOException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Only kept for redirecting to regionserver.jsp.
+ * Utility used by both Master and Region Server web UI JSP pages.
  */
 @InterfaceAudience.Private
-public class RSStatusServlet extends HttpServlet {
-  private static final long serialVersionUID = 1L;
+public final class ZKStringFormatter {
 
-  @Override
-  public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
-    response.sendRedirect(request.getContextPath() + "/regionserver.jsp");
+  private ZKStringFormatter() {
+    // Do not instantiate.
+  }
+
+  public static String formatZKString(ZKWatcher zookeeper) {
+    StringBuilder quorums = new StringBuilder();
+    String zkQuorum = zookeeper.getQuorum();
+
+    if (null == zkQuorum) {
+      return quorums.toString();
+    }
+
+    String[] zks = zkQuorum.split(",");
+
+    if (zks.length == 0) {
+      return quorums.toString();
+    }
+
+    for (int i = 0; i < zks.length; ++i) {
+      quorums.append(zks[i].trim());
+
+      if (i != (zks.length - 1)) {
+        quorums.append("<br/>");
+      }
+    }
+
+    return quorums.toString();
   }
 }

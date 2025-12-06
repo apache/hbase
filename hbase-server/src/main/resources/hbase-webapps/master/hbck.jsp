@@ -383,7 +383,7 @@ private static String formatServerName(HMaster master,
     int infoPort = master.getRegionServerInfoPort(serverName);
     if (infoPort > 0) {
       return "<a href=" + "//" + serverName.getHostname() + ":" +
-        infoPort + "/rs-status>" + sn + "</a>";
+        infoPort + "/regionserver.jsp>" + sn + "</a>";
     } else {
       return "<b>" + sn + "</b>";
     }

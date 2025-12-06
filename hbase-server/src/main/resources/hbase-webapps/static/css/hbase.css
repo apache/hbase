@@ -152,3 +152,32 @@ table.tablesorter thead tr .tablesorter-headerDesc {
 table.nowrap th, table.nowrap td {
     white-space: nowrap;
 }
+
+/* Block Cache pagination */
+.pagination-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 0;
+}
+
+.page-numbers {
+  display: flex;
+  gap: 4px;
+}
+
+.page-number {
+  min-width: 30px;
+  text-align: center;
+}
+
+.page-number.active {
+  font-weight: bold;
+  background-color: #eee;
+}
+
+.page-info {
+  margin-left: 15px;
+  font-size: 0.9em;
+  color: #666;
+}
