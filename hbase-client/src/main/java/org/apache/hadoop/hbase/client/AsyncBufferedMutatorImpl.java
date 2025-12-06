@@ -107,15 +107,14 @@ class AsyncBufferedMutatorImpl implements AsyncBufferedMutator {
    * Atomically drains the current buffered mutations and futures under {@link #lock} and prepares
    * this mutator to accept a new batch.
    * <p>
-   * The {@link #lock} must be acquired before calling this method.
-   * Cancels any pending {@link #periodicFlushTask} to avoid a redundant
-   * flush for the data we are about to send. Swaps the shared {@link #mutations} and
-   * {@link #futures} lists into a returned {@link Batch}, replaces them with fresh lists, and
-   * resets {@link #bufferedSize} to zero.
+   * The {@link #lock} must be acquired before calling this method. Cancels any pending
+   * {@link #periodicFlushTask} to avoid a redundant flush for the data we are about to send. Swaps
+   * the shared {@link #mutations} and {@link #futures} lists into a returned {@link Batch},
+   * replaces them with fresh lists, and resets {@link #bufferedSize} to zero.
    * <p>
    * If there is nothing buffered, returns {@code null} so callers can skip sending work.
    * <p>
-   * Protected for overridden in tests.
+   * Protected for being overridden in tests.
    * @return a {@link Batch} containing drained mutations and futures, or {@code null} if empty
    */
   protected Batch drainBatch() {
@@ -225,8 +224,9 @@ class AsyncBufferedMutatorImpl implements AsyncBufferedMutator {
     return futures;
   }
 
-  @Override
-  public void flush() {
+  // The only difference bewteen flush and close is that, we will set closed to true before sending
+  // out the batch to prevent further flush or close
+  private void flushOrClose(boolean close) {
     Batch batch = null;
     if (!closed) {
       lock.lock();
@@ -234,6 +234,9 @@ class AsyncBufferedMutatorImpl implements AsyncBufferedMutator {
         if (!closed) {
           // Drains under lock
           batch = drainBatch();
+          if (close) {
+            closed = true;
+          }
         }
       } finally {
         lock.unlock();
@@ -247,23 +250,13 @@ class AsyncBufferedMutatorImpl implements AsyncBufferedMutator {
   }
 
   @Override
+  public void flush() {
+    flushOrClose(false);
+  }
+
+  @Override
   public void close() {
-    Batch batch = null;
-    if (!closed) {
-      lock.lock();
-      try {
-        if (!closed) {
-          closed = true;
-          batch = drainBatch(); // Drains under lock
-        }
-      } finally {
-        lock.unlock();
-      }
-    }
-    // Send the final batch
-    if (batch != null) {
-      sendBatch(batch); // Sends outside of lock
-    }
+    flushOrClose(true);
   }
 
   @Override
