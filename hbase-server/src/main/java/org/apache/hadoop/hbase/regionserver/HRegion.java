@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.HConstants.REPLICATION_SCOPE_LOCAL;
+import static org.apache.hadoop.hbase.coprocessor.CoprocessorHost.DEFAULT_SECURITY_COPROCESSOR_NAME;
+import static org.apache.hadoop.hbase.coprocessor.CoprocessorHost.SECURITY_COPROCESSOR_NAME_KEY;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.MAJOR_COMPACTION_KEY;
 import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.REGION_NAMES_KEY;
 import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.ROW_LOCK_READ_LOCK_KEY;
@@ -167,6 +169,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationObserver;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.access.ZKAclUpdaterCoprocessor;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.trace.TraceUtil;
@@ -8954,12 +8957,29 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    */
   private static void decorateRegionConfiguration(Configuration conf) {
     if (ReplicationUtils.isReplicationForBulkLoadDataEnabled(conf)) {
-      String plugins = conf.get(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, "");
       String replicationCoprocessorClass = ReplicationObserver.class.getCanonicalName();
+      String plugins = conf.get(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, "");
       if (!plugins.contains(replicationCoprocessorClass)) {
         conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
           (plugins.equals("") ? "" : (plugins + ",")) + replicationCoprocessorClass);
       }
+    }
+    appendToRegionCoprocessorConf(conf);
+  }
+
+  private static void appendToRegionCoprocessorConf(Configuration conf) {
+    String plugins = conf.get(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, "");
+    String accessControllerClassName =
+      conf.get(SECURITY_COPROCESSOR_NAME_KEY, DEFAULT_SECURITY_COPROCESSOR_NAME);
+    if (
+      plugins.contains(accessControllerClassName)
+        && !plugins.contains(ZKAclUpdaterCoprocessor.class.getCanonicalName())
+    ) {
+
+      conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
+        (plugins.equals("") ? "" : (plugins + ","))
+          + ZKAclUpdaterCoprocessor.class.getCanonicalName());
+
     }
   }
 

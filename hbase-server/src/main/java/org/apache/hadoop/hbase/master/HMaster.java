@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.master;
 import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK;
 import static org.apache.hadoop.hbase.HConstants.HBASE_MASTER_LOGCLEANER_PLUGINS;
 import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_COORDINATED_BY_ZK;
+import static org.apache.hadoop.hbase.coprocessor.CoprocessorHost.DEFAULT_SECURITY_COPROCESSOR_NAME;
+import static org.apache.hadoop.hbase.coprocessor.CoprocessorHost.SECURITY_COPROCESSOR_NAME_KEY;
 import static org.apache.hadoop.hbase.master.cleaner.HFileCleaner.CUSTOM_POOL_SIZE;
 import static org.apache.hadoop.hbase.util.DNS.MASTER_HOSTNAME_KEY;
 
@@ -248,6 +250,7 @@ import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.SecurityConstants;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.security.access.ZKAclUpdaterCoprocessor;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -1080,6 +1083,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     if (!maintenanceMode) {
       startupTaskGroup.addTask("Initializing master coprocessors");
       setQuotasObserver(conf);
+      appendZkAclToMasterCoprocessorConf(conf);
       initializeCoprocessorHost(conf);
     } else {
       // start an in process region server for carrying system regions
@@ -1519,6 +1523,19 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
       }
     }
     return true;
+  }
+
+  private static void appendZkAclToMasterCoprocessorConf(Configuration conf) {
+    String plugins = conf.get(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, "");
+    String zkAclClassName = ZKAclUpdaterCoprocessor.class.getCanonicalName();
+    String accessControllerClassName =
+      conf.get(SECURITY_COPROCESSOR_NAME_KEY, DEFAULT_SECURITY_COPROCESSOR_NAME);
+
+    if ((plugins.contains(accessControllerClassName)) && !plugins.contains(zkAclClassName)) {
+      conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
+        (plugins.equals("") ? "" : (plugins + ","))
+          + ZKAclUpdaterCoprocessor.class.getCanonicalName());
+    }
   }
 
   /**
@@ -4415,6 +4432,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     }
     // append the quotas observer back to the master coprocessor key
     setQuotasObserver(newConf);
+    appendZkAclToMasterCoprocessorConf(newConf);
+
     // update region server coprocessor if the configuration has changed.
     if (
       CoprocessorConfigurationUtil.checkConfigurationChange(getConfiguration(), newConf,
