@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.replication;
 
+import java.io.IOException;
 import java.util.UUID;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -42,8 +43,9 @@ public class DummyReplicationEndpoint extends BaseReplicationEndpoint {
   }
 
   @Override
-  public ReplicationResult replicate(ReplicateContext replicateContext) {
-    return ReplicationResult.COMMITTED;
+  public boolean replicate(ReplicateContext replicateContext) throws IOException {
+    getReplicationSource().cleanupHFileRefsAndPersistOffsets(replicateContext.getEntries());
+    return true;
   }
 
   @Override

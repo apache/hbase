@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.replication;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceInterface;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,6 +41,7 @@ public abstract class BaseReplicationEndpoint extends AbstractService
   public static final String REPLICATION_WALENTRYFILTER_CONFIG_KEY =
     "hbase.replication.source.custom.walentryfilters";
   protected Context ctx;
+  private ReplicationSourceInterface replicationSource;
 
   @Override
   public void init(Context context) throws IOException {
@@ -47,6 +49,7 @@ public abstract class BaseReplicationEndpoint extends AbstractService
 
     if (this.ctx != null) {
       ReplicationPeer peer = this.ctx.getReplicationPeer();
+      this.replicationSource = context.getReplicationSource();
       if (peer != null) {
         peer.registerPeerConfigListener(this);
       } else {
@@ -119,5 +122,9 @@ public abstract class BaseReplicationEndpoint extends AbstractService
   @Override
   public boolean isStarting() {
     return state() == State.STARTING;
+  }
+
+  public ReplicationSourceInterface getReplicationSource() {
+    return replicationSource;
   }
 }

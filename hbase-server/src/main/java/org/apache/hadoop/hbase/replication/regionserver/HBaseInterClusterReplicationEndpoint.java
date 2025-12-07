@@ -48,7 +48,6 @@ import org.apache.hadoop.hbase.protobuf.ReplicationProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.replication.HBaseReplicationEndpoint;
-import org.apache.hadoop.hbase.replication.ReplicationResult;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -425,7 +424,7 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
    * Do the shipping logic
    */
   @Override
-  public ReplicationResult replicate(ReplicateContext replicateContext) {
+  public boolean replicate(ReplicateContext replicateContext) throws IOException {
     int sleepMultiplier = 1;
     int initialTimeout = replicateContext.getTimeout();
 
@@ -445,7 +444,7 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
         lastSinkFetchTime = EnvironmentEdgeManager.currentTime();
       }
       sleepForRetries("No sinks available at peer", sleepMultiplier);
-      return ReplicationResult.FAILED;
+      return false;
     }
 
     List<List<Entry>> batches = createBatches(replicateContext.getEntries());
@@ -459,7 +458,8 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
       try {
         // replicate the batches to sink side.
         parallelReplicate(replicateContext, batches);
-        return ReplicationResult.COMMITTED;
+        getReplicationSource().cleanupHFileRefsAndPersistOffsets(replicateContext.getEntries());
+        return true;
       } catch (IOException ioe) {
         if (ioe instanceof RemoteException) {
           if (dropOnDeletedTables && isTableNotFoundException(ioe)) {
@@ -468,14 +468,18 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
             batches = filterNotExistTableEdits(batches);
             if (batches.isEmpty()) {
               LOG.warn("After filter not exist table's edits, 0 edits to replicate, just return");
-              return ReplicationResult.COMMITTED;
+              getReplicationSource()
+                .cleanupHFileRefsAndPersistOffsets(replicateContext.getEntries());
+              return true;
             }
           } else if (dropOnDeletedColumnFamilies && isNoSuchColumnFamilyException(ioe)) {
             batches = filterNotExistColumnFamilyEdits(batches);
             if (batches.isEmpty()) {
               LOG.warn("After filter not exist column family's edits, 0 edits to replicate, "
                 + "just return");
-              return ReplicationResult.COMMITTED;
+              getReplicationSource()
+                .cleanupHFileRefsAndPersistOffsets(replicateContext.getEntries());
+              return true;
             }
           } else {
             LOG.warn("{} Peer encountered RemoteException, rechecking all sinks: ", logPeerId(),
@@ -507,7 +511,7 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
         }
       }
     }
-    return ReplicationResult.FAILED; // in case we exited before replicating
+    return false; // in case we exited before replicating
   }
 
   protected boolean isPeerEnabled() {

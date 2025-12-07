@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.replication.ReplicationPeer;
 import org.apache.hadoop.hbase.replication.ReplicationQueueData;
 import org.apache.hadoop.hbase.replication.ReplicationQueueId;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
-import org.apache.hadoop.hbase.replication.ReplicationResult;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -208,11 +207,15 @@ public interface ReplicationSourceInterface {
    * @param entryBatch the wal entry batch we just shipped
    * @return The instance of queueStorage used by this ReplicationSource.
    */
-  default void logPositionAndCleanOldLogs(WALEntryBatch entryBatch, ReplicationResult replicated) {
+  default void logPositionAndCleanOldLogs(WALEntryBatch entryBatch) {
 
   }
 
   default public void persistOffsets() {
+
+  }
+
+  default public void cleanupHFileRefsAndPersistOffsets(List<Entry> entries) throws IOException {
 
   }
 }

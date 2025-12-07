@@ -430,7 +430,7 @@ public class TestReplicationBase {
     }
 
     @Override
-    public ReplicationResult replicate(ReplicateContext replicateContext) {
+    public boolean replicate(ReplicateContext replicateContext) throws IOException {
       replicateCount.incrementAndGet();
       replicatedEntries.addAll(replicateContext.getEntries());
 

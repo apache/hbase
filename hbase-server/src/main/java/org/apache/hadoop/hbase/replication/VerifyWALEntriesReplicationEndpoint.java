@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.replication;
 
+import java.io.IOException;
 import java.util.UUID;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -59,10 +60,11 @@ public class VerifyWALEntriesReplicationEndpoint extends BaseReplicationEndpoint
   }
 
   @Override
-  public ReplicationResult replicate(ReplicateContext replicateContext) {
+  public boolean replicate(ReplicateContext replicateContext) throws IOException {
     replicateContext.entries.stream().map(WAL.Entry::getEdit).flatMap(e -> e.getCells().stream())
       .forEach(this::checkCell);
-    return ReplicationResult.COMMITTED;
+    getReplicationSource().cleanupHFileRefsAndPersistOffsets(replicateContext.getEntries());
+    return true;
   }
 
   @Override

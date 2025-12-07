@@ -41,6 +41,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
@@ -58,7 +60,6 @@ import org.apache.hadoop.hbase.replication.ReplicationPeer;
 import org.apache.hadoop.hbase.replication.ReplicationQueueData;
 import org.apache.hadoop.hbase.replication.ReplicationQueueId;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
-import org.apache.hadoop.hbase.replication.ReplicationResult;
 import org.apache.hadoop.hbase.replication.SystemTableWALEntryFilter;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -67,12 +68,15 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 
 /**
  * Class that handles the source of a replication stream. Currently does not handle more than 1
@@ -867,16 +871,12 @@ public class ReplicationSource implements ReplicationSourceInterface {
   }
 
   @Override
-  public void logPositionAndCleanOldLogs(WALEntryBatch entryBatch, ReplicationResult replicated) {
+  public void logPositionAndCleanOldLogs(WALEntryBatch entryBatch) {
     String walName = entryBatch.getLastWalPath().getName();
     String walPrefix = AbstractFSWALProvider.getWALPrefixFromWALName(walName);
 
     synchronized (lastEntryBatch) { // Synchronize addition and processing
       lastEntryBatch.put(walPrefix, entryBatch);
-
-      if (replicated == ReplicationResult.COMMITTED) {
-        processAndClearEntries();
-      }
     }
   }
 
@@ -892,5 +892,39 @@ public class ReplicationSource implements ReplicationSourceInterface {
       .forEach((prefix, batch) -> getSourceManager().logPositionAndCleanOldLogs(this, batch));
     // Clear all processed entries
     lastEntryBatch.clear();
+  }
+
+  @Override
+  public void cleanupHFileRefsAndPersistOffsets(List<Entry> entries) throws IOException {
+    // Clean up hfile references
+    for (Entry entry : entries) {
+      cleanUpHFileRefs(entry.getEdit());
+      LOG.trace("shipped entry {}: ", entry);
+    }
+    persistOffsets();
+  }
+
+  private void cleanUpHFileRefs(WALEdit edit) throws IOException {
+    String peerId = getPeerId();
+    if (peerId.contains("-")) {
+      // peerClusterZnode will be in the form peerId + "-" + rsZNode.
+      // A peerId will not have "-" in its name, see HBASE-11394
+      peerId = peerId.split("-")[0];
+    }
+    List<Cell> cells = edit.getCells();
+    int totalCells = cells.size();
+    for (int i = 0; i < totalCells; i++) {
+      Cell cell = cells.get(i);
+      if (CellUtil.matchingQualifier(cell, WALEdit.BULK_LOAD)) {
+        WALProtos.BulkLoadDescriptor bld = WALEdit.getBulkLoadDescriptor(cell);
+        List<WALProtos.StoreDescriptor> stores = bld.getStoresList();
+        int totalStores = stores.size();
+        for (int j = 0; j < totalStores; j++) {
+          List<String> storeFileList = stores.get(j).getStoreFileList();
+          getSourceManager().cleanUpHFileRefs(peerId, storeFileList);
+          getSourceMetrics().decrSizeOfHFileRefsQueue(storeFileList.size());
+        }
+      }
+    }
   }
 }

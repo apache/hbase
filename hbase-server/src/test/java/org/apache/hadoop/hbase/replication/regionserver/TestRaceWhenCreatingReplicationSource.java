@@ -38,7 +38,6 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.replication.BaseReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
-import org.apache.hadoop.hbase.replication.ReplicationResult;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -95,7 +94,7 @@ public class TestRaceWhenCreatingReplicationSource {
     }
 
     @Override
-    public ReplicationResult replicate(ReplicateContext replicateContext) {
+    public boolean replicate(ReplicateContext replicateContext) {
       synchronized (WRITER) {
         try {
           for (Entry entry : replicateContext.getEntries()) {
@@ -106,7 +105,7 @@ public class TestRaceWhenCreatingReplicationSource {
           throw new UncheckedIOException(e);
         }
       }
-      return ReplicationResult.COMMITTED;
+      return true;
     }
 
     @Override

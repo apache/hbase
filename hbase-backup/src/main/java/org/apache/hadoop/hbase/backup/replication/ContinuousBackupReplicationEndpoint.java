@@ -47,8 +47,6 @@ import org.apache.hadoop.hbase.io.asyncfs.monitor.StreamSlowMonitor;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.replication.BaseReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.EmptyEntriesPolicy;
-import org.apache.hadoop.hbase.replication.ReplicationResult;
-import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceInterface;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.FSHLogProvider;
@@ -83,7 +81,6 @@ public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint
   private final Map<Long, FSHLogProvider.Writer> walWriters = new ConcurrentHashMap<>();
   private final ReentrantLock lock = new ReentrantLock();
 
-  private ReplicationSourceInterface replicationSource;
   private Configuration conf;
   private BackupFileSystemManager backupFileSystemManager;
   private UUID peerUUID;
@@ -98,7 +95,6 @@ public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint
   @Override
   public void init(Context context) throws IOException {
     super.init(context);
-    this.replicationSource = context.getReplicationSource();
     this.peerId = context.getPeerId();
     this.conf = HBaseConfiguration.create(context.getConfiguration());
 
@@ -155,7 +151,7 @@ public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint
     try {
       LOG.info("{} Periodic WAL flush triggered", Utils.logPeerId(peerId));
       flushWriters();
-      replicationSource.persistOffsets();
+      getReplicationSource().persistOffsets();
       LOG.info("{} Periodic WAL flush and offset persistence completed successfully",
         Utils.logPeerId(peerId));
     } catch (IOException e) {
@@ -220,11 +216,11 @@ public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint
   }
 
   @Override
-  public ReplicationResult replicate(ReplicateContext replicateContext) {
+  public boolean replicate(ReplicateContext replicateContext) {
     final List<WAL.Entry> entries = replicateContext.getEntries();
     if (entries.isEmpty()) {
       LOG.debug("{} No WAL entries to replicate", Utils.logPeerId(peerId));
-      return ReplicationResult.SUBMITTED;
+      return true;
     }
 
     LOG.debug("{} Received {} WAL entries for replication", Utils.logPeerId(peerId),
@@ -253,15 +249,16 @@ public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint
           Utils.logPeerId(peerId));
         flushWriters();
         LOG.debug("{} Replication committed after WAL flush", Utils.logPeerId(peerId));
-        return ReplicationResult.COMMITTED;
+        getReplicationSource().cleanupHFileRefsAndPersistOffsets(entries);
+        return true;
       }
 
       LOG.debug("{} Replication submitted successfully", Utils.logPeerId(peerId));
-      return ReplicationResult.SUBMITTED;
+      return true;
     } catch (IOException e) {
       LOG.error("{} Replication failed. Error details: {}", Utils.logPeerId(peerId), e.getMessage(),
         e);
-      return ReplicationResult.FAILED;
+      return false;
     } finally {
       lock.unlock();
     }
@@ -277,8 +274,8 @@ public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint
   private void updateLastReplicatedTimestampForContinuousBackup() throws IOException {
     try (final Connection conn = ConnectionFactory.createConnection(conf);
       BackupSystemTable backupSystemTable = new BackupSystemTable(conn)) {
-      backupSystemTable.updateBackupCheckpointTimestamp(replicationSource.getServerWALsBelongTo(),
-        latestWALEntryTimestamp);
+      backupSystemTable.updateBackupCheckpointTimestamp(
+        getReplicationSource().getServerWALsBelongTo(), latestWALEntryTimestamp);
     }
   }
 
@@ -379,7 +376,7 @@ public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint
     lock.lock();
     try {
       flushWriters();
-      replicationSource.persistOffsets();
+      getReplicationSource().persistOffsets();
     } catch (IOException e) {
       LOG.error("{} Failed to Flush Open Wal Writers: {}", Utils.logPeerId(peerId), e.getMessage(),
         e);
