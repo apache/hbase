@@ -2341,7 +2341,7 @@ public class AssignmentManager {
         node.crashed(scp.getSubmittedTime());
         regionInTransitionTracker.regionCrashed(node);
       } else {
-        LOG.warn("Region {} should be on crashed region server{} but is recorded on {}", regionInfo,
+        LOG.warn("Region {} should be on crashed region server {} but is recorded on {}", regionInfo,
           crashedServerName, node.getRegionLocation());
       }
     }
