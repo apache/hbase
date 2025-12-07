@@ -74,11 +74,11 @@ def run(host, port, framed=False):
 
     print("\nResult:", result)
     print(f"row = {result.row.decode()}")
-    for result_column_value in result.columnValues:
-        print(f"family = {result_column_value.family.decode()}")
-        print(f"qualifier = {result_column_value.qualifier.decode()}")
-        print(f"value = {result_column_value.value.decode()}")
-        print(f"timestamp = {result_column_value.timestamp}")
+    for column_value in result.columnValues:
+        print(f"family = {column_value.family.decode()}")
+        print(f"qualifier = {column_value.qualifier.decode()}")
+        print(f"value = {column_value.value.decode()}")
+        print(f"timestamp = {column_value.timestamp}")
 
     transport.close()
 
