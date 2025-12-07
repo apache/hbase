@@ -38,7 +38,7 @@ from gen_py.hbase import THBaseService
 from gen_py.hbase import ttypes
 
 
-def run(host, port, framed=False):
+def run(host, port):
     framed = False
 
     socket = TSocket.TSocket(host, port)
