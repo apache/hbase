@@ -21,26 +21,17 @@ import static org.apache.hadoop.hbase.replication.ReplicationUtils.getAdaptiveTi
 import static org.apache.hadoop.hbase.replication.ReplicationUtils.sleepForRetries;
 
 import com.google.errorprone.annotations.RestrictedApi;
-import java.io.IOException;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.replication.EmptyEntriesPolicy;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
-import org.apache.hadoop.hbase.replication.ReplicationResult;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
-import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.BulkLoadDescriptor;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.StoreDescriptor;
 
 /**
  * This thread reads entries from a queue and ships them. Entries are placed onto the queue by
@@ -238,15 +229,6 @@ public class ReplicationSourceShipper extends Thread {
       }
     }
   }
-
-  private ReplicationResult getReplicationResult() {
-    EmptyEntriesPolicy policy = source.getReplicationEndpoint().getEmptyEntriesPolicy();
-    return (policy == EmptyEntriesPolicy.COMMIT)
-      ? ReplicationResult.COMMITTED
-      : ReplicationResult.SUBMITTED;
-  }
-
-
 
   @RestrictedApi(
       explanation = "Package-private for test visibility only. Do not use outside tests.",

@@ -48,7 +48,6 @@ import org.apache.hadoop.hbase.protobuf.ReplicationProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.replication.HBaseReplicationEndpoint;
-import org.apache.hadoop.hbase.replication.ReplicationResult;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -469,7 +468,8 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
             batches = filterNotExistTableEdits(batches);
             if (batches.isEmpty()) {
               LOG.warn("After filter not exist table's edits, 0 edits to replicate, just return");
-              getReplicationSource().cleanupHFileRefsAndPersistOffsets(replicateContext.getEntries());
+              getReplicationSource()
+                .cleanupHFileRefsAndPersistOffsets(replicateContext.getEntries());
               return true;
             }
           } else if (dropOnDeletedColumnFamilies && isNoSuchColumnFamilyException(ioe)) {
@@ -477,7 +477,8 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
             if (batches.isEmpty()) {
               LOG.warn("After filter not exist column family's edits, 0 edits to replicate, "
                 + "just return");
-              getReplicationSource().cleanupHFileRefsAndPersistOffsets(replicateContext.getEntries());
+              getReplicationSource()
+                .cleanupHFileRefsAndPersistOffsets(replicateContext.getEntries());
               return true;
             }
           } else {

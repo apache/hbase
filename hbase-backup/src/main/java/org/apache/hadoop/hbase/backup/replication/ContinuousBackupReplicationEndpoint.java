@@ -47,7 +47,6 @@ import org.apache.hadoop.hbase.io.asyncfs.monitor.StreamSlowMonitor;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.replication.BaseReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.EmptyEntriesPolicy;
-import org.apache.hadoop.hbase.replication.ReplicationResult;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.FSHLogProvider;
@@ -275,8 +274,8 @@ public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint
   private void updateLastReplicatedTimestampForContinuousBackup() throws IOException {
     try (final Connection conn = ConnectionFactory.createConnection(conf);
       BackupSystemTable backupSystemTable = new BackupSystemTable(conn)) {
-      backupSystemTable.updateBackupCheckpointTimestamp(getReplicationSource().getServerWALsBelongTo(),
-        latestWALEntryTimestamp);
+      backupSystemTable.updateBackupCheckpointTimestamp(
+        getReplicationSource().getServerWALsBelongTo(), latestWALEntryTimestamp);
     }
   }
 

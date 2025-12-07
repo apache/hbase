@@ -124,5 +124,7 @@ public abstract class BaseReplicationEndpoint extends AbstractService
     return state() == State.STARTING;
   }
 
-  public ReplicationSourceInterface getReplicationSource() { return replicationSource; }
+  public ReplicationSourceInterface getReplicationSource() {
+    return replicationSource;
+  }
 }
