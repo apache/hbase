@@ -219,7 +219,7 @@ public class TestReplicator extends TestReplicationBase {
     }
 
     @Override
-    public ReplicationResult replicate(ReplicateContext replicateContext) {
+    public boolean replicate(ReplicateContext replicateContext) throws IOException {
       try {
         await();
       } catch (InterruptedException e) {

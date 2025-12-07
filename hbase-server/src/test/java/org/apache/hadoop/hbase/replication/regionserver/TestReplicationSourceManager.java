@@ -95,13 +95,13 @@ public class TestReplicationSourceManager {
     private String clusterKey;
 
     @Override
-    public ReplicationResult replicate(ReplicateContext replicateContext) {
+    public boolean replicate(ReplicateContext replicateContext) {
       // if you want to block the replication, for example, do not want the recovered source to be
       // removed
       if (clusterKey.endsWith("error")) {
         throw new RuntimeException("Inject error");
       }
-      return ReplicationResult.COMMITTED;
+      return true;
     }
 
     @Override

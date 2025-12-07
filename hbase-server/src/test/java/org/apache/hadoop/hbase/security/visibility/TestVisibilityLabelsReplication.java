@@ -474,8 +474,8 @@ public class TestVisibilityLabelsReplication {
     }
 
     @Override
-    public ReplicationResult replicate(ReplicateContext replicateContext) {
-      ReplicationResult ret = super.replicate(replicateContext);
+    public boolean replicate(ReplicateContext replicateContext) throws IOException {
+      boolean ret = super.replicate(replicateContext);
       lastEntries = replicateContext.getEntries();
       replicateCount.incrementAndGet();
       return ret;

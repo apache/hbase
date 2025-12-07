@@ -208,11 +208,15 @@ public interface ReplicationSourceInterface {
    * @param entryBatch the wal entry batch we just shipped
    * @return The instance of queueStorage used by this ReplicationSource.
    */
-  default void logPositionAndCleanOldLogs(WALEntryBatch entryBatch, ReplicationResult replicated) {
+  default void logPositionAndCleanOldLogs(WALEntryBatch entryBatch) {
 
   }
 
   default public void persistOffsets() {
+
+  }
+
+  default public void cleanupHFileRefsAndPersistOffsets(List<Entry> entries) throws IOException {
 
   }
 }

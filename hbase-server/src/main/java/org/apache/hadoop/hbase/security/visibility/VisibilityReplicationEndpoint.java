@@ -64,7 +64,7 @@ public class VisibilityReplicationEndpoint implements ReplicationEndpoint {
   }
 
   @Override
-  public ReplicationResult replicate(ReplicateContext replicateContext) {
+  public boolean replicate(ReplicateContext replicateContext) throws IOException {
     if (!delegator.canReplicateToSameCluster()) {
       // Only when the replication is inter cluster replication we need to
       // convert the visibility tags to

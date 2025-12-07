@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.replication;
 
 import static org.junit.Assert.assertArrayEquals;
 
+import java.io.IOException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -71,7 +72,7 @@ public class TestVerifyCellsReplicationEndpoint {
   public static final class EndpointForTest extends VerifyWALEntriesReplicationEndpoint {
 
     @Override
-    public ReplicationResult replicate(ReplicateContext replicateContext) {
+    public boolean replicate(ReplicateContext replicateContext) throws IOException {
       LOG.info(replicateContext.getEntries().toString());
       replicateContext.entries.stream().map(WAL.Entry::getEdit).map(WALEdit::getCells)
         .forEachOrdered(CELLS::addAll);

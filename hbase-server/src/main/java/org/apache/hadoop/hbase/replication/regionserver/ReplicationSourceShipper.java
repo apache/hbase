@@ -169,8 +169,7 @@ public class ReplicationSourceShipper extends Thread {
        * However, some endpoints (e.g., asynchronous S3 backups) may buffer writes and delay actual
        * persistence. In such cases, we must avoid committing the WAL position prematurely.
        */
-      final ReplicationResult result = getReplicationResult();
-      updateLogPosition(entryBatch, result);
+      updateLogPosition(entryBatch);
       return;
     }
     int currentSize = (int) entryBatch.getHeapSize();
@@ -197,23 +196,17 @@ public class ReplicationSourceShipper extends Thread {
 
         long startTimeNs = System.nanoTime();
         // send the edits to the endpoint. Will block until the edits are shipped and acknowledged
-        ReplicationResult replicated = source.getReplicationEndpoint().replicate(replicateContext);
+        boolean replicated = source.getReplicationEndpoint().replicate(replicateContext);
         long endTimeNs = System.nanoTime();
 
-        if (replicated == ReplicationResult.FAILED) {
+        if (replicated == false) {
           continue;
         } else {
           sleepMultiplier = Math.max(sleepMultiplier - 1, 0);
         }
-        if (replicated == ReplicationResult.COMMITTED) {
-          // Clean up hfile references
-          for (Entry entry : entries) {
-            cleanUpHFileRefs(entry.getEdit());
-            LOG.trace("shipped entry {}: ", entry);
-          }
-        }
+
         // Log and clean up WAL logs
-        updateLogPosition(entryBatch, replicated);
+        updateLogPosition(entryBatch);
 
         // offsets totalBufferUsed by deducting shipped batchSize (excludes bulk load size)
         // this sizeExcludeBulkLoad has to use same calculation that when calling
@@ -253,35 +246,13 @@ public class ReplicationSourceShipper extends Thread {
       : ReplicationResult.SUBMITTED;
   }
 
-  private void cleanUpHFileRefs(WALEdit edit) throws IOException {
-    String peerId = source.getPeerId();
-    if (peerId.contains("-")) {
-      // peerClusterZnode will be in the form peerId + "-" + rsZNode.
-      // A peerId will not have "-" in its name, see HBASE-11394
-      peerId = peerId.split("-")[0];
-    }
-    List<Cell> cells = edit.getCells();
-    int totalCells = cells.size();
-    for (int i = 0; i < totalCells; i++) {
-      Cell cell = cells.get(i);
-      if (CellUtil.matchingQualifier(cell, WALEdit.BULK_LOAD)) {
-        BulkLoadDescriptor bld = WALEdit.getBulkLoadDescriptor(cell);
-        List<StoreDescriptor> stores = bld.getStoresList();
-        int totalStores = stores.size();
-        for (int j = 0; j < totalStores; j++) {
-          List<String> storeFileList = stores.get(j).getStoreFileList();
-          source.getSourceManager().cleanUpHFileRefs(peerId, storeFileList);
-          source.getSourceMetrics().decrSizeOfHFileRefsQueue(storeFileList.size());
-        }
-      }
-    }
-  }
+
 
   @RestrictedApi(
       explanation = "Package-private for test visibility only. Do not use outside tests.",
       link = "",
       allowedOnPath = "(.*/src/test/.*|.*/org/apache/hadoop/hbase/replication/regionserver/ReplicationSourceShipper.java)")
-  boolean updateLogPosition(WALEntryBatch batch, ReplicationResult replicated) {
+  boolean updateLogPosition(WALEntryBatch batch) {
     boolean updated = false;
     // if end of file is true, then the logPositionAndCleanOldLogs method will remove the file
     // record on zk, so let's call it. The last wal position maybe zero if end of file is true and
@@ -291,7 +262,7 @@ public class ReplicationSourceShipper extends Thread {
       batch.isEndOfFile() || !batch.getLastWalPath().equals(currentPath)
         || batch.getLastWalPosition() != currentPosition
     ) {
-      source.logPositionAndCleanOldLogs(batch, replicated);
+      source.logPositionAndCleanOldLogs(batch);
       updated = true;
     }
     // if end of file is true, then we can just skip to the next file in queue.

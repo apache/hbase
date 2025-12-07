@@ -531,7 +531,7 @@ public class TestReplicationSource {
     shipper.shipEdits(emptyBatch);
 
     // With default (COMMIT) policy, empty entry batch should advance WAL position
-    Mockito.verify(shipper).updateLogPosition(emptyBatch, ReplicationResult.COMMITTED);
+    Mockito.verify(shipper).updateLogPosition(emptyBatch);
   }
 
   /**
@@ -552,7 +552,7 @@ public class TestReplicationSource {
     shipper.shipEdits(emptyBatch);
 
     // With SUBMIT policy, empty entry batch should NOT advance WAL position
-    Mockito.verify(shipper).updateLogPosition(emptyBatch, ReplicationResult.SUBMITTED);
+    Mockito.verify(shipper).updateLogPosition(emptyBatch);
   }
 
   private RegionServerServices setupForAbortTests(ReplicationSource rs, Configuration conf,
