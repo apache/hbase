@@ -2334,11 +2334,15 @@ public class AssignmentManager {
   public void markRegionsAsCrashed(List<RegionInfo> regionsOnCrashedServer,
     ServerCrashProcedure scp) {
     ServerName crashedServerName = scp.getServerName();
+    assert crashedServerName != null;
     for (RegionInfo regionInfo : regionsOnCrashedServer) {
       RegionStateNode node = regionStates.getOrCreateRegionStateNode(regionInfo);
-      if (node.getRegionLocation() == crashedServerName) {
+      if (crashedServerName.equals(node.getRegionLocation())) {
         node.crashed(scp.getSubmittedTime());
         regionInTransitionTracker.regionCrashed(node);
+      } else {
+        LOG.warn("Region {} should be on crashed region server {} but is recorded on {}", regionInfo,
+          crashedServerName, node.getRegionLocation());
       }
     }
   }
