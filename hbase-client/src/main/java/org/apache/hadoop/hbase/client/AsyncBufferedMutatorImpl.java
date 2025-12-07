@@ -187,8 +187,8 @@ class AsyncBufferedMutatorImpl implements AsyncBufferedMutator {
           Batch flushBatch = null;
           lock.lock();
           try {
-            // confirm that we are still valid, if there is already an internalFlush call before us,
-            // then we should not execute anymore. And in internalFlush we will set periodicFlush
+            // confirm that we are still valid, if there is already a drainBatch call before us,
+            // then we should not execute anymore. And in drainBatch we will set periodicFlush
             // to null, and since we may schedule a new one, so here we check whether the references
             // are equal.
             if (timeout == periodicFlushTask) {
