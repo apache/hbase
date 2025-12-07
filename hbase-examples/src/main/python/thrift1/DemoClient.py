@@ -37,8 +37,8 @@ def printRow(row_result):
         sorted_cols = {col: cell for col, cell in sorted(res.columns.items())}
         row_str = ""
         for k, v in sorted_cols.items():
-            # prevent UnicodeDecodeError: 'utf-8' codec can't decode byte 0xfc in position 4:
-            # invalid start byte
+            # ignore error to prevent UnicodeDecodeError: 'utf-8' codec can't decode byte 0xfc in
+            # position 4: invalid start byte
             row_str += (
                 f"{k.decode('utf-8')} => {v.value.decode('utf-8', errors='ignore')}; "
             )
@@ -227,10 +227,9 @@ def demo_client(host, port, is_framed_transport):
     while True:
         r = client.scannerGet(scanner)
         if not r:
-            print("Scanner finished...")
             break
         printRow(r)
-
+    print("Scanner finished...")
     transport.close()
 
 

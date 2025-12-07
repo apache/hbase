@@ -320,8 +320,8 @@ public class DemoClient {
     for (ColumnDescriptor col2 : client.getColumnDescriptors(demoTable).values()) {
       System.out.println("column with name: " + ClientUtils.utf8(col2.name));
       System.out.println(col2);
+      // remove the trailing ':' from the family name
       col2.name.limit(col2.name.limit() - 1);
-
       columnNames.add(col2.name.slice());
     }
 
