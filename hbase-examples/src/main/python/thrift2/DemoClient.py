@@ -38,8 +38,7 @@ from gen_py.hbase import THBaseService
 from gen_py.hbase import ttypes
 
 
-def run(host, port):
-    framed = False
+def run(host, port, framed=False):
 
     socket = TSocket.TSocket(host, port)
     if framed:
@@ -94,10 +93,11 @@ if __name__ == "__main__":
 
     host = "localhost"
     port = 9090
+    is_framed_transport = False
 
     if len(sys.argv) >= 2:
         host = sys.argv[1]
     if len(sys.argv) >= 3:
         port = int(sys.argv[2])
 
-    run(host, port)
+    run(host, port, is_framed_transport)
