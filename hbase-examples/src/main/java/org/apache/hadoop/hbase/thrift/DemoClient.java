@@ -139,9 +139,8 @@ public class DemoClient {
     }
 
     // Create the demo table with two column families, entry: and unused:
-    ArrayList<ColumnDescriptor> columns = new ArrayList<>(2);
-    ColumnDescriptor col;
-    col = new ColumnDescriptor();
+    List<ColumnDescriptor> columns = new ArrayList<>(2);
+    ColumnDescriptor col = new ColumnDescriptor();
     col.name = ByteBuffer.wrap(bytes("entry:"));
     col.timeToLive = Integer.MAX_VALUE;
     col.maxVersions = 10;
@@ -152,7 +151,6 @@ public class DemoClient {
     columns.add(col);
 
     System.out.println("creating table: " + ClientUtils.utf8(demoTable.array()));
-
     try {
       client.createTable(demoTable, columns);
       client.createTable(disabledTable, columns);
@@ -162,7 +160,6 @@ public class DemoClient {
 
     System.out.println("column families in " + ClientUtils.utf8(demoTable.array()) + ": ");
     Map<ByteBuffer, ColumnDescriptor> columnMap = client.getColumnDescriptors(demoTable);
-
     for (ColumnDescriptor col2 : columnMap.values()) {
       System.out.println(
         "  column: " + ClientUtils.utf8(col2.name.array()) + ", maxVer: " + col2.maxVersions);
@@ -210,8 +207,8 @@ public class DemoClient {
     client.mutateRow(demoTable, ByteBuffer.wrap(invalid), mutations, dummyAttributes);
 
     // Run a scanner on the rows we just created
-    ArrayList<ByteBuffer> columnNames = new ArrayList<>();
-    columnNames.add(ByteBuffer.wrap(bytes("entry:")));
+    List<ByteBuffer> columnNames = new ArrayList<>();
+    columnNames.add(ByteBuffer.wrap(bytes("entry")));
 
     System.out.println("Starting scanner...");
     int scanner =
@@ -226,6 +223,7 @@ public class DemoClient {
 
       printRow(entry);
     }
+    System.out.println("Scanner finished...");
 
     // Run some operations on a bunch of rows
     for (int i = 100; i >= 0; --i) {
@@ -257,9 +255,8 @@ public class DemoClient {
       client.mutateRow(demoTable, ByteBuffer.wrap(row), mutations, dummyAttributes);
       printRow(client.getRow(demoTable, ByteBuffer.wrap(row), dummyAttributes));
 
-      Mutation m;
       mutations = new ArrayList<>(2);
-      m = new Mutation();
+      Mutation m = new Mutation();
       m.column = ByteBuffer.wrap(bytes("entry:foo"));
       m.isDelete = true;
       mutations.add(m);
@@ -314,7 +311,7 @@ public class DemoClient {
         System.exit(-1);
       }
 
-      System.out.println("");
+      System.out.println();
     }
 
     // scan all rows/columnNames
@@ -322,9 +319,10 @@ public class DemoClient {
 
     for (ColumnDescriptor col2 : client.getColumnDescriptors(demoTable).values()) {
       System.out.println("column with name: " + ClientUtils.utf8(col2.name));
-      System.out.println(col2.toString());
+      System.out.println(col2);
+      col2.name.limit(col2.name.limit() - 1);
 
-      columnNames.add(col2.name);
+      columnNames.add(col2.name.slice());
     }
 
     System.out.println("Starting scanner...");
@@ -335,7 +333,7 @@ public class DemoClient {
       List<TRowResult> entry = client.scannerGet(scanner);
 
       if (entry.isEmpty()) {
-        System.out.println("Scanner finished");
+        System.out.println("Scanner finished...");
         break;
       }
 
