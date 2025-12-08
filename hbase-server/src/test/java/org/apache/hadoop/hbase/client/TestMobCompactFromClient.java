@@ -17,15 +17,14 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -34,47 +33,40 @@ import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ ClientTests.class, MediumTests.class })
+@Tag(MediumTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestMobCompactFromClient {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMobCompactFromClient.class);
-
-  @Rule
-  public TestName name = new TestName();
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final String FAMILY = "info";
   private static final String MOB_FAMILY = "mob_info";
   private static final String QUALIFIER = "q";
+  private static final long TIMEOUT = 5000;
 
   private static Admin admin;
 
-  @Before
-  public void setup() throws Exception {
+  @BeforeAll
+  public static void setup() throws Exception {
     TEST_UTIL.startMiniCluster(1);
     admin = TEST_UTIL.getAdmin();
   }
 
-  @After
-  public void tearDown() throws IOException {
+  @AfterAll
+  public static void tearDown() throws IOException {
     admin.close();
     TEST_UTIL.shutdownMiniCluster();
     TEST_UTIL.getTestFileSystem().delete(TEST_UTIL.getDataTestDir(), true);
   }
 
   @Test
-  public void testCompactMobTableFromClientSize() throws Exception {
-    TableName tableName = TableName.valueOf(name.getMethodName());
+  public void testCompactMobTableFromClientSize(TestInfo testInfo) throws Exception {
+    TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     TableDescriptorBuilder tableBuilder = TableDescriptorBuilder.newBuilder(tableName);
     tableBuilder.setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(MOB_FAMILY))
       .setMobEnabled(true).setMobThreshold(100L).build());
@@ -109,13 +101,8 @@ public class TestMobCompactFromClient {
 
       admin.compact(tableName, Bytes.toBytes(MOB_FAMILY), CompactType.MOB);
       Thread.sleep(1000);
-      int retry = 5;
-      while (
-        admin.getCompactionState(tableName, CompactType.MOB) != CompactionState.NONE && retry > 0
-      ) {
-        Thread.sleep(1000);
-        retry--;
-      }
+      TEST_UTIL.waitFor(TIMEOUT,
+        () -> admin.getCompactionState(tableName, CompactType.MOB) == CompactionState.NONE);
       assertEquals(CompactionState.NONE, admin.getCompactionState(tableName, CompactType.MOB));
 
       int store1fileCount = store1.getStorefilesCount();
@@ -136,13 +123,8 @@ public class TestMobCompactFromClient {
 
       admin.compact(tableName, CompactType.MOB);
       Thread.sleep(1000);
-      retry = 5;
-      while (
-        admin.getCompactionState(tableName, CompactType.MOB) != CompactionState.NONE && retry > 0
-      ) {
-        Thread.sleep(1000);
-        retry--;
-      }
+      TEST_UTIL.waitFor(TIMEOUT,
+        () -> admin.getCompactionState(tableName, CompactType.MOB) == CompactionState.NONE);
       assertEquals(CompactionState.NONE, admin.getCompactionState(tableName, CompactType.MOB));
 
       assertTrue(store1.getStorefilesCount() < (store1fileCount + 5));
@@ -153,8 +135,8 @@ public class TestMobCompactFromClient {
   }
 
   @Test
-  public void testMajorCompactMobTableFromClientSize() throws Exception {
-    TableName tableName = TableName.valueOf(name.getMethodName());
+  public void testMajorCompactMobTableFromClientSize(TestInfo testInfo) throws Exception {
+    TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     TableDescriptorBuilder tableBuilder = TableDescriptorBuilder.newBuilder(tableName);
     tableBuilder.setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(MOB_FAMILY))
       .setMobEnabled(true).setMobThreshold(100L).build());
@@ -188,13 +170,8 @@ public class TestMobCompactFromClient {
 
       admin.majorCompact(tableName, CompactType.MOB);
       Thread.sleep(1000);
-      int retry = 5;
-      while (
-        admin.getCompactionState(tableName, CompactType.MOB) != CompactionState.NONE && retry > 0
-      ) {
-        Thread.sleep(1000);
-        retry--;
-      }
+      TEST_UTIL.waitFor(TIMEOUT,
+        () -> admin.getCompactionState(tableName, CompactType.MOB) == CompactionState.NONE);
       assertEquals(CompactionState.NONE, admin.getCompactionState(tableName, CompactType.MOB));
 
       assertEquals(1, store1.getStorefilesCount());
@@ -213,13 +190,8 @@ public class TestMobCompactFromClient {
 
       admin.compact(tableName, CompactType.MOB);
       Thread.sleep(1000);
-      retry = 5;
-      while (
-        admin.getCompactionState(tableName, CompactType.MOB) != CompactionState.NONE && retry > 0
-      ) {
-        Thread.sleep(1000);
-        retry--;
-      }
+      TEST_UTIL.waitFor(TIMEOUT,
+        () -> admin.getCompactionState(tableName, CompactType.MOB) == CompactionState.NONE);
       assertEquals(CompactionState.NONE, admin.getCompactionState(tableName, CompactType.MOB));
 
       assertEquals(1, store1.getStorefilesCount());
@@ -230,8 +202,8 @@ public class TestMobCompactFromClient {
   }
 
   @Test
-  public void testCompactMobTableWithNonFamilyFromClientSize() throws IOException {
-    TableName tableName = TableName.valueOf(name.getMethodName());
+  public void testCompactMobTableWithNonFamilyFromClientSize(TestInfo testInfo) throws IOException {
+    TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     TableDescriptorBuilder tableBuilder = TableDescriptorBuilder.newBuilder(tableName);
     tableBuilder.setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(MOB_FAMILY))
       .setMobEnabled(true).setMobThreshold(100L).build());
