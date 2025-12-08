@@ -48,8 +48,10 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -71,6 +73,9 @@ public class TestVerifyBucketCacheFile {
           28 * 1024 + 1024, 32 * 1024 + 1024, 64 * 1024 + 1024, 96 * 1024 + 1024,
           128 * 1024 + 1024 } } });
   }
+
+  @Rule
+  public TestName name = new TestName();
 
   @Parameterized.Parameter(0)
   public int constructedBlockSize;
@@ -106,7 +111,8 @@ public class TestVerifyBucketCacheFile {
     try {
       bucketCache =
         new BucketCache("file:" + testDir + "/bucket.cache", capacitySize, constructedBlockSize,
-          constructedBlockSizes, writeThreads, writerQLen, testDir + "/bucket.persistence");
+          constructedBlockSizes, writeThreads, writerQLen, testDir + "/bucket.persistence"
+          + name.getMethodName());
       assertTrue(bucketCache.waitForCacheInitialization(10000));
       long usedSize = bucketCache.getAllocator().getUsedSize();
       assertEquals(0, usedSize);
@@ -124,7 +130,8 @@ public class TestVerifyBucketCacheFile {
       // restore cache from file
       bucketCache =
         new BucketCache("file:" + testDir + "/bucket.cache", capacitySize, constructedBlockSize,
-          constructedBlockSizes, writeThreads, writerQLen, testDir + "/bucket.persistence");
+          constructedBlockSizes, writeThreads, writerQLen, testDir
+          + "/bucket.persistence" + name.getMethodName());
       assertTrue(bucketCache.waitForCacheInitialization(10000));
       assertEquals(usedSize, bucketCache.getAllocator().getUsedSize());
       // persist cache to file
@@ -137,7 +144,8 @@ public class TestVerifyBucketCacheFile {
       // can't restore cache from file
       recoveredBucketCache =
         new BucketCache("file:" + testDir + "/bucket.cache", capacitySize, constructedBlockSize,
-          constructedBlockSizes, writeThreads, writerQLen, testDir + "/bucket.persistence");
+          constructedBlockSizes, writeThreads, writerQLen, testDir
+          + "/bucket.persistence" + name.getMethodName());
       assertTrue(recoveredBucketCache.waitForCacheInitialization(10000));
       assertEquals(0, recoveredBucketCache.getAllocator().getUsedSize());
       assertEquals(0, recoveredBucketCache.backingMap.size());
@@ -153,18 +161,19 @@ public class TestVerifyBucketCacheFile {
 
       // 3.delete backingMap persistence file
       final java.nio.file.Path mapFile =
-        FileSystems.getDefault().getPath(testDir.toString(), "bucket.persistence");
+        FileSystems.getDefault().getPath(testDir.toString(), "bucket.persistence" + name.getMethodName());
       assertTrue(Files.deleteIfExists(mapFile));
       // can't restore cache from file
       bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
         constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen,
-        testDir + "/bucket.persistence", DEFAULT_ERROR_TOLERATION_DURATION, conf);
+        testDir + "/bucket.persistence" + name.getMethodName(),
+        DEFAULT_ERROR_TOLERATION_DURATION, conf);
       assertTrue(bucketCache.waitForCacheInitialization(10000));
       waitPersistentCacheValidation(conf, bucketCache);
       assertEquals(0, bucketCache.getAllocator().getUsedSize());
       assertEquals(0, bucketCache.backingMap.size());
     } finally {
-      if (recoveredBucketCache == null && bucketCache != null) {
+      if (bucketCache != null) {
         bucketCache.shutdown();
       }
       if (recoveredBucketCache != null) {
@@ -176,16 +185,16 @@ public class TestVerifyBucketCacheFile {
 
   @Test
   public void testRetrieveFromFileAfterDelete() throws Exception {
-
     HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
     Path testDir = TEST_UTIL.getDataTestDir();
     TEST_UTIL.getTestFileSystem().mkdirs(testDir);
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setLong(CacheConfig.BUCKETCACHE_PERSIST_INTERVAL_KEY, 300);
-    String mapFileName = testDir + "/bucket.persistence" + EnvironmentEdgeManager.currentTime();
+    String mapFileName = testDir + "/bucket.persistence"
+      + name.getMethodName() + EnvironmentEdgeManager.currentTime();
     BucketCache bucketCache = null;
     try {
-      bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
+      bucketCache = new BucketCache("file:" + testDir + "/bucket.cache" , capacitySize,
         constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen, mapFileName,
         DEFAULT_ERROR_TOLERATION_DURATION, conf);
       assertTrue(bucketCache.waitForCacheInitialization(10000));
@@ -240,7 +249,8 @@ public class TestVerifyBucketCacheFile {
     try {
       bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
         constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen,
-        testDir + "/bucket.persistence", DEFAULT_ERROR_TOLERATION_DURATION, conf);
+        testDir + "/bucket.persistence" + name.getMethodName(),
+        DEFAULT_ERROR_TOLERATION_DURATION, conf);
       assertTrue(bucketCache.waitForCacheInitialization(10000));
       long usedSize = bucketCache.getAllocator().getUsedSize();
       assertEquals(0, usedSize);
@@ -265,7 +275,8 @@ public class TestVerifyBucketCacheFile {
       // can't restore cache from file
       bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
         constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen,
-        testDir + "/bucket.persistence", DEFAULT_ERROR_TOLERATION_DURATION, conf);
+        testDir + "/bucket.persistence" + name.getMethodName(),
+        DEFAULT_ERROR_TOLERATION_DURATION, conf);
       assertTrue(bucketCache.waitForCacheInitialization(10000));
       waitPersistentCacheValidation(conf, bucketCache);
       assertEquals(0, bucketCache.getAllocator().getUsedSize());
@@ -304,7 +315,8 @@ public class TestVerifyBucketCacheFile {
     try {
       bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
         constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen,
-        testDir + "/bucket.persistence", DEFAULT_ERROR_TOLERATION_DURATION, conf);
+        testDir + "/bucket.persistence" + name.getMethodName(),
+        DEFAULT_ERROR_TOLERATION_DURATION, conf);
       assertTrue(bucketCache.waitForCacheInitialization(10000));
       long usedSize = bucketCache.getAllocator().getUsedSize();
       assertEquals(0, usedSize);
@@ -331,7 +343,8 @@ public class TestVerifyBucketCacheFile {
       // can't restore cache from file
       bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
         constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen,
-        testDir + "/bucket.persistence", DEFAULT_ERROR_TOLERATION_DURATION, conf);
+        testDir + "/bucket.persistence" + name.getMethodName(),
+        DEFAULT_ERROR_TOLERATION_DURATION, conf);
       assertTrue(bucketCache.waitForCacheInitialization(10000));
       waitPersistentCacheValidation(conf, bucketCache);
       assertEquals(usedSize, bucketCache.getAllocator().getUsedSize());
@@ -360,7 +373,8 @@ public class TestVerifyBucketCacheFile {
     Configuration conf = HBaseConfiguration.create();
     // Disables the persister thread by setting its interval to MAX_VALUE
     conf.setLong(BUCKETCACHE_PERSIST_INTERVAL_KEY, Long.MAX_VALUE);
-    String mapFileName = testDir + "/bucket.persistence" + EnvironmentEdgeManager.currentTime();
+    String mapFileName = testDir + "/bucket.persistence"
+      + EnvironmentEdgeManager.currentTime() + name.getMethodName();
     BucketCache bucketCache = null;
     BucketCache newBucketCache = null;
     try {
@@ -435,7 +449,8 @@ public class TestVerifyBucketCacheFile {
     Configuration conf = HBaseConfiguration.create();
     conf.setLong(BACKING_MAP_PERSISTENCE_CHUNK_SIZE, chunkSize);
 
-    String mapFileName = testDir + "/bucket.persistence" + EnvironmentEdgeManager.currentTime();
+    String mapFileName = testDir + "/bucket.persistence"
+      + EnvironmentEdgeManager.currentTime() + name.getMethodName();
     BucketCache bucketCache = null;
     BucketCache newBucketCache = null;
     try {
@@ -452,16 +467,13 @@ public class TestVerifyBucketCacheFile {
         cacheAndWaitUntilFlushedToBucket(bucketCache, blocks[i].getBlockName(),
           blocks[i].getBlock());
       }
-
       // saves the current state
       bucketCache.persistToFile();
-
       // Create a new bucket which reads from persistence file.
       newBucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
         constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen, mapFileName,
         DEFAULT_ERROR_TOLERATION_DURATION, conf);
       assertTrue(newBucketCache.waitForCacheInitialization(10000));
-
       assertEquals(numBlocks, newBucketCache.backingMap.size());
       BlockCacheKey[] newKeys = CacheTestUtils.regenerateKeys(blocks, names);
       for (int i = 0; i < numBlocks; i++) {
@@ -469,11 +481,19 @@ public class TestVerifyBucketCacheFile {
           newBucketCache.getBlock(newKeys[i], false, false, false));
       }
     } finally {
-      if (newBucketCache == null && bucketCache != null) {
+      if (bucketCache != null) {
         bucketCache.shutdown();
       }
       if (newBucketCache != null) {
-        newBucketCache.shutdown();
+        try {
+          newBucketCache.shutdown();
+        } catch (NullPointerException e) {
+          // We need to enforce these two shutdown to make sure we don't leave "orphan" persister
+          // threads running while the unit test JVM instance is up.
+          // This would lead to a NPE because of the StringPoolCleanup in bucketCache.shutdown
+          //  but that's fine because we don't have more than one bucket cache instance in real life
+          //  and here we passed the point where we stop background threads inside shutdown.
+        }
       }
       TEST_UTIL.cleanupTestDir();
     }
