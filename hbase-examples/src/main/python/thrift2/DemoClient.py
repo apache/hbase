@@ -91,13 +91,13 @@ if __name__ == "__main__":
         '"example" with a column family called "family1"'
     )
 
-    host = "localhost"
-    port = 9090
+    default_host = "localhost"
+    default_port = 9090
     is_framed_transport = False
 
     if len(sys.argv) >= 2:
-        host = sys.argv[1]
+        default_host = sys.argv[1]
     if len(sys.argv) >= 3:
-        port = int(sys.argv[2])
+        default_port = int(sys.argv[2])
 
-    run(host, port, is_framed_transport)
+    run(default_host, default_port, is_framed_transport)
