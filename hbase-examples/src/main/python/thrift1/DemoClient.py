@@ -34,7 +34,7 @@ def printVersions(row, versions):
 
 def printRow(row_result):
     for res in row_result:
-        sorted_cols = {col: cell for col, cell in sorted(res.columns.items())}
+        sorted_cols = dict(sorted(res.columns.items()))
         row_str = ""
         for k, v in sorted_cols.items():
             # ignore error to prevent UnicodeDecodeError: 'utf-8' codec can't decode byte 0xfc in
@@ -42,7 +42,7 @@ def printRow(row_result):
             row_str += (
                 f"{k.decode('utf-8')} => {v.value.decode('utf-8', errors='ignore')}; "
             )
-    print(f"row: {res.row.decode('utf-8', errors='ignore')}, cols: {row_str}")
+        print(f"row: {res.row.decode('utf-8', errors='ignore')}, cols: {row_str}")
 
 
 def demo_client(host, port, is_framed_transport):
@@ -78,7 +78,7 @@ def demo_client(host, port, is_framed_transport):
     print("scanning tables...")
     for table in client.getTableNames():
         print(f"  found: {table.decode()}")
-        if table == demo_table or table == disable_table:
+        if table in {demo_table, disable_table}:
             if client.isTableEnabled(table):
                 print(f"    disabling table: {table.decode()}")
                 client.disableTable(table)
@@ -238,8 +238,8 @@ if __name__ == "__main__":
         print(f"usage: {__file__} <host> <port>")
         sys.exit(1)
 
-    host = sys.argv[1]
-    port = sys.argv[2]
+    default_host = sys.argv[1]
+    default_port = sys.argv[2]
 
-    is_framed_transport = False
-    demo_client(host, port, is_framed_transport)
+    default_is_framed_transport = False
+    demo_client(default_host, default_port, default_is_framed_transport)
