@@ -64,7 +64,7 @@ public class ThriftServer extends org.apache.hadoop.hbase.thrift.ThriftServer {
         + "To shutdown the thrift server run 'hbase-daemon.sh stop thrift2' or"
         + " send a kill signal to the thrift server pid",
       true);
-    throw new Shell.ExitCodeException(exitCode, "");
+    System.exit(exitCode);
   }
 
   @Override
