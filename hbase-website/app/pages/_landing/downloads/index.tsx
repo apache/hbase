@@ -17,7 +17,7 @@
 //
 
 import { MdLayout } from "@/components/mdx-components";
-import Content from "./content.mdx";
+import Content from "./content.md";
 
 export function DownloadsPage() {
   return <MdLayout Content={Content} />;

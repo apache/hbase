@@ -67,6 +67,8 @@ This is related to the open issue [HBASE-16178](https://issues.apache.org/jira/b
 This strategy stores the backups on the same cluster as where the backup was taken. This approach is only appropriate for testing
 as it does not provide any additional safety on top of what the software itself already provides.
 
+![Intra-Cluster Backup](../images/backup-intra-cluster.png)
+
 ### Backup using a dedicated cluster
 
 This strategy provides greater fault tolerance and provides a path towards disaster recovery. In this setting, you will
@@ -75,11 +77,15 @@ You should consider backing up to a different physical location, such as a diffe
 
 Typically, a backup-dedicated HDFS cluster uses a more economical hardware profile to save money.
 
+![Dedicated HDFS Cluster Backup](../images/backup-dedicated-cluster.png)
+
 ### Backup to the Cloud or a storage vendor appliance
 
 Another approach to safeguarding HBase incremental backups is to store the data on provisioned, secure servers that belong
 to third-party vendors and that are located off-site. The vendor can be a public cloud provider or a storage vendor who uses
 a Hadoop-compatible file system, such as S3 and other HDFS-compatible destinations.
+
+![Backup to Cloud or Vendor Storage Solutions](../images/backup-cloud-appliance.png)
 
 <Callout>
 The HBase backup utility does not support backup to multiple destinations. A workaround is to manually create copies
@@ -690,6 +696,8 @@ application called green. In this example, one table contains transaction record
 two tables need to be backed up and be recoverable as a group.
 
 The admin team also wants to ensure daily backups occur automatically.
+
+![Tables Composing The Backup Set](../images/backup-app-components.png)
 
 The following is an outline of the steps and examples of commands that are used to backup the data for the _green_ application and
 to recover the data later. All commands are run when logged in as HBase superuser.

@@ -94,7 +94,7 @@ export function main() {
   console.log(`Extracted ${developers.length} developers from pom.xml`);
 
   // Write to JSON file
-  const outputPath = path.join(__dirname, '..', 'app', 'pages', 'team', 'developers.json');
+  const outputPath = path.join(__dirname, '..', 'app', 'pages', '_landing', 'team', 'developers.json');
   fs.writeFileSync(outputPath, JSON.stringify(developers, null, 2));
 
   console.log(`Developers data written to ${outputPath}`);

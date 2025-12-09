@@ -1,0 +1,1477 @@
+---
+title: "external apis"
+description: "Documentation for external_apis"
+---
+# 
+
+This chapter will cover access to Apache HBase either through non-Java languages and through custom protocols. For information on using the native HBase APIs, refer to [User API Reference](https://hbase.apache.org/apidocs/index.html) and the [HBase APIs](#hbase_apis) chapter.
+
+# REST
+
+Representational State Transfer (REST) was introduced in 2000 in the doctoral dissertation of Roy Fielding, one of the principal authors of the HTTP specification.
+
+REST itself is out of the scope of this documentation, but in general, REST allows client-server interactions via an API that is tied to the URL itself. This section discusses how to configure and run the REST server included with HBase, which exposes HBase tables, rows, cells, and metadata as URL specified resources. There is also a nice series of blogs on [How-to: Use the Apache HBase REST Interface](http://blog.cloudera.com/blog/2013/03/how-to-use-the-apache-hbase-rest-interface-part-1/) by Jesse Anderson.
+
+## Starting and Stopping the REST Server
+
+The included REST server can run as a daemon which starts an embedded Jetty servlet container and deploys the servlet into it. Use one of the following commands to start the REST server in the foreground or background. The port is optional, and defaults to 8080.
+
+``` bash
+# Foreground
+$ bin/hbase rest start -p <port>
+
+# Background, logging to a file in $HBASE_LOGS_DIR
+$ bin/hbase-daemon.sh start rest -p <port>
+```
+
+To stop the REST server, use Ctrl-C if you were running it in the foreground, or the following command if you were running it in the background.
+
+``` bash
+$ bin/hbase-daemon.sh stop rest
+```
+
+## Configuring the REST Server and Client
+
+For information about configuring the REST server and client for SSL, as well as `doAs` impersonation for the REST server, see [???](#security.gateway.thrift) and other portions of the [???](#security) chapter.
+
+## Using REST Endpoints
+
+The following examples use the placeholder server http://example.com:8000, and the following commands can all be run using `curl` or `wget` commands. You can request plain text (the default), XML , or JSON output by adding no header for plain text, or the header "Accept: text/xml" for XML, "Accept: application/json" for JSON, or "Accept: application/x-protobuf" to for protocol buffers.
+
+<Callout type="info">
+Unless specified, use `GET` requests for queries, `PUT` or `POST` requests for creation or mutation, and `DELETE` for deletion.
+</Callout>
+
+
+<table>
+<caption>Cluster-Wide Endpoints</caption>
+<colgroup>
+<col style={{width: "16%"}} />
+<col style={{width: "8%"}} />
+<col style={{width: "25%"}} />
+<col style={{width: "50%"}} />
+</colgroup>
+<thead>
+<tr>
+<th style={{textAlign: "left"}}>Endpoint</th>
+<th style={{textAlign: "left"}}>HTTP Verb</th>
+<th style={{textAlign: "left"}}>Description</th>
+<th style={{textAlign: "left"}}>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style={{textAlign: "left"}}><p><code>/version/cluster</code></p></td>
+<td style={{textAlign: "left"}}><p><code>GET</code></p></td>
+<td style={{textAlign: "left"}}><p>Version of HBase running on this cluster</p></td>
+<td style={{textAlign: "left"}}><pre><code>{`curl -vi -X GET \
+  -H &quot;Accept: text/xml&quot; \
+  &quot;http://example.com:8000/version/cluster&quot;`}</code></pre></td>
+</tr>
+<tr>
+<td style={{textAlign: "left"}}><p><code>/version/rest</code></p></td>
+<td style={{textAlign: "left"}}><p><code>GET</code></p></td>
+<td style={{textAlign: "left"}}><p>Version of the HBase REST Server</p></td>
+<td style={{textAlign: "left"}}><pre><code>{`curl -vi -X GET \
+-H &quot;Accept: text/xml&quot; \
+&quot;http://example.com:8000/version/rest&quot;`}</code></pre></td>
+</tr>
+<tr>
+<td style={{textAlign: "left"}}><p><code>/status/cluster</code></p></td>
+<td style={{textAlign: "left"}}><p><code>GET</code></p></td>
+<td style={{textAlign: "left"}}><p>Cluster status</p></td>
+<td style={{textAlign: "left"}}><pre><code>{`curl -vi -X GET \
+  -H &quot;Accept: text/xml&quot; \
+  &quot;http://example.com:8000/status/cluster&quot;`}</code></pre></td>
+</tr>
+<tr>
+<td style={{textAlign: "left"}}><p><code>/</code></p></td>
+<td style={{textAlign: "left"}}><p><code>GET</code></p></td>
+<td style={{textAlign: "left"}}><p>List of all non-system tables</p></td>
+<td style={{textAlign: "left"}}><pre><code>{`curl -vi -X GET \
+  -H &quot;Accept: text/xml&quot; \
+  &quot;http://example.com:8000/&quot;`}</code></pre></td>
+</tr>
+</tbody>
+</table>
+
+<table>
+<caption>Namespace Endpoints</caption>
+<colgroup>
+<col style={{width: "16%"}} />
+<col style={{width: "8%"}} />
+<col style={{width: "25%"}} />
+<col style={{width: "50%"}} />
+</colgroup>
+<thead>
+<tr>
+<th style={{textAlign: "left"}}>Endpoint</th>
+<th style={{textAlign: "left"}}>HTTP Verb</th>
+<th style={{textAlign: "left"}}>Description</th>
+<th style={{textAlign: "left"}}>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style={{textAlign: "left"}}><p><code>/namespaces</code></p></td>
+<td style={{textAlign: "left"}}><p><code>GET</code></p></td>
+<td style={{textAlign: "left"}}><p>List all namespaces</p></td>
+<td style={{textAlign: "left"}}><pre><code>{`curl -vi -X GET \
+  -H &quot;Accept: text/xml&quot; \
+  &quot;http://example.com:8000/namespaces/&quot;`}</code></pre></td>
+</tr>
+<tr>
+<td style={{textAlign: "left"}}><p><code>/namespaces/namespace</code></p></td>
+<td style={{textAlign: "left"}}><p><code>GET</code></p></td>
+<td style={{textAlign: "left"}}><p>Describe a specific namespace</p></td>
+<td style={{textAlign: "left"}}><pre><code>{`curl -vi -X GET \
+  -H &quot;Accept: text/xml&quot; \
+  &quot;http://example.com:8000/namespaces/special_ns&quot;`}</code></pre></td>
+</tr>
+<tr>
+<td style={{textAlign: "left"}}><p><code>/namespaces/namespace</code></p></td>
+<td style={{textAlign: "left"}}><p><code>POST</code></p></td>
+<td style={{textAlign: "left"}}><p>Create a new namespace</p></td>
+<td style={{textAlign: "left"}}><pre><code>{`curl -vi -X POST \
+  -H &quot;Accept: text/xml&quot; \
+  &quot;example.com:8000/namespaces/special_ns&quot;`}</code></pre></td>
+</tr>
+<tr>
+<td style={{textAlign: "left"}}><p><code>/namespaces/namespace/tables</code></p></td>
+<td style={{textAlign: "left"}}><p><code>GET</code></p></td>
+<td style={{textAlign: "left"}}><p>List all tables in a specific namespace</p></td>
+<td style={{textAlign: "left"}}><pre><code>{`curl -vi -X GET \
+  -H &quot;Accept: text/xml&quot; \
+  &quot;http://example.com:8000/namespaces/special_ns/tables&quot;`}</code></pre></td>
+</tr>
+<tr>
+<td style={{textAlign: "left"}}><p><code>/namespaces/namespace</code></p></td>
+<td style={{textAlign: "left"}}><p><code>PUT</code></p></td>
+<td style={{textAlign: "left"}}><p>Alter an existing namespace. Currently not used.</p></td>
+<td style={{textAlign: "left"}}><pre><code>{`curl -vi -X PUT \
+  -H &quot;Accept: text/xml&quot; \
+  &quot;http://example.com:8000/namespaces/special_ns`}</code></pre></td>
+</tr>
+<tr>
+<td style={{textAlign: "left"}}><p><code>/namespaces/namespace</code></p></td>
+<td style={{textAlign: "left"}}><p><code>DELETE</code></p></td>
+<td style={{textAlign: "left"}}><p>Delete a namespace. The namespace must be empty.</p></td>
+<td style={{textAlign: "left"}}><pre><code>{`curl -vi -X DELETE \
+  -H &quot;Accept: text/xml&quot; \
+  &quot;example.com:8000/namespaces/special_ns&quot;`}</code></pre></td>
+</tr>
+</tbody>
+</table>
+
+<table>
+<caption>Table Endpoints</caption>
+<colgroup>
+<col style={{width: "16%"}} />
+<col style={{width: "8%"}} />
+<col style={{width: "25%"}} />
+<col style={{width: "50%"}} />
+</colgroup>
+<thead>
+<tr>
+<th style={{textAlign: "left"}}>Endpoint</th>
+<th style={{textAlign: "left"}}>HTTP Verb</th>
+<th style={{textAlign: "left"}}>Description</th>
+<th style={{textAlign: "left"}}>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style={{textAlign: "left"}}><p><code>/table/exists</code></p></td>
+<td style={{textAlign: "left"}}><p><code>GET</code></p></td>
+<td style={{textAlign: "left"}}><p>Returns if the specified table exists.</p></td>
+<td style={{textAlign: "left"}}><pre><code>{`curl -vi -X GET \
+-H &quot;Accept: text/xml&quot; \
+&quot;http://example.com:8000/users/exists&quot;`}</code></pre></td>
+</tr>
+<tr>
+<td style={{textAlign: "left"}}><p><code>/table/schema</code></p></td>
+<td style={{textAlign: "left"}}><p><code>GET</code></p></td>
+<td style={{textAlign: "left"}}><p>Describe the schema of the specified table.</p></td>
+<td style={{textAlign: "left"}}><pre><code>{`curl -vi -X GET \
+  -H &quot;Accept: text/xml&quot; \
+  &quot;http://example.com:8000/users/schema&quot;`}</code></pre></td>
+</tr>
+<tr>
+<td style={{textAlign: "left"}}><p><code>/table/schema</code></p></td>
+<td style={{textAlign: "left"}}><p><code>POST</code></p></td>
+<td style={{textAlign: "left"}}><p>Update an existing table with the provided schema fragment</p></td>
+<td style={{textAlign: "left"}}><pre><code>{`curl -vi -X POST \
+  -H &quot;Accept: text/xml&quot; \
+  -H &quot;Content-Type: text/xml&quot; \
+  -d &#39;&amp;lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;&amp;lt;TableSchema name=&quot;users&quot;&gt;&amp;lt;ColumnSchema name=&quot;cf&quot; KEEP_DELETED_CELLS=&quot;true&quot; /&gt;&amp;lt;/TableSchema&gt;&#39; \
+  &quot;http://example.com:8000/users/schema&quot;`}</code></pre></td>
+</tr>
+<tr>
+<td style={{textAlign: "left"}}><p><code>/table/schema</code></p></td>
+<td style={{textAlign: "left"}}><p><code>PUT</code></p></td>
+<td style={{textAlign: "left"}}><p>Create a new table, or replace an existing table’s schema</p></td>
+<td style={{textAlign: "left"}}><pre><code>{`curl -vi -X PUT \
+  -H &quot;Accept: text/xml&quot; \
+  -H &quot;Content-Type: text/xml&quot; \
+  -d &#39;&amp;lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;&amp;lt;TableSchema name=&quot;users&quot;&gt;&amp;lt;ColumnSchema name=&quot;cf&quot; /&gt;&amp;lt;/TableSchema&gt;&#39; \
+  &quot;http://example.com:8000/users/schema&quot;`}</code></pre></td>
+</tr>
+<tr>
+<td style={{textAlign: "left"}}><p><code>/table/schema</code></p></td>
+<td style={{textAlign: "left"}}><p><code>DELETE</code></p></td>
+<td style={{textAlign: "left"}}><p>Delete the table. You must use the <code>/table/schema</code> endpoint, not just <code>/table/</code>.</p></td>
+<td style={{textAlign: "left"}}><pre><code>{`curl -vi -X DELETE \
+  -H &quot;Accept: text/xml&quot; \
+  &quot;http://example.com:8000/users/schema&quot;`}</code></pre></td>
+</tr>
+<tr>
+<td style={{textAlign: "left"}}><p><code>/table/regions</code></p></td>
+<td style={{textAlign: "left"}}><p><code>GET</code></p></td>
+<td style={{textAlign: "left"}}><p>List the table regions</p></td>
+<td style={{textAlign: "left"}}><pre><code>{`curl -vi -X GET \
+  -H &quot;Accept: text/xml&quot; \
+  &quot;http://example.com:8000/users/regions`}</code></pre></td>
+</tr>
+</tbody>
+</table>
+
+<table>
+<caption>Endpoints for <code>Get</code> Operations</caption>
+<colgroup>
+<col style={{width: "16%"}} />
+<col style={{width: "8%"}} />
+<col style={{width: "25%"}} />
+<col style={{width: "50%"}} />
+</colgroup>
+<thead>
+<tr>
+<th style={{textAlign: "left"}}>Endpoint</th>
+<th style={{textAlign: "left"}}>HTTP Verb</th>
+<th style={{textAlign: "left"}}>Description</th>
+<th style={{textAlign: "left"}}>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style={{textAlign: "left"}}><p><code>/table/row</code></p></td>
+<td style={{textAlign: "left"}}><p><code>GET</code></p></td>
+<td style={{textAlign: "left"}}><p>Get all columns of a single row. Values are Base-64 encoded. This requires the "Accept" request header with a type that can hold multiple columns (like xml, json or protobuf).</p></td>
+<td style={{textAlign: "left"}}><pre><code>{`curl -vi -X GET \
+  -H &quot;Accept: text/xml&quot; \
+  &quot;http://example.com:8000/users/row1&quot;`}</code></pre></td>
+</tr>
+<tr>
+<td style={{textAlign: "left"}}><p><code>/table/row/column:qualifier/timestamp</code></p></td>
+<td style={{textAlign: "left"}}><p><code>GET</code></p></td>
+<td style={{textAlign: "left"}}><p>Get the value of a single column. Values are Base-64 encoded.</p></td>
+<td style={{textAlign: "left"}}><pre><code>{`curl -vi -X GET \
+  -H &quot;Accept: text/xml&quot; \
+  &quot;http://example.com:8000/users/row1/cf:a/1458586888395&quot;`}</code></pre></td>
+</tr>
+<tr>
+<td style={{textAlign: "left"}}><p><code>/table/row/column:qualifier</code></p></td>
+<td style={{textAlign: "left"}}><p><code>GET</code></p></td>
+<td style={{textAlign: "left"}}><p>Get the value of a single column. Values are Base-64 encoded.</p></td>
+<td style={{textAlign: "left"}}><pre><code>{`curl -vi -X GET \
+  -H &quot;Accept: text/xml&quot; \
+  &quot;http://example.com:8000/users/row1/cf:a&quot;
+&#10;curl -vi -X GET \
+  -H &quot;Accept: text/xml&quot; \
+   &quot;http://example.com:8000/users/row1/cf:a/&quot;`}</code></pre></td>
+</tr>
+<tr>
+<td style={{textAlign: "left"}}><p><code>/table/row/column:qualifier?e=b64</code></p></td>
+<td style={{textAlign: "left"}}><p><code>GET</code></p></td>
+<td style={{textAlign: "left"}}><p>Get the value of a single column using a binary rowkey and column name, encoded in <a href="https://datatracker.ietf.org/doc/html/rfc4648#section-5">URL-safe base64</a>. Returned values are Base-64 encoded.</p></td>
+<td style={{textAlign: "left"}}><pre><code>{`curl -vi -X GET \
+  -H &quot;Accept: text/xml&quot; \
+  &quot;http://example.com:8000/users/cm93MQ/Y2Y6YQ?e=b64&quot;
+&#10;curl -vi -X GET \
+  -H &quot;Accept: text/xml&quot; \
+  -H &quot;Encoding: base64&quot; \
+   &quot;http://example.com:8000/users/cm93MQ/Y2Y6YQ/&quot;`}</code></pre></td>
+</tr>
+<tr>
+<td style={{textAlign: "left"}}><p><code>/table/row_prefix*/column</code></p></td>
+<td style={{textAlign: "left"}}><p><code>GET</code></p></td>
+<td style={{textAlign: "left"}}><p>Get a combination of rows which matches the given row prefix and column family. Returned values are Base-64 encoded.</p></td>
+<td style={{textAlign: "left"}}><pre><code>{`curl -vi -X GET \
+-H &quot;Accept: text/xml&quot; \
+&quot;http://example.com:8000/users/row*/cf&quot;`}</code></pre></td>
+</tr>
+<tr>
+<td style={{textAlign: "left"}}><p><code>/table/row_prefix*/column:qualifier</code></p></td>
+<td style={{textAlign: "left"}}><p><code>GET</code></p></td>
+<td style={{textAlign: "left"}}><p>Get a combination of rows which matches the given row prefix, column family and qualifier. Returned values are Base-64 encoded.</p></td>
+<td style={{textAlign: "left"}}><pre><code>{`curl -vi -X GET \
+-H &quot;Accept: text/xml&quot; \
+&quot;http://example.com:8000/users/row*/cf&quot;`}</code></pre></td>
+</tr>
+<tr>
+<td style={{textAlign: "left"}}><p><code>/table/multiget?row=row&amp;row=row/column:qualifier&amp;row=…​</code></p></td>
+<td style={{textAlign: "left"}}><p><code>GET</code></p></td>
+<td style={{textAlign: "left"}}><p>Multi-Get a combination of rows/columns. Values are Base-64 encoded.</p></td>
+<td style={{textAlign: "left"}}><pre><code>{`curl -vi -X GET \
+  -H &quot;Accept: text/xml&quot; \
+  &quot;http://example.com:8000/users/multiget?row=row1&amp;row=row2/cf:a&quot;`}</code></pre></td>
+</tr>
+<tr>
+<td style={{textAlign: "left"}}><p><code>/table/multiget?e=b64&amp;row=row&amp;row=row/column:qualifier&amp;row=…​</code></p></td>
+<td style={{textAlign: "left"}}><p><code>GET</code></p></td>
+<td style={{textAlign: "left"}}><p>Multi-Get a combination of rows/columns using binary rowkeys and column names, encoded in <a href="https://datatracker.ietf.org/doc/html/rfc4648#section-5">URL-safe base64</a>. Returned values are Base-64 encoded.</p></td>
+<td style={{textAlign: "left"}}><pre><code>{`curl -vi -X GET \
+  -H &quot;Accept: text/xml&quot; \
+  &quot;http://example.com:8000/users/multiget?e=b64&amp;row=cm93MQ&amp;row=cm93Mg%2FY2Y6YQ&quot;`}</code></pre></td>
+</tr>
+<tr>
+<td style={{textAlign: "left"}}><p><code>/table/multiget?row=row&amp;row=row/column:qualifier&amp;filter=url_encoded_filter</code></p></td>
+<td style={{textAlign: "left"}}><p><code>GET</code></p></td>
+<td style={{textAlign: "left"}}><p>Multi-Get a combination of rows/columns with a filter. The filter should be specified according to the <a href="#thrift.filter_language">Thrift Filter Language</a> and then encoded as <code>application/x-www-form-urlencoded</code> MIME format string. This example uses <code>PrefixFilter('row1')</code>.</p></td>
+<td style={{textAlign: "left"}}><pre><code>{`curl -vi -X GET \
+-H &quot;Accept: text/xml&quot; \
+&quot;http://example.com:8000/users/multiget?row=row1&amp;row=row2/cf:a&amp;filter=PrefixFilter%28%27row1%27%29&quot;`}</code></pre></td>
+</tr>
+<tr>
+<td style={{textAlign: "left"}}><p><code>/table/multiget?row=row&amp;row=row/column:qualifier&amp;row=…​&amp;filter_b64=b64_encoded_filter</code></p></td>
+<td style={{textAlign: "left"}}><p><code>GET</code></p></td>
+<td style={{textAlign: "left"}}><p>Multi-Get a combination of rows/columns with a filter. The filter should be specified according to the <a href="#thrift.filter_language">Thrift Filter Language</a> and then encoded in <a href="https://datatracker.ietf.org/doc/html/rfc4648#section-5">URL-safe base64</a>. This example uses <code>PrefixFilter('row1')</code>.</p></td>
+<td style={{textAlign: "left"}}><pre><code>{`curl -vi -X GET \
+-H &quot;Accept: text/xml&quot; \
+&quot;http://example.com:8000/users/multiget?row=row1&amp;row=row2/cf:a&amp;filter_b64=UHJlZml4RmlsdGVyKCdyb3cxJyk&quot;`}</code></pre></td>
+</tr>
+<tr>
+<td style={{textAlign: "left"}}><p><code>/table/row/column:qualifier/?v=number_of_versions</code></p></td>
+<td style={{textAlign: "left"}}><p><code>GET</code></p></td>
+<td style={{textAlign: "left"}}><p>Multi-Get a specified number of versions of a given cell. Values are Base-64 encoded.</p></td>
+<td style={{textAlign: "left"}}><pre><code>{`curl -vi -X GET \
+  -H &quot;Accept: text/xml&quot; \
+  &quot;http://example.com:8000/users/row1/cf:a?v=2&quot;`}</code></pre></td>
+</tr>
+</tbody>
+</table>
+
+<table>
+<caption>Endpoints for <code>Delete</code> Operations</caption>
+<colgroup>
+<col style={{width: "16%"}} />
+<col style={{width: "8%"}} />
+<col style={{width: "25%"}} />
+<col style={{width: "50%"}} />
+</colgroup>
+<thead>
+<tr>
+<th style={{textAlign: "left"}}>Endpoint</th>
+<th style={{textAlign: "left"}}>HTTP Verb</th>
+<th style={{textAlign: "left"}}>Description</th>
+<th style={{textAlign: "left"}}>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style={{textAlign: "left"}}><p><code>/table/row</code></p></td>
+<td style={{textAlign: "left"}}><p><code>DELETE</code></p></td>
+<td style={{textAlign: "left"}}><p>Delete all columns of a single row.</p></td>
+<td style={{textAlign: "left"}}><pre><code>{`curl -vi -X DELETE \
+  &quot;http://example.com:8000/users/row1&quot;`}</code></pre></td>
+</tr>
+<tr>
+<td style={{textAlign: "left"}}><p><code>/table/row/column_family:</code></p></td>
+<td style={{textAlign: "left"}}><p><code>DELETE</code></p></td>
+<td style={{textAlign: "left"}}><p>Delete all columns of a single row and column family.</p></td>
+<td style={{textAlign: "left"}}><pre><code>{`curl -vi -X DELETE \
+  &quot;http://example.com:8000/users/row1/cf&quot;`}</code></pre></td>
+</tr>
+<tr>
+<td style={{textAlign: "left"}}><p><code>/table/row/column:qualifier/timestamp</code></p></td>
+<td style={{textAlign: "left"}}><p><code>DELETE</code></p></td>
+<td style={{textAlign: "left"}}><p>Delete a single column.</p></td>
+<td style={{textAlign: "left"}}><pre><code>{`curl -vi -X DELETE \
+  &quot;http://example.com:8000/users/row1/cf:a/1458586888395&quot;`}</code></pre></td>
+</tr>
+<tr>
+<td style={{textAlign: "left"}}><p><code>/table/row/column:qualifier</code></p></td>
+<td style={{textAlign: "left"}}><p><code>DELETE</code></p></td>
+<td style={{textAlign: "left"}}><p>Delete a single column.</p></td>
+<td style={{textAlign: "left"}}><pre><code>{`curl -vi -X DELETE \
+  &quot;http://example.com:8000/users/row1/cf:a&quot;
+&#10;curl -vi -X DELETE \
+  -H &quot;Accept: text/xml&quot; \
+   &quot;http://example.com:8000/users/row1/cf:a/&quot;`}</code></pre></td>
+</tr>
+<tr>
+<td style={{textAlign: "left"}}><p><code>/table/row/column:qualifier?e=b64</code></p></td>
+<td style={{textAlign: "left"}}><p><code>DELETE</code></p></td>
+<td style={{textAlign: "left"}}><p>Delete a single column using a binary rowkey and column name, encoded in <a href="https://datatracker.ietf.org/doc/html/rfc4648#section-5">URL-safe base64</a>.</p></td>
+<td style={{textAlign: "left"}}><pre><code>{`curl -vi -X DELETE \
+  &quot;http://example.com:8000/users/cm93MQ/Y2Y6YQ?e=b64&quot;
+&#10;curl -vi -X DELETE \
+  -H &quot;Encoding: base64&quot; \
+   &quot;http://example.com:8000/users/cm93MQ/Y2Y6YQ/&quot;`}</code></pre></td>
+</tr>
+</tbody>
+</table>
+
+<table id="stateful.scanner.endpoints">
+<caption>Stateful endpoints for <code>Scan</code> Operations</caption>
+<colgroup>
+<col style={{width: "16%"}} />
+<col style={{width: "8%"}} />
+<col style={{width: "25%"}} />
+<col style={{width: "50%"}} />
+</colgroup>
+<thead>
+<tr>
+<th style={{textAlign: "left"}}>Endpoint</th>
+<th style={{textAlign: "left"}}>HTTP Verb</th>
+<th style={{textAlign: "left"}}>Description</th>
+<th style={{textAlign: "left"}}>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style={{textAlign: "left"}}><p><code>/table/scanner/</code></p></td>
+<td style={{textAlign: "left"}}><p><code>PUT</code></p></td>
+<td style={{textAlign: "left"}}><p>Get a Scanner object. Required by all other Scan operations. Adjust the batch parameter to the number of rows the scan should return in a batch. See the next example for adding filters to your scanner. The scanner endpoint URL is returned as the <code>Location</code> in the HTTP response. The other examples in this table assume that the scanner endpoint is <code>http://example.com:8000/users/scanner/145869072824375522207</code>.</p></td>
+<td style={{textAlign: "left"}}><pre><code>{`curl -vi -X PUT \
+  -H &quot;Accept: text/xml&quot; \
+  -H &quot;Content-Type: text/xml&quot; \
+  -d &#39;&lt;Scanner batch=&quot;1&quot;/&gt;&#39; \
+  &quot;http://example.com:8000/users/scanner/&quot;`}</code></pre></td>
+</tr>
+<tr>
+<td style={{textAlign: "left"}}><p><code>/table/scanner/</code></p></td>
+<td style={{textAlign: "left"}}><p><code>PUT</code></p></td>
+<td style={{textAlign: "left"}}><p>To supply filters to the Scanner object or configure the Scanner in any other way, you can create a text file and add your filter to the file. For example, to return only rows for which keys start with &lt;codeph&gt;u123&lt;/codeph&gt; and use a batch size of 100, the filter file would look like this:</p>
+<p>[source,xml] ---- &lt;Scanner batch="100"&gt; &lt;filter&gt; {'{'} "type": "PrefixFilter", "value": "u123" {'}'} &lt;/filter&gt; &lt;/Scanner&gt; ----</p>
+<p>Pass the file to the <code>-d</code> argument of the <code>curl</code> request.</p></td>
+<td style={{textAlign: "left"}}><pre><code>{`curl -vi -X PUT \
+  -H &quot;Accept: text/xml&quot; \
+  -H &quot;Content-Type:text/xml&quot; \
+  -d @filter.txt \
+  &quot;http://example.com:8000/users/scanner/&quot;`}</code></pre></td>
+</tr>
+<tr>
+<td style={{textAlign: "left"}}><p><code>/table/scanner/scanner-id</code></p></td>
+<td style={{textAlign: "left"}}><p><code>GET</code></p></td>
+<td style={{textAlign: "left"}}><p>Get the next batch from the scanner. Cell values are byte-encoded. If the scanner has been exhausted, HTTP status <code>204</code> is returned.</p></td>
+<td style={{textAlign: "left"}}><pre><code>{`curl -vi -X GET \
+  -H &quot;Accept: text/xml&quot; \
+  &quot;http://example.com:8000/users/scanner/145869072824375522207&quot;`}</code></pre></td>
+</tr>
+<tr>
+<td style={{textAlign: "left"}}><p><code>table/scanner/scanner-id</code></p></td>
+<td style={{textAlign: "left"}}><p><code>DELETE</code></p></td>
+<td style={{textAlign: "left"}}><p>Deletes the scanner and frees the resources it used.</p></td>
+<td style={{textAlign: "left"}}><pre><code>{`curl -vi -X DELETE \
+  -H &quot;Accept: text/xml&quot; \
+  &quot;http://example.com:8000/users/scanner/145869072824375522207&quot;`}</code></pre></td>
+</tr>
+</tbody>
+</table>
+
+<table id="stateless.scanner.endpoints">
+<caption>Stateless endpoints for <code>Scan</code> Operations</caption>
+<colgroup>
+<col style={{width: "16%"}} />
+<col style={{width: "8%"}} />
+<col style={{width: "25%"}} />
+<col style={{width: "50%"}} />
+</colgroup>
+<thead>
+<tr>
+<th style={{textAlign: "left"}}>Endpoint</th>
+<th style={{textAlign: "left"}}>HTTP Verb</th>
+<th style={{textAlign: "left"}}>Description</th>
+<th style={{textAlign: "left"}}>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style={{textAlign: "left"}}><p><code>/table/*</code></p></td>
+<td style={{textAlign: "left"}}><p><code>GET</code></p></td>
+<td style={{textAlign: "left"}}><p>Scanning the entire table. The stateless scanner endpoint does not require a followup call to return the results.</p></td>
+<td style={{textAlign: "left"}}><pre><code>{`curl -vi -X GET \
+-H &quot;Accept: text/xml&quot; \
+&quot;http://example.com:8000/users/*&quot;`}</code></pre></td>
+</tr>
+<tr>
+<td style={{textAlign: "left"}}><p><code>/table/*?limit=number_of_rows</code></p></td>
+<td style={{textAlign: "left"}}><p><code>GET</code></p></td>
+<td style={{textAlign: "left"}}><p>Scanning the first row of the table.</p></td>
+<td style={{textAlign: "left"}}><pre><code>{`curl -vi -X GET \
+-H &quot;Accept: text/xml&quot; \
+&quot;http://example.com:8000/users/*?limit=1&quot;`}</code></pre></td>
+</tr>
+<tr>
+<td style={{textAlign: "left"}}><p><code>/table/*?column=column:qualifier</code></p></td>
+<td style={{textAlign: "left"}}><p><code>GET</code></p></td>
+<td style={{textAlign: "left"}}><p>Scanning a given column of the table.</p></td>
+<td style={{textAlign: "left"}}><pre><code>{`curl -vi -X GET \
+-H &quot;Accept: text/xml&quot; \
+&quot;http://example.com:8000/users/*?column=cf:a&quot;`}</code></pre></td>
+</tr>
+<tr>
+<td style={{textAlign: "left"}}><p><code>/table/*?column=column1:qualifier1,column2:qualifier2</code></p></td>
+<td style={{textAlign: "left"}}><p><code>GET</code></p></td>
+<td style={{textAlign: "left"}}><p>Scanning more than one column of the table.</p></td>
+<td style={{textAlign: "left"}}><pre><code>{`curl -vi -X GET \
+-H &quot;Accept: text/xml&quot; \
+&quot;http://example.com:8000/users/*?column=cf:a,cf:b&quot;`}</code></pre></td>
+</tr>
+<tr>
+<td style={{textAlign: "left"}}><p><code>/table/*?startrow=row&amp;limit=number_of_rows</code></p></td>
+<td style={{textAlign: "left"}}><p><code>GET</code></p></td>
+<td style={{textAlign: "left"}}><p>Scanning table with start row and limit.</p></td>
+<td style={{textAlign: "left"}}><pre><code>{`curl -vi -X GET \
+-H &quot;Accept: text/xml&quot; \
+&quot;http://example.com:8000/users/*?startrow=row1&amp;limit=2&quot;`}</code></pre></td>
+</tr>
+<tr>
+<td style={{textAlign: "left"}}><p><code>/table/row_prefix*</code></p></td>
+<td style={{textAlign: "left"}}><p><code>GET</code></p></td>
+<td style={{textAlign: "left"}}><p>Scanning table with row prefix.</p></td>
+<td style={{textAlign: "left"}}><pre><code>{`curl -vi -X GET \
+-H &quot;Accept: text/xml&quot; \
+&quot;http://example.com:8000/users/row1*&quot;`}</code></pre></td>
+</tr>
+<tr>
+<td style={{textAlign: "left"}}><p><code>/table/*?reversed=true</code></p></td>
+<td style={{textAlign: "left"}}><p><code>GET</code></p></td>
+<td style={{textAlign: "left"}}><p>Scanning table in reverse.</p></td>
+<td style={{textAlign: "left"}}><pre><code>{`curl -vi -X GET \
+-H &quot;Accept: text/xml&quot; \
+&quot;http://example.com:8000/users/*?reversed=true&quot;`}</code></pre></td>
+</tr>
+<tr>
+<td style={{textAlign: "left"}}><p><code>/table/*?filter=url_encoded_filter</code></p></td>
+<td style={{textAlign: "left"}}><p><code>GET</code></p></td>
+<td style={{textAlign: "left"}}><p>Scanning with a filter <code>PrefixFilter('row1')</code>. The filter should be specified according to the <a href="#thrift.filter_language">Thrift Filter Language</a> and then encoded as <code>application/x-www-form-urlencoded</code> MIME format string.</p></td>
+<td style={{textAlign: "left"}}><pre><code>{`curl -vi -X GET \
+-H &quot;Accept: text/xml&quot; \
+&quot;http://example.com:8000/users/*?filter=PrefixFilter%28%27row1%27%29&quot;`}</code></pre></td>
+</tr>
+<tr>
+<td style={{textAlign: "left"}}><p><code>/table/*?filter_b64=b64_encoded_filter</code></p></td>
+<td style={{textAlign: "left"}}><p><code>GET</code></p></td>
+<td style={{textAlign: "left"}}><p>Scanning with a filter <code>PrefixFilter('row1')</code>. The filter should be specified according to the <a href="#thrift.filter_language">Thrift Filter Language</a> and then encoded in <a href="https://datatracker.ietf.org/doc/html/rfc4648#section-5">URL-safe base64</a>.</p></td>
+<td style={{textAlign: "left"}}><pre><code>{`curl -vi -X GET \
+-H &quot;Accept: text/xml&quot; \
+&quot;http://example.com:8000/users/*?filter_b64=UHJlZml4RmlsdGVyKCdyb3cxJyk&quot;`}</code></pre></td>
+</tr>
+</tbody>
+</table>
+
+The [stateful scanner API](#stateful.scanner.endpoints) expects clients to restart scans if there is a REST server failure in the midst. The stateless does not store any state related to scan operation and all the parameters are specified as query parameters.
+
+<Callout type="info">
+The stateless endpoints are optimized for small results, while the [stateful scanner API](#stateful.scanner.endpoints) can also be used for large results.
+</Callout>
+
+
+The following are the scan parameters:
+
+- `startrow` - The start row for the scan.
+
+- `endrow` - The end row for the scan.
+
+- `column` - The comma separated list of columns to scan.
+
+- `starttime`, `endtime` - To only retrieve columns within a specific range of version timestamps, both start and end time must be specified.
+
+- `maxversions` - To limit the number of versions of each column to be returned.
+
+- `batchsize` - To limit the maximum number of values returned for each call to next().
+
+- `limit` - The number of rows to return in the scan operation.
+
+- `cacheblocks` - Whether to use the [Block Cache](#perf.hbase.client.blockcache) in the RegionServer. By default `true`.
+
+- `reversed` - When set to `true`, reverse scan will be executed. By default `false`.
+
+- `filter` - Allows to specify a filter for the scan as an `application/x-www-form-urlencoded` MIME format string.
+
+- `filter_b64` - On versions which include the [HBASE-28518](https://issues.apache.org/jira/browse/HBASE-28518) patch, `filter_b64` allows to specify a [URL-safe base64](https://datatracker.ietf.org/doc/html/rfc4648#section-5) encoded filter for the scan. When both `filter` and `filter_b64` are specified, only `filter_b64` is considered.
+
+- `includeStartRow` - Whether start row should be included in the scan. By default `true`.
+
+- `includeStopRow` - Whether end row (stop row) should be included in the scan. By default `false`.
+
+<Callout type="info">
+`includeStartRow` and `includeStopRow` are only supported on versions that include [HBASE-28627](https://issues.apache.org/jira/browse/HBASE-28627).
+
+Versions without this patch will either ignore these parameters or will error out if they are set to a non-default value.
+</Callout>
+
+
+More on start row, end row and limit parameters:
+
+- If start row, end row and limit not specified, then the whole table will be scanned.
+
+- If start row and limit (say N) is specified, then the scan operation will return N rows from the start row specified.
+
+- If only limit parameter is specified, then the scan operation will return N rows from the start of the table.
+
+- If limit and end row are specified, then the scan operation will return N rows from start of table till the end row. If the end row is reached before N rows ( say M and M < N ), then M rows will be returned to the user.
+
+- If start row, end row and limit (say N ) are specified and N < number of rows between start row and end row, then N rows from start row will be returned to the user. If N > (number of rows between start row and end row (say M), then M number of rows will be returned to the user.
+
+<table>
+<caption>Endpoints for <code>Put</code> Operations</caption>
+<colgroup>
+<col style={{width: "16%"}} />
+<col style={{width: "8%"}} />
+<col style={{width: "25%"}} />
+<col style={{width: "50%"}} />
+</colgroup>
+<thead>
+<tr>
+<th style={{textAlign: "left"}}>Endpoint</th>
+<th style={{textAlign: "left"}}>HTTP Verb</th>
+<th style={{textAlign: "left"}}>Description</th>
+<th style={{textAlign: "left"}}>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style={{textAlign: "left"}}><p><code>/table/row_key</code></p></td>
+<td style={{textAlign: "left"}}><p><code>PUT</code></p></td>
+<td style={{textAlign: "left"}}><p>Write a row to a table. The row, column qualifier, and value must each be Base-64 encoded. To encode a string, use the <code>base64</code> command-line utility. To decode the string, use <code>base64 -d</code>. The payload is in the <code>--data</code> argument, and the <code>/users/fakerow</code> value is a placeholder. Insert multiple rows by adding them to the <code>&lt;CellSet&gt;</code> element. You can also save the data to be inserted to a file and pass it to the <code>-d</code> parameter with syntax like <code>-d @filename.txt</code>.</p></td>
+<td style={{textAlign: "left"}}><pre><code>{`curl -vi -X PUT \
+  -H &quot;Accept: text/xml&quot; \
+  -H &quot;Content-Type: text/xml&quot; \
+  -d &#39;&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot; standalone=&quot;yes&quot;?&gt;&lt;CellSet&gt;&lt;Row key=&quot;cm93NQo=&quot;&gt;&lt;Cell column=&quot;Y2Y6ZQo=&quot;&gt;dmFsdWU1Cg==&lt;/Cell&gt;&lt;/Row&gt;&lt;/CellSet&gt;&#39; \
+  &quot;http://example.com:8000/users/fakerow&quot;
+&#10;curl -vi -X PUT \
+  -H &quot;Accept: text/json&quot; \
+  -H &quot;Content-Type: text/json&quot; \
+  -d &#39;{&quot;Row&quot;:[{&quot;key&quot;:&quot;cm93NQo=&quot;, &quot;Cell&quot;: [{&quot;column&quot;:&quot;Y2Y6ZQo=&quot;, &quot;$&quot;:&quot;dmFsdWU1Cg==&quot;}]}]}&#39;&#39; \
+  &quot;example.com:8000/users/fakerow&quot;`}</code></pre></td>
+</tr>
+</tbody>
+</table>
+
+<table>
+<caption>Endpoints for <code>Check-And-Put</code> Operations</caption>
+<colgroup>
+<col style={{width: "16%"}} />
+<col style={{width: "8%"}} />
+<col style={{width: "25%"}} />
+<col style={{width: "50%"}} />
+</colgroup>
+<thead>
+<tr>
+<th style={{textAlign: "left"}}>Endpoint</th>
+<th style={{textAlign: "left"}}>HTTP Verb</th>
+<th style={{textAlign: "left"}}>Description</th>
+<th style={{textAlign: "left"}}>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style={{textAlign: "left"}}><p><code>/table/row_key/?check=put</code></p></td>
+<td style={{textAlign: "left"}}><p><code>PUT</code></p></td>
+<td style={{textAlign: "left"}}><p>Conditional Put - Change the current version value of a cell: Compare the current or latest version value (<code>current-version-value</code>) of a cell with the <code>check-value</code>, and if <code>current-version-value</code> == <code>check-value</code>, write new data (the <code>new-value</code>) into the cell as the current or latest version. The row, column qualifier, and value must each be Base-64 encoded. To encode a string, use the <code>base64</code> command-line utility. To decode the string, use <code>base64 -d</code>. The payload is in the <code>--data</code> or <code>-d</code> argument, with <code>the check cell name (column family:column name) and value</code> always at the end and right after <code>the new Put cell name (column family:column name) and value</code> of the same row key. You can also save the data to be inserted to a file and pass it to the <code>-d</code> parameter with syntax like <code>-d @filename.txt</code>.</p></td>
+<td style={{textAlign: "left"}}><pre><code>{`curl -vi -X PUT \
+  -H &quot;Accept: text/xml&quot; \
+  -H &quot;Content-Type: text/xml&quot; \
+  -d &#39;&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot; standalone=&quot;yes&quot;?&gt;&lt;CellSet&gt;&lt;Row key=&quot;cm93MQ==&quot;&gt;&lt;Cell column=&quot;Y2ZhOmFsaWFz&quot;&gt;T2xkR3V5&lt;/Cell&gt;&lt;Cell column=&quot;Y2ZhOmFsaWFz&quot;&gt;TmV3R3V5&lt;/Cell&gt;&lt;/Row&gt;&lt;/CellSet&gt;&#39; \
+  &quot;http://example.com:8000/users/row1/?check=put&quot;
+&#10;curl -vi -X PUT \
+  -H &quot;Accept: application/json&quot; \
+  -H &quot;Content-Type: application/json&quot; \
+  -d &#39;{&quot;Row&quot;:[{&quot;key&quot;:&quot;cm93MQ==&quot;,&quot;Cell&quot;:[{&quot;column&quot;:&quot;Y2ZhOmFsaWFz&quot;,&quot;$&quot;:&quot;T2xkR3V5&quot;},{&quot;column&quot;:&quot;Y2ZhOmFsaWFz&quot;, &quot;$&quot;:&quot;TmV3R3V5&quot;}] }]}&#39; \
+  &quot;http://example.com:8000/users/row1/?check=put&quot;`}</code></pre></td>
+</tr>
+</tbody>
+</table>
+
+Detailed Explanation:
+
+- In the above json-format example:
+
+  1.  `{{"column":"Y2ZhOmFsaWFz", "$":"TmV3R3V5"}}` at the end of `-d` option are `the check cell name and check cell value in Base-64` respectively: `"Y2ZhOmFsaWFz" for "cfa:alias"`, and `"TmV3R3V5" for "NewGuy"`
+
+  2.  `{{"column":"Y2ZhOmFsaWFz","$":"T2xkR3V5"}}` are `the new Put cell name and cell value in Base-64` respectively: `"Y2ZhOmFsaWFz" for "cfa:alias"`, and `"T2xkR3V5" for "OldGuy"`
+
+  3.  `"cm93MQ=="` is `the Base-64 for "row1"` for the checkAndPut `row key`
+
+  4.  `"/?check=put"` after the `"row key" in the request URL` is required for checkAndPut WebHBase operation to work
+
+  5.  The `"row key" in the request URL` should be URL-encoded, e.g., `"david%20chen"` and `"row1"` are the URL-encoded formats of row keys `"david chen"` and `"row1"`, respectively
+
+```
+      Note: "cfa" is the column family name and "alias" are the column (qualifier) name for the non-Base64 encoded cell name.
+```
+
+- Basically, the xml-format example is the same as the json-format example, and will not be explained here in detail.
+
+<table>
+<caption>Endpoints for <code>Check-And-Delete</code> Operations</caption>
+<colgroup>
+<col style={{width: "16%"}} />
+<col style={{width: "8%"}} />
+<col style={{width: "25%"}} />
+<col style={{width: "50%"}} />
+</colgroup>
+<thead>
+<tr>
+<th style={{textAlign: "left"}}>Endpoint</th>
+<th style={{textAlign: "left"}}>HTTP Verb</th>
+<th style={{textAlign: "left"}}>Description</th>
+<th style={{textAlign: "left"}}>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style={{textAlign: "left"}}><p><code>/table/row_key/?check=delete</code></p></td>
+<td style={{textAlign: "left"}}><p><code>DELETE</code></p></td>
+<td style={{textAlign: "left"}}><p>Conditional Deleting a Row: Compare the value of any version of a cell (<code>any-version-value</code>) with the <code>check-value</code>, and if <code>any-version-value</code> == <code>check-value</code>, delete the row specified by the <code>row_key</code> inside the requesting URL.The row, column qualifier, and value for checking in the payload must each be Base-64 encoded. To encode a string, use the base64 command-line utility. To decode the string, use base64 -d. The payload is in the --data argument. You can also save the data to be checked to a file and pass it to the <code>-d</code> parameter with syntax like <code>-d @filename.txt</code>.</p></td>
+<td style={{textAlign: "left"}}><pre><code>{`curl -vi -X DELETE \
+  -H &quot;Accept: text/xml&quot; \
+  -H &quot;Content-Type: text/xml&quot; \
+  -d &#39;&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot; standalone=&quot;yes&quot;?&gt;&lt;CellSet&gt;&lt;Row key=&quot;cm93MQ==&quot;&gt;&lt;Cell column=&quot;Y2ZhOmFsaWFz&quot;&gt;TmV3R3V5&lt;/Cell&gt;&lt;/Row&gt;&lt;/CellSet&gt;&#39; \
+  &quot;http://example.com:8000/users/row1/?check=delete&quot;
+&#10;curl -vi -X DELETE \
+  -H &quot;Accept: application/json&quot; \
+  -H &quot;Content-Type: application/json&quot; \
+  -d &#39;{&quot;Row&quot;:[{&quot;key&quot;:&quot;cm93MQ==&quot;,&quot;Cell&quot;:[{&quot;column&quot;:&quot;Y2ZhOmFsaWFz&quot;,&quot;$&quot;:&quot;TmV3R3V5&quot;}]}]}&#39; \
+  &quot;http://example.com:8000/users/row1/?check=delete&quot;`}</code></pre></td>
+</tr>
+<tr>
+<td style={{textAlign: "left"}}><p><code>/table/row_key /column_family /?check=delete</code></p></td>
+<td style={{textAlign: "left"}}><p><code>DELETE</code></p></td>
+<td style={{textAlign: "left"}}><p>Conditional Deleting a Column Family of a Row: Compare the value of any version of a cell (<code>any-version-value</code>) with the <code>check-value</code>, and if <code>any-version-value</code> == <code>check-value</code>, delete the column family of a row specified by the <code>row_key/column_family</code> inside the requesting URL. Anything else is the same as those in <code>Conditional Deleting a Row</code>.</p></td>
+<td style={{textAlign: "left"}}><pre><code>{`curl -vi -X DELETE \
+  -H &quot;Accept: text/xml&quot; \
+  -H &quot;Content-Type: text/xml&quot; \
+  -d &#39;&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot; standalone=&quot;yes&quot;?&gt;&lt;CellSet&gt;&lt;Row key=&quot;cm93MQ==&quot;&gt;&lt;Cell column=&quot;Y2ZhOmFsaWFz&quot;&gt;TmV3R3V5&lt;/Cell&gt;&lt;/Row&gt;&lt;/CellSet&gt;&#39; \
+  &quot;http://example.com:8000/users/row1/cfa/?check=delete&quot;
+&#10;curl -vi -X DELETE \
+  -H &quot;Accept: application/json&quot; \
+  -H &quot;Content-Type: application/json&quot; \
+  -d &#39;{&quot;Row&quot;:[{&quot;key&quot;:&quot;cm93MQ==&quot;,&quot;Cell&quot;:[{&quot;column&quot;:&quot;Y2ZhOmFsaWFz&quot;,&quot;$&quot;:&quot;TmV3R3V5&quot;}]}]}&#39; \
+  &quot;http://example.com:8000/users/row1/cfa/?check=delete&quot;`}</code></pre></td>
+</tr>
+<tr>
+<td style={{textAlign: "left"}}><p><code>/table/row_key /column:qualifier /?check=delete</code></p></td>
+<td style={{textAlign: "left"}}><p><code>DELETE</code></p></td>
+<td style={{textAlign: "left"}}><p>Conditional Deleting All Versions of a Column of a Row: Compare the value of any version of a cell (<code>any-version-value</code>) with the <code>check-value</code>, and if <code>any-version-value</code> == <code>check-value</code>, delete the column of a row specified by the <code>row_key/column:qualifier</code> inside the requesting URL. The <code>column:qualifier</code> in the requesting URL is the <code>column_family:column_name</code>. Anything else is the same as those in <code>Conditional Deleting a Row</code>.</p></td>
+<td style={{textAlign: "left"}}><pre><code>{`curl -vi -X DELETE \
+  -H &quot;Accept: text/xml&quot; \
+  -H &quot;Content-Type: text/xml&quot; \
+  -d &#39;&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot; standalone=&quot;yes&quot;?&gt;&lt;CellSet&gt;&lt;Row key=&quot;cm93MQ==&quot;&gt;&lt;Cell column=&quot;Y2ZhOmFsaWFz&quot;&gt;TmV3R3V5&lt;/Cell&gt;&lt;/Row&gt;&lt;/CellSet&gt;&#39; \
+  &quot;http://example.com:8000/users/row1/cfa:alias/?check=delete&quot;
+&#10;curl -vi -X DELETE \
+  -H &quot;Accept: application/json&quot; \
+  -H &quot;Content-Type: application/json&quot; \
+  -d &#39;{&quot;Row&quot;:[{&quot;key&quot;:&quot;cm93MQ==&quot;,&quot;Cell&quot;:[{&quot;column&quot;:&quot;Y2ZhOmFsaWFz&quot;,&quot;$&quot;:&quot;TmV3R3V5&quot;}]}]}&#39; \
+  &quot;http://example.com:8000/users/row1/cfa:alias/?check=delete&quot;`}</code></pre></td>
+</tr>
+<tr>
+<td style={{textAlign: "left"}}><p><code>/table/row_key /column:qualifier /version_id/?check=delete</code></p></td>
+<td style={{textAlign: "left"}}><p><code>DELETE</code></p></td>
+<td style={{textAlign: "left"}}><p>Conditional Deleting a Single Version of a Column of a Row: Compare the value of any version of a cell (<code>any-version-value</code>) with the <code>check-value</code>, and if <code>any-version-value</code> == <code>check-value</code>, delete the version of a column of a row specified by the <code>row_key/column:qualifier/version_id</code> inside the requesting URL. The <code>column:qualifier</code> in the requesting URL is the <code>column_family:column_name</code>. The <code>version_id</code> in the requesting URL is a number, which equals to <code>the timestamp of the targeted version + 1</code>. Anything else is the same as those in <code>Conditional Deleting a Row</code>.</p></td>
+<td style={{textAlign: "left"}}><pre><code>{`curl -vi -X DELETE \
+  -H &quot;Accept: text/xml&quot; \
+  -H &quot;Content-Type: text/xml&quot; \
+  -d &#39;&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot; standalone=&quot;yes&quot;?&gt;&lt;CellSet&gt;&lt;Row key=&quot;cm93MQ==&quot;&gt;&lt;Cell column=&quot;Y2ZhOmFsaWFz&quot;&gt;TmV3R3V5&lt;/Cell&gt;&lt;/Row&gt;&lt;/CellSet&gt;&#39; \
+  &quot;http://example.com:8000/users/row1/cfa:alias/1519423552160/?check=delete&quot;
+&#10;curl -vi -X DELETE \
+  -H &quot;Accept: application/json&quot; \
+  -H &quot;Content-Type: application/json&quot; \
+  -d &#39;{&quot;Row&quot;:[{&quot;key&quot;:&quot;cm93MQ==&quot;,&quot;Cell&quot;:[{&quot;column&quot;:&quot;Y2ZhOmFsaWFz&quot;,&quot;$&quot;:&quot;TmV3R3V5&quot;}]}]}&#39; \
+  &quot;http://example.com:8000/users/row1/cfa:alias/1519423552160/?check=delete&quot;`}</code></pre></td>
+</tr>
+</tbody>
+</table>
+
+Detailed Explanation:
+
+- In the above 4 json-format examples:
+
+  1.  `{{"column":"Y2ZhOmFsaWFz", "$":"TmV3R3V5"}}` at the end of `-d` option are `the check cell name and check cell value in Base-64` respectively: `"Y2ZhOmFsaWFz" for "cfa:alias"`, and `"TmV3R3V5" for "NewGuy"`
+
+  2.  `"cm93MQ=="` is `the Base-64 for "row1"` for the checkAndDelete `row key`
+
+  3.  `"/?check=delete"` at the end of `the request URL` is required for checkAndDelete WebHBase operation to work
+
+  4.  `"version_id"` in the `request URL` of the last json-format example should be equivalent to the value of `"the timestamp number + 1"`
+
+  5.  The `"row key"`, `"column family"`, `"cell name" or "column family:column name"`, and `"version_id"` in `the request URL` of a checkAndDelete WebHBase operation should be URL-encoded, e.g., `"row1"`, `"cfa"`, `"cfa:alias"` and `"1519423552160"` in the examples are the URL-encoded `"row key"`, `"column family"`, `"column family:column name"`, and `"version_id"`, respectively
+
+- Basically, the 4 xml-format examples are the same as the 4 corresponding json-format examples, and will not be explained here in detail.
+
+<table>
+<caption>Endpoints for <code>Append</code> Operations</caption>
+<colgroup>
+<col style={{width: "16%"}} />
+<col style={{width: "8%"}} />
+<col style={{width: "25%"}} />
+<col style={{width: "50%"}} />
+</colgroup>
+<thead>
+<tr>
+<th style={{textAlign: "left"}}>Endpoint</th>
+<th style={{textAlign: "left"}}>HTTP Verb</th>
+<th style={{textAlign: "left"}}>Description</th>
+<th style={{textAlign: "left"}}>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style={{textAlign: "left"}}><p><code>/table/row_key/?check=append</code></p></td>
+<td style={{textAlign: "left"}}><p><code>PUT</code></p></td>
+<td style={{textAlign: "left"}}><p>Appends the given new value to the end of the current value of the cell. The row, column qualifier, and value must each be Base-64 encoded.</p></td>
+<td style={{textAlign: "left"}}><pre><code>{`curl -vi -X PUT \
+-H &quot;Accept: text/xml&quot; \
+-H &quot;Content-Type: text/xml&quot; \
+-d &#39;&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot; standalone=&quot;yes&quot;?&gt;&lt;CellSet&gt;&lt;Row key=&quot;cm93NQo=&quot;&gt;&lt;Cell column=&quot;Y2Y6ZQo=&quot;&gt;dmFsdWU1Cg==&lt;/Cell&gt;&lt;/Row&gt;&lt;/CellSet&gt;&#39; \
+&quot;http://example.com:8000/users/row5?check=append&quot;
+&#10;curl -vi -X PUT \
+-H &quot;Content-type: application/json&quot; \
+-H &quot;Accept: application/json&quot; \
+-d &#39;{&quot;Row&quot;:[{&quot;key&quot;:&quot;dGVzdHJvdzE=&quot;,&quot;Cell&quot;:[{&quot;column&quot;:&quot;YTox&quot;,&quot;$&quot;:&quot;dGVzdHZhbHVlMgo&quot;},{&quot;column&quot;:&quot;YToy&quot;,&quot;$&quot;:&quot;dGVzdHZhbHVlMTIK&quot;}]}]}&#39; \
+&quot;http://localhost:8080/users/testrow1?check=append&quot;`}</code></pre></td>
+</tr>
+</tbody>
+</table>
+
+<table>
+<caption>Endpoints for <code>Increment</code> Operations</caption>
+<colgroup>
+<col style={{width: "16%"}} />
+<col style={{width: "8%"}} />
+<col style={{width: "25%"}} />
+<col style={{width: "50%"}} />
+</colgroup>
+<thead>
+<tr>
+<th style={{textAlign: "left"}}>Endpoint</th>
+<th style={{textAlign: "left"}}>HTTP Verb</th>
+<th style={{textAlign: "left"}}>Description</th>
+<th style={{textAlign: "left"}}>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style={{textAlign: "left"}}><p><code>/table/row_key/?check=increment</code></p></td>
+<td style={{textAlign: "left"}}><p><code>PUT</code></p></td>
+<td style={{textAlign: "left"}}><p>Increments the current value of the cell. The row, column qualifier, and value must each be Base-64 encoded.</p></td>
+<td style={{textAlign: "left"}}><pre><code>{`curl -vi -X PUT \
+-H &quot;Accept: text/xml&quot; \
+-H &quot;Content-Type: text/xml&quot; \
+-d &#39;&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot; standalone=&quot;yes&quot;?&gt;&lt;CellSet&gt;&lt;Row key=&quot;cm93NQo=&quot;&gt;&lt;Cell column=&quot;YTox&quot;&gt;MQ==&lt;/Cell&gt;&lt;/Row&gt;&lt;/CellSet&gt;&#39; \
+&quot;http://localhost:8080/users/row5?check=increment&quot;
+&#10;curl -vi -X PUT \
+-H &quot;Content-type: application/json&quot; \
+-H &quot;Accept: application/json&quot; \
+-d &#39;{&quot;Row&quot;:[{&quot;key&quot;:&quot;dGVzdHJvdzE=&quot;,&quot;Cell&quot;:[{&quot;column&quot;:&quot;YTox&quot;,&quot;$&quot;:&quot;MQ==&quot;},{&quot;column&quot;:&quot;YToy&quot;,&quot;$&quot;:&quot;MQ==&quot;}]}]}&#39; \
+&quot;http://localhost:8080/users/testrow1?check=increment&quot;`}</code></pre></td>
+</tr>
+</tbody>
+</table>
+
+## REST XML Schema
+
+```xml
+<schema xmlns="http://www.w3.org/2001/XMLSchema" xmlns:tns="RESTSchema">
+
+  <element name="Version" type="tns:Version"></element>
+
+  <complexType name="Version">
+<attribute name="REST" type="string"></attribute>
+<attribute name="JVM" type="string"></attribute>
+<attribute name="OS" type="string"></attribute>
+<attribute name="Server" type="string"></attribute>
+<attribute name="Jersey" type="string"></attribute>
+<attribute name="Version" type="string"></attribute>
+<attribute name="Revision" type="string"></attribute>
+  </complexType>
+
+  <element name="TableList" type="tns:TableList"></element>
+
+  <complexType name="TableList">
+<sequence>
+  <element name="table" type="tns:Table" maxOccurs="unbounded" minOccurs="1"></element>
+</sequence>
+  </complexType>
+
+  <complexType name="Table">
+<sequence>
+  <element name="name" type="string"></element>
+</sequence>
+  </complexType>
+
+  <element name="TableInfo" type="tns:TableInfo"></element>
+
+  <complexType name="TableInfo">
+<sequence>
+  <element name="region" type="tns:TableRegion" maxOccurs="unbounded" minOccurs="1"></element>
+</sequence>
+<attribute name="name" type="string"></attribute>
+  </complexType>
+
+  <complexType name="TableRegion">
+<attribute name="name" type="string"></attribute>
+<attribute name="id" type="int"></attribute>
+<attribute name="startKey" type="base64Binary"></attribute>
+<attribute name="endKey" type="base64Binary"></attribute>
+<attribute name="location" type="string"></attribute>
+  </complexType>
+
+  <element name="TableSchema" type="tns:TableSchema"></element>
+
+  <complexType name="TableSchema">
+<sequence>
+  <element name="column" type="tns:ColumnSchema" maxOccurs="unbounded" minOccurs="1"></element>
+</sequence>
+<attribute name="name" type="string"></attribute>
+<anyAttribute></anyAttribute>
+  </complexType>
+
+  <complexType name="ColumnSchema">
+<attribute name="name" type="string"></attribute>
+<anyAttribute></anyAttribute>
+  </complexType>
+
+  <element name="CellSet" type="tns:CellSet"></element>
+
+  <complexType name="CellSet">
+<sequence>
+  <element name="row" type="tns:Row" maxOccurs="unbounded" minOccurs="1"></element>
+</sequence>
+  </complexType>
+
+  <element name="Row" type="tns:Row"></element>
+
+  <complexType name="Row">
+<sequence>
+  <element name="key" type="base64Binary"></element>
+  <element name="cell" type="tns:Cell" maxOccurs="unbounded" minOccurs="1"></element>
+</sequence>
+  </complexType>
+
+  <element name="Cell" type="tns:Cell"></element>
+
+  <complexType name="Cell">
+<sequence>
+  <element name="value" maxOccurs="1" minOccurs="1">
+    <simpleType><restriction base="base64Binary">
+    </simpleType>
+  </element>
+</sequence>
+<attribute name="column" type="base64Binary" />
+<attribute name="timestamp" type="int" />
+  </complexType>
+
+  <element name="Scanner" type="tns:Scanner"></element>
+
+  <complexType name="Scanner">
+<sequence>
+  <element name="column" type="base64Binary" minOccurs="0" maxOccurs="unbounded"></element>
+</sequence>
+<attribute name="startRow" type="base64Binary"></attribute>
+<attribute name="endRow" type="base64Binary"></attribute>
+<attribute name="batch" type="int"></attribute>
+<attribute name="startTime" type="int"></attribute>
+<attribute name="endTime" type="int"></attribute>
+<attribute name="filter" type="string"></attribute>
+<attribute name="caching" type="int"></attribute>
+<sequence>
+    <element name="labels" type="string" minOccurs="0" maxOccurs="unbounded"></element>
+</sequence>
+<attribute name="cacheBlocks" type="boolean"></attribute>
+<attribute name="maxVersions" type="int"></attribute>
+<attribute name="limit" type="int"></attribute>
+<attribute name="includeStartRow" type="boolean"></attribute>
+<attribute name="includeStopRow" type="boolean"></attribute>
+  </complexType>
+
+  <element name="StorageClusterVersion" type="tns:StorageClusterVersion" />
+
+  <complexType name="StorageClusterVersion">
+<attribute name="version" type="string"></attribute>
+  </complexType>
+
+  <element name="StorageClusterStatus"
+type="tns:StorageClusterStatus">
+  </element>
+
+  <complexType name="StorageClusterStatus">
+<sequence>
+  <element name="liveNode" type="tns:Node"
+    maxOccurs="unbounded" minOccurs="0">
+  </element>
+  <element name="deadNode" type="string" maxOccurs="unbounded"
+    minOccurs="0">
+  </element>
+</sequence>
+<attribute name="regions" type="int"></attribute>
+<attribute name="requests" type="int"></attribute>
+<attribute name="averageLoad" type="float"></attribute>
+  </complexType>
+
+  <complexType name="Node">
+<sequence>
+  <element name="region" type="tns:Region"
+   maxOccurs="unbounded" minOccurs="0">
+  </element>
+</sequence>
+<attribute name="name" type="string"></attribute>
+<attribute name="startCode" type="int"></attribute>
+<attribute name="requests" type="int"></attribute>
+<attribute name="heapSizeMB" type="int"></attribute>
+<attribute name="maxHeapSizeMB" type="int"></attribute>
+  </complexType>
+
+  <complexType name="Region">
+<attribute name="name" type="base64Binary"></attribute>
+<attribute name="stores" type="int"></attribute>
+<attribute name="storefiles" type="int"></attribute>
+<attribute name="storefileSizeMB" type="int"></attribute>
+<attribute name="memstoreSizeMB" type="int"></attribute>
+<attribute name="storefileIndexSizeKB" type="int"></attribute>
+<attribute name="readRequestsCount" type="int"></attribute>
+<attribute name="cpRequestsCount" type="int"></attribute>
+<attribute name="writeRequestsCount" type="int"></attribute>
+<attribute name="rootIndexSizeKB" type="int"></attribute>
+<attribute name="totalStaticIndexSizeKB" type="int"></attribute>
+<attribute name="totalStaticBloomSizeKB" type="int"></attribute>
+<attribute name="totalCompactingKVs" type="int"></attribute>
+<attribute name="currentCompactedKVs" type="int"></attribute>
+  </complexType>
+
+</schema>
+```
+
+## REST Protobufs Schema
+
+``` json
+message Version {
+  optional string restVersion = 1;
+  optional string jvmVersion = 2;
+  optional string osVersion = 3;
+  optional string serverVersion = 4;
+  optional string jerseyVersion = 5;
+  optional string version = 6;
+  optional string revision = 7;
+}
+
+message StorageClusterStatus {
+  message Region {
+```
+required bytes name = 1;
+optional int32 stores = 2;
+optional int32 storefiles = 3;
+optional int32 storefileSizeMB = 4;
+optional int32 memStoreSizeMB = 5;
+optional int64 storefileIndexSizeKB = 6;
+optional int64 readRequestsCount = 7;
+optional int64 writeRequestsCount = 8;
+optional int32 rootIndexSizeKB = 9;
+optional int32 totalStaticIndexSizeKB = 10;
+optional int32 totalStaticBloomSizeKB = 11;
+optional int64 totalCompactingKVs = 12;
+optional int64 currentCompactedKVs = 13;
+optional int64 cpRequestsCount = 14;
+```
+  }
+  message Node {
+```
+required string name = 1;    // name:port
+optional int64 startCode = 2;
+optional int32 requests = 3;
+optional int32 heapSizeMB = 4;
+optional int32 maxHeapSizeMB = 5;
+repeated Region regions = 6;
+```
+  }
+  // node status
+  repeated Node liveNodes = 1;
+  repeated string deadNodes = 2;
+  // summary statistics
+  optional int32 regions = 3;
+  optional int32 requests = 4;
+  optional double averageLoad = 5;
+}
+
+message TableList {
+  repeated string name = 1;
+}
+
+message TableInfo {
+  required string name = 1;
+  message Region {
+```
+required string name = 1;
+optional bytes startKey = 2;
+optional bytes endKey = 3;
+optional int64 id = 4;
+optional string location = 5;
+```
+  }
+  repeated Region regions = 2;
+}
+
+message TableSchema {
+  optional string name = 1;
+  message Attribute {
+```
+required string name = 1;
+required string value = 2;
+```
+  }
+  repeated Attribute attrs = 2;
+  repeated ColumnSchema columns = 3;
+  // optional helpful encodings of commonly used attributes
+  optional bool inMemory = 4;
+  optional bool readOnly = 5;
+}
+
+message ColumnSchema {
+  optional string name = 1;
+  message Attribute {
+```
+required string name = 1;
+required string value = 2;
+```
+  }
+  repeated Attribute attrs = 2;
+  // optional helpful encodings of commonly used attributes
+  optional int32 ttl = 3;
+  optional int32 maxVersions = 4;
+  optional string compression = 5;
+}
+
+message Cell {
+  optional bytes row = 1;       // unused if Cell is in a CellSet
+  optional bytes column = 2;
+  optional int64 timestamp = 3;
+  optional bytes data = 4;
+}
+
+message CellSet {
+  message Row {
+```
+required bytes key = 1;
+repeated Cell values = 2;
+```
+  }
+  repeated Row rows = 1;
+}
+
+message Scanner {
+  optional bytes startRow = 1;
+  optional bytes endRow = 2;
+  repeated bytes columns = 3;
+  optional int32 batch = 4;
+  optional int64 startTime = 5;
+  optional int64 endTime = 6;
+  optional int32 maxVersions = 7;
+  optional string filter = 8;
+  optional int32 caching = 9;     // specifies REST scanner caching
+  repeated string labels = 10;
+  optional bool cacheBlocks = 11; // server side block caching hint
+  optional int32 limit = 12;
+  optional bool includeStartRow = 13;
+  optional bool includeStopRow = 14;
+}
+```
+
+# Thrift
+
+Documentation about Thrift has moved to [???](#thrift).
+
+# C/C++ Apache HBase Client
+
+FB’s Chip Turner wrote a pure C/C++ client. [Check it out](https://github.com/hinaria/native-cpp-hbase-client).
+
+C++ client implementation. To see [HBASE-14850](https://issues.apache.org/jira/browse/HBASE-14850).
+
+# Using Java Data Objects (JDO) with HBase
+
+[Java Data Objects (JDO)](https://db.apache.org/jdo/) is a standard way to access persistent data in databases, using plain old Java objects (POJO) to represent persistent data.
+
+**Dependencies**
+
+This code example has the following dependencies:
+
+1.  HBase 0.90.x or newer
+2.  commons-beanutils.jar ([https://commons.apache.org/](https://commons.apache.org/))
+3.  commons-pool-1.5.5.jar ([https://commons.apache.org/](https://commons.apache.org/))
+4.  transactional-tableindexed for HBase 0.90 ([https://github.com/hbase-trx/hbase-transactional-tableindexed](https://github.com/hbase-trx/hbase-transactional-tableindexed))
+
+**Download `hbase-jdo`**
+
+Download the code from [http://code.google.com/p/hbase-jdo/](http://code.google.com/p/hbase-jdo/).
+
+**JDO Example**
+
+This example uses JDO to create a table and an index, insert a row into a table, get a row, get a column value, perform a query, and do some additional HBase operations.
+
+``` java
+package com.apache.hadoop.hbase.client.jdo.examples;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.util.Hashtable;
+
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.client.tableindexed.IndexedTable;
+
+import com.apache.hadoop.hbase.client.jdo.AbstractHBaseDBO;
+import com.apache.hadoop.hbase.client.jdo.HBaseBigFile;
+import com.apache.hadoop.hbase.client.jdo.HBaseDBOImpl;
+import com.apache.hadoop.hbase.client.jdo.query.DeleteQuery;
+import com.apache.hadoop.hbase.client.jdo.query.HBaseOrder;
+import com.apache.hadoop.hbase.client.jdo.query.HBaseParam;
+import com.apache.hadoop.hbase.client.jdo.query.InsertQuery;
+import com.apache.hadoop.hbase.client.jdo.query.QSearch;
+import com.apache.hadoop.hbase.client.jdo.query.SelectQuery;
+import com.apache.hadoop.hbase.client.jdo.query.UpdateQuery;
+
+/**
+ * Hbase JDO Example.
+ *
+ * dependency library.
+ * - commons-beanutils.jar
+ * - commons-pool-1.5.5.jar
+ * - hbase0.90.0-transactionl.jar
+ *
+ * you can expand Delete,Select,Update,Insert Query classes.
+ *
+ */
+public class HBaseExample {
+  public static void main(String[] args) throws Exception {
+    AbstractHBaseDBO dbo = new HBaseDBOImpl();
+
+//*drop if table is already exist.*
+if(dbo.isTableExist("user")){
+ dbo.deleteTable("user");
+}
+
+//*create table*
+dbo.createTableIfNotExist("user",HBaseOrder.DESC,"account");
+//dbo.createTableIfNotExist("user",HBaseOrder.ASC,"account");
+
+//create index.
+String[] cols={"id","name"};
+dbo.addIndexExistingTable("user","account",cols);
+
+//insert
+InsertQuery insert = dbo.createInsertQuery("user");
+UserBean bean = new UserBean();
+bean.setFamily("account");
+bean.setAge(20);
+bean.setEmail("ncanis@gmail.com");
+bean.setId("ncanis");
+bean.setName("ncanis");
+bean.setPassword("1111");
+insert.insert(bean);
+
+//select 1 row
+SelectQuery select = dbo.createSelectQuery("user");
+UserBean resultBean = (UserBean)select.select(bean.getRow(),UserBean.class);
+
+// select column value.
+String value = (String)select.selectColumn(bean.getRow(),"account","id",String.class);
+
+// search with option (QSearch has EQUAL, NOT_EQUAL, LIKE)
+// select id,password,name,email from account where id='ncanis' limit startRow,20
+HBaseParam param = new HBaseParam();
+param.setPage(bean.getRow(),20);
+param.addColumn("id","password","name","email");
+param.addSearchOption("id","ncanis",QSearch.EQUAL);
+select.search("account", param, UserBean.class);
+
+// search column value is existing.
+boolean isExist = select.existColumnValue("account","id","ncanis".getBytes());
+
+// update password.
+UpdateQuery update = dbo.createUpdateQuery("user");
+Hashtable<String, byte[]> colsTable = new Hashtable<String, byte[]>();
+colsTable.put("password","2222".getBytes());
+update.update(bean.getRow(),"account",colsTable);
+
+//delete
+DeleteQuery delete = dbo.createDeleteQuery("user");
+delete.deleteRow(resultBean.getRow());
+
+////////////////////////////////////
+// etc
+
+// HTable pool with apache commons pool
+// borrow and release. HBasePoolManager(maxActive, minIdle etc..)
+IndexedTable table = dbo.getPool().borrow("user");
+dbo.getPool().release(table);
+
+// upload bigFile by hadoop directly.
+HBaseBigFile bigFile = new HBaseBigFile();
+File file = new File("doc/movie.avi");
+FileInputStream fis = new FileInputStream(file);
+Path rootPath = new Path("/files/");
+String filename = "movie.avi";
+bigFile.uploadFile(rootPath,filename,fis,true);
+
+// receive file stream from hadoop.
+Path p = new Path(rootPath,filename);
+InputStream is = bigFile.path2Stream(p,4096);
+  }
+}
+```
+
+# Scala
+
+## Setting the Classpath
+
+To use Scala with HBase, your CLASSPATH must include HBase’s classpath as well as the Scala JARs required by your code. First, use the following command on a server running the HBase RegionServer process, to get HBase’s classpath.
+
+``` bash
+$ ps aux |grep regionserver| awk -F 'java.library.path=' {'print $2'} | awk {'print $1'}
+
+/usr/lib/hadoop/lib/native:/usr/lib/hbase/lib/native/Linux-amd64-64
+```
+
+Set the `$CLASSPATH` environment variable to include the path you found in the previous step, plus the path of `scala-library.jar` and each additional Scala-related JAR needed for your project.
+
+``` bash
+$ export CLASSPATH=$CLASSPATH:/usr/lib/hadoop/lib/native:/usr/lib/hbase/lib/native/Linux-amd64-64:/path/to/scala-library.jar
+```
+
+## Scala SBT File
+
+Your `build.sbt` file needs the following `resolvers` and `libraryDependencies` to work with HBase.
+
+```
+resolvers += "Apache HBase" at "https://repository.apache.org/content/repositories/releases"
+
+resolvers += "Thrift" at "https://people.apache.org/~rawson/repo/"
+
+libraryDependencies ++= Seq(
+    "org.apache.hadoop" % "hadoop-core" % "0.20.2",
+    "org.apache.hbase" % "hbase" % "0.90.4"
+)
+```
+
+## Example Scala Code
+
+This example lists HBase tables, creates a new table, adds a row to it, and gets the value of the row.
+
+``` scala
+import org.apache.hadoop.hbase.{HBaseConfiguration, TableName}
+import org.apache.hadoop.hbase.client.{Admin, Connection, ConnectionFactory, Get, Put}
+import org.apache.hadoop.hbase.util.Bytes
+
+val conf = HBaseConfiguration.create()
+val connection = ConnectionFactory.createConnection(conf);
+val admin = connection.getAdmin();
+
+// list the tables
+val listtables = admin.listTables()
+listtables.foreach(println)
+
+// let's insert some data in 'mytable' and get the row
+val table = connection.getTable(TableName.valueOf("mytable"))
+
+val theput = new Put(Bytes.toBytes("rowkey1"))
+
+theput.addColumn(Bytes.toBytes("ids"),Bytes.toBytes("id1"),Bytes.toBytes("one"))
+table.put(theput)
+
+val theget = new Get(Bytes.toBytes("rowkey1"))
+val result = table.get(theget)
+val value = result.value()
+println(Bytes.toString(value))
+```
+
+# Jython
+
+## Setting the Classpath
+
+To use Jython with HBase, your CLASSPATH must include HBase’s classpath as well as the Jython JARs required by your code.
+
+Set the path to directory containing the `jython.jar` and each additional Jython-related JAR needed for your project. Then export HBASE_CLASSPATH pointing to the \$JYTHON_HOME env. variable.
+
+``` bash
+$ export HBASE_CLASSPATH=/directory/jython.jar
+```
+
+Start a Jython shell with HBase and Hadoop JARs in the classpath: \$ bin/hbase org.python.util.jython
+
+## Jython Code Examples
+
+**Example: Table Creation, Population, Get, and Delete with Jython**
+
+The following Jython code example checks for table, if it exists, deletes it and then creates it. Then it populates the table with data and fetches the data.
+
+```python
+import java.lang
+from org.apache.hadoop.hbase import HBaseConfiguration, HTableDescriptor, HColumnDescriptor, TableName
+from org.apache.hadoop.hbase.client import Admin, Connection, ConnectionFactory, Get, Put, Result, Table
+from org.apache.hadoop.conf import Configuration
+
+# First get a conf object.  This will read in the configuration
+# that is out in your hbase-*.xml files such as location of the
+# hbase master node.
+conf = HBaseConfiguration.create()
+connection = ConnectionFactory.createConnection(conf)
+admin = connection.getAdmin()
+
+# Create a table named 'test' that has a column family
+# named 'content'.
+tableName = TableName.valueOf("test")
+table = connection.getTable(tableName)
+
+desc = HTableDescriptor(tableName)
+desc.addFamily(HColumnDescriptor("content"))
+
+# Drop and recreate if it exists
+if admin.tableExists(tableName):
+```
+admin.disableTable(tableName)
+admin.deleteTable(tableName)
+```
+
+admin.createTable(desc)
+
+# Add content to 'column:' on a row named 'row_x'
+row = 'row_x'
+put = Put(row)
+put.addColumn("content", "qual", "some content")
+table.put(put)
+
+# Now fetch the content just added, returns a byte[]
+get = Get(row)
+
+result = table.get(get)
+data = java.lang.String(result.getValue("content", "qual"), "UTF8")
+
+print "The fetched row contains the value '%s'" % data
+```
+
+**Example: Table Scan Using Jython**
+
+This example scans a table and returns the results that match a given family qualifier.
+
+```python
+import java.lang
+from org.apache.hadoop.hbase import TableName, HBaseConfiguration
+from org.apache.hadoop.hbase.client import Connection, ConnectionFactory, Result, ResultScanner, Table, Admin
+from org.apache.hadoop.conf import Configuration
+conf = HBaseConfiguration.create()
+connection = ConnectionFactory.createConnection(conf)
+admin = connection.getAdmin()
+tableName = TableName.valueOf('wiki')
+table = connection.getTable(tableName)
+
+cf = "title"
+attr = "attr"
+scanner = table.getScanner(cf)
+while 1:
+```
+result = scanner.next()
+if not result:
+   break
+print java.lang.String(result.row), java.lang.String(result.getValue(cf, attr))
+```

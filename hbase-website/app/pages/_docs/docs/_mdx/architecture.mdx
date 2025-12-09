@@ -54,33 +54,17 @@ The `hbase:meta` table (previously called `.META.`) keeps a list of all regions 
 
 The `hbase:meta` table structure is as follows:
 
-<div>
-
-<div className="title">
-
-Key
-
-</div>
+**Key:**
 
 - Region key of the format (`[table],[region start key],[region id]`)
 
-</div>
-
-<div>
-
-<div className="title">
-
-Values
-
-</div>
+**Values:**
 
 - `info:regioninfo` (serialized [RegionInfo](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/RegionInfo.html) instance for this region)
 
 - `info:server` (server:port of the RegionServer containing this region)
 
 - `info:serverstartcode` (start-time of the RegionServer process containing this region)
-
-</div>
 
 When a table is in the process of splitting, two other columns will be created, called `info:splitA` and `info:splitB`. These columns represent the two daughter regions. The values for these columns are also serialized HRegionInfo instances. After the region has been split, eventually this row will be deleted.
 
@@ -138,15 +122,9 @@ For more information about how connections are handled in the HBase client, see 
 
 For applications which require high-end multithreaded access (e.g., web-servers or application servers that may serve many application threads in a single JVM), you can pre-create a `Connection`, as shown in the following example:
 
-<div className="example">
+**Example: Pre-Creating a `Connection`**
 
-<div className="title">
-
-Pre-Creating a `Connection`
-
-</div>
-
-``` java
+```java
 // Create a connection to the cluster.
 Configuration conf = HBaseConfiguration.create();
 try (Connection connection = ConnectionFactory.createConnection(conf);
@@ -154,8 +132,6 @@ try (Connection connection = ConnectionFactory.createConnection(conf);
   // use table as needed, the table returned is lightweight
 }
 ```
-
-</div>
 
 <Callout type="warn">
 Previous versions of this guide discussed `HTablePool`, which was deprecated in HBase 0.94, 0.95, and 0.96, and removed in 0.98.1, by [HBASE-6580](https://issues.apache.org/jira/browse/HBASE-6580), or `HConnection`, which is deprecated in HBase 1.0 by `Connection`. Please use [Connection](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Connection.html) instead.
@@ -266,7 +242,7 @@ MasterRegistry implements hedging of connection registry RPCs across active and 
 
 - Clients hedge the requests in a randomized order to avoid hot-spotting a single master.
 
-- Cluster internal connections (masters \<-\> regionservers) still use ZooKeeper based connection registry.
+- Cluster internal connections (masters ↔ regionservers) still use ZooKeeper based connection registry.
 
 - Cluster internal state is still tracked in Zookeeper, hence ZK availability requirements are same as before.
 
@@ -695,146 +671,47 @@ See [???](#amv2) (and [???](#pv2) for its basis) if you would like to learn more
 
 Here are the list of configurations that effect MasterProcWAL operation. You should not have to change your defaults.
 
-**`hbase.procedure.store.wal.periodic.roll.msec`**  
-<div className="formalpara">
+**`hbase.procedure.store.wal.periodic.roll.msec`**
 
-<div className="title">
+**Description:** Frequency of generating a new WAL
 
-Description
+**Default:** `1h (3600000 in msec)`
 
-</div>
+**`hbase.procedure.store.wal.roll.threshold`**
 
-Frequency of generating a new WAL
+**Description:** Threshold in size before the WAL rolls. Every time the WAL reaches this size or the above period, 1 hour, passes since last log roll, the HMaster will generate a new WAL.
 
-</div>
+**Default:** `32MB (33554432 in byte)`
 
-<div className="formalpara">
+**`hbase.procedure.store.wal.warn.threshold`**
 
-<div className="title">
-
-Default
-
-</div>
-
-`1h (3600000 in msec)`
-
-</div>
-
-
-**`hbase.procedure.store.wal.roll.threshold`**  
-<div className="formalpara">
-
-<div className="title">
-
-Description
-
-</div>
-
-Threshold in size before the WAL rolls. Every time the WAL reaches this size or the above period, 1 hour, passes since last log roll, the HMaster will generate a new WAL.
-
-</div>
-
-<div className="formalpara">
-
-<div className="title">
-
-Default
-
-</div>
-
-`32MB (33554432 in byte)`
-
-</div>
-
-
-**`hbase.procedure.store.wal.warn.threshold`**  
-<div className="formalpara">
-
-<div className="title">
-
-Description
-
-</div>
-
-If the number of WALs goes beyond this threshold, the following message should appear in the HMaster log with WARN level when rolling.
-
-</div>
+**Description:** If the number of WALs goes beyond this threshold, the following message should appear in the HMaster log with WARN level when rolling.
 
 ```
 procedure WALs count=xx above the warning threshold 64. check running procedures to see if something is stuck.
 ```
 
-<div className="formalpara">
+**Default:** `64`
 
-<div className="title">
+**`hbase.procedure.store.wal.max.retries.before.roll`**
 
-Default
-
-</div>
-
-`64`
-
-</div>
-
-
-**`hbase.procedure.store.wal.max.retries.before.roll`**  
-<div className="formalpara">
-
-<div className="title">
-
-Description
-
-</div>
-
-Max number of retry when syncing slots (records) to its underlying storage, such as HDFS. Every attempt, the following message should appear in the HMaster log.
-
-</div>
+**Description:** Max number of retry when syncing slots (records) to its underlying storage, such as HDFS. Every attempt, the following message should appear in the HMaster log.
 
 ```
 unable to sync slots, retry=xx
 ```
 
-<div className="formalpara">
+**Default:** `3`
 
-<div className="title">
+**`hbase.procedure.store.wal.sync.failure.roll.max`**
 
-Default
-
-</div>
-
-`3`
-
-</div>
-
-
-**`hbase.procedure.store.wal.sync.failure.roll.max`**  
-<div className="formalpara">
-
-<div className="title">
-
-Description
-
-</div>
-
-After the above 3 retrials, the log is rolled and the retry count is reset to 0, thereon a new set of retrial starts. This configuration controls the max number of attempts of log rolling upon sync failure. That is, HMaster is allowed to fail to sync 9 times in total. Once it exceeds, the following log should appear in the HMaster log.
-
-</div>
+**Description:** After the above 3 retrials, the log is rolled and the retry count is reset to 0, thereon a new set of retrial starts. This configuration controls the max number of attempts of log rolling upon sync failure. That is, HMaster is allowed to fail to sync 9 times in total. Once it exceeds, the following log should appear in the HMaster log.
 
 ```
 Sync slots after log roll failed, abort.
 ```
 
-<div className="formalpara">
-
-<div className="title">
-
-Default
-
-</div>
-
-`3`
-
-</div>
+**Default:** `3`
 
 # RegionServer
 
@@ -972,23 +849,21 @@ An interesting setup is one where we cache META blocks only and we read DATA blo
 
 The usual deployment of BucketCache is via a managing class that sets up two caching tiers: an on-heap cache implemented by LruBlockCache and a second cache implemented with BucketCache. The managing class is [CombinedBlockCache](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/io/hfile/CombinedBlockCache.html) by default. The previous link describes the caching 'policy' implemented by CombinedBlockCache. In short, it works by keeping meta blocks — INDEX and BLOOM in the on-heap LruBlockCache tier — and DATA blocks are kept in the BucketCache tier.
 
-<div className="informalexample">
+**Pre-hbase-2.0.0 versions**
 
-Pre-hbase-2.0.0 versions  
-Fetching will always be slower when fetching from BucketCache in pre-hbase-2.0.0, as compared to the native on-heap LruBlockCache. However, latencies tend to be less erratic across time, because there is less garbage collection when you use BucketCache since it is managing BlockCache allocations, not the GC. If the BucketCache is deployed in off-heap mode, this memory is not managed by the GC at all. This is why you’d use BucketCache in pre-2.0.0, so your latencies are less erratic, to mitigate GCs and heap fragmentation, and so you can safely use more memory. See Nick Dimiduk’s [BlockCache 101](http://www.n10k.com/blog/blockcache-101/) for comparisons running on-heap vs off-heap tests. Also see [Comparing BlockCache Deploys](https://web.archive.org/web/20231109025243/http://people.apache.org/~stack/bc/) which finds that if your dataset fits inside your LruBlockCache deploy, use it otherwise if you are experiencing cache churn (or you want your cache to exist beyond the vagaries of java GC), use BucketCache.
+Fetching will always be slower when fetching from BucketCache in pre-hbase-2.0.0, as compared to the native on-heap LruBlockCache. However, latencies tend to be less erratic across time, because there is less garbage collection when you use BucketCache since it is managing BlockCache allocations, not the GC. If the BucketCache is deployed in off-heap mode, this memory is not managed by the GC at all. This is why you'd use BucketCache in pre-2.0.0, so your latencies are less erratic, to mitigate GCs and heap fragmentation, and so you can safely use more memory. See Nick Dimiduk's [BlockCache 101](http://www.n10k.com/blog/blockcache-101/) for comparisons running on-heap vs off-heap tests. Also see [Comparing BlockCache Deploys](https://web.archive.org/web/20231109025243/http://people.apache.org/~stack/bc/) which finds that if your dataset fits inside your LruBlockCache deploy, use it otherwise if you are experiencing cache churn (or you want your cache to exist beyond the vagaries of java GC), use BucketCache.
 
 In pre-2.0.0, one can configure the BucketCache so it receives the `victim` of an LruBlockCache eviction. All Data and index blocks are cached in L1 first. When eviction happens from L1, the blocks (or `victims`) will get moved to L2. Set `cacheDataInL1` via `(HColumnDescriptor.setCacheDataInL1(true)` or in the shell, creating or amending column families setting `CACHE_DATA_IN_L1` to true: e.g.
 
-``` java
+```java
 hbase(main):003:0> create 't', {NAME => 't', CONFIGURATION => {CACHE_DATA_IN_L1 => 'true'}}
 ```
 
-hbase-2.0.0+ versions  
+**hbase-2.0.0+ versions**
+
 HBASE-11425 changed the HBase read path so it could hold the read-data off-heap avoiding copying of cached data on to the java heap. See [???](#regionserver.offheap.readpath). In hbase-2.0.0, off-heap latencies approach those of on-heap cache latencies with the added benefit of NOT provoking GC.
 
 From HBase 2.0.0 onwards, the notions of L1 and L2 have been deprecated. When BucketCache is turned on, the DATA blocks will always go to BucketCache and INDEX/BLOOM blocks go to on heap LRUBlockCache. `cacheDataInL1` support has been removed.
-
-</div>
 
 ##### BucketCache Deploy Modes
 
@@ -1351,19 +1226,11 @@ HBase 1.0 introduces support MultiWal in [HBASE-5699](https://issues.apache.org/
 
 RegionServers using the original WAL implementation and those using the MultiWAL implementation can each handle recovery of either set of WALs, so a zero-downtime configuration update is possible through a rolling restart.
 
-<div className="formalpara">
-
-<div className="title">
-
-Configure MultiWAL
-
-</div>
+#### Configure MultiWAL
 
 To configure MultiWAL for a RegionServer, set the value of the property `hbase.wal.provider` to `multiwal` by pasting in the following XML:
 
-</div>
-
-``` xml
+```xml
 <property>
   <name>hbase.wal.provider</name>
   <value>multiwal</value>
@@ -1384,48 +1251,39 @@ A RegionServer serves many regions. All of the regions in a region server share 
 
 Log splitting is done by the HMaster during cluster start-up or by the ServerShutdownHandler as a region server shuts down. So that consistency is guaranteed, affected regions are unavailable until data is restored. All WAL edits need to be recovered and replayed before a given region can become available again. As a result, regions affected by log splitting are unavailable until the process completes.
 
-<div>
+**Procedure: Log Splitting, Step by Step**
 
-<div className="title">
+1.  The `/hbase/WALs/HOST,PORT,STARTCODE` directory is renamed.
 
-Procedure: Log Splitting, Step by Step
+    Renaming the directory is important because a RegionServer may still be up and accepting requests even if the HMaster thinks it is down. If the RegionServer does not respond immediately and does not heartbeat its ZooKeeper session, the HMaster may interpret this as a RegionServer failure. Renaming the logs directory ensures that existing, valid WAL files which are still in use by an active but busy RegionServer are not written to by accident.
 
-</div>
+    The new directory is named according to the following pattern:
 
-1.  The */hbase/WALs/\<host\>,\<port\>,\<startcode\>* directory is renamed.
+    ```
+    /hbase/WALs/HOST,PORT,STARTCODE-splitting
+    ```
 
-```
-Renaming the directory is important because a RegionServer may still be up and accepting requests even if the HMaster thinks it is down. If the RegionServer does not respond immediately and does not heartbeat its ZooKeeper session, the HMaster may interpret this as a RegionServer failure. Renaming the logs directory ensures that existing, valid WAL files which are still in use by an active but busy RegionServer are not written to by accident.
+    An example of such a renamed directory might look like the following:
 
-The new directory is named according to the following pattern:
-
-```
-/hbase/WALs/<host>,<port>,<startcode>-splitting
-```
-
-An example of such a renamed directory might look like the following:
-
-```
-/hbase/WALs/srv.example.com,60020,1254173957298-splitting
-```
+    ```
+    /hbase/WALs/srv.example.com,60020,1254173957298-splitting
+    ```
 
 2.  Each log file is split, one at a time.
 
-The log splitter reads the log file one edit entry at a time and puts each edit entry into the buffer corresponding to the edit's region. At the same time, the splitter starts several writer threads. Writer threads pick up a corresponding buffer and write the edit entries in the buffer to a temporary recovered edit file. The temporary edit file is stored to disk with the following naming pattern:
+    The log splitter reads the log file one edit entry at a time and puts each edit entry into the buffer corresponding to the edit's region. At the same time, the splitter starts several writer threads. Writer threads pick up a corresponding buffer and write the edit entries in the buffer to a temporary recovered edit file. The temporary edit file is stored to disk with the following naming pattern:
 
-```
-/hbase/<table_name>/<region_id>/recovered.edits/.temp
-```
+    ```
+    /hbase/TABLE_NAME/REGION_ID/recovered.edits/.temp
+    ```
 
-This file is used to store all the edits in the WAL log for this region. After log splitting completes, the *.temp* file is renamed to the sequence ID of the first log written to the file.
+    This file is used to store all the edits in the WAL log for this region. After log splitting completes, the *.temp* file is renamed to the sequence ID of the first log written to the file.
 
-To determine whether all edits have been written, the sequence ID is compared to the sequence of the last edit that was written to the HFile. If the sequence of the last edit is greater than or equal to the sequence ID included in the file name, it is clear that all writes from the edit file have been completed.
+    To determine whether all edits have been written, the sequence ID is compared to the sequence of the last edit that was written to the HFile. If the sequence of the last edit is greater than or equal to the sequence ID included in the file name, it is clear that all writes from the edit file have been completed.
 
 3.  After log splitting is complete, each affected region is assigned to a RegionServer.
 
-When the region is opened, the *recovered.edits* folder is checked for recovered edits files. If any such files are present, they are replayed by reading the edits and saving them to the MemStore. After all edit files are replayed, the contents of the MemStore are written to disk (HFile) and the edit files are deleted.
-
-</div>
+    When the region is opened, the *recovered.edits* folder is checked for recovered edits files. If any such files are present, they are replayed by reading the edits and saving them to the MemStore. After all edit files are replayed, the contents of the MemStore are written to disk (HFile) and the edit files are deleted.
 
 #### Handling of Errors During Log Splitting
 
@@ -1445,90 +1303,42 @@ If an EOFException occurs while splitting logs, the split proceeds even when `hb
 
 #### Performance Improvements during Log Splitting
 
-WAL log splitting and recovery can be resource intensive and take a long time, depending on the number of RegionServers involved in the crash and the size of the regions. [formalpara_title](#distributed.log.splitting) was developed to improve performance during log splitting.
+WAL log splitting and recovery can be resource intensive and take a long time, depending on the number of RegionServers involved in the crash and the size of the regions. [Distributed log splitting](#distributed-log-splitting) was developed to improve performance during log splitting.
 
-<div id="distributed.log.splitting" class="formalpara">
-
-<div className="title">
-
-Enabling or Disabling Distributed Log Splitting
-
-</div>
+#### Enabling or Disabling Distributed Log Splitting
 
 Distributed log processing is enabled by default since HBase 0.92. The setting is controlled by the `hbase.master.distributed.log.splitting` property, which can be set to `true` or `false`, but defaults to `true`.
-
-</div>
 
 ### WAL splitting based on procedureV2
 
 After HBASE-20610, we introduce a new way to do WAL splitting coordination by procedureV2 framework. This can simplify the process of WAL splitting and no need to connect zookeeper any more.
 
-<div id="background" class="formalpara">
-
-<div className="title">
-
-Background
-
-</div>
+#### Background
 
 Currently, splitting WAL processes are coordinated by zookeeper. Each region server are trying to grab tasks from zookeeper. And the burden becomes heavier when the number of region server increase.
 
-</div>
-
-<div id="implementation.on.master.side" class="formalpara">
-
-<div className="title">
-
-Implementation on Master side
-
-</div>
+#### Implementation on Master side
 
 During ServerCrashProcedure, SplitWALManager will create one SplitWALProcedure for each WAL file which should be split. Then each SplitWALProcedure will spawn a SplitWalRemoteProcedure to send the request to region server. SplitWALProcedure is a StateMachineProcedure and here is the state transfer diagram.
-
-</div>
 
 <figure>
 <img src="../images/WAL_splitting.png" alt="WAL splitting" />
 <figcaption>WAL_splitting_coordination</figcaption>
 </figure>
 
-<div id="implementation.on.region.server.side" class="formalpara">
-
-<div className="title">
-
-Implementation on Region Server side
-
-</div>
+#### Implementation on Region Server side
 
 Region Server will receive a SplitWALCallable and execute it, which is much more straightforward than before. It will return null if success and return exception if there is any error.
 
-</div>
-
-<div id="preformance" class="formalpara">
-
-<div className="title">
-
-Performance
-
-</div>
+#### Performance
 
 According to tests on a cluster which has 5 regionserver and 1 master. procedureV2 coordinated WAL splitting has a better performance than ZK coordinated WAL splitting no master when restarting the whole cluster or one region server crashing.
 
-</div>
-
-<div id="enable.this.feature" class="formalpara">
-
-<div className="title">
-
-Enable this feature
-
-</div>
+#### Enable this feature
 
 To enable this feature, first we should ensure our package of HBase already contains these code. If not, please upgrade the package of HBase cluster without any configuration change first. Then change configuration 'hbase.split.wal.zk.coordinated' to false. Rolling upgrade the master with new configuration. Now WAL splitting are handled by our new implementation. But region server are still trying to grab tasks from zookeeper, we can rolling upgrade the region servers with the new configuration to stop that.
 
-</div>
-
-- steps as follows:
+Steps as follows:
 
   - Upgrade whole cluster to get the new Implementation.
 
@@ -1681,76 +1491,37 @@ Regions can be periodically moved by the [LoadBalancer](#master.processes.loadba
 
 HBase maintains a state for each region and persists the state in `hbase:meta`. The state of the `hbase:meta` region itself is persisted in ZooKeeper. You can see the states of regions in transition in the Master web UI. Following is the list of possible region states.
 
-<div>
-
-<div className="title">
-
-Possible Region States
-
-</div>
+**Possible Region States:**
 
 - `OFFLINE`: the region is offline and not opening
-
 - `OPENING`: the region is in the process of being opened
-
 - `OPEN`: the region is open and the RegionServer has notified the master
-
 - `FAILED_OPEN`: the RegionServer failed to open the region
-
 - `CLOSING`: the region is in the process of being closed
-
 - `CLOSED`: the RegionServer has closed the region and notified the master
-
 - `FAILED_CLOSE`: the RegionServer failed to close the region
-
 - `SPLITTING`: the RegionServer notified the master that the region is splitting
-
 - `SPLIT`: the RegionServer notified the master that the region has finished splitting
-
 - `SPLITTING_NEW`: this region is being created by a split which is in progress
-
 - `MERGING`: the RegionServer notified the master that this region is being merged with another region
-
 - `MERGED`: the RegionServer notified the master that this region has been merged
-
 - `MERGING_NEW`: this region is being created by a merge of two regions
-
-</div>
 
 <figure>
 <img src="../images/region_states.png" alt="region states" />
 <figcaption>Region State Transitions</figcaption>
 </figure>
 
-<div>
-
-<div className="title">
-
-Graph Legend
-
-</div>
+**Graph Legend:**
 
 - Brown: Offline state, a special state that can be transient (after closed before opening), terminal (regions of disabled tables), or initial (regions of newly created tables)
-
 - Palegreen: Online state that regions can serve requests
-
 - Lightblue: Transient states
-
 - Red: Failure states that need OPS attention
-
 - Gold: Terminal states of regions split/merged
-
 - Grey: Initial states of regions created through split/merge
 
-</div>
-
-<div>
-
-<div className="title">
-
-Transition State Descriptions
-
-</div>
+**Transition State Descriptions:**
 
 1.  The master moves a region from `OFFLINE` to `OPENING` state and tries to assign the region to a RegionServer. The RegionServer may or may not have received the open region request. The master retries sending the open region request to the RegionServer until the RPC goes through or the master runs out of retries. After the RegionServer receives the open region request, the RegionServer begins opening the region.
 
@@ -1786,8 +1557,6 @@ Transition State Descriptions
 
 17. For regions in `FAILED_OPEN` or `FAILED_CLOSE` states, the master tries to close them again when they are reassigned by an operator via HBase Shell.
 
-</div>
-
 ## Region-RegionServer Locality
 
 Over time, Region-RegionServer locality is achieved via HDFS block replication. The HDFS client does the following by default when choosing locations to write replicas:
@@ -1816,30 +1585,16 @@ You can override the default split policy using a custom [RegionSplitPolicy](htt
 
 The policy can set globally through the HBase configuration or on a per-table basis.
 
-<div className="formalpara">
+#### Configuring the Split Policy Globally in *hbase-site.xml*
 
-<div className="title">
-
-Configuring the Split Policy Globally in *hbase-site.xml*
-
-</div>
-
-``` xml
+```xml
 <property>
   <name>hbase.regionserver.region.split.policy</name>
   <value>org.apache.hadoop.hbase.regionserver.IncreasingToUpperBoundRegionSplitPolicy</value>
 </property>
 ```
 
-</div>
-
-<div className="formalpara">
-
-<div className="title">
-
-Configuring a Split Policy On a Table Using the Java API
-
-</div>
+#### Configuring a Split Policy On a Table Using the Java API
 
 ```java
 HTableDescriptor tableDesc = new HTableDescriptor("test");
@@ -1848,21 +1603,11 @@ tableDesc.addFamily(new HColumnDescriptor(Bytes.toBytes("cf1")));
 admin.createTable(tableDesc);
 ```
 
-</div>
+#### Configuring the Split Policy On a Table Using HBase Shell
 
-<div className="formalpara">
-
-<div className="title">
-
-Configuring the Split Policy On a Table Using HBase Shell
-
-</div>
-
-``` java
+```java
 hbase> create 'test', {METADATA => {'SPLIT_POLICY' => 'org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy'}},{NAME => 'cf1'}
 ```
-
-</div>
 
 The policy can be set globally through the HBaseConfiguration used or on a per table basis:
 
@@ -1880,23 +1625,12 @@ The `DisabledRegionSplitPolicy` policy blocks manual region splitting.
 
 It is possible to manually split your table, either at table creation (pre-splitting), or at a later time as an administrative action. You might choose to split your region for one or more of the following reasons. There may be other valid reasons, but the need to manually split your table might also point to problems with your schema design.
 
-<div>
-
-<div className="title">
-
-Reasons to Manually Split Your Table
-
-</div>
+**Reasons to Manually Split Your Table:**
 
 - Your data is sorted by timeseries or another similar algorithm that sorts new data at the end of the table. This means that the Region Server holding the last region is always under load, and the other Region Servers are idle, or mostly idle. See also [???](#timeseries).
-
 - You have developed an unexpected hotspot in one region of your table. For instance, an application which tracks web searches might be inundated by a lot of searches for a celebrity in the event of news about that celebrity. See [perf.one.region](#perf.one.region) for more discussion about this particular scenario.
-
 - After a big increase in the number of RegionServers in your cluster, to get the load spread out quickly.
-
 - Before a bulk-load which is likely to cause unusual and uneven load across regions.
-
-</div>
 
 See [???](#disable.splitting) for a discussion about the dangers and possible benefits of managing splitting completely manually.
 
@@ -1921,7 +1655,7 @@ Both Master and RegionServer participate in the event of online region merges. C
 
 An example of region merges in the HBase shell
 
-``` bourne
+```
 $ hbase> merge_region 'ENCODED_REGIONNAME', 'ENCODED_REGIONNAME'
 $ hbase> merge_region 'ENCODED_REGIONNAME', 'ENCODED_REGIONNAME', true
 ```
@@ -2091,53 +1825,27 @@ It is critical to understand that the rowkey, ColumnFamily, and column (aka colu
 
 ### Compaction
 
-<div>
-
-<div className="title">
-
-Ambiguous Terminology
-
-</div>
+**Ambiguous Terminology:**
 
 - A *StoreFile* is a facade of HFile. In terms of compaction, use of StoreFile seems to have prevailed in the past.
-
 - A *Store* is the same thing as a ColumnFamily. StoreFiles are related to a Store, or ColumnFamily.
-
 - If you want to read more about StoreFiles versus HFiles and Stores versus ColumnFamilies, see [HBASE-11316](https://issues.apache.org/jira/browse/HBASE-11316).
-
-</div>
 
 When the MemStore reaches a given size (`hbase.hregion.memstore.flush.size`), it flushes its contents to a StoreFile. The number of StoreFiles in a Store increases over time. *Compaction* is an operation which reduces the number of StoreFiles in a Store, by merging them together, in order to increase performance on read operations. Compactions can be resource-intensive to perform, and can either help or hinder performance depending on many factors.
 
 Compactions fall into two categories: minor and major. Minor and major compactions differ in the following ways.
 
-*Minor compactions* usually select a small number of small, adjacent StoreFiles and rewrite them as a single StoreFile. Minor compactions do not drop (filter out) deletes or expired versions, because of potential side effects. See [formalpara_title](#compaction.and.deletes) and [formalpara_title](#compaction.and.versions) for information on how deletes and versions are handled in relation to compactions. The end result of a minor compaction is fewer, larger StoreFiles for a given Store.
+*Minor compactions* usually select a small number of small, adjacent StoreFiles and rewrite them as a single StoreFile. Minor compactions do not drop (filter out) deletes or expired versions, because of potential side effects. See [Compaction and Deletions](#compaction-and-deletes) and [Compaction and Versions](#compaction-and-versions) for information on how deletes and versions are handled in relation to compactions. The end result of a minor compaction is fewer, larger StoreFiles for a given Store.
 
-The end result of a *major compaction* is a single StoreFile per Store. Major compactions also process delete markers and max versions. See [formalpara_title](#compaction.and.deletes) and [formalpara_title](#compaction.and.versions) for information on how deletes and versions are handled in relation to compactions.
+The end result of a *major compaction* is a single StoreFile per Store. Major compactions also process delete markers and max versions. See [Compaction and Deletions](#compaction-and-deletes) and [Compaction and Versions](#compaction-and-versions) for information on how deletes and versions are handled in relation to compactions.
 
-<div id="compaction.and.deletes" class="formalpara">
-
-<div className="title">
-
-Compaction and Deletions
-
-</div>
+#### Compaction and Deletions
 
 When an explicit deletion occurs in HBase, the data is not actually deleted. Instead, a *tombstone* marker is written. The tombstone marker prevents the data from being returned with queries. During a major compaction, the data is actually deleted, and the tombstone marker is removed from the StoreFile. If the deletion happens because of an expired TTL, no tombstone is created. Instead, the expired data is filtered out and is not written back to the compacted StoreFile.
 
-</div>
-
-<div id="compaction.and.versions" class="formalpara">
-
-<div className="title">
-
-Compaction and Versions
-
-</div>
+#### Compaction and Versions
 
 When you create a Column Family, you can specify the maximum number of versions to keep, by specifying `ColumnFamilyDescriptorBuilder.setMaxVersions(int versions)`. The default value is `1`. If more versions than the specified maximum exist, the excess versions are filtered out and not written back to the compacted StoreFile.
-
-</div>
 
 <Callout type="info">
 In some situations, older versions can be inadvertently resurrected if a newer version is explicitly deleted. See [???](#major.compactions.change.query.results) for a more in-depth explanation. This situation is only possible before the compaction finishes.
@@ -2148,17 +1856,9 @@ In theory, major compactions improve performance. However, on a highly loaded sy
 
 Compactions do not perform region merges. See [???](#ops.regionmgt.merge) for more information on region merging.
 
-<div className="formalpara">
-
-<div className="title">
-
-Compaction Switch
-
-</div>
+#### Compaction Switch
 
 We can switch on and off the compactions at region servers. Switching off compactions will also interrupt any currently ongoing compactions. It can be done dynamically using the "compaction_switch" command from hbase shell. If done from the command line, this setting will be lost on restart of the server. To persist the changes across region servers modify the configuration hbase.regionserver .compaction.enabled in hbase-site.xml and restart HBase.
-
-</div>
 
 #### Compaction Policy - HBase 0.96.x and newer
 
@@ -2340,25 +2040,13 @@ It has been copied below:
  */
 ```
 
-<div>
-
-<div className="title">
-
-Important knobs:
-
-</div>
+**Important knobs:**
 
 - `hbase.hstore.compaction.ratio` Ratio used in compaction file selection algorithm (default 1.2f).
-
 - `hbase.hstore.compaction.min` (in HBase v 0.90 this is called `hbase.hstore.compactionThreshold`) (files) Minimum number of StoreFiles per Store to be selected for a compaction to occur (default 2).
-
 - `hbase.hstore.compaction.max` (files) Maximum number of StoreFiles to compact per minor compaction (default 10).
-
 - `hbase.hstore.compaction.min.size` (bytes) Any StoreFile smaller than this setting with automatically be a candidate for compaction. Defaults to `hbase.hregion.memstore.flush.size` (128 mb).
-
 - `hbase.hstore.compaction.max.size` (.92) (bytes) Any StoreFile larger than this setting with automatically be excluded from compaction (default Long.MAX_VALUE).
-
-</div>
 
 The minor compaction StoreFile selection logic is size based, and selects a file for compaction when the `file ⇐ sum(smaller_files) * hbase.hstore.compaction.ratio`.
 
@@ -2471,17 +2159,9 @@ Don’t use it for
 
 - frequent bulk loads with heavily overlapping time ranges
 
-<div className="formalpara">
-
-<div className="title">
-
-Performance Improvements
-
-</div>
+**Performance Improvements**
 
 Performance testing has shown that the performance of time-range scans improve greatly for limited time ranges, especially scans of recent data.
-
-</div>
 
 ##### Enabling Date Tiered Compaction
 
@@ -2491,41 +2171,25 @@ You also need to set `hbase.hstore.blockingStoreFiles` to a high number, such as
 
 You also need to set `hbase.hstore.compaction.max` to the same value as `hbase.hstore.blockingStoreFiles` to unblock major compaction.
 
-<div>
-
-<div className="title">
-
-Procedure: Enable Date Tiered Compaction
-
-</div>
+**Procedure: Enable Date Tiered Compaction**
 
 1.  Run one of following commands in the HBase shell. Replace the table name `orders_table` with the name of your table.
 
-```sql
-alter 'orders_table', CONFIGURATION => {'hbase.hstore.engine.class' => 'org.apache.hadoop.hbase.regionserver.DateTieredStoreEngine', 'hbase.hstore.blockingStoreFiles' => '60', 'hbase.hstore.compaction.min'=>'2', 'hbase.hstore.compaction.max'=>'60'}
-alter 'orders_table', {NAME => 'blobs_cf', CONFIGURATION => {'hbase.hstore.engine.class' => 'org.apache.hadoop.hbase.regionserver.DateTieredStoreEngine', 'hbase.hstore.blockingStoreFiles' => '60', 'hbase.hstore.compaction.min'=>'2', 'hbase.hstore.compaction.max'=>'60'}}
-create 'orders_table', 'blobs_cf', CONFIGURATION => {'hbase.hstore.engine.class' => 'org.apache.hadoop.hbase.regionserver.DateTieredStoreEngine', 'hbase.hstore.blockingStoreFiles' => '60', 'hbase.hstore.compaction.min'=>'2', 'hbase.hstore.compaction.max'=>'60'}
-```
+    ```sql
+    alter 'orders_table', CONFIGURATION => {'hbase.hstore.engine.class' => 'org.apache.hadoop.hbase.regionserver.DateTieredStoreEngine', 'hbase.hstore.blockingStoreFiles' => '60', 'hbase.hstore.compaction.min'=>'2', 'hbase.hstore.compaction.max'=>'60'}
+    alter 'orders_table', {NAME => 'blobs_cf', CONFIGURATION => {'hbase.hstore.engine.class' => 'org.apache.hadoop.hbase.regionserver.DateTieredStoreEngine', 'hbase.hstore.blockingStoreFiles' => '60', 'hbase.hstore.compaction.min'=>'2', 'hbase.hstore.compaction.max'=>'60'}}
+    create 'orders_table', 'blobs_cf', CONFIGURATION => {'hbase.hstore.engine.class' => 'org.apache.hadoop.hbase.regionserver.DateTieredStoreEngine', 'hbase.hstore.blockingStoreFiles' => '60', 'hbase.hstore.compaction.min'=>'2', 'hbase.hstore.compaction.max'=>'60'}
+    ```
 
 2.  Configure other options if needed. See [Configuring Date Tiered Compaction](#ops.date.tiered.config) for more information.
 
-</div>
-
-<div>
-
-<div className="title">
-
-Procedure: Disable Date Tiered Compaction
-
-</div>
+**Procedure: Disable Date Tiered Compaction**
 
 1.  Set the `hbase.hstore.engine.class` option to either nil or `org.apache.hadoop.hbase.regionserver.DefaultStoreEngine`. Either option has the same effect. Make sure you set the other options you changed to the original settings too.
 
-```sql
-alter 'orders_table', CONFIGURATION => {'hbase.hstore.engine.class' => 'org.apache.hadoop.hbase.regionserver.DefaultStoreEngine', 'hbase.hstore.blockingStoreFiles' => '12', 'hbase.hstore.compaction.min'=>'6', 'hbase.hstore.compaction.max'=>'12'}
-```
-
-</div>
+    ```sql
+    alter 'orders_table', CONFIGURATION => {'hbase.hstore.engine.class' => 'org.apache.hadoop.hbase.regionserver.DefaultStoreEngine', 'hbase.hstore.blockingStoreFiles' => '12', 'hbase.hstore.compaction.min'=>'6', 'hbase.hstore.compaction.max'=>'12'}
+    ```
 
 When you change the store engine either way, a major compaction will likely be performed on most regions. This is not necessary on new tables.
 
@@ -2537,17 +2201,9 @@ Each of the settings for date tiered compaction should be configured at the tabl
 alter 'orders_table', CONFIGURATION => {'key' => 'value', ..., 'key' => 'value'}}
 ```
 
-<div id="ops.date.tiered.config.parameters" class="formalpara">
-
-<div className="title">
-
-Tier Parameters
-
-</div>
+**Tier Parameters**
 
 You can configure your date tiers by changing the settings for the following parameters:
-
-</div>
 
 | Setting | Notes |
 |----|----|
@@ -2559,17 +2215,9 @@ You can configure your date tiers by changing the settings for the following par
 
 Date Tier Parameters
 
-<div id="ops.date.tiered.config.compaction.throttler" class="formalpara">
-
-<div className="title">
-
-Compaction Throttler
-
-</div>
+**Compaction Throttler**
 
 With tiered compaction all servers in the cluster will promote windows to higher tier at the same time, so using a compaction throttle is recommended: Set `hbase.regionserver.throughput.controller` to `org.apache.hadoop.hbase.regionserver.compactions.PressureAwareCompactionThroughputController`.
-
-</div>
 
 <Callout type="info">
 For more information about date tiered compaction, please refer to the design specification at [https://docs.google.com/document/d/1_AmlNb2N8Us1xICsTeGDLKIqL6T-oHoRLZ323MG_uy8](https://docs.google.com/document/d/1_AmlNb2N8Us1xICsTeGDLKIqL6T-oHoRLZ323MG_uy8)
@@ -2592,61 +2240,37 @@ Consider using stripe compaction if you have either of the following:
 
 - Non-uniform keys, such as time dimension in a key. Only the stripes receiving the new keys will need to compact. Old data will not compact as often, if at all
 
-<div className="formalpara">
-
-<div className="title">
-
-Performance Improvements
-
-</div>
+**Performance Improvements**
 
 Performance testing has shown that the performance of reads improves somewhat, and variability of performance of reads and writes is greatly reduced. An overall long-term performance improvement is seen on large non-uniform-row key regions, such as a hash-prefixed timestamp key. These performance gains are the most dramatic on a table which is already large. It is possible that the performance improvement might extend to region splits.
-
-</div>
 
 ##### Enabling Stripe Compaction
 
 You can enable stripe compaction for a table or a column family, by setting its `hbase.hstore.engine.class` to `org.apache.hadoop.hbase.regionserver.StripeStoreEngine`. You also need to set the `hbase.hstore.blockingStoreFiles` to a high number, such as 100 (rather than the default value of 10).
 
-<div>
-
-<div className="title">
-
-Procedure: Enable Stripe Compaction
-
-</div>
+**Procedure: Enable Stripe Compaction**
 
 1.  Run one of following commands in the HBase shell. Replace the table name `orders_table` with the name of your table.
 
-```sql
-alter 'orders_table', CONFIGURATION => {'hbase.hstore.engine.class' => 'org.apache.hadoop.hbase.regionserver.StripeStoreEngine', 'hbase.hstore.blockingStoreFiles' => '100'}
-alter 'orders_table', {NAME => 'blobs_cf', CONFIGURATION => {'hbase.hstore.engine.class' => 'org.apache.hadoop.hbase.regionserver.StripeStoreEngine', 'hbase.hstore.blockingStoreFiles' => '100'}}
-create 'orders_table', 'blobs_cf', CONFIGURATION => {'hbase.hstore.engine.class' => 'org.apache.hadoop.hbase.regionserver.StripeStoreEngine', 'hbase.hstore.blockingStoreFiles' => '100'}
-```
+    ```sql
+    alter 'orders_table', CONFIGURATION => {'hbase.hstore.engine.class' => 'org.apache.hadoop.hbase.regionserver.StripeStoreEngine', 'hbase.hstore.blockingStoreFiles' => '100'}
+    alter 'orders_table', {NAME => 'blobs_cf', CONFIGURATION => {'hbase.hstore.engine.class' => 'org.apache.hadoop.hbase.regionserver.StripeStoreEngine', 'hbase.hstore.blockingStoreFiles' => '100'}}
+    create 'orders_table', 'blobs_cf', CONFIGURATION => {'hbase.hstore.engine.class' => 'org.apache.hadoop.hbase.regionserver.StripeStoreEngine', 'hbase.hstore.blockingStoreFiles' => '100'}
+    ```
 
 2.  Configure other options if needed. See [Configuring Stripe Compaction](#ops.stripe.config) for more information.
 
 3.  Enable the table.
 
-</div>
-
-<div>
-
-<div className="title">
-
-Procedure: Disable Stripe Compaction
-
-</div>
+**Procedure: Disable Stripe Compaction**
 
 1.  Set the `hbase.hstore.engine.class` option to either nil or `org.apache.hadoop.hbase.regionserver.DefaultStoreEngine`. Either option has the same effect.
 
-```sql
-alter 'orders_table', CONFIGURATION => {'hbase.hstore.engine.class' => 'org.apache.hadoop.hbase.regionserver.DefaultStoreEngine'}
-```
+    ```sql
+    alter 'orders_table', CONFIGURATION => {'hbase.hstore.engine.class' => 'org.apache.hadoop.hbase.regionserver.DefaultStoreEngine'}
+    ```
 
 2.  Enable the table.
-
-</div>
 
 When you enable a large table after changing the store engine either way, a major compaction will likely be performed on most regions. This is not necessary on new tables.
 
@@ -2658,78 +2282,29 @@ Each of the settings for stripe compaction should be configured at the table or 
 alter 'orders_table', CONFIGURATION => {'key' => 'value', ..., 'key' => 'value'}}
 ```
 
-<div id="ops.stripe.config.sizing" class="formalpara">
-
-<div className="title">
-
-Region and stripe sizing
-
-</div>
+**Region and stripe sizing**
 
 You can configure your stripe sizing based upon your region sizing. By default, your new regions will start with one stripe. On the next compaction after the stripe has grown too large (16 x MemStore flushes size), it is split into two stripes. Stripe splitting continues as the region grows, until the region is large enough to split.
 
-</div>
-
 You can improve this pattern for your own data. A good rule is to aim for a stripe size of at least 1 GB, and about 8-12 stripes for uniform row keys. For example, if your regions are 30 GB, 12 x 2.5 GB stripes might be a good starting point.
 
-<table>
-<caption>Stripe Sizing Settings</caption>
-<colgroup>
-<col style="width: 50%" />
-<col style="width: 50%" />
-</colgroup>
-<thead>
-<tr>
-<th style="text-align: left;">Setting</th>
-<th style="text-align: left;">Notes</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align: left;"><p><code>hbase.store.stripe.initialStripeCount</code></p></td>
-<td style="text-align: left;"><p>The number of stripes to create when stripe compaction is enabled. You can use it as follows:</p>
-<ul>
-<li><p>For relatively uniform row keys, if you know the approximate target number of stripes from the above, you can avoid some splitting overhead by starting with several stripes (2, 5, 10…​). If the early data is not representative of overall row key distribution, this will not be as efficient.</p></li>
-<li><p>For existing tables with a large amount of data, this setting will effectively pre-split your stripes.</p></li>
-<li><p>For keys such as hash-prefixed sequential keys, with more than one hash prefix per region, pre-splitting may make sense.</p></li>
-</ul></td>
-</tr>
-<tr>
-<td style="text-align: left;"><p><code>hbase.store.stripe.sizeToSplit</code></p></td>
-<td style="text-align: left;"><p>The maximum size a stripe grows before splitting. Use this in conjunction with <code>hbase.store.stripe.splitPartCount</code> to control the target stripe size (<code>sizeToSplit = splitPartsCount * target stripe size</code>), according to the above sizing considerations.</p></td>
-</tr>
-<tr>
-<td style="text-align: left;"><p><code>hbase.store.stripe.splitPartCount</code></p></td>
-<td style="text-align: left;"><p>The number of new stripes to create when splitting a stripe. The default is 2, which is appropriate for most cases. For non-uniform row keys, you can experiment with increasing the number to 3 or 4, to isolate the arriving updates into narrower slice of the region without additional splits being required.</p></td>
-</tr>
-</tbody>
-</table>
+**Stripe Sizing Settings**
 
-<div id="ops.stripe.config.memstore" class="formalpara">
+| Setting | Notes |
+|---------|-------|
+| `hbase.store.stripe.initialStripeCount` | The number of stripes to create when stripe compaction is enabled. You can use it as follows:<br/>- For relatively uniform row keys, if you know the approximate target number of stripes from the above, you can avoid some splitting overhead by starting with several stripes (2, 5, 10…​). If the early data is not representative of overall row key distribution, this will not be as efficient.<br/>- For existing tables with a large amount of data, this setting will effectively pre-split your stripes.<br/>- For keys such as hash-prefixed sequential keys, with more than one hash prefix per region, pre-splitting may make sense. |
+| `hbase.store.stripe.sizeToSplit` | The maximum size a stripe grows before splitting. Use this in conjunction with `hbase.store.stripe.splitPartCount` to control the target stripe size (`sizeToSplit = splitPartsCount * target stripe size`), according to the above sizing considerations. |
+| `hbase.store.stripe.splitPartCount` | The number of new stripes to create when splitting a stripe. The default is 2, which is appropriate for most cases. For non-uniform row keys, you can experiment with increasing the number to 3 or 4, to isolate the arriving updates into narrower slice of the region without additional splits being required. |
 
-<div className="title">
-
-MemStore Size Settings
-
-</div>
+**MemStore Size Settings**
 
 By default, the flush creates several files from one MemStore, according to existing stripe boundaries and row keys to flush. This approach minimizes write amplification, but can be undesirable if the MemStore is small and there are many stripes, because the files will be too small.
 
-</div>
-
 In this type of situation, you can set `hbase.store.stripe.compaction.flushToL0` to `true`. This will cause a MemStore flush to create a single file instead. When at least `hbase.store.stripe.compaction.minFilesL0` such files (by default, 4) accumulate, they will be compacted into striped files.
 
-<div id="ops.stripe.config.compact" class="formalpara">
-
-<div className="title">
-
-Normal Compaction Configuration and Stripe Compaction
-
-</div>
+**Normal Compaction Configuration and Stripe Compaction**
 
 All the settings that apply to normal compactions (see [Parameters Used by Compaction Algorithm](#compaction.parameters)) apply to stripe compactions. The exceptions are the minimum and maximum number of files, which are set to higher values by default because the files in stripes are smaller. To control these for stripe compactions, use `hbase.store.stripe.compaction.minFiles` and `hbase.store.stripe.compaction.maxFiles`, rather than `hbase.hstore.compaction.min` and `hbase.hstore.compaction.max`.
-
-</div>
 
 #### FIFO Compaction
 
@@ -2936,39 +2511,18 @@ If client1 reads with STRONG consistency, it will only talk with the replica_id=
 
 Having secondary regions hosted for read availability comes with some tradeoffs which should be carefully evaluated per use case. Following are advantages and disadvantages.
 
-<div>
-
-<div className="title">
-
-Advantages
-
-</div>
+**Advantages:**
 
 - High availability for read-only tables
-
 - High availability for stale reads
-
 - Ability to do very low latency reads with very high percentile (99.9%+) latencies for stale reads
 
-</div>
+**Disadvantages:**
 
-<div>
-
-<div className="title">
-
-Disadvantages
-
-</div>
-
-- Double / Triple MemStore usage (depending on region replication count) for tables with region replication \> 1
-
+- Double / Triple MemStore usage (depending on region replication count) for tables with region replication > 1
 - Increased block cache usage
-
 - Extra network traffic for log replication
-
 - Extra backup RPCs for replicas
-
-</div>
 
 To serve the region data from multiple replicas, HBase opens the regions in secondary mode in the region servers. The regions opened in secondary mode will share the same data files with the primary region replica, however each secondary region replica will have its own MemStore to keep the unflushed data (only primary region can do flushes). Also to serve reads from secondary regions, the blocks of data files may be also cached in the block caches for the secondary regions.
 
@@ -2998,7 +2552,7 @@ Before 3.0.0, this feature works as a replication endpoint, the performance and 
 
 if you want to disable this feature, you need to do two actions in the following order: \* Set configuration property `hbase.region.replica.replication.enabled` to false in `hbase-site.xml` (see Configuration section below) \* Disable the replication peer named `region_replica_replication` in the cluster using hbase shell or `Admin` class:
 
-``` bourne
+```
    hbase> disable_peer 'region_replica_replication'
 ```
 
