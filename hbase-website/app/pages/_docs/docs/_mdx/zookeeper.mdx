@@ -23,7 +23,7 @@ You must at least list the ensemble servers in _hbase-site.xml_ using the `hbase
 This property defaults to a single ensemble member at `localhost` which is not suitable for a fully distributed HBase.
 (It binds to the local machine only and remote clients will not be able to connect).
 
-<Callout title="How many ZooKeepers should I run?">
+<Callout type="info" title="How many ZooKeepers should I run?">
 You can run a ZooKeeper ensemble that comprises 1 node only but in production it is recommended that you run a ZooKeeper ensemble of 3, 5 or 7 machines; the more members an ensemble has, the more tolerant the ensemble is of host failures.
 Also, run an odd number of machines.
 In ZooKeeper, an even number of peers is supported, but it is normally not used because an even sized ensemble requires, proportionally, more peers to form a quorum than an odd sized ensemble requires.
@@ -407,7 +407,7 @@ the entire Java process. All ZooKeeper clients running in the same process will 
 co-processors.
 </Callout>
 
-<Callout>
+<Callout type="info">
 Since ZooKeeper version 3.8 the following two properties are useful to store the
 keystore and truststore passwords in protected text files rather than exposing them in the command line.
 </Callout>
@@ -441,7 +441,7 @@ to Java system properties this could be more convenient under some circumstances
 </configuration>
 ```
 
-<Callout>
+<Callout type="info">
 These settings are eventually transformed into Java system properties, it's just a convenience feature.
 So, the same rules that mentioned in the previous point, applies to them as well.
 </Callout>

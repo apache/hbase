@@ -62,7 +62,7 @@ The `contents:html` column qualifier contains the entire HTML of a given website
 Qualifiers of the `anchor` column family each contain the external site which links to the site represented by the row, along with the text it used in the anchor of its link.
 The `people` column family represents people associated with the site.
 
-<Callout title="Column Names">
+<Callout type="info" title="Column Names">
 By convention, a column name is made of its column family prefix and a _qualifier_.
 For example, the column _contents:html_ is made up of the column family `contents` and the `html` qualifier.
 The colon character (`:`) delimits the column family from the column family _qualifier_.
@@ -475,7 +475,7 @@ To keep the deletes for a configurable amount of time, you can set the delete TT
 If `hbase.hstore.time.to.purge.deletes` is not set, or set to 0, all delete markers, including those with timestamps in the future, are purged during the next major compaction.
 Otherwise, a delete marker with a timestamp in the future is kept until the major compaction which occurs after the time represented by the marker's timestamp plus the value of `hbase.hstore.time.to.purge.deletes`, in milliseconds.
 
-<Callout>
+<Callout type="info">
 This behavior represents a fix for an unexpected change that was introduced in HBase 0.94, and was fixed in [HBASE-10118](https://issues.apache.org/jira/browse/HBASE-10118).
 The change has been backported to HBase 0.94 and newer branches.
 </Callout>
@@ -560,4 +560,3 @@ hash-joins). So which is the best approach? It depends on what you are trying to
 
 See [ACID Semantics](/acid-semantics.html).
 Lars Hofhansl has also written a note on [ACID in HBase](http://hadoop-hbase.blogspot.com/2012/03/acid-in-hbase.html).
-

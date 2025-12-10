@@ -87,7 +87,7 @@ a Hadoop-compatible file system, such as S3 and other HDFS-compatible destinatio
 
 ![Backup to Cloud or Vendor Storage Solutions](../images/backup-cloud-appliance.png)
 
-<Callout>
+<Callout type="info">
 The HBase backup utility does not support backup to multiple destinations. A workaround is to manually create copies
 of the backup files from HDFS or S3.
 </Callout>
@@ -121,7 +121,7 @@ min.user.id=500
 
 Add the following properties to hbase-site.xml and restart HBase if it is already running.
 
-<Callout>
+<Callout type="info">
 The ",..." is an ellipsis meant to imply that this is a comma-separated list of values, not literal text which should be added to hbase-site.xml.
 </Callout>
 
@@ -166,7 +166,7 @@ and its options. The below information is captured in this help message for each
 
 ### Creating a Backup Image
 
-<Callout>
+<Callout type="info">
 For HBase clusters also using Apache Phoenix: include the SQL system catalog tables in the backup. In the event that you
 need to restore the HBase backup, access to the system catalog tables enable you to resume Phoenix interoperability with the
 restored data.
@@ -184,7 +184,7 @@ hbase backup create <type> <backup_path>
 After the command finishes running, the console prints a SUCCESS or FAILURE status message. The SUCCESS message includes a _backup_ ID.
 The backup ID is the Unix time (also known as Epoch time) that the HBase master received the backup request from the client.
 
-<Callout title="Tip">
+<Callout type="info" title="Tip">
 Record the backup ID that appears at the end of a successful backup. In case the source cluster fails and you need to recover the
 dataset with a restore operation, having the backup ID readily available can save time.
 </Callout>
@@ -309,7 +309,7 @@ This command restores two tables of an incremental backup image. In this example
 • `backupId_1467823988425` is the backup ID.
 • `mytable1` and `mytable2` are the names of tables in the backup image to be restored.
 
-<Callout>
+<Callout type="info">
 If the namespace of a table being restored does not exist in the target environment, it will be automatically created during the restore operation.
 [HBASE-25707](https://issues.apache.org/jira/browse/HBASE-25707)
 </Callout>
@@ -348,7 +348,7 @@ of table names. You can group tables into a named backup set with the `hbase bac
 the `-set` option to invoke the name of a backup set in the `hbase backup create` or `hbase restore` rather than list
 individually every table in the group. You can have multiple backup sets.
 
-<Callout>
+<Callout type="info">
 Note the differentiation between the `hbase backup set add` command and the _-set_ option. The `hbase backup set add`
 command must be run before using the `-set` option in a different command because backup sets must be named and defined
 before using backup sets as a shortcut.
@@ -360,7 +360,7 @@ to the set.
 
 In this command, the backup set name is case-sensitive.
 
-<Callout>
+<Callout type="info">
 The metadata of backup sets are stored within HBase. If you do not have access to the original HBase cluster with the
 backup set metadata, then you must specify individual table names to restore the data.
 </Callout>
@@ -375,7 +375,7 @@ $ hbase backup set <subcommand> <backup_set_name> <tables>
 
 The following list details subcommands of the hbase backup set command.
 
-<Callout>
+<Callout type="info">
 You must enter one (and no more than one) of the following subcommands after hbase backup set to complete an operation.
 Also, the backup set name is case-sensitive in the command-line utility.
 </Callout>
@@ -413,7 +413,7 @@ Use to assign or invoke a backup set name. The backup set name must contain only
 List of tables (or a single table) to include in the backup set. Enter the table names as a comma-separated list. If no tables
 are specified, all tables are included in the set.
 
-<Callout title="Tip">
+<Callout type="info" title="Tip">
 Maintain a log or other record of the case-sensitive backup set names and the corresponding tables in each set on a separate
 or remote cluster, backup strategy. This information can help you in case of failure on the primary cluster.
 </Callout>
@@ -551,7 +551,7 @@ Comma-separated list of backup IDs to delete.
 
 Deletes all backup images completed more than the specified number of days ago.
 
-<Callout>
+<Callout type="info">
 These options are **mutually exclusive**. Only one of `-l` or `-k` may be used at a time.
 </Callout>
 
@@ -733,7 +733,7 @@ by adding the following line:
 * A catastrophic IT incident disables the production cluster that the green application uses. An HBase system administrator of the
 backup cluster must restore the _green_set_ dataset to the point in time closest to the recovery objective.
 
-<Callout>
+<Callout type="info">
 If the administrator of the backup HBase cluster has the backup ID with relevant details in accessible records, the following
 search with the `hdfs dfs -ls` command and manually scanning the backup ID list can be bypassed. Consider continuously maintaining
 and protecting a detailed log of backup IDs outside the production cluster in your environment.
@@ -911,4 +911,3 @@ will be modifications that would necessitate breaking compatibility ([HBASE-1751
 
 Individual backup and restore operations contain metrics about the amount of work the operation included, but there is no centralized location (e.g. the Master UI)
 which present information for consumption ([HBASE-16565](https://issues.apache.org/jira/browse/HBASE-16565)).
-

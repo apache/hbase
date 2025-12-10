@@ -43,14 +43,14 @@ You can scroll the metric records in the metrics part.
 
 | Argument | Description |
 | -------- | ----------- |
-| -d,--delay `<arg>` | The refresh delay (in seconds); default is 3 seconds |
+| -d,--delay `\<arg\>` | The refresh delay (in seconds); default is 3 seconds |
 | -h,--help | Print usage; for help while the tool is running press `h` key |
-| -m,--mode `<arg>` | The mode; `n` (Namespace)\| `t` (Table)\| `r` (Region)\| `s` (RegionServer), default is `r` |
-| -n,--numberOfIterations `<arg>` | The number of iterations |
+| -m,--mode `\<arg\>` | The mode; `n` (Namespace)\| `t` (Table)\| `r` (Region)\| `s` (RegionServer), default is `r` |
+| -n,--numberOfIterations `\<arg\>` | The number of iterations |
 | -O,--outputFieldNames | Print each of the available field names on a separate line, then quit |
-| -f,--fields `<arg>` | Show only the given fields. Specify comma separated fields to show multiple fields |
-| -s,--sortField `<arg>` | The initial sort field. You can prepend a `+' or `-' to the field name to also override the sort direction. A leading `+' will force sorting high to low, whereas a `-' will ensure a low to high ordering |
-| -i,--filters `<arg>` | The initial filters. Specify comma separated filters to set multiple filters |
+| -f,--fields `\<arg\>` | Show only the given fields. Specify comma separated fields to show multiple fields |
+| -s,--sortField `\<arg\>` | The initial sort field. You can prepend a `+' or `-' to the field name to also override the sort direction. A leading `+' will force sorting high to low, whereas a `-' will ensure a low to high ordering |
+| -i,--filters `\<arg\>` | The initial filters. Specify comma separated filters to set multiple filters |
 | -b,--batchMode | Starts hbtop in Batch mode, which could be useful for sending output from hbtop to other programs or to a file. In this mode, hbtop will not accept input and runs until the iterations limit you've set with the `-n' command-line option or until killed |
 
 ### Modes
@@ -245,8 +245,8 @@ The operators we can specify are as follows:
 | == | Exact match |
 | > | Greater than |
 | >= | Greater than or equal to |
-| `<` | Less than |
-| `<=` | Less than and equal to |
+| `\<` | Less than |
+| `\<=` | Less than and equal to |
 
 You can see the current filters by pressing `^o` key and clear them by pressing `=` key.
 

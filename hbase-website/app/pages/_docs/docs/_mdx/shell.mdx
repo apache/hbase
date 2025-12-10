@@ -12,7 +12,7 @@ To run the HBase shell, do as follows:
 $ ./bin/hbase shell
 ```
 
-Type `help` and then `<RETURN>` to see a listing of shell commands and options.
+Type `help` and then `\<RETURN\>` to see a listing of shell commands and options.
 Browse at least the paragraphs at the end of the help output for the gist of how variables and command arguments are entered into the HBase shell; in particular note how table names, rows, and columns, etc., must be quoted.
 
 See [shell exercises](#shell-exercises) for example basic shell operation.
@@ -42,7 +42,7 @@ To invoke non-interactive mode, pass the `-n` or `--non-interactive` option to H
 You can use the HBase shell from within operating system script interpreters like the Bash shell which is the default command interpreter for most Linux and UNIX distributions.
 The following guidelines use Bash syntax, but could be adjusted to work with C-style shells such as csh or tcsh, and could probably be modified to work with the Microsoft Windows script interpreter as well. Submissions are welcome.
 
-<Callout>
+<Callout type="info">
 Spawning HBase Shell commands in this way is slow, so keep that in mind when you are deciding when combining HBase operations with the operating system command line is appropriate.
 </Callout>
 
@@ -442,4 +442,3 @@ hbase> count '<tablename>', CACHE => 1000
 The above count fetches 1000 rows at a time.
 Set CACHE lower if your rows are big.
 Default is to fetch one row at a time.
-

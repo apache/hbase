@@ -697,7 +697,7 @@ When you create a snapshot, HBase retains everything it needs to recreate the ta
 
 ```
 *Do not* manage snapshots or archives manually via HDFS. HBase provides APIs and
-HBase Shell commands for managing them. For more information, see <<ops.snapshots>>.
+HBase Shell commands for managing them. For more information, see [ops.snapshots](#ops.snapshots).
 ```
 
 WAL  
@@ -1184,7 +1184,7 @@ This problem appears to affect some versions of OpenJDK 7 shipped by some Linux 
 To work around this problem, find the JRE home directory and edit the file *lib/security/java.security*. Edit the file to comment out the line:
 
 ```
-security.provider.1=sun.security.pkcs11.SunPKCS11 ${java.home}/lib/security/nss.cfg
+security.provider.1=sun.security.pkcs11.SunPKCS11 $\{java.home\}/lib/security/nss.cfg
 ```
 
 Then renumber the remaining providers accordingly.
@@ -1263,4 +1263,5 @@ You can avoid this problem by reducing the chunk size a bit to 2047KB as below.
 
 ```
 hbase.hregion.memstore.mslab.chunksize 2096128
+```
 ```

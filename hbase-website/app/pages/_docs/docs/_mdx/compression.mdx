@@ -3,7 +3,7 @@ title: "Compression and Data Block Encoding In HBase"
 description: "Comprehensive guide to compression algorithms and data block encoding options in HBase for optimizing storage and performance."
 ---
 
-<Callout>
+<Callout type="info">
 Codecs mentioned in this section are for encoding and decoding data blocks or row keys.
 For information about replication codecs, see [cluster.replication.preserving.tags](#clusterreplicationpreservingtags).
 </Callout>
@@ -455,7 +455,7 @@ If you built from source, copy the shared library to a known location on your sy
 In addition to the Snappy library, HBase also needs access to the Hadoop shared library, which will be called something like _libhadoop.so.X.Y_, where X and Y are both numbers.
 Make note of the location of the Hadoop library, or copy it to the same location as the Snappy library.
 
-<Callout>
+<Callout type="info">
 The Snappy and Hadoop libraries need to be available on each node of your cluster.
 See [compression.test](#compressiontest) to find out how to test that this is the case.
 

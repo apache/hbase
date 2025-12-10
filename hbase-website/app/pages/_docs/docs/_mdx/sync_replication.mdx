@@ -30,7 +30,7 @@ For peer cluster:
 hbase> add_peer  '1', CLUSTER_KEY => 'lg-hadoop-tst-st01.bj:10010,lg-hadoop-tst-st02.bj:10010,lg-hadoop-tst-st03.bj:10010:/hbase/test-hbase', REMOTE_WAL_DIR=>'hdfs://lg-hadoop-tst-st01.bj:20100/hbase/test-hbase/remoteWALs', TABLE_CFS => {"ycsb-test"=>[]}
 ```
 
-<Callout>
+<Callout type="info">
 For synchronous replication, the current implementation require that we have the same peer id for both source
 and peer cluster. Another thing that need attention is: the peer does not support cluster-level, namespace-level, or
 cf-level replication, only support table-level replication now.

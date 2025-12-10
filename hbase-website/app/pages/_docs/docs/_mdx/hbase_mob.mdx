@@ -363,9 +363,9 @@ While working on troubleshooting failures in the MOB system you can retrieve som
 information through the HBase shell by specifying special attributes on a scan.
 
 ```bash
-hbase(main):112:0> scan 'some_table', {STARTROW => '00012-example-row-key', LIMIT => 1,
-hbase(main):113:1*     CACHE_BLOCKS => false, ATTRIBUTES => { 'hbase.mob.scan.raw' => '1',
-hbase(main):114:2*     'hbase.mob.scan.ref.only' => '1' } }
+hbase(main):112:0> scan 'some_table', \{STARTROW => '00012-example-row-key', LIMIT => 1,
+hbase(main):113:1*     CACHE_BLOCKS => false, ATTRIBUTES => \{ 'hbase.mob.scan.raw' => '1',
+hbase(main):114:2*     'hbase.mob.scan.ref.only' => '1' \} \}
 ```
 
 The MOB internal information is stored as four bytes for the size of the underlying cell value and
@@ -378,9 +378,9 @@ characters.
 Let's look at a specific example:
 
 ```bash
-hbase(main):112:0> scan 'some_table', {STARTROW => '00012-example-row-key', LIMIT => 1,
-hbase(main):113:1*     CACHE_BLOCKS => false, ATTRIBUTES => { 'hbase.mob.scan.raw' => '1',
-hbase(main):114:2*     'hbase.mob.scan.ref.only' => '1' } }
+hbase(main):112:0> scan 'some_table', \{STARTROW => '00012-example-row-key', LIMIT => 1,
+hbase(main):113:1*     CACHE_BLOCKS => false, ATTRIBUTES => \{ 'hbase.mob.scan.raw' => '1',
+hbase(main):114:2*     'hbase.mob.scan.ref.only' => '1' \} \}
 ROW                        COLUMN+CELL
  00012-example-row-key     column=foo:bar, timestamp=1511179764, value=\x00\x02|\x94d41d8cd98f00b204
                        e9800998ecf8427e19700118ffd9c244fe69488bbc9f2c77d24a3e6a
@@ -435,7 +435,7 @@ value that is larger than the largest cell present in the column family. E.g. gi
 what we store" value:
 
 ```bash
-hbase(main):011:0> alter 'some_table', {NAME => 'foo', MOB_THRESHOLD => '1000000000'}
+hbase(main):011:0> alter 'some_table', \{NAME => 'foo', MOB_THRESHOLD => '1000000000'\}
 Updating all regions with the new schema...
 9/25 regions updated.
 25/25 regions updated.
@@ -546,7 +546,7 @@ a sufficiently large MOB threshold, and redo the major compaction step.
 alter the column family configuration so that the MOB feature is disabled.
 
 ```bash
-hbase(main):017:0> alter 'some_table', {NAME => 'foo', IS_MOB => 'false'}
+hbase(main):017:0> alter 'some_table', \{NAME => 'foo', IS_MOB => 'false'\}
 Updating all regions with the new schema...
 8/25 regions updated.
 25/25 regions updated.
@@ -576,7 +576,7 @@ of the table, and then delete it.
 
 Bulk load and WAL split-to-HFile don't consider MOB threshold and write data into normal hfile (under /hbase/data directory).
 
-<Callout>
+<Callout type="info">
 This won't cause any functional problem, during next compaction such data will be written out to the MOB hfiles.
 </Callout>
 
@@ -640,4 +640,4 @@ The following configuration settings are no longer used:
 * `hbase.mob.compaction.batch.size`
 * `hbase.mob.compactor.class`
 * `hbase.mob.compaction.threads.max`
-
+```

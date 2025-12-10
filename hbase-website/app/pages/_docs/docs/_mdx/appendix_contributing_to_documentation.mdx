@@ -157,16 +157,16 @@ The HBase Reference Guide is written in Asciidoc and built using [AsciiDoctor](h
 <tr>
 <td style="text-align: left;"><p>Code blocks with highlighting</p></td>
 <td style="text-align: left;"><p>monospace, highlighted, preserve space</p></td>
-<td style="text-align: left;"><pre><code>{`[source,java]
+<td style="text-align: left;"><pre><code>\{`[source,java]
 ----
-  myAwesomeCode() {
-}
+  myAwesomeCode() \{
+\}
 ----`}</code></pre></td>
 </tr>
 <tr>
 <td style="text-align: left;"><p>Code block included from a separate file</p></td>
 <td style="text-align: left;"><p>included just as though it were part of the main file</p></td>
-<td style="text-align: left;"><pre><code>{`[source,ruby]
+<td style="text-align: left;"><pre><code>\{`[source,ruby]
 ----
 include\::path/to/app.rb[]
 ----`}</code></pre></td>
@@ -243,7 +243,7 @@ include\::path/to/app.rb[]
 <tr>
 <td style="text-align: left;"><p>A complex note</p></td>
 <td style="text-align: left;"><p>The note has a title and/or multiple paragraphs and/or code blocks or lists, etc</p></td>
-<td style="text-align: left;"><pre><code>{`.The Title
+<td style="text-align: left;"><pre><code>\{`.The Title
 [NOTE]
 ====
 Here is the note text. Everything until the second set of four equals signs is part of the note.
@@ -295,7 +295,7 @@ some source code
 <td style="text-align: left;"><p>Sidebars, quotes, or other blocks of text</p></td>
 <td style="text-align: left;"><p>a block of text, formatted differently from the default</p></td>
 <td style="text-align: left;"><p>Delimited using different delimiters, see <a href="http://asciidoctor.org/docs/user-manual/#built-in-blocks-summary">http://asciidoctor.org/docs/user-manual/#built-in-blocks-summary</a>. Some of the examples above use delimiters like ...., ----,====.</p>
-<pre><code>{`[example]
+<pre><code>\{`[example]
 ====
 This is an example block.
 ====

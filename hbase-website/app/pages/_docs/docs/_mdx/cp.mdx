@@ -216,14 +216,14 @@ To make your coprocessor available to HBase, it must be _loaded_, either statica
 Follow these steps to statically load your coprocessor. Keep in mind that you must
 restart HBase to unload a coprocessor that has been loaded statically.
 
-1. Define the Coprocessor in _hbase-site.xml_, with a `<property>` element with a `<name>`
-and a `<value>` sub-element. The `<name>` should be one of the following:
+1. Define the Coprocessor in _hbase-site.xml_, with a `\<property\>` element with a `\<name\>`
+and a `\<value\>` sub-element. The `\<name\>` should be one of the following:
 
 - `hbase.coprocessor.region.classes` for RegionObservers and Endpoints.
 - `hbase.coprocessor.wal.classes` for WALObservers.
 - `hbase.coprocessor.master.classes` for MasterObservers.
 
-`<value>` must contain the fully-qualified class name of your coprocessor's implementation
+`\<value\>` must contain the fully-qualified class name of your coprocessor's implementation
 class.
 
 For example to load a Coprocessor (implemented in class SumEndPoint.java) you have to create
@@ -270,7 +270,7 @@ Ties are broken arbitrarily.
 
 ### Static Unloading
 
-1. Delete the coprocessor's `<property>` element, including sub-elements, from `hbase-site.xml`.
+1. Delete the coprocessor's `\<property\>` element, including sub-elements, from `hbase-site.xml`.
 2. Restart HBase.
 3. Optionally, remove the coprocessor's JAR file from the classpath or HBase's `lib/`
   directory.
@@ -287,7 +287,7 @@ and the table must be taken offline to load the coprocessor.
 
 There are three ways to dynamically load Coprocessor.
 
-<Callout title="Assumptions">
+<Callout type="info" title="Assumptions">
 The below mentioned instructions makes the following assumptions:
 
 * A JAR called `coprocessor.jar` contains the Coprocessor implementation along with all of its

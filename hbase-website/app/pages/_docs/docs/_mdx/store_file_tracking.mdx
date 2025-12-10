@@ -23,7 +23,7 @@ commit is delegated to the specific Store File Tracking implementation.
 The implementation can be set at the HBase service leve in **hbase-site.xml** or at the
 Table or Column Family via the TableDescriptor configuration.
 
-<Callout>
+<Callout type="info">
 When the store file tracking implementation is specified in **hbase_site.xml**, this configuration is also propagated into a tables configuration
 at table creation time. This is to avoid dangerous configuration mismatches between processes, which
 could potentially lead to data loss.
@@ -68,7 +68,7 @@ feature, the Store File Tracking implementation can only be changed with the **M
 implementation, so that the _new tracker_ can safely build its list of tracked files based on the
 list of the _current tracker_.
 
-<Callout>
+<Callout type="info">
 MIGRATION tracker should NOT be set at global configuration. To use it, follow below section
 about setting Store File Tacking at Table or Column Family configuration.
 </Callout>
@@ -139,7 +139,7 @@ is shown below:
 clone_snapshot 'snapshotName', 'namespace:tableName', {CLONE_SFT=>'FILE'}
 ```
 
-<Callout>
+<Callout type="info">
 The option to specify the tracker during snapshot recovery is only available for the
 _clone_snapshot_ command. The _restore_snapshot_ command does not support this parameter.
 </Callout>

@@ -442,7 +442,7 @@ Unless specified, use `GET` requests for queries, `PUT` or `POST` requests for c
 <td style={{textAlign: "left"}}><p><code>/table/scanner/</code></p></td>
 <td style={{textAlign: "left"}}><p><code>PUT</code></p></td>
 <td style={{textAlign: "left"}}><p>To supply filters to the Scanner object or configure the Scanner in any other way, you can create a text file and add your filter to the file. For example, to return only rows for which keys start with &lt;codeph&gt;u123&lt;/codeph&gt; and use a batch size of 100, the filter file would look like this:</p>
-<p>[source,xml] ---- &lt;Scanner batch="100"&gt; &lt;filter&gt; {'{'} "type": "PrefixFilter", "value": "u123" {'}'} &lt;/filter&gt; &lt;/Scanner&gt; ----</p>
+<p>[source,xml] ---- &lt;Scanner batch="100"&gt; &lt;filter&gt; \{'\{'\} "type": "PrefixFilter", "value": "u123" \{'\}'\} &lt;/filter&gt; &lt;/Scanner&gt; ----</p>
 <p>Pass the file to the <code>-d</code> argument of the <code>curl</code> request.</p></td>
 <td style={{textAlign: "left"}}><pre><code>{`curl -vi -X PUT \
   -H &quot;Accept: text/xml&quot; \
@@ -644,7 +644,7 @@ More on start row, end row and limit parameters:
 &#10;curl -vi -X PUT \
   -H &quot;Accept: text/json&quot; \
   -H &quot;Content-Type: text/json&quot; \
-  -d &#39;{&quot;Row&quot;:[{&quot;key&quot;:&quot;cm93NQo=&quot;, &quot;Cell&quot;: [{&quot;column&quot;:&quot;Y2Y6ZQo=&quot;, &quot;$&quot;:&quot;dmFsdWU1Cg==&quot;}]}]}&#39;&#39; \
+  -d &#39;\{&quot;Row&quot;:[\{&quot;key&quot;:&quot;cm93NQo=&quot;, &quot;Cell&quot;: [\{&quot;column&quot;:&quot;Y2Y6ZQo=&quot;, &quot;$&quot;:&quot;dmFsdWU1Cg==&quot;\}]\}]\}&#39;&#39; \
   &quot;example.com:8000/users/fakerow&quot;`}</code></pre></td>
 </tr>
 </tbody>
@@ -679,7 +679,7 @@ More on start row, end row and limit parameters:
 &#10;curl -vi -X PUT \
   -H &quot;Accept: application/json&quot; \
   -H &quot;Content-Type: application/json&quot; \
-  -d &#39;{&quot;Row&quot;:[{&quot;key&quot;:&quot;cm93MQ==&quot;,&quot;Cell&quot;:[{&quot;column&quot;:&quot;Y2ZhOmFsaWFz&quot;,&quot;$&quot;:&quot;T2xkR3V5&quot;},{&quot;column&quot;:&quot;Y2ZhOmFsaWFz&quot;, &quot;$&quot;:&quot;TmV3R3V5&quot;}] }]}&#39; \
+  -d &#39;\{&quot;Row&quot;:[\{&quot;key&quot;:&quot;cm93MQ==&quot;,&quot;Cell&quot;:[\{&quot;column&quot;:&quot;Y2ZhOmFsaWFz&quot;,&quot;$&quot;:&quot;T2xkR3V5&quot;\},\{&quot;column&quot;:&quot;Y2ZhOmFsaWFz&quot;, &quot;$&quot;:&quot;TmV3R3V5&quot;\}] \}]\}&#39; \
   &quot;http://example.com:8000/users/row1/?check=put&quot;`}</code></pre></td>
 </tr>
 </tbody>
@@ -734,7 +734,7 @@ Detailed Explanation:
 &#10;curl -vi -X DELETE \
   -H &quot;Accept: application/json&quot; \
   -H &quot;Content-Type: application/json&quot; \
-  -d &#39;{&quot;Row&quot;:[{&quot;key&quot;:&quot;cm93MQ==&quot;,&quot;Cell&quot;:[{&quot;column&quot;:&quot;Y2ZhOmFsaWFz&quot;,&quot;$&quot;:&quot;TmV3R3V5&quot;}]}]}&#39; \
+  -d &#39;\{&quot;Row&quot;:[\{&quot;key&quot;:&quot;cm93MQ==&quot;,&quot;Cell&quot;:[\{&quot;column&quot;:&quot;Y2ZhOmFsaWFz&quot;,&quot;$&quot;:&quot;TmV3R3V5&quot;\}]\}]\}&#39; \
   &quot;http://example.com:8000/users/row1/?check=delete&quot;`}</code></pre></td>
 </tr>
 <tr>
@@ -749,7 +749,7 @@ Detailed Explanation:
 &#10;curl -vi -X DELETE \
   -H &quot;Accept: application/json&quot; \
   -H &quot;Content-Type: application/json&quot; \
-  -d &#39;{&quot;Row&quot;:[{&quot;key&quot;:&quot;cm93MQ==&quot;,&quot;Cell&quot;:[{&quot;column&quot;:&quot;Y2ZhOmFsaWFz&quot;,&quot;$&quot;:&quot;TmV3R3V5&quot;}]}]}&#39; \
+  -d &#39;\{&quot;Row&quot;:[\{&quot;key&quot;:&quot;cm93MQ==&quot;,&quot;Cell&quot;:[\{&quot;column&quot;:&quot;Y2ZhOmFsaWFz&quot;,&quot;$&quot;:&quot;TmV3R3V5&quot;\}]\}]\}&#39; \
   &quot;http://example.com:8000/users/row1/cfa/?check=delete&quot;`}</code></pre></td>
 </tr>
 <tr>
@@ -764,7 +764,7 @@ Detailed Explanation:
 &#10;curl -vi -X DELETE \
   -H &quot;Accept: application/json&quot; \
   -H &quot;Content-Type: application/json&quot; \
-  -d &#39;{&quot;Row&quot;:[{&quot;key&quot;:&quot;cm93MQ==&quot;,&quot;Cell&quot;:[{&quot;column&quot;:&quot;Y2ZhOmFsaWFz&quot;,&quot;$&quot;:&quot;TmV3R3V5&quot;}]}]}&#39; \
+  -d &#39;\{&quot;Row&quot;:[\{&quot;key&quot;:&quot;cm93MQ==&quot;,&quot;Cell&quot;:[\{&quot;column&quot;:&quot;Y2ZhOmFsaWFz&quot;,&quot;$&quot;:&quot;TmV3R3V5&quot;\}]\}]\}&#39; \
   &quot;http://example.com:8000/users/row1/cfa:alias/?check=delete&quot;`}</code></pre></td>
 </tr>
 <tr>
@@ -779,7 +779,7 @@ Detailed Explanation:
 &#10;curl -vi -X DELETE \
   -H &quot;Accept: application/json&quot; \
   -H &quot;Content-Type: application/json&quot; \
-  -d &#39;{&quot;Row&quot;:[{&quot;key&quot;:&quot;cm93MQ==&quot;,&quot;Cell&quot;:[{&quot;column&quot;:&quot;Y2ZhOmFsaWFz&quot;,&quot;$&quot;:&quot;TmV3R3V5&quot;}]}]}&#39; \
+  -d &#39;\{&quot;Row&quot;:[\{&quot;key&quot;:&quot;cm93MQ==&quot;,&quot;Cell&quot;:[\{&quot;column&quot;:&quot;Y2ZhOmFsaWFz&quot;,&quot;$&quot;:&quot;TmV3R3V5&quot;\}]\}]\}&#39; \
   &quot;http://example.com:8000/users/row1/cfa:alias/1519423552160/?check=delete&quot;`}</code></pre></td>
 </tr>
 </tbody>
@@ -830,7 +830,7 @@ Detailed Explanation:
 &#10;curl -vi -X PUT \
 -H &quot;Content-type: application/json&quot; \
 -H &quot;Accept: application/json&quot; \
--d &#39;{&quot;Row&quot;:[{&quot;key&quot;:&quot;dGVzdHJvdzE=&quot;,&quot;Cell&quot;:[{&quot;column&quot;:&quot;YTox&quot;,&quot;$&quot;:&quot;dGVzdHZhbHVlMgo&quot;},{&quot;column&quot;:&quot;YToy&quot;,&quot;$&quot;:&quot;dGVzdHZhbHVlMTIK&quot;}]}]}&#39; \
+-d &#39;\{&quot;Row&quot;:[\{&quot;key&quot;:&quot;dGVzdHJvdzE=&quot;,&quot;Cell&quot;:[\{&quot;column&quot;:&quot;YTox&quot;,&quot;$&quot;:&quot;dGVzdHZhbHVlMgo&quot;\},\{&quot;column&quot;:&quot;YToy&quot;,&quot;$&quot;:&quot;dGVzdHZhbHVlMTIK&quot;\}]\}]\}&#39; \
 &quot;http://localhost:8080/users/testrow1?check=append&quot;`}</code></pre></td>
 </tr>
 </tbody>
@@ -865,7 +865,7 @@ Detailed Explanation:
 &#10;curl -vi -X PUT \
 -H &quot;Content-type: application/json&quot; \
 -H &quot;Accept: application/json&quot; \
--d &#39;{&quot;Row&quot;:[{&quot;key&quot;:&quot;dGVzdHJvdzE=&quot;,&quot;Cell&quot;:[{&quot;column&quot;:&quot;YTox&quot;,&quot;$&quot;:&quot;MQ==&quot;},{&quot;column&quot;:&quot;YToy&quot;,&quot;$&quot;:&quot;MQ==&quot;}]}]}&#39; \
+-d &#39;\{&quot;Row&quot;:[\{&quot;key&quot;:&quot;dGVzdHJvdzE=&quot;,&quot;Cell&quot;:[\{&quot;column&quot;:&quot;YTox&quot;,&quot;$&quot;:&quot;MQ==&quot;\},\{&quot;column&quot;:&quot;YToy&quot;,&quot;$&quot;:&quot;MQ==&quot;\}]\}]\}&#39; \
 &quot;http://localhost:8080/users/testrow1?check=increment&quot;`}</code></pre></td>
 </tr>
 </tbody>
@@ -1474,4 +1474,5 @@ result = scanner.next()
 if not result:
    break
 print java.lang.String(result.row), java.lang.String(result.getValue(cf, attr))
+```
 ```

@@ -1527,7 +1527,7 @@ Each metric attribute name will start with the ‘MetaTable\_’ prefix. For all
 **Examples: some Meta Table metrics you can see in your JMX dump**
 
 ``` json
-{
+\{
   "MetaTable_get_request_count": 77309,
   "MetaTable_put_request_mean_rate": 0.06339092997186495,
   "MetaTable_table_MyTestTable_request_15min_rate": 1.1020599841623246,
@@ -1535,7 +1535,7 @@ Each metric attribute name will start with the ‘MetaTable\_’ prefix. For all
   "MetaTable_client_/172.30.65.45_put_request_5min_rate": 0.6189810954855728,
   "MetaTable_region_1561131112259.c66e4308d492936179352c80432ccfe0._lossy_request_count": 38342,
   "MetaTable_region_1561131043640.5bdffe4b9e7e334172065c853cf0caa6._lossy_request_1min_rate": 0.04925099917433935,
-}
+\}
 ```
 
 Configuration  
@@ -1632,15 +1632,15 @@ e.g.
 
 ```
 2019-10-02 10:10:22,195 WARN [,queue=15,port=60020] ipc.RpcServer - (responseTooSlow):
-{"call":"Scan(org.apache.hadoop.hbase.protobuf.generated.ClientProtos$ScanRequest)",
+\{"call":"Scan(org.apache.hadoop.hbase.protobuf.generated.ClientProtos$ScanRequest)",
 "starttimems":1567203007549,
 "responsesize":6819737,
 "method":"Scan",
-"param":"region { type: REGION_NAME value: \"t1,\\000\\000\\215\\f)o\\\\\\024\\302\\220\\000\\000\\000\\000\\000\\001\\000\\000\\000\\000\\000\\006\\000\\000\\000\\000\\000\\005\\000\\000<TRUNCATED>",
+"param":"region \{ type: REGION_NAME value: \"t1,\\000\\000\\215\\f)o\\\\\\024\\302\\220\\000\\000\\000\\000\\000\\001\\000\\000\\000\\000\\000\\006\\000\\000\\000\\000\\000\\005\\000\\000<TRUNCATED>",
 "processingtimems":28646,
 "client":"10.253.196.215:41116",
 "queuetimems":22453,
-"class":"HRegionServer"}
+"class":"HRegionServer"\}
 
 ```
 Unfortunately often the request parameters are truncated as per above Example. The truncation is unfortunate because it eliminates much of the utility of the warnings. For example, the region name, the start and end keys, and the filter hierarchy are all important clues for debugging performance problems caused by moderate to low selectivity queries or queries made at a high rate.
@@ -1831,7 +1831,7 @@ And example of 2 rows from hbase:slowlog scan result:
  \x024\xC1\x03\xE9\x04\xF5@                                  column=info:call_details, timestamp=2020-05-16T14:58:14.211Z, value=Scan(org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos$ScanRequest)
  \x024\xC1\x03\xE9\x04\xF5@                                  column=info:client_address, timestamp=2020-05-16T14:58:14.211Z, value=172.20.10.2:57347
  \x024\xC1\x03\xE9\x04\xF5@                                  column=info:method_name, timestamp=2020-05-16T14:58:14.211Z, value=Scan
- \x024\xC1\x03\xE9\x04\xF5@                                  column=info:param, timestamp=2020-05-16T14:58:14.211Z, value=region { type: REGION_NAME value: "hbase:meta,,1" } scan { column { family: "info" } attribute { name: "_isolationlevel_" value: "\x5C000" } start_row: "cluster_test,33333333,99999999999999" stop_row: "cluster_test,," time_range { from: 0 to: 9223372036854775807 } max_versions: 1 cache_blocks: true max_result_size: 2097152 reversed: true caching: 10 include_stop_row: true readType: PREAD } number_of_rows: 10 close_scanner: false client_handles_partials: true client_handles_heartbeats: true track_scan_metrics: false
+ \x024\xC1\x03\xE9\x04\xF5@                                  column=info:param, timestamp=2020-05-16T14:58:14.211Z, value=region \{ type: REGION_NAME value: "hbase:meta,,1" \} scan \{ column \{ family: "info" \} attribute \{ name: "_isolationlevel_" value: "\x5C000" \} start_row: "cluster_test,33333333,99999999999999" stop_row: "cluster_test,," time_range \{ from: 0 to: 9223372036854775807 \} max_versions: 1 cache_blocks: true max_result_size: 2097152 reversed: true caching: 10 include_stop_row: true readType: PREAD \} number_of_rows: 10 close_scanner: false client_handles_partials: true client_handles_heartbeats: true track_scan_metrics: false
  \x024\xC1\x03\xE9\x04\xF5@                                  column=info:processing_time, timestamp=2020-05-16T14:58:14.211Z, value=18
  \x024\xC1\x03\xE9\x04\xF5@                                  column=info:queue_time, timestamp=2020-05-16T14:58:14.211Z, value=0
  \x024\xC1\x03\xE9\x04\xF5@                                  column=info:region_name, timestamp=2020-05-16T14:58:14.211Z, value=hbase:meta,,1
@@ -3467,3 +3467,4 @@ We can leak store reader references if a coprocessor or core function somehow op
 Please refer to config descriptions for `hbase.master.regions.recovery.check.interval` and `hbase.regions.recovery.store.file.ref.count`.
 
 [^1]: The Metrics system was redone in HBase 0.96. See Migration to the New Metrics Hotness – Metrics2 by Elliot Clark for detail
+```

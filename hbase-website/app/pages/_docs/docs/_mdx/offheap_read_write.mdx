@@ -53,7 +53,7 @@ make sure not to turn this OFF if you want end-to-end off-heaping in read path.
 If this pool is turned off, the server will create temp buffers onheap to accumulate the cell bytes and
 make a result cell block. This can impact the GC on a highly read loaded server.
 
-<Callout>
+<Callout type="info">
 The config keys which start with prefix `hbase.ipc.server.reservoir` are deprecated in hbase-3.x (the
 internal pool implementation changed). If you are still in hbase-2.2.x or older, then just use the old config
 keys. Otherwise if in hbase-3.x or hbase-2.3.x+, please use the new config keys
