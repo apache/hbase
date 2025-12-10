@@ -61,10 +61,12 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest;
@@ -206,7 +208,7 @@ public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
   }
 
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
-    allowedOnPath = ".*/src/test/.*")
+      allowedOnPath = ".*/src/test/.*")
   public ClientMetaCoprocessorHost getClientMetaCoprocessorHost() {
     return clientMetaCoprocessorHost;
   }
@@ -316,19 +318,15 @@ public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
 
       Map<ServerName, Boolean> serverNames = new LinkedHashMap<>();
 
-      server.getActiveMaster()
-        .ifPresent(serverName -> serverNames.put(serverName, Boolean.TRUE));
-      server.getBackupMasters()
-        .forEach(serverName -> serverNames.put(serverName, Boolean.FALSE));
+      server.getActiveMaster().ifPresent(serverName -> serverNames.put(serverName, Boolean.TRUE));
+      server.getBackupMasters().forEach(serverName -> serverNames.put(serverName, Boolean.FALSE));
 
       Map<ServerName, Boolean> serverNamesReply =
         clientMetaCoprocessorHost.postGetMasters(serverNames);
 
-      serverNamesReply.forEach((serverName, active) -> builder.addMasterServers(
-        GetMastersResponseEntry.newBuilder()
-          .setServerName(ProtobufUtil.toServerName(serverName))
-          .setIsActive(active)
-      ));
+      serverNamesReply
+        .forEach((serverName, active) -> builder.addMasterServers(GetMastersResponseEntry
+          .newBuilder().setServerName(ProtobufUtil.toServerName(serverName)).setIsActive(active)));
     } catch (IOException e) {
       throw new ServiceException(e);
     }
@@ -365,8 +363,8 @@ public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
     try {
       clientMetaCoprocessorHost.preGetBootstrapNodes();
 
-      int maxNodeCount = server.getConfiguration()
-        .getInt(CLIENT_BOOTSTRAP_NODE_LIMIT, DEFAULT_CLIENT_BOOTSTRAP_NODE_LIMIT);
+      int maxNodeCount = server.getConfiguration().getInt(CLIENT_BOOTSTRAP_NODE_LIMIT,
+        DEFAULT_CLIENT_BOOTSTRAP_NODE_LIMIT);
       ReservoirSample<ServerName> sample = new ReservoirSample<>(maxNodeCount);
       sample.add(server.getBootstrapNodes());
 

@@ -26,6 +26,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -56,8 +57,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Tests invocation of the {@link MasterObserver} interface
- * hooks at all appropriate times during normal HMaster operations.
+ * Tests invocation of the {@link MasterObserver} interface hooks at all appropriate times during
+ * normal HMaster operations.
  */
 @Category({ CoprocessorTests.class, MediumTests.class })
 public class TestClientMetaCoprocessor {
@@ -81,7 +82,7 @@ public class TestClientMetaCoprocessor {
       observer = mock(ClientMetaObserver.class);
       resetMock();
     }
-    
+
     protected void resetMock() {
       reset(observer);
 
@@ -91,8 +92,8 @@ public class TestClientMetaCoprocessor {
         doAnswer(answer -> {
           return answer.getArgument(1, ServerName.class);
         }).when(observer).postGetActiveMaster(any(), any());
-        doAnswer(answer -> answer.getArgument(1, Map.class)).when(observer)
-          .postGetMasters(any(), any());
+        doAnswer(answer -> answer.getArgument(1, Map.class)).when(observer).postGetMasters(any(),
+          any());
         doAnswer(answer -> answer.getArgument(1, List.class)).when(observer)
           .postGetBootstrapNodes(any(), any());
         doAnswer(answer -> answer.getArgument(1, List.class)).when(observer)
@@ -111,7 +112,7 @@ public class TestClientMetaCoprocessor {
   private static TestCoprocessor getCoprocessor() {
     HMaster master = UTIL.getMiniHBaseCluster().getMaster();
     MasterRpcServices masterRpcServices = master.getMasterRpcServices();
-    
+
     return masterRpcServices.getClientMetaCoprocessorHost().findCoprocessor(TestCoprocessor.class);
   }
 
@@ -145,8 +146,8 @@ public class TestClientMetaCoprocessor {
   public void testGetClusterId() throws Exception {
     ClientMetaObserver observer = getObserverMock();
 
-    try (AsyncConnectionImpl asyncConnection =
-      (AsyncConnectionImpl) ConnectionFactory.createAsyncConnection(UTIL.getConfiguration()).get()) {
+    try (AsyncConnectionImpl asyncConnection = (AsyncConnectionImpl) ConnectionFactory
+      .createAsyncConnection(UTIL.getConfiguration()).get()) {
       ConnectionRegistry connectionRegistry = asyncConnection.getConnectionRegistry();
 
       doReturn("cluster-id").when(observer).postGetClusterId(any(), any());
@@ -165,8 +166,8 @@ public class TestClientMetaCoprocessor {
   public void testGetActiveMaster() throws Exception {
     ClientMetaObserver observer = getObserverMock();
 
-    try (AsyncConnectionImpl asyncConnection =
-      (AsyncConnectionImpl) ConnectionFactory.createAsyncConnection(UTIL.getConfiguration()).get()) {
+    try (AsyncConnectionImpl asyncConnection = (AsyncConnectionImpl) ConnectionFactory
+      .createAsyncConnection(UTIL.getConfiguration()).get()) {
       ConnectionRegistry connectionRegistry = asyncConnection.getConnectionRegistry();
 
       doReturn(SERVER_NAME).when(observer).postGetActiveMaster(any(), any());
@@ -185,8 +186,8 @@ public class TestClientMetaCoprocessor {
   public void testGetMetaRegionLocations() throws Exception {
     ClientMetaObserver observer = getObserverMock();
 
-    try (AsyncConnectionImpl asyncConnection =
-      (AsyncConnectionImpl) ConnectionFactory.createAsyncConnection(UTIL.getConfiguration()).get()) {
+    try (AsyncConnectionImpl asyncConnection = (AsyncConnectionImpl) ConnectionFactory
+      .createAsyncConnection(UTIL.getConfiguration()).get()) {
       ConnectionRegistry connectionRegistry = asyncConnection.getConnectionRegistry();
 
       HRegionLocation metaRegionLocation =

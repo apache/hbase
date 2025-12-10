@@ -29,14 +29,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
-public class ClientMetaCoprocessorHost extends CoprocessorHost<ClientMetaCoprocessor, ClientMetaCoprocessorEnvironment> {
+public class ClientMetaCoprocessorHost
+  extends CoprocessorHost<ClientMetaCoprocessor, ClientMetaCoprocessorEnvironment> {
 
   private static final Logger LOG = LoggerFactory.getLogger(ClientMetaCoprocessorHost.class);
 
   private static class ClientMetaEnvironment extends BaseEnvironment<ClientMetaCoprocessor>
     implements ClientMetaCoprocessorEnvironment {
 
-    public ClientMetaEnvironment(ClientMetaCoprocessor impl, int priority, int seq, Configuration conf) {
+    public ClientMetaEnvironment(ClientMetaCoprocessor impl, int priority, int seq,
+      Configuration conf) {
       super(impl, priority, seq, conf);
     }
   }
@@ -62,7 +64,8 @@ public class ClientMetaCoprocessorHost extends CoprocessorHost<ClientMetaCoproce
     throws InstantiationException, IllegalAccessException {
     try {
       if (ClientMetaCoprocessor.class.isAssignableFrom(implClass)) {
-        return implClass.asSubclass(ClientMetaCoprocessor.class).getDeclaredConstructor().newInstance();
+        return implClass.asSubclass(ClientMetaCoprocessor.class).getDeclaredConstructor()
+          .newInstance();
       } else {
         LOG.error("{} is not of type ClientMetaCoprocessor. Check the configuration of {}",
           implClass.getName(), CLIENT_META_COPROCESSOR_CONF_KEY);
@@ -80,11 +83,11 @@ public class ClientMetaCoprocessorHost extends CoprocessorHost<ClientMetaCoproce
     execOperation(coprocEnvironments.isEmpty()
       ? null
       : new ObserverOperationWithoutResult<ClientMetaObserver>(clientMetaObserverGetter) {
-      @Override
-      protected void call(ClientMetaObserver observer) throws IOException {
-        observer.preGetClusterId(this);
-      }
-    });
+        @Override
+        protected void call(ClientMetaObserver observer) throws IOException {
+          observer.preGetClusterId(this);
+        }
+      });
   }
 
   public String postGetClusterId(String clusterId) throws IOException {
@@ -92,24 +95,24 @@ public class ClientMetaCoprocessorHost extends CoprocessorHost<ClientMetaCoproce
       return clusterId;
     }
 
-    return execOperationWithResult(
-      new ObserverOperationWithResult<ClientMetaObserver, String>(clientMetaObserverGetter, clusterId) {
-        @Override
-        protected String call(ClientMetaObserver observer) throws IOException {
-          return observer.postGetClusterId(this, getResult());
-        }
-      });
+    return execOperationWithResult(new ObserverOperationWithResult<ClientMetaObserver, String>(
+      clientMetaObserverGetter, clusterId) {
+      @Override
+      protected String call(ClientMetaObserver observer) throws IOException {
+        return observer.postGetClusterId(this, getResult());
+      }
+    });
   }
 
   public void preGetActiveMaster() throws IOException {
     execOperation(coprocEnvironments.isEmpty()
       ? null
       : new ObserverOperationWithoutResult<ClientMetaObserver>(clientMetaObserverGetter) {
-      @Override
-      protected void call(ClientMetaObserver observer) throws IOException {
-        observer.preGetActiveMaster(this);
-      }
-    });
+        @Override
+        protected void call(ClientMetaObserver observer) throws IOException {
+          observer.preGetActiveMaster(this);
+        }
+      });
   }
 
   public ServerName postGetActiveMaster(ServerName serverName) throws IOException {
@@ -117,34 +120,35 @@ public class ClientMetaCoprocessorHost extends CoprocessorHost<ClientMetaCoproce
       return serverName;
     }
 
-    return execOperationWithResult(
-      new ObserverOperationWithResult<ClientMetaObserver, ServerName>(clientMetaObserverGetter, serverName) {
-        @Override
-        protected ServerName call(ClientMetaObserver observer) throws IOException {
-          return observer.postGetActiveMaster(this, getResult());
-        }
-      });
+    return execOperationWithResult(new ObserverOperationWithResult<ClientMetaObserver, ServerName>(
+      clientMetaObserverGetter, serverName) {
+      @Override
+      protected ServerName call(ClientMetaObserver observer) throws IOException {
+        return observer.postGetActiveMaster(this, getResult());
+      }
+    });
   }
 
   public void preGetMasters() throws IOException {
     execOperation(coprocEnvironments.isEmpty()
       ? null
       : new ObserverOperationWithoutResult<ClientMetaObserver>(clientMetaObserverGetter) {
-      @Override
-      protected void call(ClientMetaObserver observer) throws IOException {
-        observer.preGetMasters(this);
-      }
-    });
+        @Override
+        protected void call(ClientMetaObserver observer) throws IOException {
+          observer.preGetMasters(this);
+        }
+      });
   }
 
   public Map<ServerName, Boolean> postGetMasters(Map<ServerName, Boolean> serverNames)
     throws IOException {
-    if  (coprocEnvironments.isEmpty()) {
-      return  serverNames;
+    if (coprocEnvironments.isEmpty()) {
+      return serverNames;
     }
 
     return execOperationWithResult(
-      new ObserverOperationWithResult<ClientMetaObserver, Map<ServerName, Boolean>>(clientMetaObserverGetter, serverNames) {
+      new ObserverOperationWithResult<ClientMetaObserver, Map<ServerName, Boolean>>(
+        clientMetaObserverGetter, serverNames) {
         @Override
         protected Map<ServerName, Boolean> call(ClientMetaObserver observer) throws IOException {
           return observer.postGetMasters(this, getResult());
@@ -156,20 +160,22 @@ public class ClientMetaCoprocessorHost extends CoprocessorHost<ClientMetaCoproce
     execOperation(coprocEnvironments.isEmpty()
       ? null
       : new ObserverOperationWithoutResult<ClientMetaObserver>(clientMetaObserverGetter) {
-      @Override
-      protected void call(ClientMetaObserver observer) throws IOException {
-        observer.preGetBootstrapNodes(this);
-      }
-    });
+        @Override
+        protected void call(ClientMetaObserver observer) throws IOException {
+          observer.preGetBootstrapNodes(this);
+        }
+      });
   }
 
-  public List<ServerName> postGetBootstrapNodes(List<ServerName> bootstrapNodes) throws IOException {
-    if  (coprocEnvironments.isEmpty()) {
+  public List<ServerName> postGetBootstrapNodes(List<ServerName> bootstrapNodes)
+    throws IOException {
+    if (coprocEnvironments.isEmpty()) {
       return bootstrapNodes;
     }
 
     return execOperationWithResult(
-      new ObserverOperationWithResult<ClientMetaObserver, List<ServerName>>(clientMetaObserverGetter, bootstrapNodes) {
+      new ObserverOperationWithResult<ClientMetaObserver, List<ServerName>>(
+        clientMetaObserverGetter, bootstrapNodes) {
         @Override
         protected List<ServerName> call(ClientMetaObserver observer) throws IOException {
           return observer.postGetBootstrapNodes(this, getResult());
@@ -181,20 +187,22 @@ public class ClientMetaCoprocessorHost extends CoprocessorHost<ClientMetaCoproce
     execOperation(coprocEnvironments.isEmpty()
       ? null
       : new ObserverOperationWithoutResult<ClientMetaObserver>(clientMetaObserverGetter) {
-      @Override
-      protected void call(ClientMetaObserver observer) throws IOException {
-        observer.preGetMetaLocations(this);
-      }
-    });
+        @Override
+        protected void call(ClientMetaObserver observer) throws IOException {
+          observer.preGetMetaLocations(this);
+        }
+      });
   }
 
-  public List<HRegionLocation> postGetMetaLocations(List<HRegionLocation> metaLocations) throws IOException {
-    if  (coprocEnvironments.isEmpty()) {
+  public List<HRegionLocation> postGetMetaLocations(List<HRegionLocation> metaLocations)
+    throws IOException {
+    if (coprocEnvironments.isEmpty()) {
       return metaLocations;
     }
 
     return execOperationWithResult(
-      new ObserverOperationWithResult<ClientMetaObserver, List<HRegionLocation>>(clientMetaObserverGetter, metaLocations) {
+      new ObserverOperationWithResult<ClientMetaObserver, List<HRegionLocation>>(
+        clientMetaObserverGetter, metaLocations) {
         @Override
         protected List<HRegionLocation> call(ClientMetaObserver observer) throws IOException {
           return observer.postGetMetaLocations(this, getResult());

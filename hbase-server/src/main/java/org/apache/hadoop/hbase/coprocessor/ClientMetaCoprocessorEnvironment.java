@@ -24,5 +24,6 @@ import org.apache.yetus.audience.InterfaceStability;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
-public interface ClientMetaCoprocessorEnvironment extends CoprocessorEnvironment<ClientMetaCoprocessor> {
+public interface ClientMetaCoprocessorEnvironment
+  extends CoprocessorEnvironment<ClientMetaCoprocessor> {
 }

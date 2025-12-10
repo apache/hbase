@@ -27,8 +27,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
 /**
- * Defines coprocessor hooks for interacting operations for ClientMetaService which is
- * responsible for ZooKeeperless HBase service discovery. <br>
+ * Defines coprocessor hooks for interacting operations for ClientMetaService which is responsible
+ * for ZooKeeperless HBase service discovery. <br>
  * <br>
  * Since most implementations will be interested in only a subset of hooks, this class uses
  * 'default' functions to avoid having to add unnecessary overrides. When the functions are
@@ -55,66 +55,55 @@ public interface ClientMetaObserver {
   /**
    * Called before getting the cluster ID.
    * @param ctx the environment to interact with the framework
-   * @throws IOException
    */
-  default void preGetClusterId(
-    ObserverContext<ClientMetaCoprocessorEnvironment> ctx)
+  default void preGetClusterId(ObserverContext<ClientMetaCoprocessorEnvironment> ctx)
     throws IOException {
   }
 
   /**
    * Called after we got the cluster ID.
-   * @param ctx the environment to interact with the framework
+   * @param ctx       the environment to interact with the framework
    * @param clusterId the actual cluster ID
    * @return the cluster ID which is returned to the client.
-   * @throws IOException
    */
-  default String postGetClusterId(
-    ObserverContext<ClientMetaCoprocessorEnvironment> ctx, String clusterId)
-    throws IOException {
+  default String postGetClusterId(ObserverContext<ClientMetaCoprocessorEnvironment> ctx,
+    String clusterId) throws IOException {
     return clusterId;
   }
 
   /**
    * Called before getting the active master.
    * @param ctx the environment to interact with the framework
-   * @throws IOException
    */
-  default void preGetActiveMaster(
-    ObserverContext<ClientMetaCoprocessorEnvironment> ctx)
+  default void preGetActiveMaster(ObserverContext<ClientMetaCoprocessorEnvironment> ctx)
     throws IOException {
   }
 
   /**
    * Called after we got the active master.
-   * @param ctx the environment to interact with the framework
+   * @param ctx        the environment to interact with the framework
    * @param serverName the actual active master address. It can be {@code null} if there is no
    *                   active master.
    * @return the active master address which is returned to the client. It can be {@code null}.
-   * @throws IOException
    */
-  default ServerName postGetActiveMaster(
-    ObserverContext<ClientMetaCoprocessorEnvironment> ctx, ServerName serverName)
-    throws IOException {
+  default ServerName postGetActiveMaster(ObserverContext<ClientMetaCoprocessorEnvironment> ctx,
+    ServerName serverName) throws IOException {
     return serverName;
   }
 
   /**
    * Called before getting the master servers.
    * @param ctx the environment to interact with the framework
-   * @throws IOException
    */
-  default void preGetMasters(
-    ObserverContext<ClientMetaCoprocessorEnvironment> ctx)
+  default void preGetMasters(ObserverContext<ClientMetaCoprocessorEnvironment> ctx)
     throws IOException {
   }
 
   /**
    * Called after we got the master servers.
-   * @param ctx the environment to interact with the framework
+   * @param ctx         the environment to interact with the framework
    * @param serverNames the actual master servers addresses and active statuses
    * @return the master servers addresses and active statuses which are returned to the client.
-   * @throws IOException
    */
   default Map<ServerName, Boolean> postGetMasters(
     ObserverContext<ClientMetaCoprocessorEnvironment> ctx, Map<ServerName, Boolean> serverNames)
@@ -125,19 +114,16 @@ public interface ClientMetaObserver {
   /**
    * Called before getting bootstrap nodes.
    * @param ctx the environment to interact with the framework
-   * @throws IOException
    */
-  default void preGetBootstrapNodes(
-    ObserverContext<ClientMetaCoprocessorEnvironment> ctx)
+  default void preGetBootstrapNodes(ObserverContext<ClientMetaCoprocessorEnvironment> ctx)
     throws IOException {
   }
 
   /**
    * Called after we got bootstrap nodes.
-   * @param ctx the environment to interact with the framework
+   * @param ctx            the environment to interact with the framework
    * @param bootstrapNodes the actual bootstrap nodes
    * @return the bootstrap nodes which are returned to the client.
-   * @throws IOException
    */
   default List<ServerName> postGetBootstrapNodes(
     ObserverContext<ClientMetaCoprocessorEnvironment> ctx, List<ServerName> bootstrapNodes)
@@ -148,19 +134,16 @@ public interface ClientMetaObserver {
   /**
    * Called before getting the meta region locations.
    * @param ctx the environment to interact with the framework
-   * @throws IOException
    */
-  default void preGetMetaLocations(
-    ObserverContext<ClientMetaCoprocessorEnvironment> ctx)
+  default void preGetMetaLocations(ObserverContext<ClientMetaCoprocessorEnvironment> ctx)
     throws IOException {
   }
 
   /**
    * Called after we got the meta region locations.
-   * @param ctx the environment to interact with the framework
+   * @param ctx           the environment to interact with the framework
    * @param metaLocations the actual meta region locations
    * @return the meta region locations which are returned to the client.
-   * @throws IOException
    */
   default List<HRegionLocation> postGetMetaLocations(
     ObserverContext<ClientMetaCoprocessorEnvironment> ctx, List<HRegionLocation> metaLocations)
