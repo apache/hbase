@@ -3037,6 +3037,31 @@ hbase> set_quota NAMESPACE => 'ns1', LIMIT => '100req/min'               # a per
 hbase> set_quota USER => 'u1', GLOBAL_BYPASS => true                     # user u1 is not affected by the limit
 ----
 
+.Enabling, Disabling, and Checking RPC Throttling
+
+HBase provides shell commands to control RPC throttling at runtime. When throttling
+is disabled, HBase will not apply any request throttling. This can be useful in
+production environments that require temporary unthrottled operation.
+
+The following HBase shell commands are available:
+
+----
+# Enable RPC throttling
+hbase> enable_rpc_throttle
+
+# Disable RPC throttling
+hbase> disable_rpc_throttle
+
+# Check whether RPC throttling is enabled
+hbase> rpc_throttle_enabled
+----
+
+`enable_rpc_throttle` and `disable_rpc_throttle` return the previous RPC throttling
+state as a boolean value. `rpc_throttle_enabled` returns the current state.
+
+NOTE: If no quotas are configured, RPC throttling is not applied, and enabling or
+disabling throttling will always return `false`.
+
 [[namespace_quotas]]
 .Setting Namespace Quotas
 
@@ -3062,7 +3087,7 @@ hbase> alter_namespace 'ns2', {METHOD => 'unset', NAME=>'hbase.namespace.quota.m
 .Limiting Regions Per Namespace
 ----
 # Create a namespace with a max of 10 regions
-hbase> create_namespace 'ns1', {'hbase.namespace.quota.maxregions'=>'10'
+hbase> create_namespace 'ns1', {'hbase.namespace.quota.maxregions'=>'10'}
 
 # Show quota information for a namespace
 hbase> describe_namespace 'ns1'
