@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
@@ -32,7 +33,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
@@ -331,9 +331,9 @@ public interface TableDescriptor {
   default String getDescriptorHash() {
     try {
       HBaseProtos.TableSchema tableSchema = ProtobufUtil.toTableSchema(this);
-      byte[] bytes = tableSchema.toByteArray();
+      ByteBuffer byteBuffer = ByteBuffer.wrap(tableSchema.toByteArray());
       CRC32 crc32 = new CRC32();
-      crc32.update(bytes);
+      crc32.update(byteBuffer);
       return Long.toHexString(crc32.getValue());
     } catch (Exception e) {
       Logger log = LoggerFactory.getLogger(TableDescriptor.class);
