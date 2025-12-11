@@ -1,0 +1,124 @@
+---
+title: "HBase run modes: Standalone and Distributed"
+---
+
+HBase has two run modes: [standalone](#standalone) and [distributed](#distributed). Out of the box, HBase runs in standalone mode. Whatever your mode, you will need to configure HBase by editing files in the HBase _conf_ directory. At a minimum, you must edit `conf/hbase-env.sh` to tell HBase which java to use. In this file you set HBase environment variables such as the heapsize and other options for the `JVM`, the preferred location for log files, etc. Set `JAVA_HOME` to point at the root of your java install.
+
+## Standalone HBase
+
+This is the default mode. Standalone mode is what is described in the [quickstart](/docs/getting_started#quick-start---standalone-hbase) section. In standalone mode, HBase does not use HDFS — it uses the local filesystem instead — and it runs all HBase daemons and a local ZooKeeper all up in the same JVM. ZooKeeper binds to a well-known port so clients may talk to HBase.
+
+### Standalone HBase over HDFS
+
+A sometimes useful variation on standalone hbase has all daemons running inside the one JVM but rather than persist to the local filesystem, instead they persist to an HDFS instance.
+
+You might consider this profile when you are intent on a simple deploy profile, the loading is light, but the data must persist across node comings and goings. Writing to HDFS where data is replicated ensures the latter.
+
+To configure this standalone variant, edit your _hbase-site.xml_ setting _hbase.rootdir_ to point at a directory in your HDFS instance but then set _hbase.cluster.distributed_ to _false_. For example:
+
+```xml
+<configuration>
+  <property>
+    <name>hbase.rootdir</name>
+    <value>hdfs://namenode.example.org:9000/hbase</value>
+  </property>
+  <property>
+    <name>hbase.cluster.distributed</name>
+    <value>false</value>
+  </property>
+</configuration>
+```
+
+## Distributed
+
+Distributed mode can be subdivided into distributed but all daemons run on a single node — a.k.a. *pseudo-distributed* — and _fully-distributed_ where the daemons are spread across all nodes in the cluster. The _pseudo-distributed_ vs. _fully-distributed_ nomenclature comes from Hadoop.
+
+Pseudo-distributed mode can run against the local filesystem or it can run against an instance of the _Hadoop Distributed File System_ (HDFS). Fully-distributed mode can ONLY run on HDFS. See the Hadoop [documentation](https://hadoop.apache.org/docs/current/) for how to set up HDFS. A good walk-through for setting up HDFS on Hadoop 2 can be found at [https://web.archive.org/web/20221007121526/https://www.alexjf.net/blog/distributed-systems/hadoop-yarn-installation-definitive-guide/](https://web.archive.org/web/20221007121526/https://www.alexjf.net/blog/distributed-systems/hadoop-yarn-installation-definitive-guide/).
+
+### Pseudo-distributed
+
+<Callout type="info">
+  A quickstart has been added to the [quickstart](/docs/getting_started#quick-start---standalone-hbase) chapter. See
+  [quickstart-pseudo](/docs/getting_started#pseudo-distributed-for-local-testing). Some of the information that was originally in this section has been moved there.
+</Callout>
+
+A pseudo-distributed mode is simply a fully-distributed mode run on a single host. Use this HBase configuration for testing and prototyping purposes only. Do not use this configuration for production or for performance evaluation.
+
+## Fully-distributed
+
+By default, HBase runs in stand-alone mode. Both stand-alone mode and pseudo-distributed mode are provided for the purposes of small-scale testing. For a production environment, distributed mode is advised. In distributed mode, multiple instances of HBase daemons run on multiple servers in the cluster.
+
+Just as in pseudo-distributed mode, a fully distributed configuration requires that you set the `hbase.cluster.distributed` property to `true`. Typically, the `hbase.rootdir` is configured to point to a highly-available HDFS filesystem.
+
+In addition, the cluster is configured so that multiple cluster nodes enlist as RegionServers, ZooKeeper QuorumPeers, and backup HMaster servers. These configuration basics are all demonstrated in [quickstart-fully-distributed](/docs/getting_started#fully-distributed-for-production).
+
+### Distributed RegionServers
+
+Typically, your cluster will contain multiple RegionServers all running on different servers, as well as primary and backup Master and ZooKeeper daemons. The _conf/regionservers_ file on the master server contains a list of hosts whose RegionServers are associated with this cluster. Each host is on a separate line. All hosts listed in this file will have their RegionServer processes started and stopped when the master server starts or stops.
+
+### ZooKeeper and HBase
+
+See the [ZooKeeper](/docs/zookeeper) section for ZooKeeper setup instructions for HBase.
+
+### Example: Distributed HBase Cluster
+
+This is a bare-bones _conf/hbase-site.xml_ for a distributed HBase cluster. A cluster that is used for real-world work would contain more custom configuration parameters. Most HBase configuration directives have default values, which are used unless the value is overridden in the _hbase-site.xml_. See "[Configuration Files](/docs/config)" for more information.
+
+```xml
+<configuration>
+  <property>
+    <name>hbase.rootdir</name>
+    <value>hdfs://namenode.example.org:9000/hbase</value>
+  </property>
+  <property>
+    <name>hbase.cluster.distributed</name>
+    <value>true</value>
+  </property>
+  <property>
+    <name>hbase.zookeeper.quorum</name>
+    <value>node-a.example.com,node-b.example.com,node-c.example.com</value>
+  </property>
+</configuration>
+```
+
+This is an example _conf/regionservers_ file, which contains a list of nodes that should run a RegionServer in the cluster. These nodes need HBase installed and they need to use the same contents of the _conf/_ directory as the Master server.
+
+```text
+node-a.example.com
+node-b.example.com
+node-c.example.com
+```
+
+This is an example _conf/backup-masters_ file, which contains a list of each node that should run a backup Master instance. The backup Master instances will sit idle unless the main Master becomes unavailable.
+
+```text
+node-b.example.com
+node-c.example.com
+```
+
+### Distributed HBase Quickstart
+
+See [quickstart-fully-distributed](/docs/getting_started#fully-distributed-for-production) for a walk-through of a simple three-node cluster configuration with multiple ZooKeeper, backup HMaster, and RegionServer instances.
+
+### Procedure: HDFS Client Configuration
+
+1.  Of note, if you have made HDFS client configuration changes on your Hadoop cluster, such as configuration directives for HDFS clients, as opposed to server-side configurations, you must use one of the following methods to enable HBase to see and use these configuration changes:
+    -  Add a pointer to your `HADOOP_CONF_DIR` to the `HBASE_CLASSPATH` environment variable in _hbase-env.sh_.
+
+    -  Add a copy of _hdfs-site.xml_ (or _hadoop-site.xml_) or, better, symlinks, under `$HBASE_HOME/conf`, or
+
+    -  if only a small set of HDFS client configurations, add them to _hbase-site.xml_.
+
+An example of such an HDFS client configuration is `dfs.replication`. If for example, you want to run with a replication factor of 5, HBase will create files with the default of 3 unless you do the above to make the configuration available to HBase.
+
+## Choosing between the Classic Package and the BYO Hadoop Package
+
+Starting with HBase 3.0, HBase includes two binary packages. The classic package includes both the HBase and Hadoop components, while the Hadoop-less "Bring Your Own Hadoop" package omits the Hadoop components, and uses the files from an existing Hadoop installation. The classic binary package filename is named `hbase-VERSION-bin.tar.gz` (e.g. _hbase-3.0.0-bin.tar.gz_), while the Hadoop-less package is `hbase-byo-hadoop-VERSION-bin.tar.gz` (e.g. _hbase-byo-hadoop-3.0.0-bin.tar.gz_).
+
+If the cluster nodes already have Hadoop installed, you can use the Hadoop-less package. In this case you need to make sure that the `HADOOP_HOME` environment variable is set and points to the Hadoop installation. The easiest way to ensure this is to set it in _hbase-env.sh_. You still need to make sure that the Hadoop configuration files are present on the HBase classpath, as described above.
+
+## Advantages of the BYO Hadoop package:
+
+- There is no need to replace the Hadoop libraries.
+- It is easier to upgrade Hadoop and HBase independently (as long as compatible versions are used).
+- Both the package and installed size are about 100 MB smaller.

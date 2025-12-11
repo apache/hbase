@@ -2,7 +2,7 @@
   "title": "Apache HBase Documentation",
   "pages": [
     "---Getting Started---",
-    "preface",
+    "index",
     "getting_started",
     "---Configuration & Setup---",
     "configuration",

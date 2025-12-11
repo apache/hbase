@@ -17,10 +17,10 @@
 //
 
 import type { MDXComponents } from "mdx/types";
-import { Link } from "react-router";
 import { ExternalLinkIcon } from "lucide-react";
 import defaultMdxComponents from "fumadocs-ui/mdx";
 import { cn } from "@/lib/utils";
+import { Link } from "./link";
 
 export function getMDXComponents(overrides?: MDXComponents): MDXComponents {
   return {

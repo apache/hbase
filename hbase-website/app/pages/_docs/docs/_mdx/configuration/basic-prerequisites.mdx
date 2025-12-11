@@ -1,0 +1,271 @@
+---
+title: "Basic Prerequisites"
+description: "This section lists required services and some required system configuration."
+---
+
+## Java
+
+HBase runs on the Java Virtual Machine, thus all HBase deployments require a JVM runtime.
+
+The following table summarizes the recommendations of the HBase community with respect to running on various Java versions. The ✅ symbol indicates a base level of testing and willingness to help diagnose and address issues you might run into; these are the expected deployment combinations. An entry of ⚠️ means that there may be challenges with this combination, and you should look for more information before deciding to pursue this as your deployment strategy. The ❌ means this combination does not work; either an older Java version is considered deprecated by the HBase community, or this combination is known to not work. For combinations of newer JDK with older HBase releases, it’s likely there are known compatibility issues that cannot be addressed under our compatibility guarantees, making the combination impossible. In some cases, specific guidance on limitations (e.g. whether compiling / unit tests work, specific operational issues, etc) are also noted. Assume any combination not listed here is considered ❌.
+
+<Callout type="warn">
+  HBase recommends downstream users rely only on JDK releases that are marked as Long-Term Supported
+  (LTS), either from the OpenJDK project or vendors. At the time of this writing, the following JDK
+  releases are NOT LTS releases and are NOT tested or advocated for use by the Apache HBase
+  community: JDK9, JDK10, JDK12, JDK13, and JDK14. Community discussion around this decision is
+  recorded on [HBASE-20264](https://issues.apache.org/jira/browse/HBASE-20264).
+</Callout>
+
+<Callout type="tip">
+  At this time, all testing performed by the Apache HBase project runs on the HotSpot variant of the
+  JVM. When selecting your JDK distribution, please take this into consideration.
+</Callout>
+
+**Java support by release line**
+
+| HBase Version | JDK 6 | JDK 7 | JDK 8 | JDK 11 | JDK 17 |
+| :-----------: | :---: | :---: | :---: | :----: | :----: |
+|   HBase 2.6   |  ❌   |  ❌   |  ✅   |   ✅   |   ✅   |
+|   HBase 2.5   |  ❌   |  ❌   |  ✅   |   ✅   |  ⚠️\*  |
+|   HBase 2.4   |  ❌   |  ❌   |  ✅   |   ✅   |   ❌   |
+|   HBase 2.3   |  ❌   |  ❌   |  ✅   |  ⚠️\*  |   ❌   |
+| HBase 2.0-2.2 |  ❌   |  ❌   |  ✅   |   ❌   |   ❌   |
+|  HBase 1.2+   |  ❌   |  ✅   |  ✅   |   ❌   |   ❌   |
+| HBase 1.0-1.1 |  ❌   |  ✅   |  ⚠️   |   ❌   |   ❌   |
+|  HBase 0.98   |  ✅   |  ✅   |  ⚠️   |   ❌   |   ❌   |
+|  HBase 0.94   |  ✅   |  ✅   |  ❌   |   ❌   |   ❌   |
+
+<Callout type="warn">
+Preliminary support for JDK11 is introduced with HBase 2.3.0, and for JDK17 is introduced with HBase 2.5.x. We will compile and run test suites with JDK11/17 in pre commit checks and nightly checks. We will mark the support as ✅ as long as we have run some ITs with the JDK version and also there are users in the community use the JDK version in real production clusters.
+
+For JDK11/JDK17 support in HBase, please refer to [HBASE-22972](https://issues.apache.org/jira/browse/HBASE-22972) and [HBASE-26038](https://issues.apache.org/jira/browse/HBASE-26038)
+
+For JDK11/JDK17 support in Hadoop, which may also affect HBase, please refer to [HADOOP-15338](https://issues.apache.org/jira/browse/HADOOP-15338) and [HADOOP-17177](https://issues.apache.org/jira/browse/HADOOP-17177)
+</Callout>
+
+<Callout type="info">
+  You must set `JAVA_HOME` on each node of your cluster. *hbase-env.sh* provides a handy mechanism
+  to do this.
+</Callout>
+
+### Operating System Utilities
+
+#### ssh
+HBase uses the Secure Shell (ssh) command and utilities extensively to communicate between cluster nodes. Each server in the cluster must be running `ssh` so that the Hadoop and HBase daemons can be managed. You must be able to connect to all nodes via SSH, including the local node, from the Master as well as any backup Master, using a shared key rather than a password. You can see the basic methodology for such a set-up in Linux or Unix systems in the [Getting Started](/docs/getting_started#procedure-configure-passwordless-ssh-access) chapter. If your cluster nodes use OS X, see the section, [SSH: Setting up Remote Desktop and Enabling Self-Login](<https://cwiki.apache.org/confluence/pages/viewpage.action?pageId=120730246#RunningHadoopOnOSX10.564-bit(Single-NodeCluster)-SSH:SettingupRemoteDesktopandEnablingSelf-Login>) on the Hadoop wiki.
+
+#### DNS  
+HBase uses the local hostname to self-report its IP address.
+
+#### NTP  
+The clocks on cluster nodes should be synchronized. A small amount of variation is acceptable, but larger amounts of skew can cause erratic and unexpected behavior. Time synchronization is one of the first things to check if you see unexplained problems in your cluster. It is recommended that you run a Network Time Protocol (NTP) service, or another time-synchronization mechanism on your cluster and that all nodes look to the same service for time synchronization. See the [Basic NTP Configuration](http://www.tldp.org/LDP/sag/html/basic-ntp-config.html) at _The Linux Documentation Project (TLDP)_ to set up NTP.
+
+#### Limits on Number of Files and Processes (ulimit)  
+Apache HBase is a database. It requires the ability to open a large number of files at once. Many Linux distributions limit the number of files a single user is allowed to open to `1024` (or `256` on older versions of OS X). You can check this limit on your servers by running the command `ulimit -n` when logged in as the user which runs HBase. See [the Troubleshooting section](/docs/troubleshooting#trouble-rs-runtime-filehandles) for some of the problems you may experience if the limit is too low. You may also notice errors such as the following:
+
+```text
+2010-04-06 03:04:37,542 INFO org.apache.hadoop.hdfs.DFSClient: Exception increateBlockOutputStream java.io.EOFException
+2010-04-06 03:04:37,542 INFO org.apache.hadoop.hdfs.DFSClient: Abandoning block blk_-6935524980745310745_1391901
+```
+
+It is recommended to raise the ulimit to at least 10,000, but more likely 10,240, because the value is usually expressed in multiples of 1024. Each ColumnFamily has at least one StoreFile, and possibly more than six StoreFiles if the region is under load. The number of open files required depends upon the number of ColumnFamilies and the number of regions. The following is a rough formula for calculating the potential number of open files on a RegionServer.
+
+**Calculate the Potential Number of Open Files:**
+
+```text
+(StoreFiles per ColumnFamily) x (regions per RegionServer)
+```
+
+For example, assuming that a schema had 3 ColumnFamilies per region with an average of 3 StoreFiles per ColumnFamily, and there are 100 regions per RegionServer, the JVM will open `3 * 3 * 100 = 900` file descriptors, not counting open JAR files, configuration files, and others. Opening a file does not take many resources, and the risk of allowing a user to open too many files is minimal.
+
+Another related setting is the number of processes a user is allowed to run at once. In Linux and Unix, the number of processes is set using the `ulimit -u` command. This should not be confused with the `nproc` command, which controls the number of CPUs available to a given user. Under load, a `ulimit -u` that is too low can cause OutOfMemoryError exceptions.
+
+Configuring the maximum number of file descriptors and processes for the user who is running the HBase process is an operating system configuration, rather than an HBase configuration. It is also important to be sure that the settings are changed for the user that actually runs HBase. To see which user started HBase, and that user’s ulimit configuration, look at the first line of the HBase log for that instance.
+
+**Example: `ulimit` Settings on Ubuntu**
+
+To configure ulimit settings on Ubuntu, edit _/etc/security/limits.conf_, which is a space-delimited file with four columns. Refer to the man page for _limits.conf_ for details about the format of this file. In the following example, the first line sets both soft and hard limits for the number of open files (nofile) to 32768 for the operating system user with the username hadoop. The second line sets the number of processes to 32000 for the same user.
+
+```text
+hadoop  -       nofile  32768
+hadoop  -       nproc   32000
+```
+
+The settings are only applied if the Pluggable Authentication Module (PAM) environment is directed to use them. To configure PAM to use these limits, be sure that the _/etc/pam.d/common-session_ file contains the following line:
+
+```text
+session required  pam_limits.so
+```
+
+#### Linux Shell  
+All of the shell scripts that come with HBase rely on the [GNU Bash](http://www.gnu.org/software/bash) shell.
+
+#### Windows  
+Running production systems on Windows machines is not recommended.
+
+## Hadoop
+
+The following table summarizes the versions of [Hadoop](https://hadoop.apache.org) supported with each version of HBase. Older versions not appearing in this table are considered unsupported and likely missing necessary features, while newer versions are untested but may be suitable.
+
+Based on the version of HBase, you should select the most appropriate version of Hadoop. You can use Apache Hadoop, or a vendor’s distribution of Hadoop. No distinction is made here. See [the Hadoop wiki](https://cwiki.apache.org/confluence/display/HADOOP2/Distributions+and+Commercial+Support) for information about vendors of Hadoop.
+
+<Callout type="tip">
+Comparing to Hadoop 1.x, Hadoop 2.x is faster and includes features, such as short-circuit reads (see [Performance](/docs/performance#perf-hdfs-configs-localread)), which will help improve your HBase random read profile. Hadoop 2.x also includes important bug fixes that will improve your overall HBase experience. HBase does not support running with earlier versions of Hadoop. See the table below for requirements specific to different HBase versions.
+
+Today, Hadoop 3.x is recommended as the last Hadoop 2.x release 2.10.2 was released years ago, and there is no release for Hadoop 2.x for a very long time, although the Hadoop community does not officially EOL Hadoop 2.x yet.
+</Callout>
+
+Use the following legend to interpret these tables:
+
+- ✅ = Tested to be fully-functional
+- ❌ = Known to not be fully-functional, or there are [CVEs](https://hadoop.apache.org/cve_list.html) so we drop the support in newer minor releases
+- ⚠️ = Not tested, may/may-not function
+
+|                     | HBase-2.5.x  | HBase-2.6.x |
+| ------------------- | ------------ | ----------- |
+| Hadoop-2.10.\[0-1\] | ❌           | ❌          |
+| Hadoop-2.10.2+      | ✅           | ✅          |
+| Hadoop-3.1.0        | ❌           | ❌          |
+| Hadoop-3.1.1+       | ❌           | ❌          |
+| Hadoop-3.2.\[0-2\]  | ❌           | ❌          |
+| Hadoop-3.2.3+       | ✅           | ❌          |
+| Hadoop-3.3.\[0-1\]  | ❌           | ❌          |
+| Hadoop-3.3.\[2-4\]  | ✅           | ❌          |
+| Hadoop-3.3.5+       | ✅           | ✅          |
+| Hadoop-3.4.0+       | ✅ (2.5.11+) | ✅ (2.6.2+) |
+
+### Hadoop version support matrix for active release lines
+
+|               | HBase-2.3.x | HBase-2.4.x |
+| ------------- | ----------- | ----------- |
+| Hadoop-2.10.x | ✅          | ✅          |
+| Hadoop-3.1.0  | ❌          | ❌          |
+| Hadoop-3.1.1+ | ✅          | ✅          |
+| Hadoop-3.2.x  | ✅          | ✅          |
+| Hadoop-3.3.x  | ✅          | ✅          |
+
+### Hadoop version support matrix for EOM 2.3+ release lines
+
+|                    | HBase-2.0.x | HBase-2.1.x | HBase-2.2.x |
+| ------------------ | ----------- | ----------- | ----------- |
+| Hadoop-2.6.1+      | ✅          | ❌          | ❌          |
+| Hadoop-2.7.\[0-6\] | ❌          | ❌          | ❌          |
+| Hadoop-2.7.7+      | ✅          | ✅          | ❌          |
+| Hadoop-2.8.\[0-2\] | ❌          | ❌          | ❌          |
+| Hadoop-2.8.\[3-4\] | ✅          | ✅          | ❌          |
+| Hadoop-2.8.5+      | ✅          | ✅          | ✅          |
+| Hadoop-2.9.\[0-1\] | ⚠️          | ❌          | ❌          |
+| Hadoop-2.9.2+      | ⚠️          | ⚠️          | ✅          |
+| Hadoop-3.0.\[0-2\] | ❌          | ❌          | ❌          |
+| Hadoop-3.0.3+      | ❌          | ✅          | ❌          |
+| Hadoop-3.1.0       | ❌          | ❌          | ❌          |
+| Hadoop-3.1.1+      | ❌          | ✅          | ✅          |
+
+### Hadoop version support matrix for EOM 2.x release lines
+
+|                    | HBase-1.5.x | HBase-1.6.x | HBase-1.7.x |
+| ------------------ | ----------- | ----------- | ----------- |
+| Hadoop-2.7.7+      | ✅          | ❌          | ❌          |
+| Hadoop-2.8.\[0-4\] | ❌          | ❌          | ❌          |
+| Hadoop-2.8.5+      | ✅          | ✅          | ✅          |
+| Hadoop-2.9.\[0-1\] | ❌          | ❌          | ❌          |
+| Hadoop-2.9.2+      | ✅          | ✅          | ✅          |
+| Hadoop-2.10.x      | ⚠️          | ✅          | ✅          |
+
+### Hadoop version support matrix for EOM 1.5+ release lines
+
+|               | HBase-1.0.x (Hadoop 1.x is NOT supported) | HBase-1.1.x | HBase-1.2.x | HBase-1.3.x | HBase-1.4.x |
+| ------------- | ----------------------------------------- | ----------- | ----------- | ----------- | ----------- |
+| Hadoop-2.4.x  | ✅                                        | ✅          | ✅          | ✅          | ❌          |
+| Hadoop-2.5.x  | ✅                                        | ✅          | ✅          | ✅          | ❌          |
+| Hadoop-2.6.0  | ❌                                        | ❌          | ❌          | ❌          | ❌          |
+| Hadoop-2.6.1+ | ⚠️                                        | ⚠️          | ✅          | ✅          | ❌          |
+| Hadoop-2.7.0  | ❌                                        | ❌          | ❌          | ❌          | ❌          |
+| Hadoop-2.7.1+ | ⚠️                                        | ⚠️          | ✅          | ✅          | ✅          |
+
+### Hadoop version support matrix for EOM 1.x release lines
+
+|                    | HBase-0.92.x | HBase-0.94.x | HBase-0.96.x | HBase-0.98.x (Support for Hadoop 1.1+ is deprecated.) |
+| ------------------ | ------------ | ------------ | ------------ | ----------------------------------------------------- |
+| Hadoop-0.20.205    | ✅           | ❌           | ❌           | ❌                                                    |
+| Hadoop-0.22.x      | ✅           | ❌           | ❌           | ❌                                                    |
+| Hadoop-1.0.x       | ❌           | ❌           | ❌           | ❌                                                    |
+| Hadoop-1.1.x       | ⚠️           | ✅           | ✅           | ⚠️                                                    |
+| Hadoop-0.23.x      | ❌           | ✅           | ⚠️           | ❌                                                    |
+| Hadoop-2.0.x-alpha | ❌           | ⚠️           | ❌           | ❌                                                    |
+| Hadoop-2.1.0-beta  | ❌           | ⚠️           | ✅           | ❌                                                    |
+| Hadoop-2.2.0       | ❌           | ⚠️           | ✅           | ✅                                                    |
+| Hadoop-2.3.x       | ❌           | ⚠️           | ✅           | ✅                                                    |
+| Hadoop-2.4.x       | ❌           | ⚠️           | ✅           | ✅                                                    |
+| Hadoop-2.5.x       | ❌           | ⚠️           | ✅           | ✅                                                    |
+
+### Hadoop version support matrix for EOM pre-1.0 release lines
+
+<Callout type="idea">
+  Starting around the time of Hadoop version 2.7.0, the Hadoop PMC got into the habit of calling out
+  new minor releases on their major version 2 release line as not stable / production ready. As
+  such, HBase expressly advises downstream users to avoid running on top of these releases. Note
+  that additionally the 2.8.1 release was given the same caveat by the Hadoop PMC. For reference,
+  see the release announcements for [Apache Hadoop
+  2.7.0](https://s.apache.org/hadoop-2.7.0-announcement), [Apache Hadoop
+  2.8.0](https://s.apache.org/hadoop-2.8.0-announcement), [Apache Hadoop
+  2.8.1](https://s.apache.org/hadoop-2.8.1-announcement), and [Apache Hadoop
+  2.9.0](https://s.apache.org/hadoop-2.9.0-announcement).
+</Callout>
+
+<Callout type="idea">
+  The Hadoop PMC called out the 3.1.0 release as not stable / production ready. As such, HBase
+  expressly advises downstream users to avoid running on top of this release. For reference, see the
+  [release announcement for Hadoop 3.1.0](https://s.apache.org/hadoop-3.1.0-announcement).
+</Callout>
+
+<Callout type="info">
+  Because HBase depends on Hadoop, it bundles Hadoop jars under its *lib* directory. The bundled
+  jars are ONLY for use in stand-alone mode. In distributed mode, it is *critical* that the version
+  of Hadoop that is out on your cluster match what is under HBase. Replace the hadoop jars found in
+  the HBase lib directory with the equivalent hadoop jars from the version you are running on your
+  cluster to avoid version mismatch issues. Make sure you replace the jars under HBase across your
+  whole cluster. Hadoop version mismatch issues have various manifestations. Check for mismatch if
+  HBase appears hung.
+</Callout>
+
+### Hadoop 3 Support for the HBase Binary Releases and Maven Artifacts
+
+For HBase 2.5.1 and earlier, the official HBase binary releases and Maven artifacts were built with Hadoop 2.x.
+
+Starting with HBase 2.5.2, HBase provides binary releases and Maven artifacts built with both Hadoop 2.x and Hadoop 3.x. The Hadoop 2 artifacts do not have any version suffix, the Hadoop 3 artifacts add the `-hadoop-3` suffix to the version. i.e. `hbase-2.5.2-bin.tar.gz.asc` is the Binary release built with Hadoop2, and `hbase-2.5.2-hadoop3-bin.tar.gz` is the release built with Hadoop 3.
+
+### Hadoop 3 version policy
+
+Each HBase release has a default Hadoop 3 version. This is used when the Hadoop 3 version is not specified during build, and for building the official binary releases and artifacts. Generally when a new minor version is released (i.e. 2.5.0) the default version is set to the latest supported Hadoop 3 version at the start of the release process.
+
+Up to HBase 2.5.10 and 2.6.1 even if HBase added support for newer Hadoop 3 releases in a patch release, the default Hadoop 3 version (and the one used in the official binary releases) was not updated. This simplified upgrading, but meant that HBase releases often included old unfixed CVEs both from Hadoop and Hadoop’s dependencies, even when newer Hadoop releases with fixes were available.
+
+Starting with HBase 2.5.11 and 2.6.2, the default Hadoop 3 version is always set to the latest supported Hadoop 3 version, and is also used for the `-hadoop3` binary releases and artifacts. This will drastically reduce the number of known CVEs shipped in the HBase binary releases, and make sure that all fixes and improvements in Hadoop are included.
+
+### `dfs.datanode.max.transfer.threads`
+
+An HDFS DataNode has an upper bound on the number of files that it will serve at any one time. Before doing any loading, make sure you have configured Hadoop’s _conf/hdfs-site.xml_, setting the `dfs.datanode.max.transfer.threads` value to at least the following:
+
+```xml
+<property>
+  <name>dfs.datanode.max.transfer.threads</name>
+  <value>4096</value>
+</property>
+```
+
+Be sure to restart your HDFS after making the above configuration.
+
+Not having this configuration in place makes for strange-looking failures. One manifestation is a complaint about missing blocks. For example:
+
+```text
+10/12/08 20:10:31 INFO hdfs.DFSClient: Could not obtain block
+          blk_XXXXXXXXXXXXXXXXXXXXXX_YYYYYYYY from any node: java.io.IOException: No live nodes
+          contain current block. Will get new block locations from namenode and retry...
+```
+
+See also [Case Studies](/docs/case_studies#casestudiesmaxtransferthreads) and note that this property was previously known as `dfs.datanode.max.xcievers` (e.g. [Hadoop HDFS: Deceived by Xciever](http://ccgtech.blogspot.com/2010/02/hadoop-hdfs-deceived-by-xciever.html)).
+
+## ZooKeeper Requirements
+
+An Apache ZooKeeper quorum is required. The exact version depends on your version of HBase, though the minimum ZooKeeper version is 3.4.x due to the `useMulti` feature made default in 1.0.0 (see [HBASE-16598](https://issues.apache.org/jira/browse/HBASE-16598)).

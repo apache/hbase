@@ -1,0 +1,47 @@
+---
+title: "Configuration"
+description: "Complete guide to HBase configuration including all settings, tuning parameters, and best practices."
+---
+
+This chapter expands upon the [Getting Started](/docs/getting_started) chapter to further explain configuration of Apache HBase. Please read this chapter carefully, especially the [Basic Prerequisites](#basic-prerequisites) to ensure that your HBase testing and deployment goes smoothly.
+
+## Configuration Files
+
+Apache HBase uses the same configuration system as Apache Hadoop. All configuration files are located in the _conf/_ directory, which needs to be kept in sync for each node on your cluster.
+
+_backup-masters_  
+Not present by default. A plain-text file which lists hosts on which the Master should start a backup Master process, one host per line.
+
+_hadoop-metrics2-hbase.properties_  
+Used to connect HBase Hadoop’s Metrics2 framework. See the [Hadoop Wiki entry](https://cwiki.apache.org/confluence/display/HADOOP2/HADOOP-6728-MetricsV2) for more information on Metrics2. Contains only commented-out examples by default.
+
+_hbase-env.cmd_ and _hbase-env.sh_  
+Script for Windows and Linux / Unix environments to set up the working environment for HBase, including the location of Java, Java options, and other environment variables. The file contains many commented-out examples to provide guidance.
+
+_hbase-policy.xml_  
+The default policy configuration file used by RPC servers to make authorization decisions on client requests. Only used if HBase [security](#security) is enabled.
+
+_hbase-site.xml_  
+The main HBase configuration file. This file specifies configuration options which override HBase's default configuration. You can view (but do not edit) the default configuration file at _hbase-common/src/main/resources/hbase-default.xml_. You can also view the entire effective configuration for your cluster (defaults and overrides) in the **HBase Configuration** tab of the HBase Web UI.
+
+_log4j2.properties_  
+Configuration file for HBase logging via `log4j2`.
+
+_regionservers_  
+A plain-text file containing a list of hosts which should run a RegionServer in your HBase cluster. By default, this file contains the single entry `localhost`. It should contain a list of hostnames or IP addresses, one per line, and should only contain `localhost` if each node in your cluster will run a RegionServer on its `localhost` interface.
+
+<Callout type="tip">
+  When you edit XML, it is a good idea to use an XML-aware editor to be sure that your syntax is
+  correct and your XML is well-formed. You can also use the `xmllint` utility to check that your XML
+  is well-formed. By default, `xmllint` re-flows and prints the XML to standard output. To check for
+  well-formedness and only print output if errors exist, use the command `xmllint -noout
+  filename.xml`.
+</Callout>
+
+<Callout type="warn">
+  When running in distributed mode, after you make an edit to an HBase configuration, make sure you
+  copy the contents of the *conf/* directory to all nodes of the cluster. HBase will not do this for
+  you. Use a configuration management tool for managing and copying the configuration files to your
+  nodes. For most configurations, a restart is needed for servers to pick up changes. Dynamic
+  configuration is an exception to this, to be described later below.
+</Callout>

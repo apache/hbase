@@ -32,6 +32,8 @@ import { PageLastUpdate } from "fumadocs-ui/layouts/docs/page";
 import { useParams } from "react-router";
 import { getGithubLastEdit } from "fumadocs-core/content/github";
 import { useEffect, useState } from "react";
+import { getPageTreePeers } from "fumadocs-core/page-tree";
+import { Card, Cards } from "fumadocs-ui/components/card";
 
 export function baseOptions(): BaseLayoutProps {
   return {
@@ -44,57 +46,71 @@ export function baseOptions(): BaseLayoutProps {
 
 type DocsLoaderData = { path: string; url: string; tree: unknown };
 
-const renderer = toClientRenderer(docs.doc, ({ toc, default: Mdx, frontmatter }) => {
-  const route = useParams()["*"];
-  const [lastModifiedTime, setLastModifiedTime] = useState<Date | undefined>(undefined);
+const renderer = toClientRenderer(
+  docs.doc,
+  ({ toc, default: Mdx, frontmatter }, { tree }: { tree: PageTree.Root }) => {
+    const route = useParams()["*"];
+    const [lastModifiedTime, setLastModifiedTime] = useState<Date | undefined>(undefined);
 
-  useEffect(() => {
-    getGithubLastEdit({
-      owner: "apache",
-      repo: "hbase",
-      // file path in Git
-      path: `hbase-website/app/pages/_docs/docs/_mdx/${route}.mdx`
-    }).then((value) => {
-      if (value) {
-        setLastModifiedTime(value);
-      }
-    });
-  }, [route]);
+    useEffect(() => {
+      getGithubLastEdit({
+        owner: "apache",
+        repo: "hbase",
+        // file path in Git
+        path: `hbase-website/app/pages/_docs/docs/_mdx/${route}.mdx`
+      }).then((value) => {
+        if (value) {
+          setLastModifiedTime(value);
+        }
+      });
+    }, [route]);
 
-  return (
-    <FumaDocsPage toc={toc} tableOfContent={{ style: "clerk" }}>
-      <title>{frontmatter.title}</title>
-      <meta name="description" content={frontmatter.description} />
-      <FumaDocsTitle>{frontmatter.title}</FumaDocsTitle>
-      <FumaDocsDescription>{frontmatter.description}</FumaDocsDescription>
-      <FumaDocsBody>
-        <Mdx components={{ ...defaultMdxComponents }} />
-      </FumaDocsBody>
+    return (
+      <FumaDocsPage toc={toc} tableOfContent={{ style: "clerk" }}>
+        <title>{frontmatter.title}</title>
+        <meta name="description" content={frontmatter.description} />
+        <FumaDocsTitle>{frontmatter.title}</FumaDocsTitle>
+        <FumaDocsDescription>{frontmatter.description}</FumaDocsDescription>
+        <FumaDocsBody>
+          <Mdx components={{ ...defaultMdxComponents }} />
+        </FumaDocsBody>
 
-      {route && (
-        <div>
-          <a
-            href={`https://github.com/apache/hbase/hbase-website/app/pages/_docs/docs/_mdx/${route}.mdx`}
-            rel="noreferrer noopener"
-            target="_blank"
-            className="text-fd-secondary-foreground bg-fd-secondary hover:text-fd-accent-foreground hover:bg-fd-accent w-fit rounded-xl border p-2 text-sm font-medium transition-colors"
-          >
-            Edit on GitHub
-          </a>
+        {route && (
+          <div>
+            {/* links for /configuration */}
+            {route.startsWith("configuration") && (
+              <Cards>
+                {getPageTreePeers(tree, "/docs/configuration").map((peer) => (
+                  <Card key={peer.url} title={peer.name} href={peer.url}>
+                    {peer.description}
+                  </Card>
+                ))}
+              </Cards>
+            )}
 
-          {lastModifiedTime && <PageLastUpdate date={lastModifiedTime} />}
-        </div>
-      )}
-    </FumaDocsPage>
-  );
-});
+            <a
+              href={`https://github.com/apache/hbase/hbase-website/app/pages/_docs/docs/_mdx/${route}.mdx`}
+              rel="noreferrer noopener"
+              target="_blank"
+              className="text-fd-secondary-foreground bg-fd-secondary hover:text-fd-accent-foreground hover:bg-fd-accent w-fit rounded-xl border p-2 text-sm font-medium transition-colors"
+            >
+              Edit on GitHub
+            </a>
+
+            {lastModifiedTime && <PageLastUpdate date={lastModifiedTime} />}
+          </div>
+        )}
+      </FumaDocsPage>
+    );
+  }
+);
 
 export function DocsPage({ loaderData }: { loaderData: DocsLoaderData }) {
   const { tree, path } = loaderData;
   const Content = renderer[path];
   return (
     <DocsLayout {...baseOptions()} tree={tree as PageTree.Root}>
-      <Content />
+      <Content tree={tree as PageTree.Root} />
     </DocsLayout>
   );
 }

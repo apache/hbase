@@ -1,0 +1,4 @@
+{
+  "title": "Configuration",
+  "pages": ["basic-prerequisites", "hbase-run-models", "confirm", "default", "example", "important", "dynamic"]
+}
