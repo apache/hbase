@@ -904,7 +904,7 @@
     <opentelemetry.version>1.49.0</opentelemetry.version>
     <opentelemetry-semconv.version>1.29.0-alpha</opentelemetry-semconv.version>
     <opentelemetry-javaagent.version>2.15.0</opentelemetry-javaagent.version>
-    <log4j2.version>2.17.2</log4j2.version>
+    <log4j2.version>2.25.2</log4j2.version>
     <mockito.version>4.11.0</mockito.version>
     <byte-buddy.version>1.15.11</byte-buddy.version>
     <!--
@@ -1444,7 +1444,7 @@
       </dependency>
       <!--
         Logging dependencies. In general, we use slf4j as the log facade in HBase, so all sub
-        modules should depend on slf4j-api at compile scope, and then depend on log4j-slf4j-impl
+        modules should depend on slf4j-api at compile scope, and then depend on log4j-slf4j2-impl
         and log4j2 at test scope(and in hbase-assembly when shipping the binary) to redirect the
         log message to log4j. Do not introduce logging dependencies other than slf4j-api at compile
         scope as it will mess up the logging framework for downstream users.
@@ -1485,7 +1485,7 @@
       </dependency>
       <dependency>
         <groupId>org.apache.logging.log4j</groupId>
-        <artifactId>log4j-slf4j-impl</artifactId>
+        <artifactId>log4j-slf4j2-impl</artifactId>
         <version>${log4j2.version}</version>
       </dependency>
       <dependency>
