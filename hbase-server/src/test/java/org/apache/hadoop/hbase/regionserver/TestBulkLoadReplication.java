@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
@@ -116,7 +117,6 @@ public class TestBulkLoadReplication extends TestReplicationBase {
   private static CountDownLatch BULK_LOAD_LATCH;
 
   private static AtomicInteger REPLICATION_COUNT;
-  private static CountDownLatch REPLICATION_LATCH;
 
   protected static final HBaseTestingUtil UTIL3 = new HBaseTestingUtil();
   protected static final Configuration CONF3 = UTIL3.getConfiguration();
@@ -271,6 +271,7 @@ public class TestBulkLoadReplication extends TestReplicationBase {
     // Each bulk load event gets replicated twice (to two peers),
     // so REPLICATION_COUNT expected value is 3 * 2 = 6.
     assertEquals(6, REPLICATION_COUNT.get());
+    waitForReplicationQueuesToEmpty();
     for (ReplicationQueueStorage queueStorage : queueStorages) {
       assertEquals(0, queueStorage.getAllHFileRefs().size());
     }
@@ -279,10 +280,8 @@ public class TestBulkLoadReplication extends TestReplicationBase {
   protected void assertBulkLoadConditions(TableName tableName, byte[] row, byte[] value,
     HBaseTestingUtil utility, Table... tables) throws Exception {
     BULK_LOAD_LATCH = new CountDownLatch(3);
-    REPLICATION_LATCH = new CountDownLatch(2);
     bulkLoadOnCluster(tableName, row, value, utility);
     assertTrue(BULK_LOAD_LATCH.await(1, TimeUnit.MINUTES));
-    assertTrue(REPLICATION_LATCH.await(1, TimeUnit.MINUTES));
     assertTableHasValue(tables[0], row, value);
     assertTableHasValue(tables[1], row, value);
     assertTableHasValue(tables[2], row, value);
@@ -371,7 +370,6 @@ public class TestBulkLoadReplication extends TestReplicationBase {
         @Override
         public void
           postReplicateLogEntries(final ObserverContext<RegionServerCoprocessorEnvironment> ctx) {
-          REPLICATION_LATCH.countDown();
           REPLICATION_COUNT.incrementAndGet();
           LOG.info("Replication succeeded. Total for {}: {}", clusterName,
             replicationCount.addAndGet(1));
@@ -394,6 +392,7 @@ public class TestBulkLoadReplication extends TestReplicationBase {
     assertEquals(1, BULK_LOADS_COUNT.get());
     // No replication should happen for no-replication family
     assertEquals(0, REPLICATION_COUNT.get());
+    waitForReplicationQueuesToEmpty();
     for (ReplicationQueueStorage queueStorage : queueStorages) {
       assertEquals(0, queueStorage.getAllHFileRefs().size());
     }
@@ -459,5 +458,16 @@ public class TestBulkLoadReplication extends TestReplicationBase {
     Get get = new Get(row);
     Result result = table.get(get);
     assertNotEquals(Bytes.toString(value), Bytes.toString(result.value()));
+  }
+
+  private void waitForReplicationQueuesToEmpty() {
+    Waiter.waitFor(CONF1, 1000, () -> {
+      for (ReplicationQueueStorage queueStorage : queueStorages) {
+        if (!queueStorage.getAllHFileRefs().isEmpty()) {
+          return false;
+        }
+      }
+      return true;
+    });
   }
 }
