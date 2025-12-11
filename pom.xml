@@ -917,7 +917,7 @@
     <thrift.version>0.14.1</thrift.version>
     <zookeeper.version>3.8.4</zookeeper.version>
     <jline.version>2.11</jline.version>
-    <slf4j.version>1.7.30</slf4j.version>
+    <slf4j.version>2.0.17</slf4j.version>
     <clover.version>4.0.3</clover.version>
     <jettison.version>1.5.4</jettison.version>
     <!--Make sure these joni/jcodings are compatible with the versions used by jruby-->
