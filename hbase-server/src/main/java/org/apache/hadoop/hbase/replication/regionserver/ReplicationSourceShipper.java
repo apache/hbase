@@ -185,7 +185,7 @@ public class ReplicationSourceShipper extends Thread {
         }
         // Clean up hfile references
         for (Entry entry : entries) {
-          cleanUpHFileRefs(entry.getEdit());
+          cleanUpHFileRefs(source, entry.getEdit());
           LOG.trace("shipped entry {}: ", entry);
         }
         // Log and clean up WAL logs
@@ -219,7 +219,8 @@ public class ReplicationSourceShipper extends Thread {
     }
   }
 
-  private void cleanUpHFileRefs(WALEdit edit) throws IOException {
+  protected static void cleanUpHFileRefs(ReplicationSource source, WALEdit edit)
+    throws IOException {
     String peerId = source.getPeerId();
     if (peerId.contains("-")) {
       // peerClusterZnode will be in the form peerId + "-" + rsZNode.
