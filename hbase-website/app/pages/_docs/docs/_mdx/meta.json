@@ -11,6 +11,7 @@
     "---Core Concepts---",
     "datamodel",
     "schema_design",
+    "regionserver-sizing",
     "mapreduce",
     "security",
     "architecture",
