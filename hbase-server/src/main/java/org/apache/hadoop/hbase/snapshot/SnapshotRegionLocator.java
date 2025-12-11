@@ -56,6 +56,7 @@ public final class SnapshotRegionLocator implements RegionLocator {
 
   private final TableName tableName;
   private final TreeMap<byte[], HRegionReplicas> regions;
+  private final SnapshotManifest manifest;
 
   private final List<HRegionLocation> rawLocations;
 
@@ -92,14 +93,19 @@ public final class SnapshotRegionLocator implements RegionLocator {
       replicas.put(key, hrr);
     }
 
-    return new SnapshotRegionLocator(tableName, replicas, rawLocations);
+    return new SnapshotRegionLocator(tableName, replicas, manifest, rawLocations);
   }
 
   private SnapshotRegionLocator(TableName tableName, TreeMap<byte[], HRegionReplicas> regions,
-    List<HRegionLocation> rawLocations) {
+    SnapshotManifest manifest, List<HRegionLocation> rawLocations) {
     this.tableName = tableName;
     this.regions = regions;
+    this.manifest = manifest;
     this.rawLocations = rawLocations;
+  }
+
+  public SnapshotManifest getManifest() {
+    return manifest;
   }
 
   @Override
