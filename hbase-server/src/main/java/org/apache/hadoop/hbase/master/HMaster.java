@@ -3116,14 +3116,9 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
           if (isActiveMaster() && isInitialized() && assignmentManager != null) {
             try {
               Map<TableName, RegionStatesCount> tableRegionStatesCountMap = new HashMap<>();
-              Map<String, TableDescriptor> tableDescriptorMap = getTableDescriptors().getAll();
-              List<TableName> tableNames = listTableNames(null, null, true);
-              for (TableDescriptor tableDescriptor : tableDescriptorMap.values()) {
+              List<TableDescriptor> tableDescriptors = listTableDescriptors(null, null, null, true);
+              for (TableDescriptor tableDescriptor : tableDescriptors) {
                 TableName tableName = tableDescriptor.getTableName();
-                if (!tableNames.contains(tableName)) {
-                  LOG.info("Skipping foreign table {} in cluster metrics", tableName);
-                  continue;
-                }
                 RegionStatesCount regionStatesCount =
                   assignmentManager.getRegionStatesCount(tableName);
                 tableRegionStatesCountMap.put(tableName, regionStatesCount);
@@ -3826,7 +3821,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   }
 
   /**
-   * Return a list of table table descriptors after applying any provided filter parameters. Note
+   * Return a list of table descriptors after applying any provided filter parameters. Note
    * that the user-facing description of this filter logic is presented on the class-level javadoc
    * of {@link NormalizeTableFilterParams}.
    */
@@ -3837,7 +3832,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
       // request for all TableDescriptors
       Collection<TableDescriptor> allHtds;
       if (namespace != null && namespace.length() > 0) {
-        // Do a check on the namespace existence. Will fail if does not exist.
+        // Do a check on the namespace existence. Will fail if it does not exist.
         this.clusterSchemaService.getNamespace(namespace);
         allHtds = tableDescriptors.getByNamespace(namespace).values();
       } else {
