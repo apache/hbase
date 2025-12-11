@@ -1163,7 +1163,8 @@ public class TestBucketCache {
   }
 
   @Test
-  public void testAA() throws NoSuchFieldException, IllegalAccessException {
+  public void testIOTimePerHitReturnsZeroWhenNoHits()
+    throws NoSuchFieldException, IllegalAccessException {
     CacheStats cacheStats = cache.getStats();
     assertTrue(cacheStats instanceof BucketCacheStats);
     BucketCacheStats bucketCacheStats = (BucketCacheStats) cacheStats;
