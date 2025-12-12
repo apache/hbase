@@ -3,20 +3,20 @@ title: "Security Configuration Example"
 description: "This configuration example includes support for HFile v3, ACLs, Visibility Labels, and transparent encryption of data at rest and the WAL. All options have been discussed separately in the sections above."
 ---
 
-## Example Security Settings in _hbase-site.xml_
+#### Example Security Settings in _hbase-site.xml_
 
-```
-
+```xml
+<!-- HFile v3 Support -->
 <property>
   <name>hfile.format.version</name>
   <value>3</value>
 </property>
-
+<!-- HBase Superuser -->
 <property>
   <name>hbase.superuser</name>
   <value>hbase,admin,@superuser-group</value>
 </property>
-
+<!-- Coprocessors for ACLs and Visibility Tags -->
 <property>
   <name>hbase.security.authorization</name>
   <value>true</value>
@@ -36,22 +36,22 @@ description: "This configuration example includes support for HFile v3, ACLs, Vi
   <name>hbase.coprocessor.regionserver.classes</name>
   <value>org.apache.hadoop.hbase.security.access.AccessController</value>
 </property>
-
+<!-- Executable ACL for Coprocessor Endpoints -->
 <property>
   <name>hbase.security.exec.permission.checks</name>
   <value>true</value>
 </property>
-
+<!-- Whether a user needs authorization for a visibility tag to set it on a cell -->
 <property>
   <name>hbase.security.visibility.mutations.checkauth</name>
   <value>false</value>
 </property>
-
+<!-- Secure RPC Transport -->
 <property>
   <name>hbase.rpc.protection</name>
   <value>privacy</value>
  </property>
-
+ <!-- Transparent Encryption -->
 <property>
   <name>hbase.crypto.keyprovider</name>
   <value>org.apache.hadoop.hbase.io.crypto.KeyStoreKeyProvider</value>
@@ -64,7 +64,7 @@ description: "This configuration example includes support for HFile v3, ACLs, Vi
   <name>hbase.crypto.master.key.name</name>
   <value>hbase</value>
 </property>
-
+<!-- WAL Encryption -->
 <property>
   <name>hbase.regionserver.hlog.reader.impl</name>
   <value>org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogReader</value>
@@ -77,13 +77,12 @@ description: "This configuration example includes support for HFile v3, ACLs, Vi
   <name>hbase.regionserver.wal.encryption</name>
   <value>true</value>
 </property>
-
+<!-- For key rotation -->
 <property>
   <name>hbase.crypto.master.alternate.key.name</name>
   <value>hbase.old</value>
 </property>
 ```
-
 
 <Callout type="info">
   Starting from 2.6.0, the hbase.regionserver.hlog.reader.impl and
@@ -91,12 +90,12 @@ description: "This configuration example includes support for HFile v3, ACLs, Vi
   any more. Just set hbase.regionserver.wal.encryption to true is enough to enable WAL encryption.
 </Callout>
 
-**Example Group Mapper in Hadoop _core-site.xml_**
+#### Example Group Mapper in Hadoop _core-site.xml_
 
 Adjust these settings to suit your environment.
 
-```
-<property>
+```xml
+property>
   <name>hadoop.security.group.mapping</name>
   <value>org.apache.hadoop.security.LdapGroupsMapping</value>
 </property>
@@ -110,7 +109,7 @@ Adjust these settings to suit your environment.
 </property>
 <property>
   <name>hadoop.security.group.mapping.ldap.bind.password</name>
-  <value>****</value>
+  <value>****</value> <!-- Replace with the actual password -->
 </property>
 <property>
   <name>hadoop.security.group.mapping.ldap.base</name>
@@ -118,7 +117,7 @@ Adjust these settings to suit your environment.
 </property>
 <property>
   <name>hadoop.security.group.mapping.ldap.search.filter.user</name>
-  <value>(&amp;(objectClass=user)(sAMAccountName=\{0\}))</value>
+  <value>(&amp;(objectClass=user)(sAMAccountName={0}))</value>
 </property>
 <property>
   <name>hadoop.security.group.mapping.ldap.search.filter.group</name>
@@ -133,10 +132,3 @@ Adjust these settings to suit your environment.
   <value>cn</value>
 </property>
 ```
-
-
-```
-
-
-```
-

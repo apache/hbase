@@ -25,7 +25,7 @@ Server-side configuration, administration, and implementation details of each of
   as `ssh`, to avoid leaking sensitive data.
 </Callout>
 
-Procedure: Basic Server-Side Configuration
+#### Procedure: Basic Server-Side Configuration
 
 1. Enable HFile v3, by setting `hfile.format.version` to 3 in _hbase-site.xml_. This is the default for HBase 1.0 and newer.
 
@@ -153,7 +153,7 @@ Cell-level ACLs are implemented using tags (see [Tags](#hbase.tags)). In order t
 
 #### Server-Side Configuration
 
-1.  As a prerequisite, perform the steps in [orderedlist_title](#security.data.basic.server.side).
+1.  As a prerequisite, perform the steps in [Procedure: Basic Server-Side Configuration.](#security.data.basic.server.side).
 
 2.  Install and configure the AccessController coprocessor, by setting the following properties in _hbase-site.xml_. These properties take a list of classes.
 
@@ -415,6 +415,7 @@ public static void revokeFromTable(final HBaseTestingUtil util, final String use
 ```
 
 4.  Showing a User’s Effective Permissions
+
     ```text
         hbase> user_permission 'user'
 
@@ -525,39 +526,35 @@ Visibility labels can be used in conjunction with ACLs.
 
 ### Server-Side Configuration
 
-1.  As a prerequisite, perform the steps in [orderedlist_title](#security.data.basic.server.side).
+1.  As a prerequisite, perform the steps in [Procedure: Basic Server-Side Configuration.](#security.data.basic.server.side).
 
 2.  Install and configure the VisibilityController coprocessor by setting the following properties in _hbase-site.xml_. These properties take a list of class names.
 
-```
+    ```xml
+    <property>
+      <name>hbase.security.authorization</name>
+      <value>true</value>
+    </property>
+    <property>
+      <name>hbase.coprocessor.region.classes</name>
+      <value>org.apache.hadoop.hbase.security.visibility.VisibilityController</value>
+    </property>
+    <property>
+      <name>hbase.coprocessor.master.classes</name>
+      <value>org.apache.hadoop.hbase.security.visibility.VisibilityController</value>
+    </property>
+    ```
 
-<property>
-  <name>hbase.security.authorization</name>
-  <value>true</value>
-</property>
-<property>
-  <name>hbase.coprocessor.region.classes</name>
-  <value>org.apache.hadoop.hbase.security.visibility.VisibilityController</value>
-</property>
-<property>
-  <name>hbase.coprocessor.master.classes</name>
-  <value>org.apache.hadoop.hbase.security.visibility.VisibilityController</value>
-</property>
-```
-
-<Callout type="info">
-  If you use the AccessController and VisibilityController coprocessors together, the
-  AccessController must come first in the list, because with both components active, the
-  VisibilityController will delegate access control on its system tables to the AccessController.
-</Callout>
-```
+    <Callout type="info">
+      If you use the AccessController and VisibilityController coprocessors together, the
+      AccessController must come first in the list, because with both components active, the
+      VisibilityController will delegate access control on its system tables to the
+      AccessController.
+    </Callout>
 
 3.  Adjust Configuration
 
-```
-
-By default, users can label cells with any label, including labels they are not associated with, which means that a user can Put data that he cannot read. For example, a user could label a cell with the (hypothetical) 'topsecret' label even if the user is not associated with that label. If you only want users to be able to label cells with labels they are associated with, set `hbase.security.visibility.mutations.checkauths` to `true`. In that case, the mutation will fail if it makes use of labels the user is not associated with.
-```
+    By default, users can label cells with any label, including labels they are not associated with, which means that a user can Put data that he cannot read. For example, a user could label a cell with the (hypothetical) 'topsecret' label even if the user is not associated with that label. If you only want users to be able to label cells with labels they are associated with, set `hbase.security.visibility.mutations.checkauths` to `true`. In that case, the mutation will fail if it makes use of labels the user is not associated with.
 
 4.  Distribute your configuration and restart your cluster for changes to take effect.
 
@@ -574,172 +571,148 @@ Neither these examples, nor the source file they were taken from, are part of th
 
 1.  Define the List of Visibility Labels
 
-````
-**HBase Shell**
+    #### HBase Shell: [!toc]
 
+    ```text
     hbase> add_labels [ 'admin', 'service', 'developer', 'test' ]
+    ```
 
-**Java API**
+    #### Java API: [!toc]
 
-``` java
-public static void addLabels() throws Exception \{
-  PrivilegedExceptionAction<VisibilityLabelsResponse> action = new PrivilegedExceptionAction<VisibilityLabelsResponse>() \{
-    public VisibilityLabelsResponse run() throws Exception \{
-      String[] labels = \{ SECRET, TOPSECRET, CONFIDENTIAL, PUBLIC, PRIVATE, COPYRIGHT, ACCENT,
-          UNICODE_VIS_TAG, UC1, UC2 \};
-      try \{
-        VisibilityClient.addLabels(conf, labels);
-      \} catch (Throwable t) \{
-        throw new IOException(t);
-      \}
-      return null;
-    \}
-  \};
-  SUPERUSER.runAs(action);
-\}
-````
-
-```
-
+    ```java
+    public static void addLabels() throws Exception {
+      PrivilegedExceptionAction<VisibilityLabelsResponse> action = new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
+        public VisibilityLabelsResponse run() throws Exception {
+          String[] labels = { SECRET, TOPSECRET, CONFIDENTIAL, PUBLIC, PRIVATE, COPYRIGHT, ACCENT,
+              UNICODE_VIS_TAG, UC1, UC2 };
+          try {
+            VisibilityClient.addLabels(conf, labels);
+          } catch (Throwable t) {
+            throw new IOException(t);
+          }
+          return null;
+        }
+      };
+      SUPERUSER.runAs(action);
+    }
+    ```
 
 2.  Associate Labels with Users
 
-```
+    #### HBase Shell: [!toc]
 
-**HBase Shell**
-
+    ```text
     hbase> set_auths 'service', [ 'service' ]
-
     hbase> set_auths 'testuser', [ 'test' ]
-
     hbase> set_auths 'qa', [ 'test', 'developer' ]
-
     hbase> set_auths '@qagroup', [ 'test' ]
+    ```
 
-**Java API**
+    #### Java API: [!toc]
 
-```
-public void testSetAndGetUserAuths() throws Throwable \{
-  final String user = "user1";
-  PrivilegedExceptionAction<Void> action = new PrivilegedExceptionAction<Void>() \{
-    public Void run() throws Exception \{
-      String[] auths = \{ SECRET, CONFIDENTIAL \};
-      try \{
-        VisibilityClient.setAuths(conf, auths, user);
-      \} catch (Throwable e) \{
-      \}
-      return null;
-    \}
-    ...
-```
-
-```
-
+    ```java
+    public void testSetAndGetUserAuths() throws Throwable {
+      final String user = "user1";
+      PrivilegedExceptionAction<Void> action = new PrivilegedExceptionAction<Void>() {
+        public Void run() throws Exception {
+          String[] auths = { SECRET, CONFIDENTIAL };
+          try {
+            VisibilityClient.setAuths(conf, auths, user);
+          } catch (Throwable e) {
+          }
+          return null;
+        }
+        ...
+    ```
 
 3.  Clear Labels From Users
 
-```
+    **HBase Shell:**
 
-**HBase Shell**
-
+    ```text
     hbase> clear_auths 'service', [ 'service' ]
-
     hbase> clear_auths 'testuser', [ 'test' ]
-
     hbase> clear_auths 'qa', [ 'test', 'developer' ]
-
     hbase> clear_auths '@qagroup', [ 'test', 'developer' ]
+    ```
 
-**Java API**
+    **Java API:**
 
-```
-...
-auths = new String[] \{ SECRET, PUBLIC, CONFIDENTIAL \};
-VisibilityLabelsResponse response = null;
-try \{
-  response = VisibilityClient.clearAuths(conf, auths, user);
-\} catch (Throwable e) \{
-  fail("Should not have failed");
-  ...
-\}
-```
-
-```
-
+    ```java
+    ...
+    auths = new String[] { SECRET, PUBLIC, CONFIDENTIAL };
+    VisibilityLabelsResponse response = null;
+    try {
+      response = VisibilityClient.clearAuths(conf, auths, user);
+    } catch (Throwable e) {
+      fail("Should not have failed");
+      ...
+    }
+    ```
 
 4.  Apply a Label or Expression to a Cell
 
-```
+    The label is only applied when data is written. The label is associated with a given version of the cell.
 
-The label is only applied when data is written. The label is associated with a given version of the cell.
+    #### HBase Shell: [!toc]
 
-**HBase Shell**
+    ```text
+    hbase> set_visibility 'user', 'admin|service|developer', { COLUMNS => 'i' }
+    hbase> set_visibility 'user', 'admin|service', { COLUMNS => 'pii' }
+    hbase> set_visibility 'user', 'test', { COLUMNS => [ 'i', 'pii' ], FILTER => "(PrefixFilter ('test'))" }
+    ```
 
-```
+    <Callout type="info">
+      HBase Shell support for applying labels or permissions to cells is for testing and
+      verification support, and should not be employed for production use because it won't apply the
+      labels to cells that don't exist yet. The correct way to apply cell level labels is to do so
+      in the application code when storing the values.
+    </Callout>
 
-hbase> set_visibility 'user', 'admin|service|developer', \{ COLUMNS => 'i' \}
+    #### Java API example: [!toc]
 
-hbase> set_visibility 'user', 'admin|service', \{ COLUMNS => 'pii' \}
-
-hbase> set_visibility 'user', 'test', \{ COLUMNS => [ 'i', 'pii' ], FILTER => "(PrefixFilter ('test'))" \}
-```
-
-<Callout type="info">
-  HBase Shell support for applying labels or permissions to cells is for testing and verification
-  support, and should not be employed for production use because it won't apply the labels to cells
-  that don't exist yet. The correct way to apply cell level labels is to do so in the application
-  code when storing the values.
-</Callout>
-
-````
-**Java API**
-
-``` java
-static Table createTableAndWriteDataWithLabels(TableName tableName, String... labelExps)
-    throws Exception {
-  Configuration conf = HBaseConfiguration.create();
-  Connection connection = ConnectionFactory.createConnection(conf);
-  Table table = NULL;
-  try {
-    table = TEST_UTIL.createTable(tableName, fam);
-    int i = 1;
-    List<Put> puts = new ArrayList<Put>();
-    for (String labelExp : labelExps) {
-      Put put = new Put(Bytes.toBytes("row" + i));
-      put.add(fam, qual, HConstants.LATEST_TIMESTAMP, value);
-      put.setCellVisibility(new CellVisibility(labelExp));
-      puts.add(put);
-      i++;
+    ```java
+    static Table createTableAndWriteDataWithLabels(TableName tableName, String... labelExps)
+        throws Exception {
+      Configuration conf = HBaseConfiguration.create();
+      Connection connection = ConnectionFactory.createConnection(conf);
+      Table table = NULL;
+      try {
+        table = TEST_UTIL.createTable(tableName, fam);
+        int i = 1;
+        List<Put> puts = new ArrayList<Put>();
+        for (String labelExp : labelExps) {
+          Put put = new Put(Bytes.toBytes("row" + i));
+          put.add(fam, qual, HConstants.LATEST_TIMESTAMP, value);
+          put.setCellVisibility(new CellVisibility(labelExp));
+          puts.add(put);
+          i++;
+        }
+        table.put(puts);
+      } finally {
+        if (table != null) {
+          table.flushCommits();
+        }
+      }
     }
-    table.put(puts);
-  } finally {
-    if (table != null) {
-      table.flushCommits();
-    }
-  }
-````
-
-```
-
+    ```
 
 ### Reading Cells with Labels
 
-When you issue a Scan or Get, HBase uses your default set of authorizations to filter out cells that you do not have access to. A superuser can set the default set of authorizations for a given user by using the `set_auths` HBase Shell command or the [VisibilityClient.setAuths()](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/security/visibility/VisibilityClient.html#setAuths(org.apache.hadoop.hbase.client.Connection,java.lang.String%5B%5D,java.lang.String)) method.
+When you issue a Scan or Get, HBase uses your default set of authorizations to filter out cells that you do not have access to. A superuser can set the default set of authorizations for a given user by using the `set_auths` HBase Shell command or the [VisibilityClient.setAuths()](<https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/security/visibility/VisibilityClient.html#setAuths(org.apache.hadoop.hbase.client.Connection,java.lang.String%5B%5D,java.lang.String)>) method.
 
-You can specify a different authorization during the Scan or Get, by passing the AUTHORIZATIONS option in HBase Shell, or the [Scan.setAuthorizations()](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Scan.html#setAuthorizations(org.apache.hadoop.hbase.security.visibility.Authorizations)) method if you use the API. This authorization will be combined with your default set as an additional filter. It will further filter your results, rather than giving you additional authorization.
+You can specify a different authorization during the Scan or Get, by passing the AUTHORIZATIONS option in HBase Shell, or the [Scan.setAuthorizations()](<https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Scan.html#setAuthorizations(org.apache.hadoop.hbase.security.visibility.Authorizations)>) method if you use the API. This authorization will be combined with your default set as an additional filter. It will further filter your results, rather than giving you additional authorization.
 
-**HBase Shell**
+#### HBase Shell: [!toc]
 
-```
-
+```text
 hbase> get_auths 'myUser'
 hbase> scan 'table1', AUTHORIZATIONS => ['private']
-
-````
-
-**Java API**
-
 ```
+
+#### Java API: [!toc]
+
+```java
 ...
 public Void run() throws Exception {
   String[] auths1 = { SECRET, CONFIDENTIAL };
@@ -763,7 +736,7 @@ public Void run() throws Exception {
   return null;
 }
 ...
-````
+```
 
 ### Implementing Your Own Visibility Label Algorithm
 
@@ -777,7 +750,7 @@ The default implementation, which was implemented in [HBASE-12466](https://issue
 
 As mentioned in the above sections, the interface `VisibilityLabelService` could be used to implement a different way of storing the visibility expressions in the cells. Clusters with replication enabled also must replicate the visibility expressions to the peer cluster. If `DefaultVisibilityLabelServiceImpl` is used as the implementation for `VisibilityLabelService`, all the visibility expression are converted to the corresponding expression based on the ordinals for each visibility label stored in the labels table. During replication, visible cells are also replicated with the ordinal-based expression intact. The peer cluster may not have the same `labels` table with the same ordinal mapping for the visibility labels. In that case, replicating the ordinals makes no sense. It would be better if the replication occurred with the visibility expressions transmitted as strings. To replicate the visibility expression as strings to the peer cluster, create a `RegionServerObserver` configuration which works based on the implementation of the `VisibilityLabelService` interface. The configuration below enables replication of visibility expressions to peer clusters as strings. See [HBASE-11639](https://issues.apache.org/jira/browse/HBASE-11639) for more details.
 
-```
+```xml
 <property>
   <name>hbase.security.authorization</name>
   <value>true</value>
@@ -814,137 +787,109 @@ This procedure assumes you are using the default Java keystore implementation. I
 
 1.  Create a secret key of appropriate length for AES encryption, using the `keytool` utility.
 
-```
+    ```bash
+    $ keytool -keystore /path/to/hbase/conf/hbase.jks \
+      -storetype jceks -storepass **** \
+      -genseckey -keyalg AES -keysize 128 \
+      -alias <alias>
+    ```
 
-$ keytool -keystore /path/to/hbase/conf/hbase.jks \
-  -storetype jceks -storepass **** \
-  -genseckey -keyalg AES -keysize 128 \
-  -alias ALIAS
-```
-
-Replace \*\*\*\*\*\* with the password for the keystore file and \<alias\> with the username of the HBase service account, or an arbitrary string. If you use an arbitrary string, you will need to configure HBase to use it, and that is covered below. Specify a keysize that is appropriate. Do not specify a separate password for the key, but press Return when prompted.
-
-```
-
+    Replace \*\*\*\* with the password for the keystore file and \<alias\> with the username of the HBase service account, or an arbitrary string. If you use an arbitrary string, you will need to configure HBase to use it, and that is covered below. Specify a keysize that is appropriate. Do not specify a separate password for the key, but press `Return` when prompted.
 
 2.  Set appropriate permissions on the keyfile and distribute it to all the HBase servers.
 
-```
-
-The previous command created a file called _hbase.jks_ in the HBase _conf/_ directory. Set the permissions and ownership on this file such that only the HBase service account user can read the file, and securely distribute the key to all HBase servers.
-
-```
-
+    The previous command created a file called _hbase.jks_ in the HBase _conf/_ directory. Set the permissions and ownership on this file such that only the HBase service account user can read the file, and securely distribute the key to all HBase servers.
 
 3.  Configure the HBase daemons.
 
-```
+    Set the following properties in _hbase-site.xml_ on the region servers, to configure HBase daemons to use a key provider backed by the KeyStore file or retrieving the cluster master key. In the example below, replace \*\*\*\* with the password.
 
-Set the following properties in _hbase-site.xml_ on the region servers, to configure HBase daemons to use a key provider backed by the KeyStore file or retrieving the cluster master key. In the example below, replace \*\*\*\*\*\* with the password.
+    ```xml
+    <property>
+      <name>hbase.crypto.keyprovider</name>
+      <value>org.apache.hadoop.hbase.io.crypto.KeyStoreKeyProvider</value>
+    </property>
+    <property>
+      <name>hbase.crypto.keyprovider.parameters</name>
+      <value>jceks:///path/to/hbase/conf/hbase.jks?password=****</value>
+    </property>
+    ```
 
-```
-<property>
-  <name>hbase.crypto.keyprovider</name>
-  <value>org.apache.hadoop.hbase.io.crypto.KeyStoreKeyProvider</value>
-</property>
-<property>
-  <name>hbase.crypto.keyprovider.parameters</name>
-  <value>jceks:///path/to/hbase/conf/hbase.jks?password=****</value>
-</property>
-```
+    By default, the HBase service account name will be used to resolve the cluster master key. However, you can store it with an arbitrary alias (in the `keytool` command). In that case, set the following property to the alias you used.
 
-By default, the HBase service account name will be used to resolve the cluster master key. However, you can store it with an arbitrary alias (in the `keytool` command). In that case, set the following property to the alias you used.
+    ```xml
+    <property>
+      <name>hbase.crypto.master.key.name</name>
+      <value>my-alias</value>
+    </property>
+    ```
 
-```
-<property>
-  <name>hbase.crypto.master.key.name</name>
-  <value>my-alias</value>
-</property>
-```
+    You also need to be sure your HFiles use HFile v3, in order to use transparent encryption. This is the default configuration for HBase 1.0 onward. For previous versions, set the following property in your _hbase-site.xml_ file.
 
-You also need to be sure your HFiles use HFile v3, in order to use transparent encryption. This is the default configuration for HBase 1.0 onward. For previous versions, set the following property in your _hbase-site.xml_ file.
+    ```xml
+    <property>
+      <name>hfile.format.version</name>
+      <value>3</value>
+    </property>
+    ```
 
-```
-<property>
-  <name>hfile.format.version</name>
-  <value>3</value>
-</property>
-```
-
-Optionally, you can use a different cipher provider, either a Java Cryptography Encryption (JCE) algorithm provider or a custom HBase cipher implementation.
-
-```
-
+    Optionally, you can use a different cipher provider, either a Java Cryptography Encryption (JCE) algorithm provider or a custom HBase cipher implementation.
     - JCE:
-
       - Install a signed JCE provider (supporting `AES/CTR/NoPadding` mode with 128 bit keys)
-
-      - Add it with highest preference to the JCE site configuration file *\$JAVA_HOME/lib/security/java.security*.
-
-      - Update `hbase.crypto.algorithm.aes.provider` and `hbase.crypto.algorithm.rng.provider` options in *`hbase-site.xml`*.
+      - Add it with highest preference to the JCE site configuration file _$JAVA_HOME/lib/security/java.security_.
+      - Update `hbase.crypto.algorithm.aes.provider` and `hbase.crypto.algorithm.rng.provider` options in _hbase-site.xml_.
 
     - Custom HBase Cipher:
-
       - Implement `org.apache.hadoop.hbase.io.crypto.CipherProvider`.
-
       - Add the implementation to the server classpath.
-
-      - Update `hbase.crypto.cipherprovider` in *hbase-site.xml*.
+      - Update `hbase.crypto.cipherprovider` in _hbase-site.xml_.
 
 4.  Configure WAL encryption.
 
-```
+    Configure WAL encryption in every RegionServer's _hbase-site.xml_, by setting the following properties. You can include these in the HMaster's _hbase-site.xml_ as well, but the HMaster does not have a WAL and will not use them.
 
-Configure WAL encryption in every RegionServer’s _hbase-site.xml_, by setting the following properties. You can include these in the HMaster’s _hbase-site.xml_ as well, but the HMaster does not have a WAL and will not use them.
+    ```xml
+    <property>
+      <name>hbase.regionserver.hlog.reader.impl</name>
+      <value>org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogReader</value>
+    </property>
+    <property>
+      <name>hbase.regionserver.hlog.writer.impl</name>
+      <value>org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogWriter</value>
+    </property>
+    <property>
+      <name>hbase.regionserver.wal.encryption</name>
+      <value>true</value>
+    </property>
+    ```
 
-```
-<property>
-  <name>hbase.regionserver.hlog.reader.impl</name>
-  <value>org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogReader</value>
-</property>
-<property>
-  <name>hbase.regionserver.hlog.writer.impl</name>
-  <value>org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogWriter</value>
-</property>
-<property>
-  <name>hbase.regionserver.wal.encryption</name>
-  <value>true</value>
-</property>
-```
+    <Callout type="info">
+      Starting from 2.6.0, the hbase.regionserver.hlog.reader.impl and
+      hbase.regionserver.hlog.writer.impl configurations are removed, you do not need to specify
+      them any more. Just set hbase.regionserver.wal.encryption to true is enough to enable WAL
+      encryption.
+    </Callout>
 
-<Callout type="info">
-  Starting from 2.6.0, the hbase.regionserver.hlog.reader.impl and
-  hbase.regionserver.hlog.writer.impl configurations are removed, you do not need to specify them
-  any more. Just set hbase.regionserver.wal.encryption to true is enough to enable WAL encryption.
-</Callout>
+5.  (Optional) Configure encryption key hash algorithm.
 
-1.  (Optional) Configure encryption key hash algorithm.
+    Since [HBASE-25181](https://issues.apache.org/jira/browse/HBASE-25181) it is possible to use custom encryption key hash algorithm instead of the default MD5 algorithm. This hash is needed to verify the secret key during decryption. The MD5 algorithm is considered weak, and can not be used in some (e.g. FIPS compliant) clusters.
 
-````
-Since [HBASE-25181](https://issues.apache.org/jira/browse/HBASE-25181) it is possible to use custom encryption key hash algorithm instead of the default MD5 algorithm. This hash is needed to verify the secret key during decryption. The MD5 algorithm is considered weak, and can not be used in some (e.g. FIPS compliant) clusters.
+    The hash is set via the configuration option `hbase.crypto.key.hash.algorithm`. It should be set to a JDK `MessageDigest` algorithm like "MD5", "SHA-384" or "SHA-512". The default is "MD5" for backward compatibility. An example of this configuration parameter on a FIPS-compliant cluster:
 
-The hash is set via the configuration option `hbase.crypto.key.hash.algorithm`. It should be set to a JDK `MessageDigest` algorithm like "MD5", "SHA-384" or "SHA-512". The default is "MD5" for backward compatibility. An example of this configuration parameter on a FIPS-compliant cluster:
+    ```xml
+    <property>
+      <name>hbase.crypto.key.hash.algorithm</name>
+      <value>SHA-384</value>
+    </property>
+    ```
 
-``` xml
-<property>
-  <name>hbase.crypto.key.hash.algorithm</name>
-  <value>SHA-384</value>
-</property>
-````
+6.  Configure permissions on the _hbase-site.xml_ file.
 
-2.  Configure permissions on the _hbase-site.xml_ file.
+    Because the keystore password is stored in the hbase-site.xml, you need to ensure that only the HBase user can read the _hbase-site.xml_ file, using file ownership and permissions.
 
-```
+7.  Restart your cluster.
 
-Because the keystore password is stored in the hbase-site.xml, you need to ensure that only the HBase user can read the *hbase-site.xml* file, using file ownership and permissions.
-```
-
-3.  Restart your cluster.
-
-```
-
-Distribute the new configuration file to all nodes and restart your cluster.
-```
+    Distribute the new configuration file to all nodes and restart your cluster.
 
 ### Administration
 
@@ -957,23 +902,27 @@ Neither these examples, nor the source files they are taken from, are part of th
 
 </Callout>
 
-Enable Encryption on a Column Family  
+#### Enable Encryption on a Column Family
+
 To enable encryption on a column family, you can either use HBase Shell or the Java API. After enabling encryption, trigger a major compaction. When the major compaction completes, the compacted new HFiles will be encrypted. However, depending on the compaction settings, it is possible that not all the HFiles will be rewritten during a major compaction and there still might remain some old unencrypted HFiles. Also please note, that the snapshots are immutable. So the snapshots taken before you enabled the encryption will still contain the unencrypted HFiles.
 
-Rotate the Data Key  
+#### Rotate the Data Key
+
 To rotate the data key, first change the ColumnFamily key in the column descriptor, then trigger a major compaction. Until the compaction completes, the old HFiles will still be readable using the old key. During compaction, the compacted HFiles will be re-encrypted using the new data key. However, depending on the compaction settings, it is possible that not all the HFiles will be rewritten during a major compaction and there still might remain some old HFiles encrypted with the old key. Also please note, that the snapshots are immutable. So the snapshots taken before the changing of the encryption key will still contain the HFiles written using the old key.
 
-Switching Between Using a Random Data Key and Specifying A Key  
+#### Switching Between Using a Random Data Key and Specifying A Key
+
 If you configured a column family to use a specific key and you want to return to the default behavior of using a randomly-generated key for that column family, use the Java API to alter the `HColumnDescriptor` so that no value is sent with the key `ENCRYPTION_KEY`.
 
-Rotate the Master Key  
+#### Rotate the Master Key
+
 To rotate the master key, first generate and distribute the new key. Then update the KeyStore to contain a new master key, and keep the old master key in the KeyStore using a different alias. Next, configure fallback to the old master key in the _hbase-site.xml_ file.
 
 ## Secure Enable
 
 After hbase-2.x, the default 'hbase.security.authorization' changed. Before hbase-2.x, it defaulted to true, in later HBase versions, the default became false. So to enable hbase authorization, the following propertie must be configured in _hbase-site.xml_. See [HBASE-19483](https://issues.apache.org/jira/browse/HBASE-19483);
 
-```
+```xml
 <property>
   <name>hbase.security.authorization</name>
   <value>true</value>
