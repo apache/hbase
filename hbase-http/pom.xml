@@ -70,6 +70,10 @@
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-hadoop-compat</artifactId>
     </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-auth-filters</artifactId>
+    </dependency>
     <!-- resource bundle only needed at build time -->
     <dependency>
       <groupId>org.apache.hbase</groupId>
