@@ -246,7 +246,7 @@ public class IncrementalBackupManager extends BackupManager {
       // Even if these logs belong to a obsolete region server, we still need
       // to include they to avoid loss of edits for backup.
       Long newTimestamp = newestTimestamps.get(host);
-      if (newTimestamp == null || currentLogTS > newTimestamp) {
+      if (newTimestamp != null && currentLogTS > newTimestamp) {
         newestLogs.add(currentLogFile);
       }
     }
