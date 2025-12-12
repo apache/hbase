@@ -107,6 +107,7 @@ import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.thrift.generated.Hbase;
 import org.apache.hadoop.hbase.util.DNS;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.ExitHandler;
 import org.apache.hadoop.hbase.util.JvmPauseMonitor;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.hbase.util.VersionInfo;
@@ -864,6 +865,6 @@ public class ThriftServer extends Configured implements Tool {
     // for now, only time we return is on an argument error.
     final int status = ToolRunner.run(conf, new ThriftServer(conf), args);
     LOG.info("***** STOPPING service '" + ThriftServer.class.getSimpleName() + "' *****");
-    System.exit(status);
+    ExitHandler.getInstance().exit(status);
   }
 }
