@@ -85,6 +85,8 @@ public class TestMetricsTableAggregate {
   @Test
   public void testRegionAndStoreMetrics() throws IOException {
     HELPER.assertGauge(pre + "memstoreSize", 1000, agg);
+    HELPER.assertGauge(pre + "memstoreHeapSize", 1001, agg);
+    HELPER.assertGauge(pre + "memstoreOffHeapSize", 1002, agg);
     HELPER.assertGauge(pre + "storeFileSize", 2000, agg);
     HELPER.assertGauge(pre + "tableSize", 3000, agg);
 
