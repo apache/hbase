@@ -3475,7 +3475,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
 
     // update region server coprocessor if the configuration has changed.
     if (
-      CoprocessorConfigurationUtil.checkConfigurationChange(getConfiguration(), newConf,
+      CoprocessorConfigurationUtil.checkConfigurationChange(this.rsHost, newConf,
         CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY)
     ) {
       LOG.info("Update region server coprocessors because the configuration has changed");
