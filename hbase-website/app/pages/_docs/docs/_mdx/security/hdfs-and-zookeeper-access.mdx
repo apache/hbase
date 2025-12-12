@@ -7,7 +7,7 @@ description: "Secure HBase requires secure ZooKeeper and HDFS so that users cann
 
 ZooKeeper has a pluggable authentication mechanism to enable access from clients using different methods. ZooKeeper even allows authenticated and un-authenticated clients at the same time. The access to znodes can be restricted by providing Access Control Lists (ACLs) per znode. An ACL contains two components, the authentication method and the principal. ACLs are NOT enforced hierarchically. See [ZooKeeper Programmers Guide](https://zookeeper.apache.org/doc/r3.3.6/zookeeperProgrammers.html#sc_ZooKeeperPluggableAuthentication) for details.
 
-HBase daemons authenticate to ZooKeeper via SASL and kerberos (See [???](#zk.sasl.auth)). HBase sets up the znode ACLs so that only the HBase user and the configured hbase superuser (`hbase.superuser`) can access and modify the data. In cases where ZooKeeper is used for service discovery or sharing state with the client, the znodes created by HBase will also allow anyone (regardless of authentication) to read these znodes (clusterId, master address, meta location, etc), but only the HBase user can modify them.
+HBase daemons authenticate to ZooKeeper via SASL and kerberos (See [ZooKeeper](/docs/zookeeper)). HBase sets up the znode ACLs so that only the HBase user and the configured hbase superuser (`hbase.superuser`) can access and modify the data. In cases where ZooKeeper is used for service discovery or sharing state with the client, the znodes created by HBase will also allow anyone (regardless of authentication) to read these znodes (clusterId, master address, meta location, etc), but only the HBase user can modify them.
 
 ## Securing File System (HDFS) Data
 

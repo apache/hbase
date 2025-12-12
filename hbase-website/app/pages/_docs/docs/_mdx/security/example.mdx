@@ -5,7 +5,7 @@ description: "This configuration example includes support for HFile v3, ACLs, Vi
 
 ## Example Security Settings in _hbase-site.xml_
 
-```xml
+```
 
 <property>
   <name>hfile.format.version</name>
@@ -84,6 +84,7 @@ description: "This configuration example includes support for HFile v3, ACLs, Vi
 </property>
 ```
 
+
 <Callout type="info">
   Starting from 2.6.0, the hbase.regionserver.hlog.reader.impl and
   hbase.regionserver.hlog.writer.impl configurations are removed, you do not need to specify them
@@ -94,7 +95,7 @@ description: "This configuration example includes support for HFile v3, ACLs, Vi
 
 Adjust these settings to suit your environment.
 
-```xml
+```
 <property>
   <name>hadoop.security.group.mapping</name>
   <value>org.apache.hadoop.security.LdapGroupsMapping</value>
@@ -133,6 +134,9 @@ Adjust these settings to suit your environment.
 </property>
 ```
 
-```
 
 ```
+
+
+```
+

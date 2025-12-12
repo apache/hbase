@@ -8,10 +8,12 @@ This describes how to set up Apache HBase and clients for connection to secure H
 
 ## Prerequisites
 
-Hadoop Authentication Configuration  
+#### Hadoop Authentication Configuration [!toc]
+
 To run HBase RPC with strong authentication, you must set `hbase.security.authentication` to `kerberos`. In this case, you must also set `hadoop.security.authentication` to `kerberos` in core-site.xml. Otherwise, you would be using strong authentication for HBase but not for the underlying HDFS, which would cancel out any benefit.
 
-Kerberos KDC  
+#### Kerberos KDC [!toc]
+
 You need to have a working Kerberos KDC.
 
 ## Server-side Configuration for Secure Operation
@@ -88,11 +90,7 @@ Configuration conf = HBaseConfiguration.create();
 Connection connection = ConnectionFactory.createConnection(conf);
 conf.set("hbase.rpc.protection", "privacy");
 try (Connection connection = ConnectionFactory.createConnection(conf);
-```
-
-Table table = connection.getTable(TableName.valueOf(tablename))) \{
-
-```
+     Table table = connection.getTable(TableName.valueOf(tablename))) {
   .... do your stuff
 }
 ```
@@ -111,9 +109,11 @@ Add the following to the `hbase-site.xml` file for every Thrift gateway:
 <property>
   <name>hbase.thrift.kerberos.principal</name>
   <value>$USER/_HOST@HADOOP.LOCALDOMAIN</value>
-
+  <!-- TODO: This may need to be  HTTP/_HOST@<REALM> and _HOST may not work.
+   You may have  to put the concrete full hostname.
+   -->
 </property>
-
+<!-- Add these if you need to configure a different DNS interface from the default -->
 <property>
   <name>hbase.thrift.dns.interface</name>
   <value>default</value>
@@ -242,7 +242,7 @@ HBase REST gateway supports [SPNEGO HTTP authentication](https://hadoop.apache.o
   <name>hbase.rest.authentication.kerberos.keytab</name>
   <value>$KEYTAB</value>
 </property>
-
+<!-- Add these if you need to configure a different DNS interface from the default -->
 <property>
   <name>hbase.rest.dns.interface</name>
   <value>default</value>

@@ -14,7 +14,7 @@ A default HBase install uses insecure HTTP connections for Web UIs for the maste
 <Callout type="info">
 If you enable secure HTTP, clients should connect to HBase using the `https://` URL. Clients using the `http://` URL will receive an HTTP response of `200`, but will not receive any data. The following exception is logged:
 
-```
+```text
 javax.net.ssl.SSLException: Unrecognized SSL message, plaintext connection?
 ```
 
@@ -34,6 +34,7 @@ Set the following configuration in hbase-site to set max age to zero and disable
   <value>true</value>
 </property>
 ```
+
 
 ## Using SPNEGO for Kerberos authentication with Web UIs
 

@@ -67,7 +67,7 @@ However, specifying a trust store is not always required. Standard JDK implement
 
 You can check the list of public certificate authorities shipped with your JDK implementation:
 
-```
+```bash
 keytool -keystore $JAVA_HOME/jre/lib/security/cacerts -list
 ```
 
@@ -79,27 +79,27 @@ While obtaining globally trusted certificates from Certificate Authorities is co
 
 Follow the following steps to generate self-signed certificates.
 
-1.  Create SSL key store JKS to store local credentials
+1. Create SSL key store JKS to store local credentials
 
 Please note that the alias (-alias) and the distinguished name (-dname) must match the hostname of the machine that is associated with, otherwise hostname verification won’t work.
 
-```
+```bash
 keytool -genkeypair -alias $(hostname -f) -keyalg RSA -keysize 2048 -dname "cn=$(hostname -f)" -keypass password -keystore keystore.jks -storepass password
 ```
 
 At the end of this operation you’ll have as many key store files as many servers you have in your cluster. Each cluster member will have its own key store.
 
-2.  Extract the signed public key (certificate) from each key store
+2. Extract the signed public key (certificate) from each key store
 
-```
+```bash
 keytool -exportcert -alias $(hostname -f) -keystore keystore.jks -file $(hostname -f).cer -rfc
 ```
 
-3.  Create SSL trust store JKS containing certificates for the clients
+3. Create SSL trust store JKS containing certificates for the clients
 
 The same truststore (storing all accepted certs) should be shared on participants of the cluster. You need to use different aliases to store multiple certificates in the same truststore. Name of the aliases doesn’t matter.
 
-```
+```bash
 keytool -importcert -alias [host1..3] -file [host1..3].cer -keystore truststore.jks -storepass password
 ```
 
@@ -107,9 +107,9 @@ keytool -importcert -alias [host1..3] -file [host1..3].cer -keystore truststore.
 
 Here are the steps needed to upgrade an already running HBase cluster to TLS without downtime by taking advantage of port unification functionality. There’s a property on server side called `hbase.server.netty.tls.supportplaintext` which makes possible to accept TLS and plaintext connections on the same socket port.
 
-1.  Create the necessary key stores and trust stores for all server participants as described in the previous section.
+1. Create the necessary key stores and trust stores for all server participants as described in the previous section.
 
-2.  Enable secure communication on the Master node in _server-only_ mode with plaintext support.
+2. Enable secure communication on the Master node in _server-only_ mode with plaintext support.
 
 ```xml
 <property>
@@ -129,7 +129,7 @@ Here are the steps needed to upgrade an already running HBase cluster to TLS wit
 
 Restart the Master. Master now accepts both TLS/non-TLS connections and works with non-TLS in client mode.
 
-3.  Enable secure communication on the Region Servers in both _server and client_ mode with plaintext support. Client mode here will ensure that RegionServer’s communication to Master is encrypted.
+3. Enable secure communication on the Region Servers in both _server and client_ mode with plaintext support. Client mode here will ensure that RegionServer’s communication to Master is encrypted.
 
 <Callout type="warn">
 **Replication**
@@ -158,7 +158,7 @@ You have to prepare all Region Servers for secure communication before upgrading
 
 Restart Region Servers in rolling restart fashion. They send requests with TLS and accept both TLS and non-TLS communication.
 
-4.  Enable secure communication on the clients.
+4. Enable secure communication on the clients.
 
 ```xml
 <property>
@@ -168,7 +168,7 @@ Restart Region Servers in rolling restart fashion. They send requests with TLS a
 ...truststore setup ...
 ```
 
-5.  Enable client-mode TLS on master and disable plaintext mode.
+5. Enable client-mode TLS on master and disable plaintext mode.
 
 ```xml
 <property>
@@ -187,7 +187,7 @@ Restart Region Servers in rolling restart fashion. They send requests with TLS a
 
 Restart Master.
 
-6.  Disable plaintext communication on the Region Servers by removing `supportplaintext` property. Restart RSs in rolling restart fashion.
+6. Disable plaintext communication on the Region Servers by removing `supportplaintext` property. Restart RSs in rolling restart fashion.
 
 <Callout type="warn">
   Once `hbase.client.netty.tls.enabled` is enabled on the server side, the cluster will only be able

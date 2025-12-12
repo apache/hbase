@@ -5,7 +5,7 @@
     "client-access",
     "user-access",
     "tls",
-    "hdfs-and-zookeper-access",
+    "hdfs-and-zookeeper-access",
     "data-access",
     "example"
   ]
