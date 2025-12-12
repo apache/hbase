@@ -351,6 +351,33 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     return movedServers;
   }
 
+  public synchronized void moveAllServers(String srcGroup, String dstGroup) throws IOException {
+    RSGroupInfo src = getRSGroupInfo(srcGroup);
+    Set<Address> servers = src.getServers();
+    RSGroupInfo dst = getRSGroupInfo(dstGroup);
+    // If destination is 'default' rsgroup, only add servers that are online. If not online, drop
+    // it. If not 'default' group, add server to 'dst' rsgroup EVEN IF IT IS NOT online (could be a
+    // rsgroup of dead servers that are to come back later).
+    Set<Address> onlineServers =
+      dst.getName().equals(RSGroupInfo.DEFAULT_GROUP) ? getOnlineServers() : null;
+    for (Address el : servers) {
+      src.removeServer(el);
+      if (onlineServers != null) {
+        if (!onlineServers.contains(el)) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Dropping " + el + " during move-to-default RSGroup because not online");
+          }
+          continue;
+        }
+      }
+      dst.addServer(el);
+    }
+    Map<String, RSGroupInfo> newGroupMap = Maps.newHashMap(holder.groupName2Group);
+    newGroupMap.put(src.getName(), src);
+    newGroupMap.put(dst.getName(), dst);
+    flushConfig(newGroupMap);
+  }
+
   @Override
   public RSGroupInfo getRSGroupOfServer(Address serverHostPort) {
     for (RSGroupInfo info : holder.groupName2Group.values()) {
