@@ -300,14 +300,6 @@ public final class LogLevel {
       if (!HttpServer.hasAdministratorAccess(getServletContext(), request, response)) {
         return;
       }
-      // Disallow modification of the LogLevel if explicitly set to readonly
-      Configuration conf =
-        (Configuration) getServletContext().getAttribute(HttpServer.CONF_CONTEXT_ATTRIBUTE);
-      if (conf.getBoolean("hbase.master.ui.readonly", false)) {
-        sendError(response, HttpServletResponse.SC_FORBIDDEN,
-          "Modification of HBase via the UI is disallowed in configuration.");
-        return;
-      }
       response.setContentType("text/html");
       PrintWriter out;
       try {
@@ -323,6 +315,8 @@ public final class LogLevel {
       String logName = ServletUtil.getParameter(request, "log");
       String level = ServletUtil.getParameter(request, "level");
 
+      Configuration conf =
+        (Configuration) getServletContext().getAttribute(HttpServer.CONF_CONTEXT_ATTRIBUTE);
       String[] readOnlyLogLevels = conf.getStrings(READONLY_LOGGERS_CONF_KEY);
 
       if (logName != null) {
@@ -332,6 +326,13 @@ public final class LogLevel {
         Logger log = LoggerFactory.getLogger(logName);
         out.println(MARKER + "Log Class: <b>" + log.getClass().getName() + "</b><br />");
         if (level != null) {
+          // Disallow modification of the LogLevel if explicitly set to readonly
+          if (conf.getBoolean("hbase.master.ui.readonly", false)) {
+            sendError(response, HttpServletResponse.SC_FORBIDDEN,
+              "Modification of HBase via the UI is disallowed in configuration.");
+            return;
+          }
+
           if (!isLogLevelChangeAllowed(logName, readOnlyLogLevels)) {
             sendError(response, HttpServletResponse.SC_PRECONDITION_FAILED,
               "Modification of logger " + logName + " is disallowed in configuration.");
