@@ -493,7 +493,7 @@ public class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
         // Check if rowkey filter wants to exclude this row. If so, loop to next.
         // Technically, if we hit limits before on this row, we don't need this call.
         if (filterRowKey(current)) {
-          incrementCountOfRowsFilteredMetric(scannerContext);
+          incrementCountOfRowsFilteredMetric(scannerContext, false);
           // early check, see HBASE-16296
           if (isFilterDoneInternal()) {
             return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
@@ -558,7 +558,8 @@ public class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
         }
 
         if (isEmptyRow || ret == FilterWrapper.FilterRowRetCode.EXCLUDE || filterRow()) {
-          incrementCountOfRowsFilteredMetric(scannerContext);
+          boolean deletedOrTtlExpired = !hasFilterRow && isEmptyRow;
+          incrementCountOfRowsFilteredMetric(scannerContext, deletedOrTtlExpired);
           results.clear();
           boolean moreRows = nextRow(scannerContext, current);
           if (!moreRows) {
@@ -610,7 +611,7 @@ public class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
       // Double check to prevent empty rows from appearing in result. It could be
       // the case when SingleColumnValueExcludeFilter is used.
       if (results.isEmpty()) {
-        incrementCountOfRowsFilteredMetric(scannerContext);
+        incrementCountOfRowsFilteredMetric(scannerContext, false);
         boolean moreRows = nextRow(scannerContext, current);
         if (!moreRows) {
           return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
@@ -635,8 +636,12 @@ public class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
     }
   }
 
-  private void incrementCountOfRowsFilteredMetric(ScannerContext scannerContext) {
+  private void incrementCountOfRowsFilteredMetric(ScannerContext scannerContext,
+    boolean deletedRead) {
     region.filteredReadRequestsCount.increment();
+    if (deletedRead) {
+      region.deletedReadRequestsCount.increment();
+    }
     if (region.getMetrics() != null) {
       region.getMetrics().updateFilteredRecords();
     }
