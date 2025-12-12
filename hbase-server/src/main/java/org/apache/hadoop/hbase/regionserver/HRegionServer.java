@@ -1471,7 +1471,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       this.metricsRegionServer =
         new MetricsRegionServer(metricsRegionServerImpl, conf, metricsTable);
       // Now that we have a metrics source, start the pause monitor
-      this.pauseMonitor = new JvmPauseMonitor(conf, getMetrics().getMetricsSource());
+      this.pauseMonitor = JvmPauseMonitor.getInstance(conf, getMetrics().getMetricsSource());
       pauseMonitor.start();
 
       // There is a rare case where we do NOT want services to start. Check config.
