@@ -39,6 +39,11 @@ public final class CoprocessorConfigurationUtil {
    * Check configuration change by comparing current loaded coprocessors with configuration values.
    * This method is useful when the configuration object has been updated but we need to determine
    * if coprocessor configuration has actually changed compared to what's currently loaded.
+   * <p>
+   * <b>Note:</b> This method only detects changes in the set of coprocessor class names. It does
+   * <b>not</b> detect changes to priority or path for coprocessors that are already loaded with the
+   * same class name. If you need to update the priority or path of an existing coprocessor, you
+   * must restart the region/regionserver/master.
    * @param coprocessorHost  the coprocessor host to check current loaded coprocessors (can be null)
    * @param conf             the configuration to check
    * @param configurationKey the configuration keys to check
@@ -49,6 +54,13 @@ public final class CoprocessorConfigurationUtil {
     Preconditions.checkArgument(configurationKey != null, "Configuration Key(s) must be provided");
     Preconditions.checkArgument(conf != null, "Configuration must be provided");
 
+    if (
+      !conf.getBoolean(CoprocessorHost.COPROCESSORS_ENABLED_CONF_KEY,
+        CoprocessorHost.DEFAULT_COPROCESSORS_ENABLED)
+    ) {
+      return false;
+    }
+
     if (coprocessorHost == null) {
       // If no coprocessor host exists, check if any coprocessors are now configured
       return hasCoprocessorsConfigured(conf, configurationKey);
@@ -58,6 +70,7 @@ public final class CoprocessorConfigurationUtil {
     Set<String> currentlyLoaded = coprocessorHost.getCoprocessorClassNames();
 
     // Get coprocessor class names from configuration
+    // Only class names are compared; priority and path changes are not detected
     Set<String> configuredClasses = new HashSet<>();
     for (String key : configurationKey) {
       String[] classes = conf.getStrings(key);
@@ -81,13 +94,6 @@ public final class CoprocessorConfigurationUtil {
    * Helper method to check if there are any coprocessors configured.
    */
   private static boolean hasCoprocessorsConfigured(Configuration conf, String... configurationKey) {
-    if (
-      !conf.getBoolean(CoprocessorHost.COPROCESSORS_ENABLED_CONF_KEY,
-        CoprocessorHost.DEFAULT_COPROCESSORS_ENABLED)
-    ) {
-      return false;
-    }
-
     for (String key : configurationKey) {
       String[] coprocessors = conf.getStrings(key);
       if (coprocessors != null && coprocessors.length > 0) {
