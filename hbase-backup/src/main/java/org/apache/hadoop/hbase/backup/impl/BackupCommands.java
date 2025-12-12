@@ -17,11 +17,19 @@
  */
 package org.apache.hadoop.hbase.backup.impl;
 
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONF_CONTINUOUS_BACKUP_PITR_WINDOW_DAYS;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONF_CONTINUOUS_BACKUP_WAL_DIR;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONTINUOUS_BACKUP_REPLICATION_PEER;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.DEFAULT_CONTINUOUS_BACKUP_PITR_WINDOW_DAYS;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_BACKUP_LIST_DESC;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_BANDWIDTH;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_BANDWIDTH_DESC;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_DEBUG;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_DEBUG_DESC;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_ENABLE_CONTINUOUS_BACKUP;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_ENABLE_CONTINUOUS_BACKUP_DESC;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_FORCE_DELETE;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_FORCE_DELETE_DESC;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_IGNORECHECKSUM;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_IGNORECHECKSUM_DESC;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_KEEP;
@@ -41,13 +49,26 @@ import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_WORKE
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_WORKERS_DESC;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_YARN_QUEUE_NAME;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_YARN_QUEUE_NAME_DESC;
+import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.ONE_DAY_IN_MILLISECONDS;
+import static org.apache.hadoop.hbase.backup.util.BackupUtils.DATE_FORMAT;
 
 import java.io.IOException;
 import java.net.URI;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.TimeZone;
+import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -60,14 +81,19 @@ import org.apache.hadoop.hbase.backup.BackupRestoreConstants;
 import org.apache.hadoop.hbase.backup.BackupRestoreConstants.BackupCommand;
 import org.apache.hadoop.hbase.backup.BackupType;
 import org.apache.hadoop.hbase.backup.HBackupFileSystem;
+import org.apache.hadoop.hbase.backup.util.BackupFileSystemManager;
 import org.apache.hadoop.hbase.backup.util.BackupSet;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
+import org.apache.hbase.thirdparty.com.google.common.base.Strings;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.HelpFormatter;
@@ -339,14 +365,64 @@ public final class BackupCommands {
 
       boolean ignoreChecksum = cmdline.hasOption(OPTION_IGNORECHECKSUM);
 
+      BackupType backupType = BackupType.valueOf(args[1].toUpperCase());
+      List<TableName> tableNameList = null;
+      if (tables != null) {
+        tableNameList = Lists.newArrayList(BackupUtils.parseTableNames(tables));
+      }
+      boolean continuousBackup = cmdline.hasOption(OPTION_ENABLE_CONTINUOUS_BACKUP);
+      if (continuousBackup && !BackupType.FULL.equals(backupType)) {
+        System.out.println("ERROR: Continuous backup can Only be specified for Full Backup");
+        printUsage();
+        throw new IOException(INCORRECT_USAGE);
+      }
+
+      /*
+       * The `continuousBackup` flag is specified only during the first full backup to initiate
+       * continuous WAL replication. After that, it is redundant because the tables are already set
+       * up for continuous backup. If the `continuousBackup` flag is not explicitly enabled, we need
+       * to determine the backup mode based on the current state of the specified tables: - If all
+       * the specified tables are already part of continuous backup, we treat the request as a
+       * continuous backup request and proceed accordingly (since these tables are already
+       * continuously backed up, no additional setup is needed). - If none of the specified tables
+       * are part of continuous backup, we treat the request as a normal full backup without
+       * continuous backup. - If the request includes a mix of tables—some with continuous backup
+       * enabled and others without—we cannot determine a clear backup strategy. In this case, we
+       * throw an error. If all tables are already in continuous backup mode, we explicitly set the
+       * `continuousBackup` flag to `true` so that the request is processed using the continuous
+       * backup approach rather than the normal full backup flow.
+       */
+      if (!continuousBackup && tableNameList != null && !tableNameList.isEmpty()) {
+        try (BackupSystemTable backupSystemTable = new BackupSystemTable(conn)) {
+          Set<TableName> continuousBackupTableSet =
+            backupSystemTable.getContinuousBackupTableSet().keySet();
+
+          boolean allTablesInContinuousBackup = continuousBackupTableSet.containsAll(tableNameList);
+          boolean noTablesInContinuousBackup =
+            tableNameList.stream().noneMatch(continuousBackupTableSet::contains);
+
+          // Ensure that all tables are either fully in continuous backup or not at all
+          if (!allTablesInContinuousBackup && !noTablesInContinuousBackup) {
+            System.err
+              .println("ERROR: Some tables are already in continuous backup, while others are not. "
+                + "Cannot mix both in a single request.");
+            printUsage();
+            throw new IOException(INCORRECT_USAGE);
+          }
+
+          // If all tables are already in continuous backup, enable the flag
+          if (allTablesInContinuousBackup) {
+            continuousBackup = true;
+          }
+        }
+      }
+
       try (BackupAdminImpl admin = new BackupAdminImpl(conn)) {
         BackupRequest.Builder builder = new BackupRequest.Builder();
-        BackupRequest request = builder.withBackupType(BackupType.valueOf(args[1].toUpperCase()))
-          .withTableList(
-            tables != null ? Lists.newArrayList(BackupUtils.parseTableNames(tables)) : null)
+        BackupRequest request = builder.withBackupType(backupType).withTableList(tableNameList)
           .withTargetRootDir(targetBackupDir).withTotalTasks(workers)
           .withBandwidthPerTasks(bandwidth).withNoChecksumVerify(ignoreChecksum)
-          .withBackupSetName(setName).build();
+          .withBackupSetName(setName).withContinuousBackupEnabled(continuousBackup).build();
         String backupId = admin.backupTables(request);
         System.out.println("Backup session " + backupId + " finished. Status: SUCCESS");
       } catch (IOException e) {
@@ -400,6 +476,8 @@ public final class BackupCommands {
       options.addOption(OPTION_YARN_QUEUE_NAME, true, OPTION_YARN_QUEUE_NAME_DESC);
       options.addOption(OPTION_DEBUG, false, OPTION_DEBUG_DESC);
       options.addOption(OPTION_IGNORECHECKSUM, false, OPTION_IGNORECHECKSUM_DESC);
+      options.addOption(OPTION_ENABLE_CONTINUOUS_BACKUP, false,
+        OPTION_ENABLE_CONTINUOUS_BACKUP_DESC);
 
       HelpFormatter helpFormatter = new HelpFormatter();
       helpFormatter.setLeftPadding(2);
@@ -577,15 +655,20 @@ public final class BackupCommands {
         printUsage();
         throw new IOException(INCORRECT_USAGE);
       }
+
+      boolean isForceDelete = cmdline.hasOption(OPTION_FORCE_DELETE);
       super.execute();
       if (cmdline.hasOption(OPTION_KEEP)) {
-        executeDeleteOlderThan(cmdline);
+        executeDeleteOlderThan(cmdline, isForceDelete);
       } else if (cmdline.hasOption(OPTION_LIST)) {
-        executeDeleteListOfBackups(cmdline);
+        executeDeleteListOfBackups(cmdline, isForceDelete);
       }
+
+      cleanUpUnusedBackupWALs();
     }
 
-    private void executeDeleteOlderThan(CommandLine cmdline) throws IOException {
+    private void executeDeleteOlderThan(CommandLine cmdline, boolean isForceDelete)
+      throws IOException {
       String value = cmdline.getOptionValue(OPTION_KEEP);
       int days = 0;
       try {
@@ -607,6 +690,7 @@ public final class BackupCommands {
         BackupAdminImpl admin = new BackupAdminImpl(conn)) {
         history = sysTable.getBackupHistory(-1, dateFilter);
         String[] backupIds = convertToBackupIds(history);
+        validatePITRBackupDeletion(backupIds, isForceDelete);
         int deleted = admin.deleteBackups(backupIds);
         System.out.println("Deleted " + deleted + " backups. Total older than " + days + " days: "
           + backupIds.length);
@@ -625,10 +709,11 @@ public final class BackupCommands {
       return ids;
     }
 
-    private void executeDeleteListOfBackups(CommandLine cmdline) throws IOException {
+    private void executeDeleteListOfBackups(CommandLine cmdline, boolean isForceDelete)
+      throws IOException {
       String value = cmdline.getOptionValue(OPTION_LIST);
       String[] backupIds = value.split(",");
-
+      validatePITRBackupDeletion(backupIds, isForceDelete);
       try (BackupAdminImpl admin = new BackupAdminImpl(conn)) {
         int deleted = admin.deleteBackups(backupIds);
         System.out.println("Deleted " + deleted + " backups. Total requested: " + backupIds.length);
@@ -640,12 +725,378 @@ public final class BackupCommands {
 
     }
 
+    /**
+     * Validates whether the specified backups can be deleted while preserving Point-In-Time
+     * Recovery (PITR) capabilities. If a backup is the only remaining full backup enabling PITR for
+     * certain tables, deletion is prevented unless forced.
+     * @param backupIds     Array of backup IDs to validate.
+     * @param isForceDelete Flag indicating whether deletion should proceed regardless of PITR
+     *                      constraints.
+     * @throws IOException If a backup is essential for PITR and force deletion is not enabled.
+     */
+    private void validatePITRBackupDeletion(String[] backupIds, boolean isForceDelete)
+      throws IOException {
+      if (!isForceDelete) {
+        for (String backupId : backupIds) {
+          List<TableName> affectedTables = getTablesDependentOnBackupForPITR(backupId);
+          if (!affectedTables.isEmpty()) {
+            String errMsg = String.format(
+              "Backup %s is the only FULL backup remaining that enables PITR for tables: %s. "
+                + "Use the force option to delete it anyway.",
+              backupId, affectedTables);
+            System.err.println(errMsg);
+            throw new IOException(errMsg);
+          }
+        }
+      }
+    }
+
+    /**
+     * Identifies tables that rely on the specified backup for PITR (Point-In-Time Recovery). A
+     * table is considered dependent on the backup if it does not have any other valid full backups
+     * that can cover the PITR window enabled by the specified backup.
+     * @param backupId The ID of the backup being evaluated for PITR coverage.
+     * @return A list of tables that are dependent on the specified backup for PITR recovery.
+     * @throws IOException If there is an error retrieving the backup metadata or backup system
+     *                     table.
+     */
+    private List<TableName> getTablesDependentOnBackupForPITR(String backupId) throws IOException {
+      List<TableName> dependentTables = new ArrayList<>();
+
+      try (final BackupSystemTable backupSystemTable = new BackupSystemTable(conn)) {
+        // Fetch the target backup's info using the backup ID
+        BackupInfo targetBackup = backupSystemTable.readBackupInfo(backupId);
+        if (targetBackup == null) {
+          throw new IOException("Backup info not found for backupId: " + backupId);
+        }
+
+        // Only full backups are mandatory for PITR
+        if (!BackupType.FULL.equals(targetBackup.getType())) {
+          return List.of();
+        }
+
+        // Retrieve the tables with continuous backup enabled along with their start times
+        Map<TableName, Long> continuousBackupStartTimes =
+          backupSystemTable.getContinuousBackupTableSet();
+
+        // Calculate the PITR window by fetching configuration and current time
+        long pitrWindowDays = getConf().getLong(CONF_CONTINUOUS_BACKUP_PITR_WINDOW_DAYS,
+          DEFAULT_CONTINUOUS_BACKUP_PITR_WINDOW_DAYS);
+        long currentTime = EnvironmentEdgeManager.getDelegate().currentTime();
+        final long maxAllowedPITRTime = currentTime - TimeUnit.DAYS.toMillis(pitrWindowDays);
+
+        // Check each table associated with the target backup
+        for (TableName table : targetBackup.getTableNames()) {
+          // Skip tables without continuous backup enabled
+          if (!continuousBackupStartTimes.containsKey(table)) {
+            continue;
+          }
+
+          // Calculate the PITR window this backup covers for the table
+          Optional<Pair<Long, Long>> coveredPitrWindow = getCoveredPitrWindowForTable(targetBackup,
+            continuousBackupStartTimes.get(table), maxAllowedPITRTime, currentTime);
+
+          // If this backup does not cover a valid PITR window for the table, skip
+          if (coveredPitrWindow.isEmpty()) {
+            continue;
+          }
+
+          // Check if there is any other valid backup that can cover the PITR window
+          List<BackupInfo> allBackups = backupSystemTable.getBackupInfos(BackupState.COMPLETE);
+          boolean hasAnotherValidBackup =
+            canAnyOtherBackupCover(allBackups, targetBackup, table, coveredPitrWindow.get(),
+              continuousBackupStartTimes.get(table), maxAllowedPITRTime, currentTime);
+
+          // If no other valid backup exists, add the table to the dependent list
+          if (!hasAnotherValidBackup) {
+            dependentTables.add(table);
+          }
+        }
+      }
+
+      return dependentTables;
+    }
+
+    /**
+     * Calculates the PITR (Point-In-Time Recovery) window that the given backup enables for a
+     * table.
+     * @param backupInfo                Metadata of the backup being evaluated.
+     * @param continuousBackupStartTime When continuous backups started for the table.
+     * @param maxAllowedPITRTime        The earliest timestamp from which PITR is supported in the
+     *                                  cluster.
+     * @param currentTime               Current time.
+     * @return Optional PITR window as a pair (start, end), or empty if backup is not useful for
+     *         PITR.
+     */
+    private Optional<Pair<Long, Long>> getCoveredPitrWindowForTable(BackupInfo backupInfo,
+      long continuousBackupStartTime, long maxAllowedPITRTime, long currentTime) {
+
+      long backupStartTs = backupInfo.getStartTs();
+      long backupEndTs = backupInfo.getCompleteTs();
+      long effectiveStart = Math.max(continuousBackupStartTime, maxAllowedPITRTime);
+
+      if (backupStartTs < continuousBackupStartTime) {
+        return Optional.empty();
+      }
+
+      return Optional.of(Pair.newPair(Math.max(backupEndTs, effectiveStart), currentTime));
+    }
+
+    /**
+     * Checks if any backup (excluding the current backup) can cover the specified PITR window for
+     * the given table. A backup can cover the PITR window if it fully encompasses the target time
+     * range specified.
+     * @param allBackups                List of all backups available.
+     * @param currentBackup             The current backup that should not be considered for
+     *                                  coverage.
+     * @param table                     The table for which we need to check backup coverage.
+     * @param targetWindow              A pair representing the target PITR window (start and end
+     *                                  times).
+     * @param continuousBackupStartTime When continuous backups started for the table.
+     * @param maxAllowedPITRTime        The earliest timestamp from which PITR is supported in the
+     *                                  cluster.
+     * @param currentTime               Current time.
+     * @return {@code true} if any backup (excluding the current one) fully covers the target PITR
+     *         window; {@code false} otherwise.
+     */
+    private boolean canAnyOtherBackupCover(List<BackupInfo> allBackups, BackupInfo currentBackup,
+      TableName table, Pair<Long, Long> targetWindow, long continuousBackupStartTime,
+      long maxAllowedPITRTime, long currentTime) {
+
+      long targetStart = targetWindow.getFirst();
+      long targetEnd = targetWindow.getSecond();
+
+      // Iterate through all backups (including the current one)
+      for (BackupInfo backup : allBackups) {
+        // Skip if the backup is not full or doesn't contain the table
+        if (!BackupType.FULL.equals(backup.getType())) continue;
+        if (!backup.getTableNames().contains(table)) continue;
+
+        // Skip the current backup itself
+        if (backup.equals(currentBackup)) continue;
+
+        // Get the covered PITR window for this backup
+        Optional<Pair<Long, Long>> coveredWindow = getCoveredPitrWindowForTable(backup,
+          continuousBackupStartTime, maxAllowedPITRTime, currentTime);
+
+        if (coveredWindow.isPresent()) {
+          Pair<Long, Long> covered = coveredWindow.get();
+
+          // The backup must fully cover the target window
+          if (covered.getFirst() <= targetStart && covered.getSecond() >= targetEnd) {
+            return true;
+          }
+        }
+      }
+
+      return false;
+    }
+
+    /**
+     * Cleans up Write-Ahead Logs (WALs) that are no longer required for PITR after a successful
+     * backup deletion. If no full backups are present, all WALs are deleted, tables are removed
+     * from continuous backup metadata, and the associated replication peer is disabled.
+     */
+    private void cleanUpUnusedBackupWALs() throws IOException {
+      Configuration conf = getConf() != null ? getConf() : HBaseConfiguration.create();
+      String backupWalDir = conf.get(CONF_CONTINUOUS_BACKUP_WAL_DIR);
+
+      if (Strings.isNullOrEmpty(backupWalDir)) {
+        System.out.println("No WAL directory specified for continuous backup. Skipping cleanup.");
+        return;
+      }
+
+      try (Admin admin = conn.getAdmin();
+        BackupSystemTable sysTable = new BackupSystemTable(conn)) {
+        // Get list of tables under continuous backup
+        Map<TableName, Long> continuousBackupTables = sysTable.getContinuousBackupTableSet();
+        if (continuousBackupTables.isEmpty()) {
+          System.out.println("No continuous backups configured. Skipping WAL cleanup.");
+          return;
+        }
+
+        // Find the earliest timestamp after which WALs are still needed
+        long cutoffTimestamp = determineWALCleanupCutoffTime(sysTable);
+        if (cutoffTimestamp == 0) {
+          // No full backup exists. PITR cannot function without a base full backup.
+          // Clean up all WALs, remove tables from backup metadata, and disable the replication
+          // peer.
+          System.out
+            .println("No full backups found. Cleaning up all WALs and disabling replication peer.");
+
+          disableContinuousBackupReplicationPeer(admin);
+          removeAllTablesFromContinuousBackup(sysTable);
+          deleteAllBackupWALFiles(conf, backupWalDir);
+          return;
+        }
+
+        // Update metadata before actual cleanup to avoid inconsistencies
+        updateBackupTableStartTimes(sysTable, cutoffTimestamp);
+
+        // Delete WAL files older than cutoff timestamp
+        deleteOldWALFiles(conf, backupWalDir, cutoffTimestamp);
+
+      }
+    }
+
+    /**
+     * Determines the cutoff time for cleaning WAL files.
+     * @param sysTable Backup system table
+     * @return cutoff timestamp or 0 if not found
+     */
+    long determineWALCleanupCutoffTime(BackupSystemTable sysTable) throws IOException {
+      List<BackupInfo> backupInfos = sysTable.getBackupInfos(BackupState.COMPLETE);
+      Collections.reverse(backupInfos); // Start from oldest
+
+      for (BackupInfo backupInfo : backupInfos) {
+        if (BackupType.FULL.equals(backupInfo.getType())) {
+          return backupInfo.getStartTs();
+        }
+      }
+      return 0;
+    }
+
+    private void disableContinuousBackupReplicationPeer(Admin admin) throws IOException {
+      for (ReplicationPeerDescription peer : admin.listReplicationPeers()) {
+        if (peer.getPeerId().equals(CONTINUOUS_BACKUP_REPLICATION_PEER) && peer.isEnabled()) {
+          admin.disableReplicationPeer(CONTINUOUS_BACKUP_REPLICATION_PEER);
+          System.out.println("Disabled replication peer: " + CONTINUOUS_BACKUP_REPLICATION_PEER);
+          break;
+        }
+      }
+    }
+
+    /**
+     * Updates the start time for continuous backups if older than cutoff timestamp.
+     * @param sysTable        Backup system table
+     * @param cutoffTimestamp Timestamp before which WALs are no longer needed
+     */
+    void updateBackupTableStartTimes(BackupSystemTable sysTable, long cutoffTimestamp)
+      throws IOException {
+
+      Map<TableName, Long> backupTables = sysTable.getContinuousBackupTableSet();
+      Set<TableName> tablesToUpdate = new HashSet<>();
+
+      for (Map.Entry<TableName, Long> entry : backupTables.entrySet()) {
+        if (entry.getValue() < cutoffTimestamp) {
+          tablesToUpdate.add(entry.getKey());
+        }
+      }
+
+      if (!tablesToUpdate.isEmpty()) {
+        sysTable.updateContinuousBackupTableSet(tablesToUpdate, cutoffTimestamp);
+      }
+    }
+
+    private void removeAllTablesFromContinuousBackup(BackupSystemTable sysTable)
+      throws IOException {
+      Map<TableName, Long> allTables = sysTable.getContinuousBackupTableSet();
+      if (!allTables.isEmpty()) {
+        sysTable.removeContinuousBackupTableSet(allTables.keySet());
+        System.out.println("Removed all tables from continuous backup metadata.");
+      }
+    }
+
+    private void deleteAllBackupWALFiles(Configuration conf, String backupWalDir)
+      throws IOException {
+      try {
+        BackupFileSystemManager manager =
+          new BackupFileSystemManager(CONTINUOUS_BACKUP_REPLICATION_PEER, conf, backupWalDir);
+        FileSystem fs = manager.getBackupFs();
+        Path walDir = manager.getWalsDir();
+        Path bulkloadDir = manager.getBulkLoadFilesDir();
+
+        // Delete contents under WAL directory
+        if (fs.exists(walDir)) {
+          FileStatus[] walContents = fs.listStatus(walDir);
+          for (FileStatus item : walContents) {
+            fs.delete(item.getPath(), true); // recursive delete of each child
+          }
+          System.out.println("Deleted all contents under WAL directory: " + walDir);
+        }
+
+        // Delete contents under bulk load directory
+        if (fs.exists(bulkloadDir)) {
+          FileStatus[] bulkContents = fs.listStatus(bulkloadDir);
+          for (FileStatus item : bulkContents) {
+            fs.delete(item.getPath(), true); // recursive delete of each child
+          }
+          System.out.println("Deleted all contents under Bulk Load directory: " + bulkloadDir);
+        }
+
+      } catch (IOException e) {
+        System.out.println("WARNING: Failed to delete contents under backup directories: "
+          + backupWalDir + ". Error: " + e.getMessage());
+        throw e;
+      }
+    }
+
+    /**
+     * Cleans up old WAL and bulk-loaded files based on the determined cutoff timestamp.
+     */
+    void deleteOldWALFiles(Configuration conf, String backupWalDir, long cutoffTime)
+      throws IOException {
+      System.out.println("Starting WAL cleanup in backup directory: " + backupWalDir
+        + " with cutoff time: " + cutoffTime);
+
+      BackupFileSystemManager manager =
+        new BackupFileSystemManager(CONTINUOUS_BACKUP_REPLICATION_PEER, conf, backupWalDir);
+      FileSystem fs = manager.getBackupFs();
+      Path walDir = manager.getWalsDir();
+      Path bulkloadDir = manager.getBulkLoadFilesDir();
+
+      SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
+      dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+
+      System.out.println("Listing directories under: " + walDir);
+
+      FileStatus[] directories = fs.listStatus(walDir);
+
+      for (FileStatus dirStatus : directories) {
+        if (!dirStatus.isDirectory()) {
+          continue; // Skip files, we only want directories
+        }
+
+        Path dirPath = dirStatus.getPath();
+        String dirName = dirPath.getName();
+
+        try {
+          long dayStart = parseDayDirectory(dirName, dateFormat);
+          System.out
+            .println("Checking WAL directory: " + dirName + " (Start Time: " + dayStart + ")");
+
+          // If WAL files of that day are older than cutoff time, delete them
+          if (dayStart + ONE_DAY_IN_MILLISECONDS - 1 < cutoffTime) {
+            System.out.println("Deleting outdated WAL directory: " + dirPath);
+            fs.delete(dirPath, true);
+            Path bulkloadPath = new Path(bulkloadDir, dirName);
+            System.out.println("Deleting corresponding bulk-load directory: " + bulkloadPath);
+            fs.delete(bulkloadPath, true);
+          }
+        } catch (ParseException e) {
+          System.out.println("WARNING: Failed to parse directory name '" + dirName
+            + "'. Skipping. Error: " + e.getMessage());
+        } catch (IOException e) {
+          System.err.println("WARNING: Failed to delete directory '" + dirPath
+            + "'. Skipping. Error: " + e.getMessage());
+        }
+      }
+
+      System.out.println("Completed WAL cleanup for backup directory: " + backupWalDir);
+    }
+
+    private long parseDayDirectory(String dayDir, SimpleDateFormat dateFormat)
+      throws ParseException {
+      return dateFormat.parse(dayDir).getTime();
+    }
+
     @Override
     protected void printUsage() {
       System.out.println(DELETE_CMD_USAGE);
       Options options = new Options();
       options.addOption(OPTION_KEEP, true, OPTION_KEEP_DESC);
       options.addOption(OPTION_LIST, true, OPTION_BACKUP_LIST_DESC);
+      options.addOption(OPTION_FORCE_DELETE, false, OPTION_FORCE_DELETE_DESC);
 
       HelpFormatter helpFormatter = new HelpFormatter();
       helpFormatter.setLeftPadding(2);

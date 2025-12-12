@@ -52,6 +52,13 @@ public interface BackupAdmin extends Closeable {
   void restore(RestoreRequest request) throws IOException;
 
   /**
+   * Restore the tables to specific time
+   * @param request Point in Time restore request
+   * @throws IOException exception
+   */
+  void pointInTimeRestore(PointInTimeRestoreRequest request) throws IOException;
+
+  /**
    * Describe backup image command
    * @param backupId backup id
    * @return backup info
