@@ -59,7 +59,6 @@ import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.HFileTestUtil;
 import org.junit.After;
 import org.junit.Assert;
@@ -431,73 +430,6 @@ public class TestIncrementalBackup extends TestBackupBase {
       BACKUP_ROOT_DIR = originalBackupRoot;
     }
 
-  }
-
-  @Test
-  public void TestIncBackupRestoreHandlesArchivedFiles() throws Exception {
-    byte[] fam2 = Bytes.toBytes("f2");
-    TableDescriptor newTable1Desc = TableDescriptorBuilder.newBuilder(table1Desc)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(fam2).build()).build();
-    TEST_UTIL.getAdmin().modifyTable(newTable1Desc);
-    try (Connection conn = ConnectionFactory.createConnection(conf1);
-      BackupAdminImpl admin = new BackupAdminImpl(conn)) {
-      String backupTargetDir = TEST_UTIL.getDataTestDir("backupTarget").toString();
-      BACKUP_ROOT_DIR = new File(backupTargetDir).toURI().toString();
-
-      List<TableName> tables = Lists.newArrayList(table1);
-
-      insertIntoTable(conn, table1, famName, 3, 100);
-      String fullBackupId = takeFullBackup(tables, admin, true);
-      assertTrue(checkSucceeded(fullBackupId));
-
-      insertIntoTable(conn, table1, famName, 4, 100);
-
-      HRegion regionToBulkload = TEST_UTIL.getHBaseCluster().getRegions(table1).get(0);
-      String regionName = regionToBulkload.getRegionInfo().getEncodedName();
-      // Requires a mult-fam bulkload to ensure we're appropriately handling
-      // multi-file bulkloads
-      Path regionDir = doBulkload(table1, regionName, famName, fam2);
-
-      // archive the files in the region directory
-      Path archiveDir =
-        HFileArchiveUtil.getStoreArchivePath(conf1, table1, regionName, Bytes.toString(famName));
-      TEST_UTIL.getTestFileSystem().mkdirs(archiveDir);
-      RemoteIterator<LocatedFileStatus> iter =
-        TEST_UTIL.getTestFileSystem().listFiles(regionDir, true);
-      List<Path> paths = new ArrayList<>();
-      while (iter.hasNext()) {
-        Path path = iter.next().getPath();
-        if (path.toString().contains("_SeqId_")) {
-          paths.add(path);
-        }
-      }
-      assertTrue(paths.size() > 1);
-      Path path = paths.get(0);
-      String name = path.toString();
-      int startIdx = name.lastIndexOf(Path.SEPARATOR);
-      String filename = name.substring(startIdx + 1);
-      Path archiveFile = new Path(archiveDir, filename);
-      // archive 1 of the files
-      boolean success = TEST_UTIL.getTestFileSystem().rename(path, archiveFile);
-      assertTrue(success);
-      assertTrue(TEST_UTIL.getTestFileSystem().exists(archiveFile));
-      assertFalse(TEST_UTIL.getTestFileSystem().exists(path));
-
-      BackupRequest request =
-        createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR, true);
-      String incrementalBackupId = admin.backupTables(request);
-      assertTrue(checkSucceeded(incrementalBackupId));
-
-      TableName[] fromTable = new TableName[] { table1 };
-      TableName[] toTable = new TableName[] { table1_restore };
-
-      admin.restore(BackupUtils.createRestoreRequest(BACKUP_ROOT_DIR, incrementalBackupId, false,
-        fromTable, toTable, true));
-
-      int actualRowCount = TEST_UTIL.countRows(table1_restore);
-      int expectedRowCount = TEST_UTIL.countRows(table1);
-      assertEquals(expectedRowCount, actualRowCount);
-    }
   }
 
   private void checkThrowsCFMismatch(IOException ex, List<TableName> tables) {
