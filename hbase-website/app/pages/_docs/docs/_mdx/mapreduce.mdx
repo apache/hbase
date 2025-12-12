@@ -43,12 +43,12 @@ MapReduce job configuration (See the source at `TableMapReduceUtil#addDependency
 The following example runs the bundled HBase [RowCounter](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/mapreduce/RowCounter.html) MapReduce job against a table named `usertable`.
 It sets into `HADOOP_CLASSPATH` the jars hbase needs to run in an MapReduce context (including configuration files such as hbase-site.xml).
 Be sure to use the correct version of the HBase JAR for your system; replace the VERSION string in the below command line w/ the version of
-your local hbase install.  The backticks (``` symbols) cause the shell to execute the sub-commands, setting the output of `hbase classpath` into `HADOOP_CLASSPATH`.
+your local hbase install. The backticks (\`\`\`) cause the shell to execute the sub-commands, setting the output of `hbase classpath` into `HADOOP_CLASSPATH`.
 This example assumes you use a BASH-compatible shell.
 
 ```bash
 $ HADOOP_CLASSPATH=`${HBASE_HOME}/bin/hbase classpath` \
-  $\{HADOOP_HOME\}/bin/hadoop jar $\{HBASE_HOME\}/lib/hbase-mapreduce-VERSION.jar \
+  ${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/lib/hbase-mapreduce-VERSION.jar \
   org.apache.hadoop.hbase.mapreduce.RowCounter usertable
 ```
 
@@ -59,7 +59,7 @@ For example, presuming your install is hbase `2.0.0-SNAPSHOT`:
 
 ```bash
 $ HADOOP_CLASSPATH=`${HBASE_HOME}/bin/hbase classpath` \
-  $\{HADOOP_HOME\}/bin/hadoop jar $\{HBASE_HOME\}/lib/hbase-mapreduce-2.0.0-SNAPSHOT.jar
+  ${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/lib/hbase-mapreduce-2.0.0-SNAPSHOT.jar
 An example program must be given as the first argument.
 Valid program names are:
   CellCounter: Count cells in HBase table.
@@ -78,7 +78,7 @@ You can use the above listed shortnames for mapreduce jobs as in the below re-ru
 
 ```bash
 $ HADOOP_CLASSPATH=`${HBASE_HOME}/bin/hbase classpath` \
-  $\{HADOOP_HOME\}/bin/hadoop jar $\{HBASE_HOME\}/lib/hbase-mapreduce-2.0.0-SNAPSHOT.jar \
+  ${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/lib/hbase-mapreduce-2.0.0-SNAPSHOT.jar \
   rowcounter usertable
 ```
 
@@ -91,21 +91,21 @@ you run `hbase mapredcp`.
 For jobs that do not package their dependencies or call `TableMapReduceUtil#addDependencyJars`, the following command structure is necessary:
 
 ```bash
-$ HADOOP_CLASSPATH=`${HBASE_HOME}/bin/hbase mapredcp`:$\{HBASE_HOME\}/conf hadoop jar MyApp.jar MyJobMainClass -libjars $($\{HBASE_HOME\}/bin/hbase mapredcp | tr ':' ',') ...
+$ HADOOP_CLASSPATH=`${HBASE_HOME}/bin/hbase mapredcp`:${HBASE_HOME}/conf hadoop jar MyApp.jar MyJobMainClass -libjars $(${HBASE_HOME}/bin/hbase mapredcp | tr ':' ',') ...
 ```
 
 <Callout type="info">
 The example may not work if you are running HBase from its build directory rather than an installed location.
 You may see an error like the following:
 
-```
+```text
 java.lang.RuntimeException: java.lang.ClassNotFoundException: org.apache.hadoop.hbase.mapreduce.RowCounter$RowCounterMapper
 ```
 
 If this occurs, try modifying the command as follows, so that it uses the HBase JARs from the _target/_ directory within the build environment.
 
 ```bash
-$ HADOOP_CLASSPATH=$\{HBASE_BUILD_HOME\}/hbase-mapreduce/target/hbase-mapreduce-VERSION-SNAPSHOT.jar:`${HBASE_BUILD_HOME}/bin/hbase classpath` $\{HADOOP_HOME\}/bin/hadoop jar $\{HBASE_BUILD_HOME\}/hbase-mapreduce/target/hbase-mapreduce-VERSION-SNAPSHOT.jar rowcounter usertable
+$ HADOOP_CLASSPATH=${HBASE_BUILD_HOME}/hbase-mapreduce/target/hbase-mapreduce-VERSION-SNAPSHOT.jar:`${HBASE_BUILD_HOME}/bin/hbase classpath` ${HADOOP_HOME}/bin/hadoop jar ${HBASE_BUILD_HOME}/hbase-mapreduce/target/hbase-mapreduce-VERSION-SNAPSHOT.jar rowcounter usertable
 ```
 </Callout>
 
@@ -113,9 +113,8 @@ $ HADOOP_CLASSPATH=$\{HBASE_BUILD_HOME\}/hbase-mapreduce/target/hbase-mapreduce-
 Some MapReduce jobs that use HBase fail to launch.
 The symptom is an exception similar to the following:
 
-```
+```text
 Exception in thread "main" java.lang.IllegalAccessError: class
-```
 com.google.protobuf.ZeroCopyLiteralByteString cannot access its superclass
 com.google.protobuf.LiteralByteString
 at java.lang.ClassLoader.defineClass1(Native Method)
@@ -141,7 +140,6 @@ at
 org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil.initTableMapperJob(TableMapReduceUtil.java:270)
 at
 org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil.initTableMapperJob(TableMapReduceUtil.java:100)
-```
 ...
 ```
 
@@ -150,7 +148,7 @@ This is caused by an optimization introduced in [HBASE-9867](https://issues.apac
 This affects both jobs using the `-libjars` option and "fat jar," those which package their runtime dependencies in a nested `lib` folder.
 
 In order to satisfy the new classloader requirements, `hbase-protocol.jar` must be included in Hadoop's classpath.
-See [HBase, MapReduce, and the CLASSPATH](#hbasemapredceclasspath) for current recommendations for resolving classpath errors.
+See [HBase, MapReduce, and the CLASSPATH](#hbase-mapreduce-and-the-classpath) for current recommendations for resolving classpath errors.
 The following is included for historical purposes.
 
 This can be resolved system-wide by including a reference to the `hbase-protocol.jar` in Hadoop's lib directory, via a symlink or by copying the jar into the new location.
@@ -198,7 +196,7 @@ The HBase JAR also serves as a Driver for some bundled MapReduce jobs.
 To learn about the bundled MapReduce jobs, run the following command.
 
 ```bash
-$ $\{HADOOP_HOME\}/bin/hadoop jar $\{HBASE_HOME\}/hbase-mapreduce-VERSION.jar
+$ ${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/hbase-mapreduce-VERSION.jar
 An example program must be given as the first argument.
 Valid program names are:
   copytable: Export a table from local cluster to peer cluster
@@ -213,7 +211,7 @@ Each of the valid program names are bundled MapReduce jobs.
 To run one of the jobs, model your command after the following example.
 
 ```bash
-$ $\{HADOOP_HOME\}/bin/hadoop jar $\{HBASE_HOME\}/hbase-mapreduce-VERSION.jar rowcounter myTable
+$ ${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/hbase-mapreduce-VERSION.jar rowcounter myTable
 ```
 
 ## HBase as a MapReduce Job Data Source and Data Sink
@@ -241,7 +239,7 @@ Otherwise use the default partitioner.
 ## Writing HFiles Directly During Bulk Import
 
 If you are importing into a new table, you can bypass the HBase API and write your content directly to the filesystem, formatted into HBase data files (HFiles). Your import will run faster, perhaps an order of magnitude faster.
-For more on how this mechanism works, see [Bulk Load](#archbulkload).
+For more on how this mechanism works, see [Bulk Load](/docs/architecture#bulk-load).
 
 ## RowCounter Example
 
@@ -256,7 +254,7 @@ This will invoke the HBase MapReduce Driver class.
 Select `rowcounter` from the choice of jobs offered.
 This will print rowcounter usage advice to standard output.
 Specify the tablename, column to count, and output directory.
-If you have classpath errors, see [HBase, MapReduce, and the CLASSPATH](#hbasemapredceclasspath).
+If you have classpath errors, see [HBase, MapReduce, and the CLASSPATH](#hbase-mapreduce-and-the-classpath).
 
 ## Map-Task Splitting
 
@@ -299,20 +297,20 @@ TableMapReduceUtil.initTableMapperJob(
 job.setOutputFormatClass(NullOutputFormat.class);   // because we aren't emitting anything from mapper
 
 boolean b = job.waitForCompletion(true);
-if (!b) \{
+if (!b) {
   throw new IOException("error with job!");
-\}
+}
 ```
 
 ...and the mapper instance would extend [TableMapper](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/mapreduce/TableMapper.html)...
 
 ```java
-public static class MyMapper extends TableMapper<Text, Text> \{
+public static class MyMapper extends TableMapper<Text, Text> {
 
-  public void map(ImmutableBytesWritable row, Result value, Context context) throws InterruptedException, IOException \{
+  public void map(ImmutableBytesWritable row, Result value, Context context) throws InterruptedException, IOException {
 // process data for the row from the Result instance.
-   \}
-\}
+   }
+}
 ```
 
 ### HBase MapReduce Read/Write Example
@@ -344,9 +342,9 @@ TableMapReduceUtil.initTableReducerJob(
 job.setNumReduceTasks(0);
 
 boolean b = job.waitForCompletion(true);
-if (!b) \{
+if (!b) {
 throw new IOException("error with job!");
-\}
+}
 ```
 
 An explanation is required of what `TableMapReduceUtil` is doing, especially with the reducer. [TableOutputFormat](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/mapreduce/TableOutputFormat.html) is being used as the outputFormat class, and several parameters are being set on the config (e.g., `TableOutputFormat.OUTPUT_TABLE`), as well as setting the reducer output key to `ImmutableBytesWritable` and reducer value to `Writable`.
@@ -356,21 +354,21 @@ The following is the example mapper, which will create a `Put` and matching the 
 Note: this is what the CopyTable utility does.
 
 ```java
-public static class MyMapper extends TableMapper<ImmutableBytesWritable, Put>  \{
+public static class MyMapper extends TableMapper<ImmutableBytesWritable, Put>  {
 
-  public void map(ImmutableBytesWritable row, Result value, Context context) throws IOException, InterruptedException \{
+  public void map(ImmutableBytesWritable row, Result value, Context context) throws IOException, InterruptedException {
 // this example is just copying the data from the source table...
   context.write(row, resultToPut(row,value));
-\}
+}
 
-private static Put resultToPut(ImmutableBytesWritable key, Result result) throws IOException \{
+private static Put resultToPut(ImmutableBytesWritable key, Result result) throws IOException {
   Put put = new Put(key.get());
-  for (Cell cell : result.listCells()) \{
+  for (Cell cell : result.listCells()) {
     put.add(cell);
-  \}
+  }
   return put;
-\}
-\}
+}
+}
 ```
 
 There isn't actually a reducer step, so `TableOutputFormat` takes care of sending the `Put` to the target table.
@@ -410,48 +408,48 @@ TableMapReduceUtil.initTableReducerJob(
 job.setNumReduceTasks(1);   // at least one, adjust as required
 
 boolean b = job.waitForCompletion(true);
-if (!b) \{
+if (!b) {
   throw new IOException("error with job!");
-\}
+}
 ```
 
 In this example mapper a column with a String-value is chosen as the value to summarize upon.
 This value is used as the key to emit from the mapper, and an `IntWritable` represents an instance counter.
 
 ```java
-public static class MyMapper extends TableMapper<Text, IntWritable>  \{
+public static class MyMapper extends TableMapper<Text, IntWritable>  {
   public static final byte[] CF = "cf".getBytes();
   public static final byte[] ATTR1 = "attr1".getBytes();
 
   private final IntWritable ONE = new IntWritable(1);
   private Text text = new Text();
 
-  public void map(ImmutableBytesWritable row, Result value, Context context) throws IOException, InterruptedException \{
+  public void map(ImmutableBytesWritable row, Result value, Context context) throws IOException, InterruptedException {
 String val = new String(value.getValue(CF, ATTR1));
 text.set(val);     // we can only emit Writables...
 context.write(text, ONE);
-  \}
-\}
+  }
+}
 ```
 
 In the reducer, the "ones" are counted (just like any other MR example that does this), and then emits a `Put`.
 
 ```java
-public static class MyTableReducer extends TableReducer<Text, IntWritable, ImmutableBytesWritable>  \{
+public static class MyTableReducer extends TableReducer<Text, IntWritable, ImmutableBytesWritable>  {
   public static final byte[] CF = "cf".getBytes();
   public static final byte[] COUNT = "count".getBytes();
 
-  public void reduce(Text key, Iterable<IntWritable> values, Context context) throws IOException, InterruptedException \{
+  public void reduce(Text key, Iterable<IntWritable> values, Context context) throws IOException, InterruptedException {
 int i = 0;
-for (IntWritable val : values) \{
+for (IntWritable val : values) {
   i += val.get();
-\}
+}
 Put put = new Put(Bytes.toBytes(key.toString()));
 put.add(CF, COUNT, Bytes.toBytes(i));
 
 context.write(null, put);
-  \}
-\}
+  }
+}
 ```
 
 ### HBase MapReduce Summary to File Example
@@ -482,25 +480,25 @@ job.setNumReduceTasks(1);    // at least one, adjust as required
 FileOutputFormat.setOutputPath(job, new Path("/tmp/mr/mySummaryFile"));  // adjust directories as required
 
 boolean b = job.waitForCompletion(true);
-if (!b) \{
+if (!b) {
   throw new IOException("error with job!");
-\}
+}
 ```
 
 As stated above, the previous Mapper can run unchanged with this example.
 As for the Reducer, it is a "generic" Reducer instead of extending TableMapper and emitting Puts.
 
 ```java
-public static class MyReducer extends Reducer<Text, IntWritable, Text, IntWritable>  \{
+public static class MyReducer extends Reducer<Text, IntWritable, Text, IntWritable>  {
 
-  public void reduce(Text key, Iterable<IntWritable> values, Context context) throws IOException, InterruptedException \{
+  public void reduce(Text key, Iterable<IntWritable> values, Context context) throws IOException, InterruptedException {
 int i = 0;
-for (IntWritable val : values) \{
+for (IntWritable val : values) {
   i += val.get();
-\}
+}
 context.write(key, new IntWritable(i));
-  \}
-\}
+  }
+}
 ```
 
 ### HBase MapReduce Summary to HBase Without Reducer
@@ -526,24 +524,24 @@ Neither is right or wrong, it depends on your use-case.
 Recognize that the more reducers that are assigned to the job, the more simultaneous connections to the RDBMS will be created - this will scale, but only to a point.
 
 ```java
-public static class MyRdbmsReducer extends Reducer<Text, IntWritable, Text, IntWritable>  \{
+public static class MyRdbmsReducer extends Reducer<Text, IntWritable, Text, IntWritable>  {
 
   private Connection c = null;
 
-  public void setup(Context context) \{
+  public void setup(Context context) {
 // create DB connection...
-  \}
+  }
 
-  public void reduce(Text key, Iterable<IntWritable> values, Context context) throws IOException, InterruptedException \{
+  public void reduce(Text key, Iterable<IntWritable> values, Context context) throws IOException, InterruptedException {
 // do summarization
 // in this example the keys are Text, but this is just an example
-  \}
+  }
 
-  public void cleanup(Context context) \{
+  public void cleanup(Context context) {
 // close db connection
-  \}
+  }
 
-\}
+}
 ```
 
 In the end, the summary results are written to your RDBMS table/s.
@@ -553,19 +551,19 @@ In the end, the summary results are written to your RDBMS table/s.
 Although the framework currently allows one HBase table as input to a MapReduce job, other HBase tables can be accessed as lookup tables, etc., in a MapReduce job via creating an Table instance in the setup method of the Mapper.
 
 ```java
-public class MyMapper extends TableMapper<Text, LongWritable> \{
+public class MyMapper extends TableMapper<Text, LongWritable> {
   private Table myOtherTable;
 
-  public void setup(Context context) \{
+  public void setup(Context context) {
 // In here create a Connection to the cluster and save it or use the Connection
 // from the existing table
 myOtherTable = connection.getTable("myOtherTable");
-  \}
+  }
 
-  public void map(ImmutableBytesWritable row, Result value, Context context) throws IOException, InterruptedException \{
+  public void map(ImmutableBytesWritable row, Result value, Context context) throws IOException, InterruptedException {
 // process Result...
 // use 'myOtherTable' for lookups
-  \}
+  }
 ```
 
 ## Speculative Execution
@@ -574,5 +572,4 @@ It is generally advisable to turn off speculative execution for MapReduce jobs t
 This can either be done on a per-Job basis through properties, or on the entire cluster.
 Especially for longer running jobs, speculative execution will create duplicate map-tasks which will double-write your data to HBase; this is probably not what you want.
 
-See [Speculative Execution](#specex) for more information.
-```
+See [Speculative Execution](/docs/configuration#speculative-execution) for more information.

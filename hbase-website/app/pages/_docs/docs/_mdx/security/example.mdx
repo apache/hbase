@@ -1,0 +1,138 @@
+---
+title: "Security Configuration Example"
+description: "This configuration example includes support for HFile v3, ACLs, Visibility Labels, and transparent encryption of data at rest and the WAL. All options have been discussed separately in the sections above."
+---
+
+## Example Security Settings in _hbase-site.xml_
+
+```xml
+
+<property>
+  <name>hfile.format.version</name>
+  <value>3</value>
+</property>
+
+<property>
+  <name>hbase.superuser</name>
+  <value>hbase,admin,@superuser-group</value>
+</property>
+
+<property>
+  <name>hbase.security.authorization</name>
+  <value>true</value>
+</property>
+<property>
+  <name>hbase.coprocessor.region.classes</name>
+  <value>org.apache.hadoop.hbase.security.access.AccessController,
+  org.apache.hadoop.hbase.security.visibility.VisibilityController,
+  org.apache.hadoop.hbase.security.token.TokenProvider</value>
+</property>
+<property>
+  <name>hbase.coprocessor.master.classes</name>
+  <value>org.apache.hadoop.hbase.security.access.AccessController,
+  org.apache.hadoop.hbase.security.visibility.VisibilityController</value>
+</property>
+<property>
+  <name>hbase.coprocessor.regionserver.classes</name>
+  <value>org.apache.hadoop.hbase.security.access.AccessController</value>
+</property>
+
+<property>
+  <name>hbase.security.exec.permission.checks</name>
+  <value>true</value>
+</property>
+
+<property>
+  <name>hbase.security.visibility.mutations.checkauth</name>
+  <value>false</value>
+</property>
+
+<property>
+  <name>hbase.rpc.protection</name>
+  <value>privacy</value>
+ </property>
+
+<property>
+  <name>hbase.crypto.keyprovider</name>
+  <value>org.apache.hadoop.hbase.io.crypto.KeyStoreKeyProvider</value>
+</property>
+<property>
+  <name>hbase.crypto.keyprovider.parameters</name>
+  <value>jceks:///path/to/hbase/conf/hbase.jks?password=***</value>
+</property>
+<property>
+  <name>hbase.crypto.master.key.name</name>
+  <value>hbase</value>
+</property>
+
+<property>
+  <name>hbase.regionserver.hlog.reader.impl</name>
+  <value>org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogReader</value>
+</property>
+<property>
+  <name>hbase.regionserver.hlog.writer.impl</name>
+  <value>org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogWriter</value>
+</property>
+<property>
+  <name>hbase.regionserver.wal.encryption</name>
+  <value>true</value>
+</property>
+
+<property>
+  <name>hbase.crypto.master.alternate.key.name</name>
+  <value>hbase.old</value>
+</property>
+```
+
+<Callout type="info">
+  Starting from 2.6.0, the hbase.regionserver.hlog.reader.impl and
+  hbase.regionserver.hlog.writer.impl configurations are removed, you do not need to specify them
+  any more. Just set hbase.regionserver.wal.encryption to true is enough to enable WAL encryption.
+</Callout>
+
+**Example Group Mapper in Hadoop _core-site.xml_**
+
+Adjust these settings to suit your environment.
+
+```xml
+<property>
+  <name>hadoop.security.group.mapping</name>
+  <value>org.apache.hadoop.security.LdapGroupsMapping</value>
+</property>
+<property>
+  <name>hadoop.security.group.mapping.ldap.url</name>
+  <value>ldap://server</value>
+</property>
+<property>
+  <name>hadoop.security.group.mapping.ldap.bind.user</name>
+  <value>Administrator@example-ad.local</value>
+</property>
+<property>
+  <name>hadoop.security.group.mapping.ldap.bind.password</name>
+  <value>****</value>
+</property>
+<property>
+  <name>hadoop.security.group.mapping.ldap.base</name>
+  <value>dc=example-ad,dc=local</value>
+</property>
+<property>
+  <name>hadoop.security.group.mapping.ldap.search.filter.user</name>
+  <value>(&amp;(objectClass=user)(sAMAccountName=\{0\}))</value>
+</property>
+<property>
+  <name>hadoop.security.group.mapping.ldap.search.filter.group</name>
+  <value>(objectClass=group)</value>
+</property>
+<property>
+  <name>hadoop.security.group.mapping.ldap.search.attr.member</name>
+  <value>member</value>
+</property>
+<property>
+  <name>hadoop.security.group.mapping.ldap.search.attr.group.name</name>
+  <value>cn</value>
+</property>
+```
+
+```
+
+```

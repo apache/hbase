@@ -1,0 +1,240 @@
+---
+title: "Web UI Security"
+description: "HBase provides mechanisms to secure various components and aspects of HBase and how it relates to the rest of the Hadoop infrastructure, as well as clients and resources outside Hadoop."
+---
+
+## Using Secure HTTP (HTTPS) for the Web UI
+
+A default HBase install uses insecure HTTP connections for Web UIs for the master and region servers. To enable secure HTTP (HTTPS) connections instead, set `hbase.ssl.enabled` to `true` in _hbase-site.xml_(Please prepare SSL certificate and ssl configuration file in advance). This does not change the port used by the Web UI. To change the port for the web UI for a given HBase component, configure that port’s setting in hbase-site.xml. These settings are:
+
+- `hbase.master.info.port`
+
+- `hbase.regionserver.info.port`
+
+<Callout type="info">
+If you enable secure HTTP, clients should connect to HBase using the `https://` URL. Clients using the `http://` URL will receive an HTTP response of `200`, but will not receive any data. The following exception is logged:
+
+```
+javax.net.ssl.SSLException: Unrecognized SSL message, plaintext connection?
+```
+
+This is because the same port is used for HTTP and HTTPS.
+
+HBase uses Jetty for the Web UI. Without modifying Jetty itself, it does not seem possible to configure Jetty to redirect one port to another on the same host. See Nick Dimiduk’s contribution on this [Stack Overflow](http://stackoverflow.com/questions/20611815/redirect-from-http-to-https-in-jetty) thread for more information. If you know how to fix this without opening a second port for HTTPS, patches are appreciated.
+
+</Callout>
+
+## Disable cache in HBase UI
+
+Set the following configuration in hbase-site to set max age to zero and disable cache for the web UI:
+
+```xml
+<property>
+  <name>hbase.http.filter.no-store.enable</name>
+  <value>true</value>
+</property>
+```
+
+## Using SPNEGO for Kerberos authentication with Web UIs
+
+Kerberos-authentication to HBase Web UIs can be enabled via configuring SPNEGO with the `hbase.security.authentication.ui` property in _hbase-site.xml_. Enabling this authentication requires that HBase is also configured to use Kerberos authentication for RPCs (e.g `hbase.security.authentication` = `kerberos`).
+
+```xml
+<property>
+  <name>hbase.security.authentication.ui</name>
+  <value>kerberos</value>
+  <description>Controls what kind of authentication should be used for the HBase web UIs.</description>
+</property>
+<property>
+  <name>hbase.security.authentication</name>
+  <value>kerberos</value>
+  <description>The Kerberos keytab file to use for SPNEGO authentication by the web server.</description>
+</property>
+```
+
+A number of properties exist to configure SPNEGO authentication for the web server:
+
+```xml
+<property>
+  <name>hbase.security.authentication.spnego.kerberos.principal</name>
+  <value>HTTP/_HOST@EXAMPLE.COM</value>
+  <description>Required for SPNEGO, the Kerberos principal to use for SPNEGO authentication by the
+  web server. The _HOST keyword will be automatically substituted with the node's
+  hostname.</description>
+</property>
+<property>
+  <name>hbase.security.authentication.spnego.kerberos.keytab</name>
+  <value>/etc/security/keytabs/spnego.service.keytab</value>
+  <description>Required for SPNEGO, the Kerberos keytab file to use for SPNEGO authentication by the
+  web server.</description>
+</property>
+<property>
+  <name>hbase.security.authentication.spnego.kerberos.name.rules</name>
+  <value></value>
+  <description>Optional, Hadoop-style `auth_to_local` rules which will be parsed and used in the
+  handling of Kerberos principals</description>
+</property>
+<property>
+  <name>hbase.security.authentication.signature.secret.file</name>
+  <value></value>
+  <description>Optional, a file whose contents will be used as a secret to sign the HTTP cookies
+  as a part of the SPNEGO authentication handshake. If this is not provided, Java's `Random` library
+  will be used for the secret.</description>
+</property>
+```
+
+## Defining administrators of the Web UI with SPNEGO
+
+In the previous section, we cover how to enable authentication for the Web UI via SPNEGO. However, some portions of the Web UI could be used to impact the availability and performance of an HBase cluster. As such, it is desirable to ensure that only those with proper authority can interact with these sensitive endpoints.
+
+HBase allows the adminstrators to be defined via a list of usernames or groups in hbase-site.xml
+
+```xml
+<property>
+  <name>hbase.security.authentication.spnego.admin.users</name>
+  <value></value>
+</property>
+<property>
+  <name>hbase.security.authentication.spnego.admin.groups</name>
+  <value></value>
+</property>
+```
+
+The usernames are those which the Kerberos identity maps to, given the Hadoop `auth_to_local` rules in core-site.xml. The groups here are the Unix groups associated with the mapped usernames.
+
+Consider the following scenario to describe how the configuration properties operate. Consider three users which are defined in the Kerberos KDC:
+
+- `alice@COMPANY.COM`
+
+- `bob@COMPANY.COM`
+
+- `charlie@COMPANY.COM`
+
+The default Hadoop `auth_to_local` rules map these principals to the "shortname":
+
+- `alice`
+
+- `bob`
+
+- `charlie`
+
+Unix groups membership define that `alice` is a member of the group `admins`. `bob` and `charlie` are not members of the `admins` group.
+
+```xml
+<property>
+  <name>hbase.security.authentication.spnego.admin.users</name>
+  <value>charlie</value>
+</property>
+<property>
+  <name>hbase.security.authentication.spnego.admin.groups</name>
+  <value>admins</value>
+</property>
+```
+
+Given the above configuration, `alice` is allowed to access sensitive endpoints in the Web UI as she is a member of the `admins` group. `charlie` is also allowed to access sensitive endpoints because he is explicitly listed as an admin in the configuration. `bob` is not allowed to access sensitive endpoints because he is not a member of the `admins` group nor is listed as an explicit admin user via `hbase.security.authentication.spnego.admin.users`, but can still use any non-sensitive endpoints in the Web UI.
+
+If it doesn’t go without saying: non-authenticated users cannot access any part of the Web UI.
+
+## Using LDAP authentication with Web UIs
+
+LDAP authentication to HBase Web UIs can be enabled via configuring LDAP with the `hbase.security.authentication.ui` property in _hbase-site.xml_. The `hbase.http.filter.initializers` property also needs to have the `AuthenticationFilterInitializer` class.
+
+**IMPORTANT:** A LDAP server must be configured and running. When TLS is enabled for communication with LDAP server (either via ldaps scheme or ‘start TLS’ extension), configure the public certificate of the LDAP server in the local truststore. The LDAP authentication mechanism uses HTTP Basic authentication scheme to verify user specified credentials against a configured LDAP (or Active Directory) server. The authentication filter must be configured with the following init parameters:
+
+```xml
+<property>
+  <name>hbase.security.authentication.ui</name>
+  <value>ldap</value>
+  <description>Controls what kind of authentication should be used for the HBase web UIs.</description>
+</property>
+<property>
+  <name>hbase.http.filter.initializers</name>
+  <value>org.apache.hadoop.hbase.http.lib.AuthenticationFilterInitializer</value>
+  <description>Comma separated class names corresponding to the Filters that will be initialized.
+  Then, the Filters will be applied to all user facing jsp and servlet web pages.</description>
+</property>
+<property>
+  <name>hadoop.http.authentication.type</name>
+  <value>ldap</value>
+  <description>Defines authentication used for the HTTP web-consoles in Hadoop ecosystem.</description>
+</property>
+```
+
+A number of properties exist to configure LDAP authentication for the web server:
+
+```xml
+<property>
+  <name>hadoop.http.authentication.ldap.binddomain</name>
+  <value>EXAMPLE.COM</value>
+  <description>The LDAP bind domain value to be used with the LDAP server. This property is optional
+   and useful only in case of Active Directory server (e.g. example.com).</description>
+</property>
+<property>
+  <name>hadoop.http.authentication.ldap.providerurl</name>
+  <value>ldap://ldap-server-host:8920</value>
+  <description>The url of the LDAP server.</description>
+</property>
+<property>
+  <name>hadoop.http.authentication.ldap.enablestarttls</name>
+  <value>false</value>
+  <description>A boolean value used to define if the LDAP server supports ‘StartTLS’ extension.</description>
+</property>
+<property>
+  <name>hadoop.http.authentication.ldap.basedn</name>
+  <value>ou=users,dc=example,dc=com</value>
+  <description>The base distinguished name (DN) to be used with the LDAP server. This value is
+  appended to the provided user id for authentication purpose. This property is not useful in case
+  of Active Directory server.</description>
+</property>
+```
+
+## Defining Administrators of the Web UI with LDAP
+
+In the previous section, we discussed enabling authentication for the Web UI via LDAP. Certain portions of the Web UI can impact the availability and performance of an HBase cluster. To safeguard these sensitive endpoints, it is essential to restrict access to authorized administrators only.
+
+HBase provides a mechanism to define administrators for the Web UI through a list of usernames in the `hbase-site.xml` configuration file.
+
+To specify the administrators, use the following property in `hbase-site.xml`:
+
+```xml
+<property>
+  <name>hbase.security.authentication.ldap.admin.users</name>
+  <value>admin1,admin2,admin3</value>
+</property>
+```
+
+The usernames listed in the above property should correspond to the LDAP usernames of the administrators.
+
+### Notes
+
+- This feature is supported by only versions of HBase having [HBASE-29244](https://issues.apache.org/jira/browse/HBASE-29244)
+
+- Ensure that the LDAP server is properly configured and running. See the previous section for details.
+
+- Only users explicitly listed in the `hbase.security.authentication.ldap.admin.users` property will have access to sensitive endpoints.
+
+- Non-administrative users can still access non-sensitive endpoints, provided they are authenticated.
+
+By defining administrators in this way, you can ensure that only authorized personnel can interact with critical Web UI functionalities, thereby enhancing the security and stability of your HBase cluster.
+
+## Other UI security-related configuration
+
+While it is a clear anti-pattern for HBase developers, the developers acknowledge that the HBase configuration (including Hadoop configuration files) may contain sensitive information. As such, a user may find that they do not want to expose the HBase service-level configuration to all authenticated users. They may configure HBase to require a user must be an admin to access the service-level configuration via the HBase UI. This configuration is **false** by default (any authenticated user may access the configuration).
+
+Users who wish to change this would set the following in their hbase-site.xml:
+
+```xml
+<property>
+  <name>hbase.security.authentication.ui.config.protected</name>
+  <value>true</value>
+</property>
+```
+
+To disable showing stack traces in HBase UI for hiding sensitive information, set the following in hbase-site:
+
+```xml
+<property>
+  <name>hbase.ui.show-stack-traces</name>
+  <value>false</value>
+</property>
+```
