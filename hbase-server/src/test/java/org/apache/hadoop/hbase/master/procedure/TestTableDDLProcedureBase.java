@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
+import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -37,6 +38,7 @@ public abstract class TestTableDDLProcedureBase {
   protected static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   private static void setupConf(Configuration conf) {
+    conf.set(ReplicationStorageFactory.REPLICATION_QUEUE_TABLE_NAME, "hbase:replication");
     conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
   }
 
