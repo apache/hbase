@@ -240,15 +240,6 @@ public class IncrementalBackupManager extends BackupManager {
       } else if (currentLogTS > oldTimeStamp) {
         resultLogFiles.add(currentLogFile);
       }
-
-      // It is possible that a host in .oldlogs is an obsolete region server
-      // so newestTimestamps.get(host) here can be null.
-      // Even if these logs belong to a obsolete region server, we still need
-      // to include they to avoid loss of edits for backup.
-      Long newTimestamp = newestTimestamps.get(host);
-      if (newTimestamp != null && currentLogTS > newTimestamp) {
-        newestLogs.add(currentLogFile);
-      }
     }
     // remove newest log per host because they are still in use
     resultLogFiles.removeAll(newestLogs);
