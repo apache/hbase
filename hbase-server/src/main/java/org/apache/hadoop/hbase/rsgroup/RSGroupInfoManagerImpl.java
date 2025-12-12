@@ -71,6 +71,7 @@ import org.apache.hadoop.hbase.master.ServerListener;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.TableStateManager;
 import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
+import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.master.procedure.CreateTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
@@ -1143,8 +1144,8 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     TableStateManager tableStateManager, String groupName) throws IOException {
     Map<TableName, Map<ServerName, List<RegionInfo>>> result = Maps.newHashMap();
     Set<TableName> tablesInGroupCache = new HashSet<>();
-    for (Map.Entry<RegionInfo, ServerName> entry : masterServices.getAssignmentManager()
-      .getRegionStates().getRegionAssignments().entrySet()) {
+    final RegionStates regionStates = masterServices.getAssignmentManager().getRegionStates();
+    for (Map.Entry<RegionInfo, ServerName> entry : regionStates.getRegionAssignments().entrySet()) {
       RegionInfo region = entry.getKey();
       TableName tn = region.getTable();
       ServerName server = entry.getValue();
@@ -1154,7 +1155,9 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
         ) {
           continue;
         }
-        if (region.isSplitParent()) {
+        if (
+          regionStates.getOrCreateRegionStateNode(region).getState().equals(RegionState.State.SPLIT)
+            || region.isSplitParent()) {
           continue;
         }
         result.computeIfAbsent(tn, k -> new HashMap<>())
