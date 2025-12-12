@@ -46,6 +46,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 @InterfaceAudience.Public
 public interface TableDescriptor {
 
+  Logger LOG = LoggerFactory.getLogger(TableDescriptor.class);
+
   @InterfaceAudience.Private
   Comparator<TableDescriptor> COMPARATOR = getComparator(ColumnFamilyDescriptor.COMPARATOR);
 
@@ -337,8 +339,7 @@ public interface TableDescriptor {
       crc32.update(byteBuffer);
       return Long.toHexString(crc32.getValue());
     } catch (Exception e) {
-      Logger log = LoggerFactory.getLogger(TableDescriptor.class);
-      log.error("Failed to compute table descriptor hash for table {}", getTableName(), e);
+      LOG.error("Failed to compute table descriptor hash for table {}", getTableName(), e);
       return "UNKNOWN";
     }
   }
