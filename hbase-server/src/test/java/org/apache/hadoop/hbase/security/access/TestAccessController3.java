@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.security.access;
 
 import static org.apache.hadoop.hbase.AuthUtil.toGroupEntry;
+import static org.apache.hadoop.hbase.coprocessor.CoprocessorHost.SECURITY_COPROCESSOR_NAME_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
@@ -146,6 +147,7 @@ public class TestAccessController3 extends SecureTestUtil {
     String accessControllerClassName = FaultyAccessController.class.getName();
     // In this particular test case, we can't use SecureBulkLoadEndpoint because its doAs will fail
     // to move a file for a random user
+    conf.set(SECURITY_COPROCESSOR_NAME_KEY, accessControllerClassName);
     conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, accessControllerClassName);
     // Verify enableSecurity sets up what we require
     verifyConfiguration(conf);
