@@ -73,6 +73,10 @@ public class CacheConfig implements PropagatingConfigurationObserver {
    */
   public static final String EVICT_BLOCKS_ON_CLOSE_KEY = "hbase.rs.evictblocksonclose";
 
+  /**
+   * Configuration key to evict all blocks of a parent region from the block cache when the region
+   * split or merge.
+   */
   public static final String EVICT_BLOCKS_ON_SPLIT_KEY = "hbase.rs.evictblocksonsplit";
 
   /**
@@ -147,10 +151,10 @@ public class CacheConfig implements PropagatingConfigurationObserver {
   private volatile boolean evictOnClose;
 
   /**
-   * Whether blocks of a parent region should be evicted from cache when the region splits or
-   * merges.
+   * Whether blocks of a parent region should be evicted from cache when the region split or
+   * merge
    */
-  private volatile boolean evictOnSplit;
+  private boolean evictOnSplit;
 
   /** Whether data blocks should be stored in compressed and/or encrypted form in the cache */
   private boolean cacheDataCompressed;
@@ -262,6 +266,7 @@ public class CacheConfig implements PropagatingConfigurationObserver {
     this.cacheDataCompressed = false;
     this.prefetchOnOpen = false;
     this.cacheCompactedDataOnWrite = false;
+    this.cacheCompactedDataOnWriteThreshold = DEFAULT_CACHE_COMPACTED_BLOCKS_ON_WRITE_THRESHOLD;
     this.dropBehindCompaction = false;
     this.blockCache = null;
     this.byteBuffAllocator = ByteBuffAllocator.HEAP;
@@ -293,7 +298,7 @@ public class CacheConfig implements PropagatingConfigurationObserver {
   public boolean shouldCacheBlockOnRead(BlockCategory category, HFileInfo hFileInfo,
     Configuration conf) {
     Optional<Boolean> cacheFileBlock = Optional.of(true);
-    // For DATA blocks only, if BuckeCache is in use, we don't need to cache block again
+    // For DATA blocks only, if BucketCache is in use, we don't need to cache block again
     if (getBlockCache().isPresent() && category.equals(BlockCategory.DATA)) {
       Optional<Boolean> result = getBlockCache().get().shouldCacheFile(hFileInfo, conf);
       if (result.isPresent()) {
@@ -365,6 +370,10 @@ public class CacheConfig implements PropagatingConfigurationObserver {
     this.evictOnClose = evictOnClose;
   }
 
+  /**
+   * @return true if blocks of parent region should be evicted from the cache when the region split
+   *         or merge, false if not
+   */
   public boolean shouldEvictOnSplit() {
     return this.evictOnSplit;
   }
@@ -375,7 +384,7 @@ public class CacheConfig implements PropagatingConfigurationObserver {
   }
 
   /**
-   * Returns true if this {@link BlockCategory} should be compressed in blockcache, false otherwise
+   * Returns true if this {@link BlockCategory} should be compressed in BlockCache, false otherwise
    */
   public boolean shouldCacheCompressed(BlockCategory category) {
     switch (category) {
@@ -495,7 +504,10 @@ public class CacheConfig implements PropagatingConfigurationObserver {
       + ", cacheBloomsOnWrite=" + shouldCacheBloomsOnWrite() + ", cacheEvictOnClose="
       + shouldEvictOnClose() + ", cacheEvictOnSplit=" + shouldEvictOnSplit()
       + ", cacheDataCompressed=" + shouldCacheDataCompressed() + ", prefetchOnOpen="
-      + shouldPrefetchOnOpen();
+      + shouldPrefetchOnOpen() + ", cacheCompactedDataOnWrite="
+      + shouldCacheCompactedBlocksOnWrite() + ", cacheCompactedDataOnWriteThreshold="
+      + getCacheCompactedBlocksOnWriteThreshold() + ", dropBehindCompaction="
+      + shouldDropBehindCompaction();
   }
 
   @Override

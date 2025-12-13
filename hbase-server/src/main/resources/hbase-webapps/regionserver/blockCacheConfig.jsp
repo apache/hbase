@@ -62,7 +62,7 @@ if (cacheConfig == null) { %>
     <td>Evict blocks on Split</td>
     <td><%= cacheConfig.shouldEvictOnSplit() %></td>
     <td>True if blocks of the parent region are evicted
-      from the cache when splits or merges</td>
+      from the cache when split or merge</td>
   </tr>
   <tr>
     <td>Cache DATA in compressed format</td>
@@ -73,6 +73,17 @@ if (cacheConfig == null) { %>
     <td>Prefetch on Open</td>
     <td><%= cacheConfig.shouldPrefetchOnOpen() %></td>
     <td>True if blocks are prefetched into cache on open</td>
+  </tr>
+  <tr>
+    <td>Cache compacted data on Write</td>
+    <td><%= cacheConfig.shouldCacheCompactedBlocksOnWrite() %></td>
+    <td>True if blocks are cached while writing during compaction</td>
+  </tr>
+  <tr>
+    <td>Cache compacted data on Write Threshold</td>
+    <td><%= cacheConfig.getCacheCompactedBlocksOnWriteThreshold() %></td>
+    <td>Total file size in bytes threshold for caching
+      while writing during compaction</td>
   </tr>
 </table>
 <% } %>
