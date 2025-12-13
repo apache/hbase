@@ -151,8 +151,7 @@ public class CacheConfig implements PropagatingConfigurationObserver {
   private volatile boolean evictOnClose;
 
   /**
-   * Whether blocks of a parent region should be evicted from cache when the region split or
-   * merge
+   * Whether blocks of a parent region should be evicted from cache when the region split or merge
    */
   private boolean evictOnSplit;
 
