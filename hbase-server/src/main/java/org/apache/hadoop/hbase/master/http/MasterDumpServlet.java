@@ -18,9 +18,10 @@
 package org.apache.hadoop.hbase.master.http;
 
 import java.io.IOException;
-import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
@@ -53,7 +54,8 @@ public class MasterDumpServlet extends StateDumpServlet {
     assert master != null : "No Master in context!";
 
     response.setContentType("text/plain");
-    OutputStream os = response.getOutputStream();
+    OutputStreamWriter os =
+      new OutputStreamWriter(response.getOutputStream(), StandardCharsets.UTF_8);
     try (PrintWriter out = new PrintWriter(os)) {
 
       out.println("Master status for " + master.getServerName() + " as of " + new Date());
@@ -81,7 +83,7 @@ public class MasterDumpServlet extends StateDumpServlet {
       out.println("\n\nStacks:");
       out.println(LINE);
       out.flush();
-      PrintStream ps = new PrintStream(response.getOutputStream(), false, "UTF-8");
+      PrintStream ps = new PrintStream(response.getOutputStream(), false, StandardCharsets.UTF_8);
       Threads.printThreadInfo(ps, "");
       ps.flush();
 
@@ -89,7 +91,7 @@ public class MasterDumpServlet extends StateDumpServlet {
       out.println(LINE);
       Configuration conf = master.getConfiguration();
       out.flush();
-      conf.writeXml(os);
+      conf.writeXml(null, os, conf);
       os.flush();
 
       out.println("\n\nRecent regionserver aborts:");

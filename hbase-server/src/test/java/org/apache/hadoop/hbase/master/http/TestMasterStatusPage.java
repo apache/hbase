@@ -21,10 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
@@ -45,6 +42,7 @@ import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.TestServerHttpUtils;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -108,7 +106,9 @@ public class TestMasterStatusPage {
 
     createTestTables(master);
 
-    String page = getMasterStatusPageContent();
+    URL url =
+      new URL(TestServerHttpUtils.getMasterInfoServerHostAndPort(CLUSTER) + "/master-status");
+    String page = TestServerHttpUtils.getPageContent(url, "text/html;charset=utf-8");
 
     String hostname = master.getServerName().getHostname();
     assertTrue(page.contains("<h1>Master <small>" + hostname + "</small></h1>"));
@@ -127,17 +127,6 @@ public class TestMasterStatusPage {
     assertTrue(page.contains(VersionInfo.getVersion()));
   }
 
-  private String getMasterStatusPageContent() throws IOException {
-    URL url = new URL(getInfoServerHostAndPort() + "/master-status");
-    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-    conn.connect();
-
-    assertEquals(200, conn.getResponseCode());
-    assertEquals("text/html;charset=utf-8", conn.getContentType());
-
-    return getResponseBody(conn);
-  }
-
   private static void createTestTables(HMaster master) throws IOException {
     ColumnFamilyDescriptor cf = ColumnFamilyDescriptorBuilder.of("CF");
     TableDescriptor tableDescriptor1 = TableDescriptorBuilder
@@ -147,20 +136,6 @@ public class TestMasterStatusPage {
       .newBuilder(TableName.valueOf(TEST_TABLE_NAME_2)).setColumnFamily(cf).build();
     master.createTable(tableDescriptor2, null, 0, 0);
     master.flushMasterStore();
-  }
-
-  private String getInfoServerHostAndPort() {
-    return "http://localhost:" + CLUSTER.getActiveMaster().getInfoServer().getPort();
-  }
-
-  private static String getResponseBody(HttpURLConnection conn) throws IOException {
-    StringBuilder sb = new StringBuilder();
-    BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-    String output;
-    while ((output = br.readLine()) != null) {
-      sb.append(output);
-    }
-    return sb.toString();
   }
 
   private static void assertRegionServerLinks(HMaster master, String responseBody) {
