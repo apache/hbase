@@ -850,9 +850,10 @@ public class BucketCache implements BlockCache, HeapSize {
           blockEvicted(cacheKey, bucketEntryToUse, !existedInRamCache, evictedByEvictionProcess);
           return true;
         }
-        LOG.debug("Failed to remove key {} from map. Maybe entries in the map now differ? "
-          + "Original found entry: {}, what's in the map now: {}", cacheKey,
-          bucketEntryToUse, backingMap.get(cacheKey));
+        LOG.debug(
+          "Failed to remove key {} from map. Maybe entries in the map now differ? "
+            + "Original found entry: {}, what's in the map now: {}",
+          cacheKey, bucketEntryToUse, backingMap.get(cacheKey));
         return false;
       });
     }
