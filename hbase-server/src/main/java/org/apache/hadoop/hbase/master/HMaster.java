@@ -4300,4 +4300,10 @@ public class HMaster extends HRegionServer implements MasterServices {
     this.cpHost = new MasterCoprocessorHost(this, conf);
   }
 
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  public MobFileCleanerChore getMobFileCleanerChore() {
+    return mobFileCleanerChore;
+  }
+
 }
