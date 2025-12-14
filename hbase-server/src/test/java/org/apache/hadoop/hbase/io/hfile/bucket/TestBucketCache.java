@@ -27,6 +27,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -34,6 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -44,6 +46,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
+import org.apache.hadoop.hbase.io.hfile.CacheStats;
 import org.apache.hadoop.hbase.io.hfile.CacheTestUtils;
 import org.apache.hadoop.hbase.io.hfile.CacheTestUtils.HFileBlockPair;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
@@ -769,5 +772,21 @@ public class TestBucketCache {
     } finally {
       HBASE_TESTING_UTILITY.cleanupTestDir();
     }
+  }
+
+  @Test
+  public void testIOTimePerHitReturnsZeroWhenNoHits()
+    throws NoSuchFieldException, IllegalAccessException {
+    CacheStats cacheStats = cache.getStats();
+    assertTrue(cacheStats instanceof BucketCacheStats);
+    BucketCacheStats bucketCacheStats = (BucketCacheStats) cacheStats;
+
+    Field field = BucketCacheStats.class.getDeclaredField("ioHitCount");
+    field.setAccessible(true);
+    LongAdder ioHitCount = (LongAdder) field.get(bucketCacheStats);
+
+    assertEquals(0, ioHitCount.sum());
+    double ioTimePerHit = bucketCacheStats.getIOTimePerHit();
+    assertEquals(0, ioTimePerHit, 0.0);
   }
 }
