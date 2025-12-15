@@ -22,14 +22,17 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerMetricsBuilder;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
@@ -223,6 +226,72 @@ public class TestMasterMetrics {
 
     } finally {
       master.getTableDescriptors().remove(replicaMetaTable);
+    }
+  }
+
+  @Test
+  public void testClusterMetricsForeignTableSkipping() throws Exception {
+    List<TableName> allTables = new ArrayList<>();
+
+    // These tables, including the cluster's meta table, should not be foreign to the cluster.
+    // The cluster should be able to find their state.
+    allTables.add(TableName.META_TABLE_NAME);
+    List<TableName> familiarTables = new ArrayList<>();
+    familiarTables.add(TableName.valueOf(null, "familiarTable1"));
+    familiarTables.add(TableName.valueOf("", "familiarTable2"));
+    familiarTables.add(TableName.valueOf("default", "familiarTable3"));
+    familiarTables.add(TableName.valueOf("familiarNamespace", "familiarTable4"));
+    familiarTables.add(TableName.valueOf("familiarNamespace", "familiarTable5"));
+
+    // Create these "familiar" tables so their state can be found
+    TEST_UTIL.getAdmin().createNamespace(NamespaceDescriptor.create("familiarNamespace").build());
+    for (TableName familiarTable : familiarTables) {
+      TEST_UTIL.createTable(familiarTable, "cf");
+      allTables.add(familiarTable);
+    }
+
+    // These tables should be foreign to the cluster.
+    // The cluster should not be able to find their state.
+    allTables.add(TableName.valueOf("hbase", "meta_replica"));
+    allTables.add(TableName.valueOf(null, "defaultNamespaceTable1"));
+    allTables.add(TableName.valueOf("", "defaultNamespaceTable2"));
+    allTables.add(TableName.valueOf("default", "defaultNamespaceTable3"));
+    allTables.add(TableName.valueOf("customNamespace", "customNamespaceTable1"));
+    allTables.add(TableName.valueOf("customNamespace", "customNamespaceTable2"));
+    allTables.add(TableName.valueOf("anotherNamespace", "anotherNamespaceTable"));
+    allTables.add(TableName.valueOf("sharedNamespace", "sharedNamespaceTable1"));
+    allTables.add(TableName.valueOf("sharedNamespace", "sharedNamespaceTable2"));
+
+    // Update master's table descriptors to have all tables
+    TableDescriptor foreignTableDescriptor;
+    for (TableName tableName : allTables) {
+      foreignTableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("cf")).build();
+      master.getTableDescriptors().update(foreignTableDescriptor, true);
+    }
+
+    // The state of the meta table and the familiar tables we created should exist.
+    // The other tables' state should not exist.
+    for (TableName tableName : allTables) {
+      try {
+        ClusterMetrics metrics = master.getClusterMetricsWithoutCoprocessor(
+          EnumSet.of(ClusterMetrics.Option.TABLE_TO_REGIONS_COUNT));
+        Map<TableName, RegionStatesCount> tableRegionStatesCount =
+          metrics.getTableRegionStatesCount();
+
+        if (
+          tableName.equals(TableName.META_TABLE_NAME)
+            || tableName.getQualifierAsString().startsWith("familiar")
+        ) {
+          assertTrue("Expected this table's state to exist: " + tableName,
+            tableRegionStatesCount.containsKey(tableName));
+        } else {
+          assertFalse("This foreign table's state should not exist: " + tableName,
+            tableRegionStatesCount.containsKey(tableName));
+        }
+      } finally {
+        master.getTableDescriptors().remove(tableName);
+      }
     }
   }
 }
