@@ -21,6 +21,7 @@ import java.util.Arrays;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -120,7 +121,7 @@ class MutableRegionInfo implements RegionInfo {
     this.replicaId = checkReplicaId(replicaId);
     this.offLine = offLine;
     this.regionName = RegionInfo.createRegionName(this.tableName, this.startKey, this.regionId,
-      this.replicaId, !this.tableName.equals(TableName.META_TABLE_NAME));
+      this.replicaId, !this.tableName.equals(MetaTableName.getInstance()));
     this.encodedName = RegionInfo.encodeRegionName(this.regionName);
     this.hashCode = generateHashCode(this.tableName, this.startKey, this.endKey, this.regionId,
       this.replicaId, this.offLine, this.regionName);
@@ -232,7 +233,7 @@ class MutableRegionInfo implements RegionInfo {
   /** Returns true if this region is a meta region */
   @Override
   public boolean isMetaRegion() {
-    return tableName.equals(TableName.META_TABLE_NAME);
+    return tableName.equals(MetaTableName.getInstance());
   }
 
   /** Returns True if has been split and has daughters. */

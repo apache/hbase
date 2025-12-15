@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
@@ -92,7 +93,7 @@ public class TestEnableTable {
     }
     // Now I have a nice table, mangle it by removing the HConstants.REGIONINFO_QUALIFIER_STR
     // content from a few of the rows.
-    try (Table metaTable = TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME)) {
+    try (Table metaTable = TEST_UTIL.getConnection().getTable(MetaTableName.getInstance())) {
       try (ResultScanner scanner = metaTable.getScanner(
         MetaTableAccessor.getScanForTableName(TEST_UTIL.getConfiguration(), tableName))) {
         for (Result result : scanner) {

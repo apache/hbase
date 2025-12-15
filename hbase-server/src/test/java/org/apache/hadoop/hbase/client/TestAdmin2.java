@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -84,13 +85,13 @@ public class TestAdmin2 extends TestAdminBase {
   public void testCreateBadTables() throws IOException {
     String msg = null;
     try {
-      ADMIN.createTable(TableDescriptorBuilder.newBuilder(TableName.META_TABLE_NAME).build());
+      ADMIN.createTable(TableDescriptorBuilder.newBuilder(MetaTableName.getInstance()).build());
     } catch (TableExistsException e) {
       msg = e.toString();
     }
     assertTrue("Unexcepted exception message " + msg,
       msg != null && msg.startsWith(TableExistsException.class.getName())
-        && msg.contains(TableName.META_TABLE_NAME.getNameAsString()));
+        && msg.contains(MetaTableName.getInstance().getNameAsString()));
 
     // Now try and do concurrent creation with a bunch of threads.
     TableDescriptor tableDescriptor =
@@ -456,7 +457,7 @@ public class TestAdmin2 extends TestAdminBase {
   private HRegionServer startAndWriteData(TableName tableName, byte[] value)
     throws IOException, InterruptedException {
     // When the hbase:meta table can be opened, the region servers are running
-    TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME).close();
+    TEST_UTIL.getConnection().getTable(MetaTableName.getInstance()).close();
 
     // Create the test table and open it
     TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
@@ -486,7 +487,7 @@ public class TestAdmin2 extends TestAdminBase {
   @Test
   public void testDisableCatalogTable() throws Exception {
     try {
-      ADMIN.disableTable(TableName.META_TABLE_NAME);
+      ADMIN.disableTable(MetaTableName.getInstance());
       fail("Expected to throw ConstraintException");
     } catch (ConstraintException e) {
     }

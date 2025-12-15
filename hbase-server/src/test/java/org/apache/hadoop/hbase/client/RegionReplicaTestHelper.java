@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.regionserver.Region;
@@ -47,7 +48,7 @@ public final class RegionReplicaTestHelper {
     throws IOException {
     Configuration conf = util.getConfiguration();
     int regionReplicaCount =
-      util.getAdmin().getDescriptor(TableName.META_TABLE_NAME).getRegionReplication();
+      util.getAdmin().getDescriptor(MetaTableName.getInstance()).getRegionReplication();
     Waiter.waitFor(conf, conf.getLong("hbase.client.sync.wait.timeout.msec", 60000), 200, true,
       new ExplainingPredicate<IOException>() {
         @Override

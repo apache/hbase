@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Scan.ReadType;
@@ -2532,7 +2533,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
     scan.setCaching(1);
     // Filter out any records
     scan.setFilter(new FilterList(new FirstKeyOnlyFilter(), new InclusiveStopFilter(new byte[0])));
-    try (Table table = TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME)) {
+    try (Table table = TEST_UTIL.getConnection().getTable(MetaTableName.getInstance())) {
       try (ResultScanner s = table.getScanner(scan)) {
         assertNull(s.next());
       }
