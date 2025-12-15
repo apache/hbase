@@ -1,0 +1,269 @@
+---
+title: "Client"
+---
+
+The HBase client finds the RegionServers that are serving the particular row range of interest. It does this by querying the `hbase:meta` table. See [hbase:meta](#arch.catalog.meta) for details. After locating the required region(s), the client contacts the RegionServer serving that region, rather than going through the master, and issues the read or write request. This information is cached in the client so that subsequent requests need not go through the lookup process. Should a region be reassigned either by the master load balancer or because a RegionServer has died, the client will requery the catalog tables to determine the new location of the user region.
+
+See [Runtime Impact](#master.runtime) for more information about the impact of the Master on HBase Client communication.
+
+Administrative functions are done via an instance of [Admin](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Admin.html)
+
+## Cluster Connections
+
+The API changed in HBase 1.0. For connection configuration information, see [Client configuration and dependencies connecting to an HBase cluster](/docs/configuration#client-configuration-and-dependencies-connecting-to-an-hbase-cluster).
+
+### API as of HBase 1.0.0
+
+It’s been cleaned up and users are returned Interfaces to work against rather than particular types. In HBase 1.0, obtain a `Connection` object from `ConnectionFactory` and thereafter, get from it instances of `Table`, `Admin`, and `RegionLocator` on an as-need basis. When done, close the obtained instances. Finally, be sure to cleanup your `Connection` instance before exiting. `Connections` are heavyweight objects but thread-safe so you can create one for your application and keep the instance around. `Table`, `Admin` and `RegionLocator` instances are lightweight. Create as you go and then let go as soon as you are done by closing them. See the [Client Package Javadoc Description](https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/package-summary.html) for example usage of the new HBase 1.0 API.
+
+### API before HBase 1.0.0
+
+Instances of `HTable` are the way to interact with an HBase cluster earlier than 1.0.0. _[Table](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Table.html) instances are not thread-safe_. Only one thread can use an instance of Table at any given time. When creating Table instances, it is advisable to use the same [HBaseConfiguration](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/HBaseConfiguration) instance. This will ensure sharing of ZooKeeper and socket instances to the RegionServers which is usually what you want. For example, this is preferred:
+
+```java
+HBaseConfiguration conf = HBaseConfiguration.create();
+HTable table1 = new HTable(conf, "myTable");
+HTable table2 = new HTable(conf, "myTable");
+```
+
+as opposed to this:
+
+```java
+HBaseConfiguration conf1 = HBaseConfiguration.create();
+HTable table1 = new HTable(conf1, "myTable");
+HBaseConfiguration conf2 = HBaseConfiguration.create();
+HTable table2 = new HTable(conf2, "myTable");
+```
+
+For more information about how connections are handled in the HBase client, see [ConnectionFactory](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/ConnectionFactory.html).
+
+#### Connection Pooling
+
+For applications which require high-end multithreaded access (e.g., web-servers or application servers that may serve many application threads in a single JVM), you can pre-create a `Connection`, as shown in the following example:
+
+**Example 24. Pre-Creating a `Connection`**
+
+```java
+// Create a connection to the cluster.
+Configuration conf = HBaseConfiguration.create();
+try (Connection connection = ConnectionFactory.createConnection(conf);
+ Table table = connection.getTable(TableName.valueOf(tablename))) {
+  // use table as needed, the table returned is lightweight
+}
+```
+
+<Callout type="warn" title="HTablePool is Deprecated">
+  Previous versions of this guide discussed `HTablePool`, which was deprecated in HBase 0.94, 0.95,
+  and 0.96, and removed in 0.98.1, by
+  [HBASE-6580](https://issues.apache.org/jira/browse/HBASE-6580), or `HConnection`, which is
+  deprecated in HBase 1.0 by `Connection`. Please use
+  [Connection](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Connection.html)
+  instead.
+</Callout>
+
+## WriteBuffer and Batch Methods
+
+In HBase 1.0 and later, [HTable](https://hbase.apache.org/1.4/devapidocs/org/apache/hadoop/hbase/client/HTable.html) is deprecated in favor of [Table](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Table.html). `Table` does not use autoflush. To do buffered writes, use the BufferedMutator class.
+
+In HBase 2.0 and later, [HTable](https://hbase.apache.org/2.6/devapidocs/org/apache/hadoop/hbase/client/HTable.html) does not use BufferedMutator to execute the `Put` operation. Refer to [HBASE-18500](https://issues.apache.org/jira/browse/HBASE-18500) for more information.
+
+For additional information on write durability, review the [ACID semantics](/acid-semantics.html) page.
+
+For fine-grained control of batching of `Put`s or `Delete`s, see the [batch](<https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Table.html#batch(java.util.List,java.lang.Object%5B%5D)>) methods on Table.
+
+## Asynchronous Client
+
+It is a new API introduced in HBase 2.0 which aims to provide the ability to access HBase asynchronously.
+
+You can obtain an `AsyncConnection` from `ConnectionFactory`, and then get a asynchronous table instance from it to access HBase. When done, close the `AsyncConnection` instance(usually when your program exits).
+
+For the asynchronous table, most methods have the same meaning with the old `Table` interface, expect that the return value is wrapped with a CompletableFuture usually. We do not have any buffer here so there is no close method for asynchronous table, you do not need to close it. And it is thread safe.
+
+There are several differences for scan:
+
+- There is still a `getScanner` method which returns a `ResultScanner`. You can use it in the old way and it works like the old `ClientAsyncPrefetchScanner`.
+- There is a `scanAll` method which will return all the results at once. It aims to provide a simpler way for small scans which you want to get the whole results at once usually.
+- The Observer Pattern. There is a scan method which accepts a `ScanResultConsumer` as a parameter. It will pass the results to the consumer.
+
+Notice that `AsyncTable` interface is templatized. The template parameter specifies the type of `ScanResultConsumerBase` used by scans, which means the observer style scan APIs are different. The two types of scan consumers are - `ScanResultConsumer` and `AdvancedScanResultConsumer`.
+
+`ScanResultConsumer` needs a separate thread pool which is used to execute the callbacks registered to the returned CompletableFuture. Because the use of separate thread pool frees up RPC threads, callbacks are free to do anything. Use this if the callbacks are not quick, or when in doubt.
+
+`AdvancedScanResultConsumer` executes callbacks inside the framework thread. It is not allowed to do time consuming work in the callbacks else it will likely block the framework threads and cause very bad performance impact. As its name, it is designed for advanced users who want to write high performance code. See `org.apache.hadoop.hbase.client.example.HttpProxyExample` for how to write fully asynchronous code with it.
+
+## Asynchronous Admin
+
+You can obtain an `AsyncConnection` from `ConnectionFactory`, and then get a `AsyncAdmin` instance from it to access HBase. Notice that there are two `getAdmin` methods to get a `AsyncAdmin` instance. One method has one extra thread pool parameter which is used to execute callbacks. It is designed for normal users. Another method doesn’t need a thread pool and all the callbacks are executed inside the framework thread so it is not allowed to do time consuming works in the callbacks. It is designed for advanced users.
+
+The default `getAdmin` methods will return a `AsyncAdmin` instance which use default configs. If you want to customize some configs, you can use `getAdminBuilder` methods to get a `AsyncAdminBuilder` for creating `AsyncAdmin` instance. Users are free to only set the configs they care about to create a new `AsyncAdmin` instance.
+
+For the `AsyncAdmin` interface, most methods have the same meaning with the old `Admin` interface, expect that the return value is wrapped with a CompletableFuture usually.
+
+For most admin operations, when the returned CompletableFuture is done, it means the admin operation has also been done. But for compact operation, it only means the compact request was sent to HBase and may need some time to finish the compact operation. For `rollWALWriter` method, it only means the rollWALWriter request was sent to the region server and may need some time to finish the `rollWALWriter` operation.
+
+For region name, we only accept `byte[]` as the parameter type and it may be a full region name or a encoded region name. For server name, we only accept `ServerName` as the parameter type. For table name, we only accept `TableName` as the parameter type. For `list*` operations, we only accept `Pattern` as the parameter type if you want to do regex matching.
+
+## External Clients
+
+Information on non-Java clients and custom protocols is covered in [Apache HBase External APIs](/docs/external_apis)
+
+## Master Registry (new as of 2.3.0)
+
+Starting from 2.5.0, MasterRegistry is deprecated. It’s functionality is completely superseded by the RpcConnectionRegistry. Please see [Rpc Connection Registry (new as of 2.5.0)](#client.rpcconnectionregistry) for more details.
+
+Client internally works with a _connection registry_ to fetch the metadata needed by connections. This connection registry implementation is responsible for fetching the following metadata.
+
+- Active master address
+- Current meta region(s) locations
+- Cluster ID (unique to this cluster)
+
+This information is needed as a part of various client operations like connection set up, scans, gets, etc. Traditionally, the connection registry implementation has been based on ZooKeeper as the source of truth and clients fetched the metadata directly from the ZooKeeper quorum. HBase 2.3.0 introduces a new connection registry implementation based on direct communication with the Masters. With this implementation, clients now fetch required metadata via master RPC end points instead of maintaining connections to ZooKeeper. This change was done for the following reasons.
+
+- Reduce load on ZooKeeper since that is critical for cluster operation.
+- Holistic client timeout and retry configurations since the new registry brings all the client operations under HBase rpc framework.
+- Remove the ZooKeeper client dependency on HBase client library.
+
+This means:
+
+- At least a single active or stand by master is needed for cluster connection setup. Refer to [Runtime Impact](#master.runtime) for more details.
+- Master can be in a critical path of read/write operations, especially if the client metadata cache is empty or stale.
+- There is higher connection load on the masters that before since the clients talk directly to HMasters instead of ZooKeeper ensemble\`
+
+To reduce hot-spotting on a single master, all the masters (active & stand-by) expose the needed service to fetch the connection metadata. This lets the client connect to any master (not just active). Both ZooKeeper-based and Master-based connection registry implementations are available in 2.3+. For 2.x and earlier, the ZooKeeper-based implementation remains the default configuration. For 3.0.0, RpcConnectionRegistry becomes the default configuration, as the alternate to MasterRegistry.
+
+Change the connection registry implementation by updating the value configured for `hbase.client.registry.impl`. To explicitly enable the ZooKeeper-based registry, use
+
+```xml
+<property>
+  <name>hbase.client.registry.impl</name>
+  <value>org.apache.hadoop.hbase.client.ZKConnectionRegistry</value>
+</property>
+```
+
+To explicitly enable the Master-based registry, use
+
+```xml
+<property>
+  <name>hbase.client.registry.impl</name>
+  <value>org.apache.hadoop.hbase.client.MasterRegistry</value>
+</property>
+```
+
+### MasterRegistry RPC hedging
+
+MasterRegistry implements hedging of connection registry RPCs across active and stand-by masters. This lets the client make the same request to multiple servers and which ever responds first is returned back to the client immediately. This improves performance, especially when a subset of servers are under load. The hedging fan out size is configurable, meaning the number of requests that are hedged in a single attempt, using the configuration key _hbase.client.master_registry.hedged.fanout_ in the client configuration. It defaults to 2. With this default, the RPCs are tried in batches of 2. The hedging policy is still primitive and does not adapt to any sort of live rpc performance metrics.
+
+### Additional Notes
+
+- Clients hedge the requests in a randomized order to avoid hot-spotting a single master.
+- Cluster internal connections (masters ↔ regionservers) still use ZooKeeper based connection registry.
+- Cluster internal state is still tracked in Zookeeper, hence ZK availability requirements are same as before.
+- Inter cluster replication still uses ZooKeeper based connection registry to simplify configuration management.
+
+For more implementation details, please refer to the [design doc](https://github.com/apache/hbase/tree/master/dev-support/design-docs) and [HBASE-18095](https://issues.apache.org/jira/browse/HBASE-18095).
+
+## Rpc Connection Registry (new as of 2.5.0)
+
+As said in the [Master Registry (new as of 2.3.0)](#client.masterregistry) section, there are some disadvantages and limitations for MasterRegistry, especially that it puts master in the critical path of read/write operations. In order to address these problems, we introduced a more generic RpcConnectionRegistry.
+
+It is also rpc based, like MasterRegistry, with several differences
+
+1.  Region server also implements the necessary rpc service, so you can config any nodes in the cluster as bootstrap nodes, not only masters
+2.  Support refreshing bootstrap nodes, for spreading loads across the nodes in the cluster, and also remove the dead nodes in bootstrap nodes.
+
+To explicitly enable the rpc-based registry, use
+
+```xml
+<property>
+  <name>hbase.client.registry.impl</name>
+  <value>org.apache.hadoop.hbase.client.RpcConnectionRegistry</value>
+</property>
+```
+
+To configure the bootstrap nodes, use
+
+```xml
+<property>
+  <name>hbase.client.bootstrap.servers</name>
+  <value>server1:16020,server2:16020,server3:16020</value>
+</property>
+```
+
+If not configured, we will fallback to use master addresses as the bootstrap nodes.
+
+RpcConnectionRegistry is available in 2.5+, and becomes the default client registry implementation in 3.0.0.
+
+### RpcConnectionRegistry RPC hedging
+
+Hedged read is still supported, the configuration key is now _hbase.client.bootstrap.hedged.fanout_, and its default value is still 2.
+
+### RpcConnectionRegistry bootstrap nodes refreshing
+
+There are basically two reasons for us to refresh the bootstrap nodes
+
+- Periodically. This is for spreading loads across the nodes in the cluster. There are two configurations
+  1.  _hbase.client.bootstrap.refresh_interval_secs_: the refresh interval in seconds, default 300. A value less than or equal to zero means disable refreshing.
+  2.  _hbase.client.bootstrap.initial_refresh_delay_secs_: the initial refresh interval in seconds, the default value is 1/10 of _hbase.client.bootstrap.refresh_interval_secs_. The reason why we want to introduce a separated configuration for the delay for first refreshing is that, as end users could configure any nodes in a cluster as the initial bootstrap nodes, it is possible that different end users will configure the same machine which makes the machine over load. So we should have a shorter delay for the initial refresh, to let users quickly switch to the bootstrap nodes we want them to connect to.
+
+- When there is a connection error while requesting the nodes, we will refresh immediately, to remove the dead nodes. To avoid putting too much pressure to the cluster, there is a configuration _hbase.client.bootstrap.min_secs_between_refreshes_, to control the minimum interval between two refreshings. The default value is 60, but notice that, if you change _hbase.client.bootstrap.refresh_interval_secs_ to a small value, you need to make sure to also change _hbase.client.bootstrap.min_secs_between_refreshes_ to a value smaller than _hbase.client.bootstrap.refresh_interval_secs_, otherwise an IllegalArgumentException will be thrown.
+
+<Callout type="info">
+  (Advanced) In case of any issues with the rpc/master based registry, use the following
+  configuration to fallback to the ZooKeeper based connection registry implementation.
+</Callout>
+
+```xml
+<property>
+  <name>hbase.client.registry.impl</name>
+  <value>org.apache.hadoop.hbase.client.ZKConnectionRegistry</value>
+</property>
+```
+
+## Connection URI
+
+Starting from 2.7.0, we add the support for specifying the connection information for a HBase cluster through an URI, which we call a "connection URI". And we've added several methods in _ConnectionFactory_ to let you get a connection to the cluster specified by the URI. It looks like:
+
+```java
+URI uri = new URI("hbase+rpc://server1:16020,server2:16020,server3:16020");
+try (Connection conn = ConnectionFactory.createConnection(uri)) {
+  // ...
+}
+```
+
+### Supported Schemes
+
+Currently there are two schemes supported, _hbase+rpc_ for _RpcConnectionRegistry_ and _hbase+zk_ for _ZKConnectionRegistry_. _MasterRegistry_ is deprecated so we do not expose it through connection URI.
+
+For _hbase+rpc_, it looks like
+
+```shell
+hbase+rpc://server1:16020,server2:16020,server3:16020
+```
+
+The authority part _server1:16020,server2:16020,server3:16020_ specifies the bootstrap nodes and their rpc ports, i.e, the configuration value for _hbase.client.bootstrap.servers_ in the past.
+
+For _hbase+zk_, it looks like
+
+```shell
+hbase+zk://zk1:2181,zk2:2181,zk3:2181/hbase
+```
+
+The authority part _zk1:2181,zk2:2181,zk3:2181_ is the zk quorum, i.e, the configuration value for _hbase.zookeeper.quorum_ in the past. The path part _/hbase_ is the znode parent, i.e, the configuration value for _zookeeper.znode.parent_ in the past.
+
+### Specify Configuration through URI Queries
+
+To let users fully specify the connection information through a connection URI, we support specifying configuration values through URI Queries. It looks like:
+
+```shell
+hbase+rpc://server1:16020?hbase.client.operation.timeout=10000
+```
+
+In this way you can set the operation timeout to 10 seconds. Notice that, the configuration values specified in the connection URI will override the ones in the configuration file.
+
+### Implement Your Own Connection Registry
+
+We use _ServiceLoader_ to load different connection registry implementations, the entry point is _org.apache.hadoop.hbase.client.ConnectionRegistryURIFactory_. So if you implement your own _ConnectionRegistryURIFactory_ which has a different scheme, and register it in the services file, we can load it at runtime.
+
+Connection URI is still a very new feature which has not been used extensively in production, so we do not want to expose the ability to customize _ConnectionRegistryURIFactory_ yet as the API may be changed frequently in the beginning.
+
+If you really want to implement your own connection registry, you can use the above way but take your own risk.

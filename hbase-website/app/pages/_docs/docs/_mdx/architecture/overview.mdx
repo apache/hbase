@@ -1,0 +1,35 @@
+---
+title: "Overview"
+---
+
+## NoSQL?
+
+HBase is a type of "NoSQL" database. "NoSQL" is a general term meaning that the database isn’t an RDBMS which supports SQL as its primary access language, but there are many types of NoSQL databases: BerkeleyDB is an example of a local NoSQL database, whereas HBase is very much a distributed database. Technically speaking, HBase is really more a "Data Store" than "Data Base" because it lacks many of the features you find in an RDBMS, such as typed columns, secondary indexes, triggers, and advanced query languages, etc.
+
+However, HBase has many features which supports both linear and modular scaling. HBase clusters expand by adding RegionServers that are hosted on commodity class servers. If a cluster expands from 10 to 20 RegionServers, for example, it doubles both in terms of storage and as well as processing capacity. An RDBMS can scale well, but only up to a point - specifically, the size of a single database server - and for the best performance requires specialized hardware and storage devices. HBase features of note are:
+
+- Strongly consistent reads/writes: HBase is not an "eventually consistent" DataStore. This makes it very suitable for tasks such as high-speed counter aggregation.
+- Automatic sharding: HBase tables are distributed on the cluster via regions, and regions are automatically split and re-distributed as your data grows.
+- Automatic RegionServer failover
+- Hadoop/HDFS Integration: HBase supports HDFS out of the box as its distributed file system.
+- MapReduce: HBase supports massively parallelized processing via MapReduce for using HBase as both source and sink.
+- Java Client API: HBase supports an easy to use Java API for programmatic access.
+- Thrift/REST API: HBase also supports Thrift and REST for non-Java front-ends.
+- Block Cache and Bloom Filters: HBase supports a Block Cache and Bloom Filters for high volume query optimization.
+- Operational Management: HBase provides build-in web-pages for operational insight as well as JMX metrics.
+
+## When Should I Use HBase?
+
+HBase isn’t suitable for every problem.
+
+First, make sure you have enough data. If you have hundreds of millions or billions of rows, then HBase is a good candidate. If you only have a few thousand/million rows, then using a traditional RDBMS might be a better choice due to the fact that all of your data might wind up on a single node (or two) and the rest of the cluster may be sitting idle.
+
+Second, make sure you can live without all the extra features that an RDBMS provides (e.g., typed columns, secondary indexes, transactions, advanced query languages, etc.) An application built against an RDBMS cannot be "ported" to HBase by simply changing a JDBC driver, for example. Consider moving from an RDBMS to HBase as a complete redesign as opposed to a port.
+
+Third, make sure you have enough hardware. Even HDFS doesn’t do well with anything less than 5 DataNodes (due to things such as HDFS block replication which has a default of 3), plus a NameNode.
+
+HBase can run quite well stand-alone on a laptop - but this should be considered a development configuration only.
+
+## What Is The Difference Between HBase and Hadoop/HDFS?
+
+[HDFS](https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-hdfs/HdfsDesign.html) is a distributed file system that is well suited for the storage of large files. Its documentation states that it is not, however, a general purpose file system, and does not provide fast individual record lookups in files. HBase, on the other hand, is built on top of HDFS and provides fast record lookups (and updates) for large tables. This can sometimes be a point of conceptual confusion. HBase internally puts your data in indexed "StoreFiles" that exist on HDFS for high-speed lookups. See the [Data Model](/docs/datamodel) and the rest of this chapter for more information on how HBase achieves its goals.

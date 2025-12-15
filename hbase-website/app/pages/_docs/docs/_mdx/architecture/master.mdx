@@ -1,0 +1,90 @@
+---
+title: "Master"
+---
+
+`HMaster` is the implementation of the Master Server. The Master server is responsible for monitoring all RegionServer instances in the cluster, and is the interface for all metadata changes. In a distributed cluster, the Master typically runs on the [NameNode](#arch.hdfs.nn). J Mohamed Zahoor goes into some more detail on the Master Architecture in this blog posting, [HBase HMaster Architecture](https://web.archive.org/web/20191211053128/http://blog.zahoor.in/2012/08/hbase-hmaster-architecture/).
+
+## Startup Behavior
+
+If run in a multi-Master environment, all Masters compete to run the cluster. If the active Master loses its lease in ZooKeeper (or the Master shuts down), then the remaining Masters jostle to take over the Master role.
+
+## Runtime Impact
+
+A common dist-list question involves what happens to an HBase cluster when the Master goes down. This information has changed starting 3.0.0.
+
+### Up until releases 2.x.y
+
+Because the HBase client talks directly to the RegionServers, the cluster can still function in a "steady state". Additionally, per [Catalog Tables](#arch.catalog), `hbase:meta` exists as an HBase table and is not resident in the Master. However, the Master controls critical functions such as RegionServer failover and completing region splits. So while the cluster can still run for a short time without the Master, the Master should be restarted as soon as possible.
+
+### Staring release 3.0.0
+
+As mentioned in section [Master Registry (new as of 2.3.0)](#client.masterregistry), the default connection registry for clients is now based on master rpc end points. Hence the requirements for masters' uptime are even tighter starting this release.
+
+- At least one active or stand by master is needed for a connection set up, unlike before when all the clients needed was a ZooKeeper ensemble.
+- Master is now in critical path for read/write operations. For example, if the meta region bounces off to a different region server, clients need master to fetch the new locations. Earlier this was done by fetching this information directly from ZooKeeper.
+- Masters will now have higher connection load than before. So, the server side configuration might need adjustment depending on the load.
+
+Overall, the master uptime requirements, when this feature is enabled, are even higher for the client operations to go through.
+
+## Interface
+
+The methods exposed by `HMasterInterface` are primarily metadata-oriented methods:
+
+- Table (createTable, modifyTable, removeTable, enable, disable)
+- ColumnFamily (addColumn, modifyColumn, removeColumn)
+- Region (move, assign, unassign) For example, when the `Admin` method `disableTable` is invoked, it is serviced by the Master server.
+
+## Processes
+
+The Master runs several background threads:
+
+### LoadBalancer
+
+Periodically, and when there are no regions in transition, a load balancer will run and move regions around to balance the cluster's load. See [Balancer](#master-processes-loadbalancer) for configuring this property.
+
+See [Region-RegionServer Assignment](#regions.arch.assignment) for more information on region assignment.
+
+### CatalogJanitor
+
+Periodically checks and cleans up the `hbase:meta` table. See [hbase:meta](#arch.catalog.meta) for more information on the meta table.
+
+## MasterProcWAL
+
+_MasterProcWAL is replaced in hbase-2.3.0 by an alternate Procedure Store implementation; see [in-master-procedure-store-region](#in-master-procedure-store-region). This section pertains to hbase-2.0.0 through hbase-2.2.x_
+
+HMaster records administrative operations and their running states, such as the handling of a crashed server, table creation, and other DDLs, into a Procedure Store. The Procedure Store WALs are stored under the MasterProcWALs directory. The Master WALs are not like RegionServer WALs. Keeping up the Master WAL allows us to run a state machine that is resilient across Master failures. For example, if a HMaster was in the middle of creating a table encounters an issue and fails, the next active HMaster can take up where the previous left off and carry the operation to completion. Since hbase-2.0.0, a new AssignmentManager (A.K.A AMv2) was introduced and the HMaster handles region assignment operations, server crash processing, balancing, etc., all via AMv2 persisting all state and transitions into MasterProcWALs rather than up into ZooKeeper, as we do in hbase-1.x.
+
+See [AMv2 Description for Devs](/docs/amv2) (and [Procedure Framework (Pv2): HBASE-12439](/docs/pv2) for its basis) if you would like to learn more about the new AssignmentManager.
+
+### Configurations for MasterProcWAL
+
+Here are the list of configurations that effect MasterProcWAL operation. You should not have to change your defaults.
+
+- **`hbase.procedure.store.wal.periodic.roll.msec`**  
+  **Description:** Frequency of generating a new WAL  
+  **Default:** `1h (3600000 in msec)`
+
+- **`hbase.procedure.store.wal.roll.threshold`**  
+  **Description:** Threshold in size before the WAL rolls. Every time the WAL reaches this size or the above period, 1 hour, passes since last log roll, the HMaster will generate a new WAL.  
+  **Default:** `32MB (33554432 in byte)`
+
+- **`hbase.procedure.store.wal.warn.threshold`**  
+  **Description:** If the number of WALs goes beyond this threshold, the following message should appear in the HMaster log with WARN level when rolling.  
+  ```
+  procedure WALs count=xx above the warning threshold 64. check running procedures to see if something is stuck.
+  ```  
+  **Default:** `64`
+
+- **`hbase.procedure.store.wal.max.retries.before.roll`**  
+  **Description:** Max number of retry when syncing slots (records) to its underlying storage, such as HDFS. Every attempt, the following message should appear in the HMaster log.  
+  ```
+  unable to sync slots, retry=xx
+  ```  
+  **Default:** `3`
+
+- **`hbase.procedure.store.wal.sync.failure.roll.max`**  
+  **Description:** After the above 3 retrials, the log is rolled and the retry count is reset to 0, thereon a new set of retrial starts. This configuration controls the max number of attempts of log rolling upon sync failure. That is, HMaster is allowed to fail to sync 9 times in total. Once it exceeds, the following log should appear in the HMaster log.  
+  ```
+  Sync slots after log roll failed, abort.
+  ```  
+  **Default:** `3`

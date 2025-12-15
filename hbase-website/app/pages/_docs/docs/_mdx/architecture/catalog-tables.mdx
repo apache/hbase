@@ -1,0 +1,37 @@
+---
+title: "Catalog Tables"
+---
+
+The catalog table `hbase:meta` exists as an HBase table and is filtered out of the HBase shell’s `list` command, but is in fact a table just like any other.
+
+## hbase:meta
+
+The `hbase:meta` table (previously called `.META.`) keeps a list of all regions in the system, and the location of `hbase:meta` is stored in ZooKeeper.
+
+The `hbase:meta` table structure is as follows:
+
+**Key:**
+
+- Region key of the format (`[table],[region start key],[region id]`)
+
+**Values:**
+
+- `info:regioninfo` (serialized [RegionInfo](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/RegionInfo.html) instance for this region)
+- `info:server` (server:port of the RegionServer containing this region)
+- `info:serverstartcode` (start-time of the RegionServer process containing this region)
+
+When a table is in the process of splitting, two other columns will be created, called `info:splitA` and `info:splitB`. These columns represent the two daughter regions. The values for these columns are also serialized HRegionInfo instances. After the region has been split, eventually this row will be deleted.
+
+<Callout type="info" title="Note on HRegionInfo">
+  The empty key is used to denote table start and table end. A region with an empty start key is the
+  first region in a table. If a region has both an empty start and an empty end key, it is the only
+  region in the table
+</Callout>
+
+In the (hopefully unlikely) event that programmatic processing of catalog metadata is required, see the [RegionInfo.parseFrom](<https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/RegionInfo.html#parseFrom(byte%5B%5D)>) utility.
+
+## Startup Sequencing
+
+First, the location of `hbase:meta` is looked up in ZooKeeper. Next, `hbase:meta` is updated with server and startcode values.
+
+For information on region-RegionServer assignment, see [Region-RegionServer Assignment](#regions.arch.assignment).

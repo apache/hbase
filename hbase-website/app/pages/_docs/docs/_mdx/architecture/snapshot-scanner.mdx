@@ -1,6 +1,5 @@
 ---
 title: "Scan Over Snapshot"
-description: "TableSnapshotScanner and TableSnapshotInputFormat for scanning HBase snapshots directly from HDFS."
 ---
 
 In HBase, a scan of a table costs server-side HBase resources reading, formating, and returning data back to the client.
@@ -24,11 +23,11 @@ the hbase.rootdir. The scanner deletes the contents of the directory once the sc
 Path restoreDir = new Path("XX"); // restore dir should not be a subdirectory of hbase.rootdir
 Scan scan = new Scan();
 try (TableSnapshotScanner scanner = new TableSnapshotScanner(conf, restoreDir, snapshotName, scan)) {
-Result result = scanner.next();
-while (result != null) {
-    ...
-    result = scanner.next();
-}
+    Result result = scanner.next();
+    while (result != null) {
+        ...
+        result = scanner.next();
+    }
 }
 ```
 
@@ -51,20 +50,18 @@ Generally, only the HBase owner or the HDFS admin have the permission to access 
 
 [HBASE-18659](https://issues.apache.org/jira/browse/HBASE-18659) uses HDFS ACLs to make HBase granted user have permission to access snapshot files.
 
-### [HDFS ACLs](https://hadoop.apache.org/docs/r2.7.1/hadoop-project-dist/hadoop-hdfs/HdfsPermissionsGuide.html#ACLs_Access_Control_Lists)
+### HDFS ACLs
 
-HDFS ACLs supports an "access ACL", which defines the rules to enforce during permission checks, and a "default ACL",
-which defines the ACL entries that new child files or sub-directories receive automatically during creation.
-Via HDFS ACLs, HBase syncs granted users with read permission to HFiles.
+[HDFS ACLs](https://hadoop.apache.org/docs/r2.7.1/hadoop-project-dist/hadoop-hdfs/HdfsPermissionsGuide.html#ACLs_Access_Control_Lists) supports an "access ACL", which defines the rules to enforce during permission checks, and a "default ACL", which defines the ACL entries that new child files or sub-directories receive automatically during creation. Via HDFS ACLs, HBase syncs granted users with read permission to HFiles.
 
 ### Basic idea
 
 The HBase files are organized in the following ways:
 
- * `{hbase-rootdir}/.tmp/data/{namespace}/{table}`
- * `{hbase-rootdir}/data/{namespace}/{table}`
- * `{hbase-rootdir}/archive/data/{namespace}/{table}`
- * `{hbase-rootdir}/.hbase-snapshot/{snapshotName}`
+- `{hbase-rootdir}/.tmp/data/{namespace}/{table}`
+- `{hbase-rootdir}/data/{namespace}/{table}`
+- `{hbase-rootdir}/archive/data/{namespace}/{table}`
+- `{hbase-rootdir}/.hbase-snapshot/{snapshotName}`
 
 So the basic idea is to add or remove HDFS ACLs to files of the global/namespace/table directory
 when grant or revoke permission to global/namespace/table.
@@ -73,28 +70,28 @@ See the design doc in [HBASE-18659](https://issues.apache.org/jira/browse/HBASE-
 
 ### Configuration to use this feature
 
-* Firstly, make sure that HDFS ACLs are enabled and umask is set to 027
+- Firstly, make sure that HDFS ACLs are enabled and umask is set to 027
 
 ```
 dfs.namenode.acls.enabled = true
 fs.permissions.umask-mode = 027
 ```
 
-* Add master coprocessor, please make sure the SnapshotScannerHDFSAclController is configured after AccessController
+- Add master coprocessor, please make sure the SnapshotScannerHDFSAclController is configured after AccessController
 
 ```
 hbase.coprocessor.master.classes = "org.apache.hadoop.hbase.security.access.AccessController
 ,org.apache.hadoop.hbase.security.access.SnapshotScannerHDFSAclController"
 ```
 
-* Enable this feature
+- Enable this feature
 
 ```
 hbase.acl.sync.to.hdfs.enable=true
 ```
 
-* Modify table scheme to enable this feature for a specified table, this config is
-false by default for every table, this means the HBase granted ACLs will not be synced to HDFS
+- Modify table scheme to enable this feature for a specified table, this config is
+  false by default for every table, this means the HBase granted ACLs will not be synced to HDFS
 
 ```
 alter 't1', CONFIGURATION => {'hbase.acl.sync.to.hdfs.enable' => 'true'}
@@ -104,29 +101,11 @@ alter 't1', CONFIGURATION => {'hbase.acl.sync.to.hdfs.enable' => 'true'}
 
 There are some limitations for this feature:
 
-<Callout type="warn">
-If we enable this feature, some master operations such as grant, revoke, snapshot...
-(See the design doc for more details) will be slower as we need to sync HDFS ACLs to related hfiles.
-</Callout>
-
-<Callout type="warn">
-HDFS has a config which limits the max ACL entries num for one directory or file:
-
-```
-dfs.namenode.acls.max.entries = 32(default value)
-```
-
-The 32 entries include four fixed users for each directory or file: owner, group, other, and mask.
-For a directory, the four users contain 8 ACL entries(access and default) and for a file, the four
-users contain 4 ACL entries(access). This means there are 24 ACL entries left for named users or groups.
-
-Based on this limitation, we can only sync up to 12 HBase granted users' ACLs. This means, if a table
-enables this feature, then the total users with table, namespace of this table, global READ permission
-should not be greater than 12.
-</Callout>
-
-<Callout type="warn">
-There are some cases that this coprocessor has not handled or could not handle, so the user HDFS ACLs
-are not synced normally. It will not make a reference link to another hfile of other tables.
-</Callout>
-
+- If we enable this feature, some master operations such as grant, revoke, snapshot... (See the design doc for more details) will be slower as we need to sync HDFS ACLs to related hfiles.
+- HDFS has a config which limits the max ACL entries num for one directory or file:
+  ```
+  dfs.namenode.acls.max.entries = 32(default value)
+  ```
+  The 32 entries include four fixed users for each directory or file: owner, group, other, and mask. For a directory, the four users contain 8 ACL entries(access and default) and for a file, the four users contain 4 ACL entries(access). This means there are 24 ACL entries left for named users or groups.  
+   Based on this limitation, we can only sync up to 12 HBase granted users' ACLs. This means, if a table enables this feature, then the total users with table, namespace of this table, global READ permission should not be greater than 12.
+- There are some cases that this coprocessor has not handled or could not handle, so the user HDFS ACLs are not synced normally. It will not make a reference link to another hfile of other tables.

@@ -1,0 +1,250 @@
+---
+title: "Client Request Filters"
+---
+
+[Get](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Get.html) and [Scan](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Scan.html) instances can be optionally configured with [filters](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/filter/Filter.html) which are applied on the RegionServer.
+
+Filters can be confusing because there are many different types, and it is best to approach them by understanding the groups of Filter functionality.
+
+## Structural
+
+Structural Filters contain other Filters.
+
+### FilterList
+
+[FilterList](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/filter/FilterList.html) represents a list of Filters with a relationship of `FilterList.Operator.MUST_PASS_ALL` or `FilterList.Operator.MUST_PASS_ONE` between the Filters. The following example shows an 'or' between two Filters (checking for either 'my value' or 'my other value' on the same attribute).
+
+```java
+FilterList list = new FilterList(FilterList.Operator.MUST_PASS_ONE);
+SingleColumnValueFilter filter1 = new SingleColumnValueFilter(
+  cf,
+  column,
+  CompareOperator.EQUAL,
+  Bytes.toBytes("my value")
+  );
+list.add(filter1);
+SingleColumnValueFilter filter2 = new SingleColumnValueFilter(
+  cf,
+  column,
+  CompareOperator.EQUAL,
+  Bytes.toBytes("my other value")
+  );
+list.add(filter2);
+scan.setFilter(list);
+```
+
+## Column Value
+
+### SingleColumnValueFilter
+
+A SingleColumnValueFilter (see: [https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/filter/SingleColumnValueFilter.html](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/filter/SingleColumnValueFilter.html)) can be used to test column values for equivalence (`CompareOperaor.EQUAL`), inequality (`CompareOperaor.NOT_EQUAL`), or ranges (e.g., `CompareOperaor.GREATER`). The following is an example of testing equivalence of a column to a String value "my value"…​
+
+```java
+SingleColumnValueFilter filter = new SingleColumnValueFilter(
+  cf,
+  column,
+  CompareOperaor.EQUAL,
+  Bytes.toBytes("my value")
+  );
+scan.setFilter(filter);
+```
+
+### ColumnValueFilter
+
+Introduced in HBase-2.0.0 version as a complementation of SingleColumnValueFilter, ColumnValueFilter gets matched cell only, while SingleColumnValueFilter gets the entire row (has other columns and values) to which the matched cell belongs. Parameters of constructor of ColumnValueFilter are the same as SingleColumnValueFilter.
+
+```java
+ColumnValueFilter filter = new ColumnValueFilter(
+  cf,
+  column,
+  CompareOperaor.EQUAL,
+  Bytes.toBytes("my value")
+  );
+scan.setFilter(filter);
+```
+
+Note. For simple query like "equals to a family:qualifier:value", we highly recommend to use the following way instead of using SingleColumnValueFilter or ColumnValueFilter:
+
+```java
+Scan scan = new Scan();
+scan.addColumn(Bytes.toBytes("family"), Bytes.toBytes("qualifier"));
+ValueFilter vf = new ValueFilter(CompareOperator.EQUAL,
+  new BinaryComparator(Bytes.toBytes("value")));
+scan.setFilter(vf);
+...
+```
+
+This scan will restrict to the specified column 'family:qualifier', avoiding scan of unrelated families and columns, which has better performance, and `ValueFilter` is the condition used to do the value filtering.
+
+But if query is much more complicated beyond this book, then please make your good choice case by case.
+
+## Column Value Comparators
+
+There are several Comparator classes in the Filter package that deserve special mention. These Comparators are used in concert with other Filters, such as [SingleColumnValueFilter](#client.filter.cv.scvf).
+
+### RegexStringComparator
+
+[RegexStringComparator](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/filter/RegexStringComparator.html) supports regular expressions for value comparisons.
+
+```java
+RegexStringComparator comp = new RegexStringComparator("my.");   // any value that starts with 'my'
+SingleColumnValueFilter filter = new SingleColumnValueFilter(
+  cf,
+  column,
+  CompareOperaor.EQUAL,
+  comp
+  );
+scan.setFilter(filter);
+```
+
+See the Oracle JavaDoc for [supported RegEx patterns in Java](http://download.oracle.com/javase/6/docs/api/java/util/regex/Pattern.html).
+
+### SubstringComparator
+
+[SubstringComparator](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/filter/SubstringComparator.html) can be used to determine if a given substring exists in a value. The comparison is case-insensitive.
+
+```java
+SubstringComparator comp = new SubstringComparator("y val");   // looking for 'my value'
+SingleColumnValueFilter filter = new SingleColumnValueFilter(
+  cf,
+  column,
+  CompareOperaor.EQUAL,
+  comp
+  );
+scan.setFilter(filter);
+```
+
+### BinaryPrefixComparator
+
+See [BinaryPrefixComparator](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/filter/BinaryPrefixComparator.html).
+
+### BinaryComparator
+
+See [BinaryComparator](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/filter/BinaryComparator.html).
+
+### BinaryComponentComparator
+
+[BinaryComponentComparator](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/filter/BinaryComponentComparator.html) can be used to compare specific value at specific location with in the cell value. The comparison can be done for both ascii and binary data.
+
+```java
+byte[] partialValue = Bytes.toBytes("partial_value");
+int partialValueOffset = 0;
+Filter partialValueFilter = new ValueFilter(CompareFilter.CompareOp.GREATER,
+        new BinaryComponentComparator(partialValue,partialValueOffset));
+```
+
+See [HBASE-22969](https://issues.apache.org/jira/browse/HBASE-22969) for other use cases and details.
+
+## KeyValue Metadata
+
+As HBase stores data internally as KeyValue pairs, KeyValue Metadata Filters evaluate the existence of keys (i.e., ColumnFamily:Column qualifiers) for a row, as opposed to values the previous section.
+
+### FamilyFilter
+
+[FamilyFilter](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/filter/FamilyFilter.html) can be used to filter on the ColumnFamily. It is generally a better idea to select ColumnFamilies in the Scan than to do it with a Filter.
+
+### QualifierFilter
+
+[QualifierFilter](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/filter/QualifierFilter.html) can be used to filter based on Column (aka Qualifier) name.
+
+### ColumnPrefixFilter
+
+[ColumnPrefixFilter](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/filter/ColumnPrefixFilter.html) can be used to filter based on the lead portion of Column (aka Qualifier) names.
+
+A ColumnPrefixFilter seeks ahead to the first column matching the prefix in each row and for each involved column family. It can be used to efficiently get a subset of the columns in very wide rows.
+
+Note: The same column qualifier can be used in different column families. This filter returns all matching columns.
+
+Example: Find all columns in a row and family that start with "abc"
+
+```java
+Table t = ...;
+byte[] row = ...;
+byte[] family = ...;
+byte[] prefix = Bytes.toBytes("abc");
+Scan scan = new Scan(row, row); // (optional) limit to one row
+scan.addFamily(family); // (optional) limit to one family
+Filter f = new ColumnPrefixFilter(prefix);
+scan.setFilter(f);
+scan.setBatch(10); // set this if there could be many columns returned
+ResultScanner rs = t.getScanner(scan);
+for (Result r = rs.next(); r != null; r = rs.next()) {
+  for (Cell cell : result.listCells()) {
+    // each cell represents a column
+  }
+}
+rs.close();
+```
+
+### MultipleColumnPrefixFilter
+
+[MultipleColumnPrefixFilter](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/filter/MultipleColumnPrefixFilter.html) behaves like ColumnPrefixFilter but allows specifying multiple prefixes.
+
+Like ColumnPrefixFilter, MultipleColumnPrefixFilter efficiently seeks ahead to the first column matching the lowest prefix and also seeks past ranges of columns between prefixes. It can be used to efficiently get discontinuous sets of columns from very wide rows.
+
+Example: Find all columns in a row and family that start with "abc" or "xyz"
+
+```java
+Table t = ...;
+byte[] row = ...;
+byte[] family = ...;
+byte[][] prefixes = new byte[][] {Bytes.toBytes("abc"), Bytes.toBytes("xyz")};
+Scan scan = new Scan(row, row); // (optional) limit to one row
+scan.addFamily(family); // (optional) limit to one family
+Filter f = new MultipleColumnPrefixFilter(prefixes);
+scan.setFilter(f);
+scan.setBatch(10); // set this if there could be many columns returned
+ResultScanner rs = t.getScanner(scan);
+for (Result r = rs.next(); r != null; r = rs.next()) {
+  for (Cell cell : result.listCells()) {
+    // each cell represents a column
+  }
+}
+rs.close();
+```
+
+### ColumnRangeFilter
+
+A [ColumnRangeFilter](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/filter/ColumnRangeFilter.html) allows efficient intra row scanning.
+
+A ColumnRangeFilter can seek ahead to the first matching column for each involved column family. It can be used to efficiently get a 'slice' of the columns of a very wide row. i.e. you have a million columns in a row but you only want to look at columns bbbb-bbdd.
+
+Note: The same column qualifier can be used in different column families. This filter returns all matching columns.
+
+Example: Find all columns in a row and family between "bbbb" (inclusive) and "bbdd" (inclusive)
+
+```java
+Table t = ...;
+byte[] row = ...;
+byte[] family = ...;
+byte[] startColumn = Bytes.toBytes("bbbb");
+byte[] endColumn = Bytes.toBytes("bbdd");
+Scan scan = new Scan(row, row); // (optional) limit to one row
+scan.addFamily(family); // (optional) limit to one family
+Filter f = new ColumnRangeFilter(startColumn, true, endColumn, true);
+scan.setFilter(f);
+scan.setBatch(10); // set this if there could be many columns returned
+ResultScanner rs = t.getScanner(scan);
+for (Result r = rs.next(); r != null; r = rs.next()) {
+  for (Cell cell : result.listCells()) {
+    // each cell represents a column
+  }
+}
+rs.close();
+```
+
+Note: Introduced in HBase 0.92
+
+## RowKey
+
+### RowFilter
+
+It is generally a better idea to use the startRow/stopRow methods on Scan for row selection, however [RowFilter](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/filter/RowFilter.html) can also be used.
+
+You can supplement a scan (both bounded and unbounded) with RowFilter constructed from [BinaryComponentComparator](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/filter/BinaryComponentComparator.html) for further filtering out or filtering in rows. See [HBASE-22969](https://issues.apache.org/jira/browse/HBASE-22969) for use cases and other details.
+
+## Utility
+
+### FirstKeyOnlyFilter
+
+This is primarily used for rowcount jobs. See [FirstKeyOnlyFilter](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/filter/FirstKeyOnlyFilter.html).

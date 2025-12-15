@@ -1,6 +1,5 @@
 ---
 title: "Backup and Restore"
-description: "Complete guide to HBase backup and restore functionality including full and incremental backups, configuration, and best practices."
 ---
 
 ## Overview
@@ -159,7 +158,7 @@ The ",..." is an ellipsis meant to imply that this is a comma-separated list of 
 ## Backup and Restore commands
 
 This covers the command-line utilities that administrators would run to create, restore, and merge backups. Tools to
-inspect details on specific backup sessions is covered in the next section, [Administration of Backup Images](#bradministration).
+inspect details on specific backup sessions is covered in the next section, [Administration of Backup Images](#br-administration).
 
 Run the command `hbase backup help \<command\>` to access the online help that provides basic information about a command
 and its options. The below information is captured in this help message for each command.
@@ -184,57 +183,48 @@ hbase backup create <type> <backup_path>
 After the command finishes running, the console prints a SUCCESS or FAILURE status message. The SUCCESS message includes a _backup_ ID.
 The backup ID is the Unix time (also known as Epoch time) that the HBase master received the backup request from the client.
 
-<Callout type="info" title="Tip">
+<Callout type="info">
 Record the backup ID that appears at the end of a successful backup. In case the source cluster fails and you need to recover the
 dataset with a restore operation, having the backup ID readily available can save time.
 </Callout>
 
 #### Positional Command-Line Arguments
 
-**_type_**
-
+**_type_**  
 The type of backup to execute: _full_ or _incremental_. As a reminder, an _incremental_ backup requires a _full_ backup to
 already exist.
 
-**_backup_path_**
-
+**_backup_path_**  
 The _backup_path_ argument specifies the full filesystem URI of where to store the backup image. Valid prefixes are
 _hdfs:_, _webhdfs:_, _s3a:_ or other compatible Hadoop File System implementations.
 
 #### Named Command-Line Arguments
 
-**_-t \<table_name\[,table_name\]\>_**
-
+**_-t \<table_name\[,table_name\]\>_**  
 A comma-separated list of tables to back up. If no tables are specified, all tables are backed up. No regular-expression or
-wildcard support is present; all table names must be explicitly listed. See [Backup Sets](#brusingbackupsets) for more
+wildcard support is present; all table names must be explicitly listed. See [Backup Sets](#br-using-backup-sets) for more
 information about peforming operations on collections of tables. Mutually exclusive with the _-s_ option; one of these
 named options are required.
 
-**_-s \<backup_set_name\>_**
-
+**_-s \<backup_set_name\>_**  
 Identify tables to backup based on a backup set. See [Using Backup Sets](#brusingbackupsets) for the purpose and usage
 of backup sets. Mutually exclusive with the _-t_ option.
 
-**_-w \<number_workers\>_**
-
+**_-w \<number_workers\>_**  
 (Optional) Specifies the number of parallel workers to copy data to backup destination. Backups are currently executed by MapReduce jobs
 so this value corresponds to the number of Mappers that will be spawned by the job.
 
-**_-b \<bandwidth_per_worker\>_**
-
+**_-b \<bandwidth_per_worker\>_**  
 (Optional) Specifies the bandwidth of each worker in MB per second.
 
-**_-d_**
-
+**_-d_**  
 (Optional) Enables "DEBUG" mode which prints additional logging about the backup creation.
 
-**_-i_**
-
+**_-i_**  
 (Optional) Ignore checksum verify between source snapshot and exported snapshot. Especially when the source and target file system types
 are different, we should use -i option to skip checksum-checks.
 
-**_-q \<name\>_**
-
+**_-q \<name\>_**  
 (Optional) Allows specification of the name of a YARN queue which the MapReduce job to create the backup should be executed in. This option
 is useful to prevent backup tasks from stealing resources away from other MapReduce jobs of high importance.
 
@@ -258,44 +248,36 @@ hbase restore <backup_path> <backup_id>
 
 #### Positional Command-Line Arguments
 
-**_backup_path_**
-
+**_backup_path_**  
 The _backup_path_ argument specifies the full filesystem URI of where to store the backup image. Valid prefixes are
 _hdfs:_, _webhdfs:_, _s3a:_ or other compatible Hadoop File System implementations.
 
-**_backup_id_**
-
+**_backup_id_**  
 The backup ID that uniquely identifies the backup image to be restored.
 
 #### Named Command-Line Arguments
 
-**_-t \<table_name\[,table_name\]\>_**
-
-A comma-separated list of tables to restore. See [Backup Sets](#brusingbackupsets) for more
+**_-t \<table_name\[,table_name\]\>_**  
+A comma-separated list of tables to restore. See [Backup Sets](#br-using-backup-sets) for more
 information about peforming operations on collections of tables. Mutually exclusive with the _-s_ option; one of these
 named options are required.
 
-**_-s \<backup_set_name\>_**
-
-Identify tables to backup based on a backup set. See [Using Backup Sets](#brusingbackupsets) for the purpose and usage
+**_-s \<backup_set_name\>_**  
+Identify tables to backup based on a backup set. See [Using Backup Sets](#br-using-backup-sets) for the purpose and usage
 of backup sets. Mutually exclusive with the _-t_ option.
 
-**_-q \<name\>_**
-
+**_-q \<name\>_**  
 (Optional) Allows specification of the name of a YARN queue which the MapReduce job to create the backup should be executed in. This option
 is useful to prevent backup tasks from stealing resources away from other MapReduce jobs of high importance.
 
-**_-c_**
-
+**_-c_**  
 (Optional) Perform a dry-run of the restore. The actions are checked, but not executed.
 
-**_-m \<target_tables\>_**
-
+**_-m \<target_tables\>_**  
 (Optional) A comma-separated list of tables to restore into. If this option is not provided, the original table name is used. When
 this option is provided, there must be an equal number of entries provided in the `-t` option.
 
-**_-o_**
-
+**_-o_**  
 (Optional) Overwrites the target table for the restore if the table already exists.
 
 #### Example of Usage
@@ -327,8 +309,7 @@ $ hbase backup merge <backup_ids>
 
 #### Positional Command-Line Arguments
 
-**_backup_ids_**
-
+**_backup_ids_**  
 A comma-separated list of incremental backup image IDs that are to be combined into a single image.
 
 #### Named Command-Line Arguments
@@ -380,40 +361,33 @@ You must enter one (and no more than one) of the following subcommands after hba
 Also, the backup set name is case-sensitive in the command-line utility.
 </Callout>
 
-**_add_**
-
+**_add_**  
 Adds table\[s\] to a backup set. Specify a _backup_set_name_ value after this argument to create a backup set.
 
-**_remove_**
-
+**_remove_**  
 Removes tables from the set. Specify the tables to remove in the tables argument.
 
-**_list_**
-
+**_list_**  
 Lists all backup sets.
 
-**_describe_**
-
+**_describe_**  
 Displays a description of a backup set. The information includes whether the set has full
 or incremental backups, start and end times of the backups, and a list of the tables in the set. This subcommand must precede
 a valid value for the _backup_set_name_ value.
 
-**_delete_**
-
+**_delete_**  
 Deletes a backup set. Enter the value for the _backup_set_name_ option directly after the `hbase backup set delete` command.
 
 #### Positional Command-Line Arguments
 
-**_backup_set_name_**
-
+**_backup_set_name_**  
 Use to assign or invoke a backup set name. The backup set name must contain only printable characters and cannot have any spaces.
 
-**_tables_**
-
+**_tables_**  
 List of tables (or a single table) to include in the backup set. Enter the table names as a comma-separated list. If no tables
 are specified, all tables are included in the set.
 
-<Callout type="info" title="Tip">
+<Callout type="info">
 Maintain a log or other record of the case-sensitive backup set names and the corresponding tables in each set on a separate
 or remote cluster, backup strategy. This information can help you in case of failure on the primary cluster.
 </Callout>
@@ -451,8 +425,7 @@ $ hbase backup progress <backup_id>
 
 #### Positional Command-Line Arguments
 
-**_backup_id_**
-
+**_backup_id_**  
 Specifies the backup that you want to monitor by seeing the progress information. The backupId is case-sensitive.
 
 #### Named Command-Line Arguments
@@ -476,26 +449,21 @@ $ hbase backup history <backup_id>
 
 #### Positional Command-Line Arguments
 
-**_backup_id_**
-
+**_backup_id_**  
 Specifies the backup that you want to monitor by seeing the progress information. The backupId is case-sensitive.
 
 #### Named Command-Line Arguments
 
-**_-n \<num_records\>_**
-
+**_-n \<num_records\>_**  
 (Optional) The maximum number of backup records (Default: 10).
 
-**_-p \<backup_root_path\>_**
-
+**_-p \<backup_root_path\>_**  
 The full filesystem URI of where backup images are stored.
 
-**_-s \<backup_set_name\>_**
-
+**_-s \<backup_set_name\>_**  
 The name of the backup set to obtain history for. Mutually exclusive with the _-t_ option.
 
-**_-t \<table_name\>_**
-
+**_-t \<table_name\>_**  
 The name of table to obtain history for. Mutually exclusive with the _-s_ option.
 
 #### Example usage
@@ -517,7 +485,6 @@ $ hbase backup describe <backup_id>
 #### Positional Command-Line Arguments
 
 **_backup_id_**
-
 The ID of the backup image to describe.
 
 #### Named Command-Line Arguments
@@ -543,12 +510,10 @@ $ hbase backup delete -k <days>
 
 #### Named Command-Line Arguments
 
-**_-l \<backup_id1,backup_id2,...\>_**
-
+**_-l \<backup_id1,backup_id2,...\>_**  
 Comma-separated list of backup IDs to delete.
 
-**_-k \<days\>_**
-
+**_-k \<days\>_**  
 Deletes all backup images completed more than the specified number of days ago.
 
 <Callout type="info">
@@ -637,7 +602,7 @@ to `org.apache.hadoop.hbase.backup.BackupHFileCleaner` or append it to the curre
 
 **_hbase.backup.system.ttl_**: The time-to-live in seconds of data in the `hbase:backup` tables (default: forever). This property
 is only relevant prior to the creation of the `hbase:backup` table. Use the `alter` command in the HBase shell to modify the TTL
-when this table already exists. See the [below section](#brfilesystemgrowthwarning) for more details on the impact of this
+when this table already exists. See the [below section](#br-filesystem-growth-warning) for more details on the impact of this
 configuration property.
 
 **_hbase.backup.attempts.max_**: The number of attempts to perform when taking hbase table snapshots (default: 10).
@@ -706,64 +671,64 @@ to recover the data later. All commands are run when logged in as HBase superuse
 be used for all operations to avoid typing each table name. The backup set name is case-sensitive and should be formed with only
 printable characters and without spaces.
 
-```bash
- $ hbase backup set add green_set transactions
- $ hbase backup set add green_set customer
-```
+    ```bash
+    $ hbase backup set add green_set transactions
+    $ hbase backup set add green_set customer
+    ```
 
 * The first backup of green_set data must be a full backup. The following command example shows how credentials are passed to Amazon
 S3 and specifies the file system with the s3a: prefix.
 
-```bash
- $ ACCESS_KEY=ABCDEFGHIJKLMNOPQRST
- $ SECRET_KEY=123456789abcdefghijklmnopqrstuvwxyzABCD
- $ sudo -u hbase hbase backup create full\
-   s3a://$ACCESS_KEY:SECRET_KEY@prodhbasebackups/backups -s green_set
-```
+    ```bash
+    $ ACCESS_KEY=ABCDEFGHIJKLMNOPQRST
+    $ SECRET_KEY=123456789abcdefghijklmnopqrstuvwxyzABCD
+    $ sudo -u hbase hbase backup create full\
+      s3a://$ACCESS_KEY:SECRET_KEY@prodhbasebackups/backups -s green_set
+    ```
 
 * Incremental backups should be run according to a schedule that ensures essential data recovery in the event of a catastrophe. At
 this retail company, the HBase admin team decides that automated daily backups secures the data sufficiently. The team decides that
 they can implement this by modifying an existing Cron job that is defined in `/etc/crontab`. Consequently, IT modifies the Cron job
 by adding the following line:
 
-```bash
- @daily hbase hbase backup create incremental s3a://$ACCESS_KEY:$SECRET_KEY@prodhbasebackups/backups -s green_set
-```
+    ```bash
+    @daily hbase hbase backup create incremental s3a://$ACCESS_KEY:$SECRET_KEY@prodhbasebackups/backups -s green_set
+    ```
 
 * A catastrophic IT incident disables the production cluster that the green application uses. An HBase system administrator of the
 backup cluster must restore the _green_set_ dataset to the point in time closest to the recovery objective.
 
-<Callout type="info">
-If the administrator of the backup HBase cluster has the backup ID with relevant details in accessible records, the following
-search with the `hdfs dfs -ls` command and manually scanning the backup ID list can be bypassed. Consider continuously maintaining
-and protecting a detailed log of backup IDs outside the production cluster in your environment.
-</Callout>
+    <Callout type="info">
+    If the administrator of the backup HBase cluster has the backup ID with relevant details in accessible records, the following
+    search with the `hdfs dfs -ls` command and manually scanning the backup ID list can be bypassed. Consider continuously maintaining
+    and protecting a detailed log of backup IDs outside the production cluster in your environment.
+    </Callout>
 
-The HBase administrator runs the following command on the directory where backups are stored to print the list of successful backup
-IDs on the console:
+    The HBase administrator runs the following command on the directory where backups are stored to print the list of successful backup
+    IDs on the console:
 
-```bash
- `hdfs dfs -ls -t /prodhbasebackups/backups`
-```
+    ```bash
+    `hdfs dfs -ls -t /prodhbasebackups/backups`
+    ```
 
 * The admin scans the list to see which backup was created at a date and time closest to the recovery objective. To do this, the
 admin converts the calendar timestamp of the recovery point in time to Unix time because backup IDs are uniquely identified with
 Unix time. The backup IDs are listed in reverse chronological order, meaning the most recent successful backup appears first.
 
-The admin notices that the following line in the command output corresponds with the _green_set_ backup that needs to be restored:
+    The admin notices that the following line in the command output corresponds with the _green_set_ backup that needs to be restored:
 
-```bash
- /prodhbasebackups/backups/backup_1467823988425`
-```
+    ```bash
+    /prodhbasebackups/backups/backup_1467823988425`
+    ```
 
 * The admin restores green_set invoking the backup ID and the -overwrite option. The -overwrite option truncates all existing data
 in the destination and populates the tables with data from the backup dataset. Without this flag, the backup data is appended to the
 existing data in the destination. In this case, the admin decides to overwrite the data because it is corrupted.
 
-```bash
- $ sudo -u hbase hbase restore -s green_set \
-   s3a://$ACCESS_KEY:$SECRET_KEY@prodhbasebackups/backups backup_1467823988425 \ -overwrite
-```
+    ```bash
+    $ sudo -u hbase hbase restore -s green_set \
+      s3a://$ACCESS_KEY:$SECRET_KEY@prodhbasebackups/backups backup_1467823988425 \ -overwrite
+    ```
 
 ## Security of Backup Data
 
@@ -776,7 +741,7 @@ that only authenticated users are allowed to access that data.
 For example, with the above example of backing up data to S3, it is of the utmost importance that the proper permissions are assigned
 to the S3 bucket to ensure that only a minimum set of authorized users are allowed to access this data. Because the data is no longer
 being accessed via HBase, and its authentication and authorization controls, we must ensure that the filesystem storing that data is
-providing a comparable level of security. This is a manual step which users *must* implement on their own.
+providing a comparable level of security. This is a manual step which users **must** implement on their own.
 
 ## Technical Details of Incremental Backup and Restore
 
@@ -860,7 +825,7 @@ Like we did for full backups, we have to understand the incremental backup proce
 * Identify new write-ahead logs since the last full or incremental backup: negligible. Apriori knowledge from the backup system table(s).
 * Read, filter, and write "minimized" HFiles equivalent to the WALs: dominated by the speed of writing data. Relative to write speed of HDFS.
 * Read bulk load records from the backup system table, form the paths for bulk-loaded HFiles, and copy them to the backup destination.
-* DistCp the HFiles to the destination: [see above](#brexportsnapshotcost).
+* DistCp the HFiles to the destination: [see above](#br-export-snapshot-cost).
 
 For the second step, the dominating cost of this operation would be the re-writing the data (under the assumption that a majority of the
 data in the WAL is preserved). In this case, we can assume an aggregate write speed of 30MB/s per node. Continuing our 16-node cluster example,

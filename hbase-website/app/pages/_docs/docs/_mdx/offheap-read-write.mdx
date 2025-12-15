@@ -1,6 +1,5 @@
 ---
 title: "RegionServer Off-Heap Read/Write Path"
-description: "Offheap memory management for HBase read and write paths to reduce GC pressure."
 ---
 
 ## Overview
@@ -28,19 +27,19 @@ This feature is available since HBase 2.0.0. Refer to below blogs for more detai
 [Offheaping the Read Path in Apache HBase: Part 1 of 2](https://blogs.apache.org/hbase/entry/offheaping_the_read_path_in)
 and [Offheap Read-Path in Production - The Alibaba story](https://blogs.apache.org/hbase/entry/offheap-read-path-in-production)
 
-For an end-to-end off-heaped read-path, all you have to do is enable an off-heap backed [offheap.blockcache](#offheap-blockcache)(BC).
-To do this, configure _hbase.bucketcache.ioengine_ to be _offheap_ in _hbase-site.xml_ (See [bc.deploy.modes](#bc-deploy-modes) to learn
+For an end-to-end off-heaped read-path, all you have to do is enable an off-heap backed [Off-heap Block Cache](#offheap-blockcache)(BC).
+To do this, configure _hbase.bucketcache.ioengine_ to be _offheap_ in _hbase-site.xml_ (See [BucketCache Deploy Modes](#bc-deploy-modes) to learn
 more about _hbase.bucketcache.ioengine_ options). Also specify the total capacity of the BC using `hbase.bucketcache.size`.
-Please remember to adjust value of 'HBASE_OFFHEAPSIZE' in _hbase-env.sh_ (See [bc.example](#bc-example) for help sizing and an example
+Please remember to adjust value of 'HBASE_OFFHEAPSIZE' in _hbase-env.sh_ (See [BucketCache Example Configuration](#bc-example) for help sizing and an example
 enabling). This configuration is for specifying the maximum possible off-heap memory allocation for the RegionServer java
 process. This should be bigger than the off-heap BC size to accommodate usage by other features making use of off-heap memory
-such as Server RPC buffer pool and short-circuit reads (See discussion in [bc.example](#bc-example)).
+such as Server RPC buffer pool and short-circuit reads (See discussion in [BucketCache Example Configuration](#bc-example)).
 
 Please keep in mind that there is no default for `hbase.bucketcache.ioengine` which means the `BlockCache` is OFF by default
-(See [direct.memory](#direct-memory)). 
+(See [Direct Memory Usage In HBase](#direct-memory)). 
 
 This is all you need to do to enable off-heap read path. Most buffers in HBase are already off-heap. With BC off-heap,
-the read pipeline will copy data between HDFS and the server socket -- caveat [hbase.ipc.server.reservoir.initial.max](#hbase-ipc-server-reservoir-initial-max) --
+the read pipeline will copy data between HDFS and the server socket — caveat [hbase.ipc.server.reservoir.initial.max](#hbase-ipc-server-reservoir-initial-max) —
 sending results back to the client.
 
 ### Tuning the RPC buffer pool
@@ -135,14 +134,13 @@ ByteBuffers. This config is for how many buffers to pool. Its default value is 2
 4. `hbase.server.allocator.buffer.size`: The byte size of each ByteBuffer. The default value is 66560 (65KB), here we choose 65KB instead of 64KB
 because of [HBASE-22532](https://issues.apache.org/jira/browse/HBASE-22532).
 
-The three config keys -- `hbase.ipc.server.reservoir.enabled`, `hbase.ipc.server.reservoir.initial.buffer.size` and `hbase.ipc.server.reservoir.initial.max` -- introduced in hbase-2.x
+The three config keys —`hbase.ipc.server.reservoir.enabled`, `hbase.ipc.server.reservoir.initial.buffer.size` and `hbase.ipc.server.reservoir.initial.max` — introduced in hbase-2.x
 have been renamed and deprecated in hbase-3.x/hbase-2.3.x. Please use the new config keys instead:
 `hbase.server.allocator.pool.enabled`, `hbase.server.allocator.buffer.size` and `hbase.server.allocator.max.buffer.count`.
 
 Next, we have some suggestions regards performance.
 
-### Please make sure that there are enough pooled DirectByteBuffer in your ByteBuffAllocator.
-
+**Please make sure that there are enough pooled DirectByteBuffer in your ByteBuffAllocator.**  
 The ByteBuffAllocator will allocate ByteBuffer from the DirectByteBuffer pool first. If
 there's no available ByteBuffer in the pool, then we will allocate the ByteBuffers from onheap.
 By default, we will pre-allocate 4MB for each RPC handler (The handler count is determined by the config:
@@ -161,8 +159,7 @@ If the following condition is met, you may need to increase your max buffer.coun
 heapAllocationRatio >= hbase.server.allocator.minimal.allocate.size / hbase.server.allocator.buffer.size * 100%
 ```
 
-### Please make sure the buffer size is greater than your block size.
-
+**Please make sure the buffer size is greater than your block size.**  
 We have the default block size of 64KB, so almost all of the data blocks will be 64KB + a small delta, where the delta is
 very small, depending on the size of the last Cell. If we set `hbase.server.allocator.buffer.size`=64KB,
 then each block will be allocated as two ByteBuffers:  one 64KB DirectByteBuffer and one HeapByteBuffer for the delta bytes.
