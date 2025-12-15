@@ -27,6 +27,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import org.apache.hadoop.hbase.CatalogFamilyFormat;
 import org.apache.hadoop.hbase.ClientMetaTableAccessor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Result;
@@ -86,7 +87,7 @@ public class TableStateManager {
   }
 
   public void setDeletedTable(TableName tableName) throws IOException {
-    if (tableName.equals(TableName.META_TABLE_NAME)) {
+    if (tableName.equals(MetaTableName.getInstance())) {
       // Can't delete the hbase:meta table.
       return;
     }
@@ -147,7 +148,7 @@ public class TableStateManager {
   }
 
   private void updateMetaState(TableName tableName, TableState.State newState) throws IOException {
-    if (tableName.equals(TableName.META_TABLE_NAME)) {
+    if (tableName.equals(MetaTableName.getInstance())) {
       if (
         TableState.State.DISABLING.equals(newState) || TableState.State.DISABLED.equals(newState)
       ) {

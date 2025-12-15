@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master.procedure;
 import java.io.IOException;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.BufferedMutator;
 import org.apache.hadoop.hbase.client.Connection;
@@ -64,7 +65,7 @@ public class MigrateNamespaceTableProcedure
     try (Table nsTable = conn.getTable(TableName.NAMESPACE_TABLE_NAME);
       ResultScanner scanner = nsTable.getScanner(
         new Scan().addFamily(TableDescriptorBuilder.NAMESPACE_FAMILY_INFO_BYTES).readAllVersions());
-      BufferedMutator mutator = conn.getBufferedMutator(TableName.META_TABLE_NAME)) {
+      BufferedMutator mutator = conn.getBufferedMutator(MetaTableName.getInstance())) {
       for (Result result;;) {
         result = scanner.next();
         if (result == null) {
@@ -88,7 +89,7 @@ public class MigrateNamespaceTableProcedure
       switch (state) {
         case MIGRATE_NAMESPACE_TABLE_ADD_FAMILY:
           TableDescriptor metaTableDesc =
-            env.getMasterServices().getTableDescriptors().get(TableName.META_TABLE_NAME);
+            env.getMasterServices().getTableDescriptors().get(MetaTableName.getInstance());
           if (!metaTableDesc.hasColumnFamily(HConstants.NAMESPACE_FAMILY)) {
             TableDescriptor newMetaTableDesc = TableDescriptorBuilder.newBuilder(metaTableDesc)
               .setColumnFamily(

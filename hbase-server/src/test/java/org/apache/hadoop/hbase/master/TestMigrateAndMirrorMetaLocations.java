@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
@@ -68,7 +69,7 @@ public class TestMigrateAndMirrorMetaLocations {
   @BeforeClass
   public static void setUp() throws Exception {
     UTIL.startMiniCluster(3);
-    HBaseTestingUtil.setReplicas(UTIL.getAdmin(), TableName.META_TABLE_NAME, 2);
+    HBaseTestingUtil.setReplicas(UTIL.getAdmin(), MetaTableName.getInstance(), 2);
   }
 
   @AfterClass
@@ -143,20 +144,20 @@ public class TestMigrateAndMirrorMetaLocations {
     }
     // wait until all meta regions have been assigned
     UTIL.waitFor(30000,
-      () -> UTIL.getMiniHBaseCluster().getRegions(TableName.META_TABLE_NAME).size() == 2);
+      () -> UTIL.getMiniHBaseCluster().getRegions(MetaTableName.getInstance()).size() == 2);
     // make sure all the SCPs are finished
     waitUntilNoSCP();
     checkMirrorLocation(2);
 
     // increase replica count to 3
-    HBaseTestingUtil.setReplicas(UTIL.getAdmin(), TableName.META_TABLE_NAME, 3);
+    HBaseTestingUtil.setReplicas(UTIL.getAdmin(), MetaTableName.getInstance(), 3);
     checkMirrorLocation(3);
 
     byte[] replica2Data = ZKUtil.getData(UTIL.getZooKeeperWatcher(),
       UTIL.getZooKeeperWatcher().getZNodePaths().getZNodeForReplica(2));
 
     // decrease replica count to 1
-    HBaseTestingUtil.setReplicas(UTIL.getAdmin(), TableName.META_TABLE_NAME, 1);
+    HBaseTestingUtil.setReplicas(UTIL.getAdmin(), MetaTableName.getInstance(), 1);
     checkMirrorLocation(1);
 
     // restart the whole cluster, put an extra replica znode on zookeeper, to see if we will remove

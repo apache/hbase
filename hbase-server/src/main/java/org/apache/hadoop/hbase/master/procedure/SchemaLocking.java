@@ -26,6 +26,7 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.locking.LockProcedure;
 import org.apache.hadoop.hbase.procedure2.LockAndQueue;
@@ -174,7 +175,7 @@ class SchemaLocking {
     addToLockedResources(lockedResources, regionLocks, Function.identity(),
       LockedResourceType.REGION);
     addToLockedResources(lockedResources, peerLocks, Function.identity(), LockedResourceType.PEER);
-    addToLockedResources(lockedResources, ImmutableMap.of(TableName.META_TABLE_NAME, metaLock),
+    addToLockedResources(lockedResources, ImmutableMap.of(MetaTableName.getInstance(), metaLock),
       tn -> tn.getNameAsString(), LockedResourceType.META);
     addToLockedResources(lockedResources, globalLocks, Function.identity(),
       LockedResourceType.GLOBAL);
@@ -236,7 +237,7 @@ class SchemaLocking {
       .append("tableLocks", filterUnlocked(tableLocks))
       .append("regionLocks", filterUnlocked(regionLocks))
       .append("peerLocks", filterUnlocked(peerLocks))
-      .append("metaLocks", filterUnlocked(ImmutableMap.of(TableName.META_TABLE_NAME, metaLock)))
+      .append("metaLocks", filterUnlocked(ImmutableMap.of(MetaTableName.getInstance(), metaLock)))
       .append("globalLocks", filterUnlocked(globalLocks)).build();
   }
 

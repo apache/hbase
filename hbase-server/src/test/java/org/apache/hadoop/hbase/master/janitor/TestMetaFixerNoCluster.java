@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.SortedSet;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -50,21 +51,21 @@ public class TestMetaFixerNoCluster {
   private static byte[] D = Bytes.toBytes("d");
   private static RegionInfo ALL = RegionInfoBuilder.FIRST_META_REGIONINFO;
   private static RegionInfo _ARI =
-    RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).setEndKey(A).build();
+    RegionInfoBuilder.newBuilder(MetaTableName.getInstance()).setEndKey(A).build();
   private static RegionInfo _BRI =
-    RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).setEndKey(B).build();
+    RegionInfoBuilder.newBuilder(MetaTableName.getInstance()).setEndKey(B).build();
   private static RegionInfo ABRI =
-    RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).setStartKey(A).setEndKey(B).build();
+    RegionInfoBuilder.newBuilder(MetaTableName.getInstance()).setStartKey(A).setEndKey(B).build();
   private static RegionInfo ACRI = org.apache.hadoop.hbase.client.RegionInfoBuilder
-    .newBuilder(TableName.META_TABLE_NAME).setStartKey(A).setEndKey(C).build();
+    .newBuilder(MetaTableName.getInstance()).setStartKey(A).setEndKey(C).build();
   private static RegionInfo CDRI = org.apache.hadoop.hbase.client.RegionInfoBuilder
-    .newBuilder(TableName.META_TABLE_NAME).setStartKey(C).setEndKey(D).build();
+    .newBuilder(MetaTableName.getInstance()).setStartKey(C).setEndKey(D).build();
   private static RegionInfo ADRI = org.apache.hadoop.hbase.client.RegionInfoBuilder
-    .newBuilder(TableName.META_TABLE_NAME).setStartKey(A).setEndKey(D).build();
+    .newBuilder(MetaTableName.getInstance()).setStartKey(A).setEndKey(D).build();
   private static RegionInfo D_RI = org.apache.hadoop.hbase.client.RegionInfoBuilder
-    .newBuilder(TableName.META_TABLE_NAME).setStartKey(D).build();
+    .newBuilder(MetaTableName.getInstance()).setStartKey(D).build();
   private static RegionInfo C_RI = org.apache.hadoop.hbase.client.RegionInfoBuilder
-    .newBuilder(TableName.META_TABLE_NAME).setStartKey(C).build();
+    .newBuilder(MetaTableName.getInstance()).setStartKey(C).build();
 
   @Test
   public void testGetRegionInfoWithLargestEndKey() {

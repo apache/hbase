@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ScheduledChore;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -105,7 +106,7 @@ public class CatalogJanitor extends ScheduledChore {
         scan();
       }
     } catch (IOException e) {
-      LOG.warn("Failed initial janitorial scan of hbase:meta table", e);
+      LOG.warn("Failed initial janitorial scan of {} table", MetaTableName.getInstance(), e);
       return false;
     }
     return true;
@@ -145,7 +146,7 @@ public class CatalogJanitor extends ScheduledChore {
           + this.services.getServerManager().isClusterShutdown());
       }
     } catch (IOException e) {
-      LOG.warn("Failed janitorial scan of hbase:meta table", e);
+      LOG.warn("Failed janitorial scan of {} table", MetaTableName.getInstance(), e);
     }
   }
 
@@ -484,7 +485,7 @@ public class CatalogJanitor extends ScheduledChore {
        */
       Get g = new Get(Bytes.toBytes("t2,40,1564119846424.1db8c57d64e0733e0f027aaeae7a0bf0."));
       g.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
-      try (Table t = connection.getTable(TableName.META_TABLE_NAME)) {
+      try (Table t = connection.getTable(MetaTableName.getInstance())) {
         Result r = t.get(g);
         byte[] row = g.getRow();
         row[row.length - 2] <<= row[row.length - 2];

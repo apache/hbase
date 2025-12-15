@@ -24,6 +24,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -394,7 +395,7 @@ public class DeleteTableProcedure extends AbstractStateMachineTableProcedure<Del
     long now = EnvironmentEdgeManager.currentTime();
     List<Delete> deletes = new ArrayList<>();
     try (
-      Table metaTable = env.getMasterServices().getConnection().getTable(TableName.META_TABLE_NAME);
+      Table metaTable = env.getMasterServices().getConnection().getTable(MetaTableName.getInstance());
       ResultScanner scanner = metaTable.getScanner(tableScan)) {
       for (;;) {
         Result result = scanner.next();
@@ -405,7 +406,7 @@ public class DeleteTableProcedure extends AbstractStateMachineTableProcedure<Del
       }
       if (!deletes.isEmpty()) {
         LOG.warn("Deleting some vestigial " + deletes.size() + " rows of " + tableName + " from "
-          + TableName.META_TABLE_NAME);
+          + MetaTableName.getInstance());
         metaTable.delete(deletes);
       }
     }

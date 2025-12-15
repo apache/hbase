@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionLocator;
@@ -66,7 +67,7 @@ public class TestMetaAssignmentWithStopMaster {
   @Test
   public void testStopActiveMaster() throws Exception {
     try (Connection conn = ConnectionFactory.createConnection(UTIL.getConfiguration());
-      RegionLocator locator = conn.getRegionLocator(TableName.META_TABLE_NAME)) {
+      RegionLocator locator = conn.getRegionLocator(MetaTableName.getInstance())) {
       ServerName oldMetaServer = locator.getAllRegionLocations().get(0).getServerName();
       ServerName oldMaster = UTIL.getMiniHBaseCluster().getMaster().getServerName();
 

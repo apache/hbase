@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Delete;
@@ -80,7 +81,7 @@ public class ReplicationBarrierCleaner extends ScheduledChore {
     long deletedLastPushedSeqIds = 0;
     TableName tableName = null;
     List<String> peerIds = null;
-    try (Table metaTable = conn.getTable(TableName.META_TABLE_NAME);
+    try (Table metaTable = conn.getTable(MetaTableName.getInstance());
       ResultScanner scanner = metaTable.getScanner(
         new Scan().addFamily(HConstants.REPLICATION_BARRIER_FAMILY).readAllVersions())) {
       for (;;) {

@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Delete;
@@ -79,7 +80,7 @@ public class TableNamespaceManager {
     if (!opt.isPresent()) {
       // the procedure is not present, check whether have the ns family in meta table
       TableDescriptor metaTableDesc =
-        masterServices.getTableDescriptors().get(TableName.META_TABLE_NAME);
+        masterServices.getTableDescriptors().get(MetaTableName.getInstance());
       if (metaTableDesc.hasColumnFamily(HConstants.NAMESPACE_FAMILY)) {
         // normal case, upgrading is done or the cluster is created with 3.x code
         migrationDone = true;
@@ -106,7 +107,7 @@ public class TableNamespaceManager {
   }
 
   private void loadFromMeta() throws IOException {
-    try (Table table = masterServices.getConnection().getTable(TableName.META_TABLE_NAME);
+    try (Table table = masterServices.getConnection().getTable(MetaTableName.getInstance());
       ResultScanner scanner = table.getScanner(HConstants.NAMESPACE_FAMILY)) {
       for (Result result;;) {
         result = scanner.next();
@@ -204,7 +205,7 @@ public class TableNamespaceManager {
     Put put = new Put(row, true).addColumn(HConstants.NAMESPACE_FAMILY,
       HConstants.NAMESPACE_COL_DESC_QUALIFIER,
       ProtobufUtil.toProtoNamespaceDescriptor(ns).toByteArray());
-    try (Table table = conn.getTable(TableName.META_TABLE_NAME)) {
+    try (Table table = conn.getTable(MetaTableName.getInstance())) {
       table.put(put);
     }
   }
@@ -212,7 +213,7 @@ public class TableNamespaceManager {
   public void deleteNamespace(String namespaceName) throws IOException {
     checkMigrationDone();
     Delete d = new Delete(Bytes.toBytes(namespaceName));
-    try (Table table = masterServices.getConnection().getTable(TableName.META_TABLE_NAME)) {
+    try (Table table = masterServices.getConnection().getTable(MetaTableName.getInstance())) {
       table.delete(d);
     }
     cache.remove(namespaceName);

@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -243,7 +244,7 @@ public class TestMaster {
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(Bytes.toBytes("cf"))).build();
     Table table = TEST_UTIL.createTable(tableDescriptor, null);
     // flush META region
-    TEST_UTIL.flush(TableName.META_TABLE_NAME);
+    TEST_UTIL.flush(MetaTableName.getInstance());
     // wait for regionserver report
     Threads.sleep(msgInterval * 2);
     // record flush seqid before cluster shutdown
