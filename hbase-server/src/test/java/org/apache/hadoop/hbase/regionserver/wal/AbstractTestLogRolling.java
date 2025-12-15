@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -338,7 +339,7 @@ public abstract class AbstractTestLogRolling {
   public void testCompactionRecordDoesntBlockRolling() throws Exception {
 
     // When the hbase:meta table can be opened, the region servers are running
-    try (Table t = TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME);
+    try (Table t = TEST_UTIL.getConnection().getTable(MetaTableName.getInstance());
       Table table = createTestTable(getName())) {
 
       server = TEST_UTIL.getRSForFirstRegionInTable(table.getName());

@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -322,7 +323,7 @@ public class TestLogRolling extends AbstractTestLogRolling {
       fs.getDefaultReplication(TEST_UTIL.getDataTestDirOnTestFS()) > 1);
     LOG.info("Replication=" + fs.getDefaultReplication(TEST_UTIL.getDataTestDirOnTestFS()));
     // When the hbase:meta table can be opened, the region servers are running
-    Table t = TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME);
+    Table t = TEST_UTIL.getConnection().getTable(MetaTableName.getInstance());
     try {
       this.server = cluster.getRegionServer(0);
 

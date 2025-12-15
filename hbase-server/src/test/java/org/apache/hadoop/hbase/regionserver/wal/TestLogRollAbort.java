@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
@@ -162,7 +163,7 @@ public class TestLogRollAbort {
     LOG.info("Starting testRSAbortWithUnflushedEdits()");
 
     // When the hbase:meta table can be opened, the region servers are running
-    TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME).close();
+    TEST_UTIL.getConnection().getTable(MetaTableName.getInstance()).close();
 
     // Create the test table and open it
     TableName tableName = TableName.valueOf(this.getClass().getSimpleName());

@@ -62,6 +62,7 @@ import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.RegionTooBusyException;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.Append;
@@ -1925,7 +1926,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
           tableName = ProtobufUtil.toTableName(ri.getTableName());
         }
       }
-      if (!TableName.META_TABLE_NAME.equals(tableName)) {
+      if (!MetaTableName.getInstance().equals(tableName)) {
         throw new ServiceException(ie);
       }
       // We are assigning meta, wait a little for regionserver to finish initialization.

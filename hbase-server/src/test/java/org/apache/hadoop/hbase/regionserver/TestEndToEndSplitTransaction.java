@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -429,7 +430,7 @@ public class TestEndToEndSplitTransaction {
     log("blocking until region is split:" + Bytes.toStringBinary(regionName));
     RegionInfo daughterA = null, daughterB = null;
     try (Connection conn = ConnectionFactory.createConnection(conf);
-      Table metaTable = conn.getTable(TableName.META_TABLE_NAME)) {
+      Table metaTable = conn.getTable(MetaTableName.getInstance())) {
       Result result = null;
       RegionInfo region = null;
       while ((EnvironmentEdgeManager.currentTime() - start) < timeout) {

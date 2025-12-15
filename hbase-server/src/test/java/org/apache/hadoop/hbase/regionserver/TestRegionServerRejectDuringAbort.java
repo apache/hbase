@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -135,7 +136,7 @@ public class TestRegionServerRejectDuringAbort {
       .getRegionServerThreads()) {
       HRegionServer regionServer = regionServerThread.getRegionServer();
       if (
-        regionServer.getRegions(TableName.META_TABLE_NAME).isEmpty()
+        regionServer.getRegions(MetaTableName.getInstance()).isEmpty()
           && !regionServer.getRegions(TABLE_NAME).isEmpty()
       ) {
         serverWithoutMeta = regionServer;
