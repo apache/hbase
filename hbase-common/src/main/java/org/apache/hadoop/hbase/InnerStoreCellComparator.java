@@ -75,7 +75,7 @@ public class InnerStoreCellComparator extends CellComparatorImpl {
    * @return CellComparator to use going off the {@code tableName} passed.
    */
   public static CellComparator getInnerStoreCellComparator(byte[] tableName) {
-    return Bytes.equals(tableName, TableName.META_TABLE_NAME.toBytes())
+    return Bytes.equals(tableName, MetaTableName.getInstance().toBytes())
       ? MetaCellComparator.META_COMPARATOR
       : InnerStoreCellComparator.INNER_STORE_COMPARATOR;
   }

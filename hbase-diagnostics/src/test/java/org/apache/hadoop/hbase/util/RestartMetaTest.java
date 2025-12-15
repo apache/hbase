@@ -124,7 +124,7 @@ public class RestartMetaTest extends AbstractHBaseTool {
 
     LOG.debug("Trying to scan meta");
 
-    Table metaTable = connection.getTable(TableName.META_TABLE_NAME);
+    Table metaTable = connection.getTable(MetaTableName.getInstance());
     ResultScanner scanner = metaTable.getScanner(new Scan());
     Result result;
     while ((result = scanner.next()) != null) {
