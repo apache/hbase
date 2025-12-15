@@ -18,12 +18,12 @@
 package org.apache.hadoop.hbase.quotas;
 
 import static org.apache.hadoop.hbase.quotas.ThrottleQuotaTestUtil.triggerUserCacheRefresh;
-import static org.junit.Assert.assertTrue;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.lessThan;
 
 import java.io.IOException;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -34,25 +34,22 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestThreadHandlerUsageQuota {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestThreadHandlerUsageQuota.class);
+
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final TableName TABLE_NAME = TableName.valueOf(UUID.randomUUID().toString());
-  private static final int REFRESH_TIME = 5;
   private static final byte[] FAMILY = Bytes.toBytes("cf");
   private static final byte[] QUALIFIER = Bytes.toBytes("q");
   private static final int MAX_OPS = 1000;
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     ThrottleQuotaTestUtil.clearQuotaCache(TEST_UTIL);
     EnvironmentEdgeManager.reset();
@@ -60,11 +57,10 @@ public class TestThreadHandlerUsageQuota {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     // Enable quotas
     TEST_UTIL.getConfiguration().setBoolean(QuotaUtil.QUOTA_CONF_KEY, true);
-    TEST_UTIL.getConfiguration().setInt(QuotaCache.REFRESH_CONF_KEY, REFRESH_TIME);
 
     // Don't cache blocks to make IO predictable
     TEST_UTIL.getConfiguration().setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0.0f);
@@ -86,8 +82,8 @@ public class TestThreadHandlerUsageQuota {
 
       configureThrottle();
       long throttledAttempts = ThrottleQuotaTestUtil.doGets(MAX_OPS, FAMILY, QUALIFIER, table);
-      assertTrue("Throttled attempts should be less than unthrottled attempts",
-        throttledAttempts < unthrottledAttempts);
+      assertThat("Throttled attempts should be less than unthrottled attempts", throttledAttempts,
+        lessThan(unthrottledAttempts));
     }
   }
 
@@ -99,8 +95,8 @@ public class TestThreadHandlerUsageQuota {
 
       configureThrottle();
       long throttledAttempts = ThrottleQuotaTestUtil.doPuts(MAX_OPS, FAMILY, QUALIFIER, table);
-      assertTrue("Throttled attempts should be less than unthrottled attempts",
-        throttledAttempts < unthrottledAttempts);
+      assertThat("Throttled attempts should be less than unthrottled attempts", throttledAttempts,
+        lessThan(unthrottledAttempts));
     }
   }
 
@@ -110,6 +106,9 @@ public class TestThreadHandlerUsageQuota {
         ThrottleType.REQUEST_HANDLER_USAGE_MS, 1, TimeUnit.SECONDS));
     }
     triggerUserCacheRefresh(TEST_UTIL, false, TABLE_NAME);
+    // increase the tick so we can calculate a positive rpc request time, and then consume all the
+    // available quota and make request fail next time
+    ThrottleQuotaTestUtil.envEdge.setValue(System.currentTimeMillis() + 10000);
   }
 
   private void unthrottleUser() throws Exception {
@@ -118,6 +117,9 @@ public class TestThreadHandlerUsageQuota {
         ThrottleType.REQUEST_HANDLER_USAGE_MS));
     }
     triggerUserCacheRefresh(TEST_UTIL, true, TABLE_NAME);
+    // increase the tick here too to make sure that we truly skip the quota check, not because we
+    // pass the quota check
+    ThrottleQuotaTestUtil.envEdge.setValue(System.currentTimeMillis() + 10000);
   }
 
   private static String getUserName() throws IOException {
