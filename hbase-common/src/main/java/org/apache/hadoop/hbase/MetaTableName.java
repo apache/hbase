@@ -2,6 +2,7 @@ package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hbase.thirdparty.com.google.common.base.Strings;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -9,6 +10,7 @@ import org.slf4j.LoggerFactory;
  * Singleton class for managing the META_TABLE_NAME instance.
  * This allows the meta table name to be overridden for testing using reflection.
  */
+@InterfaceAudience.Public
 public class MetaTableName {
   private static final Logger LOG = LoggerFactory.getLogger(MetaTableName.class);
   

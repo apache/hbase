@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
@@ -64,7 +65,7 @@ public class TestZKConnectionRegistry {
   @BeforeClass
   public static void setUp() throws Exception {
     TEST_UTIL.startMiniCluster(3);
-    HBaseTestingUtil.setReplicas(TEST_UTIL.getAdmin(), TableName.META_TABLE_NAME, 3);
+    HBaseTestingUtil.setReplicas(TEST_UTIL.getAdmin(), MetaTableName.getInstance(), 3);
     REGISTRY = new ZKConnectionRegistry(TEST_UTIL.getConfiguration(), null);
   }
 
@@ -89,7 +90,7 @@ public class TestZKConnectionRegistry {
     IntStream.range(0, 3).forEach(i -> {
       HRegionLocation loc = locs.getRegionLocation(i);
       assertNotNull("Replica " + i + " doesn't have location", loc);
-      assertEquals(TableName.META_TABLE_NAME, loc.getRegion().getTable());
+      assertEquals(MetaTableName.getInstance(), loc.getRegion().getTable());
       assertEquals(i, loc.getRegion().getReplicaId());
     });
   }

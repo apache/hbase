@@ -27,6 +27,7 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -141,7 +142,7 @@ public class TestRegionInfoBuilder {
   @Test
   public void testContainsRangeForMetaTable() {
     TableDescriptor tableDesc =
-      TableDescriptorBuilder.newBuilder(TableName.META_TABLE_NAME).build();
+      TableDescriptorBuilder.newBuilder(MetaTableName.getInstance()).build();
     RegionInfo hri = RegionInfoBuilder.newBuilder(tableDesc.getTableName()).build();
     byte[] startRow = HConstants.EMPTY_START_ROW;
     byte[] row1 = Bytes.toBytes("a,a,0");

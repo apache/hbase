@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
 import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.REGION_NAMES_KEY;
 import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.SERVER_NAME_KEY;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
@@ -38,6 +37,7 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.trace.ConnectionSpanBuilder;
 import org.apache.hadoop.hbase.client.trace.TableSpanBuilder;
@@ -217,7 +217,7 @@ class AsyncRegionLocator {
       new TableSpanBuilder(conn).setName("AsyncRegionLocator.clearCache").setTableName(tableName);
     TraceUtil.trace(() -> {
       LOG.debug("Clear meta cache for {}", tableName);
-      if (tableName.equals(META_TABLE_NAME)) {
+      if (tableName.equals(MetaTableName.getInstance())) {
         metaRegionLocator.clearCache();
       } else {
         nonMetaRegionLocator.clearCache(tableName);

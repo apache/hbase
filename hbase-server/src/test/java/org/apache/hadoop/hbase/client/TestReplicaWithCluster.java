@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.coprocessor.CoreCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -261,7 +262,7 @@ public class TestReplicaWithCluster {
 
     HTU.startMiniCluster(NB_SERVERS);
     // Enable meta replica at server side
-    HBaseTestingUtil.setReplicas(HTU.getAdmin(), TableName.META_TABLE_NAME, 2);
+    HBaseTestingUtil.setReplicas(HTU.getAdmin(), MetaTableName.getInstance(), 2);
 
     HTU.getHBaseCluster().startMaster();
   }

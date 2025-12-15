@@ -33,6 +33,7 @@ import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
@@ -195,7 +196,7 @@ public class TestAsyncAdminRpcPriority {
   // that we pass the correct priority
   @Test
   public void testCreateMetaTable() {
-    conn.getAdmin().createTable(TableDescriptorBuilder.newBuilder(TableName.META_TABLE_NAME)
+    conn.getAdmin().createTable(TableDescriptorBuilder.newBuilder(MetaTableName.getInstance())
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of("cf")).build()).join();
     verify(masterStub, times(1)).createTable(assertPriority(SYSTEMTABLE_QOS),
       any(CreateTableRequest.class), any());

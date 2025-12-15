@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.security.User;
@@ -61,7 +62,7 @@ public class TestMasterRegistry {
     StartTestingClusterOption.Builder builder = StartTestingClusterOption.builder();
     builder.numMasters(3).numRegionServers(3);
     TEST_UTIL.startMiniCluster(builder.build());
-    HBaseTestingUtil.setReplicas(TEST_UTIL.getAdmin(), TableName.META_TABLE_NAME, 3);
+    HBaseTestingUtil.setReplicas(TEST_UTIL.getAdmin(), MetaTableName.getInstance(), 3);
   }
 
   @AfterClass

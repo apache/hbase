@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.assignment.AssignmentTestingUtil;
@@ -280,13 +281,13 @@ public class TestSeparateClientZKCluster {
   public void testChangeMetaReplicaCount() throws Exception {
     Admin admin = TEST_UTIL.getAdmin();
     try (RegionLocator locator =
-      TEST_UTIL.getConnection().getRegionLocator(TableName.META_TABLE_NAME)) {
+      TEST_UTIL.getConnection().getRegionLocator(MetaTableName.getInstance())) {
       assertEquals(1, locator.getAllRegionLocations().size());
-      HBaseTestingUtil.setReplicas(admin, TableName.META_TABLE_NAME, 3);
+      HBaseTestingUtil.setReplicas(admin, MetaTableName.getInstance(), 3);
       TEST_UTIL.waitFor(30000, () -> locator.getAllRegionLocations().size() == 3);
-      HBaseTestingUtil.setReplicas(admin, TableName.META_TABLE_NAME, 2);
+      HBaseTestingUtil.setReplicas(admin, MetaTableName.getInstance(), 2);
       TEST_UTIL.waitFor(30000, () -> locator.getAllRegionLocations().size() == 2);
-      HBaseTestingUtil.setReplicas(admin, TableName.META_TABLE_NAME, 1);
+      HBaseTestingUtil.setReplicas(admin, MetaTableName.getInstance(), 1);
       TEST_UTIL.waitFor(30000, () -> locator.getAllRegionLocations().size() == 1);
     }
   }

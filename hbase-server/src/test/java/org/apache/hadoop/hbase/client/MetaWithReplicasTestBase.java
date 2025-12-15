@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.AssignmentTestingUtil;
@@ -58,7 +59,7 @@ public class MetaWithReplicasTestBase {
       .numAlwaysStandByMasters(1).numMasters(1).numRegionServers(REGIONSERVERS_COUNT).build();
     TEST_UTIL.startMiniCluster(option);
     Admin admin = TEST_UTIL.getAdmin();
-    HBaseTestingUtil.setReplicas(admin, TableName.META_TABLE_NAME, 3);
+    HBaseTestingUtil.setReplicas(admin, MetaTableName.getInstance(), 3);
     AssignmentManager am = TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager();
     Set<ServerName> sns = new HashSet<ServerName>();
     ServerName hbaseMetaServerName = am.getRegionStates()
