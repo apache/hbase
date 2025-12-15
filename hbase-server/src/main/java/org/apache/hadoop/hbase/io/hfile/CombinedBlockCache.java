@@ -520,4 +520,15 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
     return l1Cache.evictBlocksRangeByHfileName(hfileName, initOffset, endOffset)
       + l2Cache.evictBlocksRangeByHfileName(hfileName, initOffset, endOffset);
   }
+
+  @Override
+  public boolean waitForCacheInitialization(long timeout) {
+    return this.l1Cache.waitForCacheInitialization(timeout)
+      && this.l2Cache.waitForCacheInitialization(timeout);
+  }
+
+  @Override
+  public boolean isCacheEnabled() {
+    return l1Cache.isCacheEnabled() && l2Cache.isCacheEnabled();
+  }
 }

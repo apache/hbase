@@ -24,12 +24,14 @@ import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.EXTRA_FREE_FAC
 import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.MIN_FACTOR_CONFIG_NAME;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.CacheTestUtils;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
@@ -63,6 +65,9 @@ public class TestRecoveryPersistentBucketCache {
     BucketCache bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
       8192, bucketSizes, writeThreads, writerQLen, testDir + "/bucket.persistence",
       DEFAULT_ERROR_TOLERATION_DURATION, conf);
+    assertTrue(bucketCache.waitForCacheInitialization(1000));
+    assertTrue(
+      bucketCache.isCacheInitialized("testBucketCacheRecovery") && bucketCache.isCacheEnabled());
 
     CacheTestUtils.HFileBlockPair[] blocks = CacheTestUtils.generateHFileBlocks(8192, 4);
 
@@ -98,7 +103,8 @@ public class TestRecoveryPersistentBucketCache {
     BucketCache newBucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
       8192, bucketSizes, writeThreads, writerQLen, testDir + "/bucket.persistence",
       DEFAULT_ERROR_TOLERATION_DURATION, conf);
-    Thread.sleep(100);
+    assertTrue(newBucketCache.waitForCacheInitialization(1000));
+
     assertEquals(3, newBucketCache.backingMap.size());
     assertNull(newBucketCache.getBlock(blocks[3].getBlockName(), false, false, false));
     assertNull(newBucketCache.getBlock(smallerBlocks[0].getBlockName(), false, false, false));
@@ -123,6 +129,7 @@ public class TestRecoveryPersistentBucketCache {
     BucketCache bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
       8192, bucketSizes, writeThreads, writerQLen, testDir + "/bucket.persistence",
       DEFAULT_ERROR_TOLERATION_DURATION, conf);
+    assertTrue(bucketCache.waitForCacheInitialization(10000));
 
     CacheTestUtils.HFileBlockPair[] blocks = CacheTestUtils.generateHFileBlocks(8192, 4);
 
@@ -137,7 +144,7 @@ public class TestRecoveryPersistentBucketCache {
     BucketCache newBucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
       8192, bucketSizes, writeThreads, writerQLen, testDir + "/bucket.persistence",
       DEFAULT_ERROR_TOLERATION_DURATION, conf);
-    Thread.sleep(100);
+    assertTrue(newBucketCache.waitForCacheInitialization(10000));
     assertEquals(4, newBucketCache.backingMap.size());
     newBucketCache.evictBlocksByHfileName(blocks[0].getBlockName().getHfileName());
     assertEquals(3, newBucketCache.backingMap.size());
@@ -202,11 +209,61 @@ public class TestRecoveryPersistentBucketCache {
     TEST_UTIL.cleanupTestDir();
   }
 
+  @Test
+  public void testValidateCacheInitialization() throws Exception {
+    HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+    Path testDir = TEST_UTIL.getDataTestDir();
+    TEST_UTIL.getTestFileSystem().mkdirs(testDir);
+    Configuration conf = HBaseConfiguration.create();
+    // Disables the persister thread by setting its interval to MAX_VALUE
+    conf.setLong(BUCKETCACHE_PERSIST_INTERVAL_KEY, Long.MAX_VALUE);
+    int[] bucketSizes = new int[] { 8 * 1024 + 1024 };
+    BucketCache bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
+      8192, bucketSizes, writeThreads, writerQLen, testDir + "/bucket.persistence",
+      DEFAULT_ERROR_TOLERATION_DURATION, conf);
+    assertTrue(bucketCache.waitForCacheInitialization(10000));
+
+    CacheTestUtils.HFileBlockPair[] blocks = CacheTestUtils.generateHFileBlocks(8192, 4);
+
+    // Add four blocks
+    cacheAndWaitUntilFlushedToBucket(bucketCache, blocks[0].getBlockName(), blocks[0].getBlock());
+    cacheAndWaitUntilFlushedToBucket(bucketCache, blocks[1].getBlockName(), blocks[1].getBlock());
+    cacheAndWaitUntilFlushedToBucket(bucketCache, blocks[2].getBlockName(), blocks[2].getBlock());
+    cacheAndWaitUntilFlushedToBucket(bucketCache, blocks[3].getBlockName(), blocks[3].getBlock());
+    // saves the current state of the cache
+    bucketCache.persistToFile();
+
+    BucketCache newBucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
+      8192, bucketSizes, writeThreads, writerQLen, testDir + "/bucket.persistence",
+      DEFAULT_ERROR_TOLERATION_DURATION, conf);
+    assertTrue(newBucketCache.waitForCacheInitialization(10000));
+
+    // Set the state of bucket cache to INITIALIZING
+    newBucketCache.setCacheState(BucketCache.CacheState.INITIALIZING);
+
+    // Validate that zero values are returned for the cache being initialized.
+    assertEquals(0, newBucketCache.acceptableSize());
+    assertEquals(0, newBucketCache.getPartitionSize(1));
+    assertEquals(0, newBucketCache.getFreeSize());
+    assertEquals(0, newBucketCache.getCurrentSize());
+    assertEquals(false, newBucketCache.blockFitsIntoTheCache(blocks[0].getBlock()).get());
+
+    newBucketCache.setCacheState(BucketCache.CacheState.ENABLED);
+
+    // Validate that non-zero values are returned for enabled cache
+    assertTrue(newBucketCache.acceptableSize() > 0);
+    assertTrue(newBucketCache.getPartitionSize(1) > 0);
+    assertTrue(newBucketCache.getFreeSize() > 0);
+    assertTrue(newBucketCache.getCurrentSize() > 0);
+    assertTrue(newBucketCache.blockFitsIntoTheCache(blocks[0].getBlock()).get());
+
+    TEST_UTIL.cleanupTestDir();
+  }
+
   private void waitUntilFlushedToBucket(BucketCache cache, BlockCacheKey cacheKey)
     throws InterruptedException {
-    while (!cache.backingMap.containsKey(cacheKey) || cache.ramCache.containsKey(cacheKey)) {
-      Thread.sleep(100);
-    }
+    Waiter.waitFor(HBaseConfiguration.create(), 12000,
+      () -> (cache.backingMap.containsKey(cacheKey) && !cache.ramCache.containsKey(cacheKey)));
   }
 
   // BucketCache.cacheBlock is async, it first adds block to ramCache and writeQueue, then writer

@@ -111,7 +111,7 @@ public class TestPrefetch {
   public OpenTelemetryRule otelRule = OpenTelemetryRule.create();
 
   @Before
-  public void setUp() throws IOException {
+  public void setUp() throws IOException, InterruptedException {
     conf = TEST_UTIL.getConfiguration();
     conf.setBoolean(CacheConfig.PREFETCH_BLOCKS_ON_OPEN_KEY, true);
     fs = HFileSystem.get(conf);

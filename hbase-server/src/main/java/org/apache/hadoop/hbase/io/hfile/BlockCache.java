@@ -284,4 +284,21 @@ public interface BlockCache extends Iterable<CachedBlock>, ConfigurationObserver
   default void onConfigurationChange(Configuration config) {
     // noop
   }
+
+  /**
+   * API to check whether or not, the cache is enabled.
+   * @return returns true if the cache is enabled, false otherwise.
+   */
+  default boolean isCacheEnabled() {
+    return true;
+  }
+
+  /**
+   * Wait for the bucket cache to be enabled while server restart
+   * @param timeout time to wait for the bucket cache to be enable
+   * @return boolean true if the bucket cache is enabled, false otherwise
+   */
+  default boolean waitForCacheInitialization(long timeout) {
+    return true;
+  }
 }

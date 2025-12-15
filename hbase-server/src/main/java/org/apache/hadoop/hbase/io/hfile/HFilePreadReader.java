@@ -32,6 +32,8 @@ import org.slf4j.LoggerFactory;
 public class HFilePreadReader extends HFileReaderImpl {
   private static final Logger LOG = LoggerFactory.getLogger(HFileReaderImpl.class);
 
+  private static final int WAIT_TIME_FOR_CACHE_INITIALIZATION = 10 * 60 * 1000;
+
   public HFilePreadReader(ReaderContext context, HFileInfo fileInfo, CacheConfig cacheConf,
     Configuration conf) throws IOException {
     super(context, fileInfo, cacheConf, conf);
@@ -100,13 +102,15 @@ public class HFilePreadReader extends HFileReaderImpl {
               HFileBlock block = prefetchStreamReader.readBlock(offset, onDiskSizeOfNextBlock,
                 /* cacheBlock= */true, /* pread= */false, false, false, null, null, true);
               try {
-                if (!cacheConf.isInMemory() && !cache.blockFitsIntoTheCache(block).orElse(true)) {
-                  LOG.warn(
-                    "Interrupting prefetch for file {} because block {} of size {} "
-                      + "doesn't fit in the available cache space.",
-                    path, cacheKey, block.getOnDiskSizeWithHeader());
-                  interrupted = true;
-                  break;
+                if (!cacheConf.isInMemory()) {
+                  if (!cache.blockFitsIntoTheCache(block).orElse(true)) {
+                    LOG.warn(
+                      "Interrupting prefetch for file {} because block {} of size {} "
+                        + "doesn't fit in the available cache space. isCacheEnabled: {}",
+                      path, cacheKey, block.getOnDiskSizeWithHeader(), cache.isCacheEnabled());
+                    interrupted = true;
+                    break;
+                  }
                 }
                 onDiskSizeOfNextBlock = block.getNextBlockOnDiskSize();
                 offset += block.getOnDiskSizeWithHeader();
@@ -168,7 +172,7 @@ public class HFilePreadReader extends HFileReaderImpl {
     // Deallocate data blocks
     cacheConf.getBlockCache().ifPresent(cache -> {
       if (evictOnClose) {
-        int numEvicted = cache.evictBlocksByHfilePath(path);
+        int numEvicted = cache.evictBlocksByHfileName(name);
         if (LOG.isTraceEnabled()) {
           LOG.trace("On close, file= {} evicted= {} block(s)", name, numEvicted);
         }
