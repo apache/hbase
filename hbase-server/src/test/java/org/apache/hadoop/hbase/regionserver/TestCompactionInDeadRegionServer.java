@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.client.Get;
@@ -131,7 +132,7 @@ public class TestCompactionInDeadRegionServer {
     HRegionServer regionSvr = UTIL.getRSForFirstRegionInTable(TABLE_NAME);
     HRegion region = regionSvr.getRegions(TABLE_NAME).get(0);
     String regName = region.getRegionInfo().getEncodedName();
-    List<HRegion> metaRegs = regionSvr.getRegions(TableName.META_TABLE_NAME);
+    List<HRegion> metaRegs = regionSvr.getRegions(MetaTableName.getInstance());
     if (metaRegs != null && !metaRegs.isEmpty()) {
       LOG.info("meta is on the same server: " + regionSvr);
       // when region is on same server as hbase:meta, reassigning meta would abort the server

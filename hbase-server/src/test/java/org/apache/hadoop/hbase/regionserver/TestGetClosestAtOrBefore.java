@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
@@ -92,7 +93,7 @@ public class TestGetClosestAtOrBefore {
     // Up flush size else we bind up when we use default catalog flush of 16k.
     TableDescriptors tds = new FSTableDescriptors(UTIL.getConfiguration());
     FSTableDescriptors.tryUpdateMetaTableDescriptor(UTIL.getConfiguration());
-    TableDescriptor td = tds.get(TableName.META_TABLE_NAME);
+    TableDescriptor td = tds.get(MetaTableName.getInstance());
     td = TableDescriptorBuilder.newBuilder(td).setMemStoreFlushSize(64 * 1024 * 1024).build();
     HRegion mr = HBaseTestingUtil.createRegionAndWAL(RegionInfoBuilder.FIRST_META_REGIONINFO,
       rootdir, conf, td);
