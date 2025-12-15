@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.BalanceRequest;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -167,7 +168,7 @@ public class TestRollbackSCP {
 
   @Test
   public void testFailAndRollback() throws Exception {
-    HRegionServer rsWithMeta = UTIL.getRSForFirstRegionInTable(TableName.META_TABLE_NAME);
+    HRegionServer rsWithMeta = UTIL.getRSForFirstRegionInTable(MetaTableName.getInstance());
     UTIL.getMiniHBaseCluster().killRegionServer(rsWithMeta.getServerName());
     UTIL.waitFor(15000, () -> getSCPForServer(rsWithMeta.getServerName()) != null);
     ServerCrashProcedure scp = getSCPForServer(rsWithMeta.getServerName());

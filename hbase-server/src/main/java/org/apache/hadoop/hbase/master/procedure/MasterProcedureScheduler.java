@@ -32,6 +32,7 @@ import org.apache.commons.lang3.builder.ToStringStyle;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -561,7 +562,7 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
   // Meta Queue Lookup Helpers
   // ============================================================================
   private MetaQueue getMetaQueue() {
-    MetaQueue node = AvlTree.get(metaMap, TableName.META_TABLE_NAME, META_QUEUE_KEY_COMPARATOR);
+    MetaQueue node = AvlTree.get(metaMap, MetaTableName.getInstance(), META_QUEUE_KEY_COMPARATOR);
     if (node != null) {
       return node;
     }
@@ -1079,7 +1080,7 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
         return false;
       }
       waitProcedure(lock, procedure);
-      logLockedResource(LockedResourceType.META, TableName.META_TABLE_NAME.getNameAsString());
+      logLockedResource(LockedResourceType.META, MetaTableName.getInstance().getNameAsString());
       return true;
     } finally {
       schedUnlock();

@@ -93,6 +93,7 @@ import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ServerTask;
 import org.apache.hadoop.hbase.ServerTaskBuilder;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -1092,7 +1093,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     startupTaskGroup.addTask("Initializing meta table if this is a new deploy");
     InitMetaProcedure initMetaProc = null;
     // Print out state of hbase:meta on startup; helps debugging.
-    if (!this.assignmentManager.getRegionStates().hasTableRegionStates(TableName.META_TABLE_NAME)) {
+    if (!this.assignmentManager.getRegionStates().hasTableRegionStates(MetaTableName.getInstance())) {
       Optional<InitMetaProcedure> optProc = procedureExecutor.getProcedures().stream()
         .filter(p -> p instanceof InitMetaProcedure).map(o -> (InitMetaProcedure) o).findAny();
       initMetaProc = optProc.orElseGet(() -> {
@@ -1156,7 +1157,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
       return;
     }
 
-    TableDescriptor metaDescriptor = tableDescriptors.get(TableName.META_TABLE_NAME);
+    TableDescriptor metaDescriptor = tableDescriptors.get(MetaTableName.getInstance());
     final ColumnFamilyDescriptor tableFamilyDesc =
       metaDescriptor.getColumnFamily(HConstants.TABLE_FAMILY);
     final ColumnFamilyDescriptor replBarrierFamilyDesc =
@@ -1174,16 +1175,17 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     if (conf.get(HConstants.META_REPLICAS_NUM) != null) {
       int replicasNumInConf =
         conf.getInt(HConstants.META_REPLICAS_NUM, HConstants.DEFAULT_META_REPLICA_NUM);
-      TableDescriptor metaDesc = tableDescriptors.get(TableName.META_TABLE_NAME);
+      TableDescriptor metaDesc = tableDescriptors.get(MetaTableName.getInstance());
       if (metaDesc.getRegionReplication() != replicasNumInConf) {
         // it is possible that we already have some replicas before upgrading, so we must set the
         // region replication number in meta TableDescriptor directly first, without creating a
         // ModifyTableProcedure, otherwise it may cause a double assign for the meta replicas.
         int existingReplicasCount =
-          assignmentManager.getRegionStates().getRegionsOfTable(TableName.META_TABLE_NAME).size();
+          assignmentManager.getRegionStates().getRegionsOfTable(MetaTableName.getInstance()).size();
         if (existingReplicasCount > metaDesc.getRegionReplication()) {
-          LOG.info("Update replica count of hbase:meta from {}(in TableDescriptor)"
-            + " to {}(existing ZNodes)", metaDesc.getRegionReplication(), existingReplicasCount);
+          LOG.info(
+            "Update replica count of {} from {}(in TableDescriptor)" + " to {}(existing ZNodes)",
+            MetaTableName.getInstance(), metaDesc.getRegionReplication(), existingReplicasCount);
           metaDesc = TableDescriptorBuilder.newBuilder(metaDesc)
             .setRegionReplication(existingReplicasCount).build();
           tableDescriptors.update(metaDesc);
@@ -1193,7 +1195,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
           LOG.info(
             "The {} config is {} while the replica count in TableDescriptor is {}"
               + " for hbase:meta, altering...",
-            HConstants.META_REPLICAS_NUM, replicasNumInConf, metaDesc.getRegionReplication());
+            HConstants.META_REPLICAS_NUM, replicasNumInConf, metaDesc.getRegionReplication(),
+            MetaTableName.getInstance());
           procedureExecutor.submitProcedure(new ModifyTableProcedure(
             procedureExecutor.getEnvironment(), TableDescriptorBuilder.newBuilder(metaDesc)
               .setRegionReplication(replicasNumInConf).build(),
@@ -2601,7 +2604,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   }
 
   private static boolean isCatalogTable(final TableName tableName) {
-    return tableName.equals(TableName.META_TABLE_NAME);
+    return tableName.equals(MetaTableName.getInstance());
   }
 
   @Override

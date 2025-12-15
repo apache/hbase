@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
@@ -80,7 +81,7 @@ public class TestRestartWithEmptyWALDirectory {
       table.put(new Put(row).addColumn(FAMILY, QUALIFIER, row));
     }
     // flush all in memory data
-    UTIL.flush(TableName.META_TABLE_NAME);
+    UTIL.flush(MetaTableName.getInstance());
     UTIL.flush(NAME);
 
     // stop master first, so when stopping region server, we will not schedule a SCP.

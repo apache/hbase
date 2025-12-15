@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaMockingUtil;
 import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.Waiter;
@@ -182,7 +183,7 @@ public class TestCatalogJanitorInMemoryStates {
     long start = EnvironmentEdgeManager.currentTime();
     PairOfSameType<RegionInfo> pair = null;
     try (Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
-      Table metaTable = conn.getTable(TableName.META_TABLE_NAME)) {
+      Table metaTable = conn.getTable(MetaTableName.getInstance())) {
       Result result = null;
       RegionInfo region = null;
       while ((EnvironmentEdgeManager.currentTime() - start) < 60000) {

@@ -30,6 +30,7 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
@@ -146,7 +147,7 @@ public final class BalancerConditionalsTestUtil {
   static void validateRegionLocations(Map<TableName, Set<ServerName>> tableToServers,
     TableName productTableName, boolean shouldBeBalanced) {
     ServerName metaServer =
-      tableToServers.get(TableName.META_TABLE_NAME).stream().findFirst().orElseThrow();
+      tableToServers.get(MetaTableName.getInstance()).stream().findFirst().orElseThrow();
     ServerName quotaServer =
       tableToServers.get(QuotaUtil.QUOTA_TABLE_NAME).stream().findFirst().orElseThrow();
     Set<ServerName> productServers = tableToServers.get(productTableName);

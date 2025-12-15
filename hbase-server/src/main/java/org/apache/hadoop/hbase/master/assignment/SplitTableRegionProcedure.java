@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -903,8 +904,10 @@ public class SplitTableRegionProcedure
           RegionInfo.parseRegionName(p.getRow());
         }
       } catch (IOException e) {
-        LOG.error("pid=" + getProcId() + " row key of mutation from coprocessor not parsable as "
-          + "region name." + "Mutations from coprocessor should only for hbase:meta table.");
+        LOG.error(
+          "pid={} row key of mutation from coprocessor not parsable as region name. "
+            + "Mutations from coprocessor should only be for {} table.",
+          getProcId(), MetaTableName.getInstance());
         throw e;
       }
     }

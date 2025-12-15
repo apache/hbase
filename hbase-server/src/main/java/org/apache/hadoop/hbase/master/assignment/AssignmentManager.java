@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.client.DoNotRetryRegionException;
@@ -354,7 +355,7 @@ public class AssignmentManager {
             if (RegionReplicaUtil.isDefaultReplica(regionInfo.getReplicaId())) {
               setMetaAssigned(regionInfo, state == State.OPEN);
             }
-            LOG.debug("Loaded hbase:meta {}", regionNode);
+            LOG.debug("Loaded {} {}", MetaTableName.getInstance(), regionNode);
           }, result);
       }
     }
@@ -1962,8 +1963,8 @@ public class AssignmentManager {
     boolean meta = isMetaRegion(hri);
     boolean metaLoaded = isMetaLoaded();
     if (!meta && !metaLoaded) {
-      throw new PleaseHoldException(
-        "Master not fully online; hbase:meta=" + meta + ", metaLoaded=" + metaLoaded);
+      throw new PleaseHoldException("Master not fully online; " + MetaTableName.getInstance() + "="
+        + meta + ", metaLoaded=" + metaLoaded);
     }
   }
 

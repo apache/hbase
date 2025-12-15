@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -93,7 +94,7 @@ public class TestMetaTableIsolationBalancerConditional {
       BalancerConditionalsTestUtil.generateSplits(2 * NUM_SERVERS));
 
     Set<TableName> tablesToBeSeparated = ImmutableSet.<TableName> builder()
-      .add(TableName.META_TABLE_NAME).add(QuotaUtil.QUOTA_TABLE_NAME).add(productTableName).build();
+      .add(MetaTableName.getInstance()).add(QuotaUtil.QUOTA_TABLE_NAME).add(productTableName).build();
 
     // Pause the balancer
     admin.balancerSwitch(false, true);
@@ -147,7 +148,7 @@ public class TestMetaTableIsolationBalancerConditional {
     TableName productTableName, boolean shouldBeBalanced) {
     // Validate that the region assignments
     ServerName metaServer =
-      tableToServers.get(TableName.META_TABLE_NAME).stream().findFirst().orElseThrow();
+      tableToServers.get(MetaTableName.getInstance()).stream().findFirst().orElseThrow();
     ServerName quotaServer =
       tableToServers.get(QuotaUtil.QUOTA_TABLE_NAME).stream().findFirst().orElseThrow();
     Set<ServerName> productServers = tableToServers.get(productTableName);

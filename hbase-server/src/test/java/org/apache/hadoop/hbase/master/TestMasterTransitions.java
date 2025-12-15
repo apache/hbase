@@ -23,6 +23,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -301,7 +302,7 @@ public class TestMasterTransitions {
    */
   private static int addToEachStartKey(final int expected) throws IOException {
     Table t = TEST_UTIL.getConnection().getTable(TABLENAME);
-    Table meta = TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME);
+    Table meta = TEST_UTIL.getConnection().getTable(MetaTableName.getInstance());
     int rows = 0;
     Scan scan = new Scan();
     scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);

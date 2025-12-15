@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -262,7 +263,7 @@ public class TestHBCKSCP extends TestSCPBase {
   private static class PrimaryNotMetaRegionSelector extends RegionSelector {
     @Override
     boolean regionFilter(final RegionInfo info) {
-      return !Objects.equals(TableName.META_TABLE_NAME, info.getTable())
+      return !Objects.equals(MetaTableName.getInstance(), info.getTable())
         && Objects.equals(RegionInfo.DEFAULT_REPLICA_ID, info.getReplicaId());
     }
 
@@ -278,7 +279,7 @@ public class TestHBCKSCP extends TestSCPBase {
   private static class ReplicaNonMetaRegionSelector extends RegionSelector {
     @Override
     boolean regionFilter(RegionInfo info) {
-      return !Objects.equals(TableName.META_TABLE_NAME, info.getTable())
+      return !Objects.equals(MetaTableName.getInstance(), info.getTable())
         && !Objects.equals(RegionInfo.DEFAULT_REPLICA_ID, info.getReplicaId());
     }
 

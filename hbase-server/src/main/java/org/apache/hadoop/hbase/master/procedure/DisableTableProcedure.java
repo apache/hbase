@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master.procedure;
 import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -111,7 +112,7 @@ public class DisableTableProcedure extends AbstractStateMachineTableProcedure<Di
           ) {
             MasterFileSystem fs = env.getMasterFileSystem();
             try (BufferedMutator mutator = env.getMasterServices().getConnection()
-              .getBufferedMutator(TableName.META_TABLE_NAME)) {
+              .getBufferedMutator(MetaTableName.getInstance())) {
               for (RegionInfo region : env.getAssignmentManager().getRegionStates()
                 .getRegionsOfTable(tableName)) {
                 long maxSequenceId = WALSplitUtil.getMaxRegionSequenceId(
@@ -230,7 +231,7 @@ public class DisableTableProcedure extends AbstractStateMachineTableProcedure<Di
    */
   private boolean prepareDisable(final MasterProcedureEnv env) throws IOException {
     boolean canTableBeDisabled = true;
-    if (tableName.equals(TableName.META_TABLE_NAME)) {
+    if (tableName.equals(MetaTableName.getInstance())) {
       setFailure("master-disable-table",
         new ConstraintException("Cannot disable " + this.tableName));
       canTableBeDisabled = false;

@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -77,7 +78,7 @@ public class TestMigrateNamespaceTable {
 
     @Override
     public TableName getTableName() {
-      return TableName.META_TABLE_NAME;
+      return MetaTableName.getInstance();
     }
 
     @Override
@@ -154,7 +155,7 @@ public class TestMigrateNamespaceTable {
   private void removeNamespaceFamily() throws IOException {
     FileSystem fs = UTIL.getTestFileSystem();
     Path rootDir = CommonFSUtils.getRootDir(UTIL.getConfiguration());
-    Path tableDir = CommonFSUtils.getTableDir(rootDir, TableName.META_TABLE_NAME);
+    Path tableDir = CommonFSUtils.getTableDir(rootDir, MetaTableName.getInstance());
     TableDescriptor metaTableDesc = FSTableDescriptors.getTableDescriptorFromFs(fs, tableDir);
     TableDescriptor noNsMetaTableDesc = TableDescriptorBuilder.newBuilder(metaTableDesc)
       .removeColumnFamily(HConstants.NAMESPACE_FAMILY).build();

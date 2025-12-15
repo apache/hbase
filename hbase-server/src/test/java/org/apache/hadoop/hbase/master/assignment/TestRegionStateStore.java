@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.client.Admin;
@@ -121,7 +122,7 @@ public class TestRegionStateStore {
     put.addColumn(HConstants.CATALOG_FAMILY, HConstants.STATE_QUALIFIER,
       Bytes.toBytes("BAD_STATE"));
 
-    try (Table table = UTIL.getConnection().getTable(TableName.META_TABLE_NAME)) {
+    try (Table table = UTIL.getConnection().getTable(MetaTableName.getInstance())) {
       table.put(put);
     }
 

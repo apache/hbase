@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
@@ -102,14 +103,14 @@ public class HBCKServerCrashProcedure extends ServerCrashProcedure {
       MetaTableAccessor.scanMetaForTableRegions(env.getMasterServices().getConnection(), visitor,
         null);
     } catch (IOException ioe) {
-      LOG.warn("Failed scan of hbase:meta for 'Unknown Servers'", ioe);
+      LOG.warn("Failed scan of {} for 'Unknown Servers'", MetaTableName.getInstance(), ioe);
       return ris;
     }
     // create the server state node too
     env.getAssignmentManager().getRegionStates().createServer(getServerName());
-    LOG.info("Found {} mentions of {} in hbase:meta of OPEN/OPENING Regions: {}",
-      visitor.getReassigns().size(), getServerName(), visitor.getReassigns().stream()
-        .map(RegionInfo::getEncodedName).collect(Collectors.joining(",")));
+    LOG.info("Found {} mentions of {} in {} of OPEN/OPENING Regions: {}",
+      visitor.getReassigns().size(), getServerName(), MetaTableName.getInstance(), visitor
+        .getReassigns().stream().map(RegionInfo::getEncodedName).collect(Collectors.joining(",")));
     return visitor.getReassigns();
   }
 
@@ -150,8 +151,8 @@ public class HBCKServerCrashProcedure extends ServerCrashProcedure {
         RegionState rs = new RegionState(hrl.getRegion(), state, hrl.getServerName());
         if (rs.isClosing()) {
           // Move region to CLOSED in hbase:meta.
-          LOG.info("Moving {} from CLOSING to CLOSED in hbase:meta",
-            hrl.getRegion().getRegionNameAsString());
+          LOG.info("Moving {} from CLOSING to CLOSED in {}",
+            hrl.getRegion().getRegionNameAsString(), MetaTableName.getInstance());
           try {
             MetaTableAccessor.updateRegionState(this.connection, hrl.getRegion(),
               RegionState.State.CLOSED);
