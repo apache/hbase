@@ -23,10 +23,15 @@ import java.util.Arrays;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 import org.apache.commons.lang3.ArrayUtils;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
-
+import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import com.google.errorprone.annotations.RestrictedApi;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.base.Strings;
 
 /**
  * Immutable POJO class for representing a table name. Which is of the form: &lt;table
@@ -43,7 +48,10 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
  * </p>
  */
 @InterfaceAudience.Public
+@InterfaceStability.Stable
 public final class TableName implements Comparable<TableName> {
+
+  private static final Logger LOG = LoggerFactory.getLogger(TableName.class);
 
   /** See {@link #createTableNameIfNecessary(ByteBuffer, ByteBuffer)} */
   private static final Set<TableName> tableCache = new CopyOnWriteArraySet<>();
@@ -65,9 +73,18 @@ public final class TableName implements Comparable<TableName> {
   public static final String VALID_USER_TABLE_REGEX = "(?:(?:(?:" + VALID_NAMESPACE_REGEX + "\\"
     + NAMESPACE_DELIM + ")?)" + "(?:" + VALID_TABLE_QUALIFIER_REGEX + "))";
 
-  /** The hbase:meta table's name. */
-  public static final TableName META_TABLE_NAME =
-    valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "meta");
+  /**
+   * The name of hbase meta table could either be hbase:meta_xxx or 'hbase:meta' otherwise. Config
+   * hbase.meta.table.suffix will govern the decision of adding suffix to the habase:meta
+   * 
+   * This field is initialized from the MetaTableName singleton and can be overridden for testing
+   * by modifying the singleton instance via reflection.
+   * 
+   * @deprecated Use {@link MetaTableName#getInstance()} instead. This field will be removed in a
+   *             future version.
+   */
+  @Deprecated
+  public static TableName META_TABLE_NAME;
 
   /**
    * The Namespace table's name.
@@ -87,7 +104,7 @@ public final class TableName implements Comparable<TableName> {
 
   /** Returns True if <code>tn</code> is the hbase:meta table name. */
   public static boolean isMetaTableName(final TableName tn) {
-    return tn.equals(TableName.META_TABLE_NAME);
+    return tn.equals(MetaTableName.getInstance());
   }
 
   /**
