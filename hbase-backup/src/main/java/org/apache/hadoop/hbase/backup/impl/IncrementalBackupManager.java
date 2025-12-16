@@ -243,6 +243,28 @@ public class IncrementalBackupManager extends BackupManager {
     }
     // remove newest log per host because they are still in use
     resultLogFiles.removeAll(newestLogs);
+
+    // Update newestTimestamps with max timestamp of files we're actually backing up.
+    // This ensures dead/decommissioned hosts get their boundaries recorded in trslm,
+    // preventing re-backup of the same WAL files on subsequent incremental backups.
+    for (String logFile : resultLogFiles) {
+      Path logPath = new Path(logFile);
+      String logHost = BackupUtils.parseHostFromOldLog(logPath);
+      if (logHost == null) {
+        logHost = BackupUtils.parseHostNameFromLogFile(logPath.getParent());
+      }
+      if (logHost != null) {
+        long logTs = BackupUtils.getCreationTime(logPath);
+        Long existingTs = newestTimestamps.get(logHost);
+        if (existingTs == null || logTs > existingTs) {
+          newestTimestamps.put(logHost, logTs);
+          if (existingTs == null) {
+            LOG.info("Updating backup boundary for inactive host {}: timestamp={}", logHost, logTs);
+          }
+        }
+      }
+    }
+
     return resultLogFiles;
   }
 

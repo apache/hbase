@@ -30,6 +30,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupCopyJob;
 import org.apache.hadoop.hbase.backup.BackupInfo;
@@ -42,7 +46,9 @@ import org.apache.hadoop.hbase.backup.master.LogRollMasterProcedureManager;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -190,6 +196,27 @@ public class FullTableBackupClient extends TableBackupClient {
       backupInfo.setState(BackupState.COMPLETE);
       // The table list in backupInfo is good for both full backup and incremental backup.
       // For incremental backup, it contains the incremental backup table set.
+
+      // Scan oldlogs for dead/decommissioned hosts and add their max WAL timestamps
+      // to newTimestamps. This ensures subsequent incremental backups won't try to back up
+      // WALs that are already covered by this full backup's snapshot.
+      Path walRootDir = CommonFSUtils.getWALRootDir(conf);
+      Path oldLogDir = new Path(walRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
+      FileSystem fs = walRootDir.getFileSystem(conf);
+      if (fs.exists(oldLogDir)) {
+        for (FileStatus oldlog : fs.listStatus(oldLogDir)) {
+          if (AbstractFSWALProvider.isMetaFile(oldlog.getPath())) {
+            continue;
+          }
+          String host = BackupUtils.parseHostFromOldLog(oldlog.getPath());
+          if (host != null && !newTimestamps.containsKey(host)) {
+            long ts = BackupUtils.getCreationTime(oldlog.getPath());
+            newTimestamps.put(host, ts);
+            LOG.info("Updating backup boundary for inactive host {}: timestamp={}", host, ts);
+          }
+        }
+      }
+
       backupManager.writeRegionServerLogTimestamp(backupInfo.getTables(), newTimestamps);
 
       Map<TableName, Map<String, Long>> newTableSetTimestampMap =
