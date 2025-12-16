@@ -22,6 +22,7 @@ import java.io.PrintWriter;
 import java.util.Map;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
+import org.apache.hadoop.conf.ConfigRedactor;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorStatus;
@@ -32,6 +33,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 public abstract class StateDumpServlet extends HttpServlet {
   static final long DEFAULT_TAIL_KB = 100;
   private static final long serialVersionUID = 1L;
+  protected static final String REDACTED_TEXT = "<redacted>";
 
   protected void dumpVersionInfo(PrintWriter out) {
     VersionInfo.writeTo(out);
@@ -65,5 +67,22 @@ public abstract class StateDumpServlet extends HttpServlet {
     for (ExecutorStatus status : statuses.values()) {
       status.dumpTo(out, "  ");
     }
+  }
+
+  protected Configuration getRedactedConfiguration(Configuration conf) {
+    // YARN-11308 introduced a new method signature to the overloaded Configuration.writeXml()
+    // method. Within this new method, the ConfigRedactor is used on the Configuration object if
+    // that object is not null. This allows the XML output to have sensitive content redacted
+    // automatically. However, this new method is only available in Hadoop 3.4 and later, so we are
+    // performing the redaction here manually in order to ensure backward compatibility.
+    ConfigRedactor redactor = new ConfigRedactor(conf);
+    String redactResult;
+    for (Map.Entry<String, String> entry : conf) {
+      redactResult = redactor.redact(entry.getKey(), entry.getValue());
+      if (REDACTED_TEXT.equals(redactResult)) {
+        conf.set(entry.getKey(), REDACTED_TEXT);
+      }
+    }
+    return conf;
   }
 }

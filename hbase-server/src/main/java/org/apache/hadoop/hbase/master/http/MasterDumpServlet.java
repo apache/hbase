@@ -89,9 +89,9 @@ public class MasterDumpServlet extends StateDumpServlet {
 
       out.println("\n\nMaster configuration:");
       out.println(LINE);
-      Configuration conf = master.getConfiguration();
+      Configuration redactedConf = getRedactedConfiguration(master.getConfiguration());
       out.flush();
-      conf.writeXml(null, os, conf);
+      redactedConf.writeXml(os);
       os.flush();
 
       out.println("\n\nRecent regionserver aborts:");

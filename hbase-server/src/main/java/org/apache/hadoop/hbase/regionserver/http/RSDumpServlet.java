@@ -89,9 +89,9 @@ public class RSDumpServlet extends StateDumpServlet {
 
       out.println("\n\nRS Configuration:");
       out.println(LINE);
-      Configuration conf = hrs.getConfiguration();
+      Configuration redactedConf = getRedactedConfiguration(hrs.getConfiguration());
       out.flush();
-      conf.writeXml(null, os, conf);
+      redactedConf.writeXml(os);
       os.flush();
 
       out.println("\n\nLogs");
@@ -101,7 +101,7 @@ public class RSDumpServlet extends StateDumpServlet {
 
       out.println("\n\nRS Queue:");
       out.println(LINE);
-      if (isShowQueueDump(conf)) {
+      if (isShowQueueDump(hrs.getConfiguration())) {
         dumpQueue(hrs, out);
       }
 

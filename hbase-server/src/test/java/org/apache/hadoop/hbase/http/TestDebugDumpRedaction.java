@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -57,17 +58,17 @@ public class TestDebugDumpRedaction {
   private static final String XML_CONFIGURATION_END_TAG = "</configuration>";
   private static final int SUBSTRING_OFFSET = XML_CONFIGURATION_END_TAG.length();
   private static final String PLAIN_TEXT_UTF8 = "text/plain;charset=utf-8";
-  private static final String REDACTED = "******";
+  private static final String REDACTED = "<redacted>";
   private static final List<String> SENSITIVE_CONF_PROPERTIES =
-    List.of("hbase.zookeeper.property.ssl.trustStore.password", "ssl.client.truststore.password",
-      "hbase.rpc.tls.truststore.password", "ssl.server.keystore.password",
-      "fs.s3a.server-side-encryption.key", "fs.s3a.encryption.algorithm", "fs.s3a.encryption.key",
-      "fs.s3a.secret.key", "fs.s3a.important.secret.key", "fs.s3a.session.key",
-      "fs.s3a.secret.session.key", "fs.s3a.session.token", "fs.s3a.secret.session.token",
-      "fs.azure.account.key.importantKey", "fs.azure.oauth2.token", "fs.adl.oauth2.token",
-      "fs.gs.encryption.sensitive", "fs.gs.proxy.important", "fs.gs.auth.sensitive.info",
-      "sensitive.credential", "oauth.important.secret", "oauth.important.password",
-      "oauth.important.token");
+    Arrays.asList("hbase.zookeeper.property.ssl.trustStore.password",
+      "ssl.client.truststore.password", "hbase.rpc.tls.truststore.password",
+      "ssl.server.keystore.password", "fs.s3a.server-side-encryption.key",
+      "fs.s3a.encryption.algorithm", "fs.s3a.encryption.key", "fs.s3a.secret.key",
+      "fs.s3a.important.secret.key", "fs.s3a.session.key", "fs.s3a.secret.session.key",
+      "fs.s3a.session.token", "fs.s3a.secret.session.token", "fs.azure.account.key.importantKey",
+      "fs.azure.oauth2.token", "fs.adl.oauth2.token", "fs.gs.encryption.sensitive",
+      "fs.gs.proxy.important", "fs.gs.auth.sensitive.info", "sensitive.credential",
+      "oauth.important.secret", "oauth.important.password", "oauth.important.token");
   private static LocalHBaseCluster CLUSTER;
 
   @ClassRule

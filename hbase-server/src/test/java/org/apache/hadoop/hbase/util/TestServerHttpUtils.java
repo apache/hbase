@@ -27,6 +27,9 @@ import java.net.URL;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 
 public class TestServerHttpUtils {
+  private TestServerHttpUtils() {
+  }
+
   public static String getMasterInfoServerHostAndPort(LocalHBaseCluster cluster) {
     return "http://localhost:" + cluster.getActiveMaster().getInfoServer().getPort();
   }
