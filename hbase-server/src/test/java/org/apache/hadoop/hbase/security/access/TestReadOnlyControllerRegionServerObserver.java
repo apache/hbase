@@ -21,6 +21,7 @@ import static org.apache.hadoop.hbase.HConstants.HBASE_GLOBAL_READONLY_ENABLED_K
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.Mutation;
@@ -76,7 +77,7 @@ public class TestReadOnlyControllerRegionServerObserver {
 
   }
 
-  @Test(expected = IOException.class)
+  @Test(expected = DoNotRetryIOException.class)
   public void testPreRollWALWriterRequestReadOnlyException() throws IOException {
     readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preRollWALWriterRequest(ctx);
@@ -87,7 +88,7 @@ public class TestReadOnlyControllerRegionServerObserver {
     readOnlyController.preRollWALWriterRequest(ctx);
   }
 
-  @Test(expected = IOException.class)
+  @Test(expected = DoNotRetryIOException.class)
   public void testPreExecuteProceduresReadOnlyException() throws IOException {
     readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preExecuteProcedures(ctx);
@@ -98,7 +99,7 @@ public class TestReadOnlyControllerRegionServerObserver {
     readOnlyController.preExecuteProcedures(ctx);
   }
 
-  @Test(expected = IOException.class)
+  @Test(expected = DoNotRetryIOException.class)
   public void testPreReplicationSinkBatchMutateReadOnlyException() throws IOException {
     readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preReplicationSinkBatchMutate(ctx, walEntry, mutation);
@@ -109,7 +110,7 @@ public class TestReadOnlyControllerRegionServerObserver {
     readOnlyController.preReplicationSinkBatchMutate(ctx, walEntry, mutation);
   }
 
-  @Test(expected = IOException.class)
+  @Test(expected = DoNotRetryIOException.class)
   public void testPreReplicateLogEntriesReadOnlyException() throws IOException {
     readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preReplicateLogEntries(ctx);

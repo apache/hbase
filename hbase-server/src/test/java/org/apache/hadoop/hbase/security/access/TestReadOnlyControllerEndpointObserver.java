@@ -21,6 +21,7 @@ import static org.apache.hadoop.hbase.HConstants.HBASE_GLOBAL_READONLY_ENABLED_K
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -73,7 +74,7 @@ public class TestReadOnlyControllerEndpointObserver {
 
   }
 
-  @Test(expected = IOException.class)
+  @Test(expected = DoNotRetryIOException.class)
   public void testPreEndpointInvocationReadOnlyException() throws IOException {
     readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preEndpointInvocation(ctx, service, methodName, request);
