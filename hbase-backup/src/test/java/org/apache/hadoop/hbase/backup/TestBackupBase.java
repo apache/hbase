@@ -69,6 +69,9 @@ import org.apache.hadoop.hbase.wal.WALFactory;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -116,6 +119,7 @@ public class TestBackupBase {
       super(conn, backupId, request);
     }
 
+    @BeforeEach
     @Before
     public void ensurePreviousBackupTestsAreCleanedUp() throws Exception {
       // Every operation here may not be necessary for any given test,
@@ -343,6 +347,7 @@ public class TestBackupBase {
    * Setup Cluster with appropriate configurations before running tests.
    * @throws Exception if starting the mini cluster or setting up the tables fails
    */
+  @BeforeAll
   @BeforeClass
   public static void setUp() throws Exception {
     TEST_UTIL = new HBaseTestingUtil();
@@ -360,6 +365,7 @@ public class TestBackupBase {
     }
   }
 
+  @AfterAll
   @AfterClass
   public static void tearDown() throws Exception {
     try {
