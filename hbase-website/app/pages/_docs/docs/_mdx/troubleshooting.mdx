@@ -227,25 +227,25 @@ The commands (and arguments) are:
   setquota -n|-b val path
 ```
 
-### Maintenance Mode
+#### Maintenance Mode
 
-If the cluster has gotten stuck in some state and the standard techniques aren’t making progress, it is possible to restart the cluster in "maintenance mode." This mode features drastically reduced capabilities and surface area, making it easier to enact very low-level changes such as repairing/recovering the `hbase:meta` table.
+If the cluster has gotten stuck in some state and the standard techniques aren't making progress, it is possible to restart the cluster in "maintenance mode." This mode features drastically reduced capabilities and surface area, making it easier to enact very low-level changes such as repairing/recovering the `hbase:meta` table.
 
-To enter maintenance mode, set `hbase.master.maintenance_mode` to `true` either in your `hbase-site.xml` or via system propery when starting the master process (`-D…​=true`). Entering and exiting this mode requires a service restart, however the typical use will be when HBase Master is already facing startup difficulties.
+To enter maintenance mode, set `hbase.master.maintenance_mode` to `true` either in your `hbase-site.xml` or via system propery when starting the master process (`-D...=true`). Entering and exiting this mode requires a service restart, however the typical use will be when HBase Master is already facing startup difficulties.
 
 When maintenance mode is enabled, the master will host all system tables - ensure that it has enough memory to do so. RegionServers will not be assigned any regions from user-space tables; in fact, they will go completely unused while in maintenance mode. Additionally, the master will not load any coprocessors, will not run any normalization or merge/split operations, and will not enforce quotas.
 
-## External Tools
+### External Tools
 
-### tail
+#### tail
 
-`tail` is the command line tool that lets you look at the end of a file. Add the `-f` option and it will refresh when new data is available. It’s useful when you are wondering what’s happening, for example, when a cluster is taking a long time to shutdown or startup as you can just fire a new terminal and tail the master log (and maybe a few RegionServers).
+`tail` is the command line tool that lets you look at the end of a file. Add the `-f` option and it will refresh when new data is available. It's useful when you are wondering what's happening, for example, when a cluster is taking a long time to shutdown or startup as you can just fire a new terminal and tail the master log (and maybe a few RegionServers).
 
-### top
+#### top
 
-`top` is probably one of the most important tools when first trying to see what’s running on a machine and how the resources are consumed. Here’s an example from production system:
+`top` is probably one of the most important tools when first trying to see what's running on a machine and how the resources are consumed. Here's an example from production system:
 
-```
+``` text
 top - 14:46:59 up 39 days, 11:55,  1 user,  load average: 3.75, 3.57, 3.84
 Tasks: 309 total,   1 running, 308 sleeping,   0 stopped,   0 zombie
 Cpu(s):  4.5%us,  1.6%sy,  0.0%ni, 91.7%id,  1.4%wa,  0.1%hi,  0.6%si,  0.0%st
@@ -263,9 +263,9 @@ Here we can see that the system load average during the last five minutes is 3.7
 
 Apart from load, we can see that the system is using almost all its available RAM but most of it is used for the OS cache (which is good). The swap only has a few KBs in it and this is wanted, high numbers would indicate swapping activity which is the nemesis of performance of Java systems. Another way to detect swapping is when the load average goes through the roof (although this could also be caused by things like a dying disk, among others).
 
-The list of processes isn’t super useful by default, all we know is that 3 java processes are using about 111% of the CPUs. To know which is which, simply type `c` and each line will be expanded. Typing `1` will give you the detail of how each CPU is used instead of the average for all of them like shown here.
+The list of processes isn't super useful by default, all we know is that 3 java processes are using about 111% of the CPUs. To know which is which, simply type `c` and each line will be expanded. Typing `1` will give you the detail of how each CPU is used instead of the average for all of them like shown here.
 
-### jps
+#### jps
 
 `jps` is shipped with every JDK and gives the java process ids for the current user (if root, then it gives the ids for all users). Example:
 
@@ -297,16 +297,16 @@ You can then do stuff like checking out the full command line that started the p
 
 ```bash
 hadoop@sv4borg12:~$ ps aux | grep HRegionServer
-hadoop   17789  155 35.2 9067824 8604364 ?     S&lt;l  Mar04 9855:48 /usr/java/jdk1.6.0_14/bin/java -Xmx8000m -XX:+DoEscapeAnalysis -XX:+AggressiveOpts -XX:+UseConcMarkSweepGC -XX:NewSize=64m -XX:MaxNewSize=64m -XX:CMSInitiatingOccupancyFraction=88 -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -Xloggc:/export1/hadoop/logs/gc-hbase.log -Dcom.sun.management.jmxremote.port=10102 -Dcom.sun.management.jmxremote.authenticate=true -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.password.file=/home/hadoop/hbase/conf/jmxremote.password -Dcom.sun.management.jmxremote -Dhbase.log.dir=/export1/hadoop/logs -Dhbase.log.file=hbase-hadoop-regionserver-sv4borg12.log -Dhbase.home.dir=/home/hadoop/hbase -Dhbase.id.str=hadoop -Dhbase.root.logger=INFO,DRFA -Djava.library.path=/home/hadoop/hbase/lib/native/Linux-amd64-64 -classpath /home/hadoop/hbase/bin/../conf:[many jars]:/home/hadoop/hadoop/conf org.apache.hadoop.hbase.regionserver.HRegionServer start
+hadoop   17789  155 35.2 9067824 8604364 ?     S<l  Mar04 9855:48 /usr/java/jdk1.6.0_14/bin/java -Xmx8000m -XX:+DoEscapeAnalysis -XX:+AggressiveOpts -XX:+UseConcMarkSweepGC -XX:NewSize=64m -XX:MaxNewSize=64m -XX:CMSInitiatingOccupancyFraction=88 -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -Xloggc:/export1/hadoop/logs/gc-hbase.log -Dcom.sun.management.jmxremote.port=10102 -Dcom.sun.management.jmxremote.authenticate=true -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.password.file=/home/hadoop/hbase/conf/jmxremote.password -Dcom.sun.management.jmxremote -Dhbase.log.dir=/export1/hadoop/logs -Dhbase.log.file=hbase-hadoop-regionserver-sv4borg12.log -Dhbase.home.dir=/home/hadoop/hbase -Dhbase.id.str=hadoop -Dhbase.root.logger=INFO,DRFA -Djava.library.path=/home/hadoop/hbase/lib/native/Linux-amd64-64 -classpath /home/hadoop/hbase/bin/../conf:[many jars]:/home/hadoop/hadoop/conf org.apache.hadoop.hbase.regionserver.HRegionServer start
 ```
 
-### jstack
+#### jstack
 
 `jstack` is one of the most important tools when trying to figure out what a java process is doing apart from looking at the logs. It has to be used in conjunction with jps in order to give it a process id. It shows a list of threads, each one has a name, and they appear in the order that they were created (so the top ones are the most recent threads). Here are a few example:
 
 The main thread of a RegionServer waiting for something to do from the master:
 
-```
+``` text
 "regionserver60020" prio=10 tid=0x0000000040ab4000 nid=0x45cf waiting on condition [0x00007f16b6a96000..0x00007f16b6a96a70]
 java.lang.Thread.State: TIMED_WAITING (parking)
     at sun.misc.Unsafe.park(Native Method)
@@ -320,7 +320,7 @@ java.lang.Thread.State: TIMED_WAITING (parking)
 
 The MemStore flusher thread that is currently flushing to a file:
 
-```
+``` text
 "regionserver60020.cacheFlusher" daemon prio=10 tid=0x0000000040f4e000 nid=0x45eb in Object.wait() [0x00007f16b5b86000..0x00007f16b5b87af0]
 java.lang.Thread.State: WAITING (on object monitor)
     at java.lang.Object.wait(Native Method)
@@ -355,9 +355,9 @@ java.lang.Thread.State: WAITING (on object monitor)
     at org.apache.hadoop.hbase.regionserver.MemStoreFlusher.run(MemStoreFlusher.java:146)
 ```
 
-A handler thread that’s waiting for stuff to do (like put, delete, scan, etc.):
+A handler thread that's waiting for stuff to do (like put, delete, scan, etc.):
 
-```
+``` text
 "IPC Server handler 16 on 60020" daemon prio=10 tid=0x00007f16b011d800 nid=0x4a5e waiting on condition [0x00007f16afefd000..0x00007f16afefd9f0]
    java.lang.Thread.State: WAITING (parking)
           at sun.misc.Unsafe.park(Native Method)
@@ -368,9 +368,9 @@ A handler thread that’s waiting for stuff to do (like put, delete, scan, etc.)
           at org.apache.hadoop.hbase.ipc.HBaseServer$Handler.run(HBaseServer.java:1013)
 ```
 
-And one that’s busy doing an increment of a counter (it’s in the phase where it’s trying to create a scanner in order to read the last value):
+And one that's busy doing an increment of a counter (it's in the phase where it's trying to create a scanner in order to read the last value):
 
-```
+``` text
 "IPC Server handler 66 on 60020" daemon prio=10 tid=0x00007f16b006e800 nid=0x4a90 runnable [0x00007f16acb77000..0x00007f16acb77cf0]
    java.lang.Thread.State: RUNNABLE
           at org.apache.hadoop.hbase.regionserver.KeyValueHeap.<init>(KeyValueHeap.java:56)
@@ -392,7 +392,7 @@ And one that’s busy doing an increment of a counter (it’s in the phase where
 
 A thread that receives data from HDFS:
 
-```
+``` text
 "IPC Client (47) connection to sv4borg9/10.4.24.40:9000 from hadoop" daemon prio=10 tid=0x00007f16a02d0000 nid=0x4fa3 runnable [0x00007f16b517d000..0x00007f16b517dbf0]
    java.lang.Thread.State: RUNNABLE
           at sun.nio.ch.EPollArrayWrapper.epollWait(Native Method)
@@ -419,7 +419,7 @@ A thread that receives data from HDFS:
 
 And here is a master trying to recover a lease after a RegionServer died:
 
-```
+``` text
 "LeaseChecker" daemon prio=10 tid=0x00000000407ef800 nid=0x76cd waiting on condition [0x00007f6d0eae2000..0x00007f6d0eae2a70]
 --
    java.lang.Thread.State: WAITING (on object monitor)
@@ -442,17 +442,17 @@ And here is a master trying to recover a lease after a RegionServer died:
           at org.apache.hadoop.hbase.master.HMaster.run(HMaster.java:503)
 ```
 
-### OpenTSDB
+#### OpenTSDB
 
-[OpenTSDB](http://opentsdb.net) is an excellent alternative to Ganglia as it uses Apache HBase to store all the time series and doesn’t have to downsample. Monitoring your own HBase cluster that hosts OpenTSDB is a good exercise.
+[OpenTSDB](http://opentsdb.net) is an excellent alternative to Ganglia as it uses Apache HBase to store all the time series and doesn't have to downsample. Monitoring your own HBase cluster that hosts OpenTSDB is a good exercise.
 
-Here’s an example of a cluster that’s suffering from hundreds of compactions launched almost all around the same time, which severely affects the IO performance: (TODO: insert graph plotting compactionQueueSize)
+Here's an example of a cluster that's suffering from hundreds of compactions launched almost all around the same time, which severely affects the IO performance: (TODO: insert graph plotting compactionQueueSize)
 
-It’s a good practice to build dashboards with all the important graphs per machine and per cluster so that debugging issues can be done with a single quick look. For example, at StumbleUpon there’s one dashboard per cluster with the most important metrics from both the OS and Apache HBase. You can then go down at the machine level and get even more detailed metrics.
+It's a good practice to build dashboards with all the important graphs per machine and per cluster so that debugging issues can be done with a single quick look. For example, at StumbleUpon there's one dashboard per cluster with the most important metrics from both the OS and Apache HBase. You can then go down at the machine level and get even more detailed metrics.
 
-### clusterssh+top
+#### clusterssh+top
 
-clusterssh+top, it’s like a poor man’s monitoring system and it can be quite useful when you have only a few machines as it’s very easy to setup. Starting clusterssh will give you one terminal per machine and another terminal in which whatever you type will be retyped in every window. This means that you can type `top` once and it will start it for all of your machines at the same time giving you full view of the current state of your cluster. You can also tail all the logs at the same time, edit files, etc.
+clusterssh+top, it's like a poor man's monitoring system and it can be quite useful when you have only a few machines as it's very easy to setup. Starting clusterssh will give you one terminal per machine and another terminal in which whatever you type will be retyped in every window. This means that you can type `top` once and it will start it for all of your machines at the same time giving you full view of the current state of your cluster. You can also tail all the logs at the same time, edit files, etc.
 
 ## Client
 
@@ -464,23 +464,23 @@ This is thrown if the time between RPC calls from the client to RegionServer exc
 
 See [Scan Caching](#perf.hbase.client.caching).
 
-## Performance Differences in Thrift and Java APIs
+### Performance Differences in Thrift and Java APIs
 
 Poor performance, or even `ScannerTimeoutExceptions`, can occur if `Scan.setCaching` is too high, as discussed in [ScannerTimeoutException or UnknownScannerException](#trouble.client.scantimeout). If the Thrift client uses the wrong caching settings for a given workload, performance can suffer compared to the Java API. To set caching for a given scan in the Thrift client, use the `scannerGetList(scannerId, numRows)` method, where `numRows` is an integer representing the number of rows to cache. In one case, it was found that reducing the cache for Thrift scans from 1000 to 100 increased performance to near parity with the Java API given the same queries.
 
-See also Jesse Andersen’s [blog post](http://blog.cloudera.com/blog/2014/04/how-to-use-the-hbase-thrift-interface-part-3-using-scans/) about using Scans with Thrift.
+See also Jesse Andersen's [blog post](http://blog.cloudera.com/blog/2014/04/how-to-use-the-hbase-thrift-interface-part-3-using-scans/) about using Scans with Thrift.
 
-## `LeaseException` when calling `Scanner.next`
+### `LeaseException` when calling `Scanner.next`
 
 In some situations clients that fetch data from a RegionServer get a LeaseException instead of the usual [ScannerTimeoutException or UnknownScannerException](#trouble.client.scantimeout). Usually the source of the exception is `org.apache.hadoop.hbase.regionserver.Leases.removeLease(Leases.java:230)` (line number may vary). It tends to happen in the context of a slow/freezing `RegionServer#next` call. It can be prevented by having `hbase.rpc.timeout` > `hbase.client.scanner.timeout.period`. Harsh J investigated the issue as part of the mailing list thread [HBase, mail \# user - Lease does not exist exceptions](https://mail-archives.apache.org/mod_mbox/hbase-user/201209.mbox/%3CCAOcnVr3R-LqtKhFsk8Bhrm-YW2i9O6J6Fhjz2h7q6_sxvwd2yw%40mail.gmail.com%3E)
 
-## Shell or client application throws lots of scary exceptions during normal operation
+### Shell or client application throws lots of scary exceptions during normal operation
 
-Since 0.20.0 the default log level for \`org.apache.hadoop.hbase.\*\`is DEBUG.
+Since 0.20.0 the default log level for `org.apache.hadoop.hbase.*` is DEBUG.
 
-On your clients, edit *`$HBASE_HOME`/conf/log4j.properties* and change this: `log4j.logger.org.apache.hadoop.hbase=DEBUG` to this: `log4j.logger.org.apache.hadoop.hbase=INFO`, or even `log4j.logger.org.apache.hadoop.hbase=WARN`.
+On your clients, edit *$HBASE_HOME/conf/log4j.properties* and change this: `log4j.logger.org.apache.hadoop.hbase=DEBUG` to this: `log4j.logger.org.apache.hadoop.hbase=INFO`, or even `log4j.logger.org.apache.hadoop.hbase=WARN`.
 
-## Long Client Pauses With Compression
+### Long Client Pauses With Compression
 
 This is a fairly frequent question on the Apache HBase dist-list. The scenario is that a client is typically inserting a lot of data into a relatively un-optimized HBase cluster. Compression can exacerbate the pauses, although it is not the source of the problem.
 
@@ -488,26 +488,26 @@ See [Table Creation: Pre-Creating Regions](#precreate.regions) on the pattern fo
 
 See [HBase Configurations](#perf.configurations) for cluster configuration, particularly `hbase.hstore.blockingStoreFiles`, `hbase.hregion.memstore.block.multiplier`, `MAX_FILESIZE` (region size), and `MEMSTORE_FLUSHSIZE.`
 
-A slightly longer explanation of why pauses can happen is as follows: Puts are sometimes blocked on the MemStores which are blocked by the flusher thread which is blocked because there are too many files to compact because the compactor is given too many small files to compact and has to compact the same data repeatedly. This situation can occur even with minor compactions. Compounding this situation, Apache HBase doesn’t compress data in memory. Thus, the 64MB that lives in the MemStore could become a 6MB file after compression - which results in a smaller StoreFile. The upside is that more data is packed into the same region, but performance is achieved by being able to write larger files - which is why HBase waits until the flushsize before writing a new StoreFile. And smaller StoreFiles become targets for compaction. Without compression the files are much bigger and don’t need as much compaction, however this is at the expense of I/O.
+A slightly longer explanation of why pauses can happen is as follows: Puts are sometimes blocked on the MemStores which are blocked by the flusher thread which is blocked because there are too many files to compact because the compactor is given too many small files to compact and has to compact the same data repeatedly. This situation can occur even with minor compactions. Compounding this situation, Apache HBase doesn't compress data in memory. Thus, the 64MB that lives in the MemStore could become a 6MB file after compression - which results in a smaller StoreFile. The upside is that more data is packed into the same region, but performance is achieved by being able to write larger files - which is why HBase waits until the flushsize before writing a new StoreFile. And smaller StoreFiles become targets for compaction. Without compression the files are much bigger and don't need as much compaction, however this is at the expense of I/O.
 
-## Secure Client Connect ([Caused by GSSException: No valid credentials provided...])
+### Secure Client Connect ([Caused by GSSException: No valid credentials provided...])
 
 You may encounter the following error:
 
-```
+``` text
 Secure Client Connect ([Caused by GSSException: No valid credentials provided
         (Mechanism level: Request is a replay (34) V PROCESS_TGS)])
 ```
 
-This issue is caused by bugs in the MIT Kerberos replay_cache component, [\#1201](http://krbdev.mit.edu/rt/Ticket/Display.html?id=1201) and [\#5924](http://krbdev.mit.edu/rt/Ticket/Display.html?id=5924). These bugs caused the old version of krb5-server to erroneously block subsequent requests sent from a Principal. This caused krb5-server to block the connections sent from one Client (one HTable instance with multi-threading connection instances for each RegionServer); Messages, such as `Request is a replay (34)`, are logged in the client log You can ignore the messages, because HTable will retry 5 \* 10 (50) times for each failed connection by default. HTable will throw IOException if any connection to the RegionServer fails after the retries, so that the user client code for HTable instance can handle it further. NOTE: `HTable` is deprecated in HBase 1.0, in favor of `Table`.
+This issue is caused by bugs in the MIT Kerberos replay_cache component, [\#1201](http://krbdev.mit.edu/rt/Ticket/Display.html?id=1201) and [\#5924](http://krbdev.mit.edu/rt/Ticket/Display.html?id=5924). These bugs caused the old version of krb5-server to erroneously block subsequent requests sent from a Principal. This caused krb5-server to block the connections sent from one Client (one HTable instance with multi-threading connection instances for each RegionServer); Messages, such as `Request is a replay (34)`, are logged in the client log You can ignore the messages, because HTable will retry 5 * 10 (50) times for each failed connection by default. HTable will throw IOException if any connection to the RegionServer fails after the retries, so that the user client code for HTable instance can handle it further. NOTE: `HTable` is deprecated in HBase 1.0, in favor of `Table`.
 
 Alternatively, update krb5-server to a version which solves these issues, such as krb5-server-1.10.3. See JIRA [HBASE-10379](https://issues.apache.org/jira/browse/HBASE-10379) for more details.
 
-## ZooKeeper Client Connection Errors
+### ZooKeeper Client Connection Errors
 
-Errors like this…​
+Errors like this...
 
-```
+``` text
 11/07/05 11:26:41 WARN zookeeper.ClientCnxn: Session 0x0 for server null,
  unexpected error, closing socket connection and attempting reconnect
  java.net.ConnectException: Connection refused: no further information
@@ -526,15 +526,15 @@ Errors like this…​
  server localhost/127.0.0.1:2181
 ```
 
-…​are either due to ZooKeeper being down, or unreachable due to network issues.
+...are either due to ZooKeeper being down, or unreachable due to network issues.
 
 The utility [zkcli](#trouble.tools.builtin.zkcli) may help investigate ZooKeeper issues.
 
-## Client running out of memory though heap size seems to be stable (but the off-heap/direct heap keeps growing)
+### Client running out of memory though heap size seems to be stable (but the off-heap/direct heap keeps growing)
 
 You are likely running into the issue that is described and worked through in the mail thread [HBase, mail \# user - Suspected memory leak](https://lists.apache.org/thread.html/d12bbe56be95cf68478d1528263042730670ff39159a01eaf06d8bc8%401322622090%40%3Cuser.hbase.apache.org%3E) and continued over in [HBase, mail \# dev - FeedbackRe: Suspected memory leak](https://lists.apache.org/thread.html/621dde35479215f0b07b23af93b8fac52ff4729949b5c9af18e3a85b%401322971078%40%3Cuser.hbase.apache.org%3E). A workaround is passing your client-side JVM a reasonable value for `-XX:MaxDirectMemorySize`. By default, the `MaxDirectMemorySize` is equal to your `-Xmx` max heapsize setting (if `-Xmx` is set). Try setting it to something smaller (for example, one user had success setting it to `1g` when they had a client-side heap of `12g`). If you set it too small, it will bring on `FullGCs` so keep it a bit hefty. You want to make this setting client-side only especially if you are running the new experimental server-side off-heap cache since this feature depends on being able to use big direct buffers (You may have to keep separate client-side and server-side config dirs).
 
-## Secure Client Cannot Connect ([Caused by GSSException: No valid credentials provided(Mechanism level: Failed to find any Kerberos tgt)])
+### Secure Client Cannot Connect ([Caused by GSSException: No valid credentials provided(Mechanism level: Failed to find any Kerberos tgt)])
 
 There can be several causes that produce this symptom.
 
@@ -548,9 +548,9 @@ Prior to JDK 1.4, the JCE was an unbundled product, and as such, the JCA and JCE
 
 You may need to install the [Java Cryptography Extension](https://docs.oracle.com/javase/1.5.0/docs/guide/security/jce/JCERefGuide.html), or JCE because of JDK 1.5 or earlier version. Insure the JCE jars are on the classpath on both server and client systems.
 
-You may also need to download the [unlimited strength JCE policy files](http://www.oracle.com/technetwork/java/javase/downloads/jce-6-download-429243.html). Uncompress and extract the downloaded file, and install the policy jars into *JAVA-HOME/lib/security*.
+You may also need to download the [unlimited strength JCE policy files](http://www.oracle.com/technetwork/java/javase/downloads/jce-6-download-429243.html). Uncompress and extract the downloaded file, and install the policy jars into *\<java-home>/lib/security*.
 
-## Trouble shooting master registry issues
+### Trouble shooting master registry issues
 
 - For connectivity issues, usually an exception like "MasterRegistryFetchException: Exception making rpc to masters…​" is logged in the client logs. The logging includes the list of master end points that were attempted by the client. The bottom part of the stack trace should include the underlying reason. If you suspect connectivity issues (ConnectionRefused?), make sure the master end points are accessible from client.
 - If there is a suspicion of higher load on the masters due to hedging of RPCs, it can be controlled by either reducing the hedging fan out (via *hbase.rpc.hedged.fanout*) or by restricting the set of masters that clients can access for the master registry purposes (via *hbase.masters*).
@@ -563,7 +563,7 @@ Refer to [Master Registry (new as of 2.3.0)](#client.masterregistry) and [Client
 
 This following stacktrace happened using `ImportTsv`, but things like this can happen on any job with a mis-configuration.
 
-```
+``` text
     WARN mapred.LocalJobRunner: job_local_0001
 java.lang.IllegalArgumentException: Can't read partitions file
        at org.apache.hadoop.hbase.mapreduce.hadoopbackport.TotalOrderPartitioner.setConf(TotalOrderPartitioner.java:111)
@@ -582,9 +582,9 @@ Caused by: java.io.FileNotFoundException: File _partition.lst does not exist.
        at org.apache.hadoop.hbase.mapreduce.hadoopbackport.TotalOrderPartitioner.readPartitions(TotalOrderPartitioner.java:296)
 ```
 
-...see the critical portion of the stack? It’s...
+...see the critical portion of the stack? It's...
 
-```
+``` text
 at org.apache.hadoop.mapred.LocalJobRunner$Job.run(LocalJobRunner.java:210)
 ```
 
@@ -636,7 +636,7 @@ Sometimes it will be necessary to explore the HBase objects that exist on HDFS. 
 
 The HDFS directory structure of HBase tables in the cluster is...
 
-```
+``` text
 /hbase
     /data
         /<Namespace>                    (Namespaces in the cluster)
@@ -648,7 +648,7 @@ The HDFS directory structure of HBase tables in the cluster is...
 
 The HDFS directory structure of HBase WAL is..
 
-```
+``` text
 /hbase
     /WALs
         /<RegionServer>    (RegionServers)
@@ -672,11 +672,11 @@ Two common use-cases for querying HDFS for HBase objects is research the degree 
 If you see an unexpected spike in filesystem usage by HBase, two possible culprits are snapshots and WALs.
 
 **Snapshots**  
-When you create a snapshot, HBase retains everything it needs to recreate the table’s state at that time of the snapshot. This includes deleted cells or expired versions. For this reason, your snapshot usage pattern should be well-planned, and you should prune snapshots that you no longer need. Snapshots are stored in `/hbase/.hbase-snapshot`, and archives needed to restore snapshots are stored in `/hbase/archive/<_tablename_>/<_region_>/<_column_family_>/`.  
-```
-Do not manage snapshots or archives manually via HDFS. HBase provides APIs and
-HBase Shell commands for managing them. For more information, see <<ops.snapshots>>.
-```
+When you create a snapshot, HBase retains everything it needs to recreate the table's state at that time of the snapshot. This includes deleted cells or expired versions. For this reason, your snapshot usage pattern should be well-planned, and you should prune snapshots that you no longer need. Snapshots are stored in `/hbase/.hbase-snapshot`, and archives needed to restore snapshots are stored in `/hbase/archive/<tablename>/<region>/<column_family>/`.
+
+<Callout type="warn">
+**Do not** manage snapshots or archives manually via HDFS. HBase provides APIs and HBase Shell commands for managing them. For more information, see [ops.snapshots](#ops.snapshots).
+</Callout>
 
 **WAL**  
 Write-ahead logs (WALs) are stored in subdirectories of the HBase root directory, typically `/hbase/`, depending on their status. Already-processed WALs are stored in `/hbase/oldWALs/` and corrupt WALs are stored in `/hbase/.corrupt/` for examination. If the size of one of these subdirectories is growing, examine the HBase server logs to find the root cause for why WALs are not being processed correctly.  
@@ -714,16 +714,16 @@ The RegionServers are erroneously informing the Master that their IP addresses a
 
 Modify */etc/hosts* on the region servers, from...
 
-```
+``` text
 # Do not remove the following line, or various programs
 # that require network functionality will fail.
 127.0.0.1               fully.qualified.regionservername regionservername  localhost.localdomain localhost
 ::1             localhost6.localdomain6 localhost6
 ```
 
-... to (removing the master node’s name from localhost)...
+... to (removing the master node's name from localhost)...
 
-```
+``` text
 # Do not remove the following line, or various programs
 # that require network functionality will fail.
 127.0.0.1               localhost.localdomain localhost
@@ -734,7 +734,7 @@ Modify */etc/hosts* on the region servers, from...
 
 Since compression algorithms such as LZO need to be installed and configured on each cluster this is a frequent source of startup error. If you see messages like this...
 
-```
+``` text
 11/02/20 01:32:15 ERROR lzo.GPLNativeCodeLoader: Could not load native gpl library
 java.lang.UnsatisfiedLinkError: no gplcompression in java.library.path
         at java.lang.ClassLoader.loadLibrary(ClassLoader.java:1734)
@@ -750,7 +750,7 @@ In order to provide data durability for writes to the cluster HBase relies on th
 
 For RegionServer roles, the failure will show up in logs like this:
 
-```
+``` text
 2018-04-05 11:36:22,785 ERROR [regionserver/192.168.1.123:16020] wal.AsyncFSWALProvider: The RegionServer async write ahead log provider relies on the ability to call hflush and hsync for proper operation during component failures, but the current FileSystem does not support doing so. Please check the config value of 'hbase.wal.dir' and ensure it points to a FileSystem mount that has suitable capabilities for output streams.
 2018-04-05 11:36:22,799 ERROR [regionserver/192.168.1.123:16020] regionserver.HRegionServer: ***** ABORTING region server 192.168.1.123,16020,1522946074234: Unhandled: cannot get log writer *****
 java.io.IOException: cannot get log writer
@@ -786,7 +786,7 @@ We will try to use *AsyncFSWAL* for HBase-2.x as it has better performance while
 
 If you do not specify the wal provider, we will try to fall back to the old *FSHLog* if we fail to initialize *AsyncFSWAL*, but it may not always work. The failure will show up in logs like this:
 
-```
+``` text
 18/07/02 18:51:06 WARN concurrent.DefaultPromise: An exception was
 thrown by org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputHelper$13.operationComplete()
 java.lang.Error: Couldn't properly initialize access to HDFS
@@ -838,9 +838,9 @@ Are you running an old JVM (`< `1.6.0_u21?)? When you look at a thread dump, doe
 
 #### java.io.IOException...(Too many open files)
 
-If you see log messages like this…​
+If you see log messages like this...
 
-```
+``` text
 2010-09-13 01:24:17,336 WARN org.apache.hadoop.hdfs.server.datanode.DataNode:
 Disk-related IOException in BlockReceiver constructor. Cause is java.io.IOException: Too many open files
         at java.io.UnixFileSystem.createFileExclusively(Native Method)
@@ -863,7 +863,7 @@ See the Getting Started section on ulimit and nproc configuration. The default o
 
 If you see warning messages like this...
 
-```
+``` text
 2009-02-24 10:01:33,516 WARN org.apache.hadoop.hbase.util.Sleeper: We slept xxx ms, ten times longer than scheduled: 10000
 2009-02-24 10:01:33,516 WARN org.apache.hadoop.hbase.util.Sleeper: We slept xxx ms, ten times longer than scheduled: 15000
 2009-02-24 10:01:36,472 WARN org.apache.hadoop.hbase.regionserver.HRegionServer: unable to report to master for xxx milliseconds - retrying
@@ -881,7 +881,7 @@ See the Getting Started section on ulimit and nproc configuration and check your
 
 Master or RegionServers shutting down with messages like those in the logs:
 
-```
+``` text
 WARN org.apache.zookeeper.ClientCnxn: Exception
 closing session 0x278bd16a96000f to sun.nio.ch.SelectionKeyImpl@355811ec
 java.io.IOException: TIMED OUT
@@ -942,14 +942,14 @@ If you see this type of message it means that the region server was trying to re
 
 Several operations within HBase, including snapshots, rely on properly configured reverse DNS. Some environments, such as Amazon EC2, have trouble with reverse DNS. If you see errors like the following on your RegionServers, check your reverse DNS configuration:
 
-```
+``` text
 2013-05-01 00:04:56,356 DEBUG org.apache.hadoop.hbase.procedure.Subprocedure: Subprocedure 'backup1'
 coordinator notified of 'acquire', waiting on 'reached' or 'abort' from coordinator.
 ```
 
-In general, the hostname reported by the RegionServer needs to be the same as the hostname the Master is trying to reach. You can see a hostname mismatch by looking for the following type of message in the RegionServer’s logs at start-up.
+In general, the hostname reported by the RegionServer needs to be the same as the hostname the Master is trying to reach. You can see a hostname mismatch by looking for the following type of message in the RegionServer's logs at start-up.
 
-```
+``` text
 2013-05-01 00:03:00,614 INFO org.apache.hadoop.hbase.regionserver.HRegionServer: Master passed us hostname
 to use. Was=myhost-1234, Now=ip-10-55-88-99.ec2.internal
 ```
@@ -978,7 +978,7 @@ HBase’s internal framework for cluster operations requires the ability to dura
 
 For Master roles, the failure will show up in logs like this:
 
-```
+``` text
 2018-04-05 11:18:44,653 ERROR [Thread-21] master.HMaster: Failed to become active master
 java.lang.IllegalStateException: The procedure WAL relies on the ability to hsync for proper operation during component failures, but the underlying filesystem does not support doing so. Please check the config value of 'hbase.procedure.store.wal.use.hsync' to set the desired level of robustness and ensure the config value of 'hbase.wal.dir' points to a FileSystem mount that can provide it.
         at org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore.rollWriter(WALProcedureStore.java:1034)
@@ -1022,7 +1022,7 @@ Additionally, the utility [zkcli](#trouble.tools.builtin.zkcli) may help investi
 
 HBase does not start when deployed as Amazon EC2 instances. Exceptions like the below appear in the Master and/or RegionServer logs:
 
-```
+``` text
   2009-10-19 11:52:27,030 INFO org.apache.zookeeper.ClientCnxn: Attempting
   connection to server ec2-174-129-15-236.compute-1.amazonaws.com/10.244.9.171:2181
   2009-10-19 11:52:27,032 WARN org.apache.zookeeper.ClientCnxn: Exception
@@ -1113,7 +1113,7 @@ The following types of errors are often seen in the logs.
 
 If you see something like the following
 
-```
+``` text
 ...
 java.lang.NullPointerException: null
 at org.apache.hadoop.hdfs.MiniDFSCluster.startDataNodes
@@ -1126,7 +1126,7 @@ at org.apache.hadoop.hbase.HBaseTestingUtility.startMiniCluster
 
 or
 
-```
+``` text
 ...
 java.io.IOException: Shutting down
 at org.apache.hadoop.hbase.MiniHBaseCluster.init
@@ -1149,7 +1149,7 @@ For Performance and Troubleshooting Case Studies, see [Apache HBase Case Studies
 
 This problem manifests as exceptions ultimately caused by:
 
-```
+``` text
 Caused by: sun.security.pkcs11.wrapper.PKCS11Exception: CKR_ARGUMENTS_BAD
   at sun.security.pkcs11.wrapper.PKCS11.C_DecryptUpdate(Native Method)
   at sun.security.pkcs11.P11Cipher.implDoFinal(P11Cipher.java:795)
@@ -1159,7 +1159,7 @@ This problem appears to affect some versions of OpenJDK 7 shipped by some Linux 
 
 To work around this problem, find the JRE home directory and edit the file *lib/security/java.security*. Edit the file to comment out the line:
 
-```
+``` text
 security.provider.1=sun.security.pkcs11.SunPKCS11 ${java.home}/lib/security/nss.cfg
 ```
 
@@ -1176,7 +1176,7 @@ This issue is known to affect CentOS 6.2 and possibly CentOS 6.5. It may also af
 
 Some users have reported seeing the following error:
 
-```
+``` text
 kernel: java: page allocation failure. order:4, mode:0x20
 ```
 
@@ -1184,7 +1184,7 @@ Raising the value of `min_free_kbytes` was reported to fix this problem. This pa
 
 To find the current value on your system, run the following command:
 
-```
+``` bash
 [user@host]# cat /proc/sys/vm/min_free_kbytes
 ```
 
@@ -1192,7 +1192,7 @@ Next, raise the value. Try doubling, then quadrupling the value. Note that setti
 
 Use the following command to modify the value of `min_free_kbytes`, substituting *VALUE* with your intended value:
 
-```
+``` bash
 [user@host]# echo <value> > /proc/sys/vm/min_free_kbytes
 ```
 
@@ -1202,7 +1202,7 @@ Use the following command to modify the value of `min_free_kbytes`, substituting
 
 If you see this in your logs:
 
-```
+``` text
 Caused by: java.lang.NoSuchMethodError: java.util.concurrent.ConcurrentHashMap.keySet()Ljava/util/concurrent/ConcurrentHashMap$KeySetView;
   at org.apache.hadoop.hbase.master.ServerManager.findServerWithSameHostnamePortWithLock(ServerManager.java:393)
   at org.apache.hadoop.hbase.master.ServerManager.checkAndRecordNewServer(ServerManager.java:307)
@@ -1213,9 +1213,9 @@ Caused by: java.lang.NoSuchMethodError: java.util.concurrent.ConcurrentHashMap.k
   ... 4 more
 ```
 
-then check if you compiled with jdk8 and tried to run it on jdk7. If so, this won’t work. Run on jdk8 or recompile with jdk7. See [HBASE-10607 JDK8 NoSuchMethodError involving ConcurrentHashMap.keySet if running on JRE 7](https://issues.apache.org/jira/browse/HBASE-10607).
+then check if you compiled with jdk8 and tried to run it on jdk7. If so, this won't work. Run on jdk8 or recompile with jdk7. See [HBASE-10607 JDK8 NoSuchMethodError involving ConcurrentHashMap.keySet if running on JRE 7](https://issues.apache.org/jira/browse/HBASE-10607).
 
-## Full gc caused by mslab when using G1
+### Full gc caused by mslab when using G1
 
 The default size of chunk used by mslab is 2MB, when using G1, if heapRegionSize equals 4MB, these chunks are allocated as humongous objects, exclusively allocating one region, then the remaining 2MB become memory fragment.
 
@@ -1232,6 +1232,6 @@ The G1HeapRegionSize calculated by initial_heap_size and max_heap_size, here are
 
 You can avoid this problem by reducing the chunk size a bit to 2047KB as below.
 
-```
+``` properties
 hbase.hregion.memstore.mslab.chunksize 2096128
 ```
