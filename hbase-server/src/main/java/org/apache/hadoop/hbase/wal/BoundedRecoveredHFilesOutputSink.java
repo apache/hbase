@@ -17,8 +17,7 @@
  */
 package org.apache.hadoop.hbase.wal;
 
-import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
-
+import org.apache.hadoop.hbase.MetaTableName;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.HashMap;
@@ -37,6 +36,7 @@ import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.MetaCellComparator;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
@@ -78,7 +78,7 @@ public class BoundedRecoveredHFilesOutputSink extends OutputSink {
   void append(RegionEntryBuffer buffer) throws IOException {
     Map<String, CellSet<ExtendedCell>> familyCells = new HashMap<>();
     Map<String, Long> familySeqIds = new HashMap<>();
-    boolean isMetaTable = buffer.tableName.equals(META_TABLE_NAME);
+    boolean isMetaTable = buffer.tableName.equals(MetaTableName.getInstance());
     // First iterate all Cells to find which column families are present and to stamp Cell with
     // sequence id.
     for (WAL.Entry entry : buffer.entryBuffer) {

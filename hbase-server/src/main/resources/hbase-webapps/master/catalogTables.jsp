@@ -20,6 +20,7 @@
 
 <%@ page contentType="text/html;charset=UTF-8"
          import="java.util.*"
+         import="org.apache.hadoop.hbase.MetaTableName"
          import="org.apache.hadoop.hbase.NamespaceDescriptor"
          import="org.apache.hadoop.hbase.TableName"
          import="org.apache.hadoop.hbase.master.HMaster"

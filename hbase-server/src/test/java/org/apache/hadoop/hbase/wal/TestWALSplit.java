@@ -61,6 +61,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.coordination.SplitLogWorkerCoordination;
@@ -456,7 +457,7 @@ public class TestWALSplit {
   @Test
   public void testOldRecoveredEditsFileSidelined() throws IOException {
     Path p = createRecoveredEditsPathForRegion();
-    Path tdir = CommonFSUtils.getTableDir(HBASEDIR, TableName.META_TABLE_NAME);
+    Path tdir = CommonFSUtils.getTableDir(HBASEDIR, MetaTableName.getInstance());
     Path regiondir = new Path(tdir, RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedName());
     fs.mkdirs(regiondir);
     Path parent = WALSplitUtil.getRegionDirRecoveredEditsDir(regiondir);
@@ -469,7 +470,7 @@ public class TestWALSplit {
 
   private Path createRecoveredEditsPathForRegion() throws IOException {
     byte[] encoded = RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedNameAsBytes();
-    Path p = WALSplitUtil.getRegionSplitEditsPath(TableName.META_TABLE_NAME, encoded, 1,
+    Path p = WALSplitUtil.getRegionSplitEditsPath(MetaTableName.getInstance(), encoded, 1,
       FILENAME_BEING_SPLIT, TMPDIRNAME, conf, "");
     return p;
   }

@@ -23,6 +23,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.client.AsyncConnection;
 import org.apache.hadoop.hbase.client.AsyncTable;
 import org.apache.hadoop.hbase.client.Connection;
@@ -73,7 +74,7 @@ public final class ClientTokenUtil {
       future.completeExceptionally(ProtobufUtil.handleRemoteException(injectedException));
       return future;
     }
-    AsyncTable<?> table = conn.getTable(TableName.META_TABLE_NAME);
+    AsyncTable<?> table = conn.getTable(MetaTableName.getInstance());
     table.<AuthenticationProtos.AuthenticationService.Interface,
       AuthenticationProtos.GetAuthenticationTokenResponse> coprocessorService(
         AuthenticationProtos.AuthenticationService::newStub,
@@ -102,7 +103,7 @@ public final class ClientTokenUtil {
     try {
       injectFault();
 
-      meta = conn.getTable(TableName.META_TABLE_NAME);
+      meta = conn.getTable(MetaTableName.getInstance());
       CoprocessorRpcChannel rpcChannel = meta.coprocessorService(HConstants.EMPTY_START_ROW);
       AuthenticationProtos.AuthenticationService.BlockingInterface service =
         AuthenticationProtos.AuthenticationService.newBlockingStub(rpcChannel);

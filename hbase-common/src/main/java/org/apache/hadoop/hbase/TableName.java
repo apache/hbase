@@ -84,7 +84,7 @@ public final class TableName implements Comparable<TableName> {
    *             future version.
    */
   @Deprecated
-  public static TableName META_TABLE_NAME;
+  public static TableName META_TABLE_NAME = TableName.valueOf("hbase:meta");
 
   /**
    * The Namespace table's name.
@@ -306,7 +306,7 @@ public final class TableName implements Comparable<TableName> {
     }
     if (qualifierAsString.equals(OLD_META_STR)) {
       throw new IllegalArgumentException(
-        OLD_META_STR + " no longer exists. The table has been " + "renamed to " + META_TABLE_NAME);
+        OLD_META_STR + " no longer exists. The table has been " + "renamed to " + MetaTableName.getInstance());
     }
 
     if (Bytes.equals(NamespaceDescriptor.DEFAULT_NAMESPACE_NAME, namespace)) {

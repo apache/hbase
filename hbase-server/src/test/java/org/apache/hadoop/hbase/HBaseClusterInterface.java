@@ -388,7 +388,7 @@ public abstract class HBaseClusterInterface implements Closeable, Configurable {
    * Get the ServerName of region server serving the first hbase:meta region
    */
   public ServerName getServerHoldingMeta() throws IOException {
-    return getServerHoldingRegion(TableName.META_TABLE_NAME,
+    return getServerHoldingRegion(MetaTableName.getInstance(),
       RegionInfoBuilder.FIRST_META_REGIONINFO.getRegionName());
   }
 

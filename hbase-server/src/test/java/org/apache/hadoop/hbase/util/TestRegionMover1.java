@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -287,7 +288,7 @@ public class TestRegionMover1 {
   public void testLoadMetaRegion() throws Exception {
     HRegionServer rsWithMeta = TEST_UTIL.getMiniHBaseCluster().getRegionServerThreads().stream()
       .map(t -> t.getRegionServer())
-      .filter(rs -> rs.getRegions(TableName.META_TABLE_NAME).size() > 0).findFirst().get();
+      .filter(rs -> rs.getRegions(MetaTableName.getInstance()).size() > 0).findFirst().get();
     int onlineRegions = rsWithMeta.getNumberOfOnlineRegions();
     String rsName = rsWithMeta.getServerName().getAddress().toString();
     try (RegionMover rm =

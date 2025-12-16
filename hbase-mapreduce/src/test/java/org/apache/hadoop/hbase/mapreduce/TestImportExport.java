@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.client.ClientInternalHelper;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -256,7 +257,7 @@ public class TestImportExport {
   @Test
   public void testMetaExport() throws Throwable {
     String[] args =
-      new String[] { TableName.META_TABLE_NAME.getNameAsString(), FQ_OUTPUT_DIR, "1", "0", "0" };
+      new String[] { MetaTableName.getInstance().getNameAsString(), FQ_OUTPUT_DIR, "1", "0", "0" };
     assertTrue(runExport(args));
   }
 

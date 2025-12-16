@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
@@ -280,7 +281,7 @@ public class TestFSTableDescriptors {
     }
     // add hbase:meta
     htds
-      .createTableDescriptor(TableDescriptorBuilder.newBuilder(TableName.META_TABLE_NAME).build());
+      .createTableDescriptor(TableDescriptorBuilder.newBuilder(MetaTableName.getInstance()).build());
     assertEquals("getAll() didn't return all TableDescriptors, expected: " + (count + 1) + " got: "
       + htds.getAll().size(), count + 1, htds.getAll().size());
   }
@@ -299,7 +300,7 @@ public class TestFSTableDescriptors {
     }
     // add hbase:meta
     htds
-      .createTableDescriptor(TableDescriptorBuilder.newBuilder(TableName.META_TABLE_NAME).build());
+      .createTableDescriptor(TableDescriptorBuilder.newBuilder(MetaTableName.getInstance()).build());
 
     int getTableDescriptorSize = htds.getAll().size();
     assertEquals("getAll() didn't return all TableDescriptors, expected: " + (count + 1) + " got: "
@@ -326,7 +327,7 @@ public class TestFSTableDescriptors {
     // Remove hbase:meta from list. It shows up now since we made it dynamic. The schema
     // is written into the fs by the FSTableDescriptors constructor now where before it
     // didn't.
-    tables.remove(TableName.META_TABLE_NAME.getNameAsString());
+    tables.remove(MetaTableName.getInstance().getNameAsString());
     assertEquals(4, tables.size());
 
     String[] tableNamesOrdered =

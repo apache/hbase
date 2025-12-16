@@ -57,6 +57,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
@@ -586,13 +587,13 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
           // For isolating hbase:meta, it should move explicitly in Ack mode,
           // hence the forceMoveRegionByAck = true.
           if (!metaSeverName.equals(server)) {
-            LOG.info("Region of hbase:meta " + metaRegionInfo.getEncodedName() + " is on server "
-              + metaSeverName + " moving to " + server);
+            LOG.info("Region of {} {} is on server {} moving to {}", MetaTableName.getInstance(),
+              metaRegionInfo.getEncodedName(), metaSeverName, server);
             submitRegionMovesWhileUnloading(metaSeverName, Collections.singletonList(server),
               movedRegions, Collections.singletonList(metaRegionInfo), true);
           } else {
-            LOG.info("Region of hbase:meta " + metaRegionInfo.getEncodedName() + " already exists"
-              + " on server : " + server);
+            LOG.info("Region of {} {} already exists on server: {}", MetaTableName.getInstance(),
+              metaRegionInfo.getEncodedName(), server);
           }
           isolateRegionInfoList.add(RegionInfoBuilder.FIRST_META_REGIONINFO);
         }
