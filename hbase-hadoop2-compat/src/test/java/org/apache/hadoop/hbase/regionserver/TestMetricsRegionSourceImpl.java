@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
-
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
@@ -231,6 +230,11 @@ public class TestMetricsRegionSourceImpl {
       Map<String, Long> map = new HashMap<String, Long>();
       map.put("info", 0L);
       return map;
+    }
+
+    @Override
+    public String getTableDescriptorHash() {
+      return "testhash";
     }
   }
 }

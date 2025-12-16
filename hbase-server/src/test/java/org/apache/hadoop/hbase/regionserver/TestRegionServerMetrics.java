@@ -18,9 +18,9 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -648,5 +648,22 @@ public class TestRegionServerMetrics {
       metricsRegionServer.getRegionServerWrapper().getShortCircuitBytesRead());
     assertEquals("Total zero-byte read bytes should be equal to 0", 0,
       metricsRegionServer.getRegionServerWrapper().getZeroCopyBytesRead());
+  }
+
+  @Test
+  public void testTableDescriptorHashMetric() throws Exception {
+    doNPuts(1, false);
+    metricsRegionServer.getRegionServerWrapper().forceRecompute();
+
+    HRegion region = rs.getRegions(tableName).get(0);
+    assertNotNull("Region should exist", region);
+
+    try (MetricsRegionWrapperImpl wrapper = new MetricsRegionWrapperImpl(region)) {
+      String hash = wrapper.getTableDescriptorHash();
+
+      assertNotNull("TableDescriptorHash should not be null", hash);
+      assertNotEquals("TableDescriptorHash should not be 'UNKNOWN'", "UNKNOWN", hash);
+      assertEquals("Hash should be 8 characters (CRC32 hex)", 8, hash.length());
+    }
   }
 }
