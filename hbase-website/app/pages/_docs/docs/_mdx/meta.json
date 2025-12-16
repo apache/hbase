@@ -23,7 +23,7 @@
     "---APIs & Integration---",
     "hbase-apis",
     "external-apis",
-    "thrift_filter_language",
+    "thrift-filter-language",
     "spark",
     "cp",
     "---Performance & Troubleshooting---",

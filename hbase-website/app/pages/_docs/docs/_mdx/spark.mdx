@@ -1,31 +1,23 @@
 ---
 title: "HBase and Spark"
-description: "Integration guide for using Apache Spark with HBase including basic operations, streaming, bulk load, and SparkSQL."
+description: "Apache Spark is a software framework that is used to process data in memory in a distributed manner, and is replacing MapReduce in many use cases."
 ---
 
-[Apache Spark](https://spark.apache.org/) is a software framework that is used
-to process data in memory in a distributed manner, and is replacing MapReduce in
-many use cases.
-
-Spark itself is out of scope of this document, please refer to the Spark site for
+[Spark](https://spark.apache.org/) itself is out of scope of this document, please refer to the Spark site for
 more information on the Spark project and subprojects. This document will focus
 on 4 main interaction points between Spark and HBase. Those interaction points are:
 
-**Basic Spark**
-
+**Basic Spark**  
 The ability to have an HBase Connection at any point in your Spark DAG.
 
-**Spark Streaming**
-
+**Spark Streaming**  
 The ability to have an HBase Connection at any point in your Spark Streaming
 application.
 
-**Spark Bulk Load**
-
+**Spark Bulk Load**  
 The ability to write directly to HBase HFiles for bulk insertion into HBase
 
-**SparkSQL/DataFrames**
-
+**SparkSQL/DataFrames**  
 The ability to write SparkSQL that draws on tables that are represented in HBase.
 
 The following sections will walk through examples of all these interaction points.
@@ -61,9 +53,9 @@ val hbaseContext = new HBaseContext(sc, config)
 rdd.hbaseForeachPartition(hbaseContext, (it, conn) => {
  val bufferedMutator = conn.getBufferedMutator(TableName.valueOf("t1"))
  it.foreach((putRecord) => {
-  val put = new Put(putRecord._1)
-  putRecord._2.foreach((putValue) => put.addColumn(putValue._1, putValue._2, putValue._3))
-  bufferedMutator.mutate(put)
+. val put = new Put(putRecord._1)
+. putRecord._2.foreach((putValue) => put.addColumn(putValue._1, putValue._2, putValue._3))
+. bufferedMutator.mutate(put)
  })
  bufferedMutator.flush()
  bufferedMutator.close()
@@ -87,22 +79,22 @@ try {
   JavaHBaseContext hbaseContext = new JavaHBaseContext(jsc, conf);
 
   hbaseContext.foreachPartition(rdd,
-  new VoidFunction<Tuple2<Iterator<byte[]>, Connection>>() {
+      new VoidFunction<Tuple2<Iterator<byte[]>, Connection>>() {
    public void call(Tuple2<Iterator<byte[]>, Connection> t)
-    throws Exception {
-Table table = t._2().getTable(TableName.valueOf(tableName));
-BufferedMutator mutator = t._2().getBufferedMutator(TableName.valueOf(tableName));
-while (t._1().hasNext()) {
-  byte[] b = t._1().next();
-  Result r = table.get(new Get(b));
-  if (r.getExists()) {
-   mutator.mutate(new Put(b));
-  }
-}
+        throws Exception {
+    Table table = t._2().getTable(TableName.valueOf(tableName));
+    BufferedMutator mutator = t._2().getBufferedMutator(TableName.valueOf(tableName));
+    while (t._1().hasNext()) {
+      byte[] b = t._1().next();
+      Result r = table.get(new Get(b));
+      if (r.getExists()) {
+       mutator.mutate(new Put(b));
+      }
+    }
 
-mutator.flush();
-mutator.close();
-table.close();
+    mutator.flush();
+    mutator.close();
+    table.close();
    }
   });
 } finally {
@@ -116,27 +108,22 @@ supported by Spark. For the remaining of this documentation we will focus on
 Scala examples.
 
 The examples above illustrate how to do a foreachPartition with a connection. A
-number of other Spark base functions  are supported out of the box:
+number of other Spark base functions are supported out of the box:
 
-**`bulkPut`**
-
+**`bulkPut`**  
 For massively parallel sending of puts to HBase
 
-**`bulkDelete`**
-
+**`bulkDelete`**  
 For massively parallel sending of deletes to HBase
 
-**`bulkGet`**
-
+**`bulkGet`**  
 For massively parallel sending of gets to HBase to create a new RDD
 
-**`mapPartition`**
-
+**`mapPartition`**  
 To do a Spark Map function with a Connection object to allow full
 access to HBase
 
-**`hbaseRDD`**
-
+**`hbaseRDD`**  
 To simplify a distributed scan to create a RDD
 
 For examples of all these functionalities, see the
@@ -152,33 +139,28 @@ processing framework built on top of Spark. HBase and Spark Streaming make great
 companions in that HBase can help serve the following benefits alongside Spark
 Streaming.
 
-* A place to grab reference data or profile data on the fly
-* A place to store counts or aggregates in a way that supports Spark Streaming's
-promise of _only once processing_.
+- A place to grab reference data or profile data on the fly
+- A place to store counts or aggregates in a way that supports Spark Streaming's
+  promise of _only once processing_.
 
 The [hbase-spark integration](https://github.com/apache/hbase-connectors/tree/master/spark)
 with Spark Streaming is similar to its normal Spark integration points, in that the following
 commands are possible straight off a Spark Streaming DStream.
 
-**`bulkPut`**
-
+**`bulkPut`**  
 For massively parallel sending of puts to HBase
 
-**`bulkDelete`**
-
+**`bulkDelete`**  
 For massively parallel sending of deletes to HBase
 
-**`bulkGet`**
-
+**`bulkGet`**  
 For massively parallel sending of gets to HBase to create a new RDD
 
-**`mapPartition`**
-
+**`mapPartition`**  
 To do a Spark Map function with a Connection object to allow full
 access to HBase
 
-**`hbaseRDD`**
-
+**`hbaseRDD`**  
 To simplify a distributed scan to create a RDD
 
 ### `bulkPut` Example with DStreams
@@ -197,7 +179,7 @@ val rdd1 = ...
 val rdd2 = ...
 
 val queue = mutable.Queue[RDD[(Array[Byte], Array[(Array[Byte],
-Array[Byte], Array[Byte])])]]()
+    Array[Byte], Array[Byte])])]]()
 
 queue += rdd1
 queue += rdd2
@@ -222,13 +204,13 @@ into an HBase Put object.
 
 ## Bulk Load
 
-There are two options for bulk loading data into HBase with Spark.  There is the
+There are two options for bulk loading data into HBase with Spark. There is the
 basic bulk load functionality that will work for cases where your rows have
 millions of columns and cases where your columns are not consolidated and
 partitioned before the map side of the Spark bulk load process.
 
 There is also a thin record bulk load option with Spark. This second option is
-designed for tables that have less then 10k columns per row.  The advantage
+designed for tables that have less then 10k columns per row. The advantage
 of this second option is higher throughput and less over-all load on the Spark
 shuffle operation.
 
@@ -254,10 +236,10 @@ val hbaseContext = new HBaseContext(sc, config)
 
 val stagingFolder = ...
 val rdd = sc.parallelize(Array(
-  (Bytes.toBytes("1"),
-    (Bytes.toBytes(columnFamily1), Bytes.toBytes("a"), Bytes.toBytes("foo1"))),
-  (Bytes.toBytes("3"),
-    (Bytes.toBytes(columnFamily1), Bytes.toBytes("b"), Bytes.toBytes("foo2.b"))), ...
+      (Bytes.toBytes("1"),
+        (Bytes.toBytes(columnFamily1), Bytes.toBytes("a"), Bytes.toBytes("foo1"))),
+      (Bytes.toBytes("3"),
+        (Bytes.toBytes(columnFamily1), Bytes.toBytes("b"), Bytes.toBytes("foo2.b"))), ...
 
 rdd.hbaseBulkLoad(TableName.valueOf(tableName),
   t => {
@@ -280,24 +262,22 @@ load.doBulkLoad(new Path(stagingFolder.getPath),
 The `hbaseBulkLoad` function takes three required parameters:
 
 1. The table name of the table we intend to bulk load too
-
 2. A function that will convert a record in the RDD to a tuple key value par. With
-the tuple key being a KeyFamilyQualifer object and the value being the cell value.
-The KeyFamilyQualifer object will hold the RowKey, Column Family, and Column Qualifier.
-The shuffle will partition on the RowKey but will sort by all three values.
-
+   the tuple key being a KeyFamilyQualifer object and the value being the cell value.
+   The KeyFamilyQualifer object will hold the RowKey, Column Family, and Column Qualifier.
+   The shuffle will partition on the RowKey but will sort by all three values.
 3. The temporary path for the HFile to be written out too
 
-Following the Spark bulk load command,  use the HBase's LoadIncrementalHFiles object
+Following the Spark bulk load command, use the HBase's LoadIncrementalHFiles object
 to load the newly created HFiles into HBase.
 
 ### Additional Parameters for Bulk Loading with Spark
 
 You can set the following attributes with additional parameter options on hbaseBulkLoad.
 
-* Max file size of the HFiles
-* A flag to exclude HFiles from compactions
-* Column Family settings for compression, bloomType, blockSize, and dataBlockEncoding
+- Max file size of the HFiles
+- A flag to exclude HFiles from compactions
+- Column Family settings for compression, bloomType, blockSize, and dataBlockEncoding
 
 ### Using Additional Parameters
 
@@ -309,10 +289,10 @@ val hbaseContext = new HBaseContext(sc, config)
 
 val stagingFolder = ...
 val rdd = sc.parallelize(Array(
-  (Bytes.toBytes("1"),
-    (Bytes.toBytes(columnFamily1), Bytes.toBytes("a"), Bytes.toBytes("foo1"))),
-  (Bytes.toBytes("3"),
-    (Bytes.toBytes(columnFamily1), Bytes.toBytes("b"), Bytes.toBytes("foo2.b"))), ...
+      (Bytes.toBytes("1"),
+        (Bytes.toBytes(columnFamily1), Bytes.toBytes("a"), Bytes.toBytes("foo1"))),
+      (Bytes.toBytes("3"),
+        (Bytes.toBytes(columnFamily1), Bytes.toBytes("b"), Bytes.toBytes("foo2.b"))), ...
 
 val familyHBaseWriterOptions = new java.util.HashMap[Array[Byte], FamilyHFileWriteOptions]
 val f1Options = new FamilyHFileWriteOptions("GZ", "ROW", 128, "PREFIX")
@@ -352,30 +332,30 @@ val hbaseContext = new HBaseContext(sc, config)
 
 val stagingFolder = ...
 val rdd = sc.parallelize(Array(
-  ("1",
-    (Bytes.toBytes(columnFamily1), Bytes.toBytes("a"), Bytes.toBytes("foo1"))),
-  ("3",
-    (Bytes.toBytes(columnFamily1), Bytes.toBytes("b"), Bytes.toBytes("foo2.b"))), ...
+      ("1",
+        (Bytes.toBytes(columnFamily1), Bytes.toBytes("a"), Bytes.toBytes("foo1"))),
+      ("3",
+        (Bytes.toBytes(columnFamily1), Bytes.toBytes("b"), Bytes.toBytes("foo2.b"))), ...
 
 rdd.hbaseBulkLoadThinRows(hbaseContext,
-  TableName.valueOf(tableName),
-  t => {
-    val rowKey = t._1
+      TableName.valueOf(tableName),
+      t => {
+        val rowKey = t._1
 
-    val familyQualifiersValues = new FamiliesQualifiersValues
-    t._2.foreach(f => {
-      val family:Array[Byte] = f._1
-      val qualifier = f._2
-      val value:Array[Byte] = f._3
+        val familyQualifiersValues = new FamiliesQualifiersValues
+        t._2.foreach(f => {
+          val family:Array[Byte] = f._1
+          val qualifier = f._2
+          val value:Array[Byte] = f._3
 
-      familyQualifiersValues +=(family, qualifier, value)
-    })
-    (new ByteArrayWrapper(Bytes.toBytes(rowKey)), familyQualifiersValues)
-  },
-  stagingFolder.getPath,
-  new java.util.HashMap[Array[Byte], FamilyHFileWriteOptions],
-  compactionExclude = false,
-  20)
+          familyQualifiersValues +=(family, qualifier, value)
+        })
+        (new ByteArrayWrapper(Bytes.toBytes(rowKey)), familyQualifiersValues)
+      },
+      stagingFolder.getPath,
+      new java.util.HashMap[Array[Byte], FamilyHFileWriteOptions],
+      compactionExclude = false,
+      20)
 
 val load = new LoadIncrementalHFiles(config)
 load.doBulkLoad(new Path(stagingFolder.getPath),
@@ -412,20 +392,20 @@ in HBase tables with SQL query. The following illustrates the basic procedure.
 
 ```scala
 def catalog = s"""{
-   |"table":{"namespace":"default", "name":"table1"},
-   |"rowkey":"key",
-   |"columns":{
-     |"col0":{"cf":"rowkey", "col":"key", "type":"string"},
-     |"col1":{"cf":"cf1", "col":"col1", "type":"boolean"},
-     |"col2":{"cf":"cf2", "col":"col2", "type":"double"},
-     |"col3":{"cf":"cf3", "col":"col3", "type":"float"},
-     |"col4":{"cf":"cf4", "col":"col4", "type":"int"},
-     |"col5":{"cf":"cf5", "col":"col5", "type":"bigint"},
-     |"col6":{"cf":"cf6", "col":"col6", "type":"smallint"},
-     |"col7":{"cf":"cf7", "col":"col7", "type":"string"},
-     |"col8":{"cf":"cf8", "col":"col8", "type":"tinyint"}
-   |}
- |}""".stripMargin
+       |"table":{"namespace":"default", "name":"table1"},
+       |"rowkey":"key",
+       |"columns":{
+         |"col0":{"cf":"rowkey", "col":"key", "type":"string"},
+         |"col1":{"cf":"cf1", "col":"col1", "type":"boolean"},
+         |"col2":{"cf":"cf2", "col":"col2", "type":"double"},
+         |"col3":{"cf":"cf3", "col":"col3", "type":"float"},
+         |"col4":{"cf":"cf4", "col":"col4", "type":"int"},
+         |"col5":{"cf":"cf5", "col":"col5", "type":"bigint"},
+         |"col6":{"cf":"cf6", "col":"col6", "type":"smallint"},
+         |"col7":{"cf":"cf7", "col":"col7", "type":"string"},
+         |"col8":{"cf":"cf8", "col":"col8", "type":"tinyint"}
+       |}
+     |}""".stripMargin
 ```
 
 Catalog defines a mapping between HBase and Spark tables. There are two critical parts of this catalog.
@@ -442,25 +422,25 @@ case class HBaseRecord(
    col1: Boolean,
    col2: Double,
    col3: Float,
-   col4: Int,       
+   col4: Int,
    col5: Long,
    col6: Short,
    col7: String,
    col8: Byte)
 
 object HBaseRecord
-{                                                                                                             
+{
    def apply(i: Int, t: String): HBaseRecord = {
-  val s = s"""row${"%03d".format(i)}"""       
-  HBaseRecord(s,
-  i % 2 == 0,
-  i.toDouble,
-  i.toFloat,  
-  i,
-  i.toLong,
-  i.toShort,  
-  s"String$i: $t",      
-  i.toByte)
+      val s = s"""row${"%03d".format(i)}"""
+      HBaseRecord(s,
+      i % 2 == 0,
+      i.toDouble,
+      i.toFloat,
+      i,
+      i.toLong,
+      i.toShort,
+      s"String$i: $t",
+      i.toByte)
   }
 }
 
@@ -540,9 +520,9 @@ writeCatalog defines catalog for the schema mapping.
 
 ```scala
 val df = sqlContext.read
-  .options(Map(HBaseTableCatalog.tableCatalog -> writeCatalog, HBaseSparkConf.TIMESTAMP -> tsSpecified.toString))
-  .format("org.apache.hadoop.hbase.spark")
-  .load()
+      .options(Map(HBaseTableCatalog.tableCatalog -> writeCatalog, HBaseSparkConf.TIMESTAMP -> tsSpecified.toString))
+      .format("org.apache.hadoop.hbase.spark")
+      .load()
 ```
 
 The example below shows how to load df DataFrame with different time ranges.
@@ -550,10 +530,10 @@ oldMs is specified by the user.
 
 ```scala
 val df = sqlContext.read
-  .options(Map(HBaseTableCatalog.tableCatalog -> writeCatalog, HBaseSparkConf.MIN_TIMESTAMP -> "0",
-    HBaseSparkConf.MAX_TIMESTAMP -> oldMs.toString))
-  .format("org.apache.hadoop.hbase.spark")
-  .load()
+      .options(Map(HBaseTableCatalog.tableCatalog -> writeCatalog, HBaseSparkConf.MIN_TIMESTAMP -> "0",
+        HBaseSparkConf.MAX_TIMESTAMP -> oldMs.toString))
+      .format("org.apache.hadoop.hbase.spark")
+      .load()
 ```
 
 After loading df DataFrame, users can query data.
@@ -571,38 +551,37 @@ shows how spark supports Avro. Users can persist the Avro record into HBase dire
 the Avro schema is converted to a native Spark Catalyst data type automatically.
 Note that both key-value parts in an HBase table can be defined in Avro format.
 
-1) Define catalog for the schema mapping:
+1. Define catalog for the schema mapping:
 
 ```scala
 def catalog = s"""{
-                 |"table":{"namespace":"default", "name":"Avrotable"},
-                  |"rowkey":"key",
-                  |"columns":{
-                  |"col0":{"cf":"rowkey", "col":"key", "type":"string"},
-                  |"col1":{"cf":"cf1", "col":"col1", "type":"binary"}
-                  |}
-                  |}""".stripMargin
+                     |"table":{"namespace":"default", "name":"Avrotable"},
+                      |"rowkey":"key",
+                      |"columns":{
+                      |"col0":{"cf":"rowkey", "col":"key", "type":"string"},
+                      |"col1":{"cf":"cf1", "col":"col1", "type":"binary"}
+                      |}
+                      |}""".stripMargin
 ```
 
 `catalog` is a schema for a HBase table named `Avrotable`. row key as key and
 one column col1. The rowkey also has to be defined in details as a column (col0),
 which has a specific cf (rowkey).
 
-2) Prepare the Data:
+2. Prepare the Data:
 
 ```scala
  object AvroHBaseRecord {
    val schemaString =
- s"""{'{'{'}'}"namespace": "example.avro",
-     |   "type": "record",      "name": "User",
-     |    "fields": [
-     |        {'{'{'}'}"name": "name", "type": "string"},
-     |        {'{'{'}'}"name": "favorite_number",  "type": ["int", "null"]},
-     |        {'{'{'}'}"name": "favorite_color", "type": ["string", "null"]},
-     |        {'{'{'}'}"name": "favorite_array", "type": {"type": "array", "items": "string"}},
-     |        {'{'{'}'}"name": "favorite_map", "type": {"type": "map", "values": "int"}}
-     |      ]    }""".stripMargin
-
+     s"""{"namespace": "example.avro",
+         |   "type": "record",      "name": "User",
+         |    "fields": [
+         |        {"name": "name", "type": "string"},
+         |        {"name": "favorite_number",  "type": ["int", "null"]},
+         |        {"name": "favorite_color", "type": ["string", "null"]},
+         |        {"name": "favorite_array", "type": {"type": "array", "items": "string"}},
+         |        {"name": "favorite_map", "type": {"type": "map", "values": "int"}}
+         |      ]    }""".stripMargin
 
    val avroSchema: Schema = {
      val p = new Schema.Parser
@@ -627,7 +606,7 @@ which has a specific cf (rowkey).
  }
 
  val data = (0 to 255).map { i =>
-   AvroHBaseRecord(i)
+    AvroHBaseRecord(i)
  }
 ```
 
@@ -635,42 +614,39 @@ which has a specific cf (rowkey).
 generate `AvroHBaseRecord`. `data` prepared by users is a local Scala collection
 which has 256 `AvroHBaseRecord` objects.
 
-3) Save DataFrame:
+3. Save DataFrame:
 
 ```scala
  sc.parallelize(data).toDF.write.options(
- Map(HBaseTableCatalog.tableCatalog -> catalog, HBaseTableCatalog.newTable -> "5"))
- .format("org.apache.spark.sql.execution.datasources.hbase")
- .save()
+     Map(HBaseTableCatalog.tableCatalog -> catalog, HBaseTableCatalog.newTable -> "5"))
+     .format("org.apache.spark.sql.execution.datasources.hbase")
+     .save()
 ```
 
 Given a data frame with specified schema `catalog`, above will create an HBase table with 5
 regions and save the data frame inside.
 
-4) Load the DataFrame
+4. Load the DataFrame
 
 ```scala
 def avroCatalog = s"""{
-        |"table":{"namespace":"default", "name":"avrotable"},
-        |"rowkey":"key",
-        |"columns":{
-          |"col0":{"cf":"rowkey", "col":"key", "type":"string"},
-          |"col1":{"cf":"cf1", "col":"col1", "avro":"avroSchema"}
-        |}
-      |}""".stripMargin
-```
+            |"table":{"namespace":"default", "name":"avrotable"},
+            |"rowkey":"key",
+            |"columns":{
+              |"col0":{"cf":"rowkey", "col":"key", "type":"string"},
+              |"col1":{"cf":"cf1", "col":"col1", "avro":"avroSchema"}
+            |}
+          |}""".stripMargin
 
-```scala
  def withCatalog(cat: String): DataFrame = {
- sqlContext
-     .read
-     .options(Map("avroSchema" -> AvroHBaseRecord.schemaString, HBaseTableCatalog.tableCatalog -> avroCatalog))
-     .format("org.apache.spark.sql.execution.datasources.hbase")
-     .load()
+     sqlContext
+         .read
+         .options(Map("avroSchema" -> AvroHBaseRecord.schemaString, HBaseTableCatalog.tableCatalog -> avroCatalog))
+         .format("org.apache.spark.sql.execution.datasources.hbase")
+         .load()
  }
  val df = withCatalog(catalog)
 ```
-
 
 In `withCatalog` function, `read` returns a DataFrameReader that can be used to read data in as a DataFrame.
 The `option` function adds input options for the underlying data source to the DataFrameReader.
@@ -678,7 +654,7 @@ There are two options: one is to set `avroSchema` as `AvroHBaseRecord.schemaStri
 set `HBaseTableCatalog.tableCatalog` as `avroCatalog`. The `load()` function loads input in as a DataFrame.
 The date frame `df` returned by `withCatalog` function could be used to access the HBase table.
 
-5) SQL Query
+5. SQL Query
 
 ```scala
  df.registerTempTable("avrotable")
@@ -688,4 +664,3 @@ The date frame `df` returned by `withCatalog` function could be used to access t
 After loading df DataFrame, users can query data. registerTempTable registers df DataFrame
 as a temporary table using the table name avrotable. `sqlContext.sql` function allows the
 user to execute SQL queries.
-
