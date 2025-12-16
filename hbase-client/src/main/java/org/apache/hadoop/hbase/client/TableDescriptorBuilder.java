@@ -47,7 +47,6 @@ import org.apache.hadoop.hbase.util.PrettyPrinter;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
@@ -632,6 +631,11 @@ public class TableDescriptorBuilder {
      */
     private final Map<byte[], ColumnFamilyDescriptor> families =
       new TreeMap<>(Bytes.BYTES_RAWCOMPARATOR);
+
+    /**
+     * Cached hash of the table descriptor. Computed lazily on first access.
+     */
+    private volatile String descriptorHash;
 
     /**
      * Construct a table descriptor specifying a TableName object
@@ -1618,6 +1622,14 @@ public class TableDescriptorBuilder {
       } else {
         return Optional.empty();
       }
+    }
+
+    @Override
+    public String getDescriptorHash() {
+      if (descriptorHash == null) {
+        descriptorHash = TableDescriptor.super.getDescriptorHash();
+      }
+      return descriptorHash;
     }
   }
 
