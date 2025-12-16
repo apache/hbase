@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
+
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
