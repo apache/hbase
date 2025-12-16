@@ -1,0 +1,170 @@
+---
+title: "Administration of Backup Images"
+---
+
+The `hbase backup` command has several subcommands that help with administering backup images as they accumulate. Most production
+environments require recurring backups, so it is necessary to have utilities to help manage the data of the backup repository.
+Some subcommands enable you to find information that can help identify backups that are relevant in a search for particular data.
+You can also delete backup images.
+
+The following list details each `hbase backup subcommand` that can help administer backups. Run the full command-subcommand line as
+the HBase superuser.
+
+### Managing Backup Progress
+
+You can monitor a running backup in another terminal session by running the _hbase backup progress_ command and specifying the backup ID as an argument.
+
+For example, run the following command as hbase superuser to view the progress of a backup
+
+```bash
+$ hbase backup progress <backup_id>
+```
+
+#### Positional Command-Line Arguments
+
+**_backup_id_**  
+Specifies the backup that you want to monitor by seeing the progress information. The backupId is case-sensitive.
+
+#### Named Command-Line Arguments
+
+None.
+
+#### Example usage
+
+```bash
+hbase backup progress backupId_1467823988425
+```
+
+### Managing Backup History
+
+This command displays a log of backup sessions. The information for each session includes backup ID, type (full or incremental), the tables
+in the backup, status, and start and end time. Specify the number of backup sessions to display with the optional -n argument.
+
+```bash
+$ hbase backup history <backup_id>
+```
+
+#### Positional Command-Line Arguments
+
+**_backup_id_**  
+Specifies the backup that you want to monitor by seeing the progress information. The backupId is case-sensitive.
+
+#### Named Command-Line Arguments
+
+**_-n \<num_records\>_**  
+(Optional) The maximum number of backup records (Default: 10).
+
+**_-p \<backup_root_path\>_**  
+The full filesystem URI of where backup images are stored.
+
+**_-s \<backup_set_name\>_**  
+The name of the backup set to obtain history for. Mutually exclusive with the _-t_ option.
+
+**_-t \<table_name\>_**  
+The name of table to obtain history for. Mutually exclusive with the _-s_ option.
+
+#### Example usage
+
+```bash
+$ hbase backup history
+$ hbase backup history -n 20
+$ hbase backup history -t WebIndexRecords
+```
+
+### Describing a Backup Image
+
+This command can be used to obtain information about a specific backup image.
+
+```bash
+$ hbase backup describe <backup_id>
+```
+
+#### Positional Command-Line Arguments
+
+**_backup_id_**
+The ID of the backup image to describe.
+
+#### Named Command-Line Arguments
+
+None.
+
+#### Example usage
+
+```bash
+$ hbase backup describe backupId_1467823988425
+```
+
+### Deleting Backup Images
+
+The `hbase backup delete` command deletes backup images that are no longer needed.
+
+#### Syntax
+
+```bash
+$ hbase backup delete -l <backup_id1,backup_id2,...>
+$ hbase backup delete -k <days>
+```
+
+#### Named Command-Line Arguments
+
+**_-l \<backup_id1,backup_id2,...\>_**  
+Comma-separated list of backup IDs to delete.
+
+**_-k \<days\>_**  
+Deletes all backup images completed more than the specified number of days ago.
+
+<Callout type="info">
+These options are **mutually exclusive**. Only one of `-l` or `-k` may be used at a time.
+</Callout>
+
+#### Example Usage
+
+Delete specific backup images by ID:
+
+```bash
+$ hbase backup delete -l backupId_1467823988425,backupId_1467824989999
+```
+
+Delete all backup images older than 30 days:
+
+```bash
+$ hbase backup delete -k 30
+```
+
+<Callout type="warn">
+* Deleting a backup may affect all following incremental backups (in the same backup root) up to 
+  the next full backup. For example, if you take a full backup every 2 weeks and 
+  daily incremental backups, running `hbase backup delete -k 7` when the full backup is older than 
+  7 days will effectively remove the data for all subsequent incremental backups.
+  The backup IDs may still be listed, but their data will be gone.
+
+* If the most recent backup is an incremental backup and you delete it, 
+  you should run a **full backup** next.
+  Running another incremental backup immediately after may result in missing data in the 
+  backup image. (See [HBASE-28084](https://issues.apache.org/jira/browse/HBASE-28084))
+</Callout>
+
+### Backup Repair Command
+
+This command attempts to correct any inconsistencies in persisted backup metadata which exists as
+the result of software errors or unhandled failure scenarios. While the backup implementation tries
+to correct all errors on its own, this tool may be necessary in the cases where the system cannot
+automatically recover on its own.
+
+```bash
+$ hbase backup repair
+```
+
+#### Positional Command-Line Arguments
+
+None.
+
+### Named Command-Line Arguments
+
+None.
+
+#### Example usage
+
+```bash
+$ hbase backup repair
+```

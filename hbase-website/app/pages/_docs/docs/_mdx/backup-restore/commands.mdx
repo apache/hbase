@@ -1,0 +1,249 @@
+---
+title: "Backup and Restore commands"
+---
+
+This covers the command-line utilities that administrators would run to create, restore, and merge backups. Tools to
+inspect details on specific backup sessions is covered in the next section, [Administration of Backup Images](#br-administration).
+
+Run the command `hbase backup help \<command\>` to access the online help that provides basic information about a command
+and its options. The below information is captured in this help message for each command.
+
+### Creating a Backup Image
+
+<Callout type="info">
+For HBase clusters also using Apache Phoenix: include the SQL system catalog tables in the backup. In the event that you
+need to restore the HBase backup, access to the system catalog tables enable you to resume Phoenix interoperability with the
+restored data.
+</Callout>
+
+The first step in running the backup and restore utilities is to perform a full backup and to store the data in a separate image
+from the source. At a minimum, you must do this to get a baseline before you can rely on incremental backups.
+
+Run the following command as HBase superuser:
+
+```bash
+hbase backup create <type> <backup_path>
+```
+
+After the command finishes running, the console prints a SUCCESS or FAILURE status message. The SUCCESS message includes a _backup_ ID.
+The backup ID is the Unix time (also known as Epoch time) that the HBase master received the backup request from the client.
+
+<Callout type="info">
+Record the backup ID that appears at the end of a successful backup. In case the source cluster fails and you need to recover the
+dataset with a restore operation, having the backup ID readily available can save time.
+</Callout>
+
+#### Positional Command-Line Arguments
+
+**_type_**  
+The type of backup to execute: _full_ or _incremental_. As a reminder, an _incremental_ backup requires a _full_ backup to
+already exist.
+
+**_backup_path_**  
+The _backup_path_ argument specifies the full filesystem URI of where to store the backup image. Valid prefixes are
+_hdfs:_, _webhdfs:_, _s3a:_ or other compatible Hadoop File System implementations.
+
+#### Named Command-Line Arguments
+
+**_-t \<table_name\[,table_name\]\>_**  
+A comma-separated list of tables to back up. If no tables are specified, all tables are backed up. No regular-expression or
+wildcard support is present; all table names must be explicitly listed. See [Backup Sets](#br-using-backup-sets) for more
+information about peforming operations on collections of tables. Mutually exclusive with the _-s_ option; one of these
+named options are required.
+
+**_-s \<backup_set_name\>_**  
+Identify tables to backup based on a backup set. See [Using Backup Sets](#brusingbackupsets) for the purpose and usage
+of backup sets. Mutually exclusive with the _-t_ option.
+
+**_-w \<number_workers\>_**  
+(Optional) Specifies the number of parallel workers to copy data to backup destination. Backups are currently executed by MapReduce jobs
+so this value corresponds to the number of Mappers that will be spawned by the job.
+
+**_-b \<bandwidth_per_worker\>_**  
+(Optional) Specifies the bandwidth of each worker in MB per second.
+
+**_-d_**  
+(Optional) Enables "DEBUG" mode which prints additional logging about the backup creation.
+
+**_-i_**  
+(Optional) Ignore checksum verify between source snapshot and exported snapshot. Especially when the source and target file system types
+are different, we should use -i option to skip checksum-checks.
+
+**_-q \<name\>_**  
+(Optional) Allows specification of the name of a YARN queue which the MapReduce job to create the backup should be executed in. This option
+is useful to prevent backup tasks from stealing resources away from other MapReduce jobs of high importance.
+
+#### Example usage
+
+```bash
+$ hbase backup create full hdfs://host5:9000/data/backup -t SALES2,SALES3 -w 3
+```
+
+This command creates a full backup image of two tables, SALES2 and SALES3, in the HDFS instance who NameNode is host5:9000
+in the path _/data/backup_. The _-w_ option specifies that no more than three parallel works complete the operation.
+
+### Restoring a Backup Image
+
+Run the following command as an HBase superuser. You can only restore a backup on a running HBase cluster because the data must be
+redistributed the RegionServers for the operation to complete successfully.
+
+```bash
+hbase restore <backup_path> <backup_id>
+```
+
+#### Positional Command-Line Arguments
+
+**_backup_path_**  
+The _backup_path_ argument specifies the full filesystem URI of where to store the backup image. Valid prefixes are
+_hdfs:_, _webhdfs:_, _s3a:_ or other compatible Hadoop File System implementations.
+
+**_backup_id_**  
+The backup ID that uniquely identifies the backup image to be restored.
+
+#### Named Command-Line Arguments
+
+**_-t \<table_name\[,table_name\]\>_**  
+A comma-separated list of tables to restore. See [Backup Sets](#br-using-backup-sets) for more
+information about peforming operations on collections of tables. Mutually exclusive with the _-s_ option; one of these
+named options are required.
+
+**_-s \<backup_set_name\>_**  
+Identify tables to backup based on a backup set. See [Using Backup Sets](#br-using-backup-sets) for the purpose and usage
+of backup sets. Mutually exclusive with the _-t_ option.
+
+**_-q \<name\>_**  
+(Optional) Allows specification of the name of a YARN queue which the MapReduce job to create the backup should be executed in. This option
+is useful to prevent backup tasks from stealing resources away from other MapReduce jobs of high importance.
+
+**_-c_**  
+(Optional) Perform a dry-run of the restore. The actions are checked, but not executed.
+
+**_-m \<target_tables\>_**  
+(Optional) A comma-separated list of tables to restore into. If this option is not provided, the original table name is used. When
+this option is provided, there must be an equal number of entries provided in the `-t` option.
+
+**_-o_**  
+(Optional) Overwrites the target table for the restore if the table already exists.
+
+#### Example of Usage
+
+```bash
+hbase restore /tmp/backup_incremental backupId_1467823988425 -t mytable1,mytable2
+```
+
+This command restores two tables of an incremental backup image. In this example:
+• `/tmp/backup_incremental` is the path to the directory containing the backup image.
+• `backupId_1467823988425` is the backup ID.
+• `mytable1` and `mytable2` are the names of tables in the backup image to be restored.
+
+<Callout type="info">
+If the namespace of a table being restored does not exist in the target environment, it will be automatically created during the restore operation.
+[HBASE-25707](https://issues.apache.org/jira/browse/HBASE-25707)
+</Callout>
+
+### Merging Incremental Backup Images
+
+This command can be used to merge two or more incremental backup images into a single incremental
+backup image. This can be used to consolidate multiple, small incremental backup images into a single
+larger incremental backup image. This command could be used to merge hourly incremental backups
+into a daily incremental backup image, or daily incremental backups into a weekly incremental backup.
+
+```bash
+$ hbase backup merge <backup_ids>
+```
+
+#### Positional Command-Line Arguments
+
+**_backup_ids_**  
+A comma-separated list of incremental backup image IDs that are to be combined into a single image.
+
+#### Named Command-Line Arguments
+
+None.
+
+#### Example usage
+
+```bash
+$ hbase backup merge backupId_1467823988425,backupId_1467827588425
+```
+
+### Using Backup Sets
+
+Backup sets can ease the administration of HBase data backups and restores by reducing the amount of repetitive input
+of table names. You can group tables into a named backup set with the `hbase backup set add` command. You can then use
+the `-set` option to invoke the name of a backup set in the `hbase backup create` or `hbase restore` rather than list
+individually every table in the group. You can have multiple backup sets.
+
+<Callout type="info">
+Note the differentiation between the `hbase backup set add` command and the _-set_ option. The `hbase backup set add`
+command must be run before using the `-set` option in a different command because backup sets must be named and defined
+before using backup sets as a shortcut.
+</Callout>
+
+If you run the `hbase backup set add` command and specify a backup set name that does not yet exist on your system, a new set
+is created. If you run the command with the name of an existing backup set name, then the tables that you specify are added
+to the set.
+
+In this command, the backup set name is case-sensitive.
+
+<Callout type="info">
+The metadata of backup sets are stored within HBase. If you do not have access to the original HBase cluster with the
+backup set metadata, then you must specify individual table names to restore the data.
+</Callout>
+
+To create a backup set, run the following command as the HBase superuser:
+
+```bash
+$ hbase backup set <subcommand> <backup_set_name> <tables>
+```
+
+#### Backup Set Subcommands
+
+The following list details subcommands of the hbase backup set command.
+
+<Callout type="info">
+You must enter one (and no more than one) of the following subcommands after hbase backup set to complete an operation.
+Also, the backup set name is case-sensitive in the command-line utility.
+</Callout>
+
+**_add_**  
+Adds table\[s\] to a backup set. Specify a _backup_set_name_ value after this argument to create a backup set.
+
+**_remove_**  
+Removes tables from the set. Specify the tables to remove in the tables argument.
+
+**_list_**  
+Lists all backup sets.
+
+**_describe_**  
+Displays a description of a backup set. The information includes whether the set has full
+or incremental backups, start and end times of the backups, and a list of the tables in the set. This subcommand must precede
+a valid value for the _backup_set_name_ value.
+
+**_delete_**  
+Deletes a backup set. Enter the value for the _backup_set_name_ option directly after the `hbase backup set delete` command.
+
+#### Positional Command-Line Arguments
+
+**_backup_set_name_**  
+Use to assign or invoke a backup set name. The backup set name must contain only printable characters and cannot have any spaces.
+
+**_tables_**  
+List of tables (or a single table) to include in the backup set. Enter the table names as a comma-separated list. If no tables
+are specified, all tables are included in the set.
+
+<Callout type="info">
+Maintain a log or other record of the case-sensitive backup set names and the corresponding tables in each set on a separate
+or remote cluster, backup strategy. This information can help you in case of failure on the primary cluster.
+</Callout>
+
+#### Example of Usage
+
+```bash
+$ hbase backup set add Q1Data TEAM3,TEAM_4
+```
+
+Depending on the environment, this command results in _one_ of the following actions:
+
+* If the `Q1Data` backup set does not exist, a backup set containing tables `TEAM_3` and `TEAM_4` is created.
+* If the `Q1Data` backup set exists already, the tables `TEAM_3` and `TEAM_4` are added to the `Q1Data` backup set.
