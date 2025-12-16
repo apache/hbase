@@ -42,9 +42,9 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -1077,8 +1077,8 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements Hb
         getReverseScanResult(MetaTableName.getInstance().getName(), row, HConstants.CATALOG_FAMILY);
 
       if (startRowResult == null) {
-        throw new IOException(
-          "Cannot find row in " + MetaTableName.getInstance() + ", row=" + Bytes.toStringBinary(row));
+        throw new IOException("Cannot find row in " + MetaTableName.getInstance() + ", row="
+          + Bytes.toStringBinary(row));
       }
 
       // find region start and end keys

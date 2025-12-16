@@ -23,10 +23,10 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionLocator;
@@ -102,7 +102,8 @@ public class TestRegionServerNoMaster {
         locator.getAllRegionLocations();
       }
     }
-    try (RegionLocator locator = HTU.getConnection().getRegionLocator(MetaTableName.getInstance())) {
+    try (
+      RegionLocator locator = HTU.getConnection().getRegionLocator(MetaTableName.getInstance())) {
       locator.getAllRegionLocations();
     }
     // Stop master

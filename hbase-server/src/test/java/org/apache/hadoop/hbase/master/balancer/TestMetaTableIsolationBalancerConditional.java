@@ -30,8 +30,8 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.MetaTableName;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -93,8 +93,9 @@ public class TestMetaTableIsolationBalancerConditional {
     admin.createTable(productTableDescriptor,
       BalancerConditionalsTestUtil.generateSplits(2 * NUM_SERVERS));
 
-    Set<TableName> tablesToBeSeparated = ImmutableSet.<TableName> builder()
-      .add(MetaTableName.getInstance()).add(QuotaUtil.QUOTA_TABLE_NAME).add(productTableName).build();
+    Set<TableName> tablesToBeSeparated =
+      ImmutableSet.<TableName> builder().add(MetaTableName.getInstance())
+        .add(QuotaUtil.QUOTA_TABLE_NAME).add(productTableName).build();
 
     // Pause the balancer
     admin.balancerSwitch(false, true);

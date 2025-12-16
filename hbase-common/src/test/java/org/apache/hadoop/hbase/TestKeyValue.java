@@ -216,7 +216,8 @@ public class TestKeyValue {
     long now = EnvironmentEdgeManager.currentTime();
     assertTrue(c.compare(
       new KeyValue(Bytes.toBytes(MetaTableName.getInstance().getNameAsString() + ",,1"), now),
-      new KeyValue(Bytes.toBytes(MetaTableName.getInstance().getNameAsString() + ",,1"), now)) == 0);
+      new KeyValue(Bytes.toBytes(MetaTableName.getInstance().getNameAsString() + ",,1"), now))
+        == 0);
     assertTrue(c.compare(
       new KeyValue(Bytes.toBytes(MetaTableName.getInstance().getNameAsString() + ",,1"), now),
       new KeyValue(Bytes.toBytes(MetaTableName.getInstance().getNameAsString() + ",,2"), now)) < 0);

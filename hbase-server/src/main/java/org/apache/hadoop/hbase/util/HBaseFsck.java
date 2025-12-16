@@ -81,10 +81,10 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.Admin;
@@ -663,8 +663,8 @@ public class HBaseFsck extends Configured implements Closeable {
     if (!checkMetaRegion()) {
       String errorMsg = MetaTableName.getInstance() + " table is not consistent. ";
       if (shouldFixAssignments()) {
-        errorMsg += "HBCK will try fixing it. Rerun once " + MetaTableName.getInstance() + " is back "
-          + "to consistent state.";
+        errorMsg += "HBCK will try fixing it. Rerun once " + MetaTableName.getInstance()
+          + " is back " + "to consistent state.";
       } else {
         errorMsg += "Run HBCK with proper fix options to fix " + MetaTableName.getInstance()
           + " inconsistency.";
@@ -1222,8 +1222,8 @@ public class HBaseFsck extends Configured implements Closeable {
    * TODO -- need to add tests for this.
    */
   private void reportEmptyMetaCells() {
-    errors.print("Number of empty REGIONINFO_QUALIFIER rows in " + MetaTableName.getInstance() + ": "
-      + emptyRegionInfoQualifiers.size());
+    errors.print("Number of empty REGIONINFO_QUALIFIER rows in " + MetaTableName.getInstance()
+      + ": " + emptyRegionInfoQualifiers.size());
     if (details) {
       for (Result r : emptyRegionInfoQualifiers) {
         errors.print("  " + r);

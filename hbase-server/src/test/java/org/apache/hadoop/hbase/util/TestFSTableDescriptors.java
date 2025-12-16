@@ -36,9 +36,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
@@ -280,8 +280,8 @@ public class TestFSTableDescriptors {
         TableDescriptorBuilder.newBuilder(TableName.valueOf(name + i)).build());
     }
     // add hbase:meta
-    htds
-      .createTableDescriptor(TableDescriptorBuilder.newBuilder(MetaTableName.getInstance()).build());
+    htds.createTableDescriptor(
+      TableDescriptorBuilder.newBuilder(MetaTableName.getInstance()).build());
     assertEquals("getAll() didn't return all TableDescriptors, expected: " + (count + 1) + " got: "
       + htds.getAll().size(), count + 1, htds.getAll().size());
   }
@@ -299,8 +299,8 @@ public class TestFSTableDescriptors {
         TableDescriptorBuilder.newBuilder(TableName.valueOf(name + i)).build());
     }
     // add hbase:meta
-    htds
-      .createTableDescriptor(TableDescriptorBuilder.newBuilder(MetaTableName.getInstance()).build());
+    htds.createTableDescriptor(
+      TableDescriptorBuilder.newBuilder(MetaTableName.getInstance()).build());
 
     int getTableDescriptorSize = htds.getAll().size();
     assertEquals("getAll() didn't return all TableDescriptors, expected: " + (count + 1) + " got: "
