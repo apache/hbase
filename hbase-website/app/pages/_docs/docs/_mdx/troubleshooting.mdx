@@ -13,7 +13,7 @@ RegionServer suicides are 'normal', as this is what they do when something goes 
 
 ## Logs
 
-The key process logs are as follows…​ (replace `<user>` with the user that started the service, and `<hostname>` for the machine name)
+The key process logs are as follows... (replace `<user>` with the user that started the service, and `<hostname>` for the machine name)
 
 NameNode: *$HADOOP_HOME/logs/hadoop-`<user>`-namenode-`<hostname>`.log*
 
@@ -552,7 +552,7 @@ You may also need to download the [unlimited strength JCE policy files](http://w
 
 ### Trouble shooting master registry issues
 
-- For connectivity issues, usually an exception like "MasterRegistryFetchException: Exception making rpc to masters…​" is logged in the client logs. The logging includes the list of master end points that were attempted by the client. The bottom part of the stack trace should include the underlying reason. If you suspect connectivity issues (ConnectionRefused?), make sure the master end points are accessible from client.
+- For connectivity issues, usually an exception like "MasterRegistryFetchException: Exception making rpc to masters..." is logged in the client logs. The logging includes the list of master end points that were attempted by the client. The bottom part of the stack trace should include the underlying reason. If you suspect connectivity issues (ConnectionRefused?), make sure the master end points are accessible from client.
 - If there is a suspicion of higher load on the masters due to hedging of RPCs, it can be controlled by either reducing the hedging fan out (via *hbase.rpc.hedged.fanout*) or by restricting the set of masters that clients can access for the master registry purposes (via *hbase.masters*).
 
 Refer to [Master Registry (new as of 2.3.0)](#client.masterregistry) and [Client configuration and dependencies connecting to an HBase cluster](#client_dependencies) for more details.
@@ -608,7 +608,7 @@ For more information on the NameNode, see [HDFS](#arch.hdfs).
 
 ### HDFS Utilization of Tables and Regions
 
-To determine how much space HBase is using on HDFS use the `hadoop` shell commands from the NameNode. For example…​
+To determine how much space HBase is using on HDFS use the `hadoop` shell commands from the NameNode. For example...
 
 ```bash
 hadoop fs -dus /hbase/
@@ -1044,7 +1044,7 @@ See Andrew’s answer here, up on the user list: [Remote Java client connection 
 
 ### ...cannot communicate with client version...
 
-If you see something like the following in your logs ... 2012-09-24 10:20:52,168 FATAL org.apache.hadoop.hbase.master.HMaster: Unhandled exception. Starting shutdown. org.apache.hadoop.ipc.RemoteException: Server IPC version 7 cannot communicate with client version 4 ... …​are you trying to talk to an Hadoop 2.0.x from an HBase that has an Hadoop 1.0.x client? Use the HBase built against Hadoop 2.0 or rebuild your HBase passing the -Dhadoop.profile=2.0 attribute to Maven (See [Building against various Hadoop versions](#maven.build.hadoop) for more).
+If you see something like the following in your logs ... 2012-09-24 10:20:52,168 FATAL org.apache.hadoop.hbase.master.HMaster: Unhandled exception. Starting shutdown. org.apache.hadoop.ipc.RemoteException: Server IPC version 7 cannot communicate with client version 4 ... ...are you trying to talk to an Hadoop 2.0.x from an HBase that has an Hadoop 1.0.x client? Use the HBase built against Hadoop 2.0 or rebuild your HBase passing the -Dhadoop.profile=2.0 attribute to Maven (See [Building against various Hadoop versions](#maven.build.hadoop) for more).
 
 ## HBase and HDFS
 
