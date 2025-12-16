@@ -22,7 +22,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
 @InterfaceAudience.Public
 public class MetaTableName {
   private static final Logger LOG = LoggerFactory.getLogger(MetaTableName.class);
@@ -49,14 +48,13 @@ public class MetaTableName {
 
   /**
    * Initialize the meta table name from the given configuration.
-   * 
    * @param conf The configuration to use
    * @return The initialized meta table name
    */
   private static TableName initializeHbaseMetaTableName(Configuration conf) {
-    TableName metaTableName = TableName.valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "meta");
+    TableName metaTableName =
+      TableName.valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "meta");
     LOG.info("Meta table suffix value: {}", metaTableName);
-      return metaTableName;
+    return metaTableName;
   }
 }
-

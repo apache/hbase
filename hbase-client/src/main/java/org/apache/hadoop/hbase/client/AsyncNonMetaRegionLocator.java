@@ -51,9 +51,9 @@ import org.apache.hadoop.hbase.CatalogReplicaMode;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Scan.ReadType;
@@ -245,7 +245,8 @@ class AsyncNonMetaRegionLocator {
                 .get(conn.connConf.getMetaReadRpcTimeoutNs(), TimeUnit.NANOSECONDS);
               numOfReplicas = metaLocations.size();
             } catch (Exception e) {
-              LOG.error("Failed to get table {}'s region replication, ", MetaTableName.getInstance(), e);
+              LOG.error("Failed to get table {}'s region replication, ",
+                MetaTableName.getInstance(), e);
             }
             return numOfReplicas;
           });

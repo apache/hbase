@@ -86,7 +86,8 @@ public class TestAsyncRegionAdminApi2 extends TestAsyncAdminBase {
     final int rows = 10000;
     TestAsyncRegionAdminApi.loadData(tableName, families, rows);
 
-    AsyncTable<AdvancedScanResultConsumer> metaTable = ASYNC_CONN.getTable(MetaTableName.getInstance());
+    AsyncTable<AdvancedScanResultConsumer> metaTable =
+      ASYNC_CONN.getTable(MetaTableName.getInstance());
     List<HRegionLocation> regionLocations =
       ClientMetaTableAccessor.getTableHRegionLocations(metaTable, tableName).get();
     int originalCount = regionLocations.size();
@@ -117,7 +118,8 @@ public class TestAsyncRegionAdminApi2 extends TestAsyncAdminBase {
     byte[][] families = { FAMILY };
     TestAsyncRegionAdminApi.loadData(tableName, families, 1000);
 
-    AsyncTable<AdvancedScanResultConsumer> metaTable = ASYNC_CONN.getTable(MetaTableName.getInstance());
+    AsyncTable<AdvancedScanResultConsumer> metaTable =
+      ASYNC_CONN.getTable(MetaTableName.getInstance());
     List<HRegionLocation> regionLocations =
       ClientMetaTableAccessor.getTableHRegionLocations(metaTable, tableName).get();
     int originalCount = regionLocations.size();
@@ -162,7 +164,8 @@ public class TestAsyncRegionAdminApi2 extends TestAsyncAdminBase {
     byte[][] splitRows = new byte[][] { Bytes.toBytes("3"), Bytes.toBytes("6") };
     createTableWithDefaultConf(tableName, splitRows);
 
-    AsyncTable<AdvancedScanResultConsumer> metaTable = ASYNC_CONN.getTable(MetaTableName.getInstance());
+    AsyncTable<AdvancedScanResultConsumer> metaTable =
+      ASYNC_CONN.getTable(MetaTableName.getInstance());
     List<HRegionLocation> regionLocations =
       ClientMetaTableAccessor.getTableHRegionLocations(metaTable, tableName).get();
     RegionInfo regionA;
@@ -242,7 +245,8 @@ public class TestAsyncRegionAdminApi2 extends TestAsyncAdminBase {
     // create table
     createTableWithDefaultConf(tableName);
 
-    AsyncTable<AdvancedScanResultConsumer> metaTable = ASYNC_CONN.getTable(MetaTableName.getInstance());
+    AsyncTable<AdvancedScanResultConsumer> metaTable =
+      ASYNC_CONN.getTable(MetaTableName.getInstance());
     List<HRegionLocation> regionLocations =
       ClientMetaTableAccessor.getTableHRegionLocations(metaTable, tableName).get();
     assertEquals(1, regionLocations.size());
@@ -299,7 +303,8 @@ public class TestAsyncRegionAdminApi2 extends TestAsyncAdminBase {
     final byte[][] bFamilies = new byte[][] { Bytes.toBytes(family1), Bytes.toBytes(family2) };
     createTableWithDefaultConf(tableName, splitKeys, bFamilies);
 
-    AsyncTable<AdvancedScanResultConsumer> metaTable = ASYNC_CONN.getTable(MetaTableName.getInstance());
+    AsyncTable<AdvancedScanResultConsumer> metaTable =
+      ASYNC_CONN.getTable(MetaTableName.getInstance());
     List<HRegionLocation> regionLocations =
       ClientMetaTableAccessor.getTableHRegionLocations(metaTable, tableName).get();
     RegionInfo regionToBeTruncated = regionLocations.get(0).getRegion();
@@ -333,7 +338,8 @@ public class TestAsyncRegionAdminApi2 extends TestAsyncAdminBase {
     final byte[][] bFamilies = new byte[][] { Bytes.toBytes(family1), Bytes.toBytes(family2) };
     createTableWithDefaultConf(tableName, 2, splitKeys, bFamilies);
 
-    AsyncTable<AdvancedScanResultConsumer> metaTable = ASYNC_CONN.getTable(MetaTableName.getInstance());
+    AsyncTable<AdvancedScanResultConsumer> metaTable =
+      ASYNC_CONN.getTable(MetaTableName.getInstance());
     List<HRegionLocation> regionLocations =
       ClientMetaTableAccessor.getTableHRegionLocations(metaTable, tableName).get();
     RegionInfo primaryRegion = regionLocations.get(0).getRegion();

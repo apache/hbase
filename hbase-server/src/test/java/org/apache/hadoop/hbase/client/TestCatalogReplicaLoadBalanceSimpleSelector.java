@@ -27,8 +27,8 @@ import java.util.stream.IntStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
-import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.MetaTableName;
+import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -102,7 +102,8 @@ public class TestCatalogReplicaLoadBalanceSimpleSelector {
             .get(CONN.connConf.getMetaReadRpcTimeoutNs(), TimeUnit.NANOSECONDS);
           numOfReplicas = metaLocations.size();
         } catch (Exception e) {
-          LOG.error("Failed to get table {}'s region replication, ", MetaTableName.getInstance(), e);
+          LOG.error("Failed to get table {}'s region replication, ", MetaTableName.getInstance(),
+            e);
         }
         return numOfReplicas;
       });
@@ -121,15 +122,16 @@ public class TestCatalogReplicaLoadBalanceSimpleSelector {
       () -> TEST_UTIL.getMiniHBaseCluster().getRegions(MetaTableName.getInstance()).size() == 1);
 
     CatalogReplicaLoadBalanceSelector metaSelectorWithNoReplica =
-      CatalogReplicaLoadBalanceSelectorFactory.createSelector(replicaSelectorClass, MetaTableName.getInstance(),
-        CONN, () -> {
+      CatalogReplicaLoadBalanceSelectorFactory.createSelector(replicaSelectorClass,
+        MetaTableName.getInstance(), CONN, () -> {
           int numOfReplicas = CatalogReplicaLoadBalanceSelector.UNINITIALIZED_NUM_OF_REPLICAS;
           try {
             RegionLocations metaLocations = CONN.registry.getMetaRegionLocations()
               .get(CONN.connConf.getMetaReadRpcTimeoutNs(), TimeUnit.NANOSECONDS);
             numOfReplicas = metaLocations.size();
           } catch (Exception e) {
-            LOG.error("Failed to get table {}'s region replication, ", MetaTableName.getInstance(), e);
+            LOG.error("Failed to get table {}'s region replication, ", MetaTableName.getInstance(),
+              e);
           }
           return numOfReplicas;
         });

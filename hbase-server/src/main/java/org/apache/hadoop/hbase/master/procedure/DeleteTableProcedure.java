@@ -395,7 +395,8 @@ public class DeleteTableProcedure extends AbstractStateMachineTableProcedure<Del
     long now = EnvironmentEdgeManager.currentTime();
     List<Delete> deletes = new ArrayList<>();
     try (
-      Table metaTable = env.getMasterServices().getConnection().getTable(MetaTableName.getInstance());
+      Table metaTable =
+        env.getMasterServices().getConnection().getTable(MetaTableName.getInstance());
       ResultScanner scanner = metaTable.getScanner(tableScan)) {
       for (;;) {
         Result result = scanner.next();

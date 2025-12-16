@@ -33,9 +33,9 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
@@ -260,8 +260,8 @@ public class TestRpcAccessChecks {
   public void testExecProcedureWithRet() throws Exception {
     verifyAdminCheckForAction((admin) -> {
       // Using existing table instead of creating a new one.
-      admin.execProcedureWithReturn("flush-table-proc", MetaTableName.getInstance().getNameAsString(),
-        new HashMap<>());
+      admin.execProcedureWithReturn("flush-table-proc",
+        MetaTableName.getInstance().getNameAsString(), new HashMap<>());
     });
   }
 

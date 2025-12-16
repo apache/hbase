@@ -23,7 +23,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.Iterator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -90,8 +89,8 @@ public class TestStorageClusterStatusModel extends TestModelBase<StorageClusterS
     model.addLiveNode("test1", 1245219839331L, 128, 1024).addRegion(Bytes.toBytes("hbase:root,,0"),
       1, 1, 0, 0, 0, 1, 1, 2, 1, 1, 1, 1, 1);
     model.addLiveNode("test2", 1245239331198L, 512, 1024).addRegion(
-      Bytes.toBytes(MetaTableName.getInstance() + ",,1246000043724"), 1, 1, 0, 0, 0, 1, 1, 2, 1, 1, 1,
-      1, 1);
+      Bytes.toBytes(MetaTableName.getInstance() + ",,1246000043724"), 1, 1, 0, 0, 0, 1, 1, 2, 1, 1,
+      1, 1, 1);
     return model;
   }
 

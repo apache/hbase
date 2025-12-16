@@ -23,15 +23,13 @@ import java.util.Arrays;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 import org.apache.commons.lang3.ArrayUtils;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import com.google.errorprone.annotations.RestrictedApi;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
-import org.apache.hbase.thirdparty.com.google.common.base.Strings;
 
 /**
  * Immutable POJO class for representing a table name. Which is of the form: &lt;table
@@ -73,18 +71,10 @@ public final class TableName implements Comparable<TableName> {
   public static final String VALID_USER_TABLE_REGEX = "(?:(?:(?:" + VALID_NAMESPACE_REGEX + "\\"
     + NAMESPACE_DELIM + ")?)" + "(?:" + VALID_TABLE_QUALIFIER_REGEX + "))";
 
-  /**
-   * The name of hbase meta table could either be hbase:meta_xxx or 'hbase:meta' otherwise. Config
-   * hbase.meta.table.suffix will govern the decision of adding suffix to the habase:meta
-   * 
-   * This field is initialized from the MetaTableName singleton and can be overridden for testing
-   * by modifying the singleton instance via reflection.
-   * 
-   * @deprecated Use {@link MetaTableName#getInstance()} instead. This field will be removed in a
-   *             future version.
-   */
+  /** The hbase:meta table's name. */
   @Deprecated
-  public static TableName META_TABLE_NAME = TableName.valueOf("hbase:meta");
+  public static TableName META_TABLE_NAME =
+    valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "meta");
 
   /**
    * The Namespace table's name.
@@ -305,8 +295,8 @@ public final class TableName implements Comparable<TableName> {
       throw new IllegalArgumentException(OLD_ROOT_STR + " has been deprecated.");
     }
     if (qualifierAsString.equals(OLD_META_STR)) {
-      throw new IllegalArgumentException(
-        OLD_META_STR + " no longer exists. The table has been " + "renamed to " + MetaTableName.getInstance());
+      throw new IllegalArgumentException(OLD_META_STR + " no longer exists. The table has been "
+        + "renamed to " + MetaTableName.getInstance());
     }
 
     if (Bytes.equals(NamespaceDescriptor.DEFAULT_NAMESPACE_NAME, namespace)) {

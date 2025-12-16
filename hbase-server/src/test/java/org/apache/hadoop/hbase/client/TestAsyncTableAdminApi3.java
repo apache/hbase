@@ -285,7 +285,8 @@ public class TestAsyncTableAdminApi3 extends TestAsyncAdminBase {
     int expectedRegions = splitKeys.length + 1;
     createTableWithDefaultConf(tableName, splitKeys);
 
-    AsyncTable<AdvancedScanResultConsumer> metaTable = ASYNC_CONN.getTable(MetaTableName.getInstance());
+    AsyncTable<AdvancedScanResultConsumer> metaTable =
+      ASYNC_CONN.getTable(MetaTableName.getInstance());
     List<HRegionLocation> regions =
       ClientMetaTableAccessor.getTableHRegionLocations(metaTable, tableName).get();
     assertEquals(
