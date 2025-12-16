@@ -106,6 +106,10 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
     }
   }
 
+  private boolean isOperationOnNonMetaTable(final ObserverContext<? extends RegionCoprocessorEnvironment> c){
+    return !c.getEnvironment().getRegionInfo().getTable().equals(TableName.META_TABLE_NAME);
+  }
+
   @Override
   public void start(CoprocessorEnvironment env) throws IOException {
     if (env instanceof MasterCoprocessorEnvironment) {
@@ -133,7 +137,9 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
   @Override
   public void preFlush(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
     FlushLifeCycleTracker tracker) throws IOException {
-    internalReadOnlyGuard();
+    if(isOperationOnNonMetaTable(c)){
+      internalReadOnlyGuard();
+    }
     RegionObserver.super.preFlush(c, tracker);
   }
 
@@ -201,53 +207,45 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
   @Override
   public void prePut(ObserverContext<? extends RegionCoprocessorEnvironment> c, Put put,
     WALEdit edit, Durability durability) throws IOException {
-    TableName tableName = c.getEnvironment().getRegionInfo().getTable();
-    if (tableName.isSystemTable()) {
-      return;
+    if(isOperationOnNonMetaTable(c)){
+      internalReadOnlyGuard();
     }
-    internalReadOnlyGuard();
     RegionObserver.super.prePut(c, put, edit, durability);
   }
 
   @Override
   public void prePut(ObserverContext<? extends RegionCoprocessorEnvironment> c, Put put,
     WALEdit edit) throws IOException {
-    TableName tableName = c.getEnvironment().getRegionInfo().getTable();
-    if (tableName.isSystemTable()) {
-      return;
+    if(isOperationOnNonMetaTable(c)){
+      internalReadOnlyGuard();
     }
-    internalReadOnlyGuard();
     RegionObserver.super.prePut(c, put, edit);
   }
 
   @Override
   public void preDelete(ObserverContext<? extends RegionCoprocessorEnvironment> c, Delete delete,
     WALEdit edit, Durability durability) throws IOException {
-    if (c.getEnvironment().getRegionInfo().getTable().isSystemTable()) {
-      return;
+    if(isOperationOnNonMetaTable(c)){
+      internalReadOnlyGuard();
     }
-    internalReadOnlyGuard();
     RegionObserver.super.preDelete(c, delete, edit, durability);
   }
 
   @Override
   public void preDelete(ObserverContext<? extends RegionCoprocessorEnvironment> c, Delete delete,
     WALEdit edit) throws IOException {
-    if (c.getEnvironment().getRegionInfo().getTable().isSystemTable()) {
-      return;
+    if(isOperationOnNonMetaTable(c)){
+      internalReadOnlyGuard();
     }
-    internalReadOnlyGuard();
     RegionObserver.super.preDelete(c, delete, edit);
   }
 
   @Override
   public void preBatchMutate(ObserverContext<? extends RegionCoprocessorEnvironment> c,
     MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {
-    TableName tableName = c.getEnvironment().getRegionInfo().getTable();
-    if (tableName.isSystemTable()) {
-      return;
+    if(isOperationOnNonMetaTable(c)){
+      internalReadOnlyGuard();
     }
-    internalReadOnlyGuard();
     RegionObserver.super.preBatchMutate(c, miniBatchOp);
   }
 
@@ -289,7 +287,7 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
   public boolean preCheckAndDelete(ObserverContext<? extends RegionCoprocessorEnvironment> c,
     byte[] row, byte[] family, byte[] qualifier, CompareOperator op, ByteArrayComparable comparator,
     Delete delete, boolean result) throws IOException {
-    if (!c.getEnvironment().getRegionInfo().getTable().isSystemTable()) {
+    if(isOperationOnNonMetaTable(c)){
       internalReadOnlyGuard();
     }
     return RegionObserver.super.preCheckAndDelete(c, row, family, qualifier, op, comparator, delete,
@@ -299,7 +297,7 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
   @Override
   public boolean preCheckAndDelete(ObserverContext<? extends RegionCoprocessorEnvironment> c,
     byte[] row, Filter filter, Delete delete, boolean result) throws IOException {
-    if (!c.getEnvironment().getRegionInfo().getTable().isSystemTable()) {
+    if(isOperationOnNonMetaTable(c)){
       internalReadOnlyGuard();
     }
     return RegionObserver.super.preCheckAndDelete(c, row, filter, delete, result);
@@ -310,7 +308,7 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
     ObserverContext<? extends RegionCoprocessorEnvironment> c, byte[] row, byte[] family,
     byte[] qualifier, CompareOperator op, ByteArrayComparable comparator, Delete delete,
     boolean result) throws IOException {
-    if (!c.getEnvironment().getRegionInfo().getTable().isSystemTable()) {
+    if(isOperationOnNonMetaTable(c)){
       internalReadOnlyGuard();
     }
     return RegionObserver.super.preCheckAndDeleteAfterRowLock(c, row, family, qualifier, op,
@@ -321,7 +319,7 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
   public boolean preCheckAndDeleteAfterRowLock(
     ObserverContext<? extends RegionCoprocessorEnvironment> c, byte[] row, Filter filter,
     Delete delete, boolean result) throws IOException {
-    if (!c.getEnvironment().getRegionInfo().getTable().isSystemTable()) {
+    if(isOperationOnNonMetaTable(c)){
       internalReadOnlyGuard();
     }
     return RegionObserver.super.preCheckAndDeleteAfterRowLock(c, row, filter, delete, result);
