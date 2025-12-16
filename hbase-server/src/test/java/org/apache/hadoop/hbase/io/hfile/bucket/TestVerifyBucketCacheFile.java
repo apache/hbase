@@ -108,7 +108,8 @@ public class TestVerifyBucketCacheFile {
       bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
         constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen,
         testDir + "/bucket.persistence", DEFAULT_ERROR_TOLERATION_DURATION, conf);
-      assertTrue(bucketCache.waitForCacheInitialization(10000));long usedSize = bucketCache.getAllocator().getUsedSize();
+      assertTrue(bucketCache.waitForCacheInitialization(10000));
+      long usedSize = bucketCache.getAllocator().getUsedSize();
       assertEquals(0, usedSize);
       CacheTestUtils.HFileBlockPair[] blocks =
         CacheTestUtils.generateHFileBlocks(constructedBlockSize, 1);
@@ -125,30 +126,30 @@ public class TestVerifyBucketCacheFile {
         constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen,
         testDir + "/bucket.persistence", DEFAULT_ERROR_TOLERATION_DURATION, conf);
       waitPersistentCacheValidation(conf, bucketCache);
-    assertTrue(bucketCache.waitForCacheInitialization(10000));
+      assertTrue(bucketCache.waitForCacheInitialization(10000));
       assertEquals(usedSize, bucketCache.getAllocator().getUsedSize());
       // persist cache to file
       bucketCache.shutdown();
 
-    // 2.delete bucket cache file
-    final java.nio.file.Path cacheFile =
-      FileSystems.getDefault().getPath(testDir.toString(), "bucket.cache");
-    assertTrue(Files.deleteIfExists(cacheFile));
-    // can't restore cache from file
-    bucketCache =
-      new BucketCache("file:" + testDir + "/bucket.cache", capacitySize, constructedBlockSize,
-        constructedBlockSizes, writeThreads, writerQLen, testDir + "/bucket.persistence");
-    assertTrue(bucketCache.waitForCacheInitialization(10000));
-    assertEquals(0, bucketCache.getAllocator().getUsedSize());
-    assertEquals(0, bucketCache.backingMap.size());
-    // Add blocks
-    for (CacheTestUtils.HFileBlockPair block : blocks) {
-      cacheAndWaitUntilFlushedToBucket(bucketCache, block.getBlockName(), block.getBlock());
-    }
-    usedSize = bucketCache.getAllocator().getUsedSize();
-    assertNotEquals(0, usedSize);
-    // persist cache to file
-    bucketCache.shutdown();
+      // 2.delete bucket cache file
+      final java.nio.file.Path cacheFile =
+        FileSystems.getDefault().getPath(testDir.toString(), "bucket.cache");
+      assertTrue(Files.deleteIfExists(cacheFile));
+      // can't restore cache from file
+      bucketCache =
+        new BucketCache("file:" + testDir + "/bucket.cache", capacitySize, constructedBlockSize,
+          constructedBlockSizes, writeThreads, writerQLen, testDir + "/bucket.persistence");
+      assertTrue(bucketCache.waitForCacheInitialization(10000));
+      assertEquals(0, bucketCache.getAllocator().getUsedSize());
+      assertEquals(0, bucketCache.backingMap.size());
+      // Add blocks
+      for (CacheTestUtils.HFileBlockPair block : blocks) {
+        cacheAndWaitUntilFlushedToBucket(bucketCache, block.getBlockName(), block.getBlock());
+      }
+      usedSize = bucketCache.getAllocator().getUsedSize();
+      assertNotEquals(0, usedSize);
+      // persist cache to file
+      bucketCache.shutdown();
 
       // 3.delete backingMap persistence file
       final java.nio.file.Path mapFile =
@@ -186,7 +187,8 @@ public class TestVerifyBucketCacheFile {
       bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
         constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen, mapFileName,
         DEFAULT_ERROR_TOLERATION_DURATION, conf);
-      assertTrue(bucketCache.waitForCacheInitialization(10000));    long usedSize = bucketCache.getAllocator().getUsedSize();
+      assertTrue(bucketCache.waitForCacheInitialization(10000));
+      long usedSize = bucketCache.getAllocator().getUsedSize();
       assertEquals(0, usedSize);
       CacheTestUtils.HFileBlockPair[] blocks =
         CacheTestUtils.generateHFileBlocks(constructedBlockSize, 1);
@@ -238,7 +240,8 @@ public class TestVerifyBucketCacheFile {
       bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
         constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen,
         testDir + "/bucket.persistence", DEFAULT_ERROR_TOLERATION_DURATION, conf);
-      assertTrue(bucketCache.waitForCacheInitialization(10000));long usedSize = bucketCache.getAllocator().getUsedSize();
+      assertTrue(bucketCache.waitForCacheInitialization(10000));
+      long usedSize = bucketCache.getAllocator().getUsedSize();
       assertEquals(0, usedSize);
 
       CacheTestUtils.HFileBlockPair[] blocks =
@@ -300,7 +303,8 @@ public class TestVerifyBucketCacheFile {
       bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
         constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen,
         testDir + "/bucket.persistence", DEFAULT_ERROR_TOLERATION_DURATION, conf);
-      assertTrue(bucketCache.waitForCacheInitialization(10000));long usedSize = bucketCache.getAllocator().getUsedSize();
+      assertTrue(bucketCache.waitForCacheInitialization(10000));
+      long usedSize = bucketCache.getAllocator().getUsedSize();
       assertEquals(0, usedSize);
 
       Pair<String, Long> myPair = new Pair<>();
@@ -327,7 +331,8 @@ public class TestVerifyBucketCacheFile {
         constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen,
         testDir + "/bucket.persistence", DEFAULT_ERROR_TOLERATION_DURATION, conf);
       waitPersistentCacheValidation(conf, bucketCache);
-      assertTrue(bucketCache.waitForCacheInitialization(10000));assertEquals(usedSize, bucketCache.getAllocator().getUsedSize());
+      assertTrue(bucketCache.waitForCacheInitialization(10000));
+      assertEquals(usedSize, bucketCache.getAllocator().getUsedSize());
       assertEquals(blockCount, bucketCache.backingMap.size());
     } finally {
       if (bucketCache != null) {
@@ -360,7 +365,7 @@ public class TestVerifyBucketCacheFile {
       bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
         constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen, mapFileName,
         DEFAULT_ERROR_TOLERATION_DURATION, conf);
-    assertTrue(bucketCache.waitForCacheInitialization(10000));
+      assertTrue(bucketCache.waitForCacheInitialization(10000));
 
       CacheTestUtils.HFileBlockPair[] blocks =
         CacheTestUtils.generateHFileBlocks(constructedBlockSize, 4);
@@ -428,7 +433,7 @@ public class TestVerifyBucketCacheFile {
       bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
         constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen, mapFileName,
         DEFAULT_ERROR_TOLERATION_DURATION, conf);
-    assertTrue(bucketCache.waitForCacheInitialization(10000));
+      assertTrue(bucketCache.waitForCacheInitialization(10000));
 
       CacheTestUtils.HFileBlockPair[] blocks =
         CacheTestUtils.generateHFileBlocks(constructedBlockSize, numBlocks);
