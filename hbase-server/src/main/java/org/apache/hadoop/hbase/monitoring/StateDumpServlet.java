@@ -33,7 +33,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 public abstract class StateDumpServlet extends HttpServlet {
   static final long DEFAULT_TAIL_KB = 100;
   private static final long serialVersionUID = 1L;
-  protected static final String REDACTED_TEXT = "<redacted>";
+  protected static final String REDACTED = "<redacted>";
+  protected static final String REDACTED_TEXT = "******";
 
   protected void dumpVersionInfo(PrintWriter out) {
     VersionInfo.writeTo(out);
@@ -79,7 +80,7 @@ public abstract class StateDumpServlet extends HttpServlet {
     String redactResult;
     for (Map.Entry<String, String> entry : conf) {
       redactResult = redactor.redact(entry.getKey(), entry.getValue());
-      if (REDACTED_TEXT.equals(redactResult)) {
+      if (REDACTED.equals(redactResult)) {
         conf.set(entry.getKey(), REDACTED_TEXT);
       }
     }

@@ -58,7 +58,7 @@ public class TestDebugDumpRedaction {
   private static final String XML_CONFIGURATION_END_TAG = "</configuration>";
   private static final int SUBSTRING_OFFSET = XML_CONFIGURATION_END_TAG.length();
   private static final String PLAIN_TEXT_UTF8 = "text/plain;charset=utf-8";
-  private static final String REDACTED = "<redacted>";
+  private static final String REDACTED_TEXT = "******";
   private static final List<String> SENSITIVE_CONF_PROPERTIES =
     Arrays.asList("hbase.zookeeper.property.ssl.trustStore.password",
       "ssl.client.truststore.password", "hbase.rpc.tls.truststore.password",
@@ -162,7 +162,7 @@ public class TestDebugDumpRedaction {
 
     // Verify all sensitive properties have had their values redacted
     for (String property : SENSITIVE_CONF_PROPERTIES) {
-      assertEquals(REDACTED, conf.get(property));
+      assertEquals(REDACTED_TEXT, conf.get(property));
     }
   }
 }
