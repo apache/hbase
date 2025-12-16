@@ -23,6 +23,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RSGroupTests;
 import org.junit.After;
@@ -69,7 +70,7 @@ public class TestRSGroupsCPHookCalled extends TestRSGroupsBase {
 
   @Test
   public void testGetRSGroupInfoOfTableCPHookCalled() throws Exception {
-    ADMIN.getRSGroup(TableName.META_TABLE_NAME);
+    ADMIN.getRSGroup(MetaTableName.getInstance());
     assertTrue(OBSERVER.preGetRSGroupInfoOfTableCalled);
     assertTrue(OBSERVER.postGetRSGroupInfoOfTableCalled);
   }

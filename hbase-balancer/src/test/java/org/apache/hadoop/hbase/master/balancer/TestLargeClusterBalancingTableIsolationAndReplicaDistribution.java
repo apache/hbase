@@ -30,6 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -72,7 +73,7 @@ public class TestLargeClusterBalancingTableIsolationAndReplicaDistribution {
     for (int i = 0; i < NUM_REGIONS; i++) {
       TableName tableName;
       if (i < 1) {
-        tableName = TableName.META_TABLE_NAME;
+        tableName = MetaTableName.getInstance();
       } else if (i < 10) {
         tableName = SYSTEM_TABLE_NAME;
       } else {
@@ -116,7 +117,7 @@ public class TestLargeClusterBalancingTableIsolationAndReplicaDistribution {
    * Validates whether all meta table regions are isolated.
    */
   private boolean isMetaTableIsolated(BalancerClusterState cluster) {
-    return isTableIsolated(cluster, TableName.META_TABLE_NAME, "Meta");
+    return isTableIsolated(cluster, MetaTableName.getInstance(), "Meta");
   }
 
   /**

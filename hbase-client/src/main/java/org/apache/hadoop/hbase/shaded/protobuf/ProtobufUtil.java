@@ -70,6 +70,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ServerTask;
 import org.apache.hadoop.hbase.ServerTaskBuilder;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.BalanceRequest;
 import org.apache.hadoop.hbase.client.BalanceResponse;
@@ -3325,7 +3326,7 @@ public final class ProtobufUtil {
     long regionId = proto.getRegionId();
     int defaultReplicaId = org.apache.hadoop.hbase.client.RegionInfo.DEFAULT_REPLICA_ID;
     int replicaId = proto.hasReplicaId() ? proto.getReplicaId() : defaultReplicaId;
-    if (tableName.equals(TableName.META_TABLE_NAME) && replicaId == defaultReplicaId) {
+    if (tableName.equals(MetaTableName.getInstance()) && replicaId == defaultReplicaId) {
       return RegionInfoBuilder.FIRST_META_REGIONINFO;
     }
     byte[] startKey = null;

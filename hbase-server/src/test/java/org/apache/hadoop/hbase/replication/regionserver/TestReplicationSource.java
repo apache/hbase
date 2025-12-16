@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -196,7 +197,7 @@ public class TestReplicationSource {
       assertTrue(wef.filter(e) == e);
       // Test system WAL edit.
       e = new WAL.Entry(
-        new WALKeyImpl(HConstants.EMPTY_BYTE_ARRAY, TableName.META_TABLE_NAME, -1, -1, uuid), we);
+        new WALKeyImpl(HConstants.EMPTY_BYTE_ARRAY, MetaTableName.getInstance(), -1, -1, uuid), we);
       assertNull(wef.filter(e));
     } finally {
       rs.terminate("Done");

@@ -20,6 +20,7 @@
 
 <%@ page contentType="text/html;charset=UTF-8"
          import="java.util.*"
+         import="org.apache.hadoop.hbase.MetaTableName"
          import="org.apache.hadoop.hbase.NamespaceDescriptor"
          import="org.apache.hadoop.hbase.TableName"
          import="org.apache.hadoop.hbase.master.HMaster"
@@ -56,7 +57,7 @@
         <td align="center"><%= frags.get(tableName.getNameAsString()) != null ? frags.get(tableName.getNameAsString()) + "%" : "n/a" %></td>
       <% } %>
     <% String description = null;
-        if (tableName.equals(TableName.META_TABLE_NAME)){
+        if (tableName.equals(MetaTableName.getInstance())){
             description = "The hbase:meta table holds references to all User Table regions.";
         } else if (tableName.equals(CanaryTool.DEFAULT_WRITE_TABLE_NAME)){
             description = "The hbase:canary table is used to sniff the write availability of"

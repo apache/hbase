@@ -30,6 +30,7 @@ import java.util.Collection;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.client.AsyncConnection;
 import org.apache.hadoop.hbase.client.AsyncTable;
 import org.apache.hadoop.hbase.client.Connection;
@@ -97,7 +98,7 @@ public class TestGenerateDelegationToken extends SecureTestCluster {
   private void testToken() throws Exception {
     try (AsyncConnection conn =
       ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get()) {
-      AsyncTable<?> table = conn.getTable(TableName.META_TABLE_NAME);
+      AsyncTable<?> table = conn.getTable(MetaTableName.getInstance());
       WhoAmIResponse response =
         table.<AuthenticationService.Interface, WhoAmIResponse> coprocessorService(
           AuthenticationService::newStub,

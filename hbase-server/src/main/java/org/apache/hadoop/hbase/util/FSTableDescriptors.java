@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.CoprocessorDescriptorBuilder;
@@ -147,20 +148,20 @@ public class FSTableDescriptors implements TableDescriptors {
     FileSystem fs, Path rootdir) throws IOException {
     // see if we already have meta descriptor on fs. Write one if not.
     Optional<Pair<FileStatus, TableDescriptor>> opt = getTableDescriptorFromFs(fs,
-      CommonFSUtils.getTableDir(rootdir, TableName.META_TABLE_NAME), false);
+      CommonFSUtils.getTableDir(rootdir, MetaTableName.getInstance()), false);
     if (opt.isPresent()) {
       return opt.get().getSecond();
     }
     TableDescriptorBuilder builder = createMetaTableDescriptorBuilder(conf);
     TableDescriptor td = StoreFileTrackerFactory.updateWithTrackerConfigs(conf, builder.build());
-    LOG.info("Creating new hbase:meta table descriptor {}", td);
+    LOG.info("Creating new {} table descriptor {}", MetaTableName.getInstance(), td);
     TableName tableName = td.getTableName();
     Path tableDir = CommonFSUtils.getTableDir(rootdir, tableName);
     Path p = writeTableDescriptor(fs, td, tableDir, null);
     if (p == null) {
-      throw new IOException("Failed update hbase:meta table descriptor");
+      throw new IOException("Failed update " + MetaTableName.getInstance() + " table descriptor");
     }
-    LOG.info("Updated hbase:meta table descriptor to {}", p);
+    LOG.info("Updated {} table descriptor to {}", MetaTableName.getInstance(), p);
     return td;
   }
 
@@ -198,7 +199,7 @@ public class FSTableDescriptors implements TableDescriptors {
     // TODO We used to set CacheDataInL1 for META table. When we have BucketCache in file mode, now
     // the META table data goes to File mode BC only. Test how that affect the system. If too much,
     // we have to rethink about adding back the setCacheDataInL1 for META table CFs.
-    return TableDescriptorBuilder.newBuilder(TableName.META_TABLE_NAME)
+    return TableDescriptorBuilder.newBuilder(MetaTableName.getInstance())
       .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(HConstants.CATALOG_FAMILY)
         .setMaxVersions(
           conf.getInt(HConstants.HBASE_META_VERSIONS, HConstants.DEFAULT_HBASE_META_VERSIONS))

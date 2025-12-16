@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -198,7 +199,7 @@ public class BaseTestHBaseFsck {
         }
 
         if (metaRow) {
-          try (Table meta = connection.getTable(TableName.META_TABLE_NAME, tableExecutorService)) {
+          try (Table meta = connection.getTable(MetaTableName.getInstance(), tableExecutorService)) {
             Delete delete = new Delete(deleteRow);
             meta.delete(delete);
           }
@@ -510,7 +511,7 @@ public class BaseTestHBaseFsck {
 
   protected void deleteMetaRegion(Configuration conf, boolean unassign, boolean hdfs,
     boolean regionInfoOnly) throws IOException, InterruptedException {
-    HRegionLocation metaLocation = connection.getRegionLocator(TableName.META_TABLE_NAME)
+    HRegionLocation metaLocation = connection.getRegionLocator(MetaTableName.getInstance())
       .getRegionLocation(HConstants.EMPTY_START_ROW);
     ServerName hsa = metaLocation.getServerName();
     RegionInfo hri = metaLocation.getRegion();
@@ -526,7 +527,7 @@ public class BaseTestHBaseFsck {
       Path rootDir = CommonFSUtils.getRootDir(conf);
       FileSystem fs = rootDir.getFileSystem(conf);
       Path p =
-        new Path(rootDir + "/" + TableName.META_TABLE_NAME.getNameAsString(), hri.getEncodedName());
+        new Path(rootDir + "/" + MetaTableName.getInstance().getNameAsString(), hri.getEncodedName());
       Path hriPath = new Path(p, HRegionFileSystem.REGION_INFO_FILE);
       fs.delete(hriPath, true);
     }
@@ -536,7 +537,7 @@ public class BaseTestHBaseFsck {
       Path rootDir = CommonFSUtils.getRootDir(conf);
       FileSystem fs = rootDir.getFileSystem(conf);
       Path p =
-        new Path(rootDir + "/" + TableName.META_TABLE_NAME.getNameAsString(), hri.getEncodedName());
+        new Path(rootDir + "/" + MetaTableName.getInstance().getNameAsString(), hri.getEncodedName());
       HBaseFsck.debugLsr(conf, p);
       boolean success = fs.delete(p, true);
       LOG.info("Deleted " + p + " sucessfully? " + success);

@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.metrics.BaseSource;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -49,7 +51,7 @@ public interface MetricsMasterFileSystemSource extends BaseSource {
   String SPLIT_SIZE_NAME = "hlogSplitSize";
 
   String META_SPLIT_TIME_DESC = "Time it takes to finish splitMetaLog()";
-  String META_SPLIT_SIZE_DESC = "Size of hbase:meta WAL files being split";
+  String META_SPLIT_SIZE_DESC = "Size of " + MetaTableName.getInstance() + " WAL files being split";
   String SPLIT_TIME_DESC = "Time it takes to finish WAL.splitLog()";
   String SPLIT_SIZE_DESC = "Size of WAL files being split";
 

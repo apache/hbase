@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.MetaTableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
@@ -131,7 +132,7 @@ public class FavoredNodeAssignmentHelper {
         puts.add(put);
       }
     }
-    try (Table table = connection.getTable(TableName.META_TABLE_NAME)) {
+    try (Table table = connection.getTable(MetaTableName.getInstance())) {
       table.put(puts);
     }
     LOG.info("Added " + puts.size() + " region favored nodes in META");

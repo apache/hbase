@@ -41,6 +41,7 @@
   import="org.apache.hadoop.hbase.ServerMetrics"
   import="org.apache.hadoop.hbase.ServerName"
   import="org.apache.hadoop.hbase.Size"
+  import="org.apache.hadoop.hbase.MetaTableName"
   import="org.apache.hadoop.hbase.TableName"
   import="org.apache.hadoop.hbase.client.AsyncAdmin"
   import="org.apache.hadoop.hbase.client.AsyncConnection"
@@ -196,7 +197,7 @@
   boolean showFragmentation = conf.getBoolean("hbase.master.ui.fragmentation.enabled", false);
   boolean readOnly = !InfoServer.canUserModifyUI(request, getServletContext(), conf);
   int numMetaReplicas =
-    master.getTableDescriptors().get(TableName.META_TABLE_NAME).getRegionReplication();
+    master.getTableDescriptors().get(MetaTableName.getInstance()).getRegionReplication();
   Map<String, Integer> frags = null;
   if (showFragmentation) {
       frags = FSUtils.getTableFragmentation(master);
@@ -317,7 +318,7 @@
 
 <div class="row">
 <% //Meta table.
-  if(fqtn.equals(TableName.META_TABLE_NAME.getNameAsString())) { %>
+  if(fqtn.equals(MetaTableName.getInstance().getNameAsString())) { %>
   <section>
     <h2>Table Regions</h2>
     <div class="tabbable">
@@ -653,7 +654,7 @@
   </div>
   <div class="col-md-8">
     <form action="/table.jsp" method="get" class="row g-1 justify-content-end align-items-center" style="margin: 20px 0">
-      <input type="hidden" name="name" value="<%= TableName.META_TABLE_NAME %>" />
+      <input type="hidden" name="name" value="<%= MetaTableName.getInstance() %>" />
       <div class="col-sm-auto">
         <label for="scan-limit" class="form-label">Scan Limit</label>
       </div>
