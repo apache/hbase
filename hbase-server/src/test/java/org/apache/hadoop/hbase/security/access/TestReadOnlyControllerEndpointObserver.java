@@ -48,7 +48,7 @@ public class TestReadOnlyControllerEndpointObserver {
   ReadOnlyController readOnlyController;
   HBaseConfiguration readOnlyConf;
 
-  // Region Server Coprocessor mocking variables
+  // Region Server Coprocessor mocking variables.
   ObserverContext<? extends RegionCoprocessorEnvironment> ctx;
   Service service;
   String methodName;
