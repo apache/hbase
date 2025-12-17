@@ -138,7 +138,7 @@ public class TestVerifyBucketCacheFile {
       recoveredBucketCache =
         new BucketCache("file:" + testDir + "/bucket.cache", capacitySize, constructedBlockSize,
           constructedBlockSizes, writeThreads, writerQLen, testDir + "/bucket.persistence");
-      assertTrue(recoveredBucketCache.waitForCacheInitialization(10000));
+      waitPersistentCacheValidation(conf, bucketCache);
       assertEquals(0, recoveredBucketCache.getAllocator().getUsedSize());
       assertEquals(0, recoveredBucketCache.backingMap.size());
       BlockCacheKey[] newKeys = CacheTestUtils.regenerateKeys(blocks, names);
@@ -494,6 +494,7 @@ public class TestVerifyBucketCacheFile {
   }
 
   private void waitPersistentCacheValidation(Configuration config, final BucketCache bucketCache) {
-    Waiter.waitFor(config, 5000, () -> bucketCache.getBackingMapValidated().get());
+    Waiter.waitFor(config, 5000,
+      () -> bucketCache.getBackingMapValidated().get() && bucketCache.isCacheEnabled());
   }
 }
