@@ -29,12 +29,14 @@ import java.security.spec.InvalidKeySpecException;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BiFunction;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.crypto.aes.AES;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -113,12 +115,6 @@ public final class Encryption {
     @Override
     public Context setCipher(Cipher cipher) {
       super.setCipher(cipher);
-      return this;
-    }
-
-    @Override
-    public Context setKey(Key key) {
-      super.setKey(key);
       return this;
     }
 
@@ -468,6 +464,19 @@ public final class Encryption {
     if (key == null) {
       throw new IOException("No key found for subject '" + subject + "'");
     }
+    encryptWithGivenKey(key, out, in, cipher, iv);
+  }
+
+  /**
+   * Encrypts a block of plaintext with the specified symmetric key.
+   * @param key    The symmetric key
+   * @param out    ciphertext
+   * @param in     plaintext
+   * @param cipher the encryption algorithm
+   * @param iv     the initialization vector, can be null
+   */
+  public static void encryptWithGivenKey(Key key, OutputStream out, InputStream in, Cipher cipher,
+    byte[] iv) throws IOException {
     Encryptor e = cipher.getEncryptor();
     e.setKey(key);
     e.setIv(iv); // can be null
@@ -490,34 +499,35 @@ public final class Encryption {
     if (key == null) {
       throw new IOException("No key found for subject '" + subject + "'");
     }
-    Decryptor d = cipher.getDecryptor();
-    d.setKey(key);
-    d.setIv(iv); // can be null
     try {
-      decrypt(out, in, outLen, d);
+      decryptWithGivenKey(key, out, in, outLen, cipher, iv);
     } catch (IOException e) {
       // If the current cipher algorithm fails to unwrap, try the alternate cipher algorithm, if one
       // is configured
       String alternateAlgorithm = conf.get(HConstants.CRYPTO_ALTERNATE_KEY_ALGORITHM_CONF_KEY);
       if (alternateAlgorithm != null) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Unable to decrypt data with current cipher algorithm '"
-            + conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES)
-            + "'. Trying with the alternate cipher algorithm '" + alternateAlgorithm
-            + "' configured.");
-        }
+        LOG.debug(
+          "Unable to decrypt data with current cipher algorithm '{}'. "
+            + "Trying with the alternate cipher algorithm '{}' configured.",
+          conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES),
+          alternateAlgorithm);
         Cipher alterCipher = Encryption.getCipher(conf, alternateAlgorithm);
         if (alterCipher == null) {
           throw new RuntimeException("Cipher '" + alternateAlgorithm + "' not available");
         }
-        d = alterCipher.getDecryptor();
-        d.setKey(key);
-        d.setIv(iv); // can be null
-        decrypt(out, in, outLen, d);
+        decryptWithGivenKey(key, out, in, outLen, alterCipher, iv);
       } else {
-        throw new IOException(e);
+        throw e;
       }
     }
+  }
+
+  public static void decryptWithGivenKey(Key key, OutputStream out, InputStream in, int outLen,
+    Cipher cipher, byte[] iv) throws IOException {
+    Decryptor d = cipher.getDecryptor();
+    d.setKey(key);
+    d.setIv(iv); // can be null
+    decrypt(out, in, outLen, d);
   }
 
   private static ClassLoader getClassLoaderForClass(Class<?> c) {
