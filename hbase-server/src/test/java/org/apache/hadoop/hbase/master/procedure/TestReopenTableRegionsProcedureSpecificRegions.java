@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master.procedure;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -111,26 +112,26 @@ public class TestReopenTableRegionsProcedureSpecificRegions {
     TableName tableName = TableName.valueOf("TestMixedRegions");
     try (Table ignored = UTIL.createTable(tableName, CF)) {
 
-    List<RegionInfo> actualRegions = UTIL.getAdmin().getRegions(tableName);
+      List<RegionInfo> actualRegions = UTIL.getAdmin().getRegions(tableName);
       assertFalse("Table should have at least one region", actualRegions.isEmpty());
 
-    List<byte[]> mixedRegionNames = new ArrayList<>();
-    mixedRegionNames.add(actualRegions.get(0).getRegionName());
-    mixedRegionNames.add(Bytes.toBytes("invalid-region-1"));
-    mixedRegionNames.add(Bytes.toBytes("invalid-region-2"));
+      List<byte[]> mixedRegionNames = new ArrayList<>();
+      mixedRegionNames.add(actualRegions.get(0).getRegionName());
+      mixedRegionNames.add(Bytes.toBytes("invalid-region-1"));
+      mixedRegionNames.add(Bytes.toBytes("invalid-region-2"));
 
-    ReopenTableRegionsProcedure proc =
-      new ReopenTableRegionsProcedure(tableName, mixedRegionNames, 0L, Integer.MAX_VALUE);
+      ReopenTableRegionsProcedure proc =
+        new ReopenTableRegionsProcedure(tableName, mixedRegionNames, 0L, Integer.MAX_VALUE);
 
-    long procId = getProcExec().submitProcedure(proc);
-    UTIL.waitFor(60000, proc::isFailed);
+      long procId = getProcExec().submitProcedure(proc);
+      UTIL.waitFor(60000, proc::isFailed);
 
-    Throwable cause = ProcedureTestingUtility.getExceptionCause(proc);
-    assertTrue("Expected UnknownRegionException", cause instanceof UnknownRegionException);
-    assertTrue("Error message should contain first invalid region",
-      cause.getMessage().contains("invalid-region-1"));
-    assertTrue("Error message should contain second invalid region",
-      cause.getMessage().contains("invalid-region-2"));
+      Throwable cause = ProcedureTestingUtility.getExceptionCause(proc);
+      assertTrue("Expected UnknownRegionException", cause instanceof UnknownRegionException);
+      assertTrue("Error message should contain first invalid region",
+        cause.getMessage().contains("invalid-region-1"));
+      assertTrue("Error message should contain second invalid region",
+        cause.getMessage().contains("invalid-region-2"));
     }
   }
 
@@ -151,8 +152,8 @@ public class TestReopenTableRegionsProcedureSpecificRegions {
     List<byte[]> specificRegionNames =
       allRegions.subList(0, 3).stream().map(RegionInfo::getRegionName).collect(Collectors.toList());
 
-    ReopenTableRegionsProcedure proc = ReopenTableRegionsProcedure.throttled(UTIL.getConfiguration(),
-      UTIL.getAdmin().getDescriptor(tableName), specificRegionNames);
+    ReopenTableRegionsProcedure proc = ReopenTableRegionsProcedure.throttled(
+      UTIL.getConfiguration(), UTIL.getAdmin().getDescriptor(tableName), specificRegionNames);
 
     long procId = getProcExec().submitProcedure(proc);
     ProcedureTestingUtility.waitProcedure(getProcExec(), procId);
@@ -191,9 +192,8 @@ public class TestReopenTableRegionsProcedureSpecificRegions {
     try (Table ignored = UTIL.createTable(tableName, CF)) {
       UTIL.getAdmin().disableTable(tableName);
 
-      ReopenTableRegionsProcedure proc =
-        ReopenTableRegionsProcedure.throttled(UTIL.getConfiguration(),
-          UTIL.getAdmin().getDescriptor(tableName));
+      ReopenTableRegionsProcedure proc = ReopenTableRegionsProcedure
+        .throttled(UTIL.getConfiguration(), UTIL.getAdmin().getDescriptor(tableName));
 
       long procId = getProcExec().submitProcedure(proc);
       ProcedureTestingUtility.waitProcedure(getProcExec(), procId);
@@ -218,8 +218,8 @@ public class TestReopenTableRegionsProcedureSpecificRegions {
     List<RegionInfo> regions = UTIL.getAdmin().getRegions(tableName);
     assertEquals(10, regions.size());
 
-    ReopenTableRegionsProcedure proc = ReopenTableRegionsProcedure.throttled(
-      UTIL.getConfiguration(), UTIL.getAdmin().getDescriptor(tableName));
+    ReopenTableRegionsProcedure proc = ReopenTableRegionsProcedure
+      .throttled(UTIL.getConfiguration(), UTIL.getAdmin().getDescriptor(tableName));
 
     long procId = getProcExec().submitProcedure(proc);
     ProcedureTestingUtility.waitProcedure(getProcExec(), procId);
@@ -244,8 +244,8 @@ public class TestReopenTableRegionsProcedureSpecificRegions {
 
     UTIL.getAdmin().createTable(td);
 
-    ReopenTableRegionsProcedure proc = ReopenTableRegionsProcedure.throttled(conf,
-      UTIL.getAdmin().getDescriptor(tableName));
+    ReopenTableRegionsProcedure proc =
+      ReopenTableRegionsProcedure.throttled(conf, UTIL.getAdmin().getDescriptor(tableName));
 
     assertEquals("Table descriptor config should override global config", 2000,
       proc.getReopenBatchBackoffMillis());
@@ -422,8 +422,8 @@ public class TestReopenTableRegionsProcedureSpecificRegions {
 
     UTIL.getAdmin().createTable(td, Bytes.toBytes("a"), Bytes.toBytes("z"), 5);
 
-    ReopenTableRegionsProcedure proc = ReopenTableRegionsProcedure.throttled(
-      UTIL.getConfiguration(), UTIL.getAdmin().getDescriptor(tableName));
+    ReopenTableRegionsProcedure proc = ReopenTableRegionsProcedure
+      .throttled(UTIL.getConfiguration(), UTIL.getAdmin().getDescriptor(tableName));
 
     assertEquals("Initial config should be 1000ms", 1000L, proc.getReopenBatchBackoffMillis());
 
@@ -440,4 +440,3 @@ public class TestReopenTableRegionsProcedureSpecificRegions {
     assertFalse("Procedure should complete successfully", proc.isFailed());
   }
 }
-
