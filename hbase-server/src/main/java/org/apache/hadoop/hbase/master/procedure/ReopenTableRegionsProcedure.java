@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
@@ -135,12 +136,12 @@ public class ReopenTableRegionsProcedure
       PROGRESSIVE_BATCH_SIZE_MAX_DISABLED);
   }
 
-  ReopenTableRegionsProcedure(final TableName tableName, long reopenBatchBackoffMillis,
+  public ReopenTableRegionsProcedure(final TableName tableName, long reopenBatchBackoffMillis,
     int reopenBatchSizeMax) {
     this(tableName, Collections.emptyList(), reopenBatchBackoffMillis, reopenBatchSizeMax);
   }
 
-  private ReopenTableRegionsProcedure(final TableName tableName, final List<byte[]> regionNames,
+  public ReopenTableRegionsProcedure(final TableName tableName, final List<byte[]> regionNames,
     long reopenBatchBackoffMillis, int reopenBatchSizeMax) {
     this.tableName = tableName;
     this.regionNames = regionNames;
@@ -273,7 +274,7 @@ public class ReopenTableRegionsProcedure
           throw new UnsupportedOperationException("unhandled state=" + state);
       }
     } catch (IOException e) {
-      if (isRollbackSupported(state)) {
+      if (isRollbackSupported(state) || e instanceof DoNotRetryIOException) {
         setFailure("master-reopen-table-regions", e);
       } else {
         LOG.warn("Retriable error trying to reopen regions for table={} (in state={})", tableName,
