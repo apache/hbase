@@ -7,15 +7,15 @@ description: "Performance and troubleshooting case studies for diagnosing Apache
 
 This chapter will describe a variety of performance and troubleshooting case studies that can provide a useful blueprint on diagnosing Apache HBase cluster issues.
 
-For more information on Performance and Troubleshooting, see [performance](#performance) and [trouble](#trouble).
+For more information on Performance and Troubleshooting, see [Apache HBase Performance Tuning](#performance) and [Troubleshooting and Debugging Apache HBase](#trouble).
 
 ## Schema Design
 
-See the schema design case studies here: [schema.casestudies](#schema-casestudies)
+See the schema design case studies here: [Schema Design Case Studies](#schema.casestudies)
 
 ## Performance/Troubleshooting
 
-### Case Study #1 (Performance Issue On A Single Node)
+### Case Study \#1 (Performance Issue On A Single Node)
 
 #### Scenario
 
@@ -25,35 +25,32 @@ These jobs were consistently found to be waiting on map and reduce tasks assigne
 
 #### Hardware
 
-##### Datanodes
+Datanodes:
 
 * Two 12-core processors
 * Six Enterprise SATA disks
 * 24GB of RAM
 * Two bonded gigabit NICs
 
-##### Network
+Network:
 
 * 10 Gigabit top-of-rack switches
 * 20 Gigabit bonded interconnects between racks.
 
 #### Hypotheses
 
-##### HBase "Hot Spot" Region
-
+**HBase "Hot Spot" Region**  
 We hypothesized that we were experiencing a familiar point of pain: a "hot spot" region in an HBase table, where uneven key-space distribution can funnel a huge number of requests to a single HBase region, bombarding the RegionServer process and cause slow response time.
 Examination of the HBase Master status page showed that the number of HBase requests to the troubled node was almost zero.
 Further, examination of the HBase logs showed that there were no region splits, compactions, or other region transitions in progress.
 This effectively ruled out a "hot spot" as the root cause of the observed slowness.
 
-##### HBase Region With Non-Local Data
-
+**HBase Region With Non-Local Data**  
 Our next hypothesis was that one of the MapReduce tasks was requesting data from HBase that was not local to the DataNode, thus forcing HDFS to request data blocks from other servers over the network.
 Examination of the DataNode logs showed that there were very few blocks being requested over the network, indicating that the HBase region was correctly assigned, and that the majority of the necessary data was located on the node.
 This ruled out the possibility of non-local data causing a slowdown.
 
-##### Excessive I/O Wait Due To Swapping Or An Over-Worked Or Failing Hard Disk
-
+**Excessive I/O Wait Due To Swapping Or An Over-Worked Or Failing Hard Disk**  
 After concluding that the Hadoop and HBase were not likely to be the culprits, we moved on to troubleshooting the DataNode's hardware.
 Java, by design, will periodically scan its entire memory space to do garbage collection.
 If system memory is heavily overcommitted, the Linux kernel may enter a vicious cycle, using up all of its resources swapping Java heap back and forth from disk to RAM as Java tries to run garbage collection.
@@ -62,12 +59,10 @@ This can manifest as high iowait, as running processes wait for reads and writes
 Finally, a disk nearing the upper edge of its performance envelope will begin to cause iowait as it informs the kernel that it cannot accept any more data, and the kernel queues incoming data into the dirty write pool in memory.
 However, using `vmstat(1)` and `free(1)`, we could see that no swap was being used, and the amount of disk IO was only a few kilobytes per second.
 
-##### Slowness Due To High Processor Usage
-
+**Slowness Due To High Processor Usage**  
 Next, we checked to see whether the system was performing slowly simply due to very high computational load. `top(1)` showed that the system load was higher than normal, but `vmstat(1)` and `mpstat(1)` showed that the amount of processor being used for actual computation was low.
 
-##### Network Saturation (The Winner)
-
+**Network Saturation (The Winner)**  
 Since neither the disks nor the processors were being utilized heavily, we moved on to the performance of the network interfaces.
 The DataNode had two gigabit ethernet adapters, bonded to form an active-standby interface. `ifconfig(8)` showed some unusual anomalies, namely interface errors, overruns, framing errors.
 While not unheard of, these kinds of errors are exceedingly rare on modern hardware which is operating as it should:
@@ -91,12 +86,12 @@ $ sudo ethtool eth0
 Settings for eth0:
 Supported ports: [ TP ]
 Supported link modes:   10baseT/Half 10baseT/Full
-                   100baseT/Half 100baseT/Full
-                   1000baseT/Full
+                       100baseT/Half 100baseT/Full
+                       1000baseT/Full
 Supports auto-negotiation: Yes
 Advertised link modes:  10baseT/Half 10baseT/Full
-                   100baseT/Half 100baseT/Full
-                   1000baseT/Full
+                       100baseT/Half 100baseT/Full
+                       1000baseT/Full
 Advertised pause frame use: No
 Advertised auto-negotiation: Yes
 Link partner advertised link modes:  Not reported
@@ -123,11 +118,11 @@ After determining that the active ethernet adapter was at the incorrect speed, w
 
 On the next trip to the datacenter, we determined that the line speed issue was ultimately caused by a bad network cable, which was replaced.
 
-### Case Study #2 (Performance Research 2012)
+### Case Study \#2 (Performance Research 2012)
 
 Investigation results of a self-described "we're not sure what's wrong, but it seems slow" problem. http://gbif.blogspot.com/2012/03/hbase-performance-evaluation-continued.html
 
-### Case Study #3 (Performance Research 2010)
+### Case Study \#3 (Performance Research 2010)
 
 Investigation results of general cluster performance from 2010.
 Although this research is on an older version of the codebase, this writeup is still very useful in terms of approach. https://web.archive.org/web/20180503124332/http://hstack.org/hbase-performance-testing/
@@ -136,5 +131,5 @@ Although this research is on an older version of the codebase, this writeup is s
 
 Case study of configuring `max.transfer.threads` (previously known as `xcievers`) and diagnosing errors from misconfigurations. http://www.larsgeorge.com/2012/03/hadoop-hbase-and-xceivers.html
 
-See also [dfs.datanode.max.transfer.threads](#dfs-datanode-max-transfer-threads).
+See also [`dfs.datanode.max.transfer.threads`](#dfs.datanode.max.transfer.threads).
 
