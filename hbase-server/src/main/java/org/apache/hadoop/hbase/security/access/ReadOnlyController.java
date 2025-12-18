@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -99,9 +100,9 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
 
   private volatile boolean globalReadOnlyEnabled;
 
-  private void internalReadOnlyGuard() throws IOException {
+  private void internalReadOnlyGuard() throws DoNotRetryIOException {
     if (this.globalReadOnlyEnabled) {
-      throw new IOException("Operation not allowed in Read-Only Mode");
+      throw new DoNotRetryIOException("Operation not allowed in Read-Only Mode");
     }
   }
 
