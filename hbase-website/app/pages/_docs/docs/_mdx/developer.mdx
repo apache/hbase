@@ -3,20 +3,19 @@ title: "Building and Developing Apache HBase"
 description: "Comprehensive guide for building, testing, releasing, and contributing to Apache HBase."
 ---
 
-
 This chapter contains information and guidelines for building and releasing HBase code and documentation.
 Being familiar with these guidelines will help the HBase committers to use your contributions more easily.
 
 ## Getting Involved
 
-Apache HBase gets better only when people contribute! If you are looking to contribute to Apache HBase, look for [issues in JIRA tagged with the label 'beginner'](https://issues.apache.org/jira/issues/?jql=project%20%3D%20HBASE%20AND%20labels%20in%20(beginner)%20AND%20status%20in%20(Open%2C%20%22In%20Progress%22%2C%20Reopened)).
+Apache HBase gets better only when people contribute! If you are looking to contribute to Apache HBase, look for [issues in JIRA tagged with the label 'beginner'](<https://issues.apache.org/jira/issues/?jql=project%20%3D%20HBASE%20AND%20labels%20in%20(beginner)%20AND%20status%20in%20(Open%2C%20%22In%20Progress%22%2C%20Reopened)>).
 These are issues HBase contributors have deemed worthy but not of immediate priority and a good way to ramp on HBase internals.
 See [What label
-                is used for issues that are good on ramps for new contributors?](https://lists.apache.org/thread.html/b122265f4e4054cf08f8cd38609fb06af72f398c44f9086b05ef4e21%401407246237%40%3Cdev.hbase.apache.org%3E) from the dev mailing list for background.
+is used for issues that are good on ramps for new contributors?](https://lists.apache.org/thread.html/b122265f4e4054cf08f8cd38609fb06af72f398c44f9086b05ef4e21%401407246237%40%3Cdev.hbase.apache.org%3E) from the dev mailing list for background.
 
 Before you get started submitting code to HBase, please refer to [developing](#developing).
 
-As Apache HBase is an Apache Software Foundation project, see [asf](#asf)            for more information about how the ASF functions.
+As Apache HBase is an Apache Software Foundation project, see [asf](#asf) for more information about how the ASF functions.
 
 ### Mailing Lists
 
@@ -61,78 +60,78 @@ Bugs and tests have the highest priority and should be actionable.
 
 #### Guidelines for reporting effective issues
 
-- *Search for duplicates*: Your issue may have already been reported. Have a
+- _Search for duplicates_: Your issue may have already been reported. Have a
   look, realizing that someone else might have worded the summary differently.
 
-Also search the mailing lists, which may have information about your problem
-and how to work around it. Don't file an issue for something that has already
-been discussed and resolved on a mailing list, unless you strongly disagree
-with the resolution *and* are willing to help take the issue forward.
+  Also search the mailing lists, which may have information about your problem
+  and how to work around it. Don't file an issue for something that has already
+  been discussed and resolved on a mailing list, unless you strongly disagree
+  with the resolution _and_ are willing to help take the issue forward.
+  - _Discuss in public_: Use the mailing lists to discuss what you've discovered
+    and see if there is something you've missed. Avoid using back channels, so
+    that you benefit from the experience and expertise of the project as a whole.
 
-* *Discuss in public*: Use the mailing lists to discuss what you've discovered
-  and see if there is something you've missed. Avoid using back channels, so
-  that you benefit from the experience and expertise of the project as a whole.
+  - _Don't file on behalf of others_: You might not have all the context, and you
+    don't have as much motivation to see it through as the person who is actually
+    experiencing the bug. It's more helpful in the long term to encourage others
+    to file their own issues. Point them to this material and offer to help out
+    the first time or two.
 
-* *Don't file on behalf of others*: You might not have all the context, and you
-  don't have as much motivation to see it through as the person who is actually
-  experiencing the bug. It's more helpful in the long term to encourage others
-  to file their own issues. Point them to this material and offer to help out
-  the first time or two.
+  - _Write a good summary_: A good summary includes information about the problem,
+    the impact on the user or developer, and the area of the code.
+    - Good: `Address new license dependencies from hadoop3-alpha4`
+    - Room for improvement: `Canary is broken`
 
-* *Write a good summary*: A good summary includes information about the problem,
-  the impact on the user or developer, and the area of the code.
-** Good: `Address new license dependencies from hadoop3-alpha4`
-** Room for improvement: `Canary is broken`
+    If you write a bad title, someone else will rewrite it for you. This is time
+    they could have spent working on the issue instead.
 
-If you write a bad title, someone else will rewrite it for you. This is time
-they could have spent working on the issue instead.
+  - _Give context in the description_: It can be good to think of this in multiple
+    parts:
+    - What happens or doesn't happen?
+    - How does it impact you?
+    - How can someone else reproduce it?
+    - What would "fixed" look like?
 
-* *Give context in the description*: It can be good to think of this in multiple
-  parts:
-** What happens or doesn't happen?
-** How does it impact you?
-** How can someone else reproduce it?
-** What would "fixed" look like?
+      You don't need to know the answers for all of these, but give as much
+      information as you can. If you can provide technical information, such as a
+      Git commit SHA that you think might have caused the issue or a build failure
+      on builds.apache.org where you think the issue first showed up, share that
+      info.
 
-You don't need to know the answers for all of these, but give as much
-information as you can. If you can provide technical information, such as a
-Git commit SHA that you think might have caused the issue or a build failure
-on builds.apache.org where you think the issue first showed up, share that
-info.
+  - **Fill in all relevant fields**: These fields help us filter, categorize, and
+    find things.
 
-* *Fill in all relevant fields*: These fields help us filter, categorize, and
-  find things.
+  - **One bug, one issue, one patch**: To help with back-porting, don't split issues
+    or fixes among multiple bugs.
 
-* *One bug, one issue, one patch*: To help with back-porting, don't split issues
-  or fixes among multiple bugs.
+  - **Add value if you can**: Filing issues is great, even if you don't know how to
+    fix them. But providing as much information as possible, being willing to
+    triage and answer questions, and being willing to test potential fixes is even
+    better! We want to fix your issue as quickly as you want it to be fixed.
 
-* *Add value if you can*: Filing issues is great, even if you don't know how to
-  fix them. But providing as much information as possible, being willing to
-  triage and answer questions, and being willing to test potential fixes is even
-  better! We want to fix your issue as quickly as you want it to be fixed.
-
-* *Don't be upset if we don't fix it*: Time and resources are finite. In some
-  cases, we may not be able to (or might choose not to) fix an issue, especially
-  if it is an edge case or there is a workaround. Even if it doesn't get fixed,
-  the JIRA is a public record of it, and will help others out if they run into
-  a similar issue in the future.
+  - **Don't be upset if we don't fix it**: Time and resources are finite. In some
+    cases, we may not be able to (or might choose not to) fix an issue, especially
+    if it is an edge case or there is a workaround. Even if it doesn't get fixed,
+    the JIRA is a public record of it, and will help others out if they run into
+    a similar issue in the future.
 
 #### Working on an issue
 
-To check for existing issues which you can tackle as a beginner, search for [issues in JIRA tagged with the label 'beginner'](https://issues.apache.org/jira/issues/?jql=project%20%3D%20HBASE%20AND%20labels%20in%20(beginner)%20AND%20status%20in%20(Open%2C%20%22In%20Progress%22%2C%20Reopened)).
+To check for existing issues which you can tackle as a beginner, search for [issues in JIRA tagged with the label 'beginner'](<https://issues.apache.org/jira/issues/?jql=project%20%3D%20HBASE%20AND%20labels%20in%20(beginner)%20AND%20status%20in%20(Open%2C%20%22In%20Progress%22%2C%20Reopened)>).
 
-.JIRA Priorites
-* *Blocker*: Should only be used if the issue WILL cause data loss or cluster instability reliably.
-* *Critical*: The issue described can cause data loss or cluster instability in some cases.
-* *Major*: Important but not tragic issues, like updates to the client API that will add a lot of much-needed functionality or significant bugs that need to be fixed but that don't cause data loss.
-* *Minor*: Useful enhancements and annoying but not damaging bugs.
-* *Trivial*: Useful enhancements but generally cosmetic.
+JIRA Priorites:
 
-**Code Blocks in Jira Comments:**
+- **Blocker**: Should only be used if the issue WILL cause data loss or cluster instability reliably.
+- **Critical**: The issue described can cause data loss or cluster instability in some cases.
+- **Major**: Important but not tragic issues, like updates to the client API that will add a lot of much-needed functionality or significant bugs that need to be fixed but that don't cause data loss.
+- **Minor**: Useful enhancements and annoying but not damaging bugs.
+- **Trivial**: Useful enhancements but generally cosmetic.
+
+Code Blocks in Jira Comments:
 
 A commonly used macro in Jira is `{code}`. Everything inside the tags is preformatted, as in this example.
 
-```
+```text
 {code}
 code snippet
 {code}
@@ -140,14 +139,14 @@ code snippet
 
 ## Apache HBase Repositories
 
-Apache HBase consists of multiple repositories which are hosted on https://gitbox.apache.org/[Apache GitBox].
+Apache HBase consists of multiple repositories which are hosted on [Apache GitBox](https://gitbox.apache.org/).
 These are the following:
 
-* https://gitbox.apache.org/repos/asf?p=hbase.git[hbase] - main Apache HBase repository
-* https://gitbox.apache.org/repos/asf?p=hbase-connectors.git[hbase-connectors] - connectors to Apache Kafka and Apache Spark
-* https://gitbox.apache.org/repos/asf?p=hbase-operator-tools.git[hbase-operator-tools] - operability and supportability tools, such as [HBCK2](#HBCK2)
-* https://gitbox.apache.org/repos/asf?p=hbase-site.git[hbase-site] - hbase.apache.org website
-* https://gitbox.apache.org/repos/asf?p=hbase-thirdparty.git[hbase-thirdparty] - relocated versions of popular third-party libraries
+- [hbase](https://gitbox.apache.org/repos/asf?p=hbase.git) - main Apache HBase repository
+- [hbase-connectors](https://gitbox.apache.org/repos/asf?p=hbase-connectors.git) - connectors to Apache Kafka and Apache Spark
+- [hbase-operator-tools](https://gitbox.apache.org/repos/asf?p=hbase-operator-tools.git) - operability and supportability tools, such as [HBase HBCK2](#HBCK2)
+- [hbase-site](https://gitbox.apache.org/repos/asf?p=hbase-site.git) - hbase.apache.org website
+- [hbase-thirdparty](https://gitbox.apache.org/repos/asf?p=hbase-thirdparty.git) - relocated versions of popular third-party libraries
 
 ## IDEs
 
@@ -167,49 +166,46 @@ In addition to the automatic formatting, make sure you follow the style guidelin
 
 #### Eclipse Git Plugin
 
-If you cloned the project via git, download and install the Git plugin (EGit). Attach to your local git repo (via the [label]#Git Repositories#                    window) and you'll be able to see file revision history, generate patches, etc.
+If you cloned the project via git, download and install the Git plugin (EGit). Attach to your local git repo (via the Git Repositories window) and you'll be able to see file revision history, generate patches, etc.
 
 #### HBase Project Setup in Eclipse using `m2eclipse`
 
 The easiest way is to use the `m2eclipse` plugin for Eclipse.
 Eclipse Indigo or newer includes +m2eclipse+, or you can download it from http://www.eclipse.org/m2e/. It provides Maven integration for Eclipse, and even lets you use the direct Maven commands from within Eclipse to compile and test your project.
 
-To import the project, click  and select the HBase root directory. `m2eclipse`                    locates all the hbase modules for you.
+To import the project, click and select the HBase root directory. `m2eclipse` locates all the hbase modules for you.
 
 If you install `m2eclipse` and import HBase in your workspace, do the following to fix your eclipse Build Path.
 
-. Remove _target_ folder
-. Add _target/generated-sources/java_ folder.
-. Remove from your Build Path the exclusions on the _src/main/resources_ and _src/test/resources_ to avoid error message in the console, such as the following:
-
-```
-Failed to execute goal
-org.apache.maven.plugins:maven-antrun-plugin:1.6:run (default) on project hbase:
-'An Ant BuildException has occurred: Replace: source file .../target/classes/hbase-default.xml
-doesn't exist
-```
-
-This will also reduce the eclipse build cycles and make your life easier when developing.
-
+- Remove _target_ folder
+- Add _target/generated-sources/java_ folder.
+- Remove from your Build Path the exclusions on the _src/main/resources_ and _src/test/resources_ to avoid error message in the console, such as the following:
+  ```text
+  Failed to execute goal
+  org.apache.maven.plugins:maven-antrun-plugin:1.6:run (default) on project hbase:
+  'An Ant BuildException has occurred: Replace: source file .../target/classes/hbase-default.xml
+  doesn't exist
+  ```
+  This will also reduce the eclipse build cycles and make your life easier when developing.
 
 #### HBase Project Setup in Eclipse Using the Command Line
 
 Instead of using `m2eclipse`, you can generate the Eclipse files from the command line.
 
-. First, run the following command, which builds HBase.
+- First, run the following command, which builds HBase.
   You only need to do this once.
 
-```bash
-mvn clean install -DskipTests
-```
+  ```bash
+  mvn clean install -DskipTests
+  ```
 
-. Close Eclipse, and execute the following command from the terminal, in your local HBase project directory, to generate new _.project_ and _.classpath_                            files.
+- Close Eclipse, and execute the following command from the terminal, in your local HBase project directory, to generate new _.project_ and _.classpath_ files.
 
-```bash
-mvn eclipse:eclipse
-```
+  ```bash
+  mvn eclipse:eclipse
+  ```
 
-. Reopen Eclipse and import the _.project_ file in the HBase directory to a workspace.
+- Reopen Eclipse and import the _.project_ file in the HBase directory to a workspace.
 
 #### Maven Classpath Variable
 
@@ -218,13 +214,12 @@ This needs to be set to your local Maven repository, which is usually _~/.m2/rep
 
 If this classpath variable is not configured, you will see compile errors in Eclipse like this:
 
-```
-
-Description	Resource	Path	Location	Type
-The project cannot be built until build path errors are resolved	hbase		Unknown	Java Problem
-Unbound classpath variable: 'M2_REPO/asm/asm/3.1/asm-3.1.jar' in project 'hbase'	hbase		Build path	Build Path Problem
-Unbound classpath variable: 'M2_REPO/com/google/guava/guava/r09/guava-r09.jar' in project 'hbase'	hbase		Build path	Build Path Problem
-Unbound classpath variable: 'M2_REPO/com/google/protobuf/protobuf-java/2.3.0/protobuf-java-2.3.0.jar' in project 'hbase'	hbase		Build path	Build Path Problem Unbound classpath variable:
+```text
+Description        Resource        Path        Location        Type
+The project cannot be built until build path errors are resolved        hbase                Unknown        Java Problem
+Unbound classpath variable: 'M2_REPO/asm/asm/3.1/asm-3.1.jar' in project 'hbase'        hbase                Build path        Build Path Problem
+Unbound classpath variable: 'M2_REPO/com/google/guava/guava/r09/guava-r09.jar' in project 'hbase'        hbase                Build path        Build Path Problem
+Unbound classpath variable: 'M2_REPO/com/google/protobuf/protobuf-java/2.3.0/protobuf-java-2.3.0.jar' in project 'hbase'        hbase                Build path        Build Path Problem Unbound classpath variable:
 ```
 
 #### Eclipse Known Issues
@@ -232,12 +227,11 @@ Unbound classpath variable: 'M2_REPO/com/google/protobuf/protobuf-java/2.3.0/pro
 Eclipse will currently complain about _Bytes.java_.
 It is not possible to turn these errors off.
 
-```
-
-Description	Resource	Path	Location	Type
-Access restriction: The method arrayBaseOffset(Class) from the type Unsafe is not accessible due to restriction on required library /System/Library/Java/JavaVirtualMachines/1.6.0.jdk/Contents/Classes/classes.jar	Bytes.java	/hbase/src/main/java/org/apache/hadoop/hbase/util	line 1061	Java Problem
-Access restriction: The method arrayIndexScale(Class) from the type Unsafe is not accessible due to restriction on required library /System/Library/Java/JavaVirtualMachines/1.6.0.jdk/Contents/Classes/classes.jar	Bytes.java	/hbase/src/main/java/org/apache/hadoop/hbase/util	line 1064	Java Problem
-Access restriction: The method getLong(Object, long) from the type Unsafe is not accessible due to restriction on required library /System/Library/Java/JavaVirtualMachines/1.6.0.jdk/Contents/Classes/classes.jar	Bytes.java	/hbase/src/main/java/org/apache/hadoop/hbase/util	line 1111	Java Problem
+```text
+Description        Resource        Path        Location        Type
+Access restriction: The method arrayBaseOffset(Class) from the type Unsafe is not accessible due to restriction on required library /System/Library/Java/JavaVirtualMachines/1.6.0.jdk/Contents/Classes/classes.jar        Bytes.java        /hbase/src/main/java/org/apache/hadoop/hbase/util        line 1061        Java Problem
+Access restriction: The method arrayIndexScale(Class) from the type Unsafe is not accessible due to restriction on required library /System/Library/Java/JavaVirtualMachines/1.6.0.jdk/Contents/Classes/classes.jar        Bytes.java        /hbase/src/main/java/org/apache/hadoop/hbase/util        line 1064        Java Problem
+Access restriction: The method getLong(Object, long) from the type Unsafe is not accessible due to restriction on required library /System/Library/Java/JavaVirtualMachines/1.6.0.jdk/Contents/Classes/classes.jar        Bytes.java        /hbase/src/main/java/org/apache/hadoop/hbase/util        line 1111        Java Problem
 ```
 
 #### Eclipse - More Information
@@ -249,28 +243,28 @@ For additional information on setting up Eclipse for HBase development on Window
 A functional development environment can be setup around an IntelliJ IDEA installation that has the
 plugins necessary for building Java projects with Maven.
 
-. Use either File > New > "Project from Existing Sources..." or "Project From Version Control.."
-. Depending on your version of IntelliJ, you may need to choose Maven as the "project" or "model"
+- Use either File > New > "Project from Existing Sources..." or "Project From Version Control.."
+- Depending on your version of IntelliJ, you may need to choose Maven as the "project" or "model"
 type.
 
 The following plugins are recommended:
 
-. Maven, bundled. This allows IntelliJ to resolve dependencies and recognize the project structure.
-. EditorConfig, bundled. This will apply project whitespace settings found in the
+- Maven, bundled. This allows IntelliJ to resolve dependencies and recognize the project structure.
+- EditorConfig, bundled. This will apply project whitespace settings found in the
 `.editorconfig` file available on branches with
 [HBASE-23234](https://issues.apache.org/jira/browse/HBASE-23234) or later.
-. [Checkstyle-IDEA](https://plugins.jetbrains.com/plugin/1065-checkstyle-idea/). Configure this
+- [Checkstyle-IDEA](https://plugins.jetbrains.com/plugin/1065-checkstyle-idea/). Configure this
 against the configuration file found under `hbase-checkstyle/src/main/resources/hbase/checkstyle.xml`
 (If the Intellij checkstyle plugin complains parsing the volunteered hbase `checkstyle.xml`, make
 sure the plugin's `version` popup menu matches the hbase checkstyle version. Find the current
 checkstyle version as a property in `pom.xml`.
 This plugin will highlight style errors in the IDE, so you can fix them before they get flagged during the
 pre-commit process.
-. [Protobuf Support](https://plugins.jetbrains.com/plugin/8277-protobuf-support/). HBase uses
+- [Protobuf Support](https://plugins.jetbrains.com/plugin/8277-protobuf-support/). HBase uses
 [Protocol Buffers](https://developers.google.com/protocol-buffers/) in a number of places where
 serialization is required. This plugin is helpful when editing these object definitions.
-. [AsciiDoc](https://plugins.jetbrains.com/plugin/7391-asciidoc/). HBase uses
-[AsciiDoc](http://asciidoc.org) for  building it's project documentation. This plugin is helpful
+- [AsciiDoc](https://plugins.jetbrains.com/plugin/7391-asciidoc/). HBase uses
+[AsciiDoc](http://asciidoc.org) for building it's project documentation. This plugin is helpful
 when editing this book.
 
 ### Other IDEs
@@ -295,7 +289,7 @@ support matrix of Java version by HBase version.
 
 All commands are executed from the local HBase project directory.
 
-##### Package
+**Package**
 
 The simplest command to compile HBase from its java source code is to use the `package` target, which builds JARs with the compiled files.
 
@@ -309,10 +303,10 @@ Or, to clean up before compiling:
 mvn clean package -DskipTests
 ```
 
-With Eclipse set up as explained above in [eclipse](#eclipse), you can also use the menu:Build[] command in Eclipse.
+With Eclipse set up as explained above in [eclipse](#eclipse), you can also use the **Build** command in Eclipse.
 To create the full installable HBase package takes a little bit more work, so read on.
 
-##### Compile
+**Compile**
 
 The `compile` target does not create the JARs with the compiled files.
 
@@ -324,7 +318,7 @@ mvn compile
 mvn clean compile
 ```
 
-##### Install
+**Install**
 
 To install the JARs in your _~/.m2/_ directory, use the `install` target.
 
@@ -340,7 +334,7 @@ mvn clean install
 mvn clean install -DskipTests
 ```
 
-#####  Building HBase 2.x on Apple Silicon
+**Building HBase 2.x on Apple Silicon**
 
 Building a non-master branch requires protoc 2.5.0 binary which is not available for Apple Silicon.
 HBASE-27741 added a workaround to the build to fall back to osx-x86_64 version of protoc automatically by `apple-silicon-workaround` Maven profile.
@@ -348,6 +342,7 @@ The intention is that this change will permit the build to proceed with the x86 
 If you'd like to provide and make use of your own aarch_64 `protoc`, you can disable this profile on the command line by adding `-P'!apple-silicon-workaround'`, or through configuration in your `settings.xml`.
 
 You can use the following commands to build protoc on your Apple Silicon machine.
+
 ```bash
 curl -sSL https://github.com/protocolbuffers/protobuf/releases/download/v2.5.0/protobuf-2.5.0.tar.gz | tar zx -
 cd protobuf-2.5.0
@@ -371,7 +366,7 @@ Exactly which version of Hadoop is used by default varies by release branch. See
 The mechanism for selecting a Hadoop version at build time is identical across all releases. Which
 version of Hadoop is default varies. We manage Hadoop major version selection by way of Maven
 profiles. Due to the peculiarities of Maven profile mutual exclusion, the profile that builds
-against a particular Hadoop version is activated by setting a property, *not* the usual profile
+against a particular Hadoop version is activated by setting a property, _not_ the usual profile
 activation. Hadoop version profile activation is summarized by the following table.
 
 .Hadoop Profile Activation by HBase Release
@@ -382,10 +377,9 @@ activation. Hadoop version profile activation is summarized by the following tab
 | HBase 3.0+ | _not supported_ | _active by default_
 |===
 
-[WARNING]
-====
-Please note that where a profile is active by default, `hadoop.profile` must NOT be provided.
-====
+# [WARNING]
+
+# Please note that where a profile is active by default, `hadoop.profile` must NOT be provided.
 
 Once the Hadoop major version profile is activated, the exact Hadoop version can be
 specified by overriding the appropriate property value. For Hadoop2 versions, the property name
@@ -498,7 +492,7 @@ You may need to change the thrift definitions that reside in the _hbase-thrift_ 
 
 The thrift files are located in _hbase-thrift/src/main/resources_.
 For the change to be effective, you will need to regenerate the classes.
-You can use maven profile  `compile-thrift` to do this.
+You can use maven profile `compile-thrift` to do this.
 
 ```bash
 mvn compile -Pcompile-thrift
@@ -515,34 +509,38 @@ You may also want to define `thrift.path` for the thrift binary, using the follo
 
 You can build a tarball without going through the release process described in [releasing](#releasing), by running the following command:
 
-```
+```bash
 mvn -DskipTests clean install && mvn -DskipTests package assembly:single
 ```
 
-The distribution tarball is built in `hbase-assembly/target/hbase-\<version\>-bin.tar.gz`.
+The distribution tarball is built in `hbase-assembly/target/hbase-<version>-bin.tar.gz`.
 
 You can install or deploy the tarball by having the assembly:single goal before install or deploy in the maven command:
 
-```
+```bash
 mvn -DskipTests package assembly:single install
 ```
-```
+
+```bash
 mvn -DskipTests package assembly:single deploy
 ```
 
-
 #### Build Gotchas
+
 ##### Maven Site failure
+
 If you see `Unable to find resource 'VM_global_library.vm'`, ignore it.
 It's not an error.
 It is [officially ugly](https://issues.apache.org/jira/browse/MSITE-286) though.
 
 ### Build On Linux Aarch64
+
 HBase runs on both Windows and UNIX-like systems, and it should run on any platform
 that runs a supported version of Java. This should include JVMs on x86_64 and aarch64.
 The documentation below describes how to build hbase on aarch64 platform.
 
 #### Set Environment Variables
+
 Manually install Java and Maven on aarch64 servers if they are not installed,
 and set environment variables. For example:
 
@@ -553,6 +551,7 @@ export PATH=${MAVEN_HOME}/bin:${JAVA_HOME}/bin:${PATH}
 ```
 
 #### Use Protobuf Supported On Aarch64
+
 Now HBase uses protobuf of two versions. Version '3.11.4' of protobuf that hbase uses
 internally and version '2.5.0' as external usage.
 Package protoc-2.5.0 does not work on aarch64 platform, we should add maven
@@ -567,7 +566,6 @@ mvn clean install -Paarch64 -DskipTests
 Protobuf is released with aarch64 protoc since version '3.5.0', and we are planning to
 upgrade protobuf later, then we don't have to add the profile '-Paarch64' anymore.
 
-
 ## Releasing Apache HBase
 
 .Building against HBase 1.x
@@ -578,6 +576,7 @@ The below is for building hbase2.
 ====
 
 ### Making a Release Candidate
+
 Only committers can make releases of hbase artifacts.
 
 .Before You Begin
@@ -609,15 +608,15 @@ purged along with the container when the build is done.
 
 The script will:
 
- * Set version to the release version 
- * Updates RELEASENOTES.md and CHANGES.md
- * Tag the RC
- * Set version to next SNAPSHOT version. 
- * Builds, signs, and hashes all artifacts. 
- * Generates the api compatibility report
- * Pushes release tgzs to the dev dir in a apache dist. 
- * Pushes to repository.apache.org staging. 
- * Creates vote email template.
+- Set version to the release version
+- Updates RELEASENOTES.md and CHANGES.md
+- Tag the RC
+- Set version to next SNAPSHOT version.
+- Builds, signs, and hashes all artifacts.
+- Generates the api compatibility report
+- Pushes release tgzs to the dev dir in a apache dist.
+- Pushes to repository.apache.org staging.
+- Creates vote email template.
 
 The _dev-support/create-release/do-release-docker.sh_ Release Candidate (RC)
 Generating script is maintained in the master branch but can generate RCs
@@ -626,14 +625,15 @@ and update the master branch when making RCs. See
 _dev-support/create-release/README.txt_ for how to configure your
 environment and run the script.
 
-[NOTE]
-====
+# [NOTE]
+
 _dev-support/create-release/do-release-docker.sh_ supercedes the previous
 _dev-support/make_rc.sh_ script. It is more comprehensive automating all
 steps, rather than a portion, building a RC.
 ====
 
 #### Release Candidate Procedure
+
 Here we outline the steps involved generating a Release Candidate, the steps
 automated by the _dev-support/create-release/do-release-docker.sh_ script
 described in the previous section. Running these steps manually tends to
@@ -648,15 +648,14 @@ You may run into OutOfMemoryErrors building, particularly building the site and
 documentation. Up the heap for Maven by setting the `MAVEN_OPTS` variable.
 You can prefix the variable to the Maven command, as in the following example:
 
-```
+```bash
 MAVEN_OPTS="-Xmx4g -XX:MaxPermSize=256m" mvn package
 ```
 
-You could also set this in an environment variable or alias in your shell.
-====
+# You could also set this in an environment variable or alias in your shell.
 
-.Example _~/.m2/settings.xml_ File
-====
+# .Example _~/.m2/settings.xml_ File
+
 Publishing to maven requires you sign the artifacts you want to upload.
 For the build to sign them for you, you a properly configured _settings.xml_
 in your local repository under _.m2_, such as the following.
@@ -698,16 +697,17 @@ in your local repository under _.m2_, such as the following.
   </profiles>
 </settings>
 ```
+
 ====
 
-##### Update the _CHANGES.md_  and _RELEASENOTES.md_ files and the POM files.
+##### Update the _CHANGES.md_ and _RELEASENOTES.md_ files and the POM files.
 
 Update _CHANGES.md_ with the changes since the last release. Be careful with where you put
 headings and license. Respect the instructions and warning you find in current
 _CHANGES.md_ and _RELEASENOTES.md_ since these two files are processed by tooling that is
 looking for particular string sequences. See [HBASE-21399](https://issues.apache.org/jira/browse/HBASE-21399)
 for description on how to make use of yetus generating additions to
-_CHANGES.md_ and _RELEASENOTES.md_ (RECOMMENDED!).  Adding JIRA fixes, make sure the
+_CHANGES.md_ and _RELEASENOTES.md_ (RECOMMENDED!). Adding JIRA fixes, make sure the
 URL to the JIRA points to the proper location which lists fixes for this release.
 
 Next, adjust the version in all the POM files appropriately.
@@ -731,12 +731,14 @@ This usually involves copying the latest from master branch and making version-p
 adjustments to suit this release candidate version. Commit your changes.
 
 ##### Clean the checkout dir
+
 ```bash
 $ mvn clean
 $ git clean -f -x -d
 ```
 
 ##### Run Apache-Rat
+
 Check licenses are good
 
 ```bash
@@ -750,6 +752,7 @@ $ grep 'Rat check' patchprocess/mvn_apache_rat.log
 ```
 
 ##### Create a release tag.
+
 Presuming you have run basic tests, the rat check, passes and all is
 looking good, now is the time to tag the release candidate (You
 always remove the tag if you need to redo). To tag, do
@@ -781,6 +784,7 @@ deleting tags that have not yet been pushed to the remote Apache
 repo as well as delete of tags pushed to Apache.
 
 ##### Build the source tarball.
+
 Now, build the source tarball. Lets presume we are building the source
 tarball for the tag _2.0.0-alpha4-RC0_ into _/tmp/hbase-2.0.0-alpha4-RC0/_
 (This step requires that the mvn and git clean steps described above have just been done).
@@ -795,6 +799,7 @@ These bits are currently a release candidate but if the VOTE passes, they will b
 the artifact names with _RCX_).
 
 ##### Build the binary tarball.
+
 Next, build the binary tarball. Add the `-Prelease` profile when building.
 It runs the license apache-rat check among other rules that help ensure
 all is wholesome. Do it in two steps.
@@ -826,13 +831,12 @@ build output directory.
 ##### Deploy to the Maven Repository.
 
 Next, deploy HBase to the Apache Maven repository. Add the
-apache-release` profile when running the `mvn deploy` command.
+apache-release`profile when running the`mvn deploy` command.
 This profile comes from the Apache parent pom referenced by our pom files.
 It does signing of your artifacts published to Maven, as long as the
 _settings.xml_ is configured correctly, as described in [maven.settings.xml](#maven.settings.xml).
 This step depends on the local repository having been populate
 by the just-previous bin tarball build.
-
 
 ```bash
 $ mvn deploy -DskipTests -Papache-release -Prelease
@@ -844,10 +848,10 @@ More work needs to be done on these maven artifacts to make them generally avail
 We do not release HBase tarball to the Apache Maven repository. To avoid deploying the tarball, do not
 include the `assembly:single` goal in your `mvn deploy` command. Check the deployed artifacts as described in the next section.
 
-.make_rc.sh
+.make*rc.sh
 [NOTE]
 ====
-If you ran the old _dev-support/make_rc.sh_ script, this is as far as it takes you.
+If you ran the old \_dev-support/make_rc.sh* script, this is as far as it takes you.
 To finish the release, take up the script from here on out.
 ====
 
@@ -933,7 +937,7 @@ Following is an example of publishing SNAPSHOTS of a release that had an hbase v
 ```
 
 The _make_rc.sh_ script mentioned above (see [maven.release](#maven.release)) can help you publish `SNAPSHOTS`.
-Make sure your `hbase.version` has a `-SNAPSHOT`                suffix before running the script.
+Make sure your `hbase.version` has a `-SNAPSHOT` suffix before running the script.
 It will put a snapshot up into the apache snapshot repository for you.
 
 ## Voting on Release Candidates
@@ -943,13 +947,16 @@ Only the votes of PMC members are binding.
 PMC members, please read this WIP doc on policy voting for a release candidate, [Release Policy](https://github.com/rectang/asfrelease/blob/master/release.md).
 
 [quote]
-____
+
+---
+
 Before casting +1 binding votes, individuals are required to
 download the signed source code package onto their own hardware, compile it as
 provided, and test the resulting executable on their own platform, along with also
 validating cryptographic signatures and verifying that the package meets the
 requirements of the ASF policy on releases.
-____
+
+---
 
 Regards the latter, run `mvn apache-rat:check` to verify all files are suitably licensed.
 See [HBase, mail # dev - On recent discussion clarifying ASF release policy](https://mail-archives.apache.org/mod_mbox/hbase-dev/201406.mbox/%3CCA%2BRK%3D_B8EP0JMFV%2Bdt-k1g%3DBmedzyq2z1GSqrnMMiH6%3DcdoiAA%40mail.gmail.com%3E)
@@ -961,12 +968,12 @@ To help with the release verification, please follow the guideline below and vot
 
 Although contributors have their own checklist for verifications, the following items are usually used for voting on release candidates.
 
-* CHANGES.md if any
-* RELEASENOTES.md (release notes) if any
-* Generated API compatibility report
-** For what should be compatible please refer the [versioning guideline](https://hbase.apache.org/book.html#hbase.versioning), especially for items with marked as high severity
-* Use `hbase-vote.sh`  to perform sanity checks for checksum, signatures, files are licensed, built from source, and unit tests.
-** `hbase-vote.sh` shell script is available under `dev-support` directory of HBase source. Following are the usage details.
+- CHANGES.md if any
+- RELEASENOTES.md (release notes) if any
+- Generated API compatibility report
+  \*\* For what should be compatible please refer the [versioning guideline](https://hbase.apache.org/book.html#hbase.versioning), especially for items with marked as high severity
+- Use `hbase-vote.sh` to perform sanity checks for checksum, signatures, files are licensed, built from source, and unit tests.
+  \*\* `hbase-vote.sh` shell script is available under `dev-support` directory of HBase source. Following are the usage details.
 
 ```bash
 ./dev-support/hbase-vote.sh -h
@@ -990,19 +997,20 @@ Usage: hbase-vote.sh -s | --source <url> [-k | --key <signature>] [-f | --keys-f
   -P |                          list of maven profiles to activate for test UT/IT, i.e. <-P runSmallTests> Defaults to runAllTests
   -D |                          list of maven properties to set for the mvn invocations, i.e. <-D hadoop.profile=3.0> Defaults to unset
 ```
-* If you see any unit test failures, please call out the solo test result and whether it's part of flaky (nightly) tests dashboard, e.g. [dashboard of master branch](https://builds.apache.org/view/H-L/view/HBase/job/HBase-Find-Flaky-Tests/job/master/lastSuccessfulBuild/artifact/dashboard.html) (please change the test branch accordingly).
+
+- If you see any unit test failures, please call out the solo test result and whether it's part of flaky (nightly) tests dashboard, e.g. [dashboard of master branch](https://builds.apache.org/view/H-L/view/HBase/job/HBase-Find-Flaky-Tests/job/master/lastSuccessfulBuild/artifact/dashboard.html) (please change the test branch accordingly).
 
 ### Additional Verifications for Voting Release Candidates
 
 Other than the common verifications, contributors may call out additional concerns, e.g. for a specific feature by running end to end tests on a distributed environment. This is optional and always encouraged.
 
-* Start a distributed HBase cluster and call out the test result of specific workload on cluster. e.g.
-** Run basic table operations, e.g. `create/put/get/scan/flush/list/disable/drop`
-** Run built-in tests, e.g. `LoadTestTool` (LTT) and `IntegrationTestBigLinkedList` (ITBLL)
+- Start a distributed HBase cluster and call out the test result of specific workload on cluster. e.g.
+  ** Run basic table operations, e.g. `create/put/get/scan/flush/list/disable/drop`
+  ** Run built-in tests, e.g. `LoadTestTool` (LTT) and `IntegrationTestBigLinkedList` (ITBLL)
 
 ## Announcing Releases
 
-Once an RC has passed successfully and the needed artifacts have been staged for disribution, you'll need to let everyone know about our shiny new release. It's not a requirement, but to make things easier for release managers we have a template you can start with. Be sure you replace \_version_ and other markers with the relevant version numbers. You should manually verify all links before sending.
+Once an RC has passed successfully and the needed artifacts have been staged for disribution, you'll need to let everyone know about our shiny new release. It's not a requirement, but to make things easier for release managers we have a template you can start with. Be sure you replace \_version\_ and other markers with the relevant version numbers. You should manually verify all links before sending.
 
 ```text
 The HBase team is happy to announce the immediate availability of HBase _version_.
@@ -1096,14 +1104,14 @@ If you have previously done a `mvn install`, then you can instruct maven to run 
 
 Alternatively, you may limit the shell tests that run using the system variable `shell.test`.
 This value should specify the ruby literal equivalent of a particular test case by name.
-For example, the tests that cover the shell commands for altering tables are contained in the test case `AdminAlterTableTest`        and you can run them with:
+For example, the tests that cover the shell commands for altering tables are contained in the test case `AdminAlterTableTest` and you can run them with:
 
 ```bash
       mvn clean test -pl hbase-shell -Dshell.test=/AdminAlterTableTest/
 ```
 
 You may also use a [Ruby Regular Expression
-      literal](https://docs.ruby-lang.org/en/master/syntax/literals_rdoc.html#label-Regexp+Literals) (in the `/pattern/` style) to select a set of test cases.
+literal](https://docs.ruby-lang.org/en/master/syntax/literals_rdoc.html#label-Regexp+Literals) (in the `/pattern/` style) to select a set of test cases.
 You can run all of the HBase admin related tests, including both the normal administration and the security administration, with the command:
 
 ```bash
@@ -1148,7 +1156,7 @@ Also, keep in mind that if you are running tests in the `hbase-server` module yo
 
 Apache HBase unit tests must carry a Category annotation and
 as of `hbase-2.0.0`, must be stamped with the HBase `ClassRule`.
-Here is an example of what a Test Class looks like with a 
+Here is an example of what a Test Class looks like with a
 Category and ClassRule included:
 
 ```java
@@ -1165,6 +1173,7 @@ public class TestHRegionInfo {
   }
 }
 ```
+
 Here the Test Class is `TestHRegionInfo`. The `CLASS_RULE` has
 the same form in every test class only the `.class` you pass
 is that of the local test; i.e. in the TestTimeout Test Class, you'd
@@ -1194,30 +1203,30 @@ to put on your new HBase test case.
 
 .Categorizing Tests
 **Small Tests (((SmallTests)))**:
-  _Small_ test cases are executed in separate JVM and each test suite/test class should
-   run in 15 seconds or less; i.e. a [junit test fixture](https://en.wikipedia.org/wiki/JUnit), a java object made
-   up of test methods, should finish in under 15 seconds, no matter how many or how few test methods
-   it has. These test cases should not use a minicluster as a minicluster starts many services,
-   most unrelated to what is being tested.
+_Small_ test cases are executed in separate JVM and each test suite/test class should
+run in 15 seconds or less; i.e. a [junit test fixture](https://en.wikipedia.org/wiki/JUnit), a java object made
+up of test methods, should finish in under 15 seconds, no matter how many or how few test methods
+it has. These test cases should not use a minicluster as a minicluster starts many services,
+most unrelated to what is being tested.
 
 **Medium Tests (((MediumTests)))**:
-  _Medium_ test cases are executed in separate JVM and individual test suites or test classes or in
-  junit parlance, [test fixture](https://en.wikipedia.org/wiki/JUnit), should run in 50 seconds
-   or less. These test cases can use a mini cluster. Since we start up a JVM per test fixture (and
-   often a cluster too), be sure to make the startup pay by writing test fixtures that do a lot of
-   testing running tens of seconds perhaps combining test rather than spin up a jvm (and cluster)
-   per test method; this practice will help w/ overall test times.
+_Medium_ test cases are executed in separate JVM and individual test suites or test classes or in
+junit parlance, [test fixture](https://en.wikipedia.org/wiki/JUnit), should run in 50 seconds
+or less. These test cases can use a mini cluster. Since we start up a JVM per test fixture (and
+often a cluster too), be sure to make the startup pay by writing test fixtures that do a lot of
+testing running tens of seconds perhaps combining test rather than spin up a jvm (and cluster)
+per test method; this practice will help w/ overall test times.
 
 **Large Tests (((LargeTests)))**:
-  _Large_ test cases are everything else. They are typically large-scale tests, regression tests
-  for specific bugs, timeout tests, or performance tests. No large test suite can take longer than
-  thirteen minutes. It will be killed as timed out. Cast your test as an Integration Test if it needs
-  to run longer.
+_Large_ test cases are everything else. They are typically large-scale tests, regression tests
+for specific bugs, timeout tests, or performance tests. No large test suite can take longer than
+thirteen minutes. It will be killed as timed out. Cast your test as an Integration Test if it needs
+to run longer.
 
 **Integration Tests (((IntegrationTests)))**:
-  _Integration_ tests are system level tests.
-  See [integration.tests](#integration.tests) for more info.
-  If you invoke `$ mvn test` on integration tests, there is no timeout for the test.
+_Integration_ tests are system level tests.
+See [integration.tests](#integration.tests) for more info.
+If you invoke `$ mvn test` on integration tests, there is no timeout for the test.
 
 ### Running tests
 
@@ -1258,10 +1267,13 @@ a small test.
 
 To run an individual test, e.g. `MyTest`, rum `mvn test -Dtest=MyTest` You can also pass multiple,
 individual tests as a comma-delimited list:
+
 ```bash
 mvn test  -Dtest=MyTest1,MyTest2,MyTest3
 ```
+
 You can also pass a package, which will run all tests under the package:
+
 ```bash
 mvn test '-Dtest=org.apache.hadoop.hbase.client.*'
 ```
@@ -1270,7 +1282,7 @@ When `-Dtest` is specified, the `localTests` profile will be used.
 Each junit test is executed in a separate JVM (A fork per test class).
 There is no parallelization when tests are running in this mode.
 You will see a new message at the end of the -report: `"[INFO] Tests are skipped"`.
-It's harmless.  However, you need to make sure the sum of
+It's harmless. However, you need to make sure the sum of
 `Tests run:` in the `Results:` section of test reports matching the number of tests
 you specified because no error will be reported when a non-existent test case is specified.
 
@@ -1297,7 +1309,7 @@ maven, where `N` is the amount of _module_ parallelism wanted.
 For example, allowing that you want to use all cores on a machine to run tests,
 you could start up the maven test run with:
 
-```
+```bash
   $ x="1.0C";  mvn -Dsurefire.firstPartForkCount=$x -Dsurefire.secondPartForkCount=$x test -PrunAllTests
 ```
 
@@ -1308,7 +1320,7 @@ and move up gradually.
 
 Adding the `--threads=N`, maven will run N maven modules in parallel (when module inter-dependencies allow). Be aware, if you have
 set the forkcount to `1.0C`, and the `--threads` count to '2', the number of concurrent test runners can approach
-2 * CPU, a count likely to overcommit the host machine (with attendant test exits failures).
+2 \* CPU, a count likely to overcommit the host machine (with attendant test exits failures).
 
 You will need ~2.2GB of memory per forked JVM plus the memory used by maven itself (3-4G).
 
@@ -1317,14 +1329,14 @@ You will need ~2.2GB of memory per forked JVM plus the memory used by maven itse
 To increase the speed, you can as well use a ramdisk. 2-3G should be sufficient. Be sure to
 delete the files between each test run. The typical way to configure a ramdisk on Linux is:
 
-```
+```bash
 $ sudo mkdir /ram2G
 sudo mount -t tmpfs -o size=2048M tmpfs /ram2G
 ```
 
 You can then use it to run all HBase tests on 2.0 with the command:
 
-```
+```bash
 mvn test -PrunAllTests -Dtest.build.data.basedirectory=/ram2G
 ```
 
@@ -1337,15 +1349,17 @@ It must be executed from the directory which contains the _pom.xml_.
 
 For example running `./dev-support/hbasetests.sh` will execute small and medium tests.
 Running +./dev-support/hbasetests.sh
-                        runAllTests+ will execute all tests.
+runAllTests+ will execute all tests.
 Running `./dev-support/hbasetests.sh replayFailed` will rerun the failed tests a second time, in a separate jvm and without parallelisation.
 
 #### Test Timeouts(((Test Timeouts)))
+
 The HBase unit test sizing Categorization timeouts are not strictly enforced.
 
 Any test that runs longer than ten minutes will be timedout/killed.
 
 As of hbase-2.0.0, we have purged all per-test-method timeouts: i.e.
+
 ```java
 ...
   @Test(timeout=30000)
@@ -1353,24 +1367,23 @@ As of hbase-2.0.0, we have purged all per-test-method timeouts: i.e.
     // ...
   }
 ```
+
 They are discouraged and don't make much sense given we are timing
-base of how long the whole Test Fixture/Class/Suite takes and 
+base of how long the whole Test Fixture/Class/Suite takes and
 that the variance in how long a test method takes varies wildly
 dependent upon context (loaded Apache Infrastructure versus
 developer machine with nothing else running on it).
 
-
-
 #### Test Resource Checker(((Test ResourceChecker)))
 
-A custom Maven SureFire plugin listener checks a number of resources before and after each HBase unit test runs and logs its findings at the end of the test output files which can be found in _target/surefire-reports_                    per Maven module (Tests write test reports named for the test class into this directory.
-Check the _*-out.txt_ files). The resources counted are the number of threads, the number of file descriptors, etc.
+A custom Maven SureFire plugin listener checks a number of resources before and after each HBase unit test runs and logs its findings at the end of the test output files which can be found in _target/surefire-reports_ per Maven module (Tests write test reports named for the test class into this directory.
+Check the _\*-out.txt_ files). The resources counted are the number of threads, the number of file descriptors, etc.
 If the number has increased, it adds a _LEAK?_ comment in the logs.
 As you can have an HBase instance running in the background, some threads can be deleted/created without any specific action in the test.
-However, if the test does not work as expected, or if the test should not impact these resources, it's worth checking these log lines [computeroutput]`...hbase.ResourceChecker(157): before...`                    and [computeroutput]`...hbase.ResourceChecker(157): after...`.
+However, if the test does not work as expected, or if the test should not impact these resources, it's worth checking these log lines [computeroutput]`...hbase.ResourceChecker(157): before...` and [computeroutput]`...hbase.ResourceChecker(157): after...`.
 For example:
 
-```
+```text
 2012-09-26 09:22:15,315 INFO [pool-1-thread-1]
 hbase.ResourceChecker(157): after:
 regionserver.TestColumnSeeking#testReseeking Thread=65 (was 65),
@@ -1382,18 +1395,18 @@ ConnectionCount=1 (was 1)
 
 #### General rules
 
-* As much as possible, tests should be written as category small tests.
-* All tests must be written to support parallel execution on the same machine, hence they should not use shared resources as fixed ports or fixed file names.
-* Tests should not overlog.
+- As much as possible, tests should be written as category small tests.
+- All tests must be written to support parallel execution on the same machine, hence they should not use shared resources as fixed ports or fixed file names.
+- Tests should not overlog.
   More than 100 lines/second makes the logs complex to read and use i/o that are hence not available for the other tests.
-* Tests can be written with `HBaseTestingUtility`.
+- Tests can be written with `HBaseTestingUtility`.
   This class offers helper functions to create a temp directory and do the cleanup, or to start a cluster.
 
 #### Categories and execution time
 
-* All tests must be categorized, if not they could be skipped.
-* All tests should be written to be as fast as possible.
-* See [hbase.unittests](#hbase.unittests) for test case categories and corresponding timeouts.
+- All tests must be categorized, if not they could be skipped.
+- All tests should be written to be as fast as possible.
+- See [hbase.unittests](#hbase.unittests) for test case categories and corresponding timeouts.
   This should ensure a good parallelization for people using it, and ease the analysis when the test fails.
 
 #### Sleeps in tests
@@ -1420,6 +1433,7 @@ This will allow to share the cluster later.
 #### Tests Skeleton Code
 
 Here is a test skeleton code with Categorization and a Category-based timeout rule to copy and paste and use as basis for test contribution.
+
 ```java
 /**
  * Describe what this testcase tests. Talk about resources initialized in @BeforeClass (before
@@ -1482,18 +1496,23 @@ To run these, test process should be able to run commands on remote end, so ssh 
 The default string is \{`/usr/bin/ssh %1$s %2$s%3$s%4$s "%5$s"`\} and is a good starting point.
 This is a standard Java format string with 5 arguments that is used to execute the remote command.
 The argument 1 (%1$s) is SSH options set the via opts setting or via environment variable, 2 is SSH user name, 3 is "@" if username is set or "" otherwise, 4 is the target host name, and 5 is the logical command to execute (that may include single quotes, so don't use them). For example, if you run the tests under non-hbase user and want to ssh as that user and change to hbase on remote machine, you can use:
+
 ```bash
 /usr/bin/ssh %1$s %2$s%3$s%4$s "su hbase - -c \"%5$s\""
 ```
+
 That way, to kill RS (for example) integration tests may run:
+
 ```bash
 {/usr/bin/ssh some-hostname "su hbase - -c \"ps aux | ... | kill ...\""}
 ```
+
 The command is logged in the test logs, so you can verify it is correct for your environment.
 
 To disable the running of Integration Tests, pass the following profile on the command line `-PskipIntegrationTests`.
 For example,
-```
+
+```bash
 $ mvn clean install test -Dtest=TestZooKeeper  -PskipIntegrationTests
 ```
 
@@ -1501,7 +1520,7 @@ $ mvn clean install test -Dtest=TestZooKeeper  -PskipIntegrationTests
 
 HBase 0.92 added a `verify` maven target.
 Invoking it, for example by doing `mvn verify`, will run all the phases up to and including the verify phase via the maven [failsafe
-                        plugin](https://maven.apache.org/plugins/maven-failsafe-plugin/), running all the above mentioned HBase unit tests as well as tests that are in the HBase integration test group.
+plugin](https://maven.apache.org/plugins/maven-failsafe-plugin/), running all the above mentioned HBase unit tests as well as tests that are in the HBase integration test group.
 After you have completed `mvn install -DskipTests` You can run just the integration tests by invoking:
 
 ```bash
@@ -1512,20 +1531,21 @@ mvn verify
 
 If you just want to run the integration tests in top-level, you need to run two commands.
 First:
-```
+
+```bash
 mvn failsafe:integration-test
 ```
 
 This actually runs ALL the integration tests.
 
 <Callout type="info">
-This command will always output `BUILD SUCCESS` even if there are test failures.
+  This command will always output `BUILD SUCCESS` even if there are test failures.
 </Callout>
-
 
 At this point, you could grep the output by hand looking for failed tests.
 However, maven will do this for us; just use:
-```
+
+```bash
 mvn failsafe:verify
 ```
 
@@ -1535,16 +1555,20 @@ The above command basically looks at all the test results (so don't remove the '
 
 This is very similar to how you specify running a subset of unit tests (see above), but use the property `it.test` instead of `test`.
 To just run `IntegrationTestClassXYZ.java`, use:
-```
+
+```bash
 mvn failsafe:integration-test -Dit.test=IntegrationTestClassXYZ -DfailIfNoTests=false
 ```
-The next thing you might want to do is run groups of integration tests, say all integration tests that are named IntegrationTestClassX*.java:
-```
+
+The next thing you might want to do is run groups of integration tests, say all integration tests that are named IntegrationTestClassX\*.java:
+
+```bash
 mvn failsafe:integration-test -Dit.test=*ClassX* -DfailIfNoTests=false
 ```
 
-This runs everything that is an integration test that matches *ClassX*. This means anything matching: "**/IntegrationTest*ClassX*". You can also run multiple groups of integration tests using comma-delimited lists (similar to unit tests). Using a list of matches still supports full regex matching for each of the groups. This would look something like:
-```
+This runs everything that is an integration test that matches _ClassX_. This means anything matching: "\**/IntegrationTest*ClassX\*". You can also run multiple groups of integration tests using comma-delimited lists (similar to unit tests). Using a list of matches still supports full regex matching for each of the groups. This would look something like:
+
+```bash
 mvn failsafe:integration-test -Dit.test=*ClassX*,*ClassY -DfailIfNoTests=false
 ```
 
@@ -1553,9 +1577,11 @@ mvn failsafe:integration-test -Dit.test=*ClassX*,*ClassY -DfailIfNoTests=false
 If you have an already-setup HBase cluster, you can launch the integration tests by invoking the class `IntegrationTestsDriver`.
 You may have to run test-compile first.
 The configuration will be picked by the bin/hbase script.
+
 ```bash
 mvn test-compile
 ```
+
 Then launch the tests with:
 
 ```bash
@@ -1572,23 +1598,21 @@ Currently there is no support for running integration tests against a distribute
 The tests interact with the distributed cluster by using the methods in the `DistributedHBaseCluster` (implementing `HBaseCluster`) class, which in turn uses a pluggable `ClusterManager`.
 Concrete implementations provide actual functionality for carrying out deployment-specific and environment-dependent tasks (SSH, etc). The default `ClusterManager` is `HBaseClusterManager`, which uses SSH to remotely execute start/stop/kill/signal commands, and assumes some posix commands (ps, etc). Also assumes the user running the test has enough "power" to start/stop servers on the remote machines.
 By default, it picks up `HBASE_SSH_OPTS`, `HBASE_HOME`, `HBASE_CONF_DIR` from the env, and uses `bin/hbase-daemon.sh` to carry out the actions.
-Currently tarball deployments, deployments which uses _hbase-daemons.sh_, and [Apache Ambari](https://incubator.apache.org/ambari/)                    deployments are supported.
+Currently tarball deployments, deployments which uses _hbase-daemons.sh_, and [Apache Ambari](https://incubator.apache.org/ambari/) deployments are supported.
 _/etc/init.d/_ scripts are not supported for now, but it can be easily added.
 For other deployment options, a ClusterManager can be implemented and plugged in.
 
 Some integration tests define a _main_ method as entry point, and can be run on its' own, rather than using the test driver. For example, the _itbll_ test can be run as follows:
 
-```
+```bash
 bin/hbase org.apache.hadoop.hbase.test.IntegrationTestBigLinkedList loop 2 1 100000 /temp 1 1000 50 1 0
 ```
 
 <Callout type="info">
-The _hbase_ script assumes all integration tests with exposed _main_ methods to be run
-against a distributed cluster will follow the *IntegrationTest* regex naming pattern
-mentioned above, in order to proper set test dependencies into the classpath.
+  The _hbase_ script assumes all integration tests with exposed _main_ methods to be run against a
+  distributed cluster will follow the *IntegrationTest* regex naming pattern mentioned above, in
+  order to proper set test dependencies into the classpath.
 </Callout>
-
-
 
 #### Destructive integration / system tests (ChaosMonkey)
 
@@ -1601,17 +1625,17 @@ to run a policy while other tests are running. In some environments, ChaosMonkey
 always running, in order to constantly check that high availability and fault tolerance
 are working as expected.
 
-ChaosMonkey defines *Actions* and *Policies*.
+ChaosMonkey defines _Actions_ and _Policies_.
 
 **Actions**: Actions are predefined sequences of events, such as the following:
 
-* Restart active master (sleep 5 sec)
-* Restart random regionserver (sleep 5 sec)
-* Restart random regionserver (sleep 60 sec)
-* Restart META regionserver (sleep 5 sec)
-* Restart ROOT regionserver (sleep 5 sec)
-* Batch restart of 50% of regionservers (sleep 5 sec)
-* Rolling restart of 100% of regionservers (sleep 5 sec)
+- Restart active master (sleep 5 sec)
+- Restart random regionserver (sleep 5 sec)
+- Restart random regionserver (sleep 60 sec)
+- Restart META regionserver (sleep 5 sec)
+- Restart ROOT regionserver (sleep 5 sec)
+- Batch restart of 50% of regionservers (sleep 5 sec)
+- Rolling restart of 100% of regionservers (sleep 5 sec)
 
 **Policies**: A policy is a strategy for executing one or more actions. The default policy
 executes a random action every minute based on predefined action weights.
@@ -1670,6 +1694,7 @@ Chaos monkey can be run without SSH using the Chaos service and ZNode cluster ma
 with many cluster managers, available in the `hbase-it/src/test/java/org/apache/hadoop/hbase/` directory.
 
 Set the following property in hbase configuration to switch to `ZNodeClusterManager`:
+
 ```xml
 <property>
   <name>hbase.it.clustermanager.class</name>
@@ -1685,6 +1710,7 @@ $ bin/hbase org.apache.hadoop.hbase.chaos.ChaosService -c start
 
 Start chaos monkey runner from any one host, preferrably an edgenode.
 An example log while running chaos monkey with default policy `PeriodicRandomActionPolicy` is as shown below:
+
 ```bash
 $ bin/hbase org.apache.hadoop.hbase.chaos.util.ChaosMonkeyRunner
 
@@ -1722,6 +1748,7 @@ INFO  [ChaosMonkey-3] policies.Policy: Sleeping for 89614 ms
 
 For info on more customisations we can see help for the `ChaosMonkeyRunner`. For example we can pass the table name on which the chaos operations to be performed etc.
 Below is the output of the help command, listing all the supported options.
+
 ```bash
 $ bin/hbase org.apache.hadoop.hbase.chaos.util.ChaosMonkeyRunner --help
 
@@ -1735,11 +1762,13 @@ Options:
 ```
 
 For example, running the following will start `ServerKillingMonkeyFactory` that chooses among actions to rolling batch restart RS, graceful rolling restart RS one at a time, restart active master, force balancer run etc.
+
 ```bash
 $ bin/hbase org.apache.hadoop.hbase.chaos.util.ChaosMonkeyRunner -m org.apache.hadoop.hbase.chaos.factories.ServerKillingMonkeyFactory
 ```
 
 #### Available Policies
+
 HBase ships with several ChaosMonkey policies, available in the
 `hbase/hbase-it/src/test/java/org/apache/hadoop/hbase/chaos/policies/` directory.
 
@@ -1764,7 +1793,8 @@ properties file _monkey.properties_ on the HBase CLASSPATH; e.g. inside the HBAS
 Here is an example chaos monkey file:
 
 .Example ChaosMonkey Properties File
-```
+
+```properties
 sdm.action1.period=120000
 sdm.action2.period=40000
 move.regions.sleep.time=80000
@@ -1816,7 +1846,7 @@ aggressive than the pre-defined set of actions provided by _slowDeterministic_. 
 the _configurableSlowDeterministic_ policy can be used. It allows for a customizable set of
 _heavy weight_ actions to be defined in the _monkey.properties_ properties file:
 
-```
+```properties
 batch.restart.rs.ratio=0.3f
 heavy.actions=RestartRandomRsAction(500000);MoveRandomRegionOfTableAction(360000,$table_name);SplitAllRegionOfTableAction($table_name)
 ```
@@ -1835,11 +1865,9 @@ When specifying monkey actions, make sure to define all required constructor par
 that require a table name parameter, the _$table_name_ placeholder can be specified, and it will
 automatically resort to the table created by the integration test run.
 
-If _heavy.actions_ property is omitted in the properties file,  _configurableSlowDeterministic_ will
+If _heavy.actions_ property is omitted in the properties file, _configurableSlowDeterministic_ will
 just run as the _slowDeterministic_ policy
 (it will execute all the heavy weight actions defined by _slowDeterministic_ policy).
-
-
 
 ## Developer Guidelines
 
@@ -1847,7 +1875,7 @@ just run as the _slowDeterministic_ policy
 
 We use Git for source code management and latest development happens on `master` branch. There are
 branches for past major/minor/maintenance releases and important features and bug fixes are often
- back-ported to them.
+back-ported to them.
 
 ### Policy for Fix Version in JIRA
 
@@ -1855,14 +1883,13 @@ To determine if a given fix is in a given release purely from the release number
 are defined:
 
 Fix version of X.Y.Z => fixed in all releases X.Y.Z' (where Z' = Z). +
-Fix version of X.Y.0 => fixed in all releases X.Y'.* (where Y' = Y). +
-Fix version of X.0.0 => fixed in all releases X'.\*.* (where X' = X). +
+Fix version of X.Y.0 => fixed in all releases X.Y'._ (where Y' = Y). +
+Fix version of X.0.0 => fixed in all releases X'.\*._ (where X' = X). +
 
 By this policy, fix version of 1.3.0 implies 1.4.0, but 1.3.2 does not imply 1.4.0 as we could not
 tell purely from the numbers which release came first.
 
 ### Code Standards
-
 
 #### Interface Classifications
 
@@ -1874,20 +1901,20 @@ The following interface classifications are commonly used:
 
 .InterfaceAudience
 **`@InterfaceAudience.Public`**:
-  APIs for users and HBase applications.
-  These APIs will be deprecated through major versions of HBase.
+APIs for users and HBase applications.
+These APIs will be deprecated through major versions of HBase.
 
 **`@InterfaceAudience.Private`**:
-  APIs for HBase internals developers.
-  No guarantees on compatibility or availability in future versions.
-  Private interfaces do not need an `@InterfaceStability` classification.
+APIs for HBase internals developers.
+No guarantees on compatibility or availability in future versions.
+Private interfaces do not need an `@InterfaceStability` classification.
 
 **`@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)`**:
-  APIs for HBase coprocessor writers.
+APIs for HBase coprocessor writers.
 
 **No `@InterfaceAudience` Classification**:
-  Packages without an `@InterfaceAudience` label are considered private.
-  Mark your new packages if publicly accessible.
+Packages without an `@InterfaceAudience` label are considered private.
+Mark your new packages if publicly accessible.
 
 .Excluding Non-Public Interfaces from API Documentation
 [NOTE]
@@ -1899,16 +1926,16 @@ Only interfaces classified `@InterfaceAudience.Public` should be included in API
 `@InterfaceStability` is important for packages marked `@InterfaceAudience.Public`.
 
 **`@InterfaceStability.Stable`**:
-  Public packages marked as stable cannot be changed without a deprecation path or a very good reason.
+Public packages marked as stable cannot be changed without a deprecation path or a very good reason.
 
 **`@InterfaceStability.Unstable`**:
-  Public packages marked as unstable can be changed without a deprecation path.
+Public packages marked as unstable can be changed without a deprecation path.
 
 **`@InterfaceStability.Evolving`**:
-  Public packages marked as evolving may be changed, but it is discouraged.
+Public packages marked as evolving may be changed, but it is discouraged.
 
 **No `@InterfaceStability` Label**:
-  Public classes with no `@InterfaceStability` label are discouraged, and should be considered implicitly unstable.
+Public classes with no `@InterfaceStability` label are discouraged, and should be considered implicitly unstable.
 
 If you are unclear about how to mark packages, ask on the development list.
 
@@ -1918,7 +1945,7 @@ Please adhere to the following guidelines so that your patches can be reviewed m
 These guidelines have been developed based upon common feedback on patches from new contributors.
 
 See the [Code
-                    Conventions for the Java Programming Language](http://www.oracle.com/technetwork/java/index-135089.html) for more information on coding conventions in Java.
+Conventions for the Java Programming Language](http://www.oracle.com/technetwork/java/index-135089.html) for more information on coding conventions in Java.
 See [eclipse.code.formatting](#eclipse.code.formatting) to setup Eclipse to check for some of
 these guidelines automatically.
 
@@ -2054,7 +2081,7 @@ Make sure that you're clear about what you are testing in your unit tests and wh
 #### Garbage-Collection Conserving Guidelines
 
 The following guidelines were borrowed from http://engineering.linkedin.com/performance/linkedin-feed-faster-less-jvm-garbage.
-Keep them in mind to keep preventable garbage  collection to a minimum. Have a look
+Keep them in mind to keep preventable garbage collection to a minimum. Have a look
 at the blog post for some great examples of how to refactor your code according to
 these guidelines.
 
@@ -2074,17 +2101,16 @@ All are subject to challenge of course but until then, please hold to the rules 
 
 ZooKeeper state should transient (treat it like memory). If ZooKeeper state is deleted, hbase should be able to recover and essentially be in the same state.
 
-* .Exceptions: There are currently a few exceptions that we need to fix around whether a table is enabled or disabled.
-* Replication data is currently stored only in ZooKeeper.
+- .Exceptions: There are currently a few exceptions that we need to fix around whether a table is enabled or disabled.
+- Replication data is currently stored only in ZooKeeper.
   Deleting ZooKeeper data related to replication may cause replication to be disabled.
   Do not delete the replication tree, _/hbase/replication/_.
 
 <Callout type="warning">
-Replication may be disrupted and data loss may occur if you delete the replication tree (_/hbase/replication/_) from ZooKeeper.
-Follow progress on this issue at [HBASE-10295](https://issues.apache.org/jira/browse/HBASE-10295).
+  Replication may be disrupted and data loss may occur if you delete the replication tree
+  (_/hbase/replication/_) from ZooKeeper. Follow progress on this issue at
+  [HBASE-10295](https://issues.apache.org/jira/browse/HBASE-10295).
 </Callout>
-
-
 
 ### Running In-Situ
 
@@ -2134,16 +2160,16 @@ For this the MetricsAssertHelper is provided.
 ### Git Best Practices
 
 **Avoid git merges.**:
-  Use `git pull --rebase` or `git fetch` followed by `git rebase`.
+Use `git pull --rebase` or `git fetch` followed by `git rebase`.
 **Do not use `git push --force`.**:
-  If the push does not work, fix the problem or ask for help.
+If the push does not work, fix the problem or ask for help.
 
 Please contribute to this document if you think of other Git best practices.
 
 #### `rebase_all_git_branches.sh`
 
 The _dev-support/rebase_all_git_branches.sh_ script is provided to help keep your Git repository clean.
-Use the `-h`                    parameter to get usage instructions.
+Use the `-h` parameter to get usage instructions.
 The script automatically refreshes your tracking branches, attempts an automatic rebase of each local branch against its remote branch, and gives you the option to delete any branch which represents a closed `HBASE-` JIRA.
 The script has one optional configuration option, the location of your Git directory.
 You can set a default by editing the script.
@@ -2153,8 +2179,8 @@ The script checks the directory for sub-directory called _.git/_, before proceed
 ### Submitting Patches
 
 If you are new to submitting patches to open source or new to submitting patches to Apache, start by
- reading the [On Contributing Patches](https://commons.apache.org/patches.html) page from
- [Apache Commons Project](https://commons.apache.org/).
+reading the [On Contributing Patches](https://commons.apache.org/patches.html) page from
+[Apache Commons Project](https://commons.apache.org/).
 It provides a nice overview that applies equally to the Apache HBase Project.
 
 Make sure you review [common.patch.feedback](#common.patch.feedback) for code style. If your patch
@@ -2165,24 +2191,26 @@ HBase enforces code style via a maven plugin. After you've written up your chang
 formatter before committing.
 
 ---
-$ mvn spotless:apply
----
+
+## $ mvn spotless:apply
 
 When your commit is ready, present it to the community as a
 [GitHub Pull Request](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-pull-requests).
 
 .Few general guidelines
-* Always patch against the master branch first, even if you want to patch in another branch.
+
+- Always patch against the master branch first, even if you want to patch in another branch.
   HBase committers always apply patches first to the master branch, and backport as necessary. For
   complex patches, you may be asked to perform the backport(s) yourself.
-* Submit one single PR for a single fix. If necessary, squash local commits to merge local commits
+- Submit one single PR for a single fix. If necessary, squash local commits to merge local commits
   into a single one first. See this
   [Stack Overflow
   question](http://stackoverflow.com/questions/5308816/how-to-use-git-merge-squash) for more information about squashing commits.
-* Please understand that not every patch may get committed, and that feedback will likely be
+- Please understand that not every patch may get committed, and that feedback will likely be
   provided on the patch.
 
 #### Unit Tests
+
 Always add and/or update relevant unit tests when making the changes.
 Make sure that new/changed unit tests pass locally before submitting the patch because it is faster
 than waiting for presubmit result which runs full test suite. This will save your own time and
@@ -2205,50 +2233,50 @@ Patches larger than one screen, or patches that will be tricky to review, should
 
 .Procedure: Use ReviewBoard
 . Register for an account if you don't already have one.
-  It does not use the credentials from [issues.apache.org](https://issues.apache.org).
-  Log in.
+It does not use the credentials from [issues.apache.org](https://issues.apache.org).
+Log in.
 . Click [label]#New Review Request#.
 . Choose the `hbase-git` repository.
-  Click Choose File to select the diff and optionally a parent diff.
-  Click btn:[Create
-  Review Request].
+Click Choose File to select the diff and optionally a parent diff.
+Click btn:[Create
+Review Request].
 . Fill in the fields as required.
-  At the minimum, fill in the [label]#Summary# and choose `hbase` as the [label]#Review Group#.
-  If you fill in the [label]#Bugs# field, the review board links back to the relevant JIRA.
-  The more fields you fill in, the better.
-  Click btn:[Publish] to make your review request public.
-  An email will be sent to everyone in the `hbase` group, to review the patch.
+At the minimum, fill in the [label]#Summary# and choose `hbase` as the [label]#Review Group#.
+If you fill in the [label]#Bugs# field, the review board links back to the relevant JIRA.
+The more fields you fill in, the better.
+Click btn:[Publish] to make your review request public.
+An email will be sent to everyone in the `hbase` group, to review the patch.
 . Back in your JIRA, click , and paste in the URL of your ReviewBoard request.
-  This attaches the ReviewBoard to the JIRA, for easy access.
+This attaches the ReviewBoard to the JIRA, for easy access.
 . To cancel the request, click .
 
 For more information on how to use ReviewBoard, see [the ReviewBoard
-                        documentation](http://www.reviewboard.org/docs/manual/1.5/).
+documentation](http://www.reviewboard.org/docs/manual/1.5/).
 
 #### GitHub
+
 Submitting [GitHub](https://github.com/apache/hbase) pull requests is another accepted form of
 contributing patches. Refer to GitHub [documentation](https://help.github.com/) for details on
 how to create pull requests.
 
 <Callout type="info">
-This section is incomplete and needs to be updated. Refer to
-[HBASE-23557](https://issues.apache.org/jira/browse/HBASE-23557)
+  This section is incomplete and needs to be updated. Refer to
+  [HBASE-23557](https://issues.apache.org/jira/browse/HBASE-23557)
 </Callout>
-
 
 ##### GitHub Tooling
 
 ====== Browser bookmarks
 
 Following is a useful javascript based browser bookmark that redirects from GitHub pull
-requests to the corresponding jira work item. This redirects based on the HBase jira  ID mentioned
+requests to the corresponding jira work item. This redirects based on the HBase jira ID mentioned
 in the issue title for the PR. Add the following javascript snippet as a browser bookmark to the
 tool bar. Clicking on it while you are on an HBase GitHub PR page redirects you to the corresponding
 jira item.
 
------
-javascript:location.href='https://issues.apache.org/jira/browse/'+document.getElementsByClassName("js-issue-title")[0].innerHTML.match(/HBASE-\d+/)[0];
------
+---
+
+## javascript:location.href='https://issues.apache.org/jira/browse/'+document.getElementsByClassName("js-issue-title")[0].innerHTML.match(/HBASE-\d+/)[0];
 
 #### Guide for HBase Committers
 
@@ -2268,34 +2296,34 @@ encouraged (and may be even more important to the health of HBase as a project a
 community). A non-exhaustive list of potential contributions (in no particular
 order):
 
-* [Update the documentation](#appendix_contributing_to_documentation) for new
+- [Update the documentation](#appendix_contributing_to_documentation) for new
   changes, best practices, recipes, and other improvements.
-* Keep the website up to date.
-* Perform testing and report the results. For instance, scale testing and
+- Keep the website up to date.
+- Perform testing and report the results. For instance, scale testing and
   testing non-standard configurations is always appreciated.
-* Maintain the shared Jenkins testing environment and other testing
+- Maintain the shared Jenkins testing environment and other testing
   infrastructure.
-* [Vote on release candidates](#hbase.rc.voting) after performing validation, even if non-binding.
+- [Vote on release candidates](#hbase.rc.voting) after performing validation, even if non-binding.
   A non-binding vote is a vote by a non-committer.
-* Provide input for discussion threads on the link:/mail-lists.html[mailing lists] (which usually have
+- Provide input for discussion threads on the link:/mail-lists.html[mailing lists] (which usually have
   `[DISCUSS]` in the subject line).
-* Answer questions questions on the user or developer mailing lists and on
+- Answer questions questions on the user or developer mailing lists and on
   Slack.
-* Make sure the HBase community is a welcoming one and that we adhere to our
+- Make sure the HBase community is a welcoming one and that we adhere to our
   link:/coc.html[Code of conduct]. Alert the PMC if you
   have concerns.
-* Review other people's work (both code and non-code) and provide public
+- Review other people's work (both code and non-code) and provide public
   feedback.
-* Report bugs that are found, or file new feature requests.
-* Triage issues and keep JIRA organized. This includes closing stale issues,
+- Report bugs that are found, or file new feature requests.
+- Triage issues and keep JIRA organized. This includes closing stale issues,
   labeling new issues, updating metadata, and other tasks as needed.
-* Mentor new contributors of all sorts.
-* Give talks and write blogs about HBase. Add these to the link:/[News] section
+- Mentor new contributors of all sorts.
+- Give talks and write blogs about HBase. Add these to the link:/[News] section
   of the website.
-* Provide UX feedback about HBase, the web UI, the CLI, APIs, and the website.
-* Write demo applications and scripts.
-* Help attract and retain a diverse community.
-* Interact with other projects in ways that benefit HBase and those other
+- Provide UX feedback about HBase, the web UI, the CLI, APIs, and the website.
+- Write demo applications and scripts.
+- Help attract and retain a diverse community.
+- Interact with other projects in ways that benefit HBase and those other
   projects.
 
 Not every individual is able to do all (or even any) of the items on this list.
@@ -2310,8 +2338,8 @@ trust and recognition.
 New committers are encouraged to first read Apache's generic committer
 documentation:
 
-* [Apache New Committer Guide](https://www.apache.org/dev/new-committers-guide.html)
-* [Apache Committer FAQ](https://www.apache.org/dev/committers.html)
+- [Apache New Committer Guide](https://www.apache.org/dev/new-committers-guide.html)
+- [Apache Committer FAQ](https://www.apache.org/dev/committers.html)
 
 ##### Review
 
@@ -2360,55 +2388,53 @@ pointers.
 When you commit a patch:
 
 . Include the Jira issue ID in the commit message along with a short description
-  of the change. Try to add something more than just the Jira title so that
-  someone looking at `git log` output doesn't have to go to Jira to discern what
-  the change is about. Be sure to get the issue ID right, because this causes
-  Jira to link to the change in Git (use the issue's "All" tab to see these
-  automatic links).
+of the change. Try to add something more than just the Jira title so that
+someone looking at `git log` output doesn't have to go to Jira to discern what
+the change is about. Be sure to get the issue ID right, because this causes
+Jira to link to the change in Git (use the issue's "All" tab to see these
+automatic links).
 . Commit the patch to a new branch based off `master` or the other intended
-  branch. It's a good idea to include the JIRA ID in the name of this branch.
-  Check out the relevant target branch where you want to commit, and make sure
-  your local branch has all remote changes, by doing a `git pull --rebase` or
-  another similar command. Next, cherry-pick the change into each relevant
-  branch (such as master), and push the changes to the remote branch using
-  a command such as `git push \<remote-server\> \<remote-branch\>`.
+branch. It's a good idea to include the JIRA ID in the name of this branch.
+Check out the relevant target branch where you want to commit, and make sure
+your local branch has all remote changes, by doing a `git pull --rebase` or
+another similar command. Next, cherry-pick the change into each relevant
+branch (such as master), and push the changes to the remote branch using
+a command such as `git push \<remote-server\> \<remote-branch\>`.
 
 <Callout type="warning">
-If you do not have all remote changes, the push will fail.
-If the push fails for any reason, fix the problem or ask for help.
-Do not do a `git push --force`.
+  If you do not have all remote changes, the push will fail. If the push fails for any reason, fix
+  the problem or ask for help. Do not do a `git push --force`.
 </Callout>
-
 
 Before you can commit a patch, you need to determine how the patch was created.
 The instructions and preferences around the way to create patches have changed,
 and there will be a transition period.
 
 .Determine How a Patch Was Created
-* If the first few lines of the patch look like the headers of an email, with a From, Date, and
+
+- If the first few lines of the patch look like the headers of an email, with a From, Date, and
   Subject, it was created using `git format-patch`. This is the preferred way, because you can
   reuse the submitter's commit message. If the commit message is not appropriate, you can still use
   the commit, then run `git commit --amend` and reword as appropriate.
-* If the first line of the patch looks similar to the following, it was created using +git diff+                                        without `--no-prefix`.
+- If the first line of the patch looks similar to the following, it was created using +git diff+ without `--no-prefix`.
   This is acceptable too.
   Notice the `a` and `b` in front of the file names.
   This is the indication that the patch was not created with `--no-prefix`.
 
-```
-diff --git a/src/main/asciidoc/_chapters/developer.adoc b/src/main/asciidoc/_chapters/developer.adoc
-```
+  ```diff
+  diff --git a/src/main/asciidoc/_chapters/developer.adoc b/src/main/asciidoc/_chapters/developer.adoc
+  ```
 
-* If the first line of the patch looks similar to the following (without the `a` and `b`), the
-patch was created with `git diff --no-prefix` and you need to add `-p0` to the `git apply` command
-below.
+- If the first line of the patch looks similar to the following (without the `a` and `b`), the
+  patch was created with `git diff --no-prefix` and you need to add `-p0` to the `git apply` command
+  below.
 
-```
-diff --git src/main/asciidoc/_chapters/developer.adoc src/main/asciidoc/_chapters/developer.adoc
-```
+  ```diff
+  diff --git src/main/asciidoc/_chapters/developer.adoc src/main/asciidoc/_chapters/developer.adoc
+  ```
 
+# .Example of committing a Patch
 
-.Example of committing a Patch
-====
 One thing you will notice with these examples is that there are a lot of
 `git pull` commands. The only command that actually writes anything to the
 remote repository is `git push`, and you need to make absolutely sure you have
@@ -2422,7 +2448,7 @@ The directive to use `git format-patch` rather than `git diff`, and not to use
 `--no-prefix`, is a new one. See the second example for how to apply a patch
 created with `git diff`, and educate the person who created the patch.
 
-```
+```bash
 $ git checkout -b HBASE-XXXX
 $ git am ~/Downloads/HBASE-XXXX-v2.patch --signoff  # If you are committing someone else's patch.
 $ git checkout master
@@ -2446,7 +2472,7 @@ This example shows how to commit a patch that was created using `git diff`
 without `--no-prefix`. If the patch was created with `--no-prefix`, add `-p0` to
 the `git apply` command.
 
-```
+```bash
 $ git apply ~/Downloads/HBASE-XXXX-v2.patch
 $ git commit -m "HBASE-XXXX Really Good Code Fix (Joe Schmo)" --author=<contributor> -a  # This and next command is needed for patches created with 'git diff'
 $ git commit --amend --signoff
@@ -2466,23 +2492,24 @@ $ git pull --rebase           # Better safe than sorry
 $ git push origin branch-1
 $ git branch -D HBASE-XXXX
 ```
+
 ====
 
 . Resolve the issue as fixed, thanking the contributor.
-  Always set the "Fix Version" at this point, but only set a single fix version
-  for each branch where the change was committed, the earliest release in that
-  branch in which the change will appear.
+Always set the "Fix Version" at this point, but only set a single fix version
+for each branch where the change was committed, the earliest release in that
+branch in which the change will appear.
 
 ====== Commit Message Format
 
 The commit message should contain the JIRA ID and a description of what the patch does.
 The preferred commit message format is:
 
-```
+```text
 <jira-id> <jira-title> (<contributor-name-if-not-commit-author>)
 ```
 
-```
+```text
 HBASE-12345 Fix All The Things (jane@example.com)
 ```
 
@@ -2494,8 +2521,8 @@ the front of the commit message, even if the contributor left it out.
 
 We've established the practice of committing to master and then cherry picking back to branches whenever possible, unless
 
-* it's breaking compat: In which case, if it can go in minor releases, backport to branch-1 and branch-2.
-* it's a new feature: No for maintenance releases, For minor releases, discuss and arrive at consensus.
+- it's breaking compat: In which case, if it can go in minor releases, backport to branch-1 and branch-2.
+- it's a new feature: No for maintenance releases, For minor releases, discuss and arrive at consensus.
 
 There are occasions when there are multiple author for a patch.
 For example when there is a minor conflict we can fix it up and just proceed with the commit.
@@ -2510,6 +2537,7 @@ In short, these are the steps to add Co-authors that will be tracked by GitHub:
 . On the next line of the commit message, type `Co-authored-by: name \<name@example.com\>`. After the co-author information, add a closing quotation mark.
 
 Here is the example from the GitHub page, using 2 Co-authors:
+
 ```bash
 $ git commit -m "Refactor usability tests.
 >
@@ -2536,7 +2564,7 @@ A committer should.
 ====== Patching Etiquette
 
 In the thread [HBase, mail # dev - ANNOUNCEMENT: Git Migration In Progress (WAS =>
-                                Re: Git Migration)](https://lists.apache.org/thread.html/186fcd5eb71973a7b282ecdba41606d3d221efd505d533bb729e1fad%401400648690%40%3Cdev.hbase.apache.org%3E), it was agreed on the following patch flow
+Re: Git Migration)](https://lists.apache.org/thread.html/186fcd5eb71973a7b282ecdba41606d3d221efd505d533bb729e1fad%401400648690%40%3Cdev.hbase.apache.org%3E), it was agreed on the following patch flow
 
 . Develop and commit the patch against master first.
 . Try to cherry-pick the patch when backporting if possible.
@@ -2629,6 +2657,8 @@ for developing new HBase-related Maven archetypes, please see
 
 **ifdef**:backend-docbook[]
 [index]
+
 ## Index
+
 // Generated automatically by the DocBook toolchain.
 **endif**:backend-docbook[]
