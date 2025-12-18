@@ -27,6 +27,8 @@ import java.net.URL;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 
 public class TestServerHttpUtils {
+  private static final String PLAIN_TEXT_UTF8 = "text/plain;charset=utf-8";
+
   private TestServerHttpUtils() {
   }
 
@@ -42,6 +44,16 @@ public class TestServerHttpUtils {
     assertEquals(mimeType, conn.getContentType());
 
     return TestServerHttpUtils.getResponseBody(conn);
+  }
+
+  public static String getMasterPageContent(LocalHBaseCluster cluster) throws IOException {
+    URL debugDumpUrl = new URL(getMasterInfoServerHostAndPort(cluster) + "/dump");
+    return getPageContent(debugDumpUrl, PLAIN_TEXT_UTF8);
+  }
+
+  public static String getRegionServerPageContent(String hostName, int port) throws IOException {
+    URL debugDumpUrl = new URL("http://" + hostName + ":" + port + "/dump");
+    return getPageContent(debugDumpUrl, PLAIN_TEXT_UTF8);
   }
 
   private static String getResponseBody(HttpURLConnection conn) throws IOException {

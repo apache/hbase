@@ -18,15 +18,18 @@
 package org.apache.hadoop.hbase.http;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -45,6 +48,8 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class performs tests that ensure sensitive config values found in the HBase UI's Debug Dump
@@ -53,12 +58,14 @@ import org.junit.experimental.categories.Category;
  */
 @Category({ MiscTests.class, SmallTests.class })
 public class TestDebugDumpRedaction {
+  private static final Logger LOG = LoggerFactory.getLogger(TestDebugDumpRedaction.class);
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static final String XML_CONFIGURATION_START_TAG = "<configuration>";
   private static final String XML_CONFIGURATION_END_TAG = "</configuration>";
   private static final int SUBSTRING_OFFSET = XML_CONFIGURATION_END_TAG.length();
-  private static final String PLAIN_TEXT_UTF8 = "text/plain;charset=utf-8";
   private static final String REDACTED_TEXT = "******";
+
+  // These are typical configuration properties whose values we would want to see redacted.
   private static final List<String> SENSITIVE_CONF_PROPERTIES =
     Arrays.asList("hbase.zookeeper.property.ssl.trustStore.password",
       "ssl.client.truststore.password", "hbase.rpc.tls.truststore.password",
@@ -68,7 +75,27 @@ public class TestDebugDumpRedaction {
       "fs.s3a.session.token", "fs.s3a.secret.session.token", "fs.azure.account.key.importantKey",
       "fs.azure.oauth2.token", "fs.adl.oauth2.token", "fs.gs.encryption.sensitive",
       "fs.gs.proxy.important", "fs.gs.auth.sensitive.info", "sensitive.credential",
-      "oauth.important.secret", "oauth.important.password", "oauth.important.token");
+      "oauth.important.secret", "oauth.important.password", "oauth.important.token",
+      "fs.adl.oauth2.access.token.provider.type", "hadoop.security.sensitive-config-keys");
+
+  // These are not typical configuration properties whose values we would want to see redacted,
+  // but we are testing their redaction anyway because we want to see how the redaction behaves
+  // with booleans and ints.
+  private static final List<String> NON_SENSITIVE_KEYS_WITH_DEFAULT_VALUES = Arrays.asList(
+    "hbase.zookeeper.quorum", "hbase.cluster.distributed", "hbase.master.logcleaner.ttl",
+    "hbase.master.hfilecleaner.plugins", "hbase.master.infoserver.redirect",
+    "hbase.thrift.minWorkerThreads", "hbase.table.lock.enable");
+
+  // We also want to verify the behavior for a string with value "null" and an empty string.
+  // (giving a config property an actual null value will throw an error)
+  private static final String NULL_CONFIG_KEY = "null.key";
+  private static final String EMPTY_CONFIG_KEY = "empty.key";
+
+  // Combine all properties we want to redact into one list
+  private static final List<String> REDACTED_PROPS =
+    Stream.of(SENSITIVE_CONF_PROPERTIES, NON_SENSITIVE_KEYS_WITH_DEFAULT_VALUES,
+      List.of(NULL_CONFIG_KEY, EMPTY_CONFIG_KEY)).flatMap(Collection::stream).toList();
+
   private static LocalHBaseCluster CLUSTER;
 
   @ClassRule
@@ -85,6 +112,25 @@ public class TestDebugDumpRedaction {
     for (String property : SENSITIVE_CONF_PROPERTIES) {
       conf.set(property, "testPassword");
     }
+
+    // Also verify a null string and empty string will get redacted.
+    // Setting the config to use an actual null value throws an error.
+    conf.set(NULL_CONFIG_KEY, "null");
+    conf.set(EMPTY_CONFIG_KEY, "");
+
+    // Config properties following these regex patterns will have their values redacted in the
+    // Debug Dump
+    String sensitiveKeyRegexes = "secret$,password$,ssl.keystore.pass$,"
+      + "fs.s3a.server-side-encryption.key,fs.s3a.*.server-side-encryption.key,"
+      + "fs.s3a.encryption.algorithm,fs.s3a.encryption.key,fs.s3a.secret.key,"
+      + "fs.s3a.*.secret.key,fs.s3a.session.key,fs.s3a.*.session.key,fs.s3a.session.token,"
+      + "fs.s3a.*.session.token,fs.azure.account.key.*,fs.azure.oauth2.*,fs.adl.oauth2.*,"
+      + "fs.gs.encryption.*,fs.gs.proxy.*,fs.gs.auth.*,credential$,oauth.*secret,"
+      + "oauth.*password,oauth.*token,hadoop.security.sensitive-config-keys,"
+      + String.join(",", NON_SENSITIVE_KEYS_WITH_DEFAULT_VALUES) + "," + NULL_CONFIG_KEY + ","
+      + EMPTY_CONFIG_KEY;
+
+    conf.set("hadoop.security.sensitive-config-keys", sensitiveKeyRegexes);
 
     UTIL.startMiniZKCluster();
 
@@ -114,9 +160,7 @@ public class TestDebugDumpRedaction {
 
   @Test
   public void testMasterPasswordsAreRedacted() throws IOException {
-    URL debugDumpUrl =
-      new URL(TestServerHttpUtils.getMasterInfoServerHostAndPort(CLUSTER) + "/dump");
-    String response = TestServerHttpUtils.getPageContent(debugDumpUrl, PLAIN_TEXT_UTF8);
+    String response = TestServerHttpUtils.getMasterPageContent(CLUSTER);
 
     // Verify this is the master server's debug dump
     assertTrue(
@@ -138,9 +182,8 @@ public class TestDebugDumpRedaction {
     int regionServerInfoPort = master.getRegionServerInfoPort(regionServerName);
     String regionServerHostname = regionServerName.getHostname();
 
-    URL debugDumpUrl =
-      new URL("http://" + regionServerHostname + ":" + regionServerInfoPort + "/dump");
-    String response = TestServerHttpUtils.getPageContent(debugDumpUrl, PLAIN_TEXT_UTF8);
+    String response =
+      TestServerHttpUtils.getRegionServerPageContent(regionServerHostname, regionServerInfoPort);
 
     // Verify this is the region server's debug dump
     assertTrue(response.startsWith("RegionServer status for " + regionServerName));
@@ -160,9 +203,21 @@ public class TestDebugDumpRedaction {
       conf.addResource(is, "DebugDumpXmlConfig");
     }
 
-    // Verify all sensitive properties have had their values redacted
-    for (String property : SENSITIVE_CONF_PROPERTIES) {
-      assertEquals(REDACTED_TEXT, conf.get(property));
+    // Verify the expected properties had their values redacted
+    for (String property : REDACTED_PROPS) {
+      LOG.info("Verifying property has been redacted: {}", property);
+      assertEquals("Expected " + property + " to have its value redacted", REDACTED_TEXT,
+        conf.get(property));
+    }
+
+    String propertyName;
+    for (Map.Entry<String, String> property : conf) {
+      propertyName = property.getKey();
+      if (!REDACTED_PROPS.contains(propertyName)) {
+        LOG.info("Verifying {} property has not had its value redacted", propertyName);
+        assertNotEquals("Expected property " + propertyName + " to not have its value redacted",
+          REDACTED_TEXT, conf.get(propertyName));
+      }
     }
   }
 }
