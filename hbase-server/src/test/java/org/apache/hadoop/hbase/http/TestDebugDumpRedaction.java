@@ -196,20 +196,21 @@ public class TestDebugDumpRedaction {
     String xmlString = response.substring(response.indexOf(XML_CONFIGURATION_START_TAG),
       response.indexOf(XML_CONFIGURATION_END_TAG) + SUBSTRING_OFFSET);
 
-    // Convert the XML string into an InputStream
+    // Convert the XML string into an InputStream.
     Configuration conf = new Configuration(false);
     try (InputStream is = new ByteArrayInputStream(xmlString.getBytes(StandardCharsets.UTF_8))) {
       // Add the InputStream as a resource to the Configuration object
       conf.addResource(is, "DebugDumpXmlConfig");
     }
 
-    // Verify the expected properties had their values redacted
+    // Verify the expected properties had their values redacted.
     for (String property : REDACTED_PROPS) {
       LOG.info("Verifying property has been redacted: {}", property);
       assertEquals("Expected " + property + " to have its value redacted", REDACTED_TEXT,
         conf.get(property));
     }
 
+    // Verify all other props have not had their values redacted.
     String propertyName;
     for (Map.Entry<String, String> property : conf) {
       propertyName = property.getKey();
