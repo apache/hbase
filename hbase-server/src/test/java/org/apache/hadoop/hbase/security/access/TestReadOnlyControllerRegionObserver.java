@@ -654,7 +654,7 @@ public class TestReadOnlyControllerRegionObserver {
   public void testPreCheckAndDeleteAfterRowLockV2NoException() throws IOException {
     readOnlyController.preCheckAndDeleteAfterRowLock(c, row, filter, delete, result);
   }
-  
+
   @Test
   public void testPreCheckAndDeleteAfterRowLockV2ReadOnlyMetaNoException() throws IOException {
     readOnlyController.onConfigurationChange(readOnlyConf);

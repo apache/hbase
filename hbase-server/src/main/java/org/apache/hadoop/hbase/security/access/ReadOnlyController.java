@@ -107,7 +107,7 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   private boolean isOnMeta(final ObserverContext<? extends RegionCoprocessorEnvironment> c) {
-    return c.getEnvironment().getRegionInfo().getTable().equals(TableName.META_TABLE_NAME);
+    return TableName.isMetaTableName(c.getEnvironment().getRegionInfo().getTable());
   }
 
   @Override
@@ -426,7 +426,7 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
   public void preWALAppend(ObserverContext<? extends RegionCoprocessorEnvironment> ctx, WALKey key,
     WALEdit edit) throws IOException {
     // Only allow this operation for meta table
-    if (!key.getTableName().equals(TableName.META_TABLE_NAME)) {
+    if (!TableName.isMetaTableName(key.getTableName())) {
       internalReadOnlyGuard();
     }
     RegionObserver.super.preWALAppend(ctx, key, edit);
