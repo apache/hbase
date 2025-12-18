@@ -17,15 +17,16 @@
  */
 package org.apache.hadoop.hbase.io.crypto;
 
+import static org.apache.hadoop.hbase.io.crypto.KeymetaTestUtils.ALIAS;
+import static org.apache.hadoop.hbase.io.crypto.KeymetaTestUtils.PASSWORD;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.net.URLEncoder;
 import java.security.Key;
 import java.security.KeyStore;
 import java.security.MessageDigest;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Properties;
 import javax.crypto.spec.SecretKeySpec;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -33,12 +34,15 @@ import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.BeforeClass;
+import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 @Category({ MiscTests.class, SmallTests.class })
+@RunWith(Parameterized.class)
 public class TestKeyStoreKeyProvider {
 
   @ClassRule
@@ -46,62 +50,53 @@ public class TestKeyStoreKeyProvider {
     HBaseClassTestRule.forClass(TestKeyStoreKeyProvider.class);
 
   static final HBaseCommonTestingUtil TEST_UTIL = new HBaseCommonTestingUtil();
-  static final String ALIAS = "test";
-  static final String PASSWORD = "password";
 
   static byte[] KEY;
-  static File storeFile;
-  static File passwordFile;
 
-  @BeforeClass
-  public static void setUp() throws Exception {
+  protected KeyProvider provider;
+
+  @Parameterized.Parameter(0)
+  public boolean withPasswordOnAlias;
+  @Parameterized.Parameter(1)
+  public boolean withPasswordFile;
+
+  @Parameterized.Parameters(name = "withPasswordOnAlias={0} withPasswordFile={1}")
+  public static Collection<Object[]> parameters() {
+    return Arrays
+      .asList(new Object[][] { { Boolean.TRUE, Boolean.TRUE }, { Boolean.TRUE, Boolean.FALSE },
+        { Boolean.FALSE, Boolean.TRUE }, { Boolean.FALSE, Boolean.FALSE }, });
+  }
+
+  @Before
+  public void setUp() throws Exception {
     KEY = MessageDigest.getInstance("SHA-256").digest(Bytes.toBytes(ALIAS));
-    // Create a JKECS store containing a test secret key
-    KeyStore store = KeyStore.getInstance("JCEKS");
-    store.load(null, PASSWORD.toCharArray());
-    store.setEntry(ALIAS, new KeyStore.SecretKeyEntry(new SecretKeySpec(KEY, "AES")),
-      new KeyStore.PasswordProtection(PASSWORD.toCharArray()));
-    // Create the test directory
-    String dataDir = TEST_UTIL.getDataTestDir().toString();
-    new File(dataDir).mkdirs();
-    // Write the keystore file
-    storeFile = new File(dataDir, "keystore.jks");
-    FileOutputStream os = new FileOutputStream(storeFile);
-    try {
-      store.store(os, PASSWORD.toCharArray());
-    } finally {
-      os.close();
-    }
-    // Write the password file
-    Properties p = new Properties();
-    p.setProperty(ALIAS, PASSWORD);
-    passwordFile = new File(dataDir, "keystore.pw");
-    os = new FileOutputStream(passwordFile);
-    try {
-      p.store(os, "");
-    } finally {
-      os.close();
-    }
+    String providerParams = KeymetaTestUtils.setupTestKeyStore(TEST_UTIL, withPasswordOnAlias,
+      withPasswordFile, store -> {
+        Properties p = new Properties();
+        try {
+          store.setEntry(ALIAS, new KeyStore.SecretKeyEntry(new SecretKeySpec(KEY, "AES")),
+            new KeyStore.PasswordProtection(
+              withPasswordOnAlias ? PASSWORD.toCharArray() : new char[0]));
+          addCustomEntries(store, p);
+        } catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+        return p;
+      });
+    provider = createProvider();
+    provider.init(providerParams);
+  }
+
+  protected KeyProvider createProvider() {
+    return new KeyStoreKeyProvider();
+  }
+
+  protected void addCustomEntries(KeyStore store, Properties passwdProps) throws Exception {
+    passwdProps.setProperty(ALIAS, PASSWORD);
   }
 
   @Test
-  public void testKeyStoreKeyProviderWithPassword() throws Exception {
-    KeyProvider provider = new KeyStoreKeyProvider();
-    provider.init("jceks://" + storeFile.toURI().getPath() + "?password=" + PASSWORD);
-    Key key = provider.getKey(ALIAS);
-    assertNotNull(key);
-    byte[] keyBytes = key.getEncoded();
-    assertEquals(keyBytes.length, KEY.length);
-    for (int i = 0; i < KEY.length; i++) {
-      assertEquals(keyBytes[i], KEY[i]);
-    }
-  }
-
-  @Test
-  public void testKeyStoreKeyProviderWithPasswordFile() throws Exception {
-    KeyProvider provider = new KeyStoreKeyProvider();
-    provider.init("jceks://" + storeFile.toURI().getPath() + "?passwordFile="
-      + URLEncoder.encode(passwordFile.getAbsolutePath(), "UTF-8"));
+  public void testKeyStoreKeyProvider() throws Exception {
     Key key = provider.getKey(ALIAS);
     assertNotNull(key);
     byte[] keyBytes = key.getEncoded();
