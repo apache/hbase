@@ -106,9 +106,8 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
     }
   }
 
-  private boolean
-    isOperationOnNonMetaTable(final ObserverContext<? extends RegionCoprocessorEnvironment> c) {
-    return !c.getEnvironment().getRegionInfo().getTable().equals(TableName.META_TABLE_NAME);
+  private boolean isOnMeta(final ObserverContext<? extends RegionCoprocessorEnvironment> c) {
+    return c.getEnvironment().getRegionInfo().getTable().equals(TableName.META_TABLE_NAME);
   }
 
   @Override
@@ -138,7 +137,7 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
   @Override
   public void preFlushScannerOpen(ObserverContext<? extends RegionCoprocessorEnvironment> c,
     Store store, ScanOptions options, FlushLifeCycleTracker tracker) throws IOException {
-    if (isOperationOnNonMetaTable(c)) {
+    if (!isOnMeta(c)) {
       internalReadOnlyGuard();
     }
     RegionObserver.super.preFlushScannerOpen(c, store, options, tracker);
@@ -147,7 +146,7 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
   @Override
   public void preFlush(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
     FlushLifeCycleTracker tracker) throws IOException {
-    if (isOperationOnNonMetaTable(c)) {
+    if (!isOnMeta(c)) {
       internalReadOnlyGuard();
     }
     RegionObserver.super.preFlush(c, tracker);
@@ -156,7 +155,7 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
   @Override
   public InternalScanner preFlush(ObserverContext<? extends RegionCoprocessorEnvironment> c,
     Store store, InternalScanner scanner, FlushLifeCycleTracker tracker) throws IOException {
-    if (isOperationOnNonMetaTable(c)) {
+    if (!isOnMeta(c)) {
       internalReadOnlyGuard();
     }
     return RegionObserver.super.preFlush(c, store, scanner, tracker);
@@ -189,7 +188,7 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
   public void preCompactSelection(ObserverContext<? extends RegionCoprocessorEnvironment> c,
     Store store, List<? extends StoreFile> candidates, CompactionLifeCycleTracker tracker)
     throws IOException {
-    if (isOperationOnNonMetaTable(c)) {
+    if (!isOnMeta(c)) {
       internalReadOnlyGuard();
     }
     RegionObserver.super.preCompactSelection(c, store, candidates, tracker);
@@ -199,7 +198,7 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
   public void preCompactScannerOpen(ObserverContext<? extends RegionCoprocessorEnvironment> c,
     Store store, ScanType scanType, ScanOptions options, CompactionLifeCycleTracker tracker,
     CompactionRequest request) throws IOException {
-    if (isOperationOnNonMetaTable(c)) {
+    if (!isOnMeta(c)) {
       internalReadOnlyGuard();
     }
     RegionObserver.super.preCompactScannerOpen(c, store, scanType, options, tracker, request);
@@ -209,7 +208,7 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
   public InternalScanner preCompact(ObserverContext<? extends RegionCoprocessorEnvironment> c,
     Store store, InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
     CompactionRequest request) throws IOException {
-    if (isOperationOnNonMetaTable(c)) {
+    if (!isOnMeta(c)) {
       internalReadOnlyGuard();
     }
     return RegionObserver.super.preCompact(c, store, scanner, scanType, tracker, request);
@@ -218,7 +217,7 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
   @Override
   public void prePut(ObserverContext<? extends RegionCoprocessorEnvironment> c, Put put,
     WALEdit edit, Durability durability) throws IOException {
-    if (isOperationOnNonMetaTable(c)) {
+    if (!isOnMeta(c)) {
       internalReadOnlyGuard();
     }
     RegionObserver.super.prePut(c, put, edit, durability);
@@ -227,7 +226,7 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
   @Override
   public void prePut(ObserverContext<? extends RegionCoprocessorEnvironment> c, Put put,
     WALEdit edit) throws IOException {
-    if (isOperationOnNonMetaTable(c)) {
+    if (!isOnMeta(c)) {
       internalReadOnlyGuard();
     }
     RegionObserver.super.prePut(c, put, edit);
@@ -236,7 +235,7 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
   @Override
   public void preDelete(ObserverContext<? extends RegionCoprocessorEnvironment> c, Delete delete,
     WALEdit edit, Durability durability) throws IOException {
-    if (isOperationOnNonMetaTable(c)) {
+    if (!isOnMeta(c)) {
       internalReadOnlyGuard();
     }
     RegionObserver.super.preDelete(c, delete, edit, durability);
@@ -245,7 +244,7 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
   @Override
   public void preDelete(ObserverContext<? extends RegionCoprocessorEnvironment> c, Delete delete,
     WALEdit edit) throws IOException {
-    if (isOperationOnNonMetaTable(c)) {
+    if (!isOnMeta(c)) {
       internalReadOnlyGuard();
     }
     RegionObserver.super.preDelete(c, delete, edit);
@@ -254,7 +253,7 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
   @Override
   public void preBatchMutate(ObserverContext<? extends RegionCoprocessorEnvironment> c,
     MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {
-    if (isOperationOnNonMetaTable(c)) {
+    if (!isOnMeta(c)) {
       internalReadOnlyGuard();
     }
     RegionObserver.super.preBatchMutate(c, miniBatchOp);
@@ -264,7 +263,7 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
   public boolean preCheckAndPut(ObserverContext<? extends RegionCoprocessorEnvironment> c,
     byte[] row, byte[] family, byte[] qualifier, CompareOperator op, ByteArrayComparable comparator,
     Put put, boolean result) throws IOException {
-    if (isOperationOnNonMetaTable(c)) {
+    if (!isOnMeta(c)) {
       internalReadOnlyGuard();
     }
     return RegionObserver.super.preCheckAndPut(c, row, family, qualifier, op, comparator, put,
@@ -274,7 +273,7 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
   @Override
   public boolean preCheckAndPut(ObserverContext<? extends RegionCoprocessorEnvironment> c,
     byte[] row, Filter filter, Put put, boolean result) throws IOException {
-    if (isOperationOnNonMetaTable(c)) {
+    if (!isOnMeta(c)) {
       internalReadOnlyGuard();
     }
     return RegionObserver.super.preCheckAndPut(c, row, filter, put, result);
@@ -285,7 +284,7 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
     ObserverContext<? extends RegionCoprocessorEnvironment> c, byte[] row, byte[] family,
     byte[] qualifier, CompareOperator op, ByteArrayComparable comparator, Put put, boolean result)
     throws IOException {
-    if (isOperationOnNonMetaTable(c)) {
+    if (!isOnMeta(c)) {
       internalReadOnlyGuard();
     }
     return RegionObserver.super.preCheckAndPutAfterRowLock(c, row, family, qualifier, op,
@@ -296,7 +295,7 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
   public boolean preCheckAndPutAfterRowLock(
     ObserverContext<? extends RegionCoprocessorEnvironment> c, byte[] row, Filter filter, Put put,
     boolean result) throws IOException {
-    if (isOperationOnNonMetaTable(c)) {
+    if (!isOnMeta(c)) {
       internalReadOnlyGuard();
     }
     return RegionObserver.super.preCheckAndPutAfterRowLock(c, row, filter, put, result);
@@ -306,7 +305,7 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
   public boolean preCheckAndDelete(ObserverContext<? extends RegionCoprocessorEnvironment> c,
     byte[] row, byte[] family, byte[] qualifier, CompareOperator op, ByteArrayComparable comparator,
     Delete delete, boolean result) throws IOException {
-    if (isOperationOnNonMetaTable(c)) {
+    if (!isOnMeta(c)) {
       internalReadOnlyGuard();
     }
     return RegionObserver.super.preCheckAndDelete(c, row, family, qualifier, op, comparator, delete,
@@ -316,7 +315,7 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
   @Override
   public boolean preCheckAndDelete(ObserverContext<? extends RegionCoprocessorEnvironment> c,
     byte[] row, Filter filter, Delete delete, boolean result) throws IOException {
-    if (isOperationOnNonMetaTable(c)) {
+    if (!isOnMeta(c)) {
       internalReadOnlyGuard();
     }
     return RegionObserver.super.preCheckAndDelete(c, row, filter, delete, result);
@@ -327,7 +326,7 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
     ObserverContext<? extends RegionCoprocessorEnvironment> c, byte[] row, byte[] family,
     byte[] qualifier, CompareOperator op, ByteArrayComparable comparator, Delete delete,
     boolean result) throws IOException {
-    if (isOperationOnNonMetaTable(c)) {
+    if (!isOnMeta(c)) {
       internalReadOnlyGuard();
     }
     return RegionObserver.super.preCheckAndDeleteAfterRowLock(c, row, family, qualifier, op,
@@ -338,7 +337,7 @@ public class ReadOnlyController implements MasterCoprocessor, RegionCoprocessor,
   public boolean preCheckAndDeleteAfterRowLock(
     ObserverContext<? extends RegionCoprocessorEnvironment> c, byte[] row, Filter filter,
     Delete delete, boolean result) throws IOException {
-    if (isOperationOnNonMetaTable(c)) {
+    if (!isOnMeta(c)) {
       internalReadOnlyGuard();
     }
     return RegionObserver.super.preCheckAndDeleteAfterRowLock(c, row, filter, delete, result);
