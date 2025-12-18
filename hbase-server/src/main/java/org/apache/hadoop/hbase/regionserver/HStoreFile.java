@@ -45,9 +45,11 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext.ReaderType;
+import org.apache.hadoop.hbase.keymeta.KeyNamespaceUtil;
 import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
 import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.security.SecurityUtil;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -240,8 +242,9 @@ public class HStoreFile implements StoreFile {
    */
   public HStoreFile(FileSystem fs, Path p, Configuration conf, CacheConfig cacheConf,
     BloomType cfBloomType, boolean primaryReplica, StoreFileTracker sft) throws IOException {
-    // Key management not yet implemented - always null
-    this(sft.getStoreFileInfo(p, primaryReplica), cfBloomType, cacheConf, null, null, null, null);
+    this(sft.getStoreFileInfo(p, primaryReplica), cfBloomType, cacheConf, null, null,
+      SecurityUtil.isKeyManagementEnabled(conf) ? SystemKeyCache.createCache(conf, fs) : null,
+      SecurityUtil.isKeyManagementEnabled(conf) ? new ManagedKeyDataCache(conf, null) : null);
   }
 
   /**
@@ -257,9 +260,13 @@ public class HStoreFile implements StoreFile {
    */
   public HStoreFile(StoreFileInfo fileInfo, BloomType cfBloomType, CacheConfig cacheConf)
     throws IOException {
-    // Key management not yet implemented - always null
-    this(fileInfo, cfBloomType, cacheConf, null, null, // keyNamespace - not yet implemented
-      null, null);
+    this(fileInfo, cfBloomType, cacheConf, null, KeyNamespaceUtil.constructKeyNamespace(fileInfo),
+      SecurityUtil.isKeyManagementEnabled(fileInfo.getConf())
+        ? SystemKeyCache.createCache(fileInfo.getConf(), fileInfo.getFileSystem())
+        : null,
+      SecurityUtil.isKeyManagementEnabled(fileInfo.getConf())
+        ? new ManagedKeyDataCache(fileInfo.getConf(), null)
+        : null);
   }
 
   /**

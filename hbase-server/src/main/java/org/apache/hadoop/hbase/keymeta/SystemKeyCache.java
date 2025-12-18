@@ -17,16 +17,78 @@
  */
 package org.apache.hadoop.hbase.keymeta;
 
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-/**
- * STUB IMPLEMENTATION - Feature not yet complete. This class will be fully implemented in
- * HBASE-29368 feature PR.
- */
+@SuppressWarnings("checkstyle:FinalClass") // as otherwise it breaks mocking.
 @InterfaceAudience.Private
 public class SystemKeyCache {
-  public SystemKeyCache(Configuration conf) {
-    // Stub constructor - does nothing
+  private static final Logger LOG = LoggerFactory.getLogger(SystemKeyCache.class);
+
+  private final ManagedKeyData latestSystemKey;
+  private final Map<Long, ManagedKeyData> systemKeys;
+
+  /**
+   * Create a SystemKeyCache from the specified configuration and file system.
+   * @param configuration the configuration to use
+   * @param fs            the file system to use
+   * @return the cache or {@code null} if no keys are found.
+   * @throws IOException if there is an error loading the system keys
+   */
+  public static SystemKeyCache createCache(Configuration configuration, FileSystem fs)
+    throws IOException {
+    SystemKeyAccessor accessor = new SystemKeyAccessor(configuration, fs);
+    return createCache(accessor);
+  }
+
+  /**
+   * Construct the System Key cache from the specified accessor.
+   * @param accessor the accessor to use to load the system keys
+   * @return the cache or {@code null} if no keys are found.
+   * @throws IOException if there is an error loading the system keys
+   */
+  public static SystemKeyCache createCache(SystemKeyAccessor accessor) throws IOException {
+    List<Path> allSystemKeyFiles = accessor.getAllSystemKeyFiles();
+    if (allSystemKeyFiles.isEmpty()) {
+      LOG.warn("No system key files found, skipping cache creation");
+      return null;
+    }
+    ManagedKeyData latestSystemKey = null;
+    Map<Long, ManagedKeyData> systemKeys = new TreeMap<>();
+    for (Path keyPath : allSystemKeyFiles) {
+      ManagedKeyData keyData = accessor.loadSystemKey(keyPath);
+      LOG.info(
+        "Loaded system key with (custodian: {}, namespace: {}), checksum: {} and metadata hash: {} "
+          + " from file: {}",
+        keyData.getKeyCustodianEncoded(), keyData.getKeyNamespace(), keyData.getKeyChecksum(),
+        keyData.getKeyMetadataHashEncoded(), keyPath);
+      if (latestSystemKey == null) {
+        latestSystemKey = keyData;
+      }
+      systemKeys.put(keyData.getKeyChecksum(), keyData);
+    }
+    return new SystemKeyCache(systemKeys, latestSystemKey);
+  }
+
+  private SystemKeyCache(Map<Long, ManagedKeyData> systemKeys, ManagedKeyData latestSystemKey) {
+    this.systemKeys = systemKeys;
+    this.latestSystemKey = latestSystemKey;
+  }
+
+  public ManagedKeyData getLatestSystemKey() {
+    return latestSystemKey;
+  }
+
+  public ManagedKeyData getSystemKeyByChecksum(long checksum) {
+    return systemKeys.get(checksum);
   }
 }

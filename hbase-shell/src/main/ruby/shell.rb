@@ -150,6 +150,10 @@ module Shell
       @rsgroup_admin ||= hbase.rsgroup_admin
     end
 
+    def hbase_keymeta_admin
+      @hbase_keymeta_admin ||= hbase.keymeta_admin
+    end
+
     ##
     # Create singleton methods on the target receiver object for all the loaded commands
     #
@@ -614,6 +618,23 @@ Shell.load_command_group(
     get_auths
     clear_auths
     set_visibility
+  ]
+)
+
+Shell.load_command_group(
+  'keymeta',
+  full_name: 'Keymeta',
+  comment: "NOTE: The KeyMeta Coprocessor Endpoint must be enabled on the Master else commands fail
+  with: UnknownProtocolException: No registered Master Coprocessor Endpoint found for
+  ManagedKeysService",
+  commands: %w[
+    enable_key_management
+    show_key_status
+    rotate_stk
+    disable_key_management
+    disable_managed_key
+    refresh_managed_keys
+    rotate_managed_key
   ]
 )
 
