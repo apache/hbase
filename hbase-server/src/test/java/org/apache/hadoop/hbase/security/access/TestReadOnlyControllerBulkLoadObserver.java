@@ -21,6 +21,7 @@ import static org.apache.hadoop.hbase.HConstants.HBASE_GLOBAL_READONLY_ENABLED_K
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -62,7 +63,7 @@ public class TestReadOnlyControllerBulkLoadObserver {
 
   }
 
-  @Test(expected = IOException.class)
+  @Test(expected = DoNotRetryIOException.class)
   public void testPrePrepareBulkLoadReadOnlyException() throws IOException {
     readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.prePrepareBulkLoad(ctx);
@@ -73,7 +74,7 @@ public class TestReadOnlyControllerBulkLoadObserver {
     readOnlyController.prePrepareBulkLoad(ctx);
   }
 
-  @Test(expected = IOException.class)
+  @Test(expected = DoNotRetryIOException.class)
   public void testPreCleanupBulkLoadReadOnlyException() throws IOException {
     readOnlyController.onConfigurationChange(readOnlyConf);
     readOnlyController.preCleanupBulkLoad(ctx);
