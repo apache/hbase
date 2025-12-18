@@ -640,166 +640,166 @@ curl -vi -X PUT \
   <element name="Version" type="tns:Version"></element>
 
   <complexType name="Version">
-    <attribute name="REST" type="string"></attribute>
-    <attribute name="JVM" type="string"></attribute>
-    <attribute name="OS" type="string"></attribute>
-    <attribute name="Server" type="string"></attribute>
-    <attribute name="Jersey" type="string"></attribute>
-    <attribute name="Version" type="string"></attribute>
-    <attribute name="Revision" type="string"></attribute>
+<attribute name="REST" type="string"></attribute>
+<attribute name="JVM" type="string"></attribute>
+<attribute name="OS" type="string"></attribute>
+<attribute name="Server" type="string"></attribute>
+<attribute name="Jersey" type="string"></attribute>
+<attribute name="Version" type="string"></attribute>
+<attribute name="Revision" type="string"></attribute>
   </complexType>
 
   <element name="TableList" type="tns:TableList"></element>
 
   <complexType name="TableList">
-    <sequence>
-      <element name="table" type="tns:Table" maxOccurs="unbounded" minOccurs="1"></element>
-    </sequence>
+<sequence>
+  <element name="table" type="tns:Table" maxOccurs="unbounded" minOccurs="1"></element>
+</sequence>
   </complexType>
 
   <complexType name="Table">
-    <sequence>
-      <element name="name" type="string"></element>
-    </sequence>
+<sequence>
+  <element name="name" type="string"></element>
+</sequence>
   </complexType>
 
   <element name="TableInfo" type="tns:TableInfo"></element>
 
   <complexType name="TableInfo">
-    <sequence>
-      <element name="region" type="tns:TableRegion" maxOccurs="unbounded" minOccurs="1"></element>
-    </sequence>
-    <attribute name="name" type="string"></attribute>
+<sequence>
+  <element name="region" type="tns:TableRegion" maxOccurs="unbounded" minOccurs="1"></element>
+</sequence>
+<attribute name="name" type="string"></attribute>
   </complexType>
 
   <complexType name="TableRegion">
-    <attribute name="name" type="string"></attribute>
-    <attribute name="id" type="int"></attribute>
-    <attribute name="startKey" type="base64Binary"></attribute>
-    <attribute name="endKey" type="base64Binary"></attribute>
-    <attribute name="location" type="string"></attribute>
+<attribute name="name" type="string"></attribute>
+<attribute name="id" type="int"></attribute>
+<attribute name="startKey" type="base64Binary"></attribute>
+<attribute name="endKey" type="base64Binary"></attribute>
+<attribute name="location" type="string"></attribute>
   </complexType>
 
   <element name="TableSchema" type="tns:TableSchema"></element>
 
   <complexType name="TableSchema">
-    <sequence>
-      <element name="column" type="tns:ColumnSchema" maxOccurs="unbounded" minOccurs="1"></element>
-    </sequence>
-    <attribute name="name" type="string"></attribute>
-    <anyAttribute></anyAttribute>
+<sequence>
+  <element name="column" type="tns:ColumnSchema" maxOccurs="unbounded" minOccurs="1"></element>
+</sequence>
+<attribute name="name" type="string"></attribute>
+<anyAttribute></anyAttribute>
   </complexType>
 
   <complexType name="ColumnSchema">
-    <attribute name="name" type="string"></attribute>
-    <anyAttribute></anyAttribute>
+<attribute name="name" type="string"></attribute>
+<anyAttribute></anyAttribute>
   </complexType>
 
   <element name="CellSet" type="tns:CellSet"></element>
 
   <complexType name="CellSet">
-    <sequence>
-      <element name="row" type="tns:Row" maxOccurs="unbounded" minOccurs="1"></element>
-    </sequence>
+<sequence>
+  <element name="row" type="tns:Row" maxOccurs="unbounded" minOccurs="1"></element>
+</sequence>
   </complexType>
 
   <element name="Row" type="tns:Row"></element>
 
   <complexType name="Row">
-    <sequence>
-      <element name="key" type="base64Binary"></element>
-      <element name="cell" type="tns:Cell" maxOccurs="unbounded" minOccurs="1"></element>
-    </sequence>
+<sequence>
+  <element name="key" type="base64Binary"></element>
+  <element name="cell" type="tns:Cell" maxOccurs="unbounded" minOccurs="1"></element>
+</sequence>
   </complexType>
 
   <element name="Cell" type="tns:Cell"></element>
 
   <complexType name="Cell">
-    <sequence>
-      <element name="value" maxOccurs="1" minOccurs="1">
-        <simpleType><restriction base="base64Binary">
-        </simpleType>
-      </element>
-    </sequence>
-    <attribute name="column" type="base64Binary" />
-    <attribute name="timestamp" type="int" />
+<sequence>
+  <element name="value" maxOccurs="1" minOccurs="1">
+    <simpleType><restriction base="base64Binary">
+    </simpleType>
+  </element>
+</sequence>
+<attribute name="column" type="base64Binary" />
+<attribute name="timestamp" type="int" />
   </complexType>
 
   <element name="Scanner" type="tns:Scanner"></element>
 
   <complexType name="Scanner">
-    <sequence>
-      <element name="column" type="base64Binary" minOccurs="0" maxOccurs="unbounded"></element>
-    </sequence>
-    <attribute name="startRow" type="base64Binary"></attribute>
-    <attribute name="endRow" type="base64Binary"></attribute>
-    <attribute name="batch" type="int"></attribute>
-    <attribute name="startTime" type="int"></attribute>
-    <attribute name="endTime" type="int"></attribute>
-    <attribute name="filter" type="string"></attribute>
-    <attribute name="caching" type="int"></attribute>
-    <sequence>
-        <element name="labels" type="string" minOccurs="0" maxOccurs="unbounded"></element>
-    </sequence>
-    <attribute name="cacheBlocks" type="boolean"></attribute>
-    <attribute name="maxVersions" type="int"></attribute>
-    <attribute name="limit" type="int"></attribute>
-    <attribute name="includeStartRow" type="boolean"></attribute>
-    <attribute name="includeStopRow" type="boolean"></attribute>
+<sequence>
+  <element name="column" type="base64Binary" minOccurs="0" maxOccurs="unbounded"></element>
+</sequence>
+<attribute name="startRow" type="base64Binary"></attribute>
+<attribute name="endRow" type="base64Binary"></attribute>
+<attribute name="batch" type="int"></attribute>
+<attribute name="startTime" type="int"></attribute>
+<attribute name="endTime" type="int"></attribute>
+<attribute name="filter" type="string"></attribute>
+<attribute name="caching" type="int"></attribute>
+<sequence>
+    <element name="labels" type="string" minOccurs="0" maxOccurs="unbounded"></element>
+</sequence>
+<attribute name="cacheBlocks" type="boolean"></attribute>
+<attribute name="maxVersions" type="int"></attribute>
+<attribute name="limit" type="int"></attribute>
+<attribute name="includeStartRow" type="boolean"></attribute>
+<attribute name="includeStopRow" type="boolean"></attribute>
   </complexType>
 
   <element name="StorageClusterVersion" type="tns:StorageClusterVersion" />
 
   <complexType name="StorageClusterVersion">
-    <attribute name="version" type="string"></attribute>
+<attribute name="version" type="string"></attribute>
   </complexType>
 
   <element name="StorageClusterStatus"
-    type="tns:StorageClusterStatus">
+type="tns:StorageClusterStatus">
   </element>
 
   <complexType name="StorageClusterStatus">
-    <sequence>
-      <element name="liveNode" type="tns:Node"
-        maxOccurs="unbounded" minOccurs="0">
-      </element>
-      <element name="deadNode" type="string" maxOccurs="unbounded"
-        minOccurs="0">
-      </element>
-    </sequence>
-    <attribute name="regions" type="int"></attribute>
-    <attribute name="requests" type="int"></attribute>
-    <attribute name="averageLoad" type="float"></attribute>
+<sequence>
+  <element name="liveNode" type="tns:Node"
+    maxOccurs="unbounded" minOccurs="0">
+  </element>
+  <element name="deadNode" type="string" maxOccurs="unbounded"
+    minOccurs="0">
+  </element>
+</sequence>
+<attribute name="regions" type="int"></attribute>
+<attribute name="requests" type="int"></attribute>
+<attribute name="averageLoad" type="float"></attribute>
   </complexType>
 
   <complexType name="Node">
-    <sequence>
-      <element name="region" type="tns:Region"
+<sequence>
+  <element name="region" type="tns:Region"
    maxOccurs="unbounded" minOccurs="0">
-      </element>
-    </sequence>
-    <attribute name="name" type="string"></attribute>
-    <attribute name="startCode" type="int"></attribute>
-    <attribute name="requests" type="int"></attribute>
-    <attribute name="heapSizeMB" type="int"></attribute>
-    <attribute name="maxHeapSizeMB" type="int"></attribute>
+  </element>
+</sequence>
+<attribute name="name" type="string"></attribute>
+<attribute name="startCode" type="int"></attribute>
+<attribute name="requests" type="int"></attribute>
+<attribute name="heapSizeMB" type="int"></attribute>
+<attribute name="maxHeapSizeMB" type="int"></attribute>
   </complexType>
 
   <complexType name="Region">
-    <attribute name="name" type="base64Binary"></attribute>
-    <attribute name="stores" type="int"></attribute>
-    <attribute name="storefiles" type="int"></attribute>
-    <attribute name="storefileSizeMB" type="int"></attribute>
-    <attribute name="memstoreSizeMB" type="int"></attribute>
-    <attribute name="storefileIndexSizeKB" type="int"></attribute>
-    <attribute name="readRequestsCount" type="int"></attribute>
-    <attribute name="cpRequestsCount" type="int"></attribute>
-    <attribute name="writeRequestsCount" type="int"></attribute>
-    <attribute name="rootIndexSizeKB" type="int"></attribute>
-    <attribute name="totalStaticIndexSizeKB" type="int"></attribute>
-    <attribute name="totalStaticBloomSizeKB" type="int"></attribute>
-    <attribute name="totalCompactingKVs" type="int"></attribute>
-    <attribute name="currentCompactedKVs" type="int"></attribute>
+<attribute name="name" type="base64Binary"></attribute>
+<attribute name="stores" type="int"></attribute>
+<attribute name="storefiles" type="int"></attribute>
+<attribute name="storefileSizeMB" type="int"></attribute>
+<attribute name="memstoreSizeMB" type="int"></attribute>
+<attribute name="storefileIndexSizeKB" type="int"></attribute>
+<attribute name="readRequestsCount" type="int"></attribute>
+<attribute name="cpRequestsCount" type="int"></attribute>
+<attribute name="writeRequestsCount" type="int"></attribute>
+<attribute name="rootIndexSizeKB" type="int"></attribute>
+<attribute name="totalStaticIndexSizeKB" type="int"></attribute>
+<attribute name="totalStaticBloomSizeKB" type="int"></attribute>
+<attribute name="totalCompactingKVs" type="int"></attribute>
+<attribute name="currentCompactedKVs" type="int"></attribute>
   </complexType>
 
 </schema>
@@ -820,28 +820,28 @@ message Version {
 
 message StorageClusterStatus {
   message Region {
-    required bytes name = 1;
-    optional int32 stores = 2;
-    optional int32 storefiles = 3;
-    optional int32 storefileSizeMB = 4;
-    optional int32 memStoreSizeMB = 5;
-    optional int64 storefileIndexSizeKB = 6;
-    optional int64 readRequestsCount = 7;
-    optional int64 writeRequestsCount = 8;
-    optional int32 rootIndexSizeKB = 9;
-    optional int32 totalStaticIndexSizeKB = 10;
-    optional int32 totalStaticBloomSizeKB = 11;
-    optional int64 totalCompactingKVs = 12;
-    optional int64 currentCompactedKVs = 13;
-    optional int64 cpRequestsCount = 14;
+required bytes name = 1;
+optional int32 stores = 2;
+optional int32 storefiles = 3;
+optional int32 storefileSizeMB = 4;
+optional int32 memStoreSizeMB = 5;
+optional int64 storefileIndexSizeKB = 6;
+optional int64 readRequestsCount = 7;
+optional int64 writeRequestsCount = 8;
+optional int32 rootIndexSizeKB = 9;
+optional int32 totalStaticIndexSizeKB = 10;
+optional int32 totalStaticBloomSizeKB = 11;
+optional int64 totalCompactingKVs = 12;
+optional int64 currentCompactedKVs = 13;
+optional int64 cpRequestsCount = 14;
   }
   message Node {
-    required string name = 1;    // name:port
-    optional int64 startCode = 2;
-    optional int32 requests = 3;
-    optional int32 heapSizeMB = 4;
-    optional int32 maxHeapSizeMB = 5;
-    repeated Region regions = 6;
+required string name = 1;    // name:port
+optional int64 startCode = 2;
+optional int32 requests = 3;
+optional int32 heapSizeMB = 4;
+optional int32 maxHeapSizeMB = 5;
+repeated Region regions = 6;
   }
   // node status
   repeated Node liveNodes = 1;
@@ -859,11 +859,11 @@ message TableList {
 message TableInfo {
   required string name = 1;
   message Region {
-    required string name = 1;
-    optional bytes startKey = 2;
-    optional bytes endKey = 3;
-    optional int64 id = 4;
-    optional string location = 5;
+required string name = 1;
+optional bytes startKey = 2;
+optional bytes endKey = 3;
+optional int64 id = 4;
+optional string location = 5;
   }
   repeated Region regions = 2;
 }
@@ -871,8 +871,8 @@ message TableInfo {
 message TableSchema {
   optional string name = 1;
   message Attribute {
-    required string name = 1;
-    required string value = 2;
+required string name = 1;
+required string value = 2;
   }
   repeated Attribute attrs = 2;
   repeated ColumnSchema columns = 3;
@@ -884,8 +884,8 @@ message TableSchema {
 message ColumnSchema {
   optional string name = 1;
   message Attribute {
-    required string name = 1;
-    required string value = 2;
+required string name = 1;
+required string value = 2;
   }
   repeated Attribute attrs = 2;
   // optional helpful encodings of commonly used attributes
@@ -903,8 +903,8 @@ message Cell {
 
 message CellSet {
   message Row {
-    required bytes key = 1;
-    repeated Cell values = 2;
+required bytes key = 1;
+repeated Cell values = 2;
   }
   repeated Row rows = 1;
 }
@@ -995,77 +995,77 @@ public class HBaseExample {
   public static void main(String[] args) throws Exception {
     AbstractHBaseDBO dbo = new HBaseDBOImpl();
 
-    //*drop if table is already exist.*
-    if(dbo.isTableExist("user")){
-     dbo.deleteTable("user");
-    }
+//*drop if table is already exist.*
+if(dbo.isTableExist("user")){
+ dbo.deleteTable("user");
+}
 
-    //*create table*
-    dbo.createTableIfNotExist("user",HBaseOrder.DESC,"account");
-    //dbo.createTableIfNotExist("user",HBaseOrder.ASC,"account");
+//*create table*
+dbo.createTableIfNotExist("user",HBaseOrder.DESC,"account");
+//dbo.createTableIfNotExist("user",HBaseOrder.ASC,"account");
 
-    //create index.
-    String[] cols={"id","name"};
-    dbo.addIndexExistingTable("user","account",cols);
+//create index.
+String[] cols={"id","name"};
+dbo.addIndexExistingTable("user","account",cols);
 
-    //insert
-    InsertQuery insert = dbo.createInsertQuery("user");
-    UserBean bean = new UserBean();
-    bean.setFamily("account");
-    bean.setAge(20);
-    bean.setEmail("ncanis@gmail.com");
-    bean.setId("ncanis");
-    bean.setName("ncanis");
-    bean.setPassword("1111");
-    insert.insert(bean);
+//insert
+InsertQuery insert = dbo.createInsertQuery("user");
+UserBean bean = new UserBean();
+bean.setFamily("account");
+bean.setAge(20);
+bean.setEmail("ncanis@gmail.com");
+bean.setId("ncanis");
+bean.setName("ncanis");
+bean.setPassword("1111");
+insert.insert(bean);
 
-    //select 1 row
-    SelectQuery select = dbo.createSelectQuery("user");
-    UserBean resultBean = (UserBean)select.select(bean.getRow(),UserBean.class);
+//select 1 row
+SelectQuery select = dbo.createSelectQuery("user");
+UserBean resultBean = (UserBean)select.select(bean.getRow(),UserBean.class);
 
-    // select column value.
-    String value = (String)select.selectColumn(bean.getRow(),"account","id",String.class);
+// select column value.
+String value = (String)select.selectColumn(bean.getRow(),"account","id",String.class);
 
-    // search with option (QSearch has EQUAL, NOT_EQUAL, LIKE)
-    // select id,password,name,email from account where id='ncanis' limit startRow,20
-    HBaseParam param = new HBaseParam();
-    param.setPage(bean.getRow(),20);
-    param.addColumn("id","password","name","email");
-    param.addSearchOption("id","ncanis",QSearch.EQUAL);
-    select.search("account", param, UserBean.class);
+// search with option (QSearch has EQUAL, NOT_EQUAL, LIKE)
+// select id,password,name,email from account where id='ncanis' limit startRow,20
+HBaseParam param = new HBaseParam();
+param.setPage(bean.getRow(),20);
+param.addColumn("id","password","name","email");
+param.addSearchOption("id","ncanis",QSearch.EQUAL);
+select.search("account", param, UserBean.class);
 
-    // search column value is existing.
-    boolean isExist = select.existColumnValue("account","id","ncanis".getBytes());
+// search column value is existing.
+boolean isExist = select.existColumnValue("account","id","ncanis".getBytes());
 
-    // update password.
-    UpdateQuery update = dbo.createUpdateQuery("user");
-    Hashtable<String, byte[]> colsTable = new Hashtable<String, byte[]>();
-    colsTable.put("password","2222".getBytes());
-    update.update(bean.getRow(),"account",colsTable);
+// update password.
+UpdateQuery update = dbo.createUpdateQuery("user");
+Hashtable<String, byte[]> colsTable = new Hashtable<String, byte[]>();
+colsTable.put("password","2222".getBytes());
+update.update(bean.getRow(),"account",colsTable);
 
-    //delete
-    DeleteQuery delete = dbo.createDeleteQuery("user");
-    delete.deleteRow(resultBean.getRow());
+//delete
+DeleteQuery delete = dbo.createDeleteQuery("user");
+delete.deleteRow(resultBean.getRow());
 
-    ////////////////////////////////////
-    // etc
+////////////////////////////////////
+// etc
 
-    // HTable pool with apache commons pool
-    // borrow and release. HBasePoolManager(maxActive, minIdle etc..)
-    IndexedTable table = dbo.getPool().borrow("user");
-    dbo.getPool().release(table);
+// HTable pool with apache commons pool
+// borrow and release. HBasePoolManager(maxActive, minIdle etc..)
+IndexedTable table = dbo.getPool().borrow("user");
+dbo.getPool().release(table);
 
-    // upload bigFile by hadoop directly.
-    HBaseBigFile bigFile = new HBaseBigFile();
-    File file = new File("doc/movie.avi");
-    FileInputStream fis = new FileInputStream(file);
-    Path rootPath = new Path("/files/");
-    String filename = "movie.avi";
-    bigFile.uploadFile(rootPath,filename,fis,true);
+// upload bigFile by hadoop directly.
+HBaseBigFile bigFile = new HBaseBigFile();
+File file = new File("doc/movie.avi");
+FileInputStream fis = new FileInputStream(file);
+Path rootPath = new Path("/files/");
+String filename = "movie.avi";
+bigFile.uploadFile(rootPath,filename,fis,true);
 
-    // receive file stream from hadoop.
-    Path p = new Path(rootPath,filename);
-    InputStream is = bigFile.path2Stream(p,4096);
+// receive file stream from hadoop.
+Path p = new Path(rootPath,filename);
+InputStream is = bigFile.path2Stream(p,4096);
 
   }
 }
@@ -1178,8 +1178,8 @@ desc.addFamily(HColumnDescriptor("content"))
 
 ## Drop and recreate if it exists
 if admin.tableExists(tableName):
-    admin.disableTable(tableName)
-    admin.deleteTable(tableName)
+admin.disableTable(tableName)
+admin.deleteTable(tableName)
 
 admin.createTable(desc)
 
@@ -1217,8 +1217,8 @@ cf = "title"
 attr = "attr"
 scanner = table.getScanner(cf)
 while 1:
-    result = scanner.next()
-    if not result:
-       break
-    print java.lang.String(result.row), java.lang.String(result.getValue(cf, attr))
+result = scanner.next()
+if not result:
+   break
+print java.lang.String(result.row), java.lang.String(result.getValue(cf, attr))
 ```

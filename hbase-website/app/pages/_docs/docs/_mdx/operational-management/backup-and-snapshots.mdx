@@ -1,0 +1,287 @@
+---
+title: "Backup & Snapshots"
+---
+
+## HBase Backup
+
+There are two broad strategies for performing HBase backups: backing up with a full cluster shutdown, and backing up on a live cluster. Each approach has pros and cons.
+
+For additional information, see [HBase Backup Options](https://web.archive.org/web/20160110232448/http://blog.sematext.com/2011/03/11/hbase-backup-options/) over on the Sematext Blog.
+
+### Full Shutdown Backup
+
+Some environments can tolerate a periodic full shutdown of their HBase cluster, for example if it is being used a back-end analytic capacity and not serving front-end web-pages. The benefits are that the NameNode/Master are RegionServers are down, so there is no chance of missing any in-flight changes to either StoreFiles or metadata. The obvious con is that the cluster is down. The steps include:
+
+#### Stop HBase
+
+#### Distcp
+
+Distcp could be used to either copy the contents of the HBase directory in HDFS to either the same cluster in another directory, or to a different cluster.  
+Note: Distcp works in this situation because the cluster is down and there are no in-flight edits to files. Distcp-ing of files in the HBase directory is not generally recommended on a live cluster.
+
+#### Restore (if needed)
+The backup of the hbase directory from HDFS is copied onto the 'real' hbase directory via distcp. The act of copying these files creates new HDFS metadata, which is why a restore of the NameNode edits from the time of the HBase backup isn’t required for this kind of restore, because it’s a restore (via distcp) of a specific HDFS directory (i.e., the HBase part) not the entire HDFS file-system.
+
+### Live Cluster Backup - Replication
+
+This approach assumes that there is a second cluster. See the HBase page on [replication](https://hbase.apache.org/book.html#_cluster_replication) for more information.
+
+### Live Cluster Backup - CopyTable
+
+The [copytable](#copy.table) utility could either be used to copy data from one table to another on the same cluster, or to copy data to another table on another cluster.
+
+Since the cluster is up, there is a risk that edits could be missed in the copy process.
+
+### Live Cluster Backup - Export
+
+The [export](#export) approach dumps the content of a table to HDFS on the same cluster. To restore the data, the [import](#import) utility would be used.
+
+Since the cluster is up, there is a risk that edits could be missed in the export process. If you want to know more about HBase back-up and restore see the page on [Backup and Restore](http://hbase.apache.org/book.html#backuprestore).
+
+## HBase Snapshots
+
+HBase Snapshots allow you to take a copy of a table (both contents and metadata)with a very small performance impact. A Snapshot is an immutable collection of table metadata and a list of HFiles that comprised the table at the time the Snapshot was taken. A "clone" of a snapshot creates a new table from that snapshot, and a "restore" of a snapshot returns the contents of a table to what it was when the snapshot was created. The "clone" and "restore" operations do not require any data to be copied, as the underlying HFiles (the files which contain the data for an HBase table) are not modified with either action. Simiarly, exporting a snapshot to another cluster has little impact on RegionServers of the local cluster.
+
+Prior to version 0.94.6, the only way to backup or to clone a table is to use CopyTable/ExportTable, or to copy all the hfiles in HDFS after disabling the table. The disadvantages of these methods are that you can degrade region server performance (Copy/Export Table) or you need to disable the table, that means no reads or writes; and this is usually unacceptable.
+
+### Configuration
+
+To turn on the snapshot support just set the `hbase.snapshot.enabled` property to true. (Snapshots are enabled by default in 0.95+ and off by default in 0.94.6+)
+
+```xml
+<property>
+  <name>hbase.snapshot.enabled</name>
+  <value>true</value>
+</property>
+```
+
+### Take a Snapshot
+
+You can take a snapshot of a table regardless of whether it is enabled or disabled. The snapshot operation doesn’t involve any data copying.
+
+```bash
+$ ./bin/hbase shell
+hbase> snapshot 'myTable', 'myTableSnapshot-122112'
+
+```
+
+#### Take a Snapshot Without Flushing
+
+The default behavior is to perform a flush of data in memory before the snapshot is taken. This means that data in memory is included in the snapshot. In most cases, this is the desired behavior. However, if your set-up can tolerate data in memory being excluded from the snapshot, you can use the `SKIP_FLUSH` option of the `snapshot` command to disable and flushing while taking the snapshot.
+
+```ruby
+hbase> snapshot 'mytable', 'snapshot123', {SKIP_FLUSH => true}
+```
+
+<Callout type="warn">
+  There is no way to determine or predict whether a very concurrent insert or update will be
+  included in a given snapshot, whether flushing is enabled or disabled. A snapshot is only a
+  representation of a table during a window of time. The amount of time the snapshot operation will
+  take to reach each Region Server may vary from a few seconds to a minute, depending on the
+  resource load and speed of the hardware or network, among other factors. There is also no way to
+  know whether a given insert or update is in memory or has been flushed.
+</Callout>
+
+#### Take a Snapshot With TTL
+
+Snapshots have a lifecycle that is independent from the table from which they are created. Although data in a table may be stored with TTL the data files containing them become frozen by the snapshot. Space consumed by expired cells will not be reclaimed by normal table housekeeping like compaction. While this is expected it can be inconvenient at scale. When many snapshots are under management and the data in various tables is expired by TTL some notion of optional TTL (and optional default TTL) for snapshots could be useful.
+
+```ruby
+hbase> snapshot 'mytable', 'snapshot1234', {TTL => 86400}
+```
+
+The above command creates snapshot `snapshot1234` with TTL of 86400 sec (24 hours) and hence, the snapshot is supposed to be cleaned up after 24 hours
+
+#### Default Snapshot TTL:
+
+- User specified default TTL with config `hbase.master.snapshot.ttl`
+- FOREVER if `hbase.master.snapshot.ttl` is not set
+
+While creating a snapshot, if TTL in seconds is not explicitly specified, the above logic will be followed to determine the TTL. If no configs are changed, the default behavior is that all snapshots will be retained forever (until manual deletion). If a different default TTL behavior is desired, `hbase.master.snapshot.ttl` can be set to a default TTL in seconds. Any snapshot created without an explicit TTL will take this new value.
+
+<Callout type="info">
+If `hbase.master.snapshot.ttl` is set, a snapshot with an explicit \{TTL ⇒ 0} or \{TTL ⇒ -1} will also take this value. In this case, a TTL < -1 (such as \{TTL ⇒ -2}) should be used to indicate FOREVER.
+</Callout>
+
+To summarize concisely,
+
+1.  Snapshot with TTL value < -1 will stay forever regardless of any server side config changes (until deleted manually by user).
+2.  Snapshot with TTL value > 0 will be deleted automatically soon after TTL expires.
+3.  Snapshot created without specifying TTL will always have TTL value represented by config `hbase.master.snapshot.ttl`. Default value of this config is 0, which represents: keep the snapshot forever (until deleted manually by user).
+4.  From client side, TTL value 0 or -1 should never be explicitly provided because they will be treated same as snapshot without TTL (same as above point 3) and hence will use TTL as per value represented by config `hbase.master.snapshot.ttl`.
+
+#### Take a snapshot with custom MAX_FILESIZE
+
+Optionally, snapshots can be created with a custom max file size configuration that will be used by cloned tables, instead of the global `hbase.hregion.max.filesize` configuration property. This is mostly useful when exporting snapshots between different clusters. If the HBase cluster where the snapshot is originally taken has a much larger value set for `hbase.hregion.max.filesize` than one or more clusters where the snapshot is being exported to, a storm of region splits may occur when restoring the snapshot on destination clusters. Specifying `MAX_FILESIZE` on properties passed to `snapshot` command will save informed value into the table’s `MAX_FILESIZE` decriptor at snapshot creation time. If the table already defines `MAX_FILESIZE` descriptor, this property would be ignored and have no effect.
+
+```ruby
+snapshot 'table01', 'snap01', {MAX_FILESIZE => 21474836480}
+```
+
+#### Enable/Disable Snapshot Auto Cleanup on running cluster:
+
+By default, snapshot auto cleanup based on TTL would be enabled for any new cluster. At any point in time, if snapshot cleanup is supposed to be stopped due to some snapshot restore activity or any other reason, it is advisable to disable it using shell command:
+
+```ruby
+hbase> snapshot_cleanup_switch false
+```
+
+We can re-enable it using:
+
+```ruby
+hbase> snapshot_cleanup_switch true
+```
+
+The shell command with switch false would disable snapshot auto cleanup activity based on TTL and return the previous state of the activity(true: running already, false: disabled already)
+
+A sample output for above commands:
+
+```text
+Previous snapshot cleanup state : true
+Took 0.0069 seconds
+=> "true"
+```
+
+We can query whether snapshot auto cleanup is enabled for cluster using:
+
+```ruby
+hbase> snapshot_cleanup_enabled
+```
+
+The command would return output in true/false.
+
+### Listing Snapshots
+
+List all snapshots taken (by printing the names and relative information).
+
+```bash
+$ ./bin/hbase shell
+hbase> list_snapshots
+```
+
+### Deleting Snapshots
+
+You can remove a snapshot, and the files retained for that snapshot will be removed if no longer needed.
+
+```bash
+$ ./bin/hbase shell
+hbase> delete_snapshot 'myTableSnapshot-122112'
+```
+
+### Clone a table from snapshot
+
+From a snapshot you can create a new table (clone operation) with the same data that you had when the snapshot was taken. The clone operation, doesn’t involve data copies, and a change to the cloned table doesn’t impact the snapshot or the original table.
+
+```bash
+$ ./bin/hbase shell
+hbase> clone_snapshot 'myTableSnapshot-122112', 'myNewTestTable'
+```
+
+### Restore a snapshot
+
+The restore operation requires the table to be disabled, and the table will be restored to the state at the time when the snapshot was taken, changing both data and schema if required.
+
+```bash
+$ ./bin/hbase shell
+hbase> disable 'myTable'
+hbase> restore_snapshot 'myTableSnapshot-122112'
+```
+
+<Callout type="info">
+  Since Replication works at log level and snapshots at file-system level, after a restore, the
+  replicas will be in a different state from the master. If you want to use restore, you need to
+  stop replication and redo the bootstrap.
+</Callout>
+
+In case of partial data-loss due to misbehaving client, instead of a full restore that requires the table to be disabled, you can clone the table from the snapshot and use a Map-Reduce job to copy the data that you need, from the clone to the main one.
+
+### Snapshots operations and ACLs
+
+If you are using security with the AccessController Coprocessor (See [hbase.accesscontrol.configuration](#hbase.accesscontrol.configuration)), only a global administrator can take, clone, or restore a snapshot, and these actions do not capture the ACL rights. This means that restoring a table preserves the ACL rights of the existing table, while cloning a table creates a new table that has no ACL rights until the administrator adds them.
+
+### Export to another cluster
+
+The ExportSnapshot tool copies all the data related to a snapshot (hfiles, logs, snapshot metadata) to another cluster. The tool executes a Map-Reduce job, similar to distcp, to copy files between the two clusters, and since it works at file-system level the hbase cluster does not have to be online.
+
+To copy a snapshot called MySnapshot to an HBase cluster srv2 (hdfs:///srv2:8082/hbase) using 16 mappers:
+
+```bash
+$ bin/hbase org.apache.hadoop.hbase.snapshot.ExportSnapshot -snapshot MySnapshot -copy-to hdfs://srv2:8082/hbase -mappers 16
+```
+
+#### Limiting Bandwidth Consumption
+
+You can limit the bandwidth consumption when exporting a snapshot, by specifying the `-bandwidth` parameter, which expects an integer representing megabytes per second. The following example limits the above example to 200 MB/sec.
+
+```bash
+$ bin/hbase org.apache.hadoop.hbase.snapshot.ExportSnapshot -snapshot MySnapshot -copy-to hdfs://srv2:8082/hbase -mappers 16 -bandwidth 200
+```
+
+## Storing Snapshots in an Amazon S3 Bucket
+
+You can store and retrieve snapshots from Amazon S3, using the following procedure.
+
+<Callout type="info">
+  You can also store snapshots in Microsoft Azure Blob Storage. See [Storing Snapshots in Microsoft
+  Azure Blob Storage](#snapshots_azure).
+</Callout>
+
+### Prerequisites
+
+- You must be using HBase 1.0 or higher and Hadoop 2.6.1 or higher, which is the first configuration that uses the Amazon AWS SDK.
+- You must use the `s3a://` protocol to connect to Amazon S3. The older `s3n://` and `s3://` protocols have various limitations and do not use the Amazon AWS SDK.
+- The `s3a://` URI must be configured and available on the server where you run the commands to export and restore the snapshot.
+
+After you have fulfilled the prerequisites, take the snapshot like you normally would. Afterward, you can export it using the `org.apache.hadoop.hbase.snapshot.ExportSnapshot` command like the one below, substituting your own `s3a://` path in the `copy-from` or `copy-to` directive and substituting or modifying other options as required:
+
+```bash
+$ hbase org.apache.hadoop.hbase.snapshot.ExportSnapshot \
+    -snapshot MySnapshot \
+    -copy-from hdfs://srv2:8082/hbase \
+    -copy-to s3a://<bucket>/<namespace>/hbase \
+    -chuser MyUser \
+    -chgroup MyGroup \
+    -chmod 700 \
+    -mappers 16
+```
+
+```bash
+$ hbase org.apache.hadoop.hbase.snapshot.ExportSnapshot \
+    -snapshot MySnapshot
+    -copy-from s3a://<bucket>/<namespace>/hbase \
+    -copy-to hdfs://srv2:8082/hbase \
+    -chuser MyUser \
+    -chgroup MyGroup \
+    -chmod 700 \
+    -mappers 16
+```
+
+You can also use the `org.apache.hadoop.hbase.snapshot.SnapshotInfo` utility with the `s3a://` path by including the `-remote-dir` option.
+
+```bash
+$ hbase org.apache.hadoop.hbase.snapshot.SnapshotInfo \
+    -remote-dir s3a://<bucket>/<namespace>/hbase \
+    -list-snapshots
+```
+
+## Storing Snapshots in Microsoft Azure Blob Storage
+
+You can store snapshots in Microsoft Azure Blog Storage using the same techniques as in [Storing Snapshots in an Amazon S3 Bucket](#snapshots_s3).
+
+### Prerequisites
+
+- You must be using HBase 1.2 or higher with Hadoop 2.7.1 or higher. No version of HBase supports Hadoop 2.7.0.
+- Your hosts must be configured to be aware of the Azure blob storage filesystem. See [https://hadoop.apache.org/docs/r2.7.1/hadoop-azure/index.html](https://hadoop.apache.org/docs/r2.7.1/hadoop-azure/index.html).
+
+After you meet the prerequisites, follow the instructions in [Storing Snapshots in an Amazon S3 Bucket](#snapshots_s3), replacingthe protocol specifier with `wasb://` or `wasbs://`.
+
+## Storing Snapshots in Aliyun Object Storage Service
+
+You can store snapshots in Aliyun Object Storage Service(Aliyun OSS) using the same techniques as in [Storing Snapshots in an Amazon S3 Bucket](#snapshots_s3).
+
+### Prerequisites
+
+- You must be using HBase 1.2 or higher with Hadoop 2.9.1 or higher.
+- Your hosts must be configured to be aware of the Aliyun oss filesystem. See [https://hadoop.apache.org/docs/stable/hadoop-aliyun/tools/hadoop-aliyun/index.html](https://hadoop.apache.org/docs/stable/hadoop-aliyun/tools/hadoop-aliyun/index.html).
+
+After you meet the prerequisites, follow the instructions in [Storing Snapshots in an Amazon S3 Bucket](#snapshots_s3), replacing the protocol specifier with `oss://`.
