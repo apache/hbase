@@ -31,7 +31,6 @@ declare -i missing_env=0
 declare -a required_envs=(
   # these ENV variables define the required API with Jenkinsfile_GitHub
   "ARCHIVE_PATTERN_LIST"
-  "BUILD_URL_ARTIFACTS"
   "DOCKERFILE"
   "GITHUB_PASSWORD"
   "GITHUB_USER"
@@ -52,6 +51,12 @@ for required_env in "${required_envs[@]}"; do
     missing_env=${missing_env}+1
   fi
 done
+
+# BUILD_URL_ARTIFACTS is required for Jenkins but set in personality for GitHub Actions
+if [[ "${GITHUB_ACTIONS}" != "true" ]] && [[ -z "${BUILD_URL_ARTIFACTS}" ]]; then
+  echo "[ERROR] Required environment variable 'BUILD_URL_ARTIFACTS' is not set."
+  missing_env=${missing_env}+1
+fi
 
 if [ ${missing_env} -gt 0 ]; then
   echo "[ERROR] Please set the required environment variables before invoking. If this error is " \
