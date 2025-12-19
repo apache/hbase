@@ -634,6 +634,11 @@ public class TableDescriptorBuilder {
       new TreeMap<>(Bytes.BYTES_RAWCOMPARATOR);
 
     /**
+     * Cached hash of the table descriptor. Computed lazily on first access.
+     */
+    private volatile String descriptorHash;
+
+    /**
      * Construct a table descriptor specifying a TableName object
      * @param name Table name. TODO: make this private after removing the HTableDescriptor
      */
@@ -1618,6 +1623,14 @@ public class TableDescriptorBuilder {
       } else {
         return Optional.empty();
       }
+    }
+
+    @Override
+    public String getDescriptorHash() {
+      if (descriptorHash == null) {
+        descriptorHash = TableDescriptor.super.getDescriptorHash();
+      }
+      return descriptorHash;
     }
   }
 

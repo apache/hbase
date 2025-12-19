@@ -64,9 +64,11 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
   private ScheduledFuture<?> regionMetricsUpdateTask;
 
   private float currentRegionCacheRatio;
+  private final String tableDescriptorHash;
 
   public MetricsRegionWrapperImpl(HRegion region) {
     this.region = region;
+    this.tableDescriptorHash = determineTableDescriptorHash();
     this.executor = CompatibilitySingletonFactory.getInstance(MetricsExecutor.class).getExecutor();
     this.runnable = new HRegionMetricsWrapperRunnable();
     this.regionMetricsUpdateTask =
@@ -350,6 +352,19 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
         maxFlushQueueSize = tempMaxFlushQueueSize;
       }
     }
+  }
+
+  @Override
+  public String getTableDescriptorHash() {
+    return tableDescriptorHash;
+  }
+
+  private String determineTableDescriptorHash() {
+    TableDescriptor tableDesc = this.region.getTableDescriptor();
+    if (tableDesc == null) {
+      return UNKNOWN;
+    }
+    return tableDesc.getDescriptorHash();
   }
 
   @Override
