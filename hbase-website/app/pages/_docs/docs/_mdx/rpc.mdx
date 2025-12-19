@@ -44,19 +44,15 @@ Client initiates connection.
 
 On connection setup, client sends a preamble followed by a connection header.
 
-##### `\<preamble\>`
-
-```
+`<preamble>`  
+```text
 <MAGIC 4 byte integer> <1 byte RPC Format Version> <1 byte auth type>
-```
-
+```  
 We need the auth method spec.
-here so the connection header is encoded if auth enabled.
+here so the connection header is encoded if auth enabled.  
+E.g.: HBas0x000x50 — 4 bytes of MAGIC — `HBas' — plus one-byte of version, 0 in this case, and one byte, 0x50 (SIMPLE). of an auth type.
 
-E.g.: HBas0x000x50 -- 4 bytes of MAGIC -- `HBas' -- plus one-byte of version, 0 in this case, and one byte, 0x50 (SIMPLE). of an auth type.
-
-##### `\<Protobuf ConnectionHeader Message\>`
-
+`<Protobuf ConnectionHeader Message>`  
 Has user info, and "protocol", as well as the encoders and compression the client will use sending CellBlocks.
 CellBlock encoders and compressors are for the life of the connection.
 CellBlock encoders implement org.apache.hadoop.hbase.codec.Codec.
@@ -69,8 +65,8 @@ This protobuf is written using writeDelimited so is prefaced by a pb varint with
 After client sends preamble and connection header, server does NOT respond if successful connection setup.
 No response means server is READY to accept requests and to give out response.
 If the version or authentication in the preamble is not agreeable or the server has trouble parsing the preamble, it will throw a org.apache.hadoop.hbase.ipc.FatalConnectionException explaining the error and will then disconnect.
-If the client in the connection header -- i.e.
-the protobuf'd Message that comes after the connection preamble -- asks for a Service the server does not support or a codec the server does not have, again we throw a FatalConnectionException with explanation.
+If the client in the connection header — i.e.
+the protobuf'd Message that comes after the connection preamble — asks for a Service the server does not support or a codec the server does not have, again we throw a FatalConnectionException with explanation.
 
 ### Request
 
@@ -86,22 +82,18 @@ The CellBlock is optionally used ferrying the bulk of the RPC data: i.e. Cells/K
 
 #### Request Parts
 
-##### `\<Total Length\>`
-
+**`<Total Length>`**  
 The request is prefaced by an int that holds the total length of what follows.
 
-##### `\<Protobuf RequestHeader Message\>`
-
+**`<Protobuf RequestHeader Message>`**  
 Will have call.id, trace.id, and method name, etc.
 including optional Metadata on the Cell block IFF one is following.
 Data is protobuf'd inline in this pb Message or optionally comes in the following CellBlock
 
-##### `\<Protobuf Param Message\>`
-
+**`<Protobuf Param Message>`**  
 If the method being invoked is getRegionInfo, if you study the Service descriptor for the client to regionserver protocol, you will find that the request sends a GetRegionInfoRequest protobuf Message param in this position.
 
-##### `\<CellBlock\>`
-
+**`<CellBlock>`**  
 An encoded and optionally compressed Cell block.
 
 ### Response
@@ -111,23 +103,19 @@ Bulk of the data may come in a following CellBlock.
 
 #### Response Parts
 
-##### `\<Total Length\>`
-
+`<Total Length>`  
 The response is prefaced by an int that holds the total length of what follows.
 
-##### `\<Protobuf ResponseHeader Message\>`
-
+`<Protobuf ResponseHeader Message>`  
 Will have call.id, etc.
 Will include exception if failed processing.
 Optionally includes metadata on optional, IFF there is a CellBlock following.
 
-##### `\<Protobuf Response Message\>`
-
+`<Protobuf Response Message>`  
 Return or may be nothing if exception.
 If the method being invoked is getRegionInfo, if you study the Service descriptor for the client to regionserver protocol, you will find that the response sends a GetRegionInfoResponse protobuf Message param in this position.
 
-##### `\<CellBlock\>`
-
+`<CellBlock>`  
 An encoded and optionally compressed Cell block.
 
 ### Exceptions
@@ -152,8 +140,8 @@ Codecs will live on the server for all time so old clients can connect.
 
 ### Constraints
 
-In some part, current wire-format -- i.e.
-all requests and responses preceded by a length -- has been dictated by current server non-async architecture.
+In some part, current wire-format — i.e.
+all requests and responses preceded by a length — has been dictated by current server non-async architecture.
 
 ### One fat pb request or header+param
 

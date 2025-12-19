@@ -14,7 +14,7 @@ Compressors reduce the size of large, opaque byte arrays in cells, and can signi
 
 Compressors and data block encoding can be used together on the same ColumnFamily.
 
-**Changes Take Effect Upon Compaction**
+## Changes Take Effect Upon Compaction
 
 If you change compression or encoding for a ColumnFamily, the changes take effect during compaction.
 
@@ -22,7 +22,7 @@ Some codecs take advantage of capabilities built into Java, such as GZip compres
 Others rely on native libraries. Native libraries may be available via codec dependencies installed into
 HBase's library directory, or, if you are utilizing Hadoop codecs, as part of Hadoop. Hadoop codecs
 typically have a native code component so follow instructions for installing Hadoop native binary
-support at [hadoop.native.lib](#hadoopnativelib).
+support at [Making use of Hadoop Native Libraries in HBase](#hadoopnativelib).
 
 This section discusses common codecs that are used and tested with HBase.
 
@@ -34,44 +34,33 @@ To configure HBase to use a compressor, see [compressor.install](#compressorinst
 To enable a compressor for a ColumnFamily, see [changing.compression](#changingcompression).
 To enable data block encoding for a ColumnFamily, see [data.block.encoding.enable](#datablockencodingenable).
 
-**Block Compressors**
+## Block Compressors
 
-* **NONE**
-
+* **NONE**  
   This compression type constant selects no compression, and is the default.
-
-* **BROTLI**
-
+* **BROTLI**  
   [Brotli](https://en.wikipedia.org/wiki/Brotli) is a generic-purpose lossless compression algorithm
   that compresses data using a combination of a modern variant of the LZ77 algorithm, Huffman
   coding, and 2nd order context modeling, with a compression ratio comparable to the best currently
   available general-purpose compression methods. It is similar in speed with GZ but offers more
   dense compression.
-
-* **BZIP2**
-
+* **BZIP2**  
   [Bzip2](https://en.wikipedia.org/wiki/Bzip2) compresses files using the Burrows-Wheeler block
   sorting text compression algorithm and Huffman coding. Compression is generally considerably
   better than that achieved by the dictionary- (LZ-) based compressors, but both compression and
   decompression can be slow in comparison to other options.
-
-* **GZ**
-
+* **GZ**  
   gzip is based on the [DEFLATE](https://en.wikipedia.org/wiki/Deflate) algorithm, which is a
   combination of LZ77 and Huffman coding. It is universally available in the Java Runtime
   Environment so is a good lowest common denominator option. However in comparison to more modern
   algorithms like Zstandard it is quite slow.
-
-* **LZ4**
-
+* **LZ4**  
   [LZ4](https://en.wikipedia.org/wiki/LZ4_(compression_algorithm)) is a lossless data compression
   algorithm that is focused on compression and decompression speed. It belongs to the LZ77 family
   of compression algorithms, like Brotli, DEFLATE, Zstandard, and others. In our microbenchmarks
   LZ4 is the fastest option for both compression and decompression in that family, and is our
   universally recommended option.
-
-* **LZMA**
-
+* **LZMA**  
   [LZMA](https://en.wikipedia.org/wiki/Lempel%E2%80%93Ziv%E2%80%93Markov_chain_algorithm) is a
   dictionary compression scheme somewhat similar to the LZ77 algorithm that achieves very high
   compression ratios with a computationally expensive predictive model and variable size
@@ -79,43 +68,34 @@ To enable data block encoding for a ColumnFamily, see [data.block.encoding.enabl
   compression algorithms. LZMA is superior to all other options in general compression ratio but as
   a compressor it can be extremely slow, especially when configured to operate at higher levels of
   compression.
-
-* **LZO**
-
+* **LZO**  
   [LZO](https://en.wikipedia.org/wiki/Lempel%E2%80%93Ziv%E2%80%93Oberhumer) is another LZ-variant
   data compression algorithm, with an implementation focused on decompression speed. It is almost
   but not quite as fast as LZ4.
-
-* **SNAPPY**
-
+* **SNAPPY**  
   [Snappy](https://en.wikipedia.org/wiki/Snappy_(compression)) is based on ideas from LZ77 but is
   optimized for very high compression speed, achieving only a "reasonable" compression in trade.
   It is as fast as LZ4 but does not compress quite as well. We offer a pure Java Snappy codec
   that can be used instead of GZ as the universally available option for any Java runtime on any
   hardware architecture.
-
-* **ZSTD**
-
+* **ZSTD**  
   [Zstandard](https://en.wikipedia.org/wiki/Zstd) combines a dictionary-matching stage (LZ77) with
   a large search window and a fast entropy coding stage, using both Finite State Entropy and
   Huffman coding. Compression speed can vary by a factor of 20 or more between the fastest and
   slowest levels, while decompression is uniformly fast, varying by less than 20% between the
-  fastest and slowest levels.
-
+  fastest and slowest levels.  
   ZStandard is the most flexible of the available compression codec options, offering a compression
   ratio similar to LZ4 at level 1 (but with slightly less performance), compression ratios
   comparable to DEFLATE at mid levels (but with better performance), and LZMA-alike dense
   compression (and LZMA-alike compression speeds) at high levels; while providing universally fast
   decompression.
 
-**Data Block Encoding Types**
+## Data Block Encoding Types
 
-**Prefix**
+### Prefix
 
-Often, keys are very similar. Specifically, keys often share a common prefix and only differ near the end. For instance, one key might be `RowKey:Family:Qualifier0` and the next key might be `RowKey:Family:Qualifier1`.
-
-In Prefix encoding, an extra column is added which holds the length of the prefix shared between the current key and the previous key.
-Assuming the first key here is totally different from the key before, its prefix length is 0.
+Often, keys are very similar. Specifically, keys often share a common prefix and only differ near the end. For instance, one key might be `RowKey:Family:Qualifier0` and the next key might be `RowKey:Family:Qualifier1`. 
+In Prefix encoding, an extra column is added which holds the length of the prefix shared between the current key and the previous key. Assuming the first key here is totally different from the key before, its prefix length is 0.
 
 The second key's prefix length is `23`, since they have the first 23 characters in common.
 
@@ -129,7 +109,7 @@ Here is the same data with prefix data encoding.
 
 ![ColumnFamily with Prefix Encoding](../images/data_block_prefix_encoding.png)
 
-**Diff**
+### Diff
 
 Diff encoding expands upon Prefix encoding.
 Instead of considering the key sequentially as a monolithic series of bytes, each key field is split so that each part of the key can be compressed more efficiently.
@@ -149,7 +129,7 @@ This image shows the same ColumnFamily from the previous images, with Diff encod
 
 ![ColumnFamily with Diff Encoding](../images/data_block_diff_encoding.png)
 
-**Fast Diff**
+### Fast Diff
 
 Fast Diff works similar to Diff, but uses a faster implementation. It also adds another field which stores a single bit to track whether the data itself is the same as the previous row. If it is, the data is not stored again.
 
@@ -157,7 +137,7 @@ Fast Diff is the recommended codec to use if you have long keys or many columns.
 
 The data format is nearly identical to Diff encoding, so there is not an image to illustrate it.
 
-**Prefix Tree**
+### Prefix Tree
 
 Prefix tree encoding was introduced as an experimental feature in HBase 0.96.
 It provides similar memory savings to the Prefix, Diff, and Fast Diff encoder, but provides faster random access at a cost of slower encoding speed.
@@ -228,7 +208,7 @@ bzip2:  false
 Above shows that the native hadoop library is not available in HBase context.
 
 The above NativeLibraryChecker tool may come back saying all is hunky-dory
--- i.e. all libs show 'true', that they are available -- but follow the below
+— i.e. all libs show 'true', that they are available — but follow the below
 presecription anyways to ensure the native libs are available in HBase context,
 when it goes to use them.
 
@@ -346,7 +326,7 @@ in site configuration, like so:
 ...
 ```
 
-**Compressor Microbenchmarks**
+#### Compressor Microbenchmarks
 
 See https://github.com/apurtell/jmh-compression-tests
 
@@ -388,7 +368,7 @@ These are the results:
 | Zstd (zstd-jni) | 18 | 47702.097 ± 442.670 | 48,319,879 | 81.28% |
 | Zstd (zstd-jni) | 22 | 97799.695 ± 1106.571 | 48,212,220 | 81.32% |
 
-**Compressor Support On the Master**
+#### Compressor Support On the Master
 
 A new configuration setting was introduced in HBase 0.95, to check the Master to determine which data block encoders are installed and configured on it, and assume that the entire cluster is configured the same.
 This option, `hbase.master.check.compression`, defaults to `true`.
@@ -396,14 +376,14 @@ This prevents the situation described in [HBASE-6370](https://issues.apache.org/
 
 If `hbase.master.check.compression` is enabled, libraries for all desired compressors need to be installed and configured on the Master, even if the Master does not run a region server.
 
-**Install GZ Support Via Native Libraries**
+#### Install GZ Support Via Native Libraries
 
 HBase uses Java's built-in GZip support unless the native Hadoop libraries are available on the CLASSPATH.
 The recommended way to add libraries to the CLASSPATH is to set the environment variable `HBASE_LIBRARY_PATH` for the user running HBase.
 If native libraries are not available and Java's GZIP is used, `Got brand-new compressor` reports will be present in the logs.
 See [brand.new.compressor](#brandnewcompressor)).
 
-**Install Hadoop Native LZO Support**
+#### Install Hadoop Native LZO Support
 
 HBase cannot ship with the Hadoop native LZO codc because of incompatibility between HBase, which uses an Apache Software License (ASL) and LZO, which uses a GPL license.
 See the [Hadoop-LZO at Twitter](https://github.com/twitter/hadoop-lzo/blob/master/README.md) for information on configuring LZO support for HBase.
@@ -413,7 +393,7 @@ AirCompressor LZO codec option instead of the Hadoop native default, or configur
 RegionServers to fail to start if native LZO support is not available.
 See [hbase.regionserver.codecs](#hbaseregionservercodecs).
 
-**Configure Hadoop Native LZ4 Support**
+#### Configure Hadoop Native LZ4 Support
 
 LZ4 support is bundled with Hadoop and is the default LZ4 codec implementation.
 It is not required that you make use of the Hadoop LZ4 codec. Our LZ4 codec implemented
@@ -436,11 +416,11 @@ Use the compression tool to check that LZ4 is installed on all nodes.
 Start up (or restart) HBase.
 Afterward, you can create and alter tables to enable LZ4 as a compression codec.:
 
-```
+```ruby
 hbase(main):003:0> alter 'TestTable', {NAME => 'info', COMPRESSION => 'LZ4'}
 ```
 
-**Install Hadoop native Snappy Support**
+#### Install Hadoop native Snappy Support
 
 Snappy support is bundled with Hadoop and is the default Snappy codec implementation.
 It is not required that you make use of the Hadoop Snappy codec. Our Snappy codec
@@ -465,7 +445,7 @@ See [hbase.regionserver.codecs](#hbaseregionservercodecs) to configure your Regi
 Each of these library locations need to be added to the environment variable `HBASE_LIBRARY_PATH` for the operating system user that runs HBase.
 You need to restart the RegionServer for the changes to take effect.
 
-**CompressionTest**
+#### CompressionTest
 
 You can use the CompressionTest tool to verify that your compressor is available to HBase:
 
@@ -473,7 +453,7 @@ You can use the CompressionTest tool to verify that your compressor is available
  $ hbase org.apache.hadoop.hbase.util.CompressionTest hdfs://host/path/to/hbase snappy
 ```
 
-**Enforce Compression Settings On a RegionServer**
+#### Enforce Compression Settings On a RegionServer
 
 You can configure a RegionServer so that it will fail to restart if compression is configured incorrectly, by adding the option hbase.regionserver.codecs to the _hbase-site.xml_, and setting its value to a comma-separated list of codecs that need to be available.
 For example, if you set this property to `lzo,gz`, the RegionServer would fail to start if both compressors were not available.
@@ -485,21 +465,21 @@ To enable compression for a ColumnFamily, use an `alter` command.
 You do not need to re-create the table or copy data.
 If you are changing codecs, be sure the old codec is still available until all the old StoreFiles have been compacted.
 
-**Enabling Compression on a ColumnFamily of an Existing Table using HBaseShell**
+#### Enabling Compression on a ColumnFamily of an Existing Table using HBaseShell
 
-```
+```ruby
 hbase> alter 'test', {NAME => 'cf', COMPRESSION => 'GZ'}
 ```
 
-**Creating a New Table with Compression On a ColumnFamily**
+#### Creating a New Table with Compression On a ColumnFamily
 
-```
+```ruby
 hbase> create 'test2', { NAME => 'cf2', COMPRESSION => 'SNAPPY' }
 ```
 
-**Verifying a ColumnFamily's Compression Settings**
+#### Verifying a ColumnFamily's Compression Settings
 
-```
+```ruby
 hbase> describe 'test'
 DESCRIPTION                                          ENABLED
  'test', {NAME => 'cf', DATA_BLOCK_ENCODING => 'NONE false
@@ -572,7 +552,7 @@ Options:
  -zk_root <arg>               name of parent znode in zookeeper
 ```
 
-**Example Usage of LoadTestTool**
+#### Example Usage of LoadTestTool
 
 ```bash
 $ hbase org.apache.hadoop.hbase.util.LoadTestTool -write 1:10:100 -num_keys 1000000 \
@@ -586,9 +566,9 @@ Codecs are enabled on a table by setting the `DATA_BLOCK_ENCODING` property.
 Disable the table before altering its DATA_BLOCK_ENCODING setting.
 Following is an example using HBase Shell:
 
-**Enable Data Block Encoding On a Table**
+#### Enable Data Block Encoding On a Table
 
-```
+```ruby
 hbase> alter 'test', { NAME => 'cf', DATA_BLOCK_ENCODING => 'FAST_DIFF' }
 Updating all regions with the new schema...
 0/1 regions updated.
@@ -597,9 +577,9 @@ Done.
 0 row(s) in 2.2820 seconds
 ```
 
-**Verifying a ColumnFamily's Data Block Encoding**
+#### Verifying a ColumnFamily's Data Block Encoding
 
-```
+```ruby
 hbase> describe 'test'
 DESCRIPTION                                          ENABLED
  'test', {NAME => 'cf', DATA_BLOCK_ENCODING => 'FAST true

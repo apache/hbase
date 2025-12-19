@@ -1,22 +1,19 @@
 ---
 title: "Access Control Matrix"
-description: "Permission sets required to perform operations in HBase."
+description: "The following matrix shows the permission set required to perform operations in HBase. Before using the table, read through the information about how to interpret it."
 ---
-
-The following matrix shows the permission set required to perform operations in HBase.
-Before using the table, read through the information about how to interpret it.
 
 ## Interpreting the ACL Matrix Table
 
 The following conventions are used in the ACL Matrix table:
 
-## Scopes
+### Scopes
 
 Permissions are evaluated starting at the widest scope and working to the narrowest scope.
 
 A scope corresponds to a level of the data model. From broadest to narrowest, the scopes are as follows:
 
-### Scopes
+#### Scopes
 
 * Global
 * Namespace (NS)
@@ -27,11 +24,11 @@ A scope corresponds to a level of the data model. From broadest to narrowest, th
 
 For instance, a permission granted at table level dominates any grants done at the Column Family, Column Qualifier, or cell level. The user can do what that grant implies at any location in the table. A permission granted at global scope dominates all: the user is always allowed to take that action everywhere.
 
-## Permissions
+### Permissions
 
 Possible permissions include the following:
 
-### Permissions
+#### Permissions
 
 * Superuser - a special user that belongs to group "supergroup" and has unlimited access
 * Admin (A)
@@ -42,22 +39,16 @@ Possible permissions include the following:
 
 For the most part, permissions work in an expected way, with the following caveats:
 
-**Having Write permission does not imply Read permission.**
-
+**Having Write permission does not imply Read permission.**  
 It is possible and sometimes desirable for a user to be able to write data that same user cannot read. One such example is a log-writing process.
 
-**The `hbase:meta` table is readable by every user, regardless of the user's other grants or restrictions.**
-
+**The `hbase:meta` table is readable by every user, regardless of the user's other grants or restrictions.**  
 This is a requirement for HBase to function correctly.
 
-**`CheckAndPut` and `CheckAndDelete` operations will fail if the user does not have both Write and Read permission.**
-
-**`Increment` and `Append` operations do not require Read access.**
-
-**The `superuser`, as the name suggests has permissions to perform all possible operations.**
-
-**And for the operations marked with \*, the checks are done in post hook and only subset of results satisfying access checks are returned back to the user.**
-
+**`CheckAndPut` and `CheckAndDelete` operations will fail if the user does not have both Write and Read permission.**  
+**`Increment` and `Append` operations do not require Read access.**  
+**The `superuser`, as the name suggests has permissions to perform all possible operations.**  
+**And for the operations marked with \*, the checks are done in post hook and only subset of results satisfying access checks are returned back to the user.**  
 The following table is sorted by the interface that provides each operation.
 In case the table goes out of date, the unit tests which check for accuracy of permissions can be found in _hbase-server/src/test/java/org/apache/hadoop/hbase/security/access/TestAccessController.java_, and the access controls themselves can be examined in _hbase-server/src/main/java/org/apache/hadoop/hbase/security/access/AccessController.java_.
 

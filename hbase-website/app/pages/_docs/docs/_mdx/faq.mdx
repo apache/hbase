@@ -5,33 +5,33 @@ description: "Frequently asked questions about Apache HBase."
 
 ## General
 
-### When should I use HBase?
+#### When should I use HBase?
 
-See [arch.overview](#arch-overview) in the Architecture chapter.
+See [Overview](#arch-overview) in the Architecture chapter.
 
-### Does HBase support SQL?
+#### Does HBase support SQL?
 
-Not really. SQL-ish support for HBase via [Hive](https://hive.apache.org/) is in development, however Hive is based on MapReduce which is not generally suitable for low-latency requests. See the [datamodel](#datamodel) section for examples on the HBase client.
+Not really. SQL-ish support for HBase via [Hive](https://hive.apache.org/) is in development, however Hive is based on MapReduce which is not generally suitable for low-latency requests. See the [Data Model](#datamodel) section for examples on the HBase client.
 
-### How can I find examples of NoSQL/HBase?
+#### How can I find examples of NoSQL/HBase?
 
-See the link to the BigTable paper in [other.info](#other-info), as well as the other papers.
+See the link to the BigTable paper in [Other Information About HBase](#other-info), as well as the other papers.
 
-### What is the history of HBase?
+#### What is the history of HBase?
 
-See [hbase.history](#hbase-history).
+See [HBase History](#hbase-history).
 
-### Why are the cells above 10MB not recommended for HBase?
+#### Why are the cells above 10MB not recommended for HBase?
 
 Large cells don't fit well into HBase's approach to buffering data. First, the large cells bypass the MemStoreLAB when they are written. Then, they cannot be cached in the L2 block cache during read operations. Instead, HBase has to allocate on-heap memory for them each time. This can have a significant impact on the garbage collector within the RegionServer process.
 
 ## Upgrading
 
-### How do I upgrade Maven-managed projects from HBase 0.94 to HBase 0.96+?
+#### How do I upgrade Maven-managed projects from HBase 0.94 to HBase 0.96+?
 
 In HBase 0.96, the project moved to a modular structure. Adjust your project's dependencies to rely upon the `hbase-client` module or another module as appropriate, rather than a single JAR. You can model your Maven dependency after one of the following, depending on your targeted version of HBase. See Section 3.5, "Upgrading from 0.94.x to 0.96.x" or Section 3.3, "Upgrading from 0.96.x to 0.98.x" for more information.
 
-#### Maven Dependency for HBase 0.98
+**Maven Dependency for HBase 0.98**  
 
 ```xml
 <dependency>
@@ -41,7 +41,7 @@ In HBase 0.96, the project moved to a modular structure. Adjust your project's d
 </dependency>
 ```
 
-#### Maven Dependency for HBase 0.96
+**Maven Dependency for HBase 0.96**
 
 ```xml
 <dependency>
@@ -51,7 +51,7 @@ In HBase 0.96, the project moved to a modular structure. Adjust your project's d
 </dependency>
 ```
 
-#### Maven Dependency for HBase 0.94
+**Maven Dependency for HBase 0.94**
 
 ```xml
 <dependency>
@@ -63,77 +63,77 @@ In HBase 0.96, the project moved to a modular structure. Adjust your project's d
 
 ## Architecture
 
-### How does HBase handle Region-RegionServer assignment and locality?
+#### How does HBase handle Region-RegionServer assignment and locality?
 
-See [regions.arch](#regions-arch).
+See [Regions](#regions-arch).
 
 ## Configuration
 
-### How can I get started with my first cluster?
+#### How can I get started with my first cluster?
 
-See [quickstart](#quickstart).
+See [Quick Start - Standalone HBase](#quickstart).
 
-### Where can I learn about the rest of the configuration options?
+#### Where can I learn about the rest of the configuration options?
 
-See [configuration](#configuration).
+See [Apache HBase Configuration](#configuration).
 
 ## Schema Design / Data Access
 
-### How should I design my schema in HBase?
+#### How should I design my schema in HBase?
 
-See [datamodel](#datamodel) and [schema](#schema).
+See [Data Model](#datamodel) and [HBase and Schema Design](#schema).
 
-### How can I store (fill in the blank) in HBase?
+#### How can I store (fill in the blank) in HBase?
 
-See [supported.datatypes](#supported-datatypes).
+See [Supported Datatypes](#supported-datatypes).
 
-### How can I handle secondary indexes in HBase?
+#### How can I handle secondary indexes in HBase?
 
-See [secondary.indexes](#secondary-indexes).
+See [Secondary Indexes and Alternate Query Paths](#secondary-indexes).
 
-### Can I change a table's rowkeys?
+#### Can I change a table's rowkeys?
 
-This is a very common question. You can't. See [changing.rowkeys](#changing-rowkeys).
+This is a very common question. You can't. See [Immutability of Rowkeys](#changing-rowkeys).
 
-### What APIs does HBase support?
+#### What APIs does HBase support?
 
-See [datamodel](#datamodel), [architecture.client](#architecture-client), and [external_apis](#external_apis).
+See [Data Model](#datamodel), [Client](#architecture-client), and [Apache HBase External APIs](#external_apis).
 
 ## MapReduce
 
-### How can I use MapReduce with HBase?
+#### How can I use MapReduce with HBase?
 
-See [mapreduce](#mapreduce).
+See [HBase and MapReduce](#mapreduce).
 
 ## Performance and Troubleshooting
 
-### How can I improve HBase cluster performance?
+#### How can I improve HBase cluster performance?
 
-See [performance](#performance).
+See [Apache HBase Performance Tuning](#performance).
 
-### How can I troubleshoot my HBase cluster?
+#### How can I troubleshoot my HBase cluster?
 
-See [trouble](#trouble).
+See [Troubleshooting and Debugging Apache HBase](#trouble).
 
 ## Amazon EC2
 
-### I am running HBase on Amazon EC2 and...
+#### I am running HBase on Amazon EC2 and...
 
-EC2 issues are a special case. See [trouble.ec2](#trouble-ec2) and [perf.ec2](#perf-ec2).
+EC2 issues are a special case. See [Amazon EC2](#trouble-ec2) and [Amazon EC2](#perf-ec2).
 
 ## Operations
 
-### How do I manage my HBase cluster?
+#### How do I manage my HBase cluster?
 
-See [ops_mgt](#ops_mgt).
+See [Apache HBase Operational Management](#ops_mgt).
 
-### How do I back up my HBase cluster?
+#### How do I back up my HBase cluster?
 
-See [ops.backup](#ops-backup).
+See [HBase Backup](#ops-backup).
 
 ## HBase in Action
 
-### Where can I find interesting videos and presentations on HBase?
+#### Where can I find interesting videos and presentations on HBase?
 
-See [other.info](#other-info).
+See [Other Information About HBase](#other-info).
 
