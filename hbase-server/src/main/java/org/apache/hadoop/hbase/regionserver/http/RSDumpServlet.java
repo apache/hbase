@@ -18,9 +18,10 @@
 package org.apache.hadoop.hbase.regionserver.http;
 
 import java.io.IOException;
-import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -58,7 +59,8 @@ public class RSDumpServlet extends StateDumpServlet {
       return;
     }
 
-    OutputStream os = response.getOutputStream();
+    OutputStreamWriter os =
+      new OutputStreamWriter(response.getOutputStream(), StandardCharsets.UTF_8);
     try (PrintWriter out = new PrintWriter(os)) {
 
       out.println("RegionServer status for " + hrs.getServerName() + " as of " + new Date());
@@ -81,15 +83,16 @@ public class RSDumpServlet extends StateDumpServlet {
 
       out.println("\n\nStacks:");
       out.println(LINE);
-      PrintStream ps = new PrintStream(response.getOutputStream(), false, "UTF-8");
+      PrintStream ps =
+        new PrintStream(response.getOutputStream(), false, StandardCharsets.UTF_8.toString());
       Threads.printThreadInfo(ps, "");
       ps.flush();
 
       out.println("\n\nRS Configuration:");
       out.println(LINE);
-      Configuration conf = hrs.getConfiguration();
+      Configuration redactedConf = getRedactedConfiguration(hrs.getConfiguration());
       out.flush();
-      conf.writeXml(os);
+      redactedConf.writeXml(os);
       os.flush();
 
       out.println("\n\nLogs");
@@ -99,7 +102,7 @@ public class RSDumpServlet extends StateDumpServlet {
 
       out.println("\n\nRS Queue:");
       out.println(LINE);
-      if (isShowQueueDump(conf)) {
+      if (isShowQueueDump(hrs.getConfiguration())) {
         dumpQueue(hrs, out);
       }
 
