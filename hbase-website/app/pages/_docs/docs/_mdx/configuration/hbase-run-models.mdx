@@ -6,7 +6,7 @@ HBase has two run modes: [standalone](#standalone) and [distributed](#distribute
 
 ## Standalone HBase
 
-This is the default mode. Standalone mode is what is described in the [quickstart](/docs/getting_started#quick-start---standalone-hbase) section. In standalone mode, HBase does not use HDFS — it uses the local filesystem instead — and it runs all HBase daemons and a local ZooKeeper all up in the same JVM. ZooKeeper binds to a well-known port so clients may talk to HBase.
+This is the default mode. Standalone mode is what is described in the [quickstart](/docs/getting_started#quick-start---standalone-hbase) section. In standalone mode, HBase does not use HDFS — it uses the local filesystem instead — and it runs all HBase daemons and a local ZooKeeper all up in the same JVM. ZooKeeper binds to a well-known port so clients may talk to HBase.
 
 ### Standalone HBase over HDFS
 
@@ -31,7 +31,7 @@ To configure this standalone variant, edit your _hbase-site.xml_ setting _hbase.
 
 ## Distributed
 
-Distributed mode can be subdivided into distributed but all daemons run on a single node — a.k.a. *pseudo-distributed* — and _fully-distributed_ where the daemons are spread across all nodes in the cluster. The _pseudo-distributed_ vs. _fully-distributed_ nomenclature comes from Hadoop.
+Distributed mode can be subdivided into distributed but all daemons run on a single node — a.k.a. *pseudo-distributed* — and _fully-distributed_ where the daemons are spread across all nodes in the cluster. The _pseudo-distributed_ vs. _fully-distributed_ nomenclature comes from Hadoop.
 
 Pseudo-distributed mode can run against the local filesystem or it can run against an instance of the _Hadoop Distributed File System_ (HDFS). Fully-distributed mode can ONLY run on HDFS. See the Hadoop [documentation](https://hadoop.apache.org/docs/current/) for how to set up HDFS. A good walk-through for setting up HDFS on Hadoop 2 can be found at [https://web.archive.org/web/20221007121526/https://www.alexjf.net/blog/distributed-systems/hadoop-yarn-installation-definitive-guide/](https://web.archive.org/web/20221007121526/https://www.alexjf.net/blog/distributed-systems/hadoop-yarn-installation-definitive-guide/).
 
@@ -104,9 +104,7 @@ See [quickstart-fully-distributed](/docs/getting_started#fully-distributed-for-p
 
 1.  Of note, if you have made HDFS client configuration changes on your Hadoop cluster, such as configuration directives for HDFS clients, as opposed to server-side configurations, you must use one of the following methods to enable HBase to see and use these configuration changes:
     -  Add a pointer to your `HADOOP_CONF_DIR` to the `HBASE_CLASSPATH` environment variable in _hbase-env.sh_.
-
     -  Add a copy of _hdfs-site.xml_ (or _hadoop-site.xml_) or, better, symlinks, under `$HBASE_HOME/conf`, or
-
     -  if only a small set of HDFS client configurations, add them to _hbase-site.xml_.
 
 An example of such an HDFS client configuration is `dfs.replication`. If for example, you want to run with a replication factor of 5, HBase will create files with the default of 3 unless you do the above to make the configuration available to HBase.

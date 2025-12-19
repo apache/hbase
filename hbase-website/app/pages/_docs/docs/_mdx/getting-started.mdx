@@ -3,6 +3,8 @@ title: "Getting Started"
 description: "Quick start to get you up and run a single-node, standalone instance of HBase."
 ---
 
+import { Step, Steps } from "fumadocs-ui/components/steps";
+
 ## Quick Start - Standalone HBase
 
 This section describes the setup of a single-node standalone HBase. A _standalone_ instance has all HBase daemons — the Master, RegionServers, and ZooKeeper — running in a single JVM persisting to the local filesystem. It is our most basic deploy profile. We will show you how to create a table in HBase using the `hbase shell` CLI, insert rows into the table, perform put and scan operations against the table, enable or disable the table, and start and stop HBase.
@@ -17,164 +19,240 @@ HBase requires that a JDK be installed. See [Java](/docs/configuration#java) for
 
 ### Procedure: Download, Configure, and Start HBase in Standalone Mode
 
-1. Choose a download site from this list of [Apache Download Mirrors](https://www.apache.org/dyn/closer.lua/hbase/). Click on the suggested top link. This will take you to a mirror of _HBase Releases_. Click on the folder named _stable_ and then download the binary file that ends in _.tar.gz_ to your local filesystem. Do not download the file ending in _src.tar.gz_ for now.
+<Steps>
 
-2. Extract the downloaded file, and change to the newly-created directory.
+<Step>
 
-    ```bash
-    tar xzvf <FILE_NAME>.tar.gz
-    cd <DIRECTORY_NAME>
-    ```
+Choose a download site from this list of [Apache Download Mirrors](https://www.apache.org/dyn/closer.lua/hbase/). Click on the suggested top link. This will take you to a mirror of _HBase Releases_. Click on the folder named _stable_ and then download the binary file that ends in _.tar.gz_ to your local filesystem. Do not download the file ending in _src.tar.gz_ for now.
 
-3. You must set the `JAVA_HOME` environment variable before starting HBase. To make this easier, HBase lets you set it within the _conf/hbase-env.sh_ file. You must locate where Java is installed on your machine, and one way to find this is by using the _whereis java_ command. Once you have the location, edit the _conf/hbase-env.sh_ file and uncomment the line starting with _\#export JAVA_HOME=_, and then set it to your Java installation path.
+</Step>
 
-   _Example extract from *hbase-env.sh* where *JAVA_HOME* is set_
+<Step>
 
-   ```bash
-   # Set environment variables here.
-   # The java implementation to use.
-   export JAVA_HOME=/usr/jdk64/jdk1.8.0_112
-   ```
+Extract the downloaded file, and change to the newly-created directory.
 
-4. The _bin/start-hbase.sh_ script is provided as a convenient way to start HBase. Issue the command, and if all goes well, a message is logged to standard output showing that HBase started successfully. You can use the `jps` command to verify that you have one running process called `HMaster`. In standalone mode HBase runs all daemons within this single JVM, i.e. the HMaster, a single HRegionServer, and the ZooKeeper daemon. Go to _[http://localhost:16010](http://localhost:16010)_ to view the HBase Web UI.
+```bash
+tar xzvf <FILE_NAME>.tar.gz
+cd <DIRECTORY_NAME>
+```
+
+</Step>
+
+<Step>
+
+You must set the `JAVA_HOME` environment variable before starting HBase. To make this easier, HBase lets you set it within the _conf/hbase-env.sh_ file. You must locate where Java is installed on your machine, and one way to find this is by using the _whereis java_ command. Once you have the location, edit the _conf/hbase-env.sh_ file and uncomment the line starting with _\#export JAVA_HOME=_, and then set it to your Java installation path.
+
+_Example extract from *hbase-env.sh* where *JAVA_HOME* is set_
+
+```bash
+# Set environment variables here.
+# The java implementation to use.
+export JAVA_HOME=/usr/jdk64/jdk1.8.0_112
+```
+
+</Step>
+
+<Step>
+
+The _bin/start-hbase.sh_ script is provided as a convenient way to start HBase. Issue the command, and if all goes well, a message is logged to standard output showing that HBase started successfully. You can use the `jps` command to verify that you have one running process called `HMaster`. In standalone mode HBase runs all daemons within this single JVM, i.e. the HMaster, a single HRegionServer, and the ZooKeeper daemon. Go to _[http://localhost:16010](http://localhost:16010)_ to view the HBase Web UI.
+
+</Step>
+
+</Steps>
 
 ### Procedure: Use HBase For the First Time
 
-1. Connect to HBase.
+<Steps>
 
-   Connect to your running instance of HBase using the `hbase shell` command, located in the _bin/_ directory of your HBase install. In this example, some usage and version information that is printed when you start HBase Shell has been omitted. The HBase Shell prompt ends with a `>` character.
+<Step>
 
-   ```bash
-   $ ./bin/hbase shell
-   hbase(main):001:0>
-   ```
+#### Connect to HBase
 
-2. Display HBase Shell Help Text.
+Connect to your running instance of HBase using the `hbase shell` command, located in the _bin/_ directory of your HBase install. In this example, some usage and version information that is printed when you start HBase Shell has been omitted. The HBase Shell prompt ends with a `>` character.
 
-   Type `help` and press Enter, to display some basic usage information for HBase Shell, as well as several example commands. Notice that table names, rows, columns all must be enclosed in quote characters.
+```bash
+$ ./bin/hbase shell
+hbase(main):001:0>
+```
 
-3. Create a table.
+</Step>
 
-   Use the `create` command to create a new table. You must specify the table name and the ColumnFamily name.
+<Step>
 
-   ```bash
-   hbase(main):001:0> create 'test', 'cf'
-   0 row(s) in 0.4170 seconds
+#### Display HBase Shell Help Text
 
-   => Hbase::Table - test
-   ```
+Type `help` and press Enter, to display some basic usage information for HBase Shell, as well as several example commands. Notice that table names, rows, columns all must be enclosed in quote characters.
 
-4. List Information About your Table
+</Step>
 
-   Use the `list` command to confirm your table exists
+<Step>
 
-   ```bash
-   hbase(main):002:0> list 'test'
-   TABLE
-   test
-   1 row(s) in 0.0180 seconds
+#### Create a table
 
-   => ["test"]
-   ```
+Use the `create` command to create a new table. You must specify the table name and the ColumnFamily name.
 
-   Now use the `describe` command to see details, including configuration defaults
+```bash
+hbase(main):001:0> create 'test', 'cf'
+0 row(s) in 0.4170 seconds
 
-   ```bash
-   hbase(main):003:0> describe 'test'
-   Table test is ENABLED
-   test
-   COLUMN FAMILIES DESCRIPTION
-   {NAME => 'cf', VERSIONS => '1', EVICT_BLOCKS_ON_CLOSE => 'false', NEW_VERSION_BEHAVIOR => 'false', KEEP_DELETED_CELLS => 'FALSE', CACHE_DATA_ON_WRITE =>
-   'false', DATA_BLOCK_ENCODING => 'NONE', TTL => 'FOREVER', MIN_VERSIONS => '0', REPLICATION_SCOPE => '0', BLOOMFILTER => 'ROW', CACHE_INDEX_ON_WRITE => 'f
-   alse', IN_MEMORY => 'false', CACHE_BLOOMS_ON_WRITE => 'false', PREFETCH_BLOCKS_ON_OPEN => 'false', COMPRESSION => 'NONE', BLOCKCACHE => 'true', BLOCKSIZE
-    => '65536'}
-   1 row(s)
-   Took 0.9998 seconds
-   ```
+=> Hbase::Table - test
+```
 
-5. Put data into your table.
+</Step>
 
-   To put data into your table, use the `put` command.
+<Step>
 
-   ```bash
-   hbase(main):003:0> put 'test', 'row1', 'cf:a', 'value1'
-   0 row(s) in 0.0850 seconds
+#### List Information About your Table
 
-   hbase(main):004:0> put 'test', 'row2', 'cf:b', 'value2'
-   0 row(s) in 0.0110 seconds
+Use the `list` command to confirm your table exists
 
-   hbase(main):005:0> put 'test', 'row3', 'cf:c', 'value3'
-   0 row(s) in 0.0100 seconds
-   ```
+```bash
+hbase(main):002:0> list 'test'
+TABLE
+test
+1 row(s) in 0.0180 seconds
 
-   Here, we insert three values, one at a time. The first insert is at `row1`, column `cf:a`, with a value of `value1`. Columns in HBase are comprised of a column family prefix, `cf` in this example, followed by a colon and then a column qualifier suffix, `a` in this case.
+=> ["test"]
+```
 
-6. Scan the table for all data at once.
+Now use the `describe` command to see details, including configuration defaults
 
-   One of the ways to get data from HBase is to scan. Use the `scan` command to scan the table for data. You can limit your scan, but for now, all data is fetched.
+```bash
+hbase(main):003:0> describe 'test'
+Table test is ENABLED
+test
+COLUMN FAMILIES DESCRIPTION
+{NAME => 'cf', VERSIONS => '1', EVICT_BLOCKS_ON_CLOSE => 'false', NEW_VERSION_BEHAVIOR => 'false', KEEP_DELETED_CELLS => 'FALSE', CACHE_DATA_ON_WRITE =>
+'false', DATA_BLOCK_ENCODING => 'NONE', TTL => 'FOREVER', MIN_VERSIONS => '0', REPLICATION_SCOPE => '0', BLOOMFILTER => 'ROW', CACHE_INDEX_ON_WRITE => 'f
+alse', IN_MEMORY => 'false', CACHE_BLOOMS_ON_WRITE => 'false', PREFETCH_BLOCKS_ON_OPEN => 'false', COMPRESSION => 'NONE', BLOCKCACHE => 'true', BLOCKSIZE
+ => '65536'}
+1 row(s)
+Took 0.9998 seconds
+```
 
-   ```bash
-   hbase(main):006:0> scan 'test'
-   ROW                                      COLUMN+CELL
-    row1                                    column=cf:a, timestamp=1421762485768, value=value1
-    row2                                    column=cf:b, timestamp=1421762491785, value=value2
-    row3                                    column=cf:c, timestamp=1421762496210, value=value3
-   3 row(s) in 0.0230 seconds
-   ```
+</Step>
 
-7. Get a single row of data.
+<Step>
 
-   To get a single row of data at a time, use the `get` command.
+#### Put data into your table
 
-   ```bash
-   hbase(main):007:0> get 'test', 'row1'
-   COLUMN                                   CELL
-    cf:a                                    timestamp=1421762485768, value=value1
-   1 row(s) in 0.0350 seconds
-   ```
+To put data into your table, use the `put` command.
 
-8. Disable a table.
+```bash
+hbase(main):003:0> put 'test', 'row1', 'cf:a', 'value1'
+0 row(s) in 0.0850 seconds
 
-   If you want to delete a table or change its settings, as well as in some other situations, you need to disable the table first, using the `disable` command. You can re-enable it using the `enable` command.
+hbase(main):004:0> put 'test', 'row2', 'cf:b', 'value2'
+0 row(s) in 0.0110 seconds
 
-   ```bash
-   hbase(main):008:0> disable 'test'
-   0 row(s) in 1.1820 seconds
+hbase(main):005:0> put 'test', 'row3', 'cf:c', 'value3'
+0 row(s) in 0.0100 seconds
+```
 
-   hbase(main):009:0> enable 'test'
-   0 row(s) in 0.1770 seconds
-   ```
+Here, we insert three values, one at a time. The first insert is at `row1`, column `cf:a`, with a value of `value1`. Columns in HBase are comprised of a column family prefix, `cf` in this example, followed by a colon and then a column qualifier suffix, `a` in this case.
 
-   Disable the table again if you tested the `enable` command above:
+</Step>
 
-   ```bash
-   hbase(main):010:0> disable 'test'
-   0 row(s) in 1.1820 seconds
-   ```
+<Step>
 
-9. Drop the table.
+#### Scan the table for all data at once
 
-   To drop (delete) a table, use the `drop` command.
+One of the ways to get data from HBase is to scan. Use the `scan` command to scan the table for data. You can limit your scan, but for now, all data is fetched.
 
-   ```bash
-   hbase(main):011:0> drop 'test'
-   0 row(s) in 0.1370 seconds
-   ```
+```bash
+hbase(main):006:0> scan 'test'
+ROW                                      COLUMN+CELL
+ row1                                    column=cf:a, timestamp=1421762485768, value=value1
+ row2                                    column=cf:b, timestamp=1421762491785, value=value2
+ row3                                    column=cf:c, timestamp=1421762496210, value=value3
+3 row(s) in 0.0230 seconds
+```
 
-10. Exit the HBase Shell.
+</Step>
 
-    To exit the HBase Shell and disconnect from your cluster, use the `quit` command. HBase is still running in the background.
+<Step>
+
+#### Get a single row of data
+
+To get a single row of data at a time, use the `get` command.
+
+```bash
+hbase(main):007:0> get 'test', 'row1'
+COLUMN                                   CELL
+ cf:a                                    timestamp=1421762485768, value=value1
+1 row(s) in 0.0350 seconds
+```
+
+</Step>
+
+<Step>
+
+#### Disable a table
+
+If you want to delete a table or change its settings, as well as in some other situations, you need to disable the table first, using the `disable` command. You can re-enable it using the `enable` command.
+
+```bash
+hbase(main):008:0> disable 'test'
+0 row(s) in 1.1820 seconds
+
+hbase(main):009:0> enable 'test'
+0 row(s) in 0.1770 seconds
+```
+
+Disable the table again if you tested the `enable` command above:
+
+```bash
+hbase(main):010:0> disable 'test'
+0 row(s) in 1.1820 seconds
+```
+
+</Step>
+
+<Step>
+
+#### Drop the table
+
+To drop (delete) a table, use the `drop` command.
+
+```bash
+hbase(main):011:0> drop 'test'
+0 row(s) in 0.1370 seconds
+```
+
+</Step>
+
+<Step>
+
+#### Exit the HBase Shell
+
+To exit the HBase Shell and disconnect from your cluster, use the `quit` command. HBase is still running in the background.
+
+</Step>
+
+</Steps>
 
 ### Procedure: Stop HBase
 
-1. In the same way that the _bin/start-hbase.sh_ script is provided to conveniently start all HBase daemons, the _bin/stop-hbase.sh_ script stops them.
+<Steps>
 
-   ```bash
-   $ ./bin/stop-hbase.sh
-   stopping hbase....................
-   ```
+<Step>
 
-2. After issuing the command, it can take several minutes for the processes to shut down. Use the `jps` to be sure that the HMaster and HRegionServer processes are shut down.
+In the same way that the _bin/start-hbase.sh_ script is provided to conveniently start all HBase daemons, the _bin/stop-hbase.sh_ script stops them.
+
+```bash
+$ ./bin/stop-hbase.sh
+stopping hbase....................
+```
+
+</Step>
+
+<Step>
+
+After issuing the command, it can take several minutes for the processes to shut down. Use the `jps` to be sure that the HMaster and HRegionServer processes are shut down.
+
+</Step>
+
+</Steps>
 
 The above has shown you how to start and stop a standalone instance of HBase. In the next sections we give a quick overview of other modes of hbase deploy.
 
@@ -190,95 +268,131 @@ After working your way through [quickstart](#quick-start---standalone-hbase) sta
   in the Hadoop documentation is a good starting point.
 </Callout>
 
-1. Stop HBase if it is running.
+<Steps>
 
-   If you have just finished [quickstart](#quick-start---standalone-hbase) and HBase is still running, stop it. This procedure will create a totally new directory where HBase will store its data, so any databases you created before will be lost.
+<Step>
 
-2. Configure HBase.
+#### Stop HBase if it is running
 
-   Edit the _hbase-site.xml_ configuration. First, add the following property which directs HBase to run in distributed mode, with one JVM instance per daemon.
+If you have just finished [quickstart](#quick-start---standalone-hbase) and HBase is still running, stop it. This procedure will create a totally new directory where HBase will store its data, so any databases you created before will be lost.
 
-   ```xml
-   <property>
-   <name>hbase.cluster.distributed</name>
-   <value>true</value>
-   </property>
-   ```
+</Step>
 
-   Next, add a configuration for `hbase.rootdir`, pointing to the address of your HDFS instance, using the `hdfs:////` URI syntax. In this example, HDFS is running on the localhost at port 8020.
+<Step>
 
-   ```xml
-   <property>
-   <name>hbase.rootdir</name>
-   <value>hdfs://localhost:9000/hbase</value>
-   </property>
-   ```
+#### Configure HBase
 
-   You do not need to create the directory in HDFS. HBase will do this for you. If you create the directory, HBase will attempt to do a migration, which is not what you want.
+Edit the _hbase-site.xml_ configuration. First, add the following property which directs HBase to run in distributed mode, with one JVM instance per daemon.
 
-   Finally, remove existing configuration for `hbase.tmp.dir` and `hbase.unsafe.stream.capability.enforce`.
+```xml
+<property>
+<name>hbase.cluster.distributed</name>
+<value>true</value>
+</property>
+```
 
-3. Start HBase.
+Next, add a configuration for `hbase.rootdir`, pointing to the address of your HDFS instance, using the `hdfs:////` URI syntax. In this example, HDFS is running on the localhost at port 8020.
 
-   Use the _bin/start-hbase.sh_ command to start HBase. If your system is configured correctly, the `jps` command should show the HMaster and HRegionServer processes running.
+```xml
+<property>
+<name>hbase.rootdir</name>
+<value>hdfs://localhost:9000/hbase</value>
+</property>
+```
 
-4. Check the HBase directory in HDFS.
+You do not need to create the directory in HDFS. HBase will do this for you. If you create the directory, HBase will attempt to do a migration, which is not what you want.
 
-   If everything worked correctly, HBase created its directory in HDFS. In the configuration above, it is stored in _/hbase/_ on HDFS. You can use the `hadoop fs` command in Hadoop’s _bin/_ directory to list this directory.
+Finally, remove existing configuration for `hbase.tmp.dir` and `hbase.unsafe.stream.capability.enforce`.
 
-   ```bash
-   $ ./bin/hadoop fs -ls /hbase
-   Found 7 items
-   drwxr-xr-x   - hbase users          0 2014-06-25 18:58 /hbase/.tmp
-   drwxr-xr-x   - hbase users          0 2014-06-25 21:49 /hbase/WALs
-   drwxr-xr-x   - hbase users          0 2014-06-25 18:48 /hbase/corrupt
-   drwxr-xr-x   - hbase users          0 2014-06-25 18:58 /hbase/data
-   -rw-r--r--   3 hbase users         42 2014-06-25 18:41 /hbase/hbase.id
-   -rw-r--r--   3 hbase users          7 2014-06-25 18:41 /hbase/hbase.version
-   drwxr-xr-x   - hbase users          0 2014-06-25 21:49 /hbase/oldWALs
-   ```
+</Step>
 
-5. Create a table and populate it with data.
+<Step>
 
-   You can use the HBase Shell to create a table, populate it with data, scan and get values from it, using the same procedure as in [shell exercises](/docs/shell_exercises).
+#### Start HBase
 
-6. Start and stop a backup HBase Master (HMaster) server.
+Use the _bin/start-hbase.sh_ command to start HBase. If your system is configured correctly, the `jps` command should show the HMaster and HRegionServer processes running.
 
-   <Callout type="info">
-     Running multiple HMaster instances on the same hardware does not make sense in a production
-     environment, in the same way that running a pseudo-distributed cluster does not make sense for
-     production. This step is offered for testing and learning purposes only.
-   </Callout>
+</Step>
 
-   The HMaster server controls the HBase cluster. You can start up to 9 backup HMaster servers, which makes 10 total HMasters, counting the primary. To start a backup HMaster, use the `local-master-backup.sh`. For each backup master you want to start, add a parameter representing the port offset for that master. Each HMaster uses two ports (16000 and 16010 by default). The port offset is added to these ports, so using an offset of 2, the backup HMaster would use ports 16002 and 16012. The following command starts 3 backup servers using ports 16002/16012, 16003/16013, and 16005/16015.
+<Step>
 
-   ```bash
-   ./bin/local-master-backup.sh start 2 3 5
-   ```
+#### Check the HBase directory in HDFS
 
-   To kill a backup master without killing the entire cluster, you need to find its process ID (PID). The PID is stored in a file with a name like _/tmp/hbase-USER-X-master.pid_. The only contents of the file is the PID. You can use the `kill -9` command to kill that PID. The following command will kill the master with port offset 1, but leave the cluster running:
+If everything worked correctly, HBase created its directory in HDFS. In the configuration above, it is stored in _/hbase/_ on HDFS. You can use the `hadoop fs` command in Hadoop's _bin/_ directory to list this directory.
 
-   ```bash
-   cat /tmp/hbase-testuser-1-master.pid |xargs kill -9
-   ```
+```bash
+$ ./bin/hadoop fs -ls /hbase
+Found 7 items
+drwxr-xr-x   - hbase users          0 2014-06-25 18:58 /hbase/.tmp
+drwxr-xr-x   - hbase users          0 2014-06-25 21:49 /hbase/WALs
+drwxr-xr-x   - hbase users          0 2014-06-25 18:48 /hbase/corrupt
+drwxr-xr-x   - hbase users          0 2014-06-25 18:58 /hbase/data
+-rw-r--r--   3 hbase users         42 2014-06-25 18:41 /hbase/hbase.id
+-rw-r--r--   3 hbase users          7 2014-06-25 18:41 /hbase/hbase.version
+drwxr-xr-x   - hbase users          0 2014-06-25 21:49 /hbase/oldWALs
+```
 
-7. Start and stop additional RegionServers
+</Step>
 
-   The HRegionServer manages the data in its StoreFiles as directed by the HMaster. Generally, one HRegionServer runs per node in the cluster. Running multiple HRegionServers on the same system can be useful for testing in pseudo-distributed mode. The `local-regionservers.sh` command allows you to run multiple RegionServers. It works in a similar way to the `local-master-backup.sh` command, in that each parameter you provide represents the port offset for an instance. Each RegionServer requires two ports, and the default ports are 16020 and 16030. Since HBase version 1.1.0, HMaster doesn’t use region server ports, this leaves 10 ports (16020 to 16029 and 16030 to 16039) to be used for RegionServers. For supporting additional RegionServers, set environment variables HBASE_RS_BASE_PORT and HBASE_RS_INFO_BASE_PORT to appropriate values before running script `local-regionservers.sh`. e.g. With values 16200 and 16300 for base ports, 99 additional RegionServers can be supported, on a server. The following command starts four additional RegionServers, running on sequential ports starting at 16022/16032 (base ports 16020/16030 plus 2).
+<Step>
 
-   ```bash
-   ./bin/local-regionservers.sh start 2 3 4 5
-   ```
+#### Create a table and populate it with data
 
-   To stop a RegionServer manually, use the `local-regionservers.sh` command with the `stop` parameter and the offset of the server to stop.
+You can use the HBase Shell to create a table, populate it with data, scan and get values from it, using the same procedure as in [shell exercises](/docs/shell_exercises).
 
-   ```bash
-   ./bin/local-regionservers.sh stop 3
-   ```
+</Step>
 
-8. Stop HBase.
+<Step>
 
-   You can stop HBase the same way as in the [quickstart](#quick-start---standalone-hbase) procedure, using the _bin/stop-hbase.sh_ command.
+#### Start and stop a backup HBase Master (HMaster) server
+
+<Callout type="info">
+  Running multiple HMaster instances on the same hardware does not make sense in a production
+  environment, in the same way that running a pseudo-distributed cluster does not make sense for
+  production. This step is offered for testing and learning purposes only.
+</Callout>
+
+The HMaster server controls the HBase cluster. You can start up to 9 backup HMaster servers, which makes 10 total HMasters, counting the primary. To start a backup HMaster, use the `local-master-backup.sh`. For each backup master you want to start, add a parameter representing the port offset for that master. Each HMaster uses two ports (16000 and 16010 by default). The port offset is added to these ports, so using an offset of 2, the backup HMaster would use ports 16002 and 16012. The following command starts 3 backup servers using ports 16002/16012, 16003/16013, and 16005/16015.
+
+```bash
+./bin/local-master-backup.sh start 2 3 5
+```
+
+To kill a backup master without killing the entire cluster, you need to find its process ID (PID). The PID is stored in a file with a name like _/tmp/hbase-USER-X-master.pid_. The only contents of the file is the PID. You can use the `kill -9` command to kill that PID. The following command will kill the master with port offset 1, but leave the cluster running:
+
+```bash
+cat /tmp/hbase-testuser-1-master.pid |xargs kill -9
+```
+
+</Step>
+
+<Step>
+
+#### Start and stop additional RegionServers
+
+The HRegionServer manages the data in its StoreFiles as directed by the HMaster. Generally, one HRegionServer runs per node in the cluster. Running multiple HRegionServers on the same system can be useful for testing in pseudo-distributed mode. The `local-regionservers.sh` command allows you to run multiple RegionServers. It works in a similar way to the `local-master-backup.sh` command, in that each parameter you provide represents the port offset for an instance. Each RegionServer requires two ports, and the default ports are 16020 and 16030. Since HBase version 1.1.0, HMaster doesn't use region server ports, this leaves 10 ports (16020 to 16029 and 16030 to 16039) to be used for RegionServers. For supporting additional RegionServers, set environment variables HBASE_RS_BASE_PORT and HBASE_RS_INFO_BASE_PORT to appropriate values before running script `local-regionservers.sh`. e.g. With values 16200 and 16300 for base ports, 99 additional RegionServers can be supported, on a server. The following command starts four additional RegionServers, running on sequential ports starting at 16022/16032 (base ports 16020/16030 plus 2).
+
+```bash
+./bin/local-regionservers.sh start 2 3 4 5
+```
+
+To stop a RegionServer manually, use the `local-regionservers.sh` command with the `stop` parameter and the offset of the server to stop.
+
+```bash
+./bin/local-regionservers.sh stop 3
+```
+
+</Step>
+
+<Step>
+
+#### Stop HBase
+
+You can stop HBase the same way as in the [quickstart](#quick-start---standalone-hbase) procedure, using the _bin/stop-hbase.sh_ command.
+
+</Step>
+
+</Steps>
 
 ## Fully Distributed for Production
 
@@ -306,147 +420,227 @@ This quickstart assumes that each node is a virtual machine and that they are al
 
 `node-a` needs to be able to log into `node-b` and `node-c` (and to itself) in order to start the daemons. The easiest way to accomplish this is to use the same username on all hosts, and configure password-less SSH login from `node-a` to each of the others.
 
-1. On `node-a`, generate a key pair.
+<Steps>
 
-   While logged in as the user who will run HBase, generate a SSH key pair, using the following command:
+<Step>
 
-   ```bash
-   ssh-keygen -t rsa
-   ```
+#### On `node-a`, generate a key pair
 
-   If the command succeeds, the location of the key pair is printed to standard output. The default name of the public key is _id_rsa.pub_.
+While logged in as the user who will run HBase, generate a SSH key pair, using the following command:
 
-2. Create the directory that will hold the shared keys on the other nodes.
+```bash
+ssh-keygen -t rsa
+```
 
-   On `node-b` and `node-c`, log in as the HBase user and create a _.ssh/_ directory in the user’s home directory, if it does not already exist. If it already exists, be aware that it may already contain other keys.
+If the command succeeds, the location of the key pair is printed to standard output. The default name of the public key is _id_rsa.pub_.
 
-3. Copy the public key to the other nodes.
+</Step>
 
-   Securely copy the public key from `node-a` to each of the nodes, by using the `scp` or some other secure means. On each of the other nodes, create a new file called _.ssh/authorized_keys_ _if it does not already exist_, and append the contents of the _id_rsa.pub_ file to the end of it. Note that you also need to do this for `node-a` itself.
+<Step>
 
-   ```bash
-   cat id_rsa.pub >> ~/.ssh/authorized_keys
-   ```
+#### Create the directory that will hold the shared keys on the other nodes
 
-4. Test password-less login.
+On `node-b` and `node-c`, log in as the HBase user and create a _.ssh/_ directory in the user's home directory, if it does not already exist. If it already exists, be aware that it may already contain other keys.
 
-   If you performed the procedure correctly, you should not be prompted for a password when you SSH from `node-a` to either of the other nodes using the same username.
+</Step>
 
-5. Since `node-b` will run a backup Master, repeat the procedure above, substituting `node-b` everywhere you see `node-a`. Be sure not to overwrite your existing _.ssh/authorized_keys_ files, but concatenate the new key onto the existing file using the `>>` operator rather than the `>` operator.
+<Step>
+
+#### Copy the public key to the other nodes
+
+Securely copy the public key from `node-a` to each of the nodes, by using the `scp` or some other secure means. On each of the other nodes, create a new file called _.ssh/authorized_keys_ _if it does not already exist_, and append the contents of the _id_rsa.pub_ file to the end of it. Note that you also need to do this for `node-a` itself.
+
+```bash
+cat id_rsa.pub >> ~/.ssh/authorized_keys
+```
+
+</Step>
+
+<Step>
+
+#### Test password-less login
+
+If you performed the procedure correctly, you should not be prompted for a password when you SSH from `node-a` to either of the other nodes using the same username.
+
+</Step>
+
+<Step>
+
+Since `node-b` will run a backup Master, repeat the procedure above, substituting `node-b` everywhere you see `node-a`. Be sure not to overwrite your existing _.ssh/authorized_keys_ files, but concatenate the new key onto the existing file using the `>>` operator rather than the `>` operator.
+
+</Step>
+
+</Steps>
 
 ### Procedure: Prepare `node-a`
 
 `node-a` will run your primary master and ZooKeeper processes, but no RegionServers. Stop the RegionServer from starting on `node-a`.
 
-1. Edit _conf/regionservers_ and remove the line which contains `localhost`. Add lines with the hostnames or IP addresses for `node-b` and `node-c`.
+<Steps>
 
-   Even if you did want to run a RegionServer on `node-a`, you should refer to it by the hostname the other servers would use to communicate with it. In this case, that would be `node-a.example.com`. This enables you to distribute the configuration to each node of your cluster any hostname conflicts. Save the file.
+<Step>
 
-2. Configure HBase to use `node-b` as a backup master.
+Edit _conf/regionservers_ and remove the line which contains `localhost`. Add lines with the hostnames or IP addresses for `node-b` and `node-c`.
 
-   Create a new file in _conf/_ called _backup-masters_, and add a new line to it with the hostname for `node-b`. In this demonstration, the hostname is `node-b.example.com`.
+Even if you did want to run a RegionServer on `node-a`, you should refer to it by the hostname the other servers would use to communicate with it. In this case, that would be `node-a.example.com`. This enables you to distribute the configuration to each node of your cluster any hostname conflicts. Save the file.
 
-3. Configure ZooKeeper
+</Step>
 
-   In reality, you should carefully consider your ZooKeeper configuration. You can find out more about configuring ZooKeeper in [zookeeper](/docs/zookeeper) section. This configuration will direct HBase to start and manage a ZooKeeper instance on each node of the cluster.
+<Step>
 
-   On `node-a`, edit _conf/hbase-site.xml_ and add the following properties.
+#### Configure HBase to use `node-b` as a backup master
 
-   ```xml
-   <property>
-   <name>hbase.zookeeper.quorum</name>
-   <value>node-a.example.com,node-b.example.com,node-c.example.com</value>
-   </property>
-   <property>
-   <name>hbase.zookeeper.property.dataDir</name>
-   <value>/usr/local/zookeeper</value>
-   </property>
-   ```
+Create a new file in _conf/_ called _backup-masters_, and add a new line to it with the hostname for `node-b`. In this demonstration, the hostname is `node-b.example.com`.
 
-4. Everywhere in your configuration that you have referred to `node-a` as `localhost`, change the reference to point to the hostname that the other nodes will use to refer to `node-a`. In these examples, the hostname is `node-a.example.com`.
+</Step>
+
+<Step>
+
+#### Configure ZooKeeper
+
+In reality, you should carefully consider your ZooKeeper configuration. You can find out more about configuring ZooKeeper in [zookeeper](/docs/zookeeper) section. This configuration will direct HBase to start and manage a ZooKeeper instance on each node of the cluster.
+
+On `node-a`, edit _conf/hbase-site.xml_ and add the following properties.
+
+```xml
+<property>
+<name>hbase.zookeeper.quorum</name>
+<value>node-a.example.com,node-b.example.com,node-c.example.com</value>
+</property>
+<property>
+<name>hbase.zookeeper.property.dataDir</name>
+<value>/usr/local/zookeeper</value>
+</property>
+```
+
+</Step>
+
+<Step>
+
+Everywhere in your configuration that you have referred to `node-a` as `localhost`, change the reference to point to the hostname that the other nodes will use to refer to `node-a`. In these examples, the hostname is `node-a.example.com`.
+
+</Step>
+
+</Steps>
 
 ### Procedure: Prepare `node-b` and `node-c`
 
 `node-b` will run a backup master server and a ZooKeeper instance.
 
-1. Download and unpack HBase.
+<Steps>
 
-   Download and unpack HBase to `node-b`, just as you did for the standalone and pseudo-distributed quickstarts.
+<Step>
 
-2. Copy the configuration files from `node-a` to `node-b`.and `node-c`.
+#### Download and unpack HBase
 
-   Each node of your cluster needs to have the same configuration information. Copy the contents of the _conf/_ directory to the _conf/_ directory on `node-b` and `node-c`.
+Download and unpack HBase to `node-b`, just as you did for the standalone and pseudo-distributed quickstarts.
+
+</Step>
+
+<Step>
+
+#### Copy the configuration files from `node-a` to `node-b`.and `node-c`
+
+Each node of your cluster needs to have the same configuration information. Copy the contents of the _conf/_ directory to the _conf/_ directory on `node-b` and `node-c`.
+
+</Step>
+
+</Steps>
 
 ### Procedure: Start and Test Your Cluster
 
-1. Be sure HBase is not running on any node.
+<Steps>
 
-   If you forgot to stop HBase from previous testing, you will have errors. Check to see whether HBase is running on any of your nodes by using the `jps` command. Look for the processes `HMaster`, `HRegionServer`, and `HQuorumPeer`. If they exist, kill them.
+<Step>
 
-2. Start the cluster.
+#### Be sure HBase is not running on any node
 
-   On `node-a`, issue the `start-hbase.sh` command. Your output will be similar to that below.
+If you forgot to stop HBase from previous testing, you will have errors. Check to see whether HBase is running on any of your nodes by using the `jps` command. Look for the processes `HMaster`, `HRegionServer`, and `HQuorumPeer`. If they exist, kill them.
 
-   ```bash
-   $ bin/start-hbase.sh
-   node-c.example.com: starting zookeeper, logging to /home/hbuser/hbase-0.98.3-hadoop2/bin/../logs/hbase-hbuser-zookeeper-node-c.example.com.out
-   node-a.example.com: starting zookeeper, logging to /home/hbuser/hbase-0.98.3-hadoop2/bin/../logs/hbase-hbuser-zookeeper-node-a.example.com.out
-   node-b.example.com: starting zookeeper, logging to /home/hbuser/hbase-0.98.3-hadoop2/bin/../logs/hbase-hbuser-zookeeper-node-b.example.com.out
-   starting master, logging to /home/hbuser/hbase-0.98.3-hadoop2/bin/../logs/hbase-hbuser-master-node-a.example.com.out
-   node-c.example.com: starting regionserver, logging to /home/hbuser/hbase-0.98.3-hadoop2/bin/../logs/hbase-hbuser-regionserver-node-c.example.com.out
-   node-b.example.com: starting regionserver, logging to /home/hbuser/hbase-0.98.3-hadoop2/bin/../logs/hbase-hbuser-regionserver-node-b.example.com.out
-   node-b.example.com: starting master, logging to /home/hbuser/hbase-0.98.3-hadoop2/bin/../logs/hbase-hbuser-master-nodeb.example.com.out
-   ```
+</Step>
 
-   ZooKeeper starts first, followed by the master, then the RegionServers, and finally the backup masters.
+<Step>
 
-3. Verify that the processes are running.
+#### Start the cluster
 
-   On each node of the cluster, run the `jps` command and verify that the correct processes are running on each server. You may see additional Java processes running on your servers as well, if they are used for other purposes.
+On `node-a`, issue the `start-hbase.sh` command. Your output will be similar to that below.
 
-   `node-a` `jps` Output
+```bash
+$ bin/start-hbase.sh
+node-c.example.com: starting zookeeper, logging to /home/hbuser/hbase-0.98.3-hadoop2/bin/../logs/hbase-hbuser-zookeeper-node-c.example.com.out
+node-a.example.com: starting zookeeper, logging to /home/hbuser/hbase-0.98.3-hadoop2/bin/../logs/hbase-hbuser-zookeeper-node-a.example.com.out
+node-b.example.com: starting zookeeper, logging to /home/hbuser/hbase-0.98.3-hadoop2/bin/../logs/hbase-hbuser-zookeeper-node-b.example.com.out
+starting master, logging to /home/hbuser/hbase-0.98.3-hadoop2/bin/../logs/hbase-hbuser-master-node-a.example.com.out
+node-c.example.com: starting regionserver, logging to /home/hbuser/hbase-0.98.3-hadoop2/bin/../logs/hbase-hbuser-regionserver-node-c.example.com.out
+node-b.example.com: starting regionserver, logging to /home/hbuser/hbase-0.98.3-hadoop2/bin/../logs/hbase-hbuser-regionserver-node-b.example.com.out
+node-b.example.com: starting master, logging to /home/hbuser/hbase-0.98.3-hadoop2/bin/../logs/hbase-hbuser-master-nodeb.example.com.out
+```
 
-   ```bash
-   $ jps
-   20355 Jps
-   20071 HQuorumPeer
-   20137 HMaster
-   ```
+ZooKeeper starts first, followed by the master, then the RegionServers, and finally the backup masters.
 
-   `node-b` `jps` Output
+</Step>
 
-   ```bash
-   $ jps
-   15930 HRegionServer
-   16194 Jps
-   15838 HQuorumPeer
-   16010 HMaster
-   ```
+<Step>
 
-   `node-c` `jps` Output
+#### Verify that the processes are running
 
-   ```bash
-   $ jps
-   13901 Jps
-   13639 HQuorumPeer
-   13737 HRegionServer
-   ```
+On each node of the cluster, run the `jps` command and verify that the correct processes are running on each server. You may see additional Java processes running on your servers as well, if they are used for other purposes.
 
-   <Callout type="info">
-     The `HQuorumPeer` process is a ZooKeeper instance which is controlled and started by HBase. If
-     you use ZooKeeper this way, it is limited to one instance per cluster node and is appropriate
-     for testing only. If ZooKeeper is run outside of HBase, the process is called `QuorumPeer`. For
-     more about ZooKeeper configuration, including using an external ZooKeeper instance with HBase,
-     see [zookeeper](/docs/zookeeper) section.
-   </Callout>
+`node-a` `jps` Output
 
-4. Browse to the Web UI.
+```bash
+$ jps
+20355 Jps
+20071 HQuorumPeer
+20137 HMaster
+```
 
-   If everything is set up correctly, you should be able to connect to the UI for the Master `http://node-a.example.com:16010/` or the secondary master at `http://node-b.example.com:16010/` using a web browser. If you can connect via `localhost` but not from another host, check your firewall rules. You can see the web UI for each of the RegionServers at port 16030 of their IP addresses, or by clicking their links in the web UI for the Master.
+`node-b` `jps` Output
 
-5. Test what happens when nodes or services disappear.
+```bash
+$ jps
+15930 HRegionServer
+16194 Jps
+15838 HQuorumPeer
+16010 HMaster
+```
 
-   With a three-node cluster you have configured, things will not be very resilient. You can still test the behavior of the primary Master or a RegionServer by killing the associated processes and watching the logs.
+`node-c` `jps` Output
+
+```bash
+$ jps
+13901 Jps
+13639 HQuorumPeer
+13737 HRegionServer
+```
+
+<Callout type="info">
+  The `HQuorumPeer` process is a ZooKeeper instance which is controlled and started by HBase. If
+  you use ZooKeeper this way, it is limited to one instance per cluster node and is appropriate
+  for testing only. If ZooKeeper is run outside of HBase, the process is called `QuorumPeer`. For
+  more about ZooKeeper configuration, including using an external ZooKeeper instance with HBase,
+  see [zookeeper](/docs/zookeeper) section.
+</Callout>
+
+</Step>
+
+<Step>
+
+#### Browse to the Web UI
+
+If everything is set up correctly, you should be able to connect to the UI for the Master `http://node-a.example.com:16010/` or the secondary master at `http://node-b.example.com:16010/` using a web browser. If you can connect via `localhost` but not from another host, check your firewall rules. You can see the web UI for each of the RegionServers at port 16030 of their IP addresses, or by clicking their links in the web UI for the Master.
+
+</Step>
+
+<Step>
+
+#### Test what happens when nodes or services disappear
+
+With a three-node cluster you have configured, things will not be very resilient. You can still test the behavior of the primary Master or a RegionServer by killing the associated processes and watching the logs.
+
+</Step>
+
+</Steps>
 
 ## Where to go next
 

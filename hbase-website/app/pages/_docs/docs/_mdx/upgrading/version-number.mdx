@@ -9,11 +9,8 @@ Starting with the 1.0.0 release, HBase is working towards [Semantic Versioning](
 **Given a version number MAJOR.MINOR.PATCH, increment the:**
 
 - MAJOR version when you make incompatible API changes,
-
 - MINOR version when you add functionality in a backwards-compatible manner, and
-
 - PATCH version when you make backwards-compatible bug fixes.
-
 - Additional labels for pre-release and build metadata are available as extensions to the MAJOR.MINOR.PATCH format.
 
 **Compatibility Dimensions**
@@ -23,68 +20,50 @@ In addition to the usual API versioning considerations HBase has other compatibi
 **Client-Server wire protocol compatibility**
 
 - Allows updating client and server out of sync.
-
 - We could only allow upgrading the server first. I.e. the server would be backward compatible to an old client, that way new APIs are OK.
-
 - Example: A user should be able to use an old client to connect to an upgraded cluster.
 
 **Server-Server protocol compatibility**
 
 - Servers of different versions can co-exist in the same cluster.
-
 - The wire protocol between servers is compatible.
-
 - Workers for distributed tasks, such as replication and log splitting, can co-exist in the same cluster.
-
 - Dependent protocols (such as using ZK for coordination) will also not be changed.
-
 - Example: A user can perform a rolling upgrade.
 
 **File format compatibility**
 
 - Support file formats backward and forward compatible
-
 - Example: File, ZK encoding, directory layout is upgraded automatically as part of an HBase upgrade. User can downgrade to the older version and everything will continue to work.
 
 **Client API compatibility**
 
 - Allow changing or removing existing client APIs.
-
 - An API needs to be deprecated for a whole major version before we will change/remove it.
   - An example: An API was deprecated in 2.0.1 and will be marked for deletion in 4.0.0. On the other hand, an API deprecated in 2.0.0 can be removed in 3.0.0.
-
   - Occasionally mistakes are made and internal classes are marked with a higher access level than they should. In these rare circumstances, we will accelerate the deprecation schedule to the next major version (i.e., deprecated in 2.2.x, marked `IA.Private` 3.0.0). Such changes are communicated and explained via release note in Jira.
-
 - APIs available in a patch version will be available in all later patch versions. However, new APIs may be added which will not be available in earlier patch versions.
-
-- New APIs introduced in a patch version will only be added in a source compatible way [^1]: i.e. code that implements public APIs will continue to compile.
+- New APIs introduced in a patch version will only be added in a source compatible way: i.e. code that implements public APIs will continue to compile. [^1]
   - Example: A user using a newly deprecated API does not need to modify application code with HBase API calls until the next major version. \*
 
 **Client Binary compatibility**
 
 - Client code written to APIs available in a given patch release can run unchanged (no recompilation needed) against the new jars of later patch versions.
-
 - Client code written to APIs available in a given patch release might not run against the old jars from an earlier patch version.
   - Example: Old compiled client code will work unchanged with the new jars.
-
 - If a Client implements an HBase Interface, a recompile MAY be required upgrading to a newer minor version (See release notes for warning about incompatible changes). All effort will be made to provide a default implementation so this case should not arise.
 
 **Server-Side Limited API compatibility (taken from Hadoop)**
 
 - Internal APIs are marked as Stable, Evolving, or Unstable
-
 - This implies binary compatibility for coprocessors and plugins (pluggable classes, including replication) as long as these are only using marked interfaces/classes.
-
 - Example: Old compiled Coprocessor, Filter, or Plugin code will work unchanged with the new jars.
 
 **Dependency Compatibility**
 
 - An upgrade of HBase will not require an incompatible upgrade of a dependent project, except for Apache Hadoop.
-
 - An upgrade of HBase will not require an incompatible upgrade of the Java runtime.
-
 - Example: Upgrading HBase to a version that supports _Dependency Compatibility_ won’t require that you upgrade your Apache ZooKeeper service.
-
 - Example: If your current version of HBase supported running on JDK 8, then an upgrade to a version that supports _Dependency Compatibility_ will also run on JDK 8.
 
 <Callout type="tip">
@@ -99,17 +78,13 @@ In addition to the usual API versioning considerations HBase has other compatibi
 **Operational Compatibility**
 
 - Metric changes
-
 - Behavioral changes of services
-
 - JMX APIs exposed via the `/jmx/` endpoint
 
 **Summary**
 
-- A patch upgrade is a drop-in replacement. Any change that is not Java binary and source compatible would not be allowed.[^2] Downgrading versions within patch releases may not be compatible.
-
+- A patch upgrade is a drop-in replacement. Any change that is not Java binary and source compatible would not be allowed. Downgrading versions within patch releases may not be compatible. [^2]
 - A minor upgrade requires no application/client code modification. Ideally it would be a drop-in replacement but client code, coprocessors, filters, etc might have to be recompiled if new jars are used.
-
 - A major upgrade allows the HBase community to make breaking changes.
 
 **Compatibility Matrix:**
@@ -118,7 +93,7 @@ In addition to the usual API versioning considerations HBase has other compatibi
 | ----------------------------------------- | :---: | :---: | :---: |
 | Client-Server wire Compatibility          |   N   |   Y   |   Y   |
 | Server-Server Compatibility               |   N   |   Y   |   Y   |
-| File Format Compatibility                 | N[^1] |   Y   |   Y   |
+| File Format Compatibility                 | N [^1] |   Y   |   Y   |
 | Client API Compatibility                  |   N   |   Y   |   Y   |
 | Client Binary Compatibility               |   N   |   N   |   Y   |
 | **Server-Side Limited API Compatibility** |       |       |       |
@@ -127,8 +102,6 @@ In addition to the usual API versioning considerations HBase has other compatibi
 | → Unstable                                |   N   |   N   |   N   |
 | Dependency Compatibility                  |   N   |   Y   |   Y   |
 | Operational Compatibility                 |   N   |   N   |   Y   |
-
-[^1]: Running an offline upgrade tool without downgrade might be needed. We will typically only support migrating data from major version X to major version X+1.
 
 <Callout type="warn">
   HBase 1.7.0 release violated client-server wire compatibility guarantees and was subsequently
@@ -177,3 +150,6 @@ All classes annotated with InterfaceAudience.Private or all classes that do not 
 
 When we say two HBase versions are compatible, we mean that the versions are wire and binary compatible. Compatible HBase versions means that clients can talk to compatible but differently versioned servers. It means too that you can just swap out the jars of one version and replace them with the jars of another, compatible version and all will just work. Unless otherwise specified, HBase point versions are (mostly) binary compatible. You can safely do rolling upgrades between binary compatible versions; i.e. across maintenance releases: e.g. from 1.4.4 to 1.4.6. See [Does compatibility between versions also mean binary compatibility?]() discussion on the HBase dev mailing list.
 
+[^1]: Running an offline upgrade tool without downgrade might be needed. We will typically only support migrating data from major version X to major version X+1.
+
+[^2]: See http://docs.oracle.com/javase/specs/jls/se7/html/jls-13.html.

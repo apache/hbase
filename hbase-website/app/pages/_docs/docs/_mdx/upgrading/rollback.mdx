@@ -5,21 +5,21 @@ description: "Sometimes things don't go as planned when attempting an upgrade. T
 
 ## Caveats
 
-**Rollback vs Downgrade**
+### Rollback vs Downgrade
 
 This section describes how to perform a _rollback_ on an upgrade between HBase minor and major versions. In this document, rollback refers to the process of taking an upgraded cluster and restoring it to the old version _while losing all changes that have occurred since upgrade_. By contrast, a cluster _downgrade_ would restore an upgraded cluster to the old version while maintaining any data written since the upgrade. We currently only offer instructions to rollback HBase clusters. Further, rollback only works when these instructions are followed prior to performing the upgrade.
 
 When these instructions talk about rollback vs downgrade of prerequisite cluster services (i.e. HDFS), you should treat leaving the service version the same as a degenerate case of downgrade.
 
-**Replication**
+### Replication
 
 Unless you are doing an all-service rollback, the HBase cluster will lose any configured peers for HBase replication. If your cluster is configured for HBase replication, then prior to following these instructions you should document all replication peers. After performing the rollback you should then add each documented peer back to the cluster. Note also that data written to the cluster since the upgrade may or may not have already been replicated to any peers. Determining which, if any, peers have seen replication data as well as rolling back the data in those peers is out of the scope of this guide.
 
-**Data Locality**
+### Data Locality
 
 Unless you are doing an all-service rollback, going through a rollback procedure will likely destroy all locality for Region Servers. You should expect degraded performance until after the cluster has had time to go through compactions to restore data locality. Optionally, you can force a compaction to speed this process up at the cost of generating cluster load.
 
-**Configurable Locations**
+### Configurable Locations
 
 The instructions below assume default locations for the HBase data directory and the HBase znode. Both of these locations are configurable and you should verify the value used in your cluster before proceeding. In the event that you have a different value, just replace the default with the one found in your configuration \* HBase data directory is configured via the key 'hbase.rootdir' and has a default value of '/hbase'. \* HBase znode is configured via the key 'zookeeper.znode.parent' and has a default value of '/hbase'.
 
@@ -27,127 +27,98 @@ The instructions below assume default locations for the HBase data directory and
 
 If you will be performing a rollback of both the HDFS and ZooKeeper services, then HBase’s data will be rolled back in the process.
 
-**Requirements**
+### Requirements
 
 - Ability to rollback HDFS and ZooKeeper
 
-**Before upgrade**
+### Before upgrade
 
 No additional steps are needed pre-upgrade. As an extra precautionary measure, you may wish to use distcp to back up the HBase data off of the cluster to be upgraded. To do so, follow the steps in the 'Before upgrade' section of 'Rollback after HDFS downgrade' but copy to another HDFS instance instead of within the same instance.
 
-**Performing a rollback**
+### Performing a rollback
 
 1.  Stop HBase
-
 2.  Perform a rollback for HDFS and ZooKeeper (HBase should remain stopped)
-
 3.  Change the installed version of HBase to the previous version
-
 4.  Start HBase
-
 5.  Verify HBase contents—use the HBase shell to list tables and scan some known values.
 
 ## Rollback after HDFS rollback and ZooKeeper downgrade
 
 If you will be rolling back HDFS but going through a ZooKeeper downgrade, then HBase will be in an inconsistent state. You must ensure the cluster is not started until you complete this process.
 
-**Requirements**
+### Requirements
 
 - Ability to rollback HDFS
-
 - Ability to downgrade ZooKeeper
 
-**Before upgrade**
+### Before upgrade
 
 No additional steps are needed pre-upgrade. As an extra precautionary measure, you may wish to use distcp to back up the HBase data off of the cluster to be upgraded. To do so, follow the steps in the 'Before upgrade' section of 'Rollback after HDFS downgrade' but copy to another HDFS instance instead of within the same instance.
 
-**Performing a rollback**
+### Performing a rollback
 
 1.  Stop HBase
-
 2.  Perform a rollback for HDFS and a downgrade for ZooKeeper (HBase should remain stopped)
-
 3.  Change the installed version of HBase to the previous version
-
 4.  Clean out ZooKeeper information related to HBase. WARNING: This step will permanently destroy all replication peers. Please see the section on HBase Replication under Caveats for more information.
-
-    **Clean HBase information out of ZooKeeper:**
-
-```bash
-[hpnewton@gateway_node.example.com ~]$ zookeeper-client -server zookeeper1.example.com:2181,zookeeper2.example.com:2181,zookeeper3.example.com:2181
-Welcome to ZooKeeper!
-JLine support is disabled
-rmr /hbase
-quit
-Quitting...
-```
-
+    **Clean HBase information out of ZooKeeper:**  
+    ```bash
+    [hpnewton@gateway_node.example.com ~]$ zookeeper-client -server zookeeper1.example.com:2181,zookeeper2.example.com:2181,zookeeper3.example.com:2181
+    Welcome to ZooKeeper!
+    JLine support is disabled
+    rmr /hbase
+    quit
+    Quitting...
+    ```
 5.  Start HBase
-
 6.  Verify HBase contents—use the HBase shell to list tables and scan some known values.
 
 ## Rollback after HDFS downgrade
 
 If you will be performing an HDFS downgrade, then you’ll need to follow these instructions regardless of whether ZooKeeper goes through rollback, downgrade, or reinstallation.
 
-**Requirements**
+### Requirements
 
 - Ability to downgrade HDFS
-
 - Pre-upgrade cluster must be able to run MapReduce jobs
-
 - HDFS super user access
-
 - Sufficient space in HDFS for at least two copies of the HBase data directory
 
-**Before upgrade**
+### Before upgrade
 
 Before beginning the upgrade process, you must take a complete backup of HBase’s backing data. The following instructions cover backing up the data within the current HDFS instance. Alternatively, you can use the distcp command to copy the data to another HDFS cluster.
 
 1.  Stop the HBase cluster
-
 2.  Copy the HBase data directory to a backup location using the [distcp command](https://hadoop.apache.org/docs/current/hadoop-distcp/DistCp.html) as the HDFS super user (shown below on a security enabled cluster)
-
-    **Using distcp to backup the HBase data directory:**
-
-```bash
-[hpnewton@gateway_node.example.com ~]$ kinit -k -t hdfs.keytab hdfs@EXAMPLE.COM
-[hpnewton@gateway_node.example.com ~]$ hadoop distcp /hbase /hbase-pre-upgrade-backup
-```
-
+    **Using distcp to backup the HBase data directory:**  
+    ```bash
+    [hpnewton@gateway_node.example.com ~]$ kinit -k -t hdfs.keytab hdfs@EXAMPLE.COM
+    [hpnewton@gateway_node.example.com ~]$ hadoop distcp /hbase /hbase-pre-upgrade-backup
+    ```
 3.  Distcp will launch a mapreduce job to handle copying the files in a distributed fashion. Check the output of the distcp command to ensure this job completed successfully.
 
-**Performing a rollback**
+### Performing a rollback
 
 1.  Stop HBase
-
 2.  Perform a downgrade for HDFS and a downgrade/rollback for ZooKeeper (HBase should remain stopped)
-
 3.  Change the installed version of HBase to the previous version
-
 4.  Restore the HBase data directory from prior to the upgrade as the HDFS super user (shown below on a security enabled cluster). If you backed up your data on another HDFS cluster instead of locally, you will need to use the distcp command to copy it back to the current HDFS cluster.
-
     **Restore the HBase data directory:**
-
-```bash
-[hpnewton@gateway_node.example.com ~]$ kinit -k -t hdfs.keytab hdfs@EXAMPLE.COM
-[hpnewton@gateway_node.example.com ~]$ hdfs dfs -mv /hbase /hbase-upgrade-rollback
-[hpnewton@gateway_node.example.com ~]$ hdfs dfs -mv /hbase-pre-upgrade-backup /hbase
-```
-
+    ```bash
+    [hpnewton@gateway_node.example.com ~]$ kinit -k -t hdfs.keytab hdfs@EXAMPLE.COM
+    [hpnewton@gateway_node.example.com ~]$ hdfs dfs -mv /hbase /hbase-upgrade-rollback
+    [hpnewton@gateway_node.example.com ~]$ hdfs dfs -mv /hbase-pre-upgrade-backup /hbase
+    ```
 5.  Clean out ZooKeeper information related to HBase. WARNING: This step will permanently destroy all replication peers. Please see the section on HBase Replication under Caveats for more information.
-
     **Clean HBase information out of ZooKeeper:**
-
-```bash
-[hpnewton@gateway_node.example.com ~]$ zookeeper-client -server zookeeper1.example.com:2181,zookeeper2.example.com:2181,zookeeper3.example.com:2181
-Welcome to ZooKeeper!
-JLine support is disabled
-rmr /hbase
-quit
-Quitting...
-```
-
+    ```bash
+    [hpnewton@gateway_node.example.com ~]$ zookeeper-client -server zookeeper1.example.com:2181,zookeeper2.example.com:2181,zookeeper3.example.com:2181
+    Welcome to ZooKeeper!
+    JLine support is disabled
+    rmr /hbase
+    quit
+    Quitting...
+    ```
 6.  Start HBase
-
 7.  Verify HBase contents–use the HBase shell to list tables and scan some known values.
