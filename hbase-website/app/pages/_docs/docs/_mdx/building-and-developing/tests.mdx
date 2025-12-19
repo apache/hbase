@@ -1,0 +1,806 @@
+---
+title: "Tests"
+---
+
+Developers, at a minimum, should familiarize themselves with the unit test detail; unit tests in HBase have a character not usually seen in other projects.
+
+This information is about unit tests for HBase itself.
+For developing unit tests for your HBase applications, see [Unit Testing HBase Applications](#unit.tests).
+
+## Apache HBase Modules
+
+As of 0.96, Apache HBase is split into multiple modules.
+This creates "interesting" rules for how and where tests are written.
+If you are writing code for `hbase-server`, see [Unit Tests](#hbase.unittests) for how to write your tests.
+These tests can spin up a minicluster and will need to be categorized.
+For any other module, for example `hbase-common`, the tests must be strict unit tests and just test the class under test - no use of the HBaseTestingUtility or minicluster is allowed (or even possible given the dependency tree).
+
+Starting from 3.0.0, HBaseTestingUtility is renamed to HBaseTestingUtil and marked as IA.Private. Of course the API is still the same.
+
+### Testing the HBase Shell
+
+The HBase shell and its tests are predominantly written in jruby.
+
+In order to make these tests run as a part of the standard build, there are a few JUnit test classes that take care of loading the jruby implemented tests and running them.
+The tests were split into separate classes to accomodate class level timeouts (see [Unit Tests](#hbase.unittests) for specifics).
+You can run all of these tests from the top level with:
+
+```bash
+mvn clean test -Dtest=Test*Shell
+```
+
+If you have previously done a `mvn install`, then you can instruct maven to run only the tests in the hbase-shell module with:
+
+```bash
+mvn clean test -pl hbase-shell
+```
+
+Alternatively, you may limit the shell tests that run using the system variable `shell.test`.
+This value should specify the ruby literal equivalent of a particular test case by name.
+For example, the tests that cover the shell commands for altering tables are contained in the test case `AdminAlterTableTest` and you can run them with:
+
+```bash
+mvn clean test -pl hbase-shell -Dshell.test=/AdminAlterTableTest/
+```
+
+You may also use a [Ruby Regular Expression
+literal](https://docs.ruby-lang.org/en/master/syntax/literals_rdoc.html#label-Regexp+Literals) (in the `/pattern/` style) to select a set of test cases.
+You can run all of the HBase admin related tests, including both the normal administration and the security administration, with the command:
+
+```bash
+mvn clean test -pl hbase-shell -Dshell.test=/.*Admin.*Test/
+```
+
+In the event of a test failure, you can see details by examining the XML version of the surefire report results
+
+```bash
+vim hbase-shell/target/surefire-reports/TEST-org.apache.hadoop.hbase.client.TestShell.xml
+```
+
+### Running Tests in other Modules
+
+If the module you are developing in has no other dependencies on other HBase modules, then you can cd into that module and just run:
+
+```bash
+mvn test
+```
+
+which will just run the tests IN THAT MODULE.
+If there are other dependencies on other modules, then you will have run the command from the ROOT HBASE DIRECTORY.
+This will run the tests in the other modules, unless you specify to skip the tests in that module.
+For instance, to skip the tests in the hbase-server module, you would run:
+
+```bash
+mvn clean test -PskipServerTests
+```
+
+from the top level directory to run all the tests in modules other than hbase-server.
+Note that you can specify to skip tests in multiple modules as well as just for a single module.
+For example, to skip the tests in `hbase-server` and `hbase-common`, you would run:
+
+```bash
+mvn clean test -PskipServerTests -PskipCommonTests
+```
+
+Also, keep in mind that if you are running tests in the `hbase-server` module you will need to apply the maven profiles discussed in [Running tests](#hbase.unittests.cmds) to get the tests to run properly.
+
+## Unit Tests
+
+Apache HBase unit tests must carry a Category annotation and
+as of `hbase-2.0.0`, must be stamped with the HBase `ClassRule`.
+Here is an example of what a Test Class looks like with a
+Category and ClassRule included:
+
+```java
+...
+@Category(SmallTests.class)
+public class TestHRegionInfo {
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestHRegionInfo.class);
+
+  @Test
+  public void testCreateHRegionInfoName() throws Exception {
+    // ...
+  }
+}
+```
+
+Here the Test Class is `TestHRegionInfo`. The `CLASS_RULE` has
+the same form in every test class only the `.class` you pass
+is that of the local test; i.e. in the TestTimeout Test Class, you'd
+pass `TestTimeout.class` to the `CLASS_RULE` instead of the
+`TestHRegionInfo.class` we have above. The `CLASS_RULE`
+is where we'll enforce timeouts (currently set at a hard-limit of
+thirteen! minutes for all tests -- 780 seconds) and other cross-unit test facility.
+The test is in the `SmallTest` Category.
+
+Categories can be arbitrary and provided as a list but each test MUST
+carry one from the following list of sizings: `small`, `medium`, `large`, and
+`integration`. The test sizing is designated using the JUnit
+[categories](https://github.com/junit-team/junit4/wiki/Categories): `SmallTests`, `MediumTests`, `LargeTests`, `IntegrationTests`.
+JUnit Categories are denoted using java annotations (a special unit test looks
+for the presence of the @Category annotation in all unit tess and will fail if it
+finds a test suite missing a sizing marking).
+
+The first three categories, `small`, `medium`, and `large`, are for test cases which run when you
+type `$ mvn test`.
+In other words, these three categorizations are for HBase unit tests.
+The `integration` category is not for unit tests, but for integration tests.
+These are normally run when you invoke `$ mvn verify`.
+Integration tests are described in [Integration Tests](#integration.tests).
+
+Keep reading to figure which annotation of the set `small`, `medium`, and `large`
+to put on your new HBase test case.
+
+### Categorizing Tests
+
+#### Small Tests:
+
+_Small_ test cases are executed in separate JVM and each test suite/test class should
+run in 15 seconds or less; i.e. a [junit test fixture](https://en.wikipedia.org/wiki/JUnit), a java object made
+up of test methods, should finish in under 15 seconds, no matter how many or how few test methods
+it has. These test cases should not use a minicluster as a minicluster starts many services,
+most unrelated to what is being tested.
+
+#### Medium Tests:
+
+_Medium_ test cases are executed in separate JVM and individual test suites or test classes or in
+junit parlance, [test fixture](https://en.wikipedia.org/wiki/JUnit), should run in 50 seconds
+or less. These test cases can use a mini cluster. Since we start up a JVM per test fixture (and
+often a cluster too), be sure to make the startup pay by writing test fixtures that do a lot of
+testing running tens of seconds perhaps combining test rather than spin up a jvm (and cluster)
+per test method; this practice will help w/ overall test times.
+
+#### Large Tests:
+_Large_ test cases are everything else. They are typically large-scale tests, regression tests
+for specific bugs, timeout tests, or performance tests. No large test suite can take longer than
+thirteen minutes. It will be killed as timed out. Cast your test as an Integration Test if it needs
+to run longer.
+
+#### Integration Tests:
+_Integration_ tests are system level tests.
+See [Integration Tests](#integration.tests) for more info.
+If you invoke `$ mvn test` on integration tests, there is no timeout for the test.
+
+## Running tests
+
+The state of tests on the hbase branches varies. Some branches keep good test hygiene and all tests pass
+reliably with perhaps an unlucky sporadic flakey test failure. On other branches, the case may be less so with
+frequent flakies and even broken tests in need of attention that fail 100% of the time. Try and figure
+the state of tests on the branch you are currently interested in; the current state of nightly
+[apache jenkins builds](https://builds.apache.org/view/H-L/view/HBase/job/HBase%20Nightly/) is a good
+place to start. Tests on master branch are generally not in the best of condition as releases
+are less frequent off master. This can make it hard landing patches especially given our dictum that
+patches land on master branch first.
+
+The full test suite can take from 5-6 hours on an anemic VM with 4 CPUs and minimal
+parallelism to 50 minutes or less on a linux machine with dozens of CPUs and plenty of
+RAM.
+
+When you go to run the full test suite, make sure you up the test runner user nproc
+(`ulimit -u` -- make sure it > 6000 or more if more parallelism) and the number of
+open files (`ulimit -n` -- make sure it > 10240 or more) limits on your system.
+Errors because the test run hits
+limits are often only opaquely related to the constraint. You can see the current
+user settings by running `ulimit -a`.
+
+### Default: small and medium category tests
+
+Running `mvn test` will execute all small tests in a single JVM (no fork) and then medium tests in a
+forked, separate JVM for each test instance (For definition of 'small' test and so on, see
+[Unit Tests](#hbase.unittests)). Medium tests are NOT executed if there is an error in a
+small test. Large tests are NOT executed.
+
+### Running all tests
+
+Running `mvn test -P runAllTests` will execute small tests in a single JVM, then medium and large tests
+in a forked, separate JVM for each test. Medium and large tests are NOT executed if there is an error in
+a small test.
+
+### Running a single test or all tests in a package
+
+To run an individual test, e.g. `MyTest`, rum `mvn test -Dtest=MyTest` You can also pass multiple,
+individual tests as a comma-delimited list:
+
+```bash
+mvn test  -Dtest=MyTest1,MyTest2,MyTest3
+```
+
+You can also pass a package, which will run all tests under the package:
+
+```bash
+mvn test '-Dtest=org.apache.hadoop.hbase.client.*'
+```
+
+When `-Dtest` is specified, the `localTests` profile will be used.
+Each junit test is executed in a separate JVM (A fork per test class).
+There is no parallelization when tests are running in this mode.
+You will see a new message at the end of the -report: `"[INFO] Tests are skipped"`.
+It's harmless. However, you need to make sure the sum of
+`Tests run:` in the `Results:` section of test reports matching the number of tests
+you specified because no error will be reported when a non-existent test case is specified.
+
+### Other test invocation permutations
+
+Running `mvn test -P runSmallTests` will execute "small" tests only, using a single JVM.
+
+Running `mvn test -P runMediumTests` will execute "medium" tests only, launching a new JVM for each test-class.
+
+Running `mvn test -P runLargeTests` will execute "large" tests only, launching a new JVM for each test-class.
+
+For convenience, you can run `mvn test -P runDevTests` to execute both small and medium tests, using a single JVM.
+
+### Running tests faster
+
+By default, `$ mvn test -P runAllTests` runs all tests using a quarter of the CPUs available on machine
+hosting the test run (see `surefire.firstPartForkCount` and `surefire.secondPartForkCount` in the top-level
+hbase `pom.xml` which default to 0.25C, or 1/4 of CPU count). Up these counts to get the build to run faster.
+You can also have hbase modules
+run their tests in parrallel when the dependency graph allows by passing `--threads=N` when you invoke
+maven, where `N` is the amount of parallelism wanted.
+maven, where `N` is the amount of _module_ parallelism wanted.
+
+For example, allowing that you want to use all cores on a machine to run tests,
+you could start up the maven test run with:
+
+```bash
+$ x="1.0C";  mvn -Dsurefire.firstPartForkCount=$x -Dsurefire.secondPartForkCount=$x test -PrunAllTests
+```
+
+If a 32 core machine, you should see periods during which 32 forked jvms appear in your process listing each running unit tests.
+Your milage may vary. Dependent on hardware, overcommittment of CPU and/or memory can bring the test suite crashing down,
+usually complaining with a spew of test system exits and incomplete test report xml files. Start gently, with the default fork
+and move up gradually.
+
+Adding the `--threads=N`, maven will run N maven modules in parallel (when module inter-dependencies allow). Be aware, if you have
+set the forkcount to `1.0C`, and the `--threads` count to '2', the number of concurrent test runners can approach
+2 \* CPU, a count likely to overcommit the host machine (with attendant test exits failures).
+
+You will need ~2.2GB of memory per forked JVM plus the memory used by maven itself (3-4G).
+
+#### RAM Disk
+
+To increase the speed, you can as well use a ramdisk. 2-3G should be sufficient. Be sure to
+delete the files between each test run. The typical way to configure a ramdisk on Linux is:
+
+```bash
+$ sudo mkdir /ram2G
+sudo mount -t tmpfs -o size=2048M tmpfs /ram2G
+```
+
+You can then use it to run all HBase tests on 2.0 with the command:
+
+```bash
+mvn test -PrunAllTests -Dtest.build.data.basedirectory=/ram2G
+```
+
+### hbasetests.sh
+
+It's also possible to use the script `hbasetests.sh`.
+This script runs the medium and large tests in parallel with two maven instances, and provides a single report.
+This script does not use the hbase version of surefire so no parallelization is being done other than the two maven instances the script sets up.
+It must be executed from the directory which contains the _pom.xml_.
+
+For example running `./dev-support/hbasetests.sh` will execute small and medium tests.
+Running `./dev-support/hbasetests.sh runAllTests` will execute all tests.
+Running `./dev-support/hbasetests.sh replayFailed` will rerun the failed tests a second time, in a separate jvm and without parallelisation.
+
+### Test Timeouts
+
+The HBase unit test sizing Categorization timeouts are not strictly enforced.
+
+Any test that runs longer than ten minutes will be timedout/killed.
+
+As of hbase-2.0.0, we have purged all per-test-method timeouts: i.e.
+
+```java
+...
+  @Test(timeout=30000)
+  public void testCreateHRegionInfoName() throws Exception {
+    // ...
+  }
+```
+
+They are discouraged and don't make much sense given we are timing
+base of how long the whole Test Fixture/Class/Suite takes and
+that the variance in how long a test method takes varies wildly
+dependent upon context (loaded Apache Infrastructure versus
+developer machine with nothing else running on it).
+
+### Test Resource Checker
+
+A custom Maven SureFire plugin listener checks a number of resources before and after each HBase unit test runs and logs its findings at the end of the test output files which can be found in _target/surefire-reports_ per Maven module (Tests write test reports named for the test class into this directory.
+Check the _*-out.txt_ files). The resources counted are the number of threads, the number of file descriptors, etc.
+If the number has increased, it adds a _LEAK?_ comment in the logs.
+As you can have an HBase instance running in the background, some threads can be deleted/created without any specific action in the test.
+However, if the test does not work as expected, or if the test should not impact these resources, it's worth checking these log lines `...hbase.ResourceChecker(157): before...` and `...hbase.ResourceChecker(157): after...`.
+For example:
+
+```text
+2012-09-26 09:22:15,315 INFO [pool-1-thread-1]
+hbase.ResourceChecker(157): after:
+regionserver.TestColumnSeeking#testReseeking Thread=65 (was 65),
+OpenFileDescriptor=107 (was 107), MaxFileDescriptor=10240 (was 10240),
+ConnectionCount=1 (was 1)
+```
+
+## Writing Tests
+
+### General rules
+
+- As much as possible, tests should be written as category small tests.
+- All tests must be written to support parallel execution on the same machine, hence they should not use shared resources as fixed ports or fixed file names.
+- Tests should not overlog.
+  More than 100 lines/second makes the logs complex to read and use i/o that are hence not available for the other tests.
+- Tests can be written with `HBaseTestingUtility`.
+  This class offers helper functions to create a temp directory and do the cleanup, or to start a cluster.
+
+### Categories and execution time
+
+- All tests must be categorized, if not they could be skipped.
+- All tests should be written to be as fast as possible.
+- See [Unit Tests](#hbase.unittests) for test case categories and corresponding timeouts.
+  This should ensure a good parallelization for people using it, and ease the analysis when the test fails.
+
+### Sleeps in tests
+
+Whenever possible, tests should not use `Thread.sleep`, but rather waiting for the real event they need.
+This is faster and clearer for the reader.
+Tests should not do a `Thread.sleep` without testing an ending condition.
+This allows understanding what the test is waiting for.
+Moreover, the test will work whatever the machine performance is.
+Sleep should be minimal to be as fast as possible.
+Waiting for a variable should be done in a 40ms sleep loop.
+Waiting for a socket operation should be done in a 200 ms sleep loop.
+
+### Tests using a cluster
+
+Tests using a HRegion do not have to start a cluster: A region can use the local file system.
+Start/stopping a cluster cost around 10 seconds.
+They should not be started per test method but per test class.
+Started cluster must be shutdown using `HBaseTestingUtility#shutdownMiniCluster`, which cleans the directories.
+As most as possible, tests should use the default settings for the cluster.
+When they don't, they should document it.
+This will allow to share the cluster later.
+
+### Tests Skeleton Code
+
+Here is a test skeleton code with Categorization and a Category-based timeout rule to copy and paste and use as basis for test contribution.
+
+```java
+/**
+ * Describe what this testcase tests. Talk about resources initialized in @BeforeClass (before
+ * any test is run) and before each test is run, etc.
+ */
+// Specify the category as explained in Unit Tests section.
+@Category(SmallTests.class)
+public class TestExample {
+  // Replace the TestExample.class in the below with the name of your test fixture class.
+  private static final Log LOG = LogFactory.getLog(TestExample.class);
+
+  // Handy test rule that allows you subsequently get the name of the current method. See
+  // down in 'testExampleFoo()' where we use it to log current test's name.
+  @Rule public TestName testName = new TestName();
+
+  // The below rule does two things. It decides the timeout based on the category
+  // (small/medium/large) of the testcase. This @Rule requires that the full testcase runs
+  // within this timeout irrespective of individual test methods' times. The second
+  // feature is we'll dump in the log when the test is done a count of threads still
+  // running.
+  @Rule public static TestRule timeout = CategoryBasedTimeout.builder().
+    withTimeout(this.getClass()).withLookingForStuckThread(true).build();
+
+  @Before
+  public void setUp() throws Exception {
+  }
+
+  @After
+  public void tearDown() throws Exception {
+  }
+
+  @Test
+  public void testExampleFoo() {
+    LOG.info("Running test " + testName.getMethodName());
+  }
+}
+```
+
+## Integration Tests
+
+HBase integration/system tests are tests that are beyond HBase unit tests.
+They are generally long-lasting, sizeable (the test can be asked to 1M rows or 1B rows), targetable (they can take configuration that will point them at the ready-made cluster they are to run against; integration tests do not include cluster start/stop code), and verifying success, integration tests rely on public APIs only; they do not attempt to examine server internals asserting success/fail.
+Integration tests are what you would run when you need to more elaborate proofing of a release candidate beyond what unit tests can do.
+They are not generally run on the Apache Continuous Integration build server, however, some sites opt to run integration tests as a part of their continuous testing on an actual cluster.
+
+Integration tests currently live under the _src/test_ directory in the hbase-it submodule and will match the regex: _*IntegrationTest*.java_.
+All integration tests are also annotated with `@Category(IntegrationTests.class)`.
+
+Integration tests can be run in two modes: using a mini cluster, or against an actual distributed cluster.
+Maven failsafe is used to run the tests using the mini cluster.
+IntegrationTestsDriver class is used for executing the tests against a distributed cluster.
+Integration tests SHOULD NOT assume that they are running against a mini cluster, and SHOULD NOT use private API's to access cluster state.
+To interact with the distributed or mini cluster uniformly, `IntegrationTestingUtility`, and `HBaseCluster` classes, and public client API's can be used.
+
+On a distributed cluster, integration tests that use ChaosMonkey or otherwise manipulate services thru cluster manager (e.g.
+restart regionservers) use SSH to do it.
+To run these, test process should be able to run commands on remote end, so ssh should be configured accordingly (for example, if HBase runs under hbase user in your cluster, you can set up passwordless ssh for that user and run the test also under it). To facilitate that, `hbase.it.clustermanager.ssh.user`, `hbase.it.clustermanager.ssh.opts` and `hbase.it.clustermanager.ssh.cmd` configuration settings can be used.
+"User" is the remote user that cluster manager should use to perform ssh commands.
+"Opts" contains additional options that are passed to SSH (for example, "-i /tmp/my-key"). Finally, if you have some custom environment setup, "cmd" is the override format for the entire tunnel (ssh) command.
+The default string is \{`/usr/bin/ssh %1$s %2$s%3$s%4$s "%5$s"`\} and is a good starting point.
+This is a standard Java format string with 5 arguments that is used to execute the remote command.
+The argument 1 (%1$s) is SSH options set the via opts setting or via environment variable, 2 is SSH user name, 3 is "@" if username is set or "" otherwise, 4 is the target host name, and 5 is the logical command to execute (that may include single quotes, so don't use them). For example, if you run the tests under non-hbase user and want to ssh as that user and change to hbase on remote machine, you can use:
+
+```bash
+/usr/bin/ssh %1$s %2$s%3$s%4$s "su hbase - -c \"%5$s\""
+```
+
+That way, to kill RS (for example) integration tests may run:
+
+```bash
+{/usr/bin/ssh some-hostname "su hbase - -c \"ps aux | ... | kill ...\""}
+```
+
+The command is logged in the test logs, so you can verify it is correct for your environment.
+
+To disable the running of Integration Tests, pass the following profile on the command line `-PskipIntegrationTests`.
+For example,
+
+```bash
+$ mvn clean install test -Dtest=TestZooKeeper  -PskipIntegrationTests
+```
+
+### Running integration tests against mini cluster
+
+HBase 0.92 added a `verify` maven target.
+Invoking it, for example by doing `mvn verify`, will run all the phases up to and including the verify phase via the maven [failsafe
+plugin](https://maven.apache.org/plugins/maven-failsafe-plugin/), running all the above mentioned HBase unit tests as well as tests that are in the HBase integration test group.
+After you have completed `mvn install -DskipTests` You can run just the integration tests by invoking:
+
+```bash
+cd hbase-it
+mvn verify
+```
+
+If you just want to run the integration tests in top-level, you need to run two commands.
+First:
+
+```bash
+mvn failsafe:integration-test
+```
+
+This actually runs ALL the integration tests.
+
+<Callout type="info">
+  This command will always output `BUILD SUCCESS` even if there are test failures.
+</Callout>
+
+At this point, you could grep the output by hand looking for failed tests.
+However, maven will do this for us; just use:
+
+```bash
+mvn failsafe:verify
+```
+
+The above command basically looks at all the test results (so don't remove the 'target' directory) for test failures and reports the results.
+
+#### Running a subset of Integration tests
+
+This is very similar to how you specify running a subset of unit tests (see above), but use the property `it.test` instead of `test`.
+To just run `IntegrationTestClassXYZ.java`, use:
+
+```bash
+mvn failsafe:integration-test -Dit.test=IntegrationTestClassXYZ -DfailIfNoTests=false
+```
+
+The next thing you might want to do is run groups of integration tests, say all integration tests that are named IntegrationTestClassX\*.java:
+
+```bash
+mvn failsafe:integration-test -Dit.test=*ClassX* -DfailIfNoTests=false
+```
+
+This runs everything that is an integration test that matches **ClassX**. This means anything matching: "**\*/IntegrationTest\*ClassX**". You can also run multiple groups of integration tests using comma-delimited lists (similar to unit tests). Using a list of matches still supports full regex matching for each of the groups. This would look something like:
+
+```bash
+mvn failsafe:integration-test -Dit.test=*ClassX*,*ClassY -DfailIfNoTests=false
+```
+
+### Running integration tests against distributed cluster
+
+If you have an already-setup HBase cluster, you can launch the integration tests by invoking the class `IntegrationTestsDriver`.
+You may have to run test-compile first.
+The configuration will be picked by the bin/hbase script.
+
+```bash
+mvn test-compile
+```
+
+Then launch the tests with:
+
+```bash
+bin/hbase [--config config_dir] org.apache.hadoop.hbase.IntegrationTestsDriver
+```
+
+Pass `-h` to get usage on this sweet tool.
+Running the IntegrationTestsDriver without any argument will launch tests found under `hbase-it/src/test`, having `@Category(IntegrationTests.class)` annotation, and a name starting with `IntegrationTests`.
+See the usage, by passing -h, to see how to filter test classes.
+You can pass a regex which is checked against the full class name; so, part of class name can be used.
+IntegrationTestsDriver uses Junit to run the tests.
+Currently there is no support for running integration tests against a distributed cluster using maven (see [HBASE-6201](https://issues.apache.org/jira/browse/HBASE-6201)).
+
+The tests interact with the distributed cluster by using the methods in the `DistributedHBaseCluster` (implementing `HBaseCluster`) class, which in turn uses a pluggable `ClusterManager`.
+Concrete implementations provide actual functionality for carrying out deployment-specific and environment-dependent tasks (SSH, etc). The default `ClusterManager` is `HBaseClusterManager`, which uses SSH to remotely execute start/stop/kill/signal commands, and assumes some posix commands (ps, etc). Also assumes the user running the test has enough "power" to start/stop servers on the remote machines.
+By default, it picks up `HBASE_SSH_OPTS`, `HBASE_HOME`, `HBASE_CONF_DIR` from the env, and uses `bin/hbase-daemon.sh` to carry out the actions.
+Currently tarball deployments, deployments which uses _hbase-daemons.sh_, and [Apache Ambari](https://incubator.apache.org/ambari/) deployments are supported.
+_/etc/init.d/_ scripts are not supported for now, but it can be easily added.
+For other deployment options, a ClusterManager can be implemented and plugged in.
+
+Some integration tests define a _main_ method as entry point, and can be run on its' own, rather than using the test driver. For example, the _itbll_ test can be run as follows:
+
+```bash
+bin/hbase org.apache.hadoop.hbase.test.IntegrationTestBigLinkedList loop 2 1 100000 /temp 1 1000 50 1 0
+```
+
+<Callout type="info">
+  The _hbase_ script assumes all integration tests with exposed _main_ methods to be run against a
+  distributed cluster will follow the **IntegrationTest** regex naming pattern mentioned above, in
+  order to proper set test dependencies into the classpath.
+</Callout>
+
+### Destructive integration / system tests (ChaosMonkey)
+
+HBase 0.96 introduced a tool named `ChaosMonkey`, modeled after
+[same-named tool by Netflix's Chaos Monkey tool](https://netflix.github.io/chaosmonkey/).
+ChaosMonkey simulates real-world
+faults in a running cluster by killing or disconnecting random servers, or injecting
+other failures into the environment. You can use ChaosMonkey as a stand-alone tool
+to run a policy while other tests are running. In some environments, ChaosMonkey is
+always running, in order to constantly check that high availability and fault tolerance
+are working as expected.
+
+ChaosMonkey defines **Actions** and **Policies**.
+
+#### Actions:
+
+Actions are predefined sequences of events, such as the following:
+
+- Restart active master (sleep 5 sec)
+- Restart random regionserver (sleep 5 sec)
+- Restart random regionserver (sleep 60 sec)
+- Restart META regionserver (sleep 5 sec)
+- Restart ROOT regionserver (sleep 5 sec)
+- Batch restart of 50% of regionservers (sleep 5 sec)
+- Rolling restart of 100% of regionservers (sleep 5 sec)
+
+#### Policies:  
+A policy is a strategy for executing one or more actions. The default policy
+executes a random action every minute based on predefined action weights.
+A given policy will be executed until ChaosMonkey is interrupted.
+
+Most ChaosMonkey actions are configured to have reasonable defaults, so you can run
+ChaosMonkey against an existing cluster without any additional configuration. The
+following example runs ChaosMonkey with the default configuration:
+
+```bash
+$ bin/hbase org.apache.hadoop.hbase.chaos.util.ChaosMonkeyRunner
+
+12/11/19 23:21:57 INFO util.ChaosMonkey: Using ChaosMonkey Policy: class org.apache.hadoop.hbase.util.ChaosMonkey$PeriodicRandomActionPolicy, period:60000
+12/11/19 23:21:57 INFO util.ChaosMonkey: Sleeping for 26953 to add jitter
+12/11/19 23:22:24 INFO util.ChaosMonkey: Performing action: Restart active master
+12/11/19 23:22:24 INFO util.ChaosMonkey: Killing master:master.example.com,60000,1353367210440
+12/11/19 23:22:24 INFO hbase.HBaseCluster: Aborting Master: master.example.com,60000,1353367210440
+12/11/19 23:22:24 INFO hbase.ClusterManager: Executing remote command: ps aux | grep master | grep -v grep | tr -s ' ' | cut -d ' ' -f2 | xargs kill -s SIGKILL , hostname:master.example.com
+12/11/19 23:22:25 INFO hbase.ClusterManager: Executed remote command, exit code:0 , output:
+12/11/19 23:22:25 INFO hbase.HBaseCluster: Waiting service:master to stop: master.example.com,60000,1353367210440
+12/11/19 23:22:25 INFO hbase.ClusterManager: Executing remote command: ps aux | grep master | grep -v grep | tr -s ' ' | cut -d ' ' -f2 , hostname:master.example.com
+12/11/19 23:22:25 INFO hbase.ClusterManager: Executed remote command, exit code:0 , output:
+12/11/19 23:22:25 INFO util.ChaosMonkey: Killed master server:master.example.com,60000,1353367210440
+12/11/19 23:22:25 INFO util.ChaosMonkey: Sleeping for:5000
+12/11/19 23:22:30 INFO util.ChaosMonkey: Starting master:master.example.com
+12/11/19 23:22:30 INFO hbase.HBaseCluster: Starting Master on: master.example.com
+12/11/19 23:22:30 INFO hbase.ClusterManager: Executing remote command: /homes/enis/code/hbase-0.94/bin/../bin/hbase-daemon.sh --config /homes/enis/code/hbase-0.94/bin/../conf start master , hostname:master.example.com
+12/11/19 23:22:31 INFO hbase.ClusterManager: Executed remote command, exit code:0 , output:starting master, logging to /homes/enis/code/hbase-0.94/bin/../logs/hbase-enis-master-master.example.com.out
+....
+12/11/19 23:22:33 INFO util.ChaosMonkey: Started master: master.example.com,60000,1353367210440
+12/11/19 23:22:33 INFO util.ChaosMonkey: Sleeping for:51321
+12/11/19 23:23:24 INFO util.ChaosMonkey: Performing action: Restart random region server
+12/11/19 23:23:24 INFO util.ChaosMonkey: Killing region server:rs3.example.com,60020,1353367027826
+12/11/19 23:23:24 INFO hbase.HBaseCluster: Aborting RS: rs3.example.com,60020,1353367027826
+12/11/19 23:23:24 INFO hbase.ClusterManager: Executing remote command: ps aux | grep regionserver | grep -v grep | tr -s ' ' | cut -d ' ' -f2 | xargs kill -s SIGKILL , hostname:rs3.example.com
+12/11/19 23:23:25 INFO hbase.ClusterManager: Executed remote command, exit code:0 , output:
+12/11/19 23:23:25 INFO hbase.HBaseCluster: Waiting service:regionserver to stop: rs3.example.com,60020,1353367027826
+12/11/19 23:23:25 INFO hbase.ClusterManager: Executing remote command: ps aux | grep regionserver | grep -v grep | tr -s ' ' | cut -d ' ' -f2 , hostname:rs3.example.com
+12/11/19 23:23:25 INFO hbase.ClusterManager: Executed remote command, exit code:0 , output:
+12/11/19 23:23:25 INFO util.ChaosMonkey: Killed region server:rs3.example.com,60020,1353367027826. Reported num of rs:6
+12/11/19 23:23:25 INFO util.ChaosMonkey: Sleeping for:60000
+12/11/19 23:24:25 INFO util.ChaosMonkey: Starting region server:rs3.example.com
+12/11/19 23:24:25 INFO hbase.HBaseCluster: Starting RS on: rs3.example.com
+12/11/19 23:24:25 INFO hbase.ClusterManager: Executing remote command: /homes/enis/code/hbase-0.94/bin/../bin/hbase-daemon.sh --config /homes/enis/code/hbase-0.94/bin/../conf start regionserver , hostname:rs3.example.com
+12/11/19 23:24:26 INFO hbase.ClusterManager: Executed remote command, exit code:0 , output:starting regionserver, logging to /homes/enis/code/hbase-0.94/bin/../logs/hbase-enis-regionserver-rs3.example.com.out
+
+12/11/19 23:24:27 INFO util.ChaosMonkey: Started region server:rs3.example.com,60020,1353367027826. Reported num of rs:6
+```
+
+The output indicates that ChaosMonkey started the default `PeriodicRandomActionPolicy`
+policy, which is configured with all the available actions. It chose to run `RestartActiveMaster` and `RestartRandomRs` actions.
+
+### ChaosMonkey without SSH
+
+Chaos monkey can be run without SSH using the Chaos service and ZNode cluster manager. HBase ships
+with many cluster managers, available in the `hbase-it/src/test/java/org/apache/hadoop/hbase/` directory.
+
+Set the following property in hbase configuration to switch to `ZNodeClusterManager`:
+
+```xml
+<property>
+  <name>hbase.it.clustermanager.class</name>
+  <value>org.apache.hadoop.hbase.ZNodeClusterManager</value>
+</property>
+```
+
+Start chaos agent on all hosts where you want to test chaos scenarios.
+
+```bash
+$ bin/hbase org.apache.hadoop.hbase.chaos.ChaosService -c start
+```
+
+Start chaos monkey runner from any one host, preferrably an edgenode.
+An example log while running chaos monkey with default policy `PeriodicRandomActionPolicy` is as shown below:
+
+```bash
+$ bin/hbase org.apache.hadoop.hbase.chaos.util.ChaosMonkeyRunner
+
+INFO  [main] hbase.HBaseCommonTestingUtility: Instantiating org.apache.hadoop.hbase.ZNodeClusterManager
+INFO  [ReadOnlyZKClient-host1.example.com:2181,host2.example.com:2181,host3.example.com:2181@0x003d43fe] zookeeper.ZooKeeper: Initiating client connection, connectString=host1.example.com:2181,host2.example.com:2181,host3.example.com:2181 sessionTimeout=90000 watcher=org.apache.hadoop.hbase.zookeeper.ReadOnlyZKClient$$Lambda$19/2106254492@1a39cf8
+INFO  [ReadOnlyZKClient-host1.example.com:2181,host2.example.com:2181,host3.example.com:2181@0x003d43fe] zookeeper.ClientCnxnSocket: jute.maxbuffer value is 4194304 Bytes
+INFO  [ReadOnlyZKClient-host1.example.com:2181,host2.example.com:2181,host3.example.com:2181@0x003d43fe] zookeeper.ClientCnxn: zookeeper.request.timeout value is 0. feature enabled=
+INFO  [ReadOnlyZKClient-host1.example.com:2181,host2.example.com:2181,host3.example.com:2181@0x003d43fe-SendThread(host2.example.com:2181)] zookeeper.ClientCnxn: Opening socket connection to server host2.example.com/10.20.30.40:2181. Will not attempt to authenticate using SASL (unknown error)
+INFO  [ReadOnlyZKClient-host1.example.com:2181,host2.example.com:2181,host3.example.com:2181@0x003d43fe-SendThread(host2.example.com:2181)] zookeeper.ClientCnxn: Socket connection established, initiating session, client: /10.20.30.40:35164, server: host2.example.com/10.20.30.40:2181
+INFO  [ReadOnlyZKClient-host1.example.com:2181,host2.example.com:2181,host3.example.com:2181@0x003d43fe-SendThread(host2.example.com:2181)] zookeeper.ClientCnxn: Session establishment complete on server host2.example.com/10.20.30.40:2181, sessionid = 0x101de9204670877, negotiated timeout = 60000
+INFO  [main] policies.Policy: Using ChaosMonkey Policy class org.apache.hadoop.hbase.chaos.policies.PeriodicRandomActionPolicy, period=60000 ms
+ [ChaosMonkey-2] policies.Policy: Sleeping for 93741 ms to add jitter
+INFO  [ChaosMonkey-0] policies.Policy: Sleeping for 9752 ms to add jitter
+INFO  [ChaosMonkey-1] policies.Policy: Sleeping for 65562 ms to add jitter
+INFO  [ChaosMonkey-3] policies.Policy: Sleeping for 38777 ms to add jitter
+INFO  [ChaosMonkey-0] actions.CompactRandomRegionOfTableAction: Performing action: Compact random region of table usertable, major=false
+INFO  [ChaosMonkey-0] policies.Policy: Sleeping for 59532 ms
+INFO  [ChaosMonkey-3] client.ConnectionImplementation: Getting master connection state from TTL Cache
+INFO  [ChaosMonkey-3] client.ConnectionImplementation: Getting master state using rpc call
+INFO  [ChaosMonkey-3] actions.DumpClusterStatusAction: Cluster status
+Master: host1.example.com,16000,1678339058222
+Number of backup masters: 0
+Number of live region servers: 3
+  host1.example.com,16020,1678794551244
+  host2.example.com,16020,1678341258970
+  host3.example.com,16020,1678347834336
+Number of dead region servers: 0
+Number of unknown region servers: 0
+Average load: 123.6666666666666
+Number of requests: 118645157
+Number of regions: 2654
+Number of regions in transition: 0
+INFO  [ChaosMonkey-3] policies.Policy: Sleeping for 89614 ms
+```
+
+For info on more customisations we can see help for the `ChaosMonkeyRunner`. For example we can pass the table name on which the chaos operations to be performed etc.
+Below is the output of the help command, listing all the supported options.
+
+```bash
+$ bin/hbase org.apache.hadoop.hbase.chaos.util.ChaosMonkeyRunner --help
+
+usage: hbase org.apache.hadoop.hbase.chaos.util.ChaosMonkeyRunner <options>
+Options:
+ -c <arg>             Name of extra configurations file to find on CLASSPATH
+ -m,--monkey <arg>    Which chaos monkey to run
+ -monkeyProps <arg>   The properties file for specifying chaos monkey properties.
+ -tableName <arg>     Table name in the test to run chaos monkey against
+ -familyName <arg>    Family name in the test to run chaos monkey against
+```
+
+For example, running the following will start `ServerKillingMonkeyFactory` that chooses among actions to rolling batch restart RS, graceful rolling restart RS one at a time, restart active master, force balancer run etc.
+
+```bash
+$ bin/hbase org.apache.hadoop.hbase.chaos.util.ChaosMonkeyRunner -m org.apache.hadoop.hbase.chaos.factories.ServerKillingMonkeyFactory
+```
+
+### Available Policies
+
+HBase ships with several ChaosMonkey policies, available in the
+`hbase/hbase-it/src/test/java/org/apache/hadoop/hbase/chaos/policies/` directory.
+
+### Configuring Individual ChaosMonkey Actions
+
+ChaosMonkey integration tests can be configured per test run.
+Create a Java properties file in the HBase CLASSPATH and pass it to ChaosMonkey using
+the `-monkeyProps` configuration flag. Configurable properties, along with their default
+values if applicable, are listed in the `org.apache.hadoop.hbase.chaos.factories.MonkeyConstants`
+class. For properties that have defaults, you can override them by including them
+in your properties file.
+
+The following example uses a properties file called `monkey.properties`.
+
+```bash
+$ bin/hbase org.apache.hadoop.hbase.IntegrationTestIngest -m slowDeterministic -monkeyProps monkey.properties
+```
+
+The above command will start the integration tests and chaos monkey. It will look for the
+properties file _monkey.properties_ on the HBase CLASSPATH; e.g. inside the HBASE _conf_ dir.
+
+Here is an example chaos monkey file:
+
+#### Example ChaosMonkey Properties File
+
+```properties
+sdm.action1.period=120000
+sdm.action2.period=40000
+move.regions.sleep.time=80000
+move.regions.max.time=1000000
+move.regions.sleep.time=80000
+batch.restart.rs.ratio=0.4f
+```
+
+Periods/time are expressed in milliseconds.
+
+HBase 1.0.2 and newer adds the ability to restart HBase's underlying ZooKeeper quorum or
+HDFS nodes. To use these actions, you need to configure some new properties, which
+have no reasonable defaults because they are deployment-specific, in your ChaosMonkey
+properties file, which may be `hbase-site.xml` or a different properties file.
+
+```xml
+<property>
+  <name>hbase.it.clustermanager.hadoop.home</name>
+  <value>$HADOOP_HOME</value>
+</property>
+<property>
+  <name>hbase.it.clustermanager.zookeeper.home</name>
+  <value>$ZOOKEEPER_HOME</value>
+</property>
+<property>
+  <name>hbase.it.clustermanager.hbase.user</name>
+  <value>hbase</value>
+</property>
+<property>
+  <name>hbase.it.clustermanager.hadoop.hdfs.user</name>
+  <value>hdfs</value>
+</property>
+<property>
+  <name>hbase.it.clustermanager.zookeeper.user</name>
+  <value>zookeeper</value>
+</property>
+```
+
+### Customizing Destructive ChaosMonkey Actions
+
+The session above shows how to setup custom configurations for the _slowDeterministic_ monkey
+policy. This is a policy that pre-defines a set of destructive actions of varying gravity for a
+running cluster. These actions are grouped into three categories: _light weight_, _mid weight_ and
+_heavy weight_. Although it's possible to define some properties for the different actions
+(such as timeouts, frequency, etc), the actions themselves are not configurable.
+
+For certain deployments, it may be interesting to define its own test strategy, either less or more
+aggressive than the pre-defined set of actions provided by _slowDeterministic_. For such cases,
+the _configurableSlowDeterministic_ policy can be used. It allows for a customizable set of
+_heavy weight_ actions to be defined in the _monkey.properties_ properties file:
+
+```properties
+batch.restart.rs.ratio=0.3f
+heavy.actions=RestartRandomRsAction(500000);MoveRandomRegionOfTableAction(360000,$table_name);SplitAllRegionOfTableAction($table_name)
+```
+
+The above properties file definition instructs chaos monkey to perform a RegionServer crash every 8 minutes,
+a random region move every 6 minutes, and at least one split of all table regions.
+
+To run this policy, just specify _configurableSlowDeterministic_ as the monkey policy to run, together
+with a property file containing the _heavy.actions_ property definition:
+
+```bash
+$ bin/hbase org.apache.hadoop.hbase.IntegrationTestIngest -m configurableSlowDeterministic -monkeyProps monkey.properties
+```
+
+When specifying monkey actions, make sure to define all required constructor parameters. For actions
+that require a table name parameter, the _$table_name_ placeholder can be specified, and it will
+automatically resort to the table created by the integration test run.
+
+If _heavy.actions_ property is omitted in the properties file, _configurableSlowDeterministic_ will
+just run as the _slowDeterministic_ policy
+(it will execute all the heavy weight actions defined by _slowDeterministic_ policy).

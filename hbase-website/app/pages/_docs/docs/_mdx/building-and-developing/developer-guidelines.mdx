@@ -1,0 +1,773 @@
+---
+title: "Developer Guidelines"
+---
+
+## Branches
+
+We use Git for source code management and latest development happens on `master` branch. There are
+branches for past major/minor/maintenance releases and important features and bug fixes are often
+back-ported to them.
+
+## Policy for Fix Version in JIRA
+
+To determine if a given fix is in a given release purely from the release numbers following rules
+are defined:
+
+Fix version of X.Y.Z => fixed in all releases X.Y.Z' (where Z' = Z).  
+Fix version of X.Y.0 => fixed in all releases X.Y'.\* (where Y' = Y).  
+Fix version of X.0.0 => fixed in all releases X'.\*.\* (where X' = X).  
+
+By this policy, fix version of 1.3.0 implies 1.4.0, but 1.3.2 does not imply 1.4.0 as we could not
+tell purely from the numbers which release came first.
+
+## Code Standards
+
+### Interface Classifications
+
+Interfaces are classified both by audience and by stability level.
+These labels appear at the head of a class.
+The conventions followed by HBase are inherited by its parent project, Hadoop.
+
+The following interface classifications are commonly used:
+
+#### InterfaceAudience
+
+`@InterfaceAudience.Public`  
+APIs for users and HBase applications.
+These APIs will be deprecated through major versions of HBase.
+
+`@InterfaceAudience.Private`  
+APIs for HBase internals developers.
+No guarantees on compatibility or availability in future versions.
+Private interfaces do not need an `@InterfaceStability` classification.
+
+`@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)`  
+APIs for HBase coprocessor writers.
+
+**No `@InterfaceAudience` Classification**:  
+Packages without an `@InterfaceAudience` label are considered private.
+Mark your new packages if publicly accessible.
+
+<Callout type="info" title="Excluding Non-Public Interfaces from API Documentation">
+Only interfaces classified `@InterfaceAudience.Public` should be included in API documentation (Javadoc). Committers must add new package excludes `ExcludePackageNames` section of the _pom.xml_ for new packages which do not contain public classes.
+</Callout>
+
+#### @InterfaceStability
+
+`@InterfaceStability` is important for packages marked `@InterfaceAudience.Public`.
+
+`@InterfaceStability.Stable`  
+Public packages marked as stable cannot be changed without a deprecation path or a very good reason.
+
+`@InterfaceStability.Unstable`  
+Public packages marked as unstable can be changed without a deprecation path.
+
+`@InterfaceStability.Evolving`  
+Public packages marked as evolving may be changed, but it is discouraged.
+
+**No `@InterfaceStability` Label**:
+Public classes with no `@InterfaceStability` label are discouraged, and should be considered implicitly unstable.
+
+If you are unclear about how to mark packages, ask on the development list.
+
+### Code Formatting Conventions
+
+Please adhere to the following guidelines so that your patches can be reviewed more quickly.
+These guidelines have been developed based upon common feedback on patches from new contributors.
+
+See the [Code Conventions for the Java Programming Language](http://www.oracle.com/technetwork/java/index-135089.html) for more information on coding conventions in Java.
+See [Eclipse Code Formatting](#eclipse.code.formatting) to setup Eclipse to check for some of
+these guidelines automatically.
+
+#### Space Invaders
+
+Do not use extra spaces around brackets.
+Use the second style, rather than the first.
+
+```java
+if ( foo.equals( bar ) ) {     // don't do this
+```
+
+```java
+if (foo.equals(bar)) {
+```
+
+```java
+foo = barArray[ i ];     // don't do this
+```
+
+```java
+foo = barArray[i];
+```
+
+#### Auto Generated Code
+
+Auto-generated code in Eclipse often uses bad variable names such as `arg0`.
+Use more informative variable names.
+Use code like the second example here.
+
+```java
+ public void readFields(DataInput arg0) throws IOException {    // don't do this
+   foo = arg0.readUTF();                                       // don't do this
+```
+
+```java
+ public void readFields(DataInput di) throws IOException {
+   foo = di.readUTF();
+```
+
+#### Long Lines
+
+Keep lines less than 100 characters.
+You can configure your IDE to do this automatically.
+
+```java
+Bar bar = foo.veryLongMethodWithManyArguments(argument1, argument2, argument3, argument4, argument5, argument6, argument7, argument8, argument9);  // don't do this
+```
+
+```java
+Bar bar = foo.veryLongMethodWithManyArguments(
+ argument1, argument2, argument3,argument4, argument5, argument6, argument7, argument8, argument9);
+```
+
+#### Trailing Spaces
+
+Be sure there is a line break after the end of your code, and avoid lines with nothing but whitespace.
+This makes diffs more meaningful.
+You can configure your IDE to help with this.
+
+```java
+Bar bar = foo.getBar();     <--- imagine there is an extra space(s) after the semicolon.
+```
+
+#### API Documentation (Javadoc)
+
+Don't forget Javadoc!
+
+Javadoc warnings are checked during precommit.
+If the precommit tool gives you a '-1', please fix the javadoc issue.
+Your patch won't be committed if it adds such warnings.
+
+Also, no `@author` tags - that's a rule.
+
+#### Findbugs
+
+`Findbugs` is used to detect common bugs pattern.
+It is checked during the precommit build.
+If errors are found, please fix them.
+You can run findbugs locally with `mvn
+                            findbugs:findbugs`, which will generate the `findbugs` files locally.
+Sometimes, you may have to write code smarter than `findbugs`.
+You can annotate your code to tell `findbugs` you know what you're doing, by annotating your class with the following annotation:
+
+```java
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(
+value="HE_EQUALS_USE_HASHCODE",
+justification="I know what I'm doing")
+```
+
+It is important to use the Apache-licensed version of the annotations. That generally means using
+annotations in the `edu.umd.cs.findbugs.annotations` package so that we can rely on the cleanroom
+reimplementation rather than annotations in the `javax.annotations` package.
+
+#### Javadoc - Useless Defaults
+
+Don't just leave javadoc tags the way IDE generates them, or fill redundant information in them.
+
+```java
+  /**
+   * @param table                              <---- don't leave them empty!
+   * @param region An HRegion object.          <---- don't fill redundant information!
+   * @return Foo Object foo just created.      <---- Not useful information
+   * @throws SomeException                     <---- Not useful. Function declarations already tell that!
+   * @throws BarException when something went wrong  <---- really?
+   */
+  public Foo createFoo(Bar bar);
+```
+
+Either add something descriptive to the tags, or just remove them.
+The preference is to add something descriptive and useful.
+
+#### One Thing At A Time, Folks
+
+If you submit a patch for one thing, don't do auto-reformatting or unrelated reformatting of code on a completely different area of code.
+
+Likewise, don't add unrelated cleanup or refactorings outside the scope of your Jira.
+
+#### Ambiguous Unit Tests
+
+Make sure that you're clear about what you are testing in your unit tests and why.
+
+### Garbage-Collection Conserving Guidelines
+
+The following guidelines were borrowed from http://engineering.linkedin.com/performance/linkedin-feed-faster-less-jvm-garbage.
+Keep them in mind to keep preventable garbage collection to a minimum. Have a look
+at the blog post for some great examples of how to refactor your code according to
+these guidelines.
+
+- Be careful with Iterators
+- Estimate the size of a collection when initializing
+- Defer expression evaluation
+- Compile the regex patterns in advance
+- Cache it if you can
+- String Interns are useful but dangerous
+
+## Invariants
+
+We don't have many but what we have we list below.
+All are subject to challenge of course but until then, please hold to the rules of the road.
+
+### No permanent state in ZooKeeper
+
+ZooKeeper state should transient (treat it like memory). If ZooKeeper state is deleted, hbase should be able to recover and essentially be in the same state.
+
+- .Exceptions: There are currently a few exceptions that we need to fix around whether a table is enabled or disabled.
+- Replication data is currently stored only in ZooKeeper.
+  Deleting ZooKeeper data related to replication may cause replication to be disabled.
+  Do not delete the replication tree, _/hbase/replication/_.
+
+<Callout type="warning">
+  Replication may be disrupted and data loss may occur if you delete the replication tree
+  (_/hbase/replication/_) from ZooKeeper. Follow progress on this issue at
+  [HBASE-10295](https://issues.apache.org/jira/browse/HBASE-10295).
+</Callout>
+
+## Running In-Situ
+
+If you are developing Apache HBase, frequently it is useful to test your changes against a more-real cluster than what you find in unit tests.
+In this case, HBase can be run directly from the source in local-mode.
+All you need to do is run:
+
+```bash
+${HBASE_HOME}/bin/start-hbase.sh
+```
+
+This will spin up a full local-cluster, just as if you had packaged up HBase and installed it on your machine.
+
+Keep in mind that you will need to have installed HBase into your local maven repository for the in-situ cluster to work properly.
+That is, you will need to run:
+
+```bash
+mvn clean install -DskipTests
+```
+
+to ensure that maven can find the correct classpath and dependencies.
+Generally, the above command is just a good thing to try running first, if maven is acting oddly.
+
+## Adding Metrics
+
+After adding a new feature a developer might want to add metrics.
+HBase exposes metrics using the Hadoop Metrics 2 system, so adding a new metric involves exposing that metric to the hadoop system.
+Unfortunately the API of metrics2 changed from hadoop 1 to hadoop 2.
+In order to get around this a set of interfaces and implementations have to be loaded at runtime.
+To get an in-depth look at the reasoning and structure of these classes you can read the blog post located [here](https://blogs.apache.org/hbase/entry/migration_to_the_new_metrics).
+To add a metric to an existing MBean follow the short guide below:
+
+### Add Metric name and Function to Hadoop Compat Interface.
+
+Inside of the source interface the corresponds to where the metrics are generated (eg MetricsMasterSource for things coming from HMaster) create new static strings for metric name and description.
+Then add a new method that will be called to add new reading.
+
+### Add the Implementation to Both Hadoop 1 and Hadoop 2 Compat modules.
+
+Inside of the implementation of the source (eg.
+MetricsMasterSourceImpl in the above example) create a new histogram, counter, gauge, or stat in the init method.
+Then in the method that was added to the interface wire up the parameter passed in to the histogram.
+
+Now add tests that make sure the data is correctly exported to the metrics 2 system.
+For this the MetricsAssertHelper is provided.
+
+## Git Best Practices
+
+**Avoid git merges.**  
+Use `git pull --rebase` or `git fetch` followed by `git rebase`.
+
+**Do not use `git push --force`.**  
+If the push does not work, fix the problem or ask for help.
+
+Please contribute to this document if you think of other Git best practices.
+
+### `rebase_all_git_branches.sh`
+
+The _dev-support/rebase_all_git_branches.sh_ script is provided to help keep your Git repository clean.
+Use the `-h` parameter to get usage instructions.
+The script automatically refreshes your tracking branches, attempts an automatic rebase of each local branch against its remote branch, and gives you the option to delete any branch which represents a closed `HBASE-` JIRA.
+The script has one optional configuration option, the location of your Git directory.
+You can set a default by editing the script.
+Otherwise, you can pass the git directory manually by using the `-d` parameter, followed by an absolute or relative directory name, or even '.' for the current working directory.
+The script checks the directory for sub-directory called _.git/_, before proceeding.
+
+## Submitting Patches
+
+If you are new to submitting patches to open source or new to submitting patches to Apache, start by
+reading the [On Contributing Patches](https://commons.apache.org/patches.html) page from
+[Apache Commons Project](https://commons.apache.org/).
+It provides a nice overview that applies equally to the Apache HBase Project.
+
+Make sure you review [Code Formatting Conventions](#common.patch.feedback) for code style. If your patch
+was generated incorrectly or your code does not adhere to the code formatting guidelines, you may
+be asked to redo some work.
+
+HBase enforces code style via a maven plugin. After you've written up your changes, apply the
+formatter before committing.
+
+```bash
+$ mvn spotless:apply
+```
+
+When your commit is ready, present it to the community as a
+[GitHub Pull Request](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-pull-requests).
+
+### Few general guidelines
+
+- Always patch against the master branch first, even if you want to patch in another branch.
+  HBase committers always apply patches first to the master branch, and backport as necessary. For
+  complex patches, you may be asked to perform the backport(s) yourself.
+- Submit one single PR for a single fix. If necessary, squash local commits to merge local commits
+  into a single one first. See this
+  [Stack Overflow
+  question](http://stackoverflow.com/questions/5308816/how-to-use-git-merge-squash) for more information about squashing commits.
+- Please understand that not every patch may get committed, and that feedback will likely be
+  provided on the patch.
+
+### Unit Tests
+
+Always add and/or update relevant unit tests when making the changes.
+Make sure that new/changed unit tests pass locally before submitting the patch because it is faster
+than waiting for presubmit result which runs full test suite. This will save your own time and
+effort.
+Use [Mockito](https://site.mockito.org/) to make mocks which are very useful for testing failure scenarios by
+injecting appropriate failures.
+
+If you are creating a new unit test class, notice how other unit test classes have
+classification/sizing annotations before class name and a static methods for setup/teardown of
+testing environment. Be sure to include annotations in any new unit test files.
+See [Tests](#hbase.tests) for more information on tests.
+
+### Integration Tests
+
+Significant new features should provide an integration test in addition to unit tests, suitable for exercising the new feature at different points in its configuration space.
+
+### ReviewBoard
+
+Patches larger than one screen, or patches that will be tricky to review, should go through [ReviewBoard](https://reviews.apache.org).
+
+**Procedure: Use ReviewBoard**
+
+1. Register for an account if you don't already have one.
+   It does not use the credentials from [issues.apache.org](https://issues.apache.org).
+   Log in.
+2. Click **New Review Request**.
+3. Choose the `hbase-git` repository.
+   Click Choose File to select the diff and optionally a parent diff.
+   Click **Create Review Request**.
+4. Fill in the fields as required.
+   At the minimum, fill in the **Summary** and choose `hbase` as the **Review Group**.
+   If you fill in the **Bugs** field, the review board links back to the relevant JIRA.
+   The more fields you fill in, the better.
+   Click **Publish** to make your review request public.
+   An email will be sent to everyone in the `hbase` group, to review the patch.
+5. Back in your JIRA, click , and paste in the URL of your ReviewBoard request.
+   This attaches the ReviewBoard to the JIRA, for easy access.
+6. To cancel the request, click .
+
+For more information on how to use ReviewBoard, see [the ReviewBoard
+documentation](http://www.reviewboard.org/docs/manual/1.5/).
+
+### GitHub
+
+Submitting [GitHub](https://github.com/apache/hbase) pull requests is another accepted form of
+contributing patches. Refer to GitHub [documentation](https://help.github.com/) for details on
+how to create pull requests.
+
+<Callout type="info">
+  This section is incomplete and needs to be updated. Refer to
+  [HBASE-23557](https://issues.apache.org/jira/browse/HBASE-23557)
+</Callout>
+
+#### GitHub Tooling
+
+**Browser bookmarks**
+
+Following is a useful javascript based browser bookmark that redirects from GitHub pull
+requests to the corresponding jira work item. This redirects based on the HBase jira ID mentioned
+in the issue title for the PR. Add the following javascript snippet as a browser bookmark to the
+tool bar. Clicking on it while you are on an HBase GitHub PR page redirects you to the corresponding
+jira item.
+
+```js
+location.href='https://issues.apache.org/jira/browse/'+document.getElementsByClassName("js-issue-title")[0].innerHTML.match(/HBASE-\d+/)[0];
+```
+
+### Guide for HBase Committers
+
+#### Becoming a committer
+
+Committers are responsible for reviewing and integrating code changes, testing
+and voting on release candidates, weighing in on design discussions, as well as
+other types of project contributions. The PMC votes to make a contributor a
+committer based on an assessment of their contributions to the project. It is
+expected that committers demonstrate a sustained history of high-quality
+contributions to the project and community involvement.
+
+Contributions can be made in many ways. There is no single path to becoming a
+committer, nor any expected timeline. Submitting features, improvements, and bug
+fixes is the most common avenue, but other methods are both recognized and
+encouraged (and may be even more important to the health of HBase as a project and a
+community). A non-exhaustive list of potential contributions (in no particular
+order):
+
+- [Update the documentation](#appendix_contributing_to_documentation) for new
+  changes, best practices, recipes, and other improvements.
+- Keep the website up to date.
+- Perform testing and report the results. For instance, scale testing and
+  testing non-standard configurations is always appreciated.
+- Maintain the shared Jenkins testing environment and other testing
+  infrastructure.
+- [Vote on release candidates](#hbase.rc.voting) after performing validation, even if non-binding.
+  A non-binding vote is a vote by a non-committer.
+- Provide input for discussion threads on the link:/mail-lists.html[mailing lists] (which usually have
+  `[DISCUSS]` in the subject line).
+- Answer questions questions on the user or developer mailing lists and on
+  Slack.
+- Make sure the HBase community is a welcoming one and that we adhere to our
+  link:/coc.html[Code of conduct]. Alert the PMC if you
+  have concerns.
+- Review other people's work (both code and non-code) and provide public
+  feedback.
+- Report bugs that are found, or file new feature requests.
+- Triage issues and keep JIRA organized. This includes closing stale issues,
+  labeling new issues, updating metadata, and other tasks as needed.
+- Mentor new contributors of all sorts.
+- Give talks and write blogs about HBase. Add these to the link:/[News] section
+  of the website.
+- Provide UX feedback about HBase, the web UI, the CLI, APIs, and the website.
+- Write demo applications and scripts.
+- Help attract and retain a diverse community.
+- Interact with other projects in ways that benefit HBase and those other
+  projects.
+
+Not every individual is able to do all (or even any) of the items on this list.
+If you think of other ways to contribute, go for it (and add them to the list).
+A pleasant demeanor and willingness to contribute are all you need to make a
+positive impact on the HBase project. Invitations to become a committer are the
+result of steady interaction with the community over the long term, which builds
+trust and recognition.
+
+#### New committers
+
+New committers are encouraged to first read Apache's generic committer
+documentation:
+
+- [Apache New Committer Guide](https://www.apache.org/dev/new-committers-guide.html)
+- [Apache Committer FAQ](https://www.apache.org/dev/committers.html)
+
+#### Review
+
+HBase committers should, as often as possible, attempt to review patches
+submitted by others. Ideally every submitted patch will get reviewed by a
+committer _within a few days_. If a committer reviews a patch they have not
+authored, and believe it to be of sufficient quality, then they can commit the
+patch. Otherwise the patch should be cancelled with a clear explanation for why
+it was rejected.
+
+The list of submitted patches is in the
+[HBase Review Queue](https://issues.apache.org/jira/secure/IssueNavigator.jspa?mode=hide&requestId=12312392),
+which is ordered by time of last modification. Committers should scan the list
+from top to bottom, looking for patches that they feel qualified to review and
+possibly commit. If you see a patch you think someone else is better qualified
+to review, you can mention them by username in the JIRA.
+
+For non-trivial changes, it is required that another committer review your
+patches before commit. **Self-commits of non-trivial patches are not allowed.**
+Use the **Submit Patch** button in JIRA, just like other contributors, and
+then wait for a `+1` response from another committer before committing.
+
+#### Reject
+
+Patches which do not adhere to the guidelines in
+[HowToContribute](https://hbase.apache.org/book.html#developer) and to the
+[code review checklist](https://cwiki.apache.org/confluence/display/HADOOP2/CodeReviewChecklist)
+should be rejected. Committers should always be polite to contributors and try
+to instruct and encourage them to contribute better patches. If a committer
+wishes to improve an unacceptable patch, then it should first be rejected, and a
+new patch should be attached by the committer for further review.
+
+#### Commit
+
+Committers commit patches to the Apache HBase GIT repository.
+
+<Callout type="warn" title="Before you commit!!!!">
+Make sure your local configuration is correct, especially your identity and email.
+Examine the output of the `$ git config --list` command and be sure it is correct.
+See [Set Up Git](https://help.github.com/articles/set-up-git) if you need
+pointers.
+</Callout>
+
+When you commit a patch:
+
+1. Include the Jira issue ID in the commit message along with a short description
+   of the change. Try to add something more than just the Jira title so that
+   someone looking at `git log` output doesn't have to go to Jira to discern what
+   the change is about. Be sure to get the issue ID right, because this causes
+   Jira to link to the change in Git (use the issue's "All" tab to see these
+   automatic links).
+2. Commit the patch to a new branch based off `master` or the other intended
+   branch. It's a good idea to include the JIRA ID in the name of this branch.
+   Check out the relevant target branch where you want to commit, and make sure
+   your local branch has all remote changes, by doing a `git pull --rebase` or
+   another similar command. Next, cherry-pick the change into each relevant
+   branch (such as master), and push the changes to the remote branch using
+   a command such as `git push <remote-server> <remote-branch>`.
+
+<Callout type="warning">
+If you do not have all remote changes, the push will fail. If the push fails for any reason, fix
+the problem or ask for help. Do not do a `git push --force`.
+</Callout>
+
+Before you can commit a patch, you need to determine how the patch was created.
+The instructions and preferences around the way to create patches have changed,
+and there will be a transition period.
+
+**Determine How a Patch Was Created**
+
+- If the first few lines of the patch look like the headers of an email, with a From, Date, and
+  Subject, it was created using `git format-patch`. This is the preferred way, because you can
+  reuse the submitter's commit message. If the commit message is not appropriate, you can still use
+  the commit, then run `git commit --amend` and reword as appropriate.
+- If the first line of the patch looks similar to the following, it was created using +git diff+ without `--no-prefix`.
+  This is acceptable too.
+  Notice the `a` and `b` in front of the file names.
+  This is the indication that the patch was not created with `--no-prefix`.
+
+  ```diff
+  diff --git a/src/main/asciidoc/_chapters/developer.adoc b/src/main/asciidoc/_chapters/developer.adoc
+  ```
+
+- If the first line of the patch looks similar to the following (without the `a` and `b`), the
+  patch was created with `git diff --no-prefix` and you need to add `-p0` to the `git apply` command
+  below.
+
+  ```diff
+  diff --git src/main/asciidoc/_chapters/developer.adoc src/main/asciidoc/_chapters/developer.adoc
+  ```
+
+**Example of committing a Patch**
+
+One thing you will notice with these examples is that there are a lot of
+`git pull` commands. The only command that actually writes anything to the
+remote repository is `git push`, and you need to make absolutely sure you have
+the correct versions of everything and don't have any conflicts before pushing.
+The extra `git pull` commands are usually redundant, but better safe than sorry.
+
+The first example shows how to apply a patch that was generated with +git
+format-patch+ and apply it to the `master` and `branch-1` branches.
+
+The directive to use `git format-patch` rather than `git diff`, and not to use
+`--no-prefix`, is a new one. See the second example for how to apply a patch
+created with `git diff`, and educate the person who created the patch.
+
+```bash
+$ git checkout -b HBASE-XXXX
+$ git am ~/Downloads/HBASE-XXXX-v2.patch --signoff  # If you are committing someone else's patch.
+$ git checkout master
+$ git pull --rebase
+$ git cherry-pick <sha-from-commit>
+# Resolve conflicts if necessary or ask the submitter to do it
+$ git pull --rebase          # Better safe than sorry
+$ git push origin master
+
+# Backport to branch-1
+$ git checkout branch-1
+$ git pull --rebase
+$ git cherry-pick <sha-from-commit>
+# Resolve conflicts if necessary
+$ git pull --rebase          # Better safe than sorry
+$ git push origin branch-1
+$ git branch -D HBASE-XXXX
+```
+
+This example shows how to commit a patch that was created using `git diff`
+without `--no-prefix`. If the patch was created with `--no-prefix`, add `-p0` to
+the `git apply` command.
+
+```bash
+$ git apply ~/Downloads/HBASE-XXXX-v2.patch
+$ git commit -m "HBASE-XXXX Really Good Code Fix (Joe Schmo)" --author=<contributor> -a  # This and next command is needed for patches created with 'git diff'
+$ git commit --amend --signoff
+$ git checkout master
+$ git pull --rebase
+$ git cherry-pick <sha-from-commit>
+# Resolve conflicts if necessary or ask the submitter to do it
+$ git pull --rebase          # Better safe than sorry
+$ git push origin master
+
+# Backport to branch-1
+$ git checkout branch-1
+$ git pull --rebase
+$ git cherry-pick <sha-from-commit>
+# Resolve conflicts if necessary or ask the submitter to do it
+$ git pull --rebase           # Better safe than sorry
+$ git push origin branch-1
+$ git branch -D HBASE-XXXX
+```
+
+3. Resolve the issue as fixed, thanking the contributor.
+   Always set the "Fix Version" at this point, but only set a single fix version
+   for each branch where the change was committed, the earliest release in that
+   branch in which the change will appear.
+
+**Commit Message Format**
+
+The commit message should contain the JIRA ID and a description of what the patch does.
+The preferred commit message format is:
+
+```text
+<jira-id> <jira-title> (<contributor-name-if-not-commit-author>)
+```
+
+```text
+HBASE-12345 Fix All The Things (jane@example.com)
+```
+
+If the contributor used `git format-patch` to generate the patch, their commit
+message is in their patch and you can use that, but be sure the JIRA ID is at
+the front of the commit message, even if the contributor left it out.
+
+**Use GitHub's "Co-authored-by" when there are multiple authors**
+
+We've established the practice of committing to master and then cherry picking back to branches whenever possible, unless
+
+- it's breaking compat: In which case, if it can go in minor releases, backport to branch-1 and branch-2.
+- it's a new feature: No for maintenance releases, For minor releases, discuss and arrive at consensus.
+
+There are occasions when there are multiple author for a patch.
+For example when there is a minor conflict we can fix it up and just proceed with the commit.
+The amending author will be different from the original committer, so you should also attribute to the original author by
+adding one or more `Co-authored-by` trailers to the commit's message.
+See [the GitHub documentation for "Creating a commit with multiple authors"](https://help.github.com/en/articles/creating-a-commit-with-multiple-authors/).
+
+In short, these are the steps to add Co-authors that will be tracked by GitHub:
+
+1. Collect the name and email address for each co-author.
+2. Commit the change, but after your commit description, instead of a closing quotation, add two empty lines. (Do not close the commit message with a quotation mark)
+3. On the next line of the commit message, type `Co-authored-by: name <name@example.com>`. After the co-author information, add a closing quotation mark.
+
+Here is the example from the GitHub page, using 2 Co-authors:
+
+```bash
+$ git commit -m "Refactor usability tests.
+>
+>
+Co-authored-by: name \<name@example.com\>
+Co-authored-by: another-name \<another-name@example.com\>"
+```
+
+Note: `Amending-Author: Author \<committer@apache\>` was used prior to this
+[DISCUSSION](https://lists.apache.org/thread.html/f00b5f9b65570e777dbb31c37d7b0ffc55c5fc567aefdb456608a042@%3Cdev.hbase.apache.org%3E).
+
+**Close related GitHub PRs**
+
+As a project we work to ensure there's a JIRA associated with each change, but we don't mandate any particular tool be used for reviews. Due to implementation details of the ASF's integration between hosted git repositories and GitHub, the PMC has no ability to directly close PRs on our GitHub repo. In the event that a contributor makes a Pull Request on GitHub, either because the contributor finds that easier than attaching a patch to JIRA or because a reviewer prefers that UI for examining changes, it's important to make note of the PR in the commit that goes to the master branch so that PRs are kept up to date.
+
+To read more about the details of what kinds of commit messages will work with the GitHub "close via keyword in commit" mechanism see [the GitHub documentation for "Closing issues using keywords"](https://help.github.com/articles/closing-issues-using-keywords/). In summary, you should include a line with the phrase "closes #XXX", where the XXX is the pull request id. The pull request id is usually given in the GitHub UI in grey at the end of the subject heading.
+
+**Committers are responsible for making sure commits do not break the build or tests**
+
+If a committer commits a patch, it is their responsibility to make sure it passes the test suite.
+It is helpful if contributors keep an eye out that their patch does not break the hbase build and/or tests, but ultimately, a contributor cannot be expected to be aware of all the particular vagaries and interconnections that occur in a project like HBase.
+A committer should.
+
+**Patching Etiquette**
+
+In the thread [HBase, mail # dev - ANNOUNCEMENT: Git Migration In Progress (WAS =>
+Re: Git Migration)](https://lists.apache.org/thread.html/186fcd5eb71973a7b282ecdba41606d3d221efd505d533bb729e1fad%401400648690%40%3Cdev.hbase.apache.org%3E), it was agreed on the following patch flow
+
+1. Develop and commit the patch against master first.
+2. Try to cherry-pick the patch when backporting if possible.
+3. If this does not work, manually commit the patch to the branch.
+
+**Merge Commits**
+
+Avoid merge commits, as they create problems in the git history.
+
+**Committing Documentation**
+
+See [appendix contributing to documentation](#appendix_contributing_to_documentation).
+
+**How to re-trigger github Pull Request checks/re-build**
+
+A Pull Request (PR) submission triggers the hbase yetus checks. The checks make
+sure the patch doesn't break the build or introduce test failures. The checks take
+around four hours to run (They are the same set run when you submit a patch via
+HBASE JIRA). When finished, they add a report to the PR as a comment. If a problem
+w/ the patch -- failed compile, checkstyle violation, or an added findbugs --
+the original author makes fixes and pushes a new patch. This re-runs the checks
+to produce a new report.
+
+Sometimes though, the patch is good but a flakey, unrelated test has the report vote -1
+on the patch. In this case, **committers** can retrigger the check run by doing a force push of the
+exact same patch. Or, click on the `Console output` link which shows toward the end
+of the report (For example `https://builds.apache.org/job/HBase-PreCommit-GitHub-PR/job/PR-289/1/console`).
+This will take you to `builds.apache.org`, to the build run that failed. See the
+"breadcrumbs" along the top (where breadcrumbs is the listing of the directories that
+gets us to this particular build page). It'll look something like
+`Jenkins > HBase-PreCommit-GitHub-PR > PR-289 > #1`. Click on the
+PR number -- i.e. PR-289 in our example -- and then, when you've arrived at the PR page,
+find the 'Build with Parameters' menu-item (along top left-hand menu). Click here and
+then `Build` leaving the JIRA_ISSUE_KEY empty. This will re-run your checks.
+
+### Dialog
+
+Committers should hang out in the #hbase room on irc.freenode.net for real-time discussions.
+However any substantive discussion (as with any off-list project-related discussion) should be re-iterated in Jira or on the developer list.
+
+### Do not edit JIRA comments
+
+Misspellings and/or bad grammar is preferable to the disruption a JIRA comment edit.
+
+## The hbase-thirdparty dependency and shading/relocation
+
+A new project was created for the release of hbase-2.0.0. It was called
+`hbase-thirdparty`. This project exists only to provide the main hbase
+project with relocated -- or shaded -- versions of popular thirdparty
+libraries such as guava, netty, and protobuf. The mainline HBase project
+relies on the relocated versions of these libraries gotten from hbase-thirdparty
+rather than on finding these classes in their usual locations. We do this so
+we can specify whatever the version we wish. If we don't relocate, we must
+harmonize our version to match that which hadoop, spark, and other projects use.
+
+For developers, this means you need to be careful referring to classes from
+netty, guava, protobuf, gson, etc. (see the hbase-thirdparty pom.xml for what
+it provides). Devs must refer to the hbase-thirdparty provided classes. In
+practice, this is usually not an issue (though it can be a bit of a pain). You
+will have to hunt for the relocated version of your particular class. You'll
+find it by prepending the general relocation prefix of `org.apache.hbase.thirdparty.`.
+For example if you are looking for `com.google.protobuf.Message`, the relocated
+version used by HBase internals can be found at
+`org.apache.hbase.thirdparty.com.google.protobuf.Message`.
+
+For a few thirdparty libs, like protobuf (see the protobuf chapter in this book
+for the why), your IDE may give you both options -- the `com.google.protobuf.*`
+and the `org.apache.hbase.thirdparty.com.google.protobuf.*` -- because both
+classes are on your CLASSPATH. Unless you are doing the particular juggling
+required in Coprocessor Endpoint development (again see above cited protobuf
+chapter), you'll want to use the shaded version, always.
+
+The `hbase-thirdparty` project has groupid of `org.apache.hbase.thirdparty`.
+As of this writing, it provides three jars; one for netty with an artifactid of
+`hbase-thirdparty-netty`, one for protobuf at `hbase-thirdparty-protobuf` and then
+a jar for all else -- gson, guava -- at `hbase-thirdpaty-miscellaneous`.
+
+The hbase-thirdparty artifacts are a product produced by the Apache HBase
+project under the aegis of the HBase Project Management Committee. Releases
+are done via the usual voting project on the hbase dev mailing list. If issue
+in the hbase-thirdparty, use the hbase JIRA and mailing lists to post notice.
+
+## Development of HBase-related Maven archetypes
+
+The development of HBase-related Maven archetypes was begun with
+[HBASE-14876](https://issues.apache.org/jira/browse/HBASE-14876).
+For an overview of the hbase-archetypes infrastructure and instructions
+for developing new HBase-related Maven archetypes, please see
+`hbase/hbase-archetypes/README.md`.

@@ -1,0 +1,295 @@
+---
+title: "Building Apache HBase"
+---
+
+## Basic Compile
+
+HBase is compiled using Maven. You must use at least Maven 3.0.4. To check your Maven version, run
+the command `mvn -version`.
+
+### JDK Version Requirements
+
+HBase has Java version compiler requirements that vary by release branch. At compilation time,
+HBase has the same version requirements as it does for runtime. See [Java](#java) for a complete
+support matrix of Java version by HBase version.
+
+### Maven Build Commands
+
+All commands are executed from the local HBase project directory.
+
+#### Package
+
+The simplest command to compile HBase from its java source code is to use the `package` target, which builds JARs with the compiled files.
+
+```bash
+mvn package -DskipTests
+```
+
+Or, to clean up before compiling:
+
+```bash
+mvn clean package -DskipTests
+```
+
+With Eclipse set up as explained above in [Eclipse](#eclipse), you can also use the **Build** command in Eclipse.
+To create the full installable HBase package takes a little bit more work, so read on.
+
+#### Compile
+
+The `compile` target does not create the JARs with the compiled files.
+
+```bash
+mvn compile
+```
+
+```bash
+mvn clean compile
+```
+
+#### Install
+
+To install the JARs in your _~/.m2/_ directory, use the `install` target.
+
+```bash
+mvn install
+```
+
+```bash
+mvn clean install
+```
+
+```bash
+mvn clean install -DskipTests
+```
+
+#### Building HBase 2.x on Apple Silicon
+
+Building a non-master branch requires protoc 2.5.0 binary which is not available for Apple Silicon.
+HBASE-27741 added a workaround to the build to fall back to osx-x86_64 version of protoc automatically by `apple-silicon-workaround` Maven profile.
+The intention is that this change will permit the build to proceed with the x86 version of `protoc`, making use of the Rosetta instruction translation service built into the OS.
+If you'd like to provide and make use of your own aarch_64 `protoc`, you can disable this profile on the command line by adding `-P'!apple-silicon-workaround'`, or through configuration in your `settings.xml`.
+
+You can use the following commands to build protoc on your Apple Silicon machine.
+
+```bash
+curl -sSL https://github.com/protocolbuffers/protobuf/releases/download/v2.5.0/protobuf-2.5.0.tar.gz | tar zx -
+cd protobuf-2.5.0
+curl -L -O https://gist.githubusercontent.com/liusheng/64aee1b27de037f8b9ccf1873b82c413/raw/118c2fce733a9a62a03281753572a45b6efb8639/protobuf-2.5.0-arm64.patch
+patch -p1 < protobuf-2.5.0-arm64.patch
+./configure --disable-shared
+make
+mvn install:install-file -DgroupId=com.google.protobuf -DartifactId=protoc -Dversion=2.5.0 -Dclassifier=osx-aarch_64 -Dpackaging=exe -Dfile=src/protoc
+```
+
+### Running all or individual Unit Tests
+
+See the [Running tests](#hbase.unittests.cmds) section in [Unit Tests](#hbase.unittests)
+
+### Building against various Hadoop versions
+
+HBase supports building against Apache Hadoop versions: 2.y and 3.y (early release artifacts).
+Exactly which version of Hadoop is used by default varies by release branch. See the section
+[Hadoop](#hadoop) for the complete breakdown of supported Hadoop version by HBase release.
+
+The mechanism for selecting a Hadoop version at build time is identical across all releases. Which
+version of Hadoop is default varies. We manage Hadoop major version selection by way of Maven
+profiles. Due to the peculiarities of Maven profile mutual exclusion, the profile that builds
+against a particular Hadoop version is activated by setting a property, _not_ the usual profile
+activation. Hadoop version profile activation is summarized by the following table.
+
+#### Hadoop Profile Activation by HBase Release
+
+|              | Hadoop2 Activation   | Hadoop3 Activation        |
+| ------------ | -------------------- | ------------------------- |
+| HBase 1.3+   | _active by default_  | `-Dhadoop.profile=3.0`    |
+| HBase 3.0+   | _not supported_      | _active by default_       |
+
+<Callout type="warn">
+Please note that where a profile is active by default, `hadoop.profile` must NOT be provided.
+</Callout>
+
+Once the Hadoop major version profile is activated, the exact Hadoop version can be
+specified by overriding the appropriate property value. For Hadoop2 versions, the property name
+is `hadoop-two.version`. With Hadoop3 versions, the property name is `hadoop-three.version`.
+
+#### Example 1: Building HBase 1.7 against Hadoop 2.10.0
+
+For example, to build HBase 1.7 against Hadoop 2.10.0, the profile is set for Hadoop2 by default,
+so only `hadoop-two.version` must be specified:
+
+```bash
+git checkout branch-1
+mvn -Dhadoop-two.version=2.10.0 ...
+```
+
+#### Example 2: Building HBase 2.3 or 2.4 against Hadoop 3.4.0-SNAPSHOT
+
+This is how a developer might check the compatibility of HBase 2.3 or 2.4 against an unreleased
+Hadoop version (currently 3.4). Both the Hadoop3 profile and version must be specified:
+
+```bash
+git checkout branch-2.4
+mvn -Dhadoop.profile=3.0 -Dhadoop-three.version=3.4.0-SNAPSHOT ...
+```
+
+#### Example 3: Building HBase 3.0 against Hadoop 3.4.0-SNAPSHOT
+
+The same developer might want also to check the development version of HBase (currently 3.0)
+against the development version of Hadoop (currently 3.4). In this case, the Hadoop3 profile is
+active by default, so only `hadoop-three.version` must be specified:
+
+```bash
+git checkout master
+mvn -Dhadoop-three.version=3.4.0-SNAPSHOT ...
+```
+
+### Building with JDK11 and Hadoop3
+
+HBase manages JDK-specific build settings using Maven profiles. The profile appropriate to the JDK
+in use is automatically activated. Building and running on JDK8 supports both Hadoop2 and Hadoop3.
+For JDK11, only Hadoop3 is supported. Thus, the Hadoop3 profile must be active when building on
+JDK11, and the artifacts used when running HBase on JDK11 must be compiled against Hadoop3.
+Furthermore, the JDK11 profile requires a minimum Hadoop version of 3.2.0. This value is specified
+by the JDK11 profile, but it can be overridden using the `hadoop-three.version` property as normal.
+For details on Hadoop profile activation by HBase branch, see
+[Building against various Hadoop versions](#maven.build.hadoop). See [Java](#java) for a complete
+support matrix of Java version by HBase version.
+
+#### Example 1: Building HBase 2.3 or 2.4 with JDK11
+
+To build HBase 2.3 or 2.4 with JDK11, the Hadoop3 profile must be activated explicitly.
+
+```bash
+git checkout branch-2.4
+JAVA_HOME=/usr/lib/jvm/java-11 mvn -Dhadoop.profile=3.0 ...
+```
+
+#### Example 2: Building HBase 3.0 with JDK11
+
+For HBase 3.0, the Hadoop3 profile is active by default, no additional properties need be
+specified.
+
+```bash
+git checkout master
+JAVA_HOME=/usr/lib/jvm/java-11 mvn ...
+```
+
+### Building and testing in an IDE with JDK11 and Hadoop3
+
+Continuing the discussion from the [earlier section](#maven.build.jdk11_hadoop3), building and
+testing with JDK11 and Hadoop3 within an IDE may require additional configuration. Specifically,
+make sure the JVM version used by the IDE is a JDK11, the active JDK Maven profile is for JDK11,
+and the Maven profile for JDK8 is NOT active. Likewise, ensure the Hadoop3 Maven profile is active
+and the Hadoop2 Maven profile is NOT active.
+
+### Build Protobuf
+
+You may need to change the protobuf definitions that reside in the _hbase-protocol_ module or other modules.
+
+Previous to hbase-2.0.0, protobuf definition files were sprinkled across all hbase modules but now all
+to do with protobuf must reside in the hbase-protocol module; we are trying to contain our protobuf
+use so we can freely change versions without upsetting any downstream project use of protobuf.
+
+The protobuf files are located in _hbase-protocol/src/main/protobuf_.
+For the change to be effective, you will need to regenerate the classes.
+
+```bash
+mvn package -pl hbase-protocol -am
+```
+
+Similarly, protobuf definitions for internal use are located in the _hbase-protocol-shaded_ module.
+
+```bash
+mvn package -pl hbase-protocol-shaded -am
+```
+
+Typically, protobuf code generation is done using the native `protoc` binary. In our build we use a maven plugin for
+convenience; however, the plugin may not be able to retrieve appropriate binaries for all platforms. If you find yourself
+on a platform where protoc fails, you will have to compile protoc from source, and run it independent of our maven build.
+You can disable the inline code generation by specifying `-Dprotoc.skip` in your maven arguments, allowing your build to proceed further.
+
+<Callout type="info">
+If you need to manually generate your protobuf files, you should not use `clean` in subsequent maven calls, as that will delete the newly generated files.
+</Callout>
+
+Read the _hbase-protocol/README.txt_ for more details
+
+### Build Thrift
+
+You may need to change the thrift definitions that reside in the _hbase-thrift_ module or other modules.
+
+The thrift files are located in _hbase-thrift/src/main/resources_.
+For the change to be effective, you will need to regenerate the classes.
+You can use maven profile `compile-thrift` to do this.
+
+```bash
+mvn compile -Pcompile-thrift
+```
+
+You may also want to define `thrift.path` for the thrift binary, using the following command:
+
+```bash
+mvn compile -Pcompile-thrift -Dthrift.path=/opt/local/bin/thrift
+```
+
+### Build a Tarball
+
+You can build a tarball without going through the release process described in [Releasing Apache HBase](#releasing), by running the following command:
+
+```bash
+mvn -DskipTests clean install && mvn -DskipTests package assembly:single
+```
+
+The distribution tarball is built in `hbase-assembly/target/hbase-<version>-bin.tar.gz`.
+
+You can install or deploy the tarball by having the assembly:single goal before install or deploy in the maven command:
+
+```bash
+mvn -DskipTests package assembly:single install
+```
+
+```bash
+mvn -DskipTests package assembly:single deploy
+```
+
+### Build Gotchas
+
+#### Maven Site failure
+
+If you see `Unable to find resource 'VM_global_library.vm'`, ignore it.
+It's not an error.
+It is [officially ugly](https://issues.apache.org/jira/browse/MSITE-286) though.
+
+## Build On Linux Aarch64
+
+HBase runs on both Windows and UNIX-like systems, and it should run on any platform
+that runs a supported version of Java. This should include JVMs on x86_64 and aarch64.
+The documentation below describes how to build hbase on aarch64 platform.
+
+### Set Environment Variables
+
+Manually install Java and Maven on aarch64 servers if they are not installed,
+and set environment variables. For example:
+
+```bash
+export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-arm64
+export MAVEN_HOME=/opt/maven
+export PATH=${MAVEN_HOME}/bin:${JAVA_HOME}/bin:${PATH}
+```
+
+### Use Protobuf Supported On Aarch64
+
+Now HBase uses protobuf of two versions. Version '3.11.4' of protobuf that hbase uses
+internally and version '2.5.0' as external usage.
+Package protoc-2.5.0 does not work on aarch64 platform, we should add maven
+profile '-Paarch64' when building. It downloads protoc-2.5.0 package from maven
+repository which we made on aarch64 platform locally.
+
+```bash
+mvn clean install -Paarch64 -DskipTests
+```
+
+<Callout type="info">
+Protobuf is released with aarch64 protoc since version '3.5.0', and we are planning to
+upgrade protobuf later, then we don't have to add the profile '-Paarch64' anymore.
+</Callout>

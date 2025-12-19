@@ -1,0 +1,63 @@
+---
+title: "Voting on Release Candidates"
+---
+
+Everyone is encouraged to try and vote on HBase release candidates.
+Only the votes of PMC members are binding.
+PMC members, please read this WIP doc on policy voting for a release candidate, [Release Policy](https://github.com/rectang/asfrelease/blob/master/release.md).
+
+> Before casting +1 binding votes, individuals are required to
+> download the signed source code package onto their own hardware, compile it as
+> provided, and test the resulting executable on their own platform, along with also
+> validating cryptographic signatures and verifying that the package meets the
+> requirements of the ASF policy on releases.
+
+Regards the latter, run `mvn apache-rat:check` to verify all files are suitably licensed.
+See [HBase, mail # dev - On recent discussion clarifying ASF release policy](https://mail-archives.apache.org/mod_mbox/hbase-dev/201406.mbox/%3CCA%2BRK%3D_B8EP0JMFV%2Bdt-k1g%3DBmedzyq2z1GSqrnMMiH6%3DcdoiAA%40mail.gmail.com%3E)
+for how we arrived at this process.
+
+To help with the release verification, please follow the guideline below and vote based on the your verification.
+
+## Baseline Verifications for Voting Release Candidates
+
+Although contributors have their own checklist for verifications, the following items are usually used for voting on release candidates.
+
+- CHANGES.md if any
+- RELEASENOTES.md (release notes) if any
+- Generated API compatibility report
+  - For what should be compatible please refer the [versioning guideline](https://hbase.apache.org/book.html#hbase.versioning), especially for items with marked as high severity
+- Use `hbase-vote.sh` to perform sanity checks for checksum, signatures, files are licensed, built from source, and unit tests.
+  - `hbase-vote.sh` shell script is available under `dev-support` directory of HBase source. Following are the usage details.
+
+  ```bash
+  ./dev-support/hbase-vote.sh -h
+  hbase-vote. A script for standard vote which verifies the following items
+  1. Checksum of sources and binaries
+  2. Signature of sources and binaries
+  3. Rat check
+  4. Built from source
+  5. Unit tests
+
+  Usage: hbase-vote.sh -s | --source <url> [-k | --key <signature>] [-f | --keys-file-url <url>] [-o | --output-dir </path/to/use>] [-P runSmallTests] [-D property[=value]]
+        hbase-vote.sh -h | --help
+
+    -h | --help                   Show this screen.
+    -s | --source '<url>'         A URL pointing to the release candidate sources and binaries
+                                  e.g. https://dist.apache.org/repos/dist/dev/hbase/hbase-<version>RC0/
+    -k | --key '<signature>'      A signature of the public key, e.g. 9AD2AE49
+    -f | --keys-file-url '<url>'   the URL of the key file, default is
+                                  https://downloads.apache.org/hbase/KEYS
+    -o | --output-dir '</path>'   directory which has the stdout and stderr of each verification target
+    -P |                          list of maven profiles to activate for test UT/IT, i.e. <-P runSmallTests> Defaults to runAllTests
+    -D |                          list of maven properties to set for the mvn invocations, i.e. <-D hadoop.profile=3.0> Defaults to unset
+  ```
+
+- If you see any unit test failures, please call out the solo test result and whether it's part of flaky (nightly) tests dashboard, e.g. [dashboard of master branch](https://builds.apache.org/view/H-L/view/HBase/job/HBase-Find-Flaky-Tests/job/master/lastSuccessfulBuild/artifact/dashboard.html) (please change the test branch accordingly).
+
+## Additional Verifications for Voting Release Candidates
+
+Other than the common verifications, contributors may call out additional concerns, e.g. for a specific feature by running end to end tests on a distributed environment. This is optional and always encouraged.
+
+- Start a distributed HBase cluster and call out the test result of specific workload on cluster. e.g.
+  - Run basic table operations, e.g. `create/put/get/scan/flush/list/disable/drop`
+  - Run built-in tests, e.g. `LoadTestTool` (LTT) and `IntegrationTestBigLinkedList` (ITBLL)

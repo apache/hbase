@@ -1,9 +1,8 @@
 ---
 title: "Unit Testing HBase Applications"
-description: "How to unit test HBase applications using JUnit, Mockito, MRUnit, and HBase testing utilities."
+description: "This chapter discusses unit testing your HBase application using JUnit, Mockito, MRUnit, and HBaseTestingUtility."
 ---
 
-This chapter discusses unit testing your HBase application using JUnit, Mockito, MRUnit, and HBaseTestingUtility.
 Much of the information comes from [a community blog post about testing HBase applications](http://blog.cloudera.com/blog/2013/09/how-to-test-hbase-applications-using-popular-tools/).
 For information on unit tests for HBase itself, see [hbase.tests](#hbase-tests).
 
@@ -19,20 +18,20 @@ This example will add unit tests to the following example class:
 ```java
 public class MyHBaseDAO {
 
-public static void insertRecord(Table.getTable(table), HBaseTestObj obj)
-throws Exception {
-    Put put = createPut(obj);
-    table.put(put);
-}
+    public static void insertRecord(Table.getTable(table), HBaseTestObj obj)
+    throws Exception {
+        Put put = createPut(obj);
+        table.put(put);
+    }
 
-private static Put createPut(HBaseTestObj obj) {
-    Put put = new Put(Bytes.toBytes(obj.getRowKey()));
-    put.add(Bytes.toBytes("CF"), Bytes.toBytes("CQ-1"),
-                Bytes.toBytes(obj.getData1()));
-    put.add(Bytes.toBytes("CF"), Bytes.toBytes("CQ-2"),
-                Bytes.toBytes(obj.getData2()));
-    return put;
-}
+    private static Put createPut(HBaseTestObj obj) {
+        Put put = new Put(Bytes.toBytes(obj.getRowKey()));
+        put.add(Bytes.toBytes("CF"), Bytes.toBytes("CQ-1"),
+                    Bytes.toBytes(obj.getData1()));
+        put.add(Bytes.toBytes("CF"), Bytes.toBytes("CQ-2"),
+                    Bytes.toBytes(obj.getData2()));
+        return put;
+    }
 }
 ```
 
@@ -86,10 +85,10 @@ First, add a dependency for Mockito to your Maven POM file.
 
 ```xml
 <dependency>
-  <groupId>org.mockito</groupId>
-  <artifactId>mockito-core</artifactId>
-  <version>2.1.0</version>
-  <scope>test</scope>
+    <groupId>org.mockito</groupId>
+    <artifactId>mockito-core</artifactId>
+    <version>2.1.0</version>
+    <scope>test</scope>
 </dependency>
 ```
 
@@ -109,22 +108,22 @@ public class TestMyHBaseDAO{
 
   @Test
   public void testInsertRecord() throws Exception {
-//return mock table when getTable is called
-when(connection.getTable(TableName.valueOf("tablename")).thenReturn(table);
-//create test object and make a call to the DAO that needs testing
-HBaseTestObj obj = new HBaseTestObj();
-obj.setRowKey("ROWKEY-1");
-obj.setData1("DATA-1");
-obj.setData2("DATA-2");
-MyHBaseDAO.insertRecord(table, obj);
-verify(table).put(putCaptor.capture());
-Put put = putCaptor.getValue();
+    //return mock table when getTable is called
+    when(connection.getTable(TableName.valueOf("tablename")).thenReturn(table);
+    //create test object and make a call to the DAO that needs testing
+    HBaseTestObj obj = new HBaseTestObj();
+    obj.setRowKey("ROWKEY-1");
+    obj.setData1("DATA-1");
+    obj.setData2("DATA-2");
+    MyHBaseDAO.insertRecord(table, obj);
+    verify(table).put(putCaptor.capture());
+    Put put = putCaptor.getValue();
 
-assertEquals(Bytes.toString(put.getRow()), obj.getRowKey());
-assert(put.has(Bytes.toBytes("CF"), Bytes.toBytes("CQ-1")));
-assert(put.has(Bytes.toBytes("CF"), Bytes.toBytes("CQ-2")));
-assertEquals(Bytes.toString(put.get(Bytes.toBytes("CF"),Bytes.toBytes("CQ-1")).get(0).getValue()), "DATA-1");
-assertEquals(Bytes.toString(put.get(Bytes.toBytes("CF"),Bytes.toBytes("CQ-2")).get(0).getValue()), "DATA-2");
+    assertEquals(Bytes.toString(put.getRow()), obj.getRowKey());
+    assert(put.has(Bytes.toBytes("CF"), Bytes.toBytes("CQ-1")));
+    assert(put.has(Bytes.toBytes("CF"), Bytes.toBytes("CQ-2")));
+    assertEquals(Bytes.toString(put.get(Bytes.toBytes("CF"),Bytes.toBytes("CQ-1")).get(0).getValue()), "DATA-1");
+    assertEquals(Bytes.toString(put.get(Bytes.toBytes("CF"),Bytes.toBytes("CQ-2")).get(0).getValue()), "DATA-2");
   }
 }
 ```
@@ -149,17 +148,17 @@ public class MyReducer extends TableReducer<Text, Text, ImmutableBytesWritable> 
    public static final byte[] CF = "CF".getBytes();
    public static final byte[] QUALIFIER = "CQ-1".getBytes();
    public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
- //bunch of processing to extract data to be inserted, in our case, let's say we are simply
- //appending all the records we receive from the mapper for this particular
- //key and insert one record into HBase
- StringBuffer data = new StringBuffer();
- Put put = new Put(Bytes.toBytes(key.toString()));
- for (Text val : values) {
-     data = data.append(val);
- }
- put.add(CF, QUALIFIER, Bytes.toBytes(data.toString()));
- //write to HBase
- context.write(new ImmutableBytesWritable(Bytes.toBytes(key.toString())), put);
+     //bunch of processing to extract data to be inserted, in our case, let's say we are simply
+     //appending all the records we receive from the mapper for this particular
+     //key and insert one record into HBase
+     StringBuffer data = new StringBuffer();
+     Put put = new Put(Bytes.toBytes(key.toString()));
+     for (Text val : values) {
+         data = data.append(val);
+     }
+     put.add(CF, QUALIFIER, Bytes.toBytes(data.toString()));
+     //write to HBase
+     context.write(new ImmutableBytesWritable(Bytes.toBytes(key.toString())), put);
    }
  }
 ```
@@ -179,40 +178,40 @@ Next, use the ReducerDriver provided by MRUnit, in your Reducer job.
 
 ```java
 public class MyReducerTest {
-ReduceDriver<Text, Text, ImmutableBytesWritable, Writable> reduceDriver;
-byte[] CF = "CF".getBytes();
-byte[] QUALIFIER = "CQ-1".getBytes();
+    ReduceDriver<Text, Text, ImmutableBytesWritable, Writable> reduceDriver;
+    byte[] CF = "CF".getBytes();
+    byte[] QUALIFIER = "CQ-1".getBytes();
 
-@Before
-public void setUp() {
-  MyReducer reducer = new MyReducer();
-  reduceDriver = ReduceDriver.newReduceDriver(reducer);
-}
+    @Before
+    public void setUp() {
+      MyReducer reducer = new MyReducer();
+      reduceDriver = ReduceDriver.newReduceDriver(reducer);
+    }
 
    @Test
    public void testHBaseInsert() throws IOException {
-     String strKey = "RowKey-1", strValue = "DATA", strValue1 = "DATA1",
-       strValue2 = "DATA2";
-     List<Text> list = new ArrayList<Text>();
-     list.add(new Text(strValue));
-     list.add(new Text(strValue1));
-     list.add(new Text(strValue2));
-     //since in our case all that the reducer is doing is appending the records that the mapper
-     //sends it, we should get the following back
-     String expectedOutput = strValue + strValue1 + strValue2;
+      String strKey = "RowKey-1", strValue = "DATA", strValue1 = "DATA1",
+strValue2 = "DATA2";
+      List<Text> list = new ArrayList<Text>();
+      list.add(new Text(strValue));
+      list.add(new Text(strValue1));
+      list.add(new Text(strValue2));
+      //since in our case all that the reducer is doing is appending the records that the mapper
+      //sends it, we should get the following back
+      String expectedOutput = strValue + strValue1 + strValue2;
      //Setup Input, mimic what mapper would have passed
-     //to the reducer and run test
-     reduceDriver.withInput(new Text(strKey), list);
-     //run the reducer and get its output
-     List<Pair<ImmutableBytesWritable, Writable>> result = reduceDriver.run();
+      //to the reducer and run test
+      reduceDriver.withInput(new Text(strKey), list);
+      //run the reducer and get its output
+      List<Pair<ImmutableBytesWritable, Writable>> result = reduceDriver.run();
 
-     //extract key from result and verify
-     assertEquals(Bytes.toString(result.get(0).getFirst().get()), strKey);
+      //extract key from result and verify
+      assertEquals(Bytes.toString(result.get(0).getFirst().get()), strKey);
 
-     //extract value for CF/QUALIFIER and verify
-     Put a = (Put)result.get(0).getSecond();
-     String c = Bytes.toString(a.get(CF, QUALIFIER).get(0).getValue());
-     assertEquals(expectedOutput,c );
+      //extract value for CF/QUALIFIER and verify
+      Put a = (Put)result.get(0).getSecond();
+      String c = Bytes.toString(a.get(CF, QUALIFIER).get(0).getValue());
+      assertEquals(expectedOutput,c );
    }
 }
 ```
@@ -246,36 +245,36 @@ This code represents an integration test for the MyDAO insert shown in [unit.tes
 
 ```java
 public class MyHBaseIntegrationTest {
-private static HBaseTestingUtility utility;
-byte[] CF = "CF".getBytes();
-byte[] CQ1 = "CQ-1".getBytes();
-byte[] CQ2 = "CQ-2".getBytes();
+    private static HBaseTestingUtility utility;
+    byte[] CF = "CF".getBytes();
+    byte[] CQ1 = "CQ-1".getBytes();
+    byte[] CQ2 = "CQ-2".getBytes();
 
-@Before
-public void setup() throws Exception {
-    utility = new HBaseTestingUtility();
-    utility.startMiniCluster();
-}
+    @Before
+    public void setup() throws Exception {
+        utility = new HBaseTestingUtility();
+        utility.startMiniCluster();
+    }
 
-@Test
-public void testInsert() throws Exception {
-    Table table = utility.createTable(Bytes.toBytes("MyTest"), CF);
-    HBaseTestObj obj = new HBaseTestObj();
-    obj.setRowKey("ROWKEY-1");
-    obj.setData1("DATA-1");
-    obj.setData2("DATA-2");
-    MyHBaseDAO.insertRecord(table, obj);
-    Get get1 = new Get(Bytes.toBytes(obj.getRowKey()));
-    get1.addColumn(CF, CQ1);
-    Result result1 = table.get(get1);
-    assertEquals(Bytes.toString(result1.getRow()), obj.getRowKey());
-    assertEquals(Bytes.toString(result1.value()), obj.getData1());
-    Get get2 = new Get(Bytes.toBytes(obj.getRowKey()));
-    get2.addColumn(CF, CQ2);
-    Result result2 = table.get(get2);
-    assertEquals(Bytes.toString(result2.getRow()), obj.getRowKey());
-    assertEquals(Bytes.toString(result2.value()), obj.getData2());
-}
+    @Test
+    public void testInsert() throws Exception {
+        Table table = utility.createTable(Bytes.toBytes("MyTest"), CF);
+        HBaseTestObj obj = new HBaseTestObj();
+        obj.setRowKey("ROWKEY-1");
+        obj.setData1("DATA-1");
+        obj.setData2("DATA-2");
+        MyHBaseDAO.insertRecord(table, obj);
+        Get get1 = new Get(Bytes.toBytes(obj.getRowKey()));
+        get1.addColumn(CF, CQ1);
+        Result result1 = table.get(get1);
+        assertEquals(Bytes.toString(result1.getRow()), obj.getRowKey());
+        assertEquals(Bytes.toString(result1.value()), obj.getData1());
+        Get get2 = new Get(Bytes.toBytes(obj.getRowKey()));
+        get2.addColumn(CF, CQ2);
+        Result result2 = table.get(get2);
+        assertEquals(Bytes.toString(result2.getRow()), obj.getRowKey());
+        assertEquals(Bytes.toString(result2.value()), obj.getData2());
+    }
 }
 ```
 
@@ -298,40 +297,40 @@ public class MyHBaseIntegrationTest {
 
   @Before
   public void setUp() throws Exception {
-cluster = TestingHBaseCluster.create(TestingHBaseClusterOption.builder().build());
-cluster.start();
-conn = ConnectionFactory.createConnection(cluster.getConf());
-admin = conn.getAdmin();
-admin.createTable(TableDescriptorBuilder.newBuilder(tableName)
-  .setColumnFamily(ColumnFamilyDescriptorBuilder.of(CF)).build());
+    cluster = TestingHBaseCluster.create(TestingHBaseClusterOption.builder().build());
+    cluster.start();
+    conn = ConnectionFactory.createConnection(cluster.getConf());
+    admin = conn.getAdmin();
+    admin.createTable(TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(CF)).build());
   }
 
   @After
   public void tearDown() throws Exception {
-admin.close();
-conn.close();
-cluster.stop();
+    admin.close();
+    conn.close();
+    cluster.stop();
   }
 
   @Test
   public void testInsert() throws Exception {
-try (Table table = conn.getTable(tableName)) {
-  HBaseTestObj obj = new HBaseTestObj();
-  obj.setRowKey("ROWKEY-1");
-  obj.setData1("DATA-1");
-  obj.setData2("DATA-2");
-  MyHBaseDAO.insertRecord(table, obj);
-  Get get1 = new Get(Bytes.toBytes(obj.getRowKey()));
-  get1.addColumn(CF, CQ1);
-  Result result1 = table.get(get1);
-  assertEquals(Bytes.toString(result1.getRow()), obj.getRowKey());
-  assertEquals(Bytes.toString(result1.value()), obj.getData1());
-  Get get2 = new Get(Bytes.toBytes(obj.getRowKey()));
-  get2.addColumn(CF, CQ2);
-  Result result2 = table.get(get2);
-  assertEquals(Bytes.toString(result2.getRow()), obj.getRowKey());
-  assertEquals(Bytes.toString(result2.value()), obj.getData2());
-}
+    try (Table table = conn.getTable(tableName)) {
+      HBaseTestObj obj = new HBaseTestObj();
+      obj.setRowKey("ROWKEY-1");
+      obj.setData1("DATA-1");
+      obj.setData2("DATA-2");
+      MyHBaseDAO.insertRecord(table, obj);
+      Get get1 = new Get(Bytes.toBytes(obj.getRowKey()));
+      get1.addColumn(CF, CQ1);
+      Result result1 = table.get(get1);
+      assertEquals(Bytes.toString(result1.getRow()), obj.getRowKey());
+      assertEquals(Bytes.toString(result1.value()), obj.getData1());
+      Get get2 = new Get(Bytes.toBytes(obj.getRowKey()));
+      get2.addColumn(CF, CQ2);
+      Result result2 = table.get(get2);
+      assertEquals(Bytes.toString(result2.getRow()), obj.getRowKey());
+      assertEquals(Bytes.toString(result2.value()), obj.getData2());
+    }
   }
 }
 ```

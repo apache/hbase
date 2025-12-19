@@ -1,0 +1,125 @@
+---
+title: "IDEs"
+---
+
+## Eclipse
+
+### Code Formatting
+
+Under the _dev-support/_ folder, you will find _hbase_eclipse_formatter.xml_.
+We encourage you to have this formatter in place in eclipse when editing HBase code.
+
+Go to `Preferences->Java->Code Style->Formatter->Import` to load the xml file.
+Go to `Preferences->Java->Editor->Save Actions`, and make sure 'Format source code' and 'Format
+edited lines' is selected.
+
+In addition to the automatic formatting, make sure you follow the style guidelines explained in
+[Code Formatting Conventions](#common.patch.feedback).
+
+### Eclipse Git Plugin
+
+If you cloned the project via git, download and install the Git plugin (EGit). Attach to your local git repo (via the Git Repositories window) and you'll be able to see file revision history, generate patches, etc.
+
+### HBase Project Setup in Eclipse using `m2eclipse`
+
+The easiest way is to use the `m2eclipse` plugin for Eclipse.
+Eclipse Indigo or newer includes +m2eclipse+, or you can download it from http://www.eclipse.org/m2e/. It provides Maven integration for Eclipse, and even lets you use the direct Maven commands from within Eclipse to compile and test your project.
+
+To import the project, click and select the HBase root directory. `m2eclipse` locates all the hbase modules for you.
+
+If you install `m2eclipse` and import HBase in your workspace, do the following to fix your eclipse Build Path.
+
+- Remove _target_ folder
+- Add _target/generated-sources/java_ folder.
+- Remove from your Build Path the exclusions on the _src/main/resources_ and _src/test/resources_ to avoid error message in the console, such as the following:
+  ```text
+  Failed to execute goal
+  org.apache.maven.plugins:maven-antrun-plugin:1.6:run (default) on project hbase:
+  'An Ant BuildException has occurred: Replace: source file .../target/classes/hbase-default.xml
+  doesn't exist
+  ```
+  This will also reduce the eclipse build cycles and make your life easier when developing.
+
+### HBase Project Setup in Eclipse Using the Command Line
+
+Instead of using `m2eclipse`, you can generate the Eclipse files from the command line.
+
+- First, run the following command, which builds HBase.
+  You only need to do this once.
+
+  ```bash
+  mvn clean install -DskipTests
+  ```
+
+- Close Eclipse, and execute the following command from the terminal, in your local HBase project directory, to generate new _.project_ and _.classpath_ files.
+
+  ```bash
+  mvn eclipse:eclipse
+  ```
+
+- Reopen Eclipse and import the _.project_ file in the HBase directory to a workspace.
+
+### Maven Classpath Variable
+
+The `$M2_REPO` classpath variable needs to be set up for the project.
+This needs to be set to your local Maven repository, which is usually _~/.m2/repository_
+
+If this classpath variable is not configured, you will see compile errors in Eclipse like this:
+
+```text
+Description        Resource        Path        Location        Type
+The project cannot be built until build path errors are resolved        hbase                Unknown        Java Problem
+Unbound classpath variable: 'M2_REPO/asm/asm/3.1/asm-3.1.jar' in project 'hbase'        hbase                Build path        Build Path Problem
+Unbound classpath variable: 'M2_REPO/com/google/guava/guava/r09/guava-r09.jar' in project 'hbase'        hbase                Build path        Build Path Problem
+Unbound classpath variable: 'M2_REPO/com/google/protobuf/protobuf-java/2.3.0/protobuf-java-2.3.0.jar' in project 'hbase'        hbase                Build path        Build Path Problem Unbound classpath variable:
+```
+
+### Eclipse Known Issues
+
+Eclipse will currently complain about _Bytes.java_.
+It is not possible to turn these errors off.
+
+```text
+Description        Resource        Path        Location        Type
+Access restriction: The method arrayBaseOffset(Class) from the type Unsafe is not accessible due to restriction on required library /System/Library/Java/JavaVirtualMachines/1.6.0.jdk/Contents/Classes/classes.jar        Bytes.java        /hbase/src/main/java/org/apache/hadoop/hbase/util        line 1061        Java Problem
+Access restriction: The method arrayIndexScale(Class) from the type Unsafe is not accessible due to restriction on required library /System/Library/Java/JavaVirtualMachines/1.6.0.jdk/Contents/Classes/classes.jar        Bytes.java        /hbase/src/main/java/org/apache/hadoop/hbase/util        line 1064        Java Problem
+Access restriction: The method getLong(Object, long) from the type Unsafe is not accessible due to restriction on required library /System/Library/Java/JavaVirtualMachines/1.6.0.jdk/Contents/Classes/classes.jar        Bytes.java        /hbase/src/main/java/org/apache/hadoop/hbase/util        line 1111        Java Problem
+```
+
+### Eclipse - More Information
+
+For additional information on setting up Eclipse for HBase development on Windows, see [Michael Morello's blog](http://michaelmorello.blogspot.com/2011/09/hbase-subversion-eclipse-windows.html) on the topic.
+
+## IntelliJ IDEA
+
+A functional development environment can be setup around an IntelliJ IDEA installation that has the
+plugins necessary for building Java projects with Maven.
+
+- Use either File > New > "Project from Existing Sources..." or "Project From Version Control.."
+- Depending on your version of IntelliJ, you may need to choose Maven as the "project" or "model"
+type.
+
+The following plugins are recommended:
+
+- Maven, bundled. This allows IntelliJ to resolve dependencies and recognize the project structure.
+- EditorConfig, bundled. This will apply project whitespace settings found in the
+`.editorconfig` file available on branches with
+[HBASE-23234](https://issues.apache.org/jira/browse/HBASE-23234) or later.
+- [Checkstyle-IDEA](https://plugins.jetbrains.com/plugin/1065-checkstyle-idea/). Configure this
+against the configuration file found under `hbase-checkstyle/src/main/resources/hbase/checkstyle.xml`
+(If the Intellij checkstyle plugin complains parsing the volunteered hbase `checkstyle.xml`, make
+sure the plugin's `version` popup menu matches the hbase checkstyle version. Find the current
+checkstyle version as a property in `pom.xml`.
+This plugin will highlight style errors in the IDE, so you can fix them before they get flagged during the
+pre-commit process.
+- [Protobuf Support](https://plugins.jetbrains.com/plugin/8277-protobuf-support/). HBase uses
+[Protocol Buffers](https://developers.google.com/protocol-buffers/) in a number of places where
+serialization is required. This plugin is helpful when editing these object definitions.
+- [AsciiDoc](https://plugins.jetbrains.com/plugin/7391-asciidoc/). HBase uses
+[AsciiDoc](http://asciidoc.org) for building it's project documentation. This plugin is helpful
+when editing this book.
+
+## Other IDEs
+
+If you'd have another environment with which you'd like to develop on HBase, please consider
+documenting your setup process here.
