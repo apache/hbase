@@ -1,0 +1,142 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+# yamllint disable rule:line-length
+---
+name: Yetus General Check
+
+"on":
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  checks: write
+  contents: read
+  pull-requests: write
+  statuses: write
+
+jobs:
+  general-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 600
+
+    env:
+      YETUS_VERSION: '0.15.0'
+
+    steps:
+      - name: Checkout HBase
+        uses: actions/checkout@v4
+        with:
+          path: src
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Maven cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2
+          key: hbase-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            hbase-m2-
+
+      - name: Download Yetus
+        run: |
+          mkdir -p yetus
+          cd yetus
+          bash "${{ github.workspace }}/src/dev-support/jenkins-scripts/cache-apache-project-artifact.sh" \
+            --keys 'https://downloads.apache.org/yetus/KEYS' \
+            --verify-tar-gz \
+            ./apache-yetus-${{ env.YETUS_VERSION }}-bin.tar.gz \
+            yetus/${{ env.YETUS_VERSION }}/apache-yetus-${{ env.YETUS_VERSION }}-bin.tar.gz
+          tar --strip-components=1 -xzf apache-yetus-${{ env.YETUS_VERSION }}-bin.tar.gz
+          rm apache-yetus-${{ env.YETUS_VERSION }}-bin.tar.gz
+
+      - name: Run Yetus General Check
+        env:
+          ARCHIVE_PATTERN_LIST: "TEST-*.xml,org.apache.h*.txt,*.dumpstream,*.dump"
+          DOCKERFILE: "${{ github.workspace }}/src/dev-support/docker/Dockerfile"
+          GITHUB_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_USER: ${{ github.actor }}
+          PATCHDIR: "${{ github.workspace }}/yetus-general-check/output"
+          PLUGINS: "all,-javadoc,-jira,-shadedjars,-unit"
+          SET_JAVA_HOME: "/usr/lib/jvm/java-17"
+          SOURCEDIR: "${{ github.workspace }}/src"
+          TESTS_FILTER: "checkstyle,javac,javadoc,pylint,shellcheck,shelldocs,blanks,perlcritic,ruby-lint,rubocop"
+          YETUSDIR: "${{ github.workspace }}/yetus"
+          AUTHOR_IGNORE_LIST: "src/main/asciidoc/_chapters/developer.adoc"
+          BLANKS_EOL_IGNORE_FILE: "dev-support/blanks-eol-ignore.txt"
+          BLANKS_TABS_IGNORE_FILE: "dev-support/blanks-tabs-ignore.txt"
+          EXCLUDE_TESTS_URL: "https://ci-hbase.apache.org/job/HBase-Find-Flaky-Tests/job/${{ github.base_ref }}/lastSuccessfulBuild/artifact/output/excludes"
+          BUILD_THREAD: "4"
+          SUREFIRE_FIRST_PART_FORK_COUNT: "1.0C"
+          SUREFIRE_SECOND_PART_FORK_COUNT: "0.5C"
+          BRANCH_NAME: "${{ github.base_ref }}"
+          DEBUG: 'true'
+        run: |
+          cd "${{ github.workspace }}"
+          bash src/dev-support/jenkins_precommit_github_yetus.sh
+
+      - name: Hide Old Comments
+        if: always()
+        env:
+          DEBUG: 'true'
+        run: |
+          # github-actions[bot] has a known user ID: 41898282
+          # Verify: curl -s "https://api.github.com/users/github-actions%5Bbot%5D" | jq .id
+          export DEBUG="${DEBUG:-false}"
+          export GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}"
+          export BUILD_BOT_USER_ID="41898282"
+          export JOB_NAME="HBase-PreCommit-GH-Actions-PR"
+          export REPO="${{ github.repository }}"
+          bash src/dev-support/gh_hide_old_comments.sh ${{ github.event.pull_request.number }} || true
+
+      - name: Create Nightlies Directory Structure
+        # this version of rsync doesn't support --mkdirs so we do this step manually
+        if: always()
+        run: |
+          eval $(ssh-agent -s)
+          ssh-add - <<< "${{ secrets.NIGHTLIES_RSYNC_KEY }}"
+          ssh -p ${{ secrets.NIGHTLIES_RSYNC_PORT }} \
+            -o StrictHostKeyChecking=no \
+            ${{ secrets.NIGHTLIES_RSYNC_USER }}@${{ secrets.NIGHTLIES_RSYNC_HOST }} \
+            "mkdir -p ${{ secrets.NIGHTLIES_RSYNC_PATH }}/hbase/HBase-PreCommit-GH-Actions-PR/PR-${{ github.event.pull_request.number }}/${{ github.run_number }}"
+          ssh-agent -k
+
+      - name: Publish to Nightlies
+        if: always()
+        uses: burnett01/rsync-deployments@0dc935cdecc5f5e571865e60d2a6cdc673704823
+        with:
+          switches: -avzr --no-o
+          path: yetus-general-check
+          remote_path: ${{ secrets.NIGHTLIES_RSYNC_PATH }}/hbase/HBase-PreCommit-GH-Actions-PR/PR-${{ github.event.pull_request.number }}/${{ github.run_number }}/
+          remote_host: ${{ secrets.NIGHTLIES_RSYNC_HOST }}
+          remote_port: ${{ secrets.NIGHTLIES_RSYNC_PORT }}
+          remote_user: ${{ secrets.NIGHTLIES_RSYNC_USER }}
+          remote_key: ${{ secrets.NIGHTLIES_RSYNC_KEY }}
+
+      - name: Publish Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: yetus-general-check-output
+          path: ${{ github.workspace }}/yetus-general-check/output
+          retention-days: 7
