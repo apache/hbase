@@ -1,6 +1,6 @@
 ---
 title: "Protobuf in HBase"
-description: "How HBase uses Protocol Buffers for serialization and RPC interfaces."
+description: "In this chapter we go into detail for developers who are looking to understand better how Protobuf in HBase works. This chapter is of particular use to those who would amend or extend HBase functionality."
 ---
 
 ## Protobuf
@@ -14,10 +14,6 @@ Interfaces (Services) we expose to clients, for example the `Admin` and `Client`
 Interfaces that the RegionServer fields,
 or specifying the arbitrary extensions added by developers via our
 [Coprocessor Endpoint](#cp) mechanism.
-
-In this chapter we go into detail for  developers who are looking to
-understand better how it all works. This chapter is of particular
-use to those who would amend or extend HBase functionality.
 
 With protobuf, you describe serializations and services in a `.protos` file.
 You then feed these descriptors to a protobuf tool, the `protoc` binary,
@@ -50,7 +46,7 @@ CPEP Service. Going forward, after the release of hbase-2.0.0, this
 practice needs to whither. We'll explain why in the later
 [hbase-2.0.0](#shaded-protobuf) section.
 
-## hbase-2.0.0 and the shading of protobufs (HBASE-15638)
+### hbase-2.0.0 and the shading of protobufs (HBASE-15638)
 
 As of hbase-2.0.0, our protobuf usage gets a little more involved. HBase
 core protobuf references are offset so as to refer to a private,
@@ -86,7 +82,7 @@ to make invocations against:
 ...
   <T extends com.google.protobuf.Service,R> Map<byte[],R> coprocessorService(
    Class<T> service, byte[] startKey, byte[] endKey,
- org.apache.hadoop.hbase.client.coprocessor.Batch.Call<T,R> callable)
+     org.apache.hadoop.hbase.client.coprocessor.Batch.Call<T,R> callable)
   throws com.google.protobuf.ServiceException, Throwable
 ```
 
@@ -123,7 +119,7 @@ Going forward, we will provide a new module of common types for use
 by CPEPs that will have the same guarantees against change as does our
 public API. TODO.
 
-## protobuf changes for hbase-3.0.0 (HBASE-23797)
+### protobuf changes for hbase-3.0.0 (HBASE-23797)
 
 Since hadoop(start from 3.3.x) also shades protobuf and bumps the version to
 3.x, there is no reason for us to stay on protobuf 2.5.0 any more.
@@ -140,7 +136,7 @@ Add this dependency to your pom:
 <dependency>
   <groupId>org.apache.hbase.thirdparty</groupId>
   <artifactId>hbase-shaded-protobuf</artifactId>
-  
+  <!-- use the version that your target hbase cluster uses -->
   <version>${hbase-thirdparty.version}</version>
   <scope>provided</scope>
 </dependency>
@@ -165,24 +161,27 @@ in hbase-thirdparty.
   </executions>
   <configuration>
     <basedir>${basedir}/target/generated-sources/</basedir>
-    <includes>
-      <include>**/*.java</include>
-    </includes>
-    <ignoreErrors>true</ignoreErrors>
-    <replacements>
-      <replacement>
-        <token>([^\.])com.google.protobuf</token>
-        <value>$1org.apache.hbase.thirdparty.com.google.protobuf</value>
-      </replacement>
-      <replacement>
-        <token>(public)(\W+static)?(\W+final)?(\W+class)</token>
-        <value>@javax.annotation.Generated("proto") $1$2$3$4</value>
-      </replacement>
-      <replacement>
-        <token>(@javax.annotation.Generated\("proto"\) )\{2\}</token>
-        <value>$1</value>
-      </replacement>
-    </replacements>
+      <includes>
+        <include>**/*.java</include>
+      </includes>
+      <!-- Ignore errors when missing files, because it means this build
+           was run with -Dprotoc.skip and there is no -Dreplacer.skip -->
+      <ignoreErrors>true</ignoreErrors>
+      <replacements>
+        <replacement>
+          <token>([^\.])com.google.protobuf</token>
+          <value>$1org.apache.hbase.thirdparty.com.google.protobuf</value>
+        </replacement>
+        <replacement>
+          <token>(public)(\W+static)?(\W+final)?(\W+class)</token>
+          <value>@javax.annotation.Generated("proto") $1$2$3$4</value>
+        </replacement>
+        <!-- replacer doesn't support anchoring or negative lookbehind -->
+        <replacement>
+          <token>(@javax.annotation.Generated\("proto"\) ){2}</token>
+          <value>$1</value>
+        </replacement>
+      </replacements>
   </configuration>
 </plugin>
 ```

@@ -1,33 +1,36 @@
 ---
 title: "Tracing"
-description: "Documentation for tracing"
+description: "HBase used to depend on the HTrace project for tracing. After the Apache HTrace project moved to the Attic/retired, we decided to move to OpenTelemetry in HBASE-22120."
 ---
-# Overview
 
-HBase used to depend on the HTrace project for tracing. After the Apache HTrace project moved to the Attic/retired, we decided to move to [OpenTelemetry](https://opentelemetry.io) in [HBASE-22120](https://issues.apache.org/jira/browse/HBASE-22120).
+## Overview
 
 The basic support for tracing has been done, where we added tracing for async client, rpc, region read/write/scan operation, and WAL. We use opentelemetry-api to implement the tracing support manually by code, as our code base is way too complicated to be instrumented through a java agent. But notice that you still need to attach the opentelemetry java agent to enable tracing. Please see the official site for [OpenTelemetry](https://opentelemetry.io/) and the documentation for [opentelemetry-java-instrumentation](https://github.com/open-telemetry/opentelemetry-java-instrumentation) for more details on how to properly configure opentelemetry instrumentation.
 
-# Usage
+## Usage
 
-## Enable Tracing
+### Enable Tracing
 
 See this section in hbase-env.sh
 
-``` shell
+```
 # Uncomment to enable trace, you can change the options to use other exporters such as jaeger or
 # zipkin. See https://github.com/open-telemetry/opentelemetry-java-instrumentation on how to
 # configure exporters and other components through system properties.
 # export HBASE_TRACE_OPTS="-Dotel.resource.attributes=service.name=HBase -Dotel.traces.exporter=logging otel.metrics.exporter=none"
 ```
 
-Uncomment this line to enable tracing. The default config is to output the tracing data to log. Please see the documentation for [opentelemetry-java-instrumentation](https://github.com/open-telemetry/opentelemetry-java-instrumentation) for more details on how to export tracing data to other tracing system such as OTel collector, jaeger or zipkin, what does the *service.name* mean, and how to change the sampling rate, etc.
+Uncomment this line to enable tracing. The default config is to output the tracing data to log. Please see the documentation for [opentelemetry-java-instrumentation](https://github.com/open-telemetry/opentelemetry-java-instrumentation) for more details on how to export tracing data to other tracing system such as OTel collector, jaeger or zipkin, what does the _service.name_ mean, and how to change the sampling rate, etc.
 
 <Callout type="info">
-The [LoggingSpanExporter](https://github.com/open-telemetry/opentelemetry-java/blob/v1.0.1/exporters/logging/src/main/java/io/opentelemetry/exporter/logging/LoggingSpanExporter.java) uses java.util.logging(jul) for logging tracing data, and the logger is initialized in opentelemetry java agent, which seems to be ahead of our jul to slf4j bridge initialization, so it will always log the tracing data to console. We highly suggest that you use other tracing systems to collect and view tracing data instead of logging.
+  The
+  [LoggingSpanExporter](https://github.com/open-telemetry/opentelemetry-java/blob/v1.0.1/exporters/logging/src/main/java/io/opentelemetry/exporter/logging/LoggingSpanExporter.java)
+  uses java.util.logging(jul) for logging tracing data, and the logger is initialized in
+  opentelemetry java agent, which seems to be ahead of our jul to slf4j bridge initialization, so it
+  will always log the tracing data to console. We highly suggest that you use other tracing systems
+  to collect and view tracing data instead of logging.
 </Callout>
 
-
-## Performance Impact
+### Performance Impact
 
 According to the result in [HBASE-25658](https://issues.apache.org/jira/browse/HBASE-25658), the performance impact is minimal. Of course the test cluster is not under heavy load, so if you find out that enabling tracing would impact the performance, try to lower the sampling rate. See documentation for configuring [sampler](https://github.com/open-telemetry/opentelemetry-java/blob/main/sdk-extensions/autoconfigure/README.md#sampler) for more details.

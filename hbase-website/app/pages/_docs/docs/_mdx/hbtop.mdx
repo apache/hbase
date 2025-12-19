@@ -1,14 +1,7 @@
 ---
 title: "hbtop"
-description: "A real-time monitoring tool for HBase like Unix's top command."
+description: "`hbtop` is a real-time monitoring tool for HBase like Unix's top command. It can display summary information as well as metrics per Region/Namespace/Table/RegionServer. In this tool, you can see the metrics sorted by a selected field and filter the metrics to see only metrics you really want to see."
 ---
-
-## Overview
-
-`hbtop` is a real-time monitoring tool for HBase like Unix's top command.
-It can display summary information as well as metrics per Region/Namespace/Table/RegionServer.
-In this tool, you can see the metrics sorted by a selected field and filter the metrics to see only metrics you really want to see.
-Also, with the drill-down feature, you can find hot regions easily in a top-down manner.
 
 ## Usage
 
@@ -41,30 +34,30 @@ You can scroll the metric records in the metrics part.
 
 ### Command line arguments
 
-| Argument | Description |
-| -------- | ----------- |
-| -d,--delay `\<arg\>` | The refresh delay (in seconds); default is 3 seconds |
-| -h,--help | Print usage; for help while the tool is running press `h` key |
-| -m,--mode `\<arg\>` | The mode; `n` (Namespace)\| `t` (Table)\| `r` (Region)\| `s` (RegionServer), default is `r` |
-| -n,--numberOfIterations `\<arg\>` | The number of iterations |
-| -O,--outputFieldNames | Print each of the available field names on a separate line, then quit |
-| -f,--fields `\<arg\>` | Show only the given fields. Specify comma separated fields to show multiple fields |
-| -s,--sortField `\<arg\>` | The initial sort field. You can prepend a `+' or `-' to the field name to also override the sort direction. A leading `+' will force sorting high to low, whereas a `-' will ensure a low to high ordering |
-| -i,--filters `\<arg\>` | The initial filters. Specify comma separated filters to set multiple filters |
-| -b,--batchMode | Starts hbtop in Batch mode, which could be useful for sending output from hbtop to other programs or to a file. In this mode, hbtop will not accept input and runs until the iterations limit you've set with the `-n' command-line option or until killed |
+| Argument                          | Description                                                                                                                                                                                                                                                |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| -d,--delay `<arg>`              | The refresh delay (in seconds); default is 3 seconds                                                                                                                                                                                                       |
+| -h,--help                         | Print usage; for help while the tool is running press `h` key                                                                                                                                                                                              |
+| -m,--mode `<arg>`               | The mode; `n` (Namespace)\| `t` (Table)\| `r` (Region)\| `s` (RegionServer), default is `r`                                                                                                                                                                |
+| -n,--numberOfIterations `<arg>` | The number of iterations                                                                                                                                                                                                                                   |
+| -O,--outputFieldNames             | Print each of the available field names on a separate line, then quit                                                                                                                                                                                      |
+| -f,--fields `<arg>`             | Show only the given fields. Specify comma separated fields to show multiple fields                                                                                                                                                                         |
+| -s,--sortField `<arg>`          | The initial sort field. You can prepend a `+` or `-` to the field name to also override the sort direction. A leading `+` will force sorting high to low, whereas a `-` will ensure a low to high ordering                                                 |
+| -i,--filters `<arg>`            | The initial filters. Specify comma separated filters to set multiple filters                                                                                                                                                                               |
+| -b,--batchMode                    | Starts hbtop in Batch mode, which could be useful for sending output from hbtop to other programs or to a file. In this mode, hbtop will not accept input and runs until the iterations limit you've set with the `-n` command-line option or until killed |
 
 ### Modes
 
 There are the following modes in hbtop:
 
-| Mode | Description |
-| ---- | ----------- |
-| Region | Showing metric records per region |
-| Namespace | Showing metric records per namespace |
-| Table | Showing metric records per table |
+| Mode         | Description                              |
+| ------------ | ---------------------------------------- |
+| Region       | Showing metric records per region        |
+| Namespace    | Showing metric records per namespace     |
+| Table        | Showing metric records per table         |
 | RegionServer | Showing metric records per region server |
-| User | Showing metric records per user |
-| Client | Showing metric records per client |
+| User         | Showing metric records per user          |
+| Client       | Showing metric records per client        |
 
 #### Region mode
 
@@ -72,30 +65,30 @@ In Region mode, the default sort field is `#REQ/S`.
 
 The fields in this mode are as follows:
 
-| Field | Description | Displayed by default |
-| ----- | ----------- | -------------------- |
-| RNAME | Region Name | false |
-| NAMESPACE | Namespace Name | true |
-| TABLE | Table Name | true |
-| SCODE | Start Code | false |
-| REPID | Replica ID | false |
-| REGION | Encoded Region Name | true |
-| RS | Short Region Server Name | true |
-| LRS | Long Region Server Name | false |
-| #REQ/S | Request Count per second | true |
-| #READ/S | Read Request Count per second | true |
-| #FREAD/S | Filtered Read Request Count per second | true |
-| #WRITE/S | Write Request Count per second | true |
-| SF | StoreFile Size | true |
-| USF | Uncompressed StoreFile Size | false |
-| #SF | Number of StoreFiles | true |
-| MEMSTORE | MemStore Size | true |
-| LOCALITY | Block Locality | true |
-| SKEY | Start Key | false |
-| #COMPingCELL | Compacting Cell Count | false |
-| #COMPedCELL | Compacted Cell Count | false |
-| %COMP | Compaction Progress | false |
-| LASTMCOMP | Last Major Compaction Time | false |
+| Field        | Description                            | Displayed by default |
+| ------------ | -------------------------------------- | -------------------- |
+| RNAME        | Region Name                            | false                |
+| NAMESPACE    | Namespace Name                         | true                 |
+| TABLE        | Table Name                             | true                 |
+| SCODE        | Start Code                             | false                |
+| REPID        | Replica ID                             | false                |
+| REGION       | Encoded Region Name                    | true                 |
+| RS           | Short Region Server Name               | true                 |
+| LRS          | Long Region Server Name                | false                |
+| #REQ/S       | Request Count per second               | true                 |
+| #READ/S      | Read Request Count per second          | true                 |
+| #FREAD/S     | Filtered Read Request Count per second | true                 |
+| #WRITE/S     | Write Request Count per second         | true                 |
+| SF           | StoreFile Size                         | true                 |
+| USF          | Uncompressed StoreFile Size            | false                |
+| #SF          | Number of StoreFiles                   | true                 |
+| MEMSTORE     | MemStore Size                          | true                 |
+| LOCALITY     | Block Locality                         | true                 |
+| SKEY         | Start Key                              | false                |
+| #COMPingCELL | Compacting Cell Count                  | false                |
+| #COMPedCELL  | Compacted Cell Count                   | false                |
+| %COMP        | Compaction Progress                    | false                |
+| LASTMCOMP    | Last Major Compaction Time             | false                |
 
 #### Namespace mode
 
@@ -103,18 +96,18 @@ In Namespace mode, the default sort field is `#REQ/S`.
 
 The fields in this mode are as follows:
 
-| Field | Description | Displayed by default |
-| ----- | ----------- | -------------------- |
-| NAMESPACE | Namespace Name | true |
-| #REGION | Region Count | true |
-| #REQ/S | Request Count per second | true |
-| #READ/S | Read Request Count per second | true |
-| #FREAD/S | Filtered Read Request Count per second | true |
-| #WRITE/S | Write Request Count per second | true |
-| SF | StoreFile Size | true |
-| USF | Uncompressed StoreFile Size | false |
-| #SF | Number of StoreFiles | true |
-| MEMSTORE | MemStore Size | true |
+| Field     | Description                            | Displayed by default |
+| --------- | -------------------------------------- | -------------------- |
+| NAMESPACE | Namespace Name                         | true                 |
+| #REGION   | Region Count                           | true                 |
+| #REQ/S    | Request Count per second               | true                 |
+| #READ/S   | Read Request Count per second          | true                 |
+| #FREAD/S  | Filtered Read Request Count per second | true                 |
+| #WRITE/S  | Write Request Count per second         | true                 |
+| SF        | StoreFile Size                         | true                 |
+| USF       | Uncompressed StoreFile Size            | false                |
+| #SF       | Number of StoreFiles                   | true                 |
+| MEMSTORE  | MemStore Size                          | true                 |
 
 #### Table mode
 
@@ -122,19 +115,19 @@ In Table mode, the default sort field is `#REQ/S`.
 
 The fields in this mode are as follows:
 
-| Field | Description | Displayed by default |
-| ----- | ----------- | -------------------- |
-| NAMESPACE | Namespace Name | true |
-| TABLE | Table Name | true |
-| #REGION | Region Count | true |
-| #REQ/S | Request Count per second | true |
-| #READ/S | Read Request Count per second | true |
-| #FREAD/S | Filtered Read Request Count per second | true |
-| #WRITE/S | Write Request Count per second | true |
-| SF | StoreFile Size | true |
-| USF | Uncompressed StoreFile Size | false |
-| #SF | Number of StoreFiles | true |
-| MEMSTORE | MemStore Size | true |
+| Field     | Description                            | Displayed by default |
+| --------- | -------------------------------------- | -------------------- |
+| NAMESPACE | Namespace Name                         | true                 |
+| TABLE     | Table Name                             | true                 |
+| #REGION   | Region Count                           | true                 |
+| #REQ/S    | Request Count per second               | true                 |
+| #READ/S   | Read Request Count per second          | true                 |
+| #FREAD/S  | Filtered Read Request Count per second | true                 |
+| #WRITE/S  | Write Request Count per second         | true                 |
+| SF        | StoreFile Size                         | true                 |
+| USF       | Uncompressed StoreFile Size            | false                |
+| #SF       | Number of StoreFiles                   | true                 |
+| MEMSTORE  | MemStore Size                          | true                 |
 
 #### RegionServer mode
 
@@ -142,21 +135,21 @@ In RegionServer mode, the default sort field is `#REQ/S`.
 
 The fields in this mode are as follows:
 
-| Field | Description | Displayed by default |
-| ----- | ----------- | -------------------- |
-| RS | Short Region Server Name | true |
-| LRS | Long Region Server Name | false |
-| #REGION | Region Count | true |
-| #REQ/S | Request Count per second | true |
-| #READ/S | Read Request Count per second | true |
-| #FREAD/S | Filtered Read Request Count per second | true |
-| #WRITE/S | Write Request Count per second | true |
-| SF | StoreFile Size | true |
-| USF | Uncompressed StoreFile Size | false |
-| #SF | Number of StoreFiles | true |
-| MEMSTORE | MemStore Size | true |
-| UHEAP | Used Heap Size | true |
-| MHEAP | Max Heap Size | true |
+| Field    | Description                            | Displayed by default |
+| -------- | -------------------------------------- | -------------------- |
+| RS       | Short Region Server Name               | true                 |
+| LRS      | Long Region Server Name                | false                |
+| #REGION  | Region Count                           | true                 |
+| #REQ/S   | Request Count per second               | true                 |
+| #READ/S  | Read Request Count per second          | true                 |
+| #FREAD/S | Filtered Read Request Count per second | true                 |
+| #WRITE/S | Write Request Count per second         | true                 |
+| SF       | StoreFile Size                         | true                 |
+| USF      | Uncompressed StoreFile Size            | false                |
+| #SF      | Number of StoreFiles                   | true                 |
+| MEMSTORE | MemStore Size                          | true                 |
+| UHEAP    | Used Heap Size                         | true                 |
+| MHEAP    | Max Heap Size                          | true                 |
 
 #### User mode
 
@@ -164,14 +157,14 @@ In User mode, the default sort field is `#REQ/S`.
 
 The fields in this mode are as follows:
 
-| Field | Description | Displayed by default |
-| ----- | ----------- | -------------------- |
-| USER | user Name | true |
-| #CLIENT | Client Count | true |
-| #REQ/S | Request Count per second | true |
-| #READ/S | Read Request Count per second | true |
-| #WRITE/S | Write Request Count per second | true |
-| #FREAD/S | Filtered Read Request Count per second | true |
+| Field    | Description                            | Displayed by default |
+| -------- | -------------------------------------- | -------------------- |
+| USER     | user Name                              | true                 |
+| #CLIENT  | Client Count                           | true                 |
+| #REQ/S   | Request Count per second               | true                 |
+| #READ/S  | Read Request Count per second          | true                 |
+| #WRITE/S | Write Request Count per second         | true                 |
+| #FREAD/S | Filtered Read Request Count per second | true                 |
 
 #### Client mode
 
@@ -179,14 +172,14 @@ In Client mode, the default sort field is `#REQ/S`.
 
 The fields in this mode are as follows:
 
-| Field | Description | Displayed by default |
-| ----- | ----------- | -------------------- |
-| CLIENT | Client Hostname | true |
-| #USER | User Count | true |
-| #REQ/S | Request Count per second | true |
-| #READ/S | Read Request Count per second | true |
-| #WRITE/S | Write Request Count per second | true |
-| #FREAD/S | Filtered Read Request Count per second | true |
+| Field    | Description                            | Displayed by default |
+| -------- | -------------------------------------- | -------------------- |
+| CLIENT   | Client Hostname                        | true                 |
+| #USER    | User Count                             | true                 |
+| #REQ/S   | Request Count per second               | true                 |
+| #READ/S  | Read Request Count per second          | true                 |
+| #WRITE/S | Write Request Count per second         | true                 |
+| #FREAD/S | Filtered Read Request Count per second | true                 |
 
 ### Changing mode
 
@@ -239,14 +232,14 @@ REQ/S>1000
 
 The operators we can specify are as follows:
 
-| Operator | Description |
-| -------- | ----------- |
-| = | Partial match |
-| == | Exact match |
-| > | Greater than |
-| >= | Greater than or equal to |
-| `\<` | Less than |
-| `\<=` | Less than and equal to |
+| Operator | Description              |
+| -------- | ------------------------ |
+| =        | Partial match            |
+| ==       | Exact match              |
+| >        | Greater than             |
+| >=       | Greater than or equal to |
+| \<       | Less than                |
+| \<=      | Less than and equal to   |
 
 You can see the current filters by pressing `^o` key and clear them by pressing `=` key.
 
@@ -269,4 +262,3 @@ You can see the help screen by pressing `h` key in the top screen.
 ### How hbtop gets the metrics data
 
 hbtop gets the metrics from ClusterMetrics which is returned as the result of a call to Admin#getClusterMetrics() on the current HMaster. To add metrics to hbtop, they will need to be exposed via ClusterMetrics.
-

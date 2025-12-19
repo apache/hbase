@@ -1,11 +1,9 @@
 ---
 title: "Procedure Framework (PV2)"
-description: "Procedure v2 provides a unified way to build multi-step procedures with rollback/roll-forward ability in case of failure."
+description: "Procedure v2 ...aims to provide a unified way to build...multi-step procedures with a rollback/roll-forward ability in case of failure (e.g. create/delete table) — Matteo Bertozzi, the author of Pv2."
 ---
 
 See [HBASE-12439](https://issues.apache.org/jira/browse/HBASE-12439) for the original implementation.
-
-_Procedure v2 ...aims to provide a unified way to build...multi-step procedures with a rollback/roll-forward ability in case of failure (e.g. create/delete table) -- Matteo Bertozzi, the author of Pv2._
 
 With Pv2 you can build and run state machines. It was built by Matteo to make distributed state transitions in HBase resilient in the face of process failures. Previous to Pv2, state transition handling was spread about the codebase with implementation varying by transition-type and context. Pv2 was inspired by [FATE](https://accumulo.apache.org/1.8/accumulo_user_manual.html#_fault_tolerant_executor_fate), of Apache Accumulo.
 
@@ -41,7 +39,7 @@ The ProcedureExecutor stamps the frameworks notions of Procedure State into the 
 
 After each execute, the Procedure state is persisted to the ProcedureStore. Hooks are invoked on Procedures so they can preserve custom state. Post-fault, the ProcedureExecutor re-hydrates its pre-crash state by replaying the content of the ProcedureStore. This makes the Procedure Framework resilient against process failure.
 
-## Implementation
+### Implementation
 
 In implementation, Procedures tend to divide transforms into finer-grained tasks and while some of these work items are handed off to sub-procedures,
 the bulk are done as processing _steps_ in-Procedure; each invocation of the execute is used to perform a single step, and then the Procedure relinquishes returning to the framework. The Procedure does its own tracking of where it is in the processing.
@@ -49,11 +47,11 @@ the bulk are done as processing _steps_ in-Procedure; each invocation of the exe
 What comprises a sub-task, or _step_ in the execution is up to the Procedure author but generally it is a small piece of work that cannot be further decomposed and that moves the processing forward toward its end state. Having procedures made of many small steps rather than a few large ones allows the Procedure framework give out insight on where we are in the processing. It also allows the framework be more fair in its execution. As stated per above, each step may be called multiple times (failure/restart) so steps must be implemented idempotent.
 It is easy to confuse the state that the Procedure itself is keeping with that of the Framework itself. Try to keep them distinct.
 
-## Rollback
+### Rollback
 
 Rollback is called when the procedure or one of the sub-procedures has failed. The rollback step is supposed to cleanup the resources created during the execute() step. In case of failure and restart, rollback() may be called multiple times, so again the code must be idempotent.
 
-## Metrics
+### Metrics
 
 There are hooks for collecting metrics on submit of the procedure and on finish.
 
@@ -68,13 +66,13 @@ Individual procedures can override these methods to collect procedure specific m
 
 Individual procedures can implement this object and define these generic set of metrics.
 
-## Baggage
+### Baggage
 
 Procedures can carry baggage. One example is the _step_ the procedure last attained (see previous section); procedures persist the enum that marks where they are currently. Other examples might be the Region or Server name the Procedure is currently working. After each call to execute, the Procedure#serializeStateData is called. Procedures can persist whatever.
 
-## Result/State and Queries
+### Result/State and Queries
 
-(From Matteo's [ProcedureV2 and Notification Bus](https://issues.apache.org/jira/secure/attachment/12693273/Procedurev2Notification-Bus.pdf) doc)
+(From Matteo's [ProcedureV2 and Notification Bus](https://issues.apache.org/jira/secure/attachment/12693273/Procedurev2Notification-Bus.pdf) doc)  
 In the case of asynchronous operations, the result must be kept around until the client asks for it. Once we receive a "get" of the result we can schedule the delete of the record. For some operations the result may be "unnecessary" especially in case of failure (e.g. if the create table fail, we can query the operation result or we can just do a list table to see if it was created) so in some cases we can schedule the delete after a timeout. On the client side the operation will return a "Procedure ID", this ID can be used to wait until the procedure is completed and get the result/exception.
 
 ```
@@ -114,9 +112,9 @@ Procedure Locks are not about concurrency! They are about giving a Procedure rea
 
 Locking is optional, up to the Procedure implementor but if an entity is being operated on by a Procedure, all transforms need to be done via Procedures using the same locking scheme else havoc.
 
-Two ProcedureExecutor Worker threads can actually end up both processing the same Procedure instance. If it happens, the threads are meant to be running different parts of the one Procedure -- changes that do not stamp on each other (This gets awkward around the procedure frameworks notion of 'suspend'. More on this below).
+Two ProcedureExecutor Worker threads can actually end up both processing the same Procedure instance. If it happens, the threads are meant to be running different parts of the one Procedure — changes that do not stamp on each other (This gets awkward around the procedure frameworks notion of ‘suspend’. More on this below).
 
-Locks optionally may be held for the life of a Procedure. For example, if moving a Region, you probably want to have exclusive access to the HBase Region until the Region completes (or fails).  This is used in conjunction with holdLock(Object). If holdLock(Object) returns true, the procedure executor will call acquireLock() once and thereafter not call releaseLock(Object) until the Procedure is done (Normally, it calls release/acquire around each invocation of execute(Object).
+Locks optionally may be held for the life of a Procedure. For example, if moving a Region, you probably want to have exclusive access to the HBase Region until the Region completes (or fails). This is used in conjunction with \{@link #holdLock(Object)}. If \{@link #holdLock(Object)} returns true, the procedure executor will call acquireLock() once and thereafter not call \{@link #releaseLock(Object)} until the Procedure is done (Normally, it calls release/acquire around each invocation of \{@link #execute(Object)}.
 
 Locks also may live the life of a procedure; i.e. once an Assign Procedure starts, we do not want another procedure meddling w/ the region under assignment. Procedures that hold the lock for the life of the procedure set Procedure#holdLock to true. AssignProcedure does this as do Split and Move (If in the middle of a Region move, you do not want it Splitting).
 

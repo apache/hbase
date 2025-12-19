@@ -44,22 +44,22 @@
     "community",
     "hbtop",
     "tracing",
-    "store_file_tracking",
-    "bulk_data_generator_tool",
+    "store-file-tracking",
+    "bulk-data-generator-tool",
     "---Appendices---",
-    "appendix_contributing_to_documentation",
+    "contributing-to-documentation",
     "faq",
-    "appendix_acl_matrix",
+    "acl-matrix",
     "compression",
     "sql",
     "ycsb",
-    "appendix_hfile_format",
-    "other_info",
-    "hbase_history",
+    "hfile-format",
+    "other-info",
+    "hbase-history",
     "asf",
     "orca",
     "rpc",
-    "appendix_hbase_incompatibilities"
+    "hbase-incompatibilities"
   ]
 }
 

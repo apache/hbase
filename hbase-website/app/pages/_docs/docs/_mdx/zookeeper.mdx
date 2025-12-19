@@ -1,10 +1,8 @@
 ---
 title: "ZooKeeper"
-description: "How to configure and use Apache ZooKeeper with HBase including SASL authentication and TLS connections."
+description: "A distributed Apache HBase installation depends on a running ZooKeeper cluster. All participating nodes and clients need to be able to access the running ZooKeeper ensemble."
 ---
 
-A distributed Apache HBase installation depends on a running ZooKeeper cluster.
-All participating nodes and clients need to be able to access the running ZooKeeper ensemble.
 Apache HBase by default manages a ZooKeeper "cluster" for you.
 It will start and stop the ZooKeeper ensemble as part of the HBase start/stop process.
 You can also manage the ZooKeeper ensemble independent of HBase and just point HBase at the cluster it should use.
@@ -388,7 +386,7 @@ over the wire.
 
 The ZooKeeper client supports the following Java system properties to set up TLS connection:
 
-```bash
+```properties
 zookeeper.client.secure=true
 zookeeper.clientCnxnSocket=org.apache.zookeeper.ClientCnxnSocketNetty
 zookeeper.ssl.keyStore.location="/path/to/your/keystore"
@@ -412,7 +410,7 @@ Since ZooKeeper version 3.8 the following two properties are useful to store the
 keystore and truststore passwords in protected text files rather than exposing them in the command line.
 </Callout>
 
-```bash
+```properties
 zookeeper.ssl.keyStore.passwordPath=/path/to/secure/file
 zookeeper.ssl.trustStore.passwordPath=/path/to/secure/file
 ```

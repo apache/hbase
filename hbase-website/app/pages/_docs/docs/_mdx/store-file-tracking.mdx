@@ -1,22 +1,16 @@
 ---
 title: "Store File Tracking"
-description: "An abstraction layer to track store files with pluggable implementations for different file systems."
+description: "This feature introduces an abstraction layer to track store files still used/needed by store engines, allowing for plugging different approaches of identifying store files required by the given store."
 ---
 
 ## Overview
-
-This feature introduces an abstraction layer to track store files still used/needed by store
-engines, allowing for plugging different approaches of identifying store
-files required by the given store.
 
 Historically, HBase internals have relied on creating hfiles on temporary directories first, renaming
 those files to the actual store directory at operation commit time. That's a simple and convenient
 way to separate transient from already finalised files that are ready to serve client reads with data.
 This approach works well with strong consistent file systems, but with the popularity of less consistent
-file systems, mainly Object Store which can be used like file systems, dependency on atomic rename operations starts to introduce
-performance penalties. The Amazon S3 Object Store, in particular, has been the most affected deployment,
-due to its lack of atomic renames. The HBase community temporarily bypassed this problem by building a distributed locking layer called HBOSS,
-to guarantee atomicity of operations against S3.
+file systems, mainly Object Store which can be used like file systems, dependency on atomic rename operations starts to introduce performance penalties. The Amazon S3 Object Store, in particular, has been the most affected deployment,
+due to its lack of atomic renames. The HBase community temporarily bypassed this problem by building a distributed locking layer called HBOSS, to guarantee atomicity of operations against S3.
 
 With **Store File Tracking**, decision on where to originally create new hfiles and how to proceed upon
 commit is delegated to the specific Store File Tracking implementation.
@@ -24,8 +18,7 @@ The implementation can be set at the HBase service leve in **hbase-site.xml** or
 Table or Column Family via the TableDescriptor configuration.
 
 <Callout type="info">
-When the store file tracking implementation is specified in **hbase_site.xml**, this configuration is also propagated into a tables configuration
-at table creation time. This is to avoid dangerous configuration mismatches between processes, which
+When the store file tracking implementation is specified in **hbase_site.xml**, this configuration is also propagated into a tables configuration at table creation time. This is to avoid dangerous configuration mismatches between processes, which
 could potentially lead to data loss.
 </Callout>
 
