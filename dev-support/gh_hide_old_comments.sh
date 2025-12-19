@@ -104,11 +104,16 @@ function identify_most_recent_build_number {
     local pr="$1"
     local comments_file="$2"
     local jq_filter
+    local url_pattern="${JOB_NAME}/job/PR-${pr}/(?<buildnum>[0-9]+)/"
+    # GitHub Actions URLs don't have /job/ in them
+    if [[ "${JOB_NAME}" == *"GH-Actions"* ]]; then
+        url_pattern="${JOB_NAME}/PR-${pr}/(?<buildnum>[0-9]+)/"
+    fi
     read -r -d '' jq_filter << EOF || :
 .[] \
 | select(.user.id == ${BUILD_BOT_USER_ID}) \
 | .body \
-| capture("${JOB_NAME}/job/PR-${pr}/(?<buildnum>[0-9]+)/") \
+| capture("${url_pattern}") \
 | .buildnum
 EOF
 
@@ -122,10 +127,15 @@ function identify_old_comment_ids {
     local comments_file="$2"
     local most_recent_build_number="$3"
     local jq_filter
+    local url_pattern="${JOB_NAME}/job/PR-${pr}/(?<buildnum>[0-9]+)/"
+    # GitHub Actions URLs don't have /job/ in them
+    if [[ "${JOB_NAME}" == *"GH-Actions"* ]]; then
+        url_pattern="${JOB_NAME}/PR-${pr}/(?<buildnum>[0-9]+)/"
+    fi
     read -r -d '' jq_filter << EOF || :
 .[] \
 | select(.user.id == ${BUILD_BOT_USER_ID}) \
-| { node_id, buildnum: (.body | capture("${JOB_NAME}/job/PR-${pr}/(?<buildnum>[0-9]+)/") | .buildnum | tonumber) } \
+| { node_id, buildnum: (.body | capture("${url_pattern}") | .buildnum | tonumber) } \
 | select(.buildnum < (${most_recent_build_number} | tonumber)) \
 | .node_id
 EOF
