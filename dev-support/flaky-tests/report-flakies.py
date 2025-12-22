@@ -54,6 +54,11 @@ parser.add_argument('--max-builds', metavar='n', action='append', type=int,
 parser.add_argument('--is-yetus', metavar='True/False', action='append', choices=['True', 'False'],
                     help='True, if build is yetus style i.e. look for maven output in artifacts; '
                          'False, if maven output is in <url>/consoleText itself.')
+parser.add_argument('--excludes-threshold-flakiness', metavar='n', type=float, default=20.0,
+                    required=False, help='Flakiness threshold for adding a test to excludes file')
+parser.add_argument('--excludes-threshold-runs', metavar='n', type=int, default=10,
+                    required=False,
+                    help='The times of a test should run before it can be added to excludes file')
 parser.add_argument(
     "--mvn", action="store_true",
     help="Writes two strings for including/excluding these flaky tests using maven flags. These "
@@ -149,6 +154,8 @@ def expand_multi_config_projects(cli_args):
                                         'excludes': excluded_builds, 'is_yetus': is_yetus})
     return final_expanded_urls
 
+bad_tests = set()
+test_to_build_ids = {}
 
 # Set of timeout/failed tests across all given urls.
 all_timeout_tests = set()
@@ -160,6 +167,7 @@ url_to_bad_test_results = OrderedDict()
 # Contains { <url> : [run_ids] }
 # Used for common min/max build ids when generating sparklines.
 url_to_build_ids = OrderedDict()
+
 
 # Iterates over each url, gets test results and prints flaky tests.
 expanded_urls = expand_multi_config_projects(args)
@@ -195,7 +203,7 @@ for url_max_build in expanded_urls:
     url_to_build_ids[url].sort()
 
     # Collect list of bad tests.
-    bad_tests = set()
+
     for build in build_id_to_results:
         [_, failed_tests, timeout_tests, hanging_tests] = build_id_to_results[build]
         all_timeout_tests.update(timeout_tests)
@@ -205,30 +213,30 @@ for url_max_build in expanded_urls:
         bad_tests.update(failed_tests.union(hanging_tests))
 
     # For each bad test, get build ids where it ran, timed out, failed or hanged.
-    test_to_build_ids = {key : {'all' : set(), 'timeout': set(), 'failed': set(),
-                                'hanging' : set(), 'bad_count' : 0}
-                         for key in bad_tests}
+    for key in bad_tests:
+        test_to_build_ids[key] = {'all': set(), 'timeout': set(), 'failed': set(),
+                                  'hanging': set(), 'bad_count': 0}
+
     for build in build_id_to_results:
         [all_tests, failed_tests, timeout_tests, hanging_tests] = build_id_to_results[build]
-        for bad_test in test_to_build_ids:
+        for bad_test, test_result in test_to_build_ids.items():
             is_bad = False
             if all_tests.issuperset([bad_test]):
-                test_to_build_ids[bad_test]["all"].add(build)
+                test_result["all"].add(build)
             if timeout_tests.issuperset([bad_test]):
-                test_to_build_ids[bad_test]['timeout'].add(build)
+                test_result['timeout'].add(build)
                 is_bad = True
             if failed_tests.issuperset([bad_test]):
-                test_to_build_ids[bad_test]['failed'].add(build)
+                test_result['failed'].add(build)
                 is_bad = True
             if hanging_tests.issuperset([bad_test]):
-                test_to_build_ids[bad_test]['hanging'].add(build)
+                test_result['hanging'].add(build)
                 is_bad = True
             if is_bad:
-                test_to_build_ids[bad_test]['bad_count'] += 1
+                test_result['bad_count'] += 1
 
     # Calculate flakyness % and successful builds for each test. Also sort build ids.
-    for bad_test in test_to_build_ids:
-        test_result = test_to_build_ids[bad_test]
+    for _, test_result in test_to_build_ids.items():
         test_result['flakyness'] = test_result['bad_count'] * 100.0 / len(test_result['all'])
         test_result['success'] = (test_result['all'].difference(
             test_result['failed'].union(test_result['hanging'])))
@@ -260,14 +268,17 @@ for url_max_build in expanded_urls:
     print("Builds without any test runs: {}".format(build_ids_without_tests_run))
     print("")
 
-
-all_bad_tests = all_hanging_tests.union(all_failed_tests)
 if args.mvn:
-    includes = ",".join(all_bad_tests)
+    includes = ",".join(bad_tests)
     with open(output_dir + "/includes", "w") as inc_file:
         inc_file.write(includes)
 
-    excludes = ["**/{0}.java".format(bad_test) for bad_test in all_bad_tests]
+    excludes = []
+    for bad_test in bad_tests:
+        test_result = test_to_build_ids[bad_test]
+        if test_result["flakyness"] > args.excludes_threshold_flakiness and len(
+          test_result["all"]) >= args.excludes_threshold_runs:
+            excludes.append(f"**/{bad_test}.java")
     with open(output_dir + "/excludes", "w") as exc_file:
         exc_file.write(",".join(excludes))
 
@@ -283,5 +294,5 @@ with open(os.path.join(dev_support_dir, "flaky-dashboard-template.html"), "r") a
 
 with open(output_dir + "/dashboard.html", "w") as f:
     datetime = time.strftime("%m/%d/%Y %H:%M:%S")
-    f.write(template.render(datetime=datetime, bad_tests_count=len(all_bad_tests),
+    f.write(template.render(datetime=datetime, bad_tests_count=len(bad_tests),
                             results=url_to_bad_test_results, build_ids=url_to_build_ids))
