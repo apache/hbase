@@ -267,8 +267,10 @@ public class TestRegionServerOnlineConfigChange {
   @Test
   public void testCoprocessorConfigurationOnlineChange() {
     assertNull(rs1.getRegionServerCoprocessorHost().findCoprocessor(JMXListener.class.getName()));
-    conf.set(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY, JMXListener.class.getName());
-    rs1.getConfigurationManager().notifyAllObservers(conf);
+    // Update configuration directly to simulate dynamic configuration reload
+    Configuration rsConf = rs1.getConfiguration();
+    rsConf.set(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY, JMXListener.class.getName());
+    rs1.getConfigurationManager().notifyAllObservers(rsConf);
     assertNotNull(
       rs1.getRegionServerCoprocessorHost().findCoprocessor(JMXListener.class.getName()));
   }
@@ -276,9 +278,11 @@ public class TestRegionServerOnlineConfigChange {
   @Test
   public void testCoprocessorConfigurationOnlineChangeOnMaster() {
     assertNull(hMaster.getMasterCoprocessorHost().findCoprocessor(JMXListener.class.getName()));
-    conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, JMXListener.class.getName());
+    // Update configuration directly to simulate dynamic configuration reload
+    Configuration masterConf = hMaster.getConfiguration();
+    masterConf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, JMXListener.class.getName());
     assertFalse(hMaster.isInMaintenanceMode());
-    hMaster.getConfigurationManager().notifyAllObservers(conf);
+    hMaster.getConfigurationManager().notifyAllObservers(masterConf);
     assertNotNull(hMaster.getMasterCoprocessorHost().findCoprocessor(JMXListener.class.getName()));
   }
 
