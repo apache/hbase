@@ -4,7 +4,7 @@
 .DS_Store
 .classpath
 /build
-/.idea/
+**/.idea/
 /logs
 *target/
 *.orig
