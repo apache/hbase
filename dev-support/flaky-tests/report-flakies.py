@@ -219,7 +219,7 @@ for url_max_build in expanded_urls:
 
     for build in build_id_to_results:
         [all_tests, failed_tests, timeout_tests, hanging_tests] = build_id_to_results[build]
-        for bad_test, test_result in test_to_build_ids:
+        for bad_test, test_result in test_to_build_ids.items():
             is_bad = False
             if all_tests.issuperset([bad_test]):
                 test_result["all"].add(build)
@@ -236,7 +236,7 @@ for url_max_build in expanded_urls:
                 test_result['bad_count'] += 1
 
     # Calculate flakyness % and successful builds for each test. Also sort build ids.
-    for _, test_result in test_to_build_ids:
+    for _, test_result in test_to_build_ids.items():
         test_result['flakyness'] = test_result['bad_count'] * 100.0 / len(test_result['all'])
         test_result['success'] = (test_result['all'].difference(
             test_result['failed'].union(test_result['hanging'])))
@@ -278,7 +278,7 @@ if args.mvn:
         test_result = test_to_build_ids[bad_test]
         if test_result["flakyness"] > args.excludes_threshold_flakiness and len(
           test_result["all"]) >= args.excludes_threshold_runs:
-            excludes.append(f"**/{0}.java".format(bad_test))
+            excludes.append(f"**/{bad_test}.java")
     with open(output_dir + "/excludes", "w") as exc_file:
         exc_file.write(",".join(excludes))
 
