@@ -17,7 +17,10 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -110,6 +113,35 @@ public final class CoprocessorDescriptorBuilder {
     public String toString() {
       return "class:" + className + ", jarPath:" + jarPath + ", priority:" + priority
         + ", properties:" + properties;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      if (this == obj) {
+        return true;
+      }
+      if (!(obj instanceof CoprocessorDescriptor)) {
+        return false;
+      }
+      CoprocessorDescriptor other = (CoprocessorDescriptor) obj;
+      if (
+        priority != other.getPriority() || !Objects.equals(className, other.getClassName())
+          || !Objects.equals(getJarPath(), other.getJarPath())
+      ) {
+        return false;
+      }
+      return Objects.equals(getProperties(), other.getProperties());
+    }
+
+    @Override
+    public int hashCode() {
+      int result = Objects.hash(className, jarPath, priority);
+      List<Map.Entry<String, String>> entries = new ArrayList<>(properties.entrySet());
+      entries.sort(Comparator.comparing(Map.Entry::getKey));
+      for (Map.Entry<String, String> e : entries) {
+        result = 31 * result + Objects.hash(e.getKey(), e.getValue());
+      }
+      return result;
     }
   }
 }
