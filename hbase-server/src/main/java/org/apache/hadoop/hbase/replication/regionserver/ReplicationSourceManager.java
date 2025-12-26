@@ -175,9 +175,6 @@ public class ReplicationSourceManager {
 
   private AtomicLong totalBufferUsed = new AtomicLong();
 
-  // How long should we sleep for each retry when deleting remote wal files for sync replication
-  // peer.
-  private final long sleepForRetries;
   // Maximum number of retries before taking bold actions when deleting remote wal files for sync
   // replication peer.
   private final int maxRetriesMultiplier;
@@ -227,7 +224,6 @@ public class ReplicationSourceManager {
     tfb.setDaemon(true);
     this.executor.setThreadFactory(tfb.build());
     this.latestPaths = new HashMap<>();
-    this.sleepForRetries = this.conf.getLong("replication.source.sync.sleepforretries", 1000);
     this.maxRetriesMultiplier =
       this.conf.getInt("replication.source.sync.maxretriesmultiplier", 60);
     this.totalBufferLimit = conf.getLong(HConstants.REPLICATION_SOURCE_TOTAL_BUFFER_KEY,
@@ -747,8 +743,8 @@ public class ReplicationSourceManager {
             return;
           }
           if (
-            ReplicationUtils.sleepForRetries("Failed to delete remote wals", sleepForRetries,
-              sleepMultiplier, maxRetriesMultiplier)
+            ReplicationUtils.sleepForRetries("Failed to delete remote wals",
+              source.getSleepForRetries(), sleepMultiplier, maxRetriesMultiplier)
           ) {
             sleepMultiplier++;
           }

@@ -98,7 +98,8 @@ public class ReplicationSourceShipper extends Thread {
       if (!source.isPeerEnabled()) {
         // The peer enabled check is in memory, not expensive, so do not need to increase the
         // sleep interval as it may cause a long lag when we enable the peer.
-        sleepForRetries("Replication is disabled", sleepForRetries, 1, maxRetriesMultiplier);
+        sleepForRetries("Replication is disabled", source.getSleepForRetries(), 1,
+          maxRetriesMultiplier);
         continue;
       }
       try {
@@ -216,8 +217,8 @@ public class ReplicationSourceShipper extends Thread {
         LOG.warn("{} threw unknown exception:",
           source.getReplicationEndpoint().getClass().getName(), ex);
         if (
-          sleepForRetries("ReplicationEndpoint threw exception", sleepForRetries, sleepMultiplier,
-            maxRetriesMultiplier)
+          sleepForRetries("ReplicationEndpoint threw exception", source.getSleepForRetries(),
+            sleepMultiplier, maxRetriesMultiplier)
         ) {
           sleepMultiplier++;
         }
@@ -304,24 +305,6 @@ public class ReplicationSourceShipper extends Thread {
 
   public boolean isFinished() {
     return state == WorkerState.FINISHED;
-  }
-
-  /**
-   * Do the sleeping logic
-   * @param msg             Why we sleep
-   * @param sleepMultiplier by how many times the default sleeping time is augmented
-   * @return True if <code>sleepMultiplier</code> is &lt; <code>maxRetriesMultiplier</code>
-   */
-  public boolean sleepForRetries(String msg, int sleepMultiplier) {
-    try {
-      long sleepForRetries = source.getSleepForRetries();
-      LOG.trace("{}, sleeping {} times {}", msg, sleepForRetries, sleepMultiplier);
-      Thread.sleep(sleepForRetries * sleepMultiplier);
-    } catch (InterruptedException e) {
-      LOG.debug("Interrupted while sleeping between retries");
-      Thread.currentThread().interrupt();
-    }
-    return sleepMultiplier < maxRetriesMultiplier;
   }
 
   /**
