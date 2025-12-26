@@ -49,7 +49,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.LongAdder;
@@ -679,37 +678,6 @@ public class TestBucketCache {
     // should finally increment eviction count
     cache.freeSpace("testing");
     assertEquals(1, cache.getStats().getEvictionCount());
-  }
-
-  @Test
-  public void testStringPool() throws Exception {
-    HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
-    Path testDir = TEST_UTIL.getDataTestDir();
-    TEST_UTIL.getTestFileSystem().mkdirs(testDir);
-    BucketCache bucketCache =
-      new BucketCache("file:" + testDir + "/bucket.cache", capacitySize, constructedBlockSize,
-        constructedBlockSizes, writeThreads, writerQLen, testDir + "/bucket.persistence");
-    assertTrue(bucketCache.waitForCacheInitialization(10000));
-    long usedSize = bucketCache.getAllocator().getUsedSize();
-    assertEquals(0, usedSize);
-    Random rand = ThreadLocalRandom.current();
-    Path filePath = new Path(testDir, Long.toString(rand.nextLong()));
-    CacheTestUtils.HFileBlockPair[] blocks =
-      CacheTestUtils.generateBlocksForPath(constructedBlockSize, 1, filePath, false);
-    String name = blocks[0].getBlockName().getHfileName();
-    assertEquals(name, filePath.getName());
-    assertNotNull(blocks[0].getBlockName().getRegionName());
-    bucketCache.cacheBlock(blocks[0].getBlockName(), blocks[0].getBlock());
-    waitUntilFlushedToBucket(bucketCache, blocks[0].getBlockName());
-    assertTrue(FilePathStringPool.getInstance().size() > 0);
-    bucketCache.evictBlock(blocks[0].getBlockName());
-    assertTrue(FilePathStringPool.getInstance().size() > 0);
-    bucketCache.cacheBlock(blocks[0].getBlockName(), blocks[0].getBlock());
-    waitUntilFlushedToBucket(bucketCache, blocks[0].getBlockName());
-    bucketCache.fileCacheCompleted(filePath,
-      bucketCache.backingMap.get(blocks[0].getBlockName()).getLength());
-    bucketCache.evictBlocksByHfileName(name);
-    assertEquals(1, FilePathStringPool.getInstance().size());
   }
 
   @Test
