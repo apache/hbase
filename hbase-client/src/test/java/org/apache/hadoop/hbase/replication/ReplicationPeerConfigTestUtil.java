@@ -66,7 +66,8 @@ public final class ReplicationPeerConfigTestUtil {
       .setReplicationEndpointImpl(Long.toHexString(RNG.nextLong()))
       .setNamespaces(randNamespaces(RNG)).setExcludeNamespaces(randNamespaces(RNG))
       .setTableCFsMap(randTableCFs(RNG)).setExcludeTableCFsMap(randTableCFs(RNG))
-      .setReplicateAllUserTables(RNG.nextBoolean()).setBandwidth(RNG.nextInt(1000)).build();
+      .setReplicateAllUserTables(RNG.nextBoolean()).setBandwidth(RNG.nextInt(1000))
+      .setSleepForRetries(RNG.nextInt(5000)).build();
   }
 
   private static void assertSetEquals(Set<String> expected, Set<String> actual) {
@@ -111,5 +112,6 @@ public final class ReplicationPeerConfigTestUtil {
     assertMapEquals(expected.getExcludeTableCFsMap(), actual.getExcludeTableCFsMap());
     assertEquals(expected.replicateAllUserTables(), actual.replicateAllUserTables());
     assertEquals(expected.getBandwidth(), actual.getBandwidth());
+    assertEquals(expected.getSleepForRetries(), actual.getSleepForRetries());
   }
 }
