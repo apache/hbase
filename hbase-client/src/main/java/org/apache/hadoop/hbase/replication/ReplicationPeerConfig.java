@@ -51,6 +51,7 @@ public class ReplicationPeerConfig {
   private final boolean serial;
   // Used by synchronous replication
   private String remoteWALDir;
+  private long sleepForRetries = 0;
 
   private ReplicationPeerConfig(ReplicationPeerConfigBuilderImpl builder) {
     this.clusterKey = builder.clusterKey;
@@ -71,6 +72,7 @@ public class ReplicationPeerConfig {
     this.bandwidth = builder.bandwidth;
     this.serial = builder.serial;
     this.remoteWALDir = builder.remoteWALDir;
+    this.sleepForRetries = builder.sleepForRetries;
   }
 
   private Map<TableName, List<String>>
@@ -140,6 +142,10 @@ public class ReplicationPeerConfig {
     return serial;
   }
 
+  public long getSleepForRetries() {
+    return this.sleepForRetries;
+  }
+
   public static ReplicationPeerConfigBuilder newBuilder(ReplicationPeerConfig peerConfig) {
     ReplicationPeerConfigBuilderImpl builder = new ReplicationPeerConfigBuilderImpl();
     builder.setClusterKey(peerConfig.getClusterKey())
@@ -150,7 +156,8 @@ public class ReplicationPeerConfig {
       .setExcludeTableCFsMap(peerConfig.getExcludeTableCFsMap())
       .setExcludeNamespaces(peerConfig.getExcludeNamespaces())
       .setBandwidth(peerConfig.getBandwidth()).setSerial(peerConfig.isSerial())
-      .setRemoteWALDir(peerConfig.getRemoteWALDir());
+      .setRemoteWALDir(peerConfig.getRemoteWALDir())
+      .setSleepForRetries(peerConfig.getSleepForRetries());
     return builder;
   }
 
@@ -180,6 +187,8 @@ public class ReplicationPeerConfig {
     private boolean serial = false;
 
     private String remoteWALDir = null;
+
+    private long sleepForRetries = 0;
 
     @Override
     public ReplicationPeerConfigBuilder setClusterKey(String clusterKey) {
@@ -261,6 +270,12 @@ public class ReplicationPeerConfig {
     }
 
     @Override
+    public ReplicationPeerConfigBuilder setSleepForRetries(long sleepForRetries) {
+      this.sleepForRetries = sleepForRetries;
+      return this;
+    }
+
+    @Override
     public ReplicationPeerConfig build() {
       // It would be nice to validate the configuration, but we have to work with "old" data
       // from ZK which makes it much more difficult.
@@ -293,6 +308,7 @@ public class ReplicationPeerConfig {
     if (this.remoteWALDir != null) {
       builder.append(",remoteWALDir=").append(remoteWALDir);
     }
+    builder.append(",sleepForRetries=").append(sleepForRetries);
     return builder.toString();
   }
 
