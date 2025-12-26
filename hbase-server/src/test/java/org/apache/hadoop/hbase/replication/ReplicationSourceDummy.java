@@ -131,6 +131,11 @@ public class ReplicationSourceDummy implements ReplicationSourceInterface {
   }
 
   @Override
+  public long getSleepForRetries() {
+    return 1000; // 1 second default for test
+  }
+
+  @Override
   public MetricsSource getSourceMetrics() {
     return metrics;
   }
