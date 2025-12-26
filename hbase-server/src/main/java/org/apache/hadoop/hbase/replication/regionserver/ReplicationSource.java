@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import static org.apache.hadoop.hbase.wal.AbstractFSWALProvider.findArchivedLog;
-
 import com.google.errorprone.annotations.RestrictedApi;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -69,7 +68,6 @@ import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
@@ -527,7 +525,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
    * global configuration.
    * @return sleep time in milliseconds
    */
-  protected long getSleepForRetries() {
+  public long getSleepForRetries() {
     long peerSleepForRetries = replicationPeer.getPeerConfig().getSleepForRetries();
     if (peerSleepForRetries > 0) {
       return peerSleepForRetries;
