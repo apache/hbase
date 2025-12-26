@@ -40,9 +40,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
-
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.BulkLoadDescriptor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.StoreDescriptor;
@@ -136,7 +134,6 @@ class ReplicationSourceWALReader extends Thread {
         source.getWALFileLengthProvider(), source.getSourceMetrics(), walGroupId)) {
         while (isReaderRunning()) { // loop here to keep reusing stream while we can
           if (!source.isPeerEnabled()) {
-            waitingPeerEnabled.set(true);
             Threads.sleep(source.getSleepForRetries());
             continue;
           }
