@@ -130,6 +130,7 @@ public class TestReplicationSource {
     ReplicationPeerConfig peerConfig = mock(ReplicationPeerConfig.class);
     when(peerConfig.getReplicationEndpointImpl())
       .thenReturn(DoNothingReplicationEndpoint.class.getName());
+    when(peerConfig.getSleepForRetries()).thenReturn(0L);
     when(mockPeer.getPeerConfig()).thenReturn(peerConfig);
     ReplicationSourceManager manager = mock(ReplicationSourceManager.class);
     Mockito.when(manager.getGlobalMetrics())
@@ -169,6 +170,7 @@ public class TestReplicationSource {
     ReplicationPeerConfig peerConfig = mock(ReplicationPeerConfig.class);
     when(peerConfig.getReplicationEndpointImpl())
       .thenReturn(DoNothingReplicationEndpoint.class.getName());
+    when(peerConfig.getSleepForRetries()).thenReturn(0L);
     when(mockPeer.getPeerConfig()).thenReturn(peerConfig);
     ReplicationSourceManager manager = mock(ReplicationSourceManager.class);
     String queueId = "qid";
@@ -253,7 +255,10 @@ public class TestReplicationSource {
     try {
       replicationEndpoint.start();
       ReplicationPeer mockPeer = mock(ReplicationPeer.class);
+      ReplicationPeerConfig mockPeerConfig = mock(ReplicationPeerConfig.class);
       when(mockPeer.getPeerBandwidth()).thenReturn(0L);
+      when(mockPeer.getPeerConfig()).thenReturn(mockPeerConfig);
+      when(mockPeerConfig.getSleepForRetries()).thenReturn(0L);
       Configuration testConf = HBaseConfiguration.create();
       testConf.setInt("replication.source.maxretriesmultiplier", 1);
       ReplicationSourceManager manager = mock(ReplicationSourceManager.class);
@@ -275,6 +280,9 @@ public class TestReplicationSource {
       null, null, null, null, null, mock(MetricsReplicationGlobalSourceSource.class));
     ReplicationPeer mockPeer = mock(ReplicationPeer.class);
     Mockito.when(mockPeer.getPeerBandwidth()).thenReturn(0L);
+    ReplicationPeerConfig peerConfig = mock(ReplicationPeerConfig.class);
+    when(peerConfig.getSleepForRetries()).thenReturn(0L);
+    when(mockPeer.getPeerConfig()).thenReturn(peerConfig);
     Configuration testConf = HBaseConfiguration.create();
     source.init(testConf, null, mockManager, null, mockPeer, Mockito.mock(Server.class), "testPeer",
       null, p -> OptionalLong.empty(), mock(MetricsSource.class));
@@ -518,6 +526,7 @@ public class TestReplicationSource {
     ReplicationPeerConfig peerConfig = mock(ReplicationPeerConfig.class);
     FaultyReplicationEndpoint.count = 0;
     when(peerConfig.getReplicationEndpointImpl()).thenReturn(endpointName);
+    when(peerConfig.getSleepForRetries()).thenReturn(0L);
     when(mockPeer.getPeerConfig()).thenReturn(peerConfig);
     ReplicationSourceManager manager = mock(ReplicationSourceManager.class);
     Mockito.when(manager.getGlobalMetrics())
@@ -634,6 +643,7 @@ public class TestReplicationSource {
       ReplicationPeerConfig peerConfig = Mockito.mock(ReplicationPeerConfig.class);
       Mockito.when(peerConfig.getReplicationEndpointImpl())
         .thenReturn(DoNothingReplicationEndpoint.class.getName());
+      Mockito.when(peerConfig.getSleepForRetries()).thenReturn(0L);
       Mockito.when(mockPeer.getPeerConfig()).thenReturn(peerConfig);
       ReplicationSourceManager manager = Mockito.mock(ReplicationSourceManager.class);
       Mockito.when(manager.getGlobalMetrics())
