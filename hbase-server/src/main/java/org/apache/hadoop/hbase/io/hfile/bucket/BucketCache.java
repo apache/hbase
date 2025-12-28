@@ -397,7 +397,6 @@ public class BucketCache implements BlockCache, HeapSize {
         LOG.warn("Can't restore from file[{}]. The bucket cache will be reset and rebuilt."
           + " Exception seen: ", persistencePath, ex);
         backingMap.clear();
-        FilePathStringPool.getInstance().clear();
         fullyCachedFiles.clear();
         backingMapValidated.set(true);
         regionCachedSize.clear();
@@ -780,7 +779,6 @@ public class BucketCache implements BlockCache, HeapSize {
         // remove the entry for that region from regionCachedSize map.
         if (regionCachedSize.get(regionName) <= 0) {
           regionCachedSize.remove(regionName);
-          FilePathStringPool.getInstance().remove(regionName);
         }
       }
     }
@@ -1005,7 +1003,6 @@ public class BucketCache implements BlockCache, HeapSize {
       + cacheStats.getEvictedCount() + ", " + "evictedPerRun=" + cacheStats.evictedPerEviction()
       + ", " + "allocationFailCount=" + cacheStats.getAllocationFailCount() + ", blocksCount="
       + backingMap.size());
-    LOG.info(FilePathStringPool.getInstance().getPoolStats());
     cacheStats.reset();
 
     bucketAllocator.logDebugStatistics();
@@ -1750,7 +1747,6 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   private void retrieveChunkedBackingMap(FileInputStream in) throws IOException {
-
     // Read the first chunk that has all the details.
     BucketCacheProtos.BucketCacheEntry cacheEntry =
       BucketCacheProtos.BucketCacheEntry.parseDelimitedFrom(in);
@@ -1760,7 +1756,6 @@ public class BucketCache implements BlockCache, HeapSize {
 
     backingMap.clear();
     blocksByHFile.clear();
-    FilePathStringPool.getInstance().clear();
 
     // Read the backing map entries in batches.
     int numChunks = 0;
@@ -1816,7 +1811,6 @@ public class BucketCache implements BlockCache, HeapSize {
       this.blocksByHFile.clear();
       this.fullyCachedFiles.clear();
       this.regionCachedSize.clear();
-      FilePathStringPool.getInstance().clear();
     }
     if (cacheStats.getMetricsRollerScheduler() != null) {
       cacheStats.getMetricsRollerScheduler().shutdownNow();
@@ -1845,7 +1839,6 @@ public class BucketCache implements BlockCache, HeapSize {
             }
           }
           persistToFile();
-          FilePathStringPool.getInstance().clear();
         } catch (IOException ex) {
           LOG.error("Unable to persist data on exit: " + ex.toString(), ex);
         } catch (InterruptedException e) {
@@ -1936,20 +1929,12 @@ public class BucketCache implements BlockCache, HeapSize {
     Set<BlockCacheKey> keySet = getAllCacheKeysForFile(hfileName, initOffset, endOffset);
     // We need to make sure whether we are evicting all blocks for this given file. In case of
     // split references, we might be evicting just half of the blocks
-    int totalFileKeys = (endOffset == Long.MAX_VALUE)
-      ? keySet.size()
-      : getAllCacheKeysForFile(hfileName, 0, Long.MAX_VALUE).size();
     LOG.debug("found {} blocks for file {}, starting offset: {}, end offset: {}", keySet.size(),
       hfileName, initOffset, endOffset);
     int numEvicted = 0;
     for (BlockCacheKey key : keySet) {
       if (evictBlock(key)) {
         ++numEvicted;
-      }
-    }
-    if (numEvicted > 0) {
-      if (totalFileKeys == numEvicted) {
-        FilePathStringPool.getInstance().remove(hfileName);
       }
     }
     return numEvicted;

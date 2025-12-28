@@ -19,8 +19,8 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.HeapSize;
-import org.apache.hadoop.hbase.io.hfile.bucket.FilePathStringPool;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.hadoop.hbase.util.FastStringPool;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -29,17 +29,22 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class BlockCacheKey implements HeapSize, java.io.Serializable {
-  private static final long serialVersionUID = -5199992013113130535L; // Changed due to format
-                                                                      // change
+  // Changed due to format change
+  private static final long serialVersionUID = -5199992013113130535L;
+
+  private static final FastStringPool HFILE_NAME_POOL = new FastStringPool();
+
+  private static final FastStringPool REGION_NAME_POOL = new FastStringPool();
+
+  private static final FastStringPool CF_NAME_POOL = new FastStringPool();
 
   // New compressed format using integer file ID (when codec is available)
-  private final int hfileNameId;
 
-  private transient final FilePathStringPool stringPool;
+  private final String hfileName;
 
-  private final int regionId;
+  private final String regionName;
 
-  private final int cfId;
+  private final String cfName;
 
   private final long offset;
 
@@ -91,11 +96,10 @@ public class BlockCacheKey implements HeapSize, java.io.Serializable {
     this.isPrimaryReplicaBlock = isPrimaryReplica;
     this.offset = offset;
     this.blockType = blockType;
-    this.stringPool = FilePathStringPool.getInstance();
     // Use string pool for file, region and cf values
-    this.hfileNameId = stringPool.encode(hfileName);
-    this.regionId = (regionName != null) ? stringPool.encode(regionName) : -1;
-    this.cfId = (cfName != null) ? stringPool.encode(cfName) : -1;
+    this.hfileName = HFILE_NAME_POOL.intern(hfileName);
+    this.regionName = (regionName != null) ? REGION_NAME_POOL.intern(regionName) : null;
+    this.cfName = (cfName != null) ? CF_NAME_POOL.intern(cfName) : null;
     this.archived = archived;
   }
 
@@ -116,7 +120,7 @@ public class BlockCacheKey implements HeapSize, java.io.Serializable {
 
   @Override
   public int hashCode() {
-    return hfileNameId * 127 + (int) (offset ^ (offset >>> 32));
+    return hfileName.hashCode() * 127 + (int) (offset ^ (offset >>> 32));
   }
 
   @Override
@@ -152,7 +156,7 @@ public class BlockCacheKey implements HeapSize, java.io.Serializable {
    * @return The file name
    */
   public String getHfileName() {
-    return stringPool.decode(hfileNameId);
+    return hfileName;
   }
 
   /**
@@ -160,7 +164,7 @@ public class BlockCacheKey implements HeapSize, java.io.Serializable {
    * @return The region name
    */
   public String getRegionName() {
-    return stringPool.decode(regionId);
+    return regionName;
   }
 
   /**
@@ -168,7 +172,7 @@ public class BlockCacheKey implements HeapSize, java.io.Serializable {
    * @return The column family name
    */
   public String getCfName() {
-    return stringPool.decode(cfId);
+    return cfName;
   }
 
   public boolean isPrimary() {
