@@ -289,8 +289,6 @@ public final class LogLevel {
         return bufferedReader.lines().filter(Objects::nonNull)
           .filter(line -> line.startsWith(MARKER)).map(line -> TAG.matcher(line).replaceAll(""))
           .collect(Collectors.joining("\n"));
-      } catch (IOException ioe) {
-        return "" + ioe;
       }
     }
   }
