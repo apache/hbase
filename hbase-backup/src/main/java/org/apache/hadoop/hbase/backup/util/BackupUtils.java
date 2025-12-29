@@ -40,7 +40,6 @@ import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupInfo;
@@ -116,14 +115,14 @@ public final class BackupUtils {
   }
 
   /**
-   * copy out Table RegionInfo into incremental backup image need to consider move this logic into
+   * copy out Table descriptor into incremental backup image need to consider move this logic into
    * HBackupFileSystem
    * @param conn       connection
    * @param backupInfo backup info
    * @param conf       configuration
    * @throws IOException exception
    */
-  public static void copyTableRegionInfo(Connection conn, BackupInfo backupInfo, Configuration conf)
+  public static void copyTableDescriptor(Connection conn, BackupInfo backupInfo, Configuration conf)
     throws IOException {
     Path rootDir = CommonFSUtils.getRootDir(conf);
     FileSystem fs = rootDir.getFileSystem(conf);
@@ -147,16 +146,6 @@ public final class BackupUtils {
         LOG.debug("Attempting to copy table info for:" + table + " target: " + target
           + " descriptor: " + orig);
         LOG.debug("Finished copying tableinfo.");
-        List<RegionInfo> regions = MetaTableAccessor.getTableRegions(conn, table);
-        // For each region, write the region info to disk
-        LOG.debug("Starting to write region info for table " + table);
-        for (RegionInfo regionInfo : regions) {
-          Path regionDir = FSUtils
-            .getRegionDirFromTableDir(new Path(backupInfo.getTableBackupDir(table)), regionInfo);
-          regionDir = new Path(backupInfo.getTableBackupDir(table), regionDir.getName());
-          writeRegioninfoOnFilesystem(conf, targetFs, regionDir, regionInfo);
-        }
-        LOG.debug("Finished writing region info for table " + table);
       }
     }
   }

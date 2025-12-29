@@ -163,8 +163,7 @@ public class TestBackupBase {
         LOG.debug("For incremental backup, current table set is "
           + backupManager.getIncrementalBackupTableSet());
         newTimestamps = ((IncrementalBackupManager) backupManager).getIncrBackupLogFileMap();
-        // copy out the table and region info files for each table
-        BackupUtils.copyTableRegionInfo(conn, backupInfo, conf);
+        BackupUtils.copyTableDescriptor(conn, backupInfo, conf);
         // convert WAL to HFiles and copy them to .tmp under BACKUP_ROOT
         convertWALsToHFiles();
         incrementalCopyHFiles(new String[] { getBulkOutputDir().toString() },

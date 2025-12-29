@@ -302,8 +302,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
 
     // case INCREMENTAL_COPY:
     try {
-      // copy out the table and region info files for each table
-      BackupUtils.copyTableRegionInfo(conn, backupInfo, conf);
+      BackupUtils.copyTableDescriptor(conn, backupInfo, conf);
       setupRegionLocator();
       // convert WAL to HFiles and copy them to .tmp under BACKUP_ROOT
       convertWALsToHFiles();
