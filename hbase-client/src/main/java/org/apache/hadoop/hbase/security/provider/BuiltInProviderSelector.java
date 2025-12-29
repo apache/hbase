@@ -101,6 +101,11 @@ public class BuiltInProviderSelector implements AuthenticationProviderSelector {
     requireNonNull(clusterId, "Null clusterId was given");
     requireNonNull(user, "Null user was given");
 
+    // Superfluous: we don't do SIMPLE auth over SASL, but we should to simplify.
+    if (!User.isHBaseSecurityEnabled(conf)) {
+      return new Pair<>(simpleAuth, null);
+    }
+
     final Text clusterIdAsText = new Text(clusterId);
 
     // Must be digest auth, look for a token.
