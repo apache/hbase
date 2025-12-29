@@ -1734,8 +1734,6 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   private void retrieveChunkedBackingMap(FileInputStream in) throws IOException {
-
-    ArrayList<BucketCacheProtos.BackingMap> bucketCacheMaps = new ArrayList<>();
     // Read the first chunk that has all the details.
     BucketCacheProtos.BucketCacheEntry cacheEntry =
       BucketCacheProtos.BucketCacheEntry.parseDelimitedFrom(in);
