@@ -1776,10 +1776,9 @@ public class TestHStore {
     }
   }
 
-
   @Test
-  public void testReaderIsClosedOnlyAfterCompactionComplete() throws Exception {
-    HBaseTestingUtility util = new HBaseTestingUtility();
+  public void testReaderRaceConditionDuringCompaction() throws Exception {
+    HBaseTestingUtil util = new HBaseTestingUtil();
     util.startMiniCluster(1);
 
     try {
@@ -1860,6 +1859,106 @@ public class TestHStore {
       }
 
       Collection<HStoreFile> finalFiles = sfm.getStoreFiles();
+      LOG.info("Is the old file present? " + finalFiles.contains(victim));
+      assertFalse("Old file must be gone",
+        finalFiles.contains(victim));
+
+      LOG.info("File count after compaction: " + finalFiles.size());
+      assertEquals("File count stable after compaction",
+        3, finalFiles.size());
+
+    } finally {
+      util.shutdownMiniCluster();
+    }
+  }
+
+  @Test
+  public void testReaderIsClosedOnlyAfterCompactionComplete() throws Exception {
+    HBaseTestingUtil util = new HBaseTestingUtil();
+    util.startMiniCluster(1);
+
+    try {
+      Configuration conf = util.getConfiguration();
+
+      byte[] FAMILY = Bytes.toBytes("f");
+      byte[] Q = Bytes.toBytes("q");
+      TableName TABLE = TableName.valueOf("race_test");
+
+      TableDescriptor td = TableDescriptorBuilder.newBuilder(TABLE)
+        .setColumnFamily(
+          ColumnFamilyDescriptorBuilder.newBuilder(FAMILY)
+            .setMaxVersions(1)
+            .build())
+        .build();
+
+      util.getAdmin().createTable(td);
+
+      HRegion region =
+        util.getMiniHBaseCluster().getRegions(TABLE).get(0);
+
+      HStore store = region.getStore(FAMILY);
+
+      for (int i = 0; i < 4; i++) {
+        Put p = new Put(Bytes.toBytes("row-" + i));
+        p.addColumn(FAMILY, Q, Bytes.toBytes(i));
+        region.put(p);
+        region.flush(true);   // force store file
+      }
+
+      // sanity check
+      assertEquals(4, store.getStorefilesCount());
+
+      DefaultStoreFileManager sfm =
+        (DefaultStoreFileManager) store.getStoreEngine().getStoreFileManager();
+
+      HStoreFile victim =
+        sfm.getStoreFiles().iterator().next();
+
+      AtomicReference<Throwable> failure = new AtomicReference<>();
+      CountDownLatch start = new CountDownLatch(1);
+      CountDownLatch closeStarted = new CountDownLatch(1);
+      CountDownLatch done = new CountDownLatch(2);
+
+      Thread remover = new Thread(() -> {
+        try {
+          start.await();
+          closeStarted.countDown();
+          victim.closeStoreFile(true); // async-style close
+        } catch (Throwable t) {
+          failure.set(t);
+        } finally {
+          done.countDown();
+        }
+      });
+
+      Thread adder = new Thread(() -> {
+        try {
+          start.await();
+          closeStarted.await();
+          Thread.sleep(1);
+          sfm.addCompactionResults(
+            Collections.singletonList(victim),
+            new ArrayList<>());
+        } catch (Throwable t) {
+          failure.set(t);
+        } finally {
+          done.countDown();
+        }
+      });
+
+      remover.start();
+      adder.start();
+      start.countDown();
+
+      assertTrue(done.await(60, TimeUnit.SECONDS));
+
+      if (failure.get() != null) {
+        throw new AssertionError(
+          "Race caused failure (this is the bug you fixed)",
+          failure.get());
+      }
+
+      Collection<HStoreFile> finalFiles = sfm.getStoreFiles();
 
       assertFalse("Old file must be gone",
         finalFiles.contains(victim));
@@ -1867,6 +1966,8 @@ public class TestHStore {
       assertEquals("File count stable after compaction",
         3, finalFiles.size());
 
+      assertEquals(true, victim.isCompactedAway());
+      assertEquals(null, victim.getReader());
     } finally {
       util.shutdownMiniCluster();
     }
