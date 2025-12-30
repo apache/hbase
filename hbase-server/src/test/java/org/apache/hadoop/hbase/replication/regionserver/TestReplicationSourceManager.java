@@ -399,7 +399,7 @@ public class TestReplicationSourceManager {
       return rs != null && rs.isSourceActive();
     });
 
-    ReplicationSourceInterface source = manager.getSources().stream()
+    ReplicationSource source = (ReplicationSource) manager.getSources().stream()
       .filter(s -> s.getPeerId().equals(peerId)).findFirst().orElse(null);
     assertNotNull("Source should be created for peer", source);
 
@@ -457,14 +457,14 @@ public class TestReplicationSourceManager {
     });
 
     // Verify peer with override uses the override value
-    ReplicationSourceInterface sourceWithOverride = manager.getSources().stream()
+    ReplicationSource sourceWithOverride = (ReplicationSource) manager.getSources().stream()
       .filter(s -> s.getPeerId().equals(peerIdWithOverride)).findFirst().orElse(null);
     assertNotNull("Source with override should be created", sourceWithOverride);
     assertEquals("Peer with override should use override value", peerSleepOverride,
       sourceWithOverride.getSleepForRetries());
 
     // Verify peer without override uses global config
-    ReplicationSourceInterface sourceWithoutOverride = manager.getSources().stream()
+    ReplicationSource sourceWithoutOverride = (ReplicationSource) manager.getSources().stream()
       .filter(s -> s.getPeerId().equals(peerIdWithoutOverride)).findFirst().orElse(null);
     assertNotNull("Source without override should be created", sourceWithoutOverride);
     assertEquals("Peer without override should use global config", globalSleepValue,
