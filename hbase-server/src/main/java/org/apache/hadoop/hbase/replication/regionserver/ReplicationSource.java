@@ -836,12 +836,10 @@ public class ReplicationSource implements ReplicationSourceInterface {
     return totalReplicatedEdits.get();
   }
 
-  @Override
-  public long getSleepForRetriesForTesting() {
+  public long getSleepForRetries() {
     return sleepForRetries;
   }
 
-  @Override
   public Map<String, ReplicationSourceShipper> getWorkerThreadsForTesting() {
     return workerThreads;
   }
