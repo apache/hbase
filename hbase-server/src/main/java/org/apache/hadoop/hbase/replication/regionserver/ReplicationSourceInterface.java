@@ -211,7 +211,7 @@ public interface ReplicationSourceInterface {
     getSourceManager().logPositionAndCleanOldLogs(this, entryBatch);
   }
 
-  default long getSleepForRetriesForTesting() {
+  default long getSleepForRetries() {
     throw new UnsupportedOperationException("Not implemented");
   }
 

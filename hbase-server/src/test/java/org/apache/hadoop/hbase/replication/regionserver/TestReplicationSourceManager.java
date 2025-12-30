@@ -25,7 +25,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
@@ -80,7 +79,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 
 @Category({ ReplicationTests.class, MediumTests.class })
@@ -404,7 +402,7 @@ public class TestReplicationSourceManager {
     assertNotNull("Source should be created for peer", source);
 
     assertEquals("ReplicationSource should use peer config override for sleepForRetries",
-      peerSleepOverride, source.getSleepForRetriesForTesting());
+      peerSleepOverride, source.getSleepForRetries());
 
     Map<String, ReplicationSourceShipper> workers = source.getWorkerThreadsForTesting();
     if (workers != null && !workers.isEmpty()) {
@@ -461,14 +459,14 @@ public class TestReplicationSourceManager {
       .filter(s -> s.getPeerId().equals(peerIdWithOverride)).findFirst().orElse(null);
     assertNotNull("Source with override should be created", sourceWithOverride);
     assertEquals("Peer with override should use override value", peerSleepOverride,
-      sourceWithOverride.getSleepForRetriesForTesting());
+      sourceWithOverride.getSleepForRetries());
 
     // Verify peer without override uses global config
     ReplicationSourceInterface sourceWithoutOverride = manager.getSources().stream()
       .filter(s -> s.getPeerId().equals(peerIdWithoutOverride)).findFirst().orElse(null);
     assertNotNull("Source without override should be created", sourceWithoutOverride);
     assertEquals("Peer without override should use global config", globalSleepValue,
-      sourceWithoutOverride.getSleepForRetriesForTesting());
+      sourceWithoutOverride.getSleepForRetries());
 
     removePeerAndWait(peerIdWithOverride);
     removePeerAndWait(peerIdWithoutOverride);
