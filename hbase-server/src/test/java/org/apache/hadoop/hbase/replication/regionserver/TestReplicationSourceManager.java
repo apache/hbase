@@ -422,4 +422,55 @@ public class TestReplicationSourceManager {
 
     removePeerAndWait(peerId);
   }
+
+  @Test
+  public void testPeerConfigurationIsolation() throws Exception {
+    Configuration globalConf = UTIL.getConfiguration();
+    long globalSleepValue = 1000L;
+    globalConf.setLong("replication.source.sleepforretries", globalSleepValue);
+
+    // Create first peer WITH config override
+    long peerSleepOverride = 5000L;
+    String peerIdWithOverride = "peerWithOverride";
+    String clusterKeyWithOverride = "testPeerWithOverride";
+
+    ReplicationPeerConfig configWithOverride = ReplicationPeerConfig.newBuilder()
+      .setClusterKey(UTIL.getZkCluster().getAddress().toString() + ":/" + clusterKeyWithOverride)
+      .setReplicationEndpointImpl(ReplicationEndpointForTest.class.getName())
+      .putConfiguration("replication.source.sleepforretries", String.valueOf(peerSleepOverride))
+      .build();
+
+    manager.getReplicationPeers().getPeerStorage().addPeer(peerIdWithOverride, configWithOverride,
+      true, SyncReplicationState.NONE);
+    manager.addPeer(peerIdWithOverride);
+
+    // Create second peer WITHOUT config override
+    String peerIdWithoutOverride = "peerWithoutOverride";
+    String clusterKeyWithoutOverride = "testPeerWithoutOverride";
+    addPeerAndWait(peerIdWithoutOverride, clusterKeyWithoutOverride, false);
+
+    // Wait for both peers to be active
+    UTIL.waitFor(20000, () -> {
+      ReplicationSourceInterface rs1 = manager.getSource(peerIdWithOverride);
+      ReplicationSourceInterface rs2 = manager.getSource(peerIdWithoutOverride);
+      return rs1 != null && rs1.isSourceActive() && rs2 != null && rs2.isSourceActive();
+    });
+
+    // Verify peer with override uses the override value
+    ReplicationSourceInterface sourceWithOverride = manager.getSources().stream()
+      .filter(s -> s.getPeerId().equals(peerIdWithOverride)).findFirst().orElse(null);
+    assertNotNull("Source with override should be created", sourceWithOverride);
+    assertEquals("Peer with override should use override value", peerSleepOverride,
+      sourceWithOverride.getSleepForRetriesForTesting());
+
+    // Verify peer without override uses global config
+    ReplicationSourceInterface sourceWithoutOverride = manager.getSources().stream()
+      .filter(s -> s.getPeerId().equals(peerIdWithoutOverride)).findFirst().orElse(null);
+    assertNotNull("Source without override should be created", sourceWithoutOverride);
+    assertEquals("Peer without override should use global config", globalSleepValue,
+      sourceWithoutOverride.getSleepForRetriesForTesting());
+
+    removePeerAndWait(peerIdWithOverride);
+    removePeerAndWait(peerIdWithoutOverride);
+  }
 }
