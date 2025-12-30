@@ -122,7 +122,7 @@ public class TestRSStatusPage {
     int port = firstServerName.getPort();
 
     URL url = new URL("http://" + hostname + ":" + infoPort + "/regionserver.jsp");
-    String page = TestServerHttpUtils.getPageContent(url, "text/html;charset=utf-8");
+    String page = TestServerHttpUtils.getPageContent(url, "text/html");
 
     assertTrue(page.contains("<title>HBase Region Server: " + masterHostname + "</title>"));
 
