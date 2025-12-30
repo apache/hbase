@@ -28,6 +28,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Set;
 import java.util.TreeMap;
@@ -372,5 +373,53 @@ public class TestReplicationSourceManager {
     ReplicationSourceInterface source = manager.getSource(peerId);
     manager.cleanOldLogs(walName, true, source);
     assertFalse(FS.exists(remoteWAL));
+  }
+
+  @Test
+  public void testPeerConfigurationOverridesPropagate() throws Exception {
+    Configuration globalConf = UTIL.getConfiguration();
+    long globalSleepValue = 1000L;
+    globalConf.setLong("replication.source.sleepforretries", globalSleepValue);
+
+    long peerSleepOverride = 5000L;
+    String peerId = "testConfigOverridePeer";
+    String clusterKey = "testPeerConfigOverride";
+
+    ReplicationPeerConfig peerConfig = ReplicationPeerConfig.newBuilder()
+      .setClusterKey(UTIL.getZkCluster().getAddress().toString() + ":/" + clusterKey)
+      .setReplicationEndpointImpl(ReplicationEndpointForTest.class.getName())
+      .putConfiguration("replication.source.sleepforretries", String.valueOf(peerSleepOverride))
+      .build();
+
+    manager.getReplicationPeers().getPeerStorage().addPeer(peerId, peerConfig, true,
+      SyncReplicationState.NONE);
+    manager.addPeer(peerId);
+    UTIL.waitFor(20000, () -> {
+      ReplicationSourceInterface rs = manager.getSource(peerId);
+      return rs != null && rs.isSourceActive();
+    });
+
+    ReplicationSourceInterface source = manager.getSources().stream()
+      .filter(s -> s.getPeerId().equals(peerId)).findFirst().orElse(null);
+    assertNotNull("Source should be created for peer", source);
+
+    assertEquals("ReplicationSource should use peer config override for sleepForRetries",
+      peerSleepOverride, source.getSleepForRetriesForTesting());
+
+    Map<String, ReplicationSourceShipper> workers = source.getWorkerThreadsForTesting();
+    if (workers != null && !workers.isEmpty()) {
+      ReplicationSourceShipper shipper = workers.values().iterator().next();
+      assertEquals("ReplicationSourceShipper should use peer config override for sleepForRetries",
+        peerSleepOverride, shipper.getSleepForRetriesForTesting());
+
+      ReplicationSourceWALReader reader = shipper.getEntryReaderForTesting();
+      if (reader != null) {
+        assertEquals(
+          "ReplicationSourceWALReader should use peer config override for sleepForRetries",
+          peerSleepOverride, reader.getSleepForRetriesForTesting());
+      }
+    }
+
+    removePeerAndWait(peerId);
   }
 }
