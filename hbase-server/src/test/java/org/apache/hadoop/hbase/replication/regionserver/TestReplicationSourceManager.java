@@ -410,13 +410,13 @@ public class TestReplicationSourceManager {
     if (workers != null && !workers.isEmpty()) {
       ReplicationSourceShipper shipper = workers.values().iterator().next();
       assertEquals("ReplicationSourceShipper should use peer config override for sleepForRetries",
-        peerSleepOverride, shipper.getSleepForRetriesForTesting());
+        peerSleepOverride, shipper.getSleepForRetries());
 
       ReplicationSourceWALReader reader = shipper.getEntryReaderForTesting();
       if (reader != null) {
         assertEquals(
           "ReplicationSourceWALReader should use peer config override for sleepForRetries",
-          peerSleepOverride, reader.getSleepForRetriesForTesting());
+          peerSleepOverride, reader.getSleepForRetries());
       }
     }
 
