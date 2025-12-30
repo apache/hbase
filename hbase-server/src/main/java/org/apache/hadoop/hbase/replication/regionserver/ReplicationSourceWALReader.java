@@ -70,6 +70,7 @@ class ReplicationSourceWALReader extends Thread {
   private final int replicationBatchCountCapacity;
   // position in the WAL to start reading at
   private long currentPosition;
+  private final long sleepForRetries;
   private final int maxRetriesMultiplier;
 
   // Indicates whether this particular worker is running
@@ -101,6 +102,8 @@ class ReplicationSourceWALReader extends Thread {
     // memory used will be batchSizeCapacity * (nb.batches + 1)
     // the +1 is for the current thread reading before placing onto the queue
     int batchCount = conf.getInt("replication.source.nb.batches", 1);
+    // 1 second
+    this.sleepForRetries = this.conf.getLong("replication.source.sleepforretries", 1000);
     // 5 minutes @ 1 sec per
     this.maxRetriesMultiplier = this.conf.getInt("replication.source.maxretriesmultiplier", 300);
     this.entryBatchQueue = new LinkedBlockingQueue<>(batchCount);
@@ -124,7 +127,7 @@ class ReplicationSourceWALReader extends Thread {
     if (sleepMultiplier < maxRetriesMultiplier) {
       sleepMultiplier++;
     }
-    Threads.sleep(source.getSleepForRetries() * sleepMultiplier);
+    Threads.sleep(sleepForRetries * sleepMultiplier);
     return sleepMultiplier;
   }
 
@@ -136,7 +139,7 @@ class ReplicationSourceWALReader extends Thread {
         source.getWALFileLengthProvider(), source.getSourceMetrics(), walGroupId)) {
         while (isReaderRunning()) { // loop here to keep reusing stream while we can
           if (!source.isPeerEnabled()) {
-            Threads.sleep(source.getSleepForRetries());
+            Threads.sleep(sleepForRetries);
             continue;
           }
           if (!checkBufferQuota()) {
@@ -269,7 +272,7 @@ class ReplicationSourceWALReader extends Thread {
   private boolean checkBufferQuota() {
     // try not to go over total quota
     if (!this.getSourceManager().checkBufferQuota(this.source.getPeerId())) {
-      Threads.sleep(source.getSleepForRetries());
+      Threads.sleep(sleepForRetries);
       return false;
     }
     return true;

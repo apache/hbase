@@ -148,13 +148,6 @@ public interface ReplicationSourceInterface {
     return getPeer().getPeerConfig().isSyncReplication();
   }
 
-  /**
-   * Get the sleep time for retries. Check peer config first, if set use it, otherwise fall back to
-   * global configuration.
-   * @return sleep time in milliseconds
-   */
-  long getSleepForRetries();
-
   /** Returns active or not */
   boolean isSourceActive();
 

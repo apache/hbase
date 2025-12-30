@@ -652,21 +652,6 @@ module Hbase
       command(:remove_peer, @peer_id)
     end
 
-    define_test 'set_peer_sleep_for_retries: works with peer sleep for retries' do
-      cluster_key = org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster::HOST + ":2181:/hbase-test"
-      args = {CLUSTER_KEY => cluster_key, ENDPOINT_CLASSNAME => @dummy_endpoint}
-      command(:add_peer, @peer_id, args)
-
-      peer_config = command(:get_peer_config, @peer_id)
-      assert_equal(0, peer_config.getSleepForRetries)
-      command(:set_peer_sleep_for_retries, @peer_id, 2000)
-      peer_config = command(:get_peer_config, @peer_id)
-      assert_equal(2000, peer_config.getSleepForRetries)
-
-      #cleanup
-      command(:remove_peer, @peer_id)
-    end
-
     define_test 'get_peer_config: works with simple clusterKey peer' do
       cluster_key = org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster::HOST + ":2181:/hbase-test"
       args = {CLUSTER_KEY => cluster_key, ENDPOINT_CLASSNAME => @dummy_endpoint}

@@ -67,6 +67,8 @@ public class ReplicationSourceShipper extends Thread {
   private volatile WorkerState state;
   final ReplicationSourceWALReader entryReader;
 
+  // How long should we sleep for each retry
+  private final long sleepForRetries;
   // Maximum number of retries before taking bold actions
   private final int maxRetriesMultiplier;
   private final int DEFAULT_TIMEOUT = 20000;
@@ -79,6 +81,8 @@ public class ReplicationSourceShipper extends Thread {
     this.walGroupId = walGroupId;
     this.source = source;
     this.entryReader = walReader;
+    // 1 second
+    this.sleepForRetries = this.conf.getLong("replication.source.sleepforretries", 1000);
     // 5 minutes @ 1 sec per
     this.maxRetriesMultiplier = this.conf.getInt("replication.source.maxretriesmultiplier", 300);
     // 20 seconds
@@ -98,8 +102,7 @@ public class ReplicationSourceShipper extends Thread {
       if (!source.isPeerEnabled()) {
         // The peer enabled check is in memory, not expensive, so do not need to increase the
         // sleep interval as it may cause a long lag when we enable the peer.
-        sleepForRetries("Replication is disabled", source.getSleepForRetries(), 1,
-          maxRetriesMultiplier);
+        sleepForRetries("Replication is disabled", sleepForRetries, 1, maxRetriesMultiplier);
         continue;
       }
       try {
@@ -217,8 +220,8 @@ public class ReplicationSourceShipper extends Thread {
         LOG.warn("{} threw unknown exception:",
           source.getReplicationEndpoint().getClass().getName(), ex);
         if (
-          sleepForRetries("ReplicationEndpoint threw exception", source.getSleepForRetries(),
-            sleepMultiplier, maxRetriesMultiplier)
+          sleepForRetries("ReplicationEndpoint threw exception", sleepForRetries, sleepMultiplier,
+            maxRetriesMultiplier)
         ) {
           sleepMultiplier++;
         }
@@ -331,7 +334,7 @@ public class ReplicationSourceShipper extends Thread {
           return;
         } else {
           // Wait both shipper and reader threads to stop
-          Thread.sleep(source.getSleepForRetries());
+          Thread.sleep(this.sleepForRetries);
         }
       } catch (InterruptedException e) {
         LOG.warn("{} Interrupted while waiting {} to stop on clearWALEntryBatch. "

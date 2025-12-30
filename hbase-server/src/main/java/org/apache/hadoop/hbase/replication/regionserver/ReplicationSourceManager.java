@@ -47,6 +47,7 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
@@ -175,6 +176,9 @@ public class ReplicationSourceManager {
 
   private AtomicLong totalBufferUsed = new AtomicLong();
 
+  // How long should we sleep for each retry when deleting remote wal files for sync replication
+  // peer.
+  private final long sleepForRetries;
   // Maximum number of retries before taking bold actions when deleting remote wal files for sync
   // replication peer.
   private final int maxRetriesMultiplier;
@@ -224,6 +228,7 @@ public class ReplicationSourceManager {
     tfb.setDaemon(true);
     this.executor.setThreadFactory(tfb.build());
     this.latestPaths = new HashMap<>();
+    this.sleepForRetries = this.conf.getLong("replication.source.sync.sleepforretries", 1000);
     this.maxRetriesMultiplier =
       this.conf.getInt("replication.source.sync.maxretriesmultiplier", 60);
     this.totalBufferLimit = conf.getLong(HConstants.REPLICATION_SOURCE_TOTAL_BUFFER_KEY,
@@ -314,7 +319,18 @@ public class ReplicationSourceManager {
     WALFileLengthProvider walFileLengthProvider = this.walFactory.getWALProvider() != null
       ? this.walFactory.getWALProvider().getWALFileLengthProvider()
       : p -> OptionalLong.empty();
-    src.init(conf, fs, this, queueStorage, replicationPeer, server, queueData, clusterId,
+
+    // Create merged configuration with peer overrides as higher priority and
+    // global config as lower priority
+    Configuration mergedConf = conf;
+    if (!replicationPeer.getPeerConfig().getConfiguration().isEmpty()) {
+      CompoundConfiguration compound = new CompoundConfiguration();
+      compound.add(conf);
+      compound.addStringMap(replicationPeer.getPeerConfig().getConfiguration());
+      mergedConf = compound;
+    }
+
+    src.init(mergedConf, fs, this, queueStorage, replicationPeer, server, queueData, clusterId,
       walFileLengthProvider, new MetricsSource(queueData.getId().toString()));
     return src;
   }
@@ -743,8 +759,8 @@ public class ReplicationSourceManager {
             return;
           }
           if (
-            ReplicationUtils.sleepForRetries("Failed to delete remote wals",
-              source.getSleepForRetries(), sleepMultiplier, maxRetriesMultiplier)
+            ReplicationUtils.sleepForRetries("Failed to delete remote wals", sleepForRetries,
+              sleepMultiplier, maxRetriesMultiplier)
           ) {
             sleepMultiplier++;
           }
