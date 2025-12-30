@@ -99,10 +99,10 @@ public class RecoveredReplicationSourceShipper extends ReplicationSourceShipper 
     }
     if (entryReader != null) {
       entryReader.interrupt();
-      Threads.shutdown(entryReader, source.getSleepForRetries());
+      Threads.shutdown(entryReader, sleepForRetries);
     }
     this.interrupt();
-    Threads.shutdown(this, source.getSleepForRetries());
+    Threads.shutdown(this, sleepForRetries);
     LOG.info("ReplicationSourceWorker {} terminated", this.getName());
   }
 }

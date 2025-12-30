@@ -308,17 +308,10 @@ module Hbase
     # Set new bandwidth config for the specified peer
     def set_peer_bandwidth(id, bandwidth)
       rpc = get_peer_config(id)
-      return if rpc.nil?
-      rpc = ReplicationPeerConfig.newBuilder(rpc).setBandwidth(bandwidth).build
-      @admin.updateReplicationPeerConfig(id, rpc)
-    end
-
-    # Set new sleep_for_retries config for the specified peer
-    def set_peer_sleep_for_retries(id, sleep_for_retries)
-      rpc = get_peer_config(id)
-      return if rpc.nil?
-      rpc = ReplicationPeerConfig.newBuilder(rpc).setSleepForRetries(sleep_for_retries).build
-      @admin.updateReplicationPeerConfig(id, rpc)
+      unless rpc.nil?
+        rpc.setBandwidth(bandwidth)
+        @admin.updateReplicationPeerConfig(id, rpc)
+      end
     end
 
     # Append exclude namespaces config for the specified peer

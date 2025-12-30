@@ -98,6 +98,8 @@ public class ReplicationSource implements ReplicationSourceInterface {
   protected ReplicationSourceManager manager;
   // Should we stop everything?
   protected Server server;
+  // How long should we sleep for each retry
+  private long sleepForRetries;
   protected FileSystem fs;
   // id of this cluster
   private UUID clusterId;
@@ -198,6 +200,8 @@ public class ReplicationSource implements ReplicationSourceInterface {
     this.waitOnEndpointSeconds =
       this.conf.getInt(WAIT_ON_ENDPOINT_SECONDS, DEFAULT_WAIT_ON_ENDPOINT_SECONDS);
     decorateConf();
+    // 1 second
+    this.sleepForRetries = this.conf.getLong("replication.source.sleepforretries", 1000);
     // 5 minutes @ 1 sec per
     this.maxRetriesMultiplier = this.conf.getInt("replication.source.maxretriesmultiplier", 300);
     this.queueSizePerGroup = this.conf.getInt("hbase.regionserver.maxlogs", 32);
@@ -488,19 +492,6 @@ public class ReplicationSource implements ReplicationSourceInterface {
   }
 
   /**
-   * Get the sleep time for retries. Check peer config first, if set use it, otherwise fall back to
-   * global configuration.
-   * @return sleep time in milliseconds
-   */
-  protected long getSleepForRetries() {
-    long peerSleepForRetries = replicationPeer.getPeerConfig().getSleepForRetries();
-    if (peerSleepForRetries > 0) {
-      return peerSleepForRetries;
-    }
-    return this.conf.getLong("replication.source.sleepforretries", 1000);
-  }
-
-  /**
    * Do the sleeping logic
    * @param msg             Why we sleep
    * @param sleepMultiplier by how many times the default sleeping time is augmented
@@ -508,12 +499,11 @@ public class ReplicationSource implements ReplicationSourceInterface {
    */
   protected boolean sleepForRetries(String msg, int sleepMultiplier) {
     try {
-      long sleepForRetries = getSleepForRetries();
       if (LOG.isTraceEnabled()) {
         LOG.trace("{} {}, sleeping {} times {}", logPeerId(), msg, sleepForRetries,
           sleepMultiplier);
       }
-      Thread.sleep(sleepForRetries * sleepMultiplier);
+      Thread.sleep(this.sleepForRetries * sleepMultiplier);
     } catch (InterruptedException e) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("{} Interrupted while sleeping between retries", logPeerId());
@@ -578,7 +568,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
       if (this.isSourceActive() && peerClusterId == null) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("{} Could not connect to Peer ZK. Sleeping for {} millis", logPeerId(),
-            (getSleepForRetries() * sleepMultiplier));
+            (this.sleepForRetries * sleepMultiplier));
         }
         if (sleepForRetries("Cannot contact the peer's zk ensemble", sleepMultiplier)) {
           sleepMultiplier++;
@@ -676,7 +666,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
       // And notice that we may call terminate directly from the initThread so here we need to
       // avoid join on ourselves.
       initThread.interrupt();
-      Threads.shutdown(initThread, getSleepForRetries());
+      Threads.shutdown(initThread, this.sleepForRetries);
     }
     Collection<ReplicationSourceShipper> workers = workerThreads.values();
 
@@ -695,7 +685,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
       if (worker.isAlive() || worker.entryReader.isAlive()) {
         try {
           // Wait worker to stop
-          Thread.sleep(getSleepForRetries());
+          Thread.sleep(this.sleepForRetries);
         } catch (InterruptedException e) {
           LOG.info("{} Interrupted while waiting {} to stop", logPeerId(), worker.getName());
           Thread.currentThread().interrupt();
@@ -718,12 +708,12 @@ public class ReplicationSource implements ReplicationSourceInterface {
 
     if (join) {
       for (ReplicationSourceShipper worker : workers) {
-        Threads.shutdown(worker, getSleepForRetries());
+        Threads.shutdown(worker, this.sleepForRetries);
         LOG.info("{} ReplicationSourceWorker {} terminated", logPeerId(), worker.getName());
       }
       if (this.replicationEndpoint != null) {
         try {
-          this.replicationEndpoint.awaitTerminated(getSleepForRetries() * maxRetriesMultiplier,
+          this.replicationEndpoint.awaitTerminated(sleepForRetries * maxRetriesMultiplier,
             TimeUnit.MILLISECONDS);
         } catch (TimeoutException te) {
           LOG.warn("{} Got exception while waiting for endpoint to shutdown "

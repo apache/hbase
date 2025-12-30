@@ -48,7 +48,6 @@ public class ReplicationPeerConfig {
   private Set<String> excludeNamespaces = null;
   private long bandwidth = 0;
   private final boolean serial;
-  private long sleepForRetries = 0;
 
   private ReplicationPeerConfig(ReplicationPeerConfigBuilderImpl builder) {
     this.clusterKey = builder.clusterKey;
@@ -68,7 +67,6 @@ public class ReplicationPeerConfig {
       : null;
     this.bandwidth = builder.bandwidth;
     this.serial = builder.serial;
-    this.sleepForRetries = builder.sleepForRetries;
   }
 
   private Map<TableName, List<String>>
@@ -224,10 +222,6 @@ public class ReplicationPeerConfig {
     return serial;
   }
 
-  public long getSleepForRetries() {
-    return this.sleepForRetries;
-  }
-
   public static ReplicationPeerConfigBuilder newBuilder(ReplicationPeerConfig peerConfig) {
     ReplicationPeerConfigBuilderImpl builder = new ReplicationPeerConfigBuilderImpl();
     builder.setClusterKey(peerConfig.getClusterKey())
@@ -237,8 +231,7 @@ public class ReplicationPeerConfig {
       .setReplicateAllUserTables(peerConfig.replicateAllUserTables())
       .setExcludeTableCFsMap(peerConfig.getExcludeTableCFsMap())
       .setExcludeNamespaces(peerConfig.getExcludeNamespaces())
-      .setBandwidth(peerConfig.getBandwidth()).setSerial(peerConfig.isSerial())
-      .setSleepForRetries(peerConfig.getSleepForRetries());
+      .setBandwidth(peerConfig.getBandwidth()).setSerial(peerConfig.isSerial());
     return builder;
   }
 
@@ -266,8 +259,6 @@ public class ReplicationPeerConfig {
     private long bandwidth = 0;
 
     private boolean serial = false;
-
-    private long sleepForRetries = 0;
 
     @Override
     public ReplicationPeerConfigBuilder setClusterKey(String clusterKey) {
@@ -343,12 +334,6 @@ public class ReplicationPeerConfig {
     }
 
     @Override
-    public ReplicationPeerConfigBuilder setSleepForRetries(long sleepForRetries) {
-      this.sleepForRetries = sleepForRetries;
-      return this;
-    }
-
-    @Override
     public ReplicationPeerConfig build() {
       // It would be nice to validate the configuration, but we have to work with "old" data
       // from ZK which makes it much more difficult.
@@ -377,8 +362,7 @@ public class ReplicationPeerConfig {
       }
     }
     builder.append("bandwidth=").append(bandwidth).append(",");
-    builder.append("serial=").append(serial).append(",");
-    builder.append("sleepForRetries=").append(sleepForRetries);
+    builder.append("serial=").append(serial);
     return builder.toString();
   }
 

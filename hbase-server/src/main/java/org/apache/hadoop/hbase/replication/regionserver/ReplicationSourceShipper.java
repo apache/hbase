@@ -67,6 +67,8 @@ public class ReplicationSourceShipper extends Thread {
   private volatile WorkerState state;
   protected ReplicationSourceWALReader entryReader;
 
+  // How long should we sleep for each retry
+  protected final long sleepForRetries;
   // Maximum number of retries before taking bold actions
   protected final int maxRetriesMultiplier;
   private final int DEFAULT_TIMEOUT = 20000;
@@ -79,6 +81,8 @@ public class ReplicationSourceShipper extends Thread {
     this.walGroupId = walGroupId;
     this.logQueue = logQueue;
     this.source = source;
+    // 1 second
+    this.sleepForRetries = this.conf.getLong("replication.source.sleepforretries", 1000);
     // 5 minutes @ 1 sec per
     this.maxRetriesMultiplier = this.conf.getInt("replication.source.maxretriesmultiplier", 300);
     // 20 seconds
@@ -312,9 +316,8 @@ public class ReplicationSourceShipper extends Thread {
    */
   public boolean sleepForRetries(String msg, int sleepMultiplier) {
     try {
-      long sleepForRetries = source.getSleepForRetries();
       LOG.trace("{}, sleeping {} times {}", msg, sleepForRetries, sleepMultiplier);
-      Thread.sleep(sleepForRetries * sleepMultiplier);
+      Thread.sleep(this.sleepForRetries * sleepMultiplier);
     } catch (InterruptedException e) {
       LOG.debug("Interrupted while sleeping between retries");
       Thread.currentThread().interrupt();
@@ -346,7 +349,7 @@ public class ReplicationSourceShipper extends Thread {
           return;
         } else {
           // Wait both shipper and reader threads to stop
-          Thread.sleep(source.getSleepForRetries());
+          Thread.sleep(this.sleepForRetries);
         }
       } catch (InterruptedException e) {
         LOG.warn("{} Interrupted while waiting {} to stop on clearWALEntryBatch. "

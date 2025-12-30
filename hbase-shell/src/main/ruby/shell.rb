@@ -525,7 +525,6 @@ Shell.load_command_group(
     append_peer_exclude_tableCFs
     remove_peer_exclude_tableCFs
     set_peer_bandwidth
-    set_peer_sleep_for_retries
     list_replicated_tables
     append_peer_tableCFs
     remove_peer_tableCFs

@@ -316,10 +316,6 @@ public final class ReplicationPeerConfigUtil {
       builder.setSerial(peer.getSerial());
     }
 
-    if (peer.hasSleepForRetries()) {
-      builder.setSleepForRetries(peer.getSleepForRetries());
-    }
-
     Map<TableName, List<String>> excludeTableCFsMap = convert2Map(peer.getExcludeTableCfsList()
       .toArray(new ReplicationProtos.TableCF[peer.getExcludeTableCfsCount()]));
     if (excludeTableCFsMap != null) {
@@ -372,7 +368,6 @@ public final class ReplicationPeerConfigUtil {
     builder.setBandwidth(peerConfig.getBandwidth());
     builder.setReplicateAll(peerConfig.replicateAllUserTables());
     builder.setSerial(peerConfig.isSerial());
-    builder.setSleepForRetries(peerConfig.getSleepForRetries());
 
     ReplicationProtos.TableCF[] excludeTableCFs = convert(peerConfig.getExcludeTableCFsMap());
     if (excludeTableCFs != null) {

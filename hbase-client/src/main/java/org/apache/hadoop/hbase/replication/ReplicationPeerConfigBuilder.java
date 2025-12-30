@@ -152,13 +152,6 @@ public interface ReplicationPeerConfigBuilder {
   ReplicationPeerConfigBuilder setSerial(boolean serial);
 
   /**
-   * Sets the sleep time between retries for this peer's replication source.
-   * @param sleepForRetries Sleep time in milliseconds
-   * @return {@code this}.
-   */
-  ReplicationPeerConfigBuilder setSleepForRetries(long sleepForRetries);
-
-  /**
    * Builds the configuration object from the current state of {@code this}.
    * @return A {@link ReplicationPeerConfig} instance.
    */
