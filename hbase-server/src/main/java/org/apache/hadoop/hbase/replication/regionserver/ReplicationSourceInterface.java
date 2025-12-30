@@ -185,4 +185,12 @@ public interface ReplicationSourceInterface {
   default void logPositionAndCleanOldLogs(WALEntryBatch entryBatch) {
     getSourceManager().logPositionAndCleanOldLogs(this, entryBatch);
   }
+
+  default long getSleepForRetriesForTesting() {
+    throw new UnsupportedOperationException("Not implemented");
+  }
+
+  default Map<String, ReplicationSourceShipper> getWorkerThreadsForTesting() {
+    throw new UnsupportedOperationException("Not implemented");
+  }
 }

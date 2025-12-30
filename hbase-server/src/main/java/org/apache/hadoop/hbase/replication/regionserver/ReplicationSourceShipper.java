@@ -370,4 +370,12 @@ public class ReplicationSourceShipper extends Thread {
         totalReleasedBytes);
     }
   }
+
+  long getSleepForRetriesForTesting() {
+    return sleepForRetries;
+  }
+
+  ReplicationSourceWALReader getEntryReaderForTesting() {
+    return entryReader;
+  }
 }

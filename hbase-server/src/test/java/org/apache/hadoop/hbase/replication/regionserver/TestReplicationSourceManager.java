@@ -667,6 +667,53 @@ public abstract class TestReplicationSourceManager {
     assertTrue(latestWals.contains(walName2));
   }
 
+  @Test
+  public void testPeerConfigurationOverridesPropagate() throws Exception {
+    Configuration globalConf = utility.getConfiguration();
+    long globalSleepValue = 1000L;
+    globalConf.setLong("replication.source.sleepforretries", globalSleepValue);
+
+    long peerSleepOverride = 5000L;
+    String peerId = "testConfigOverridePeer";
+    String clusterKey = "testPeerConfigOverride";
+
+    ReplicationPeerConfig peerConfig = ReplicationPeerConfig.newBuilder()
+      .setClusterKey(utility.getZkCluster().getAddress().toString() + ":/" + clusterKey)
+      .setReplicationEndpointImpl(ReplicationEndpointForTest.class.getName())
+      .putConfiguration("replication.source.sleepforretries", String.valueOf(peerSleepOverride))
+      .build();
+
+    manager.getReplicationPeers().getPeerStorage().addPeer(peerId, peerConfig, true);
+    manager.addPeer(peerId);
+    utility.waitFor(20000, () -> {
+      ReplicationSourceInterface rs = manager.getSource(peerId);
+      return rs != null && rs.isSourceActive();
+    });
+
+    ReplicationSourceInterface source = manager.getSources().stream()
+      .filter(s -> s.getPeerId().equals(peerId)).findFirst().orElse(null);
+    assertNotNull("Source should be created for peer", source);
+
+    assertEquals("ReplicationSource should use peer config override for sleepForRetries",
+      peerSleepOverride, source.getSleepForRetriesForTesting());
+
+    Map<String, ReplicationSourceShipper> workers = source.getWorkerThreadsForTesting();
+    if (workers != null && !workers.isEmpty()) {
+      ReplicationSourceShipper shipper = workers.values().iterator().next();
+      assertEquals("ReplicationSourceShipper should use peer config override for sleepForRetries",
+        peerSleepOverride, shipper.getSleepForRetriesForTesting());
+
+      ReplicationSourceWALReader reader = shipper.getEntryReaderForTesting();
+      if (reader != null) {
+        assertEquals(
+          "ReplicationSourceWALReader should use peer config override for sleepForRetries",
+          peerSleepOverride, reader.getSleepForRetriesForTesting());
+      }
+    }
+
+    removePeerAndWait(peerId);
+  }
+
   private WALEdit getBulkLoadWALEdit(NavigableMap<byte[], Integer> scope) {
     // 1. Create store files for the families
     Map<byte[], List<Path>> storeFiles = new HashMap<>(1);

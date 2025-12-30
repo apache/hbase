@@ -835,4 +835,14 @@ public class ReplicationSource implements ReplicationSourceInterface {
   public long getTotalReplicatedEdits() {
     return totalReplicatedEdits.get();
   }
+
+  @Override
+  public long getSleepForRetriesForTesting() {
+    return sleepForRetries;
+  }
+
+  @Override
+  public Map<String, ReplicationSourceShipper> getWorkerThreadsForTesting() {
+    return workerThreads;
+  }
 }

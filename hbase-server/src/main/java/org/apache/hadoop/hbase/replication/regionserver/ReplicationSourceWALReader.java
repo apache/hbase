@@ -440,4 +440,8 @@ class ReplicationSourceWALReader extends Thread {
   private ReplicationSourceManager getSourceManager() {
     return this.source.getSourceManager();
   }
+
+  long getSleepForRetriesForTesting() {
+    return sleepForRetries;
+  }
 }
