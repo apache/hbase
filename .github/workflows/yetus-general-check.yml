@@ -125,7 +125,7 @@ jobs:
         with:
           switches: -avzr
           path: yetus-general-check
-          remote_path: ${{ secrets.NIGHTLIES_RSYNC_PATH }}/HBase-PreCommit-GH-Actions-PR/PR-${{ github.event.pull_request.number }}/${{ github.run_number }}/
+          remote_path: ${{ secrets.NIGHTLIES_RSYNC_PATH }}/hbase/HBase-PreCommit-GH-Actions-PR/PR-${{ github.event.pull_request.number }}/${{ github.run_number }}/
           remote_host: ${{ secrets.NIGHTLIES_RSYNC_HOST }}
           remote_port: ${{ secrets.NIGHTLIES_RSYNC_PORT }}
           remote_user: ${{ secrets.NIGHTLIES_RSYNC_USER }}
