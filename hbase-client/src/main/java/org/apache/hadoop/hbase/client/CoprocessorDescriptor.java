@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.util.NavigableMap;
+import java.util.Map;
 import java.util.Optional;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -40,5 +40,5 @@ public interface CoprocessorDescriptor {
   int getPriority();
 
   /** Returns Arbitrary key-value parameter pairs passed into the coprocessor. */
-  NavigableMap<String, String> getProperties();
+  Map<String, String> getProperties();
 }
