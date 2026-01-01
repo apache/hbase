@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -31,6 +32,7 @@ import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.client.CoprocessorDescriptor;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -133,10 +135,7 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
         throw new HBaseIOException(
           "Cannot add or remove column families when this modification " + "won't reopen regions.");
       }
-      if (
-        this.unmodifiedTableDescriptor.getCoprocessorDescriptors().hashCode()
-            != this.modifiedTableDescriptor.getCoprocessorDescriptors().hashCode()
-      ) {
+      if (isCoprocModified()) {
         throw new HBaseIOException(
           "Can not modify Coprocessor when table modification won't reopen regions");
       }
@@ -151,6 +150,25 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
         }
       }
     }
+  }
+
+  private boolean isCoprocModified() {
+    final Collection<CoprocessorDescriptor> unmodifiedCoprocs =
+      this.unmodifiedTableDescriptor.getCoprocessorDescriptors();
+    final Collection<CoprocessorDescriptor> modifiedCoprocs =
+      this.modifiedTableDescriptor.getCoprocessorDescriptors();
+
+    if (unmodifiedCoprocs.size() != modifiedCoprocs.size()) {
+      return true;
+    }
+
+    final Set<CoprocessorDescriptor> unmodifiedSet = new HashSet<>(unmodifiedCoprocs);
+    for (CoprocessorDescriptor cp : modifiedCoprocs) {
+      if (!unmodifiedSet.remove(cp)) {
+        return true;
+      }
+    }
+    return !unmodifiedSet.isEmpty();
   }
 
   /**
