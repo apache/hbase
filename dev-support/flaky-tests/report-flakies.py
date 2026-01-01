@@ -154,9 +154,6 @@ def expand_multi_config_projects(cli_args):
                                         'excludes': excluded_builds, 'is_yetus': is_yetus})
     return final_expanded_urls
 
-bad_tests = set()
-test_to_build_ids = {}
-
 # Set of timeout/failed tests across all given urls.
 all_timeout_tests = set()
 all_failed_tests = set()
@@ -167,6 +164,7 @@ url_to_bad_test_results = OrderedDict()
 # Contains { <url> : [run_ids] }
 # Used for common min/max build ids when generating sparklines.
 url_to_build_ids = OrderedDict()
+all_flaky_results = {}
 
 
 # Iterates over each url, gets test results and prints flaky tests.
@@ -203,7 +201,7 @@ for url_max_build in expanded_urls:
     url_to_build_ids[url].sort()
 
     # Collect list of bad tests.
-
+    bad_tests = set()
     for build in build_id_to_results:
         [_, failed_tests, timeout_tests, hanging_tests] = build_id_to_results[build]
         all_timeout_tests.update(timeout_tests)
@@ -213,9 +211,9 @@ for url_max_build in expanded_urls:
         bad_tests.update(failed_tests.union(hanging_tests))
 
     # For each bad test, get build ids where it ran, timed out, failed or hanged.
-    for key in bad_tests:
-        test_to_build_ids[key] = {'all': set(), 'timeout': set(), 'failed': set(),
-                                  'hanging': set(), 'bad_count': 0}
+    test_to_build_ids = {key: {'all': set(), 'timeout': set(), 'failed': set(),
+                               'hanging': set(), 'bad_count': 0}
+                         for key in bad_tests}
 
     for build in build_id_to_results:
         [all_tests, failed_tests, timeout_tests, hanging_tests] = build_id_to_results[build]
@@ -236,13 +234,23 @@ for url_max_build in expanded_urls:
                 test_result['bad_count'] += 1
 
     # Calculate flakyness % and successful builds for each test. Also sort build ids.
-    for _, test_result in test_to_build_ids.items():
+    for bad_test, test_result in test_to_build_ids.items():
         test_result['flakyness'] = test_result['bad_count'] * 100.0 / len(test_result['all'])
         test_result['success'] = (test_result['all'].difference(
             test_result['failed'].union(test_result['hanging'])))
         for key in ['all', 'timeout', 'failed', 'hanging', 'success']:
             test_result[key] = sorted(test_result[key])
-
+        # record flaky test result
+        # record the one with more runs, or greater flakiness if runs are equal
+        if bad_test not in all_flaky_results:
+            all_flaky_results[bad_test] = {'runs': len(test_result['all']),
+                                           'flakyness': test_result['flakyness']}
+        elif all_flaky_results[bad_test]['runs'] < len(test_result['all']):
+            all_flaky_results[bad_test] = {'runs': len(test_result['all']),
+                                           'flakyness': test_result['flakyness']}
+        elif all_flaky_results[bad_test]['runs'] == len(test_result['all']) and \
+          all_flaky_results[bad_test]['flakyness'] < test_result['flakyness']:
+            all_flaky_results[bad_test]['flakyness'] = test_result['flakyness']
 
     # Sort tests in descending order by flakyness.
     sorted_test_to_build_ids = OrderedDict(
@@ -268,16 +276,20 @@ for url_max_build in expanded_urls:
     print("Builds without any test runs: {}".format(build_ids_without_tests_run))
     print("")
 
+all_bad_tests = all_hanging_tests.union(all_failed_tests)
 if args.mvn:
-    includes = ",".join(bad_tests)
+    includes = ",".join(all_bad_tests)
     with open(output_dir + "/includes", "w") as inc_file:
         inc_file.write(includes)
 
     excludes = []
-    for bad_test in bad_tests:
-        test_result = test_to_build_ids[bad_test]
-        if test_result["flakyness"] > args.excludes_threshold_flakiness and len(
-          test_result["all"]) >= args.excludes_threshold_runs:
+    for bad_test in all_bad_tests:
+        if bad_test not in all_flaky_results:
+            print(f"No flaky record found for {bad_test}")
+            continue
+        test_result = all_flaky_results[bad_test]
+        if test_result['flakyness'] > args.excludes_threshold_flakiness and \
+          test_result['runs'] >= args.excludes_threshold_runs:
             excludes.append(f"**/{bad_test}.java")
     with open(output_dir + "/excludes", "w") as exc_file:
         exc_file.write(",".join(excludes))
