@@ -1964,7 +1964,9 @@ public class BucketCache implements BlockCache, HeapSize {
       // NavigableSet ordering is by (hfileName, offset).
       for (BlockCacheKey key : blocksByHFile.subSet(new BlockCacheKey(prefix, 0), true,
         new BlockCacheKey(prefix + Character.MAX_VALUE, Long.MAX_VALUE), true)) {
-        if (key.getHfileName().startsWith(prefix) && key.getOffset() >= init && key.getOffset() <= end) {
+        if (
+          key.getHfileName().startsWith(prefix) && key.getOffset() >= init && key.getOffset() <= end
+        ) {
           keys.add(key);
         }
       }
@@ -2415,8 +2417,7 @@ public class BucketCache implements BlockCache, HeapSize {
       Set<BlockCacheKey> result = getAllCacheKeysForFile(baseFileName, 0, Long.MAX_VALUE);
       if (result.isEmpty() && StoreFileInfo.isReference(baseFileName)) {
         result = getAllCacheKeysForFile(
-          StoreFileInfo.getReferredToRegionAndFile(baseFileName).getSecond(), 0,
-          Long.MAX_VALUE);
+          StoreFileInfo.getReferredToRegionAndFile(baseFileName).getSecond(), 0, Long.MAX_VALUE);
       }
       result.stream().forEach(entry -> {
         LOG.debug("found block for file {} in the backing map. Acquiring read lock for offset {}",

@@ -73,9 +73,7 @@ public class BlockCacheUtil {
     return idx >= 0 ? hfileName.substring(0, idx) : hfileName;
   }
 
-  /**
-   * @return true if the given HFile name contains a multi-tenant section suffix ({@code #...}).
-   */
+  /** Returns true if the given HFile name contains a multi-tenant section suffix ({@code #...}). */
   public static boolean isMultiTenantSectionHFileName(String hfileName) {
     return hfileName != null && hfileName.indexOf(MULTI_TENANT_HFILE_NAME_DELIMITER) >= 0;
   }
@@ -98,8 +96,7 @@ public class BlockCacheUtil {
     if (isMultiTenantSectionHFileName(requestedHFileName)) {
       return false;
     }
-    return cachedHFileName
-      .startsWith(requestedHFileName + MULTI_TENANT_HFILE_NAME_DELIMITER);
+    return cachedHFileName.startsWith(requestedHFileName + MULTI_TENANT_HFILE_NAME_DELIMITER);
   }
 
   /**

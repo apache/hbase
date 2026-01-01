@@ -37,9 +37,9 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellComparatorImpl;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
@@ -79,7 +79,8 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.io.netty.util.ResourceLeakDetector;
 
 /**
- * This test mirrors {@link TestHFileBlockIndex} but writes HFiles using format version 4 (multi-tenant).
+ * This test mirrors {@link TestHFileBlockIndex} but writes HFiles using format version 4
+ * (multi-tenant).
  * <p>
  * HFile v4 is a container of one or more HFile v3 "sections". For parity with the v3 tests, we
  * create single-section v4 files (tenant prefix length = 0) and validate the embedded v3 section's
@@ -470,8 +471,8 @@ public class TestHFileV4BlockIndex {
 
       KeyValue.KeyOnlyKeyValue cell =
         new KeyValue.KeyOnlyKeyValue(arrayHoldingKey, searchKey.length / 2, searchKey.length);
-      int searchResult = BlockIndexReader.binarySearchNonRootIndex(cell, new MultiByteBuff(nonRootIndex),
-        CellComparatorImpl.COMPARATOR);
+      int searchResult = BlockIndexReader.binarySearchNonRootIndex(cell,
+        new MultiByteBuff(nonRootIndex), CellComparatorImpl.COMPARATOR);
       String lookupFailureMsg =
         "Failed to look up key #" + i + " (" + Bytes.toStringBinary(searchKey) + ")";
 
@@ -740,7 +741,8 @@ public class TestHFileV4BlockIndex {
           assertEquals(Bytes.toStringBinary(blockKeys.get((blockKeys.size() - 1) / 2)),
             reader.midKey());
 
-          assertEquals(UNCOMPRESSED_INDEX_SIZES[testI], reader.getTrailer().getUncompressedDataIndexSize());
+          assertEquals(UNCOMPRESSED_INDEX_SIZES[testI],
+            reader.getTrailer().getUncompressedDataIndexSize());
         }
       }
     }
@@ -811,10 +813,10 @@ public class TestHFileV4BlockIndex {
     // Scanner doesn't do Cells yet. Fix.
     HFileScanner scanner = reader.getScanner(conf, true, true);
     for (int i = 0; i < keys.size(); ++i) {
-      scanner.seekTo(ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(keys.get(i))
-        .setFamily(HConstants.EMPTY_BYTE_ARRAY).setQualifier(HConstants.EMPTY_BYTE_ARRAY)
-        .setTimestamp(HConstants.LATEST_TIMESTAMP).setType(KeyValue.Type.Maximum.getCode())
-        .setValue(HConstants.EMPTY_BYTE_ARRAY).build());
+      scanner.seekTo(ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
+        .setRow(keys.get(i)).setFamily(HConstants.EMPTY_BYTE_ARRAY)
+        .setQualifier(HConstants.EMPTY_BYTE_ARRAY).setTimestamp(HConstants.LATEST_TIMESTAMP)
+        .setType(KeyValue.Type.Maximum.getCode()).setValue(HConstants.EMPTY_BYTE_ARRAY).build());
     }
     reader.close();
   }
@@ -835,8 +837,8 @@ public class TestHFileV4BlockIndex {
     HFileContext context = new HFileContextBuilder().withBlockSize(4096).withIncludesTags(false)
       .withDataBlockEncoding(DataBlockEncoding.NONE).withCompression(compressAlgo).build();
 
-    try (HFile.Writer writer = HFile.getWriterFactory(conf, new CacheConfig(conf)).withPath(fs, hfilePath)
-      .withFileContext(context).create()) {
+    try (HFile.Writer writer = HFile.getWriterFactory(conf, new CacheConfig(conf))
+      .withPath(fs, hfilePath).withFileContext(context).create()) {
 
       List<KeyValue> keyValues = new ArrayList<>(entryCount);
       for (int i = 0; i < entryCount; ++i) {
@@ -850,9 +852,8 @@ public class TestHFileV4BlockIndex {
       }
     }
 
-    try (AbstractMultiTenantReader mtReader =
-      (AbstractMultiTenantReader) HFile.createReader(fs, hfilePath, new CacheConfig(conf), true,
-        conf)) {
+    try (AbstractMultiTenantReader mtReader = (AbstractMultiTenantReader) HFile.createReader(fs,
+      hfilePath, new CacheConfig(conf), true, conf)) {
       assertEquals(HFile.MIN_FORMAT_VERSION_WITH_MULTI_TENANT,
         mtReader.getTrailer().getMajorVersion());
       byte[][] sectionIds = mtReader.getAllTenantSectionIds();
@@ -874,10 +875,10 @@ public class TestHFileV4BlockIndex {
             trailer.getNumDataIndexLevels(), encoder);
 
         long fileSize = sectionReader.length();
-        HFileBlock.BlockIterator blockIter =
-          blockReader.blockRange(trailer.getLoadOnOpenDataOffset(), fileSize - trailer.getTrailerSize());
-        dataBlockIndexReader.readMultiLevelIndexRoot(blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX),
-          trailer.getDataIndexCount());
+        HFileBlock.BlockIterator blockIter = blockReader
+          .blockRange(trailer.getLoadOnOpenDataOffset(), fileSize - trailer.getTrailerSize());
+        dataBlockIndexReader.readMultiLevelIndexRoot(
+          blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX), trailer.getDataIndexCount());
 
         NoOpEncodedSeeker noOpEncodedSeeker = (NoOpEncodedSeeker) encoder.encoderSeeker;
         // Assert we have read midkey metadata successfully.
@@ -915,5 +916,3 @@ public class TestHFileV4BlockIndex {
     }
   }
 }
-
-

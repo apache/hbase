@@ -2342,8 +2342,8 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
    * The underlying {@link FSDataInputStreamWrapper} may resolve a {@code readerPath} different from
    * {@link #getPath()} (e.g. for HFileLinks/Refs). Internally we use
    * {@link HFileReaderImpl#getPathForCaching()} for cache keys; exposing the same name here keeps
-   * behavior consistent for callers/tests that use {@link #getName()} to build {@link BlockCacheKey}
-   * instances.
+   * behavior consistent for callers/tests that use {@link #getName()} to build
+   * {@link BlockCacheKey} instances.
    */
   @Override
   public String getName() {

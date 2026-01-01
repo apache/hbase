@@ -1273,9 +1273,8 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     synchronized (metaBlockIndexReader.getRootBlockKey(block)) {
       // Check cache for block. If found return.
       long metaBlockOffset = metaBlockIndexReader.getRootBlockOffset(block);
-      BlockCacheKey cacheKey =
-        new BlockCacheKey(getNameForCaching(), getOffsetForCaching(metaBlockOffset),
-          this.isPrimaryReplicaReader(), BlockType.META);
+      BlockCacheKey cacheKey = new BlockCacheKey(getNameForCaching(),
+        getOffsetForCaching(metaBlockOffset), this.isPrimaryReplicaReader(), BlockType.META);
 
       cacheBlock &=
         cacheConf.shouldCacheBlockOnRead(BlockType.META.getCategory(), getHFileInfo(), conf);

@@ -140,8 +140,8 @@ public class TestSeekBeforeWithInlineBlocks {
           // the embedded v3 section reader, so assert levels and run the seekBefore checks against
           // that section reader.
           if (hfileVersion >= HFile.MIN_FORMAT_VERSION_WITH_MULTI_TENANT) {
-            try (AbstractMultiTenantReader mtReader =
-              (AbstractMultiTenantReader) HFile.createReader(fs, hfilePath, cacheConf, true, conf)) {
+            try (AbstractMultiTenantReader mtReader = (AbstractMultiTenantReader) HFile
+              .createReader(fs, hfilePath, cacheConf, true, conf)) {
               byte[][] sectionIds = mtReader.getAllTenantSectionIds();
               assertEquals(1, sectionIds.length);
               try (AbstractMultiTenantReader.SectionReaderLease lease =

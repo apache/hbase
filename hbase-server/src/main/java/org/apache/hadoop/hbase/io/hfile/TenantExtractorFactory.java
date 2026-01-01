@@ -85,8 +85,8 @@ public class TenantExtractorFactory {
     //
     // IMPORTANT:
     // - In regionserver/master write paths, the `conf` passed here is usually a Store-specific
-    //   CompoundConfiguration that already includes table descriptor values (see
-    //   StoreUtils#createStoreConfiguration).
+    // CompoundConfiguration that already includes table descriptor values (see
+    // StoreUtils#createStoreConfiguration).
     // - In other call paths, callers may provide `tableProperties` explicitly.
     //
     // We therefore support both, with precedence: tableProperties > conf > default(false).
