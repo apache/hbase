@@ -701,9 +701,8 @@ public class SplitTableRegionProcedure
     // table dir. In case of failure, the proc would go through this again, already existing
     // region dirs and split files would just be ignored, new split files should get created.
     int nbFiles = 0;
-    final Map<String, Pair<Collection<StoreFileInfo>, StoreFileTracker>> files =
-      new HashMap<String, Pair<Collection<StoreFileInfo>, StoreFileTracker>>(
-        htd.getColumnFamilyCount());
+    final Map<String, Collection<StoreFileInfo>> files =
+      new HashMap<String, Collection<StoreFileInfo>>(htd.getColumnFamilyCount());
     for (ColumnFamilyDescriptor cfd : htd.getColumnFamilies()) {
       String family = cfd.getNameAsString();
       StoreFileTracker tracker =
@@ -726,7 +725,7 @@ public class SplitTableRegionProcedure
         }
         if (filteredSfis == null) {
           filteredSfis = new ArrayList<StoreFileInfo>(sfis.size());
-          files.put(family, new Pair(filteredSfis, tracker));
+          files.put(family, filteredSfis);
         }
         filteredSfis.add(sfi);
         nbFiles++;
@@ -749,12 +748,11 @@ public class SplitTableRegionProcedure
     final List<Future<Pair<Path, Path>>> futures = new ArrayList<Future<Pair<Path, Path>>>(nbFiles);
 
     // Split each store file.
-    for (Map.Entry<String, Pair<Collection<StoreFileInfo>, StoreFileTracker>> e : files
-      .entrySet()) {
+    for (Map.Entry<String, Collection<StoreFileInfo>> e : files.entrySet()) {
       byte[] familyName = Bytes.toBytes(e.getKey());
       final ColumnFamilyDescriptor hcd = htd.getColumnFamily(familyName);
-      Pair<Collection<StoreFileInfo>, StoreFileTracker> storeFilesAndTracker = e.getValue();
-      final Collection<StoreFileInfo> storeFiles = storeFilesAndTracker.getFirst();
+      Collection<StoreFileInfo> storeFileInfos = e.getValue();
+      final Collection<StoreFileInfo> storeFiles = storeFileInfos;
       if (storeFiles != null && storeFiles.size() > 0) {
         final Configuration storeConfiguration =
           StoreUtils.createStoreConfiguration(env.getMasterConfiguration(), htd, hcd);
@@ -765,9 +763,8 @@ public class SplitTableRegionProcedure
           // is running in a regionserver's Store context, or we might not be able
           // to read the hfiles.
           storeFileInfo.setConf(storeConfiguration);
-          StoreFileSplitter sfs =
-            new StoreFileSplitter(regionFs, storeFilesAndTracker.getSecond(), familyName,
-              new HStoreFile(storeFileInfo, hcd.getBloomFilterType(), CacheConfig.DISABLED));
+          StoreFileSplitter sfs = new StoreFileSplitter(regionFs, htd, hcd,
+            new HStoreFile(storeFileInfo, hcd.getBloomFilterType(), CacheConfig.DISABLED));
           futures.add(threadPool.submit(sfs));
         }
       }
@@ -833,19 +830,27 @@ public class SplitTableRegionProcedure
     }
   }
 
-  private Pair<Path, Path> splitStoreFile(HRegionFileSystem regionFs, StoreFileTracker tracker,
-    byte[] family, HStoreFile sf) throws IOException {
+  private Pair<Path, Path> splitStoreFile(HRegionFileSystem regionFs, TableDescriptor htd,
+    ColumnFamilyDescriptor hcd, HStoreFile sf) throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("pid=" + getProcId() + " splitting started for store file: " + sf.getPath()
         + " for region: " + getParentRegion().getShortNameToLog());
     }
 
     final byte[] splitRow = getSplitRow();
-    final String familyName = Bytes.toString(family);
+    final String familyName = hcd.getNameAsString();
+    StoreFileTracker daughterOneSft =
+      StoreFileTrackerFactory.create(regionFs.getFileSystem().getConf(), htd, hcd,
+        HRegionFileSystem.create(regionFs.getFileSystem().getConf(), regionFs.getFileSystem(),
+          regionFs.getTableDir(), daughterOneRI));
+    StoreFileTracker daughterTwoSft =
+      StoreFileTrackerFactory.create(regionFs.getFileSystem().getConf(), htd, hcd,
+        HRegionFileSystem.create(regionFs.getFileSystem().getConf(), regionFs.getFileSystem(),
+          regionFs.getTableDir(), daughterTwoRI));
     final Path path_first = regionFs.splitStoreFile(this.daughterOneRI, familyName, sf, splitRow,
-      false, splitPolicy, tracker);
+      false, splitPolicy, daughterOneSft);
     final Path path_second = regionFs.splitStoreFile(this.daughterTwoRI, familyName, sf, splitRow,
-      true, splitPolicy, tracker);
+      true, splitPolicy, daughterTwoSft);
     if (LOG.isDebugEnabled()) {
       LOG.debug("pid=" + getProcId() + " splitting complete for store file: " + sf.getPath()
         + " for region: " + getParentRegion().getShortNameToLog());
@@ -859,27 +864,27 @@ public class SplitTableRegionProcedure
    */
   private class StoreFileSplitter implements Callable<Pair<Path, Path>> {
     private final HRegionFileSystem regionFs;
-    private final byte[] family;
+    private final ColumnFamilyDescriptor hcd;
     private final HStoreFile sf;
-    private final StoreFileTracker tracker;
+    private final TableDescriptor htd;
 
     /**
      * Constructor that takes what it needs to split
      * @param regionFs the file system
-     * @param family   Family that contains the store file
+     * @param hcd      Family that contains the store file
      * @param sf       which file
      */
-    public StoreFileSplitter(HRegionFileSystem regionFs, StoreFileTracker tracker, byte[] family,
-      HStoreFile sf) {
+    public StoreFileSplitter(HRegionFileSystem regionFs, TableDescriptor htd,
+      ColumnFamilyDescriptor hcd, HStoreFile sf) {
       this.regionFs = regionFs;
       this.sf = sf;
-      this.family = family;
-      this.tracker = tracker;
+      this.hcd = hcd;
+      this.htd = htd;
     }
 
     @Override
     public Pair<Path, Path> call() throws IOException {
-      return splitStoreFile(regionFs, tracker, family, sf);
+      return splitStoreFile(regionFs, htd, hcd, sf);
     }
   }
 
