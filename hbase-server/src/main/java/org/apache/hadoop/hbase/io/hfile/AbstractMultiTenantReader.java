@@ -33,6 +33,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.ExtendedCell;
@@ -141,6 +142,15 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
   private int tenantIndexMaxChunkSize = SectionIndexManager.DEFAULT_MAX_CHUNK_SIZE;
   /** Whether prefetch is enabled for sequential access */
   private final boolean prefetchEnabled;
+  /**
+   * Track block-prefetch-on-open for v4 containers.
+   * <p>
+   * For v4 multi-tenant HFiles, block prefetching is executed by section readers (which are v3
+   * {@link HFilePreadReader}s) and scheduled via {@link PrefetchExecutor} using a section-specific
+   * Path. For single-section v4 containers we eagerly instantiate the single section reader so the
+   * standard prefetch-on-open path runs and we can report status via {@link #prefetchComplete()}.
+   */
+  private volatile Path prefetchOnOpenPath;
   /** Cache of section readers keyed by tenant section ID */
   private final Cache<ImmutableBytesWritable, SectionReaderHolder> sectionReaderCache;
   /** Cached Bloom filter state per section */
@@ -204,6 +214,51 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
     this.dataBlockIndexSectionHint = new AtomicReference<>();
 
     LOG.info("Initialized multi-tenant reader for {}", context.getFilePath());
+  }
+
+  /**
+   * Best-effort initiation of block-prefetch-on-open for v4 containers.
+   * <p>
+   * In the v4 multi-tenant reader implementation, actual block prefetching is performed by the
+   * delegated per-section v3 readers. Those section readers are typically created lazily. However,
+   * the prefetch-on-open feature is expected to be scheduled at open time (honoring
+   * {@link PrefetchExecutor#PREFETCH_DELAY}) so that callers/tests can observe prefetch start and
+   * completion.
+   * <p>
+   * To preserve v3 semantics for the common v4 single-section case, we eagerly create the only
+   * section reader when prefetch-on-open is enabled. For multi-section files we do not eagerly
+   * create all section readers to avoid potentially heavy fan-out.
+   */
+  protected final void prefetchBlocksOnOpenIfRequested() {
+    if (prefetchOnOpenPath != null) {
+      return;
+    }
+    if (!cacheConf.getBlockCache().isPresent() || !cacheConf.shouldPrefetchOnOpen()) {
+      return;
+    }
+    if (sectionIds == null || sectionIds.size() != 1) {
+      if (LOG.isDebugEnabled()) {
+        int count = sectionIds == null ? 0 : sectionIds.size();
+        LOG.debug(
+          "Skipping eager prefetch-on-open for v4 multi-tenant file {} because sectionCount={}",
+          getPath(), count);
+      }
+      return;
+    }
+
+    byte[] firstSectionId = sectionIds.get(0).get();
+    try (SectionReaderLease lease = getSectionReader(firstSectionId)) {
+      if (lease == null) {
+        return;
+      }
+      HFileReaderImpl sectionReader = lease.getReader();
+      if (sectionReader != null) {
+        prefetchOnOpenPath = sectionReader.getPath();
+      }
+    } catch (IOException e) {
+      // Best-effort: failure to prefetch must not prevent reads.
+      LOG.debug("Failed to initiate prefetch-on-open for v4 multi-tenant file {}", getPath(), e);
+    }
   }
 
   /**
@@ -2281,14 +2336,29 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
   }
 
   /**
+   * For v4 multi-tenant readers (including refs/links), align {@link #getName()} with the name used
+   * for block cache keys.
+   * <p>
+   * The underlying {@link FSDataInputStreamWrapper} may resolve a {@code readerPath} different from
+   * {@link #getPath()} (e.g. for HFileLinks/Refs). Internally we use
+   * {@link HFileReaderImpl#getPathForCaching()} for cache keys; exposing the same name here keeps
+   * behavior consistent for callers/tests that use {@link #getName()} to build {@link BlockCacheKey}
+   * instances.
+   */
+  @Override
+  public String getName() {
+    return getNameForCaching();
+  }
+
+  /**
    * Check if prefetch is complete for this multi-tenant file.
    * @return true if prefetching is complete for all sections
    */
   @Override
   public boolean prefetchComplete() {
-    // For multi-tenant files, prefetch is complete when section loading is done
-    // This is a simpler check than per-section prefetch status
-    return true; // Multi-tenant files handle prefetch at section level
+    prefetchBlocksOnOpenIfRequested();
+    Path p = prefetchOnOpenPath;
+    return p == null || PrefetchExecutor.isCompleted(p);
   }
 
   /**
@@ -2297,8 +2367,8 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
    */
   @Override
   public boolean prefetchStarted() {
-    // Multi-tenant files start prefetch immediately on open
-    return prefetchEnabled;
+    prefetchBlocksOnOpenIfRequested();
+    return PrefetchExecutor.isPrefetchStarted();
   }
 
   /**

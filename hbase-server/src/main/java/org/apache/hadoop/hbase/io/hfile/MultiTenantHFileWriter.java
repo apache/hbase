@@ -26,7 +26,6 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.Arrays;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
@@ -34,15 +33,10 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
-import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
@@ -425,7 +419,11 @@ public class MultiTenantHFileWriter implements HFile.Writer {
       currentSectionTimeRangeTracker.includeTimestamp(cell);
     }
     globalTimeRangeTracker.includeTimestamp(cell);
-    if (cell.getType() == Cell.Type.Put) {
+    // Do not call cell.getType() here. Some internal/test-only cells (e.g. KeyValue.Type.Maximum)
+    // use type codes which are not valid Cell.Type values and would throw on conversion.
+    // HFile writers historically tolerate these and treat them as non-Put for put-specific
+    // bookkeeping.
+    if (CellUtil.isPut(cell)) {
       long ts = cell.getTimestamp();
       currentSectionEarliestPutTs = Math.min(currentSectionEarliestPutTs, ts);
       globalEarliestPutTs = Math.min(globalEarliestPutTs, ts);
@@ -1476,26 +1474,16 @@ public class MultiTenantHFileWriter implements HFile.Writer {
         }
       }
 
-      // Extract table properties for tenant configuration from table descriptor
-      Map<String, String> tableProperties = new java.util.HashMap<>();
-      BloomType columnFamilyBloomType = null;
-
-      // Get the table descriptor if available
-      TableDescriptor tableDesc = getTableDescriptor(writerFileContext);
-      if (tableDesc != null) {
-        // Extract relevant properties for multi-tenant configuration
-        for (Entry<Bytes, Bytes> entry : tableDesc.getValues().entrySet()) {
-          String key = Bytes.toString(entry.getKey().get());
-          tableProperties.put(key, Bytes.toString(entry.getValue().get()));
-        }
-        columnFamilyBloomType = resolveColumnFamilyBloomType(tableDesc, writerFileContext);
-        LOG.debug(
-          "Creating MultiTenantHFileWriter with table properties from descriptor for table: {}",
-          tableDesc.getTableName());
-      } else {
-        LOG.debug("Creating MultiTenantHFileWriter with default properties "
-          + "(no table descriptor available)");
-      }
+      // IMPORTANT:
+      // This code path runs on regionserver/master threads during flush/compaction.
+      // Never perform any filesystem or RPC lookups here (e.g. fetching a TableDescriptor), as that
+      // can deadlock during shutdown and is also very expensive.
+      //
+      // The `conf` passed here is typically a Store-specific CompoundConfiguration which already
+      // includes table/CF descriptor values (see StoreUtils#createStoreConfiguration).
+      // TenantExtractorFactory reads multi-tenant enablement/prefix length from that Configuration.
+      Map<String, String> tableProperties = null;
+      BloomType columnFamilyBloomType = preferredBloomType;
 
       // Create the writer using the factory method
       // For system tables with MULTI_TENANT_ENABLED=false, this will use SingleTenantExtractor
@@ -1505,54 +1493,6 @@ public class MultiTenantHFileWriter implements HFile.Writer {
       boolean ownsStream = path != null;
       return MultiTenantHFileWriter.create(fs, path, conf, cacheConf, tableProperties,
         writerFileContext, columnFamilyBloomType, preferredBloomType, ostream, ownsStream);
-    }
-
-    /**
-     * Get the table descriptor from the HFile context if available
-     * @param fileContext The HFile context potentially containing a table name
-     * @return The table descriptor or null if not available
-     */
-    private TableDescriptor getTableDescriptor(HFileContext fileContext) {
-      try {
-        // If file context or table name is not available, return null
-        if (fileContext == null || fileContext.getTableName() == null) {
-          LOG.debug("Table name not available in HFileContext");
-          return null;
-        }
-
-        // Get the table descriptor from the Admin API
-        TableName tableName = TableName.valueOf(fileContext.getTableName());
-        try (Connection conn = ConnectionFactory.createConnection(conf);
-          Admin admin = conn.getAdmin()) {
-          return admin.getDescriptor(tableName);
-        } catch (Exception e) {
-          LOG.warn("Failed to get table descriptor using Admin API for {}", tableName, e);
-          return null;
-        }
-      } catch (Exception e) {
-        LOG.warn("Error getting table descriptor", e);
-        return null;
-      }
-    }
-
-    private BloomType resolveColumnFamilyBloomType(TableDescriptor tableDesc,
-      HFileContext fileContext) {
-      if (fileContext == null) {
-        return null;
-      }
-
-      byte[] family = fileContext.getColumnFamily();
-      if (family == null) {
-        return null;
-      }
-
-      ColumnFamilyDescriptor familyDescriptor = tableDesc.getColumnFamily(family);
-      if (familyDescriptor == null) {
-        LOG.debug("Column family {} not found in table descriptor {}, using table-level bloom type",
-          Bytes.toStringBinary(family), tableDesc.getTableName());
-        return null;
-      }
-      return familyDescriptor.getBloomFilterType();
     }
   }
 }

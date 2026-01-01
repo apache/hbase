@@ -157,6 +157,17 @@ public class TestHFile {
   }
 
   private BlockCacheKey cacheKeyFor(HFile.Reader reader, HFileBlock block) {
+    // Use the same key derivation as the reader implementation, especially for multi-tenant files
+    // where the reader may use an offset-translating stream wrapper. This ensures tests validate
+    // real cache behavior rather than a particular naming convention.
+    if (reader instanceof HFileReaderImpl) {
+      HFileReaderImpl impl = (HFileReaderImpl) reader;
+      String hfileName = impl.getNameForCaching();
+      long offset = impl.getOffsetForCaching(block.getOffset());
+      BlockType blockType = block.getBlockType() != null ? block.getBlockType() : BlockType.DATA;
+      return new BlockCacheKey(hfileName, offset, true, blockType);
+    }
+
     String hfileName = block.getHFileContext().getHFileName();
     if (hfileName == null) {
       hfileName = reader.getName();
@@ -164,7 +175,8 @@ public class TestHFile {
         hfileName = hfileName + "#";
       }
     }
-    return new BlockCacheKey(hfileName, block.getOffset());
+    BlockType blockType = block.getBlockType() != null ? block.getBlockType() : BlockType.DATA;
+    return new BlockCacheKey(hfileName, block.getOffset(), true, blockType);
   }
 
   @Test

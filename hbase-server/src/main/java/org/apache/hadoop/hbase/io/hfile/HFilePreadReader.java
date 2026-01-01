@@ -77,7 +77,8 @@ public class HFilePreadReader extends HFileReaderImpl {
               // so we check first if the block exists on its in-memory index, if so, we just
               // update the offset and move on to the next block without actually going read all
               // the way to the cache.
-              BlockCacheKey cacheKey = new BlockCacheKey(name, offset);
+              BlockCacheKey cacheKey =
+                new BlockCacheKey(getNameForCaching(), getOffsetForCaching(offset));
               if (cache.isAlreadyCached(cacheKey).orElse(false)) {
                 // Right now, isAlreadyCached is only supported by BucketCache, which should
                 // always cache data blocks.
@@ -165,17 +166,20 @@ public class HFilePreadReader extends HFileReaderImpl {
     }
   }
 
-  /*
-   * Get the region name for the given file path. A HFile is always kept under the <region>/<column
-   * family>/<hfile>. To find the region for a given hFile, just find the name of the grandparent
-   * directory.
-   */
-  private static String getRegionName(Path path) {
-    return path.getParent().getParent().getName();
-  }
-
   private static String getPathOffsetEndStr(final Path path, final long offset, final long end) {
     return "path=" + path.toString() + ", offset=" + offset + ", end=" + end;
+  }
+
+  /*
+   * Get the region name for the given file path. A HFile is always kept under the
+   * <region>/<column family>/<hfile>. To find the region for a given hFile, just find the name of
+   * the grandparent directory.
+   */
+  private static String getRegionName(Path path) {
+    if (path == null || path.getParent() == null || path.getParent().getParent() == null) {
+      return "";
+    }
+    return path.getParent().getParent().getName();
   }
 
   public void close(boolean evictOnClose) throws IOException {
@@ -185,9 +189,10 @@ public class HFilePreadReader extends HFileReaderImpl {
     // Deallocate data blocks
     cacheConf.getBlockCache().ifPresent(cache -> {
       if (evictOnClose) {
-        int numEvicted = cache.evictBlocksByHfileName(name);
+        int numEvicted = cache.evictBlocksByHfileName(getNameForCaching());
         if (LOG.isTraceEnabled()) {
-          LOG.trace("On close, file= {} evicted= {} block(s)", name, numEvicted);
+          LOG.trace("On close, file= {}, region= {}, evicted= {} block(s)", getNameForCaching(),
+            getRegionName(getPathForCaching()), numEvicted);
         }
       }
     });

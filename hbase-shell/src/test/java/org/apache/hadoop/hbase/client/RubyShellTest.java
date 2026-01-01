@@ -24,6 +24,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.security.access.SecureTestUtil;
 import org.apache.hadoop.hbase.security.visibility.VisibilityTestUtil;
 import org.jruby.embed.PathType;
@@ -57,7 +58,7 @@ public interface RubyShellTest {
     conf.setBoolean("hbase.quota.enabled", true);
     conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 6);
     conf.setBoolean(CoprocessorHost.ABORT_ON_ERROR_KEY, false);
-    conf.setInt("hfile.format.version", 3);
+    conf.setInt(HFile.FORMAT_VERSION_KEY, HFile.MAX_FORMAT_VERSION);
 
     // Below settings are necessary for task monitor test.
     conf.setInt(HConstants.MASTER_INFO_PORT, 0);

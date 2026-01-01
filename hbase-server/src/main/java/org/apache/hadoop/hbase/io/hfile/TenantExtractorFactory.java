@@ -82,14 +82,21 @@ public class TenantExtractorFactory {
     Map<String, String> tableProperties) {
 
     // Check if multi-tenant functionality is enabled for this table
-    boolean multiTenantEnabled = false; // Default to disabled - only enabled when explicitly set
-    if (
-      tableProperties != null
-        && tableProperties.containsKey(MultiTenantHFileWriter.TABLE_MULTI_TENANT_ENABLED)
-    ) {
-      multiTenantEnabled = Boolean
-        .parseBoolean(tableProperties.get(MultiTenantHFileWriter.TABLE_MULTI_TENANT_ENABLED));
+    //
+    // IMPORTANT:
+    // - In regionserver/master write paths, the `conf` passed here is usually a Store-specific
+    //   CompoundConfiguration that already includes table descriptor values (see
+    //   StoreUtils#createStoreConfiguration).
+    // - In other call paths, callers may provide `tableProperties` explicitly.
+    //
+    // We therefore support both, with precedence: tableProperties > conf > default(false).
+    String multiTenantEnabledStr = tableProperties != null
+      ? tableProperties.get(MultiTenantHFileWriter.TABLE_MULTI_TENANT_ENABLED)
+      : null;
+    if (multiTenantEnabledStr == null) {
+      multiTenantEnabledStr = conf.get(MultiTenantHFileWriter.TABLE_MULTI_TENANT_ENABLED);
     }
+    boolean multiTenantEnabled = Boolean.parseBoolean(multiTenantEnabledStr);
 
     // If multi-tenant is disabled, return SingleTenantExtractor
     if (!multiTenantEnabled) {
@@ -103,6 +110,9 @@ public class TenantExtractorFactory {
     String tablePrefixLengthStr = tableProperties != null
       ? tableProperties.get(MultiTenantHFileWriter.TABLE_TENANT_PREFIX_LENGTH)
       : null;
+    if (tablePrefixLengthStr == null) {
+      tablePrefixLengthStr = conf.get(MultiTenantHFileWriter.TABLE_TENANT_PREFIX_LENGTH);
+    }
 
     // If not found at table level, try cluster level settings
     int clusterPrefixLength =

@@ -57,6 +57,52 @@ public class BlockCacheUtil {
   public static final long NANOS_PER_SECOND = 1000000000;
 
   /**
+   * Multi-tenant HFile readers may decorate the underlying HFile name with a section suffix in the
+   * form {@code <hfileName>#<tenantSectionId>} to avoid cache key collisions across sections.
+   */
+  public static final char MULTI_TENANT_HFILE_NAME_DELIMITER = '#';
+
+  /**
+   * Return the base HFile name, stripping any multi-tenant section suffix ({@code #...}).
+   */
+  public static String getBaseHFileName(String hfileName) {
+    if (hfileName == null) {
+      return null;
+    }
+    int idx = hfileName.indexOf(MULTI_TENANT_HFILE_NAME_DELIMITER);
+    return idx >= 0 ? hfileName.substring(0, idx) : hfileName;
+  }
+
+  /**
+   * @return true if the given HFile name contains a multi-tenant section suffix ({@code #...}).
+   */
+  public static boolean isMultiTenantSectionHFileName(String hfileName) {
+    return hfileName != null && hfileName.indexOf(MULTI_TENANT_HFILE_NAME_DELIMITER) >= 0;
+  }
+
+  /**
+   * Match an HFile name for operations where callers use the base storefile name while the cache
+   * may contain multi-tenant section-decorated names.
+   * <p>
+   * If {@code requestedHFileName} already includes a section suffix ({@code #...}), this performs
+   * an exact match. Otherwise it matches either the exact base name or any section-decorated name
+   * that starts with {@code <requestedHFileName>#}.
+   */
+  public static boolean matchesHFileName(String cachedHFileName, String requestedHFileName) {
+    if (cachedHFileName == null || requestedHFileName == null) {
+      return false;
+    }
+    if (cachedHFileName.equals(requestedHFileName)) {
+      return true;
+    }
+    if (isMultiTenantSectionHFileName(requestedHFileName)) {
+      return false;
+    }
+    return cachedHFileName
+      .startsWith(requestedHFileName + MULTI_TENANT_HFILE_NAME_DELIMITER);
+  }
+
+  /**
    * Needed generating JSON.
    */
   private static final Gson GSON =

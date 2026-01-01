@@ -236,7 +236,7 @@ public final class TinyLfuBlockCache implements FirstLevelBlockCache {
   public int evictBlocksByHfileName(String hfileName) {
     int evicted = 0;
     for (BlockCacheKey key : cache.asMap().keySet()) {
-      if (key.getHfileName().equals(hfileName) && evictBlock(key)) {
+      if (BlockCacheUtil.matchesHFileName(key.getHfileName(), hfileName) && evictBlock(key)) {
         evicted++;
       }
     }

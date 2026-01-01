@@ -135,32 +135,50 @@ public class TestSeekBeforeWithInlineBlocks {
           }
 
           // Read the HFile
-          HFile.Reader reader = HFile.createReader(fs, hfilePath, cacheConf, true, conf);
-
-          // Sanity check the HFile index level
-          assertEquals(expectedNumLevels, reader.getTrailer().getNumDataIndexLevels());
-
-          // Check that we can seekBefore in either direction and with both pread
-          // enabled and disabled
-          for (boolean pread : new boolean[] { false, true }) {
-            HFileScanner scanner = reader.getScanner(conf, true, pread);
-            checkNoSeekBefore(cells, scanner, 0);
-            for (int i = 1; i < NUM_KV; i++) {
-              checkSeekBefore(cells, scanner, i);
-              checkCell(cells[i - 1], scanner.getCell());
+          // HFile v4 is a multi-tenant container format and repurposes the trailer
+          // numDataIndexLevels field for the tenant section index. The data block index lives in
+          // the embedded v3 section reader, so assert levels and run the seekBefore checks against
+          // that section reader.
+          if (hfileVersion >= HFile.MIN_FORMAT_VERSION_WITH_MULTI_TENANT) {
+            try (AbstractMultiTenantReader mtReader =
+              (AbstractMultiTenantReader) HFile.createReader(fs, hfilePath, cacheConf, true, conf)) {
+              byte[][] sectionIds = mtReader.getAllTenantSectionIds();
+              assertEquals(1, sectionIds.length);
+              try (AbstractMultiTenantReader.SectionReaderLease lease =
+                mtReader.getSectionReader(sectionIds[0])) {
+                HFileReaderImpl sectionReader = lease.getReader();
+                assertEquals(expectedNumLevels, sectionReader.getTrailer().getNumDataIndexLevels());
+                runSeekBeforeChecks(cells, sectionReader);
+              }
             }
-            assertTrue(scanner.seekTo());
-            for (int i = NUM_KV - 1; i >= 1; i--) {
-              checkSeekBefore(cells, scanner, i);
-              checkCell(cells[i - 1], scanner.getCell());
+          } else {
+            try (HFile.Reader reader = HFile.createReader(fs, hfilePath, cacheConf, true, conf)) {
+              // Sanity check the HFile index level (v3 layout).
+              assertEquals(expectedNumLevels, reader.getTrailer().getNumDataIndexLevels());
+              runSeekBeforeChecks(cells, reader);
             }
-            checkNoSeekBefore(cells, scanner, 0);
-            scanner.close();
           }
-
-          reader.close();
         }
       }
+    }
+  }
+
+  private void runSeekBeforeChecks(ExtendedCell[] cells, HFile.Reader reader) throws IOException {
+    // Check that we can seekBefore in either direction and with both pread enabled and disabled
+    for (boolean pread : new boolean[] { false, true }) {
+      HFileScanner scanner = reader.getScanner(conf, true, pread);
+      checkNoSeekBefore(cells, scanner, 0);
+      for (int i = 1; i < NUM_KV; i++) {
+        checkSeekBefore(cells, scanner, i);
+        checkCell(cells[i - 1], scanner.getCell());
+      }
+      assertTrue(scanner.seekTo());
+      for (int i = NUM_KV - 1; i >= 1; i--) {
+        checkSeekBefore(cells, scanner, i);
+        checkCell(cells[i - 1], scanner.getCell());
+      }
+      checkNoSeekBefore(cells, scanner, 0);
+      scanner.close();
     }
   }
 

@@ -45,6 +45,7 @@ public class MultiTenantPreadReader extends AbstractMultiTenantReader {
     Configuration conf) throws IOException {
     super(context, fileInfo, cacheConf, conf);
     // Tenant index structure is loaded and logged by the parent class
+    prefetchBlocksOnOpenIfRequested();
   }
 
   /**

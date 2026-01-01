@@ -43,6 +43,8 @@ import org.apache.hadoop.hbase.SizeCachedByteBufferKeyValue;
 import org.apache.hadoop.hbase.SizeCachedKeyValue;
 import org.apache.hadoop.hbase.SizeCachedNoTagsByteBufferKeyValue;
 import org.apache.hadoop.hbase.SizeCachedNoTagsKeyValue;
+import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
+import org.apache.hadoop.hbase.io.MultiTenantFSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -1221,6 +1223,31 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
   }
 
   /**
+   * For multi-tenant HFiles, a section reader uses an offset-translating stream wrapper so that
+   * section-internal offsets start at 0. For block cache keys we must always use container-file
+   * coordinates (container file name + absolute file offset), otherwise we will cache the same
+   * physical block under multiple names/offsets (e.g. with/without section suffixes), which breaks
+   * ref-counting/eviction and wastes cache space.
+   */
+  protected Path getPathForCaching() {
+    FSDataInputStreamWrapper wrapper = context.getInputStreamWrapper();
+    Path readerPath = wrapper.getReaderPath();
+    return readerPath != null ? readerPath : path;
+  }
+
+  protected String getNameForCaching() {
+    return getPathForCaching().getName();
+  }
+
+  protected long getOffsetForCaching(long relativeOffset) {
+    FSDataInputStreamWrapper wrapper = context.getInputStreamWrapper();
+    if (wrapper instanceof MultiTenantFSDataInputStreamWrapper) {
+      return ((MultiTenantFSDataInputStreamWrapper) wrapper).toAbsolutePosition(relativeOffset);
+    }
+    return relativeOffset;
+  }
+
+  /**
    * @param cacheBlock Add block to cache, if found
    * @return block wrapped in a ByteBuffer, with header skipped
    */
@@ -1247,7 +1274,8 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
       // Check cache for block. If found return.
       long metaBlockOffset = metaBlockIndexReader.getRootBlockOffset(block);
       BlockCacheKey cacheKey =
-        new BlockCacheKey(name, metaBlockOffset, this.isPrimaryReplicaReader(), BlockType.META);
+        new BlockCacheKey(getNameForCaching(), getOffsetForCaching(metaBlockOffset),
+          this.isPrimaryReplicaReader(), BlockType.META);
 
       cacheBlock &=
         cacheConf.shouldCacheBlockOnRead(BlockType.META.getCategory(), getHFileInfo(), conf);
@@ -1336,8 +1364,9 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     // the other choice is to duplicate work (which the cache would prevent you
     // from doing).
 
-    BlockCacheKey cacheKey =
-      new BlockCacheKey(path, dataBlockOffset, this.isPrimaryReplicaReader(), expectedBlockType);
+    long cacheKeyOffset = getOffsetForCaching(dataBlockOffset);
+    BlockCacheKey cacheKey = new BlockCacheKey(getPathForCaching(), cacheKeyOffset,
+      this.isPrimaryReplicaReader(), expectedBlockType);
 
     boolean useLock = false;
     IdLock.Entry lockEntry = null;
@@ -1352,7 +1381,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
         // Check cache for block. If found return.
         if (cacheConf.shouldReadBlockFromCache(expectedBlockType) && !cacheOnly) {
           if (useLock) {
-            lockEntry = offsetLock.getLockEntry(dataBlockOffset);
+            lockEntry = offsetLock.getLockEntry(cacheKeyOffset);
           }
           // Try and get the block from the block cache. If the useLock variable is true then this
           // is the second time through the loop and it should not be counted as a block cache miss.

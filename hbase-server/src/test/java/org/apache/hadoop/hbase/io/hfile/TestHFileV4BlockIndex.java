@@ -29,19 +29,17 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellComparatorImpl;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
@@ -52,7 +50,6 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
-import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -60,7 +57,6 @@ import org.apache.hadoop.hbase.io.encoding.IndexBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
 import org.apache.hadoop.hbase.io.hfile.HFileBlockIndex.BlockIndexReader;
 import org.apache.hadoop.hbase.io.hfile.NoOpIndexBlockEncoder.NoOpEncodedSeeker;
-import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.MultiByteBuff;
 import org.apache.hadoop.hbase.nio.RefCnt;
 import org.apache.hadoop.hbase.testclassification.IOTests;
@@ -68,7 +64,9 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -80,24 +78,31 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.io.netty.util.ResourceLeakDetector;
 
+/**
+ * This test mirrors {@link TestHFileBlockIndex} but writes HFiles using format version 4 (multi-tenant).
+ * <p>
+ * HFile v4 is a container of one or more HFile v3 "sections". For parity with the v3 tests, we
+ * create single-section v4 files (tenant prefix length = 0) and validate the embedded v3 section's
+ * data block index behavior through the v4 reader.
+ */
 @RunWith(Parameterized.class)
 @Category({ IOTests.class, MediumTests.class })
-public class TestHFileBlockIndex {
+public class TestHFileV4BlockIndex {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHFileBlockIndex.class);
+    HBaseClassTestRule.forClass(TestHFileV4BlockIndex.class);
 
   @Parameters
   public static Collection<Object[]> compressionAlgorithms() {
     return HBaseCommonTestingUtil.COMPRESSION_ALGORITHMS_PARAMETERIZED;
   }
 
-  public TestHFileBlockIndex(Compression.Algorithm compr) {
+  public TestHFileV4BlockIndex(Compression.Algorithm compr) {
     this.compr = compr;
   }
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestHFileBlockIndex.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestHFileV4BlockIndex.class);
   private static final Random RNG = new Random(); // This test depends on Random#setSeed
   private static final int NUM_DATA_BLOCKS = 1000;
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
@@ -126,6 +131,16 @@ public class TestHFileBlockIndex {
     assert INDEX_CHUNK_SIZES.length == UNCOMPRESSED_INDEX_SIZES.length;
   }
 
+  @BeforeClass
+  public static void setUpBeforeClass() throws Exception {
+    TEST_UTIL.startMiniCluster(1);
+  }
+
+  @AfterClass
+  public static void tearDownAfterClass() throws Exception {
+    TEST_UTIL.shutdownMiniCluster();
+  }
+
   @Before
   public void setUp() throws IOException {
     keys.clear();
@@ -133,10 +148,8 @@ public class TestHFileBlockIndex {
     conf = TEST_UTIL.getConfiguration();
     RNG.setSeed(2389757);
 
-    // This test validates the v3 data block index behavior (HFileBlockIndex + FixedFileTrailer
-    // numDataIndexLevels). HFile v4 has a different layout and repurposes trailer fields for the
-    // section index, so keep this pinned to v3.
-    conf.setInt(HFile.FORMAT_VERSION_KEY, 3);
+    // Force v4 writer/reader for this parity test.
+    conf.setInt(HFile.FORMAT_VERSION_KEY, HFile.MIN_FORMAT_VERSION_WITH_MULTI_TENANT);
 
     fs = HFileSystem.get(conf);
   }
@@ -182,7 +195,7 @@ public class TestHFileBlockIndex {
   @Test
   public void testBlockIndexWithOffHeapBuffer() throws Exception {
     ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
-    path = new Path(TEST_UTIL.getDataTestDir(), "block_index_testBlockIndexWithOffHeapBuffer");
+    path = new Path(TEST_UTIL.getDataTestDir(), "block_index_testBlockIndexWithOffHeapBuffer_v4");
     assertEquals(0, keys.size());
     HFileContext meta = new HFileContextBuilder().withHBaseCheckSum(true)
       .withIncludesMvcc(includesMemstoreTS).withIncludesTags(true).withCompression(compr)
@@ -224,14 +237,14 @@ public class TestHFileBlockIndex {
     conf = TEST_UTIL.getConfiguration();
     RNG.setSeed(2389757);
 
-    // This test requires at least HFile format version 2.
-    conf.setInt(HFile.FORMAT_VERSION_KEY, 3);
+    // Force v4 writer/reader for this parity test.
+    conf.setInt(HFile.FORMAT_VERSION_KEY, HFile.MIN_FORMAT_VERSION_WITH_MULTI_TENANT);
 
     fs = HFileSystem.get(conf);
   }
 
   private void testBlockIndexInternals(boolean useTags) throws IOException {
-    path = new Path(TEST_UTIL.getDataTestDir(), "block_index_" + compr + useTags);
+    path = new Path(TEST_UTIL.getDataTestDir(), "block_index_v4_" + compr + useTags);
     writeWholeIndex(useTags);
     readIndex(useTags);
   }
@@ -403,8 +416,9 @@ public class TestHFileBlockIndex {
       keys.add(cell.getKey());
       String msgPrefix = "Key #" + i + " (" + Bytes.toStringBinary(k) + "): ";
       StringBuilder padding = new StringBuilder();
-      while (msgPrefix.length() + padding.length() < 70)
+      while (msgPrefix.length() + padding.length() < 70) {
         padding.append(' ');
+      }
       msgPrefix += padding;
       if (i % 2 == 1) {
         dos.writeInt(curAllEntriesSize);
@@ -420,10 +434,11 @@ public class TestHFileBlockIndex {
     }
 
     // Make sure the keys are increasing.
-    for (int i = 0; i < keys.size() - 1; ++i)
+    for (int i = 0; i < keys.size() - 1; ++i) {
       assertTrue(CellComparatorImpl.COMPARATOR.compare(
         new KeyValue.KeyOnlyKeyValue(keys.get(i), 0, keys.get(i).length),
         new KeyValue.KeyOnlyKeyValue(keys.get(i + 1), 0, keys.get(i + 1).length)) < 0);
+    }
 
     dos.writeInt(curAllEntriesSize);
     assertEquals(numSearchedKeys, numEntriesAdded);
@@ -455,8 +470,8 @@ public class TestHFileBlockIndex {
 
       KeyValue.KeyOnlyKeyValue cell =
         new KeyValue.KeyOnlyKeyValue(arrayHoldingKey, searchKey.length / 2, searchKey.length);
-      int searchResult = BlockIndexReader.binarySearchNonRootIndex(cell,
-        new MultiByteBuff(nonRootIndex), CellComparatorImpl.COMPARATOR);
+      int searchResult = BlockIndexReader.binarySearchNonRootIndex(cell, new MultiByteBuff(nonRootIndex),
+        CellComparatorImpl.COMPARATOR);
       String lookupFailureMsg =
         "Failed to look up key #" + i + " (" + Bytes.toStringBinary(searchKey) + ")";
 
@@ -493,7 +508,6 @@ public class TestHFileBlockIndex {
         assertEquals(errorMsg, getDummyOnDiskSize(referenceItem), nonRootIndex.getInt());
       }
     }
-
   }
 
   @Test
@@ -517,6 +531,7 @@ public class TestHFileBlockIndex {
 
       byte[] k = RandomKeyValueUtil.randomOrderedKey(RNG, i);
       numSubEntries += RNG.nextInt(5) + 1;
+      numSubEntriesAt[i] = numSubEntries;
       keys.add(k);
       c.add(k, getDummyFileOffset(i), getDummyOnDiskSize(i), numSubEntries);
     }
@@ -557,7 +572,7 @@ public class TestHFileBlockIndex {
    */
   @Test
   public void testMidKeyOnLeafIndexBlockBoundary() throws IOException {
-    Path hfilePath = new Path(TEST_UTIL.getDataTestDir(), "hfile_for_midkey");
+    Path hfilePath = new Path(TEST_UTIL.getDataTestDir(), "hfile_v4_for_midkey");
     int maxChunkSize = 512;
     conf.setInt(HFileBlockIndex.MAX_CHUNK_SIZE_KEY, maxChunkSize);
     // should open hfile.block.index.cacheonwrite
@@ -593,6 +608,8 @@ public class TestHFileBlockIndex {
     // Read the HFile
     HFile.Reader reader = HFile.createReader(fs, hfilePath, cacheConf, true, conf);
 
+    assertEquals(HFile.MIN_FORMAT_VERSION_WITH_MULTI_TENANT, reader.getTrailer().getMajorVersion());
+
     boolean hasArrayIndexOutOfBoundsException = false;
     try {
       // get the mid-key.
@@ -610,10 +627,13 @@ public class TestHFileBlockIndex {
   /**
    * Testing block index through the HFile writer/reader APIs. Allows to test setting index block
    * size through configuration, intermediate-level index blocks, and caching index blocks on write.
+   * <p>
+   * For v4 files, the v3 block index lives inside the single embedded section, so we validate using
+   * that section reader.
    */
   @Test
   public void testHFileWriterAndReader() throws IOException {
-    Path hfilePath = new Path(TEST_UTIL.getDataTestDir(), "hfile_for_block_index");
+    Path hfilePath = new Path(TEST_UTIL.getDataTestDir(), "hfile_v4_for_block_index");
     CacheConfig cacheConf = new CacheConfig(conf, BlockCacheFactory.createBlockCache(conf));
     BlockCache blockCache = cacheConf.getBlockCache().get();
 
@@ -625,11 +645,10 @@ public class TestHFileBlockIndex {
       blockCache.evictBlocksByHfileName(hfilePath.getName());
 
       conf.setInt(HFileBlockIndex.MAX_CHUNK_SIZE_KEY, indexBlockSize);
-      Set<String> keyStrSet = new HashSet<>();
       byte[][] keys = new byte[NUM_KV][];
       byte[][] values = new byte[NUM_KV][];
 
-      // Write the HFile
+      // Write the HFile (v4 container; single section v3 inside)
       {
         HFileContext meta =
           new HFileContextBuilder().withBlockSize(SMALL_BLOCK_SIZE).withCompression(compr).build();
@@ -648,81 +667,82 @@ public class TestHFileBlockIndex {
           writer.append(kv);
           keys[i] = k;
           values[i] = CellUtil.cloneValue(kv);
-          keyStrSet.add(Bytes.toStringBinary(k));
-          if (i > 0) {
-            assertTrue((PrivateCellUtil.compare(CellComparatorImpl.COMPARATOR, kv, keys[i - 1], 0,
-              keys[i - 1].length)) > 0);
-          }
         }
 
         writer.close();
       }
 
-      // Read the HFile
-      HFile.Reader reader = HFile.createReader(fs, hfilePath, cacheConf, true, conf);
-      assertEquals(expectedNumLevels, reader.getTrailer().getNumDataIndexLevels());
+      // Read the HFile and validate the embedded v3 section index behavior.
+      try (AbstractMultiTenantReader mtReader =
+        (AbstractMultiTenantReader) HFile.createReader(fs, hfilePath, cacheConf, true, conf)) {
+        assertEquals(HFile.MIN_FORMAT_VERSION_WITH_MULTI_TENANT,
+          mtReader.getTrailer().getMajorVersion());
+        byte[][] sectionIds = mtReader.getAllTenantSectionIds();
+        assertEquals(1, sectionIds.length);
 
-      assertTrue(Bytes.equals(keys[0], ((KeyValue) reader.getFirstKey().get()).getKey()));
-      assertTrue(Bytes.equals(keys[NUM_KV - 1], ((KeyValue) reader.getLastKey().get()).getKey()));
-      LOG.info("Last key: " + Bytes.toStringBinary(keys[NUM_KV - 1]));
+        try (AbstractMultiTenantReader.SectionReaderLease lease =
+          mtReader.getSectionReader(sectionIds[0])) {
+          HFileReaderImpl reader = lease.getReader();
 
-      for (boolean pread : new boolean[] { false, true }) {
-        HFileScanner scanner = reader.getScanner(conf, true, pread);
-        for (int i = 0; i < NUM_KV; ++i) {
-          checkSeekTo(keys, scanner, i);
-          checkKeyValue("i=" + i, keys[i], values[i],
-            ByteBuffer.wrap(((KeyValue) scanner.getKey()).getKey()), scanner.getValue());
-        }
-        assertTrue(scanner.seekTo());
-        for (int i = NUM_KV - 1; i >= 0; --i) {
-          checkSeekTo(keys, scanner, i);
-          checkKeyValue("i=" + i, keys[i], values[i],
-            ByteBuffer.wrap(((KeyValue) scanner.getKey()).getKey()), scanner.getValue());
+          assertEquals(3, reader.getTrailer().getMajorVersion());
+          assertEquals(expectedNumLevels, reader.getTrailer().getNumDataIndexLevels());
+
+          assertTrue(Bytes.equals(keys[0], ((KeyValue) reader.getFirstKey().get()).getKey()));
+          assertTrue(
+            Bytes.equals(keys[NUM_KV - 1], ((KeyValue) reader.getLastKey().get()).getKey()));
+          LOG.info("Last key: " + Bytes.toStringBinary(keys[NUM_KV - 1]));
+
+          for (boolean pread : new boolean[] { false, true }) {
+            HFileScanner scanner = reader.getScanner(conf, true, pread);
+            for (int i = 0; i < NUM_KV; ++i) {
+              checkSeekTo(keys, scanner, i);
+              checkKeyValue("i=" + i, keys[i], values[i],
+                ByteBuffer.wrap(((KeyValue) scanner.getKey()).getKey()), scanner.getValue());
+            }
+            assertTrue(scanner.seekTo());
+            for (int i = NUM_KV - 1; i >= 0; --i) {
+              checkSeekTo(keys, scanner, i);
+              checkKeyValue("i=" + i, keys[i], values[i],
+                ByteBuffer.wrap(((KeyValue) scanner.getKey()).getKey()), scanner.getValue());
+            }
+          }
+
+          // Manually compute the mid-key and validate it (same logic as v3 test).
+          HFile.Reader reader2 = reader;
+          HFileBlock.FSReader fsReader = reader2.getUncachedBlockReader();
+
+          HFileBlock.BlockIterator iter =
+            fsReader.blockRange(0, reader.getTrailer().getLoadOnOpenDataOffset());
+          HFileBlock block;
+          List<byte[]> blockKeys = new ArrayList<>();
+          while ((block = iter.nextBlock()) != null) {
+            if (block.getBlockType() != BlockType.LEAF_INDEX) {
+              return;
+            }
+            org.apache.hadoop.hbase.nio.ByteBuff b = block.getBufferReadOnly();
+            int n = b.getIntAfterPosition(0);
+            // One int for the number of items, and n + 1 for the secondary index.
+            int entriesOffset = Bytes.SIZEOF_INT * (n + 2);
+
+            // Get all the keys from the leaf index block.
+            for (int i = 0; i < n; ++i) {
+              int keyRelOffset = b.getIntAfterPosition(Bytes.SIZEOF_INT * (i + 1));
+              int nextKeyRelOffset = b.getIntAfterPosition(Bytes.SIZEOF_INT * (i + 2));
+              int keyLen = nextKeyRelOffset - keyRelOffset;
+              int keyOffset = b.arrayOffset() + entriesOffset + keyRelOffset
+                + HFileBlockIndex.SECONDARY_INDEX_ENTRY_OVERHEAD;
+              byte[] blockKey = Arrays.copyOfRange(b.array(), keyOffset, keyOffset + keyLen);
+              blockKeys.add(blockKey);
+            }
+          }
+
+          // Validate the mid-key (note: the v3 test does not dereference Optional here).
+          assertEquals(Bytes.toStringBinary(blockKeys.get((blockKeys.size() - 1) / 2)),
+            reader.midKey());
+
+          assertEquals(UNCOMPRESSED_INDEX_SIZES[testI], reader.getTrailer().getUncompressedDataIndexSize());
         }
       }
-
-      // Manually compute the mid-key and validate it.
-      HFile.Reader reader2 = reader;
-      HFileBlock.FSReader fsReader = reader2.getUncachedBlockReader();
-
-      HFileBlock.BlockIterator iter =
-        fsReader.blockRange(0, reader.getTrailer().getLoadOnOpenDataOffset());
-      HFileBlock block;
-      List<byte[]> blockKeys = new ArrayList<>();
-      while ((block = iter.nextBlock()) != null) {
-        if (block.getBlockType() != BlockType.LEAF_INDEX) return;
-        ByteBuff b = block.getBufferReadOnly();
-        int n = b.getIntAfterPosition(0);
-        // One int for the number of items, and n + 1 for the secondary index.
-        int entriesOffset = Bytes.SIZEOF_INT * (n + 2);
-
-        // Get all the keys from the leaf index block. S
-        for (int i = 0; i < n; ++i) {
-          int keyRelOffset = b.getIntAfterPosition(Bytes.SIZEOF_INT * (i + 1));
-          int nextKeyRelOffset = b.getIntAfterPosition(Bytes.SIZEOF_INT * (i + 2));
-          int keyLen = nextKeyRelOffset - keyRelOffset;
-          int keyOffset = b.arrayOffset() + entriesOffset + keyRelOffset
-            + HFileBlockIndex.SECONDARY_INDEX_ENTRY_OVERHEAD;
-          byte[] blockKey = Arrays.copyOfRange(b.array(), keyOffset, keyOffset + keyLen);
-          String blockKeyStr = Bytes.toString(blockKey);
-          blockKeys.add(blockKey);
-
-          // If the first key of the block is not among the keys written, we
-          // are not parsing the non-root index block format correctly.
-          assertTrue("Invalid block key from leaf-level block: " + blockKeyStr,
-            keyStrSet.contains(blockKeyStr));
-        }
-      }
-
-      // Validate the mid-key.
-      assertEquals(Bytes.toStringBinary(blockKeys.get((blockKeys.size() - 1) / 2)),
-        reader.midKey());
-
-      assertEquals(UNCOMPRESSED_INDEX_SIZES[testI],
-        reader.getTrailer().getUncompressedDataIndexSize());
-
-      reader.close();
-      reader2.close();
     }
   }
 
@@ -741,7 +761,9 @@ public class TestHFileBlockIndex {
   /** Check a key/value pair after it was read by the reader */
   private void checkKeyValue(String msgPrefix, byte[] expectedKey, byte[] expectedValue,
     ByteBuffer keyRead, ByteBuffer valueRead) {
-    if (!msgPrefix.isEmpty()) msgPrefix += ". ";
+    if (!msgPrefix.isEmpty()) {
+      msgPrefix += ". ";
+    }
 
     assertArrayEqualsBuffer(msgPrefix + "Invalid key", expectedKey, keyRead);
     assertArrayEqualsBuffer(msgPrefix + "Invalid value", expectedValue, valueRead);
@@ -760,14 +782,14 @@ public class TestHFileBlockIndex {
 
   public void testIntermediateLevelIndicesWithLargeKeys(int minNumEntries) throws IOException {
     Path hfPath =
-      new Path(TEST_UTIL.getDataTestDir(), "testIntermediateLevelIndicesWithLargeKeys.hfile");
+      new Path(TEST_UTIL.getDataTestDir(), "testIntermediateLevelIndicesWithLargeKeys_v4.hfile");
     int maxChunkSize = 1024;
     FileSystem fs = FileSystem.get(conf);
     CacheConfig cacheConf = new CacheConfig(conf);
     conf.setInt(HFileBlockIndex.MAX_CHUNK_SIZE_KEY, maxChunkSize);
     conf.setInt(HFileBlockIndex.MIN_INDEX_NUM_ENTRIES_KEY, minNumEntries);
     HFileContext context = new HFileContextBuilder().withBlockSize(16).build();
-    HFile.Writer hfw = new HFile.WriterFactory(conf, cacheConf).withFileContext(context)
+    HFile.Writer hfw = HFile.getWriterFactory(conf, cacheConf).withFileContext(context)
       .withPath(fs, hfPath).create();
     List<byte[]> keys = new ArrayList<>();
 
@@ -785,13 +807,14 @@ public class TestHFileBlockIndex {
     hfw.close();
 
     HFile.Reader reader = HFile.createReader(fs, hfPath, cacheConf, true, conf);
+    assertEquals(HFile.MIN_FORMAT_VERSION_WITH_MULTI_TENANT, reader.getTrailer().getMajorVersion());
     // Scanner doesn't do Cells yet. Fix.
     HFileScanner scanner = reader.getScanner(conf, true, true);
     for (int i = 0; i < keys.size(); ++i) {
-      scanner.seekTo(ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
-        .setRow(keys.get(i)).setFamily(HConstants.EMPTY_BYTE_ARRAY)
-        .setQualifier(HConstants.EMPTY_BYTE_ARRAY).setTimestamp(HConstants.LATEST_TIMESTAMP)
-        .setType(KeyValue.Type.Maximum.getCode()).setValue(HConstants.EMPTY_BYTE_ARRAY).build());
+      scanner.seekTo(ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(keys.get(i))
+        .setFamily(HConstants.EMPTY_BYTE_ARRAY).setQualifier(HConstants.EMPTY_BYTE_ARRAY)
+        .setTimestamp(HConstants.LATEST_TIMESTAMP).setType(KeyValue.Type.Maximum.getCode())
+        .setValue(HConstants.EMPTY_BYTE_ARRAY).build());
     }
     reader.close();
   }
@@ -799,19 +822,21 @@ public class TestHFileBlockIndex {
   /**
    * This test is for HBASE-27940, which midkey metadata in root index block would always be ignored
    * by {@link BlockIndexReader#readMultiLevelIndexRoot}.
+   * <p>
+   * For v4, we validate the embedded v3 section's root index block.
    */
   @Test
   public void testMidKeyReadSuccessfullyFromRootIndexBlock() throws IOException {
     conf.setInt(HFileBlockIndex.MAX_CHUNK_SIZE_KEY, 128);
     Path hfilePath =
-      new Path(TEST_UTIL.getDataTestDir(), "testMidKeyReadSuccessfullyFromRootIndexBlock");
+      new Path(TEST_UTIL.getDataTestDir(), "testMidKeyReadSuccessfullyFromRootIndexBlock_v4");
     Compression.Algorithm compressAlgo = Compression.Algorithm.NONE;
     int entryCount = 50000;
     HFileContext context = new HFileContextBuilder().withBlockSize(4096).withIncludesTags(false)
       .withDataBlockEncoding(DataBlockEncoding.NONE).withCompression(compressAlgo).build();
 
-    try (HFile.Writer writer = new HFile.WriterFactory(conf, new CacheConfig(conf))
-      .withPath(fs, hfilePath).withFileContext(context).create()) {
+    try (HFile.Writer writer = HFile.getWriterFactory(conf, new CacheConfig(conf)).withPath(fs, hfilePath)
+      .withFileContext(context).create()) {
 
       List<KeyValue> keyValues = new ArrayList<>(entryCount);
       for (int i = 0; i < entryCount; ++i) {
@@ -825,37 +850,41 @@ public class TestHFileBlockIndex {
       }
     }
 
-    try (FSDataInputStream fsdis = fs.open(hfilePath)) {
-      long fileSize = fs.getFileStatus(hfilePath).getLen();
-      FixedFileTrailer trailer = FixedFileTrailer.readFromStream(fsdis, fileSize);
+    try (AbstractMultiTenantReader mtReader =
+      (AbstractMultiTenantReader) HFile.createReader(fs, hfilePath, new CacheConfig(conf), true,
+        conf)) {
+      assertEquals(HFile.MIN_FORMAT_VERSION_WITH_MULTI_TENANT,
+        mtReader.getTrailer().getMajorVersion());
+      byte[][] sectionIds = mtReader.getAllTenantSectionIds();
+      assertEquals(1, sectionIds.length);
 
-      assertEquals(3, trailer.getMajorVersion());
-      assertEquals(entryCount, trailer.getEntryCount());
-      HFileContext meta = new HFileContextBuilder().withCompression(compressAlgo)
-        .withIncludesMvcc(false).withIncludesTags(false)
-        .withDataBlockEncoding(DataBlockEncoding.NONE).withHBaseCheckSum(true).build();
-      ReaderContext readerContext =
-        new ReaderContextBuilder().withInputStreamWrapper(new FSDataInputStreamWrapper(fsdis))
-          .withFilePath(hfilePath).withFileSystem(fs).withFileSize(fileSize).build();
-      HFileBlock.FSReader blockReader =
-        new HFileBlock.FSReaderImpl(readerContext, meta, ByteBuffAllocator.HEAP, conf);
+      try (AbstractMultiTenantReader.SectionReaderLease lease =
+        mtReader.getSectionReader(sectionIds[0])) {
+        HFileReaderImpl sectionReader = lease.getReader();
+        FixedFileTrailer trailer = sectionReader.getTrailer();
 
-      MyEncoder encoder = new MyEncoder();
-      HFileBlockIndex.CellBasedKeyBlockIndexReaderV2 dataBlockIndexReader =
-        new HFileBlockIndex.CellBasedKeyBlockIndexReaderV2(trailer.createComparator(),
-          trailer.getNumDataIndexLevels(), encoder);
+        assertEquals(3, trailer.getMajorVersion());
+        assertEquals(entryCount, trailer.getEntryCount());
 
-      HFileBlock.BlockIterator blockIter = blockReader.blockRange(trailer.getLoadOnOpenDataOffset(),
-        fileSize - trailer.getTrailerSize());
-      // Data index. We also read statistics about the block index written after
-      // the root level.
-      dataBlockIndexReader.readMultiLevelIndexRoot(
-        blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX), trailer.getDataIndexCount());
-      NoOpEncodedSeeker noOpEncodedSeeker = (NoOpEncodedSeeker) encoder.encoderSeeker;
-      // Assert we have read midkey metadata successfully.
-      assertTrue(noOpEncodedSeeker.midLeafBlockOffset >= 0);
-      assertTrue(noOpEncodedSeeker.midLeafBlockOnDiskSize > 0);
-      assertTrue(noOpEncodedSeeker.midKeyEntry >= 0);
+        HFileBlock.FSReader blockReader = sectionReader.getUncachedBlockReader();
+
+        MyEncoder encoder = new MyEncoder();
+        HFileBlockIndex.CellBasedKeyBlockIndexReaderV2 dataBlockIndexReader =
+          new HFileBlockIndex.CellBasedKeyBlockIndexReaderV2(trailer.createComparator(),
+            trailer.getNumDataIndexLevels(), encoder);
+
+        long fileSize = sectionReader.length();
+        HFileBlock.BlockIterator blockIter =
+          blockReader.blockRange(trailer.getLoadOnOpenDataOffset(), fileSize - trailer.getTrailerSize());
+        dataBlockIndexReader.readMultiLevelIndexRoot(blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX),
+          trailer.getDataIndexCount());
+
+        NoOpEncodedSeeker noOpEncodedSeeker = (NoOpEncodedSeeker) encoder.encoderSeeker;
+        // Assert we have read midkey metadata successfully.
+        assertTrue(noOpEncodedSeeker.midLeafBlockOffset >= 0);
+        assertTrue(noOpEncodedSeeker.midLeafBlockOnDiskSize > 0);
+        assertTrue(noOpEncodedSeeker.midKeyEntry >= 0);
+      }
     }
   }
 
@@ -866,7 +895,6 @@ public class TestHFileBlockIndex {
     @Override
     public void saveMetadata(Writer writer) throws IOException {
       NoOpIndexBlockEncoder.INSTANCE.saveMetadata(writer);
-
     }
 
     @Override
@@ -885,6 +913,7 @@ public class TestHFileBlockIndex {
       encoderSeeker = NoOpIndexBlockEncoder.INSTANCE.createSeeker();
       return encoderSeeker;
     }
-
   }
 }
+
+
