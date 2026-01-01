@@ -20,10 +20,7 @@ package org.apache.hadoop.hbase.regionserver.http;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
@@ -43,6 +40,7 @@ import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.TestServerHttpUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -123,7 +121,8 @@ public class TestRSStatusPage {
     String hostname = firstServerName.getHostname();
     int port = firstServerName.getPort();
 
-    String page = getRegionServerStatusPageContent(hostname, infoPort);
+    URL url = new URL("http://" + hostname + ":" + infoPort + "/regionserver.jsp");
+    String page = TestServerHttpUtils.getPageContent(url, "text/html");
 
     assertTrue(page.contains("<title>HBase Region Server: " + masterHostname + "</title>"));
 
@@ -152,27 +151,5 @@ public class TestRSStatusPage {
       .newBuilder(TableName.valueOf(TEST_TABLE_NAME_2)).setColumnFamily(cf).build();
     master.createTable(tableDescriptor2, null, 0, 0);
     master.flushMasterStore();
-  }
-
-  private static String getRegionServerStatusPageContent(String hostname, int infoPort)
-    throws IOException {
-    URL url = new URL("http://" + hostname + ":" + infoPort + "/regionserver.jsp");
-    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-    conn.connect();
-
-    assertEquals(200, conn.getResponseCode());
-    assertTrue(conn.getContentType().startsWith("text/html"));
-
-    return getResponseBody(conn);
-  }
-
-  private static String getResponseBody(HttpURLConnection conn) throws IOException {
-    StringBuilder sb = new StringBuilder();
-    BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-    String output;
-    while ((output = br.readLine()) != null) {
-      sb.append(output);
-    }
-    return sb.toString();
   }
 }
