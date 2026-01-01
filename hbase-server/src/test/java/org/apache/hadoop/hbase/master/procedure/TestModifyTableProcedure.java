@@ -37,6 +37,8 @@ import org.apache.hadoop.hbase.client.PerClientRandomNonceGenerator;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.constraint.ConstraintProcessor;
+import org.apache.hadoop.hbase.coprocessor.SimpleRegionObserver;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureTestingUtility.StepHook;
 import org.apache.hadoop.hbase.procedure2.Procedure;
@@ -681,6 +683,83 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     } catch (HBaseIOException e) {
       System.out.println(e.getMessage());
       assertTrue(e.getMessage().contains("Can not modify REGION_REPLICATION"));
+    }
+  }
+
+  @Test
+  public void testModifyTableWithCoprocessorAndColumnFamilyPropertyChange() throws IOException {
+    // HBASE-29706 - This test validates the fix for the bug where modifying only column family
+    // properties
+    // (like COMPRESSION) with REOPEN_REGIONS=false would incorrectly throw an error when
+    // coprocessors are present. The bug was caused by comparing collection hash codes
+    // instead of actual descriptor content, which failed when HashMap iteration order varied.
+
+    final boolean reopenRegions = false;
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
+
+    MasterProcedureTestingUtility.createTable(procExec, tableName, null, "cf");
+
+    // Step 1: Add coprocessors to the table
+    TableDescriptor htd = UTIL.getAdmin().getDescriptor(tableName);
+    final String cp2 = ConstraintProcessor.class.getName();
+    TableDescriptor descriptorWithCoprocessor = TableDescriptorBuilder.newBuilder(htd)
+      .setCoprocessor(CoprocessorDescriptorBuilder.newBuilder(SimpleRegionObserver.class.getName())
+        .setPriority(100).build())
+      .setCoprocessor(CoprocessorDescriptorBuilder.newBuilder(cp2).setPriority(200).build())
+      .build();
+    long procId = ProcedureTestingUtility.submitAndWait(procExec, new ModifyTableProcedure(
+      procExec.getEnvironment(), descriptorWithCoprocessor, null, htd, false, true));
+    ProcedureTestingUtility.assertProcNotFailed(procExec.getResult(procId));
+
+    // Verify coprocessors were added
+    TableDescriptor currentHtd = UTIL.getAdmin().getDescriptor(tableName);
+    assertEquals(2, currentHtd.getCoprocessorDescriptors().size());
+    assertTrue("First coprocessor should be present",
+      currentHtd.hasCoprocessor(SimpleRegionObserver.class.getName()));
+    assertTrue("Second coprocessor should be present", currentHtd.hasCoprocessor(cp2));
+
+    // Step 2: Modify only the column family property (COMPRESSION) with REOPEN_REGIONS=false
+    // This should SUCCEED because we're not actually modifying the coprocessor,
+    // just the column family compression setting.
+    htd = UTIL.getAdmin().getDescriptor(tableName);
+    TableDescriptor modifiedDescriptor =
+      TableDescriptorBuilder
+        .newBuilder(htd).modifyColumnFamily(ColumnFamilyDescriptorBuilder
+          .newBuilder("cf".getBytes()).setCompressionType(Compression.Algorithm.SNAPPY).build())
+        .build();
+
+    // This should NOT throw an error - the fix ensures order-independent coprocessor comparison
+    long procId2 = ProcedureTestingUtility.submitAndWait(procExec, new ModifyTableProcedure(
+      procExec.getEnvironment(), modifiedDescriptor, null, htd, false, reopenRegions));
+    ProcedureTestingUtility.assertProcNotFailed(procExec.getResult(procId2));
+
+    // Verify the modification succeeded
+    currentHtd = UTIL.getAdmin().getDescriptor(tableName);
+    assertEquals("Coprocessors should still be present", 2,
+      currentHtd.getCoprocessorDescriptors().size());
+    assertTrue("First coprocessor should still be present",
+      currentHtd.hasCoprocessor(SimpleRegionObserver.class.getName()));
+    assertTrue("Second coprocessor should still be present", currentHtd.hasCoprocessor(cp2));
+    assertEquals("Compression should be updated in table descriptor", Compression.Algorithm.SNAPPY,
+      currentHtd.getColumnFamily("cf".getBytes()).getCompressionType());
+
+    // Verify regions haven't picked up the change yet (since reopenRegions=false)
+    for (HRegion r : UTIL.getHBaseCluster().getRegions(tableName)) {
+      assertEquals("Regions should still have old compression", Compression.Algorithm.NONE,
+        r.getTableDescriptor().getColumnFamily("cf".getBytes()).getCompressionType());
+    }
+
+    // Force regions to reopen
+    for (HRegion r : UTIL.getHBaseCluster().getRegions(tableName)) {
+      getMaster().getAssignmentManager().move(r.getRegionInfo());
+    }
+
+    // After reopen, regions should have the new compression setting
+    for (HRegion r : UTIL.getHBaseCluster().getRegions(tableName)) {
+      assertEquals("Regions should now have new compression after reopen",
+        Compression.Algorithm.SNAPPY,
+        r.getTableDescriptor().getColumnFamily("cf".getBytes()).getCompressionType());
     }
   }
 }
