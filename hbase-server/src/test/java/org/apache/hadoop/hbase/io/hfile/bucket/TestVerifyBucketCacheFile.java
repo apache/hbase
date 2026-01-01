@@ -415,8 +415,15 @@ public class TestVerifyBucketCacheFile {
   }
 
   @Test
-  public void testMultipleChunks() throws Exception {
+  public void testCompletelyFilledChunks() throws Exception {
+    // Test where the all the chunks are complete with chunkSize entries
     testChunkedBackingMapRecovery(5, 10);
+  }
+
+  @Test
+  public void testPartiallyFilledChunks() throws Exception {
+    // Test where the last chunk is not completely filled.
+    testChunkedBackingMapRecovery(5, 13);
   }
 
   private void testChunkedBackingMapRecovery(int chunkSize, int numBlocks) throws Exception {

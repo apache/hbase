@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.io.hfile.BlockPriority;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.CacheableDeserializerIdManager;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -51,47 +50,53 @@ final class BucketProtoUtils {
   }
 
   static BucketCacheProtos.BucketCacheEntry toPB(BucketCache cache,
-    BucketCacheProtos.BackingMap backingMap) {
+    BucketCacheProtos.BackingMap.Builder backingMapBuilder) {
     return BucketCacheProtos.BucketCacheEntry.newBuilder().setCacheCapacity(cache.getMaxSize())
       .setIoClass(cache.ioEngine.getClass().getName())
       .setMapClass(cache.backingMap.getClass().getName())
       .putAllDeserializers(CacheableDeserializerIdManager.save())
-      .putAllCachedFiles(toCachedPB(cache.fullyCachedFiles)).setBackingMap(backingMap)
+      .putAllCachedFiles(toCachedPB(cache.fullyCachedFiles))
+      .setBackingMap(backingMapBuilder.build())
       .setChecksum(ByteString
         .copyFrom(((PersistentIOEngine) cache.ioEngine).calculateChecksum(cache.getAlgorithm())))
       .build();
   }
 
-  public static void serializeAsPB(BucketCache cache, FileOutputStream fos, long chunkSize,
-    long numChunks) throws IOException {
-    int blockCount = 0;
-    int chunkCount = 0;
-    int backingMapSize = cache.backingMap.size();
-    BucketCacheProtos.BackingMap.Builder builder = BucketCacheProtos.BackingMap.newBuilder();
-
+  public static void serializeAsPB(BucketCache cache, FileOutputStream fos, long chunkSize)
+    throws IOException {
+    // Write the new version of magic number.
     fos.write(PB_MAGIC_V2);
-    fos.write(Bytes.toBytes(chunkSize));
-    fos.write(Bytes.toBytes(numChunks));
 
+    BucketCacheProtos.BackingMap.Builder builder = BucketCacheProtos.BackingMap.newBuilder();
+    BucketCacheProtos.BackingMapEntry.Builder entryBuilder =
+      BucketCacheProtos.BackingMapEntry.newBuilder();
+
+    // Persist the metadata first.
+    toPB(cache, builder).writeDelimitedTo(fos);
+
+    int blockCount = 0;
+    // Persist backing map entries in chunks of size 'chunkSize'.
     for (Map.Entry<BlockCacheKey, BucketEntry> entry : cache.backingMap.entrySet()) {
       blockCount++;
-      builder.addEntry(
-        BucketCacheProtos.BackingMapEntry.newBuilder().setKey(BucketProtoUtils.toPB(entry.getKey()))
-          .setValue(BucketProtoUtils.toPB(entry.getValue())).build());
-      if (blockCount % chunkSize == 0 || (blockCount == backingMapSize)) {
-        chunkCount++;
-        if (chunkCount == 1) {
-          // Persist all details along with the first chunk into BucketCacheEntry
-          BucketProtoUtils.toPB(cache, builder.build()).writeDelimitedTo(fos);
-        } else {
-          // Directly persist subsequent backing-map chunks.
-          builder.build().writeDelimitedTo(fos);
-        }
-        if (blockCount < backingMapSize) {
-          builder = BucketCacheProtos.BackingMap.newBuilder();
-        }
+      addEntryToBuilder(entry, entryBuilder, builder);
+      if (blockCount % chunkSize == 0) {
+        builder.build().writeDelimitedTo(fos);
+        builder.clear();
       }
     }
+    // Persist the last chunk.
+    if (builder.getEntryList().size() > 0) {
+      builder.build().writeDelimitedTo(fos);
+    }
+  }
+
+  private static void addEntryToBuilder(Map.Entry<BlockCacheKey, BucketEntry> entry,
+    BucketCacheProtos.BackingMapEntry.Builder entryBuilder,
+    BucketCacheProtos.BackingMap.Builder builder) {
+    entryBuilder.clear();
+    entryBuilder.setKey(BucketProtoUtils.toPB(entry.getKey()));
+    entryBuilder.setValue(BucketProtoUtils.toPB(entry.getValue()));
+    builder.addEntry(entryBuilder.build());
   }
 
   private static BucketCacheProtos.BlockCacheKey toPB(BlockCacheKey key) {
