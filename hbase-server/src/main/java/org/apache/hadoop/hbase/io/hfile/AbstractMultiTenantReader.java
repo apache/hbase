@@ -247,13 +247,17 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
     }
 
     byte[] firstSectionId = sectionIds.get(0).get();
-    try (SectionReaderLease lease = getSectionReader(firstSectionId)) {
+    try {
+      SectionReaderLease lease = getSectionReader(firstSectionId);
       if (lease == null) {
         return;
       }
-      HFileReaderImpl sectionReader = lease.getReader();
-      if (sectionReader != null) {
-        prefetchOnOpenPath = sectionReader.getPath();
+      // Avoid nullable resource in try-with-resources (SpotBugs false-positive for NP/RCN).
+      try (SectionReaderLease ignored = lease) {
+        HFileReaderImpl sectionReader = ignored.getReader();
+        if (sectionReader != null) {
+          prefetchOnOpenPath = sectionReader.getPath();
+        }
       }
     } catch (IOException e) {
       // Best-effort: failure to prefetch must not prevent reads.

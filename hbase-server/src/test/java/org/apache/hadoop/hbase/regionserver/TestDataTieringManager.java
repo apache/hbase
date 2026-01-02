@@ -52,7 +52,6 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-import org.apache.hadoop.hbase.io.hfile.AbstractMultiTenantReader;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
@@ -60,7 +59,6 @@ import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CacheTestUtils;
-import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
@@ -638,7 +636,6 @@ public class TestDataTieringManager {
     int numHotBlocks = 0, numColdBlocks = 0;
 
     Waiter.waitFor(defaultConf, 10000, 100, () -> (expectedTotalKeys == keys.size()));
-    int iter = 0;
     for (BlockCacheKey key : keys) {
       try {
         if (dataTieringManager.isHotData(key)) {
@@ -708,35 +705,10 @@ public class TestDataTieringManager {
 
   private BlockCacheKey createBlockCacheKey(HStoreFile hStoreFile, long blockOffset,
     BlockType blockType) {
-    StoreFileReader storeFileReader = hStoreFile.getReader();
-    HFile.Reader hFileReader = storeFileReader.getHFileReader();
-    if (
-      storeFileReader.getHFileVersion() == HFile.MIN_FORMAT_VERSION_WITH_MULTI_TENANT
-        && hFileReader instanceof AbstractMultiTenantReader
-    ) {
-      AbstractMultiTenantReader multiTenantReader = (AbstractMultiTenantReader) hFileReader;
-      byte[][] tenantSectionIds = multiTenantReader.getAllTenantSectionIds();
-      if (tenantSectionIds != null) {
-        for (byte[] sectionId : tenantSectionIds) {
-          Map<String, Object> sectionInfo = multiTenantReader.getSectionInfo(sectionId);
-          if (sectionInfo == null || !Boolean.TRUE.equals(sectionInfo.get("exists"))) {
-            continue;
-          }
-          Object offsetObj = sectionInfo.get("offset");
-          Object sizeObj = sectionInfo.get("size");
-          if (!(offsetObj instanceof Number) || !(sizeObj instanceof Number)) {
-            continue;
-          }
-          long sectionStart = ((Number) offsetObj).longValue();
-          long sectionEnd = sectionStart + ((Number) sizeObj).longValue();
-          if (blockOffset >= sectionStart && blockOffset < sectionEnd) {
-            String sectionSuffix = Bytes.toStringBinary(sectionId);
-            Path sectionPath = new Path(hStoreFile.getPath().toString() + "#" + sectionSuffix);
-            return new BlockCacheKey(sectionPath, blockOffset, true, blockType);
-          }
-        }
-      }
-    }
+    // For multi-tenant (v4) HFiles, section readers may use section-specific paths (e.g.
+    // "<hfile>#<sectionId>") for internal routing, but block cache keys are always based on the
+    // container file path to avoid caching the same physical block multiple times under different
+    // names.
     return new BlockCacheKey(hStoreFile.getPath(), blockOffset, true, blockType);
   }
 
