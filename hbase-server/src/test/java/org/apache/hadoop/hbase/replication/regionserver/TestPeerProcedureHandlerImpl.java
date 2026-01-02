@@ -24,24 +24,19 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.replication.ReplicationPeer.PeerState;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerImpl;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ ReplicationTests.class, SmallTests.class })
+@Tag(ReplicationTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestPeerProcedureHandlerImpl {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestPeerProcedureHandlerImpl.class);
 
   private ReplicationSourceManager mockSourceManager;
   private ReplicationPeers mockReplicationPeers;
@@ -49,7 +44,7 @@ public class TestPeerProcedureHandlerImpl {
   private PeerProcedureHandlerImpl handler;
   private static final String PEER_ID = "testPeer";
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     mockSourceManager = mock(ReplicationSourceManager.class);
     mockReplicationPeers = mock(ReplicationPeers.class);
