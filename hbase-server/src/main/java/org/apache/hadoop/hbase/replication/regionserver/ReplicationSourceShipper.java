@@ -374,8 +374,4 @@ public class ReplicationSourceShipper extends Thread {
   long getSleepForRetries() {
     return sleepForRetries;
   }
-
-  ReplicationSourceWALReader getEntryReaderForTesting() {
-    return entryReader;
-  }
 }
