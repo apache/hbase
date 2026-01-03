@@ -30,10 +30,12 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.master.balancer.BalancerTestBase.MockMapping;
 import org.apache.hadoop.hbase.master.balancer.replicas.ReplicaKeyCache;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -96,6 +98,7 @@ public class TestLargeClusterBalancingConditionalReplicaDistribution {
   @Test
   public void testReplicaDistribution() {
     Configuration conf = new Configuration();
+    conf.setClass("hbase.util.ip.to.rack.determiner", MockMapping.class, DNSToSwitchMapping.class);
     DistributeReplicasTestConditional.enableConditionalReplicaDistributionForTest(conf);
     conf.setBoolean(ReplicaKeyCache.CACHE_REPLICA_KEYS_KEY, true);
     conf.setInt(ReplicaKeyCache.REPLICA_KEY_CACHE_SIZE_KEY, Integer.MAX_VALUE);

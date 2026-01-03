@@ -31,8 +31,10 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.master.balancer.BalancerTestBase.MockMapping;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -89,6 +91,7 @@ public class TestLargeClusterBalancingMetaTableIsolation {
   @Test
   public void testMetaTableIsolation() {
     Configuration conf = new Configuration(false);
+    conf.setClass("hbase.util.ip.to.rack.determiner", MockMapping.class, DNSToSwitchMapping.class);
     conf.setBoolean(BalancerConditionals.ISOLATE_META_TABLE_KEY, true);
     runBalancerToExhaustion(conf, serverToRegions, Set.of(this::isMetaTableIsolated), 10.0f);
     LOG.info("Meta table regions are successfully isolated.");
