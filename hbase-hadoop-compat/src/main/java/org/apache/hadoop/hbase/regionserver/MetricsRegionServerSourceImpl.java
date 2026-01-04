@@ -381,6 +381,8 @@ public class MetricsRegionServerSourceImpl extends BaseSourceImpl
           rsWrap.getCpRequestsCount())
         .addCounter(Interns.info(FILTERED_READ_REQUEST_COUNT, FILTERED_READ_REQUEST_COUNT_DESC),
           rsWrap.getFilteredReadRequestsCount())
+        .addCounter(Interns.info(DELETED_READ_REQUEST_COUNT, DELETED_READ_REQUEST_COUNT_DESC),
+          rsWrap.getDeletedReadRequestsCount())
         .addCounter(Interns.info(WRITE_REQUEST_COUNT, WRITE_REQUEST_COUNT_DESC),
           rsWrap.getWriteRequestsCount())
         .addCounter(Interns.info(RPC_GET_REQUEST_COUNT, RPC_GET_REQUEST_COUNT_DESC),

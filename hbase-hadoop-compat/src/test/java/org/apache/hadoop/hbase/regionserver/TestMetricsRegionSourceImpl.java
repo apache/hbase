@@ -132,6 +132,11 @@ public class TestMetricsRegionSourceImpl {
     }
 
     @Override
+    public long getDeletedReadRequestCount() {
+      return 0;
+    }
+
+    @Override
     public long getMaxStoreFileAge() {
       return 0;
     }
