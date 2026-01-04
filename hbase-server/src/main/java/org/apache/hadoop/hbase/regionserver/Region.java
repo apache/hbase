@@ -269,7 +269,7 @@ public interface Region extends ConfigurationObserver {
    * The obtained locks should be released after use by {@link RowLock#release()}
    * <p>
    * NOTE: the boolean passed here has changed. It used to be a boolean that stated whether or not
-   * to wait on the lock. Now it is whether it an exclusive lock is requested.
+   * to wait on the lock. Now it is whether if an exclusive lock is requested.
    * @param row      The row actions will be performed against
    * @param readLock is the lock reader or writer. True indicates that a non-exclusive lock is
    *                 requested
@@ -277,6 +277,24 @@ public interface Region extends ConfigurationObserver {
    * @see #startRegionOperation(Operation)
    */
   RowLock getRowLock(byte[] row, boolean readLock) throws IOException;
+
+  /**
+   * Get a row lock for the specified row with a custom time out value. All locks are reentrant.
+   * Before calling this function make sure that a region operation has already been started (the
+   * calling thread has already acquired the region-close-guard lock).
+   * <p>
+   * The obtained locks should be released after use by {@link RowLock#release()}
+   * <p>
+   * NOTE: the boolean passed here has changed. It used to be a boolean that stated whether or not
+   * to wait on the lock. Now it is whether if an exclusive lock is requested.
+   * @param row      The row actions will be performed against
+   * @param readLock is the lock reader or writer. True indicates that a non-exclusive lock is
+   *                 requested
+   * @param timeout  Time Out duration for lock acquisition
+   * @see #startRegionOperation()
+   * @see #startRegionOperation(Operation)
+   */
+  RowLock getRowLock(byte[] row, boolean readLock, int timeout) throws IOException;
 
   ///////////////////////////////////////////////////////////////////////////
   // Region operations
