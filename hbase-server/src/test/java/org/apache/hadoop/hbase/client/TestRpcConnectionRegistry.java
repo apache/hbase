@@ -60,12 +60,11 @@ public class TestRpcConnectionRegistry {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestRpcConnectionRegistry.class);
 
-  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
+  protected static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   private RpcConnectionRegistry registry;
 
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
+  protected static void startMiniCluster() throws Exception {
     // allow refresh immediately so we will switch to use region servers soon.
     UTIL.getConfiguration().setLong(RpcConnectionRegistry.INITIAL_REFRESH_DELAY_SECS, 1);
     UTIL.getConfiguration().setLong(RpcConnectionRegistry.PERIODIC_REFRESH_INTERVAL_SECS, 1);
@@ -73,6 +72,11 @@ public class TestRpcConnectionRegistry {
     UTIL.getConfiguration().setLong(BootstrapNodeManager.REQUEST_MASTER_MIN_INTERVAL_SECS, 1);
     UTIL.startMiniCluster(3);
     HBaseTestingUtil.setReplicas(UTIL.getAdmin(), TableName.META_TABLE_NAME, 3);
+  }
+
+  @BeforeClass
+  public static void setUpBeforeClass() throws Exception {
+    startMiniCluster();
   }
 
   @AfterClass

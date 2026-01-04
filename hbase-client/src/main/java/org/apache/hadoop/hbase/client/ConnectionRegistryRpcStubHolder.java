@@ -55,9 +55,6 @@ class ConnectionRegistryRpcStubHolder implements Closeable {
 
   private final Configuration conf;
 
-  // used for getting cluster id
-  private final Configuration noAuthConf;
-
   private final User user;
 
   private final RpcControllerFactory rpcControllerFactory;
@@ -75,12 +72,6 @@ class ConnectionRegistryRpcStubHolder implements Closeable {
   ConnectionRegistryRpcStubHolder(Configuration conf, User user,
     RpcControllerFactory rpcControllerFactory, Set<ServerName> bootstrapNodes) {
     this.conf = conf;
-    if (User.isHBaseSecurityEnabled(conf)) {
-      this.noAuthConf = new Configuration(conf);
-      this.noAuthConf.set(User.HBASE_SECURITY_CONF_KEY, "simple");
-    } else {
-      this.noAuthConf = conf;
-    }
     this.user = user;
     this.rpcControllerFactory = rpcControllerFactory;
     this.bootstrapNodes = Collections.unmodifiableSet(bootstrapNodes);
@@ -107,7 +98,7 @@ class ConnectionRegistryRpcStubHolder implements Closeable {
       new CompletableFuture<>();
     addr2StubFuture = future;
     FutureUtils.addListener(
-      new ClusterIdFetcher(noAuthConf, user, rpcControllerFactory, bootstrapNodes).fetchClusterId(),
+      new ClusterIdFetcher(conf, user, rpcControllerFactory, bootstrapNodes).fetchClusterId(),
       (clusterId, error) -> {
         synchronized (ConnectionRegistryRpcStubHolder.this) {
           if (error != null) {
