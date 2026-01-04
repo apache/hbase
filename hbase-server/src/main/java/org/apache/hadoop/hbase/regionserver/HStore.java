@@ -335,7 +335,8 @@ public class HStore
   }
 
   private StoreContext initializeStoreContext(ColumnFamilyDescriptor family) throws IOException {
-    return new StoreContext.Builder().withBlockSize(family.getBlocksize())
+    return new StoreContext.Builder()
+      .withBlockSize(StoreUtils.getBlockSize(conf, family.getBlocksize()))
       .withEncryptionContext(EncryptionUtil.createEncryptionContext(conf, family))
       .withBloomType(family.getBloomFilterType()).withCacheConfig(createCacheConf(family))
       .withCellComparator(region.getTableDescriptor().isMetaTable() || conf

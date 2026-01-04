@@ -205,4 +205,28 @@ public final class StoreUtils {
     }
     return f.applyAsLong(reader);
   }
+
+  /**
+   * Helper for figuring out what block size to use when writing. If the user set a block size in
+   * schema, we use that. We determine the user has set a size if the size is not the default size.
+   * Otherwise, we check if the user has set a block size in the configuration that is not the
+   * default size. This is annoyingly complicated but required for compatibility.
+   * <ul>
+   * <li>If the schema specifies a non default block size, use it.</li>
+   * <li>Otherwise, if the configuration specifies a non default block size, use it.</li>
+   * <li>Otherwise, use the default block size.</li>
+   * </ul>
+   * The default is defined by HConstants.DEFAULT_BLOCKSIZE.
+   * @param conf            The configuration, can be null. Use the store configuration wherever
+   *                        possible so we properly support site configuration overrides.
+   * @param schemaBlockSize The block size as specified in the column family schema.
+   * @return The block size to use.
+   */
+  public static int getBlockSize(Configuration conf, int schemaBlockSize) {
+    if (schemaBlockSize == HConstants.DEFAULT_BLOCKSIZE && conf != null) {
+      return conf.getInt(HFile.BLOCK_SIZE_KEY, HConstants.DEFAULT_BLOCKSIZE);
+    }
+    return schemaBlockSize;
+  }
+
 }

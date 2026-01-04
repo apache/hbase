@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.regionserver.StoreFileReader;
 import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.regionserver.StoreScanner;
+import org.apache.hadoop.hbase.regionserver.StoreUtils;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputControlUtil;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
@@ -445,8 +446,9 @@ public abstract class Compactor<T extends CellSink> {
 
     throughputController.start(compactionName);
     Shipper shipper = (scanner instanceof Shipper) ? (Shipper) scanner : null;
-    long shippedCallSizeLimit =
-      (long) request.getFiles().size() * this.store.getColumnFamilyDescriptor().getBlocksize();
+    int blockSize = StoreUtils.getBlockSize(store.getReadOnlyConfiguration(),
+      store.getColumnFamilyDescriptor().getBlocksize());
+    long shippedCallSizeLimit = (long) request.getFiles().size() * blockSize;
     try {
       do {
         // InternalScanner is for CPs so we do not want to leak ExtendedCell to the interface, but

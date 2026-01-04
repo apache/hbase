@@ -242,7 +242,7 @@ public class TestSecureBulkLoadManager {
       .withIncludesTags(true).withCompression(compression).withCompressTags(family.isCompressTags())
       .withChecksumType(StoreUtils.getChecksumType(conf))
       .withBytesPerCheckSum(StoreUtils.getBytesPerChecksum(conf))
-      .withBlockSize(family.getBlocksize()).withHBaseCheckSum(true)
+      .withBlockSize(StoreUtils.getBlockSize(conf, family.getBlocksize())).withHBaseCheckSum(true)
       .withDataBlockEncoding(family.getDataBlockEncoding())
       .withEncryptionContext(Encryption.Context.NONE)
       .withCreateTime(EnvironmentEdgeManager.currentTime()).build();

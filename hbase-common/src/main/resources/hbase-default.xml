@@ -1095,6 +1095,21 @@ possible configurations would overwhelm and obscure the important.
       </description>
   </property>
   <property>
+      <name>hfile.block.size</name>
+      <value>65536</value>
+      <description>The default HFile block size to use for new files. If set, this will define
+      the default block size to use when writing HFiles, as long as a column family schema does
+      not define its own non-default block size. This is a bit complicated but required for
+      compatability. The rules are:
+        - If the column family schema specifies a non default block size, use it.
+        - Otherwise, if hfile.block.size in configuration specifies a non default block size,
+          use it.
+        - Otherwise, use the default block size.
+      The default is 65536.
+      Specifying the default in hfile.block.size is a no-op.
+      </description>
+  </property>
+  <property>
       <name>hfile.block.bloom.cacheonwrite</name>
       <value>false</value>
       <description>Enables cache-on-write for inline blocks of a compound Bloom filter.</description>

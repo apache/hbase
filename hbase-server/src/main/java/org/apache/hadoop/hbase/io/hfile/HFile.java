@@ -121,6 +121,14 @@ public final class HFile {
   // LOG is being used in HFileBlock and CheckSumUtil
   static final Logger LOG = LoggerFactory.getLogger(HFile.class);
 
+  /** The configuration key for HFile version to use for new files */
+  @InterfaceAudience.Public
+  public static final String FORMAT_VERSION_KEY = "hfile.format.version";
+
+  /** The configuration key for the default block size for an HFile */
+  @InterfaceAudience.Public
+  public static final String BLOCK_SIZE_KEY = "hfile.block.size";
+
   /**
    * Maximum length of key in HFile.
    */
@@ -323,9 +331,6 @@ public final class HFile {
       return new HFileWriterImpl(conf, cacheConf, path, ostream, fileContext);
     }
   }
-
-  /** The configuration key for HFile version to use for new files */
-  public static final String FORMAT_VERSION_KEY = "hfile.format.version";
 
   public static int getFormatVersion(Configuration conf) {
     int version = conf.getInt(FORMAT_VERSION_KEY, MAX_FORMAT_VERSION);
