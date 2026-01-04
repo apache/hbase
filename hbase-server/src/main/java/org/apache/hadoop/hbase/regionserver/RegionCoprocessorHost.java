@@ -493,26 +493,26 @@ public class RegionCoprocessorHost
   abstract class RegionObserverOperationWithoutResult
     extends ObserverOperationWithoutResult<RegionObserver> {
     public RegionObserverOperationWithoutResult() {
-      super(regionObserverGetter);
+      this(null);
     }
 
     public RegionObserverOperationWithoutResult(User user) {
-      super(regionObserverGetter, user);
+      this(user, false);
     }
 
     public RegionObserverOperationWithoutResult(boolean bypassable) {
-      super(regionObserverGetter, null, bypassable);
+      this(null, bypassable);
     }
 
     public RegionObserverOperationWithoutResult(User user, boolean bypassable) {
-      super(regionObserverGetter, user, bypassable);
+      super(regionObserverGetter, createObserverRpcCallContext(user), bypassable);
     }
   }
 
   abstract class BulkLoadObserverOperation
     extends ObserverOperationWithoutResult<BulkLoadObserver> {
     public BulkLoadObserverOperation(User user) {
-      super(RegionCoprocessor::getBulkLoadObserver, user);
+      super(RegionCoprocessor::getBulkLoadObserver, createObserverRpcCallContext(user));
     }
   }
 
@@ -678,7 +678,7 @@ public class RegionCoprocessorHost
       return defaultResult;
     }
     return execOperationWithResult(new ObserverOperationWithResult<RegionObserver, InternalScanner>(
-      regionObserverGetter, defaultResult, user) {
+      regionObserverGetter, defaultResult, createObserverRpcCallContext(user)) {
       @Override
       public InternalScanner call(RegionObserver observer) throws IOException {
         InternalScanner scanner =

@@ -191,19 +191,19 @@ public class MasterCoprocessorHost
 
   abstract class MasterObserverOperation extends ObserverOperationWithoutResult<MasterObserver> {
     public MasterObserverOperation() {
-      super(masterObserverGetter);
+      this(null);
+    }
+
+    public MasterObserverOperation(User user) {
+      this(user, false);
     }
 
     public MasterObserverOperation(boolean bypassable) {
       this(null, bypassable);
     }
 
-    public MasterObserverOperation(User user) {
-      super(masterObserverGetter, user);
-    }
-
     public MasterObserverOperation(User user, boolean bypassable) {
-      super(masterObserverGetter, user, bypassable);
+      super(masterObserverGetter, createObserverRpcCallContext(user), bypassable);
     }
   }
 

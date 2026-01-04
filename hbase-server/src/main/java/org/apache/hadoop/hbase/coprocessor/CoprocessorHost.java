@@ -27,7 +27,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import org.apache.hadoop.conf.Configuration;
@@ -492,19 +491,18 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
     }
   }
 
-  /**
-   * Used to limit legacy handling to once per Coprocessor class per classloader.
-   */
-  private static final Set<Class<? extends Coprocessor>> legacyWarning =
-    new ConcurrentSkipListSet<>(new Comparator<Class<? extends Coprocessor>>() {
-      @Override
-      public int compare(Class<? extends Coprocessor> c1, Class<? extends Coprocessor> c2) {
-        if (c1.equals(c2)) {
-          return 0;
-        }
-        return c1.getName().compareTo(c2.getName());
-      }
-    });
+  protected static Optional<ObserverRpcCallContext> createObserverRpcCallContext() {
+    return createObserverRpcCallContext(RpcServer.getRequestUser().orElse(null));
+  }
+
+  protected static Optional<ObserverRpcCallContext> createObserverRpcCallContext(User user) {
+    if (user == null) {
+      /* not in RPC context */
+      return Optional.empty();
+    } else {
+      return Optional.of(new ObserverRpcCallContextImpl(user, RpcServer.getConnectionAttributes()));
+    }
+  }
 
   /**
    * Implementations defined function to get an observer of type {@code O} from a coprocessor of
@@ -521,19 +519,17 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
     ObserverGetter<C, O> observerGetter;
 
     ObserverOperation(ObserverGetter<C, O> observerGetter) {
-      this(observerGetter, null);
+      this(observerGetter, createObserverRpcCallContext());
     }
 
-    ObserverOperation(ObserverGetter<C, O> observerGetter, User user) {
-      this(observerGetter, user, false);
+    ObserverOperation(ObserverGetter<C, O> observerGetter,
+      Optional<ObserverRpcCallContext> rpcCallContext) {
+      this(observerGetter, rpcCallContext, false);
     }
 
-    ObserverOperation(ObserverGetter<C, O> observerGetter, boolean bypassable) {
-      this(observerGetter, null, bypassable);
-    }
-
-    ObserverOperation(ObserverGetter<C, O> observerGetter, User user, boolean bypassable) {
-      super(user != null ? user : RpcServer.getRequestUser().orElse(null), bypassable);
+    ObserverOperation(ObserverGetter<C, O> observerGetter,
+      Optional<ObserverRpcCallContext> rpcCallContext, boolean bypassable) {
+      super(rpcCallContext, bypassable);
       this.observerGetter = observerGetter;
     }
 
@@ -553,13 +549,14 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
       super(observerGetter);
     }
 
-    public ObserverOperationWithoutResult(ObserverGetter<C, O> observerGetter, User user) {
-      super(observerGetter, user);
+    public ObserverOperationWithoutResult(ObserverGetter<C, O> observerGetter,
+      Optional<ObserverRpcCallContext> rpcCallContext) {
+      super(observerGetter, rpcCallContext);
     }
 
-    public ObserverOperationWithoutResult(ObserverGetter<C, O> observerGetter, User user,
-      boolean bypassable) {
-      super(observerGetter, user, bypassable);
+    public ObserverOperationWithoutResult(ObserverGetter<C, O> observerGetter,
+      Optional<ObserverRpcCallContext> rpcCallContext, boolean bypassable) {
+      super(observerGetter, rpcCallContext, bypassable);
     }
 
     /**
@@ -587,16 +584,17 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
 
     public ObserverOperationWithResult(ObserverGetter<C, O> observerGetter, R result,
       boolean bypassable) {
-      this(observerGetter, result, null, bypassable);
+      this(observerGetter, result, createObserverRpcCallContext(), bypassable);
     }
 
-    public ObserverOperationWithResult(ObserverGetter<C, O> observerGetter, R result, User user) {
-      this(observerGetter, result, user, false);
+    public ObserverOperationWithResult(ObserverGetter<C, O> observerGetter, R result,
+      Optional<ObserverRpcCallContext> rpcCallContext) {
+      this(observerGetter, result, rpcCallContext, false);
     }
 
-    private ObserverOperationWithResult(ObserverGetter<C, O> observerGetter, R result, User user,
-      boolean bypassable) {
-      super(observerGetter, user, bypassable);
+    private ObserverOperationWithResult(ObserverGetter<C, O> observerGetter, R result,
+      Optional<ObserverRpcCallContext> rpcCallContext, boolean bypassable) {
+      super(observerGetter, rpcCallContext, bypassable);
       this.result = result;
     }
 

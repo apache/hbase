@@ -799,6 +799,10 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
     return ctx.isPresent() ? ctx.get().getRequestUser() : Optional.empty();
   }
 
+  public static Map<String, byte[]> getConnectionAttributes() {
+    return getCurrentCall().map(RpcCall::getConnectionAttributes).orElse(Map.of());
+  }
+
   /**
    * The number of open RPC conections
    * @return the number of open rpc connections

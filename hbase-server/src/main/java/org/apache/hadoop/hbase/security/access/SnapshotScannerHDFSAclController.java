@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.ObserverRpcCallContext;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
@@ -579,11 +580,13 @@ public class SnapshotScannerHDFSAclController implements MasterCoprocessor, Mast
 
   private User getActiveUser(ObserverContext<?> ctx) throws IOException {
     // for non-rpc handling, fallback to system user
-    Optional<User> optionalUser = ctx.getCaller();
-    if (optionalUser.isPresent()) {
-      return optionalUser.get();
+    Optional<ObserverRpcCallContext> rpcCallContext = ctx.getRpcCallContext();
+
+    if (rpcCallContext.isPresent()) {
+      return rpcCallContext.get().getUser();
+    } else {
+      return userProvider.getCurrent();
     }
-    return userProvider.getCurrent();
   }
 
   /**

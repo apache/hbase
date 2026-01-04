@@ -84,19 +84,19 @@ public class RpcCoprocessorHost extends CoprocessorHost<RpcCoprocessor, RpcCopro
 
   abstract class RpcObserverOperation extends ObserverOperationWithoutResult<RpcObserver> {
     public RpcObserverOperation() {
-      super(rpcObserverGetter);
+      this(null);
+    }
+
+    public RpcObserverOperation(User user) {
+      this(user, false);
     }
 
     public RpcObserverOperation(boolean bypassable) {
       this(null, bypassable);
     }
 
-    public RpcObserverOperation(User user) {
-      super(rpcObserverGetter, user);
-    }
-
     public RpcObserverOperation(User user, boolean bypassable) {
-      super(rpcObserverGetter, user, bypassable);
+      super(rpcObserverGetter, createObserverRpcCallContext(user), bypassable);
     }
   }
 

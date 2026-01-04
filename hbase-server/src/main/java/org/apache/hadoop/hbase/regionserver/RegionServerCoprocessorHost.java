@@ -102,11 +102,11 @@ public class RegionServerCoprocessorHost
   abstract class RegionServerObserverOperation
     extends ObserverOperationWithoutResult<RegionServerObserver> {
     public RegionServerObserverOperation() {
-      super(rsObserverGetter);
+      this(null);
     }
 
     public RegionServerObserverOperation(User user) {
-      super(rsObserverGetter, user);
+      super(rsObserverGetter, createObserverRpcCallContext(user));
     }
   }
 
