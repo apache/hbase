@@ -26,6 +26,7 @@ import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
@@ -45,6 +46,7 @@ import org.apache.hadoop.hbase.security.SecurityInfo;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.provider.SaslClientAuthenticationProvider;
 import org.apache.hadoop.hbase.security.provider.SaslClientAuthenticationProviders;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.compress.CompressionCodec;
@@ -193,6 +195,25 @@ abstract class RpcConnection {
     return preamble;
   }
 
+  private Map<String, byte[]> getConfigurationConnectionAttributes() {
+    Map<String, byte[]> attributes = new HashMap<>();
+
+    for (Map.Entry<String, String> entry : conf) {
+      String key = entry.getKey();
+
+      if (
+        key.startsWith(HConstants.CLIENT_HEADER_PREFIX) && !connectionAttributes.containsKey(key)
+      ) {
+        String value = entry.getValue();
+
+        LOG.debug("Adding connection header: {}={}", key, value);
+        attributes.put(key, Bytes.toBytes(value));
+      }
+    }
+
+    return attributes;
+  }
+
   protected final ConnectionHeader getConnectionHeader() {
     final ConnectionHeader.Builder builder = ConnectionHeader.newBuilder();
     builder.setServiceName(remoteId.getServiceName());
@@ -213,6 +234,12 @@ abstract class RpcConnection {
         attributeBuilder.setValue(UnsafeByteOperations.unsafeWrap(attribute.getValue()));
         builder.addAttribute(attributeBuilder.build());
       }
+    }
+    for (Map.Entry<String, byte[]> attribute : getConfigurationConnectionAttributes().entrySet()) {
+      HBaseProtos.NameBytesPair.Builder attributeBuilder = HBaseProtos.NameBytesPair.newBuilder();
+      attributeBuilder.setName(attribute.getKey());
+      attributeBuilder.setValue(UnsafeByteOperations.unsafeWrap(attribute.getValue()));
+      builder.addAttribute(attributeBuilder.build());
     }
     builder.setVersionInfo(ProtobufUtil.getVersionInfo());
     boolean isCryptoAESEnable = conf.getBoolean(CRYPTO_AES_ENABLED_KEY, CRYPTO_AES_ENABLED_DEFAULT);
