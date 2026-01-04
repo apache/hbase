@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
@@ -60,6 +61,9 @@ import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
+import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessor;
+import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.RegionServerObserver;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
@@ -112,6 +116,8 @@ public class TestBulkLoadReplication extends TestReplicationBase {
   private static AtomicInteger BULK_LOADS_COUNT;
   private static CountDownLatch BULK_LOAD_LATCH;
 
+  private static AtomicInteger REPLICATION_COUNT;
+
   protected static final HBaseTestingUtil UTIL3 = new HBaseTestingUtil();
   protected static final Configuration CONF3 = UTIL3.getConfiguration();
 
@@ -125,7 +131,7 @@ public class TestBulkLoadReplication extends TestReplicationBase {
   @ClassRule
   public static TemporaryFolder testFolder = new TemporaryFolder();
 
-  private static ReplicationQueueStorage queueStorage;
+  private static final List<ReplicationQueueStorage> queueStorages = new ArrayList<>();
 
   private static boolean replicationPeersAdded = false;
 
@@ -137,8 +143,11 @@ public class TestBulkLoadReplication extends TestReplicationBase {
     setupConfig(UTIL3, "/3");
     TestReplicationBase.setUpBeforeClass();
     startThirdCluster();
-    queueStorage = ReplicationStorageFactory.getReplicationQueueStorage(UTIL1.getConnection(),
-      UTIL1.getConfiguration());
+    for (HBaseTestingUtil util : new HBaseTestingUtil[] { UTIL1, UTIL2, UTIL3 }) {
+      ReplicationQueueStorage queueStorage = ReplicationStorageFactory
+        .getReplicationQueueStorage(util.getConnection(), util.getConfiguration());
+      queueStorages.add(queueStorage);
+    }
   }
 
   private static void startThirdCluster() throws Exception {
@@ -184,6 +193,7 @@ public class TestBulkLoadReplication extends TestReplicationBase {
       replicationPeersAdded = true;
     }
     BULK_LOADS_COUNT = new AtomicInteger(0);
+    REPLICATION_COUNT = new AtomicInteger(0);
   }
 
   private ReplicationPeerConfig getPeerConfigForCluster(HBaseTestingUtil util)
@@ -193,21 +203,36 @@ public class TestBulkLoadReplication extends TestReplicationBase {
   }
 
   private void setupCoprocessor(HBaseTestingUtil cluster) {
+    Configuration conf = cluster.getConfiguration();
+    Class<TestBulkLoadReplication.BulkReplicationTestObserver> cpClass =
+      TestBulkLoadReplication.BulkReplicationTestObserver.class;
+
     cluster.getHBaseCluster().getRegions(tableName).forEach(r -> {
       try {
-        TestBulkLoadReplication.BulkReplicationTestObserver cp = r.getCoprocessorHost()
-          .findCoprocessor(TestBulkLoadReplication.BulkReplicationTestObserver.class);
+        RegionCoprocessorHost cpHost = r.getCoprocessorHost();
+        TestBulkLoadReplication.BulkReplicationTestObserver cp = cpHost.findCoprocessor(cpClass);
         if (cp == null) {
-          r.getCoprocessorHost().load(TestBulkLoadReplication.BulkReplicationTestObserver.class, 0,
-            cluster.getConfiguration());
-          cp = r.getCoprocessorHost()
-            .findCoprocessor(TestBulkLoadReplication.BulkReplicationTestObserver.class);
+          cpHost.load(cpClass, 0, conf);
+          cp = cpHost.findCoprocessor(cpClass);
           cp.clusterName = cluster.getRpcConnnectionURI();
         }
       } catch (Exception e) {
         LOG.error(e.getMessage(), e);
       }
     });
+
+    try {
+      RegionServerCoprocessorHost cpHost =
+        cluster.getHBaseCluster().getRegionServer(0).getRegionServerCoprocessorHost();
+      TestBulkLoadReplication.BulkReplicationTestObserver cp = cpHost.findCoprocessor(cpClass);
+      if (cp == null) {
+        cpHost.load(cpClass, 0, conf);
+        cp = cpHost.findCoprocessor(cpClass);
+        cp.clusterName = cluster.getRpcConnnectionURI();
+      }
+    } catch (Exception e) {
+      LOG.error(e.getMessage(), e);
+    }
   }
 
   protected static void setupBulkLoadConfigsForCluster(Configuration config,
@@ -243,6 +268,13 @@ public class TestBulkLoadReplication extends TestReplicationBase {
     // Each event gets 3 counts (the originator cluster, plus the two peers),
     // so BULK_LOADS_COUNT expected value is 3 * 3 = 9.
     assertEquals(9, BULK_LOADS_COUNT.get());
+    // Each bulk load event gets replicated twice (to two peers),
+    // so REPLICATION_COUNT expected value is 3 * 2 = 6.
+    assertEquals(6, REPLICATION_COUNT.get());
+    waitForReplicationQueuesToEmpty();
+    for (ReplicationQueueStorage queueStorage : queueStorages) {
+      assertEquals(0, queueStorage.getAllHFileRefs().size());
+    }
   }
 
   protected void assertBulkLoadConditions(TableName tableName, byte[] row, byte[] value,
@@ -307,10 +339,12 @@ public class TestBulkLoadReplication extends TestReplicationBase {
     return hFileLocation.getAbsoluteFile().getAbsolutePath();
   }
 
-  public static class BulkReplicationTestObserver implements RegionCoprocessor {
+  public static class BulkReplicationTestObserver
+    implements RegionCoprocessor, RegionServerCoprocessor {
 
     String clusterName;
     AtomicInteger bulkLoadCounts = new AtomicInteger();
+    AtomicInteger replicationCount = new AtomicInteger();
 
     @Override
     public Optional<RegionObserver> getRegionObserver() {
@@ -324,6 +358,21 @@ public class TestBulkLoadReplication extends TestReplicationBase {
           BULK_LOADS_COUNT.incrementAndGet();
           LOG.debug("Another file bulk loaded. Total for {}: {}", clusterName,
             bulkLoadCounts.addAndGet(1));
+        }
+      });
+    }
+
+    @Override
+    public Optional<RegionServerObserver> getRegionServerObserver() {
+      return Optional.of(new RegionServerObserver() {
+
+        // FIXME: this is deprecated, but we need it for validating bulk load replication
+        @Override
+        public void
+          postReplicateLogEntries(final ObserverContext<RegionServerCoprocessorEnvironment> ctx) {
+          REPLICATION_COUNT.incrementAndGet();
+          LOG.info("Replication succeeded. Total for {}: {}", clusterName,
+            replicationCount.addAndGet(1));
         }
       });
     }
@@ -341,7 +390,12 @@ public class TestBulkLoadReplication extends TestReplicationBase {
     // additional wait to make sure no extra bulk load happens
     Thread.sleep(400);
     assertEquals(1, BULK_LOADS_COUNT.get());
-    assertEquals(0, queueStorage.getAllHFileRefs().size());
+    // No replication should happen for no-replication family
+    assertEquals(0, REPLICATION_COUNT.get());
+    waitForReplicationQueuesToEmpty();
+    for (ReplicationQueueStorage queueStorage : queueStorages) {
+      assertEquals(0, queueStorage.getAllHFileRefs().size());
+    }
   }
 
   private void assertBulkLoadConditionsForNoRepFamily(byte[] row, byte[] value,
@@ -404,5 +458,16 @@ public class TestBulkLoadReplication extends TestReplicationBase {
     Get get = new Get(row);
     Result result = table.get(get);
     assertNotEquals(Bytes.toString(value), Bytes.toString(result.value()));
+  }
+
+  private void waitForReplicationQueuesToEmpty() {
+    Waiter.waitFor(CONF1, 1000, () -> {
+      for (ReplicationQueueStorage queueStorage : queueStorages) {
+        if (!queueStorage.getAllHFileRefs().isEmpty()) {
+          return false;
+        }
+      }
+      return true;
+    });
   }
 }

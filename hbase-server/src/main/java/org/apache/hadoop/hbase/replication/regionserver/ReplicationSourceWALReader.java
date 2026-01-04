@@ -187,7 +187,7 @@ class ReplicationSourceWALReader extends Thread {
             }
           }
         }
-      } catch (WALEntryFilterRetryableException e) {
+      } catch (WALEntryFilterRetryableException | IOException e) {
         // here we have to recreate the WALEntryStream, as when filtering, we have already called
         // next to get the WAL entry and advanced the WALEntryStream, at WALEntryStream layer, it
         // just considers everything is fine,that's why the catch block is not in the inner block
@@ -231,7 +231,7 @@ class ReplicationSourceWALReader extends Thread {
   // This is required in case there is any exception in while reading entries
   // we do not want to loss the existing entries in the batch
   protected void readWALEntries(WALEntryStream entryStream, WALEntryBatch batch)
-    throws InterruptedException {
+    throws InterruptedException, IOException {
     Path currentPath = entryStream.getCurrentPath();
     for (;;) {
       Entry entry = entryStream.next();
@@ -282,7 +282,7 @@ class ReplicationSourceWALReader extends Thread {
     return new WALEntryBatch(replicationBatchCountCapacity, entryStream.getCurrentPath());
   }
 
-  protected final Entry filterEntry(Entry entry) {
+  protected final Entry filterEntry(Entry entry) throws IOException {
     // Always replicate if this edit is Replication Marker edit.
     if (entry != null && WALEdit.isReplicationMarkerEdit(entry.getEdit())) {
       return entry;
@@ -291,6 +291,8 @@ class ReplicationSourceWALReader extends Thread {
     if (entry != null && (filtered == null || filtered.getEdit().size() == 0)) {
       LOG.trace("Filtered entry for replication: {}", entry);
       source.getSourceMetrics().incrLogEditsFiltered();
+      // Filtered Bulk Load HFiles need to be cleaned up
+      ReplicationSourceShipper.cleanUpHFileRefs(source, entry.getEdit());
     }
     return filtered;
   }
