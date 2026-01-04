@@ -96,12 +96,18 @@ public class BackupObserver implements RegionCoprocessor, RegionObserver {
     try (Connection connection = ConnectionFactory.createConnection(cfg);
       BackupSystemTable tbl = new BackupSystemTable(connection)) {
       Set<TableName> fullyBackedUpTables = tbl.getTablesIncludedInBackups();
+      Map<TableName, Long> continuousBackupTableSet = tbl.getContinuousBackupTableSet();
 
-      if (fullyBackedUpTables.contains(tableName)) {
+      // Tables in continuousBackupTableSet do not rely on BackupSystemTable but rather
+      // scan on WAL backup directory to identify bulkload operation HBASE-29656
+      if (
+        fullyBackedUpTables.contains(tableName) && !continuousBackupTableSet.containsKey(tableName)
+      ) {
         tbl.registerBulkLoad(tableName, region.getEncodedNameAsBytes(), cfToHFilePaths);
       } else {
         if (LOG.isTraceEnabled()) {
-          LOG.trace("Table {} has not gone through full backup - skipping.", tableName);
+          LOG.trace("Table {} has either not gone through full backup or is "
+            + "part of continuousBackupTableSet - skipping", tableName);
         }
       }
     }
